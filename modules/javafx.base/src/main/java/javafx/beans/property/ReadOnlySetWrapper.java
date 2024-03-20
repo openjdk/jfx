@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,7 @@ import static javafx.collections.SetChangeListener.Change;
  * and can be passed to external users. The other property is read- and
  * writable and should be used internally only.
  *
+ * @param <E> the set element type
  * @since JavaFX 2.1
  */
 public class ReadOnlySetWrapper<E> extends SimpleSetProperty<E> {

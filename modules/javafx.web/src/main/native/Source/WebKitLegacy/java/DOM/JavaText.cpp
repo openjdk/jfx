@@ -64,7 +64,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_TextImpl_replaceWholeTextImpl(JN
     , jstring content)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Text>(env, WTF::getPtr(IMPL->replaceWholeText(String(env, content))));
+    IMPL->replaceWholeText(String(env, content));
+    return JavaReturn<Text>(env, nullptr); //REVISIT
 }
 
 

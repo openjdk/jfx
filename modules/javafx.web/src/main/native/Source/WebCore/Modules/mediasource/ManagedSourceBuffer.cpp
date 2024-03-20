@@ -28,6 +28,9 @@
 
 #if ENABLE(MANAGED_MEDIA_SOURCE)
 
+#include "ManagedMediaSource.h"
+#include <wtf/IsoMallocInlines.h>
+
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(ManagedSourceBuffer);

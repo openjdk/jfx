@@ -52,10 +52,9 @@ public:
     static Seconds nonInteractedCrossOriginFrameAlignmentInterval() { return 30_ms; }
     static Seconds hiddenPageAlignmentInterval() { return 1_s; }
 
-    // Creates a new timer owned by specified ScriptExecutionContext, starts it
-    // and returns its Id.
-    static int install(ScriptExecutionContext&, std::unique_ptr<ScheduledAction>, Seconds timeout, bool singleShot);
-    static int install(ScriptExecutionContext&, Function<void(ScriptExecutionContext&)>&&, Seconds timeout, bool singleShot);
+    enum class Type : bool { SingleShot, Repeating };
+    static int install(ScriptExecutionContext&, std::unique_ptr<ScheduledAction>, Seconds timeout, Type);
+    static int install(ScriptExecutionContext&, Function<void(ScriptExecutionContext&)>&&, Seconds timeout, Type);
     static void removeById(ScriptExecutionContext&, int timeoutId);
 
     // Notify that the interval may need updating (e.g. because the minimum interval
@@ -65,12 +64,12 @@ public:
     static void scriptDidInteractWithPlugin();
 
 private:
-    DOMTimer(ScriptExecutionContext&, Function<void(ScriptExecutionContext&)>&&, Seconds interval, bool singleShot);
+    DOMTimer(ScriptExecutionContext&, Function<void(ScriptExecutionContext&)>&&, Seconds interval, Type);
     friend class Internals;
 
     WEBCORE_EXPORT Seconds intervalClampedToMinimum() const;
 
-    bool isDOMTimersThrottlingEnabled(Document&) const;
+    bool isDOMTimersThrottlingEnabled(const Document&) const;
     void updateThrottlingStateIfNecessary(const DOMTimerFireState&);
 
     // SuspendableTimerBase

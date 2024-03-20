@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,7 +37,10 @@ import javafx.scene.control.Tooltip;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.lang.ref.WeakReference;
+
 import static org.junit.Assert.*;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.attemptGC;
 
 /**
  *
@@ -649,5 +652,30 @@ public class PopupControlTest {
     }
 
     //TODO: test computePref____ methods
+
+    /**
+     * Set a skin -> set another instance of the same skin (class).
+     */
+    @Test
+    public void testMemoryLeakSameSkinClass() {
+        popup.setSkin(new PopupControlSkin<>());
+        Skin<?> skin = popup.getSkin();
+        popup.setSkin(new PopupControlSkin<>());
+
+        WeakReference<?> weakRef = new WeakReference<>(skin);
+        skin = null;
+        attemptGC(weakRef);
+        assertNull("Unused Skin must be gc'ed", weakRef.get());
+    }
+
+    @Test
+    public void testSetSkinOfSameClass() {
+        popup.setSkin(new PopupControlSkin<>());
+        Skin<?> oldSkin = popup.getSkin();
+        popup.setSkin(new PopupControlSkin<>());
+        Skin<?> newSkin = popup.getSkin();
+
+        assertNotEquals("New skin was not set", oldSkin, newSkin);
+    }
 
 }

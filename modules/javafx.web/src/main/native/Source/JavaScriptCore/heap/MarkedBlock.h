@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2022 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -26,8 +26,9 @@
 #include "HeapCell.h"
 #include "WeakSet.h"
 #include <algorithm>
+#include <type_traits>
 #include <wtf/Atomics.h>
-#include <wtf/Bitmap.h>
+#include <wtf/BitSet.h>
 #include <wtf/CountingLock.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/IterationStatus.h>
@@ -73,10 +74,14 @@ public:
 
     // Block size must be at least as large as the system page size.
     static constexpr size_t blockSize = std::max(16 * KB, CeilingOnPageSize);
+    static_assert((WeakBlock::blockSize * 16) == 16 * KB);
 
     static constexpr size_t blockMask = ~(blockSize - 1); // blockSize must be a power of two.
 
     static constexpr size_t atomsPerBlock = blockSize / atomSize;
+
+    using AtomNumberType = std::conditional<atomsPerBlock < UINT16_MAX, uint16_t, uint32_t>::type;
+    static_assert(std::numeric_limits<AtomNumberType>::max() >= atomsPerBlock);
 
     static constexpr size_t maxNumberOfLowerTierCells = 8;
     static_assert(maxNumberOfLowerTierCells <= 256);
@@ -297,8 +302,8 @@ public:
         HeapVersion m_markingVersion;
         HeapVersion m_newlyAllocatedVersion;
 
-        Bitmap<atomsPerBlock> m_marks;
-        Bitmap<atomsPerBlock> m_newlyAllocated;
+        WTF::BitSet<atomsPerBlock> m_marks;
+        WTF::BitSet<atomsPerBlock> m_newlyAllocated;
         void* m_verifierMemo { nullptr };
     };
 
@@ -352,7 +357,7 @@ public:
     bool isNewlyAllocated(const void*);
     void setNewlyAllocated(const void*);
     void clearNewlyAllocated(const void*);
-    const Bitmap<atomsPerBlock>& newlyAllocated() const;
+    const WTF::BitSet<atomsPerBlock>& newlyAllocated() const;
 
     HeapVersion newlyAllocatedVersion() const { return header().m_newlyAllocatedVersion; }
 
@@ -390,7 +395,7 @@ public:
     bool isMarkedRaw(const void* p);
     HeapVersion markingVersion() const { return header().m_markingVersion; }
 
-    const Bitmap<atomsPerBlock>& marks() const;
+    const WTF::BitSet<atomsPerBlock>& marks() const;
 
     CountingLock& lock() { return header().m_lock; }
 
@@ -618,7 +623,7 @@ inline bool MarkedBlock::testAndSetMarked(const void* p, Dependency dependency)
     return header().m_marks.concurrentTestAndSet(atomNumber(p), dependency);
 }
 
-inline const Bitmap<MarkedBlock::atomsPerBlock>& MarkedBlock::marks() const
+inline const WTF::BitSet<MarkedBlock::atomsPerBlock>& MarkedBlock::marks() const
 {
     return header().m_marks;
 }
@@ -638,7 +643,7 @@ inline void MarkedBlock::clearNewlyAllocated(const void* p)
     header().m_newlyAllocated.clear(atomNumber(p));
 }
 
-inline const Bitmap<MarkedBlock::atomsPerBlock>& MarkedBlock::newlyAllocated() const
+inline const WTF::BitSet<MarkedBlock::atomsPerBlock>& MarkedBlock::newlyAllocated() const
 {
     return header().m_newlyAllocated;
 }

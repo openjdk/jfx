@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2020 Sony Interactive Entertainment Inc.
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -63,12 +63,6 @@ IntlLocale::IntlLocale(VM& vm, Structure* structure)
 {
 }
 
-void IntlLocale::finishCreation(VM& vm)
-{
-    Base::finishCreation(vm);
-    ASSERT(inherits(info()));
-}
-
 template<typename Visitor>
 void IntlLocale::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
@@ -96,7 +90,7 @@ bool LocaleIDBuilder::initialize(const String& tag)
 {
     if (!isStructurallyValidLanguageTag(tag))
         return false;
-    ASSERT(tag.isAllASCII());
+    ASSERT(tag.containsOnlyASCII());
     m_buffer = localeIDBufferForLanguageTagWithNullTerminator(tag.ascii());
     return m_buffer.size();
 }
@@ -158,7 +152,7 @@ void LocaleIDBuilder::overrideLanguageScriptRegion(StringView language, StringVi
         else
             hasAppended = true;
 
-        ASSERT(subtag.isAllASCII());
+        ASSERT(subtag.containsOnlyASCII());
         if (subtag.is8Bit())
             buffer.append(subtag.characters8(), subtag.length());
         else
@@ -168,7 +162,7 @@ void LocaleIDBuilder::overrideLanguageScriptRegion(StringView language, StringVi
     if (endOfLanguageScriptRegionVariant != length) {
         auto rest = localeIDView.right(length - endOfLanguageScriptRegionVariant);
 
-        ASSERT(rest.isAllASCII());
+        ASSERT(rest.containsOnlyASCII());
         if (rest.is8Bit())
             buffer.append(rest.characters8(), rest.length());
         else
@@ -183,7 +177,7 @@ void LocaleIDBuilder::setKeywordValue(ASCIILiteral key, StringView value)
 {
     ASSERT(m_buffer.size());
 
-    ASSERT(value.isAllASCII());
+    ASSERT(value.containsOnlyASCII());
     Vector<char, 32> rawValue(value.length() + 1);
     value.getCharacters(reinterpret_cast<LChar*>(rawValue.data()));
     rawValue[value.length()] = '\0';

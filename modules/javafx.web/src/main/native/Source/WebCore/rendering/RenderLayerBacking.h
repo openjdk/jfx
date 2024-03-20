@@ -35,21 +35,12 @@
 
 namespace WebCore {
 
-class EventRegionContext;
 class KeyframeList;
 class PaintedContentsInfo;
+class RegionContext;
 class RenderLayerCompositor;
 class TiledBacking;
 class TransformationMatrix;
-
-
-#if CPU(ADDRESS64) && PLATFORM(COCOA)
-#define USE_OWNING_LAYER_BEAR_TRAP 1
-#define BEAR_TRAP_VALUE 0xEEEEEEEEEEEEEEEE
-#else
-#define USE_OWNING_LAYER_BEAR_TRAP 0
-#endif
-
 
 enum CompositingLayerType {
     NormalCompositingLayer, // non-tiled layer with backing store
@@ -192,6 +183,10 @@ public:
     void suspendAnimations(MonotonicTime = MonotonicTime());
     void resumeAnimations();
 
+#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+    bool updateAcceleratedEffectsAndBaseValues();
+#endif
+
     WEBCORE_EXPORT LayoutRect compositedBounds() const;
     // Returns true if changed.
     bool setCompositedBounds(const LayoutRect&);
@@ -206,6 +201,10 @@ public:
 
     bool needsEventRegionUpdate() const { return m_needsEventRegionUpdate; }
     void setNeedsEventRegionUpdate(bool needsUpdate = true) { m_needsEventRegionUpdate = needsUpdate; }
+#endif
+
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+    void clearInteractionRegions();
 #endif
 
     void updateAfterWidgetResize();
@@ -223,9 +222,9 @@ public:
     void tiledBackingUsageChanged(const GraphicsLayer*, bool /*usingTiledBacking*/) override;
     void notifyAnimationStarted(const GraphicsLayer*, const String& animationKey, MonotonicTime startTime) override;
     void notifyFlushRequired(const GraphicsLayer*) override;
-    void notifyFlushBeforeDisplayRefresh(const GraphicsLayer*) override;
+    void notifySubsequentFlushRequired(const GraphicsLayer*) override;
 
-    void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect& clip, GraphicsLayerPaintBehavior) override;
+    void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect& clip, OptionSet<GraphicsLayerPaintBehavior>) override;
 
     float deviceScaleFactor() const override;
     float contentsScaleMultiplierForNewTiles(const GraphicsLayer*) const override;
@@ -290,6 +289,7 @@ public:
     WEBCORE_EXPORT void setIsTrackingDisplayListReplay(bool);
     WEBCORE_EXPORT String replayDisplayListAsText(OptionSet<DisplayList::AsTextFlag>) const;
 
+    bool shouldPaintUsingCompositeCopy() const { return m_shouldPaintUsingCompositeCopy; }
 private:
     friend class PaintedContentsInfo;
 
@@ -354,6 +354,9 @@ private:
 #if ENABLE(CSS_COMPOSITING)
     void updateBlendMode(const RenderStyle&);
 #endif
+#if ENABLE(VIDEO)
+    void updateVideoGravity(const RenderStyle&);
+#endif
     void updateContentsScalingFilters(const RenderStyle&);
 
     // Return the opacity value that this layer should use for compositing.
@@ -392,7 +395,7 @@ private:
     bool hasTiledBackingFlatteningLayer() const { return (m_childContainmentLayer && m_isFrameLayerWithTiledBacking); }
     GraphicsLayer* tileCacheFlatteningLayer() const { return m_isFrameLayerWithTiledBacking ? m_childContainmentLayer.get() : nullptr; }
 
-    void paintIntoLayer(const GraphicsLayer*, GraphicsContext&, const IntRect& paintDirtyRect, OptionSet<PaintBehavior>, EventRegionContext* = nullptr);
+    void paintIntoLayer(const GraphicsLayer*, GraphicsContext&, const IntRect& paintDirtyRect, OptionSet<PaintBehavior>, RegionContext* = nullptr);
     OptionSet<RenderLayer::PaintLayerFlag> paintFlagsForLayer(const GraphicsLayer&) const;
 
     void paintDebugOverlays(const GraphicsLayer*, GraphicsContext&);
@@ -406,9 +409,6 @@ private:
 
     bool shouldSetContentsDisplayDelegate() const;
 
-#if USE(OWNING_LAYER_BEAR_TRAP)
-    uintptr_t m_owningLayerBearTrap { BEAR_TRAP_VALUE }; // webkit.org/b.206915
-#endif
     RenderLayer& m_owningLayer;
 
     // A list other layers that paint into this backing store, later than m_owningLayer in paint order.
@@ -457,6 +457,7 @@ private:
 #if ENABLE(ASYNC_SCROLLING)
     bool m_needsEventRegionUpdate { true };
 #endif
+    bool m_shouldPaintUsingCompositeCopy { false };
 };
 
 enum CanvasCompositingStrategy {

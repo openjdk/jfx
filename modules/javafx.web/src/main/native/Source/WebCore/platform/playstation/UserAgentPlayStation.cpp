@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Sony Interactive Entertainment Inc.
+ * Copyright (C) 2021 Sony Interactive Entertainment Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,16 +26,75 @@
 #include "config.h"
 #include "UserAgent.h"
 
+#include <wtf/NeverDestroyed.h>
+#include <wtf/text/StringConcatenate.h>
+
+// WARNING! WARNING! WARNING!
+//
+// The user agent is ludicrously fragile. The most innocent change can
+// and will break websites. Read the git log for this file and
+// WebCore/platform/glib/UserAgentGLib.cpp carefully before changing
+// user agent construction. You have been warned.
+
 namespace WebCore {
 
-String standardUserAgent(const String&, const String&)
+static String getSystemSoftwareName()
 {
-    return emptyString();
+#if HAS_GETENV_NP
+    char buf[32];
+    if (!getenv_np("SYSTEM_SOFTWARE_NAME", buf, sizeof(buf)))
+        return String::fromUTF8(buf);
+#endif
+    return "PlayStation"_s;
+}
+
+static String getSystemSoftwareVersion()
+{
+#if HAS_GETENV_NP
+    char buf[32];
+    if (!getenv_np("SYSTEM_SOFTWARE_VERSION", buf, sizeof(buf)))
+        return String::fromUTF8(buf);
+#endif
+    return "0.00"_s;
+}
+
+static constexpr const char* versionForUAString()
+{
+    // https://bugs.webkit.org/show_bug.cgi?id=180365
+    return "605.1.15";
+}
+
+static String standardUserAgentStatic()
+{
+    // Version/X is mandatory *before* Safari/X to be a valid Safari UA. See
+    // https://bugs.webkit.org/show_bug.cgi?id=133403 for details.
+    static NeverDestroyed<String> uaStatic(makeString("Mozilla/5.0 (PlayStation; ", getSystemSoftwareName(), '/', getSystemSoftwareVersion(), ") AppleWebKit/", versionForUAString(), " (KHTML, like Gecko) ", "Version/14.0 Safari/", versionForUAString()));
+    return uaStatic;
+}
+
+String standardUserAgent(const String& applicationName, const String& applicationVersion)
+{
+    // Create a default user agent string with a liberal interpretation of
+    // https://developer.mozilla.org/en-US/docs/User_Agent_Strings_Reference
+    //
+    // Forming a functional user agent is really difficult. We must mention Safari, because some
+    // sites check for that when detecting WebKit browsers. Additionally some sites assume that
+    // browsers that are "Safari" but not running on OS X are the Safari iOS browser. Getting this
+    // wrong can cause sites to load the wrong JavaScript, CSS, or custom fonts. In some cases
+    // sites won't load resources at all.
+    if (applicationName.isEmpty())
+        return standardUserAgentStatic();
+
+    String finalApplicationVersion = applicationVersion;
+    if (finalApplicationVersion.isEmpty())
+        finalApplicationVersion = String::fromUTF8(versionForUAString());
+
+    return makeString(standardUserAgentStatic(), ' ', applicationName, '/', finalApplicationVersion);
 }
 
 String standardUserAgentForURL(const URL&)
 {
-    return emptyString();
+    return standardUserAgentStatic();
 }
 
 } // namespace WebCore

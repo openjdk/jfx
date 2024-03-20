@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,8 @@ import javafx.collections.ObservableMap;
  * Base class for all readonly properties wrapping an {@link javafx.collections.ObservableMap}.
  * This class provides a default implementation to attach listener.
  *
+ * @param <K> the map key type
+ * @param <V> the map value type
  * @see ReadOnlyMapProperty
  * @since JavaFX 2.1
  */

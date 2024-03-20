@@ -29,7 +29,6 @@
 #include "CPU.h"
 #include "Error.h"
 #include "ExceptionHelpers.h"
-#include "JSGlobalObject.h"
 #include "JSObject.h"
 #include "MathCommon.h"
 #include <wtf/CagedUniquePtr.h>
@@ -48,7 +47,7 @@ public:
     using Base = JSCell;
     using Digit = UCPURegister;
 
-    static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal | OverridesToThis;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal | OverridesPut;
     friend class CachedBigInt;
 
     DECLARE_VISIT_CHILDREN;

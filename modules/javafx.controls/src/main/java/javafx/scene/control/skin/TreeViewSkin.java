@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,6 +55,8 @@ import com.sun.javafx.scene.control.behavior.TreeViewBehavior;
 /**
  * Default skin implementation for the {@link TreeView} control.
  *
+ * @param <T> the type of the item contained within the {@code TreeItem} value
+ *      property for all tree items in this TreeView
  * @see TreeView
  * @since 9
  */

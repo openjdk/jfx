@@ -65,7 +65,7 @@ const ClassInfo ObjectConstructor::s_info = { "Function"_s, &InternalFunction::s
   getOwnPropertyDescriptor  objectConstructorGetOwnPropertyDescriptor   DontEnum|Function 2
   getOwnPropertyDescriptors objectConstructorGetOwnPropertyDescriptors  DontEnum|Function 1
   getOwnPropertyNames       objectConstructorGetOwnPropertyNames        DontEnum|Function 1 ObjectGetOwnPropertyNamesIntrinsic
-  getOwnPropertySymbols     objectConstructorGetOwnPropertySymbols      DontEnum|Function 1
+  getOwnPropertySymbols     objectConstructorGetOwnPropertySymbols      DontEnum|Function 1 ObjectGetOwnPropertySymbolsIntrinsic
   keys                      objectConstructorKeys                       DontEnum|Function 1 ObjectKeysIntrinsic
   defineProperty            objectConstructorDefineProperty             DontEnum|Function 3
   defineProperties          objectConstructorDefineProperties           DontEnum|Function 2
@@ -109,6 +109,9 @@ void ObjectConstructor::finishCreation(VM& vm, JSGlobalObject* globalObject, Obj
     JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().valuesPrivateName(), objectConstructorValues, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public);
         JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->hasOwn, objectConstructorHasOwn, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public);
         JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().hasOwnPrivateName(), objectConstructorHasOwn, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public);
+
+    if (Options::useArrayGroupMethod())
+        JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().groupByPublicName(), objectConstructorGroupByCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
 
 // ES 19.1.1.1 Object([value])
@@ -251,17 +254,16 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorGetOwnPropertyNames, (JSGlobalObject* 
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSObject* object = callFrame->argument(0).toObject(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    RELEASE_AND_RETURN(scope, JSValue::encode(ownPropertyKeys(globalObject, object, PropertyNameMode::Strings, DontEnumPropertiesMode::Include, CachedPropertyNamesKind::GetOwnPropertyNames)));
+    RELEASE_AND_RETURN(scope, JSValue::encode(ownPropertyKeys(globalObject, object, PropertyNameMode::Strings, DontEnumPropertiesMode::Include)));
 }
 
-// FIXME: Use the enumeration cache.
 JSC_DEFINE_HOST_FUNCTION(objectConstructorGetOwnPropertySymbols, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSObject* object = callFrame->argument(0).toObject(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    RELEASE_AND_RETURN(scope, JSValue::encode(ownPropertyKeys(globalObject, object, PropertyNameMode::Symbols, DontEnumPropertiesMode::Include, std::nullopt)));
+    RELEASE_AND_RETURN(scope, JSValue::encode(ownPropertyKeys(globalObject, object, PropertyNameMode::Symbols, DontEnumPropertiesMode::Include)));
 }
 
 JSC_DEFINE_HOST_FUNCTION(objectConstructorKeys, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -270,7 +272,7 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorKeys, (JSGlobalObject* globalObject, C
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSObject* object = callFrame->argument(0).toObject(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    RELEASE_AND_RETURN(scope, JSValue::encode(ownPropertyKeys(globalObject, object, PropertyNameMode::Strings, DontEnumPropertiesMode::Exclude, CachedPropertyNamesKind::Keys)));
+    RELEASE_AND_RETURN(scope, JSValue::encode(ownPropertyKeys(globalObject, object, PropertyNameMode::Strings, DontEnumPropertiesMode::Exclude)));
 }
 
 void objectAssignGeneric(JSGlobalObject* globalObject, VM& vm, JSObject* target, JSObject* source)
@@ -324,10 +326,54 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorAssign, (JSGlobalObject* globalObject,
     // FIXME: Extend this for non JSFinalObject. For example, we would like to use this fast path for function objects too.
     // https://bugs.webkit.org/show_bug.cgi?id=185358
     bool targetCanPerformFastPut = jsDynamicCast<JSFinalObject*>(target) && target->canPerformFastPutInlineExcludingProto() && target->isStructureExtensible();
+    unsigned argsCount = callFrame->argumentCount();
+
+    // argsCount == 2 case does not need to use arguments' batching.
+    // We limit argsCount < 5 not to increase properties / values vector super large.
+    if (argsCount > 2 && argsCount < 5 && targetCanPerformFastPut) {
+        bool willBatch = true;
+        for (unsigned i = 1; i < argsCount; ++i) {
+            JSValue sourceValue = callFrame->uncheckedArgument(i);
+            if (!sourceValue.isObject()) {
+                willBatch = false;
+                break;
+            }
+            JSObject* source = asObject(sourceValue);
+            if (!source->staticPropertiesReified() || !source->structure()->canPerformFastPropertyEnumeration()) {
+                willBatch = false;
+                break;
+            }
+        }
+        if (willBatch) {
+            Vector<RefPtr<UniquedStringImpl>, 16> properties;
+            MarkedArgumentBufferWithSize<16> values;
+            for (unsigned i = 1; i < argsCount; ++i) {
+                JSValue sourceValue = callFrame->uncheckedArgument(i);
+                JSObject* source = asObject(sourceValue);
+                source->structure()->forEachProperty(vm, [&](const PropertyTableEntry& entry) -> bool {
+                    if (entry.attributes() & PropertyAttribute::DontEnum)
+                        return true;
+
+                    PropertyName propertyName(entry.key());
+                    if (propertyName.isPrivateName())
+                        return true;
+
+                    properties.append(entry.key());
+                    values.appendWithCrashOnOverflow(source->getDirect(entry.offset()));
+
+                    return true;
+                });
+            }
+
+            // Actually, assigning with empty object (option for example) is common. (`Object.assign(defaultOptions, passedOptions)` where `passedOptions` is empty object.)
+            if (properties.size())
+                target->putOwnDataPropertyBatching(vm, properties.data(), values.data(), properties.size());
+            return JSValue::encode(target);
+        }
+    }
 
     Vector<RefPtr<UniquedStringImpl>, 8> properties;
     MarkedArgumentBuffer values;
-    unsigned argsCount = callFrame->argumentCount();
     for (unsigned i = 1; i < argsCount; ++i) {
         JSValue sourceValue = callFrame->uncheckedArgument(i);
         if (sourceValue.isUndefinedOrNull())
@@ -395,7 +441,7 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorEntries, (JSGlobalObject* globalObject
             Structure* targetStructure = target->structure();
             JSImmutableButterfly* cachedButterfly = nullptr;
             if (LIKELY(!globalObject->isHavingABadTime())) {
-                auto* butterfly = targetStructure->cachedPropertyNames(CachedPropertyNamesKind::Keys);
+                auto* butterfly = targetStructure->cachedPropertyNames(CachedPropertyNamesKind::EnumerableStrings);
                 if (butterfly) {
                     ASSERT(butterfly->length() == properties.size());
                     if (butterfly->length() == properties.size())
@@ -404,7 +450,7 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorEntries, (JSGlobalObject* globalObject
             }
 
             if (!cachedButterfly && properties.size() < MIN_SPARSE_ARRAY_INDEX && !globalObject->isHavingABadTime() && targetStructure->canCacheOwnPropertyNames()) {
-                auto* canSentinel = targetStructure->cachedPropertyNamesIgnoringSentinel(CachedPropertyNamesKind::Keys);
+                auto* canSentinel = targetStructure->cachedPropertyNamesIgnoringSentinel(CachedPropertyNamesKind::EnumerableStrings);
                 if (canSentinel == StructureRareData::cachedPropertyNamesSentinel()) {
                     size_t numProperties = properties.size();
                     auto* newButterfly = JSImmutableButterfly::create(vm, CopyOnWriteArrayWithContiguous, numProperties);
@@ -413,10 +459,10 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorEntries, (JSGlobalObject* globalObject
                         newButterfly->setIndex(vm, i, jsOwnedString(vm, identifier.get()));
                     }
 
-                    targetStructure->setCachedPropertyNames(vm, CachedPropertyNamesKind::Keys, newButterfly);
+                    targetStructure->setCachedPropertyNames(vm, CachedPropertyNamesKind::EnumerableStrings, newButterfly);
                     cachedButterfly = newButterfly;
                 } else
-                    targetStructure->setCachedPropertyNames(vm, CachedPropertyNamesKind::Keys, StructureRareData::cachedPropertyNamesSentinel());
+                    targetStructure->setCachedPropertyNames(vm, CachedPropertyNamesKind::EnumerableStrings, StructureRareData::cachedPropertyNamesSentinel());
             }
 
             for (size_t i = 0; i < properties.size(); ++i) {
@@ -979,71 +1025,82 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorIs, (JSGlobalObject* globalObject, Cal
     return JSValue::encode(jsBoolean(sameValue(globalObject, callFrame->argument(0), callFrame->argument(1))));
 }
 
-JSArray* ownPropertyKeys(JSGlobalObject* globalObject, JSObject* object, PropertyNameMode propertyNameMode, DontEnumPropertiesMode dontEnumPropertiesMode, std::optional<CachedPropertyNamesKind> kind)
+static CachedPropertyNamesKind inferCachedPropertyNamesKind(PropertyNameMode propertyNameMode, DontEnumPropertiesMode dontEnumPropertiesMode)
+{
+    switch (propertyNameMode) {
+    case PropertyNameMode::Strings:
+        return dontEnumPropertiesMode == DontEnumPropertiesMode::Include ? CachedPropertyNamesKind::Strings : CachedPropertyNamesKind::EnumerableStrings;
+    case PropertyNameMode::Symbols:
+        ASSERT(dontEnumPropertiesMode == DontEnumPropertiesMode::Include);
+        return CachedPropertyNamesKind::Symbols;
+    case PropertyNameMode::StringsAndSymbols:
+        ASSERT(dontEnumPropertiesMode == DontEnumPropertiesMode::Include);
+        return CachedPropertyNamesKind::StringsAndSymbols;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+JSArray* ownPropertyKeys(JSGlobalObject* globalObject, JSObject* object, PropertyNameMode propertyNameMode, DontEnumPropertiesMode dontEnumPropertiesMode)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
+    auto kind = inferCachedPropertyNamesKind(propertyNameMode, dontEnumPropertiesMode);
+
+    if (object->inherits<ProxyObject>()) {
+        ProxyObject* proxy = jsCast<ProxyObject*>(object);
+        if (proxy->forwardsGetOwnPropertyNamesToTarget(dontEnumPropertiesMode))
+            object = proxy->target();
+    }
+
     // We attempt to look up own property keys cache in Object.keys / Object.getOwnPropertyNames cases.
-    if (kind) {
         if (LIKELY(!globalObject->isHavingABadTime())) {
-            if (auto* immutableButterfly = object->structure()->cachedPropertyNames(kind.value())) {
+        if (auto* immutableButterfly = object->structure()->cachedPropertyNames(kind)) {
                 Structure* arrayStructure = globalObject->originalArrayStructureForIndexingType(immutableButterfly->indexingMode());
                 return JSArray::createWithButterfly(vm, nullptr, arrayStructure, immutableButterfly->toButterfly());
             }
         }
-    }
 
     PropertyNameArray properties(vm, propertyNameMode, PrivateSymbolMode::Exclude);
     object->methodTable()->getOwnPropertyNames(object, globalObject, properties, dontEnumPropertiesMode);
     RETURN_IF_EXCEPTION(scope, nullptr);
 
-    if (propertyNameMode != PropertyNameMode::StringsAndSymbols) {
-        ASSERT(propertyNameMode == PropertyNameMode::Strings || propertyNameMode == PropertyNameMode::Symbols);
-        if (properties.size() < MIN_SPARSE_ARRAY_INDEX) {
-            if (LIKELY(!globalObject->isHavingABadTime())) {
-                if (kind) {
-                    Structure* structure = object->structure();
-                    if (structure->canCacheOwnPropertyNames()) {
-                        auto* cachedButterfly = structure->cachedPropertyNamesIgnoringSentinel(kind.value());
-                        if (cachedButterfly == StructureRareData::cachedPropertyNamesSentinel()) {
                             size_t numProperties = properties.size();
-                            auto* newButterfly = JSImmutableButterfly::create(vm, CopyOnWriteArrayWithContiguous, numProperties);
+    if (LIKELY(numProperties < MIN_SPARSE_ARRAY_INDEX) && !globalObject->isHavingABadTime()) {
+        auto copyPropertiesToBuffer = [&](WriteBarrier<Unknown>* buffer, JSCell* owner) {
                             for (size_t i = 0; i < numProperties; i++) {
                                 const auto& identifier = properties[i];
-                                ASSERT(!identifier.isSymbol());
-                                newButterfly->setIndex(vm, i, jsOwnedString(vm, identifier.string()));
+                if (propertyNameMode != PropertyNameMode::Strings && identifier.isSymbol()) {
+                    ASSERT(!identifier.isPrivateName());
+                    buffer[i].set(vm, owner, Symbol::create(vm, static_cast<SymbolImpl&>(*identifier.impl())));
+                } else
+                    buffer[i].set(vm, owner, jsOwnedString(vm, identifier.string()));
                             }
+        };
 
-                            structure->setCachedPropertyNames(vm, kind.value(), newButterfly);
+        Structure* structure = object->structure();
+        if (structure->canCacheOwnPropertyNames()) {
+            auto* cachedButterfly = structure->cachedPropertyNamesIgnoringSentinel(kind);
+            if (cachedButterfly == StructureRareData::cachedPropertyNamesSentinel()) {
+                auto* newButterfly = JSImmutableButterfly::create(vm, CopyOnWriteArrayWithContiguous, numProperties);
+                copyPropertiesToBuffer(newButterfly->toButterfly()->contiguous().data(), newButterfly);
+
+                structure->setCachedPropertyNames(vm, kind, newButterfly);
                             Structure* arrayStructure = globalObject->originalArrayStructureForIndexingType(newButterfly->indexingMode());
                             return JSArray::createWithButterfly(vm, nullptr, arrayStructure, newButterfly->toButterfly());
                         }
 
                         if (cachedButterfly == nullptr)
-                            structure->setCachedPropertyNames(vm, kind.value(), StructureRareData::cachedPropertyNamesSentinel());
-                    }
+                structure->setCachedPropertyNames(vm, kind, StructureRareData::cachedPropertyNamesSentinel());
                 }
 
-                size_t numProperties = properties.size();
                 // FIXME: We should probably be calling tryCreate here:
                 // https://bugs.webkit.org/show_bug.cgi?id=221984
                 JSArray* keys = JSArray::create(vm, globalObject->originalArrayStructureForIndexingType(ArrayWithContiguous), numProperties);
-                WriteBarrier<Unknown>* buffer = keys->butterfly()->contiguous().data();
-                for (size_t i = 0; i < numProperties; i++) {
-                    const auto& identifier = properties[i];
-                    if (propertyNameMode == PropertyNameMode::Strings) {
-                        ASSERT(!identifier.isSymbol());
-                        buffer[i].set(vm, keys, jsOwnedString(vm, identifier.string()));
-                    } else {
-                        ASSERT(identifier.isSymbol());
-                        buffer[i].set(vm, keys, Symbol::create(vm, static_cast<SymbolImpl&>(*identifier.impl())));
-                    }
-                }
+        copyPropertiesToBuffer(keys->butterfly()->contiguous().data(), keys);
+
                 return keys;
             }
-        }
-    }
 
     JSArray* keys = constructEmptyArray(globalObject, nullptr);
     RETURN_IF_EXCEPTION(scope, nullptr);
@@ -1055,7 +1112,6 @@ JSArray* ownPropertyKeys(JSGlobalObject* globalObject, JSObject* object, Propert
 
     switch (propertyNameMode) {
     case PropertyNameMode::Strings: {
-        size_t numProperties = properties.size();
         for (size_t i = 0; i < numProperties; i++) {
             const auto& identifier = properties[i];
             ASSERT(!identifier.isSymbol());
@@ -1066,7 +1122,6 @@ JSArray* ownPropertyKeys(JSGlobalObject* globalObject, JSObject* object, Propert
     }
 
     case PropertyNameMode::Symbols: {
-        size_t numProperties = properties.size();
         for (size_t i = 0; i < numProperties; i++) {
             const auto& identifier = properties[i];
             ASSERT(identifier.isSymbol());
@@ -1078,7 +1133,6 @@ JSArray* ownPropertyKeys(JSGlobalObject* globalObject, JSObject* object, Propert
     }
 
     case PropertyNameMode::StringsAndSymbols: {
-        size_t numProperties = properties.size();
         for (size_t i = 0; i < numProperties; i++) {
             const auto& identifier = properties[i];
             if (identifier.isSymbol()) {

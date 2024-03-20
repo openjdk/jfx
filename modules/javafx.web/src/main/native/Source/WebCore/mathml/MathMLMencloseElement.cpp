@@ -30,7 +30,6 @@
 #if ENABLE(MATHML)
 
 #include "ElementInlines.h"
-#include "HTMLParserIdioms.h"
 #include "MathMLNames.h"
 #include "RenderMathMLMenclose.h"
 #include <wtf/IsoMallocInlines.h>
@@ -114,12 +113,12 @@ void MathMLMencloseElement::parseNotationAttribute()
     unsigned length = value.length();
     unsigned start = 0;
     while (start < length) {
-        if (isHTMLSpace(value[start])) {
+        if (isASCIIWhitespace(value[start])) {
             start++;
             continue;
         }
         unsigned end = start + 1;
-        while (end < length && !isHTMLSpace(value[end]))
+        while (end < length && !isASCIIWhitespace(value[end]))
             end++;
         addNotationFlags(value.substring(start, end - start));
         start = end;
@@ -133,12 +132,12 @@ bool MathMLMencloseElement::hasNotation(MencloseNotationFlag notationFlag)
     return m_notationFlags.value() & notationFlag;
 }
 
-void MathMLMencloseElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void MathMLMencloseElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     if (name == notationAttr)
         m_notationFlags = std::nullopt;
 
-    MathMLRowElement::parseAttribute(name, value);
+    MathMLRowElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 }

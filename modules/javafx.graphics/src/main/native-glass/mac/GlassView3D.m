@@ -35,6 +35,8 @@
 #import "GlassLayer3D.h"
 #import "GlassApplication.h"
 
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 //#define VERBOSE
 #ifndef VERBOSE
     #define LOG(MSG, ...)
@@ -245,7 +247,8 @@
         [self addTrackingArea: self->_trackingArea];
         self->nsAttrBuffer = [[NSAttributedString alloc] initWithString:@""];
         self->imEnabled = NO;
-        self->shouldProcessKeyEvent = YES;
+        self->handlingKeyEvent = NO;
+        self->didCommitText = NO;
     }
     return self;
 }
@@ -378,12 +381,9 @@
 - (void)mouseDown:(NSEvent *)theEvent
 {
     MOUSELOG("mouseDown");
-    // First check if system Input Method Engine needs to handle this event
-    NSInputManager *inputManager = [NSInputManager currentInputManager];
-    if ([inputManager wantsToHandleMouseEvents]) {
-        if ([inputManager handleMouseEvent:theEvent]) {
-            return;
-        }
+    // First check if system Input Context needs to handle this event
+    if ([self.inputContext handleEvent:theEvent]) {
+        return;
     }
     [self->_delegate sendJavaMouseEvent:theEvent];
 }
@@ -474,10 +474,10 @@
     // create extra KeyEvents.
     //
     NSString *chars = [theEvent charactersIgnoringModifiers];
-    if ([theEvent type] == NSKeyDown && [chars length] > 0)
+    if ([theEvent type] == NSEventTypeKeyDown && [chars length] > 0)
     {
         unichar uch = [chars characterAtIndex:0];
-        if ([theEvent modifierFlags] & NSCommandKeyMask &&
+        if ([theEvent modifierFlags] & NSEventModifierFlagCommand &&
             (uch == com_sun_glass_events_KeyEvent_VK_PERIOD ||
              uch == com_sun_glass_events_KeyEvent_VK_EQUALS))
         {
@@ -511,11 +511,25 @@
 {
     KEYLOG("keyDown");
 
-    if (![[self inputContext] handleEvent:theEvent] || shouldProcessKeyEvent) {
+    handlingKeyEvent = YES;
+    didCommitText = NO;
+    BOOL hadMarkedText = (nsAttrBuffer.length > 0);
+    BOOL inputContextHandledEvent = (imEnabled && [self.inputContext handleEvent:theEvent]);
+    handlingKeyEvent = NO;
+
+    if (didCommitText) {
+        // Exit composition mode
+        didCommitText = NO;
+        nsAttrBuffer = [nsAttrBuffer initWithString: @""];
+    } else if (hadMarkedText) {
+        // Either we still have marked text or the keystroke removed it
+        // (ESC can do that). In either case we don't want to generate a key
+        // event.
+        ;
+    } else if (!inputContextHandledEvent || (nsAttrBuffer.length == 0)) {
         [GlassApplication registerKeyEvent:theEvent];
         [self->_delegate sendJavaKeyEvent:theEvent isDown:YES];
     }
-    shouldProcessKeyEvent = YES;
 }
 
 - (void)keyUp:(NSEvent *)theEvent
@@ -713,38 +727,65 @@
 - (void)setInputMethodEnabled:(BOOL)enabled
 {
     IMLOG("setInputMethodEnabled called with arg is %s", (enabled ? "YES" : "NO") );
+    if (enabled != imEnabled) {
+        // If enabled is false this has nowhere to go. If enabled is true this
+        // wasn't intended for the newly focused node.
+        if (nsAttrBuffer.length) {
+            nsAttrBuffer = [nsAttrBuffer initWithString:@""];
+        }
+        [self.inputContext discardMarkedText];
+        imEnabled = enabled;
+    }
+}
+
+- (void)finishInputMethodComposition
+{
+    IMLOG("finishInputMethodComposition called");
     [self unmarkText];
-    self->imEnabled = enabled;
+    [self.inputContext discardMarkedText];
 }
 
 /*
  NSTextInputClient protocol implementation follows here.
  */
 
+// Utility function, not part of protocol
+- (void)commitString:(NSString*)aString
+{
+    [self->_delegate notifyInputMethod:aString attr:4 length:(int)[aString length] cursor:(int)[aString length] selectedRange: NSMakeRange(NSNotFound, 0)];
+}
+
 - (void)doCommandBySelector:(SEL)aSelector
 {
     IMLOG("doCommandBySelector called ");
-    // In case the IM was stopped with a mouse and the next typed key
-    // is a special command key (backspace, tab, etc.)
-    self->shouldProcessKeyEvent = YES;
+    // According to Apple an NSResponder will send this up the responder chain
+    // but a text input client should not. So we ignore this which avoids an
+    // annoying beep.
 }
 
 - (void) insertText:(id)aString replacementRange:(NSRange)replacementRange
 {
     IMLOG("insertText called with string: %s", [aString UTF8String]);
     if ([self->nsAttrBuffer length] > 0 || [aString length] > 1) {
-        [self->_delegate notifyInputMethod:aString attr:4 length:(int)[aString length] cursor:(int)[aString length] selectedRange: NSMakeRange(NSNotFound, 0)];
-        self->shouldProcessKeyEvent = NO;
-    } else {
-        self->shouldProcessKeyEvent = YES;
+        self->didCommitText = YES;
+        [self commitString: aString];
     }
-    self->nsAttrBuffer = [self->nsAttrBuffer initWithString:@""];
+
+    // If a user tries to enter an invalid character using a dead key
+    // combination (like, say, a q with a grave accent) insertText will be
+    // called twice on the last keystroke, first with the accent and then
+    // with the letter. We want both inserts to be handled as committed text
+    // so we defer exiting composition mode until the keystroke is processed.
+    // We only defer on keystrokes because sometimes insertText is called
+    // when a mouse event dismisses the IM window.
+    if (!self->handlingKeyEvent) {
+        self->nsAttrBuffer = [self->nsAttrBuffer initWithString:@""];
+    }
 }
 
 - (void) setMarkedText:(id)aString selectedRange:(NSRange)selectionRange replacementRange:(NSRange)replacementRange
 {
     if (!self->imEnabled) {
-        self->shouldProcessKeyEvent = YES;
         return;
     }
     BOOL isAttributedString = [aString isKindOfClass:[NSAttributedString class]];
@@ -754,17 +795,15 @@
     [self->_delegate notifyInputMethod:incomingString attr:1 length:0 cursor:(int)[incomingString length] selectedRange:selectionRange ];
     self->nsAttrBuffer = (attrString == nil ? [self->nsAttrBuffer initWithString:incomingString]
                                             : [self->nsAttrBuffer initWithAttributedString: attrString]);
-    self->shouldProcessKeyEvent = NO;
 }
 
 - (void) unmarkText
 {
     IMLOG("unmarkText called\n");
-    if (self->nsAttrBuffer != nil && self->nsAttrBuffer.length != 0) {
-        self->nsAttrBuffer = [self->nsAttrBuffer initWithString:@""];
-        [self->_delegate notifyInputMethod:@"" attr:4 length:0 cursor:0 selectedRange: NSMakeRange(NSNotFound, 0)];
+    if (nsAttrBuffer.length != 0) {
+        [self commitString: nsAttrBuffer.string];
+        nsAttrBuffer = [nsAttrBuffer initWithString:@""];
     }
-    self->shouldProcessKeyEvent = YES;
 }
 
 - (BOOL) hasMarkedText
@@ -810,8 +849,10 @@
     IMLOG("firstRectForCharacterRange called %lu %lu",
           (unsigned long)theRange.location, (unsigned long)theRange.length);
     NSRect result = [self->_delegate getInputMethodCandidatePosRequest:0];
-    NSRect screenFrame = [[NSScreen mainScreen] frame];
-    result.origin.y = screenFrame.size.height - result.origin.y;
+    if (NSScreen.screens.count) {
+        NSRect screenFrame = NSScreen.screens[0].frame;
+        result.origin.y = screenFrame.size.height - result.origin.y;
+    }
     return result;
 }
 

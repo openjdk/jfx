@@ -62,7 +62,7 @@ DragImageRef createDragImageIconForCachedImage(CachedImage *cimg)
     return createDragImageFromImage(cimg->image(), ImageOrientation::Orientation::None); // todo tav valid orientation?
 }
 
-DragImageRef createDragImageForLink(Element&, URL&, const String&, TextIndicatorData&, FontRenderingMode, float)
+DragImageRef createDragImageForLink(Element&, URL&, const String&, TextIndicatorData&, float)
 {
     return nullptr;
 }

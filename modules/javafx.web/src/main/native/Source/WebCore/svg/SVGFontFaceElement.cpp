@@ -32,7 +32,7 @@
 #include "CSSValueKeywords.h"
 #include "CSSValueList.h"
 #include "Document.h"
-#include "ElementIterator.h"
+#include "ElementChildIteratorInlines.h"
 #include "FontCascade.h"
 #include "Logging.h"
 #include "MutableStyleProperties.h"
@@ -72,13 +72,13 @@ Ref<SVGFontFaceElement> SVGFontFaceElement::create(const QualifiedName& tagName,
     return adoptRef(*new SVGFontFaceElement(tagName, document));
 }
 
-void SVGFontFaceElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGFontFaceElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     CSSPropertyID propertyId = cssPropertyIdForSVGAttributeName(name);
     if (propertyId > 0) {
         // FIXME: Parse using the @font-face descriptor grammars, not the property grammars.
         auto& properties = m_fontFaceRule->mutableProperties();
-        bool valueChanged = properties.setProperty(propertyId, value);
+        bool valueChanged = properties.setProperty(propertyId, newValue);
 
         if (valueChanged) {
             // The above parser is designed for the font-face properties, not descriptors, and the properties accept the global keywords, but descriptors don't.
@@ -94,7 +94,7 @@ void SVGFontFaceElement::parseAttribute(const QualifiedName& name, const AtomStr
         return;
     }
 
-    SVGElement::parseAttribute(name, value);
+    SVGElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 unsigned SVGFontFaceElement::unitsPerEm() const
@@ -274,9 +274,7 @@ void SVGFontFaceElement::rebuildFontFace()
 
     if (describesParentFont) {
         m_fontElement = downcast<SVGFontElement>(parentNode());
-
-        list = CSSValueList::createCommaSeparated();
-        list->append(CSSFontFaceSrcLocalValue::create(AtomString { fontFamily() }));
+        list = CSSValueList::createCommaSeparated(CSSFontFaceSrcLocalValue::create(AtomString { fontFamily() }));
     } else {
         m_fontElement = nullptr;
         if (srcElement)
@@ -293,7 +291,7 @@ void SVGFontFaceElement::rebuildFontFace()
         // Traverse parsed CSS values and associate CSSFontFaceSrcLocalValue elements with ourselves.
         if (auto* srcList = downcast<CSSValueList>(m_fontFaceRule->properties().getPropertyCSSValue(CSSPropertySrc).get())) {
             for (auto& item : *srcList)
-                downcast<CSSFontFaceSrcLocalValue>(item.get()).setSVGFontFaceElement(*this);
+                downcast<CSSFontFaceSrcLocalValue>(const_cast<CSSValue&>(item)).setSVGFontFaceElement(*this);
         }
     }
 
@@ -302,7 +300,7 @@ void SVGFontFaceElement::rebuildFontFace()
 
 Node::InsertedIntoAncestorResult SVGFontFaceElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
-    SVGElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+    auto result = SVGElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
     if (!insertionType.connectedToDocument) {
         ASSERT(!m_fontElement);
         return InsertedIntoAncestorResult::Done;
@@ -310,7 +308,7 @@ Node::InsertedIntoAncestorResult SVGFontFaceElement::insertedIntoAncestor(Insert
     document().accessSVGExtensions().registerSVGFontFaceElement(*this);
 
     rebuildFontFace();
-    return InsertedIntoAncestorResult::Done;
+    return result;
 }
 
 void SVGFontFaceElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)

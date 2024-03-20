@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -80,6 +80,7 @@ import java.util.List;
  * {@link javafx.scene.control.ListView}, {@link javafx.scene.control.TreeView},
  * {@link javafx.scene.control.TableView}, and {@link javafx.scene.control.TreeTableView}.
  *
+ * @param <T> The type of the item contained within the virtual flow cells
  * @since 9
  */
 public class VirtualFlow<T extends IndexedCell> extends Region {

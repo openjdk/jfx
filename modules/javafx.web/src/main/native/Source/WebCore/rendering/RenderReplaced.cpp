@@ -29,7 +29,6 @@
 #include "DocumentMarkerController.h"
 #include "ElementRuleCollector.h"
 #include "FloatRoundedRect.h"
-#include "Frame.h"
 #include "GraphicsContext.h"
 #include "HTMLElement.h"
 #include "HTMLImageElement.h"
@@ -37,13 +36,17 @@
 #include "HighlightData.h"
 #include "HighlightRegister.h"
 #include "InlineIteratorBox.h"
-#include "InlineIteratorLineBox.h"
+#include "InlineIteratorLineBoxInlines.h"
 #include "LayoutRepainter.h"
 #include "LineSelection.h"
+#include "LocalFrame.h"
 #include "RenderBlock.h"
+#include "RenderBoxInlines.h"
+#include "RenderElementInlines.h"
 #include "RenderFragmentedFlow.h"
 #include "RenderImage.h"
 #include "RenderLayer.h"
+#include "RenderStyleInlines.h"
 #include "RenderTheme.h"
 #include "RenderVideo.h"
 #include "RenderView.h"
@@ -53,6 +56,7 @@
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
 #include <wtf/TypeCasts.h>
+
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderReplaced);
@@ -217,8 +221,13 @@ void RenderReplaced::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
         if (visibleToHitTesting()) {
             auto borderRect = LayoutRect(adjustedPaintOffset, size());
             auto borderRegion = approximateAsRegion(style().getRoundedBorderFor(borderRect));
-            paintInfo.eventRegionContext->unite(borderRegion, *this, style());
+            paintInfo.eventRegionContext()->unite(borderRegion, *this, style());
         }
+        return;
+        }
+
+    if (paintInfo.phase == PaintPhase::Accessibility) {
+        paintInfo.accessibilityRegionContext()->takeBounds(*this, adjustedPaintOffset);
         return;
     }
 
@@ -279,7 +288,7 @@ void RenderReplaced::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
     }
 
     if (!completelyClippedOut) {
-        if (!shouldSkipContent())
+        if (!isSkippedContentRoot())
         paintReplaced(paintInfo, adjustedPaintOffset);
 
         if (style().hasBorderRadius())
@@ -311,7 +320,8 @@ bool RenderReplaced::shouldPaint(PaintInfo& paintInfo, const LayoutPoint& paintO
         && paintInfo.phase != PaintPhase::SelfOutline
         && paintInfo.phase != PaintPhase::Selection
         && paintInfo.phase != PaintPhase::Mask
-        && paintInfo.phase != PaintPhase::EventRegion)
+        && paintInfo.phase != PaintPhase::EventRegion
+        && paintInfo.phase != PaintPhase::Accessibility)
         return false;
 
     if (!paintInfo.shouldPaintWithinRoot(*this))
@@ -398,7 +408,7 @@ static bool isVideoWithDefaultObjectSize(const RenderReplaced* maybeVideo)
 void RenderReplaced::computeAspectRatioInformationForRenderBox(RenderBox* contentRenderer, FloatSize& constrainedSize, FloatSize& intrinsicRatio) const
 {
     FloatSize intrinsicSize;
-    if (shouldApplySizeContainment())
+    if (shouldApplySizeOrInlineSizeContainment())
         RenderReplaced::computeIntrinsicRatioInformation(intrinsicSize, intrinsicRatio);
     else if (contentRenderer) {
         contentRenderer->computeIntrinsicRatioInformation(intrinsicSize, intrinsicRatio);
@@ -508,7 +518,7 @@ RoundedRect RenderReplaced::roundedContentBoxRect() const
 void RenderReplaced::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, FloatSize& intrinsicRatio) const
 {
     // If there's an embeddedContentBox() of a remote, referenced document available, this code-path should never be used.
-    ASSERT(!embeddedContentBox() || shouldApplySizeContainment());
+    ASSERT(!embeddedContentBox() || shouldApplySizeOrInlineSizeContainment());
     intrinsicSize = FloatSize(intrinsicLogicalWidth(), intrinsicLogicalHeight());
 
     if (style().hasAspectRatio()) {
@@ -568,8 +578,6 @@ LayoutUnit RenderReplaced::computeReplacedLogicalWidth(ShouldComputePreferred sh
 {
     if (style().logicalWidth().isSpecified())
         return computeReplacedLogicalWidthRespectingMinMaxWidth(computeReplacedLogicalWidthUsing(MainOrPreferredSize, style().logicalWidth()), shouldComputePreferred);
-    if (shouldApplyInlineSizeContainment())
-        return LayoutUnit();
     if (style().logicalWidth().isIntrinsic())
         return computeReplacedLogicalWidthRespectingMinMaxWidth(computeReplacedLogicalWidthUsing(MainOrPreferredSize, style().logicalWidth()), shouldComputePreferred);
 
@@ -582,8 +590,8 @@ LayoutUnit RenderReplaced::computeReplacedLogicalWidth(ShouldComputePreferred sh
 
     if (style().logicalWidth().isAuto()) {
         bool computedHeightIsAuto = style().logicalHeight().isAuto();
-        bool hasIntrinsicWidth = constrainedSize.width() > 0;
-        bool hasIntrinsicHeight = constrainedSize.height() > 0;
+        bool hasIntrinsicWidth = constrainedSize.width() > 0 || shouldApplySizeOrInlineSizeContainment();
+        bool hasIntrinsicHeight = constrainedSize.height() > 0 || shouldApplySizeContainment();
 
         // For flex or grid items where the logical height has been overriden then we should use that size to compute the replaced width as long as the flex or
         // grid item has an intrinsic size. It is possible (indeed, common) for an SVG graphic to have an intrinsic aspect ratio but not to have an intrinsic
@@ -652,8 +660,8 @@ LayoutUnit RenderReplaced::computeReplacedLogicalHeight(std::optional<LayoutUnit
     computeIntrinsicSizesConstrainedByTransferredMinMaxSizes(contentRenderer, constrainedSize, intrinsicRatio);
 
     bool widthIsAuto = style().logicalWidth().isAuto();
-    bool hasIntrinsicHeight = constrainedSize.height() > 0;
-    bool hasIntrinsicWidth = constrainedSize.width() > 0;
+    bool hasIntrinsicHeight = constrainedSize.height() > 0 || shouldApplySizeContainment();
+    bool hasIntrinsicWidth = constrainedSize.width() > 0 || shouldApplySizeOrInlineSizeContainment();
 
     // See computeReplacedLogicalHeight() for a similar check for heights.
     if (!intrinsicRatio.isEmpty() && (isFlexItem() || isGridItem()) && hasOverridingLogicalWidth() && hasIntrinsicSize(contentRenderer, hasIntrinsicWidth, hasIntrinsicHeight))
@@ -838,6 +846,16 @@ bool RenderReplaced::needsPreferredWidthsRecalculation() const
 {
     // If the height is a percentage and the width is auto, then the containingBlocks's height changing can cause this node to change it's preferred width because it maintains aspect ratio.
     return (hasRelativeLogicalHeight() || (isGridItem() && hasStretchedLogicalHeight())) && style().logicalWidth().isAuto();
+}
+
+LayoutSize RenderReplaced::intrinsicSize() const
+{
+    LayoutSize size = m_intrinsicSize;
+    if (isHorizontalWritingMode() ? shouldApplySizeOrInlineSizeContainment() : shouldApplySizeContainment())
+        size.setWidth(explicitIntrinsicInnerWidth().value_or(0));
+    if (isHorizontalWritingMode() ? shouldApplySizeContainment() : shouldApplySizeOrInlineSizeContainment())
+        size.setHeight(explicitIntrinsicInnerHeight().value_or(0));
+    return size;
 }
 
 }

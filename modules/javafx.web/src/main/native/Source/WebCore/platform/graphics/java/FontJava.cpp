@@ -171,4 +171,20 @@ bool Font::platformSupportsCodePoint(UChar32 character, std::optional<UChar32> v
     return variation ? false : glyphForCharacter(character);
 }
 
+ResolvedEmojiPolicy FontCascade::resolveEmojiPolicy(FontVariantEmoji fontVariantEmoji, UChar32)
+{
+    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=259205 We can't return RequireText or RequireEmoji
+    // unless we have a way of knowing whether a font/glyph is color or not.
+    switch (fontVariantEmoji) {
+    case FontVariantEmoji::Normal:
+    case FontVariantEmoji::Unicode:
+        return ResolvedEmojiPolicy::NoPreference;
+    case FontVariantEmoji::Text:
+        return ResolvedEmojiPolicy::RequireText;
+    case FontVariantEmoji::Emoji:
+        return ResolvedEmojiPolicy::RequireEmoji;
+    }
+    return ResolvedEmojiPolicy::NoPreference;
+}
+
 }

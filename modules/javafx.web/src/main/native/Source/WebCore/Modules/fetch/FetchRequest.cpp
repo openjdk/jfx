@@ -33,6 +33,7 @@
 #include "HTTPParsers.h"
 #include "JSAbortSignal.h"
 #include "Logging.h"
+#include "OriginAccessPatterns.h"
 #include "Quirks.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
@@ -64,13 +65,13 @@ static ExceptionOr<String> computeReferrer(ScriptExecutionContext& context, cons
     if (referrerURL.protocolIsAbout() && referrerURL.path() == "client"_s)
         return "client"_str;
 
-    if (!(context.securityOrigin() && context.securityOrigin()->canRequest(referrerURL)))
+    if (!(context.securityOrigin() && context.securityOrigin()->canRequest(referrerURL, OriginAccessPatternsForWebProcess::singleton())))
         return "client"_str;
 
     return String { referrerURL.string() };
 }
 
-static std::optional<Exception> buildOptions(FetchOptions& options, ResourceRequest& request, String& referrer, ScriptExecutionContext& context, const FetchRequest::Init& init)
+static std::optional<Exception> buildOptions(FetchOptions& options, ResourceRequest& request, String& referrer, RequestPriority& fetchPriorityHint, ScriptExecutionContext& context, const FetchRequest::Init& init)
 {
     if (!init.window.isUndefinedOrNull() && !init.window.isEmpty())
         return Exception { TypeError, "Window can only be null."_s };
@@ -91,6 +92,9 @@ static std::optional<Exception> buildOptions(FetchOptions& options, ResourceRequ
 
     if (init.referrerPolicy)
         options.referrerPolicy = init.referrerPolicy.value();
+
+    if (init.priority)
+        fetchPriorityHint = *init.priority;
 
     if (init.mode) {
         options.mode = init.mode.value();
@@ -137,14 +141,13 @@ inline FetchRequest::FetchRequest(ScriptExecutionContext& context, std::optional
     , m_signal(AbortSignal::create(&context))
 {
     m_request.setRequester(ResourceRequestRequester::Fetch);
-    updateContentType();
 }
 
 ExceptionOr<void> FetchRequest::initializeOptions(const Init& init)
 {
     ASSERT(scriptExecutionContext());
 
-    auto exception = buildOptions(m_options, m_request, m_referrer, *scriptExecutionContext(), init);
+    auto exception = buildOptions(m_options, m_request, m_referrer, m_fetchPriorityHint, *scriptExecutionContext(), init);
     if (exception)
         return WTFMove(exception.value());
 
@@ -211,8 +214,6 @@ ExceptionOr<void> FetchRequest::initializeWith(const String& url, Init&& init)
             return setBodyResult.releaseException();
     }
 
-
-    updateContentType();
     return { };
 }
 
@@ -223,6 +224,7 @@ ExceptionOr<void> FetchRequest::initializeWith(FetchRequest& input, Init&& init)
 
     m_options = input.m_options;
     m_referrer = input.m_referrer;
+    m_fetchPriorityHint = input.m_fetchPriorityHint;
 
     auto optionsResult = initializeOptions(init);
     if (optionsResult.hasException())
@@ -243,15 +245,16 @@ ExceptionOr<void> FetchRequest::initializeWith(FetchRequest& input, Init&& init)
         auto fillResult = init.headers ? m_headers->fill(*init.headers) : m_headers->fill(input.headers());
         if (fillResult.hasException())
             return fillResult;
-    } else
+        m_navigationPreloadIdentifier = { };
+    } else {
         m_headers->setInternalHeaders(HTTPHeaderMap { input.headers().internalHeaders() });
+        m_navigationPreloadIdentifier = input.m_navigationPreloadIdentifier;
+    }
 
     auto setBodyResult = init.body ? setBody(WTFMove(*init.body)) : setBody(input);
     if (setBodyResult.hasException())
         return setBodyResult;
 
-
-    updateContentType();
     return { };
 }
 

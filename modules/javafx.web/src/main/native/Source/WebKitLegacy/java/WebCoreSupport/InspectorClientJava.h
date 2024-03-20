@@ -35,6 +35,7 @@ class InspectorClientJava final
     : public InspectorClient,
       public Inspector::FrontendChannel
 {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     InspectorClientJava(const JLObject &webPage);
 

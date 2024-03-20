@@ -30,6 +30,7 @@
 #include "config.h"
 #include "StyleBuilder.h"
 
+#include "CSSCustomPropertyValue.h"
 #include "CSSFontSelector.h"
 #include "CSSPaintImageValue.h"
 #include "CSSPendingSubstitutionValue.h"
@@ -40,6 +41,7 @@
 #include "Document.h"
 #include "HTMLElement.h"
 #include "PaintWorkletGlobalScope.h"
+#include "RenderStyle.h"
 #include "Settings.h"
 #include "StyleBuilderGenerated.h"
 #include "StyleFontSizeFunctions.h"
@@ -79,7 +81,7 @@ inline bool isValidVisitedLinkProperty(CSSPropertyID id)
     return false;
 }
 
-Builder::Builder(RenderStyle& style, BuilderContext&& context, const MatchResult& matchResult, CascadeLevel cascadeLevel, PropertyCascade::IncludedProperties includedProperties, const HashSet<AnimatableProperty>* animatedPropertes)
+Builder::Builder(RenderStyle& style, BuilderContext&& context, const MatchResult& matchResult, CascadeLevel cascadeLevel, OptionSet<PropertyCascade::PropertyType> includedProperties, const HashSet<AnimatableProperty>* animatedPropertes)
     : m_cascade(matchResult, cascadeLevel, includedProperties, animatedPropertes)
     , m_state(*this, style, WTFMove(context))
 {

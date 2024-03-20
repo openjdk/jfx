@@ -62,13 +62,13 @@ struct AuthenticatorResponseData {
 template<class Encoder>
 static void encodeArrayBuffer(Encoder& encoder, const ArrayBuffer& buffer)
 {
-    encoder << Span { reinterpret_cast<const uint8_t*>(buffer.data()), buffer.byteLength() };
+    encoder << std::span(reinterpret_cast<const uint8_t*>(buffer.data()), buffer.byteLength());
 }
 
 template<class Decoder>
 RefPtr<ArrayBuffer> WARN_UNUSED_RETURN decodeArrayBuffer(Decoder& decoder)
 {
-    std::optional<Span<const uint8_t>> buffer;
+    std::optional<std::span<const uint8_t>> buffer;
     decoder >> buffer;
     if (!buffer)
         return nullptr;

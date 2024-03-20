@@ -51,7 +51,6 @@ public:
     void* visual() const;
     bool supportsXComposite() const;
     bool supportsXDamage(std::optional<int>& damageEventBase, std::optional<int>& damageErrorBase) const;
-    bool supportsGLX(std::optional<int>& glxErrorBase) const;
 
 private:
     explicit PlatformDisplayX11(::Display*);
@@ -64,6 +63,9 @@ private:
     Type type() const override { return PlatformDisplay::Type::X11; }
 
 #if USE(EGL)
+#if PLATFORM(GTK)
+    EGLDisplay gtkEGLDisplay() override;
+#endif
     void initializeEGLDisplay() override;
 #endif
 
@@ -80,10 +82,6 @@ private:
     mutable std::optional<bool> m_supportsXDamage;
     mutable std::optional<int> m_damageEventBase;
     mutable std::optional<int> m_damageErrorBase;
-#if USE(GLX)
-    mutable std::optional<bool> m_supportsGLX;
-    mutable std::optional<int> m_glxErrorBase;
-#endif
     mutable void* m_visual { nullptr };
 };
 

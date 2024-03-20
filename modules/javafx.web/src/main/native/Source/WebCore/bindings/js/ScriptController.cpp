@@ -29,17 +29,17 @@
 #include "DocumentInlines.h"
 #include "DocumentLoader.h"
 #include "Event.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "HTMLPlugInElement.h"
 #include "InspectorInstrumentation.h"
 #include "JSDOMBindingSecurity.h"
 #include "JSDOMExceptionHandling.h"
-#include "JSDOMWindow.h"
 #include "JSDocument.h"
 #include "JSExecState.h"
+#include "JSLocalDOMWindow.h"
 #include "LoadableModuleScript.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "Logging.h"
 #include "ModuleFetchFailureKind.h"
 #include "ModuleFetchParameters.h"
@@ -97,7 +97,7 @@ void ScriptController::initializeMainThread()
     WTF::registerProfileGenerationCallback<WebCoreProfileTag>("WebCore");
 }
 
-ScriptController::ScriptController(Frame& frame)
+ScriptController::ScriptController(LocalFrame& frame)
     : m_frame(frame)
     , m_sourceURL(0)
     , m_paused(false)
@@ -217,7 +217,7 @@ JSC::JSValue ScriptController::linkAndEvaluateModuleScriptInWorld(LoadableModule
 
     // FIXME: Preventing Frame from being destroyed is essentially unnecessary.
     // https://bugs.webkit.org/show_bug.cgi?id=164763
-    Ref<Frame> protector(m_frame);
+    Ref protectedFrame { m_frame };
 
     NakedPtr<JSC::Exception> evaluationException;
     auto returnValue = JSExecState::linkAndEvaluateModule(lexicalGlobalObject, Identifier::fromUid(vm, moduleScript.moduleKey()), jsUndefined(), evaluationException);
@@ -289,7 +289,7 @@ void ScriptController::initScriptForWindowProxy(JSWindowProxy& windowProxy)
     JSC::VM& vm = world.vm();
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
-    jsCast<JSDOMWindow*>(windowProxy.window())->updateDocument();
+    jsCast<JSLocalDOMWindow*>(windowProxy.window())->updateDocument();
     EXCEPTION_ASSERT_UNUSED(scope, !scope.exception());
 
     if (Document* document = m_frame.document())
@@ -441,7 +441,7 @@ void ScriptController::setWebAssemblyEnabled(bool value, const String& errorMess
     jsWindowProxy->window()->setWebAssemblyEnabled(value, errorMessage);
 }
 
-bool ScriptController::canAccessFromCurrentOrigin(Frame* frame, Document& accessingDocument)
+bool ScriptController::canAccessFromCurrentOrigin(LocalFrame* frame, Document& accessingDocument)
 {
     auto* lexicalGlobalObject = JSExecState::currentState();
 
@@ -458,13 +458,13 @@ void ScriptController::updateDocument()
 {
     for (auto& jsWindowProxy : windowProxy().jsWindowProxiesAsVector()) {
         JSLockHolder lock(jsWindowProxy->world().vm());
-        jsCast<JSDOMWindow*>(jsWindowProxy->window())->updateDocument();
+        jsCast<JSLocalDOMWindow*>(jsWindowProxy->window())->updateDocument();
     }
 }
 
 Bindings::RootObject* ScriptController::cacheableBindingRootObject()
 {
-    if (!canExecuteScripts(NotAboutToExecuteScript))
+    if (!canExecuteScripts(ReasonForCallingCanExecuteScripts::NotAboutToExecuteScript))
         return nullptr;
 
     if (!m_cacheableBindingRootObject) {
@@ -476,7 +476,7 @@ Bindings::RootObject* ScriptController::cacheableBindingRootObject()
 
 Bindings::RootObject* ScriptController::bindingRootObject()
 {
-    if (!canExecuteScripts(NotAboutToExecuteScript))
+    if (!canExecuteScripts(ReasonForCallingCanExecuteScripts::NotAboutToExecuteScript))
         return nullptr;
 
     if (!m_bindingRootObject) {
@@ -502,7 +502,7 @@ void ScriptController::collectIsolatedContexts(Vector<std::pair<JSC::JSGlobalObj
 {
     for (auto& jsWindowProxy : windowProxy().jsWindowProxiesAsVector()) {
         auto* lexicalGlobalObject = jsWindowProxy->window();
-        auto* origin = &downcast<DOMWindow>(jsWindowProxy->wrapped()).document()->securityOrigin();
+        auto* origin = &downcast<LocalDOMWindow>(jsWindowProxy->wrapped()).document()->securityOrigin();
         result.append(std::make_pair(lexicalGlobalObject, origin));
     }
 }
@@ -517,7 +517,7 @@ RefPtr<JSC::Bindings::Instance> ScriptController::createScriptInstanceForWidget(
 JSObject* ScriptController::jsObjectForPluginElement(HTMLPlugInElement* plugin)
 {
     // Can't create JSObjects when JavaScript is disabled
-    if (!canExecuteScripts(NotAboutToExecuteScript))
+    if (!canExecuteScripts(ReasonForCallingCanExecuteScripts::NotAboutToExecuteScript))
         return nullptr;
 
     JSLockHolder lock(commonVM());
@@ -576,7 +576,7 @@ JSC::JSValue ScriptController::executeScriptIgnoringException(const String& scri
 
 JSC::JSValue ScriptController::executeScriptInWorldIgnoringException(DOMWrapperWorld& world, const String& script, bool forceUserGesture)
 {
-    auto result = executeScriptInWorld(world, { script, URL { }, false, std::nullopt, forceUserGesture, RemoveTransientActivation::No });
+    auto result = executeScriptInWorld(world, { script, URL { }, false, std::nullopt, forceUserGesture, RemoveTransientActivation::Yes });
     return result ? result.value() : JSC::JSValue { };
 }
 
@@ -603,7 +603,7 @@ ValueOrException ScriptController::executeScriptInWorld(DOMWrapperWorld& world, 
         });
     }
 
-    if (!canExecuteScripts(AboutToExecuteScript) || isPaused())
+    if (!canExecuteScripts(ReasonForCallingCanExecuteScripts::AboutToExecuteScript) || isPaused())
         return makeUnexpected(ExceptionDetails { "Cannot execute JavaScript in this document"_s });
 
     auto sourceURL = parameters.sourceURL;
@@ -783,12 +783,12 @@ void ScriptController::executeAsynchronousUserAgentScriptInWorld(DOMWrapperWorld
 
 bool ScriptController::canExecuteScripts(ReasonForCallingCanExecuteScripts reason)
 {
-    if (reason == AboutToExecuteScript)
+    if (reason == ReasonForCallingCanExecuteScripts::AboutToExecuteScript)
         RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(ScriptDisallowedScope::InMainThread::isScriptAllowed() || !isInWebProcess());
 
     if (m_frame.document() && m_frame.document()->isSandboxed(SandboxScripts)) {
         // FIXME: This message should be moved off the console once a solution to https://bugs.webkit.org/show_bug.cgi?id=103274 exists.
-        if (reason == AboutToExecuteScript || reason == AboutToCreateEventListener)
+        if (reason == ReasonForCallingCanExecuteScripts::AboutToExecuteScript || reason == ReasonForCallingCanExecuteScripts::AboutToCreateEventListener)
             m_frame.document()->addConsoleMessage(MessageSource::Security, MessageLevel::Error, "Blocked script execution in '" + m_frame.document()->url().stringCenterEllipsizedToLength() + "' because the document's frame is sandboxed and the 'allow-scripts' permission is not set.");
         return false;
     }
@@ -817,8 +817,8 @@ void ScriptController::executeJavaScriptURL(const URL& url, RefPtr<SecurityOrigi
 
     // We need to hold onto the Frame here because executing script can
     // destroy the frame.
-    Ref<Frame> protector(m_frame);
-    RefPtr<Document> ownerDocument(m_frame.document());
+    Ref protectedFrame { m_frame };
+    RefPtr ownerDocument { m_frame.document() };
 
     const int javascriptSchemeLength = sizeof("javascript:") - 1;
 

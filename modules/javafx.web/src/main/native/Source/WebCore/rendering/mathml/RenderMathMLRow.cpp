@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2010 Alex Milowski (alex@milowski.com). All rights reserved.
  * Copyright (C) 2016 Igalia S.L.
+ * Copyright (C) 2023 Apple Inc. All right reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +33,7 @@
 #include "MathMLNames.h"
 #include "MathMLRowElement.h"
 #include "RenderIterator.h"
+#include "RenderMathMLBlockInlines.h"
 #include "RenderMathMLOperator.h"
 #include "RenderMathMLRoot.h"
 #include <wtf/IsoMallocInlines.h>
@@ -90,7 +92,7 @@ void RenderMathMLRow::stretchVerticalOperatorsAndLayoutChildren()
     }
     if (stretchAscent + stretchDescent <= 0) {
         // We ensure a minimal stretch size.
-        stretchAscent = style().computedFontPixelSize();
+        stretchAscent = style().computedFontSize();
         stretchDescent = 0;
     }
 
@@ -153,7 +155,12 @@ void RenderMathMLRow::layoutRowItems(LayoutUnit width, LayoutUnit ascent)
         LayoutUnit childVerticalOffset = borderTop() + paddingTop() + child->marginTop() + ascent - childAscent;
         LayoutUnit childWidth = child->logicalWidth();
         LayoutUnit childHorizontalOffset = style().isLeftToRightDirection() ? horizontalOffset : width - horizontalOffset - childWidth;
+        auto repaintRect = child->checkForRepaintDuringLayout() ? std::make_optional(child->frameRect()) : std::nullopt;
         child->setLocation(LayoutPoint(childHorizontalOffset, childVerticalOffset));
+        if (repaintRect) {
+            repaintRect->uniteEvenIfEmpty(child->frameRect());
+            repaintRectangle(*repaintRect);
+        }
         horizontalOffset += childWidth + child->marginEnd();
     }
 }

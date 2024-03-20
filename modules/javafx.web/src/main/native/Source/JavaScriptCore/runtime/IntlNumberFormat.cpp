@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2015 Andy VanWagoner (andy@vanwagoner.family)
  * Copyright (C) 2016 Sukolsak Sakshuwong (sukolsak@gmail.com)
- * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2020 Sony Interactive Entertainment Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -90,12 +90,6 @@ IntlNumberFormat::IntlNumberFormat(VM& vm, Structure* structure)
 {
 }
 
-void IntlNumberFormat::finishCreation(VM& vm)
-{
-    Base::finishCreation(vm);
-    ASSERT(inherits(info()));
-}
-
 template<typename Visitor>
 void IntlNumberFormat::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
@@ -119,14 +113,14 @@ Vector<String> IntlNumberFormat::localeData(const String& locale, RelevantExtens
 static inline unsigned computeCurrencySortKey(const String& currency)
 {
     ASSERT(currency.length() == 3);
-    ASSERT(currency.isAllSpecialCharacters<isASCIIUpper>());
+    ASSERT(currency.containsOnly<isASCIIUpper>());
     return (currency[0] << 16) + (currency[1] << 8) + currency[2];
 }
 
 static inline unsigned computeCurrencySortKey(const char* currency)
 {
     ASSERT(strlen(currency) == 3);
-    ASSERT(isAllSpecialCharacters<isASCIIUpper>(currency, 3));
+    ASSERT(containsOnly<isASCIIUpper>(currency, 3));
     return (currency[0] << 16) + (currency[1] << 8) + currency[2];
 }
 
@@ -237,6 +231,13 @@ static std::optional<WellFormedUnit> wellFormedUnitIdentifier(StringView unitIde
     return WellFormedUnit(numeratorUnit.value(), denominatorUnit.value());
 }
 
+#if HAVE(ICU_U_NUMBER_FORMATTER)
+// We intentionally avoid using ICU's UNUM_APPROXIMATELY_SIGN_FIELD and define the same value here.
+// UNUM_APPROXIMATELY_SIGN_FIELD can be defined in the header after ICU 71. But dylib ICU can be newer while ICU header version is old.
+// We can define UNUM_APPROXIMATELY_SIGN_FIELD here so that we can support old ICU header + newer ICU library combination.
+static constexpr UNumberFormatFields UNUM_APPROXIMATELY_SIGN_FIELD = static_cast<UNumberFormatFields>(UNUM_COMPACT_FIELD + 1);
+#endif
+
 static ASCIILiteral partTypeString(UNumberFormatFields field, IntlNumberFormat::Style style, bool sign, IntlMathematicalValue::NumberType type)
 {
     switch (field) {
@@ -276,6 +277,10 @@ static ASCIILiteral partTypeString(UNumberFormatFields field, IntlNumberFormat::
         return "unit"_s;
     case UNUM_COMPACT_FIELD:
         return "compact"_s;
+IGNORE_GCC_WARNINGS_BEGIN("switch")
+    case UNUM_APPROXIMATELY_SIGN_FIELD:
+        return "approximatelySign"_s;
+IGNORE_GCC_WARNINGS_END
 #endif
     // These should not show up because there is no way to specify them in NumberFormat options.
     // If they do, they don't fit well into any of known part types, so consider it an "unknown".
@@ -433,7 +438,7 @@ void IntlNumberFormat::initializeNumberFormat(JSGlobalObject* globalObject, JSVa
         }, "roundingMode must be either \"ceil\", \"floor\", \"expand\", \"trunc\", \"halfCeil\", \"halfFloor\", \"halfExpand\", \"halfTrunc\", or \"halfEven\""_s, RoundingMode::HalfExpand);
     RETURN_IF_EXCEPTION(scope, void());
 
-    CString dataLocaleWithExtensions = makeString(resolved.dataLocale, "-u-nu-", m_numberingSystem).utf8();
+    CString dataLocaleWithExtensions = makeString(resolved.dataLocale, "-u-nu-"_s, m_numberingSystem).utf8();
     dataLogLnIf(IntlNumberFormatInternal::verbose, "dataLocaleWithExtensions:(", dataLocaleWithExtensions , ")");
 
     // Options are obtained. Configure formatter here.
@@ -1168,6 +1173,8 @@ JSValue IntlNumberFormat::formatRangeToParts(JSGlobalObject* globalObject, doubl
     if (U_FAILURE(status))
         return throwTypeError(globalObject, scope, "failed to format a range"_s);
 
+    // After ICU 71, approximatelySign is supported. We use the old path only for < 71.
+    if (WTF::ICU::majorVersion() < 71) {
     bool equal = numberFieldsPracticallyEqual(formattedValue, status);
     if (U_FAILURE(status)) {
         throwTypeError(globalObject, scope, "Failed to format number range"_s);
@@ -1176,6 +1183,7 @@ JSValue IntlNumberFormat::formatRangeToParts(JSGlobalObject* globalObject, doubl
 
     if (equal)
         RELEASE_AND_RETURN(scope, formatToParts(globalObject, start, jsNontrivialString(vm, "shared"_s)));
+    }
 
     JSArray* parts = JSArray::tryCreate(vm, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous), 0);
     if (!parts) {
@@ -1218,6 +1226,8 @@ JSValue IntlNumberFormat::formatRangeToParts(JSGlobalObject* globalObject, IntlM
     if (U_FAILURE(status))
         return throwTypeError(globalObject, scope, "failed to format a range"_s);
 
+    // After ICU 71, approximatelySign is supported. We use the old path only for < 71.
+    if (WTF::ICU::majorVersion() < 71) {
     bool equal = numberFieldsPracticallyEqual(formattedValue, status);
     if (U_FAILURE(status)) {
         throwTypeError(globalObject, scope, "Failed to format number range"_s);
@@ -1226,6 +1236,7 @@ JSValue IntlNumberFormat::formatRangeToParts(JSGlobalObject* globalObject, IntlM
 
     if (equal)
         RELEASE_AND_RETURN(scope, formatToParts(globalObject, WTFMove(start), jsNontrivialString(vm, "shared"_s)));
+    }
 
     JSArray* parts = JSArray::tryCreate(vm, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous), 0);
     if (!parts) {

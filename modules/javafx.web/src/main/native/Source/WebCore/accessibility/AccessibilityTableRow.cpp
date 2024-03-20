@@ -29,14 +29,10 @@
 #include "config.h"
 #include "AccessibilityTableRow.h"
 
-#include "AXObjectCache.h"
 #include "AccessibilityTable.h"
 #include "AccessibilityTableCell.h"
 #include "HTMLNames.h"
-#include "HTMLTableRowElement.h"
 #include "RenderObject.h"
-#include "RenderTableCell.h"
-#include "RenderTableRow.h"
 
 namespace WebCore {
 
@@ -47,11 +43,21 @@ AccessibilityTableRow::AccessibilityTableRow(RenderObject* renderer)
 {
 }
 
+AccessibilityTableRow::AccessibilityTableRow(Node& node)
+    : AccessibilityRenderObject(node)
+{
+}
+
 AccessibilityTableRow::~AccessibilityTableRow() = default;
 
 Ref<AccessibilityTableRow> AccessibilityTableRow::create(RenderObject* renderer)
 {
     return adoptRef(*new AccessibilityTableRow(renderer));
+}
+
+Ref<AccessibilityTableRow> AccessibilityTableRow::create(Node& node)
+{
+    return adoptRef(*new AccessibilityTableRow(node));
 }
 
 AccessibilityRole AccessibilityTableRow::determineAccessibilityRole()
@@ -112,39 +118,22 @@ AccessibilityTable* AccessibilityTableRow::parentTable() const
 
 AXCoreObject* AccessibilityTableRow::headerObject()
 {
-    if (!m_renderer || !m_renderer->isTableRow())
-        return nullptr;
-
     const auto& rowChildren = children();
-    if (!rowChildren.size())
+    if (rowChildren.isEmpty())
         return nullptr;
 
-    // check the first element in the row to see if it is a TH element
-    AXCoreObject* cell = rowChildren[0].get();
-    if (!is<AccessibilityTableCell>(*cell))
-        return nullptr;
-
-    RenderObject* cellRenderer = downcast<AccessibilityTableCell>(*cell).renderer();
-    if (!cellRenderer)
-        return nullptr;
-
-    Node* cellNode = cellRenderer->node();
-    if (!cellNode || !cellNode->hasTagName(thTag))
+    auto* firstCell = rowChildren[0].get();
+    if (!firstCell || !firstCell->node() || !firstCell->node()->hasTagName(thTag))
         return nullptr;
 
     // Verify that the row header is not part of an entire row of headers.
     // In that case, it is unlikely this is a row header.
-    bool allHeadersInRow = true;
-    for (const auto& cell : rowChildren) {
-        if (cell->node() && !cell->node()->hasTagName(thTag)) {
-            allHeadersInRow = false;
-            break;
-        }
+    for (const auto& child : rowChildren) {
+        // We found a non-header cell, so this is not an entire row of headers -- return the original header cell.
+        if (child->node() && !child->node()->hasTagName(thTag))
+            return firstCell;
     }
-    if (allHeadersInRow)
         return nullptr;
-
-    return cell;
 }
 
 void AccessibilityTableRow::addChildren()
@@ -154,6 +143,8 @@ void AccessibilityTableRow::addChildren()
     if (ownedObjects.size()) {
         for (auto& object : ownedObjects)
             addChild(object.get(), DescendIfIgnored::No);
+        m_childrenInitialized = true;
+        m_subtreeDirty = false;
     }
     else
         AccessibilityRenderObject::addChildren();
@@ -168,8 +159,8 @@ void AccessibilityTableRow::addChildren()
 
     unsigned index = 0;
     for (const auto& cell : children()) {
-        if (is<AccessibilityTableCell>(*cell))
-            downcast<AccessibilityTableCell>(*cell).setAXColIndexFromRow(colIndex + index);
+        if (auto* tableCell = dynamicDowncast<AccessibilityTableCell>(cell.get()))
+            tableCell->setAXColIndexFromRow(colIndex + index);
         index++;
     }
 }

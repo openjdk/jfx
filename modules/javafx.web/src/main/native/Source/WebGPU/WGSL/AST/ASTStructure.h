@@ -39,35 +39,48 @@ enum class StructureRole : uint8_t {
     ComputeInput,
     VertexOutput,
     BindGroup,
+    UserDefinedResource,
+    PackedResource,
 };
 
 class Structure final : public Declaration {
-    WTF_MAKE_FAST_ALLOCATED;
+    WGSL_AST_BUILDER_NODE(Structure);
 public:
-    using Ref = UniqueRef<Structure>;
-    using List = UniqueRefVector<Structure>;
+    using Ref = std::reference_wrapper<Structure>;
+    using List = ReferenceWrapperVector<Structure>;
 
-    Structure(SourceSpan span, Identifier&& name, StructureMember::List&& members, Attribute::List&& attributes, StructureRole role)
+    NodeKind kind() const override;
+    StructureRole role() const { return m_role; }
+    StructureRole& role() { return m_role; }
+    Identifier& name() { return m_name; }
+    Attribute::List& attributes() { return m_attributes; }
+    StructureMember::List& members() { return m_members; }
+    Structure* original() const { return m_original; }
+    Structure* packed() const { return m_packed; }
+
+    void setRole(StructureRole role) { m_role = role; }
+
+private:
+    Structure(SourceSpan span, Identifier&& name, StructureMember::List&& members, Attribute::List&& attributes, StructureRole role, Structure* original = nullptr)
         : Declaration(span)
         , m_name(WTFMove(name))
         , m_attributes(WTFMove(attributes))
         , m_members(WTFMove(members))
         , m_role(role)
-    { }
+        , m_original(original)
+    {
+        if (m_original) {
+            ASSERT(m_role == StructureRole::PackedResource);
+            m_original->m_packed = this;
+        }
+    }
 
-    NodeKind kind() const override;
-    StructureRole role() const { return m_role; }
-    Identifier& name() { return m_name; }
-    Attribute::List& attributes() { return m_attributes; }
-    StructureMember::List& members() { return m_members; }
-
-    void setRole(StructureRole role) { m_role = role; }
-
-private:
     Identifier m_name;
     Attribute::List m_attributes;
     StructureMember::List m_members;
     StructureRole m_role;
+    Structure* m_original;
+    Structure* m_packed { nullptr };
 };
 
 } // namespace WGSL::AST

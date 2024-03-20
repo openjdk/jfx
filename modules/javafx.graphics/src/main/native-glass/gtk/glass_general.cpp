@@ -605,7 +605,8 @@ glass_gdk_mouse_devices_grab_with_cursor(GdkWindow *gdkWindow, GdkCursor *cursor
                                                 | GDK_BUTTON2_MOTION_MASK
                                                 | GDK_BUTTON3_MOTION_MASK
                                                 | GDK_BUTTON_PRESS_MASK
-                                                | GDK_BUTTON_RELEASE_MASK),
+                                                | GDK_BUTTON_RELEASE_MASK
+                                                | GDK_TOUCH_MASK),
                                             NULL, cursor, GDK_CURRENT_TIME);
 
     return (status == GDK_GRAB_SUCCESS) ? TRUE : FALSE;
