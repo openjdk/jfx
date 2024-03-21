@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -114,6 +114,7 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
             peer = _peer;
         }
 
+        @Override
         public void dispose() {
             int hash = hashPeer(peer);
             SelfDisposer head = hashTable[hash];
@@ -1262,6 +1263,7 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
     native static void releaseEventsImpl(long peer);
 
 
+    @Override
     public void addEventListener(String type
         , EventListener listener
         , boolean useCapture)
@@ -1277,6 +1279,7 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
         , boolean useCapture);
 
 
+    @Override
     public void removeEventListener(String type
         , EventListener listener
         , boolean useCapture)
@@ -1292,6 +1295,7 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
         , boolean useCapture);
 
 
+    @Override
     public boolean dispatchEvent(Event event) throws DOMException
     {
         return dispatchEventImpl(getPeer()
@@ -1339,6 +1343,7 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
 
 
 //stubs
+    @Override
     public DocumentView getDocument() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
