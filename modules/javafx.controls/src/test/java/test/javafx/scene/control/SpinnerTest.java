@@ -338,7 +338,7 @@ public class SpinnerTest {
      *                                                                         *
      **************************************************************************/
 
-    @Ignore("Need KeyboardEventFirer. Listener not invoked on changing value using setText method")
+    @Ignore("JDK-8328701")
     @Test public void editing_commitValidInput() {
         intSpinner.valueProperty().addListener(o -> eventCount++);
         intSpinner.getEditor().setText("3");
@@ -349,7 +349,7 @@ public class SpinnerTest {
         assertEquals("3", intSpinner.getEditor().getText());
     }
 
-    @Ignore("Need KeyboardEventFirer. Listener not invoked on changing value using setText method")
+    @Ignore("JDK-8328701")
     @Test public void editing_commitInvalidInput() {
         intSpinner.valueProperty().addListener(o -> eventCount++);
         intSpinner.getEditor().setText("300");
