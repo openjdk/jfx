@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -738,7 +738,7 @@ public class DatePickerTest {
     }
 
     /**
-     * When DatePicker looses focus with misformatted text in the editor,
+     * When DatePicker loses focus with misformatted text in the editor,
      * checks that the value is not changed, and the text is reverted to the value
      */
     @Test
@@ -754,7 +754,7 @@ public class DatePickerTest {
         datePicker.requestFocus();
         datePicker.getEditor().setText("11/24/20xx");
 
-        // loosing focus triggers cancelEdit() because the text cannot be parsed
+        // losing focus triggers cancelEdit() because the text cannot be parsed
         button.requestFocus();
 
         // check that value remains unchanged, and text is reverted

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -178,7 +178,7 @@ public class TreeTableCellEditingTest {
         cell.updateTreeTableView(table);
         cell.updateTableColumn(editingColumn);
         // make sure that focus change doesn't interfere with tests
-        // (editing cell loosing focus will be canceled from focusListener in Cell)
+        // (editing cell losing focus will be canceled from focusListener in Cell)
         // Note: not really needed for Tree/TableCell because the cell is never focused
         // if !cellSelectionEnabled nor if not in Tree/TableRow
         // done here for consistency across analogous tests for List/Tree/Cell
