@@ -24,34 +24,7 @@
  */
 package test.javafx.scene.control.behavior;
 
-import static javafx.scene.input.KeyCode.A;
-import static javafx.scene.input.KeyCode.BACK_SLASH;
-import static javafx.scene.input.KeyCode.BACK_SPACE;
-import static javafx.scene.input.KeyCode.C;
-import static javafx.scene.input.KeyCode.COPY;
-import static javafx.scene.input.KeyCode.CUT;
-import static javafx.scene.input.KeyCode.DELETE;
-import static javafx.scene.input.KeyCode.DOWN;
-import static javafx.scene.input.KeyCode.END;
-import static javafx.scene.input.KeyCode.ENTER;
-import static javafx.scene.input.KeyCode.ESCAPE;
-import static javafx.scene.input.KeyCode.F1;
-import static javafx.scene.input.KeyCode.H;
-import static javafx.scene.input.KeyCode.HOME;
-import static javafx.scene.input.KeyCode.INSERT;
-import static javafx.scene.input.KeyCode.KP_DOWN;
-import static javafx.scene.input.KeyCode.KP_LEFT;
-import static javafx.scene.input.KeyCode.KP_RIGHT;
-import static javafx.scene.input.KeyCode.KP_UP;
-import static javafx.scene.input.KeyCode.LEFT;
-import static javafx.scene.input.KeyCode.PASTE;
-import static javafx.scene.input.KeyCode.RIGHT;
-import static javafx.scene.input.KeyCode.SPACE;
-import static javafx.scene.input.KeyCode.UP;
-import static javafx.scene.input.KeyCode.V;
-import static javafx.scene.input.KeyCode.X;
-import static javafx.scene.input.KeyCode.Y;
-import static javafx.scene.input.KeyCode.Z;
+import static javafx.scene.input.KeyCode.*;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.TextInputControl;
 import org.junit.jupiter.api.Assertions;
