@@ -59,13 +59,11 @@ public class HBoxPage extends TestPaneBase {
         box = new HBox();
 
         // TODO menu button
-        Button addButton = new Button("Add Item");
-        addButton.setOnAction((ev) -> {
+        Button addButton = FX.button("Add Item", () -> {
             addItem(box.getChildren());
         });
 
-        Button clearButton = new Button("Clear Items");
-        clearButton.setOnAction((ev) -> {
+        Button clearButton = FX.button("Clear Items", () -> {
             box.getChildren().clear();
         });
 

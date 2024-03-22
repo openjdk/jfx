@@ -74,15 +74,11 @@ public class TreeViewPage extends TestPaneBase implements HasSkinnable {
         CheckBox selected = new CheckBox("Selected");
         FX.name(selected, "selected");
 
-        Button addButton = new Button("Add");
-        addButton.setOnAction((ev) -> {
+        Button addButton = FX.button("Add", () -> {
             addChild(indeterminate.isSelected(), selected.isSelected());
         });
 
-        Button removeButton = new Button("Remove");
-        removeButton.setOnAction((ev) -> {
-            removeChild();
-        });
+        Button removeButton = FX.button("Remove", this::removeChild);
 
         OptionPane op = new OptionPane();
         op.section("TreeView");

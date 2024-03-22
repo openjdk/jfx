@@ -73,14 +73,10 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
 
         control = new TreeTableView<>();
 
-        Button addDataItemButton = new Button("Add Data Item");
-        addDataItemButton.setOnAction((ev) -> {
-            addDataItem();
-        });
+        Button addDataItemButton = FX.button("Add Data Item", this::addDataItem);
         addDataItemButton.setDisable(true); // FIX
 
-        Button clearDataItemsButton = new Button("Clear Data Items");
-        clearDataItemsButton.setOnAction((ev) -> {
+        Button clearDataItemsButton = FX.button("Clear Data Items", () -> {
             control.setRoot(new TreeItem(null));
             control.setShowRoot(false);
         });
@@ -100,8 +96,7 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
         );
         removeColumnButton.setText("Remove Column");
 
-        Button refresh = new Button("Refresh");
-        refresh.setOnAction((ev) -> {
+        Button refresh = FX.button("Refresh", () -> {
             control.refresh();
         });
 
@@ -139,7 +134,6 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
     private void addColumn(int where) {
         TreeTableColumn<DataRow, Object> c = newColumn();
         c.setText("C" + System.currentTimeMillis());
-        //c.setCellValueFactory((f) -> new SimpleStringProperty(describe(c)));
 
         int ct = control.getColumns().size();
         int ix;
@@ -397,7 +391,6 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
         s.addChoice("AUTO_RESIZE_LAST_COLUMN", TreeTableView.CONSTRAINED_RESIZE_POLICY_LAST_COLUMN);
         s.addChoice("AUTO_RESIZE_NEXT_COLUMN", TreeTableView.CONSTRAINED_RESIZE_POLICY_NEXT_COLUMN);
         s.addChoice("AUTO_RESIZE_SUBSEQUENT_COLUMNS", TreeTableView.CONSTRAINED_RESIZE_POLICY_SUBSEQUENT_COLUMNS);
-        //s.addChoice("CONSTRAINED_RESIZE_POLICY", TreeTableView.CONSTRAINED_RESIZE_POLICY);
         s.addChoice("UNCONSTRAINED_RESIZE_POLICY", TreeTableView.UNCONSTRAINED_RESIZE_POLICY);
         s.addChoice("user defined, equal width", new UserDefinedResizePolicy());
         return s;

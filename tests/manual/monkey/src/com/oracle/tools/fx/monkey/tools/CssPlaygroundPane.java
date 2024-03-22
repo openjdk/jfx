@@ -38,6 +38,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Window;
+import com.oracle.tools.fx.monkey.util.FX;
 
 /**
  * CSS Playground Tool
@@ -69,11 +70,9 @@ public class CssPlaygroundPane extends BorderPane {
 
         colorPicker = new ColorPicker();
 
-        Button fsLarger = new Button("+");
-        fsLarger.setOnAction((ev) -> fontSize(true));
+        Button fsLarger = FX.button("+", () -> fontSize(true));
 
-        Button fsSmaller = new Button("-");
-        fsSmaller.setOnAction((ev) -> fontSize(false));
+        Button fsSmaller = FX.button("-", () -> fontSize(false));
 
         fontSizeLabel = new Label("12");
         fontSizeLabel.setAlignment(Pos.CENTER);
@@ -82,7 +81,7 @@ public class CssPlaygroundPane extends BorderPane {
         fs.setLeft(fsSmaller);
         fs.setRight(fsLarger);
 
-        Button updateButton = new Button("Update");
+        Button updateButton = FX.button("Update", this::update);
 
         GridPane p = new GridPane();
         p.setPadding(new Insets(10));
@@ -102,9 +101,6 @@ public class CssPlaygroundPane extends BorderPane {
         setCenter(cssField);
 
         colorPicker.setOnAction((ev) -> {
-            update();
-        });
-        updateButton.setOnAction((ev) -> {
             update();
         });
     }

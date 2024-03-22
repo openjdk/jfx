@@ -30,14 +30,17 @@ import javafx.application.Platform;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Control;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.control.Tooltip;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
@@ -266,5 +269,27 @@ public class FX {
             }
             ev.consume();
         });
+    }
+
+    public static void tooltip(Control n, String text) {
+        if (text != null) {
+            n.setTooltip(new Tooltip(text));
+        }
+    }
+
+    public static Button button(String text, String tooltip, Runnable r) {
+        Button b = button(text, r);
+        tooltip(b, tooltip);
+        return b;
+    }
+
+    public static Button button(String text, Runnable r) {
+        Button b = new Button(text);
+        if (r == null) {
+            b.setDisable(true);
+        } else {
+            b.setOnAction((ev) -> r.run());
+        }
+        return b;
     }
 }

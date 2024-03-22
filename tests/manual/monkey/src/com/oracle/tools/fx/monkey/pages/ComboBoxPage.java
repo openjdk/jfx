@@ -39,6 +39,7 @@ import javafx.util.StringConverter;
 import com.oracle.tools.fx.monkey.options.ObjectOption;
 import com.oracle.tools.fx.monkey.sheets.ComboBoxBasePropertySheet;
 import com.oracle.tools.fx.monkey.sheets.Options;
+import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.HasSkinnable;
 import com.oracle.tools.fx.monkey.util.ObjectSelector;
 import com.oracle.tools.fx.monkey.util.OptionPane;
@@ -57,13 +58,11 @@ public class ComboBoxPage extends TestPaneBase implements HasSkinnable {
 
         control = new ComboBox<>();
 
-        Button addButton = new Button("Add Item");
-        addButton.setOnAction((ev) -> {
+        Button addButton = FX.button("Add Item", () -> {
             control.getItems().add(newItem(""));
         });
 
-        Button clearButton = new Button("Clear Items");
-        clearButton.setOnAction((ev) -> {
+        Button clearButton = FX.button("Clear Items", () -> {
             control.getItems().clear();
         });
 

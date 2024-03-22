@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,8 +47,7 @@ public class KeyboardEventViewer extends BorderPane {
         textField.addEventFilter(KeyEvent.ANY, this::handleKeyboardEvent);
         textField.setOnInputMethodTextChanged(this::inputMethodTextChangedEvent);
 
-        Button clearButton = new Button("Clear");
-        clearButton.setOnAction((ev) -> clear());
+        Button clearButton = FX.button("Clear", this::clear);
 
         ToolBar tp = new ToolBar(clearButton);
 

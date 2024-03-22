@@ -51,6 +51,7 @@ import com.oracle.tools.fx.monkey.options.EnumOption;
 import com.oracle.tools.fx.monkey.options.ObjectOption;
 import com.oracle.tools.fx.monkey.sheets.ControlPropertySheet;
 import com.oracle.tools.fx.monkey.sheets.Options;
+import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.HasSkinnable;
 import com.oracle.tools.fx.monkey.util.ImageTools;
 import com.oracle.tools.fx.monkey.util.ObjectSelector;
@@ -75,23 +76,19 @@ public class ListViewPage extends TestPaneBase implements HasSkinnable {
             ev.getSource().getItems().set(ix, ev.getNewValue());
         });
 
-        Button addButton = new Button("Add Item");
-        addButton.setOnAction((ev) -> {
+        Button addButton = FX.button("Add Item", () -> {
             control.getItems().add(newItem(""));
         });
 
-        Button clearButton = new Button("Clear Items");
-        clearButton.setOnAction((ev) -> {
+        Button clearButton = FX.button("Clear Items", () -> {
             control.getItems().clear();
         });
 
-        Button jumpButton = new Button("Jump w/VirtualFlow");
-        jumpButton.setOnAction((ev) -> {
+        Button jumpButton = FX.button("Jump w/VirtualFlow", () -> {
             jump();
         });
 
-        Button refresh = new Button("Refresh");
-        refresh.setOnAction((ev) -> {
+        Button refresh = FX.button("Refresh", () -> {
             control.refresh();
         });
 

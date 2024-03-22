@@ -79,11 +79,7 @@ public class TestPaneBase extends BorderPane {
     }
 
     public Button addButton(String name, Runnable action) {
-        Button b = new Button(name);
-        b.setOnAction((ev) -> {
-            action.run();
-        });
-
+        Button b = FX.button(name, action);
         toolbar().add(b);
         return b;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -70,8 +70,7 @@ public class TextChoiceOption extends BorderPane {
         });
 
         if (allowEditButton) {
-            Button editButton = new Button("Edit");
-            editButton.setOnAction(EnterTextDialog.action(this, property));
+            Button editButton = FX.button("Edit", EnterTextDialog.getRunnable(this, property));
             setRight(editButton);
             setMargin(editButton, new Insets(0, 0, 0, 2));
         }

@@ -33,11 +33,11 @@ import com.oracle.tools.fx.monkey.util.OptionPane;
  *
  */
 public class ComboBoxBasePropertySheet {
-    public static void appendTo(OptionPane op, ComboBoxBase<?> cb) {
-        op.option(new BooleanOption("editable", "editable", cb.editableProperty()));
-        op.option("Prompt Text:", new PromptTextOption("promptText", true, cb.promptTextProperty()));
+    public static void appendTo(OptionPane op, ComboBoxBase<?> n) {
+        op.option(new BooleanOption("editable", "editable", n.editableProperty()));
+        op.option("Prompt Text:", new PromptTextOption("promptText", true, n.promptTextProperty()));
         op.option("Value: TODO", null); // TODO
 
-        ControlPropertySheet.appendTo(op, cb);
+        ControlPropertySheet.appendTo(op, n);
     }
 }

@@ -69,13 +69,11 @@ public class TableViewPage extends TestPaneBase implements HasSkinnable {
 
         control = new TableView<>();
 
-        Button addDataItemButton = new Button("Add Data Item");
-        addDataItemButton.setOnAction((ev) -> {
+        Button addDataItemButton = FX.button("Add Data Item", () -> {
             control.getItems().add(new DataRow());
         });
 
-        Button clearDataItemsButton = new Button("Clear Data Items");
-        clearDataItemsButton.setOnAction((ev) -> {
+        Button clearDataItemsButton = FX.button("Clear Data Items", () -> {
             control.getItems().clear();
         });
 
@@ -94,8 +92,7 @@ public class TableViewPage extends TestPaneBase implements HasSkinnable {
         );
         removeColumnButton.setText("Remove Column");
 
-        Button refresh = new Button("Refresh");
-        refresh.setOnAction((ev) -> {
+        Button refresh = FX.button("Refresh", () -> {
             control.refresh();
         });
 
@@ -382,14 +379,14 @@ public class TableViewPage extends TestPaneBase implements HasSkinnable {
         );
         s.addChoiceSupplier("20 Equal", () -> {
             var cs = columnBuilder();
-            for(int i=1; i<20; i++) {
+            for (int i = 1; i < 20; i++) {
                 cs.col("C" + i);
             }
             return cs.asList();
         });
         s.addChoiceSupplier("20 Equal, Pref=30", () -> {
             var cs = columnBuilder();
-            for(int i=1; i<20; i++) {
+            for (int i = 1; i < 20; i++) {
                 cs.col("C" + i).pref(30);
             }
             return cs.asList();
@@ -465,7 +462,6 @@ public class TableViewPage extends TestPaneBase implements HasSkinnable {
         s.addChoice("AUTO_RESIZE_LAST_COLUMN", TableView.CONSTRAINED_RESIZE_POLICY_LAST_COLUMN);
         s.addChoice("AUTO_RESIZE_NEXT_COLUMN", TableView.CONSTRAINED_RESIZE_POLICY_NEXT_COLUMN);
         s.addChoice("AUTO_RESIZE_SUBSEQUENT_COLUMNS", TableView.CONSTRAINED_RESIZE_POLICY_SUBSEQUENT_COLUMNS);
-        //s.addChoice("CONSTRAINED_RESIZE_POLICY", TableView.CONSTRAINED_RESIZE_POLICY);
         s.addChoice("UNCONSTRAINED_RESIZE_POLICY", TableView.UNCONSTRAINED_RESIZE_POLICY);
         s.addChoice("user defined, equal width", new UserDefinedResizePolicy());
         return s;

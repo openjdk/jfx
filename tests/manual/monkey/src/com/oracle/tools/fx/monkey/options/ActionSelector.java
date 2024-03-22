@@ -80,8 +80,7 @@ public class ActionSelector extends BorderPane {
     }
 
     public void addButton(String text, Runnable r) {
-        Button b = new Button(text);
-        b.setOnAction((ev) -> r.run());
+        Button b = FX.button(text, r);
         setRight(b);
         setMargin(b, new Insets(0, 0, 0, 2));
     }

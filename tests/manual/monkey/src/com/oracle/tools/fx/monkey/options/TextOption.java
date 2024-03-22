@@ -64,8 +64,7 @@ public class TextOption extends BorderPane {
             property.set(v);
         });
 
-        Button editButton = new Button("Edit");
-        editButton.setOnAction(EnterTextDialog.action(this, property));
+        Button editButton = FX.button("Edit", EnterTextDialog.getRunnable(this, property));
 
         setCenter(textField);
         setRight(editButton);

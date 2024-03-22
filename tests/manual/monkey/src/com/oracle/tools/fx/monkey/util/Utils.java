@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,8 +40,8 @@ public class Utils {
         return (x.toString().trim().length() == 0);
     }
 
-    public static void fromPairs(Object[] pairs, BiConsumer<String,String> client) {
-        for(int i=0; i<pairs.length; ) {
+    public static void fromPairs(Object[] pairs, BiConsumer<String, String> client) {
+        for (int i = 0; i < pairs.length;) {
             String k = (String)pairs[i++];
             String v = (String)pairs[i++];
             client.accept(k, v);

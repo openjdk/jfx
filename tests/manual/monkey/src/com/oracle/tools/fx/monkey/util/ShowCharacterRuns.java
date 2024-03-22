@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -70,7 +70,6 @@ public class ShowCharacterRuns extends Group {
                 double y = (caretBounds.getMinY() + caretBounds.getMaxY()) / 2;
                 HitInfo hit = owner.hitTest(new Point2D(x, y));
                 Path p = new Path(owner.rangeShape(hit.getCharIndex(), hit.getCharIndex() + 1));
-                //System.err.println(i + " " + cs); // FIX
                 Color c = color(i);
                 p.setFill(c);
                 p.setStroke(c);
@@ -103,7 +102,6 @@ public class ShowCharacterRuns extends Group {
                 double y = (caretBounds.getMinY() + caretBounds.getMaxY()) / 2;
                 HitInfo hit = owner.hitTest(new Point2D(x, y));
                 Path cs = new Path(owner.rangeShape(hit.getCharIndex(), hit.getCharIndex() + 1));
-                //System.err.println(i + " " + cs); // FIX
                 Color c = color(i);
                 cs.setFill(c);
                 cs.setStroke(c);

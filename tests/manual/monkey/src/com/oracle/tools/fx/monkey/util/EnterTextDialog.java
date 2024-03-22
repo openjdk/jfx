@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,8 +50,7 @@ public class EnterTextDialog extends Stage {
 
         textField = new TextArea(initialText);
 
-        Button ok = new Button("OK");
-        ok.setOnAction((ev) -> {
+        Button ok = FX.button("OK", () -> {
             String text = textField.getText();
             onEdit.accept(text);
             hide();
@@ -85,16 +84,6 @@ public class EnterTextDialog extends Stage {
             new EnterTextDialog(owner, text, (v) -> {
                 p.setValue(v);
             }).show();
-        };
-    }
-
-    public static EventHandler<ActionEvent> action(Node owner, Property<String> p) {
-        Runnable r = getRunnable(owner, p);
-        if (r == null) {
-            return null;
-        }
-        return (ev) -> {
-            r.run();
         };
     }
 }

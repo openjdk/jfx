@@ -29,6 +29,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.skin.AccordionSkin;
 import com.oracle.tools.fx.monkey.sheets.ControlPropertySheet;
+import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.HasSkinnable;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.SequenceNumber;
@@ -48,11 +49,9 @@ public class AccordionPage extends TestPaneBase implements HasSkinnable {
         addPane();
 
         // TODO MenuButtons with more options
-        Button addButton = new Button("Add Pane");
-        addButton.setOnAction((ev) -> addPane());
+        Button addButton = FX.button("Add Pane", this::addPane);
 
-        Button removeButton = new Button("Remove");
-        removeButton.setOnAction((ev) -> removePane());
+        Button removeButton = FX.button("Remove", this::removePane);
 
         OptionPane op = new OptionPane();
         op.section("Accordion");
@@ -66,8 +65,7 @@ public class AccordionPage extends TestPaneBase implements HasSkinnable {
     private void addPane() {
         String name = SequenceNumber.next();
         System.nanoTime();
-        Button b = new Button(name);
-        b.setOnAction((ev) -> {
+        Button b = FX.button(name, () -> {
             System.out.println(name);
         });
         TitledPane p = new TitledPane(name, b);
