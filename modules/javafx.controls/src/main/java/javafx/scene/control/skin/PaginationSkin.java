@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1095,7 +1095,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
                 fromIndex = toIndex - lastIndicatorButtonIndex;
             } else {
                 // We need to get the new page set if the currentIndex is out of range.
-                // This can happen if setPageIndex() is called programatically.
+                // This can happen if setPageIndex() is called programmatically.
                 if (currentIndex < fromIndex || currentIndex > toIndex) {
                     fromIndex = currentIndex - index;
                     toIndex = fromIndex + lastIndicatorButtonIndex;
