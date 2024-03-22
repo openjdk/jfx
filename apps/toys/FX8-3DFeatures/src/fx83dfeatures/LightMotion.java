@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -148,6 +148,7 @@ public class LightMotion extends Application {
         scene.setFill(Color.rgb(10, 10, 40));
 
         scene.setOnKeyTyped(new EventHandler<KeyEvent>() {
+            @Override
             public void handle(KeyEvent e) {
                 switch (e.getCharacter()) {
                     case "[":
