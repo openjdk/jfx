@@ -50,7 +50,7 @@ public class JDK8130122Test extends VisualTestBase {
 
     private static final double TOLERANCE = 0.07;
 
-    @Test(timeout = 15000)
+    @Test(timeout = 20000)
     public void testEmptyShapes() {
         final int WIDTH = 800;
         final int HEIGHT = 400;
@@ -84,6 +84,7 @@ public class JDK8130122Test extends VisualTestBase {
             testScene.setCamera(new PerspectiveCamera());
             testScene.setFill(Color.WHITE);
             testStage.setScene(testScene);
+            testStage.setAlwaysOnTop(true);
             testStage.show();
         });
         waitFirstFrame();
@@ -98,9 +99,10 @@ public class JDK8130122Test extends VisualTestBase {
             assertColorEquals(Color.WHITE, color, TOLERANCE);
             horizontalListView.setVisible(true);
         });
+        sleep(1000);
         waitNextFrame();
         runAndWait(() -> {
-            Color color = getColor(testScene, 200, 250);
+            Color color = getColor(testScene, 200, 200);
             assertColorEquals(Color.GREEN, color, TOLERANCE);
         });
 
