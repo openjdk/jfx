@@ -169,9 +169,10 @@ public class SpinnerTest {
         assertFalse(spinner.isEditable());
     }
 
-    @Ignore("Waiting for StageLoader")
     @Test public void createDefaultSpinner_defaultSkinIsInstalled() {
+        StageLoader stageLoader = new StageLoader(spinner);
         assertTrue(spinner.getSkin() instanceof SpinnerSkin);
+        stageLoader.dispose();
     }
 
 
@@ -337,7 +338,7 @@ public class SpinnerTest {
      *                                                                         *
      **************************************************************************/
 
-    @Ignore("Need KeyboardEventFirer")
+    @Ignore("JDK-8328701")
     @Test public void editing_commitValidInput() {
         intSpinner.valueProperty().addListener(o -> eventCount++);
         intSpinner.getEditor().setText("3");
@@ -348,7 +349,7 @@ public class SpinnerTest {
         assertEquals("3", intSpinner.getEditor().getText());
     }
 
-    @Ignore("Need KeyboardEventFirer")
+    @Ignore("JDK-8328701")
     @Test public void editing_commitInvalidInput() {
         intSpinner.valueProperty().addListener(o -> eventCount++);
         intSpinner.getEditor().setText("300");
