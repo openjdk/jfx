@@ -59,7 +59,12 @@ import org.junit.jupiter.api.extension.TestWatcher;
  * -Djava.library.path="../../../../build/sdk/lib"
  * -ea
  * }</pre>
+ * <p>
+ * WARNING: using this utility may significantly increase the size of your logs!
+ * Make sure there is plenty of free disk space.
  */
+// TODO investigate having a hard-coded or programmable via property limit on the number of
+// captured screenshots.
 public class ScreenCaptureTestWatcher implements TestWatcher {
     @Override
     public void testAborted(ExtensionContext extensionContext, Throwable err) {
@@ -102,7 +107,8 @@ public class ScreenCaptureTestWatcher implements TestWatcher {
 
             Rectangle2D bounds = Screen.getPrimary().getBounds();
             Robot r = new Robot();
-            WritableImage im = r.getScreenCapture(null, bounds);
+            // do not scale to fit, capture all pixels
+            WritableImage im = r.getScreenCapture(null, bounds, false);
             ByteArrayOutputStream os = new ByteArrayOutputStream();
             BufferedImage im2 = SwingFXUtils.fromFXImage(im, null);
             ImageIO.write(im2, "PNG", os);
