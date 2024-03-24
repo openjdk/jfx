@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -768,8 +768,9 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
                         .filter(this::isNotSelected)
                         .sorted()
                         .boxed()
-                        .peek(this::set) // we also set here, but it's atomic!
                         .collect(Collectors.toList());
+
+                sortedNewIndices.forEach(this::set);
                 stopAtomic();
 
                 final int size = sortedNewIndices.size();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,7 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -166,19 +167,26 @@ class ControlUtils {
             // ensuring that the selectedIndices bitset is correctly updated.
 
             sm.startAtomic();
-            final List<Integer> removed = c.getRemoved().stream()
+
+            final List<Integer> removed = new ArrayList<>(c.getRemovedSize());
+            c.getRemoved().stream()
                     .mapToInt(TablePositionBase::getRow)
                     .distinct()
                     .filter(removeRowFilter)
-                    .boxed()
-                    .peek(sm.selectedIndices::clear)
-                    .collect(Collectors.toList());
+                    .forEach(row -> {
+                        removed.add(row);
+                        sm.selectedIndices.clear(row);
+                    });
 
-            final int addedSize = (int)c.getAddedSubList().stream()
+            final int[] addedSize = new int[1];
+            c.getAddedSubList().stream()
                     .mapToInt(TablePositionBase::getRow)
                     .distinct()
-                    .peek(sm.selectedIndices::set)
-                    .count();
+                    .forEach(row -> {
+                        addedSize[0]++;
+                        sm.selectedIndices.set(row);
+                    });
+
             sm.stopAtomic();
 
             int from = c.getFrom();
@@ -188,7 +196,7 @@ class ControlUtils {
                 int tpRow = c.getList().get(from).getRow();
                 from = sm.selectedIndices.indexOf(tpRow);
             }
-            final int to = from + addedSize;
+            final int to = from + addedSize[0];
 
             if (c.wasReplaced()) {
                 sm.selectedIndices._nextReplace(from, to, removed);
