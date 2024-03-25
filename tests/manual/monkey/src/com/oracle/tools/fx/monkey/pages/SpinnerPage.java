@@ -111,7 +111,7 @@ public class SpinnerPage extends TestPaneBase {
 
         setContent(control);
         setOptions(op);
-        
+
         mode.selectFirst();
         converter.selectFirst();
     }
