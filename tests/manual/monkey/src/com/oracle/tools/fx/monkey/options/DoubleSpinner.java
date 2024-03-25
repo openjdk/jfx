@@ -30,20 +30,27 @@ import javafx.scene.control.Spinner;
 import com.oracle.tools.fx.monkey.util.FX;
 
 /**
- *
+ * Double option based on Spinner.
  */
 public class DoubleSpinner extends Spinner<Double> {
     private final SimpleDoubleProperty property = new SimpleDoubleProperty();
 
-    public DoubleSpinner(String name, DoubleProperty p, double min, double max, double amountToStepBy) {
-        super(min, max, p.get(), amountToStepBy);
+    public DoubleSpinner(String name, double min, double max, double amountToStepBy, DoubleProperty p) {
+        super(min, max, p == null ? min : p.get(), amountToStepBy);
 
         FX.name(this, name);
         setEditable(true);
 
-        property.bindBidirectional(p);
+        if (p != null) {
+            property.bindBidirectional(p);
+        }
+
         valueProperty().addListener((s, pr, val) -> {
             property.set(val);
         });
+    }
+
+    public DoubleSpinner(String name, double min, double max, double amountToStepBy) {
+        this(name, min, max, amountToStepBy, null);
     }
 }

@@ -43,12 +43,12 @@ public class ShapePropertySheet {
         op.option("Fill:", new PaintOption("fill", n.fillProperty()));
         op.option(new BooleanOption("smooth", "smooth", n.smoothProperty()));
         op.option("Stroke:", new PaintOption("stroke", n.strokeProperty()));
-        op.option("Stroke Dash Offset:", new DoubleSpinner("strokeWidth", n.strokeDashOffsetProperty(), 0, 100, 0.1));
+        op.option("Stroke Dash Offset:", new DoubleSpinner("strokeWidth", 0, 100, 0.1, n.strokeDashOffsetProperty()));
         op.option("Stroke Line Cap:", new EnumOption<>("strokeLineCap", StrokeLineCap.class, n.strokeLineCapProperty()));
         op.option("Stroke Line Join:", new EnumOption<>("strokeLineJoin", StrokeLineJoin.class, n.strokeLineJoinProperty()));
-        op.option("Stroke Miter Limit:", new DoubleSpinner("strokeWidth", n.strokeMiterLimitProperty(), 0, 100, 0.1));
+        op.option("Stroke Miter Limit:", new DoubleSpinner("strokeWidth", 0, 100, 0.1, n.strokeMiterLimitProperty()));
         op.option("Stroke Type:", new EnumOption<>("strokeType", StrokeType.class, n.strokeTypeProperty()));
-        op.option("Stroke width:", new DoubleSpinner("strokeWidth", n.strokeWidthProperty(), 0, 100, 0.1));
+        op.option("Stroke width:", new DoubleSpinner("strokeWidth", 0, 100, 0.1, n.strokeWidthProperty()));
 
         NodePropertySheet.appendTo(op, n);
     }

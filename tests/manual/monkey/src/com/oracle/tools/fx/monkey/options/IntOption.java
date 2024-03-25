@@ -36,15 +36,22 @@ public class IntOption extends Spinner<Integer> {
     private final SimpleIntegerProperty property = new SimpleIntegerProperty();
 
     public IntOption(String name, int min, int max, IntegerProperty p) {
-        super(min, max, p.get());
+        super(min, max, p == null ? min : p.get());
 
         FX.name(this, name);
         setEditable(true);
 
-        property.bindBidirectional(p);
+        if (p != null) {
+            property.bindBidirectional(p);
+        }
 
         valueProperty().addListener((s, pr, val) -> {
             property.set(val);
         });
+    }
+
+    public IntOption(String name, int min, int max, int value) {
+        this(name, min, max, null);
+        getValueFactory().setValue(value);
     }
 }

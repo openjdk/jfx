@@ -26,16 +26,15 @@ package com.oracle.tools.fx.monkey.sheets;
 
 import javafx.scene.control.ComboBoxBase;
 import com.oracle.tools.fx.monkey.options.BooleanOption;
-import com.oracle.tools.fx.monkey.options.PromptTextOption;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 
 /**
- *
+ * ComboBoxBase Property Sheet.
  */
 public class ComboBoxBasePropertySheet {
     public static void appendTo(OptionPane op, ComboBoxBase<?> n) {
         op.option(new BooleanOption("editable", "editable", n.editableProperty()));
-        op.option("Prompt Text:", new PromptTextOption("promptText", true, n.promptTextProperty()));
+        op.option("Prompt Text:", Options.promptText("promptText", true, n.promptTextProperty()));
         op.option("Value: TODO", null); // TODO
 
         ControlPropertySheet.appendTo(op, n);

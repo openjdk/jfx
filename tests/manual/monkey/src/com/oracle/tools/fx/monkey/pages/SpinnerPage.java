@@ -25,149 +25,274 @@
 package com.oracle.tools.fx.monkey.pages;
 
 import java.text.DecimalFormat;
+import java.text.Format;
 import java.text.ParseException;
-import javafx.scene.control.CheckBox;
-import javafx.scene.control.ComboBox;
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.IntegerBinding;
+import javafx.beans.property.ReadOnlyProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.collections.FXCollections;
 import javafx.scene.control.Spinner;
+import javafx.scene.control.SpinnerValueFactory;
 import javafx.util.StringConverter;
-import com.oracle.tools.fx.monkey.util.FX;
+import com.oracle.tools.fx.monkey.options.BooleanOption;
+import com.oracle.tools.fx.monkey.options.DoubleSpinner;
+import com.oracle.tools.fx.monkey.options.DurationOption;
+import com.oracle.tools.fx.monkey.sheets.ControlPropertySheet;
+import com.oracle.tools.fx.monkey.sheets.Options;
+import com.oracle.tools.fx.monkey.util.ObjectSelector;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
 
 /**
  * Spinner Page.
  */
-// TODO convert to final control (use value factory)
 public class SpinnerPage extends TestPaneBase {
     enum Mode {
-        DOUBLE,
         INTEGER,
+        DOUBLE,
+        LIST,
+        NULL
     }
-
     enum Converter {
-        NULL("null"),
-        PERCENT("0.##%"),
-        QUOTED("\"quoted\""),
-        ;
-        private final String text;
-        Converter(String text) { this.text = text; }
-        @Override public String toString() { return text; }
+        NULL,
+        NUMBER,
+        PERCENT,
+        QUOTED
     }
 
-    private final ComboBox<Mode> modeChoice;
-    private final ComboBox<Converter> converterChoice;
-    private final CheckBox editable;
-    private Spinner<Number> control;
+    private final Spinner<Object> control;
+    private final SimpleBooleanProperty wrapAround = new SimpleBooleanProperty();
+    private final ObjectSelector<Mode> mode;
+    private final ObjectSelector<Converter> converter;
+    private final BooleanOption wrapOption;
+    private final DoubleSpinner minOption;
+    private final DoubleSpinner maxOption;
+    private final DoubleSpinner stepOption;
+    private static final Format NUMBER = new DecimalFormat("0.##");
+    private static final Format PERCENT = new DecimalFormat("0.##%");
+    private static final Format QUOTED = new DecimalFormat("\".##\"");
 
     public SpinnerPage() {
         super("SpinnerPage");
 
-        modeChoice = new ComboBox<>();
-        FX.name(modeChoice, "modeChoice");
-        modeChoice.getItems().addAll(Mode.values());
-        modeChoice.setEditable(false);
-        modeChoice.getSelectionModel().selectedItemProperty().addListener((s, p, c) -> {
-            updateControl();
+        control = new Spinner<Object>();
+        control.valueProperty().addListener((s,p,c) -> {
+            // TODO show in UI?
+            System.out.println("Value=" + c);
         });
 
-        converterChoice = new ComboBox<>();
-        FX.name(converterChoice, "converterChoice");
-        converterChoice.getItems().addAll(Converter.values());
-        converterChoice.setEditable(false);
-        converterChoice.getSelectionModel().selectedItemProperty().addListener((s, p, c) -> {
-            updateControl();
-        });
+        wrapOption = new BooleanOption("wrapAround", "wrap around", wrapAround);
 
-        editable = new CheckBox("editable");
-        FX.name(editable, "editable");
-        editable.selectedProperty().addListener((s, p, c) -> {
-            if (control != null) {
-                control.setEditable(c);
-            }
-        });
+        mode = createModeOptions("mode");
 
-        OptionPane p = new OptionPane();
-        p.option("Mode:", modeChoice);
-        p.option(editable);
-        p.option("Converter:", converterChoice);
+        converter = createConverterOptions("converter");
 
-        setOptions(p);
-        updateControl();
-        FX.select(modeChoice, Mode.DOUBLE);
-    }
+        minOption = new DoubleSpinner("min", Integer.MIN_VALUE, Integer.MAX_VALUE, 0);
 
-    private void updateControl() {
-        Mode m = modeChoice.getSelectionModel().getSelectedItem();
-        if (m == null) {
-            m = Mode.DOUBLE;
-        }
+        maxOption = new DoubleSpinner("max", Integer.MIN_VALUE, Integer.MAX_VALUE, 100);
 
-        switch (m) {
-        case DOUBLE:
-            control = new Spinner(-10.5, 10.5, 0.5);
-            break;
-        case INTEGER:
-            control = new Spinner(-10, 10, 0);
-            break;
-        }
+        stepOption = new DoubleSpinner("step", Integer.MIN_VALUE, Integer.MAX_VALUE, 1);
 
-        Converter c = converterChoice.getSelectionModel().getSelectedItem();
-        StringConverter<Number> conv = createConverter(c);
-        control.getValueFactory().setConverter(conv);
-        control.setEditable(editable.isSelected());
+        OptionPane op = new OptionPane();
+        op.section("Spinner");
+        op.option(new BooleanOption("editable", "editable", control.editableProperty()));
+        op.option("Initial Delay:", new DurationOption("initialDelay", control.initialDelayProperty()));
+        op.option("Prompt Text:", Options.promptText("promptText", true, control.promptTextProperty()));
+        op.option("Repeat Delay:", new DurationOption("repeatDelay", control.repeatDelayProperty()));
+        op.option("Value Factory:", mode);
+        op.separator();
+        op.option("Converter:", converter);
+        op.option(wrapOption);
+        op.option("Min:", minOption);
+        op.option("Max:", maxOption);
+        op.option("Amount to Step By:", stepOption);
+        ControlPropertySheet.appendTo(op, control);
 
         setContent(control);
+        setOptions(op);
+        
+        mode.selectFirst();
+        converter.selectFirst();
     }
 
-    private StringConverter<Number> createConverter(Converter c) {
+    private StringConverter<Object> createConverter(Converter c, Mode mode) {
         if (c != null) {
             switch (c) {
             case PERCENT:
-                return new StringConverter<Number>() {
-                    private final DecimalFormat f = new DecimalFormat("0.##%");
-
-                    @Override
-                    public String toString(Number v) {
-                        return v == null ? "" : f.format(v);
-                    }
-
-                    @Override
-                    public Number fromString(String s) {
-                        if (s == null) {
-                            return null;
-                        }
-
-                        try {
-                            return f.parse(s);
-                        } catch (ParseException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                };
+                switch(mode) {
+                case DOUBLE:
+                case INTEGER:
+                    return new SConverter(mode, PERCENT);
+                }
             case QUOTED:
-                return new StringConverter<Number>() {
-                    private final DecimalFormat f = new DecimalFormat("\".##\"");
-
-                    @Override
-                    public String toString(Number v) {
-                        return v == null ? "" : f.format(v);
-                    }
-
-                    @Override
-                    public Number fromString(String s) {
-                        if (s == null) {
-                            return null;
-                        }
-
-                        try {
-                            return f.parse(s);
-                        } catch (ParseException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                };
+                switch(mode) {
+                case DOUBLE:
+                case INTEGER:
+                    return new SConverter(mode, QUOTED);
+                }
+            case NUMBER:
+                switch(mode) {
+                case DOUBLE:
+                case INTEGER:
+                    return new SConverter(mode, NUMBER);
+                }
             }
         }
         return null;
+    }
+
+    private ObjectSelector<Mode> createModeOptions(String name) {
+        ObjectSelector<Mode> op = new ObjectSelector<>(name, this::handleModeChange);
+        op.addChoice("Integer", Mode.INTEGER);
+        op.addChoice("Double", Mode.DOUBLE);
+        op.addChoice("List", Mode.LIST);
+        op.addChoice("<null>", Mode.NULL);
+        return op;
+    }
+
+    private ObjectSelector<Converter> createConverterOptions(String name) {
+        ObjectSelector<Converter> op = new ObjectSelector<>(name, this::handleConverterChange);
+        op.addChoice("<null>", Converter.NULL);
+        op.addChoice("Number (0.##)", Converter.NUMBER);
+        op.addChoice("Percent (0.##%)", Converter.PERCENT);
+        op.addChoice("\"Quoted\"", Converter.QUOTED);
+        return op;
+    }
+
+    private IntegerBinding toIntBinding(ReadOnlyProperty<Double> p) {
+        return Bindings.createIntegerBinding(
+            () -> {
+                Double v = p.getValue();
+                return v == null ? 0 : v.intValue();
+            },
+            p
+        );
+    }
+
+    private void handleModeChange(Mode mode) {
+        if (mode == null) {
+            mode = Mode.NULL;
+        }
+
+        SpinnerValueFactory f;
+        boolean disableConverter;
+
+        switch (mode) {
+        case DOUBLE:
+            {
+                SpinnerValueFactory.DoubleSpinnerValueFactory df =
+                    new SpinnerValueFactory.DoubleSpinnerValueFactory(0, 100, 50, 1);
+                df.minProperty().bind(minOption.valueProperty());
+                df.maxProperty().bind(maxOption.valueProperty());
+                df.amountToStepByProperty().bind(stepOption.valueProperty());
+                f = df;
+                disableConverter = false;
+            }
+            break;
+        case INTEGER:
+            {
+                SpinnerValueFactory.IntegerSpinnerValueFactory df =
+                    new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 100, 50, 1);
+                df.minProperty().bind(toIntBinding(minOption.valueProperty()));
+                df.maxProperty().bind(toIntBinding(maxOption.valueProperty()));
+                df.amountToStepByProperty().bind(toIntBinding(stepOption.valueProperty()));
+                f = df;
+                disableConverter = false;
+            }
+            break;
+        case LIST:
+            f = new SpinnerValueFactory.ListSpinnerValueFactory(FXCollections.observableArrayList(
+                null,
+                "one",
+                "two",
+                "three",
+                "four",
+                "five",
+                "six",
+                "seven",
+                "eight",
+                "nine",
+                "ten"));
+            disableConverter = true;
+            break;
+        case NULL:
+        default:
+            f = null;
+            disableConverter = true;
+            break;
+        }
+
+        control.setValueFactory(f);
+
+        if (f == null) {
+            wrapOption.setDisable(true);
+        } else {
+            f.wrapAroundProperty().bind(wrapAround);
+            wrapOption.setDisable(false);
+        }
+
+        Converter c = converter.getSelectedValue();
+        handleConverterChange(c);
+
+        converter.setDisable(disableConverter);
+        minOption.setDisable(disableConverter);
+        maxOption.setDisable(disableConverter);
+        stepOption.setDisable(disableConverter);
+    }
+
+    private void handleConverterChange(Converter c) {
+        Mode m = mode.getSelectedValue();
+        StringConverter<Object> conv = createConverter(c, m);
+        if (control.getValueFactory() != null) {
+            control.getValueFactory().setConverter(conv);
+        }
+    }
+
+    // string converter
+    static class SConverter extends StringConverter<Object> {
+        private final Mode mode;
+        private final Format format;
+
+        public SConverter(Mode c, Format f) {
+            this.mode = c;
+            this.format = f;
+        }
+
+        @Override
+        public String toString(Object v) {
+            return v == null ? "" : format.format(v);
+        }
+
+        @Override
+        public Object fromString(String s) {
+            if (s == null) {
+                return null;
+            }
+
+            Object v;
+            try {
+                v = format.parseObject(s);
+            } catch (ParseException e) {
+                throw new RuntimeException(e);
+            }
+
+            switch (mode) {
+            case DOUBLE:
+                if(v instanceof Number n) {
+                    return n.doubleValue();
+                }
+                throw new RuntimeException("Not a double: " + v);
+            case INTEGER:
+                if(v instanceof Number n) {
+                    return n.intValue();
+                }
+                throw new RuntimeException("Not an integer: " + v);
+            case LIST:
+            case NULL:
+            default:
+                return s;
+            }
+        }
     }
 }

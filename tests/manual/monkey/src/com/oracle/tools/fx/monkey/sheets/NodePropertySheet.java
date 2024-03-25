@@ -62,7 +62,7 @@ public class NodePropertySheet {
         op.option(new BooleanOption("mouseTransparent", "mouse transparent", n.mouseTransparentProperty()));
         op.option("Node Orientation:", new EnumOption<>("nodeOrientation", NodeOrientation.class, n.nodeOrientationProperty()));
         //op.option("On Various Events: TODO", null); // TODO own section?
-        op.option("Opacity:", new DoubleSpinner("opacity", n.opacityProperty(), -0.1, 1.1, 0.1));
+        op.option("Opacity:", new DoubleSpinner("opacity", -0.1, 1.1, 0.1, n.opacityProperty()));
         op.option(new BooleanOption("pickOnBounds", "pick on bounds", n.pickOnBoundsProperty()));
         op.option("Rotate: TODO", null); // TODO
         op.option("Rotation Axis: TODO", null); // TODO

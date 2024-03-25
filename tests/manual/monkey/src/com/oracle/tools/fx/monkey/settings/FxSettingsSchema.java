@@ -27,6 +27,7 @@
 package com.oracle.tools.fx.monkey.settings;
 
 import java.util.List;
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Rectangle2D;
@@ -274,8 +275,12 @@ public class FxSettingsSchema {
                     }
                     divs[i] = v;
                 }
-                // FIX getting smaller and smaller
-                // sp.setDividerPositions(divs);
+
+                // FIX some kind of a bug, the dividers move slightly each time
+                sp.setDividerPositions(divs);
+                Platform.runLater(() -> {
+                    sp.setDividerPositions(divs);
+                });
             }
         }
     }

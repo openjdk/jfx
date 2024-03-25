@@ -70,7 +70,7 @@ public class TooltipPage extends TestPaneBase {
         op.option("Content Display:", new EnumOption<>("contentDisplay", ContentDisplay.class, control.contentDisplayProperty()));
         op.option("Font: TODO", null); // TODO font
         op.option("Graphic:", graphic);
-        op.option("Graphic Text Gap:", new DoubleSpinner("graphicTextGap", control.graphicTextGapProperty(), 0, 100, 0.1));
+        op.option("Graphic Text Gap:", new DoubleSpinner("graphicTextGap", 0, 100, 0.1, control.graphicTextGapProperty()));
         op.option("Hide Delay:", new DurationOption("hideDelay", control.hideDelayProperty()));
         op.option("Show Delay:", new DurationOption("showDelay", control.showDelayProperty()));
         op.option("Show Duration:", new DurationOption("showDuration", control.showDurationProperty()));

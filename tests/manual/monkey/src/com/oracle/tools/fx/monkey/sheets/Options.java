@@ -39,6 +39,7 @@ import com.oracle.tools.fx.monkey.options.DoubleOption;
 import com.oracle.tools.fx.monkey.options.IntOption;
 import com.oracle.tools.fx.monkey.options.ObjectOption;
 import com.oracle.tools.fx.monkey.options.TextChoiceOption;
+import com.oracle.tools.fx.monkey.util.ObjectSelector;
 import com.oracle.tools.fx.monkey.util.TextTemplates;
 import com.oracle.tools.fx.monkey.util.Utils;
 
@@ -146,5 +147,21 @@ public class Options {
         op.addChoice("<null>", null);
         op.selectInitialValue();
         return op;
+    }
+
+    public static TextChoiceOption promptText(String name, boolean allowEditButton, StringProperty p) {
+        TextChoiceOption op = new TextChoiceOption(name, allowEditButton, p);
+        Utils.fromPairs(TextTemplates.singleLineTextPairs(), (k, v) -> op.addChoice(k, v));
+        return op;
+    }
+
+    public static ObjectSelector<Runnable> selector(String name) {
+        return new ObjectSelector<Runnable>(name, (r) -> {
+            try {
+                r.run();
+            } catch (Throwable e) {
+                e.printStackTrace();
+            }
+        });
     }
 }

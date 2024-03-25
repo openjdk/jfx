@@ -71,4 +71,9 @@ public class ObjectSelector<T> extends ComboBox<NamedValue<T>> {
     public void selectFirst() {
         select(0);
     }
+
+    public T getSelectedValue() {
+        NamedValue<T> v = getSelectionModel().getSelectedItem();
+        return v == null ? null : v.getValue();
+    }
 }

@@ -27,7 +27,6 @@ package com.oracle.tools.fx.monkey.sheets;
 import javafx.scene.control.TextInputControl;
 import com.oracle.tools.fx.monkey.options.BooleanOption;
 import com.oracle.tools.fx.monkey.options.FontOption;
-import com.oracle.tools.fx.monkey.options.PromptTextOption;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 
 /**
@@ -38,7 +37,7 @@ public class TextInputControlPropertySheet {
         op.section("TextInputControl");
         op.option(new BooleanOption("editable", "editable", control.editableProperty()));
         op.option("Font:", new FontOption("font", false, control.fontProperty()));
-        op.option("Prompt Text:", new PromptTextOption("promptText", true, control.promptTextProperty()));
+        op.option("Prompt Text:", Options.promptText("promptText", true, control.promptTextProperty()));
         op.option("Text:", Options.textOption("text", multiLine, true, control.textProperty()));
         op.option("Text Formatter: TODO", null); // TODO
 
