@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -323,7 +323,7 @@ public class PrismTextLayout implements TextLayout {
             if (lineEnd > offset) break;
             lineIndex++;
         }
-        int sliptCaretOffset = -1;
+        int splitCaretOffset = -1;
         int level = 0;
         float lineX = 0, lineY = 0, lineHeight = 0;
         TextLine line = lines[lineIndex];
@@ -352,13 +352,13 @@ public class PrismTextLayout implements TextLayout {
             if (isLeading) {
                 if (runIndex > 0 && offset == runStart) {
                     level = run.getLevel();
-                    sliptCaretOffset = offset - 1;
+                    splitCaretOffset = offset - 1;
                 }
             } else {
                 int runEnd = run.getEnd();
                 if (runIndex + 1 < runs.length && offset + 1 == runEnd) {
                     level = run.getLevel();
-                    sliptCaretOffset = offset + 1;
+                    splitCaretOffset = offset + 1;
                 }
             }
         } else {
@@ -386,12 +386,12 @@ public class PrismTextLayout implements TextLayout {
         }
         lineX += x;
         lineY += y;
-        if (sliptCaretOffset != -1) {
+        if (splitCaretOffset != -1) {
             for (int i = 0; i < runs.length; i++) {
                 TextRun run = runs[i];
                 int runStart = run.getStart();
                 int runEnd = run.getEnd();
-                if (runStart <= sliptCaretOffset && sliptCaretOffset < runEnd) {
+                if (runStart <= splitCaretOffset && splitCaretOffset < runEnd) {
                     if ((run.getLevel() & 1) != (level & 1)) {
                         Point2D location = run.getLocation();
                         float lineX2 = location.x;

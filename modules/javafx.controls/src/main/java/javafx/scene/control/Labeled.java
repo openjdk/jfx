@@ -487,7 +487,7 @@ public abstract class Labeled extends Control {
 
                 //
                 // If imageUrlProperty is invalidated, this is the origin of the style that
-                // triggered the invalidation. This is used in the invaildated() method where the
+                // triggered the invalidation. This is used in the invalidated() method where the
                 // value of super.getStyleOrigin() is not valid until after the call to set(v) returns,
                 // by which time invalidated will have been called.
                 // This value is initialized to USER in case someone calls set on the imageUrlProperty, which
@@ -887,17 +887,6 @@ public abstract class Labeled extends Control {
     public final boolean isTextTruncated() {
         return textTruncatedProperty().get();
     }
-
-    //    /**
-    //     * This is the symbol that is searched for in the text and used as
-    //     * a mnemonic. You can change what symbol is used. Using the symbol
-    //     * more than once will cause the symbol to be escaped. Thus, if "_"
-    //     * (the default) is used, then the string "H_ello World" will use
-    //     * "e" as the mnemonic. If "H__ello World" is used, then no mnemonic
-    //     * will be used and the text will be rendered as "H_ello World".
-    //     * TODO: Have i18n review this part of the API to confirm proper
-    //     * externalization will work as expected
-    //     */
 
     @Override public String toString() {
         StringBuilder builder =
