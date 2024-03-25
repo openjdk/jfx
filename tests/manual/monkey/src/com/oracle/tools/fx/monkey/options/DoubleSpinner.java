@@ -36,21 +36,22 @@ public class DoubleSpinner extends Spinner<Double> {
     private final SimpleDoubleProperty property = new SimpleDoubleProperty();
 
     public DoubleSpinner(String name, double min, double max, double amountToStepBy, DoubleProperty p) {
-        super(min, max, p == null ? min : p.get(), amountToStepBy);
+        this(name, min, max, p.get(), amountToStepBy);
+        property.bindBidirectional(p);
+    }
+
+    public DoubleSpinner(String name, double min, double max, double value, double amountToStepBy) {
+        super(min, max, value, amountToStepBy);
 
         FX.name(this, name);
         setEditable(true);
-
-        if (p != null) {
-            property.bindBidirectional(p);
-        }
 
         valueProperty().addListener((s, pr, val) -> {
             property.set(val);
         });
     }
 
-    public DoubleSpinner(String name, double min, double max, double amountToStepBy) {
-        this(name, min, max, amountToStepBy, null);
+    public DoubleSpinner(String name, double min, double max, double value) {
+        this(name, min, max, value, 1.0);
     }
 }
