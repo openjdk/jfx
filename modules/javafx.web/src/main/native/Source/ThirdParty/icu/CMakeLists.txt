@@ -202,6 +202,8 @@ set(ICU_COMMON_SOURCES
     source/common/uloc.cpp
     source/common/uloc_keytype.cpp
     source/common/uloc_tag.cpp
+    source/common/ulocale.cpp
+    source/common/ulocbuilder.cpp
     source/common/umapfile.cpp
     source/common/umath.cpp
     source/common/umutablecptrie.cpp
@@ -588,7 +590,7 @@ target_link_libraries(data_as_asm icuuc icui18n)
 file(GLOB ICU_DATA_ZIP_FILE "${CMAKE_BINARY_DIR}/icu/data/icu4c-*.zip")
 
 # Get just file name without extension
-set(ICU_DATA_FILE_NAME "icudt73l")
+set(ICU_DATA_FILE_NAME "icudt74l")
 
 # Use jar instead of unzip, it will be helpful to get rid of cygwin dependency
 find_package(Java)

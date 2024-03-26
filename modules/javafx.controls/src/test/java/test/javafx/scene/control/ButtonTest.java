@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -400,7 +400,7 @@ public class ButtonTest {
     }
 
 
-    @Test public void conextMenuShouldntShowOnAction() {
+    @Test public void contextMenuShouldntShowOnAction() {
         ContextMenu popupMenu = new ContextMenu();
         MenuItem item1 = new MenuItem("_About");
         popupMenu.getItems().add(item1);
