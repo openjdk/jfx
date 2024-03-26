@@ -84,7 +84,6 @@ public class JDK8130122Test extends VisualTestBase {
             testScene.setCamera(new PerspectiveCamera());
             testScene.setFill(Color.WHITE);
             testStage.setScene(testScene);
-            testStage.setAlwaysOnTop(true);
             testStage.show();
         });
         waitFirstFrame();
@@ -99,8 +98,8 @@ public class JDK8130122Test extends VisualTestBase {
             assertColorEquals(Color.WHITE, color, TOLERANCE);
             horizontalListView.setVisible(true);
         });
-        sleep(1000);
-        waitNextFrame();
+        // Give more time after setVisible(true) is called for frame update
+        waitFirstFrame();
         runAndWait(() -> {
             Color color = getColor(testScene, 200, 200);
             assertColorEquals(Color.GREEN, color, TOLERANCE);
