@@ -75,9 +75,9 @@ public class ImageStorageTest {
             { "http://test.com/dir.ext/image.ext", "http://test.com/dir.ext/image@" + scale + "x.ext" },
         };
         for (String[] names : imageNames) {
-            String name2x = ImageTools.getScaledImageName(names[0], scale);
-            if (name2x.equals(names[1])) continue;
-            fail("Scaled image names don't match: expected = " + names[1] + ", actual = " + name2x);
+            String nameScaled = ImageTools.getScaledImageName(names[0], scale);
+            if (nameScaled.equals(names[1])) continue;
+            fail("Scaled image names don't match: expected = " + names[1] + ", actual = " + nameScaled);
         }
     }
 
