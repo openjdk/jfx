@@ -534,8 +534,8 @@ public class AreaChartTest extends XYChartTestBase {
                 .filter(pathElement -> pathElement instanceof LineTo)
                 .map(pathElement -> (LineTo) pathElement)
                 .map(lineTo -> new Point2D(
-                        Math.ceil(xAxis.getValueForDisplay(lineTo.getX()).doubleValue()),
-                        Math.ceil(yAxis.getValueForDisplay(lineTo.getY()).doubleValue()))
+                        Math.round(xAxis.getValueForDisplay(lineTo.getX()).doubleValue()),
+                        Math.round(yAxis.getValueForDisplay(lineTo.getY()).doubleValue()))
                 )
                 .collect(Collectors.toList());
         // Due to fillPath, one additional LineTo element is added to close the loop

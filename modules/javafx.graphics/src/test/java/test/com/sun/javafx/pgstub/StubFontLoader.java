@@ -37,54 +37,53 @@ import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
 
 import java.io.InputStream;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Stub implementation of the {@link FontLoader} for testing purposes.
+ * <br>
+ * Can recognize and load some fonts we defined below, will otherwise fall back to the
+ * System font (like in the real font loader).
+ */
 public class StubFontLoader extends FontLoader {
 
     @Override
     public void loadFont(Font font) {
-        StubFont nativeFont = new StubFont();
-        nativeFont.font = font;
+        StubFont stub = new StubFont();
+        stub.font = font;
 
-        String name = font.getName().trim().toLowerCase(Locale.ROOT);
-        switch (name) {
-            case "system regular" -> FontHelper.setNativeFont(font, nativeFont, font.getName(), "System", "Regular");
-            case "system bold" -> FontHelper.setNativeFont(font, nativeFont, font.getName(), "System", "Bold");
-            case "system italic" -> FontHelper.setNativeFont(font, nativeFont, font.getName(), "System", "Italic");
-            case "system bold italic" ->
-                    FontHelper.setNativeFont(font, nativeFont, font.getName(), "System", "Bold Italic");
-            case "amble regular" -> FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble", "Regular");
-            case "amble bold" -> FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble", "Bold");
-            case "amble italic" -> FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble", "Italic");
-            case "amble bold italic" ->
-                    FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble", "Bold Italic");
-            case "amble condensed" -> FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble Cn", "Regular");
-            case "amble bold condensed" ->
-                    FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble Cn", "Bold");
-            case "amble condensed italic" ->
-                    FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble Cn", "Italic");
-            case "amble bold condensed italic" ->
-                    FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble Cn", "Bold Italic");
-            case "amble light" -> FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble Lt", "Regular");
-            case "amble light italic" ->
-                    FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble Lt", "Italic");
-            case "amble light condensed" ->
-                    FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble LtCn", "Regular");
-            case "amble light condensed italic" ->
-                    FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble LtCn", "Italic");
+        String name = font.getName();
+        String nameLower = name.trim().toLowerCase(Locale.ROOT);
+        switch (nameLower) {
+            case "system regular" -> FontHelper.setNativeFont(font, stub, name, "System", "Regular");
+            case "system bold" -> FontHelper.setNativeFont(font, stub, name, "System", "Bold");
+            case "system italic" -> FontHelper.setNativeFont(font, stub, name, "System", "Italic");
+            case "system bold italic" -> FontHelper.setNativeFont(font, stub, name, "System", "Bold Italic");
+            case "amble regular" -> FontHelper.setNativeFont(font, stub, name, "Amble", "Regular");
+            case "amble bold" -> FontHelper.setNativeFont(font, stub, name, "Amble", "Bold");
+            case "amble italic" -> FontHelper.setNativeFont(font, stub, name, "Amble", "Italic");
+            case "amble bold italic" -> FontHelper.setNativeFont(font, stub, name, "Amble", "Bold Italic");
+            case "amble condensed" -> FontHelper.setNativeFont(font, stub, name, "Amble Cn", "Regular");
+            case "amble bold condensed" -> FontHelper.setNativeFont(font, stub, name, "Amble Cn", "Bold");
+            case "amble condensed italic" -> FontHelper.setNativeFont(font, stub, name, "Amble Cn", "Italic");
+            case "amble bold condensed italic" -> FontHelper.setNativeFont(font, stub, name, "Amble Cn", "Bold Italic");
+            case "amble light" -> FontHelper.setNativeFont(font, stub, name, "Amble Lt", "Regular");
+            case "amble light italic" -> FontHelper.setNativeFont(font, stub, name, "Amble Lt", "Italic");
+            case "amble light condensed" -> FontHelper.setNativeFont(font, stub, name, "Amble LtCn", "Regular");
+            case "amble light condensed italic" -> FontHelper.setNativeFont(font, stub, name, "Amble LtCn", "Italic");
+            default -> FontHelper.setNativeFont(font, stub, name, "System", "Regular");
         }
     }
 
     @Override
     public List<String> getFamilies() {
-        return Arrays.asList("System", "Amble", "Amble Cn", "Amble Lt", "Amble LtCn");
+        return List.of("System", "Amble", "Amble Cn", "Amble Lt", "Amble LtCn");
     }
 
     @Override
     public List<String> getFontNames() {
-        return Arrays.asList("System Regular", "System Bold", "System Italic", "System Bold Italic",
+        return List.of("System Regular", "System Bold", "System Italic", "System Bold Italic",
                 "Amble Regular", "Amble Bold", "Amble Italic", "Amble Bold Italic",
                 "Amble Condensed", "Amble Bold Condensed", "Amble Condensed Italic", "Amble Bold Condensed Italic",
                 "Amble Light", "Amble Light Italic", "Amble Light Condensed", "Amble Light Condensed Italic");
@@ -97,8 +96,7 @@ public class StubFontLoader extends FontLoader {
         return switch (familyLower) {
             case "system" -> List.of("System Regular", "System Bold", "System Italic", "System Bold Italic");
             case "amble" -> List.of("Amble Regular", "Amble Bold", "Amble Italic", "Amble Bold Italic");
-            case "amble cn" -> List.of("Amble Condensed", "Amble Bold Condensed", "Amble Condensed Italic",
-                    "Amble Bold Condensed Italic");
+            case "amble cn" -> List.of("Amble Condensed", "Amble Bold Condensed", "Amble Condensed Italic", "Amble Bold Condensed Italic");
             case "amble lt" -> List.of("Amble Light", "Amble Light Italic");
             case "amble ltcn" -> List.of("Amble Light Condensed", "Amble Light Condensed Italic");
             default -> List.of();
