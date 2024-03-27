@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -243,7 +243,7 @@ void GlassApplication::ExecActionLater(Action *action)
 }
 
 /* static */
-jobject GlassApplication::EnterNestedEventLoop(JNIEnv * env)
+void GlassApplication::EnterNestedEventLoop(JNIEnv * env)
 {
     sm_shouldLeaveNestedLoop = false;
 
@@ -257,20 +257,11 @@ jobject GlassApplication::EnterNestedEventLoop(JNIEnv * env)
     }
 
     sm_shouldLeaveNestedLoop = false;
-
-    if (!sm_nestedLoopReturnValue) {
-        return NULL;
-    }
-
-    jobject ret = env->NewLocalRef(sm_nestedLoopReturnValue);
-    sm_nestedLoopReturnValue.Attach(env, NULL);
-    return ret;
 }
 
 /* static */
-void GlassApplication::LeaveNestedEventLoop(JNIEnv * env, jobject retValue)
+void GlassApplication::LeaveNestedEventLoop(JNIEnv * env)
 {
-    sm_nestedLoopReturnValue.Attach(env, retValue);
     sm_shouldLeaveNestedLoop = true;
 }
 
@@ -438,23 +429,23 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinApplication__1terminateLoop
 /*
  * Class:     com_sun_glass_ui_win_WinApplication
  * Method:    _enterNestedEventLoopImpl
- * Signature: ()Ljava/lang/Object;
+ * Signature: ()V;
  */
-JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_win_WinApplication__1enterNestedEventLoopImpl
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinApplication__1enterNestedEventLoopImpl
   (JNIEnv * env, jobject self)
 {
-    return GlassApplication::EnterNestedEventLoop(env);
+    GlassApplication::EnterNestedEventLoop(env);
 }
 
 /*
  * Class:     com_sun_glass_ui_win_WinApplication
  * Method:    _leaveNestedEventLoopImpl
- * Signature: (Ljava/lang/Object;)V
+ * Signature: ()V
  */
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinApplication__1leaveNestedEventLoopImpl
-  (JNIEnv * env, jobject self, jobject retValue)
+  (JNIEnv * env, jobject self)
 {
-    GlassApplication::LeaveNestedEventLoop(env, retValue);
+    GlassApplication::LeaveNestedEventLoop(env);
 }
 
 /*
@@ -531,4 +522,3 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_win_WinApplication_getPlatformPr
 }
 
 } // extern "C"
-
