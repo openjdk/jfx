@@ -27,6 +27,7 @@ package javafx.scene.control.skin;
 
 import static com.sun.javafx.PlatformUtil.isMac;
 import static com.sun.javafx.PlatformUtil.isWindows;
+import java.text.BreakIterator;
 import java.util.List;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -60,8 +61,10 @@ import javafx.scene.shape.PathElement;
 import javafx.scene.text.HitInfo;
 import javafx.scene.text.Text;
 import javafx.util.Duration;
+import com.sun.javafx.scene.control.TextInputControlHelper;
 import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
 import com.sun.javafx.scene.control.skin.Utils;
+
 /**
  * Default skin implementation for the {@link TextArea} control.
  *
@@ -507,7 +510,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
                 switch (dir) {
                     case LEFT:
                     case RIGHT:
-                        nextCharacterVisually(dir == Direction.RIGHT);
+                        nextCharacterLeftRight(dir == Direction.RIGHT);
                         break;
                     default:
                         throw new IllegalArgumentException(""+dir);
@@ -570,44 +573,19 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         }
     }
 
-    private void nextCharacterVisually(boolean moveRight) {
+    private void nextCharacterLeftRight(boolean moveRight) {
+        // left/right arrow keys should move the cursor left/right
+        // in LTR orientation: within LTR text blocks
+        // in RTL orientation: within RTL text blocks
         if (isRTL()) {
-            // Text node is mirrored.
             moveRight = !moveRight;
         }
 
-        Text textNode = getTextNode();
-        Bounds caretBounds = caretPath.getLayoutBounds();
-        if (caretPath.getElements().size() == 4) {
-            // The caret is split
-            // TODO: Find a better way to get the primary caret position
-            // instead of depending on the internal implementation.
-            // See RT-25465.
-            caretBounds = new Path(caretPath.getElements().get(0), caretPath.getElements().get(1)).getLayoutBounds();
-        }
-        double hitX = moveRight ? caretBounds.getMaxX() : caretBounds.getMinX();
-        double hitY = (caretBounds.getMinY() + caretBounds.getMaxY()) / 2;
-        HitInfo hit = textNode.hitTest(new Point2D(hitX, hitY));
-        boolean leading = hit.isLeading();
-        Path charShape = new Path(textNode.rangeShape(hit.getCharIndex(), hit.getCharIndex() + 1));
-        if ((moveRight && charShape.getLayoutBounds().getMaxX() > caretBounds.getMaxX()) ||
-                (!moveRight && charShape.getLayoutBounds().getMinX() < caretBounds.getMinX())) {
-            leading = !leading;
-            positionCaret(hit.getInsertionIndex(), leading, false, false);
-        } else {
-            // We're at beginning or end of line. Try moving up / down.
-            int dot = textArea.getCaretPosition();
-            targetCaretX = moveRight ? 0 : Double.MAX_VALUE;
-            // TODO: Use Bidi sniffing instead of assuming right means forward here?
-            downLines(moveRight ? 1 : -1, false, false);
-            targetCaretX = -1;
-            if (dot == textArea.getCaretPosition()) {
-                if (moveRight) {
-                    textArea.forward();
-                } else {
-                    textArea.backward();
-                }
-            }
+        int pos = textArea.getCaretPosition();
+        BreakIterator bi = TextInputControlHelper.charIterator(textArea);
+        int next = moveRight ? bi.following(pos) : bi.preceding(pos);
+        if (next != BreakIterator.DONE) {
+            textArea.selectRange(next, next);
         }
     }
 
