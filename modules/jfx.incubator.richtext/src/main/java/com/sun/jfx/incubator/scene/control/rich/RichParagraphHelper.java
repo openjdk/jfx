@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,26 +23,42 @@
  * questions.
  */
 
-include "base", "graphics", "controls", "incubator.richtext", "swing", "swt", "fxml", "web", "media", "systemTests"
+package com.sun.jfx.incubator.scene.control.rich;
 
-project(":base").projectDir = file("modules/javafx.base")
-project(":graphics").projectDir = file("modules/javafx.graphics")
-project(":controls").projectDir = file("modules/javafx.controls")
-project(":incubator.richtext").projectDir = file("modules/jfx.incubator.richtext")
-project(":swing").projectDir = file("modules/javafx.swing")
-project(":swt").projectDir = file("modules/javafx.swt")
-project(":fxml").projectDir = file("modules/javafx.fxml")
-project(":web").projectDir = file("modules/javafx.web")
-project(":media").projectDir = file("modules/javafx.media")
-project(":systemTests").projectDir = file("tests/system")
+import java.util.List;
+import java.util.function.Consumer;
+import com.sun.javafx.util.Utils;
+import jfx.incubator.scene.control.rich.model.RichParagraph;
+import jfx.incubator.scene.control.rich.model.StyledSegment;
 
-def closedDir = file("../rt-closed")
-def buildClosed = closedDir.isDirectory()
+/**
+ * Provides access to internal methods in RichParagraph.
+ */
+public class RichParagraphHelper {
+    public interface Accessor {
+        public List<Consumer<TextCell>> getHighlights(RichParagraph p);
 
-if (buildClosed) {
-    File supplementalSettingsFile = new File("../rt-closed/closed-settings.gradle");
-    apply from: supplementalSettingsFile
+        public List<StyledSegment> getSegments(RichParagraph p);
+    }
+
+    static {
+        Utils.forceInit(RichParagraph.class);
+    }
+
+    private static Accessor accessor;
+
+    public static void setAccessor(Accessor a) {
+        if (accessor != null) {
+            throw new IllegalStateException();
+        }
+        accessor = a;
+    }
+
+    public static List<Consumer<TextCell>> getHighlights(RichParagraph p) {
+        return accessor.getHighlights(p);
+    }
+
+    public static List<StyledSegment> getSegments(RichParagraph p) {
+        return accessor.getSegments(p);
+    }
 }
-
-include 'apps'
-

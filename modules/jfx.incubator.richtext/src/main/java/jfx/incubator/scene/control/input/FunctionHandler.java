@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,27 +22,33 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package jfx.incubator.scene.control.input;
 
-include "base", "graphics", "controls", "incubator.richtext", "swing", "swt", "fxml", "web", "media", "systemTests"
+import javafx.event.Event;
+import javafx.scene.control.Skinnable;
 
-project(":base").projectDir = file("modules/javafx.base")
-project(":graphics").projectDir = file("modules/javafx.graphics")
-project(":controls").projectDir = file("modules/javafx.controls")
-project(":incubator.richtext").projectDir = file("modules/jfx.incubator.richtext")
-project(":swing").projectDir = file("modules/javafx.swing")
-project(":swt").projectDir = file("modules/javafx.swt")
-project(":fxml").projectDir = file("modules/javafx.fxml")
-project(":web").projectDir = file("modules/javafx.web")
-project(":media").projectDir = file("modules/javafx.media")
-project(":systemTests").projectDir = file("tests/system")
+/**
+ * A functional interface which denotes code associated with a {@code FunctionTag} or a key binding.
+ *
+ * @param <C> the type of the skinnable
+ * @since 999 TODO
+ */
+@FunctionalInterface
+public interface FunctionHandler<C extends Skinnable> {
+    /**
+     * Handles the event associated with a function tag or a key binding.
+     * @param control the control instance
+     */
+    public void handle(C control);
 
-def closedDir = file("../rt-closed")
-def buildClosed = closedDir.isDirectory()
-
-if (buildClosed) {
-    File supplementalSettingsFile = new File("../rt-closed/closed-settings.gradle");
-    apply from: supplementalSettingsFile
+    /**
+     * This method is called by the InputMap when handling the corresponding KeyEvent.
+     * Implementors may override this method to conditionally consume the event.
+     * @param ev the event
+     * @param control the control instance
+     */
+    public default void handleKeyBinding(Event ev, C control) {
+        handle(control);
+        ev.consume();
+    }
 }
-
-include 'apps'
-
