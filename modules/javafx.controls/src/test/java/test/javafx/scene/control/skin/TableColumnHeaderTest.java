@@ -260,9 +260,7 @@ public class TableColumnHeaderTest {
                 width, column.getWidth(), 0.001);
     }
 
-    /**
-     * Row style must affect the required column width
-     */
+    /** Row style must affect the required column width */
     @Test
     public void test_resizeColumnToFitContentRowStyle() {
         TableColumn column = tableView.getColumns().get(0);
@@ -276,9 +274,7 @@ public class TableColumnHeaderTest {
         assertTrue("Column width must be greater", width < column.getWidth());
     }
 
-    /**
-     * Test resizeColumnToFitContent in the presence of a non-standard row skin
-     */
+    /** Test resizeColumnToFitContent in the presence of a non-standard row skin */
     @Test
     public void test_resizeColumnToFitContentCustomRowSkin() {
         TableColumn column = tableView.getColumns().get(0);
@@ -289,17 +285,26 @@ public class TableColumnHeaderTest {
         assertTrue(width > 0);
     }
 
+    /**
+     * We expect that the css of the label is processed after the resizing took place,
+     * since it is needed to correctly measure the size.
+     */
     @Test
     public void testResizeColumnToFitContentCssIsApplied() {
         Label label = TableColumnHeaderShim.getLabel(firstColumnHeader);
         label.setStyle("-fx-font-size: 24px;");
         firstColumnHeader.getTableColumn().setText("longlonglonglong");
 
+        assertEquals(12, label.getFont().getSize(), 0);
+
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
 
         assertEquals(24, label.getFont().getSize(), 0);
     }
 
+    /**
+     * A table column with a graphic {@link Text} should be bigger than without.
+     */
     @Test
     public void testResizeColumnToFitContentWithGraphicText() {
         TableColumnBase<?, ?> tableColumn = firstColumnHeader.getTableColumn();
@@ -318,6 +323,9 @@ public class TableColumnHeaderTest {
         assertTrue(widthWithGraphic > width);
     }
 
+    /**
+     * A table column with a graphic {@link Label} should be bigger than without.
+     */
     @Test
     public void testResizeColumnToFitContentWithGraphicLabel() {
         TableColumnBase<?, ?> tableColumn = firstColumnHeader.getTableColumn();
@@ -336,6 +344,10 @@ public class TableColumnHeaderTest {
         assertTrue(widthWithGraphic > width);
     }
 
+    /**
+     * The content display should also be taken into consideration when measuring the width.
+     * See also: <a href="https://bugs.openjdk.org/browse/JDK-8186188">JDK-8186188</a>
+     */
     @Test
     public void testResizeColumnToFitContentWithGraphicAlignment() {
         TableColumnBase<?, ?> tableColumn = firstColumnHeader.getTableColumn();

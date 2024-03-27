@@ -45,17 +45,17 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.text.Text;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TableColumnHeaderTreeTableTest {
 
@@ -67,7 +67,7 @@ public class TableColumnHeaderTreeTableTest {
     private static String NAME2 = "Orrin Davies";
     private static String NAME3 = "Emma Wilson";
 
-    @Before
+    @BeforeEach
     public void before() {
         ObservableList<Person> model = FXCollections.observableArrayList(
                 new Person(NAME0, 76),
@@ -95,7 +95,7 @@ public class TableColumnHeaderTreeTableTest {
         firstColumnHeader = VirtualFlowTestUtils.getTableColumnHeader(tableView, column);
     }
 
-    @After
+    @AfterEach
     public void after() {
         sl.dispose();
     }
@@ -149,8 +149,7 @@ public class TableColumnHeaderTreeTableTest {
         double width = column.getWidth();
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
 
-        assertEquals("Width must be the same",
-                width, column.getWidth(), 0.001);
+        assertEquals(width, column.getWidth(), 0.001, "Width must be the same");
     }
 
     /**
@@ -165,19 +164,18 @@ public class TableColumnHeaderTreeTableTest {
 
         tableView.getRoot().getChildren().get(0).getValue().setFirstName("This is a big text inside that column");
 
-        assertEquals("Width must be the same",
-                width, column.getWidth(), 0.001);
+        assertEquals(
+                width, column.getWidth(), 0.001, "Width must be the same");
 
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
-        assertTrue("Column width must be greater",
-                width < column.getWidth());
+        assertTrue(
+                width < column.getWidth(), "Column width must be greater");
 
         //Back to initial value
         tableView.getRoot().getChildren().get(0).getValue().setFirstName(NAME0);
 
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
-        assertEquals("Width must be equal to initial value",
-                width, column.getWidth(), 0.001);
+        assertEquals(width, column.getWidth(), 0.001, "Width must be equal to initial value");
     }
 
     /**
@@ -195,12 +193,12 @@ public class TableColumnHeaderTreeTableTest {
         tableView.getRoot().getChildren().get(2).getValue().setFirstName("small");
         tableView.getRoot().getChildren().get(3).getValue().setFirstName("small");
 
-        assertEquals("Width must be the same",
-                width, column.getWidth(), 0.001);
+        assertEquals(
+                width, column.getWidth(), 0.001, "Width must be the same");
 
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
-        assertTrue("Column width must be smaller",
-                width > column.getWidth());
+        assertTrue(
+                width > column.getWidth(), "Column width must be smaller");
 
         //Back to initial value
         tableView.getRoot().getChildren().get(0).getValue().setFirstName(NAME0);
@@ -209,8 +207,7 @@ public class TableColumnHeaderTreeTableTest {
         tableView.getRoot().getChildren().get(3).getValue().setFirstName(NAME3);
 
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
-        assertEquals("Width must be equal to initial value",
-                width, column.getWidth(), 0.001);
+        assertEquals(width, column.getWidth(), 0.001, "Width must be equal to initial value");
     }
 
     /**
@@ -225,18 +222,15 @@ public class TableColumnHeaderTreeTableTest {
 
         column.setText("This is a big text inside that column");
 
-        assertEquals("Width must be the same",
-                width, column.getWidth(), 0.001);
+        assertEquals(width, column.getWidth(), 0.001, "Width must be the same");
 
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
-        assertTrue("Column width must be greater",
-                width < column.getWidth());
+        assertTrue(width < column.getWidth(), "Column width must be greater");
 
         //Back to initial value
         column.setText("Col");
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, 3);
-        assertEquals("Width must be equal to initial value",
-                width, column.getWidth(), 0.001);
+        assertEquals(width, column.getWidth(), 0.001, "Width must be equal to initial value");
     }
 
     /**
@@ -251,19 +245,14 @@ public class TableColumnHeaderTreeTableTest {
 
         tableView.getRoot().getChildren().get(3).getValue().setFirstName("This is a big text inside that column");
 
-
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, 3);
-        assertEquals("Width must be the same",
-                width, column.getWidth(), 0.001);
-
+        assertEquals(width, column.getWidth(), 0.001, "Width must be the same");
 
         //Back to initial value
         tableView.getRoot().getChildren().get(3).getValue().setFirstName(NAME3);
 
-
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, 3);
-        assertEquals("Width must be equal to initial value",
-                width, column.getWidth(), 0.001);
+        assertEquals(width, column.getWidth(), 0.001, "Width must be equal to initial value");
     }
 
     /** Row style must affect the required column width */
@@ -277,7 +266,7 @@ public class TableColumnHeaderTreeTableTest {
 
         tableView.setRowFactory(this::createLargeRow);
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
-        assertTrue("Column width must be greater", width < column.getWidth());
+        assertTrue(width < column.getWidth(), "Column width must be greater");
     }
 
     /** Test resizeColumnToFitContent in the presence of a non-standard row skin */
@@ -291,17 +280,26 @@ public class TableColumnHeaderTreeTableTest {
         assertTrue(width > 0);
     }
 
+    /**
+     * We expect that the css of the label is processed after the resizing took place,
+     * since it is needed to correctly measure the size.
+     */
     @Test
     public void testResizeColumnToFitContentCssIsApplied() {
         Label label = TableColumnHeaderShim.getLabel(firstColumnHeader);
         label.setStyle("-fx-font-size: 24px;");
         firstColumnHeader.getTableColumn().setText("longlonglonglong");
 
+        assertEquals(12, label.getFont().getSize(), 0);
+
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
 
         assertEquals(24, label.getFont().getSize(), 0);
     }
 
+    /**
+     * A table column with a graphic {@link Text} should be bigger than without.
+     */
     @Test
     public void testResizeColumnToFitContentWithGraphicText() {
         TableColumnBase<?, ?> tableColumn = firstColumnHeader.getTableColumn();
@@ -320,6 +318,9 @@ public class TableColumnHeaderTreeTableTest {
         assertTrue(widthWithGraphic > width);
     }
 
+    /**
+     * A table column with a graphic {@link Label} should be bigger than without.
+     */
     @Test
     public void testResizeColumnToFitContentWithGraphicLabel() {
         TableColumnBase<?, ?> tableColumn = firstColumnHeader.getTableColumn();
@@ -338,6 +339,10 @@ public class TableColumnHeaderTreeTableTest {
         assertTrue(widthWithGraphic > width);
     }
 
+    /**
+     * The content display should also be taken into consideration when measuring the width.
+     * See also: <a href="https://bugs.openjdk.org/browse/JDK-8186188">JDK-8186188</a>
+     */
     @Test
     public void testResizeColumnToFitContentWithGraphicAlignment() {
         TableColumnBase<?, ?> tableColumn = firstColumnHeader.getTableColumn();
@@ -360,12 +365,11 @@ public class TableColumnHeaderTreeTableTest {
     }
 
     private TreeTableRow<Person> createCustomRow(TreeTableView<Person> tableView) {
-        TreeTableRow<Person> row = new TreeTableRow<>() {
+        return new TreeTableRow<>() {
             protected Skin<?> createDefaultSkin() {
                 return new CustomSkin(this);
             }
         };
-        return row;
     }
 
     private static class CustomSkin implements Skin<TreeTableRow<?>> {
@@ -395,13 +399,13 @@ public class TableColumnHeaderTreeTableTest {
 
     private TreeTableRow<Person> createSmallRow(TreeTableView<Person> tableView) {
         TreeTableRow<Person> row = new TreeTableRow<>();
-        row.setStyle("-fx-font: 24 Amble");
+        row.setStyle("-fx-font: 24 System");
         return row;
     }
 
     private TreeTableRow<Person> createLargeRow(TreeTableView<Person> param) {
         TreeTableRow<Person> row = new TreeTableRow<>();
-        row.setStyle("-fx-font: 48 Amble");
+        row.setStyle("-fx-font: 48 System");
         return row;
     }
 
