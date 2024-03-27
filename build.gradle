@@ -2055,6 +2055,10 @@ allprojects {
         // and the ant importer collides with the 'apply plugin:java'
         return
     }
+    // 3DLighting applies an 'application' plugin (that includes the 'java' plugin)
+    if (project.path.startsWith(":3DLighting")) {
+        return
+    }
 
     // All of our projects are java projects
 
@@ -4040,7 +4044,29 @@ project(":systemTests") {
     addValidateSourceSets(project, nonModSrcSets, modSrcSets)
 }
 
+project(":3DLighting") {
+
+    apply plugin: "application"
+    
+    application {
+        mainClass = "attenuation.LightingApplication"
+    }
+
+    project.ext.buildModule = false
+    project.ext.moduleRuntime = false
+
+    commonModuleSetup(project, [ 'base', 'graphics', 'controls', 'swing' ])
+
+    dependencies {
+        implementation project(":base")
+        implementation project(":graphics")
+        implementation project(":controls")
+        implementation project(":swing")
+    }
+}
+
 allprojects {
+
     // The following block is a workaround for the fact that presently Gradle
     // can't set the -XDignore.symbol.file flag, because it appears that the
     // javac API is lacking support for it. So what we'll do is find any Compile
