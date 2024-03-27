@@ -50,6 +50,7 @@ import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
+import java.net.ProxySelector;
 import java.nio.ByteBuffer;
 import java.security.AccessControlException;
 import java.security.AccessController;
@@ -97,6 +98,7 @@ final class HTTP2Loader extends URLLoaderBase {
                 .followRedirects(Redirect.NEVER) // WebCore handles redirection
                 .connectTimeout(Duration.ofSeconds(30)) // FIXME: Add a property to control the timeout
                 .cookieHandler(CookieHandler.getDefault())
+                .proxy(ProxySelector.getDefault())
                 .build());
     // Singleton instance of direct ByteBuffer to transfer downloaded bytes from
     // Java to native
