@@ -76,7 +76,9 @@ public abstract class View {
                                      int modifiers, boolean isPopupTrigger, boolean isSynthesized)
         {
         }
-
+        public boolean handleHitTest(View view, int x, int y) {
+            return false;
+        }
         /**
          * A Scroll event handler.
          *
@@ -554,6 +556,13 @@ public abstract class View {
         }
     }
 
+    private boolean handleHitTest(int x, int y) {
+        if (eventHandler != null) {
+            return eventHandler.handleHitTest(this, x, y);
+        }
+        return false;
+    }
+
     private void handleMenuEvent(int x, int y, int xAbs, int yAbs, boolean isKeyboardTrigger) {
         if (this.eventHandler != null) {
             this.eventHandler.handleMenuEvent(this, x, y, xAbs, yAbs, isKeyboardTrigger);
@@ -946,6 +955,10 @@ public abstract class View {
         } else {
             dragProcessed = false;
         }
+    }
+
+    protected boolean hitTest(int x, int y) {
+        return handleHitTest(x, y);
     }
 
     // ------------- END OF MOUSE EVENTS -----------------

@@ -61,6 +61,9 @@ public interface TKSceneListener {
                            boolean primaryDown, boolean middleDown, boolean secondaryDown,
                            boolean backDown, boolean forwardDown);
 
+
+    public boolean hitTest(double x, double y);
+
     /**
      * Pass a key event to the scene to handle
      */

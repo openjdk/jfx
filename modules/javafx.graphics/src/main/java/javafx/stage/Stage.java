@@ -30,6 +30,8 @@ import java.util.List;
 
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
@@ -231,6 +233,12 @@ public class Stage extends Window {
         @Override
         public void setAlwaysOnTop(Stage stage, boolean aot) {
             stage.alwaysOnTopPropertyImpl().set(aot);
+        }
+
+        @Override
+        public void setTitleBarInsets(Stage stage, float left, float right) {
+            stage.leftTitleBarInsetPropertyImpl().set(left);
+            stage.rightTitleBarInsetPropertyImpl().set(right);
         }
     };
 
@@ -1134,6 +1142,93 @@ public class Stage extends Window {
         return maxHeight;
     }
 
+    /**
+     * Defines the title bar height of this {@code Stage}.
+     *
+     * @defaultValue 0
+     * @since JavaFX 22
+     */
+    private DoubleProperty titleBarHeight;
+
+    public final void setTitleBarHeight(double value) {
+        titleBarHeightProperty().set(value);
+    }
+
+    public final double getTitleBarHeight() {
+        return titleBarHeight == null ? 0.0 : titleBarHeight.get();
+    }
+
+    public final DoubleProperty titleBarHeightProperty() {
+        if (titleBarHeight == null) {
+            titleBarHeight = new DoublePropertyBase(0.0) {
+
+                @Override
+                protected void invalidated() {
+                    if (getPeer() != null) {
+                        getPeer().setTitleBarHeight((int) get());
+                    }
+                }
+
+                @Override
+                public Object getBean() {
+                    return Stage.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "titleBarHeight";
+                }
+            };
+        }
+        return titleBarHeight;
+    }
+
+    /**
+     * Defines the left title bar inset of this {@code Stage}.
+     *
+     * @defaultValue 0
+     * @since JavaFX 22
+     */
+    private ReadOnlyDoubleWrapper leftTitleBarInset;
+
+    public final double getLeftTitleBarInset() {
+        return leftTitleBarInset == null ? 0.0 : leftTitleBarInset.get();
+    }
+
+    public final ReadOnlyDoubleProperty leftTitleBarInsetProperty() {
+        return leftTitleBarInsetPropertyImpl().getReadOnlyProperty();
+    }
+
+    private ReadOnlyDoubleWrapper leftTitleBarInsetPropertyImpl() {
+        if (leftTitleBarInset == null) {
+            leftTitleBarInset = new ReadOnlyDoubleWrapper(this, "leftTitleBarInset");
+        }
+        return leftTitleBarInset;
+    }
+
+    /**
+     * Defines the right title bar inset of this {@code Stage}.
+     *
+     * @defaultValue 0
+     * @since JavaFX 22
+     */
+    private ReadOnlyDoubleWrapper rightTitleBarInset;
+
+    public final double getRightTitleBarInset() {
+        return rightTitleBarInset == null ? 0.0 : rightTitleBarInset.get();
+    }
+
+    public final ReadOnlyDoubleProperty rightTitleBarInsetProperty() {
+        return rightTitleBarInsetPropertyImpl().getReadOnlyProperty();
+    }
+
+    private ReadOnlyDoubleWrapper rightTitleBarInsetPropertyImpl() {
+        if (rightTitleBarInset == null) {
+            rightTitleBarInset = new ReadOnlyDoubleWrapper(this, "rightTitleBarInset");
+        }
+        return rightTitleBarInset;
+    }
+
     /*
      * This can be replaced by listening for the onShowing/onHiding events
      * Note: This method MUST only be called via its accessor method.
@@ -1166,6 +1261,7 @@ public class Stage extends Window {
                     (int) Math.ceil(getMinHeight()));
             getPeer().setMaximumSize((int) Math.floor(getMaxWidth()),
                     (int) Math.floor(getMaxHeight()));
+            getPeer().setTitleBarHeight((int) Math.floor(getTitleBarHeight()));
             setPeerListener(new StagePeerListener(this, STAGE_ACCESSOR));
         }
     }

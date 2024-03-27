@@ -451,6 +451,40 @@ class GlassViewEventHandler extends View.EventHandler {
         });
     }
 
+    private final HitTestNotification hitTestNotification = new HitTestNotification();
+    private class HitTestNotification implements PrivilegedAction<Boolean> {
+        View view;
+        int x, y;
+
+        @Override
+        public Boolean run() {
+            if (scene.sceneListener != null) {
+                final Window w = view.getWindow();
+                double pScaleX = 1.0;
+                double pScaleY = 1.0;
+                if (w != null) {
+                    pScaleX = w.getPlatformScaleX();
+                    pScaleY = w.getPlatformScaleY();
+                }
+                return scene.sceneListener.hitTest(x / pScaleX, y / pScaleY);
+            }
+            return false;
+        }
+    }
+
+    @SuppressWarnings("removal")
+    @Override
+    public boolean handleHitTest(View view, int x, int y)
+    {
+        hitTestNotification.view = view;
+        hitTestNotification.x = x;
+        hitTestNotification.y = y;
+
+        return QuantumToolkit.runWithoutRenderLock(() -> {
+            return AccessController.doPrivileged(hitTestNotification, scene.getAccessControlContext());
+        });
+    }
+
     @SuppressWarnings("removal")
     @Override public void handleMenuEvent(final View view,
                                           final int x, final int y, final int xAbs, final int yAbs,

@@ -121,6 +121,8 @@ public interface TKStage {
 
     public void setMaximumSize(int maxWidth, int maxHeight);
 
+    public void setTitleBarHeight(int height);
+
     public void setFullScreen(boolean fullScreen);
 
     // =================================================================================================================

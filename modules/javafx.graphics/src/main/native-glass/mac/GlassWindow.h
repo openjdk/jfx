@@ -28,6 +28,7 @@
 
 #import "GlassMenu.h"
 #import "GlassView.h"
+#import "GlassTitleBar.h"
 
 // normal Glass window delegate
 @interface GlassWindow : NSObject <NSWindowDelegate>
@@ -42,6 +43,7 @@
     NSView<GlassView>   *view;
     NSScreen            *currentScreen;
     GlassMenubar        *menubar;
+    GlassTitleBar       *titleBar;
     NSRect              preZoomedRect;
     NSWindow            *fullscreenWindow;
 
@@ -50,6 +52,8 @@
     NSUInteger          enabledStyleMask; // valid while the window is disabled
     BOOL                isTransparent;
     BOOL                isDecorated;
+    BOOL                isUnified;
+    BOOL                isCombined;
     BOOL                isResizable;
     BOOL                suppressWindowMoveEvent;
     BOOL                suppressWindowResizeEvent;

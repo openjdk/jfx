@@ -24,13 +24,14 @@
  */
 
 #import <Cocoa/Cocoa.h>
-#import <jni.h>
+#import <GlassTitleBar.h>
 
 // host view to which our views attach, so we can move our view in/out
 @interface GlassHostView : NSView
 {
 @public
-        NSView *view;
+        NSView *jfxView;
+        GlassTitleBar* titleBar;
 }
 
 @end

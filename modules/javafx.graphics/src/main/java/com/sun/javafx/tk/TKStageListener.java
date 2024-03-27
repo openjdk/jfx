@@ -105,6 +105,11 @@ public interface TKStageListener {
      */
     public void changedScreen(Object from, Object to);
 
+     /**
+     * The stages peer has changed it's title bar insets
+     */
+    public void changedTitleBarInsets(float left, float right);
+
     /**
      * Called if the window is closing do to something that has happened on the peer. For
      * example the user clicking the close button or choosing quit from the application menu

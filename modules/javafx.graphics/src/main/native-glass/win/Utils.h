@@ -443,12 +443,14 @@ typedef struct _tagJavaIDs {
         jmethodID notifyFocusUngrab;
         jmethodID notifyDestroy;
         jmethodID notifyDelegatePtr;
+        jmethodID notifyTitleBarInsetsChanged;
     } Window;
     struct {
         jmethodID notifyResize;
         jmethodID notifyRepaint;
         jmethodID notifyKey;
         jmethodID notifyMouse;
+        jmethodID hitTest;
         jmethodID notifyMenu;
         jmethodID notifyScroll;
         jmethodID notifyInputMethod;

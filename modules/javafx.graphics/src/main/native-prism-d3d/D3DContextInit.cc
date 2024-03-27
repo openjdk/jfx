@@ -39,6 +39,7 @@ HRESULT D3DContext::InitContext(bool isVsyncEnabled) {
     params.Windowed = TRUE;
     params.SwapEffect = D3DSWAPEFFECT_DISCARD;
     params.hDeviceWindow = GetDesktopWindow();
+    params.BackBufferFormat = D3DFMT_A8R8G8B8;
     params.PresentationInterval = isVsyncEnabled ?
         D3DPRESENT_INTERVAL_ONE :
         D3DPRESENT_INTERVAL_IMMEDIATE;
