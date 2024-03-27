@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,10 +43,10 @@ import javafx.collections.ObservableList;
 import javafx.collections.ObservableListWrapperShim;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.* ;
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class SortedListTest {
 
@@ -54,7 +54,7 @@ public class SortedListTest {
     private MockListObserver<String> mockListObserver;
     private SortedList<String> sortedList;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         list = FXCollections.observableArrayList();
         list.addAll("a", "c", "d", "c");
@@ -594,5 +594,19 @@ public class SortedListTest {
         assertEquals(Arrays.asList("a", "e", "d", "c"), sortedList);
         mockListObserver.check1Permutation(sortedList, new int[] {0, 3, 2, 1});
         compareIndices();
+    }
+
+    @Test
+    public void testGetSourceIndexOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, () -> sortedList.getSourceIndex(-1));
+        assertThrows(IndexOutOfBoundsException.class, () -> sortedList.getSourceIndex(sortedList.size()));
+        assertDoesNotThrow(() -> sortedList.getSourceIndex(sortedList.size() - 1));
+    }
+
+    @Test
+    public void testGetViewIndexOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, () -> sortedList.getViewIndex(-1));
+        assertThrows(IndexOutOfBoundsException.class, () -> sortedList.getViewIndex(sortedList.size()));
+        assertDoesNotThrow(() -> sortedList.getViewIndex(sortedList.size() - 1));
     }
 }

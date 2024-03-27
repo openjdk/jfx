@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Objects;
 import java.util.function.Predicate;
 import javafx.beans.NamedArg;
 import javafx.beans.property.ObjectProperty;
@@ -173,14 +174,13 @@ public final class FilteredList<E> extends TransformationList<E, E>{
 
     @Override
     public int getSourceIndex(int index) {
-        if (index >= size) {
-            throw new IndexOutOfBoundsException();
-        }
+        Objects.checkIndex(index, size);
         return filtered[index];
     }
 
     @Override
     public int getViewIndex(int index) {
+        Objects.checkIndex(index, getSource().size());
         return Arrays.binarySearch(filtered, 0, size, index);
     }
 
