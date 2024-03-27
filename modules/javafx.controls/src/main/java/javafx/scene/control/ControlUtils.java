@@ -162,10 +162,6 @@ class ControlUtils {
         sm.selectedIndices._beginChange();
 
         while (c.next()) {
-            // it may look like all we are doing here is collecting the removed elements (and
-            // counting the added elements), but the call to 'peek' is also crucial - it is
-            // ensuring that the selectedIndices bitset is correctly updated.
-
             sm.startAtomic();
 
             final List<Integer> removed = new ArrayList<>(c.getRemovedSize());
