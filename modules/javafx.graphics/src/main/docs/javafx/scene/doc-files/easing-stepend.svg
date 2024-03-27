@@ -1,0 +1,22 @@
+<svg viewBox="-120 -25 660 660" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="512" height="512" style="fill: #e3e3e3; stroke: rgb(100, 100, 100); stroke-width: 6px;"></rect>
+    <ellipse style="stroke: #000; paint-order: stroke; stroke-width: 0px; fill: #06c;" cx="0" cy="512" rx="20"></ellipse>
+    <path style="stroke: #06c; stroke-width: 12px;" d="M 0 512 L 171 512"></path>
+    <ellipse style="paint-order: stroke; stroke: rgb(0, 102, 204); fill: #e3e3e3; stroke-width: 20px;" cx="171" cy="512" rx="10"></ellipse>
+    <path style="stroke: rgb(0, 102, 204); stroke-width: 12px; stroke-dasharray: 22;" d="M 171 482 L 171 372"></path>
+    <ellipse style="stroke: #000; paint-order: stroke; stroke-width: 0px; fill: #06c;" cx="171" cy="341" rx="20" ry="20"></ellipse>
+    <path style="stroke: #06c; stroke-width: 12px;" d="M 171 341 L 341 341"></path>
+    <ellipse style="paint-order: stroke; stroke: rgb(0, 102, 204); fill: #e3e3e3; stroke-width: 20px;" cx="341" cy="341" rx="10"></ellipse>
+    <path style="stroke: rgb(0, 102, 204); stroke-width: 12px; stroke-dasharray: 22;" d="M 341 311 L 341 201"></path>
+    <ellipse style="stroke: #000; paint-order: stroke; stroke-width: 0px; fill: #06c;" cx="341" cy="171" rx="20" ry="20"></ellipse>
+    <path style="stroke: #06c; stroke-width: 12px;" d="M 341 171 L 512 171"></path>
+    <ellipse style="paint-order: stroke; stroke: rgb(0, 102, 204); fill: #e3e3e3; stroke-width: 20px;" cx="512" cy="171" rx="10"></ellipse>
+    <path style="stroke: rgb(0, 102, 204); stroke-width: 12px; stroke-dasharray: 22;" d="M 512 140 L 512 30"></path>
+    <ellipse style="stroke: #000; paint-order: stroke; stroke-width: 0px; fill: #06c;" cx="512" cy="0" rx="20" ry="20"></ellipse>
+    <text style="font-family: sans-serif; font-size: 40px; text-anchor: middle; white-space: pre;" x="256" y="620">input progress</text>
+    <text style="font-family: sans-serif; font-size: 40px; white-space: pre;" x="-7" y="580">0</text>
+    <text style="font-family: sans-serif; font-size: 40px; white-space: pre;" x="500.144" y="580">1</text>
+    <text style="font-family: sans-serif; font-size: 40px; white-space: pre;" x="-55" y="522">0</text>
+    <text style="font-family: sans-serif; font-size: 40px; white-space: pre;" x="-55" y="15">1</text>
+    <text style="font-family: sans-serif; font-size: 40px; text-anchor: middle; white-space: pre;" x="-95" y="256" transform="matrix(0, -1, 1, 0, -337.415588, 147.415619)">output progress</text>
+</svg>

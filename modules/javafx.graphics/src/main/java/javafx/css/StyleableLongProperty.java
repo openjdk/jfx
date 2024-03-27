@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,12 @@
 
 package javafx.css;
 
+import com.sun.javafx.css.TransitionMediator;
+import com.sun.javafx.css.TransitionDefinition;
+import com.sun.javafx.scene.NodeHelper;
 import javafx.beans.property.LongPropertyBase;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.Node;
 
 /**
  * This class extends {@code LongPropertyBase} and provides a partial
@@ -65,7 +69,18 @@ public abstract class StyleableLongProperty
     /** {@inheritDoc} */
     @Override
     public void applyStyle(StyleOrigin origin, Number v) {
-        setValue(v);
+        // If this.origin == null, we're setting the value for the first time.
+        // No transition should be started in this case.
+        TransitionDefinition transition = this.origin != null && getBean() instanceof Node node ?
+            NodeHelper.findTransitionDefinition(node, getCssMetaData()) : null;
+
+        if (transition != null) {
+            mediator = new TransitionMediatorImpl(get(), v != null ? v.longValue() : 0);
+            mediator.run(transition);
+        } else {
+            setValue(v);
+        }
+
         this.origin = origin;
     }
 
@@ -74,13 +89,21 @@ public abstract class StyleableLongProperty
     public void bind(ObservableValue<? extends Number> observable) {
         super.bind(observable);
         origin = StyleOrigin.USER;
+
+        // Calling the 'bind' method always cancels a transition timer.
+        if (mediator != null) {
+            mediator.cancel(true);
+        }
     }
 
     /** {@inheritDoc} */
     @Override
     public void set(long v) {
         super.set(v);
-        origin = StyleOrigin.USER;
+
+        if (mediator == null || mediator.cancel(false)) {
+            origin = StyleOrigin.USER;
+        }
     }
 
     /** {@inheritDoc} */
@@ -88,5 +111,35 @@ public abstract class StyleableLongProperty
     public StyleOrigin getStyleOrigin() { return origin; }
 
     private StyleOrigin origin = null;
+    private TransitionMediatorImpl mediator = null;
 
+    private final class TransitionMediatorImpl extends TransitionMediator {
+        private final long oldValue;
+        private final long newValue;
+
+        public TransitionMediatorImpl(long oldValue, long newValue) {
+            this.oldValue = oldValue;
+            this.newValue = newValue;
+        }
+
+        @Override
+        public void onUpdate(double progress) {
+            set(progress < 1 ? oldValue + (long)((newValue - oldValue) * progress) : newValue);
+        }
+
+        @Override
+        public void onStop() {
+            mediator = null;
+        }
+
+        @Override
+        public StyleableProperty<?> getStyleableProperty() {
+            return StyleableLongProperty.this;
+        }
+
+        @Override
+        public boolean equalsTargetValue(TransitionMediator mediator) {
+            return newValue == ((TransitionMediatorImpl) mediator).newValue;
+        }
+    }
 }
