@@ -37,7 +37,7 @@ import javafx.scene.text.Font;
  * Stub implementation of the {@link TextLayout} for testing purposes.
  * <br>
  * Can calculate the bounds of text by simply using the size of the font.
- * If the text is bold, the font will be 1 pixel bigger.
+ * If the text is bold, the font will be 1 pixel wider for the calculation.
  */
 public class StubTextLayout implements TextLayout {
 
