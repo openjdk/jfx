@@ -790,40 +790,34 @@ public class Spinner<T> extends Control {
      * Convenience method to support wrapping values around their min / max
      * constraints. Used by the SpinnerValueFactory implementations when
      * the Spinner wrapAround property is true.
+     *
+     * This method accepts negative values, wrapping around in the other direction.
      */
     static int wrapValue(int value, int min, int max) {
-        if (max == 0) {
-            throw new RuntimeException();
+        int span = max - min + 1;
+
+        if (value < 0) {
+            value = max + value % span + 1;
         }
 
-        int r = value % max;
-        if (r > min && max < min) {
-            r = r + max - min;
-        } else if (r < min && max > min) {
-            r = r + max - min;
-        }
-        return r;
+        return min + (value - min) % span;
     }
 
     /*
      * Convenience method to support wrapping values around their min / max
      * constraints. Used by the SpinnerValueFactory implementations when
      * the Spinner wrapAround property is true.
+     *
+     * This method accepts negative values, wrapping around in the other direction.
      */
-    static BigDecimal wrapValue(BigDecimal value, BigDecimal min, BigDecimal max) {
-        if (max.doubleValue() == 0) {
-            throw new RuntimeException();
+    static BigDecimal wrapValue(BigDecimal value, BigDecimal min, BigDecimal max, BigDecimal stepSize) {
+        BigDecimal span = max.subtract(min).add(stepSize);
+
+        if (value.signum() < 0) {
+            value = max.add(value.remainder(span)).add(stepSize);
         }
 
-        // note that this wrap method differs from the others where we take the
-        // difference - in this approach we wrap to the min or max - it feels better
-        // to go from 1 to 0, rather than 1 to 0.05 (where max is 1 and step is 0.05).
-        if (value.compareTo(min) < 0) {
-            return max;
-        } else if (value.compareTo(max) > 0) {
-            return min;
-        }
-        return value;
+        return min.add(value.subtract(min).remainder(span));
     }
 
 
