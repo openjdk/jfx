@@ -167,12 +167,15 @@ public class PropertyBaseTest<T> {
     public void testTrimAfterGC() {
         Property<T> p1 = factory.createProperty();
         Property<T> p2 = factory.createProperty();
+        Property<T> p3 = factory.createProperty();
         p1.bind(observable); // creates SingleInvalidation
         p2.bind(observable); // creates Generic with 2 listeners
-        assertEquals(2, ExpressionHelperUtility.getInvalidationListeners(observable).size());
+        p3.bind(observable); // one extra as ListenerHelper has different semantics
+        assertEquals(3, ExpressionHelperUtility.getInvalidationListeners(observable).size());
 
         p1 = null;
         p2 = null;
+        p3 = null;
         System.gc();
 
         property.bind(observable); // calls trim
