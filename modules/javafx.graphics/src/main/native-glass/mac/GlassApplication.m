@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1277,7 +1277,19 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getMacKey
 
 /*
  * Class:     com_sun_glass_ui_mac_MacApplication
- * Method:    getPreferences
+ * Method:    _getApplicationClassName
+ * Signature: ()Ljava/lang/String;
+ */
+JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getApplicationClassName
+(JNIEnv *env, jobject self)
+{
+    NSString* className = NSStringFromClass([[NSApplicationFX sharedApplication] class]);
+    return (*env)->NewStringUTF(env, [className UTF8String]);
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacApplication
+ * Method:    getPlatformPreferences
  * Signature: ()Ljava/util/Map;
  */
 JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacApplication_getPlatformPreferences

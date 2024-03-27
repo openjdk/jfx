@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1038,6 +1038,17 @@ public class PlatformImpl {
             // because the preferences map may contain null values.
             Map<String, Object> preferencesCopy = new HashMap<>(preferences);
             runLater(() -> updatePreferences(preferencesCopy));
+        }
+    }
+
+    /**
+     * Emits a one-time warning on macOS if we're running with AWT and the
+     * "apple.awt.application.appearance=system" property is not set (see JDK-8235363).
+     */
+    public static void checkPreferencesSupport() {
+        var application = com.sun.glass.ui.Application.GetApplication();
+        if (application != null) {
+            application.checkPlatformPreferencesSupport();
         }
     }
 

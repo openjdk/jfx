@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,6 +59,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     native static int _getMacKey(int code);
 
+    private String applicationClassName;
     private boolean isTaskbarApplication = false;
     private final InvokeLaterDispatcher invokeLaterDispatcher;
 
@@ -90,6 +91,8 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
             if (isTriggerReactivation()) {
                 waitForReactivation();
             }
+
+            applicationClassName = _getApplicationClassName();
             launchable.run();
         };
 
@@ -391,6 +394,8 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     @Override
     protected native int _isKeyLocked(int keyCode);
 
+    private native String _getApplicationClassName();
+
     @Override
     public native Map<String, Object> getPlatformPreferences();
 
@@ -454,5 +459,35 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
             Map.entry("macOS.NSColor.systemTealColor", Color.class),
             Map.entry("macOS.NSColor.systemYellowColor", Color.class)
         );
+    }
+
+    private static final String SUPPRESS_AWT_WARNING_PROPERTY = "javafx.preferences.suppressAppleAwtWarning";
+    private static final String AWT_APPEARANCE_PROPERTY = "apple.awt.application.appearance";
+    private static final String AWT_APPLICATION_CLASS = "NSApplicationAWT";
+    private static final String AWT_SYSTEM_APPEARANCE = "system";
+
+    @SuppressWarnings("removal")
+    private boolean checkSystemAppearance = AccessController.doPrivileged(
+            (PrivilegedAction<Boolean>) () -> !Boolean.getBoolean(SUPPRESS_AWT_WARNING_PROPERTY));
+
+    @Override
+    public void checkPlatformPreferencesSupport() {
+        if (checkSystemAppearance && AWT_APPLICATION_CLASS.equals(applicationClassName)) {
+            @SuppressWarnings("removal")
+            String awtAppearanceProperty = AccessController.doPrivileged(
+                (PrivilegedAction<String>) () -> System.getProperty(AWT_APPEARANCE_PROPERTY));
+
+            if (!AWT_SYSTEM_APPEARANCE.equals(awtAppearanceProperty)) {
+                Logging.getJavaFXLogger().warning(String.format(
+                    "Reported preferences may not reflect macOS system preferences unless the system%n" +
+                    "property %s=%s is set. This warning can be disabled by%n" +
+                    "setting %s=true.",
+                    AWT_APPEARANCE_PROPERTY,
+                    AWT_SYSTEM_APPEARANCE,
+                    SUPPRESS_AWT_WARNING_PROPERTY));
+            }
+        }
+
+        checkSystemAppearance = false;
     }
 }
