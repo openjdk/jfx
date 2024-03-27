@@ -683,7 +683,7 @@ public class TableColumnHeader extends Region {
         // Magic 10 is to allow for sort arrow to appear without text truncation.
         TableColumnHeader header = tableSkin.getTableHeaderRow().getColumnHeaderFor(tc);
         header.applyCss();
-        double headerWidth = header.label.prefWidth(-1) + 10;
+        double headerWidth = header.snappedLeftInset() + header.snappedRightInset() + header.label.prefWidth(-1) + 10;
         maxWidth = Math.max(maxWidth, headerWidth);
 
         // RT-23486
@@ -779,7 +779,7 @@ public class TableColumnHeader extends Region {
         // Magic 10 is to allow for sort arrow to appear without text truncation.
         TableColumnHeader header = tableSkin.getTableHeaderRow().getColumnHeaderFor(tc);
         header.applyCss();
-        double headerWidth = header.label.prefWidth(-1) + 10;
+        double headerWidth = header.snappedLeftInset() + header.snappedRightInset() + header.label.prefWidth(-1) + 10;
         maxWidth = Math.max(maxWidth, headerWidth);
 
         // RT-23486
