@@ -212,7 +212,7 @@ public class SelectorPartitioningTest {
 
         SimpleSelector simple = simpleData.selector;
 
-        List<Selector> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassSet());
+        List<Selector> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassNames());
 
         assertEquals(1,matched.size());
         Selector selector = matched.get(0);
@@ -236,7 +236,7 @@ public class SelectorPartitioningTest {
 
         SimpleSelector simple = complexData.selector;
 
-        List<Selector> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassSet());
+        List<Selector> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassNames());
         assertEquals(complexData.matches, matched.size());
 
         for(Selector s1 : matched) {
