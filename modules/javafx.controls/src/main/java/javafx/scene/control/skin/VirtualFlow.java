@@ -3290,14 +3290,17 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             }
         }
 
+        @Override
         public T getFirst() {
             return firstIndex == -1 ? null : array.get(firstIndex);
         }
 
+        @Override
         public T getLast() {
             return lastIndex == -1 ? null : array.get(lastIndex);
         }
 
+        @Override
         public void addFirst(T cell) {
             // if firstIndex == -1 then that means this is the first item in the
             // list and we need to initialize firstIndex and lastIndex
@@ -3316,6 +3319,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             }
         }
 
+        @Override
         public void addLast(T cell) {
 
             // if lastIndex == -1 then that means this is the first item in the
@@ -3362,11 +3366,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             firstIndex = lastIndex = -1;
         }
 
+        @Override
         public T removeFirst() {
             if (isEmpty()) return null;
             return remove(0);
         }
 
+        @Override
         public T removeLast() {
             if (isEmpty()) return null;
             return remove(lastIndex - firstIndex);

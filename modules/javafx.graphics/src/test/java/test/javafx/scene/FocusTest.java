@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -756,7 +756,7 @@ public class FocusTest {
         assertFalse(n2.isFocused());
     }
 
-    @Test public void shouldCancelInputMethodWhenLoosingFocus() {
+    @Test public void shouldCancelInputMethodWhenLosingFocus() {
         final Node n1 = n();
         final Node n2 = n();
         scene.setRoot(new Group(n1, n2));

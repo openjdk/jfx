@@ -37,64 +37,53 @@ import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
 
 import java.io.InputStream;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Stub implementation of the {@link FontLoader} for testing purposes.
+ * <br>
+ * Can recognize and load some fonts we defined below, will otherwise fall back to the
+ * System font (like in the real font loader).
+ */
 public class StubFontLoader extends FontLoader {
 
     @Override
     public void loadFont(Font font) {
-        StubFont nativeFont = new StubFont();
-        nativeFont.font = font;
-        String name = font.getName().trim().toLowerCase(Locale.ROOT);
-        if (name.equals("system regular")) {
-            FontHelper.setNativeFont(font, nativeFont, font.getName(), "System", "Regular");
-        } else if (name.equals("system bold")) {
-            FontHelper.setNativeFont(font, nativeFont, font.getName(), "System", "Bold");
-        } else if (name.equals("system italic")) {
-            FontHelper.setNativeFont(font, nativeFont, font.getName(), "System", "Italic");
-        } else if (name.equals("system bold italic")) {
-            FontHelper.setNativeFont(font, nativeFont, font.getName(), "System", "Bold Italic");
-        } else if (name.equals("amble regular")) {
-            FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble", "Regular");
-        } else if (name.equals("amble bold")) {
-            FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble", "Bold");
-        } else if (name.equals("amble italic")) {
-            FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble", "Italic");
-        } else if (name.equals("amble bold italic")) {
-            FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble",
-                    "Bold Italic");
-        } else if (name.equals("amble condensed")) {
-            FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble Cn", "Regular");
-        } else if (name.equals("amble bold condensed")) {
-            FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble Cn", "Bold");
-        } else if (name.equals("amble condensed italic")) {
-            FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble Cn", "Italic");
-        } else if (name.equals("amble bold condensed italic")) {
-            FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble Cn",
-                    "Bold Italic");
-        } else if (name.equals("amble light")) {
-            FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble Lt", "Regular");
-        } else if (name.equals("amble light italic")) {
-            FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble Lt", "Italic");
-        } else if (name.equals("amble light condensed")) {
-            FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble LtCn",
-                    "Regular");
-        } else if (name.equals("amble light condensed italic")) {
-            FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble LtCn",
-                    "Italic");
+        StubFont stub = new StubFont();
+        stub.font = font;
+
+        String name = font.getName();
+        String nameLower = name.trim().toLowerCase(Locale.ROOT);
+        switch (nameLower) {
+            case "system regular" -> FontHelper.setNativeFont(font, stub, name, "System", "Regular");
+            case "system bold" -> FontHelper.setNativeFont(font, stub, name, "System", "Bold");
+            case "system italic" -> FontHelper.setNativeFont(font, stub, name, "System", "Italic");
+            case "system bold italic" -> FontHelper.setNativeFont(font, stub, name, "System", "Bold Italic");
+            case "amble regular" -> FontHelper.setNativeFont(font, stub, name, "Amble", "Regular");
+            case "amble bold" -> FontHelper.setNativeFont(font, stub, name, "Amble", "Bold");
+            case "amble italic" -> FontHelper.setNativeFont(font, stub, name, "Amble", "Italic");
+            case "amble bold italic" -> FontHelper.setNativeFont(font, stub, name, "Amble", "Bold Italic");
+            case "amble condensed" -> FontHelper.setNativeFont(font, stub, name, "Amble Cn", "Regular");
+            case "amble bold condensed" -> FontHelper.setNativeFont(font, stub, name, "Amble Cn", "Bold");
+            case "amble condensed italic" -> FontHelper.setNativeFont(font, stub, name, "Amble Cn", "Italic");
+            case "amble bold condensed italic" -> FontHelper.setNativeFont(font, stub, name, "Amble Cn", "Bold Italic");
+            case "amble light" -> FontHelper.setNativeFont(font, stub, name, "Amble Lt", "Regular");
+            case "amble light italic" -> FontHelper.setNativeFont(font, stub, name, "Amble Lt", "Italic");
+            case "amble light condensed" -> FontHelper.setNativeFont(font, stub, name, "Amble LtCn", "Regular");
+            case "amble light condensed italic" -> FontHelper.setNativeFont(font, stub, name, "Amble LtCn", "Italic");
+            default -> FontHelper.setNativeFont(font, stub, name, "System", "Regular");
         }
     }
 
     @Override
     public List<String> getFamilies() {
-        return Arrays.asList("System", "Amble", "Amble Cn", "Amble Lt", "Amble LtCn");
+        return List.of("System", "Amble", "Amble Cn", "Amble Lt", "Amble LtCn");
     }
 
     @Override
     public List<String> getFontNames() {
-        return Arrays.asList("System Regular", "System Bold", "System Italic", "System Bold Italic",
+        return List.of("System Regular", "System Bold", "System Italic", "System Bold Italic",
                 "Amble Regular", "Amble Bold", "Amble Italic", "Amble Bold Italic",
                 "Amble Condensed", "Amble Bold Condensed", "Amble Condensed Italic", "Amble Bold Condensed Italic",
                 "Amble Light", "Amble Light Italic", "Amble Light Condensed", "Amble Light Condensed Italic");
@@ -102,78 +91,80 @@ public class StubFontLoader extends FontLoader {
 
     @Override
     public List<String> getFontNames(String family) {
-        String lower = family.trim().toLowerCase(Locale.ROOT);
-        if ("system".equals(lower)) {
-            return List.of("System Regular", "System Bold", "System Italic", "System Bold Italic");
-        }
+        String familyLower = family.trim().toLowerCase(Locale.ROOT);
 
-        if ("amble".equals(lower)) {
-            return Arrays.asList("Amble Regular", "Amble Bold", "Amble Italic", "Amble Bold Italic");
-        } else if ("amble cn".equals(lower)) {
-            return Arrays.asList("Amble Condensed", "Amble Bold Condensed", "Amble Condensed Italic", "Amble Bold Condensed Italic");
-        } else if ("amble lt".equals(lower)) {
-            return Arrays.asList("Amble Light", "Amble Light Italic");
-        } else if ("amble ltcn".equals(lower)) {
-            return Arrays.asList("Amble Light Condensed", "Amble Light Condensed Italic");
-        } else {
-            return Arrays.asList();
-        }
+        return switch (familyLower) {
+            case "system" -> List.of("System Regular", "System Bold", "System Italic", "System Bold Italic");
+            case "amble" -> List.of("Amble Regular", "Amble Bold", "Amble Italic", "Amble Bold Italic");
+            case "amble cn" -> List.of("Amble Condensed", "Amble Bold Condensed", "Amble Condensed Italic", "Amble Bold Condensed Italic");
+            case "amble lt" -> List.of("Amble Light", "Amble Light Italic");
+            case "amble ltcn" -> List.of("Amble Light Condensed", "Amble Light Condensed Italic");
+            default -> List.of();
+        };
     }
 
     @Override
     public Font font(String family, FontWeight weight, FontPosture posture,
             float size) {
-        family = family.trim();
-        String fam = family.toLowerCase(Locale.ROOT);
-        String name;
-        if ("system".equals(fam)) {
+        String fam = family.trim().toLowerCase(Locale.ROOT);
+        String name = "";
+        if (fam.startsWith("system")) {
             name = "System";
-        } else {
+        } else if (fam.startsWith("amble")) {
             name = "Amble";
         }
 
-        if ("amble".equals(fam) || "system".equals(fam)) {
-            if (weight != null
-                    && weight.ordinal() < FontWeight.NORMAL.ordinal()) {
-                name = name + " Light";
-            } else if (weight != null
-                    && weight.ordinal() > FontWeight.NORMAL.ordinal()) {
-                name = name + " Bold";
-            } else if (posture != FontPosture.ITALIC) {
-                name = name + " Regular";
+        switch (fam) {
+            case "amble", "system" -> {
+                if (weight != null
+                        && weight.ordinal() < FontWeight.NORMAL.ordinal()) {
+                    name = name + " Light";
+                } else if (weight != null
+                        && weight.ordinal() > FontWeight.NORMAL.ordinal()) {
+                    name = name + " Bold";
+                } else if (posture != FontPosture.ITALIC) {
+                    name = name + " Regular";
+                }
             }
-        } else if ("amble cn".equals(fam) || "amble condensed".equals(fam)) {
-            if (weight != null
-                    && weight.ordinal() < FontWeight.NORMAL.ordinal()) {
-                name = name + " Light";
-            } else if (weight != null
-                    && weight.ordinal() > FontWeight.NORMAL.ordinal()) {
-                name = name + " Bold";
+            case "amble cn", "amble condensed" -> {
+                if (weight != null
+                        && weight.ordinal() < FontWeight.NORMAL.ordinal()) {
+                    name = name + " Light";
+                } else if (weight != null
+                        && weight.ordinal() > FontWeight.NORMAL.ordinal()) {
+                    name = name + " Bold";
+                }
+                name = name + " Condensed";
             }
-            name = name + " Condensed";
-        } else if ("amble lt".equals(fam)) {
-            if (weight.ordinal() <= FontWeight.NORMAL.ordinal()) {
-                name = name + " Light";
-            } else if (weight != null
-                    && weight.ordinal() < FontWeight.BOLD.ordinal()
-                    && posture != FontPosture.ITALIC) {
-                name = name + " Regular";
-            } else if (weight != null
-                    && weight.ordinal() >= FontWeight.BOLD.ordinal()) {
-                name = name + " Bold";
+            case "amble lt" -> {
+                if (weight != null
+                        && weight.ordinal() <= FontWeight.NORMAL.ordinal()) {
+                    name = name + " Light";
+                } else if (weight != null
+                        && weight.ordinal() < FontWeight.BOLD.ordinal()
+                        && posture != FontPosture.ITALIC) {
+                    name = name + " Regular";
+                } else if (weight != null
+                        && weight.ordinal() >= FontWeight.BOLD.ordinal()) {
+                    name = name + " Bold";
+                }
             }
-        } else if ("amble ltcn".equals(fam)) {
-            if (weight.ordinal() <= FontWeight.NORMAL.ordinal()) {
-                name = name + " Light";
-            } else if (weight != null
-                    && weight.ordinal() >= FontWeight.BOLD.ordinal()) {
-                name = name + " Bold";
+            case "amble ltcn" -> {
+                if (weight != null
+                        && weight.ordinal() <= FontWeight.NORMAL.ordinal()) {
+                    name = name + " Light";
+                } else if (weight != null
+                        && weight.ordinal() >= FontWeight.BOLD.ordinal()) {
+                    name = name + " Bold";
+                }
+                name = name + " Condensed";
             }
-            name = name + " Condensed";
         }
+
         if (posture == FontPosture.ITALIC) {
             name = name + " Italic";
         }
+
         return new Font(name, size);
     }
 

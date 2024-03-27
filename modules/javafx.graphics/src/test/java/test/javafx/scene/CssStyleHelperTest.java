@@ -107,13 +107,13 @@ public class CssStyleHelperTest {
         Toolkit.getToolkit().firePulse();
         assertEquals("Italic", C.getFont().getStyle());
         assertEquals("Italic", D.getFont().getStyle());
-        assertNull(E.getFont().getStyle());
+        assertEquals("Regular", E.getFont().getStyle());
 
         B.getChildren().add(D); //move D
         Toolkit.getToolkit().firePulse();
         assertEquals("Italic", C.getFont().getStyle());
-        assertNull(D.getFont().getStyle());
-        assertNull(E.getFont().getStyle());
+        assertEquals("Regular", D.getFont().getStyle());
+        assertEquals("Regular", E.getFont().getStyle());
     }
 
     @Test

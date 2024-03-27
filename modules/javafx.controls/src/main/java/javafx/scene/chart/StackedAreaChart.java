@@ -248,7 +248,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
             boolean animate = false;
             // dataSize represents size of currently visible data. After this operation, the number will decrement by 1
             final int dataSize = series.getDataSize();
-            // This is the size of current data list in Series. Note that it might be totaly different from dataSize as
+            // This is the size of current data list in Series. Note that it might be totally different from dataSize as
             // some big operation might have happened on the list.
             final int dataListSize = series.getData().size();
             if (itemIndex > 0 && itemIndex < dataSize - 1) {
