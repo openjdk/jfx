@@ -576,7 +576,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
     private void correctOverflow(double length) {
         boolean overflowed = isOverflowed(length);
         if (overflowed != overflow) {
-            organizeOverflow(length, overflow);
+            organizeOverflow(length, overflowed);
         }
     }
 
@@ -590,14 +590,15 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
             length -= getSpacing();
         }
 
-        // Determine which node goes to the toolbar and which goes to the overflow.
+        ObservableList<Node> nodes = getSkinnable().getItems();
 
+        // Determine the index of the first node to be moved to the overflow menu
+        // IMPORTANT: As the width/height of the node may depend on whether the node has been added to the scene,
+        // do not move it between the toolbar and the overflow menu here.
+        int overflowIndex = nodes.size();
         double x = 0;
-        overflowMenuItems.clear();
-        box.getChildren().clear();
-        for (Node node : getSkinnable().getItems()) {
-            node.getStyleClass().remove("menu-item");
-            node.getStyleClass().remove("custom-menu-item");
+        for (int i = 0; i < nodes.size(); i++) {
+            Node node = nodes.get(i);
 
             if (node.isManaged()) {
                 if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
@@ -607,7 +608,22 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
                 }
             }
 
-            if (x <= length) {
+            if (x > length) {
+                overflowIndex = i;
+                break;
+            }
+        }
+
+        // Determine which node goes to the toolbar and which goes to the overflow.
+
+        overflowMenuItems.clear();
+        box.getChildren().clear();
+        for (int i = 0; i < nodes.size(); i++) {
+            Node node = nodes.get(i);
+            node.getStyleClass().remove("menu-item");
+            node.getStyleClass().remove("custom-menu-item");
+
+            if (i < overflowIndex) {
                 box.getChildren().add(node);
             } else {
                 if (node.isFocused()) {
