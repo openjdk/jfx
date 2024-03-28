@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,12 +23,11 @@
 
 import javafx.application.Application;
 import javafx.print.PrinterJob;
-import javafx.scene.Group;
 import javafx.scene.Scene;
-import javafx.stage.Stage;
-import javafx.scene.web.HTMLEditor;
 import javafx.scene.control.Button;
 import javafx.scene.layout.VBox;
+import javafx.scene.web.HTMLEditor;
+import javafx.stage.Stage;
 
 public class PrintHTML extends Application {
 
