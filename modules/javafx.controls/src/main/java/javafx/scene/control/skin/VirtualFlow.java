@@ -1553,18 +1553,30 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         T targetCell = getVisibleCell(targetIndex + indexDiff);
         if (targetCell != null) {
-            T cell = getAvailableCell(targetIndex);
-            setCellIndex(cell, targetIndex);
-            resizeCell(cell);
-            setMaxPrefBreadth(Math.max(getMaxPrefBreadth(), getCellBreadth(cell)));
-            cell.setVisible(true);
-            if (downOrRight) {
-                cells.addLast(cell);
-                scrollPixels(getCellLength(cell));
+            if (targetIndex < 0) {
+                T cell = getCell(targetIndex);
+                setMaxPrefBreadth(Math.max(getMaxPrefBreadth(), getCellBreadth(cell)));
+                if (downOrRight) {
+                    scrollPixels(getCellLength(cell));
+                } else {
+                    // up or left
+                    scrollPixels(-getCellLength(cell));
+                }
+                releaseCell(cell);
             } else {
-                // up or left
-                cells.addFirst(cell);
-                scrollPixels(-getCellLength(cell));
+                T cell = getAvailableCell(targetIndex);
+                setCellIndex(cell, targetIndex);
+                resizeCell(cell);
+                setMaxPrefBreadth(Math.max(getMaxPrefBreadth(), getCellBreadth(cell)));
+                cell.setVisible(true);
+                if (downOrRight) {
+                    cells.addLast(cell);
+                    scrollPixels(getCellLength(cell));
+                } else {
+                    // up or left
+                    cells.addFirst(cell);
+                    scrollPixels(-getCellLength(cell));
+                }
             }
             return true;
         }
