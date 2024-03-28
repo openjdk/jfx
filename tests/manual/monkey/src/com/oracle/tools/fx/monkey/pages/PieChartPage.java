@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,14 +27,15 @@ package com.oracle.tools.fx.monkey.pages;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.scene.Node;
 import javafx.scene.chart.PieChart;
 import javafx.scene.chart.PieChart.Data;
-import javafx.scene.control.CheckBox;
-import javafx.scene.control.ComboBox;
 import javafx.scene.layout.BorderPane;
-import com.oracle.tools.fx.monkey.util.FX;
+import com.oracle.tools.fx.monkey.options.BooleanOption;
+import com.oracle.tools.fx.monkey.options.DoubleOption;
+import com.oracle.tools.fx.monkey.sheets.ChartPropertySheet;
+import com.oracle.tools.fx.monkey.util.ObjectSelector;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
 
@@ -42,80 +43,50 @@ import com.oracle.tools.fx.monkey.util.TestPaneBase;
  * PieChart Page
  */
 public class PieChartPage extends TestPaneBase {
-    public enum Model {
-        SMALL("Small"),
-        LARGE("Large"),
-        EMPTY("Empty"),
-        ;
-        private final String text;
-        Model(String text) { this.text = text; }
-        public String toString() { return text; }
-    }
-
-    private final ObservableList<PieChart.Data> data;
-    private final ComboBox<Model> modelSelector;
-    private PieChart chart;
-    protected static Random rnd = new Random();
+    private final PieChart chart;
 
     public PieChartPage() {
-        FX.name(this, "PieChartPage");
+        super("PieChartPage");
 
-        data = FXCollections.observableArrayList();
-        chart = new PieChart(data);
+        chart = new PieChart();
 
-        modelSelector = new ComboBox<>();
-        FX.name(modelSelector, "modelSelector");
-        modelSelector.getItems().addAll(Model.values());
-        modelSelector.setEditable(false);
-        modelSelector.getSelectionModel().selectedItemProperty().addListener((x) -> {
-            updateChart();
-        });
-
-        CheckBox animated = new CheckBox("animation");
-        FX.name(animated, "animated");
-        animated.selectedProperty().bindBidirectional(chart.animatedProperty());
-
-        OptionPane p = new OptionPane();
-        p.label("Model:");
-        p.option(modelSelector);
-        p.option(animated);
-        setOptions(p);
+        OptionPane op = new OptionPane();
+        op.section("PieChart");
+        op.option(new BooleanOption("clockwise", "clockwise", chart.clockwiseProperty()));
+        op.option("Data:", createDataOptions("data", chart.getData()));
+        // TODO add/remove buttons
+        op.option("Label Line Length:", DoubleOption.of("labelLineLength", chart.labelLineLengthProperty(), -100, 0, 100));
+        op.option(new BooleanOption("labelsVisible", "labels visible", chart.labelsVisibleProperty()));
+        // TODO make this editable spinner?
+        op.option("Start Angle:", DoubleOption.of("startAngle", chart.startAngleProperty(), -100, 0, 30, 45, 90, 120, 180, 270, 360));
+        ChartPropertySheet.appendTo(op, chart);
 
         BorderPane bp = new BorderPane();
         bp.setCenter(chart);
+
         setContent(bp);
-
-        modelSelector.getSelectionModel().selectFirst();
+        setOptions(op);
     }
 
-    protected void updateChart() {
-        Model m = modelSelector.getSelectionModel().getSelectedItem();
-        List<PieChart.Data> d = createData(m);
-        chart.getData().setAll(d);
-    }
-
-    private List<PieChart.Data> createData(Model m) {
-        ArrayList<PieChart.Data> a = new ArrayList<>();
-        switch (m) {
-        case SMALL:
-            addRandom(a, 30);
-            break;
-        case LARGE:
-            addRandom(a, 3000);
-            break;
-        case EMPTY:
-            break;
-        default:
-            throw new Error("?" + m);
+    private List<PieChart.Data> createData(int max) {
+        Random rnd = new Random();
+        int sz = rnd.nextInt(max);
+        ArrayList<Data> a = new ArrayList<>(sz);
+        for (int i = 0; i < sz; i++) {
+            a.add(new PieChart.Data("N" + i, rnd.nextDouble()));
         }
         return a;
     }
 
-    private void addRandom(ArrayList<Data> a, int max) {
-        Random r = new Random();
-        int sz = r.nextInt(max);
-        for (int i = 0; i < sz; i++) {
-            a.add(new PieChart.Data("N" + i, r.nextDouble()));
-        }
+    private Node createDataOptions(String name, ObservableList<PieChart.Data> data) {
+        ObjectSelector<List<PieChart.Data>> s = new ObjectSelector<>(name, (v) -> {
+            data.setAll(v);
+        });
+        s.addChoiceSupplier("<30 Elements", () -> createData(30));
+        s.addChoiceSupplier("<100 Elements", () -> createData(100));
+        s.addChoiceSupplier("<3,000 Elements", () -> createData(3_000));
+        s.addChoice("<empty>", List.of());
+        s.selectFirst();
+        return s;
     }
 }
