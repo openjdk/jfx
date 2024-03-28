@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package com.sun.prism.sw;
 
 import com.sun.glass.ui.Screen;
+import com.sun.javafx.font.CharToGlyphMapper;
 import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.Glyph;
@@ -58,12 +59,10 @@ import com.sun.prism.RTTexture;
 import com.sun.prism.ReadbackGraphics;
 import com.sun.prism.RenderTarget;
 import com.sun.prism.Texture;
-import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.ImagePattern;
 import com.sun.prism.paint.Paint;
-import com.sun.javafx.font.CharToGlyphMapper;
 
 final class SWGraphics implements ReadbackGraphics {
 

@@ -26,10 +26,8 @@
 package com.sun.javafx.font;
 
 import java.lang.ref.WeakReference;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
 import com.sun.javafx.geom.transform.BaseTransform;
 
 
