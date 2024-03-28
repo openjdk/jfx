@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,21 +38,25 @@ public class HTMLLIElementImpl extends HTMLElementImpl implements HTMLLIElement 
 
 
 // Attributes
+    @Override
     public String getType() {
         return getTypeImpl(getPeer());
     }
     native static String getTypeImpl(long peer);
 
+    @Override
     public void setType(String value) {
         setTypeImpl(getPeer(), value);
     }
     native static void setTypeImpl(long peer, String value);
 
+    @Override
     public int getValue() {
         return getValueImpl(getPeer());
     }
     native static int getValueImpl(long peer);
 
+    @Override
     public void setValue(int value) {
         setValueImpl(getPeer(), value);
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,6 +38,8 @@ public class EventTargetImpl implements EventTarget {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
+
+        @Override
         public void dispose() {
             EventTargetImpl.dispose(peer);
         }
@@ -80,6 +82,7 @@ public class EventTargetImpl implements EventTarget {
 
 
 // Functions
+    @Override
     public void addEventListener(String type
         , EventListener listener
         , boolean useCapture)
@@ -95,6 +98,7 @@ public class EventTargetImpl implements EventTarget {
         , boolean useCapture);
 
 
+    @Override
     public void removeEventListener(String type
         , EventListener listener
         , boolean useCapture)
@@ -110,6 +114,7 @@ public class EventTargetImpl implements EventTarget {
         , boolean useCapture);
 
 
+    @Override
     public boolean dispatchEvent(Event event) throws DOMException
     {
         return dispatchEventImpl(getPeer()

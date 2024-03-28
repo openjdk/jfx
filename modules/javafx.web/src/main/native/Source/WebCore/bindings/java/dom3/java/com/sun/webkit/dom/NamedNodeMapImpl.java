@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,8 @@ public class NamedNodeMapImpl implements NamedNodeMap {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
+
+        @Override
         public void dispose() {
             NamedNodeMapImpl.dispose(peer);
         }
@@ -79,6 +81,7 @@ public class NamedNodeMapImpl implements NamedNodeMap {
 
 
 // Attributes
+    @Override
     public int getLength() {
         return getLengthImpl(getPeer());
     }
@@ -86,6 +89,7 @@ public class NamedNodeMapImpl implements NamedNodeMap {
 
 
 // Functions
+    @Override
     public Node getNamedItem(String name)
     {
         return NodeImpl.getImpl(getNamedItemImpl(getPeer()
@@ -95,6 +99,7 @@ public class NamedNodeMapImpl implements NamedNodeMap {
         , String name);
 
 
+    @Override
     public Node setNamedItem(Node node) throws DOMException
     {
         return NodeImpl.getImpl(setNamedItemImpl(getPeer()
@@ -104,6 +109,7 @@ public class NamedNodeMapImpl implements NamedNodeMap {
         , long node);
 
 
+    @Override
     public Node removeNamedItem(String name) throws DOMException
     {
         return NodeImpl.getImpl(removeNamedItemImpl(getPeer()
@@ -113,6 +119,7 @@ public class NamedNodeMapImpl implements NamedNodeMap {
         , String name);
 
 
+    @Override
     public Node item(int index)
     {
         return NodeImpl.getImpl(itemImpl(getPeer()
@@ -122,6 +129,7 @@ public class NamedNodeMapImpl implements NamedNodeMap {
         , int index);
 
 
+    @Override
     public Node getNamedItemNS(String namespaceURI
         , String localName)
     {
@@ -134,6 +142,7 @@ public class NamedNodeMapImpl implements NamedNodeMap {
         , String localName);
 
 
+    @Override
     public Node setNamedItemNS(Node node) throws DOMException
     {
         return NodeImpl.getImpl(setNamedItemNSImpl(getPeer()
@@ -143,6 +152,7 @@ public class NamedNodeMapImpl implements NamedNodeMap {
         , long node);
 
 
+    @Override
     public Node removeNamedItemNS(String namespaceURI
         , String localName) throws DOMException
     {

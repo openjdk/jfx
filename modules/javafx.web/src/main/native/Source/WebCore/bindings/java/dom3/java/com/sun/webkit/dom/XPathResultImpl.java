@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,8 @@ public class XPathResultImpl implements XPathResult {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
+
+        @Override
         public void dispose() {
             XPathResultImpl.dispose(peer);
         }
@@ -91,36 +93,43 @@ public class XPathResultImpl implements XPathResult {
     public static final int FIRST_ORDERED_NODE_TYPE = 9;
 
 // Attributes
+    @Override
     public short getResultType() {
         return getResultTypeImpl(getPeer());
     }
     native static short getResultTypeImpl(long peer);
 
+    @Override
     public double getNumberValue() throws DOMException {
         return getNumberValueImpl(getPeer());
     }
     native static double getNumberValueImpl(long peer);
 
+    @Override
     public String getStringValue() throws DOMException {
         return getStringValueImpl(getPeer());
     }
     native static String getStringValueImpl(long peer);
 
+    @Override
     public boolean getBooleanValue() throws DOMException {
         return getBooleanValueImpl(getPeer());
     }
     native static boolean getBooleanValueImpl(long peer);
 
+    @Override
     public Node getSingleNodeValue() throws DOMException {
         return NodeImpl.getImpl(getSingleNodeValueImpl(getPeer()));
     }
     native static long getSingleNodeValueImpl(long peer);
 
+    @Override
     public boolean getInvalidIteratorState() {
         return getInvalidIteratorStateImpl(getPeer());
     }
     native static boolean getInvalidIteratorStateImpl(long peer);
 
+    @Override
     public int getSnapshotLength() throws DOMException {
         return getSnapshotLengthImpl(getPeer());
     }
@@ -128,6 +137,7 @@ public class XPathResultImpl implements XPathResult {
 
 
 // Functions
+    @Override
     public Node iterateNext() throws DOMException
     {
         return NodeImpl.getImpl(iterateNextImpl(getPeer()));
@@ -135,6 +145,7 @@ public class XPathResultImpl implements XPathResult {
     native static long iterateNextImpl(long peer);
 
 
+    @Override
     public Node snapshotItem(int index) throws DOMException
     {
         return NodeImpl.getImpl(snapshotItemImpl(getPeer()

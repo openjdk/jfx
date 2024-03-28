@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,6 +40,8 @@ public class DOMImplementationImpl implements DOMImplementation {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
+
+        @Override
         public void dispose() {
             DOMImplementationImpl.dispose(peer);
         }
@@ -82,6 +84,7 @@ public class DOMImplementationImpl implements DOMImplementation {
 
 
 // Functions
+    @Override
     public boolean hasFeature(String feature
         , String version)
     {
@@ -94,6 +97,7 @@ public class DOMImplementationImpl implements DOMImplementation {
         , String version);
 
 
+    @Override
     public DocumentType createDocumentType(String qualifiedName
         , String publicId
         , String systemId) throws DOMException
@@ -109,6 +113,7 @@ public class DOMImplementationImpl implements DOMImplementation {
         , String systemId);
 
 
+    @Override
     public Document createDocument(String namespaceURI
         , String qualifiedName
         , DocumentType doctype) throws DOMException
@@ -147,6 +152,7 @@ public class DOMImplementationImpl implements DOMImplementation {
 
 
 //stubs
+    @Override
     public Object getFeature(String feature, String version) {
         throw new UnsupportedOperationException("Not supported yet.");
     }

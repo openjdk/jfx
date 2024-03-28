@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,6 +47,8 @@ final class EventListenerImpl implements EventListener {
         private SelfDisposer(final long peer) {
             this.peer = peer;
         }
+
+        @Override
         public void dispose() {
             //dispose JavaEL <-> JSstab connection (JavaEL die)
             EventListenerImpl.dispose(peer);
@@ -102,6 +104,7 @@ final class EventListenerImpl implements EventListener {
         return el;
     }
 
+    @Override
     public void handleEvent(Event evt) {
         //call to JS peer if any
         if (jsPeer != 0L && (evt instanceof EventImpl)) {

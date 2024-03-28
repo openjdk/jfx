@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,8 @@ public class NodeIteratorImpl implements NodeIterator {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
+
+        @Override
         public void dispose() {
             NodeIteratorImpl.dispose(peer);
         }
@@ -79,21 +81,25 @@ public class NodeIteratorImpl implements NodeIterator {
 
 
 // Attributes
+    @Override
     public Node getRoot() {
         return NodeImpl.getImpl(getRootImpl(getPeer()));
     }
     native static long getRootImpl(long peer);
 
+    @Override
     public int getWhatToShow() {
         return getWhatToShowImpl(getPeer());
     }
     native static int getWhatToShowImpl(long peer);
 
+    @Override
     public NodeFilter getFilter() {
         return NodeFilterImpl.getImpl(getFilterImpl(getPeer()));
     }
     native static long getFilterImpl(long peer);
 
+    @Override
     public boolean getExpandEntityReferences() {
         return getExpandEntityReferencesImpl(getPeer());
     }
@@ -111,6 +117,7 @@ public class NodeIteratorImpl implements NodeIterator {
 
 
 // Functions
+    @Override
     public Node nextNode()
     {
         return NodeImpl.getImpl(nextNodeImpl(getPeer()));
@@ -118,6 +125,7 @@ public class NodeIteratorImpl implements NodeIterator {
     native static long nextNodeImpl(long peer);
 
 
+    @Override
     public Node previousNode()
     {
         return NodeImpl.getImpl(previousNodeImpl(getPeer()));
@@ -125,6 +133,7 @@ public class NodeIteratorImpl implements NodeIterator {
     native static long previousNodeImpl(long peer);
 
 
+    @Override
     public void detach()
     {
         detachImpl(getPeer());

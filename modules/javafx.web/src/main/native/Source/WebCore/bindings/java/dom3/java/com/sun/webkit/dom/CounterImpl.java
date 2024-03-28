@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,8 @@ public class CounterImpl implements Counter {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
+
+        @Override
         public void dispose() {
             CounterImpl.dispose(peer);
         }
@@ -77,16 +79,19 @@ public class CounterImpl implements Counter {
 
 
 // Attributes
+    @Override
     public String getIdentifier() {
         return getIdentifierImpl(getPeer());
     }
     native static String getIdentifierImpl(long peer);
 
+    @Override
     public String getListStyle() {
         return getListStyleImpl(getPeer());
     }
     native static String getListStyleImpl(long peer);
 
+    @Override
     public String getSeparator() {
         return getSeparatorImpl(getPeer());
     }

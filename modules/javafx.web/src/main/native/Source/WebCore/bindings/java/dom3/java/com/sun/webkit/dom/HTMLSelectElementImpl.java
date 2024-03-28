@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,36 +54,43 @@ public class HTMLSelectElementImpl extends HTMLElementImpl implements HTMLSelect
     }
     native static void setAutofocusImpl(long peer, boolean value);
 
+    @Override
     public boolean getDisabled() {
         return getDisabledImpl(getPeer());
     }
     native static boolean getDisabledImpl(long peer);
 
+    @Override
     public void setDisabled(boolean value) {
         setDisabledImpl(getPeer(), value);
     }
     native static void setDisabledImpl(long peer, boolean value);
 
+    @Override
     public HTMLFormElement getForm() {
         return HTMLFormElementImpl.getImpl(getFormImpl(getPeer()));
     }
     native static long getFormImpl(long peer);
 
+    @Override
     public boolean getMultiple() {
         return getMultipleImpl(getPeer());
     }
     native static boolean getMultipleImpl(long peer);
 
+    @Override
     public void setMultiple(boolean value) {
         setMultipleImpl(getPeer(), value);
     }
     native static void setMultipleImpl(long peer, boolean value);
 
+    @Override
     public String getName() {
         return getNameImpl(getPeer());
     }
     native static String getNameImpl(long peer);
 
+    @Override
     public void setName(String value) {
         setNameImpl(getPeer(), value);
     }
@@ -99,26 +106,31 @@ public class HTMLSelectElementImpl extends HTMLElementImpl implements HTMLSelect
     }
     native static void setRequiredImpl(long peer, boolean value);
 
+    @Override
     public int getSize() {
         return getSizeImpl(getPeer());
     }
     native static int getSizeImpl(long peer);
 
+    @Override
     public void setSize(int value) {
         setSizeImpl(getPeer(), value);
     }
     native static void setSizeImpl(long peer, int value);
 
+    @Override
     public String getType() {
         return getTypeImpl(getPeer());
     }
     native static String getTypeImpl(long peer);
 
+    @Override
     public HTMLOptionsCollectionImpl getOptions() {
         return HTMLOptionsCollectionImpl.getImpl(getOptionsImpl(getPeer()));
     }
     native static long getOptionsImpl(long peer);
 
+    @Override
     public int getLength() {
         return getLengthImpl(getPeer());
     }
@@ -129,21 +141,25 @@ public class HTMLSelectElementImpl extends HTMLElementImpl implements HTMLSelect
     }
     native static long getSelectedOptionsImpl(long peer);
 
+    @Override
     public int getSelectedIndex() {
         return getSelectedIndexImpl(getPeer());
     }
     native static int getSelectedIndexImpl(long peer);
 
+    @Override
     public void setSelectedIndex(int value) {
         setSelectedIndexImpl(getPeer(), value);
     }
     native static void setSelectedIndexImpl(long peer, int value);
 
+    @Override
     public String getValue() {
         return getValueImpl(getPeer());
     }
     native static String getValueImpl(long peer);
 
+    @Override
     public void setValue(String value) {
         setValueImpl(getPeer(), value);
     }
@@ -194,6 +210,7 @@ public class HTMLSelectElementImpl extends HTMLElementImpl implements HTMLSelect
         , String name);
 
 
+    @Override
     public void add(HTMLElement element
         , HTMLElement before) throws DOMException
     {
@@ -206,6 +223,7 @@ public class HTMLSelectElementImpl extends HTMLElementImpl implements HTMLSelect
         , long before);
 
 
+    @Override
     public void remove(int index)
     {
         removeImpl(getPeer()

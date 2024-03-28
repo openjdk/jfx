@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,31 +38,37 @@ public class HTMLAreaElementImpl extends HTMLElementImpl implements HTMLAreaElem
 
 
 // Attributes
+    @Override
     public String getAlt() {
         return getAltImpl(getPeer());
     }
     native static String getAltImpl(long peer);
 
+    @Override
     public void setAlt(String value) {
         setAltImpl(getPeer(), value);
     }
     native static void setAltImpl(long peer, String value);
 
+    @Override
     public String getCoords() {
         return getCoordsImpl(getPeer());
     }
     native static String getCoordsImpl(long peer);
 
+    @Override
     public void setCoords(String value) {
         setCoordsImpl(getPeer(), value);
     }
     native static void setCoordsImpl(long peer, String value);
 
+    @Override
     public boolean getNoHref() {
         return getNoHrefImpl(getPeer());
     }
     native static boolean getNoHrefImpl(long peer);
 
+    @Override
     public void setNoHref(boolean value) {
         setNoHrefImpl(getPeer(), value);
     }
@@ -88,41 +94,49 @@ public class HTMLAreaElementImpl extends HTMLElementImpl implements HTMLAreaElem
     }
     native static void setRelImpl(long peer, String value);
 
+    @Override
     public String getShape() {
         return getShapeImpl(getPeer());
     }
     native static String getShapeImpl(long peer);
 
+    @Override
     public void setShape(String value) {
         setShapeImpl(getPeer(), value);
     }
     native static void setShapeImpl(long peer, String value);
 
+    @Override
     public String getTarget() {
         return getTargetImpl(getPeer());
     }
     native static String getTargetImpl(long peer);
 
+    @Override
     public void setTarget(String value) {
         setTargetImpl(getPeer(), value);
     }
     native static void setTargetImpl(long peer, String value);
 
+    @Override
     public String getAccessKey() {
         return getAccessKeyImpl(getPeer());
     }
     native static String getAccessKeyImpl(long peer);
 
+    @Override
     public void setAccessKey(String value) {
         setAccessKeyImpl(getPeer(), value);
     }
     native static void setAccessKeyImpl(long peer, String value);
 
+    @Override
     public String getHref() {
         return getHrefImpl(getPeer());
     }
     native static String getHrefImpl(long peer);
 
+    @Override
     public void setHref(String value) {
         setHrefImpl(getPeer(), value);
     }

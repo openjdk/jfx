@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,46 +41,55 @@ public class HTMLTableSectionElementImpl extends HTMLElementImpl implements HTML
 
 
 // Attributes
+    @Override
     public String getAlign() {
         return getAlignImpl(getPeer());
     }
     native static String getAlignImpl(long peer);
 
+    @Override
     public void setAlign(String value) {
         setAlignImpl(getPeer(), value);
     }
     native static void setAlignImpl(long peer, String value);
 
+    @Override
     public String getCh() {
         return getChImpl(getPeer());
     }
     native static String getChImpl(long peer);
 
+    @Override
     public void setCh(String value) {
         setChImpl(getPeer(), value);
     }
     native static void setChImpl(long peer, String value);
 
+    @Override
     public String getChOff() {
         return getChOffImpl(getPeer());
     }
     native static String getChOffImpl(long peer);
 
+    @Override
     public void setChOff(String value) {
         setChOffImpl(getPeer(), value);
     }
     native static void setChOffImpl(long peer, String value);
 
+    @Override
     public String getVAlign() {
         return getVAlignImpl(getPeer());
     }
     native static String getVAlignImpl(long peer);
 
+    @Override
     public void setVAlign(String value) {
         setVAlignImpl(getPeer(), value);
     }
     native static void setVAlignImpl(long peer, String value);
 
+    @Override
     public HTMLCollection getRows() {
         return HTMLCollectionImpl.getImpl(getRowsImpl(getPeer()));
     }
@@ -88,6 +97,7 @@ public class HTMLTableSectionElementImpl extends HTMLElementImpl implements HTML
 
 
 // Functions
+    @Override
     public HTMLElement insertRow(int index) throws DOMException
     {
         return HTMLElementImpl.getImpl(insertRowImpl(getPeer()
@@ -97,6 +107,7 @@ public class HTMLTableSectionElementImpl extends HTMLElementImpl implements HTML
         , int index);
 
 
+    @Override
     public void deleteRow(int index) throws DOMException
     {
         deleteRowImpl(getPeer()

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,31 +40,37 @@ public class DocumentTypeImpl extends NodeImpl implements DocumentType {
 
 
 // Attributes
+    @Override
     public String getName() {
         return getNameImpl(getPeer());
     }
     native static String getNameImpl(long peer);
 
+    @Override
     public NamedNodeMap getEntities() {
         return NamedNodeMapImpl.getImpl(getEntitiesImpl(getPeer()));
     }
     native static long getEntitiesImpl(long peer);
 
+    @Override
     public NamedNodeMap getNotations() {
         return NamedNodeMapImpl.getImpl(getNotationsImpl(getPeer()));
     }
     native static long getNotationsImpl(long peer);
 
+    @Override
     public String getPublicId() {
         return getPublicIdImpl(getPeer());
     }
     native static String getPublicIdImpl(long peer);
 
+    @Override
     public String getSystemId() {
         return getSystemIdImpl(getPeer());
     }
     native static String getSystemIdImpl(long peer);
 
+    @Override
     public String getInternalSubset() {
         return getInternalSubsetImpl(getPeer());
     }

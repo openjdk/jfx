@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -99,16 +99,19 @@ public class CharacterDataImpl extends NodeImpl implements CharacterData {
 
 
 // Attributes
+    @Override
     public String getData() {
         return getDataImpl(getPeer());
     }
     native static String getDataImpl(long peer);
 
+    @Override
     public void setData(String value) {
         setDataImpl(getPeer(), value);
     }
     native static void setDataImpl(long peer, String value);
 
+    @Override
     public int getLength() {
         return getLengthImpl(getPeer());
     }
@@ -126,6 +129,7 @@ public class CharacterDataImpl extends NodeImpl implements CharacterData {
 
 
 // Functions
+    @Override
     public String substringData(int offset
         , int length) throws DOMException
     {
@@ -138,6 +142,7 @@ public class CharacterDataImpl extends NodeImpl implements CharacterData {
         , int length);
 
 
+    @Override
     public void appendData(String data)
     {
         appendDataImpl(getPeer()
@@ -147,6 +152,7 @@ public class CharacterDataImpl extends NodeImpl implements CharacterData {
         , String data);
 
 
+    @Override
     public void insertData(int offset
         , String data) throws DOMException
     {
@@ -159,6 +165,7 @@ public class CharacterDataImpl extends NodeImpl implements CharacterData {
         , String data);
 
 
+    @Override
     public void deleteData(int offset
         , int length) throws DOMException
     {
@@ -171,6 +178,7 @@ public class CharacterDataImpl extends NodeImpl implements CharacterData {
         , int length);
 
 
+    @Override
     public void replaceData(int offset
         , int length
         , String data) throws DOMException

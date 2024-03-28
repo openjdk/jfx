@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,6 +38,8 @@ public class RangeImpl implements Range {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
+
+        @Override
         public void dispose() {
             RangeImpl.dispose(peer);
         }
@@ -90,31 +92,37 @@ public class RangeImpl implements Range {
     public static final int NODE_INSIDE = 3;
 
 // Attributes
+    @Override
     public Node getStartContainer() {
         return NodeImpl.getImpl(getStartContainerImpl(getPeer()));
     }
     native static long getStartContainerImpl(long peer);
 
+    @Override
     public int getStartOffset() {
         return getStartOffsetImpl(getPeer());
     }
     native static int getStartOffsetImpl(long peer);
 
+    @Override
     public Node getEndContainer() {
         return NodeImpl.getImpl(getEndContainerImpl(getPeer()));
     }
     native static long getEndContainerImpl(long peer);
 
+    @Override
     public int getEndOffset() {
         return getEndOffsetImpl(getPeer());
     }
     native static int getEndOffsetImpl(long peer);
 
+    @Override
     public boolean getCollapsed() {
         return getCollapsedImpl(getPeer());
     }
     native static boolean getCollapsedImpl(long peer);
 
+    @Override
     public Node getCommonAncestorContainer() {
         return NodeImpl.getImpl(getCommonAncestorContainerImpl(getPeer()));
     }
@@ -127,6 +135,7 @@ public class RangeImpl implements Range {
 
 
 // Functions
+    @Override
     public void setStart(Node refNode
         , int offset) throws DOMException
     {
@@ -139,6 +148,7 @@ public class RangeImpl implements Range {
         , int offset);
 
 
+    @Override
     public void setEnd(Node refNode
         , int offset) throws DOMException
     {
@@ -151,6 +161,7 @@ public class RangeImpl implements Range {
         , int offset);
 
 
+    @Override
     public void setStartBefore(Node refNode) throws DOMException
     {
         setStartBeforeImpl(getPeer()
@@ -160,6 +171,7 @@ public class RangeImpl implements Range {
         , long refNode);
 
 
+    @Override
     public void setStartAfter(Node refNode) throws DOMException
     {
         setStartAfterImpl(getPeer()
@@ -169,6 +181,7 @@ public class RangeImpl implements Range {
         , long refNode);
 
 
+    @Override
     public void setEndBefore(Node refNode) throws DOMException
     {
         setEndBeforeImpl(getPeer()
@@ -178,6 +191,7 @@ public class RangeImpl implements Range {
         , long refNode);
 
 
+    @Override
     public void setEndAfter(Node refNode) throws DOMException
     {
         setEndAfterImpl(getPeer()
@@ -187,6 +201,7 @@ public class RangeImpl implements Range {
         , long refNode);
 
 
+    @Override
     public void collapse(boolean toStart)
     {
         collapseImpl(getPeer()
@@ -196,6 +211,7 @@ public class RangeImpl implements Range {
         , boolean toStart);
 
 
+    @Override
     public void selectNode(Node refNode) throws DOMException
     {
         selectNodeImpl(getPeer()
@@ -205,6 +221,7 @@ public class RangeImpl implements Range {
         , long refNode);
 
 
+    @Override
     public void selectNodeContents(Node refNode) throws DOMException
     {
         selectNodeContentsImpl(getPeer()
@@ -214,6 +231,7 @@ public class RangeImpl implements Range {
         , long refNode);
 
 
+    @Override
     public short compareBoundaryPoints(short how
         , Range sourceRange) throws DOMException
     {
@@ -226,6 +244,7 @@ public class RangeImpl implements Range {
         , long sourceRange);
 
 
+    @Override
     public void deleteContents() throws DOMException
     {
         deleteContentsImpl(getPeer());
@@ -233,6 +252,7 @@ public class RangeImpl implements Range {
     native static void deleteContentsImpl(long peer);
 
 
+    @Override
     public DocumentFragment extractContents() throws DOMException
     {
         return DocumentFragmentImpl.getImpl(extractContentsImpl(getPeer()));
@@ -240,6 +260,7 @@ public class RangeImpl implements Range {
     native static long extractContentsImpl(long peer);
 
 
+    @Override
     public DocumentFragment cloneContents() throws DOMException
     {
         return DocumentFragmentImpl.getImpl(cloneContentsImpl(getPeer()));
@@ -247,6 +268,7 @@ public class RangeImpl implements Range {
     native static long cloneContentsImpl(long peer);
 
 
+    @Override
     public void insertNode(Node newNode) throws DOMException
     {
         insertNodeImpl(getPeer()
@@ -256,6 +278,7 @@ public class RangeImpl implements Range {
         , long newNode);
 
 
+    @Override
     public void surroundContents(Node newParent) throws DOMException
     {
         surroundContentsImpl(getPeer()
@@ -265,6 +288,7 @@ public class RangeImpl implements Range {
         , long newParent);
 
 
+    @Override
     public Range cloneRange()
     {
         return RangeImpl.getImpl(cloneRangeImpl(getPeer()));
@@ -272,6 +296,7 @@ public class RangeImpl implements Range {
     native static long cloneRangeImpl(long peer);
 
 
+    @Override
     public String toString()
     {
         return toStringImpl(getPeer());
@@ -279,6 +304,7 @@ public class RangeImpl implements Range {
     native static String toStringImpl(long peer);
 
 
+    @Override
     public void detach()
     {
         detachImpl(getPeer());
