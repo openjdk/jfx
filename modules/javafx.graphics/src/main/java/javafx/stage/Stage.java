@@ -823,6 +823,21 @@ public class Stage extends Window {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * If this Stage is {@code maximized} or in {@code fullScreen}, it is not sized and the request
+     * is ignored.
+     */
+    @Override
+    public void sizeToScene() {
+        if (isMaximized() || isFullScreen()) {
+            return;
+        }
+
+        super.sizeToScene();
+    }
+
     public final boolean isMaximized() {
         return maximized == null ? false : maximized.get();
     }
