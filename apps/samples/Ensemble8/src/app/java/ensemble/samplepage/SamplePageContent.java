@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -31,14 +31,12 @@
  */
 package ensemble.samplepage;
 
-import ensemble.PlatformFeatures;
-import ensemble.SampleInfo;
+import static ensemble.samplepage.SamplePage.INDENT;
 import javafx.scene.Node;
 import javafx.scene.layout.Region;
 import javafx.scene.text.Text;
-import javafx.util.Callback;
-
-import static ensemble.samplepage.SamplePage.INDENT;
+import ensemble.PlatformFeatures;
+import ensemble.SampleInfo;
 
 /**
  * The content for Sample Page

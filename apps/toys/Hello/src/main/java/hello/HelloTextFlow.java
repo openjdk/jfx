@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,17 +25,20 @@
 
 package hello;
 
+import static javafx.scene.paint.Color.BLACK;
+import static javafx.scene.paint.Color.LIGHTBLUE;
 import javafx.application.Application;
 import javafx.geometry.Point2D;
-import javafx.scene.*;
+import javafx.scene.Cursor;
+import javafx.scene.Group;
+import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.paint.*;
 import javafx.scene.shape.Path;
-import javafx.scene.text.*;
+import javafx.scene.text.HitInfo;
+import javafx.scene.text.Text;
+import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
-
-import static javafx.scene.paint.Color.*;
 
 public class HelloTextFlow extends Application {
     final Path caret = new Path();

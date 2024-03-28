@@ -25,10 +25,8 @@
 
 package hello;
 
-import java.util.List;
 import javafx.application.Application;
 import javafx.collections.ListChangeListener;
-import javafx.collections.ListChangeListener.Change;
 import javafx.collections.MapChangeListener;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
