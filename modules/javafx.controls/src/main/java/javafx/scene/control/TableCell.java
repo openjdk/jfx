@@ -354,6 +354,16 @@ public class TableCell<S,T> extends IndexedCell<T> {
         super.commitEdit(newValue);
 
         final TableView<S> table = getTableView();
+        boolean tableShouldRequestFocus = false;
+
+        if (table != null) {
+            // The cell is going to be updated, and the current focus owner might be removed from it.
+            // Before that happens, check if it has the table as a parent (otherwise the user might have
+            // clicked out of the table entirely and given focus to something else), so the table can
+            // request the focus back, once the edit commit ends.
+            tableShouldRequestFocus = ControlUtils.controlShouldRequestFocusIfCurrentFocusOwnerIsChild(table);
+        }
+
         // JDK-8187307: fire the commit after updating cell's editing state
         if (getTableColumn() != null) {
             // Inform the TableColumn of the edit being ready to be committed.
@@ -375,10 +385,11 @@ public class TableCell<S,T> extends IndexedCell<T> {
             table.edit(-1, null);
 
             // request focus back onto the table, only if the current focus
-            // owner has the table as a parent (otherwise the user might have
-            // clicked out of the table entirely and given focus to something else.
+            // owner had the table as a parent.
             // It would be rude of us to request it back again.
-            ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(table);
+            if (tableShouldRequestFocus) {
+                table.requestFocus();
+            }
         }
     }
 
@@ -394,7 +405,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
             if (updateEditingIndex) table.edit(-1, null);
             // request focus back onto the table, only if the current focus
             // owner has the table as a parent (otherwise the user might have
-            // clicked out of the table entirely and given focus to something else.
+            // clicked out of the table entirely and given focus to something else).
             // It would be rude of us to request it back again.
             ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(table);
         }
