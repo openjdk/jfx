@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,14 @@
 
 package test.launchertest;
 
-import java.net.URL;
-import java.net.URLClassLoader;
+import static test.launchertest.Constants.ERROR_CONSTRUCTOR_WRONG_CCL;
+import static test.launchertest.Constants.ERROR_NONE;
+import static test.launchertest.Constants.ERROR_START_WRONG_CCL;
+import static test.launchertest.Constants.ERROR_TOOLKIT_NOT_RUNNING;
+import static test.launchertest.Constants.ERROR_UNEXPECTED_EXCEPTION;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.stage.Stage;
-
-import static test.launchertest.Constants.*;
 
 /**
  * Test application with no main method. This is launched by MainLauncherTest.

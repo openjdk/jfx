@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,14 @@
 
 package test.launchertest;
 
+import static test.launchertest.Constants.ERROR_ASSERTION_FAILURE;
+import static test.launchertest.Constants.ERROR_NONE;
+import static test.launchertest.Constants.ERROR_STARTUP_FAILED;
+import static test.launchertest.Constants.ERROR_TOOLKIT_IS_RUNNING;
+import static test.launchertest.Constants.ERROR_UNEXPECTED_EXCEPTION;
 import java.util.ArrayList;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 import javafx.application.Platform;
-
-import static test.launchertest.Constants.*;
 
 /**
  * Test Platform.startup from class that is not an Application.

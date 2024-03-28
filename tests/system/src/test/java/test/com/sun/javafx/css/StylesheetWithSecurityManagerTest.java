@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,26 +25,23 @@
 
 package test.com.sun.javafx.css;
 
-import javafx.css.Declaration;
-import javafx.css.Rule;
-import javafx.css.Selector;
-import com.sun.javafx.css.StyleManager;
-import javafx.css.Stylesheet;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import java.security.Permission;
+import java.util.List;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableSet;
 import javafx.css.CssMetaData;
+import javafx.css.Declaration;
 import javafx.css.PseudoClass;
+import javafx.css.Rule;
+import javafx.css.Selector;
 import javafx.css.Styleable;
+import javafx.css.Stylesheet;
 import javafx.scene.paint.Color;
-import org.junit.Ignore;
 import org.junit.Test;
-
-import java.security.Permission;
-import java.util.List;
-
-import static org.junit.Assert.*;
-import static org.junit.Assume.*;
+import com.sun.javafx.css.StyleManager;
 
 public class StylesheetWithSecurityManagerTest {
 

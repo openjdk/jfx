@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,14 @@
 
 package test.robot.helloworld;
 
-import com.sun.glass.ui.Application;
-import com.sun.javafx.PlatformUtil;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 import java.awt.AWTPermission;
 import java.security.AllPermission;
 import java.security.Permission;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
@@ -43,9 +45,7 @@ import javafx.stage.StageStyle;
 import javafx.util.FXPermission;
 import org.junit.After;
 import org.junit.Test;
-
-import static org.junit.Assert.*;
-import static org.junit.Assume.*;
+import com.sun.javafx.PlatformUtil;
 import test.robot.testharness.VisualTestBase;
 
 /**

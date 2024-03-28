@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,19 +25,18 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLogShim;
-import test.robot.com.sun.glass.ui.monocle.TestApplication;
-import com.sun.glass.ui.monocle.TouchFilterShim.FlushingFilter;
-import com.sun.glass.ui.monocle.TouchFilterShim.LoggingFilter;
-import com.sun.glass.ui.monocle.TouchFilterShim.NoMultiplesOfTenOnXFilter;
-import com.sun.glass.ui.monocle.TouchFilterShim.OverrideIDFilter;
-import com.sun.glass.ui.monocle.TouchFilterShim.TranslateFilter;
 import javafx.geometry.Rectangle2D;
 import javafx.stage.Screen;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
+import com.sun.glass.ui.monocle.TestLogShim;
+import com.sun.glass.ui.monocle.TouchFilterShim.FlushingFilter;
+import com.sun.glass.ui.monocle.TouchFilterShim.LoggingFilter;
+import com.sun.glass.ui.monocle.TouchFilterShim.NoMultiplesOfTenOnXFilter;
+import com.sun.glass.ui.monocle.TouchFilterShim.OverrideIDFilter;
+import com.sun.glass.ui.monocle.TouchFilterShim.TranslateFilter;
 
 /**
  * Test installation of custom touch filters

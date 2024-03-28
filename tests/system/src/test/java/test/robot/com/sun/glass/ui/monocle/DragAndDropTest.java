@@ -1,7 +1,5 @@
-package test.robot.com.sun.glass.ui.monocle;
-
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +23,9 @@ package test.robot.com.sun.glass.ui.monocle;
  * questions.
  */
 
-import com.sun.glass.ui.monocle.TestLogShim;
-import test.robot.com.sun.glass.ui.monocle.TestApplication;
-import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
-import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
+package test.robot.com.sun.glass.ui.monocle;
+
+import java.util.Collection;
 import javafx.scene.Node;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.Dragboard;
@@ -37,9 +34,10 @@ import javafx.scene.input.TransferMode;
 import javafx.scene.shape.Rectangle;
 import org.junit.Test;
 import org.junit.runners.Parameterized;
-
-import java.util.Collection;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.com.sun.glass.ui.monocle.TestRunnable;
+import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
+import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
 
 public class DragAndDropTest extends ParameterizedTestBase {
 

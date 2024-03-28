@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,18 +26,13 @@
 package test.com.sun.glass.ui.monocle.headless;
 
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Application;
-import javafx.application.Platform;
 import javafx.stage.Stage;
-
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
 import com.sun.glass.ui.Screen;
-
 import test.util.Util;
 
 public class HeadlessGeometry2Test {

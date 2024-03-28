@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,9 @@
 
 package myapp6;
 
+import static myapp6.Constants.ERROR_ASSERTION_FAILURE;
+import static myapp6.Constants.ERROR_NONE;
+import static myapp6.Constants.ERROR_UNEXPECTED_EXCEPTION;
 import java.io.IOException;
 import java.net.URL;
 import javafx.application.Application;
@@ -34,13 +37,9 @@ import javafx.fxml.FXMLLoader;
 import javafx.fxml.LoadException;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
-import javafx.scene.text.Text;
 import javafx.stage.Stage;
-import myapp6.pkg2.AnnotatedController;
 import myapp6.pkg2.CustomNode;
 import myapp6.pkg2.SimpleController;
-
-import static myapp6.Constants.*;
 
 /**
  * Modular test application for testing FXML.
