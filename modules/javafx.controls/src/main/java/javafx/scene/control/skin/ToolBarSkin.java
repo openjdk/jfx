@@ -96,6 +96,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
     private Pane box;
     private ToolBarOverflowMenu overflowMenu;
     private boolean overflow = false;
+    private int overflowNodeIndex = Integer.MAX_VALUE;
     private double previousWidth = 0;
     private double previousHeight = 0;
     private double savedPrefWidth = 0;
@@ -467,7 +468,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
                 previousHeight = snapSizeY(toolbar.getHeight());
                 addNodesToToolBar();
             } else {
-                correctOverflow(toolbarLength);
+                organizeOverflow(toolbarLength);
             }
         } else {
             if (snapSizeX(toolbar.getWidth()) != previousWidth || needsUpdate) {
@@ -476,7 +477,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
                 previousWidth = snapSizeX(toolbar.getWidth());
                 addNodesToToolBar();
             } else {
-                correctOverflow(toolbarLength);
+                organizeOverflow(toolbarLength);
             }
         }
 
@@ -573,48 +574,30 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
         getSkinnable().requestLayout();
     }
 
-    private void correctOverflow(double length) {
-        boolean overflowed = isOverflowed(length);
-        if (overflowed != overflow) {
-            organizeOverflow(length, overflowed);
-        }
-    }
+    private void organizeOverflow(double length) {
+        // Determine the index of the first node to be moved to the overflow menu
+        int newOverflowNodeIndex = getOverflowNodeIndex(length);
 
-    private void organizeOverflow(double length, boolean hasOverflow) {
-        if (hasOverflow) {
+        // If the overflow button is displayed, the length must be corrected
+        // and the overflow index recalculated.
+        if (newOverflowNodeIndex < getSkinnable().getItems().size()) {
             if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
                 length -= snapSizeY(overflowMenu.prefHeight(-1));
             } else {
                 length -= snapSizeX(overflowMenu.prefWidth(-1));
             }
             length -= getSpacing();
+            newOverflowNodeIndex = getOverflowNodeIndex(length);
         }
 
-        ObservableList<Node> nodes = getSkinnable().getItems();
-
-        // Determine the index of the first node to be moved to the overflow menu
-        // IMPORTANT: As the width/height of the node may depend on whether the node has been added to the scene,
-        // do not move it between the toolbar and the overflow menu here.
-        int overflowIndex = nodes.size();
-        double x = 0;
-        for (int i = 0; i < nodes.size(); i++) {
-            Node node = nodes.get(i);
-
-            if (node.isManaged()) {
-                if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
-                    x += snapSizeY(node.prefHeight(-1)) + getSpacing();
-                } else {
-                    x += snapSizeX(node.prefWidth(-1)) + getSpacing();
-                }
-            }
-
-            if (x > length) {
-                overflowIndex = i;
-                break;
-            }
+        // Optimization: Skip moving nodes if the node list has not been changed
+        // and the overflow index has remained the same.
+        if (!needsUpdate && newOverflowNodeIndex == overflowNodeIndex) {
+            return;
         }
 
         // Determine which node goes to the toolbar and which goes to the overflow.
+        ObservableList<Node> nodes = getSkinnable().getItems();
 
         overflowMenuItems.clear();
         box.getChildren().clear();
@@ -623,7 +606,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
             node.getStyleClass().remove("menu-item");
             node.getStyleClass().remove("custom-menu-item");
 
-            if (i < overflowIndex) {
+            if (i < newOverflowNodeIndex) {
                 box.getChildren().add(node);
             } else {
                 if (node.isFocused()) {
@@ -686,7 +669,13 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
 
         // Check if we overflowed.
         overflow = overflowMenuItems.size() > 0;
-        if (!overflow && overflowMenu.isFocused()) {
+        overflowNodeIndex = newOverflowNodeIndex;
+        if (overflow) {
+            // The nodes needs to be added to the scene and the css needs to be applied,
+            // otherwise subsequent prefWidth(..)/prefHeight(..) may return wrong values.
+            overflowMenu.popup.getItems().setAll(overflowMenuItems);
+            overflowMenu.popup.getScene().getRoot().applyCss();
+        } else if(overflowMenu.isFocused()) {
             Node last = engine.selectLast();
             if (last != null) {
                 last.requestFocus();
@@ -700,10 +689,9 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
         final ToolBar toolbar = getSkinnable();
         double toolbarLength = getToolbarLength(toolbar);
 
-        // Is there overflow ?
-        boolean hasOverflow = isOverflowed(toolbarLength);
-
-        organizeOverflow(toolbarLength, hasOverflow);
+        // Reset overflowNodeIndex. This causes the overflow menu to be reorganized.
+        overflowNodeIndex = Integer.MAX_VALUE;
+        organizeOverflow(toolbarLength);
     }
 
     private double getToolbarLength(ToolBar toolbar) {
@@ -716,22 +704,33 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
         return length;
     }
 
-    private boolean isOverflowed(double length) {
+    /**
+     * Calculate the index of the node that does not fit in the toolbar and must be moved to the overflow menu.
+     *
+     * @param length the length of the toolbar
+     * @return the index of the first node that does not fit in the toolbar, or the size of the items list else
+     */
+    private int getOverflowNodeIndex(double length) {
+        ObservableList<Node> items = getSkinnable().getItems();
+        int overflowIndex = items.size();
         double x = 0;
-        boolean hasOverflow = false;
-        for (Node node : getSkinnable().getItems()) {
-            if (!node.isManaged()) continue;
-            if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
-                x += snapSizeY(node.prefHeight(-1)) + getSpacing();
-            } else {
-                x += snapSizeX(node.prefWidth(-1)) + getSpacing();
+        for (int i = 0; i < items.size(); i++) {
+            Node node = items.get(i);
+
+            if (node.isManaged()) {
+                if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
+                    x += snapSizeY(node.prefHeight(-1)) + getSpacing();
+                } else {
+                    x += snapSizeX(node.prefWidth(-1)) + getSpacing();
+                }
             }
+
             if (x > length) {
-                hasOverflow = true;
+                overflowIndex = i;
                 break;
             }
         }
-        return hasOverflow;
+        return overflowIndex;
     }
 
     /* *************************************************************************
