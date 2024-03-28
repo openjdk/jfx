@@ -25,15 +25,16 @@
 
 
 #import <Cocoa/Cocoa.h>
+#import "GlassDragSource.h"
 
 @interface GlassDraggingSource : NSObject <NSDraggingSource>
 {
 @public
     NSDragOperation dragOperation;
-
+    id<GlassDragSourceDelegate> dragDelegate;
 }
 
-- (GlassDraggingSource*)initWithOperation:(NSDragOperation)operation;
+- (GlassDraggingSource*)initWithOperation:(NSDragOperation)operation delegate:(id<GlassDragSourceDelegate>)delegate;
 
 - (void)draggingSession:(NSDraggingSession *)session willBeginAtPoint:(NSPoint)screenPoint;
 - (void)draggingSession:(NSDraggingSession *)session movedToPoint:(NSPoint)screenPoint;
