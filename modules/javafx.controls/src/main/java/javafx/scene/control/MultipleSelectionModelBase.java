@@ -761,16 +761,18 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
                 // by finding all contiguous indices, of all indices that are
                 // not already selected, and which are in the valid range
                 startAtomic();
-                List<Integer> sortedNewIndices =
-                        IntStream.concat(IntStream.of(index), IntStream.of(indices))
+
+                List<Integer> sortedNewIndices = new ArrayList<>(indices.length + 1);
+                IntStream.concat(IntStream.of(index), IntStream.of(indices))
                         .distinct()
                         .filter(this::isValidIndex)
                         .filter(this::isNotSelected)
                         .sorted()
-                        .boxed()
-                        .collect(Collectors.toList());
+                        .forEach(i -> {
+                            sortedNewIndices.add(i);
+                            set(i);
+                        });
 
-                sortedNewIndices.forEach(this::set);
                 stopAtomic();
 
                 final int size = sortedNewIndices.size();
