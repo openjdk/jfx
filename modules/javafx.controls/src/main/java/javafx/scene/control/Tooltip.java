@@ -119,6 +119,7 @@ public class Tooltip extends PopupControl {
     private static int TOOLTIP_YOFFSET = 7;
 
     private static TooltipBehavior BEHAVIOR = new TooltipBehavior(false);
+    private boolean cssForced;
 
     /**
      * Associates the given {@link Tooltip} with the given {@link Node}. The tooltip
@@ -168,6 +169,16 @@ public class Tooltip extends PopupControl {
         bridge = new CSSBridge();
         PopupWindowHelper.getContent(this).setAll(bridge);
         getStyleClass().setAll("tooltip");
+    }
+
+    @Override
+    protected void show() {
+        // The very first show call is just for us to do the correct CSS processing, so we ignore the request here.
+        if (!cssForced) {
+            return;
+        }
+
+        super.show();
     }
 
     /* *************************************************************************
@@ -859,7 +870,6 @@ public class Tooltip extends PopupControl {
         private double lastMouseY;
 
         private boolean hideOnExit;
-        private boolean cssForced = false;
 
         TooltipBehavior(final boolean hideOnExit) {
             this.hideOnExit = hideOnExit;
@@ -998,13 +1008,14 @@ public class Tooltip extends PopupControl {
                     } else {
                         // Force the CSS to be processed for the tooltip so that it uses the
                         // appropriate timings for showDelay, showDuration, and hideDelay.
-                        if (!cssForced) {
-                            double opacity = t.getOpacity();
-                            t.setOpacity(0);
+                        if (!t.cssForced) {
+                            // Note that we do not really show the tooltip but rather do all the necessary setup for
+                            // the correct CSS processing.
+                            // In this case we especially need the show method to attach all the stylesheets to us
+                            // from the owner root window.
                             t.show(owner);
-                            t.hide();
-                            t.setOpacity(opacity);
-                            cssForced = true;
+                            t.bridge.applyCss();
+                            t.cssForced = true;
                         }
 
                         // Start / restart the timer and make sure the tooltip
