@@ -27,7 +27,6 @@ package javafx.scene.control.skin;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
@@ -35,6 +34,7 @@ import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
+import javafx.scene.control.ScrollBar;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TablePosition;
@@ -43,7 +43,6 @@ import javafx.scene.control.TableSelectionModel;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TableView.TableViewSelectionModel;
 import javafx.scene.input.MouseEvent;
-
 import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.behavior.TableViewBehavior;
 
@@ -116,6 +115,15 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
         behavior.setOnSelectRightCell(() -> onSelectRightCell());
         behavior.setOnFocusLeftCell(() -> onFocusLeftCell());
         behavior.setOnFocusRightCell(() -> onFocusRightCell());
+        behavior.setOnHorizontalUnitScroll((right) -> {
+            // TODO this should have beem a public method in VirtualFlow
+            ScrollBar sb = flow.getHbar();
+            if(right) {
+                sb.increment();
+            } else {
+                sb.decrement();
+            }
+        });
 
         lh.addChangeListener(control.fixedCellSizeProperty(), (ev) -> {
             flow.setFixedCellSize(getSkinnable().getFixedCellSize());

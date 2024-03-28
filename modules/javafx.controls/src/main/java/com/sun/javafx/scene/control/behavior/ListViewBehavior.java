@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,8 +24,12 @@
  */
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.scene.control.skin.Utils;
+import static javafx.scene.input.KeyCode.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
@@ -38,19 +42,15 @@ import javafx.scene.control.FocusModel;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.SelectionMode;
-import com.sun.javafx.scene.control.inputmap.InputMap;
-import com.sun.javafx.scene.control.inputmap.KeyBinding;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.util.Callback;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
-
-import static com.sun.javafx.scene.control.inputmap.InputMap.*;
-import static javafx.scene.input.KeyCode.*;
+import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
+import com.sun.javafx.scene.control.inputmap.InputMap.MouseMapping;
+import com.sun.javafx.scene.control.inputmap.KeyBinding;
+import com.sun.javafx.scene.control.skin.Utils;
 
 public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     private final InputMap<ListView<T>> listViewInputMap;
@@ -142,6 +142,9 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             new KeyMapping(DOWN, e -> selectNextRow()),
             new KeyMapping(KP_DOWN, e -> selectNextRow()),
 
+            new KeyMapping(new KeyBinding(RIGHT).shortcut().alt(), e -> horizontalUnitScroll(true)),
+            new KeyMapping(new KeyBinding(LEFT).shortcut().alt(), e -> horizontalUnitScroll(false)),
+
             new KeyMapping(new KeyBinding(UP).shift(), e -> alsoSelectPreviousRow()),
             new KeyMapping(new KeyBinding(KP_UP).shift(), e -> alsoSelectPreviousRow()),
             new KeyMapping(new KeyBinding(DOWN).shift(), e -> alsoSelectNextRow()),
@@ -231,6 +234,17 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
 
         if (tlFocus != null) tlFocus.dispose();
         control.removeEventFilter(KeyEvent.ANY, keyEventListener);
+
+        onScrollPageUp = null;
+        onScrollPageDown = null;
+        onFocusPreviousRow = null;
+        onFocusNextRow = null;
+        onSelectPreviousRow = null;
+        onSelectNextRow = null;
+        onMoveToFirstCell = null;
+        onMoveToLastCell = null;
+        onHorizontalUnitScroll = null;
+
         super.dispose();
     }
 
@@ -911,5 +925,18 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         sm.selectRange(index, getRowCount());
 
         if (onMoveToLastCell != null) onMoveToLastCell.run();
+    }
+
+    // TODO not necessary with the new InputMap V2
+    private Consumer<Boolean> onHorizontalUnitScroll;
+
+    public void setOnHorizontalUnitScroll(Consumer<Boolean> f) {
+        onHorizontalUnitScroll = f;
+    }
+
+    private void horizontalUnitScroll(boolean right) {
+        if (onHorizontalUnitScroll != null) {
+            onHorizontalUnitScroll.accept(right);
+        }
     }
 }

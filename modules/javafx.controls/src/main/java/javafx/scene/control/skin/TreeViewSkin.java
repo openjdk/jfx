@@ -25,7 +25,11 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.Properties;
+import java.lang.ref.WeakReference;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.ArrayList;
+import java.util.List;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
@@ -39,17 +43,19 @@ import javafx.event.WeakEventHandler;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
-import javafx.scene.control.*;
+import javafx.scene.control.Control;
+import javafx.scene.control.FocusModel;
+import javafx.scene.control.MultipleSelectionModel;
+import javafx.scene.control.ScrollBar;
+import javafx.scene.control.SelectionModel;
+import javafx.scene.control.TreeCell;
+import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeItem.TreeModificationEvent;
+import javafx.scene.control.TreeView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
-import java.lang.ref.WeakReference;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.ArrayList;
-import java.util.List;
-
+import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.behavior.TreeViewBehavior;
 
 /**
@@ -184,6 +190,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
         properties.remove(Properties.RECREATE);
         properties.addListener(propertiesMapListener);
 
+        // FIX unnecessary, make the behavior class abstract
         // init the behavior 'closures'
         behavior.setOnFocusPreviousRow(() -> { onFocusPreviousCell(); });
         behavior.setOnFocusNextRow(() -> { onFocusNextCell(); });
@@ -193,6 +200,15 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
         behavior.setOnScrollPageUp(this::onScrollPageUp);
         behavior.setOnSelectPreviousRow(() -> { onSelectPreviousCell(); });
         behavior.setOnSelectNextRow(() -> { onSelectNextCell(); });
+        behavior.setOnHorizontalUnitScroll((right) -> {
+            // TODO this should have beem a public method in VirtualFlow
+            ScrollBar sb = flow.getHbar();
+            if(right) {
+                sb.increment();
+            } else {
+                sb.decrement();
+            }
+        });
 
         registerChangeListener(control.rootProperty(), e -> setRoot(getSkinnable().getRoot()));
         registerChangeListener(control.showRootProperty(), e -> {

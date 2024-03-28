@@ -25,10 +25,10 @@
 
 package javafx.scene.control.skin;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.List;
-
-import com.sun.javafx.scene.control.Properties;
 import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
 import javafx.collections.FXCollections;
@@ -50,14 +50,12 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MultipleSelectionModel;
+import javafx.scene.control.ScrollBar;
 import javafx.scene.control.SelectionModel;
-import com.sun.javafx.scene.control.behavior.ListViewBehavior;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
-
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
+import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.control.behavior.ListViewBehavior;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 
 /**
@@ -196,16 +194,6 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         behavior = new ListViewBehavior<>(control);
 //        control.setInputMap(behavior.getInputMap());
 
-        // init the behavior 'closures'
-        behavior.setOnFocusPreviousRow(() -> onFocusPreviousCell());
-        behavior.setOnFocusNextRow(() -> onFocusNextCell());
-        behavior.setOnMoveToFirstCell(() -> onMoveToFirstCell());
-        behavior.setOnMoveToLastCell(() -> onMoveToLastCell());
-        behavior.setOnSelectPreviousRow(() -> onSelectPreviousCell());
-        behavior.setOnSelectNextRow(() -> onSelectNextCell());
-        behavior.setOnScrollPageDown(this::onScrollPageDown);
-        behavior.setOnScrollPageUp(this::onScrollPageUp);
-
         updateListViewItems();
 
         // init the VirtualFlow
@@ -216,6 +204,25 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         flow.setCellFactory(flow -> createCell());
         flow.setFixedCellSize(control.getFixedCellSize());
         getChildren().add(flow);
+
+        // init the behavior 'closures'
+        behavior.setOnFocusPreviousRow(() -> onFocusPreviousCell());
+        behavior.setOnFocusNextRow(() -> onFocusNextCell());
+        behavior.setOnMoveToFirstCell(() -> onMoveToFirstCell());
+        behavior.setOnMoveToLastCell(() -> onMoveToLastCell());
+        behavior.setOnSelectPreviousRow(() -> onSelectPreviousCell());
+        behavior.setOnSelectNextRow(() -> onSelectNextCell());
+        behavior.setOnScrollPageDown(this::onScrollPageDown);
+        behavior.setOnScrollPageUp(this::onScrollPageUp);
+        behavior.setOnHorizontalUnitScroll((right) -> {
+            // TODO this should have beem a public method in VirtualFlow
+            ScrollBar sb = flow.getHbar();
+            if(right) {
+                sb.increment();
+            } else {
+                sb.decrement();
+            }
+        });
 
         EventHandler<MouseEvent> ml = event -> {
             // This ensures that the list maintains the focus, even when the vbar
