@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,7 @@ public abstract class TestRunnable implements Runnable {
 
     public abstract void test() throws Exception;
 
+    @Override
     public final void run() {
         t = null;
         try {
@@ -88,6 +89,7 @@ public abstract class TestRunnable implements Runnable {
 
     public static void invokeAndWaitUntilSuccess(Testable t, long timeout) throws Exception {
         new TestRunnable() {
+            @Override
             public void test() throws Exception {
                 t.test();
             }
@@ -96,6 +98,7 @@ public abstract class TestRunnable implements Runnable {
 
     public static void invokeAndWait(Testable t) throws Exception {
         new TestRunnable() {
+            @Override
             public void test() throws Exception {
                 t.test();
             }

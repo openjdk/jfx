@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,10 +46,12 @@ public class PrinterListenerTest extends Application {
     Printer defaultPrinter;
     Stage window;
 
+    @Override
     public void start(Stage stage) {
         window = stage;
         printPrinters();
         printers.addListener(new SetChangeListener<Printer>() {
+           @Override
            public void onChanged(SetChangeListener.Change<? extends Printer> change) {
                printChanged(change);
            }
