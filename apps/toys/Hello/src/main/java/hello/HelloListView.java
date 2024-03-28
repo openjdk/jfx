@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -267,6 +267,7 @@ public class HelloListView extends Application implements InvalidationListener {
         stage.show();
     }
 
+    @Override
     public void invalidated(Observable observable) {
         System.out.println("Event: " + observable);
     }
@@ -384,6 +385,7 @@ public class HelloListView extends Application implements InvalidationListener {
         //
         // observation code for debugging the simple list view multiple selection
         listView.getSelectionModel().selectedIndexProperty().addListener(new InvalidationListener() {
+            @Override
             public void invalidated(Observable ov) {
                 System.out.println("SelectedIndex: " + listView.getSelectionModel().getSelectedIndex());
             }
@@ -406,6 +408,7 @@ public class HelloListView extends Application implements InvalidationListener {
 //////        listView.getFocusModel().addInvalidationListener(FocusModel.FOCUSED_ITEM, this);
 ////
         listView.getSelectionModel().getSelectedIndices().addListener(new ListChangeListener<Integer>() {
+            @Override
             public void onChanged(Change<? extends Integer> change) {
                 while (change.next()) {
                     System.out.println("SelectedIndices: " + change.getList() +
@@ -578,6 +581,7 @@ public class HelloListView extends Application implements InvalidationListener {
         // control buttons
         final Button editRow3btn = new Button("Edit row 3");
         editRow3btn.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
             public void handle(ActionEvent t) {
                 textFieldListView.edit(2);
                 choiceBoxListView.edit(2);
@@ -588,6 +592,7 @@ public class HelloListView extends Application implements InvalidationListener {
 
         final Button cancelEditBtn = new Button("Cancel edit");
         cancelEditBtn.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
             public void handle(ActionEvent t) {
                 textFieldListView.edit(-1);
                 choiceBoxListView.edit(-1);
@@ -699,6 +704,7 @@ public class HelloListView extends Application implements InvalidationListener {
         filterInput.setPromptText("Enter filter text");
 //        filterInput.setColumns(35);
         filterInput.setOnKeyReleased(new EventHandler<KeyEvent>() {
+            @Override
             public void handle(KeyEvent t) {
                 filteredList.setPredicate((String e) ->
                         e.toUpperCase().contains(filterInput.getText().toUpperCase()));
@@ -710,6 +716,7 @@ public class HelloListView extends Application implements InvalidationListener {
         newItemInput.setPromptText("Enter text, then press enter to add item to list");
 //        newItemInput.setColumns(35);
         newItemInput.setOnKeyReleased(new EventHandler<KeyEvent>() {
+            @Override
             public void handle(KeyEvent t) {
                 if (t.getCode() == KeyCode.ENTER) {
                     names.add(newItemInput.getText());
@@ -722,6 +729,7 @@ public class HelloListView extends Application implements InvalidationListener {
         // sort ascending
         final ToggleGroup toggleGroup = new ToggleGroup();
         toggleGroup.selectedToggleProperty().addListener(new InvalidationListener() {
+            @Override
             public void invalidated(Observable ov) {
                 if (toggleGroup.getSelectedToggle() == null) return;
                 sortedList.setComparator((Comparator<String>)toggleGroup.getSelectedToggle().getUserData());
@@ -802,6 +810,7 @@ public class HelloListView extends Application implements InvalidationListener {
 
         // set up Dnd in both directions
         EventHandler<MouseEvent> dragDetected = new EventHandler<MouseEvent>() {
+            @Override
             public void handle(MouseEvent event) {
                 ListView<String> list = (ListView) event.getSource();
                 Dragboard db = list.startDragAndDrop(TransferMode.ANY);
@@ -814,6 +823,7 @@ public class HelloListView extends Application implements InvalidationListener {
             }
         };
         EventHandler<DragEvent> dragOver = new EventHandler<DragEvent>() {
+            @Override
             public void handle(DragEvent event) {
                 if (event.getGestureSource() != event.getTarget() && event.getDragboard().hasString()) {
                     event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
@@ -823,6 +833,7 @@ public class HelloListView extends Application implements InvalidationListener {
             }
         };
         EventHandler<DragEvent> dragDropped = new EventHandler<DragEvent>() {
+            @Override
             public void handle(DragEvent event) {
                 ListView<String> list = (ListView) event.getGestureTarget();
 
@@ -838,6 +849,7 @@ public class HelloListView extends Application implements InvalidationListener {
             }
         };
         EventHandler<DragEvent> dragDone = new EventHandler<DragEvent>() {
+            @Override
             public void handle(DragEvent event) {
                 if (event.getTransferMode() == TransferMode.MOVE) {
                     ListView<String> list = (ListView) event.getGestureSource();
@@ -921,34 +933,42 @@ public class HelloListView extends Application implements InvalidationListener {
             // no-op
         }
 
+        @Override
         public void addListener(ListChangeListener<? super Integer> ll) {
             // no-op
         }
 
+        @Override
         public void removeListener(ListChangeListener<? super Integer> ll) {
             // no-op
         }
 
+        @Override
         public boolean addAll(Integer... es) {
             throw new UnsupportedOperationException("Not supported yet.");
         }
 
+        @Override
         public boolean setAll(Integer... es) {
             throw new UnsupportedOperationException("Not supported yet.");
         }
 
+        @Override
         public boolean setAll(Collection<? extends Integer> clctn) {
             throw new UnsupportedOperationException("Not supported yet.");
         }
 
+        @Override
         public boolean removeAll(Integer... es) {
             throw new UnsupportedOperationException("Not supported yet.");
         }
 
+        @Override
         public boolean retainAll(Integer... es) {
             throw new UnsupportedOperationException("Not supported yet.");
         }
 
+        @Override
         public void remove(int from, int to) {
             throw new UnsupportedOperationException("Not supported yet.");
         }
@@ -993,6 +1013,7 @@ public class HelloListView extends Application implements InvalidationListener {
         public ExpandOnSelectionCell() {
 
             prefHeightProperty().addListener(new InvalidationListener() {
+                @Override
                 public void invalidated(Observable o) {
                     requestLayout();
                 }
