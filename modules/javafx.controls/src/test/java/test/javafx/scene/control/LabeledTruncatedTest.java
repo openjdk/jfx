@@ -24,68 +24,65 @@
  */
 package test.javafx.scene.control;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import java.util.concurrent.atomic.AtomicReference;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.scene.Node;
 import javafx.scene.control.Label;
+import javafx.scene.control.Labeled;
 import javafx.scene.control.TableCell;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.Pane;
-import org.junit.jupiter.api.AfterEach;
+import javafx.scene.control.TreeTableCell;
+import javafx.scene.control.skin.LabelSkin;
+import javafx.scene.control.skin.TableCellSkin;
+import javafx.scene.control.skin.TreeTableCellSkin;
 import org.junit.jupiter.api.Test;
+import com.sun.javafx.scene.layout.RegionHelper;
 import com.sun.javafx.tk.Toolkit;
-import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 /**
- * Tests textTruncated property of Labeled in different settings.
+ * Tests textTruncated property of Labeled, using Label, TableCell, and TreeTableCell controls
+ * (the last two contain conditional code that redirects the execution of computePrefWidth()
+ * in their skins to different code paths.
  */
 public class LabeledTruncatedTest {
-    private Pane container;
-    private StageLoader stageLoader;
-    private static final String TEXT = "aaaaaaaaaaaaa";
-
-    public void init(Node n) {
-        container = new BorderPane(n);
-        stageLoader = new StageLoader(container);
-        n.requestFocus();
-        firePulse();
-    }
-
-    @AfterEach
-    public void afterEach() {
-        if (stageLoader != null) {
-            stageLoader.dispose();
-            stageLoader = null;
-        }
-    }
+    private static final String TEXT = "testing.truncated";
 
     private void firePulse() {
         Toolkit.getToolkit().firePulse();
     }
 
-    /**
-     * Tests textTruncated property of Label (which extends Labeled)
-     */
     @Test
-    public void testTruncatedLabel() {
-        Label control = new Label(TEXT);
-        control.widthProperty().addListener((p) -> {
-            System.out.println(control.getWidth());
-        });
-        init(control);
+    public void testTruncatedLabel2() {
+        Label control = new Label();
+        control.setSkin(new LabelSkin(control));
+        control.setText(TEXT);
+        test(control);
+    }
 
-        container.setPrefWidth(1000);
+    @Test
+    public void testTruncatedTableCellSkin() {
+        TableCell<String, String> control = new TableCell<>();
+        control.setSkin(new TableCellSkin<>(control));
+        control.setText(TEXT);
+        test(control);
+    }
+
+    @Test
+    public void testTruncatedTreeTableCellSkin() {
+        TreeTableCell<String, String> control = new TreeTableCell<>();
+        control.setSkin(new TreeTableCellSkin<>(control));
+        control.setText(TEXT);
+        test(control);
+    }
+
+    private void test(Labeled control) {
+        RegionHelper.setWidth(control, 1000);
         firePulse();
         double w = control.prefWidth(-1);
+        double h = control.prefHeight(-1);
 
         assertFalse(control.isTextTruncated());
 
-        container.setPrefWidth(w - 1);
+        RegionHelper.setWidth(control, 10);
+        RegionHelper.setHeight(control, h);
         firePulse();
 
         assertTrue(control.isTextTruncated());
@@ -94,75 +91,5 @@ public class LabeledTruncatedTest {
         firePulse();
 
         assertFalse(control.isTextTruncated());
-    }
-
-    /**
-     * Tests textTruncated property of a TableCell (which extends Labeled)
-     */
-    @Test
-    public void testTruncatedTableColumn() {
-        AtomicReference<Boolean> truncated = new AtomicReference();
-
-        TableView<String> table = new TableView<>();
-        table.getItems().setAll(TEXT);
-        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
-
-        TableColumn<String, String> c = new TableColumn<>();
-        c.setCellValueFactory((cdf) -> {
-            return new SimpleStringProperty(cdf.getValue());
-        });
-        c.setCellFactory((tc) -> {
-            return new TableCell<String, String>() {
-                @Override
-                protected void updateItem(String item, boolean empty) {
-                    super.updateItem(item, empty);
-                    // there is only one row with this text, so should be ok
-                    if (TEXT.equals(item)) {
-                        //System.out.println("trunc=" + textTruncatedProperty().get() + " " + getWidth());
-                        truncated.set(isTextTruncated());
-                    }
-                    // FIX why is width==0??
-                    System.out.println("val=" + item + " trunc=" + textTruncatedProperty().get() + " " + getWidth());
-                }
-            };
-        });
-        table.getColumns().setAll(c);
-        init(table);
-
-        // TODO remove
-        container.widthProperty().addListener((s, p, v) -> {
-            System.out.println("container width=" + v);
-        });
-        table.widthProperty().addListener((s, p, v) -> {
-            System.out.println("table width=" + v);
-        });
-
-        container.setPrefWidth(1000);
-        firePulse();
-
-        assertEquals(Boolean.FALSE, truncated.get());
-        truncated.set(null);
-
-        System.out.println("set 20"); // TODO remove
-        container.setPrefWidth(20);
-        container.setMaxWidth(20);
-        container.setMinWidth(20);
-        firePulse();
-
-        // FIX fails
-        //assertEquals(Boolean.TRUE, truncated.get());
-
-        table.getItems().setAll(TEXT + ".");
-        table.refresh();
-        table.layout();
-        firePulse();
-
-        // FIX fails
-        //assertEquals(Boolean.TRUE, truncated.get());
-    }
-
-    @Test
-    public void testTruncatedTreeTableColumn() {
-        // TODO
     }
 }
