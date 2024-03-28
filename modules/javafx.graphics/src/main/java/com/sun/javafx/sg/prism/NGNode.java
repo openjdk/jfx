@@ -2003,6 +2003,7 @@ public abstract class NGNode {
                 if ((bits & DIRTY_REGION_CONTAINS_OR_INTERSECTS_NODE_BOUNDS) == 0) {
                     // If no culling bits are set for this region, this group
                     // does not intersect (nor is covered by) the region
+                    clearDirtyTree();
                     return;
                 } else if ((bits & DIRTY_REGION_CONTAINS_NODE_BOUNDS) != 0) {
                     // When this group is fully covered by the region,
