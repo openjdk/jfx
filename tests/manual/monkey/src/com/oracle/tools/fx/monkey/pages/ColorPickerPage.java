@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,61 +24,44 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
-import javafx.geometry.Point2D;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Alert.AlertType;
-import javafx.scene.control.Button;
 import javafx.scene.control.ColorPicker;
+import javafx.scene.control.skin.ColorPickerSkin;
 import javafx.scene.paint.Color;
-import javafx.stage.StageStyle;
-import com.oracle.tools.fx.monkey.util.FX;
+import com.oracle.tools.fx.monkey.sheets.ComboBoxBasePropertySheet;
+import com.oracle.tools.fx.monkey.util.HasSkinnable;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
 
 /**
- * ColorPicker Page
+ * ColorPicker Page.
  */
-public class ColorPickerPage extends TestPaneBase {
-    private final Button button;
-    private ColorPicker picker1;
-    private ColorPicker picker2;
-    private Alert dialog;
+public class ColorPickerPage extends TestPaneBase implements HasSkinnable {
+    private ColorPicker control;
 
     public ColorPickerPage() {
-        FX.name(this, "ColorPickerPage");
+        super("ColorPickerPage");
 
-        button = new Button("Show in Alert");
-
-        picker1 = new ColorPicker(Color.BLUE);
-        picker1.valueProperty().addListener(event -> {
-            dialog.close();
-        });
-
-        button.setOnAction(event -> {
-            Point2D p = button.localToScreen(0, button.getHeight());
-
-            dialog = new Alert(AlertType.INFORMATION);
-            dialog.initStyle(StageStyle.UNDECORATED);
-            dialog.initOwner(getWindow());
-            dialog.getDialogPane().setContent(picker1);
-            dialog.setX(p.getX());
-            dialog.setY(p.getY());
-            dialog.show();
-
-            Object v = picker1.getValue();
+        control = new ColorPicker(Color.YELLOW);
+        control.setOnAction((ev) -> {
+            Object v = control.getValue();
             System.out.println(v);
         });
 
-        picker2 = new ColorPicker(Color.YELLOW);
-        picker2.setOnAction((ev) -> {
-            Object v = picker2.getValue();
-            System.out.println(v);
-        });
+        OptionPane op = new OptionPane();
+        op.section("ColorPicker");
+        ComboBoxBasePropertySheet.appendTo(op, control);
 
-        OptionPane p = new OptionPane();
-        p.option(button);
+        setContent(control);
+        setOptions(op);
+    }
 
-        setContent(picker2);
-        setOptions(p);
+    @Override
+    public void nullSkin() {
+        control.setSkin(null);
+    }
+
+    @Override
+    public void newSkin() {
+        control.setSkin(new ColorPickerSkin(control));
     }
 }

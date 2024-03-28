@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,67 +24,50 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
-import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
-import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
-import javafx.scene.control.Separator;
-import javafx.scene.control.TextField;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.PickResult;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Path;
-import javafx.scene.shape.PathElement;
 import javafx.scene.text.Font;
 import javafx.scene.text.HitInfo;
 import javafx.scene.text.Text;
+import javafx.scene.text.TextAlignment;
 import javafx.scene.text.TextFlow;
+import com.oracle.tools.fx.monkey.options.ActionSelector;
+import com.oracle.tools.fx.monkey.options.BooleanOption;
+import com.oracle.tools.fx.monkey.options.EnumOption;
+import com.oracle.tools.fx.monkey.options.FontOption;
+import com.oracle.tools.fx.monkey.sheets.Options;
+import com.oracle.tools.fx.monkey.sheets.RegionPropertySheet;
 import com.oracle.tools.fx.monkey.util.EnterTextDialog;
-import com.oracle.tools.fx.monkey.util.FX;
-import com.oracle.tools.fx.monkey.util.FontSelector;
 import com.oracle.tools.fx.monkey.util.OptionPane;
+import com.oracle.tools.fx.monkey.util.ShowCaretPaths;
 import com.oracle.tools.fx.monkey.util.ShowCharacterRuns;
-import com.oracle.tools.fx.monkey.util.Templates;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
-import com.oracle.tools.fx.monkey.util.TextSelector;
+import com.oracle.tools.fx.monkey.util.TextTemplates;
 import com.oracle.tools.fx.monkey.util.Utils;
 
 /**
- * TextFlow Page
+ * TextFlow Page.
  */
 public class TextFlowPage extends TestPaneBase {
-    private final TextSelector textSelector;
-    private final TextField styleField;
-    private final FontSelector fontSelector;
-    private final CheckBox showChars;
-    private final CheckBox showCaretPath;
-    private final TextFlow control;
+    private final ActionSelector contentOption;
+    private final FontOption fontOption;
+    private final BooleanOption showChars;
+    private final BooleanOption showCaretPaths;
     private final Label pickResult;
     private final Label hitInfo;
     private final Label hitInfo2;
-    private final Path caretPath;
-    private String currentText;
-    private static final String INLINE = "\u0000_INLINE";
-    private static final String RICH_TEXT = "\u0000_RICH";
+    private final TextFlow textFlow;
 
     public TextFlowPage() {
-        FX.name(this, "TextFlowPage");
+        super("TextFlowPage");
 
-        control = new TextFlow();
-        control.addEventHandler(MouseEvent.ANY, this::handleMouseEvent);
-
-        styleField = new TextField();
-        styleField.setOnAction((ev) -> {
-            String s = styleField.getText();
-            if (Utils.isBlank(s)) {
-                s = null;
-            }
-            control.setStyle(s);
-        });
+        textFlow = new TextFlow();
+        textFlow.addEventHandler(MouseEvent.ANY, this::handleMouseEvent);
 
         pickResult = new Label();
 
@@ -92,123 +75,108 @@ public class TextFlowPage extends TestPaneBase {
 
         hitInfo2 = new Label();
 
-        caretPath = new Path();
-        caretPath.setStrokeWidth(1);
-        caretPath.setStroke(Color.RED);
-        caretPath.setManaged(false);
-
-        textSelector = TextSelector.fromPairs(
-            "textSelector",
-            (t) -> updateText(),
-            Utils.combine(
-                Templates.multiLineTextPairs(),
-                "Inline Nodes", INLINE,
-                "Rich Text", RICH_TEXT,
-                "Accadian", Templates.AKKADIAN
-            )
-        );
-
-        fontSelector = new FontSelector("font", (f) -> updateControl());
-
-        Button editButton = new Button("Enter Text");
-        editButton.setOnAction((ev) -> {
-            new EnterTextDialog(this, (s) -> {
-                currentText = s;
-                updateControl();
+        contentOption = new ActionSelector("content");
+        contentOption.addButton("Edit", () -> {
+            new EnterTextDialog(this, getText(), (s) -> {
+                setContent(s);
             }).show();
         });
+        Utils.fromPairs(TextTemplates.multiLineTextPairs(), (k,v) -> contentOption.addChoice(k, () -> setContent(v)));
+        contentOption.addChoice("Inline Nodes", () -> setContent(mkInlineNodes()));
+        contentOption.addChoice("Rich Text", () -> setContent(createRichText()));
+        contentOption.addChoice("Rich Text (Complex)", () -> setContent(createRichTextComplex()));
+        contentOption.addChoice("Accadian", () -> setContent(TextTemplates.AKKADIAN));
 
-        showChars = new CheckBox("show characters");
-        FX.name(showChars, "showChars");
-        showChars.selectedProperty().addListener((p) -> {
-            updateControl();
+        fontOption = new FontOption("font", false, null);
+        fontOption.getProperty().addListener((s,p,v) -> {
+            Runnable r = contentOption.getValue();
+            if (r != null) {
+                r.run();
+            }
         });
 
-        showCaretPath = new CheckBox("show caret path");
-        FX.name(showCaretPath, "showCaretPath");
-        showCaretPath.selectedProperty().addListener((p) -> {
-            updateControl();
-        });
+        showChars = new BooleanOption("showChars", "show characters", () -> updateShowCharacters());
+
+        showCaretPaths = new BooleanOption("showCaretPaths", "show caret paths", () -> updateShowCaretPaths());
 
         OptionPane op = new OptionPane();
-        op.label("Text:");
-        op.option(textSelector.node());
-        op.option(editButton);
-        op.label("Font:");
-        op.option(fontSelector.fontNode());
-        op.label("Font Size:");
-        op.option(fontSelector.sizeNode());
-        op.option(showChars);
-        op.option(showCaretPath);
-        op.label("Direct Style:");
-        op.option(styleField);
-        //
-        op.option(new Separator(Orientation.HORIZONTAL));
-        op.label("Pick Result:");
-        op.option(pickResult);
-        op.label("Text.hitTest:");
-        op.option(hitInfo2);
-        op.label("TextFlow.hitTest:");
-        op.option(hitInfo);
-        op.label("Note: " + (FX.isMac() ? "⌘" : "ctrl") + "-click for caret shape");
+        op.section("TextFlow");
+        op.option("Content:", contentOption);
+        op.option("Font:", fontOption);
+        op.option("Line Spacing:", Options.lineSpacing("lineSpacing", textFlow.lineSpacingProperty()));
+        op.option("Tab Size:", Options.tabSize("tabSize", textFlow.tabSizeProperty()));
+        op.option("Text Alignment:", new EnumOption<>("textAlignment", TextAlignment.class, textFlow.textAlignmentProperty()));
 
-        setContent(control);
+        op.separator();
+        op.option(showChars);
+        op.option(showCaretPaths);
+
+        op.separator();
+        op.option("Pick Result:", pickResult);
+        op.option("Text.hitTest:", hitInfo2);
+        op.option("TextFlow.hitTest:", hitInfo);
+
+        RegionPropertySheet.appendTo(op, textFlow);
+
+        setContent(textFlow);
         setOptions(op);
 
-        fontSelector.selectSystemFont();
-        textSelector.selectFirst();
+        fontOption.selectSystemFont();
     }
 
-    private void updateText() {
-        currentText = textSelector.getSelectedText();
-        updateControl();
+    private void setContent(String text) {
+        Font f = getFont();
+        textFlow.getChildren().setAll(t(text, f));
     }
 
-    private void updateControl() {
-        Font f = fontSelector.getFont();
-        Node[] ts = createTextArray(currentText, f);
-        control.getChildren().setAll(ts);
-
-        caretPath.getElements().clear();
-        control.getChildren().add(caretPath);
-
-        if (showChars.isSelected()) {
-            Group g = ShowCharacterRuns.createFor(control);
-            control.getChildren().add(g);
-        }
-
-        if (showCaretPath.isSelected()) {
-            int len = FX.getTextLength(control);
-            for (int i = 0; i < len; i++) {
-                PathElement[] es = control.caretShape(i, true);
-                caretPath.getElements().addAll(es);
-            }
-        }
+    private void setContent(Node[] content) {
+        textFlow.getChildren().setAll(content);
     }
 
-    private Node[] createTextArray(String text, Font f) {
-        if (INLINE.equals(text)) {
-            return new Node[] {
-                t("Inline Nodes:", f),
-                new Button("Left"),
-                t(" ", f),
-                new Button("Right"),
-                t("trailing", f)
-            };
-        } else if (RICH_TEXT.equals(text)) {
-            return new Node[] {
-                t("Rich Text: ", f),
-                t("BOLD ", f, "-fx-font-weight:bold;"),
-                t("BOLD ", f, "-fx-font-weight:bold;"),
-                t("BOLD ", f, "-fx-font-weight:900;"),
-                t("italic ", f, "-fx-font-style:italic;"),
-                t("underline ", f, "-fx-underline:true;"),
-                t(Templates.TWO_EMOJIS, f),
-                t(Templates.CLUSTERS, f)
-            };
-        } else {
-            return new Node[] { t(text, f) };
-        }
+    private Font getFont() {
+        return fontOption.getFont();
+    }
+
+    private Node[] mkInlineNodes() {
+        Font f = getFont();
+        return new Node[] {
+            t("Inline Nodes:", f),
+            new Button("Left"),
+            t(" ", f),
+            new Button("Right"),
+            t("trailing", f)
+        };
+    }
+
+    private Node[] createRichText() {
+        Font f = getFont();
+        return new Node[] {
+            t("Rich Text: ", f),
+            t("BOLD ", f, "-fx-font-weight:bold;"),
+            t("BOLD ", f, "-fx-font-weight:bold;"),
+            t("BOLD ", f, "-fx-font-weight:bold;"),
+            t("italic ", f, "-fx-font-style:italic;"),
+            t("underline ", f, "-fx-underline:true;"),
+            t("The quick brown fox jumped over the lazy dog ", f),
+            t("The quick brown fox jumped over the lazy dog ", f),
+            t("The quick brown fox jumped over the lazy dog ", f),
+            t(TextTemplates.RIGHT_TO_LEFT, f),
+            t(TextTemplates.RIGHT_TO_LEFT, f)
+        };
+    }
+
+    private Node[] createRichTextComplex() {
+        Font f = getFont();
+        return new Node[] {
+            t("Rich Text: ", f),
+            t("BOLD ", f, "-fx-font-weight:bold;"),
+            t("BOLD ", f, "-fx-font-weight:100; -fx-scale-x:200%;"),
+            t("BOLD ", f, "-fx-font-weight:900;"),
+            t("italic ", f, "-fx-font-style:italic;"),
+            t("underline ", f, "-fx-underline:true;"),
+            t(TextTemplates.TWO_EMOJIS, f),
+            t(TextTemplates.CLUSTERS, f)
+        };
     }
 
     private static Text t(String text, Font f) {
@@ -241,20 +209,36 @@ public class TextFlowPage extends TestPaneBase {
         }
 
         Point2D p = new Point2D(ev.getX(), ev.getY());
-        HitInfo h = control.hitTest(p);
+        HitInfo h = textFlow.hitTest(p);
         hitInfo.setText(String.valueOf(h));
+    }
 
-        if (ev.getEventType() == MouseEvent.MOUSE_CLICKED) {
-            if (ev.isShortcutDown()) {
-                showCaretShape(new Point2D(ev.getX(), ev.getY()));
+    private String getText() {
+        StringBuilder sb = new StringBuilder();
+        for (Node n : textFlow.getChildrenUnmodifiable()) {
+            if (n instanceof Text t) {
+                sb.append(t.getText());
+            } else {
+                // inline node is treated as a single character
+                sb.append(' ');
             }
+        }
+        return sb.toString();
+    }
+
+    private void updateShowCaretPaths() {
+        if (showCaretPaths.getValue()) {
+            ShowCaretPaths.createFor(textFlow);
+        } else {
+            ShowCaretPaths.remove(textFlow);
         }
     }
 
-    private void showCaretShape(Point2D p) {
-        HitInfo h = control.hitTest(p);
-        System.out.println("hit=" + h);
-        PathElement[] pe = control.caretShape(h.getCharIndex(), h.isLeading());
-        caretPath.getElements().setAll(pe);
+    private void updateShowCharacters() {
+        if (showChars.getValue()) {
+            ShowCharacterRuns.createFor(textFlow);
+        } else {
+            ShowCharacterRuns.remove(textFlow);
+        }
     }
 }

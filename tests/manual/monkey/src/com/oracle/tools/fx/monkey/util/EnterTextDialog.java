@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,11 @@
 package com.oracle.tools.fx.monkey.util;
 
 import java.util.function.Consumer;
+import javafx.beans.property.Property;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
@@ -40,14 +44,13 @@ import javafx.stage.Stage;
 public class EnterTextDialog extends Stage {
     private final TextArea textField;
 
-    public EnterTextDialog(Object owner, Consumer<String> onEdit) {
+    public EnterTextDialog(Object owner, String initialText, Consumer<String> onEdit) {
         initOwner(FX.getParentWindow(owner));
         initModality(Modality.APPLICATION_MODAL);
 
-        textField = new TextArea();
+        textField = new TextArea(initialText);
 
-        Button ok = new Button("OK");
-        ok.setOnAction((ev) -> {
+        Button ok = FX.button("OK", () -> {
             String text = textField.getText();
             onEdit.accept(text);
             hide();
@@ -70,5 +73,17 @@ public class EnterTextDialog extends Stage {
         setWidth(400);
         setHeight(300);
         setTitle("Enter Text");
+    }
+
+    public static Runnable getRunnable(Node owner, Property<String> p) {
+        if (p == null) {
+            return null;
+        }
+        return () -> {
+            String text = p.getValue();
+            new EnterTextDialog(owner, text, (v) -> {
+                p.setValue(v);
+            }).show();
+        };
     }
 }

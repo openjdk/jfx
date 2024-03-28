@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,6 +49,8 @@ import com.oracle.tools.fx.monkey.pages.DemoPage;
 import com.oracle.tools.fx.monkey.settings.FxSettings;
 import com.oracle.tools.fx.monkey.tools.ClipboardViewer;
 import com.oracle.tools.fx.monkey.tools.CssPlaygroundPane;
+import com.oracle.tools.fx.monkey.tools.EmbeddedFxTextArea;
+import com.oracle.tools.fx.monkey.tools.EmbeddedJTextAreaWindow;
 import com.oracle.tools.fx.monkey.tools.KeyboardEventViewer;
 import com.oracle.tools.fx.monkey.tools.Native2AsciiPane;
 import com.oracle.tools.fx.monkey.tools.SystemInfoViewer;
@@ -146,8 +148,10 @@ public class MainWindow extends Stage {
         FX.menu(b, "_Tools");
         FX.item(b, "Clipboard Viewer", this::openClipboardViewer);
         FX.item(b, "CSS Playground", this::openCssPlayground);
+        FX.item(b, "FX TextArea Embedded in JFXPanel", this::openJFXPanel);
+        FX.item(b, "JTextArea/JTextField Embedded in SwingNode", this::openJTextArea);
         FX.item(b, "Keyboard Event Viewer", this::openKeyboardViewer);
-        FX.item(b, "Native-to-ascii", this::openNative2Ascii);
+        FX.item(b, "Native to ASCII", this::openNative2Ascii);
         FX.item(b, "System Info", this::openSystemInfo);
         // Window
         FX.menu(b, "_Window");
@@ -254,6 +258,18 @@ public class MainWindow extends Stage {
             "System Info",
             SystemInfoViewer::new
         );
+    }
+
+    private void openJTextArea() {
+        SingleInstance.openSingleInstance(
+            "JTextArea",
+            "JTextArea/JTextField Embedded in SwingNode",
+            EmbeddedJTextAreaWindow::new
+        );
+    }
+
+    private void openJFXPanel() {
+        EmbeddedFxTextArea.start();
     }
 
     private void nullSkin() {

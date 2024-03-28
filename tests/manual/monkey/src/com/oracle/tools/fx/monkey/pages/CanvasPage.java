@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,13 +24,12 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
-import com.oracle.tools.fx.monkey.util.FX;
-import com.oracle.tools.fx.monkey.util.TestPaneBase;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
+import com.oracle.tools.fx.monkey.util.TestPaneBase;
 
 /**
  * Canvas Page.
@@ -39,7 +38,7 @@ public class CanvasPage extends TestPaneBase {
     private Pane pane;
 
     public CanvasPage() {
-        FX.name(this, "CanvasPage");
+        super("CanvasPage");
 
         pane = new Pane();
         setContent(pane);

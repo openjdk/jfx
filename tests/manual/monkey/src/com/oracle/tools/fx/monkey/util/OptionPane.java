@@ -24,34 +24,94 @@
  */
 package com.oracle.tools.fx.monkey.util;
 
+import java.util.List;
 import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.scene.Node;
+import javafx.scene.control.Accordion;
 import javafx.scene.control.Label;
+import javafx.scene.control.Separator;
+import javafx.scene.control.TitledPane;
 import javafx.scene.layout.GridPane;
 
 /**
  * Option Pane - a vertical option sheet.
  */
-public class OptionPane extends GridPane {
-    private int row;
-    private int column;
-    private static final Insets MARGIN = new Insets(1, 4, 0, 4);
+public class OptionPane extends Accordion {
 
     public OptionPane() {
+        FX.name(this, "OptionPane");
     }
 
     public void label(String text) {
-        add(new Label(text));
+        lastSection().add(new Label(text));
     }
 
     public void option(Node n) {
-        add(n);
+        lastSection().add(n);
+    }
+
+    public void option(String text, Node n) {
+        lastSection().add(new Label(text));
+        if (n != null) {
+            lastSection().add(n);
+        }
     }
 
     public void add(Node n) {
-        add(n, column, row++);
-        setMargin(n, MARGIN);
-        setFillHeight(n, Boolean.TRUE);
-        setFillWidth(n, Boolean.TRUE);
+        lastSection().add(n);
+    }
+
+    public void separator() {
+        lastSection().add(new Separator(Orientation.HORIZONTAL));
+    }
+
+    public void section(String name) {
+        section(name, new OptionGridPane());
+    }
+
+    public void section(String name, OptionGridPane content) {
+        TitledPane t = new TitledPane(name, content);
+        getPanes().add(t);
+
+        List<TitledPane> panes = getPanes();
+        if (panes.size() == 1) {
+            setExpandedPane(panes.get(0));
+        }
+    }
+
+    private OptionGridPane lastSection() {
+        List<TitledPane> panes = getPanes();
+        if (panes.size() == 0) {
+            section("Properties");
+        }
+        TitledPane t = panes.get(panes.size() - 1);
+        return (OptionGridPane)t.getContent();
+    }
+
+    private static class OptionGridPane extends GridPane {
+        private int row;
+        private int column;
+        private static final Insets MARGIN = new Insets(1, 4, 0, 4);
+        private static final Insets PADDING = new Insets(0, 0, 2, 0);
+
+        public OptionGridPane() {
+            setPadding(PADDING);
+        }
+
+        public void label(String text) {
+            add(new Label(text));
+        }
+
+        public void option(Node n) {
+            add(n);
+        }
+
+        public void add(Node n) {
+            add(n, column, row++);
+            setMargin(n, MARGIN);
+            setFillHeight(n, Boolean.TRUE);
+            setFillWidth(n, Boolean.TRUE);
+        }
     }
 }

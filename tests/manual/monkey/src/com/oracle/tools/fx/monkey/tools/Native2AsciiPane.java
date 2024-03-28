@@ -100,8 +100,8 @@ public class Native2AsciiPane extends BorderPane {
     private void fill(GridPane p, Node n) {
         GridPane.setFillHeight(n, Boolean.TRUE);
         GridPane.setFillWidth(n, Boolean.TRUE);
-        p.setHgrow(n, Priority.ALWAYS);
-        p.setVgrow(n, Priority.ALWAYS);
+        GridPane.setHgrow(n, Priority.ALWAYS);
+        GridPane.setVgrow(n, Priority.ALWAYS);
     }
 
     protected void convert(boolean fromNative) {

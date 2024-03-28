@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,87 +24,149 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
-import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import javafx.beans.property.ObjectProperty;
+import javafx.collections.ObservableList;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
-import javafx.scene.control.Label;
-import javafx.scene.control.Tooltip;
-import javafx.scene.layout.VBox;
-import javafx.util.Duration;
+import javafx.scene.control.skin.ComboBoxListViewSkin;
 import javafx.util.StringConverter;
+import com.oracle.tools.fx.monkey.options.ObjectOption;
+import com.oracle.tools.fx.monkey.sheets.ComboBoxBasePropertySheet;
+import com.oracle.tools.fx.monkey.sheets.Options;
 import com.oracle.tools.fx.monkey.util.FX;
+import com.oracle.tools.fx.monkey.util.HasSkinnable;
+import com.oracle.tools.fx.monkey.util.ObjectSelector;
 import com.oracle.tools.fx.monkey.util.OptionPane;
+import com.oracle.tools.fx.monkey.util.SequenceNumber;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
+import com.oracle.tools.fx.monkey.util.Utils;
 
 /**
- * ComboBox Page
+ * ComboBox Page.
  */
-public class ComboBoxPage extends TestPaneBase {
-    private final ComboBox<String> control;
-    private final Label itemCountField;
+public class ComboBoxPage extends TestPaneBase implements HasSkinnable {
+    private final ComboBox<Object> control;
 
     public ComboBoxPage() {
-        FX.name(this, "ComboBoxPage");
-
-        itemCountField = new Label("<default>");
+        super("ComboBoxPage");
 
         control = new ComboBox<>();
-        control.getItems().setAll("0", "1", "2", "3", "4", "5", "6", "7", "8", "9");
 
-        VBox b = new VBox();
-        b.getChildren().add(control);
-
-        Button setConverterButton = new Button("Set Converter");
-        setConverterButton.setOnAction((ev) -> {
-            control.setConverter(new StringConverter() {
-                @Override
-                public String toString(Object t) {
-                    return "toString-" + t;
-                }
-
-                @Override
-                public Object fromString(String t) {
-                    return "fromString" + t;
-                }
-            });
+        Button addButton = FX.button("Add Item", () -> {
+            control.getItems().add(newItem(""));
         });
 
-        Button changeCountButton = new Button("Change Visible Row Count");
-        changeCountButton.setTooltip(new Tooltip("starts a timer to change row count 3 times"));
-        changeCountButton.setOnAction((x) -> {
-            new Timeline(
-                new KeyFrame(Duration.seconds(2.0), (ev) -> {
-                    changeItemCount(2);
-                }),
-                new KeyFrame(Duration.seconds(4.0), (ev) -> {
-                    changeItemCount(20);
-                }),
-                new KeyFrame(Duration.seconds(6.0), (ev) -> {
-                    changeItemCount(2);
-                })).play();
+        Button clearButton = FX.button("Clear Items", () -> {
+            control.getItems().clear();
         });
-
-        CheckBox editable = new CheckBox("editable");
-        FX.name(editable, "editable");
-        editable.selectedProperty().bindBidirectional(control.editableProperty());
 
         OptionPane op = new OptionPane();
-        // TODO data?
-        op.option(editable);
-        // TODO converter selector
-        op.option(setConverterButton);
-        op.label("Visible Row Count:");
-        op.option(itemCountField);
-        op.option(changeCountButton);
+        op.section("ComboBox");
+        op.option("Button Cell: TODO", null); // TODO
+        op.option("Cell Factory: TODO", null); // TODO
+        op.option("Converter:", createConverterOptions("converter", control.converterProperty()));
+        op.option("Items:", createItemsOptions("items", control.getItems()));
+        op.option(Utils.buttons(addButton, clearButton));
+        op.option("Placeholder:", Options.placeholderNode("placeholder", control.placeholderProperty()));
+        op.option("Selection Model:", createSelectionModelOptions("selectionModel"));
 
-        setContent(b);
+        op.section("ComboBoxBase");
+        ComboBoxBasePropertySheet.appendTo(op, control);
+
+        setContent(control);
         setOptions(op);
     }
 
-    protected void changeItemCount(int x) {
-        control.setVisibleRowCount(x);
-        itemCountField.setText(String.valueOf(x));
+    private Node createSelectionModelOptions(String name) {
+        var original = control.getSelectionModel();
+        ObjectSelector<Boolean> s = new ObjectSelector<>(name, (v) -> {
+            control.setSelectionModel(v == null ? null : original);
+        });
+        s.addChoice("Single", Boolean.FALSE);
+        s.addChoice("<null>", null);
+        s.selectFirst();
+        return s;
+    }
+
+    // TODO common code with ListViewPage - move to utils?
+    private String newItem(Object n) {
+        return n + "." + SequenceNumber.next();
+    }
+
+    private String newVariableItem(Object n) {
+        int rows = 1 << new Random().nextInt(5);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < rows; i++) {
+            if (i > 0) {
+                sb.append('\n');
+            }
+            sb.append(i);
+        }
+        return n + "." + SequenceNumber.next() + "." + sb;
+    }
+
+
+    private Supplier<List<Object>> createItems(int count, Function<Integer, Object> gen) {
+        return () -> {
+            ArrayList<Object> rv = new ArrayList<>(count);
+            for (int i = 0; i < count; i++) {
+                Object v = gen.apply(i);
+                rv.add(v);
+            }
+            return rv;
+        };
+    }
+
+    private Node createItemsOptions(String name, ObservableList<Object> items) {
+        ObjectSelector<List<Object>> s = new ObjectSelector<>(name, (v) -> {
+            items.setAll(v);
+        });
+        s.addChoice("<empty>", List.of());
+        s.addChoiceSupplier("1 Row", createItems(1, this::newItem));
+        s.addChoiceSupplier("10 Rows", createItems(10, this::newItem));
+        s.addChoiceSupplier("200 Rows", createItems(200, this::newItem));
+        s.addChoiceSupplier("10,000 Rows", createItems(10_000, this::newItem));
+        s.addChoiceSupplier("10 Variable Height Rows", createItems(10, this::newVariableItem));
+        s.addChoiceSupplier("200 Variable HeightRows", createItems(200, this::newVariableItem));
+        s.selectFirst();
+        return s;
+    }
+
+    private Node createConverterOptions(String name, ObjectProperty<StringConverter<Object>> p) {
+        var original = p.get();
+        ObjectOption<StringConverter<Object>> op = new ObjectOption<>(name, p);
+        op.addChoiceSupplier("Quoted", () -> {
+            return new StringConverter<Object>() {
+                @Override
+                public String toString(Object x) {
+                    return "\"" + x + "\"";
+                }
+
+                @Override
+                public Object fromString(String s) {
+                    return s;
+                }
+            };
+        });
+        op.addChoice("<default>", original);
+        op.addChoice("<null>", null);
+        op.selectInitialValue();
+        return op;
+    }
+
+    @Override
+    public void nullSkin() {
+        control.setSkin(null);
+    }
+
+    @Override
+    public void newSkin() {
+        control.setSkin(new ComboBoxListViewSkin<>(control));
     }
 }

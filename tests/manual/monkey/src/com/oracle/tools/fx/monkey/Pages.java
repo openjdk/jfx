@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 package com.oracle.tools.fx.monkey;
 
 import com.oracle.tools.fx.monkey.pages.*;
-import com.oracle.tools.fx.monkey.tools.ClipboardViewer;
 
 /**
  * Monkey Tester Pages.
@@ -34,48 +33,54 @@ public class Pages {
     public static DemoPage[] create() {
         return new DemoPage[] {
             new DemoPage("Accordion", AccordionPage::new),
+            new DemoPage("AreaChart", AreaChartPage::new),
+            new DemoPage("BarChart", BarChartPage::new),
+            new DemoPage("BubbleChart", BubbleChartPage::new),
             // TODO Button
             // TODO ButtonBar
-            new DemoPage("Canvas", CanvasPage::new),
+            // TODO new DemoPage("Canvas", CanvasPage::new),
             // TODO CheckBox
             new DemoPage("ChoiceBox", ChoiceBoxPage::new),
-            new DemoPage("Clipboard", ClipboardViewer::new),
             new DemoPage("ComboBox", ComboBoxPage::new),
             new DemoPage("ColorPicker", ColorPickerPage::new),
             new DemoPage("DatePicker", DatePickerPage::new),
             new DemoPage("HBox", HBoxPage::new),
-            new DemoPage("HtmlEditor", HtmlEditorPage::new),
+            new DemoPage("HTMLEditor", HTMLEditor_Page::new),
             // TODO Hyperlink
             // TODO InputField: DoubleField, IntegerField, WebColorField
             new DemoPage("Label", LabelPage::new),
+            new DemoPage("LineChart", LineChartPage::new),
             new DemoPage("ListView", ListViewPage::new),
             // TODO MenuBar
-            // TODO MenuButton
-            // TODO Pagination
+            new DemoPage("MenuButton", MenuButtonPage::new),
+            new DemoPage("Pagination", PaginationPage::new),
             new DemoPage("PasswordField", PasswordFieldPage::new),
             new DemoPage("PieChart", PieChartPage::new),
             // TODO ProgressIndicator
+            // TODO RadioButton
             new DemoPage("ScrollBar", ScrollBarPage::new),
-            // TODO ScrollPane
+            new DemoPage("ScrollPane", ScrollPanePage::new),
             // TODO Separator
             // TODO Slider
             new DemoPage("Spinner", SpinnerPage::new),
             // TODO SplitPane
+            new DemoPage("StackedAreaChart", StackedAreaChartPage::new),
+            new DemoPage("StackedBarChart", StackedBarChartPage::new),
             new DemoPage("TableView", TableViewPage::new),
-            // TODO TabPane
+            new DemoPage("TabPane", TabPanePage::new),
             new DemoPage("Text", TextPage::new),
             new DemoPage("TextArea", TextAreaPage::new),
             new DemoPage("TextField", TextFieldPage::new),
             new DemoPage("TextFlow", TextFlowPage::new),
             new DemoPage("TitledPane", TitledPanePage::new),
             // TODO ToggleButton
-            // TODO ToolBar
+            new DemoPage("ToolBar", ToolBarPage::new),
+            new DemoPage("Tooltip", TooltipPage::new),
             // TODO in tables: Cell, DateCell, IndexedCell* ?
             new DemoPage("TreeTableView", TreeTableViewPage::new),
             new DemoPage("TreeView", TreeViewPage::new),
             new DemoPage("VBox", VBoxPage::new),
             new DemoPage("WebView", WebViewPage::new),
-            new DemoPage("X/Y Charts", XYChartPage::new),
         };
     }
 }

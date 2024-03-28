@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,83 +24,45 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
-import java.util.function.Supplier;
+import javafx.beans.property.ObjectProperty;
 import javafx.scene.Node;
-import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TitledPane;
+import javafx.scene.control.skin.TitledPaneSkin;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.VBox;
-import com.oracle.tools.fx.monkey.util.FX;
-import com.oracle.tools.fx.monkey.util.ItemSelector;
+import com.oracle.tools.fx.monkey.options.BooleanOption;
+import com.oracle.tools.fx.monkey.options.ObjectOption;
+import com.oracle.tools.fx.monkey.sheets.LabeledPropertySheet;
+import com.oracle.tools.fx.monkey.util.HasSkinnable;
 import com.oracle.tools.fx.monkey.util.OptionPane;
-import com.oracle.tools.fx.monkey.util.Templates;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
-import com.oracle.tools.fx.monkey.util.TextSelector;
 
 /**
- * TitledPane Page
+ * TitledPane Page.
  */
-public class TitledPanePage extends TestPaneBase {
-    private final TextSelector textSelector;
-    private final ItemSelector<Supplier<Node>> contentSelector;
-    private final CheckBox snap;
+public class TitledPanePage extends TestPaneBase implements HasSkinnable {
     private final TitledPane control;
 
     public TitledPanePage() {
-        FX.name(this, "TitledPane");
-
-        textSelector = TextSelector.fromPairs(
-            "textSelector",
-            (t) -> update(),
-            Templates.multiLineTextPairs()
-        );
-        textSelector.removeChoice("Writing Systems");
-
-        contentSelector = new ItemSelector<Supplier<Node>>(
-            "contentSelector",
-            (g) -> update(),
-            new Object[] {
-                "null", null,
-                "AnchorPane", mk(() -> makeAnchorPane()),
-                "Label", mk(() -> new Label("Label"))
-            }
-        );
-
-        snap = new CheckBox("snap");
-        FX.name(snap, "snap");
+        super("TitledPane");
 
         control = new TitledPane();
 
-        snap.selectedProperty().bindBidirectional(control.snapToPixelProperty());
-
         OptionPane op = new OptionPane();
-        op.label("Text:");
-        op.option(textSelector.node());
-        op.label("Content:");
-        op.option(contentSelector.node());
-        op.option(snap);
+        op.section("TitledPane");
+        op.option(new BooleanOption("animated", "animated", control.animatedProperty()));
+        op.option(new BooleanOption("collapsible", "collapsible", control.collapsibleProperty()));
+        op.option("Content:", createContentOptions("content", control.contentProperty()));
+        op.option(new BooleanOption("expanded", "expanded", control.expandedProperty()));
+        LabeledPropertySheet.appendTo(op, "Labeled", false, control);
 
         setContent(control);
         setOptions(op);
-
-        update();
     }
 
-    protected void update() {
-        Supplier<Node> gen = contentSelector.getSelectedItem();
-        Node n = (gen == null) ? null : gen.get();
-
-        control.setText(textSelector.getSelectedText());
-        control.setContent(n);
-    }
-
-    protected Supplier<Node> mk(Supplier<Node> gen) {
-        return gen;
-    }
-
-    protected Node makeAnchorPane() {
+    private Node makeAnchorPane() {
         VBox b = new VBox(new TextField("First"), new TextField("Second"));
         AnchorPane p = new AnchorPane(b);
         AnchorPane.setTopAnchor(b, 10.0);
@@ -108,5 +70,24 @@ public class TitledPanePage extends TestPaneBase {
         AnchorPane.setLeftAnchor(b, 100.0);
         AnchorPane.setRightAnchor(b, 50.0);
         return p;
+    }
+
+    private Node createContentOptions(String name, ObjectProperty<Node> p) {
+        ObjectOption<Node> s = new ObjectOption<>(name, p);
+        s.addChoiceSupplier("Label", () -> new Label("Label"));
+        s.addChoiceSupplier("AnchorPane", () -> makeAnchorPane());
+        s.addChoiceSupplier("<null>", () -> null);
+        s.selectFirst();
+        return s;
+    }
+
+    @Override
+    public void nullSkin() {
+        control.setSkin(null);
+    }
+
+    @Override
+    public void newSkin() {
+        control.setSkin(new TitledPaneSkin(control));
     }
 }

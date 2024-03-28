@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,52 +27,65 @@ package com.oracle.tools.fx.monkey.pages;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
 import javafx.scene.control.TitledPane;
+import javafx.scene.control.skin.AccordionSkin;
+import com.oracle.tools.fx.monkey.sheets.ControlPropertySheet;
 import com.oracle.tools.fx.monkey.util.FX;
+import com.oracle.tools.fx.monkey.util.HasSkinnable;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.SequenceNumber;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
+import com.oracle.tools.fx.monkey.util.Utils;
 
 /**
  * Accordion Page.
  */
-public class AccordionPage extends TestPaneBase {
-    private final Accordion accordion;
+public class AccordionPage extends TestPaneBase implements HasSkinnable {
+    private final Accordion control;
 
     public AccordionPage() {
-        FX.name(this, "AccordionPage");
+        super("AccordionPage");
 
-        accordion = new Accordion();
+        control = new Accordion();
         addPane();
 
-        Button addButton = new Button("Add Pane");
-        addButton.setOnAction((ev) -> addPane());
+        // TODO MenuButtons with more options
+        Button addButton = FX.button("Add Pane", this::addPane);
 
-        Button removeButton = new Button("Remove Pane");
-        removeButton.setOnAction((ev) -> removePane());
+        Button removeButton = FX.button("Remove", this::removePane);
 
         OptionPane op = new OptionPane();
-        op.add(addButton);
-        op.add(removeButton);
+        op.section("Accordion");
+        op.option("Panes:", Utils.buttons(addButton, removeButton));
+        ControlPropertySheet.appendTo(op, control);
 
-        setContent(accordion);
+        setContent(control);
         setOptions(op);
     }
 
     private void addPane() {
         String name = SequenceNumber.next();
         System.nanoTime();
-        Button b = new Button(name);
-        b.setOnAction((ev) -> {
+        Button b = FX.button(name, () -> {
             System.out.println(name);
         });
         TitledPane p = new TitledPane(name, b);
-        accordion.getPanes().add(p);
+        control.getPanes().add(p);
     }
 
     private void removePane() {
-        int sz = accordion.getPanes().size();
+        int sz = control.getPanes().size();
         if (sz > 0) {
-            accordion.getPanes().remove(0);
+            control.getPanes().remove(0);
         }
+    }
+
+    @Override
+    public void nullSkin() {
+        control.setSkin(null);
+    }
+
+    @Override
+    public void newSkin() {
+        control.setSkin(new AccordionSkin(control));
     }
 }

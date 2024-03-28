@@ -26,6 +26,8 @@
 // https://github.com/andy-goryachev/FxDock
 package com.oracle.tools.fx.monkey.settings;
 
+import java.util.List;
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Rectangle2D;
@@ -33,6 +35,7 @@ import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Accordion;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.DialogPane;
@@ -40,6 +43,7 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
+import javafx.scene.control.TitledPane;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
@@ -214,53 +218,16 @@ public class FxSettingsSchema {
         return null;
     }
 
-    public static void storeNode(Node n) {
-        if (n instanceof ListView lv) {
-            storeListView(lv);
-            return;
-        } else if (n instanceof ComboBox cb) {
-            storeComboBox(cb);
-            return;
-        } else if (n instanceof CheckBox cb) {
-            storeCheckBox(cb);
-            return;
-        } else if (n instanceof SplitPane sp) {
-            storeSplitPane(sp);
-            return;
-        } else if (n instanceof ScrollPane sp) {
-            storeNode(sp.getContent());
-            return;
+    private static List<? extends Node> getChildren(Node n) {
+        if(n instanceof Accordion a) {
+            return a.getPanes();
         }
 
         if (n instanceof Parent p) {
-            for (Node ch: p.getChildrenUnmodifiable()) {
-                storeNode(ch);
-            }
-        }
-    }
-
-    public static void restoreNode(Node n) {
-        if (checkNoScene(n)) {
-            return;
+            return p.getChildrenUnmodifiable();
         }
 
-        if (n instanceof ListView lv) {
-            restoreListView(lv);
-        } else if (n instanceof ComboBox cb) {
-            restoreComboBox(cb);
-        } else if (n instanceof CheckBox cb) {
-            restoreCheckBox(cb);
-        } else if (n instanceof SplitPane sp) {
-            restoreSplitPane(sp);
-        } else if (n instanceof ScrollPane sp) {
-            restoreNode(sp.getContent());
-        }
-
-        if (n instanceof Parent p) {
-            for (Node ch: p.getChildrenUnmodifiable()) {
-                restoreNode(ch);
-            }
-        }
+        return null;
     }
 
     private static void storeSplitPane(SplitPane sp) {
@@ -308,8 +275,12 @@ public class FxSettingsSchema {
                     }
                     divs[i] = v;
                 }
-                // FIX getting smaller and smaller
-                // sp.setDividerPositions(divs);
+
+                // FIX some kind of a bug, the dividers move slightly each time
+                sp.setDividerPositions(divs);
+                Platform.runLater(() -> {
+                    sp.setDividerPositions(divs);
+                });
             }
         }
     }
@@ -487,5 +458,60 @@ public class FxSettingsSchema {
             }
         }
         return null;
+    }
+
+    public static void storeNode(Node n) {
+        if (n instanceof ListView lv) {
+            storeListView(lv);
+            return;
+        } else if (n instanceof ComboBox cb) {
+            storeComboBox(cb);
+            return;
+        } else if (n instanceof CheckBox cb) {
+            storeCheckBox(cb);
+            return;
+        } else if (n instanceof SplitPane sp) {
+            storeSplitPane(sp);
+            return;
+        } else if (n instanceof ScrollPane sp) {
+            storeNode(sp.getContent());
+            return;
+        } else if(n instanceof TitledPane tp) {
+            storeNode(tp.getContent());
+        }
+
+        List<? extends Node> children = getChildren(n);
+        if(children != null) {
+            for (Node ch: children) {
+                storeNode(ch);
+            }
+        }
+    }
+
+    public static void restoreNode(Node n) {
+        if (checkNoScene(n)) {
+            return;
+        }
+
+        if (n instanceof ListView lv) {
+            restoreListView(lv);
+        } else if (n instanceof ComboBox cb) {
+            restoreComboBox(cb);
+        } else if (n instanceof CheckBox cb) {
+            restoreCheckBox(cb);
+        } else if (n instanceof SplitPane sp) {
+            restoreSplitPane(sp);
+        } else if (n instanceof ScrollPane sp) {
+            restoreNode(sp.getContent());
+        } else if(n instanceof TitledPane tp) {
+            restoreNode(tp.getContent());
+        }
+
+        List<? extends Node> children = getChildren(n);
+        if(children != null) {
+            for (Node ch: children) {
+                restoreNode(ch);
+            }
+        }
     }
 }

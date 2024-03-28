@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,66 +24,46 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
-import com.oracle.tools.fx.monkey.util.FX;
-import com.oracle.tools.fx.monkey.util.FontSelector;
-import com.oracle.tools.fx.monkey.util.OptionPane;
-import com.oracle.tools.fx.monkey.util.Templates;
-import com.oracle.tools.fx.monkey.util.TestPaneBase;
-import com.oracle.tools.fx.monkey.util.TextSelector;
-import javafx.scene.control.CheckBox;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.skin.TextAreaSkin;
+import com.oracle.tools.fx.monkey.options.BooleanOption;
+import com.oracle.tools.fx.monkey.options.IntOption;
+import com.oracle.tools.fx.monkey.sheets.TextInputControlPropertySheet;
+import com.oracle.tools.fx.monkey.util.HasSkinnable;
+import com.oracle.tools.fx.monkey.util.OptionPane;
+import com.oracle.tools.fx.monkey.util.TestPaneBase;
 
 /**
- * TextArea Page
+ * TextArea Page.
  */
-public class TextAreaPage extends TestPaneBase {
+public class TextAreaPage extends TestPaneBase implements HasSkinnable {
     private final TextArea control;
-    private final TextSelector textSelector;
 
     public TextAreaPage() {
-        FX.name(this, "TextAreaPage");
+        super("TextAreaPage");
 
         control = new TextArea();
-        control.setPromptText("<prompt>");
 
-        textSelector = TextSelector.fromPairs(
-            "textSelector",
-            (t) -> control.setText(t),
-            Templates.multiLineTextPairs()
-        );
-
-        FontSelector fontSelector = new FontSelector("font", control::setFont);
-
-        CheckBox wrap = new CheckBox("wrap text");
-        FX.name(wrap, "wrapText");
-        wrap.selectedProperty().addListener((s, p, on) -> {
-            control.setWrapText(on);
-        });
-
-        CheckBox editable = new CheckBox("editable");
-        FX.name(editable, "editable");
-        editable.selectedProperty().bindBidirectional(control.editableProperty());
-
-        TextSelector promptChoice = Templates.promptChoice("promptChoice", control::setPromptText);
-        promptChoice.addPair("Multiline", "1\n2\n3\n4");
-
-        OptionPane p = new OptionPane();
-        p.label("Text:");
-        p.option(textSelector.node());
-        p.label("Font:");
-        p.option(fontSelector.fontNode());
-        p.label("Font Size:");
-        p.option(fontSelector.sizeNode());
-        p.option(wrap);
-        p.option(editable);
-        p.label("Prompt:");
-        p.option(promptChoice.node());
+        OptionPane op = new OptionPane();
+        op.section("TextArea");
+        op.option("Preferred Column Count:", new IntOption("prefColumnCount", -1, Integer.MAX_VALUE, control.prefColumnCountProperty()));
+        op.option("Preferred Row Count:", new IntOption("prefRowCount", -1, Integer.MAX_VALUE, control.prefRowCountProperty()));
+        op.option("Scroll Left: TODO", null); // TODO
+        op.option("Scroll Top: TODO", null); // TODO
+        op.option(new BooleanOption("wrapText", "wrap text", control.wrapTextProperty()));
+        TextInputControlPropertySheet.appendTo(op, true, control);
 
         setContent(control);
-        setOptions(p);
+        setOptions(op);
+    }
 
-        textSelector.selectFirst();
-        fontSelector.selectSystemFont();
-        promptChoice.select(null);
+    @Override
+    public void nullSkin() {
+        control.setSkin(null);
+    }
+
+    @Override
+    public void newSkin() {
+        control.setSkin(new TextAreaSkin(control));
     }
 }
