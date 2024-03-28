@@ -47,6 +47,8 @@ module javafx.base {
 
     exports com.sun.javafx to
         javafx.controls,
+        // TODO: incubator template
+        jfx.incubator.myfeature,
         javafx.graphics,
         javafx.fxml,
         javafx.media,
