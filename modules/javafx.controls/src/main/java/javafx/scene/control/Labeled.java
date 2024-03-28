@@ -25,27 +25,36 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.scene.NodeHelper;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import javafx.beans.DefaultProperty;
+import javafx.beans.binding.Bindings;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
+import javafx.beans.value.WritableValue;
+import javafx.css.CssMetaData;
+import javafx.css.FontCssMetaData;
+import javafx.css.StyleOrigin;
+import javafx.css.Styleable;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
+import javafx.css.StyleableStringProperty;
 import javafx.css.converter.BooleanConverter;
 import javafx.css.converter.EnumConverter;
 import javafx.css.converter.InsetsConverter;
 import javafx.css.converter.PaintConverter;
 import javafx.css.converter.SizeConverter;
 import javafx.css.converter.StringConverter;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
-import javafx.beans.value.WritableValue;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -56,16 +65,9 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
-import javafx.beans.DefaultProperty;
-import javafx.css.CssMetaData;
-import javafx.css.FontCssMetaData;
-import javafx.css.StyleOrigin;
-import javafx.css.Styleable;
-import javafx.css.StyleableBooleanProperty;
-import javafx.css.StyleableDoubleProperty;
-import javafx.css.StyleableObjectProperty;
-import javafx.css.StyleableProperty;
-import javafx.css.StyleableStringProperty;
+import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.control.LabeledHelper;
 
 /**
  * A Labeled {@link Control} is one which has as part of its user interface
@@ -96,6 +98,29 @@ public abstract class Labeled extends Control {
 
     private final static String DEFAULT_ELLIPSIS_STRING = "...";
 
+    /**
+     * Setting this flag to true causes
+     * TableCellSkinBase.computePrefWidth() and
+     * TreeTableCellSkin.computePrefWidth()
+     * to compute the actual content width rather than table column width.
+     * (We should have never used such a logic without exposing the way to obtain
+     * the content width!).
+     * It is safe to use a public global flag because:
+     * a) it's an implementation detail and
+     * b) we are always in the content of the FX app thread
+     * This functionality is made separate from Properties.DEFER_TO_PARENT_PREF_WIDTH which
+     * by itself looks rather weird.
+     */
+    private static boolean useContentWidth;
+
+    static {
+        LabeledHelper.setAccessor(new LabeledHelper.Accessor() {
+            @Override
+            public boolean isUseContentWidth() {
+                return useContentWidth;
+            }
+        });
+    }
 
     /* *************************************************************************
      *                                                                         *
@@ -816,6 +841,51 @@ public abstract class Labeled extends Control {
             mnemonicParsing = new SimpleBooleanProperty(this, "mnemonicParsing");
         }
         return mnemonicParsing;
+    }
+
+    /**
+     * Indicates whether the text has been truncated
+     * when it cannot fit into the available width.
+     * <p>
+     * When truncated, the {@link #ellipsisStringProperty() ellipsis string}
+     * gets inserted in the place dictated by the
+     * {@link #textOverrun} property.
+     *
+     * @since 23
+     */
+    private ReadOnlyBooleanWrapper textTruncated;
+
+    public final ReadOnlyBooleanProperty textTruncatedProperty() {
+        if (textTruncated == null) {
+            textTruncated = new ReadOnlyBooleanWrapper(this, "textTruncated");
+            textTruncated.bind(
+                Bindings.createBooleanBinding(() -> {
+                    // make sure prefWidth always returns the actual content width
+                    // rather than the column width if inside a table
+                    useContentWidth = true;
+                    try {
+                        if (isWrapText()) {
+                            return (getHeight() < prefHeight(getWidth()));
+                        }
+
+                        return (getWidth() < prefWidth(getHeight()));
+                    } finally {
+                        useContentWidth = false;
+                    }
+                },
+                ellipsisStringProperty(),
+                fontProperty(),
+                heightProperty(),
+                textProperty(),
+                widthProperty(),
+                wrapTextProperty()
+            ));
+        }
+        return textTruncated.getReadOnlyProperty();
+    }
+
+    public final boolean isTextTruncated() {
+        return textTruncatedProperty().get();
     }
 
     @Override public String toString() {
