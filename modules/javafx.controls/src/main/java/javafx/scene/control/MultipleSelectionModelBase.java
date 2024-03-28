@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -761,15 +761,18 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
                 // by finding all contiguous indices, of all indices that are
                 // not already selected, and which are in the valid range
                 startAtomic();
-                List<Integer> sortedNewIndices =
-                        IntStream.concat(IntStream.of(index), IntStream.of(indices))
+
+                List<Integer> sortedNewIndices = new ArrayList<>(indices.length + 1);
+                IntStream.concat(IntStream.of(index), IntStream.of(indices))
                         .distinct()
                         .filter(this::isValidIndex)
                         .filter(this::isNotSelected)
                         .sorted()
-                        .boxed()
-                        .peek(this::set) // we also set here, but it's atomic!
-                        .collect(Collectors.toList());
+                        .forEach(i -> {
+                            sortedNewIndices.add(i);
+                            set(i);
+                        });
+
                 stopAtomic();
 
                 final int size = sortedNewIndices.size();
