@@ -29,9 +29,6 @@ import static com.sun.javafx.scene.control.skin.resources.ControlResources.getSt
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import com.sun.javafx.scene.control.ListenerHelper;
-import com.sun.javafx.scene.control.behavior.PaginationBehavior;
-import com.sun.javafx.scene.control.skin.Utils;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -66,7 +63,6 @@ import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.Pagination;
 import javafx.scene.control.SkinBase;
-import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.Tooltip;
@@ -76,6 +72,9 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
+import com.sun.javafx.scene.control.ListenerHelper;
+import com.sun.javafx.scene.control.behavior.PaginationBehavior;
+import com.sun.javafx.scene.control.skin.Utils;
 
 /**
  * Default skin implementation for the {@link Pagination} control.

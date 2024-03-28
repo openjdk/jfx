@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,22 +26,18 @@
 package test.javafx.scene.control.skin;
 
 import static org.junit.Assert.assertEquals;
-
-import org.junit.Before;
-import org.junit.Test;
-
 import javafx.animation.Animation.Status;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Insets;
+import javafx.scene.Scene;
 import javafx.scene.control.Spinner;
-import javafx.scene.control.SpinnerShim;
 import javafx.scene.control.skin.SpinnerSkin;
 import javafx.scene.control.skin.SpinnerSkinShim;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
-import javafx.scene.Scene;
 import javafx.stage.Stage;
-
+import org.junit.Before;
+import org.junit.Test;
 import com.sun.javafx.scene.control.behavior.SpinnerBehavior;
 import com.sun.javafx.scene.control.behavior.SpinnerBehaviorShim;
 

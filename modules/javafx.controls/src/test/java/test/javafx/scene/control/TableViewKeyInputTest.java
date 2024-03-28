@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,20 +25,37 @@
 
 package test.javafx.scene.control;
 
-import com.sun.javafx.scene.control.behavior.TableCellBehavior;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import java.util.List;
+import java.util.function.Function;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.scene.Group;
 import javafx.scene.control.Button;
+import javafx.scene.control.FocusModel;
+import javafx.scene.control.MultipleSelectionModel;
+import javafx.scene.control.SelectionMode;
+import javafx.scene.control.TableCell;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableFocusModel;
+import javafx.scene.control.TablePosition;
+import javafx.scene.control.TableSelectionModel;
+import javafx.scene.control.TableView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
-
-import java.util.List;
-import java.util.function.Function;
-
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.scene.control.behavior.TableCellBehavior;
+import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.util.Utils;
 import test.com.sun.javafx.scene.control.behavior.TableViewAnchorRetriever;
 import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
@@ -46,27 +63,6 @@ import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
-import com.sun.javafx.tk.Toolkit;
-import javafx.scene.control.FocusModel;
-import javafx.scene.control.MultipleSelectionModel;
-import javafx.scene.control.SelectionMode;
-import javafx.scene.control.TableCell;
-import javafx.scene.control.TableCellShim;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableFocusModel;
-import javafx.scene.control.TablePosition;
-import javafx.scene.control.TableSelectionModel;
-import javafx.scene.control.TableView;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 
 public class TableViewKeyInputTest {
     private TableView<String> tableView;
