@@ -43,6 +43,8 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <GL/glx.h>
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
 #endif
 
 #include <GL/gl.h>
@@ -57,7 +59,7 @@
 #define ptr_to_jlong(value) (jlong)((long)(value))
 
 /* Max lenght of value, attr pair plus a None */
-#define  MAX_GLX_ATTRS_LENGTH 50
+#define  MAX_EGL_ATTRS_LENGTH 50
 
 #ifdef IS_EGL
 #include <EGL/egl.h>
@@ -156,9 +158,9 @@ struct PixelFormatInfoRec {
 
 #ifdef UNIX /* LINUX || SOLARIS */
     Display *display;
-    GLXFBConfig fbConfig;
     Window dummyWin;
-    Colormap dummyCmap;
+    EGLConfig eglConfig;
+    EGLDisplay eglDisplay;
 #endif
 
 #ifdef MACOSX /* MACOSX */
@@ -184,6 +186,7 @@ struct DrawableInfoRec {
     EGLSurface eglsurface;
 #endif
 #ifndef IS_EGLFB
+    EGLSurface eglSurface;
     Display *display;
     Window win;
 #endif
@@ -224,13 +227,15 @@ struct ContextInfoRec {
 #endif /* WIN32 */
 
 #ifdef UNIX /* LINUX || SOLARIS */
-    Display *display;
 #ifdef IS_EGL
     EGLContext context;
     EGLDisplay *egldisplay;
     EGLSurface eglsurface;
 #else
-     GLXContext context;
+    Display *display;
+    EGLContext eglContext;
+    EGLDisplay eglDisplay;
+    EGLDisplay eglSurface;
 #endif
 
 #if defined(IS_GLX) || defined( IS_EGLX11)
@@ -261,8 +266,8 @@ struct ContextInfoRec {
 #endif /* WIN32 */
 
 #ifdef UNIX /* LINUX || SOLARIS */
-    char *glxExtensionStr;
-    PFNGLXSWAPINTERVALSGIPROC glXSwapIntervalSGI;
+    char *eglExtensionStr;
+//    PFNGLXSWAPINTERVALSGIPROC glXSwapIntervalSGI;
 #endif /* LINUX || SOLARIS */
 
     /* gl function pointers */

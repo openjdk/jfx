@@ -59,9 +59,6 @@ void deletePixelFormatInfo(PixelFormatInfo *pfInfo) {
         if (pfInfo->dummyWin != None) {
             XDestroyWindow(pfInfo->display, pfInfo->dummyWin);
         }
-        if (pfInfo->dummyCmap != None) {
-            XFreeColormap(pfInfo->display, pfInfo->dummyCmap);
-        }
     }
 #endif
     // Initialize structure to all zeros

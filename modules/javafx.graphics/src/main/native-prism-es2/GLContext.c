@@ -100,12 +100,12 @@ void deleteCtxInfo(ContextInfo *ctxInfo) {
 #endif
 
 #ifdef UNIX
-    if (ctxInfo->glxExtensionStr != NULL) {
-        free(ctxInfo->glxExtensionStr);
+    if (ctxInfo->eglExtensionStr != NULL) {
+        free(ctxInfo->eglExtensionStr);
     }
-    if (ctxInfo->context != NULL) {
+    if (ctxInfo->eglContext != NULL) {
 #if defined(IS_GLX)
-        glXDestroyContext(ctxInfo->display, ctxInfo->context);
+        eglDestroyContext(eglGetCurrentDisplay(), ctxInfo->eglContext);
 #endif
 #ifdef IS_EGL
         eglDestroyContext(ctxInfo->display, ctxInfo->context);
