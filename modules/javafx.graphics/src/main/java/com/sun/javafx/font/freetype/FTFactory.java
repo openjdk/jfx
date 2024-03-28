@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -127,6 +127,7 @@ public class FTFactory extends PrismFontFactory {
         }
     }
 
+    @Override
     public FontFallbackInfo getFallbacks(FontResource primaryResource) {
         boolean isBold = primaryResource.isBold();
         boolean isItalic = primaryResource.isItalic();

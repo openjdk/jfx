@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -50,14 +50,17 @@ public class MFloat2Impl extends MDataImpl implements MFloat2 {
             this.index = index;
         }
 
+        @Override
         public void set(float value) {
             data[index] = value;
         }
 
+        @Override
         public float get() {
             return data[index];
         }
 
+        @Override
         public void parse(Iterator<String> elements) {
             data[index] = Float.parseFloat(elements.next());
         }
@@ -67,36 +70,44 @@ public class MFloat2Impl extends MDataImpl implements MFloat2 {
         super(type);
     }
 
+    @Override
     public void set(float x, float y) {
         data[0] = x; data[1] = y;
     }
 
+    @Override
     public float[] get() {
         return data;
     }
 
+    @Override
     public float getX() {
         return data[0];
     }
 
+    @Override
     public float getY() {
         return data[1];
     }
 
+    @Override
     public float get(int index) {
         return data[index];
     }
 
+    @Override
     public void parse(Iterator<String> elements) {
         for (int i = 0; i < 2; i++) {
             data[i] = Float.parseFloat(elements.next());
         }
     }
 
+    @Override
     public MData getData(int index) {
         return new MFloat2Component(index);
     }
 
+    @Override
     public MData getData(String name) {
         if (name.equals("x")) {
             return getData(0);

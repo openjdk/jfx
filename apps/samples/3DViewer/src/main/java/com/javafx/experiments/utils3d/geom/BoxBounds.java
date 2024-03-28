@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -55,6 +55,7 @@ public class BoxBounds extends BaseBounds {
         maxX = maxY = maxZ = -1.0f;
     }
 
+    @Override
     public BaseBounds copy() {
         return new BoxBounds(minX, minY, minZ, maxX, maxY, maxZ);
     }
@@ -75,10 +76,12 @@ public class BoxBounds extends BaseBounds {
         setBounds(other);
     }
 
+    @Override
     public BoundsType getBoundsType() {
         return BoundsType.BOX;
     }
 
+    @Override
     public boolean is2D() {
         return false;
     }
@@ -87,6 +90,7 @@ public class BoxBounds extends BaseBounds {
      * Convenience function for getting the width of this bounds.
      * The dimension along the X-Axis.
      */
+    @Override
     public float getWidth() {
         return maxX - minX;
     }
@@ -95,6 +99,7 @@ public class BoxBounds extends BaseBounds {
      * Convenience function for getting the height of this bounds.
      * The dimension along the Y-Axis.
      */
+    @Override
     public float getHeight() {
         return maxY - minY;
     }
@@ -103,10 +108,12 @@ public class BoxBounds extends BaseBounds {
      * Convenience function for getting the depth of this bounds.
      * The dimension along the Z-Axis.
      */
+    @Override
     public float getDepth() {
         return maxZ - minZ;
     }
 
+    @Override
     public float getMinX() {
         return minX;
     }
@@ -115,6 +122,7 @@ public class BoxBounds extends BaseBounds {
         this.minX = minX;
     }
 
+    @Override
     public float getMinY() {
         return minY;
     }
@@ -123,6 +131,7 @@ public class BoxBounds extends BaseBounds {
         this.minY = minY;
     }
 
+    @Override
     public float getMinZ() {
         return minZ;
     }
@@ -131,6 +140,7 @@ public class BoxBounds extends BaseBounds {
         this.minZ = minZ;
     }
 
+    @Override
     public float getMaxX() {
         return maxX;
     }
@@ -139,6 +149,7 @@ public class BoxBounds extends BaseBounds {
         this.maxX = maxX;
     }
 
+    @Override
     public float getMaxY() {
         return maxY;
     }
@@ -147,6 +158,7 @@ public class BoxBounds extends BaseBounds {
         this.maxY = maxY;
     }
 
+    @Override
     public float getMaxZ() {
         return maxZ;
     }
@@ -155,6 +167,7 @@ public class BoxBounds extends BaseBounds {
         this.maxZ = maxZ;
     }
 
+    @Override
     public Vec2f getMin(Vec2f min) {
         if (min == null) {
             min = new Vec2f();
@@ -164,6 +177,7 @@ public class BoxBounds extends BaseBounds {
         return min;
     }
 
+    @Override
     public Vec2f getMax(Vec2f max) {
         if (max == null) {
             max = new Vec2f();
@@ -173,6 +187,7 @@ public class BoxBounds extends BaseBounds {
         return max;
     }
 
+    @Override
     public Vec3f getMin(Vec3f min) {
         if (min == null) {
             min = new Vec3f();
@@ -184,6 +199,7 @@ public class BoxBounds extends BaseBounds {
 
     }
 
+    @Override
     public Vec3f getMax(Vec3f max) {
         if (max == null) {
             max = new Vec3f();
@@ -195,6 +211,7 @@ public class BoxBounds extends BaseBounds {
 
     }
 
+    @Override
     public BaseBounds deriveWithUnion(BaseBounds other) {
         if ((other.getBoundsType() == BoundsType.RECTANGLE) ||
                 (other.getBoundsType() == BoundsType.BOX)) {
@@ -205,6 +222,7 @@ public class BoxBounds extends BaseBounds {
         return this;
     }
 
+    @Override
     public BaseBounds deriveWithNewBounds(Rectangle other) {
         if (other.width < 0 || other.height < 0) return makeEmpty();
         setBounds(other.x, other.y, 0,
@@ -212,6 +230,7 @@ public class BoxBounds extends BaseBounds {
         return this;
     }
 
+    @Override
     public BaseBounds deriveWithNewBounds(BaseBounds other) {
         if (other.isEmpty()) return makeEmpty();
         if ((other.getBoundsType() == BoundsType.RECTANGLE) ||
@@ -228,6 +247,7 @@ public class BoxBounds extends BaseBounds {
         return this;
     }
 
+    @Override
     public BaseBounds deriveWithNewBounds(float minX, float minY, float minZ,
                                           float maxX, float maxY, float maxZ) {
         if ((maxX < minX) || (maxY < minY) || (maxZ < minZ)) return makeEmpty();
@@ -240,6 +260,7 @@ public class BoxBounds extends BaseBounds {
         return this;
     }
 
+    @Override
     public BaseBounds deriveWithNewBoundsAndSort(float minX, float minY, float minZ,
                                                  float maxX, float maxY, float maxZ) {
         setBoundsAndSort(minX, minY, minZ, maxX, maxY, maxZ);
@@ -283,12 +304,14 @@ public class BoxBounds extends BaseBounds {
         this.maxZ = maxZ;
     }
 
+    @Override
     public void setBoundsAndSort(float minX, float minY, float minZ,
                                  float maxX, float maxY, float maxZ) {
         setBounds(minX, minY, minZ, maxX, maxY, maxZ);
         sortMinMax();
     }
 
+    @Override
     public void setBoundsAndSort(Point2D p1, Point2D p2) {
         setBoundsAndSort(p1.x, p1.y, 0.0f, p2.x, p2.y, 0.0f);
     }
@@ -327,14 +350,17 @@ public class BoxBounds extends BaseBounds {
         this.maxZ = Math.max(this.maxZ, maxZ);
     }
 
+    @Override
     public void add(float x, float y, float z) {
         unionWith(x, y, z, x, y, z);
     }
 
+    @Override
     public void add(Point2D p) {
         add(p.x, p.y, 0.0f);
     }
 
+    @Override
     public void intersectWith(Rectangle other) {
         float x = other.x;
         float y = other.y;
@@ -342,6 +368,7 @@ public class BoxBounds extends BaseBounds {
                 x + other.width, y + other.height, 0);
     }
 
+    @Override
     public void intersectWith(BaseBounds other) {
         // Short circuit intersect if either bounds is empty.
         if (this.isEmpty()) return;
@@ -358,6 +385,7 @@ public class BoxBounds extends BaseBounds {
         maxZ = Math.min(maxZ, other.getMaxZ());
     }
 
+    @Override
     public void intersectWith(float minX, float minY, float minZ,
                               float maxX, float maxY, float maxZ) {
         // Short circuit intersect if either bounds is empty.
@@ -375,11 +403,13 @@ public class BoxBounds extends BaseBounds {
         this.maxZ = Math.min(this.maxZ, maxZ);
     }
 
+    @Override
     public boolean contains(Point2D p) {
         if ((p == null) || isEmpty()) return false;
         return contains(p.x, p.y, 0.0f);
     }
 
+    @Override
     public boolean contains(float x, float y) {
         if (isEmpty()) return false;
         return contains(x, y, 0.0f);
@@ -397,6 +427,7 @@ public class BoxBounds extends BaseBounds {
         return contains(x, y, z) && contains(x + width, y + height, z + depth);
     }
 
+    @Override
     public boolean intersects(float x, float y, float width, float height) {
         return intersects(x, y, 0.0f, width, height, 0.0f);
     }
@@ -424,6 +455,7 @@ public class BoxBounds extends BaseBounds {
                 other.getMinZ() <= maxZ);
     }
 
+    @Override
     public boolean disjoint(float x, float y, float width, float height) {
         return disjoint(x, y, 0f, width, height, 0f);
     }
@@ -439,6 +471,7 @@ public class BoxBounds extends BaseBounds {
                 z > maxZ);
     }
 
+    @Override
     public boolean isEmpty() {
         return maxX < minX || maxY < minY || maxZ < minZ;
     }
@@ -448,6 +481,7 @@ public class BoxBounds extends BaseBounds {
      * such that the rounded bounding box will always full enclose the original
      * bounding box.
      */
+    @Override
     public void roundOut() {
         minX = (float) Math.floor(minX);
         minY = (float) Math.floor(minY);
@@ -466,6 +500,7 @@ public class BoxBounds extends BaseBounds {
         maxZ += d;
     }
 
+    @Override
     public BaseBounds deriveWithPadding(float h, float v, float d) {
         grow(h, v, d);
         return this;
@@ -474,12 +509,14 @@ public class BoxBounds extends BaseBounds {
     // for convenience, this function returns a reference to itself, so we can
     // change from using "bounds.makeEmpty(); return bounds;" to just
     // "return bounds.makeEmpty()"
+    @Override
     public BoxBounds makeEmpty() {
         minX = minY = minZ = 0.0f;
         maxX = maxY = maxZ = -1.0f;
         return this;
     }
 
+    @Override
     protected void sortMinMax() {
         if (minX > maxX) {
             float tmp = maxX;

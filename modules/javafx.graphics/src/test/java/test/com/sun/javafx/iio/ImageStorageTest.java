@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,9 +33,9 @@ import com.sun.javafx.iio.ImageStorage;
 import com.sun.javafx.iio.ImageStorageException;
 import com.sun.javafx.iio.common.ImageLoaderImpl;
 import com.sun.javafx.iio.common.ImageTools;
-import static org.junit.Assert.*;
-import org.junit.ComparisonFailure;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -45,6 +45,8 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.zip.GZIPInputStream;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ImageStorageTest {
     private String getResourcePath(String path) {
@@ -57,25 +59,38 @@ public class ImageStorageTest {
         assertNotNull(new ImageStorage().loadAll(path, null, 0, 0, true, 2.0f, true));
     }
 
-    @Test
-    public void testImageNames() {
+    @ParameterizedTest
+    @ValueSource(ints = {2, 3, 4})
+    public void testImageNames(int scale) {
         String [][]imageNames = new String[][] {
-            { "image", "image@2x" },
-            { "image.ext", "image@2x.ext" },
-            { "dir/image", "dir/image@2x" },
-            { "/dir.ext/image.ext", "/dir.ext/image@2x.ext" },
-            { "file:image", "file:image@2x" },
-            { "file:image.ext", "file:image@2x.ext" },
-            { "http://test.com/image", "http://test.com/image@2x" },
-            { "http://test.com/dir.ext/image", "http://test.com/dir.ext/image@2x" },
-            { "http://test.com/image.ext", "http://test.com/image@2x.ext" },
-            { "http://test.com/dir.ext/image.ext", "http://test.com/dir.ext/image@2x.ext" },
+            { "image", "image@" + scale + "x" },
+            { "image.ext", "image@" + scale + "x.ext" },
+            { "dir/image", "dir/image@" + scale + "x" },
+            { "/dir.ext/image.ext", "/dir.ext/image@" + scale + "x.ext" },
+            { "file:image", "file:image@" + scale + "x" },
+            { "file:image.ext", "file:image@" + scale + "x.ext" },
+            { "http://test.com/image", "http://test.com/image@" + scale + "x" },
+            { "http://test.com/dir.ext/image", "http://test.com/dir.ext/image@" + scale + "x" },
+            { "http://test.com/image.ext", "http://test.com/image@" + scale + "x.ext" },
+            { "http://test.com/dir.ext/image.ext", "http://test.com/dir.ext/image@" + scale + "x.ext" },
         };
         for (String[] names : imageNames) {
-            String name2x = ImageTools.getScaledImageName(names[0]);
-            if (name2x.equals(names[1])) continue;
-            throw new ComparisonFailure("Scaled image names don't match", names[1], name2x);
+            String nameScaled = ImageTools.getScaledImageName(names[0], scale);
+            if (nameScaled.equals(names[1])) continue;
+            fail("Scaled image names don't match: expected = " + names[1] + ", actual = " + nameScaled);
         }
+    }
+
+    @ParameterizedTest
+    @ValueSource(floats = {1, 1.4f, 1.5f, 2.1f, 3.5f, 4f, 5f})
+    void testScaledImageIsLoaded(float pixelScale) throws IOException {
+        String url = getResourcePath("checker.png");
+        ImageFrame[] frames = ImageStorage.getInstance().loadAll(url, null, -1, -1, true, pixelScale, false);
+        assertEquals(1, frames.length);
+
+        // We don't have test images for pixel scales > 4, so we expect to get 4x for higher pixel scales.
+        float expectedScale = pixelScale < 4f ? Math.round(pixelScale) : 4f;
+        assertEquals(expectedScale, frames[0].getPixelScale(), 0.001f);
     }
 
     @Test
@@ -92,10 +107,11 @@ public class ImageStorageTest {
         assertEquals(frames.length, 2);
     }
 
-    @Test(expected = ImageStorageException.class)
-    public void testCorruptFirstFrame() throws ImageStorageException  {
+    @Test
+    public void testCorruptFirstFrame() {
         String path = getResourcePath("gif/animation/testBad.gif");
-        new ImageStorage().loadAll(path, null, 0, 0, false, 1.0f, false);
+        assertThrows(ImageStorageException.class, () ->
+            new ImageStorage().loadAll(path, null, 0, 0, false, 1.0f, false));
     }
 
     @Test
