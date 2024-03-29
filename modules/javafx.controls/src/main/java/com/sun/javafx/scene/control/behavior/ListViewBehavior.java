@@ -115,6 +115,9 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
 
             new KeyMapping(new KeyBinding(BACK_SLASH).shortcut(), e -> clearSelection()),
 
+            new KeyMapping(new KeyBinding(RIGHT).shortcut().alt(), e -> horizontalUnitScroll(true)),
+            new KeyMapping(new KeyBinding(LEFT).shortcut().alt(), e -> horizontalUnitScroll(false)),
+
             new MouseMapping(MouseEvent.MOUSE_PRESSED, this::mousePressed)
         );
 
@@ -141,9 +144,6 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             new KeyMapping(KP_UP, e -> selectPreviousRow()),
             new KeyMapping(DOWN, e -> selectNextRow()),
             new KeyMapping(KP_DOWN, e -> selectNextRow()),
-
-            new KeyMapping(new KeyBinding(RIGHT).shortcut().alt(), e -> horizontalUnitScroll(true)),
-            new KeyMapping(new KeyBinding(LEFT).shortcut().alt(), e -> horizontalUnitScroll(false)),
 
             new KeyMapping(new KeyBinding(UP).shift(), e -> alsoSelectPreviousRow()),
             new KeyMapping(new KeyBinding(KP_UP).shift(), e -> alsoSelectPreviousRow()),
