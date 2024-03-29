@@ -46,7 +46,7 @@ If you are a first time contributor to OpenJFX, welcome! Please do the following
 
 * Read the code review policies
 
-    Please read the entire section below on how to submit a pull request, as well as the [OpenJFX Code Review Policies](https://wiki.openjdk.org/display/OpenJFX/Code+Reviews). If this is a feature request, please note the additional requirements and expectations in the [New features / API additions](#new-features--api-additions) section at the end of this guide.
+    Please read the entire section below on how to submit a pull request, as well as the [Code Review Policies](README-code-reviews.md) page. If this is a feature request, please note the additional requirements and expectations in the [New features / API additions](#new-features--api-additions) section at the end of this guide.
 
 * File a bug in JBS for every pull request
 
@@ -115,7 +115,7 @@ Once your changes and tests are ready to submit for review:
 4. Code review
 
     All pull requests _must_ be reviewed according to the
-    [OpenJFX Code Review Policies](https://wiki.openjdk.org/display/OpenJFX/Code+Reviews).
+    [Code Review Policies](README-code-reviews.md) page.
     It is the responsibility of the Reviewer(s) and the Committer who
     will integrate or sponsor the change to ensure that the code review policies
     are followed, and that all concerns have been addressed.
@@ -199,8 +199,8 @@ this is a good time to discuss it. Once this step is far enough along that there
 then it's time to focus on the implementation.
 
 3. Submit a review of your proposed implementation. As noted in the
-[New features / API additions](https://wiki.openjdk.org/display/OpenJFX/Code+Reviews#CodeReviews-NewFeaturesC.Newfeatures/APIadditions.)
-section of the Code Review Policies doc, we also need a [CSR](https://wiki.openjdk.org/display/csr/Main), which documents the API change and its approval.
+[New features / API additions](README-code-reviews.md#c-new-features--api-additions)
+section of the Code Review Policies page, we also need a [CSR](https://wiki.openjdk.org/display/csr/Main), which documents the API change and its approval.
 The CSR can be reviewed in parallel. Changes in the API that arise during the review need to be reflected in the CSR, meaning
 that the final review / approval of the CSR usually happens late in the review cycle.
 You can avoid extra work by waiting to submit the CSR until the API is agreed upon and the code review for the documentation is reasonably far along.
