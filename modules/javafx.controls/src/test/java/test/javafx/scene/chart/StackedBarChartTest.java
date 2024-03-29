@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -108,7 +108,7 @@ public class StackedBarChartTest extends XYChartTestBase {
         // compute bounds for the first series
         String bounds = computeBoundsString((Region)childrenList.get(0), (Region)childrenList.get(1),
                 (Region)childrenList.get(2));
-        assertEquals("10 478 234 37 254 432 234 83 499 375 234 140 ", bounds);
+        assertEquals("10 453 218 35 238 409 218 79 465 355 218 133 ", bounds);
 
         // compute bounds for the second series
 //        bounds = computeBoundsString((Region)childrenList.get(3), (Region)childrenList.get(4),

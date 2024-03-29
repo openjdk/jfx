@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -451,7 +451,7 @@ public class ImageTools {
         return output;
     }
 
-    public static String getScaledImageName(String path) {
+    public static String getScaledImageName(String path, int scaleFactor) {
         StringBuilder result = new StringBuilder();
         int slash = path.lastIndexOf('/');
         String name = (slash < 0) ? path : path.substring(slash + 1);
@@ -463,7 +463,9 @@ public class ImageTools {
             result.append(path.substring(0, slash + 1));
         }
         result.append(name.substring(0, dot));
-        result.append("@2x");
+        result.append("@");
+        result.append(scaleFactor);
+        result.append("x");
         result.append(name.substring(dot));
         return result.toString();
     }
