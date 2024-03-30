@@ -651,6 +651,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1setCallback
         GlassMenu *menu = (GlassMenu *)jlong_to_ptr(jMenuPtr);
         GET_MAIN_JENV;
         (*env)->DeleteGlobalRef(env, menu->jCallback);
+        menu->jCallback = NULL;
         if (jCallback != NULL)
         {
             menu->jCallback = (*env)->NewGlobalRef(env, jCallback);

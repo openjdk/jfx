@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -56,6 +56,7 @@ public class HelloSimpleTableView extends Application {
         }
     }
 
+    @Override
     public void start(Stage stage) {
         stage.setTitle(getClass().getSimpleName());
         TableView<Item> tableView = new TableView<>();
@@ -72,6 +73,7 @@ public class HelloSimpleTableView extends Application {
         column2.setCellValueFactory(new PropertyValueFactory<Item, String>("email"));
         tableView.getColumns().addAll(column1, column2);
         tableView.getSelectionModel().selectedIndexProperty().addListener(new InvalidationListener() {
+            @Override
             public void invalidated(Observable ov) {
                 System.out.println("SelectedIndex: " + tableView.getSelectionModel().getSelectedIndex());
             }
