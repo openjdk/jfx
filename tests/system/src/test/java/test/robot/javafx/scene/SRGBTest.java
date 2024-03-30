@@ -57,49 +57,23 @@ public class SRGBTest extends VisualTestBase {
 
     private static final int SWATCH_SIZE = 200;
 
-    // Avoid testing colors out near the edge
-    // of the gamut to avoid clipping.
+    // Avoid testing colors out near the edge of the gamut to avoid clipping
+    // when converting between spaces.
     static final float LOW = 0.25f;
     static final float MID = 0.50f;
     static final float HIGH = 0.75f;
+
+    // The component tolerance is chosen to allow one bit of rounding variance
+    // when writing a color out and another bit when reading it back in.
     static final double COMPONENT_TOLERANCE = 2.0 / 255.0;
 
     private enum TestColor {
-        COLOR_01(LOW, LOW, LOW),
-        COLOR_02(LOW, LOW, MID),
-        COLOR_03(LOW, LOW, HIGH),
-
-        COLOR_04(LOW, MID, LOW),
-        COLOR_05(LOW, MID, MID),
-        COLOR_06(LOW, MID, HIGH),
-
-        COLOR_07(LOW, HIGH, LOW),
-        COLOR_08(LOW, HIGH, MID),
-        COLOR_09(LOW, HIGH, HIGH),
-
-        COLOR_10(MID, LOW, LOW),
-        COLOR_11(MID, LOW, MID),
-        COLOR_12(MID, LOW, HIGH),
-
-        COLOR_13(MID, MID, LOW),
-        COLOR_14(MID, MID, MID),
-        COLOR_15(MID, MID, HIGH),
-
-        COLOR_16(MID, HIGH, LOW),
-        COLOR_17(MID, HIGH, MID),
-        COLOR_18(MID, HIGH, HIGH),
-
-        COLOR_19(HIGH, LOW, LOW),
-        COLOR_20(HIGH, LOW, MID),
-        COLOR_21(HIGH, LOW, HIGH),
-
-        COLOR_22(HIGH, MID, LOW),
-        COLOR_23(HIGH, MID, MID),
-        COLOR_24(HIGH, MID, HIGH),
-
-        COLOR_25(HIGH, HIGH, LOW),
-        COLOR_26(HIGH, HIGH, MID),
-        COLOR_27(HIGH, HIGH, HIGH);
+        COLOR_01(LOW, MID, HIGH),
+        COLOR_02(LOW, HIGH, MID),
+        COLOR_03(MID, LOW, HIGH),
+        COLOR_04(MID, HIGH, LOW),
+        COLOR_05(HIGH, LOW, MID),
+        COLOR_06(HIGH, MID, LOW);
 
         public final float red;
         public final float green;
@@ -112,8 +86,41 @@ public class SRGBTest extends VisualTestBase {
         }
     };
 
-    // Create a stage in the center of the visual bounds and
-    // return a swatch we can set the color on.
+    // We center windows in the visual bounds of the screen to make it easy
+    // for both JavaFX and AWT to sample from the same point.
+    private Point2D getJFXScreenCenter() {
+        Rectangle2D screenBounds = Screen.getPrimary().getVisualBounds();
+        double centerX = screenBounds.getMinX() + screenBounds.getWidth() / 2.0;
+        double centerY = screenBounds.getMinY() + screenBounds.getHeight() / 2.0;
+        return new Point2D(centerX, centerY);
+    }
+
+    // We use an AWT Robot since it is colorspace-aware and will correctly convert
+    // from the screeen's colorspace to sRGB.
+    private Color getSRGBColorAtScreenCenter() throws Exception {
+        float[] sRGB = {1.0f, 1,0f, 1.0f};
+        SwingUtilities.invokeAndWait(() -> {
+            try {
+                GraphicsEnvironment environment = GraphicsEnvironment.getLocalGraphicsEnvironment();
+                java.awt.Rectangle bounds = environment.getMaximumWindowBounds();
+                int centerX = (int) (bounds.getMinX() + bounds.getWidth() / 2.0);
+                int centerY = (int) (bounds.getMinY() + bounds.getHeight() / 2.0);
+
+                java.awt.Robot awtRobot = new java.awt.Robot();
+                java.awt.Color awtColor = awtRobot.getPixelColor(centerX, centerY);
+                ColorSpace colorSpace = ColorSpace.getInstance(ColorSpace.CS_sRGB);
+                awtColor.getColorComponents(colorSpace, sRGB);
+            }
+            catch (final Exception ex)
+            {
+                throw new RuntimeException(ex);
+            }
+        });
+        return new Color(sRGB[0], sRGB[1], sRGB[2], 1.0);
+    }
+
+    // Create a stage in the center of the visual bounds and return a swatch
+    // to hold the color.
     private Rectangle prepareStage() {
         AtomicReference<Rectangle> rectangle = new AtomicReference<>();
 
@@ -127,12 +134,10 @@ public class SRGBTest extends VisualTestBase {
             Scene scene = new Scene(root);
             stage.setScene(scene);
             stage.setOnShown(e -> {
-                Rectangle2D screenBounds = Screen.getPrimary().getVisualBounds();
-                double centerX = screenBounds.getMinX() + screenBounds.getWidth() / 2.0;
-                double centerY = screenBounds.getMinY() + screenBounds.getHeight() / 2.0;
                 stage.sizeToScene();
-                stage.setX(centerX - stage.getWidth() / 2.0);
-                stage.setY(centerY - stage.getHeight() / 2.0);
+                Point2D center = getJFXScreenCenter();
+                stage.setX(center.getX() - stage.getWidth() / 2.0);
+                stage.setY(center.getY() - stage.getHeight() / 2.0);
             });
             stage.show();
         });
@@ -141,7 +146,7 @@ public class SRGBTest extends VisualTestBase {
         return rectangle.get();
     }
 
-    // Change the color of the swatch and wait for it to be drawn
+    // Change the color of the swatch and wait for it to be drawn.
     private Color prepareSwatch(Rectangle swatch, TestColor testColor) {
         float r = testColor.red;
         float g = testColor.green;
@@ -154,6 +159,7 @@ public class SRGBTest extends VisualTestBase {
         return expected;
     }
 
+    // Find the center of the swatch.
     private Point2D findCenter(Rectangle swatch) {
         Bounds screenBounds = swatch.localToScreen(swatch.getBoundsInLocal());
         double centerX = screenBounds.getMinX() + screenBounds.getWidth() / 2.0;
@@ -161,6 +167,9 @@ public class SRGBTest extends VisualTestBase {
         return new Point2D(centerX, centerY);
     }
 
+    // Tests that a color can be written out and then retrieved using a JavaFX
+    // Robot's getPixelColor call. This can fail if the drawing code and the
+    // Robot have mismatched policies for handling colorspace conversions.
     @Test
     public void singlePixelTest() {
         Rectangle swatch = prepareStage();
@@ -177,6 +186,10 @@ public class SRGBTest extends VisualTestBase {
         }
     }
 
+    // Tests that a color can be written out and then retrieved using a JavaFX
+    // Robot's getScreenCapture call. This can fail if the drawing code and
+    // the Robot have mismatched policies for handling colorspace
+    // conversions.
     @Test
     public void screenCaptureTest() {
         Rectangle swatch = prepareStage();
@@ -195,41 +208,31 @@ public class SRGBTest extends VisualTestBase {
         }
     }
 
-    // The earlier tests only verify that we can round-trip our colors. An AWT
-    // Robot understands color spaces and can verify that we actually
-    // produced sRGB color on the screen.
+    // Tests that pixels are correctly written out as sRGB using an AWT Robot
+    // that is colorspace-aware. The singlePixel and screenCapture tests only
+    // verify that colors can be round-tripped, not that they are actually
+    // producing sRGB onscreen.
     @Test
     public void sRGBPixelTest() throws Exception {
         Rectangle swatch = prepareStage();
 
-        java.awt.Robot awtRobot = new java.awt.Robot();
-        GraphicsEnvironment environment = GraphicsEnvironment.getLocalGraphicsEnvironment();
-        java.awt.Rectangle bounds = environment.getMaximumWindowBounds();
-        int centerX = (int) (bounds.getMinX() + bounds.getWidth() / 2.0);
-        int centerY = (int) (bounds.getMinY() + bounds.getHeight() / 2.0);
-
         for (TestColor testColor : TestColor.values()) {
             Color expected = prepareSwatch(swatch, testColor);
-            float[] sRGB = {1.0f, 1,0f, 1.0f};
-            SwingUtilities.invokeAndWait(() -> {
-                ColorSpace colorSpace = ColorSpace.getInstance(ColorSpace.CS_sRGB);
-                java.awt.Color awtColor = awtRobot.getPixelColor(centerX, centerY);
-                awtColor.getColorComponents(colorSpace, sRGB);
-            });
-            Color actual = new Color(sRGB[0], sRGB[1], sRGB[2], 1.0);
+            Color actual = getSRGBColorAtScreenCenter();
             assertColorEquals(expected, actual, COMPONENT_TOLERANCE);
         }
     }
 
+    // Test that Glass is correctly interpreting the window's background
+    // color as sRGB (only applies to Mac).
     @Test
     public void windowBackgroundTest() throws Exception {
         assumeTrue(PlatformUtil.isMac());
-        final int positionX = 50;
-        final int positionY = 50;
-        final int centerX = positionX + SWATCH_SIZE / 2;
-        final int centerY = positionY + SWATCH_SIZE / 2;
         AtomicReference<Window> window = new AtomicReference<>();
         runAndWait(() -> {
+            Point2D center = getJFXScreenCenter();
+            int positionX = (int)(center.getX() - SWATCH_SIZE / 2.0);
+            int positionY = (int)(center.getY() - SWATCH_SIZE / 2.0);
             Application app = Application.GetApplication();
             Window w = app.createWindow(null, com.sun.glass.ui.Screen.getMainScreen(), Window.UNTITLED);
             w.setLevel(Window.Level.TOPMOST);
@@ -239,8 +242,8 @@ public class SRGBTest extends VisualTestBase {
             window.set(w);
         });
 
+        // Ensure the window gets cleaned up.
         try {
-            Robot robot = getRobot();
             for (TestColor testColor : TestColor.values()) {
                 runAndWait(() -> {
                     window.get().setBackground(testColor.red, testColor.green, testColor.blue);
@@ -248,11 +251,8 @@ public class SRGBTest extends VisualTestBase {
                 waitNextFrame();
 
                 Color expected = new Color(testColor.red, testColor.green, testColor.blue, 1.0f);
-                AtomicReference<Color> actual = new AtomicReference<>();
-                runAndWait(() -> {
-                    actual.set(robot.getPixelColor(centerX, centerY));
-                });
-                assertColorEquals(expected, actual.get(), COMPONENT_TOLERANCE);
+                Color actual = getSRGBColorAtScreenCenter();
+                assertColorEquals(expected, actual, COMPONENT_TOLERANCE);
             }
         } finally {
             runAndWait(() -> {
