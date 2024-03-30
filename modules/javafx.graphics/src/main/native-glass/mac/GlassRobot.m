@@ -429,7 +429,6 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getPixelColor
             CGImageRelease(screenImage);
         }
     }
-    GLASS_POOL_EXIT;
 
     if (origColor != NULL) {
         CGColorSpaceRef sRGBSpace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
@@ -443,6 +442,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getPixelColor
         CGColorRelease(correctedColor);
         CGColorRelease(origColor);
     }
+    GLASS_POOL_EXIT;
 
     return color;
 }
