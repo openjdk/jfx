@@ -83,11 +83,6 @@ public class TransitionTimerTest {
         public StyleableProperty<?> getStyleableProperty() {
             return (StyleableProperty<?>)node.opacityProperty();
         }
-
-        @Override
-        public boolean equalsTargetValue(TransitionMediator mediator) {
-            return false;
-        }
     }
 
     @BeforeEach
@@ -220,26 +215,5 @@ public class TransitionTimerTest {
         assertEquals(6, trace.size());
         assertSame(TransitionEvent.START, trace.get(4).getEventType());
         assertSame(TransitionEvent.END, trace.get(5).getEventType());
-    }
-
-    @Test
-    public void testRedundantTransitionIsDiscarded() {
-        var transition = new TransitionDefinition("-fx-opacity", seconds(1), ZERO, LINEAR);
-
-        var timer1 = new TimerWrapper(new TestTransitionMediator() {
-            @Override public boolean equalsTargetValue(TransitionMediator mediator) {
-                return true;
-            }
-        });
-
-        var timer2 = new TimerWrapper(new TestTransitionMediator());
-
-        // Start timer1. This adds it to the list of running timers.
-        timer1.run(transition);
-
-        // Now we start timer2. Since both timers target the same property of the same node, and timer2
-        // has the same target value as timer1, it is discarded and timer1 is returned instead.
-        timer2.run(transition);
-        assertSame(timer1.timer, timer2.timer);
     }
 }

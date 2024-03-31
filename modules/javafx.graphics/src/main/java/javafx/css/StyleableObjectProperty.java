@@ -90,11 +90,15 @@ public abstract class StyleableObjectProperty<T>
             TransitionDefinition transition = this.origin != null && getBean() instanceof Node node ?
                 NodeHelper.findTransitionDefinition(node, getCssMetaData()) : null;
 
-            if (transition != null) {
+            if (transition == null) {
+                set(newValue);
+            } else if (mediator == null || !Objects.equals(mediator.newValue, newValue)) {
+                // We only start a new transition if the new target value is different from the target
+                // value of the existing transition. This scenario can sometimes happen when a CSS value
+                // is redundantly applied, which would cause unexpected animations if we allowed the new
+                // transition to interrupt the existing transition.
                 mediator = new TransitionMediatorImpl(oldValue, newValue);
                 mediator.run(transition);
-            } else {
-                set(newValue);
             }
         }
 
@@ -152,18 +156,18 @@ public abstract class StyleableObjectProperty<T>
 
         @Override
         public void onStop() {
-            mediator = null;
+            // When the transition is cancelled or completed, we clear the reference to this mediator.
+            // However, when this mediator was cancelled by a reversing transition, the 'mediator' field
+            // refers to the reversing mediator, and not to this mediator. We need to be careful to only
+            // clear references to this mediator.
+            if (mediator == this) {
+                mediator = null;
+            }
         }
 
         @Override
         public StyleableProperty<?> getStyleableProperty() {
             return StyleableObjectProperty.this;
-        }
-
-        @Override
-        @SuppressWarnings("unchecked")
-        public boolean equalsTargetValue(TransitionMediator mediator) {
-            return Objects.equals(newValue, ((TransitionMediatorImpl)mediator).newValue);
         }
     }
 }

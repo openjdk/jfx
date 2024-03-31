@@ -82,7 +82,6 @@ public final class TransitionTimer extends AnimationTimer {
         if (!(mediator.getStyleableProperty() instanceof Property<?> property)
                 || !(property.getBean() instanceof Node node)
                 || !NodeHelper.isTreeShowing(node)) {
-            mediator.onUpdate(1);
             return null;
         }
 
@@ -92,18 +91,8 @@ public final class TransitionTimer extends AnimationTimer {
 
         var existingTimer = (TransitionTimer)NodeHelper.findTransitionTimer(node, property);
         if (existingTimer != null) {
-            // If we already have a timer that targets the specified property, and the existing
-            // timer has the same target value as the new timer, we discard the new timer and
-            // return the existing timer. This scenario can sometimes happen when a CSS value
-            // is redundantly applied, which would cause unexpected animations if we allowed
-            // the new timer to interrupt the existing timer.
-            if (existingTimer.mediator.equalsTargetValue(mediator)) {
-                return existingTimer;
-            }
-
-            // Here we know that the new timer has a different target value than the existing
-            // timer, which means that the new timer is a reversing timer that needs to be
-            // adjusted by the reversing shortening algorithm.
+            // If we already have a timer for the styleable property, the new timer is a reversing
+            // timer that needs to be adjusted by the reversing shortening algorithm.
             if (combinedDuration > 0) {
                 var newTimer = new TransitionTimer(mediator, definition);
                 newTimer.adjustReversingTimings(existingTimer);
@@ -113,7 +102,6 @@ public final class TransitionTimer extends AnimationTimer {
             }
 
             existingTimer.stop(TransitionEvent.CANCEL);
-            mediator.onUpdate(1);
             return null;
         }
 
@@ -124,9 +112,6 @@ public final class TransitionTimer extends AnimationTimer {
             return timer;
         }
 
-        // If the combined duration is zero, we just call onUpdate without starting a timer.
-        // This updates the value of the target property to the end value, and no events will be fired.
-        mediator.onUpdate(1);
         return null;
     }
 

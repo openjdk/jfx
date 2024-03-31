@@ -42,6 +42,12 @@ public abstract class TransitionMediator {
     public final void run(TransitionDefinition definition) {
         // Might return 'null' if the transition duration is zero or the target node is not showing.
         timer = TransitionTimer.run(this, definition);
+
+        // If no timer was started, we complete the transition immediately.
+        if (timer == null) {
+            onUpdate(1);
+            onStop();
+        }
     }
 
     /**
@@ -84,13 +90,4 @@ public abstract class TransitionMediator {
      * Derived classes should implement this method to clear any references to this mediator.
      */
     public abstract void onStop();
-
-    /**
-     * Returns whether the target value of the transition associated with the specified mediator
-     * equals the target value of the transition associated with this mediator.
-     *
-     * @param mediator the other mediator
-     * @return {@code true} if the target values are equal, {@code false} otherwise
-     */
-    public abstract boolean equalsTargetValue(TransitionMediator mediator);
 }
