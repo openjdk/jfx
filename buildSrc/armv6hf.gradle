@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -140,12 +140,12 @@ def iioCFlags = [extraCFlags,
          ].flatten()
 def iioLFlags = [extraLFlags].flatten()
 
-def es2EglfbCFlags = [extraCFlags, "-DIS_EGLFB", "-DLINUX", "-D_GNU_SOURCE"].flatten()
+def es2EglfbCFlags = [extraCFlags, "-DIS_MONOCLE_EGLFB", "-DLINUX", "-D_GNU_SOURCE"].flatten()
 def es2EglfbLFlags = [extraLFlags].flatten()
-def es2MonocleCFlags = [extraCFlags, "-DIS_EGLFB", "-DLINUX"].flatten()
+def es2MonocleCFlags = [extraCFlags, "-DIS_MONOCLE_EGLFB", "-DLINUX"].flatten()
 def es2MonocleLFlags = [extraLFlags].flatten()
 
-def es2X11CFlags = [extraCFlags, "-DUSE_XSHM", "-DDEBUG", "-DIS_EGLX11", "-DLINUX"].flatten()
+def es2X11CFlags = [extraCFlags, "-DUSE_XSHM", "-DDEBUG", "-DIS_MONOCLE_EGLX11", "-DLINUX"].flatten()
 def es2X11LFlags = [extraLFlags, "-lX11", "-lXext", "-lXdmcp", "-lXau"].flatten()
 
 def mediaCFlags = [extraCFlags,

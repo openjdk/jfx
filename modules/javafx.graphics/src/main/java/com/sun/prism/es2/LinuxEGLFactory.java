@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,51 +23,40 @@
  * questions.
  */
 
-#include <jni.h>
-#include <stdlib.h>
-#include <assert.h>
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
+package com.sun.prism.es2;
 
-#include "PrismES2Defs.h"
+import com.sun.prism.es2.GLPixelFormat.Attributes;
 
-void initializeDrawableInfo(DrawableInfo *dInfo)
-{
-    if (dInfo == NULL) {
-        return;
+class LinuxEGLFactory extends LinuxGLFactory {
+
+    public LinuxEGLFactory() {
+        loadNativeLib("prism_es2_egl_x11");
     }
-    // Initialize structure to all zeros
-    memset(dInfo, 0, sizeof(DrawableInfo));
-}
 
-void deleteDrawableInfo(DrawableInfo *dInfo)
-{
-    if (dInfo == NULL) {
-        return;
+    @Override
+    GLContext createGLContext(long nativeCtxInfo) {
+        return new LinuxEGLContext(nativeCtxInfo);
     }
-#ifdef WIN32 /* WIN32 */
-    if ((dInfo->hdc != NULL) && (dInfo->hwnd != NULL)) {
-        ReleaseDC(dInfo->hwnd, dInfo->hdc);
-    }
-#endif
-#ifdef UNIX
-    // This win is pass in from Glass so we most likely don't destroy it
-    /*
-            if (dInfo->display == NULL) {
-                if (dInfo->win != None) {
-                    XDestroyWindow(dInfo->display, dInfo->win);
-                }
-            }
-     */
-#endif
-#ifdef IS_LINUX_EGL
-    if (dInfo->eglSurface != NULL) {
-        eglDestroySurface(dInfo->eglDisplay, dInfo->eglSurface);
-    }
-#endif
 
-    // Initialize structure to all zeros
-    memset(dInfo, 0, sizeof (DrawableInfo));
+    @Override
+    GLContext createGLContext(GLDrawable drawable, GLPixelFormat pixelFormat,
+            GLContext shareCtx, boolean vSyncRequest) {
+        // No need to pass down shareCtx as we don't use shared ctx on X11
+        return new LinuxEGLContext(drawable, pixelFormat, vSyncRequest);
+    }
 
+    @Override
+    GLDrawable createDummyGLDrawable(GLPixelFormat pixelFormat) {
+        return new LinuxEGLDrawable(pixelFormat);
+    }
+
+    @Override
+    GLDrawable createGLDrawable(long nativeWindow, GLPixelFormat pixelFormat) {
+        return new LinuxEGLDrawable(nativeWindow, pixelFormat);
+    }
+
+    @Override
+    GLPixelFormat createGLPixelFormat(long nativeScreen, Attributes attributes) {
+        return new LinuxEGLPixelFormat(nativeScreen, attributes);
+    }
 }

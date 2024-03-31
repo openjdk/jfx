@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,7 @@
 #include <X11/Xutil.h>
 
 #include "../PrismES2Defs.h"
-#include "com_sun_prism_es2_X11GLFactory.h"
+#include "com_sun_prism_es2_LinuxGLFactory.h"
 #ifdef STATIC_BUILD
 JNIEXPORT jint JNICALL
 JNI_OnLoad_prism_es2(JavaVM *vm, void * reserved) {
@@ -50,51 +50,73 @@ JNI_OnLoad_prism_es2(JavaVM *vm, void * reserved) {
 #endif
 
 
-void setEGLAttrs(jint *attrs, int *eglAttrs) {
+void setGLXAttrs(jint *attrs, int *glxAttrs) {
     int index = 0;
 
-    eglAttrs[index++] = EGL_RENDERABLE_TYPE;
-    eglAttrs[index++] = EGL_OPENGL_BIT;
+    /* Specify pbuffer as default */
+    glxAttrs[index++] = GLX_DRAWABLE_TYPE;
+    if (attrs[ONSCREEN] != 0) {
+        glxAttrs[index++] = (GLX_PBUFFER_BIT | GLX_WINDOW_BIT);
+    } else {
+        glxAttrs[index++] = GLX_PBUFFER_BIT;
+    }
 
-    eglAttrs[index++] = EGL_SURFACE_TYPE;
-    eglAttrs[index++] = EGL_WINDOW_BIT;
+    /* only interested in RGBA type */
+    glxAttrs[index++] = GLX_RENDER_TYPE;
+    glxAttrs[index++] = GLX_RGBA_BIT;
 
-    eglAttrs[index++] = EGL_RED_SIZE;
-    eglAttrs[index++] = attrs[RED_SIZE];
-    eglAttrs[index++] = EGL_GREEN_SIZE;
-    eglAttrs[index++] = attrs[GREEN_SIZE];
-    eglAttrs[index++] = EGL_BLUE_SIZE;
-    eglAttrs[index++] = attrs[BLUE_SIZE];
-    eglAttrs[index++] = EGL_ALPHA_SIZE;
-    eglAttrs[index++] = attrs[ALPHA_SIZE];
+    /* only interested in FBConfig with associated X Visual type */
+    glxAttrs[index++] = GLX_X_RENDERABLE;
+    glxAttrs[index++] = True;
 
-    eglAttrs[index++] = EGL_DEPTH_SIZE;
-    eglAttrs[index++] = attrs[DEPTH_SIZE];
+    glxAttrs[index++] = GLX_DOUBLEBUFFER;
+    if (attrs[DOUBLEBUFFER] != 0) {
+        glxAttrs[index++] = True;
+    } else {
+        glxAttrs[index++] = False;
+    }
 
-    eglAttrs[index] = EGL_NONE;
+    glxAttrs[index++] = GLX_RED_SIZE;
+    glxAttrs[index++] = attrs[RED_SIZE];
+    glxAttrs[index++] = GLX_GREEN_SIZE;
+    glxAttrs[index++] = attrs[GREEN_SIZE];
+    glxAttrs[index++] = GLX_BLUE_SIZE;
+    glxAttrs[index++] = attrs[BLUE_SIZE];
+    glxAttrs[index++] = GLX_ALPHA_SIZE;
+    glxAttrs[index++] = attrs[ALPHA_SIZE];
+
+    glxAttrs[index++] = GLX_DEPTH_SIZE;
+    glxAttrs[index++] = attrs[DEPTH_SIZE];
+
+    glxAttrs[index] = None;
 }
 
-void printAndReleaseResources(EGLDisplay eglDisplay, EGLSurface eglSurface, EGLContext eglContext,
-                              const char *message) {
+void printAndReleaseResources(Display *display, GLXFBConfig *fbConfigList,
+        XVisualInfo *visualInfo, Window win, GLXContext ctx, Colormap cmap,
+        const char *message) {
     if (message != NULL) {
         fprintf(stderr, "%s\n", message);
     }
-
-    if (eglDisplay == EGL_NO_DISPLAY) {
+    if (display == NULL) {
         return;
     }
-
-    eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-
-    if (eglContext != EGL_NO_CONTEXT) {
-        eglDestroyContext(eglDisplay, eglContext);
+    glXMakeCurrent(display, None, NULL);
+    if (fbConfigList != NULL) {
+        XFree(fbConfigList);
     }
-
-    if (eglSurface != EGL_NO_SURFACE) {
-        eglDestroySurface(eglDisplay, eglSurface);
+    if (visualInfo != NULL) {
+        XFree(visualInfo);
+    }
+    if (ctx != NULL) {
+        glXDestroyContext(display, ctx);
+    }
+    if (win != None) {
+        XDestroyWindow(display, win);
+    }
+    if (cmap != None) {
+        XFreeColormap(display, cmap);
     }
 }
-
 
 jboolean queryGLX13(Display *display) {
 
@@ -131,20 +153,20 @@ jboolean queryGLX13(Display *display) {
 
 static int x11errorhit = 0;
 
-static void x11errorDetector (Display *dpy, XErrorEvent *error)
+static int x11errorDetector (Display *dpy, XErrorEvent *error)
 {
     x11errorhit = JNI_TRUE;
 }
 
 /*
- * Class:     com_sun_prism_es2_X11GLFactory
+ * Class:     com_sun_prism_es2_LinuxGLFactory
  * Method:    nInitialize
  * Signature: ([I[J)J
  */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLFactory_nInitialize
+JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_LinuxGLFactory_nInitialize
 (JNIEnv *env, jclass class, jintArray attrArr) {
 
-    EGLint eglAttrs[MAX_EGL_ATTRS_LENGTH];
+    int glxAttrs[MAX_GL_ATTRS_LENGTH]; /* value, attr pair plus a None */
     jint *attrs;
     ContextInfo *ctxInfo = NULL;
 
@@ -154,21 +176,25 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLFactory_nInitialize
     char *tmpVersionStr;
     int versionNumbers[2];
     const char *glExtensions;
-    const char *eglExtensions;
-    EGLint majorVersion;
-    EGLint minorVersion;
+    const char *glxExtensions;
+
+    GLXFBConfig *fbConfigList = NULL;
+    GLXContext ctx = NULL;
+    XVisualInfo *visualInfo = NULL;
+    int numFBConfigs, index, visualID;
     Display *display = NULL;
-    EGLDisplay eglDisplay;
-    EGLConfig eglConfig;
-    int num_configs;
+    int screen;
+    Window root;
+    Window win = None;
+    XSetWindowAttributes win_attrs;
+    Colormap cmap = None;
+    unsigned long win_mask;
 
     if (attrArr == NULL) {
         return 0;
     }
-
-    fprintf(stderr, "EGLFactory_nInitialize");
     attrs = (*env)->GetIntArrayElements(env, attrArr, NULL);
-    setEGLAttrs(attrs, eglAttrs);
+    setGLXAttrs(attrs, glxAttrs);
     (*env)->ReleaseIntArrayElements(env, attrArr, attrs, JNI_ABORT);
 
     display = XOpenDisplay(0);
@@ -176,46 +202,86 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLFactory_nInitialize
         return 0;
     }
 
-    eglDisplay = eglGetDisplay(display);
+    screen = DefaultScreen(display);
 
-    if (eglDisplay == EGL_NO_DISPLAY) {
-        fprintf(stderr, "Prism ES2 Error - nInitialize: EGL_NO_DISPLAY\n");
+    if (!queryGLX13(display)) {
         return 0;
     }
 
-    if (!eglBindAPI(EGL_OPENGL_API)) {
-        fprintf(stderr, "Prism ES2 Error - nInitialize: cannot bind EGL_OPENGL_API.\n");
+    fbConfigList = glXChooseFBConfig(display, screen, glxAttrs, &numFBConfigs);
+
+    if (fbConfigList == NULL) {
+        fprintf(stderr, "Prism ES2 Error - nInitialize: glXChooseFBConfig failed\n");
         return 0;
     }
 
-    if (!eglInitialize(eglDisplay, &majorVersion, &minorVersion)) {
-        fprintf(stderr, "Prism ES2 Error - nInitialize: eglInitialize failed. Version: %d.%d\n",
-                majorVersion, minorVersion);
+    visualInfo = glXGetVisualFromFBConfig(display, fbConfigList[0]);
+    if (visualInfo == NULL) {
+        printAndReleaseResources(display, fbConfigList, visualInfo,
+                win, ctx, cmap,
+                "Failed in  glXGetVisualFromFBConfig");
         return 0;
     }
 
-    if ((eglGetConfigs(eglDisplay, NULL, 0, &num_configs) != EGL_TRUE) || (num_configs == 0)) {
-        fprintf(stderr, "Prism ES2 Error - nInitialize: no EGL configuration available\n");
+/*
+    fprintf(stderr, "found a %d-bit visual (visual ID = 0x%x)\n",
+            visualInfo->depth, (unsigned int) visualInfo->visualid);
+*/
+    root = RootWindow(display, visualInfo->screen);
+
+    /* Create a colormap */
+    cmap = XCreateColormap(display, root, visualInfo->visual, AllocNone);
+
+    /* Create a 1x1 window */
+    win_attrs.colormap = cmap;
+    win_attrs.border_pixel = 0;
+    win_attrs.event_mask = KeyPressMask | ExposureMask | StructureNotifyMask;
+    win_mask = CWColormap | CWBorderPixel | CWEventMask;
+    win = XCreateWindow(display, root, 0, 0, 1, 1, 0,
+            visualInfo->depth, InputOutput, visualInfo->visual, win_mask, &win_attrs);
+
+    if (win == None) {
+        printAndReleaseResources(display, fbConfigList, visualInfo, win, ctx, cmap,
+                "Failed in XCreateWindow");
         return 0;
     }
 
-    if (eglChooseConfig(eglDisplay, eglAttrs, &eglConfig, 1, &num_configs) != EGL_TRUE) {
-        fprintf(stderr, "Prism ES2 Error - nInitialize: eglChooseConfig failed\n");
+    int (*old_error_handler) (Display *, XErrorEvent *);
+    old_error_handler = XSetErrorHandler(x11errorDetector);
+
+    ctx = glXCreateNewContext(display, fbConfigList[0], GLX_RGBA_TYPE, NULL, True);
+
+    XSync(display, 0); // sync needed for the GLX error detection.
+
+
+    if (x11errorhit) {
+        // An X11 Error was hit along the way. This would happen if GLX is
+        // disabled which recently became the X11 default for remote connections
+        printAndReleaseResources(display, fbConfigList, visualInfo, win, ctx, cmap,
+                "Error in glXCreateNewContext, remote GLX is likely disabled");
+        XSync(display, 0); // sync needed for the GLX error detection.
+        XSetErrorHandler(old_error_handler);
         return 0;
     }
 
-    EGLContext eglContext = eglCreateContext(eglDisplay, eglConfig, EGL_NO_CONTEXT, NULL);
+    XSetErrorHandler(old_error_handler);
 
-    if (!eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, eglContext)) {
-        printAndReleaseResources(eglDisplay, EGL_NO_SURFACE, eglContext,
-                "Failed in eglMakeCurrent");
+    if (ctx == NULL) {
+        printAndReleaseResources(display, fbConfigList, visualInfo, win, ctx, cmap,
+                "Failed in glXCreateNewContext");
+        return 0;
+    }
+
+    if (!glXMakeCurrent(display, win, ctx)) {
+        printAndReleaseResources(display, fbConfigList, visualInfo, win, ctx, cmap,
+                "Failed in glXMakeCurrent");
         return 0;
     }
 
     /* Get the OpenGL version */
     glVersion = (char *) glGetString(GL_VERSION);
     if (glVersion == NULL) {
-        printAndReleaseResources(eglDisplay, EGL_NO_SURFACE, eglContext,
+        printAndReleaseResources(display, fbConfigList, visualInfo, win, ctx, cmap,
                 "glVersion == null");
         return 0;
     }
@@ -225,9 +291,12 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLFactory_nInitialize
     extractVersionInfo(tmpVersionStr, versionNumbers);
     free(tmpVersionStr);
 
+/*
+
     fprintf(stderr, "GL_VERSION string = %s\n", glVersion);
     fprintf(stderr, "GL_VERSION (major.minor) = %d.%d\n",
             versionNumbers[0], versionNumbers[1]);
+*/
 
     /*
      * Targeted Cards: Intel HD Graphics, Intel HD Graphics 2000/3000,
@@ -238,7 +307,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLFactory_nInitialize
     if ((versionNumbers[0] < 2) || ((versionNumbers[0] == 2) && (versionNumbers[1] < 1))) {
         fprintf(stderr, "Prism-ES2 Error : GL_VERSION (major.minor) = %d.%d\n",
                 versionNumbers[0], versionNumbers[1]);
-        printAndReleaseResources(eglDisplay, EGL_NO_SURFACE, eglContext, NULL);
+        printAndReleaseResources(display, fbConfigList, visualInfo, win, ctx, cmap, NULL);
         return 0;
     }
 
@@ -254,7 +323,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLFactory_nInitialize
 
     glExtensions = (char *) glGetString(GL_EXTENSIONS);
     if (glExtensions == NULL) {
-        printAndReleaseResources(eglDisplay, EGL_NO_SURFACE, eglContext,
+        printAndReleaseResources(display, fbConfigList, visualInfo, win, ctx, cmap,
                 "Prism-ES2 Error : glExtensions == null");
         return 0;
     }
@@ -262,15 +331,15 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLFactory_nInitialize
     // We use GL_ARB_pixel_buffer_object as an guide to
     // determine PS 3.0 capable.
     if (!isExtensionSupported(glExtensions, "GL_ARB_pixel_buffer_object")) {
-            printAndReleaseResources(eglDisplay, EGL_NO_SURFACE, eglContext,
-             "GL profile isn't PS 3.0 capable");
+        printAndReleaseResources(display, fbConfigList, visualInfo,
+                win, ctx, cmap, "GL profile isn't PS 3.0 capable");
         return 0;
     }
 
-    eglExtensions = (const char *) eglQueryString(eglDisplay, EGL_EXTENSIONS);
-    if (eglExtensions == NULL) {
-            printAndReleaseResources(eglDisplay, EGL_NO_SURFACE, eglContext,
-                "eglExtensions == null");
+    glxExtensions = (const char *) glXGetClientString(display, GLX_EXTENSIONS);
+    if (glxExtensions == NULL) {
+        printAndReleaseResources(display, fbConfigList, visualInfo, win, ctx, cmap,
+                "glxExtensions == null");
         return 0;
     }
 
@@ -291,45 +360,50 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLFactory_nInitialize
     ctxInfo->vendorStr = strdup(glVendor);
     ctxInfo->rendererStr = strdup(glRenderer);
     ctxInfo->glExtensionStr = strdup(glExtensions);
-    ctxInfo->eglExtensionStr = strdup(eglExtensions);
+    ctxInfo->glxExtensionStr = strdup(glxExtensions);
     ctxInfo->versionNumbers[0] = versionNumbers[0];
     ctxInfo->versionNumbers[1] = versionNumbers[1];
     ctxInfo->gl2 = JNI_TRUE;
-    ctxInfo->eglDisplay = eglDisplay;
 
-    fprintf(stderr, "EGLFactory_nInitialize END\n");
+    /* Information required by GLass at startup */
+    ctxInfo->display = display;
+    ctxInfo->screen = screen;
+    ctxInfo->visualID = (int) visualInfo->visualid;
+
+    /* Releasing native resources */
+    printAndReleaseResources(display, fbConfigList, visualInfo, win, ctx, cmap, NULL);
 
     return ptr_to_jlong(ctxInfo);
 }
 
 /*
- * Class:     com_sun_prism_es2_X11GLFactory
+ * Class:     com_sun_prism_es2_LinuxGLFactory
  * Method:    nGetAdapterOrdinal
  * Signature: (J)I
  */
-JNIEXPORT jint JNICALL Java_com_sun_prism_es2_X11GLFactory_nGetAdapterOrdinal
+JNIEXPORT jint JNICALL Java_com_sun_prism_es2_LinuxGLFactory_nGetAdapterOrdinal
 (JNIEnv *env, jclass class, jlong screen) {
     //TODO: Needs implementation to handle multi-monitors (RT-27437)
     return 0;
 }
 
 /*
- * Class:     com_sun_prism_es2_X11GLFactory
+ * Class:     com_sun_prism_es2_LinuxGLFactory
  * Method:    nGetAdapterCount
  * Signature: ()I
  */
-JNIEXPORT jint JNICALL Java_com_sun_prism_es2_X11GLFactory_nGetAdapterCount
+JNIEXPORT jint JNICALL Java_com_sun_prism_es2_LinuxGLFactory_nGetAdapterCount
 (JNIEnv *env, jclass class) {
     //TODO: Needs implementation to handle multi-monitors (RT-27437)
     return 1;
 }
 
 /*
- * Class:     com_sun_prism_es2_X11GLFactory
+ * Class:     com_sun_prism_es2_LinuxGLFactory
  * Method:    nGetDefaultScreen
  * Signature: (J)I
  */
-JNIEXPORT jint JNICALL Java_com_sun_prism_es2_X11GLFactory_nGetDefaultScreen
+JNIEXPORT jint JNICALL Java_com_sun_prism_es2_LinuxGLFactory_nGetDefaultScreen
 (JNIEnv *env, jclass class, jlong nativeCtxInfo) {
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
     if (ctxInfo == NULL) {
@@ -339,26 +413,25 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_X11GLFactory_nGetDefaultScreen
 }
 
 /*
- * Class:     com_sun_prism_es2_X11GLFactory
+ * Class:     com_sun_prism_es2_LinuxGLFactory
  * Method:    nGetDisplay
  * Signature: (J)J
  */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLFactory_nGetDisplay
+JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_LinuxGLFactory_nGetDisplay
 (JNIEnv *env, jclass class, jlong nativeCtxInfo) {
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
     if (ctxInfo == NULL) {
         return 0;
     }
-
     return (jlong) ptr_to_jlong(ctxInfo->display);
 }
 
 /*
- * Class:     com_sun_prism_es2_X11GLFactory
+ * Class:     com_sun_prism_es2_LinuxGLFactory
  * Method:    nGetVisualID
  * Signature: (J)J
  */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLFactory_nGetVisualID
+JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_LinuxGLFactory_nGetVisualID
 (JNIEnv *env, jclass class, jlong nativeCtxInfo) {
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
     if (ctxInfo == NULL) {
@@ -368,11 +441,11 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLFactory_nGetVisualID
 }
 
 /*
- * Class:     com_sun_prism_es2_X11_X11GLFactory
+ * Class:     com_sun_prism_es2_X11_LinuxGLFactory
  * Method:    nGetIsGL2
  * Signature: (J)Z
  */
-JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_X11GLFactory_nGetIsGL2
+JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_LinuxGLFactory_nGetIsGL2
 (JNIEnv *env, jclass class, jlong nativeCtxInfo) {
     return ((ContextInfo *)jlong_to_ptr(nativeCtxInfo))->gl2;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,14 +31,14 @@
 #include <math.h>
 
 #include "../PrismES2Defs.h"
-#include "com_sun_prism_es2_X11GLContext.h"
+#include "com_sun_prism_es2_LinuxGLContext.h"
 
 /*
- * Class:     com_sun_prism_es2_X11GLContext
+ * Class:     com_sun_prism_es2_LinuxGLContext
  * Method:    nInitialize
  * Signature: (JJZ)J
  */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLContext_nInitialize
+JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_LinuxGLContext_nInitialize
 (JNIEnv *env, jclass class, jlong nativeDInfo, jlong nativePFInfo,
         jboolean vSyncRequested) {
     const char *glVersion;
@@ -47,30 +47,43 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLContext_nInitialize
     char *tmpVersionStr;
     int versionNumbers[2];
     const char *glExtensions;
-    const char *eglExtensions;
+    const char *glxExtensions;
 
-    PixelFormatInfo *pfInfo = (PixelFormatInfo *) jlong_to_ptr(nativePFInfo);
-    EGLDisplay eglDisplay = pfInfo->eglDisplay;
-
+    Window win = None;
+    GLXFBConfig fbConfig = NULL;
+    GLXContext ctx = NULL;
+    XVisualInfo *visualInfo = NULL;
+    int numFBConfigs, index, visualID;
+    Display *display = NULL;
     ContextInfo *ctxInfo = NULL;
-    EGLContext eglContext = eglCreateContext(eglDisplay, pfInfo->eglConfig, EGL_NO_CONTEXT, NULL);
+    DrawableInfo *dInfo = (DrawableInfo *) jlong_to_ptr(nativeDInfo);
+    PixelFormatInfo *pfInfo = (PixelFormatInfo *) jlong_to_ptr(nativePFInfo);
 
-    if (eglContext == EGL_NO_CONTEXT) {
-        fprintf(stderr, "Failed in eglCreateContext 0x%x\n", eglGetError());
+    if ((dInfo == NULL) || (pfInfo == NULL)) {
+        return 0;
+    }
+    display = pfInfo->display;
+    fbConfig = pfInfo->fbConfig;
+    win = dInfo->win;
+
+    ctx = glXCreateNewContext(display, fbConfig, GLX_RGBA_TYPE, NULL, True);
+
+    if (ctx == NULL) {
+        fprintf(stderr, "Failed in glXCreateNewContext");
         return 0;
     }
 
-    if (!eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, eglContext)) {
-        eglDestroyContext(eglDisplay, eglContext);
-        fprintf(stderr, "Failed in eglMakeCurrent\n");
+    if (!glXMakeCurrent(display, win, ctx)) {
+        glXDestroyContext(display, ctx);
+        fprintf(stderr, "Failed in glXMakeCurrent");
         return 0;
     }
 
     /* Get the OpenGL version */
     glVersion = (char *) glGetString(GL_VERSION);
     if (glVersion == NULL) {
-        eglDestroyContext(eglDisplay, eglContext);
-        fprintf(stderr, "glVersion == null\n");
+        glXDestroyContext(display, ctx);
+        fprintf(stderr, "glVersion == null");
         return 0;
     }
 
@@ -92,7 +105,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLContext_nInitialize
      * Check for OpenGL 2.1 or later.
      */
     if ((versionNumbers[0] < 2) || ((versionNumbers[0] == 2) && (versionNumbers[1] < 1))) {
-        eglDestroyContext(eglDisplay, eglContext);
+        glXDestroyContext(display, ctx);
         fprintf(stderr, "Prism-ES2 Error : GL_VERSION (major.minor) = %d.%d\n",
                 versionNumbers[0], versionNumbers[1]);
         return 0;
@@ -110,30 +123,30 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLContext_nInitialize
 
     glExtensions = (const char *) glGetString(GL_EXTENSIONS);
     if (glExtensions == NULL) {
-        eglDestroyContext(eglDisplay, eglContext);
-        fprintf(stderr, "glExtensions == null\n");
+        glXDestroyContext(display, ctx);
+        fprintf(stderr, "glExtensions == null");
         return 0;
     }
 
     // We use GL_ARB_pixel_buffer_object as an guide to
     // determine PS 3.0 capable.
     if (!isExtensionSupported(glExtensions, "GL_ARB_pixel_buffer_object")) {
-        eglDestroyContext(eglDisplay, eglContext);
-        fprintf(stderr, "GL profile isn't PS 3.0 capable\n");
+        glXDestroyContext(display, ctx);
+        fprintf(stderr, "GL profile isn't PS 3.0 capable");
         return 0;
     }
 
-    eglExtensions = (const char *) eglQueryString(eglDisplay, EGL_EXTENSIONS);
-    if (eglExtensions == NULL) {
-        eglDestroyContext(eglDisplay, eglContext);
-        fprintf(stderr, "eglExtensions == null\n");
+    glxExtensions = (const char *) glXGetClientString(display, GLX_EXTENSIONS);
+    if (glxExtensions == NULL) {
+        glXDestroyContext(display, ctx);
+        fprintf(stderr, "glxExtensions == null");
         return 0;
     }
 
     /*
         fprintf(stderr, "glExtensions: %s\n", glExtensions);
         fprintf(stderr, "glxExtensions: %s\n", glxExtensions);
-    */
+     */
 
     /* allocate the structure */
     ctxInfo = (ContextInfo *) malloc(sizeof (ContextInfo));
@@ -148,10 +161,11 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLContext_nInitialize
     ctxInfo->vendorStr = strdup(glVendor);
     ctxInfo->rendererStr = strdup(glRenderer);
     ctxInfo->glExtensionStr = strdup(glExtensions);
-    ctxInfo->eglExtensionStr = strdup(eglExtensions);
+    ctxInfo->glxExtensionStr = strdup(glxExtensions);
     ctxInfo->versionNumbers[0] = versionNumbers[0];
     ctxInfo->versionNumbers[1] = versionNumbers[1];
-    ctxInfo->eglContext = eglContext;
+    ctxInfo->display = display;
+    ctxInfo->context = ctx;
 
     /* set function pointers */
     ctxInfo->glActiveTexture = (PFNGLACTIVETEXTUREPROC)
@@ -255,50 +269,62 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLContext_nInitialize
     ctxInfo->glBlitFramebuffer = (PFNGLBLITFRAMEBUFFERPROC)
             dlsym(RTLD_DEFAULT,"glBlitFramebuffer");
 
-    eglSwapInterval(eglDisplay, 0);
+    if (isExtensionSupported(ctxInfo->glxExtensionStr,
+            "GLX_SGI_swap_control")) {
+        ctxInfo->glXSwapIntervalSGI = (PFNGLXSWAPINTERVALSGIPROC)
+                dlsym(RTLD_DEFAULT, "glXSwapIntervalSGI");
+
+        if (ctxInfo->glXSwapIntervalSGI == NULL) {
+            ctxInfo->glXSwapIntervalSGI = (PFNGLXSWAPINTERVALSGIPROC)
+                glXGetProcAddress((const GLubyte *)"glXSwapIntervalSGI");
+        }
+
+    }
+
+    // initialize platform states and properties to match
+    // cached states and properties
+    if (ctxInfo->glXSwapIntervalSGI != NULL) {
+        ctxInfo->glXSwapIntervalSGI(0);
+    }
     ctxInfo->state.vSyncEnabled = JNI_FALSE;
     ctxInfo->vSyncRequested = vSyncRequested;
-    ctxInfo->eglDisplay = eglDisplay;
-    ctxInfo->display = pfInfo->display;
 
     initState(ctxInfo);
 
     // Release context once we are all done
-    eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+    glXMakeCurrent(display, None, NULL);
 
     return ptr_to_jlong(ctxInfo);
 }
 
 /*
- * Class:     com_sun_prism_es2_X11GLContext
+ * Class:     com_sun_prism_es2_LinuxGLContext
  * Method:    nGetNativeHandle
  * Signature: (J)J
  */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLContext_nGetNativeHandle
+JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_LinuxGLContext_nGetNativeHandle
 (JNIEnv *env, jclass class, jlong nativeCtxInfo) {
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
     if (ctxInfo == NULL) {
         return 0;
     }
-
-    return ptr_to_jlong(ctxInfo->eglContext);
+    return ptr_to_jlong(ctxInfo->context);
 }
 
 /*
- * Class:     com_sun_prism_es2_X11GLContext
+ * Class:     com_sun_prism_es2_LinuxGLContext
  * Method:    nMakeCurrent
  * Signature: (JJ)V
  */
-JNIEXPORT void JNICALL Java_com_sun_prism_es2_X11GLContext_nMakeCurrent
+JNIEXPORT void JNICALL Java_com_sun_prism_es2_LinuxGLContext_nMakeCurrent
 (JNIEnv *env, jclass class, jlong nativeCtxInfo, jlong nativeDInfo) {
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
     DrawableInfo *dInfo = (DrawableInfo *) jlong_to_ptr(nativeDInfo);
     int interval;
     jboolean vSyncNeeded;
 
-
-    if (!eglMakeCurrent(ctxInfo->eglDisplay, dInfo->eglSurface, dInfo->eglSurface, ctxInfo->eglContext)) {
-        fprintf(stderr, "Failed in eglMakeCurrent");
+    if (!glXMakeCurrent(ctxInfo->display, dInfo->win, ctxInfo->context)) {
+        fprintf(stderr, "Failed in glXMakeCurrent");
     }
 
     vSyncNeeded = ctxInfo->vSyncRequested && dInfo->onScreen;
@@ -307,5 +333,7 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_X11GLContext_nMakeCurrent
     }
     interval = (vSyncNeeded) ? 1 : 0;
     ctxInfo->state.vSyncEnabled = vSyncNeeded;
-    eglSwapInterval(ctxInfo->eglDisplay, interval);
+    if (ctxInfo->glXSwapIntervalSGI != NULL) {
+        ctxInfo->glXSwapIntervalSGI(interval);
+    }
 }

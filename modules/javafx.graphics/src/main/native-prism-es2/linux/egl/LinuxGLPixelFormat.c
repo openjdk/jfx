@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,19 +31,54 @@
 #include <math.h>
 
 #include "../PrismES2Defs.h"
-#include "com_sun_prism_es2_X11GLPixelFormat.h"
+#include "com_sun_prism_es2_LinuxGLPixelFormat.h"
 
 extern void setEGLAttrs(jint *attrs, int *eglAttrs);
 extern void printAndReleaseResources(EGLDisplay eglDisplay, EGLSurface eglSurface, EGLContext eglContext,
                                     const char *message);
+
+static EGLDisplay getPlatformDisplay(void * display) {
+    EGLDisplay eglDisplay = NULL;
+
+    const char* extensions = eglQueryString(NULL, EGL_EXTENSIONS);
+
+    if (strstr(extensions, "EGL_KHR_platform_base") != NULL) {
+        PFNEGLGETPLATFORMDISPLAYPROC getPlatformDisplay = (void *) eglGetProcAddress("eglGetPlatformDisplay");
+
+        if (getPlatformDisplay != NULL) {
+            eglDisplay = getPlatformDisplay(EGL_PLATFORM_X11_KHR, display, NULL);
+
+            if (eglDisplay != EGL_NO_DISPLAY) {
+                goto out;
+            }
+        }
+    }
+
+    if (strstr(extensions, "EGL_EXT_platform_base") != NULL) {
+        PFNEGLGETPLATFORMDISPLAYEXTPROC getPlatformDisplay =  (void *) eglGetProcAddress("eglGetPlatformDisplayEXT");
+
+        if (getPlatformDisplay != NULL) {
+            eglDisplay = getPlatformDisplay(EGL_PLATFORM_X11_EXT, display, NULL);
+
+            if (eglDisplay != EGL_NO_DISPLAY) {
+                goto out;
+            }
+        }
+    }
+
+    eglDisplay = eglGetDisplay((EGLNativeDisplayType) display);
+
+out:
+    return eglDisplay;
+}
 /*
- * Class:     com_sun_prism_es2_X11GLPixelFormat
+ * Class:     com_sun_prism_es2_LinuxGLPixelFormat
  * Method:    nCreatePixelFormat
  * Signature: (J[I)J
  */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLPixelFormat_nCreatePixelFormat
+JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_LinuxGLPixelFormat_nCreatePixelFormat
 (JNIEnv *env, jclass class, jlong nativeScreen, jintArray attrArr) {
-    int eglAttrs[MAX_EGL_ATTRS_LENGTH]; /* value, attr pair plus a None */
+    int eglAttrs[MAX_GL_ATTRS_LENGTH]; /* value, attr pair plus a None */
     jint *attrs;
     PixelFormatInfo *pfInfo = NULL;
 
@@ -66,36 +101,36 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLPixelFormat_nCreatePixelForm
     // currently hack to work on a single monitor system
     display = XOpenDisplay(0);
     if (display == NULL) {
-        fprintf(stderr, "Failed in XOpenDisplay\n");
+        fprintf(stderr, "Prism ES2 Error: XOpenDisplay failed\n");
         return 0;
     }
 
     screen = DefaultScreen(display);
 
-    EGLDisplay eglDisplay = eglGetDisplay(display);
+    EGLDisplay eglDisplay = getPlatformDisplay(display);
 
     if (eglDisplay == EGL_NO_DISPLAY) {
-        fprintf(stderr, "Prism ES2 Error - nCreatePixelFormat: no supported display found\n");
+        fprintf(stderr, "Prism ES2 Error: CreatePixelFormat - no supported display found\n");
         return 0;
     }
 
     if (!eglInitialize(eglDisplay, NULL, NULL)) {
-        fprintf(stderr, "Prism ES2 Error - nCreatePixelFormat: eglInitialize failed.\n");
+        fprintf(stderr, "Prism ES2 Error: CreatePixelFormat - eglInitialize failed.\n");
         return 0;
     }
 
     if (!eglBindAPI(EGL_OPENGL_API)) {
-        fprintf(stderr, "Prism ES2 Error - nCreatePixelFormat: cannot bind EGL_OPENGL_API.\n");
+        fprintf(stderr, "Prism ES2 Error: CreatePixelFormat - cannot bind EGL_OPENGL_API.\n");
         return 0;
     }
 
     if ((eglGetConfigs(eglDisplay, NULL, 0, &num_configs) != EGL_TRUE) || (num_configs == 0)) {
-        fprintf(stderr, "Prism ES2 Error - nCreatePixelFormat: no EGL configuration available\n");
+        fprintf(stderr, "Prism ES2 Error: CreatePixelFormat - no EGL configuration available\n");
         return 0;
     }
 
     if (eglChooseConfig(eglDisplay, eglAttrs, &eglConfig, 1, &num_configs) != EGL_TRUE) {
-        fprintf(stderr, "Prism ES2 Error - nCreatePixelFormat: eglChooseConfig failed\n");
+        fprintf(stderr, "Prism ES2 Error: CreatePixelFormat - eglChooseConfig failed\n");
         return 0;
     }
 
@@ -106,14 +141,14 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLPixelFormat_nCreatePixelForm
                               WhitePixel(display, screen));
 
     if (win == None) {
-        printAndReleaseResources(eglDisplay, NULL, NULL, "Failed in XCreateWindow");
+        printAndReleaseResources(eglDisplay, NULL, NULL, "Prism ES2 Error: XCreateWindow failed");
         return 0;
     }
 
     /* allocate the structure */
     pfInfo = (PixelFormatInfo *) malloc(sizeof (PixelFormatInfo));
     if (pfInfo == NULL) {
-        fprintf(stderr, "nCreatePixelFormat: Failed in malloc\n");
+        fprintf(stderr, "Prism ES2 Error: CreatePixelFormat - Failed in malloc\n");
         return 0;
     }
 
