@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,36 +25,22 @@
 package com.oracle.tools.fx.monkey.util;
 
 import java.util.Random;
-import java.util.function.Consumer;
 
 /**
  * Text Templates
  */
-public class Templates {
+public class TextTemplates {
     public static final String TWO_EMOJIS = "😊😇";
     public static final String CLUSTERS = "☝🏿☝🏿☝🏿🤦🏼‍♂️";
     public static final String AKKADIAN = "Akkadian:  𒀝𒅗𒁺𒌑";
-
-    public static TextSelector promptChoice(String id, Consumer<String> client) {
-        return TextSelector.fromPairs(
-            id,
-            client,
-            "null", null,
-            "Short", "yo",
-            "Long", "<beg-0123456789012345678901234567890123456789-|-0123456789012345678901234567890123456789-end>",
-            "RTL", "العربية"
-        );
-    }
+    public static final String RIGHT_TO_LEFT = "العربية" + "העברעאיש (עברית) איז אַ סעמיטישע שפּראַך. מען שרייבט העברעאיש מיט די 22 אותיות פוHello, world!נעם אלף בית לשון קודש. די";
 
     public static Object[] multiLineTextPairs() {
         return new Object[] {
+            "Short", "short",
             "Long", "<beg-0123456789012345678901234567890123456789-|-0123456789012345678901234567890123456789-end>",
-            "Short", "yo",
-            "Empty", "",
-            "null", null,
-            "Right-to-Left", "العربية" + "העברעאיש (עברית) איז אַ סעמיטישע שפּראַך. מען שרייבט העברעאיש מיט די 22 אותיות פונעם אלף בית לשון קודש. די",
+            "Right-to-Left", RIGHT_TO_LEFT,
             "Writing Systems", WritingSystemsDemo.getText(false),
-            //"Writing Systems (Clean)", WritingSystemsDemo.getText(false),
             "Combining Chars", "Tibetan ཨོཾ་མ་ཎི་པདྨེ་ཧཱུྃ\nDouble diacritics: a\u0360b a\u0361b a\u0362b a\u035cb",
             "Failed Nav Bug", "Arabic: \u0627\u0644\u0639\u0631\u0628\u064a\u0629",
             "Wrap Index Bug", "A regular Arabic verb, كَتَبَ‎ kataba (to write).",
@@ -62,24 +48,26 @@ public class Templates {
             "Tabs", "0123456789012345678901234567890\n0\n\t1\n\t\t2\n\t\t\t3\n\t\t\t\t4\n0\n",
             "Newlines", "\n1\n2\n\n3\n\n\n4\n\n\n\n5\n",
             "Long CJK",  createLongCJK(),
-        };
+            "Single Newline", "\n",
+            "<empty>", "",
+            "<null>", null,
+       };
     }
 
     public static Object[] singleLineTextPairs() {
         return new Object[] {
+            "Short", "short",
             "Long", "<beg-0123456789012345678901234567890123456789-|-0123456789012345678901234567890123456789-end>",
-            "Short", "yo",
-            "Empty", "",
-            "null", null,
             "Right-to-Left", "العربية" + "העברעאיש (עברית) איז אַ סעמיטישע שפּראַך. מען שרייבט העברעאיש מיט די 22 אותיות פונעם אלף בית לשון קודש. די",
             "Tibetan", "Tibetan ཨོཾ་མ་ཎི་པདྨེ་ཧཱུྃ",
             "Double diacritics", "a\u0360b a\u0361b a\u0362b a\u035cb",
             "Failed Nav Bug", "Arabic: \u0627\u0644\u0639\u0631\u0628\u064a\u0629",
             "Wrap Index Bug", "A regular Arabic verb, كَتَبَ‎ kataba (to write).",
             "Newlines and Tabs", "1\t\n2\r3\r\n4",
-            "Single Newline", "\n",
             "Single Tab", "\t",
             "Emojis", "[🇺🇦❤️🏁🇺🇸🔥🦋😀😃😄😁😆😅🤣😂🙂🙃😉😊😇]",
+            "<empty>", "",
+            "<null>", null,
         };
     }
 

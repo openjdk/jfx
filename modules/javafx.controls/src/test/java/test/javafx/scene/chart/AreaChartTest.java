@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -534,8 +534,8 @@ public class AreaChartTest extends XYChartTestBase {
                 .filter(pathElement -> pathElement instanceof LineTo)
                 .map(pathElement -> (LineTo) pathElement)
                 .map(lineTo -> new Point2D(
-                        xAxis.getValueForDisplay(lineTo.getX()).doubleValue(),
-                        yAxis.getValueForDisplay(lineTo.getY()).doubleValue())
+                        Math.round(xAxis.getValueForDisplay(lineTo.getX()).doubleValue()),
+                        Math.round(yAxis.getValueForDisplay(lineTo.getY()).doubleValue()))
                 )
                 .collect(Collectors.toList());
         // Due to fillPath, one additional LineTo element is added to close the loop

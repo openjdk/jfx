@@ -169,9 +169,10 @@ public class SpinnerTest {
         assertFalse(spinner.isEditable());
     }
 
-    @Ignore("Waiting for StageLoader")
     @Test public void createDefaultSpinner_defaultSkinIsInstalled() {
+        StageLoader stageLoader = new StageLoader(spinner);
         assertTrue(spinner.getSkin() instanceof SpinnerSkin);
+        stageLoader.dispose();
     }
 
 
@@ -337,7 +338,7 @@ public class SpinnerTest {
      *                                                                         *
      **************************************************************************/
 
-    @Ignore("Need KeyboardEventFirer")
+    @Ignore("JDK-8328701")
     @Test public void editing_commitValidInput() {
         intSpinner.valueProperty().addListener(o -> eventCount++);
         intSpinner.getEditor().setText("3");
@@ -348,7 +349,7 @@ public class SpinnerTest {
         assertEquals("3", intSpinner.getEditor().getText());
     }
 
-    @Ignore("Need KeyboardEventFirer")
+    @Ignore("JDK-8328701")
     @Test public void editing_commitInvalidInput() {
         intSpinner.valueProperty().addListener(o -> eventCount++);
         intSpinner.getEditor().setText("300");
@@ -1585,7 +1586,7 @@ public class SpinnerTest {
     }
 
     /**
-     * When Spinner looses focus with misformatted text in the editor,
+     * When Spinner loses focus with misformatted text in the editor,
      * checks that the value is not changed, and the text is reverted to the value
      */
     @Test
@@ -1606,7 +1607,7 @@ public class SpinnerTest {
         spinner.requestFocus();
         spinner.getEditor().setText("2abc");
 
-        // loosing focus triggers cancelEdit() because the text cannot be parsed
+        // losing focus triggers cancelEdit() because the text cannot be parsed
         button.requestFocus();
 
         // check that value remains unchanged, and text is reverted
