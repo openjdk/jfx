@@ -753,10 +753,7 @@ final class CssStyleHelper {
      * Called by the Node whenever it has transitioned from one set of
      * pseudo-class states to another. This function will then lookup the
      * new values for each of the styleable variables on the Node, and
-     * then either set the value directly or start an animation based on
-     * how things are specified in the CSS file. Currently animation support
-     * is disabled until the new parser comes online with support for
-     * animations and that support is detectable via the API.
+     * then set the new value via {@link StyleableProperty#applyStyle}.
      */
     void transitionToState(final Node node) {
 
