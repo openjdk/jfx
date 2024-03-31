@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,6 +60,7 @@ public class RgfPseudoScriptEngineCompilable extends AbstractScriptEngine implem
         enginesUsed.add(this);
     }
 
+    @Override
     public ScriptEngineFactory getFactory() {
         return new RgfPseudoScriptEngineCompilableFactory();
     }
@@ -75,16 +76,19 @@ public class RgfPseudoScriptEngineCompilable extends AbstractScriptEngine implem
         return invocationList;
     }
 
+    @Override
     public Bindings createBindings() {
         return new SimpleBindings();
     }
 
+    @Override
     public Object eval(Reader reader, ScriptContext context) {
         if (bDebug) System.err.println("[debug: " + this + ".eval(Reader,ScriptContext), ScriptContext=" + context + "]");
 
         return eval(readReader(reader), context);
     }
 
+    @Override
     public Object eval(String script, ScriptContext context) {
         if (bDebug) System.err.print("[debug: " + this + ".eval(String,ScriptContext), ScriptContext=" + context + "]");
 
@@ -100,10 +104,12 @@ public class RgfPseudoScriptEngineCompilable extends AbstractScriptEngine implem
         return invocationList;
     }
 
+    @Override
     public CompiledScript compile(Reader script) throws ScriptException {
         return compile (readReader(script));
     }
 
+    @Override
     public CompiledScript compile(String script) throws ScriptException {
         if (script.indexOf("FAIL COMPILATION") != -1) {
                 throw new ScriptException("test script contains FAIL COMPILATION");
