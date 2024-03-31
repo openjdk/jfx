@@ -272,7 +272,7 @@ public abstract class Interpolator {
      * The step position determines the location of rise points in the input progress interval, which are the
      * locations on the input progress axis where the output progress value jumps from one step to the next.
      *
-     * @since 22
+     * @since 23
      */
     public enum StepPosition {
         /**
@@ -300,14 +300,14 @@ public abstract class Interpolator {
     /**
      * Built-in interpolator instance that is equivalent to {@code STEPS(1, StepPosition.START)}.
      *
-     * @since 22
+     * @since 23
      */
     public static final Interpolator STEP_START = STEPS(1, StepPosition.START);
 
     /**
      * Built-in interpolator instance that is equivalent to {@code STEPS(1, StepPosition.END)}.
      *
-     * @since 22
+     * @since 23
      */
     public static final Interpolator STEP_END = STEPS(1, StepPosition.END);
 
@@ -323,7 +323,7 @@ public abstract class Interpolator {
      * @throws NullPointerException if {@code position} is {@code null}
      * @return a new step interpolator
      *
-     * @since 22
+     * @since 23
      */
     public static Interpolator STEPS(int intervals, StepPosition position) {
         return new StepInterpolator(intervals, position);

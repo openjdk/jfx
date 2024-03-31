@@ -37,7 +37,7 @@ import java.util.Objects;
  * <p>
  * Note that this event is not raised for explicit transitions that are created using the {@link Transition} class.
  *
- * @since 22
+ * @since 23
  */
 public final class TransitionEvent extends Event {
 

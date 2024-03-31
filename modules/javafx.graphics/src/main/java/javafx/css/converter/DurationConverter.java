@@ -82,7 +82,7 @@ public final class DurationConverter extends StyleConverter<ParsedValue<?, Size>
     /**
      * Converts a sequence of parsed values to an array of {@link Duration} instances.
      *
-     * @since 22
+     * @since 23
      */
     public static final class SequenceConverter extends StyleConverter<ParsedValue<ParsedValue<?, Size>, Duration>[], Duration[]> {
         /**
