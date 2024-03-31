@@ -78,7 +78,15 @@ public final class TransitionEvent extends Event {
     public static final EventType<TransitionEvent> CANCEL =
             new EventType<>(TransitionEvent.ANY, "TRANSITION_CANCEL");
 
+    /**
+     * The {@code StyleableProperty} that is targeted by the transition.
+     */
     private final StyleableProperty<?> property;
+
+    /**
+     * The time that has elapsed since the transition has entered its active period,
+     * not including the time spent in the delay phase.
+     */
     private final Duration elapsedTime;
 
     /**
