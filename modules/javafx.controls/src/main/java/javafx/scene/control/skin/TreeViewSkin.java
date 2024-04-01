@@ -191,7 +191,6 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
         properties.remove(Properties.RECREATE);
         properties.addListener(propertiesMapListener);
 
-        // FIX unnecessary, make the behavior class abstract
         // init the behavior 'closures'
         behavior.setOnFocusPreviousRow(() -> { onFocusPreviousCell(); });
         behavior.setOnFocusNextRow(() -> { onFocusNextCell(); });
