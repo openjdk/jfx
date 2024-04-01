@@ -39,6 +39,7 @@ import javafx.collections.ObservableMap;
 import javafx.collections.WeakListChangeListener;
 import javafx.collections.WeakMapChangeListener;
 import javafx.event.EventHandler;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
@@ -214,15 +215,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         behavior.setOnSelectNextRow(() -> onSelectNextCell());
         behavior.setOnScrollPageDown(this::onScrollPageDown);
         behavior.setOnScrollPageUp(this::onScrollPageUp);
-        behavior.setOnHorizontalUnitScroll((right) -> {
-            // TODO this should have beem a public method in VirtualFlow
-            ScrollBar sb = flow.getHbar();
-            if(right) {
-                sb.increment();
-            } else {
-                sb.decrement();
-            }
-        });
+        behavior.setOnHorizontalUnitScroll(this::horizontalUnitScroll);
 
         EventHandler<MouseEvent> ml = event -> {
             // This ensures that the list maintains the focus, even when the vbar
@@ -684,5 +677,17 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         int newSelectionIndex = firstVisibleCell.getIndex();
         flow.scrollTo(firstVisibleCell);
         return newSelectionIndex;
+    }
+
+    private void horizontalUnitScroll(boolean right) {
+        if (getSkinnable().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+            right = !right;
+        }
+        ScrollBar sb = flow.getHbar();
+        if (right) {
+            sb.increment();
+        } else {
+            sb.decrement();
+        }
     }
 }

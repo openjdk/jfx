@@ -40,6 +40,7 @@ import javafx.collections.ObservableMap;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.event.WeakEventHandler;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
@@ -200,15 +201,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
         behavior.setOnScrollPageUp(this::onScrollPageUp);
         behavior.setOnSelectPreviousRow(() -> { onSelectPreviousCell(); });
         behavior.setOnSelectNextRow(() -> { onSelectNextCell(); });
-        behavior.setOnHorizontalUnitScroll((right) -> {
-            // TODO this should have beem a public method in VirtualFlow
-            ScrollBar sb = flow.getHbar();
-            if(right) {
-                sb.increment();
-            } else {
-                sb.decrement();
-            }
-        });
+        behavior.setOnHorizontalUnitScroll(this::horizontalUnitScroll);
 
         registerChangeListener(control.rootProperty(), e -> setRoot(getSkinnable().getRoot()));
         registerChangeListener(control.showRootProperty(), e -> {
@@ -626,5 +619,17 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
         int newSelectionIndex = firstVisibleCell.getIndex();
         flow.scrollTo(firstVisibleCell);
         return newSelectionIndex;
+    }
+
+    private void horizontalUnitScroll(boolean right) {
+        if (getSkinnable().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+            right = !right;
+        }
+        ScrollBar sb = flow.getHbar();
+        if (right) {
+            sb.increment();
+        } else {
+            sb.decrement();
+        }
     }
 }

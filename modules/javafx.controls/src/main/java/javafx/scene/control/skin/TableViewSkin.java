@@ -30,6 +30,7 @@ import java.util.List;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
@@ -115,15 +116,7 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
         behavior.setOnSelectRightCell(() -> onSelectRightCell());
         behavior.setOnFocusLeftCell(() -> onFocusLeftCell());
         behavior.setOnFocusRightCell(() -> onFocusRightCell());
-        behavior.setOnHorizontalUnitScroll((right) -> {
-            // TODO this should have beem a public method in VirtualFlow
-            ScrollBar sb = flow.getHbar();
-            if(right) {
-                sb.increment();
-            } else {
-                sb.decrement();
-            }
-        });
+        behavior.setOnHorizontalUnitScroll(this::horizontalUnitScroll);
 
         lh.addChangeListener(control.fixedCellSizeProperty(), (ev) -> {
             flow.setFixedCellSize(getSkinnable().getFixedCellSize());
@@ -236,6 +229,18 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
         super.horizontalScroll();
         if (getSkinnable().getFixedCellSize() > 0) {
             flow.requestCellLayout();
+        }
+    }
+
+    private void horizontalUnitScroll(boolean right) {
+        if (getSkinnable().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+            right = !right;
+        }
+        ScrollBar sb = flow.getHbar();
+        if (right) {
+            sb.increment();
+        } else {
+            sb.decrement();
         }
     }
 }

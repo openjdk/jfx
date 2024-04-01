@@ -1,6 +1,6 @@
-# TableView Behavior
+# TreeTableView Behavior
 
-TableView behavior shares most of the key bindings with TreeTableView behavior.
+TreeTableView Behavior inherits most of the key bindings from the TableView.  The key bindings registered by the TreeTableView are labeled with (TTV).
 
 
 ## Key Bindings
@@ -8,6 +8,7 @@ TableView behavior shares most of the key bindings with TreeTableView behavior.
 |Key Combination          |Platform |Condition         |Function                                |
 |-------------------------|---------|------------------|----------------------------------------|
 |shortcut-A               |         |                  |select all
+|ADD                      |         |                  |expand row (TTV)
 |DOWN                     |         |                  |select next row
 |shift-DOWN               |         |                  |extend selection to the next row
 |shift-shortcut-DOWN      |         |                  |discontinuous select next row **function unclear**
@@ -25,19 +26,20 @@ TableView behavior shares most of the key bindings with TreeTableView behavior.
 |shortcut-HOME            |         |                  |focus first row **win,linux? on mac, HOME is shortcut-LEFT**
 |KP_DOWN                  |         |                  |select next row
 |shift-KP_DOWN            |         |                  |extend selection to the next row
-|KP_LEFT                  |         |                  |LTR: select left cell; RTL: select right cell;
+|KP_LEFT                  |         |                  |LTR: collapse row; RTL: expand row; (TTV)
 |shift-KP_LEFT            |         |                  |LTR: extend selection left cell; RTL: extend selection right cell;
 |KP_RIGHT                 |         |                  |LTR: select right cell; RTL: select left cell;
-|shift-KP_RIGHT           |         |                  |LTR: extend selection right cell; RTL: extend selection left cell;
+|shift-KP_RIGHT           |         |                  |LTR: expand row; RTL: collapse row; (TTV)
 |shortcut-KP_LEFT         |         |                  |LTR: focus left cell; RTL: focus right cell;
 |KP_UP                    |         |                  |select previous row
 |shift-KP_UP              |         |                  |extend selection to the previous row
 |shortcut-KP_RIGHT        |         |                  |LTR: focus right cell; RTL: focus left cell;
-|LEFT                     |         |                  |LTR: select left cell; RTL: select right cell;
+|LEFT                     |         |                  |LTR: collapse row; RTL: expand row; (TTV)
 |alt-shortcut-LEFT        |         |                  |horizontal scroll left (proposed in JDK-8313138)
 |shift-LEFT               |         |                  |LTR: extend selection left cell; RTL: extend selection right cell;
 |shift-shortcut-LEFT      |         |                  |LTR: discontinuous select previuos column; RTL: discontinuous select next column; **win,linux? on mac, HOME is shortcut-LEFT**
 |shortcut-LEFT            |         |                  |LTR: focus left cell; RTL: focus right cell;
+|MULTIPLY                 |         |                  |expand all (TTV)
 |PAGE_DOWN                |         |                  |scroll page down
 |shift-PAGE_DOWN          |         |                  |extend selection page down
 |shift-shortcut-PAGE_DOWN |         |                  |discontinuous select page down **function unclear**
@@ -46,7 +48,7 @@ TableView behavior shares most of the key bindings with TreeTableView behavior.
 |shift-PAGE_UP            |         |                  |extend selection page up
 |shift-shortcut-PAGE_UP   |         |                  |discontinuous select page up **function unclear**
 |shortcut-PAGE_UP         |         |                  |focus page up
-|RIGHT                    |         |                  |LTR: select right cell; RTL: select left cell;
+|RIGHT                    |         |                  |LTR: expand row; RTL: collapse row; (TTV)
 |shift-shortcut-RIGHT     |         |                  |LTR: discontinuous select next column; RTL: discontinuous select previous column; **win,linux? on mac, END is shortcut-RIGHT**
 |shortcut-RIGHT           |         |                  |LTR: focus right cell; RTL: focus left cell;
 |alt-shortcut-RIGHT       |         |                  |horizontal scroll right (proposed in JDK-8313138)
@@ -56,6 +58,7 @@ TableView behavior shares most of the key bindings with TreeTableView behavior.
 |ctrl-shortcut-SPACE      |mac      |                  |toggle focus owner selection
 |shift-SPACE              |         |                  |extend selection to focus
 |shift-shortcut-SPACE     |         |                  |extend selection to focus
+|SUBTRACT                 |         |                  |collapse row (TTV)
 |TAB                      |         |                  |traverse focus next
 |shift-TAB                |         |                  |traverse focus previous
 |UP                       |         |                  |select previous row
