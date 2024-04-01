@@ -26,10 +26,7 @@ package test.robot.javafx.scene;
 
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
-
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.ListChangeListener;
@@ -42,16 +39,13 @@ import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
-
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
 import com.sun.javafx.PlatformUtil;
-
 import test.util.Util;
 
 /*
