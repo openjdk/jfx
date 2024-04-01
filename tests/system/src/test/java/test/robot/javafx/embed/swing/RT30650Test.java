@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,9 @@
 
 package test.robot.javafx.embed.swing;
 
-import test.robot.javafx.embed.swing.RT30650GUI;
-import junit.framework.Assert;
-import org.junit.Test;
-
 import static org.junit.Assume.assumeTrue;
+import org.junit.Test;
+import junit.framework.Assert;
 
 /**
  * RT-30650: SwingNode is not Resizable
