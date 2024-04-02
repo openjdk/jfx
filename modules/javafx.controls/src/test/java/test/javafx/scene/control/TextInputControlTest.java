@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -150,10 +150,12 @@ public class TextInputControlTest {
      ********************************************************************/
 
     @Test public void fontSetFromCSS() {
-        textInput.setStyle("-fx-font: 24 Helvetica");
+        assertEquals(Font.font("System", 12), textInput.getFont());
+
+        textInput.setStyle("-fx-font: 24 Amble");
         Scene s = new Scene(textInput);
         textInput.applyCss();
-        assertEquals(Font.font("Helvetica", 24), textInput.getFont());
+        assertEquals(Font.font("Amble", 24), textInput.getFont());
     }
 
     /******************************************************

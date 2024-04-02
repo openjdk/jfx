@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,19 +37,16 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
-import javafx.scene.robot.Robot;
 import javafx.scene.Scene;
 import javafx.scene.layout.Region;
+import javafx.scene.robot.Robot;
 import javafx.stage.Screen;
-import javafx.stage.Stage;
 import javafx.stage.Window;
 import org.junit.Assert;
-
 import junit.framework.AssertionFailedError;
 
 /**
@@ -377,16 +374,14 @@ public class Util {
     }
 
     /**
-     * This synchronous method first hides all the specified stages (ignoring any
-     * null Stages) in the platform thread, then calls {@link Platform.exit()}.
+     * This synchronous method first hides all the open {@code Window}s in the platform thread,
+     * then invokes {@link Platform.exit()}.
      */
-    public static void shutdown(Stage... stages) {
+    public static void shutdown() {
         runAndWait(() -> {
-            for (Stage s : stages) {
-                if (s != null) {
-                    s.hide();
-                }
-            }
+            List.
+                copyOf(Window.getWindows()).
+                forEach(Window::hide);
             Platform.exit();
         });
     }
