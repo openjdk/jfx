@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,11 @@
 
 package com.sun.javafx.text;
 
-
+import java.text.Bidi;
+import java.text.BreakIterator;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Hashtable;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
@@ -41,17 +45,11 @@ import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.RoundRectangle2D;
 import com.sun.javafx.geom.Shape;
-import com.sun.javafx.geom.BoxBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.Translate2D;
 import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextSpan;
-import java.text.Bidi;
-import java.text.BreakIterator;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Hashtable;
 
 public class PrismTextLayout implements TextLayout {
     private static final BaseTransform IDENTITY = BaseTransform.IDENTITY_TRANSFORM;
@@ -323,7 +321,7 @@ public class PrismTextLayout implements TextLayout {
             if (lineEnd > offset) break;
             lineIndex++;
         }
-        int sliptCaretOffset = -1;
+        int splitCaretOffset = -1;
         int level = 0;
         float lineX = 0, lineY = 0, lineHeight = 0;
         TextLine line = lines[lineIndex];
@@ -352,13 +350,13 @@ public class PrismTextLayout implements TextLayout {
             if (isLeading) {
                 if (runIndex > 0 && offset == runStart) {
                     level = run.getLevel();
-                    sliptCaretOffset = offset - 1;
+                    splitCaretOffset = offset - 1;
                 }
             } else {
                 int runEnd = run.getEnd();
                 if (runIndex + 1 < runs.length && offset + 1 == runEnd) {
                     level = run.getLevel();
-                    sliptCaretOffset = offset + 1;
+                    splitCaretOffset = offset + 1;
                 }
             }
         } else {
@@ -386,12 +384,12 @@ public class PrismTextLayout implements TextLayout {
         }
         lineX += x;
         lineY += y;
-        if (sliptCaretOffset != -1) {
+        if (splitCaretOffset != -1) {
             for (int i = 0; i < runs.length; i++) {
                 TextRun run = runs[i];
                 int runStart = run.getStart();
                 int runEnd = run.getEnd();
-                if (runStart <= sliptCaretOffset && sliptCaretOffset < runEnd) {
+                if (runStart <= splitCaretOffset && splitCaretOffset < runEnd) {
                     if ((run.getLevel() & 1) != (level & 1)) {
                         Point2D location = run.getLocation();
                         float lineX2 = location.x;

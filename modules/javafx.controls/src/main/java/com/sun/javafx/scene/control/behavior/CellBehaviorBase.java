@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -231,7 +231,7 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
 
         // if shift is down, and we don't already have the initial focus index
         // recorded, we record the focus index now so that subsequent shift+clicks
-        // result in the correct selection occuring (whilst the focus index moves
+        // result in the correct selection occurring (whilst the focus index moves
         // about).
         if (shiftDown) {
             if (! hasNonDefaultAnchor(cellContainer)) {

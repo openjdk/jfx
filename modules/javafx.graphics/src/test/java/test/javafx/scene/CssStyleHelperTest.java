@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -107,13 +107,13 @@ public class CssStyleHelperTest {
         Toolkit.getToolkit().firePulse();
         assertEquals("Italic", C.getFont().getStyle());
         assertEquals("Italic", D.getFont().getStyle());
-        assertNull(E.getFont().getStyle());
+        assertEquals("Regular", E.getFont().getStyle());
 
         B.getChildren().add(D); //move D
         Toolkit.getToolkit().firePulse();
         assertEquals("Italic", C.getFont().getStyle());
-        assertNull(D.getFont().getStyle());
-        assertNull(E.getFont().getStyle());
+        assertEquals("Regular", D.getFont().getStyle());
+        assertEquals("Regular", E.getFont().getStyle());
     }
 
     @Test
@@ -194,7 +194,7 @@ public class CssStyleHelperTest {
         Toolkit.getToolkit().firePulse();
         assertEquals("Italic", C.getFont().getStyle());
         assertEquals("Italic", D.getFont().getStyle());
-        assertNull(E.getFont().getStyle());
+        assertEquals("Regular", E.getFont().getStyle());
 
         A.getChildren().remove(D); //move D
         Toolkit.getToolkit().firePulse();
@@ -202,8 +202,8 @@ public class CssStyleHelperTest {
         Toolkit.getToolkit().firePulse();
 
         assertEquals("Italic", C.getFont().getStyle());
-        assertNull(D.getFont().getStyle());
-        assertNull(E.getFont().getStyle());
+        assertEquals("Regular", D.getFont().getStyle());
+        assertEquals("Regular", E.getFont().getStyle());
     }
 
     @Test
@@ -482,7 +482,7 @@ public class CssStyleHelperTest {
         A.getChildren().add(C);
         Toolkit.getToolkit().firePulse();
 
-        assertNull(C.getFont().getStyle());
+        assertEquals("Regular", C.getFont().getStyle());
     }
 
     @Test
@@ -518,7 +518,7 @@ public class CssStyleHelperTest {
         A.getChildren().add(C);
         Toolkit.getToolkit().firePulse();
 
-        assertNull(C.getFont().getStyle());
+        assertEquals("Regular", C.getFont().getStyle());
     }
 
     @Test
@@ -553,7 +553,7 @@ public class CssStyleHelperTest {
         A.getChildren().add(C);
         Toolkit.getToolkit().firePulse();
 
-        assertNull(C.getFont().getStyle());
+        assertEquals("Regular", C.getFont().getStyle());
     }
 
     @Test
