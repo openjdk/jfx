@@ -434,6 +434,7 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
 //        return sb.append("}").toString();
 //    }
 
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("KeyBinding{key=");
