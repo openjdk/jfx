@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,8 @@ public class NodeFilterImpl implements NodeFilter {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
+
+        @Override
         public void dispose() {
             NodeFilterImpl.dispose(peer);
         }
@@ -96,6 +98,7 @@ public class NodeFilterImpl implements NodeFilter {
     public static final int SHOW_NOTATION = 0x00000800;
 
 // Functions
+    @Override
     public short acceptNode(Node n)
     {
         return acceptNodeImpl(getPeer()
