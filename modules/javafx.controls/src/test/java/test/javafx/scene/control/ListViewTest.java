@@ -1273,9 +1273,7 @@ public class ListViewTest {
         listView.requestFocus();
         assertTrue(listView.isFocused());
 
-        VirtualFlowTestUtils.BLOCK_STAGE_LOADER_DISPOSE = true;
         ListCell cell = (ListCell) VirtualFlowTestUtils.getCell(listView, 0);
-        VirtualFlowTestUtils.BLOCK_STAGE_LOADER_DISPOSE = false;
         assertTrue(cell.getSkin() instanceof ListCellSkin);
         assertNull(cell.getGraphic());
         assertEquals("John", cell.getText());
@@ -1314,9 +1312,7 @@ public class ListViewTest {
         listView.requestFocus();
         assertTrue(listView.isFocused());
 
-        VirtualFlowTestUtils.BLOCK_STAGE_LOADER_DISPOSE = true;
         ListCell cell = (ListCell) VirtualFlowTestUtils.getCell(listView, 0);
-        VirtualFlowTestUtils.BLOCK_STAGE_LOADER_DISPOSE = false;
         assertTrue(cell.getSkin() instanceof ListCellSkin);
         assertNull(cell.getGraphic());
         assertEquals("John", cell.getText());

@@ -2359,9 +2359,7 @@ public class TreeViewTest {
         treeView.requestFocus();
         assertTrue(treeView.isFocused());
 
-        VirtualFlowTestUtils.BLOCK_STAGE_LOADER_DISPOSE = true;
         TreeCell cell = (TreeCell) VirtualFlowTestUtils.getCell(treeView, 0);
-        VirtualFlowTestUtils.BLOCK_STAGE_LOADER_DISPOSE = false;
         assertTrue(cell.getSkin() instanceof TreeCellSkin);
         assertNull(cell.getGraphic());
         assertEquals("John", cell.getText());
@@ -2405,9 +2403,7 @@ public class TreeViewTest {
         treeView.requestFocus();
         assertTrue(treeView.isFocused());
 
-        VirtualFlowTestUtils.BLOCK_STAGE_LOADER_DISPOSE = true;
         TreeCell cell = (TreeCell) VirtualFlowTestUtils.getCell(treeView, 0);
-        VirtualFlowTestUtils.BLOCK_STAGE_LOADER_DISPOSE = false;
         assertTrue(cell.getSkin() instanceof TreeCellSkin);
         assertNull(cell.getGraphic());
         assertEquals("John", cell.getText());

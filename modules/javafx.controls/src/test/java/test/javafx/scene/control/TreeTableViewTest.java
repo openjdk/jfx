@@ -3325,9 +3325,7 @@ public class TreeTableViewTest {
         assertTrue(table.isFocused());
 
         // get the cell at (0,0)
-        VirtualFlowTestUtils.BLOCK_STAGE_LOADER_DISPOSE = true;
         TreeTableCell cell = (TreeTableCell) VirtualFlowTestUtils.getCell(table, 0, 0);
-        VirtualFlowTestUtils.BLOCK_STAGE_LOADER_DISPOSE = false;
         assertTrue(cell.getSkin() instanceof TreeTableCellSkin);
         assertNull(cell.getGraphic());
         assertEquals("John", cell.getText());
@@ -3380,9 +3378,7 @@ public class TreeTableViewTest {
         assertTrue(table.isFocused());
 
         // get the cell at (0,0)
-        VirtualFlowTestUtils.BLOCK_STAGE_LOADER_DISPOSE = true;
         TreeTableCell cell = (TreeTableCell) VirtualFlowTestUtils.getCell(table, 0, 0);
-        VirtualFlowTestUtils.BLOCK_STAGE_LOADER_DISPOSE = false;
         assertTrue(cell.getSkin() instanceof TreeTableCellSkin);
         assertNull(cell.getGraphic());
         assertEquals("John", cell.getText());
