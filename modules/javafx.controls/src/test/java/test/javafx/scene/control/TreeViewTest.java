@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import javafx.scene.control.skin.TreeCellSkin;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -2339,6 +2340,94 @@ public class TreeViewTest {
 
         assertEquals(1, rt_37853_cancelCount);
         assertEquals(0, rt_37853_commitCount);
+
+        sl.dispose();
+    }
+
+    @Test
+    public void testTreeViewRemainsFocusedAfterEditCancel() {
+        treeView.setCellFactory(TextFieldTreeCell.forTreeView());
+        treeView.setEditable(true);
+        treeView.setRoot(new TreeItem<>("Root"));
+        treeView.getRoot().setExpanded(true);
+        treeView.setShowRoot(false);
+
+        TreeItem<String> item = new TreeItem<>("John");
+        treeView.getRoot().getChildren().add(item);
+
+        StageLoader sl = new StageLoader(new Button(), treeView);
+        treeView.requestFocus();
+        assertTrue(treeView.isFocused());
+
+        TreeCell cell = (TreeCell) VirtualFlowTestUtils.getCell(treeView, 0);
+        assertTrue(cell.getSkin() instanceof TreeCellSkin);
+        assertNull(cell.getGraphic());
+        assertEquals("John", cell.getText());
+
+        treeView.edit(item);
+
+        Toolkit.getToolkit().firePulse();
+        assertNotNull(cell.getGraphic());
+        assertTrue(cell.getGraphic() instanceof TextField);
+
+        TextField textField = (TextField) cell.getGraphic();
+        assertEquals("John", textField.getText());
+
+        textField.setText("Andrew");
+        textField.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertTrue(textField.isFocused());
+        assertFalse(treeView.isFocused());
+
+        KeyEventFirer keyboard = new KeyEventFirer(textField);
+        keyboard.doKeyPress(KeyCode.ESCAPE);
+
+        assertEquals("John", cell.getText());
+        assertTrue(treeView.isFocused());
+
+        sl.dispose();
+    }
+
+    @Test
+    public void testTreeViewRemainsFocusedAfterEditCommit() {
+        treeView.setCellFactory(TextFieldTreeCell.forTreeView());
+        treeView.setEditable(true);
+        treeView.setRoot(new TreeItem<>("Root"));
+        treeView.getRoot().setExpanded(true);
+        treeView.setShowRoot(false);
+
+        TreeItem<String> item = new TreeItem<>("John");
+        treeView.getRoot().getChildren().add(item);
+
+        StageLoader sl = new StageLoader(new Button(), treeView);
+        treeView.requestFocus();
+        assertTrue(treeView.isFocused());
+
+        TreeCell cell = (TreeCell) VirtualFlowTestUtils.getCell(treeView, 0);
+        assertTrue(cell.getSkin() instanceof TreeCellSkin);
+        assertNull(cell.getGraphic());
+        assertEquals("John", cell.getText());
+
+        treeView.edit(item);
+
+        Toolkit.getToolkit().firePulse();
+        assertNotNull(cell.getGraphic());
+        assertTrue(cell.getGraphic() instanceof TextField);
+
+        TextField textField = (TextField) cell.getGraphic();
+        assertEquals("John", textField.getText());
+
+        textField.setText("Andrew");
+        textField.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertTrue(textField.isFocused());
+        assertFalse(treeView.isFocused());
+
+        KeyEventFirer keyboard = new KeyEventFirer(textField);
+        keyboard.doKeyPress(KeyCode.ENTER);
+
+        assertEquals("Andrew", cell.getText());
+        assertTrue(treeView.isFocused());
 
         sl.dispose();
     }
