@@ -104,6 +104,7 @@ elseif (WIN32)
         win/OSAllocatorWin.cpp
         win/RunLoopWin.cpp
         win/ThreadingWin.cpp
+        win/Win32Handle.cpp
     )
 
     list(APPEND WTF_PUBLIC_HEADERS

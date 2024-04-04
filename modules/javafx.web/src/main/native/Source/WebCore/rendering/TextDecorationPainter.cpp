@@ -31,7 +31,7 @@
 #include "InlineIteratorLineBox.h"
 #include "InlineTextBoxStyle.h"
 #include "RenderBlock.h"
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 #include "RenderText.h"
 #include "ShadowData.h"
 #include "TextRun.h"
@@ -200,7 +200,7 @@ TextDecorationPainter::TextDecorationPainter(GraphicsContext& context, const Fon
 }
 
 // Paint text-shadow, underline, overline
-void TextDecorationPainter::paintBackgroundDecorations(const TextRun& textRun, const BackgroundDecorationGeometry& decorationGeometry, OptionSet<TextDecorationLine> decorationType, const Styles& decorationStyle)
+void TextDecorationPainter::paintBackgroundDecorations(const RenderStyle& style, const TextRun& textRun, const BackgroundDecorationGeometry& decorationGeometry, OptionSet<TextDecorationLine> decorationType, const Styles& decorationStyle)
 {
     auto paintDecoration = [&] (auto decoration, auto style, auto& color, auto& rect) {
         m_context.setStrokeColor(color);
@@ -270,17 +270,18 @@ void TextDecorationPainter::paintBackgroundDecorations(const TextRun& textRun, c
                 boxOrigin.move(0, -extraOffset);
                 extraOffset = 0;
             }
-            auto shadowColor = shadow->color();
+            auto shadowColor = style.colorResolvingCurrentColor(shadow->color());
             if (m_shadowColorFilter)
                 m_shadowColorFilter->transformColor(shadowColor);
 
             auto shadowX = m_isHorizontal ? shadow->x().value() : shadow->y().value();
             auto shadowY = m_isHorizontal ? shadow->y().value() : -shadow->x().value();
-            m_context.setShadow(FloatSize { shadowX, shadowY - extraOffset }, shadow->radius().value(), shadowColor);
+            m_context.setDropShadow({ { shadowX, shadowY - extraOffset }, shadow->radius().value(), shadowColor, ShadowRadiusMode::Default });
             shadow = shadow->next();
         };
         applyShadowIfNeeded();
 
+        // FIXME: Add support to handle left/right case
         if (decorationType.contains(TextDecorationLine::Underline))
             paintDecoration(TextDecorationLine::Underline, decorationStyle.underline.decorationStyle, decorationStyle.underline.color, underlineRect);
         if (decorationType.contains(TextDecorationLine::Overline))

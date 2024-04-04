@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,13 @@
 
 package test.javafx.css.imagecacheleaktest;
 
-import java.util.ArrayList;
-
-import org.junit.Test;
-import org.junit.Assert;
 import static org.junit.Assert.fail;
-
-import static test.javafx.css.imagecacheleaktest.Constants.*;
+import static test.javafx.css.imagecacheleaktest.Constants.ERROR_IMAGE_VIEW;
+import static test.javafx.css.imagecacheleaktest.Constants.ERROR_INCORRECT_GC;
+import static test.javafx.css.imagecacheleaktest.Constants.ERROR_LEAK;
+import static test.javafx.css.imagecacheleaktest.Constants.ERROR_NONE;
+import java.util.ArrayList;
+import org.junit.Test;
 
 /**
  * Unit test for verifying leak in CSS styles ImageCache.

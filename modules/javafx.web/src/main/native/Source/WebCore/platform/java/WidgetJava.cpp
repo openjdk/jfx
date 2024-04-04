@@ -193,7 +193,7 @@ IntPoint Widget::convertFromContainingWindowToRoot(const Widget*, const IntPoint
     return point;
 }
 
-void Widget::paint(GraphicsContext&, const IntRect&, SecurityOriginPaintPolicy, EventRegionContext*)
+void Widget::paint(GraphicsContext&, const IntRect&, SecurityOriginPaintPolicy policy, RegionContext*)
 {
 /*
     JNIEnv* env = WTF::GetJavaEnv();

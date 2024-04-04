@@ -97,11 +97,13 @@ public:
     bool isGridIntegerRepeatValue() const { return m_classType == GridIntegerRepeatClass; }
     bool isGridLineNamesValue() const { return m_classType == GridLineNamesClass; }
     bool isGridTemplateAreasValue() const { return m_classType == GridTemplateAreasClass; }
+    bool isImageSetOptionValue() const { return m_classType == ImageSetOptionClass; }
     bool isImageSetValue() const { return m_classType == ImageSetClass; }
     bool isImageValue() const { return m_classType == ImageClass; }
     bool isInsetShape() const { return m_classType == InsetShapeClass; }
     bool isLineBoxContainValue() const { return m_classType == LineBoxContainClass; }
     bool isLinearGradientValue() const { return m_classType == LinearGradientClass; }
+    bool isLinearTimingFunctionValue() const { return m_classType == LinearTimingFunctionClass; }
     bool isNamedImageValue() const { return m_classType == NamedImageClass; }
     bool isOffsetRotateValue() const { return m_classType == OffsetRotateClass; }
     bool isPair() const { return m_classType == ValuePairClass; }
@@ -185,6 +187,7 @@ protected:
 
         // Image classes.
         ImageClass,
+        ImageSetOptionClass,
         CursorImageClass,
 
         // Image generator classes.
@@ -204,6 +207,7 @@ protected:
         PrefixedRadialGradientClass,
 
         // Timing function classes.
+        LinearTimingFunctionClass,
         CubicBezierTimingFunctionClass,
         SpringTimingFunctionClass,
         StepsTimingFunctionClass,
@@ -228,6 +232,7 @@ protected:
         FontStyleWithAngleClass,
         FontVariantAlternatesClass,
         FontVariationClass,
+        GridLineNamesClass,
         GridTemplateAreasClass,
         InsetShapeClass,
         LineBoxContainClass,
@@ -248,7 +253,6 @@ protected:
         FunctionClass,
         GridAutoRepeatClass,
         GridIntegerRepeatClass,
-        GridLineNamesClass,
         ImageSetClass,
         PolygonClass,
         SubgridClass,

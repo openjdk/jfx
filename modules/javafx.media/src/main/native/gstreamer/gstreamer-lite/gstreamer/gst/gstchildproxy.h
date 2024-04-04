@@ -119,6 +119,10 @@ GST_API
 GObject * gst_child_proxy_get_child_by_name  (GstChildProxy * parent, const gchar * name);
 
 GST_API
+GObject * gst_child_proxy_get_child_by_name_recurse (GstChildProxy * child_proxy,
+                                                     const gchar *name);
+
+GST_API
 guint     gst_child_proxy_get_children_count (GstChildProxy * parent);
 
 GST_API

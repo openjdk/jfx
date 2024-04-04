@@ -28,6 +28,43 @@
 
 namespace WebCore {
 
+void RequestedScrollData::merge(RequestedScrollData&& other)
+{
+    if (other.requestType == ScrollRequestType::CancelAnimatedScroll && animated == ScrollIsAnimated::No) {
+        // Carry over the previously requested scroll position so that we can set `requestedDataBeforeAnimatedScroll`
+        // below in the case where the cancelled animated scroll is immediately followed by another animated scroll.
+        other.scrollPositionOrDelta = scrollPositionOrDelta;
+    } else if ((other.requestType == ScrollRequestType::PositionUpdate || other.requestType == ScrollRequestType::DeltaUpdate) && other.animated == ScrollIsAnimated::Yes) {
+        switch (animated) {
+        case ScrollIsAnimated::No:
+            other.requestedDataBeforeAnimatedScroll = { requestType, scrollPositionOrDelta, scrollType, clamping };
+            break;
+        case ScrollIsAnimated::Yes:
+            other.requestedDataBeforeAnimatedScroll = requestedDataBeforeAnimatedScroll;
+            break;
+        }
+    } else if (other.requestType == ScrollRequestType::DeltaUpdate && animated == ScrollIsAnimated::No) {
+        switch (requestType) {
+        case ScrollRequestType::PositionUpdate: {
+            other.requestType = ScrollRequestType::PositionUpdate;
+            other.scrollPositionOrDelta = std::get<FloatPoint>(scrollPositionOrDelta) + std::get<FloatSize>(other.scrollPositionOrDelta);
+            break;
+        }
+        case ScrollRequestType::DeltaUpdate:
+            std::get<FloatSize>(other.scrollPositionOrDelta) += std::get<FloatSize>(scrollPositionOrDelta);
+            break;
+        default:
+            break;
+        }
+    }
+    *this = WTFMove(other);
+}
+
+FloatPoint RequestedScrollData::destinationPosition(const FloatPoint& currentScrollPosition) const
+{
+    return requestType == ScrollRequestType::DeltaUpdate ? (currentScrollPosition + std::get<FloatSize>(scrollPositionOrDelta)) : std::get<FloatPoint>(scrollPositionOrDelta);
+}
+
 TextStream& operator<<(TextStream& ts, SynchronousScrollingReason reason)
 {
     switch (reason) {
@@ -126,17 +163,17 @@ TextStream& operator<<(TextStream& ts, ViewportRectStability stability)
 
 TextStream& operator<<(TextStream& ts, WheelEventHandlingResult result)
 {
-    ts << "steps" << result.steps << " was handled " << result.wasHandled;
+    ts << "steps " << result.steps << " was handled " << result.wasHandled;
     return ts;
 }
 
 TextStream& operator<<(TextStream& ts, WheelEventProcessingSteps steps)
 {
     switch (steps) {
-    case WheelEventProcessingSteps::ScrollingThread: ts << "scrolling thread"; break;
-    case WheelEventProcessingSteps::MainThreadForScrolling: ts << "main thread scrolling"; break;
-    case WheelEventProcessingSteps::MainThreadForNonBlockingDOMEventDispatch: ts << "main thread non-blocking DOM event dispatch"; break;
-    case WheelEventProcessingSteps::MainThreadForBlockingDOMEventDispatch: ts << "main thread blocking DOM event dispatch"; break;
+    case WheelEventProcessingSteps::AsyncScrolling: ts << "async scrolling"; break;
+    case WheelEventProcessingSteps::SynchronousScrolling: ts << "synchronous scrolling"; break;
+    case WheelEventProcessingSteps::NonBlockingDOMEventDispatch: ts << "non-blocking DOM event dispatch"; break;
+    case WheelEventProcessingSteps::BlockingDOMEventDispatch: ts << "blocking DOM event dispatch"; break;
     }
     return ts;
 }
@@ -149,6 +186,43 @@ TextStream& operator<<(TextStream& ts, ScrollUpdateType type)
     case ScrollUpdateType::AnimatedScrollDidEnd: ts << "animated scroll did end"; break;
     case ScrollUpdateType::WheelEventScrollWillStart: ts << "wheel event scroll will start"; break;
     case ScrollUpdateType::WheelEventScrollDidEnd: ts << "wheel event scroll did end"; break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(WTF::TextStream& ts, ScrollRequestType type)
+{
+    switch (type) {
+    case ScrollRequestType::CancelAnimatedScroll: ts << "cancel animated scroll"; break;
+    case ScrollRequestType::PositionUpdate: ts << "position update"; break;
+    case ScrollRequestType::DeltaUpdate: ts << "delta update"; break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, RequestedScrollData requestedScrollData)
+{
+    ts.dumpProperty("requested-type", requestedScrollData.requestType);
+
+    if (requestedScrollData.requestType != ScrollRequestType::CancelAnimatedScroll) {
+        if (requestedScrollData.requestType == ScrollRequestType::DeltaUpdate)
+            ts.dumpProperty("requested-scroll-delta", std::get<FloatSize>(requestedScrollData.scrollPositionOrDelta));
+        else
+            ts.dumpProperty("requested-scroll-position", std::get<FloatPoint>(requestedScrollData.scrollPositionOrDelta));
+        ts.dumpProperty("requested-scroll-position-is-programatic", requestedScrollData.scrollType);
+        ts.dumpProperty("requested-scroll-position-clamping", requestedScrollData.clamping);
+        ts.dumpProperty("requested-scroll-position-animated", requestedScrollData.animated == ScrollIsAnimated::Yes);
+        if (requestedScrollData.requestedDataBeforeAnimatedScroll) {
+            auto oldType = std::get<0>(*requestedScrollData.requestedDataBeforeAnimatedScroll);
+            ts.dumpProperty("requested-scroll-position-old-data-type", oldType);
+
+            if (oldType == ScrollRequestType::DeltaUpdate)
+                ts.dumpProperty("requested-scroll-position-old-delta", std::get<FloatSize>(std::get<1>(*requestedScrollData.requestedDataBeforeAnimatedScroll)));
+            else
+                ts.dumpProperty("requested-scroll-position-old-position", std::get<FloatPoint>(std::get<1>(*requestedScrollData.requestedDataBeforeAnimatedScroll)));
+            ts.dumpProperty("requested-scroll-position-old-data-is-programatic", std::get<2>(*requestedScrollData.requestedDataBeforeAnimatedScroll));
+            ts.dumpProperty("requested-scroll-position-old-data-animated", std::get<3>(*requestedScrollData.requestedDataBeforeAnimatedScroll));
+        }
     }
     return ts;
 }

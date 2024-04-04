@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,16 @@
 
 package test.javafx.scene.shape.meshmanagercacheleaktest;
 
-import java.util.ArrayList;
-
-import javafx.application.ConditionalFeature;
-import javafx.application.Platform;
-
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.Assert;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
-
-import static test.javafx.scene.shape.meshmanagercacheleaktest.Constants.*;
+import static test.javafx.scene.shape.meshmanagercacheleaktest.Constants.ERROR_LAUNCH;
+import static test.javafx.scene.shape.meshmanagercacheleaktest.Constants.ERROR_NONE;
+import static test.javafx.scene.shape.meshmanagercacheleaktest.Constants.ERROR_OOM;
+import java.util.ArrayList;
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * Unit test for verifying leak with cache of TriangleMesh in PredefinedMeshManager.

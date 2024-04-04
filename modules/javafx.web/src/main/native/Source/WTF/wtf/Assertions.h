@@ -47,6 +47,10 @@
 #include <stdlib.h>
 #include <wtf/ExportMacros.h>
 
+#if OS(DARWIN) && USE(APPLE_INTERNAL_SDK)
+#include <wtf/spi/darwin/AbortWithReasonSPI.h>
+#endif
+
 #if USE(OS_LOG)
 #include <os/log.h>
 #endif
@@ -686,7 +690,7 @@ constexpr bool assertionFailureDueToUnreachableCode = false;
 #define RELEASE_ASSERT(assertion, ...) ASSERT(assertion, __VA_ARGS__)
 #define RELEASE_ASSERT_WITH_MESSAGE(assertion, ...) ASSERT_WITH_MESSAGE(assertion, __VA_ARGS__)
 #define RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(assertion) ASSERT_WITH_SECURITY_IMPLICATION(assertion)
-#define RELEASE_ASSERT_NOT_REACHED() ASSERT_NOT_REACHED()
+#define RELEASE_ASSERT_NOT_REACHED(...) ASSERT_NOT_REACHED(__VA_ARGS__)
 #define RELEASE_ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT() ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT()
 #define RELEASE_ASSERT_UNDER_CONSTEXPR_CONTEXT(assertion) ASSERT_UNDER_CONSTEXPR_CONTEXT(assertion)
 
@@ -795,9 +799,7 @@ inline void compilerFenceForCrash()
 
 // This is useful if you are going to stuff data into registers before crashing, like the
 // crashWithInfo functions below.
-#if COMPILER(MSVC) || !VA_OPT_SUPPORTED
-// FIXME: Re-check whether MSVC 2020 supports __VA_OPT__ and remove the special
-//        casing once older versions of the compiler are no longer supported.
+#if !VA_OPT_SUPPORTED
 #define CRASH_WITH_INFO(...) do { \
         WTF::isIntegralOrPointerType(__VA_ARGS__); \
         compilerFenceForCrash(); \
@@ -824,7 +826,7 @@ inline void compilerFenceForCrash()
 
 #endif /* __cplusplus */
 
-#if USE(APPLE_INTERNAL_SDK)
+#if OS(DARWIN) && USE(APPLE_INTERNAL_SDK)
 #define CRASH_WITH_EXTRA_SECURITY_IMPLICATION_AND_INFO(abortReason, abortMsg, ...) do { \
         if (g_wtfConfig.useSpecialAbortForExtraSecurityImplications) \
             abort_with_reason(OS_REASON_WEBKIT, abortReason, abortMsg, OS_REASON_FLAG_SECURITY_SENSITIVE); \

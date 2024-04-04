@@ -25,6 +25,8 @@
 
 #import "GlassFullscreenWindow.h"
 
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 @implementation GlassFullscreenWindow : NSWindow
 
 - (id)initWithContentRect:(NSRect)contentRect withHostView:(NSView *)hostView withView:(NSView *)view withScreen:(NSScreen *)screen withPoint:(NSPoint)p

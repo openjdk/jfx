@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import javafx.scene.control.skin.TreeCellSkin;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -101,6 +102,8 @@ public class TreeViewTest {
     private TreeItem<String> child1;
     private TreeItem<String> child2;
     private TreeItem<String> child3;
+
+    private StageLoader stageLoader;
 
     // sample data #1
     private TreeItem<String> myCompanyRootNode;
@@ -181,6 +184,10 @@ public class TreeViewTest {
     @After
     public void cleanup() {
         Thread.currentThread().setUncaughtExceptionHandler(null);
+
+        if (stageLoader != null) {
+            stageLoader.dispose();
+        }
     }
 
     private void installChildren() {
@@ -800,6 +807,9 @@ public class TreeViewTest {
         root.setExpanded(true);
 
         final TreeView<RT_22463_Person> tree = new TreeView<>();
+
+        stageLoader = new StageLoader(tree);
+
         tree.setRoot(root);
 
         // before the change things display fine
@@ -812,6 +822,9 @@ public class TreeViewTest {
         root.getChildren().addAll(
                 new TreeItem<>(p1),
                 new TreeItem<>(p2));
+
+        Toolkit.getToolkit().firePulse();
+
         VirtualFlowTestUtils.assertCellTextEquals(tree, 1, "name1");
         VirtualFlowTestUtils.assertCellTextEquals(tree, 2, "name2");
 
@@ -827,6 +840,53 @@ public class TreeViewTest {
         root.getChildren().setAll(
                 new TreeItem<>(new_p1),
                 new TreeItem<>(new_p2));
+
+        Toolkit.getToolkit().firePulse();
+
+        VirtualFlowTestUtils.assertCellTextEquals(tree, 1, "updated name1");
+        VirtualFlowTestUtils.assertCellTextEquals(tree, 2, "updated name2");
+    }
+
+    @Test public void testSetChildrenShouldUpdateTheCells() {
+        RT_22463_Person rootPerson = new RT_22463_Person();
+        rootPerson.setName("Root");
+        TreeItem<RT_22463_Person> root = new TreeItem<>(rootPerson);
+        root.setExpanded(true);
+
+        final TreeView<RT_22463_Person> tree = new TreeView<>();
+
+        stageLoader = new StageLoader(tree);
+
+        tree.setRoot(root);
+
+        RT_22463_Person p1 = new RT_22463_Person();
+        p1.setId(1L);
+        p1.setName("name1");
+        RT_22463_Person p2 = new RT_22463_Person();
+        p2.setId(2L);
+        p2.setName("name2");
+        root.getChildren().addAll(
+                new TreeItem<>(p1),
+                new TreeItem<>(p2));
+
+        Toolkit.getToolkit().firePulse();
+
+        VirtualFlowTestUtils.assertCellTextEquals(tree, 1, "name1");
+        VirtualFlowTestUtils.assertCellTextEquals(tree, 2, "name2");
+
+        // Replace all TreeItems by the new ones. Cells should get updated.
+        RT_22463_Person newP1 = new RT_22463_Person();
+        newP1.setId(1L);
+        newP1.setName("updated name1");
+        RT_22463_Person newP2 = new RT_22463_Person();
+        newP2.setId(2L);
+        newP2.setName("updated name2");
+        root.getChildren().setAll(
+                new TreeItem<>(newP1),
+                new TreeItem<>(newP2));
+
+        Toolkit.getToolkit().firePulse();
+
         VirtualFlowTestUtils.assertCellTextEquals(tree, 1, "updated name1");
         VirtualFlowTestUtils.assertCellTextEquals(tree, 2, "updated name2");
     }
@@ -2280,6 +2340,94 @@ public class TreeViewTest {
 
         assertEquals(1, rt_37853_cancelCount);
         assertEquals(0, rt_37853_commitCount);
+
+        sl.dispose();
+    }
+
+    @Test
+    public void testTreeViewRemainsFocusedAfterEditCancel() {
+        treeView.setCellFactory(TextFieldTreeCell.forTreeView());
+        treeView.setEditable(true);
+        treeView.setRoot(new TreeItem<>("Root"));
+        treeView.getRoot().setExpanded(true);
+        treeView.setShowRoot(false);
+
+        TreeItem<String> item = new TreeItem<>("John");
+        treeView.getRoot().getChildren().add(item);
+
+        StageLoader sl = new StageLoader(new Button(), treeView);
+        treeView.requestFocus();
+        assertTrue(treeView.isFocused());
+
+        TreeCell cell = (TreeCell) VirtualFlowTestUtils.getCell(treeView, 0);
+        assertTrue(cell.getSkin() instanceof TreeCellSkin);
+        assertNull(cell.getGraphic());
+        assertEquals("John", cell.getText());
+
+        treeView.edit(item);
+
+        Toolkit.getToolkit().firePulse();
+        assertNotNull(cell.getGraphic());
+        assertTrue(cell.getGraphic() instanceof TextField);
+
+        TextField textField = (TextField) cell.getGraphic();
+        assertEquals("John", textField.getText());
+
+        textField.setText("Andrew");
+        textField.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertTrue(textField.isFocused());
+        assertFalse(treeView.isFocused());
+
+        KeyEventFirer keyboard = new KeyEventFirer(textField);
+        keyboard.doKeyPress(KeyCode.ESCAPE);
+
+        assertEquals("John", cell.getText());
+        assertTrue(treeView.isFocused());
+
+        sl.dispose();
+    }
+
+    @Test
+    public void testTreeViewRemainsFocusedAfterEditCommit() {
+        treeView.setCellFactory(TextFieldTreeCell.forTreeView());
+        treeView.setEditable(true);
+        treeView.setRoot(new TreeItem<>("Root"));
+        treeView.getRoot().setExpanded(true);
+        treeView.setShowRoot(false);
+
+        TreeItem<String> item = new TreeItem<>("John");
+        treeView.getRoot().getChildren().add(item);
+
+        StageLoader sl = new StageLoader(new Button(), treeView);
+        treeView.requestFocus();
+        assertTrue(treeView.isFocused());
+
+        TreeCell cell = (TreeCell) VirtualFlowTestUtils.getCell(treeView, 0);
+        assertTrue(cell.getSkin() instanceof TreeCellSkin);
+        assertNull(cell.getGraphic());
+        assertEquals("John", cell.getText());
+
+        treeView.edit(item);
+
+        Toolkit.getToolkit().firePulse();
+        assertNotNull(cell.getGraphic());
+        assertTrue(cell.getGraphic() instanceof TextField);
+
+        TextField textField = (TextField) cell.getGraphic();
+        assertEquals("John", textField.getText());
+
+        textField.setText("Andrew");
+        textField.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertTrue(textField.isFocused());
+        assertFalse(treeView.isFocused());
+
+        KeyEventFirer keyboard = new KeyEventFirer(textField);
+        keyboard.doKeyPress(KeyCode.ENTER);
+
+        assertEquals("Andrew", cell.getText());
+        assertTrue(treeView.isFocused());
 
         sl.dispose();
     }

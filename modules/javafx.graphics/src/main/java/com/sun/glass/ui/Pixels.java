@@ -85,17 +85,7 @@ public abstract class Pixels {
     private final float scaley;
 
     protected Pixels(final int width, final int height, final ByteBuffer pixels) {
-        this.width = width;
-        this.height = height;
-        this.bytesPerComponent = 1;
-        this.bytes = pixels.slice();
-        if ((this.width <= 0) || (this.height <= 0) || ((this.width * this.height * 4) > this.bytes.capacity())) {
-            throw new IllegalArgumentException("Too small byte buffer size "+this.width+"x"+this.height+" ["+(this.width*this.height*4)+"] > "+this.bytes.capacity());
-        }
-
-        this.ints = null;
-        this.scalex = 1.0f;
-        this.scaley = 1.0f;
+        this(width, height, pixels, 1.0f, 1.0f);
     }
 
     protected Pixels(final int width, final int height, final ByteBuffer pixels, float scalex, float scaley) {
@@ -103,7 +93,14 @@ public abstract class Pixels {
         this.height = height;
         this.bytesPerComponent = 1;
         this.bytes = pixels.slice();
-        if ((this.width <= 0) || (this.height <= 0) || ((this.width * this.height * 4) > this.bytes.capacity())) {
+
+        if (this.width <= 0 || this.height <= 0 ||
+                this.width > ((Integer.MAX_VALUE / 4) / this.height)) {
+
+            throw new IllegalArgumentException("Invalid width*height");
+        }
+
+        if ((this.width * this.height * 4) > this.bytes.capacity()) {
             throw new IllegalArgumentException("Too small byte buffer size "+this.width+"x"+this.height+" ["+(this.width*this.height*4)+"] > "+this.bytes.capacity());
         }
 
@@ -113,17 +110,7 @@ public abstract class Pixels {
     }
 
     protected Pixels(final int width, final int height, IntBuffer pixels) {
-        this.width = width;
-        this.height = height;
-        this.bytesPerComponent = 4;
-        this.ints = pixels.slice();
-        if ((this.width <= 0) || (this.height <= 0) || ((this.width * this.height) > this.ints.capacity())) {
-            throw new IllegalArgumentException("Too small int buffer size "+this.width+"x"+this.height+" ["+(this.width*this.height)+"] > "+this.ints.capacity());
-        }
-
-        this.bytes = null;
-        this.scalex = 1.0f;
-        this.scaley = 1.0f;
+        this(width, height, pixels, 1.0f, 1.0f);
     }
 
     protected Pixels(final int width, final int height, IntBuffer pixels, float scalex, float scaley) {
@@ -131,7 +118,14 @@ public abstract class Pixels {
         this.height = height;
         this.bytesPerComponent = 4;
         this.ints = pixels.slice();
-        if ((this.width <= 0) || (this.height <= 0) || ((this.width * this.height) > this.ints.capacity())) {
+
+        if (this.width <= 0 || this.height <= 0 ||
+                this.width > ((Integer.MAX_VALUE / 4) / this.height)) {
+
+            throw new IllegalArgumentException("Invalid width*height");
+        }
+
+        if ((this.width * this.height) > this.ints.capacity()) {
             throw new IllegalArgumentException("Too small int buffer size "+this.width+"x"+this.height+" ["+(this.width*this.height)+"] > "+this.ints.capacity());
         }
 
@@ -238,6 +232,7 @@ public abstract class Pixels {
             throw new RuntimeException("Too small buffer.");
         }
         _fillDirectByteBuffer(bb);
+        bb.rewind();
     }
 
     // This method is called from the native code to reduce the number of JNI up-calls.

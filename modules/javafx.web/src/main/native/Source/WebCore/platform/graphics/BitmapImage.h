@@ -88,6 +88,7 @@ public:
 
     EncodedDataStatus encodedDataStatus() const { return m_source->encodedDataStatus(); }
     size_t frameCount() const { return m_source->frameCount(); }
+    size_t primaryFrameIndex() const { return m_source->primaryFrameIndex(); }
     RepetitionCount repetitionCount() const { return m_source->repetitionCount(); }
     String uti() const override { return m_source->uti(); }
     String filenameExtension() const override { return m_source->filenameExtension(); }
@@ -121,8 +122,8 @@ public:
     bool canUseAsyncDecodingForLargeImages() const;
     bool shouldUseAsyncDecodingForAnimatedImages() const;
     void setClearDecoderAfterAsyncFrameRequestForTesting(bool value) { m_clearDecoderAfterAsyncFrameRequestForTesting = value; }
-    void setLargeImageAsyncDecodingEnabledForTesting(bool enabled) { m_largeImageAsyncDecodingEnabledForTesting = enabled; }
-    bool isLargeImageAsyncDecodingEnabledForTesting() const { return m_largeImageAsyncDecodingEnabledForTesting; }
+    void setAsyncDecodingEnabledForTesting(bool enabled) { m_asyncDecodingEnabledForTesting = enabled; }
+    bool isAsyncDecodingEnabledForTesting() const { return m_asyncDecodingEnabledForTesting; }
     void stopAsyncDecodingQueue() { m_source->stopAsyncDecodingQueue(); }
 
     DestinationColorSpace colorSpace() final;
@@ -252,7 +253,7 @@ private:
     bool m_showDebugBackground { false };
 
     bool m_clearDecoderAfterAsyncFrameRequestForTesting { false };
-    bool m_largeImageAsyncDecodingEnabledForTesting { false };
+    bool m_asyncDecodingEnabledForTesting { false };
 
 #if ASSERT_ENABLED || !LOG_DISABLED
     size_t m_lateFrameCount { 0 };

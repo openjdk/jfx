@@ -84,7 +84,13 @@ struct _GstAudioSrcClass {
   gboolean (*unprepare) (GstAudioSrc *src);
   /* close the device */
   gboolean (*close)     (GstAudioSrc *src);
-  /* read samples from the device */
+  /**
+   * GstAudioSrcClass::read:
+   * @data: (type guint8) (array length=length): the sample data
+   * @timestamp: (out): a #GstClockTime
+   *
+   * Read samples from the device.
+   */
   guint    (*read)      (GstAudioSrc *src, gpointer data, guint length,
       GstClockTime *timestamp);
   /* get number of frames queued in the device */

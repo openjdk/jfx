@@ -27,13 +27,12 @@
 #include "DOMTokenList.h"
 #include "Document.h"
 #include "EventHandler.h"
-#include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameLoaderTypes.h"
 #include "HTMLAnchorElement.h"
-#include "HTMLParserIdioms.h"
 #include "KeyboardEvent.h"
 #include "LegacyRenderSVGTransformableContainer.h"
+#include "LocalFrame.h"
 #include "MouseEvent.h"
 #include "PlatformMouseEvent.h"
 #include "RenderSVGInline.h"
@@ -79,18 +78,18 @@ String SVGAElement::title() const
     return SVGElement::title();
 }
 
-void SVGAElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGAElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     if (name == SVGNames::targetAttr) {
-        m_target->setBaseValInternal(value);
+        m_target->setBaseValInternal(newValue);
         return;
     } else if (name == SVGNames::relAttr) {
         if (m_relList)
-            m_relList->associatedAttributeValueChanged(value);
+            m_relList->associatedAttributeValueChanged(newValue);
     }
 
-    SVGGraphicsElement::parseAttribute(name, value);
-    SVGURIReference::parseAttribute(name, value);
+    SVGURIReference::parseAttribute(name, newValue);
+    SVGGraphicsElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGAElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -130,7 +129,7 @@ void SVGAElement::defaultEventHandler(Event& event)
         }
 
         if (MouseEvent::canTriggerActivationBehavior(event)) {
-            String url = stripLeadingAndTrailingHTMLSpaces(href());
+            auto url = href().trim(isASCIIWhitespace);
 
             if (url[0] == '#') {
                 RefPtr targetElement = treeScope().getElementById(url.substringSharingImpl(1));
@@ -233,7 +232,7 @@ SharedStringHash SVGAElement::visitedLinkHash() const
 DOMTokenList& SVGAElement::relList()
 {
     if (!m_relList) {
-        m_relList = makeUnique<DOMTokenList>(*this, SVGNames::relAttr, [](Document&, StringView token) {
+        m_relList = makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, SVGNames::relAttr, [](Document&, StringView token) {
 #if USE(SYSTEM_PREVIEW)
             if (equalLettersIgnoringASCIICase(token, "ar"_s))
                 return true;

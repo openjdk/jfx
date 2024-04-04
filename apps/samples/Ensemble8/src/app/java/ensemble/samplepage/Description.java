@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -31,26 +31,28 @@
  */
 package ensemble.samplepage;
 
-import ensemble.EnsembleApp;
-import ensemble.PlatformFeatures;
-import ensemble.SampleInfo;
-import ensemble.SampleInfo.URL;
-import ensemble.generated.Samples;
+import static ensemble.samplepage.SamplePage.INDENT;
+import static ensemble.samplepage.SamplePageContent.title;
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Insets;
-import javafx.scene.control.*;
+import javafx.scene.control.ContentDisplay;
+import javafx.scene.control.Hyperlink;
+import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
-import javafx.util.Callback;
-import static ensemble.samplepage.SamplePage.INDENT;
-import static ensemble.samplepage.SamplePageContent.title;
-import javafx.application.ConditionalFeature;
-import javafx.application.Platform;
+import ensemble.EnsembleApp;
+import ensemble.PlatformFeatures;
+import ensemble.SampleInfo;
+import ensemble.SampleInfo.URL;
+import ensemble.generated.Samples;
 
 /**
  * Description Section on Sample Page

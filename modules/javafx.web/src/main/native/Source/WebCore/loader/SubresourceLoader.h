@@ -45,13 +45,15 @@ class SecurityOrigin;
 
 class SubresourceLoader final : public ResourceLoader {
 public:
-    WEBCORE_EXPORT static void create(Frame&, CachedResource&, ResourceRequest&&, const ResourceLoaderOptions&, CompletionHandler<void(RefPtr<SubresourceLoader>&&)>&&);
+    WEBCORE_EXPORT static void create(LocalFrame&, CachedResource&, ResourceRequest&&, const ResourceLoaderOptions&, CompletionHandler<void(RefPtr<SubresourceLoader>&&)>&&);
 
     virtual ~SubresourceLoader();
 
     void cancelIfNotFinishing();
     bool isSubresourceLoader() const override;
-    CachedResource* cachedResource() const override { return m_resource.get(); };
+    CachedResource* cachedResource() const override { return m_resource.get(); }
+    CachedResourceHandle<CachedResource> protectedCachedResource() const { return cachedResource(); }
+
     WEBCORE_EXPORT const HTTPHeaderMap* originalHeaders() const;
 
     const SecurityOrigin* origin() const { return m_origin.get(); }
@@ -72,7 +74,7 @@ public:
     void resetRequestCountTracker(CachedResourceLoader& loader, const CachedResource& resource) { m_requestCountTracker = RequestCountTracker { loader, resource }; }
 
 private:
-    SubresourceLoader(Frame&, CachedResource&, const ResourceLoaderOptions&);
+    SubresourceLoader(LocalFrame&, CachedResource&, const ResourceLoaderOptions&);
 
     void init(ResourceRequest&&, CompletionHandler<void(bool)>&&) override;
 

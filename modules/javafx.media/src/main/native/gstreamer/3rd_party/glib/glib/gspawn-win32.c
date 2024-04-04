@@ -3,6 +3,8 @@
  *  Copyright 2000 Red Hat, Inc.
  *  Copyright 2003 Tor Lillqvist
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -62,6 +64,12 @@
 #include <direct.h>
 #include <wchar.h>
 
+#ifdef _MSC_VER
+#ifdef HAVE_VCRUNTIME_H
+#include <vcruntime.h> /* for _UCRT */
+#endif
+#endif
+
 #ifndef GSPAWN_HELPER
 #ifdef G_SPAWN_WIN32_DEBUG
   static int debug = 1;
@@ -107,19 +115,6 @@ enum {
   ARG_COUNT = ARG_PROGRAM
 };
 
-static int
-reopen_noninherited (int fd,
-         int mode)
-{
-  HANDLE filehandle;
-
-  DuplicateHandle (GetCurrentProcess (), (LPHANDLE) _get_osfhandle (fd),
-       GetCurrentProcess (), &filehandle,
-       0, FALSE, DUPLICATE_SAME_ACCESS);
-  close (fd);
-  return _open_osfhandle ((gintptr) filehandle, mode | _O_NOINHERIT);
-}
-
 #ifndef GSPAWN_HELPER
 
 #ifdef _WIN64
@@ -127,6 +122,130 @@ reopen_noninherited (int fd,
 #else
 #define HELPER_PROCESS "gspawn-win32-helper"
 #endif
+
+#ifndef _UCRT
+
+/* The wspawn*e functions are thread-safe only in the Universal
+ * CRT (UCRT). If we are linking against the MSVCRT.dll or the
+ * pre-2015 MSVC runtime (MSVCRXXX.dll), then we have to use a
+ * mutex.
+ */
+
+static GMutex safe_wspawn_e_mutex;
+
+static intptr_t
+safe_wspawnve (int _Mode,
+               const wchar_t *_Filename,
+               const wchar_t *const *_ArgList,
+               const wchar_t *const *_Env)
+{
+  intptr_t ret_val = -1;
+
+  g_mutex_lock (&safe_wspawn_e_mutex);
+  ret_val = _wspawnve (_Mode, _Filename, _ArgList, _Env);
+  g_mutex_unlock (&safe_wspawn_e_mutex);
+
+  return ret_val;
+}
+
+static intptr_t
+safe_wspawnvpe (int _Mode,
+                const wchar_t *_Filename,
+                const wchar_t *const *_ArgList,
+                const wchar_t *const *_Env)
+{
+  intptr_t ret_val = -1;
+
+  g_mutex_lock (&safe_wspawn_e_mutex);
+  ret_val = _wspawnvpe (_Mode, _Filename, _ArgList, _Env);
+  g_mutex_unlock (&safe_wspawn_e_mutex);
+
+  return ret_val;
+}
+
+#else
+
+/**< private >
+ * ensure_cmd_environment:
+ *
+ * Workaround for an issue in the universal C Runtime library (UCRT). This adds
+ * a custom environment variable to this process's environment block that looks
+ * like the cmd.exe's shell-related environment variables, i.e the name starts
+ * with an equal sign character: '='. This is needed because the UCRT may crash
+ * if those environment variables are missing from the calling process's block.
+ *
+ * Reference:
+ *
+ * https://developercommunity.visualstudio.com/t/UCRT-Crash-in-_wspawne-functions/10262748
+ */
+static void
+ensure_cmd_environment (void)
+{
+  static gsize initialization_value = 0;
+
+  if (g_once_init_enter (&initialization_value))
+    {
+      wchar_t *block = GetEnvironmentStringsW ();
+      gboolean have_cmd_environment = FALSE;
+
+      if (block)
+        {
+          const wchar_t *p = block;
+
+          while (*p != L'\0')
+            {
+              if (*p == L'=')
+                {
+                  have_cmd_environment = TRUE;
+                  break;
+                }
+
+              p += wcslen (p) + 1;
+            }
+
+          if (!FreeEnvironmentStringsW (block))
+            g_warning ("%s failed with error code %u",
+                       "FreeEnvironmentStrings",
+                       (guint) GetLastError ());
+        }
+
+      if (!have_cmd_environment)
+        {
+          if (!SetEnvironmentVariableW (L"=GLIB", L"GLIB"))
+            {
+              g_critical ("%s failed with error code %u",
+                          "SetEnvironmentVariable",
+                          (guint) GetLastError ());
+            }
+        }
+
+      g_once_init_leave (&initialization_value, 1);
+    }
+}
+
+static intptr_t
+safe_wspawnve (int                   _mode,
+               const wchar_t *       _filename,
+               const wchar_t *const *_args,
+               const wchar_t *const *_env)
+{
+  ensure_cmd_environment ();
+
+  return _wspawnve (_mode, _filename, _args, _env);;
+}
+
+static intptr_t
+safe_wspawnvpe (int                   _mode,
+                const wchar_t *       _filename,
+                const wchar_t *const *_args,
+                const wchar_t *const *_env)
+{
+  ensure_cmd_environment ();
+
+  return _wspawnvpe (_mode, _filename, _args, _env);
+}
+
+#endif /* _UCRT */
 
 /* This logic has a copy for wchar_t in gspawn-win32-helper.c, protect_wargv() */
 static gchar *
@@ -500,12 +619,12 @@ do_spawn_directly (gint                 *exit_status,
 
   if (flags & G_SPAWN_SEARCH_PATH)
     if (wenvp != NULL)
-      rc = _wspawnvpe (mode, wargv0, (const wchar_t **) wargv, (const wchar_t **) wenvp);
+      rc = safe_wspawnvpe (mode, wargv0, (const wchar_t **) wargv, (const wchar_t **) wenvp);
     else
       rc = _wspawnvp (mode, wargv0, (const wchar_t **) wargv);
   else
     if (wenvp != NULL)
-      rc = _wspawnve (mode, wargv0, (const wchar_t **) wargv, (const wchar_t **) wenvp);
+      rc = safe_wspawnve (mode, wargv0, (const wchar_t **) wargv, (const wchar_t **) wenvp);
     else
       rc = _wspawnv (mode, wargv0, (const wchar_t **) wargv);
 
@@ -618,12 +737,18 @@ fork_exec (gint                  *exit_status,
     {
       if (!make_pipe (stdin_pipe, error))
         goto cleanup_and_fail;
+      if (_g_spawn_invalid_source_fd (stdin_pipe[0], source_fds, n_fds, error) ||
+          _g_spawn_invalid_source_fd (stdin_pipe[1], source_fds, n_fds, error))
+        goto cleanup_and_fail;
       stdin_fd = stdin_pipe[0];
     }
 
   if (stdout_pipe_out != NULL)
     {
       if (!make_pipe (stdout_pipe, error))
+        goto cleanup_and_fail;
+      if (_g_spawn_invalid_source_fd (stdout_pipe[0], source_fds, n_fds, error) ||
+          _g_spawn_invalid_source_fd (stdout_pipe[1], source_fds, n_fds, error))
         goto cleanup_and_fail;
       stdout_fd = stdout_pipe[1];
     }
@@ -632,17 +757,13 @@ fork_exec (gint                  *exit_status,
     {
       if (!make_pipe (stderr_pipe, error))
         goto cleanup_and_fail;
+      if (_g_spawn_invalid_source_fd (stderr_pipe[0], source_fds, n_fds, error) ||
+          _g_spawn_invalid_source_fd (stderr_pipe[1], source_fds, n_fds, error))
+        goto cleanup_and_fail;
       stderr_fd = stderr_pipe[1];
     }
 
   argc = protect_argv (argv, &protected_argv);
-
-  /*
-   * FIXME: Workaround broken spawnvpe functions that SEGV when "=X:="
-   * environment variables are missing. Calling chdir() will set the magic
-   * environment variable again.
-   */
-  _chdir (".");
 
   if (stdin_fd == -1 && stdout_fd == -1 && stderr_fd == -1 &&
       (flags & G_SPAWN_CHILD_INHERITS_STDIN) &&
@@ -663,8 +784,14 @@ fork_exec (gint                  *exit_status,
 
   if (!make_pipe (child_err_report_pipe, error))
     goto cleanup_and_fail;
+  if (_g_spawn_invalid_source_fd (child_err_report_pipe[0], source_fds, n_fds, error) ||
+      _g_spawn_invalid_source_fd (child_err_report_pipe[1], source_fds, n_fds, error))
+    goto cleanup_and_fail;
 
   if (!make_pipe (helper_sync_pipe, error))
+    goto cleanup_and_fail;
+  if (_g_spawn_invalid_source_fd (helper_sync_pipe[0], source_fds, n_fds, error) ||
+      _g_spawn_invalid_source_fd (helper_sync_pipe[1], source_fds, n_fds, error))
     goto cleanup_and_fail;
 
   new_argv = g_new (char *, argc + 1 + ARG_COUNT);
@@ -684,7 +811,10 @@ fork_exec (gint                  *exit_status,
    * helper process, and the started actual user process. As such that
    * shouldn't harm, but it is unnecessary.
    */
-  child_err_report_pipe[0] = reopen_noninherited (child_err_report_pipe[0], _O_RDONLY);
+  child_err_report_pipe[0] = g_win32_reopen_noninherited (
+    child_err_report_pipe[0], _O_RDONLY, error);
+  if (child_err_report_pipe[0] == -1)
+      goto cleanup_and_fail;
 
   if (flags & G_SPAWN_FILE_AND_ARGV_ZERO)
     {
@@ -703,7 +833,10 @@ fork_exec (gint                  *exit_status,
    * process won't read but won't get any EOF either, as it has the
    * write end open itself.
    */
-  helper_sync_pipe[1] = reopen_noninherited (helper_sync_pipe[1], _O_WRONLY);
+  helper_sync_pipe[1] = g_win32_reopen_noninherited (
+    helper_sync_pipe[1], _O_WRONLY, error);
+  if (helper_sync_pipe[1] == -1)
+      goto cleanup_and_fail;
 
   if (stdin_fd != -1)
     {
@@ -838,7 +971,7 @@ fork_exec (gint                  *exit_status,
   g_free (helper_process);
 
   if (wenvp != NULL)
-    rc = _wspawnvpe (P_NOWAIT, whelper, (const wchar_t **) wargv, (const wchar_t **) wenvp);
+    rc = safe_wspawnvpe (P_NOWAIT, whelper, (const wchar_t **) wargv, (const wchar_t **) wenvp);
   else
     rc = _wspawnvp (P_NOWAIT, whelper, (const wchar_t **) wargv);
 
@@ -903,7 +1036,8 @@ switch (helper_report[0])
                                     0, TRUE, DUPLICATE_SAME_ACCESS))
                 {
                   char *emsg = g_win32_error_message (GetLastError ());
-                  g_print("%s\n", emsg);
+                  g_print ("%s\n", emsg);
+                  g_free (emsg);
                   *child_pid = 0;
                 }
             }
@@ -1421,6 +1555,9 @@ g_spawn_command_line_async (const gchar *command_line,
 void
 g_spawn_close_pid (GPid pid)
 {
+  /* CRT functions such as _wspawn* return (HANDLE)-1
+   * on failure, so check also for that value. */
+  if (pid != NULL && pid != (HANDLE) -1)
     CloseHandle (pid);
 }
 

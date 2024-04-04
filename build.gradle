@@ -413,7 +413,7 @@ defineProperty("JAVA", cygpathExe("$JDK_HOME/bin/java"))
 defineProperty("JAVAC", cygpathExe("$JDK_HOME/bin/javac"))
 defineProperty("JAVADOC", cygpathExe("$JDK_HOME/bin/javadoc"))
 defineProperty("JMOD", cygpathExe("$JDK_HOME/bin/jmod"))
-defineProperty("JDK_DOCS", "https://docs.oracle.com/en/java/javase/17/docs/api/")
+defineProperty("JDK_DOCS", "https://docs.oracle.com/en/java/javase/21/docs/api/")
 defineProperty("JDK_JMODS", cygpath(System.getenv("JDK_JMODS")) ?: cygpath(System.getenv("JDK_HOME") + "/jmods"))
 
 defineProperty("javaRuntimeVersion", System.getProperty("java.runtime.version"))
@@ -425,7 +425,7 @@ defineProperty("libAVRepositoryURL", "https://github.com/libav/libav/archive")
 defineProperty("FFmpegRepositoryURL", "https://www.ffmpeg.org/releases/")
 defineProperty("icuRepositoryURL", "https://github.com/unicode-org/icu/releases/")
 
-defineProperty("icuVersion", "73.1")
+defineProperty("icuVersion", "74.2")
 
 loadProperties("$projectDir/build.properties")
 
@@ -497,11 +497,11 @@ defineProperty("BUILD_TOOLS_DOWNLOAD_SCRIPT", "")
 
 // Define the SWT.jar that we are going to have to download during the build process based
 // on what platform we are compiling from (not based on our target).
-ext.SWT_FILE_NAME = IS_MAC ? "org.eclipse.swt.cocoa.macosx.x86_64_3.105.3.v20170228-0512" :
-    IS_WINDOWS && IS_64 ? "org.eclipse.swt.win32.win32.x86_64_3.105.3.v20170228-0512" :
-    IS_WINDOWS && !IS_64 ? "org.eclipse.swt.win32.win32.x86_3.105.3.v20170228-0512" :
-    IS_LINUX && IS_64 ? "org.eclipse.swt.gtk.linux.x86_64_3.105.3.v20170228-0512" :
-    IS_LINUX && !IS_64 ? "org.eclipse.swt.gtk.linux.x86_3.105.3.v20170228-0512" : ""
+ext.SWT_FILE_NAME =
+    IS_MAC && IS_AARCH64 ? "org.eclipse.swt.cocoa.macosx.aarch64_3.124.200.v20231113-1355" :
+    IS_MAC && !IS_AARCH64 ? "org.eclipse.swt.cocoa.macosx.x86_64_3.124.200.v20231113-1355" :
+    IS_WINDOWS ? "org.eclipse.swt.win32.win32.x86_64_3.124.200.v20231113-1355" :
+    IS_LINUX ? "org.eclipse.swt.gtk.linux.x86_64_3.124.200.v20231113-1355" : ""
 
 // Specifies whether to run full tests (true) or smoke tests (false)
 defineProperty("FULL_TEST", "false")
@@ -554,6 +554,9 @@ ext.IS_LINT = LINT != "none"
 
 defineProperty("DOC_LINT", "all")
 ext.IS_DOC_LINT = DOC_LINT != ""
+
+defineProperty("DOC_WERROR", "true")
+ext.IS_DOC_WERROR = Boolean.parseBoolean(DOC_WERROR)
 
 // Specifies whether to use the "useDepend" option when compiling Java sources
 defineProperty("USE_DEPEND", "true")
@@ -1996,7 +1999,7 @@ allprojects {
         repositories {
             mavenCentral()
             ivy {
-                url "https://download.eclipse.org/eclipse/updates/4.6/R-4.6.3-201703010400/plugins/"
+                url "https://download.eclipse.org/eclipse/updates/4.30/R-4.30-202312010110/plugins/"
                 metadataSources {
                     artifact()
                 }
@@ -4278,6 +4281,7 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     }
     options.addBooleanOption("XDignore.symbol.file").setValue(true);
     options.addBooleanOption("Xdoclint:${DOC_LINT}").setValue(IS_DOC_LINT);
+    options.addBooleanOption("Werror").setValue(IS_DOC_WERROR);
     options.addBooleanOption("html5").setValue(true);
     options.addBooleanOption("javafx").setValue(true);
     options.addBooleanOption("use").setValue(true);
@@ -5667,9 +5671,7 @@ compileTargets { t ->
                         }
                         args("--legal-notices")
                         args(srcLegalDir)
-                        // https://bugs.openjdk.org/browse/JDK-8278766
-                        def status = compareJdkVersion(jdkVersion, "19")
-                        if (sourceDateEpoch != null && status >= 0) {
+                        if (sourceDateEpoch != null) {
                             args("--date", extendedTimestamp)
                         }
                         args(jmodFile)

@@ -24,11 +24,12 @@
 
 #include "AffineTransform.h"
 #include "ElementInlines.h"
-#include "Frame.h"
 #include "HTMLImageElement.h"
 #include "HTMLMapElement.h"
 #include "HTMLParserIdioms.h"
 #include "HitTestResult.h"
+#include "LocalFrame.h"
+#include "NodeName.h"
 #include "Path.h"
 #include "RenderImage.h"
 #include "RenderView.h"
@@ -53,27 +54,33 @@ Ref<HTMLAreaElement> HTMLAreaElement::create(const QualifiedName& tagName, Docum
     return adoptRef(*new HTMLAreaElement(tagName, document));
 }
 
-void HTMLAreaElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLAreaElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == shapeAttr) {
-        if (equalLettersIgnoringASCIICase(value, "default"_s))
+    switch (name.nodeName()) {
+    case AttributeNames::shapeAttr:
+        if (equalLettersIgnoringASCIICase(newValue, "default"_s))
             m_shape = Default;
-        else if (equalLettersIgnoringASCIICase(value, "circle"_s) || equalLettersIgnoringASCIICase(value, "circ"_s))
+        else if (equalLettersIgnoringASCIICase(newValue, "circle"_s) || equalLettersIgnoringASCIICase(newValue, "circ"_s))
             m_shape = Circle;
-        else if (equalLettersIgnoringASCIICase(value, "poly"_s) || equalLettersIgnoringASCIICase(value, "polygon"_s))
+        else if (equalLettersIgnoringASCIICase(newValue, "poly"_s) || equalLettersIgnoringASCIICase(newValue, "polygon"_s))
             m_shape = Poly;
         else {
             // The missing value default is the rectangle state.
             m_shape = Rect;
         }
         invalidateCachedRegion();
-    } else if (name == coordsAttr) {
-        m_coords = parseHTMLListOfOfFloatingPointNumberValues(value.string());
+        break;
+    case AttributeNames::coordsAttr:
+        m_coords = parseHTMLListOfOfFloatingPointNumberValues(newValue.string());
         invalidateCachedRegion();
-    } else if (name == altAttr) {
+        break;
+    case AttributeNames::altAttr:
         // Do nothing.
-    } else
-        HTMLAnchorElement::parseAttribute(name, value);
+        break;
+    default:
+        HTMLAnchorElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
+        break;
+    }
 }
 
 void HTMLAreaElement::invalidateCachedRegion()
@@ -167,7 +174,7 @@ Path HTMLAreaElement::getRegion(const LayoutSize& size) const
             if (m_coords.size() >= 3) {
                 double radius = m_coords[2];
                 if (radius > 0)
-                    path.addEllipse(FloatRect(m_coords[0] - radius, m_coords[1] - radius, 2 * radius, 2 * radius));
+                    path.addEllipseInRect(FloatRect(m_coords[0] - radius, m_coords[1] - radius, 2 * radius, 2 * radius));
             }
             break;
         case Rect:

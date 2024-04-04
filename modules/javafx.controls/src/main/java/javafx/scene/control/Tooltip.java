@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -420,7 +420,7 @@ public class Tooltip extends PopupControl {
         if (imageUrl == null) {
             imageUrl = new StyleableStringProperty() {
                 // If imageUrlProperty is invalidated, this is the origin of the style that
-                // triggered the invalidation. This is used in the invaildated() method where the
+                // triggered the invalidation. This is used in the invalidated() method where the
                 // value of super.getStyleOrigin() is not valid until after the call to set(v) returns,
                 // by which time invalidated will have been called.
                 // This value is initialized to USER in case someone calls set on the imageUrlProperty, which

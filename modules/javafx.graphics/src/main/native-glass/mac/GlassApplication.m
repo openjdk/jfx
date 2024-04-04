@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,9 +35,13 @@
 #import "GlassScreen.h"
 #import "GlassWindow.h"
 #import "GlassTouches.h"
+#import "PlatformSupport.h"
 
 #import "ProcessInfo.h"
 #import <Security/SecRequirement.h>
+#import <Carbon/Carbon.h>
+
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 //#define VERBOSE
 #ifndef VERBOSE
@@ -58,6 +62,21 @@ static BOOL triggerReactivation = NO;
 static BOOL disableSyncRendering = NO;
 static BOOL firstActivation = YES;
 static BOOL shouldReactivate = NO;
+
+// Custom NSRunLoopMode constant that matches the one used by AWT in its
+// doAWTRunLoopImpl method. This is not formally documented yet, but all
+// versions of the JDK use it. We might consider a request to document it.
+static NSString* JavaRunLoopMode = @"AWTRunLoopMode";
+
+// List of allowable runLoop modes that Java runnables can run in.
+// This is used when calling performSelectorOnMainThread from
+// the JNI _invokeAndWait and _submitForLaterInvocation methods.
+// We include JavaRunLoopMode in the list of allowable run modes in case
+// we are running on the AWT event thread. This will allow JavaFX
+// runnables to be scheduled when AWT is running doAWTRunLoopImpl
+// on the AppKit thread (which it does for IME callbacks) so that we
+// don't deadlock.
+static NSArray<NSString*> *runLoopModes = nil;
 
 #ifdef STATIC_BUILD
 jint JNICALL JNI_OnLoad_glass(JavaVM *vm, void *reserved)
@@ -158,6 +177,25 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     }
 }
 
+- (void)platformPreferencesDidChange {
+    // Some dynamic colors like NSColor.controlAccentColor don't seem to be reliably updated
+    // at the exact moment AppleColorPreferencesChangedNotification is received.
+    // As a workaround, we wait for a short period of time (one second seems sufficient) before
+    // we query the updated platform preferences.
+
+    [NSObject cancelPreviousPerformRequestsWithTarget:self
+              selector:@selector(updatePlatformPreferences)
+              object:nil];
+
+    [self performSelector:@selector(updatePlatformPreferences)
+          withObject:nil
+          afterDelay:1.0];
+}
+
+- (void)updatePlatformPreferences {
+    [PlatformSupport updatePreferences:self->jApplication];
+}
+
 - (void)applicationWillFinishLaunching:(NSNotification *)aNotification
 {
     LOG("GlassApplication:applicationWillFinishLaunching");
@@ -196,6 +234,16 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
                                                                  selector:@selector(GlassApplicationDidChangeScreenParameters)
                                                                      name:NSApplicationDidChangeScreenParametersNotification
                                                                    object:nil];
+
+                        [[NSDistributedNotificationCenter defaultCenter] addObserver:self
+                                                                         selector:@selector(platformPreferencesDidChange)
+                                                                         name:@"AppleInterfaceThemeChangedNotification"
+                                                                         object:nil];
+
+                        [[NSDistributedNotificationCenter defaultCenter] addObserver:self
+                                                                         selector:@selector(platformPreferencesDidChange)
+                                                                         name:@"AppleColorPreferencesChangedNotification"
+                                                                         object:nil];
 
                         // localMonitor = [NSEvent addLocalMonitorForEventsMatchingMask: NSRightMouseDownMask
                         //                                                      handler:^(NSEvent *incomingEvent) {
@@ -247,13 +295,16 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     [pool drain];
     GLASS_CHECK_EXCEPTION(env);
 
-     if (!NSApp.isActive && requiresActivation) {
+    if (!NSApp.isActive && requiresActivation) {
         // As of macOS 14, application gets to the foreground,
         // but it doesn't get activated, so this is needed:
         LOG("-> need to active application");
         dispatch_async(dispatch_get_main_queue(), ^{
-            [NSApp activate];
+            [NSApp performSelector: @selector(activate)];
         });
+        // TODO: performSelector is used only to avoid a compiler
+        // warning with the 13.3 SDK. After updating to SDK 14
+        // this can be converted to a standard call.
     }
 }
 
@@ -538,6 +589,19 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
             }
         }
 
+        // List of RunLoopModes in which we will run runnables passed
+        // to _invokeAndWait and _submitForLaterInvocation. This includes
+        // JavaRunLoopMode to avoid a possible deadlock with AWT.
+        // There is no harm always adding it, since it will have no
+        // effect if the run loop that receives this message does not
+        // specify it.
+        runLoopModes = [[NSArray alloc] initWithObjects:
+            NSDefaultRunLoopMode,
+            NSModalPanelRunLoopMode,
+            NSEventTrackingRunLoopMode,
+            JavaRunLoopMode,
+            nil];
+
         // Determine if we're running embedded (in AWT, SWT, elsewhere)
         NSApplication *app = [NSApplicationFX sharedApplication];
         isEmbedded = ![app isKindOfClass:[NSApplicationFX class]];
@@ -583,28 +647,25 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
                 char *path = getenv([property UTF8String]);
                 if (path != NULL)
                 {
+                    BOOL isFolder = NO;
                     NSString *overridenPath = [NSString stringWithFormat:@"%s", path];
-                    if ([[NSFileManager defaultManager] fileExistsAtPath:overridenPath isDirectory:NO] == YES)
+                    if ([[NSFileManager defaultManager] fileExistsAtPath:overridenPath isDirectory:&isFolder] && !isFolder)
                     {
                         iconPath = overridenPath;
                     }
                 }
-                if ([[NSFileManager defaultManager] fileExistsAtPath:iconPath isDirectory:NO] == NO)
-                {
-                    // try again using Java generic icon (this icon might go away eventually ?)
-                    iconPath = [NSString stringWithFormat:@"%s", "/System/Library/Frameworks/JavaVM.framework/Resources/GenericApp.icns"];
-                }
 
                 NSImage *image = nil;
                 {
-                    if ([[NSFileManager defaultManager] fileExistsAtPath:iconPath isDirectory:NO] == YES)
+                    BOOL isFolder = NO;
+                    if ([[NSFileManager defaultManager] fileExistsAtPath:iconPath isDirectory:&isFolder] && !isFolder)
                     {
                         image = [[NSImage alloc] initWithContentsOfFile:iconPath];
                     }
                     if (image == nil)
                     {
-                        // last resort - if still no icon, then ask for an empty standard app icon, which is guranteed to exist
-                        image = [[NSImage imageNamed:@"NSApplicationIcon"] retain];
+                        // last resort - if still no icon, then ask for an empty standard app icon, which is guaranteed to exist
+                        image = [[NSImage imageNamed:@"NSImageNameApplicationIcon"] retain];
                     }
                 }
                 [app setApplicationIconImage:image];
@@ -686,7 +747,11 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         else // event loop is not started
         {
             if ([NSThread isMainThread] == YES) {
-                [glassApp applicationWillFinishLaunching: NULL];
+                // The NSNotification is ignored but the compiler insists on a non-NULL argument.
+                NSNotification* notification = [NSNotification notificationWithName: NSApplicationWillFinishLaunchingNotification
+                    object: NSApp
+                    userInfo: nil];
+                [glassApp applicationWillFinishLaunching: notification];
             } else {
                 [glassApp performSelectorOnMainThread:@selector(applicationWillFinishLaunching:) withObject:NULL waitUntilDone:NO];
             }
@@ -774,13 +839,44 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
             javaIDs.Application.leaveNestedEventLoop, (jobject)NULL);
 }
 
+static void inputDidChangeCallback(CFNotificationCenterRef center, void *observer, CFNotificationName name, const void *object, CFDictionaryRef userInfo)
+{
+    if (keyCodeForCharMap != nil) {
+        [keyCodeForCharMap removeAllObjects];
+    }
+}
+
 + (void)registerKeyEvent:(NSEvent*)event
 {
     if (!keyCodeForCharMap) {
         keyCodeForCharMap = [[NSMutableDictionary alloc] initWithCapacity:100];
         // Note: it's never released, just like, say, the jApplication reference...
+        // To avoid stale entries when the user switches layout
+        CFNotificationCenterRef center = CFNotificationCenterGetDistributedCenter();
+        CFNotificationCenterAddObserver(center, NULL, inputDidChangeCallback,
+                                        kTISNotifySelectedKeyboardInputSourceChanged,
+                                        NULL, CFNotificationSuspensionBehaviorCoalesce);
     }
-    [keyCodeForCharMap setObject:[NSNumber numberWithUnsignedShort:[event keyCode]] forKey:[event characters]];
+
+    // Add the character the user typed to the map.
+    NSNumber* mapObject = [NSNumber numberWithUnsignedShort:[event keyCode]];
+    [keyCodeForCharMap setObject:mapObject forKey:[event characters]];
+    // getKeyCodeForChar should not just match against a character the user types
+    // directly but any other character printed on the same key.
+    NSString* unshifted = GetStringForMacKey(event.keyCode, false);
+    if (unshifted != nil) {
+        [keyCodeForCharMap setObject:mapObject forKey:unshifted];
+    }
+    NSString* shifted = GetStringForMacKey(event.keyCode, true);
+    if (shifted != nil) {
+        [keyCodeForCharMap setObject:mapObject forKey:shifted];
+    }
+    // On some European keyboards there are useful symbols which are only
+    // accessible via the Option key. We don't query for the Option key
+    // character because on most layouts just about every key has some
+    // random symbol assigned to that modifier which the user probably
+    // isn't even aware of. The user can get that character into the map
+    // by typing it directly.
 }
 
 + (jint)getKeyCodeForChar:(jchar)c;
@@ -867,6 +963,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1initIDs
             env, jClass, "notifyApplicationDidTerminate", "()V");
     if ((*env)->ExceptionCheck(env)) return;
 
+    javaIDs.MacApplication.notifyPreferencesChanged = (*env)->GetMethodID(
+            env, jClass, "notifyPreferencesChanged", "(Ljava/util/Map;)V");
+    if ((*env)->ExceptionCheck(env)) return;
+
     if (jRunnableRun == NULL)
     {
         jclass jcls = (*env)->FindClass(env, "java/lang/Runnable");
@@ -874,6 +974,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1initIDs
         jRunnableRun = (*env)->GetMethodID(env, jcls, "run", "()V");
         if ((*env)->ExceptionCheck(env)) return;
     }
+
+    [PlatformSupport initIDs:env];
 }
 
 /*
@@ -1012,7 +1114,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1submitForLater
     if (jEnv != NULL)
     {
         GlassRunnable *runnable = [[GlassRunnable alloc] initWithRunnable:(*env)->NewGlobalRef(env, jRunnable)];
-        [runnable performSelectorOnMainThread:@selector(run) withObject:nil waitUntilDone:NO];
+        [runnable performSelectorOnMainThread:@selector(run) withObject:nil waitUntilDone:NO modes:runLoopModes];
     }
 }
 
@@ -1030,7 +1132,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1invokeAndWait
     if (jEnv != NULL)
     {
         GlassRunnable *runnable = [[GlassRunnable alloc] initWithRunnable:(*env)->NewGlobalRef(env, jRunnable)];
-        [runnable performSelectorOnMainThread:@selector(run) withObject:nil waitUntilDone:YES];
+        [runnable performSelectorOnMainThread:@selector(run) withObject:nil waitUntilDone:YES modes:runLoopModes];
     }
 }
 
@@ -1171,4 +1273,27 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getMacKey
     unsigned short macCode = 0;
     GetMacKey(code, &macCode);
     return (macCode & 0xFFFF);
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacApplication
+ * Method:    _getApplicationClassName
+ * Signature: ()Ljava/lang/String;
+ */
+JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getApplicationClassName
+(JNIEnv *env, jobject self)
+{
+    NSString* className = NSStringFromClass([[NSApplicationFX sharedApplication] class]);
+    return (*env)->NewStringUTF(env, [className UTF8String]);
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacApplication
+ * Method:    getPlatformPreferences
+ * Signature: ()Ljava/util/Map;
+ */
+JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacApplication_getPlatformPreferences
+(JNIEnv *env, jobject self)
+{
+    return [PlatformSupport collectPreferences];
 }

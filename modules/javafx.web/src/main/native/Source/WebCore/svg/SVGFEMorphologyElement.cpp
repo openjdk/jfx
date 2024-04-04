@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2009 Dirk Schulze <krit@webkit.org>
  * Copyright (C) 2018-2023 Apple Inc. All rights reserved.
- * Copyright (C) 2014 Google Inc. All rights reserved.
+ * Copyright (C) 2014-2015 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -23,6 +23,7 @@
 #include "SVGFEMorphologyElement.h"
 
 #include "FEMorphology.h"
+#include "NodeName.h"
 #include "SVGNames.h"
 #include "SVGParserUtilities.h"
 #include <wtf/IsoMallocInlines.h>
@@ -49,29 +50,29 @@ Ref<SVGFEMorphologyElement> SVGFEMorphologyElement::create(const QualifiedName& 
     return adoptRef(*new SVGFEMorphologyElement(tagName, document));
 }
 
-void SVGFEMorphologyElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGFEMorphologyElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == SVGNames::operatorAttr) {
-        MorphologyOperatorType propertyValue = SVGPropertyTraits<MorphologyOperatorType>::fromString(value);
+    switch (name.nodeName()) {
+    case AttributeNames::operatorAttr: {
+        MorphologyOperatorType propertyValue = SVGPropertyTraits<MorphologyOperatorType>::fromString(newValue);
         if (propertyValue != MorphologyOperatorType::Unknown)
             m_svgOperator->setBaseValInternal<MorphologyOperatorType>(propertyValue);
-        return;
+        break;
     }
-
-    if (name == SVGNames::inAttr) {
-        m_in1->setBaseValInternal(value);
-        return;
-    }
-
-    if (name == SVGNames::radiusAttr) {
-        if (auto result = parseNumberOptionalNumber(value)) {
+    case AttributeNames::inAttr:
+        m_in1->setBaseValInternal(newValue);
+        break;
+    case AttributeNames::radiusAttr:
+        if (auto result = parseNumberOptionalNumber(newValue)) {
             m_radiusX->setBaseValInternal(result->first);
             m_radiusY->setBaseValInternal(result->second);
         }
-        return;
+        break;
+    default:
+        break;
     }
 
-    SVGFilterPrimitiveStandardAttributes::parseAttribute(name, value);
+    SVGFilterPrimitiveStandardAttributes::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 bool SVGFEMorphologyElement::setFilterEffectAttribute(FilterEffect& effect, const QualifiedName& attrName)
@@ -92,24 +93,27 @@ bool SVGFEMorphologyElement::setFilterEffectAttribute(FilterEffect& effect, cons
 
 void SVGFEMorphologyElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (attrName == SVGNames::inAttr) {
+    switch (attrName.nodeName()) {
+    case AttributeNames::inAttr: {
         InstanceInvalidationGuard guard(*this);
         updateSVGRendererForElementChange();
-        return;
+        break;
     }
-
-    if (attrName == SVGNames::operatorAttr || attrName == SVGNames::radiusAttr) {
+    case AttributeNames::operatorAttr:
+    case AttributeNames::radiusAttr: {
         InstanceInvalidationGuard guard(*this);
         primitiveAttributeChanged(attrName);
-        return;
+        break;
     }
-
+    default:
     SVGFilterPrimitiveStandardAttributes::svgAttributeChanged(attrName);
+        break;
+    }
 }
 
 bool SVGFEMorphologyElement::isIdentity() const
 {
-    return !radiusX() && !radiusY();
+    return !std::max(0.0f, radiusX()) && !std::max(0.0f, radiusY());
 }
 
 IntOutsets SVGFEMorphologyElement::outsets(const FloatRect& targetBoundingBox, SVGUnitTypes::SVGUnitType primitiveUnits) const
@@ -118,11 +122,13 @@ IntOutsets SVGFEMorphologyElement::outsets(const FloatRect& targetBoundingBox, S
     return { radius.height(), radius.width(), radius.height(), radius.width() };
 }
 
+
 RefPtr<FilterEffect> SVGFEMorphologyElement::createFilterEffect(const FilterEffectVector&, const GraphicsContext&) const
 {
-    if (radiusX() < 0 || radiusY() < 0)
-        return nullptr;
-
+    // "A negative or zero value disables the effect of the given filter
+    // primitive (i.e., the result is the filter input image)."
+    // https://drafts.fxtf.org/filters/#element-attrdef-femorphology-radius
+    // This is handled by FEMorphology.
     return FEMorphology::create(svgOperator(), radiusX(), radiusY());
 }
 

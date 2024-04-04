@@ -2167,10 +2167,14 @@ JNIEXPORT jbyteArray JNICALL OS_NATIVE(CreateAlphaTexture)
     /* In Only */
     if (arg2) lparg2 = getRECTFields(env, arg2, &_arg2);
     if (!lparg2) return NULL;
+    if (lparg2->right <= lparg2->left) return NULL;
+    if (lparg2->bottom <= lparg2->top) return NULL;
     DWRITE_TEXTURE_TYPE textureType = (DWRITE_TEXTURE_TYPE)arg1;
     UINT32 width = lparg2->right - lparg2->left;
     UINT32 height = lparg2->bottom - lparg2->top;
     UINT32 bpp = textureType == DWRITE_TEXTURE_CLEARTYPE_3x1 ? 3 : 1;
+    if (height > UINT32_MAX / bpp) return NULL;
+    if (height > 0 && width > UINT32_MAX / (height * bpp)) return NULL;
     UINT32 bufferSize = width * height * bpp;
     BYTE * buffer = new (std::nothrow) BYTE[bufferSize];
     HRESULT hr = ((IDWriteGlyphRunAnalysis *)arg0)->CreateAlphaTexture(textureType, lparg2, buffer, bufferSize);
@@ -2233,6 +2237,10 @@ JNIEXPORT jint JNICALL OS_NATIVE(GetGlyphs)
     if (arg15) if ((lparg15 = env->GetShortArrayElements(arg15, NULL)) == NULL) goto fail;
     if (arg16) if ((lparg16 = env->GetShortArrayElements(arg16, NULL)) == NULL) goto fail;
     if (arg17) if ((lparg17 = env->GetIntArrayElements(arg17, NULL)) == NULL) goto fail;
+    if (textStart < 0) goto fail;
+    if (!arg1) goto fail;
+    if (arg2 <= 0 || arg2 > env->GetArrayLength(arg1)) goto fail;
+    if (textStart > env->GetArrayLength(arg1) - arg2) goto fail;
     const WCHAR* text = (const WCHAR*)(lparg1 + textStart);
 
     hr = ((IDWriteTextAnalyzer *)arg0)->GetGlyphs(text,
@@ -2297,6 +2305,10 @@ JNIEXPORT jint JNICALL OS_NATIVE(GetGlyphPlacements)
     if (arg15) if ((lparg15 = env->GetIntArrayElements(arg15, NULL)) == NULL) goto fail;
     if (arg17) if ((lparg17 = env->GetFloatArrayElements(arg17, NULL)) == NULL) goto fail;
     if (arg18) if ((lparg18 = env->GetFloatArrayElements(arg18, NULL)) == NULL) goto fail;
+    if (textStart < 0) goto fail;
+    if (!arg1) goto fail;
+    if (arg4 <= 0 || arg4 > env->GetArrayLength(arg1)) goto fail;
+    if (textStart > env->GetArrayLength(arg1) - arg4) goto fail;
     const WCHAR* text = (const WCHAR*)(lparg1 + textStart);
 
     hr = ((IDWriteTextAnalyzer *)arg0)->GetGlyphPlacements(text,

@@ -48,6 +48,7 @@
 namespace WebCore {
 
 class Document;
+class InputDeviceInfo;
 class MediaDeviceInfo;
 class MediaStream;
 class UserGestureToken;
@@ -66,7 +67,7 @@ public:
     Document* document() const;
 
     using Promise = DOMPromiseDeferred<IDLInterface<MediaStream>>;
-    using EnumerateDevicesPromise = DOMPromiseDeferred<IDLSequence<IDLInterface<MediaDeviceInfo>>>;
+    using EnumerateDevicesPromise = DOMPromiseDeferred<IDLSequence<IDLUnion<IDLInterface<MediaDeviceInfo>, IDLInterface<InputDeviceInfo>>>>;
 
     enum class DisplayCaptureSurfaceType {
         Monitor,
@@ -91,6 +92,7 @@ public:
     MediaTrackSupportedConstraints getSupportedConstraints();
 
     String deviceIdToPersistentId(const String& deviceId) const { return m_audioOutputDeviceIdToPersistentId.get(deviceId); }
+    String hashedGroupId(const String& groupId);
 
     using RefCounted<MediaDevices>::ref;
     using RefCounted<MediaDevices>::deref;
@@ -101,7 +103,7 @@ private:
     void scheduledEventTimerFired();
     bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) override;
 
-    void exposeDevices(const Vector<CaptureDevice>&, MediaDeviceHashSalts&&, EnumerateDevicesPromise&&);
+    void exposeDevices(Vector<CaptureDeviceWithCapabilities>&&, MediaDeviceHashSalts&&, EnumerateDevicesPromise&&);
     void listenForDeviceChanges();
 
     friend class JSMediaDevicesOwner;

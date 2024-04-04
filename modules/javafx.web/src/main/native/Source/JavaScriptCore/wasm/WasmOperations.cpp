@@ -55,6 +55,7 @@
 #include "WasmOSREntryPlan.h"
 #include "WasmOperationsInlines.h"
 #include "WasmWorklist.h"
+#include <bit>
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/DataLog.h>
 #include <wtf/Locker.h>
@@ -131,6 +132,7 @@ void loadValuesIntoBuffer(Probe::Context& context, const StackMap& values, uint6
             default:
                 *bitwise_cast<uint64_t*>(buffer + index * valueSize) = context.gpr(value.gpr());
             }
+            dataLogLnIf(WasmOperationsInternal::verbose, "GPR for value ", index, " ", value.gpr(), " = ", context.gpr(value.gpr()));
         } else if (value.isFPR()) {
             switch (value.type().kind()) {
             case B3::Float:
@@ -197,7 +199,7 @@ SUPPRESS_ASAN
 static void doOSREntry(Instance* instance, Probe::Context& context, BBQCallee& callee, OSREntryCallee& osrEntryCallee, OSREntryData& osrEntryData)
 {
     auto returnWithoutOSREntry = [&] {
-        context.gpr(GPRInfo::argumentGPR0) = 0;
+        context.gpr(GPRInfo::nonPreservedNonArgumentGPR0) = 0;
     };
 
     unsigned valueSize = (callee.savedFPWidth() == SavedFPWidth::SaveVectors) ? 2 : 1;
@@ -256,13 +258,13 @@ static void doOSREntry(Instance* instance, Probe::Context& context, BBQCallee& c
 #error Unsupported architecture.
 #endif
     // 4. Configure argument registers to jump to OSR entry from the caller of this runtime function.
-    context.gpr(GPRInfo::argumentGPR0) = bitwise_cast<UCPURegister>(buffer);
-    context.gpr(GPRInfo::argumentGPR1) = bitwise_cast<UCPURegister>(osrEntryCallee.entrypoint().taggedPtr<>());
+    context.gpr(GPRInfo::argumentGPR0) = bitwise_cast<UCPURegister>(buffer); // Modify this only when we definitely tier up.
+    context.gpr(GPRInfo::nonPreservedNonArgumentGPR0) = bitwise_cast<UCPURegister>(osrEntryCallee.entrypoint().taggedPtr<>());
 }
 
 inline bool shouldJIT(unsigned functionIndex)
 {
-    if (!Options::useOMGJIT())
+    if (!Options::useOMGJIT() || !OMGPlan::ensureGlobalOMGAllowlist().containsWasmFunction(functionIndex))
         return false;
     if (!Options::wasmFunctionIndexRangeToCompile().isInRange(functionIndex))
         return false;
@@ -277,7 +279,7 @@ JSC_DEFINE_JIT_OPERATION(operationWasmTriggerOSREntryNow, void, (Probe::Context&
     Instance* instance = context.gpr<Instance*>(GPRInfo::wasmContextInstancePointer);
 
     auto returnWithoutOSREntry = [&] {
-        context.gpr(GPRInfo::argumentGPR0) = 0;
+        context.gpr(GPRInfo::nonPreservedNonArgumentGPR0) = 0;
     };
 
     Wasm::CalleeGroup& calleeGroup = *instance->calleeGroup();
@@ -455,6 +457,60 @@ JSC_DEFINE_JIT_OPERATION(operationWasmTriggerOSREntryNow, void, (Probe::Context&
 
     tierUp.dontOptimizeAnytimeSoon(functionIndex);
     return returnWithoutOSREntry();
+}
+
+JSC_DEFINE_JIT_OPERATION(operationWasmLoopOSREnterBBQJIT, void, (Probe::Context& context))
+{
+    TierUpCount& tierUp = *context.arg<TierUpCount*>();
+    uint64_t* osrEntryScratchBuffer = bitwise_cast<uint64_t*>(context.gpr(GPRInfo::argumentGPR0));
+    unsigned loopIndex = osrEntryScratchBuffer[0]; // First entry in scratch buffer is the loop index when tiering up to BBQ.
+
+    // We just populated the callee in the frame before we entered this operation, so let's use it.
+    CalleeBits calleeBits = *bitwise_cast<CalleeBits*>(bitwise_cast<uint8_t*>(context.fp()) + (unsigned)CallFrameSlot::callee * sizeof(Register));
+    BBQCallee& callee = *bitwise_cast<BBQCallee*>(calleeBits.asWasmCallee());
+
+    OSREntryData& entryData = tierUp.osrEntryData(loopIndex);
+    RELEASE_ASSERT(entryData.loopIndex() == loopIndex);
+
+    const StackMap& stackMap = entryData.values();
+    auto writeValueToRep = [&](uint64_t encodedValue, const OSREntryValue& value) {
+        B3::Type type = value.type();
+        if (value.isGPR()) {
+            ASSERT(!type.isFloat() && !type.isVector());
+            context.gpr(value.gpr()) = encodedValue;
+        } else if (value.isFPR()) {
+            ASSERT(type.isFloat()); // We don't expect vectors from LLInt right now.
+            context.fpr(value.fpr()) = encodedValue;
+        } else if (value.isStack()) {
+            auto* baseStore = bitwise_cast<uint8_t*>(context.fp()) + value.offsetFromFP();
+            switch (type.kind()) {
+            case B3::Int32:
+                *bitwise_cast<uint32_t*>(baseStore) = static_cast<uint32_t>(encodedValue);
+                break;
+            case B3::Int64:
+                *bitwise_cast<uint64_t*>(baseStore) = encodedValue;
+                break;
+            case B3::Float:
+                *bitwise_cast<float*>(baseStore) = bitwise_cast<float>(static_cast<uint32_t>(encodedValue));
+                break;
+            case B3::Double:
+                *bitwise_cast<double*>(baseStore) = bitwise_cast<double>(encodedValue);
+                break;
+            case B3::V128:
+                RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE("We shouldn't be receiving v128 values when tiering up from LLInt into BBQ.");
+                break;
+            default:
+                RELEASE_ASSERT_NOT_REACHED();
+                break;
+            }
+        }
+    };
+
+    unsigned indexInScratchBuffer = BBQCallee::extraOSRValuesForLoopIndex;
+    for (const auto& entry : stackMap)
+        writeValueToRep(osrEntryScratchBuffer[indexInScratchBuffer ++], entry);
+
+    context.gpr(GPRInfo::nonPreservedNonArgumentGPR0) = bitwise_cast<UCPURegister>(callee.loopEntrypoints()[loopIndex].taggedPtr());
 }
 
 JSC_DEFINE_JIT_OPERATION(operationWasmTriggerTierUpNow, void, (Instance* instance, uint32_t functionIndex))
@@ -702,12 +758,12 @@ JSC_DEFINE_JIT_OPERATION(operationWasmWriteBarrierSlowPath, void, (JSCell* cell,
 
 JSC_DEFINE_JIT_OPERATION(operationPopcount32, uint32_t, (int32_t value))
 {
-    return __builtin_popcount(value);
+    return std::popcount(static_cast<uint32_t>(value));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationPopcount64, uint64_t, (int64_t value))
 {
-    return __builtin_popcountll(value);
+    return std::popcount(static_cast<uint64_t>(value));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationGrowMemory, int32_t, (Instance* instance, int32_t delta))
@@ -783,7 +839,8 @@ JSC_DEFINE_JIT_OPERATION(operationWasmStructNewEmpty, EncodedJSValue, (Instance*
     NativeCallFrameTracer tracer(vm, callFrame);
     JSWebAssemblyInstance* jsInstance = instance->owner();
     JSGlobalObject* globalObject = instance->globalObject();
-    return JSValue::encode(JSWebAssemblyStruct::tryCreate(globalObject, globalObject->webAssemblyStructStructure(), jsInstance, typeIndex));
+    auto structRTT = instance->module().moduleInformation().rtts[typeIndex];
+    return JSValue::encode(JSWebAssemblyStruct::tryCreate(globalObject, globalObject->webAssemblyStructStructure(), jsInstance, typeIndex, structRTT));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationWasmStructGet, EncodedJSValue, (EncodedJSValue encodedStructReference, uint32_t fieldIndex))
@@ -884,14 +941,37 @@ JSC_DEFINE_JIT_OPERATION(operationWasmToJSException, void*, (Instance* instance,
     return throwWasmToJSException(callFrame, type, instance);
 }
 
-namespace WasmOperationsInternal {
-
-static ThrownExceptionInfo retrieveAndClearExceptionIfCatchableImpl(Instance* instance)
+#if USE(JSVALUE64)
+JSC_DEFINE_JIT_OPERATION(operationWasmRetrieveAndClearExceptionIfCatchable, ThrownExceptionInfo, (Instance* instance))
 {
     VM& vm = instance->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
     RELEASE_ASSERT(!!throwScope.exception());
+
+    vm.callFrameForCatch = nullptr;
+    auto* jumpTarget = std::exchange(vm.targetMachinePCAfterCatch, nullptr);
+
+    Exception* exception = throwScope.exception();
+    JSValue thrownValue = exception->value();
+
+    // We want to clear the exception here rather than in the catch prologue
+    // JIT code because clearing it also entails clearing a bit in an Atomic
+    // bit field in VMTraps.
+    throwScope.clearException();
+
+    return { JSValue::encode(thrownValue), jumpTarget };
+}
+#else
+static ThrownExceptionInfo retrieveAndClearExceptionIfCatchableNonSharedImpl(Instance* instance)
+{
+    VM& vm = instance->vm();
+    auto throwScope = DECLARE_THROW_SCOPE(vm);
+
+    RELEASE_ASSERT(!!throwScope.exception());
+
+    vm.callFrameForCatch = nullptr;
+    vm.targetMachinePCForThrow = nullptr;
 
     Exception* exception = throwScope.exception();
     JSValue thrownValue = exception->value();
@@ -908,17 +988,9 @@ static ThrownExceptionInfo retrieveAndClearExceptionIfCatchableImpl(Instance* in
     return { JSValue::encode(thrownValue), payload };
 }
 
-}
-
-#if USE(JSVALUE64)
-JSC_DEFINE_JIT_OPERATION(operationWasmRetrieveAndClearExceptionIfCatchable, ThrownExceptionInfo, (Instance* instance))
+JSC_DEFINE_JIT_OPERATION(operationWasmRetrieveAndClearExceptionIfCatchable32, void*, (Instance* instance, EncodedJSValue* encodedThrownValue))
 {
-    return WasmOperationsInternal::retrieveAndClearExceptionIfCatchableImpl(instance);
-}
-#else
-JSC_DEFINE_JIT_OPERATION(operationWasmRetrieveAndClearExceptionIfCatchable, void*, (Instance* instance, EncodedJSValue* encodedThrownValue))
-{
-    auto info = WasmOperationsInternal::retrieveAndClearExceptionIfCatchableImpl(instance);
+    auto info = retrieveAndClearExceptionIfCatchableNonSharedImpl(instance);
     *encodedThrownValue = info.thrownValue;
     return info.payload;
 }
@@ -930,6 +1002,72 @@ JSC_DEFINE_JIT_OPERATION(operationWasmArrayNew, EncodedJSValue, (Instance* insta
     VM& vm = instance->vm();
     NativeCallFrameTracer tracer(vm, callFrame);
     return arrayNew(instance, typeIndex, size, encValue);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationWasmArrayNewData, EncodedJSValue, (Instance* instance, uint32_t typeIndex, uint32_t dataSegmentIndex, uint32_t arraySize, uint32_t offset))
+{
+    CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
+    VM& vm = instance->vm();
+    NativeCallFrameTracer tracer(vm, callFrame);
+    return arrayNewData(instance, typeIndex, dataSegmentIndex, arraySize, offset);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationWasmArrayNewElem, EncodedJSValue, (Instance* instance, uint32_t typeIndex, uint32_t elemSegmentIndex, uint32_t arraySize, uint32_t offset))
+{
+    CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
+    VM& vm = instance->vm();
+    NativeCallFrameTracer tracer(vm, callFrame);
+
+    return arrayNewElem(instance, typeIndex, elemSegmentIndex, arraySize, offset);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationWasmArrayNewEmpty, EncodedJSValue, (Instance* instance, uint32_t typeIndex, uint32_t size))
+{
+    CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
+    VM& vm = instance->vm();
+    NativeCallFrameTracer tracer(vm, callFrame);
+
+    JSGlobalObject* globalObject = instance->globalObject();
+    auto arrayRTT = instance->module().moduleInformation().rtts[typeIndex];
+
+    // Get the element type
+    ASSERT(typeIndex < instance->module().moduleInformation().typeCount());
+    const Wasm::TypeDefinition& arraySignature = instance->module().moduleInformation().typeSignatures[typeIndex]->expand();
+    ASSERT(arraySignature.is<ArrayType>());
+    Wasm::FieldType fieldType = arraySignature.as<ArrayType>()->elementType();
+
+    // Create a zero-initialized array with the right element type and length
+    JSWebAssemblyArray* array = nullptr;
+    switch (fieldType.type.elementSize()) {
+    case sizeof(uint8_t): {
+        FixedVector<uint8_t> v(size);
+        v.fill(0); // Prevent GC from tracing uninitialized array slots
+        array = JSWebAssemblyArray::create(vm, globalObject->webAssemblyArrayStructure(), fieldType, size, WTFMove(v), arrayRTT);
+        break;
+    }
+    case sizeof(uint16_t): {
+        FixedVector<uint16_t> v(size);
+        v.fill(0);
+        array = JSWebAssemblyArray::create(vm, globalObject->webAssemblyArrayStructure(), fieldType, size, WTFMove(v), arrayRTT);
+        break;
+    }
+    case sizeof(uint32_t): {
+        FixedVector<uint32_t> v(size);
+        v.fill(0);
+        array = JSWebAssemblyArray::create(vm, globalObject->webAssemblyArrayStructure(), fieldType, size, WTFMove(v), arrayRTT);
+        break;
+    }
+    case sizeof(uint64_t): {
+        FixedVector<uint64_t> v(size);
+        v.fill(0);
+        array = JSWebAssemblyArray::create(vm, globalObject->webAssemblyArrayStructure(), fieldType, size, WTFMove(v), arrayRTT);
+        break;
+    }
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+
+    return JSValue::encode(array);
 }
 
 JSC_DEFINE_JIT_OPERATION(operationWasmArrayGet, EncodedJSValue, (Instance* instance, uint32_t typeIndex, EncodedJSValue arrayValue, uint32_t index))
@@ -946,6 +1084,40 @@ JSC_DEFINE_JIT_OPERATION(operationWasmArraySet, void, (Instance* instance, uint3
     VM& vm = instance->vm();
     NativeCallFrameTracer tracer(vm, callFrame);
     return arraySet(instance, typeIndex, arrayValue, index, value);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationWasmIsSubRTT, bool, (RTT* maybeSubRTT, RTT* targetRTT))
+{
+    ASSERT(maybeSubRTT && targetRTT);
+    return maybeSubRTT->isSubRTT(*targetRTT);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationWasmExternInternalize, EncodedJSValue, (EncodedJSValue reference))
+{
+    return externInternalize(reference);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationWasmRefTest, int32_t, (Instance* instance, EncodedJSValue reference, uint32_t allowNull, int32_t heapType))
+{
+    Wasm::TypeIndex typeIndex;
+    if (Wasm::typeIndexIsType(static_cast<Wasm::TypeIndex>(heapType)))
+        typeIndex = static_cast<Wasm::TypeIndex>(heapType);
+    else
+        typeIndex = instance->module().moduleInformation().typeSignatures[heapType]->index();
+    // Explicitly return 1 or 0 because bool in C++ only reqiures that the bottom bit match the other bits can be anything.
+    return Wasm::refCast(reference, static_cast<bool>(allowNull), typeIndex) ? 1 : 0;
+}
+
+JSC_DEFINE_JIT_OPERATION(operationWasmRefCast, EncodedJSValue, (Instance* instance, EncodedJSValue reference, uint32_t allowNull, int32_t heapType))
+{
+    Wasm::TypeIndex typeIndex;
+    if (Wasm::typeIndexIsType(static_cast<Wasm::TypeIndex>(heapType)))
+        typeIndex = static_cast<Wasm::TypeIndex>(heapType);
+    else
+        typeIndex = instance->module().moduleInformation().typeSignatures[heapType]->index();
+    if (!Wasm::refCast(reference, static_cast<bool>(allowNull), typeIndex))
+        return encodedJSValue();
+    return reference;
 }
 
 } } // namespace JSC::Wasm

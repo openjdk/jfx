@@ -30,7 +30,7 @@
 #pragma once
 
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
+#include "LocalFrameLoaderClient.h"
 #include "ResourceRequest.h"
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
@@ -48,7 +48,7 @@ namespace WebCore {
 
 class DocumentLoader;
 class FormState;
-class Frame;
+class LocalFrame;
 class NavigationAction;
 class ResourceError;
 class ResourceResponse;
@@ -57,7 +57,7 @@ class URLKeepingBlobAlive;
 enum class NavigationPolicyDecision : uint8_t {
     ContinueLoad,
     IgnoreLoad,
-    StopAllLoads,
+    LoadWillContinueInAnotherProcess,
 };
 
 enum class PolicyDecisionMode { Synchronous, Asynchronous };
@@ -66,7 +66,7 @@ class FrameLoader::PolicyChecker : public CanMakeWeakPtr<FrameLoader::PolicyChec
     WTF_MAKE_NONCOPYABLE(PolicyChecker);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit PolicyChecker(Frame&);
+    explicit PolicyChecker(LocalFrame&);
 
     using NavigationPolicyDecisionFunction = CompletionHandler<void(ResourceRequest&&, WeakPtr<FormState>&&, NavigationPolicyDecision)>;
     using NewWindowPolicyDecisionFunction = CompletionHandler<void(const ResourceRequest&, WeakPtr<FormState>&&, const AtomString& frameName, const NavigationAction&, ShouldContinuePolicyCheck)>;
@@ -93,7 +93,7 @@ private:
     void handleUnimplementablePolicy(const ResourceError&);
     URLKeepingBlobAlive extendBlobURLLifetimeIfNecessary(const ResourceRequest&, const Document&, PolicyDecisionMode = PolicyDecisionMode::Asynchronous) const;
 
-    Frame& m_frame;
+    LocalFrame& m_frame;
 
     HashMap<PolicyCheckIdentifier, FramePolicyFunction> m_javaScriptURLPolicyChecks;
 

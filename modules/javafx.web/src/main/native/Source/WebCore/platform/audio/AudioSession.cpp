@@ -30,6 +30,7 @@
 
 #include "Logging.h"
 #include "NotImplemented.h"
+#include <wtf/LoggerHelper.h>
 #include <wtf/NeverDestroyed.h>
 
 #if PLATFORM(MAC)
@@ -101,6 +102,8 @@ bool AudioSession::tryToSetActive(bool active)
     if (!tryToSetActiveInternal(active))
         return false;
 
+    ALWAYS_LOG(LOGIDENTIFIER, "is active = ", m_active, ", previousIsActive = ", previousIsActive);
+
     bool hasActiveChanged = previousIsActive != isActive();
     m_active = active;
     if (m_isInterrupted && m_active) {
@@ -129,6 +132,7 @@ void AudioSession::removeInterruptionObserver(InterruptionObserver& observer)
 
 void AudioSession::beginInterruption()
 {
+    ALWAYS_LOG(LOGIDENTIFIER);
     if (m_isInterrupted) {
         RELEASE_LOG_ERROR(WebRTC, "AudioSession::beginInterruption but session is already interrupted!");
         return;
@@ -140,6 +144,7 @@ void AudioSession::beginInterruption()
 
 void AudioSession::endInterruption(MayResume mayResume)
 {
+    ALWAYS_LOG(LOGIDENTIFIER);
     if (!m_isInterrupted) {
         RELEASE_LOG_ERROR(WebRTC, "AudioSession::endInterruption but session is already uninterrupted!");
         return;
@@ -153,10 +158,10 @@ void AudioSession::endInterruption(MayResume mayResume)
 void AudioSession::activeStateChanged()
 {
     for (auto& observer : m_interruptionObservers)
-        observer.activeStateChanged();
+        observer.audioSessionActiveStateChanged();
 }
 
-void AudioSession::setCategory(CategoryType, RouteSharingPolicy)
+void AudioSession::setCategory(CategoryType, Mode, RouteSharingPolicy)
 {
     notImplemented();
 }
@@ -166,9 +171,11 @@ void AudioSession::setCategoryOverride(CategoryType category)
     if (m_categoryOverride == category)
         return;
 
+    ALWAYS_LOG(LOGIDENTIFIER);
+
     m_categoryOverride = category;
     if (category != CategoryType::None)
-    setCategory(category, RouteSharingPolicy::Default);
+        setCategory(category, Mode::Default, RouteSharingPolicy::Default);
 }
 
 AudioSession::CategoryType AudioSession::categoryOverride() const
@@ -180,6 +187,12 @@ AudioSession::CategoryType AudioSession::category() const
 {
     notImplemented();
     return AudioSession::CategoryType::None;
+}
+
+AudioSession::Mode AudioSession::mode() const
+{
+    notImplemented();
+    return AudioSession::Mode::Default;
 }
 
 float AudioSession::sampleRate() const
@@ -253,6 +266,19 @@ void AudioSession::setIsPlayingToBluetoothOverride(std::optional<bool>)
     notImplemented();
 }
 
+Logger& AudioSession::logger()
+{
+    if (!m_logger)
+        m_logger = Logger::create(this);
+
+    return *m_logger;
+}
+
+WTFLogChannel& AudioSession::logChannel() const
+{
+    return LogMedia;
+}
+
 String convertEnumerationToString(RouteSharingPolicy enumerationValue)
 {
     static const NeverDestroyed<String> values[] = {
@@ -287,6 +313,20 @@ String convertEnumerationToString(AudioSession::CategoryType enumerationValue)
     static_assert(static_cast<size_t>(AudioSession::CategoryType::RecordAudio) == 4, "AudioSession::CategoryType::RecordAudio is not 4 as expected");
     static_assert(static_cast<size_t>(AudioSession::CategoryType::PlayAndRecord) == 5, "AudioSession::CategoryType::PlayAndRecord is not 5 as expected");
     static_assert(static_cast<size_t>(AudioSession::CategoryType::AudioProcessing) == 6, "AudioSession::CategoryType::AudioProcessing is not 6 as expected");
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
+    return values[static_cast<size_t>(enumerationValue)];
+}
+
+String convertEnumerationToString(AudioSession::Mode enumerationValue)
+{
+    static const NeverDestroyed<String> values[] = {
+        MAKE_STATIC_STRING_IMPL("Default"),
+        MAKE_STATIC_STRING_IMPL("VideoChat"),
+        MAKE_STATIC_STRING_IMPL("MoviePlayback"),
+    };
+    static_assert(!static_cast<size_t>(AudioSession::Mode::Default), "AudioSession::Mode::Default is not 0 as expected");
+    static_assert(static_cast<size_t>(AudioSession::Mode::VideoChat) == 1, "AudioSession::Mode::VideoChat is not 1 as expected");
+    static_assert(static_cast<size_t>(AudioSession::Mode::MoviePlayback) == 2, "AudioSession::Mode::MoviePlayback is not 2 as expected");
     ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }

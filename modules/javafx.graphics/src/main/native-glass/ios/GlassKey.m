@@ -34,10 +34,10 @@
 /*
  * Class:     com_sun_glass_ui_ios_IosApplication
  * Method:    _getKeyCodeForChar
- * Signature: (C)I
+ * Signature: (CI)I
  */
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_ios_IosApplication__1getKeyCodeForChar
-(JNIEnv * env, jobject jApplication, jchar c)
+(JNIEnv * env, jobject jApplication, jchar c, jint hint)
 {
     GLASS_LOG("Java_com_sun_glass_ui_ios_IosApplication__1getKeyCodeForChar");
 

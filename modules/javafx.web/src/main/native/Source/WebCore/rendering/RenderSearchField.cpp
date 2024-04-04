@@ -29,21 +29,24 @@
 #include "Chrome.h"
 #include "ElementInlines.h"
 #include "Font.h"
-#include "Frame.h"
 #include "FrameSelection.h"
-#include "FrameView.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "HitTestResult.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "LocalizedStrings.h"
 #include "Page.h"
 #include "PopupMenu.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderLayer.h"
 #include "RenderScrollbar.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
 #include "StyleResolver.h"
 #include "TextControlInnerElements.h"
+#include "UnicodeBidi.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -168,7 +171,7 @@ LayoutUnit RenderSearchField::computeControlLogicalHeight(LayoutUnit lineHeight,
     return lineHeight + nonContentHeight;
 }
 
-Span<const RecentSearch> RenderSearchField::recentSearches()
+std::span<const RecentSearch> RenderSearchField::recentSearches()
 {
     if (!m_searchPopup)
         m_searchPopup = page().chrome().createSearchPopupMenu(*this);
@@ -232,7 +235,8 @@ void RenderSearchField::valueChanged(unsigned listIndex, bool fireEvents)
         }
     } else {
         inputElement().setValue(itemText(listIndex));
-        if (fireEvents)
+        if (inputElement().document().settings().searchInputIncrementalAttributeAndSearchEventEnabled()
+            && fireEvents)
             inputElement().onSearch();
         inputElement().select();
     }
@@ -369,12 +373,12 @@ HostWindow* RenderSearchField::hostWindow() const
     return RenderTextControlSingleLine::hostWindow();
 }
 
-Ref<Scrollbar> RenderSearchField::createScrollbar(ScrollableArea& scrollableArea, ScrollbarOrientation orientation, ScrollbarControlSize controlSize)
+Ref<Scrollbar> RenderSearchField::createScrollbar(ScrollableArea& scrollableArea, ScrollbarOrientation orientation, ScrollbarWidth widthStyle)
 {
-    bool hasCustomScrollbarStyle = style().hasPseudoStyle(PseudoId::Scrollbar);
-    if (hasCustomScrollbarStyle)
+    bool usesLegacyScrollbarStyle = style().usesLegacyScrollbarStyle();
+    if (usesLegacyScrollbarStyle)
         return RenderScrollbar::createCustomScrollbar(scrollableArea, orientation, &inputElement());
-    return Scrollbar::createNativeScrollbar(scrollableArea, orientation, controlSize);
+    return Scrollbar::createNativeScrollbar(scrollableArea, orientation, widthStyle);
 }
 
 }

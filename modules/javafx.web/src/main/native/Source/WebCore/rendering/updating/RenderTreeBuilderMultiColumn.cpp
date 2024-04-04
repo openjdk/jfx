@@ -29,6 +29,7 @@
 #include "RenderMultiColumnFlow.h"
 #include "RenderMultiColumnSet.h"
 #include "RenderMultiColumnSpannerPlaceholder.h"
+#include "RenderStyleInlines.h"
 #include "RenderTextControl.h"
 #include "RenderTreeBuilder.h"
 #include "RenderTreeBuilderBlock.h"
@@ -186,10 +187,17 @@ void RenderTreeBuilder::MultiColumn::restoreColumnSpannersForContainer(const Ren
     Vector<RenderMultiColumnSpannerPlaceholder*> placeholdersToRestore;
     for (auto& spannerAndPlaceholder : spanners) {
         auto& placeholder = *spannerAndPlaceholder.value;
-        if (!placeholder.isDescendantOf(&container))
-            continue;
-        placeholdersToRestore.append(&placeholder);
-    }
+#if PLATFORM(JAVA)
+        if (spannerAndPlaceholder.value.get() != nullptr)
+        {
+#endif
+            if (!placeholder.isDescendantOf(&container))
+                continue;
+            placeholdersToRestore.append(&placeholder);
+#if PLATFORM(JAVA)
+        }
+#endif
+     }
     for (auto* placeholder : placeholdersToRestore) {
         auto* spanner = placeholder->spanner();
         if (!spanner) {
@@ -372,7 +380,10 @@ RenderObject* RenderTreeBuilder::MultiColumn::processPossibleSpannerDescendant(R
             // column set at the end of the multicol container. We don't really check here if the
             // child inserted precedes any spanner or not (as that's an expensive operation). Just
             // make sure we have a column set at the end. It's no big deal if it remains unused.
-            if (!lastSet->nextSibling())
+
+            // Legends are siblings of RenderMultiColumnSets not because they are spanners, but because they don't participate in multi-column context.
+            auto hasMultiColumnSet = !lastSet->nextSibling() || lastSet->nextSibling()->isLegend();
+            if (hasMultiColumnSet)
                 return nextDescendant;
         }
     }

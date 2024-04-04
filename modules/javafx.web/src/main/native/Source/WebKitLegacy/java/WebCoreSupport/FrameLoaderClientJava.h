@@ -30,7 +30,7 @@
 #include <WebCore/FormState.h>
 #include <WebCore/Frame.h>
 #include <WebCore/FrameLoader.h>
-#include <WebCore/FrameLoaderClient.h>
+#include <WebCore/LocalFrameLoaderClient.h>
 #include <WebCore/FrameView.h>
 #include <WebCore/HTMLFrameOwnerElement.h>
 #include <WebCore/PlatformJavaClasses.h>
@@ -41,7 +41,7 @@
 
 namespace WebCore {
 
-class FrameLoaderClientJava : public FrameLoaderClient {
+class FrameLoaderClientJava : public LocalFrameLoaderClient {
 public:
     FrameLoaderClientJava(const JLObject &webPage);
     ~FrameLoaderClientJava();
@@ -53,7 +53,7 @@ public:
     void makeRepresentation(DocumentLoader*) override;
     void forceLayoutForNonHTML() override;
 
-    std::optional<PageIdentifier> pageID() const final;
+    //std::optional<PageIdentifier> pageID() const final;
 
     void setCopiesOnScroll() override;
 
@@ -89,7 +89,7 @@ public:
     void dispatchDidFinishLoad() override;
     void dispatchDidClearWindowObjectInWorld(WebCore::DOMWrapperWorld&) override;
 
-    Frame* dispatchCreatePage(const NavigationAction&, NewFrameOpenerPolicy) override;
+    LocalFrame* dispatchCreatePage(const NavigationAction&, NewFrameOpenerPolicy) override;
     void dispatchShow() override;
 
     void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, PolicyCheckIdentifier, const String& downloadAttribute, FramePolicyFunction&&) override;
@@ -107,7 +107,7 @@ public:
     void revertToProvisionalState(DocumentLoader*) override;
     void setMainDocumentError(DocumentLoader*, const ResourceError&) override;
 
-    RefPtr<Frame> createFrame(const AtomString& name, HTMLFrameOwnerElement& ownerElement) override;
+    RefPtr<LocalFrame> createFrame(const AtomString& name, HTMLFrameOwnerElement& ownerElement) override;
     ObjectContentType objectContentType(const URL& url, const String& mimeTypeIn) override;
     RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement& element, const URL& url, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues, const String& mimeType, bool loadManually) override;
     void redirectDataToPlugin(Widget&) override;
@@ -145,6 +145,7 @@ public:
 
     ResourceError cannotShowMIMETypeError(const ResourceResponse&) const override;
     ResourceError fileDoesNotExistError(const ResourceResponse&) const override;
+        ResourceError httpsUpgradeRedirectLoopError(const ResourceRequest&) const override;
     ResourceError pluginWillHandleLoadError(const ResourceResponse&) const override;
 
     bool shouldFallBack(const ResourceError&) const override;
@@ -191,6 +192,7 @@ public:
     bool isJavaFrameLoaderClient() override { return true; }
     void prefetchDNS(const String&) override;
     void sendH2Ping(const URL&, CompletionHandler<void(Expected<Seconds, ResourceError>&&)>&&) override;
+    void broadcastFrameRemovalToOtherProcesses() override;
 private:
     Page* m_page;
     Frame* m_frame;

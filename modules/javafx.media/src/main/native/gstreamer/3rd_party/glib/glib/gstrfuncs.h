@@ -1,6 +1,8 @@
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -30,9 +32,12 @@
 #endif
 
 #include <stdarg.h>
+#include <string.h>
+
 #include <glib/gmacros.h>
 #include <glib/gtypes.h>
 #include <glib/gerror.h>
+#include <glib/gmem.h>
 
 G_BEGIN_DECLS
 
@@ -135,11 +140,73 @@ gchar *               g_strrstr_len    (const gchar  *haystack,
                                         const gchar  *needle);
 
 GLIB_AVAILABLE_IN_ALL
-gboolean              g_str_has_suffix (const gchar  *str,
-                                        const gchar  *suffix);
+gboolean             (g_str_has_suffix) (const gchar *str,
+                                         const gchar *suffix);
 GLIB_AVAILABLE_IN_ALL
-gboolean              g_str_has_prefix (const gchar  *str,
-                                        const gchar  *prefix);
+gboolean             (g_str_has_prefix) (const gchar *str,
+                                         const gchar *prefix);
+
+#if G_GNUC_CHECK_VERSION (2, 0)
+#ifndef __GTK_DOC_IGNORE__
+#ifndef __GI_SCANNER__
+
+/* This macro is defeat a false -Wnonnull warning in GCC.
+ * Without it, it thinks strlen and memcmp may be getting passed NULL
+ * despite the explicit check for NULL right above the calls.
+ */
+#define _G_STR_NONNULL(x) ((x) + !(x))
+
+#define g_str_has_prefix(STR, PREFIX)                                         \
+  (__builtin_constant_p (PREFIX)?                                             \
+    G_GNUC_EXTENSION ({                                                       \
+       const char * const __str = (STR);                                      \
+       const char * const __prefix = (PREFIX);                                \
+       gboolean __result = FALSE;                                             \
+                                                                              \
+       if G_UNLIKELY (__str == NULL || __prefix == NULL)                      \
+           __result = (g_str_has_prefix) (__str, __prefix);                   \
+       else                                                                   \
+         {                                                                    \
+            const size_t __str_len = strlen (_G_STR_NONNULL (__str));         \
+            const size_t __prefix_len = strlen (_G_STR_NONNULL (__prefix));   \
+            if (__str_len >= __prefix_len)                                    \
+              __result = memcmp (_G_STR_NONNULL (__str),                      \
+                                 _G_STR_NONNULL (__prefix),                   \
+                                 __prefix_len) == 0;                          \
+         }                                                                    \
+         __result;                                                            \
+    })                                                                        \
+  :                                                                           \
+    (g_str_has_prefix) (STR, PREFIX)                                          \
+  )
+
+#define g_str_has_suffix(STR, SUFFIX)                                         \
+  (__builtin_constant_p (SUFFIX)?                                             \
+    G_GNUC_EXTENSION ({                                                       \
+       const char * const __str = (STR);                                      \
+       const char * const __suffix = (SUFFIX);                                \
+       gboolean __result = FALSE;                                             \
+                                                                              \
+       if G_UNLIKELY (__str == NULL || __suffix == NULL)                      \
+         __result = (g_str_has_suffix) (__str, __suffix);                     \
+       else                                                                   \
+         {                                                                    \
+            const size_t __str_len = strlen (_G_STR_NONNULL (__str));         \
+            const size_t __suffix_len = strlen (_G_STR_NONNULL (__suffix));   \
+            if (__str_len >= __suffix_len)                                    \
+              __result = memcmp (__str + __str_len - __suffix_len,            \
+                                 _G_STR_NONNULL (__suffix),                   \
+                                 __suffix_len) == 0;                          \
+         }                                                                    \
+         __result;                                                            \
+    })                                                                        \
+  :                                                                           \
+    (g_str_has_suffix) (STR, SUFFIX)                                          \
+  )
+
+#endif /* !defined (__GI_SCANNER__) */
+#endif /* !defined (__GTK_DOC_IGNORE__) */
+#endif /* G_GNUC_CHECK_VERSION (2, 0) */
 
 /* String to/from double conversion functions */
 
@@ -233,6 +300,32 @@ gchar*                g_strconcat      (const gchar *string1,
 GLIB_AVAILABLE_IN_ALL
 gchar*                g_strjoin        (const gchar  *separator,
                                         ...) G_GNUC_MALLOC G_GNUC_NULL_TERMINATED;
+
+#if G_GNUC_CHECK_VERSION(2, 0)
+#ifndef __GTK_DOC_IGNORE__
+#ifndef __GI_SCANNER__
+
+G_ALWAYS_INLINE static inline char *
+g_strdup_inline (const char *str)
+{
+  if (__builtin_constant_p (!str) && !str)
+    return NULL;
+
+  if (__builtin_constant_p (!!str) && !!str && __builtin_constant_p (strlen (str)))
+    {
+      const size_t len = strlen (str) + 1;
+      char *dup_str = (char *) g_malloc (len);
+      return (char *) memcpy (dup_str, str, len);
+    }
+
+  return g_strdup (str);
+}
+
+#define g_strdup(x) g_strdup_inline (x)
+
+#endif /* !defined (__GI_SCANNER__) */
+#endif /* !defined (__GTK_DOC_IGNORE__) */
+#endif /* G_GNUC_CHECK_VERSION (2, 0) */
 
 /* Make a copy of a string interpreting C string -style escape
  * sequences. Inverse of g_strescape. The recognized sequences are \b
@@ -360,6 +453,51 @@ gboolean              g_ascii_string_to_unsigned   (const gchar  *str,
                                                     guint64       max,
                                                     guint64      *out_num,
                                                     GError      **error);
+
+/**
+ * g_set_str: (skip)
+ * @str_pointer: (inout) (not optional) (nullable): a pointer to either a string or %NULL
+ * @new_str: (nullable): a string to assign to @str_pointer, or %NULL
+ *
+ * Updates a pointer to a string to a copy of @new_str. The previous string
+ * pointed to by @str_pointer will be freed with g_free().
+ *
+ * @str_pointer must not be %NULL, but can point to a %NULL value.
+ *
+ * One convenient usage of this function is in implementing property settings:
+ * |[
+ *   void
+ *   foo_set_bar (Foo        *foo,
+ *                const char *new_bar)
+ *   {
+ *     g_return_if_fail (IS_FOO (foo));
+ *
+ *     if (g_set_str (&foo->bar, new_bar))
+ *       g_object_notify (foo, "bar");
+ *   }
+ * ]|
+ *
+ * Returns: %TRUE if the value of @str_pointer changed, %FALSE otherwise
+ *
+ * Since: 2.76
+ */
+GLIB_AVAILABLE_STATIC_INLINE_IN_2_76
+static inline gboolean
+g_set_str (char       **str_pointer,
+           const char  *new_str)
+{
+  char *copy;
+
+  if (*str_pointer == new_str ||
+      (*str_pointer && new_str && strcmp (*str_pointer, new_str) == 0))
+    return FALSE;
+
+  copy = g_strdup (new_str);
+  g_free (*str_pointer);
+  *str_pointer = copy;
+
+  return TRUE;
+}
 
 G_END_DECLS
 

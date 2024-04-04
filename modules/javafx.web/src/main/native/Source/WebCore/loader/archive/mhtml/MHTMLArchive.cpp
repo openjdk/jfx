@@ -35,8 +35,8 @@
 #include "MHTMLArchive.h"
 
 #include "Document.h"
-#include "Frame.h"
 #include "LegacySchemeRegistry.h"
+#include "LocalFrame.h"
 #include "MHTMLParser.h"
 #include "MIMETypeRegistry.h"
 #include "Page.h"
@@ -145,22 +145,27 @@ Ref<FragmentedSharedBuffer> MHTMLArchive::generateMHTMLData(Page* page)
 
     StringBuilder stringBuilder;
     stringBuilder.append("From: <Saved by WebKit>\r\n");
+    auto* localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    if (localMainFrame) {
     stringBuilder.append("Subject: ");
     // We replace non ASCII characters with '?' characters to match IE's behavior.
-    stringBuilder.append(replaceNonPrintableCharacters(page->mainFrame().document()->title()));
+        stringBuilder.append(replaceNonPrintableCharacters(localMainFrame->document()->title()));
+    }
     stringBuilder.append("\r\nDate: ");
     stringBuilder.append(dateString);
     stringBuilder.append("\r\nMIME-Version: 1.0\r\n");
     stringBuilder.append("Content-Type: multipart/related;\r\n");
+    if (localMainFrame) {
     stringBuilder.append("\ttype=\"");
-    stringBuilder.append(page->mainFrame().document()->suggestedMIMEType());
+        stringBuilder.append(localMainFrame->document()->suggestedMIMEType());
+    }
     stringBuilder.append("\";\r\n");
     stringBuilder.append("\tboundary=\"");
     stringBuilder.append(boundary);
     stringBuilder.append("\"\r\n\r\n");
 
     // We use utf8() below instead of ascii() as ascii() replaces CRLFs with ?? (we still only have put ASCII characters in it).
-    ASSERT(stringBuilder.toString().isAllASCII());
+    ASSERT(stringBuilder.toString().containsOnlyASCII());
     CString asciiString = stringBuilder.toString().utf8();
     SharedBufferBuilder mhtmlData;
     mhtmlData.append(asciiString.data(), asciiString.length());

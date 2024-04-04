@@ -22,7 +22,6 @@
 
 #pragma once
 
-#include "LegacyInlineFlowBox.h"
 #include "RenderBoxModelObject.h"
 #include "RenderLineBoxList.h"
 
@@ -46,7 +45,7 @@ public:
     LayoutUnit marginStart(const RenderStyle* otherStyle = 0) const final;
     LayoutUnit marginEnd(const RenderStyle* otherStyle = 0) const final;
 
-    void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const final;
+    void boundingRects(Vector<LayoutRect>&, const LayoutPoint& accumulatedOffset) const final;
     void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;
 
     LayoutSize offsetFromContainer(RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = nullptr) const final;
@@ -85,7 +84,7 @@ public:
 
     bool mayAffectLayout() const;
 
-    bool requiresLayer() const override { return isInFlowPositioned() || createsGroup() || hasClipPath() || shouldApplyPaintContainment() || willChangeCreatesStackingContext() || hasRunningAcceleratedAnimations(); }
+    bool requiresLayer() const override;
 
 protected:
     void willBeDestroyed() override;
@@ -143,10 +142,7 @@ private:
 
     void imageChanged(WrappedImagePtr, const IntRect* = 0) final;
 
-    bool willChangeCreatesStackingContext() const
-    {
-        return style().willChange() && style().willChange()->canCreateStackingContext();
-    }
+    inline bool willChangeCreatesStackingContext() const;
 
     RenderLineBoxList m_lineBoxes;   // All of the line boxes created for this inline flow.  For example, <i>Hello<br>world.</i> will have two <i> line boxes.
 };

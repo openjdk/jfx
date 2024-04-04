@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import com.sun.glass.ui.*;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.javafx.util.Logging;
+import javafx.scene.paint.Color;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -36,6 +37,7 @@ import java.nio.IntBuffer;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -57,6 +59,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     native static int _getMacKey(int code);
 
+    private String applicationClassName;
     private boolean isTaskbarApplication = false;
     private final InvokeLaterDispatcher invokeLaterDispatcher;
 
@@ -88,6 +91,8 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
             if (isTriggerReactivation()) {
                 waitForReactivation();
             }
+
+            applicationClassName = _getApplicationClassName();
             launchable.run();
         };
 
@@ -384,8 +389,105 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     }
 
     @Override
-    protected native int _getKeyCodeForChar(char c);
+    protected native int _getKeyCodeForChar(char c, int hint);
 
     @Override
     protected native int _isKeyLocked(int keyCode);
+
+    private native String _getApplicationClassName();
+
+    @Override
+    public native Map<String, Object> getPlatformPreferences();
+
+    @Override
+    public Map<String, String> getPlatformKeyMappings() {
+        return Map.of(
+            "macOS.NSColor.textColor", "foregroundColor",
+            "macOS.NSColor.textBackgroundColor", "backgroundColor",
+            "macOS.NSColor.controlAccentColor", "accentColor"
+        );
+    }
+
+    // This list needs to be kept in sync with PlatformSupport.m in the Glass toolkit for macOS.
+    @Override
+    public Map<String, Class<?>> getPlatformKeys() {
+        return Map.ofEntries(
+            Map.entry("macOS.NSColor.labelColor", Color.class),
+            Map.entry("macOS.NSColor.secondaryLabelColor", Color.class),
+            Map.entry("macOS.NSColor.tertiaryLabelColor", Color.class),
+            Map.entry("macOS.NSColor.quaternaryLabelColor", Color.class),
+            Map.entry("macOS.NSColor.textColor", Color.class),
+            Map.entry("macOS.NSColor.placeholderTextColor", Color.class),
+            Map.entry("macOS.NSColor.selectedTextColor", Color.class),
+            Map.entry("macOS.NSColor.textBackgroundColor", Color.class),
+            Map.entry("macOS.NSColor.selectedTextBackgroundColor", Color.class),
+            Map.entry("macOS.NSColor.keyboardFocusIndicatorColor", Color.class),
+            Map.entry("macOS.NSColor.unemphasizedSelectedTextColor", Color.class),
+            Map.entry("macOS.NSColor.unemphasizedSelectedTextBackgroundColor", Color.class),
+            Map.entry("macOS.NSColor.linkColor", Color.class),
+            Map.entry("macOS.NSColor.separatorColor", Color.class),
+            Map.entry("macOS.NSColor.selectedContentBackgroundColor", Color.class),
+            Map.entry("macOS.NSColor.unemphasizedSelectedContentBackgroundColor", Color.class),
+            Map.entry("macOS.NSColor.selectedMenuItemTextColor", Color.class),
+            Map.entry("macOS.NSColor.gridColor", Color.class),
+            Map.entry("macOS.NSColor.headerTextColor", Color.class),
+            Map.entry("macOS.NSColor.alternatingContentBackgroundColors", Color[].class),
+            Map.entry("macOS.NSColor.controlAccentColor", Color.class),
+            Map.entry("macOS.NSColor.controlColor", Color.class),
+            Map.entry("macOS.NSColor.controlBackgroundColor", Color.class),
+            Map.entry("macOS.NSColor.controlTextColor", Color.class),
+            Map.entry("macOS.NSColor.disabledControlTextColor", Color.class),
+            Map.entry("macOS.NSColor.selectedControlColor", Color.class),
+            Map.entry("macOS.NSColor.selectedControlTextColor", Color.class),
+            Map.entry("macOS.NSColor.alternateSelectedControlTextColor", Color.class),
+            Map.entry("macOS.NSColor.currentControlTint", String.class),
+            Map.entry("macOS.NSColor.windowBackgroundColor", Color.class),
+            Map.entry("macOS.NSColor.windowFrameTextColor", Color.class),
+            Map.entry("macOS.NSColor.underPageBackgroundColor", Color.class),
+            Map.entry("macOS.NSColor.findHighlightColor", Color.class),
+            Map.entry("macOS.NSColor.highlightColor", Color.class),
+            Map.entry("macOS.NSColor.shadowColor", Color.class),
+            Map.entry("macOS.NSColor.systemBlueColor", Color.class),
+            Map.entry("macOS.NSColor.systemBrownColor", Color.class),
+            Map.entry("macOS.NSColor.systemGrayColor", Color.class),
+            Map.entry("macOS.NSColor.systemGreenColor", Color.class),
+            Map.entry("macOS.NSColor.systemIndigoColor", Color.class),
+            Map.entry("macOS.NSColor.systemOrangeColor", Color.class),
+            Map.entry("macOS.NSColor.systemPinkColor", Color.class),
+            Map.entry("macOS.NSColor.systemPurpleColor", Color.class),
+            Map.entry("macOS.NSColor.systemRedColor", Color.class),
+            Map.entry("macOS.NSColor.systemTealColor", Color.class),
+            Map.entry("macOS.NSColor.systemYellowColor", Color.class)
+        );
+    }
+
+    private static final String SUPPRESS_AWT_WARNING_PROPERTY = "javafx.preferences.suppressAppleAwtWarning";
+    private static final String AWT_APPEARANCE_PROPERTY = "apple.awt.application.appearance";
+    private static final String AWT_APPLICATION_CLASS = "NSApplicationAWT";
+    private static final String AWT_SYSTEM_APPEARANCE = "system";
+
+    @SuppressWarnings("removal")
+    private boolean checkSystemAppearance = AccessController.doPrivileged(
+            (PrivilegedAction<Boolean>) () -> !Boolean.getBoolean(SUPPRESS_AWT_WARNING_PROPERTY));
+
+    @Override
+    public void checkPlatformPreferencesSupport() {
+        if (checkSystemAppearance && AWT_APPLICATION_CLASS.equals(applicationClassName)) {
+            @SuppressWarnings("removal")
+            String awtAppearanceProperty = AccessController.doPrivileged(
+                (PrivilegedAction<String>) () -> System.getProperty(AWT_APPEARANCE_PROPERTY));
+
+            if (!AWT_SYSTEM_APPEARANCE.equals(awtAppearanceProperty)) {
+                Logging.getJavaFXLogger().warning(String.format(
+                    "Reported preferences may not reflect macOS system preferences unless the system%n" +
+                    "property %s=%s is set. This warning can be disabled by%n" +
+                    "setting %s=true.",
+                    AWT_APPEARANCE_PROPERTY,
+                    AWT_SYSTEM_APPEARANCE,
+                    SUPPRESS_AWT_WARNING_PROPERTY));
+            }
+        }
+
+        checkSystemAppearance = false;
+    }
 }

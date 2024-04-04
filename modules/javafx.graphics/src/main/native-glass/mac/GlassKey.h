@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,7 @@ jint GetJavaKeyCodeFor(unsigned short keyCode);
 jint GetJavaKeyCode(NSEvent *event);
 jcharArray GetJavaKeyChars(JNIEnv *env, NSEvent *event);
 NSString* GetStringForJavaKey(jchar key);
+NSString* GetStringForMacKey(unsigned short keyCode, bool shifted);
 
 // for key event injection
 BOOL GetMacKey(jint javaKeyCode, unsigned short *outMacKeyCode);

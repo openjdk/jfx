@@ -45,7 +45,8 @@ public:
     void serialize(StringBuilder&, OptionSet<SerializationArguments>) const final;
     size_t length() const { return m_segments.size(); }
 
-    ExceptionOr<CSSUnparsedSegment> item(size_t);
+    bool isSupportedPropertyIndex(unsigned index) const { return index < m_segments.size(); }
+    std::optional<CSSUnparsedSegment> item(size_t);
     ExceptionOr<CSSUnparsedSegment> setItem(size_t, CSSUnparsedSegment&&);
 
     CSSStyleValueType getType() const final { return CSSStyleValueType::CSSUnparsedValue; }

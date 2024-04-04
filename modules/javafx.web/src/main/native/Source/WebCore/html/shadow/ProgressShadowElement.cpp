@@ -34,6 +34,7 @@
 #include "HTMLNames.h"
 #include "HTMLProgressElement.h"
 #include "RenderProgress.h"
+#include "RenderStyleInlines.h"
 #include "ShadowPseudoIds.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -50,7 +51,7 @@ ProgressShadowElement::ProgressShadowElement(Document& document)
 
 HTMLProgressElement* ProgressShadowElement::progressElement() const
 {
-    return downcast<HTMLProgressElement>(shadowHost());
+    return checkedDowncast<HTMLProgressElement>(shadowHost());
 }
 
 bool ProgressShadowElement::rendererIsNeeded(const RenderStyle& style)
@@ -85,9 +86,9 @@ ProgressValueElement::ProgressValueElement(Document& document)
 {
 }
 
-void ProgressValueElement::setWidthPercentage(double width)
+void ProgressValueElement::setInlineSizePercentage(double size)
 {
-    setInlineStyleProperty(CSSPropertyWidth, width, CSSUnitType::CSS_PERCENTAGE);
+    setInlineStyleProperty(CSSPropertyInlineSize, size, CSSUnitType::CSS_PERCENTAGE);
 }
 
 Ref<ProgressInnerElement> ProgressInnerElement::create(Document& document)
