@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry including=".classpath|.project|.settings" kind="src" output="bin" path=""/>
 	<classpathentry combineaccessrules="false" kind="src" path="/base">
 		<attributes>
 			<attribute name="module" value="true"/>
@@ -22,5 +21,6 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="src" path="/manualTests-util"/>
+	<classpathentry excluding=".classpath|.project|.settings" kind="src" output="bin" path=""/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
