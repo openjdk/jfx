@@ -26,8 +26,6 @@
 package com.sun.javafx.font.coretext;
 
 import java.util.ArrayList;
-
-import com.sun.javafx.font.FallbackResource;
 import com.sun.javafx.font.FontFallbackInfo;
 import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.PrismFontFactory;

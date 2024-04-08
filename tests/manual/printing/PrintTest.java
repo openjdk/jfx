@@ -23,22 +23,19 @@
  * questions.
  */
 
+import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
-import javafx.print.*;
-
-import javafx.application.Application;
 import javafx.geometry.Rectangle2D;
-import javafx.scene.Group;
-import javafx.scene.Node;
+import javafx.print.PageLayout;
+import javafx.print.PageRange;
+import javafx.print.Printer;
+import javafx.print.PrinterJob;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
-import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
-import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
+import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.scene.transform.Transform;
 import javafx.stage.Screen;

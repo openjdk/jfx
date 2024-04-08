@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,7 @@
 
 package test.robot.test3d;
 
-import com.sun.javafx.geom.Vec3f;
+import static org.junit.Assume.assumeTrue;
 import java.util.ArrayList;
 import java.util.Collection;
 import javafx.application.ConditionalFeature;
@@ -38,10 +38,7 @@ import javafx.scene.Scene;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
-import javafx.scene.shape.Box;
 import javafx.scene.shape.MeshView;
-import javafx.scene.shape.Shape3D;
-import javafx.scene.shape.Sphere;
 import javafx.scene.shape.TriangleMesh;
 import javafx.scene.shape.VertexFormat;
 import javafx.stage.Stage;
@@ -49,9 +46,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import com.sun.javafx.geom.Vec3f;
 import test.robot.testharness.VisualTestBase;
-
-import static org.junit.Assume.assumeTrue;
 
 /**
  * 3D Snapshot validation tests.
