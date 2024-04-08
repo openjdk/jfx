@@ -24,10 +24,7 @@
  */
 package test.javafx.stage;
 
-import static org.junit.Assume.assumeTrue;
-
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Group;
@@ -35,14 +32,10 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
-
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import com.sun.javafx.PlatformUtil;
-
 import test.util.Util;
 
 public class MaximizeUndecorated {

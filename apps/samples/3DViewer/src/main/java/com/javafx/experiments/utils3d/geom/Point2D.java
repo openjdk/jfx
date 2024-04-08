@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2015, Oracle and/or its affiliates.
+ * Copyright (c) 1997, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -193,6 +193,7 @@ public class Point2D {
      *
      * @return a hash code for this <code>Point2D</code>.
      */
+    @Override
     public int hashCode() {
         int bits = Float.floatToIntBits(x);
         bits ^= Float.floatToIntBits(y) * 31;
@@ -210,6 +211,7 @@ public class Point2D {
      * an instance of <code>Point2D</code> and has
      * the same values; <code>false</code> otherwise.
      */
+    @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
         if (obj instanceof Point2D) {
@@ -225,6 +227,7 @@ public class Point2D {
      *
      * @return a string representation of this <code>Point2D</code>.
      */
+    @Override
     public String toString() {
         return "Point2D[" + x + ", " + y + "]";
     }
