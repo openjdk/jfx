@@ -1,10 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry including=".classpath|.project|.settings" kind="src" path="">
-			<attributes>
-			<attribute name="module" value="true"/>
-		</attributes>
-	</classpathentry>
+	<classpathentry including=".classpath|.project|.settings" kind="src" output="bin" path=""/>
 	<classpathentry combineaccessrules="false" kind="src" path="/base">
 		<attributes>
 			<attribute name="module" value="true"/>
