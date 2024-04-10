@@ -121,18 +121,9 @@ public abstract class ManualTestWindow extends Application {
 
         Region fill = new Region();
 
-        /*
-        Button screenshotButton = new Button("Screenshot");
-        screenshotButton.setMinWidth(100);
-        screenshotButton.setOnAction((ev) -> {
-        });
-        screenshotButton.setDisable(true);
-        */
-
         Button failButton = new Button("✘ Fail");
         failButton.setMinWidth(100);
         failButton.setOnAction((ev) -> {
-            // dump encoded screenshot to stderr?
             Platform.exit();
             throw new AssertionError("Failed Manual Test: " + stage.getTitle());
         });
@@ -145,7 +136,6 @@ public abstract class ManualTestWindow extends Application {
 
         HBox buttons = new HBox(
             10,
-            //screenshotButton,
             fill,
             failButton,
             passButton
