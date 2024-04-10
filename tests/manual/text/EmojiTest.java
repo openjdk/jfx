@@ -31,34 +31,36 @@ import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import com.oracle.util.testing.ManualTestWindow;
 
-public class EmojiTest {
+public class EmojiTest extends ManualTestWindow {
     public static void main(String[] args) {
-        ManualTestWindow.builder().
-            title("Emoji Rendering Test (macOS)").
-            instructions(
-                """
-                This tests rendering of Emoji glyphs which is only supported on macOS.
-                On macOS you should see a yellow-coloured smiling face image,
-                embedded between 'ab' and 'cd'.
-                On other platforms it may be a missing glyph, or an empty space, or
-                a similar rendering as a greyscale/B&W glyph.
-                Principally, you are checking that the emoji is rendered on macOS in
-                each of the controls and nodes displayed in the test, and that the
-                editable text field handles selection of the emoji glyph with the
-                same background as other glyphs - this presumes the emoji image has
-                transparent background pixels.
-                There are 3 different ways it is displayed to verify
-                1) Text node. 2) Label control, 3) TextField Control
-                Press the Pass or Fail button as appropriate and the test will exit.
-                If what you see is not explained here, ask before filing a bug.
-                """
-            ).
-            size(1200, 800).
-            ui(() -> create()).
-            buildAndRun();
+        launch(args);
     }
 
-    public static Node create() {
+    public EmojiTest() {
+        super(
+            "Emoji Rendering Test (macOS)",
+            """
+            This tests rendering of Emoji glyphs which is only supported on macOS.
+            On macOS you should see a yellow-coloured smiling face image,
+            embedded between 'ab' and 'cd'.
+            On other platforms it may be a missing glyph, or an empty space, or
+            a similar rendering as a greyscale/B&W glyph.
+            Principally, you are checking that the emoji is rendered on macOS in
+            each of the controls and nodes displayed in the test, and that the
+            editable text field handles selection of the emoji glyph with the
+            same background as other glyphs - this presumes the emoji image has
+            transparent background pixels.
+            There are 3 different ways it is displayed to verify
+            1) Text node. 2) Label control, 3) TextField Control
+            Press the Pass or Fail button as appropriate and the test will exit.
+            If what you see is not explained here, ask before filing a bug.
+            """,
+            1200, 800
+        );
+    }
+
+    @Override
+    protected Node createContent() {
         Font font = new Font(32);
         String emojiString = "ab\ud83d\ude00cd";
         Text text = new Text(emojiString);

@@ -1,13 +1,8 @@
-# Test Utilities
+package com.oracle.util.testing;
 
-## ManualTestWindow
+import javafx.scene.Node;
+import javafx.scene.control.Button;
 
-This facility provides the base class for manual tests which displays the test instructions,
-the UI under test, and the Pass/Fail buttons.
-
-Example:
-
-```java
 public class ManualTestExample extends ManualTestWindow {
     public ManualTestExample() {
         super(
@@ -30,9 +25,3 @@ public class ManualTestExample extends ManualTestWindow {
         return new Button("Test");
     }
 }
-```
-
-Resulting application window:
-
-![screenshot](doc/ManualTestWindow.png)
-
