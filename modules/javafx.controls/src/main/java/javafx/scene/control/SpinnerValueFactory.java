@@ -848,7 +848,7 @@ public abstract class SpinnerValueFactory<T> {
             final BigDecimal amountToStepByBigDecimal = BigDecimal.valueOf(getAmountToStepBy());
             BigDecimal newValue = currentValue.subtract(amountToStepByBigDecimal.multiply(BigDecimal.valueOf(steps)));
             setValue(isWrapAround() ?
-                Spinner.wrapValue(newValue, minBigDecimal, maxBigDecimal, amountToStepByBigDecimal).doubleValue() :
+                Spinner.wrapValue(currentValue, newValue, minBigDecimal, maxBigDecimal).doubleValue() :
                 Utils.clamp(minBigDecimal, newValue, maxBigDecimal).doubleValue());
         }
 
@@ -860,7 +860,7 @@ public abstract class SpinnerValueFactory<T> {
             final BigDecimal amountToStepByBigDecimal = BigDecimal.valueOf(getAmountToStepBy());
             BigDecimal newValue = currentValue.add(amountToStepByBigDecimal.multiply(BigDecimal.valueOf(steps)));
             setValue(isWrapAround() ?
-                Spinner.wrapValue(newValue, minBigDecimal, maxBigDecimal, amountToStepByBigDecimal).doubleValue() :
+                Spinner.wrapValue(currentValue, newValue, minBigDecimal, maxBigDecimal).doubleValue() :
                 Utils.clamp(minBigDecimal, newValue, maxBigDecimal).doubleValue());
         }
     }

@@ -684,7 +684,6 @@ public class SpinnerTest {
         dblValueFactory.increment(1); // 0.90
         dblValueFactory.increment(1); // 0.95
         dblValueFactory.increment(1); // 1.00
-        dblValueFactory.increment(1); // 0.00
         dblValueFactory.increment(1); // 0.05
         dblValueFactory.increment(1); // 0.10
         assertEquals(0.10, dblValueFactory.getValue(), 0);
@@ -695,35 +694,33 @@ public class SpinnerTest {
         dblValueFactory.setValue(0.80);
         dblValueFactory.increment(2); // 0.90
         dblValueFactory.increment(2); // 1.00
-        dblValueFactory.increment(2); // 0.05 Note: one step is consumed going from 1.0->0.0
-        dblValueFactory.increment(2); // 0.15
-        assertEquals(0.15, dblValueFactory.getValue(), 0);
+        dblValueFactory.increment(2); // 0.10
+        dblValueFactory.increment(2); // 0.20
+        assertEquals(0.2, dblValueFactory.getValue(), 0);
     }
 
     @Test public void dblSpinner_testWrapAround_increment_largeStep() {
         dblValueFactory.setWrapAround(true);
-        dblValueFactory.increment(21);
+        dblValueFactory.increment(20);
         assertEquals(0.5, dblValueFactory.getValue(), 0);
-        dblValueFactory.increment(31);
+        dblValueFactory.increment(30);
         assertEquals(1.0, dblValueFactory.getValue(), 0);
-        dblValueFactory.increment(42);
+        dblValueFactory.increment(40);
         assertEquals(1.0, dblValueFactory.getValue(), 0);
-        dblValueFactory.increment(53);
+        dblValueFactory.increment(50);
         assertEquals(0.5, dblValueFactory.getValue(), 0);
     }
 
     @Test public void dblSpinner_testWrapAround_increment_negativeStep() {
         dblValueFactory.setWrapAround(true);
+        dblValueFactory.increment(-9);
+        assertEquals(0.05, dblValueFactory.getValue());
         dblValueFactory.increment(-1);
-        assertEquals(0.45, dblValueFactory.getValue());
-        dblValueFactory.increment(-21);
-        assertEquals(0.45, dblValueFactory.getValue());
-        dblValueFactory.increment(-22);
-        assertEquals(0.4, dblValueFactory.getValue());
-        dblValueFactory.increment(-42);
-        assertEquals(0.4, dblValueFactory.getValue());
-        dblValueFactory.increment(-43);
-        assertEquals(0.35, dblValueFactory.getValue());
+        assertEquals(0.0, dblValueFactory.getValue());
+        dblValueFactory.increment(-1);
+        assertEquals(0.95, dblValueFactory.getValue());
+        dblValueFactory.increment(-20);
+        assertEquals(0.95, dblValueFactory.getValue());
     }
 
     @Test public void dblSpinner_testWrapAround_decrement_oneStep() {
@@ -733,7 +730,6 @@ public class SpinnerTest {
         dblValueFactory.decrement(1); // 0.10
         dblValueFactory.decrement(1); // 0.05
         dblValueFactory.decrement(1); // 0.00
-        dblValueFactory.decrement(1); // 1.00
         dblValueFactory.decrement(1); // 0.95
         dblValueFactory.decrement(1); // 0.90
         assertEquals(0.90, dblValueFactory.getValue(), 0);
@@ -744,35 +740,33 @@ public class SpinnerTest {
         dblValueFactory.setValue(0.20);
         dblValueFactory.decrement(2); // 0.10
         dblValueFactory.decrement(2); // 0.00
-        dblValueFactory.decrement(2); // 0.95 NOTE: one step is consumed going from 0.0->1.0
-        dblValueFactory.decrement(2); // 0.85
-        assertEquals(0.85, dblValueFactory.getValue());
+        dblValueFactory.decrement(2); // 0.90
+        dblValueFactory.decrement(2); // 0.80
+        assertEquals(0.80, dblValueFactory.getValue());
     }
 
     @Test public void dblSpinner_testWrapAround_decrement_largeStep() {
         dblValueFactory.setWrapAround(true);
-        dblValueFactory.decrement(21);
+        dblValueFactory.decrement(20);
         assertEquals(0.5, dblValueFactory.getValue());
-        dblValueFactory.decrement(31);
+        dblValueFactory.decrement(30);
         assertEquals(0.0, dblValueFactory.getValue());
-        dblValueFactory.decrement(42);
+        dblValueFactory.decrement(40);
         assertEquals(0.0, dblValueFactory.getValue());
-        dblValueFactory.decrement(53);
+        dblValueFactory.decrement(50);
         assertEquals(0.5, dblValueFactory.getValue());
     }
 
     @Test public void dblSpinner_testWrapAround_decrement_negativeStep() {
         dblValueFactory.setWrapAround(true);
+        dblValueFactory.decrement(-9);
+        assertEquals(0.95, dblValueFactory.getValue());
         dblValueFactory.decrement(-1);
-        assertEquals(0.55, dblValueFactory.getValue());
-        dblValueFactory.decrement(-21);
-        assertEquals(0.55, dblValueFactory.getValue());
-        dblValueFactory.decrement(-22);
-        assertEquals(0.6, dblValueFactory.getValue());
-        dblValueFactory.decrement(-42);
-        assertEquals(0.6, dblValueFactory.getValue());
-        dblValueFactory.decrement(-43);
-        assertEquals(0.65, dblValueFactory.getValue());
+        assertEquals(1.0, dblValueFactory.getValue());
+        dblValueFactory.decrement(-1);
+        assertEquals(0.05, dblValueFactory.getValue());
+        dblValueFactory.decrement(-20);
+        assertEquals(0.05, dblValueFactory.getValue());
     }
 
     @Test public void dblSpinner_assertDefaultConverterIsNonNull() {

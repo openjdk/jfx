@@ -810,14 +810,19 @@ public class Spinner<T> extends Control {
      *
      * This method accepts negative values, wrapping around in the other direction.
      */
-    static BigDecimal wrapValue(BigDecimal value, BigDecimal min, BigDecimal max, BigDecimal stepSize) {
-        BigDecimal span = max.subtract(min).add(stepSize);
-
-        if (value.signum() < 0) {
-            value = max.add(value.remainder(span)).add(stepSize);
+    static BigDecimal wrapValue(BigDecimal currentValue, BigDecimal newValue, BigDecimal min, BigDecimal max) {
+        if (newValue.compareTo(min) >= 0 && newValue.compareTo(max) <= 0) {
+            return newValue;
         }
 
-        return min.add(value.subtract(min).remainder(span));
+        BigDecimal span = max.subtract(min);
+        BigDecimal remainder = newValue.remainder(span);
+
+        if (remainder.compareTo(BigDecimal.ZERO) == 0) {
+            return newValue.compareTo(currentValue) >= 0 ? max : min;
+        }
+
+        return newValue.compareTo(max) > 0 ? min.add(remainder) : max.add(remainder);
     }
 
 
