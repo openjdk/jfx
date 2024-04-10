@@ -100,7 +100,7 @@ public abstract class ManualTestWindow extends Application {
         this.width = width;
         this.height = height;
     }
-    
+
     private Parent createContent(Stage stage) {
         Node content = createContent();
 
