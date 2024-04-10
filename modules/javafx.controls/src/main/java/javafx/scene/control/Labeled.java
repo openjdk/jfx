@@ -111,13 +111,13 @@ public abstract class Labeled extends Control {
      * This functionality is made separate from Properties.DEFER_TO_PARENT_PREF_WIDTH which
      * by itself looks rather weird.
      */
-    private static boolean useContentWidth;
+    private static boolean useActualContentWidth;
 
     static {
         LabeledHelper.setAccessor(new LabeledHelper.Accessor() {
             @Override
-            public boolean isUseContentWidth() {
-                return useContentWidth;
+            public boolean isUseActualContentWidth() {
+                return useActualContentWidth;
             }
         });
     }
@@ -862,7 +862,7 @@ public abstract class Labeled extends Control {
                 Bindings.createBooleanBinding(() -> {
                     // make sure prefWidth always returns the actual content width
                     // rather than the column width if inside a table
-                    useContentWidth = true;
+                    useActualContentWidth = true;
                     try {
                         if (isWrapText()) {
                             return (getHeight() < prefHeight(getWidth()));
@@ -870,7 +870,7 @@ public abstract class Labeled extends Control {
 
                         return (getWidth() < prefWidth(getHeight()));
                     } finally {
-                        useContentWidth = false;
+                        useActualContentWidth = false;
                     }
                 },
                 ellipsisStringProperty(),
