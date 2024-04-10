@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,21 +38,25 @@ public class HTMLBaseElementImpl extends HTMLElementImpl implements HTMLBaseElem
 
 
 // Attributes
+    @Override
     public String getHref() {
         return getHrefImpl(getPeer());
     }
     native static String getHrefImpl(long peer);
 
+    @Override
     public void setHref(String value) {
         setHrefImpl(getPeer(), value);
     }
     native static void setHrefImpl(long peer, String value);
 
+    @Override
     public String getTarget() {
         return getTargetImpl(getPeer());
     }
     native static String getTargetImpl(long peer);
 
+    @Override
     public void setTarget(String value) {
         setTargetImpl(getPeer(), value);
     }

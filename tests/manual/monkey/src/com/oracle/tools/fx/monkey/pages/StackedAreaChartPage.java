@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,17 +24,36 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
-import com.oracle.tools.fx.monkey.util.FX;
-import com.oracle.tools.fx.monkey.util.TestPaneBase;
-import javafx.scene.web.HTMLEditor;
+import javafx.scene.chart.StackedAreaChart;
+import javafx.scene.chart.XYChart;
+import com.oracle.tools.fx.monkey.options.BooleanOption;
+import com.oracle.tools.fx.monkey.sheets.XYChartPropertySheet;
+import com.oracle.tools.fx.monkey.util.OptionPane;
 
 /**
- *
+ * Stacked Area Chart Page.
  */
-public class HtmlEditorPage extends TestPaneBase {
-    public HtmlEditorPage() {
-        FX.name(this, "HtmlEditorPage");
-        HTMLEditor ed = new HTMLEditor();
-        setContent(ed);
+public class StackedAreaChartPage extends XYChartPageBase {
+    private final StackedAreaChart<Number, Number> chart;
+
+    public StackedAreaChartPage() {
+        super("StackedAreaChartPage");
+
+        chart = new StackedAreaChart<>(createNumberAxis("X Axis"), createNumberAxis("Y Axis"));
+        chart.setTitle("Stacked Area Chart");
+        addSeries();
+
+        OptionPane op = new OptionPane();
+        op.section("StackedAreaChart");
+        op.option(new BooleanOption("createSymbols", "create symbols", chart.createSymbolsProperty()));
+        XYChartPropertySheet.appendTo(this, op, chart);
+
+        setContent(chart);
+        setOptions(op);
+    }
+
+    @Override
+    public XYChart<?, Number> chart() {
+        return chart;
     }
 }

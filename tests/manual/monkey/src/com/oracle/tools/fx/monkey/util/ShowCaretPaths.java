@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,31 +24,44 @@
  */
 package com.oracle.tools.fx.monkey.util;
 
-import java.util.function.Consumer;
-import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.control.ComboBox;
+import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Path;
+import javafx.scene.shape.PathElement;
+import javafx.scene.text.TextFlow;
 
 /**
- * Alignment Option Selector.
+ * Shows caret paths for each text position.
  */
-public class PosSelector {
-    private final ComboBox<Pos> field = new ComboBox<>();
-
-    public PosSelector(Consumer<Pos> client) {
-        FX.name(field, "PosSelector");
-        field.getItems().setAll(Pos.values());
-        field.getSelectionModel().selectedItemProperty().addListener((p) -> {
-            Pos v = field.getSelectionModel().getSelectedItem();
-            client.accept(v);
-        });
+public class ShowCaretPaths extends Path {
+    public ShowCaretPaths() {
+        setStrokeWidth(1);
+        setStroke(Color.RED);
+        setManaged(false);
     }
 
-    public Node node() {
-        return field;
+    /**
+     * Creates ShowCaretPaths Node for the given TextFlow node.
+     * The Text node must be a child of a Group.
+     * @param owner the Text node to show character runs for
+     */
+    public static void createFor(TextFlow owner) {
+        ShowCaretPaths p = new ShowCaretPaths();
+        int len = FX.getTextLength(owner);
+        for (int i = 0; i < len; i++) {
+            PathElement[] es = owner.caretShape(i, true);
+            p.getElements().addAll(es);
+        }
+        owner.getChildren().add(p);
     }
 
-    public void select(Pos v) {
-        field.getSelectionModel().select(v);
+    public static void remove(Pane p) {
+        for (Node ch : p.getChildren()) {
+            if (ch instanceof ShowCaretPaths) {
+                p.getChildren().remove(ch);
+                return;
+            }
+        }
     }
 }

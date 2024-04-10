@@ -25,12 +25,11 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import test.robot.com.sun.glass.ui.monocle.ScrollTestBase;
-import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 
 /**
  * Scroll tests that are checking scroll threshold
