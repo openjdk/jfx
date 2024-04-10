@@ -39,7 +39,7 @@ import com.sun.javafx.tk.Toolkit;
 
 /**
  * Tests textTruncated property of Labeled, using Label, TableCell, and TreeTableCell controls
- * (the last two contain conditional code that redirects the execution of computePrefWidth()
+ * (the last two contain conditional code that redirects the execution of computePrefWidth())
  * in their skins to different code paths.
  */
 public class LabeledTruncatedTest {
