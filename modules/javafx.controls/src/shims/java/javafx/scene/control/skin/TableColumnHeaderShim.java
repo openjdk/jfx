@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
  */
 package javafx.scene.control.skin;
 
+import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
 
@@ -63,5 +64,9 @@ public class TableColumnHeaderShim {
 
     public static void resizeColumnToFitContent(TableColumnHeader header, int nbRows) {
         header.resizeColumnToFitContent(nbRows);
+    }
+
+    public static Label getLabel(TableColumnHeader tableColumnHeader) {
+        return tableColumnHeader.label;
     }
 }
