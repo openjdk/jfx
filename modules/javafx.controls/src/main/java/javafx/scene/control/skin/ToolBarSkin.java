@@ -39,7 +39,6 @@ import com.sun.javafx.scene.traversal.TraversalContext;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.value.WritableValue;
-import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.HPos;
@@ -76,6 +75,7 @@ import com.sun.javafx.scene.control.behavior.ToolBarBehavior;
 import com.sun.javafx.scene.traversal.Direction;
 
 import javafx.css.Styleable;
+import javafx.stage.WindowEvent;
 
 import static com.sun.javafx.scene.control.skin.resources.ControlResources.getString;
 
@@ -94,6 +94,12 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
      **************************************************************************/
 
     private Pane box;
+    /**
+     * The overflow logic needs properly calculated prefWidth(..)/prefHeight(..) values.
+     * These values are valid if the elements have been added to the scene and the CSS has been applied properly.
+     * To ensure this, we add the overflow items to this pane if they are not currently visible in the overflow menu.
+     */
+    private Pane overflowBox;
     private ToolBarOverflowMenu overflowMenu;
     private boolean overflow = false;
     private int overflowNodeIndex = Integer.MAX_VALUE;
@@ -101,7 +107,6 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
     private double previousHeight = 0;
     private double savedPrefWidth = 0;
     private double savedPrefHeight = 0;
-    private ObservableList<MenuItem> overflowMenuItems;
     private boolean needsUpdate = false;
     private final ParentTraversalEngine engine;
     private final BehaviorBase<ToolBar> behavior;
@@ -128,7 +133,6 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
         behavior = new ToolBarBehavior(control);
 //        control.setInputMap(behavior.getInputMap());
 
-        overflowMenuItems = FXCollections.observableArrayList();
         initialize();
         registerChangeListener(control.orientationProperty(), e -> initialize());
 
@@ -246,6 +250,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
             while (c.next()) {
                 for (Node n: c.getRemoved()) {
                     box.getChildren().remove(n);
+                    overflowBox.getChildren().remove(n);
                 }
                 box.getChildren().addAll(c.getAddedSubList());
             }
@@ -553,17 +558,25 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
     private void initialize() {
         if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
             box = new VBox();
+            overflowBox = new VBox();
         } else {
             box = new HBox();
+            overflowBox = new HBox();
         }
         box.getStyleClass().add("container");
         box.getChildren().addAll(getSkinnable().getItems());
-        overflowMenu = new ToolBarOverflowMenu(overflowMenuItems);
+        // The overflowBox must have the same style classes, otherwise the overflow items may get wrong values.
+        overflowBox.setId(box.getId());
+        overflowBox.getStyleClass().addAll(box.getStyleClass());
+        overflowBox.setManaged(false);
+        overflowBox.setVisible(false);
+        overflowMenu = new ToolBarOverflowMenu(overflowBox.getChildren());
         overflowMenu.setVisible(false);
         overflowMenu.setManaged(false);
 
         getChildren().clear();
         getChildren().add(box);
+        getChildren().add(overflowBox);
         getChildren().add(overflowMenu);
 
         previousWidth = 0;
@@ -599,8 +612,8 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
         // Determine which node goes to the toolbar and which goes to the overflow.
         ObservableList<Node> nodes = getSkinnable().getItems();
 
-        overflowMenuItems.clear();
         box.getChildren().clear();
+        overflowBox.getChildren().clear();
         for (int i = 0; i < nodes.size(); i++) {
             Node node = nodes.get(i);
             node.getStyleClass().remove("menu-item");
@@ -609,6 +622,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
             if (i < newOverflowNodeIndex) {
                 box.getChildren().add(node);
             } else {
+                overflowBox.getChildren().add(node);
                 if (node.isFocused()) {
                     if (!box.getChildren().isEmpty()) {
                         Node last = engine.selectLast();
@@ -619,63 +633,13 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
                         overflowMenu.requestFocus();
                     }
                 }
-                if (node instanceof Separator) {
-                    overflowMenuItems.add(new SeparatorMenuItem());
-                } else {
-                    CustomMenuItem customMenuItem = new CustomMenuItem(node);
-
-                    // RT-36455:
-                    // We can't be totally certain of all nodes, but for the
-                    // most common nodes we can check to see whether we should
-                    // hide the menu when the node is clicked on. The common
-                    // case is for TextField or Slider.
-                    // This list won't be exhaustive (there is no point really
-                    // considering the ListView case), but it should try to
-                    // include most common control types that find themselves
-                    // placed in menus.
-                    final String nodeType = node.getTypeSelector();
-                    switch (nodeType) {
-                        case "Button":
-                        case "Hyperlink":
-                        case "Label":
-                            customMenuItem.setHideOnClick(true);
-                            break;
-                        case "CheckBox":
-                        case "ChoiceBox":
-                        case "ColorPicker":
-                        case "ComboBox":
-                        case "DatePicker":
-                        case "MenuButton":
-                        case "PasswordField":
-                        case "RadioButton":
-                        case "ScrollBar":
-                        case "ScrollPane":
-                        case "Slider":
-                        case "SplitMenuButton":
-                        case "SplitPane":
-                        case "TextArea":
-                        case "TextField":
-                        case "ToggleButton":
-                        case "ToolBar":
-                        default:
-                            customMenuItem.setHideOnClick(false);
-                            break;
-                    }
-
-                    overflowMenuItems.add(customMenuItem);
-                }
             }
         }
 
         // Check if we overflowed.
-        overflow = overflowMenuItems.size() > 0;
+        overflow = !overflowBox.getChildren().isEmpty();
         overflowNodeIndex = newOverflowNodeIndex;
-        if (overflow) {
-            // The nodes needs to be added to the scene and the css needs to be applied,
-            // otherwise subsequent prefWidth(..)/prefHeight(..) may return wrong values.
-            overflowMenu.popup.getItems().setAll(overflowMenuItems);
-            overflowMenu.popup.getScene().getRoot().applyCss();
-        } else if(overflowMenu.isFocused()) {
+        if (!overflow && overflowMenu.isFocused()) {
             Node last = engine.selectLast();
             if (last != null) {
                 last.requestFocus();
@@ -742,14 +706,14 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
     class ToolBarOverflowMenu extends StackPane {
         private StackPane downArrow;
         private ContextMenu popup;
-        private ObservableList<MenuItem> menuItems;
+        private ObservableList<Node> overflowItems;
 
-        public ToolBarOverflowMenu(ObservableList<MenuItem> items) {
+        public ToolBarOverflowMenu(ObservableList<Node> items) {
             getStyleClass().setAll("tool-bar-overflow-button");
             setAccessibleRole(AccessibleRole.BUTTON);
             setAccessibleText(getString("Accessibility.title.ToolBar.OverflowButton"));
             setFocusTraversable(true);
-            this.menuItems = items;
+            this.overflowItems = items;
             downArrow = new StackPane();
             downArrow.getStyleClass().setAll("arrow");
             downArrow.setOnMousePressed(me -> {
@@ -760,7 +724,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
                 if (KeyCode.SPACE.equals(ke.getCode())) {
                     if (!popup.isShowing()) {
                         popup.getItems().clear();
-                        popup.getItems().addAll(menuItems);
+                        popup.getItems().addAll(createMenuItems());
                         popup.show(downArrow, Side.BOTTOM, 0, 0);
                     }
                     ke.consume();
@@ -783,6 +747,16 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
                     }
             });
             popup = new ContextMenu();
+            popup.addEventHandler(WindowEvent.WINDOW_HIDDEN, e -> {
+                // Put the overflowed items back to the list,
+                // otherwise subsequent prefWidth(..)/prefHeight(..) may return wrong values.
+                overflowItems.clear();
+                for (Node item : getSkinnable().getItems()) {
+                    if (!box.getChildren().contains(item)) {
+                        overflowItems.add(item);
+                    }
+                }
+            });
             setVisible(false);
             setManaged(false);
             getChildren().add(downArrow);
@@ -793,9 +767,62 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
                 popup.hide();
             } else {
                 popup.getItems().clear();
-                popup.getItems().addAll(menuItems);
+                popup.getItems().addAll(createMenuItems());
                 popup.show(downArrow, Side.BOTTOM, 0, 0);
             }
+        }
+
+        private List<MenuItem> createMenuItems() {
+            List<MenuItem> menuItems = new ArrayList<>();
+            for (Node node : overflowItems) {
+                if (node instanceof Separator) {
+                    menuItems.add(new SeparatorMenuItem());
+                } else {
+                    CustomMenuItem customMenuItem = new CustomMenuItem(node);
+
+                    // RT-36455:
+                    // We can't be totally certain of all nodes, but for the
+                    // most common nodes we can check to see whether we should
+                    // hide the menu when the node is clicked on. The common
+                    // case is for TextField or Slider.
+                    // This list won't be exhaustive (there is no point really
+                    // considering the ListView case), but it should try to
+                    // include most common control types that find themselves
+                    // placed in menus.
+                    final String nodeType = node.getTypeSelector();
+                    switch (nodeType) {
+                        case "Button":
+                        case "Hyperlink":
+                        case "Label":
+                            customMenuItem.setHideOnClick(true);
+                            break;
+                        case "CheckBox":
+                        case "ChoiceBox":
+                        case "ColorPicker":
+                        case "ComboBox":
+                        case "DatePicker":
+                        case "MenuButton":
+                        case "PasswordField":
+                        case "RadioButton":
+                        case "ScrollBar":
+                        case "ScrollPane":
+                        case "Slider":
+                        case "SplitMenuButton":
+                        case "SplitPane":
+                        case "TextArea":
+                        case "TextField":
+                        case "ToggleButton":
+                        case "ToolBar":
+                        default:
+                            customMenuItem.setHideOnClick(false);
+                            break;
+                    }
+
+                    menuItems.add(customMenuItem);
+                }
+
+            }
+            return menuItems;
         }
 
         @Override protected double computePrefWidth(double height) {
