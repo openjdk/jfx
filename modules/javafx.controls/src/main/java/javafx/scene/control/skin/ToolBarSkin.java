@@ -36,6 +36,7 @@ import com.sun.javafx.scene.traversal.Algorithm;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import com.sun.javafx.scene.traversal.TraversalContext;
 
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.value.WritableValue;
@@ -569,15 +570,13 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
         box.getChildren().addAll(getSkinnable().getItems());
         // The overflowBox must have the same style classes, otherwise the overflow items may get wrong values.
         overflowBox.idProperty().bind(box.idProperty());
-        overflowBox.getStyleClass().setAll(box.getStyleClass());
-        box.getStyleClass().addListener((ListChangeListener<? super String>) change -> overflowBox.getStyleClass().setAll(change.getList()));
-        overflowBox.getStylesheets().setAll(box.getStylesheets());
-        box.getStylesheets().addListener((ListChangeListener<? super String>) change -> overflowBox.getStylesheets().setAll(change.getList()));
+        Bindings.bindContent(overflowBox.getStyleClass(), box.getStyleClass());
+        Bindings.bindContent(overflowBox.getStylesheets(), box.getStylesheets());
         box.getPseudoClassStates().addListener((SetChangeListener<? super PseudoClass>) change -> {
             if (change.wasAdded()) {
                 overflowBox.pseudoClassStateChanged(change.getElementAdded(), true);
             } else if (change.wasRemoved()) {
-                overflowBox.pseudoClassStateChanged(change.getElementAdded(), false);
+                overflowBox.pseudoClassStateChanged(change.getElementRemoved(), false);
             }
         });
         overflowBox.setManaged(false);
