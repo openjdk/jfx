@@ -41,6 +41,8 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.SetChangeListener;
+import javafx.css.PseudoClass;
 import javafx.geometry.HPos;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -566,8 +568,18 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
         box.getStyleClass().add("container");
         box.getChildren().addAll(getSkinnable().getItems());
         // The overflowBox must have the same style classes, otherwise the overflow items may get wrong values.
-        overflowBox.setId(box.getId());
-        overflowBox.getStyleClass().addAll(box.getStyleClass());
+        overflowBox.idProperty().bind(box.idProperty());
+        overflowBox.getStyleClass().setAll(box.getStyleClass());
+        box.getStyleClass().addListener((ListChangeListener<? super String>) change -> overflowBox.getStyleClass().setAll(change.getList()));
+        overflowBox.getStylesheets().setAll(box.getStylesheets());
+        box.getStylesheets().addListener((ListChangeListener<? super String>) change -> overflowBox.getStylesheets().setAll(change.getList()));
+        box.getPseudoClassStates().addListener((SetChangeListener<? super PseudoClass>) change -> {
+            if (change.wasAdded()) {
+                overflowBox.pseudoClassStateChanged(change.getElementAdded(), true);
+            } else if (change.wasRemoved()) {
+                overflowBox.pseudoClassStateChanged(change.getElementAdded(), false);
+            }
+        });
         overflowBox.setManaged(false);
         overflowBox.setVisible(false);
         overflowMenu = new ToolBarOverflowMenu(overflowBox.getChildren());
