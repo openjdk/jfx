@@ -113,6 +113,7 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
             peer = _peer;
         }
 
+        @Override
         public void dispose() {
             int hash = hashPeer(peer);
             SelfDisposer head = hashTable[hash];
@@ -252,96 +253,115 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
     public static final int DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC = 0x20;
 
 // Attributes
+    @Override
     public String getNodeName() {
         return getNodeNameImpl(getPeer());
     }
     native static String getNodeNameImpl(long peer);
 
+    @Override
     public String getNodeValue() {
         return getNodeValueImpl(getPeer());
     }
     native static String getNodeValueImpl(long peer);
 
+    @Override
     public void setNodeValue(String value) throws DOMException {
         setNodeValueImpl(getPeer(), value);
     }
     native static void setNodeValueImpl(long peer, String value);
 
+    @Override
     public short getNodeType() {
         return getNodeTypeImpl(getPeer());
     }
     native static short getNodeTypeImpl(long peer);
 
+    @Override
     public Node getParentNode() {
         return NodeImpl.getImpl(getParentNodeImpl(getPeer()));
     }
     native static long getParentNodeImpl(long peer);
 
+    @Override
     public NodeList getChildNodes() {
         return NodeListImpl.getImpl(getChildNodesImpl(getPeer()));
     }
     native static long getChildNodesImpl(long peer);
 
+    @Override
     public Node getFirstChild() {
         return NodeImpl.getImpl(getFirstChildImpl(getPeer()));
     }
     native static long getFirstChildImpl(long peer);
 
+    @Override
     public Node getLastChild() {
         return NodeImpl.getImpl(getLastChildImpl(getPeer()));
     }
     native static long getLastChildImpl(long peer);
 
+    @Override
     public Node getPreviousSibling() {
         return NodeImpl.getImpl(getPreviousSiblingImpl(getPeer()));
     }
     native static long getPreviousSiblingImpl(long peer);
 
+    @Override
     public Node getNextSibling() {
         return NodeImpl.getImpl(getNextSiblingImpl(getPeer()));
     }
     native static long getNextSiblingImpl(long peer);
 
+    @Override
     public Document getOwnerDocument() {
         return DocumentImpl.getImpl(getOwnerDocumentImpl(getPeer()));
     }
     native static long getOwnerDocumentImpl(long peer);
 
+    @Override
     public String getNamespaceURI() {
         return getNamespaceURIImpl(getPeer());
     }
     native static String getNamespaceURIImpl(long peer);
 
+    @Override
     public String getPrefix() {
         return getPrefixImpl(getPeer());
     }
     native static String getPrefixImpl(long peer);
 
+    @Override
     public void setPrefix(String value) throws DOMException {
         setPrefixImpl(getPeer(), value);
     }
     native static void setPrefixImpl(long peer, String value);
 
+    @Override
     public String getLocalName() {
         return getLocalNameImpl(getPeer());
     }
     native static String getLocalNameImpl(long peer);
 
+    @Override
     public NamedNodeMap getAttributes() {
         return NamedNodeMapImpl.getImpl(getAttributesImpl(getPeer()));
     }
     native static long getAttributesImpl(long peer);
 
+    @Override
     public String getBaseURI() {
         return getBaseURIImpl(getPeer());
     }
     native static String getBaseURIImpl(long peer);
 
+    @Override
     public String getTextContent() {
         return getTextContentImpl(getPeer());
     }
     native static String getTextContentImpl(long peer);
 
+    @Override
     public void setTextContent(String value) throws DOMException {
         setTextContentImpl(getPeer(), value);
     }
@@ -354,6 +374,7 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
 
 
 // Functions
+    @Override
     public Node insertBefore(Node newChild
         , Node refChild) throws DOMException
     {
@@ -366,6 +387,7 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
         , long refChild);
 
 
+    @Override
     public Node replaceChild(Node newChild
         , Node oldChild) throws DOMException
     {
@@ -378,6 +400,7 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
         , long oldChild);
 
 
+    @Override
     public Node removeChild(Node oldChild) throws DOMException
     {
         return NodeImpl.getImpl(removeChildImpl(getPeer()
@@ -387,6 +410,7 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
         , long oldChild);
 
 
+    @Override
     public Node appendChild(Node newChild) throws DOMException
     {
         return NodeImpl.getImpl(appendChildImpl(getPeer()
@@ -396,6 +420,7 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
         , long newChild);
 
 
+    @Override
     public boolean hasChildNodes()
     {
         return hasChildNodesImpl(getPeer());
@@ -403,6 +428,7 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
     native static boolean hasChildNodesImpl(long peer);
 
 
+    @Override
     public Node cloneNode(boolean deep) throws DOMException
     {
         return NodeImpl.getImpl(cloneNodeImpl(getPeer()
@@ -412,6 +438,7 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
         , boolean deep);
 
 
+    @Override
     public void normalize()
     {
         normalizeImpl(getPeer());
@@ -419,6 +446,7 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
     native static void normalizeImpl(long peer);
 
 
+    @Override
     public boolean isSupported(String feature
         , String version)
     {
@@ -431,6 +459,7 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
         , String version);
 
 
+    @Override
     public boolean hasAttributes()
     {
         return hasAttributesImpl(getPeer());
@@ -438,6 +467,7 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
     native static boolean hasAttributesImpl(long peer);
 
 
+    @Override
     public boolean isSameNode(Node other)
     {
         return isSameNodeImpl(getPeer()
@@ -447,6 +477,7 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
         , long other);
 
 
+    @Override
     public boolean isEqualNode(Node other)
     {
         return isEqualNodeImpl(getPeer()
@@ -456,6 +487,7 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
         , long other);
 
 
+    @Override
     public String lookupPrefix(String namespaceURI)
     {
         return lookupPrefixImpl(getPeer()
@@ -465,6 +497,7 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
         , String namespaceURI);
 
 
+    @Override
     public boolean isDefaultNamespace(String namespaceURI)
     {
         return isDefaultNamespaceImpl(getPeer()
@@ -474,6 +507,7 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
         , String namespaceURI);
 
 
+    @Override
     public String lookupNamespaceURI(String prefix)
     {
         return lookupNamespaceURIImpl(getPeer()
@@ -483,6 +517,7 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
         , String prefix);
 
 
+    @Override
     public short compareDocumentPosition(Node other)
     {
         return compareDocumentPositionImpl(getPeer()
@@ -501,6 +536,7 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
         , long other);
 
 
+    @Override
     public void addEventListener(String type
         , EventListener listener
         , boolean useCapture)
@@ -516,6 +552,7 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
         , boolean useCapture);
 
 
+    @Override
     public void removeEventListener(String type
         , EventListener listener
         , boolean useCapture)
@@ -531,6 +568,7 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
         , boolean useCapture);
 
 
+    @Override
     public boolean dispatchEvent(Event event) throws DOMException
     {
         return dispatchEventImpl(getPeer()
@@ -542,12 +580,17 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
 
 
 //stubs
+    @Override
     public Object getUserData(String key) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
+
+    @Override
     public Object setUserData(String key, Object data, UserDataHandler handler) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
+
+    @Override
     public Object getFeature(String feature, String version) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
