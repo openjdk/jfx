@@ -144,6 +144,16 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
     }
 
     /**
+     * Utility method creates a KeyBinding corresponding to an option-code key press.
+     *
+     * @param code the key code
+     * @return the KeyBinding
+     */
+    public static KeyBinding option(KeyCode code) {
+        return create(code, KCondition.KEY_PRESSED, KCondition.OPTION);
+    }
+
+    /**
      * Utility method creates a KeyBinding corresponding to a shift-code key press.
      *
      * @param code the key code
@@ -161,6 +171,16 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
      */
     public static KeyBinding shortcut(KeyCode code) {
         return create(code, KCondition.KEY_PRESSED, KCondition.SHORTCUT);
+    }
+
+    /**
+     * Utility method creates a KeyBinding corresponding to a shift-shortcut-code key press.
+     *
+     * @param code the key code
+     * @return the KeyBinding
+     */
+    public static KeyBinding shiftShortcut(KeyCode code) {
+        return create(code, KCondition.KEY_PRESSED, KCondition.SHORTCUT, KCondition.SHORTCUT);
     }
 
     private static KeyBinding create(Object key, KCondition... mods) {
