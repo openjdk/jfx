@@ -954,15 +954,14 @@ public abstract class PrismFontFactory implements FontFactory {
     private static String sysFontDir = null;
     private static String userFontDir = null;
 
-    private static native byte[] getFontPath();
+    private static native String getFontPath();
 
     private static void getPlatformFontDirs() {
 
         if (userFontDir != null || sysFontDir != null) {
             return;
         }
-        byte [] pathBytes = getFontPath();
-        String path = new String(pathBytes);
+        String path = getFontPath();
 
         int scIdx = path.indexOf(';');
         if (scIdx < 0) {
