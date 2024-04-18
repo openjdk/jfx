@@ -27,9 +27,13 @@ package jfx.incubator.scene.control.input;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
+import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.input.KeyCode;
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.traversal.Direction;
+import com.sun.javafx.scene.traversal.TraversalMethod;
 
 /**
  * Class provides a convenient foundation for the stateful behaviors.
@@ -54,6 +58,7 @@ import com.sun.javafx.PlatformUtil;
  *         setSkinInputMap(behavior.getSkinInputMap());
  *   }
  * }</pre>
+ *
  * @param <C> the type of the control
  * @since 999 TODO
  */
@@ -240,5 +245,76 @@ public abstract class BehaviorBase<C extends Control> {
      */
     protected boolean isWindows() {
         return PlatformUtil.isWindows();
+    }
+    
+    /**
+     * Called by any of the BehaviorBase traverse methods to actually effect a
+     * traversal of the focus. The default behavior of this method is to simply
+     * traverse on the given node, passing the given direction. A
+     * subclass may override this method.
+     *
+     * @param node The node to traverse on
+     * @param dir The direction to traverse
+     */
+    // NOTE: there should be a proper public focus management API
+    private static void traverse(Node node, Direction dir) {
+        if (node == null) {
+            throw new IllegalArgumentException("Attempting to traverse on a null Node.");
+        }
+        NodeHelper.traverse(node, dir, TraversalMethod.KEY);
+    }
+
+    /**
+     * Calls the focus traversal engine and indicates that traversal should
+     * go the next focusTraversable Node above the current one.
+     * @param n the node to traverse from
+     */
+    protected final void traverseUp(Node n) {
+        traverse(n, Direction.UP);
+    }
+
+    /**
+     * Calls the focus traversal engine and indicates that traversal should
+     * go the next focusTraversable Node below the current one.
+     * @param n the node to traverse from
+     */
+    protected final void traverseDown(Node n) {
+        traverse(n, Direction.DOWN);
+    }
+
+    /**
+     * Calls the focus traversal engine and indicates that traversal should
+     * go the next focusTraversable Node left of the current one.
+     * @param n the node to traverse from
+     */
+    protected final void traverseLeft(Node n) {
+        traverse(n, Direction.LEFT);
+    }
+
+    /**
+     * Calls the focus traversal engine and indicates that traversal should
+     * go the next focusTraversable Node right of the current one.
+     * @param n the node to traverse from
+     */
+    protected final void traverseRight(Node n) {
+        traverse(n, Direction.RIGHT);
+    }
+
+    /**
+     * Calls the focus traversal engine and indicates that traversal should
+     * go the next focusTraversable Node in the focus traversal cycle.
+     * @param n the node to traverse from
+     */
+    protected final void traverseNext(Node n) {
+        traverse(n, Direction.NEXT);
+    }
+
+    /**
+     * Calls the focus traversal engine and indicates that traversal should
+     * go the previous focusTraversable Node in the focus traversal cycle.
+     * @param n the node to traverse from
+     */
+    protected final void traversePrevious(Node n) {
+        traverse(n, Direction.PREVIOUS);
     }
 }

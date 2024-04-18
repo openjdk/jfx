@@ -132,8 +132,8 @@ public abstract class StyledTextModel {
      * and must not contain any control characters other than TAB.
      * The caller should never attempt to ask for a paragraph outside of the valid range.
      *
-     * @param index paragraph index in the range (0...{@link #size()})
-     * @return paragraph text string or null
+     * @param index the paragraph index in the range (0...{@link #size()})
+     * @return the paragraph text string or null
      */
     public abstract String getPlainText(int index);
 

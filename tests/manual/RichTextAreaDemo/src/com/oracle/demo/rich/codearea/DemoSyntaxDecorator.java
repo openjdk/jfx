@@ -26,11 +26,12 @@ package com.oracle.demo.rich.codearea;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javafx.scene.paint.Color;
 import jfx.incubator.scene.control.rich.CodeTextModel;
 import jfx.incubator.scene.control.rich.SyntaxDecorator;
+import jfx.incubator.scene.control.rich.TextPos;
 import jfx.incubator.scene.control.rich.model.RichParagraph;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
-import javafx.scene.paint.Color;
 
 /**
  * Simple {@code SyntaxDecorator} which emphasizes digits and java keywords.
@@ -47,14 +48,6 @@ public class DemoSyntaxDecorator implements SyntaxDecorator {
     @Override
     public String toString() {
         return "DemoSyntaxDecorator";
-    }
-
-    @Override
-    public void attach(CodeTextModel m) {
-    }
-
-    @Override
-    public void detach(CodeTextModel m) {
     }
 
     @Override
@@ -149,5 +142,10 @@ public class DemoSyntaxDecorator implements SyntaxDecorator {
             sb.append(")\\b");
         }
         return Pattern.compile(sb.toString());
+    }
+
+    @Override
+    public void handleChange(CodeTextModel m, TextPos start, TextPos end, int charsTop, int linesAdded, int charsBottom) {
+        // no-op
     }
 }

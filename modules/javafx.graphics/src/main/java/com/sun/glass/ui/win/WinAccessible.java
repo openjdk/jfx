@@ -40,6 +40,7 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCombination;
 import com.sun.glass.ui.Accessible;
+import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.javafx.stage.WindowHelper;
@@ -238,6 +239,7 @@ final class WinAccessible extends Accessible {
     private native static boolean UiaClientsAreListening();
 
     WinAccessible() {
+        Application.checkEventThread();
         this.peer = _createGlassAccessible();
         if (this.peer == 0L) {
             throw new RuntimeException("could not create platform accessible");
@@ -247,6 +249,7 @@ final class WinAccessible extends Accessible {
 
     @Override
     public void dispose() {
+        Application.checkEventThread();
         super.dispose();
         if (selectionRange != null) {
             selectionRange.dispose();
@@ -265,6 +268,7 @@ final class WinAccessible extends Accessible {
 
     @Override
     public void sendNotification(AccessibleAttribute notification) {
+        Application.checkEventThread();
         if (isDisposed()) return;
 
         switch (notification) {
@@ -416,6 +420,7 @@ final class WinAccessible extends Accessible {
     }
 
     private void notifyToggleState() {
+        Application.checkEventThread();
         int state = get_ToggleState();
         WinVariant vo = new WinVariant();
         vo.vt = WinVariant.VT_I4;
@@ -428,6 +433,7 @@ final class WinAccessible extends Accessible {
 
     @Override
     protected long getNativeAccessible() {
+        Application.checkEventThread();
         return peer;
     }
 

@@ -27,13 +27,12 @@ package com.oracle.demo.rich.codearea;
 
 import java.util.ArrayList;
 import java.util.List;
+import javafx.scene.paint.Color;
 import jfx.incubator.scene.control.rich.CodeTextModel;
 import jfx.incubator.scene.control.rich.SyntaxDecorator;
 import jfx.incubator.scene.control.rich.TextPos;
 import jfx.incubator.scene.control.rich.model.RichParagraph;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
-import jfx.incubator.scene.control.rich.model.StyledTextModel;
-import javafx.scene.paint.Color;
 
 /**
  * A simple {@code SyntaxDecorator} for Java source files.
@@ -41,14 +40,13 @@ import javafx.scene.paint.Color;
  * This is just a demo, as it has no link to the real compiler, does not understand Java language
  * and does not take into account version-specific language features.
  */
-public class JavaSyntaxDecorator implements SyntaxDecorator, StyledTextModel.ChangeListener {
+public class JavaSyntaxDecorator implements SyntaxDecorator {
     private static final StyleAttrs CHARACTER = mkStyle(Color.BLUE);
     private static final StyleAttrs COMMENT = mkStyle(Color.RED);
     private static final StyleAttrs KEYWORD = mkStyle(Color.GREEN);
-    private static final StyleAttrs NUMBER = mkStyle(Color.BLUE);
+    private static final StyleAttrs NUMBER = mkStyle(Color.MAGENTA);
     private static final StyleAttrs OTHER = mkStyle(Color.BLACK);
     private static final StyleAttrs STRING = mkStyle(Color.BLUE);
-    private CodeTextModel model;
     private ArrayList<RichParagraph> paragraphs;
 
     public JavaSyntaxDecorator() {
@@ -59,33 +57,17 @@ public class JavaSyntaxDecorator implements SyntaxDecorator, StyledTextModel.Cha
         return "JavaSyntaxDecorator";
     }
 
-    @Override
-    public void attach(CodeTextModel m) {
-        this.model = m;
-        m.addChangeListener(this);
-        reload();
-    }
 
     @Override
-    public void detach(CodeTextModel m) {
-        m.removeChangeListener(this);
-        this.model = null;
-    }
-
-    @Override
-    public void eventTextUpdated(TextPos start, TextPos end, int charsAddedTop, int linesAdded, int charsAddedBottom) {
+    public void handleChange(CodeTextModel m, TextPos start, TextPos end, int top, int lines, int btm) {
         // in theory, it may reuse the portions that haven't changed
         // but java files are short enough to re-analyze in full each time
-        reload();
-    }
-
-    @Override
-    public void eventStyleUpdated(TextPos start, TextPos end) {
+        reload(m);
     }
 
     @Override
     public RichParagraph createRichParagraph(CodeTextModel model, int index) {
-        if (index >= paragraphs.size()) {
+        if ((paragraphs == null) || (index >= paragraphs.size())) {
             return RichParagraph.builder().build();
         }
         return paragraphs.get(index);
@@ -95,14 +77,14 @@ public class JavaSyntaxDecorator implements SyntaxDecorator, StyledTextModel.Cha
         return StyleAttrs.builder().setTextColor(c).build();
     }
 
-    private void reload() {
-        String text = getPlainText();
+    private void reload(CodeTextModel model) {
+        String text = getPlainText(model);
         JavaSyntaxAnalyzer a = new JavaSyntaxAnalyzer(text);
         List<JavaSyntaxAnalyzer.Line> res = a.analyze();
         paragraphs = translate(res);
     }
 
-    private String getPlainText() {
+    private String getPlainText(CodeTextModel model) {
         StringBuilder sb = new StringBuilder(65536);
         int sz = model.size();
         boolean nl = false;

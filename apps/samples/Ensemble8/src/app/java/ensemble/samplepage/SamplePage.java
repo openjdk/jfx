@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -31,11 +31,6 @@
  */
 package ensemble.samplepage;
 
-import ensemble.Page;
-import ensemble.PageBrowser;
-import ensemble.SampleInfo;
-import static ensemble.SampleInfo.SampleRuntimeInfo;
-
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.binding.StringBinding;
 import javafx.beans.property.ObjectProperty;
@@ -43,11 +38,14 @@ import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
-import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
 import javafx.util.Callback;
+import ensemble.Page;
+import ensemble.PageBrowser;
+import ensemble.SampleInfo;
+import ensemble.SampleInfo.SampleRuntimeInfo;
 
 /**
  * Page for showing a sample

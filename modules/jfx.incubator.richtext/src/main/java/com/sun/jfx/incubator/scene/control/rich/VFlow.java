@@ -33,6 +33,7 @@ import java.util.function.Supplier;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -319,15 +320,15 @@ public class VFlow extends Pane implements StyleResolver {
         return origin.get();
     }
 
-    private void setOrigin(Origin p) {
-        if (p == null) {
+    private void setOrigin(Origin or) {
+        if (or == null) {
             throw new NullPointerException();
         }
         // prevent scrolling
-        if (control.isUseContentHeight() || ((p.index() == 0) && (p.offset() == 0))) {
-            p = new Origin(0, -topPadding);
+        if (control.isUseContentHeight() || ((or.index() == 0) && (or.offset() == 0))) {
+            or = new Origin(0, -topPadding);
         }
-        origin.set(p);
+        origin.set(or);
     }
 
     private void handleOriginChange() {
@@ -761,6 +762,9 @@ public class VFlow extends Pane implements StyleResolver {
     }
 
     private TextCell createTextCell(int index, RichParagraph par) {
+        if(par == null) {
+            return null;
+        }
         TextCell cell;
         StyleAttrs pa = par.getParagraphAttributes();
         Supplier<Region> gen = par.getParagraphRegion();
@@ -916,6 +920,11 @@ public class VFlow extends Pane implements StyleResolver {
             return;
         }
 
+        double width = getWidth();
+        if(width == 0.0) {
+            return;
+        }
+
         // sides
         SideDecorator leftDecorator = control.getLeftDecorator();
         SideDecorator rightDecorator = control.getRightDecorator();
@@ -926,6 +935,8 @@ public class VFlow extends Pane implements StyleResolver {
         boolean useContentHeight = control.isUseContentHeight();
         boolean useContentWidth = control.isUseContentWidth();
         boolean wrap = control.isWrapText() && !useContentWidth;
+        double height = useContentHeight ? 0.0 : getHeight();
+
         double forWidth;
         double maxWidth;
         if (wrap) {
@@ -935,9 +946,6 @@ public class VFlow extends Pane implements StyleResolver {
             forWidth = -1.0;
             maxWidth = Params.MAX_WIDTH_FOR_LAYOUT;
         }
-
-        double width = getWidth();
-        double height = useContentHeight ? 0.0 : getHeight();
 
         double ytop = snapPositionY(-getOrigin().offset());
         double y = ytop;
@@ -983,6 +991,9 @@ public class VFlow extends Pane implements StyleResolver {
 
             if (useContentHeight) {
                 height = y;
+                if (y > Params.MAX_HEIGHT_SAFEGUARD) {
+                    break;
+                }
             } else {
                 // stop populating the bottom part of the sliding window
                 // when exceeded both pixel and line count margins
@@ -1133,7 +1144,22 @@ public class VFlow extends Pane implements StyleResolver {
         }
 
         if (useContentHeight) {
-            updatePrefHeight();
+            double h = getFlowHeight();
+            double prev = getPrefHeight();
+            setPrefHeight(h);
+            //System.out.println("vflow.setPrefHeight=" + h + " prev=" + prev); // FIX
+
+            // this "works" except for change model
+            requestParentLayout();
+            
+            // avoids infinite layout loop in MultipleStackedBoxWindow but ... why?
+            if (h != prev) {
+                requestLayout();
+                // weird, need this to make sure the reflow happens when changing models
+                Platform.runLater(() -> layoutChildren());
+            }
+        } else {
+            setPrefHeight(USE_COMPUTED_SIZE);
         }
 
         placeCells();
@@ -1165,6 +1191,7 @@ public class VFlow extends Pane implements StyleResolver {
                 Node n = arrangement.getLeftNodeAt(i);
                 if (n != null) {
                     leftGutter.getChildren().add(n);
+                    n.applyCss();
                     leftGutter.layoutInArea(n, 0.0, y, leftGutter.getWidth(), h);
                 }
             }
@@ -1173,6 +1200,7 @@ public class VFlow extends Pane implements StyleResolver {
                 Node n = arrangement.getRightNodeAt(i);
                 if (n != null) {
                     rightGutter.getChildren().add(n);
+                    n.applyCss();
                     rightGutter.layoutInArea(n, 0.0, y, rightGutter.getWidth(), h);
                 }
             }
@@ -1256,6 +1284,7 @@ public class VFlow extends Pane implements StyleResolver {
                 Origin or = new Origin(ix, 0.0);
                 boolean moveDown = (ix > getOrigin().index());
                 setOrigin(or);
+                // TODO this can be null?
                 c = getCaretInfo();
                 if (moveDown) {
                     blockScroll(c.getMaxY() - c.getMinY() - getViewHeight());
@@ -1314,22 +1343,15 @@ public class VFlow extends Pane implements StyleResolver {
         }
     }
 
-//    public void updateTabSize() {
-//        //CaretInfo c = getCaretInfo();
-//        requestLayout();
-//        // TODO remember caret line position, do layout pass, block move to preserve the caret y position
-//        // as it might shift (only if wrapping is enabled)
-//        // also if wrap is off, might need a horizontal block scroll to keep caret in the same x position
-//    }
-
     // TODO this could be more advanced to reduce the amount of re-computation and re-flow
     public void handleTextUpdated(TextPos start, TextPos end, int addedTop, int linesAdded, int addedBottom) {
         // change origin if start position is before the top line
-        Origin origin = getOrigin();
-        if (start.index() < origin.index()) {
-            origin = new Origin(start.index(), 0.0);
-            setOrigin(origin);
-        }
+//        Origin origin = getOrigin();
+//        if (start.index() < origin.index()) {
+//            origin = new Origin(start.index(), 0.0);
+//            ...
+//            setOrigin(origin);
+//        }
 
         // TODO clear cache >= start, update layout
         cellCache.clear();
@@ -1429,7 +1451,7 @@ public class VFlow extends Pane implements StyleResolver {
         requestLayout();
     }
 
-    // TODO move to caller?
+    // FIX same treatment as with usePrefHeight
     private void updatePrefWidth() {
         if (!control.prefWidthProperty().isBound()) {
             double w = getFlowWidth();
@@ -1441,48 +1463,28 @@ public class VFlow extends Pane implements StyleResolver {
 
             //D.p("w=", w); // FIX
 
-            if (mainPane().getPrefWidth() != w) {
-                //setPrefWidth(w);
-                mainPane().setPrefWidth(w);
-                //control.setPrefWidth(w);
-
-                //D.p("control.getParent().requestLayout();");
-                control.getParent().requestLayout();
-                requestControlLayout(false);
-            }
-        }
-    }
-
-    // TODO move to the caller?
-    private void updatePrefHeight() {
-        if (!control.prefHeightProperty().isBound()) {
-            double h = getFlowHeight();
-            if (h >= 0.0) {
-                if (hscroll.isVisible()) {
-                    h += hscroll.getHeight();
+            Parent parent = getParent();
+            if (parent instanceof Region r) {
+                if (r.getPrefWidth() != w) {
+                    r.setPrefWidth(w);
+                    control.getParent().requestLayout();
+                    requestControlLayout(false);
                 }
             }
-
-            //D.p("h=", h); // FIX
-
-            if (mainPane().getPrefHeight() != h) {
-                mainPane().setPrefHeight(h);
-
-                //D.p("control.getParent().requestLayout();");
-                control.getParent().requestLayout();
-                requestControlLayout(false);
-            }
         }
     }
 
-    private Region mainPane() {
-        return (Region)getParent();
+    @Override
+    protected double computePrefHeight(double width) {
+        if (control.isUseContentHeight()) {
+            return getFlowHeight();
+        }
+        return super.computePrefHeight(width);
     }
 
     public double getFlowHeight() {
         return
-            snapSizeY(Math.max(Params.LAYOUT_MIN_HEIGHT, arrangement().bottomHeight())) +
-            snapSizeY(Params.LAYOUT_FOCUS_BORDER) * 2;
+            snapSizeY(Math.max(Params.LAYOUT_MIN_HEIGHT, arrangement().bottomHeight()));
     }
 
     public double getFlowWidth() {
@@ -1492,7 +1494,6 @@ public class VFlow extends Pane implements StyleResolver {
             snapSizeX(rightSide) +
             leftPadding +
             rightPadding +
-            snapSizeX(Params.LAYOUT_CARET_ALLOWANCE) +
-            snapSizeX(Params.LAYOUT_FOCUS_BORDER) * 2;
+            snapSizeX(Params.HORIZONTAL_GUARD);
     }
 }

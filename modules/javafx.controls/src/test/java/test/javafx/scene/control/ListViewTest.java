@@ -66,6 +66,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.cell.CheckBoxListCell;
 import javafx.scene.control.cell.ComboBoxListCell;
 import javafx.scene.control.cell.TextFieldListCell;
+import javafx.scene.control.skin.ListCellSkin;
 import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
@@ -1258,6 +1259,84 @@ public class ListViewTest {
         listView.getItems().clear();
         assertEquals(1, rt_37853_cancelCount);
         assertEquals(0, rt_37853_commitCount);
+
+        sl.dispose();
+    }
+
+    @Test
+    public void testListViewRemainsFocusedAfterEditCancel() {
+        listView.setCellFactory(TextFieldListCell.forListView());
+        listView.setEditable(true);
+        listView.getItems().add("John");
+
+        StageLoader sl = new StageLoader(new Button(), listView);
+        listView.requestFocus();
+        assertTrue(listView.isFocused());
+
+        ListCell cell = (ListCell) VirtualFlowTestUtils.getCell(listView, 0);
+        assertTrue(cell.getSkin() instanceof ListCellSkin);
+        assertNull(cell.getGraphic());
+        assertEquals("John", cell.getText());
+
+        listView.edit(0);
+
+        Toolkit.getToolkit().firePulse();
+        assertNotNull(cell.getGraphic());
+        assertTrue(cell.getGraphic() instanceof TextField);
+
+        TextField textField = (TextField) cell.getGraphic();
+        assertEquals("John", textField.getText());
+
+        textField.setText("Andrew");
+        textField.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertTrue(textField.isFocused());
+        assertFalse(listView.isFocused());
+
+        KeyEventFirer keyboard = new KeyEventFirer(textField);
+        keyboard.doKeyPress(KeyCode.ESCAPE);
+
+        assertEquals("John", cell.getText());
+        assertTrue(listView.isFocused());
+
+        sl.dispose();
+    }
+
+    @Test
+    public void testListViewRemainsFocusedAfterEditCommit() {
+        listView.setCellFactory(TextFieldListCell.forListView());
+        listView.setEditable(true);
+        listView.getItems().add("John");
+
+        StageLoader sl = new StageLoader(new Button(), listView);
+        listView.requestFocus();
+        assertTrue(listView.isFocused());
+
+        ListCell cell = (ListCell) VirtualFlowTestUtils.getCell(listView, 0);
+        assertTrue(cell.getSkin() instanceof ListCellSkin);
+        assertNull(cell.getGraphic());
+        assertEquals("John", cell.getText());
+
+        listView.edit(0);
+
+        Toolkit.getToolkit().firePulse();
+        assertNotNull(cell.getGraphic());
+        assertTrue(cell.getGraphic() instanceof TextField);
+
+        TextField textField = (TextField) cell.getGraphic();
+        assertEquals("John", textField.getText());
+
+        textField.setText("Andrew");
+        textField.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertTrue(textField.isFocused());
+        assertFalse(listView.isFocused());
+
+        KeyEventFirer keyboard = new KeyEventFirer(textField);
+        keyboard.doKeyPress(KeyCode.ENTER);
+
+        assertEquals("Andrew", cell.getText());
+        assertTrue(listView.isFocused());
 
         sl.dispose();
     }

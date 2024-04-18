@@ -53,19 +53,19 @@ public class Params {
     public static final int DEFAULT_CARET_BLINK_PERIOD = 1000;
 
     /** small space between the end of last character and the right edge when typing, in pixels. */
-    public static final double HORIZONTAL_GUARD = 20;
-
-    /** allows a little space for the caret shape when use content width is enabled */
-    public static final double LAYOUT_CARET_ALLOWANCE = 1;
+    public static final double HORIZONTAL_GUARD = 10;
 
     /** focus background outline size */
     public static final double LAYOUT_FOCUS_BORDER = 1;
 
     /** min height of the content area when use content width = true and empty model */
-    public static final double LAYOUT_MIN_HEIGHT = 20;
+    public static final double LAYOUT_MIN_HEIGHT = 10;
 
     /** min width of the content area when use content width = true and empty model */
     public static final double LAYOUT_MIN_WIDTH = 20;
+
+    /** prevents lockup when useContentHeight is enabled with a large model */
+    public static final double MAX_HEIGHT_SAFEGUARD = 10_000;
 
     /** maximum width for unwrapped TextFlow layout. Neither Double.MAX_VALUE nor 1e20 work, probably bc float */
     public static final double MAX_WIDTH_FOR_LAYOUT = 1_000_000_000.0;

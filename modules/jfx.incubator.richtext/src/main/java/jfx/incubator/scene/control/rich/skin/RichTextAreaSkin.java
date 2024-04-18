@@ -30,6 +30,7 @@ package jfx.incubator.scene.control.rich.skin;
 import java.util.function.Supplier;
 import javafx.beans.binding.Bindings;
 import javafx.geometry.HPos;
+import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
 import javafx.scene.control.ScrollBar;
@@ -116,6 +117,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         };
 
         vscroll = createVScrollBar();
+        vscroll.setManaged(false);
         vscroll.setOrientation(Orientation.VERTICAL);
         vscroll.setMin(0.0);
         vscroll.setMax(1.0);
@@ -128,6 +130,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         ));
 
         hscroll = createHScrollBar();
+        hscroll.setManaged(false);
         hscroll.setOrientation(Orientation.HORIZONTAL);
         hscroll.setMin(0.0);
         hscroll.setMax(1.0);
@@ -146,20 +149,36 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
 
         mainPane = new Pane(vflow, vscroll, hscroll) {
             @Override
+            protected double computePrefHeight(double width) {
+                if (control.isUseContentHeight()) {
+                    double h = vflow.prefHeight(width);
+                    if (hscroll.isVisible()) {
+                        h += hscroll.prefHeight(width);
+                    }
+                    h += (Params.LAYOUT_FOCUS_BORDER * 2);
+                    Insets m = getInsets();
+                    return h + m.getTop() + m.getBottom();
+                }
+                return super.computePrefHeight(width);
+            }
+
+            @Override
             protected void layoutChildren() {
-                double x0 = snappedLeftInset();
-                double y0 = snappedTopInset();
+                double x0 = snappedLeftInset() + snapSizeX(Params.LAYOUT_FOCUS_BORDER);
+                double y0 = snappedTopInset() + snapSizeY(Params.LAYOUT_FOCUS_BORDER);
+                double width = getWidth();
+                double height = getHeight();
 
                 double vscrollWidth;
                 if (vscroll.isVisible()) {
-                    vscrollWidth = vscroll.prefWidth(-1);
+                    vscrollWidth = vscroll.prefWidth(height);
                 } else {
                     vscrollWidth = 0.0;
                 }
 
                 double hscrollHeight;
                 if (hscroll.isVisible()) {
-                    hscrollHeight = hscroll.prefHeight(-1);
+                    hscrollHeight = hscroll.prefHeight(width);
                 } else {
                     hscrollHeight = 0.0;
                 }
@@ -168,24 +187,25 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                 if (control.isUseContentWidth()) {
                     w = vflow.getFlowWidth();
                 } else {
-                    w = snapSizeX(getWidth() - x0 - snappedRightInset() - snapSizeX(vscrollWidth) - snapSizeX(Params.LAYOUT_FOCUS_BORDER));
+                    w = snapSizeX(width - x0 - snappedRightInset() - snapSizeX(vscrollWidth) - snapSizeX(Params.LAYOUT_FOCUS_BORDER));
                 }
 
                 double h;
                 if (control.isUseContentHeight()) {
-                    h = vflow.getFlowHeight();
+                    h = vflow.prefHeight(width);
                 } else {
-                    h = snapSizeY(getHeight() - y0 - snappedBottomInset() - snapSizeY(hscrollHeight) - snapSizeY(Params.LAYOUT_FOCUS_BORDER));
+                    h = snapSizeY(height - y0 - snappedBottomInset() - snapSizeY(hscrollHeight) - snapSizeY(Params.LAYOUT_FOCUS_BORDER));
                 }
 
-                //D.f("w=%.1f h=%.1f pref=%.1f", w, h, prefHeight(-1)); // FIX
+                //System.out.println(String.format("mainPane.layoutChildren w=%.1f h=%.1f pref=%.1f", w, h, prefHeight(-1))); // FIX
 
-                layoutInArea(vscroll, w, y0 + 1.0, vscrollWidth, h, -1, null, true, true, HPos.RIGHT, VPos.TOP);
-                layoutInArea(hscroll, x0 + 1, h, w, hscrollHeight, -1, null, true, true, HPos.LEFT, VPos.BOTTOM);
+                layoutInArea(vscroll, w, y0, vscrollWidth, h, -1, null, true, true, HPos.RIGHT, VPos.TOP);
+                layoutInArea(hscroll, x0, h, w, hscrollHeight, -1, null, true, true, HPos.LEFT, VPos.BOTTOM);
                 layoutInArea(vflow, x0, y0, w, h, -1, null, true, true, HPos.LEFT, VPos.TOP);
             }
         };
         getChildren().add(mainPane);
+        mainPane.getStyleClass().add("rta-main-pane");
 
         behavior = new RichTextAreaBehavior(control);
 
@@ -291,7 +311,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
      */
     public void applyStyles(CellContext context, StyleAttrs attrs, boolean forParagraph) {
         if (attrs != null) {
-            RichTextArea c = (RichTextArea)getSkinnable();
+            RichTextArea c = getSkinnable();
             StyleHandlerRegistry r = c.getStyleHandlerRegistry();
             for (StyleAttribute a : attrs.getAttributes()) {
                 Object v = attrs.get(a);

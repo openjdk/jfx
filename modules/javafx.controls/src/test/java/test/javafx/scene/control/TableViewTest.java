@@ -2216,6 +2216,103 @@ public class TableViewTest {
         assertEquals(1, test_rt_34685_commitCount);
     }
 
+    @Test
+    public void testTableViewRemainsFocusedAfterEditCancel() {
+        TableView<Person> table = new TableView<>();
+        table.setEditable(true);
+
+        table.setItems(FXCollections.observableArrayList(
+                new Person("John", "Smith", "john.smith@example.com")));
+
+        TableColumn<Person,String> first = new TableColumn<>("first");
+        first.setCellValueFactory(new PropertyValueFactory<>("firstName"));
+        first.setCellFactory(TextFieldTableCell.forTableColumn());
+        table.getColumns().add(first);
+
+        StageLoader sl = new StageLoader(new Button(), table);
+
+        table.requestFocus();
+        assertTrue(table.isFocused());
+
+        // get the cell at (0,0)
+        TableCell cell = (TableCell) VirtualFlowTestUtils.getCell(table, 0, 0);
+        assertTrue(cell.getSkin() instanceof TableCellSkin);
+        assertNull(cell.getGraphic());
+        assertEquals("John", cell.getText());
+
+        // set the table to be editing the first cell at 0,0
+        table.edit(0, first);
+
+        Toolkit.getToolkit().firePulse();
+        assertNotNull(cell.getGraphic());
+        assertTrue(cell.getGraphic() instanceof TextField);
+
+        TextField textField = (TextField) cell.getGraphic();
+        assertEquals("John", textField.getText());
+
+        textField.setText("Andrew");
+        textField.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertTrue(textField.isFocused());
+        assertFalse(table.isFocused());
+
+        KeyEventFirer keyboard = new KeyEventFirer(textField);
+        keyboard.doKeyPress(KeyCode.ESCAPE);
+
+        assertEquals("John", cell.getText());
+        assertTrue(table.isFocused());
+
+        sl.dispose();
+    }
+
+    @Test
+    public void testTableViewRemainsFocusedAfterEditCommit() {
+        TableView<Person> table = new TableView<>();
+        table.setEditable(true);
+
+        table.setItems(FXCollections.observableArrayList(
+                new Person("John", "Smith", "john.smith@example.com")));
+
+        TableColumn<Person,String> first = new TableColumn<>("first");
+        first.setCellValueFactory(new PropertyValueFactory<>("firstName"));
+        first.setCellFactory(TextFieldTableCell.forTableColumn());
+        table.getColumns().add(first);
+
+        StageLoader sl = new StageLoader(new Button(), table);
+        table.requestFocus();
+        assertTrue(table.isFocused());
+
+        // get the cell at (0,0)
+        TableCell cell = (TableCell) VirtualFlowTestUtils.getCell(table, 0, 0);
+        assertTrue(cell.getSkin() instanceof TableCellSkin);
+        assertNull(cell.getGraphic());
+        assertEquals("John", cell.getText());
+
+        // set the table to be editing the first cell at 0,0
+        table.edit(0, first);
+
+        Toolkit.getToolkit().firePulse();
+        assertNotNull(cell.getGraphic());
+        assertTrue(cell.getGraphic() instanceof TextField);
+
+        TextField textField = (TextField) cell.getGraphic();
+        assertEquals("John", textField.getText());
+
+        textField.setText("Andrew");
+        textField.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertTrue(textField.isFocused());
+        assertFalse(table.isFocused());
+
+        KeyEventFirer keyboard = new KeyEventFirer(textField);
+        keyboard.doKeyPress(KeyCode.ENTER);
+
+        assertEquals("Andrew", cell.getText());
+        assertTrue(table.isFocused());
+
+        sl.dispose();
+    }
+
     @Test public void test_rt_35224() {
         TableView table = new TableView();
         TableColumn col1 = new TableColumn();
@@ -6123,5 +6220,49 @@ public class TableViewTest {
         table.setItems(null);
         // Should not throw an NPE.
         table.queryAccessibleAttribute(AccessibleAttribute.ROW_COUNT);
+    }
+
+    @Test
+    public void testChangeRowFactoryShouldRecreateRows() {
+        String propertyKey = "key";
+        String firstRowKey = "table_row_key1";
+        String secondRowKey = "table_row_key2";
+
+        final TableColumn<String, String> c = new TableColumn<>("C");
+        c.setCellValueFactory(value -> new SimpleStringProperty(value.getValue()));
+        table.getColumns().add(c);
+
+        table.getItems().addAll("1", "2", "3");
+
+        table.setRowFactory(e -> {
+            TableRow<String> row = new TableRow<>();
+            row.getProperties().put(propertyKey, firstRowKey);
+            return row;
+        });
+
+        stageLoader = new StageLoader(table);
+        stageLoader.getStage().setWidth(300);
+        stageLoader.getStage().setHeight(300);
+
+        for (int index = 0; index < table.getItems().size(); index++) {
+            IndexedCell<?> cell = VirtualFlowTestUtils.getCell(table, 0);
+
+            assertEquals(firstRowKey, cell.getProperties().get(propertyKey));
+        }
+
+        // Change the row factory and verify cells again.
+        table.setRowFactory(e -> {
+            TableRow<String> row = new TableRow<>();
+            row.getProperties().put(propertyKey, secondRowKey);
+            return row;
+        });
+
+        Toolkit.getToolkit().firePulse();
+
+        for (int index = 0; index < table.getItems().size(); index++) {
+            IndexedCell<?> cell = VirtualFlowTestUtils.getCell(table, 0);
+
+            assertEquals(secondRowKey, cell.getProperties().get(propertyKey));
+        }
     }
 }

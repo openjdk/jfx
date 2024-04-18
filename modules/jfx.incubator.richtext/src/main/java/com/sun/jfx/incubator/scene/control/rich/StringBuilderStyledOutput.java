@@ -58,7 +58,8 @@ public class StringBuilderStyledOutput implements StyledOutput {
         }
     }
 
-    public String getOutput() {
+    @Override
+    public String toString() {
         return sb.toString();
     }
 

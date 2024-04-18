@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,41 +38,49 @@ public class HTMLImageElementImpl extends HTMLElementImpl implements HTMLImageEl
 
 
 // Attributes
+    @Override
     public String getName() {
         return getNameImpl(getPeer());
     }
     native static String getNameImpl(long peer);
 
+    @Override
     public void setName(String value) {
         setNameImpl(getPeer(), value);
     }
     native static void setNameImpl(long peer, String value);
 
+    @Override
     public String getAlign() {
         return getAlignImpl(getPeer());
     }
     native static String getAlignImpl(long peer);
 
+    @Override
     public void setAlign(String value) {
         setAlignImpl(getPeer(), value);
     }
     native static void setAlignImpl(long peer, String value);
 
+    @Override
     public String getAlt() {
         return getAltImpl(getPeer());
     }
     native static String getAltImpl(long peer);
 
+    @Override
     public void setAlt(String value) {
         setAltImpl(getPeer(), value);
     }
     native static void setAltImpl(long peer, String value);
 
+    @Override
     public String getBorder() {
         return getBorderImpl(getPeer());
     }
     native static String getBorderImpl(long peer);
 
+    @Override
     public void setBorder(String value) {
         setBorderImpl(getPeer(), value);
     }
@@ -88,51 +96,61 @@ public class HTMLImageElementImpl extends HTMLElementImpl implements HTMLImageEl
     }
     native static void setCrossOriginImpl(long peer, String value);
 
+    @Override
     public String getHeight() {
         return getHeightImpl(getPeer())+"";
     }
     native static int getHeightImpl(long peer);
 
+    @Override
     public void setHeight(String value) {
         setHeightImpl(getPeer(), Integer.parseInt(value));
     }
     native static void setHeightImpl(long peer, int value);
 
+    @Override
     public String getHspace() {
         return getHspaceImpl(getPeer())+"";
     }
     native static int getHspaceImpl(long peer);
 
+    @Override
     public void setHspace(String value) {
         setHspaceImpl(getPeer(), Integer.parseInt(value));
     }
     native static void setHspaceImpl(long peer, int value);
 
+    @Override
     public boolean getIsMap() {
         return getIsMapImpl(getPeer());
     }
     native static boolean getIsMapImpl(long peer);
 
+    @Override
     public void setIsMap(boolean value) {
         setIsMapImpl(getPeer(), value);
     }
     native static void setIsMapImpl(long peer, boolean value);
 
+    @Override
     public String getLongDesc() {
         return getLongDescImpl(getPeer());
     }
     native static String getLongDescImpl(long peer);
 
+    @Override
     public void setLongDesc(String value) {
         setLongDescImpl(getPeer(), value);
     }
     native static void setLongDescImpl(long peer, String value);
 
+    @Override
     public String getSrc() {
         return getSrcImpl(getPeer());
     }
     native static String getSrcImpl(long peer);
 
+    @Override
     public void setSrc(String value) {
         setSrcImpl(getPeer(), value);
     }
@@ -163,31 +181,37 @@ public class HTMLImageElementImpl extends HTMLElementImpl implements HTMLImageEl
     }
     native static String getCurrentSrcImpl(long peer);
 
+    @Override
     public String getUseMap() {
         return getUseMapImpl(getPeer());
     }
     native static String getUseMapImpl(long peer);
 
+    @Override
     public void setUseMap(String value) {
         setUseMapImpl(getPeer(), value);
     }
     native static void setUseMapImpl(long peer, String value);
 
+    @Override
     public String getVspace() {
         return getVspaceImpl(getPeer())+"";
     }
     native static int getVspaceImpl(long peer);
 
+    @Override
     public void setVspace(String value) {
         setVspaceImpl(getPeer(), Integer.parseInt(value));
     }
     native static void setVspaceImpl(long peer, int value);
 
+    @Override
     public String getWidth() {
         return getWidthImpl(getPeer())+"";
     }
     native static int getWidthImpl(long peer);
 
+    @Override
     public void setWidth(String value) {
         setWidthImpl(getPeer(), Integer.parseInt(value));
     }
@@ -230,9 +254,11 @@ public class HTMLImageElementImpl extends HTMLElementImpl implements HTMLImageEl
 
 
 //stubs
+    @Override
     public void setLowSrc(String lowSrc) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
+    @Override
     public String getLowSrc() {
         throw new UnsupportedOperationException("Not supported yet.");
     }

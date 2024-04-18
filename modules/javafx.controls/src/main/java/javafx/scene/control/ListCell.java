@@ -427,8 +427,16 @@ public class ListCell<T> extends IndexedCell<T> {
         super.commitEdit(newValue);
 
         ListView<T> list = getListView();
+        boolean listShouldRequestFocus = false;
+
         // JDK-8187307: fire the commit after updating cell's editing state
         if (list != null) {
+            // The cell is going to be updated, and the current focus owner might be removed from it.
+            // Before that happens, check if it has the list as a parent (otherwise the user might have
+            // clicked out of the list entirely and given focus to something else), so the list can
+            // request the focus back, once the edit commit ends.
+            listShouldRequestFocus = ControlUtils.controlShouldRequestFocusIfCurrentFocusOwnerIsChild(list);
+
             // Inform the ListView of the edit being ready to be committed.
             list.fireEvent(new ListView.EditEvent<>(list,
                     ListView.<T>editCommitEvent(),
@@ -447,10 +455,11 @@ public class ListCell<T> extends IndexedCell<T> {
             list.edit(-1);
 
             // request focus back onto the list, only if the current focus
-            // owner has the list as a parent (otherwise the user might have
-            // clicked out of the list entirely and given focus to something else.
+            // owner had the list as a parent.
             // It would be rude of us to request it back again.
-            ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(list);
+            if (listShouldRequestFocus) {
+                list.requestFocus();
+            }
         }
     }
 
@@ -469,7 +478,7 @@ public class ListCell<T> extends IndexedCell<T> {
 
             // request focus back onto the list, only if the current focus
             // owner has the list as a parent (otherwise the user might have
-            // clicked out of the list entirely and given focus to something else.
+            // clicked out of the list entirely and given focus to something else).
             // It would be rude of us to request it back again.
             ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(list);
 

@@ -41,9 +41,17 @@ public class CodeTextModel extends PlainTextModel {
     private static final Set<StyleAttribute<?>> SUPPORTED = initSupportedAttributes();
 
     /**
-     * The constructor.
+     * Constructs the CodeTextModel with an in-memory content.
      */
     public CodeTextModel() {
+    }
+
+    /**
+     * Constructs the CodeTextModel with the specified content.
+     * @param c the content
+     */
+    public CodeTextModel(PlainTextModel.Content c) {
+        super(c);
     }
 
     private static Set<StyleAttribute<?>> initSupportedAttributes() {
@@ -78,17 +86,12 @@ public class CodeTextModel extends PlainTextModel {
     public final ObjectProperty<SyntaxDecorator> decoratorProperty() {
         if (decorator == null) {
             decorator = new SimpleObjectProperty<>() {
-                private SyntaxDecorator old;
-
-                @SuppressWarnings("synthetic-access")
                 @Override
                 protected void invalidated() {
-                    if (old != null) {
-                        old.detach(CodeTextModel.this);
-                    }
-                    old = get();
-                    if (old != null) {
-                        old.attach(CodeTextModel.this);
+                    SyntaxDecorator d = get();
+                    if (d != null) {
+                        TextPos end = getDocumentEnd();
+                        d.handleChange(CodeTextModel.this, TextPos.ZERO, end, 0, 0, 0);
                     }
                     fireStylingUpdate();
                 }
@@ -103,5 +106,14 @@ public class CodeTextModel extends PlainTextModel {
 
     public final void setDecorator(SyntaxDecorator d) {
         decoratorProperty().set(d);
+    }
+
+    @Override
+    protected void fireChangeEvent(TextPos start, TextPos end, int charsTop, int linesAdded, int charsBottom) {
+        SyntaxDecorator d = getDecorator();
+        if (d != null) {
+            d.handleChange(this, start, end, charsTop, linesAdded, charsBottom);
+        }
+        super.fireChangeEvent(start, end, charsTop, linesAdded, charsBottom);
     }
 }

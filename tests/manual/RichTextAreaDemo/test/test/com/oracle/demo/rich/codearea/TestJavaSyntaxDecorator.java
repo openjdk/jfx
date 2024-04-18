@@ -39,9 +39,19 @@ public class TestJavaSyntaxDecorator {
     private static final JavaSyntaxAnalyzer.Type C = JavaSyntaxAnalyzer.Type.COMMENT;
     private static final JavaSyntaxAnalyzer.Type K = JavaSyntaxAnalyzer.Type.KEYWORD;
     private static final JavaSyntaxAnalyzer.Type N = JavaSyntaxAnalyzer.Type.NUMBER;
-    private static final JavaSyntaxAnalyzer.Type O = JavaSyntaxAnalyzer.Type.OTHER;
+    private static final JavaSyntaxAnalyzer.Type T = JavaSyntaxAnalyzer.Type.OTHER;
     private static final JavaSyntaxAnalyzer.Type S = JavaSyntaxAnalyzer.Type.STRING;
     private static final Object NL = new Object();
+
+    @Test
+    public void specialCases() {
+        t(T, "print(x);");
+        t(K, "new", T, " StringPropertyBase(", S, "\"\"", T, ") {");
+        t(K, "import", T, " javafx.geometry.BoundingBox;");
+        t(T, "tempState.point.y = ");
+        t(T, "FX.checkItem(m, ", S, "\"1\"", T, " ", K, "new", T, " Insets(", N, "1", T, ").equals(t.getContentPadding()), (on) -> {", NL);
+        t(K, "import", T, " atry.a;");
+    }
 
     private void someExamplesOfValidCode() {
         // text block
@@ -66,12 +76,6 @@ public class TestJavaSyntaxDecorator {
 
     @Test
     public void tests() {
-        // FIX these fail
-        // "FX.checkItem(m, "1", new Insets(1).equals(t.getContentPadding()), (on) -> {"
-        //t(O, "tempState.point.y = ");
-        //t(O, "import javafx.geometry.BoundingBox;");
-        //t(O, "new StringPropertyBase(", S, "\"\"", O, ") {");
-
         // hex
         t(N, "0x0123456789abcdefL");
         t(N, "0x00", NL, N, "0x0123456789abcdefL");
@@ -123,8 +127,8 @@ public class TestJavaSyntaxDecorator {
         t(N, "1L", NL, N, "1l", NL);
         t(N, "2_2L", NL, N, "2_2l", NL);
         t(N, "2____2L", NL, N, "2___2l", NL);
-        t(O, "-", N, "99999L", NL);
-        t(O, "5.L");
+        t(T, "-", N, "99999L", NL);
+        t(T, "5.L");
 
         // integers
         t(N, "1");
@@ -132,22 +136,22 @@ public class TestJavaSyntaxDecorator {
         t(N, "1_000_000_000");
         t(N, "1______000___000_____000");
         // negative scenarios with integers
-        t(O, "_1");
-        t(O, "1_");
-        t(O, "-", N, "9999");
+        t(T, "_1");
+        t(T, "1_");
+        t(T, "-", N, "9999");
 
         // text blocks
-        t(O, "String s =", S, "\"\"\"   ", NL, S, " yo /* // */ */ \"\" \"  ", NL, S, "a  \"\"\"   ", O, ";");
+        t(T, "String s =", S, "\"\"\"   ", NL, S, " yo /* // */ */ \"\" \"  ", NL, S, "a  \"\"\"   ", T, ";");
 
         // strings
-        t(O, " ", S, "\"\\\"/*\\\"\"", NL);
-        t(S, "\"\\\"\\\"\\\"\"", O, " {", NL);
-        t(S, "\"abc\"", NL, O, "s = ", S, "\"\"");
+        t(T, " ", S, "\"\\\"/*\\\"\"", NL);
+        t(S, "\"\\\"\\\"\\\"\"", T, " {", NL);
+        t(S, "\"abc\"", NL, T, "s = ", S, "\"\"");
 
         // comments
-        t(O, " ", C, "/* yo", NL, C, "yo yo", NL, C, " */", O, " ");
-        t(O, " ", C, "// yo yo", NL, K, "int", O, " c;");
-        t(C, "/* // yo", NL, C, "// */", O, " ");
+        t(T, " ", C, "/* yo", NL, C, "yo yo", NL, C, " */", T, " ");
+        t(T, " ", C, "// yo yo", NL, K, "int", T, " c;");
+        t(C, "/* // yo", NL, C, "// */", T, " ");
 
         // chars
         t(H, "'\\b'");
@@ -157,15 +161,15 @@ public class TestJavaSyntaxDecorator {
         t(H, "'\\''", NL, H, "'\\\"'", NL, H, "'\\\\'", NL);
 
         // keywords
-        t(K, "package", O, " java.com;", NL);
-        t(K, "import", O, " java.util.ArrayList;", NL);
-        t(K, "import", O, " java.util.ArrayList;", NL, K, "import", O, " java.util.ArrayList;", NL);
-        t(K, "import", O, " com.oracle.demo");
+        t(K, "package", T, " java.com;", NL);
+        t(K, "import", T, " java.util.ArrayList;", NL);
+        t(K, "import", T, " java.util.ArrayList;", NL, K, "import", T, " java.util.ArrayList;", NL);
+        t(K, "import", T, " com.oracle.demo");
 
         // misc
-        t(K, "if", O, "(", S, "\"/*\"", O, " == null) {", NL);
-        t(C, "// test", NL, O, "--", NL);
-        t(O, "S_0,");
+        t(K, "if", T, "(", S, "\"/*\"", T, " == null) {", NL);
+        t(C, "// test", NL, T, "--", NL);
+        t(T, "S_0,");
     }
 
     private void t(Object... items) {

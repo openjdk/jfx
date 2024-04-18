@@ -35,6 +35,7 @@
 module RichTextAreaDemo {
     exports com.oracle.demo.rich.codearea;
     exports com.oracle.demo.rich.editor;
+    exports com.oracle.demo.rich.notebook;
     exports com.oracle.demo.rich.rta;
 
     requires javafx.base;

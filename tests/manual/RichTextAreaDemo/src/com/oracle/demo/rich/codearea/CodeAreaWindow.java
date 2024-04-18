@@ -26,9 +26,6 @@ package com.oracle.demo.rich.codearea;
 
 import javafx.application.Platform;
 import javafx.geometry.Insets;
-import jfx.incubator.scene.control.rich.CodeTextModel;
-import jfx.incubator.scene.control.rich.RichTextArea;
-import jfx.incubator.scene.control.rich.TextPos;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuBar;
@@ -36,6 +33,9 @@ import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 import com.oracle.demo.rich.rta.RichTextAreaWindow;
 import com.oracle.demo.rich.util.FX;
+import jfx.incubator.scene.control.rich.CodeTextModel;
+import jfx.incubator.scene.control.rich.RichTextArea;
+import jfx.incubator.scene.control.rich.TextPos;
 
 /**
  * CodeArea Demo window

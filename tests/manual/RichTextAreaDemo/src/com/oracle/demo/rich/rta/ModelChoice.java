@@ -25,15 +25,15 @@
 package com.oracle.demo.rich.rta;
 
 import java.io.IOException;
+import javafx.scene.paint.Color;
 import jfx.incubator.scene.control.rich.TextPos;
-import jfx.incubator.scene.control.rich.model.PlainTextModel;
 import jfx.incubator.scene.control.rich.model.EditableRichTextModel;
+import jfx.incubator.scene.control.rich.model.PlainTextModel;
 import jfx.incubator.scene.control.rich.model.RichParagraph;
 import jfx.incubator.scene.control.rich.model.SimpleViewOnlyStyledModel;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
 import jfx.incubator.scene.control.rich.model.StyledInput;
 import jfx.incubator.scene.control.rich.model.StyledTextModel;
-import javafx.scene.paint.Color;
 
 public enum ModelChoice {
     DEMO("Demo"),

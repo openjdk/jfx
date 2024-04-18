@@ -178,6 +178,7 @@ public class DemoModel extends SimpleViewOnlyStyledModel {
 
     private Region createRect() {
         Label t = new Label() {
+            @Override
             protected double computePrefHeight(double w) {
                 return 400;
             }

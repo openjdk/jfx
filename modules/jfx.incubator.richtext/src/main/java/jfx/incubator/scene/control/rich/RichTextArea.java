@@ -148,6 +148,10 @@ public class RichTextArea extends Control {
         public static final FunctionTag DELETE = new FunctionTag();
         /** Deletes paragraph at the caret, or selected paragraphs */
         public static final FunctionTag DELETE_PARAGRAPH = new FunctionTag();
+        /** Focus the next focusable node */
+        public static final FunctionTag FOCUS_NEXT = new FunctionTag();
+        /** Focus the previous focusable node */
+        public static final FunctionTag FOCUS_PREVIOUS = new FunctionTag();
         /** Inserts a line break at the caret. */
         public static final FunctionTag INSERT_LINE_BREAK = new FunctionTag();
         /** Inserts a tab symbol at the caret. */
@@ -405,18 +409,18 @@ public class RichTextArea extends Control {
      * Indicates whether the current paragraph will be visually highlighted.
      * TODO StyleableProperty ?
      * @return the highlight current paragraph property
-     * @defaultValue true
+     * @defaultValue false
      */
     public final BooleanProperty highlightCurrentParagraphProperty() {
         if (highlightCurrentParagraph == null) {
-            highlightCurrentParagraph = new SimpleBooleanProperty(this, "highlightCurrentParagraph", true);
+            highlightCurrentParagraph = new SimpleBooleanProperty(this, "highlightCurrentParagraph", false);
         }
         return highlightCurrentParagraph;
     }
 
     public final boolean isHighlightCurrentParagraph() {
         if (highlightCurrentParagraph == null) {
-            return true;
+            return false;
         }
         return highlightCurrentParagraph.get();
     }

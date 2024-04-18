@@ -32,21 +32,6 @@ import jfx.incubator.scene.control.rich.model.RichParagraph;
  */
 public interface SyntaxDecorator {
     /**
-     * This method allows for attaching this decorator to the model.
-     * Called by {@link CodeTextModel#setDecorator(SyntaxDecorator)}.
-     * The implementation may add a change listener to the model if required.
-     * @param m the model
-     */
-    public void attach(CodeTextModel m);
-
-    /**
-     * This method allows for detaching this decorator from the model and subsequent cleanup.
-     * Called by {@link CodeTextModel#setDecorator(SyntaxDecorator)}.
-     * @param m the model
-     */
-    public void detach(CodeTextModel m);
-
-    /**
      * Converts plain text into a rich text paragraph.
      *
      * @param model the model
@@ -54,4 +39,16 @@ public interface SyntaxDecorator {
      * @return the decorated {@link RichParagraph} instance
      */
     public RichParagraph createRichParagraph(CodeTextModel model, int index);
+
+    /**
+     * Receives the updates from the model, before other event handlers are notified.
+     *
+     * @param m the model
+     * @param start start of the affected range
+     * @param end end of the affected range
+     * @param charsTop number of characters added before any added paragraphs
+     * @param linesAdded number of paragraphs inserted
+     * @param charsBottom number of characters added after any inserted paragraphs
+     */
+    public void handleChange(CodeTextModel m, TextPos start, TextPos end, int charsTop, int linesAdded, int charsBottom);
 }

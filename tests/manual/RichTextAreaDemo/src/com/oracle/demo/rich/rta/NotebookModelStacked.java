@@ -27,6 +27,8 @@ package com.oracle.demo.rich.rta;
 
 import java.util.ArrayList;
 import java.util.function.Supplier;
+import javafx.scene.control.TextArea;
+import javafx.scene.layout.Region;
 import jfx.incubator.scene.control.rich.RichTextArea;
 import jfx.incubator.scene.control.rich.StyleResolver;
 import jfx.incubator.scene.control.rich.TextPos;
@@ -34,8 +36,6 @@ import jfx.incubator.scene.control.rich.model.PlainTextModel;
 import jfx.incubator.scene.control.rich.model.RichParagraph;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
 import jfx.incubator.scene.control.rich.model.StyledTextModel;
-import javafx.scene.control.TextArea;
-import javafx.scene.layout.Region;
 
 public class NotebookModelStacked extends StyledTextModel {
     enum Type {
@@ -53,14 +53,14 @@ public class NotebookModelStacked extends StyledTextModel {
     }
 
     public static StyledTextModel m1() {
-        return create(Type.COMMENT, "This is", "a comment cell.");
+        return create(Type.COMMENT, "This is\na comment cell.");
     }
 
     public static StyledTextModel m2() {
-        return create(Type.CODE, "x = 5;", "print(x);");
+        return create(Type.CODE, "x = 5;\nprint(x);");
     }
 
-    public static StyledTextModel create(Type type, String ... text) {
+    public static StyledTextModel create(Type type, String text) {
         PlainTextModel m;
         switch(type) {
         case CODE:
@@ -89,9 +89,7 @@ public class NotebookModelStacked extends StyledTextModel {
             throw new Error("?" + type);
         }
 
-        for (String s : text) {
-            m.addParagraph(s);
-        }
+        m.insertText(TextPos.ZERO, text);
         return m;
     }
 

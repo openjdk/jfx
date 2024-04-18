@@ -27,6 +27,7 @@ package jfx.incubator.scene.control.rich.model;
 
 import java.io.Closeable;
 import java.io.IOException;
+import com.sun.jfx.incubator.scene.control.rich.StringBuilderStyledOutput;
 
 /**
  * Class represents a consumer of styled text segments for the purposes of
@@ -46,4 +47,12 @@ public interface StyledOutput extends Closeable {
      * @throws IOException when an I/O error occurs
      */
     public void flush() throws IOException;
+
+    /**
+     * Creates an instance of a plain text StyledOutput.
+     * @return the instance of a plain text StyledOutput
+     */
+    public static StyledOutput forPlainText() {
+        return new StringBuilderStyledOutput();
+    }
 }

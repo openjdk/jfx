@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,19 +22,28 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.oracle.tools.fx.monkey.pages;
+package com.oracle.demo.rich.notebook;
 
-import com.oracle.tools.fx.monkey.util.FX;
-import com.oracle.tools.fx.monkey.util.TestPaneBase;
-import javafx.scene.web.HTMLEditor;
+import javafx.application.Application;
+import javafx.stage.Stage;
+import com.oracle.demo.rich.settings.FxSettings;
 
 /**
- *
+ * Interactive Notebook Skeleton Implementation.
+ * Demonstrates the use of RichTextArea/CodeArea in a notebook-like setting.
  */
-public class HtmlEditorPage extends TestPaneBase {
-    public HtmlEditorPage() {
-        FX.name(this, "HtmlEditorPage");
-        HTMLEditor ed = new HTMLEditor();
-        setContent(ed);
+public class NotebookMockupApp extends Application {
+    public static void main(String[] args) {
+        Application.launch(NotebookMockupApp.class, args);
+    }
+
+    @Override
+    public void init() {
+        FxSettings.useDirectory(".NotebookMockupApp");
+    }
+
+    @Override
+    public void start(Stage stage) throws Exception {
+        new NotebookWindow().show();
     }
 }

@@ -3302,6 +3302,112 @@ public class TreeTableViewTest {
         assertEquals(1, test_rt_34685_commitCount);
     }
 
+    @Test
+    public void testTreeTableViewRemainsFocusedAfterEditCancel() {
+        TreeTableView<Person> table = new TreeTableView<>();
+        table.setEditable(true);
+
+        TreeItem<Person> root = new TreeItem<>(new Person("Root", null, null));
+        root.setExpanded(true);
+        table.setRoot(root);
+        table.setShowRoot(false);
+        root.getChildren().setAll(FXCollections.observableArrayList(
+                new TreeItem<>(new Person("John", "Smith", "john.smith@example.com"))));
+
+        TreeTableColumn<Person,String> first = new TreeTableColumn<>("first");
+        first.setCellValueFactory(new TreeItemPropertyValueFactory<>("firstName"));
+        first.setCellFactory(TextFieldTreeTableCell.forTreeTableColumn());
+        table.getColumns().add(first);
+
+        StageLoader sl = new StageLoader(new Button(), table);
+
+        table.requestFocus();
+        assertTrue(table.isFocused());
+
+        // get the cell at (0,0)
+        TreeTableCell cell = (TreeTableCell) VirtualFlowTestUtils.getCell(table, 0, 0);
+        assertTrue(cell.getSkin() instanceof TreeTableCellSkin);
+        assertNull(cell.getGraphic());
+        assertEquals("John", cell.getText());
+
+        // set the table to be editing the first cell at 0,0
+        table.edit(0, first);
+
+        Toolkit.getToolkit().firePulse();
+        assertNotNull(cell.getGraphic());
+        assertTrue(cell.getGraphic() instanceof TextField);
+
+        TextField textField = (TextField) cell.getGraphic();
+        assertEquals("John", textField.getText());
+
+        textField.setText("Andrew");
+        textField.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertTrue(textField.isFocused());
+        assertFalse(table.isFocused());
+
+        KeyEventFirer keyboard = new KeyEventFirer(textField);
+        keyboard.doKeyPress(KeyCode.ESCAPE);
+
+        assertEquals("John", cell.getText());
+        assertTrue(table.isFocused());
+
+        sl.dispose();
+    }
+
+    @Test
+    public void testTreeTableViewRemainsFocusedAfterEditCommit() {
+        TreeTableView<Person> table = new TreeTableView<>();
+        table.setEditable(true);
+
+        TreeItem<Person> root = new TreeItem<>(new Person("Root", null, null));
+        root.setExpanded(true);
+        table.setRoot(root);
+        table.setShowRoot(false);
+        root.getChildren().setAll(FXCollections.observableArrayList(
+                new TreeItem<>(new Person("John", "Smith", "john.smith@example.com"))));
+
+        TreeTableColumn<Person,String> first = new TreeTableColumn<>("first");
+        first.setCellValueFactory(new TreeItemPropertyValueFactory<>("firstName"));
+        first.setCellFactory(TextFieldTreeTableCell.forTreeTableColumn());
+        table.getColumns().add(first);
+
+        StageLoader sl = new StageLoader(new Button(), table);
+
+        table.requestFocus();
+        assertTrue(table.isFocused());
+
+        // get the cell at (0,0)
+        TreeTableCell cell = (TreeTableCell) VirtualFlowTestUtils.getCell(table, 0, 0);
+        assertTrue(cell.getSkin() instanceof TreeTableCellSkin);
+        assertNull(cell.getGraphic());
+        assertEquals("John", cell.getText());
+
+        // set the table to be editing the first cell at 0,0
+        table.edit(0, first);
+
+        Toolkit.getToolkit().firePulse();
+        assertNotNull(cell.getGraphic());
+        assertTrue(cell.getGraphic() instanceof TextField);
+
+        TextField textField = (TextField) cell.getGraphic();
+        assertEquals("John", textField.getText());
+
+        textField.setText("Andrew");
+        textField.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertTrue(textField.isFocused());
+        assertFalse(table.isFocused());
+
+        KeyEventFirer keyboard = new KeyEventFirer(textField);
+        keyboard.doKeyPress(KeyCode.ENTER);
+
+        assertEquals("Andrew", cell.getText());
+        assertTrue(table.isFocused());
+
+        sl.dispose();
+    }
+
     @Test public void test_rt34694() {
         TreeItem treeNode = new TreeItem("Controls");
         treeNode.getChildren().addAll(
@@ -7323,5 +7429,54 @@ public class TreeTableViewTest {
         treeTableView.setRoot(null);
         // Should not throw an NPE.
         treeTableView.queryAccessibleAttribute(AccessibleAttribute.ROW_COUNT);
+    }
+
+    @Test
+    public void testChangeRowFactoryShouldRecreateRows() {
+        String propertyKey = "key";
+        String firstRowKey = "table_row_key1";
+        String secondRowKey = "table_row_key2";
+
+        TreeTableColumn<String, String> c = new TreeTableColumn<>("C");
+        c.setCellValueFactory(value -> new SimpleStringProperty(value.getValue().getValue()));
+        treeTableView.getColumns().add(c);
+
+        treeTableView.setRoot(new TreeItem<>("Root"));
+        treeTableView.getRoot().setExpanded(true);
+        for (int i = 0; i < 4; i++) {
+            TreeItem<String> parent = new TreeItem<String>("item - " + i);
+            treeTableView.getRoot().getChildren().add(parent);
+        }
+
+        treeTableView.setRowFactory(e -> {
+            TreeTableRow<String> row = new TreeTableRow<>();
+            row.getProperties().put(propertyKey, firstRowKey);
+            return row;
+        });
+
+        stageLoader = new StageLoader(treeTableView);
+        stageLoader.getStage().setWidth(300);
+        stageLoader.getStage().setHeight(300);
+
+        for (int index = 0; index < treeTableView.getRoot().getChildren().size(); index++) {
+            IndexedCell<?> cell = VirtualFlowTestUtils.getCell(treeTableView, 0);
+
+            assertEquals(firstRowKey, cell.getProperties().get(propertyKey));
+        }
+
+        // Change the row factory and verify cells again.
+        treeTableView.setRowFactory(e -> {
+            TreeTableRow<String> row = new TreeTableRow<>();
+            row.getProperties().put(propertyKey, secondRowKey);
+            return row;
+        });
+
+        Toolkit.getToolkit().firePulse();
+
+        for (int index = 0; index < treeTableView.getRoot().getChildren().size(); index++) {
+            IndexedCell<?> cell = VirtualFlowTestUtils.getCell(treeTableView, 0);
+
+            assertEquals(secondRowKey, cell.getProperties().get(propertyKey));
+        }
     }
 }

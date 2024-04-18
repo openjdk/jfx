@@ -37,7 +37,6 @@ import java.util.regex.Pattern;
  * It also does not check validity of numeric literals, allowing malformed octal or binary numbers,
  * or values that are too large to be represented.
  */
-// FIX the keyword regex is TOO SLOW!
 public class JavaSyntaxAnalyzer {
     private boolean DEBUG = false;
 
@@ -282,9 +281,13 @@ public class JavaSyntaxAnalyzer {
     }
 
     // returns the length of java keyword, 0 if not a java keyword
-    // FIX way too slow!
     private int matchJavaKeyword() {
-        int c = charAt(0);
+        int c = charAt(-1);
+        if (Character.isJavaIdentifierPart(c)) {
+            return 0;
+        }
+
+        c = charAt(0);
         switch (c) {
         case 'a':
         case 'b':
@@ -310,6 +313,11 @@ public class JavaSyntaxAnalyzer {
         if (keywordMatcher.find(pos)) {
             int start = keywordMatcher.start();
             int end = keywordMatcher.end();
+            switch (charAt(end - pos)) {
+            case '.':
+                return 0;
+            }
+
             return (end - start);
         }
         return 0;
@@ -436,6 +444,7 @@ public class JavaSyntaxAnalyzer {
                     return true;
                 }
             case -1:
+            default:
                 return false;
             }
         }

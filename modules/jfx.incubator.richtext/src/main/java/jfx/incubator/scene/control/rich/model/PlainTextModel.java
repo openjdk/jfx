@@ -40,29 +40,95 @@ import jfx.incubator.scene.control.rich.TextPos;
  * syntax highlighting based on the model content.
  */
 public class PlainTextModel extends StyledTextModel {
-    private final ArrayList<String> paragraphs = new ArrayList<>();
+    /**
+     * This interface describes the underlying storage mechanism for the PlainTextModel.
+     */
+    public interface Content {
+        /**
+         * Returns the number of text lines in this content.
+         * @return number of text lines
+         */
+        public int size();
+
+        /**
+         * Returns the text string for the specified paragraph index.  The returned text string cannot be null
+         * and must not contain any control characters other than TAB.
+         * The caller should never attempt to ask for a paragraph outside of the valid range.
+         *
+         * @param index the paragraph index in the range (0...{@link #size()})
+         * @return the text string or null
+         */
+        public String getText(int index);
+
+        /**
+         * This method is called to insert a single text segment at the given position.
+         *
+         * @param index the paragraph index
+         * @param offset the insertion offset within the paragraph
+         * @param text the text to insert
+         * @param attrs the style attributes
+         * @return the number of characters inserted
+         */
+        public int insertTextSegment(int index, int offset, String text, StyleAttrs attrs);
+
+        /**
+         * Inserts a line break.
+         *
+         * @param index the model index
+         * @param offset the text offset
+         */
+        public void insertLineBreak(int index, int offset);
+        
+        /**
+         * This method gets called only if the model is editable.
+         * The caller guarantees that {@code start} precedes {@code end}.
+         *
+         * @param start the start of the region to be removed
+         * @param end the end of the region to be removed, expected to be greater than the start position
+         */
+        public void removeRegion(TextPos start, TextPos end);
+
+        // TODO this may need isEditable() method.
+    }
+
+    private final Content content;
+    // TODO a property or delegate to Content?
     private final SimpleBooleanProperty editable = new SimpleBooleanProperty(true);
 
     /**
-     * Constructs an empty model.
+     * Constructs an empty model with the specified {@code Content}.
+     * @param c the content to use
+     */
+    public PlainTextModel(Content c) {
+        this.content = c;
+        registerDataFormatHandler(new PlainTextFormatHandler(), true, true, 0);
+    }
+
+    /**
+     * Constructs an empty model with the in-memory {@code Content}.
      */
     public PlainTextModel() {
-        registerDataFormatHandler(new PlainTextFormatHandler(), true, true, 0);
+        this(new InMemoryContent());
+    }
+
+    /**
+     * Inserts text at the specified position.
+     * This is a convenience shortcut for {@link #replace(StyleResolver, TextPos, TextPos, String, boolean)}.
+     * @param p the insertion position
+     * @param text the text to insert
+     */
+    public void insertText(TextPos p, String text) {
+        replace(null, p, p, text, false);
     }
 
     @Override
     public int size() {
-        int sz = paragraphs.size();
-        // empty model always have one line
-        return sz == 0 ? 1 : sz;
+        return content.size();
     }
 
     @Override
     public String getPlainText(int index) {
-        if (index < paragraphs.size()) {
-            return paragraphs.get(index);
-        }
-        return "";
+        return content.getText(index);
     }
 
     @Override
@@ -74,11 +140,11 @@ public class PlainTextModel extends StyledTextModel {
     }
 
     @Override
-    public boolean isUserEditable() {
+    public final boolean isUserEditable() {
         return editable.get();
     }
 
-    public void setEditable(boolean on) {
+    public final void setEditable(boolean on) {
         editable.set(on);
     }
 
@@ -86,74 +152,23 @@ public class PlainTextModel extends StyledTextModel {
      * Determines whether the model is editable.
      * @return the editable property
      */
-    public BooleanProperty editableProperty() {
+    public final BooleanProperty editableProperty() {
         return editable;
     }
 
     @Override
     protected int insertTextSegment(int index, int offset, String text, StyleAttrs attrs) {
-        String s = getPlainText(index);
-        String s2 = insertText(s, offset, text);
-        setText(index, s2);
-        return text.length();
-    }
-
-    private static String insertText(String text, int offset, String toInsert) {
-        if (offset >= text.length()) {
-            return text + toInsert;
-        } else {
-            return text.substring(0, offset) + toInsert + text.substring(offset);
-        }
+        return content.insertTextSegment(index, offset, text, attrs);
     }
 
     @Override
     protected void insertLineBreak(int index, int offset) {
-        if (index >= paragraphs.size()) {
-            paragraphs.add("");
-        } else {
-            String s = paragraphs.get(index);
-            if (offset >= s.length()) {
-                paragraphs.add(index + 1, "");
-            } else {
-                setText(index, s.substring(0, offset));
-                paragraphs.add(index + 1, s.substring(offset));
-            }
-        }
+        content.insertLineBreak(index, offset);
     }
 
     @Override
     protected void removeRegion(TextPos start, TextPos end) {
-        int ix = start.index();
-        String text = getPlainText(ix);
-        String newText;
-
-        if (ix == end.index()) {
-            int len = text.length();
-            if (end.offset() >= len) {
-                newText = text.substring(0, start.offset());
-            } else {
-                newText = text.substring(0, start.offset()) + text.substring(end.offset());
-            }
-            setText(ix, newText);
-        } else {
-            newText = text.substring(0, start.offset()) + paragraphs.get(end.index()).substring(end.offset());
-            setText(ix, newText);
-
-            int ct = end.index() - ix;
-            ix++;
-            for (int i = 0; i < ct; i++) {
-                paragraphs.remove(ix);
-            }
-        }
-    }
-
-    private void setText(int index, String text) {
-        if (index < paragraphs.size()) {
-            paragraphs.set(index, text);
-        } else {
-            // due to emulated empty paragraph in an empty model
-            paragraphs.add(text);
-        }
+        content.removeRegion(start, end);
     }
 
     @Override
@@ -166,14 +181,6 @@ public class PlainTextModel extends StyledTextModel {
         return StyleAttrs.EMPTY;
     }
 
-    /**
-     * Adds a paragraph to the end of the document.
-     * @param text text to add.  must not contain newlines and other control characters except for TAB.
-     */
-    public void addParagraph(String text) {
-        paragraphs.add(text);
-    }
-
     @Override
     protected final void setParagraphStyle(int ix, StyleAttrs a) {
         // no-op
@@ -182,5 +189,97 @@ public class PlainTextModel extends StyledTextModel {
     @Override
     protected final void applyStyle(int ix, int start, int end, StyleAttrs a, boolean merge) {
         // no-op
+    }
+
+    /**
+     * This content provides in-memory storage in an {@code ArrayList} of {@code String}s.
+     */
+    public static class InMemoryContent implements Content {
+        private final ArrayList<String> paragraphs = new ArrayList<>();
+
+        /** The constructor. */
+        public InMemoryContent() {
+        }
+
+        @Override
+        public int size() {
+            int sz = paragraphs.size();
+            // empty model always have one line
+            return sz == 0 ? 1 : sz;
+        }
+
+        @Override
+        public String getText(int index) {
+            if (index < paragraphs.size()) {
+                return paragraphs.get(index);
+            }
+            return "";
+        }
+
+        @Override
+        public int insertTextSegment(int index, int offset, String text, StyleAttrs attrs) {
+            String s = getText(index);
+            String s2 = insertText(s, offset, text);
+            setText(index, s2);
+            return text.length();
+        }
+
+        private static String insertText(String text, int offset, String toInsert) {
+            if (offset >= text.length()) {
+                return text + toInsert;
+            } else {
+                return text.substring(0, offset) + toInsert + text.substring(offset);
+            }
+        }
+
+        @Override
+        public void insertLineBreak(int index, int offset) {
+            if (index >= paragraphs.size()) {
+                paragraphs.add("");
+            } else {
+                String s = paragraphs.get(index);
+                if (offset >= s.length()) {
+                    paragraphs.add(index + 1, "");
+                } else {
+                    setText(index, s.substring(0, offset));
+                    paragraphs.add(index + 1, s.substring(offset));
+                }
+            }
+        }
+
+        @Override
+        public void removeRegion(TextPos start, TextPos end) {
+            int ix = start.index();
+            String text = getText(ix);
+            String newText;
+
+            if (ix == end.index()) {
+                int len = text.length();
+                if (end.offset() >= len) {
+                    newText = text.substring(0, start.offset());
+                } else {
+                    newText = text.substring(0, start.offset()) + text.substring(end.offset());
+                }
+                setText(ix, newText);
+            } else {
+                newText = text.substring(0, start.offset()) + paragraphs.get(end.index()).substring(end.offset());
+                setText(ix, newText);
+
+                int ct = end.index() - ix;
+                ix++;
+                for (int i = 0; i < ct; i++) {
+                    paragraphs.remove(ix);
+                }
+            }
+        }
+
+        private void setText(int index, String text) {
+            if (index < paragraphs.size()) {
+                paragraphs.set(index, text);
+            } else {
+                // due to emulated empty paragraph in an empty model
+                paragraphs.add(text);
+            }
+        }
     }
 }

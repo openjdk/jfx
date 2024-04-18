@@ -51,7 +51,7 @@ public class PlainTextFormatHandler extends DataFormatHandler {
     public Object copy(StyledTextModel m, StyleResolver resolver, TextPos start, TextPos end) throws IOException {
         StringBuilderStyledOutput out = new StringBuilderStyledOutput();
         m.export(start, end, out);
-        return out.getOutput();
+        return out.toString();
     }
 
     @Override

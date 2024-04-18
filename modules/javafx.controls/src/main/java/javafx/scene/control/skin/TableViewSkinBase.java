@@ -338,7 +338,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
             Callback<C, I> oldFactory = rowFactory;
             rowFactory = rowFactoryProperty.get();
             if (oldFactory != rowFactory) {
-                requestRebuildCells();
+                flow.recreateCells();
             }
         });
 

@@ -95,6 +95,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         registerFunction(RichTextArea.Tags.CUT, this::cut);
         registerFunction(RichTextArea.Tags.DELETE, this::delete);
         registerFunction(RichTextArea.Tags.DELETE_PARAGRAPH, this::deleteParagraph);
+        registerFunction(RichTextArea.Tags.FOCUS_NEXT, this::traverseNext);
+        registerFunction(RichTextArea.Tags.FOCUS_PREVIOUS, this::traversePrevious);
         registerFunction(RichTextArea.Tags.INSERT_LINE_BREAK, this::insertLineBreak);
         registerFunction(RichTextArea.Tags.INSERT_TAB, this::insertTab);
         registerFunction(RichTextArea.Tags.MOVE_DOWN, this::moveDown);
@@ -133,52 +135,64 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         registerFunction(RichTextArea.Tags.SELECT_WORD_RIGHT, this::selectRightWord);
         registerFunction(RichTextArea.Tags.UNDO, this::undo);
         // key mappings
+        registerKey(KeyBinding.shortcut(KeyCode.A), RichTextArea.Tags.SELECT_ALL);
         registerKey(KeyCode.BACK_SPACE, RichTextArea.Tags.BACKSPACE);
         registerKey(KeyBinding.shortcut(KeyCode.C), RichTextArea.Tags.COPY);
-        registerKey(KeyBinding.shortcut(KeyCode.X), RichTextArea.Tags.CUT);
-        registerKey(KeyCode.DELETE, RichTextArea.Tags.DELETE);
+        registerKey(KeyCode.COPY, RichTextArea.Tags.COPY);
         registerKey(KeyBinding.shortcut(KeyCode.D), RichTextArea.Tags.DELETE_PARAGRAPH);
-        registerKey(KeyCode.ENTER, RichTextArea.Tags.INSERT_LINE_BREAK);
-        registerKey(KeyCode.TAB, RichTextArea.Tags.INSERT_TAB);
-        registerKey(KeyCode.LEFT, RichTextArea.Tags.MOVE_LEFT);
-        registerKey(KeyCode.RIGHT, RichTextArea.Tags.MOVE_RIGHT);
-        registerKey(KeyCode.UP, RichTextArea.Tags.MOVE_UP);
+        registerKey(KeyCode.DELETE, RichTextArea.Tags.DELETE);
         registerKey(KeyCode.DOWN, RichTextArea.Tags.MOVE_DOWN);
-        registerKey(KeyCode.HOME, RichTextArea.Tags.MOVE_TO_PARAGRAPH_START);
-        registerKey(KeyCode.END, RichTextArea.Tags.MOVE_TO_PARAGRAPH_END);
-        registerKey(KeyCode.PAGE_DOWN, RichTextArea.Tags.PAGE_DOWN);
-        registerKey(KeyCode.PAGE_UP, RichTextArea.Tags.PAGE_UP);
-        registerKey(KeyBinding.shortcut(KeyCode.V), RichTextArea.Tags.PASTE);
-        registerKey(KeyBinding.with(KeyCode.V).shortcut().shift().build(), RichTextArea.Tags.PASTE_PLAIN_TEXT);
-        registerKey(KeyBinding.shortcut(KeyCode.A), RichTextArea.Tags.SELECT_ALL);
-        registerKey(KeyBinding.shift(KeyCode.LEFT), RichTextArea.Tags.SELECT_LEFT);
-        registerKey(KeyBinding.shift(KeyCode.RIGHT), RichTextArea.Tags.SELECT_RIGHT);
-        registerKey(KeyBinding.shift(KeyCode.UP), RichTextArea.Tags.SELECT_UP);
         registerKey(KeyBinding.shift(KeyCode.DOWN), RichTextArea.Tags.SELECT_DOWN);
-        registerKey(KeyBinding.shift(KeyCode.PAGE_UP), RichTextArea.Tags.SELECT_PAGE_UP);
+        registerKey(KeyCode.END, RichTextArea.Tags.MOVE_TO_PARAGRAPH_END);
+        registerKey(KeyCode.ENTER, RichTextArea.Tags.INSERT_LINE_BREAK);
+        registerKey(KeyCode.HOME, RichTextArea.Tags.MOVE_TO_PARAGRAPH_START);
+        registerKey(KeyCode.LEFT, RichTextArea.Tags.MOVE_LEFT);
+        registerKey(KeyBinding.shift(KeyCode.LEFT), RichTextArea.Tags.SELECT_LEFT);
+        registerKey(KeyCode.PAGE_DOWN, RichTextArea.Tags.PAGE_DOWN);
         registerKey(KeyBinding.shift(KeyCode.PAGE_DOWN), RichTextArea.Tags.SELECT_PAGE_DOWN);
+        registerKey(KeyCode.PAGE_UP, RichTextArea.Tags.PAGE_UP);
+        registerKey(KeyBinding.shift(KeyCode.PAGE_UP), RichTextArea.Tags.SELECT_PAGE_UP);
+        registerKey(KeyCode.PASTE, RichTextArea.Tags.PASTE);
+        registerKey(KeyCode.RIGHT, RichTextArea.Tags.MOVE_RIGHT);
+        registerKey(KeyBinding.shift(KeyCode.RIGHT), RichTextArea.Tags.SELECT_RIGHT);
+        registerKey(KeyCode.TAB, RichTextArea.Tags.INSERT_TAB);
+        registerKey(KeyBinding.ctrl(KeyCode.TAB), RichTextArea.Tags.FOCUS_NEXT);
+        registerKey(KeyBinding.builder(KeyCode.TAB).ctrl().option().shift().build(), RichTextArea.Tags.FOCUS_NEXT);
+        registerKey(KeyBinding.ctrlShift(KeyCode.TAB), RichTextArea.Tags.FOCUS_PREVIOUS);
+        registerKey(KeyBinding.shift(KeyCode.TAB), RichTextArea.Tags.FOCUS_PREVIOUS);
+        registerKey(KeyCode.UP, RichTextArea.Tags.MOVE_UP);
+        registerKey(KeyBinding.shift(KeyCode.UP), RichTextArea.Tags.SELECT_UP);
+        registerKey(KeyBinding.shortcut(KeyCode.V), RichTextArea.Tags.PASTE);
+        registerKey(KeyBinding.shiftShortcut(KeyCode.V), RichTextArea.Tags.PASTE_PLAIN_TEXT);
+        registerKey(KeyBinding.shortcut(KeyCode.X), RichTextArea.Tags.CUT);
+        registerKey(KeyCode.CUT, RichTextArea.Tags.CUT);
         registerKey(KeyBinding.shortcut(KeyCode.Z), RichTextArea.Tags.UNDO);
 
         if (isMac()) {
-            registerKey(KeyBinding.with(KeyCode.UP).shortcut().build(), RichTextArea.Tags.MOVE_TO_DOCUMENT_START);
-            registerKey(KeyBinding.with(KeyCode.DOWN).shortcut().build(), RichTextArea.Tags.MOVE_TO_DOCUMENT_END);
-            registerKey(KeyBinding.with(KeyCode.LEFT).option().build(), RichTextArea.Tags.MOVE_WORD_LEFT);
-            registerKey(KeyBinding.with(KeyCode.RIGHT).option().build(), RichTextArea.Tags.MOVE_WORD_RIGHT);
-            registerKey(KeyBinding.with(KeyCode.Z).shift().command().build(), RichTextArea.Tags.REDO);
+            registerKey(KeyBinding.shiftShortcut(KeyCode.DOWN), RichTextArea.Tags.SELECT_TO_DOCUMENT_END);
+            registerKey(KeyBinding.shortcut(KeyCode.DOWN), RichTextArea.Tags.MOVE_TO_DOCUMENT_END);
+            registerKey(KeyBinding.option(KeyCode.LEFT), RichTextArea.Tags.MOVE_WORD_LEFT);
             registerKey(KeyBinding.with(KeyCode.LEFT).shift().option().build(), RichTextArea.Tags.SELECT_WORD_LEFT);
+            registerKey(KeyBinding.option(KeyCode.RIGHT), RichTextArea.Tags.MOVE_WORD_RIGHT);
             registerKey(KeyBinding.with(KeyCode.RIGHT).shift().option().build(), RichTextArea.Tags.SELECT_WORD_RIGHT);
-            registerKey(KeyBinding.with(KeyCode.UP).shift().shortcut().build(), RichTextArea.Tags.SELECT_TO_DOCUMENT_START);
-            registerKey(KeyBinding.with(KeyCode.DOWN).shift().shortcut().build(), RichTextArea.Tags.SELECT_TO_DOCUMENT_END);
+            registerKey(KeyBinding.shiftShortcut(KeyCode.UP), RichTextArea.Tags.SELECT_TO_DOCUMENT_START);
+            registerKey(KeyBinding.shortcut(KeyCode.UP), RichTextArea.Tags.MOVE_TO_DOCUMENT_START);
+            registerKey(KeyBinding.with(KeyCode.Z).shift().command().build(), RichTextArea.Tags.REDO);
         } else {
             registerKey(KeyBinding.ctrl(KeyCode.HOME), RichTextArea.Tags.MOVE_TO_DOCUMENT_START);
-            registerKey(KeyBinding.ctrl(KeyCode.END), RichTextArea.Tags.MOVE_TO_DOCUMENT_END);
-            registerKey(KeyBinding.ctrl(KeyCode.LEFT), RichTextArea.Tags.MOVE_WORD_LEFT);
-            registerKey(KeyBinding.ctrl(KeyCode.RIGHT), RichTextArea.Tags.MOVE_WORD_RIGHT);
-            registerKey(KeyBinding.ctrl(KeyCode.Y), RichTextArea.Tags.REDO);
-            registerKey(KeyBinding.ctrlShift(KeyCode.LEFT), RichTextArea.Tags.SELECT_WORD_LEFT);
-            registerKey(KeyBinding.ctrlShift(KeyCode.RIGHT), RichTextArea.Tags.SELECT_WORD_RIGHT);
             registerKey(KeyBinding.ctrlShift(KeyCode.HOME), RichTextArea.Tags.SELECT_TO_DOCUMENT_START);
+            registerKey(KeyBinding.ctrl(KeyCode.END), RichTextArea.Tags.MOVE_TO_DOCUMENT_END);
             registerKey(KeyBinding.ctrlShift(KeyCode.END), RichTextArea.Tags.SELECT_TO_DOCUMENT_END);
+            registerKey(KeyBinding.ctrl(KeyCode.LEFT), RichTextArea.Tags.MOVE_WORD_LEFT);
+            registerKey(KeyBinding.ctrlShift(KeyCode.LEFT), RichTextArea.Tags.SELECT_WORD_LEFT);
+            registerKey(KeyBinding.ctrl(KeyCode.RIGHT), RichTextArea.Tags.MOVE_WORD_RIGHT);
+            registerKey(KeyBinding.ctrlShift(KeyCode.RIGHT), RichTextArea.Tags.SELECT_WORD_RIGHT);
+
+            if (isWindows()) {
+                registerKey(KeyBinding.ctrl(KeyCode.Y), RichTextArea.Tags.REDO);
+            } else {
+                registerKey(KeyBinding.ctrlShift(KeyCode.Z), RichTextArea.Tags.REDO);
+            }
         }
 
         Pane cp = vflow.getContentPane();
@@ -277,7 +291,11 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
     }
 
     public void insertTab(RichTextArea control) {
-        handleTypedChar("\t");
+        if (canEdit()) {
+            handleTypedChar("\t");
+        } else {
+            traverseNext(control);
+        }
     }
 
     public void insertLineBreak(RichTextArea control) {
@@ -848,6 +866,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         RichTextArea control = getControl();
         boolean sel = control.hasNonEmptySelection();
         boolean paste = (findFormatForPaste() != null);
+        boolean editable = control.canEdit();
 
         ObservableList<MenuItem> items = contextMenu.getItems();
         items.clear();
@@ -865,7 +884,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
 
         items.add(m = new MenuItem("Cut"));
         m.setOnAction((ev) -> control.cut());
-        m.setDisable(!sel);
+        m.setDisable(!sel || !editable);
 
         items.add(m = new MenuItem("Copy"));
         m.setOnAction((ev) -> control.copy());
@@ -873,7 +892,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
 
         items.add(m = new MenuItem("Paste"));
         m.setOnAction((ev) -> control.paste());
-        m.setDisable(!paste);
+        m.setDisable(!paste || !editable);
 
         items.add(new SeparatorMenuItem());
 
@@ -1133,7 +1152,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
 //            } else {
 //                textInputControl.nextWord();
 //            }
-            TextPos p = nextWordFrom(caret);
+            TextPos p = nextWordFrom(control, caret);
             if (p != null) {
                 control.moveCaret(p, extendSelection);
             }
@@ -1152,62 +1171,95 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         }
     }
 
-    protected TextPos previousWordFrom(TextPos caret) {
-        int index = caret.index();
-        String text = getPlainText(index);
-        if ((text == null) || (text.length() == 0)) {
-            return null;
-        }
+    protected TextPos previousWordFrom(TextPos pos) {
+        int index = pos.index();
+        int offset = pos.offset();
+        BreakIterator br = null;
 
-        BreakIterator br = BreakIterator.getWordInstance();
-        br.setText(text);
-
-        int len = text.length();
-        int offset = caret.offset();
-        int off = br.preceding(Utils.clamp(0, offset, len));
-
-        // Skip the non-word region, then move/select to the beginning of the word.
-        while (off != BreakIterator.DONE && !Character.isLetterOrDigit(text.charAt(Utils.clamp(0, off, len - 1)))) {
-            off = br.preceding(Utils.clamp(0, off, len));
-        }
-
-        return new TextPos(index, off);
-    }
-
-    protected TextPos nextWordFrom(TextPos caret) {
-        int index = caret.index();
-        String text = getPlainText(index);
-        if ((text == null) || (text.length() == 0)) {
-            return null;
-        }
-
-        BreakIterator br = BreakIterator.getWordInstance();
-        br.setText(text);
-
-        int len = text.length();
-        int offset = caret.offset();
-
-        int last = br.following(Utils.clamp(0, offset, len - 1));
-        int current = br.next();
-
-        // Skip whitespace characters to the beginning of next word, but
-        // stop at newline. Then move the caret or select a range.
-        while (current != BreakIterator.DONE) {
-            for (int off = last; off <= current; off++) {
-                char ch = text.charAt(Utils.clamp(0, off, len - 1));
-                // Avoid using Character.isSpaceChar() and Character.isWhitespace(),
-                // because they include LINE_SEPARATOR, PARAGRAPH_SEPARATOR, etc.
-                if (ch != ' ' && ch != '\t') {
-                    return new TextPos(index, off);
-                }
+        for (;;) {
+            if ((index == 0) && (offset <= 0)) {
+                return TextPos.ZERO;
             }
-            last = current;
-            current = br.next();
-        }
 
-        return new TextPos(index, len);
+            String text = getPlainText(index);
+            if ((text == null) || (text.length() == 0)) {
+                index--;
+                offset = Integer.MAX_VALUE;
+                continue;
+            }
+
+            if (br == null) {
+                br = BreakIterator.getWordInstance();
+            }
+            br.setText(text);
+
+            int len = text.length();
+            int off = br.preceding(Utils.clamp(0, offset, len));
+
+            while (off != BreakIterator.DONE && !isLetterOrDigit(text, off, len)) {
+                off = br.preceding(Utils.clamp(0, off, len));
+            }
+
+            if (off < 0) {
+                index--;
+                offset = Integer.MAX_VALUE;
+                continue;
+            }
+            return new TextPos(index, off);
+        }
     }
 
+    protected TextPos nextWordFrom(RichTextArea control, TextPos pos) {
+        int index = pos.index();
+        int offset = pos.offset();
+        boolean skipEmpty = true;
+
+        for (;;) {
+            TextPos end = control.getEndTextPos();
+            // this could be a isSameOrAfter(index, off) method in TextPos
+            if ((index == end.index()) && (offset >= end.offset())) {
+                return end;
+            } else if (index > end.index()) {
+                return end;
+            }
+
+            String text = getPlainText(index);
+            if ((text == null) || (text.length() == 0)) {
+                if (skipEmpty) {
+                    index++;
+                }
+                return new TextPos(index, 0);
+            }
+
+            BreakIterator br = BreakIterator.getWordInstance();
+            br.setText(text);
+    
+            int len = text.length();
+            int last = br.following(Utils.clamp(0, offset, len - 1));
+            int current = br.next();
+    
+            // Skip whitespace characters to the beginning of next word, but
+            // stop at newline. Then move the caret or select a range.
+            while (current != BreakIterator.DONE) {
+                for (int off = last; off <= current; off++) {
+                    char ch = text.charAt(Utils.clamp(0, off, len - 1));
+                    // Avoid using Character.isSpaceChar() and Character.isWhitespace(),
+                    // because they include LINE_SEPARATOR, PARAGRAPH_SEPARATOR, etc.
+                    if (ch != ' ' && ch != '\t') {
+                        return new TextPos(index, off);
+                    }
+                }
+                last = current;
+                current = br.next();
+            }
+            
+            index++;
+            offset = 0;
+            skipEmpty = false;
+        }
+    }
+
+    // FIX fix to navigate over multiple paragraphs similarly to nextWordFrom()
     protected TextPos endOfNextWordFrom(TextPos caret) {
         int index = caret.index();
         String text = getPlainText(index);
@@ -1218,23 +1270,23 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         BreakIterator br = BreakIterator.getWordInstance();
         br.setText(text);
 
-        int textLength = text.length();
+        int len = text.length();
         int offset = caret.offset();
-        int last = br.following(Utils.clamp(0, offset, textLength));
+        int last = br.following(Utils.clamp(0, offset, len));
         int current = br.next();
 
         // skip the non-word region, then move/select to the end of the word.
         while (current != BreakIterator.DONE) {
-            for (int p = last; p <= current; p++) {
-                if (!Character.isLetterOrDigit(text.charAt(Utils.clamp(0, p, textLength - 1)))) {
-                    return new TextPos(index, p);
+            for (int off = last; off <= current; off++) {
+                if (!isLetterOrDigit(text, off, len)) {
+                    return new TextPos(index, off);
                 }
             }
             last = current;
             current = br.next();
         }
 
-        return new TextPos(index, textLength);
+        return new TextPos(index, len);
     }
 
     public void redo(RichTextArea control) {
@@ -1287,5 +1339,17 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             bidi.isRightToLeft() ||
             (isMixed() && getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT)
         );
+    }
+
+    private boolean isLetterOrDigit(String text, int ix, int len) {
+        if (ix < 0) {
+            // should not happen
+            return false;
+        } else if (ix >= text.length()) {
+            return false;
+        }
+        // ignore the case when 'c' is a high surrogate without the low surrogate
+        int c = Character.codePointAt(text, ix);
+        return Character.isLetterOrDigit(c);
     }
 }

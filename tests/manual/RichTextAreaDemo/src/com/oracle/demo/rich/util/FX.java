@@ -28,9 +28,11 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javafx.application.Platform;
+import javafx.css.PseudoClass;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
@@ -87,6 +89,7 @@ public class FX {
 
     public static MenuItem item(MenuBar b, String text) {
         MenuItem mi = new MenuItem(text);
+        mi.setDisable(true);
         applyMnemonic(mi);
         lastMenu(b).getItems().add(mi);
         return mi;
@@ -114,6 +117,37 @@ public class FX {
         cm.getItems().add(mi);
         a.attach(mi);
         return mi;
+    }
+
+    public static MenuItem item(ContextMenu cm, String text) {
+        MenuItem mi = new MenuItem(text);
+        mi.setDisable(true);
+        applyMnemonic(mi);
+        cm.getItems().add(mi);
+        return mi;
+    }
+
+    public static MenuItem item(Menu b, String text) {
+        MenuItem mi = new MenuItem(text);
+        mi.setDisable(true);
+        applyMnemonic(mi);
+        b.getItems().add(mi);
+        return mi;
+    }
+
+    public static MenuItem item(Menu b, String text, Runnable r) {
+        MenuItem mi = new MenuItem(text);
+        mi.setOnAction((ev) -> r.run());
+        applyMnemonic(mi);
+        b.getItems().add(mi);
+        return mi;
+    }
+
+    public static Menu submenu(MenuBar b, String text) {
+        Menu m = new Menu(text);
+        applyMnemonic(m);
+        lastMenu(b).getItems().add(m);
+        return m;
     }
 
     private static void applyMnemonic(MenuItem m) {
@@ -172,17 +206,41 @@ public class FX {
         return m;
     }
 
-    public static ToggleButton button(ToolBar t, String text, FxAction a) {
+    public static ToggleButton toggleButton(ToolBar t, String text, FxAction a) {
         ToggleButton b = new ToggleButton(text);
         a.attach(b);
         t.getItems().add(b);
         return b;
     }
 
-    public static ToggleButton button(ToolBar t, String text, String tooltip, FxAction a) {
+    public static ToggleButton toggleButton(ToolBar t, String text, String tooltip, FxAction a) {
         ToggleButton b = new ToggleButton(text);
         b.setTooltip(new Tooltip(tooltip));
         a.attach(b);
+        t.getItems().add(b);
+        return b;
+    }
+
+    public static ToggleButton toggleButton(ToolBar t, String text, String tooltip) {
+        ToggleButton b = new ToggleButton(text);
+        b.setTooltip(new Tooltip(tooltip));
+        b.setDisable(true);
+        t.getItems().add(b);
+        return b;
+    }
+
+    public static Button button(ToolBar t, String text, String tooltip, FxAction a) {
+        Button b = new Button(text);
+        b.setTooltip(new Tooltip(tooltip));
+        a.attach(b);
+        t.getItems().add(b);
+        return b;
+    }
+
+    public static Button button(ToolBar t, String text, String tooltip) {
+        Button b = new Button(text);
+        b.setTooltip(new Tooltip(tooltip));
+        b.setDisable(true);
         t.getItems().add(b);
         return b;
     }
@@ -311,5 +369,63 @@ public class FX {
         double g = c.getGreen();
         double b = c.getBlue();
         return new Color(r, g, b, opacity);
+    }
+
+    /**
+     * Returns the node of type {@code type}, which is either the ancestor or the specified node,
+     * or the specified node itself.
+     * @param <N> the class of Node
+     * @param type the class of Node
+     * @param n the node to look at
+     * @return the ancestor of type N, or null
+     */
+    public static <N extends Node> N findParentOf(Class<N> type, Node n) {
+        for (;;) {
+            if (n == null) {
+                return null;
+            } else if (type.isAssignableFrom(n.getClass())) {
+                return (N)n;
+            }
+            n = n.getParent();
+        }
+    }
+
+    /**
+     * Adds the specified style name to the Node's style list.
+     * @param n the node
+     * @param name the style name to add
+     */
+    public static void style(Node n, String name) {
+        if (n != null) {
+            n.getStyleClass().add(name);
+        }
+    }
+
+    /**
+     * Adds or removes the specified style name to the Node's style list.
+     * @param n the node
+     * @param name the style name to add
+     * @param add whether to add or remove the style
+     */
+    public static void style(Node n, String name, boolean add) {
+        if (n != null) {
+            if (add) {
+                n.getStyleClass().add(name);
+            } else {
+                n.getStyleClass().remove(name);
+            }
+        }
+    }
+
+    /**
+     * Adds or removes the specified pseudo class to the Node's style list.
+     * @param n the node
+     * @param name the style name to add
+     * @param on whether to add or remove the pseudo class
+     */
+    public static void style(Node n, PseudoClass name, boolean on) {
+        if (n != null) {
+            n.pseudoClassStateChanged(name, on);
+        }
     }
 }

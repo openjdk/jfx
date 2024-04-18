@@ -116,12 +116,12 @@ public class RichEditorDemoPane extends BorderPane {
         // TODO bullet
         // TODO space left (indent left, indent right)
         // TODO line spacing
-        FX.button(t, "B", "Bold Text", actions.bold);
-        FX.button(t, "I", "Italicize Text", actions.italic);
-        FX.button(t, "S", "Strike Through Text", actions.strikeThrough);
-        FX.button(t, "U", "Underline Text", actions.underline);
+        FX.toggleButton(t, "B", "Bold Text", actions.bold);
+        FX.toggleButton(t, "I", "Italicize Text", actions.italic);
+        FX.toggleButton(t, "S", "Strike Through Text", actions.strikeThrough);
+        FX.toggleButton(t, "U", "Underline Text", actions.underline);
         FX.space(t);
-        FX.button(t, "W", "Wrap Text", actions.wrapText);
+        FX.toggleButton(t, "W", "Wrap Text", actions.wrapText);
         // TODO line numbers
         return t;
     }
