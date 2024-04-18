@@ -98,8 +98,19 @@ class WinTextRangeProvider {
         }
 
         int length = text.length();
-        start = Math.max(0, Math.min(start, length));
+        start = getValidStringIndex(start, 0, length);
         end = Math.max(start, Math.min(end, length));
+    }
+
+    private int getValidStringIndex(int start, int requestedSteps, int maxEnd) {
+        int fixedMaxEnd = Math.max(0, maxEnd);
+        int theEnd;
+        try {
+            theEnd = Math.addExact(Math.max(0, start), Math.max(0, requestedSteps));
+        } catch (ArithmeticException e) {
+            return fixedMaxEnd;
+        }
+        return Math.min(theEnd, fixedMaxEnd);
     }
 
     void setRange(int start, int end) {
@@ -362,7 +373,7 @@ class WinTextRangeProvider {
         String text = (String)getAttribute(TEXT);
         if (text == null) return null;
         validateRange(text);
-        int endOffset = maxLength >= 0 ? Math.min(end, Math.max(start + maxLength, maxLength)) : end;
+        int endOffset = getValidStringIndex(start, maxLength, end);
 //        System.out.println("+GetText [" + text.substring(start, endOffset)+"]");
         return text.substring(start, endOffset);
     }
@@ -378,7 +389,7 @@ class WinTextRangeProvider {
         switch (unit) {
             case TextUnit_Character: {
                 int oldStart = start;
-                start = Math.max(0, Math.min(start + requestedCount, length - 1));
+                start = getValidStringIndex(start, requestedCount, length - 1);
                 end = start + 1;
                 actualCount = start - oldStart;
                 break;
@@ -482,7 +493,7 @@ class WinTextRangeProvider {
         switch (unit) {
             case TextUnit_Character: {
                 int oldOffset = offset;
-                offset = Math.max(0, Math.min(offset + requestedCount, length));
+                offset = getValidStringIndex(offset, requestedCount, length);
                 actualCount = offset - oldOffset;
                 break;
             }
