@@ -104,9 +104,12 @@ class WinTextRangeProvider {
 
     private int getValidStringIndex(int start, int requestedSteps, int maxEnd) {
         int fixedMaxEnd = Math.max(0, maxEnd);
+        if (requestedSteps < 0) {
+            return fixedMaxEnd;
+        }
         int theEnd;
         try {
-            theEnd = Math.addExact(Math.max(0, start), Math.max(0, requestedSteps));
+            theEnd = Math.addExact(Math.max(0, start), requestedSteps);
         } catch (ArithmeticException e) {
             return fixedMaxEnd;
         }
