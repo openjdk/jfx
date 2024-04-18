@@ -39,11 +39,11 @@ public class Notebook {
     public int size() {
         return cells.size();
     }
-    
+
     public CellInfo getCell(int ix) {
         return cells.get(ix);
     }
-    
+
     public void add(CellInfo cell) {
         cells.add(cell);
     }

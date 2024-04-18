@@ -1151,7 +1151,7 @@ public class VFlow extends Pane implements StyleResolver {
 
             // this "works" except for change model
             requestParentLayout();
-            
+
             // avoids infinite layout loop in MultipleStackedBoxWindow but ... why?
             if (h != prev) {
                 requestLayout();

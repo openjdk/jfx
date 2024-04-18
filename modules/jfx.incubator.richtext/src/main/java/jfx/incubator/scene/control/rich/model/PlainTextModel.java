@@ -78,7 +78,7 @@ public class PlainTextModel extends StyledTextModel {
          * @param offset the text offset
          */
         public void insertLineBreak(int index, int offset);
-        
+
         /**
          * This method gets called only if the model is editable.
          * The caller guarantees that {@code start} precedes {@code end}.

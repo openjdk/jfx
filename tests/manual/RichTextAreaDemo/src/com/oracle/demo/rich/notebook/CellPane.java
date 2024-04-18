@@ -167,7 +167,7 @@ public class CellPane extends GridPane {
         Node n = createResultNode(result);
         outputPane.setCenter(n);
     }
-    
+
     private Node createResultNode(Object result) {
         if(result != null) {
             if(result instanceof Supplier gen) {
@@ -203,7 +203,7 @@ public class CellPane extends GridPane {
         }
         return null;
     }
-    
+
     private static CodeTextModel from(String text) throws IOException {
         CodeTextModel m = new CodeTextModel();
         m.insertText(TextPos.ZERO, text);

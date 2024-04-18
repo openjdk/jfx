@@ -1233,11 +1233,11 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
 
             BreakIterator br = BreakIterator.getWordInstance();
             br.setText(text);
-    
+
             int len = text.length();
             int last = br.following(Utils.clamp(0, offset, len - 1));
             int current = br.next();
-    
+
             // Skip whitespace characters to the beginning of next word, but
             // stop at newline. Then move the caret or select a range.
             while (current != BreakIterator.DONE) {
@@ -1252,7 +1252,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 last = current;
                 current = br.next();
             }
-            
+
             index++;
             offset = 0;
             skipEmpty = false;

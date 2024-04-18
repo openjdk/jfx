@@ -38,7 +38,7 @@ import jfx.incubator.scene.control.rich.model.StyleAttrs;
 
 /**
  * Super simple (and therefore not always correct) syntax decorator for JSON
- * which works one line at a time. 
+ * which works one line at a time.
  */
 public class SimpleJsonDecorator implements SyntaxDecorator {
     private static final StyleAttrs NORMAL = mkStyle(Color.BLACK);

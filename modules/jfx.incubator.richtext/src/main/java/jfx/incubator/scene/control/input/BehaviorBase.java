@@ -246,7 +246,7 @@ public abstract class BehaviorBase<C extends Control> {
     protected boolean isWindows() {
         return PlatformUtil.isWindows();
     }
-    
+
     /**
      * Called by any of the BehaviorBase traverse methods to actually effect a
      * traversal of the focus. The default behavior of this method is to simply

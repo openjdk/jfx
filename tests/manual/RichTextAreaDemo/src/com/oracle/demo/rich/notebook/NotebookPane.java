@@ -71,7 +71,7 @@ public class NotebookPane extends BorderPane {
 
         ScrollPane scroll = new ScrollPane(cellContainer);
         scroll.setFitToWidth(true);
-        
+
         setTop(createToolBar());
         setCenter(scroll);
 

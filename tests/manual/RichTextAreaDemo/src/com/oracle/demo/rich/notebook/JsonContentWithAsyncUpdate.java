@@ -124,7 +124,7 @@ public class JsonContentWithAsyncUpdate implements PlainTextModel.Content {
         String message = bytes(1 + random.nextInt(10));
         String payload = bytes(10 + random.nextInt(128));
         int size = payload.length() / 2;
-        
+
         return
             "{date=\"" + date + "\"" +
             ", timestamp=" + time +

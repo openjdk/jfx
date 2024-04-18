@@ -172,10 +172,10 @@ public class Actions {
             activeCellPane,
             executing
         );
-        
+
         SimpleBooleanProperty redoDisabled = new SimpleBooleanProperty();
         SimpleBooleanProperty undoDisabled = new SimpleBooleanProperty();
-        
+
         // file actions
         open.setDisabled(true);
         save.setDisabled(true);
@@ -210,9 +210,9 @@ public class Actions {
         runAndAdvance.disabledProperty().bind(runDisabled);
         runAll.setDisabled(true);
         splitCell.disabledProperty().bind(disabledEditing);
-        
+
         // listeners
-        
+
         styles.addListener((s,p,a) -> {
             bold.setSelected(hasStyle(a, StyleAttrs.BOLD), false);
             italic.setSelected(hasStyle(a, StyleAttrs.ITALIC), false);
@@ -225,10 +225,10 @@ public class Actions {
             if (p == null) {
                 return;
             }
-        
+
             RichTextArea r = FX.findParentOf(RichTextArea.class, node);
             editor.set(r);
-        
+
             EditorType t = getEditorType(r);
             editorType.set(t);
             updateSourceStyles();
@@ -510,7 +510,7 @@ public class Actions {
     private void runScript(CellPane p, String src, boolean advance) {
         setExecuting(true);
         p.setExecuting();
-        
+
         Thread t = new Thread("executing script [" + (sequenceNumber + 1) + "]") {
             @Override
             public void run() {
@@ -551,7 +551,7 @@ public class Actions {
     public final void setActiveCellPane(CellPane p) {
         activeCellPane.set(p);
     }
-    
+
     public final CellPane getActiveCellPane() {
         return activeCellPane.get();
     }
@@ -667,13 +667,13 @@ public class Actions {
 
     public void selectAll() {
         whenCell((c) -> {
-            c.selectAll(); 
+            c.selectAll();
          });
     }
 
     public void redo() {
         whenCell((c) -> {
-           c.redo(); 
+           c.redo();
         });
     }
 
