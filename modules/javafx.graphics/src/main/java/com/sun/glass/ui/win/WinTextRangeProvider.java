@@ -107,13 +107,11 @@ class WinTextRangeProvider {
         if (requestedSteps < 0) {
             return fixedMaxEnd;
         }
-        int theEnd;
         try {
-            theEnd = Math.addExact(Math.max(0, start), requestedSteps);
+            return Math.min(fixedMaxEnd, Math.addExact(Math.max(0, start), requestedSteps));
         } catch (ArithmeticException e) {
             return fixedMaxEnd;
         }
-        return Math.min(theEnd, fixedMaxEnd);
     }
 
     void setRange(int start, int end) {
