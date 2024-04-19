@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -76,6 +76,9 @@ class WinTextRangeProvider {
     /* Releases the GlassTextRangeProvider and deletes the GlobalRef */
     private native void _destroyTextRangeProvider(long textRangeProvider);
 
+    WinTextRangeProvider() {
+    }
+
     WinTextRangeProvider(WinAccessible accessible) {
         this.accessible = accessible;
         peer = _createTextRangeProvider(accessible.getNativeAccessible());
@@ -102,7 +105,7 @@ class WinTextRangeProvider {
         end = Math.max(start, Math.min(end, length));
     }
 
-    private int getValidStringIndex(int start, int requestedSteps, int maxEnd) {
+    int getValidStringIndex(int start, int requestedSteps, int maxEnd) {
         int fixedMaxEnd = Math.max(0, maxEnd);
         int fixedStart = Math.max(0, Math.min(start, fixedMaxEnd));
         if (requestedSteps < 0) {
