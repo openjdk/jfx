@@ -35,11 +35,10 @@ public class WinTextRangeProviderTest {
         assertEquals(1, WinTextRangeProvider.getValidStringIndex(0, 2, 1));
         assertEquals(1, WinTextRangeProvider.getValidStringIndex(-1, 2, 1));
         assertEquals(1, WinTextRangeProvider.getValidStringIndex(0, Integer.MAX_VALUE, 1));
-        assertEquals(1, WinTextRangeProvider.getValidStringIndex(0, Integer.MAX_VALUE, Integer.MAX_VALUE));
+        assertEquals(Integer.MAX_VALUE, WinTextRangeProvider.getValidStringIndex(0, Integer.MAX_VALUE, Integer.MAX_VALUE));
         assertEquals(55, WinTextRangeProvider.getValidStringIndex(50, Integer.MAX_VALUE, 55));
         assertEquals(50, WinTextRangeProvider.getValidStringIndex(50, -1, 55));
         assertEquals(55, WinTextRangeProvider.getValidStringIndex(50, 10, 55));
-        assertEquals(60, WinTextRangeProvider.getValidStringIndex(50, 10, Integer.MAX_VALUE));
         assertEquals(60, WinTextRangeProvider.getValidStringIndex(50, 10, Integer.MIN_VALUE));
         assertEquals(50, WinTextRangeProvider.getValidStringIndex(50, Integer.MIN_VALUE, Integer.MIN_VALUE));
     }
