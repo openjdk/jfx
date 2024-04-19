@@ -98,7 +98,7 @@ class WinTextRangeProvider {
         }
 
         int length = text.length();
-        start = getValidStringIndex(start, 0, length);
+        start = Math.max(0, Math.min(start, length));
         end = Math.max(start, Math.min(end, length));
     }
 
