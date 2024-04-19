@@ -154,8 +154,6 @@ public class RichTextArea extends Control {
         public static final FunctionTag FOCUS_PREVIOUS = new FunctionTag();
         /** Inserts a line break at the caret. */
         public static final FunctionTag INSERT_LINE_BREAK = new FunctionTag();
-        /** Inserts a tab symbol at the caret. */
-        public static final FunctionTag INSERT_TAB = new FunctionTag();
         /** Moves the caret one visual line down. */
         public static final FunctionTag MOVE_DOWN = new FunctionTag();
         /** Moves the caret one symbol to the left. */
@@ -224,6 +222,8 @@ public class RichTextArea extends Control {
         public static final FunctionTag SELECT_WORD_PREVIOUS = new FunctionTag();
         /** Extends selection to the next word (LTR) or previous word (RTL). */
         public static final FunctionTag SELECT_WORD_RIGHT = new FunctionTag();
+        /** Inserts a tab symbol at the caret (editable), or transfer focus to the next focusable node. */
+        public static final FunctionTag TAB = new FunctionTag();
         /** If possible, undoes the last modification. */
         public static final FunctionTag UNDO = new FunctionTag();
 
@@ -814,7 +814,7 @@ public class RichTextArea extends Control {
      * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
      */
     public void insertTab() {
-        execute(Tags.INSERT_TAB);
+        execute(Tags.TAB);
     }
 
     /**

@@ -98,7 +98,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         registerFunction(RichTextArea.Tags.FOCUS_NEXT, this::traverseNext);
         registerFunction(RichTextArea.Tags.FOCUS_PREVIOUS, this::traversePrevious);
         registerFunction(RichTextArea.Tags.INSERT_LINE_BREAK, this::insertLineBreak);
-        registerFunction(RichTextArea.Tags.INSERT_TAB, this::insertTab);
+        registerFunction(RichTextArea.Tags.TAB, this::insertTab);
         registerFunction(RichTextArea.Tags.MOVE_DOWN, this::moveDown);
         registerFunction(RichTextArea.Tags.MOVE_LEFT, this::moveLeft);
         registerFunction(RichTextArea.Tags.MOVE_TO_DOCUMENT_END, this::moveDocumentEnd);
@@ -155,7 +155,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         registerKey(KeyCode.PASTE, RichTextArea.Tags.PASTE);
         registerKey(KeyCode.RIGHT, RichTextArea.Tags.MOVE_RIGHT);
         registerKey(KeyBinding.shift(KeyCode.RIGHT), RichTextArea.Tags.SELECT_RIGHT);
-        registerKey(KeyCode.TAB, RichTextArea.Tags.INSERT_TAB);
+        registerKey(KeyCode.TAB, RichTextArea.Tags.TAB);
         registerKey(KeyBinding.ctrl(KeyCode.TAB), RichTextArea.Tags.FOCUS_NEXT);
         registerKey(KeyBinding.builder(KeyCode.TAB).ctrl().option().shift().build(), RichTextArea.Tags.FOCUS_NEXT);
         registerKey(KeyBinding.ctrlShift(KeyCode.TAB), RichTextArea.Tags.FOCUS_PREVIOUS);
