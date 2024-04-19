@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
  */
 package javafx.scene.control;
 
+import com.sun.javafx.util.Utils;
 import javafx.beans.NamedArg;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -365,7 +366,7 @@ public abstract class SpinnerValueFactory<T> {
         @Override public void decrement(int steps) {
             final int max = getItemsSize() - 1;
             int newIndex = currentIndex - steps;
-            currentIndex = newIndex >= 0 ? newIndex : (isWrapAround() ? Spinner.wrapValue(newIndex, 0, max + 1) : 0);
+            currentIndex = isWrapAround() ? Spinner.wrapValue(newIndex, 0, max) : Utils.clamp(0, newIndex, max);
             setValue(_getValue(currentIndex));
         }
 
@@ -373,7 +374,7 @@ public abstract class SpinnerValueFactory<T> {
         @Override public void increment(int steps) {
             final int max = getItemsSize() - 1;
             int newIndex = currentIndex + steps;
-            currentIndex = newIndex <= max ? newIndex : (isWrapAround() ? Spinner.wrapValue(newIndex, 0, max + 1) : max);
+            currentIndex = isWrapAround() ? Spinner.wrapValue(newIndex, 0, max) : Utils.clamp(0, newIndex, max);
             setValue(_getValue(currentIndex));
         }
 
@@ -587,7 +588,7 @@ public abstract class SpinnerValueFactory<T> {
             final int min = getMin();
             final int max = getMax();
             final int newIndex = getValue() - steps * getAmountToStepBy();
-            setValue(newIndex >= min ? newIndex : (isWrapAround() ? Spinner.wrapValue(newIndex, min, max) + 1 : min));
+            setValue(isWrapAround() ? Spinner.wrapValue(newIndex, min, max) : Utils.clamp(min, newIndex, max));
         }
 
         /** {@inheritDoc} */
@@ -596,7 +597,7 @@ public abstract class SpinnerValueFactory<T> {
             final int max = getMax();
             final int currentValue = getValue();
             final int newIndex = currentValue + steps * getAmountToStepBy();
-            setValue(newIndex <= max ? newIndex : (isWrapAround() ? Spinner.wrapValue(newIndex, min, max) - 1 : max));
+            setValue(isWrapAround() ? Spinner.wrapValue(newIndex, min, max) : Utils.clamp(min, newIndex, max));
         }
     }
 
@@ -846,8 +847,9 @@ public abstract class SpinnerValueFactory<T> {
             final BigDecimal maxBigDecimal = BigDecimal.valueOf(getMax());
             final BigDecimal amountToStepByBigDecimal = BigDecimal.valueOf(getAmountToStepBy());
             BigDecimal newValue = currentValue.subtract(amountToStepByBigDecimal.multiply(BigDecimal.valueOf(steps)));
-            setValue(newValue.compareTo(minBigDecimal) >= 0 ? newValue.doubleValue() :
-                    (isWrapAround() ? Spinner.wrapValue(newValue, minBigDecimal, maxBigDecimal).doubleValue() : getMin()));
+            setValue(isWrapAround() ?
+                Spinner.wrapValue(currentValue, newValue, minBigDecimal, maxBigDecimal).doubleValue() :
+                Utils.clamp(minBigDecimal, newValue, maxBigDecimal).doubleValue());
         }
 
         /** {@inheritDoc} */
@@ -857,8 +859,9 @@ public abstract class SpinnerValueFactory<T> {
             final BigDecimal maxBigDecimal = BigDecimal.valueOf(getMax());
             final BigDecimal amountToStepByBigDecimal = BigDecimal.valueOf(getAmountToStepBy());
             BigDecimal newValue = currentValue.add(amountToStepByBigDecimal.multiply(BigDecimal.valueOf(steps)));
-            setValue(newValue.compareTo(maxBigDecimal) <= 0 ? newValue.doubleValue() :
-                    (isWrapAround() ? Spinner.wrapValue(newValue, minBigDecimal, maxBigDecimal).doubleValue() : getMax()));
+            setValue(isWrapAround() ?
+                Spinner.wrapValue(currentValue, newValue, minBigDecimal, maxBigDecimal).doubleValue() :
+                Utils.clamp(minBigDecimal, newValue, maxBigDecimal).doubleValue());
         }
     }
 

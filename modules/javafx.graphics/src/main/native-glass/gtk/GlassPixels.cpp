@@ -84,8 +84,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkPixels__1attachInt
 
     pixbuf = (GdkPixbuf**)JLONG_TO_PTR(ptr);
     dataRGBA = convert_BGRA_to_RGBA(data + offset, w*4, h);
-    *pixbuf = gdk_pixbuf_new_from_data(dataRGBA, GDK_COLORSPACE_RGB, TRUE, 8,
-                  w, h, w * 4, (GdkPixbufDestroyNotify) my_free, NULL);
+    if (dataRGBA) {
+        *pixbuf = gdk_pixbuf_new_from_data(dataRGBA, GDK_COLORSPACE_RGB, TRUE, 8,
+                w, h, w * 4, (GdkPixbufDestroyNotify) my_free, NULL);
+    }
     if (array != NULL) {
         env->ReleasePrimitiveArrayCritical(array, data, 0);
     }
@@ -136,8 +138,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkPixels__1attachByte
 
     pixbuf = (GdkPixbuf**)JLONG_TO_PTR(ptr);
     dataRGBA = convert_BGRA_to_RGBA((const int*)(data + offset), w*4, h);
-    *pixbuf = gdk_pixbuf_new_from_data(dataRGBA, GDK_COLORSPACE_RGB, TRUE, 8,
-                  w, h, w * 4, (GdkPixbufDestroyNotify) my_free, NULL);
+    if (dataRGBA) {
+        *pixbuf = gdk_pixbuf_new_from_data(dataRGBA, GDK_COLORSPACE_RGB, TRUE, 8,
+                w, h, w * 4, (GdkPixbufDestroyNotify) my_free, NULL);
+    }
     if (array != NULL) {
         env->ReleasePrimitiveArrayCritical(array, data, 0);
     }
