@@ -22,25 +22,25 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.glass.ui.win;
+package test.com.sun.glass.ui.win;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
+import com.sun.glass.ui.win.WinTextRangeProvider;
 
 public class WinTextRangeProviderTest {
     @Test
     public void getValidStringIndex() {
-        WinTextRangeProvider winTextRangeProvider = new WinTextRangeProvider();
-        assertEquals(1, winTextRangeProvider.getValidStringIndex(0, 1, 2));
-        assertEquals(1, winTextRangeProvider.getValidStringIndex(0, 2, 1));
-        assertEquals(1, winTextRangeProvider.getValidStringIndex(-1, 2, 1));
-        assertEquals(1, winTextRangeProvider.getValidStringIndex(0, Integer.MAX_VALUE, 1));
-        assertEquals(1, winTextRangeProvider.getValidStringIndex(0, Integer.MAX_VALUE, Integer.MAX_VALUE));
-        assertEquals(55, winTextRangeProvider.getValidStringIndex(50, Integer.MAX_VALUE, 55));
-        assertEquals(50, winTextRangeProvider.getValidStringIndex(50, -1, 55));
-        assertEquals(55, winTextRangeProvider.getValidStringIndex(50, 10, 55));
-        assertEquals(60, winTextRangeProvider.getValidStringIndex(50, 10, Integer.MAX_VALUE));
-        assertEquals(60, winTextRangeProvider.getValidStringIndex(50, 10, Integer.MIN_VALUE));
-        assertEquals(50, winTextRangeProvider.getValidStringIndex(50, Integer.MIN_VALUE, Integer.MIN_VALUE));
+        assertEquals(1, WinTextRangeProvider.getValidStringIndex(0, 1, 2));
+        assertEquals(1, WinTextRangeProvider.getValidStringIndex(0, 2, 1));
+        assertEquals(1, WinTextRangeProvider.getValidStringIndex(-1, 2, 1));
+        assertEquals(1, WinTextRangeProvider.getValidStringIndex(0, Integer.MAX_VALUE, 1));
+        assertEquals(1, WinTextRangeProvider.getValidStringIndex(0, Integer.MAX_VALUE, Integer.MAX_VALUE));
+        assertEquals(55, WinTextRangeProvider.getValidStringIndex(50, Integer.MAX_VALUE, 55));
+        assertEquals(50, WinTextRangeProvider.getValidStringIndex(50, -1, 55));
+        assertEquals(55, WinTextRangeProvider.getValidStringIndex(50, 10, 55));
+        assertEquals(60, WinTextRangeProvider.getValidStringIndex(50, 10, Integer.MAX_VALUE));
+        assertEquals(60, WinTextRangeProvider.getValidStringIndex(50, 10, Integer.MIN_VALUE));
+        assertEquals(50, WinTextRangeProvider.getValidStringIndex(50, Integer.MIN_VALUE, Integer.MIN_VALUE));
     }
 }
