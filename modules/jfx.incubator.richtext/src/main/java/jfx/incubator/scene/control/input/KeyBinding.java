@@ -180,7 +180,7 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
      * @return the KeyBinding
      */
     public static KeyBinding shiftShortcut(KeyCode code) {
-        return create(code, KCondition.KEY_PRESSED, KCondition.SHORTCUT, KCondition.SHORTCUT);
+        return create(code, KCondition.KEY_PRESSED, KCondition.SHIFT, KCondition.SHORTCUT);
     }
 
     private static KeyBinding create(Object key, KCondition... mods) {

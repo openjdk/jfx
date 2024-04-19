@@ -148,6 +148,8 @@ public class RichTextArea extends Control {
         public static final FunctionTag DELETE = new FunctionTag();
         /** Deletes paragraph at the caret, or selected paragraphs */
         public static final FunctionTag DELETE_PARAGRAPH = new FunctionTag();
+        /** Clears any existing selection by moving anchor to the caret position */
+        public static final FunctionTag DESELECT = new FunctionTag();
         /** Focus the next focusable node */
         public static final FunctionTag FOCUS_NEXT = new FunctionTag();
         /** Focus the previous focusable node */
@@ -202,6 +204,10 @@ public class RichTextArea extends Control {
         public static final FunctionTag SELECT_PAGE_UP = new FunctionTag();
         /** Selects the current paragraph. */
         public static final FunctionTag SELECT_PARAGRAPH = new FunctionTag();
+        /** Extends selection to the paragraph end. */
+        public static final FunctionTag SELECT_PARAGRAPH_END = new FunctionTag();
+        /** Extends selection to the paragraph start. */
+        public static final FunctionTag SELECT_PARAGRAPH_START = new FunctionTag();
         /** Extends selection one symbol to the right. */
         public static final FunctionTag SELECT_RIGHT = new FunctionTag();
         /** Extends selection to the end of the document. */
@@ -800,6 +806,15 @@ public class RichTextArea extends Control {
     }
 
     /**
+     * Clears any existing selection by moving anchor to the caret position.
+     * <p>
+     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     */
+    public void deselect() {
+        execute(Tags.DESELECT);
+    }
+
+    /**
      * Inserts a line break at the caret.  If selection exists, first deletes the selected text.
      * <p>
      * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
@@ -1068,6 +1083,24 @@ public class RichTextArea extends Control {
      */
     public void selectParagraph() {
         execute(Tags.SELECT_PARAGRAPH);
+    }
+
+    /**
+     * Selects from the current position to the paragraph end.
+     * <p>
+     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     */
+    public void selectParagraphEnd() {
+        execute(Tags.SELECT_PARAGRAPH_END);
+    }
+
+    /**
+     * Selects from the current position to the paragraph start.
+     * <p>
+     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     */
+    public void selectParagraphStart() {
+        execute(Tags.SELECT_PARAGRAPH_START);
     }
 
     /**

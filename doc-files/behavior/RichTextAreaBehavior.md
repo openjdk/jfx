@@ -9,6 +9,7 @@
 |CUT                       |Cuts selected text and places it to the clipboard
 |DELETE                    |Deletes the symbol at the caret
 |DELETE_PARAGRAPH          |Deletes paragraph at the caret, or selected paragraphs
+|DESELECT                  |Clears any existing selection by moving anchor to the caret position
 |FOCUS_NEXT                |Transfer focus to the next focusable node
 |FOCUS_PREVIOUS            |Transfer focus to the previous focusable node
 |INSERT_LINE_BREAK         |Inserts a line break at the caret
@@ -36,6 +37,8 @@
 |SELECT_PAGE_DOWN          |Extends selection one visible page down
 |SELECT_PAGE_UP            |Extends selection one visible page up
 |SELECT_PARAGRAPH          |Selects the current paragraph
+|SELECT_PARAGRAPH_END      |Extends selection to the paragraph end
+|SELECT_PARAGRAPH_START    |Extends selection to the paragraph start
 |SELECT_RIGHT              |Extends selection one symbol to the right
 |SELECT_TO_DOCUMENT_END    |Extends selection to the end of the document
 |SELECT_TO_DOCUMENT_START  |Extends selection to the start of the document
@@ -69,16 +72,21 @@
 |END                   |          |MOVE_TO_PARAGRAPH_END
 |ctrl-END              |linux,win |MOVE_TO_DOCUMENT_END
 |ctrl-shift-END        |linux,win |SELECT_TO_DOCUMENT_END
+|shift-END             |linux,win |SELECT_PARAGRAPH_END
 |ENTER                 |          |INSERT_LINE_BREAK
+|ctrl-H                |linux,win |BACKSPACE
 |HOME                  |          |MOVE_TO_PARAGRAPH_START
 |ctrl-HOME             |linux,win |MOVE_TO_DOCUMENT_START
 |ctrl-shift-HOME       |linux,win |SELECT_TO_DOCUMENT_START
+|shift-HOME            |linux,win |SELECT_PARAGRAPH_START
 |LEFT                  |          |MOVE_LEFT
 |ctrl-LEFT             |linux,win |MOVE_WORD_LEFT
 |ctrl-shift-LEFT       |linux,win |SELECT_WORD_LEFT
 |option-LEFT           |mac       |MOVE_WORD_LEFT
 |option-shift-LEFT     |mac       |SELECT_WORD_LEFT
 |shift-LEFT            |          |SELECT_LEFT
+|shift-shortcut-LEFT   |mac       |SELECT_PARAGRAPH_START
+|shortcut-LEFT         |mac       |MOVE_TO_PARAGRAPH_START
 |PAGE_DOWN             |          |PAGE_DOWN
 |shift-PAGE_DOWN       |          |SELECT_PAGE_DOWN
 |PAGE_UP               |          |PAGE_UP
@@ -90,6 +98,8 @@
 |option-RIGHT          |mac       |MOVE_WORD_RIGHT
 |option-shift-RIGHT    |mac       |SELECT_WORD_RIGHT
 |shift-RIGHT           |          |SELECT_RIGHT
+|shift-shortcut-RIGHT  |mac       |SELECT_PARAGRAPH_END
+|shortcut-RIGHT        |mac       |MOVE_TO_PARAGRAPH_END
 |TAB                   |          |TAB
 |alt-ctrl-shift-TAB    |linux,win |FOCUS_NEXT
 |ctrl-TAB              |          |FOCUS_NEXT
@@ -121,41 +131,30 @@ The following key combinations, present in the TextArea, should be considered fo
 
 |Key Combination|Platform|Function|
 |---------------|--------|--------|
-|alt-shift-RIGHT       |mac|select right word|
-|ctrl-BACK_SLASH|linux, win|deselect|
 |alt-BACKSPACE|mac|delete previous word|
 |ctrl-BACKSPACE|linux, win|delete previous word|
-|shift-BACKSPACE|          |delete previous char|
+|shift-BACKSPACE|          |delete previous char **no BACKSPACE on mac keyboard, is this shift-DELETE**?|
 |shortcut-BACKSPACE|mac|delete from line start|
 |alt-DELETE|mac|delete next word|
 |ctrl-DELETE|linux, win|delete next word|
 |ctrl-shift-DIGIT9|          |toggle the virtual keyboard (if supported)|
-|alt-DOWN|mac|paragraph down|
+|alt-DOWN|mac|paragraph down **option-DOWN goes to end of the current or next paragraph**|
 |alt-shift-DOWN|mac|select paragraph down|
 |ctrl-DOWN|linux, win|paragraph down|
 |ctrl-shift-DOWN|linux, win|select paragraph down|
-|shift-END|          |select to line end|
-|shift-HOME|          |select to line start|
-|shift-INSERT|          |paste|
-|shortcut-INSERT|          |copy|
-|alt-LEFT|          |left word|
-|alt-shift-LEFT|mac|select left word|
-|shift-shortcut-LEFT|mac|select to line start|
-|shortcut-LEFT|mac|move to line start|
-|alt-RIGHT|mac|right word|
-|alt-shift-RIGHT       |mac|select right word|
-|ctrl-RIGHT            |linux, win|right word|
-|shift-shortcut-RIGHT  |mac|select to line end|
-|shortcut-RIGHT|mac|move to line end|
 |alt-UP|mac|paragraph up|
 |alt-shift-UP|mac|select paragraph up|
 |ctrl-UP|linux, win|paragraph up|
 |ctrl-shift-UP|linux, win|select paragraph up|
-|shift-shortcut-UP|mac|extend selection to document start|
-|ctrl-H|linux, win|delete previous char|
+
+
 
 
 Notes:
 
-1. On Mac, alt is represented by the Option key.
-2. On Mac, shortcut is represented by the Command key.
+- On macOS, alt is represented by the Option key
+- On macOS, shortcut is represented by the Command key
+- On macOS, Home = command left arrow key
+- On macOS, End = command right arrow key
+- On macOS, PgUp = fn up arrow key
+- On macOS, PgDn = fn down arrow key
