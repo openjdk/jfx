@@ -24,23 +24,36 @@
  */
 package test.com.sun.glass.ui.win;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import com.sun.glass.ui.win.WinTextRangeProviderShim;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import java.util.stream.Stream;
 
 public class WinTextRangeProviderTest {
-    @Test
-    public void getValidStringIndex() {
-        assertEquals(1, WinTextRangeProviderShim.getValidStringIndex(0, 1, 2));
-        assertEquals(1, WinTextRangeProviderShim.getValidStringIndex(0, 2, 1));
-        assertEquals(1, WinTextRangeProviderShim.getValidStringIndex(-1, 2, 1));
-        assertEquals(1, WinTextRangeProviderShim.getValidStringIndex(0, Integer.MAX_VALUE, 1));
-        assertEquals(1, WinTextRangeProviderShim.getValidStringIndex(0, Integer.MAX_VALUE, Integer.MAX_VALUE));
-        assertEquals(55, WinTextRangeProviderShim.getValidStringIndex(50, Integer.MAX_VALUE, 55));
-        assertEquals(50, WinTextRangeProviderShim.getValidStringIndex(50, -1, 55));
-        assertEquals(55, WinTextRangeProviderShim.getValidStringIndex(50, 10, 55));
-        assertEquals(60, WinTextRangeProviderShim.getValidStringIndex(50, 10, Integer.MAX_VALUE));
-        assertEquals(60, WinTextRangeProviderShim.getValidStringIndex(50, 10, Integer.MIN_VALUE));
-        assertEquals(50, WinTextRangeProviderShim.getValidStringIndex(50, Integer.MIN_VALUE, Integer.MIN_VALUE));
+
+    static Stream<Arguments> getValidStringIndex() {
+        return Stream.of(
+                Arguments.of(1, 0, 1, 2),
+                Arguments.of(1, 0, 2, 1),
+                Arguments.of(1, -1, 2, -1),
+                Arguments.of(1, 0, Integer.MAX_VALUE, 1),
+                Arguments.of(1, 0, Integer.MAX_VALUE, Integer.MAX_VALUE),
+                Arguments.of(55, 50, Integer.MAX_VALUE, 50),
+                Arguments.of(50, 50, -1, 55),
+                Arguments.of(55, 50, 10, 55),
+                Arguments.of(60, 50, 10, Integer.MAX_VALUE),
+                Arguments.of(60, 50, 10, Integer.MIN_VALUE),
+                Arguments.of(50, 50, Integer.MIN_VALUE, Integer.MIN_VALUE)
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource
+    public void getEndIndex(Integer expected, Integer startIndex, Integer length, Integer maxEndIndex) {
+        assertEquals(expected, WinTextRangeProviderShim.getEndIndex(startIndex, length, maxEndIndex));
     }
 }

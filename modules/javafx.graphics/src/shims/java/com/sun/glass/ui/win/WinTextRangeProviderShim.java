@@ -30,7 +30,7 @@ package com.sun.glass.ui.win;
  * {@link test.com.sun.glass.ui.win.WinTextRangeProviderTest WinTextRangeProviderTest}.
  */
 public class WinTextRangeProviderShim {
-    public static int getValidStringIndex(int start, int requestedSteps, int maxEnd) {
-        return WinTextRangeProvider.getValidStringIndex(start, requestedSteps, maxEnd);
+    public static int getEndIndex(int start, int length, int maxEndIndex) {
+        return WinTextRangeProvider.getEndIndex(start, length, maxEndIndex);
     }
 }

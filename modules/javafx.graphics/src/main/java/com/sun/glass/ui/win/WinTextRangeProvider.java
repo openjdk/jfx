@@ -111,7 +111,7 @@ final class WinTextRangeProvider {
      * @param length The requested length of a string when starting from "start". Negative numbers are treated as full length.
      * @param maxEndIndex The maximum end index to return. Needs to be equal or greater than startIndex (not checked in the code).
      */
-    static int calculateEndIndex(int startIndex, int length, int maxEndIndex) {
+    static int getEndIndex(int startIndex, int length, int maxEndIndex) {
         if (length < 0 || length > maxEndIndex) {
             return maxEndIndex;
         }
@@ -378,7 +378,7 @@ final class WinTextRangeProvider {
         String text = (String)getAttribute(TEXT);
         if (text == null) return null;
         validateRange(text);
-        int endOffset = calculateEndIndex(start, maxLength, end);
+        int endOffset = getEndIndex(start, maxLength, end);
 //        System.out.println("+GetText [" + text.substring(start, endOffset)+"]");
         return text.substring(start, endOffset);
     }
@@ -394,7 +394,7 @@ final class WinTextRangeProvider {
         switch (unit) {
             case TextUnit_Character: {
                 int oldStart = start;
-                start = calculateEndIndex(start, requestedCount, length - 1);
+                start = getEndIndex(start, requestedCount, length - 1);
                 end = start + 1;
                 actualCount = start - oldStart;
                 break;
@@ -498,7 +498,7 @@ final class WinTextRangeProvider {
         switch (unit) {
             case TextUnit_Character: {
                 int oldOffset = offset;
-                offset = calculateEndIndex(offset, requestedCount, length);
+                offset = getEndIndex(offset, requestedCount, length);
                 actualCount = offset - oldOffset;
                 break;
             }
