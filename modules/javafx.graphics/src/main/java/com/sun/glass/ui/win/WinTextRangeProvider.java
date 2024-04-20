@@ -103,11 +103,14 @@ class WinTextRangeProvider {
     }
 
     /**
-     * Calculate the end index based on the start index, requested length and the maximum end index.
+     * In the context of substrings, this method calculates the end index based on the start index,
+     * requested string length, and the maximum end index.
      *
      * @param startIndex The start index in a string. Needs to be 0 or more (not checked in the code).
-     * @param length The requested length of a string when starting from "start". Negative numbers are treated as full length.
-     * @param maxEndIndex The maximum end index to return. Needs to be equal or greater than startIndex (not checked in the code).
+     * @param length The requested length of a string when starting from "start".
+     *               Negative numbers are treated as full length.
+     * @param maxEndIndex The maximum end index to return. Needs to be equal or greater than startIndex
+     *                    (not checked in the code).
      */
     static int getEndIndex(int startIndex, int length, int maxEndIndex) {
         if (length < 0 || length > maxEndIndex) {
