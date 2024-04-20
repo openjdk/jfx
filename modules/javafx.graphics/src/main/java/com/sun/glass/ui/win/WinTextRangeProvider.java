@@ -102,17 +102,20 @@ public final class WinTextRangeProvider {
         end = Math.max(start, Math.min(end, length));
     }
 
-    public static int getValidStringIndex(int start, int requestedSteps, int maxEnd) {
-        int fixedMaxEnd = Math.max(0, maxEnd);
-        int fixedStart = Math.max(0, Math.min(start, fixedMaxEnd));
-        if (requestedSteps < 0) {
-            return fixedMaxEnd;
+    /**
+     * Calculate the end index based on the start index, requested length and the maximum end index.
+     *
+     * @implNote Code does not work if values near Integer.MAX_VALUE are used. For isntance, if 2147483645 is passed as start, 5 as length, and 2147483647 as maxEndIndex, the result will negative.
+     *
+     * @param startIndex The start index in a string. Needs to be 0 or more (not checked in the code).
+     * @param length The requested length of a string when starting from "start". Negative numbers are treated as full length.
+     * @param maxEndIndex The maximum end index to return. Needs to be equal or greater than startIndex (not checked in the code).
+     */
+    static int calculateEndIndex(int startIndex, int length, int maxEndIndex) {
+        if (length < 0 || length > maxEndIndex) {
+            return maxEndIndex;
         }
-        try {
-            return Math.min(fixedMaxEnd, Math.addExact(fixedStart, requestedSteps));
-        } catch (ArithmeticException e) {
-            return fixedMaxEnd;
-        }
+        return Math.min(startIndex + length, maxEndIndex);
     }
 
     void setRange(int start, int end) {
@@ -375,7 +378,7 @@ public final class WinTextRangeProvider {
         String text = (String)getAttribute(TEXT);
         if (text == null) return null;
         validateRange(text);
-        int endOffset = getValidStringIndex(start, maxLength, end);
+        int endOffset = calculateEndIndex(start, maxLength, end);
 //        System.out.println("+GetText [" + text.substring(start, endOffset)+"]");
         return text.substring(start, endOffset);
     }
@@ -391,7 +394,7 @@ public final class WinTextRangeProvider {
         switch (unit) {
             case TextUnit_Character: {
                 int oldStart = start;
-                start = getValidStringIndex(start, requestedCount, length - 1);
+                start = calculateEndIndex(start, requestedCount, length - 1);
                 end = start + 1;
                 actualCount = start - oldStart;
                 break;
@@ -495,7 +498,7 @@ public final class WinTextRangeProvider {
         switch (unit) {
             case TextUnit_Character: {
                 int oldOffset = offset;
-                offset = getValidStringIndex(offset, requestedCount, length);
+                offset = calculateEndIndex(offset, requestedCount, length);
                 actualCount = offset - oldOffset;
                 break;
             }
