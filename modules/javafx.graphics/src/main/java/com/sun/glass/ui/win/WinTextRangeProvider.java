@@ -37,7 +37,7 @@ import javafx.scene.text.FontWeight;
  * This class is the Java peer for GlassTextRangeProvider.
  * GlassTextRangeProvider implements ITextRangeProvider.
  */
-final class WinTextRangeProvider {
+class WinTextRangeProvider {
 
     private native static void _initIDs();
     static {
