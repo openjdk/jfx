@@ -35,7 +35,7 @@ import java.util.stream.Stream;
 
 public class WinTextRangeProviderTest {
 
-    static Stream<Arguments> getValidStringIndex() {
+    static Stream<Arguments> getEndIndex() {
         return Stream.of(
                 Arguments.of(1, 0, 1, 2),
                 Arguments.of(1, 0, 2, 1),
