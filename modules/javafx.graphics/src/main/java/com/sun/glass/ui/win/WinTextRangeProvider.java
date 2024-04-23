@@ -379,7 +379,6 @@ class WinTextRangeProvider {
     }
 
     /**
-     *
      * Returns the text contained in the TEXT attribute, starting from the start index and ending at the end index.
      *
      * @param maxLength The maximum length of the returned string
