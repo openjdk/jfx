@@ -1164,7 +1164,7 @@ public class PrismTextLayout implements TextLayout {
      * space around the hard wrapped location).
      *
      * Text effects have no effect on the alignment, and so with underlining on
-     * the right right aligned text would look like:
+     * the right aligned text would look like:
      *
      *      "___The___quick_"     (one collapsed space becomes visible here)
      *     "brown_fox_jumps__"    (two collapsed spaces become visible here)
