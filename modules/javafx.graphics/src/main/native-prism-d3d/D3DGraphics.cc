@@ -494,16 +494,3 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nResetClipRect
 
     return pCtx->ResetClip();
 }
-
-/*
- * Class:     com_sun_prism_d3d_D3DContext
- * Method:    nIsRTTVolatile
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d_D3DContext_nIsRTTVolatile
-  (JNIEnv *, jclass, jlong ctx)
-{
-    D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
-    RETURN_STATUS_IF_NULL(pCtx, false);
-
-    return false;
-}
