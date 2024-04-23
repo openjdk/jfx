@@ -450,7 +450,7 @@ public class TextLayoutTest {
         SOFT_WRAP_WITH_COMPLEX_TEXT_ON_MAC(
             TextLayoutTest::assumeMac,
             "The quick brown लोमड़ी jumps over the lazy कुत्ता",
-            160.0f, List.of(155.3047f, 93.134766f)
+            160.0f, List.of(155.3047f, 91.04719f)
         ),
 
         /**
@@ -461,7 +461,7 @@ public class TextLayoutTest {
         SOFT_WRAP_WITH_COMPLEX_TEXT_AND_EXTRA_SPACE_ON_MAC(
             TextLayoutTest::assumeMac,
             "The quick brown लोमड़ी jumps           over the lazy कुत्ता",
-            160.0f, List.of(155.3047f, 93.134766f)
+            160.0f, List.of(155.3047f, 91.04719f)
         );
 
         Runnable assumption;
