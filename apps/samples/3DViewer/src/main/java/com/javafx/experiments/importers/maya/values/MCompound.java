@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -39,6 +39,7 @@ public interface MCompound extends MData {
 
     public MData getFieldData(int fieldIndex);
 
+    @Override
     public MData getFieldData(String fieldName);
 
     public void set(int fieldIndex, MData value);

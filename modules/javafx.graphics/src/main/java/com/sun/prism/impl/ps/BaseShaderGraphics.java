@@ -2016,9 +2016,10 @@ public abstract class BaseShaderGraphics
 
         CompositeMode blendMode = getCompositeMode();
         // LCD support requires several attributes to function:
-        // FontStrike supports LCD, SRC_OVER CompositeMode and Paint is a COLOR
+        // FontStrike supports LCD, SRC_OVER CompositeMode and Paint is an opaque COLOR
         boolean lcdSupported = blendMode == CompositeMode.SRC_OVER &&
                                textColor != null &&
+                               textColor.getAlpha() == 1.0 &&
                                xform.is2D() &&
                                !getRenderTarget().isMSAA();
 

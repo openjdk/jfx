@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,7 @@ import javafx.util.StringConverter;
  * <p>{@link StringConverter} implementation that can use a {@link Format}
  * instance.</p>
  *
+ * @param <T> the type of the object being converted
  * @since JavaFX 2.2
  */
 public class FormatStringConverter<T> extends StringConverter<T> {

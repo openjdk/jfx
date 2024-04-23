@@ -261,6 +261,7 @@ private:
 
     D3DContext(IDirect3D9 *pd3d, IDirect3D9Ex *pd3dEx, UINT adapter);
     HRESULT InitDevice(IDirect3DDevice9 *d3dDevice);
+    HRESULT createIndexBuffer();
     HRESULT InitContextCaps();
     IDirect3DDevice9        *pd3dDevice;
     IDirect3DDevice9Ex      *pd3dDeviceEx;

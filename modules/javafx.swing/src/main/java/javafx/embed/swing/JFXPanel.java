@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -135,6 +135,11 @@ import com.sun.javafx.embed.swing.newimpl.JFXPanelInteropN;
  *         }
  *     }
  * </pre>
+ * <strong>Warning:</strong>
+ * Serialized objects of this class will not be compatible with
+ * future Swing or JavaFX releases. The current serialization support is
+ * appropriate for short term storage or RMI between applications running
+ * the same version of Swing and the same version of JavaFX.
  *
  * @since JavaFX 2.0
  */
@@ -157,36 +162,49 @@ public class JFXPanel extends JComponent {
     private transient EmbeddedSceneInterface scenePeer;
 
     // The logical size of the FX content
+    @SuppressWarnings("doclint:missing")
     private int pWidth;
+    @SuppressWarnings("doclint:missing")
     private int pHeight;
 
     // The scale factor, used to translate b/w the logical (the FX content dimension)
     // and physical (the back buffer's dimension) coordinate spaces
+    @SuppressWarnings("doclint:missing")
     private double scaleFactorX = 1.0;
+    @SuppressWarnings("doclint:missing")
     private double scaleFactorY = 1.0;
 
     // Preferred size set from FX
+    @SuppressWarnings("doclint:missing")
     private volatile int pPreferredWidth = -1;
+    @SuppressWarnings("doclint:missing")
     private volatile int pPreferredHeight = -1;
 
     // Cached copy of this component's location on screen to avoid
     // calling getLocationOnScreen() under the tree lock on FX thread
+    @SuppressWarnings("doclint:missing")
     private volatile int screenX = 0;
+    @SuppressWarnings("doclint:missing")
     private volatile int screenY = 0;
 
     // Accessed on EDT only
+    @SuppressWarnings("doclint:missing")
     private BufferedImage pixelsIm;
 
+    @SuppressWarnings("doclint:missing")
     private volatile float opacity = 1.0f;
 
     // Indicates how many times setFxEnabled(false) has been called.
     // A value of 0 means the component is enabled.
+    @SuppressWarnings("doclint:missing")
     private AtomicInteger disableCount = new AtomicInteger(0);
 
+    @SuppressWarnings("doclint:missing")
     private boolean isCapturingMouse = false;
 
     private static boolean fxInitialized;
 
+    @SuppressWarnings("doclint:missing")
     private JFXPanelInteropN jfxPanelIOP;
 
     private synchronized void registerFinishListener() {

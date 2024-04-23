@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,6 +63,9 @@ import javafx.scene.chart.LineChart.SortingPolicy;
 /**
  * AreaChart - Plots the area between the line that connects the data points and
  * the 0 line on the Y axis.
+ *
+ * @param <X> the X axis value type
+ * @param <Y> the Y axis value type
  * @since JavaFX 2.0
  */
 public class AreaChart<X,Y> extends XYChart<X,Y> {
@@ -263,7 +266,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             boolean animate = false;
             // dataSize represents size of currently visible data. After this operation, the number will decrement by 1
             final int dataSize = series.getDataSize();
-            // This is the size of current data list in Series. Note that it might be totaly different from dataSize as
+            // This is the size of current data list in Series. Note that it might be totally different from dataSize as
             // some big operation might have happened on the list.
             final int dataListSize = series.getData().size();
             if (itemIndex > 0 && itemIndex < dataSize -1) {

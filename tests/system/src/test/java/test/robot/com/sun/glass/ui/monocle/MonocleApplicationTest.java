@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,12 +24,11 @@
  */
 package test.robot.com.sun.glass.ui.monocle;
 
-import test.robot.com.sun.glass.ui.monocle.TestApplication;
-import com.sun.glass.events.KeyEvent;
-import com.sun.glass.ui.monocle.MonocleApplicationShim;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
+import com.sun.glass.events.KeyEvent;
+import com.sun.glass.ui.monocle.MonocleApplicationShim;
 import test.com.sun.glass.ui.monocle.TestRunnable;
 
 public class MonocleApplicationTest {
@@ -140,7 +139,7 @@ public class MonocleApplicationTest {
             for (int i = 0; i < TEST_CASES.length; i++) {
                 char ch = (char) TEST_CASES[i][0];
                 int expectedCode = TEST_CASES[i][1];
-                int code = MonocleApplicationShim._getKeyCodeForChar(ch);
+                int code = MonocleApplicationShim._getKeyCodeForChar(ch, KeyEvent.VK_UNDEFINED);
                 Assert.assertEquals("Code for character "
                                     + ((int) ch) + " ('" + ch + "')",
                                     expectedCode, code);
