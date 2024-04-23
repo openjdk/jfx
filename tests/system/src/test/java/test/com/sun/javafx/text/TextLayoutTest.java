@@ -37,6 +37,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.font.CharToGlyphMapper;
 import com.sun.javafx.font.PGFont;
 import com.sun.javafx.geom.Point2D;
@@ -335,10 +336,10 @@ public class TextLayoutTest {
         /**
          * Checks that alignment variations have no effect when not wrapping.
          */
-        NO_WRAP(new Parameters(
+        NO_WRAP(
             "The quick brown fox jumps over the lazy dog",
             0.0f, List.of(237.45117f)
-        )),
+        ),
 
         /**
          * Checks that the individual lines of hard wrapped text are still
@@ -346,46 +347,46 @@ public class TextLayoutTest {
          * line, which is the widest line, will not be aligned, but the 2nd
          * line will be aligned as it is less wide).
          */
-        HARD_WRAP(new Parameters(
+        HARD_WRAP(
             "The quick brown fox jumps\nover the lazy dog",
             0.0f, List.of(142.72852f, 91.38867f)
-        )),
+        ),
 
         /**
          * Checks that trailing white space is NOT ignored when wrapping
          * is not enabled.
          */
-        HARD_WRAP_WITH_EXTRA_TRAILING_SPACE(new Parameters(
+        HARD_WRAP_WITH_EXTRA_TRAILING_SPACE(
             "The quick brown fox jumps           \nover the lazy dog           ",
             0.0f, List.of(142.72852f + 11 * ARIAL_SPACE_ADVANCE, 91.38867f + 11 * ARIAL_SPACE_ADVANCE)
-        )),
+        ),
 
         /**
          * Checks that a character after tabs align, even if there were
          * some preceding characters (that don't exceed the tab advance width)
          */
-        HARD_WRAP_WITH_TABS(new Parameters(
+        HARD_WRAP_WITH_TABS(
             "\tA A\n" + "x\tA A\n" + "xx\tA A",  // expect same width for all three, as the "x" character falls within tab advance width
             0.0f, List.of(46.01367f, 46.01367f, 46.01367f)
-        )),
+        ),
 
         /**
          * Checks that tabs are a multiple of the tab advance.
          */
-        HARD_WRAP_WITH_MULTIPLE_TABS(new Parameters(
+        HARD_WRAP_WITH_MULTIPLE_TABS(
             "\t\n" + "\t\t\n" + "\t\t\t",  // expect width ratio 1:2:3
             0.0f, List.of(ARIAL_TAB_ADVANCE, ARIAL_TAB_ADVANCE * 2, ARIAL_TAB_ADVANCE * 3)
-        )),
+        ),
 
         /**
          * Checks that single white spaces are ignored for alignment
          * purposes when wrapping is enabled in simple text. This soft
          * wraps after "jumps".
          */
-        SOFT_WRAP(new Parameters(
+        SOFT_WRAP(
             "The quick brown fox jumps over the lazy dog",
             145.0f, List.of(142.72852f, 91.38867f)
-        )),
+        ),
 
         /**
          * Checks that leading white spaces are NOT stripped even when
@@ -393,10 +394,10 @@ public class TextLayoutTest {
          * and has 4 leading spaces on the 1st line where no soft
          * wrap occurs, and so they should be kept intact.
          */
-        SOFT_WRAP_WITH_LEADING_SPACE(new Parameters(
+        SOFT_WRAP_WITH_LEADING_SPACE(
             "    The quick brown fox jumps over the lazy dog",
             145.0f, List.of(107.384762f + 4 * ARIAL_SPACE_ADVANCE, 126.73242f)
-        )),
+        ),
 
         /**
          * Checks that trailing white spaces are NOT stripped even when
@@ -404,62 +405,92 @@ public class TextLayoutTest {
          * and has 4 trailing spaces on the 2nd line where no soft
          * wrap occurs, and so they should be kept intact.
          */
-        SOFT_WRAP_WITH_TRAILING_SPACE(new Parameters(
+        SOFT_WRAP_WITH_TRAILING_SPACE(
             "The quick brown fox jumps over the lazy dog    ",
             145.0f, List.of(142.72852f, 91.38867f + 4 * ARIAL_SPACE_ADVANCE)
-        )),
+        ),
 
         /**
          * Checks that multiple white spaces are ignored for alignment
          * purposes when wrapping is enabled in simple text. This soft
          * wraps after "jumps".
          */
-        SOFT_WRAP_WITH_EXTRA_SPACE(new Parameters(
+        SOFT_WRAP_WITH_EXTRA_SPACE(
             "The quick brown fox jumps           over the lazy dog",
             145.0f, List.of(142.72852f, 91.38867f)
-        )),
+        ),
 
         /**
          * Checks that single white spaces are ignored for alignment
          * purposes when wrapping is enabled in complex text. This soft
          * wraps after "jumps".
          */
-        SOFT_WRAP_WITH_COMPLEX_TEXT(new Parameters(
+        SOFT_WRAP_WITH_COMPLEX_TEXT_ON_WINDOWS(
+            TextLayoutTest::assumeWindows,
             "The quick brown लोमड़ी jumps over the lazy कुत्ता",
             160.0f, List.of(158.1914f, 93.134766f)
-        )),
+        ),
 
         /**
          * Checks that multiple white spaces are ignored for alignment
          * purposes when wrapping is enabled in complex text. This soft
          * wraps after "jumps".
          */
-        SOFT_WRAP_WITH_COMPLEX_TEXT_AND_EXTRA_SPACE(new Parameters(
+        SOFT_WRAP_WITH_COMPLEX_TEXT_AND_EXTRA_SPACE_ON_WINDOWS(
+            TextLayoutTest::assumeWindows,
             "The quick brown लोमड़ी jumps           over the lazy कुत्ता",
             160.0f, List.of(158.1914f, 93.134766f)
-        ));
+        ),
 
-        Parameters parameters;
+        /**
+         * Checks that single white spaces are ignored for alignment
+         * purposes when wrapping is enabled in complex text. This soft
+         * wraps after "jumps".
+         */
+        SOFT_WRAP_WITH_COMPLEX_TEXT_ON_MAC(
+            TextLayoutTest::assumeMac,
+            "The quick brown लोमड़ी jumps over the lazy कुत्ता",
+            160.0f, List.of(155.3047f, 93.134766f)
+        ),
 
-        Case(Parameters parameters) {
-            this.parameters = parameters;
+        /**
+         * Checks that multiple white spaces are ignored for alignment
+         * purposes when wrapping is enabled in complex text. This soft
+         * wraps after "jumps".
+         */
+        SOFT_WRAP_WITH_COMPLEX_TEXT_AND_EXTRA_SPACE_ON_MAC(
+            TextLayoutTest::assumeMac,
+            "The quick brown लोमड़ी jumps           over the lazy कुत्ता",
+            160.0f, List.of(155.3047f, 93.134766f)
+        );
+
+        Runnable assumption;
+        String text;
+        float wrapWidth;
+        List<Float> lineWidths;
+
+        Case(Runnable assumption, String text, float wrapWidth, List<Float> lineWidths) {
+            assert text != null;
+            assert wrapWidth >= 0;
+            assert lineWidths != null;
+            assert lineWidths.size() > 0;
+
+            this.assumption = assumption == null ? () -> {} : assumption;
+            this.text = text;
+            this.wrapWidth = wrapWidth;
+            this.lineWidths = List.copyOf(lineWidths);
         }
 
-        record Parameters(String text, float wrapWidth, List<Float> lineWidths) {
-            Parameters {
-                assert text != null;
-                assert wrapWidth >= 0;
-                assert lineWidths != null;
-                assert lineWidths.size() > 0;
-            }
+        Case(String text, float wrapWidth, List<Float> lineWidths) {
+            this(null, text, wrapWidth, lineWidths);
+        }
 
-            int lineCount() {
-                return lineWidths.size();
-            }
+        int lineCount() {
+            return lineWidths.size();
+        }
 
-            float maxWidth() {
-                return lineWidths.stream().max(Float::compareTo).orElseThrow();
-            }
+        float maxWidth() {
+            return lineWidths.stream().max(Float::compareTo).orElseThrow();
         }
     }
 
@@ -468,34 +499,35 @@ public class TextLayoutTest {
     void caseTest(Case c) {
         assumeArialFontAvailable();
 
-        Case.Parameters p = c.parameters;
+        // Check test specific assumption:
+        c.assumption.run();
 
         final float ASCENT = -ARIAL_ASCENT;
         final float DESCENT = ARIAL_DESCENT;
-        final float WRAP = p.wrapWidth == 0 ? p.maxWidth() : p.wrapWidth;
+        final float WRAP = c.wrapWidth == 0 ? c.maxWidth() : c.wrapWidth;
         final float CENTER = 0.5f * WRAP;
 
         for (String contentType : new String[] {"rich text (spans)", "plain text"}) {
             if (contentType.equals("plain text")) {
-                layout.setContent(p.text, arialFont);
+                layout.setContent(c.text, arialFont);
             }
             else {
                 // split content on line feeds (without removing the line feeds):
-                layout.setContent(Arrays.stream(p.text.split("(?<=\n)")).map(text -> new TestSpan(text, arialFont)).toArray(TextSpan[]::new));
+                layout.setContent(Arrays.stream(c.text.split("(?<=\n)")).map(text -> new TestSpan(text, arialFont)).toArray(TextSpan[]::new));
             }
 
-            layout.setWrapWidth(p.wrapWidth);
+            layout.setWrapWidth(c.wrapWidth);
 
             // LEFT ALIGNMENT
 
             layout.setAlignment(0);  // 0 == left
 
-            assertLineCount(p.lineCount());
+            assertLineCount(c.lineCount());
 
-            for (int i = 0; i < p.lineCount(); i++) {
+            for (int i = 0; i < c.lineCount(); i++) {
                 TextLine line = layout.getLines()[i];
-                String description = "left aligned " + contentType + ": line " + i + " for " + c.parameters;
-                RectBounds expectedBounds = new RectBounds(0, -ASCENT, p.lineWidths.get(i), DESCENT);
+                String description = "left aligned " + contentType + ": line " + i + " for " + c;
+                RectBounds expectedBounds = new RectBounds(0, -ASCENT, c.lineWidths.get(i), DESCENT);
                 Point2D expectedLocation = new Point2D(0, i * (ASCENT + DESCENT));
 
                 assertEquals(expectedBounds, line.getBounds(), description);
@@ -506,13 +538,13 @@ public class TextLayoutTest {
 
             layout.setAlignment(1);  // 1 == center
 
-            assertLineCount(p.lineCount());
+            assertLineCount(c.lineCount());
 
-            for (int i = 0; i < p.lineCount(); i++) {
+            for (int i = 0; i < c.lineCount(); i++) {
                 TextLine line = layout.getLines()[i];
-                String description = "centered " + contentType + ": line " + i + " for " + p;
-                RectBounds expectedBounds = new RectBounds(CENTER - 0.5f * p.lineWidths.get(i), -ASCENT, CENTER + 0.5f * p.lineWidths.get(i), DESCENT);
-                Point2D expectedLocation = new Point2D(CENTER - 0.5f * p.lineWidths.get(i), i * (ASCENT + DESCENT));
+                String description = "centered " + contentType + ": line " + i + " for " + c;
+                RectBounds expectedBounds = new RectBounds(CENTER - 0.5f * c.lineWidths.get(i), -ASCENT, CENTER + 0.5f * c.lineWidths.get(i), DESCENT);
+                Point2D expectedLocation = new Point2D(CENTER - 0.5f * c.lineWidths.get(i), i * (ASCENT + DESCENT));
 
                 assertEquals(expectedBounds, line.getBounds(), description);
                 assertEquals(expectedLocation, line.getRuns()[0].getLocation(), description);
@@ -522,13 +554,13 @@ public class TextLayoutTest {
 
             layout.setAlignment(2);  // 2 == right
 
-            assertLineCount(p.lineCount());
+            assertLineCount(c.lineCount());
 
-            for (int i = 0; i < p.lineCount(); i++) {
+            for (int i = 0; i < c.lineCount(); i++) {
                 TextLine line = layout.getLines()[i];
-                String description = "right aligned " + contentType + ": line " + i + " for " + p;
-                RectBounds expectedBounds = new RectBounds(WRAP - p.lineWidths.get(i), -ASCENT, WRAP, DESCENT);
-                Point2D expectedLocation = new Point2D(WRAP - p.lineWidths.get(i), i * (ASCENT + DESCENT));
+                String description = "right aligned " + contentType + ": line " + i + " for " + c;
+                RectBounds expectedBounds = new RectBounds(WRAP - c.lineWidths.get(i), -ASCENT, WRAP, DESCENT);
+                Point2D expectedLocation = new Point2D(WRAP - c.lineWidths.get(i), i * (ASCENT + DESCENT));
 
                 assertEquals(expectedBounds, line.getBounds(), description);
                 assertEquals(expectedLocation, line.getRuns()[0].getLocation(), description);
@@ -538,14 +570,14 @@ public class TextLayoutTest {
 
             layout.setAlignment(3);  // 3 == justified
 
-            assertLineCount(p.lineCount());
+            assertLineCount(c.lineCount());
 
-            for (int i = 0; i < p.lineCount(); i++) {
+            for (int i = 0; i < c.lineCount(); i++) {
                 TextLine line = layout.getLines()[i];
-                String description = "justified " + contentType + ": line " + i + " for " + p;
+                String description = "justified " + contentType + ": line " + i + " for " + c;
                 GlyphList[] runs = line.getRuns();
-                boolean lastLine = i == p.lineCount() - 1 || (runs[runs.length - 1] instanceof TextRun tr && tr.isLinebreak());
-                RectBounds expectedBounds = new RectBounds(0, -ASCENT, lastLine ? p.lineWidths.get(i) : WRAP, DESCENT);
+                boolean lastLine = i == c.lineCount() - 1 || (runs[runs.length - 1] instanceof TextRun tr && tr.isLinebreak());
+                RectBounds expectedBounds = new RectBounds(0, -ASCENT, lastLine ? c.lineWidths.get(i) : WRAP, DESCENT);
                 Point2D expectedLocation = new Point2D(0, i * (ASCENT + DESCENT));
 
                 assertEquals(expectedBounds, line.getBounds(), description);
@@ -560,5 +592,13 @@ public class TextLayoutTest {
 
     private void assumeTahomaFontAvailable() {
         assumeTrue("Tahoma font missing", arialFont.getName().equals("Tahoma"));
+    }
+
+    private static void assumeMac() {
+        assumeTrue("Platform is not Mac", PlatformUtil.isMac());
+    }
+
+    private static void assumeWindows() {
+        assumeTrue("Platform is not Windows", PlatformUtil.isWindows());
     }
 }
