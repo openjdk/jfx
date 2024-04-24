@@ -78,11 +78,11 @@ public class WinTextRangeProviderTest {
         return Stream.of(
                 Arguments.of(1, 0, 1, 2),
                 Arguments.of(1, 0, 2, 1),
-                Arguments.of(1, 0, Integer.MAX_VALUE, 1),
-                Arguments.of(Integer.MAX_VALUE, 0, Integer.MAX_VALUE, Integer.MAX_VALUE),
-                Arguments.of(50, 50, Integer.MAX_VALUE, 50),
                 Arguments.of(55, 50, 10, 55),
                 Arguments.of(60, 50, 10, Integer.MAX_VALUE),
+                Arguments.of(1, 0, Integer.MAX_VALUE, 1),
+                Arguments.of(50, 50, Integer.MAX_VALUE, 50),
+                Arguments.of(Integer.MAX_VALUE, 0, Integer.MAX_VALUE, Integer.MAX_VALUE),
                 Arguments.of(60, 50, -1, 60),
                 Arguments.of(60, 50, Integer.MIN_VALUE, 60),
 
