@@ -24,7 +24,6 @@
  */
 package test.com.sun.glass.ui.win;
 
-import com.sun.javafx.PlatformUtil;
 import com.sun.glass.ui.win.WinTextRangeProviderShim;
 
 import java.io.ByteArrayOutputStream;
