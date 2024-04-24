@@ -78,15 +78,21 @@ public class WinTextRangeProviderTest {
         return Stream.of(
                 Arguments.of(1, 0, 1, 2),
                 Arguments.of(1, 0, 2, 1),
-                Arguments.of(1, -1, 2, -1),
                 Arguments.of(1, 0, Integer.MAX_VALUE, 1),
-                Arguments.of(1, 0, Integer.MAX_VALUE, Integer.MAX_VALUE),
-                Arguments.of(55, 50, Integer.MAX_VALUE, 50),
-                Arguments.of(50, 50, -1, 55),
+                Arguments.of(Integer.MAX_VALUE, 0, Integer.MAX_VALUE, Integer.MAX_VALUE),
+                Arguments.of(50, 50, Integer.MAX_VALUE, 50),
                 Arguments.of(55, 50, 10, 55),
                 Arguments.of(60, 50, 10, Integer.MAX_VALUE),
-                Arguments.of(60, 50, 10, Integer.MIN_VALUE),
-                Arguments.of(50, 50, Integer.MIN_VALUE, Integer.MIN_VALUE)
+                Arguments.of(60, 50, -1, 60),
+                Arguments.of(60, 50, Integer.MIN_VALUE, 60),
+
+                // No range check for startIndex
+                Arguments.of(20, -10, 9, 20),
+
+                // No range check for maxEndIndex
+                Arguments.of(-1, -1, 2, -1),
+                Arguments.of(Integer.MIN_VALUE, 100, 50, Integer.MIN_VALUE),
+                Arguments.of(Integer.MIN_VALUE, 50, Integer.MIN_VALUE, Integer.MIN_VALUE)
         );
     }
 
