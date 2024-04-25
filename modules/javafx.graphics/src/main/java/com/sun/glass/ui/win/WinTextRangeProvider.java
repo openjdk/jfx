@@ -27,6 +27,8 @@ package com.sun.glass.ui.win;
 
 import static javafx.scene.AccessibleAttribute.*;
 import java.text.BreakIterator;
+
+import com.sun.javafx.util.Utils;
 import javafx.geometry.Bounds;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
@@ -98,8 +100,8 @@ class WinTextRangeProvider {
         }
 
         int length = text.length();
-        start = Math.max(0, Math.min(start, length));
-        end = Math.max(start, Math.min(end, length));
+        start = Utils.clamp(0, start, length);
+        end = Utils.clamp(start, end, length);
     }
 
     /**
