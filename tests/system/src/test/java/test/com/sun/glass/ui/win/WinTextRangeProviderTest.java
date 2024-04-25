@@ -24,6 +24,7 @@
  */
 package test.com.sun.glass.ui.win;
 
+import com.sun.javafx.PlatformUtil;
 import com.sun.glass.ui.win.WinTextRangeProviderShim;
 
 import java.io.ByteArrayOutputStream;
@@ -35,16 +36,14 @@ import javafx.application.Platform;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.condition.EnabledOnOs;
-import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.junit.Assert.fail;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-@EnabledOnOs({OS.WINDOWS})
 public class WinTextRangeProviderTest {
 
     private static final CountDownLatch startupLatch = new CountDownLatch(1);
@@ -53,6 +52,7 @@ public class WinTextRangeProviderTest {
 
     @BeforeAll
     static void doSetup() throws Exception {
+        assumeTrue(PlatformUtil.isWindows());
         System.setErr(new PrintStream(out, true));
 
         Platform.startup(() -> {
