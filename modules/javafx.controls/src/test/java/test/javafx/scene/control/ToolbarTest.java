@@ -252,6 +252,69 @@ public class ToolbarTest {
         testOverflowVisibility();
     }
 
+    @Test
+    public void overflowDoesNotOverlapWithItems() {
+        Rectangle node3 = new Rectangle(2.0, 4.0);
+        Rectangle node4 = new Rectangle(2.0, 4.0);
+
+        node1.setId("node1");
+        node2.setId("node2");
+        node3.setId("node3");
+        node4.setId("node4");
+
+        // Make the width of the node dependent on whether it is added to the scene
+        node1.sceneProperty().addListener((ov, o, n) -> {
+            if (n == null) {
+                setFixSize(node1, 0);
+            } else {
+                setFixSize(node1, ORIGINAL_CHILDREN_SIZE);
+            }
+        });
+
+        initializeToolBar();
+        toolBar.getItems().addAll(node3, node4);
+
+        setFixSize(toolBar, ORIGINAL_CHILDREN_SIZE * 4 + 50);
+        setFixSize(node1, ORIGINAL_CHILDREN_SIZE);
+        setFixSize(node2, ORIGINAL_CHILDREN_SIZE);
+        setFixSize(node3, ORIGINAL_CHILDREN_SIZE);
+        setFixSize(node4, ORIGINAL_CHILDREN_SIZE);
+
+        // Resize toolbar
+        setFixSize(toolBar, ORIGINAL_CHILDREN_SIZE * 3);
+
+        checkNodeBoundsWithinToolbar(node1);
+        checkNodeBoundsWithinToolbar(node2);
+        checkNodeBoundsWithinToolbar(node3);
+        checkNodeBoundsWithinToolbar(node4);
+    }
+
+
+    private void checkNodeBoundsWithinToolbar(Node node) {
+        if (node.getScene() != toolBar.getScene()) {
+            // Currently, a node that does not fit into the toolbar is removed from the toolbar and from the the scene.
+            // Although this is an implementation detail, we use it here to check whether the node is visible in the toolbar or has been moved behind the overflow button.
+            return;
+        }
+
+        double nodeX = node.getLayoutX();
+        double nodeWidth = node.prefWidth(-1);
+
+        Pane overflowButton = getOverflowButton();
+        if (overflowButton.getScene() != null && overflowButton.isVisible()) {
+            assertTrue("'" + node.getId() + "' is overlapping the overflowButton." +
+                            " The node " + "<" + nodeX + ".." + (nodeX + nodeWidth) + ">."
+                            + " The overflow button " + "<" + overflowButton.getLayoutX() + ".." + (overflowButton.getLayoutX() + overflowButton.getWidth()) + ">",
+                    nodeX + nodeWidth < overflowButton.getLayoutX());
+        }
+
+        assertTrue("'" + node.getId() + "' bounds are outside the toolbar." +
+                        " The node " + "<" + nodeX + ".." + (nodeX + nodeWidth) + ">."
+                        + " The toolbar width " + toolBar.getWidth(),
+                nodeX + nodeWidth < toolBar.getWidth());
+
+    }
+
     private void initializeToolBar() {
         root = new StackPane(toolBar);
         root.setPrefSize(400, 400);
@@ -295,14 +358,18 @@ public class ToolbarTest {
     }
 
     private void assertOverflowNotShown() {
-        Pane pane = (Pane) toolBar.queryAccessibleAttribute(AccessibleAttribute.OVERFLOW_BUTTON);
+        Pane pane = getOverflowButton();
         assertNotNull(pane);
         assertFalse(pane.isVisible());
     }
 
     private void assertOverflowShown() {
-        Pane pane = (Pane) toolBar.queryAccessibleAttribute(AccessibleAttribute.OVERFLOW_BUTTON);
+        Pane pane = getOverflowButton();
         assertNotNull(pane);
         assertTrue(pane.isVisible());
+    }
+
+    private Pane getOverflowButton() {
+        return (Pane) toolBar.queryAccessibleAttribute(AccessibleAttribute.OVERFLOW_BUTTON);
     }
 }
