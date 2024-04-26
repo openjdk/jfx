@@ -258,7 +258,7 @@ private:
 
     HRESULT UpdateVertexShaderTX();
 
-    D3DContext(IDirect3D9Ex *pd3dEx, UINT adapter);
+    D3DContext(IDirect3D9Ex *pd3d9, UINT adapter);
     HRESULT InitDevice(IDirect3DDevice9Ex *d3dDevice);
     HRESULT createIndexBuffer();
     HRESULT InitContextCaps();

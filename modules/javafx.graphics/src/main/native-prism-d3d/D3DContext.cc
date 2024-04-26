@@ -80,11 +80,11 @@ D3DContext::CreateInstance(IDirect3D9Ex *pd3d9, UINT adapter, bool isVsyncEnable
     return res;
 }
 
-D3DContext::D3DContext(IDirect3D9Ex *pd3dEx, UINT adapter)
+D3DContext::D3DContext(IDirect3D9Ex *pd3d9, UINT adapter)
 {
     TraceLn(NWT_TRACE_INFO, "D3DContext::D3DContext");
-    TraceLn1(NWT_TRACE_VERBOSE, "  pd3dEx=0x%x", pd3dEx);
-    pd3dObject = pd3dEx;
+    TraceLn1(NWT_TRACE_VERBOSE, "  pd3d9=0x%x", pd3d9);
+    pd3dObject = pd3d9;
     pd3dDevice = NULL;
     adapterOrdinal = adapter;
     defaulResourcePool = D3DPOOL_SYSTEMMEM;
