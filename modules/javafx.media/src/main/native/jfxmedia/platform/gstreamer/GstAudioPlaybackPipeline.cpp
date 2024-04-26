@@ -34,6 +34,8 @@
 #include <jni/Logger.h>
 #include <fxplugins_common.h>
 
+#include <string.h>
+
 #define AUDIO_RESUME_DELTA_TIME   10.0 // seconds
 #define VIDEO_RESUME_DELTA_TIME   10.0 // seconds
 #define STALL_DELTA_TIME           1.0 // seconds

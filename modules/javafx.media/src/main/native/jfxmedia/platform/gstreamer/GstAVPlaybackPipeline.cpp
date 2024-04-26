@@ -35,6 +35,8 @@
 #include <Utils/LowLevelPerf.h>
 #include <fxplugins_common.h>
 
+#include <string.h>
+
 #define MAX_SIZE_BUFFERS_LIMIT 25
 #define MAX_SIZE_BUFFERS_INC   5
 
