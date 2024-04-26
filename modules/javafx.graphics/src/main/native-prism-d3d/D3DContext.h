@@ -105,7 +105,7 @@ public:
      * to initialize and test the device last time, it doesn't attempt
      * to create/init/test the device.
      */
-    static HRESULT CreateInstance(IDirect3D9Ex *pd3d9Ex, UINT adapter, bool isVsyncEnabled, D3DContext **ppCtx);
+    static HRESULT CreateInstance(IDirect3D9Ex *pd3d9, UINT adapter, bool isVsyncEnabled, D3DContext **ppCtx);
 
     // desrtoys this instance
     /* virtual */ int release();

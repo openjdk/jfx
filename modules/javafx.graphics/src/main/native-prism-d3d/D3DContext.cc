@@ -69,10 +69,10 @@ inline void D3DUtils_SetIdentityMatrix(D3DMATRIX *m) {
 
 // static
 HRESULT
-D3DContext::CreateInstance(IDirect3D9Ex *pd3d9Ex, UINT adapter, bool isVsyncEnabled, D3DContext **ppCtx)
+D3DContext::CreateInstance(IDirect3D9Ex *pd3d9, UINT adapter, bool isVsyncEnabled, D3DContext **ppCtx)
 {
     HRESULT res;
-    *ppCtx = new D3DContext(pd3d9Ex, adapter);
+    *ppCtx = new D3DContext(pd3d9, adapter);
     if (FAILED(res = (*ppCtx)->InitContext(isVsyncEnabled))) {
         delete *ppCtx;
         *ppCtx = NULL;
