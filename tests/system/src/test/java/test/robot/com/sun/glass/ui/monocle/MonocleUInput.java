@@ -25,16 +25,14 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import test.robot.com.sun.glass.ui.monocle.TestApplication;
-import com.sun.glass.ui.Application;
-import com.sun.glass.ui.monocle.LinuxInputDeviceRegistryShim;
-import javafx.application.Platform;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
+import javafx.application.Platform;
+import com.sun.glass.ui.Application;
+import com.sun.glass.ui.monocle.LinuxInputDeviceRegistryShim;
 import test.com.sun.glass.ui.monocle.NativeUInput;
 
 class MonocleUInput extends NativeUInput {

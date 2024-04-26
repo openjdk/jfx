@@ -629,24 +629,27 @@ HRESULT D3DContext::setDeviceParametersFor3D() {
     return res;
 }
 
-/*
- * Note: this method assumes that pIndices is not null
- */
-static HRESULT fillQuadIndices(IDirect3DIndexBuffer9 *pIndices, int maxQuads) {
-    short * data = 0;
-    HRESULT hr = pIndices->Lock(0, maxQuads * 6 * sizeof(short), (void **)&data, 0);
-    if (SUCCEEDED(hr) && data) {
-        for (int i = 0; i != maxQuads; ++i) {
-            int vtx = i * 4;
-            int idx = i * 6;
-            data[idx + 0] = vtx + 0;
-            data[idx + 1] = vtx + 1;
-            data[idx + 2] = vtx + 2;
-            data[idx + 3] = vtx + 2;
-            data[idx + 4] = vtx + 1;
-            data[idx + 5] = vtx + 3;
+HRESULT D3DContext::createIndexBuffer() {
+    RETURN_STATUS_IF_NULL(pd3dDevice, S_FALSE);
+    HRESULT hr = pd3dDevice->CreateIndexBuffer(sizeof(short) * 6 * MAX_BATCH_QUADS,
+        D3DUSAGE_WRITEONLY, D3DFMT_INDEX16, getResourcePool(), &pIndices, 0);
+    // fill index buffer
+    if (hr == D3D_OK && pIndices) {
+        short* data = 0;
+        hr = pIndices->Lock(0, 0, (void **)&data, 0);
+        if (SUCCEEDED(hr) && data) {
+            for (int i = 0; i < MAX_BATCH_QUADS; i++) {
+                int vtx = i * 4;
+                int idx = i * 6;
+                data[idx + 0] = vtx + 0;
+                data[idx + 1] = vtx + 1;
+                data[idx + 2] = vtx + 2;
+                data[idx + 3] = vtx + 2;
+                data[idx + 4] = vtx + 1;
+                data[idx + 5] = vtx + 3;
+            }
+            hr = pIndices->Unlock();
         }
-        hr = pIndices->Unlock();
     }
     return hr;
 }
@@ -699,11 +702,7 @@ HRESULT D3DContext::InitDevice(IDirect3DDevice9 *pd3dDevice)
 //    RETURN_STATUS_IF_FAILED(res);
 
     if (pIndices == NULL) {
-        res = pd3dDevice->CreateIndexBuffer(sizeof(short) * 6 * MAX_BATCH_QUADS,
-            D3DUSAGE_WRITEONLY, D3DFMT_INDEX16, getResourcePool(), &pIndices, 0);
-        if (pIndices) {
-            res = fillQuadIndices(pIndices, MAX_BATCH_QUADS);
-        }
+        res = createIndexBuffer();
         RETURN_STATUS_IF_FAILED(res);
     }
 //    res = pd3dDevice->SetIndices(pIndices);
