@@ -405,7 +405,7 @@ class WinTextRangeProvider {
         switch (unit) {
             case TextUnit_Character: {
                 int oldStart = start;
-                start = getEndIndex(start, requestedCount, length - 1);
+                start = Math.max(0, Math.min(start + requestedCount, length - 1));
                 end = start + 1;
                 actualCount = start - oldStart;
                 break;
@@ -509,7 +509,7 @@ class WinTextRangeProvider {
         switch (unit) {
             case TextUnit_Character: {
                 int oldOffset = offset;
-                offset = getEndIndex(offset, requestedCount, length);
+                offset = Math.max(0, Math.min(offset + requestedCount, length));
                 actualCount = offset - oldOffset;
                 break;
             }
