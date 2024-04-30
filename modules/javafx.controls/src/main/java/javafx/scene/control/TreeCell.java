@@ -404,8 +404,16 @@ public class TreeCell<T> extends IndexedCell<T> {
 
         final TreeItem<T> treeItem = getTreeItem();
         final TreeView<T> tree = getTreeView();
+        boolean treeShouldRequestFocus = false;
+
         // JDK-8187307: fire the commit after updating cell's editing state
         if (tree != null) {
+            // The cell is going to be updated, and the current focus owner might be removed from it.
+            // Before that happens, check if it has the tree as a parent (otherwise the user might have
+            // clicked out of the tree entirely and given focus to something else), so the tree can
+            // request the focus back, once the edit commit ends.
+            treeShouldRequestFocus = ControlUtils.controlShouldRequestFocusIfCurrentFocusOwnerIsChild(tree);
+
             // Inform the TreeView of the edit being ready to be committed.
             tree.fireEvent(new TreeView.EditEvent<>(tree,
                     TreeView.<T>editCommitEvent(),
@@ -418,14 +426,15 @@ public class TreeCell<T> extends IndexedCell<T> {
         updateItem(-1);
 
         if (tree != null) {
-            // reset the editing item in the TreetView
+            // reset the editing item in the TreeView
             tree.edit(null);
 
             // request focus back onto the tree, only if the current focus
-            // owner has the tree as a parent (otherwise the user might have
-            // clicked out of the tree entirely and given focus to something else.
+            // owner had the tree as a parent.
             // It would be rude of us to request it back again.
-            ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(tree);
+            if (treeShouldRequestFocus) {
+                tree.requestFocus();
+            }
         }
         treeItemAtStartEdit = null;
     }
@@ -447,7 +456,7 @@ public class TreeCell<T> extends IndexedCell<T> {
 
             // request focus back onto the tree, only if the current focus
             // owner has the tree as a parent (otherwise the user might have
-            // clicked out of the tree entirely and given focus to something else.
+            // clicked out of the tree entirely and given focus to something else).
             // It would be rude of us to request it back again.
             ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(tree);
 

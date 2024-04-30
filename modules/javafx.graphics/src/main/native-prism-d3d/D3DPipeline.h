@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -123,7 +123,7 @@ do {                      \
     } else do { } while (0)
 
 // d3d9 must be valid and tested
-int getMaxSampleSupport(IDirect3D9 *d3d9, UINT adapter);
+int getMaxSampleSupport(IDirect3D9Ex *d3d9, UINT adapter);
 
 inline void logD3DSurfaceDesc(D3DSURFACE_DESC const & dsk) {
     RlsTrace5(NWT_TRACE_INFO, "w=%d, h=%d, Format = %d, Pool=%d, Usage=%d\n",
@@ -136,7 +136,7 @@ inline void logSurfaceDesk(IDirect3DSurface9 *surf) {
         logD3DSurfaceDesc(dsk) : TraceImpl(NWT_TRACE_INFO, JNI_FALSE, "Error reading surface desk\n");
 }
 
-inline void logDeviceTargets(IDirect3DDevice9 *pd3dDevice) {
+inline void logDeviceTargets(IDirect3DDevice9Ex *pd3dDevice) {
     IDirect3DSurface9 * pSurf=0, *pZB=0;
     HRESULT hr1 = pd3dDevice->GetRenderTarget(0, &pSurf);
     HRESULT hr2 = pd3dDevice->GetDepthStencilSurface(&pZB);
