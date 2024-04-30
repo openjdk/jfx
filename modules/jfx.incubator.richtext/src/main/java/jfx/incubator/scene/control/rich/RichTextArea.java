@@ -408,7 +408,7 @@ public class RichTextArea extends Control {
      * Indicates whether this RichTextArea can be edited by the user, provided the model is also editable.
      * Changing the value of this property with a view-only model or a null model has no effect.
      * @return the editable property
-     * @see {@link #canEdit()}
+     * @see canEdit() method
      * @defaultValue true
      */
     public final BooleanProperty editableProperty() {
