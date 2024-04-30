@@ -64,7 +64,7 @@ public class RichTextAreaWindow extends Stage {
         FX.separator(mb);
         FX.item(mb, "Close Window", this::hide);
         FX.separator(mb);
-        FX.item(mb, "Quit", () -> Platform.exit());
+        FX.item(mb, "Quit", Platform::exit);
         // tests
         FX.menu(mb, "_Tests");
         FX.item(mb, "Stacked Vertically", () -> openMultipeStacked(true));
@@ -89,7 +89,7 @@ public class RichTextAreaWindow extends Stage {
 
         setScene(scene);
         setTitle(
-            "RichTextArea Demo FX:" +
+            "RichTextArea Tester FX:" +
             System.getProperty("javafx.runtime.version") +
             "  JDK:" +
             System.getProperty("java.version")

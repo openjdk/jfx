@@ -156,6 +156,7 @@ public class CellPane extends GridPane {
         execLabel.setText("[*]:");
         FX.style(execLabel, EXECUTING, true);
 
+        getSourceEditor().requestFocus();
         outputPane.setCenter(null);
     }
 

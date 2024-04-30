@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.jfx.incubator.scene.control.rich.model;
 
+import java.io.IOException;
 import java.io.StringWriter;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.Assertions;
@@ -43,7 +44,7 @@ import jfx.incubator.scene.control.rich.model.StyledOutput;
  */
 public class TestEditableRichTextModel {
     @Test
-    public void testInsertLineBreak() throws Exception {
+    public void testInsertLineBreak() {
         // empty model
         t(
             null,
@@ -90,32 +91,51 @@ public class TestEditableRichTextModel {
         );
     }
 
-    private void t(String initial, Consumer<EditableRichTextModel> op, String expected) throws Exception {
-        EditableRichTextModel m = new EditableRichTextModel();
-        RichTextFormatHandler h = new RichTextFormatHandler();
+    @Test
+    public void testDeleteParagraphStart() {
+        t(
+            "{fs|24.0}{tc|808080}aaaaa:  {fs|24.0}bbbbb{!}",
+            (m) -> {
+                m.replace(null, p(0, 13), p(0, 0), "", false);
+            },
+            "{!}"
+        );
+    }
 
-        // set initial text
-        if (initial != null) {
-            StyledInput in = h.createStyledInput(initial);
-            TextPos end = m.replace(null, TextPos.ZERO, TextPos.ZERO, in, false);
-            // check initial text
-            StringWriter wr = new StringWriter();
-            StyledOutput out = RichTextFormatHandlerHelper.createStyledOutput(h, null, wr);
-            m.export(TextPos.ZERO, end, out);
-            String s = wr.toString();
-            Assertions.assertEquals(initial, s, "problem setting initial text");
-        }
+    private TextPos p(int index, int offset) {
+        return new TextPos(index, offset);
+    }
 
-        op.accept(m);
-
-        // check output
-        {
-            StringWriter wr = new StringWriter();
-            StyledOutput out = RichTextFormatHandlerHelper.createStyledOutput(h, null, wr);
-            TextPos end = m.getDocumentEnd();
-            m.export(TextPos.ZERO, end, out);
-            String s = wr.toString();
-            Assertions.assertEquals(expected, s, "operation failed");
+    private void t(String initial, Consumer<EditableRichTextModel> op, String expected) {
+        try {
+            EditableRichTextModel m = new EditableRichTextModel();
+            RichTextFormatHandler h = new RichTextFormatHandler();
+    
+            // set initial text
+            if (initial != null) {
+                StyledInput in = h.createStyledInput(initial);
+                TextPos end = m.replace(null, TextPos.ZERO, TextPos.ZERO, in, false);
+                // check initial text
+                StringWriter wr = new StringWriter();
+                StyledOutput out = RichTextFormatHandlerHelper.createStyledOutput(h, null, wr);
+                m.export(TextPos.ZERO, end, out);
+                String s = wr.toString();
+                Assertions.assertEquals(initial, s, "problem setting initial text");
+            }
+    
+            op.accept(m);
+    
+            // check output
+            {
+                StringWriter wr = new StringWriter();
+                StyledOutput out = RichTextFormatHandlerHelper.createStyledOutput(h, null, wr);
+                TextPos end = m.getDocumentEnd();
+                m.export(TextPos.ZERO, end, out);
+                String s = wr.toString();
+                Assertions.assertEquals(expected, s, "operation failed");
+            }
+        } catch(IOException e) {
+            throw new RuntimeException(e);
         }
     }
 }

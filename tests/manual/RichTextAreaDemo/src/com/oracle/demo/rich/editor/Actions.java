@@ -30,17 +30,12 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.util.Optional;
 import javafx.beans.binding.Bindings;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
-import jfx.incubator.scene.control.rich.RichTextArea;
-import jfx.incubator.scene.control.rich.TextPos;
-import jfx.incubator.scene.control.rich.model.EditableRichTextModel;
-import jfx.incubator.scene.control.rich.model.RichTextFormatHandler;
-import jfx.incubator.scene.control.rich.model.StyleAttribute;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
-import jfx.incubator.scene.control.rich.model.StyledTextModel;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ButtonBar.ButtonData;
@@ -49,8 +44,19 @@ import javafx.scene.input.DataFormat;
 import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
+import com.oracle.demo.rich.common.Styles;
+import com.oracle.demo.rich.common.TextStyle;
 import com.oracle.demo.rich.util.FX;
 import com.oracle.demo.rich.util.FxAction;
+import jfx.incubator.scene.control.rich.RichTextArea;
+import jfx.incubator.scene.control.rich.SelectionSegment;
+import jfx.incubator.scene.control.rich.TextPos;
+import jfx.incubator.scene.control.rich.model.ContentChange;
+import jfx.incubator.scene.control.rich.model.EditableRichTextModel;
+import jfx.incubator.scene.control.rich.model.RichTextFormatHandler;
+import jfx.incubator.scene.control.rich.model.StyleAttribute;
+import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyledTextModel;
 
 /**
  * This is a bit of hack.  JavaFX has no actions (yet), so here we are using FxActions from
@@ -62,74 +68,52 @@ import com.oracle.demo.rich.util.FxAction;
  * (The model does not change in this application).
  */
 public class Actions {
-    public final FxAction bold;
-    public final FxAction copy;
-    public final FxAction cut;
-    public final FxAction italic;
-    public final FxAction newDocument;
-    public final FxAction open;
-    public final FxAction paste;
-    public final FxAction pasteUnformatted;
-    public final FxAction redo;
-    public final FxAction save;
-    public final FxAction selectAll;
-    public final FxAction strikeThrough;
-    public final FxAction underline;
-    public final FxAction undo;
-    public final FxAction wrapText;
+    // file
+    public final FxAction newDocument = new FxAction(this::newDocument);
+    public final FxAction open = new FxAction(this::open);
+    public final FxAction save = new FxAction(this::save);
+    // style
+    public final FxAction bold = new FxAction(this::bold);
+    public final FxAction italic = new FxAction(this::italic);
+    public final FxAction strikeThrough = new FxAction(this::strikeThrough);
+    public final FxAction underline = new FxAction(this::underline);
+    // editing
+    public final FxAction copy = new FxAction(this::copy);
+    public final FxAction cut = new FxAction(this::cut);
+    public final FxAction paste = new FxAction(this::paste);
+    public final FxAction pasteUnformatted = new FxAction(this::pasteUnformatted);
+    public final FxAction redo = new FxAction(this::redo);
+    public final FxAction selectAll = new FxAction(this::selectAll);
+    public final FxAction undo = new FxAction(this::undo);
+    // view
+    public final FxAction wrapText = new FxAction();
 
     private final RichTextArea control;
     private final ReadOnlyBooleanWrapper modified = new ReadOnlyBooleanWrapper();
     private final ReadOnlyObjectWrapper<File> file = new ReadOnlyObjectWrapper<>();
+    private final SimpleObjectProperty<StyleAttrs> styles = new SimpleObjectProperty<>();
+    private final SimpleObjectProperty<TextStyle> textStyle = new SimpleObjectProperty<>();
 
     public Actions(RichTextArea control) {
         this.control = control;
 
-        newDocument = new FxAction(this::newDocument);
+        // undo/redo actions
+        redo.disabledProperty().bind(control.redoableProperty().not());
+        undo.disabledProperty().bind(control.undoableProperty().not());
 
-        open = new FxAction(this::open);
-
-        save = new FxAction(this::save);
-
-        undo = new FxAction(control::undo);
         undo.disabledProperty().bind(Bindings.createBooleanBinding(() -> {
             return !control.isUndoable();
         }, control.undoableProperty()));
 
-        redo = new FxAction(control::redo);
         redo.disabledProperty().bind(Bindings.createBooleanBinding(() -> {
             return !control.isRedoable();
         }, control.redoableProperty()));
 
-        cut = new FxAction(control::cut);
-
-        copy = new FxAction(control::copy);
-
-        paste = new FxAction(control::paste);
-
-        pasteUnformatted = new FxAction(control::pastePlainText);
-
-        selectAll = new FxAction(control::selectAll);
-
-        bold = new FxAction(() -> toggle(StyleAttrs.BOLD));
-
-        italic = new FxAction(() -> toggle(StyleAttrs.ITALIC));
-
-        underline = new FxAction(() -> toggle(StyleAttrs.UNDERLINE));
-
-        strikeThrough = new FxAction(() -> toggle(StyleAttrs.STRIKE_THROUGH));
-
-        wrapText = new FxAction();
         wrapText.selectedProperty().bindBidirectional(control.wrapTextProperty());
 
-        control.getModel().addChangeListener(new StyledTextModel.ChangeListener() {
+        control.getModel().addChangeListener(new StyledTextModel.Listener() {
             @Override
-            public void eventTextUpdated(TextPos start, TextPos end, int top, int added, int bottom) {
-                handleEdit();
-            }
-
-            @Override
-            public void eventStyleUpdated(TextPos start, TextPos end) {
+            public void onContentChange(ContentChange ch) {
                 handleEdit();
             }
         });
@@ -137,10 +121,31 @@ public class Actions {
         control.caretPositionProperty().addListener((x) -> {
             handleCaret();
         });
+        
+        control.selectionProperty().addListener((p) -> {
+            updateSourceStyles();
+        });
+
+        styles.addListener((s,p,a) -> {
+            bold.setSelected(hasStyle(a, StyleAttrs.BOLD), false);
+            italic.setSelected(hasStyle(a, StyleAttrs.ITALIC), false);
+            strikeThrough.setSelected(hasStyle(a, StyleAttrs.STRIKE_THROUGH), false);
+            underline.setSelected(hasStyle(a, StyleAttrs.UNDERLINE), false);
+        });
+
+        updateSourceStyles();
 
         handleEdit();
         handleCaret();
-        modified.set(false);
+        setModified(false);
+    }
+
+    private boolean hasStyle(StyleAttrs attrs, StyleAttribute<Boolean> a) {
+        return attrs == null ? false : Boolean.TRUE.equals(attrs.get(a));
+    }
+
+    public final ObjectProperty<TextStyle> textStyleProperty() {
+        return textStyle;
     }
 
     public final ReadOnlyBooleanProperty modifiedProperty() {
@@ -149,6 +154,10 @@ public class Actions {
 
     public final boolean isModified() {
         return modified.get();
+    }
+
+    private void setModified(boolean on) {
+        modified.set(on);
     }
 
     public final ReadOnlyObjectProperty<File> fileNameProperty() {
@@ -160,7 +169,7 @@ public class Actions {
     }
 
     private void handleEdit() {
-        modified.set(true);
+        setModified(true);
     }
 
     private void handleCaret() {
@@ -230,7 +239,7 @@ public class Actions {
             return;
         }
         control.setModel(new EditableRichTextModel());
-        modified.set(false);
+        setModified(false);
     }
 
     private void open() {
@@ -325,7 +334,7 @@ public class Actions {
         try (FileInputStream in = new FileInputStream(f)) {
             control.read(fmt, in);
             file.set(f);
-            modified.set(false);
+            setModified(false);
         }
     }
 
@@ -333,7 +342,109 @@ public class Actions {
         try (FileOutputStream out = new FileOutputStream(f)) {
             control.write(fmt, out);
             file.set(f);
-            modified.set(false);
+            setModified(false);
         }
+    }
+
+    public void copy() {
+        control.copy();
+    }
+
+    public void cut() {
+        control.cut();
+    }
+
+    public void paste() {
+        control.paste();
+    }
+
+    public void pasteUnformatted() {
+        control.pastePlainText();
+    }
+
+    public void selectAll() {
+        control.selectAll();
+    }
+
+    public void redo() {
+       control.redo();
+    }
+
+    public void undo() {
+        control.undo();
+    }
+
+    public void bold() {
+        toggleStyle(StyleAttrs.BOLD);
+    }
+
+    public void italic() {
+        toggleStyle(StyleAttrs.ITALIC);
+    }
+
+    public void strikeThrough() {
+        toggleStyle(StyleAttrs.STRIKE_THROUGH);
+    }
+
+    public void underline() {
+        toggleStyle(StyleAttrs.UNDERLINE);
+    }
+
+    private void toggleStyle(StyleAttribute<Boolean> attr) {
+        TextPos start = control.getAnchorPosition();
+        TextPos end = control.getCaretPosition();
+        if (start == null) {
+            return;
+        } else if (start.equals(end)) {
+            // apply to the whole paragraph
+            int ix = start.index();
+            start = new TextPos(ix, 0);
+            end = control.getEndOfParagraph(ix);
+        }
+
+        StyleAttrs a = control.getActiveStyleAttrs();
+        boolean on = !a.getBoolean(attr);
+        a = StyleAttrs.builder().set(attr, on).build();
+        control.applyStyle(start, end, a);
+        updateSourceStyles();
+    }
+
+    public void setTextStyle(TextStyle st) {
+        TextPos start = control.getAnchorPosition();
+        TextPos end = control.getCaretPosition();
+        if (start == null) {
+            return;
+        } else if (start.equals(end)) {
+            TextStyle cur = Styles.guessTextStyle(control.getActiveStyleAttrs());
+            if (cur == st) {
+                return;
+            }
+            // apply to the whole paragraph
+            int ix = start.index();
+            start = new TextPos(ix, 0);
+            end = control.getEndOfParagraph(ix);
+        }
+
+        StyleAttrs a = Styles.getStyleAttrs(st);
+        control.applyStyle(start, end, a);
+        updateSourceStyles();
+    }
+
+    private void updateSourceStyles() {
+        StyleAttrs a = getSourceStyleAttrs();
+        if (a != null) {
+            styles.set(a);
+
+            TextStyle st = Styles.guessTextStyle(a);
+            textStyle.set(st);
+        }
+    }
+
+    private StyleAttrs getSourceStyleAttrs() {
+        SelectionSegment sel = control.getSelection();
+        if ((sel == null) || (!sel.isCollapsed())) {
+            return null;
+        }
+        return control.getActiveStyleAttrs();
     }
 }

@@ -49,7 +49,6 @@ import jfx.incubator.scene.control.rich.ConfigurationParameters;
 import jfx.incubator.scene.control.rich.RichTextArea;
 import jfx.incubator.scene.control.rich.StyleHandlerRegistry;
 import jfx.incubator.scene.control.rich.StyleResolver;
-import jfx.incubator.scene.control.rich.TextPos;
 import jfx.incubator.scene.control.rich.model.StyleAttribute;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
 import jfx.incubator.scene.control.rich.model.StyledTextModel;
@@ -72,7 +71,6 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     private final VFlow vflow;
     private final ScrollBar vscroll;
     private final ScrollBar hscroll;
-    private final StyledTextModel.ChangeListener modelChangeListener;
 
     static {
         RichTextAreaSkinHelper.setAccessor(new RichTextAreaSkinHelper.Accessor() {
@@ -101,20 +99,6 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
 
         this.config = cnf;
         this.listenerHelper = new ListenerHelper();
-
-        modelChangeListener = new StyledTextModel.ChangeListener() {
-            @Override
-            public void eventTextUpdated(TextPos start, TextPos end, int top, int ins, int btm) {
-                handleTextUpdated(start, end, top, ins, btm);
-                // TODO do we need to reflow if useContentXX is on?
-            }
-
-            @Override
-            public void eventStyleUpdated(TextPos start, TextPos end) {
-                handleStyleUpdated(start, end);
-                // TODO do we need to reflow if useContentXX is on?
-            }
-        };
 
         vscroll = createVScrollBar();
         vscroll.setManaged(false);
@@ -243,20 +227,12 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
 
     private void handleModelChange(Object src, StyledTextModel old, StyledTextModel m) {
         if (old != null) {
-            old.removeChangeListener(modelChangeListener);
+            old.removeChangeListener(vflow);
         }
 
         if (m != null) {
-            m.addChangeListener(modelChangeListener);
+            m.addChangeListener(vflow);
         }
-    }
-
-    private void handleTextUpdated(TextPos start, TextPos end, int addedTop, int linesAdded, int addedBottom) {
-        vflow.handleTextUpdated(start, end, addedTop, linesAdded, addedBottom);
-    }
-
-    private void handleStyleUpdated(TextPos start, TextPos end) {
-        vflow.handleStyleUpdated(start, end);
     }
 
     private final ScrollBar createVScrollBar() {

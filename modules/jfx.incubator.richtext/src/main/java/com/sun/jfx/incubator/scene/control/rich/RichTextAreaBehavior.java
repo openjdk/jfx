@@ -30,6 +30,7 @@ package com.sun.jfx.incubator.scene.control.rich;
 import java.io.IOException;
 import java.text.Bidi;
 import java.text.BreakIterator;
+import java.util.function.BiFunction;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.collections.ObservableList;
@@ -63,7 +64,8 @@ import jfx.incubator.scene.control.rich.model.StyledInput;
 import jfx.incubator.scene.control.rich.model.StyledTextModel;
 
 /**
- * RichTextArea Behavior.
+ * This class provides the RichTextArea behavior by registering input mappings and
+ * implementing various event handlers.
  */
 public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
     private VFlow vflow;
@@ -95,21 +97,27 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         registerFunction(RichTextArea.Tags.CUT, this::cut);
         registerFunction(RichTextArea.Tags.DELETE, this::delete);
         registerFunction(RichTextArea.Tags.DELETE_PARAGRAPH, this::deleteParagraph);
+        registerFunction(RichTextArea.Tags.DELETE_PARAGRAPH_START, this::deleteParagraphStart);
+        registerFunction(RichTextArea.Tags.DELETE_WORD_NEXT_BEG, this::deleteWordNextBeg);
+        registerFunction(RichTextArea.Tags.DELETE_WORD_NEXT_END, this::deleteWordNextEnd);
+        registerFunction(RichTextArea.Tags.DELETE_WORD_PREVIOUS, this::deleteWordPrevious);
         registerFunction(RichTextArea.Tags.DESELECT, this::deselect);
         registerFunction(RichTextArea.Tags.FOCUS_NEXT, this::traverseNext);
         registerFunction(RichTextArea.Tags.FOCUS_PREVIOUS, this::traversePrevious);
         registerFunction(RichTextArea.Tags.INSERT_LINE_BREAK, this::insertLineBreak);
-        registerFunction(RichTextArea.Tags.TAB, this::insertTab);
+        registerFunction(RichTextArea.Tags.INSERT_TAB, this::insertTab);
         registerFunction(RichTextArea.Tags.MOVE_DOWN, this::moveDown);
         registerFunction(RichTextArea.Tags.MOVE_LEFT, this::moveLeft);
+        registerFunction(RichTextArea.Tags.MOVE_PARAGRAPH_DOWN, this::moveParagraphDown);
+        registerFunction(RichTextArea.Tags.MOVE_PARAGRAPH_UP, this::moveParagraphUp);
+        registerFunction(RichTextArea.Tags.MOVE_RIGHT, this::moveRight);
         registerFunction(RichTextArea.Tags.MOVE_TO_DOCUMENT_END, this::moveDocumentEnd);
         registerFunction(RichTextArea.Tags.MOVE_TO_DOCUMENT_START, this::moveDocumentStart);
         registerFunction(RichTextArea.Tags.MOVE_TO_PARAGRAPH_END, this::moveParagraphEnd);
         registerFunction(RichTextArea.Tags.MOVE_TO_PARAGRAPH_START, this::moveParagraphStart);
-        registerFunction(RichTextArea.Tags.MOVE_RIGHT, this::moveRight);
         registerFunction(RichTextArea.Tags.MOVE_UP, this::moveUp);
         registerFunction(RichTextArea.Tags.MOVE_WORD_NEXT, this::nextWord);
-        registerFunction(RichTextArea.Tags.MOVE_WORD_NEXT_END, this::endOfNextWord);
+        registerFunction(RichTextArea.Tags.MOVE_WORD_NEXT_END, this::nextWordEnd);
         registerFunction(RichTextArea.Tags.MOVE_WORD_LEFT, this::leftWord);
         registerFunction(RichTextArea.Tags.MOVE_WORD_PREVIOUS, this::previousWord);
         registerFunction(RichTextArea.Tags.MOVE_WORD_RIGHT, this::rightWord);
@@ -124,22 +132,26 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         registerFunction(RichTextArea.Tags.SELECT_PAGE_DOWN, this::selectPageDown);
         registerFunction(RichTextArea.Tags.SELECT_PAGE_UP, this::selectPageUp);
         registerFunction(RichTextArea.Tags.SELECT_PARAGRAPH, this::selectParagraph);
+        registerFunction(RichTextArea.Tags.SELECT_PARAGRAPH_DOWN, this::selectParagraphDown);
         registerFunction(RichTextArea.Tags.SELECT_PARAGRAPH_END, this::selectParagraphEnd);
         registerFunction(RichTextArea.Tags.SELECT_PARAGRAPH_START, this::selectParagraphStart);
+        registerFunction(RichTextArea.Tags.SELECT_PARAGRAPH_UP, this::selectParagraphUp);
         registerFunction(RichTextArea.Tags.SELECT_RIGHT, this::selectRight);
         registerFunction(RichTextArea.Tags.SELECT_TO_DOCUMENT_END, this::selectDocumentEnd);
         registerFunction(RichTextArea.Tags.SELECT_TO_DOCUMENT_START, this::selectDocumentStart);
         registerFunction(RichTextArea.Tags.SELECT_UP, this::selectUp);
         registerFunction(RichTextArea.Tags.SELECT_WORD, this::selectWord);
-        registerFunction(RichTextArea.Tags.SELECT_WORD_LEFT, this::selectLeftWord);
-        registerFunction(RichTextArea.Tags.SELECT_WORD_NEXT, this::selectNextWord);
-        registerFunction(RichTextArea.Tags.SELECT_WORD_NEXT_END, this::selectEndOfNextWord);
-        registerFunction(RichTextArea.Tags.SELECT_WORD_PREVIOUS, this::selectPreviousWord);
-        registerFunction(RichTextArea.Tags.SELECT_WORD_RIGHT, this::selectRightWord);
+        registerFunction(RichTextArea.Tags.SELECT_WORD_LEFT, this::selectWordLeft);
+        registerFunction(RichTextArea.Tags.SELECT_WORD_NEXT, this::selectWordNext);
+        registerFunction(RichTextArea.Tags.SELECT_WORD_NEXT_END, this::selectNextWordEnd);
+        registerFunction(RichTextArea.Tags.SELECT_WORD_PREVIOUS, this::selectWordPrevious);
+        registerFunction(RichTextArea.Tags.SELECT_WORD_RIGHT, this::selectWordRight);
         registerFunction(RichTextArea.Tags.UNDO, this::undo);
+
         // key mappings
         registerKey(KeyBinding.shortcut(KeyCode.A), RichTextArea.Tags.SELECT_ALL);
         registerKey(KeyCode.BACK_SPACE, RichTextArea.Tags.BACKSPACE);
+        registerKey(KeyBinding.shift(KeyCode.BACK_SPACE), RichTextArea.Tags.BACKSPACE);
         registerKey(KeyBinding.shortcut(KeyCode.C), RichTextArea.Tags.COPY);
         registerKey(KeyCode.COPY, RichTextArea.Tags.COPY);
         registerKey(KeyBinding.shortcut(KeyCode.D), RichTextArea.Tags.DELETE_PARAGRAPH);
@@ -162,7 +174,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         registerKey(KeyCode.PASTE, RichTextArea.Tags.PASTE);
         registerKey(KeyCode.RIGHT, RichTextArea.Tags.MOVE_RIGHT);
         registerKey(KeyBinding.shift(KeyCode.RIGHT), RichTextArea.Tags.SELECT_RIGHT);
-        registerKey(KeyCode.TAB, RichTextArea.Tags.TAB);
+        registerKey(KeyCode.TAB, RichTextArea.Tags.INSERT_TAB);
         registerKey(KeyBinding.ctrl(KeyCode.TAB), RichTextArea.Tags.FOCUS_NEXT);
         registerKey(KeyBinding.ctrlShift(KeyCode.TAB), RichTextArea.Tags.FOCUS_PREVIOUS);
         registerKey(KeyBinding.shift(KeyCode.TAB), RichTextArea.Tags.FOCUS_PREVIOUS);
@@ -175,22 +187,33 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         registerKey(KeyBinding.shortcut(KeyCode.Z), RichTextArea.Tags.UNDO);
 
         if (isMac()) {
+            registerKey(KeyBinding.option(KeyCode.BACK_SPACE), RichTextArea.Tags.DELETE_WORD_PREVIOUS);
+            registerKey(KeyBinding.shortcut(KeyCode.BACK_SPACE), RichTextArea.Tags.DELETE_PARAGRAPH_START);
+            registerKey(KeyBinding.option(KeyCode.DELETE), RichTextArea.Tags.DELETE_WORD_NEXT_END);
+            registerKey(KeyBinding.option(KeyCode.DOWN), RichTextArea.Tags.MOVE_PARAGRAPH_DOWN);
+            registerKey(KeyBinding.shiftOption(KeyCode.DOWN), RichTextArea.Tags.SELECT_PARAGRAPH_DOWN);
             registerKey(KeyBinding.shiftShortcut(KeyCode.DOWN), RichTextArea.Tags.SELECT_TO_DOCUMENT_END);
             registerKey(KeyBinding.shortcut(KeyCode.DOWN), RichTextArea.Tags.MOVE_TO_DOCUMENT_END);
             registerKey(KeyBinding.option(KeyCode.LEFT), RichTextArea.Tags.MOVE_WORD_LEFT);
-            registerKey(KeyBinding.with(KeyCode.LEFT).shift().option().build(), RichTextArea.Tags.SELECT_WORD_LEFT);
+            registerKey(KeyBinding.shiftOption(KeyCode.LEFT), RichTextArea.Tags.SELECT_WORD_LEFT);
             registerKey(KeyBinding.shiftShortcut(KeyCode.LEFT), RichTextArea.Tags.SELECT_PARAGRAPH_START);
             registerKey(KeyBinding.shortcut(KeyCode.LEFT), RichTextArea.Tags.MOVE_TO_PARAGRAPH_START);
             registerKey(KeyBinding.option(KeyCode.RIGHT), RichTextArea.Tags.MOVE_WORD_RIGHT);
-            registerKey(KeyBinding.with(KeyCode.RIGHT).shift().option().build(), RichTextArea.Tags.SELECT_WORD_RIGHT);
+            registerKey(KeyBinding.shiftOption(KeyCode.RIGHT), RichTextArea.Tags.SELECT_WORD_RIGHT);
             registerKey(KeyBinding.shiftShortcut(KeyCode.RIGHT), RichTextArea.Tags.SELECT_PARAGRAPH_END);
             registerKey(KeyBinding.shortcut(KeyCode.RIGHT), RichTextArea.Tags.MOVE_TO_PARAGRAPH_END);
             registerKey(KeyBinding.builder(KeyCode.TAB).ctrl().option().shift().build(), RichTextArea.Tags.FOCUS_NEXT);
+            registerKey(KeyBinding.option(KeyCode.UP), RichTextArea.Tags.MOVE_PARAGRAPH_UP);
+            registerKey(KeyBinding.shiftOption(KeyCode.UP), RichTextArea.Tags.SELECT_PARAGRAPH_UP);
             registerKey(KeyBinding.shiftShortcut(KeyCode.UP), RichTextArea.Tags.SELECT_TO_DOCUMENT_START);
             registerKey(KeyBinding.shortcut(KeyCode.UP), RichTextArea.Tags.MOVE_TO_DOCUMENT_START);
             registerKey(KeyBinding.with(KeyCode.Z).shift().command().build(), RichTextArea.Tags.REDO);
         } else {
             registerKey(KeyBinding.ctrl(KeyCode.BACK_SLASH), RichTextArea.Tags.DESELECT);
+            registerKey(KeyBinding.ctrl(KeyCode.BACK_SPACE), RichTextArea.Tags.DELETE_WORD_PREVIOUS);
+            registerKey(KeyBinding.ctrl(KeyCode.DELETE), RichTextArea.Tags.DELETE_WORD_NEXT_BEG);
+            registerKey(KeyBinding.ctrl(KeyCode.DOWN), RichTextArea.Tags.MOVE_PARAGRAPH_DOWN);
+            registerKey(KeyBinding.ctrlShift(KeyCode.DOWN), RichTextArea.Tags.SELECT_PARAGRAPH_DOWN);
             registerKey(KeyBinding.ctrl(KeyCode.H), RichTextArea.Tags.BACKSPACE);
             registerKey(KeyBinding.ctrl(KeyCode.HOME), RichTextArea.Tags.MOVE_TO_DOCUMENT_START);
             registerKey(KeyBinding.ctrlShift(KeyCode.HOME), RichTextArea.Tags.SELECT_TO_DOCUMENT_START);
@@ -202,6 +225,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             registerKey(KeyBinding.ctrlShift(KeyCode.LEFT), RichTextArea.Tags.SELECT_WORD_LEFT);
             registerKey(KeyBinding.ctrl(KeyCode.RIGHT), RichTextArea.Tags.MOVE_WORD_RIGHT);
             registerKey(KeyBinding.ctrlShift(KeyCode.RIGHT), RichTextArea.Tags.SELECT_WORD_RIGHT);
+            registerKey(KeyBinding.ctrl(KeyCode.UP), RichTextArea.Tags.MOVE_PARAGRAPH_UP);
+            registerKey(KeyBinding.ctrlShift(KeyCode.UP), RichTextArea.Tags.SELECT_PARAGRAPH_UP);
 
             if (isWindows()) {
                 registerKey(KeyBinding.ctrl(KeyCode.Y), RichTextArea.Tags.REDO);
@@ -493,40 +518,81 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
     }
 
     public void moveParagraphStart(RichTextArea control) {
-        paragraphStart(control, false);
+        moveCaret(control, false, this::paragraphStart);
     }
 
     public void moveParagraphEnd(RichTextArea control) {
-        paragraphEnd(control, false);
+        moveCaret(control, false, this::paragraphEnd);
     }
 
     public void selectParagraphStart(RichTextArea control) {
-        paragraphStart(control, true);
+        moveCaret(control, true, this::paragraphStart);
     }
 
     public void selectParagraphEnd(RichTextArea control) {
-        paragraphEnd(control, true);
+        moveCaret(control, true, this::paragraphEnd);
     }
 
-    private void paragraphStart(RichTextArea control, boolean extendSelection) {
-        TextPos p = control.getCaretPosition();
-        if (p != null) {
-            TextPos p2 = new TextPos(p.index(), 0);
-            // FIX extend selection does not work right
-            control.moveCaret(p2, extendSelection);
-            clearPhantomX();
+    public void moveParagraphDown(RichTextArea control) {
+        moveCaret(control, false, this::paragraphDown);
+    }
+
+    public void selectParagraphDown(RichTextArea control) {
+        moveCaret(control, true, this::paragraphDown);
+    }
+
+    public void moveParagraphUp(RichTextArea control) {
+        moveCaret(control, false, this::paragraphUp);
+    }
+
+    public void selectParagraphUp(RichTextArea control) {
+        moveCaret(control, true, this::paragraphUp);
+    }
+
+    private TextPos paragraphDown(RichTextArea control, TextPos caret) {
+        int ix = caret.index();
+        TextPos end = control.getEndOfParagraph(ix);
+        if (caret.isSameInsertionIndex(end)) {
+            ix++;
+            if (ix >= control.getParagraphCount()) {
+                return null;
+            }
+            return control.getEndOfParagraph(ix);
+        }
+        return end;
+    }
+
+    public TextPos paragraphUp(RichTextArea control, TextPos caret) {
+        int ix = caret.index();
+        TextPos p = new TextPos(ix, 0);
+        if (caret.isSameInsertionIndex(p)) {
+            --ix;
+            if (ix < 0) {
+                return null;
+            }
+            p = new TextPos(ix, 0);
+        }
+        return p;
+    }
+
+    private TextPos paragraphEnd(RichTextArea control, TextPos caret) {
+        int ix = caret.index();
+        return control.getEndOfParagraph(ix);
+    }
+
+    private void moveCaret(RichTextArea control, boolean extSelection, BiFunction<RichTextArea, TextPos, TextPos> h) {
+        TextPos caret = control.getCaretPosition();
+        if (caret != null) {
+            TextPos p = h.apply(control, caret);
+            if (p != null) {
+                clearPhantomX();
+                control.moveCaret(p, extSelection);
+            }
         }
     }
 
-    private void paragraphEnd(RichTextArea control, boolean extendSelection) {
-        TextPos p = control.getCaretPosition();
-        if (p != null) {
-            int ix = p.index();
-            TextPos end = control.getEndOfParagraph(ix);
-            // FIX extend selection does not work right
-            control.moveCaret(end, extendSelection);
-            clearPhantomX();
-        }
+    private TextPos paragraphStart(RichTextArea control, TextPos caret) {
+        return new TextPos(caret.index(), 0);
     }
 
     public void moveUp(RichTextArea control) {
@@ -802,39 +868,39 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
     public void deleteParagraph(RichTextArea control) {
         if (canEdit()) {
             SelInfo sel = sel();
-            if (sel == null) {
-                return;
+            if (sel != null) {
+                int ix0 = sel.getMin().index();
+                int ix1 = sel.getMax().index();
+    
+                TextPos p0 = new TextPos(ix0, 0);
+                TextPos p1 = clamp(new TextPos(ix1 + 1, 0));
+                control.getModel().replace(vflow, p0, p1, StyledInput.EMPTY, true);
+                clearPhantomX();
+                control.moveCaret(p0, false);
             }
-
-            int ix0 = sel.getMin().index();
-            int ix1 = sel.getMax().index();
-
-            TextPos p0 = new TextPos(ix0, 0);
-            TextPos p1 = clamp(new TextPos(ix1 + 1, 0));
-            control.getModel().replace(vflow, p0, p1, StyledInput.EMPTY, true);
-            control.moveCaret(p0, false);
-            clearPhantomX();
         }
+    }
+
+    public void deleteParagraphStart(RichTextArea control) {
+        deleteIgnoreSelection(control, this::paragraphStart);
     }
 
     protected void deleteSelection(RichTextArea control) {
         SelInfo sel = sel();
-        if (sel == null) {
-            return;
+        if (sel != null) {
+            TextPos start = sel.getMin();
+            TextPos end = sel.getMax();
+            control.getModel().replace(vflow, start, end, StyledInput.EMPTY, true);
+            clearPhantomX();
+            control.moveCaret(start, false);
         }
-
-        TextPos start = sel.getMin();
-        TextPos end = sel.getMax();
-        control.getModel().replace(vflow, start, end, StyledInput.EMPTY, true);
-        control.moveCaret(start, false);
-        clearPhantomX();
     }
 
     protected void deselect(RichTextArea control) {
         TextPos p = control.getCaretPosition();
         if (p != null) {
-            control.moveCaret(p, false);
             clearPhantomX();
+            control.moveCaret(p, false);
         }
     }
 
@@ -1079,7 +1145,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
      * also has the effect of clearing the selection.
      */
     public void previousWord(RichTextArea control) {
-        previousWord(control, false);
+        moveCaret(control, false, this::previousWord);
     }
 
     /** moves the caret to the beginning of the previos word (LTR) or next word (RTL) */
@@ -1097,15 +1163,15 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
      * also has the effect of clearing the selection.
      */
     public void nextWord(RichTextArea control) {
-        nextWord(control, false);
+        moveCaret(control, false, this::nextWordBeg);
     }
 
     /**
      * Moves the caret to the end of the next word. This function
      * also has the effect of clearing the selection.
      */
-    public void endOfNextWord(RichTextArea control) {
-        endOfNextWord(control, false);
+    public void nextWordEnd(RichTextArea control) {
+        moveCaret(control, false, this::nextWordEnd);
     }
 
     /**
@@ -1113,8 +1179,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
      * the selection to be cleared. Rather, the anchor stays put and the caretPosition is
      * moved to the beginning of previous word.
      */
-    public void selectPreviousWord(RichTextArea control) {
-        previousWord(control, true);
+    public void selectWordPrevious(RichTextArea control) {
+        moveCaret(control, true, this::previousWord);
     }
 
     /**
@@ -1122,8 +1188,16 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
      * the selection to be cleared. Rather, the anchor stays put and the caretPosition is
      * moved to the beginning of next word.
      */
-    public void selectNextWord(RichTextArea control) {
-        nextWord(control, true);
+    public void selectWordNext(RichTextArea control) {
+        moveCaret(control, true, this::nextWordBeg);
+    }
+
+    /**
+     * Moves the caret to the end of the next word. This does not cause
+     * the selection to be cleared.
+     */
+    public void selectNextWordEnd(RichTextArea control) {
+        moveCaret(control, true, this::nextWordEnd);
     }
 
     /**
@@ -1132,8 +1206,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
      * the selection to be cleared. Rather, the anchor stays put and the caretPosition is
      * moved to the beginning of previous word.
      */
-    public void selectLeftWord(RichTextArea control) {
-        previousWord(control, true);
+    public void selectWordLeft(RichTextArea control) {
+        leftWord(control, true);
     }
 
     /**
@@ -1142,77 +1216,35 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
      * the selection to be cleared. Rather, the anchor stays put and the caretPosition is
      * moved to the beginning of next word.
      */
-    public void selectRightWord(RichTextArea control) {
-        nextWord(control, true);
-    }
-
-    /**
-     * Moves the caret to the end of the next word. This does not cause
-     * the selection to be cleared.
-     */
-    public void selectEndOfNextWord(RichTextArea control) {
-        endOfNextWord(control, true);
+    public void selectWordRight(RichTextArea control) {
+        rightWord(control, true);
     }
 
     protected void leftWord(RichTextArea control, boolean extendSelection) {
         if (isRTLText()) {
-            nextWord(control, extendSelection);
+            if (isWindows()) {
+                moveCaret(control, extendSelection, this::nextWordBeg);
+            } else {
+                moveCaret(control, extendSelection, this::nextWordEnd);
+            }
         } else {
-            previousWord(control, extendSelection);
+            moveCaret(control, extendSelection, this::previousWord);
         }
     }
 
     protected void rightWord(RichTextArea control, boolean extendSelection) {
         if (isRTLText()) {
-            previousWord(control, extendSelection);
+            moveCaret(control, extendSelection, this::previousWord);
         } else {
-            nextWord(control, extendSelection);
-        }
-    }
-
-    protected void previousWord(RichTextArea control, boolean extendSelection) {
-        TextPos caret = control.getCaretPosition();
-        if (caret != null) {
-            clearPhantomX();
-
-            TextPos p = previousWordFrom(caret);
-            if (p != null) {
-                control.moveCaret(p, extendSelection);
+            if (isWindows()) {
+                moveCaret(control, extendSelection, this::nextWordBeg);
+            } else {
+                moveCaret(control, extendSelection, this::nextWordEnd);
             }
         }
     }
 
-    protected void nextWord(RichTextArea control, boolean extendSelection) {
-        TextPos caret = control.getCaretPosition();
-        if (caret != null) {
-            clearPhantomX();
-
-// TODO
-//            if (isMac() || isLinux()) {
-//                textInputControl.endOfNextWord();
-//            } else {
-//                textInputControl.nextWord();
-//            }
-            TextPos p = nextWordFrom(control, caret);
-            if (p != null) {
-                control.moveCaret(p, extendSelection);
-            }
-        }
-    }
-
-    protected void endOfNextWord(RichTextArea control, boolean extendSelection) {
-        TextPos caret = control.getCaretPosition();
-        if (caret != null) {
-            clearPhantomX();
-
-            TextPos p = endOfNextWordFrom(caret);
-            if (p != null) {
-                control.moveCaret(p, extendSelection);
-            }
-        }
-    }
-
-    protected TextPos previousWordFrom(TextPos pos) {
+    protected TextPos previousWord(RichTextArea control, TextPos pos) {
         int index = pos.index();
         int offset = pos.offset();
         BreakIterator br = null;
@@ -1250,7 +1282,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         }
     }
 
-    protected TextPos nextWordFrom(RichTextArea control, TextPos pos) {
+    // skips empty paragraphs
+    protected TextPos nextWordBeg(RichTextArea control, TextPos pos) {
         int index = pos.index();
         int offset = pos.offset();
         boolean skipEmpty = true;
@@ -1300,34 +1333,51 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         }
     }
 
-    // FIX fix to navigate over multiple paragraphs similarly to nextWordFrom()
-    protected TextPos endOfNextWordFrom(TextPos caret) {
-        int index = caret.index();
-        String text = getPlainText(index);
-        if ((text == null) || (text.length() == 0)) {
-            return null;
-        }
+    // skips empty paragraphs
+    protected TextPos nextWordEnd(RichTextArea control, TextPos pos) {
+        int index = pos.index();
+        int offset = pos.offset();
+        boolean skipEmpty = true;
 
-        BreakIterator br = BreakIterator.getWordInstance();
-        br.setText(text);
-
-        int len = text.length();
-        int offset = caret.offset();
-        int last = br.following(Utils.clamp(0, offset, len));
-        int current = br.next();
-
-        // skip the non-word region, then move/select to the end of the word.
-        while (current != BreakIterator.DONE) {
-            for (int off = last; off <= current; off++) {
-                if (!isLetterOrDigit(text, off, len)) {
-                    return new TextPos(index, off);
-                }
+        for (;;) {
+            TextPos end = control.getEndTextPos();
+            // this could be a isSameOrAfter(index, off) method in TextPos
+            if ((index == end.index()) && (offset >= end.offset())) {
+                return end;
+            } else if (index > end.index()) {
+                return end;
             }
-            last = current;
-            current = br.next();
-        }
 
-        return new TextPos(index, len);
+            String text = getPlainText(index);
+            if ((text == null) || (text.length() == 0)) {
+                if(skipEmpty) {
+                    index++;
+                }
+                return new TextPos(index, 0);
+            }
+
+            BreakIterator br = BreakIterator.getWordInstance();
+            br.setText(text);
+
+            int len = text.length();
+            int last = br.following(Utils.clamp(0, offset, len));
+            int current = br.next();
+
+            // skip the non-word region, then move/select to the end of the word.
+            while (current != BreakIterator.DONE) {
+                for (int off = last; off <= current; off++) {
+                    if (!isLetterOrDigit(text, off, len)) {
+                        return new TextPos(index, off);
+                    }
+                }
+                last = current;
+                current = br.next();
+            }
+            
+            index++;
+            offset = 0;
+            skipEmpty = false;
+        }
     }
 
     public void redo(RichTextArea control) {
@@ -1392,5 +1442,30 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         // ignore the case when 'c' is a high surrogate without the low surrogate
         int c = Character.codePointAt(text, ix);
         return Character.isLetterOrDigit(c);
+    }
+
+    public void deleteWordNextBeg(RichTextArea control) {
+        deleteIgnoreSelection(control, this::nextWordBeg);
+    }
+
+    public void deleteWordNextEnd(RichTextArea control) {
+        deleteIgnoreSelection(control, this::nextWordEnd);
+    }
+
+    public void deleteWordPrevious(RichTextArea control) {
+        deleteIgnoreSelection(control, this::previousWord);
+    }
+
+    private void deleteIgnoreSelection(RichTextArea control, BiFunction<RichTextArea,TextPos,TextPos> getter) {
+        TextPos caret = control.getCaretPosition();
+        if (caret != null) {
+            TextPos p = getter.apply(control, caret);
+            if (p != null) {
+                control.clearSelection();
+                clearPhantomX();
+                p = control.replaceText(caret, p, "", true);
+                control.select(p);
+            }
+        }
     }
 }

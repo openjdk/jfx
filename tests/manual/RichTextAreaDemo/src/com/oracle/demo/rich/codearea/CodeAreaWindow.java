@@ -70,7 +70,7 @@ public class CodeAreaWindow extends Stage {
 
         setScene(scene);
         setTitle(
-            "CodeArea Demo  JFX:" + System.getProperty("javafx.runtime.version") +
+            "CodeArea Tester  JFX:" + System.getProperty("javafx.runtime.version") +
             "  JDK:" + System.getProperty("java.version")
         );
         setWidth(1200);

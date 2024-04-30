@@ -90,6 +90,14 @@ public class SelectionSegment {
         return max;
     }
 
+    /**
+     * Returns true if the anchor and the caret are at the same position.
+     * @return true if the anchor and the caret are at the same position
+     */
+    public boolean isCollapsed() {
+        return min.equals(max);
+    }
+
     @Override
     public String toString() {
         return "SelectionSegment{" + min + ", " + max + ", caretAtMin=" + caretAtMin + "}";

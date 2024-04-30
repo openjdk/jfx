@@ -25,8 +25,6 @@
 package com.oracle.demo.rich.editor;
 
 import java.util.List;
-import jfx.incubator.scene.control.input.KeyBinding;
-import jfx.incubator.scene.control.rich.RichTextArea;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
@@ -34,7 +32,10 @@ import javafx.scene.control.ToolBar;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Font;
+import com.oracle.demo.rich.common.TextStyle;
 import com.oracle.demo.rich.util.FX;
+import jfx.incubator.scene.control.input.KeyBinding;
+import jfx.incubator.scene.control.rich.RichTextArea;
 
 /**
  * Main Panel.
@@ -45,6 +46,7 @@ public class RichEditorDemoPane extends BorderPane {
     private final ComboBox<String> fontName;
     private final ComboBox<Integer> fontSize;
     private final ColorPicker textColor;
+    private final ComboBox<TextStyle> textStyle;
 
     public RichEditorDemoPane() {
         FX.name(this, "RichEditorDemoPane");
@@ -101,8 +103,19 @@ public class RichEditorDemoPane extends BorderPane {
             actions.setTextColor(textColor.getValue());
         });
 
+        textStyle = new ComboBox<>();
+        textStyle.getItems().setAll(TextStyle.values());
+        textStyle.setConverter(TextStyle.converter());
+        textStyle.setOnAction((ev) -> {
+            updateTextStyle();
+        });
+
         setTop(createToolBar());
         setCenter(control);
+
+        actions.textStyleProperty().addListener((s,p,c) -> {
+            setTextStyle(c);
+        });
     }
 
     private ToolBar createToolBar() {
@@ -116,10 +129,11 @@ public class RichEditorDemoPane extends BorderPane {
         // TODO bullet
         // TODO space left (indent left, indent right)
         // TODO line spacing
-        FX.toggleButton(t, "B", "Bold Text", actions.bold);
-        FX.toggleButton(t, "I", "Italicize Text", actions.italic);
-        FX.toggleButton(t, "S", "Strike Through Text", actions.strikeThrough);
-        FX.toggleButton(t, "U", "Underline Text", actions.underline);
+        FX.toggleButton(t, "𝐁", "Bold text", actions.bold);
+        FX.toggleButton(t, "𝐼", "Bold text", actions.italic);
+        FX.toggleButton(t, "S\u0336", "Strike through text", actions.strikeThrough);
+        FX.toggleButton(t, "U\u0332", "Underline text", actions.underline);
+        FX.add(t, textStyle);
         FX.space(t);
         FX.toggleButton(t, "W", "Wrap Text", actions.wrapText);
         // TODO line numbers
@@ -148,5 +162,16 @@ public class RichEditorDemoPane extends BorderPane {
 
     private static List<String> collectFonts() {
         return Font.getFamilies();
+    }
+
+    private void updateTextStyle() {
+        TextStyle st = textStyle.getSelectionModel().getSelectedItem();
+        if (st != null) {
+            actions.setTextStyle(st);
+        }
+    }
+
+    public void setTextStyle(TextStyle v) {
+        textStyle.setValue(v);
     }
 }

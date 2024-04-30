@@ -45,13 +45,17 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.input.DataFormat;
+import com.oracle.demo.rich.common.Styles;
+import com.oracle.demo.rich.common.TextStyle;
 import com.oracle.demo.rich.notebook.data.CellInfo;
 import com.oracle.demo.rich.notebook.data.Notebook;
 import com.oracle.demo.rich.util.FX;
 import com.oracle.demo.rich.util.FxAction;
 import jfx.incubator.scene.control.rich.CodeArea;
 import jfx.incubator.scene.control.rich.RichTextArea;
+import jfx.incubator.scene.control.rich.SelectionSegment;
 import jfx.incubator.scene.control.rich.TextPos;
+import jfx.incubator.scene.control.rich.model.ContentChange;
 import jfx.incubator.scene.control.rich.model.StyleAttribute;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
 import jfx.incubator.scene.control.rich.model.StyledTextModel;
@@ -68,13 +72,11 @@ public class Actions {
     public final FxAction newDocument = new FxAction(this::newDocument);
     public final FxAction open = new FxAction(this::open);
     public final FxAction save = new FxAction(this::save);
-
     // style
     public final FxAction bold = new FxAction(this::bold);
     public final FxAction italic = new FxAction(this::italic);
     public final FxAction strikeThrough = new FxAction(this::strikeThrough);
     public final FxAction underline = new FxAction(this::underline);
-
     // editing
     public final FxAction copy = new FxAction(this::copy);
     public final FxAction cut = new FxAction(this::cut);
@@ -83,7 +85,6 @@ public class Actions {
     public final FxAction redo = new FxAction(this::redo);
     public final FxAction selectAll = new FxAction(this::selectAll);
     public final FxAction undo = new FxAction(this::undo);
-
     // cells
     public final FxAction copyCell = new FxAction(this::copyCell);
     public final FxAction cutCell = new FxAction(this::cutCell);
@@ -109,13 +110,14 @@ public class Actions {
     private final ScriptEngine engine;
     private final ObservableList<CellPane> cellPanes = FXCollections.observableArrayList();
     private final ReadOnlyObjectWrapper<CellPane> activeCellPane = new ReadOnlyObjectWrapper<>();
-    private final ReadOnlyBooleanWrapper modified2 = new ReadOnlyBooleanWrapper();
+    private final ReadOnlyBooleanWrapper modified = new ReadOnlyBooleanWrapper();
     private final ReadOnlyObjectWrapper<File> file = new ReadOnlyObjectWrapper<>();
     private final SimpleBooleanProperty executing = new SimpleBooleanProperty();
     private final SimpleObjectProperty<RichTextArea> editor = new SimpleObjectProperty<>();
     private final SimpleObjectProperty<EditorType> editorType = new SimpleObjectProperty<>(EditorType.NONE);
     private final SimpleObjectProperty<StyleAttrs> styles = new SimpleObjectProperty<>();
     private final SimpleObjectProperty<TextStyle> textStyle = new SimpleObjectProperty<>();
+    private final BooleanBinding disabledStyleEditing;
     private int sequenceNumber;
 
     public Actions(NotebookWindow w) {
@@ -138,7 +140,7 @@ public class Actions {
             executing
         );
 
-        BooleanBinding disabledStyleEditing = Bindings.createBooleanBinding(
+        disabledStyleEditing = Bindings.createBooleanBinding(
             () -> {
                 if (isExecuting()) {
                     return true;
@@ -243,16 +245,15 @@ public class Actions {
            }
         });
 
-        StyledTextModel.ChangeListener changeListener = new StyledTextModel.ChangeListener() {
+        StyledTextModel.Listener changeListener = new StyledTextModel.Listener() {
             @Override
-            public void eventTextUpdated(TextPos start, TextPos end, int top, int added, int bottom) {
-                handleEdit();
-            }
-
-            @Override
-            public void eventStyleUpdated(TextPos start, TextPos end) {
-                if (editorType.get() == EditorType.TEXT) {
+            public void onContentChange(ContentChange ch) {
+                if (ch.isEdit()) {
                     handleEdit();
+                } else {
+                    if (editorType.get() == EditorType.TEXT) {
+                        handleEdit();
+                    }
                 }
             }
         };
@@ -321,10 +322,12 @@ public class Actions {
 
     private void updateSourceStyles() {
         StyleAttrs a = getSourceStyleAttrs();
-        styles.set(a);
+        if (a != null) {
+            styles.set(a);
 
-        TextStyle st = Styles.guessTextStyle(a);
-        textStyle.set(st);
+            TextStyle st = Styles.guessTextStyle(a);
+            textStyle.set(st);
+        }
     }
 
     public final ObjectProperty<TextStyle> textStyleProperty() {
@@ -336,6 +339,10 @@ public class Actions {
         EditorType t = getEditorType(r);
         switch (t) {
         case TEXT:
+            SelectionSegment sel = r.getSelection();
+            if ((sel == null) || (!sel.isCollapsed())) {
+                return null;
+            }
             return r.getActiveStyleAttrs();
         }
         return null;
@@ -354,16 +361,15 @@ public class Actions {
     }
 
     public final ReadOnlyBooleanProperty modifiedProperty() {
-        return modified2.getReadOnlyProperty();
+        return modified.getReadOnlyProperty();
     }
 
     public final boolean isModified() {
-        return modified2.get();
+        return modified.get();
     }
 
     private void setModified(boolean on) {
-        // TODO rename
-        modified2.set(on);
+        modified.set(on);
     }
 
     public final ReadOnlyObjectProperty<File> fileNameProperty() {
@@ -793,5 +799,9 @@ public class Actions {
             cellPanes.remove(ix);
             cellPanes.addAll(ix, ps);
         });
+    }
+
+    public BooleanBinding disabledStyleEditingProperty() {
+        return disabledStyleEditing;
     }
 }

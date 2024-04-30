@@ -58,9 +58,9 @@ public class SingleSelectionModel implements SelectionModel {
     }
 
     @Override
-    public void setSelection(Marker an, Marker ca) {
+    public void setSelection(Marker anchor, Marker caret) {
         // TODO clamp selection to document start/end?
-        SelectionSegment seg = new SelectionSegment(an, ca);
+        SelectionSegment seg = new SelectionSegment(anchor, caret);
         setSelectionSegment(seg);
     }
 
@@ -69,6 +69,18 @@ public class SingleSelectionModel implements SelectionModel {
         Marker a = anchor();
         if (a == null) {
             a = pos;
+        } else {
+            SelectionSegment sel = getSelection();
+            if(pos.compareTo(sel.getMin()) < 0) {
+                // extend before
+                a = sel.getMax();
+            } else if(pos.compareTo(sel.getMax()) > 0) {
+                // extend after
+                a = sel.getMin();
+            } else {
+                // extend from anchor to pos
+                a = sel.getAnchor();
+            }
         }
         setSelection(a, pos);
     }

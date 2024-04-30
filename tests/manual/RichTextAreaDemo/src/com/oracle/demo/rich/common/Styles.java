@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.oracle.demo.rich.notebook;
+package com.oracle.demo.rich.common;
 
 import jfx.incubator.scene.control.rich.model.StyleAttribute;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
@@ -83,9 +83,6 @@ public class Styles {
     }
 
     private static boolean match(StyleAttrs attrs, StyleAttrs builtin, StyleAttribute<?>[] keys) {
-        if (!attrs.getAttributes().equals(builtin.getAttributes())) {
-            return false;
-        }
         for (StyleAttribute<?> k : keys) {
             Object v1 = attrs.get(k);
             Object v2 = builtin.get(k);

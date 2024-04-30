@@ -477,11 +477,12 @@ public class EditableRichTextModel extends StyledTextModel {
             } else {
                 // spans multiple segments
                 // first segment
-                if (off0 > 0) {
+                if (off0 >= 0) {
                     RSegment seg = get(ix0);
                     if (seg.removeRegion(off0, Integer.MAX_VALUE)) {
                         remove(ix0);
                         ix1--;
+                        ct--;
                     } else {
                         ix0++;
                     }
@@ -493,7 +494,6 @@ public class EditableRichTextModel extends StyledTextModel {
                     RSegment seg = get(ix1);
                     if (seg.removeRegion(0, off1)) {
                         remove(ix1);
-                        ix1--;
                     }
                 }
                 // remove in-between segments

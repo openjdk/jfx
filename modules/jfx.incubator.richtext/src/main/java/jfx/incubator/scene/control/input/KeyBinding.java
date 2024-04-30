@@ -174,6 +174,16 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
     }
 
     /**
+     * Utility method creates a KeyBinding corresponding to a shift-option-code key press.
+     *
+     * @param code the key code
+     * @return the KeyBinding
+     */
+    public static KeyBinding shiftOption(KeyCode code) {
+        return create(code, KCondition.KEY_PRESSED, KCondition.SHIFT, KCondition.OPTION);
+    }
+
+    /**
      * Utility method creates a KeyBinding corresponding to a shift-shortcut-code key press.
      *
      * @param code the key code

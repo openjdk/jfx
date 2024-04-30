@@ -26,9 +26,9 @@
 package com.oracle.demo.rich.notebook;
 
 import java.io.IOException;
-import javafx.beans.property.StringProperty;
 import jfx.incubator.scene.control.rich.CodeTextModel;
 import jfx.incubator.scene.control.rich.TextPos;
+import jfx.incubator.scene.control.rich.model.ContentChange;
 import jfx.incubator.scene.control.rich.model.StyledOutput;
 
 /**
@@ -38,14 +38,12 @@ public class CodeCellTextModel extends CodeTextModel {
     private boolean modified;
 
     public CodeCellTextModel() {
-        addChangeListener(new ChangeListener() {
+        addChangeListener(new Listener() {
             @Override
-            public void eventTextUpdated(TextPos start, TextPos end, int top, int linesAdded, int bottom) {
-                setModified(true);
-            }
-
-            @Override
-            public void eventStyleUpdated(TextPos start, TextPos end) {
+            public void onContentChange(ContentChange ch) {
+                if (ch.isEdit()) {
+                    setModified(true);
+                }
             }
         });
     }

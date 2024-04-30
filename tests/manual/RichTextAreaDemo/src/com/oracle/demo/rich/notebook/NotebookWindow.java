@@ -86,8 +86,8 @@ public class NotebookWindow extends Stage {
         });
         updateTitle();
 
-        //setNotebook(Demo.createSingleCell());
-        setNotebook(Demo.createNotebookExample());
+        setNotebook(Demo.createSingleCodeCell());
+        //setNotebook(Demo.createNotebookExample());
     }
 
     private MenuBar createMenu() {

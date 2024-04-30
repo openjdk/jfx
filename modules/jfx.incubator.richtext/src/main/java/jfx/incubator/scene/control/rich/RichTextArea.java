@@ -148,6 +148,14 @@ public class RichTextArea extends Control {
         public static final FunctionTag DELETE = new FunctionTag();
         /** Deletes paragraph at the caret, or selected paragraphs */
         public static final FunctionTag DELETE_PARAGRAPH = new FunctionTag();
+        /** Deletes text from the caret to paragraph start, ignoring selection. */
+        public static final FunctionTag DELETE_PARAGRAPH_START = new FunctionTag();
+        /** Deletes empty paragraph or text to the beginning of the next word. */
+        public static final FunctionTag DELETE_WORD_NEXT_BEG = new FunctionTag();
+        /** Deletes empty paragraph or text to the end of the next word. */
+        public static final FunctionTag DELETE_WORD_NEXT_END = new FunctionTag();
+        /** Deletes (multiple) empty paragraphs or text to the beginning of the previous word. */
+        public static final FunctionTag DELETE_WORD_PREVIOUS = new FunctionTag();
         /** Clears any existing selection by moving anchor to the caret position */
         public static final FunctionTag DESELECT = new FunctionTag();
         /** Focus the next focusable node */
@@ -160,6 +168,10 @@ public class RichTextArea extends Control {
         public static final FunctionTag MOVE_DOWN = new FunctionTag();
         /** Moves the caret one symbol to the left. */
         public static final FunctionTag MOVE_LEFT = new FunctionTag();
+        /** Moves the caret to the end of the current paragraph, or, if already there, to the end of the next paragraph. */
+        public static final FunctionTag MOVE_PARAGRAPH_DOWN = new FunctionTag();
+        /** Moves the caret to the start of the current paragraph, or, if already there, to the start of the previous paragraph. */
+        public static final FunctionTag MOVE_PARAGRAPH_UP = new FunctionTag();
         /** Moves the caret one symbol to the right. */
         public static final FunctionTag MOVE_RIGHT = new FunctionTag();
         /** Moves the caret to after the last character of the text. */
@@ -174,7 +186,7 @@ public class RichTextArea extends Control {
         public static final FunctionTag MOVE_UP = new FunctionTag();
         /** Moves the caret one word left (previous word if LTR, next word if RTL). */
         public static final FunctionTag MOVE_WORD_LEFT = new FunctionTag();
-        /** Moves the caret to the beginning of next word. */
+        /** Moves the caret to the beginning of the next word, or next paragraph if at the start of an empty paragraph. */
         public static final FunctionTag MOVE_WORD_NEXT = new FunctionTag();
         /** Moves the caret to the end of the next word. */
         public static final FunctionTag MOVE_WORD_NEXT_END = new FunctionTag();
@@ -204,10 +216,14 @@ public class RichTextArea extends Control {
         public static final FunctionTag SELECT_PAGE_UP = new FunctionTag();
         /** Selects the current paragraph. */
         public static final FunctionTag SELECT_PARAGRAPH = new FunctionTag();
+        /** Extends selection to the end of the current paragraph, or, if already there, to the end of the next paragraph. */
+        public static final FunctionTag SELECT_PARAGRAPH_DOWN = new FunctionTag();
         /** Extends selection to the paragraph end. */
         public static final FunctionTag SELECT_PARAGRAPH_END = new FunctionTag();
         /** Extends selection to the paragraph start. */
         public static final FunctionTag SELECT_PARAGRAPH_START = new FunctionTag();
+        /** Extends selection to the start of the current paragraph, or, if already there, to the start of the previous paragraph. */
+        public static final FunctionTag SELECT_PARAGRAPH_UP = new FunctionTag();
         /** Extends selection one symbol to the right. */
         public static final FunctionTag SELECT_RIGHT = new FunctionTag();
         /** Extends selection to the end of the document. */
@@ -229,7 +245,7 @@ public class RichTextArea extends Control {
         /** Extends selection to the next word (LTR) or previous word (RTL). */
         public static final FunctionTag SELECT_WORD_RIGHT = new FunctionTag();
         /** Inserts a tab symbol at the caret (editable), or transfer focus to the next focusable node. */
-        public static final FunctionTag TAB = new FunctionTag();
+        public static final FunctionTag INSERT_TAB = new FunctionTag();
         /** If possible, undoes the last modification. */
         public static final FunctionTag UNDO = new FunctionTag();
 
@@ -389,8 +405,10 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Indicates whether this RichTextArea can be edited by the user.
+     * Indicates whether this RichTextArea can be edited by the user, provided the model is also editable.
+     * Changing the value of this property with a view-only model or a null model has no effect.
      * @return the editable property
+     * @see {@link #canEdit()}
      * @defaultValue true
      */
     public final BooleanProperty editableProperty() {
@@ -657,7 +675,7 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Extends selection from the existing anchor to the specified position.
+     * Extends selection to the specified position.
      * @param pos the text position
      */
     public void extendSelection(TextPos pos) {
@@ -806,6 +824,43 @@ public class RichTextArea extends Control {
     }
 
     /**
+     * Deletes text from the caret to paragraph start, ignoring selection.
+     * <p>
+     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     */
+    public void deleteParagraphStart() {
+        execute(Tags.DELETE_PARAGRAPH_START);
+    }
+
+    /**
+     * Deletes empty paragraph or text to the beginning of the next word.
+     * <p>
+     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     */
+    public void deleteWordNextBeg() {
+        execute(Tags.DELETE_WORD_NEXT_BEG);
+    }
+
+    /**
+     * Deletes empty paragraph or text to the end of the next word.
+     * <p>
+     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     */
+    public void deleteWordNextEnd() {
+        execute(Tags.DELETE_WORD_NEXT_END);
+    }
+
+    /**
+     * Deletes (multiple) empty paragraphs or text to the beginning of the previous word.
+     * This method has a side effect of clearing an existing selection prior to the delete operation.
+     * <p>
+     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     */
+    public void deleteWordPrevious() {
+        execute(Tags.DELETE_WORD_PREVIOUS);
+    }
+
+    /**
      * Clears any existing selection by moving anchor to the caret position.
      * <p>
      * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
@@ -829,7 +884,7 @@ public class RichTextArea extends Control {
      * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
      */
     public void insertTab() {
-        execute(Tags.TAB);
+        execute(Tags.INSERT_TAB);
     }
 
     /**
@@ -887,6 +942,42 @@ public class RichTextArea extends Control {
     }
 
     /**
+     * Moves the caret to the end of the current paragraph, or, if already there, to the end of the next paragraph.
+     * <p>
+     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     */
+    public void moveParagraphDown() {
+        execute(Tags.MOVE_PARAGRAPH_DOWN);
+    }
+
+    /**
+     * Moves the caret to the start of the current paragraph, or, if already there, to the start of the previous paragraph.
+     * <p>
+     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     */
+    public void moveParagraphUp() {
+        execute(Tags.MOVE_PARAGRAPH_UP);
+    }
+
+    /**
+     * Extends selection to the end of the current paragraph, or, if already there, to the end of the next paragraph.
+     * <p>
+     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     */
+    public void selectParagraphDown() {
+        execute(Tags.SELECT_PARAGRAPH_DOWN);
+    }
+
+    /**
+     * Extends selection to the start of the current paragraph, or, if already there, to the start of the previous paragraph.
+     * <p>
+     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     */
+    public void selectParagraphUp() {
+        execute(Tags.SELECT_PARAGRAPH_UP);
+    }
+
+    /**
      * Moves the caret to the next symbol, clearing an existing selection.
      * <p>
      * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
@@ -910,7 +1001,7 @@ public class RichTextArea extends Control {
      * <p>
      * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
      */
-    public void moveLeftWord() {
+    public void moveWordLeft() {
         execute(Tags.MOVE_WORD_LEFT);
     }
 
@@ -920,7 +1011,7 @@ public class RichTextArea extends Control {
      * <p>
      * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
      */
-    public void moveRightWord() {
+    public void moveWordRight() {
         execute(Tags.MOVE_WORD_RIGHT);
     }
 
@@ -929,7 +1020,7 @@ public class RichTextArea extends Control {
      * <p>
      * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
      */
-    public void movePreviousWord() {
+    public void moveWordPrevious() {
         execute(Tags.MOVE_WORD_PREVIOUS);
     }
 
@@ -938,7 +1029,7 @@ public class RichTextArea extends Control {
      * <p>
      * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
      */
-    public void moveNextWord() {
+    public void moveWordNext() {
         execute(Tags.MOVE_WORD_NEXT);
     }
 
@@ -947,7 +1038,7 @@ public class RichTextArea extends Control {
      * <p>
      * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
      */
-    public void moveEndOfNextWord() {
+    public void moveWordNextEnd() {
         execute(Tags.MOVE_WORD_NEXT_END);
     }
 
@@ -1139,7 +1230,7 @@ public class RichTextArea extends Control {
      * <p>
      * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
      */
-    public void selectLeftWord() {
+    public void selectWordLeft() {
         execute(Tags.SELECT_WORD_LEFT);
     }
 
@@ -1152,7 +1243,7 @@ public class RichTextArea extends Control {
      * <p>
      * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
      */
-    public void selectRightWord() {
+    public void selectWordRight() {
         execute(Tags.SELECT_WORD_RIGHT);
     }
 
@@ -1163,7 +1254,7 @@ public class RichTextArea extends Control {
      * <p>
      * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
      */
-    public void selectNextWord() {
+    public void selectWordNext() {
         execute(Tags.SELECT_WORD_NEXT);
     }
 
@@ -1174,7 +1265,7 @@ public class RichTextArea extends Control {
      * <p>
      * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
      */
-    public void selectPreviousWord() {
+    public void selectWordPrevious() {
         execute(Tags.SELECT_WORD_PREVIOUS);
     }
 
@@ -1183,7 +1274,7 @@ public class RichTextArea extends Control {
      * <p>
      * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
      */
-    public void selectEndOfNextWord() {
+    public void selectWordNextEnd() {
         execute(Tags.SELECT_WORD_NEXT_END);
     }
 
@@ -1214,7 +1305,7 @@ public class RichTextArea extends Control {
     }
 
     public final boolean isUndoable() {
-        return undoable == null ? false : undoable.get();
+        return undoableProperty().get();
     }
 
     /**
@@ -1234,7 +1325,7 @@ public class RichTextArea extends Control {
     }
 
     public final boolean isRedoable() {
-        return redoable == null ? false : redoable.get();
+        return redoableProperty().get();
     }
 
     /**

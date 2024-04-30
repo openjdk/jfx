@@ -32,6 +32,7 @@ import javafx.scene.control.ToolBar;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
+import com.oracle.demo.rich.common.TextStyle;
 import com.oracle.demo.rich.util.FX;
 
 /**
@@ -64,10 +65,10 @@ public class NotebookPane extends BorderPane {
         textStyle = new ComboBox<>();
         textStyle.getItems().setAll(TextStyle.values());
         textStyle.setConverter(TextStyle.converter());
-        // TODO textStyle.valueProperty().bind(actions.textStyleProperty());
         textStyle.setOnAction((ev) -> {
             updateTextStyle();
         });
+        textStyle.disableProperty().bind(actions.disabledStyleEditingProperty());
 
         ScrollPane scroll = new ScrollPane(cellContainer);
         scroll.setFitToWidth(true);

@@ -68,16 +68,18 @@ import jfx.incubator.scene.control.rich.RichTextArea;
 import jfx.incubator.scene.control.rich.SideDecorator;
 import jfx.incubator.scene.control.rich.StyleResolver;
 import jfx.incubator.scene.control.rich.TextPos;
+import jfx.incubator.scene.control.rich.model.ContentChange;
 import jfx.incubator.scene.control.rich.model.RichParagraph;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
 import jfx.incubator.scene.control.rich.model.StyledSegment;
+import jfx.incubator.scene.control.rich.model.StyledTextModel;
 import jfx.incubator.scene.control.rich.skin.RichTextAreaSkin;
 
 /**
  * Virtual text flow deals with TextCells, scroll bars, and conversion
  * between the model and the screen coordinates.
  */
-public class VFlow extends Pane implements StyleResolver {
+public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listener {
     private final RichTextAreaSkin skin;
     private final RichTextArea control;
     private final ConfigurationParameters config;
@@ -1343,28 +1345,48 @@ public class VFlow extends Pane implements StyleResolver {
         }
     }
 
-    // TODO this could be more advanced to reduce the amount of re-computation and re-flow
-    public void handleTextUpdated(TextPos start, TextPos end, int addedTop, int linesAdded, int addedBottom) {
-        // change origin if start position is before the top line
-//        Origin origin = getOrigin();
-//        if (start.index() < origin.index()) {
-//            origin = new Origin(start.index(), 0.0);
-//            ...
-//            setOrigin(origin);
-//        }
-
+    @Override
+    public void onContentChange(ContentChange ch) {
+        if (ch.isEdit()) {
+            Origin newOrigin = computeNewOrigin(ch);
+            if (newOrigin != null) {
+                setOrigin(newOrigin);
+            }
+        }
+        // TODO this could be more advanced to reduce the amount of re-computation and re-flow
         // TODO clear cache >= start, update layout
         cellCache.clear();
         // TODO rebuild from start.lineIndex()
         requestLayout();
     }
 
-    // TODO this implementation might be more advanced to reduce the amount of re-computation and re-flow
-    public void handleStyleUpdated(TextPos start, TextPos end) {
-        // TODO clear cache >= start, update layout
-        cellCache.clear();
-        // TODO rebuild from start.lineIndex()
-        requestLayout();
+    private Origin computeNewOrigin(ContentChange ch) {
+        int startIndex = ch.getStart().index();
+        int endIndex = ch.getEnd().index();
+        // TODO store position of the last visible symbol, use that to compare with 'start' to avoid reflow
+        Origin or = getOrigin();
+        int lineDelta = endIndex - startIndex + ch.getLinesAdded();
+
+        // jump to start if the old origin is within the changed range 
+        if ((startIndex <= or.index()) && (or.index() < (startIndex + lineDelta))) {
+            return new Origin(startIndex, 0);
+        }
+
+        // adjust index only if the end precedes the origin
+        if (lineDelta != 0) {
+            if (
+                (endIndex < or.index()) ||
+                (
+                    (endIndex == or.index()) &&
+                    (ch.getEnd().offset() < or.offset())
+                )
+            )
+            {
+                return new Origin(or.index() + lineDelta, or.offset());
+            }
+        }
+
+        return null;
     }
 
     @Override

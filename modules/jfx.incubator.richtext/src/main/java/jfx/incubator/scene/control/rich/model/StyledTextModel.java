@@ -71,7 +71,7 @@ import jfx.incubator.scene.control.rich.TextPos;
  * These methods decompose the main modification into operations with individual paragraphs
  * and delegate these to subclasses.
  * <p>
- * At the end of this process, an event is sent to all the {@link ChangeListener}s, followed by the
+ * At the end of this process, an event is sent to all the {@link Listener}s, followed by the
  * skin requesting the updated paragraphs when required.
  *
  * <h2>Creating a Paragraph</h2>
@@ -92,25 +92,12 @@ public abstract class StyledTextModel {
     /**
      * Receives information about modifications of the model.
      */
-    public interface ChangeListener {
+    public interface Listener {
         /**
-         * Indicates a change in the model text.
-         * The listeners are updated *after* the corresponding changes have been made to the model.
-         *
-         * @param start start of the affected text block
-         * @param end end of the affected text block
-         * @param charsAddedTop number of characters inserted on the same line as start
-         * @param linesAdded the number of paragraphs inserted between start and end
-         * @param charsAddedBottom number of characters inserted on the same line as end
+         * Informs the listener that the model content has changed.
+         * @param ch the change
          */
-        public void eventTextUpdated(TextPos start, TextPos end, int charsAddedTop, int linesAdded, int charsAddedBottom);
-
-        /**
-         * Indicates a change in styles only, with no change in the model text.
-         * @param start start of the affected text block
-         * @param end end of the affected text block
-         */
-        public void eventStyleUpdated(TextPos start, TextPos end);
+        public void onContentChange(ContentChange ch);
     }
 
     /**
@@ -245,7 +232,7 @@ public abstract class StyledTextModel {
     static { ModuleUtil.incubatorWarning(); }
 
     // TODO should it hold WeakReferences?
-    private final CopyOnWriteArrayList<ChangeListener> listeners = new CopyOnWriteArrayList();
+    private final CopyOnWriteArrayList<Listener> listeners = new CopyOnWriteArrayList();
     private final HashMap<FHKey,FHPriority> handlers = new HashMap<>(2);
     private final Markers markers = new Markers();
     private final UndoableChange head = UndoableChange.createHead();
@@ -261,19 +248,19 @@ public abstract class StyledTextModel {
     }
 
     /**
-     * Adds a {@link ChangeListener} to this model.
+     * Adds a {@link Listener} to this model.
      * @param listener a non-null listener
      */
-    public void addChangeListener(StyledTextModel.ChangeListener listener) {
+    public void addChangeListener(StyledTextModel.Listener listener) {
         listeners.add(listener);
     }
 
     /**
-     * Removes a {@link ChangeListener} from this model.
+     * Removes a {@link Listener} from this model.
      * This method does nothing if this listener has never been added.
      * @param listener a non-null listener
      */
-    public void removeChangeListener(StyledTextModel.ChangeListener listener) {
+    public void removeChangeListener(StyledTextModel.Listener listener) {
         listeners.remove(listener);
     }
 
@@ -360,9 +347,10 @@ public abstract class StyledTextModel {
      * @param charsBottom number of characters added after any inserted paragraphs
      */
     protected void fireChangeEvent(TextPos start, TextPos end, int charsTop, int linesAdded, int charsBottom) {
+        ContentChange ch = ContentChange.ofEdit(start, end, charsTop, linesAdded, charsBottom);
         markers.update(start, end, charsTop, linesAdded, charsBottom);
-        for (ChangeListener li : listeners) {
-            li.eventTextUpdated(start, end, charsTop, linesAdded, charsBottom);
+        for (Listener li : listeners) {
+            li.onContentChange(ch);
         }
     }
 
@@ -373,8 +361,9 @@ public abstract class StyledTextModel {
      * @param end end position, must be greater than the start position
      */
     protected void fireStyleChangeEvent(TextPos start, TextPos end) {
-        for (ChangeListener li : listeners) {
-            li.eventStyleUpdated(start, end);
+        ContentChange ch = ContentChange.ofStyleChange(start, end);
+        for (Listener li : listeners) {
+            li.onContentChange(ch);
         }
     }
 
@@ -562,6 +551,7 @@ public abstract class StyledTextModel {
      */
     public TextPos replace(StyleResolver resolver, TextPos start, TextPos end, String text, boolean allowUndo) {
         if (isUserEditable()) {
+            // TODO pick the lowest from start,end.  Possibly add (end) argument to getStyleAttributes?
             StyleAttrs a = getStyleAttrs(resolver, start);
             StyledInput in = StyledInput.of(text, a);
             return replace(resolver, start, end, in, allowUndo);

@@ -71,7 +71,7 @@ public class ScriptEngine {
                 Completed.
                 """;
         } else if (src.contains("json")) {
-            JsonContentWithAsyncUpdate c = new JsonContentWithAsyncUpdate(1_000_000_000);
+            JsonContentWithAsyncUpdate c = new JsonContentWithAsyncUpdate(10_000_000);
             return new CodeTextModel(c) {
                 {
                     c.setUpdater((ix) -> {

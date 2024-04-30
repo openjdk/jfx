@@ -53,8 +53,7 @@ public interface SelectionModel {
     public void setSelection(Marker anchor, Marker caret);
 
     /**
-     * Replaces the existing selection, if any, with a new one
-     * from the anchor to the specified position.
+     * Extends selection to the specified position.
      * @param pos the new caret position
      */
     public void extendSelection(Marker pos);

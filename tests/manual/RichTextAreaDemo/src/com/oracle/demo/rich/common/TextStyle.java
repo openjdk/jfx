@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.oracle.demo.rich.notebook;
+package com.oracle.demo.rich.common;
 
 import javafx.util.StringConverter;
 
