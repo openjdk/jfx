@@ -231,11 +231,10 @@ Please also follow these formatting guidelines:
 
 ### Building and testing
 
-JDK 17 (at a minimum) is required to build OpenJFX. You must have the JDK
+JDK 21 (at a minimum) is required to build OpenJFX. You must have the JDK
 installed on your system
 with the environment variable `JAVA_HOME` referencing the path to Java home for
 your JDK installation. By default, tests use the same runtime as `JAVA_HOME`.
-Currently OpenJFX will build and run on JDK 17 through JDK 21.
 
 It is possible to develop in any major Java IDE (Eclipse, IntelliJ, NetBeans). IDEs can automatically configure projects based on Gradle setup.
 

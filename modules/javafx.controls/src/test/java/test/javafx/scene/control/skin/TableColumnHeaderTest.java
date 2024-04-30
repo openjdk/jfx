@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,8 +30,11 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.scene.Node;
+import javafx.scene.control.ContentDisplay;
+import javafx.scene.control.Label;
 import javafx.scene.control.Skin;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -40,6 +43,7 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 
+import javafx.scene.text.Text;
 import org.junit.Before;
 import org.junit.After;
 import org.junit.Test;
@@ -82,8 +86,6 @@ public class TableColumnHeaderTest {
         Toolkit tk = Toolkit.getToolkit();
 
         tk.firePulse();
-        //Force the column to have default font, otherwise font Amble is applied and mess with header width size
-        column.setStyle("-fx-font: System;");
         firstColumnHeader = VirtualFlowTestUtils.getTableColumnHeader(tableView, column);
     }
 
@@ -281,6 +283,90 @@ public class TableColumnHeaderTest {
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
         double width = column.getWidth();
         assertTrue(width > 0);
+    }
+
+    /**
+     * We expect that the css of the label is processed after the resizing took place,
+     * since it is needed to correctly measure the size.
+     */
+    @Test
+    public void testResizeColumnToFitContentCssIsApplied() {
+        Label label = TableColumnHeaderShim.getLabel(firstColumnHeader);
+        label.setStyle("-fx-font-size: 24px;");
+        firstColumnHeader.getTableColumn().setText("longlonglonglong");
+
+        assertEquals(12, label.getFont().getSize(), 0);
+
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+
+        assertEquals(24, label.getFont().getSize(), 0);
+    }
+
+    /**
+     * A table column with a graphic {@link Text} should be bigger than without.
+     */
+    @Test
+    public void testResizeColumnToFitContentWithGraphicText() {
+        TableColumnBase<?, ?> tableColumn = firstColumnHeader.getTableColumn();
+
+        tableColumn.setText("longlonglonglonglonglonglonglong");
+        tableColumn.setGraphic(new Text("longlonglonglong"));
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+
+        double widthWithGraphic = tableColumn.getWidth();
+
+        tableColumn.setGraphic(null);
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+
+        double width = tableColumn.getWidth();
+
+        assertTrue(widthWithGraphic > width);
+    }
+
+    /**
+     * A table column with a graphic {@link Label} should be bigger than without.
+     */
+    @Test
+    public void testResizeColumnToFitContentWithGraphicLabel() {
+        TableColumnBase<?, ?> tableColumn = firstColumnHeader.getTableColumn();
+
+        tableColumn.setText("longlonglonglonglonglonglonglong");
+        tableColumn.setGraphic(new Label("longlonglonglong"));
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+
+        double widthWithGraphic = tableColumn.getWidth();
+
+        tableColumn.setGraphic(null);
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+
+        double width = tableColumn.getWidth();
+
+        assertTrue(widthWithGraphic > width);
+    }
+
+    /**
+     * The content display should also be taken into consideration when measuring the width.
+     * See also: <a href="https://bugs.openjdk.org/browse/JDK-8186188">JDK-8186188</a>
+     */
+    @Test
+    public void testResizeColumnToFitContentWithGraphicAlignment() {
+        TableColumnBase<?, ?> tableColumn = firstColumnHeader.getTableColumn();
+
+        tableColumn.setText("longlonglonglonglonglonglonglong");
+        tableColumn.setGraphic(new Text("longlonglonglong"));
+
+        Label label = TableColumnHeaderShim.getLabel(firstColumnHeader);
+
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+
+        double widthWithGraphic = tableColumn.getWidth();
+
+        label.setContentDisplay(ContentDisplay.BOTTOM);
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+
+        double width = tableColumn.getWidth();
+
+        assertTrue(widthWithGraphic > width);
     }
 
     private TableRow<Person> createCustomRow(TableView<Person> tableView) {

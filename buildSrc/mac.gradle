@@ -190,7 +190,8 @@ MAC.glass.compiler = compiler
 MAC.glass.ccFlags = [ccFlags,
     "-DGL_SILENCE_DEPRECATION",
     "-DMACOS_MIN_VERSION_MAJOR=$macOSMinVersionMajor",
-    "-DMACOS_MIN_VERSION_MINOR=$macOSMinVersionMinor"].flatten()
+    "-DMACOS_MIN_VERSION_MINOR=$macOSMinVersionMinor",
+    "-Werror"].flatten()
 MAC.glass.linker = linker
 MAC.glass.linkFlags = [linkFlags].flatten()
 MAC.glass.lib = "glass"

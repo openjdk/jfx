@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1958,18 +1958,19 @@ public class TableView<S> extends Control {
         }
     }
 
-
     /* *************************************************************************
      *                                                                         *
      * Support Interfaces                                                      *
      *                                                                         *
      **************************************************************************/
 
-     /**
-      * An immutable wrapper class for use in the TableView
+    /**
+     * An immutable wrapper class for use in the TableView
      * {@link TableView#columnResizePolicyProperty() column resize} functionality.
-      * @since JavaFX 2.0
-      */
+     *
+     * @param <S> the type of the objects contained within the TableView items list
+     * @since JavaFX 2.0
+     */
      public static class ResizeFeatures<S> extends ResizeFeaturesBase<S> {
         private TableView<S> table;
 
@@ -2030,6 +2031,8 @@ public class TableView<S> extends Control {
     /**
      * A simple extension of the {@link SelectionModel} abstract class to
      * allow for special support for TableView controls.
+     *
+     * @param <S> the type of the item contained within the TableView
      * @since JavaFX 2.0
      */
     public static abstract class TableViewSelectionModel<S> extends TableSelectionModel<S> {
@@ -3199,6 +3202,7 @@ public class TableView<S> extends Control {
      * A {@link FocusModel} with additional functionality to support the requirements
      * of a TableView control.
      *
+     * @param <S> the type of the item contained within the TableView
      * @see TableView
      * @since JavaFX 2.0
      */

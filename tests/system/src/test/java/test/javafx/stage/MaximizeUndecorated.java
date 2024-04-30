@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,10 +24,7 @@
  */
 package test.javafx.stage;
 
-import static org.junit.Assume.assumeTrue;
-
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Group;
@@ -35,14 +32,10 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
-
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import com.sun.javafx.PlatformUtil;
-
 import test.util.Util;
 
 public class MaximizeUndecorated {
@@ -72,7 +65,7 @@ public class MaximizeUndecorated {
 
     @AfterClass
     public static void teardown() {
-        Util.shutdown(stage);
+        Util.shutdown();
     }
 
     @Test

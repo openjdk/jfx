@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -212,7 +212,7 @@ public class ScrollPane extends Control {
     }
     /**
      * The current horizontal scroll position of the ScrollPane. This value
-     * may be set by the application to scroll the view programatically.
+     * may be set by the application to scroll the view programmatically.
      * The ScrollPane will update this value whenever the viewport is
      * scrolled or panned by the user. This value must always be within
      * the range of {@link #hminProperty hmin} to {@link #hmaxProperty hmax}. When {@link #hvalueProperty hvalue}
@@ -242,7 +242,7 @@ public class ScrollPane extends Control {
     }
     /**
      * The current vertical scroll position of the ScrollPane. This value
-     * may be set by the application to scroll the view programatically.
+     * may be set by the application to scroll the view programmatically.
      * The ScrollPane will update this value whenever the viewport is
      * scrolled or panned by the user. This value must always be within
      * the range of {@link #vminProperty vmin} to {@link #vmaxProperty vmax}. When {@link #vvalueProperty vvalue}

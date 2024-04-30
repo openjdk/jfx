@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,16 +50,14 @@ import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-
 
 public class HelloTabPane extends Application {
 
@@ -182,6 +180,7 @@ public class HelloTabPane extends Application {
                 ToggleButton tb = new ToggleButton("Show scroll arrows");
                 tb.setSelected(showScrollArrows);
                 tb.selectedProperty().addListener(new InvalidationListener() {
+                    @Override
                     public void invalidated(Observable ov) {
                         showScrollArrows = !showScrollArrows;
                     }
@@ -192,6 +191,7 @@ public class HelloTabPane extends Application {
                 ToggleButton tb = new ToggleButton("Show Tab Menu Button");
                 tb.setSelected(showTabMenu);
                 tb.selectedProperty().addListener(new InvalidationListener() {
+                    @Override
                     public void invalidated(Observable ov) {
                         showTabMenu = !showTabMenu;
                     }
@@ -217,6 +217,7 @@ public class HelloTabPane extends Application {
                 final ToggleButton button = new ToggleButton(policy.name());
                 button.setToggleGroup(closingPolicy);
                 button.selectedProperty().addListener(new InvalidationListener() {
+                    @Override
                     public void invalidated(Observable ov) {
                         tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.valueOf(button.getText()));
                     }
@@ -226,6 +227,7 @@ public class HelloTabPane extends Application {
 
             final ToggleButton rotateGraphics = new ToggleButton("Rotate Graphics");
             rotateGraphics.selectedProperty().addListener(new InvalidationListener() {
+                @Override
                     public void invalidated(Observable ov) {
                     tabPane.setRotateGraphic(rotateGraphics.isSelected());
                 }
@@ -249,6 +251,7 @@ public class HelloTabPane extends Application {
                 final ToggleButton tb = new ToggleButton("Show Labels");
                 tb.setSelected(true);
                 tb.selectedProperty().addListener(new InvalidationListener() {
+                    @Override
                     public void invalidated(Observable ov) {
                         if (tb.isSelected()) {
                             tab1.setText("Tab 1");
@@ -266,6 +269,7 @@ public class HelloTabPane extends Application {
             {
                 final ToggleButton tb = new ToggleButton("Big Graphic 1");
                 tb.selectedProperty().addListener(new InvalidationListener() {
+                    @Override
                     public void invalidated(Observable ov) {
                         Image image;
                         if (tb.isSelected()) {
@@ -283,6 +287,7 @@ public class HelloTabPane extends Application {
             {
                 final ToggleButton tb = new ToggleButton("Big Graphic 2");
                 tb.selectedProperty().addListener(new InvalidationListener() {
+                    @Override
                     public void invalidated(Observable ov) {
                         Image image;
                         if (tb.isSelected()) {
@@ -300,6 +305,7 @@ public class HelloTabPane extends Application {
             {
                 final ToggleButton tb = new ToggleButton("Big Graphic 3");
                 tb.selectedProperty().addListener(new InvalidationListener() {
+                    @Override
                     public void invalidated(Observable ov) {
                         Image image;
                         if (tb.isSelected()) {
@@ -328,12 +334,14 @@ public class HelloTabPane extends Application {
         tabPane.getTabs().add(emptyTab);
 
         emptyTab.setOnSelectionChanged(new EventHandler<Event>() {
+            @Override
             public void handle(Event t) {
                 System.out.println("Empty tab selected");
             }
         });
 
         emptyTab.setOnClosed(new EventHandler<Event>() {
+            @Override
             public void handle(Event t) {
                 System.out.println("Empty tab closed");
             }

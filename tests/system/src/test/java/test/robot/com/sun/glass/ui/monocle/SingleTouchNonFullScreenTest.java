@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,17 +25,18 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLogShim;
-import test.robot.com.sun.glass.ui.monocle.TestApplication;
-import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
-import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
-import javafx.geometry.Rectangle2D;
-import javafx.scene.input.TouchEvent;
-import org.junit.*;
-import org.junit.runners.Parameterized;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import javafx.geometry.Rectangle2D;
+import javafx.scene.input.TouchEvent;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runners.Parameterized;
+import com.sun.glass.ui.monocle.TestLogShim;
+import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
+import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
 
 public class SingleTouchNonFullScreenTest extends ParameterizedTestBase {
 
@@ -57,6 +58,7 @@ public class SingleTouchNonFullScreenTest extends ParameterizedTestBase {
             this.y2 = y2;
         }
 
+        @Override
         public String toString() {
             return "TestCase[stage bounds=("
                     + stageBounds.getMinX()
