@@ -742,7 +742,12 @@
 {
     IMLOG("finishInputMethodComposition called");
     [self unmarkText];
-    [self.inputContext discardMarkedText];
+    // If we call discardMarkedText on an input context that is not
+    // the current one the IM will get into a persistent state where
+    // it will not call setMarkedText or firstRectForCharacterRange.
+    if (self.inputContext == NSTextInputContext.currentInputContext) {
+        [self.inputContext discardMarkedText];
+    }
 }
 
 /*
