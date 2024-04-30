@@ -121,7 +121,7 @@ public class Actions {
         control.caretPositionProperty().addListener((x) -> {
             handleCaret();
         });
-        
+
         control.selectionProperty().addListener((p) -> {
             updateSourceStyles();
         });

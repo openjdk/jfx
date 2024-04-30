@@ -871,7 +871,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             if (sel != null) {
                 int ix0 = sel.getMin().index();
                 int ix1 = sel.getMax().index();
-    
+
                 TextPos p0 = new TextPos(ix0, 0);
                 TextPos p1 = clamp(new TextPos(ix1 + 1, 0));
                 control.getModel().replace(vflow, p0, p1, StyledInput.EMPTY, true);
@@ -1373,7 +1373,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 last = current;
                 current = br.next();
             }
-            
+
             index++;
             offset = 0;
             skipEmpty = false;

@@ -110,7 +110,7 @@ public class TestEditableRichTextModel {
         try {
             EditableRichTextModel m = new EditableRichTextModel();
             RichTextFormatHandler h = new RichTextFormatHandler();
-    
+
             // set initial text
             if (initial != null) {
                 StyledInput in = h.createStyledInput(initial);
@@ -122,9 +122,9 @@ public class TestEditableRichTextModel {
                 String s = wr.toString();
                 Assertions.assertEquals(initial, s, "problem setting initial text");
             }
-    
+
             op.accept(m);
-    
+
             // check output
             {
                 StringWriter wr = new StringWriter();

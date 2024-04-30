@@ -1367,7 +1367,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         Origin or = getOrigin();
         int lineDelta = endIndex - startIndex + ch.getLinesAdded();
 
-        // jump to start if the old origin is within the changed range 
+        // jump to start if the old origin is within the changed range
         if ((startIndex <= or.index()) && (or.index() < (startIndex + lineDelta))) {
             return new Origin(startIndex, 0);
         }
