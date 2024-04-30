@@ -165,8 +165,7 @@ public class DndBasic extends Application {
         return new Group(source, labels);
     }
 
-    private Group createTarget(TransferMode[] modes)
-    {
+    private Group createTarget(TransferMode[] modes) {
         Text title = modesToText("Destination", modes);
         Text available = new Text("");
         Text result = new Text("");
