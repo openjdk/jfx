@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,35 +24,37 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
-import com.oracle.tools.fx.monkey.util.FX;
-import com.oracle.tools.fx.monkey.util.OptionPane;
-import com.oracle.tools.fx.monkey.util.TestPaneBase;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollBar;
+import javafx.scene.control.skin.ScrollBarSkin;
 import javafx.scene.layout.VBox;
+import com.oracle.tools.fx.monkey.util.FX;
+import com.oracle.tools.fx.monkey.util.HasSkinnable;
+import com.oracle.tools.fx.monkey.util.OptionPane;
+import com.oracle.tools.fx.monkey.util.TestPaneBase;
 
 /**
- * ScrollBar Page
+ * ScrollBar Page.
  */
-public class ScrollBarPage extends TestPaneBase {
-    private ScrollBar scroll;
+public class ScrollBarPage extends TestPaneBase implements HasSkinnable {
+    private ScrollBar control;
     private Label status;
     private static Long[] VALUES = {
         0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L
     };
 
     public ScrollBarPage() {
-        FX.name(this, "ScrollBarPage");
+        super("ScrollBarPage");
 
-        scroll = new ScrollBar();
+        control = new ScrollBar();
 
         ComboBox<Long> min = new ComboBox<>();
         FX.name(min, "min");
         min.getItems().setAll(VALUES);
         min.getSelectionModel().selectedItemProperty().addListener((s, p, c) -> {
             int v = parse(min);
-            scroll.setMin(v);
+            control.setMin(v);
         });
 
         ComboBox<Long> val = new ComboBox<>();
@@ -60,7 +62,7 @@ public class ScrollBarPage extends TestPaneBase {
         val.getItems().setAll(VALUES);
         val.getSelectionModel().selectedItemProperty().addListener((s, p, c) -> {
             int v = parse(val);
-            scroll.setValue(v);
+            control.setValue(v);
         });
 
         ComboBox<Long> visible = new ComboBox<>();
@@ -68,7 +70,7 @@ public class ScrollBarPage extends TestPaneBase {
         visible.getItems().setAll(VALUES);
         visible.getSelectionModel().selectedItemProperty().addListener((s, p, c) -> {
             int v = parse(visible);
-            scroll.setVisibleAmount(v);
+            control.setVisibleAmount(v);
         });
 
         ComboBox<Long> max = new ComboBox<>();
@@ -76,35 +78,31 @@ public class ScrollBarPage extends TestPaneBase {
         max.getItems().setAll(VALUES);
         max.getSelectionModel().selectedItemProperty().addListener((s, p, c) -> {
             int v = parse(max);
-            scroll.setMax(v);
+            control.setMax(v);
         });
 
         OptionPane p = new OptionPane();
-        p.label("Min:");
-        p.option(min);
-        p.label("Value:");
-        p.option(val);
-        p.label("Visible:");
-        p.option(visible);
-        p.label("Max:");
-        p.option(max);
+        p.option("Min:", min);
+        p.option("Value:", val);
+        p.option("Visible:", visible);
+        p.option("Max:", max);
 
         status = new Label();
 
-        scroll.minProperty().addListener((s, pr, c) -> {
+        control.minProperty().addListener((s, pr, c) -> {
             updateStatus();
         });
-        scroll.valueProperty().addListener((s, pr, c) -> {
+        control.valueProperty().addListener((s, pr, c) -> {
             updateStatus();
         });
-        scroll.visibleAmountProperty().addListener((s, pr, c) -> {
+        control.visibleAmountProperty().addListener((s, pr, c) -> {
             updateStatus();
         });
-        scroll.maxProperty().addListener((s, pr, c) -> {
+        control.maxProperty().addListener((s, pr, c) -> {
             updateStatus();
         });
 
-        VBox b = new VBox(scroll, status);
+        VBox b = new VBox(control, status);
         b.setSpacing(5);
 
         setContent(b);
@@ -116,17 +114,27 @@ public class ScrollBarPage extends TestPaneBase {
         max.getSelectionModel().select(10L);
     }
 
-    protected int parse(ComboBox<Long> c) {
+    private int parse(ComboBox<Long> c) {
         Long v = c.getSelectionModel().getSelectedItem();
         return (v == null) ? 0 : v.intValue();
     }
 
-    protected void updateStatus() {
+    private void updateStatus() {
         status.setText(
-            "min=" + scroll.getMin() +
-            " value=" + scroll.getValue() +
-            " visible=" + scroll.getVisibleAmount() +
-            " max=" + scroll.getMax()
+            "min=" + control.getMin() +
+            " value=" + control.getValue() +
+            " visible=" + control.getVisibleAmount() +
+            " max=" + control.getMax()
         );
+    }
+
+    @Override
+    public void nullSkin() {
+        control.setSkin(null);
+    }
+
+    @Override
+    public void newSkin() {
+        control.setSkin(new ScrollBarSkin(control));
     }
 }

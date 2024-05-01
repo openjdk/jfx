@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -69,10 +69,10 @@ inline void D3DUtils_SetIdentityMatrix(D3DMATRIX *m) {
 
 // static
 HRESULT
-D3DContext::CreateInstance(IDirect3D9 *pd3d9, IDirect3D9Ex *pd3d9Ex, UINT adapter, bool isVsyncEnabled, D3DContext **ppCtx)
+D3DContext::CreateInstance(IDirect3D9Ex *pd3d9, UINT adapter, bool isVsyncEnabled, D3DContext **ppCtx)
 {
     HRESULT res;
-    *ppCtx = new D3DContext(pd3d9, pd3d9Ex, adapter);
+    *ppCtx = new D3DContext(pd3d9, adapter);
     if (FAILED(res = (*ppCtx)->InitContext(isVsyncEnabled))) {
         delete *ppCtx;
         *ppCtx = NULL;
@@ -80,14 +80,12 @@ D3DContext::CreateInstance(IDirect3D9 *pd3d9, IDirect3D9Ex *pd3d9Ex, UINT adapte
     return res;
 }
 
-D3DContext::D3DContext(IDirect3D9 *pd3d, IDirect3D9Ex *pd3dEx, UINT adapter)
+D3DContext::D3DContext(IDirect3D9Ex *pd3d9, UINT adapter)
 {
     TraceLn(NWT_TRACE_INFO, "D3DContext::D3DContext");
-    TraceLn1(NWT_TRACE_VERBOSE, "  pd3d=0x%x", pd3d);
-    pd3dObject = pd3d;
-    pd3dObjectEx = pd3dEx;
+    TraceLn1(NWT_TRACE_VERBOSE, "  pd3d9=0x%x", pd3d9);
+    pd3dObject = pd3d9;
     pd3dDevice = NULL;
-    pd3dDeviceEx = NULL;
     adapterOrdinal = adapter;
     defaulResourcePool = D3DPOOL_SYSTEMMEM;
 
@@ -163,7 +161,6 @@ int D3DContext::release() {
         SAFE_RELEASE(textureCache[i].texture);
     }
     SAFE_RELEASE(pd3dDevice);
-    SAFE_RELEASE(pd3dDeviceEx);
 
     if (phongShader) {
         delete phongShader;
@@ -629,29 +626,32 @@ HRESULT D3DContext::setDeviceParametersFor3D() {
     return res;
 }
 
-/*
- * Note: this method assumes that pIndices is not null
- */
-static HRESULT fillQuadIndices(IDirect3DIndexBuffer9 *pIndices, int maxQuads) {
-    short * data = 0;
-    HRESULT hr = pIndices->Lock(0, maxQuads * 6 * sizeof(short), (void **)&data, 0);
-    if (SUCCEEDED(hr) && data) {
-        for (int i = 0; i != maxQuads; ++i) {
-            int vtx = i * 4;
-            int idx = i * 6;
-            data[idx + 0] = vtx + 0;
-            data[idx + 1] = vtx + 1;
-            data[idx + 2] = vtx + 2;
-            data[idx + 3] = vtx + 2;
-            data[idx + 4] = vtx + 1;
-            data[idx + 5] = vtx + 3;
+HRESULT D3DContext::createIndexBuffer() {
+    RETURN_STATUS_IF_NULL(pd3dDevice, S_FALSE);
+    HRESULT hr = pd3dDevice->CreateIndexBuffer(sizeof(short) * 6 * MAX_BATCH_QUADS,
+        D3DUSAGE_WRITEONLY, D3DFMT_INDEX16, getResourcePool(), &pIndices, 0);
+    // fill index buffer
+    if (hr == D3D_OK && pIndices) {
+        short* data = 0;
+        hr = pIndices->Lock(0, 0, (void **)&data, 0);
+        if (SUCCEEDED(hr) && data) {
+            for (int i = 0; i < MAX_BATCH_QUADS; i++) {
+                int vtx = i * 4;
+                int idx = i * 6;
+                data[idx + 0] = vtx + 0;
+                data[idx + 1] = vtx + 1;
+                data[idx + 2] = vtx + 2;
+                data[idx + 3] = vtx + 2;
+                data[idx + 4] = vtx + 1;
+                data[idx + 5] = vtx + 3;
+            }
+            hr = pIndices->Unlock();
         }
-        hr = pIndices->Unlock();
     }
     return hr;
 }
 
-HRESULT D3DContext::InitDevice(IDirect3DDevice9 *pd3dDevice)
+HRESULT D3DContext::InitDevice(IDirect3DDevice9Ex *pd3dDevice)
 {
 #if defined PERF_COUNTERS
     stats.clear();
@@ -699,11 +699,7 @@ HRESULT D3DContext::InitDevice(IDirect3DDevice9 *pd3dDevice)
 //    RETURN_STATUS_IF_FAILED(res);
 
     if (pIndices == NULL) {
-        res = pd3dDevice->CreateIndexBuffer(sizeof(short) * 6 * MAX_BATCH_QUADS,
-            D3DUSAGE_WRITEONLY, D3DFMT_INDEX16, getResourcePool(), &pIndices, 0);
-        if (pIndices) {
-            res = fillQuadIndices(pIndices, MAX_BATCH_QUADS);
-        }
+        res = createIndexBuffer();
         RETURN_STATUS_IF_FAILED(res);
     }
 //    res = pd3dDevice->SetIndices(pIndices);
@@ -736,16 +732,14 @@ HRESULT D3DContext::InitDevice(IDirect3DDevice9 *pd3dDevice)
 HRESULT
 D3DContext::TestCooperativeLevel()
 {
-    TraceLn2(NWT_TRACE_INFO,
-             "D3DContext::testCooperativeLevel pd3dDevice = 0x%x, pd3dDeviceEx = 0x%x",
-             pd3dDevice, pd3dDeviceEx);
+    TraceLn1(NWT_TRACE_INFO,
+             "D3DContext::CheckDeviceState pd3dDevice = 0x%x",
+             pd3dDevice);
 
     RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
 
     //TODO: call CheckDeviceState only if Present fails
-    HRESULT res = pd3dDeviceEx ?
-        pd3dDeviceEx->CheckDeviceState(NULL) :
-        pd3dDevice->TestCooperativeLevel();
+    HRESULT res = pd3dDevice->CheckDeviceState(NULL);
 
     switch (res) {
     case S_OK: break;
@@ -1281,7 +1275,7 @@ HRESULT D3DContext::InitContextCaps() {
     return S_OK;
 }
 
-IDirect3DTexture9 *createTexture(D3DFORMAT format, int w, int h, IDirect3DSurface9 **pSurface, IDirect3DDevice9 *dev) {
+IDirect3DTexture9 *createTexture(D3DFORMAT format, int w, int h, IDirect3DSurface9 **pSurface, IDirect3DDevice9Ex *dev) {
     IDirect3DTexture9 *texture;
     HRESULT hr = dev->CreateTexture(w, h, 1, D3DUSAGE_DYNAMIC, format, D3DPOOL_SYSTEMMEM, &texture, 0);
     if (FAILED(hr)) {
@@ -1301,7 +1295,7 @@ IDirect3DTexture9 *createTexture(D3DFORMAT format, int w, int h, IDirect3DSurfac
 }
 
 IDirect3DTexture9 *D3DContext::TextureUpdateCache::getTexture(
-    D3DFORMAT format, int w, int h, IDirect3DSurface9 **pSurface, IDirect3DDevice9 *dev)
+    D3DFORMAT format, int w, int h, IDirect3DSurface9 **pSurface, IDirect3DDevice9Ex *dev)
 {
     if (w <= width && h <= height && texture != NULL) {
         if (pSurface) *pSurface = surface;

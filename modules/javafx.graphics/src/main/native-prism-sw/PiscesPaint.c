@@ -29,6 +29,8 @@
 #include <PiscesSysutils.h>
 #include <PiscesMath.h>
 
+#include <limits.h>
+
 #define NO_REPEAT_NO_INTERPOLATE        0
 #define REPEAT_NO_INTERPOLATE           1
 #define NO_REPEAT_INTERPOLATE_NO_ALPHA  2
@@ -1121,30 +1123,32 @@ genTexturePaintMultiply(Renderer *rdr, jint height) {
         break;
     case PAINT_LINEAR_GRADIENT:
     case PAINT_RADIAL_GRADIENT:
-        {
-        jint *imagePaint = my_malloc(jint, w * height);
-        if (imagePaint != NULL) {
-            if (rdr->_prevPaintMode == PAINT_LINEAR_GRADIENT) {
-                genLinearGradientPaint(rdr, height);
-            } else {
-                genRadialGradientPaint(rdr, height);
-            }
-            genTexturePaintTarget(rdr, imagePaint, height);
-            for (i = 0; i < height; i++) {
-                idx = i * paintStride;
-                for (j = 0; j < w; j++) {
-                    pval = paint[idx + j];
-                    tval = imagePaint[idx + j];
-                    palpha_1 = ((pval >> 24) & 0xFF) + 1;
-                    oalpha = (palpha_1 * ((tval >> 24) & 0xFF)) >> 8;
-                    ored = ((((((pval >> 16) & 0xFF) + 1) * ((tval >> 16) & 0xFF)) >> 8) * palpha_1) >> 8;
-                    ogreen = ((((((pval >> 8) & 0xFF) + 1) * ((tval >> 8) & 0xFF)) >> 8) * palpha_1) >> 8;
-                    oblue = (((((pval & 0xFF) + 1) * (tval & 0xFF)) >> 8) * palpha_1) >> 8;
-                    paint[idx + j] = (oalpha << 24) | (ored << 16) | (ogreen << 8) | oblue;
+        if (w > 0 && height > 0 && (w < (INT_MAX / height / sizeof(jint)))) {
+            jint *imagePaint = my_malloc(jint, w * height);
+            if (imagePaint != NULL) {
+                if (rdr->_prevPaintMode == PAINT_LINEAR_GRADIENT) {
+                    genLinearGradientPaint(rdr, height);
+                } else {
+                    genRadialGradientPaint(rdr, height);
                 }
+                genTexturePaintTarget(rdr, imagePaint, height);
+                for (i = 0; i < height; i++) {
+                    idx = i * paintStride;
+                    for (j = 0; j < w; j++) {
+                        pval = paint[idx + j];
+                        tval = imagePaint[idx + j];
+                        palpha_1 = ((pval >> 24) & 0xFF) + 1;
+                        oalpha = (palpha_1 * ((tval >> 24) & 0xFF)) >> 8;
+                        ored = ((((((pval >> 16) & 0xFF) + 1) * ((tval >> 16) & 0xFF)) >> 8) * palpha_1) >> 8;
+                        ogreen = ((((((pval >> 8) & 0xFF) + 1) * ((tval >> 8) & 0xFF)) >> 8) * palpha_1) >> 8;
+                        oblue = (((((pval & 0xFF) + 1) * (tval & 0xFF)) >> 8) * palpha_1) >> 8;
+                        paint[idx + j] = (oalpha << 24) | (ored << 16) | (ogreen << 8) | oblue;
+                    }
+                }
+                my_free(imagePaint);
             }
-            my_free(imagePaint);
-        }
+        } else {
+            fprintf(stderr, "Invalid dimensions: width: %d, height: %d\n", w, height);
         }
         break;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,6 +44,7 @@ import javafx.collections.ObservableList;
  * All changes in the ObservableList are propagated immediately
  * to the FilteredList.
  *
+ * @param <E> the list element type
  * @see TransformationList
  * @since JavaFX 8.0
  */
@@ -161,7 +162,6 @@ public final class FilteredList<E> extends TransformationList<E, E>{
      *
      * @param  index index of the element to return
      * @return the element at the specified position in this list
-     * @throws IndexOutOfBoundsException {@inheritDoc}
      */
     @Override
     public E get(int index) {
