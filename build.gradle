@@ -3976,7 +3976,18 @@ project(":systemTests") {
         testImplementation project(":swing").sourceSets.test.output
     }
 
-    def dependentProjects = [ 'base', 'graphics', 'controls', 'media', 'web', 'swing', 'fxml' ]
+    // TODO: incubator dependency
+    def dependentProjects = [
+        'base',
+        'graphics',
+        'controls',
+        // TODO: incubator template
+        'incubator.myfeature',
+        'media',
+        'web',
+        'swing',
+        'fxml'
+    ]
     commonModuleSetup(project, dependentProjects)
 
     File testJavaPolicyFile = new File(rootProject.buildDir, TESTJAVAPOLICYFILE);
