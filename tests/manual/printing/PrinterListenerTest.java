@@ -23,18 +23,16 @@
  * questions.
  */
 
-import javafx.collections.FXCollections;
+import javafx.application.Application;
 import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
-
-import javafx.application.Application;
-import javafx.print.PrinterJob;
 import javafx.print.Printer;
+import javafx.print.PrinterJob;
 import javafx.scene.Scene;
-import javafx.stage.Stage;
 import javafx.scene.control.Button;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
+import javafx.stage.Stage;
 
 public class PrinterListenerTest extends Application {
 

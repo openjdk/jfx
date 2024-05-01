@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,17 +25,15 @@
 
 package layout;
 
+import static javafx.geometry.Orientation.HORIZONTAL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javafx.geometry.HPos;
-import static javafx.geometry.Orientation.HORIZONTAL;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.layout.TilePane;
-import static javafx.scene.layout.TilePane.getAlignment;
-import static javafx.scene.layout.TilePane.getMargin;
 
 public class CustomTilePane extends TilePane {
 
