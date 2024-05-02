@@ -36,9 +36,10 @@ public class LabeledHelper {
         /**
          * Determines whether {@code computePrefWidth()} must compute the actual content width,
          * or the width of the table header.
+         * @param c the instance of Labeled
          * @return true to use the actual content width, false to delegate to the parent
          */
-        public boolean isUseActualContentWidth();
+        public boolean isUseActualContentWidth(Labeled c);
     }
 
     private static Accessor accessor;
@@ -57,9 +58,10 @@ public class LabeledHelper {
     /**
      * Determines whether {@code computePrefWidth()} must compute the actual content width,
      * or the width of the table header.
+     * @param c the instance of Labeled
      * @return true to use the actual content width, false to delegate to the parent
      */
-    public static boolean isUseActualContentWidth() {
-        return accessor.isUseActualContentWidth();
+    public static boolean isUseActualContentWidth(Labeled c) {
+        return accessor.isUseActualContentWidth(c);
     }
 }

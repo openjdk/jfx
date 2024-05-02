@@ -152,7 +152,7 @@ public abstract class TableCellSkinBase<S, T, C extends IndexedCell<T>> extends 
     /** {@inheritDoc} */
     @Override
     protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (LabeledHelper.isUseActualContentWidth() || isDeferToParentForPrefWidth) {
+        if (LabeledHelper.isUseActualContentWidth(getSkinnable()) || isDeferToParentForPrefWidth) {
             return super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
         }
 

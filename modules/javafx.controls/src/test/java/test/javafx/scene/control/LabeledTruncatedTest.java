@@ -26,10 +26,12 @@ package test.javafx.scene.control;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TreeTableCell;
+import javafx.scene.control.skin.ButtonSkin;
 import javafx.scene.control.skin.LabelSkin;
 import javafx.scene.control.skin.TableCellSkin;
 import javafx.scene.control.skin.TreeTableCellSkin;
@@ -50,9 +52,17 @@ public class LabeledTruncatedTest {
     }
 
     @Test
-    public void testTruncatedLabel2() {
+    public void testTruncatedLabel() {
         Label control = new Label();
         control.setSkin(new LabelSkin(control));
+        control.setText(TEXT);
+        test(control);
+    }
+
+    @Test
+    public void testTruncatedButton() {
+        Button control = new Button();
+        control.setSkin(new ButtonSkin(control));
         control.setText(TEXT);
         test(control);
     }
@@ -91,5 +101,10 @@ public class LabeledTruncatedTest {
         firePulse();
 
         assertFalse(control.isTextTruncated());
+
+        RegionHelper.setHeight(control, 2);
+        firePulse();
+
+        assertTrue(control.isTextTruncated());
     }
 }
