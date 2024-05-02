@@ -616,6 +616,28 @@ public class TextFieldTest {
         assertEquals("", txtField.getText());
     }
 
+    //Test for JDK-8273657
+    @Test
+    public void testTextSelectionOnAddingTextField() {
+        initStage();
+        txtField.setSkin(new TextFieldSkin(txtField));
+        txtField.setText("A short text");
+        stage.show();
+
+        root.getChildren().add(txtField);
+        txtField.requestFocus();
+
+        assertEquals(0, txtField.getSelection().getStart());
+        assertEquals(txtField.getText().length(), txtField.getSelection().getEnd());
+
+        root.getChildren().remove(txtField);
+        root.getChildren().add(txtField);
+        txtField.requestFocus();
+
+        assertEquals(0, txtField.getSelection().getStart());
+        assertEquals(txtField.getText().length(), txtField.getSelection().getEnd());
+    }
+
     private Change upperCase(Change change) {
         change.setText(change.getText().toUpperCase());
         return change;

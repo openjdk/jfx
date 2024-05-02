@@ -523,6 +523,7 @@ HRESULT PushImage(
     jint cdata = env->GetArrayLength(data);
     if (cdata < 8) {
         OLE_HRT(E_INVALIDARG)
+        OLE_RETURN_HR
     }
 
     jint w, h;
@@ -531,16 +532,27 @@ HRESULT PushImage(
     w = BSWAP_32(w);
     h = BSWAP_32(h);
 
-    int numPixels = w*h;
     OLE_HRT(checkJavaException(env))
-    if (cdata < (numPixels*4 + 8)) {
+    OLE_RETURN_HR_IF_FAILED
+
+    if (w <= 0 || h <= 0 || w > (INT_MAX / 4) / h) {
         OLE_HRT(E_INVALIDARG)
+        OLE_RETURN_HR
+    }
+
+    int numPixels = w*h;
+
+    if ((cdata - 8) < (numPixels * 4)) {
+        OLE_HRT(E_INVALIDARG)
+        OLE_RETURN_HR
     }
     jbyte *pBytes;
     Bitmap bitmap(w, h, (void **)&pBytes);
     OLE_CHECK_NOTNULL((HBITMAP)bitmap)
+    OLE_RETURN_HR_IF_FAILED
     env->GetByteArrayRegion(data, 8, numPixels*4, pBytes);
     OLE_HRT(checkJavaException(env))
+    OLE_RETURN_HR_IF_FAILED
 
     psm->hGlobal = bitmap.GetGlobalDIB();
     psm->tymed = TYMED_HGLOBAL;
@@ -1516,7 +1528,15 @@ HRESULT setDragImage(IDataObject *p)
         w = BSWAP_32(w);
         h = BSWAP_32(h);
 
+        if (w <= 0 || h <= 0 || w > (INT_MAX / 4) / h) {
+            return E_INVALIDARG;
+        }
+
         jsize bmpSize = w*h*4;
+        if (bmpSize > INT_MAX - header_size) {
+            return E_INVALIDARG;
+        }
+
         if (me.size() < jsize(header_size + bmpSize))
             return E_INVALIDARG;
 
@@ -1532,7 +1552,15 @@ HRESULT setDragImage(IDataObject *p)
         w = abs(lpbi->bmiHeader.biWidth);
         h = abs(lpbi->bmiHeader.biHeight);
 
+        if (w == 0 || h == 0 || w > (INT_MAX / 4) / h) {
+            return E_INVALIDARG;
+        }
+
         jsize bmpSize = w*h*4;
+        if (lpbi->bmiHeader.biSize > (DWORD)(INT_MAX - bmpSize)) {
+            return E_INVALIDARG;
+        }
+
         if (me.size() < jsize(bmpSize + lpbi->bmiHeader.biSize))
             return E_INVALIDARG;
 
