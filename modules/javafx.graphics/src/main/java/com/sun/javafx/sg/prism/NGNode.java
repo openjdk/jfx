@@ -1955,21 +1955,15 @@ public abstract class NGNode {
         if (PULSE_LOGGING_ENABLED) {
             PulseLogger.incrementCounter("Nodes visited during render");
         }
+        // Clear the visuals changed flag
+        clearDirty();
         // If it isn't visible, then punt
-        if (visible && opacity != 0f) {
-            // Clear the visuals changed flag
-            clearDirty();
+        if (!visible || opacity == 0f) return;
 
-            // We know that we are going to render this node, so we call the
-            // doRender method, which subclasses implement to do the actual
-            // rendering work.
-            doRender(g);
-        } else {
-            // Since we are skipping the rendering of this node and all of its children
-            // and therefore not calling clearDirty() for each of them,
-            // we need to clear the dirty flag here.
-            clearDirtyTree();
-        }
+        // We know that we are going to render this node, so we call the
+        // doRender method, which subclasses implement to do the actual
+        // rendering work.
+        doRender(g);
     }
 
     /**
