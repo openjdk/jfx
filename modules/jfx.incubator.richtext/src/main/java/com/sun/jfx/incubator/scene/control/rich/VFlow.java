@@ -1221,24 +1221,24 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
     }
 
     public void pageUp() {
-        blockScroll(-getViewHeight());
+        scrollVerticalPixels(-getViewHeight());
     }
 
     public void pageDown() {
-        blockScroll(getViewHeight());
+        scrollVerticalPixels(getViewHeight());
     }
 
-    public void scroll(double fractionOfHeight) {
-        blockScroll(getViewHeight() * fractionOfHeight);
-    }
-
-    /** scroll by a number of pixels, delta must not exceed the view height in absolute terms */
-    public void blockScroll(double delta) {
-        blockScroll(delta, false);
+    public void scrollVerticalFraction(double fractionOfHeight) {
+        scrollVerticalPixels(getViewHeight() * fractionOfHeight);
     }
 
     /** scroll by a number of pixels, delta must not exceed the view height in absolute terms */
-    public void blockScroll(double delta, boolean forceLayout) {
+    public void scrollVerticalPixels(double delta) {
+        scrollVerticalPixels(delta, false);
+    }
+
+    /** scroll by a number of pixels, delta must not exceed the view height in absolute terms */
+    public void scrollVerticalPixels(double delta, boolean forceLayout) {
         Origin or = arrangement().computeOrigin(delta);
         if (or != null) {
             setOrigin(or);
@@ -1248,15 +1248,20 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         }
     }
 
-    public void hscroll(double delta) {
-        double cw = flow.getWidth();
-        double off = getOffsetX() + delta * cw;
-        if (off < 0.0) {
-            off = 0.0;
-        } else if (off + cw > (getContentWidth() + leftPadding)) {
-            off = Math.max(0.0, getContentWidth() + leftPadding - cw);
+    public void scrollHorizontalFraction(double delta) {
+        double w = flow.getWidth() + leftPadding + rightPadding;
+        scrollHorizontalPixels(delta * w);
+    }
+
+    public void scrollHorizontalPixels(double delta) {
+        double off = getOffsetX() + delta;
+        double w = flow.getWidth();
+        if (off < -leftPadding) {
+            off = -leftPadding;
+        } else if (off + w > (getContentWidth() + leftPadding)) {
+            off = Math.max(0.0, getContentWidth() + leftPadding - w);
         }
-        setOffsetX(off - leftPadding);
+        setOffsetX(off);
         // no need to recompute the flow
         placeCells();
         updateCaretAndSelection();
@@ -1266,10 +1271,10 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
     public void scrollToVisible(double x, double y) {
         if (y < 0.0) {
             // above viewport
-            blockScroll(y);
+            scrollVerticalPixels(y);
         } else if (y >= getViewHeight()) {
             // below viewport
-            blockScroll(y - getViewHeight());
+            scrollVerticalPixels(y - getViewHeight());
         }
 
         scrollHorizontalToVisible(x);
@@ -1289,16 +1294,16 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
                 // TODO this can be null?
                 c = getCaretInfo();
                 if (moveDown) {
-                    blockScroll(c.getMaxY() - c.getMinY() - getViewHeight());
+                    scrollVerticalPixels(c.getMaxY() - c.getMinY() - getViewHeight());
                 }
                 checkForExcessiveWhitespaceAtTheEnd();
             }
         } else {
             // block scroll, if needed
             if (c.getMinY() < 0.0) {
-                blockScroll(c.getMinY());
+                scrollVerticalPixels(c.getMinY());
             } else if (c.getMaxY() > getViewHeight()) {
-                blockScroll(c.getMaxY() - getViewHeight());
+                scrollVerticalPixels(c.getMaxY() - getViewHeight());
             }
 
             if (!control.isWrapText()) {
@@ -1341,7 +1346,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
                     return;
                 }
             }
-            blockScroll(delta);
+            scrollVerticalPixels(delta);
         }
     }
 

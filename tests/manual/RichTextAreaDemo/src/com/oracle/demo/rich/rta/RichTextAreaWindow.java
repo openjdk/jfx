@@ -109,6 +109,7 @@ public class RichTextAreaWindow extends Stage {
         if (p != null) {
             sb.append(" line=").append(p.index());
             sb.append(" col=").append(p.offset());
+            sb.append(p.isLeading() ? " (leading)" : "");
         }
 
         status.setText(sb.toString());

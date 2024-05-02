@@ -453,4 +453,44 @@ public final class RichUtils {
         ImageIO.write(ImgUtil.fromFXImage(im, null), "PNG", out);
         return out.toByteArray();
     }
+
+    /**
+     * Returns true if code point at the specified offset is a letter or a digit,
+     * returns false otherwise or if the offset is outside of the valid range.
+     * @param text the text
+     * @param offset the character offset
+     * @param len the text length
+     * @return true if the code point at the specified offset is a letter or a digit
+     */
+    public static boolean isLetterOrDigit(String text, int offset) {
+        if (offset < 0) {
+            return false;
+        } else if (offset >= text.length()) {
+            return false;
+        }
+        // ignore the case when 'c' is a high surrogate without the low surrogate
+        int c = Character.codePointAt(text, offset);
+        return Character.isLetterOrDigit(c);
+    }
+
+    /**
+     * Returns the offset of the next code point, or the end of the text string.
+     * @param text the text
+     * @param offset the offset to start from
+     * @return the offset of the next code point, or the end of the text string
+     */
+    public static int nextCodePoint(String text, int offset) {
+        int len = text.length();
+        if (offset < len) {
+            char ch1 = text.charAt(offset++);
+            if (Character.isHighSurrogate(ch1) && offset < len) {
+                char ch2 = text.charAt(offset);
+                if (Character.isLowSurrogate(ch2)) {
+                    ++offset;
+                }
+            }
+            return offset;
+        }
+        return len;
+    }
 }

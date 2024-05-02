@@ -72,6 +72,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
     private final Timeline autoScrollTimer;
     private boolean autoScrollUp;
     private boolean fastAutoScroll;
+    private boolean scrollStarted;
     private double phantomX = -1.0;
     private final Duration autoScrollPeriod;
     private ContextMenu contextMenu = new ContextMenu();
@@ -240,7 +241,9 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         cp.addEventFilter(MouseEvent.MOUSE_PRESSED, this::handleMousePressed);
         cp.addEventFilter(MouseEvent.MOUSE_RELEASED, this::handleMouseReleased);
         cp.addEventFilter(MouseEvent.MOUSE_DRAGGED, this::handleMouseDragged);
-        cp.addEventFilter(ScrollEvent.ANY, this::handleScrollEvent);
+        cp.addEventFilter(ScrollEvent.SCROLL_STARTED, this::handleScrollEventStarted);
+        cp.addEventHandler(ScrollEvent.SCROLL_FINISHED, this::handleScrollEventFinished);
+        cp.addEventHandler(ScrollEvent.SCROLL, this::handleScrollEvent);
 
         addHandler(KeyEvent.KEY_TYPED, true, this::handleKeyTyped);
         addHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED, true, this::contextMenuRequested);
@@ -430,37 +433,61 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         getControl().extendSelection(pos);
     }
 
-    protected void handleScrollEvent(ScrollEvent ev) {
+    private void handleScrollEventStarted(ScrollEvent ev) {
+        scrollStarted = true;
+    }
+
+    private void handleScrollEventFinished(ScrollEvent ev) {
+        scrollStarted = false;
+    }
+
+    private void handleScrollEvent(ScrollEvent ev) {
         RichTextArea control = getControl();
-        if (ev.isShiftDown()) {
+        double dx = ev.getDeltaX();
+        if (dx != 0.0) {
+            // horizontal
             if (!control.isWrapText() && !control.isUseContentWidth()) {
-                // horizontal scroll
-                double f = Params.SCROLL_SHEEL_BLOCK_SIZE_HORIZONTAL;
-                if (ev.getDeltaX() >= 0) {
-                    f = -f;
-                }
-                vflow.hscroll(f);
-                ev.consume();
-            }
-        } else {
-            if (!control.isUseContentHeight()) {
-                if (ev.isShortcutDown()) {
-                    // page up / page down
-                    if (ev.getDeltaY() >= 0) {
-                        vflow.pageUp();
-                    } else {
-                        vflow.pageDown();
-                    }
-                    ev.consume();
+                if(scrollStarted) {
+                    // trackpad
+                    vflow.scrollHorizontalPixels(-ev.getDeltaX());
                 } else {
-                    // block scroll
-                    double f = Params.SCROLL_WHEEL_BLOCK_SIZE_VERTICAL;
-                    if (ev.getDeltaY() >= 0) {
+                    // mouse
+                    double f = Params.SCROLL_SHEEL_BLOCK_SIZE_HORIZONTAL;
+                    if (dx >= 0) {
                         f = -f;
                     }
-                    vflow.scroll(f);
-                    ev.consume();
+                    vflow.scrollHorizontalFraction(f);
                 }
+                ev.consume();
+            }
+        }
+
+        double dy = ev.getDeltaY();
+        if (dy != 0.0) {
+            // vertical
+            if (!control.isUseContentHeight()) {
+                if(scrollStarted) {
+                    // trackpad
+                    vflow.scrollVerticalPixels(-dy);
+                } else {
+                    // mouse
+                    if (ev.isShortcutDown()) {
+                        // page up / page down
+                        if (dy >= 0) {
+                            vflow.pageUp();
+                        } else {
+                            vflow.pageDown();
+                        }
+                    } else {
+                        // block scroll
+                        double f = Params.SCROLL_WHEEL_BLOCK_SIZE_VERTICAL;
+                        if (dy >= 0) {
+                            f = -f;
+                        }
+                        vflow.scrollVerticalFraction(f);
+                    }
+                }
+                ev.consume();
             }
         }
     }
@@ -490,7 +517,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         if (autoScrollUp) {
             delta = -delta;
         }
-        vflow.blockScroll(delta, true);
+        vflow.scrollVerticalPixels(delta, true);
 
         double x = Math.max(0.0, phantomX + vflow.getOffsetX());
         double y = autoScrollUp ? 0.0 : vflow.getViewHeight();
@@ -1269,7 +1296,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             int len = text.length();
             int off = br.preceding(Utils.clamp(0, offset, len));
 
-            while (off != BreakIterator.DONE && !isLetterOrDigit(text, off, len)) {
+            while (off != BreakIterator.DONE && !RichUtils.isLetterOrDigit(text, off)) {
                 off = br.preceding(Utils.clamp(0, off, len));
             }
 
@@ -1309,22 +1336,21 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             br.setText(text);
 
             int len = text.length();
-            int last = br.following(Utils.clamp(0, offset, len - 1));
-            int current = br.next();
+            if (offset == len) {
+                return new TextPos(++index, 0);
+            }
 
-            // Skip whitespace characters to the beginning of next word, but
-            // stop at newline. Then move the caret or select a range.
-            while (current != BreakIterator.DONE) {
-                for (int off = last; off <= current; off++) {
-                    char ch = text.charAt(Utils.clamp(0, off, len - 1));
-                    // Avoid using Character.isSpaceChar() and Character.isWhitespace(),
-                    // because they include LINE_SEPARATOR, PARAGRAPH_SEPARATOR, etc.
-                    if (ch != ' ' && ch != '\t') {
-                        return new TextPos(index, off);
+            int next = br.following(Utils.clamp(0, offset, len));
+            if ((next == BreakIterator.DONE) || (next == len)) {
+                return new TextPos(index, len);
+            } else {
+                while (next != BreakIterator.DONE) {
+                    boolean inWord = RichUtils.isLetterOrDigit(text, next);
+                    if (inWord) {
+                        return new TextPos(index, next);
                     }
+                    next = br.next();
                 }
-                last = current;
-                current = br.next();
             }
 
             index++;
@@ -1350,7 +1376,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
 
             String text = getPlainText(index);
             if ((text == null) || (text.length() == 0)) {
-                if(skipEmpty) {
+                if (skipEmpty) {
                     index++;
                 }
                 return new TextPos(index, 0);
@@ -1359,19 +1385,27 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             BreakIterator br = BreakIterator.getWordInstance();
             br.setText(text);
 
+            boolean inWord = RichUtils.isLetterOrDigit(text, offset);
             int len = text.length();
-            int last = br.following(Utils.clamp(0, offset, len));
-            int current = br.next();
+            int next = br.following(Utils.clamp(0, offset, len));
+            if (next == BreakIterator.DONE) {
+                if (inWord) {
+                    // when starting in the middle of a word
+                    return new TextPos(index, len);
+                }
+            } else {
+                if (inWord) {
+                    return new TextPos(index, next);
+                }
 
-            // skip the non-word region, then move/select to the end of the word.
-            while (current != BreakIterator.DONE) {
-                for (int off = last; off <= current; off++) {
-                    if (!isLetterOrDigit(text, off, len)) {
-                        return new TextPos(index, off);
+                while (next != BreakIterator.DONE) {
+                    offset = next;
+                    next = br.next();
+                    inWord = RichUtils.isLetterOrDigit(text, offset);
+                    if (inWord) {
+                        return new TextPos(index, next);
                     }
                 }
-                last = current;
-                current = br.next();
             }
 
             index++;
@@ -1430,18 +1464,6 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             bidi.isRightToLeft() ||
             (isMixed() && getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT)
         );
-    }
-
-    private boolean isLetterOrDigit(String text, int ix, int len) {
-        if (ix < 0) {
-            // should not happen
-            return false;
-        } else if (ix >= text.length()) {
-            return false;
-        }
-        // ignore the case when 'c' is a high surrogate without the low surrogate
-        int c = Character.codePointAt(text, ix);
-        return Character.isLetterOrDigit(c);
     }
 
     public void deleteWordNextBeg(RichTextArea control) {

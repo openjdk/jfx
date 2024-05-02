@@ -2778,7 +2778,12 @@ project(":incubator.richtext") {
     project.ext.moduleSourcePath = defaultModuleSourcePath
     project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
 
-    commonModuleSetup(project, [ 'base', 'graphics', 'controls', 'incubator.richtext' ])
+    commonModuleSetup(project, [
+        'base',
+        'graphics',
+        'controls',
+        'incubator.richtext'
+    ])
 
     dependencies {
         testImplementation project(":base").sourceSets.test.output
@@ -3944,7 +3949,16 @@ project(":systemTests") {
         testImplementation project(":swing").sourceSets.test.output
     }
 
-    def dependentProjects = [ 'base', 'graphics', 'controls', 'media', 'web', 'swing', 'fxml' ]
+    def dependentProjects = [
+        'base',
+        'graphics',
+        'controls',
+        'incubator.richtext',
+        'media',
+        'web',
+        'swing',
+        'fxml'
+    ]
     commonModuleSetup(project, dependentProjects)
 
     File testJavaPolicyFile = new File(rootProject.buildDir, TESTJAVAPOLICYFILE);
