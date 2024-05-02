@@ -845,9 +845,9 @@ public abstract class Labeled extends Control {
 
     /**
      * Indicates whether the text has been truncated
-     * when it cannot fit into the available width.
+     * because it cannot fit into the available width.
      * <p>
-     * When truncated, the {@link #ellipsisStringProperty() ellipsis string}
+     * When truncated, the {@link #ellipsisStringProperty() ellipsisString}
      * gets inserted in the place dictated by the
      * {@link #textOverrun} property.
      *
