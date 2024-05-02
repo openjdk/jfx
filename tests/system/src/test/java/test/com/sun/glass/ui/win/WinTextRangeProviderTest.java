@@ -27,12 +27,10 @@ package test.com.sun.glass.ui.win;
 import com.sun.javafx.PlatformUtil;
 import com.sun.glass.ui.win.WinTextRangeProviderShim;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
-import javafx.application.Platform;
+
+import test.util.Util;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -40,41 +38,25 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static org.junit.Assert.fail;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class WinTextRangeProviderTest {
 
     private static final CountDownLatch startupLatch = new CountDownLatch(1);
-    private static final PrintStream defaultErrorStream = System.err;
-    protected static final ByteArrayOutputStream out = new ByteArrayOutputStream();
 
     @BeforeAll
-    static void doSetup() throws Exception {
+    static void initFX() throws Exception {
         assumeTrue(PlatformUtil.isWindows());
-        System.setErr(new PrintStream(out, true));
-
-        Platform.startup(() -> {
-            startupLatch.countDown();
-        });
-
-        if (!startupLatch.await(15, TimeUnit.SECONDS)) {
-            System.setErr(defaultErrorStream);
-            System.err.println(out);
-            fail("Timeout waiting for FX runtime to start");
-        }
-
-        Thread.sleep(250);
-        System.setErr(defaultErrorStream);
+        Util.startup(startupLatch, () -> startupLatch.countDown());
     }
 
     @AfterAll
-    static void doTeardown() {
-        Platform.exit();
+    static void shutdown() {
+        Util.shutdown();
     }
 
-    static Stream<Arguments> getEndIndex() {
+    static Stream<Arguments> getEndIndexParameters() {
         return Stream.of(
                 Arguments.of(1, 0, 1, 2),
                 Arguments.of(1, 0, 2, 1),
@@ -89,8 +71,8 @@ public class WinTextRangeProviderTest {
     }
 
     @ParameterizedTest
-    @MethodSource
-    public void getEndIndex(Integer expected, Integer startIndex, Integer length, Integer maxEndIndex) {
+    @MethodSource("getEndIndexParameters")
+    public void testGetEndIndex(Integer expected, Integer startIndex, Integer length, Integer maxEndIndex) {
         assertEquals(expected, WinTextRangeProviderShim.getEndIndex(startIndex, length, maxEndIndex));
     }
 }
