@@ -23,7 +23,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-function all(iterable)
+@linkTimeConstant
+function promiseAllSlow(iterable)
 {
     "use strict";
 
@@ -48,7 +49,7 @@ function all(iterable)
 
             --remainingElementsCount;
             if (remainingElementsCount === 0)
-                return promiseCapability.@resolve.@call(@undefined, values);
+                return promiseCapability.resolve.@call(@undefined, values);
 
             return @undefined;
         };
@@ -64,18 +65,119 @@ function all(iterable)
             var nextPromise = promiseResolve.@call(this, value);
             var resolveElement = newResolveElement(index);
             ++remainingElementsCount;
-            nextPromise.then(resolveElement, promiseCapability.@reject);
+            nextPromise.then(resolveElement, promiseCapability.reject);
             ++index;
         }
 
         --remainingElementsCount;
         if (remainingElementsCount === 0)
-            promiseCapability.@resolve.@call(@undefined, values);
+            promiseCapability.resolve.@call(@undefined, values);
     } catch (error) {
-        promiseCapability.@reject.@call(@undefined, error);
+        promiseCapability.reject.@call(@undefined, error);
     }
 
-    return promiseCapability.@promise;
+    return promiseCapability.promise;
+}
+
+@linkTimeConstant
+function promiseOnRejectedWithContext(argument, context)
+{
+    "use strict";
+
+    return @rejectPromiseWithFirstResolvingFunctionCallCheck(context.globalContext.promise, argument);
+}
+
+@linkTimeConstant
+function promiseAllOnFulfilled(argument, context)
+{
+    "use strict";
+
+    var globalContext = context.globalContext;
+    var values = globalContext.values;
+
+    @putByValDirect(values, context.index, argument);
+
+    if (!--globalContext.remainingElementsCount)
+        return @resolvePromiseWithFirstResolvingFunctionCallCheck(globalContext.promise, values);
+}
+
+@linkTimeConstant
+function promiseNewOnRejected(promise)
+{
+    "use strict";
+
+    return function @reject(reason) {
+        return @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, reason);
+    };
+}
+
+@linkTimeConstant
+function promiseAllNewResolveElement(globalContext, index)
+{
+    "use strict";
+
+    var alreadyCalled = false;
+    return (argument) => {
+        if (alreadyCalled)
+            return @undefined;
+        alreadyCalled = true;
+
+        var values = globalContext.values;
+        @putByValDirect(values, index, argument);
+
+        if (!--globalContext.remainingElementsCount)
+            return @resolvePromiseWithFirstResolvingFunctionCallCheck(globalContext.promise, values);
+    };
+}
+
+function all(iterable)
+{
+    "use strict";
+
+    if (this !== @Promise)
+        return @tailCallForwardArguments(@promiseAllSlow, this);
+
+    var promise = @newPromise();
+    var values = [];
+    var globalContext = {
+        promise,
+        values,
+        remainingElementsCount: 1,
+    };
+    var index = 0;
+    var onRejected;
+
+    try {
+        var promiseResolve = this.resolve;
+        if (!@isCallable(promiseResolve))
+            @throwTypeError("Promise resolve is not a function");
+
+        for (var value of iterable) {
+            @putByValDirect(values, index, @undefined);
+            var nextPromise = promiseResolve.@call(this, value);
+            ++globalContext.remainingElementsCount;
+            var then = nextPromise.then;
+            if (@isPromise(nextPromise) && then === @defaultPromiseThen) {
+                var constructor = @speciesConstructor(nextPromise, @Promise);
+                var promiseOrCapability;
+                if (constructor !== @Promise)
+                    promiseOrCapability = @newPromiseCapabilitySlow(constructor);
+                @performPromiseThen(nextPromise, @promiseAllOnFulfilled, @promiseOnRejectedWithContext, promiseOrCapability, { globalContext, index });
+            } else {
+                if (!onRejected)
+                    onRejected = @promiseNewOnRejected(promise);
+                then.@call(nextPromise, @promiseAllNewResolveElement(globalContext, index), onRejected);
+            }
+            ++index;
+        }
+
+        if (!--globalContext.remainingElementsCount)
+            @resolvePromiseWithFirstResolvingFunctionCallCheck(promise, values);
+    } catch (error) {
+        @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, error);
+    }
+
+    return promise;
 }
 
 function allSettled(iterable)
@@ -110,7 +212,7 @@ function allSettled(iterable)
 
                 --remainingElementsCount;
                 if (remainingElementsCount === 0)
-                    return promiseCapability.@resolve.@call(@undefined, values);
+                    return promiseCapability.resolve.@call(@undefined, values);
 
                 return @undefined;
             },
@@ -129,7 +231,7 @@ function allSettled(iterable)
 
                 --remainingElementsCount;
                 if (remainingElementsCount === 0)
-                    return promiseCapability.@resolve.@call(@undefined, values);
+                    return promiseCapability.resolve.@call(@undefined, values);
 
                 return @undefined;
             }
@@ -152,12 +254,12 @@ function allSettled(iterable)
 
         --remainingElementsCount;
         if (remainingElementsCount === 0)
-            promiseCapability.@resolve.@call(@undefined, values);
+            promiseCapability.resolve.@call(@undefined, values);
     } catch (error) {
-        promiseCapability.@reject.@call(@undefined, error);
+        promiseCapability.reject.@call(@undefined, error);
     }
 
-    return promiseCapability.@promise;
+    return promiseCapability.promise;
 }
 
 function any(iterable)
@@ -185,7 +287,7 @@ function any(iterable)
 
             --remainingElementsCount;
             if (remainingElementsCount === 0)
-                return promiseCapability.@reject.@call(@undefined, new @AggregateError(errors));
+                return promiseCapability.reject.@call(@undefined, new @AggregateError(errors));
 
             return @undefined;
         };
@@ -201,7 +303,7 @@ function any(iterable)
             var nextPromise = promiseResolve.@call(this, value);
             var rejectElement = newRejectElement(index);
             ++remainingElementsCount;
-            nextPromise.then(promiseCapability.@resolve, rejectElement);
+            nextPromise.then(promiseCapability.resolve, rejectElement);
             ++index;
         }
 
@@ -209,10 +311,10 @@ function any(iterable)
         if (remainingElementsCount === 0)
             throw new @AggregateError(errors);
     } catch (error) {
-        promiseCapability.@reject.@call(@undefined, error);
+        promiseCapability.reject.@call(@undefined, error);
     }
 
-    return promiseCapability.@promise;
+    return promiseCapability.promise;
 }
 
 function race(iterable)
@@ -231,13 +333,13 @@ function race(iterable)
 
         for (var value of iterable) {
             var nextPromise = promiseResolve.@call(this, value);
-            nextPromise.then(promiseCapability.@resolve, promiseCapability.@reject);
+            nextPromise.then(promiseCapability.resolve, promiseCapability.reject);
         }
     } catch (error) {
-        promiseCapability.@reject.@call(@undefined, error);
+        promiseCapability.reject.@call(@undefined, error);
     }
 
-    return promiseCapability.@promise;
+    return promiseCapability.promise;
 }
 
 function reject(reason)
@@ -264,6 +366,13 @@ function resolve(value)
         @throwTypeError("|this| is not an object");
 
     return @promiseResolve(this, value);
+}
+
+function withResolvers()
+{
+    "use strict";
+
+    return @newPromiseCapability(this);
 }
 
 @nakedConstructor

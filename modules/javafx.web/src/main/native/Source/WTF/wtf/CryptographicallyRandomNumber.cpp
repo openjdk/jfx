@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 1996, David Mazieres <dm@uun.org>
  * Copyright (c) 2008, Damien Miller <djm@openbsd.org>
+ * Copyright (C) 2022 Apple Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -58,7 +59,7 @@ public:
     void randomValues(void* buffer, size_t length);
 
 private:
-    inline void addRandomData(unsigned char *data, int length);
+    inline void addRandomData(const unsigned char *data, int length);
     void stir() WTF_REQUIRES_LOCK(m_lock);
     void stirIfNeeded() WTF_REQUIRES_LOCK(m_lock);
     inline uint8_t getByte();
@@ -82,7 +83,7 @@ ARC4RandomNumberGenerator::ARC4RandomNumberGenerator()
 {
 }
 
-void ARC4RandomNumberGenerator::addRandomData(unsigned char* data, int length)
+void ARC4RandomNumberGenerator::addRandomData(const unsigned char* data, int length)
 {
     m_stream.i--;
     for (int n = 0; n < 256; n++) {
@@ -173,7 +174,7 @@ ARC4RandomNumberGenerator& sharedRandomNumberGenerator()
 
 }
 
-uint32_t cryptographicallyRandomNumber()
+template<> unsigned cryptographicallyRandomNumber<unsigned>()
 {
     return sharedRandomNumberGenerator().randomNumber();
 }
@@ -181,6 +182,17 @@ uint32_t cryptographicallyRandomNumber()
 void cryptographicallyRandomValues(void* buffer, size_t length)
 {
     sharedRandomNumberGenerator().randomValues(buffer, length);
+}
+
+template<> uint64_t cryptographicallyRandomNumber<uint64_t>()
+{
+    uint64_t high = cryptographicallyRandomNumber<unsigned>();
+    return (high << 32) | cryptographicallyRandomNumber<unsigned>();
+}
+
+double cryptographicallyRandomUnitInterval()
+{
+    return cryptographicallyRandomNumber<unsigned>() / (std::numeric_limits<unsigned>::max() + 1.0);
 }
 
 }

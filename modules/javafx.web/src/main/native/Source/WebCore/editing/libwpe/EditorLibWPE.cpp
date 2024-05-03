@@ -29,8 +29,8 @@
 #if USE(LIBWPE)
 
 #include "DocumentFragment.h"
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
+#include "LocalFrame.h"
 #include "NotImplemented.h"
 #include "Pasteboard.h"
 #include "Settings.h"
@@ -38,7 +38,7 @@
 
 namespace WebCore {
 
-static RefPtr<DocumentFragment> createFragmentFromPasteboardData(Pasteboard& pasteboard, Frame& frame, const SimpleRange& range, bool allowPlainText, bool& chosePlainText)
+static RefPtr<DocumentFragment> createFragmentFromPasteboardData(Pasteboard& pasteboard, LocalFrame& frame, const SimpleRange& range, bool allowPlainText, bool& chosePlainText)
 {
     chosePlainText = false;
 
@@ -48,7 +48,7 @@ static RefPtr<DocumentFragment> createFragmentFromPasteboardData(Pasteboard& pas
 
     if (types.contains("text/html;charset=utf-8"_s) && frame.document()) {
         String markup = pasteboard.readString("text/html;charset=utf-8"_s);
-        return createFragmentFromMarkup(*frame.document(), markup, emptyString(), DisallowScriptingAndPluginContent);
+        return createFragmentFromMarkup(*frame.document(), markup, emptyString(), { });
     }
 
     if (!allowPlainText)
@@ -66,7 +66,7 @@ void Editor::writeSelectionToPasteboard(Pasteboard& pasteboard)
 {
     PasteboardWebContent pasteboardContent;
     pasteboardContent.text = selectedTextForDataTransfer();
-    pasteboardContent.markup = serializePreservingVisualAppearance(m_document.selection().selection(), ResolveURLs::YesExcludingURLsForPrivacy, SerializeComposedTree::Yes);
+    pasteboardContent.markup = serializePreservingVisualAppearance(m_document.selection().selection(), ResolveURLs::YesExcludingURLsForPrivacy, SerializeComposedTree::Yes, IgnoreUserSelectNone::Yes);
     pasteboard.write(pasteboardContent);
 }
 

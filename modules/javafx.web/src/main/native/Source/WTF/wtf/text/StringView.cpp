@@ -88,7 +88,7 @@ bool StringView::endsWithIgnoringASCIICase(StringView suffix) const
     return ::WTF::endsWithIgnoringASCIICase(*this, suffix);
 }
 
-Expected<CString, UTF8ConversionError> StringView::tryGetUtf8(ConversionMode mode) const
+Expected<CString, UTF8ConversionError> StringView::tryGetUTF8(ConversionMode mode) const
 {
     if (isNull())
         return CString("", 0);
@@ -99,7 +99,7 @@ Expected<CString, UTF8ConversionError> StringView::tryGetUtf8(ConversionMode mod
 
 CString StringView::utf8(ConversionMode mode) const
 {
-    auto expectedString = tryGetUtf8(mode);
+    auto expectedString = tryGetUTF8(mode);
     RELEASE_ASSERT(expectedString);
     return expectedString.value();
 }
@@ -243,11 +243,6 @@ bool StringView::GraphemeClusters::Iterator::operator==(const Iterator& other) c
     return *m_impl == *(other.m_impl);
 }
 
-bool StringView::GraphemeClusters::Iterator::operator!=(const Iterator& other) const
-{
-    return !(*this == other);
-}
-
 enum class ASCIICase { Lower, Upper };
 
 template<ASCIICase type, typename CharacterType>
@@ -371,11 +366,6 @@ bool equalRespectingNullity(StringView a, StringView b)
     return equalCommon(a, b);
 }
 
-StringView StringView::stripWhiteSpace() const
-{
-    return stripLeadingAndTrailingMatchedCharacters(isASCIISpace<UChar>);
-}
-
 size_t StringView::reverseFind(StringView matchString, unsigned start) const
 {
     if (isNull())
@@ -445,6 +435,35 @@ int codePointCompare(StringView lhs, StringView rhs)
     if (rhsIs8Bit)
         return codePointCompare(lhs.characters16(), lhs.length(), rhs.characters8(), rhs.length());
     return codePointCompare(lhs.characters16(), lhs.length(), rhs.characters16(), rhs.length());
+}
+
+template<typename CharacterType> static String makeStringBySimplifyingNewLinesSlowCase(const String& string, unsigned firstCarriageReturn)
+{
+    unsigned length = string.length();
+    unsigned resultLength = firstCarriageReturn;
+    auto* characters = string.characters<CharacterType>();
+    CharacterType* resultCharacters;
+    auto result = String::createUninitialized(length, resultCharacters);
+    memcpy(resultCharacters, characters, firstCarriageReturn * sizeof(CharacterType));
+    for (unsigned i = firstCarriageReturn; i < length; ++i) {
+        if (characters[i] != '\r')
+            resultCharacters[resultLength++] = characters[i];
+        else {
+            resultCharacters[resultLength++] = '\n';
+            if (i + 1 < length && characters[i + 1] == '\n')
+                ++i;
+        }
+    }
+    if (resultLength < length)
+        result = StringImpl::createSubstringSharingImpl(*result.impl(), 0, resultLength);
+    return result;
+}
+
+String makeStringBySimplifyingNewLinesSlowCase(const String& string, unsigned firstCarriageReturn)
+{
+    if (string.is8Bit())
+        return makeStringBySimplifyingNewLinesSlowCase<LChar>(string, firstCarriageReturn);
+    return makeStringBySimplifyingNewLinesSlowCase<UChar>(string, firstCarriageReturn);
 }
 
 #if CHECK_STRINGVIEW_LIFETIME

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,6 +49,12 @@ JNI_OnLoad_javafx_font_pango(JavaVM * vm, void * reserved) {
 
 
 #define OS_NATIVE(func) Java_com_sun_javafx_font_freetype_OSPango_##func
+
+#define SAFE_FREE(PTR)  \
+    if ((PTR) != NULL) {  \
+        free(PTR);     \
+        (PTR) = NULL;     \
+    }
 
 extern jboolean checkAndClearException(JNIEnv *env);
 
@@ -159,15 +165,28 @@ JNIEXPORT jobject JNICALL OS_NATIVE(pango_1shape)
     jobject result = NULL;
     pango_shape(text, item->length, &analysis, glyphString);
     int count = glyphString->num_glyphs;
-    if(count == 0) goto fail;
+    jint *glyphs = NULL;
+    jint *widths = NULL;
+    jint *cluster = NULL;
+    if (count <= 0) goto fail;
+    if ((size_t)count >= INT_MAX / sizeof(jint)) {
+        fprintf(stderr, "OS_NATIVE error: large glyph count value in pango_1shape\n");
+        goto fail;
+    }
 
     jintArray glyphsArray = (*env)->NewIntArray(env, count);
     jintArray widthsArray = (*env)->NewIntArray(env, count);
     jintArray clusterArray = (*env)->NewIntArray(env, count);
     if (glyphsArray && widthsArray && clusterArray) {
-        jint glyphs[count];
-        jint widths[count];
-        jint cluster[count];
+        glyphs = (jint*) malloc(count * sizeof(jint));
+        widths = (jint*) malloc(count * sizeof(jint));
+        cluster = (jint*) malloc(count * sizeof(jint));
+        if (glyphs == NULL ||
+            widths == NULL ||
+            cluster == NULL) {
+            fprintf(stderr, "OS_NATIVE error: Unable to allocate memory in pango_1shape\n");
+            goto fail;
+        }
         int i;
         for (i = 0; i < count; i++) {
             glyphs[i] = glyphString->glyphs[i].glyph;
@@ -206,6 +225,9 @@ JNIEXPORT jobject JNICALL OS_NATIVE(pango_1shape)
 
 fail:
     pango_glyph_string_free(glyphString);
+    SAFE_FREE(glyphs);
+    SAFE_FREE(widths);
+    SAFE_FREE(cluster);
     return result;
 }
 
@@ -243,7 +265,7 @@ JNIEXPORT jboolean JNICALL OS_NATIVE(FcConfigAppFontAddFile)
         if (text) {
 //            rc = (jboolean)FcConfigAppFontAddFile(arg0, text);
             if (fp) {
-                rc = (jboolean)((jboolean (*)(void *, const char *))fp)(arg0, text);
+                rc = (jboolean)((int (*)(void *, const char *))fp)((void *)arg0, text);
             }
             (*env)->ReleaseStringUTFChars(env, arg1, text);
         }
@@ -402,7 +424,7 @@ JNIEXPORT jlong JNICALL OS_NATIVE(g_1utf8_1strlen)
     (JNIEnv *env, jclass that, jlong str, jlong pos)
 {
     if (!str) return 0;
-    return (jlong)g_utf8_strlen((const gchar *)str, (const gchar *)pos);
+    return (jlong)g_utf8_strlen((const gchar *)str, (gssize)pos);
 }
 
 JNIEXPORT jlong JNICALL OS_NATIVE(g_1utf16_1to_1utf8)

@@ -24,8 +24,8 @@ SUNWprivate_1.0 {
                _ZN3WTF16fastZeroedMallocEj;
                _ZN3WTF16fastZeroedMallocEm;
                _ZN3WTF26getAndResetAccumulatedLogsEv;
+               _ZNK3WTF6String4utf8ENS_14ConversionModeE;
                _ZNK14OpaqueJSString6stringEv;
-               _ZNK3WTF6String4utf8Ev;
                _ZNK3WTF10StringView23underlyingStringIsValidEv;
                _ZN3WTF26setPermissionsOfConfigPageEv;
                JSCheckScriptSyntax;
@@ -130,6 +130,7 @@ SUNWprivate_1.0 {
                _ZN18WebCoreTestSupport21injectInternalsObjectEPK15OpaqueJSContext;
                _ZN18WebCoreTestSupport25setLogChannelToAccumulateERKN3WTF6StringE;
                _ZN18WebCoreTestSupport26setAllowsAnySSLCertificateEb;
+               _ZN18WebCoreTestSupport23allowsAnySSLCertificateEv;
                Java_com_sun_webkit_dom_AttrImpl_getNameImpl;
                Java_com_sun_webkit_dom_AttrImpl_getOwnerElementImpl;
                Java_com_sun_webkit_dom_AttrImpl_getSpecifiedImpl;
@@ -1981,10 +1982,6 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_graphics_WCMediaPlayer_notifySeeking;
                Java_com_sun_webkit_graphics_WCMediaPlayer_notifySizeChanged;
                Java_com_sun_webkit_graphics_WCRenderQueue_twkRelease;
-               Java_com_sun_webkit_network_SocketStreamHandle_twkDidClose;
-               Java_com_sun_webkit_network_SocketStreamHandle_twkDidFail;
-               Java_com_sun_webkit_network_SocketStreamHandle_twkDidOpen;
-               Java_com_sun_webkit_network_SocketStreamHandle_twkDidReceiveData;
                Java_com_sun_webkit_network_URLLoaderBase_twkDidFail;
                Java_com_sun_webkit_network_URLLoaderBase_twkDidFinishLoading;
                Java_com_sun_webkit_network_URLLoaderBase_twkDidReceiveData;

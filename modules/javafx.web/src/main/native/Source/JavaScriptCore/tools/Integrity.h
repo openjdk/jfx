@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <wtf/AccessibleAddress.h>
 #include <wtf/Assertions.h>
 #include <wtf/Lock.h>
 
@@ -96,18 +97,14 @@ private:
 
 ALWAYS_INLINE static bool isSanePointer(const void* pointer)
 {
-#if CPU(ADDRESS64)
     uintptr_t pointerAsInt = bitwise_cast<uintptr_t>(pointer);
-#if OS(DARWIN)
-    constexpr uintptr_t oneAbove4G = (static_cast<uintptr_t>(1) << 32);
-    if (pointerAsInt < oneAbove4G)
+    if (pointerAsInt < lowestAccessibleAddress())
         return false;
-#endif
+#if CPU(ADDRESS64)
     uintptr_t canonicalPointerBits = pointerAsInt << (64 - OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH));
     uintptr_t nonCanonicalPointerBits = pointerAsInt >> OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH);
     return !nonCanonicalPointerBits && canonicalPointerBits;
 #else
-    UNUSED_PARAM(pointer);
     return true;
 #endif // CPU(ADDRESS64)
 }
@@ -173,12 +170,12 @@ ALWAYS_INLINE void auditCell(VM&, JSValue);
 ALWAYS_INLINE void auditStructureID(StructureID);
 
 #if ENABLE(EXTRA_INTEGRITY_CHECKS) && USE(JSVALUE64)
-template<typename T> ALWAYS_INLINE T audit(T value) { return doAudit(value); }
+template<typename T> ALWAYS_INLINE T audit(T value) { return bitwise_cast<T>(doAudit(value)); }
 #else
 template<typename T> ALWAYS_INLINE T audit(T value) { return value; }
 #endif
 
-#if COMPILER(MSVC) || !VA_OPT_SUPPORTED
+#if !VA_OPT_SUPPORTED
 
 #define IA_LOG(assertion, format, ...) do { \
         Integrity::logLnF("ERROR: %s @ %s:%d", #assertion, __FILE__, __LINE__); \
@@ -197,7 +194,7 @@ template<typename T> ALWAYS_INLINE T audit(T value) { return value; }
         RELEASE_ASSERT((assertion)); \
     })
 
-#else // not (COMPILER(MSVC) || !VA_OPT_SUPPORTED)
+#else // not !VA_OPT_SUPPORTED
 
 #define IA_LOG(assertion, format, ...) do { \
         Integrity::logLnF("ERROR: %s @ %s:%d", #assertion, __FILE__, __LINE__); \
@@ -217,7 +214,7 @@ template<typename T> ALWAYS_INLINE T audit(T value) { return value; }
         RELEASE_ASSERT((assertion) __VA_OPT__(,) __VA_ARGS__); \
     } __VA_OPT__(,) __VA_ARGS__)
 
-#endif // COMPILER(MSVC) || !VA_OPT_SUPPORTED
+#endif // !VA_OPT_SUPPORTED
 
 JS_EXPORT_PRIVATE WTF::PrintStream& logFile();
 JS_EXPORT_PRIVATE void logF(const char* format, ...) WTF_ATTRIBUTE_PRINTF(1, 2);

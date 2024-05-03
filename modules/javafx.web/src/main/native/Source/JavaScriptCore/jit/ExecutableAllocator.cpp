@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 #include "ExecutableAllocationFuzz.h"
 #include "JITOperationValidation.h"
 #include "LinkBuffer.h"
+#include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/FastBitVector.h>
 #include <wtf/FileSystem.h>
 #include <wtf/FixedVector.h>
@@ -42,14 +43,14 @@
 #include <wtf/SystemTracing.h>
 #include <wtf/WorkQueue.h>
 
-#if USE(LIBPAS_JIT_HEAP)
+#if ENABLE(LIBPAS_JIT_HEAP)
 #include <bmalloc/jit_heap.h>
 #include <bmalloc/jit_heap_config.h>
 #else
 #include <wtf/MetaAllocator.h>
 #endif
 
-#if HAVE(IOS_JIT_RESTRICTIONS)
+#if HAVE(IOS_JIT_RESTRICTIONS) || HAVE(MAC_JIT_RESTRICTIONS)
 #include <wtf/cocoa/Entitlements.h>
 #endif
 
@@ -94,7 +95,7 @@ static inline constexpr size_t executablePageSize() { return CeilingOnPageSize; 
 static inline size_t executablePageSize() { return WTF::pageSize(); }
 #endif
 
-#if USE(LIBPAS_JIT_HEAP)
+#if ENABLE(LIBPAS_JIT_HEAP)
 static constexpr size_t minimumPoolSizeForSegregatedHeap = 256 * MB;
 #endif
 
@@ -139,7 +140,7 @@ static constexpr double executablePoolReservationFraction = 0.15;
 static constexpr double executablePoolReservationFraction = 0.25;
 #endif
 
-#if USE(LIBPAS_JIT_HEAP)
+#if ENABLE(LIBPAS_JIT_HEAP)
 // This size is derived from jit_config's medium table size.
 static constexpr size_t minimumExecutablePoolReservationSize = 256 * KB;
 static_assert(fixedExecutableMemoryPoolSize * executablePoolReservationFraction >= minimumExecutablePoolReservationSize);
@@ -150,29 +151,37 @@ static bool isJITEnabled()
 {
     bool jitEnabled = !g_jscConfig.jitDisabled;
 #if HAVE(IOS_JIT_RESTRICTIONS)
-    return processHasEntitlement("dynamic-codesigning"_s) && jitEnabled;
-#else
-    return jitEnabled;
+    jitEnabled = jitEnabled && processHasEntitlement("dynamic-codesigning"_s);
+#elif HAVE(MAC_JIT_RESTRICTIONS) && USE(APPLE_INTERNAL_SDK)
+    jitEnabled = jitEnabled && processHasEntitlement("com.apple.security.cs.allow-jit"_s);
 #endif
+    return jitEnabled;
 }
 
-void ExecutableAllocator::setJITEnabled(bool enabled)
+void ExecutableAllocator::disableJIT()
 {
-    bool jitEnabled = !g_jscConfig.jitDisabled;
     ASSERT(!g_jscConfig.fixedVMPoolExecutableAllocator);
-    if (jitEnabled == enabled)
+    if (g_jscConfig.jitDisabled) {
+        RELEASE_ASSERT(!Options::useJIT());
         return;
+    }
 
-    g_jscConfig.jitDisabled = !enabled;
+    g_jscConfig.jitDisabled = true;
+    Options::useJIT() = false;
 
+#if HAVE(IOS_JIT_RESTRICTIONS) || HAVE(MAC_JIT_RESTRICTIONS) && USE(APPLE_INTERNAL_SDK)
 #if HAVE(IOS_JIT_RESTRICTIONS)
-    if (!enabled && processHasEntitlement("dynamic-codesigning"_s)) {
+    bool shouldDisableJITMemory = processHasEntitlement("dynamic-codesigning"_s);
+#else
+    bool shouldDisableJITMemory = processHasEntitlement("com.apple.security.cs.allow-jit"_s) && !isKernOpenSource();
+#endif
+    if (shouldDisableJITMemory) {
         // Because of an OS quirk, even after the JIT region has been unmapped,
         // the OS thinks that region is reserved, and as such, can cause Gigacage
         // allocation to fail. We work around this by initializing the Gigacage
         // first.
-        // Note: when called, setJITEnabled() is always called extra early in the
-        // process bootstrap. Under normal operation (when setJITEnabled() isn't
+        // Note: when called, disableJIT() is always called extra early in the
+        // process bootstrap. Under normal operation (when disableJIT() isn't
         // called at all), we will naturally initialize the Gigacage before we
         // allocate the JIT region. Hence, this workaround is merely ensuring the
         // same behavior of allocation ordering.
@@ -186,7 +195,7 @@ void ExecutableAllocator::setJITEnabled(bool enabled)
         const void* executableMemoryAllocationFailure = reinterpret_cast<void*>(-1);
         RELEASE_ASSERT_WITH_MESSAGE(allocation && allocation != executableMemoryAllocationFailure, "We should not have allocated executable memory before disabling the JIT.");
         RELEASE_ASSERT_WITH_MESSAGE(!munmap(allocation, size), "Unmapping executable memory should succeed so we do not have any executable memory in the address space");
-        RELEASE_ASSERT_WITH_MESSAGE(mmap(nullptr, size, protection, flags, fd, 0) == executableMemoryAllocationFailure, "Allocating executable memory should fail after setJITEnabled(false) is called.");
+        RELEASE_ASSERT_WITH_MESSAGE(mmap(nullptr, size, protection, flags, fd, 0) == executableMemoryAllocationFailure, "Allocating executable memory should fail after disableJIT() is called.");
     }
 #endif
 }
@@ -260,7 +269,7 @@ static ALWAYS_INLINE MacroAssemblerCodeRef<JITThunkPtrTag> jitWriteThunkGenerato
     local2.link(&jit);
     jit.ret();
 
-    auto stubBaseCodePtr = MacroAssemblerCodePtr<LinkBufferPtrTag>(tagCodePtr<LinkBufferPtrTag>(stubBase));
+    auto stubBaseCodePtr = CodePtr<LinkBufferPtrTag>(tagCodePtr<LinkBufferPtrTag>(stubBase));
     LinkBuffer linkBuffer(jit, stubBaseCodePtr, stubSize, LinkBuffer::Profile::Thunk);
     // We don't use FINALIZE_CODE() for two reasons.
     // The first is that we don't want the writeable address, as disassembled instructions,
@@ -285,7 +294,7 @@ static MacroAssemblerCodeRef<JITThunkPtrTag> ALWAYS_INLINE jitWriteThunkGenerato
     functionAsInt -= 1;
     function = reinterpret_cast<void*>(functionAsInt);
 #endif
-    auto codePtr = MacroAssemblerCodePtr<JITThunkPtrTag>(tagCFunctionPtr<JITThunkPtrTag>(function));
+    auto codePtr = CodePtr<JITThunkPtrTag>(tagCFunctionPtr<JITThunkPtrTag>(function));
     return MacroAssemblerCodeRef<JITThunkPtrTag>::createSelfManagedCodeRef(codePtr);
 }
 #endif // USE(EXECUTE_ONLY_JIT_WRITE_FUNCTION)
@@ -336,7 +345,7 @@ static ALWAYS_INLINE void initializeSeparatedWXHeaps(void* stubBase, size_t stub
     memset_s(&writableAddr, sizeof(writableAddr), 0, sizeof(writableAddr));
 
 #if ENABLE(SEPARATED_WX_HEAP)
-    g_jscConfig.jitWriteSeparateHeaps = reinterpret_cast<JITWriteSeparateHeapsFunction>(writeThunk.code().executableAddress());
+    g_jscConfig.jitWriteSeparateHeaps = reinterpret_cast<JITWriteSeparateHeapsFunction>(writeThunk.code().taggedPtr());
 #endif
 }
 
@@ -366,7 +375,7 @@ static ALWAYS_INLINE JITReservation initializeJITPageReservation()
 
     if (Options::jitMemoryReservationSize()) {
         reservation.size = Options::jitMemoryReservationSize();
-#if USE(LIBPAS_JIT_HEAP)
+#if ENABLE(LIBPAS_JIT_HEAP)
         if (reservation.size * executablePoolReservationFraction < minimumExecutablePoolReservationSize)
             reservation.size += minimumExecutablePoolReservationSize;
 #endif
@@ -377,7 +386,7 @@ static ALWAYS_INLINE JITReservation initializeJITPageReservation()
     RELEASE_ASSERT(reservation.size <= MacroAssembler::nearJumpRange, "Executable pool size is too large for near jump/call without JUMP_ISLANDS");
 #endif
 
-#if USE(LIBPAS_JIT_HEAP)
+#if ENABLE(LIBPAS_JIT_HEAP)
     if (reservation.size < minimumPoolSizeForSegregatedHeap)
         jit_heap_runtime_config.max_segregated_object_size = 0;
 #endif
@@ -526,7 +535,7 @@ public:
 
     RefPtr<ExecutableMemoryHandle> allocate(size_t sizeInBytes)
     {
-#if USE(LIBPAS_JIT_HEAP)
+#if ENABLE(LIBPAS_JIT_HEAP)
         auto result = ExecutableMemoryHandle::createImpl(sizeInBytes);
         if (LIKELY(result))
             m_bytesAllocated.fetch_add(result->sizeInBytes(), std::memory_order_relaxed);
@@ -536,7 +545,7 @@ public:
 
         unsigned start = 0;
         if (UNLIKELY(Options::useRandomizingExecutableIslandAllocation()))
-            start = cryptographicallyRandomNumber() % m_allocators.size();
+            start = cryptographicallyRandomNumber<uint32_t>() % m_allocators.size();
 
         unsigned i = start;
         while (true) {
@@ -555,7 +564,7 @@ public:
 
     Lock& getLock() WTF_RETURNS_LOCK(m_lock) { return m_lock; }
 
-#if USE(LIBPAS_JIT_HEAP)
+#if ENABLE(LIBPAS_JIT_HEAP)
     void shrinkBytesAllocated(size_t oldSizeInBytes, size_t newSizeInBytes)
     {
         m_bytesAllocated.fetch_add(newSizeInBytes - oldSizeInBytes, std::memory_order_relaxed);
@@ -565,7 +574,7 @@ public:
     // Non atomic
     size_t bytesAllocated()
     {
-#if USE(LIBPAS_JIT_HEAP)
+#if ENABLE(LIBPAS_JIT_HEAP)
         return m_bytesAllocated.load(std::memory_order_relaxed);
 #else
         size_t result = 0;
@@ -584,7 +593,7 @@ public:
     size_t bytesAvailable()
     {
         size_t bytesReserved = this->bytesReserved();
-#if USE(LIBPAS_JIT_HEAP)
+#if ENABLE(LIBPAS_JIT_HEAP)
         size_t nonAvailableSize = static_cast<size_t>(bytesReserved * executablePoolReservationFraction);
         if (nonAvailableSize < minimumExecutablePoolReservationSize)
             return bytesReserved - minimumExecutablePoolReservationSize;
@@ -594,7 +603,7 @@ public:
 #endif
     }
 
-#if !USE(LIBPAS_JIT_HEAP)
+#if !ENABLE(LIBPAS_JIT_HEAP)
     size_t bytesCommitted()
     {
         size_t result = 0;
@@ -625,7 +634,7 @@ public:
     }
 #endif
 
-#if !USE(LIBPAS_JIT_HEAP)
+#if !ENABLE(LIBPAS_JIT_HEAP)
     MetaAllocator::Statistics currentStatistics()
     {
         Locker locker { getLock() };
@@ -638,9 +647,9 @@ public:
         });
         return result;
     }
-#endif // !USE(LIBPAS_JIT_HEAP)
+#endif // !ENABLE(LIBPAS_JIT_HEAP)
 
-#if USE(LIBPAS_JIT_HEAP)
+#if ENABLE(LIBPAS_JIT_HEAP)
     void handleWillBeReleased(ExecutableMemoryHandle& handle, size_t sizeInBytes)
     {
         m_bytesAllocated.fetch_sub(sizeInBytes, std::memory_order_relaxed);
@@ -654,7 +663,7 @@ public:
         UNUSED_PARAM(handle);
 #endif // ENABLE(JUMP_ISLANDS) -> so end of !ENABLE(JUMP_ISLANDS)
     }
-#endif // USE(LIBPAS_JIT_HEAP)
+#endif // ENABLE(LIBPAS_JIT_HEAP)
 
 #if ENABLE(JUMP_ISLANDS)
     void handleWillBeReleased(const LockHolder& locker, ExecutableMemoryHandle& handle)
@@ -754,7 +763,7 @@ private:
 
                 MacroAssembler jit;
                 auto nearTailCall = jit.nearTailCall();
-                LinkBuffer linkBuffer(jit, MacroAssemblerCodePtr<NoPtrTag>(currentIsland), islandSizeInBytes, LinkBuffer::Profile::JumpIsland, JITCompilationMustSucceed, false);
+                LinkBuffer linkBuffer(jit, CodePtr<NoPtrTag>(currentIsland), islandSizeInBytes, LinkBuffer::Profile::JumpIsland, JITCompilationMustSucceed, false);
                 RELEASE_ASSERT(linkBuffer.isValid());
 
                 // We use this to appease the assertion that we're not finalizing on a compiler thread. In this situation, it's
@@ -794,16 +803,16 @@ private:
 
 private:
     class Allocator
-#if !USE(LIBPAS_JIT_HEAP)
+#if !ENABLE(LIBPAS_JIT_HEAP)
         : public MetaAllocator
 #endif
     {
-#if !USE(LIBPAS_JIT_HEAP)
+#if !ENABLE(LIBPAS_JIT_HEAP)
         using Base = MetaAllocator;
 #endif
     public:
         Allocator(FixedVMPoolExecutableAllocator& allocator)
-#if !USE(LIBPAS_JIT_HEAP)
+#if !ENABLE(LIBPAS_JIT_HEAP)
             : Base(allocator.getLock(), jitAllocationGranule, executablePageSize()) // round up all allocations to 32 bytes
             ,
 #else
@@ -813,7 +822,7 @@ private:
         {
         }
 
-#if USE(LIBPAS_JIT_HEAP)
+#if ENABLE(LIBPAS_JIT_HEAP)
         void addFreshFreeSpace(void* start, size_t sizeInBytes)
         {
             RELEASE_ASSERT(!m_start);
@@ -828,9 +837,9 @@ private:
             uintptr_t addressAsInt = reinterpret_cast<uintptr_t>(address);
             return addressAsInt >= m_start && addressAsInt < m_end;
         }
-#endif // USE(LIBPAS_JIT_HEAP)
+#endif // ENABLE(LIBPAS_JIT_HEAP)
 
-#if !USE(LIBPAS_JIT_HEAP)
+#if !ENABLE(LIBPAS_JIT_HEAP)
         FreeSpacePtr allocateNewSpace(size_t&) override
         {
             // We're operating in a fixed pool, so new allocation is always prohibited.
@@ -846,13 +855,13 @@ private:
         {
             m_fixedAllocator.m_reservation.decommit(page, executablePageSize() * count);
         }
-#endif // !USE(LIBPAS_JIT_HEAP)
+#endif // !ENABLE(LIBPAS_JIT_HEAP)
 
         FixedVMPoolExecutableAllocator& m_fixedAllocator;
-#if USE(LIBPAS_JIT_HEAP)
+#if ENABLE(LIBPAS_JIT_HEAP)
         uintptr_t m_start { 0 };
         uintptr_t m_end { 0 };
-#endif // USE(LIBPAS_JIT_HEAP)
+#endif // ENABLE(LIBPAS_JIT_HEAP)
     };
 
 #if ENABLE(JUMP_ISLANDS)
@@ -900,9 +909,10 @@ private:
             return islandsPerPage;
         }
 
-#if !USE(LIBPAS_JIT_HEAP)
+#if !ENABLE(LIBPAS_JIT_HEAP)
         void release(const LockHolder& locker, MetaAllocatorHandle& handle) final
         {
+            AssemblyCommentRegistry::singleton().unregisterCodeRange(handle.start().untaggedPtr(), handle.end().untaggedPtr());
             m_fixedAllocator.handleWillBeReleased(locker, handle);
             Base::release(locker, handle);
         }
@@ -1024,7 +1034,7 @@ private:
     Allocator m_allocator;
 #endif // ENABLE(JUMP_ISLANDS)
     size_t m_bytesReserved { 0 };
-#if USE(LIBPAS_JIT_HEAP)
+#if ENABLE(LIBPAS_JIT_HEAP)
     std::atomic<size_t> m_bytesAllocated { 0 };
 #endif
 };
@@ -1079,7 +1089,7 @@ RefPtr<ExecutableMemoryHandle> ExecutableAllocator::allocate(size_t sizeInBytes,
     FixedVMPoolExecutableAllocator* allocator = g_jscConfig.fixedVMPoolExecutableAllocator;
     if (!allocator)
         return Base::allocate(sizeInBytes, effort);
-#if !USE(LIBPAS_JIT_HEAP)
+#if !ENABLE(LIBPAS_JIT_HEAP)
     if (Options::logExecutableAllocation()) {
         MetaAllocator::Statistics stats = allocator->currentStatistics();
         dataLog("Allocating ", sizeInBytes, " bytes of executable memory with ", stats.bytesAllocated, " bytes allocated, ", stats.bytesReserved, " bytes reserved, and ", stats.bytesCommitted, " committed.\n");
@@ -1142,14 +1152,14 @@ Lock& ExecutableAllocator::getLock() const
 
 size_t ExecutableAllocator::committedByteCount()
 {
-#if USE(LIBPAS_JIT_HEAP)
+#if ENABLE(LIBPAS_JIT_HEAP)
     return Base::committedByteCount();
-#else // USE(LIBPAS_JIT_HEAP) -> so start of !USE(LIBPAS_JIT_HEAP)
+#else // ENABLE(LIBPAS_JIT_HEAP) -> so start of !ENABLE(LIBPAS_JIT_HEAP)
     FixedVMPoolExecutableAllocator* allocator = g_jscConfig.fixedVMPoolExecutableAllocator;
     if (!allocator)
         return Base::committedByteCount();
     return allocator->bytesCommitted();
-#endif // USE(LIBPAS_JIT_HEAP) -> so end of !USE(LIBPAS_JIT_HEAP)
+#endif // ENABLE(LIBPAS_JIT_HEAP) -> so end of !ENABLE(LIBPAS_JIT_HEAP)
 }
 
 #if ENABLE(META_ALLOCATOR_PROFILE)
@@ -1277,13 +1287,13 @@ void dumpJITMemory(const void* dst, const void* src, size_t size)
 #endif
 }
 
-#if USE(LIBPAS_JIT_HEAP) && ENABLE(JIT)
+#if ENABLE(LIBPAS_JIT_HEAP) && ENABLE(JIT)
 RefPtr<ExecutableMemoryHandle> ExecutableMemoryHandle::createImpl(size_t sizeInBytes)
 {
     void* key = jit_heap_try_allocate(sizeInBytes);
     if (!key)
         return nullptr;
-    return adoptRef(new ExecutableMemoryHandle(MemoryPtr::makeFromRawPointer(key), jit_heap_get_size(key)));
+    return adoptRef(new ExecutableMemoryHandle(MemoryPtr::fromUntaggedPtr(key), jit_heap_get_size(key)));
 }
 
 ExecutableMemoryHandle::~ExecutableMemoryHandle()
@@ -1304,7 +1314,7 @@ void ExecutableMemoryHandle::shrink(size_t newSizeInBytes)
         allocator->shrinkBytesAllocated(oldSizeInBytes, sizeInBytes());
     }
 }
-#endif // USE(LIBPAS_JIT_HEAP) && ENABLE(JIT)
+#endif // ENABLE(LIBPAS_JIT_HEAP) && ENABLE(JIT)
 
 } // namespace JSC
 
@@ -1317,6 +1327,8 @@ namespace JSC {
 static ExecutableAllocator* globalExecutableAllocatorToWorkAroundLeaks = nullptr;
 void ExecutableAllocator::initialize()
 {
+    if (g_jscConfig.jitDisabled)
+        return;
     g_jscConfig.executableAllocator = new ExecutableAllocator;
     globalExecutableAllocatorToWorkAroundLeaks = g_jscConfig.executableAllocator;
 }

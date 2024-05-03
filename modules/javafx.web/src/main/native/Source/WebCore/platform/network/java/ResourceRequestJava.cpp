@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,7 +50,7 @@ static void initRefs(JNIEnv* env)
 }
 
 namespace WebCore {
-
+#if 0
 unsigned initializeMaximumHTTPConnectionCountPerHost()
 {
     using namespace ResourceRequestJavaInternal;
@@ -69,5 +69,5 @@ unsigned initializeMaximumHTTPConnectionCountPerHost()
     ASSERT(result >= 0);
     return result;
 }
-
+#endif
 } // namespace WebCore

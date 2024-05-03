@@ -28,11 +28,11 @@
 #if ENABLE(SERVICE_WORKER)
 #include "ServiceWorkerClientData.h"
 
-#include "DOMWindow.h"
 #include "Document.h"
 #include "DocumentLoader.h"
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrame.h"
 #include "SWClientConnection.h"
 #include "WorkerGlobalScope.h"
 #include <wtf/CrossThreadCopier.h>
@@ -76,8 +76,10 @@ ServiceWorkerClientData ServiceWorkerClientData::from(ScriptExecutionContext& co
 
         Vector<String> ancestorOrigins;
         if (auto* frame = document->frame()) {
-            for (auto* ancestor = frame->tree().parent(); ancestor; ancestor = ancestor->tree().parent())
-                ancestorOrigins.append(ancestor->document()->securityOrigin().toString());
+            for (auto* ancestor = frame->tree().parent(); ancestor; ancestor = ancestor->tree().parent()) {
+                if (auto* ancestorFrame = dynamicDowncast<LocalFrame>(ancestor))
+                    ancestorOrigins.append(ancestorFrame->document()->securityOrigin().toString());
+            }
         }
 
         return {

@@ -115,7 +115,6 @@ public:
     NinePieceImage(RefPtr<StyleImage>&&, LengthBox imageSlices, bool fill, LengthBox borderSlices, bool overridesBorderWidths, LengthBox outset, NinePieceImageRule horizontalRule, NinePieceImageRule verticalRule);
 
     bool operator==(const NinePieceImage& other) const { return m_data == other.m_data; }
-    bool operator!=(const NinePieceImage& other) const { return m_data != other.m_data; }
 
     bool hasImage() const { return m_data->image; }
     StyleImage* image() const { return m_data->image.get(); }
@@ -187,7 +186,7 @@ public:
     static FloatSize computeMiddleTileScale(const Vector<FloatSize>& scales, const Vector<FloatRect>& destinationRects, const Vector<FloatRect>& sourceRects, NinePieceImageRule hRule, NinePieceImageRule vRule);
     static Vector<FloatSize> computeTileScales(const Vector<FloatRect>& destinationRects, const Vector<FloatRect>& sourceRects, NinePieceImageRule hRule, NinePieceImageRule vRule);
 
-    void paint(GraphicsContext&, RenderElement*, const RenderStyle&, const LayoutRect& destination, const LayoutSize& source, float deviceScaleFactor, CompositeOperator) const;
+    void paint(GraphicsContext&, const RenderElement*, const RenderStyle&, const LayoutRect& destination, const LayoutSize& source, float deviceScaleFactor, CompositeOperator) const;
 
 private:
     struct Data : RefCounted<Data> {
@@ -196,7 +195,6 @@ private:
         Ref<Data> copy() const;
 
         bool operator==(const Data&) const;
-        bool operator!=(const Data& other) const { return !(*this == other); }
 
         bool fill { false };
         bool overridesBorderWidths { false };

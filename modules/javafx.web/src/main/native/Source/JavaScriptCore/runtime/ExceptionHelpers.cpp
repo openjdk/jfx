@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -49,8 +49,8 @@ JSObject* createStackOverflowError(JSGlobalObject* globalObject)
 JSObject* createUndefinedVariableError(JSGlobalObject* globalObject, const Identifier& ident)
 {
     if (ident.isPrivateName())
-        return createReferenceError(globalObject, makeString("Can't find private variable: PrivateSymbol.", ident.string()));
-    return createReferenceError(globalObject, makeString("Can't find variable: ", ident.string()));
+        return createReferenceError(globalObject, makeString("Can't find private variable: PrivateSymbol."_s, ident.string()));
+    return createReferenceError(globalObject, makeString("Can't find variable: "_s, ident.string()));
 }
 
 String errorDescriptionForValue(JSGlobalObject* globalObject, JSValue v)
@@ -62,8 +62,13 @@ String errorDescriptionForValue(JSGlobalObject* globalObject, JSValue v)
         return tryMakeString('"', string, '"');
     }
 
-    if (v.isSymbol())
-        return asSymbol(v)->descriptiveString();
+    if (v.isSymbol()) {
+        auto expectedDescription = asSymbol(v)->tryGetDescriptiveString();
+        if (expectedDescription)
+            return expectedDescription.value();
+        ASSERT(expectedDescription.error() == ErrorTypeWithExtension::OutOfMemoryError);
+        return String("Symbol"_s);
+    }
     if (v.isObject()) {
         VM& vm = globalObject->vm();
         JSObject* object = asObject(v);
@@ -83,7 +88,7 @@ static StringView clampErrorMessage(const String& originalMessage)
 
 static String defaultApproximateSourceError(const String& originalMessage, StringView sourceText)
 {
-    return makeString(clampErrorMessage(originalMessage), " (near '...", sourceText, "...')");
+    return makeString(clampErrorMessage(originalMessage), " (near '..."_s, sourceText, "...')"_s);
 }
 
 String defaultSourceAppender(const String& originalMessage, StringView sourceText, RuntimeType, ErrorInstance::SourceTextWhereErrorOccurred occurrence)
@@ -92,7 +97,7 @@ String defaultSourceAppender(const String& originalMessage, StringView sourceTex
         return defaultApproximateSourceError(originalMessage, sourceText);
 
     ASSERT(occurrence == ErrorInstance::FoundExactSource);
-    return makeString(clampErrorMessage(originalMessage), " (evaluating '", sourceText, "')");
+    return makeString(clampErrorMessage(originalMessage), " (evaluating '"_s, sourceText, "')"_s);
 }
 
 static StringView functionCallBase(StringView sourceText)
@@ -205,11 +210,11 @@ static String invalidParameterInSourceAppender(const String& originalMessage, St
         return originalMessage;
     }
     if (sourceText.find("in"_s) != inIndex)
-        return makeString(originalMessage, " (evaluating '", sourceText, "')");
+        return makeString(originalMessage, " (evaluating '"_s, sourceText, "')"_s);
 
     static constexpr unsigned inLength = 2;
-    StringView rightHandSide = sourceText.substring(inIndex + inLength).stripLeadingAndTrailingMatchedCharacters(isSpaceOrNewline);
-    return makeString(rightHandSide, " is not an Object. (evaluating '", sourceText, "')");
+    auto rightHandSide = sourceText.substring(inIndex + inLength).trim(deprecatedIsSpaceOrNewline);
+    return makeString(rightHandSide, " is not an Object. (evaluating '"_s, sourceText, "')"_s);
 }
 
 inline String invalidParameterInstanceofSourceAppender(const String& content, const String& originalMessage, StringView sourceText, RuntimeType, ErrorInstance::SourceTextWhereErrorOccurred occurrence)
@@ -224,11 +229,11 @@ inline String invalidParameterInstanceofSourceAppender(const String& content, co
         return originalMessage;
 
     if (sourceText.find("instanceof"_s) != instanceofIndex)
-        return makeString(originalMessage, " (evaluating '", sourceText, "')");
+        return makeString(originalMessage, " (evaluating '"_s, sourceText, "')"_s);
 
     static constexpr unsigned instanceofLength = 10;
-    StringView rightHandSide = sourceText.substring(instanceofIndex + instanceofLength).stripLeadingAndTrailingMatchedCharacters(isSpaceOrNewline);
-    return makeString(rightHandSide, content, ". (evaluating '", sourceText, "')");
+    auto rightHandSide = sourceText.substring(instanceofIndex + instanceofLength).trim(deprecatedIsSpaceOrNewline);
+    return makeString(rightHandSide, content, ". (evaluating '"_s, sourceText, "')"_s);
 }
 
 static String invalidParameterInstanceofNotFunctionSourceAppender(const String& originalMessage, StringView sourceText, RuntimeType runtimeType, ErrorInstance::SourceTextWhereErrorOccurred occurrence)
@@ -248,7 +253,7 @@ static String invalidPrototypeSourceAppender(const String& originalMessage, Stri
 
     auto extendsIndex = sourceText.reverseFind("extends"_s);
     if (extendsIndex == notFound || sourceText.find("extends"_s) != extendsIndex)
-        return makeString(originalMessage, " (evaluating '", sourceText, "')");
+        return makeString(originalMessage, " (evaluating '"_s, sourceText, "')"_s);
 
     return "The value of the superclass's prototype property is not an object or null."_s;
 }
@@ -319,7 +324,7 @@ JSObject* createInvalidPrototypeError(JSGlobalObject* globalObject, JSValue valu
 
 JSObject* createErrorForInvalidGlobalAssignment(JSGlobalObject* globalObject, const String& propertyName)
 {
-    return createReferenceError(globalObject, makeString("Strict mode forbids implicit creation of global property '", propertyName, '\''));
+    return createReferenceError(globalObject, makeString("Strict mode forbids implicit creation of global property '"_s, propertyName, '\''));
 }
 
 JSObject* createTDZError(JSGlobalObject* globalObject)

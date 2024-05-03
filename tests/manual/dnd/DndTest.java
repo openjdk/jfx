@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,16 +23,13 @@
  * questions.
  */
 
-
 import javafx.application.Application;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
-import javafx.scene.input.Dragboard;
 import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
@@ -57,7 +54,7 @@ public class DndTest extends Application {
         VBox root = new VBox(5,
                 new Label("1. Click on \"DRAG ME\" and drop on \"DROP HERE\"."),
                 new Label("2. Click on \"DRAG ME\" and drop outside this program."),
-                new Label("3. Click on \"DRAG ME\" and drop on \"DROP HERE\"\n pressing SHIFT."),
+                new Label("3. Click on \"DRAG ME\" and drop on \"DROP HERE\"\n pressing SHIFT (Cmd on Mac)."),
                 new Label(""),
                 group);
 

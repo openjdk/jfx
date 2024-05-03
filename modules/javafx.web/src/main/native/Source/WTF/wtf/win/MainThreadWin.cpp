@@ -31,23 +31,22 @@
 #include <wtf/MainThread.h>
 
 #include <wtf/Assertions.h>
-#include <wtf/RunLoop.h>
 #include <wtf/Threading.h>
 #include <wtf/WindowsExtras.h>
 
 namespace WTF {
 
-static ThreadIdentifier mainThread { 0 };
+static ThreadIdentifier s_mainThread { 0 };
 
 void initializeMainThreadPlatform()
 {
-    mainThread = Thread::currentID();
+    s_mainThread = Thread::currentID();
     Thread::initializeCurrentThreadInternal("Main Thread");
 }
 
 bool isMainThread()
 {
-    return mainThread == Thread::currentID();
+    return s_mainThread == Thread::currentID();
 }
 
 } // namespace WTF

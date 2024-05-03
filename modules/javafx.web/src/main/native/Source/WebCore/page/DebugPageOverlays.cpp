@@ -30,11 +30,11 @@
 #include "Cursor.h"
 #include "ElementIterator.h"
 #include "FloatRoundedRect.h"
-#include "FrameView.h"
 #include "Gradient.h"
 #include "GraphicsContext.h"
 #include "HitTestResult.h"
 #include "InteractionRegion.h"
+#include "LocalFrameView.h"
 #include "Page.h"
 #include "PageOverlay.h"
 #include "PageOverlayController.h"
@@ -72,7 +72,7 @@ private:
     void didMoveToPage(PageOverlay&, Page*) final;
     void drawRect(PageOverlay&, GraphicsContext&, const IntRect& dirtyRect) override;
     bool mouseEvent(PageOverlay&, const PlatformMouseEvent&) override;
-    void didScrollFrame(PageOverlay&, Frame&) override;
+    void didScrollFrame(PageOverlay&, LocalFrame&) override;
 
 protected:
     // Returns true if the region changed.
@@ -114,12 +114,15 @@ bool MouseWheelRegionOverlay::updateRegion()
 #else
     auto region = makeUnique<Region>();
 
-    for (const Frame* frame = &m_page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
-        if (!frame->view() || !frame->document())
+    for (auto* frame = &m_page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+        if (!localFrame)
+            continue;
+        if (!localFrame->view() || !localFrame->document())
             continue;
 
-        auto frameRegion = frame->document()->absoluteRegionForEventTargets(frame->document()->wheelEventTargets());
-        frameRegion.first.translate(toIntSize(frame->view()->contentsToRootView(IntPoint())));
+        auto frameRegion = localFrame->document()->absoluteRegionForEventTargets(localFrame->document()->wheelEventTargets());
+        frameRegion.first.translate(toIntSize(localFrame->view()->contentsToRootView(IntPoint())));
         region->unite(frameRegion.first);
     }
 
@@ -281,7 +284,6 @@ private:
         { "constrain"_s, "Constrain to Regions"_s, true },
         { "clip"_s, "Clip to Regions"_s, true },
         { "wash"_s, "Draw Wash"_s, false },
-        { "contextualColor"_s, "Contextual Color"_s, true },
         { "contextualSize"_s, "Contextual Size"_s, true },
         { "cursor"_s, "Show Cursor"_s, true },
         { "hover"_s, "CSS Hover"_s, false },
@@ -297,13 +299,12 @@ bool InteractionRegionOverlay::updateRegion()
     return true;
 }
 
-static Vector<Path> pathsForRegion(const Region& region, float borderRadius)
+static Vector<Path> pathsForRect(const IntRect& rect, float borderRadius)
 {
     static constexpr float radius = 4;
 
-    Vector<FloatRect> rects = region.rects().map([] (auto rect) -> FloatRect {
-        return rect;
-    });
+    Vector<FloatRect> rects;
+    rects.append(rect);
     return PathUtilities::pathsWithShrinkWrappedRects(rects, std::max(borderRadius, radius));
 }
 
@@ -315,7 +316,11 @@ std::optional<std::pair<RenderLayer&, GraphicsLayer&>> InteractionRegionOverlay:
         HitTestRequest::Type::AllowChildFrameContent
     };
     HitTestResult result(m_mouseLocationInContentCoordinates);
-    m_page.mainFrame().document()->hitTest(hitType, result);
+    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page.mainFrame());
+    if (!localMainFrame)
+        return std::nullopt;
+
+    localMainFrame->document()->hitTest(hitType, result);
 
     auto* hitNode = result.innerNode();
     if (!hitNode || !hitNode->renderer())
@@ -349,16 +354,19 @@ std::optional<InteractionRegion> InteractionRegionOverlay::activeRegion() const
     auto& [layer, graphicsLayer] = *layerPair;
 
     std::optional<InteractionRegion> hitRegion;
-    Region hitRegionInOverlayCoordinates;
+    IntRect hitRectInOverlayCoordinates;
     float hitRegionArea = 0;
+
+    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page.mainFrame());
+    if (!localMainFrame)
+        return std::nullopt;
 
     auto regions = graphicsLayer.eventRegion().interactionRegions();
     for (const auto& region : regions) {
         float area = 0;
         FloatRect boundingRect;
-        Region regionInOverlayCoordinates;
 
-        for (auto rect : region.regionInLayerCoordinates.rects()) {
+        auto rect = region.rectInLayerCoordinates;
             rect.move(roundedIntSize(graphicsLayer.offsetFromRenderer()));
             IntRect rectInOverlayCoordinates = layer.renderer().localToAbsoluteQuad(FloatRect { rect }).enclosingBoundingBox();
             if (boundingRect.isEmpty())
@@ -366,13 +374,11 @@ std::optional<InteractionRegion> InteractionRegionOverlay::activeRegion() const
             else
                 boundingRect.unite(rectInOverlayCoordinates);
             area += rectInOverlayCoordinates.area();
-            regionInOverlayCoordinates.unite(rectInOverlayCoordinates);
-        }
 
         if (!boundingRect.contains(m_mouseLocationInContentCoordinates))
             continue;
 
-        auto paths = pathsForRegion(regionInOverlayCoordinates, region.borderRadius);
+        auto paths = pathsForRect(rectInOverlayCoordinates, region.borderRadius);
         bool didHitRegion = false;
         for (const auto& path : paths) {
             if (path.contains(m_mouseLocationInContentCoordinates)) {
@@ -384,18 +390,22 @@ std::optional<InteractionRegion> InteractionRegionOverlay::activeRegion() const
         if (!didHitRegion)
             continue;
 
-        if (area > m_page.mainFrame().view()->layoutSize().area() / 2)
+        if (area > localMainFrame->view()->layoutSize().area() / 2)
             continue;
 
         if (didHitRegion && (!hitRegion || area < hitRegionArea)) {
             hitRegion = region;
             hitRegionArea = area;
-            hitRegionInOverlayCoordinates = regionInOverlayCoordinates;
+            hitRectInOverlayCoordinates = rectInOverlayCoordinates;
         }
     }
 
-    if (hitRegion)
-        hitRegion->regionInLayerCoordinates = hitRegionInOverlayCoordinates;
+    if (hitRegion) {
+        if (hitRegion->type == InteractionRegion::Type::Occlusion)
+            return std::nullopt;
+
+        hitRegion->rectInLayerCoordinates = hitRectInOverlayCoordinates;
+    }
 
     return hitRegion;
 #else
@@ -430,7 +440,10 @@ static void drawCheckbox(const String& text, GraphicsContext& context, const Fon
 
 FloatRect InteractionRegionOverlay::rectForSettingAtIndex(unsigned index) const
 {
-    auto viewSize = m_page.mainFrame().view()->layoutSize();
+    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page.mainFrame());
+    if (!localMainFrame)
+        return FloatRect();
+    auto viewSize = localMainFrame->view()->layoutSize();
     static constexpr float settingsWidth = 150;
     static constexpr float rowHeight = 16;
     return {
@@ -463,7 +476,7 @@ void InteractionRegionOverlay::drawSettings(GraphicsContext& context)
 
     {
         GraphicsContextStateSaver stateSaver(context);
-        context.setShadow({ }, 5, Color(Color::black).colorWithAlpha(0.5));
+        context.setDropShadow({ { }, 5, Color(Color::black).colorWithAlpha(0.5), ShadowRadiusMode::Default });
         context.fillRoundedRect(FloatRoundedRect { rect, FloatRoundedRect::Radii { 6 } }, Color(Color::white).colorWithAlpha(0.85));
     }
 
@@ -500,11 +513,11 @@ void InteractionRegionOverlay::drawRect(PageOverlay&, GraphicsContext& context, 
             return gradientData;
         };
 
-        auto makeGradient = [&] (bool hasLightBackground, Gradient::RadialData gradientData) {
+        auto makeGradient = [&] (Gradient::RadialData gradientData) {
             auto gradient = Gradient::create(WTFMove(gradientData), { ColorInterpolationMethod::SRGB { }, AlphaPremultiplication::Unpremultiplied });
             if (region && valueForSetting("wash"_s) && valueForSetting("clip"_s)) {
                 gradient->addColorStop({ 0.1, Color(Color::white).colorWithAlpha(0.5) });
-                gradient->addColorStop({ 1, hasLightBackground ? Color(Color::black).colorWithAlpha(0.05) : Color(Color::white).colorWithAlpha(0.1) });
+                gradient->addColorStop({ 1, Color(Color::white).colorWithAlpha(0.1) });
             } else if (!valueForSetting("clip"_s) || !valueForSetting("constrain"_s)) {
                 gradient->addColorStop({ 0.1, Color(Color::white).colorWithAlpha(0.2) });
                 gradient->addColorStop({ 1, Color(Color::white).colorWithAlpha(0) });
@@ -521,7 +534,7 @@ void InteractionRegionOverlay::drawRect(PageOverlay&, GraphicsContext& context, 
         Vector<Path> clipPaths;
 
         if (shouldClip)
-            clipPaths = pathsForRegion(region->regionInLayerCoordinates, region->borderRadius);
+            clipPaths = pathsForRect(region->rectInLayerCoordinates, region->borderRadius);
 
         bool shouldUseBackdropGradient = !shouldClip || !region || (!valueForSetting("wash"_s) && valueForSetting("clip"_s));
 
@@ -546,18 +559,14 @@ void InteractionRegionOverlay::drawRect(PageOverlay&, GraphicsContext& context, 
             }
         }
 
-        bool hasLightBackground = false;
-        if (!shouldUseBackdropGradient && valueForSetting("contextualColor"_s))
-            hasLightBackground = region->hasLightBackground;
-
         if (shouldClip) {
             for (const auto& path : clipPaths) {
                 float radius = valueForSetting("contextualSize"_s) ? 1.5 * path.boundingRect().size().minDimension() : defaultRadius;
-                context.setFillGradient(makeGradient(hasLightBackground, gradientData(radius)));
+                context.setFillGradient(makeGradient(gradientData(radius)));
                 context.fillPath(path);
             }
         } else {
-            context.setFillGradient(makeGradient(hasLightBackground, gradientData(defaultRadius)));
+            context.setFillGradient(makeGradient(gradientData(defaultRadius)));
             context.fillRect(dirtyRect);
         }
     }
@@ -569,7 +578,10 @@ void InteractionRegionOverlay::drawRect(PageOverlay&, GraphicsContext& context, 
 
 bool InteractionRegionOverlay::mouseEvent(PageOverlay& overlay, const PlatformMouseEvent& event)
 {
-    auto mainFrameView = m_page.mainFrame().view();
+    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page.mainFrame());
+    if (!localMainFrame)
+        return false;
+    auto mainFrameView = localMainFrame->view();
 
     std::optional<Cursor> cursorToSet;
 
@@ -583,7 +595,7 @@ bool InteractionRegionOverlay::mouseEvent(PageOverlay& overlay, const PlatformMo
         if (!rectForSettingAtIndex(i).contains(eventInContentsCoordinates))
             continue;
         cursorToSet = handCursor();
-        if (event.button() == LeftButton && event.type() == PlatformEvent::MousePressed) {
+        if (event.button() == LeftButton && event.type() == PlatformEvent::Type::MousePressed) {
             m_settings[i].value = !m_settings[i].value;
             m_page.forceRepaintAllFrames();
             return true;
@@ -596,7 +608,7 @@ bool InteractionRegionOverlay::mouseEvent(PageOverlay& overlay, const PlatformMo
     m_mouseLocationInContentCoordinates = eventInContentsCoordinates;
     overlay.setNeedsDisplay();
 
-    if (event.type() == PlatformEvent::MouseMoved && !event.buttons() && !valueForSetting("hover"_s))
+    if (event.type() == PlatformEvent::Type::MouseMoved && !event.buttons() && !valueForSetting("hover"_s))
         return true;
 
     return false;
@@ -670,7 +682,7 @@ bool RegionOverlay::mouseEvent(PageOverlay&, const PlatformMouseEvent&)
     return false;
 }
 
-void RegionOverlay::didScrollFrame(PageOverlay&, Frame&)
+void RegionOverlay::didScrollFrame(PageOverlay&, LocalFrame&)
 {
 }
 
@@ -737,7 +749,7 @@ void DebugPageOverlays::hideRegionOverlay(Page& page, RegionType regionType)
     visualizer = nullptr;
 }
 
-void DebugPageOverlays::regionChanged(Frame& frame, RegionType regionType)
+void DebugPageOverlays::regionChanged(LocalFrame& frame, RegionType regionType)
 {
     auto* page = frame.page();
     if (!page)

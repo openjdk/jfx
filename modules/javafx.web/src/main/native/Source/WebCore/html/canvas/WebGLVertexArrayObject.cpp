@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,7 @@
 #include "config.h"
 #include "WebGLVertexArrayObject.h"
 
-#if ENABLE(WEBGL2)
+#if ENABLE(WEBGL)
 
 #include "WebGL2RenderingContext.h"
 #include "WebGLContextGroup.h"
@@ -51,10 +51,6 @@ WebGLVertexArrayObject::~WebGLVertexArrayObject()
 WebGLVertexArrayObject::WebGLVertexArrayObject(WebGLRenderingContextBase& context, Type type)
     : WebGLVertexArrayObjectBase(context, type)
 {
-#if USE(OPENGL_ES)
-    if (m_type != Type::User)
-        return;
-#endif
     setObject(this->context()->graphicsContextGL()->createVertexArray());
 }
 

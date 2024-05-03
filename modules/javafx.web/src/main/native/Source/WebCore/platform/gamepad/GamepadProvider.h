@@ -27,13 +27,16 @@
 
 #if ENABLE(GAMEPAD)
 
+#include "GamepadHapticEffectType.h"
 #include <wtf/Forward.h>
 #include <wtf/HashSet.h>
+#include <wtf/WeakHashSet.h>
 
 namespace WebCore {
 
 class GamepadProviderClient;
 class PlatformGamepad;
+struct GamepadEffectParameters;
 
 class GamepadProvider {
 public:
@@ -44,13 +47,18 @@ public:
 
     virtual void startMonitoringGamepads(GamepadProviderClient&) = 0;
     virtual void stopMonitoringGamepads(GamepadProviderClient&) = 0;
-    virtual const Vector<PlatformGamepad*>& platformGamepads() = 0;
+    virtual const Vector<WeakPtr<PlatformGamepad>>& platformGamepads() = 0;
     virtual bool isMockGamepadProvider() const { return false; }
+
+    virtual void playEffect(unsigned gamepadIndex, const String& gamepadID, GamepadHapticEffectType, const GamepadEffectParameters&, CompletionHandler<void(bool)>&&) = 0;
+    virtual void stopEffects(unsigned gamepadIndex, const String& gamepadID, CompletionHandler<void()>&&) = 0;
+
+    virtual void clearGamepadsForTesting() { }
 
 protected:
     WEBCORE_EXPORT void dispatchPlatformGamepadInputActivity();
     void setShouldMakeGamepadsVisibile() { m_shouldMakeGamepadsVisible = true; }
-    HashSet<GamepadProviderClient*> m_clients;
+    WeakHashSet<GamepadProviderClient> m_clients;
 
 private:
     bool m_shouldMakeGamepadsVisible { false };

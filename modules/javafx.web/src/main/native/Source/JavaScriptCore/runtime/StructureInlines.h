@@ -25,14 +25,17 @@
 
 #pragma once
 
+#include "BigIntPrototype.h"
 #include "BrandedStructure.h"
 #include "JSArrayBufferView.h"
 #include "JSCJSValueInlines.h"
 #include "JSGlobalObject.h"
 #include "PropertyTable.h"
+#include "StringPrototype.h"
 #include "Structure.h"
 #include "StructureChain.h"
 #include "StructureRareDataInlines.h"
+#include "Watchpoint.h"
 #include <wtf/CompactRefPtr.h>
 #include <wtf/Threading.h>
 
@@ -41,14 +44,26 @@ namespace JSC {
 class DeferredStructureTransitionWatchpointFire final : public DeferredWatchpointFire {
     WTF_MAKE_NONCOPYABLE(DeferredStructureTransitionWatchpointFire);
 public:
-    JS_EXPORT_PRIVATE DeferredStructureTransitionWatchpointFire(VM&, Structure*);
-    JS_EXPORT_PRIVATE ~DeferredStructureTransitionWatchpointFire() final;
+    DeferredStructureTransitionWatchpointFire(VM& vm, Structure* structure)
+        : DeferredWatchpointFire()
+        , m_vm(vm)
+        , m_structure(structure)
+    {
+    }
 
-    void dump(PrintStream&) const final;
+    ~DeferredStructureTransitionWatchpointFire()
+    {
+        if (watchpointsToFire().state() == IsWatched)
+            fireAllSlow();
+    }
 
     const Structure* structure() const { return m_structure; }
 
+
 private:
+    JS_EXPORT_PRIVATE void fireAllSlow();
+
+    VM& m_vm;
     const Structure* m_structure;
 };
 
@@ -58,7 +73,7 @@ inline Structure* Structure::create(VM& vm, JSGlobalObject* globalObject, JSValu
     ASSERT(classInfo);
     if (auto* object = prototype.getObject()) {
         ASSERT(!object->anyObjectInChainMayInterceptIndexedAccesses() || hasSlowPutArrayStorage(indexingModeIncludingHistory) || !hasIndexedProperties(indexingModeIncludingHistory));
-        object->didBecomePrototype();
+        object->didBecomePrototype(vm);
     }
 
     Structure* structure = new (NotNull, allocateCell<Structure>(vm)) Structure(vm, globalObject, prototype, typeInfo, classInfo, indexingModeIncludingHistory, inlineCapacity);
@@ -108,6 +123,21 @@ inline bool Structure::mayInterceptIndexedAccesses() const
     if (!globalObject)
         return false;
     return globalObject->isHavingABadTime();
+}
+
+inline bool Structure::holesMustForwardToPrototype(JSObject* base) const
+{
+    ASSERT(base->structure() == this);
+    if (typeInfo().type() == ArrayType) {
+        JSGlobalObject* globalObject = this->globalObject();
+        if (LIKELY(globalObject->isOriginalArrayStructure(const_cast<Structure*>(this)) && globalObject->arrayPrototypeChainIsSane()))
+            return false;
+    }
+
+    if (this->mayInterceptIndexedAccesses())
+        return true;
+
+    return holesMustForwardToPrototypeSlow(base);
 }
 
 inline JSObject* Structure::storedPrototypeObject() const
@@ -258,7 +288,8 @@ inline bool Structure::hasIndexingHeader(const JSCell* cell) const
     if (!isTypedView(m_blob.type()))
         return false;
 
-    return jsCast<const JSArrayBufferView*>(cell)->mode() == WastefulTypedArray;
+    TypedArrayMode mode = jsCast<const JSArrayBufferView*>(cell)->mode();
+    return isWastefulTypedArray(mode);
 }
 
 inline bool Structure::masqueradesAsUndefined(JSGlobalObject* lexicalGlobalObject)
@@ -365,15 +396,15 @@ inline bool Structure::isValid(JSGlobalObject* globalObject, StructureChain* cac
 
 inline void Structure::didReplaceProperty(PropertyOffset offset)
 {
-    if (LIKELY(!hasRareData()))
+    if (LIKELY(!isWatchingReplacement()))
         return;
-    auto* rareData = this->rareData();
-    if (LIKELY(rareData->m_replacementWatchpointSets.isNullStorage()))
-        return;
-    WatchpointSet* set = rareData->m_replacementWatchpointSets.get(offset);
-    if (LIKELY(!set))
-        return;
-    set->fireAll(vm(), "Property did get replaced");
+    didReplacePropertySlow(offset);
+}
+
+inline void Structure::didCachePropertyReplacement(VM& vm, PropertyOffset offset)
+{
+    ASSERT(isValidOffset(offset));
+    firePropertyReplacementWatchpointSet(vm, offset, "Did cache property replacement");
 }
 
 inline WatchpointSet* Structure::propertyReplacementWatchpointSet(PropertyOffset offset)
@@ -429,10 +460,12 @@ ALWAYS_INLINE void Structure::checkOffsetConsistency() const
         ASSERT(!isPinnedPropertyTable());
 }
 
+#if ASSERT_ENABLED
 inline void Structure::checkConsistency()
 {
     checkOffsetConsistency();
 }
+#endif
 
 inline size_t nextOutOfLineStorageCapacity(size_t currentCapacity)
 {
@@ -451,6 +484,7 @@ inline void Structure::cacheSpecialProperty(JSGlobalObject* globalObject, VM& vm
 template<Structure::ShouldPin shouldPin, typename Func>
 inline PropertyOffset Structure::add(VM& vm, PropertyName propertyName, unsigned attributes, const Func& func)
 {
+    ASSERT(!isCompilationThread());
     PropertyTable* table = ensurePropertyTable(vm);
 
     GCSafeConcurrentJSLocker locker(m_lock, vm);
@@ -469,6 +503,11 @@ inline PropertyOffset Structure::add(VM& vm, PropertyName propertyName, unsigned
     checkConsistency();
     if (attributes & PropertyAttribute::DontEnum || propertyName.isSymbol())
         setIsQuickPropertyAccessAllowedForEnumeration(false);
+    if (attributes & PropertyAttribute::DontDelete) {
+        setHasNonConfigurableProperties(true);
+        if (attributes & PropertyAttribute::ReadOnlyOrAccessorOrCustomAccessorOrValue)
+            setHasNonConfigurableReadOnlyOrGetterSetterProperties(true);
+    }
     if (propertyName == vm.propertyNames->underscoreProto)
         setHasUnderscoreProtoPropertyExcludingOriginalProto(true);
 
@@ -496,6 +535,7 @@ inline PropertyOffset Structure::add(VM& vm, PropertyName propertyName, unsigned
 template<Structure::ShouldPin shouldPin, typename Func>
 inline PropertyOffset Structure::remove(VM& vm, PropertyName propertyName, const Func& func)
 {
+    ASSERT(!isCompilationThread());
     PropertyTable* table = ensurePropertyTable(vm);
     GCSafeConcurrentJSLocker locker(m_lock, vm);
 
@@ -537,6 +577,7 @@ inline PropertyOffset Structure::remove(VM& vm, PropertyName propertyName, const
 template<Structure::ShouldPin shouldPin, typename Func>
 inline PropertyOffset Structure::attributeChange(VM& vm, PropertyName propertyName, unsigned attributes, const Func& func)
 {
+    ASSERT(!isCompilationThread());
     PropertyTable* table = ensurePropertyTable(vm);
 
     GCSafeConcurrentJSLocker locker(m_lock, vm);
@@ -559,6 +600,11 @@ inline PropertyOffset Structure::attributeChange(VM& vm, PropertyName propertyNa
 
     if (attributes & PropertyAttribute::DontEnum)
         setIsQuickPropertyAccessAllowedForEnumeration(false);
+    if (attributes & PropertyAttribute::DontDelete) {
+        setHasNonConfigurableProperties(true);
+        if (attributes & PropertyAttribute::ReadOnlyOrAccessorOrCustomAccessorOrValue)
+            setHasNonConfigurableReadOnlyOrGetterSetterProperties(true);
+    }
     if (attributes & PropertyAttribute::ReadOnly)
         setContainsReadOnlyProperties();
 
@@ -590,6 +636,53 @@ inline PropertyOffset Structure::removePropertyWithoutTransition(VM& vm, Propert
 }
 
 template<typename Func>
+ALWAYS_INLINE auto Structure::addOrReplacePropertyWithoutTransition(VM& vm, PropertyName propertyName, unsigned newAttributes, const Func& func) -> decltype(auto)
+{
+    ASSERT(!isCompilationThread());
+    PropertyTable* table = ensurePropertyTable(vm);
+
+    auto rep = propertyName.uid();
+    auto findResult = table->find(rep);
+    if (findResult.offset != invalidOffset)
+        return std::tuple { findResult.offset, findResult.attributes, false };
+
+    GCSafeConcurrentJSLocker locker(m_lock, vm);
+
+    pin(locker, vm, table);
+
+    ASSERT(!JSC::isValidOffset(get(vm, propertyName)));
+
+    checkConsistency();
+    if (newAttributes & PropertyAttribute::DontEnum || propertyName.isSymbol())
+        setIsQuickPropertyAccessAllowedForEnumeration(false);
+    if (newAttributes & PropertyAttribute::DontDelete) {
+        setHasNonConfigurableProperties(true);
+        if (newAttributes & PropertyAttribute::ReadOnlyOrAccessorOrCustomAccessorOrValue)
+            setHasNonConfigurableReadOnlyOrGetterSetterProperties(true);
+    }
+    if (propertyName == vm.propertyNames->underscoreProto)
+        setHasUnderscoreProtoPropertyExcludingOriginalProto(true);
+
+    PropertyOffset newOffset = table->nextOffset(m_inlineCapacity);
+
+    m_propertyHash = m_propertyHash ^ rep->existingSymbolAwareHash();
+    m_seenProperties.add(CompactPtr<UniquedStringImpl>::encode(rep));
+
+    auto [offset, attributes, result] = table->addAfterFind(vm, PropertyTableEntry(rep, newOffset, newAttributes), WTFMove(findResult));
+    ASSERT_UNUSED(result, result);
+    ASSERT_UNUSED(offset, offset == newOffset);
+    UNUSED_VARIABLE(attributes);
+    auto newMaxOffset = std::max(newOffset, maxOffset());
+
+    func(locker, newOffset, newMaxOffset);
+
+    ASSERT(maxOffset() == newMaxOffset);
+
+    checkConsistency();
+    return std::tuple { newOffset, newAttributes, true };
+}
+
+template<typename Func>
 inline PropertyOffset Structure::attributeChangeWithoutTransition(VM& vm, PropertyName propertyName, unsigned attributes, const Func& func)
 {
     return attributeChange<ShouldPin::Yes>(vm, propertyName, attributes, func);
@@ -617,6 +710,14 @@ ALWAYS_INLINE void Structure::setPreviousID(VM& vm, Structure* structure)
         rareData()->setPreviousID(vm, structure);
     else
         m_previousOrRareData.set(vm, this, structure);
+}
+
+inline void Structure::pin(const AbstractLocker&, VM& vm, PropertyTable* table)
+{
+    setIsPinnedPropertyTable(true);
+    setPropertyTable(vm, table);
+    clearPreviousID();
+    m_transitionPropertyName = nullptr;
 }
 
 ALWAYS_INLINE bool Structure::shouldConvertToPolyProto(const Structure* a, const Structure* b)
@@ -665,23 +766,22 @@ ALWAYS_INLINE bool Structure::shouldConvertToPolyProto(const Structure* a, const
     return !aObj && !bObj;
 }
 
-inline Structure* Structure::nonPropertyTransition(VM& vm, Structure* structure, TransitionKind transitionKind)
+inline Structure* Structure::nonPropertyTransition(VM& vm, Structure* structure, TransitionKind transitionKind, DeferredStructureTransitionWatchpointFire* deferred)
 {
-    IndexingType indexingModeIncludingHistory = newIndexingType(structure->indexingModeIncludingHistory(), transitionKind);
-
     if (changesIndexingType(transitionKind)) {
         if (JSGlobalObject* globalObject = structure->m_globalObject.get()) {
             if (globalObject->isOriginalArrayStructure(structure)) {
+                IndexingType indexingModeIncludingHistory = newIndexingType(structure->indexingModeIncludingHistory(), transitionKind);
                 Structure* result = globalObject->originalArrayStructureForIndexingType(indexingModeIncludingHistory);
                 if (result->indexingModeIncludingHistory() == indexingModeIncludingHistory) {
-                    structure->didTransitionFromThisStructure();
+                    structure->didTransitionFromThisStructure(deferred);
                     return result;
                 }
             }
         }
     }
 
-    return nonPropertyTransitionSlow(vm, structure, transitionKind);
+    return nonPropertyTransitionSlow(vm, structure, transitionKind, deferred);
 }
 
 inline Structure* Structure::addPropertyTransitionToExistingStructureImpl(Structure* structure, UniquedStringImpl* uid, unsigned attributes, PropertyOffset& offset)
@@ -715,23 +815,29 @@ ALWAYS_INLINE Structure* Structure::addPropertyTransitionToExistingStructureConc
     return addPropertyTransitionToExistingStructureImpl(structure, uid, attributes, offset);
 }
 
-inline Structure* StructureTransitionTable::singleTransition() const
+inline Structure* StructureTransitionTable::trySingleTransition() const
 {
-    ASSERT(isUsingSingleSlot());
-    if (WeakImpl* impl = this->weakImpl()) {
-        if (impl->state() == WeakImpl::Live)
-            return jsCast<Structure*>(impl->jsValue().asCell());
-    }
+    uintptr_t pointer = m_data;
+    if (pointer & UsingSingleSlotFlag)
+        return bitwise_cast<Structure*>(pointer & ~UsingSingleSlotFlag);
     return nullptr;
 }
 
 inline Structure* StructureTransitionTable::get(UniquedStringImpl* rep, unsigned attributes, TransitionKind transitionKind) const
 {
     if (isUsingSingleSlot()) {
-        Structure* transition = singleTransition();
+        auto* transition = trySingleTransition();
         return (transition && transition->m_transitionPropertyName == rep && transition->transitionPropertyAttributes() == attributes && transition->transitionKind() == transitionKind) ? transition : nullptr;
     }
     return map()->get(StructureTransitionTable::Hash::Key(rep, attributes, transitionKind));
+}
+
+inline void StructureTransitionTable::finalizeUnconditionally(VM& vm, CollectionScope)
+{
+    if (auto* transition = trySingleTransition()) {
+        if (!vm.heap.isMarked(transition))
+            m_data = UsingSingleSlotFlag;
+    }
 }
 
 inline void Structure::clearCachedPrototypeChain()
@@ -740,6 +846,29 @@ inline void Structure::clearCachedPrototypeChain()
     if (!hasRareData())
         return;
     rareData()->clearCachedPropertyNameEnumerator();
+}
+
+ALWAYS_INLINE bool Structure::canPerformFastPropertyEnumeration() const
+{
+    if (typeInfo().overridesGetOwnPropertySlot())
+        return false;
+    if (typeInfo().overridesAnyFormOfGetOwnPropertyNames())
+        return false;
+    // FIXME: Indexed properties can be handled.
+    // https://bugs.webkit.org/show_bug.cgi?id=185358
+
+    if (hasIndexedProperties(indexingType()))
+        return false;
+    if (hasAnyKindOfGetterSetterProperties())
+        return false;
+    if (hasReadOnlyOrGetterSetterPropertiesExcludingProto())
+        return false;
+    if (isUncacheableDictionary())
+        return false;
+    // Cannot perform fast [[Put]] to |target| if the property names of the |source| contain "__proto__".
+    if (hasUnderscoreProtoPropertyExcludingOriginalProto())
+        return false;
+    return true;
 }
 
 } // namespace JSC

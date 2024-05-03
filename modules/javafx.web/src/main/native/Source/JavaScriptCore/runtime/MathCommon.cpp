@@ -231,7 +231,7 @@ static double fdlibmPow(double x, double y)
         }
     }
 
-    ax   = fabs(x);
+    ax   = std::abs(x);
     /* special value of x */
     if(lx==0) {
         if(ix==0x7ff00000||ix==0||ix==0x3ff00000){
@@ -413,7 +413,7 @@ JSC_DEFINE_JIT_OPERATION(operationMathPow, double, (double x, double y))
 {
     if (std::isnan(y))
         return PNaN;
-    double absoluteBase = fabs(x);
+    double absoluteBase = std::abs(x);
     if (absoluteBase == 1 && std::isinf(y))
         return PNaN;
 
@@ -610,6 +610,50 @@ JSC_DEFINE_JIT_OPERATION(jsRoundDouble, double, (double value))
 {
     return roundDoubleImpl(value);
 }
+
+static ALWAYS_INLINE float roundFloatImpl(float value)
+{
+    float integer = ceil(value);
+    return integer - (integer - 0.5 > value);
+}
+
+JSC_DEFINE_JIT_OPERATION(roundFloat, float, (float value))
+{
+    return roundFloatImpl(value);
+}
+
+#if USE(JSVALUE32_64)
+JSC_DEFINE_JIT_OPERATION(f32_nearest, float, (float operand))
+{
+    static_assert(std::numeric_limits<float>::round_style == std::round_to_nearest);
+    return std::nearbyint(operand);
+}
+
+JSC_DEFINE_JIT_OPERATION(f64_nearest, double, (double operand))
+{
+    static_assert(std::numeric_limits<float>::round_style == std::round_to_nearest);
+    return std::nearbyint(operand);
+}
+
+JSC_DEFINE_JIT_OPERATION(i32_div_s, int32_t, (int32_t a, int32_t b)) { return a / b; }
+JSC_DEFINE_JIT_OPERATION(i32_div_u, uint32_t, (uint32_t a, uint32_t b)) { return a / b; }
+JSC_DEFINE_JIT_OPERATION(i32_rem_s, int32_t, (int32_t a, int32_t b)) { return a % b; }
+JSC_DEFINE_JIT_OPERATION(i32_rem_u, uint32_t, (uint32_t a, uint32_t b)) { return a % b; }
+JSC_DEFINE_JIT_OPERATION(i64_div_s, int64_t, (int64_t a, int64_t b)) { return a / b; }
+JSC_DEFINE_JIT_OPERATION(i64_div_u, uint64_t, (uint64_t a, uint64_t b)) { return a / b; }
+JSC_DEFINE_JIT_OPERATION(i64_rem_s, int64_t, (int64_t a, int64_t b)) { return a % b; }
+JSC_DEFINE_JIT_OPERATION(i64_rem_u, uint64_t, (uint64_t a, uint64_t b)) { return a % b; }
+
+JSC_DEFINE_JIT_OPERATION(i64_trunc_u_f32, uint64_t, (float operand)) { return static_cast<uint64_t>(operand); }
+JSC_DEFINE_JIT_OPERATION(i64_trunc_s_f32, int64_t, (float operand)) { return static_cast<int64_t>(operand); }
+JSC_DEFINE_JIT_OPERATION(i64_trunc_u_f64, uint64_t, (double operand)) { return static_cast<uint64_t>(operand); }
+JSC_DEFINE_JIT_OPERATION(i64_trunc_s_f64, int64_t, (double operand)) { return static_cast<int64_t>(operand); }
+
+JSC_DEFINE_JIT_OPERATION(f32_convert_u_i64, float, (uint64_t operand)) { return static_cast<float>(operand); }
+JSC_DEFINE_JIT_OPERATION(f32_convert_s_i64, float, (int64_t operand)) { return static_cast<float>(operand); }
+JSC_DEFINE_JIT_OPERATION(f64_convert_u_i64, double, (uint64_t operand)) { return static_cast<double>(operand); }
+JSC_DEFINE_JIT_OPERATION(f64_convert_s_i64, double, (int64_t operand)) { return static_cast<double>(operand); }
+#endif
 
 } // namespace Math
 } // namespace JSC

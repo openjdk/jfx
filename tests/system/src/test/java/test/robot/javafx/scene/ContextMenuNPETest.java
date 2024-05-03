@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,9 +48,10 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.tk.Toolkit;
 
 import test.util.Util;
+
+import static org.junit.Assume.assumeTrue;
 
 /*
  * Test for verifying context menu NPE error
@@ -101,15 +102,17 @@ public class ContextMenuNPETest {
             robot.keyType(KeyCode.DOWN);
             robot.keyType(KeyCode.RIGHT);
             robot.keyType(KeyCode.ENTER);
-            Toolkit.getToolkit().firePulse();
-
         });
-        Thread.sleep(200); // Small delay to wait for context menu to close.
+        Util.waitForIdle(scene);
         Util.waitForLatch(onHiddenLatch, 10, "Failed to hide context menu.");
     }
 
     @Test
     public void testContextMenuNPE() throws Throwable {
+        if (PlatformUtil.isLinux()) {
+            assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8321625
+        }
+
         showMenuButtonContextMenu();
         selectSubmenuItem();
 
@@ -150,7 +153,7 @@ public class ContextMenuNPETest {
 
     @AfterClass
     public static void exit() {
-        Util.shutdown(stage);
+        Util.shutdown();
     }
 
     public static class TestApp extends Application {

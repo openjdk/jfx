@@ -2,7 +2,7 @@
  * The default style sheet used to render HTML.
  *
  * Copyright (C) 2000 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2003-2011, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -30,8 +30,9 @@ html {
 #endif
 }
 
-/* children of the <head> element all have display:none */
-head, link, meta, script, style, title {
+/* children of the <head> element all have display:none as below */
+area, base, basefont, datalist, head, link, meta, noembed, noframes,
+param, rp, script, style, template, title {
     display: none;
 }
 
@@ -50,12 +51,13 @@ p {
     margin-inline-end: 0;
 }
 
-address, article, aside, div, footer, header, hgroup, main, nav, section {
+address, article, aside, div, footer, header, hgroup, main, nav, search, section {
     display: block;
 }
 
 marquee {
     display: inline-block;
+    text-align: initial;
 }
 
 blockquote {
@@ -98,6 +100,9 @@ center {
 
 hr {
     display: block;
+    overflow: hidden;
+    unicode-bidi: isolate;
+    color: gray;
     margin-block-start: 0.5em;
     margin-block-end: 0.5em;
     margin-inline-start: auto;
@@ -109,6 +114,15 @@ hr {
 abbr[title], acronym[title] {
     text-decoration: dotted underline;
 }
+
+/* ::backdrop */
+
+::backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+}
+
 
 /* media elements */
 
@@ -127,6 +141,10 @@ video {
 audio {
     width: 200px;
     height: 25px;
+}
+
+audio:not([controls]) {
+    display: none !important;
 }
 
 /* heading elements */
@@ -228,6 +246,7 @@ table {
     border-spacing: 2px;
     border-color: gray;
     text-indent: initial;
+    box-sizing: border-box;
 }
 
 thead {
@@ -282,6 +301,11 @@ caption {
     text-align: -webkit-center;
 }
 
+/* for table elements with form inside following rules should apply */
+:is(table, thead, tbody, tfoot, tr) > form:-internal-html-document {
+    display: none !important;
+}
+
 /* lists */
 
 ul, menu, dir {
@@ -289,8 +313,6 @@ ul, menu, dir {
     list-style-type: disc;
     margin-block-start: 1__qem;
     margin-block-end: 1em;
-    margin-inline-start: 0;
-    margin-inline-end: 0;
     padding-inline-start: 40px;
 }
 
@@ -299,8 +321,6 @@ ol {
     list-style-type: decimal;
     margin-block-start: 1__qem;
     margin-block-end: 1em;
-    margin-inline-start: 0;
-    margin-inline-end: 0;
     padding-inline-start: 40px;
 }
 
@@ -309,21 +329,16 @@ li {
     text-align: match-parent;
 }
 
-/* FIXME: this should also match ::before::marker and ::after::marker but we don't support
-   this yet. When we do, we can remove the code specific to ::before and ::after in
-   RenderListItem::computeMarkerStyle(), see bugs.webkit.org/b/218897. */
-::marker {
-    unicode-bidi: isolate;
-    font-variant-numeric: tabular-nums;
-    white-space: pre;
-    text-transform: none;
+:is(dir, dl, menu, ol, ul) :is(dir, dl, menu, ol, ul) {
+    margin-block-start: 0;
+    margin-block-end: 0;
 }
 
-ul ul, ol ul {
+:is(dir, menu, ol, ul) :is(dir, menu, ul) {
     list-style-type: circle;
 }
 
-ol ol ul, ol ul ul, ul ol ul, ul ul ul {
+:is(dir, menu, ol, ul) :is(dir, menu, ol, ul) :is(dir, menu, ul) {
     list-style-type: square;
 }
 
@@ -336,17 +351,20 @@ dl {
     display: block;
     margin-block-start: 1__qem;
     margin-block-end: 1em;
-    margin-inline-start: 0;
-    margin-inline-end: 0;
 }
 
 dt {
     display: block;
 }
 
-ol ul, ul ol, ul ul, ol ol {
-    margin-block-start: 0;
-    margin-block-end: 0;
+/* FIXME: this should also match ::before::marker and ::after::marker but we don't support
+   this yet. When we do, we can remove the code specific to ::before and ::after in
+   RenderListItem::computeMarkerStyle(), see bugs.webkit.org/b/218897. */
+::marker {
+    unicode-bidi: isolate;
+    font-variant-numeric: tabular-nums;
+    white-space: pre;
+    text-transform: none;
 }
 
 /* form elements */
@@ -361,7 +379,6 @@ label {
 }
 
 legend {
-    display: block;
     padding-inline-start: 2px;
     padding-inline-end: 2px;
     border: none;
@@ -376,15 +393,15 @@ fieldset {
     padding-inline-end: 0.75em;
     padding-block-end: 0.625em;
     border: 2px groove ThreeDFace;
-    min-width: min-content;
+    min-inline-size: min-content;
 }
 
 button {
     appearance: auto;
 }
 
-/* Form controls don't go vertical. */
-input, textarea, select, button, meter, progress {
+/* Every time a new control is supported in vertical writing mode, it should be removed from here and added in the horizontalFormControls.css rule */
+select, button, input:is([type="button"], [type="submit"], [type="reset"], [type="file"]) {
     writing-mode: horizontal-tb !important;
 }
 
@@ -425,7 +442,7 @@ input {
     font: 11px system-ui;
     padding: 0.2em 0.5em 0.3em 0.5em;
 #else
-    border: 2px inset;
+    border: 2px inset gray;
     padding: 1px;
 #endif
     -webkit-rtl-ordering: logical;
@@ -486,10 +503,15 @@ input:is([type="date"], [type="time"], [type="datetime-local"], [type="month"], 
     overflow: hidden;
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
     border: 1px solid -webkit-control-background;
-    background-color: -apple-system-opaque-secondary-fill;
     font-family: system-ui;
-    color: -apple-system-blue;
     padding: 0.2em 0.5em;
+#if defined(WTF_PLATFORM_VISION) && WTF_PLATFORM_VISION
+    background-color: rgba(0, 0, 0, 0.04);
+    color: CanvasText;
+#else
+    background-color: -apple-system-opaque-secondary-fill;
+    color: -apple-system-blue;
+#endif /*defined(WTF_PLATFORM_VISION) && WTF_PLATFORM_VISION */
 #else
     outline: none;
     font-variant-numeric: tabular-nums;
@@ -728,10 +750,6 @@ input::-webkit-list-button {
 }
 #endif
 
-select {
-    border-radius: 5px;
-}
-
 textarea {
     appearance: auto;
 #if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
@@ -765,7 +783,10 @@ textarea {
 ::placeholder {
     -webkit-text-security: none;
     color: darkGray;
+    direction: inherit !important;
     pointer-events: none !important;
+    text-orientation: inherit !important;
+    writing-mode: inherit !important;
 }
 
 input::placeholder {
@@ -773,6 +794,10 @@ input::placeholder {
     word-wrap: normal;
     overflow: hidden;
     line-height: initial !important;
+}
+
+input:disabled, textarea:disabled {
+    color: color-mix(in hsl, CanvasText 66%, Canvas);
 }
 
 input:is([type="hidden"], [type="image"], [type="file"]) {
@@ -843,9 +868,13 @@ input:is([type="button"], [type="submit"], [type="reset"]), input[type="file"]::
     padding: 0 1.0em;
     border: 1px solid -webkit-control-background;
     font: 11px system-ui;
-    background-color: -apple-system-opaque-secondary-fill;
     color: -apple-system-blue;
-#endif
+#if defined(WTF_PLATFORM_VISION) && WTF_PLATFORM_VISION
+    background-color: rgba(0, 0, 0, 0.05);
+#else
+    background-color: -apple-system-opaque-secondary-fill;
+#endif /* defined(WTF_PLATFORM_VISION) && WTF_PLATFORM_VISION */
+#endif /* (defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY) */
     box-sizing: border-box;
 }
 
@@ -870,7 +899,7 @@ button[type="menu"], button[type="menu"]:active {
 #endif
 
 input[type="range"] {
-    /*This is needed for PLATFORM(JAVA)*/
+//Needed for PLATFORM(JAVA)
     -webkit-appearance: slider-horizontal;
     appearance: slider-horizontal;
     padding: initial;
@@ -896,7 +925,7 @@ input[type="range"]::-webkit-slider-runnable-track {
 }
 
 input[type="range"]::-webkit-slider-thumb, input[type="range"]::-webkit-media-slider-thumb {
-    /*This is needed for PLATFORM(JAVA)*/
+//Needed for PLATFORM(JAVA)
     -webkit-appearance: sliderthumb-horizontal;
     appearance: sliderthumb-horizontal;
     box-sizing: border-box;
@@ -960,10 +989,6 @@ select:disabled {
 }
 
 #endif
-
-area, param {
-    display: none;
-}
 
 input[type="checkbox"] {
 #if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
@@ -1032,7 +1057,8 @@ input[type="color"]::-webkit-color-swatch-wrapper {
     border-radius: inherit;
     padding: 2px;
 #else
-    padding: 4px 2px 5px;
+    padding-inline: 2px;
+    padding-block: 4px 5px;
 #endif
     box-sizing: border-box;
     width: 100%;
@@ -1063,8 +1089,13 @@ select {
     font: 11px system-ui;
     border: 1px solid -webkit-control-background;
     border-radius: initial;
-    background-color: -apple-system-opaque-secondary-fill;
+#if defined(WTF_PLATFORM_VISION) && WTF_PLATFORM_VISION
+    background-color: rgba(0, 0, 0, 0.04);
 #else
+    background-color: -apple-system-opaque-secondary-fill;
+#endif /* defined(WTF_PLATFORM_VISION) && WTF_PLATFORM_VISION */
+#else
+    border-radius: 5px;
     border: 1px solid;
 #if defined(HAVE_OS_DARK_MODE_SUPPORT) && HAVE_OS_DARK_MODE_SUPPORT
     color: CanvasText;
@@ -1072,7 +1103,7 @@ select {
 #else
     color: black;
     background-color: white;
-#endif
+#endif /* defined(HAVE_OS_DARK_MODE_SUPPORT) && HAVE_OS_DARK_MODE_SUPPORT */
 #endif
     align-items: center;
     white-space: pre;
@@ -1102,6 +1133,7 @@ optgroup {
 
 option {
     font-weight: normal;
+    white-space: nowrap;
 }
 
 output {
@@ -1177,8 +1209,8 @@ meter {
     appearance: auto;
     box-sizing: border-box;
     display: inline-block;
-    height: 1em;
-    width: 5em;
+    block-size: 1em;
+    inline-size: 5em;
     vertical-align: -0.2em;
 }
 
@@ -1188,8 +1220,8 @@ progress {
     appearance: auto;
     box-sizing: border-box;
     display: inline-block;
-    height: 1em;
-    width: 10em;
+    block-size: 1em;
+    inline-size: 10em;
     vertical-align: -0.2em;
 }
 
@@ -1208,8 +1240,8 @@ progress::-webkit-progress-bar {
 
 progress::-webkit-progress-value {
     background-color: green;
-    height: 100%;
-    width: 50%; /* should be removed later */
+    block-size: 100%;
+    inline-size: 50%; /* should be removed later */
     box-sizing: border-box;
 }
 
@@ -1239,8 +1271,8 @@ pre, xmp, plaintext, listing {
 }
 
 mark {
-    background-color: yellow;
-    color: black;
+    background-color: Mark;
+    color: MarkText;
 }
 
 big {
@@ -1305,6 +1337,10 @@ a:any-link:active {
     color: -webkit-activelink;
 }
 
+area:any-link {
+    cursor: pointer;
+}
+
 /* HTML5 ruby elements */
 
 ruby, rt {
@@ -1327,10 +1363,6 @@ ruby > rp {
 }
 
 /* other elements */
-
-noframes {
-    display: none;
-}
 
 frameset, frame {
     display: block;
@@ -1356,16 +1388,14 @@ summary::-webkit-details-marker {
     display: inline-block;
     width: 0.66em;
     height: 0.66em;
-    margin-right: 0.4em;
-}
-
-template {
-    display: none;
+    margin-inline-end: 0.4em;
 }
 
 bdi, output {
     unicode-bidi: isolate;
 }
+
+input[type=tel i]:dir(ltr) { direction: ltr; }
 
 bdo {
     unicode-bidi: bidi-override;
@@ -1394,11 +1424,18 @@ applet, embed, object, img {
     border-width: 0px;
 }
 
-/* noscript is handled internally, as it depends on settings. */
+/* noscript support */
+
+@media (scripting) {
+    noscript {
+        display: none !important;
+    }
+}
 
 /* Default support for "Smart Invert" where all content color except media is inverted. */
+/* https://drafts.csswg.org/mediaqueries-5/#inverted */
 @media (inverted-colors) {
-    img, picture, video { filter: invert(100%); } /* Images and videos double-inverted. */
+    img:not(picture>img), picture, video { filter: invert(100%); } /* Images and videos double-inverted. */
 }
 
 /* https://drafts.csswg.org/css-text-decor-4/#text-decoration-skipping */

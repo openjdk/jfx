@@ -31,31 +31,29 @@
 #include "ComposedTreeIterator.h"
 #include "Document.h"
 #include "Element.h"
-#include "FullscreenManager.h"
-#include "HTMLParserIdioms.h"
 #include "HTMLSlotElement.h"
+#include "LayoutState.h"
+#include "LayoutTreeBuilder.h"
+#include "LocalFrameView.h"
+#include "LocalFrameViewLayoutContext.h"
 #include "NodeRenderStyle.h"
 #include "PseudoElement.h"
 #include "RenderDescendantIterator.h"
-#include "RenderFullScreen.h"
 #include "RenderInline.h"
+#include "RenderListItem.h"
 #include "RenderMultiColumnFlow.h"
 #include "RenderMultiColumnSet.h"
 #include "RenderSVGResource.h"
+#include "RenderStyleConstants.h"
+#include "RenderStyleInlines.h"
 #include "RenderTreeUpdaterGeneratedContent.h"
 #include "RenderView.h"
 #include "SVGElement.h"
 #include "StyleResolver.h"
 #include "StyleTreeResolver.h"
 #include "TextManipulationController.h"
+#include <wtf/Scope.h>
 #include <wtf/SystemTracing.h>
-
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-#include "FrameView.h"
-#include "FrameViewLayoutContext.h"
-#include "LayoutState.h"
-#include "LayoutTreeBuilder.h"
-#endif
 
 #if ENABLE(CONTENT_CHANGE_OBSERVER)
 #include "ContentChangeObserver.h"
@@ -109,7 +107,11 @@ void RenderTreeUpdater::commit(std::unique_ptr<const Style::Update> styleUpdate)
 
     m_styleUpdate = WTFMove(styleUpdate);
 
+    updateRenderViewStyle();
+
     for (auto& root : m_styleUpdate->roots()) {
+        if (&root->document() != &m_document)
+            continue;
         auto* renderingRoot = findRenderingRoot(*root);
         if (!renderingRoot)
             continue;
@@ -117,6 +119,7 @@ void RenderTreeUpdater::commit(std::unique_ptr<const Style::Update> styleUpdate)
     }
 
     generatedContent().updateRemainingQuotes();
+    generatedContent().updateCounters();
 
     m_builder.updateAfterDescendants(renderView());
 
@@ -160,7 +163,7 @@ void RenderTreeUpdater::updateRenderTree(ContainerNode& root)
             auto& text = downcast<Text>(node);
             auto* textUpdate = m_styleUpdate->textUpdate(text);
             bool didCreateParent = parent().update && parent().update->change == Style::Change::Renderer;
-            bool mayNeedUpdateWhitespaceOnlyRenderer = renderingParent().didCreateOrDestroyChildRenderer && text.data().isAllSpecialCharacters<isHTMLSpace>();
+            bool mayNeedUpdateWhitespaceOnlyRenderer = renderingParent().didCreateOrDestroyChildRenderer && text.data().containsOnly<isASCIIWhitespace>();
             if (didCreateParent || textUpdate || mayNeedUpdateWhitespaceOnlyRenderer)
                 updateTextRenderer(text, textUpdate);
 
@@ -190,7 +193,12 @@ void RenderTreeUpdater::updateRenderTree(ContainerNode& root)
 
         storePreviousRenderer(element);
 
-        bool mayHaveRenderedDescendants = element.renderer() || (element.hasDisplayContents() && shouldCreateRenderer(element, renderTreePosition().parent()));
+        auto mayHaveRenderedDescendants = [&]() {
+            if (element.renderer())
+                return !(element.isInTopLayer() && element.renderer()->style().effectiveSkippedContent());
+            return element.hasDisplayContents() && shouldCreateRenderer(element, renderTreePosition().parent());
+        }();
+
         if (!mayHaveRenderedDescendants) {
             it.traverseNextSkippingChildren();
             continue;
@@ -276,7 +284,7 @@ static bool pseudoStyleCacheIsInvalid(RenderElement* renderer, RenderStyle* newS
     if (!pseudoStyleCache)
         return false;
 
-    for (auto& cache : *pseudoStyleCache) {
+    for (auto& cache : pseudoStyleCache->styles) {
         PseudoId pseudoId = cache->styleType();
         std::unique_ptr<RenderStyle> newPseudoStyle = renderer->getUncachedPseudoStyle({ pseudoId }, newStyle, newStyle);
         if (!newPseudoStyle)
@@ -315,7 +323,12 @@ void RenderTreeUpdater::updateElementRenderer(Element& element, const Style::Ele
 
     auto elementUpdateStyle = RenderStyle::cloneIncludingPseudoElements(*elementUpdate.style);
 
-    bool shouldTearDownRenderers = elementUpdate.change == Style::Change::Renderer && (element.renderer() || element.hasDisplayContents() || element.displayContentsChanged());
+    bool shouldTearDownRenderers = [&]() {
+        if (element.isInTopLayer() && elementUpdate.change == Style::Change::Inherited && elementUpdate.style->effectiveSkippedContent())
+            return true;
+        return elementUpdate.change == Style::Change::Renderer && (element.renderer() || element.hasDisplayContents());
+    }();
+
     if (shouldTearDownRenderers) {
         if (!element.renderer()) {
             // We may be tearing down a descendant renderer cached in renderTreePosition.
@@ -327,17 +340,31 @@ void RenderTreeUpdater::updateElementRenderer(Element& element, const Style::Ele
         tearDownRenderers(element, teardownType, m_builder);
 
         renderingParent().didCreateOrDestroyChildRenderer = true;
-
-        element.setDisplayContentsChanged(false);
     }
 
     bool hasDisplayContents = elementUpdate.style->display() == DisplayType::Contents;
     if (hasDisplayContents)
         element.storeDisplayContentsStyle(makeUnique<RenderStyle>(WTFMove(elementUpdateStyle)));
     else
-        element.resetComputedStyle();
+        element.clearDisplayContentsStyle();
 
-    bool shouldCreateNewRenderer = !element.renderer() && !hasDisplayContents;
+    if (!hasDisplayContents) {
+        if (!elementUpdateStyle.containIntrinsicLogicalWidthHasAuto())
+            element.clearLastRememberedLogicalWidth();
+        if (!elementUpdateStyle.containIntrinsicLogicalHeightHasAuto())
+            element.clearLastRememberedLogicalHeight();
+    }
+    auto scopeExit = makeScopeExit([&] {
+        if (!hasDisplayContents) {
+            auto* box = element.renderBox();
+            if (box && box->style().hasAutoLengthContainIntrinsicSize() && !box->isSkippedContentRoot())
+                m_document.observeForContainIntrinsicSize(element);
+            else
+                m_document.unobserveForContainIntrinsicSize(element);
+        }
+    });
+
+    bool shouldCreateNewRenderer = !element.renderer() && !hasDisplayContents && !(element.isInTopLayer() && renderTreePosition().parent().style().effectiveSkippedContent());
     if (shouldCreateNewRenderer) {
         if (element.hasCustomStyleResolveCallbacks())
             element.willAttachRenderers();
@@ -392,22 +419,14 @@ void RenderTreeUpdater::createRenderer(Element& element, RenderStyle&& style)
 
     newRenderer->initializeStyle();
 
-#if ENABLE(FULLSCREEN_API)
-    if (m_document.fullscreenManager().isFullscreen() && m_document.fullscreenManager().currentFullscreenElement() == &element) {
-        newRenderer = RenderFullScreen::wrapNewRenderer(m_builder, WTFMove(newRenderer), insertionPosition.parent(), m_document);
-        if (!newRenderer)
-            return;
-    }
-#endif
-
     m_builder.attach(insertionPosition.parent(), WTFMove(newRenderer), insertionPosition.nextSibling());
 
     auto* textManipulationController = m_document.textManipulationControllerIfExists();
     if (UNLIKELY(textManipulationController))
         textManipulationController->didAddOrCreateRendererForNode(element);
 
-    if (AXObjectCache* cache = m_document.axObjectCache())
-        cache->updateCacheAfterNodeIsAttached(&element);
+    if (auto* cache = m_document.axObjectCache())
+        cache->onRendererCreated(element);
 }
 
 bool RenderTreeUpdater::textRendererIsNeeded(const Text& textNode)
@@ -422,7 +441,7 @@ bool RenderTreeUpdater::textRendererIsNeeded(const Text& textNode)
         return true;
     if (!textNode.length())
         return false;
-    if (!textNode.data().isAllSpecialCharacters<isHTMLSpace>())
+    if (!textNode.data().containsOnly<isASCIIWhitespace>())
         return true;
     if (is<RenderText>(renderingParent.previousChildRenderer))
         return true;
@@ -438,7 +457,7 @@ bool RenderTreeUpdater::textRendererIsNeeded(const Text& textNode)
 
     if (parentRenderer.isRenderInline()) {
         // <span><div/> <div/></span>
-        if (previousRenderer && !previousRenderer->isInline())
+        if (previousRenderer && !previousRenderer->isInline() && !previousRenderer->isOutOfFlowPositioned())
             return false;
     } else {
         if (parentRenderer.isRenderBlock() && !parentRenderer.childrenInline() && (!previousRenderer || !previousRenderer->isInline()))
@@ -528,6 +547,12 @@ void RenderTreeUpdater::storePreviousRenderer(Node& node)
     renderingParent().previousChildRenderer = renderer;
 }
 
+void RenderTreeUpdater::updateRenderViewStyle()
+{
+    if (m_styleUpdate->initialContainingBlockUpdate())
+        m_document.renderView()->setStyle(RenderStyle::clone(*m_styleUpdate->initialContainingBlockUpdate()));
+}
+
 void RenderTreeUpdater::tearDownRenderers(Element& root)
 {
     auto* view = root.document().renderView();
@@ -568,8 +593,6 @@ void RenderTreeUpdater::tearDownRenderers(Element& root, TeardownType teardownTy
         teardownStack.append(&element);
     };
 
-    auto& document = root.document();
-
     auto pop = [&] (unsigned depth) {
         while (teardownStack.size() > depth) {
             auto& element = *teardownStack.takeLast();
@@ -587,9 +610,9 @@ void RenderTreeUpdater::tearDownRenderers(Element& root, TeardownType teardownTy
                     styleable.willChangeRenderer();
                     break;
                 }
-                FALLTHROUGH;
+                element.clearHoverAndActiveStatusBeforeDetachingRenderer();
+                break;
             case TeardownType::Full:
-                if (document.renderTreeBeingDestroyed())
                     styleable.cancelDeclarativeAnimations();
                 element.clearHoverAndActiveStatusBeforeDetachingRenderer();
                 break;
@@ -603,6 +626,16 @@ void RenderTreeUpdater::tearDownRenderers(Element& root, TeardownType teardownTy
 
             GeneratedContent::removeBeforePseudoElement(element, builder);
             GeneratedContent::removeAfterPseudoElement(element, builder);
+
+            if (!is<PseudoElement>(element)) {
+                // ::before and ::after cannot have a ::marker pseudo-element addressable via
+                // CSS selectors, and as such cannot possibly have animations on them. Additionally,
+                // we cannot create a Styleable with a PseudoElement.
+                if (auto* renderListItem = dynamicDowncast<RenderListItem>(element.renderer())) {
+                    if (renderListItem->markerRenderer())
+                        Styleable(element, PseudoId::Marker).cancelDeclarativeAnimations();
+                }
+            }
 
             if (auto* renderer = element.renderer()) {
                 builder.destroyAndCleanUpAnonymousWrappers(*renderer);

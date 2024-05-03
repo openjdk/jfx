@@ -28,22 +28,24 @@
 
 #include "AXObjectCache.h"
 #include "DocumentInlines.h"
-#include "Frame.h"
 #include "FrameSelection.h"
 #include "LegacyRenderSVGContainer.h"
 #include "LegacyRenderSVGRoot.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
+#include "LocalFrameViewLayoutContext.h"
 #include "RenderButton.h"
 #include "RenderCounter.h"
 #include "RenderDescendantIterator.h"
 #include "RenderElement.h"
 #include "RenderEmbeddedObject.h"
-#include "RenderFullScreen.h"
 #include "RenderGrid.h"
 #include "RenderHTMLCanvas.h"
 #include "RenderLineBreak.h"
 #include "RenderMathMLFenced.h"
 #include "RenderMenuList.h"
 #include "RenderMultiColumnFlow.h"
+#include "RenderMultiColumnSet.h"
 #include "RenderMultiColumnSpannerPlaceholder.h"
 #include "RenderReplaced.h"
 #include "RenderRuby.h"
@@ -53,6 +55,7 @@
 #include "RenderSVGInline.h"
 #include "RenderSVGRoot.h"
 #include "RenderSVGText.h"
+#include "RenderStyleInlines.h"
 #include "RenderTable.h"
 #include "RenderTableCell.h"
 #include "RenderTableRow.h"
@@ -64,7 +67,6 @@
 #include "RenderTreeBuilderContinuation.h"
 #include "RenderTreeBuilderFirstLetter.h"
 #include "RenderTreeBuilderFormControls.h"
-#include "RenderTreeBuilderFullScreen.h"
 #include "RenderTreeBuilderInline.h"
 #include "RenderTreeBuilderList.h"
 #include "RenderTreeBuilderMathML.h"
@@ -75,11 +77,6 @@
 #include "RenderTreeMutationDisallowedScope.h"
 #include "RenderView.h"
 #include <wtf/SetForScope.h>
-
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-#include "FrameView.h"
-#include "FrameViewLayoutContext.h"
-#endif
 
 namespace WebCore {
 
@@ -139,9 +136,6 @@ RenderTreeBuilder::RenderTreeBuilder(RenderView& view)
     , m_mathMLBuilder(makeUnique<MathML>(*this))
 #endif
     , m_continuationBuilder(makeUnique<Continuation>(*this))
-#if ENABLE(FULLSCREEN_API)
-    , m_fullScreenBuilder(makeUnique<FullScreen>(*this))
-#endif
 {
     RELEASE_ASSERT(!s_current || &m_view != &s_current->m_view);
     m_previous = s_current;
@@ -158,11 +152,6 @@ void RenderTreeBuilder::destroy(RenderObject& renderer, CanCollapseAnonymousBloc
     RELEASE_ASSERT(RenderTreeMutationDisallowedScope::isMutationAllowed());
     ASSERT(renderer.parent());
     auto toDestroy = detach(*renderer.parent(), renderer, canCollapseAnonymousBlock);
-
-#if ENABLE(FULLSCREEN_API)
-    if (is<RenderFullScreen>(renderer))
-        fullScreenBuilder().cleanupOnDestroy(downcast<RenderFullScreen>(renderer));
-#endif
 
     if (is<RenderTextFragment>(renderer))
         firstLetterBuilder().cleanupOnDestroy(downcast<RenderTextFragment>(renderer));
@@ -412,13 +401,6 @@ RenderPtr<RenderObject> RenderTreeBuilder::detach(RenderElement& parent, RenderO
     return detachFromRenderElement(parent, child);
 }
 
-#if ENABLE(FULLSCREEN_API)
-void RenderTreeBuilder::createPlaceholderForFullScreen(RenderFullScreen& renderer, std::unique_ptr<RenderStyle> style, const LayoutRect& frameRect)
-{
-    fullScreenBuilder().createPlaceholder(renderer, WTFMove(style), frameRect);
-}
-#endif
-
 void RenderTreeBuilder::attachToRenderElement(RenderElement& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild)
 {
     if (tableBuilder().childRequiresTable(parent, *child)) {
@@ -464,9 +446,6 @@ void RenderTreeBuilder::attachToRenderElementInternal(RenderElement& parent, Ren
         if (m_internalMovesType == RenderObject::IsInternalMove::No) {
             if (auto* fragmentedFlow = newChild->enclosingFragmentedFlow(); is<RenderMultiColumnFlow>(fragmentedFlow))
                 multiColumnBuilder().multiColumnDescendantInserted(downcast<RenderMultiColumnFlow>(*fragmentedFlow), *newChild);
-
-            if (is<RenderElement>(*newChild))
-                RenderCounter::rendererSubtreeAttached(downcast<RenderElement>(*newChild));
         }
     }
 
@@ -479,6 +458,7 @@ void RenderTreeBuilder::attachToRenderElementInternal(RenderElement& parent, Ren
         cache->childrenChanged(&parent, newChild);
 
     if (parent.hasOutlineAutoAncestor() || parent.outlineStyleForRepaint().outlineStyleIsAuto() == OutlineIsAuto::On)
+        if (!is<RenderMultiColumnSet>(newChild->previousSibling()))
         newChild->setHasOutlineAutoAncestor();
 }
 
@@ -667,12 +647,12 @@ void RenderTreeBuilder::normalizeTreeAfterStyleChange(RenderElement& renderer, R
             auto clearDescendantFloats = [&] {
                 // These descendent floats can not intrude other, sibling block containers anymore.
                 for (auto& descendant : descendantsOfType<RenderBox>(renderer)) {
-                    if (descendant.isFloatingOrOutOfFlowPositioned())
-                        descendant.removeFloatingOrPositionedChildFromBlockLists();
+                    if (descendant.isFloating())
+                        descendant.removeFloatingAndInvalidateForLayout();
                 }
             };
             clearDescendantFloats();
-            downcast<RenderBlockFlow>(renderer).removeFloatingObjects();
+            removeFloatingObjects(downcast<RenderBlock>(renderer));
             // Fresh floats need to be reparented if they actually belong to the previous anonymous block.
             // It copies the logic of RenderBlock::addChildIgnoringContinuation
             if (renderer.previousSibling() && renderer.previousSibling()->isAnonymousBlock())
@@ -822,7 +802,6 @@ void RenderTreeBuilder::removeAnonymousWrappersForInlineChildrenIfNeeded(RenderE
     }
 
     RenderObject* next = nullptr;
-    auto internalMoveScope = SetForScope { m_internalMovesType, RenderObject::IsInternalMove::Yes };
     for (auto* current = blockParent.firstChild(); current; current = next) {
         next = current->nextSibling();
         if (current->isAnonymousBlock())
@@ -918,12 +897,22 @@ void RenderTreeBuilder::destroyAndCleanUpAnonymousWrappers(RenderObject& rendere
 
 void RenderTreeBuilder::updateAfterDescendants(RenderElement& renderer)
 {
-    if (is<RenderBlock>(renderer))
-        firstLetterBuilder().updateAfterDescendants(downcast<RenderBlock>(renderer));
-    if (is<RenderListItem>(renderer))
-        listBuilder().updateItemMarker(downcast<RenderListItem>(renderer));
-    if (is<RenderBlockFlow>(renderer))
-        multiColumnBuilder().updateAfterDescendants(downcast<RenderBlockFlow>(renderer));
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (auto* svgRoot = dynamicDowncast<RenderSVGRoot>(renderer)) {
+        svgBuilder().updateAfterDescendants(*svgRoot);
+        return; // A RenderSVGRoot cannot be a RenderBlock, RenderListItem or RenderBlockFlow: early return.
+    }
+#endif
+
+    // Do not early return here in any case. For example, RenderListItem derives
+    // from RenderBlockFlow and indirectly from RenderBlock thus fulfilling all
+    // update conditions below.
+    if (auto* block = dynamicDowncast<RenderBlock>(renderer))
+        firstLetterBuilder().updateAfterDescendants(*block);
+    if (auto* listItem = dynamicDowncast<RenderListItem>(renderer))
+        listBuilder().updateItemMarker(*listItem);
+    if (auto* blockFlow = dynamicDowncast<RenderBlockFlow>(renderer))
+        multiColumnBuilder().updateAfterDescendants(*blockFlow);
 }
 
 RenderPtr<RenderObject> RenderTreeBuilder::detachFromRenderGrid(RenderGrid& parent, RenderObject& child)
@@ -942,7 +931,6 @@ RenderPtr<RenderObject> RenderTreeBuilder::detachFromRenderGrid(RenderGrid& pare
 RenderPtr<RenderObject> RenderTreeBuilder::detachFromRenderElement(RenderElement& parent, RenderObject& child, WillBeDestroyed willBeDestroyed)
 {
     RELEASE_ASSERT_WITH_MESSAGE(!parent.view().frameView().layoutContext().layoutState(), "Layout must not mutate render tree");
-
     ASSERT(parent.canHaveChildren() || parent.canHaveGeneratedChildren());
     ASSERT(child.parent() == &parent);
 
@@ -953,9 +941,10 @@ RenderPtr<RenderObject> RenderTreeBuilder::detachFromRenderElement(RenderElement
     // that a positioned child got yanked). We also repaint, so that the area exposed when the child
     // disappears gets repainted properly.
     if (!parent.renderTreeBeingDestroyed() && child.everHadLayout()) {
-        if (child.isBody())
+        bool shouldNotRepaint = is<RenderMultiColumnSet>(child.previousSibling());
+        if (child.isBody() && !shouldNotRepaint)
             parent.view().repaintRootContents();
-        else
+        else if (!shouldNotRepaint)
             child.repaint();
         child.setNeedsLayoutAndPrefWidthsRecalc();
     }
@@ -986,11 +975,6 @@ RenderPtr<RenderObject> RenderTreeBuilder::detachFromRenderElement(RenderElement
     // This is needed to avoid race conditions where willBeRemovedFromTree() would dirty the tree's structure
     // and the code running here would force an untimely rebuilding, leaving |child| dangling.
     auto childToTake = parent.detachRendererInternal(child);
-
-    // rendererRemovedFromTree() walks the whole subtree. We can improve performance
-    // by skipping this step when destroying the entire tree.
-    if (!parent.renderTreeBeingDestroyed() && is<RenderElement>(*childToTake))
-        RenderCounter::rendererRemovedFromTree(downcast<RenderElement>(*childToTake));
 
     if (!parent.renderTreeBeingDestroyed()) {
         if (AXObjectCache* cache = parent.document().existingAXObjectCache())

@@ -33,17 +33,30 @@
 #include "CSSFontSelector.h"
 #include "Document.h"
 #include "FontCascade.h"
+#include "RenderStyleInlines.h"
+#include "StyleResolver.h"
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
 namespace Style {
 
-MatchedDeclarationsCache::MatchedDeclarationsCache()
-    : m_sweepTimer(*this, &MatchedDeclarationsCache::sweep)
+MatchedDeclarationsCache::MatchedDeclarationsCache(const Resolver& owner)
+    : m_owner(owner)
+    , m_sweepTimer(*this, &MatchedDeclarationsCache::sweep)
 {
 }
 
 MatchedDeclarationsCache::~MatchedDeclarationsCache() = default;
+
+void MatchedDeclarationsCache::ref() const
+{
+    m_owner->ref();
+}
+
+void MatchedDeclarationsCache::deref() const
+{
+    m_owner->deref();
+}
 
 bool MatchedDeclarationsCache::isCacheable(const Element& element, const RenderStyle& style, const RenderStyle& parentStyle)
 {
@@ -71,6 +84,8 @@ bool MatchedDeclarationsCache::isCacheable(const Element& element, const RenderS
         return false;
     if (!parentStyle.fontCascade().isCurrent(fontSelector))
         return false;
+
+    // FIXME: counter-style: we might need to resolve cache like for fontSelector here (rdar://103018993).
 
     return true;
 }
@@ -144,6 +159,8 @@ void MatchedDeclarationsCache::invalidate()
 
 void MatchedDeclarationsCache::clearEntriesAffectedByViewportUnits()
 {
+    Ref protectedThis { *this };
+
     m_entries.removeIf([](auto& keyValue) {
         return keyValue.value.renderStyle->usesViewportUnits();
     });
@@ -151,6 +168,8 @@ void MatchedDeclarationsCache::clearEntriesAffectedByViewportUnits()
 
 void MatchedDeclarationsCache::sweep()
 {
+    Ref protectedThis { *this };
+
     // Look for cache entries containing a style declaration with a single ref and remove them.
     // This may happen when an element attribute mutation causes it to generate a new inlineStyle()
     // or presentationalHintStyle(), potentially leaving this cache with the last ref on the old one.

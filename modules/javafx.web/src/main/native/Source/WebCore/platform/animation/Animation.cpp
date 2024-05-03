@@ -23,6 +23,7 @@
 #include "Animation.h"
 
 #include "CommonAtomStrings.h"
+#include "WebAnimationUtilities.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/TextStream.h>
 
@@ -34,7 +35,7 @@ Animation::Animation()
     , m_delay(initialDelay())
     , m_duration(initialDuration())
     , m_timingFunction(initialTimingFunction())
-    , m_direction(initialDirection())
+    , m_direction(static_cast<unsigned>(initialDirection()))
     , m_fillMode(static_cast<unsigned>(initialFillMode()))
     , m_playState(static_cast<unsigned>(initialPlayState()))
     , m_compositeOperation(static_cast<unsigned>(initialCompositeOperation()))
@@ -125,7 +126,7 @@ bool Animation::animationsMatch(const Animation& other, bool matchProperties) co
     if (!result)
         return false;
 
-    return !matchProperties || (m_property.mode == other.m_property.mode && m_property.id == other.m_property.id && m_propertySet == other.m_propertySet);
+    return !matchProperties || (m_property.mode == other.m_property.mode && m_property.animatableProperty == other.m_property.animatableProperty && m_propertySet == other.m_propertySet);
 }
 
 auto Animation::initialName() -> const Name&
@@ -139,19 +140,19 @@ TextStream& operator<<(TextStream& ts, Animation::TransitionProperty transitionP
     switch (transitionProperty.mode) {
     case Animation::TransitionMode::All: ts << "all"; break;
     case Animation::TransitionMode::None: ts << "none"; break;
-    case Animation::TransitionMode::SingleProperty: ts << getPropertyName(transitionProperty.id); break;
+    case Animation::TransitionMode::SingleProperty: ts << animatablePropertyAsString(transitionProperty.animatableProperty); break;
     case Animation::TransitionMode::UnknownProperty: ts << "unknown property"; break;
     }
     return ts;
 }
 
-TextStream& operator<<(TextStream& ts, Animation::AnimationDirection direction)
+TextStream& operator<<(TextStream& ts, Animation::Direction direction)
 {
     switch (direction) {
-    case Animation::AnimationDirectionNormal: ts << "normal"; break;
-    case Animation::AnimationDirectionAlternate: ts << "alternate"; break;
-    case Animation::AnimationDirectionReverse: ts << "reverse"; break;
-    case Animation::AnimationDirectionAlternateReverse: ts << "alternate-reverse"; break;
+    case Animation::Direction::Normal: ts << "normal"; break;
+    case Animation::Direction::Alternate: ts << "alternate"; break;
+    case Animation::Direction::Reverse: ts << "reverse"; break;
+    case Animation::Direction::AlternateReverse: ts << "alternate-reverse"; break;
     }
     return ts;
 }

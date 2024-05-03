@@ -27,6 +27,7 @@
 
 #include "CascadeLevel.h"
 #include "MatchResult.h"
+#include "WebAnimationTypes.h"
 #include <bitset>
 
 namespace WebCore {
@@ -38,9 +39,16 @@ namespace Style {
 class PropertyCascade {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    enum IncludedProperties { All, InheritedOnly };
+    enum class PropertyType : uint8_t {
+        NonInherited = 1 << 0,
+        Inherited = 1 << 1,
+        VariableReference = 1 << 2,
+        AfterAnimation = 1 << 3,
+        AfterTransition = 1 << 4
+    };
+    static constexpr OptionSet<PropertyType> allProperties() { return { PropertyType::NonInherited,  PropertyType::Inherited }; }
 
-    PropertyCascade(const MatchResult&, CascadeLevel, IncludedProperties);
+    PropertyCascade(const MatchResult&, CascadeLevel, OptionSet<PropertyType> includedProperties, const HashSet<AnimatableProperty>* = nullptr);
     PropertyCascade(const PropertyCascade&, CascadeLevel, std::optional<ScopeOrdinal> rollbackScope = { }, std::optional<CascadeLayerPriority> maximumCascadeLayerPriorityForRollback = { });
 
     ~PropertyCascade();
@@ -54,6 +62,8 @@ public:
         std::array<CSSValue*, 3> cssValue; // Values for link match states MatchDefault, MatchLink and MatchVisited
     };
 
+    bool isEmpty() const { return m_propertyIsPresent.none() && !m_seenDeferredPropertyCount; }
+
     bool hasNormalProperty(CSSPropertyID) const;
     const Property& normalProperty(CSSPropertyID) const;
 
@@ -62,31 +72,46 @@ public:
     const Property* lastDeferredPropertyResolvingRelated(CSSPropertyID, TextDirection, WritingMode) const;
 
     bool hasCustomProperty(const AtomString&) const;
-    Property customProperty(const AtomString&) const;
+    const Property& customProperty(const AtomString&) const;
 
-    Span<const CSSPropertyID> deferredPropertyIDs() const;
+    std::span<const CSSPropertyID> deferredPropertyIDs() const;
     const HashMap<AtomString, Property>& customProperties() const { return m_customProperties; }
+
+    const HashSet<AnimatableProperty> overriddenAnimatedProperties() const;
 
 private:
     void buildCascade();
     bool addNormalMatches(CascadeLevel);
     void addImportantMatches(CascadeLevel);
     bool addMatch(const MatchedProperties&, CascadeLevel, bool important);
+    bool shouldApplyAfterAnimation(const StyleProperties::PropertyReference&);
 
     void set(CSSPropertyID, CSSValue&, const MatchedProperties&, CascadeLevel);
     void setDeferred(CSSPropertyID, CSSValue&, const MatchedProperties&, CascadeLevel);
     static void setPropertyInternal(Property&, CSSPropertyID, CSSValue&, const MatchedProperties&, CascadeLevel);
 
+    bool hasProperty(CSSPropertyID, const CSSValue&);
 
     unsigned deferredPropertyIndex(CSSPropertyID) const;
     void setDeferredPropertyIndex(CSSPropertyID, unsigned);
     void sortDeferredPropertyIDs();
 
     const MatchResult& m_matchResult;
-    const IncludedProperties m_includedProperties;
+    const OptionSet<PropertyType> m_includedProperties;
     const CascadeLevel m_maximumCascadeLevel;
     const std::optional<ScopeOrdinal> m_rollbackScope;
     const std::optional<CascadeLayerPriority> m_maximumCascadeLayerPriorityForRollback;
+
+    struct AnimationLayer {
+        AnimationLayer(const HashSet<AnimatableProperty>&);
+
+        const HashSet<AnimatableProperty>& properties;
+        HashSet<AnimatableProperty> overriddenProperties;
+        bool hasCustomProperties { false };
+        bool hasFontSize { false };
+        bool hasLineHeight { false };
+    };
+    std::optional<AnimationLayer> m_animationLayer;
 
     // The CSSPropertyID enum is sorted like this:
     // 1. CSSPropertyInvalid and CSSPropertyCustom.
@@ -148,7 +173,7 @@ inline const PropertyCascade::Property& PropertyCascade::deferredProperty(CSSPro
     return m_properties[id];
 }
 
-inline Span<const CSSPropertyID> PropertyCascade::deferredPropertyIDs() const
+inline std::span<const CSSPropertyID> PropertyCascade::deferredPropertyIDs() const
 {
     return { m_deferredPropertyIDs.data(), m_seenDeferredPropertyCount };
 }
@@ -158,9 +183,10 @@ inline bool PropertyCascade::hasCustomProperty(const AtomString& name) const
     return m_customProperties.contains(name);
 }
 
-inline PropertyCascade::Property PropertyCascade::customProperty(const AtomString& name) const
+inline const PropertyCascade::Property& PropertyCascade::customProperty(const AtomString& name) const
 {
-    return m_customProperties.get(name);
+    ASSERT(hasCustomProperty(name));
+    return m_customProperties.find(name)->value;
 }
 
 }

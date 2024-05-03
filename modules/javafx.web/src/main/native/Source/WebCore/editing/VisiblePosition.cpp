@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2014 Google Inc. All rights reserved.
  * Portions Copyright (c) 2011 Motorola Mobility, Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -276,8 +277,7 @@ VisiblePosition VisiblePosition::left(bool stayInEditableContent, bool* reachedB
     if (!stayInEditableContent)
         return left;
 
-    // FIXME: This may need to do something different from "before".
-    return honorEditingBoundaryAtOrBefore(left, reachedBoundary);
+    return directionOfEnclosingBlock(left.deepEquivalent()) == TextDirection::LTR ? honorEditingBoundaryAtOrBefore(left, reachedBoundary) : honorEditingBoundaryAtOrAfter(left, reachedBoundary);
 }
 
 Position VisiblePosition::rightVisuallyDistinctCandidate() const
@@ -446,8 +446,7 @@ VisiblePosition VisiblePosition::right(bool stayInEditableContent, bool* reached
     if (!stayInEditableContent)
         return right;
 
-    // FIXME: This may need to do something different from "after".
-    return honorEditingBoundaryAtOrAfter(right, reachedBoundary);
+    return directionOfEnclosingBlock(right.deepEquivalent()) == TextDirection::LTR ? honorEditingBoundaryAtOrAfter(right, reachedBoundary) : honorEditingBoundaryAtOrBefore(right, reachedBoundary);
 }
 
 VisiblePosition VisiblePosition::honorEditingBoundaryAtOrBefore(const VisiblePosition& position, bool* reachedBoundary) const
@@ -670,7 +669,7 @@ FloatRect VisiblePosition::absoluteSelectionBoundsForLine() const
         return { };
 
     auto line = box->lineBox();
-    return line->containingBlock().localToAbsoluteQuad(FloatRect { LineSelection::physicalRect(*line) }).boundingBox();
+    return line->formattingContextRoot().localToAbsoluteQuad(FloatRect { LineSelection::physicalRect(*line) }).boundingBox();
 }
 
 int VisiblePosition::lineDirectionPointForBlockDirectionNavigation() const
@@ -711,7 +710,11 @@ void VisiblePosition::showTreeForThis() const
     m_deepPosition.showTreeForThis();
 }
 
-#endif
+String VisiblePositionRange::debugDescription() const
+{
+    return makeString("start: ", start.debugDescription(), ", end: ", end.debugDescription());
+}
+#endif // ENABLE(TREE_DEBUGGING)
 
 // FIXME: Maybe this should be deprecated too, like the underlying function?
 Element* enclosingBlockFlowElement(const VisiblePosition& visiblePosition)
@@ -802,7 +805,7 @@ VisiblePositionRange makeVisiblePositionRange(const std::optional<SimpleRange>& 
     return { makeContainerOffsetPosition(range->start), makeContainerOffsetPosition(range->end) };
 }
 
-PartialOrdering documentOrder(const VisiblePosition& a, const VisiblePosition& b)
+std::partial_ordering documentOrder(const VisiblePosition& a, const VisiblePosition& b)
 {
     // FIXME: Should two positions with different affinity be considered equivalent or not?
     return treeOrder<ComposedTree>(a.deepEquivalent(), b.deepEquivalent());

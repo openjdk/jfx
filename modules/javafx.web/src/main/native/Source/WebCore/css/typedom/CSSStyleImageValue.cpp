@@ -32,8 +32,6 @@
 
 #include "Document.h"
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -56,6 +54,10 @@ Document* CSSStyleImageValue::document() const
     return m_document.get();
 }
 
-} // namespace WebCore
 
-#endif
+RefPtr<CSSValue> CSSStyleImageValue::toCSSValue() const
+{
+    return m_cssValue.copyRef();
+}
+
+} // namespace WebCore

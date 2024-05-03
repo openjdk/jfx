@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include "CacheStorageConnection.h"
 #include "ClientOrigin.h"
 #include "ImageBitmap.h"
+#include "ReportingClient.h"
 #include "ScriptExecutionContext.h"
 #include "Supplementable.h"
 #include "WindowOrWorkerGlobalScope.h"
@@ -55,10 +56,12 @@ class FileSystemStorageConnection;
 class FontFaceSet;
 class MessagePortChannelProvider;
 class Performance;
+class ReportingScope;
 class ScheduledAction;
 class ScriptBuffer;
 class ScriptBufferSourceProvider;
 class WorkerCacheStorageConnection;
+class WorkerClient;
 class WorkerFileSystemStorageConnection;
 class WorkerLocation;
 class WorkerMessagePortChannelProvider;
@@ -69,11 +72,13 @@ class WorkerStorageConnection;
 class WorkerThread;
 struct WorkerParameters;
 
+enum class ViolationReportType : uint8_t;
+
 namespace IDBClient {
 class IDBConnectionProxy;
 }
 
-class WorkerGlobalScope : public Supplementable<WorkerGlobalScope>, public Base64Utilities, public WindowOrWorkerGlobalScope, public WorkerOrWorkletGlobalScope {
+class WorkerGlobalScope : public Supplementable<WorkerGlobalScope>, public Base64Utilities, public WindowOrWorkerGlobalScope, public WorkerOrWorkletGlobalScope, public ReportingClient {
     WTF_MAKE_ISO_ALLOCATED(WorkerGlobalScope);
 public:
     virtual ~WorkerGlobalScope();
@@ -90,8 +95,9 @@ public:
     void suspend() final;
     void resume() final;
 
-    using WeakValueType = EventTarget::WeakValueType;
     using EventTarget::weakPtrFactory;
+    using EventTarget::WeakValueType;
+    using EventTarget::WeakPtrImplType;
     WorkerStorageConnection& storageConnection();
     static void postFileSystemStorageTask(Function<void()>&&);
     WorkerFileSystemStorageConnection& getFileSystemStorageConnection(Ref<FileSystemStorageConnection>&&);
@@ -116,6 +122,7 @@ public:
     WorkerNavigator& navigator();
 
     void setIsOnline(bool);
+    bool isOnline() const { return m_isOnline; }
 
     ExceptionOr<int> setTimeout(std::unique_ptr<ScheduledAction>, int timeout, FixedVector<JSC::Strong<JSC::Unknown>>&& arguments);
     void clearTimeout(int timeoutId);
@@ -134,6 +141,7 @@ public:
 
     Crypto& crypto();
     Performance& performance() const;
+    ReportingScope& reportingScope() const { return m_reportingScope.get(); }
 
     void prepareForDestruction() override;
 
@@ -145,10 +153,8 @@ public:
     CSSValuePool& cssValuePool() final;
     CSSFontSelector* cssFontSelector() final;
     Ref<FontFaceSet> fonts();
-    std::unique_ptr<FontLoadRequest> fontLoadRequest(String& url, bool isSVG, bool isInitiatingElementInUserAgentShadowTree, LoadedFromOpaqueSource) final;
+    std::unique_ptr<FontLoadRequest> fontLoadRequest(const String& url, bool isSVG, bool isInitiatingElementInUserAgentShadowTree, LoadedFromOpaqueSource) final;
     void beginLoadingFontSoon(FontLoadRequest&) final;
-
-    ReferrerPolicy referrerPolicy() const final;
 
     const Settings::Values& settingsValues() const final { return m_settingsValues; }
 
@@ -162,11 +168,15 @@ public:
 
     ClientOrigin clientOrigin() const { return { topOrigin().data(), securityOrigin()->data() }; }
 
+    WorkerClient* workerClient() { return m_workerClient.get(); }
+
 protected:
-    WorkerGlobalScope(WorkerThreadType, const WorkerParameters&, Ref<SecurityOrigin>&&, WorkerThread&, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*);
+    WorkerGlobalScope(WorkerThreadType, const WorkerParameters&, Ref<SecurityOrigin>&&, WorkerThread&, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, std::unique_ptr<WorkerClient>&&);
 
     void applyContentSecurityPolicyResponseHeaders(const ContentSecurityPolicyResponseHeaders&);
     void updateSourceProviderBuffers(const ScriptBuffer& mainScript, const HashMap<URL, ScriptBuffer>& importedScripts);
+
+    void addConsoleMessage(MessageSource, MessageLevel, const String& message, unsigned long requestIdentifier) override;
 
 private:
     void logExceptionToConsole(const String& errorMessage, const String& sourceURL, int lineNumber, int columnNumber, RefPtr<Inspector::ScriptCallStack>&&) final;
@@ -174,7 +184,6 @@ private:
     // The following addMessage and addConsoleMessage functions are deprecated.
     // Callers should try to create the ConsoleMessage themselves.
     void addMessage(MessageSource, MessageLevel, const String& message, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, RefPtr<Inspector::ScriptCallStack>&&, JSC::JSGlobalObject*, unsigned long requestIdentifier) final;
-    void addConsoleMessage(MessageSource, MessageLevel, const String& message, unsigned long requestIdentifier) final;
 
     bool isWorkerGlobalScope() const final { return true; }
 
@@ -198,6 +207,12 @@ private:
 
     void stopIndexedDatabase();
 
+    // ReportingClient.
+    void notifyReportObservers(Ref<Report>&&) final;
+    String endpointURIForToken(const String&) const final;
+    void sendReportToEndpoints(const URL& baseURL, const Vector<String>& endpointURIs, const Vector<String>& endpointTokens, Ref<FormData>&& report, ViolationReportType) final;
+    String httpUserAgent() const final { return m_userAgent; }
+
     URL m_url;
     URL m_ownerURL;
     String m_inspectorIdentifier;
@@ -216,6 +231,7 @@ private:
     RefPtr<SocketProvider> m_socketProvider;
 
     RefPtr<Performance> m_performance;
+    Ref<ReportingScope> m_reportingScope;
     mutable RefPtr<Crypto> m_crypto;
 
     WeakPtr<ScriptBufferSourceProvider> m_mainScriptSourceProvider;
@@ -227,8 +243,8 @@ private:
     RefPtr<WorkerSWClientConnection> m_swClientConnection;
 #endif
     std::unique_ptr<CSSValuePool> m_cssValuePool;
+    std::unique_ptr<WorkerClient> m_workerClient;
     RefPtr<CSSFontSelector> m_cssFontSelector;
-    ReferrerPolicy m_referrerPolicy;
     Settings::Values m_settingsValues;
     WorkerType m_workerType;
     FetchOptions::Credentials m_credentials;

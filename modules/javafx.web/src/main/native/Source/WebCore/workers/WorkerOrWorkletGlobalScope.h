@@ -39,14 +39,15 @@ class WorkerInspectorController;
 class WorkerOrWorkletScriptController;
 class WorkerOrWorkletThread;
 
-class WorkerOrWorkletGlobalScope : public ScriptExecutionContext, public RefCounted<WorkerOrWorkletGlobalScope>, public EventTargetWithInlineData {
+class WorkerOrWorkletGlobalScope : public ScriptExecutionContext, public RefCounted<WorkerOrWorkletGlobalScope>, public EventTarget {
     WTF_MAKE_ISO_ALLOCATED(WorkerOrWorkletGlobalScope);
     WTF_MAKE_NONCOPYABLE(WorkerOrWorkletGlobalScope);
 public:
     virtual ~WorkerOrWorkletGlobalScope();
 
     using ScriptExecutionContext::weakPtrFactory;
-    using WeakValueType = ScriptExecutionContext::WeakValueType;
+    using ScriptExecutionContext::WeakValueType;
+    using ScriptExecutionContext::WeakPtrImplType;
 
     bool isClosing() const { return m_isClosing; }
     WorkerOrWorkletThread* workerOrWorkletThread() const { return m_thread; }
@@ -78,9 +79,11 @@ public:
     virtual void resume() { }
 
     virtual FetchOptions::Destination destination() const = 0;
+    ReferrerPolicy referrerPolicy() const final { return m_referrerPolicy; }
+    std::optional<uint64_t> noiseInjectionHashSalt() const final { return m_noiseInjectionHashSalt; }
 
 protected:
-    WorkerOrWorkletGlobalScope(WorkerThreadType, PAL::SessionID, Ref<JSC::VM>&&, WorkerOrWorkletThread*, ScriptExecutionContextIdentifier = { });
+    WorkerOrWorkletGlobalScope(WorkerThreadType, PAL::SessionID, Ref<JSC::VM>&&, ReferrerPolicy, WorkerOrWorkletThread*, std::optional<uint64_t>,  ScriptExecutionContextIdentifier = { });
 
     // ScriptExecutionContext.
     bool isJSExecutionForbidden() const final;
@@ -110,7 +113,9 @@ private:
     std::unique_ptr<EventLoopTaskGroup> m_defaultTaskGroup;
     std::unique_ptr<WorkerInspectorController> m_inspectorController;
     PAL::SessionID m_sessionID;
+    ReferrerPolicy m_referrerPolicy;
     bool m_isClosing { false };
+    std::optional<uint64_t> m_noiseInjectionHashSalt;
 };
 
 } // namespace WebCore

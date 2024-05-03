@@ -26,6 +26,7 @@
 
 #if USE(COORDINATED_GRAPHICS)
 
+#include "CairoUtilities.h"
 #include "FloatQuad.h"
 #include "GraphicsContext.h"
 #include "GraphicsLayer.h"
@@ -184,9 +185,9 @@ Nicosia::PlatformLayer::LayerID CoordinatedGraphicsLayer::id() const
     return m_id;
 }
 
-auto CoordinatedGraphicsLayer::primaryLayerID() const -> PlatformLayerID
+auto CoordinatedGraphicsLayer::primaryLayerID() const -> PlatformLayerIdentifier
 {
-    return id();
+    return { ObjectIdentifier<PlatformLayerIdentifierType>(id()), Process::identifier() };
 }
 
 bool CoordinatedGraphicsLayer::setChildren(Vector<Ref<GraphicsLayer>>&& children)
@@ -259,6 +260,7 @@ void CoordinatedGraphicsLayer::setEventRegion(EventRegion&& eventRegion)
     notifyFlushRequired();
 }
 
+#if ENABLE(SCROLLING_THREAD)
 void CoordinatedGraphicsLayer::setScrollingNodeID(ScrollingNodeID nodeID)
 {
     if (scrollingNodeID() == nodeID)
@@ -267,6 +269,7 @@ void CoordinatedGraphicsLayer::setScrollingNodeID(ScrollingNodeID nodeID)
     GraphicsLayer::setScrollingNodeID(nodeID);
     m_nicosia.delta.scrollingNodeChanged = true;
 }
+#endif // ENABLE(SCROLLING_THREAD)
 
 void CoordinatedGraphicsLayer::setPosition(const FloatPoint& p)
 {
@@ -534,7 +537,7 @@ bool CoordinatedGraphicsLayer::filtersCanBeComposited(const FilterOperations& fi
         return false;
 
     for (const auto& filterOperation : filters.operations()) {
-        if (filterOperation->type() == FilterOperation::REFERENCE)
+        if (filterOperation->type() == FilterOperation::Type::Reference)
             return false;
     }
 
@@ -897,7 +900,7 @@ void CoordinatedGraphicsLayer::flushCompositingStateForThisLayerOnly()
         ASSERT(m_compositedImage);
         auto& image = *m_compositedImage;
         uintptr_t imageID = reinterpret_cast<uintptr_t>(&image);
-        uintptr_t nativeImageID = reinterpret_cast<uintptr_t>(m_compositedNativeImage->platformImage().get());
+        uintptr_t nativeImageID = getSurfaceUniqueID(m_compositedNativeImage->platformImage().get());
 
         // Respawn the ImageBacking object if the underlying image changed.
         if (m_nicosia.imageBacking) {
@@ -917,7 +920,7 @@ void CoordinatedGraphicsLayer::flushCompositingStateForThisLayerOnly()
         auto& layerState = impl.layerState();
         layerState.imageID = imageID;
         layerState.update.isVisible = transformedVisibleRect().intersects(IntRect(contentsRect()));
-        if (layerState.update.isVisible && layerState.update.nativeImageID != nativeImageID) {
+        if (layerState.update.isVisible && (!nativeImageID || layerState.update.nativeImageID != nativeImageID)) {
             layerState.update.nativeImageID = nativeImageID;
             layerState.update.imageBackingStore = m_coordinator->imageBackingStore(nativeImageID,
                 [&] {
@@ -941,7 +944,7 @@ void CoordinatedGraphicsLayer::flushCompositingStateForThisLayerOnly()
     }
 
     {
-        m_nicosia.layer->updateState(
+        m_nicosia.layer->accessPending(
             [this](Nicosia::CompositionLayer::LayerState& state)
             {
                 // OR the local delta value into the layer's pending state delta. After that,
@@ -1052,8 +1055,10 @@ void CoordinatedGraphicsLayer::flushCompositingStateForThisLayerOnly()
                     state.imageBacking = m_nicosia.imageBacking;
                 if (localDelta.animatedBackingStoreClientChanged)
                     state.animatedBackingStoreClient = m_nicosia.animatedBackingStoreClient;
+#if ENABLE(SCROLLING_THREAD)
                 if (localDelta.scrollingNodeChanged)
                     state.scrollingNodeID = scrollingNodeID();
+#endif
                 if (localDelta.eventRegionChanged)
                     state.eventRegion = eventRegion();
             });
@@ -1384,22 +1389,22 @@ void CoordinatedGraphicsLayer::computeTransformedVisibleRect()
 bool CoordinatedGraphicsLayer::shouldHaveBackingStore() const
 {
     // If the CSS opacity value is 0 and there's no animation over the opacity property, the layer is invisible.
-    bool isInvisibleBecauseOpacityZero = !opacity() && !m_animations.hasActiveAnimationsOfType(AnimatedPropertyOpacity);
+    bool isInvisibleBecauseOpacityZero = !opacity() && !m_animations.hasActiveAnimationsOfType(AnimatedProperty::Opacity);
 
     // Check if there's a filter that sets the opacity to zero.
     bool hasOpacityZeroFilter = notFound != filters().operations().findIf([&](const auto& operation) {
-        return operation->type() == FilterOperation::OperationType::OPACITY && !downcast<BasicComponentTransferFilterOperation>(*operation).amount();
+        return operation->type() == FilterOperation::Type::Opacity && !downcast<BasicComponentTransferFilterOperation>(*operation).amount();
     });
 
     // If there's a filter that sets opacity to 0 and the filters are not being animated, the layer is invisible.
-    isInvisibleBecauseOpacityZero |= hasOpacityZeroFilter && !m_animations.hasActiveAnimationsOfType(AnimatedPropertyFilter);
+    isInvisibleBecauseOpacityZero |= hasOpacityZeroFilter && !m_animations.hasActiveAnimationsOfType(AnimatedProperty::Filter);
 
     return drawsContent() && contentsAreVisible() && !m_size.isEmpty() && !isInvisibleBecauseOpacityZero;
 }
 
 bool CoordinatedGraphicsLayer::selfOrAncestorHasActiveTransformAnimation() const
 {
-    if (m_animations.hasActiveAnimationsOfType(AnimatedPropertyTransform))
+    if (m_animations.hasActiveAnimationsOfType(AnimatedProperty::Transform))
         return true;
 
     if (!parent())
@@ -1428,9 +1433,9 @@ bool CoordinatedGraphicsLayer::addAnimation(const KeyframeValueList& valueList, 
 
     switch (valueList.property()) {
 #if ENABLE(FILTERS_LEVEL_2)
-    case AnimatedPropertyWebkitBackdropFilter:
+    case AnimatedProperty::WebkitBackdropFilter:
 #endif
-    case AnimatedPropertyFilter: {
+    case AnimatedProperty::Filter: {
         int listIndex = validateFilterOperations(valueList);
         if (listIndex < 0)
             return false;
@@ -1440,8 +1445,8 @@ bool CoordinatedGraphicsLayer::addAnimation(const KeyframeValueList& valueList, 
             return false;
         break;
     }
-    case AnimatedPropertyOpacity:
-    case AnimatedPropertyTransform:
+    case AnimatedProperty::Opacity:
+    case AnimatedProperty::Transform:
         break;
     default:
         return false;
@@ -1518,6 +1523,11 @@ void CoordinatedGraphicsLayer::dumpAdditionalProperties(TextStream& textStream, 
 {
     if (options & LayerTreeAsTextOptions::IncludeContentLayers)
         dumpInnerLayer(textStream, "backdrop layer"_s, m_backdropLayer.get(), options);
+}
+
+double CoordinatedGraphicsLayer::backingStoreMemoryEstimate() const
+{
+    return 0.0;
 }
 
 } // namespace WebCore

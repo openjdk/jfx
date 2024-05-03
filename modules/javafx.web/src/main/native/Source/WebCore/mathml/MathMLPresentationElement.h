@@ -39,16 +39,14 @@ public:
     static Ref<MathMLPresentationElement> create(const QualifiedName& tagName, Document&);
 
 protected:
-    MathMLPresentationElement(const QualifiedName& tagName, Document&);
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
-
-    static bool isPhrasingContent(const Node&);
-    static bool isFlowContent(const Node&);
+    constexpr static auto CreateMathMLPresentationElement = CreateMathMLElement;
+    MathMLPresentationElement(const QualifiedName& tagName, Document&, ConstructionType = CreateMathMLPresentationElement);
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
 
     static std::optional<bool> toOptionalBool(const BooleanValue& value) { return value == BooleanValue::Default ? std::nullopt : std::optional<bool>(value == BooleanValue::True); }
     const BooleanValue& cachedBooleanAttribute(const QualifiedName&, std::optional<BooleanValue>&);
 
-    static Length parseMathMLLength(const String&);
+    static Length parseMathMLLength(const String&, bool acceptLegacyMathMLLengths);
     const Length& cachedMathMLLength(const QualifiedName&, std::optional<Length>&);
 
     virtual bool acceptsMathVariantAttribute() { return false; }
@@ -60,7 +58,7 @@ private:
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
     bool isPresentationMathML() const final { return true; }
 
-    static Length parseNumberAndUnit(StringView);
+    static Length parseNumberAndUnit(StringView, bool acceptLegacyMathMLLengths);
     static Length parseNamedSpace(StringView);
     static MathVariant parseMathVariantAttribute(const AtomString& attributeValue);
 };

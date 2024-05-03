@@ -26,10 +26,13 @@
 #include "config.h"
 #include "InlineIteratorTextBox.h"
 
+#include "InlineIteratorBoxInlines.h"
 #include "InlineIteratorLineBox.h"
+#include "InlineIteratorTextBoxInlines.h"
 #include "LayoutIntegrationLineLayout.h"
-#include "LineSelection.h"
 #include "RenderCombineText.h"
+#include "RenderStyleInlines.h"
+#include "SVGInlineTextBox.h"
 
 namespace WebCore {
 namespace InlineIterator {
@@ -37,55 +40,6 @@ namespace InlineIterator {
 TextBoxIterator TextBox::nextTextBox() const
 {
     return TextBoxIterator(*this).traverseNextTextBox();
-}
-
-LayoutRect TextBox::selectionRect(unsigned rangeStart, unsigned rangeEnd) const
-{
-    auto [clampedStart, clampedEnd] = selectableRange().clamp(rangeStart, rangeEnd);
-
-    if (clampedStart >= clampedEnd && !(rangeStart == rangeEnd && rangeStart >= start() && rangeStart <= end()))
-        return { };
-
-    auto lineSelectionRect = LineSelection::logicalRect(*lineBox());
-    auto selectionRect = LayoutRect { logicalLeft(), lineSelectionRect.y(), logicalWidth(), lineSelectionRect.height() };
-
-    TextRun textRun = createTextRun();
-    if (clampedStart || clampedEnd != textRun.length())
-        fontCascade().adjustSelectionRectForText(textRun, selectionRect, clampedStart, clampedEnd);
-
-    return snappedSelectionRect(selectionRect, logicalRight(), lineSelectionRect.y(), lineSelectionRect.height(), isHorizontal());
-}
-
-unsigned TextBox::offsetForPosition(float x, bool includePartialGlyphs) const
-{
-    if (isLineBreak())
-        return 0;
-    if (x - logicalLeft() > logicalWidth())
-        return isLeftToRightDirection() ? length() : 0;
-    if (x - logicalLeft() < 0)
-        return isLeftToRightDirection() ? 0 : length();
-    return fontCascade().offsetForPosition(createTextRun(CreateTextRunMode::Editing), x - logicalLeft(), includePartialGlyphs);
-}
-
-float TextBox::positionForOffset(unsigned offset) const
-{
-    ASSERT(offset >= start());
-    ASSERT(offset <= end());
-
-    if (isLineBreak())
-        return logicalLeft();
-
-    auto [startOffset, endOffset] = [&] {
-        if (direction() == TextDirection::RTL)
-            return std::pair { selectableRange().clamp(offset), length() };
-        return std::pair { 0u, selectableRange().clamp(offset) };
-    }();
-
-    auto selectionRect = LayoutRect(logicalLeft(), 0, 0, 0);
-
-    auto textRun = createTextRun(CreateTextRunMode::Editing);
-    fontCascade().adjustSelectionRectForText(textRun, selectionRect, startOffset, endOffset);
-    return snapRectToDevicePixelsWithWritingDirection(selectionRect, renderer().document().deviceScaleFactor(), textRun.ltr()).maxX();
 }
 
 bool TextBox::isCombinedText() const
@@ -122,10 +76,8 @@ TextBoxIterator& TextBoxIterator::traverseNextTextBox()
 
 TextBoxIterator firstTextBoxFor(const RenderText& text)
 {
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     if (auto* lineLayout = LayoutIntegration::LineLayout::containing(text))
         return lineLayout->textBoxesFor(text);
-#endif
 
     return { BoxLegacyPath { text.firstTextBox() } };
 }
@@ -135,7 +87,6 @@ TextBoxIterator textBoxFor(const LegacyInlineTextBox* legacyInlineTextBox)
     return { BoxLegacyPath { legacyInlineTextBox } };
 }
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 TextBoxIterator textBoxFor(const LayoutIntegration::InlineContent& content, const InlineDisplay::Box& box)
 {
     return textBoxFor(content, content.indexForBox(box));
@@ -143,10 +94,9 @@ TextBoxIterator textBoxFor(const LayoutIntegration::InlineContent& content, cons
 
 TextBoxIterator textBoxFor(const LayoutIntegration::InlineContent& content, size_t boxIndex)
 {
-    ASSERT(content.boxes[boxIndex].text());
+    ASSERT(content.displayContent().boxes[boxIndex].isTextOrSoftLineBreak());
     return { BoxModernPath { content, boxIndex } };
 }
-#endif
 
 TextBoxRange textBoxesFor(const RenderText& text)
 {

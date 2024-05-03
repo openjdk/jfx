@@ -27,8 +27,9 @@
 namespace WebCore {
 
 class Document;
-class HTMLFormControlElementWithState;
+class FormListedElement;
 class HTMLFormElement;
+class ValidatedFormListedElement;
 
 using FormControlState = Vector<AtomString>;
 
@@ -39,22 +40,23 @@ public:
     FormController();
     ~FormController();
 
-    Vector<AtomString> formElementsState(const Document&) const;
-    void setStateForNewFormElements(const Vector<AtomString>& stateVector);
+    WEBCORE_EXPORT Vector<AtomString> formElementsState(const Document&) const;
+    WEBCORE_EXPORT void setStateForNewFormElements(const Vector<AtomString>& stateVector);
 
     void willDeleteForm(HTMLFormElement&);
-    void restoreControlStateFor(HTMLFormControlElementWithState&);
+    void restoreControlStateFor(ValidatedFormListedElement&);
     void restoreControlStateIn(HTMLFormElement&);
     bool hasFormStateToRestore() const;
 
     WEBCORE_EXPORT static Vector<String> referencedFilePaths(const Vector<AtomString>& stateVector);
+    static HTMLFormElement* ownerForm(const FormListedElement&);
 
 private:
     class FormKeyGenerator;
     class SavedFormState;
     using SavedFormStateMap = HashMap<String, SavedFormState>;
 
-    FormControlState takeStateForFormElement(const HTMLFormControlElementWithState&);
+    FormControlState takeStateForFormElement(const ValidatedFormListedElement&);
     static SavedFormStateMap parseStateVector(const Vector<AtomString>&);
 
     SavedFormStateMap m_savedFormStateMap;

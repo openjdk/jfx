@@ -26,14 +26,12 @@
 #include "config.h"
 #include "DisplayView.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "DeprecatedGlobalSettings.h"
 #include "DisplayTree.h"
 #include "DisplayTreeBuilder.h"
-#include "Frame.h"
-#include "FrameView.h"
-#include "LayoutContainerBox.h"
+#include "LayoutElementBox.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "Page.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -42,7 +40,7 @@ namespace Display {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(View);
 
-View::View(FrameView& frameView)
+View::View(LocalFrameView& frameView)
     : m_frameView(frameView)
     , m_layerController(*this)
 {
@@ -52,9 +50,9 @@ View::~View()
 {
 }
 
-Frame& View::frame() const
+LocalFrame& View::frame() const
 {
-    return m_frameView.frame();
+    return downcast<LocalFrame>(m_frameView.frame());
 }
 
 Page* View::page() const
@@ -107,4 +105,3 @@ float View::deviceScaleFactor() const
 } // namespace Display
 } // namespace WebCore
 
-#endif // ENABLE(LAYOUT_FORMATTING_CONTEXT)

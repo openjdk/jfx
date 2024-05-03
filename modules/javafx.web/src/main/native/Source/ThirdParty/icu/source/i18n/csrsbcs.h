@@ -28,10 +28,10 @@ private:
     int32_t hitCount;
 
 protected:
-    int32_t byteIndex;
+        int32_t byteIndex;
     const uint8_t *charMap;
 
-    void addByte(int32_t b);
+        void addByte(int32_t b);
 
 public:
     NGramParser(const int32_t *theNgramList, const uint8_t *theCharMap);
@@ -46,7 +46,7 @@ private:
     void lookup(int32_t thisNgram);
 
     virtual int32_t nextByte(InputText *det);
-    virtual void parseCharacters(InputText *det);
+        virtual void parseCharacters(InputText *det);
 
 public:
     int32_t parse(InputText *det);
@@ -267,7 +267,7 @@ public:
     virtual ~CharsetRecog_IBM420_ar();
 
     const char *getLanguage() const override;
-    int32_t match_sbcs(InputText *det, const int32_t ngrams[], const uint8_t charMap[]) const override;
+        int32_t match_sbcs(InputText *det, const int32_t ngrams[], const uint8_t charMap[]) const override;
 
 };
 

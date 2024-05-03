@@ -68,12 +68,10 @@ public:
     StringView(const UChar*, unsigned length);
     StringView(const char*, unsigned length);
     StringView(ASCIILiteral);
-    ALWAYS_INLINE StringView(Span<const LChar> characters) : StringView(characters.data(), characters.size()) { }
-    ALWAYS_INLINE StringView(Span<const UChar> characters) : StringView(characters.data(), characters.size()) { }
+    ALWAYS_INLINE StringView(std::span<const LChar> characters) : StringView(characters.data(), characters.size()) { }
+    ALWAYS_INLINE StringView(std::span<const UChar> characters) : StringView(characters.data(), characters.size()) { }
 
     ALWAYS_INLINE static StringView fromLatin1(const char* characters) { return StringView { characters }; }
-
-    static StringView empty();
 
     unsigned length() const;
     bool isEmpty() const;
@@ -96,13 +94,15 @@ public:
     bool is8Bit() const;
     const LChar* characters8() const;
     const UChar* characters16() const;
+    std::span<const LChar> span8() const { return { characters8(), length() }; }
+    std::span<const UChar> span16() const { return { characters16(), length() }; }
 
     unsigned hash() const;
 
     // Return characters8() or characters16() depending on CharacterType.
     template<typename CharacterType> const CharacterType* characters() const;
 
-    bool isAllASCII() const;
+    bool containsOnlyASCII() const;
 
     String toString() const;
     String toStringWithoutCopying() const;
@@ -121,14 +121,18 @@ public:
     WTF_EXPORT_PRIVATE RetainPtr<NSString> createNSStringWithoutCopying() const;
 #endif
 
-    WTF_EXPORT_PRIVATE Expected<CString, UTF8ConversionError> tryGetUtf8(ConversionMode = LenientConversion) const;
+    WTF_EXPORT_PRIVATE Expected<CString, UTF8ConversionError> tryGetUTF8(ConversionMode = LenientConversion) const;
     WTF_EXPORT_PRIVATE CString utf8(ConversionMode = LenientConversion) const;
+
+    template<typename Func>
+    Expected<std::invoke_result_t<Func, std::span<const char>>, UTF8ConversionError> tryGetUTF8(const Func&, ConversionMode = LenientConversion) const;
 
     class UpconvertedCharacters;
     UpconvertedCharacters upconvertedCharacters() const;
 
-    void getCharactersWithUpconvert(LChar*) const;
-    void getCharactersWithUpconvert(UChar*) const;
+    template<typename CharacterType> void getCharacters(CharacterType*) const;
+    template<typename CharacterType> void getCharacters8(CharacterType*) const;
+    template<typename CharacterType> void getCharacters16(CharacterType*) const;
 
     enum class CaseConvertType { Upper, Lower };
     WTF_EXPORT_PRIVATE void getCharactersWithASCIICase(CaseConvertType, LChar*) const;
@@ -139,14 +143,15 @@ public:
     StringView right(unsigned length) const { return substring(this->length() - length, length); }
 
     template<typename MatchedCharacterPredicate>
-    StringView stripLeadingAndTrailingMatchedCharacters(const MatchedCharacterPredicate&) const;
-    WTF_EXPORT_PRIVATE StringView stripWhiteSpace() const;
+    StringView trim(const MatchedCharacterPredicate&) const;
 
     class SplitResult;
     SplitResult split(UChar) const;
     SplitResult splitAllowingEmptyEntries(UChar) const;
 
     size_t find(UChar, unsigned start = 0) const;
+    size_t find(LChar, unsigned start = 0) const;
+    ALWAYS_INLINE size_t find(char c, unsigned start = 0) const { return find(static_cast<LChar>(c), start); }
     template<typename CodeUnitMatchFunction, std::enable_if_t<std::is_invocable_r_v<bool, CodeUnitMatchFunction, UChar>>* = nullptr>
     size_t find(CodeUnitMatchFunction&&, unsigned start = 0) const;
     ALWAYS_INLINE size_t find(ASCIILiteral literal, unsigned start = 0) const { return find(literal.characters8(), literal.length(), start); }
@@ -172,7 +177,7 @@ public:
     WTF_EXPORT_PRIVATE bool containsIgnoringASCIICase(StringView) const;
     WTF_EXPORT_PRIVATE bool containsIgnoringASCIICase(StringView, unsigned start) const;
 
-    template<bool isSpecialCharacter(UChar)> bool isAllSpecialCharacters() const;
+    template<bool isSpecialCharacter(UChar)> bool containsOnly() const;
 
     WTF_EXPORT_PRIVATE bool startsWith(UChar) const;
     WTF_EXPORT_PRIVATE bool startsWith(StringView) const;
@@ -194,6 +199,7 @@ private:
     explicit StringView(const char*);
 
     friend bool equal(StringView, StringView);
+    friend bool equal(StringView, StringView, unsigned length);
     friend WTF_EXPORT_PRIVATE bool equalRespectingNullity(StringView, StringView);
 
     void initialize(const LChar*, unsigned length);
@@ -203,7 +209,7 @@ private:
     WTF_EXPORT_PRIVATE size_t reverseFind(const LChar* match, unsigned matchLength, unsigned start) const;
 
     template<typename CharacterType, typename MatchedCharacterPredicate>
-    StringView stripLeadingAndTrailingMatchedCharacters(const CharacterType*, const MatchedCharacterPredicate&) const;
+    StringView trim(const CharacterType*, const MatchedCharacterPredicate&) const;
 
     WTF_EXPORT_PRIVATE bool underlyingStringIsValidImpl() const;
     WTF_EXPORT_PRIVATE void setUnderlyingStringImpl(const StringImpl*);
@@ -249,10 +255,6 @@ inline bool operator==(StringView a, StringView b) { return equal(a, b); }
 inline bool operator==(StringView a, ASCIILiteral b) { return equal(a, b); }
 inline bool operator==(ASCIILiteral a, StringView b) { return equal(b, a); }
 
-inline bool operator!=(StringView a, StringView b) { return !equal(a, b); }
-inline bool operator!=(StringView a, ASCIILiteral b) { return !equal(a, b); }
-inline bool operator!=(ASCIILiteral a, StringView b) { return !equal(b, a); }
-
 struct StringViewWithUnderlyingString;
 
 // This returns a StringView of the normalized result, and a String that is either
@@ -263,7 +265,10 @@ WTF_EXPORT_PRIVATE StringViewWithUnderlyingString normalizedNFC(StringView);
 
 WTF_EXPORT_PRIVATE String normalizedNFC(const String&);
 
-}
+inline StringView nullStringView() { return { }; }
+inline StringView emptyStringView() { return StringView("", 0); }
+
+} // namespace WTF
 
 #include <wtf/text/AtomString.h>
 #include <wtf/text/WTFString.h>
@@ -272,12 +277,26 @@ namespace WTF {
 
 struct StringViewWithUnderlyingString {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
-    StringView view;
+    StringViewWithUnderlyingString(StringView passedView, String passedUnderlyingString)
+        : underlyingString(WTFMove(passedUnderlyingString))
+        , view(WTFMove(passedView))
+    { }
+
     String underlyingString;
+    StringView view;
+
+    String toString() const;
 };
 
 inline StringView::StringView()
 {
+}
+
+inline String StringViewWithUnderlyingString::toString() const
+{
+    if (LIKELY(view.length() == underlyingString.length()))
+        return underlyingString;
+    return view.toString();
 }
 
 #if CHECK_STRINGVIEW_LIFETIME
@@ -427,11 +446,6 @@ inline void StringView::clear()
     m_is8Bit = true;
 }
 
-inline StringView StringView::empty()
-{
-    return StringView("", 0);
-}
-
 inline const LChar* StringView::characters8() const
 {
     ASSERT(is8Bit());
@@ -463,7 +477,7 @@ template<> ALWAYS_INLINE const UChar* StringView::characters<UChar>() const
     return characters16();
 }
 
-inline bool StringView::isAllASCII() const
+inline bool StringView::containsOnlyASCII() const
 {
     if (is8Bit())
         return charactersAreAllASCII(characters8(), length());
@@ -514,7 +528,7 @@ inline bool StringView::is8Bit() const
 inline StringView StringView::substring(unsigned start, unsigned length) const
 {
     if (start >= this->length())
-        return empty();
+        return emptyStringView();
     unsigned maxLength = this->length() - start;
 
     if (length >= maxLength) {
@@ -557,34 +571,29 @@ inline bool StringView::contains(CodeUnitMatchFunction&& function) const
     return find(std::forward<CodeUnitMatchFunction>(function)) != notFound;
 }
 
-template<bool isSpecialCharacter(UChar)> inline bool StringView::isAllSpecialCharacters() const
+template<bool isSpecialCharacter(UChar)> inline bool StringView::containsOnly() const
 {
     if (is8Bit())
-        return WTF::isAllSpecialCharacters<isSpecialCharacter>(characters8(), length());
-    return WTF::isAllSpecialCharacters<isSpecialCharacter>(characters16(), length());
+        return WTF::containsOnly<isSpecialCharacter>(characters8(), length());
+    return WTF::containsOnly<isSpecialCharacter>(characters16(), length());
 }
 
-inline void StringView::getCharactersWithUpconvert(LChar* destination) const
+template<typename CharacterType> inline void StringView::getCharacters8(CharacterType* destination) const
 {
-    if (!characters8())
-        return;
-
-    ASSERT(is8Bit());
     StringImpl::copyCharacters(destination, characters8(), m_length);
 }
 
-inline void StringView::getCharactersWithUpconvert(UChar* destination) const
+template<typename CharacterType> inline void StringView::getCharacters16(CharacterType* destination) const
 {
-    if (is8Bit()) {
-        if (!characters8())
-            return;
-
-        StringImpl::copyCharacters(destination, characters8(), m_length);
-        return;
-    }
-    if (!characters16())
-        return;
     StringImpl::copyCharacters(destination, characters16(), m_length);
+}
+
+template<typename CharacterType> inline void StringView::getCharacters(CharacterType* destination) const
+{
+    if (is8Bit())
+        getCharacters8(destination);
+    else
+        getCharacters16(destination);
 }
 
 inline StringView::UpconvertedCharacters::UpconvertedCharacters(StringView string)
@@ -595,9 +604,8 @@ inline StringView::UpconvertedCharacters::UpconvertedCharacters(StringView strin
     }
     const LChar* characters8 = string.characters8();
     unsigned length = string.m_length;
-    m_upconvertedCharacters.reserveInitialCapacity(length);
-    for (unsigned i = 0; i < length; ++i)
-        m_upconvertedCharacters.uncheckedAppend(characters8[i]);
+    m_upconvertedCharacters.resize(length);
+    StringImpl::copyCharacters(m_upconvertedCharacters.data(), characters8, length);
     m_characters = m_upconvertedCharacters.data();
 }
 
@@ -650,6 +658,13 @@ inline size_t StringView::find(UChar character, unsigned start) const
     return WTF::find(characters16(), m_length, character, start);
 }
 
+inline size_t StringView::find(LChar character, unsigned start) const
+{
+    if (is8Bit())
+        return WTF::find(characters8(), m_length, character, start);
+    return WTF::find(characters16(), m_length, character, start);
+}
+
 template<typename CodeUnitMatchFunction, std::enable_if_t<std::is_invocable_r_v<bool, CodeUnitMatchFunction, UChar>>*>
 inline size_t StringView::find(CodeUnitMatchFunction&& matchFunction, unsigned start) const
 {
@@ -682,7 +697,7 @@ public:
 
     unsigned length() { return m_string.length(); }
     bool is8Bit() { return m_string.is8Bit(); }
-    template<typename CharacterType> void writeTo(CharacterType* destination) { m_string.getCharactersWithUpconvert(destination); }
+    template<typename CharacterType> void writeTo(CharacterType* destination) { m_string.getCharacters(destination); }
 
 private:
     StringView m_string;
@@ -692,10 +707,20 @@ template<typename CharacterType, size_t inlineCapacity> void append(Vector<Chara
 {
     unsigned oldSize = buffer.size();
     buffer.grow(oldSize + string.length());
-    string.getCharactersWithUpconvert(buffer.data() + oldSize);
+    string.getCharacters(buffer.data() + oldSize);
 }
 
-inline bool equal(StringView a, StringView b)
+ALWAYS_INLINE bool equal(StringView a, StringView b, unsigned length)
+{
+    if (a.m_characters == b.m_characters) {
+        ASSERT(a.is8Bit() == b.is8Bit());
+        return true;
+    }
+
+    return equalCommon(a, b, length);
+}
+
+ALWAYS_INLINE bool equal(StringView a, StringView b)
 {
     if (a.m_characters == b.m_characters) {
         ASSERT(a.is8Bit() == b.is8Bit());
@@ -804,7 +829,6 @@ public:
     WTF_EXPORT_PRIVATE Iterator& operator++();
 
     bool operator==(const Iterator&) const;
-    bool operator!=(const Iterator&) const;
 
 private:
     enum PositionTag { AtEnd };
@@ -837,7 +861,6 @@ public:
     WTF_EXPORT_PRIVATE Iterator& operator++();
 
     WTF_EXPORT_PRIVATE bool operator==(const Iterator&) const;
-    WTF_EXPORT_PRIVATE bool operator!=(const Iterator&) const;
 
 private:
     class Impl;
@@ -854,7 +877,6 @@ public:
     Iterator& operator++();
 
     bool operator==(const Iterator&) const;
-    bool operator!=(const Iterator&) const;
 
 private:
     const void* m_current;
@@ -874,7 +896,6 @@ public:
     Iterator& operator++();
 
     bool operator==(const Iterator&) const;
-    bool operator!=(const Iterator&) const;
 
 private:
     StringView m_stringView;
@@ -974,11 +995,6 @@ inline bool StringView::CodePoints::Iterator::operator==(const Iterator& other) 
     return m_current == other.m_current;
 }
 
-inline bool StringView::CodePoints::Iterator::operator!=(const Iterator& other) const
-{
-    return !(*this == other);
-}
-
 inline auto StringView::CodePoints::begin() const -> Iterator
 {
     return Iterator(m_stringView, 0);
@@ -1016,11 +1032,6 @@ inline bool StringView::CodeUnits::Iterator::operator==(const Iterator& other) c
     ASSERT(m_stringView.m_characters == other.m_stringView.m_characters);
     ASSERT(m_stringView.m_length == other.m_stringView.m_length);
     return m_index == other.m_index;
-}
-
-inline bool StringView::CodeUnits::Iterator::operator!=(const Iterator& other) const
-{
-    return !(*this == other);
 }
 
 inline auto StringView::CodeUnits::begin() const -> Iterator
@@ -1087,13 +1098,8 @@ inline bool StringView::SplitResult::Iterator::operator==(const Iterator& other)
     return m_position == other.m_position && m_isDone == other.m_isDone;
 }
 
-inline bool StringView::SplitResult::Iterator::operator!=(const Iterator& other) const
-{
-    return !(*this == other);
-}
-
 template<typename CharacterType, typename MatchedCharacterPredicate>
-inline StringView StringView::stripLeadingAndTrailingMatchedCharacters(const CharacterType* characters, const MatchedCharacterPredicate& predicate) const
+inline StringView StringView::trim(const CharacterType* characters, const MatchedCharacterPredicate& predicate) const
 {
     if (!m_length)
         return *this;
@@ -1105,7 +1111,7 @@ inline StringView StringView::stripLeadingAndTrailingMatchedCharacters(const Cha
         ++start;
 
     if (start > end)
-        return StringView::empty();
+        return emptyStringView();
 
     while (end && predicate(characters[end]))
         --end;
@@ -1119,11 +1125,11 @@ inline StringView StringView::stripLeadingAndTrailingMatchedCharacters(const Cha
 }
 
 template<typename MatchedCharacterPredicate>
-StringView StringView::stripLeadingAndTrailingMatchedCharacters(const MatchedCharacterPredicate& predicate) const
+StringView StringView::trim(const MatchedCharacterPredicate& predicate) const
 {
     if (is8Bit())
-        return stripLeadingAndTrailingMatchedCharacters<LChar>(characters8(), predicate);
-    return stripLeadingAndTrailingMatchedCharacters<UChar>(characters16(), predicate);
+        return trim<LChar>(characters8(), predicate);
+    return trim<UChar>(characters16(), predicate);
 }
 
 inline bool equalLettersIgnoringASCIICase(StringView string, ASCIILiteral literal)
@@ -1345,10 +1351,14 @@ inline String WARN_UNUSED_RETURN makeStringByReplacingAll(const String& string, 
 }
 
 WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN makeStringByReplacingAll(StringView, UChar target, UChar replacement);
+WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN makeStringBySimplifyingNewLinesSlowCase(const String&, unsigned firstCarriageReturnOffset);
 
 inline String WARN_UNUSED_RETURN makeStringBySimplifyingNewLines(const String& string)
 {
-    return makeStringByReplacingAll(makeStringByReplacingAll(string, "\r\n"_s, "\n"_s), '\r', '\n');
+    auto firstCarriageReturn = string.find('\r');
+    if (firstCarriageReturn == notFound)
+        return string;
+    return makeStringBySimplifyingNewLinesSlowCase(string, firstCarriageReturn);
 }
 
 inline bool String::startsWith(StringView string) const
@@ -1426,6 +1436,23 @@ inline bool AtomString::endsWithIgnoringASCIICase(StringView string) const
     return m_string.endsWithIgnoringASCIICase(string);
 }
 
+template<typename Func>
+inline Expected<std::invoke_result_t<Func, std::span<const char>>, UTF8ConversionError> StringView::tryGetUTF8(const Func& function, ConversionMode mode) const
+{
+    if (is8Bit())
+        return StringImpl::tryGetUTF8ForCharacters(function, characters8(), length());
+    return StringImpl::tryGetUTF8ForCharacters(function, characters16(), length(), mode);
+}
+
+template<> struct VectorTraits<StringView> : VectorTraitsBase<false, void> {
+    static constexpr bool canMoveWithMemcpy = true;
+    static constexpr bool canCopyWithMemcpy = true;
+};
+
+template<> struct VectorTraits<StringViewWithUnderlyingString> : VectorTraitsBase<false, void> {
+    static constexpr bool canMoveWithMemcpy = true;
+};
+
 } // namespace WTF
 
 using WTF::append;
@@ -1435,3 +1462,5 @@ using WTF::makeStringBySimplifyingNewLines;
 using WTF::StringView;
 using WTF::StringViewWithUnderlyingString;
 using WTF::hasUnpairedSurrogate;
+using WTF::nullStringView;
+using WTF::emptyStringView;

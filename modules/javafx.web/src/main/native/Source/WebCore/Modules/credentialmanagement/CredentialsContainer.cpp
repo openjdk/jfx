@@ -41,7 +41,7 @@
 
 namespace WebCore {
 
-CredentialsContainer::CredentialsContainer(WeakPtr<Document>&& document)
+CredentialsContainer::CredentialsContainer(WeakPtr<Document, WeakPtrImplWithEventTargetData>&& document)
     : m_document(WTFMove(document))
 {
 }
@@ -138,7 +138,7 @@ void CredentialsContainer::isCreate(CredentialCreationOptions&& options, Credent
 
 void CredentialsContainer::preventSilentAccess(DOMPromiseDeferred<void>&& promise) const
 {
-    promise.reject(Exception { NotSupportedError, "Not implemented."_s });
+    promise.resolve();
 }
 
 } // namespace WebCore

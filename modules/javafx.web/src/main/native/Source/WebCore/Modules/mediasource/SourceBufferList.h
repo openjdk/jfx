@@ -42,12 +42,13 @@ namespace WebCore {
 class SourceBuffer;
 class WebCoreOpaqueRoot;
 
-class SourceBufferList final : public RefCounted<SourceBufferList>, public EventTargetWithInlineData, public ActiveDOMObject {
+class SourceBufferList final : public RefCounted<SourceBufferList>, public EventTarget, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(SourceBufferList);
 public:
     static Ref<SourceBufferList> create(ScriptExecutionContext*);
     virtual ~SourceBufferList();
 
+    bool isSupportedPropertyIndex(unsigned index) const { return index < length(); }
     unsigned length() const { return m_list.size(); }
 
     SourceBuffer* item(unsigned index) const { return (index < m_list.size()) ? m_list[index].get() : nullptr; }

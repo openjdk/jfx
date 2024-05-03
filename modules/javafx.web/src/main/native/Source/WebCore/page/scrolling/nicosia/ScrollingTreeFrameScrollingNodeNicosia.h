@@ -31,7 +31,6 @@
 #if ENABLE(ASYNC_SCROLLING) && USE(NICOSIA)
 
 #include "ScrollingTreeFrameScrollingNode.h"
-#include "ScrollingTreeScrollingNodeDelegateNicosia.h"
 #include <wtf/RefPtr.h>
 
 namespace Nicosia {
@@ -39,8 +38,8 @@ class CompositionLayer;
 }
 
 namespace WebCore {
-class ScrollAnimation;
-class ScrollAnimationKinetic;
+
+class ScrollingTreeScrollingNodeDelegateNicosia;
 
 class ScrollingTreeFrameScrollingNodeNicosia final : public ScrollingTreeFrameScrollingNode {
 public:
@@ -52,16 +51,12 @@ public:
 private:
     ScrollingTreeFrameScrollingNodeNicosia(ScrollingTree&, ScrollingNodeType, ScrollingNodeID);
 
-    void commitStateBeforeChildren(const ScrollingStateNode&) override;
+    ScrollingTreeScrollingNodeDelegateNicosia& delegate() const;
 
-    bool startAnimatedScrollToPosition(FloatPoint) override;
-    void stopAnimatedScroll() override;
-    void serviceScrollAnimation(MonotonicTime) final;
+    bool commitStateBeforeChildren(const ScrollingStateNode&) override;
 
     WheelEventHandlingResult handleWheelEvent(const PlatformWheelEvent&, EventTargeting) override;
-    void stopScrollAnimations() override;
 
-    FloatPoint adjustedScrollPosition(const FloatPoint&, ScrollClamping) const override;
     void currentScrollPositionChanged(ScrollType, ScrollingLayerPositionAction) override;
     void repositionScrollingLayers() override;
     void repositionRelatedLayers() override;
@@ -72,8 +67,6 @@ private:
     RefPtr<Nicosia::CompositionLayer> m_contentShadowLayer;
     RefPtr<Nicosia::CompositionLayer> m_headerLayer;
     RefPtr<Nicosia::CompositionLayer> m_footerLayer;
-
-    ScrollingTreeScrollingNodeDelegateNicosia m_delegate;
 };
 
 } // namespace WebCore

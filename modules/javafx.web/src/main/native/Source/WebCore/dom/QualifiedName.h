@@ -24,18 +24,22 @@
 #include <wtf/Hasher.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/AtomString.h>
+#include <wtf/text/AtomStringHash.h>
 
 namespace WebCore {
+
+enum class Namespace : uint8_t;
+enum class NodeName : uint16_t;
 
 struct QualifiedNameComponents {
     AtomStringImpl* m_prefix;
     AtomStringImpl* m_localName;
-    AtomStringImpl* m_namespace;
+    AtomStringImpl* m_namespaceURI;
 };
 
 inline void add(Hasher& hasher, const QualifiedNameComponents& components)
 {
-    add(hasher, components.m_prefix, components.m_localName, components.m_namespace);
+    add(hasher, components.m_prefix, components.m_localName, components.m_namespaceURI);
 }
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(QualifiedName);
@@ -57,36 +61,32 @@ public:
         unsigned computeHash() const;
 
         mutable unsigned m_existingHash { 0 };
+        Namespace m_namespace;
+        NodeName m_nodeName;
         const AtomString m_prefix;
         const AtomString m_localName;
-        const AtomString m_namespace;
+        const AtomString m_namespaceURI;
+        AtomString m_localNameLower;
         mutable AtomString m_localNameUpper;
 
 #if ENABLE(JIT)
         static ptrdiff_t localNameMemoryOffset() { return OBJECT_OFFSETOF(QualifiedNameImpl, m_localName); }
-        static ptrdiff_t namespaceMemoryOffset() { return OBJECT_OFFSETOF(QualifiedNameImpl, m_namespace); }
+        static ptrdiff_t namespaceMemoryOffset() { return OBJECT_OFFSETOF(QualifiedNameImpl, m_namespaceURI); }
 #endif
 
     private:
-        QualifiedNameImpl(const AtomString& prefix, const AtomString& localName, const AtomString& namespaceURI)
-            : m_prefix(prefix)
-            , m_localName(localName)
-            , m_namespace(namespaceURI)
-        {
-            ASSERT(!namespaceURI.isEmpty() || namespaceURI.isNull());
-        }
+        friend class QualifiedName;
+
+        QualifiedNameImpl(const AtomString& prefix, const AtomString& localName, const AtomString& namespaceURI);
     };
 
     WEBCORE_EXPORT QualifiedName(const AtomString& prefix, const AtomString& localName, const AtomString& namespaceURI);
+    WEBCORE_EXPORT QualifiedName(const AtomString& prefix, const AtomString& localName, const AtomString& namespaceURI, Namespace, NodeName);
     QualifiedName(QualifiedNameImpl& impl) : m_impl(&impl) { }
     explicit QualifiedName(WTF::HashTableDeletedValueType) : m_impl(WTF::HashTableDeletedValue) { }
     bool isHashTableDeletedValue() const { return m_impl.isHashTableDeletedValue(); }
-#ifdef QNAME_DEFAULT_CONSTRUCTOR
-    QualifiedName() { }
-#endif
 
     bool operator==(const QualifiedName& other) const { return m_impl == other.m_impl; }
-    bool operator!=(const QualifiedName& other) const { return !(*this == other); }
 
     bool matches(const QualifiedName& other) const { return m_impl == other.m_impl || (localName() == other.localName() && namespaceURI() == other.namespaceURI()); }
 
@@ -95,10 +95,12 @@ public:
 
     const AtomString& prefix() const { return m_impl->m_prefix; }
     const AtomString& localName() const { return m_impl->m_localName; }
-    const AtomString& namespaceURI() const { return m_impl->m_namespace; }
+    const AtomString& namespaceURI() const { return m_impl->m_namespaceURI; }
+    const AtomString& localNameLowercase() const { return m_impl->m_localNameLower; }
+    const AtomString& localNameUppercase() const;
 
-    // Uppercased localName, cached for efficiency
-    const AtomString& localNameUpper() const;
+    NodeName nodeName() const { return m_impl->m_nodeName; }
+    Namespace nodeNamespace() const { return m_impl->m_namespace; }
 
     String toString() const;
     AtomString toAtomString() const;
@@ -119,7 +121,7 @@ private:
 
 inline void add(Hasher& hasher, const QualifiedName::QualifiedNameImpl& impl)
 {
-    add(hasher, impl.m_prefix, impl.m_localName, impl.m_namespace);
+    add(hasher, impl.m_prefix, impl.m_localName, impl.m_namespaceURI);
 }
 
 inline void add(Hasher& hasher, const QualifiedName& name)
@@ -133,9 +135,7 @@ inline const QualifiedName& anyQName() { return anyName; }
 const QualifiedName& nullQName();
 
 inline bool operator==(const AtomString& a, const QualifiedName& q) { return a == q.localName(); }
-inline bool operator!=(const AtomString& a, const QualifiedName& q) { return a != q.localName(); }
 inline bool operator==(const QualifiedName& q, const AtomString& a) { return a == q.localName(); }
-inline bool operator!=(const QualifiedName& q, const AtomString& a) { return a != q.localName(); }
 
 struct QualifiedNameHash {
     static unsigned hash(const QualifiedName& name) { return hash(name.impl()); }

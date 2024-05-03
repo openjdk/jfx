@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,11 @@
 
 #pragma once
 
+#import "BindGroupLayout.h"
+
 #import <wtf/FastMalloc.h>
+#import <wtf/HashMap.h>
+#import <wtf/HashTraits.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
 
@@ -36,14 +40,15 @@ namespace WebGPU {
 
 class BindGroupLayout;
 class Device;
+class PipelineLayout;
 
 // https://gpuweb.github.io/gpuweb/#gpucomputepipeline
 class ComputePipeline : public WGPUComputePipelineImpl, public RefCounted<ComputePipeline> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<ComputePipeline> create(id<MTLComputePipelineState> computePipelineState, Device& device)
+    static Ref<ComputePipeline> create(id<MTLComputePipelineState> computePipelineState, Ref<PipelineLayout>&& pipelineLayout, MTLSize threadsPerThreadgroup, Device& device)
     {
-        return adoptRef(*new ComputePipeline(computePipelineState, device));
+        return adoptRef(*new ComputePipeline(computePipelineState, WTFMove(pipelineLayout), threadsPerThreadgroup, device));
     }
     static Ref<ComputePipeline> createInvalid(Device& device)
     {
@@ -52,7 +57,7 @@ public:
 
     ~ComputePipeline();
 
-    BindGroupLayout* getBindGroupLayout(uint32_t groupIndex);
+    RefPtr<BindGroupLayout> getBindGroupLayout(uint32_t groupIndex);
     void setLabel(String&&);
 
     bool isValid() const { return m_computePipelineState; }
@@ -60,14 +65,17 @@ public:
     id<MTLComputePipelineState> computePipelineState() const { return m_computePipelineState; }
 
     Device& device() const { return m_device; }
+    MTLSize threadsPerThreadgroup() const { return m_threadsPerThreadgroup; }
 
 private:
-    ComputePipeline(id<MTLComputePipelineState>, Device&);
+    ComputePipeline(id<MTLComputePipelineState>, Ref<PipelineLayout>&&, MTLSize, Device&);
     ComputePipeline(Device&);
 
     const id<MTLComputePipelineState> m_computePipelineState { nil };
 
     const Ref<Device> m_device;
+    const MTLSize m_threadsPerThreadgroup;
+    const Ref<PipelineLayout> m_pipelineLayout;
 };
 
 } // namespace WebGPU

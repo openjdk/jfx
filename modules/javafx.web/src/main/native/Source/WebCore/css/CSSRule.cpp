@@ -36,6 +36,17 @@ struct SameSizeAsCSSRule : public RefCounted<SameSizeAsCSSRule> {
 
 static_assert(sizeof(CSSRule) == sizeof(SameSizeAsCSSRule), "CSSRule should stay small");
 
+unsigned short CSSRule::typeForCSSOM() const
+{
+    // "This enumeration is thus frozen in its current state, and no new new values will be
+    // added to reflect additional at-rules; all at-rules beyond the ones listed above will return 0."
+    // https://drafts.csswg.org/cssom/#the-cssrule-interface
+    if (styleRuleType() >= firstUnexposedStyleRuleType)
+        return 0;
+
+    return static_cast<unsigned short>(styleRuleType());
+}
+
 ExceptionOr<void> CSSRule::setCssText(const String&)
 {
     return { };
@@ -45,6 +56,23 @@ const CSSParserContext& CSSRule::parserContext() const
 {
     CSSStyleSheet* styleSheet = parentStyleSheet();
     return styleSheet ? styleSheet->contents().parserContext() : strictCSSParserContext();
+}
+
+bool CSSRule::hasStyleRuleAncestor() const
+{
+    auto current = this->parentRule();
+    while (current) {
+        if (current->styleRuleType() == StyleRuleType::Style)
+            return true;
+
+        current = current->parentRule();
+    }
+    return false;
+}
+
+RefPtr<StyleRuleWithNesting> CSSRule::prepareChildStyleRuleForNesting(StyleRule&)
+{
+    return nullptr;
 }
 
 } // namespace WebCore

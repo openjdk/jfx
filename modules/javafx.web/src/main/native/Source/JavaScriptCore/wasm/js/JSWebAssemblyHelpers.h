@@ -29,8 +29,9 @@
 
 #include "Error.h"
 #include "JSArrayBuffer.h"
-#include "JSArrayBufferView.h"
+#include "JSArrayBufferViewInlines.h"
 #include "JSCJSValue.h"
+#include "JSDataView.h"
 #include "JSSourceCode.h"
 #include "JSWebAssemblyRuntimeError.h"
 #include "WasmFormat.h"
@@ -79,10 +80,20 @@ ALWAYS_INLINE std::pair<const uint8_t*, size_t> getWasmBufferFromValue(JSGlobalO
         return { nullptr, 0 };
     }
 
-    if (arrayBufferView ? arrayBufferView->isDetached() : arrayBuffer->impl()->isDetached()) {
-        throwException(globalObject, throwScope, createTypeError(globalObject,
-            "underlying TypedArray has been detatched from the ArrayBuffer"_s, defaultSourceAppender, runtimeTypeForValue(value)));
-        return { nullptr, 0 };
+    if (arrayBufferView) {
+        if (isTypedArrayType(arrayBufferView->type())) {
+            validateTypedArray(globalObject, arrayBufferView);
+            RETURN_IF_EXCEPTION(throwScope, { });
+        } else {
+            IdempotentArrayBufferByteLengthGetter<std::memory_order_relaxed> getter;
+            if (UNLIKELY(!jsCast<JSDataView*>(arrayBufferView)->viewByteLength(getter))) {
+                throwTypeError(globalObject, throwScope, typedArrayBufferHasBeenDetachedErrorMessage);
+                return { };
+            }
+        }
+    } else if (arrayBuffer->impl()->isDetached()) {
+        throwTypeError(globalObject, throwScope, typedArrayBufferHasBeenDetachedErrorMessage);
+        return { };
     }
 
     uint8_t* base = arrayBufferView ? static_cast<uint8_t*>(arrayBufferView->vector()) : static_cast<uint8_t*>(arrayBuffer->impl()->data());
@@ -165,9 +176,12 @@ ALWAYS_INLINE JSValue toJSValue(JSGlobalObject* globalObject, const Wasm::Type t
         return jsNumber(purifyNaN(bitwise_cast<double>(bits)));
     case Wasm::TypeKind::I64:
         return JSBigInt::createFrom(globalObject, static_cast<int64_t>(bits));
+    case Wasm::TypeKind::Ref:
+    case Wasm::TypeKind::RefNull:
     case Wasm::TypeKind::Externref:
     case Wasm::TypeKind::Funcref:
         return bitwise_cast<JSValue>(bits);
+    case Wasm::TypeKind::V128:
     default:
         break;
     }
@@ -188,23 +202,25 @@ ALWAYS_INLINE uint64_t fromJSValue(JSGlobalObject* globalObject, const Wasm::Typ
         RELEASE_AND_RETURN(scope, bitwise_cast<uint32_t>(value.toFloat(globalObject)));
     case Wasm::TypeKind::F64:
         RELEASE_AND_RETURN(scope, bitwise_cast<uint64_t>(value.toNumber(globalObject)));
+    case Wasm::TypeKind::V128:
+        RELEASE_ASSERT_NOT_REACHED();
     default: {
         if (Wasm::isExternref(type)) {
             if (!type.isNullable() && value.isNull())
-                return throwVMException(globalObject, scope, createJSWebAssemblyRuntimeError(globalObject, vm, "Non-null Externref cannot be null"_s));
+                return throwVMTypeError(globalObject, scope, "Non-null Externref cannot be null"_s);
         } else if (Wasm::isFuncref(type) || isRefWithTypeIndex(type)) {
             WebAssemblyFunction* wasmFunction = nullptr;
             WebAssemblyWrapperFunction* wasmWrapperFunction = nullptr;
             if (!isWebAssemblyHostFunction(value, wasmFunction, wasmWrapperFunction) && (!type.isNullable() || !value.isNull()))
-                return throwVMException(globalObject, scope, createJSWebAssemblyRuntimeError(globalObject, vm, "Funcref must be an exported wasm function"_s));
+                return throwVMTypeError(globalObject, scope, "Funcref must be an exported wasm function"_s);
             if (isRefWithTypeIndex(type) && !value.isNull()) {
                 Wasm::TypeIndex paramIndex = type.index;
                 Wasm::TypeIndex argIndex = wasmFunction ? wasmFunction->typeIndex() : wasmWrapperFunction->typeIndex();
                 if (paramIndex != argIndex)
-                    return throwVMException(globalObject, scope, createJSWebAssemblyRuntimeError(globalObject, vm, "Argument function did not match the reference type"_s));
+                    return throwVMTypeError(globalObject, scope, "Argument function did not match the reference type"_s);
             }
         } else if (Wasm::isI31ref(type))
-            return throwVMException(globalObject, scope, createJSWebAssemblyRuntimeError(globalObject, vm, "I31ref import from JS currently unsupported"_s));
+            return throwVMTypeError(globalObject, scope, "I31ref import from JS currently unsupported"_s);
         else
             RELEASE_ASSERT_NOT_REACHED();
     }

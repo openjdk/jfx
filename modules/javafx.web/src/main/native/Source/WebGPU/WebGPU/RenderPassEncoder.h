@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,9 +47,9 @@ class RenderPipeline;
 class RenderPassEncoder : public WGPURenderPassEncoderImpl, public RefCounted<RenderPassEncoder>, public CommandsMixin {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<RenderPassEncoder> create(id<MTLRenderCommandEncoder> renderCommandEncoder, Device& device)
+    static Ref<RenderPassEncoder> create(id<MTLRenderCommandEncoder> renderCommandEncoder, const WGPURenderPassDescriptor& descriptor, NSUInteger visibilityResultBufferSize, bool depthReadOnly, bool stencilReadOnly, Device& device)
     {
-        return adoptRef(*new RenderPassEncoder(renderCommandEncoder, device));
+        return adoptRef(*new RenderPassEncoder(renderCommandEncoder, descriptor, visibilityResultBufferSize, depthReadOnly, stencilReadOnly, device));
     }
     static Ref<RenderPassEncoder> createInvalid(Device& device)
     {
@@ -86,18 +86,31 @@ public:
     bool isValid() const { return m_renderCommandEncoder; }
 
 private:
-    RenderPassEncoder(id<MTLRenderCommandEncoder>, Device&);
+    RenderPassEncoder(id<MTLRenderCommandEncoder>, const WGPURenderPassDescriptor&, NSUInteger, bool depthReadOnly, bool stencilReadOnly, Device&);
     RenderPassEncoder(Device&);
 
     bool validatePopDebugGroup() const;
 
-    void makeInvalid() { m_renderCommandEncoder = nil; }
+    void makeInvalid();
 
     id<MTLRenderCommandEncoder> m_renderCommandEncoder { nil };
 
     uint64_t m_debugGroupStackSize { 0 };
+    struct PendingTimestampWrites {
+        Ref<QuerySet> querySet;
+        uint32_t queryIndex;
+    };
+    Vector<PendingTimestampWrites> m_pendingTimestampWrites;
 
     const Ref<Device> m_device;
+    MTLPrimitiveType m_primitiveType { MTLPrimitiveTypeTriangle };
+    id<MTLBuffer> m_indexBuffer { nil };
+    MTLIndexType m_indexType { MTLIndexTypeUInt16 };
+    NSUInteger m_indexBufferOffset { 0 };
+    NSUInteger m_visibilityResultBufferOffset { 0 };
+    NSUInteger m_visibilityResultBufferSize { 0 };
+    bool m_depthReadOnly { false };
+    bool m_stencilReadOnly { false };
 };
 
 } // namespace WebGPU

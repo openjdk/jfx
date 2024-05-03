@@ -35,7 +35,7 @@ namespace Style {
 class Builder {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    Builder(RenderStyle&, BuilderContext&&, const MatchResult&, CascadeLevel, PropertyCascade::IncludedProperties = PropertyCascade::IncludedProperties::All);
+    Builder(RenderStyle&, BuilderContext&&, const MatchResult&, CascadeLevel, OptionSet<PropertyCascade::PropertyType> = PropertyCascade::allProperties(), const HashSet<AnimatableProperty>* animatedProperties = nullptr);
     ~Builder();
 
     void applyAllProperties();
@@ -47,6 +47,8 @@ public:
     void applyCustomProperty(const AtomString& name);
 
     BuilderState& state() { return m_state; }
+
+    const HashSet<AnimatableProperty> overriddenAnimatedProperties() const { return m_cascade.overriddenAnimatedProperties(); }
 
 private:
     void applyProperties(int firstProperty, int lastProperty);
@@ -60,8 +62,8 @@ private:
     void applyRollbackCascadeProperty(const PropertyCascade::Property&, SelectorChecker::LinkMatchMask);
     void applyProperty(CSSPropertyID, CSSValue&, SelectorChecker::LinkMatchMask);
 
-    Ref<CSSValue> resolveValue(CSSPropertyID, CSSValue&);
-    RefPtr<CSSValue> resolvedVariableValue(CSSPropertyID, const CSSValue&);
+    Ref<CSSValue> resolveVariableReferences(CSSPropertyID, CSSValue&);
+    RefPtr<CSSCustomPropertyValue> resolveCustomPropertyValueWithVariableReferences(CSSCustomPropertyValue&);
 
     const PropertyCascade* ensureRollbackCascadeForRevert();
     const PropertyCascade* ensureRollbackCascadeForRevertLayer();

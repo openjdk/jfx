@@ -31,7 +31,8 @@
 #include "DOMTokenList.h"
 #include "DOMURL.h"
 #include "Document.h"
-#include "ElementChildIterator.h"
+#include "ElementAncestorIteratorInlines.h"
+#include "ElementChildIteratorInlines.h"
 #include "ElementRareData.h"
 #include "EventHandler.h"
 #include "EventLoop.h"
@@ -46,7 +47,8 @@
 #include "ImageOverlayController.h"
 #include "MediaControlsHost.h"
 #include "Page.h"
-#include "Quirks.h"
+#include "RenderBoxInlines.h"
+#include "RenderElementInlines.h"
 #include "RenderImage.h"
 #include "RenderText.h"
 #include "ShadowRoot.h"
@@ -278,6 +280,9 @@ static Elements updateSubtree(HTMLElement& element, const TextRecognitionResult&
 #endif // ENABLE(MODERN_MEDIA_CONTROLS)
 
     if (RefPtr shadowRoot = element.shadowRoot()) {
+        if (auto* renderer = dynamicDowncast<RenderImage>(element.renderer()))
+            renderer->setHasImageOverlay();
+
         if (hasOverlay(element)) {
             RefPtr<ContainerNode> containerForImageOverlay;
             if (mediaControlsContainer)
@@ -341,7 +346,7 @@ static Elements updateSubtree(HTMLElement& element, const TextRecognitionResult&
                     return false;
 
                 for (size_t childIndex = 0; childIndex < childResults.size(); ++childIndex) {
-                    if (childResults[childIndex].text != childTextElements[childIndex]->textContent().stripWhiteSpace())
+                    if (childResults[childIndex].text != StringView(childTextElements[childIndex]->textContent()).trim(deprecatedIsSpaceOrNewline))
                         return false;
                 }
             }
@@ -353,7 +358,7 @@ static Elements updateSubtree(HTMLElement& element, const TextRecognitionResult&
                     if (textContentByLine.size() <= lineIndex)
                         return false;
 
-                    if (textContentByLine[lineIndex++].stripWhiteSpace() != text.wholeText().stripWhiteSpace())
+                    if (StringView(textContentByLine[lineIndex++]).trim(deprecatedIsSpaceOrNewline) != StringView(text.wholeText()).trim(deprecatedIsSpaceOrNewline))
                         return false;
                 }
             }
@@ -438,11 +443,6 @@ static Elements updateSubtree(HTMLElement& element, const TextRecognitionResult&
             elements.root->appendChild(blockContainer);
             elements.blocks.uncheckedAppend(WTFMove(blockContainer));
         }
-
-        if (document->quirks().needsToForceUserSelectAndUserDragWhenInstallingImageOverlay()) {
-            element.setInlineStyleProperty(CSSPropertyWebkitUserSelect, CSSValueText);
-            element.setInlineStyleProperty(CSSPropertyWebkitUserDrag, CSSValueAuto);
-        }
     }
 
     if (!hadExistingElements)
@@ -469,18 +469,8 @@ static RotatedRect fitElementToQuad(HTMLElement& container, const FloatQuad& qua
 
 void updateWithTextRecognitionResult(HTMLElement& element, const TextRecognitionResult& result, CacheTextRecognitionResults cacheTextRecognitionResults)
 {
-    auto elements = updateSubtree(element, result);
-    if (!elements.root)
-        return;
-
     Ref document = element.document();
     document->updateLayoutIgnorePendingStylesheets();
-
-    auto* renderer = element.renderer();
-    if (!is<RenderImage>(renderer))
-        return;
-
-    downcast<RenderImage>(*renderer).setHasImageOverlay();
 
     auto containerRect = ImageOverlay::containerRect(element);
     auto convertToContainerCoordinates = [&](const FloatQuad& normalizedQuad) {
@@ -490,7 +480,35 @@ void updateWithTextRecognitionResult(HTMLElement& element, const TextRecognition
         return quad;
     };
 
-    bool applyUserSelectAll = document->isImageDocument() || renderer->style().userSelect() != UserSelect::None;
+    bool smallImageWithSingleWord = [&] {
+        constexpr auto smallImageDimensionThreshold = 64;
+        if (containerRect.width() > smallImageDimensionThreshold || containerRect.height() > smallImageDimensionThreshold)
+            return false;
+
+        return result.blocks.isEmpty() && result.lines.size() == 1 && result.lines[0].children.size() == 1;
+    }();
+
+    if (smallImageWithSingleWord)
+        return;
+
+    auto elements = updateSubtree(element, result);
+    if (!elements.root)
+        return;
+
+    {
+        document->updateLayoutIgnorePendingStylesheets();
+        auto* renderer = dynamicDowncast<RenderImage>(element.renderer());
+        if (!renderer)
+            return;
+
+        renderer->setHasImageOverlay();
+    }
+
+    bool applyUserSelectAll = [&] {
+        auto* renderer = dynamicDowncast<RenderImage>(element.renderer());
+        return document->isImageDocument() || (renderer && renderer->style().userSelect() != UserSelect::None);
+    }();
+
     for (size_t lineIndex = 0; lineIndex < result.lines.size(); ++lineIndex) {
         auto& lineElements = elements.lines[lineIndex];
         auto& lineContainer = lineElements.line;
@@ -510,10 +528,9 @@ void updateWithTextRecognitionResult(HTMLElement& element, const TextRecognition
 
         auto offsetsAlongHorizontalAxis = line.children.map([&](auto& child) -> WTF::Range<float> {
             auto textQuad = convertToContainerCoordinates(child.normalizedQuad);
-            return {
-                offsetAlongHorizontalAxis(textQuad.p1(), textQuad.p4()),
-                offsetAlongHorizontalAxis(textQuad.p2(), textQuad.p3())
-            };
+            auto startOffset = offsetAlongHorizontalAxis(textQuad.p1(), textQuad.p4());
+            auto endOffset = offsetAlongHorizontalAxis(textQuad.p2(), textQuad.p3());
+            return { std::min(startOffset, endOffset), std::max(startOffset, endOffset) };
         });
 
         for (size_t childIndex = 0; childIndex < line.children.size(); ++childIndex) {
@@ -566,10 +583,13 @@ void updateWithTextRecognitionResult(HTMLElement& element, const TextRecognition
             ));
 
             textContainer->setInlineStyleProperty(CSSPropertyWebkitUserSelect, applyUserSelectAll ? CSSValueAll : CSSValueNone);
+
+            if (line.isVertical)
+                textContainer->setInlineStyleProperty(CSSPropertyWritingMode, CSSValueVerticalRl);
         }
 
         if (document->isImageDocument())
-            lineContainer->setInlineStyleProperty(CSSPropertyCursor, CSSValueText);
+            lineContainer->setInlineStyleProperty(CSSPropertyCursor, line.isVertical ? CSSValueVerticalText : CSSValueText);
     }
 
 #if ENABLE(DATA_DETECTION)

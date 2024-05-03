@@ -32,14 +32,14 @@
 #include "Document.h"
 #include "DocumentFragment.h"
 #include "DocumentType.h"
-#include "ElementAncestorIterator.h"
-#include "Frame.h"
+#include "ElementAncestorIteratorInlines.h"
 #include "FrameLoader.h"
-#include "FrameView.h"
 #include "HTMLLinkElement.h"
 #include "HTMLNames.h"
 #include "HTMLStyleElement.h"
 #include "ImageLoader.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "PendingScript.h"
 #include "ProcessingInstruction.h"
 #include "ResourceError.h"
@@ -125,9 +125,6 @@ void XMLDocumentParser::append(RefPtr<StringImpl>&& inputSource)
     }
 
     doWrite(source);
-
-    // After parsing, dispatch image beforeload events.
-    ImageLoader::dispatchPendingBeforeLoadEvents(nullptr);
 }
 
 void XMLDocumentParser::handleError(XMLErrors::ErrorType type, const char* m, TextPosition position)
@@ -208,7 +205,7 @@ void XMLDocumentParser::end()
 
     if (isParsing())
         prepareToStopParsing();
-    document()->setReadyState(Document::Interactive);
+    document()->setReadyState(Document::ReadyState::Interactive);
     clearCurrentNodeStack();
     document()->finishedParsing();
 }
@@ -285,7 +282,7 @@ static XMLParsingNamespaces findXMLParsingNamespaces(Element* contextElement)
     return result;
 }
 
-bool XMLDocumentParser::parseDocumentFragment(const String& chunk, DocumentFragment& fragment, Element* contextElement, ParserContentPolicy parserContentPolicy)
+bool XMLDocumentParser::parseDocumentFragment(const String& chunk, DocumentFragment& fragment, Element* contextElement, OptionSet<ParserContentPolicy> parserContentPolicy)
 {
     if (!chunk.length())
         return true;

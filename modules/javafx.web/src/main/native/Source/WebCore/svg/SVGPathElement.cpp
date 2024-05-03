@@ -38,7 +38,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGPathElement);
 
 inline SVGPathElement::SVGPathElement(const QualifiedName& tagName, Document& document)
-    : SVGGeometryElement(tagName, document)
+    : SVGGeometryElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::pathTag));
 
@@ -53,15 +53,14 @@ Ref<SVGPathElement> SVGPathElement::create(const QualifiedName& tagName, Documen
     return adoptRef(*new SVGPathElement(tagName, document));
 }
 
-void SVGPathElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGPathElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     if (name == SVGNames::dAttr) {
-        if (!m_pathSegList->baseVal()->parse(value))
-            document().accessSVGExtensions().reportError("Problem parsing d=\"" + value + "\"");
-        return;
+        if (!m_pathSegList->baseVal()->parse(newValue))
+            document().accessSVGExtensions().reportError("Problem parsing d=\"" + newValue + "\"");
     }
 
-    SVGGeometryElement::parseAttribute(name, value);
+    SVGGeometryElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGPathElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -72,16 +71,11 @@ void SVGPathElement::svgAttributeChanged(const QualifiedName& attrName)
         invalidateMPathDependencies();
 
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
-        if (auto* renderer = this->renderer()) {
-            if (document().settings().layerBasedSVGEngineEnabled())
-                static_cast<RenderSVGPath*>(renderer)->setNeedsShapeUpdate();
-            else
-                static_cast<LegacyRenderSVGPath*>(renderer)->setNeedsShapeUpdate();
-        }
-#else
-        if (auto* renderer = this->renderer())
-            static_cast<LegacyRenderSVGPath*>(renderer)->setNeedsShapeUpdate();
+        if (auto* path = dynamicDowncast<RenderSVGPath>(renderer()))
+            path->setNeedsShapeUpdate();
 #endif
+        if (auto* path = dynamicDowncast<LegacyRenderSVGPath>(renderer()))
+            path->setNeedsShapeUpdate();
 
         updateSVGRendererForElementChange();
         return;
@@ -102,9 +96,9 @@ void SVGPathElement::invalidateMPathDependencies()
 
 Node::InsertedIntoAncestorResult SVGPathElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
-    SVGGeometryElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+    auto result = SVGGeometryElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
     invalidateMPathDependencies();
-    return InsertedIntoAncestorResult::Done;
+    return result;
 }
 
 void SVGPathElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
@@ -142,16 +136,11 @@ FloatRect SVGPathElement::getBBox(StyleUpdateStrategy styleUpdateStrategy)
     // which is an error.
 
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
-    if (is<RenderSVGPath>(renderer())) {
-        if (auto& pathRenderer = *downcast<RenderSVGPath>(renderer()); pathRenderer.hasPath())
-            return pathRenderer.path().boundingRect();
-    }
+        if (auto* path = dynamicDowncast<RenderSVGPath>(renderer()); path && path->hasPath())
+            return path->path().boundingRect();
 #endif
-
-    if (is<LegacyRenderSVGPath>(renderer())) {
-        if (auto& pathRenderer = *downcast<LegacyRenderSVGPath>(renderer()); pathRenderer.hasPath())
-            return pathRenderer.path().boundingRect();
-    }
+        if (auto* path = dynamicDowncast<LegacyRenderSVGPath>(renderer()); path && path->hasPath())
+            return path->path().boundingRect();
 
     return { };
 }
@@ -162,7 +151,6 @@ RenderPtr<RenderElement> SVGPathElement::createElementRenderer(RenderStyle&& sty
     if (document().settings().layerBasedSVGEngineEnabled())
         return createRenderer<RenderSVGPath>(*this, WTFMove(style));
 #endif
-
     return createRenderer<LegacyRenderSVGPath>(*this, WTFMove(style));
 }
 

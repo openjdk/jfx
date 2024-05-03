@@ -1,6 +1,8 @@
 /* GObject - GLib Type, Object, Parameter and Signal Library
  * Copyright (C) 1998-1999, 2000-2001 Tim Janik and Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -83,8 +85,22 @@
  *
  * As mentioned in the [GType conventions][gtype-conventions], type names must
  * be at least three characters long. There is no upper length limit. The first
- * character must be a letter (a or A) or an underscore (). Subsequent
- * characters can be letters, numbers or any of .
+ * character must be a letter (a–z or A–Z) or an underscore (‘_’). Subsequent
+ * characters can be letters, numbers or any of ‘-_+’.
+ *
+ * # Runtime Debugging
+ *
+ * When 'G_ENABLE_DEBUG' is defined during compilation, the GObject library
+ * supports an environment variable 'GOBJECT_DEBUG' that can be set to a
+ * combination of flags to trigger debugging messages about
+ * object bookkeeping and signal emissions during runtime.
+ *
+ * The currently supported flags are:
+ *  - 'objects': Tracks all #GObject instances in a global hash table called
+ *    'debug_objects_ht', and prints the still-alive objects on exit.
+ *  - 'instance-count': Tracks the number of instances of every #GType and makes
+ *    it available via the g_type_get_instance_count() function.
+ *  - 'signals': Currently unused.
  */
 
 
@@ -143,7 +159,14 @@
             G_TYPE_FLAG_INSTANTIATABLE | \
             G_TYPE_FLAG_DERIVABLE | \
             G_TYPE_FLAG_DEEP_DERIVABLE)
-#define TYPE_FLAG_MASK             (G_TYPE_FLAG_ABSTRACT | G_TYPE_FLAG_VALUE_ABSTRACT | G_TYPE_FLAG_FINAL)
+#define TYPE_FLAG_MASK       (G_TYPE_FLAG_ABSTRACT | G_TYPE_FLAG_VALUE_ABSTRACT | G_TYPE_FLAG_FINAL | G_TYPE_FLAG_DEPRECATED)
+
+/* List the flags that are directly accessible via the TypeNode struct flags */
+#define NODE_FLAG_MASK ( \
+  G_TYPE_FLAG_CLASSED | \
+  G_TYPE_FLAG_INSTANTIATABLE | \
+  G_TYPE_FLAG_FINAL)
+
 #define SIZEOF_FUNDAMENTAL_INFO    ((gssize) MAX (MAX (sizeof (GTypeFundamentalInfo), \
                    sizeof (gpointer)), \
                                                   sizeof (glong)))
@@ -171,7 +194,7 @@ typedef struct _InstanceData    InstanceData;
 typedef union  _TypeData        TypeData;
 typedef struct _IFaceEntries    IFaceEntries;
 typedef struct _IFaceEntry      IFaceEntry;
-typedef struct _IFaceHolder IFaceHolder;
+typedef struct _IFaceHolder     IFaceHolder;
 
 
 /* --- prototypes --- */
@@ -231,7 +254,9 @@ struct _TypeNode
   guint        n_prerequisites : 9;
   guint        is_classed : 1;
   guint        is_instantiatable : 1;
-  guint        mutatable_check_cache : 1;       /* combines some common path checks */
+  guint        is_final : 1;
+  guint        mutatable_check_cache : 1; /* combines some common path checks */
+
   GType       *children; /* writable with lock */
   TypeData    *data;
   GQuark       qname;
@@ -345,7 +370,6 @@ struct _InstanceData
   gpointer           class;
   guint16            instance_size;
   guint16            private_size;
-  guint16            n_preallocs;
   GInstanceInitFunc  instance_init;
 };
 
@@ -713,25 +737,25 @@ check_plugin_U (GTypePlugin *plugin,
    */
   if (!plugin)
     {
-      g_warning ("plugin handle for type '%s' is NULL",
+      g_critical ("plugin handle for type '%s' is NULL",
      type_name);
       return FALSE;
     }
   if (!G_IS_TYPE_PLUGIN (plugin))
     {
-      g_warning ("plugin pointer (%p) for type '%s' is invalid",
+      g_critical ("plugin pointer (%p) for type '%s' is invalid",
      plugin, type_name);
       return FALSE;
     }
   if (need_complete_type_info && !G_TYPE_PLUGIN_GET_CLASS (plugin)->complete_type_info)
     {
-      g_warning ("plugin for type '%s' has no complete_type_info() implementation",
+      g_critical ("plugin for type '%s' has no complete_type_info() implementation",
      type_name);
       return FALSE;
     }
   if (need_complete_interface_info && !G_TYPE_PLUGIN_GET_CLASS (plugin)->complete_interface_info)
     {
-      g_warning ("plugin for type '%s' has no complete_interface_info() implementation",
+      g_critical ("plugin for type '%s' has no complete_interface_info() implementation",
      type_name);
       return FALSE;
     }
@@ -747,7 +771,7 @@ check_type_name_I (const gchar *type_name)
 
   if (!type_name[0] || !type_name[1] || !type_name[2])
     {
-      g_warning ("type name '%s' is too short", type_name);
+      g_critical ("type name '%s' is too short", type_name);
       return FALSE;
     }
   /* check the first letter */
@@ -759,12 +783,12 @@ check_type_name_I (const gchar *type_name)
        strchr (extra_chars, p[0]));
   if (!name_valid)
     {
-      g_warning ("type name '%s' contains invalid characters", type_name);
+      g_critical ("type name '%s' contains invalid characters", type_name);
       return FALSE;
     }
   if (g_type_from_name (type_name))
     {
-      g_warning ("cannot register existing type '%s'", type_name);
+      g_critical ("cannot register existing type '%s'", type_name);
       return FALSE;
     }
 
@@ -781,34 +805,34 @@ check_derivation_I (GType        parent_type,
   pnode = lookup_type_node_I (parent_type);
   if (!pnode)
     {
-      g_warning ("cannot derive type '%s' from invalid parent type '%s'",
+      g_critical ("cannot derive type '%s' from invalid parent type '%s'",
      type_name,
      type_descriptive_name_I (parent_type));
+      return FALSE;
+    }
+if (pnode->is_final)
+    {
+      g_critical ("cannot derive '%s' from final parent type '%s'",
+                  type_name,
+                  NODE_NAME (pnode));
       return FALSE;
     }
   finfo = type_node_fundamental_info_I (pnode);
   /* ensure flat derivability */
   if (!(finfo->type_flags & G_TYPE_FLAG_DERIVABLE))
     {
-      g_warning ("cannot derive '%s' from non-derivable parent type '%s'",
-     type_name,
-     NODE_NAME (pnode));
+      g_critical ("cannot derive '%s' from non-derivable parent type '%s'",
+      type_name,
+      NODE_NAME (pnode));
       return FALSE;
     }
   /* ensure deep derivability */
   if (parent_type != NODE_FUNDAMENTAL_TYPE (pnode) &&
       !(finfo->type_flags & G_TYPE_FLAG_DEEP_DERIVABLE))
     {
-      g_warning ("cannot derive '%s' from non-fundamental parent type '%s'",
-     type_name,
-     NODE_NAME (pnode));
-      return FALSE;
-    }
-  if ((G_TYPE_FLAG_FINAL & GPOINTER_TO_UINT (type_get_qdata_L (pnode, static_quark_type_flags))) == G_TYPE_FLAG_FINAL)
-    {
-      g_warning ("cannot derive '%s' from final parent type '%s'",
-                 type_name,
-                 NODE_NAME (pnode));
+      g_critical ("cannot derive '%s' from non-fundamental parent type '%s'",
+      type_name,
+      NODE_NAME (pnode));
       return FALSE;
     }
 
@@ -841,7 +865,7 @@ check_value_table_I (const gchar           *type_name,
     value_table->value_peek_pointer ||
     value_table->collect_format || value_table->collect_value ||
     value_table->lcopy_format || value_table->lcopy_value)
-  g_warning ("cannot handle uninitializable values of type '%s'",
+  g_critical ("cannot handle uninitializable values of type '%s'",
        type_name);
       return FALSE;
     }
@@ -850,25 +874,25 @@ check_value_table_I (const gchar           *type_name,
       if (!value_table->value_free)
   {
     /* +++ optional +++
-     * g_warning ("missing 'value_free()' for type '%s'", type_name);
+     * g_critical ("missing 'value_free()' for type '%s'", type_name);
      * return FALSE;
      */
   }
       if (!value_table->value_copy)
   {
-    g_warning ("missing 'value_copy()' for type '%s'", type_name);
+    g_critical ("missing 'value_copy()' for type '%s'", type_name);
     return FALSE;
   }
       if ((value_table->collect_format || value_table->collect_value) &&
     (!value_table->collect_format || !value_table->collect_value))
   {
-    g_warning ("one of 'collect_format' and 'collect_value()' is unspecified for type '%s'",
+    g_critical ("one of 'collect_format' and 'collect_value()' is unspecified for type '%s'",
          type_name);
     return FALSE;
   }
       if (value_table->collect_format && !check_collect_format_I (value_table->collect_format))
   {
-    g_warning ("the '%s' specification for type '%s' is too long or invalid",
+    g_critical ("the '%s' specification for type '%s' is too long or invalid",
          "collect_format",
          type_name);
     return FALSE;
@@ -876,13 +900,13 @@ check_value_table_I (const gchar           *type_name,
       if ((value_table->lcopy_format || value_table->lcopy_value) &&
     (!value_table->lcopy_format || !value_table->lcopy_value))
   {
-    g_warning ("one of 'lcopy_format' and 'lcopy_value()' is unspecified for type '%s'",
+    g_critical ("one of 'lcopy_format' and 'lcopy_value()' is unspecified for type '%s'",
          type_name);
     return FALSE;
   }
       if (value_table->lcopy_format && !check_collect_format_I (value_table->lcopy_format))
   {
-    g_warning ("the '%s' specification for type '%s' is too long or invalid",
+    g_critical ("the '%s' specification for type '%s' is too long or invalid",
          "lcopy_format",
          type_name);
     return FALSE;
@@ -904,15 +928,15 @@ check_type_info_I (TypeNode        *pnode,
 
   /* check instance members */
   if (!(finfo->type_flags & G_TYPE_FLAG_INSTANTIATABLE) &&
-      (info->instance_size || info->n_preallocs || info->instance_init))
+      (info->instance_size || info->instance_init))
     {
       if (pnode)
-  g_warning ("cannot instantiate '%s', derived from non-instantiatable parent type '%s'",
-       type_name,
-       NODE_NAME (pnode));
+        g_critical ("cannot instantiate '%s', derived from non-instantiatable parent type '%s'",
+        type_name,
+        NODE_NAME (pnode));
       else
-  g_warning ("cannot instantiate '%s' as non-instantiatable fundamental",
-       type_name);
+        g_critical ("cannot instantiate '%s' as non-instantiatable fundamental",
+        type_name);
       return FALSE;
     }
   /* check class & interface members */
@@ -921,18 +945,18 @@ check_type_info_I (TypeNode        *pnode,
        info->class_size || info->base_init || info->base_finalize))
     {
       if (pnode)
-  g_warning ("cannot create class for '%s', derived from non-classed parent type '%s'",
+  g_critical ("cannot create class for '%s', derived from non-classed parent type '%s'",
        type_name,
                    NODE_NAME (pnode));
       else
-  g_warning ("cannot create class for '%s' as non-classed fundamental",
+  g_critical ("cannot create class for '%s' as non-classed fundamental",
        type_name);
       return FALSE;
     }
   /* check interface size */
   if (is_interface && info->class_size < sizeof (GTypeInterface))
     {
-      g_warning ("specified interface size for type '%s' is smaller than 'GTypeInterface' size",
+      g_critical ("specified interface size for type '%s' is smaller than 'GTypeInterface' size",
      type_name);
       return FALSE;
     }
@@ -941,13 +965,13 @@ check_type_info_I (TypeNode        *pnode,
     {
       if (info->class_size < sizeof (GTypeClass))
   {
-    g_warning ("specified class size for type '%s' is smaller than 'GTypeClass' size",
+    g_critical ("specified class size for type '%s' is smaller than 'GTypeClass' size",
          type_name);
     return FALSE;
   }
       if (pnode && info->class_size < pnode->data->class.class_size)
   {
-    g_warning ("specified class size for type '%s' is smaller "
+    g_critical ("specified class size for type '%s' is smaller "
          "than the parent type's '%s' class size",
          type_name,
          NODE_NAME (pnode));
@@ -959,13 +983,13 @@ check_type_info_I (TypeNode        *pnode,
     {
       if (info->instance_size < sizeof (GTypeInstance))
   {
-    g_warning ("specified instance size for type '%s' is smaller than 'GTypeInstance' size",
+    g_critical ("specified instance size for type '%s' is smaller than 'GTypeInstance' size",
          type_name);
     return FALSE;
   }
       if (pnode && info->instance_size < pnode->data->instance.instance_size)
   {
-    g_warning ("specified instance size for type '%s' is smaller "
+    g_critical ("specified instance size for type '%s' is smaller "
          "than the parent type's '%s' instance size",
          type_name,
          NODE_NAME (pnode));
@@ -1006,20 +1030,20 @@ check_add_interface_L (GType instance_type,
 
   if (!node || !node->is_instantiatable)
     {
-      g_warning ("cannot add interfaces to invalid (non-instantiatable) type '%s'",
+      g_critical ("cannot add interfaces to invalid (non-instantiatable) type '%s'",
      type_descriptive_name_I (instance_type));
       return FALSE;
     }
   if (!iface || !NODE_IS_IFACE (iface))
     {
-      g_warning ("cannot add invalid (non-interface) type '%s' to type '%s'",
+      g_critical ("cannot add invalid (non-interface) type '%s' to type '%s'",
      type_descriptive_name_I (iface_type),
      NODE_NAME (node));
       return FALSE;
     }
   if (node->data && node->data->class.class)
     {
-      g_warning ("attempting to add an interface (%s) to class (%s) after class_init",
+      g_critical ("attempting to add an interface (%s) to class (%s) after class_init",
                  NODE_NAME (iface), NODE_NAME (node));
       return FALSE;
     }
@@ -1027,10 +1051,10 @@ check_add_interface_L (GType instance_type,
   if (NODE_PARENT_TYPE (tnode) && !type_lookup_iface_entry_L (node, tnode))
     {
       /* 2001/7/31:timj: erk, i guess this warning is junk as interface derivation is flat */
-      g_warning ("cannot add sub-interface '%s' to type '%s' which does not conform to super-interface '%s'",
-     NODE_NAME (iface),
-     NODE_NAME (node),
-     NODE_NAME (tnode));
+      g_critical ("cannot add sub-interface '%s' to type '%s' which does not conform to super-interface '%s'",
+      NODE_NAME (iface),
+      NODE_NAME (node),
+      NODE_NAME (tnode));
       return FALSE;
     }
   /* allow overriding of interface type introduced for parent type */
@@ -1049,10 +1073,10 @@ check_add_interface_L (GType instance_type,
   tnode = find_conforming_child_type_L (node, iface);  /* tnode is_a node */
   if (tnode)
     {
-      g_warning ("cannot add interface type '%s' to type '%s', since type '%s' already conforms to interface",
-     NODE_NAME (iface),
-     NODE_NAME (node),
-     NODE_NAME (tnode));
+      g_critical ("cannot add interface type '%s' to type '%s', since type '%s' already conforms to interface",
+      NODE_NAME (iface),
+      NODE_NAME (node),
+      NODE_NAME (tnode));
       return FALSE;
     }
   prerequisites = IFACE_NODE_PREREQUISITES (iface);
@@ -1061,7 +1085,7 @@ check_add_interface_L (GType instance_type,
       tnode = lookup_type_node_I (prerequisites[i]);
       if (!type_node_is_a_L (node, tnode))
   {
-    g_warning ("cannot add interface type '%s' to type '%s' which does not conform to prerequisite '%s'",
+    g_critical ("cannot add interface type '%s' to type '%s' which does not conform to prerequisite '%s'",
          NODE_NAME (iface),
          NODE_NAME (node),
          NODE_NAME (tnode));
@@ -1078,9 +1102,9 @@ check_interface_info_I (TypeNode             *iface,
 {
   if ((info->interface_finalize || info->interface_data) && !info->interface_init)
     {
-      g_warning ("interface type '%s' for type '%s' comes without initializer",
-     NODE_NAME (iface),
-     type_descriptive_name_I (instance_type));
+      g_critical ("interface type '%s' for type '%s' comes without initializer",
+      NODE_NAME (iface),
+      type_descriptive_name_I (instance_type));
       return FALSE;
     }
 
@@ -1151,7 +1175,6 @@ type_data_make_W (TypeNode              *node,
       data->instance.class_private_size = 0;
       if (pnode)
         data->instance.class_private_size = pnode->data->instance.class_private_size;
-      data->instance.n_preallocs = MIN (info->n_preallocs, 1024);
       data->instance.instance_init = info->instance_init;
     }
   else if (node->is_classed) /* only classed */
@@ -1586,7 +1609,7 @@ g_type_interface_add_prerequisite (GType interface_type,
   prerequisite_node = lookup_type_node_I (prerequisite_type);
   if (!iface || !prerequisite_node || !NODE_IS_IFACE (iface))
     {
-      g_warning ("interface type '%s' or prerequisite type '%s' invalid",
+      g_critical ("interface type '%s' or prerequisite type '%s' invalid",
      type_descriptive_name_I (interface_type),
      type_descriptive_name_I (prerequisite_type));
       return;
@@ -1596,7 +1619,7 @@ g_type_interface_add_prerequisite (GType interface_type,
   if (holders)
     {
       G_WRITE_UNLOCK (&type_rw_lock);
-      g_warning ("unable to add prerequisite '%s' to interface '%s' which is already in use for '%s'",
+      g_critical ("unable to add prerequisite '%s' to interface '%s' which is already in use for '%s'",
      type_descriptive_name_I (prerequisite_type),
      type_descriptive_name_I (interface_type),
      type_descriptive_name_I (holders->instance_type));
@@ -1614,7 +1637,7 @@ g_type_interface_add_prerequisite (GType interface_type,
     if (prnode->is_instantiatable)
       {
         G_WRITE_UNLOCK (&type_rw_lock);
-        g_warning ("adding prerequisite '%s' to interface '%s' conflicts with existing prerequisite '%s'",
+        g_critical ("adding prerequisite '%s' to interface '%s' conflicts with existing prerequisite '%s'",
        type_descriptive_name_I (prerequisite_type),
        type_descriptive_name_I (interface_type),
        type_descriptive_name_I (NODE_TYPE (prnode)));
@@ -1640,7 +1663,7 @@ g_type_interface_add_prerequisite (GType interface_type,
   else
     {
       G_WRITE_UNLOCK (&type_rw_lock);
-      g_warning ("prerequisite '%s' for interface '%s' is neither instantiatable nor interface",
+      g_critical ("prerequisite '%s' for interface '%s' is neither instantiatable nor interface",
      type_descriptive_name_I (prerequisite_type),
      type_descriptive_name_I (interface_type));
     }
@@ -1831,6 +1854,47 @@ type_iface_blow_holder_info_Wm (TypeNode *iface,
     }
 }
 
+static void
+maybe_issue_deprecation_warning (GType type)
+{
+  static GHashTable *already_warned_table;
+  static const gchar *enable_diagnostic;
+  static GMutex already_warned_lock;
+  gboolean already;
+  const char *name;
+
+  if (g_once_init_enter (&enable_diagnostic))
+    {
+      const gchar *value = g_getenv ("G_ENABLE_DIAGNOSTIC");
+
+      if (!value)
+        value = "0";
+
+      g_once_init_leave (&enable_diagnostic, value);
+    }
+
+  if (enable_diagnostic[0] == '0')
+    return;
+
+  g_mutex_lock (&already_warned_lock);
+
+  if (already_warned_table == NULL)
+    already_warned_table = g_hash_table_new (NULL, NULL);
+
+  name = g_type_name (type);
+
+  already = g_hash_table_contains (already_warned_table, (gpointer) name);
+  if (!already)
+    g_hash_table_add (already_warned_table, (gpointer) name);
+
+  g_mutex_unlock (&already_warned_lock);
+
+  if (!already)
+    g_warning ("The type %s is deprecated and shouldn’t be used "
+               "any more. It may be removed in a future version.",
+               name);
+}
+
 /**
  * g_type_create_instance: (skip)
  * @type: an instantiatable type to create an instance for
@@ -1867,16 +1931,20 @@ g_type_create_instance (GType type)
   guint i;
 
   node = lookup_type_node_I (type);
-  if (!node || !node->is_instantiatable)
+  if (G_UNLIKELY (!node || !node->is_instantiatable))
     {
       g_error ("cannot create new instance of invalid (non-instantiatable) type '%s'",
      type_descriptive_name_I (type));
     }
   /* G_TYPE_IS_ABSTRACT() is an external call: _U */
-  if (!node->mutatable_check_cache && G_TYPE_IS_ABSTRACT (type))
+  if (G_UNLIKELY (!node->mutatable_check_cache && G_TYPE_IS_ABSTRACT (type)))
     {
       g_error ("cannot create instance of abstract (non-instantiatable) type '%s'",
      type_descriptive_name_I (type));
+    }
+  if (G_UNLIKELY (G_TYPE_IS_DEPRECATED (type)))
+    {
+      maybe_issue_deprecation_warning (type);
     }
 
   class = g_type_class_ref (type);
@@ -1902,12 +1970,12 @@ g_type_create_instance (GType type)
   ivar_size = node->data->instance.instance_size;
 
 #ifdef ENABLE_VALGRIND
-  if (private_size && RUNNING_ON_VALGRIND)
+  if (G_UNLIKELY (private_size && RUNNING_ON_VALGRIND))
     {
       private_size += ALIGN_STRUCT (1);
 
       /* Allocate one extra pointer size... */
-      allocated = g_slice_alloc0 (private_size + ivar_size + sizeof (gpointer));
+      allocated = g_malloc0 (private_size + ivar_size + sizeof (gpointer));
       /* ... and point it back to the start of the private data. */
       *(gpointer *) (allocated + private_size + ivar_size) = allocated + ALIGN_STRUCT (1);
 
@@ -1917,7 +1985,7 @@ g_type_create_instance (GType type)
     }
   else
 #endif
-    allocated = g_slice_alloc0 (private_size + ivar_size);
+    allocated = g_malloc0 (private_size + ivar_size);
 
   instance = (GTypeInstance *) (allocated + private_size);
 
@@ -1972,17 +2040,17 @@ g_type_free_instance (GTypeInstance *instance)
 
   class = instance->g_class;
   node = lookup_type_node_I (class->g_type);
-  if (!node || !node->is_instantiatable || !node->data || node->data->class.class != (gpointer) class)
+  if (G_UNLIKELY (!node || !node->is_instantiatable || !node->data || node->data->class.class != (gpointer) class))
     {
-      g_warning ("cannot free instance of invalid (non-instantiatable) type '%s'",
-     type_descriptive_name_I (class->g_type));
+      g_critical ("cannot free instance of invalid (non-instantiatable) type '%s'",
+      type_descriptive_name_I (class->g_type));
       return;
     }
   /* G_TYPE_IS_ABSTRACT() is an external call: _U */
-  if (!node->mutatable_check_cache && G_TYPE_IS_ABSTRACT (NODE_TYPE (node)))
+  if (G_UNLIKELY (!node->mutatable_check_cache && G_TYPE_IS_ABSTRACT (NODE_TYPE (node))))
     {
-      g_warning ("cannot free instance of abstract (non-instantiatable) type '%s'",
-     NODE_NAME (node));
+      g_critical ("cannot free instance of abstract (non-instantiatable) type '%s'",
+      NODE_NAME (node));
       return;
     }
 
@@ -1999,7 +2067,7 @@ g_type_free_instance (GTypeInstance *instance)
   /* See comment in g_type_create_instance() about what's going on here.
    * We're basically unwinding what we put into motion there.
    */
-  if (private_size && RUNNING_ON_VALGRIND)
+  if (G_UNLIKELY (private_size && RUNNING_ON_VALGRIND))
     {
       private_size += ALIGN_STRUCT (1);
       allocated -= ALIGN_STRUCT (1);
@@ -2007,14 +2075,14 @@ g_type_free_instance (GTypeInstance *instance)
       /* Clear out the extra pointer... */
       *(gpointer *) (allocated + private_size + ivar_size) = NULL;
       /* ... and ensure we include it in the size we free. */
-      g_slice_free1 (private_size + ivar_size + sizeof (gpointer), allocated);
+      g_free_sized (allocated, private_size + ivar_size + sizeof (gpointer));
 
       VALGRIND_FREELIKE_BLOCK (allocated + ALIGN_STRUCT (1), 0);
       VALGRIND_FREELIKE_BLOCK (instance, 0);
     }
   else
 #endif
-    g_slice_free1 (private_size + ivar_size, allocated);
+    g_free_sized (allocated, private_size + ivar_size);
 
 #ifdef  G_ENABLE_DEBUG
   IF_DEBUG (INSTANCE_COUNT)
@@ -2416,8 +2484,8 @@ type_data_last_unref_Wm (TypeNode *node,
 
   if (!node->data || NODE_REFCOUNT (node) == 0)
     {
-      g_warning ("cannot drop last reference to unreferenced type '%s'",
-     NODE_NAME (node));
+      g_critical ("cannot drop last reference to unreferenced type '%s'",
+      NODE_NAME (node));
       return;
     }
 
@@ -2515,8 +2583,8 @@ type_data_unref_U (TypeNode *node,
     {
       if (!node->plugin)
   {
-    g_warning ("static type '%s' unreferenced too often",
-         NODE_NAME (node));
+    g_critical ("static type '%s' unreferenced too often",
+          NODE_NAME (node));
     return;
   }
       else
@@ -2603,8 +2671,8 @@ g_type_remove_class_cache_func (gpointer            cache_data,
   G_WRITE_UNLOCK (&type_rw_lock);
 
   if (!found_it)
-    g_warning (G_STRLOC ": cannot remove unregistered class cache func %p with data %p",
-         cache_func, cache_data);
+    g_critical (G_STRLOC ": cannot remove unregistered class cache func %p with data %p",
+          cache_func, cache_data);
 }
 
 
@@ -2677,8 +2745,8 @@ g_type_remove_interface_check (gpointer                check_data,
   G_WRITE_UNLOCK (&type_rw_lock);
 
   if (!found_it)
-    g_warning (G_STRLOC ": cannot remove unregistered class check func %p with data %p",
-         check_func, check_data);
+    g_critical (G_STRLOC ": cannot remove unregistered class check func %p with data %p",
+          check_func, check_data);
 }
 
 /* --- type registration --- */
@@ -2720,23 +2788,23 @@ g_type_register_fundamental (GType                       type_id,
   if ((type_id & TYPE_ID_MASK) ||
       type_id > G_TYPE_FUNDAMENTAL_MAX)
     {
-      g_warning ("attempt to register fundamental type '%s' with invalid type id (%" G_GSIZE_FORMAT ")",
-     type_name,
-     type_id);
+      g_critical ("attempt to register fundamental type '%s' with invalid type id (%" G_GSIZE_FORMAT ")",
+      type_name,
+      type_id);
       return 0;
     }
   if ((finfo->type_flags & G_TYPE_FLAG_INSTANTIATABLE) &&
       !(finfo->type_flags & G_TYPE_FLAG_CLASSED))
     {
-      g_warning ("cannot register instantiatable fundamental type '%s' as non-classed",
-     type_name);
+      g_critical ("cannot register instantiatable fundamental type '%s' as non-classed",
+      type_name);
       return 0;
     }
   if (lookup_type_node_I (type_id))
     {
-      g_warning ("cannot register existing fundamental type '%s' (as '%s')",
-     type_descriptive_name_I (type_id),
-     type_name);
+      g_critical ("cannot register existing fundamental type '%s' (as '%s')",
+      type_descriptive_name_I (type_id),
+      type_name);
       return 0;
     }
 
@@ -2836,8 +2904,8 @@ g_type_register_static (GType            parent_type,
     return 0;
   if (info->class_finalize)
     {
-      g_warning ("class finalizer specified for static type '%s'",
-     type_name);
+      g_critical ("class finalizer specified for static type '%s'",
+      type_name);
       return 0;
     }
 
@@ -2999,8 +3067,8 @@ g_type_class_ref (GType type)
   node = lookup_type_node_I (type);
   if (!node || !node->is_classed)
     {
-      g_warning ("cannot retrieve class for invalid (unclassed) type '%s'",
-     type_descriptive_name_I (type));
+      g_critical ("cannot retrieve class for invalid (unclassed) type '%s'",
+      type_descriptive_name_I (type));
       return NULL;
     }
 
@@ -3063,8 +3131,8 @@ g_type_class_unref (gpointer g_class)
   if (node && node->is_classed && NODE_REFCOUNT (node))
     type_data_unref_U (node, FALSE);
   else
-    g_warning ("cannot unreference class of invalid (unclassed) type '%s'",
-         type_descriptive_name_I (class->g_type));
+    g_critical ("cannot unreference class of invalid (unclassed) type '%s'",
+          type_descriptive_name_I (class->g_type));
 }
 
 /**
@@ -3088,8 +3156,8 @@ g_type_class_unref_uncached (gpointer g_class)
   if (node && node->is_classed && NODE_REFCOUNT (node))
     type_data_unref_U (node, TRUE);
   else
-    g_warning ("cannot unreference class of invalid (unclassed) type '%s'",
-         type_descriptive_name_I (class->g_type));
+    g_critical ("cannot unreference class of invalid (unclassed) type '%s'",
+          type_descriptive_name_I (class->g_type));
 }
 
 /**
@@ -3193,7 +3261,7 @@ g_type_class_peek_parent (gpointer g_class)
       class = node->data->class.class;
     }
   else if (NODE_PARENT_TYPE (node))
-    g_warning (G_STRLOC ": invalid class pointer '%p'", g_class);
+    g_critical (G_STRLOC ": invalid class pointer '%p'", g_class);
 
   return class;
 }
@@ -3226,7 +3294,7 @@ g_type_interface_peek (gpointer instance_class,
   if (node && node->is_instantiatable && iface)
     type_lookup_iface_vtable_I (node, iface, &vtable);
   else
-    g_warning (G_STRLOC ": invalid class pointer '%p'", class);
+    g_critical (G_STRLOC ": invalid class pointer '%p'", class);
 
   return vtable;
 }
@@ -3262,7 +3330,7 @@ g_type_interface_peek_parent (gpointer g_iface)
   if (node && node->is_instantiatable && iface)
     type_lookup_iface_vtable_I (node, iface, &vtable);
   else if (node)
-    g_warning (G_STRLOC ": invalid interface pointer '%p'", g_iface);
+    g_critical (G_STRLOC ": invalid interface pointer '%p'", g_iface);
 
   return vtable;
 }
@@ -3301,8 +3369,8 @@ g_type_default_interface_ref (GType g_type)
       (node->data && NODE_REFCOUNT (node) == 0))
     {
       G_WRITE_UNLOCK (&type_rw_lock);
-      g_warning ("cannot retrieve default vtable for invalid or non-interface type '%s'",
-     type_descriptive_name_I (g_type));
+      g_critical ("cannot retrieve default vtable for invalid or non-interface type '%s'",
+      type_descriptive_name_I (g_type));
       return NULL;
     }
 
@@ -3378,8 +3446,8 @@ g_type_default_interface_unref (gpointer g_iface)
   if (node && NODE_IS_IFACE (node))
     type_data_unref_U (node, FALSE);
   else
-    g_warning ("cannot unreference invalid interface default vtable for '%s'",
-         type_descriptive_name_I (vtable->g_type));
+    g_critical ("cannot unreference invalid interface default vtable for '%s'",
+          type_descriptive_name_I (vtable->g_type));
 }
 
 /**
@@ -3392,7 +3460,7 @@ g_type_default_interface_unref (gpointer g_iface)
  * other validly registered type ID, but randomized type IDs should
  * not be passed in and will most likely lead to a crash.
  *
- * Returns: static type name or %NULL
+ * Returns: (nullable): static type name or %NULL
  */
 const gchar *
 g_type_name (GType type)
@@ -3598,8 +3666,8 @@ type_node_conforms_to_U (TypeNode *node,
  * Returns: %TRUE if @type is a @is_a_type
  */
 gboolean
-g_type_is_a (GType type,
-             GType iface_type)
+(g_type_is_a) (GType type,
+               GType iface_type)
 {
   TypeNode *node, *iface_node;
   gboolean is_a;
@@ -3867,10 +3935,12 @@ type_add_flags_W (TypeNode  *node,
   g_return_if_fail (node != NULL);
 
   if ((flags & TYPE_FLAG_MASK) && node->is_classed && node->data && node->data->class.class)
-    g_warning ("tagging type '%s' as abstract after class initialization", NODE_NAME (node));
+    g_critical ("tagging type '%s' as abstract after class initialization", NODE_NAME (node));
   dflags = GPOINTER_TO_UINT (type_get_qdata_L (node, static_quark_type_flags));
   dflags |= flags;
   type_set_qdata_W (node, static_quark_type_flags, GUINT_TO_POINTER (dflags));
+
+  node->is_final = (flags & G_TYPE_FLAG_FINAL) != 0;
 }
 
 /**
@@ -3880,11 +3950,15 @@ type_add_flags_W (TypeNode  *node,
  *     filled in with constant values upon success
  *
  * Queries the type system for information about a specific type.
+ *
  * This function will fill in a user-provided structure to hold
  * type-specific information. If an invalid #GType is passed in, the
  * @type member of the #GTypeQuery is 0. All members filled into the
  * #GTypeQuery structure should be considered constant and have to be
  * left untouched.
+ *
+ * Since GLib 2.78, this function allows queries on dynamic types. Previously
+ * it only supported static types.
  */
 void
 g_type_query (GType       type,
@@ -3894,10 +3968,10 @@ g_type_query (GType       type,
 
   g_return_if_fail (query != NULL);
 
-  /* if node is not static and classed, we won't allow query */
+  /* if node is not classed, we won't allow query */
   query->type = 0;
   node = lookup_type_node_I (type);
-  if (node && node->is_classed && !node->plugin)
+  if (node && node->is_classed)
     {
       /* type is classed and probably even instantiatable */
       G_READ_LOCK (&type_rw_lock);
@@ -3918,8 +3992,8 @@ g_type_query (GType       type,
  *
  * Returns the number of instances allocated of the particular type;
  * this is only available if GLib is built with debugging support and
- * the instance_count debug flag is set (by setting the GOBJECT_DEBUG
- * variable to include instance-count).
+ * the 'instance-count' debug flag is set (by setting the 'GOBJECT_DEBUG'
+ * variable to include 'instance-count').
  *
  * Returns: the number of instances allocated of the given type;
  *   if instance counts are not available, returns 0.
@@ -3952,6 +4026,20 @@ g_type_test_flags (GType type,
   node = lookup_type_node_I (type);
   if (node)
     {
+      if ((flags & ~NODE_FLAG_MASK) == 0)
+        {
+          if (flags & G_TYPE_FLAG_CLASSED)
+            result |= node->is_classed;
+
+          if (flags & G_TYPE_FLAG_INSTANTIATABLE)
+            result |= node->is_instantiatable;
+
+          if (flags & G_TYPE_FLAG_FINAL)
+            result |= node->is_final;
+
+          return result;
+        }
+
       guint fflags = flags & TYPE_FUNDAMENTAL_FLAG_MASK;
       guint tflags = flags & TYPE_FLAG_MASK;
 
@@ -4042,7 +4130,7 @@ g_type_interface_get_plugin (GType instance_type,
   g_return_val_if_fail (node == NULL, NULL);
   g_return_val_if_fail (iface == NULL, NULL);
 
-  g_warning (G_STRLOC ": attempt to look up plugin for invalid instance/interface type pair.");
+  g_critical (G_STRLOC ": attempt to look up plugin for invalid instance/interface type pair.");
 
   return NULL;
 }
@@ -4097,8 +4185,11 @@ g_type_check_instance_is_a (GTypeInstance *type_instance,
   if (!type_instance || !type_instance->g_class)
     return FALSE;
 
-  node = lookup_type_node_I (type_instance->g_class->g_type);
   iface = lookup_type_node_I (iface_type);
+  if (iface && iface->is_final)
+    return type_instance->g_class->g_type == iface_type;
+
+  node = lookup_type_node_I (type_instance->g_class->g_type);
   check = node && node->is_instantiatable && iface && type_node_conforms_to_U (node, iface, TRUE, FALSE);
 
   return check;
@@ -4151,17 +4242,17 @@ g_type_check_instance_cast (GTypeInstance *type_instance,
             return type_instance;
 
           if (is_instantiatable)
-            g_warning ("invalid cast from '%s' to '%s'",
-                       type_descriptive_name_I (type_instance->g_class->g_type),
-                       type_descriptive_name_I (iface_type));
+            g_critical ("invalid cast from '%s' to '%s'",
+                        type_descriptive_name_I (type_instance->g_class->g_type),
+                        type_descriptive_name_I (iface_type));
           else
-            g_warning ("invalid uninstantiatable type '%s' in cast to '%s'",
-                       type_descriptive_name_I (type_instance->g_class->g_type),
-                       type_descriptive_name_I (iface_type));
+            g_critical ("invalid uninstantiatable type '%s' in cast to '%s'",
+                        type_descriptive_name_I (type_instance->g_class->g_type),
+                        type_descriptive_name_I (iface_type));
         }
       else
-        g_warning ("invalid unclassed pointer in cast to '%s'",
-                   type_descriptive_name_I (iface_type));
+        g_critical ("invalid unclassed pointer in cast to '%s'",
+                    type_descriptive_name_I (iface_type));
     }
 
   return type_instance;
@@ -4184,17 +4275,17 @@ g_type_check_class_cast (GTypeClass *type_class,
         return type_class;
 
       if (is_classed)
-        g_warning ("invalid class cast from '%s' to '%s'",
-                   type_descriptive_name_I (type_class->g_type),
-                   type_descriptive_name_I (is_a_type));
+        g_critical ("invalid class cast from '%s' to '%s'",
+                    type_descriptive_name_I (type_class->g_type),
+                    type_descriptive_name_I (is_a_type));
       else
-        g_warning ("invalid unclassed type '%s' in class cast to '%s'",
-                   type_descriptive_name_I (type_class->g_type),
-                   type_descriptive_name_I (is_a_type));
+        g_critical ("invalid unclassed type '%s' in class cast to '%s'",
+                    type_descriptive_name_I (type_class->g_type),
+                    type_descriptive_name_I (is_a_type));
     }
   else
-    g_warning ("invalid class cast from (NULL) pointer to '%s'",
-               type_descriptive_name_I (is_a_type));
+    g_critical ("invalid class cast from (NULL) pointer to '%s'",
+                type_descriptive_name_I (is_a_type));
   return type_class;
 }
 
@@ -4222,14 +4313,14 @@ g_type_check_instance (GTypeInstance *type_instance)
           if (node && node->is_instantiatable)
             return TRUE;
 
-          g_warning ("instance of invalid non-instantiatable type '%s'",
-                     type_descriptive_name_I (type_instance->g_class->g_type));
+          g_critical ("instance of invalid non-instantiatable type '%s'",
+                      type_descriptive_name_I (type_instance->g_class->g_type));
         }
       else
-        g_warning ("instance with invalid (NULL) class pointer");
+        g_critical ("instance with invalid (NULL) class pointer");
     }
   else
-    g_warning ("invalid (NULL) pointer instance");
+    g_critical ("invalid (NULL) pointer instance");
 
   return FALSE;
 }
@@ -4351,9 +4442,9 @@ g_type_value_table_peek (GType type)
     return vtable;
 
   if (!node)
-    g_warning (G_STRLOC ": type id '%" G_GSIZE_FORMAT "' is invalid", type);
+    g_critical (G_STRLOC ": type id '%" G_GSIZE_FORMAT "' is invalid", type);
   if (!has_refed_data)
-    g_warning ("can't peek value table for type '%s' which is not currently referenced",
+    g_critical ("can't peek value table for type '%s' which is not currently referenced",
                type_descriptive_name_I (type));
 
   return NULL;
@@ -4416,7 +4507,7 @@ _g_type_boxed_init (GType          type,
  * flags.  Since GLib 2.36, the type system is initialised automatically
  * and this function does nothing.
  *
- * If you need to enable debugging features, use the GOBJECT_DEBUG
+ * If you need to enable debugging features, use the 'GOBJECT_DEBUG'
  * environment variable.
  *
  * Deprecated: 2.36: the type system is now initialised automatically
@@ -4718,7 +4809,7 @@ gobject_init_ctor (void)
  * ]|
  *
  * Since: 2.4
- * Deprecated: 2.58: Use the G_ADD_PRIVATE() macro with the `G_DEFINE_*`
+ * Deprecated: 2.58: Use the G_ADD_PRIVATE() macro with the 'G_DEFINE_*'
  *   family of macros to add instance private data to a type
  */
 void
@@ -4733,7 +4824,7 @@ g_type_class_add_private (gpointer g_class,
 
   if (!node || !node->is_instantiatable || !node->data || node->data->class.class != g_class)
     {
-      g_warning ("cannot add private field to invalid (non-instantiatable) type '%s'",
+      g_critical ("cannot add private field to invalid (non-instantiatable) type '%s'",
      type_descriptive_name_I (instance_type));
       return;
     }
@@ -4743,7 +4834,7 @@ g_type_class_add_private (gpointer g_class,
       TypeNode *pnode = lookup_type_node_I (NODE_PARENT_TYPE (node));
       if (node->data->instance.private_size != pnode->data->instance.private_size)
         {
-          g_warning ("g_type_class_add_private() called multiple times for the same type");
+          g_critical ("g_type_class_add_private() called multiple times for the same type");
           return;
         }
     }
@@ -4769,14 +4860,14 @@ g_type_add_instance_private (GType class_gtype,
 
   if (!node || !node->is_classed || !node->is_instantiatable || !node->data)
     {
-      g_warning ("cannot add private field to invalid (non-instantiatable) type '%s'",
+      g_critical ("cannot add private field to invalid (non-instantiatable) type '%s'",
                  type_descriptive_name_I (class_gtype));
       return 0;
     }
 
   if (node->plugin != NULL)
     {
-      g_warning ("cannot use g_type_add_instance_private() with dynamic type '%s'",
+      g_critical ("cannot use g_type_add_instance_private() with dynamic type '%s'",
                  type_descriptive_name_I (class_gtype));
       return 0;
     }
@@ -4796,7 +4887,7 @@ g_type_add_instance_private (GType class_gtype,
    * hide it behind a macro. the function will return the private size, instead
    * of the offset, which will be stored inside a static variable defined by
    * the G_DEFINE_TYPE_EXTENDED() macro. the G_DEFINE_TYPE_EXTENDED() macro will
-   * check the variable and call g_type_class_add_instance_private(), which
+   * check the variable and call g_type_class_adjust_private_offset(), which
    * will use the data size and actually register the private data, then
    * return the computed offset of the private data, which will be stored
    * inside the static variable, so we can use it to retrieve the pointer
@@ -4805,7 +4896,7 @@ g_type_add_instance_private (GType class_gtype,
    * once all our code has been migrated to the new idiomatic form of private
    * data registration, we will change the g_type_add_instance_private()
    * function to actually perform the registration and return the offset
-   * of the private data; g_type_class_add_instance_private() already checks
+   * of the private data; g_type_class_adjust_private_offset() already checks
    * if the passed argument is negative (meaning that it's an offset in the
    * GTypeInstance allocation) and becomes a no-op if that's the case. this
    * should make the migration fully transparent even if we're effectively
@@ -4836,7 +4927,7 @@ g_type_class_adjust_private_offset (gpointer  g_class,
 
   if (!node || !node->is_classed || !node->is_instantiatable || !node->data)
     {
-      g_warning ("cannot add private field to invalid (non-instantiatable) type '%s'",
+      g_critical ("cannot add private field to invalid (non-instantiatable) type '%s'",
                  type_descriptive_name_I (class_gtype));
       *private_size_or_offset = 0;
       return;
@@ -4847,7 +4938,7 @@ g_type_class_adjust_private_offset (gpointer  g_class,
       TypeNode *pnode = lookup_type_node_I (NODE_PARENT_TYPE (node));
       if (node->data->instance.private_size != pnode->data->instance.private_size)
         {
-          g_warning ("g_type_add_instance_private() called multiple times for the same type");
+          g_critical ("g_type_add_instance_private() called multiple times for the same type");
           *private_size_or_offset = 0;
           return;
         }
@@ -4875,8 +4966,8 @@ g_type_instance_get_private (GTypeInstance *instance,
   node = lookup_type_node_I (private_type);
   if (G_UNLIKELY (!node || !node->is_instantiatable))
     {
-      g_warning ("instance of invalid non-instantiatable type '%s'",
-                 type_descriptive_name_I (instance->g_class->g_type));
+      g_critical ("instance of invalid non-instantiatable type '%s'",
+                  type_descriptive_name_I (instance->g_class->g_type));
       return NULL;
     }
 
@@ -4960,7 +5051,7 @@ g_type_add_class_private (GType    class_type,
 
   if (!node || !node->is_classed || !node->data)
     {
-      g_warning ("cannot add class private field to invalid type '%s'",
+      g_critical ("cannot add class private field to invalid type '%s'",
      type_descriptive_name_I (class_type));
       return;
     }
@@ -4970,7 +5061,7 @@ g_type_add_class_private (GType    class_type,
       TypeNode *pnode = lookup_type_node_I (NODE_PARENT_TYPE (node));
       if (node->data->class.class_private_size != pnode->data->class.class_private_size)
         {
-          g_warning ("g_type_add_class_private() called multiple times for the same type");
+          g_critical ("g_type_add_class_private() called multiple times for the same type");
           return;
         }
     }
@@ -4997,16 +5088,16 @@ g_type_class_get_private (GTypeClass *klass,
   class_node = lookup_type_node_I (klass->g_type);
   if (G_UNLIKELY (!class_node || !class_node->is_classed))
     {
-      g_warning ("class of invalid type '%s'",
-     type_descriptive_name_I (klass->g_type));
+      g_critical ("class of invalid type '%s'",
+      type_descriptive_name_I (klass->g_type));
       return NULL;
     }
 
   private_node = lookup_type_node_I (private_type);
   if (G_UNLIKELY (!private_node || !NODE_IS_ANCESTOR (private_node, class_node)))
     {
-      g_warning ("attempt to retrieve private data for invalid type '%s'",
-     type_descriptive_name_I (private_type));
+      g_critical ("attempt to retrieve private data for invalid type '%s'",
+      type_descriptive_name_I (private_type));
       return NULL;
     }
 
@@ -5019,7 +5110,7 @@ g_type_class_get_private (GTypeClass *klass,
 
       if (G_UNLIKELY (private_node->data->class.class_private_size == parent_node->data->class.class_private_size))
         {
-          g_warning ("g_type_instance_get_class_private() requires a prior call to g_type_add_class_private()");
+          g_critical ("g_type_instance_get_class_private() requires a prior call to g_type_add_class_private()");
           return NULL;
         }
 

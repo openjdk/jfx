@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,9 @@
 #include "config.h"
 #include "GPUAdapter.h"
 
+#include "Exception.h"
+#include "JSDOMPromiseDeferred.h"
+#include "JSGPUAdapterInfo.h"
 #include "JSGPUDevice.h"
 
 namespace WebCore {
@@ -37,12 +40,12 @@ String GPUAdapter::name() const
 
 Ref<GPUSupportedFeatures> GPUAdapter::features() const
 {
-    return GPUSupportedFeatures::create(PAL::WebGPU::SupportedFeatures::clone(m_backing->features()));
+    return GPUSupportedFeatures::create(WebGPU::SupportedFeatures::clone(m_backing->features()));
 }
 
 Ref<GPUSupportedLimits> GPUAdapter::limits() const
 {
-    return GPUSupportedLimits::create(PAL::WebGPU::SupportedLimits::clone(m_backing->limits()));
+    return GPUSupportedLimits::create(WebGPU::SupportedLimits::clone(m_backing->limits()));
 }
 
 bool GPUAdapter::isFallbackAdapter() const
@@ -50,7 +53,7 @@ bool GPUAdapter::isFallbackAdapter() const
     return m_backing->isFallbackAdapter();
 }
 
-static PAL::WebGPU::DeviceDescriptor convertToBacking(const std::optional<GPUDeviceDescriptor>& options)
+static WebGPU::DeviceDescriptor convertToBacking(const std::optional<GPUDeviceDescriptor>& options)
 {
     if (!options)
         return { };
@@ -60,9 +63,17 @@ static PAL::WebGPU::DeviceDescriptor convertToBacking(const std::optional<GPUDev
 
 void GPUAdapter::requestDevice(ScriptExecutionContext&, const std::optional<GPUDeviceDescriptor>& deviceDescriptor, RequestDevicePromise&& promise)
 {
-    m_backing->requestDevice(convertToBacking(deviceDescriptor), [promise = WTFMove(promise)] (Ref<PAL::WebGPU::Device>&& device) mutable {
-        promise.resolve(GPUDevice::create(nullptr, WTFMove(device)));
+    m_backing->requestDevice(convertToBacking(deviceDescriptor), [promise = WTFMove(promise)](RefPtr<WebGPU::Device>&& device) mutable {
+        if (!device.get())
+            promise.reject(Exception(OperationError));
+        else
+            promise.resolve(GPUDevice::create(nullptr, device.releaseNonNull()));
     });
+}
+
+void GPUAdapter::requestAdapterInfo(const std::optional<Vector<String>>&, RequestAdapterInfoPromise&& promise)
+{
+    promise.resolve(GPUAdapterInfo::create(name()));
 }
 
 }

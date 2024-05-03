@@ -29,7 +29,7 @@
 #include "BaselineJITRegisters.h"
 #include "CacheableIdentifierInlines.h"
 #include "DFGJITCode.h"
-#include "PolymorphicAccess.h"
+#include "InlineCacheCompiler.h"
 #include "Repatch.h"
 
 namespace JSC {
@@ -198,7 +198,8 @@ AccessGenerationResult StructureStubInfo::addAccessCase(
         // PolymorphicAccess.
         clearBufferedStructures();
 
-        result = m_stub->regenerate(locker, vm, globalObject, codeBlock, ecmaMode, *this);
+        InlineCacheCompiler compiler(vm, globalObject, ecmaMode, *this);
+        result = compiler.regenerate(locker, *m_stub, codeBlock);
 
         if (StructureStubInfoInternal::verbose)
             dataLog("Regeneration result: ", result, "\n");
@@ -258,15 +259,50 @@ void StructureStubInfo::reset(const ConcurrentJSLockerBase& locker, CodeBlock* c
     case AccessType::GetByVal:
         resetGetBy(codeBlock, *this, GetByKind::ByVal);
         break;
+    case AccessType::GetByValWithThis:
+        resetGetBy(codeBlock, *this, GetByKind::ByValWithThis);
+        break;
     case AccessType::GetPrivateName:
         resetGetBy(codeBlock, *this, GetByKind::PrivateName);
         break;
-    case AccessType::PutById:
-        resetPutBy(codeBlock, *this, PutByKind::ById);
+    case AccessType::GetPrivateNameById:
+        resetGetBy(codeBlock, *this, GetByKind::PrivateNameById);
         break;
-    case AccessType::PutByVal:
-    case AccessType::PutPrivateName:
-        resetPutBy(codeBlock, *this, PutByKind::ByVal);
+    case AccessType::PutByIdStrict:
+        resetPutBy(codeBlock, *this, PutByKind::ByIdStrict);
+        break;
+    case AccessType::PutByIdSloppy:
+        resetPutBy(codeBlock, *this, PutByKind::ByIdSloppy);
+        break;
+    case AccessType::PutByIdDirectStrict:
+        resetPutBy(codeBlock, *this, PutByKind::ByIdDirectStrict);
+        break;
+    case AccessType::PutByIdDirectSloppy:
+        resetPutBy(codeBlock, *this, PutByKind::ByIdDirectSloppy);
+        break;
+    case AccessType::PutByValStrict:
+        resetPutBy(codeBlock, *this, PutByKind::ByValStrict);
+        break;
+    case AccessType::PutByValSloppy:
+        resetPutBy(codeBlock, *this, PutByKind::ByValSloppy);
+        break;
+    case AccessType::PutByValDirectStrict:
+        resetPutBy(codeBlock, *this, PutByKind::ByValDirectStrict);
+        break;
+    case AccessType::PutByValDirectSloppy:
+        resetPutBy(codeBlock, *this, PutByKind::ByValDirectSloppy);
+        break;
+    case AccessType::DefinePrivateNameById:
+        resetPutBy(codeBlock, *this, PutByKind::DefinePrivateNameById);
+        break;
+    case AccessType::SetPrivateNameById:
+        resetPutBy(codeBlock, *this, PutByKind::SetPrivateNameById);
+        break;
+    case AccessType::DefinePrivateNameByVal:
+        resetPutBy(codeBlock, *this, PutByKind::DefinePrivateNameByVal);
+        break;
+    case AccessType::SetPrivateNameByVal:
+        resetPutBy(codeBlock, *this, PutByKind::SetPrivateNameByVal);
         break;
     case AccessType::InById:
         resetInBy(codeBlock, *this, InByKind::ById);
@@ -380,6 +416,17 @@ StubInfoSummary StructureStubInfo::summary(VM& vm) const
                 break;
             }
         }
+        if (list->size() == 1) {
+            switch (list->at(0).type()) {
+            case AccessCase::LoadMegamorphic:
+            case AccessCase::IndexedMegamorphicLoad:
+            case AccessCase::StoreMegamorphic:
+            case AccessCase::IndexedMegamorphicStore:
+                return StubInfoSummary::Megamorphic;
+            default:
+                break;
+            }
+        }
     }
 
     if (tookSlowPath || sawNonCell)
@@ -411,7 +458,7 @@ ALWAYS_INLINE void StructureStubInfo::setCacheType(const ConcurrentJSLockerBase&
     m_cacheType = newCacheType;
 }
 
-static FunctionPtr<OperationPtrTag> slowOperationFromUnlinkedStructureStubInfo(const UnlinkedStructureStubInfo& unlinkedStubInfo)
+static CodePtr<OperationPtrTag> slowOperationFromUnlinkedStructureStubInfo(const UnlinkedStructureStubInfo& unlinkedStubInfo)
 {
     switch (unlinkedStubInfo.accessType) {
     case AccessType::DeleteByVal:
@@ -434,48 +481,40 @@ static FunctionPtr<OperationPtrTag> slowOperationFromUnlinkedStructureStubInfo(c
         return operationGetByIdDirectOptimize;
     case AccessType::GetByIdWithThis:
         return operationGetByIdWithThisOptimize;
+    case AccessType::GetByValWithThis:
+        return operationGetByValWithThisOptimize;
     case AccessType::HasPrivateName:
         return operationHasPrivateNameOptimize;
     case AccessType::HasPrivateBrand:
         return operationHasPrivateBrandOptimize;
     case AccessType::GetPrivateName:
         return operationGetPrivateNameOptimize;
-    case AccessType::PutById:
-        switch (unlinkedStubInfo.putKind) {
-        case PutKind::NotDirect:
-            if (unlinkedStubInfo.ecmaMode.isStrict())
+    case AccessType::GetPrivateNameById:
+        return operationGetPrivateNameByIdOptimize;
+    case AccessType::PutByIdStrict:
                 return operationPutByIdStrictOptimize;
-            else
-                return operationPutByIdNonStrictOptimize;
-        case PutKind::Direct:
-            if (unlinkedStubInfo.ecmaMode.isStrict())
+    case AccessType::PutByIdSloppy:
+        return operationPutByIdSloppyOptimize;
+    case AccessType::PutByIdDirectStrict:
                 return operationPutByIdDirectStrictOptimize;
-            else
-                return operationPutByIdDirectNonStrictOptimize;
-        case PutKind::DirectPrivateFieldDefine:
-            return operationPutByIdDefinePrivateFieldStrictOptimize;
-        case PutKind::DirectPrivateFieldSet:
-            return operationPutByIdSetPrivateFieldStrictOptimize;
-        }
-        break;
-    case AccessType::PutByVal:
-        switch (unlinkedStubInfo.putKind) {
-        case PutKind::NotDirect:
-            if (unlinkedStubInfo.ecmaMode.isStrict())
+    case AccessType::PutByIdDirectSloppy:
+        return operationPutByIdDirectSloppyOptimize;
+    case AccessType::PutByValStrict:
                 return operationPutByValStrictOptimize;
-            else
-                return operationPutByValNonStrictOptimize;
-        case PutKind::Direct:
-            if (unlinkedStubInfo.ecmaMode.isStrict())
+    case AccessType::PutByValSloppy:
+        return operationPutByValSloppyOptimize;
+    case AccessType::PutByValDirectStrict:
                 return operationDirectPutByValStrictOptimize;
-            else
-                return operationDirectPutByValNonStrictOptimize;
-        default:
-            RELEASE_ASSERT_NOT_REACHED();
-        }
-        break;
-    case AccessType::PutPrivateName:
-        return unlinkedStubInfo.privateFieldPutKind.isDefine() ? operationPutByValDefinePrivateFieldOptimize : operationPutByValSetPrivateFieldOptimize;
+    case AccessType::PutByValDirectSloppy:
+        return operationDirectPutByValSloppyOptimize;
+    case AccessType::DefinePrivateNameById:
+        return operationPutByIdDefinePrivateFieldStrictOptimize;
+    case AccessType::SetPrivateNameById:
+        return operationPutByIdSetPrivateFieldStrictOptimize;
+    case AccessType::DefinePrivateNameByVal:
+        return operationPutByValDefinePrivateFieldOptimize;
+    case AccessType::SetPrivateNameByVal:
+        return operationPutByValSetPrivateFieldOptimize;
     case AccessType::SetPrivateBrand:
         return operationSetPrivateBrandOptimize;
     case AccessType::CheckPrivateBrand:
@@ -493,14 +532,19 @@ void StructureStubInfo::initializeFromUnlinkedStructureStubInfo(const BaselineUn
     codeOrigin = CodeOrigin(unlinkedStubInfo.bytecodeIndex);
     m_codePtr = slowPathStartLocation;
     propertyIsInt32 = unlinkedStubInfo.propertyIsInt32;
-    tookSlowPath = unlinkedStubInfo.tookSlowPath;
+    canBeMegamorphic = unlinkedStubInfo.canBeMegamorphic;
+    isEnumerator = unlinkedStubInfo.isEnumerator;
     useDataIC = true;
 
-    usedRegisters = RegisterSet::stubUnavailableRegisters();
+    if (unlinkedStubInfo.canBeMegamorphic)
+        bufferingCountdown = 1;
+
+    auto usedJSRs = RegisterSetBuilder::stubUnavailableRegisters();
     if (accessType == AccessType::GetById && unlinkedStubInfo.bytecodeIndex.checkpoint()) {
         // For iterator_next, we can't clobber the "dontClobberJSR" register either.
-        usedRegisters.set(BaselineJITRegisters::GetById::FastPath::dontClobberJSR);
+        usedJSRs.add(BaselineJITRegisters::GetById::FastPath::dontClobberJSR, IgnoreVectors);
     }
+    usedRegisters = usedJSRs.buildScalarRegisterSet();
 
     m_slowOperation = slowOperationFromUnlinkedStructureStubInfo(unlinkedStubInfo);
 
@@ -584,6 +628,7 @@ void StructureStubInfo::initializeFromUnlinkedStructureStubInfo(const BaselineUn
     case AccessType::TryGetById:
     case AccessType::GetByIdDirect:
     case AccessType::GetById:
+    case AccessType::GetPrivateNameById:
         hasConstantIdentifier = true;
         m_extraGPR = InvalidGPRReg;
         m_baseGPR = BaselineJITRegisters::GetById::baseJSR.payloadGPR();
@@ -607,7 +652,25 @@ void StructureStubInfo::initializeFromUnlinkedStructureStubInfo(const BaselineUn
         m_extraTagGPR = BaselineJITRegisters::GetByIdWithThis::thisJSR.tagGPR();
 #endif
         break;
-    case AccessType::PutById:
+    case AccessType::GetByValWithThis:
+        hasConstantIdentifier = false;
+#if USE(JSVALUE64)
+        m_baseGPR = BaselineJITRegisters::GetByValWithThis::baseJSR.payloadGPR();
+        m_valueGPR = BaselineJITRegisters::GetByValWithThis::resultJSR.payloadGPR();
+        m_extraGPR = BaselineJITRegisters::GetByValWithThis::thisJSR.payloadGPR();
+        m_extra2GPR = BaselineJITRegisters::GetByValWithThis::propertyJSR.payloadGPR();
+        m_stubInfoGPR = BaselineJITRegisters::GetByValWithThis::FastPath::stubInfoGPR;
+#else
+        // Registers are exhausted, we cannot have this IC on 32bit.
+        RELEASE_ASSERT_NOT_REACHED();
+#endif
+        break;
+    case AccessType::PutByIdStrict:
+    case AccessType::PutByIdSloppy:
+    case AccessType::PutByIdDirectStrict:
+    case AccessType::PutByIdDirectSloppy:
+    case AccessType::DefinePrivateNameById:
+    case AccessType::SetPrivateNameById:
         hasConstantIdentifier = true;
         m_extraGPR = InvalidGPRReg;
         m_baseGPR = BaselineJITRegisters::PutById::baseJSR.payloadGPR();
@@ -619,14 +682,18 @@ void StructureStubInfo::initializeFromUnlinkedStructureStubInfo(const BaselineUn
         m_valueTagGPR = BaselineJITRegisters::PutById::valueJSR.tagGPR();
 #endif
         break;
-    case AccessType::PutByVal:
-    case AccessType::PutPrivateName:
+    case AccessType::PutByValStrict:
+    case AccessType::PutByValSloppy:
+    case AccessType::PutByValDirectStrict:
+    case AccessType::PutByValDirectSloppy:
+    case AccessType::DefinePrivateNameByVal:
+    case AccessType::SetPrivateNameByVal:
         hasConstantIdentifier = false;
         m_baseGPR = BaselineJITRegisters::PutByVal::baseJSR.payloadGPR();
         m_extraGPR = BaselineJITRegisters::PutByVal::propertyJSR.payloadGPR();
         m_valueGPR = BaselineJITRegisters::PutByVal::valueJSR.payloadGPR();
         m_stubInfoGPR = BaselineJITRegisters::PutByVal::stubInfoGPR;
-        if (accessType == AccessType::PutByVal)
+        if (accessType != AccessType::DefinePrivateNameByVal && accessType != AccessType::SetPrivateNameByVal)
             m_arrayProfileGPR = BaselineJITRegisters::PutByVal::profileGPR;
 #if USE(JSVALUE32_64)
         m_baseTagGPR = BaselineJITRegisters::PutByVal::baseJSR.tagGPR();
@@ -665,13 +732,18 @@ void StructureStubInfo::initializeFromDFGUnlinkedStructureStubInfo(const DFG::Un
     propertyIsString = unlinkedStubInfo.propertyIsString;
     prototypeIsKnownObject = unlinkedStubInfo.prototypeIsKnownObject;
     hasConstantIdentifier = unlinkedStubInfo.hasConstantIdentifier;
-    tookSlowPath = unlinkedStubInfo.tookSlowPath;
+    canBeMegamorphic = unlinkedStubInfo.canBeMegamorphic;
+    isEnumerator = unlinkedStubInfo.isEnumerator;
     useDataIC = true;
+
+    if (unlinkedStubInfo.canBeMegamorphic)
+        bufferingCountdown = 1;
 
     usedRegisters = unlinkedStubInfo.usedRegisters;
 
     m_baseGPR = unlinkedStubInfo.m_baseGPR;
     m_extraGPR = unlinkedStubInfo.m_extraGPR;
+    m_extra2GPR = unlinkedStubInfo.m_extra2GPR;
     m_valueGPR = unlinkedStubInfo.m_valueGPR;
     m_stubInfoGPR = unlinkedStubInfo.m_stubInfoGPR;
 
@@ -683,10 +755,15 @@ void StructureStubInfo::initializeFromDFGUnlinkedStructureStubInfo(const DFG::Un
 #if ASSERT_ENABLED
 void StructureStubInfo::checkConsistency()
 {
-    if (thisValueIsInExtraGPR()) {
+    switch (accessType) {
+    case AccessType::GetByIdWithThis:
         // We currently use a union for both "thisGPR" and "propertyGPR". If this were
         // not the case, we'd need to take one of them out of the union.
         RELEASE_ASSERT(hasConstantIdentifier);
+        break;
+    case AccessType::GetByValWithThis:
+    default:
+        break;
     }
 }
 #endif // ASSERT_ENABLED

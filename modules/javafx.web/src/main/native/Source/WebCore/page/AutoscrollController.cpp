@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2014 Google Inc. All rights reserved.
  * Copyright (C) 2006 Alexey Proskuryakov (ap@webkit.org)
  * Copyright (C) 2012 Digia Plc. and/or its subsidiary(-ies)
  *
@@ -29,11 +30,12 @@
 #include "AutoscrollController.h"
 
 #include "EventHandler.h"
-#include "Frame.h"
-#include "FrameView.h"
 #include "HitTestResult.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "Page.h"
 #include "RenderBox.h"
+#include "RenderListBox.h"
 #include "RenderView.h"
 #include "ScrollView.h"
 #include "Settings.h"
@@ -47,10 +49,10 @@ static const Seconds autoscrollDelay { 200_ms };
 static const Seconds autoscrollInterval { 50_ms };
 
 #if ENABLE(PAN_SCROLLING)
-static Frame* getMainFrame(Frame* frame)
+static LocalFrame* getMainFrame(LocalFrame* frame)
 {
     Page* page = frame->page();
-    return page ? &page->mainFrame() : 0;
+    return page && dynamicDowncast<LocalFrame>(page->mainFrame()) ? dynamicDowncast<LocalFrame>(page->mainFrame()) : 0;
 }
 #endif
 
@@ -75,6 +77,8 @@ void AutoscrollController::startAutoscrollForSelection(RenderObject* renderer)
     if (m_autoscrollTimer.isActive())
         return;
     auto* scrollable = RenderBox::findAutoscrollable(renderer);
+    if (!scrollable)
+        scrollable = renderer->isListBox() ? downcast<RenderListBox>(renderer) : nullptr;
     if (!scrollable)
         return;
     m_autoscrollType = AutoscrollForSelection;
@@ -104,7 +108,7 @@ void AutoscrollController::stopAutoscrollTimer(bool rendererIsBeingDestroyed)
 
 #if ENABLE(PAN_SCROLLING)
     if (panScrollInProgress()) {
-        FrameView& frameView = scrollable->view().frameView();
+        auto& frameView = scrollable->view().frameView();
         frameView.removePanScrollIcon();
         frameView.setCursor(pointerCursor());
     }
@@ -114,8 +118,8 @@ void AutoscrollController::stopAutoscrollTimer(bool rendererIsBeingDestroyed)
 
 #if ENABLE(PAN_SCROLLING)
     // If we're not in the top frame we notify it that we are not doing a panScroll any more.
-    if (frame && !frame->isMainFrame())
-        frame->mainFrame().eventHandler().didPanScrollStop();
+    if (auto* localFrame = (frame && !frame->isMainFrame()) ? dynamicDowncast<LocalFrame>(frame->mainFrame()) : nullptr)
+        localFrame->eventHandler().didPanScrollStop();
 #endif
 }
 
@@ -248,7 +252,7 @@ void AutoscrollController::autoscrollTimerFired()
         return;
     }
 
-    Frame& frame = m_autoscrollRenderer->frame();
+    LocalFrame& frame = m_autoscrollRenderer->frame();
     switch (m_autoscrollType) {
     case AutoscrollForDragAndDrop:
         if (WallTime::now() - m_dragAndDropAutoscrollStartTime > autoscrollDelay)
@@ -271,13 +275,13 @@ void AutoscrollController::autoscrollTimerFired()
     case AutoscrollForPanCanStop:
     case AutoscrollForPan:
         // we verify that the main frame hasn't received the order to stop the panScroll
-        if (Frame* mainFrame = getMainFrame(&frame)) {
+        if (auto* mainFrame = getMainFrame(&frame)) {
             if (!mainFrame->eventHandler().panScrollInProgress()) {
                 stopAutoscrollTimer();
                 return;
             }
         }
-        if (FrameView* view = frame.view())
+        if (auto* view = frame.view())
             updatePanScrollState(view, frame.eventHandler().lastKnownMousePosition());
         m_autoscrollRenderer->panScroll(m_panScrollStartPos);
         break;
@@ -291,7 +295,7 @@ void AutoscrollController::startAutoscrollTimer()
 }
 
 #if ENABLE(PAN_SCROLLING)
-void AutoscrollController::updatePanScrollState(FrameView* view, const IntPoint& lastKnownMousePosition)
+void AutoscrollController::updatePanScrollState(LocalFrameView* view, const IntPoint& lastKnownMousePosition)
 {
     // At the original click location we draw a 4 arrowed icon. Over this icon there won't be any scroll
     // So we don't want to change the cursor over this area

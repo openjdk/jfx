@@ -32,13 +32,14 @@
 #include "EventLoop.h"
 #include "EventNames.h"
 #include "ExtendableEvent.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "JSDOMPromiseDeferred.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "NotificationEvent.h"
 #include "PushEvent.h"
 #include "SWContextManager.h"
+#include "SWServer.h"
 #include "ServiceWorker.h"
 #include "ServiceWorkerClient.h"
 #include "ServiceWorkerClients.h"
@@ -56,13 +57,14 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(ServiceWorkerGlobalScope);
 Ref<ServiceWorkerGlobalScope> ServiceWorkerGlobalScope::create(ServiceWorkerContextData&& contextData, ServiceWorkerData&& workerData, const WorkerParameters& params, Ref<SecurityOrigin>&& origin, ServiceWorkerThread& thread, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider, std::unique_ptr<NotificationClient>&& notificationClient)
 {
     auto scope = adoptRef(*new ServiceWorkerGlobalScope { WTFMove(contextData), WTFMove(workerData), params, WTFMove(origin), thread, WTFMove(topOrigin), connectionProxy, socketProvider, WTFMove(notificationClient) });
+    scope->addToContextsMap();
     scope->applyContentSecurityPolicyResponseHeaders(params.contentSecurityPolicyResponseHeaders);
     scope->notifyServiceWorkerPageOfCreationIfNecessary();
     return scope;
 }
 
 ServiceWorkerGlobalScope::ServiceWorkerGlobalScope(ServiceWorkerContextData&& contextData, ServiceWorkerData&& workerData, const WorkerParameters& params, Ref<SecurityOrigin>&& origin, ServiceWorkerThread& thread, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider, std::unique_ptr<NotificationClient>&& notificationClient)
-    : WorkerGlobalScope(WorkerThreadType::ServiceWorker, params, WTFMove(origin), thread, WTFMove(topOrigin), connectionProxy, socketProvider)
+    : WorkerGlobalScope(WorkerThreadType::ServiceWorker, params, WTFMove(origin), thread, WTFMove(topOrigin), connectionProxy, socketProvider, nullptr)
     , m_contextData(WTFMove(contextData))
     , m_registration(ServiceWorkerRegistration::getOrCreate(*this, navigator().serviceWorker(), WTFMove(m_contextData.registration)))
     , m_serviceWorker(ServiceWorker::getOrCreate(*this, WTFMove(workerData)))
@@ -74,6 +76,9 @@ ServiceWorkerGlobalScope::ServiceWorkerGlobalScope(ServiceWorkerContextData&& co
 
 ServiceWorkerGlobalScope::~ServiceWorkerGlobalScope()
 {
+    // We need to remove from the contexts map very early in the destructor so that calling postTask() on this WorkerGlobalScope from another thread is safe.
+    removeFromContextsMap();
+
     // NotificationClient might have some interactions pending with the main thread,
     // so it should also be destroyed there.
     callOnMainThread([notificationClient = WTFMove(m_notificationClient)] { });
@@ -83,6 +88,7 @@ void ServiceWorkerGlobalScope::dispatchPushEvent(PushEvent& pushEvent)
 {
     ASSERT(!m_pushEvent);
     m_pushEvent = &pushEvent;
+    m_lastPushEventTime = MonotonicTime::now();
     dispatchEvent(pushEvent);
     m_pushEvent = nullptr;
 }
@@ -96,10 +102,11 @@ void ServiceWorkerGlobalScope::notifyServiceWorkerPageOfCreationIfNecessary()
     ASSERT(isMainThread());
     serviceWorkerPage->setServiceWorkerGlobalScope(*this);
 
-    Vector<Ref<DOMWrapperWorld>> worlds;
-    static_cast<JSVMClientData*>(vm().clientData)->getAllWorlds(worlds);
-    for (auto& world : worlds)
-        serviceWorkerPage->mainFrame().loader().client().dispatchServiceWorkerGlobalObjectAvailable(world);
+    if (auto* localMainFrame = dynamicDowncast<LocalFrame>(serviceWorkerPage->mainFrame())) {
+        // FIXME: We currently do not support non-normal worlds in service workers.
+        Ref normalWorld = static_cast<JSVMClientData*>(vm().clientData)->normalWorld();
+        localMainFrame->loader().client().dispatchServiceWorkerGlobalObjectAvailable(normalWorld);
+    }
 }
 
 Page* ServiceWorkerGlobalScope::serviceWorkerPage()
@@ -140,6 +147,15 @@ EventTargetInterface ServiceWorkerGlobalScope::eventTargetInterface() const
 ServiceWorkerThread& ServiceWorkerGlobalScope::thread()
 {
     return static_cast<ServiceWorkerThread&>(WorkerGlobalScope::thread());
+}
+
+void ServiceWorkerGlobalScope::prepareForDestruction()
+{
+    // Make sure we destroy fetch events objects before the VM goes away, since their
+    // destructor may access the VM.
+    m_extendedEvents.clear();
+
+    WorkerGlobalScope::prepareForDestruction();
 }
 
 // https://w3c.github.io/ServiceWorker/#update-service-worker-extended-events-set-algorithm
@@ -210,6 +226,22 @@ void ServiceWorkerGlobalScope::recordUserGesture()
 {
     m_isProcessingUserGesture = true;
     m_userGestureTimer.startOneShot(userGestureLifetime);
+}
+
+bool ServiceWorkerGlobalScope::didFirePushEventRecently() const
+{
+    return MonotonicTime::now() <= m_lastPushEventTime + SWServer::defaultTerminationDelay;
+}
+
+void ServiceWorkerGlobalScope::addConsoleMessage(MessageSource source, MessageLevel level, const String& message, unsigned long requestIdentifier)
+{
+    if (m_consoleMessageReportingEnabled) {
+        callOnMainThread([threadIdentifier = thread().identifier(), source, level, message = message.isolatedCopy(), requestIdentifier] {
+            if (auto* connection = SWContextManager::singleton().connection())
+                connection->reportConsoleMessage(threadIdentifier, source, level, message, requestIdentifier);
+        });
+    }
+    WorkerGlobalScope::addConsoleMessage(source, level, message, requestIdentifier);
 }
 
 } // namespace WebCore

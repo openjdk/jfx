@@ -51,10 +51,23 @@ bool BifurcatedGraphicsContext::hasPlatformContext() const
 {
     return m_primaryContext.hasPlatformContext();
 }
-
+#if !PLATFORM(JAVA)
 PlatformGraphicsContext* BifurcatedGraphicsContext::platformContext() const
 {
     return m_primaryContext.platformContext();
+}
+#endif
+
+#if PLATFORM(JAVA)
+PlatformGraphicsContext* BifurcatedGraphicsContext::platformContext()
+{
+    return m_primaryContext.platformContext();
+}
+#endif
+
+const DestinationColorSpace& BifurcatedGraphicsContext::colorSpace() const
+{
+    return m_primaryContext.colorSpace();
 }
 
 void BifurcatedGraphicsContext::save()
@@ -148,6 +161,8 @@ void BifurcatedGraphicsContext::beginTransparencyLayer(float opacity)
     GraphicsContext::beginTransparencyLayer(opacity);
     m_primaryContext.beginTransparencyLayer(opacity);
     m_secondaryContext.beginTransparencyLayer(opacity);
+
+    GraphicsContext::save();
     m_state.didBeginTransparencyLayer();
 
     VERIFY_STATE_SYNCHRONIZATION();
@@ -158,7 +173,8 @@ void BifurcatedGraphicsContext::endTransparencyLayer()
     GraphicsContext::endTransparencyLayer();
     m_primaryContext.endTransparencyLayer();
     m_secondaryContext.endTransparencyLayer();
-    m_state.didEndTransparencyLayer(m_primaryContext.alpha());
+
+    GraphicsContext::restore();
 
     VERIFY_STATE_SYNCHRONIZATION();
 }
@@ -195,11 +211,6 @@ void BifurcatedGraphicsContext::fillRoundedRectImpl(const FloatRoundedRect& rect
     VERIFY_STATE_SYNCHRONIZATION();
 }
 
-void BifurcatedGraphicsContext::fillRoundedRect(const FloatRoundedRect& rect, const Color& color, BlendMode blendMode)
-{
-    m_primaryContext.fillRoundedRect(rect, color, blendMode);
-    m_secondaryContext.fillRoundedRect(rect, color, blendMode);
-}
 
 void BifurcatedGraphicsContext::fillRectWithRoundedHole(const FloatRect& rect, const FloatRoundedRect& roundedHoleRect, const Color& color)
 {
@@ -242,26 +253,12 @@ void BifurcatedGraphicsContext::strokeEllipse(const FloatRect& ellipse)
 }
 
 #if USE(CG)
-void BifurcatedGraphicsContext::setIsCALayerContext(bool isCALayerContext)
-{
-    m_primaryContext.setIsCALayerContext(isCALayerContext);
-    m_secondaryContext.setIsCALayerContext(isCALayerContext);
-
-    VERIFY_STATE_SYNCHRONIZATION();
-}
 
 bool BifurcatedGraphicsContext::isCALayerContext() const
 {
     return m_primaryContext.isCALayerContext();
 }
 
-void BifurcatedGraphicsContext::setIsAcceleratedContext(bool isAcceleratedContext)
-{
-    m_primaryContext.setIsAcceleratedContext(isAcceleratedContext);
-    m_secondaryContext.setIsAcceleratedContext(isAcceleratedContext);
-
-    VERIFY_STATE_SYNCHRONIZATION();
-}
 #endif
 
 RenderingMode BifurcatedGraphicsContext::renderingMode() const
@@ -277,10 +274,26 @@ void BifurcatedGraphicsContext::clip(const FloatRect& rect)
     VERIFY_STATE_SYNCHRONIZATION();
 }
 
+void BifurcatedGraphicsContext::clipRoundedRect(const FloatRoundedRect& rect)
+{
+    m_primaryContext.clipRoundedRect(rect);
+    m_secondaryContext.clipRoundedRect(rect);
+
+    VERIFY_STATE_SYNCHRONIZATION();
+}
+
 void BifurcatedGraphicsContext::clipOut(const FloatRect& rect)
 {
     m_primaryContext.clipOut(rect);
     m_secondaryContext.clipOut(rect);
+
+    VERIFY_STATE_SYNCHRONIZATION();
+}
+
+void BifurcatedGraphicsContext::clipOutRoundedRect(const FloatRoundedRect& rect)
+{
+    m_primaryContext.clipOutRoundedRect(rect);
+    m_secondaryContext.clipOutRoundedRect(rect);
 
     VERIFY_STATE_SYNCHRONIZATION();
 }
@@ -301,9 +314,25 @@ void BifurcatedGraphicsContext::clipPath(const Path& path, WindRule windRule)
     VERIFY_STATE_SYNCHRONIZATION();
 }
 
+void BifurcatedGraphicsContext::clipToImageBuffer(ImageBuffer& imageBuffer, const FloatRect& destRect)
+{
+    m_primaryContext.clipToImageBuffer(imageBuffer, destRect);
+    m_secondaryContext.clipToImageBuffer(imageBuffer, destRect);
+
+    VERIFY_STATE_SYNCHRONIZATION();
+}
+
 IntRect BifurcatedGraphicsContext::clipBounds() const
 {
     return m_primaryContext.clipBounds();
+}
+
+void BifurcatedGraphicsContext::resetClip()
+{
+    m_primaryContext.resetClip();
+    m_secondaryContext.resetClip();
+
+    VERIFY_STATE_SYNCHRONIZATION();
 }
 
 void BifurcatedGraphicsContext::setLineCap(LineCap lineCap)
@@ -338,18 +367,31 @@ void BifurcatedGraphicsContext::setMiterLimit(float miterLimit)
     VERIFY_STATE_SYNCHRONIZATION();
 }
 
-void BifurcatedGraphicsContext::drawNativeImage(NativeImage& nativeImage, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
+void BifurcatedGraphicsContext::drawNativeImageInternal(NativeImage& nativeImage, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
 {
-    m_primaryContext.drawNativeImage(nativeImage, selfSize, destRect, srcRect, options);
-    m_secondaryContext.drawNativeImage(nativeImage, selfSize, destRect, srcRect, options);
+    m_primaryContext.drawNativeImageInternal(nativeImage, selfSize, destRect, srcRect, options);
+    m_secondaryContext.drawNativeImageInternal(nativeImage, selfSize, destRect, srcRect, options);
 
     VERIFY_STATE_SYNCHRONIZATION();
+}
+
+bool BifurcatedGraphicsContext::needsCachedNativeImageInvalidationWorkaround(RenderingMode renderingMode)
+{
+    return m_primaryContext.needsCachedNativeImageInvalidationWorkaround(renderingMode) || m_secondaryContext.needsCachedNativeImageInvalidationWorkaround(renderingMode);
 }
 
 void BifurcatedGraphicsContext::drawSystemImage(SystemImage& systemImage, const FloatRect& destinationRect)
 {
     m_primaryContext.drawSystemImage(systemImage, destinationRect);
     m_secondaryContext.drawSystemImage(systemImage, destinationRect);
+
+    VERIFY_STATE_SYNCHRONIZATION();
+}
+
+void BifurcatedGraphicsContext::drawControlPart(ControlPart& part, const FloatRoundedRect& borderRect, float deviceScaleFactor, const ControlStyle& style)
+{
+    m_primaryContext.drawControlPart(part, borderRect, deviceScaleFactor, style);
+    m_secondaryContext.drawControlPart(part, borderRect, deviceScaleFactor, style);
 
     VERIFY_STATE_SYNCHRONIZATION();
 }
@@ -447,46 +489,21 @@ AffineTransform BifurcatedGraphicsContext::getCTM(IncludeDeviceScale includeDevi
     return m_primaryContext.getCTM(includeDeviceScale);
 }
 
-FloatRect BifurcatedGraphicsContext::roundToDevicePixels(const FloatRect& rect, RoundingMode roundingMode)
+void BifurcatedGraphicsContext::drawFocusRing(const Path& path, float outlineWidth, const Color& color)
 {
-    auto roundedRect = m_primaryContext.roundToDevicePixels(rect, roundingMode);
-    VERIFY_STATE_SYNCHRONIZATION();
-    return roundedRect;
-}
-
-void BifurcatedGraphicsContext::drawFocusRing(const Vector<FloatRect>& rects, float width, float offset, const Color& color)
-{
-    m_primaryContext.drawFocusRing(rects, width, offset, color);
-    m_secondaryContext.drawFocusRing(rects, width, offset, color);
+    m_primaryContext.drawFocusRing(path, outlineWidth, color);
+    m_secondaryContext.drawFocusRing(path, outlineWidth, color);
 
     VERIFY_STATE_SYNCHRONIZATION();
 }
 
-void BifurcatedGraphicsContext::drawFocusRing(const Path& path, float width, float offset, const Color& color)
+void BifurcatedGraphicsContext::drawFocusRing(const Vector<FloatRect>& rects, float outlineOffset, float outlineWidth, const Color& color)
 {
-    m_primaryContext.drawFocusRing(path, width, offset, color);
-    m_secondaryContext.drawFocusRing(path, width, offset, color);
+    m_primaryContext.drawFocusRing(rects, outlineOffset, outlineWidth, color);
+    m_secondaryContext.drawFocusRing(rects, outlineOffset, outlineWidth, color);
 
     VERIFY_STATE_SYNCHRONIZATION();
 }
-
-#if PLATFORM(MAC)
-void BifurcatedGraphicsContext::drawFocusRing(const Path& path, double timeOffset, bool& needsRedraw, const Color& color)
-{
-    m_primaryContext.drawFocusRing(path, timeOffset, needsRedraw, color);
-    m_secondaryContext.drawFocusRing(path, timeOffset, needsRedraw, color);
-
-    VERIFY_STATE_SYNCHRONIZATION();
-}
-
-void BifurcatedGraphicsContext::drawFocusRing(const Vector<FloatRect>& rects, double timeOffset, bool& needsRedraw, const Color& color)
-{
-    m_primaryContext.drawFocusRing(rects, timeOffset, needsRedraw, color);
-    m_secondaryContext.drawFocusRing(rects, timeOffset, needsRedraw, color);
-
-    VERIFY_STATE_SYNCHRONIZATION();
-}
-#endif
 
 FloatSize BifurcatedGraphicsContext::drawText(const FontCascade& cascade, const TextRun& run, const FloatPoint& point, unsigned from, std::optional<unsigned> to)
 {
@@ -577,11 +594,11 @@ bool BifurcatedGraphicsContext::supportsInternalLinks() const
 
 void BifurcatedGraphicsContext::didUpdateState(GraphicsContextState& state)
 {
-    // This calls updateState() instead of didUpdateState() so that changes
+    // This calls mergeLastChanges() instead of didUpdateState() so that changes
     // are also applied to each context's GraphicsContextState, so that code
     // internal to the child contexts that reads from the state gets the right values.
-    m_primaryContext.updateState(state);
-    m_secondaryContext.updateState(state);
+    m_primaryContext.mergeLastChanges(state);
+    m_secondaryContext.mergeLastChanges(state);
     state.didApplyChanges();
 
     VERIFY_STATE_SYNCHRONIZATION();
@@ -594,24 +611,11 @@ void BifurcatedGraphicsContext::verifyStateSynchronization()
     // The two contexts' CTMs must begin and remain in sync, otherwise `setCTM(getCTM())`
     // will cause further painting to the secondary context to be mistransformed.
     auto secondaryContextCTM = m_secondaryContext.getCTM();
-    if (!m_hasLoggedAboutDesynchronizedState && !primaryContextCTM.isEssentiallyEqualTo(secondaryContextCTM)) {
-        TextStream message;
-        message << "BifurcatedGraphicsContext(" << this << ") CTM is out of sync: " << primaryContextCTM << " != " << secondaryContextCTM;
-#if ASSERT_ENABLED
-        ASSERT_NOT_REACHED_WITH_MESSAGE("%s", message.release().utf8().data());
-#else
-        WTFLogAlways("%s", message.release().utf8().data());
-#endif
+    if (!m_hasLoggedAboutDesynchronizedState && !primaryContextCTM.isEssentiallyEqualToAsFloats(secondaryContextCTM)) {
+        ALWAYS_LOG_WITH_STREAM(stream << "BifurcatedGraphicsContext(" << this << ") CTM is out of sync: " << primaryContextCTM << " != " << secondaryContextCTM);
         m_hasLoggedAboutDesynchronizedState = true;
     }
 }
-
-#if OS(WINDOWS) && !USE(CAIRO)
-GraphicsContextPlatformPrivate* BifurcatedGraphicsContext::deprecatedPrivateContext() const
-{
-    return m_primaryContext.deprecatedPrivateContext();
-}
-#endif
 
 } // namespace WebCore
 

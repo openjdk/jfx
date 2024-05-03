@@ -35,8 +35,9 @@ namespace WebCore {
 class WebGLRenderingContext final : public WebGLRenderingContextBase {
     WTF_MAKE_ISO_ALLOCATED(WebGLRenderingContext);
 public:
-    static std::unique_ptr<WebGLRenderingContext> create(CanvasBase&, GraphicsContextGLAttributes);
     static std::unique_ptr<WebGLRenderingContext> create(CanvasBase&, Ref<GraphicsContextGL>&&, GraphicsContextGLAttributes);
+
+    ~WebGLRenderingContext();
 
     bool isWebGL1() const final { return true; }
 
@@ -45,16 +46,21 @@ public:
 
     WebGLAny getFramebufferAttachmentParameter(GCGLenum target, GCGLenum attachment, GCGLenum pname) final;
 
+    long long getInt64Parameter(GCGLenum) final;
+
     GCGLint getMaxDrawBuffers() final;
     GCGLint getMaxColorAttachments() final;
     void initializeVertexArrayObjects() final;
-#if !USE(ANGLE)
-    bool validateIndexArrayConservative(GCGLenum type, unsigned& numElementsRequired) final;
-#endif
     bool validateBlendEquation(const char* functionName, GCGLenum mode) final;
 
+    void addMembersToOpaqueRoots(JSC::AbstractSlotVisitor&) final;
+
+protected:
+    friend class EXTDisjointTimerQuery;
+
+    RefPtr<WebGLTimerQueryEXT> m_activeQuery;
+
 private:
-    WebGLRenderingContext(CanvasBase&, GraphicsContextGLAttributes);
     WebGLRenderingContext(CanvasBase&, Ref<GraphicsContextGL>&&, GraphicsContextGLAttributes);
 };
 

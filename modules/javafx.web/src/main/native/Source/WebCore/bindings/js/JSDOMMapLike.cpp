@@ -26,6 +26,7 @@
 #include "config.h"
 #include "JSDOMMapLike.h"
 
+#include "WebCoreJSBuiltinInternals.h"
 #include "WebCoreJSClientData.h"
 #include <JavaScriptCore/CatchScope.h>
 #include <JavaScriptCore/HashMapImplInlines.h>
@@ -71,6 +72,7 @@ void setToBackingMap(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSObject& ba
     JSC::MarkedArgumentBuffer arguments;
     arguments.append(key);
     arguments.append(value);
+    ASSERT(!arguments.hasOverflowed());
     JSC::call(&lexicalGlobalObject, function, callData, &backingMap, arguments);
 }
 

@@ -131,10 +131,11 @@ void ScrollingStateNode::insertChild(Ref<ScrollingStateNode>&& childNode, size_t
 
 void ScrollingStateNode::removeFromParent()
 {
-    if (!m_parent)
+    RefPtr parent = m_parent.get();
+    if (!parent)
         return;
 
-    m_parent->removeChild(*this);
+    parent->removeChild(*this);
     m_parent = nullptr;
 }
 
@@ -171,6 +172,18 @@ void ScrollingStateNode::setLayer(const LayerRepresentation& layerRepresentation
 
     setPropertyChanged(Property::Layer);
 }
+
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+void ScrollingStateNode::setInteractionRegionsLayer(const LayerRepresentation& layerRepresentation)
+{
+    if (layerRepresentation == m_interactionRegionsLayer)
+        return;
+
+    m_interactionRegionsLayer = layerRepresentation;
+
+    // Piggybacks on other property changed flags: Property::Layer and Property::ScrollContainerLayer.
+}
+#endif
 
 void ScrollingStateNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {

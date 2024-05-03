@@ -37,7 +37,7 @@
 namespace WebCore {
 
 // Most renderers in the SVG rendering tree will inherit from this class
-// but not all. (e.g. RenderSVGForeignObject, RenderSVGBlock) thus methods
+// but not all. (e.g. LegacyRenderSVGForeignObject, RenderSVGBlock) thus methods
 // required by SVG renders need to be declared on RenderObject, but shared
 // logic can go in this class or in SVGRenderSupport.
 
@@ -50,7 +50,7 @@ public:
     std::optional<FloatRect> computeFloatVisibleRectInContainer(const FloatRect&, const RenderLayerModelObject* container, VisibleRectContext) const final;
     LayoutRect outlineBoundsForRepaint(const RenderLayerModelObject* repaintContainer, const RenderGeometryMap*) const final;
 
-    void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const final;
+    void boundingRects(Vector<LayoutRect>&, const LayoutPoint& accumulatedOffset) const final;
     void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;
 
     void mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const final;

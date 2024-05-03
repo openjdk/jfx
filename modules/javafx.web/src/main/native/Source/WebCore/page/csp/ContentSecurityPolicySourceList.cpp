@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google, Inc. All rights reserved.
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,6 +53,7 @@ static bool isCSPDirectiveName(StringView name)
         || equalIgnoringASCIICase(name, ContentSecurityPolicyDirectiveNames::mediaSrc)
         || equalIgnoringASCIICase(name, ContentSecurityPolicyDirectiveNames::objectSrc)
         || equalIgnoringASCIICase(name, ContentSecurityPolicyDirectiveNames::pluginTypes)
+        || equalIgnoringASCIICase(name, ContentSecurityPolicyDirectiveNames::reportTo)
         || equalIgnoringASCIICase(name, ContentSecurityPolicyDirectiveNames::reportURI)
         || equalIgnoringASCIICase(name, ContentSecurityPolicyDirectiveNames::sandbox)
         || equalIgnoringASCIICase(name, ContentSecurityPolicyDirectiveNames::scriptSrc)
@@ -61,7 +62,7 @@ static bool isCSPDirectiveName(StringView name)
 
 template<typename CharacterType> static bool isSourceCharacter(CharacterType c)
 {
-    return !isASCIISpace(c);
+    return !isUnicodeCompatibleASCIIWhitespace(c);
 }
 
 template<typename CharacterType> static bool isHostCharacter(CharacterType c)
@@ -86,12 +87,12 @@ template<typename CharacterType> static bool isNotColonOrSlash(CharacterType c)
 
 template<typename CharacterType> static bool isSourceListNone(StringParsingBuffer<CharacterType> buffer)
 {
-    skipWhile<isASCIISpace>(buffer);
+    skipWhile<isUnicodeCompatibleASCIIWhitespace>(buffer);
 
     if (!skipExactlyIgnoringASCIICase(buffer, "'none'"_s))
         return false;
 
-    skipWhile<isASCIISpace>(buffer);
+    skipWhile<isUnicodeCompatibleASCIIWhitespace>(buffer);
 
     return buffer.atEnd();
 }
@@ -246,7 +247,7 @@ static bool extensionModeAllowsKeywordsForDirective(ContentSecurityPolicyModeFor
 template<typename CharacterType> void ContentSecurityPolicySourceList::parse(StringParsingBuffer<CharacterType> buffer)
 {
     while (buffer.hasCharactersRemaining()) {
-        skipWhile<isASCIISpace>(buffer);
+        skipWhile<isUnicodeCompatibleASCIIWhitespace>(buffer);
         if (buffer.atEnd())
             return;
 
@@ -274,7 +275,7 @@ template<typename CharacterType> void ContentSecurityPolicySourceList::parse(Str
         } else
             m_policy.reportInvalidSourceExpression(m_directiveName, String(beginSource, buffer.position() - beginSource));
 
-        ASSERT(buffer.atEnd() || isASCIISpace(*buffer));
+        ASSERT(buffer.atEnd() || isUnicodeCompatibleASCIIWhitespace(*buffer));
     }
 
     m_list.shrinkToFit();

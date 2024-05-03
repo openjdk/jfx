@@ -26,6 +26,7 @@
 #pragma once
 
 #include "FloatPoint.h"
+#include "KeyboardScroll.h"
 #include "ScrollTypes.h"
 #include <wtf/EnumTraits.h>
 #include <wtf/OptionSet.h>
@@ -64,7 +65,7 @@ constexpr auto debugScrollingStateTreeAsTextBehaviors = OptionSet<ScrollingState
     ScrollingStateTreeAsTextBehavior::IncludeLayerIDs, ScrollingStateTreeAsTextBehavior::IncludeNodeIDs, ScrollingStateTreeAsTextBehavior::IncludeLayerPositions
 };
 
-enum class ScrollingLayerPositionAction {
+enum class ScrollingLayerPositionAction : uint8_t {
     Set,
     SetApproximate,
     Sync
@@ -83,10 +84,12 @@ struct ScrollableAreaParameters {
     bool allowsHorizontalScrolling { false };
     bool allowsVerticalScrolling { false };
 
-    bool horizontalScrollbarHiddenByStyle { false };
-    bool verticalScrollbarHiddenByStyle { false };
+    NativeScrollbarVisibility horizontalNativeScrollbarVisibility { NativeScrollbarVisibility::Visible };
+    NativeScrollbarVisibility verticalNativeScrollbarVisibility { NativeScrollbarVisibility::Visible };
 
     bool useDarkAppearanceForScrollbars { false };
+
+    ScrollbarWidth scrollbarWidthStyle { ScrollbarWidth::Auto };
 
     bool operator==(const ScrollableAreaParameters& other) const
     {
@@ -98,9 +101,10 @@ struct ScrollableAreaParameters {
             && verticalOverscrollBehavior == other.verticalOverscrollBehavior
             && allowsHorizontalScrolling == other.allowsHorizontalScrolling
             && allowsVerticalScrolling == other.allowsVerticalScrolling
-            && horizontalScrollbarHiddenByStyle == other.horizontalScrollbarHiddenByStyle
-            && verticalScrollbarHiddenByStyle == other.verticalScrollbarHiddenByStyle
-            && useDarkAppearanceForScrollbars == other.useDarkAppearanceForScrollbars;
+            && horizontalNativeScrollbarVisibility == other.horizontalNativeScrollbarVisibility
+            && verticalNativeScrollbarVisibility == other.verticalNativeScrollbarVisibility
+            && useDarkAppearanceForScrollbars == other.useDarkAppearanceForScrollbars
+            && scrollbarWidthStyle == other.scrollbarWidthStyle;
     }
 };
 
@@ -112,29 +116,62 @@ enum class ViewportRectStability {
 
 enum class ScrollRequestType : uint8_t {
     PositionUpdate,
+    DeltaUpdate,
     CancelAnimatedScroll
 };
 
 struct RequestedScrollData {
     ScrollRequestType requestType { ScrollRequestType::PositionUpdate };
-    FloatPoint scrollPosition;
+    std::variant<FloatPoint, FloatSize> scrollPositionOrDelta;
     ScrollType scrollType { ScrollType::User };
     ScrollClamping clamping { ScrollClamping::Clamped };
     ScrollIsAnimated animated { ScrollIsAnimated::No };
+    std::optional<std::tuple<ScrollRequestType, std::variant<FloatPoint, FloatSize>, ScrollType, ScrollClamping>> requestedDataBeforeAnimatedScroll { };
+
+    void merge(RequestedScrollData&&);
+    WEBCORE_EXPORT FloatPoint destinationPosition(const FloatPoint&) const;
+    bool comparePositionOrDelta(const RequestedScrollData& other) const
+    {
+        if (requestType == ScrollRequestType::PositionUpdate)
+            return std::get<FloatPoint>(scrollPositionOrDelta) == std::get<FloatPoint>(other.scrollPositionOrDelta);
+        if (requestType == ScrollRequestType::DeltaUpdate)
+            return std::get<FloatSize>(scrollPositionOrDelta) == std::get<FloatSize>(other.scrollPositionOrDelta);
+        return true;
+    }
 
     bool operator==(const RequestedScrollData& other) const
     {
         return requestType == other.requestType
-            && scrollPosition == other.scrollPosition
+            && comparePositionOrDelta(other)
             && scrollType == other.scrollType
             && clamping == other.clamping
-            && animated == other.animated;
+            && animated == other.animated
+            && requestedDataBeforeAnimatedScroll == other.requestedDataBeforeAnimatedScroll;
+    }
+};
+
+enum class KeyboardScrollAction : uint8_t {
+    StartAnimation,
+    StopWithAnimation,
+    StopImmediately
+};
+
+struct RequestedKeyboardScrollData {
+    KeyboardScrollAction action { KeyboardScrollAction::StartAnimation };
+    std::optional<KeyboardScroll> keyboardScroll;
+
+    bool operator==(const RequestedKeyboardScrollData& other) const
+    {
+        return action == other.action && keyboardScroll == other.keyboardScroll;
     }
 };
 
 enum class ScrollUpdateType : uint8_t {
     PositionUpdate,
-    AnimatedScrollDidEnd
+    AnimatedScrollWillStart,
+    AnimatedScrollDidEnd,
+    WheelEventScrollWillStart,
+    WheelEventScrollDidEnd,
 };
 
 struct ScrollUpdate {
@@ -156,14 +193,64 @@ struct ScrollUpdate {
     }
 };
 
+enum class WheelEventProcessingSteps : uint8_t {
+    AsyncScrolling                      = 1 << 0,
+    SynchronousScrolling                = 1 << 1, // Synchronous with painting and script.
+    NonBlockingDOMEventDispatch         = 1 << 2,
+    BlockingDOMEventDispatch            = 1 << 3,
+};
+
+struct WheelEventHandlingResult {
+    OptionSet<WheelEventProcessingSteps> steps;
+    bool wasHandled { false };
+    bool needsMainThreadProcessing() const { return steps.containsAny({ WheelEventProcessingSteps::SynchronousScrolling, WheelEventProcessingSteps::NonBlockingDOMEventDispatch, WheelEventProcessingSteps::BlockingDOMEventDispatch }); }
+
+    static WheelEventHandlingResult handled(OptionSet<WheelEventProcessingSteps> steps = { })
+    {
+        return { steps, true };
+    }
+    static WheelEventHandlingResult unhandled(OptionSet<WheelEventProcessingSteps> steps = { })
+    {
+        return { steps, false };
+    }
+    static WheelEventHandlingResult result(bool handled)
+    {
+        return { { }, handled };
+    }
+};
+
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, SynchronousScrollingReason);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollingNodeType);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollingLayerPositionAction);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollableAreaParameters);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ViewportRectStability);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, WheelEventHandlingResult);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, WheelEventProcessingSteps);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollRequestType);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollUpdateType);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, RequestedScrollData);
+
 } // namespace WebCore
 
 namespace WTF {
+
+template<> struct EnumTraits<WebCore::SynchronousScrollingReason> {
+    using values = EnumValues<
+        WebCore::SynchronousScrollingReason,
+        WebCore::SynchronousScrollingReason::ForcedOnMainThread,
+        WebCore::SynchronousScrollingReason::HasViewportConstrainedObjectsWithoutSupportingFixedLayers,
+        WebCore::SynchronousScrollingReason::HasNonLayerViewportConstrainedObjects,
+        WebCore::SynchronousScrollingReason::IsImageDocument,
+        WebCore::SynchronousScrollingReason::HasSlowRepaintObjects,
+        WebCore::SynchronousScrollingReason::DescendantScrollersHaveSynchronousScrolling
+    >;
+};
 
 template<> struct EnumTraits<WebCore::ScrollRequestType> {
     using values = EnumValues<
         WebCore::ScrollRequestType,
         WebCore::ScrollRequestType::PositionUpdate,
+        WebCore::ScrollRequestType::DeltaUpdate,
         WebCore::ScrollRequestType::CancelAnimatedScroll
     >;
 };
@@ -179,6 +266,15 @@ template<> struct EnumTraits<WebCore::ScrollingNodeType> {
         WebCore::ScrollingNodeType::Fixed,
         WebCore::ScrollingNodeType::Sticky,
         WebCore::ScrollingNodeType::Positioned
+    >;
+};
+
+template<> struct EnumTraits<WebCore::KeyboardScrollAction> {
+    using values = EnumValues<
+        WebCore::KeyboardScrollAction,
+        WebCore::KeyboardScrollAction::StartAnimation,
+        WebCore::KeyboardScrollAction::StopWithAnimation,
+        WebCore::KeyboardScrollAction::StopImmediately
     >;
 };
 

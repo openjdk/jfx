@@ -23,13 +23,18 @@
 #pragma once
 
 #include "LightSource.h"
+#include <wtf/ArgumentCoder.h>
 #include <wtf/Ref.h>
 
 namespace WebCore {
 
 class DistantLightSource : public LightSource {
+    friend struct IPC::ArgumentCoder<DistantLightSource, void>;
+
 public:
     WEBCORE_EXPORT static Ref<DistantLightSource> create(float azimuth, float elevation);
+
+    bool operator==(const DistantLightSource&) const;
 
     // These are in degrees.
     float azimuth() const { return m_azimuth; }
@@ -43,38 +48,14 @@ public:
 
     WTF::TextStream& externalRepresentation(WTF::TextStream&) const override;
 
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<Ref<DistantLightSource>> decode(Decoder&);
-
 private:
     DistantLightSource(float azimuth, float elevation);
+
+    bool operator==(const LightSource& other) const override { return areEqual<DistantLightSource>(*this, other); }
 
     float m_azimuth;
     float m_elevation;
 };
-
-template<class Encoder>
-void DistantLightSource::encode(Encoder& encoder) const
-{
-    encoder << m_azimuth;
-    encoder << m_elevation;
-}
-
-template<class Decoder>
-std::optional<Ref<DistantLightSource>> DistantLightSource::decode(Decoder& decoder)
-{
-    std::optional<float> azimuth;
-    decoder >> azimuth;
-    if (!azimuth)
-        return std::nullopt;
-
-    std::optional<float> elevation;
-    decoder >> elevation;
-    if (!elevation)
-        return std::nullopt;
-
-    return DistantLightSource::create(*azimuth, *elevation);
-}
 
 } // namespace WebCore
 

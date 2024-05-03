@@ -107,7 +107,7 @@ void ThreadableWebSocketChannelClientWrapper::setSubprotocol(const String& subpr
 {
     unsigned length = subprotocol.length();
     m_subprotocol.resize(length);
-    StringView(subprotocol).getCharactersWithUpconvert(m_subprotocol.data());
+    StringView(subprotocol).getCharacters(m_subprotocol.data());
 }
 
 String ThreadableWebSocketChannelClientWrapper::extensions() const
@@ -121,7 +121,7 @@ void ThreadableWebSocketChannelClientWrapper::setExtensions(const String& extens
 {
     unsigned length = extensions.length();
     m_extensions.resize(length);
-    StringView(extensions).getCharactersWithUpconvert(m_extensions.data());
+    StringView(extensions).getCharacters(m_extensions.data());
 }
 
 ThreadableWebSocketChannel::SendResult ThreadableWebSocketChannelClientWrapper::sendRequestResult() const
@@ -257,7 +257,8 @@ void ThreadableWebSocketChannelClientWrapper::processPendingTasks()
     if (!m_syncMethodDone) {
         // When a synchronous operation is in progress (i.e. the execution stack contains
         // WorkerThreadableWebSocketChannel::waitForMethodCompletion()), we cannot invoke callbacks in this run loop.
-        m_context.postTask([this, protectedThis = Ref { *this }] (ScriptExecutionContext& context) {
+        RefPtr protectedContext = m_context.get();
+        protectedContext->postTask([this, protectedThis = Ref { *this }] (ScriptExecutionContext& context) {
             ASSERT_UNUSED(context, context.isWorkerGlobalScope());
             processPendingTasks();
         });
@@ -265,8 +266,9 @@ void ThreadableWebSocketChannelClientWrapper::processPendingTasks()
     }
 
     Vector<std::unique_ptr<ScriptExecutionContext::Task>> pendingTasks = WTFMove(m_pendingTasks);
+    Ref protectedContext = { *m_context };
     for (auto& task : pendingTasks)
-        task->performTask(m_context);
+        task->performTask(protectedContext.get());
 }
 
 } // namespace WebCore

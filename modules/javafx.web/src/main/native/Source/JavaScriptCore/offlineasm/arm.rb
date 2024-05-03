@@ -335,6 +335,7 @@ class Sequence
 
     def getModifiedListARMCommon
         result = @list
+        result = riscDropTags(result)
         result = riscLowerSimpleBranchOps(result)
         result = riscLowerHardBranchOps(result)
         result = riscLowerShiftOps(result)
@@ -832,7 +833,7 @@ class Instruction
                 $asm.puts "blx #{operands[0].armOperand}"
             end
         when "break"
-            $asm.puts "bkpt #0"
+            $asm.puts "udf #0"
         when "ret"
             $asm.puts "bx lr"
         when "cieq", "cpeq", "cbeq"

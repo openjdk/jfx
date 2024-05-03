@@ -28,10 +28,10 @@
 
 #include "AnimationEventBase.h"
 #include "CSSTransition.h"
-#include "DOMWindow.h"
 #include "Document.h"
 #include "DocumentTimeline.h"
 #include "EventLoop.h"
+#include "LocalDOMWindow.h"
 #include "Logging.h"
 #include "Page.h"
 #include "Settings.h"
@@ -44,7 +44,6 @@ namespace WebCore {
 
 DocumentTimelinesController::DocumentTimelinesController(Document& document)
     : m_document(document)
-    , m_frameRateAligner()
 {
     if (auto* page = document.page()) {
         if (page->settings().hiddenPageCSSAnimationSuspensionEnabled() && !page->isVisible())
@@ -73,7 +72,7 @@ void DocumentTimelinesController::detachFromDocument()
 {
     m_currentTimeClearingTaskCancellationGroup.cancel();
 
-    while (!m_timelines.computesEmpty())
+    while (!m_timelines.isEmptyIgnoringNullReferences())
         m_timelines.begin()->detachFromDocument();
 }
 
@@ -94,8 +93,6 @@ void DocumentTimelinesController::updateAnimationsAndSendEvents(ReducedResolutio
     }
 
     LOG_WITH_STREAM(Animations, stream << "DocumentTimelinesController::updateAnimationsAndSendEvents for time " << timestamp);
-
-    ASSERT(!m_timelines.hasNullReferences());
 
     // We need to copy m_timelines before iterating over its members since the steps in this procedure may mutate m_timelines.
     auto protectedTimelines = copyToVectorOf<Ref<DocumentTimeline>>(m_timelines);
@@ -147,12 +144,11 @@ void DocumentTimelinesController::updateAnimationsAndSendEvents(ReducedResolutio
             animation->tick();
 
             if (!animation->isRelevant() && !animation->needsTick())
-                animationsToRemove.append(*animation);
+                animationsToRemove.append(animation);
 
-            if (is<CSSTransition>(*animation)) {
-                auto& transition = downcast<CSSTransition>(*animation);
-                if (!transition.needsTick() && transition.playState() == WebAnimation::PlayState::Finished && transition.owningElement())
-                    completedTransitions.append(transition);
+            if (auto* transition = dynamicDowncast<CSSTransition>(animation.get())) {
+                if (!transition->needsTick() && transition->playState() == WebAnimation::PlayState::Finished && transition->owningElement())
+                    completedTransitions.append(*transition);
             }
         }
     }
@@ -192,10 +188,7 @@ void DocumentTimelinesController::updateAnimationsAndSendEvents(ReducedResolutio
 
     // 6. Perform a stable sort of the animation events in events to dispatch as follows.
     std::stable_sort(events.begin(), events.end(), [] (const Ref<AnimationEventBase>& lhs, const Ref<AnimationEventBase>& rhs) {
-        // 1. Sort the events by their scheduled event time such that events that were scheduled to occur earlier, sort before events scheduled to occur later
-        // and events whose scheduled event time is unresolved sort before events with a resolved scheduled event time.
-        // 2. Within events with equal scheduled event times, sort by their composite order. FIXME: Need to do this.
-        return lhs->timelineTime() < rhs->timelineTime();
+        return compareAnimationEventsByCompositeOrder(lhs.get(), rhs.get());
     });
 
     // 7. Dispatch each of the events in events to dispatch at their corresponding target using the order established in the previous step.
@@ -216,8 +209,8 @@ void DocumentTimelinesController::updateAnimationsAndSendEvents(ReducedResolutio
     // This needs to happen after dealing with the list of animations to remove as the animation may have been
     // removed from the list of completed transitions otherwise.
     for (auto& completedTransition : completedTransitions) {
-        if (auto timeline = completedTransition->timeline())
-            downcast<DocumentTimeline>(*timeline).transitionDidComplete(WTFMove(completedTransition));
+        if (auto documentTimeline = dynamicDowncast<DocumentTimeline>(completedTransition->timeline()))
+            documentTimeline->transitionDidComplete(WTFMove(completedTransition));
     }
 
     for (auto& timeline : timelinesToUpdate)
@@ -256,11 +249,6 @@ void DocumentTimelinesController::resumeAnimations()
 
     for (auto& timeline : m_timelines)
         timeline.resumeAnimations();
-}
-
-bool DocumentTimelinesController::animationsAreSuspended() const
-{
-    return m_isSuspended;
 }
 
 ReducedResolutionSeconds DocumentTimelinesController::liveCurrentTime() const

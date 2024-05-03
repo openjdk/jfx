@@ -46,6 +46,7 @@
 #include "HTMLElement.h"
 #include "HTMLMediaElement.h"
 #include "HTMLVideoElement.h"
+#include "InspectorController.h"
 #include "LocalizedStrings.h"
 #include "Logging.h"
 #include "MediaControlTextTrackContainerElement.h"
@@ -66,10 +67,6 @@
 #include <wtf/JSONValues.h>
 #include <wtf/Scope.h>
 #include <wtf/UUID.h>
-
-#if USE(APPLE_INTERNAL_SDK)
-#include <WebKitAdditions/MediaControlsHostAdditions.h>
-#endif
 
 namespace WebCore {
 
@@ -117,21 +114,19 @@ MediaControlsHost::~MediaControlsHost()
 
 String MediaControlsHost::layoutTraitsClassName() const
 {
-#if defined(MEDIA_CONTROLS_HOST_LAYOUT_TRAITS_CLASS_NAME_OVERRIDE)
-    return MEDIA_CONTROLS_HOST_LAYOUT_TRAITS_CLASS_NAME_OVERRIDE""_s;
-#else
 #if PLATFORM(MAC) || PLATFORM(MACCATALYST)
     return "MacOSLayoutTraits"_s;
 #elif PLATFORM(IOS)
     return "IOSLayoutTraits"_s;
+#elif PLATFORM(VISION)
+    return "VisionLayoutTraits"_s;
 #elif PLATFORM(WATCHOS)
     return "WatchOSLayoutTraits"_s;
-#elif PLATFORM(GTK) || PLATFORM(WPE)
+#elif PLATFORM(GTK) || PLATFORM(WPE) || PLATFORM(WIN)  || PLATFORM(JAVA)
     return "AdwaitaLayoutTraits"_s;
 #else
     ASSERT_NOT_REACHED();
     return nullString();
-#endif
 #endif
 }
 
@@ -432,11 +427,6 @@ public:
         return adoptRef(*new MediaControlsContextMenuEventListener(WTFMove(contextMenuProvider)));
     }
 
-    bool operator==(const EventListener& other) const override
-    {
-        return this == &other;
-    }
-
     void handleEvent(ScriptExecutionContext&, Event& event) override
     {
         ASSERT(event.type() == eventNames().contextmenuEvent);
@@ -513,6 +503,8 @@ bool MediaControlsHost::showMediaControlsContextMenu(HTMLElement& target, String
         x2_0,
     };
 
+    enum class ShowMediaStatsTag { IncludeShowMediaStats };
+
     using MenuData = std::variant<
 #if ENABLE(VIDEO_PRESENTATION_MODE)
         PictureInPictureTag,
@@ -520,7 +512,8 @@ bool MediaControlsHost::showMediaControlsContextMenu(HTMLElement& target, String
         RefPtr<AudioTrack>,
         RefPtr<TextTrack>,
         RefPtr<VTTCue>,
-        PlaybackSpeed
+        PlaybackSpeed,
+        ShowMediaStatsTag
     >;
     HashMap<MenuItemIdentifier, MenuData> idMap;
 
@@ -542,6 +535,14 @@ bool MediaControlsHost::showMediaControlsContextMenu(HTMLElement& target, String
 #elif ENABLE(CONTEXT_MENUS) && USE(ACCESSIBILITY_CONTEXT_MENUS)
         UNUSED_PARAM(icon);
         return { CheckableActionType, static_cast<ContextMenuAction>(ContextMenuItemBaseCustomTag + id), title, /* enabled */ true, checked };
+#endif
+    };
+
+    auto createSeparator = [] () -> MenuItem {
+#if USE(UICONTEXTMENU)
+        return { MediaControlsContextMenuItem::invalidID, /* title */ nullString(), /* icon */ nullString(), /* checked */ false, /* children */ { } };
+#elif ENABLE(CONTEXT_MENUS) && USE(ACCESSIBILITY_CONTEXT_MENUS)
+        return { SeparatorType, ContextMenuItemTagNoAction, /* title */ nullString() };
 #endif
     };
 
@@ -650,6 +651,11 @@ bool MediaControlsHost::showMediaControlsContextMenu(HTMLElement& target, String
     }
 #endif // ENABLE(CONTEXT_MENUS) && USE(ACCESSIBILITY_CONTEXT_MENUS)
 
+    if (page->settings().showMediaStatsContextMenuItemEnabled() && page->settings().developerExtrasEnabled() && optionsJSONObject->getBoolean("includeShowMediaStats"_s).value_or(false)) {
+        items.append(createSeparator());
+        items.append(createMenuItem(ShowMediaStatsTag::IncludeShowMediaStats, contextMenuItemTagShowMediaStats(), mediaElement.showingStats(), "chart.bar.xaxis"_s));
+    }
+
     if (items.isEmpty())
         return false;
 
@@ -729,6 +735,9 @@ bool MediaControlsHost::showMediaControlsContextMenu(HTMLElement& target, String
                 }
 
                 ASSERT_NOT_REACHED();
+            },
+            [&] (ShowMediaStatsTag) {
+                mediaElement.setShowingStats(!mediaElement.showingStats());
             }
         );
 
@@ -749,6 +758,36 @@ bool MediaControlsHost::showMediaControlsContextMenu(HTMLElement& target, String
 }
 
 #endif // ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
+
+auto MediaControlsHost::sourceType() const -> std::optional<SourceType>
+{
+    if (!m_mediaElement)
+        return std::nullopt;
+
+    if (m_mediaElement->hasMediaStreamSource())
+        return SourceType::MediaStream;
+
+#if ENABLE(MANAGED_MEDIA_SOURCE)
+    if (m_mediaElement->hasManagedMediaSource())
+        return SourceType::ManagedMediaSource;
+#endif
+
+#if ENABLE(MEDIA_SOURCE)
+    if (m_mediaElement->hasMediaSource())
+        return SourceType::MediaSource;
+#endif
+
+    switch (m_mediaElement->movieLoadType()) {
+    case HTMLMediaElement::MovieLoadType::Unknown: return std::nullopt;
+    case HTMLMediaElement::MovieLoadType::Download: return SourceType::File;
+    case HTMLMediaElement::MovieLoadType::StoredStream: return SourceType::LiveStream;
+    case HTMLMediaElement::MovieLoadType::LiveStream: return SourceType::StoredStream;
+    case HTMLMediaElement::MovieLoadType::HttpLiveStream: return SourceType::HLS;
+    }
+
+    ASSERT_NOT_REACHED();
+    return std::nullopt;
+}
 
 #endif // ENABLE(MODERN_MEDIA_CONTROLS)
 

@@ -44,7 +44,7 @@
 
 namespace WebCore {
 
-std::unique_ptr<MediaRecorderPrivateAVFImpl> MediaRecorderPrivateAVFImpl::create(MediaStreamPrivate& stream, const MediaRecorderPrivateOptions& options)
+RefPtr<MediaRecorderPrivateAVFImpl> MediaRecorderPrivateAVFImpl::create(MediaStreamPrivate& stream, const MediaRecorderPrivateOptions& options)
 {
     // FIXME: we will need to implement support for multiple audio/video tracks
     // Currently we only choose the first track as the recorded track.
@@ -56,7 +56,7 @@ std::unique_ptr<MediaRecorderPrivateAVFImpl> MediaRecorderPrivateAVFImpl::create
     if (!writer)
         return nullptr;
 
-    auto recorder = std::unique_ptr<MediaRecorderPrivateAVFImpl>(new MediaRecorderPrivateAVFImpl(writer.releaseNonNull()));
+    auto recorder = adoptRef(*new MediaRecorderPrivateAVFImpl(writer.releaseNonNull()));
     if (selectedTracks.audioTrack) {
         recorder->setAudioSource(&selectedTracks.audioTrack->source());
         recorder->checkTrackState(*selectedTracks.audioTrack);
@@ -75,6 +75,7 @@ MediaRecorderPrivateAVFImpl::MediaRecorderPrivateAVFImpl(Ref<MediaRecorderPrivat
 
 MediaRecorderPrivateAVFImpl::~MediaRecorderPrivateAVFImpl()
 {
+    m_writer->close();
 }
 
 void MediaRecorderPrivateAVFImpl::startRecording(StartRecordingCallback&& callback)
@@ -106,7 +107,7 @@ void MediaRecorderPrivateAVFImpl::audioSamplesAvailable(const MediaTime& mediaTi
     if (shouldMuteAudio()) {
         if (!m_audioBuffer || m_description != toCAAudioStreamDescription(description)) {
             m_description = toCAAudioStreamDescription(description);
-            m_audioBuffer = makeUnique<WebAudioBufferList>(m_description, sampleCount);
+            m_audioBuffer = makeUnique<WebAudioBufferList>(*m_description, sampleCount);
         } else
             m_audioBuffer->setSampleCount(sampleCount);
         m_audioBuffer->zeroFlatBuffer();

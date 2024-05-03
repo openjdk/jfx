@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2008-2009 Torch Mobile, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include "ControlPart.h"
 #include "DashArray.h"
 #include "DestinationColorSpace.h"
 #include "FloatRect.h"
@@ -58,16 +59,31 @@ class GraphicsContextGL;
 class Path;
 class SystemImage;
 class TextRun;
+class VideoFrame;
+
+namespace DisplayList {
+class DrawNativeImage;
+}
 
 class GraphicsContext {
     WTF_MAKE_NONCOPYABLE(GraphicsContext); WTF_MAKE_FAST_ALLOCATED;
+    friend class BifurcatedGraphicsContext;
+    friend class DisplayList::DrawNativeImage;
+    friend class NativeImage;
+    friend class ImageBuffer;
 public:
     WEBCORE_EXPORT GraphicsContext(const GraphicsContextState::ChangeFlags& = { }, InterpolationQuality = InterpolationQuality::Default);
     WEBCORE_EXPORT GraphicsContext(const GraphicsContextState&);
     WEBCORE_EXPORT virtual ~GraphicsContext();
 
     virtual bool hasPlatformContext() const { return false; }
+#if !PLATFORM(JAVA)
     virtual PlatformGraphicsContext* platformContext() const { return nullptr; }
+#else
+    virtual PlatformGraphicsContext* platformContext() { return nullptr; }
+#endif
+
+    virtual const DestinationColorSpace& colorSpace() const { return DestinationColorSpace::SRGB(); }
 
     virtual bool paintingDisabled() const { return false; }
     virtual bool performingPaintInvalidation() const { return false; }
@@ -106,20 +122,15 @@ public:
     StrokeStyle strokeStyle() const { return m_state.strokeStyle(); }
     void setStrokeStyle(StrokeStyle style) { m_state.setStrokeStyle(style); didUpdateState(m_state); }
 
-    const DropShadow& dropShadow() const { return m_state.dropShadow(); }
-    FloatSize shadowOffset() const { return dropShadow().offset; }
-    float shadowBlur() const { return dropShadow().blurRadius; }
-    const Color& shadowColor() const { return dropShadow().color; }
-    void setDropShadow(const DropShadow& dropShadow) { m_state.setDropShadow(dropShadow); didUpdateState(m_state); }
-    void clearShadow() { setDropShadow({ }); }
+    std::optional<GraphicsDropShadow> dropShadow() const { return m_state.dropShadow(); }
+    void setDropShadow(const GraphicsDropShadow& dropShadow) { m_state.setStyle(dropShadow); didUpdateState(m_state); }
+    WEBCORE_EXPORT void clearShadow();
+    bool hasVisibleShadow() const;
+    bool hasBlurredShadow() const;
+    bool hasShadow() const;
 
-    // FIXME: Use dropShadow() and setDropShadow() instead of calling these functions.
-    WEBCORE_EXPORT bool getShadow(FloatSize&, float&, Color&) const;
-    void setShadow(const FloatSize& offset, float blurRadius, const Color& color, ShadowRadiusMode shadowRadiusMode = ShadowRadiusMode::Default) { setDropShadow({ offset, blurRadius, color, shadowRadiusMode }); }
-
-    bool hasVisibleShadow() const { return dropShadow().isVisible(); }
-    bool hasBlurredShadow() const { return dropShadow().isBlurred(); }
-    bool hasShadow() const { return dropShadow().hasOutsets(); }
+    std::optional<GraphicsStyle> style() const { return m_state.style(); }
+    void setStyle(const std::optional<GraphicsStyle>& style) { m_state.setStyle(style); didUpdateState(m_state); }
 
     CompositeMode compositeMode() const { return m_state.compositeMode(); }
     CompositeOperator compositeOperation() const { return compositeMode().operation; }
@@ -159,7 +170,8 @@ public:
 #endif
 
     virtual const GraphicsContextState& state() const { return m_state; }
-    void updateState(GraphicsContextState&, const std::optional<GraphicsContextState>& lastDrawingState = std::nullopt);
+    void mergeLastChanges(const GraphicsContextState&, const std::optional<GraphicsContextState>& lastDrawingState = std::nullopt);
+    void mergeAllChanges(const GraphicsContextState&);
 
     // Called *after* any change to GraphicsContextState; generally used to propagate changes
     // to the platform context's state.
@@ -176,11 +188,7 @@ public:
     virtual void applyFillPattern() = 0;
 
     // FIXME: Can we make this a why instead of a what, and then have it exist cross-platform?
-    virtual void setIsCALayerContext(bool) = 0;
     virtual bool isCALayerContext() const = 0;
-
-    // FIXME: Can this be a GraphicsContextCG constructor parameter? Or just be read off the context?
-    virtual void setIsAcceleratedContext(bool) = 0;
 #endif
 
     virtual RenderingMode renderingMode() const { return RenderingMode::Unaccelerated; }
@@ -191,7 +199,6 @@ public:
         RoundAllSides,
         RoundOriginAndDimensions
     };
-    virtual FloatRect roundToDevicePixels(const FloatRect&, RoundingMode = RoundAllSides) = 0;
     WEBCORE_EXPORT static void adjustLineToPixelBoundaries(FloatPoint& p1, FloatPoint& p2, float strokeWidth, StrokeStyle);
 
     // Shapes
@@ -234,7 +241,7 @@ public:
     virtual void setLineJoin(LineJoin) = 0;
     virtual void setMiterLimit(float) = 0;
 
-    // Images, Patterns, and Media
+    // Images, Patterns, ControlParts, and Media
 
     IntSize compatibleImageBufferSize(const FloatSize&) const;
 
@@ -246,13 +253,16 @@ public:
     WEBCORE_EXPORT virtual RefPtr<ImageBuffer> createAlignedImageBuffer(const FloatSize&, const DestinationColorSpace& = DestinationColorSpace::SRGB(), std::optional<RenderingMethod> = std::nullopt) const;
     WEBCORE_EXPORT virtual RefPtr<ImageBuffer> createAlignedImageBuffer(const FloatRect&, const DestinationColorSpace& = DestinationColorSpace::SRGB(), std::optional<RenderingMethod> = std::nullopt) const;
 
-    virtual void drawNativeImage(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& = { }) = 0;
+    WEBCORE_EXPORT void drawNativeImage(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& = { });
+
+    virtual bool needsCachedNativeImageInvalidationWorkaround(RenderingMode) { return true; }
+
 
     WEBCORE_EXPORT virtual void drawSystemImage(SystemImage&, const FloatRect&);
 
-    WEBCORE_EXPORT ImageDrawResult drawImage(Image&, const FloatPoint& destination, const ImagePaintingOptions& = { ImageOrientation::FromImage });
-    WEBCORE_EXPORT ImageDrawResult drawImage(Image&, const FloatRect& destination, const ImagePaintingOptions& = { ImageOrientation::FromImage });
-    WEBCORE_EXPORT virtual ImageDrawResult drawImage(Image&, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& = { ImageOrientation::FromImage });
+    WEBCORE_EXPORT ImageDrawResult drawImage(Image&, const FloatPoint& destination, const ImagePaintingOptions& = { ImageOrientation::Orientation::FromImage });
+    WEBCORE_EXPORT ImageDrawResult drawImage(Image&, const FloatRect& destination, const ImagePaintingOptions& = { ImageOrientation::Orientation::FromImage });
+    WEBCORE_EXPORT virtual ImageDrawResult drawImage(Image&, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& = { ImageOrientation::Orientation::FromImage });
 
     WEBCORE_EXPORT virtual ImageDrawResult drawTiledImage(Image&, const FloatRect& destination, const FloatPoint& source, const FloatSize& tileSize, const FloatSize& spacing, const ImagePaintingOptions& = { });
     WEBCORE_EXPORT virtual ImageDrawResult drawTiledImage(Image&, const FloatRect& destination, const FloatRect& source, const FloatSize& tileScaleFactor, Image::TileRule, Image::TileRule, const ImagePaintingOptions& = { });
@@ -263,19 +273,23 @@ public:
 
     WEBCORE_EXPORT void drawConsumingImageBuffer(RefPtr<ImageBuffer>, const FloatPoint& destination, const ImagePaintingOptions& = { });
     WEBCORE_EXPORT void drawConsumingImageBuffer(RefPtr<ImageBuffer>, const FloatRect& destination, const ImagePaintingOptions& = { });
-    WEBCORE_EXPORT virtual void drawConsumingImageBuffer(RefPtr<ImageBuffer>, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& = { });
+    WEBCORE_EXPORT void drawConsumingImageBuffer(RefPtr<ImageBuffer>, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& = { });
 
     WEBCORE_EXPORT virtual void drawFilteredImageBuffer(ImageBuffer* sourceImage, const FloatRect& sourceImageRect, Filter&, FilterResults&);
 
     virtual void drawPattern(NativeImage&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { }) = 0;
     WEBCORE_EXPORT virtual void drawPattern(ImageBuffer&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { });
 
+    WEBCORE_EXPORT virtual void drawControlPart(ControlPart&, const FloatRoundedRect& borderRect, float deviceScaleFactor, const ControlStyle&);
+
 #if ENABLE(VIDEO)
     WEBCORE_EXPORT virtual void paintFrameForMedia(MediaPlayer&, const FloatRect& destination);
+    WEBCORE_EXPORT virtual void paintVideoFrame(VideoFrame&, const FloatRect& destination, bool shouldDiscardAlpha);
 #endif
 
     // Clipping
 
+    virtual void resetClip() = 0;
     virtual void clip(const FloatRect&) = 0;
     WEBCORE_EXPORT virtual void clipRoundedRect(const FloatRoundedRect&);
 
@@ -283,7 +297,7 @@ public:
     virtual void clipOut(const Path&) = 0;
     WEBCORE_EXPORT virtual void clipOutRoundedRect(const FloatRoundedRect&);
     virtual void clipPath(const Path&, WindRule = WindRule::EvenOdd) = 0;
-    WEBCORE_EXPORT virtual void clipToImageBuffer(ImageBuffer&, const FloatRect&);
+    WEBCORE_EXPORT virtual void clipToImageBuffer(ImageBuffer&, const FloatRect&) = 0;
     WEBCORE_EXPORT virtual IntRect clipBounds() const;
 
     // Text
@@ -301,25 +315,20 @@ public:
     WEBCORE_EXPORT virtual void drawDecomposedGlyphs(const Font&, const DecomposedGlyphs&);
 
     WEBCORE_EXPORT FloatRect computeUnderlineBoundsForText(const FloatRect&, bool printing);
-    WEBCORE_EXPORT void drawLineForText(const FloatRect&, bool printing, bool doubleLines = false, StrokeStyle = SolidStroke);
-    virtual void drawLinesForText(const FloatPoint&, float thickness, const DashArray& widths, bool printing, bool doubleLines = false, StrokeStyle = SolidStroke) = 0;
+    WEBCORE_EXPORT void drawLineForText(const FloatRect&, bool printing, bool doubleLines = false, StrokeStyle = StrokeStyle::SolidStroke);
+    virtual void drawLinesForText(const FloatPoint&, float thickness, const DashArray& widths, bool printing, bool doubleLines = false, StrokeStyle = StrokeStyle::SolidStroke) = 0;
     virtual void drawDotsForDocumentMarker(const FloatRect&, DocumentMarkerLineStyle) = 0;
 
     // Transparency Layers
 
     WEBCORE_EXPORT virtual void beginTransparencyLayer(float opacity);
     WEBCORE_EXPORT virtual void endTransparencyLayer();
-    bool isInTransparencyLayer() const { return (m_transparencyLayerCount > 0) && supportsTransparencyLayers(); }
+    bool isInTransparencyLayer() const { return (m_transparencyLayerCount > 0); }
 
     // Focus Rings
 
-    virtual void drawFocusRing(const Vector<FloatRect>&, float width, float offset, const Color&) = 0;
-    virtual void drawFocusRing(const Path&, float width, float offset, const Color&) = 0;
-    // FIXME: Can we hide these in the CG implementation? Or elsewhere?
-#if PLATFORM(MAC)
-    virtual void drawFocusRing(const Path&, double timeOffset, bool& needsRedraw, const Color&) = 0;
-    virtual void drawFocusRing(const Vector<FloatRect>&, double timeOffset, bool& needsRedraw, const Color&) = 0;
-#endif
+    virtual void drawFocusRing(const Path&, float outlineWidth, const Color&) = 0;
+    virtual void drawFocusRing(const Vector<FloatRect>&, float outlineOffset, float outlineWidth, const Color&) = 0;
 
     // Transforms
 
@@ -356,7 +365,7 @@ public:
     // Contentful Paint Detection
 
     void setContentfulPaintDetected() { m_contentfulPaintDetected = true; }
-    bool contenfulPaintDetected() const { return m_contentfulPaintDetected; }
+    bool contentfulPaintDetected() const { return m_contentfulPaintDetected; }
 
     // FIXME: Nothing in this section belongs here, and should be moved elsewhere.
 #if OS(WINDOWS)
@@ -364,18 +373,12 @@ public:
     void releaseWindowsContext(HDC, const IntRect&, bool supportAlphaBlend); // The passed in HDC should be the one handed back by getWindowsContext.
 #endif
 
-#if OS(WINDOWS) && !USE(CAIRO)
-    // FIXME: This should not exist; we need a different place to
-    // put code shared between Windows CG and Windows Cairo backends.
-    virtual GraphicsContextPlatformPrivate* deprecatedPrivateContext() const { return nullptr; }
-#endif
-
 private:
-    virtual bool supportsTransparencyLayers() const { return true; }
+    virtual void drawNativeImageInternal(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& = { }) = 0;
 
 protected:
-    void fillEllipseAsPath(const FloatRect&);
-    void strokeEllipseAsPath(const FloatRect&);
+    WEBCORE_EXPORT void fillEllipseAsPath(const FloatRect&);
+    WEBCORE_EXPORT void strokeEllipseAsPath(const FloatRect&);
 
     FloatRect computeLineBoundsAndAntialiasingModeForText(const FloatRect&, bool printing, Color&);
 

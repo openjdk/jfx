@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -77,7 +77,7 @@ public:
     virtual ~GraphicsContextJava();
 
     bool hasPlatformContext() const override { return true; }
-    PlatformGraphicsContext* platformContext() const override;
+    PlatformGraphicsContext* platformContext() override;
 
     void savePlatformState();
     void restorePlatformState();
@@ -87,8 +87,8 @@ public:
     void drawRect(const FloatRect& rect, float) override;
     void drawLine(const FloatPoint& point1, const FloatPoint& point2) override;
     void drawEllipse(const FloatRect& rect) override;
-    void drawFocusRing(const Path&, float width, float offset, const Color&) override;
-    void drawFocusRing(const Vector<FloatRect>& rects, float width, float offset, const Color& color) override;
+    void drawFocusRing(const Path&, float outlineWidth, const Color&) override;
+    void drawFocusRing(const Vector<FloatRect>& rects, float outlineOffset, float outlineWidth, const Color& color) override;
     void drawLinesForText(const FloatPoint& origin, float thickness, const DashArray& widths, bool printing, bool, StrokeStyle) override;
     void drawLineForText(const FloatRect& rect, bool printing, bool doubleLines, StrokeStyle stroke);
     void drawDotsForDocumentMarker(const FloatRect& rect, DocumentMarkerLineStyle style) override;
@@ -107,17 +107,15 @@ public:
     void strokeRect(const FloatRect& rect, float lineWidth) override;
     void strokePath(const Path& path) override;
 
+    void resetClip() override;
     void clip(const FloatRect& rect) override;
     IntRect clipBounds() const override;
+    void clipToImageBuffer(ImageBuffer&, const FloatRect&) override;
     void clipPath(const Path &path, WindRule) override;
     void clipOut(const Path& path) override;
     void clipOut(const FloatRect& rect) override;
     void clearRect(const FloatRect& rect) override;
     void canvasClip(const Path& path, WindRule fillRule);
-
-    FloatRect roundToDevicePixels(const FloatRect& frect, RoundingMode) override;
-
-    bool supportsTransparencyLayers() const override;
     void beginTransparencyLayer(float opacity) override;
     void endTransparencyLayer() override;
 
@@ -149,7 +147,7 @@ public:
 
     void didUpdateState(GraphicsContextState&) override;
     void fillRoundedRectImpl(const FloatRoundedRect&, const Color&) override;
-    void drawNativeImage(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect,
+    void drawNativeImageInternal(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect,
                             const FloatRect& srcRect, const ImagePaintingOptions& = { }) override;
     /*void drawPattern(NativeImage&, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& tileRect,
                             const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing,

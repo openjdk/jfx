@@ -34,9 +34,12 @@ namespace WebCore {
 
 class Document;
 class Element;
-class MediaQueryEvaluator;
 class ShadowRoot;
 class StyleSheetContents;
+
+namespace MQ {
+class MediaQueryEvaluator;
+}
 
 namespace Style {
 
@@ -47,7 +50,7 @@ struct SelectorMatchingState;
 
 class Invalidator {
 public:
-    Invalidator(const Vector<StyleSheetContents*>&, const MediaQueryEvaluator&);
+    Invalidator(const Vector<StyleSheetContents*>&, const MQ::MediaQueryEvaluator&);
     Invalidator(const InvalidationRuleSetVector&);
 
     ~Invalidator();
@@ -67,7 +70,7 @@ public:
     static void invalidateHostAndSlottedStyleIfNeeded(ShadowRoot&);
 
 private:
-    enum class CheckDescendants { Yes, No };
+    enum class CheckDescendants : bool { No, Yes };
     CheckDescendants invalidateIfNeeded(Element&, SelectorMatchingState*);
     void invalidateStyleForTree(Element&, SelectorMatchingState*);
     void invalidateStyleForDescendants(Element&, SelectorMatchingState*);

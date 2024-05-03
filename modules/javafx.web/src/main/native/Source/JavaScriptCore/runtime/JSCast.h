@@ -69,6 +69,8 @@ struct JSTypeRange {
 
 template<typename>
 class JSGenericTypedArrayView;
+template<typename>
+class JSGenericResizableOrGrowableSharedTypedArrayView;
 struct Int8Adaptor;
 struct Int16Adaptor;
 struct Int32Adaptor;
@@ -93,6 +95,18 @@ using JSFloat64Array = JSGenericTypedArrayView<Float64Adaptor>;
 using JSBigInt64Array = JSGenericTypedArrayView<BigInt64Adaptor>;
 using JSBigUint64Array = JSGenericTypedArrayView<BigUint64Adaptor>;
 
+using JSResizableOrGrowableSharedInt8Array = JSGenericResizableOrGrowableSharedTypedArrayView<Int8Adaptor>;
+using JSResizableOrGrowableSharedInt16Array = JSGenericResizableOrGrowableSharedTypedArrayView<Int16Adaptor>;
+using JSResizableOrGrowableSharedInt32Array = JSGenericResizableOrGrowableSharedTypedArrayView<Int32Adaptor>;
+using JSResizableOrGrowableSharedUint8Array = JSGenericResizableOrGrowableSharedTypedArrayView<Uint8Adaptor>;
+using JSResizableOrGrowableSharedUint8ClampedArray = JSGenericResizableOrGrowableSharedTypedArrayView<Uint8ClampedAdaptor>;
+using JSResizableOrGrowableSharedUint16Array = JSGenericResizableOrGrowableSharedTypedArrayView<Uint16Adaptor>;
+using JSResizableOrGrowableSharedUint32Array = JSGenericResizableOrGrowableSharedTypedArrayView<Uint32Adaptor>;
+using JSResizableOrGrowableSharedFloat32Array = JSGenericResizableOrGrowableSharedTypedArrayView<Float32Adaptor>;
+using JSResizableOrGrowableSharedFloat64Array = JSGenericResizableOrGrowableSharedTypedArrayView<Float64Adaptor>;
+using JSResizableOrGrowableSharedBigInt64Array = JSGenericResizableOrGrowableSharedTypedArrayView<BigInt64Adaptor>;
+using JSResizableOrGrowableSharedBigUint64Array = JSGenericResizableOrGrowableSharedTypedArrayView<BigUint64Adaptor>;
+
 #define FOR_EACH_JS_DYNAMIC_CAST_JS_TYPE_OVERLOAD_NON_FORWARD_DECLARED(macro) \
     /* TypedArrays are typedef, thus, we cannot use `class` forward declaration */ \
     macro(JSInt8Array, JSType::Int8ArrayType, JSType::Int8ArrayType) \
@@ -110,6 +124,9 @@ using JSBigUint64Array = JSGenericTypedArrayView<BigUint64Adaptor>;
 #define FOR_EACH_JS_DYNAMIC_CAST_JS_TYPE_OVERLOAD_FORWARD_DECLARED(macro) \
     macro(JSImmutableButterfly, JSType::JSImmutableButterflyType, JSType::JSImmutableButterflyType) \
     macro(JSStringIterator, JSType::JSStringIteratorType, JSType::JSStringIteratorType) \
+    macro(JSString, JSType::StringType, JSType::StringType) \
+    macro(JSBigInt, JSType::HeapBigIntType, JSType::HeapBigIntType) \
+    macro(Symbol, JSType::SymbolType, JSType::SymbolType) \
     macro(JSObject, FirstObjectType, LastObjectType) \
     macro(JSFinalObject, JSType::FinalObjectType, JSType::FinalObjectType) \
     macro(JSFunction, JSType::JSFunctionType, JSType::JSFunctionType) \
@@ -120,7 +137,7 @@ using JSBigUint64Array = JSGenericTypedArrayView<BigUint64Adaptor>;
     macro(JSArrayBuffer, JSType::ArrayBufferType, JSType::ArrayBufferType) \
     macro(JSArrayBufferView, FirstTypedArrayType, LastTypedArrayType) \
     macro(JSPromise, JSType::JSPromiseType, JSType::JSPromiseType) \
-    macro(JSProxy, JSType::PureForwardingProxyType, JSType::PureForwardingProxyType) \
+    macro(JSGlobalProxy, JSType::GlobalProxyType, JSType::GlobalProxyType) \
     macro(JSSet, JSType::JSSetType, JSType::JSSetType) \
     macro(JSMap, JSType::JSMapType, JSType::JSMapType) \
     macro(JSWeakSet, JSType::JSWeakSetType, JSType::JSWeakSetType) \
@@ -129,6 +146,7 @@ using JSBigUint64Array = JSGenericTypedArrayView<BigUint64Adaptor>;
     macro(ProxyObject, JSType::ProxyObjectType, JSType::ProxyObjectType) \
     macro(RegExpObject, JSType::RegExpObjectType, JSType::RegExpObjectType) \
     macro(JSWebAssemblyModule, JSType::WebAssemblyModuleType, JSType::WebAssemblyModuleType) \
+    macro(JSWebAssemblyInstance, JSType::WebAssemblyInstanceType, JSType::WebAssemblyInstanceType) \
     macro(DirectArguments, JSType::DirectArgumentsType, JSType::DirectArgumentsType) \
     macro(FunctionExecutable, JSType::FunctionExecutableType, JSType::FunctionExecutableType) \
     macro(ScopedArguments, JSType::ScopedArgumentsType, JSType::ScopedArgumentsType) \
@@ -139,7 +157,7 @@ using JSBigUint64Array = JSGenericTypedArrayView<BigUint64Adaptor>;
     macro(JSModuleEnvironment, JSType::ModuleEnvironmentType, JSType::ModuleEnvironmentType) \
     macro(JSLexicalEnvironment, JSType::LexicalEnvironmentType, JSType::ModuleEnvironmentType) \
     macro(JSSymbolTableObject, JSType::GlobalObjectType, JSType::ModuleEnvironmentType) \
-    macro(JSScope, JSType::GlobalObjectType, JSType::WithScopeType) \
+    macro(JSScope, FirstScopeType, LastScopeType) \
     macro(StringObject, JSType::StringObjectType, JSType::DerivedStringObjectType) \
     macro(ShadowRealmObject, JSType::ShadowRealmType, JSType::ShadowRealmType) \
     macro(JSDataView, JSType::DataViewType, JSType::DataViewType) \

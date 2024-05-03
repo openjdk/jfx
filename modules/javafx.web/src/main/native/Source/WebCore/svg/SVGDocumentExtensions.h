@@ -23,9 +23,7 @@
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
-#include <wtf/RobinHoodHashMap.h>
 #include <wtf/WeakHashSet.h>
-#include <wtf/text/AtomStringHash.h>
 
 namespace WebCore {
 
@@ -38,6 +36,7 @@ class SVGResourcesCache;
 class SVGSMILElement;
 class SVGSVGElement;
 class SVGUseElement;
+class WeakPtrImplWithEventTargetData;
 
 class SVGDocumentExtensions {
     WTF_MAKE_NONCOPYABLE(SVGDocumentExtensions); WTF_MAKE_FAST_ALLOCATED;
@@ -47,10 +46,7 @@ public:
 
     void addTimeContainer(SVGSVGElement&);
     void removeTimeContainer(SVGSVGElement&);
-
-    void addResource(const AtomString& id, RenderSVGResourceContainer&);
-    void removeResource(const AtomString& id);
-    RenderSVGResourceContainer* resourceById(const AtomString& id) const;
+    WEBCORE_EXPORT Vector<Ref<SVGSVGElement>> allSVGSVGElements() const;
 
     void startAnimations();
     void pauseAnimations();
@@ -69,39 +65,19 @@ public:
     void clearTargetDependencies(SVGElement&);
     void rebuildAllElementReferencesForTarget(SVGElement&);
 
-    const WeakHashSet<SVGFontFaceElement>& svgFontFaceElements() const { return m_svgFontFaceElements; }
+    const WeakHashSet<SVGFontFaceElement, WeakPtrImplWithEventTargetData>& svgFontFaceElements() const { return m_svgFontFaceElements; }
     void registerSVGFontFaceElement(SVGFontFaceElement&);
     void unregisterSVGFontFaceElement(SVGFontFaceElement&);
 
 private:
     Document& m_document;
-    WeakHashSet<SVGSVGElement> m_timeContainers; // For SVG 1.2 support this will need to be made more general.
-    WeakHashSet<SVGFontFaceElement> m_svgFontFaceElements;
-    MemoryCompactRobinHoodHashMap<AtomString, RenderSVGResourceContainer*> m_resources;
-    MemoryCompactRobinHoodHashMap<AtomString, WeakHashSet<Element>> m_pendingResources; // Resources that are pending.
-    MemoryCompactRobinHoodHashMap<AtomString, WeakHashSet<Element>> m_pendingResourcesForRemoval; // Resources that are pending and scheduled for removal.
+    WeakHashSet<SVGSVGElement, WeakPtrImplWithEventTargetData> m_timeContainers; // For SVG 1.2 support this will need to be made more general.
+    WeakHashSet<SVGFontFaceElement, WeakPtrImplWithEventTargetData> m_svgFontFaceElements;
     std::unique_ptr<SVGResourcesCache> m_resourcesCache;
 
     Vector<Ref<SVGElement>> m_rebuildElements;
     bool m_areAnimationsPaused;
 
-public:
-    // This HashMap contains a list of pending resources. Pending resources, are such
-    // which are referenced by any object in the SVG document, but do NOT exist yet.
-    // For instance, dynamically build gradients / patterns / clippers...
-    void addPendingResource(const AtomString& id, Element&);
-    bool isIdOfPendingResource(const AtomString& id) const;
-    bool isPendingResource(Element&, const AtomString& id) const;
-    void clearHasPendingResourcesIfPossible(Element&);
-    void removeElementFromPendingResources(Element&);
-    WeakHashSet<Element> removePendingResource(const AtomString& id) { return m_pendingResources.take(id); }
-
-    // The following two functions are used for scheduling a pending resource to be removed.
-    void markPendingResourcesForRemoval(const AtomString&);
-    RefPtr<Element> takeElementFromPendingResourcesForRemovalMap(const AtomString&);
-
-private:
-    bool isElementWithPendingResources(Element&) const;
 };
 
 } // namespace WebCore

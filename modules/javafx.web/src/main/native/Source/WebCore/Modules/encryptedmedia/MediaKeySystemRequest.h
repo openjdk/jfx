@@ -28,7 +28,7 @@
 
 #include "ActiveDOMObject.h"
 #include "IDLTypes.h"
-#include "JSDOMPromiseDeferred.h"
+#include "JSDOMPromiseDeferredForward.h"
 #include "MediaKeySystemRequestIdentifier.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
@@ -51,7 +51,7 @@ public:
     MediaKeySystemRequestIdentifier identifier() const { return m_identifier; }
     WEBCORE_EXPORT void start();
 
-    WEBCORE_EXPORT void allow(CompletionHandler<void()>&&);
+    WEBCORE_EXPORT void allow();
     WEBCORE_EXPORT void deny(const String& errorMessage = emptyString());
 
     WEBCORE_EXPORT SecurityOrigin* topLevelDocumentOrigin() const;

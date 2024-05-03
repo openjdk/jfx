@@ -26,11 +26,10 @@
 #include "config.h"
 #include "FloatingState.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "LayoutContainingBlockChainIterator.h"
 #include "LayoutInitialContainingBlock.h"
-#include "LayoutState.h"
+#include "RenderStyleInlines.h"
+#include "Shape.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -38,57 +37,101 @@ namespace Layout {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(FloatingState);
 
-FloatingState::FloatItem::FloatItem(const Box& layoutBox, BoxGeometry absoluteBoxGeometry)
+FloatingState::FloatItem::FloatItem(const Box& layoutBox, Position position, const BoxGeometry& absoluteBoxGeometry, LayoutPoint localTopLeft)
     : m_layoutBox(layoutBox)
-    , m_position(layoutBox.isLeftFloatingPositioned() ? Position::Left : Position::Right)
+    , m_position(position)
     , m_absoluteBoxGeometry(absoluteBoxGeometry)
+    , m_localTopLeft(localTopLeft)
+    , m_shape(layoutBox.shape())
 {
 }
 
-FloatingState::FloatItem::FloatItem(Position position, BoxGeometry absoluteBoxGeometry)
+FloatingState::FloatItem::FloatItem(Position position, const BoxGeometry& absoluteBoxGeometry, LayoutPoint localTopLeft, const Shape* shape)
     : m_position(position)
     , m_absoluteBoxGeometry(absoluteBoxGeometry)
+    , m_localTopLeft(localTopLeft)
+    , m_shape(shape)
 {
 }
 
-FloatingState::FloatingState(LayoutState& layoutState, const ContainerBox& formattingContextRoot)
-    : m_layoutState(layoutState)
-    , m_formattingContextRoot(formattingContextRoot)
+BoxGeometry FloatingState::FloatItem::boxGeometry() const
 {
+    auto boxGeometry = BoxGeometry { m_absoluteBoxGeometry };
+    boxGeometry.setLogicalTopLeft(m_localTopLeft);
+    return boxGeometry;
 }
 
-void FloatingState::append(FloatItem floatItem)
+FloatingState::FloatItem::~FloatItem() = default;
+
+FloatingState::FloatingState(const ElementBox& blockFormattingContextRoot)
+    : m_blockFormattingContextRoot(blockFormattingContextRoot)
+    , m_isLeftToRightDirection(blockFormattingContextRoot.style().isLeftToRightDirection())
 {
+    ASSERT(blockFormattingContextRoot.establishesBlockFormattingContext());
+}
+
+void FloatingState::append(FloatItem newFloatItem)
+{
+    auto isLeftPositioned = newFloatItem.isLeftPositioned();
+    m_positionTypes.add(isLeftPositioned ? PositionType::Left : PositionType::Right);
+
     if (m_floats.isEmpty())
-        return m_floats.append(floatItem);
+        return m_floats.append(newFloatItem);
 
     // The integration codepath does not construct a layout box for the float item.
-    ASSERT_IMPLIES(floatItem.floatBox(), m_floats.findIf([&] (auto& entry) {
-        return entry.floatBox() == floatItem.floatBox();
+    ASSERT_IMPLIES(newFloatItem.layoutBox(), m_floats.findIf([&] (auto& entry) {
+        return entry.layoutBox() == newFloatItem.layoutBox();
     }) == notFound);
 
-    auto isLeftPositioned = floatItem.isLeftPositioned();
     // When adding a new float item to the list, we have to ensure that it is definitely the left(right)-most item.
     // Normally it is, but negative horizontal margins can push the float box beyond another float box.
     // Float items in m_floats list should stay in horizontal position order (left/right edge) on the same vertical position.
-    auto horizontalMargin = floatItem.horizontalMargin();
+    auto horizontalMargin = newFloatItem.horizontalMargin();
     auto hasNegativeHorizontalMargin = (isLeftPositioned && horizontalMargin.start < 0) || (!isLeftPositioned && horizontalMargin.end < 0);
     if (!hasNegativeHorizontalMargin)
-        return m_floats.append(floatItem);
+        return m_floats.append(newFloatItem);
 
-    for (int i = m_floats.size() - 1; i >= 0; --i) {
+    for (size_t i = m_floats.size(); i--;) {
         auto& floatItem = m_floats[i];
         if (isLeftPositioned != floatItem.isLeftPositioned())
             continue;
-        if (floatItem.rectWithMargin().top() < floatItem.rectWithMargin().bottom())
-            continue;
-        if ((isLeftPositioned && floatItem.rectWithMargin().right() >= floatItem.rectWithMargin().right())
-            || (!isLeftPositioned && floatItem.rectWithMargin().left() <= floatItem.rectWithMargin().left()))
-            return m_floats.insert(i + 1, floatItem);
+
+        auto isHorizontallyOrdered = [&] {
+            if (newFloatItem.absoluteRectWithMargin().top() > floatItem.absoluteRectWithMargin().top()) {
+                // There's no more floats on this vertical position.
+                return true;
     }
-    return m_floats.insert(0, floatItem);
+            return (isLeftPositioned && newFloatItem.absoluteRectWithMargin().right() >= floatItem.absoluteRectWithMargin().right())
+                || (!isLeftPositioned && newFloatItem.absoluteRectWithMargin().left() <= floatItem.absoluteRectWithMargin().left());
+        };
+        if (isHorizontallyOrdered())
+            return m_floats.insert(i + 1, newFloatItem);
+    }
+    m_floats.insert(0, newFloatItem);
+}
+
+bool FloatingState::FloatItem::isInFormattingContextOf(const ElementBox& formattingContextRoot) const
+{
+    ASSERT(formattingContextRoot.establishesFormattingContext());
+    ASSERT(!is<InitialContainingBlock>(m_layoutBox));
+    for (auto& containingBlock : containingBlockChain(*m_layoutBox)) {
+        if (&containingBlock == &formattingContextRoot)
+            return true;
+    }
+    ASSERT_NOT_REACHED();
+    return false;
+}
+
+void FloatingState::clear()
+{
+    m_floats.clear();
+    m_positionTypes = { };
+}
+
+void FloatingState::shrinkToFit()
+{
+    m_floats.shrinkToFit();
 }
 
 }
 }
-#endif

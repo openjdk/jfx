@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -62,12 +62,6 @@ JSWebAssemblyTable::JSWebAssemblyTable(VM& vm, Structure* structure, Ref<Wasm::T
 {
 }
 
-void JSWebAssemblyTable::finishCreation(VM& vm)
-{
-    Base::finishCreation(vm);
-    ASSERT(inherits(info()));
-}
-
 void JSWebAssemblyTable::destroy(JSCell* cell)
 {
     static_cast<JSWebAssemblyTable*>(cell)->JSWebAssemblyTable::~JSWebAssemblyTable();
@@ -127,7 +121,7 @@ JSObject* JSWebAssemblyTable::type(JSGlobalObject* globalObject)
     JSString* elementString = nullptr;
     switch (element) {
     case Wasm::TableElementType::Funcref:
-        elementString = jsNontrivialString(vm, "anyfunc"_s);
+        elementString = jsNontrivialString(vm, "funcref"_s);
         break;
     case Wasm::TableElementType::Externref:
         elementString = jsNontrivialString(vm, "externref"_s);

@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include "CSSNumericValue.h"
 #include <wtf/RefCounted.h>
 #include <wtf/text/StringConcatenateNumbers.h>
@@ -53,6 +51,10 @@ public:
     RefPtr<CSSUnitValue> convertTo(CSSUnitType) const;
     static CSSUnitType parseUnit(const String& unit);
 
+    RefPtr<CSSValue> toCSSValue() const final;
+    RefPtr<CSSValue> toCSSValueWithProperty(CSSPropertyID) const final;
+    RefPtr<CSSCalcExpressionNode> toCalcExpressionNode() const final;
+
 private:
     CSSUnitValue(double, CSSUnitType);
 
@@ -69,5 +71,3 @@ private:
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSUnitValue)
 static bool isType(const WebCore::CSSStyleValue& styleValue) { return styleValue.getType() == WebCore::CSSStyleValueType::CSSUnitValue; }
 SPECIALIZE_TYPE_TRAITS_END()
-
-#endif

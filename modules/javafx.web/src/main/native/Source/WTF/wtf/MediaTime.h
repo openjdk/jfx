@@ -74,7 +74,6 @@ public:
     MediaTime operator*(int32_t) const;
     bool operator<(const MediaTime& rhs) const { return compare(rhs) == LessThan; }
     bool operator>(const MediaTime& rhs) const { return compare(rhs) == GreaterThan; }
-    bool operator!=(const MediaTime& rhs) const { return compare(rhs) != EqualTo; }
     bool operator==(const MediaTime& rhs) const { return compare(rhs) == EqualTo; }
     bool operator>=(const MediaTime& rhs) const { return compare(rhs) >= EqualTo; }
     bool operator<=(const MediaTime& rhs) const { return compare(rhs) <= EqualTo; }
@@ -135,9 +134,6 @@ public:
 
     MediaTime toTimeScale(uint32_t, RoundingFlags = RoundingFlags::HalfAwayFromZero) const;
 
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, MediaTime&);
-
 private:
     void setTimeScale(uint32_t, RoundingFlags = RoundingFlags::HalfAwayFromZero);
 
@@ -189,20 +185,6 @@ struct WTF_EXPORT_PRIVATE MediaTimeRange {
     const MediaTime start;
     const MediaTime end;
 };
-
-template<class Encoder>
-void MediaTime::encode(Encoder& encoder) const
-{
-    encoder << m_timeValue << m_timeScale << m_timeFlags;
-}
-
-template<class Decoder>
-bool MediaTime::decode(Decoder& decoder, MediaTime& time)
-{
-    return decoder.decode(time.m_timeValue)
-        && decoder.decode(time.m_timeScale)
-        && decoder.decode(time.m_timeFlags);
-}
 
 template<typename> struct LogArgument;
 

@@ -164,12 +164,12 @@ struct HashAndUTF8CharactersTranslator {
         UChar* target;
         auto newString = StringImpl::createUninitialized(buffer.utf16Length, target);
 
-        bool isAllASCII;
+        bool containsOnlyASCII;
         const char* source = buffer.characters;
-        if (!convertUTF8ToUTF16(source, source + buffer.length, &target, target + buffer.utf16Length, &isAllASCII))
+        if (!convertUTF8ToUTF16(source, source + buffer.length, &target, target + buffer.utf16Length, &containsOnlyASCII))
             RELEASE_ASSERT_NOT_REACHED();
 
-        if (isAllASCII)
+        if (containsOnlyASCII)
             newString = StringImpl::create(buffer.characters, buffer.length);
 
         auto* pointer = &newString.leakRef();
@@ -188,6 +188,17 @@ RefPtr<AtomStringImpl> AtomStringImpl::add(const UChar* characters, unsigned len
         return static_cast<AtomStringImpl*>(StringImpl::empty());
 
     UCharBuffer buffer { characters, length };
+    return addToStringTable<UCharBuffer, UCharBufferTranslator>(buffer);
+}
+
+RefPtr<AtomStringImpl> AtomStringImpl::add(HashTranslatorCharBuffer<UChar>& buffer)
+{
+    if (!buffer.characters)
+        return nullptr;
+
+    if (!buffer.length)
+        return static_cast<AtomStringImpl*>(StringImpl::empty());
+
     return addToStringTable<UCharBuffer, UCharBufferTranslator>(buffer);
 }
 
@@ -294,6 +305,17 @@ struct BufferFromStaticDataTranslator {
         location = pointer;
     }
 };
+
+RefPtr<AtomStringImpl> AtomStringImpl::add(HashTranslatorCharBuffer<LChar>& buffer)
+{
+    if (!buffer.characters)
+        return nullptr;
+
+    if (!buffer.length)
+        return static_cast<AtomStringImpl*>(StringImpl::empty());
+
+    return addToStringTable<LCharBuffer, LCharBufferTranslator>(buffer);
+}
 
 RefPtr<AtomStringImpl> AtomStringImpl::add(const LChar* characters, unsigned length)
 {
@@ -445,7 +467,7 @@ Ref<AtomStringImpl> AtomStringImpl::addSlowCase(AtomStringTable& stringTable, St
 // When removing a string from the table, we know it's already the one in the table, so no need for a string equality check.
 struct AtomStringTableRemovalHashTranslator {
     static unsigned hash(AtomStringImpl* string) { return string->hash(); }
-    static bool equal(const AtomStringTable::StringEntry& a, AtomStringImpl* b) { return a.get() == b; }
+    static bool equal(const AtomStringTable::StringEntry& a, AtomStringImpl* b) { return a == b; }
 };
 
 void AtomStringImpl::remove(AtomStringImpl* string)

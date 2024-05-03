@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,8 @@
 #import "GlassMacros.h"
 #import "GlassPasteboard.h"
 #import "GlassDragSource.h"
+
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 // UTF-16 code points for surrogate pairs
 #define HIGH_SURROGATE_START 0xD800
@@ -144,7 +146,8 @@ static inline jbyteArray ByteArrayFromPixels(JNIEnv *env, void *data, size_t wid
 {
     jbyteArray javaArray = NULL;
 
-    if (data != NULL)
+    if ((data != NULL) && (width > 0) && (height > 0) &&
+        (width <= ((INT_MAX / 4) - 2) / height))
     {
         jsize length = 4*(jsize)(width*height);
 
@@ -624,7 +627,13 @@ JNIEXPORT jbyteArray JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getItemAs
 
                     size_t width = CGImageGetWidth(cgImage);
                     size_t height = CGImageGetHeight(cgImage);
-                    uint32_t *pixels = malloc(4*width*height);
+                    uint32_t *pixels = NULL;
+                    if (width > 0 && height > 0 &&
+                        width <= (INT_MAX / 4) / height)
+                    {
+                        pixels = malloc(4 * width * height);
+                    }
+
                     if (pixels != NULL)
                     {
                         CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
@@ -760,7 +769,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1putItemsFromAr
         seed = [pasteboard clearContents];
 
         jsize itemCount = (*env)->GetArrayLength(env, jObjects);
-        //NSLog(@"Java_com_sun_glass_ui_mac_MacPasteboard__1putItems itemCount: %d", itemCount);
+        LOG(@"Java_com_sun_glass_ui_mac_MacPasteboard__1putItems itemCount: %d", itemCount);
         if (itemCount > 0)
         {
             NSMutableArray *objects = [NSMutableArray arrayWithCapacity:(NSUInteger)itemCount];
@@ -775,12 +784,33 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1putItemsFromAr
                 }
             }
 
-            // http://developer.apple.com/library/mac/#documentation/cocoa/Conceptual/PasteboardGuide106/Articles/pbCustom.html
-            [pasteboard writeObjects:objects];
-
-            if (pasteboard == [NSPasteboard pasteboardWithName:NSDragPboard])
+            // We perform a Drag-n-Drop only when our pasteboard is a DnD pasteboard
+            // and if drag delegate was set. The latter one is set when DnD operation
+            // came from a NSView (ex. mouse drag).
+            if ([[pasteboard name] isEqualToString:NSDragPboard] && [GlassDragSource isDelegateSet])
             {
-                [GlassDragSource flushWithMask:supportedActions];
+                // DnD requires separate NSDragging* calls to work since macOS 10.7
+                // convert NSPasteboardItem-s array to NSDraggingItem-s
+                NSMutableArray<NSDraggingItem*> *dItems = [NSMutableArray<NSDraggingItem*> arrayWithCapacity:itemCount];
+                for (NSPasteboardItem* i in objects)
+                {
+                    [dItems addObject:[[NSDraggingItem alloc] initWithPasteboardWriter:i]];
+                }
+
+                // New DnD API (macOS 10.7+) requires us to skip writing data to Pasteboard.
+                // It handles managing the pasteboard separately on its own.
+                [GlassDragSource flushWithMask:supportedActions withItems:dItems];
+
+                for (NSDraggingItem* i in dItems)
+                {
+                    [i release];
+                }
+            }
+            else
+            {
+                // previous write to pasteboard for compatibility
+                // http://developer.apple.com/library/mac/#documentation/cocoa/Conceptual/PasteboardGuide106/Articles/pbCustom.html
+                [pasteboard writeObjects:objects];
             }
         }
     }

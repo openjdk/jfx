@@ -25,9 +25,11 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
+#include "InlineDamage.h"
+#include "InlineDisplayContent.h"
+#include "InlineFormattingState.h"
 #include <optional>
+#include <wtf/Forward.h>
 
 namespace WebCore {
 
@@ -36,27 +38,36 @@ class RenderStyle;
 namespace Layout {
 
 class Box;
-class InlineDamage;
 class InlineTextBox;
+class InlineFormattingState;
+struct DamagedLine;
 
 class InlineInvalidation {
 public:
-    InlineInvalidation(InlineDamage&);
+    InlineInvalidation(InlineDamage&, const InlineItems&, const InlineDisplay::Content&);
 
     void styleChanged(const Box&, const RenderStyle& oldStyle);
 
-    void textInserted(const InlineTextBox&, std::optional<size_t> offset, std::optional<size_t> length);
-    void textWillBeRemoved(const InlineTextBox&, std::optional<size_t> offset, std::optional<size_t> length);
+    bool textInserted(const InlineTextBox& newOrDamagedInlineTextBox, std::optional<size_t> offset = { });
+    bool textWillBeRemoved(const InlineTextBox&, std::optional<size_t> offset = { });
 
-    void inlineLevelBoxInserted(const Box&);
-    void inlineLevelBoxWillBeRemoved(const Box&);
+    bool inlineLevelBoxInserted(const Box&);
+    bool inlineLevelBoxWillBeRemoved(const Box&);
 
     void horizontalConstraintChanged();
 
 private:
+    enum class ShouldApplyRangeLayout : bool { No, Yes };
+    void updateInlineDamage(InlineDamage::Type, std::optional<DamagedLine>, ShouldApplyRangeLayout = ShouldApplyRangeLayout::No);
+    bool applyFullDamageIfNeeded(const Box&);
+    const InlineDisplay::Boxes& displayBoxes() const { return m_displayContent.boxes; }
+    const InlineDisplay::Lines& displayLines() const { return m_displayContent.lines; }
+
     InlineDamage& m_inlineDamage;
+
+    const InlineItems& m_inlineItems;
+    const InlineDisplay::Content& m_displayContent;
 };
 
 }
 }
-#endif

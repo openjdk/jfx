@@ -29,9 +29,9 @@
 #include "AudioSession.h"
 #include "HTMLMediaElement.h"
 #include "MediaPlayer.h"
+#include "MediaStrategy.h"
 #include "PlatformMediaSessionManager.h"
-#include "PlatformScreen.h"
-#include <JavaScriptCore/Options.h>
+#include "PlatformStrategies.h"
 #include <wtf/NeverDestroyed.h>
 
 #if PLATFORM(COCOA)
@@ -40,48 +40,11 @@
 
 namespace WebCore {
 
-DeprecatedGlobalSettings::DeprecatedGlobalSettings()
-{
-#if PLATFORM(WATCHOS)
-    m_isWebSocketEnabled = false;
-#endif
-#if USE(AVFOUNDATION)
-    m_AVFoundationEnabled = true;
-#endif
-
-#if USE(GSTREAMER)
-    m_GStreamerEnabled = true;
-#endif
-#if PLATFORM(WIN)
-    m_shouldUseHighResolutionTimers = true;
-#endif
-#if PLATFORM(IOS_FAMILY)
-    m_networkDataUsageTrackingEnabled = false;
-    m_shouldOptOutOfNetworkStateObservation = false;
-    m_disableScreenSizeOverride = false;
-#endif
-
-    m_mockScrollbarsEnabled = false;
-    m_usesOverlayScrollbars = false;
-    m_lowPowerVideoAudioBufferSizeEnabled = false;
-    m_resourceLoadStatisticsEnabledEnabled = false;
-    m_allowsAnySSLCertificate = false;
-}
-
-DeprecatedGlobalSettings::~DeprecatedGlobalSettings() = default;
-
 DeprecatedGlobalSettings& DeprecatedGlobalSettings::shared()
 {
     static NeverDestroyed<DeprecatedGlobalSettings> deprecatedGlobalSettings;
     return deprecatedGlobalSettings;
 }
-
-#if ENABLE(TOUCH_EVENTS)
-bool DeprecatedGlobalSettings::touchEventsEnabled()
-{
-    return shared().m_touchEventsEnabled.value_or(screenHasTouchDevice());
-}
-#endif
 
 #if ENABLE(VORBIS)
 void DeprecatedGlobalSettings::setVorbisDecoderEnabled(bool isEnabled)
@@ -109,15 +72,6 @@ void DeprecatedGlobalSettings::setMediaSourceInlinePaintingEnabled(bool isEnable
 }
 #endif
 
-#if HAVE(AVCONTENTKEYSPECIFIER)
-void DeprecatedGlobalSettings::setSampleBufferContentKeySessionSupportEnabled(bool enabled)
-{
-    shared().m_sampleBufferContentKeySessionSupportEnabled = enabled;
-    MediaSessionManagerCocoa::setSampleBufferContentKeySessionSupportEnabled(enabled);
-}
-#endif
-
-
 #if PLATFORM(WIN)
 void DeprecatedGlobalSettings::setShouldUseHighResolutionTimers(bool shouldUseHighResolutionTimers)
 {
@@ -132,7 +86,7 @@ void DeprecatedGlobalSettings::setAVFoundationEnabled(bool enabled)
         return;
 
     shared().m_AVFoundationEnabled = enabled;
-    HTMLMediaElement::resetMediaEngines();
+    platformStrategies()->mediaStrategy().resetMediaEngines();
 }
 #endif
 
@@ -145,7 +99,7 @@ void DeprecatedGlobalSettings::setGStreamerEnabled(bool enabled)
     shared().m_GStreamerEnabled = enabled;
 
 #if ENABLE(VIDEO)
-    HTMLMediaElement::resetMediaEngines();
+    platformStrategies()->mediaStrategy().resetMediaEngines();
 #endif
 }
 #endif
@@ -160,30 +114,15 @@ void DeprecatedGlobalSettings::setMockScrollbarsEnabled(bool flag)
     // FIXME: This should update scroll bars in existing pages.
 }
 
-bool DeprecatedGlobalSettings::mockScrollbarsEnabled()
-{
-    return shared().m_mockScrollbarsEnabled;
-}
-
 void DeprecatedGlobalSettings::setUsesOverlayScrollbars(bool flag)
 {
     shared().m_usesOverlayScrollbars = flag;
     // FIXME: This should update scroll bars in existing pages.
 }
 
-bool DeprecatedGlobalSettings::usesOverlayScrollbars()
+void DeprecatedGlobalSettings::setTrackingPreventionEnabled(bool flag)
 {
-    return shared().m_usesOverlayScrollbars;
-}
-
-void DeprecatedGlobalSettings::setLowPowerVideoAudioBufferSizeEnabled(bool flag)
-{
-    shared().m_lowPowerVideoAudioBufferSizeEnabled = flag;
-}
-
-void DeprecatedGlobalSettings::setResourceLoadStatisticsEnabled(bool flag)
-{
-    shared().m_resourceLoadStatisticsEnabledEnabled = flag;
+    shared().m_trackingPreventionEnabled = flag;
 }
 
 #if PLATFORM(IOS_FAMILY)
@@ -202,19 +141,9 @@ void DeprecatedGlobalSettings::setNetworkDataUsageTrackingEnabled(bool trackingE
     shared().m_networkDataUsageTrackingEnabled = trackingEnabled;
 }
 
-bool DeprecatedGlobalSettings::networkDataUsageTrackingEnabled()
-{
-    return shared().m_networkDataUsageTrackingEnabled;
-}
-
 void DeprecatedGlobalSettings::setNetworkInterfaceName(const String& networkInterfaceName)
 {
     shared().m_networkInterfaceName = networkInterfaceName;
-}
-
-const String& DeprecatedGlobalSettings::networkInterfaceName()
-{
-    return shared().m_networkInterfaceName;
 }
 #endif
 

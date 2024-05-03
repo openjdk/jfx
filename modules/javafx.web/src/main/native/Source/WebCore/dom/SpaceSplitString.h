@@ -101,9 +101,9 @@ public:
     SpaceSplitString() = default;
 
     enum class ShouldFoldCase : bool { No, Yes };
-    SpaceSplitString(const AtomString& string, ShouldFoldCase shouldFoldCase) { set(string, shouldFoldCase); }
+    SpaceSplitString(const AtomString&, ShouldFoldCase);
 
-    bool operator!=(const SpaceSplitString& other) const { return m_data != other.m_data; }
+    bool operator==(const SpaceSplitString& other) const { return m_data == other.m_data; }
 
     void set(const AtomString&, ShouldFoldCase);
     void clear() { m_data = nullptr; }
@@ -124,5 +124,10 @@ public:
 private:
     RefPtr<SpaceSplitStringData> m_data;
 };
+
+inline SpaceSplitString::SpaceSplitString(const AtomString& string, ShouldFoldCase shouldFoldCase)
+    : m_data(!string.isEmpty() ? SpaceSplitStringData::create(shouldFoldCase == ShouldFoldCase::Yes ? string.convertToASCIILowercase() : string) : nullptr)
+{
+}
 
 } // namespace WebCore

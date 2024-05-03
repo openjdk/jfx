@@ -51,8 +51,8 @@ public:
     {
     }
 
-    unsigned length() { return 1; }
-    bool is8Bit() { return true; }
+    unsigned length() const { return 1; }
+    bool is8Bit() const { return true; }
     template<typename CharacterType> void writeTo(CharacterType* destination) const { *destination = m_character; }
 
 private:
@@ -191,7 +191,7 @@ public:
     bool is8Bit() const { return !m_string || m_string->is8Bit(); }
     template<typename CharacterType> void writeTo(CharacterType* destination) const
     {
-        StringView { m_string }.getCharactersWithUpconvert(destination);
+        StringView { m_string }.getCharacters(destination);
         WTF_STRINGTYPEADAPTER_COPIED_WTF_STRING();
     }
 
@@ -234,7 +234,7 @@ public:
     bool is8Bit() const { return m_string.is8Bit(); }
     template<typename CharacterType> void writeTo(CharacterType* destination) const
     {
-        StringView { m_string }.getCharactersWithUpconvert(destination);
+        StringView { m_string }.getCharacters(destination);
         WTF_STRINGTYPEADAPTER_COPIED_WTF_STRING();
     }
 
@@ -358,17 +358,17 @@ public:
     {
     }
 
-    unsigned length()
+    unsigned length() const
     {
         return m_indentation.value * N;
     }
 
-    bool is8Bit()
+    bool is8Bit() const
     {
         return true;
     }
 
-    template<typename CharacterType> void writeTo(CharacterType* destination)
+    template<typename CharacterType> void writeTo(CharacterType* destination) const
     {
         std::fill_n(destination, m_indentation.value * N, ' ');
     }

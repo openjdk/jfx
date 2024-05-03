@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (C) 2007 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,21 +27,17 @@
 
 #include "ResourceResponse.h"
 #include "SharedBuffer.h"
-#include <wtf/RefPtr.h>
 #include <wtf/URL.h>
 
 namespace WebCore {
 
-    class SubstituteData {
-    public:
-        enum class SessionHistoryVisibility : bool {
-            Visible,
-            Hidden,
-        };
+enum class SessionHistoryVisibility : bool { Visible, Hidden };
 
-        SubstituteData()
-        {
-        }
+class SubstituteData {
+public:
+    using SessionHistoryVisibility = WebCore::SessionHistoryVisibility;
+
+    SubstituteData() = default;
 
         SubstituteData(RefPtr<FragmentedSharedBuffer>&& content, const URL& failingURL, const ResourceResponse& response, SessionHistoryVisibility shouldRevealToSessionHistory)
             : m_content(WTFMove(content))
@@ -52,54 +48,19 @@ namespace WebCore {
         }
 
         bool isValid() const { return m_content != nullptr; }
-        bool shouldRevealToSessionHistory() const { return m_shouldRevealToSessionHistory == SessionHistoryVisibility::Visible; }
+    SessionHistoryVisibility shouldRevealToSessionHistory() const { return m_shouldRevealToSessionHistory; }
 
-        const FragmentedSharedBuffer* content() const { return m_content.get(); }
+    const RefPtr<FragmentedSharedBuffer>& content() const { return m_content; }
         const String& mimeType() const { return m_response.mimeType(); }
         const String& textEncoding() const { return m_response.textEncodingName(); }
         const URL& failingURL() const { return m_failingURL; }
         const ResourceResponse& response() const { return m_response; }
 
-        template<class Encoder> void encode(Encoder&) const;
-        template<class Decoder> static std::optional<SubstituteData> decode(Decoder&);
-
-    private:
+private:
         RefPtr<FragmentedSharedBuffer> m_content;
         URL m_failingURL;
         ResourceResponse m_response;
         SessionHistoryVisibility m_shouldRevealToSessionHistory { SessionHistoryVisibility::Hidden };
-    };
-
-template<class Encoder>
-void SubstituteData::encode(Encoder& encoder) const
-{
-    encoder << m_content << m_failingURL << m_response << m_shouldRevealToSessionHistory;
-}
-
-template<class Decoder>
-std::optional<SubstituteData> SubstituteData::decode(Decoder& decoder)
-{
-    std::optional<RefPtr<FragmentedSharedBuffer>> content;
-    decoder >> content;
-    if (!content)
-        return std::nullopt;
-
-    std::optional<URL> failingURL;
-    decoder >> failingURL;
-    if (!failingURL)
-        return std::nullopt;
-
-    std::optional<ResourceResponse> response;
-    decoder >> response;
-    if (!response)
-        return std::nullopt;
-
-    std::optional<SessionHistoryVisibility> shouldRevealToSessionHistory;
-    decoder >> shouldRevealToSessionHistory;
-    if (!shouldRevealToSessionHistory)
-        return std::nullopt;
-
-    return { { WTFMove(*content), *failingURL, *response, *shouldRevealToSessionHistory } };
-}
+};
 
 } // namespace WebCore

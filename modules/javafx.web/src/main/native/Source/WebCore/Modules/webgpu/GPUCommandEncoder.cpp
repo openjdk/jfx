@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -88,10 +88,10 @@ void GPUCommandEncoder::copyTextureToTexture(
 
 void GPUCommandEncoder::clearBuffer(
     const GPUBuffer& buffer,
-    GPUSize64 offset,
+    std::optional<GPUSize64> offset,
     std::optional<GPUSize64> size)
 {
-    m_backing->clearBuffer(buffer.backing(), offset, size);
+    m_backing->clearBuffer(buffer.backing(), offset.value_or(0), size);
 }
 
 void GPUCommandEncoder::pushDebugGroup(String&& groupLabel)
@@ -124,7 +124,7 @@ void GPUCommandEncoder::resolveQuerySet(
     m_backing->resolveQuerySet(querySet.backing(), firstQuery, queryCount, destination.backing(), destinationOffset);
 }
 
-static PAL::WebGPU::CommandBufferDescriptor convertToBacking(const std::optional<GPUCommandBufferDescriptor>& commandBufferDescriptor)
+static WebGPU::CommandBufferDescriptor convertToBacking(const std::optional<GPUCommandBufferDescriptor>& commandBufferDescriptor)
 {
     if (!commandBufferDescriptor)
         return { };

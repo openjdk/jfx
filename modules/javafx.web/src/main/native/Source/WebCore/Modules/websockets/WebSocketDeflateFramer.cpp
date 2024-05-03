@@ -48,17 +48,23 @@ private:
     String handshakeString() final;
     bool processResponse(const HashMap<String, String>&) final;
     String failureReason() final { return m_failureReason; }
-
+#if !PLATFORM(JAVA)
     WebSocketDeflateFramer& m_framer;
     bool m_responseProcessed { false };
+#endif
     String m_failureReason;
 };
 
 // FXIME: Remove vendor prefix after the specification matured.
 WebSocketExtensionDeflateFrame::WebSocketExtensionDeflateFrame(WebSocketDeflateFramer& framer)
     : WebSocketExtensionProcessor("x-webkit-deflate-frame"_s)
+#if !PLATFORM(JAVA)
     , m_framer(framer)
+#endif
 {
+#if PLATFORM(JAVA)
+     UNUSED_PARAM(framer);
+#endif
 }
 
 String WebSocketExtensionDeflateFrame::handshakeString()
@@ -106,6 +112,7 @@ bool WebSocketExtensionDeflateFrame::processResponse(const HashMap<String, Strin
     m_framer.enableDeflate(windowBits, mode);
     return true;
 #else
+    UNUSED_PARAM(serverParameters);
     return false;
 #endif
 }
@@ -176,6 +183,7 @@ std::unique_ptr<DeflateResultHolder> WebSocketDeflateFramer::deflate(WebSocketFr
     frame.payloadLength = m_deflater->size();
     return result;
 #else
+    UNUSED_PARAM(frame);
     return makeUnique<DeflateResultHolder>(*this);
 #endif
 }

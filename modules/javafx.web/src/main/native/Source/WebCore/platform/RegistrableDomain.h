@@ -45,15 +45,18 @@ public:
     }
 
     explicit RegistrableDomain(const SecurityOriginData& origin)
-        : RegistrableDomain(registrableDomainFromHost(origin.host))
+        : RegistrableDomain(registrableDomainFromHost(origin.host()))
     {
     }
 
+    static RegistrableDomain fromRawString(String&& origin)
+    {
+        return RegistrableDomain(WTFMove(origin));
+    }
+
     bool isEmpty() const { return m_registrableDomain.isEmpty() || m_registrableDomain == "nullOrigin"_s; }
-    String& string() { return m_registrableDomain; }
     const String& string() const { return m_registrableDomain; }
 
-    bool operator!=(const RegistrableDomain& other) const { return m_registrableDomain != other.m_registrableDomain; }
     bool operator==(const RegistrableDomain& other) const { return m_registrableDomain == other.m_registrableDomain; }
     bool operator==(ASCIILiteral other) const { return m_registrableDomain == other; }
 
@@ -64,7 +67,7 @@ public:
 
     bool matches(const SecurityOriginData& origin) const
     {
-        return matches(origin.host);
+        return matches(origin.host());
     }
 
     RegistrableDomain isolatedCopy() const & { return RegistrableDomain { m_registrableDomain.isolatedCopy() }; }
@@ -97,11 +100,6 @@ public:
         return uncheckedCreateFromRegistrableDomainString(host);
 #endif
     }
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<RegistrableDomain> decode(Decoder&);
-
-protected:
 
 private:
     explicit RegistrableDomain(String&& domain)
@@ -136,25 +134,6 @@ private:
 
     String m_registrableDomain;
 };
-
-template<class Encoder>
-void RegistrableDomain::encode(Encoder& encoder) const
-{
-    encoder << m_registrableDomain;
-}
-
-template<class Decoder>
-std::optional<RegistrableDomain> RegistrableDomain::decode(Decoder& decoder)
-{
-    std::optional<String> domain;
-    decoder >> domain;
-    if (!domain)
-        return std::nullopt;
-
-    RegistrableDomain registrableDomain;
-    registrableDomain.m_registrableDomain = WTFMove(*domain);
-    return registrableDomain;
-}
 
 inline bool areRegistrableDomainsEqual(const URL& a, const URL& b)
 {

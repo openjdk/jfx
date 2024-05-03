@@ -22,6 +22,7 @@
 #include "config.h"
 #include "SVGFETurbulenceElement.h"
 
+#include "NodeName.h"
 #include "SVGNames.h"
 #include "SVGParserUtilities.h"
 #include <wtf/IsoMallocInlines.h>
@@ -32,7 +33,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFETurbulenceElement);
 
 inline SVGFETurbulenceElement::SVGFETurbulenceElement(const QualifiedName& tagName, Document& document)
-    : SVGFilterPrimitiveStandardAttributes(tagName, document)
+    : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::feTurbulenceTag));
 
@@ -51,60 +52,59 @@ Ref<SVGFETurbulenceElement> SVGFETurbulenceElement::create(const QualifiedName& 
     return adoptRef(*new SVGFETurbulenceElement(tagName, document));
 }
 
-void SVGFETurbulenceElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGFETurbulenceElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == SVGNames::typeAttr) {
-        TurbulenceType propertyValue = SVGPropertyTraits<TurbulenceType>::fromString(value);
+    switch (name.nodeName()) {
+    case AttributeNames::typeAttr: {
+        TurbulenceType propertyValue = SVGPropertyTraits<TurbulenceType>::fromString(newValue);
         if (propertyValue != TurbulenceType::Unknown)
             m_type->setBaseValInternal<TurbulenceType>(propertyValue);
-        return;
+        break;
     }
-
-    if (name == SVGNames::stitchTilesAttr) {
-        SVGStitchOptions propertyValue = SVGPropertyTraits<SVGStitchOptions>::fromString(value);
+    case AttributeNames::stitchTilesAttr: {
+        SVGStitchOptions propertyValue = SVGPropertyTraits<SVGStitchOptions>::fromString(newValue);
         if (propertyValue > 0)
             m_stitchTiles->setBaseValInternal<SVGStitchOptions>(propertyValue);
-        return;
+        break;
     }
-
-    if (name == SVGNames::baseFrequencyAttr) {
-        if (auto result = parseNumberOptionalNumber(value)) {
+    case AttributeNames::baseFrequencyAttr:
+        if (auto result = parseNumberOptionalNumber(newValue)) {
             m_baseFrequencyX->setBaseValInternal(result->first);
             m_baseFrequencyY->setBaseValInternal(result->second);
         }
-        return;
+        break;
+    case AttributeNames::seedAttr:
+        m_seed->setBaseValInternal(newValue.toFloat());
+        break;
+    case AttributeNames::numOctavesAttr:
+        m_numOctaves->setBaseValInternal(parseInteger<unsigned>(newValue).value_or(0));
+        break;
+    default:
+        break;
     }
-
-    if (name == SVGNames::seedAttr) {
-        m_seed->setBaseValInternal(value.toFloat());
-        return;
-    }
-
-    if (name == SVGNames::numOctavesAttr) {
-        m_numOctaves->setBaseValInternal(parseInteger<unsigned>(value).value_or(0));
-        return;
-    }
-
-    SVGFilterPrimitiveStandardAttributes::parseAttribute(name, value);
+    SVGFilterPrimitiveStandardAttributes::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
-bool SVGFETurbulenceElement::setFilterEffectAttribute(FilterEffect& effect, const QualifiedName& attrName)
+bool SVGFETurbulenceElement::setFilterEffectAttribute(FilterEffect& filterEffect, const QualifiedName& attrName)
 {
-    auto& feTurbulence = downcast<FETurbulence>(effect);
-    if (attrName == SVGNames::typeAttr)
-        return feTurbulence.setType(type());
-    if (attrName == SVGNames::stitchTilesAttr)
-        return feTurbulence.setStitchTiles(stitchTiles());
-    if (attrName == SVGNames::baseFrequencyAttr) {
-        bool baseFrequencyXChanged = feTurbulence.setBaseFrequencyX(baseFrequencyX());
-        bool baseFrequencyYChanged = feTurbulence.setBaseFrequencyY(baseFrequencyY());
+    auto& effect = downcast<FETurbulence>(filterEffect);
+    switch (attrName.nodeName()) {
+    case AttributeNames::typeAttr:
+        return effect.setType(type());
+    case AttributeNames::stitchTilesAttr:
+        return effect.setStitchTiles(stitchTiles());
+    case AttributeNames::baseFrequencyAttr: {
+        bool baseFrequencyXChanged = effect.setBaseFrequencyX(baseFrequencyX());
+        bool baseFrequencyYChanged = effect.setBaseFrequencyY(baseFrequencyY());
         return baseFrequencyXChanged || baseFrequencyYChanged;
     }
-    if (attrName == SVGNames::seedAttr)
-        return feTurbulence.setSeed(seed());
-    if (attrName == SVGNames::numOctavesAttr)
-        return feTurbulence.setNumOctaves(numOctaves());
-
+    case AttributeNames::seedAttr:
+        return effect.setSeed(seed());
+    case AttributeNames::numOctavesAttr:
+        return effect.setNumOctaves(numOctaves());
+    default:
+        break;
+    }
     ASSERT_NOT_REACHED();
     return false;
 }

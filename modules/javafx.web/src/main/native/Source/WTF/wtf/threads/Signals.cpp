@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -84,6 +84,10 @@ void SignalHandlers::add(Signal signal, SignalHandler&& handler)
     // partially initialized handler.
     storeStoreFence();
     numberOfHandlers[signalIndex]++;
+#if HAVE(MACH_EXCEPTIONS)
+    RELEASE_ASSERT(initState >= InitState::InitializedHandlerThread);
+    initState = InitState::AddedHandlers;
+#endif
     loadLoadFence();
 }
 
@@ -107,13 +111,28 @@ inline void SignalHandlers::forEachHandler(Signal signal, const Func& func) cons
 
 static constexpr size_t maxMessageSize = 1 * KB;
 
-void startMachExceptionHandlerThread()
+void initMachExceptionHandlerThread(bool enable)
 {
     static std::once_flag once;
-    std::call_once(once, [] {
+    std::call_once(once, [=] {
+        RELEASE_ASSERT(g_wtfConfig.signalHandlers.initState == SignalHandlers::InitState::Uninitialized);
+        g_wtfConfig.signalHandlers.initState = SignalHandlers::InitState::InitializedHandlerThread;
+
+        if (!enable || !g_wtfConfig.signalHandlers.useMach)
+            return;
+
         Config::AssertNotFrozenScope assertScope;
         SignalHandlers& handlers = g_wtfConfig.signalHandlers;
-        kern_return_t kr = mach_port_allocate(mach_task_self(), MACH_PORT_RIGHT_RECEIVE, &handlers.exceptionPort);
+
+        uint16_t flags = 0;
+#ifdef MPO_PROVISIONAL_ID_PROT_OPTOUT
+        flags |= MPO_PROVISIONAL_ID_PROT_OPTOUT;
+#endif
+        mach_port_options_t opts = {
+            .flags = flags
+        };
+
+        kern_return_t kr = mach_port_construct(mach_task_self(), &opts, 0, &handlers.exceptionPort);
         RELEASE_ASSERT(kr == KERN_SUCCESS);
         kr = mach_port_insert_right(mach_task_self(), handlers.exceptionPort, handlers.exceptionPort, MACH_MSG_TYPE_MAKE_SEND);
         RELEASE_ASSERT(kr == KERN_SUCCESS);
@@ -297,23 +316,56 @@ inline void setExceptionPorts(const AbstractLocker& threadGroupLocker, Thread& t
 
 static ThreadGroup& activeThreads()
 {
-    static LazyNeverDestroyed<std::shared_ptr<ThreadGroup>> activeThreads;
+    static LazyNeverDestroyed<Ref<ThreadGroup>> activeThreads;
     static std::once_flag initializeKey;
     std::call_once(initializeKey, [&] {
         Config::AssertNotFrozenScope assertScope;
         activeThreads.construct(ThreadGroup::create());
     });
-    return (*activeThreads.get());
+    return activeThreads.get();
 }
 
 void registerThreadForMachExceptionHandling(Thread& thread)
 {
+    RELEASE_ASSERT(g_wtfConfig.signalHandlers.initState == SignalHandlers::InitState::AddedHandlers);
     Locker locker { activeThreads().getLock() };
     if (activeThreads().add(locker, thread) == ThreadGroupAddResult::NewlyAdded)
         setExceptionPorts(locker, thread);
 }
 
 #endif // HAVE(MACH_EXCEPTIONS)
+
+inline std::tuple<int, std::optional<int>> toSystemSignal(Signal signal)
+{
+    switch (signal) {
+    case Signal::AccessFault: return std::make_tuple(SIGSEGV, SIGBUS);
+    case Signal::IllegalInstruction: return std::make_tuple(SIGILL, std::nullopt);
+    case Signal::Usr: return std::make_tuple(SIGUSR2, std::nullopt);
+    case Signal::FloatingPoint: return std::make_tuple(SIGFPE, std::nullopt);
+    case Signal::Breakpoint: return std::make_tuple(SIGTRAP, std::nullopt);
+#if !OS(DARWIN)
+    case Signal::Abort: return std::make_tuple(SIGABRT, std::nullopt);
+#endif
+    default: break;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+inline Signal fromSystemSignal(int signal)
+{
+    switch (signal) {
+    case SIGSEGV: return Signal::AccessFault;
+    case SIGBUS: return Signal::AccessFault;
+    case SIGFPE: return Signal::FloatingPoint;
+    case SIGTRAP: return Signal::Breakpoint;
+    case SIGILL: return Signal::IllegalInstruction;
+    case SIGUSR2: return Signal::Usr;
+#if !OS(DARWIN)
+    case SIGABRT: return Signal::Abort;
+#endif
+    default: return Signal::Unknown;
+    }
+}
 
 inline size_t offsetForSystemSignal(int sig)
 {
@@ -329,10 +381,8 @@ void addSignalHandler(Signal signal, SignalHandler&& handler)
     SignalHandlers& handlers = g_wtfConfig.signalHandlers;
     ASSERT(signal < Signal::Unknown);
     ASSERT(!handlers.useMach || signal != Signal::Usr);
-
 #if HAVE(MACH_EXCEPTIONS)
-    if (handlers.useMach)
-        startMachExceptionHandlerThread();
+    RELEASE_ASSERT(handlers.initState >= SignalHandlers::InitState::InitializedHandlerThread);
 #endif
 
     static std::once_flag initializeOnceFlags[static_cast<size_t>(Signal::NumberOfSignals)];
@@ -364,6 +414,7 @@ void activateSignalHandlersFor(Signal signal)
     UNUSED_PARAM(signal);
 #if HAVE(MACH_EXCEPTIONS)
     const SignalHandlers& handlers = g_wtfConfig.signalHandlers;
+    RELEASE_ASSERT(handlers.initState >= SignalHandlers::InitState::InitializedHandlerThread);
     ASSERT(signal < Signal::Unknown);
     ASSERT(!handlers.useMach || signal != Signal::Usr);
 

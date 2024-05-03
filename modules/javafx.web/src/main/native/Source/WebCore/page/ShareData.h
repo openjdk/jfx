@@ -30,11 +30,13 @@
 
 namespace WebCore {
 
+enum class ShareDataOriginator : bool { Web, User };
+
 struct ShareData {
     String title;
     String text;
     String url;
-    Vector<RefPtr<File>> files;
+    Vector<RefPtr<File>> files { };
 };
 
 struct RawFile {
@@ -46,6 +48,7 @@ struct ShareDataWithParsedURL {
     ShareData shareData;
     std::optional<URL> url;
     Vector<RawFile> files;
+    ShareDataOriginator originator;
 };
 
 }

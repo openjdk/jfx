@@ -100,8 +100,6 @@ public class TableCell<S,T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
-    // package for testing
-    boolean lockItemOnEdit = false;
 
 
     /* *************************************************************************
@@ -319,12 +317,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
             return;
         }
 
-        // We check the boolean lockItemOnEdit field here, as whilst we want to
-        // updateItem normally, when it comes to unit tests we can't have the
-        // item change in all circumstances.
-        if (! lockItemOnEdit) {
-            updateItem(-1);
-        }
+        updateItem(-1);
 
         // it makes sense to get the cell into its editing state before firing
         // the event to listeners below, so that's what we're doing here
@@ -361,6 +354,16 @@ public class TableCell<S,T> extends IndexedCell<T> {
         super.commitEdit(newValue);
 
         final TableView<S> table = getTableView();
+        boolean tableShouldRequestFocus = false;
+
+        if (table != null) {
+            // The cell is going to be updated, and the current focus owner might be removed from it.
+            // Before that happens, check if it has the table as a parent (otherwise the user might have
+            // clicked out of the table entirely and given focus to something else), so the table can
+            // request the focus back, once the edit commit ends.
+            tableShouldRequestFocus = ControlUtils.controlShouldRequestFocusIfCurrentFocusOwnerIsChild(table);
+        }
+
         // JDK-8187307: fire the commit after updating cell's editing state
         if (getTableColumn() != null) {
             // Inform the TableColumn of the edit being ready to be committed.
@@ -374,18 +377,19 @@ public class TableCell<S,T> extends IndexedCell<T> {
             Event.fireEvent(getTableColumn(), editEvent);
         }
 
-        // update the item within this cell, so that it represents the new value
-        updateItem(newValue, false);
+        // Update the item within this cell, so that it represents the new value
+        updateItem(-1);
 
         if (table != null) {
             // reset the editing cell on the TableView
             table.edit(-1, null);
 
             // request focus back onto the table, only if the current focus
-            // owner has the table as a parent (otherwise the user might have
-            // clicked out of the table entirely and given focus to something else.
+            // owner had the table as a parent.
             // It would be rude of us to request it back again.
-            ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(table);
+            if (tableShouldRequestFocus) {
+                table.requestFocus();
+            }
         }
     }
 
@@ -401,7 +405,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
             if (updateEditingIndex) table.edit(-1, null);
             // request focus back onto the table, only if the current focus
             // owner has the table as a parent (otherwise the user might have
-            // clicked out of the table entirely and given focus to something else.
+            // clicked out of the table entirely and given focus to something else).
             // It would be rude of us to request it back again.
             ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(table);
         }

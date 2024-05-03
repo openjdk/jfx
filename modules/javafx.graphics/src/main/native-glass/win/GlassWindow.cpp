@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -165,29 +165,6 @@ void GlassWindow::setMaxSize(long width, long height)
 {
     m_maxSize.x = width;
     m_maxSize.y = height;
-}
-
-void GlassWindow::updateMinMaxSize(RECT &windowRect)
-{
-    if (m_minSize.x >= 0) {
-        // min size has been set
-        if (windowRect.right - windowRect.left < m_minSize.x) {
-            windowRect.right = windowRect.left + m_minSize.x;
-        }
-        if (windowRect.bottom - windowRect.top < m_minSize.y) {
-            windowRect.bottom = windowRect.top + m_minSize.y;
-        }
-    }
-    if (m_maxSize.x >= 0) {
-        // max size has been set
-        if (windowRect.right - windowRect.left > m_maxSize.x) {
-            windowRect.right = windowRect.left + m_maxSize.x;
-        }
-        if (windowRect.bottom - windowRect.top > m_maxSize.y) {
-            windowRect.bottom = windowRect.top + m_maxSize.y;
-        }
-    }
-
 }
 
 void GlassWindow::SetFocusable(bool isFocusable)
@@ -1556,6 +1533,13 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1setBounds
                        cw > 0 ? cw + is.right + is.left : r.right - r.left;
         int newH = h > 0 ? h :
                        ch > 0 ? ch + is.bottom + is.top : r.bottom - r.top;
+
+        POINT minSize = pWindow->getMinSize();
+        POINT maxSize = pWindow->getMaxSize();
+        if (minSize.x >= 0) newW = max(newW, minSize.x);
+        if (minSize.y >= 0) newH = max(newH, minSize.y);
+        if (maxSize.x >= 0) newW = min(newW, maxSize.x);
+        if (maxSize.y >= 0) newH = min(newH, maxSize.y);
 
         if (xSet || ySet) {
             ::SetWindowPos(hWnd, NULL, newX, newY, newW, newH,

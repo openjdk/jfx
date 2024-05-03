@@ -41,29 +41,25 @@ using namespace Unicode;
 
 // Construct a string with UTF-16 data.
 String::String(const UChar* characters, unsigned length)
+    : m_impl(characters ? RefPtr { StringImpl::create(characters, length) } : nullptr)
 {
-    if (characters)
-        m_impl = StringImpl::create(characters, length);
 }
 
 // Construct a string with latin1 data.
 String::String(const LChar* characters, unsigned length)
+    : m_impl(characters ? RefPtr { StringImpl::create(characters, length) } : nullptr)
 {
-    if (characters)
-        m_impl = StringImpl::create(characters, length);
 }
 
 String::String(const char* characters, unsigned length)
+    : m_impl(characters ? RefPtr { StringImpl::create(reinterpret_cast<const LChar*>(characters), length) } : nullptr)
 {
-    if (characters)
-        m_impl = StringImpl::create(reinterpret_cast<const LChar*>(characters), length);
 }
 
 // Construct a string with Latin-1 data, from a null-terminated source.
 String::String(const char* nullTerminatedString)
+    : m_impl(nullTerminatedString ? RefPtr { StringImpl::createFromCString(nullTerminatedString) } : nullptr)
 {
-    if (nullTerminatedString)
-        m_impl = StringImpl::createFromCString(nullTerminatedString);
 }
 
 int codePointCompare(const String& a, const String& b)
@@ -78,6 +74,18 @@ UChar32 String::characterStartingAt(unsigned i) const
     return m_impl->characterStartingAt(i);
 }
 
+String makeStringByJoining(std::span<const String> strings, const String& separator)
+{
+    StringBuilder builder;
+    for (const auto& string : strings) {
+        if (builder.isEmpty())
+            builder.append(string);
+        else
+            builder.append(separator, string);
+    }
+    return builder.toString();
+}
+
 String makeStringByRemoving(const String& string, unsigned position, unsigned lengthToRemove)
 {
     if (!lengthToRemove)
@@ -88,12 +96,6 @@ String makeStringByRemoving(const String& string, unsigned position, unsigned le
     lengthToRemove = std::min(lengthToRemove, length - position);
     StringView view { string };
     return makeString(view.left(position), view.substring(position + lengthToRemove));
-}
-
-String String::substring(unsigned position, unsigned length) const
-{
-    // FIXME: Should this function, and the many others like it, be inlined?
-    return m_impl ? m_impl->substring(position, length) : String { };
 }
 
 String String::substringSharingImpl(unsigned offset, unsigned length) const
@@ -151,30 +153,10 @@ String String::convertToUppercaseWithLocale(const AtomString& localeIdentifier) 
     return m_impl ? m_impl->convertToUppercaseWithLocale(localeIdentifier) : String { };
 }
 
-String String::stripWhiteSpace() const
+String String::trim(CodeUnitMatchFunction predicate) const
 {
     // FIXME: Should this function, and the many others like it, be inlined?
-    // FIXME: This function needs a new name. For one thing, "whitespace" is a single
-    // word so the "s" should be lowercase. For another, it's not clear from this name
-    // that the function uses the Unicode definition of whitespace. Most WebKit callers
-    // don't want that and eventually we should consider deleting this.
-    return m_impl ? m_impl->stripWhiteSpace() : String { };
-}
-
-String String::stripLeadingAndTrailingCharacters(CodeUnitMatchFunction predicate) const
-{
-    // FIXME: Should this function, and the many others like it, be inlined?
-    return m_impl ? m_impl->stripLeadingAndTrailingCharacters(predicate) : String { };
-}
-
-String String::simplifyWhiteSpace() const
-{
-    // FIXME: Should this function, and the many others like it, be inlined?
-    // FIXME: This function needs a new name. For one thing, "whitespace" is a single
-    // word so the "s" should be lowercase. For another, it's not clear from this name
-    // that the function uses the Unicode definition of whitespace. Most WebKit callers
-    // don't want that and eventually we should consider deleting this.
-    return m_impl ? m_impl->simplifyWhiteSpace() : String { };
+    return m_impl ? m_impl->trim(predicate) : String { };
 }
 
 String String::simplifyWhiteSpace(CodeUnitMatchFunction isWhiteSpace) const
@@ -198,7 +180,7 @@ Vector<UChar> String::charactersWithoutNullTermination() const
 
         if (is8Bit()) {
             const LChar* characters8 = m_impl->characters8();
-            for (size_t i = 0; i < length(); ++i)
+            for (unsigned i = 0; i < length(); ++i)
                 result.uncheckedAppend(characters8[i]);
         } else {
             const UChar* characters16 = m_impl->characters16();
@@ -459,59 +441,47 @@ CString String::latin1() const
     return result;
 }
 
-Expected<CString, UTF8ConversionError> String::tryGetUtf8(ConversionMode mode) const
+Expected<CString, UTF8ConversionError> String::tryGetUTF8(ConversionMode mode) const
 {
-    return m_impl ? m_impl->tryGetUtf8(mode) : CString { "", 0 };
+    return m_impl ? m_impl->tryGetUTF8(mode) : CString { "", 0 };
 }
 
-Expected<CString, UTF8ConversionError> String::tryGetUtf8() const
+Expected<CString, UTF8ConversionError> String::tryGetUTF8() const
 {
-    return tryGetUtf8(LenientConversion);
+    return tryGetUTF8(LenientConversion);
 }
 
 CString String::utf8(ConversionMode mode) const
 {
-    Expected<CString, UTF8ConversionError> expectedString = tryGetUtf8(mode);
+    Expected<CString, UTF8ConversionError> expectedString = tryGetUTF8(mode);
     RELEASE_ASSERT(expectedString);
     return expectedString.value();
 }
 
-CString String::utf8() const
+String String::make8Bit(const UChar* source, unsigned length)
 {
-    return utf8(LenientConversion);
-}
-
-String String::make8BitFrom16BitSource(const UChar* source, size_t length)
-{
-    if (!length)
-        return String();
-
     LChar* destination;
     String result = String::createUninitialized(length, destination);
-
-    copyLCharsFromUCharSource(destination, source, length);
-
+    StringImpl::copyCharacters(destination, source, length);
     return result;
 }
 
-String String::make16BitFrom8BitSource(const LChar* source, size_t length)
+void String::convertTo16Bit()
 {
-    if (!length)
-        return String();
-
+    if (isNull() || !is8Bit())
+        return;
+    auto length = this->length();
     UChar* destination;
-    String result = String::createUninitialized(length, destination);
-
-    StringImpl::copyCharacters(destination, source, length);
-
-    return result;
+    auto convertedString = String::createUninitialized(length, destination);
+    StringImpl::copyCharacters(destination, characters8(), length);
+    *this = WTFMove(convertedString);
 }
 
 template<bool replaceInvalidSequences>
 String fromUTF8Impl(const LChar* stringStart, size_t length)
 {
-    if (length > StringImplShape::MaxLength)
-        CRASH();
+    // Do this assertion before chopping the size_t down to unsigned.
+    RELEASE_ASSERT(length <= String::MaxLength);
 
     if (!stringStart)
         return String();
@@ -561,8 +531,11 @@ String String::fromUTF8(const CString& s)
 String String::fromUTF8WithLatin1Fallback(const LChar* string, size_t size)
 {
     String utf8 = fromUTF8(string, size);
-    if (!utf8)
+    if (!utf8) {
+        // Do this assertion before chopping the size_t down to unsigned.
+        RELEASE_ASSERT(size <= String::MaxLength);
         return String(string, size);
+    }
     return utf8;
 }
 
@@ -581,7 +554,7 @@ template<typename CharacterType, TrailingJunkPolicy policy>
 static inline double toDoubleType(const CharacterType* data, size_t length, bool* ok, size_t& parsedLength)
 {
     size_t leadingSpacesLength = 0;
-    while (leadingSpacesLength < length && isASCIISpace(data[leadingSpacesLength]))
+    while (leadingSpacesLength < length && isUnicodeCompatibleASCIIWhitespace(data[leadingSpacesLength]))
         ++leadingSpacesLength;
 
     double number = parseDouble(data + leadingSpacesLength, length - leadingSpacesLength, parsedLength);

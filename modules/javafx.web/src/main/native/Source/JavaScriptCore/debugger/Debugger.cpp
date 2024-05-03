@@ -29,7 +29,7 @@
 #include "JSCInlines.h"
 #include "MarkedSpaceInlines.h"
 #include "Microtask.h"
-#include "VMEntryScope.h"
+#include "VMEntryScopeInlines.h"
 #include "VMTrapsInlines.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
@@ -127,10 +127,13 @@ Debugger::Debugger(VM& vm)
     , m_lastExecutedSourceID(noSourceID)
     , m_pausingBreakpointID(noBreakpointID)
 {
+    m_vm.addDebugger(*this);
 }
 
 Debugger::~Debugger()
 {
+    m_vm.removeDebugger(*this);
+
     HashSet<JSGlobalObject*>::iterator end = m_globalObjects.end();
     for (HashSet<JSGlobalObject*>::iterator it = m_globalObjects.begin(); it != end; ++it)
         (*it)->setDebugger(nullptr);
@@ -240,6 +243,28 @@ void Debugger::registerCodeBlock(CodeBlock* codeBlock)
         codeBlock->setSteppingMode(CodeBlock::SteppingModeEnabled);
 }
 
+void Debugger::forEachRegisteredCodeBlock(const Function<void(CodeBlock*)>& callback)
+{
+    m_vm.heap.forEachCodeBlock([&] (CodeBlock* codeBlock) {
+        if (codeBlock->globalObject()->debugger() == this)
+            callback(codeBlock);
+    });
+}
+
+void Debugger::didCreateNativeExecutable(NativeExecutable& nativeExecutable)
+{
+    dispatchFunctionToObservers([&] (Observer& observer) {
+        observer.didCreateNativeExecutable(nativeExecutable);
+    });
+}
+
+void Debugger::willCallNativeExecutable(CallFrame* callFrame)
+{
+    dispatchFunctionToObservers([&] (Observer& observer) {
+        observer.willCallNativeExecutable(callFrame);
+    });
+}
+
 void Debugger::setClient(Client* client)
 {
     ASSERT(!!m_client != !!client);
@@ -266,15 +291,13 @@ void Debugger::removeObserver(Observer& observer, bool isBeingDestroyed)
 
 bool Debugger::canDispatchFunctionToObservers() const
 {
-    return !m_dispatchingFunctionToObservers && !m_observers.isEmpty();
+    return !m_observers.isEmpty();
 }
 
 void Debugger::dispatchFunctionToObservers(Function<void(Observer&)> func)
 {
     if (!canDispatchFunctionToObservers())
         return;
-
-    SetForScope change(m_dispatchingFunctionToObservers, true);
 
     for (auto* observer : copyToVector(m_observers))
         func(*observer);
@@ -390,6 +413,10 @@ void Debugger::applyBreakpoints(CodeBlock* codeBlock)
 {
     for (auto& breakpoint : m_breakpoints)
         toggleBreakpoint(codeBlock, breakpoint, BreakpointEnabled);
+
+    dispatchFunctionToObservers([&] (Observer& observer) {
+        observer.applyBreakpoints(codeBlock);
+    });
 }
 
 class Debugger::ToggleBreakpointFunctor {
@@ -436,6 +463,46 @@ DebuggerParseData& Debugger::debuggerParseData(SourceID sourceID, SourceProvider
     gatherDebuggerParseDataForSource(m_vm, provider, parseData);
     auto result = m_parseDataMap.add(sourceID, parseData);
     return result.iterator->value;
+}
+
+void Debugger::forEachBreakpointLocation(SourceID sourceID, SourceProvider* sourceProvider, int startLine, int startColumn, int endLine, int endColumn, Function<void(int, int)>&& callback)
+{
+    auto providerStartLine = sourceProvider->startPosition().m_line.oneBasedInt(); // One based to match the already adjusted line.
+    auto providerStartColumn = sourceProvider->startPosition().m_column.zeroBasedInt(); // Zero based so column zero is zero.
+
+    // FIXME: <https://webkit.org/b/162771> Web Inspector: Adopt TextPosition in Inspector to avoid oneBasedInt/zeroBasedInt ambiguity
+    // Inspector breakpoint line and column values are zero-based but the executable
+    // and CodeBlock line values are one-based while column is zero-based.
+    auto adjustedStartLine = startLine + 1;
+    auto adjustedStartColumn = startColumn;
+    auto adjustedEndLine = endLine + 1;
+    auto adjustedEndColumn = endColumn;
+
+    // Account for a <script>'s start position on the first line only.
+    if (startLine == providerStartLine && startColumn) {
+        ASSERT(providerStartColumn <= startColumn);
+        if (providerStartColumn)
+            adjustedStartColumn -= providerStartColumn;
+    }
+    if (endLine == providerStartLine && endColumn) {
+        ASSERT(providerStartColumn <= endColumn);
+        if (providerStartColumn)
+            adjustedEndColumn -= providerStartColumn;
+    }
+
+    auto& parseData = debuggerParseData(sourceID, sourceProvider);
+    parseData.pausePositions.forEachBreakpointLocation(adjustedStartLine, adjustedStartColumn, adjustedEndLine, adjustedEndColumn, [&, callback = WTFMove(callback)] (const JSTextPosition& resolvedPosition) {
+        auto resolvedLine = resolvedPosition.line;
+        auto resolvedColumn = resolvedPosition.column();
+
+        // Re-account for a <script>'s start position on the first line only.
+        if (resolvedLine == providerStartLine && (startColumn || (endLine == providerStartLine && endColumn))) {
+            if (providerStartColumn)
+                resolvedColumn += providerStartColumn;
+        }
+
+        callback(resolvedLine - 1, resolvedColumn);
+    });
 }
 
 bool Debugger::resolveBreakpoint(Breakpoint& breakpoint, SourceProvider* sourceProvider)
@@ -781,7 +848,8 @@ void Debugger::breakProgram(RefPtr<Breakpoint>&& specialBreakpoint)
 
 void Debugger::continueProgram()
 {
-    clearNextPauseState();
+    resetImmediatePauseState();
+    resetEventualPauseState();
     m_deferredBreakpoints.clear();
 
     if (!m_isPaused)
@@ -913,7 +981,12 @@ void Debugger::pauseIfNeeded(JSGlobalObject* globalObject)
     if (!pauseNow)
         return;
 
-    clearNextPauseState();
+    resetImmediatePauseState();
+
+    // Don't clear the `m_pauseOnCallFrame` if we've not hit it yet, as we may have encountered a breakpoint that won't pause.
+    bool atDesiredCallFrame = !m_pauseOnCallFrame || m_pauseOnCallFrame == m_currentCallFrame;
+    if (atDesiredCallFrame)
+        resetEventualPauseState();
 
     // Make sure we are not going to pause again on breakpoint actions by
     // reseting the pause state before executing any breakpoint actions.
@@ -985,6 +1058,10 @@ void Debugger::pauseIfNeeded(JSGlobalObject* globalObject)
 
     if (!m_blackboxBreakpointEvaluations && shouldDeferPause())
         return;
+
+    // Clear `m_pauseOnCallFrame` as we're actually pausing at this point.
+    if (!atDesiredCallFrame)
+        resetEventualPauseState();
 
     {
         auto reason = m_reasonForPause;
@@ -1133,6 +1210,12 @@ void Debugger::callEvent(CallFrame* callFrame)
         return;
 
     updateCallFrame(lexicalGlobalObjectForCallFrame(m_vm, callFrame), callFrame, NoPause);
+
+    if (callFrame) {
+        dispatchFunctionToObservers([&] (Observer& observer) {
+            observer.willEnter(callFrame);
+        });
+    }
 }
 
 void Debugger::returnEvent(CallFrame* callFrame)
@@ -1220,19 +1303,24 @@ void Debugger::didExecuteProgram(CallFrame* callFrame)
 
     // Do not continue stepping into an unknown future program.
     if (!m_currentCallFrame) {
-        clearNextPauseState();
+        resetImmediatePauseState();
+        resetEventualPauseState();
         m_deferredBreakpoints.clear();
     }
 }
 
-void Debugger::clearNextPauseState()
+void Debugger::resetImmediatePauseState()
 {
-    m_pauseOnCallFrame = nullptr;
     m_pauseAtNextOpportunity = false;
-    m_pauseOnStepNext = false;
-    m_pauseOnStepOut = false;
     m_afterBlackboxedScript = false;
     m_specialBreakpoint = nullptr;
+}
+
+void Debugger::resetEventualPauseState()
+{
+    m_pauseOnCallFrame = nullptr;
+    m_pauseOnStepNext = false;
+    m_pauseOnStepOut = false;
 }
 
 void Debugger::didReachDebuggerStatement(CallFrame* callFrame)
@@ -1249,24 +1337,24 @@ void Debugger::didReachDebuggerStatement(CallFrame* callFrame)
     updateCallFrame(lexicalGlobalObjectForCallFrame(m_vm, callFrame), callFrame, AttemptPause);
 }
 
-void Debugger::didQueueMicrotask(JSGlobalObject* globalObject, const Microtask& microtask)
+void Debugger::didQueueMicrotask(JSGlobalObject* globalObject, MicrotaskIdentifier identifier)
 {
     dispatchFunctionToObservers([&] (Observer& observer) {
-        observer.didQueueMicrotask(globalObject, microtask);
+        observer.didQueueMicrotask(globalObject, identifier);
     });
 }
 
-void Debugger::willRunMicrotask(JSGlobalObject* globalObject, const Microtask& microtask)
+void Debugger::willRunMicrotask(JSGlobalObject* globalObject, MicrotaskIdentifier identifier)
 {
     dispatchFunctionToObservers([&] (Observer& observer) {
-        observer.willRunMicrotask(globalObject, microtask);
+        observer.willRunMicrotask(globalObject, identifier);
     });
 }
 
-void Debugger::didRunMicrotask(JSGlobalObject* globalObject, const Microtask& microtask)
+void Debugger::didRunMicrotask(JSGlobalObject* globalObject, MicrotaskIdentifier identifier)
 {
     dispatchFunctionToObservers([&] (Observer& observer) {
-        observer.didRunMicrotask(globalObject, microtask);
+        observer.didRunMicrotask(globalObject, identifier);
     });
 }
 

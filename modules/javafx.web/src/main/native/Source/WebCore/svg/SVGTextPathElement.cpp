@@ -22,6 +22,7 @@
 #include "config.h"
 #include "SVGTextPathElement.h"
 
+#include "NodeName.h"
 #include "RenderSVGResource.h"
 #include "RenderSVGTextPath.h"
 #include "SVGDocumentExtensions.h"
@@ -35,7 +36,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGTextPathElement);
 
 inline SVGTextPathElement::SVGTextPathElement(const QualifiedName& tagName, Document& document)
-    : SVGTextContentElement(tagName, document)
+    : SVGTextContentElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
     , SVGURIReference(this)
 {
     ASSERT(hasTagName(SVGNames::textPathTag));
@@ -63,26 +64,33 @@ void SVGTextPathElement::clearResourceReferences()
     removeElementReference();
 }
 
-void SVGTextPathElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGTextPathElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     SVGParsingError parseError = NoError;
 
-    if (name == SVGNames::startOffsetAttr)
-        m_startOffset->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Other, value, parseError));
-    else if (name == SVGNames::methodAttr) {
-        SVGTextPathMethodType propertyValue = SVGPropertyTraits<SVGTextPathMethodType>::fromString(value);
+    switch (name.nodeName()) {
+    case AttributeNames::startOffsetAttr:
+        m_startOffset->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Other, newValue, parseError));
+        break;
+    case AttributeNames::methodAttr: {
+        SVGTextPathMethodType propertyValue = SVGPropertyTraits<SVGTextPathMethodType>::fromString(newValue);
         if (propertyValue > 0)
             m_method->setBaseValInternal<SVGTextPathMethodType>(propertyValue);
-    } else if (name == SVGNames::spacingAttr) {
-        SVGTextPathSpacingType propertyValue = SVGPropertyTraits<SVGTextPathSpacingType>::fromString(value);
+        break;
+    }
+    case AttributeNames::spacingAttr: {
+        SVGTextPathSpacingType propertyValue = SVGPropertyTraits<SVGTextPathSpacingType>::fromString(newValue);
         if (propertyValue > 0)
             m_spacing->setBaseValInternal<SVGTextPathSpacingType>(propertyValue);
+        break;
     }
+    default:
+        break;
+    }
+    reportAttributeParsingError(parseError, name, newValue);
 
-    reportAttributeParsingError(parseError, name, value);
-
-    SVGTextContentElement::parseAttribute(name, value);
-    SVGURIReference::parseAttribute(name, value);
+    SVGURIReference::parseAttribute(name, newValue);
+    SVGTextContentElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGTextPathElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -138,14 +146,15 @@ void SVGTextPathElement::buildPendingResource()
     if (!isConnected())
         return;
 
-    auto target = SVGURIReference::targetElementFromIRIString(href(), treeScope());
+    auto target = SVGURIReference::targetElementFromIRIString(href(), treeScopeForSVGReferences());
     if (!target.element) {
         // Do not register as pending if we are already pending this resource.
-        if (document().accessSVGExtensions().isPendingResource(*this, target.identifier))
+        auto& treeScope = treeScopeForSVGReferences();
+        if (treeScope.isPendingSVGResource(*this, target.identifier))
             return;
 
         if (!target.identifier.isEmpty()) {
-            document().accessSVGExtensions().addPendingResource(target.identifier, *this);
+            treeScope.addPendingSVGResource(target.identifier, *this);
             ASSERT(hasPendingResources());
         }
     } else if (target.element->hasTagName(SVGNames::pathTag))
@@ -160,6 +169,7 @@ Node::InsertedIntoAncestorResult SVGTextPathElement::insertedIntoAncestor(Insert
 
 void SVGTextPathElement::didFinishInsertingNode()
 {
+    SVGTextContentElement::buildPendingResource();
     buildPendingResource();
 }
 

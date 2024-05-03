@@ -26,9 +26,8 @@
 #include "config.h"
 #include "JSCSSStyleValue.h"
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include "JSCSSKeywordValue.h"
+#include "JSCSSMathClamp.h"
 #include "JSCSSMathInvert.h"
 #include "JSCSSMathMax.h"
 #include "JSCSSMathMin.h"
@@ -42,6 +41,7 @@
 #include "JSCSSUnitValue.h"
 #include "JSCSSUnparsedValue.h"
 #include "JSDOMWrapperCache.h"
+#include <JavaScriptCore/JSCJSValueInlines.h>
 
 namespace WebCore {
 using namespace JSC;
@@ -51,6 +51,8 @@ JSValue toJSNewlyCreated(JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<C
     switch (value->getType()) {
     case CSSStyleValueType::CSSStyleImageValue:
         return createWrapper<CSSStyleImageValue>(globalObject, WTFMove(value));
+    case CSSStyleValueType::CSSMathClamp:
+        return createWrapper<CSSMathClamp>(globalObject, WTFMove(value));
     case CSSStyleValueType::CSSMathInvert:
         return createWrapper<CSSMathInvert>(globalObject, WTFMove(value));
     case CSSStyleValueType::CSSMathMin:
@@ -85,5 +87,3 @@ JSValue toJS(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObjec
 }
 
 } // namespace WebCore
-
-#endif

@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include "CSSStyleValue.h"
 #include <variant>
 #include <wtf/text/WTFString.h>
@@ -47,10 +45,13 @@ public:
     void serialize(StringBuilder&, OptionSet<SerializationArguments>) const final;
     size_t length() const { return m_segments.size(); }
 
-    ExceptionOr<CSSUnparsedSegment> item(size_t);
+    bool isSupportedPropertyIndex(unsigned index) const { return index < m_segments.size(); }
+    std::optional<CSSUnparsedSegment> item(size_t);
     ExceptionOr<CSSUnparsedSegment> setItem(size_t, CSSUnparsedSegment&&);
 
     CSSStyleValueType getType() const final { return CSSStyleValueType::CSSUnparsedValue; }
+
+    RefPtr<CSSValue> toCSSValue() const final;
 
 private:
     explicit CSSUnparsedValue(Vector<CSSUnparsedSegment>&& segments);
@@ -63,5 +64,3 @@ private:
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSUnparsedValue)
     static bool isType(const WebCore::CSSStyleValue& styleValue) { return styleValue.getType() == WebCore::CSSStyleValueType::CSSUnparsedValue; }
 SPECIALIZE_TYPE_TRAITS_END()
-
-#endif

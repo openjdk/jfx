@@ -50,7 +50,7 @@ public:
 
     SVGPathByteStream() { }
 
-    SVGPathByteStream(const String& string)
+    SVGPathByteStream(StringView string)
     {
         buildSVGPathByteStreamFromString(string, *this, UnalteredParsing);
     }
@@ -63,6 +63,11 @@ public:
     SVGPathByteStream(SVGPathByteStream&& other)
     {
         *this = WTFMove(other);
+    }
+
+    SVGPathByteStream(Data&& data)
+        : m_data(WTFMove(data))
+    {
     }
 
     SVGPathByteStream& operator=(const SVGPathByteStream& other)
@@ -82,7 +87,6 @@ public:
     }
 
     bool operator==(const SVGPathByteStream& other) const { return m_data == other.m_data; }
-    bool operator!=(const SVGPathByteStream& other) const { return !(*this == other); }
 
     std::unique_ptr<SVGPathByteStream> copy() const
     {
@@ -98,6 +102,8 @@ public:
     bool isEmpty() const { return m_data.isEmpty(); }
     unsigned size() const { return m_data.size(); }
     void shrinkToFit() { m_data.shrinkToFit(); }
+
+    const Data& data() const { return m_data; }
 
 private:
     Data m_data;

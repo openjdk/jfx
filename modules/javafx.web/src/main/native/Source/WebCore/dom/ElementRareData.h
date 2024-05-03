@@ -21,14 +21,17 @@
 
 #pragma once
 
+#include "CustomElementDefaultARIA.h"
 #include "CustomElementReactionQueue.h"
 #include "DOMTokenList.h"
 #include "DatasetDOMStringMap.h"
 #include "ElementAnimationRareData.h"
+#include "FormAssociatedCustomElement.h"
 #include "IntersectionObserver.h"
 #include "KeyframeEffectStack.h"
 #include "NamedNodeMap.h"
 #include "NodeRareData.h"
+#include "PopoverData.h"
 #include "PseudoElement.h"
 #include "RenderElement.h"
 #include "ResizeObserver.h"
@@ -36,8 +39,21 @@
 #include "SpaceSplitString.h"
 #include "StylePropertyMap.h"
 #include "StylePropertyMapReadOnly.h"
+#include <wtf/Markable.h>
 
 namespace WebCore {
+
+struct LayoutUnitMarkableTraits {
+    static bool isEmptyValue(LayoutUnit value)
+    {
+        return value == LayoutUnit(-1);
+    }
+
+    static LayoutUnit emptyValue()
+    {
+        return LayoutUnit(-1);
+    }
+};
 
 class ElementRareData : public NodeRareData {
 public:
@@ -66,17 +82,29 @@ public:
     CustomElementReactionQueue* customElementReactionQueue() { return m_customElementReactionQueue.get(); }
     void setCustomElementReactionQueue(std::unique_ptr<CustomElementReactionQueue>&& queue) { m_customElementReactionQueue = WTFMove(queue); }
 
+    CustomElementDefaultARIA* customElementDefaultARIA() { return m_customElementDefaultARIA.get(); }
+    void setCustomElementDefaultARIA(std::unique_ptr<CustomElementDefaultARIA>&& defaultARIA) { m_customElementDefaultARIA = WTFMove(defaultARIA); }
+
+    FormAssociatedCustomElement* formAssociatedCustomElement() { return m_formAssociatedCustomElement.get(); }
+    void setFormAssociatedCustomElement(std::unique_ptr<FormAssociatedCustomElement>&& element) { m_formAssociatedCustomElement = WTFMove(element); }
+
     NamedNodeMap* attributeMap() const { return m_attributeMap.get(); }
-    void setAttributeMap(std::unique_ptr<NamedNodeMap> attributeMap) { m_attributeMap = WTFMove(attributeMap); }
+    void setAttributeMap(std::unique_ptr<NamedNodeMap>&& attributeMap) { m_attributeMap = WTFMove(attributeMap); }
 
     RenderStyle* computedStyle() const { return m_computedStyle.get(); }
-    void setComputedStyle(std::unique_ptr<RenderStyle> computedStyle) { m_computedStyle = WTFMove(computedStyle); }
+    void setComputedStyle(std::unique_ptr<RenderStyle>&& computedStyle) { m_computedStyle = WTFMove(computedStyle); }
+
+    RenderStyle* displayContentsStyle() const { return m_displayContentsStyle.get(); }
+    void setDisplayContentsStyle(std::unique_ptr<RenderStyle> style) { m_displayContentsStyle = WTFMove(style); }
+
+    const AtomString& effectiveLang() const { return m_effectiveLang; }
+    void setEffectiveLang(const AtomString& lang) { m_effectiveLang = lang; }
 
     DOMTokenList* classList() const { return m_classList.get(); }
-    void setClassList(std::unique_ptr<DOMTokenList> classList) { m_classList = WTFMove(classList); }
+    void setClassList(std::unique_ptr<DOMTokenList>&& classList) { m_classList = WTFMove(classList); }
 
     DatasetDOMStringMap* dataset() const { return m_dataset.get(); }
-    void setDataset(std::unique_ptr<DatasetDOMStringMap> dataset) { m_dataset = WTFMove(dataset); }
+    void setDataset(std::unique_ptr<DatasetDOMStringMap>&& dataset) { m_dataset = WTFMove(dataset); }
 
     IntPoint savedLayerScrollPosition() const { return m_savedLayerScrollPosition; }
     void setSavedLayerScrollPosition(IntPoint position) { m_savedLayerScrollPosition = position; }
@@ -85,7 +113,7 @@ public:
     ElementAnimationRareData& ensureAnimationRareData(PseudoId);
 
     DOMTokenList* partList() const { return m_partList.get(); }
-    void setPartList(std::unique_ptr<DOMTokenList> partList) { m_partList = WTFMove(partList); }
+    void setPartList(std::unique_ptr<DOMTokenList>&& partList) { m_partList = WTFMove(partList); }
 
     const SpaceSplitString& partNames() const { return m_partNames; }
     void setPartNames(SpaceSplitString&& partNames) { m_partNames = WTFMove(partNames); }
@@ -96,29 +124,42 @@ public:
     ResizeObserverData* resizeObserverData() { return m_resizeObserverData.get(); }
     void setResizeObserverData(std::unique_ptr<ResizeObserverData>&& data) { m_resizeObserverData = WTFMove(data); }
 
+    std::optional<LayoutUnit> lastRememberedLogicalWidth() const { return m_lastRememberedLogicalWidth; }
+    std::optional<LayoutUnit> lastRememberedLogicalHeight() const { return m_lastRememberedLogicalHeight; }
+    void setLastRememberedLogicalWidth(LayoutUnit width) { m_lastRememberedLogicalWidth = width; }
+    void setLastRememberedLogicalHeight(LayoutUnit height) { m_lastRememberedLogicalHeight = height; }
+    void clearLastRememberedLogicalWidth() { m_lastRememberedLogicalWidth.reset(); }
+    void clearLastRememberedLogicalHeight() { m_lastRememberedLogicalHeight.reset(); }
+
     const AtomString& nonce() const { return m_nonce; }
     void setNonce(const AtomString& value) { m_nonce = value; }
 
-#if ENABLE(CSS_TYPED_OM)
     StylePropertyMap* attributeStyleMap() { return m_attributeStyleMap.get(); }
     void setAttributeStyleMap(Ref<StylePropertyMap>&& map) { m_attributeStyleMap = WTFMove(map); }
 
     StylePropertyMapReadOnly* computedStyleMap() { return m_computedStyleMap.get(); }
     void setComputedStyleMap(Ref<StylePropertyMapReadOnly>&& map) { m_computedStyleMap = WTFMove(map); }
-#endif
 
     ExplicitlySetAttrElementsMap& explicitlySetAttrElementsMap() { return m_explicitlySetAttrElementsMap; }
+
+    PopoverData* popoverData() { return m_popoverData.get(); }
+    void setPopoverData(std::unique_ptr<PopoverData>&& popoverData) { m_popoverData = WTFMove(popoverData); }
+
+    const OptionSet<ContentRelevancyStatus>& contentRelevancyStatus() const { return m_contentRelevancyStatus; }
+    void setContentRelevancyStatus(OptionSet<ContentRelevancyStatus>& contentRelevancyStatus) { m_contentRelevancyStatus = contentRelevancyStatus; }
 
 #if DUMP_NODE_STATISTICS
     OptionSet<UseType> useTypes() const
     {
         auto result = NodeRareData::useTypes();
-        if (m_unusualTabIndex)
-            result.add(UseType::TabIndex);
         if (!m_savedLayerScrollPosition.isZero())
             result.add(UseType::ScrollingPosition);
         if (m_computedStyle)
             result.add(UseType::ComputedStyle);
+        if (m_displayContentsStyle)
+            result.add(UseType::DisplayContentsStyle);
+        if (!m_effectiveLang.isEmpty())
+            result.add(UseType::EffectiveLang);
         if (m_dataset)
             result.add(UseType::Dataset);
         if (m_classList)
@@ -126,58 +167,74 @@ public:
         if (m_shadowRoot)
             result.add(UseType::ShadowRoot);
         if (m_customElementReactionQueue)
-            result.add(UseType::CustomElementQueue);
+            result.add(UseType::CustomElementReactionQueue);
+        if (m_customElementDefaultARIA)
+            result.add(UseType::CustomElementDefaultARIA);
+        if (m_formAssociatedCustomElement)
+            result.add(UseType::FormAssociatedCustomElement);
         if (m_attributeMap)
             result.add(UseType::AttributeMap);
         if (m_intersectionObserverData)
             result.add(UseType::InteractionObserver);
-        if (m_resizeObserverData)
+        if (m_resizeObserverData || m_lastRememberedLogicalWidth || m_lastRememberedLogicalHeight)
             result.add(UseType::ResizeObserver);
         if (!m_animationRareData.isEmpty())
             result.add(UseType::Animations);
         if (m_beforePseudoElement || m_afterPseudoElement)
             result.add(UseType::PseudoElements);
-#if ENABLE(CSS_TYPED_OM)
         if (m_attributeStyleMap)
-            result.add(UseType::StyleMap);
+            result.add(UseType::AttributeStyleMap);
         if (m_computedStyleMap)
             result.add(UseType::ComputedStyleMap);
-#endif
         if (m_partList)
             result.add(UseType::PartList);
         if (!m_partNames.isEmpty())
             result.add(UseType::PartNames);
-        if (m_nonce)
+        if (!m_nonce.isEmpty())
             result.add(UseType::Nonce);
         if (!m_explicitlySetAttrElementsMap.isEmpty())
             result.add(UseType::ExplicitlySetAttrElementsMap);
+        if (m_popoverData)
+            result.add(UseType::Popover);
+        if (m_childIndex)
+            result.add(UseType::ChildIndex);
         return result;
     }
 #endif
 
 private:
+    unsigned short m_childIndex { 0 }; // Keep on top for better bit packing with NodeRareData.
+    int m_unusualTabIndex { 0 }; // Keep on top for better bit packing with NodeRareData.
+
+    OptionSet<ContentRelevancyStatus> m_contentRelevancyStatus;
+
     IntPoint m_savedLayerScrollPosition;
     std::unique_ptr<RenderStyle> m_computedStyle;
+    std::unique_ptr<RenderStyle> m_displayContentsStyle;
 
+    AtomString m_effectiveLang;
     std::unique_ptr<DatasetDOMStringMap> m_dataset;
     std::unique_ptr<DOMTokenList> m_classList;
     RefPtr<ShadowRoot> m_shadowRoot;
     std::unique_ptr<CustomElementReactionQueue> m_customElementReactionQueue;
+    std::unique_ptr<CustomElementDefaultARIA> m_customElementDefaultARIA;
+    std::unique_ptr<FormAssociatedCustomElement> m_formAssociatedCustomElement;
     std::unique_ptr<NamedNodeMap> m_attributeMap;
 
     std::unique_ptr<IntersectionObserverData> m_intersectionObserverData;
 
     std::unique_ptr<ResizeObserverData> m_resizeObserverData;
 
+    Markable<LayoutUnit, LayoutUnitMarkableTraits> m_lastRememberedLogicalWidth;
+    Markable<LayoutUnit, LayoutUnitMarkableTraits> m_lastRememberedLogicalHeight;
+
     Vector<std::unique_ptr<ElementAnimationRareData>> m_animationRareData;
 
     RefPtr<PseudoElement> m_beforePseudoElement;
     RefPtr<PseudoElement> m_afterPseudoElement;
 
-#if ENABLE(CSS_TYPED_OM)
     RefPtr<StylePropertyMap> m_attributeStyleMap;
     RefPtr<StylePropertyMapReadOnly> m_computedStyleMap;
-#endif
 
     std::unique_ptr<DOMTokenList> m_partList;
     SpaceSplitString m_partNames;
@@ -186,7 +243,7 @@ private:
 
     ExplicitlySetAttrElementsMap m_explicitlySetAttrElementsMap;
 
-    void releasePseudoElement(PseudoElement*);
+    std::unique_ptr<PopoverData> m_popoverData;
 };
 
 inline ElementRareData::ElementRareData()
@@ -264,6 +321,14 @@ inline ShadowRoot* Node::shadowRoot() const
 inline ShadowRoot* Element::shadowRoot() const
 {
     return hasRareData() ? elementRareData()->shadowRoot() : nullptr;
+}
+
+inline void Element::removeShadowRoot()
+{
+    RefPtr shadowRoot = this->shadowRoot();
+    if (LIKELY(!shadowRoot))
+        return;
+    removeShadowRootSlow(*shadowRoot);
 }
 
 } // namespace WebCore

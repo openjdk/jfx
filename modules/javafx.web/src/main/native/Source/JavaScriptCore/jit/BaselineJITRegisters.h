@@ -40,6 +40,19 @@ namespace Call {
     constexpr GPRReg callLinkInfoGPR { GPRInfo::regT2 };
 }
 
+namespace CallDirectEval {
+    namespace SlowPath {
+        constexpr GPRReg calleeFrameGPR { GPRInfo::regT0 };
+#if USE(JSVALUE64)
+        constexpr GPRReg scopeGPR { GPRInfo::regT1 };
+        constexpr JSValueRegs thisValueJSR { GPRInfo::regT2 };
+#else
+        constexpr GPRReg scopeGPR { GPRInfo::regT1 };
+        constexpr JSValueRegs thisValueJSR { JSRInfo::jsRegT32 };
+#endif
+    }
+}
+
 namespace CheckTraps {
     constexpr GPRReg bytecodeOffsetGPR { GPRInfo::nonArgGPR0 };
 }
@@ -206,6 +219,33 @@ namespace EnumeratorGetByVal {
 }
 #endif
 
+#if USE(JSVALUE64)
+namespace GetByValWithThis {
+    // Registers used on both Fast and Slow paths
+    constexpr JSValueRegs resultJSR { JSRInfo::returnValueJSR };
+    constexpr JSValueRegs baseJSR { GPRInfo::regT0 };
+    constexpr JSValueRegs propertyJSR { GPRInfo::regT1 };
+    constexpr JSValueRegs thisJSR { GPRInfo::regT2 };
+
+    // Fast path only registers
+    namespace FastPath {
+        constexpr GPRReg stubInfoGPR { GPRInfo::regT3 };
+        constexpr GPRReg scratchGPR { GPRInfo::regT5 };
+        static_assert(noOverlap(baseJSR, propertyJSR, thisJSR, stubInfoGPR, scratchGPR), "Required for DataIC");
+    }
+
+    // Slow path only registers
+    namespace SlowPath {
+        constexpr GPRReg globalObjectGPR { GPRInfo::regT3 };
+        constexpr GPRReg bytecodeOffsetGPR { globalObjectGPR };
+        constexpr GPRReg stubInfoGPR { GPRInfo::regT4 };
+        constexpr GPRReg profileGPR { GPRInfo::regT5 };
+        static_assert(noOverlap(baseJSR, propertyJSR, thisJSR, bytecodeOffsetGPR, stubInfoGPR, profileGPR), "Required for call to CTI thunk");
+        static_assert(noOverlap(baseJSR, propertyJSR, thisJSR, globalObjectGPR, stubInfoGPR, profileGPR), "Required for call to slow operation");
+    }
+}
+#endif
+
 namespace PutById {
     // Registers used on both Fast and Slow paths
     constexpr JSValueRegs baseJSR { JSRInfo::jsRegT10 };
@@ -277,6 +317,20 @@ namespace PutByVal {
         static_assert(noOverlap(baseJSR, propertyJSR, valueJSR, profileGPR, globalObjectGPR, stubInfoGPR), "Required for call to slow operation");
     }
 }
+
+#if USE(JSVALUE64)
+namespace EnumeratorPutByVal {
+    // We rely on using the same registers when linking a CodeBlock and initializing registers
+    // for a PutByVal StubInfo.
+    static constexpr JSValueRegs baseJSR { PutByVal::baseJSR };
+    static constexpr JSValueRegs propertyJSR { PutByVal::propertyJSR };
+    static constexpr JSValueRegs valueJSR { PutByVal::valueJSR };
+    static constexpr GPRReg profileGPR { PutByVal::profileGPR };
+    static constexpr GPRReg stubInfoGPR { PutByVal::stubInfoGPR };
+    static constexpr GPRReg scratch1 { GPRInfo::regT5 };
+    static_assert(noOverlap(baseJSR, propertyJSR, valueJSR, stubInfoGPR, scratch1));
+}
+#endif
 
 namespace InById {
     constexpr JSValueRegs baseJSR { GetById::baseJSR };

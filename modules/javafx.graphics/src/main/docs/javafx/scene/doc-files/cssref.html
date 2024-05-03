@@ -2,7 +2,7 @@
 
 <!--
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -277,6 +277,7 @@
           <li><a href="#typefont">&lt;font&gt;</a></li>
           <li><a href="#typepaint">&lt;paint&gt;</a></li>
           <li><a href="#typecolor">&lt;color&gt;</a></li>
+          <li><a href="#typetextbounds">&lt;text-bounds&gt;</a></li>
         </ul>
       </li>
         <li><a href="#stage">Stage</a>
@@ -351,6 +352,7 @@
           <li>javafx.scene.text
             <ul>
               <li><a href="#text">Text</a></li>
+              <li><a href="#textflow">TextFlow</a></li>
             </ul>
           </li>
         </ul>
@@ -1071,6 +1073,7 @@
       font family. An actual font family name available on the system can be
       used, or one of the following generic family names can be used:</p>
     <ul>
+      <li>'system'</li>
       <li>'serif' (e.g., Times)</li>
       <li>'sans-serif' (e.g., Helvetica)</li>
       <li>'cursive' (e.g., Zapf-Chancery)</li>
@@ -1576,6 +1579,32 @@
           href="#typecolor"
           class="typelink">&lt;color&gt;</a>
         ) ]+ </span></p>
+    <h3><a id="typetextbounds">&lt;text-bounds&gt;</a></h3>
+    <p>The geometry of text can be measured either in terms of the bounds of
+       the particular text to be rendered - visual bounds, or as properties
+       of the font and the characters to be rendered - logical bounds.
+       Visual bounds are more useful for positioning text as graphics, and
+       for obtaining tight enclosing bounds around the text.</p>
+    <p>Logical bounds are important for laying out text relative to other
+       text and other components, particularly those which also contain text.
+       The bounds aren't specific to the text being rendered, and so will
+       report heights which account for the potential ascent and descent of
+       text using the font at its specified size. Also leading and trailing
+       spaces are part of the logical advance width of the text.</p>
+    <p>&nbsp;</p>
+    <p class="grammar">[ logical | visual | logical-vertical-center ]</p>
+    <ul>
+      <li><strong>logical</strong>: The logical bounds are based on font metrics information.
+          The width is based on the glyph advances and the height of the ascent, descent, and
+          line gap, except for the last line which does not include the line gap.
+          This is usually the fastest option.</li>
+      <li><strong>visual</strong>: Use visual bounds as the basis for calculating the bounds.
+          This is likely to be slower than using logical bounds.</li>
+      <li><strong>logical-vertical-center</strong>: Use logical vertical centered bounds
+          as the basis for calculating the bounds.
+          This bounds type is typically used to center Text nodes vertically
+          within the bounds of its parent.</li>
+    </ul>
     <h2><a id="stage">Stage</a></h2>
     <table class="package" width="100%">
         <tbody>
@@ -1668,7 +1697,7 @@
           <td class="default">false</td>
           <td class="range">&nbsp;</td>
           <td>The default value for controls is true, although there are some exceptions.
-          See <a href="#controls">Controls</a> for details.</td>
+          See <a href="#control">Control</a> for details.</td>
         </tr>
         <tr>
         <th class="propertyname" scope="row">-fx-view-order</th>
@@ -1853,10 +1882,33 @@
       </thead>
       <tbody>
         <tr>
-        <th class="propertyname" scope="row">-fx-image</th>
+          <th class="propertyname" scope="row">-fx-fit-height</th>
+          <td class="value"><a href="#typenumber" class="typelink">&lt;number&gt;</a></td>
+          <td class="default">0</td>
+          <td>The height of the bounding box within which the source image is resized as necessary to fit.</td>
+        </tr>
+        <tr>
+          <th class="propertyname" scope="row">-fx-fit-width</th>
+          <td class="value"><a href="#typenumber" class="typelink">&lt;number&gt;</a></td>
+          <td class="default">0</td>
+          <td>The width of the bounding box within which the source image is resized as necessary to fit.</td>
+        </tr>
+          <th class="propertyname" scope="row">-fx-image</th>
           <td class="value"><a href="#typeurl" class="typelink">&lt;uri&gt;</a></td>
           <td class="default">null</td>
           <td>Relative URLs are resolved against the URL of the stylesheet.</td>
+        </tr>
+        <tr>
+          <th class="propertyname" scope="row">-fx-preserve-ratio</th>
+          <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
+          <td class="default">false</td>
+          <td>Indicates whether to preserve the aspect ratio of the source image when scaling to fit the image within the fitting bounding box.</td>
+        </tr>
+        <tr>
+          <th class="propertyname" scope="row">-fx-smooth</th>
+          <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
+          <td class="default">Platform-specific</td>
+          <td>Indicates whether to use a better quality filtering algorithm or a faster one when transforming or scaling the source image to fit.</td>
         </tr>
         <tr>
         <th colspan="4" class="parents" scope="row">Also has all properties of <a href="#node">Node</a></th>
@@ -3025,6 +3077,24 @@
       </thead>
       <tbody>
         <tr>
+        <th class="propertyname" scope="row">-fx-bounds-type</th>
+          <td class="value"><a href="#typetextbounds" class="typelink">&lt;text-bounds&gt;</a></td>
+          <td>logical</td>
+          <td></td>
+        </tr>
+        <tr>
+        <th class="propertyname" scope="row">-fx-line-spacing</th>
+          <td class="value"><a href="#typenumber" class="typelink">&lt;number&gt;</a></td>
+          <td>0</td>
+          <td>&nbsp;</td>
+        </tr>
+        <tr>
+        <th class="propertyname" scope="row">-fx-fill</th>
+          <td class="value"><a href="#typepaint" class="typelink">&lt;paint&gt;</a></td>
+          <td>BLACK</td>
+          <td>text color</td>
+        </tr>
+        <tr>
         <th class="propertyname" scope="row">-fx-font</th>
           <td class="value"><a href="#typefont" class="typelink">&lt;font&gt;</a></td>
           <td>Font.DEFAULT</td>
@@ -3069,6 +3139,43 @@
         <tr>
         <th colspan="4" class="parents" scope="row">Also has <a href="#fontprops">font
             properties</a> and all properties of <a href="#shape">Shape</a></th>
+        </tr>
+      </tbody>
+    </table>
+    <h4><a id="textflow">TextFlow</a></h4>
+<p class="styleclass">Style class: empty by default</p>
+    <table class="csspropertytable">
+    <caption>Available CSS Properties</caption>
+      <thead>
+        <tr>
+        <th class="propertyname" scope="col">CSS Property</th>
+        <th class="value" scope="col">Values</th>
+        <th scope="col">Default</th>
+        <th scope="col">Comments</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+        <th class="propertyname" scope="row">-fx-line-spacing</th>
+          <td class="value"><a href="#typenumber" class="typelink">&lt;number&gt;</a></td>
+          <td>0</td>
+          <td>&nbsp;</td>
+        </tr>
+        <tr>
+        <th class="propertyname" scope="row">-fx-tab-size</th>
+          <td class="value"><a href="#typenumber" class="typelink">&lt;integer&gt;</a></td>
+          <td>8</td>
+          <td>&nbsp;</td>
+        </tr>
+        <tr>
+        <th class="propertyname" scope="row">-fx-text-alignment</th>
+          <td class="value">[ left | center | right | justify ] </td>
+          <td>left</td>
+          <td>inherits</td>
+        </tr>
+        <tr>
+        <th colspan="4" class="parents" scope="row">Also has <a href="#fontprops">font
+            properties</a> and all properties of <a href="#pane">Pane</a></th>
         </tr>
       </tbody>
     </table>
@@ -3158,6 +3265,7 @@
       </tbody>
     </table>
     <!-- Controls -->
+    <h2><a id="controls">Controls</a></h2>
     <table class="package" width="100%">
       <tbody>
         <tr>
@@ -6067,7 +6175,7 @@
     <p>[5] Uniform Resource Identifier (URI): Generic Syntax <a href="http://www.ietf.org/rfc/rfc3986">RFC-3986</a></p>
     <hr>
     <p>
-<small><a href="http://bugreport.java.com/bugreport/">Report a bug or suggest an enhancement</a><br> Copyright &copy; 2008, 2023, Oracle and/or its affiliates. All rights reserved.</small>
+<small><a href="http://bugreport.java.com/bugreport/">Report a bug or suggest an enhancement</a><br> Copyright &copy; 2008, 2024, Oracle and/or its affiliates. All rights reserved.</small>
     </p>
     <br>
   </body>

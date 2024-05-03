@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,6 +54,7 @@ public class ExpressionHelperUtility {
     private static final String LIST_EXPRESSION_HELPER_SINGLE_CHANGE       = "com.sun.javafx.binding.ListExpressionHelper$SingleChange";
     private static final String LIST_EXPRESSION_HELPER_SINGLE_LIST_CHANGE  = "com.sun.javafx.binding.ListExpressionHelper$SingleListChange";
     private static final String LIST_EXPRESSION_HELPER_GENERIC             = "com.sun.javafx.binding.ListExpressionHelper$Generic";
+    private static final String LIST_LISTENER_HELPER_GENERIC               = "com.sun.javafx.collections.ListListenerHelper$Generic";
     private static final String MAP_EXPRESSION_HELPER_SINGLE_INVALIDATION  = "com.sun.javafx.binding.MapExpressionHelper$SingleInvalidation";
     private static final String MAP_EXPRESSION_HELPER_SINGLE_CHANGE        = "com.sun.javafx.binding.MapExpressionHelper$SingleChange";
     private static final String MAP_EXPRESSION_HELPER_SINGLE_MAP_CHANGE    = "com.sun.javafx.binding.MapExpressionHelper$SingleMapChange";
@@ -239,9 +240,12 @@ public class ExpressionHelperUtility {
     }
 
     public static <E> List<ListChangeListener<? super E>> getListChangeListeners(ObservableList<E> observable) {
-        final Object helper = getExpressionHelper(observable);
+        Object helper = getExpressionHelper(observable);
         if (helper == null) {
-            return Collections.emptyList();
+            helper = getListExpressionHelper(observable);
+            if (helper == null) {
+                return Collections.emptyList();
+            }
         }
         final Class helperClass = helper.getClass();
 
@@ -266,6 +270,23 @@ public class ExpressionHelperUtility {
                     final ListChangeListener<? super E>[] listeners = (ListChangeListener[])field.get(helper);
                     if (listeners != null) {
                         final Field sizeField = clazz.getDeclaredField("listChangeSize");
+                        sizeField.setAccessible(true);
+                        final int size = sizeField.getInt(helper);
+                        return Arrays.asList(Arrays.copyOf(listeners, size));
+                    }
+                } catch (Exception ex) { }
+            }
+        } catch (ClassNotFoundException ex) { }
+
+        try {
+            final Class clazz = Class.forName(LIST_LISTENER_HELPER_GENERIC);
+            if (clazz.isAssignableFrom(helperClass)) {
+                try {
+                    final Field field = clazz.getDeclaredField("changeListeners");
+                    field.setAccessible(true);
+                    final ListChangeListener<? super E>[] listeners = (ListChangeListener[])field.get(helper);
+                    if (listeners != null) {
+                        final Field sizeField = clazz.getDeclaredField("changeSize");
                         sizeField.setAccessible(true);
                         final int size = sizeField.getInt(helper);
                         return Arrays.asList(Arrays.copyOf(listeners, size));
@@ -371,6 +392,19 @@ public class ExpressionHelperUtility {
                 catch(Exception ex2) {
                 }
             }
+            clazz = clazz.getSuperclass();
+        }
+        return null;
+    }
+
+    private static Object getListExpressionHelper(Object bean) {
+        Class clazz = bean.getClass();
+        while (clazz != Object.class) {
+            try {
+                final Field field = clazz.getDeclaredField("listenerHelper");
+                field.setAccessible(true);
+                return field.get(bean);
+            } catch (Exception ex) {}
             clazz = clazz.getSuperclass();
         }
         return null;

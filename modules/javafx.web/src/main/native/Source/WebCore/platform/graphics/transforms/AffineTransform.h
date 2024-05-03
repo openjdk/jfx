@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2005-2016 Apple Inc.  All rights reserved.
+ * Copyright (C) 2014 Google Inc.  All rights reserved.
  *               2010 Dirk Schulze <krit@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,6 +28,7 @@
 #pragma once
 
 #include "CompositeOperation.h"
+#include "FloatConversion.h"
 #include "FloatPoint.h"
 #include "FloatSize.h"
 #include <array>
@@ -109,6 +111,7 @@ public:
     WEBCORE_EXPORT AffineTransform& scaleNonUniform(double sx, double sy); // Same as scale(sx, sy).
     WEBCORE_EXPORT AffineTransform& scale(const FloatSize&);
     WEBCORE_EXPORT AffineTransform& rotate(double);
+    WEBCORE_EXPORT AffineTransform& rotateRadians(double);
     AffineTransform& rotateFromVector(double x, double y);
     WEBCORE_EXPORT AffineTransform& translate(double tx, double ty);
     WEBCORE_EXPORT AffineTransform& translate(const FloatPoint&);
@@ -152,14 +155,14 @@ public:
         return (m_transform[1] == 0 && m_transform[2] == 0) || (m_transform[0] == 0 && m_transform[3] == 0);
     }
 
-    bool isEssentiallyEqualTo(const AffineTransform& m2) const
+    bool isEssentiallyEqualToAsFloats(const AffineTransform& m2) const
     {
-        return (WTF::areEssentiallyEqual(m_transform[0], m2.m_transform[0])
-            && WTF::areEssentiallyEqual(m_transform[1], m2.m_transform[1])
-            && WTF::areEssentiallyEqual(m_transform[2], m2.m_transform[2])
-            && WTF::areEssentiallyEqual(m_transform[3], m2.m_transform[3])
-            && WTF::areEssentiallyEqual(m_transform[4], m2.m_transform[4])
-            && WTF::areEssentiallyEqual(m_transform[5], m2.m_transform[5]));
+        return WTF::areEssentiallyEqual(narrowPrecisionToFloat(m_transform[0]), narrowPrecisionToFloat(m2.m_transform[0]))
+            && WTF::areEssentiallyEqual(narrowPrecisionToFloat(m_transform[1]), narrowPrecisionToFloat(m2.m_transform[1]))
+            && WTF::areEssentiallyEqual(narrowPrecisionToFloat(m_transform[2]), narrowPrecisionToFloat(m2.m_transform[2]))
+            && WTF::areEssentiallyEqual(narrowPrecisionToFloat(m_transform[3]), narrowPrecisionToFloat(m2.m_transform[3]))
+            && WTF::areEssentiallyEqual(narrowPrecisionToFloat(m_transform[4]), narrowPrecisionToFloat(m2.m_transform[4]))
+            && WTF::areEssentiallyEqual(narrowPrecisionToFloat(m_transform[5]), narrowPrecisionToFloat(m2.m_transform[5]));
     }
 
     bool operator==(const AffineTransform& m2) const
@@ -171,8 +174,6 @@ public:
             && m_transform[4] == m2.m_transform[4]
             && m_transform[5] == m2.m_transform[5]);
     }
-
-    bool operator!=(const AffineTransform& other) const { return !(*this == other); }
 
     // *this = *this * t (i.e., a multRight)
     AffineTransform& operator*=(const AffineTransform& t)

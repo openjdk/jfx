@@ -29,11 +29,11 @@
 
 namespace WTF {
 
-template<typename Value, typename Counter = EmptyCounter>
+template<typename Value, typename WeakPtrImpl = DefaultWeakPtrImpl>
 class WeakHashCountedSet {
     WTF_MAKE_FAST_ALLOCATED;
 private:
-    using ImplType = WeakHashMap<Value, unsigned, Counter>;
+    using ImplType = WeakHashMap<Value, unsigned, WeakPtrImpl>;
 public:
     using ValueType = Value;
     using iterator = typename ImplType::iterator;
@@ -50,6 +50,7 @@ public:
     const_iterator find(const ValueType& value) const { return m_impl.find(value); }
     bool contains(const ValueType& value) const { return m_impl.contains(value); }
 
+    bool isEmptyIgnoringNullReferences() const { return m_impl.isEmptyIgnoringNullReferences(); }
     unsigned computeSize() const { return m_impl.computeSize(); }
 
     // Increments the count if an equal value is already present.
@@ -67,33 +68,33 @@ public:
     void clear() { m_impl.clear(); }
 
 private:
-    WeakHashMap<Value, unsigned, Counter> m_impl;
+    WeakHashMap<Value, unsigned, WeakPtrImpl> m_impl;
 };
 
-template<typename Value, typename Counter>
-inline auto WeakHashCountedSet<Value, Counter>::add(const ValueType &value) -> AddResult
+template<typename Value, typename WeakPtrImpl>
+inline auto WeakHashCountedSet<Value, WeakPtrImpl>::add(const ValueType &value) -> AddResult
 {
     auto result = m_impl.add(value, 0);
     ++result.iterator->value;
     return result;
 }
 
-template<typename Value, typename Counter>
-inline auto WeakHashCountedSet<Value, Counter>::add(ValueType&& value) -> AddResult
+template<typename Value, typename WeakPtrImpl>
+inline auto WeakHashCountedSet<Value, WeakPtrImpl>::add(ValueType&& value) -> AddResult
 {
     auto result = m_impl.add(std::forward<Value>(value), 0);
     ++result.iterator->value;
     return result;
 }
 
-template<typename Value, typename Counter>
-inline bool WeakHashCountedSet<Value, Counter>::remove(const ValueType& value)
+template<typename Value, typename WeakPtrImpl>
+inline bool WeakHashCountedSet<Value, WeakPtrImpl>::remove(const ValueType& value)
 {
     return remove(find(value));
 }
 
-template<typename Value, typename Counter>
-inline bool WeakHashCountedSet<Value, Counter>::remove(iterator it)
+template<typename Value, typename WeakPtrImpl>
+inline bool WeakHashCountedSet<Value, WeakPtrImpl>::remove(iterator it)
 {
     if (it == end())
         return false;

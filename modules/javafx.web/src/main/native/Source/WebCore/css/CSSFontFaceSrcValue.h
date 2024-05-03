@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,11 +25,11 @@
 
 #pragma once
 
+#include "CSSParserContext.h"
 #include "CSSValue.h"
 #include "CachedResourceHandle.h"
 #include "ResourceLoaderOptions.h"
-#include <wtf/Function.h>
-#include <wtf/text/WTFString.h>
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
@@ -37,61 +37,98 @@ class CachedFont;
 class FontLoadRequest;
 class SVGFontFaceElement;
 class ScriptExecutionContext;
+class WeakPtrImplWithEventTargetData;
 
-class CSSFontFaceSrcValue final : public CSSValue {
+class CSSFontFaceSrcLocalValue final : public CSSValue {
 public:
-    static Ref<CSSFontFaceSrcValue> create(const String& resource, LoadedFromOpaqueSource loadedFromOpaqueSource)
-    {
-        return adoptRef(*new CSSFontFaceSrcValue(resource, false, loadedFromOpaqueSource));
-    }
-    static Ref<CSSFontFaceSrcValue> createLocal(const String& resource)
-    {
-        return adoptRef(*new CSSFontFaceSrcValue(resource, true, LoadedFromOpaqueSource::No));
-    }
+    static Ref<CSSFontFaceSrcLocalValue> create(AtomString fontFaceName);
+    ~CSSFontFaceSrcLocalValue();
 
-    ~CSSFontFaceSrcValue();
-
-    const String& resource() const { return m_resource; }
-    const String& format() const { return m_format; }
-    bool isLocal() const { return m_isLocal; }
-
-    void setFormat(const String& format) { m_format = format; }
-
-    bool isSupportedFormat() const;
-
-    bool isSVGFontFaceSrc() const;
-    bool isSVGFontTarget() const;
+    bool isEmpty() const { return m_fontFaceName.isEmpty(); }
+    const AtomString& fontFaceName() const { return m_fontFaceName; }
 
     SVGFontFaceElement* svgFontFaceElement() const;
-    void setSVGFontFaceElement(SVGFontFaceElement*);
+    void setSVGFontFaceElement(SVGFontFaceElement&);
 
     String customCSSText() const;
-
-    bool traverseSubresources(const Function<bool(const CachedResource&)>& handler) const;
-
-    std::unique_ptr<FontLoadRequest> fontLoadRequest(ScriptExecutionContext*, bool isSVG, bool isInitiatingElementInUserAgentShadowTree);
-
-    bool equals(const CSSFontFaceSrcValue&) const;
+    bool equals(const CSSFontFaceSrcLocalValue&) const;
 
 private:
-    CSSFontFaceSrcValue(const String& resource, bool local, LoadedFromOpaqueSource loadedFromOpaqueSource)
-        : CSSValue(FontFaceSrcClass)
-        , m_resource(resource)
-        , m_isLocal(local)
-        , m_loadedFromOpaqueSource(loadedFromOpaqueSource)
-        , m_svgFontFaceElement(0)
-    {
+    explicit CSSFontFaceSrcLocalValue(AtomString&&);
+
+    AtomString m_fontFaceName;
+    WeakPtr<SVGFontFaceElement, WeakPtrImplWithEventTargetData> m_element;
+};
+
+enum class FontTechnology : uint8_t {
+    ColorColrv0,
+    ColorColrv1,
+    ColorCbdt,
+    ColorSbix,
+    ColorSvg,
+    FeaturesAat,
+    FeaturesGraphite,
+    FeaturesOpentype,
+    Incremental,
+    Palettes,
+    Variations,
+    // Reserved for invalid conversion result.
+    Invalid
+};
+
+inline ASCIILiteral cssTextFromFontTech(FontTechnology tech)
+{
+    switch (tech) {
+    case FontTechnology::ColorColrv0:
+        return "color-colrv0"_s;
+    case FontTechnology::ColorColrv1:
+        return "color-colrv1"_s;
+    case FontTechnology::ColorCbdt:
+        return "color-cbdt"_s;
+    case FontTechnology::ColorSbix:
+        return "color-sbix"_s;
+    case FontTechnology::ColorSvg:
+        return "color-svg"_s;
+    case FontTechnology::FeaturesAat:
+        return "features-aat"_s;
+    case FontTechnology::FeaturesGraphite:
+        return "features-graphite"_s;
+    case FontTechnology::FeaturesOpentype:
+        return "features-opentype"_s;
+    case FontTechnology::Incremental:
+        return "incremental"_s;
+    case FontTechnology::Palettes:
+        return "palettes"_s;
+    case FontTechnology::Variations:
+        return "variations"_s;
+    default:
+        return ""_s;
     }
+}
 
-    String m_resource;
+class CSSFontFaceSrcResourceValue final : public CSSValue {
+public:
+
+    static Ref<CSSFontFaceSrcResourceValue> create(ResolvedURL, String format, Vector<FontTechnology>&& technologies, LoadedFromOpaqueSource = LoadedFromOpaqueSource::No);
+
+    bool isEmpty() const { return m_location.specifiedURLString.isEmpty(); }
+    std::unique_ptr<FontLoadRequest> fontLoadRequest(ScriptExecutionContext&, bool isInitiatingElementInUserAgentShadowTree);
+
+    String customCSSText() const;
+    bool customTraverseSubresources(const Function<bool(const CachedResource&)>&) const;
+    bool equals(const CSSFontFaceSrcResourceValue&) const;
+
+private:
+    explicit CSSFontFaceSrcResourceValue(ResolvedURL&&, String&& format, Vector<FontTechnology>&& technologies, LoadedFromOpaqueSource);
+
+    ResolvedURL m_location;
     String m_format;
-    bool m_isLocal;
+    Vector<FontTechnology> m_technologies;
     LoadedFromOpaqueSource m_loadedFromOpaqueSource { LoadedFromOpaqueSource::No };
-
     CachedResourceHandle<CachedFont> m_cachedFont;
-    WeakPtr<SVGFontFaceElement> m_svgFontFaceElement;
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_CSS_VALUE(CSSFontFaceSrcValue, isFontFaceSrcValue())
+SPECIALIZE_TYPE_TRAITS_CSS_VALUE(CSSFontFaceSrcLocalValue, isFontFaceSrcLocalValue())
+SPECIALIZE_TYPE_TRAITS_CSS_VALUE(CSSFontFaceSrcResourceValue, isFontFaceSrcResourceValue())

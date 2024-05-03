@@ -215,11 +215,6 @@ public:
         }
     }
 
-    bool operator!=(const ValueRep& other) const
-    {
-        return !(*this == other);
-    }
-
     explicit operator bool() const { return kind() != WarmAny; }
 
     bool isAny() const { return kind() == WarmAny || kind() == ColdAny || kind() == LateColdAny; }
@@ -284,17 +279,17 @@ public:
         }
     }
 
-    void addUsedRegistersTo(RegisterSet&) const;
+    void addUsedRegistersTo(bool isSIMDContext, RegisterSetBuilder&) const;
 
-    RegisterSet usedRegisters() const;
+    RegisterSetBuilder usedRegisters(bool isSIMDContext) const;
 
     // Get the used registers for a vector of ValueReps.
     template<typename VectorType>
-    static RegisterSet usedRegisters(const VectorType& vector)
+    static RegisterSetBuilder usedRegisters(bool isSIMDContext, const VectorType& vector)
     {
-        RegisterSet result;
+        RegisterSetBuilder result;
         for (const ValueRep& value : vector)
-            value.addUsedRegistersTo(result);
+            value.addUsedRegistersTo(isSIMDContext, result);
         return result;
     }
 

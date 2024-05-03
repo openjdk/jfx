@@ -30,21 +30,25 @@
 #include "ApplicationCacheStorage.h"
 #include "AttachmentElementClient.h"
 #include "BackForwardClient.h"
+#include "BadgeClient.h"
 #include "BroadcastChannelRegistry.h"
 #include "CacheStorageProvider.h"
+#include "ChromeClient.h"
+#include "ContextMenuClient.h"
 #include "CookieJar.h"
 #include "DatabaseProvider.h"
 #include "DiagnosticLoggingClient.h"
 #include "DragClient.h"
 #include "EditorClient.h"
-#include "FrameLoaderClient.h"
-#include "LibWebRTCProvider.h"
+#include "InspectorClient.h"
+#include "LocalFrameLoaderClient.h"
 #include "MediaRecorderProvider.h"
 #include "ModelPlayerProvider.h"
 #include "PerformanceLoggingClient.h"
-#include "PermissionController.h"
 #include "PluginInfoProvider.h"
 #include "ProgressTrackerClient.h"
+#include "RemoteFrameClient.h"
+#include "ScreenOrientationManager.h"
 #include "SocketProvider.h"
 #include "SpeechRecognitionProvider.h"
 #include "SpeechSynthesisClient.h"
@@ -61,26 +65,67 @@
 #if ENABLE(WEB_AUTHN)
 #include "AuthenticatorCoordinatorClient.h"
 #endif
+#if ENABLE(APPLE_PAY)
+#include "PaymentCoordinatorClient.h"
+#endif
 
 namespace WebCore {
 
-PageConfiguration::PageConfiguration(PAL::SessionID sessionID, UniqueRef<EditorClient>&& editorClient, Ref<SocketProvider>&& socketProvider, UniqueRef<WebRTCProvider>&& webRTCProvider, Ref<CacheStorageProvider>&& cacheStorageProvider, Ref<UserContentProvider>&& userContentProvider, Ref<BackForwardClient>&& backForwardClient, Ref<CookieJar>&& cookieJar, UniqueRef<ProgressTrackerClient>&& progressTrackerClient, UniqueRef<FrameLoaderClient>&& loaderClientForMainFrame, UniqueRef<SpeechRecognitionProvider>&& speechRecognitionProvider, UniqueRef<MediaRecorderProvider>&& mediaRecorderProvider, Ref<BroadcastChannelRegistry>&& broadcastChannelRegistry, Ref<PermissionController>&& permissionController, UniqueRef<StorageProvider>&& storageProvider, UniqueRef<ModelPlayerProvider>&& modelPlayerProvider)
-    : sessionID(sessionID)
+PageConfiguration::PageConfiguration(
+    std::optional<PageIdentifier> identifier,
+    PAL::SessionID sessionID,
+    UniqueRef<EditorClient>&& editorClient,
+    Ref<SocketProvider>&& socketProvider,
+    UniqueRef<WebRTCProvider>&& webRTCProvider,
+    Ref<CacheStorageProvider>&& cacheStorageProvider,
+    Ref<UserContentProvider>&& userContentProvider,
+    Ref<BackForwardClient>&& backForwardClient,
+    Ref<CookieJar>&& cookieJar,
+    UniqueRef<ProgressTrackerClient>&& progressTrackerClient,
+#if PLATFORM(JAVA)
+    UniqueRef<LocalFrameLoaderClient> clientForMainFrame,
+#else
+    std::variant<UniqueRef<LocalFrameLoaderClient>, UniqueRef<RemoteFrameClient>>&& clientForMainFrame,
+#endif
+    FrameIdentifier mainFrameIdentifier,
+    UniqueRef<SpeechRecognitionProvider>&& speechRecognitionProvider,
+    UniqueRef<MediaRecorderProvider>&& mediaRecorderProvider,
+    Ref<BroadcastChannelRegistry>&& broadcastChannelRegistry,
+    UniqueRef<StorageProvider>&& storageProvider,
+    UniqueRef<ModelPlayerProvider>&& modelPlayerProvider,
+    Ref<BadgeClient>&& badgeClient,
+#if ENABLE(CONTEXT_MENUS)
+    UniqueRef<ContextMenuClient>&& contextMenuClient,
+#endif
+#if ENABLE(APPLE_PAY)
+    UniqueRef<PaymentCoordinatorClient>&& paymentCoordinatorClient,
+#endif
+    UniqueRef<ChromeClient>&& chromeClient)
+    : identifier(identifier)
+    , sessionID(sessionID)
+    , chromeClient(WTFMove(chromeClient))
+#if ENABLE(CONTEXT_MENUS)
+    , contextMenuClient(WTFMove(contextMenuClient))
+#endif
     , editorClient(WTFMove(editorClient))
     , socketProvider(WTFMove(socketProvider))
+#if ENABLE(APPLE_PAY)
+    , paymentCoordinatorClient(WTFMove(paymentCoordinatorClient))
+#endif
     , webRTCProvider(WTFMove(webRTCProvider))
     , progressTrackerClient(WTFMove(progressTrackerClient))
     , backForwardClient(WTFMove(backForwardClient))
     , cookieJar(WTFMove(cookieJar))
-    , loaderClientForMainFrame(WTFMove(loaderClientForMainFrame))
+    , clientForMainFrame(WTFMove(clientForMainFrame))
+    , mainFrameIdentifier(WTFMove(mainFrameIdentifier))
     , cacheStorageProvider(WTFMove(cacheStorageProvider))
     , userContentProvider(WTFMove(userContentProvider))
     , broadcastChannelRegistry(WTFMove(broadcastChannelRegistry))
     , speechRecognitionProvider(WTFMove(speechRecognitionProvider))
     , mediaRecorderProvider(WTFMove(mediaRecorderProvider))
-    , permissionController(WTFMove(permissionController))
     , storageProvider(WTFMove(storageProvider))
     , modelPlayerProvider(WTFMove(modelPlayerProvider))
+    , badgeClient(WTFMove(badgeClient))
 {
 }
 

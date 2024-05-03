@@ -37,18 +37,13 @@ namespace JSC {
 
 const ClassInfo FunctionExecutable::s_info = { "FunctionExecutable"_s, &ScriptExecutable::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(FunctionExecutable) };
 
-FunctionExecutable::FunctionExecutable(VM& vm, const SourceCode& source, UnlinkedFunctionExecutable* unlinkedExecutable, Intrinsic intrinsic, bool isInsideOrdinaryFunction)
+FunctionExecutable::FunctionExecutable(VM& vm, ScriptExecutable* topLevelExecutable, const SourceCode& source, UnlinkedFunctionExecutable* unlinkedExecutable, Intrinsic intrinsic, bool isInsideOrdinaryFunction)
     : ScriptExecutable(vm.functionExecutableStructure.get(), vm, source, unlinkedExecutable->lexicalScopeFeatures(), unlinkedExecutable->derivedContextType(), false, isInsideOrdinaryFunction || !unlinkedExecutable->isArrowFunction(), EvalContextType::None, intrinsic)
-    , m_unlinkedExecutable(vm, this, unlinkedExecutable)
+    , m_topLevelExecutable(topLevelExecutable ? topLevelExecutable : this, WriteBarrierEarlyInit)
+    , m_unlinkedExecutable(unlinkedExecutable, WriteBarrierEarlyInit)
 {
     RELEASE_ASSERT(!source.isNull());
     ASSERT(source.length());
-}
-
-void FunctionExecutable::finishCreation(VM& vm, ScriptExecutable* topLevelExecutable)
-{
-    Base::finishCreation(vm);
-    m_topLevelExecutable.set(vm, this, topLevelExecutable ? topLevelExecutable : this);
 }
 
 void FunctionExecutable::destroy(JSCell* cell)
@@ -152,8 +147,8 @@ FunctionExecutable::RareData& FunctionExecutable::ensureRareDataSlow()
     rareData->m_lineCount = lineCount();
     rareData->m_endColumn = endColumn();
     rareData->m_parametersStartOffset = parametersStartOffset();
-    rareData->m_typeProfilingStartOffset = typeProfilingStartOffset();
-    rareData->m_typeProfilingEndOffset = typeProfilingEndOffset();
+    rareData->m_functionStart = functionStart();
+    rareData->m_functionEnd = functionEnd();
     WTF::storeStoreFence();
     m_rareData = WTFMove(rareData);
     return *m_rareData;
@@ -183,54 +178,11 @@ JSString* FunctionExecutable::toStringSlow(JSGlobalObject* globalObject)
     if (isClass())
         return cache(jsString(vm, classSource().view()));
 
-    ASCIILiteral functionHeader = ""_s;
-    switch (parseMode()) {
-    case SourceParseMode::GeneratorWrapperFunctionMode:
-    case SourceParseMode::GeneratorWrapperMethodMode:
-        functionHeader = "function* "_s;
-        break;
-
-    case SourceParseMode::NormalFunctionMode:
-    case SourceParseMode::GetterMode:
-    case SourceParseMode::SetterMode:
-    case SourceParseMode::MethodMode:
-    case SourceParseMode::ProgramMode:
-    case SourceParseMode::ModuleAnalyzeMode:
-    case SourceParseMode::ModuleEvaluateMode:
-    case SourceParseMode::GeneratorBodyMode:
-    case SourceParseMode::AsyncGeneratorBodyMode:
-    case SourceParseMode::AsyncFunctionBodyMode:
-    case SourceParseMode::AsyncArrowFunctionBodyMode:
-        functionHeader = "function "_s;
-        break;
-
-    case SourceParseMode::ArrowFunctionMode:
-    case SourceParseMode::ClassFieldInitializerMode:
-        break;
-
-    case SourceParseMode::AsyncFunctionMode:
-    case SourceParseMode::AsyncMethodMode:
-        functionHeader = "async function "_s;
-        break;
-
-    case SourceParseMode::AsyncArrowFunctionMode:
-        functionHeader = "async "_s;
-        break;
-
-    case SourceParseMode::AsyncGeneratorWrapperFunctionMode:
-    case SourceParseMode::AsyncGeneratorWrapperMethodMode:
-        functionHeader = "async function* "_s;
-        break;
-    }
-
     StringView src = source().provider()->getRange(
-        parametersStartOffset(),
+        functionStart(),
         parametersStartOffset() + source().length());
 
-    auto name = this->name().string();
-    if (name == vm.propertyNames->starDefaultPrivateName.string())
-        name = emptyAtom();
-    return cacheIfNoException(jsMakeNontrivialString(globalObject, functionHeader, WTFMove(name), src));
+    return cacheIfNoException(jsMakeNontrivialString(globalObject, src));
 }
 
 void FunctionExecutable::overrideInfo(const FunctionOverrideInfo& overrideInfo)
@@ -240,8 +192,8 @@ void FunctionExecutable::overrideInfo(const FunctionOverrideInfo& overrideInfo)
     rareData.m_lineCount = overrideInfo.lineCount;
     rareData.m_endColumn = overrideInfo.endColumn;
     rareData.m_parametersStartOffset = overrideInfo.parametersStartOffset;
-    rareData.m_typeProfilingStartOffset = overrideInfo.typeProfilingStartOffset;
-    rareData.m_typeProfilingEndOffset = overrideInfo.typeProfilingEndOffset;
+    rareData.m_functionStart = overrideInfo.functionStart;
+    rareData.m_functionEnd = overrideInfo.functionEnd;
 }
 
 auto FunctionExecutable::ensureTemplateObjectMap(VM&) -> TemplateObjectMap&

@@ -114,11 +114,6 @@ public:
         return true;
     }
 
-    friend bool operator!=(const ObjectPropertyConditionSet& lhs, const ObjectPropertyConditionSet& rhs)
-    {
-        return !(lhs == rhs);
-    }
-
     ObjectPropertyCondition forObject(JSObject*) const;
     ObjectPropertyCondition forConditionKind(PropertyCondition::Kind) const;
 
@@ -194,8 +189,8 @@ struct PrototypeChainCachingStatus {
     bool flattenedDictionary;
 };
 
-std::optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObject*, JSCell* base, const PropertySlot&);
-std::optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObject*, JSCell* base, JSObject* target);
-std::optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObject*, Structure* base, JSObject* target);
+std::optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObject*, JSCell* base, UniquedStringImpl*, const PropertySlot&);
+std::optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObject*, JSCell* base, UniquedStringImpl*, JSObject* target);
+std::optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObject*, Structure* base, UniquedStringImpl*, JSObject* target);
 
 } // namespace JSC

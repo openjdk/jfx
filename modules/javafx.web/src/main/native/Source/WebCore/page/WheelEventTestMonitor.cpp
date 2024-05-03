@@ -111,24 +111,31 @@ void WheelEventTestMonitor::removeDeferralForReason(ScrollableAreaIdentifier ide
     scheduleCallbackCheck();
 }
 
-void WheelEventTestMonitor::receivedWheelEvent(const PlatformWheelEvent& event)
+void WheelEventTestMonitor::receivedWheelEventWithPhases(PlatformWheelEventPhase phase, PlatformWheelEventPhase momentumPhase)
 {
 #if ENABLE(KINETIC_SCROLLING)
     Locker locker { m_lock };
 
-    if (event.phase() == PlatformWheelEventPhase::Ended || event.phase() == PlatformWheelEventPhase::Cancelled)
+    LOG_WITH_STREAM(WheelEventTestMonitor, stream << "      (=) WheelEventTestMonitor::receivedWheelEventWithPhases: phase=" << phase << " momentumPhase=" << momentumPhase);
+
+    if (phase == PlatformWheelEventPhase::Ended || phase == PlatformWheelEventPhase::Cancelled)
         m_receivedWheelEndOrCancel = true;
 
-    if (event.momentumPhase() == PlatformWheelEventPhase::Ended)
+    if (momentumPhase == PlatformWheelEventPhase::Ended)
         m_receivedMomentumEnd = true;
+#else
+    UNUSED_PARAM(phase);
+    UNUSED_PARAM(momentumPhase);
 #endif
 }
 
 void WheelEventTestMonitor::scheduleCallbackCheck()
 {
-    ensureOnMainThread([weakPage = WeakPtr { m_page }] {
-        if (weakPage)
-            weakPage->scheduleRenderingUpdate(RenderingUpdateStep::WheelEventMonitorCallbacks);
+    ensureOnMainThread([weakThis = ThreadSafeWeakPtr { *this }] {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
+            return;
+        protectedThis->m_page.scheduleRenderingUpdate(RenderingUpdateStep::WheelEventMonitorCallbacks);
     });
 }
 

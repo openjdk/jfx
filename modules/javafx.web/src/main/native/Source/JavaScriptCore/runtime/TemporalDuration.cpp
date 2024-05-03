@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2021 Sony Interactive Entertainment Inc.
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,12 +55,6 @@ TemporalDuration::TemporalDuration(VM& vm, Structure* structure, ISO8601::Durati
     : Base(vm, structure)
     , m_duration(WTFMove(duration))
 {
-}
-
-void TemporalDuration::finishCreation(VM& vm)
-{
-    Base::finishCreation(vm);
-    ASSERT(inherits(info()));
 }
 
 // CreateTemporalDuration ( years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds [ , newTarget ] )
@@ -307,9 +301,11 @@ static TemporalUnit largestSubduration(const ISO8601::Duration& duration)
 
 // BalanceDuration ( days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds, largestUnit [ , relativeTo ] )
 // https://tc39.es/proposal-temporal/#sec-temporal-balanceduration
-void TemporalDuration::balance(ISO8601::Duration& duration, TemporalUnit largestUnit)
+std::optional<double> TemporalDuration::balance(ISO8601::Duration& duration, TemporalUnit largestUnit)
 {
     auto nanoseconds = totalNanoseconds(duration);
+    if (!std::isfinite(nanoseconds))
+        return nanoseconds;
     duration.clear();
 
     if (largestUnit <= TemporalUnit::Day) {
@@ -348,6 +344,8 @@ void TemporalDuration::balance(ISO8601::Duration& duration, TemporalUnit largest
         duration.setMicroseconds(microseconds);
     } else
         duration.setNanoseconds(nanoseconds);
+
+    return std::nullopt;
 }
 
 ISO8601::Duration TemporalDuration::add(JSGlobalObject* globalObject, JSValue otherValue) const
@@ -549,7 +547,9 @@ double TemporalDuration::total(JSGlobalObject* globalObject, JSValue optionsValu
     }
 
     ISO8601::Duration newDuration = m_duration;
-    balance(newDuration, unit);
+    auto infiniteResult = balance(newDuration, unit);
+    if (infiniteResult)
+        return infiniteResult.value();
     double remainder = round(newDuration, 1, unit, RoundingMode::Trunc);
     return newDuration[static_cast<uint8_t>(unit)] + remainder;
 }

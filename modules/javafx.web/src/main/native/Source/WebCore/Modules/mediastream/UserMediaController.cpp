@@ -28,10 +28,9 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-#include "DOMWindow.h"
 #include "Document.h"
-#include "Frame.h"
-#include "HTMLIFrameElement.h"
+#include "LocalDOMWindow.h"
+#include "RealtimeMediaSourceCenter.h"
 #include "UserMediaRequest.h"
 
 namespace WebCore {

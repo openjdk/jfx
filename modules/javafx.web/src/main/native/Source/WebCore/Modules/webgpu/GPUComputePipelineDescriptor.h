@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,17 +27,17 @@
 
 #include "GPUPipelineDescriptorBase.h"
 #include "GPUProgrammableStage.h"
-#include <pal/graphics/WebGPU/WebGPUComputePipelineDescriptor.h>
+#include "WebGPUComputePipelineDescriptor.h"
 
 namespace WebCore {
 
 struct GPUComputePipelineDescriptor : public GPUPipelineDescriptorBase {
-    PAL::WebGPU::ComputePipelineDescriptor convertToBacking() const
+    WebGPU::ComputePipelineDescriptor convertToBacking(const Ref<GPUPipelineLayout>& autoLayout) const
     {
         return {
             {
                 { label },
-                layout ? &layout->backing() : nullptr,
+                &convertPipelineLayoutToBacking(layout, autoLayout),
             },
             compute.convertToBacking()
         };

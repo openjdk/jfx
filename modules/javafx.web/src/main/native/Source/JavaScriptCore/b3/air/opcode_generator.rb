@@ -229,15 +229,15 @@ def isGF(token)
 end
 
 def isKind(token)
-    token =~ /\A((Tmp)|(Imm)|(BigImm)|(BitImm)|(BitImm64)|(ZeroReg)|(SimpleAddr)|(Addr)|(ExtendedOffsetAddr)|(Index)|(PreIndex)|(PostIndex)|(RelCond)|(ResCond)|(DoubleCond)|(StatusCond))\Z/
+    token =~ /\A((Tmp)|(Imm)|(BigImm)|(BitImm)|(BitImm64)|(ZeroReg)|(SimpleAddr)|(Addr)|(ExtendedOffsetAddr)|(Index)|(PreIndex)|(PostIndex)|(RelCond)|(ResCond)|(DoubleCond)|(StatusCond)|(SIMDInfo))\Z/
 end
 
 def isArch(token)
-    token =~ /\A((x86)|(x86_32)|(x86_64)|(arm)|(armv7)|(arm64e)|(arm64)|(32)|(64))\Z/
+    token =~ /\A((x86)|(x86_32)|(x86_64_avx)|(x86_64)|(arm)|(armv7)|(arm64e)|(arm64_lse)|(arm64)|(32)|(64))\Z/
 end
 
 def isWidth(token)
-    token =~ /\A((8)|(16)|(32)|(64)|(Ptr))\Z/
+    token =~ /\A((8)|(16)|(32)|(64)|(Ptr)|(128))\Z/
 end
 
 def isKeyword(token)
@@ -310,7 +310,7 @@ class Parser
 
     def consumeWidth
         result = token.string
-        parseError("Expected width (8, 16, 32, or 64)") unless isWidth(result)
+        parseError("Expected width (8, 16, 32, 64, or 128)") unless isWidth(result)
         advance
         result
     end
@@ -328,18 +328,22 @@ class Parser
                 result << "X86"
             when "x86_64"
                 result << "X86_64"
+            when "x86_64_avx"
+                result << "X86_64_AVX"
             when "arm"
-                result << "ARMv7"
+                result << "ARM_THUMB2"
                 result << "ARM64"
             when "armv7"
-                result << "ARMv7"
+                result << "ARM_THUMB2"
             when "arm64"
                 result << "ARM64"
             when "arm64e"
                 result << "ARM64E"
+            when "arm64_lse"
+                result << "ARM64_LSE"
             when "32"
                 result << "X86"
-                result << "ARMv7"
+                result << "ARM_THUMB2"
             when "64"
                 result << "X86_64"
                 result << "ARM64"
@@ -526,6 +530,7 @@ end
 
 writeH("Opcode") {
     | outp |
+    outp.puts "#if ENABLE(B3_JIT)"
     outp.puts "namespace JSC { namespace B3 { namespace Air {"
     outp.puts "enum Opcode : int16_t {"
     $opcodes.keys.each {
@@ -541,6 +546,7 @@ writeH("Opcode") {
     outp.puts "class PrintStream;"
     outp.puts "JS_EXPORT_PRIVATE void printInternal(PrintStream&, JSC::B3::Air::Opcode);"
     outp.puts "} // namespace WTF"
+    outp.puts "#endif // ENABLE(B3_JIT)"
 }
 
 # From here on, we don't try to emit properly indented code, since we're using a recursive pattern
@@ -579,14 +585,14 @@ def matchForms(outp, speed, forms, columnIndex, columnGetter, filter, callback)
     outp.puts "switch (#{columnGetter[columnIndex]}) {"
     groups.each_pair {
         | key, value |
-        outp.puts "#if USE(JSVALUE64)" if key == "BigImm" or key == "BitImm64"
+        outp.puts "#if USE(JSVALUE64)" if key == "BitImm64"
         Kind.argKinds(key).each {
             | argKind |
             outp.puts "case Arg::#{argKind}:"
         }
         matchForms(outp, speed, value, columnIndex + 1, columnGetter, filter, callback)
         outp.puts "break;"
-        outp.puts "#endif // USE(JSVALUE64)" if key == "BigImm" or key == "BitImm64"
+        outp.puts "#endif // USE(JSVALUE64)" if key == "BitImm64"
     }
     outp.puts "default:"
     outp.puts "break;"
@@ -642,20 +648,42 @@ def matchInstOverloadForm(outp, speed, inst)
     }
 end
 
+$runTimeArchs = {
+    "ARM64_LSE" => "ARM64",
+    "X86_64_AVX" => "X86_64"
+}
 def beginArchs(outp, archs)
     return unless archs
     if archs.empty?
         outp.puts "#if 0"
         return
     end
-    outp.puts("#if " + archs.map {
+    compileTime = []
+    runTime = []
+    archs.each {|arch|
+        if $runTimeArchs.has_key? arch
+            compileTime << $runTimeArchs[arch]
+        else
+            compileTime << arch
+        end
+    }
+    if compileTime.empty?
+        outp.puts("#if 1")
+    else
+        outp.puts("#if " + compileTime.map {
                   | arch |
                   "CPU(#{arch})"
               }.join(" || "))
+    end
+    outp.puts("if (" + archs.map {
+                  | arch |
+                  "is#{arch}()"
+              }.join(" || ") + ") {")
 end
 
 def endArchs(outp, archs)
     return unless archs
+    outp.puts "}"
     outp.puts "#endif"
 end
 
@@ -673,6 +701,7 @@ formTableWidth = (maxNumOperands + 1) * maxNumOperands / 2
 
 writeH("OpcodeUtils") {
     | outp |
+    outp.puts "#if ENABLE(B3_JIT)"
     outp.puts "#include \"AirCustom.h\""
     outp.puts "#include \"AirInst.h\""
     outp.puts "#include \"AirFormTable.h\""
@@ -712,7 +741,6 @@ writeH("OpcodeUtils") {
     outp.puts "    const uint8_t* formBase = g_formTable + kind.opcode * #{formTableWidth} + formOffset;"
     outp.puts "    for (size_t i = 0; i < numOperands; ++i) {"
     outp.puts "        uint8_t form = formBase[i];"
-    outp.puts "        ASSERT(!(form & (1 << formInvalidShift)));"
     outp.puts "        func(args[i], decodeFormRole(form), decodeFormBank(form), decodeFormWidth(form));"
     outp.puts "    }"
     outp.puts "}"
@@ -809,11 +837,14 @@ writeH("OpcodeUtils") {
     outp.puts "}"
     
     outp.puts "} } } // namespace JSC::B3::Air"
+    outp.puts "#endif // ENABLE(B3_JIT)"
 }
 
 writeH("OpcodeGenerated") {
     | outp |
+    outp.puts "#if ENABLE(B3_JIT)"
     outp.puts "#include \"AirInstInlines.h\""
+    outp.puts "#include \"B3ProcedureInlines.h\""
     outp.puts "#include \"CCallHelpers.h\""
     outp.puts "#include \"wtf/PrintStream.h\""
     outp.puts "namespace WTF {"
@@ -919,7 +950,7 @@ writeH("OpcodeGenerated") {
                         outp.puts "if (args[#{index}].isStack() && args[#{index}].stackSlot()->isSpill())"
                         outp.puts "OPGEN_RETURN(false);"
                     end
-                    outp.puts "if (!Arg::isValidAddrForm(args[#{index}].offset()))"
+                    outp.puts "if (!Arg::isValidAddrForm(this->kind.opcode, args[#{index}].offset()))"
                     outp.puts "OPGEN_RETURN(false);"
                 when "ExtendedOffsetAddr"
                     if arg.role == "UA"
@@ -927,7 +958,7 @@ writeH("OpcodeGenerated") {
                         outp.puts "OPGEN_RETURN(false);"
                     end
                 when "Index"
-                    outp.puts "if (!Arg::isValidIndexForm(args[#{index}].scale(), args[#{index}].offset(), #{arg.widthCode}))"
+                    outp.puts "if (!Arg::isValidIndexForm(this->kind.opcode, args[#{index}].scale(), args[#{index}].offset(), #{arg.widthCode}))"
                     outp.puts "OPGEN_RETURN(false);"
                 when "PreIndex"
                     outp.puts "if (!Arg::isValidIncrementIndexForm(args[#{index}].offset()))"
@@ -941,6 +972,7 @@ writeH("OpcodeGenerated") {
                 when "DoubleCond"
                 when "StatusCond"
                 when "ZeroReg"
+                when "SIMDInfo"
                 else
                     raise "Unexpected kind: #{kind.name}"
                 end
@@ -963,17 +995,17 @@ writeH("OpcodeGenerated") {
         | opcode |
         outp.puts "case Opcode::#{opcode.name}:"
 
+        numArgs = opcode.custom ? 0 : opcode.overloads.map {
+            | overload |
+            overload.signature.length
+        }.max
+
         if opcode.custom
             outp.puts "OPGEN_RETURN(#{opcode.name}Custom::admitsStack(*this, argIndex));"
-        else
+        elsif numArgs > 0
             # Switch on the argIndex.
             outp.puts "switch (argIndex) {"
 
-            numArgs = opcode.overloads.map {
-                | overload |
-                overload.signature.length
-            }.max
-            
             numArgs.times {
                 | argIndex |
                 outp.puts "case #{argIndex}:"
@@ -1233,7 +1265,9 @@ writeH("OpcodeGenerated") {
                     end
                 when "Imm", "BitImm"
                     outp.print "args[#{index}].asTrustedImm32()"
-                when "BigImm", "BitImm64"
+                when "BigImm"
+                    outp.print "args[#{index}].asTrustedBigImm()"
+                when "BitImm64"
                     outp.print "args[#{index}].asTrustedImm64()"
                 when "ZeroReg"
                     outp.print "args[#{index}].asZeroReg()"
@@ -1253,6 +1287,8 @@ writeH("OpcodeGenerated") {
                     outp.print "args[#{index}].asDoubleCondition()"
                 when "StatusCond"
                     outp.print "args[#{index}].asStatusCondition()"
+                when "SIMDInfo"
+                    outp.print "args[#{index}].simdInfo()"
                 end
             }
 
@@ -1266,5 +1302,6 @@ writeH("OpcodeGenerated") {
     outp.puts "}"
 
     outp.puts "} } } // namespace JSC::B3::Air"
+    outp.puts "#endif // ENABLE(B3_JIT)"
 }
 

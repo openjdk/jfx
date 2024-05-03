@@ -35,13 +35,8 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGResourceContainer);
 
-static inline SVGDocumentExtensions& svgExtensionsFromElement(SVGElement& element)
-{
-    return element.document().accessSVGExtensions();
-}
-
 RenderSVGResourceContainer::RenderSVGResourceContainer(SVGElement& element, RenderStyle&& style)
-    : RenderSVGHiddenContainer(element, WTFMove(style))
+    : LegacyRenderSVGHiddenContainer(element, WTFMove(style))
     , m_id(element.getIdAttribute())
 {
 }
@@ -55,7 +50,7 @@ void RenderSVGResourceContainer::layout()
     if (selfNeedsClientInvalidation())
         LegacyRenderSVGRoot::addResourceForClientInvalidation(this);
 
-    RenderSVGHiddenContainer::layout();
+    LegacyRenderSVGHiddenContainer::layout();
 }
 
 void RenderSVGResourceContainer::willBeDestroyed()
@@ -63,16 +58,16 @@ void RenderSVGResourceContainer::willBeDestroyed()
     SVGResourcesCache::resourceDestroyed(*this);
 
     if (m_registered) {
-        svgExtensionsFromElement(element()).removeResource(m_id);
+        treeScopeForSVGReferences().removeSVGResource(m_id);
         m_registered = false;
     }
 
-    RenderSVGHiddenContainer::willBeDestroyed();
+    LegacyRenderSVGHiddenContainer::willBeDestroyed();
 }
 
 void RenderSVGResourceContainer::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
-    RenderSVGHiddenContainer::styleDidChange(diff, oldStyle);
+    LegacyRenderSVGHiddenContainer::styleDidChange(diff, oldStyle);
 
     if (!m_registered) {
         m_registered = true;
@@ -86,7 +81,7 @@ void RenderSVGResourceContainer::idChanged()
     removeAllClientsFromCache();
 
     // Remove old id, that is guaranteed to be present in cache.
-    svgExtensionsFromElement(element()).removeResource(m_id);
+    treeScopeForSVGReferences().removeSVGResource(m_id);
     m_id = element().getIdAttribute();
 
     registerResource();
@@ -98,6 +93,12 @@ void RenderSVGResourceContainer::markAllClientsForRepaint()
 }
 
 void RenderSVGResourceContainer::markAllClientsForInvalidation(InvalidationMode mode)
+{
+    WeakHashSet<RenderObject> visitedRenderers;
+    markAllClientsForInvalidationIfNeeded(mode, &visitedRenderers);
+}
+
+void RenderSVGResourceContainer::markAllClientsForInvalidationIfNeeded(InvalidationMode mode, WeakHashSet<RenderObject>* visitedRenderers)
 {
     // FIXME: Style invalidation should either be a pre-layout task or this function
     // should never get called while in layout. See webkit.org/b/208903.
@@ -116,14 +117,14 @@ void RenderSVGResourceContainer::markAllClientsForInvalidation(InvalidationMode 
             continue;
 
         if (is<RenderSVGResourceContainer>(*client)) {
-            downcast<RenderSVGResourceContainer>(*client).removeAllClientsFromCache(markForInvalidation);
+            downcast<RenderSVGResourceContainer>(*client).removeAllClientsFromCacheIfNeeded(markForInvalidation, visitedRenderers);
             continue;
         }
 
         if (markForInvalidation)
             markClientForInvalidation(*client, mode);
 
-        RenderSVGResource::markForLayoutAndParentResourceInvalidation(*client, needsLayout);
+        RenderSVGResource::markForLayoutAndParentResourceInvalidationIfNeeded(*client, needsLayout, visitedRenderers);
     }
 
     markAllClientLayersForInvalidation();
@@ -195,21 +196,20 @@ void RenderSVGResourceContainer::removeClientRenderLayer(RenderLayer* client)
 
 void RenderSVGResourceContainer::registerResource()
 {
-    SVGDocumentExtensions& extensions = svgExtensionsFromElement(element());
-    if (!extensions.isIdOfPendingResource(m_id)) {
-        extensions.addResource(m_id, *this);
+    auto& treeScope = this->treeScopeForSVGReferences();
+    if (!treeScope.isIdOfPendingSVGResource(m_id)) {
+        treeScope.addSVGResource(m_id, *this);
         return;
     }
 
-    auto elements = copyToVectorOf<Ref<Element>>(extensions.removePendingResource(m_id));
+    auto elements = copyToVectorOf<Ref<SVGElement>>(treeScope.removePendingSVGResource(m_id));
 
-    // Cache us with the new id.
-    extensions.addResource(m_id, *this);
+    treeScope.addSVGResource(m_id, *this);
 
     // Update cached resources of pending clients.
     for (auto& client : elements) {
         ASSERT(client->hasPendingResources());
-        extensions.clearHasPendingResourcesIfPossible(client);
+        treeScope.clearHasPendingSVGResourcesIfPossible(client);
         auto* renderer = client->renderer();
         if (!renderer)
             continue;

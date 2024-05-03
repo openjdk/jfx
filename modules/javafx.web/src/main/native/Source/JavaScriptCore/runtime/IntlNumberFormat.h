@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2015 Andy VanWagoner (andy@vanwagoner.family)
  * Copyright (C) 2020 Sony Interactive Entertainment Inc.
- * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -89,15 +89,15 @@ public:
     IntlMathematicalValue() = default;
 
     explicit IntlMathematicalValue(double value)
-        : m_numberType(numberTypeFromDouble(value))
-        , m_sign(std::signbit(value))
-        , m_value(value)
+        : m_value(purifyNaN(value))
+        , m_numberType(numberTypeFromDouble(value))
+        , m_sign(!std::isnan(value) && std::signbit(value))
     { }
 
     explicit IntlMathematicalValue(NumberType numberType, bool sign, CString value)
-        : m_numberType(numberType)
+        : m_value(value)
+        , m_numberType(numberType)
         , m_sign(sign)
-        , m_value(value)
     {
     }
 
@@ -147,9 +147,9 @@ public:
     }
 
 private:
+    Value m_value { 0.0 };
     NumberType m_numberType { NumberType::Integer };
     bool m_sign { false };
-    Value m_value { 0.0 };
 };
 
 class IntlNumberFormat final : public JSNonFinalObject {
@@ -214,7 +214,7 @@ public:
 
 private:
     IntlNumberFormat(VM&, Structure*);
-    void finishCreation(VM&);
+    DECLARE_DEFAULT_FINISH_CREATION;
     DECLARE_VISIT_CHILDREN;
 
     static Vector<String> localeData(const String&, RelevantExtensionKey);

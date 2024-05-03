@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2014 Yoav Weiss (yoav@yoav.ws)
  * Copyright (C) 2015 Akamai Technologies Inc. All rights reserved.
+ * Copyright (C) 2023 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,15 +25,19 @@
 
 #include "CommonVM.h"
 #include "EventLoop.h"
+#include "RejectedPromiseTracker.h"
+#include "ScriptExecutionContext.h"
 #include "WorkerGlobalScope.h"
+#include <JavaScriptCore/CatchScope.h>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/SetForScope.h>
 
 namespace WebCore {
 
-MicrotaskQueue::MicrotaskQueue(JSC::VM& vm)
+MicrotaskQueue::MicrotaskQueue(JSC::VM& vm, EventLoop& eventLoop)
     : m_vm(vm)
+    , m_eventLoop(eventLoop)
 {
 }
 
@@ -49,10 +54,12 @@ void MicrotaskQueue::performMicrotaskCheckpoint()
         return;
 
     SetForScope change(m_performingMicrotaskCheckpoint, true);
-    JSC::JSLockHolder locker(vm());
+    JSC::VM& vm = this->vm();
+    JSC::JSLockHolder locker(vm);
+    auto catchScope = DECLARE_CATCH_SCOPE(vm);
 
     Vector<std::unique_ptr<EventLoopTask>> toKeep;
-    while (!m_microtaskQueue.isEmpty()) {
+    while (!m_microtaskQueue.isEmpty() && !vm.executionForbidden()) {
         Vector<std::unique_ptr<EventLoopTask>> queue = WTFMove(m_microtaskQueue);
         for (auto& task : queue) {
             auto* group = task->group();
@@ -60,14 +67,18 @@ void MicrotaskQueue::performMicrotaskCheckpoint()
                 continue;
             if (group->isSuspended())
                 toKeep.append(WTFMove(task));
-            else
+            else {
                 task->execute();
+                if (UNLIKELY(!catchScope.clearExceptionExceptTermination()))
+                    break; // Encountered termination.
+            }
         }
     }
 
-    vm().finalizeSynchronousJSExecution();
+    vm.finalizeSynchronousJSExecution();
     m_microtaskQueue = WTFMove(toKeep);
 
+    if (!vm.executionForbidden()) {
     auto checkpointTasks = std::exchange(m_checkpointTasks, { });
     for (auto& checkpointTask : checkpointTasks) {
         auto* group = checkpointTask->group();
@@ -80,7 +91,25 @@ void MicrotaskQueue::performMicrotaskCheckpoint()
         }
 
         checkpointTask->execute();
+            if (UNLIKELY(!catchScope.clearExceptionExceptTermination()))
+                break; // Encountered termination.
+        }
     }
+
+    // https://html.spec.whatwg.org/multipage/webappapis.html#perform-a-microtask-checkpoint (step 4).
+    auto* vmPtr = &vm;
+    m_eventLoop->forEachAssociatedContext([vmPtr](auto& context) {
+        auto& vm = *vmPtr;
+        if (UNLIKELY(vm.executionForbidden()))
+            return;
+        auto catchScope = DECLARE_CATCH_SCOPE(vm);
+        if (auto* tracker = context.rejectedPromiseTracker())
+            tracker->processQueueSoon();
+        catchScope.clearExceptionExceptTermination();
+    });
+
+    // FIXME: We should cleanup Indexed Database transactions as per:
+    // https://html.spec.whatwg.org/multipage/webappapis.html#perform-a-microtask-checkpoint (step 5).
 }
 
 void MicrotaskQueue::addCheckpointTask(std::unique_ptr<EventLoopTask>&& task)

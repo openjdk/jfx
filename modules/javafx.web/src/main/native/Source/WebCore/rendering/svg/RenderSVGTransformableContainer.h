@@ -42,9 +42,9 @@ private:
     SVGGraphicsElement& graphicsElement() const;
 
     FloatSize additionalContainerTranslation() const;
-    void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption> = RenderStyle::allTransformOperations) const final;
+    void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption>) const final;
     void updateLayerTransform() final;
-    void updateFromStyle() final;
+    bool needsHasSVGTransformFlags() const final;
 
     AffineTransform m_supplementalLayerTransform;
 };

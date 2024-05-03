@@ -52,52 +52,41 @@ page/linux/ResourceUsageThreadLinux.cpp
 
 page/scrolling/nicosia/ScrollingCoordinatorNicosia.cpp
 page/scrolling/nicosia/ScrollingStateNodeNicosia.cpp
-page/scrolling/nicosia/ScrollingTreeFixedNode.cpp
+page/scrolling/nicosia/ScrollingTreeFixedNodeNicosia.cpp
 page/scrolling/nicosia/ScrollingTreeFrameScrollingNodeNicosia.cpp
 page/scrolling/nicosia/ScrollingTreeNicosia.cpp
-page/scrolling/nicosia/ScrollingTreeOverflowScrollProxyNode.cpp
+page/scrolling/nicosia/ScrollingTreeOverflowScrollProxyNodeNicosia.cpp
 page/scrolling/nicosia/ScrollingTreeOverflowScrollingNodeNicosia.cpp
-page/scrolling/nicosia/ScrollingTreePositionedNode.cpp
+page/scrolling/nicosia/ScrollingTreePositionedNodeNicosia.cpp
 page/scrolling/nicosia/ScrollingTreeScrollingNodeDelegateNicosia.cpp
 page/scrolling/nicosia/ScrollingTreeStickyNodeNicosia.cpp
-
-platform/UserAgentQuirks.cpp
-
-platform/adwaita/ScrollbarThemeAdwaita.cpp
-platform/adwaita/ThemeAdwaita.cpp
 
 platform/gamepad/manette/ManetteGamepad.cpp
 platform/gamepad/manette/ManetteGamepadProvider.cpp
 
 platform/generic/ScrollbarsControllerGeneric.cpp
 
-platform/graphics/ANGLEWebKitBridge.cpp
-platform/graphics/GLContext.cpp @no-unify
 platform/graphics/PlatformDisplay.cpp @no-unify
+
+platform/graphics/angle/PlatformDisplayANGLE.cpp @no-unify
 
 platform/graphics/cairo/BackingStoreBackendCairoX11.cpp @no-unify
 
-platform/graphics/egl/GLContextEGL.cpp @no-unify
-platform/graphics/egl/GLContextEGLLibWPE.cpp @no-unify
-platform/graphics/egl/GLContextEGLWayland.cpp @no-unify
-platform/graphics/egl/GLContextEGLX11.cpp @no-unify
+platform/graphics/egl/GLContext.cpp @no-unify
+platform/graphics/egl/GLContextLibWPE.cpp @no-unify
+platform/graphics/egl/GLContextX11.cpp @no-unify
+platform/graphics/egl/PlatformDisplaySurfaceless.cpp @no-unify
 
 platform/graphics/gbm/GBMBufferSwapchain.cpp
 platform/graphics/gbm/GBMDevice.cpp
-platform/graphics/gbm/GraphicsContextGLANGLELinux.cpp
-platform/graphics/gbm/GraphicsContextGLFallback.cpp
-platform/graphics/gbm/GraphicsContextGLGBM.cpp
-platform/graphics/gbm/GraphicsContextGLGBMTextureMapper.cpp
-
-platform/graphics/glx/GLContextGLX.cpp @no-unify
+platform/graphics/gbm/GraphicsContextGLGBM.cpp @no-unify
+platform/graphics/gbm/PlatformDisplayGBM.cpp @no-unify
 
 platform/graphics/gtk/ColorGtk.cpp
 platform/graphics/gtk/DisplayRefreshMonitorGtk.cpp
 platform/graphics/gtk/GdkCairoUtilities.cpp
 platform/graphics/gtk/ImageGtk.cpp
 platform/graphics/gtk/SystemFontDatabaseGTK.cpp
-
-platform/graphics/gstreamer/ImageGStreamerCairo.cpp
 
 platform/graphics/libwpe/PlatformDisplayLibWPE.cpp
 
@@ -135,6 +124,3 @@ platform/text/hyphen/HyphenationLibHyphen.cpp
 platform/unix/LoggingUnix.cpp
 
 platform/xdg/MIMETypeRegistryXdg.cpp
-
-rendering/RenderThemeAdwaita.cpp
-rendering/RenderThemeGtk.cpp

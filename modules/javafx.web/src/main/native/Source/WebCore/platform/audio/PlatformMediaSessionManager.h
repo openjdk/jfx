@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,8 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PlatformMediaSessionManager_h
-#define PlatformMediaSessionManager_h
+#pragma once
 
 #include "MediaUniqueIdentifier.h"
 #include "PlatformMediaSession.h"
@@ -50,6 +49,7 @@ public:
     WEBCORE_EXPORT static PlatformMediaSessionManager& sharedManager();
 
     static void updateNowPlayingInfoIfNecessary();
+    static void updateAudioSessionCategoryIfNecessary();
 
     WEBCORE_EXPORT static void setShouldDeactivateAudioSession(bool);
     WEBCORE_EXPORT static bool shouldDeactivateAudioSession();
@@ -62,6 +62,8 @@ public:
     WEBCORE_EXPORT static bool opusDecoderEnabled();
     WEBCORE_EXPORT static void setAlternateWebMPlayerEnabled(bool);
     WEBCORE_EXPORT static bool alternateWebMPlayerEnabled();
+    WEBCORE_EXPORT static void setUseSCContentSharingPicker(bool);
+    WEBCORE_EXPORT static bool useSCContentSharingPicker();
 
 #if ENABLE(VP9)
     WEBCORE_EXPORT static void setShouldEnableVP9Decoder(bool);
@@ -137,9 +139,10 @@ public:
     virtual void sessionCanProduceAudioChanged();
 
 #if PLATFORM(IOS_FAMILY)
-    virtual void configureWireLessTargetMonitoring() { }
+    virtual void configureWirelessTargetMonitoring() { }
 #endif
     virtual bool hasWirelessTargetsAvailable() { return false; }
+    virtual bool isMonitoringWirelessTargets() const { return false; }
 
     virtual void setCurrentSession(PlatformMediaSession&);
     PlatformMediaSession* currentSession() const;
@@ -217,6 +220,7 @@ private:
     bool m_processIsSuspended { false };
     bool m_isPlayingToAutomotiveHeadUnit { false };
 
+    bool m_alreadyScheduledSessionStatedUpdate { false };
 #if USE(AUDIO_SESSION)
     bool m_becameActive { false };
 #endif
@@ -236,6 +240,9 @@ private:
 #if ENABLE(ALTERNATE_WEBM_PLAYER)
     static bool m_alternateWebMPlayerEnabled;
 #endif
+#if HAVE(SC_CONTENT_SHARING_PICKER)
+    static bool s_useSCContentSharingPicker;
+#endif
 
 #if ENABLE(VP9)
     static bool m_vp9DecoderEnabled;
@@ -248,6 +255,4 @@ private:
 #endif
 };
 
-}
-
-#endif // PlatformMediaSessionManager_h
+} // namespace WebCore

@@ -31,6 +31,7 @@
 #include "BaseAudioContext.h"
 #include "IIRFilter.h"
 #include "ScriptExecutionContext.h"
+#include <JavaScriptCore/TypedArrays.h>
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -68,7 +69,7 @@ static bool isFilterStable(const Vector<double>& feedback)
     for (int n = order; n >= 1; --n) {
         double k = coefficients[n];
 
-        if (std::fabs(k) >= 1)
+        if (std::abs(k) >= 1)
             return false;
 
         // Note that A[n](1/z)/z^n is basically the coefficients of A[n]

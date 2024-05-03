@@ -50,7 +50,7 @@ private:
     void addChildren() override;
     LayoutRect elementRect() const override;
 
-    SpinButtonElement* m_spinButtonElement;
+    WeakPtr<SpinButtonElement, WeakPtrImplWithEventTargetData> m_spinButtonElement;
 };
 
 class AccessibilitySpinButtonPart final : public AccessibilityMockObject {
@@ -74,5 +74,10 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilitySpinButton, isNativeSpinButton())
-SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilitySpinButtonPart, isSpinButtonPart())
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::AccessibilitySpinButton) \
+    static bool isType(const WebCore::AccessibilityObject& object) { return object.isNativeSpinButton(); } \
+SPECIALIZE_TYPE_TRAITS_END()
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::AccessibilitySpinButtonPart) \
+    static bool isType(const WebCore::AccessibilityObject& object) { return object.isSpinButtonPart(); } \
+SPECIALIZE_TYPE_TRAITS_END()

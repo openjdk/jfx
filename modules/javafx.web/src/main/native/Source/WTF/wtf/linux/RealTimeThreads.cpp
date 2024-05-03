@@ -30,6 +30,7 @@
 #include <signal.h>
 #include <string.h>
 #include <wtf/MainThread.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/SafeStrerror.h>
 
 #if USE(GLIB)
@@ -151,6 +152,7 @@ void RealTimeThreads::demoteAllThreadsFromRealTime()
 #if USE(GLIB)
 static const Seconds s_dbusCallTimeout = 20_ms;
 
+#ifdef RLIMIT_RTTIME
 static int64_t realTimeKitGetProperty(GDBusProxy* proxy, const char* propertyName, GError** error)
 {
     const char* interfaceName = shouldUsePortal() ? "org.freedesktop.portal.Realtime" : "org.freedesktop.RealtimeKit1";
@@ -168,6 +170,7 @@ static int64_t realTimeKitGetProperty(GDBusProxy* proxy, const char* propertyNam
     g_set_error(error, G_DBUS_ERROR, G_DBUS_ERROR_INVALID_ARGS, "Invalid property type received for property %s at interface %s", propertyName, interfaceName);
     return -1;
 }
+#endif
 
 void RealTimeThreads::realTimeKitMakeThreadRealTime(uint64_t processID, uint64_t threadID, uint32_t priority)
 {

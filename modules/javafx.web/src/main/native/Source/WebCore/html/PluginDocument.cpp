@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,15 +25,16 @@
 #include "config.h"
 #include "PluginDocument.h"
 
+#include "CSSValuePool.h"
 #include "DocumentLoader.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
-#include "FrameView.h"
 #include "HTMLBodyElement.h"
 #include "HTMLEmbedElement.h"
 #include "HTMLHtmlElement.h"
 #include "HTMLNames.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
+#include "LocalFrameView.h"
 #include "PluginViewBase.h"
 #include "RawDataDocumentParser.h"
 #include "RenderEmbeddedObject.h"
@@ -62,7 +63,7 @@ private:
     void appendBytes(DocumentWriter&, const uint8_t*, size_t) final;
     void createDocumentStructure();
 
-    WeakPtr<HTMLEmbedElement> m_embedElement;
+    WeakPtr<HTMLEmbedElement, WeakPtrImplWithEventTargetData> m_embedElement;
 };
 
 void PluginDocumentParser::createDocumentStructure()
@@ -72,6 +73,8 @@ void PluginDocumentParser::createDocumentStructure()
     auto rootElement = HTMLHtmlElement::create(document);
     document.appendChild(rootElement);
     rootElement->insertedByParser();
+    rootElement->setInlineStyleProperty(CSSPropertyHeight, 100, CSSUnitType::CSS_PERCENTAGE);
+    rootElement->setInlineStyleProperty(CSSPropertyWidth, 100, CSSUnitType::CSS_PERCENTAGE);
 
     if (document.frame())
         document.frame()->injectUserScripts(UserScriptInjectionTime::DocumentStart);
@@ -85,16 +88,23 @@ void PluginDocumentParser::createDocumentStructure()
     body->setAttributeWithoutSynchronization(marginwidthAttr, "0"_s);
     body->setAttributeWithoutSynchronization(marginheightAttr, "0"_s);
 #if PLATFORM(IOS_FAMILY)
-    body->setAttribute(styleAttr, "background-color: rgb(217,224,233)"_s);
+    constexpr auto bodyBackgroundColor = SRGBA<uint8_t> { 217, 224, 233 };
 #else
-    body->setAttribute(styleAttr, "background-color: rgb(38,38,38)"_s);
+    constexpr auto bodyBackgroundColor = SRGBA<uint8_t> { 38, 38, 38 };
 #endif
+
+    // If the plugin is a PDF, the background color is overriden in `PDFPlugin::PDFPlugin`.
+    body->setInlineStyleProperty(CSSPropertyBackgroundColor, CSSValuePool::singleton().createColorValue(bodyBackgroundColor));
+    body->setInlineStyleProperty(CSSPropertyHeight, 100, CSSUnitType::CSS_PERCENTAGE);
+    body->setInlineStyleProperty(CSSPropertyWidth, 100, CSSUnitType::CSS_PERCENTAGE);
+    body->setInlineStyleProperty(CSSPropertyOverflow, CSSValueHidden);
+    body->setInlineStyleProperty(CSSPropertyMargin, 0, CSSUnitType::CSS_PERCENTAGE);
 
     rootElement->appendChild(body);
 
     auto embedElement = HTMLEmbedElement::create(document);
 
-    m_embedElement = embedElement.ptr();
+    m_embedElement = embedElement.get();
     embedElement->setAttributeWithoutSynchronization(widthAttr, "100%"_s);
     embedElement->setAttributeWithoutSynchronization(heightAttr, "100%"_s);
 
@@ -144,10 +154,10 @@ void PluginDocumentParser::appendBytes(DocumentWriter&, const uint8_t*, size_t)
     }
 }
 
-PluginDocument::PluginDocument(Frame& frame, const URL& url)
+PluginDocument::PluginDocument(LocalFrame& frame, const URL& url)
     : HTMLDocument(&frame, frame.settings(), url, { }, { DocumentClass::Plugin })
 {
-    setCompatibilityMode(DocumentCompatibilityMode::QuirksMode);
+    setCompatibilityMode(DocumentCompatibilityMode::NoQuirksMode);
     lockCompatibilityMode();
 }
 

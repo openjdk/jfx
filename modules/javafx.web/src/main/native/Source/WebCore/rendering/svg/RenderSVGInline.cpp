@@ -22,6 +22,8 @@
 #include "config.h"
 #include "RenderSVGInline.h"
 
+#include "RenderBoxModelObjectInlines.h"
+#include "RenderSVGInlineInlines.h"
 #include "RenderSVGInlineText.h"
 #include "RenderSVGResource.h"
 #include "RenderSVGText.h"
@@ -76,6 +78,8 @@ LayoutRect RenderSVGInline::clippedOverflowRect(const RenderLayerModelObject* re
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (document().settings().layerBasedSVGEngineEnabled())
         return RenderInline::clippedOverflowRect(repaintContainer, context);
+#else
+    UNUSED_PARAM(context);
 #endif
     return SVGRenderSupport::clippedOverflowRectForRepaint(*this, repaintContainer);
 }
@@ -98,6 +102,8 @@ void RenderSVGInline::mapLocalToContainer(const RenderLayerModelObject* ancestor
         RenderInline::mapLocalToContainer(ancestorContainer, transformState, mode, wasFixed);
         return;
     }
+#else
+    UNUSED_PARAM(mode);
 #endif
     SVGRenderSupport::mapLocalToContainer(*this, ancestorContainer, transformState, wasFixed);
 }
@@ -149,9 +155,21 @@ void RenderSVGInline::styleDidChange(StyleDifference diff, const RenderStyle* ol
     SVGResourcesCache::clientStyleChanged(*this, diff, oldStyle, style());
 }
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+bool RenderSVGInline::needsHasSVGTransformFlags() const
+{
+    return graphicsElement().hasTransformRelatedAttributes();
+}
+#endif
+
 void RenderSVGInline::updateFromStyle()
 {
     RenderInline::updateFromStyle();
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (document().settings().layerBasedSVGEngineEnabled())
+        updateHasSVGTransformFlags();
+#endif
 
     // SVG text layout code expects us to be an inline-level element.
     setInline(true);

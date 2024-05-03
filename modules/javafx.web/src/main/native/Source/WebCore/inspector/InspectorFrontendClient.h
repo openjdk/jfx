@@ -135,6 +135,8 @@ public:
     virtual void inspectedURLChanged(const String&) = 0;
     virtual void showCertificate(const CertificateInfo&) = 0;
 
+    virtual void setInspectorPageDeveloperExtrasEnabled(bool) = 0;
+
 #if ENABLE(INSPECTOR_TELEMETRY)
     virtual bool supportsDiagnosticLogging() { return false; }
     virtual bool diagnosticLoggingAvailable() { return false; }
@@ -143,7 +145,7 @@ public:
 
 #if ENABLE(INSPECTOR_EXTENSIONS)
     virtual bool supportsWebExtensions() { return false; }
-    virtual void didShowExtensionTab(const Inspector::ExtensionID&, const Inspector::ExtensionTabID&, FrameIdentifier) { }
+    virtual void didShowExtensionTab(const Inspector::ExtensionID&, const Inspector::ExtensionTabID&, const FrameIdentifier&) { }
     virtual void didHideExtensionTab(const Inspector::ExtensionID&, const Inspector::ExtensionTabID&) { }
     virtual void didNavigateExtensionTab(const Inspector::ExtensionID&, const Inspector::ExtensionTabID&, const URL&) { }
     virtual void inspectedPageDidNavigate(const URL&) { }

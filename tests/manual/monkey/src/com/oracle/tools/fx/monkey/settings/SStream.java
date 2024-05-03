@@ -71,6 +71,10 @@ public abstract class SStream {
         };
     }
 
+    public void add(int x) {
+        addValue(x);
+    }
+
     public void add(double x) {
         addValue(x);
     }
@@ -95,7 +99,7 @@ public abstract class SStream {
         return defaultValue;
     }
 
-    public double nextDouble(double defaultValue) {
+    public final double nextDouble(double defaultValue) {
         Object v = nextValue();
         if (v instanceof String s) {
             try {
@@ -109,6 +113,21 @@ public abstract class SStream {
         return defaultValue;
     }
 
+    public final int nextInt(int defaultValue) {
+        Object v = nextValue();
+        if (v instanceof String s) {
+            try {
+                return Integer.parseInt(s);
+            } catch (NumberFormatException e) {
+                // ignore
+            }
+        } else if (v instanceof Integer d) {
+            return d;
+        }
+        return defaultValue;
+    }
+
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder(64);
         sb.append("[");

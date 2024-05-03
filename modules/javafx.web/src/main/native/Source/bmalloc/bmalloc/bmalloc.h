@@ -76,6 +76,34 @@ BINLINE void* malloc(size_t size, HeapKind kind = HeapKind::Primary)
 #endif
 }
 
+BINLINE void* tryZeroedMalloc(size_t size, HeapKind kind = HeapKind::Primary)
+{
+#if BUSE(LIBPAS)
+    if (!isGigacage(kind))
+        return bmalloc_try_allocate_zeroed_inline(size);
+    return bmalloc_try_allocate_auxiliary_zeroed_inline(&heapForKind(gigacageKind(kind)), size);
+#else
+    auto* mem = Cache::tryAllocate(kind, size);
+    if (mem)
+        memset(mem, 0, size);
+    return mem;
+#endif
+}
+
+// Crashes on failure.
+BINLINE void* zeroedMalloc(size_t size, HeapKind kind = HeapKind::Primary)
+{
+#if BUSE(LIBPAS)
+    if (!isGigacage(kind))
+        return bmalloc_allocate_zeroed_inline(size);
+    return bmalloc_allocate_auxiliary_zeroed_inline(&heapForKind(gigacageKind(kind)), size);
+#else
+    auto* mem = Cache::allocate(kind, size);
+    memset(mem, 0, size);
+    return mem;
+#endif
+}
+
 BEXPORT void* mallocOutOfLine(size_t size, HeapKind kind = HeapKind::Primary);
 
 // Returns null on failure.
@@ -188,6 +216,24 @@ BEXPORT void enableMiniMode();
 
 // Used for debugging only.
 BEXPORT void disableScavenger();
+
+#if BENABLE(MALLOC_SIZE)
+inline size_t mallocSize(const void* object)
+{
+    if (auto* debugHeap = DebugHeap::tryGet())
+        return debugHeap->mallocSize(object);
+    return bmalloc_get_allocation_size(const_cast<void*>(object));
+}
+#endif
+
+#if BENABLE(MALLOC_GOOD_SIZE)
+inline size_t mallocGoodSize(size_t size)
+{
+    if (auto* debugHeap = DebugHeap::tryGet())
+        return debugHeap->mallocGoodSize(size);
+    return size;
+}
+#endif
 
 } // namespace api
 } // namespace bmalloc

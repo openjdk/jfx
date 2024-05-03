@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include "DOMCacheIdentifier.h"
 #include "FetchHeaders.h"
 #include "FetchOptions.h"
 #include "ResourceRequest.h"
@@ -79,8 +80,45 @@ struct Record {
     uint64_t responseBodySize;
 };
 
-struct CacheInfo {
+struct CrossThreadRecord {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    CrossThreadRecord(const CrossThreadRecord&) = delete;
+    CrossThreadRecord& operator=(const CrossThreadRecord&) = delete;
+    CrossThreadRecord() = default;
+    CrossThreadRecord(CrossThreadRecord&&) = default;
+    CrossThreadRecord& operator=(CrossThreadRecord&&) = default;
+    CrossThreadRecord(uint64_t identifier, uint64_t updateResponseCounter, FetchHeaders::Guard requestHeadersGuard, ResourceRequest&& request, FetchOptions options, String&& referrer, FetchHeaders::Guard responseHeadersGuard, ResourceResponse::CrossThreadData&& response, ResponseBody&& responseBody, uint64_t responseBodySize)
+        : identifier(identifier)
+        , updateResponseCounter(updateResponseCounter)
+        , requestHeadersGuard(requestHeadersGuard)
+        , request(WTFMove(request))
+        , options(options)
+        , referrer(WTFMove(referrer))
+        , responseHeadersGuard(responseHeadersGuard)
+        , response(WTFMove(response))
+        , responseBody(WTFMove(responseBody))
+        , responseBodySize(responseBodySize)
+    {
+    }
+    CrossThreadRecord isolatedCopy() &&;
+
     uint64_t identifier;
+    uint64_t updateResponseCounter;
+    FetchHeaders::Guard requestHeadersGuard;
+    ResourceRequest request;
+    FetchOptions options;
+    String referrer;
+    FetchHeaders::Guard responseHeadersGuard;
+    ResourceResponse::CrossThreadData response;
+    ResponseBody responseBody;
+    uint64_t responseBodySize;
+};
+
+WEBCORE_EXPORT CrossThreadRecord toCrossThreadRecord(Record&&);
+WEBCORE_EXPORT Record fromCrossThreadRecord(CrossThreadRecord&&);
+
+struct CacheInfo {
+    DOMCacheIdentifier identifier;
     String name;
 
     CacheInfo isolatedCopy() const & { return { identifier, name.isolatedCopy() }; }
@@ -91,24 +129,21 @@ struct CacheInfos {
     Vector<CacheInfo> infos;
     uint64_t updateCounter;
 
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<CacheInfos> decode(Decoder&);
-
     CacheInfos isolatedCopy() const & { return { crossThreadCopy(infos), updateCounter }; }
     CacheInfos isolatedCopy() && { return { crossThreadCopy(WTFMove(infos)), updateCounter }; }
 };
 
 struct CacheIdentifierOperationResult {
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<CacheIdentifierOperationResult> decode(Decoder&);
-
-    uint64_t identifier { 0 };
+    DOMCacheIdentifier identifier;
     // True in case storing cache list on the filesystem failed.
     bool hadStorageError { false };
 };
 
 using CacheIdentifierOrError = Expected<CacheIdentifierOperationResult, Error>;
 using CacheIdentifierCallback = CompletionHandler<void(const CacheIdentifierOrError&)>;
+
+using RemoveCacheIdentifierOrError = Expected<bool, Error>;
+using RemoveCacheIdentifierCallback = CompletionHandler<void(const RemoveCacheIdentifierOrError&)>;
 
 using RecordIdentifiersOrError = Expected<Vector<uint64_t>, Error>;
 using RecordIdentifiersCallback = CompletionHandler<void(RecordIdentifiersOrError&&)>;
@@ -120,64 +155,11 @@ using CacheInfosCallback = CompletionHandler<void(CacheInfosOrError&&)>;
 using RecordsOrError = Expected<Vector<Record>, Error>;
 using RecordsCallback = CompletionHandler<void(RecordsOrError&&)>;
 
+using CrossThreadRecordsOrError = Expected<Vector<CrossThreadRecord>, Error>;
+using CrossThreadRecordsCallback = CompletionHandler<void(CrossThreadRecordsOrError&&)>;
+
 using CompletionCallback = CompletionHandler<void(std::optional<Error>&&)>;
-
-template<class Encoder> inline void CacheInfos::encode(Encoder& encoder) const
-{
-    encoder << infos;
-    encoder << updateCounter;
-}
-
-template<class Decoder> inline std::optional<CacheInfos> CacheInfos::decode(Decoder& decoder)
-{
-    std::optional<Vector<CacheInfo>> infos;
-    decoder >> infos;
-    if (!infos)
-        return std::nullopt;
-
-    std::optional<uint64_t> updateCounter;
-    decoder >> updateCounter;
-    if (!updateCounter)
-        return std::nullopt;
-
-    return {{ WTFMove(*infos), WTFMove(*updateCounter) }};
-}
-
-template<class Encoder> inline void CacheIdentifierOperationResult::encode(Encoder& encoder) const
-{
-    encoder << identifier;
-    encoder << hadStorageError;
-}
-
-template<class Decoder> inline std::optional<CacheIdentifierOperationResult> CacheIdentifierOperationResult::decode(Decoder& decoder)
-{
-    std::optional<uint64_t> identifier;
-    decoder >> identifier;
-    if (!identifier)
-        return std::nullopt;
-
-    std::optional<bool> hadStorageError;
-    decoder >> hadStorageError;
-    if (!hadStorageError)
-        return std::nullopt;
-    return {{ WTFMove(*identifier), WTFMove(*hadStorageError) }};
-}
 
 } // namespace DOMCacheEngine
 
 } // namespace WebCore
-
-namespace WTF {
-template<> struct EnumTraits<WebCore::DOMCacheEngine::Error> {
-    using values = EnumValues<
-        WebCore::DOMCacheEngine::Error,
-        WebCore::DOMCacheEngine::Error::NotImplemented,
-        WebCore::DOMCacheEngine::Error::ReadDisk,
-        WebCore::DOMCacheEngine::Error::WriteDisk,
-        WebCore::DOMCacheEngine::Error::QuotaExceeded,
-        WebCore::DOMCacheEngine::Error::Internal,
-        WebCore::DOMCacheEngine::Error::Stopped,
-        WebCore::DOMCacheEngine::Error::CORP
-    >;
-};
-}

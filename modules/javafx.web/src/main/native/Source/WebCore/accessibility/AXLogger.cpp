@@ -33,24 +33,41 @@
 #include "AXIsolatedObject.h"
 #endif
 #include "AXObjectCache.h"
-#include "FrameView.h"
+#include "DocumentInlines.h"
+#include "LocalFrameView.h"
 #include "LogInitialization.h"
 #include "Logging.h"
+#include <algorithm>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/OptionSet.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
-static bool shouldLog()
+#if !LOG_DISABLED
+
+bool AXLogger::shouldLog()
 {
     // Modify the initializer list below to choose what thread you want to log messages from.
     static constexpr OptionSet<AXLoggingOptions> loggingOptions { AXLoggingOptions::MainThread, AXLoggingOptions::OffMainThread };
 
-    return (isMainThread() && loggingOptions & AXLoggingOptions::MainThread)
-        || (!isMainThread() && loggingOptions & AXLoggingOptions::OffMainThread);
-}
+    // Add strings to the Vector below to just log from instances whose m_methodName includes any of the strings.
+    // For instance, if you want to just log from the wrapper and the AXIsolatedTree class:
+    // static NeverDestroyed nameFilter = Vector<String> { "WebAccessibilityObjectWrapper"_s, "AXIsolatedTree"_s };
+    static NeverDestroyed nameFilter = Vector<String> { };
 
-#if !LOG_DISABLED
+    if (!nameFilter->isEmpty()) {
+        auto it = std::find_if(nameFilter->begin(), nameFilter->end(), [this] (const auto& name) {
+            return m_methodName.contains(name);
+        });
+        if (it == nameFilter->end())
+            return false;
+    }
+
+    if (isMainThread())
+        return loggingOptions.contains(AXLoggingOptions::MainThread);
+    return loggingOptions.contains(AXLoggingOptions::OffMainThread);
+}
 
 AXLogger::AXLogger(const String& methodName)
     : m_methodName(methodName)
@@ -82,6 +99,11 @@ void AXLogger::log(const char* message)
 {
     if (shouldLog())
         LOG(Accessibility, "%s", message);
+}
+
+void AXLogger::log(const AXCoreObject& object)
+{
+    log(const_cast<AXCoreObject*>(&object));
 }
 
 void AXLogger::log(RefPtr<AXCoreObject> object)
@@ -131,6 +153,9 @@ void AXLogger::log(const std::pair<RefPtr<AXCoreObject>, AXObjectCache::AXNotifi
 
 void AXLogger::log(const AccessibilitySearchCriteria& criteria)
 {
+    if (!shouldLog())
+        return;
+
     TextStream stream(TextStream::LineMode::MultipleLine);
     stream << criteria;
     LOG(Accessibility, "%s", stream.release().utf8().data());
@@ -138,6 +163,9 @@ void AXLogger::log(const AccessibilitySearchCriteria& criteria)
 
 void AXLogger::log(AccessibilityObjectInclusion inclusion)
 {
+    if (!shouldLog())
+        return;
+
     TextStream stream(TextStream::LineMode::SingleLine);
     stream.dumpProperty("ObjectInclusion", inclusion);
     LOG(Accessibility, "%s", stream.release().utf8().data());
@@ -161,6 +189,28 @@ void AXLogger::log(AXObjectCache& axObjectCache)
         stream << axObjectCache;
         LOG(Accessibility, "%s", stream.release().utf8().data());
     }
+}
+
+void AXLogger::log(const String& collectionName, const AXObjectCache::DeferredCollection& collection)
+{
+    unsigned size = 0;
+    WTF::switchOn(collection,
+        [&size] (const HashMap<Element*, String>& typedCollection) { size = typedCollection.size(); },
+        [&size] (const HashSet<AXID>& typedCollection) { size = typedCollection.size(); },
+        [&size] (const ListHashSet<Node*>& typedCollection) { size = typedCollection.size(); },
+        [&size] (const ListHashSet<RefPtr<AccessibilityObject>>& typedCollection) { size = typedCollection.size(); },
+        [&size] (const Vector<AXObjectCache::AttributeChange>& typedCollection) { size = typedCollection.size(); },
+        [&size] (const Vector<std::pair<Node*, Node*>>& typedCollection) { size = typedCollection.size(); },
+        [&size] (const WeakHashSet<Element, WeakPtrImplWithEventTargetData>& typedCollection) { size = typedCollection.computeSize(); },
+        [&size] (const WeakHashSet<HTMLTableElement, WeakPtrImplWithEventTargetData>& typedCollection) { size = typedCollection.computeSize(); },
+        [&size] (const WeakHashSet<AccessibilityTable>& typedCollection) { size = typedCollection.computeSize(); },
+        [&size] (const WeakListHashSet<Node, WeakPtrImplWithEventTargetData>& typedCollection) { size = typedCollection.computeSize(); },
+        [] (auto&) {
+            ASSERT_NOT_REACHED();
+            return;
+        });
+    if (size)
+        log(makeString(collectionName, " size: ", size));
 }
 
 #endif // !LOG_DISABLED
@@ -364,17 +414,20 @@ TextStream& operator<<(TextStream& stream, AccessibilityObjectInclusion inclusio
 TextStream& operator<<(TextStream& stream, AXObjectCache::AXNotification notification)
 {
     switch (notification) {
+    case AXObjectCache::AXNotification::AXAccessKeyChanged:
+        stream << "AXAccessKeyChanged";
+        break;
     case AXObjectCache::AXNotification::AXActiveDescendantChanged:
         stream << "AXActiveDescendantChanged";
-        break;
-    case AXObjectCache::AXNotification::AXAriaRoleChanged:
-        stream << "AXAriaRoleChanged";
         break;
     case AXObjectCache::AXNotification::AXAutocorrectionOccured:
         stream << "AXAutocorrectionOccured";
         break;
     case AXObjectCache::AXNotification::AXAutofillTypeChanged:
         stream << "AXAutofillTypeChanged";
+        break;
+    case AXObjectCache::AXNotification::AXCellSlotsChanged:
+        stream << "AXCellSlotsChanged";
         break;
     case AXObjectCache::AXNotification::AXCheckedStateChanged:
         stream << "AXCheckedStateChanged";
@@ -391,6 +444,9 @@ TextStream& operator<<(TextStream& stream, AXObjectCache::AXNotification notific
     case AXObjectCache::AXNotification::AXColumnSpanChanged:
         stream << "AXColumnSpanChanged";
         break;
+    case AXObjectCache::AXNotification::AXControlledObjectsChanged:
+        stream << "AXControlledObjectsChanged";
+        break;
     case AXObjectCache::AXNotification::AXCurrentStateChanged:
         stream << "AXCurrentStateChanged";
         break;
@@ -402,6 +458,9 @@ TextStream& operator<<(TextStream& stream, AXObjectCache::AXNotification notific
         break;
     case AXObjectCache::AXNotification::AXDropEffectChanged:
         stream << "AXDropEffectChanged";
+        break;
+    case AXObjectCache::AXNotification::AXFlowToChanged:
+        stream << "AXFlowToChanged";
         break;
     case AXObjectCache::AXNotification::AXFocusedUIElementChanged:
         stream << "AXFocusedUIElementChanged";
@@ -423,6 +482,9 @@ TextStream& operator<<(TextStream& stream, AXObjectCache::AXNotification notific
         break;
     case AXObjectCache::AXNotification::AXIsAtomicChanged:
         stream << "AXIsAtomicChanged";
+        break;
+    case AXObjectCache::AXNotification::AXKeyShortcutsChanged:
+        stream << "AXKeyShortcutsChanged";
         break;
     case AXObjectCache::AXNotification::AXLanguageChanged:
         stream << "AXLanguageChanged";
@@ -460,6 +522,12 @@ TextStream& operator<<(TextStream& stream, AXObjectCache::AXNotification notific
     case AXObjectCache::AXNotification::AXPositionInSetChanged:
         stream << "AXPositionInSetChanged";
         break;
+    case AXObjectCache::AXNotification::AXRoleChanged:
+        stream << "AXRoleChanged";
+        break;
+    case AXObjectCache::AXNotification::AXRoleDescriptionChanged:
+        stream << "AXRoleDescriptionChanged";
+        break;
     case AXObjectCache::AXNotification::AXRowIndexChanged:
         stream << "AXRowIndexChanged";
         break;
@@ -469,6 +537,9 @@ TextStream& operator<<(TextStream& stream, AXObjectCache::AXNotification notific
     case AXObjectCache::AXNotification::AXSelectedChildrenChanged:
         stream << "AXSelectedChildrenChanged";
         break;
+    case AXObjectCache::AXNotification::AXSelectedCellsChanged:
+        stream << "AXSelectedCellsChanged";
+        break;
     case AXObjectCache::AXNotification::AXSelectedStateChanged:
         stream << "AXSelectedStateChanged";
         break;
@@ -477,6 +548,12 @@ TextStream& operator<<(TextStream& stream, AXObjectCache::AXNotification notific
         break;
     case AXObjectCache::AXNotification::AXSetSizeChanged:
         stream << "AXSetSizeChanged";
+        break;
+    case AXObjectCache::AXNotification::AXTableHeadersChanged:
+        stream << "AXTableHeadersChanged";
+        break;
+    case AXObjectCache::AXNotification::AXURLChanged:
+        stream << "AXURLChanged";
         break;
     case AXObjectCache::AXNotification::AXValueChanged:
         stream << "AXValueChanged";
@@ -544,6 +621,12 @@ TextStream& operator<<(TextStream& stream, AXObjectCache::AXNotification notific
     case AXObjectCache::AXNotification::AXTextChanged:
         stream << "AXTextChanged";
         break;
+    case AXObjectCache::AXNotification::AXTextCompositionChanged:
+        stream << "AXTextCompositionChanged";
+        break;
+    case AXObjectCache::AXNotification::AXTextSecurityChanged:
+        stream << "AXTextSecurityChanged";
+        break;
     case AXObjectCache::AXNotification::AXElementBusyChanged:
         stream << "AXElementBusyChanged";
         break;
@@ -561,6 +644,12 @@ TextStream& operator<<(TextStream& stream, AXObjectCache::AXNotification notific
         break;
     case AXObjectCache::AXNotification::AXDraggingExitedDropZone:
         stream << "AXDraggingExitedDropZone";
+        break;
+    case AXObjectCache::AXNotification::AXTextCompositionBegan:
+        stream << "AXTextCompositionBegan";
+        break;
+    case AXObjectCache::AXNotification::AXTextCompositionEnded:
+        stream << "AXTextCompositionEnded";
         break;
     }
 
@@ -590,9 +679,6 @@ TextStream& operator<<(TextStream& stream, AXIsolatedTree& tree)
 void streamIsolatedSubtreeOnMainThread(TextStream& stream, const AXIsolatedTree& tree, AXID objectID, const OptionSet<AXStreamOptions>& options)
 {
     ASSERT(isMainThread());
-
-    if (!shouldLog())
-        return;
 
     stream.increaseIndent();
     TextStream::GroupScope groupScope(stream);
@@ -667,7 +753,7 @@ void streamAXCoreObject(TextStream& stream, const AXCoreObject& object, const Op
 
 void streamSubtree(TextStream& stream, const RefPtr<AXCoreObject>& object, const OptionSet<AXStreamOptions>& options)
 {
-    if (!object || !shouldLog())
+    if (!object)
         return;
 
     stream.increaseIndent();

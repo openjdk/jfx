@@ -96,10 +96,14 @@ void fastSetMaxSingleAllocationSize(size_t size)
     maxSingleAllocationSize = size;
 }
 
+#if ASSERT_ENABLED
 #define ASSERT_IS_WITHIN_LIMIT(size) do { \
         size_t size__ = (size); \
         ASSERT_WITH_MESSAGE((size__) <= maxSingleAllocationSize, "Requested size (%zu) exceeds max single allocation size set for testing (%zu)", (size__), maxSingleAllocationSize); \
     } while (false)
+#else
+#define ASSERT_IS_WITHIN_LIMIT(size)
+#endif // ASSERT_ENABLED
 
 #define FAIL_IF_EXCEEDS_LIMIT(size) do { \
         if (UNLIKELY((size) > maxSingleAllocationSize)) \
@@ -112,13 +116,6 @@ void fastSetMaxSingleAllocationSize(size_t size)
 #define FAIL_IF_EXCEEDS_LIMIT(size)
 
 #endif // !defined(NDEBUG)
-
-void* fastZeroedMalloc(size_t n)
-{
-    void* result = fastMalloc(n);
-    memset(result, 0, n);
-    return result;
-}
 
 char* fastStrDup(const char* src)
 {
@@ -135,15 +132,6 @@ void* fastMemDup(const void* mem, size_t bytes)
 
     void* result = fastMalloc(bytes);
     memcpy(result, mem, bytes);
-    return result;
-}
-
-TryMallocReturnValue tryFastZeroedMalloc(size_t n)
-{
-    void* result;
-    if (!tryFastMalloc(n).getValue(result))
-        return nullptr;
-    memset(result, 0, n);
     return result;
 }
 
@@ -237,6 +225,22 @@ void* fastMalloc(size_t n)
     if (!result)
         CRASH();
 
+    return result;
+}
+
+void* fastZeroedMalloc(size_t n)
+{
+    void* result = fastMalloc(n);
+    memset(result, 0, n);
+    return result;
+}
+
+TryMallocReturnValue tryFastZeroedMalloc(size_t n)
+{
+    void* result;
+    if (!tryFastMalloc(n).getValue(result))
+        return nullptr;
+    memset(result, 0, n);
     return result;
 }
 
@@ -534,6 +538,25 @@ void* fastMalloc(size_t size)
     return result;
 }
 
+void* fastZeroedMalloc(size_t size)
+{
+    ASSERT_IS_WITHIN_LIMIT(size);
+    ASSERT(!forbidMallocUseScopeCount || disableMallocRestrictionScopeCount);
+    void* result = bmalloc::api::zeroedMalloc(size);
+#if ENABLE(MALLOC_HEAP_BREAKDOWN) && TRACK_MALLOC_CALLSTACK
+    if (!AvoidRecordingScope::avoidRecordingCount())
+        MallocCallTracker::singleton().recordMalloc(result, size);
+#endif
+    return result;
+}
+
+TryMallocReturnValue tryFastZeroedMalloc(size_t size)
+{
+    FAIL_IF_EXCEEDS_LIMIT(size);
+    ASSERT(!forbidMallocUseScopeCount || disableMallocRestrictionScopeCount);
+    return bmalloc::api::tryZeroedMalloc(size);
+}
+
 void* fastCalloc(size_t numElements, size_t elementSize)
 {
     ASSERT_IS_WITHIN_LIMIT(numElements * elementSize);
@@ -566,17 +589,26 @@ void fastFree(void* object)
 #endif
 }
 
-size_t fastMallocSize(const void*)
+size_t fastMallocSize(const void* p)
 {
+#if BENABLE(MALLOC_SIZE)
+    return bmalloc::api::mallocSize(p);
+#else
     // FIXME: This is incorrect; best fix is probably to remove this function.
     // Caller currently are all using this for assertion, not to actually check
     // the size of the allocation, so maybe we can come up with something for that.
+    UNUSED_PARAM(p);
     return 1;
+#endif
 }
 
 size_t fastMallocGoodSize(size_t size)
 {
+#if BENABLE(MALLOC_GOOD_SIZE)
+    return bmalloc::api::mallocGoodSize(size);
+#else
     return size;
+#endif
 }
 
 void* fastAlignedMalloc(size_t alignment, size_t size)

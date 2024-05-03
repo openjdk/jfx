@@ -30,29 +30,34 @@
 #include "ColorSerialization.h"
 #include "Document.h"
 #include "ElementInlines.h"
-#include "Frame.h"
 #include "FrameSelection.h"
-#include "FrameView.h"
 #include "HTMLElement.h"
 #include "HTMLNames.h"
 #include "HTMLSpanElement.h"
+#include "InlineIteratorBoxInlines.h"
 #include "InlineIteratorTextBox.h"
-#include "LegacyInlineTextBox.h"
 #include "LegacyRenderSVGContainer.h"
+#include "LegacyRenderSVGImage.h"
 #include "LegacyRenderSVGRoot.h"
 #include "LegacyRenderSVGShape.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "Logging.h"
 #include "PrintContext.h"
 #include "PseudoElement.h"
+#include "RemoteFrame.h"
+#include "RemoteFrameView.h"
 #include "RenderBlockFlow.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderCounter.h"
 #include "RenderDetailsMarker.h"
+#include "RenderElementInlines.h"
 #include "RenderFileUploadControl.h"
 #include "RenderFragmentContainer.h"
 #include "RenderInline.h"
 #include "RenderIterator.h"
-#include "RenderLayer.h"
 #include "RenderLayerBacking.h"
+#include "RenderLayerInlines.h"
 #include "RenderLayerScrollableArea.h"
 #include "RenderLineBreak.h"
 #include "RenderListItem.h"
@@ -61,7 +66,6 @@
 #include "RenderRuby.h"
 #include "RenderSVGContainer.h"
 #include "RenderSVGGradientStop.h"
-#include "RenderSVGImage.h"
 #include "RenderSVGInlineText.h"
 #include "RenderSVGResourceContainer.h"
 #include "RenderSVGRoot.h"
@@ -71,8 +75,9 @@
 #include "RenderView.h"
 #include "RenderWidget.h"
 #include "SVGRenderTreeAsText.h"
+#include "ScriptDisallowedScope.h"
 #include "ShadowRoot.h"
-#include "StyleProperties.h"
+#include "StylePropertiesInlines.h"
 #include <wtf/HexNumber.h>
 #include <wtf/Vector.h>
 #include <wtf/text/TextStream.h>
@@ -211,6 +216,19 @@ static inline bool hasNonEmptySibling(const RenderInline& inlineRenderer)
     return false;
 }
 
+inline bool shouldEnableSubpixelPrecisionForTextDump(const Document& document)
+{
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    // If LBSE is activated and the document contains outermost <svg> elements, generate the text
+    // representation with subpixel precision. It would be awkward to only see the SVG part of a
+    // compound document with subpixel precision in the render tree dumps, and not the surrounding content.
+    return document.settings().layerBasedSVGEngineEnabled() && document.mayHaveRenderedSVGRootElements();
+#else
+    UNUSED_PARAM(document);
+    return false;
+#endif
+}
+
 void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, OptionSet<RenderAsTextFlag> behavior)
 {
     ts << o.renderName().characters();
@@ -238,6 +256,7 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
     RenderBlock* cb = o.containingBlock();
     bool adjustForTableCells = cb ? cb->isTableCell() : false;
 
+    bool enableSubpixelPrecisionForTextDump = shouldEnableSubpixelPrecisionForTextDump(o.document());
     LayoutRect r;
     if (is<RenderText>(o)) {
         // FIXME: Would be better to dump the bounding box x and y rather than the first run's x and y, but that would involve updating
@@ -296,7 +315,9 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
 
     // FIXME: Convert layout test results to report sub-pixel values, in the meantime using enclosingIntRect
     // for consistency with old results.
-    // FIXME: [LBSE] Enable sub-pixel dumps for SVG
+    if (enableSubpixelPrecisionForTextDump)
+        ts << " " << r;
+    else
     ts << " " << enclosingIntRect(r);
 
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
@@ -364,60 +385,35 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
         if (borderTop || borderRight || borderBottom || borderLeft) {
             ts << " [border:";
 
-            BorderValue prevBorder = o.style().borderTop();
-            if (!borderTop)
+            auto printBorder = [&ts, &o] (const LayoutUnit& width, const BorderStyle& style, const StyleColor& color) {
+                if (!width)
                 ts << " none";
             else {
-                ts << " (" << borderTop << "px ";
-                printBorderStyle(ts, o.style().borderTopStyle());
-                auto color = o.style().borderTopColor();
-                if (!color.isValid())
-                    color = o.style().color();
-                ts << serializationForRenderTreeAsText(color) << ")";
+                    ts << " (" << width << "px ";
+                    printBorderStyle(ts, style);
+                    auto resolvedColor = o.style().colorResolvingCurrentColor(color);
+                    ts << serializationForRenderTreeAsText(resolvedColor) << ")";
             }
+
+            };
+
+            BorderValue prevBorder = o.style().borderTop();
+            printBorder(borderTop, o.style().borderTopStyle(), o.style().borderTopColor());
 
             if (o.style().borderRight() != prevBorder || (overridden && borderRight != borderTop)) {
                 prevBorder = o.style().borderRight();
-                if (!borderRight)
-                    ts << " none";
-                else {
-                    ts << " (" << borderRight << "px ";
-                    printBorderStyle(ts, o.style().borderRightStyle());
-                    auto color = o.style().borderRightColor();
-                    if (!color.isValid())
-                        color = o.style().color();
-                    ts << serializationForRenderTreeAsText(color) << ")";
-                }
+                printBorder(borderRight, o.style().borderRightStyle(), o.style().borderRightColor());
             }
 
             if (o.style().borderBottom() != prevBorder || (overridden && borderBottom != borderRight)) {
-                prevBorder = box.style().borderBottom();
-                if (!borderBottom)
-                    ts << " none";
-                else {
-                    ts << " (" << borderBottom << "px ";
-                    printBorderStyle(ts, o.style().borderBottomStyle());
-                    auto color = o.style().borderBottomColor();
-                    if (!color.isValid())
-                        color = o.style().color();
-                    ts << serializationForRenderTreeAsText(color) << ")";
-                }
+                prevBorder = o.style().borderBottom();
+                printBorder(borderBottom, o.style().borderBottomStyle(), o.style().borderBottomColor());
             }
 
             if (o.style().borderLeft() != prevBorder || (overridden && borderLeft != borderBottom)) {
                 prevBorder = o.style().borderLeft();
-                if (!borderLeft)
-                    ts << " none";
-                else {
-                    ts << " (" << borderLeft << "px ";
-                    printBorderStyle(ts, o.style().borderLeftStyle());
-                    auto color = o.style().borderLeftColor();
-                    if (!color.isValid())
-                        color = o.style().color();
-                    ts << serializationForRenderTreeAsText(color) << ")";
+                printBorder(borderLeft, o.style().borderLeftStyle(), o.style().borderLeftColor());
                 }
-            }
-
             ts << "]";
         }
 
@@ -571,8 +567,7 @@ void writeDebugInfo(TextStream& ts, const RenderObject& object, OptionSet<Render
 
 void write(TextStream& ts, const RenderObject& o, OptionSet<RenderAsTextFlag> behavior)
 {
-    auto writeTextRun = [&](auto& textRenderer, auto& textRun)
-    {
+    auto writeTextRun = [&] (auto& textRenderer, auto& textRun) {
         auto rect = textRun.visualRectIgnoringBlockDirection();
         int x = rect.x();
         int y = rect.y();
@@ -586,7 +581,7 @@ void write(TextStream& ts, const RenderObject& o, OptionSet<RenderAsTextFlag> be
         if (!textRun.isLeftToRightDirection())
             ts << " RTL";
         ts << ": "
-            << quoteAndEscapeNonPrintables(textRun.text());
+            << quoteAndEscapeNonPrintables(textRun.originalText());
         if (textRun.hasHyphen())
             ts << " + hyphen string " << quoteAndEscapeNonPrintables(textRenderer.style().hyphenString().string());
         ts << "\n";
@@ -621,8 +616,8 @@ void write(TextStream& ts, const RenderObject& o, OptionSet<RenderAsTextFlag> be
         writeSVGInlineText(ts, downcast<RenderSVGInlineText>(o), behavior);
         return;
     }
-    if (is<RenderSVGImage>(o)) {
-        writeSVGImage(ts, downcast<RenderSVGImage>(o), behavior);
+    if (is<LegacyRenderSVGImage>(o)) {
+        writeSVGImage(ts, downcast<LegacyRenderSVGImage>(o), behavior);
         return;
     }
 
@@ -649,14 +644,9 @@ void write(TextStream& ts, const RenderObject& o, OptionSet<RenderAsTextFlag> be
 
     if (is<RenderWidget>(o)) {
         Widget* widget = downcast<RenderWidget>(o).widget();
-        if (is<FrameView>(widget)) {
-            FrameView& view = downcast<FrameView>(*widget);
-            if (RenderView* root = view.frame().contentRenderer()) {
-                if (!(behavior.contains(RenderAsTextFlag::DontUpdateLayout)))
-                    view.layoutContext().layout();
-                if (RenderLayer* layer = root->layer())
-                    writeLayers(ts, *layer, *layer, layer->rect(), behavior);
-            }
+        if (widget) {
+            if (auto* frameView = dynamicDowncast<FrameView>(widget))
+                frameView->writeRenderTreeAsText(ts, behavior);
         }
     }
 
@@ -672,13 +662,10 @@ enum LayerPaintPhase {
     LayerPaintPhaseForeground = 1
 };
 
-static void writeLayer(TextStream& ts, const RenderLayer& layer, const LayoutRect& layerBounds, const LayoutRect& backgroundClipRect, const LayoutRect& clipRect,
-    LayerPaintPhase paintPhase = LayerPaintPhaseAll, OptionSet<RenderAsTextFlag> behavior = { })
+template<typename DumpRectType>
+inline void writeLayerUsingGeometryType(TextStream& ts, const RenderLayer& layer, const DumpRectType& layerBounds, const DumpRectType& backgroundClipRect, const DumpRectType& clipRect,
+    LayerPaintPhase paintPhase, OptionSet<RenderAsTextFlag> behavior)
 {
-    IntRect adjustedLayoutBounds = snappedIntRect(layerBounds);
-    IntRect adjustedBackgroundClipRect = snappedIntRect(backgroundClipRect);
-    IntRect adjustedClipRect = snappedIntRect(clipRect);
-
     ts << indent << "layer ";
 
     if (behavior.contains(RenderAsTextFlag::ShowAddresses)) {
@@ -687,13 +674,13 @@ static void writeLayer(TextStream& ts, const RenderLayer& layer, const LayoutRec
             ts << "scrollableArea " << scrollableArea << " ";
     }
 
-    ts << adjustedLayoutBounds;
+    ts << layerBounds;
 
-    if (!adjustedLayoutBounds.isEmpty()) {
-        if (!adjustedBackgroundClipRect.contains(adjustedLayoutBounds))
-            ts << " backgroundClip " << adjustedBackgroundClipRect;
-        if (!adjustedClipRect.contains(adjustedLayoutBounds))
-            ts << " clip " << adjustedClipRect;
+    if (!layerBounds.isEmpty()) {
+        if (!backgroundClipRect.contains(layerBounds))
+            ts << " backgroundClip " << backgroundClipRect;
+        if (!clipRect.contains(layerBounds))
+            ts << " clip " << clipRect;
     }
 
     if (layer.renderer().hasNonVisibleOverflow()) {
@@ -740,6 +727,17 @@ static void writeLayer(TextStream& ts, const RenderLayer& layer, const LayoutRec
 #endif
 
     ts << "\n";
+}
+
+static void writeLayer(TextStream& ts, const RenderLayer& layer, const LayoutRect& layerBounds, const LayoutRect& backgroundClipRect, const LayoutRect& clipRect,
+    LayerPaintPhase paintPhase = LayerPaintPhaseAll, OptionSet<RenderAsTextFlag> behavior = { })
+{
+    if (shouldEnableSubpixelPrecisionForTextDump(layer.renderer().document())) {
+        writeLayerUsingGeometryType<LayoutRect>(ts, layer, layerBounds, backgroundClipRect, clipRect, paintPhase, behavior);
+        return;
+    }
+
+    writeLayerUsingGeometryType<IntRect>(ts, layer, snappedIntRect(layerBounds), snappedIntRect(backgroundClipRect), snappedIntRect(clipRect), paintPhase, behavior);
 }
 
 static void writeLayerRenderers(TextStream& ts, const RenderLayer& layer, LayerPaintPhase paintPhase, OptionSet<RenderAsTextFlag> behavior)
@@ -882,7 +880,7 @@ static void writeSelection(TextStream& ts, const RenderBox& renderer)
     if (!renderer.isRenderView())
         return;
 
-    Frame* frame = renderer.document().frame();
+    auto* frame = renderer.document().frame();
     if (!frame)
         return;
 
@@ -897,14 +895,31 @@ static void writeSelection(TextStream& ts, const RenderBox& renderer)
            << "selection end:   position " << selection.end().deprecatedEditingOffset() << " of " << nodePosition(selection.end().deprecatedNode()) << "\n";
 }
 
+static TextStream createTextStream(const Document& document)
+{
+    auto formattingFlags = [&document]() -> OptionSet<TextStream::Formatting> {
+        if (shouldEnableSubpixelPrecisionForTextDump(document))
+            return { TextStream::Formatting::SVGStyleRect };
+        return { TextStream::Formatting::SVGStyleRect, TextStream::Formatting::LayoutUnitsAsIntegers };
+    };
+
+    return { TextStream::LineMode::MultipleLine, formattingFlags() };
+}
+
+TextStream createTextStream(const RenderView& view)
+{
+    return createTextStream(view.document());
+}
+
 static String externalRepresentation(RenderBox& renderer, OptionSet<RenderAsTextFlag> behavior)
 {
-    TextStream ts(TextStream::LineMode::MultipleLine, { TextStream::Formatting::SVGStyleRect, TextStream::Formatting::LayoutUnitsAsIntegers });
+    auto ts = createTextStream(renderer.document());
     if (!renderer.hasLayer())
         return ts.release();
 
     LOG(Layout, "externalRepresentation: dumping layer tree");
 
+    ScriptDisallowedScope scriptDisallowedScope;
     RenderLayer& layer = *renderer.layer();
     writeLayers(ts, layer, layer, layer.rect(), behavior);
     writeSelection(ts, renderer);
@@ -915,13 +930,16 @@ static void updateLayoutIgnoringPendingStylesheetsIncludingSubframes(Document& d
 {
     document.updateLayoutIgnorePendingStylesheets();
     auto* frame = document.frame();
-    for (auto* subframe = frame; subframe; subframe = subframe->tree().traverseNext(frame)) {
-        if (auto* document = subframe->document())
+    for (Frame* subframe = frame; subframe; subframe = subframe->tree().traverseNext(frame)) {
+        auto* localFrame = dynamicDowncast<LocalFrame>(subframe);
+        if (!localFrame)
+            continue;
+        if (auto* document = localFrame->document())
             document->updateLayoutIgnorePendingStylesheets();
     }
 }
 
-String externalRepresentation(Frame* frame, OptionSet<RenderAsTextFlag> behavior)
+String externalRepresentation(LocalFrame* frame, OptionSet<RenderAsTextFlag> behavior)
 {
     ASSERT(frame);
     ASSERT(frame->document());
@@ -938,6 +956,16 @@ String externalRepresentation(Frame* frame, OptionSet<RenderAsTextFlag> behavior
         printContext.begin(renderer->width());
 
     return externalRepresentation(*renderer, behavior);
+}
+
+void externalRepresentationForLocalFrame(TextStream &ts, LocalFrame& frame, OptionSet<RenderAsTextFlag> behavior)
+{
+    ASSERT(frame.document());
+
+    if (RenderView* root = frame.contentRenderer()) {
+        if (RenderLayer* layer = root->layer())
+            writeLayers(ts, *layer, *layer, layer->rect(), behavior);
+    }
 }
 
 String externalRepresentation(Element* element, OptionSet<RenderAsTextFlag> behavior)
@@ -975,7 +1003,7 @@ String counterValueForElement(Element* element)
     // Make sure the element is not freed during the layout.
     RefPtr<Element> elementRef(element);
     element->document().updateLayout();
-    TextStream stream(TextStream::LineMode::MultipleLine, { TextStream::Formatting::SVGStyleRect, TextStream::Formatting::LayoutUnitsAsIntegers });
+    auto stream = createTextStream(element->document());
     bool isFirstCounter = true;
     // The counter renderers should be children of :before or :after pseudo-elements.
     if (PseudoElement* before = element->beforePseudoElement())

@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2005, 2006, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2014 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,13 +33,13 @@
 #include "Document.h"
 #include "Editing.h"
 #include "Editor.h"
-#include "ElementIterator.h"
-#include "Frame.h"
+#include "ElementChildIteratorInlines.h"
 #include "HTMLFontElement.h"
 #include "HTMLIFrameElement.h"
 #include "HTMLInterchange.h"
 #include "HTMLNames.h"
 #include "HTMLSpanElement.h"
+#include "LocalFrame.h"
 #include "NodeList.h"
 #include "NodeTraversal.h"
 #include "RenderObject.h"
@@ -57,11 +58,6 @@
 namespace WebCore {
 
 using namespace HTMLNames;
-
-static int toIdentifier(RefPtr<CSSValue>&& value)
-{
-    return is<CSSPrimitiveValue>(value) ? downcast<CSSPrimitiveValue>(*value).valueID() : 0;
-}
 
 static String& styleSpanClassString()
 {
@@ -179,7 +175,8 @@ void ApplyStyleCommand::updateStartEnd(const Position& newStart, const Position&
         m_useEndingSelection = true;
 
     bool wasBaseFirst = startingSelection().isBaseFirst() || !startingSelection().isDirectional();
-    setEndingSelection(VisibleSelection(wasBaseFirst ? newStart : newEnd, wasBaseFirst ? newEnd : newStart, VisiblePosition::defaultAffinity, endingSelection().isDirectional()));
+    setEndingSelection(VisibleSelection(VisiblePosition(wasBaseFirst ? newStart : newEnd), VisiblePosition(wasBaseFirst ? newEnd : newStart),
+        endingSelection().isDirectional()));
     m_start = newStart;
     m_end = newEnd;
 }
@@ -265,7 +262,7 @@ void ApplyStyleCommand::applyBlockStyle(EditingStyle& style)
                 if (newBlock)
                     block = newBlock;
             }
-            ASSERT(!block || is<HTMLElement>(*block));
+            ASSERT(!block || is<Element>(*block));
             if (is<HTMLElement>(block)) {
                 removeCSSStyle(style, downcast<HTMLElement>(*block));
                 if (!m_removeOnly)
@@ -366,7 +363,7 @@ void ApplyStyleCommand::applyRelativeFontStyleChange(EditingStyle* style)
     // is performed in the following loops below.
     if (beyondEnd) {
         auto treeOrderPos = treeOrder(*startNode, *beyondEnd);
-        if (is_gt(treeOrderPos) || is_eq(treeOrderPos))
+        if (is_gteq(treeOrderPos))
             return;
     }
 
@@ -408,7 +405,7 @@ void ApplyStyleCommand::applyRelativeFontStyleChange(EditingStyle* style)
             auto span = createStyleSpanElement(document());
             if (!surroundNodeRangeWithElement(*node, *node, span))
                 continue;
-            reachedEnd = node->isDescendantOf(beyondEnd.get());
+            reachedEnd = node->isDescendantOf(beyondEnd.get()) || !node->parentElement();
             element = WTFMove(span);
         }  else {
             // Only handle HTML elements and text nodes.
@@ -425,7 +422,7 @@ void ApplyStyleCommand::applyRelativeFontStyleChange(EditingStyle* style)
             currentFontSize = computedFontSize(node.get());
         }
         if (currentFontSize != desiredFontSize) {
-            inlineStyle->setProperty(CSSPropertyFontSize, CSSValuePool::singleton().createValue(desiredFontSize, CSSUnitType::CSS_PX), false);
+            inlineStyle->setProperty(CSSPropertyFontSize, CSSPrimitiveValue::create(desiredFontSize, CSSUnitType::CSS_PX), false);
             setNodeAttribute(*element, styleAttr, inlineStyle->asTextAtom());
         }
         if (inlineStyle->isEmpty()) {
@@ -479,7 +476,7 @@ RefPtr<HTMLElement> ApplyStyleCommand::splitAncestorsWithUnicodeBidi(Node* node,
     RefPtr<Node> nextHighestAncestorWithUnicodeBidi;
     int highestAncestorUnicodeBidi = 0;
     for (auto ancestor = RefPtr { node->parentNode() }; ancestor != block; ancestor = ancestor->parentNode()) {
-        int unicodeBidi = toIdentifier(ComputedStyleExtractor(ancestor.get()).propertyValue(CSSPropertyUnicodeBidi));
+        int unicodeBidi = valueID(ComputedStyleExtractor(ancestor.get()).propertyValue(CSSPropertyUnicodeBidi).get());
         if (unicodeBidi && unicodeBidi != CSSValueNormal) {
             highestAncestorUnicodeBidi = unicodeBidi;
             nextHighestAncestorWithUnicodeBidi = highestAncestorWithUnicodeBidi;
@@ -529,7 +526,7 @@ void ApplyStyleCommand::removeEmbeddingUpToEnclosingBlock(Node* node, Node* unsp
             continue;
 
         StyledElement& element = downcast<StyledElement>(*ancestor);
-        int unicodeBidi = toIdentifier(ComputedStyleExtractor(&element).propertyValue(CSSPropertyUnicodeBidi));
+        int unicodeBidi = valueID(ComputedStyleExtractor(&element).propertyValue(CSSPropertyUnicodeBidi).get());
         if (!unicodeBidi || unicodeBidi == CSSValueNormal)
             continue;
 
@@ -555,7 +552,7 @@ void ApplyStyleCommand::removeEmbeddingUpToEnclosingBlock(Node* node, Node* unsp
 static RefPtr<Node> highestEmbeddingAncestor(Node* startNode, Node* enclosingNode)
 {
     for (RefPtr currentNode = startNode; currentNode && currentNode != enclosingNode; currentNode = currentNode->parentNode()) {
-        if (currentNode->isHTMLElement() && toIdentifier(ComputedStyleExtractor(currentNode.get()).propertyValue(CSSPropertyUnicodeBidi)) == CSSValueEmbed)
+        if (currentNode->isHTMLElement() && valueID(ComputedStyleExtractor(currentNode.get()).propertyValue(CSSPropertyUnicodeBidi).get()) == CSSValueEmbed)
             return currentNode;
     }
 
@@ -1025,7 +1022,7 @@ void ApplyStyleCommand::applyInlineStyleToPushDown(Node& node, EditingStyle* sty
     {
         ScriptDisallowedScope::InMainThread scriptDisallowedScope;
 
-        if (node.renderer()->isText() && static_cast<RenderText*>(node.renderer())->isAllCollapsibleWhitespace())
+        if (node.renderer()->isText() && static_cast<RenderText*>(node.renderer())->containsOnlyCollapsibleWhitespace())
             return;
         if (node.renderer()->isBR() && !node.renderer()->style().preserveNewline())
             return;
@@ -1148,7 +1145,7 @@ void ApplyStyleCommand::removeInlineStyle(EditingStyle& style, const Position& s
                 if (s.deprecatedNode() == element.ptr()) {
                     // Since elem must have been fully selected, and it is at the start
                     // of the selection, it is clear we can set the new s offset to 0.
-                    ASSERT(s.anchorType() == Position::PositionIsBeforeAnchor || s.offsetInContainerNode() <= 0);
+                    ASSERT(s.anchorType() == Position::PositionIsBeforeAnchor || s.anchorType() == Position::PositionIsBeforeChildren || s.offsetInContainerNode() <= 0);
                     s = firstPositionInOrBeforeNode(next.get());
                 }
                 if (e.deprecatedNode() == element.ptr()) {

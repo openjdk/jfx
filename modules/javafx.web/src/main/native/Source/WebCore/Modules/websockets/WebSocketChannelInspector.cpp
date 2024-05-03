@@ -36,9 +36,11 @@ namespace WebCore {
 
 WebSocketChannelInspector::WebSocketChannelInspector(Document& document)
     : m_document(document)
-    , m_progressIdentifier(WebSocketChannelIdentifier::generateThreadSafe())
+    , m_progressIdentifier(WebSocketChannelIdentifier::generate())
 {
 }
+
+WebSocketChannelInspector::~WebSocketChannelInspector() = default;
 
 void WebSocketChannelInspector::didCreateWebSocket(const URL& url) const
 {

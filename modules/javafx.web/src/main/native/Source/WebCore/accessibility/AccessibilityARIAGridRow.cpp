@@ -39,11 +39,21 @@ AccessibilityARIAGridRow::AccessibilityARIAGridRow(RenderObject* renderer)
 {
 }
 
+AccessibilityARIAGridRow::AccessibilityARIAGridRow(Node& node)
+    : AccessibilityTableRow(node)
+{
+}
+
 AccessibilityARIAGridRow::~AccessibilityARIAGridRow() = default;
 
 Ref<AccessibilityARIAGridRow> AccessibilityARIAGridRow::create(RenderObject* renderer)
 {
     return adoptRef(*new AccessibilityARIAGridRow(renderer));
+}
+
+Ref<AccessibilityARIAGridRow> AccessibilityARIAGridRow::create(Node& node)
+{
+    return adoptRef(*new AccessibilityARIAGridRow(node));
 }
 
 bool AccessibilityARIAGridRow::isARIATreeGridRow() const
@@ -140,7 +150,7 @@ AccessibilityTable* AccessibilityARIAGridRow::parentTable() const
 AXCoreObject* AccessibilityARIAGridRow::headerObject()
 {
     for (const auto& child : children()) {
-        if (child->ariaRoleAttribute() == AccessibilityRole::RowHeader)
+        if (child->roleValue() == AccessibilityRole::RowHeader)
             return child.get();
     }
 

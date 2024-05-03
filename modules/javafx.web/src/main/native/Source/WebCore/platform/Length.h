@@ -84,7 +84,6 @@ public:
     Length& operator*=(float);
 
     bool operator==(const Length&) const;
-    bool operator!=(const Length&) const;
 
     float value() const;
     int intValue() const;
@@ -126,7 +125,7 @@ public:
     bool isSpecified() const;
     bool isSpecifiedOrIntrinsic() const;
 
-    float nonNanCalculatedValue(float maxValue) const;
+    WEBCORE_EXPORT float nonNanCalculatedValue(float maxValue) const;
 
     bool isLegacyIntrinsic() const;
 
@@ -153,7 +152,6 @@ private:
 Length blend(const Length& from, const Length& to, const BlendingContext&);
 Length blend(const Length& from, const Length& to, const BlendingContext&, ValueRange);
 
-UniqueArray<Length> newCoordsArray(const String&, int& length);
 UniqueArray<Length> newLengthArray(const String&, int& length);
 
 inline Length::Length(LengthType type)
@@ -314,11 +312,6 @@ inline bool Length::operator==(const Length& other) const
     if (isCalculated())
         return isCalculatedEqual(other);
     return value() == other.value();
-}
-
-inline bool Length::operator!=(const Length& other) const
-{
-    return !(*this == other);
 }
 
 inline Length& Length::operator*=(float value)

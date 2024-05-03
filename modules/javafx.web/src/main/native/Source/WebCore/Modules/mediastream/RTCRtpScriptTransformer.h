@@ -29,9 +29,10 @@
 
 #include "ActiveDOMObject.h"
 #include "ExceptionOr.h"
-#include "JSDOMPromiseDeferred.h"
+#include "JSDOMPromiseDeferredForward.h"
 #include "RTCRtpTransformBackend.h"
 #include <JavaScriptCore/JSCJSValue.h>
+#include <wtf/Deque.h>
 #include <wtf/RefCounted.h>
 #include <wtf/WeakPtr.h>
 
@@ -65,7 +66,7 @@ public:
     void startPendingActivity() { m_pendingActivity = makePendingActivity(*this); }
     void start(Ref<RTCRtpTransformBackend>&&);
 
-    enum class ClearCallback { No, Yes};
+    enum class ClearCallback : bool { No, Yes };
     void clear(ClearCallback);
 
 private:

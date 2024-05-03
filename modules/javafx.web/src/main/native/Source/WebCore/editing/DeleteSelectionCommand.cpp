@@ -31,15 +31,18 @@
 #include "Editing.h"
 #include "Editor.h"
 #include "EditorClient.h"
+#include "ElementInlines.h"
 #include "ElementIterator.h"
-#include "Frame.h"
+#include "ElementTraversal.h"
 #include "HTMLBRElement.h"
 #include "HTMLLinkElement.h"
 #include "HTMLNames.h"
 #include "HTMLStyleElement.h"
 #include "HTMLTableElement.h"
+#include "LocalFrame.h"
 #include "NodeTraversal.h"
 #include "Range.h"
+#include "RenderBoxInlines.h"
 #include "RenderTableCell.h"
 #include "RenderText.h"
 #include "RenderedDocumentMarker.h"
@@ -77,7 +80,7 @@ static bool isTableRowEmpty(Node* row)
 
 static bool isSpecialHTMLElement(const Node& node)
 {
-    ScriptDisallowedScope scriptDisallowedScope;
+    ScriptDisallowedScope::InMainThread scriptDisallowedScope;
 
     if (!is<HTMLElement>(node))
         return false;
@@ -258,7 +261,7 @@ void DeleteSelectionCommand::smartDeleteParagraphSpacers()
 {
     VisiblePosition visibleStart { m_upstreamStart };
     VisiblePosition visibleEnd { m_downstreamEnd };
-    bool selectionEndsInParagraphSeperator = isEndOfParagraph(visibleEnd);
+    bool selectionEndsInParagraphSeparator = isEndOfParagraph(visibleEnd);
     bool selectionEndIsEndOfContent = endOfEditableContent(visibleEnd) == visibleEnd;
     bool startAndEndInSameUnsplittableElement = unsplittableElementForPosition(visibleStart.deepEquivalent()) == unsplittableElementForPosition(visibleEnd.deepEquivalent());
     visibleStart = visibleStart.previous(CannotCrossEditingBoundary);
@@ -266,7 +269,7 @@ void DeleteSelectionCommand::smartDeleteParagraphSpacers()
     bool previousPositionIsStartOfContent = startOfEditableContent(visibleStart) == visibleStart;
     bool previousPositionIsBlankParagraph = isBlankParagraph(visibleStart);
     bool endPositionIsBlankParagraph = isBlankParagraph(visibleEnd);
-    bool hasBlankParagraphAfterEndOrIsEndOfContent = !selectionEndIsEndOfContent && (endPositionIsBlankParagraph || selectionEndsInParagraphSeperator);
+    bool hasBlankParagraphAfterEndOrIsEndOfContent = !selectionEndIsEndOfContent && (endPositionIsBlankParagraph || selectionEndsInParagraphSeparator);
     if (startAndEndInSameUnsplittableElement && previousPositionIsBlankParagraph && hasBlankParagraphAfterEndOrIsEndOfContent) {
         m_needPlaceholder = false;
         Position position;
@@ -279,7 +282,7 @@ void DeleteSelectionCommand::smartDeleteParagraphSpacers()
         m_trailingWhitespace = m_downstreamEnd.trailingWhitespacePosition(VisiblePosition::defaultAffinity);
         setStartingSelectionOnSmartDelete(m_upstreamStart, m_downstreamEnd);
     }
-    if (startAndEndInSameUnsplittableElement && selectionEndIsEndOfContent && previousPositionIsBlankParagraph && selectionEndsInParagraphSeperator) {
+    if (startAndEndInSameUnsplittableElement && selectionEndIsEndOfContent && previousPositionIsBlankParagraph && selectionEndsInParagraphSeparator) {
         m_needPlaceholder = false;
         VisiblePosition endOfParagraphBeforeStart;
         if (previousPositionIsStartOfContent)
@@ -357,7 +360,7 @@ bool DeleteSelectionCommand::initializePositionData()
 
         // skip smart delete if the selection to delete already starts or ends with whitespace
         Position pos = VisiblePosition(m_upstreamStart, m_selectionToDelete.affinity()).deepEquivalent();
-        bool skipSmartDelete = pos.trailingWhitespacePosition(VisiblePosition::defaultAffinity, true).isNotNull();
+        bool skipSmartDelete = isEditablePosition(pos) && pos.trailingWhitespacePosition(VisiblePosition::defaultAffinity, true).isNotNull();
         if (!skipSmartDelete)
             skipSmartDelete = m_downstreamEnd.leadingWhitespacePosition(VisiblePosition::defaultAffinity, true).isNotNull();
 
@@ -483,7 +486,7 @@ void DeleteSelectionCommand::insertBlockPlaceholderForTableCellIfNeeded(Element&
 {
     // Make sure empty cell has some height.
     {
-        ScriptDisallowedScope scriptDisallowedScope;
+        ScriptDisallowedScope::InMainThread scriptDisallowedScope;
         auto* renderer = element.renderer();
         if (!is<RenderTableCell>(renderer))
             return;
@@ -605,8 +608,7 @@ void DeleteSelectionCommand::makeStylingElementsDirectChildrenOfEditableRootToPr
     auto nodes = intersectingNodes(*range).begin();
     while (nodes) {
         Ref node = *nodes;
-        auto shouldMove = is<HTMLLinkElement>(node)
-            || (is<HTMLStyleElement>(node) && !downcast<HTMLStyleElement>(node.get()).hasAttributeWithoutSynchronization(scopedAttr));
+        auto shouldMove = is<HTMLLinkElement>(node) || is<HTMLStyleElement>(node);
         if (!shouldMove)
             nodes.advance();
         else {
@@ -944,7 +946,7 @@ String DeleteSelectionCommand::originalStringForAutocorrectionAtBeginningOfSelec
     if (!rangeOfFirstCharacter)
         return String();
 
-    ScriptDisallowedScope scriptDisallowedScope;
+    ScriptDisallowedScope::InMainThread scriptDisallowedScope;
     for (auto* marker : document().markers().markersInRange(*rangeOfFirstCharacter, DocumentMarker::Autocorrected)) {
         int startOffset = marker->startOffset();
         if (startOffset == startOfSelection.deepEquivalent().offsetInContainerNode())
@@ -1053,7 +1055,7 @@ void DeleteSelectionCommand::doApply()
     if (!document().editor().behavior().shouldRebalanceWhiteSpacesInSecureField()) {
         if (RefPtr endNode = m_endingPosition.deprecatedNode(); is<Text>(endNode)) {
             auto& textNode = downcast<Text>(*endNode);
-            ScriptDisallowedScope scriptDisallowedScope;
+            ScriptDisallowedScope::InMainThread scriptDisallowedScope;
             if (textNode.length() && textNode.renderer())
                 shouldRebalaceWhiteSpace = textNode.renderer()->style().textSecurity() == TextSecurity::None;
         }
@@ -1066,7 +1068,7 @@ void DeleteSelectionCommand::doApply()
     if (!originalString.isEmpty())
         document().editor().deletedAutocorrectionAtPosition(m_endingPosition, originalString);
 
-    setEndingSelection(VisibleSelection(m_endingPosition, affinity, endingSelection().isDirectional()));
+    setEndingSelection(VisibleSelection(VisiblePosition(m_endingPosition, affinity), endingSelection().isDirectional()));
     clearTransientState();
 }
 

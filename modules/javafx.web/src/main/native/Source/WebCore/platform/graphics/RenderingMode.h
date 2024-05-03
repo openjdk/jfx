@@ -25,6 +25,10 @@
 
 #pragma once
 
+namespace WTF {
+class TextStream;
+}
+
 namespace WebCore {
 
 enum class RenderingPurpose : uint8_t {
@@ -34,10 +38,15 @@ enum class RenderingPurpose : uint8_t {
     LayerBacking,
     Snapshot,
     ShareableSnapshot,
-    MediaPainting
+    ShareableLocalSnapshot,
+    MediaPainting,
 };
 
 enum class RenderingMode : bool { Unaccelerated, Accelerated };
 enum class RenderingMethod : bool { Local, DisplayList };
+
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, RenderingPurpose);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, RenderingMode);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, RenderingMethod);
 
 } // namespace WebCore

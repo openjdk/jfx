@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,11 @@
 #include <wtf/DataLog.h>
 
 namespace WTF {
+
+enum class PACKeyType {
+    ProcessIndependent,
+    ProcessDependent
+};
 
 #define FOR_EACH_BASE_WTF_PTRTAG(v) \
     v(NoPtrTag) \
@@ -162,10 +167,10 @@ struct PtrTagLookup {
 #if CPU(ARM64E)
 #define ENABLE_PTRTAG_DEBUGGING ASSERT_ENABLED
 
+#if ENABLE(PTRTAG_DEBUGGING)
+
 WTF_EXPORT_PRIVATE void registerPtrTagLookup(PtrTagLookup*);
 WTF_EXPORT_PRIVATE void reportBadTag(const void*, PtrTag expectedTag);
-
-#if ENABLE(PTRTAG_DEBUGGING)
 
 WTF_EXPORT_PRIVATE const char* ptrTagName(PtrTag);
 WTF_EXPORT_PRIVATE const char* tagForPtr(const void*);
@@ -428,17 +433,20 @@ inline const void* untagReturnPC(const void* pc, const void* sp)
     return ptr;
 }
 
-template <typename IntType>
+template <typename IntType, PACKeyType keyType = PACKeyType::ProcessDependent>
 inline IntType untagInt(IntType ptrInt, PtrTag tag)
 {
     static_assert(sizeof(IntType) == sizeof(uintptr_t));
-    return bitwise_cast<IntType>(ptrauth_auth_data(bitwise_cast<void*>(ptrInt), ptrauth_key_process_dependent_data, tag));
+    if constexpr (keyType == PACKeyType::ProcessDependent)
+        return bitwise_cast<IntType>(ptrauth_auth_data(bitwise_cast<void*>(ptrInt), ptrauth_key_process_dependent_data, tag));
+    return bitwise_cast<IntType>(ptrauth_auth_data(bitwise_cast<void*>(ptrInt), ptrauth_key_process_independent_data, tag));
 }
 
 template<typename T>
 inline T* tagArrayPtr(std::nullptr_t ptr, size_t length)
 {
     ASSERT(!length);
+    length = length & ((1ull << 48) - 1); // See rdar://107561209, rdar://107724053.
     return ptrauth_sign_unauthenticated(static_cast<T*>(ptr), ptrauth_key_process_dependent_data, length);
 }
 
@@ -446,6 +454,7 @@ inline T* tagArrayPtr(std::nullptr_t ptr, size_t length)
 template<typename T>
 inline T* tagArrayPtr(T* ptr, size_t length)
 {
+    length = length & ((1ull << 48) - 1); // See rdar://107561209, rdar://107724053.
     return ptrauth_sign_unauthenticated(ptr, ptrauth_key_process_dependent_data, length);
 }
 
@@ -464,21 +473,26 @@ inline T* removeArrayPtrTag(T* ptr)
 template<typename T>
 inline T* retagArrayPtr(T* ptr, size_t oldLength, size_t newLength)
 {
+    newLength = newLength & ((1ull << 48) - 1); // See rdar://107561209, rdar://107724053.
     return ptrauth_auth_and_resign(ptr, ptrauth_key_process_dependent_data, oldLength, ptrauth_key_process_dependent_data, newLength);
 }
 
-template <PtrTag tag, typename IntType>
+template <PtrTag tag, typename IntType, PACKeyType keyType = PACKeyType::ProcessDependent>
 inline IntType tagInt(IntType ptrInt)
 {
     static_assert(sizeof(IntType) == sizeof(uintptr_t));
-    return bitwise_cast<IntType>(ptrauth_sign_unauthenticated(bitwise_cast<void*>(ptrInt), ptrauth_key_process_dependent_data, tag));
+    if constexpr (keyType == PACKeyType::ProcessDependent)
+        return bitwise_cast<IntType>(ptrauth_sign_unauthenticated(bitwise_cast<void*>(ptrInt), ptrauth_key_process_dependent_data, tag));
+    return bitwise_cast<IntType>(ptrauth_sign_unauthenticated(bitwise_cast<void*>(ptrInt), ptrauth_key_process_independent_data, tag));
 }
 
-template <typename IntType>
+template <typename IntType, PACKeyType keyType = PACKeyType::ProcessDependent>
 inline IntType tagInt(IntType ptrInt, PtrTag tag)
 {
     static_assert(sizeof(IntType) == sizeof(uintptr_t));
-    return bitwise_cast<IntType>(ptrauth_sign_unauthenticated(bitwise_cast<void*>(ptrInt), ptrauth_key_process_dependent_data, tag));
+    if constexpr (keyType == PACKeyType::ProcessDependent)
+        return bitwise_cast<IntType>(ptrauth_sign_unauthenticated(bitwise_cast<void*>(ptrInt), ptrauth_key_process_dependent_data, tag));
+    return bitwise_cast<IntType>(ptrauth_sign_unauthenticated(bitwise_cast<void*>(ptrInt), ptrauth_key_process_independent_data, tag));
 }
 
 inline bool usesPointerTagging() { return true; }
@@ -533,21 +547,21 @@ inline T* retagArrayPtr(T* ptr, size_t, size_t)
     return ptr;
 }
 
-template <PtrTag, typename IntType>
+template <PtrTag, typename IntType, PACKeyType>
 inline IntType tagInt(IntType ptrInt)
 {
     static_assert(sizeof(IntType) == sizeof(uintptr_t));
     return ptrInt;
 }
 
-template <typename IntType>
+template <typename IntType, PACKeyType>
 inline IntType tagInt(IntType ptrInt, PtrTag)
 {
     static_assert(sizeof(IntType) == sizeof(uintptr_t));
     return ptrInt;
 }
 
-template <typename IntType>
+template <typename IntType, PACKeyType>
 inline IntType untagInt(IntType ptrInt, PtrTag)
 {
     static_assert(sizeof(IntType) == sizeof(uintptr_t));
@@ -563,17 +577,38 @@ inline bool usesPointerTagging() { return false; }
 
 #endif // CPU(ARM64E)
 
+template <PACKeyType keyType, PtrTag tag, typename IntType>
+inline IntType tagInt(IntType ptrInt)
+{
+    return tagInt<tag, IntType, keyType>(ptrInt);
+}
+
+template <PACKeyType keyType, typename IntType>
+inline IntType tagInt(IntType ptrInt, PtrTag tag)
+{
+    return tagInt<IntType, keyType>(ptrInt, tag);
+}
+
+template <PACKeyType keyType, typename IntType>
+inline IntType untagInt(IntType ptrInt, PtrTag tag)
+{
+    return untagInt<IntType, keyType>(ptrInt, tag);
+}
+
 } // namespace WTF
 
 using WTF::CFunctionPtrTag;
 using WTF::NoPtrTag;
+using WTF::PACKeyType;
 using WTF::PlatformRegistersLRPtrTag;
 using WTF::PlatformRegistersPCPtrTag;
 using WTF::PtrTag;
 using WTF::PtrTagCallerType;
 using WTF::PtrTagCalleeType;
 
+#if ENABLE(PTRTAG_DEBUGGING)
 using WTF::reportBadTag;
+#endif
 
 using WTF::untagReturnPC;
 using WTF::tagArrayPtr;

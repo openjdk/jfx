@@ -28,12 +28,12 @@
 
 #if ENABLE(GAMEPAD)
 
-#include "DOMWindow.h"
 #include "Document.h"
 #include "EventNames.h"
 #include "Gamepad.h"
 #include "GamepadEvent.h"
 #include "GamepadProvider.h"
+#include "LocalDOMWindow.h"
 #include "Logging.h"
 #include "NavigatorGamepad.h"
 #include "PlatformGamepad.h"
@@ -41,9 +41,9 @@
 
 namespace WebCore {
 
-static NavigatorGamepad* navigatorGamepadFromDOMWindow(DOMWindow* window)
+static NavigatorGamepad* navigatorGamepadFromDOMWindow(LocalDOMWindow& window)
 {
-    return NavigatorGamepad::from(&window->navigator());
+    return NavigatorGamepad::from(window.navigator());
 }
 
 GamepadManager& GamepadManager::singleton()
@@ -63,7 +63,7 @@ void GamepadManager::platformGamepadConnected(PlatformGamepad& platformGamepad, 
         return;
 
     // Notify blind Navigators and Windows about all gamepads except for this one.
-    for (auto* gamepad : GamepadProvider::singleton().platformGamepads()) {
+    for (auto& gamepad : GamepadProvider::singleton().platformGamepads()) {
         if (!gamepad || gamepad == &platformGamepad)
             continue;
 
@@ -79,36 +79,36 @@ void GamepadManager::platformGamepadConnected(PlatformGamepad& platformGamepad, 
 
 void GamepadManager::platformGamepadDisconnected(PlatformGamepad& platformGamepad)
 {
-    HashSet<NavigatorGamepad*> notifiedNavigators;
+    WeakHashSet<NavigatorGamepad> notifiedNavigators;
 
     // Handle the disconnect for all DOMWindows with event listeners and their Navigators.
-    for (auto& window : copyToVectorOf<WeakPtr<DOMWindow>>(m_domWindows)) {
+    for (auto& window : copyToVectorOf<WeakPtr<LocalDOMWindow, WeakPtrImplWithEventTargetData>>(m_domWindows)) {
         // Event dispatch might have made this window go away.
         if (!window)
             continue;
 
-        // This DOMWindow's Navigator might not be accessible. e.g. The DOMWindow might be in the back/forward cache.
-        // If this happens the DOMWindow will not get this gamepaddisconnected event.
-        NavigatorGamepad* navigator = navigatorGamepadFromDOMWindow(window.get());
+        // This LocalDOMWindow's Navigator might not be accessible. e.g. The LocalDOMWindow might be in the back/forward cache.
+        // If this happens the LocalDOMWindow will not get this gamepaddisconnected event.
+        NavigatorGamepad* navigator = navigatorGamepadFromDOMWindow(*window);
         if (!navigator)
             continue;
 
         // If this Navigator hasn't seen gamepads yet then its Window should not get the disconnect event.
-        if (m_gamepadBlindNavigators.contains(navigator))
+        if (m_gamepadBlindNavigators.contains(*navigator))
             continue;
 
         Ref<Gamepad> gamepad(navigator->gamepadFromPlatformGamepad(platformGamepad));
 
         navigator->gamepadDisconnected(platformGamepad);
-        notifiedNavigators.add(navigator);
+        notifiedNavigators.add(*navigator);
 
         window->dispatchEvent(GamepadEvent::create(eventNames().gamepaddisconnectedEvent, gamepad.get()), window->document());
     }
 
     // Notify all the Navigators that haven't already been notified.
-    for (auto* navigator : m_navigators) {
+    for (auto& navigator : m_navigators) {
         if (!notifiedNavigators.contains(navigator))
-            navigator->gamepadDisconnected(platformGamepad);
+            navigator.gamepadDisconnected(platformGamepad);
     }
 }
 
@@ -117,10 +117,10 @@ void GamepadManager::platformGamepadInputActivity(EventMakesGamepadsVisible even
     if (eventVisibility == EventMakesGamepadsVisible::No)
         return;
 
-    if (m_gamepadBlindNavigators.isEmpty() && m_gamepadBlindDOMWindows.isEmpty())
+    if (m_gamepadBlindNavigators.isEmptyIgnoringNullReferences() && m_gamepadBlindDOMWindows.isEmptyIgnoringNullReferences())
         return;
 
-    for (auto* gamepad : GamepadProvider::singleton().platformGamepads()) {
+    for (auto& gamepad : GamepadProvider::singleton().platformGamepads()) {
         if (gamepad)
             makeGamepadVisible(*gamepad, m_gamepadBlindNavigators, m_gamepadBlindDOMWindows);
     }
@@ -129,38 +129,38 @@ void GamepadManager::platformGamepadInputActivity(EventMakesGamepadsVisible even
     m_gamepadBlindDOMWindows.clear();
 }
 
-void GamepadManager::makeGamepadVisible(PlatformGamepad& platformGamepad, HashSet<NavigatorGamepad*>& navigatorSet, HashSet<DOMWindow*>& domWindowSet)
+void GamepadManager::makeGamepadVisible(PlatformGamepad& platformGamepad, WeakHashSet<NavigatorGamepad>& navigatorSet, WeakHashSet<LocalDOMWindow, WeakPtrImplWithEventTargetData>& domWindowSet)
 {
-    LOG(Gamepad, "GamepadManager::makeGamepadVisible - New gamepad '%s' is visible", platformGamepad.id().utf8().data());
+    LOG(Gamepad, "(%u) GamepadManager::makeGamepadVisible - New gamepad '%s' is visible", (unsigned)getpid(), platformGamepad.id().utf8().data());
 
-    if (navigatorSet.isEmpty() && domWindowSet.isEmpty())
+    if (navigatorSet.isEmptyIgnoringNullReferences() && domWindowSet.isEmptyIgnoringNullReferences())
         return;
 
-    for (auto* navigator : navigatorSet)
-        navigator->gamepadConnected(platformGamepad);
+    for (auto& navigator : navigatorSet)
+        navigator.gamepadConnected(platformGamepad);
 
-    for (auto& window : copyToVectorOf<WeakPtr<DOMWindow>>(m_domWindows)) {
+    for (auto& window : copyToVectorOf<WeakPtr<LocalDOMWindow, WeakPtrImplWithEventTargetData>>(m_domWindows)) {
         // Event dispatch might have made this window go away.
         if (!window)
             continue;
 
-        // This DOMWindow's Navigator might not be accessible. e.g. The DOMWindow might be in the back/forward cache.
-        // If this happens the DOMWindow will not get this gamepadconnected event.
+        // This LocalDOMWindow's Navigator might not be accessible. e.g. The LocalDOMWindow might be in the back/forward cache.
+        // If this happens the LocalDOMWindow will not get this gamepadconnected event.
         // The new gamepad will still be visibile to it once it is restored from the back/forward cache.
-        NavigatorGamepad* navigator = navigatorGamepadFromDOMWindow(window.get());
+        NavigatorGamepad* navigator = navigatorGamepadFromDOMWindow(*window);
         if (!navigator)
             continue;
 
         Ref<Gamepad> gamepad(navigator->gamepadFromPlatformGamepad(platformGamepad));
 
-        LOG(Gamepad, "GamepadManager::makeGamepadVisible - Dispatching gamepadconnected event for gamepad '%s'", platformGamepad.id().utf8().data());
+        LOG(Gamepad, "(%u) GamepadManager::makeGamepadVisible - Dispatching gamepadconnected event for gamepad '%s'", (unsigned)getpid(), platformGamepad.id().utf8().data());
         window->dispatchEvent(GamepadEvent::create(eventNames().gamepadconnectedEvent, gamepad.get()), window->document());
     }
 }
 
-void GamepadManager::registerNavigator(NavigatorGamepad* navigator)
+void GamepadManager::registerNavigator(NavigatorGamepad& navigator)
 {
-    LOG(Gamepad, "GamepadManager registering NavigatorGamepad %p", navigator);
+    LOG(Gamepad, "(%u) GamepadManager registering NavigatorGamepad %p", (unsigned)getpid(), &navigator);
 
     ASSERT(!m_navigators.contains(navigator));
     m_navigators.add(navigator);
@@ -169,9 +169,9 @@ void GamepadManager::registerNavigator(NavigatorGamepad* navigator)
     maybeStartMonitoringGamepads();
 }
 
-void GamepadManager::unregisterNavigator(NavigatorGamepad* navigator)
+void GamepadManager::unregisterNavigator(NavigatorGamepad& navigator)
 {
-    LOG(Gamepad, "GamepadManager unregistering NavigatorGamepad %p", navigator);
+    LOG(Gamepad, "(%u) GamepadManager unregistering NavigatorGamepad %p", (unsigned)getpid(), &navigator);
 
     ASSERT(m_navigators.contains(navigator));
     m_navigators.remove(navigator);
@@ -180,31 +180,31 @@ void GamepadManager::unregisterNavigator(NavigatorGamepad* navigator)
     maybeStopMonitoringGamepads();
 }
 
-void GamepadManager::registerDOMWindow(DOMWindow* window)
+void GamepadManager::registerDOMWindow(LocalDOMWindow& window)
 {
-    LOG(Gamepad, "GamepadManager registering DOMWindow %p", window);
+    LOG(Gamepad, "(%u) GamepadManager registering LocalDOMWindow %p", (unsigned)getpid(), &window);
 
     ASSERT(!m_domWindows.contains(window));
     m_domWindows.add(window);
 
-    // Anytime we register a DOMWindow, we should also double check that its NavigatorGamepad is registered.
+    // Anytime we register a LocalDOMWindow, we should also double check that its NavigatorGamepad is registered.
     NavigatorGamepad* navigator = navigatorGamepadFromDOMWindow(window);
     ASSERT(navigator);
 
-    if (m_navigators.add(navigator).isNewEntry)
-        m_gamepadBlindNavigators.add(navigator);
+    if (m_navigators.add(*navigator).isNewEntry)
+        m_gamepadBlindNavigators.add(*navigator);
 
-    // If this DOMWindow's NavigatorGamepad was already registered but was still blind,
-    // then this DOMWindow should be blind.
-    if (m_gamepadBlindNavigators.contains(navigator))
+    // If this LocalDOMWindow's NavigatorGamepad was already registered but was still blind,
+    // then this LocalDOMWindow should be blind.
+    if (m_gamepadBlindNavigators.contains(*navigator))
         m_gamepadBlindDOMWindows.add(window);
 
     maybeStartMonitoringGamepads();
 }
 
-void GamepadManager::unregisterDOMWindow(DOMWindow* window)
+void GamepadManager::unregisterDOMWindow(LocalDOMWindow& window)
 {
-    LOG(Gamepad, "GamepadManager unregistering DOMWindow %p", window);
+    LOG(Gamepad, "(%u) GamepadManager unregistering LocalDOMWindow %p", (unsigned)getpid(), &window);
 
     ASSERT(m_domWindows.contains(window));
     m_domWindows.remove(window);
@@ -218,8 +218,8 @@ void GamepadManager::maybeStartMonitoringGamepads()
     if (m_isMonitoringGamepads)
         return;
 
-    if (!m_navigators.isEmpty() || !m_domWindows.isEmpty()) {
-        LOG(Gamepad, "GamepadManager has %i NavigatorGamepads and %i DOMWindows registered, is starting gamepad monitoring", m_navigators.size(), m_domWindows.size());
+    if (!m_navigators.isEmptyIgnoringNullReferences() || !m_domWindows.isEmptyIgnoringNullReferences()) {
+        LOG(Gamepad, "(%u) GamepadManager has %i NavigatorGamepads and %i DOMWindows registered, is starting gamepad monitoring", (unsigned)getpid(), m_navigators.computeSize(), m_domWindows.computeSize());
         m_isMonitoringGamepads = true;
         GamepadProvider::singleton().startMonitoringGamepads(*this);
     }
@@ -230,8 +230,8 @@ void GamepadManager::maybeStopMonitoringGamepads()
     if (!m_isMonitoringGamepads)
         return;
 
-    if (m_navigators.isEmpty() && m_domWindows.isEmpty()) {
-        LOG(Gamepad, "GamepadManager has no NavigatorGamepads or DOMWindows registered, is stopping gamepad monitoring");
+    if (m_navigators.isEmptyIgnoringNullReferences() && m_domWindows.isEmptyIgnoringNullReferences()) {
+        LOG(Gamepad, "(%u) GamepadManager has no NavigatorGamepads or DOMWindows registered, is stopping gamepad monitoring", (unsigned)getpid());
         m_isMonitoringGamepads = false;
         GamepadProvider::singleton().stopMonitoringGamepads(*this);
     }

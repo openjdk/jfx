@@ -33,7 +33,7 @@
 
 namespace WebCore {
 
-void AXObjectCache::attachWrapper(AXCoreObject* axObject)
+void AXObjectCache::attachWrapper(AccessibilityObject* axObject)
 {
     auto wrapper = AccessibilityObjectAtspi::create(axObject, document().page()->accessibilityRootObject());
     axObject->setWrapper(wrapper.ptr());
@@ -81,11 +81,12 @@ void AXObjectCache::postPlatformNotification(AXCoreObject* coreObject, AXNotific
         break;
     case AXMenuListItemSelected: {
         // Menu list popup items are handled by AXSelectedStateChanged.
-        auto* parent = coreObject->parentObjectUnignored();
+        auto* parent = dynamicDowncast<AccessibilityObject>(coreObject->parentObjectUnignored());
         if (parent && !parent->isMenuListPopup())
             wrapper->stateChanged("selected", coreObject->isSelected());
         break;
     }
+    case AXSelectedCellsChanged:
     case AXSelectedChildrenChanged:
         wrapper->selectionChanged();
         break;
@@ -129,7 +130,7 @@ void AXObjectCache::postPlatformNotification(AXCoreObject* coreObject, AXNotific
         wrapper->stateChanged("pressed", coreObject->isPressed());
         break;
     case AXReadOnlyStatusChanged:
-        wrapper->stateChanged("read-only", coreObject->canSetValueAttribute());
+        wrapper->stateChanged("read-only", !coreObject->canSetValueAttribute());
         break;
     case AXRequiredStatusChanged:
         wrapper->stateChanged("required", coreObject->isRequired());
@@ -146,7 +147,7 @@ void AXObjectCache::postPlatformNotification(AXCoreObject* coreObject, AXNotific
     }
 }
 
-void AXObjectCache::postTextStateChangePlatformNotification(AXCoreObject* coreObject, const AXTextStateChangeIntent&, const VisibleSelection& selection)
+void AXObjectCache::postTextStateChangePlatformNotification(AccessibilityObject* coreObject, const AXTextStateChangeIntent&, const VisibleSelection& selection)
 {
     if (!coreObject)
         coreObject = rootWebArea();
@@ -189,7 +190,7 @@ void AXObjectCache::postTextStateChangePlatformNotification(AccessibilityObject*
     }
 }
 
-void AXObjectCache::postTextReplacementPlatformNotificationForTextControl(AXCoreObject* coreObject, const String& deletedText, const String& insertedText, HTMLTextFormControlElement&)
+void AXObjectCache::postTextReplacementPlatformNotificationForTextControl(AccessibilityObject* coreObject, const String& deletedText, const String& insertedText, HTMLTextFormControlElement&)
 {
     if (!coreObject)
         coreObject = rootWebArea();
@@ -210,7 +211,7 @@ void AXObjectCache::postTextReplacementPlatformNotificationForTextControl(AXCore
         wrapper->textInserted(insertedText, coreObject->visiblePositionForIndex(insertedText.length()));
 }
 
-void AXObjectCache::postTextReplacementPlatformNotification(AXCoreObject* coreObject, AXTextEditType, const String& deletedText, AXTextEditType, const String& insertedText, const VisiblePosition& position)
+void AXObjectCache::postTextReplacementPlatformNotification(AccessibilityObject* coreObject, AXTextEditType, const String& deletedText, AXTextEditType, const String& insertedText, const VisiblePosition& position)
 {
     if (!coreObject)
         coreObject = rootWebArea();

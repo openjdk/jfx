@@ -33,7 +33,8 @@
 #include "FontCascade.h"
 #include "KeyboardEvent.h"
 #include "RenderBlock.h"
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
+#include "RenderStyleSetters.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextBreakIterator.h>
@@ -51,15 +52,18 @@ DateTimeSymbolicFieldElement::DateTimeSymbolicFieldElement(Document& document, F
     ASSERT(!m_symbols.isEmpty());
 }
 
-void DateTimeSymbolicFieldElement::adjustMinWidth(RenderStyle& style) const
+void DateTimeSymbolicFieldElement::adjustMinInlineSize(RenderStyle& style) const
 {
     auto& font = style.fontCascade();
 
-    float width = 0;
+    float inlineSize = 0;
     for (auto& symbol : m_symbols)
-        width = std::max(width, font.width(RenderBlock::constructTextRun(symbol, style)));
+        inlineSize = std::max(inlineSize, font.width(RenderBlock::constructTextRun(symbol, style)));
 
-    style.setMinWidth({ width, LengthType::Fixed });
+    if (style.isHorizontalWritingMode())
+        style.setMinWidth({ inlineSize, LengthType::Fixed });
+    else
+        style.setMinHeight({ inlineSize, LengthType::Fixed });
 }
 
 bool DateTimeSymbolicFieldElement::hasValue() const

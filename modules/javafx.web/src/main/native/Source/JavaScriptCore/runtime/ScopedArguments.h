@@ -27,6 +27,7 @@
 
 #include "GenericArguments.h"
 #include "JSLexicalEnvironment.h"
+#include "Watchpoint.h"
 
 namespace JSC {
 
@@ -38,8 +39,7 @@ namespace JSC {
 // lookups.
 class ScopedArguments final : public GenericArguments<ScopedArguments> {
 private:
-    ScopedArguments(VM&, Structure*, WriteBarrier<Unknown>* storage, unsigned totalLength);
-    void finishCreation(VM&, JSFunction* callee, ScopedArgumentsTable*, JSLexicalEnvironment*);
+    ScopedArguments(VM&, Structure*, WriteBarrier<Unknown>* storage, unsigned totalLength, JSFunction* callee, ScopedArgumentsTable*, JSLexicalEnvironment*);
     using Base = GenericArguments<ScopedArguments>;
 
 public:
@@ -111,9 +111,13 @@ public:
     {
         ASSERT_WITH_SECURITY_IMPLICATION(isMappedArgument(i));
         unsigned namedLength = m_table->length();
-        if (i < namedLength)
+        if (i < namedLength) {
             m_scope->variableAt(m_table->get(i)).set(vm, m_scope.get(), value);
-        else
+
+            auto* watchpointSet = m_table->getWatchpointSet(i);
+            if (watchpointSet)
+                watchpointSet->touch(vm, "Write to ScopedArgument.");
+        } else
             storage()[i - namedLength].set(vm, this, value);
     }
 
@@ -144,6 +148,8 @@ public:
 
     void copyToArguments(JSGlobalObject*, JSValue* firstElementDest, unsigned offset, unsigned length);
 
+    JS_EXPORT_PRIVATE bool isIteratorProtocolFastAndNonObservable();
+
     DECLARE_INFO;
 
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype);
@@ -160,7 +166,10 @@ private:
         return m_storage.get();
     }
 
+    DECLARE_DEFAULT_FINISH_CREATION;
+
     bool m_overrodeThings { false }; // True if length, callee, and caller are fully materialized in the object.
+    bool m_hasUnmappedArgument { false };
     unsigned m_totalLength; // The length of declared plus overflow arguments.
     WriteBarrier<JSFunction> m_callee;
     WriteBarrier<ScopedArgumentsTable> m_table;

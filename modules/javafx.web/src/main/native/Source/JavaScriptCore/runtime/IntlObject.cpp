@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2015 Andy VanWagoner (andy@vanwagoner.family)
  * Copyright (C) 2015 Sukolsak Sakshuwong (sukolsak@gmail.com)
- * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2020 Sony Interactive Entertainment Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,6 +31,7 @@
 
 #include "Error.h"
 #include "FunctionPrototype.h"
+#include "GlobalObjectMethodTable.h"
 #include "IntlCollator.h"
 #include "IntlCollatorConstructor.h"
 #include "IntlCollatorPrototype.h"
@@ -39,6 +40,9 @@
 #include "IntlDisplayNames.h"
 #include "IntlDisplayNamesConstructor.h"
 #include "IntlDisplayNamesPrototype.h"
+#include "IntlDurationFormat.h"
+#include "IntlDurationFormatConstructor.h"
+#include "IntlDurationFormatPrototype.h"
 #include "IntlListFormat.h"
 #include "IntlListFormatConstructor.h"
 #include "IntlListFormatPrototype.h"
@@ -100,6 +104,13 @@ static JSValue createDisplayNamesConstructor(VM& vm, JSObject* object)
     return IntlDisplayNamesConstructor::create(vm, IntlDisplayNamesConstructor::createStructure(vm, globalObject, globalObject->functionPrototype()), jsCast<IntlDisplayNamesPrototype*>(globalObject->displayNamesStructure()->storedPrototypeObject()));
 }
 
+static JSValue createDurationFormatConstructor(VM& vm, JSObject* object)
+{
+    IntlObject* intlObject = jsCast<IntlObject*>(object);
+    JSGlobalObject* globalObject = intlObject->globalObject();
+    return IntlDurationFormatConstructor::create(vm, IntlDurationFormatConstructor::createStructure(vm, globalObject, globalObject->functionPrototype()), jsCast<IntlDurationFormatPrototype*>(globalObject->durationFormatStructure()->storedPrototypeObject()));
+}
+
 static JSValue createListFormatConstructor(VM& vm, JSObject* object)
 {
     IntlObject* intlObject = jsCast<IntlObject*>(object);
@@ -151,6 +162,7 @@ namespace JSC {
 /* Source for IntlObject.lut.h
 @begin intlObjectTable
   getCanonicalLocales   intlObjectFuncGetCanonicalLocales            DontEnum|Function 1
+  supportedValuesOf     intlObjectFuncSupportedValuesOf              DontEnum|Function 1
   Collator              createCollatorConstructor                    DontEnum|PropertyCallback
   DateTimeFormat        createDateTimeFormatConstructor              DontEnum|PropertyCallback
   DisplayNames          createDisplayNamesConstructor                DontEnum|PropertyCallback
@@ -176,7 +188,7 @@ void UFieldPositionIteratorDeleter::operator()(UFieldPositionIterator* iterator)
         ufieldpositer_close(iterator);
 }
 
-const MeasureUnit simpleUnits[43] = {
+const MeasureUnit simpleUnits[45] = {
     { "area"_s, "acre"_s },
     { "digital"_s, "bit"_s },
     { "digital"_s, "byte"_s },
@@ -202,6 +214,7 @@ const MeasureUnit simpleUnits[43] = {
     { "digital"_s, "megabit"_s },
     { "digital"_s, "megabyte"_s },
     { "length"_s, "meter"_s },
+    { "duration"_s, "microsecond"_s },
     { "length"_s, "mile"_s },
     { "length"_s, "mile-scandinavian"_s },
     { "volume"_s, "milliliter"_s },
@@ -209,6 +222,7 @@ const MeasureUnit simpleUnits[43] = {
     { "duration"_s, "millisecond"_s },
     { "duration"_s, "minute"_s },
     { "duration"_s, "month"_s },
+    { "duration"_s, "nanosecond"_s },
     { "mass"_s, "ounce"_s },
     { "concentr"_s, "percent"_s },
     { "digital"_s, "petabyte"_s },
@@ -234,18 +248,19 @@ IntlObject* IntlObject::create(VM& vm, JSGlobalObject* globalObject, Structure* 
     return object;
 }
 
-void IntlObject::finishCreation(VM& vm, JSGlobalObject* globalObject)
+void IntlObject::finishCreation(VM& vm, JSGlobalObject*)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(info()));
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 #if HAVE(ICU_U_LIST_FORMATTER)
+    if (Options::useIntlDurationFormat())
+        putDirectWithoutTransition(vm, vm.propertyNames->DurationFormat, createDurationFormatConstructor(vm, this), static_cast<unsigned>(PropertyAttribute::DontEnum));
     putDirectWithoutTransition(vm, vm.propertyNames->ListFormat, createListFormatConstructor(vm, this), static_cast<unsigned>(PropertyAttribute::DontEnum));
 #else
+    UNUSED_PARAM(&createDurationFormatConstructor);
     UNUSED_PARAM(&createListFormatConstructor);
 #endif
-    if (Options::useIntlEnumeration())
-        JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("supportedValuesOf"_s, intlObjectFuncSupportedValuesOf, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public);
 }
 
 Structure* IntlObject::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
@@ -416,10 +431,10 @@ static void addScriptlessLocaleIfNeeded(LocaleSet& availableLocales, StringView 
         return;
 
     Vector<char, 12> buffer;
-    ASSERT(subtags[0].is8Bit() && subtags[0].isAllASCII());
+    ASSERT(subtags[0].is8Bit() && subtags[0].containsOnlyASCII());
     buffer.append(reinterpret_cast<const char*>(subtags[0].characters8()), subtags[0].length());
     buffer.append('-');
-    ASSERT(subtags[2].is8Bit() && subtags[2].isAllASCII());
+    ASSERT(subtags[2].is8Bit() && subtags[2].containsOnlyASCII());
     buffer.append(reinterpret_cast<const char*>(subtags[2].characters8()), subtags[2].length());
 
     availableLocales.add(StringImpl::createStaticStringImpl(buffer.data(), buffer.size()));
@@ -489,7 +504,7 @@ const LocaleSet& intlAvailableLocales()
 //
 //  Based on the above observation, our fast path handles ASCII strings excluding control characters. We first compare strings with level-1 weights. And then,
 //  if we found they are the same and if we found they are not binary-equal strings, then we perform comparison with level-3 and level-4 weights.
-const uint8_t ducetLevel1Weights[128] = {
+const uint8_t ducetLevel1Weights[256] = {
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 1, 2, 3, 4, 5, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
@@ -506,11 +521,28 @@ const uint8_t ducetLevel1Weights[128] = {
     56, 57, 58, 59, 60, 61, 62, 63,
     64, 65, 66, 67, 68, 69, 70, 71,
     72, 73, 74, 21, 36, 22, 37, 0,
+
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
 };
 
 // Level 2 are all zeros.
 
-const uint8_t ducetLevel3Weights[128] = {
+const uint8_t ducetLevel3Weights[256] = {
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
@@ -523,6 +555,23 @@ const uint8_t ducetLevel3Weights[128] = {
     1, 1, 1, 1, 1, 1, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1,
     1, 1, 1, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
@@ -646,7 +695,7 @@ unsigned intlDefaultNumberOption(JSGlobalObject* globalObject, JSValue value, Pr
         RETURN_IF_EXCEPTION(scope, 0);
 
         if (!(doubleValue >= minimum && doubleValue <= maximum)) {
-            throwException(globalObject, scope, createRangeError(globalObject, *property.publicName() + " is out of range"));
+            throwException(globalObject, scope, createRangeError(globalObject, *property.publicName() + " is out of range"_s));
             return 0;
         }
         return static_cast<unsigned>(doubleValue);
@@ -721,7 +770,7 @@ Vector<String> canonicalizeLocaleList(JSGlobalObject* globalObject, JSValue loca
     JSValue lengthProperty = localesObject->get(globalObject, vm.propertyNames->length);
     RETURN_IF_EXCEPTION(scope, Vector<String>());
 
-    uint64_t length = static_cast<uint64_t>(lengthProperty.toLength(globalObject));
+    uint64_t length = lengthProperty.toLength(globalObject);
     RETURN_IF_EXCEPTION(scope, Vector<String>());
 
     HashSet<String> seenSet;
@@ -750,7 +799,7 @@ Vector<String> canonicalizeLocaleList(JSGlobalObject* globalObject, JSValue loca
             }
 
             if (isStructurallyValidLanguageTag(tag)) {
-                ASSERT(tag.isAllASCII());
+                ASSERT(tag.containsOnlyASCII());
                 String canonicalizedTag = canonicalizeUnicodeLocaleID(tag.ascii());
                 if (!canonicalizedTag.isNull()) {
                     if (seenSet.add(canonicalizedTag).isNewEntry)
@@ -759,7 +808,7 @@ Vector<String> canonicalizeLocaleList(JSGlobalObject* globalObject, JSValue loca
                 }
             }
 
-            String errorMessage = tryMakeString("invalid language tag: ", tag);
+            String errorMessage = tryMakeString("invalid language tag: "_s, tag);
             if (UNLIKELY(!errorMessage)) {
                 throwException(globalObject, scope, createOutOfMemoryError(globalObject));
                 return { };
@@ -1063,21 +1112,21 @@ Vector<String> numberingSystemsForLocale(const String& locale)
 bool isUnicodeLanguageSubtag(StringView string)
 {
     auto length = string.length();
-    return length >= 2 && length <= 8 && length != 4 && string.isAllSpecialCharacters<isASCIIAlpha>();
+    return length >= 2 && length <= 8 && length != 4 && string.containsOnly<isASCIIAlpha>();
 }
 
 // unicode_script_subtag = alpha{4} ;
 bool isUnicodeScriptSubtag(StringView string)
 {
-    return string.length() == 4 && string.isAllSpecialCharacters<isASCIIAlpha>();
+    return string.length() == 4 && string.containsOnly<isASCIIAlpha>();
 }
 
 // unicode_region_subtag = alpha{2} | digit{3} ;
 bool isUnicodeRegionSubtag(StringView string)
 {
     auto length = string.length();
-    return (length == 2 && string.isAllSpecialCharacters<isASCIIAlpha>())
-        || (length == 3 && string.isAllSpecialCharacters<isASCIIDigit>());
+    return (length == 2 && string.containsOnly<isASCIIAlpha>())
+        || (length == 3 && string.containsOnly<isASCIIDigit>());
 }
 
 // unicode_variant_subtag = (alphanum{5,8} | digit alphanum{3}) ;
@@ -1085,15 +1134,15 @@ bool isUnicodeVariantSubtag(StringView string)
 {
     auto length = string.length();
     if (length >= 5 && length <= 8)
-        return string.isAllSpecialCharacters<isASCIIAlphanumeric>();
-    return length == 4 && isASCIIDigit(string[0]) && string.substring(1).isAllSpecialCharacters<isASCIIAlphanumeric>();
+        return string.containsOnly<isASCIIAlphanumeric>();
+    return length == 4 && isASCIIDigit(string[0]) && string.substring(1).containsOnly<isASCIIAlphanumeric>();
 }
 
 using VariantCode = uint64_t;
 static VariantCode parseVariantCode(StringView string)
 {
     ASSERT(isUnicodeVariantSubtag(string));
-    ASSERT(string.isAllASCII());
+    ASSERT(string.containsOnlyASCII());
     ASSERT(string.length() <= 8);
     ASSERT(string.length() >= 1);
     struct Code {
@@ -1125,7 +1174,7 @@ static constexpr unsigned numberOfUnicodeSingletons = 10 + 26; // Digits + Alpha
 static bool isUnicodeExtensionAttribute(StringView string)
 {
     auto length = string.length();
-    return length >= 3 && length <= 8 && string.isAllSpecialCharacters<isASCIIAlphanumeric>();
+    return length >= 3 && length <= 8 && string.containsOnly<isASCIIAlphanumeric>();
 }
 
 static bool isUnicodeExtensionKey(StringView string)
@@ -1136,19 +1185,19 @@ static bool isUnicodeExtensionKey(StringView string)
 static bool isUnicodeExtensionTypeComponent(StringView string)
 {
     auto length = string.length();
-    return length >= 3 && length <= 8 && string.isAllSpecialCharacters<isASCIIAlphanumeric>();
+    return length >= 3 && length <= 8 && string.containsOnly<isASCIIAlphanumeric>();
 }
 
 static bool isUnicodePUExtensionValue(StringView string)
 {
     auto length = string.length();
-    return length >= 1 && length <= 8 && string.isAllSpecialCharacters<isASCIIAlphanumeric>();
+    return length >= 1 && length <= 8 && string.containsOnly<isASCIIAlphanumeric>();
 }
 
 static bool isUnicodeOtherExtensionValue(StringView string)
 {
     auto length = string.length();
-    return length >= 2 && length <= 8 && string.isAllSpecialCharacters<isASCIIAlphanumeric>();
+    return length >= 2 && length <= 8 && string.containsOnly<isASCIIAlphanumeric>();
 }
 
 static bool isUnicodeTKey(StringView string)
@@ -1159,7 +1208,7 @@ static bool isUnicodeTKey(StringView string)
 static bool isUnicodeTValueComponent(StringView string)
 {
     auto length = string.length();
-    return length >= 3 && length <= 8 && string.isAllSpecialCharacters<isASCIIAlphanumeric>();
+    return length >= 3 && length <= 8 && string.containsOnly<isASCIIAlphanumeric>();
 }
 
 // The IsStructurallyValidLanguageTag abstract operation verifies that the locale argument (which must be a String value)
@@ -1393,7 +1442,7 @@ bool LanguageTagParser::parseExtensionsAndPUExtensions()
     //
     // pu_extensions = sep [xX] (sep alphanum{1,8})+ ;
     ASSERT(!isEOS());
-    Bitmap<numberOfUnicodeSingletons> singletonsSet { };
+    WTF::BitSet<numberOfUnicodeSingletons> singletonsSet { };
     while (true) {
         if (m_current.length() != 1)
             return true;
@@ -1485,7 +1534,7 @@ bool isUnicodeLanguageId(StringView string)
 
 bool isWellFormedCurrencyCode(StringView currency)
 {
-    return currency.length() == 3 && currency.isAllSpecialCharacters<isASCIIAlpha>();
+    return currency.length() == 3 && currency.containsOnly<isASCIIAlpha>();
 }
 
 std::optional<Vector<char, 32>> canonicalizeLocaleIDWithoutNullTerminator(const char* localeID)

@@ -25,38 +25,12 @@
 #include "PluginData.h"
 
 #include "Document.h"
-#include "Frame.h"
+#include "LocalFrame.h"
 #include "LocalizedStrings.h"
 #include "Page.h"
 #include "PluginInfoProvider.h"
 
 namespace WebCore {
-
-PluginData::PluginData(Page& page)
-    : m_page(page)
-{
-    initPlugins();
-}
-
-void PluginData::initPlugins()
-{
-    ASSERT(m_plugins.isEmpty());
-    m_plugins = m_page.pluginInfoProvider().pluginInfo(m_page, m_supportedPluginIdentifiers);
-}
-
-const Vector<PluginInfo>& PluginData::webVisiblePlugins() const
-{
-    auto documentURL = m_page.mainFrame().document() ? m_page.mainFrame().document()->url() : URL { };
-    if (!documentURL.isNull() && !protocolHostAndPortAreEqual(m_cachedVisiblePlugins.pageURL, documentURL)) {
-        m_cachedVisiblePlugins.pageURL = WTFMove(documentURL);
-        m_cachedVisiblePlugins.pluginList = std::nullopt;
-    }
-
-    if (!m_cachedVisiblePlugins.pluginList)
-        m_cachedVisiblePlugins.pluginList = m_page.pluginInfoProvider().webVisiblePluginInfo(m_page, m_cachedVisiblePlugins.pageURL);
-
-    return *m_cachedVisiblePlugins.pluginList;
-}
 
 #if PLATFORM(COCOA)
 static inline bool isBuiltInPDFPlugIn(const PluginInfo& plugin)
@@ -70,39 +44,38 @@ static inline bool isBuiltInPDFPlugIn(const PluginInfo&)
 }
 #endif
 
-static bool shouldBePubliclyVisible(const PluginInfo& plugin)
+PluginData::PluginData(Page& page)
+    : m_page(page)
 {
-    // We can greatly reduce fingerprinting opportunities by only advertising plug-ins
-    // that are widely needed for general website compatibility. Since many users
-    // will have these plug-ins, we are not revealing much user-specific information.
-    //
-    // Web compatibility data indicate that Flash, QuickTime, Java, and PDF support
-    // are frequently accessed through the bad practice of iterating over the contents
-    // of the navigator.plugins list. Luckily, these plug-ins happen to be the least
-    // user-specific.
-    return plugin.name.containsIgnoringASCIICase("Shockwave"_s)
-        || plugin.name.containsIgnoringASCIICase("QuickTime"_s)
-        || plugin.name.containsIgnoringASCIICase("Java"_s)
-        || isBuiltInPDFPlugIn(plugin);
+    initPlugins();
 }
 
-std::pair<Vector<PluginInfo>, Vector<PluginInfo>> PluginData::publiclyVisiblePluginsAndAdditionalWebVisiblePlugins() const
+void PluginData::initPlugins()
 {
-    auto plugins = webVisiblePlugins();
+    ASSERT(m_plugins.isEmpty());
+    m_plugins = m_page.pluginInfoProvider().pluginInfo(m_page, m_supportedPluginIdentifiers);
 
-    if (m_page.showAllPlugins())
-        return { plugins, { } };
-
-    Vector<PluginInfo> additionalWebVisiblePlugins;
-    plugins.removeAllMatching([&](auto& plugin) {
-        if (!shouldBePubliclyVisible(plugin)) {
-            additionalWebVisiblePlugins.append(plugin);
-            return true;
+    for (auto& plugin : m_plugins) {
+        if (isBuiltInPDFPlugIn(plugin)) {
+            m_builtInPDFPluginInfo = plugin;
+            break;
         }
-        return false;
-    });
+    }
+}
 
-    return { plugins, additionalWebVisiblePlugins };
+const Vector<PluginInfo>& PluginData::webVisiblePlugins() const
+{
+    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page.mainFrame());
+    auto documentURL = localMainFrame && localMainFrame->document() ? localMainFrame->document()->url() : URL { };
+    if (!documentURL.isNull() && !protocolHostAndPortAreEqual(m_cachedVisiblePlugins.pageURL, documentURL)) {
+        m_cachedVisiblePlugins.pageURL = WTFMove(documentURL);
+        m_cachedVisiblePlugins.pluginList = std::nullopt;
+    }
+
+    if (!m_cachedVisiblePlugins.pluginList)
+        m_cachedVisiblePlugins.pluginList = m_page.pluginInfoProvider().webVisiblePluginInfo(m_page, m_cachedVisiblePlugins.pageURL);
+
+    return *m_cachedVisiblePlugins.pluginList;
 }
 
 Vector<MimeClassInfo> PluginData::webVisibleMimeTypes() const
@@ -152,6 +125,31 @@ String PluginData::pluginFileForWebVisibleMimeType(const String& mimeType) const
         }
     }
     return { };
+}
+
+PluginInfo PluginData::dummyPDFPluginInfo()
+{
+    PluginInfo info;
+
+    info.name = "Dummy Plugin"_s;
+    info.desc = pdfDocumentTypeDescription();
+    info.file = "internal-pdf-viewer"_s;
+    info.isApplicationPlugin = true;
+    info.clientLoadPolicy = PluginLoadClientPolicy::Undefined;
+
+    MimeClassInfo pdfMimeClassInfo;
+    pdfMimeClassInfo.type = "application/pdf"_s;
+    pdfMimeClassInfo.desc = pdfDocumentTypeDescription();
+    pdfMimeClassInfo.extensions.append("pdf"_s);
+    info.mimes.append(pdfMimeClassInfo);
+
+    MimeClassInfo textPDFMimeClassInfo;
+    textPDFMimeClassInfo.type = "text/pdf"_s;
+    textPDFMimeClassInfo.desc = pdfDocumentTypeDescription();
+    textPDFMimeClassInfo.extensions.append("pdf"_s);
+    info.mimes.append(textPDFMimeClassInfo);
+
+    return info;
 }
 
 } // namespace WebCore

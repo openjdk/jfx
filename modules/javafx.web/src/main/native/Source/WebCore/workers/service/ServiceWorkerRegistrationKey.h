@@ -33,31 +33,32 @@
 
 namespace WebCore {
 
+struct ClientOrigin;
+class RegistrableDomain;
+
 class ServiceWorkerRegistrationKey {
 public:
     ServiceWorkerRegistrationKey() = default;
     WEBCORE_EXPORT ServiceWorkerRegistrationKey(SecurityOriginData&& topOrigin, URL&& scope);
 
-    static ServiceWorkerRegistrationKey emptyKey();
+    WEBCORE_EXPORT static ServiceWorkerRegistrationKey emptyKey();
 
-    bool operator==(const ServiceWorkerRegistrationKey&) const;
-    bool operator!=(const ServiceWorkerRegistrationKey& key) const { return !(*this == key); }
+    WEBCORE_EXPORT bool operator==(const ServiceWorkerRegistrationKey&) const;
     bool isEmpty() const { return *this == emptyKey(); }
     WEBCORE_EXPORT bool isMatching(const SecurityOriginData& topOrigin, const URL& clientURL) const;
     bool originIsMatching(const SecurityOriginData& topOrigin, const URL& clientURL) const;
     size_t scopeLength() const { return m_scope.string().length(); }
 
+    WEBCORE_EXPORT ClientOrigin clientOrigin() const;
     const SecurityOriginData& topOrigin() const { return m_topOrigin; }
+    WEBCORE_EXPORT RegistrableDomain firstPartyForCookies() const;
     const URL& scope() const { return m_scope; }
     void setScope(URL&& scope) { m_scope = WTFMove(scope); }
 
     bool relatesToOrigin(const SecurityOriginData&) const;
 
-    ServiceWorkerRegistrationKey isolatedCopy() const &;
-    ServiceWorkerRegistrationKey isolatedCopy() &&;
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<ServiceWorkerRegistrationKey> decode(Decoder&);
+    WEBCORE_EXPORT ServiceWorkerRegistrationKey isolatedCopy() const &;
+    WEBCORE_EXPORT ServiceWorkerRegistrationKey isolatedCopy() &&;
 
     String toDatabaseKey() const;
     WEBCORE_EXPORT static std::optional<ServiceWorkerRegistrationKey> fromDatabaseKey(const String&);
@@ -72,29 +73,6 @@ private:
     SecurityOriginData m_topOrigin;
     URL m_scope;
 };
-
-template<class Encoder>
-void ServiceWorkerRegistrationKey::encode(Encoder& encoder) const
-{
-    RELEASE_ASSERT(!m_topOrigin.isEmpty());
-    RELEASE_ASSERT(!m_scope.isNull());
-    encoder << m_topOrigin << m_scope;
-}
-
-template<class Decoder>
-std::optional<ServiceWorkerRegistrationKey> ServiceWorkerRegistrationKey::decode(Decoder& decoder)
-{
-    std::optional<SecurityOriginData> topOrigin;
-    decoder >> topOrigin;
-    if (!topOrigin)
-        return std::nullopt;
-
-    URL scope;
-    if (!decoder.decode(scope))
-        return std::nullopt;
-
-    return ServiceWorkerRegistrationKey { WTFMove(*topOrigin), WTFMove(scope) };
-}
 
 inline void add(Hasher& hasher, const ServiceWorkerRegistrationKey& key)
 {

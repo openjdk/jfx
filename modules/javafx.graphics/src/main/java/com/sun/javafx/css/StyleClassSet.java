@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,35 +58,6 @@ public final class StyleClassSet  extends BitSet<StyleClass> {
 
     }
 
-    /** {@inheritDoc} */
-    @Override
-    public Object[] toArray() {
-        return toArray(new StyleClass[size()]);
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public <T> T[] toArray(T[] a) {
-        if (a.length < size()) {
-            a = (T[]) new StyleClass[size()];
-        }
-        int index = 0;
-        while(index < getBits().length) {
-            final long state = getBits()[index];
-            for(int bit=0; bit<Long.SIZE; bit++) {
-                long mask = 1l << bit;
-                if ((state & mask) == mask) {
-                    int n = index * Long.SIZE + bit;
-                    StyleClass impl = getStyleClass(n);
-                    a[index++] = (T) impl;
-                }
-
-            }
-        }
-        return a;
-    }
-
-
     @Override
     public String toString() {
         StringBuilder builder = new StringBuilder("style-classes: [");
@@ -102,12 +73,8 @@ public final class StyleClassSet  extends BitSet<StyleClass> {
     }
 
     @Override
-    protected StyleClass cast(Object o) {
-        if (o == null) {
-            throw new NullPointerException("null arg");
-        }
-        StyleClass styleClass = (StyleClass) o;
-        return styleClass;
+    protected Class<StyleClass> getElementType() {
+        return StyleClass.class;
     }
 
     @Override

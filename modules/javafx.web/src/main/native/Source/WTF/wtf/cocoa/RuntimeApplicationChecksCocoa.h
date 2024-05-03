@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,7 @@
 #pragma once
 
 #include <optional>
-#include <wtf/Bitmap.h>
+#include <wtf/BitSet.h>
 #include <wtf/Forward.h>
 
 namespace WTF {
@@ -40,11 +40,13 @@ enum class SDKAlignedBehavior {
     ConvertsInvalidURLsToBlank,
     DataURLFragmentRemoval,
     DecidesPolicyBeforeLoadingQuickLookPreview,
+    DefaultsToExcludingBackgroundsWhenPrinting,
     DefaultsToPassiveTouchListenersOnDocument,
     DefaultsToPassiveWheelListenersOnDocument,
     DisallowsSettingAnyXHRHeaderFromFileURLs,
     DoesNotDrainTheMicrotaskQueueWhenCallingObjC,
     DoesNotParseStringEndingWithFullStopAsFloatingPointNumber,
+    DoesNotAddIntrinsicMarginsToFormControls,
     DOMWindowReuseRestriction,
     DownloadDelegatesCalledOnTheMainThread,
     DropToNavigateDisallowedByDefault,
@@ -52,9 +54,11 @@ enum class SDKAlignedBehavior {
     ExceptionsForRelatedWebViewsUsingDifferentDataStores,
     ExpiredOnlyReloadBehavior,
     ForbidsDotPrefixedFonts,
+    FullySuspendsBackgroundContent,
     HasUIContextMenuInteraction,
     HTMLDocumentSupportedPropertyNames,
     InitializeWebKit2MainThreadAssertion,
+    InspectableDefaultsToDisabled,
     LazyGestureRecognizerInstallation,
     LinkPreviewEnabledByDefault,
     MainThreadReleaseAssertionInWebPageProxy,
@@ -67,17 +71,21 @@ enum class SDKAlignedBehavior {
     NoLaBanquePostaleQuirks,
     NoMoviStarPlusCORSPreflightQuirk,
     NoPokerBrosBuiltInTagQuirk,
+    NoSearchInputIncrementalAttributeAndSearchEvent,
     NoShowModalDialog,
     NoTheSecretSocietyHiddenMysteryWindowOpenQuirk,
     NoTypedArrayAPIQuirk,
     NoUnconditionalUniversalSandboxExtension,
     NoWeChatScrollingQuirk,
+    NoUNIQLOLazyIframeLoadingQuirk,
     NullOriginForNonSpecialSchemedURLs,
     ObservesClassProperty,
     PictureInPictureMediaPlayback,
     ProcessSwapOnCrossSiteNavigation,
+    PushStateFilePathRestriction,
     RequiresUserGestureToLoadVideo,
     RestrictsBaseURLSchemes,
+    RunningBoardThrottling,
     ScrollViewContentInsetsAreNotObscuringInsets,
     SendsNativeMouseEvents,
     SessionCleanupByDefault,
@@ -97,11 +105,18 @@ enum class SDKAlignedBehavior {
     WKWebsiteDataStoreInitReturningNil,
     UIBackForwardSkipsHistoryItemsWithoutUserGesture,
     ProgrammaticFocusDuringUserScriptShowsInputViews,
+    UsesGameControllerPhysicalInputProfile,
+    ScreenOrientationAPIEnabled,
+    PopoverAttributeEnabled,
+    LiveRangeSelectionEnabledForAllApps,
+    DoesNotOverrideUAFromNSUserDefault,
+    EvaluateJavaScriptWithoutTransientActivation,
+    ResettingTransitionCancelsRunningTransitionQuirk,
 
     NumberOfBehaviors
 };
 
-using SDKAlignedBehaviors = Bitmap<static_cast<size_t>(SDKAlignedBehavior::NumberOfBehaviors), uint32_t>;
+using SDKAlignedBehaviors = WTF::BitSet<static_cast<size_t>(SDKAlignedBehavior::NumberOfBehaviors), uint32_t>;
 
 WTF_EXPORT_PRIVATE const SDKAlignedBehaviors& sdkAlignedBehaviors();
 WTF_EXPORT_PRIVATE void setSDKAlignedBehaviors(SDKAlignedBehaviors);

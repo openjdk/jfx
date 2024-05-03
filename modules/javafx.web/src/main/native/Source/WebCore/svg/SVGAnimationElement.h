@@ -83,20 +83,17 @@ protected:
     SVGAnimationElement(const QualifiedName&, Document&);
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGAnimationElement, SVGElement, SVGTests>;
-    const SVGPropertyRegistry& propertyRegistry() const override { return m_propertyRegistry; }
 
     virtual void resetAnimation();
 
     static bool isSupportedAttribute(const QualifiedName&);
     bool attributeContainsJavaScriptURL(const Attribute&) const final;
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;
 
     String toValue() const;
     String byValue() const;
     String fromValue() const;
-
-    String targetAttributeBaseValue();
 
     // from SVGSMILElement
     void startedActiveInterval() override;
@@ -115,9 +112,9 @@ private:
     void animationAttributeChanged() override;
     void setAttributeType(const AtomString&);
 
-    virtual bool calculateToAtEndOfDurationValue(const String& toAtEndOfDurationString) = 0;
-    virtual bool calculateFromAndToValues(const String& fromString, const String& toString) = 0;
-    virtual bool calculateFromAndByValues(const String& fromString, const String& byString) = 0;
+    virtual bool setFromAndToValues(const String& fromString, const String& toString) = 0;
+    virtual bool setFromAndByValues(const String& fromString, const String& byString) = 0;
+    virtual bool setToAtEndOfDurationValue(const String& toAtEndOfDurationString) = 0;
     virtual void calculateAnimatedValue(float percent, unsigned repeatCount) = 0;
     virtual std::optional<float> calculateDistance(const String& /*fromString*/, const String& /*toString*/) = 0;
 
@@ -144,7 +141,6 @@ private:
     String m_lastValuesAnimationTo;
     CalcMode m_calcMode { CalcMode::Linear };
     AnimationMode m_animationMode { AnimationMode::None };
-    PropertyRegistry m_propertyRegistry { *this };
 };
 
 } // namespace WebCore

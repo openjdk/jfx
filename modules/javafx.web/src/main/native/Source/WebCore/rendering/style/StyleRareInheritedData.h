@@ -2,7 +2,7 @@
  * Copyright (C) 2000 Lars Knoll (knoll@kde.org)
  *           (C) 2000 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2003, 2005, 2006, 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Graham Dennis (graham.dennis@gmail.com)
  *
  * This library is free software; you can redistribute it and/or
@@ -24,12 +24,15 @@
 
 #pragma once
 
-#include "Color.h"
 #include "Length.h"
+#include "ListStyleType.h"
 #include "RenderStyleConstants.h"
+#include "ScrollbarColor.h"
+#include "StyleColor.h"
 #include "StyleCustomPropertyData.h"
+#include "StyleTextBoxEdge.h"
 #include "TabSize.h"
-#include "TextDecorationThickness.h"
+#include "TextSpacing.h"
 #include "TextUnderlineOffset.h"
 #include "TouchAction.h"
 #include <wtf/DataRef.h>
@@ -65,30 +68,25 @@ public:
     ~StyleRareInheritedData();
 
     bool operator==(const StyleRareInheritedData& o) const;
-    bool operator!=(const StyleRareInheritedData& o) const
-    {
-        return !(*this == o);
-    }
 
     bool hasColorFilters() const;
 
     float textStrokeWidth;
 
     RefPtr<StyleImage> listStyleImage;
-    AtomString listStyleStringValue;
 
-    Color textStrokeColor;
-    Color textFillColor;
-    Color textEmphasisColor;
+    StyleColor textStrokeColor;
+    StyleColor textFillColor;
+    StyleColor textEmphasisColor;
 
-    Color visitedLinkTextStrokeColor;
-    Color visitedLinkTextFillColor;
-    Color visitedLinkTextEmphasisColor;
+    StyleColor visitedLinkTextStrokeColor;
+    StyleColor visitedLinkTextFillColor;
+    StyleColor visitedLinkTextEmphasisColor;
 
-    Color caretColor;
-    Color visitedLinkCaretColor;
+    StyleColor caretColor;
+    StyleColor visitedLinkCaretColor;
 
-    Color accentColor;
+    StyleColor accentColor;
 
     std::unique_ptr<ShadowData> textShadow;
 
@@ -97,7 +95,8 @@ public:
     float effectiveZoom;
 
     TextUnderlineOffset textUnderlineOffset;
-    TextDecorationThickness textDecorationThickness;
+
+    TextBoxEdge textBoxEdge;
 
     Length wordSpacing;
     float miterLimit;
@@ -112,13 +111,13 @@ public:
 
     unsigned textSecurity : 2; // TextSecurity
     unsigned userModify : 2; // UserModify (editing)
-    unsigned wordBreak : 2; // WordBreak
+    unsigned wordBreak : 3; // WordBreak
     unsigned overflowWrap : 2; // OverflowWrap
     unsigned nbspMode : 1; // NBSPMode
     unsigned lineBreak : 3; // LineBreak
     unsigned userSelect : 2; // UserSelect
     unsigned colorSpace : 1; // ColorSpace
-    unsigned speakAs : 4; // ESpeakAs
+    unsigned speakAs : 4 { 0 }; // OptionSet<SpeakAs>
     unsigned hyphens : 2; // Hyphens
     unsigned textCombine : 1; // text-combine-upright
     unsigned textEmphasisFill : 1; // TextEmphasisFill
@@ -136,14 +135,10 @@ public:
 #if ENABLE(OVERFLOW_SCROLLING_TOUCH)
     unsigned useTouchOverflowScrolling: 1;
 #endif
-#if ENABLE(CSS_IMAGE_RESOLUTION)
-    unsigned imageResolutionSource : 1; // ImageResolutionSource
-    unsigned imageResolutionSnap : 1; // ImageResolutionSnap
-#endif
     unsigned textAlignLast : 3; // TextAlignLast
     unsigned textJustify : 2; // TextJustify
     unsigned textDecorationSkipInk : 2; // TextDecorationSkipInk
-    unsigned textUnderlinePosition : 2; // TextUnderlinePosition
+    unsigned textUnderlinePosition : 3; // TextUnderlinePosition
     unsigned rubyPosition : 2; // RubyPosition
     unsigned textZoom: 1; // TextZoom
 
@@ -170,12 +165,14 @@ public:
 
     unsigned isInSubtreeWithBlendMode : 1;
 
+    unsigned effectiveSkippedContent : 1;
+
     OptionSet<TouchAction> effectiveTouchActions;
     OptionSet<EventListenerRegionType> eventListenerRegionTypes;
 
     Length strokeWidth;
-    Color strokeColor;
-    Color visitedLinkStrokeColor;
+    StyleColor strokeColor;
+    StyleColor visitedLinkStrokeColor;
 
     AtomString hyphenationString;
     short hyphenationLimitBefore { -1 };
@@ -197,13 +194,15 @@ public:
     TextSizeAdjustment textSizeAdjust;
 #endif
 
-#if ENABLE(CSS_IMAGE_RESOLUTION)
-    float imageResolution;
-#endif
-
 #if ENABLE(TOUCH_EVENTS)
-    Color tapHighlightColor;
+    StyleColor tapHighlightColor;
 #endif
+    TextSpacingTrim textSpacingTrim;
+    TextAutospace textAutospace;
+
+    ListStyleType listStyleType;
+
+    Markable<ScrollbarColor> scrollbarColor;
 
 private:
     StyleRareInheritedData();

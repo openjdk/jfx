@@ -72,7 +72,6 @@ public:
     explicit operator bool() const { return m_gpr != InvalidGPRReg; }
 
     constexpr bool operator==(JSValueRegs other) const { return m_gpr == other.m_gpr; }
-    constexpr bool operator!=(JSValueRegs other) const { return !(*this == other); }
 
     constexpr GPRReg gpr() const { return m_gpr; }
     constexpr GPRReg tagGPR() const { return InvalidGPRReg; }
@@ -180,14 +179,14 @@ public:
     {
     }
 
-    static constexpr JSValueRegs withTwoAvailableRegs(GPRReg gpr1, GPRReg gpr2)
+    static constexpr JSValueRegs withTwoAvailableRegs(GPRReg tagGPR, GPRReg payloadGPR)
     {
-        return JSValueRegs(gpr1, gpr2);
+        return JSValueRegs(tagGPR, payloadGPR);
     }
 
-    static constexpr JSValueRegs payloadOnly(GPRReg gpr)
+    static constexpr JSValueRegs payloadOnly(GPRReg payloadGPR)
     {
-        return JSValueRegs(InvalidGPRReg, gpr);
+        return JSValueRegs(InvalidGPRReg, payloadGPR);
     }
 
     bool operator!() const { return !static_cast<bool>(*this); }
@@ -202,7 +201,6 @@ public:
         return m_tagGPR == other.m_tagGPR
             && m_payloadGPR == other.m_payloadGPR;
     }
-    constexpr bool operator!=(JSValueRegs other) const { return !(*this == other); }
 
     constexpr GPRReg tagGPR() const { return m_tagGPR; }
     constexpr GPRReg payloadGPR() const { return m_payloadGPR; }
@@ -487,6 +485,9 @@ public:
 #if !OS(WINDOWS)
     static constexpr GPRReg wasmScratchGPR1 = X86Registers::r10;
 #endif
+    static constexpr GPRReg wasmContextInstancePointer = regCS0;
+    static constexpr GPRReg wasmBaseMemoryPointer = regCS3;
+    static constexpr GPRReg wasmBoundsCheckingSizeRegister = regCS4;
 
     // FIXME: I believe that all uses of this are dead in the sense that it just causes the scratch
     // register allocator to select a different register and potentially spill things. It would be better
@@ -584,6 +585,14 @@ public:
     static constexpr GPRReg returnValueGPR = ARMRegisters::r0; // regT0
     static constexpr GPRReg returnValueGPR2 = ARMRegisters::r1; // regT1
     static constexpr GPRReg nonPreservedNonReturnGPR = ARMRegisters::r5;
+    static constexpr GPRReg nonPreservedNonArgumentGPR0 = ARMRegisters::r5;
+    static constexpr GPRReg nonPreservedNonArgumentGPR1 = ARMRegisters::r4;
+
+    static constexpr GPRReg wasmScratchGPR0 = regT5;
+    static constexpr GPRReg wasmScratchGPR1 = regT6;
+    static constexpr GPRReg wasmContextInstancePointer = regCS0;
+    static constexpr GPRReg wasmBaseMemoryPointer = InvalidGPRReg;
+    static constexpr GPRReg wasmBoundsCheckingSizeRegister = InvalidGPRReg;
 
     static GPRReg toRegister(unsigned index)
     {
@@ -684,6 +693,11 @@ public:
     static constexpr GPRReg patchpointScratchRegister = ARM64Registers::ip0;
     static constexpr GPRReg wasmScratchGPR0 = ARM64Registers::x9;
     static constexpr GPRReg wasmScratchGPR1 = ARM64Registers::x10;
+    static constexpr GPRReg wasmScratchGPR2 = ARM64Registers::x11;
+    static constexpr GPRReg wasmScratchGPR3 = ARM64Registers::x12;
+    static constexpr GPRReg wasmContextInstancePointer = regCS0;
+    static constexpr GPRReg wasmBaseMemoryPointer = regCS3;
+    static constexpr GPRReg wasmBoundsCheckingSizeRegister = regCS4;
 
     // GPRReg mapping is direct, the machine register numbers can
     // be used directly as indices into the GPR RegisterBank.
@@ -882,6 +896,9 @@ public:
 
     static constexpr GPRReg wasmScratchGPR0 = RISCV64Registers::x6; // regT9
     static constexpr GPRReg wasmScratchGPR1 = RISCV64Registers::x7; // regT10
+    static constexpr GPRReg wasmContextInstancePointer = regCS0;
+    static constexpr GPRReg wasmBaseMemoryPointer = regCS3;
+    static constexpr GPRReg wasmBoundsCheckingSizeRegister = regCS4;
 
     static constexpr GPRReg patchpointScratchRegister = RISCV64Registers::x30; // Should match dataTempRegister
 

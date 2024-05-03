@@ -41,7 +41,7 @@ enum ViewportErrorCode {
     MaximumScaleTooLargeError
 };
 
-enum class ViewportFit {
+enum class ViewportFit : uint8_t {
     Auto,
     Contain,
     Cover
@@ -121,11 +121,6 @@ struct ViewportArguments {
             && shrinkToFit == other.shrinkToFit
             && viewportFit == other.viewportFit
             && widthWasExplicit == other.widthWasExplicit;
-    }
-
-    bool operator!=(const ViewportArguments& other) const
-    {
-        return !(*this == other);
     }
 
 #if PLATFORM(GTK)

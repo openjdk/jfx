@@ -36,12 +36,18 @@
 #include <mutex>
 #include <sqlite3.h>
 #include <thread>
+#include <wtf/FastMalloc.h>
 #include <wtf/FileSystem.h>
 #include <wtf/Lock.h>
 #include <wtf/Scope.h>
 #include <wtf/Threading.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringConcatenateNumbers.h>
+
+#if !USE(SYSTEM_MALLOC)
+#include <bmalloc/BPlatform.h>
+#define ENABLE_SQLITE_FAST_MALLOC (BENABLE(MALLOC_SIZE) && BENABLE(MALLOC_GOOD_SIZE))
+#endif
 
 namespace WebCore {
 
@@ -76,6 +82,28 @@ static void initializeSQLiteIfNecessary()
 static Lock isDatabaseOpeningForbiddenLock;
 static bool isDatabaseOpeningForbidden WTF_GUARDED_BY_LOCK(isDatabaseOpeningForbiddenLock) { false };
 
+void SQLiteDatabase::useFastMalloc()
+{
+#if ENABLE(SQLITE_FAST_MALLOC)
+    int returnCode = sqlite3_config(SQLITE_CONFIG_LOOKASIDE, 0, 0);
+    RELEASE_LOG_ERROR_IF(returnCode != SQLITE_OK, SQLDatabase, "Unable to reduce lookaside buffer size: %d", returnCode);
+
+    static sqlite3_mem_methods fastMallocMethods = {
+        [](int n) { return fastMalloc(n); },
+        fastFree,
+        [](void *p, int n) { return fastRealloc(p, n); },
+        [](void *p) { return static_cast<int>(fastMallocSize(p)); },
+        [](int n) { return static_cast<int>(fastMallocGoodSize(n)); },
+        [](void*) { return SQLITE_OK; },
+        [](void*) { },
+        nullptr
+    };
+
+    returnCode = sqlite3_config(SQLITE_CONFIG_MALLOC, &fastMallocMethods);
+    RELEASE_LOG_ERROR_IF(returnCode != SQLITE_OK, SQLDatabase, "Unable to replace SQLite malloc: %d", returnCode);
+#endif
+}
+
 void SQLiteDatabase::setIsDatabaseOpeningForbidden(bool isForbidden)
 {
     Locker locker { isDatabaseOpeningForbiddenLock };
@@ -89,7 +117,7 @@ SQLiteDatabase::~SQLiteDatabase()
     close();
 }
 
-bool SQLiteDatabase::open(const String& filename, OpenMode openMode)
+bool SQLiteDatabase::open(const String& filename, OpenMode openMode, OptionSet<OpenOptions> options)
 {
     initializeSQLiteIfNecessary();
     close();
@@ -128,6 +156,12 @@ bool SQLiteDatabase::open(const String& filename, OpenMode openMode)
         {
             SQLiteTransactionInProgressAutoCounter transactionCounter;
             result = sqlite3_open_v2(FileSystem::fileSystemRepresentation(filename).data(), &m_db, flags, nullptr);
+#if PLATFORM(COCOA)
+            if (result == SQLITE_OK && options.contains(OpenOptions::CanSuspendWhileLocked))
+                SQLiteFileSystem::setCanSuspendLockedFileAttribute(filename);
+#else
+            UNUSED_PARAM(options);
+#endif
         }
 
         if (result != SQLITE_OK) {
@@ -409,16 +443,32 @@ void SQLiteDatabase::setBusyHandler(int(*handler)(void*, int))
         LOG(SQLDatabase, "Busy handler set on non-open database");
 }
 
-bool SQLiteDatabase::executeCommandSlow(StringView query)
+int SQLiteDatabase::executeSlow(StringView query)
 {
     auto statement = prepareStatementSlow(query);
-    return statement && statement->executeCommand();
+    if (!statement)
+        return statement.error();
+
+    return statement->step();
+}
+
+int SQLiteDatabase::execute(ASCIILiteral query)
+{
+    auto statement = prepareStatement(query);
+    if (!statement)
+        return statement.error();
+
+    return statement->step();
+}
+
+bool SQLiteDatabase::executeCommandSlow(StringView query)
+{
+    return executeSlow(query) == SQLITE_DONE;
 }
 
 bool SQLiteDatabase::executeCommand(ASCIILiteral query)
 {
-    auto statement = prepareStatement(query);
-    return statement && statement->executeCommand();
+    return execute(query) == SQLITE_DONE;
 }
 
 bool SQLiteDatabase::tableExists(StringView tableName)
@@ -639,7 +689,6 @@ bool SQLiteDatabase::turnOnIncrementalAutoVacuum()
     if (!statement)
         return false;
         autoVacuumMode = statement->columnInt(0);
-    }
 
     // Check if we got an error while trying to get the value of the auto_vacuum flag.
     // If we got a SQLITE_BUSY error, then there's probably another transaction in
@@ -647,8 +696,14 @@ bool SQLiteDatabase::turnOnIncrementalAutoVacuum()
     // auto_vacuum flag and try to set it to INCREMENTAL the next time we open this
     // database. If the error is not SQLITE_BUSY, then we probably ran into a more
     // serious problem and should return false (to log an error message).
+        //
+        // The call to lastError() here MUST be made immediately after the call to columnInt
+        // and before the destructor of the PRAGMA auto_vacuum statement. This is because we
+        // want to get the return value of the sqlite3_step issued by columnInt, not the
+        // return value of the sqlite3_finalize issued by the statement destructor.
     if (lastError() != SQLITE_ROW)
         return false;
+    }
 
     switch (autoVacuumMode) {
     case AutoVacuumIncremental:
@@ -722,7 +777,7 @@ static Expected<sqlite3_stmt*, int> constructAndPrepareStatement(SQLiteDatabase&
 
 Expected<SQLiteStatement, int> SQLiteDatabase::prepareStatementSlow(StringView queryString)
 {
-    CString query = queryString.stripWhiteSpace().utf8();
+    auto query = queryString.trim(isUnicodeCompatibleASCIIWhitespace<UChar>).utf8();
     auto sqlStatement = constructAndPrepareStatement(*this, query.data(), query.length());
     if (!sqlStatement) {
         RELEASE_LOG_ERROR(SQLDatabase, "SQLiteDatabase::prepareStatement: Failed to prepare statement %" PUBLIC_LOG_STRING, query.data());
@@ -743,7 +798,7 @@ Expected<SQLiteStatement, int> SQLiteDatabase::prepareStatement(ASCIILiteral que
 
 Expected<UniqueRef<SQLiteStatement>, int> SQLiteDatabase::prepareHeapStatementSlow(StringView queryString)
 {
-    CString query = queryString.stripWhiteSpace().utf8();
+    auto query = queryString.trim(isUnicodeCompatibleASCIIWhitespace<UChar>).utf8();
     auto sqlStatement = constructAndPrepareStatement(*this, query.data(), query.length());
     if (!sqlStatement) {
         RELEASE_LOG_ERROR(SQLDatabase, "SQLiteDatabase::prepareHeapStatement: Failed to prepare statement %" PUBLIC_LOG_STRING, query.data());

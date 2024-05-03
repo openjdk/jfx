@@ -29,6 +29,7 @@
 #if ENABLE(MEDIA_SOURCE)
 
 #include "Logging.h"
+#include <wtf/CryptographicallyRandomNumber.h>
 
 namespace WebCore {
 
@@ -66,9 +67,9 @@ MediaTime TrackBuffer::maximumBufferedTime() const
     return m_buffered.maximumBufferedTime();
 }
 
-void TrackBuffer::addBufferedRange(const MediaTime& start, const MediaTime& end)
+void TrackBuffer::addBufferedRange(const MediaTime& start, const MediaTime& end, AddTimeRangeOption addTimeRangeOption)
 {
-    m_buffered.add(start, end);
+    m_buffered.add(start, end, addTimeRangeOption);
 }
 
 void TrackBuffer::addSample(MediaSample& sample)
@@ -197,7 +198,7 @@ PlatformTimeRanges TrackBuffer::removeSamples(const DecodeOrderSampleMap::MapTyp
 
         auto startTime = sample->presentationTime();
         auto endTime = startTime + sample->duration();
-        erasedRanges.add(startTime, endTime);
+        erasedRanges.add(startTime, endTime, AddTimeRangeOption::EliminateSmallGaps);
 
 #if !RELEASE_LOG_DISABLED
         bytesRemoved += startBufferSize - m_samples.sizeInBytes();
@@ -338,6 +339,7 @@ void TrackBuffer::clearSamples()
 {
     m_samples.clear();
     m_decodeQueue.clear();
+    m_buffered = PlatformTimeRanges();
 }
 
 void TrackBuffer::setRoundedTimestampOffset(const MediaTime& time, uint32_t timeScale, const MediaTime& roundingMargin)
@@ -349,7 +351,7 @@ void TrackBuffer::setRoundedTimestampOffset(const MediaTime& time, uint32_t time
 void TrackBuffer::setLogger(const Logger& newLogger, const void* newLogIdentifier)
 {
     m_logger = &newLogger;
-    m_logIdentifier = childLogIdentifier(newLogIdentifier, cryptographicallyRandomNumber());
+    m_logIdentifier = childLogIdentifier(newLogIdentifier, cryptographicallyRandomNumber<uint32_t>());
     ALWAYS_LOG(LOGIDENTIFIER);
 }
 

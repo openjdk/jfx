@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "HTMLFormControlElementWithState.h"
+#include "HTMLFormControlElement.h"
 #include "PointerEventTypeNames.h"
 
 namespace WebCore {
@@ -41,7 +41,7 @@ enum TextFieldSelectionDirection { SelectionHasNoDirection, SelectionHasForwardD
 enum TextFieldEventBehavior { DispatchNoEvent, DispatchChangeEvent, DispatchInputAndChangeEvent };
 enum TextControlSetValueSelection { SetSelectionToEnd, Clamp, DoNotSet };
 
-class HTMLTextFormControlElement : public HTMLFormControlElementWithState {
+class HTMLTextFormControlElement : public HTMLFormControlElement {
     WTF_MAKE_ISO_ALLOCATED(HTMLTextFormControlElement);
 public:
     // Common flag for HTMLInputElement::tooLong() / tooShort() and HTMLTextAreaElement::tooLong() / tooShort().
@@ -82,6 +82,8 @@ public:
     void setSelectionRange(unsigned start, unsigned end, const String& direction, const AXTextStateChangeIntent& = AXTextStateChangeIntent());
     WEBCORE_EXPORT bool setSelectionRange(unsigned start, unsigned end, TextFieldSelectionDirection = SelectionHasNoDirection, SelectionRevealMode = SelectionRevealMode::DoNotReveal, const AXTextStateChangeIntent& = AXTextStateChangeIntent());
 
+    TextFieldSelectionDirection computeSelectionDirection() const;
+
     std::optional<SimpleRange> selection() const;
     String selectedText() const;
 
@@ -106,15 +108,18 @@ public:
 
     WEBCORE_EXPORT virtual bool isInnerTextElementEditable() const;
 
+    bool canContainRangeEndPoint() const override { return false; }
+
 protected:
     HTMLTextFormControlElement(const QualifiedName&, Document&, HTMLFormElement*);
     bool isPlaceholderEmpty() const;
     virtual void updatePlaceholderText() = 0;
 
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
 
     void disabledStateChanged() override;
     void readOnlyStateChanged() override;
+    bool readOnlyBarsFromConstraintValidation() const final { return true; }
 
     void updateInnerTextElementEditability();
 
@@ -141,8 +146,6 @@ private:
     TextFieldSelectionDirection cachedSelectionDirection() const { return static_cast<TextFieldSelectionDirection>(m_cachedSelectionDirection); }
 
     bool isTextFormControlElement() const final { return true; }
-
-    TextFieldSelectionDirection computeSelectionDirection() const;
 
     void dispatchFocusEvent(RefPtr<Element>&& oldFocusedElement, const FocusOptions&) final;
     void dispatchBlurEvent(RefPtr<Element>&& newFocusedElement) final;

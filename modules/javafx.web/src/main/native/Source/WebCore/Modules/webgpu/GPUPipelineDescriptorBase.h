@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,22 +25,39 @@
 
 #pragma once
 
+#include "GPUAutoLayoutMode.h"
 #include "GPUObjectDescriptorBase.h"
 #include "GPUPipelineLayout.h"
-#include <pal/graphics/WebGPU/WebGPUPipelineDescriptorBase.h>
+#include "WebGPUPipelineDescriptorBase.h"
+
+#include <variant>
 
 namespace WebCore {
 
+using GPULayoutMode = std::variant<
+    RefPtr<GPUPipelineLayout>,
+    GPUAutoLayoutMode
+>;
+
+static WebGPU::PipelineLayout& convertPipelineLayoutToBacking(const GPULayoutMode& layout, const Ref<GPUPipelineLayout>& autoLayout)
+{
+    return *WTF::switchOn(layout, [](auto pipelineLayout) {
+        return &pipelineLayout->backing();
+    }, [&autoLayout](GPUAutoLayoutMode) {
+        return &autoLayout->backing();
+    });
+}
+
 struct GPUPipelineDescriptorBase : public GPUObjectDescriptorBase {
-    PAL::WebGPU::PipelineDescriptorBase convertToBacking() const
+    WebGPU::PipelineDescriptorBase convertToBacking(const Ref<GPUPipelineLayout>& autoLayout) const
     {
         return {
             { label },
-            layout ? &layout->backing() : nullptr,
+            &convertPipelineLayoutToBacking(layout, autoLayout)
         };
     }
 
-    GPUPipelineLayout* layout { nullptr };
+    GPULayoutMode layout { nullptr };
 };
 
 }

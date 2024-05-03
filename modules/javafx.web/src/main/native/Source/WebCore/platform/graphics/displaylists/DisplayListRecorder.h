@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,6 @@
 #include "DrawGlyphsRecorder.h"
 #include "GraphicsContext.h"
 #include "Image.h" // For Image::TileRule.
-#include "InlinePathData.h"
 #include "TextFlags.h"
 #include <wtf/Noncopyable.h>
 
@@ -40,9 +39,11 @@ class FloatPoint;
 class FloatRect;
 class Font;
 class GlyphBuffer;
+class Gradient;
 class Image;
 class SourceImage;
-class DrawGlyphsRecorder;
+class VideoFrame;
+
 struct ImagePaintingOptions;
 
 namespace DisplayList {
@@ -57,11 +58,14 @@ public:
         DeconstructUsingDrawDecomposedGlyphsCommands,
     };
 
-    WEBCORE_EXPORT Recorder(const GraphicsContextState&, const FloatRect& initialClip, const AffineTransform&, DrawGlyphsMode = DrawGlyphsMode::Normal);
+    WEBCORE_EXPORT Recorder(const GraphicsContextState&, const FloatRect& initialClip, const AffineTransform&, const DestinationColorSpace&, DrawGlyphsMode = DrawGlyphsMode::Normal);
     WEBCORE_EXPORT virtual ~Recorder();
 
     virtual void convertToLuminanceMask() = 0;
     virtual void transformToColorSpace(const DestinationColorSpace&) = 0;
+
+    // Records possible pending commands. Should be used when recording is known to end.
+    WEBCORE_EXPORT void commitRecording();
 
 protected:
     virtual void recordSave() = 0;
@@ -80,8 +84,11 @@ protected:
     virtual void recordSetLineJoin(LineJoin) = 0;
     virtual void recordSetMiterLimit(float) = 0;
     virtual void recordClearShadow() = 0;
+    virtual void recordResetClip() = 0;
     virtual void recordClip(const FloatRect&) = 0;
+    virtual void recordClipRoundedRect(const FloatRoundedRect&) = 0;
     virtual void recordClipOut(const FloatRect&) = 0;
+    virtual void recordClipOutRoundedRect(const FloatRoundedRect&) = 0;
     virtual void recordClipToImageBuffer(ImageBuffer&, const FloatRect& destinationRect) = 0;
     virtual void recordClipOutToPath(const Path&) = 0;
     virtual void recordClipPath(const Path&, WindRule) = 0;
@@ -100,8 +107,8 @@ protected:
     virtual void recordDrawDotsForDocumentMarker(const FloatRect&, const DocumentMarkerLineStyle&) = 0;
     virtual void recordDrawEllipse(const FloatRect&) = 0;
     virtual void recordDrawPath(const Path&) = 0;
-    virtual void recordDrawFocusRingPath(const Path&, float width, float offset, const Color&) = 0;
-    virtual void recordDrawFocusRingRects(const Vector<FloatRect>&, float width, float offset, const Color&) = 0;
+    virtual void recordDrawFocusRingPath(const Path&, float outlineWidth, const Color&) = 0;
+    virtual void recordDrawFocusRingRects(const Vector<FloatRect>&, float outlineOffset, float outlineWidth, const Color&) = 0;
     virtual void recordFillRect(const FloatRect&) = 0;
     virtual void recordFillRectWithColor(const FloatRect&, const Color&) = 0;
     virtual void recordFillRectWithGradient(const FloatRect&, Gradient&) = 0;
@@ -109,27 +116,33 @@ protected:
     virtual void recordFillRoundedRect(const FloatRoundedRect&, const Color&, BlendMode) = 0;
     virtual void recordFillRectWithRoundedHole(const FloatRect&, const FloatRoundedRect&, const Color&) = 0;
 #if ENABLE(INLINE_PATH_DATA)
-    virtual void recordFillLine(const LineData&) = 0;
-    virtual void recordFillArc(const ArcData&) = 0;
-    virtual void recordFillQuadCurve(const QuadCurveData&) = 0;
-    virtual void recordFillBezierCurve(const BezierCurveData&) = 0;
+    virtual void recordFillLine(const PathDataLine&) = 0;
+    virtual void recordFillArc(const PathArc&) = 0;
+    virtual void recordFillQuadCurve(const PathDataQuadCurve&) = 0;
+    virtual void recordFillBezierCurve(const PathDataBezierCurve&) = 0;
 #endif
+    virtual void recordFillPathSegment(const PathSegment&) = 0;
     virtual void recordFillPath(const Path&) = 0;
     virtual void recordFillEllipse(const FloatRect&) = 0;
 #if ENABLE(VIDEO)
     virtual void recordPaintFrameForMedia(MediaPlayer&, const FloatRect& destination) = 0;
+    virtual void recordPaintVideoFrame(VideoFrame&, const FloatRect& destination, bool shouldDiscardAlpha) = 0;
 #endif
     virtual void recordStrokeRect(const FloatRect&, float) = 0;
 #if ENABLE(INLINE_PATH_DATA)
-    virtual void recordStrokeLine(const LineData&) = 0;
-    virtual void recordStrokeLineWithColorAndThickness(SRGBA<uint8_t>, float, const LineData&) = 0;
-    virtual void recordStrokeArc(const ArcData&) = 0;
-    virtual void recordStrokeQuadCurve(const QuadCurveData&) = 0;
-    virtual void recordStrokeBezierCurve(const BezierCurveData&) = 0;
+    virtual void recordStrokeLine(const PathDataLine&) = 0;
+    virtual void recordStrokeLineWithColorAndThickness(const PathDataLine&, SRGBA<uint8_t>, float thickness) = 0;
+    virtual void recordStrokeArc(const PathArc&) = 0;
+    virtual void recordStrokeQuadCurve(const PathDataQuadCurve&) = 0;
+    virtual void recordStrokeBezierCurve(const PathDataBezierCurve&) = 0;
 #endif
+    virtual void recordStrokePathSegment(const PathSegment&) = 0;
     virtual void recordStrokePath(const Path&) = 0;
     virtual void recordStrokeEllipse(const FloatRect&) = 0;
     virtual void recordClearRect(const FloatRect&) = 0;
+
+    virtual void recordDrawControlPart(ControlPart&, const FloatRoundedRect& borderRect, float deviceScaleFactor, const ControlStyle&) = 0;
+
 #if USE(CG)
     virtual void recordApplyStrokePattern() = 0;
     virtual void recordApplyFillPattern() = 0;
@@ -141,6 +154,8 @@ protected:
     virtual bool recordResourceUse(const SourceImage&) = 0;
     virtual bool recordResourceUse(Font&) = 0;
     virtual bool recordResourceUse(DecomposedGlyphs&) = 0;
+    virtual bool recordResourceUse(Gradient&) = 0;
+    virtual bool recordResourceUse(Filter&) = 0;
 
     struct ContextState {
         GraphicsContextState state;
@@ -180,12 +195,16 @@ protected:
 
 private:
     bool hasPlatformContext() const final { return false; }
+#if !PLATFORM(JAVA)
     PlatformGraphicsContext* platformContext() const final { return nullptr; }
+#else
+    PlatformGraphicsContext* platformContext() { return nullptr; }
+#endif
+
+    const DestinationColorSpace& colorSpace() const final { return m_colorSpace; }
 
 #if USE(CG)
-    void setIsCALayerContext(bool) final { }
     bool isCALayerContext() const final { return false; }
-    void setIsAcceleratedContext(bool) final { }
 #endif
 
     void fillRoundedRectImpl(const FloatRoundedRect&, const Color&) final { ASSERT_NOT_REACHED(); }
@@ -217,6 +236,8 @@ private:
     WEBCORE_EXPORT void applyFillPattern() final;
 #endif
 
+    WEBCORE_EXPORT void drawControlPart(ControlPart&, const FloatRoundedRect& borderRect, float deviceScaleFactor, const ControlStyle&) final;
+
     WEBCORE_EXPORT void drawFilteredImageBuffer(ImageBuffer* sourceImage, const FloatRect& sourceImageRect, Filter&, FilterResults&) final;
 
     WEBCORE_EXPORT void drawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned numGlyphs, const FloatPoint& anchorPoint, FontSmoothingMode) final;
@@ -224,7 +245,7 @@ private:
     WEBCORE_EXPORT void drawGlyphsAndCacheResources(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned count, const FloatPoint& localAnchor, FontSmoothingMode) final;
 
     WEBCORE_EXPORT void drawImageBuffer(ImageBuffer&, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions&) final;
-    WEBCORE_EXPORT void drawNativeImage(NativeImage&, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions&) final;
+    WEBCORE_EXPORT void drawNativeImageInternal(NativeImage&, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions&) final;
     WEBCORE_EXPORT void drawSystemImage(SystemImage&, const FloatRect&) final;
     WEBCORE_EXPORT void drawPattern(NativeImage&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions&) final;
     WEBCORE_EXPORT void drawPattern(ImageBuffer&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions&) final;
@@ -237,13 +258,8 @@ private:
 
     WEBCORE_EXPORT void drawPath(const Path&) final;
 
-    WEBCORE_EXPORT void drawFocusRing(const Path&, float width, float offset, const Color&) final;
-    WEBCORE_EXPORT void drawFocusRing(const Vector<FloatRect>&, float width, float offset, const Color&) final;
-
-#if PLATFORM(MAC)
-    WEBCORE_EXPORT void drawFocusRing(const Path&, double timeOffset, bool& needsRedraw, const Color&) final;
-    WEBCORE_EXPORT void drawFocusRing(const Vector<FloatRect>&, double timeOffset, bool& needsRedraw, const Color&) final;
-#endif
+    WEBCORE_EXPORT void drawFocusRing(const Path&, float outlineWidth, const Color&) final;
+    WEBCORE_EXPORT void drawFocusRing(const Vector<FloatRect>&, float outlineOffset, float outlineWidth, const Color&) final;
 
     WEBCORE_EXPORT void save() final;
     WEBCORE_EXPORT void restore() final;
@@ -258,20 +274,25 @@ private:
     WEBCORE_EXPORT void beginTransparencyLayer(float opacity) final;
     WEBCORE_EXPORT void endTransparencyLayer() final;
 
+    WEBCORE_EXPORT void resetClip() final;
+
     WEBCORE_EXPORT void clip(const FloatRect&) final;
+    WEBCORE_EXPORT void clipRoundedRect(const FloatRoundedRect&) final;
+    WEBCORE_EXPORT void clipPath(const Path&, WindRule) final;
+
     WEBCORE_EXPORT void clipOut(const FloatRect&) final;
     WEBCORE_EXPORT void clipOut(const Path&) final;
-    WEBCORE_EXPORT void clipPath(const Path&, WindRule) final;
+    WEBCORE_EXPORT void clipOutRoundedRect(const FloatRoundedRect&) final;
+
     WEBCORE_EXPORT IntRect clipBounds() const final;
     WEBCORE_EXPORT void clipToImageBuffer(ImageBuffer&, const FloatRect&) final;
 
 #if ENABLE(VIDEO)
     WEBCORE_EXPORT void paintFrameForMedia(MediaPlayer&, const FloatRect& destination) final;
+    WEBCORE_EXPORT void paintVideoFrame(VideoFrame&, const FloatRect&, bool shouldDiscardAlpha) final;
 #endif
 
     WEBCORE_EXPORT void applyDeviceScaleFactor(float) final;
-
-    WEBCORE_EXPORT FloatRect roundToDevicePixels(const FloatRect&, GraphicsContext::RoundingMode) final;
 
     void appendStateChangeItemIfNecessary();
     void appendStateChangeItem(const GraphicsContextState&);
@@ -283,9 +304,10 @@ private:
     Vector<ContextState, 4> m_stateStack;
     std::unique_ptr<DrawGlyphsRecorder> m_drawGlyphsRecorder;
     float m_initialScale { 1 };
+    DestinationColorSpace m_colorSpace;
     const DrawGlyphsMode m_drawGlyphsMode { DrawGlyphsMode::Normal };
+    const FloatRect m_initialClip;
 };
 
 } // namespace DisplayList
 } // namespace WebCore
-

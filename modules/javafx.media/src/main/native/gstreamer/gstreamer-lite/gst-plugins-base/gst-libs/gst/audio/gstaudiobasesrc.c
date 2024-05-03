@@ -40,10 +40,14 @@
 #include <gst/audio/audio.h>
 #include "gstaudiobasesrc.h"
 
-#include "gst/gst-i18n-plugin.h"
+#include <glib/gi18n-lib.h>
 
 GST_DEBUG_CATEGORY_STATIC (gst_audio_base_src_debug);
 #define GST_CAT_DEFAULT gst_audio_base_src_debug
+
+/* This function is public in >= 1.23, but internal in 1.22 */
+G_GNUC_INTERNAL
+    void __gst_audio_ring_buffer_set_errored (GstAudioRingBuffer * buf);
 
 struct _GstAudioBaseSrcPrivate
 {
@@ -1086,7 +1090,7 @@ got_error:
  * the ::create_ringbuffer vmethod and will set @src as the parent of the
  * returned buffer (see gst_object_set_parent()).
  *
- * Returns: (transfer none): The new ringbuffer of @src.
+ * Returns: (transfer none) (nullable): The new ringbuffer of @src.
  */
 GstAudioRingBuffer *
 gst_audio_base_src_create_ringbuffer (GstAudioBaseSrc * src)
@@ -1229,7 +1233,7 @@ gst_audio_base_src_post_message (GstElement * element, GstMessage * message)
      * flow error message */
     ret = GST_ELEMENT_CLASS (parent_class)->post_message (element, message);
 
-    g_atomic_int_set (&ringbuffer->state, GST_AUDIO_RING_BUFFER_STATE_ERROR);
+    __gst_audio_ring_buffer_set_errored (ringbuffer);
     GST_AUDIO_RING_BUFFER_SIGNAL (ringbuffer);
     gst_object_unref (ringbuffer);
   } else {

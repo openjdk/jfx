@@ -33,8 +33,9 @@
 #include "HTMLNames.h"
 #include "HTMLPictureElement.h"
 #include "Logging.h"
-#include "MediaList.h"
 #include "MediaQueryParser.h"
+#include "MediaQueryParserContext.h"
+#include "NodeName.h"
 #include <wtf/IsoMallocInlines.h>
 
 #if ENABLE(VIDEO)
@@ -151,44 +152,54 @@ void HTMLSourceElement::stop()
     cancelPendingErrorEvent();
 }
 
-void HTMLSourceElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLSourceElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    HTMLElement::parseAttribute(name, value);
-    if (name == srcsetAttr || name == sizesAttr || name == mediaAttr || name == typeAttr) {
-        if (name == mediaAttr)
-            m_cachedParsedMediaAttribute = std::nullopt;
-        RefPtr parent = parentNode();
+    HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
+
+    switch (name.nodeName()) {
+    case AttributeNames::typeAttr: {
+        RefPtr parent = parentElement();
         if (m_shouldCallSourcesChanged && parent)
             downcast<HTMLPictureElement>(*parent).sourcesChanged();
-    }
 #if ENABLE(MODEL_ELEMENT)
-    if (name == srcAttr ||  name == typeAttr) {
-        RefPtr<Element> parent = parentElement();
-        if (is<HTMLModelElement>(parent))
-            downcast<HTMLModelElement>(*parent).sourcesChanged();
-    }
+        if (auto* parentModelElement = dynamicDowncast<HTMLModelElement>(parent.get()))
+            parentModelElement->sourcesChanged();
 #endif
+        break;
+    }
+    case AttributeNames::srcsetAttr:
+    case AttributeNames::sizesAttr:
+    case AttributeNames::mediaAttr: {
+        if (name == mediaAttr)
+            m_cachedParsedMediaAttribute = std::nullopt;
+        RefPtr parent = parentElement();
+        if (m_shouldCallSourcesChanged && parent)
+            downcast<HTMLPictureElement>(*parent).sourcesChanged();
+        break;
+    }
+    case AttributeNames::widthAttr:
+    case AttributeNames::heightAttr:
+        if (RefPtr parent = dynamicDowncast<HTMLPictureElement>(parentElement()))
+            parent->sourceDimensionAttributesChanged(*this);
+        break;
+#if ENABLE(MODEL_ELEMENT)
+    case AttributeNames::srcAttr:
+        if (RefPtr parent = dynamicDowncast<HTMLModelElement>(parentElement()))
+            parent->sourcesChanged();
+        break;
+#endif
+    default:
+        break;
+    }
 }
 
-const MediaQuerySet* HTMLSourceElement::parsedMediaAttribute(Document& document) const
+const MQ::MediaQueryList& HTMLSourceElement::parsedMediaAttribute(Document& document) const
 {
     if (!m_cachedParsedMediaAttribute) {
-        RefPtr<const MediaQuerySet> parsedAttribute;
         auto& value = attributeWithoutSynchronization(mediaAttr);
-        if (!value.isNull())
-            parsedAttribute = MediaQuerySet::create(value, MediaQueryParserContext(document));
-        m_cachedParsedMediaAttribute = WTFMove(parsedAttribute);
+        m_cachedParsedMediaAttribute = MQ::MediaQueryParser::parse(value, MediaQueryParserContext { document });
     }
-    return m_cachedParsedMediaAttribute.value().get();
-}
-
-void HTMLSourceElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason reason)
-{
-    if (name == widthAttr || name == heightAttr) {
-        if (RefPtr parent = parentNode(); is<HTMLPictureElement>(parent))
-            downcast<HTMLPictureElement>(*parent).sourceDimensionAttributesChanged(*this);
-    }
-    HTMLElement::attributeChanged(name, oldValue, newValue, reason);
+    return m_cachedParsedMediaAttribute.value();
 }
 
 }

@@ -300,6 +300,16 @@ gst_caps_new_empty_simple (const char *media_type)
   GstStructure *structure;
 
   caps = gst_caps_new_empty ();
+  if (strcmp ("ANY", media_type) == 0) {
+    g_warning
+        ("media_type should not be ANY. Please consider using `gst_caps_new_any` or `gst_caps_from_string`.");
+  }
+  if (strcmp ("", media_type) == 0 || strcmp ("EMPTY", media_type) == 0
+      || strcmp ("NONE", media_type) == 0) {
+    g_warning
+        ("media_type should not be `%s`. Please consider using `gst_caps_new_empty` or `gst_caps_from_string`.",
+        media_type);
+  }
   structure = gst_structure_new_empty (media_type);
   if (structure)
     gst_caps_append_structure_unchecked (caps, structure, NULL);

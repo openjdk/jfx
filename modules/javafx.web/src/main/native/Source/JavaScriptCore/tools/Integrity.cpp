@@ -35,7 +35,10 @@
 #include "Options.h"
 #include "VMInspectorInlines.h"
 #include <wtf/DataLog.h>
-#include <wtf/OSLogPrintStream.h>
+
+#if OS(DARWIN)
+#include <wtf/darwin/OSLogPrintStream.h>
+#endif
 
 namespace JSC {
 namespace Integrity {
@@ -46,7 +49,7 @@ static constexpr bool verbose = false;
 
 PrintStream& logFile()
 {
-#if OS(DARWIN)
+#if OS(DARWIN) && !PLATFORM(JAVA) // OSLogPrintStream.cpp is removed
     static PrintStream* s_file;
     static std::once_flag once;
     std::call_once(once, [] {
@@ -121,17 +124,25 @@ void auditCellMinimallySlow(VM&, JSCell* cell)
 
 #if USE(JSVALUE64)
 
+#if ENABLE(EXTRA_INTEGRITY_CHECKS)
+// toJS will trigger an audit if ENABLE(EXTRA_INTEGRITY_CHECKS).
+#define DO_AUDIT(value) toJS(value)
+#else
+// Else, we'll need to explicit call doAudit.
+#define DO_AUDIT(value) doAudit(toJS(value))
+#endif
+
 JSContextRef doAudit(JSContextRef ctx)
 {
     IA_ASSERT(ctx, "NULL JSContextRef");
-    toJS(ctx); // toJS will trigger an audit.
+    DO_AUDIT(ctx);
     return ctx;
 }
 
 JSGlobalContextRef doAudit(JSGlobalContextRef ctx)
 {
     IA_ASSERT(ctx, "NULL JSGlobalContextRef");
-    toJS(ctx); // toJS will trigger an audit.
+    DO_AUDIT(ctx);
     return ctx;
 }
 
@@ -139,7 +150,7 @@ JSObjectRef doAudit(JSObjectRef objectRef)
 {
     if (!objectRef)
         return objectRef;
-    toJS(objectRef); // toJS will trigger an audit.
+    DO_AUDIT(objectRef);
     return objectRef;
 }
 
@@ -148,10 +159,12 @@ JSValueRef doAudit(JSValueRef valueRef)
 #if CPU(ADDRESS64)
     if (!valueRef)
         return valueRef;
-    toJS(valueRef); // toJS will trigger an audit.
+    DO_AUDIT(valueRef);
 #endif
     return valueRef;
 }
+
+#undef DO_AUDIT
 
 JSValue doAudit(JSValue value)
 {
@@ -172,7 +185,7 @@ bool Analyzer::analyzeVM(VM& vm, Analyzer::Action action)
     return true;
 }
 
-#if COMPILER(MSVC) || !VA_OPT_SUPPORTED
+#if !VA_OPT_SUPPORTED
 
 #define AUDIT_VERIFY(cond, format, ...) do { \
         IA_ASSERT_WITH_ACTION(cond, { \
@@ -184,7 +197,7 @@ bool Analyzer::analyzeVM(VM& vm, Analyzer::Action action)
         }); \
     } while (false)
 
-#else // not (COMPILER(MSVC) || !VA_OPT_SUPPORTED)
+#else // not !VA_OPT_SUPPORTED
 
 #define AUDIT_VERIFY(cond, format, ...) do { \
         IA_ASSERT_WITH_ACTION(cond, { \
@@ -196,7 +209,7 @@ bool Analyzer::analyzeVM(VM& vm, Analyzer::Action action)
         }, format __VA_OPT__(,) __VA_ARGS__); \
     } while (false)
 
-#endif // COMPILER(MSVC) || !VA_OPT_SUPPORTED
+#endif // !VA_OPT_SUPPORTED
 
 bool Analyzer::analyzeCell(VM& vm, JSCell* cell, Analyzer::Action action)
 {

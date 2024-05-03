@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -83,7 +83,7 @@ protected:
         XPACI  = 1 << 30 | 0b00001 << 16 | 0b10000 << 10,
         XPACD  = 1 << 30 | 0b00001 << 16 | 0b10001 << 10,
 
-        PACGA  = 0 << 30 | 0b01100,
+        PACGA  = 0 << 30 | 0b01100 << 10,
     };
 
     ALWAYS_INLINE static int encodeGroup2(Group2Op op, RegisterID rn, RegisterID rd, RegisterID rm)
@@ -283,163 +283,6 @@ public:
     ALWAYS_INLINE void retab() { insn(encodeGroup4(Group4Op::RETAB)); }
     ALWAYS_INLINE void eretaa() { insn(encodeGroup4(Group4Op::ERETAA)); }
     ALWAYS_INLINE void eretab() { insn(encodeGroup4(Group4Op::ERETAB)); }
-
-    enum ExoticAtomicLoadStoreOp {
-        ExoticAtomicLoadStoreOp_Add   = 0b0'000'00,
-        ExoticAtomicLoadStoreOp_Clear = 0b0'001'00,
-        ExoticAtomicLoadStoreOp_Xor   = 0b0'010'00,
-        ExoticAtomicLoadStoreOp_Set   = 0b0'011'00,
-        ExoticAtomicLoadStoreOp_Swap  = 0b1'000'00,
-    };
-
-    static int exoticAtomicLoadStore(MemOpSize size, ExoticAtomicLoadStoreOp op, ExoticLoadFence loadFence, ExoticStoreFence storeFence, RegisterID rs, RegisterID rt, RegisterID rn)
-    {
-        ASSERT((rs & 0b11111) == rs);
-        ASSERT((rn & 0b11111) == rn);
-        ASSERT((rt & 0b11111) == rt);
-        return 0b00111000'00100000'00000000'00000000 | size << 30 | loadFence << 23 | storeFence << 22 | rs << 16 | op << 10 | rn << 5 | rt;
-    }
-
-    static int exoticAtomicCAS(MemOpSize size, ExoticLoadFence loadFence, ExoticStoreFence storeFence, RegisterID rs, RegisterID rt, RegisterID rn)
-    {
-        ASSERT((rs & 0b11111) == rs);
-        ASSERT((rn & 0b11111) == rn);
-        ASSERT((rt & 0b11111) == rt);
-        return 0b00001000'10100000'01111100'00000000 | size << 30 | storeFence << 22 | rs << 16 | loadFence << 15 | rn << 5 | rt;
-    }
-
-    template<int datasize>
-    ALWAYS_INLINE void ldaddal(RegisterID rs, RegisterID rt, RegisterID rn)
-    {
-        CHECK_MEMOPSIZE();
-        insn(exoticAtomicLoadStore(MEMOPSIZE, ExoticAtomicLoadStoreOp_Add, ExoticLoadFence_Acquire, ExoticStoreFence_Release, rs, rt, rn));
-    }
-
-    template<int datasize>
-    ALWAYS_INLINE void ldeoral(RegisterID rs, RegisterID rt, RegisterID rn)
-    {
-        CHECK_MEMOPSIZE();
-        insn(exoticAtomicLoadStore(MEMOPSIZE, ExoticAtomicLoadStoreOp_Xor, ExoticLoadFence_Acquire, ExoticStoreFence_Release, rs, rt, rn));
-    }
-
-    template<int datasize>
-    ALWAYS_INLINE void ldclral(RegisterID rs, RegisterID rt, RegisterID rn)
-    {
-        CHECK_MEMOPSIZE();
-        insn(exoticAtomicLoadStore(MEMOPSIZE, ExoticAtomicLoadStoreOp_Clear, ExoticLoadFence_Acquire, ExoticStoreFence_Release, rs, rt, rn));
-    }
-
-    template<int datasize>
-    ALWAYS_INLINE void ldsetal(RegisterID rs, RegisterID rt, RegisterID rn)
-    {
-        CHECK_MEMOPSIZE();
-        insn(exoticAtomicLoadStore(MEMOPSIZE, ExoticAtomicLoadStoreOp_Set, ExoticLoadFence_Acquire, ExoticStoreFence_Release, rs, rt, rn));
-    }
-
-    template<int datasize>
-    ALWAYS_INLINE void swpal(RegisterID rs, RegisterID rt, RegisterID rn)
-    {
-        CHECK_MEMOPSIZE();
-        insn(exoticAtomicLoadStore(MEMOPSIZE, ExoticAtomicLoadStoreOp_Swap, ExoticLoadFence_Acquire, ExoticStoreFence_Release, rs, rt, rn));
-    }
-
-    template<int datasize>
-    ALWAYS_INLINE void casal(RegisterID rs, RegisterID rt, RegisterID rn)
-    {
-        CHECK_MEMOPSIZE();
-        insn(exoticAtomicCAS(MEMOPSIZE, ExoticLoadFence_Acquire, ExoticStoreFence_Release, rs, rt, rn));
-    }
-
-    // Overload of the ARM64 equivalents.
-
-    // Needed because we need to call our overloaded linkPointer below.
-    static void linkPointer(void* code, AssemblerLabel where, void* valuePtr)
-    {
-        linkPointer(addressOf(code, where), valuePtr);
-    }
-
-    // Needed because we need to add the assert for address[3], and because we need to
-    // call our own version of setPointer() below.
-    static void linkPointer(int* address, void* valuePtr, bool flush = false)
-    {
-        Datasize sf;
-        MoveWideOp opc;
-        int hw;
-        uint16_t imm16;
-        RegisterID rd;
-        bool expected = disassembleMoveWideImediate(address, sf, opc, hw, imm16, rd);
-        ASSERT_UNUSED(expected, expected && sf && opc == MoveWideOp_Z && !hw);
-        ASSERT(checkMovk<Datasize_64>(address[1], 1, rd));
-        ASSERT(checkMovk<Datasize_64>(address[2], 2, rd));
-        if (NUMBER_OF_ADDRESS_ENCODING_INSTRUCTIONS > 3)
-            ASSERT(checkMovk<Datasize_64>(address[3], 3, rd));
-
-        setPointer(address, valuePtr, rd, flush);
-    }
-
-    // Needed because we need to call our overloaded linkPointer above.
-    static void repatchPointer(void* where, void* valuePtr)
-    {
-        linkPointer(static_cast<int*>(where), valuePtr, true);
-    }
-
-    // Needed because we need to set buffer[3]: signed pointers take up more than 48 bits.
-    static void setPointer(int* address, void* valuePtr, RegisterID rd, bool flush)
-    {
-        uintptr_t value = reinterpret_cast<uintptr_t>(valuePtr);
-        int buffer[4];
-        buffer[0] = moveWideImediate(Datasize_64, MoveWideOp_Z, 0, getHalfword(value, 0), rd);
-        buffer[1] = moveWideImediate(Datasize_64, MoveWideOp_K, 1, getHalfword(value, 1), rd);
-        buffer[2] = moveWideImediate(Datasize_64, MoveWideOp_K, 2, getHalfword(value, 2), rd);
-        if (NUMBER_OF_ADDRESS_ENCODING_INSTRUCTIONS > 3)
-            buffer[3] = moveWideImediate(Datasize_64, MoveWideOp_K, 3, getHalfword(value, 3), rd);
-        RELEASE_ASSERT(roundUpToMultipleOf<instructionSize>(address) == address);
-        performJITMemcpy(address, buffer, sizeof(int) * 4);
-
-        if (flush)
-            cacheFlush(address, sizeof(int) * 4);
-    }
-
-    static void* readPointer(void* where)
-    {
-        int* address = static_cast<int*>(where);
-
-        Datasize sf;
-        MoveWideOp opc;
-        int hw;
-        uint16_t imm16;
-        RegisterID rdFirst, rd;
-
-        bool expected = disassembleMoveWideImediate(address, sf, opc, hw, imm16, rdFirst);
-        ASSERT_UNUSED(expected, expected && sf && opc == MoveWideOp_Z && !hw);
-        uintptr_t result = imm16;
-
-        expected = disassembleMoveWideImediate(address + 1, sf, opc, hw, imm16, rd);
-        ASSERT_UNUSED(expected, expected && sf && opc == MoveWideOp_K && hw == 1 && rd == rdFirst);
-        result |= static_cast<uintptr_t>(imm16) << 16;
-
-        expected = disassembleMoveWideImediate(address + 2, sf, opc, hw, imm16, rd);
-        ASSERT_UNUSED(expected, expected && sf && opc == MoveWideOp_K && hw == 2 && rd == rdFirst);
-        result |= static_cast<uintptr_t>(imm16) << 32;
-
-        if (NUMBER_OF_ADDRESS_ENCODING_INSTRUCTIONS > 3) {
-            expected = disassembleMoveWideImediate(address + 3, sf, opc, hw, imm16, rd);
-            ASSERT_UNUSED(expected, expected && sf && opc == MoveWideOp_K && hw == 3 && rd == rdFirst);
-            result |= static_cast<uintptr_t>(imm16) << 48;
-        }
-
-        return reinterpret_cast<void*>(result);
-    }
-
-    static void* readCallTarget(void* from)
-    {
-        constexpr ptrdiff_t callInstruction = 1;
-        return readPointer(reinterpret_cast<int*>(from) - callInstruction - NUMBER_OF_ADDRESS_ENCODING_INSTRUCTIONS);
-    }
-
-    static constexpr ptrdiff_t MAX_POINTER_BITS = 64;
-    static constexpr ptrdiff_t BITS_ENCODEABLE_PER_INSTRUCTION = 16;
-    static constexpr ptrdiff_t NUMBER_OF_ADDRESS_ENCODING_INSTRUCTIONS = MAX_POINTER_BITS / BITS_ENCODEABLE_PER_INSTRUCTION;
 };
 
 #undef CHECK_MEMOPSIZE_OF

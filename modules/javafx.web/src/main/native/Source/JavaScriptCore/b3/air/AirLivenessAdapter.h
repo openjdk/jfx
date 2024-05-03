@@ -37,6 +37,10 @@
 
 namespace JSC { namespace B3 { namespace Air {
 
+namespace AirLivenessAdapterInternal {
+static constexpr bool verbose = false;
+}
+
 template<typename Adapter>
 struct LivenessAdapter {
     typedef Air::CFG CFG;
@@ -65,6 +69,7 @@ struct LivenessAdapter {
 
     void prepareToCompute()
     {
+        dataLogLnIf(AirLivenessAdapterInternal::verbose, "Prepare to compute tmp or stack slot liveness for code: ", code);
         for (BasicBlock* block : code) {
             ActionsForBoundary& actionsForBoundary = actions[block];
             actionsForBoundary.resize(block->size() + 1);
@@ -87,6 +92,25 @@ struct LivenessAdapter {
                         if (Arg::isLateDef(role))
                             actionsForBoundary[instIndex + 1].def.appendIfNotContains(index);
                     });
+            }
+        }
+
+        if (AirLivenessAdapterInternal::verbose) {
+            for (size_t blockIndex = code.size(); blockIndex--;) {
+                BasicBlock* block = code[blockIndex];
+                if (!block)
+                    continue;
+                ActionsForBoundary& actionsForBoundary = actions[block];
+                dataLogLn("Block ", blockIndex);
+
+                dataLogLn("(null) | use: ", listDump(actionsForBoundary[block->size()].use),
+                        " def: ", listDump(actionsForBoundary[block->size()].def));
+                for (size_t instIndex = block->size(); instIndex--;) {
+                    dataLogLn(block->at(instIndex), " | use: ", listDump(actionsForBoundary[instIndex].use),
+                        " def: ", listDump(actionsForBoundary[instIndex].def));
+                }
+                dataLogLn(block->at(0), " | use: ", listDump(actionsForBoundary[0].use),
+                        " def: ", listDump(actionsForBoundary[0].def));
             }
         }
     }

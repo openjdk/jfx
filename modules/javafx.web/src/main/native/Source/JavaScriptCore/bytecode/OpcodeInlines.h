@@ -44,10 +44,13 @@ inline bool isOpcodeShape(OpcodeID opcodeID)
     if (shape == OpCallShape) {
         return opcodeID == op_call
             || opcodeID == op_tail_call
-            || opcodeID == op_call_eval
+            || opcodeID == op_call_direct_eval
             || opcodeID == op_call_varargs
+            || opcodeID == op_call_ignore_result
             || opcodeID == op_tail_call_varargs
-            || opcodeID == op_tail_call_forward_arguments;
+            || opcodeID == op_tail_call_forward_arguments
+            || opcodeID == op_iterator_open
+            || opcodeID == op_iterator_next;
     }
 
     RELEASE_ASSERT_NOT_REACHED();

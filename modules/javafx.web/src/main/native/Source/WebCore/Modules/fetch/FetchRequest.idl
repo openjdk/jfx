@@ -26,11 +26,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-enum FetchRequestDestination { "", "audio", "audioworklet", "document", "embed", "font", "image", "iframe", "manifest", "model", "object", "paintworklet", "report", "script", "serviceworker", "sharedworker", "style", "track", "video", "worker", "xslt" };
-
 typedef (FetchRequest or USVString) RequestInfo;
 
 [
+    EnabledBySetting=FetchAPIEnabled,
     ActiveDOMObject,
     ExportMacro=WEBCORE_EXPORT,
     Exposed=(Window,Worker),

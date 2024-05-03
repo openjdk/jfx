@@ -27,6 +27,7 @@
 
 #if ENABLE(B3_JIT)
 
+#include "AirCCallingConvention.h"
 #include "AirCode.h"
 #include "AirGenerationContext.h"
 #include "AirInst.h"
@@ -131,26 +132,40 @@ struct CCallCustom : public CommonCustomBase<CCallCustom> {
     template<typename Functor>
     static void forEachArg(Inst& inst, const Functor& functor)
     {
-        Value* value = inst.origin;
+        CCallValue* value = inst.origin->as<CCallValue>();
 
-        unsigned index = 0;
+        Code& code = inst.args[0].special()->code();
 
-        functor(inst.args[index++], Arg::Use, GP, pointerWidth()); // callee
+        // Skip the CCallSpecial Arg.
+        unsigned index = 1;
 
-        if (value->type() != Void) {
-            functor(
-                inst.args[index++], Arg::Def,
-                bankForType(value->type()),
-                widthForType(value->type()));
+        auto next = [&](Arg::Role role, Bank bank, Width width) {
+            functor(inst.args[index++], role, bank, width);
+        };
+
+        next(Arg::Use, GP, pointerWidth()); // callee
+
+        size_t resultCount = cCallResultCount(code, value);
+        for (size_t n = 0; n < resultCount; ++n) {
+            Type type = value->type().isTuple() ? code.proc().typeAtOffset(value->type(), n) : value->type();
+            next(
+                Arg::Def,
+                bankForType(type),
+                cCallArgumentRegisterWidth(type)
+            );
         }
 
         for (unsigned i = 1; i < value->numChildren(); ++i) {
             Value* child = value->child(i);
-            functor(
-                inst.args[index++], Arg::Use,
+            for (size_t j = 0; j < cCallArgumentRegisterCount(child); j++) {
+                next(
+                    Arg::Use,
                 bankForType(child->type()),
-                widthForType(child->type()));
+                    cCallArgumentRegisterWidth(child->type())
+                );
+            }
         }
+        ASSERT(index == inst.args.size());
     }
 
     template<typename... Arguments>

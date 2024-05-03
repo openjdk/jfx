@@ -32,8 +32,6 @@
 #include "Logging.h"
 #include "RenderAncestorIterator.h"
 #include "RenderChildIterator.h"
-#include "RenderSVGForeignObject.h"
-#include "RenderSVGHiddenContainer.h"
 #include "RenderSVGInline.h"
 #include "RenderSVGModelObject.h"
 #include "RenderSVGRoot.h"
@@ -61,10 +59,8 @@ void SVGContainerLayout::layoutChildren(bool containerNeedsLayout)
 
     m_positionedChildren.clear();
     for (auto& child : childrenOfType<RenderObject>(m_container)) {
-        if (child.isSVGLayerAwareRenderer()) {
-            ASSERT(child.hasLayer());
+        if (child.isSVGLayerAwareRenderer())
             m_positionedChildren.append(downcast<RenderLayerModelObject>(child));
-        }
 
         bool needsLayout = containerNeedsLayout;
         bool childEverHadLayout = child.everHadLayout();
@@ -242,14 +238,17 @@ void SVGContainerLayout::invalidateResourcesOfChildren(RenderElement& renderer)
 bool SVGContainerLayout::layoutSizeOfNearestViewportChanged() const
 {
     RenderElement* ancestor = &m_container;
-    while (ancestor && !is<RenderSVGRoot>(*ancestor) && !is<RenderSVGViewportContainer>(*ancestor))
+    while (ancestor && !is<RenderSVGRoot>(ancestor) && !is<RenderSVGViewportContainer>(ancestor))
         ancestor = ancestor->parent();
 
     ASSERT(ancestor);
-    if (is<RenderSVGViewportContainer>(*ancestor))
-        return downcast<RenderSVGViewportContainer>(*ancestor).isLayoutSizeChanged();
+    if (auto* viewportContainer = dynamicDowncast<RenderSVGViewportContainer>(ancestor))
+        return viewportContainer->isLayoutSizeChanged();
 
-    return downcast<RenderSVGRoot>(*ancestor).isLayoutSizeChanged();
+    if (auto* svgRoot = dynamicDowncast<RenderSVGRoot>(ancestor))
+        return svgRoot->isLayoutSizeChanged();
+
+    return false;
 }
 
 bool SVGContainerLayout::transformToRootChanged(const RenderObject* ancestor)

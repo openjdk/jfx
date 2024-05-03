@@ -322,7 +322,7 @@ JSC_DEFINE_JIT_OPERATION(operationMaterializeObjectInOSR, JSCell*, (JSGlobalObje
                 if (property.location().kind() == ClosureVarPLoc)
                     numberOfClosureVarPloc++;
             }
-            ASSERT(numberOfClosureVarPloc == table->scopeSize());
+            ASSERT_UNUSED(numberOfClosureVarPloc, numberOfClosureVarPloc == table->scopeSize());
         }
 
         return result;
@@ -383,8 +383,11 @@ JSC_DEFINE_JIT_OPERATION(operationMaterializeObjectInOSR, JSCell*, (JSGlobalObje
             switch (materialization->type()) {
             case PhantomDirectArguments:
                 return DirectArguments::createByCopying(globalObject, callFrame);
-            case PhantomClonedArguments:
-                return ClonedArguments::createWithMachineFrame(globalObject, callFrame, ArgumentsMode::Cloned);
+            case PhantomClonedArguments: {
+                ClonedArguments* result = ClonedArguments::createWithMachineFrame(globalObject, callFrame, ArgumentsMode::Cloned);
+                RELEASE_ASSERT(result);
+                return result;
+            }
             case PhantomCreateRest: {
                 CodeBlock* codeBlock = baselineCodeBlockForOriginAndBaselineCodeBlock(
                     materialization->origin(), callFrame->codeBlock()->baselineAlternative());
@@ -466,8 +469,8 @@ JSC_DEFINE_JIT_OPERATION(operationMaterializeObjectInOSR, JSCell*, (JSGlobalObje
         }
         case PhantomClonedArguments: {
             unsigned length = argumentCount - 1;
-            ClonedArguments* result = ClonedArguments::createEmpty(
-                vm, codeBlock->globalObject()->clonedArgumentsStructure(), callee, length);
+            ClonedArguments* result = ClonedArguments::createEmpty(vm, codeBlock->globalObject()->clonedArgumentsStructure(), callee, length, nullptr);
+            RELEASE_ASSERT(result);
 
             for (unsigned i = materialization->properties().size(); i--;) {
                 const ExitPropertyValue& property = materialization->properties()[i];
@@ -747,7 +750,7 @@ JSC_DEFINE_JIT_OPERATION(operationCompileFTLLazySlowPath, void*, (CallFrame* cal
     LazySlowPath& lazySlowPath = *jitCode->lazySlowPaths[index];
     lazySlowPath.generate(codeBlock);
 
-    return lazySlowPath.stub().code().executableAddress();
+    return lazySlowPath.stub().code().taggedPtr();
 }
 
 JSC_DEFINE_JIT_OPERATION_WITH_ATTRIBUTES(operationReportBoundsCheckEliminationErrorAndCrash, NO_RETURN_DUE_TO_CRASH, void, (intptr_t codeBlockAsIntPtr, int32_t nodeIndex, int32_t child1Index, int32_t child2Index, int32_t checkedIndex, int32_t bounds))

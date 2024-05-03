@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,24 @@
 #include "config.h"
 #include "GPUBuffer.h"
 
+#include "JSDOMPromiseDeferred.h"
+#include "JSGPUBufferMapState.h"
+
 namespace WebCore {
+
+GPUBuffer::~GPUBuffer()
+{
+    m_backing->destroy();
+    m_arrayBuffer = nullptr;
+}
+
+GPUBuffer::GPUBuffer(Ref<WebGPU::Buffer>&& backing, size_t bufferSize, GPUBufferUsageFlags usage, bool mappedAtCreation)
+    : m_backing(WTFMove(backing))
+    , m_bufferSize(bufferSize)
+    , m_usage(usage)
+    , m_mapState(mappedAtCreation ? GPUBufferMapState::Mapped : GPUBufferMapState::Unmapped)
+{
+}
 
 String GPUBuffer::label() const
 {
@@ -40,24 +57,77 @@ void GPUBuffer::setLabel(String&& label)
 
 void GPUBuffer::mapAsync(GPUMapModeFlags mode, std::optional<GPUSize64> offset, std::optional<GPUSize64> size, MapAsyncPromise&& promise)
 {
-    m_backing->mapAsync(convertMapModeFlagsToBacking(mode), offset.value_or(0), size, [promise = WTFMove(promise)] () mutable {
+    if (!m_bufferSize || (size.has_value() && !size.value())) {
         promise.resolve(nullptr);
+        return;
+    }
+
+    if (m_pendingMapPromise) {
+        promise.reject(Exception { OperationError });
+        return;
+    }
+
+    if (m_mapState == GPUBufferMapState::Unmapped)
+        m_mapState = GPUBufferMapState::Pending;
+
+    m_pendingMapPromise = promise;
+    // FIXME: Should this capture a weak pointer to |this| instead?
+    m_backing->mapAsync(convertMapModeFlagsToBacking(mode), offset.value_or(0), size, [promise = WTFMove(promise), protectedThis = Ref { *this }](bool success) mutable {
+        if (!protectedThis->m_pendingMapPromise)
+            return;
+
+        protectedThis->m_pendingMapPromise = std::nullopt;
+        if (success) {
+            protectedThis->m_mapState = GPUBufferMapState::Mapped;
+            promise.resolve(nullptr);
+        } else {
+            if (protectedThis->m_mapState == GPUBufferMapState::Pending)
+                protectedThis->m_mapState = GPUBufferMapState::Unmapped;
+            promise.reject(Exception { OperationError });
+        }
     });
 }
 
-Ref<JSC::ArrayBuffer> GPUBuffer::getMappedRange(std::optional<GPUSize64> offset, std::optional<GPUSize64> size)
+ExceptionOr<Ref<JSC::ArrayBuffer>> GPUBuffer::getMappedRange(std::optional<GPUSize64> offset, std::optional<GPUSize64> size)
 {
-    auto mappedRange = m_backing->getMappedRange(offset.value_or(0), size);
-    return ArrayBuffer::create(mappedRange.source, mappedRange.byteLength);
+    if (!m_bufferSize || (size.has_value() && !size.value()))
+        return ArrayBuffer::create(static_cast<size_t>(0U), 1);
+
+    // size is <= the size of the buffer is validated in WebGPU.framework
+    m_mappedRange = m_backing->getMappedRange(offset.value_or(0), size);
+    if (!m_mappedRange.source) {
+        m_arrayBuffer = nullptr;
+        return Exception { OperationError };
+    }
+
+    auto arrayBuffer = ArrayBuffer::create(m_mappedRange.source, m_mappedRange.byteLength);
+    m_arrayBuffer = arrayBuffer.ptr();
+
+    return arrayBuffer;
 }
 
 void GPUBuffer::unmap()
 {
+    if (m_pendingMapPromise) {
+        m_pendingMapPromise->reject(Exception { AbortError });
+        m_pendingMapPromise = std::nullopt;
+    }
+
+    m_mapState = GPUBufferMapState::Unmapped;
+    if (!m_bufferSize)
+        return;
+
+    if (m_arrayBuffer && m_arrayBuffer->data())
+        memcpy(m_mappedRange.source, m_arrayBuffer->data(), m_mappedRange.byteLength);
+
+    m_arrayBuffer = nullptr;
     m_backing->unmap();
 }
 
 void GPUBuffer::destroy()
 {
+    unmap();
+    m_bufferSize = 0;
     m_backing->destroy();
 }
 

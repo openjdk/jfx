@@ -36,12 +36,12 @@
 #include "DragData.h"
 #include "Editor.h"
 #include "FileList.h"
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "HTMLImageElement.h"
-#include "HTMLParserIdioms.h"
 #include "Image.h"
+#include "LocalFrame.h"
+#include "Page.h"
 #include "PagePasteboardContext.h"
 #include "Pasteboard.h"
 #include "Settings.h"
@@ -127,7 +127,7 @@ static String normalizeType(const String& type)
     if (type.isNull())
         return type;
 
-    String lowercaseType = stripLeadingAndTrailingHTMLSpaces(type).convertToASCIILowercase();
+    auto lowercaseType = type.trim(isASCIIWhitespace).convertToASCIILowercase();
     if (lowercaseType == "text"_s || lowercaseType.startsWith("text/plain;"_s))
         return textPlainContentTypeAtom();
     if (lowercaseType == "url"_s || lowercaseType.startsWith("text/uri-list;"_s))
@@ -152,17 +152,21 @@ void DataTransfer::clearData(const String& type)
         m_itemList->didClearStringData(normalizedType);
 }
 
-static String readURLsFromPasteboardAsString(Pasteboard& pasteboard, Function<bool(const String&)>&& shouldIncludeURL)
+static String readURLsFromPasteboardAsString(Page* page, Pasteboard& pasteboard, Function<bool(const String&)>&& shouldIncludeURL)
 {
     StringBuilder urlList;
-    for (const auto& urlString : pasteboard.readAllStrings("text/uri-list"_s)) {
-        if (!shouldIncludeURL(urlString))
-            continue;
-        if (!urlList.isEmpty())
-            urlList.append(newlineCharacter);
-        urlList.append(urlString);
+    auto urlStrings = pasteboard.readAllStrings("text/uri-list"_s);
+    if (page) {
+        urlStrings = urlStrings.map([&](auto& string) {
+            return page->applyLinkDecorationFiltering(string, LinkDecorationFilteringTrigger::Paste);
+        });
     }
-    return urlList.toString();
+
+    urlStrings.removeAllMatching([&](auto& string) {
+        return !shouldIncludeURL(string);
+    });
+
+    return makeStringByJoining(urlStrings, "\n"_s);
 }
 
 String DataTransfer::getDataForItem(Document& document, const String& type) const
@@ -170,10 +174,10 @@ String DataTransfer::getDataForItem(Document& document, const String& type) cons
     if (!canReadData())
         return { };
 
-    auto lowercaseType = stripLeadingAndTrailingHTMLSpaces(type).convertToASCIILowercase();
+    auto lowercaseType = type.trim(isASCIIWhitespace).convertToASCIILowercase();
     if (shouldSuppressGetAndSetDataToAvoidExposingFilePaths()) {
         if (lowercaseType == "text/uri-list"_s) {
-            return readURLsFromPasteboardAsString(*m_pasteboard, [] (auto& urlString) {
+            return readURLsFromPasteboardAsString(document.page(), *m_pasteboard, [] (auto& urlString) {
                 return Pasteboard::canExposeURLToDOMWhenPasteboardContainsFiles(urlString);
             });
         }
@@ -216,12 +220,16 @@ String DataTransfer::readStringFromPasteboard(Document& document, const String& 
     }
 
     if (!is<StaticPasteboard>(*m_pasteboard) && lowercaseType == "text/uri-list"_s) {
-        return readURLsFromPasteboardAsString(*m_pasteboard, [] (auto&) {
+        return readURLsFromPasteboardAsString(document.page(), *m_pasteboard, [] (auto&) {
             return true;
         });
     }
 
-    return m_pasteboard->readString(lowercaseType);
+    auto string = m_pasteboard->readString(lowercaseType);
+    if (auto* page = document.page())
+        return page->applyLinkDecorationFiltering(string, LinkDecorationFilteringTrigger::Paste);
+
+    return string;
 }
 
 String DataTransfer::getData(Document& document, const String& type) const
@@ -236,7 +244,7 @@ bool DataTransfer::shouldSuppressGetAndSetDataToAvoidExposingFilePaths() const
     return m_pasteboard->fileContentState() == Pasteboard::FileContentState::MayContainFilePaths;
 }
 
-void DataTransfer::setData(const String& type, const String& data)
+void DataTransfer::setData(Document& document, const String& type, const String& data)
 {
     if (!canWriteData())
         return;
@@ -245,12 +253,12 @@ void DataTransfer::setData(const String& type, const String& data)
         return;
 
     auto normalizedType = normalizeType(type);
-    setDataFromItemList(normalizedType, data);
+    setDataFromItemList(document, normalizedType, data);
     if (m_itemList)
         m_itemList->didSetStringData(normalizedType);
 }
 
-void DataTransfer::setDataFromItemList(const String& type, const String& data)
+void DataTransfer::setDataFromItemList(Document& document, const String& type, const String& data)
 {
     ASSERT(canWriteData());
     RELEASE_ASSERT(is<StaticPasteboard>(*m_pasteboard));
@@ -269,6 +277,11 @@ void DataTransfer::setDataFromItemList(const String& type, const String& data)
             sanitizedData = url.string();
     } else if (type == textPlainContentTypeAtom())
         sanitizedData = data; // Nothing to sanitize.
+
+    if (type == "text/uri-list"_s || type == textPlainContentTypeAtom()) {
+        if (auto* page = document.page())
+            sanitizedData = page->applyLinkDecorationFiltering(sanitizedData, LinkDecorationFilteringTrigger::Copy);
+    }
 
     if (sanitizedData != data)
         downcast<StaticPasteboard>(*m_pasteboard).writeStringInCustomData(type, data);
@@ -298,7 +311,7 @@ void DataTransfer::didAddFileToItemList()
 DataTransferItemList& DataTransfer::items(Document& document)
 {
     if (!m_itemList)
-        m_itemList = makeUnique<DataTransferItemList>(document, *this);
+        m_itemList = makeUniqueWithoutRefCountedCheck<DataTransferItemList>(document, *this);
     return *m_itemList;
 }
 
@@ -572,10 +585,10 @@ DragImageRef DataTransfer::createDragImage(IntPoint& location) const
     location = m_dragLocation;
 
     if (m_dragImage)
-        return createDragImageFromImage(m_dragImage->image(), ImageOrientation::None);
+        return createDragImageFromImage(m_dragImage->image(), ImageOrientation::Orientation::None);
 
     if (m_dragImageElement) {
-        if (Frame* frame = m_dragImageElement->document().frame())
+        if (auto* frame = m_dragImageElement->document().frame())
             return createDragImageForNode(*frame, *m_dragImageElement);
     }
 

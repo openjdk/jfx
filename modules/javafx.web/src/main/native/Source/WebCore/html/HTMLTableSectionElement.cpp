@@ -4,7 +4,8 @@
  *           (C) 1998 Waldo Bastian (bastian@kde.org)
  *           (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2003, 2004, 2005, 2006, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2014 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -25,6 +26,7 @@
 #include "config.h"
 #include "HTMLTableSectionElement.h"
 
+#include "ElementChildIteratorInlines.h"
 #include "GenericCachedHTMLCollection.h"
 #include "HTMLNames.h"
 #include "HTMLTableRowElement.h"
@@ -50,7 +52,7 @@ Ref<HTMLTableSectionElement> HTMLTableSectionElement::create(const QualifiedName
     return adoptRef(*new HTMLTableSectionElement(tagName, document));
 }
 
-const StyleProperties* HTMLTableSectionElement::additionalPresentationalHintStyle() const
+const MutableStyleProperties* HTMLTableSectionElement::additionalPresentationalHintStyle() const
 {
     auto table = findParentTable();
     if (!table)
@@ -58,7 +60,7 @@ const StyleProperties* HTMLTableSectionElement::additionalPresentationalHintStyl
     return table->additionalGroupStyle(true);
 }
 
-ExceptionOr<Ref<HTMLElement>> HTMLTableSectionElement::insertRow(int index)
+ExceptionOr<Ref<HTMLTableRowElement>> HTMLTableSectionElement::insertRow(int index)
 {
     if (index < -1)
         return Exception { IndexSizeError };
@@ -71,10 +73,10 @@ ExceptionOr<Ref<HTMLElement>> HTMLTableSectionElement::insertRow(int index)
     if (numRows == index || index == -1)
         result = appendChild(row);
     else
-        result = insertBefore(row, index < 1 ? firstChild() : children->item(index));
+        result = insertBefore(row, children->item(index));
     if (result.hasException())
         return result.releaseException();
-    return Ref<HTMLElement> { WTFMove(row) };
+    return row;
 }
 
 ExceptionOr<void> HTMLTableSectionElement::deleteRow(int index)
@@ -99,7 +101,7 @@ int HTMLTableSectionElement::numRows() const
 
 Ref<HTMLCollection> HTMLTableSectionElement::rows()
 {
-    return ensureRareData().ensureNodeLists().addCachedCollection<GenericCachedHTMLCollection<CollectionTypeTraits<TSectionRows>::traversalType>>(*this, TSectionRows);
+    return ensureRareData().ensureNodeLists().addCachedCollection<GenericCachedHTMLCollection<CollectionTypeTraits<CollectionType::TSectionRows>::traversalType>>(*this, CollectionType::TSectionRows);
 }
 
 }

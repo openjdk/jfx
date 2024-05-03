@@ -37,22 +37,18 @@ public:
     TextBox(PathVariant&&);
 
     bool hasHyphen() const;
-    StringView text() const;
+    StringView originalText() const;
 
     unsigned start() const;
     unsigned end() const;
     unsigned length() const;
 
-    unsigned offsetForPosition(float x, bool includePartialGlyphs = true) const;
-    float positionForOffset(unsigned) const;
-
     TextBoxSelectableRange selectableRange() const;
-    LayoutRect selectionRect(unsigned start, unsigned end) const;
 
     bool isCombinedText() const;
     const FontCascade& fontCascade() const;
 
-    TextRun createTextRun(CreateTextRunMode = CreateTextRunMode::Painting) const;
+    inline TextRun textRun(TextRunMode = TextRunMode::Painting) const;
 
     const RenderText& renderer() const { return downcast<RenderText>(Box::renderer()); }
 
@@ -102,10 +98,8 @@ private:
 
 TextBoxIterator firstTextBoxFor(const RenderText&);
 TextBoxIterator textBoxFor(const LegacyInlineTextBox*);
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 TextBoxIterator textBoxFor(const LayoutIntegration::InlineContent&, const InlineDisplay::Box&);
 TextBoxIterator textBoxFor(const LayoutIntegration::InlineContent&, size_t boxIndex);
-#endif
 TextBoxRange textBoxesFor(const RenderText&);
 
 inline bool TextBox::hasHyphen() const
@@ -120,10 +114,10 @@ inline TextBox::TextBox(PathVariant&& path)
 {
 }
 
-inline StringView TextBox::text() const
+inline StringView TextBox::originalText() const
 {
     return WTF::switchOn(m_pathVariant, [](auto& path) {
-        return path.text();
+        return path.originalText();
     });
 }
 
@@ -152,13 +146,6 @@ inline TextBoxSelectableRange TextBox::selectableRange() const
 {
     return WTF::switchOn(m_pathVariant, [&](auto& path) {
         return path.selectableRange();
-    });
-}
-
-inline TextRun TextBox::createTextRun(CreateTextRunMode mode) const
-{
-    return WTF::switchOn(m_pathVariant, [&](auto& path) {
-        return path.createTextRun(mode);
     });
 }
 

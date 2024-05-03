@@ -40,14 +40,20 @@ public:
     static std::unique_ptr<CSSParserSelector> parsePagePseudoSelector(StringView);
 
     CSSParserSelector();
+
+    // Recursively copy the selector chain.
+    CSSParserSelector(const CSSSelector&);
+
     explicit CSSParserSelector(const QualifiedName&);
+
     ~CSSParserSelector();
 
     std::unique_ptr<CSSSelector> releaseSelector() { return WTFMove(m_selector); }
+    CSSSelector* selector() { return m_selector.get(); }
 
     void setValue(const AtomString& value, bool matchLowerCase = false) { m_selector->setValue(value, matchLowerCase); }
 
-    void setAttribute(const QualifiedName& value, bool convertToLowercase, CSSSelector::AttributeMatchType type) { m_selector->setAttribute(value, convertToLowercase, type); }
+    void setAttribute(const QualifiedName& value, CSSSelector::AttributeMatchType type) { m_selector->setAttribute(value, type); }
 
     void setArgument(const AtomString& value) { m_selector->setArgument(value); }
     void setNth(int a, int b) { m_selector->setNth(a, b); }
@@ -63,7 +69,7 @@ public:
     void setPseudoClassType(CSSSelector::PseudoClassType type) { m_selector->setPseudoClassType(type); }
 
     void adoptSelectorVector(Vector<std::unique_ptr<CSSParserSelector>>&&);
-    void setArgumentList(std::unique_ptr<Vector<AtomString>>);
+    void setArgumentList(FixedVector<PossiblyQuotedIdentifier>);
     void setSelectorList(std::unique_ptr<CSSSelectorList>);
 
     CSSSelector::PseudoClassType pseudoClassType() const { return m_selector->pseudoClassType(); }
@@ -82,6 +88,7 @@ public:
     bool needsImplicitShadowCombinatorForMatching() const;
 
     CSSParserSelector* tagHistory() const { return m_tagHistory.get(); }
+    CSSParserSelector* leftmostSimpleSelector();
     void setTagHistory(std::unique_ptr<CSSParserSelector> selector) { m_tagHistory = WTFMove(selector); }
     void clearTagHistory() { m_tagHistory.reset(); }
     void insertTagHistory(CSSSelector::RelationType before, std::unique_ptr<CSSParserSelector>, CSSSelector::RelationType after);
@@ -97,7 +104,7 @@ private:
 
 inline bool CSSParserSelector::needsImplicitShadowCombinatorForMatching() const
 {
-    return match() == CSSSelector::PseudoElement
+    return match() == CSSSelector::Match::PseudoElement
         && (pseudoElementType() == CSSSelector::PseudoElementWebKitCustom
 #if ENABLE(VIDEO)
             || pseudoElementType() == CSSSelector::PseudoElementCue
@@ -110,7 +117,7 @@ inline bool CSSParserSelector::needsImplicitShadowCombinatorForMatching() const
 inline bool CSSParserSelector::isPseudoElementCueFunction() const
 {
 #if ENABLE(VIDEO)
-    return m_selector->match() == CSSSelector::PseudoElement && m_selector->pseudoElementType() == CSSSelector::PseudoElementCue;
+    return m_selector->match() == CSSSelector::Match::PseudoElement && m_selector->pseudoElementType() == CSSSelector::PseudoElementCue;
 #else
     return false;
 #endif

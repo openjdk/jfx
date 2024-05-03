@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,10 @@
 package test.robot.javafx.scene.layout;
 
 import static org.junit.Assume.assumeTrue;
-
 import javafx.geometry.Bounds;
 import javafx.scene.paint.Color;
-
 import org.junit.Ignore;
 import org.junit.Test;
-
-import com.sun.javafx.PlatformUtil;
 
 /**************************************************************************
  *                                                                        *
@@ -707,7 +703,6 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
     @Test(timeout = 20000)
     public void unalignedImage_Cover() {
         assumeTrue(checkIntegralUIScale());
-        assumeTrue(!PlatformUtil.isMac()); // JDK-8255679
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
                 "-fx-background-size: cover;");
@@ -1056,13 +1051,14 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     private void checkNonRepeating(int size, int centerX, int centerY, boolean checkForBlack) {
         final int halfSize = size / 2;
-        final int quarterSize = size / 4;
+        final int redCenterDelta = (int)(size / 2.2f);
+        final int greenCenterDelta = (int)(size / 3.3f);
         // The image
-        int x = centerX - halfSize;
-        int y = centerY - halfSize;
+        int x = centerX - redCenterDelta;
+        int y = centerY - redCenterDelta;
         assertColorEquals(contains(x, y) ? Color.RED : SCENE_FILL, x, y, TOLERANCE);
-        x = centerX - quarterSize;
-        y = centerY - quarterSize;
+        x = centerX - greenCenterDelta;
+        y = centerY - greenCenterDelta;
         assertColorEquals(contains(x, y) ? Color.rgb(0, 255, 0) : SCENE_FILL, x, y, TOLERANCE);
         x = centerX;
         y = centerY;

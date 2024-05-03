@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006 Rob Buis <buis@kde.org>
- * Copyright (C) 2009 Google, Inc.
+ * Copyright (C) 2009-2016 Google, Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,6 +22,8 @@
 #include "config.h"
 #include "LegacyRenderSVGTransformableContainer.h"
 
+#include "RenderElementInlines.h"
+#include "RenderStyleInlines.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGGElement.h"
 #include "SVGGraphicsElement.h"
@@ -56,11 +58,17 @@ bool LegacyRenderSVGTransformableContainer::calculateLocalTransform()
     }
 
     if (useElement) {
-        SVGLengthContext lengthContext(useElement);
+        SVGLengthContext lengthContext(&element);
         FloatSize translation(useElement->x().value(lengthContext), useElement->y().value(lengthContext));
         if (translation != m_lastTranslation)
             m_needsTransformUpdate = true;
         m_lastTranslation = translation;
+    }
+
+    auto referenceBoxRect = transformReferenceBoxRect();
+    if (referenceBoxRect != m_lastTransformReferenceBoxRect) {
+        m_lastTransformReferenceBoxRect = referenceBoxRect;
+        m_needsTransformUpdate = true;
     }
 
     m_didTransformToRootUpdate = m_needsTransformUpdate || SVGRenderSupport::transformToRootChanged(parent());

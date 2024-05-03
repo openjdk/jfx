@@ -31,44 +31,62 @@
 #include "AirCCallSpecial.h"
 #include "AirCode.h"
 #include "B3CCallValue.h"
+#include "B3Procedure.h"
 
 namespace JSC { namespace B3 { namespace Air {
 
 namespace {
 
 template<typename BankInfo>
-Arg marshallCCallArgumentImpl(unsigned& argumentCount, unsigned& stackOffset, Value* child)
+void marshallCCallArgumentImpl(Vector<Arg>& result, unsigned& argumentCount, unsigned& stackOffset, Value* child)
 {
-    unsigned argumentIndex = argumentCount++;
-    if (argumentIndex < BankInfo::numberOfArgumentRegisters)
-        return Tmp(BankInfo::toArgumentRegister(argumentIndex));
+    const auto registerCount = cCallArgumentRegisterCount(child);
+    if (is32Bit() && child->type() == Int64)
+        argumentCount = WTF::roundUpToMultipleOf<2>(argumentCount);
 
-    unsigned slotSize;
-    if (isARM64() && isDarwin()) {
-        // Arguments are packed.
-        slotSize = sizeofType(child->type());
-    } else {
-        // Arguments are aligned.
-        slotSize = 8;
+    if (argumentCount < BankInfo::numberOfArgumentRegisters) {
+        for (unsigned i = 0; i < registerCount; i++)
+            result.append(Tmp(BankInfo::toArgumentRegister(argumentCount++)));
+        return;
     }
 
-    stackOffset = WTF::roundUpToMultipleOf(slotSize, stackOffset);
-    Arg result = Arg::callArg(stackOffset);
+    unsigned slotSize, slotAlignment;
+    if ((isARM64() && isDarwin()) || isARM_THUMB2()) {
+        // Arguments are packed to their natural alignment.
+        //
+        // In the rare case when the Arg width does not match the argument width
+        // (32-bit arm passing a 64-bit argument), we respect the width needed
+        // for each stack access:
+        slotSize = bytesForWidth(cCallArgumentRegisterWidth(child->type()));
+
+        // but the logical stack slot uses the natural alignment of the argument
+        slotAlignment = sizeofType(child->type());
+
+    } else {
+        // On other platforms, arguments are always aligned to machine word
+        // boundaries.
+        slotSize = 8;
+        slotAlignment = slotSize;
+    }
+
+    stackOffset = WTF::roundUpToMultipleOf(slotAlignment, stackOffset);
+    for (unsigned i = 0; i < registerCount; i++) {
+        result.append(Arg::callArg(stackOffset));
     stackOffset += slotSize;
-    return result;
+    }
 }
 
-Arg marshallCCallArgument(
-    unsigned& gpArgumentCount, unsigned& fpArgumentCount, unsigned& stackOffset, Value* child)
+void marshallCCallArgument(Vector<Arg> &result, unsigned& gpArgumentCount, unsigned& fpArgumentCount, unsigned& stackOffset, Value* child)
 {
     switch (bankForType(child->type())) {
     case GP:
-        return marshallCCallArgumentImpl<GPRInfo>(gpArgumentCount, stackOffset, child);
+        marshallCCallArgumentImpl<GPRInfo>(result, gpArgumentCount, stackOffset, child);
+        return;
     case FP:
-        return marshallCCallArgumentImpl<FPRInfo>(fpArgumentCount, stackOffset, child);
+        marshallCCallArgumentImpl<FPRInfo>(result, fpArgumentCount, stackOffset, child);
+        return;
     }
     RELEASE_ASSERT_NOT_REACHED();
-    return Arg();
 }
 
 } // anonymous namespace
@@ -76,30 +94,87 @@ Arg marshallCCallArgument(
 Vector<Arg> computeCCallingConvention(Code& code, CCallValue* value)
 {
     Vector<Arg> result;
-    result.append(Tmp(CCallSpecial::scratchRegister));
+    result.append(Tmp(CCallSpecial::scratchRegister)); // For callee
     unsigned gpArgumentCount = 0;
     unsigned fpArgumentCount = 0;
     unsigned stackOffset = 0;
-    for (unsigned i = 1; i < value->numChildren(); ++i) {
-        result.append(
-            marshallCCallArgument(gpArgumentCount, fpArgumentCount, stackOffset, value->child(i)));
-    }
+    for (unsigned i = 1; i < value->numChildren(); ++i)
+        marshallCCallArgument(result, gpArgumentCount, fpArgumentCount, stackOffset, value->child(i));
     code.requestCallArgAreaSizeInBytes(WTF::roundUpToMultipleOf(stackAlignmentBytes(), stackOffset));
     return result;
 }
 
-Tmp cCallResult(Type type)
+size_t cCallResultCount(Code& code, CCallValue* value)
 {
-    switch (type.kind()) {
+    switch (value->type().kind()) {
+    case Void:
+        return 0;
+    case Int64:
+        if constexpr (is32Bit())
+            return 2;
+        return 1;
+    case Tuple:
+        // We only support tuples that return exactly two register sized ints.
+        UNUSED_PARAM(code);
+        ASSERT(code.proc().resultCount(value->type()) == 2);
+        ASSERT(code.proc().typeAtOffset(value->type(), 0) == pointerType());
+        ASSERT(code.proc().typeAtOffset(value->type(), 1) == pointerType());
+        return 2;
+    default:
+        return 1;
+
+    }
+}
+
+size_t cCallArgumentRegisterCount(const Value* value)
+{
+    switch (value->type().kind()) {
+    case Void:
+        return 0;
+    case Int64:
+        if constexpr (is32Bit())
+            return 2;
+        return 1;
+    case Tuple:
+        RELEASE_ASSERT_NOT_REACHED();
+    default:
+        return 1;
+    }
+}
+
+Width cCallArgumentRegisterWidth(Type type)
+{
+    if constexpr (is32Bit()) {
+        if (type == Int64)
+            return Width32;
+    }
+
+    return widthForType(type);
+}
+
+Tmp cCallResult(Code& code, CCallValue* value, unsigned index)
+{
+    ASSERT(index < 2);
+    switch (value->type().kind()) {
     case Void:
         return Tmp();
     case Int32:
+        return Tmp(GPRInfo::returnValueGPR);
     case Int64:
+        if (is32Bit() && index == 1)
+            return Tmp(GPRInfo::returnValueGPR2);
         return Tmp(GPRInfo::returnValueGPR);
     case Float:
     case Double:
+        ASSERT(!index);
         return Tmp(FPRInfo::returnValueFPR);
     case Tuple:
+        ASSERT_UNUSED(code, code.proc().resultCount(value->type()) == 2);
+        // We only support functions that return each parameter in its own register for now.
+        ASSERT(code.proc().typeAtOffset(value->type(), 0) == registerType());
+        ASSERT(code.proc().typeAtOffset(value->type(), 1) == registerType());
+        return index ? Tmp(GPRInfo::returnValueGPR2) : Tmp(GPRInfo::returnValueGPR);
+    case V128:
         break;
     }
 

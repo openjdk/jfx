@@ -27,7 +27,6 @@
 #include "DisplayListReplayer.h"
 #include "FilterOperations.h"
 #include "GraphicsContext.h"
-#include "HTMLParserIdioms.h"
 #include "InlineIteratorTextBox.h"
 #include "LayoutIntegrationInlineContent.h"
 #include "LegacyInlineTextBox.h"
@@ -38,7 +37,7 @@
 
 namespace WebCore {
 
-ShadowApplier::ShadowApplier(GraphicsContext& context, const ShadowData* shadow, const FilterOperations* colorFilter, const FloatRect& textRect, bool lastShadowIterationShouldDrawText, bool opaque, FontOrientation orientation)
+ShadowApplier::ShadowApplier(const RenderStyle& style, GraphicsContext& context, const ShadowData* shadow, const FilterOperations* colorFilter, const FloatRect& textRect, bool lastShadowIterationShouldDrawText, bool opaque, FontOrientation orientation)
     : m_context { context }
     , m_shadow { shadow }
     , m_onlyDrawsShadow { !isLastShadowIteration() || !lastShadowIterationShouldDrawText }
@@ -55,7 +54,7 @@ ShadowApplier::ShadowApplier(GraphicsContext& context, const ShadowData* shadow,
     float shadowY = orientation == FontOrientation::Horizontal ? shadow->y().value() : -shadow->x().value();
     FloatSize shadowOffset(shadowX, shadowY);
     auto shadowRadius = shadow->radius();
-    Color shadowColor = shadow->color();
+    auto shadowColor = style.colorResolvingCurrentColor(shadow->color());
     if (colorFilter)
         colorFilter->transformColor(shadowColor);
 
@@ -75,7 +74,7 @@ ShadowApplier::ShadowApplier(GraphicsContext& context, const ShadowData* shadow,
     }
 
     if (!m_avoidDrawingShadow)
-        context.setShadow(shadowOffset, shadowRadius.value(), shadowColor);
+        context.setDropShadow({ shadowOffset, shadowRadius.value(), shadowColor, ShadowRadiusMode::Default });
 }
 
 inline bool ShadowApplier::isLastShadowIteration()
@@ -98,9 +97,10 @@ ShadowApplier::~ShadowApplier()
         m_context.clearShadow();
 }
 
-TextPainter::TextPainter(GraphicsContext& context, const FontCascade& font)
+TextPainter::TextPainter(GraphicsContext& context, const FontCascade& font, const RenderStyle& renderStyle)
     : m_context(context)
     , m_font(font)
+    , m_renderStyle(renderStyle)
 {
 }
 
@@ -110,7 +110,7 @@ void TextPainter::paintTextOrEmphasisMarks(const FontCascade& font, const TextRu
     ASSERT(startOffset < endOffset);
 
     if (m_context.detectingContentfulPaint()) {
-        if (!textRun.text().isAllSpecialCharacters<isHTMLSpace>())
+        if (!textRun.text().containsOnly<isASCIIWhitespace>())
             m_context.setContentfulPaintDetected();
         return;
     }
@@ -129,8 +129,7 @@ void TextPainter::paintTextOrEmphasisMarks(const FontCascade& font, const TextRu
     m_glyphDisplayList = nullptr;
 }
 
-void TextPainter::paintTextWithShadows(const ShadowData* shadow, const FilterOperations* colorFilter, const FontCascade& font, const TextRun& textRun, const FloatRect& boxRect, const FloatPoint& textOrigin,
-    unsigned startOffset, unsigned endOffset, const AtomString& emphasisMark, float emphasisMarkOffset, bool stroked)
+void TextPainter::paintTextWithShadows(const ShadowData* shadow, const FilterOperations* colorFilter, const FontCascade& font, const TextRun& textRun, const FloatRect& boxRect, const FloatPoint& textOrigin, unsigned startOffset, unsigned endOffset, const AtomString& emphasisMark, float emphasisMarkOffset, bool stroked)
 {
     if (!shadow) {
         paintTextOrEmphasisMarks(font, textRun, emphasisMark, emphasisMarkOffset, textOrigin, startOffset, endOffset);
@@ -143,7 +142,7 @@ void TextPainter::paintTextWithShadows(const ShadowData* shadow, const FilterOpe
     if (!opaque)
         m_context.setFillColor(Color::black);
     while (shadow) {
-        ShadowApplier shadowApplier(m_context, shadow, colorFilter, boxRect, lastShadowIterationShouldDrawText, opaque, m_textBoxIsHorizontal ? FontOrientation::Horizontal : FontOrientation::Vertical);
+        ShadowApplier shadowApplier(m_renderStyle, m_context, shadow, colorFilter, boxRect, lastShadowIterationShouldDrawText, opaque, (m_textBoxIsHorizontal || m_combinedText) ? FontOrientation::Horizontal : FontOrientation::Vertical);
         if (!shadowApplier.nothingToDraw())
             paintTextOrEmphasisMarks(font, textRun, emphasisMark, emphasisMarkOffset, textOrigin + shadowApplier.extraOffset(), startOffset, endOffset);
         shadow = shadow->next();
@@ -202,14 +201,14 @@ void TextPainter::paintTextAndEmphasisMarksIfNeeded(const TextRun& textRun, cons
     const TextRun& emphasisMarkTextRun = m_combinedText ? objectReplacementCharacterTextRun.get() : textRun;
     FloatPoint emphasisMarkTextOrigin = m_combinedText ? FloatPoint(boxOrigin.x() + boxRect.width() / 2, boxOrigin.y() + m_font.metricsOfPrimaryFont().ascent()) : textOrigin;
     if (m_combinedText)
-        m_context.concatCTM(rotation(boxRect, Clockwise));
+        m_context.concatCTM(rotation(boxRect, RotationDirection::Clockwise));
 
     // FIXME: Truncate right-to-left text correctly.
     paintTextWithShadows(shadow, shadowColorFilter, m_combinedText ? m_combinedText->originalFont() : m_font, emphasisMarkTextRun, boxRect, emphasisMarkTextOrigin, startOffset, endOffset,
         m_emphasisMark, m_emphasisMarkOffset, paintStyle.strokeWidth > 0);
 
     if (m_combinedText)
-        m_context.concatCTM(rotation(boxRect, Counterclockwise));
+        m_context.concatCTM(rotation(boxRect, RotationDirection::Counterclockwise));
 }
 
 void TextPainter::paintRange(const TextRun& textRun, const FloatRect& boxRect, const FloatPoint& textOrigin, unsigned start, unsigned end)
@@ -222,7 +221,11 @@ static bool forceUseGlyphDisplayListForTesting = false;
 
 bool TextPainter::shouldUseGlyphDisplayList(const PaintInfo& paintInfo)
 {
+#if USE(GLYPH_DISPLAY_LIST_CACHE)
     return !paintInfo.context().paintingDisabled() && paintInfo.enclosingSelfPaintingLayer() && (paintInfo.enclosingSelfPaintingLayer()->paintingFrequently() || forceUseGlyphDisplayListForTesting);
+#else
+    return !paintInfo.context().paintingDisabled() && paintInfo.enclosingSelfPaintingLayer() && forceUseGlyphDisplayListForTesting;
+#endif
 }
 
 void TextPainter::setForceUseGlyphDisplayListForTesting(bool enabled)
@@ -246,10 +249,8 @@ String TextPainter::cachedGlyphDisplayListsForTextNodeAsText(Text& textNode, Opt
         DisplayList::DisplayList* displayList = nullptr;
         if (auto* legacyInlineBox = textBox.legacyInlineBox())
             displayList = TextPainter::glyphDisplayListIfExists(*legacyInlineBox);
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
         else
             displayList = TextPainter::glyphDisplayListIfExists(*textBox.inlineBox());
-#endif
         if (displayList) {
             builder.append(displayList->asText(flags));
             builder.append('\n');

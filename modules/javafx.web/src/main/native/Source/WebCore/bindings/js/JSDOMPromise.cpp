@@ -26,8 +26,8 @@
 #include "config.h"
 #include "JSDOMPromise.h"
 
-#include "DOMWindow.h"
-#include "JSDOMWindow.h"
+#include "JSLocalDOMWindow.h"
+#include "LocalDOMWindow.h"
 #include <JavaScriptCore/BuiltinNames.h>
 #include <JavaScriptCore/CatchScope.h>
 #include <JavaScriptCore/Exception.h>
@@ -66,6 +66,7 @@ auto DOMPromise::whenPromiseIsSettled(JSDOMGlobalObject* globalObject, JSC::JSOb
     JSC::MarkedArgumentBuffer arguments;
     arguments.append(handler);
     arguments.append(handler);
+    ASSERT(!arguments.hasOverflowed());
 
     auto callData = JSC::getCallData(thenFunction);
     ASSERT(callData.type != JSC::CallData::Type::None);

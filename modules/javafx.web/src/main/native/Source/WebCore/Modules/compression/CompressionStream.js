@@ -32,12 +32,9 @@ function initializeCompressionStream(format)
     if (arguments.length < 1)
         @throwTypeError(errorMessage);
 
-    if (typeof arguments[0] !== "string")
-        @throwTypeError("CompressionStream input must be a string.");
-
     const algorithms = ['gzip', 'deflate', 'deflate-raw'];
-    const text = arguments[0].toLowerCase();
-    const findAlgorithm = (element) => element === text;
+    const lowercaseFormat = @toString(arguments[0]).toLowerCase();
+    const findAlgorithm = (element) => element === lowercaseFormat;
 
     // Pass the index to our new CompressionStreamEncoder, so we do not need to reparse the string.
     // We need to ensure that the Formats.h and this file stay in sync.
@@ -87,8 +84,10 @@ function initializeCompressionStream(format)
         return @Promise.@resolve();
     };
 
-    const transform = @createTransformStream(startAlgorithm, transformAlgorithm, flushAlgorithm);
+    const [transform, readable, writable] = @createTransformStream(startAlgorithm, transformAlgorithm, flushAlgorithm);
     @putByIdDirectPrivate(this, "CompressionStreamTransform", transform);
+    @putByIdDirectPrivate(this, "readable", readable);
+    @putByIdDirectPrivate(this, "writable", writable);
     @putByIdDirectPrivate(this, "CompressionStreamEncoder", new @CompressionStreamEncoder(index));
     return this;
 }
@@ -102,7 +101,7 @@ function readable()
     if (!transform)
         throw @makeThisTypeError("CompressionStreamEncoder", "readable");
 
-    return @getByIdDirectPrivate(transform, "readable");
+    return @getByIdDirectPrivate(this, "readable");
 }
 
 @getter
@@ -114,5 +113,5 @@ function writable()
     if (!transform)
         throw @makeThisTypeError("CompressionStreamEncoder", "writable");
 
-    return @getByIdDirectPrivate(transform, "writable");
+    return @getByIdDirectPrivate(this, "writable");
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -64,6 +64,8 @@ struct Config {
     bool disabledFreezingForTesting;
     bool restrictedOptionsEnabled;
     bool jitDisabled;
+    bool vmCreationDisallowed;
+    bool vmEntryDisallowed;
 
     bool useFastJITPermissions;
 
@@ -76,6 +78,10 @@ struct Config {
 #endif
         bool canUseJIT;
     } vm;
+
+#if CPU(ARM64E)
+    bool canUseFPAC;
+#endif
 
     ExecutableAllocator* executableAllocator;
     FixedVMPoolExecutableAllocator* fixedVMPoolExecutableAllocator;
@@ -126,6 +132,11 @@ extern "C" JS_EXPORT_PRIVATE Config g_jscConfig;
 constexpr size_t offsetOfJSCConfigInitializeHasBeenCalled = offsetof(JSC::Config, initializeHasBeenCalled);
 constexpr size_t offsetOfJSCConfigGateMap = offsetof(JSC::Config, llint.gateMap);
 constexpr size_t offsetOfJSCConfigStartOfStructureHeap = offsetof(JSC::Config, startOfStructureHeap);
+
+ALWAYS_INLINE PURE_FUNCTION uintptr_t startOfStructureHeap()
+{
+    return g_jscConfig.startOfStructureHeap;
+}
 
 } // namespace JSC
 

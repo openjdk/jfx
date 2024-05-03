@@ -27,6 +27,8 @@
 
 #if ENABLE(SERVICE_WORKER)
 
+#include <wtf/EnumTraits.h>
+
 namespace WebCore {
 
 enum class PushPermissionState : uint8_t {
@@ -36,16 +38,5 @@ enum class PushPermissionState : uint8_t {
 };
 
 } // namespace WebCore
-
-namespace WTF {
-template<> struct EnumTraits<WebCore::PushPermissionState> {
-    using values = EnumValues<
-        WebCore::PushPermissionState,
-        WebCore::PushPermissionState::Denied,
-        WebCore::PushPermissionState::Granted,
-        WebCore::PushPermissionState::Prompt
-    >;
-};
-} // namespace WTF
 
 #endif // ENABLE(SERVICE_WORKER)

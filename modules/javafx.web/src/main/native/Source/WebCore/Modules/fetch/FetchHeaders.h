@@ -29,6 +29,7 @@
 #pragma once
 
 #include "ExceptionOr.h"
+#include "FetchHeadersGuard.h"
 #include "HTTPHeaderMap.h"
 #include <variant>
 #include <wtf/HashTraits.h>
@@ -36,25 +37,21 @@
 
 namespace WebCore {
 
+class ScriptExecutionContext;
+
 class FetchHeaders : public RefCounted<FetchHeaders> {
 public:
-    enum class Guard {
-        None,
-        Immutable,
-        Request,
-        RequestNoCors,
-        Response
-    };
-
+    using Guard = FetchHeadersGuard;
     using Init = std::variant<Vector<Vector<String>>, Vector<KeyValuePair<String, String>>>;
     static ExceptionOr<Ref<FetchHeaders>> create(std::optional<Init>&&);
 
-    static Ref<FetchHeaders> create(Guard guard = Guard::None, HTTPHeaderMap&& headers = { }) { return adoptRef(*new FetchHeaders { guard, WTFMove(headers) }); }
+    static Ref<FetchHeaders> create(Guard guard = Guard::None, HTTPHeaderMap&& headers = { }, Vector<String>&& setCookieValues = { }) { return adoptRef(*new FetchHeaders { guard, WTFMove(headers), WTFMove(setCookieValues) }); }
     static Ref<FetchHeaders> create(const FetchHeaders& headers) { return adoptRef(*new FetchHeaders { headers }); }
 
     ExceptionOr<void> append(const String& name, const String& value);
     ExceptionOr<void> remove(const String&);
     ExceptionOr<String> get(const String&) const;
+    const Vector<String>& getSetCookie() const;
     ExceptionOr<bool> has(const String&) const;
     ExceptionOr<void> set(const String& name, const String& value);
 
@@ -62,9 +59,9 @@ public:
     ExceptionOr<void> fill(const FetchHeaders&);
     void filterAndFill(const HTTPHeaderMap&, Guard);
 
-    String fastGet(HTTPHeaderName name) const { return m_headers.get(name); }
-    bool fastHas(HTTPHeaderName name) const { return m_headers.contains(name); }
-    void fastSet(HTTPHeaderName name, const String& value) { m_headers.set(name, value); }
+    String fastGet(HTTPHeaderName) const;
+    bool fastHas(HTTPHeaderName) const;
+    void fastSet(HTTPHeaderName, const String& value);
 
     class Iterator {
     public:
@@ -74,9 +71,11 @@ public:
     private:
         Ref<FetchHeaders> m_headers;
         size_t m_currentIndex { 0 };
+        size_t m_setCookieIndex { 0 };
         Vector<String> m_keys;
+        size_t m_updateCounter { 0 };
     };
-    Iterator createIterator() { return Iterator { *this }; }
+    Iterator createIterator(ScriptExecutionContext*) { return Iterator { *this }; }
 
     void setInternalHeaders(HTTPHeaderMap&& headers) { m_headers = WTFMove(headers); }
     const HTTPHeaderMap& internalHeaders() const { return m_headers; }
@@ -85,16 +84,19 @@ public:
     Guard guard() const { return m_guard; }
 
 private:
-    FetchHeaders(Guard, HTTPHeaderMap&&);
+    FetchHeaders(Guard, HTTPHeaderMap&&, Vector<String>&&);
     explicit FetchHeaders(const FetchHeaders&);
 
     Guard m_guard;
     HTTPHeaderMap m_headers;
+    Vector<String> m_setCookieValues;
+    uint64_t m_updateCounter { 0 };
 };
 
-inline FetchHeaders::FetchHeaders(Guard guard, HTTPHeaderMap&& headers)
+inline FetchHeaders::FetchHeaders(Guard guard, HTTPHeaderMap&& headers, Vector<String>&& setCookieValues)
     : m_guard(guard)
     , m_headers(WTFMove(headers))
+    , m_setCookieValues(WTFMove(setCookieValues))
 {
 }
 
@@ -102,7 +104,26 @@ inline FetchHeaders::FetchHeaders(const FetchHeaders& other)
     : RefCounted<FetchHeaders>()
     , m_guard(other.m_guard)
     , m_headers(other.m_headers)
+    , m_setCookieValues(other.m_setCookieValues)
 {
+}
+
+inline String FetchHeaders::fastGet(HTTPHeaderName name) const
+{
+    ASSERT(name != HTTPHeaderName::SetCookie);
+    return m_headers.get(name);
+}
+
+inline bool FetchHeaders::fastHas(HTTPHeaderName name) const
+{
+    ASSERT(name != HTTPHeaderName::SetCookie);
+    return m_headers.contains(name);
+}
+
+inline void FetchHeaders::fastSet(HTTPHeaderName name, const String& value)
+{
+    ASSERT(name != HTTPHeaderName::SetCookie);
+    m_headers.set(name, value);
 }
 
 inline void FetchHeaders::setGuard(Guard guard)
@@ -112,18 +133,3 @@ inline void FetchHeaders::setGuard(Guard guard)
 }
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::FetchHeaders::Guard> {
-    using values = EnumValues<
-    WebCore::FetchHeaders::Guard,
-    WebCore::FetchHeaders::Guard::None,
-    WebCore::FetchHeaders::Guard::Immutable,
-    WebCore::FetchHeaders::Guard::Request,
-    WebCore::FetchHeaders::Guard::RequestNoCors,
-    WebCore::FetchHeaders::Guard::Response
-    >;
-};
-
-}

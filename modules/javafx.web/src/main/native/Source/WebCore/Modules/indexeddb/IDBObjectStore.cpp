@@ -43,7 +43,7 @@
 #include "Page.h"
 #include "ScriptExecutionContext.h"
 #include "SerializedScriptValue.h"
-#include "WebCoreOpaqueRoot.h"
+#include "WebCoreOpaqueRootInlines.h"
 #include <JavaScriptCore/CatchScope.h>
 #include <JavaScriptCore/HeapInlines.h>
 #include <JavaScriptCore/JSCJSValueInlines.h>
@@ -340,7 +340,7 @@ ExceptionOr<Ref<IDBRequest>> IDBObjectStore::putOrAdd(JSGlobalObject& state, JSV
     if (!serializedValue) {
         // Transaction should be inactive during structured clone.
         m_transaction.deactivate();
-        serializedValue = SerializedScriptValue::create(state, value);
+        serializedValue = SerializedScriptValue::create(state, value, SerializationForStorage::Yes);
         m_transaction.activate();
     }
 

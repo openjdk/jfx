@@ -40,8 +40,6 @@ struct GradientData {
             return std::tie(objectBoundingBox, textPaintingScale) == std::tie(other.objectBoundingBox, other.textPaintingScale);
         }
 
-        bool operator!=(const Inputs& other) const { return !(*this == other); }
-
         std::optional<FloatRect> objectBoundingBox;
         float textPaintingScale = 1;
     };
@@ -66,7 +64,7 @@ class RenderSVGResourceGradient : public RenderSVGResourceContainer {
 public:
     SVGGradientElement& gradientElement() const { return static_cast<SVGGradientElement&>(RenderSVGResourceContainer::element()); }
 
-    void removeAllClientsFromCache(bool markForInvalidation = true) final;
+    void removeAllClientsFromCacheIfNeeded(bool markForInvalidation, WeakHashSet<RenderObject>* visitedRenderers) final;
     void removeClientFromCache(RenderElement&, bool markForInvalidation = true) final;
 
     bool applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>) final;

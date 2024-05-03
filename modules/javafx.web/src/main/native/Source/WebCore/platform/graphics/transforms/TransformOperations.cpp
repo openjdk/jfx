@@ -23,17 +23,15 @@
 #include "TransformOperations.h"
 
 #include "AnimationUtilities.h"
-#include "IdentityTransformOperation.h"
 #include "Matrix3DTransformOperation.h"
 #include <algorithm>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
-TransformOperations::TransformOperations(bool makeIdentity)
+TransformOperations::TransformOperations(Vector<RefPtr<TransformOperation>>&& operations)
+    : m_operations(WTFMove(operations))
 {
-    if (makeIdentity)
-        m_operations.append(IdentityTransformOperation::create());
 }
 
 bool TransformOperations::operator==(const TransformOperations& o) const
@@ -106,9 +104,13 @@ TransformOperations TransformOperations::blend(const TransformOperations& from, 
     for (unsigned i = 0; i < maxOperationCount; i++) {
         RefPtr<TransformOperation> fromOperation = (i < fromOperationCount) ? from.operations()[i].get() : nullptr;
         RefPtr<TransformOperation> toOperation = (i < toOperationCount) ? operations()[i].get() : nullptr;
+
+        // If either of the transform list is empty, then we should not attempt to do a matrix blend.
+        if (fromOperationCount && toOperationCount) {
         if ((prefixLength && i >= *prefixLength) || (fromOperation && toOperation && !fromOperation->sharedPrimitiveType(toOperation.get()))) {
             result.operations().append(createBlendedMatrixOperationFromOperationsSuffix(from, i, context, boxSize));
             return result;
+        }
         }
 
         RefPtr<TransformOperation> blendedOperation;

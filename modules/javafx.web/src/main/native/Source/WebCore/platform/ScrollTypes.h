@@ -27,6 +27,7 @@
 
 #include "FloatPoint.h"
 #include "FloatSize.h"
+#include "RectEdges.h"
 #include <wtf/EnumTraits.h>
 
 namespace WTF {
@@ -72,12 +73,9 @@ enum class ScrollAnimationStatus : uint8_t {
     Animating,
 };
 
-enum class ScrollIsAnimated : uint8_t {
-    No,
-    Yes
-};
+enum class ScrollIsAnimated : bool { No, Yes };
 
-enum class OverflowAnchor : uint8_t {
+enum class OverflowAnchor : bool {
     Auto,
     None
 };
@@ -161,14 +159,21 @@ enum class ScrollbarMode : uint8_t {
     AlwaysOn
 };
 
-enum class ScrollbarControlSize : uint8_t {
-    Regular,
-    Small
-};
-
 enum class ScrollbarExpansionState : uint8_t {
     Regular,
     Expanded
+};
+
+enum class ScrollbarWidth : uint8_t {
+    Auto,
+    Thin,
+    None
+};
+
+enum class NativeScrollbarVisibility : uint8_t {
+    Visible,
+    HiddenByStyle,
+    ReplacedByCustomScrollbar
 };
 
 enum class ScrollEventAxis : uint8_t {
@@ -228,11 +233,28 @@ inline FloatPoint setValueForAxis(FloatPoint point, ScrollEventAxis axis, float 
     case ScrollEventAxis::Horizontal:
         point.setX(value);
         return point;
-    case ScrollEventAxis::Vertical: point.setY(value);
+    case ScrollEventAxis::Vertical:
+        point.setY(value);
         return point;
     }
     ASSERT_NOT_REACHED();
     return point;
+}
+
+inline BoxSide boxSideForDirection(ScrollDirection direction)
+{
+    switch (direction) {
+    case ScrollDirection::ScrollUp:
+        return BoxSide::Top;
+    case ScrollDirection::ScrollDown:
+        return BoxSide::Bottom;
+    case ScrollDirection::ScrollLeft:
+        return BoxSide::Left;
+    case ScrollDirection::ScrollRight:
+        return BoxSide::Right;
+    }
+    ASSERT_NOT_REACHED();
+    return BoxSide::Top;
 }
 
 enum ScrollbarControlStateMask {
@@ -274,7 +296,7 @@ enum ScrollbarOverlayStyle: uint8_t {
     ScrollbarOverlayStyleLight
 };
 
-enum ScrollPinningBehavior : uint8_t {
+enum class ScrollPinningBehavior : uint8_t {
     DoNotPin,
     PinToTop,
     PinToBottom
@@ -323,27 +345,21 @@ using ScrollbarControlState = unsigned;
 using ScrollbarControlPartMask = unsigned;
 using ScrollingNodeID = uint64_t;
 
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollType);
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollClamping);
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollBehaviorForFixedElements);
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollElasticity);
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollbarMode);
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, OverflowAnchor);
-
 struct ScrollPositionChangeOptions {
     ScrollType type;
     ScrollClamping clamping = ScrollClamping::Clamped;
     ScrollIsAnimated animated = ScrollIsAnimated::No;
     ScrollSnapPointSelectionMethod snapPointSelectionMethod = ScrollSnapPointSelectionMethod::Closest;
+    std::optional<FloatSize> originalScrollDelta = std::nullopt;
 
     static ScrollPositionChangeOptions createProgrammatic()
     {
         return { ScrollType::Programmatic };
     }
 
-    static ScrollPositionChangeOptions createProgrammaticWithOptions(ScrollClamping clamping, ScrollIsAnimated animated, ScrollSnapPointSelectionMethod snapPointSelectionMethod)
+    static ScrollPositionChangeOptions createProgrammaticWithOptions(ScrollClamping clamping, ScrollIsAnimated animated, ScrollSnapPointSelectionMethod snapPointSelectionMethod, std::optional<FloatSize> originalScrollDelta = std::nullopt)
     {
-        return { ScrollType::Programmatic, clamping, animated, snapPointSelectionMethod };
+        return { ScrollType::Programmatic, clamping, animated, snapPointSelectionMethod, originalScrollDelta };
     }
 
     static ScrollPositionChangeOptions createUser()
@@ -357,55 +373,22 @@ struct ScrollPositionChangeOptions {
     }
 };
 
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollType);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollClamping);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollBehaviorForFixedElements);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollElasticity);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollbarMode);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, OverflowAnchor);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollDirection);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollGranularity);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, NativeScrollbarVisibility);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollPositionChangeOptions);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollSnapPointSelectionMethod);
+WTF::TextStream& operator<<(WTF::TextStream&, ScrollbarWidth);
+
 } // namespace WebCore
 
 namespace WTF {
-
-template<> struct EnumTraits<WebCore::ScrollIsAnimated> {
-    using values = EnumValues<
-        WebCore::ScrollIsAnimated,
-        WebCore::ScrollIsAnimated::No,
-        WebCore::ScrollIsAnimated::Yes
-    >;
-};
-
-template<> struct EnumTraits<WebCore::ScrollbarMode> {
-    using values = EnumValues<
-        WebCore::ScrollbarMode,
-        WebCore::ScrollbarMode::Auto,
-        WebCore::ScrollbarMode::AlwaysOff,
-        WebCore::ScrollbarMode::AlwaysOn
-    >;
-};
-
-template<> struct EnumTraits<WebCore::ScrollElasticity> {
-    using values = EnumValues<
-        WebCore::ScrollElasticity,
-        WebCore::ScrollElasticity::Automatic,
-        WebCore::ScrollElasticity::None,
-        WebCore::ScrollElasticity::Allowed
-    >;
-};
-
-
-template<> struct EnumTraits<WebCore::ScrollPinningBehavior> {
-    using values = EnumValues<
-        WebCore::ScrollPinningBehavior,
-        WebCore::ScrollPinningBehavior::DoNotPin,
-        WebCore::ScrollPinningBehavior::PinToTop,
-        WebCore::ScrollPinningBehavior::PinToBottom
-    >;
-};
-
-template<> struct EnumTraits<WebCore::ScrollGranularity> {
-    using values = EnumValues<
-        WebCore::ScrollGranularity,
-        WebCore::ScrollGranularity::Line,
-        WebCore::ScrollGranularity::Page,
-        WebCore::ScrollGranularity::Document,
-        WebCore::ScrollGranularity::Pixel
-    >;
-};
 
 template<> struct EnumTraits<WebCore::ScrollDirection> {
     using values = EnumValues<
@@ -414,6 +397,23 @@ template<> struct EnumTraits<WebCore::ScrollDirection> {
         WebCore::ScrollDirection::ScrollDown,
         WebCore::ScrollDirection::ScrollLeft,
         WebCore::ScrollDirection::ScrollRight
+    >;
+};
+
+template<> struct EnumTraits<WebCore::ScrollbarOrientation> {
+    using values = EnumValues<
+        WebCore::ScrollbarOrientation,
+        WebCore::ScrollbarOrientation::Horizontal,
+        WebCore::ScrollbarOrientation::Vertical
+    >;
+};
+
+template<> struct EnumTraits<WebCore::ScrollbarWidth> {
+    using values = EnumValues<
+        WebCore::ScrollbarWidth,
+        WebCore::ScrollbarWidth::Auto,
+        WebCore::ScrollbarWidth::Thin,
+        WebCore::ScrollbarWidth::None
     >;
 };
 } // namespace WTF

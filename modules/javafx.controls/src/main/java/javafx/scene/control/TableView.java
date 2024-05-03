@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1406,18 +1406,18 @@ public class TableView<S> extends Control {
      */
     private ObjectProperty<EventHandler<SortEvent<TableView<S>>>> onSort;
 
-    public void setOnSort(EventHandler<SortEvent<TableView<S>>> value) {
+    public final void setOnSort(EventHandler<SortEvent<TableView<S>>> value) {
         onSortProperty().set(value);
     }
 
-    public EventHandler<SortEvent<TableView<S>>> getOnSort() {
+    public final EventHandler<SortEvent<TableView<S>>> getOnSort() {
         if( onSort != null ) {
             return onSort.get();
         }
         return null;
     }
 
-    public ObjectProperty<EventHandler<SortEvent<TableView<S>>>> onSortProperty() {
+    public final ObjectProperty<EventHandler<SortEvent<TableView<S>>>> onSortProperty() {
         if( onSort == null ) {
             onSort = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
@@ -1507,18 +1507,18 @@ public class TableView<S> extends Control {
      */
     private ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollTo;
 
-    public void setOnScrollTo(EventHandler<ScrollToEvent<Integer>> value) {
+    public final void setOnScrollTo(EventHandler<ScrollToEvent<Integer>> value) {
         onScrollToProperty().set(value);
     }
 
-    public EventHandler<ScrollToEvent<Integer>> getOnScrollTo() {
+    public final EventHandler<ScrollToEvent<Integer>> getOnScrollTo() {
         if( onScrollTo != null ) {
             return onScrollTo.get();
         }
         return null;
     }
 
-    public ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollToProperty() {
+    public final ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollToProperty() {
         if( onScrollTo == null ) {
             onScrollTo = new ObjectPropertyBase<>() {
                 @Override
@@ -1566,18 +1566,18 @@ public class TableView<S> extends Control {
      */
     private ObjectProperty<EventHandler<ScrollToEvent<TableColumn<S, ?>>>> onScrollToColumn;
 
-    public void setOnScrollToColumn(EventHandler<ScrollToEvent<TableColumn<S, ?>>> value) {
+    public final void setOnScrollToColumn(EventHandler<ScrollToEvent<TableColumn<S, ?>>> value) {
         onScrollToColumnProperty().set(value);
     }
 
-    public EventHandler<ScrollToEvent<TableColumn<S, ?>>> getOnScrollToColumn() {
+    public final EventHandler<ScrollToEvent<TableColumn<S, ?>>> getOnScrollToColumn() {
         if( onScrollToColumn != null ) {
             return onScrollToColumn.get();
         }
         return null;
     }
 
-    public ObjectProperty<EventHandler<ScrollToEvent<TableColumn<S, ?>>>> onScrollToColumnProperty() {
+    public final ObjectProperty<EventHandler<ScrollToEvent<TableColumn<S, ?>>>> onScrollToColumnProperty() {
         if( onScrollToColumn == null ) {
             onScrollToColumn = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
@@ -1919,7 +1919,7 @@ public class TableView<S> extends Control {
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case COLUMN_COUNT: return getVisibleLeafColumns().size();
-            case ROW_COUNT: return getItems().size();
+            case ROW_COUNT: return getItems() != null ? getItems().size() : 0;
             case SELECTED_ITEMS: {
                 // TableViewSkin returns TableRows back to TableView.
                 // TableRowSkin returns TableCells back to TableRow.
@@ -1958,18 +1958,19 @@ public class TableView<S> extends Control {
         }
     }
 
-
     /* *************************************************************************
      *                                                                         *
      * Support Interfaces                                                      *
      *                                                                         *
      **************************************************************************/
 
-     /**
-      * An immutable wrapper class for use in the TableView
+    /**
+     * An immutable wrapper class for use in the TableView
      * {@link TableView#columnResizePolicyProperty() column resize} functionality.
-      * @since JavaFX 2.0
-      */
+     *
+     * @param <S> the type of the objects contained within the TableView items list
+     * @since JavaFX 2.0
+     */
      public static class ResizeFeatures<S> extends ResizeFeaturesBase<S> {
         private TableView<S> table;
 
@@ -2030,6 +2031,8 @@ public class TableView<S> extends Control {
     /**
      * A simple extension of the {@link SelectionModel} abstract class to
      * allow for special support for TableView controls.
+     *
+     * @param <S> the type of the item contained within the TableView
      * @since JavaFX 2.0
      */
     public static abstract class TableViewSelectionModel<S> extends TableSelectionModel<S> {
@@ -3199,6 +3202,7 @@ public class TableView<S> extends Control {
      * A {@link FocusModel} with additional functionality to support the requirements
      * of a TableView control.
      *
+     * @param <S> the type of the item contained within the TableView
      * @see TableView
      * @since JavaFX 2.0
      */

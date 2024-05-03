@@ -72,10 +72,10 @@ ManetteGamepadProvider::~ManetteGamepadProvider()
 
 void ManetteGamepadProvider::startMonitoringGamepads(GamepadProviderClient& client)
 {
-    bool shouldOpenAndScheduleManager = m_clients.isEmpty();
+    bool shouldOpenAndScheduleManager = m_clients.isEmptyIgnoringNullReferences();
 
-    ASSERT(!m_clients.contains(&client));
-    m_clients.add(&client);
+    ASSERT(!m_clients.contains(client));
+    m_clients.add(client);
 
     if (!shouldOpenAndScheduleManager)
         return;
@@ -99,9 +99,9 @@ void ManetteGamepadProvider::startMonitoringGamepads(GamepadProviderClient& clie
 
 void ManetteGamepadProvider::stopMonitoringGamepads(GamepadProviderClient& client)
 {
-    ASSERT(m_clients.contains(&client));
+    ASSERT(m_clients.contains(client));
 
-    bool shouldCloseAndUnscheduleManager = m_clients.remove(&client) && m_clients.isEmpty();
+    bool shouldCloseAndUnscheduleManager = m_clients.remove(client) && m_clients.isEmptyIgnoringNullReferences();
     if (shouldCloseAndUnscheduleManager) {
         m_gamepadVector.clear();
         m_gamepadMap.clear();
@@ -145,7 +145,7 @@ void ManetteGamepadProvider::deviceConnected(ManetteDevice* device)
 
     auto eventVisibility = m_initialGamepadsConnected ? EventMakesGamepadsVisible::Yes : EventMakesGamepadsVisible::No;
     for (auto& client : m_clients)
-        client->platformGamepadConnected(*m_gamepadVector[index], eventVisibility);
+        client.platformGamepadConnected(*m_gamepadVector[index], eventVisibility);
 }
 
 void ManetteGamepadProvider::deviceDisconnected(ManetteDevice* device)
@@ -156,7 +156,7 @@ void ManetteGamepadProvider::deviceDisconnected(ManetteDevice* device)
     ASSERT(removedGamepad);
 
     for (auto& client : m_clients)
-        client->platformGamepadDisconnected(*removedGamepad);
+        client.platformGamepadDisconnected(*removedGamepad);
 }
 
 unsigned ManetteGamepadProvider::indexForNewlyConnectedDevice()
@@ -194,6 +194,18 @@ std::unique_ptr<ManetteGamepad> ManetteGamepadProvider::removeGamepadForDevice(M
         m_gamepadVector[index] = nullptr;
 
     return result;
+}
+
+void ManetteGamepadProvider::playEffect(unsigned, const String&, GamepadHapticEffectType, const GamepadEffectParameters&, CompletionHandler<void(bool)>&& completionHandler)
+{
+    // Not supported by this provider.
+    completionHandler(false);
+}
+
+void ManetteGamepadProvider::stopEffects(unsigned, const String&, CompletionHandler<void()>&& completionHandler)
+{
+    // Not supported by this provider.
+    completionHandler();
 }
 
 } // namespace WebCore

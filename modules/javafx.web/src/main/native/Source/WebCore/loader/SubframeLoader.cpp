@@ -37,18 +37,20 @@
 #include "DiagnosticLoggingClient.h"
 #include "DiagnosticLoggingKeys.h"
 #include "DocumentLoader.h"
-#include "Frame.h"
-#include "FrameLoaderClient.h"
 #include "HTMLFrameElement.h"
 #include "HTMLIFrameElement.h"
 #include "HTMLNames.h"
 #include "HTMLObjectElement.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "MIMETypeRegistry.h"
 #include "MixedContentChecker.h"
 #include "NavigationScheduler.h"
+#include "OriginAccessPatterns.h"
 #include "Page.h"
 #include "PluginData.h"
 #include "PluginDocument.h"
+#include "RenderBoxInlines.h"
 #include "RenderEmbeddedObject.h"
 #include "RenderView.h"
 #include "ScriptController.h"
@@ -61,7 +63,17 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-FrameLoader::SubframeLoader::SubframeLoader(Frame& frame)
+static bool canLoadJavaScriptURL(HTMLFrameOwnerElement& ownerElement, const URL& url)
+{
+    ASSERT(url.protocolIsJavaScript());
+    if (!ownerElement.document().contentSecurityPolicy()->allowJavaScriptURLs(aboutBlankURL().string(), { }, url.string(), &ownerElement))
+        return false;
+    if (!ownerElement.canLoadScriptURL(url))
+        return false;
+    return true;
+}
+
+FrameLoader::SubframeLoader::SubframeLoader(LocalFrame& frame)
     : m_frame(frame)
 {
 }
@@ -71,47 +83,31 @@ void FrameLoader::SubframeLoader::clear()
     m_containsPlugins = false;
 }
 
+void FrameLoader::SubframeLoader::createFrameIfNecessary(HTMLFrameOwnerElement& ownerElement, const AtomString& frameName)
+{
+    if (ownerElement.contentFrame())
+        return;
+    m_frame.loader().client().createFrame(frameName, ownerElement);
+    if (!ownerElement.contentFrame())
+        return;
+
+    if (auto* contentDocument = downcast<LocalFrame>(ownerElement.contentFrame())->document())
+        contentDocument->setReferrerPolicy(ownerElement.referrerPolicy());
+}
+
 bool FrameLoader::SubframeLoader::requestFrame(HTMLFrameOwnerElement& ownerElement, const String& urlString, const AtomString& frameName, LockHistory lockHistory, LockBackForwardList lockBackForwardList)
 {
     // Support for <frame src="javascript:string">
-    URL scriptURL;
-    URL url;
-    if (WTF::protocolIsJavaScript(urlString)) {
-        scriptURL = completeURL(urlString); // completeURL() encodes the URL.
-        url = aboutBlankURL();
-    } else
-        url = completeURL(urlString);
+    URL url = completeURL(urlString);
 
     if (shouldConvertInvalidURLsToBlank() && !url.isValid())
         url = aboutBlankURL();
 
     // Check the CSP of the embedder to determine if we allow execution of javascript: URLs via child frame navigation.
-    if (!scriptURL.isEmpty() && !ownerElement.document().contentSecurityPolicy()->allowJavaScriptURLs(aboutBlankURL().string(), { }, scriptURL.string(), &ownerElement))
-        scriptURL = URL();
+    if (url.protocolIsJavaScript() && !canLoadJavaScriptURL(ownerElement, url))
+        url = aboutBlankURL();
 
-    // If we will schedule a JavaScript URL load, we need to delay the firing of the load event at least until we've run the JavaScript in the URL.
-    CompletionHandlerCallingScope stopDelayingLoadEvent;
-    if (!scriptURL.isEmpty()) {
-        ownerElement.document().incrementLoadEventDelayCount();
-        stopDelayingLoadEvent = CompletionHandlerCallingScope([ownerDocument = Ref { ownerElement.document() }] {
-            ownerDocument->decrementLoadEventDelayCount();
-        });
-    }
-
-    Frame* frame = loadOrRedirectSubframe(ownerElement, url, frameName, lockHistory, lockBackForwardList);
-    if (!frame)
-        return false;
-
-    if (!scriptURL.isEmpty() && ownerElement.canLoadScriptURL(scriptURL)) {
-        // FIXME: Some sites rely on the javascript:'' loading synchronously, which is why we have this special case.
-        // Blink has the same workaround (https://bugs.chromium.org/p/chromium/issues/detail?id=923585).
-        if (urlString == "javascript:''"_s || urlString == "javascript:\"\""_s)
-            frame->script().executeJavaScriptURL(scriptURL);
-        else
-            frame->navigationScheduler().scheduleLocationChange(ownerElement.document(), ownerElement.document().securityOrigin(), scriptURL, m_frame.loader().outgoingReferrer(), lockHistory, lockBackForwardList, stopDelayingLoadEvent.release());
-    }
-
-    return true;
+    return loadOrRedirectSubframe(ownerElement, url, frameName, lockHistory, lockBackForwardList);
 }
 
 bool FrameLoader::SubframeLoader::resourceWillUsePlugin(const String& url, const String& mimeType)
@@ -131,7 +127,7 @@ bool FrameLoader::SubframeLoader::pluginIsLoadable(const URL& url)
         if (document->isSandboxed(SandboxPlugins))
             return false;
 
-        if (!document->securityOrigin().canDisplay(url)) {
+        if (!document->securityOrigin().canDisplay(url, OriginAccessPatternsForWebProcess::singleton())) {
             FrameLoader::reportLocalLoadFailed(&m_frame, url.string());
             return false;
         }
@@ -141,7 +137,7 @@ bool FrameLoader::SubframeLoader::pluginIsLoadable(const URL& url)
             return false;
         }
 
-        if (!MixedContentChecker::canRunInsecureContent(m_frame, document->securityOrigin(), url))
+        if (!MixedContentChecker::frameAndAncestorsCanRunInsecureContent(m_frame, document->securityOrigin(), url))
             return false;
     }
 
@@ -238,7 +234,7 @@ bool FrameLoader::SubframeLoader::requestObject(HTMLPlugInImageElement& ownerEle
     return loadOrRedirectSubframe(ownerElement, completedURL, frameName, LockHistory::Yes, LockBackForwardList::Yes);
 }
 
-Frame* FrameLoader::SubframeLoader::loadOrRedirectSubframe(HTMLFrameOwnerElement& ownerElement, const URL& requestURL, const AtomString& frameName, LockHistory lockHistory, LockBackForwardList lockBackForwardList)
+LocalFrame* FrameLoader::SubframeLoader::loadOrRedirectSubframe(HTMLFrameOwnerElement& ownerElement, const URL& requestURL, const AtomString& frameName, LockHistory lockHistory, LockBackForwardList lockBackForwardList)
 {
     auto& initiatingDocument = ownerElement.document();
 
@@ -246,24 +242,31 @@ Frame* FrameLoader::SubframeLoader::loadOrRedirectSubframe(HTMLFrameOwnerElement
     initiatingDocument.contentSecurityPolicy()->upgradeInsecureRequestIfNeeded(upgradedRequestURL, ContentSecurityPolicy::InsecureRequestType::Load);
 
     RefPtr frame = ownerElement.contentFrame();
-    if (frame)
-        frame->navigationScheduler().scheduleLocationChange(initiatingDocument, initiatingDocument.securityOrigin(), upgradedRequestURL, m_frame.loader().outgoingReferrer(), lockHistory, lockBackForwardList);
-    else
+    if (frame) {
+        CompletionHandler<void()> stopDelayingLoadEvent = [] { };
+        if (upgradedRequestURL.protocolIsJavaScript()) {
+            ownerElement.document().incrementLoadEventDelayCount();
+            stopDelayingLoadEvent = [ownerDocument = Ref { ownerElement.document() }] {
+                ownerDocument->decrementLoadEventDelayCount();
+            };
+        }
+        frame->navigationScheduler().scheduleLocationChange(initiatingDocument, initiatingDocument.securityOrigin(), upgradedRequestURL, m_frame.loader().outgoingReferrer(), lockHistory, lockBackForwardList, WTFMove(stopDelayingLoadEvent));
+    } else
         frame = loadSubframe(ownerElement, upgradedRequestURL, frameName, m_frame.loader().outgoingReferrer());
 
     if (!frame)
         return nullptr;
 
     ASSERT(ownerElement.contentFrame() == frame || !ownerElement.contentFrame());
-    return ownerElement.contentFrame();
+    return dynamicDowncast<LocalFrame>(ownerElement.contentFrame());
 }
 
-RefPtr<Frame> FrameLoader::SubframeLoader::loadSubframe(HTMLFrameOwnerElement& ownerElement, const URL& url, const AtomString& name, const String& referrer)
+RefPtr<LocalFrame> FrameLoader::SubframeLoader::loadSubframe(HTMLFrameOwnerElement& ownerElement, const URL& url, const AtomString& name, const String& referrer)
 {
     Ref protectedFrame { m_frame };
     Ref document = ownerElement.document();
 
-    if (!document->securityOrigin().canDisplay(url)) {
+    if (!document->securityOrigin().canDisplay(url, OriginAccessPatternsForWebProcess::singleton())) {
         FrameLoader::reportLocalLoadFailed(&m_frame, url.string());
         return nullptr;
     }
@@ -294,7 +297,7 @@ RefPtr<Frame> FrameLoader::SubframeLoader::loadSubframe(HTMLFrameOwnerElement& o
     ReferrerPolicy policy = ownerElement.referrerPolicy();
     if (policy == ReferrerPolicy::EmptyString)
         policy = document->referrerPolicy();
-    String referrerToUse = SecurityPolicy::generateReferrerHeader(policy, url, referrer);
+    String referrerToUse = SecurityPolicy::generateReferrerHeader(policy, url, referrer, OriginAccessPatternsForWebProcess::singleton());
 
     m_frame.loader().loadURLIntoChildFrame(url, referrerToUse, frame.get());
 

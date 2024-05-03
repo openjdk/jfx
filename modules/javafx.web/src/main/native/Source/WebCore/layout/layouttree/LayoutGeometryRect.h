@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "LayoutRect.h"
 #include "LayoutUnits.h"
 
@@ -73,6 +71,8 @@ public:
     void expandVertically(LayoutUnit delta) { expand({ }, delta); }
     void expandToContain(const Rect&);
     bool intersects(const Rect& rect) const { return m_rect.intersects(rect); }
+
+    bool isEmpty() const { return m_rect.isEmpty(); }
 
     Rect clone() const;
     operator LayoutRect() const;
@@ -321,4 +321,3 @@ inline Rect::operator LayoutRect() const
 
 }
 }
-#endif

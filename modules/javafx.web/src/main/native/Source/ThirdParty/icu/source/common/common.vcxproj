@@ -58,7 +58,7 @@
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <OutputFile>..\..\$(IcuBinOutputDir)\icuuc71d.dll</OutputFile>
+      <OutputFile>..\..\$(IcuBinOutputDir)\icuuc$(IcuMajorVersion)d.dll</OutputFile>
       <ProgramDatabaseFile>.\..\..\$(IcuLibOutputDir)\icuucd.pdb</ProgramDatabaseFile>
       <ImportLibrary>..\..\$(IcuLibOutputDir)\icuucd.lib</ImportLibrary>
     </Link>
@@ -70,7 +70,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
     </ClCompile>
     <Link>
-      <OutputFile>..\..\$(IcuBinOutputDir)\icuuc71.dll</OutputFile>
+      <OutputFile>..\..\$(IcuBinOutputDir)\icuuc$(IcuMajorVersion).dll</OutputFile>
       <ProgramDatabaseFile>.\..\..\$(IcuLibOutputDir)\icuuc.pdb</ProgramDatabaseFile>
       <ImportLibrary>..\..\$(IcuLibOutputDir)\icuuc.lib</ImportLibrary>
     </Link>
@@ -88,6 +88,7 @@
     <ClCompile Include="brkiter.cpp" />
     <ClCompile Include="dictbe.cpp" />
     <ClCompile Include="lstmbe.cpp" />
+    <ClCompile Include="mlbe.cpp" />
     <ClCompile Include="pluralmap.cpp" />
     <ClCompile Include="rbbi.cpp" />
     <ClCompile Include="rbbidata.cpp" />
@@ -166,6 +167,7 @@
     <ClCompile Include="uidna.cpp" />
     <ClCompile Include="uts46.cpp" />
     <ClCompile Include="localebuilder.cpp" />
+    <ClCompile Include="ulocbuilder.cpp" />
     <ClCompile Include="localematcher.cpp" />
     <ClCompile Include="localeprioritylist.cpp" />
     <ClCompile Include="locavailable.cpp" />
@@ -184,6 +186,7 @@
     <ClCompile Include="ucat.cpp" />
     <ClCompile Include="uloc.cpp" />
     <ClCompile Include="uloc_tag.cpp" />
+    <ClCompile Include="ulocale.cpp" />
     <ClCompile Include="ures_cnv.cpp" />
     <ClCompile Include="uresbund.cpp" />
     <ClCompile Include="uresdata.cpp" />
@@ -282,6 +285,7 @@
     <ClInclude Include="brkeng.h" />
     <ClInclude Include="dictbe.h" />
     <ClInclude Include="lstmbe.h" />
+    <ClInclude Include="mlbe.h" />
     <ClInclude Include="rbbidata.h" />
     <ClInclude Include="rbbinode.h" />
     <ClInclude Include="rbbirb.h" />

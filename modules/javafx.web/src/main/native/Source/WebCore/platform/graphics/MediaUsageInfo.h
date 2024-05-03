@@ -33,6 +33,7 @@ namespace WebCore {
 
 struct MediaUsageInfo {
     URL mediaURL;
+    bool hasSource { false };
     bool isPlaying { false };
     bool canShowControlsManager { false };
     bool canShowNowPlayingControls { false };
@@ -69,6 +70,7 @@ struct MediaUsageInfo {
     bool operator==(const MediaUsageInfo& other) const
     {
         return mediaURL == other.mediaURL
+            && hasSource == other.hasSource
             && isPlaying == other.isPlaying
             && canShowControlsManager == other.canShowControlsManager
             && canShowNowPlayingControls == other.canShowNowPlayingControls
@@ -104,11 +106,6 @@ struct MediaUsageInfo {
             ;
     }
 
-    bool operator!=(const MediaUsageInfo other) const
-    {
-        return !(*this == other);
-    }
-
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static std::optional<MediaUsageInfo> decode(Decoder&);
 };
@@ -116,6 +113,7 @@ struct MediaUsageInfo {
 template<class Encoder> inline void MediaUsageInfo::encode(Encoder& encoder) const
 {
     encoder << mediaURL;
+    encoder << hasSource;
     encoder << isPlaying;
     encoder << canShowControlsManager;
     encoder << canShowNowPlayingControls;
@@ -155,6 +153,9 @@ template<class Decoder> inline std::optional<MediaUsageInfo> MediaUsageInfo::dec
     MediaUsageInfo info;
 
     if (!decoder.decode(info.mediaURL))
+        return { };
+
+    if (!decoder.decode(info.hasSource))
         return { };
 
     if (!decoder.decode(info.isPlaying))

@@ -36,16 +36,9 @@ public:
     LayoutRect replacedContentRect(const LayoutSize& intrinsicSize) const;
     LayoutRect replacedContentRect() const { return replacedContentRect(intrinsicSize()); }
 
-    bool hasReplacedLogicalWidth() const;
-    bool hasReplacedLogicalHeight() const;
     bool setNeedsLayoutIfNeededAfterIntrinsicSizeChange();
 
-    LayoutSize intrinsicSize() const final
-    {
-        if (shouldApplySizeContainment())
-            return LayoutSize();
-        return m_intrinsicSize;
-    }
+    LayoutSize intrinsicSize() const final;
 
     RoundedRect roundedContentBoxRect() const;
 
@@ -54,14 +47,14 @@ public:
 
     double computeIntrinsicAspectRatio() const;
 
+    void computeIntrinsicRatioInformation(FloatSize& intrinsicSize, FloatSize& intrinsicRatio) const override;
+
 protected:
     RenderReplaced(Element&, RenderStyle&&);
     RenderReplaced(Element&, RenderStyle&&, const LayoutSize& intrinsicSize);
     RenderReplaced(Document&, RenderStyle&&, const LayoutSize& intrinsicSize);
 
     void layout() override;
-
-    void computeIntrinsicRatioInformation(FloatSize& intrinsicSize, double& intrinsicRatio) const override;
 
     void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const final;
 
@@ -99,14 +92,18 @@ private:
     bool canBeSelectionLeaf() const override { return true; }
 
     LayoutRect selectionRectForRepaint(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent = true) final;
-    void computeAspectRatioInformationForRenderBox(RenderBox*, FloatSize& constrainedSize, double& intrinsicRatio) const;
+    void computeAspectRatioInformationForRenderBox(RenderBox*, FloatSize& constrainedSize, FloatSize& intrinsicRatio) const;
+    void computeIntrinsicSizesConstrainedByTransferredMinMaxSizes(RenderBox* contentRenderer, FloatSize& constrainedSize, FloatSize& intrinsicRatio) const;
 
     virtual bool shouldDrawSelectionTint() const;
 
     Color calculateHighlightColor() const;
     bool isHighlighted(HighlightState, const HighlightData&) const;
 
+    bool hasReplacedLogicalHeight() const;
+
     mutable LayoutSize m_intrinsicSize;
+    mutable FloatSize m_intrinsicRatio;
 };
 
 } // namespace WebCore

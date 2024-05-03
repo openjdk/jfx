@@ -25,9 +25,15 @@
 
 #pragma once
 
-#if ENABLE(WEBGL) && USE(TEXTURE_MAPPER) && !USE(NICOSIA) && USE(ANGLE)
+#if ENABLE(WEBGL) && USE(TEXTURE_MAPPER)
 
 #include "GraphicsContextGLANGLE.h"
+
+#if USE(NICOSIA)
+namespace Nicosia {
+class GCGLANGLELayer;
+}
+#endif
 
 namespace WebCore {
 
@@ -43,12 +49,13 @@ public:
 #if ENABLE(VIDEO)
     bool copyTextureFromMedia(MediaPlayer&, PlatformGLObject texture, GCGLenum target, GCGLint level, GCGLenum internalFormat, GCGLenum format, GCGLenum type, bool premultiplyAlpha, bool flipY) final;
 #endif
-#if ENABLE(MEDIA_STREAM)
+#if ENABLE(MEDIA_STREAM) || ENABLE(WEB_CODECS)
     RefPtr<VideoFrame> paintCompositedResultsToVideoFrame() final;
 #endif
+    RefPtr<PixelBuffer> readCompositedResults() final;
 
     void setContextVisibility(bool) final;
-    bool reshapeDisplayBufferBacking() final;
+    bool reshapeDrawingBuffer() final;
     void prepareForDisplay() final;
 
 private:
@@ -59,18 +66,28 @@ private:
 
     void prepareTexture() final;
 
+#if USE(NICOSIA)
+    GCGLuint setupCurrentTexture();
+#endif
+
     RefPtr<GraphicsLayerContentsDisplayDelegate> m_layerContentsDisplayDelegate;
 
     GCGLuint m_compositorTexture { 0 };
-#if USE(COORDINATED_GRAPHICS)
-    GCGLuint m_intermediateTexture { 0 };
-#endif
 
+#if USE(NICOSIA)
+    GCGLuint m_textureID { 0 };
+    GCGLuint m_compositorTextureID { 0 };
+
+    std::unique_ptr<Nicosia::GCGLANGLELayer> m_nicosiaLayer;
+
+    friend class Nicosia::GCGLANGLELayer;
+#else
     std::unique_ptr<TextureMapperGCGLPlatformLayer> m_texmapLayer;
 
     friend class TextureMapperGCGLPlatformLayer;
+#endif
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(WEBGL) && USE(TEXTURE_MAPPER) && !USE(NICOSIA) && USE(ANGLE)
+#endif // ENABLE(WEBGL) && USE(TEXTURE_MAPPER)

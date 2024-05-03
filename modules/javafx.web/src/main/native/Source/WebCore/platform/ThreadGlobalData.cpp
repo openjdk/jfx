@@ -27,7 +27,7 @@
 #include "config.h"
 #include "ThreadGlobalData.h"
 
-#include "CachedResourceRequestInitiators.h"
+#include "CachedResourceRequestInitiatorTypes.h"
 #include "EventNames.h"
 #include "FontCache.h"
 #include "MIMETypeRegistry.h"
@@ -71,11 +71,11 @@ void ThreadGlobalData::setWebCoreThreadData()
     ASSERT(&threadGlobalData() == sharedMainThreadStaticData);
 }
 
-ThreadGlobalData& threadGlobalData()
+ThreadGlobalData& threadGlobalDataSlow()
 {
     auto& thread = Thread::current();
     auto* clientData = thread.m_clientData.get();
-    if (LIKELY(clientData))
+    if (UNLIKELY(clientData))
         return *static_cast<ThreadGlobalData*>(clientData);
 
     auto data = adoptRef(*new ThreadGlobalData);
@@ -91,11 +91,11 @@ ThreadGlobalData& threadGlobalData()
 
 #else
 
-ThreadGlobalData& threadGlobalData()
+ThreadGlobalData& threadGlobalDataSlow()
 {
     auto& thread = Thread::current();
     auto* clientData = thread.m_clientData.get();
-    if (LIKELY(clientData))
+    if (UNLIKELY(clientData))
         return *static_cast<ThreadGlobalData*>(clientData);
 
     auto data = adoptRef(*new ThreadGlobalData);
@@ -106,10 +106,10 @@ ThreadGlobalData& threadGlobalData()
 
 #endif
 
-void ThreadGlobalData::initializeCachedResourceRequestInitiators()
+void ThreadGlobalData::initializeCachedResourceRequestInitiatorTypes()
 {
-    ASSERT(!m_cachedResourceRequestInitiators);
-    m_cachedResourceRequestInitiators = makeUnique<CachedResourceRequestInitiators>();
+    ASSERT(!m_cachedResourceRequestInitiatorTypes);
+    m_cachedResourceRequestInitiatorTypes = makeUnique<CachedResourceRequestInitiatorTypes>();
 }
 
 void ThreadGlobalData::initializeEventNames()

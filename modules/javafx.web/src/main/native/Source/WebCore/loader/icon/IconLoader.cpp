@@ -29,13 +29,13 @@
 #include "CachedRawResource.h"
 #include "CachedResourceLoader.h"
 #include "CachedResourceRequest.h"
-#include "CachedResourceRequestInitiators.h"
+#include "CachedResourceRequestInitiatorTypes.h"
 #include "Document.h"
 #include "DocumentLoader.h"
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "Logging.h"
 #include "ResourceRequest.h"
 #include "SharedBuffer.h"
@@ -59,7 +59,7 @@ void IconLoader::startLoading()
     if (m_resource)
         return;
 
-    auto* frame = m_documentLoader.frame();
+    auto* frame = m_documentLoader->frame();
     if (!frame)
         return;
 
@@ -86,7 +86,7 @@ void IconLoader::startLoading()
         DefersLoadingPolicy::AllowDefersLoading,
         CachingPolicy::AllowCaching));
 
-    request.setInitiator(cachedResourceRequestInitiators().icon);
+    request.setInitiatorType(cachedResourceRequestInitiatorTypes().icon);
 
     auto cachedResource = frame->document()->cachedResourceLoader().requestIcon(WTFMove(request));
     m_resource = cachedResource.value_or(nullptr);
@@ -116,7 +116,7 @@ void IconLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetri
         data = nullptr;
 
     constexpr uint8_t pdfMagicNumber[] = { '%', 'P', 'D', 'F' };
-    if (data && data->startsWith(Span { pdfMagicNumber, std::size(pdfMagicNumber) })) {
+    if (data && data->startsWith(std::span(pdfMagicNumber, std::size(pdfMagicNumber)))) {
         LOG(IconDatabase, "IconLoader::finishLoading() - Ignoring icon at %s because it appears to be a PDF", m_resource->url().string().ascii().data());
         data = nullptr;
     }
@@ -125,7 +125,7 @@ void IconLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetri
 
     // DocumentLoader::finishedLoadingIcon destroys this IconLoader as it finishes. This will automatically
     // trigger IconLoader::stopLoading() during destruction, so we should just return here.
-    m_documentLoader.finishedLoadingIcon(*this, data);
+    m_documentLoader->finishedLoadingIcon(*this, data);
 }
 
 }

@@ -22,10 +22,14 @@
 
 #pragma once
 
+#include "ColorTypes.h"
+#include "Document.h"
 #include "HTMLNames.h"
 #include "InputMode.h"
 #include "StyledElement.h"
+#if PLATFORM(JAVA)
 #include "ElementInlines.h"
+#endif
 
 #if ENABLE(AUTOCAPITALIZE)
 #include "Autocapitalize.h"
@@ -33,15 +37,26 @@
 
 namespace WebCore {
 
+class ElementInternals;
+class FormListedElement;
 class FormAssociatedElement;
-class FormNamedItem;
+class HTMLFormControlElement;
 class HTMLFormElement;
 class VisibleSelection;
+
 struct SimpleRange;
 struct TextRecognitionResult;
 
-enum class PageIsEditable : bool;
 enum class EnterKeyHint : uint8_t;
+enum class PageIsEditable : bool;
+enum class FireEvents : bool { No, Yes };
+enum class FocusPreviousElement : bool { No, Yes };
+enum class PopoverVisibilityState : bool;
+enum class PopoverState : uint8_t {
+    None,
+    Auto,
+    Manual,
+};
 
 #if PLATFORM(IOS_FAMILY)
 enum class SelectionRenderingBehavior : bool;
@@ -83,24 +98,23 @@ public:
 
     bool rendererIsEverNeeded() final;
 
-    WEBCORE_EXPORT virtual HTMLFormElement* form() const;
-
     WEBCORE_EXPORT const AtomString& dir() const;
     WEBCORE_EXPORT void setDir(const AtomString&);
 
-    TextDirection computeDirectionality() const;
     bool hasDirectionAuto() const;
-    TextDirection directionalityIfhasDirAutoAttribute(bool& isAuto) const;
+
+    std::optional<TextDirection> directionalityIfDirIsAuto() const;
 
     virtual bool isTextControlInnerTextElement() const { return false; }
     virtual bool isSearchFieldResultsButtonElement() const { return false; }
 
     bool willRespondToMouseMoveEvents() const override;
-    bool willRespondToMouseWheelEvents() const override;
     bool willRespondToMouseClickEventsWithEditability(Editability) const override;
 
+    // Represents "labelable element": https://html.spec.whatwg.org/multipage/forms.html#category-label
     virtual bool isLabelable() const { return false; }
-    virtual FormNamedItem* asFormNamedItem();
+    WEBCORE_EXPORT RefPtr<NodeList> labels();
+
     virtual FormAssociatedElement* asFormAssociatedElement();
 
     virtual bool isInteractiveContent() const { return false; }
@@ -111,7 +125,7 @@ public:
 
     // Only some element types can be disabled: https://html.spec.whatwg.org/multipage/scripting.html#concept-element-disabled
     bool canBeActuallyDisabled() const;
-    bool isActuallyDisabled() const;
+    virtual bool isActuallyDisabled() const;
 
 #if ENABLE(AUTOCAPITALIZE)
     WEBCORE_EXPORT virtual AutocapitalizeType autocapitalizeType() const;
@@ -134,6 +148,19 @@ public:
     void setEnterKeyHint(const AtomString& value);
 
     WEBCORE_EXPORT static bool shouldExtendSelectionToTargetNode(const Node& targetNode, const VisibleSelection& selectionBeforeUpdate);
+
+    WEBCORE_EXPORT ExceptionOr<Ref<ElementInternals>> attachInternals();
+
+    void queuePopoverToggleEventTask(PopoverVisibilityState oldState, PopoverVisibilityState newState);
+    ExceptionOr<void> showPopover(const HTMLFormControlElement* = nullptr);
+    ExceptionOr<void> hidePopover();
+    ExceptionOr<void> hidePopoverInternal(FocusPreviousElement, FireEvents);
+    ExceptionOr<bool> togglePopover(std::optional<bool> force);
+
+    PopoverState popoverState() const;
+    const AtomString& popover() const;
+    void setPopover(const AtomString& value) { setAttributeWithoutSynchronization(HTMLNames::popoverAttr, value); };
+    void popoverAttributeChanged(const AtomString& value);
 
 #if PLATFORM(IOS_FAMILY)
     static SelectionRenderingBehavior selectionRenderingBehavior(const Node*);
@@ -159,14 +186,16 @@ protected:
     void applyBorderAttributeToStyle(const AtomString&, MutableStyleProperties&);
 
     bool matchesReadWritePseudoClass() const override;
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     Node::InsertedIntoAncestorResult insertedIntoAncestor(InsertionType , ContainerNode& parentOfInsertedTree) override;
+    void removedFromAncestor(RemovalType, ContainerNode& oldParentOfRemovedTree) override;
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const override;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) override;
     unsigned parseBorderWidthAttribute(const AtomString&) const;
 
     void childrenChanged(const ChildChange&) override;
-    void calculateAndAdjustDirectionality();
+    void updateTextDirectionalityAfterTelephoneInputTypeChange();
+    void updateEffectiveDirectionalityOfDirAuto();
 
     using EventHandlerNameMap = HashMap<AtomStringImpl*, AtomString>;
     static const AtomString& eventNameForEventHandlerAttribute(const QualifiedName& attributeName, const EventHandlerNameMap&);
@@ -177,9 +206,15 @@ private:
     void mapLanguageAttributeToLocale(const AtomString&, MutableStyleProperties&);
 
     void dirAttributeChanged(const AtomString&);
+    void updateEffectiveDirectionality(std::optional<TextDirection>);
     void adjustDirectionalityIfNeededAfterChildAttributeChanged(Element* child);
     void adjustDirectionalityIfNeededAfterChildrenChanged(Element* beforeChange, ChildChange::Type);
-    TextDirection directionality(Node** strongDirectionalityTextNode= 0) const;
+
+    struct TextDirectionWithStrongDirectionalityNode {
+        TextDirection direction;
+        RefPtr<Node> strongDirectionalityNode;
+    };
+    TextDirectionWithStrongDirectionalityNode computeDirectionalityFromText() const;
 
     enum class AllowPercentage : bool { No, Yes };
     enum class UseCSSPXAsUnitType : bool { No, Yes };

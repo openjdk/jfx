@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,7 +36,7 @@
 #include "LLIntPCRanges.h"
 #include "MachineContext.h"
 #include "MacroAssemblerCodeRef.h"
-#include "VMEntryScope.h"
+#include "VMEntryScopeInlines.h"
 #include "VMTrapsInlines.h"
 #include "Watchdog.h"
 #include <wtf/ProcessID.h>
@@ -49,7 +49,7 @@ namespace JSC {
 
 struct VMTraps::SignalContext {
 private:
-    SignalContext(PlatformRegisters& registers, MacroAssemblerCodePtr<PlatformRegistersPCPtrTag> trapPC)
+    SignalContext(PlatformRegisters& registers, CodePtr<PlatformRegistersPCPtrTag> trapPC)
         : registers(registers)
         , trapPC(trapPC)
         , stackPointer(MachineContext::stackPointer(registers))
@@ -66,7 +66,7 @@ public:
     }
 
     PlatformRegisters& registers;
-    MacroAssemblerCodePtr<PlatformRegistersPCPtrTag> trapPC;
+    CodePtr<PlatformRegistersPCPtrTag> trapPC;
     void* stackPointer;
     void* framePointer;
 };
@@ -90,7 +90,7 @@ void VMTraps::tryInstallTrapBreakpoints(VMTraps::SignalContext& context, StackBo
     // This must be the initial signal to get the mutator thread's attention.
     // Let's get the thread to break at invalidation points if needed.
     VM& vm = this->vm();
-    void* trapPC = context.trapPC.untaggedExecutableAddress();
+    void* trapPC = context.trapPC.untaggedPtr();
     // We must ensure we're in JIT/LLint code. If we are, we know a few things:
     // - The JS thread isn't holding the malloc lock. Therefore, it's safe to malloc below.
     // - The JS thread isn't holding the CodeBlockSet lock.
@@ -186,7 +186,7 @@ void VMTraps::invalidateCodeBlocksOnStack(Locker<Lock>&, CallFrame* topCallFrame
         return; // Not running JS code. Nothing to invalidate.
 
     while (callFrame) {
-        CodeBlock* codeBlock = callFrame->codeBlock();
+        CodeBlock* codeBlock = callFrame->isWasmFrame() ? nullptr : callFrame->codeBlock();
         if (codeBlock && JITCode::isOptimizingJIT(codeBlock->jitType()))
             codeBlock->jettison(Profiler::JettisonDueToVMTraps);
         callFrame = callFrame->callerFrame(entryFrame);
@@ -213,7 +213,7 @@ public:
                 if (!signalContext)
                     return SignalAction::NotHandled;
 
-                void* trapPC = signalContext->trapPC.untaggedExecutableAddress();
+                void* trapPC = signalContext->trapPC.untaggedPtr();
                 if (!isJITPC(trapPC))
                     return SignalAction::NotHandled;
 
@@ -401,11 +401,11 @@ void VMTraps::handleTraps(VMTraps::BitField mask)
             ASSERT(vm.watchdog());
             if (LIKELY(!vm.watchdog()->isActive() || !vm.watchdog()->shouldTerminate(vm.entryScope->globalObject())))
                 continue;
-            vm.setTerminationInProgress(true);
+            vm.setHasTerminationRequest();
             FALLTHROUGH;
 
         case NeedTermination:
-            ASSERT(vm.terminationInProgress());
+            ASSERT(vm.hasTerminationRequest());
             scope.release();
             if (!isDeferringTermination())
                 vm.throwTerminationException();
@@ -441,7 +441,7 @@ void VMTraps::deferTerminationSlow(DeferAction)
 
     VM& vm = this->vm();
     if (vm.hasPendingTerminationException()) {
-        ASSERT(vm.terminationInProgress());
+        ASSERT(vm.hasTerminationRequest());
         vm.clearException();
         m_suspendedTerminationException = true;
     }
@@ -452,7 +452,7 @@ void VMTraps::undoDeferTerminationSlow(DeferAction deferAction)
     ASSERT(m_deferTerminationCount == 0);
 
     VM& vm = this->vm();
-    ASSERT(vm.terminationInProgress());
+    ASSERT(vm.hasTerminationRequest());
     if (m_suspendedTerminationException || (deferAction == DeferAction::DeferUntilEndOfScope)) {
         vm.throwTerminationException();
         m_suspendedTerminationException = false;

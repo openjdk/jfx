@@ -36,10 +36,12 @@
 #include <wtf/Lock.h>
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
+ALLOW_COMMA_BEGIN
 
 #include <webrtc/api/media_stream_interface.h>
 
 ALLOW_UNUSED_PARAMETERS_END
+ALLOW_COMMA_END
 
 #include <wtf/LoggerHelper.h>
 #include <wtf/ThreadSafeRefCounted.h>
@@ -102,7 +104,8 @@ private:
     void unobserveSource();
 
     using MediaStreamTrackPrivate::Observer::weakPtrFactory;
-    using WeakValueType = MediaStreamTrackPrivate::Observer::WeakValueType;
+    using MediaStreamTrackPrivate::Observer::WeakValueType;
+    using MediaStreamTrackPrivate::Observer::WeakPtrImplType;
 
     // Notifier API
     void RegisterObserver(webrtc::ObserverInterface*) final { }
@@ -127,6 +130,7 @@ private:
 
     void sourceMutedChanged();
     void sourceEnabledChanged();
+    void startObservingVideoFrames();
 
     // MediaStreamTrackPrivate::Observer API
     void trackMutedChanged(MediaStreamTrackPrivate&) final { sourceMutedChanged(); }
@@ -149,6 +153,8 @@ private:
     bool m_muted { false };
     uint32_t m_width { 0 };
     uint32_t m_height { 0 };
+    std::optional<double> m_maxFrameRate;
+    bool m_isObservingVideoFrames { false };
 
 #if !RELEASE_LOG_DISABLED
     Ref<const Logger> m_logger;

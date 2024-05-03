@@ -185,6 +185,9 @@ public:
 #endif
     static_assert(JSCell::atomSize >= MarkedBlock::atomSize);
 
+    static constexpr int s_maxTransitionLength = 64;
+    static constexpr int s_maxTransitionLengthForNonEvalPutById = 512;
+
     enum PolyProtoTag { PolyProto };
     static Structure* create(VM&, JSGlobalObject*, JSValue prototype, const TypeInfo&, const ClassInfo*, IndexingType = NonArray, unsigned inlineCapacity = 0);
     static Structure* create(PolyProtoTag, VM&, JSGlobalObject*, JSObject* prototype, const TypeInfo&, const ClassInfo*, IndexingType = NonArray, unsigned inlineCapacity = 0);
@@ -238,10 +241,20 @@ public:
     bool isProxy() const
     {
         JSType type = m_blob.type();
-        return type == PureForwardingProxyType || type == ProxyObjectType;
+        return type == GlobalProxyType || type == ProxyObjectType;
     }
 
     static void dumpStatistics();
+
+    inline bool shouldDoCacheableDictionaryTransitionForAdd(PutPropertySlot::Context context)
+    {
+        int maxTransitionLength;
+        if (context == PutPropertySlot::PutById)
+            maxTransitionLength = s_maxTransitionLengthForNonEvalPutById;
+        else
+            maxTransitionLength = s_maxTransitionLength;
+        return transitionCountEstimate() > maxTransitionLength;
+    }
 
     JS_EXPORT_PRIVATE static Structure* addPropertyTransition(VM&, Structure*, PropertyName, unsigned attributes, PropertyOffset&);
     JS_EXPORT_PRIVATE static Structure* addNewPropertyTransition(VM&, Structure*, PropertyName, unsigned attributes, PropertyOffset&, PutPropertySlot::Context = PutPropertySlot::UnknownContext, DeferredStructureTransitionWatchpointFire* = nullptr);
@@ -256,13 +269,13 @@ public:
     JS_EXPORT_PRIVATE static Structure* attributeChangeTransitionToExistingStructure(Structure*, PropertyName, unsigned attributes, PropertyOffset&);
     JS_EXPORT_PRIVATE static Structure* toCacheableDictionaryTransition(VM&, Structure*, DeferredStructureTransitionWatchpointFire* = nullptr);
     static Structure* toUncacheableDictionaryTransition(VM&, Structure*, DeferredStructureTransitionWatchpointFire* = nullptr);
-    JS_EXPORT_PRIVATE static Structure* sealTransition(VM&, Structure*);
-    JS_EXPORT_PRIVATE static Structure* freezeTransition(VM&, Structure*);
-    static Structure* preventExtensionsTransition(VM&, Structure*);
-    static Structure* nonPropertyTransition(VM&, Structure*, TransitionKind);
-    JS_EXPORT_PRIVATE static Structure* nonPropertyTransitionSlow(VM&, Structure*, TransitionKind);
+    JS_EXPORT_PRIVATE static Structure* sealTransition(VM&, Structure*, DeferredStructureTransitionWatchpointFire* = nullptr);
+    JS_EXPORT_PRIVATE static Structure* freezeTransition(VM&, Structure*, DeferredStructureTransitionWatchpointFire* = nullptr);
+    static Structure* preventExtensionsTransition(VM&, Structure*, DeferredStructureTransitionWatchpointFire* = nullptr);
+    static Structure* nonPropertyTransition(VM&, Structure*, TransitionKind, DeferredStructureTransitionWatchpointFire*);
     static Structure* setBrandTransitionFromExistingStructureConcurrently(Structure*, UniquedStringImpl*);
     static Structure* setBrandTransition(VM&, Structure*, Symbol* brand, DeferredStructureTransitionWatchpointFire* = nullptr);
+    JS_EXPORT_PRIVATE static Structure* becomePrototypeTransition(VM&, Structure*, DeferredStructureTransitionWatchpointFire* = nullptr);
 
     JS_EXPORT_PRIVATE bool isSealed(VM&);
     JS_EXPORT_PRIVATE bool isFrozen(VM&);
@@ -282,6 +295,8 @@ public:
     PropertyOffset removePropertyWithoutTransition(VM&, PropertyName, const Func&);
     template<typename Func>
     PropertyOffset attributeChangeWithoutTransition(VM&, PropertyName, unsigned attributes, const Func&);
+    template<typename Func>
+    auto addOrReplacePropertyWithoutTransition(VM&, PropertyName, unsigned attributes, const Func&) -> decltype(auto);
     void setPrototypeWithoutTransition(VM&, JSValue prototype);
 
     bool isDictionary() const { return dictionaryKind() != NoneDictionaryKind; }
@@ -328,10 +343,21 @@ public:
         return typeInfo().hasStaticPropertyTable() && !staticPropertiesReified();
     }
 
+    bool isNonExtensibleOrHasNonConfigurableProperties() const
+    {
+        return didPreventExtensions() || hasNonConfigurableProperties();
+    }
+
+    bool hasAnyOfBitFieldFlags(unsigned flags) const
+    {
+        return m_bitField & flags;
+    }
+
     // Type accessors.
     TypeInfo typeInfo() const { return m_blob.typeInfo(m_outOfLineTypeFlags); }
     bool isObject() const { return typeInfo().isObject(); }
     const ClassInfo* classInfoForCells() const { return m_classInfo.get(); }
+    CellState typeInfoDefaultCellState() const { return m_blob.defaultCellState(); }
 protected:
     // You probably want typeInfo().type()
     JSType type() { return JSCell::type(); }
@@ -351,7 +377,7 @@ public:
 
     inline bool mayInterceptIndexedAccesses() const;
 
-    bool holesMustForwardToPrototype(JSObject*) const;
+    inline bool holesMustForwardToPrototype(JSObject*) const;
 
     JSGlobalObject* globalObject() const { return m_globalObject.get(); }
 
@@ -572,6 +598,8 @@ public:
     PropertyOffset get(VM&, PropertyName);
     PropertyOffset get(VM&, PropertyName, unsigned& attributes);
 
+    bool canPerformFastPropertyEnumeration() const;
+
     // This is a somewhat internalish method. It will call your functor while possibly holding the
     // Structure's lock. There is no guarantee whether the lock is held or not in any particular
     // call. So, you have to assume the worst. Also, the functor returns true if it wishes for you
@@ -613,21 +641,14 @@ public:
 
     Vector<PropertyTableEntry> getPropertiesConcurrently();
 
-    void setHasGetterSetterPropertiesWithProtoCheck(bool is__proto__)
+    void setHasAnyKindOfGetterSetterPropertiesWithProtoCheck(bool is__proto__)
     {
-        setHasGetterSetterProperties(true);
+        setHasAnyKindOfGetterSetterProperties(true);
         if (!is__proto__)
             setHasReadOnlyOrGetterSetterPropertiesExcludingProto(true);
     }
 
     void setContainsReadOnlyProperties() { setHasReadOnlyOrGetterSetterPropertiesExcludingProto(true); }
-
-    void setHasCustomGetterSetterPropertiesWithProtoCheck(bool is__proto__)
-    {
-        setHasCustomGetterSetterProperties(true);
-        if (!is__proto__)
-            setHasReadOnlyOrGetterSetterPropertiesExcludingProto(true);
-    }
 
     void setCachedPropertyNameEnumerator(VM&, JSPropertyNameEnumerator*, StructureChain*);
     JSPropertyNameEnumerator* cachedPropertyNameEnumerator() const;
@@ -690,6 +711,16 @@ public:
         return OBJECT_OFFSETOF(Structure, m_previousOrRareData);
     }
 
+    static ptrdiff_t bitFieldOffset()
+    {
+        return OBJECT_OFFSETOF(Structure, m_bitField);
+    }
+
+    static ptrdiff_t propertyHashOffset()
+    {
+        return OBJECT_OFFSETOF(Structure, m_propertyHash);
+    }
+
     static Structure* createStructure(VM&);
 
     bool transitionWatchpointSetHasBeenInvalidated() const
@@ -742,9 +773,6 @@ public:
     void didTransitionFromThisStructureWithoutFiringWatchpoint() const;
     void fireStructureTransitionWatchpoint(DeferredStructureTransitionWatchpointFire*) const;
 
-    // This function does the both didTransitionFromThisStructureWithoutFiringWatchpoint and fireStructureTransitionWatchpoint.
-    void didTransitionFromThisStructure(DeferredStructureTransitionWatchpointFire* = nullptr) const;
-
     InlineWatchpointSet& transitionWatchpointSet() const
     {
         return m_transitionWatchpointSet;
@@ -757,6 +785,8 @@ public:
     }
     void startWatchingPropertyForReplacements(VM&, PropertyName);
     WatchpointSet* propertyReplacementWatchpointSet(PropertyOffset);
+    WatchpointSet* firePropertyReplacementWatchpointSet(VM&, PropertyOffset, const char* reason);
+
     void didReplaceProperty(PropertyOffset);
     void didCachePropertyReplacement(VM&, PropertyOffset);
 
@@ -792,6 +822,8 @@ public:
     DECLARE_EXPORT_INFO;
 
 private:
+    JS_EXPORT_PRIVATE void didReplacePropertySlow(PropertyOffset);
+
     typedef enum {
         NoneDictionaryKind = 0,
         CachedDictionaryKind = 1,
@@ -802,6 +834,7 @@ public:
 #define DEFINE_BITFIELD(type, lowerName, upperName, width, offset) \
     static constexpr uint32_t s_##lowerName##Shift = offset;\
     static constexpr uint32_t s_##lowerName##Mask = ((1 << (width - 1)) | ((1 << (width - 1)) - 1));\
+    static constexpr uint32_t s_##lowerName##Bits = s_##lowerName##Mask << s_##lowerName##Shift;\
     static constexpr uint32_t s_bitWidthOf##upperName = width;\
     type lowerName() const { return static_cast<type>((m_bitField >> offset) & s_##lowerName##Mask); }\
     void set##upperName(type newValue) \
@@ -812,25 +845,50 @@ public:
 
     DEFINE_BITFIELD(DictionaryKind, dictionaryKind, DictionaryKind, 2, 0);
     DEFINE_BITFIELD(bool, isPinnedPropertyTable, IsPinnedPropertyTable, 1, 2);
-    DEFINE_BITFIELD(bool, hasGetterSetterProperties, HasGetterSetterProperties, 1, 3);
+    DEFINE_BITFIELD(bool, hasAnyKindOfGetterSetterProperties, HasAnyKindOfGetterSetterProperties, 1, 3);
     DEFINE_BITFIELD(bool, hasReadOnlyOrGetterSetterPropertiesExcludingProto, HasReadOnlyOrGetterSetterPropertiesExcludingProto, 1, 4);
     DEFINE_BITFIELD(bool, isQuickPropertyAccessAllowedForEnumeration, IsQuickPropertyAccessAllowedForEnumeration, 1, 5);
-    DEFINE_BITFIELD(TransitionPropertyAttributes, transitionPropertyAttributes, TransitionPropertyAttributes, 8, 6);
-    DEFINE_BITFIELD(TransitionKind, transitionKind, TransitionKind, 6, 14);
+    DEFINE_BITFIELD(TransitionPropertyAttributes, transitionPropertyAttributes, TransitionPropertyAttributes, 7, 6);
+    DEFINE_BITFIELD(TransitionKind, transitionKind, TransitionKind, 5, 13);
+    DEFINE_BITFIELD(bool, isWatchingReplacement, IsWatchingReplacement, 1, 18); // This flag can be fliped on the main thread at any timing.
+    DEFINE_BITFIELD(bool, mayBePrototype, MayBePrototype, 1, 19);
     DEFINE_BITFIELD(bool, didPreventExtensions, DidPreventExtensions, 1, 20);
     DEFINE_BITFIELD(bool, didTransition, DidTransition, 1, 21);
     DEFINE_BITFIELD(bool, staticPropertiesReified, StaticPropertiesReified, 1, 22);
     DEFINE_BITFIELD(bool, hasBeenFlattenedBefore, HasBeenFlattenedBefore, 1, 23);
-    DEFINE_BITFIELD(bool, hasCustomGetterSetterProperties, HasCustomGetterSetterProperties, 1, 24);
+    DEFINE_BITFIELD(bool, isBrandedStructure, IsBrandedStructure, 1, 24);
     DEFINE_BITFIELD(bool, didWatchInternalProperties, DidWatchInternalProperties, 1, 25);
     DEFINE_BITFIELD(bool, transitionWatchpointIsLikelyToBeFired, TransitionWatchpointIsLikelyToBeFired, 1, 26);
     DEFINE_BITFIELD(bool, hasBeenDictionary, HasBeenDictionary, 1, 27);
     DEFINE_BITFIELD(bool, protectPropertyTableWhileTransitioning, ProtectPropertyTableWhileTransitioning, 1, 28);
     DEFINE_BITFIELD(bool, hasUnderscoreProtoPropertyExcludingOriginalProto, HasUnderscoreProtoPropertyExcludingOriginalProto, 1, 29);
-    DEFINE_BITFIELD(bool, isBrandedStructure, IsBrandedStructure, 1, 30);
+    DEFINE_BITFIELD(bool, hasNonConfigurableProperties, HasNonConfigurableProperties, 1, 30);
+    DEFINE_BITFIELD(bool, hasNonConfigurableReadOnlyOrGetterSetterProperties, HasNonConfigurableReadOnlyOrGetterSetterProperties, 1, 31);
 
     static_assert(s_bitWidthOfTransitionPropertyAttributes <= sizeof(TransitionPropertyAttributes) * 8);
     static_assert(s_bitWidthOfTransitionKind <= sizeof(TransitionKind) * 8);
+
+    static bool bitFieldFlagsCantBeChangedWithoutTransition(unsigned flags)
+    {
+        return flags == (flags & (
+            s_didPreventExtensionsBits
+            | s_isQuickPropertyAccessAllowedForEnumerationBits
+            | s_hasAnyKindOfGetterSetterPropertiesBits
+            | s_hasReadOnlyOrGetterSetterPropertiesExcludingProtoBits
+            | s_hasUnderscoreProtoPropertyExcludingOriginalProtoBits
+            | s_hasNonConfigurablePropertiesBits
+            | s_hasNonConfigurableReadOnlyOrGetterSetterPropertiesBits
+        ));
+    }
+
+    int transitionCountEstimate() const
+    {
+        // Since the number of transitions is often the same as the last offset (except if there are deletes)
+        // we keep the size of Structure down by not storing both.
+        return numberOfSlotsForMaxOffset(maxOffset(), m_inlineCapacity);
+    }
+
+    void finalizeUnconditionally(VM&, CollectionScope);
 
 protected:
     Structure(VM&, Structure*);
@@ -841,11 +899,16 @@ private:
     JS_EXPORT_PRIVATE Structure(VM&, JSGlobalObject*, JSValue prototype, const TypeInfo&, const ClassInfo*, IndexingType, unsigned inlineCapacity);
     Structure(VM&, CreatingEarlyCellTag);
 
-    static Structure* create(VM&, Structure*, DeferredStructureTransitionWatchpointFire* = nullptr);
+    static Structure* create(VM&, Structure*, DeferredStructureTransitionWatchpointFire*);
 
     static Structure* addPropertyTransitionToExistingStructureImpl(Structure*, UniquedStringImpl* uid, unsigned attributes, PropertyOffset&);
     static Structure* removePropertyTransitionFromExistingStructureImpl(Structure*, PropertyName, unsigned attributes, PropertyOffset&);
     static Structure* setBrandTransitionFromExistingStructureImpl(Structure*, UniquedStringImpl*);
+
+    JS_EXPORT_PRIVATE static Structure* nonPropertyTransitionSlow(VM&, Structure*, TransitionKind, DeferredStructureTransitionWatchpointFire*);
+
+    // This function does the both didTransitionFromThisStructureWithoutFiringWatchpoint and fireStructureTransitionWatchpoint.
+    void didTransitionFromThisStructure(DeferredStructureTransitionWatchpointFire*) const;
 
     // This will return the structure that has a usable property table, that property table,
     // and the list of structures that we visited before we got to it. If it returns a
@@ -855,7 +918,7 @@ private:
 
     static Structure* toDictionaryTransition(VM&, Structure*, DictionaryKind, DeferredStructureTransitionWatchpointFire* = nullptr);
 
-    enum class ShouldPin { No, Yes };
+    enum class ShouldPin : bool { No, Yes };
     template<ShouldPin, typename Func>
     PropertyOffset add(VM&, PropertyName, unsigned attributes, const Func&);
     PropertyOffset add(VM&, PropertyName, unsigned attributes);
@@ -866,7 +929,11 @@ private:
     PropertyOffset attributeChange(VM&, PropertyName, unsigned attributes, const Func&);
     PropertyOffset attributeChange(VM&, PropertyName, unsigned attributes);
 
+#if ASSERT_ENABLED
     void checkConsistency();
+#else
+    ALWAYS_INLINE void checkConsistency() { }
+#endif
 
     // This may grab the lock, or not. Do not call when holding the Structure's lock.
     PropertyTable* ensurePropertyTableIfNotEmpty(VM& vm)
@@ -909,13 +976,6 @@ private:
             m_previousOrRareData.clear();
     }
 
-    int transitionCountEstimate() const
-    {
-        // Since the number of transitions is often the same as the last offset (except if there are deletes)
-        // we keep the size of Structure down by not storing both.
-        return numberOfSlotsForMaxOffset(maxOffset(), m_inlineCapacity);
-    }
-
     ALWAYS_INLINE bool transitionCountHasOverflowed() const
     {
         int transitionCount = 0;
@@ -930,7 +990,8 @@ private:
     bool isValid(JSGlobalObject*, StructureChain* cachedPrototypeChain, JSObject* base) const;
 
     // You have to hold the structure lock to do these.
-    JS_EXPORT_PRIVATE void pin(const AbstractLocker&, VM&, PropertyTable*);
+    // Keep them inlined function since they are used in the critical path of Dictionary JSObject modification.
+    void pin(const AbstractLocker&, VM&, PropertyTable*);
     void pinForCaching(const AbstractLocker&, VM&, PropertyTable*);
 
     static bool isRareData(JSCell* cell)
@@ -948,8 +1009,7 @@ private:
 
     void clearCachedPrototypeChain();
 
-    static constexpr int s_maxTransitionLength = 64;
-    static constexpr int s_maxTransitionLengthForNonEvalPutById = 512;
+    bool holesMustForwardToPrototypeSlow(JSObject*) const;
 
     // These need to be properly aligned at the beginning of the 'Structure'
     // part of the object.

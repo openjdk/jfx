@@ -38,11 +38,7 @@ public:
     TextEncoding() = default;
     PAL_EXPORT TextEncoding(const char* name);
     PAL_EXPORT TextEncoding(StringView name);
-
-    TextEncoding(const String& name)
-        : TextEncoding(StringView { name })
-    {
-    }
+    PAL_EXPORT TextEncoding(const String& name);
 
     bool isValid() const { return m_name; }
     const char* name() const { return m_name; }
@@ -71,7 +67,6 @@ private:
 };
 
 inline bool operator==(const TextEncoding& a, const TextEncoding& b) { return a.name() == b.name(); }
-inline bool operator!=(const TextEncoding& a, const TextEncoding& b) { return a.name() != b.name(); }
 
 const TextEncoding& ASCIIEncoding();
 const TextEncoding& Latin1Encoding();

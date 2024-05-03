@@ -39,14 +39,17 @@ class HTMLLinkElement;
 class Page;
 struct MediaQueryParserContext;
 
-template<typename T> class EventSender;
-using LinkEventSender = EventSender<HTMLLinkElement>;
+enum class RequestPriority : uint8_t;
+
+template<typename T, typename Counter> class EventSender;
+using LinkEventSender = EventSender<HTMLLinkElement, WeakPtrImplWithEventTargetData>;
 
 class HTMLLinkElement final : public HTMLElement, public CachedStyleSheetClient, public LinkLoaderClient {
     WTF_MAKE_ISO_ALLOCATED(HTMLLinkElement);
 public:
-    using WeakValueType = HTMLElement::WeakValueType;
     using HTMLElement::weakPtrFactory;
+    using HTMLElement::WeakValueType;
+    using HTMLElement::WeakPtrImplType;
 
     static Ref<HTMLLinkElement> create(const QualifiedName&, Document&, bool createdByParser);
     virtual ~HTMLLinkElement();
@@ -68,14 +71,14 @@ public:
     bool isEnabledViaScript() const { return m_disabledState == EnabledViaScript; }
     DOMTokenList& sizes();
 
-    bool mediaAttributeMatches() const;
+    WEBCORE_EXPORT bool mediaAttributeMatches() const;
 
     WEBCORE_EXPORT void setCrossOrigin(const AtomString&);
     WEBCORE_EXPORT String crossOrigin() const;
     WEBCORE_EXPORT void setAs(const AtomString&);
     WEBCORE_EXPORT String as() const;
 
-    void dispatchPendingEvent(LinkEventSender*);
+    void dispatchPendingEvent(LinkEventSender*, const AtomString& eventType);
     static void dispatchPendingLoadEvents(Page*);
 
     WEBCORE_EXPORT DOMTokenList& relList();
@@ -90,8 +93,12 @@ public:
     String referrerPolicyForBindings() const;
     ReferrerPolicy referrerPolicy() const;
 
+    void setFetchPriorityForBindings(const AtomString&);
+    String fetchPriorityForBindings() const;
+    RequestPriority fetchPriorityHint() const;
+
 private:
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
 
     bool shouldLoadLink() final;
     void process();

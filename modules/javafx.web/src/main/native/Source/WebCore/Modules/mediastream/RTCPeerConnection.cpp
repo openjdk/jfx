@@ -39,11 +39,11 @@
 #include "Document.h"
 #include "Event.h"
 #include "EventNames.h"
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSRTCPeerConnection.h"
 #include "JSRTCSessionDescriptionInit.h"
+#include "LocalFrame.h"
 #include "Logging.h"
 #include "MediaEndpointConfiguration.h"
 #include "MediaStream.h"
@@ -66,11 +66,14 @@
 #include "RTCSessionDescription.h"
 #include "RTCSessionDescriptionInit.h"
 #include "Settings.h"
-#include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/MainThread.h>
 #include <wtf/UUID.h>
 #include <wtf/text/Base64.h>
+
+#if USE(LIBWEBRTC)
+#include "LibWebRTCProvider.h"
+#endif
 
 namespace WebCore {
 
@@ -97,8 +100,12 @@ ExceptionOr<Ref<RTCPeerConnection>> RTCPeerConnection::create(Document& document
         if (auto* page = document.page()) {
             peerConnection->registerToController(page->rtcController());
 #if USE(LIBWEBRTC) && (!LOG_DISABLED || !RELEASE_LOG_DISABLED)
-            if (!page->sessionID().isEphemeral())
-                page->webRTCProvider().setLoggingLevel(LogWebRTC.level);
+            if (!page->sessionID().isEphemeral()) {
+                WTFLogLevel level = LogWebRTC.level;
+                if (level != WTFLogLevel::Debug && document.settings().webRTCMediaPipelineAdditionalLoggingEnabled())
+                    level = WTFLogLevel::Info;
+                page->webRTCProvider().setLoggingLevel(level);
+            }
 #endif
         }
     }
@@ -109,7 +116,7 @@ RTCPeerConnection::RTCPeerConnection(Document& document)
     : ActiveDOMObject(document)
 #if !RELEASE_LOG_DISABLED
     , m_logger(document.logger())
-    , m_logIdentifier(reinterpret_cast<const void*>(cryptographicallyRandomNumber()))
+    , m_logIdentifier(LoggerHelper::uniqueLogIdentifier())
 #endif
     , m_backend(PeerConnectionBackend::create(*this))
 {
@@ -426,7 +433,7 @@ ExceptionOr<Vector<MediaEndpointConfiguration::IceServerInfo>> RTCPeerConnection
                             return Exception { TypeError, "TURN/TURNS username and/or credential are too long"_s };
                     }
                 } else if (!serverURL.protocolIs("stun"_s))
-                    return Exception { NotSupportedError, "ICE server protocol not supported"_s };
+                    return Exception { SyntaxError, "ICE server protocol not supported"_s };
             }
             if (serverURLs.size())
                 servers.uncheckedAppend({ WTFMove(serverURLs), server.credential, server.username });
@@ -555,9 +562,9 @@ ExceptionOr<Ref<RTCDataChannel>> RTCPeerConnection::createDataChannel(String&& l
     // FIXME: Provide better error reporting.
     auto channelHandler = m_backend->createDataChannelHandler(label, options);
     if (!channelHandler)
-        return Exception { NotSupportedError };
+        return Exception { OperationError };
 
-    return RTCDataChannel::create(*document(), WTFMove(channelHandler), WTFMove(label), WTFMove(options));
+    return RTCDataChannel::create(*document(), WTFMove(channelHandler), WTFMove(label), WTFMove(options), RTCDataChannelState::Connecting);
 }
 
 bool RTCPeerConnection::doClose()

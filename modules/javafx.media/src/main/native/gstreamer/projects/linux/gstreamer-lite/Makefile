@@ -18,7 +18,7 @@ DIRLIST = gstreamer/gst \
           gst-plugins-base/gst-libs/gst/tag \
           gst-plugins-base/gst-libs/gst/riff \
           gst-plugins-base/gst-libs/gst/app \
-	  projects/plugins \
+          projects/plugins \
           gstreamer/plugins/elements \
           gst-plugins-base/gst-libs/gst/fft \
           gst-plugins-base/gst-libs/gst/pbutils \
@@ -64,7 +64,7 @@ else
 endif
 
 INCLUDES = -I$(BASE_DIR)/plugins                          \
-	   -I$(SRCBASE_DIR)/projects/build/linux/common   \
+           -I$(SRCBASE_DIR)/projects/build/linux/common   \
            -I$(SRCBASE_DIR)/gstreamer                     \
            -I$(SRCBASE_DIR)/gstreamer/libs                \
            -I$(SRCBASE_DIR)/gstreamer/gst/parse           \

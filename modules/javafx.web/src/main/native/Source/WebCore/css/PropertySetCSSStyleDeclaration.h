@@ -28,6 +28,7 @@
 #include "CSSParserContext.h"
 #include "CSSStyleDeclaration.h"
 #include "DeprecatedCSSOMValue.h"
+#include "StyledElement.h"
 #include <memory>
 #include <wtf/HashMap.h>
 #include <wtf/RefPtr.h>
@@ -49,8 +50,6 @@ public:
         : m_propertySet(&propertySet)
     { }
 
-    virtual void clearParentElement() { ASSERT_NOT_REACHED(); }
-
     StyleSheetContents* contextStyleSheet() const;
 
 protected:
@@ -66,6 +65,8 @@ private:
     void deref() override;
 
     CSSRule* parentRule() const override { return nullptr; }
+    // FIXME: To implement.
+    CSSRule* cssRules() const override { return nullptr; }
     unsigned length() const final;
     String item(unsigned index) const final;
     RefPtr<DeprecatedCSSOMValue> getPropertyCSSValue(const String& propertyName) final;
@@ -77,12 +78,11 @@ private:
     ExceptionOr<String> removeProperty(const String& propertyName) final;
     String cssText() const final;
     ExceptionOr<void> setCssText(const String&) final;
-    RefPtr<CSSValue> getPropertyCSSValueInternal(CSSPropertyID) final;
     String getPropertyValueInternal(CSSPropertyID) final;
     ExceptionOr<void> setPropertyInternal(CSSPropertyID, const String& value, bool important) final;
 
     Ref<MutableStyleProperties> copyProperties() const final;
-    bool isCSSPropertyExposed(CSSPropertyID) const;
+    bool isExposed(CSSPropertyID) const;
 
     RefPtr<DeprecatedCSSOMValue> wrapForDeprecatedCSSOM(CSSValue*);
 
@@ -90,7 +90,7 @@ private:
     virtual void didMutate(MutationType) { }
 };
 
-class StyleRuleCSSStyleDeclaration final : public PropertySetCSSStyleDeclaration {
+class StyleRuleCSSStyleDeclaration final : public PropertySetCSSStyleDeclaration, public RefCounted<StyleRuleCSSStyleDeclaration> {
     WTF_MAKE_ISO_ALLOCATED(StyleRuleCSSStyleDeclaration);
 public:
     static Ref<StyleRuleCSSStyleDeclaration> create(MutableStyleProperties& propertySet, CSSRule& parentRule)
@@ -101,8 +101,8 @@ public:
 
     void clearParentRule() { m_parentRule = nullptr; }
 
-    void ref() final;
-    void deref() final;
+    void ref() final { RefCounted::ref(); }
+    void deref() final { RefCounted::deref(); }
 
     void reattach(MutableStyleProperties&);
 
@@ -117,7 +117,6 @@ private:
     void didMutate(MutationType) final;
     CSSParserContext cssParserContext() const final;
 
-    unsigned m_refCount;
     StyleRuleType m_parentRuleType;
     CSSRule* m_parentRule;
 };
@@ -127,20 +126,19 @@ class InlineCSSStyleDeclaration final : public PropertySetCSSStyleDeclaration {
 public:
     InlineCSSStyleDeclaration(MutableStyleProperties& propertySet, StyledElement& parentElement)
         : PropertySetCSSStyleDeclaration(propertySet)
-        , m_parentElement(&parentElement)
+        , m_parentElement(parentElement)
     {
     }
 
 private:
     CSSStyleSheet* parentStyleSheet() const final;
-    StyledElement* parentElement() const final { return m_parentElement; }
-    void clearParentElement() final { m_parentElement = nullptr; }
+    StyledElement* parentElement() const final { return m_parentElement.get(); }
 
     bool willMutate() final WARN_UNUSED_RETURN;
     void didMutate(MutationType) final;
     CSSParserContext cssParserContext() const final;
 
-    StyledElement* m_parentElement;
+    WeakPtr<StyledElement, WeakPtrImplWithEventTargetData> m_parentElement;
 };
 
 } // namespace WebCore

@@ -12,10 +12,12 @@
 
 #include "unicode/reldatefmt.h"
 
-#if !UCONFIG_NO_FORMATTING && !UCONFIG_NO_BREAK_ITERATION
+#if !UCONFIG_NO_FORMATTING
 
 #include <cmath>
 #include <functional>
+#include "unicode/calendar.h"
+#include "unicode/datefmt.h"
 #include "unicode/dtfmtsym.h"
 #include "unicode/ucasemap.h"
 #include "unicode/ureldatefmt.h"
@@ -184,35 +186,19 @@ const UnicodeString& RelativeDateTimeCacheData::getAbsoluteUnitString(
     return nullptr;  // No formatter found.
  }
 
-static UBool getStringWithFallback(
-        const UResourceBundle *resource,
-        const char *key,
-        UnicodeString &result,
-        UErrorCode &status) {
-    int32_t len = 0;
-    const UChar *resStr = ures_getStringByKeyWithFallback(
-        resource, key, &len, &status);
-    if (U_FAILURE(status)) {
-        return FALSE;
-    }
-    result.setTo(TRUE, resStr, len);
-    return TRUE;
-}
-
-
 static UBool getStringByIndex(
         const UResourceBundle *resource,
         int32_t idx,
         UnicodeString &result,
         UErrorCode &status) {
     int32_t len = 0;
-    const UChar *resStr = ures_getStringByIndex(
+    const char16_t *resStr = ures_getStringByIndex(
             resource, idx, &len, &status);
     if (U_FAILURE(status)) {
-        return FALSE;
+        return false;
     }
-    result.setTo(TRUE, resStr, len);
-    return TRUE;
+    result.setTo(true, resStr, len);
+    return true;
 }
 
 namespace {
@@ -386,8 +372,8 @@ struct RelDateTimeFmtDataSink : public ResourceSink {
 
     // Utility functions
     static UDateRelativeDateTimeFormatterStyle styleFromAliasUnicodeString(UnicodeString s) {
-        static const UChar narrow[7] = {0x002D, 0x006E, 0x0061, 0x0072, 0x0072, 0x006F, 0x0077};
-        static const UChar sshort[6] = {0x002D, 0x0073, 0x0068, 0x006F, 0x0072, 0x0074,};
+        static const char16_t narrow[7] = {0x002D, 0x006E, 0x0061, 0x0072, 0x0072, 0x006F, 0x0077};
+        static const char16_t sshort[6] = {0x002D, 0x0073, 0x0068, 0x006F, 0x0072, 0x0074,};
         if (s.endsWith(narrow, 7)) {
             return UDAT_STYLE_NARROW;
         }
@@ -661,39 +647,61 @@ static UBool loadUnitData(
     return U_SUCCESS(status);
 }
 
+static const int32_t cTypeBufMax = 32;
+
 static UBool getDateTimePattern(
+        Locale locale,
         const UResourceBundle *resource,
         UnicodeString &result,
         UErrorCode &status) {
-    UnicodeString defaultCalendarName;
-    if (!getStringWithFallback(
-            resource,
-            "calendar/default",
-            defaultCalendarName,
-            status)) {
-        return FALSE;
+    if (U_FAILURE(status)) {
+        return false;
     }
+    char cType[cTypeBufMax + 1];
+    Calendar::getCalendarTypeFromLocale(locale, cType, cTypeBufMax, status);
+    cType[cTypeBufMax] = 0;
+    if (U_FAILURE(status) || cType[0] == 0) {
+        status = U_ZERO_ERROR;
+        uprv_strcpy(cType, "gregorian");
+    }
+
+    LocalUResourceBundlePointer topLevel;
+    int32_t dateTimeFormatOffset = DateFormat::kMedium;
     CharString pathBuffer;
+    // Currently, for compatibility with pre-CLDR-42 data, we default to the "atTime"
+    // combining patterns. Depending on guidance in CLDR 42 spec and on DisplayOptions,
+    // we may change this.
     pathBuffer.append("calendar/", status)
-            .appendInvariantChars(defaultCalendarName, status)
-            .append("/DateTimePatterns", status);
-    LocalUResourceBundlePointer topLevel(
+            .append(cType, status)
+            .append("/DateTimePatterns%atTime", status);
+    topLevel.adoptInstead(
             ures_getByKeyWithFallback(
                     resource, pathBuffer.data(), nullptr, &status));
-    if (U_FAILURE(status)) {
-        return FALSE;
+    if (U_FAILURE(status) ||  ures_getSize(topLevel.getAlias()) < 4) {
+        // Fall back to standard combining patterns
+        status = U_ZERO_ERROR;
+        dateTimeFormatOffset = DateFormat::kDateTime;
+        pathBuffer.clear();
+        pathBuffer.append("calendar/", status)
+                .append(cType, status)
+                .append("/DateTimePatterns", status);
+        topLevel.adoptInstead(
+                ures_getByKeyWithFallback(
+                        resource, pathBuffer.data(), nullptr, &status));
     }
-    int32_t size = ures_getSize(topLevel.getAlias());
-    if (size <= 8) {
+    if (U_FAILURE(status)) {
+        return false;
+    }
+    if (dateTimeFormatOffset == DateFormat::kDateTime && ures_getSize(topLevel.getAlias()) <= DateFormat::kDateTime) {
         // Oops, size is too small to access the index that we want, fallback
         // to a hard-coded value.
         result = UNICODE_STRING_SIMPLE("{1} {0}");
-        return TRUE;
+        return true;
     }
-    return getStringByIndex(topLevel.getAlias(), 8, result, status);
+    return getStringByIndex(topLevel.getAlias(), dateTimeFormatOffset, result, status);
 }
 
-template<> U_I18N_API
+template<>
 const RelativeDateTimeCacheData *LocaleCacheKey<RelativeDateTimeCacheData>::createObject(const void * /*unused*/, UErrorCode &status) const {
     const char *localeId = fLoc.getName();
     LocalUResourceBundlePointer topLevel(ures_open(nullptr, localeId, &status));
@@ -714,7 +722,7 @@ const RelativeDateTimeCacheData *LocaleCacheKey<RelativeDateTimeCacheData>::crea
         return nullptr;
     }
     UnicodeString dateTimePattern;
-    if (!getDateTimePattern(topLevel.getAlias(), dateTimePattern, status)) {
+    if (!getDateTimePattern(fLoc, topLevel.getAlias(), dateTimePattern, status)) {
         return nullptr;
     }
     result->adoptCombinedDateAndTime(
@@ -753,6 +761,7 @@ RelativeDateTimeFormatter::RelativeDateTimeFormatter(UErrorCode& status) :
         fStyle(UDAT_STYLE_LONG),
         fContext(UDISPCTX_CAPITALIZATION_NONE),
         fOptBreakIterator(nullptr) {
+    (void)fOptBreakIterator; // suppress unused field warning
     init(nullptr, nullptr, status);
 }
 
@@ -796,16 +805,25 @@ RelativeDateTimeFormatter::RelativeDateTimeFormatter(
     if (U_FAILURE(status)) {
         return;
     }
+    if (styl < 0 || UDAT_STYLE_COUNT <= styl) {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
+        return;
+    }
     if ((capitalizationContext >> 8) != UDISPCTX_TYPE_CAPITALIZATION) {
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return;
     }
     if (capitalizationContext == UDISPCTX_CAPITALIZATION_FOR_BEGINNING_OF_SENTENCE) {
+#if !UCONFIG_NO_BREAK_ITERATION
         BreakIterator *bi = BreakIterator::createSentenceInstance(locale, status);
         if (U_FAILURE(status)) {
             return;
         }
         init(nfToAdopt, bi, status);
+#else
+        status = U_UNSUPPORTED_ERROR;
+        return;
+#endif // !UCONFIG_NO_BREAK_ITERATION
     } else {
         init(nfToAdopt, nullptr, status);
     }
@@ -824,9 +842,11 @@ RelativeDateTimeFormatter::RelativeDateTimeFormatter(
     fCache->addRef();
     fNumberFormat->addRef();
     fPluralRules->addRef();
+#if !UCONFIG_NO_BREAK_ITERATION
     if (fOptBreakIterator != nullptr) {
       fOptBreakIterator->addRef();
     }
+#endif // !UCONFIG_NO_BREAK_ITERATION
 }
 
 RelativeDateTimeFormatter& RelativeDateTimeFormatter::operator=(
@@ -835,7 +855,9 @@ RelativeDateTimeFormatter& RelativeDateTimeFormatter::operator=(
         SharedObject::copyPtr(other.fCache, fCache);
         SharedObject::copyPtr(other.fNumberFormat, fNumberFormat);
         SharedObject::copyPtr(other.fPluralRules, fPluralRules);
+#if !UCONFIG_NO_BREAK_ITERATION
         SharedObject::copyPtr(other.fOptBreakIterator, fOptBreakIterator);
+#endif // !UCONFIG_NO_BREAK_ITERATION
         fStyle = other.fStyle;
         fContext = other.fContext;
         fLocale = other.fLocale;
@@ -853,9 +875,11 @@ RelativeDateTimeFormatter::~RelativeDateTimeFormatter() {
     if (fPluralRules != nullptr) {
         fPluralRules->removeRef();
     }
+#if !UCONFIG_NO_BREAK_ITERATION
     if (fOptBreakIterator != nullptr) {
         fOptBreakIterator->removeRef();
     }
+#endif // !UCONFIG_NO_BREAK_ITERATION
 }
 
 const NumberFormat& RelativeDateTimeFormatter::getNumberFormat() const {
@@ -1007,6 +1031,10 @@ void RelativeDateTimeFormatter::formatNumericImpl(
     if (U_FAILURE(status)) {
         return;
     }
+    if (unit < 0 || UDAT_REL_UNIT_COUNT <= unit) {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
+        return;
+    }
     UDateDirection direction = UDAT_DIRECTION_NEXT;
     if (std::signbit(offset)) { // needed to handle -0.0
         direction = UDAT_DIRECTION_LAST;
@@ -1075,7 +1103,9 @@ void RelativeDateTimeFormatter::formatAbsoluteImpl(
     if (U_FAILURE(status)) {
         return;
     }
-    if (unit == UDAT_ABSOLUTE_NOW && direction != UDAT_DIRECTION_PLAIN) {
+    if ((unit < 0 || UDAT_ABSOLUTE_UNIT_COUNT <= unit) ||
+        (direction < 0 || UDAT_DIRECTION_COUNT <= direction) ||
+        (unit == UDAT_ABSOLUTE_NOW && direction != UDAT_DIRECTION_PLAIN)) {
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return;
     }
@@ -1183,6 +1213,7 @@ UnicodeString& RelativeDateTimeFormatter::combineDateAndTime(
 }
 
 UnicodeString& RelativeDateTimeFormatter::adjustForContext(UnicodeString &str) const {
+#if !UCONFIG_NO_BREAK_ITERATION
     if (fOptBreakIterator == nullptr
         || str.length() == 0 || !u_islower(str.char32At(0))) {
         return str;
@@ -1196,25 +1227,36 @@ UnicodeString& RelativeDateTimeFormatter::adjustForContext(UnicodeString &str) c
             fOptBreakIterator->get(),
             fLocale,
             U_TITLECASE_NO_LOWERCASE | U_TITLECASE_NO_BREAK_ADJUSTMENT);
+#endif // !UCONFIG_NO_BREAK_ITERATION
     return str;
 }
 
 UBool RelativeDateTimeFormatter::checkNoAdjustForContext(UErrorCode& status) const {
+#if !UCONFIG_NO_BREAK_ITERATION
     // This is unsupported because it's hard to keep fields in sync with title
     // casing. The code could be written and tested if there is demand.
     if (fOptBreakIterator != nullptr) {
         status = U_UNSUPPORTED_ERROR;
-        return FALSE;
+        return false;
     }
-    return TRUE;
+#else
+    (void)status; // suppress unused argument warning
+#endif // !UCONFIG_NO_BREAK_ITERATION
+    return true;
 }
 
 void RelativeDateTimeFormatter::init(
         NumberFormat *nfToAdopt,
+#if !UCONFIG_NO_BREAK_ITERATION
         BreakIterator *biToAdopt,
+#else
+        std::nullptr_t,
+#endif // !UCONFIG_NO_BREAK_ITERATION
         UErrorCode &status) {
     LocalPointer<NumberFormat> nf(nfToAdopt);
+#if !UCONFIG_NO_BREAK_ITERATION
     LocalPointer<BreakIterator> bi(biToAdopt);
+#endif // !UCONFIG_NO_BREAK_ITERATION
     UnifiedCache::getByLocale(fLocale, fCache, status);
     if (U_FAILURE(status)) {
         return;
@@ -1243,6 +1285,7 @@ void RelativeDateTimeFormatter::init(
         nf.orphan();
         SharedObject::copyPtr(shared, fNumberFormat);
     }
+#if !UCONFIG_NO_BREAK_ITERATION
     if (bi.isNull()) {
         SharedObject::clearPtr(fOptBreakIterator);
     } else {
@@ -1254,6 +1297,7 @@ void RelativeDateTimeFormatter::init(
         bi.orphan();
         SharedObject::copyPtr(shared, fOptBreakIterator);
     }
+#endif // !UCONFIG_NO_BREAK_ITERATION
 }
 
 U_NAMESPACE_END
@@ -1302,7 +1346,7 @@ U_CAPI int32_t U_EXPORT2
 ureldatefmt_formatNumeric( const URelativeDateTimeFormatter* reldatefmt,
                     double                offset,
                     URelativeDateTimeUnit unit,
-                    UChar*                result,
+                    char16_t*                result,
                     int32_t               resultCapacity,
                     UErrorCode*           status)
 {
@@ -1345,7 +1389,7 @@ U_CAPI int32_t U_EXPORT2
 ureldatefmt_format( const URelativeDateTimeFormatter* reldatefmt,
                     double                offset,
                     URelativeDateTimeUnit unit,
-                    UChar*                result,
+                    char16_t*                result,
                     int32_t               resultCapacity,
                     UErrorCode*           status)
 {
@@ -1386,11 +1430,11 @@ ureldatefmt_formatToResult(
 
 U_CAPI int32_t U_EXPORT2
 ureldatefmt_combineDateAndTime( const URelativeDateTimeFormatter* reldatefmt,
-                    const UChar *     relativeDateString,
+                    const char16_t *     relativeDateString,
                     int32_t           relativeDateStringLen,
-                    const UChar *     timeString,
+                    const char16_t *     timeString,
                     int32_t           timeStringLen,
-                    UChar*            result,
+                    char16_t*            result,
                     int32_t           resultCapacity,
                     UErrorCode*       status )
 {

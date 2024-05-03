@@ -33,15 +33,15 @@
 #if ENABLE(VIDEO)
 
 #include "DOMTokenList.h"
-#include "ElementChildIterator.h"
+#include "ElementChildIteratorInlines.h"
 #include "EventHandler.h"
 #include "EventLoop.h"
 #include "EventNames.h"
-#include "Frame.h"
 #include "FullscreenManager.h"
 #include "GraphicsContext.h"
 #include "HTMLVideoElement.h"
 #include "ImageBuffer.h"
+#include "LocalFrame.h"
 #include "LocalizedStrings.h"
 #include "Logging.h"
 #include "PODInterval.h"
@@ -164,11 +164,15 @@ void MediaControlTextTrackContainerElement::updateDisplay()
         // following substeps:
         for (auto& interval : activeCues) {
             auto cue = interval.data();
-            cue->setFontSize(m_fontSize, m_videoDisplaySize.size(), m_fontSizeIsImportant);
+
+            if (cue->track()->isSpoken())
+                continue;
+
+            cue->setFontSize(m_fontSize, m_fontSizeIsImportant);
             if (is<VTTCue>(*cue))
                 processActiveVTTCue(downcast<VTTCue>(*cue));
             else {
-                auto displayBox = cue->getDisplayTree(m_videoDisplaySize.size(), m_fontSize);
+                auto displayBox = cue->getDisplayTree();
                 if (displayBox->hasChildNodes() && !contains(displayBox.get()))
                     appendChild(*displayBox);
             }
@@ -203,7 +207,7 @@ void MediaControlTextTrackContainerElement::updateTextTrackRepresentationImageIf
 void MediaControlTextTrackContainerElement::processActiveVTTCue(VTTCue& cue)
 {
     DEBUG_LOG(LOGIDENTIFIER, "adding and positioning cue: \"", cue.text(), "\", start=", cue.startTime(), ", end=", cue.endTime());
-    Ref<TextTrackCueBox> displayBox = *cue.getDisplayTree(m_videoDisplaySize.size(), m_fontSize);
+    Ref<TextTrackCueBox> displayBox = *cue.getDisplayTree();
 
     if (auto region = cue.track()->regions()->getRegionById(cue.regionId())) {
         // Let region be the WebVTT region whose region identifier
@@ -233,14 +237,17 @@ void MediaControlTextTrackContainerElement::updateActiveCuesFontSize()
     if (!m_mediaElement)
         return;
 
-    float smallestDimension = std::min(m_videoDisplaySize.size().height(), m_videoDisplaySize.size().width());
     float fontScale = document().page()->group().ensureCaptionPreferences().captionFontSizeScaleAndImportance(m_fontSizeIsImportant);
-    m_fontSize = lroundf(smallestDimension * fontScale);
+
+    // Caption fonts are defined as |size vh| units, so there's no need to
+    // scale by display size. Since |vh| is a decimal percentage, multiply
+    // the scale factor by 100 to achive the final font size.
+    m_fontSize = lroundf(100 * fontScale);
 
     for (auto& activeCue : m_mediaElement->currentlyActiveCues()) {
         RefPtr<TextTrackCue> cue = activeCue.data();
         if (cue->isRenderable())
-            cue->setFontSize(m_fontSize, m_videoDisplaySize.size(), m_fontSizeIsImportant);
+            cue->setFontSize(m_fontSize, m_fontSizeIsImportant);
     }
 }
 
@@ -294,7 +301,7 @@ void MediaControlTextTrackContainerElement::updateTextTrackRepresentationIfNeede
     if (!m_textTrackRepresentation) {
         ALWAYS_LOG(LOGIDENTIFIER);
 
-        m_textTrackRepresentation = TextTrackRepresentation::create(*this);
+        m_textTrackRepresentation = TextTrackRepresentation::create(*this, *m_mediaElement);
         if (document().page())
             m_textTrackRepresentation->setContentScale(document().page()->deviceScaleFactor());
         m_mediaElement->setTextTrackRepresentation(m_textTrackRepresentation.get());
@@ -398,7 +405,7 @@ RefPtr<Image> MediaControlTextTrackContainerElement::createTextTrackRepresentati
     if (!hasChildNodes())
         return nullptr;
 
-    RefPtr<Frame> frame = document().frame();
+    RefPtr frame = document().frame();
     if (!frame)
         return nullptr;
 

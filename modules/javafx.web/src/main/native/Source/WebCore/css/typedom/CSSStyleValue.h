@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include "CSSPropertyNames.h"
 #include "CSSValue.h"
 #include "ScriptWrappable.h"
@@ -44,6 +42,7 @@ enum class CSSStyleValueType : uint8_t {
     CSSStyleValue,
     CSSStyleImageValue,
     CSSTransformValue,
+    CSSMathClamp,
     CSSMathInvert,
     CSSMathMin,
     CSSMathMax,
@@ -58,6 +57,7 @@ enum class CSSStyleValueType : uint8_t {
 inline bool isCSSNumericValue(CSSStyleValueType type)
 {
     switch (type) {
+    case CSSStyleValueType::CSSMathClamp:
     case CSSStyleValueType::CSSMathInvert:
     case CSSStyleValueType::CSSMathMin:
     case CSSStyleValueType::CSSMathMax:
@@ -79,6 +79,7 @@ inline bool isCSSNumericValue(CSSStyleValueType type)
 inline bool isCSSMathValue(CSSStyleValueType type)
 {
     switch (type) {
+    case CSSStyleValueType::CSSMathClamp:
     case CSSStyleValueType::CSSMathInvert:
     case CSSStyleValueType::CSSMathMin:
     case CSSStyleValueType::CSSMathMax:
@@ -115,11 +116,14 @@ IGNORE_GCC_WARNINGS_END
 
     virtual CSSStyleValueType getType() const { return CSSStyleValueType::CSSStyleValue; }
 
-    static ExceptionOr<Ref<CSSStyleValue>> parse(const AtomString&, const String&);
-    static ExceptionOr<Vector<Ref<CSSStyleValue>>> parseAll(const AtomString&, const String&);
+    static ExceptionOr<Ref<CSSStyleValue>> parse(const Document&, const AtomString&, const String&);
+    static ExceptionOr<Vector<Ref<CSSStyleValue>>> parseAll(const Document&, const AtomString&, const String&);
 
     static Ref<CSSStyleValue> create(RefPtr<CSSValue>&&, String&& = String());
     static Ref<CSSStyleValue> create();
+
+    virtual RefPtr<CSSValue> toCSSValue() const { return m_propertyValue; }
+    virtual RefPtr<CSSValue> toCSSValueWithProperty(CSSPropertyID) const { return toCSSValue(); }
 
 protected:
     CSSStyleValue(RefPtr<CSSValue>&&, String&& = String());
@@ -130,5 +134,3 @@ protected:
 };
 
 } // namespace WebCore
-
-#endif

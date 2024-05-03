@@ -25,9 +25,8 @@
 
 #include "Chrome.h"
 #include "ChromeClient.h"
-#include "DeprecatedGlobalSettings.h"
 #include "Document.h"
-#include "ElementChildIterator.h"
+#include "ElementChildIteratorInlines.h"
 #include "HTMLMenuItemElement.h"
 #include "HTMLNames.h"
 #include "Page.h"
@@ -48,7 +47,7 @@ inline HTMLMenuElement::HTMLMenuElement(const QualifiedName& tagName, Document& 
 Node::InsertedIntoAncestorResult HTMLMenuElement::insertedIntoAncestor(InsertionType type, ContainerNode& ancestor)
 {
     auto result = HTMLElement::insertedIntoAncestor(type, ancestor);
-    if (type.connectedToDocument && DeprecatedGlobalSettings::menuItemElementEnabled() && m_isTouchBarMenu) {
+    if (type.connectedToDocument && document().settings().menuItemElementEnabled() && m_isTouchBarMenu) {
         if (auto* page = document().page())
             page->chrome().client().didInsertMenuElement(*this);
     }
@@ -58,20 +57,20 @@ Node::InsertedIntoAncestorResult HTMLMenuElement::insertedIntoAncestor(Insertion
 void HTMLMenuElement::removedFromAncestor(RemovalType type, ContainerNode& ancestor)
 {
     HTMLElement::removedFromAncestor(type, ancestor);
-    if (type.disconnectedFromDocument && DeprecatedGlobalSettings::menuItemElementEnabled() && m_isTouchBarMenu) {
+    if (type.disconnectedFromDocument && document().settings().menuItemElementEnabled() && m_isTouchBarMenu) {
         if (auto* page = document().page())
             page->chrome().client().didRemoveMenuElement(*this);
     }
 }
 
-void HTMLMenuElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLMenuElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name != typeAttr || !DeprecatedGlobalSettings::menuItemElementEnabled()) {
-        HTMLElement::parseAttribute(name, value);
+    if (name != typeAttr || !document().settings().menuItemElementEnabled()) {
+        HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
         return;
     }
     bool wasTouchBarMenu = m_isTouchBarMenu;
-    m_isTouchBarMenu = equalLettersIgnoringASCIICase(value, "touchbar"_s);
+    m_isTouchBarMenu = equalLettersIgnoringASCIICase(newValue, "touchbar"_s);
     if (!wasTouchBarMenu && m_isTouchBarMenu) {
         if (auto* page = document().page()) {
             page->chrome().client().didInsertMenuElement(*this);

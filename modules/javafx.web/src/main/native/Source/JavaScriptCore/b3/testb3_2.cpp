@@ -26,7 +26,7 @@
 #include "config.h"
 #include "testb3.h"
 
-#if ENABLE(B3_JIT)
+#if ENABLE(B3_JIT) && !CPU(ARM)
 
 void test42()
 {
@@ -7133,7 +7133,7 @@ static void testBitOrImmArg32(int a, int b)
     CHECK(compileAndRun<int>(proc, b) == (a | b));
 }
 
-void addBitTests(const char* filter, Deque<RefPtr<SharedTask<void()>>>& tasks)
+void addBitTests(const TestConfig* config, Deque<RefPtr<SharedTask<void()>>>& tasks)
 {
     RUN(testUbfx32ShiftAnd());
     RUN(testUbfx32AndShift());

@@ -44,6 +44,7 @@ public:
     bool isMainProgramContent() const override;
     bool isEasyToRead() const override;
     void setMode(Mode) override;
+    bool isDefault() const override;
     size_t inbandTrackIndex();
 
     AtomString inBandMetadataTrackDispatchType() const override;
@@ -60,6 +61,8 @@ protected:
     void updateKindFromPrivate();
 
     Ref<InbandTextTrackPrivate> m_private;
+
+    MediaTime startTimeVariance() const override;
 
 private:
     bool isInband() const final { return true; }
@@ -83,8 +86,6 @@ private:
     void parseWebVTTFileHeader(String&&) override { ASSERT_NOT_REACHED(); }
     void parseWebVTTCueData(const uint8_t*, unsigned) override { ASSERT_NOT_REACHED(); }
     void parseWebVTTCueData(ISOWebVTTCue&&) override { ASSERT_NOT_REACHED(); }
-
-    MediaTime startTimeVariance() const override;
 };
 
 } // namespace WebCore

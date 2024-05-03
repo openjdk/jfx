@@ -37,7 +37,6 @@
 #include "CSSPropertyNames.h"
 #include "CSSPropertyParserHelpers.h"
 #include "CSSPropertyParserWorkerSafe.h"
-#include "DeprecatedGlobalSettings.h"
 #include "Gradient.h"
 #include "ImageBuffer.h"
 #include "ImageData.h"
@@ -57,6 +56,7 @@
 #include "StyleTreeResolver.h"
 #include "TextMetrics.h"
 #include "TextRun.h"
+#include "UnicodeBidi.h"
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/MathExtras.h>
@@ -99,7 +99,7 @@ void CanvasRenderingContext2D::drawFocusIfNeededInternal(const Path& path, Eleme
     auto* context = drawingContext();
     if (!element.focused() || !state().hasInvertibleTransform || path.isEmpty() || !element.isDescendantOf(canvas()) || !context)
         return;
-    context->drawFocusRing(path, 1, 1, RenderTheme::singleton().focusRingColor(element.document().styleColorOptions(canvas().computedStyle())));
+    context->drawFocusRing(path, 1, RenderTheme::singleton().focusRingColor(element.document().styleColorOptions(canvas().computedStyle())));
 }
 
 void CanvasRenderingContext2D::setFont(const String& newFont)
@@ -183,6 +183,7 @@ CanvasDirection CanvasRenderingContext2D::direction() const
 
 void CanvasRenderingContext2D::fillText(const String& text, double x, double y, std::optional<double> maxWidth)
 {
+    canvasBase().recordLastFillText(text);
     drawTextInternal(text, x, y, true, maxWidth);
 }
 
@@ -193,14 +194,14 @@ void CanvasRenderingContext2D::strokeText(const String& text, double x, double y
 
 Ref<TextMetrics> CanvasRenderingContext2D::measureText(const String& text)
 {
-    downcast<HTMLCanvasElement>(canvasBase()).document().updateStyleIfNeeded();
+    Ref document = canvas().document();
+    document->updateStyleIfNeeded();
 
     ScriptDisallowedScope::InMainThread scriptDisallowedScope;
 
-    if (DeprecatedGlobalSettings::webAPIStatisticsEnabled()) {
-        auto& canvas = this->canvas();
-        ResourceLoadObserver::shared().logCanvasWriteOrMeasure(canvas.document(), text);
-        ResourceLoadObserver::shared().logCanvasRead(canvas.document());
+    if (document->settings().webAPIStatisticsEnabled()) {
+        ResourceLoadObserver::shared().logCanvasWriteOrMeasure(document, text);
+        ResourceLoadObserver::shared().logCanvasRead(document);
     }
 
     String normalizedText = normalizeSpaces(text);
@@ -226,12 +227,13 @@ auto CanvasRenderingContext2D::fontProxy() -> const FontProxy*
 
 void CanvasRenderingContext2D::drawTextInternal(const String& text, double x, double y, bool fill, std::optional<double> maxWidth)
 {
-    downcast<HTMLCanvasElement>(canvasBase()).document().updateStyleIfNeeded();
+    Ref document = canvas().document();
+    document->updateStyleIfNeeded();
 
     ScriptDisallowedScope::InMainThread scriptDisallowedScope;
 
-    if (DeprecatedGlobalSettings::webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logCanvasWriteOrMeasure(this->canvas().document(), text);
+    if (document->settings().webAPIStatisticsEnabled())
+        ResourceLoadObserver::shared().logCanvasWriteOrMeasure(document, text);
 
     if (!canDrawText(x, y, fill, maxWidth))
         return;

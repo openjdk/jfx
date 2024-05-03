@@ -27,7 +27,6 @@
 
 #include "Token.h"
 #include <wtf/ASCIICType.h>
-#include <wtf/text/StringView.h>
 #include <wtf/text/WTFString.h>
 
 namespace WGSL {
@@ -48,6 +47,7 @@ public:
         }
 
         m_current = (m_code != m_codeEnd) ? *m_code : 0;
+        m_currentPosition = { 1, 0, 0 };
     }
 
     Token lex();
@@ -55,8 +55,8 @@ public:
     SourcePosition currentPosition() const { return m_currentPosition; }
 
 private:
-    unsigned currentOffset() const { return m_currentPosition.m_offset; }
-    unsigned currentTokenLength() const { return currentOffset() - m_tokenStartingPosition.m_offset; }
+    unsigned currentOffset() const { return m_currentPosition.offset; }
+    unsigned currentTokenLength() const { return currentOffset() - m_tokenStartingPosition.offset; }
 
     Token makeToken(TokenType type)
     {
@@ -66,14 +66,17 @@ private:
     {
         return { type, m_tokenStartingPosition, currentTokenLength(), literalValue };
     }
-    Token makeIdentifierToken(StringView view)
+    Token makeIdentifierToken(String&& identifier)
     {
-        return { WGSL::TokenType::Identifier, m_tokenStartingPosition, currentTokenLength(), view };
+        return { WGSL::TokenType::Identifier, m_tokenStartingPosition, currentTokenLength(), WTFMove(identifier) };
     }
 
-    void shift();
-    T peek(unsigned);
-    void skipWhitespace();
+    T shift(unsigned = 1);
+    T peek(unsigned = 0);
+    void newLine();
+    bool skipBlockComments();
+    void skipLineComment();
+    bool skipWhitespaceAndComments();
 
     // Reads [0-9]+
     std::optional<uint64_t> parseDecimalInteger();
@@ -82,8 +85,8 @@ private:
     // Checks whether there is an "i" or "u" coming, and return the right kind of literal token
     Token parseIntegerLiteralSuffix(double literalValue);
 
-    static bool isIdentifierStart(T character) { return isASCIIAlpha(character); }
-    static bool isValidIdentifierCharacter(T character) { return isASCIIAlphanumeric(character) || character == '_'; }
+    static bool isIdentifierStart(T character) { return isASCIIAlpha(character) || character == '_'; }
+    static bool isIdentifierContinue(T character) { return isASCIIAlphanumeric(character) || character == '_'; }
     static unsigned readDecimal(T character)
     {
         ASSERT(isASCIIDigit(character));

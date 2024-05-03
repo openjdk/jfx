@@ -113,7 +113,7 @@ function repeatCharactersSlowPath(string, count)
         operand += operand;
     }
     if (remainingCharacters)
-        result += @stringSubstringInternal.@call(string, 0, remainingCharacters);
+        result += @stringSubstring.@call(string, 0, remainingCharacters);
     return result;
 }
 
@@ -232,6 +232,10 @@ function hasObservableSideEffectsForStringReplace(regexp, replacer)
 
     var regexpUnicode = @tryGetById(regexp, "unicode");
     if (regexpUnicode !== @regExpProtoUnicodeGetter)
+        return true;
+
+    var regexpUnicodeSets = @tryGetById(regexp, "unicodeSets");
+    if (regexpUnicodeSets !== @regExpProtoUnicodeSetsGetter)
         return true;
 
     return typeof regexp.lastIndex !== "number";

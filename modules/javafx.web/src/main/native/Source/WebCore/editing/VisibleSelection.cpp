@@ -83,32 +83,28 @@ VisibleSelection::VisibleSelection(const SimpleRange& range, Affinity affinity, 
 VisibleSelection VisibleSelection::selectionFromContentsOfNode(Node* node)
 {
     ASSERT(!editingIgnoresContent(*node));
-    return VisibleSelection(firstPositionInNode(node), lastPositionInNode(node));
+    return VisibleSelection(VisiblePosition { firstPositionInNode(node) }, VisiblePosition { lastPositionInNode(node) });
 }
 
-Position VisibleSelection::anchor() const
-{
-    return m_anchor;
-}
-
-Position VisibleSelection::focus() const
-{
-    return m_focus;
-}
-
-Position VisibleSelection::uncanonicalizedStart() const
+const Position& VisibleSelection::uncanonicalizedStart() const
 {
     return m_anchorIsFirst ? m_anchor : m_focus;
 }
 
-Position VisibleSelection::uncanonicalizedEnd() const
+const Position& VisibleSelection::uncanonicalizedEnd() const
 {
     return m_anchorIsFirst ? m_focus : m_anchor;
 }
 
 std::optional<SimpleRange> VisibleSelection::range() const
 {
-    return makeSimpleRange(uncanonicalizedStart().parentAnchoredEquivalent(), uncanonicalizedEnd().parentAnchoredEquivalent());
+    auto start = uncanonicalizedStart();
+    auto end = uncanonicalizedEnd();
+    ASSERT(!start.document() || !end.document()
+        || start.document()->settings().liveRangeSelectionEnabled() == end.document()->settings().liveRangeSelectionEnabled());
+    if (start.document() && start.document()->settings().liveRangeSelectionEnabled())
+        return makeSimpleRange(start, end);
+    return makeSimpleRange(start.parentAnchoredEquivalent(), end.parentAnchoredEquivalent());
 }
 
 void VisibleSelection::setBase(const Position& position)
@@ -146,17 +142,20 @@ bool VisibleSelection::isOrphan() const
 
 RefPtr<Document> VisibleSelection::document() const
 {
-    RefPtr baseDocument { m_base.document() };
-    if (!baseDocument)
+    RefPtr document { m_base.document() };
+    if (!document) {
+        document = m_anchor.document();
+        if (!document || !document->settings().liveRangeSelectionEnabled())
+        return nullptr;
+    }
+
+    if (m_extent.document() != document.get() || m_start.document() != document.get() || m_end.document() != document.get())
         return nullptr;
 
-    if (m_extent.document() != baseDocument.get() || m_start.document() != baseDocument.get() || m_end.document() != baseDocument.get())
+    if (document->settings().liveRangeSelectionEnabled() && (m_anchor.document() != document.get() || m_focus.document() != document.get()))
         return nullptr;
 
-    if (baseDocument->settings().liveRangeSelectionEnabled() && (m_anchor.document() != baseDocument.get() || m_focus.document() != baseDocument.get()))
-        return nullptr;
-
-    return baseDocument;
+    return document;
 }
 
 std::optional<SimpleRange> VisibleSelection::firstRange() const
@@ -236,9 +235,13 @@ void VisibleSelection::appendTrailingWhitespace()
     CharacterIterator charIt(*makeSimpleRange(m_end, makeBoundaryPointAfterNodeContents(*scope)), TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions);
     for (; !charIt.atEnd() && charIt.text().length(); charIt.advance(1)) {
         UChar c = charIt.text()[0];
-        if ((!isSpaceOrNewline(c) && c != noBreakSpace) || c == '\n')
+        if ((!deprecatedIsSpaceOrNewline(c) && c != noBreakSpace) || c == '\n')
             break;
         m_end = makeDeprecatedLegacyPosition(charIt.range().end);
+        if (m_anchorIsFirst)
+            m_focus = m_end;
+        else
+            m_anchor = m_end;
     }
 }
 
@@ -418,8 +421,8 @@ void VisibleSelection::validate(TextGranularity granularity)
     adjustSelectionToAvoidCrossingEditingBoundaries();
     updateSelectionType();
 
-    bool shouldUpdateAnchor = false; // Set to false because of <rdar://problem/69542459>. Can be returned to original logic when this problem is fully fixed.
-    bool shouldUpdateFocus = false; // Ditto.
+    bool shouldUpdateAnchor = m_start != startBeforeAdjustments;
+    bool shouldUpdateFocus = m_end != endBeforeAdjustments;
 
     if (isRange()) {
         // "Constrain" the selection to be the smallest equivalent range of nodes.
@@ -674,7 +677,7 @@ Element* VisibleSelection::rootEditableElement() const
 
 Node* VisibleSelection::nonBoundaryShadowTreeRootNode() const
 {
-    return start().deprecatedNode() ? start().deprecatedNode()->nonBoundaryShadowTreeRootNode() : nullptr;
+    return start().deprecatedNode() && !start().deprecatedNode()->isShadowRoot() ? start().deprecatedNode()->nonBoundaryShadowTreeRootNode() : nullptr;
 }
 
 bool VisibleSelection::isInPasswordField() const

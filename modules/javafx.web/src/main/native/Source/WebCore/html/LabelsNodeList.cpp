@@ -27,7 +27,7 @@
 #include "CommonAtomStrings.h"
 #include "HTMLLabelElement.h"
 #include "HTMLNames.h"
-#include "LabelableElement.h"
+#include "LiveNodeListInlines.h"
 #include "NodeRareData.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -37,12 +37,12 @@ using namespace HTMLNames;
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(LabelsNodeList);
 
-LabelsNodeList::LabelsNodeList(LabelableElement& element)
-    : CachedLiveNodeList(element, InvalidateOnForTypeAttrChange)
+LabelsNodeList::LabelsNodeList(HTMLElement& element)
+    : CachedLiveNodeList(element, NodeListInvalidationType::InvalidateOnForTypeAttrChange)
 {
 }
 
-Ref<LabelsNodeList> LabelsNodeList::create(LabelableElement& element, const AtomString&)
+Ref<LabelsNodeList> LabelsNodeList::create(HTMLElement& element, const AtomString&)
 {
     return adoptRef(*new LabelsNodeList(element));
 }

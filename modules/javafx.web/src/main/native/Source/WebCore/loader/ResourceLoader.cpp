@@ -37,14 +37,15 @@
 #include "DiagnosticLoggingClient.h"
 #include "DiagnosticLoggingKeys.h"
 #include "DocumentLoader.h"
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "HTMLFrameOwnerElement.h"
 #include "InspectorInstrumentation.h"
 #include "LoaderStrategy.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "Logging.h"
+#include "OriginAccessPatterns.h"
 #include "Page.h"
 #include "PageConsoleClient.h"
 #include "PlatformStrategies.h"
@@ -71,14 +72,14 @@
 
 #undef RESOURCELOADER_RELEASE_LOG
 #define PAGE_ID ((frame() ? valueOrDefault(frame()->pageID()) : PageIdentifier()).toUInt64())
-#define FRAME_ID ((frame() ? valueOrDefault(frame()->frameID()) : FrameIdentifier()).toUInt64())
+#define FRAME_ID ((frame() ? frame()->frameID() : FrameIdentifier()).object().toUInt64())
 #define RESOURCELOADER_RELEASE_LOG(fmt, ...) RELEASE_LOG(Network, "%p - [pageID=%" PRIu64 ", frameID=%" PRIu64 ", frameLoader=%p, resourceID=%" PRIu64 "] ResourceLoader::" fmt, this, PAGE_ID, FRAME_ID, frameLoader(), identifier().toUInt64(), ##__VA_ARGS__)
 
 namespace WebCore {
 
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ResourceLoader);
 
-ResourceLoader::ResourceLoader(Frame& frame, ResourceLoaderOptions options)
+ResourceLoader::ResourceLoader(LocalFrame& frame, ResourceLoaderOptions options)
     : m_frame { &frame }
     , m_documentLoader { frame.loader().activeDocumentLoader() }
     , m_defersLoading { options.defersLoadingPolicy == DefersLoadingPolicy::AllowDefersLoading && frame.page()->defersLoading() }
@@ -147,7 +148,7 @@ void ResourceLoader::init(ResourceRequest&& clientRequest, CompletionHandler<voi
 
     m_defersLoading = m_options.defersLoadingPolicy == DefersLoadingPolicy::AllowDefersLoading && m_frame->page()->defersLoading();
 
-    if (m_options.securityCheck == SecurityCheckPolicy::DoSecurityCheck && !m_frame->document()->securityOrigin().canDisplay(clientRequest.url())) {
+    if (m_options.securityCheck == SecurityCheckPolicy::DoSecurityCheck && !m_frame->document()->securityOrigin().canDisplay(clientRequest.url(), OriginAccessPatternsForWebProcess::singleton())) {
         RESOURCELOADER_RELEASE_LOG("init: Cancelling load because it violates security policy.");
         FrameLoader::reportLocalLoadFailed(m_frame.get(), clientRequest.url().string());
         releaseResources();
@@ -294,10 +295,7 @@ void ResourceLoader::loadDataURL()
     if (auto page = m_frame->page())
         scheduleContext.scheduledPairs = *page->scheduledRunLoopPairs();
 #endif
-    auto mode = DataURLDecoder::Mode::Legacy;
-    if (m_request.requester() == ResourceRequest::Requester::Fetch)
-        mode = DataURLDecoder::Mode::ForgivingBase64;
-    DataURLDecoder::decode(url, scheduleContext, mode, [this, protectedThis = Ref { *this }, url](auto decodeResult) mutable {
+    DataURLDecoder::decode(url, scheduleContext, [this, protectedThis = Ref { *this }, url](auto decodeResult) mutable {
         if (this->reachedTerminalState())
             return;
         if (!decodeResult) {
@@ -410,6 +408,17 @@ void ResourceLoader::willSendRequestInternal(ResourceRequest&& request, const Re
         return;
     }
 
+    if (frameLoader() && frameLoader()->frame().isMainFrame() && cachedResource() && cachedResource()->type() == CachedResource::Type::MainResource && !redirectResponse.isNull()) {
+        auto requestURL { redirectResponse.url() };
+        auto redirectURL { request.url() };
+        if (frameLoader()->upgradeRequestforHTTPSOnlyIfNeeded(requestURL, request) && request.url() == redirectResponse.url()) {
+            RESOURCELOADER_RELEASE_LOG("willSendRequestInternal: resource load canceled because of entering same-URL redirect loop");
+            cancel(httpsUpgradeRedirectLoopError());
+            completionHandler({ });
+            return;
+        }
+    }
+
     if (m_options.sendLoadCallbacks == SendCallbackPolicy::SendCallbacks) {
         if (createdResourceIdentifier)
             frameLoader()->notifier().assignIdentifierToInitialRequest(m_identifier, documentLoader(), request);
@@ -439,7 +448,7 @@ void ResourceLoader::willSendRequestInternal(ResourceRequest&& request, const Re
     if (isRedirect) {
         RESOURCELOADER_RELEASE_LOG("willSendRequestInternal: Processing cross-origin redirect");
         platformStrategies()->loaderStrategy()->crossOriginRedirectReceived(this, request.url());
-#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+#if ENABLE(TRACKING_PREVENTION)
         frameLoader()->client().didLoadFromRegistrableDomain(RegistrableDomain(request.url()));
 #endif
     }
@@ -471,7 +480,7 @@ void ResourceLoader::didSendData(unsigned long long, unsigned long long)
 {
 }
 
-static void logResourceResponseSource(Frame* frame, ResourceResponse::Source source)
+static void logResourceResponseSource(LocalFrame* frame, ResourceResponse::Source source)
 {
     if (!frame || !frame->page())
         return;
@@ -508,7 +517,9 @@ static void logResourceResponseSource(Frame* frame, ResourceResponse::Source sou
 
 bool ResourceLoader::shouldAllowResourceToAskForCredentials() const
 {
-    return m_canCrossOriginRequestsAskUserForCredentials || m_frame->tree().top().document()->securityOrigin().canRequest(m_request.url());
+    auto* topFrame = dynamicDowncast<LocalFrame>(m_frame->tree().top());
+    return m_canCrossOriginRequestsAskUserForCredentials
+        || (topFrame && topFrame->document()->securityOrigin().canRequest(m_request.url(), OriginAccessPatternsForWebProcess::singleton()));
 }
 
 void ResourceLoader::didBlockAuthenticationChallenge()
@@ -538,6 +549,13 @@ void ResourceLoader::didReceiveResponse(const ResourceResponse& r, CompletionHan
                 }
                 document->setUsedLegacyTLS(true);
             }
+        }
+    }
+
+    if (r.wasPrivateRelayed() && m_frame) {
+        if (auto* document = m_frame->document()) {
+            if (!document->wasPrivateRelayed())
+                document->setWasPrivateRelayed(true);
         }
     }
 
@@ -706,6 +724,11 @@ ResourceError ResourceLoader::cannotShowURLError()
     return frameLoader()->client().cannotShowURLError(m_request);
 }
 
+ResourceError ResourceLoader::httpsUpgradeRedirectLoopError()
+{
+    return frameLoader()->client().httpsUpgradeRedirectLoopError(m_request);
+}
+
 void ResourceLoader::willSendRequestAsync(ResourceHandle* handle, ResourceRequest&& request, ResourceResponse&& redirectResponse, CompletionHandler<void(ResourceRequest&&)>&& completionHandler)
 {
     RefPtr<ResourceHandle> protectedHandle(handle);
@@ -785,7 +808,7 @@ bool ResourceLoader::isAllowedToAskUserForCredentials() const
         return false;
     if (!shouldAllowResourceToAskForCredentials())
         return false;
-    return m_options.credentials == FetchOptions::Credentials::Include || (m_options.credentials == FetchOptions::Credentials::SameOrigin && m_frame->document()->securityOrigin().canRequest(originalRequest().url()));
+    return m_options.credentials == FetchOptions::Credentials::Include || (m_options.credentials == FetchOptions::Credentials::SameOrigin && m_frame->document()->securityOrigin().canRequest(originalRequest().url(), OriginAccessPatternsForWebProcess::singleton()));
 }
 
 bool ResourceLoader::shouldIncludeCertificateInfo() const

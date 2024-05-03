@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2015 Google Inc. All rights reserved.
  * Copyright (C) 2005 Alexey Proskuryakov.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,7 +34,6 @@
 #include "ElementInlines.h"
 #include "ElementRareData.h"
 #include "FontCascade.h"
-#include "Frame.h"
 #include "HTMLBodyElement.h"
 #include "HTMLElement.h"
 #include "HTMLFrameOwnerElement.h"
@@ -47,9 +47,10 @@
 #include "HTMLTextAreaElement.h"
 #include "HTMLTextFormControlElement.h"
 #include "ImageOverlay.h"
-#include "LegacyInlineTextBox.h"
+#include "LocalFrame.h"
 #include "NodeTraversal.h"
 #include "Range.h"
+#include "RenderBoxInlines.h"
 #include "RenderImage.h"
 #include "RenderIterator.h"
 #include "RenderTableCell.h"
@@ -174,7 +175,8 @@ bool BitStack::top() const
     if (!m_size)
         return false;
     unsigned shift = (m_size - 1) & bitInWordMask;
-    return m_words.last() & (1U << shift);
+    unsigned index = (m_size - 1) / bitsInWord;
+    return m_words[index] & (1U << shift);
 }
 
 // --------
@@ -425,6 +427,11 @@ static inline bool hasDisplayContents(Node& node)
     return is<Element>(node) && downcast<Element>(node).hasDisplayContents();
 }
 
+static bool isRendererVisible(const RenderObject* renderer, TextIteratorBehaviors behaviors)
+{
+    return renderer && !(renderer->style().effectiveUserSelect() == UserSelect::None && behaviors.contains(TextIteratorBehavior::IgnoresUserSelectNone));
+}
+
 void TextIterator::advance()
 {
     ASSERT(!atEnd());
@@ -470,9 +477,11 @@ void TextIterator::advance()
 
         auto* renderer = m_node->renderer();
         if (!m_handledNode) {
-            if (!renderer) {
+            if (!isRendererVisible(renderer, m_behaviors)) {
                 m_handledNode = true;
-                m_handledChildren = !hasDisplayContents(*m_node);
+                m_handledChildren = !hasDisplayContents(*m_node) && !renderer;
+            } else if (is<Element>(m_node) && renderer->isSkippedContentRoot()) {
+                m_handledChildren = true;
             } else {
                 // handle current node according to its type
                 if (renderer->isText() && m_node->isTextNode())
@@ -498,7 +507,7 @@ void TextIterator::advance()
                 while (!next && parentNode) {
                     if ((pastEnd && parentNode == m_endContainer) || isDescendantOf(m_behaviors, *m_endContainer, *parentNode))
                         return;
-                    bool haveRenderer = m_node->renderer();
+                    bool haveRenderer = isRendererVisible(m_node->renderer(), m_behaviors);
                     Node* exitedNode = m_node;
                     m_node = parentNode;
                     m_fullyClippedStack.pop();
@@ -511,7 +520,7 @@ void TextIterator::advance()
                         return;
                     }
                     next = nextSibling(m_behaviors, *m_node);
-                    if (next && m_node->renderer())
+                    if (next && isRendererVisible(m_node->renderer(), m_behaviors))
                         exitNode(m_node);
                 }
             }
@@ -933,8 +942,8 @@ static bool shouldEmitExtraNewlineForNode(Node& node)
     if (!renderBox.height())
         return false;
 
-    int bottomMargin = renderBox.collapsedMarginAfter();
-    int fontSize = renderBox.style().fontDescription().computedPixelSize();
+    auto bottomMargin = renderBox.collapsedMarginAfter();
+    auto fontSize = renderBox.style().fontDescription().computedSize();
     return bottomMargin * 2 >= fontSize;
 }
 
@@ -1581,7 +1590,7 @@ void WordAwareIterator::advance()
 
     while (1) {
         // If this chunk ends in whitespace we can just use it as our chunk.
-        if (isSpaceOrNewline(m_underlyingIterator.text()[m_underlyingIterator.text().length() - 1]))
+        if (deprecatedIsSpaceOrNewline(m_underlyingIterator.text()[m_underlyingIterator.text().length() - 1]))
             return;
 
         // If this is the first chunk that failed, save it in previousText before look ahead
@@ -1590,7 +1599,7 @@ void WordAwareIterator::advance()
 
         // Look ahead to next chunk. If it is whitespace or a break, we can use the previous stuff
         m_underlyingIterator.advance();
-        if (m_underlyingIterator.atEnd() || !m_underlyingIterator.text().length() || isSpaceOrNewline(m_underlyingIterator.text()[0])) {
+        if (m_underlyingIterator.atEnd() || !m_underlyingIterator.text().length() || deprecatedIsSpaceOrNewline(m_underlyingIterator.text()[0])) {
             m_didLookAhead = true;
             return;
         }
@@ -1622,11 +1631,33 @@ static inline UChar foldQuoteMark(UChar c)
         case leftDoubleQuotationMark:
         case leftLowDoubleQuotationMark:
         case rightDoubleQuotationMark:
+        case leftPointingDoubleAngleQuotationMark:
+        case rightPointingDoubleAngleQuotationMark:
+        case doubleHighReversed9QuotationMark:
+        case doubleLowReversed9QuotationMark:
+        case reversedDoublePrimeQuotationMark:
+        case doublePrimeQuotationMark:
+        case lowDoublePrimeQuotationMark:
+        case fullwidthQuotationMark:
             return '"';
         case hebrewPunctuationGeresh:
         case leftSingleQuotationMark:
         case leftLowSingleQuotationMark:
         case rightSingleQuotationMark:
+        case singleLow9QuotationMark:
+        case singleLeftPointingAngleQuotationMark:
+        case singleRightPointingAngleQuotationMark:
+        case leftCornerBracket:
+        case rightCornerBracket:
+        case leftWhiteCornerBracket:
+        case rightWhiteCornerBracket:
+        case presentationFormForVerticalLeftCornerBracket:
+        case presentationFormForVerticalRightCornerBracket:
+        case presentationFormForVerticalLeftWhiteCornerBracket:
+        case presentationFormForVerticalRightWhiteCornerBracket:
+        case fullwidthApostrophe:
+        case halfwidthLeftCornerBracket:
+        case halfwidthRightCornerBracket:
             return '\'';
         default:
             return c;
@@ -1645,6 +1676,28 @@ String foldQuoteMarks(const String& stringToFold)
     result = makeStringByReplacingAll(result, leftSingleQuotationMark, '\'');
     result = makeStringByReplacingAll(result, leftLowSingleQuotationMark, '\'');
     result = makeStringByReplacingAll(result, rightDoubleQuotationMark, '"');
+    result = makeStringByReplacingAll(result, singleLow9QuotationMark, '\'');
+    result = makeStringByReplacingAll(result, singleLeftPointingAngleQuotationMark, '\'');
+    result = makeStringByReplacingAll(result, singleRightPointingAngleQuotationMark, '\'');
+    result = makeStringByReplacingAll(result, leftCornerBracket, '\'');
+    result = makeStringByReplacingAll(result, rightCornerBracket, '\'');
+    result = makeStringByReplacingAll(result, leftWhiteCornerBracket, '\'');
+    result = makeStringByReplacingAll(result, rightWhiteCornerBracket, '\'');
+    result = makeStringByReplacingAll(result, presentationFormForVerticalLeftCornerBracket, '\'');
+    result = makeStringByReplacingAll(result, presentationFormForVerticalRightCornerBracket, '\'');
+    result = makeStringByReplacingAll(result, presentationFormForVerticalLeftWhiteCornerBracket, '\'');
+    result = makeStringByReplacingAll(result, presentationFormForVerticalRightWhiteCornerBracket, '\'');
+    result = makeStringByReplacingAll(result, fullwidthApostrophe, '\'');
+    result = makeStringByReplacingAll(result, halfwidthLeftCornerBracket, '\'');
+    result = makeStringByReplacingAll(result, halfwidthRightCornerBracket, '\'');
+    result = makeStringByReplacingAll(result, leftPointingDoubleAngleQuotationMark, '"');
+    result = makeStringByReplacingAll(result, rightPointingDoubleAngleQuotationMark, '"');
+    result = makeStringByReplacingAll(result, doubleHighReversed9QuotationMark, '"');
+    result = makeStringByReplacingAll(result, doubleLowReversed9QuotationMark, '"');
+    result = makeStringByReplacingAll(result, reversedDoublePrimeQuotationMark, '"');
+    result = makeStringByReplacingAll(result, doublePrimeQuotationMark, '"');
+    result = makeStringByReplacingAll(result, lowDoublePrimeQuotationMark, '"');
+    result = makeStringByReplacingAll(result, fullwidthQuotationMark, '"');
     return makeStringByReplacingAll(result, rightSingleQuotationMark, '\'');
 }
 

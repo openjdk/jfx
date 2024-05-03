@@ -26,16 +26,16 @@
 #include "config.h"
 #include "DocumentStorageAccess.h"
 
-#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+#if ENABLE(TRACKING_PREVENTION)
 
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "Document.h"
 #include "EventLoop.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "JSDOMPromiseDeferred.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "NetworkStorageSession.h"
 #include "Page.h"
 #include "Quirks.h"
@@ -83,7 +83,7 @@ std::optional<bool> DocumentStorageAccess::hasStorageAccessQuickCheck()
         return true;
 
     auto& securityOrigin = m_document.securityOrigin();
-    if (!frame || securityOrigin.isUnique())
+    if (!frame || securityOrigin.isOpaque())
         return false;
 
     if (frame->isMainFrame())
@@ -153,7 +153,7 @@ std::optional<StorageAccessQuickResult> DocumentStorageAccess::requestStorageAcc
         return StorageAccessQuickResult::Grant;
 
     auto& securityOrigin = m_document.securityOrigin();
-    if (!frame || securityOrigin.isUnique() || !isAllowedToRequestStorageAccess())
+    if (!frame || securityOrigin.isOpaque() || !isAllowedToRequestStorageAccess())
         return StorageAccessQuickResult::Reject;
 
     if (frame->isMainFrame())
@@ -315,4 +315,4 @@ bool DocumentStorageAccess::hasFrameSpecificStorageAccess() const
 
 } // namespace WebCore
 
-#endif // ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+#endif // ENABLE(TRACKING_PREVENTION)

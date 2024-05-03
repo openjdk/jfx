@@ -43,15 +43,20 @@ bool isValidMarkerStyleProperty(CSSPropertyID id)
     switch (id) {
     case CSSPropertyColor:
     case CSSPropertyContent:
+    case CSSPropertyCustom:
     case CSSPropertyDirection:
     case CSSPropertyFont:
     case CSSPropertyFontFamily:
     case CSSPropertyFontFeatureSettings:
     case CSSPropertyFontKerning:
     case CSSPropertyFontSize:
+    case CSSPropertyFontSizeAdjust:
     case CSSPropertyFontStretch:
     case CSSPropertyFontStyle:
     case CSSPropertyFontSynthesis:
+    case CSSPropertyFontSynthesisWeight:
+    case CSSPropertyFontSynthesisStyle:
+    case CSSPropertyFontSynthesisSmallCaps:
     case CSSPropertyFontVariantAlternates:
     case CSSPropertyFontVariantCaps:
     case CSSPropertyFontVariantEastAsian:
@@ -63,7 +68,7 @@ bool isValidMarkerStyleProperty(CSSPropertyID id)
     case CSSPropertyFontOpticalSizing:
     case CSSPropertyFontVariationSettings:
 #endif
-    case CSSPropertyWebkitHyphens:
+    case CSSPropertyHyphens:
     case CSSPropertyLetterSpacing:
     case CSSPropertyLineBreak:
     case CSSPropertyLineHeight:
@@ -78,10 +83,12 @@ bool isValidMarkerStyleProperty(CSSPropertyID id)
     case CSSPropertyTextEmphasisStyle:
     case CSSPropertyTextShadow:
     case CSSPropertyTextTransform:
+    case CSSPropertyTextWrap:
     case CSSPropertyUnicodeBidi:
     case CSSPropertyWordBreak:
     case CSSPropertyWordSpacing:
     case CSSPropertyWhiteSpace:
+    case CSSPropertyWhiteSpaceCollapse:
     case CSSPropertyAnimationDuration:
     case CSSPropertyAnimationTimingFunction:
     case CSSPropertyAnimationDelay:
@@ -118,6 +125,7 @@ bool isValidCueStyleProperty(CSSPropertyID id)
     case CSSPropertyBackgroundRepeat:
     case CSSPropertyBackgroundSize:
     case CSSPropertyColor:
+    case CSSPropertyCustom:
     case CSSPropertyFont:
     case CSSPropertyFontFamily:
     case CSSPropertyFontSize:
@@ -133,8 +141,10 @@ bool isValidCueStyleProperty(CSSPropertyID id)
     case CSSPropertyOutlineWidth:
     case CSSPropertyVisibility:
     case CSSPropertyWhiteSpace:
+    case CSSPropertyWhiteSpaceCollapse:
     case CSSPropertyTextDecorationLine:
     case CSSPropertyTextShadow:
+    case CSSPropertyTextWrap:
     case CSSPropertyBorderStyle:
     case CSSPropertyPaintOrder:
     case CSSPropertyStrokeLinejoin:

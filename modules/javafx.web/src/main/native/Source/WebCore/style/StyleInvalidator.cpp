@@ -28,7 +28,7 @@
 
 #include "CSSSelectorList.h"
 #include "Document.h"
-#include "ElementIterator.h"
+#include "ElementChildIteratorInlines.h"
 #include "ElementRareData.h"
 #include "ElementRuleCollector.h"
 #include "HTMLSlotElement.h"
@@ -40,21 +40,27 @@
 #include "StyleScope.h"
 #include "StyleScopeRuleSets.h"
 #include "StyleSheetContents.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include <wtf/SetForScope.h>
 
 namespace WebCore {
 namespace Style {
 
-static bool shouldDirtyAllStyle(const Vector<RefPtr<StyleRuleBase>>& rules)
+static bool shouldDirtyAllStyle(const Vector<Ref<StyleRuleBase>>& rules)
 {
     for (auto& rule : rules) {
-        if (is<StyleRuleMedia>(*rule)) {
-            if (shouldDirtyAllStyle(downcast<StyleRuleMedia>(*rule).childRules()))
+        if (is<StyleRuleMedia>(rule)) {
+            if (shouldDirtyAllStyle(downcast<StyleRuleMedia>(rule).childRules()))
+                return true;
+            continue;
+        }
+        if (is<StyleRuleWithNesting>(rule)) {
+            if (shouldDirtyAllStyle(downcast<StyleRuleWithNesting>(rule).nestedRules()))
                 return true;
             continue;
         }
         // FIXME: At least font faces don't need full recalc in all cases.
-        if (!is<StyleRule>(*rule))
+        if (!is<StyleRule>(rule))
             return true;
     }
     return false;
@@ -82,7 +88,7 @@ static bool shouldDirtyAllStyle(const Vector<StyleSheetContents*>& sheets)
     return false;
 }
 
-Invalidator::Invalidator(const Vector<StyleSheetContents*>& sheets, const MediaQueryEvaluator& mediaQueryEvaluator)
+Invalidator::Invalidator(const Vector<StyleSheetContents*>& sheets, const MQ::MediaQueryEvaluator& mediaQueryEvaluator)
     : m_ownedRuleSet(RuleSet::create())
     , m_ruleSets({ m_ownedRuleSet })
     , m_dirtiesAllStyle(shouldDirtyAllStyle(sheets))
@@ -314,6 +320,7 @@ void Invalidator::invalidateStyleWithMatchElement(Element& element, MatchElement
             ancestors.append(parent);
 
         SelectorMatchingState selectorMatchingState;
+        selectorMatchingState.selectorFilter.parentStackReserveInitialCapacity(ancestors.size());
         for (auto* ancestor : makeReversedRange(ancestors)) {
             invalidateIfNeeded(*ancestor, &selectorMatchingState);
             selectorMatchingState.selectorFilter.pushParent(ancestor);
@@ -337,6 +344,7 @@ void Invalidator::invalidateStyleWithMatchElement(Element& element, MatchElement
             elementAndAncestors.append(parent);
 
         SelectorMatchingState selectorMatchingState;
+        selectorMatchingState.selectorFilter.parentStackReserveInitialCapacity(elementAndAncestors.size());
         for (auto* elementOrAncestor : makeReversedRange(elementAndAncestors)) {
             for (auto* sibling = elementOrAncestor->previousElementSibling(); sibling; sibling = sibling->previousElementSibling())
                 invalidateIfNeeded(*sibling, &selectorMatchingState);

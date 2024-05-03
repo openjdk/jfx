@@ -36,8 +36,6 @@
 
 namespace WebCore {
 
-static constexpr Seconds clientDataBufferingTimerThrottleDelay { 100_ms };
-
 String convertEnumerationToString(PlatformMediaSession::State state)
 {
     static const NeverDestroyed<String> values[] = {
@@ -52,7 +50,7 @@ String convertEnumerationToString(PlatformMediaSession::State state)
     static_assert(static_cast<size_t>(PlatformMediaSession::Playing) == 2, "PlatformMediaSession::Playing is not 2 as expected");
     static_assert(static_cast<size_t>(PlatformMediaSession::Paused) == 3, "PlatformMediaSession::Paused is not 3 as expected");
     static_assert(static_cast<size_t>(PlatformMediaSession::Interrupted) == 4, "PlatformMediaSession::Interrupted is not 4 as expected");
-    ASSERT(static_cast<size_t>(state) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(state) < std::size(values));
     return values[static_cast<size_t>(state)];
 }
 
@@ -76,7 +74,7 @@ String convertEnumerationToString(PlatformMediaSession::InterruptionType type)
     static_assert(static_cast<size_t>(PlatformMediaSession::InvisibleAutoplay) == 5, "PlatformMediaSession::InvisibleAutoplay is not 5 as expected");
     static_assert(static_cast<size_t>(PlatformMediaSession::ProcessInactive) == 6, "PlatformMediaSession::ProcessInactive is not 6 as expected");
     static_assert(static_cast<size_t>(PlatformMediaSession::PlaybackSuspended) == 7, "PlatformMediaSession::PlaybackSuspended is not 7 as expected");
-    ASSERT(static_cast<size_t>(type) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(type) < std::size(values));
     return values[static_cast<size_t>(type)];
 }
 
@@ -117,7 +115,7 @@ String convertEnumerationToString(PlatformMediaSession::RemoteControlCommandType
     static_assert(static_cast<size_t>(PlatformMediaSession::BeginScrubbingCommand) == 14, "PlatformMediaSession::BeginScrubbingCommand is not 14 as expected");
     static_assert(static_cast<size_t>(PlatformMediaSession::EndScrubbingCommand) == 15, "PlatformMediaSession::EndScrubbingCommand is not 15 as expected");
 
-    ASSERT(static_cast<size_t>(command) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(command) < std::size(values));
     return values[static_cast<size_t>(command)];
 }
 
@@ -160,8 +158,8 @@ void PlatformMediaSession::setState(State state)
 
     ALWAYS_LOG(LOGIDENTIFIER, state);
     m_state = state;
-    if (m_state == State::Playing)
-        m_hasPlayedSinceLastInterruption = true;
+    if (m_state == State::Playing && canProduceAudio())
+        m_hasPlayedAudiblySinceLastInterruption = true;
     PlatformMediaSessionManager::sharedManager().sessionStateChanged(*this);
 }
 
@@ -281,6 +279,10 @@ void PlatformMediaSession::clientWillBeDOMSuspended()
 void PlatformMediaSession::pauseSession()
 {
     ALWAYS_LOG(LOGIDENTIFIER);
+
+    if (state() == Interrupted)
+        m_stateToRestore = Paused;
+
     m_client.suspendPlayback();
 }
 
@@ -326,6 +328,11 @@ bool PlatformMediaSession::isSuspended() const
 bool PlatformMediaSession::isPlaying() const
 {
     return m_client.isPlaying();
+}
+
+bool PlatformMediaSession::isAudible() const
+{
+    return m_client.isAudible();
 }
 
 bool PlatformMediaSession::shouldOverrideBackgroundLoadingRestriction() const

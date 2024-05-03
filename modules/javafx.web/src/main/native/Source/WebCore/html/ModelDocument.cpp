@@ -32,7 +32,6 @@
 #include "DocumentLoader.h"
 #include "EventNames.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "HTMLBodyElement.h"
 #include "HTMLHeadElement.h"
 #include "HTMLHtmlElement.h"
@@ -41,6 +40,7 @@
 #include "HTMLNames.h"
 #include "HTMLSourceElement.h"
 #include "HTMLStyleElement.h"
+#include "LocalFrameLoaderClient.h"
 #include "RawDataDocumentParser.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
@@ -70,7 +70,7 @@ private:
     void appendBytes(DocumentWriter&, const uint8_t*, size_t) final;
     void finish() final;
 
-    WeakPtr<HTMLModelElement> m_modelElement;
+    WeakPtr<HTMLModelElement, WeakPtrImplWithEventTargetData> m_modelElement;
     String m_outgoingReferrer;
 };
 
@@ -137,7 +137,7 @@ void ModelDocumentParser::finish()
     document()->finishedParsing();
 }
 
-ModelDocument::ModelDocument(Frame* frame, const Settings& settings, const URL& url)
+ModelDocument::ModelDocument(LocalFrame* frame, const Settings& settings, const URL& url)
     : HTMLDocument(frame, settings, url, { }, { DocumentClass::Model })
 {
     if (frame)

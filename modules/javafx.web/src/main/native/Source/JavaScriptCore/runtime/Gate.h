@@ -37,6 +37,7 @@ namespace JSC {
     v(loopOSREntry, NoPtrTag) \
     v(entryOSREntry, NoPtrTag) \
     v(wasmOSREntry, NoPtrTag) \
+    v(wasmTailCallJSEntrySlowPathPtrTag, NoPtrTag) \
     v(exceptionHandler, NoPtrTag) \
     v(returnFromLLInt, NoPtrTag) \
     v(llint_function_for_call_arity_checkUntag, NoPtrTag) \
@@ -47,12 +48,14 @@ namespace JSC {
 
 #define JSC_JS_GATE_OPCODES(v) \
     v(op_call, JSEntryPtrTag) \
+    v(op_call_ignore_result, JSEntryPtrTag) \
     v(op_construct, JSEntryPtrTag) \
     v(op_iterator_next, JSEntryPtrTag) \
     v(op_iterator_open, JSEntryPtrTag) \
     v(op_call_varargs, JSEntryPtrTag) \
     v(op_construct_varargs, JSEntryPtrTag) \
     v(op_call_slow, JSEntryPtrTag) \
+    v(op_call_ignore_result_slow, JSEntryPtrTag) \
     v(op_tail_call_slow, JSEntryPtrTag) \
     v(op_construct_slow, JSEntryPtrTag) \
     v(op_iterator_next_slow, JSEntryPtrTag) \
@@ -61,17 +64,14 @@ namespace JSC {
     v(op_tail_call_varargs_slow, JSEntryPtrTag) \
     v(op_tail_call_forward_arguments_slow, JSEntryPtrTag) \
     v(op_construct_varargs_slow, JSEntryPtrTag) \
-    v(op_call_eval_slow, JSEntrySlowPathPtrTag) \
+    v(op_call_direct_eval_slow, JSEntrySlowPathPtrTag) \
 
 #if ENABLE(WEBASSEMBLY)
 
 #define JSC_WASM_GATE_OPCODES(v) \
     v(wasm_call, JSEntrySlowPathPtrTag) \
-    v(wasm_call_no_tls, JSEntrySlowPathPtrTag) \
     v(wasm_call_indirect, JSEntrySlowPathPtrTag) \
-    v(wasm_call_indirect_no_tls, JSEntrySlowPathPtrTag) \
     v(wasm_call_ref, JSEntrySlowPathPtrTag) \
-    v(wasm_call_ref_no_tls, JSEntrySlowPathPtrTag) \
 
 #else
 #define JSC_WASM_GATE_OPCODES(v)
@@ -88,11 +88,7 @@ enum class Gate : uint8_t {
 
 #define JSC_COUNT(gateName, tag) + 1
 #define JSC_OPCODE_COUNT(gateName, tag) + 3
-#if PLATFORM(JAVA) && ENABLE(WEBASSEMBLY)
 static constexpr unsigned numberOfGates = (JSC_UTILITY_GATES(JSC_COUNT)) + (JSC_JS_GATE_OPCODES(JSC_OPCODE_COUNT)) + (JSC_WASM_GATE_OPCODES(JSC_OPCODE_COUNT));
-#else
-static constexpr unsigned numberOfGates = (JSC_UTILITY_GATES(JSC_COUNT)) + (JSC_JS_GATE_OPCODES(JSC_OPCODE_COUNT));
-#endif
 #undef JSC_COUNT
 #undef JSC_OPCODE_COUNT
 

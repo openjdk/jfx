@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,17 +37,16 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.layout.Region;
 import javafx.scene.robot.Robot;
 import javafx.stage.Screen;
-import javafx.stage.Stage;
-
+import javafx.stage.Window;
 import org.junit.Assert;
-
 import junit.framework.AssertionFailedError;
 
 /**
@@ -375,16 +374,14 @@ public class Util {
     }
 
     /**
-     * This synchronous method first hides all the specified stages (ignoring any
-     * null Stages) in the platform thread, then calls {@link Platform.exit()}.
+     * This synchronous method first hides all the open {@code Window}s in the platform thread,
+     * then invokes {@link Platform.exit()}.
      */
-    public static void shutdown(Stage... stages) {
+    public static void shutdown() {
         runAndWait(() -> {
-            for (Stage s : stages) {
-                if (s != null) {
-                    s.hide();
-                }
-            }
+            List.
+                copyOf(Window.getWindows()).
+                forEach(Window::hide);
             Platform.exit();
         });
     }
@@ -424,6 +421,38 @@ public class Util {
         }
     }
 
+    /**
+     * Triggers and waits for 10 pulses to complete in the specified scene.
+     */
+    public static void waitForIdle(Scene scene) {
+        waitForIdle(scene, 10);
+    }
+
+    /**
+     * Triggers and waits for specified number of pulses (pulseCount)
+     * to complete in the specified scene.
+     */
+    public static void waitForIdle(Scene scene, int pulseCount) {
+        CountDownLatch latch = new CountDownLatch(pulseCount);
+        Runnable pulseListener = () -> {
+            latch.countDown();
+            Platform.requestNextPulse();
+        };
+
+        runAndWait(() -> {
+            scene.addPostLayoutPulseListener(pulseListener);
+        });
+
+        try {
+            Platform.requestNextPulse();
+            waitForLatch(latch, TIMEOUT, "Timeout waiting for post layout pulse");
+        } finally {
+            runAndWait(() -> {
+                scene.removePostLayoutPulseListener(pulseListener);
+            });
+        }
+    }
+
     /** returns true if scaleX of the specified Node is not integer */
     public static boolean isFractionalScaleX(Node n) {
         double scale = n.getScene().getWindow().getRenderScaleX();
@@ -432,5 +461,33 @@ public class Util {
 
     private static boolean isFractional(double x) {
         return x != Math.rint(x);
+    }
+
+    /**
+     * Returns the tolerance which should be used when comparing values,
+     * when {@link Region#isSnapToPixel()} returns true and the scale can
+     * be determined from the region's parent {@code Window}.
+     * When scale cannot be determined it is assumed to be 1.0.
+     * Otherwise, returns 0.0.
+     *
+     * @param r the region in question
+     * @return the tolerance value
+     */
+    public static double getTolerance(Region r) {
+        if (r.isSnapToPixel()) {
+            Scene scene = r.getScene();
+            if (scene != null) {
+                Window win = scene.getWindow();
+                if (win != null) {
+                    // x and y usually have the same scale, so we'll use x
+                    double scale = win.getRenderScaleX();
+                    // distance between pixels in the local (unscaled) coordinates is (1 / scale)
+                    return 1.0 / scale;
+                }
+            }
+            // default to 1 when the scale cannot be determited
+            return 1.0;
+        }
+        return 0.0;
     }
 }

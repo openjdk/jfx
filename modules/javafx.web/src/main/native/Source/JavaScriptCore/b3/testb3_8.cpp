@@ -28,7 +28,7 @@
 
 #include <wtf/UniqueArray.h>
 
-#if ENABLE(B3_JIT)
+#if ENABLE(B3_JIT) && !CPU(ARM)
 
 template<typename T>
 void testAtomicWeakCAS()
@@ -41,7 +41,7 @@ void testAtomicWeakCAS()
             checkUsesInstruction(compilation, "lock");
             checkUsesInstruction(compilation, "cmpxchg");
         } else {
-            if (isARM64E())
+            if (isARM64_LSE())
                 checkUsesInstruction(compilation, "casal");
             else {
                 if (fenced) {
@@ -292,7 +292,7 @@ void testAtomicStrongCAS()
             checkUsesInstruction(compilation, "lock");
             checkUsesInstruction(compilation, "cmpxchg");
         } else {
-            if (isARM64E())
+            if (isARM64_LSE())
                 checkUsesInstruction(compilation, "casal");
             else {
                 if (fenced) {
@@ -635,7 +635,7 @@ void testAtomicXchg(B3::Opcode opcode)
             if (AtomicXchg != opcode)
                 checkUsesInstruction(compilation, "lock");
         } else {
-            if (isARM64E()) {
+            if (isARM64_LSE()) {
                 switch (opcode) {
                 case AtomicXchgAdd:
                     checkUsesInstruction(compilation, "ldaddal");
@@ -750,7 +750,7 @@ void testAtomicXchg(B3::Opcode opcode)
     }
 }
 
-void addAtomicTests(const char* filter, Deque<RefPtr<SharedTask<void()>>>& tasks)
+void addAtomicTests(const TestConfig* config, Deque<RefPtr<SharedTask<void()>>>& tasks)
 {
     RUN(testAtomicWeakCAS<int8_t>());
     RUN(testAtomicWeakCAS<int16_t>());
@@ -885,7 +885,7 @@ void testLoad(B3::Type type, T value)
     return testLoad<T>(type, Load, value);
 }
 
-void addLoadTests(const char* filter, Deque<RefPtr<SharedTask<void()>>>& tasks)
+void addLoadTests(const TestConfig* config, Deque<RefPtr<SharedTask<void()>>>& tasks)
 {
     RUN(testLoad(Int32, 60));
     RUN(testLoad(Int32, -60));
@@ -936,232 +936,6 @@ void addLoadTests(const char* filter, Deque<RefPtr<SharedTask<void()>>>& tasks)
     RUN(testLoad<uint16_t>(Load16Z, -1000000000));
 }
 
-void testFastForwardCopy32()
-{
-#if CPU(X86_64)
-    for (const bool aligned : { true, false }) {
-        for (const bool overlap : { false, true }) {
-            for (size_t arrsize : { 1, 4, 5, 6, 8, 10, 12, 16, 20, 40, 100, 1000}) {
-                size_t overlapAmount = 5;
-
-                UniqueArray<uint32_t> array1, array2;
-                uint32_t* arr1, *arr2;
-
-                if (overlap) {
-                    array1 = makeUniqueArray<uint32_t>(arrsize * 2);
-                    arr1 = &array1[0];
-                    arr2 = arr1 + (arrsize - overlapAmount);
-                } else {
-                    array1 = makeUniqueArray<uint32_t>(arrsize);
-                    array2 = makeUniqueArray<uint32_t>(arrsize);
-                    arr1 = &array1[0];
-                    arr2 = &array2[0];
-                }
-
-                if (!aligned && arrsize < 3)
-                    continue;
-                if (overlap && arrsize <= overlapAmount + 3)
-                    continue;
-
-                if (!aligned) {
-                    ++arr1;
-                    ++arr2;
-                    arrsize -= 1;
-                    overlapAmount -= 1;
-                }
-
-                for (size_t i = 0; i < arrsize; ++i)
-                    arr1[i] = i;
-
-                fastForwardCopy32(arr2, arr1, arrsize);
-
-                if (overlap) {
-                    for (size_t i = 0; i < arrsize - overlapAmount; ++i)
-                        CHECK(arr2[i] == i);
-                    for (size_t i = arrsize - overlapAmount; i < arrsize; ++i)
-                        CHECK(arr2[i] == i - (arrsize - overlapAmount));
-                } else {
-                    for (size_t i = 0; i < arrsize; ++i)
-                        CHECK(arr2[i] == i);
-                }
-
-                if (!aligned) {
-                    --arr1;
-                    --arr2;
-                }
-            }
-        }
-    }
-#endif
-}
-
-void testByteCopyLoop()
-{
-    Procedure proc;
-    BasicBlock* root = proc.addBlock();
-    BasicBlock* head = proc.addBlock();
-    BasicBlock* update = proc.addBlock();
-    BasicBlock* continuation = proc.addBlock();
-
-    auto* arraySrc = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
-    auto* arrayDst = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
-    auto* arraySize = root->appendNew<Value>(proc, Trunc, Origin(), root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR2));
-    auto* one = root->appendNew<Const32Value>(proc, Origin(), 1);
-    auto* two = root->appendNew<Const32Value>(proc, Origin(), 2);
-    UpsilonValue* startingIndex = root->appendNew<UpsilonValue>(proc, Origin(), root->appendNew<Const32Value>(proc, Origin(), 0));
-    root->appendNew<Value>(proc, Jump, Origin());
-    root->setSuccessors(FrequentedBlock(head));
-
-    auto* index = head->appendNew<Value>(proc, Phi, Int32, Origin());
-    startingIndex->setPhi(index);
-    auto* loadIndex = head->appendNew<Value>(proc, Add, Origin(), arraySrc,
-        head->appendNew<Value>(proc, ZExt32, Origin(), head->appendNew<Value>(proc, Shl, Origin(), index, two)));
-    auto* storeIndex = head->appendNew<Value>(proc, Add, Origin(), arrayDst,
-        head->appendNew<Value>(proc, ZExt32, Origin(), head->appendNew<Value>(proc, Shl, Origin(), index, two)));
-    head->appendNew<MemoryValue>(proc, Store, Origin(), head->appendNew<MemoryValue>(proc, Load, Int32, Origin(), loadIndex), storeIndex);
-    auto* newIndex = head->appendNew<Value>(proc, Add, Origin(), index, one);
-    auto* cmpValue = head->appendNew<Value>(proc, GreaterThan, Origin(), newIndex, arraySize);
-    head->appendNew<Value>(proc, Branch, Origin(), cmpValue);
-    head->setSuccessors(FrequentedBlock(continuation), FrequentedBlock(update));
-
-    UpsilonValue* updateIndex = update->appendNew<UpsilonValue>(proc, Origin(), newIndex);
-    updateIndex->setPhi(index);
-    update->appendNew<Value>(proc, Jump, Origin());
-    update->setSuccessors(FrequentedBlock(head));
-
-    continuation->appendNewControlValue(proc, Return, Origin());
-
-    int* arr1 = new int[3];
-    int* arr2 = new int[3];
-
-    arr1[0] = 0;
-    arr1[1] = 0;
-    arr1[2] = 0;
-    arr2[0] = 1;
-    arr2[1] = 2;
-    arr2[2] = 3;
-
-    compileAndRun<void>(proc, arr2, arr1, 3);
-
-    CHECK_EQ(arr1[0], 1);
-    CHECK_EQ(arr1[1], 2);
-    CHECK_EQ(arr1[2], 3);
-
-    delete[] arr1;
-    delete [] arr2;
-}
-
-void testByteCopyLoopStartIsLoopDependent()
-{
-    Procedure proc;
-    BasicBlock* root = proc.addBlock();
-    BasicBlock* head = proc.addBlock();
-    BasicBlock* update = proc.addBlock();
-    BasicBlock* continuation = proc.addBlock();
-
-    auto* arraySrc = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
-    auto* arrayDst = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
-    auto* arraySize = root->appendNew<Value>(proc, Trunc, Origin(), root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR2));
-    auto* one = root->appendNew<Const32Value>(proc, Origin(), 1);
-    auto* two = root->appendNew<Const32Value>(proc, Origin(), 2);
-    root->appendNew<Value>(proc, Jump, Origin());
-    root->setSuccessors(FrequentedBlock(head));
-
-    UpsilonValue* startingIndex = head->appendNew<UpsilonValue>(proc, Origin(), head->appendNew<Const32Value>(proc, Origin(), 0));
-    auto* index = head->appendNew<Value>(proc, Phi, Int32, Origin());
-    startingIndex->setPhi(index);
-    auto* loadIndex = head->appendNew<Value>(proc, Add, Origin(), arraySrc,
-        head->appendNew<Value>(proc, ZExt32, Origin(), head->appendNew<Value>(proc, Shl, Origin(), index, two)));
-    auto* storeIndex = head->appendNew<Value>(proc, Add, Origin(), arrayDst,
-        head->appendNew<Value>(proc, ZExt32, Origin(), head->appendNew<Value>(proc, Shl, Origin(), index, two)));
-    head->appendNew<MemoryValue>(proc, Store, Origin(), head->appendNew<MemoryValue>(proc, Load, Int32, Origin(), loadIndex), storeIndex);
-    auto* newIndex = head->appendNew<Value>(proc, Add, Origin(), index, one);
-    auto* cmpValue = head->appendNew<Value>(proc, GreaterThan, Origin(), newIndex, arraySize);
-    head->appendNew<Value>(proc, Branch, Origin(), cmpValue);
-    head->setSuccessors(FrequentedBlock(continuation), FrequentedBlock(update));
-
-    UpsilonValue* updateIndex = update->appendNew<UpsilonValue>(proc, Origin(), newIndex);
-    updateIndex->setPhi(index);
-    update->appendNew<Value>(proc, Jump, Origin());
-    update->setSuccessors(FrequentedBlock(head));
-
-    continuation->appendNewControlValue(proc, Return, Origin());
-
-    int* arr1 = new int[3];
-    int* arr2 = new int[3];
-
-    arr1[0] = 0;
-    arr1[1] = 0;
-    arr1[2] = 0;
-    arr2[0] = 1;
-    arr2[1] = 2;
-    arr2[2] = 3;
-
-    compileAndRun<void>(proc, arr2, arr1, 0);
-
-    CHECK_EQ(arr1[0], 1);
-    CHECK_EQ(arr1[1], 0);
-    CHECK_EQ(arr1[2], 0);
-
-    delete[] arr1;
-    delete [] arr2;
-}
-
-void testByteCopyLoopBoundIsLoopDependent()
-{
-    Procedure proc;
-    BasicBlock* root = proc.addBlock();
-    BasicBlock* head = proc.addBlock();
-    BasicBlock* update = proc.addBlock();
-    BasicBlock* continuation = proc.addBlock();
-
-    auto* arraySrc = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
-    auto* arrayDst = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
-    auto* one = root->appendNew<Const32Value>(proc, Origin(), 1);
-    auto* two = root->appendNew<Const32Value>(proc, Origin(), 2);
-    UpsilonValue* startingIndex = root->appendNew<UpsilonValue>(proc, Origin(), root->appendNew<Const32Value>(proc, Origin(), 0));
-    root->appendNew<Value>(proc, Jump, Origin());
-    root->setSuccessors(FrequentedBlock(head));
-
-    auto* index = head->appendNew<Value>(proc, Phi, Int32, Origin());
-    startingIndex->setPhi(index);
-    auto* loadIndex = head->appendNew<Value>(proc, Add, Origin(), arraySrc,
-        head->appendNew<Value>(proc, ZExt32, Origin(), head->appendNew<Value>(proc, Shl, Origin(), index, two)));
-    auto* storeIndex = head->appendNew<Value>(proc, Add, Origin(), arrayDst,
-        head->appendNew<Value>(proc, ZExt32, Origin(), head->appendNew<Value>(proc, Shl, Origin(), index, two)));
-    head->appendNew<MemoryValue>(proc, Store, Origin(), head->appendNew<MemoryValue>(proc, Load, Int32, Origin(), loadIndex), storeIndex);
-    auto* newIndex = head->appendNew<Value>(proc, Add, Origin(), index, one);
-    auto* cmpValue = head->appendNew<Value>(proc, GreaterThan, Origin(), newIndex, index);
-    head->appendNew<Value>(proc, Branch, Origin(), cmpValue);
-    head->setSuccessors(FrequentedBlock(continuation), FrequentedBlock(update));
-
-    UpsilonValue* updateIndex = update->appendNew<UpsilonValue>(proc, Origin(), newIndex);
-    updateIndex->setPhi(index);
-    update->appendNew<Value>(proc, Jump, Origin());
-    update->setSuccessors(FrequentedBlock(head));
-
-    continuation->appendNewControlValue(proc, Return, Origin());
-
-    int* arr1 = new int[3];
-    int* arr2 = new int[3];
-
-    arr1[0] = 0;
-    arr1[1] = 0;
-    arr1[2] = 0;
-    arr2[0] = 1;
-    arr2[1] = 2;
-    arr2[2] = 3;
-
-    compileAndRun<void>(proc, arr2, arr1, 3);
-
-    CHECK_EQ(arr1[0], 1);
-    CHECK_EQ(arr1[1], 0);
-    CHECK_EQ(arr1[2], 0);
-
-    delete[] arr1;
-    delete [] arr2;
-}
-
 void testWasmAddressDoesNotCSE()
 {
     Procedure proc;
@@ -1188,8 +962,8 @@ void testWasmAddressDoesNotCSE()
 
     PatchpointValue* patchpoint = b->appendNew<PatchpointValue>(proc, Void, Origin());
     patchpoint->effects = Effects::forCall();
-    patchpoint->clobber(RegisterSet::macroScratchRegisters());
-    patchpoint->clobber(RegisterSet(pinnedGPR));
+    patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
+    patchpoint->clobber(RegisterSetBuilder(pinnedGPR));
     patchpoint->setGenerator(
         [&] (CCallHelpers& jit, const StackmapGenerationParams& params) {
             CHECK(!params.size());
@@ -1283,10 +1057,10 @@ void testStoreAfterClobberExitsSideways()
     proc.pinRegister(pinnedSizeGPR);
 
     // Please don't make me save anything.
-    RegisterSet csrs;
-    csrs.merge(RegisterSet::calleeSaveRegisters());
-    csrs.exclude(RegisterSet::stackRegisters());
-    csrs.forEach(
+    RegisterSetBuilder csrs;
+    csrs.merge(RegisterSetBuilder::calleeSaveRegisters());
+    csrs.exclude(RegisterSetBuilder::stackRegisters());
+    csrs.buildAndValidate().forEach(
         [&] (Reg reg) {
             CHECK(reg != pinnedBaseGPR);
             CHECK(reg != pinnedSizeGPR);
@@ -1463,10 +1237,10 @@ void testStoreAfterClobberExitsSidewaysSuccessor()
     proc.pinRegister(pinnedSizeGPR);
 
     // Please don't make me save anything.
-    RegisterSet csrs;
-    csrs.merge(RegisterSet::calleeSaveRegisters());
-    csrs.exclude(RegisterSet::stackRegisters());
-    csrs.forEach(
+    RegisterSetBuilder csrs;
+    csrs.merge(RegisterSetBuilder::calleeSaveRegisters());
+    csrs.exclude(RegisterSetBuilder::stackRegisters());
+    csrs.buildAndValidate().forEach(
         [&] (Reg reg) {
             CHECK(reg != pinnedBaseGPR);
             CHECK(reg != pinnedSizeGPR);
@@ -1580,12 +1354,74 @@ void testStoreAfterClobberExitsSidewaysSuccessor()
     delete[] memory;
 }
 
-void addCopyTests(const char* filter, Deque<RefPtr<SharedTask<void()>>>& tasks)
+void testNarrowLoad()
 {
-    RUN(testFastForwardCopy32());
-    RUN(testByteCopyLoop());
-    RUN(testByteCopyLoopStartIsLoopDependent());
-    RUN(testByteCopyLoopBoundIsLoopDependent());
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto* value1 = root->appendNew<MemoryValue>(proc, Load, Int64, Origin(), root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto* value2 = root->appendNew<MemoryValue>(proc, Load, Int32, Origin(), root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    root->appendNewControlValue(proc, Return, Origin(), root->appendNew<Value>(proc, Add, Int64, Origin(), value1, root->appendNew<Value>(proc, ZExt32, Int64, Origin(), value2)));
+
+    uint64_t value = 0x1000000010000000ULL;
+    CHECK_EQ(compileAndRun<uint64_t>(proc, &value), 0x1000000020000000ULL);
+}
+
+void testNarrowLoadClobber()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto* value1 = root->appendNew<MemoryValue>(proc, Load, Int64, Origin(), address);
+    root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<Const64Value>(proc, Origin(), 0), address, 0);
+    auto* value2 = root->appendNew<MemoryValue>(proc, Load, Int32, Origin(), root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    root->appendNewControlValue(proc, Return, Origin(), root->appendNew<Value>(proc, Add, Int64, Origin(), value1, root->appendNew<Value>(proc, ZExt32, Int64, Origin(), value2)));
+
+    uint64_t value = 0x1000000010000000ULL;
+    CHECK_EQ(compileAndRun<uint64_t>(proc, &value), 0x1000000010000000ULL);
+    CHECK_EQ(value, 0x0000000000000000ULL);
+}
+
+void testNarrowLoadClobberNarrow()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto* value1 = root->appendNew<MemoryValue>(proc, Load, Int64, Origin(), address);
+    root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<Const32Value>(proc, Origin(), 0), address, 0);
+    auto* value2 = root->appendNew<MemoryValue>(proc, Load, Int32, Origin(), root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    root->appendNewControlValue(proc, Return, Origin(), root->appendNew<Value>(proc, Add, Int64, Origin(), value1, root->appendNew<Value>(proc, ZExt32, Int64, Origin(), value2)));
+
+    uint64_t value = 0x1000000010000000ULL;
+    CHECK_EQ(compileAndRun<uint64_t>(proc, &value), 0x1000000010000000ULL);
+    CHECK_EQ(value, 0x1000000000000000ULL);
+}
+
+void testNarrowLoadNotClobber()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto* value1 = root->appendNew<MemoryValue>(proc, Load, Int64, Origin(), address);
+    root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<Const32Value>(proc, Origin(), 0), address, 4);
+    auto* value2 = root->appendNew<MemoryValue>(proc, Load, Int32, Origin(), root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    root->appendNewControlValue(proc, Return, Origin(), root->appendNew<Value>(proc, Add, Int64, Origin(), value1, root->appendNew<Value>(proc, ZExt32, Int64, Origin(), value2)));
+
+    uint64_t value = 0x1000000010000000ULL;
+    CHECK_EQ(compileAndRun<uint64_t>(proc, &value), 0x1000000020000000ULL);
+    CHECK_EQ(value, 0x0000000010000000ULL);
+}
+
+void testNarrowLoadUpper()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto* value1 = root->appendNew<MemoryValue>(proc, Load, Int64, Origin(), address);
+    auto* value2 = root->appendNew<MemoryValue>(proc, Load, Int32, Origin(), address, 4);
+    root->appendNewControlValue(proc, Return, Origin(), root->appendNew<Value>(proc, Add, Int64, Origin(), value1, root->appendNew<Value>(proc, ZExt32, Int64, Origin(), value2)));
+
+    uint64_t value = 0x2000000010000000ULL;
+    CHECK_EQ(compileAndRun<uint64_t>(proc, &value), 0x2000000030000000ULL);
 }
 
 #endif // ENABLE(B3_JIT)

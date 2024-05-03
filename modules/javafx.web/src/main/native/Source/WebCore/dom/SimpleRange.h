@@ -61,7 +61,7 @@ template<typename ...T> auto makeSimpleRange(T&& ...arguments) -> decltype(makeS
 WEBCORE_EXPORT std::optional<SimpleRange> makeRangeSelectingNode(Node&);
 WEBCORE_EXPORT SimpleRange makeRangeSelectingNodeContents(Node&);
 
-bool operator==(const SimpleRange&, const SimpleRange&);
+WEBCORE_EXPORT bool operator==(const SimpleRange&, const SimpleRange&);
 
 template<TreeType = Tree> Node* commonInclusiveAncestor(const SimpleRange&);
 
@@ -69,6 +69,8 @@ template<TreeType = Tree> bool contains(const SimpleRange&, const BoundaryPoint&
 template<TreeType = Tree> bool contains(const SimpleRange&, const std::optional<BoundaryPoint>&);
 template<TreeType = Tree> bool contains(const SimpleRange& outerRange, const SimpleRange& innerRange);
 template<TreeType = Tree> bool contains(const SimpleRange&, const Node&);
+
+template<> WEBCORE_EXPORT bool contains<ComposedTree>(const SimpleRange&, const std::optional<BoundaryPoint>&);
 
 WEBCORE_EXPORT bool containsForTesting(TreeType, const SimpleRange& outerRange, const SimpleRange& innerRange);
 WEBCORE_EXPORT bool containsForTesting(TreeType, const SimpleRange&, const Node&);
@@ -81,8 +83,8 @@ WEBCORE_EXPORT bool intersectsForTesting(TreeType, const SimpleRange&, const Sim
 WEBCORE_EXPORT bool intersectsForTesting(TreeType, const SimpleRange&, const Node&);
 
 // Returns equivalent if point is in range.
-template<TreeType = Tree> PartialOrdering treeOrder(const SimpleRange&, const BoundaryPoint&);
-template<TreeType = Tree> PartialOrdering treeOrder(const BoundaryPoint&, const SimpleRange&);
+template<TreeType = Tree> std::partial_ordering treeOrder(const SimpleRange&, const BoundaryPoint&);
+template<TreeType = Tree> std::partial_ordering treeOrder(const BoundaryPoint&, const SimpleRange&);
 
 struct OffsetRange {
     unsigned start { 0 };
@@ -123,7 +125,7 @@ public:
 
     operator bool() const { return m_node; }
     bool operator!() const { return !m_node; }
-    bool operator!=(const std::nullptr_t) const { return m_node; }
+    bool operator==(const std::nullptr_t) const { return !m_node; }
 
     IntersectingNodeIterator& operator++() { advance(); return *this; }
     void advance();

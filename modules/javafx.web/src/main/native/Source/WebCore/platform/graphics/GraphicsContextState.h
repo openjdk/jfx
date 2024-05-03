@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc.  All rights reserved.
+ * Copyright (C) 2022-2023 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "GraphicsStyle.h"
 #include "GraphicsTypes.h"
 #include "SourceBrush.h"
 #include "WindRule.h"
@@ -33,7 +34,9 @@
 namespace WebCore {
 
 class GraphicsContextState {
+#if PLATFORM(JAVA)
     friend class GraphicsContextJava;
+#endif
     friend class GraphicsContextCairo;
 public:
     enum class Change : uint32_t {
@@ -45,7 +48,7 @@ public:
         StrokeStyle                 = 1 << 4,
 
         CompositeMode               = 1 << 5,
-        DropShadow                  = 1 << 6,
+        Style                       = 1 << 6,
 
         Alpha                       = 1 << 7,
         TextDrawingMode             = 1 << 8,
@@ -63,6 +66,7 @@ public:
     using ChangeFlags = OptionSet<Change>;
 
     static constexpr ChangeFlags basicChangeFlags { Change::StrokeThickness, Change::StrokeBrush, Change::FillBrush };
+    static constexpr ChangeFlags strokeChangeFlags { Change::StrokeThickness, Change::StrokeBrush };
 
     WEBCORE_EXPORT GraphicsContextState(const ChangeFlags& = { }, InterpolationQuality = InterpolationQuality::Default);
 
@@ -71,6 +75,7 @@ public:
 
     GraphicsContextState cloneForRecording() const;
 
+    SourceBrush& fillBrush() { return m_fillBrush; }
     const SourceBrush& fillBrush() const { return m_fillBrush; }
     void setFillBrush(const SourceBrush& brush) { setProperty(Change::FillBrush, &GraphicsContextState::m_fillBrush, brush); }
     void setFillColor(const Color& color) { setProperty(Change::FillBrush, &GraphicsContextState::m_fillBrush, { color }); }
@@ -80,6 +85,7 @@ public:
     WindRule fillRule() const { return m_fillRule; }
     void setFillRule(WindRule fillRule) { setProperty(Change::FillRule, &GraphicsContextState::m_fillRule, fillRule); }
 
+    SourceBrush& strokeBrush() { return m_strokeBrush; }
     const SourceBrush& strokeBrush() const { return m_strokeBrush; }
     void setStrokeBrush(const SourceBrush& brush) { setProperty(Change::StrokeBrush, &GraphicsContextState::m_strokeBrush, brush); }
     void setStrokeColor(const Color& color) { setProperty(Change::StrokeBrush, &GraphicsContextState::m_strokeBrush, { color }); }
@@ -95,8 +101,10 @@ public:
     const CompositeMode& compositeMode() const { return m_compositeMode; }
     void setCompositeMode(CompositeMode compositeMode) { setProperty(Change::CompositeMode, &GraphicsContextState::m_compositeMode, compositeMode); }
 
-    const DropShadow& dropShadow() const { return m_dropShadow; }
-    void setDropShadow(const DropShadow& dropShadow) { setProperty(Change::DropShadow, &GraphicsContextState::m_dropShadow, dropShadow); }
+    WEBCORE_EXPORT std::optional<GraphicsDropShadow> dropShadow() const;
+
+    const std::optional<GraphicsStyle>& style() const { return m_style; }
+    void setStyle(const std::optional<GraphicsStyle>& style) { setProperty(Change::Style, &GraphicsContextState::m_style, style); }
 
     float alpha() const { return m_alpha; }
     void setAlpha(float alpha) { setProperty(Change::Alpha, &GraphicsContextState::m_alpha, alpha); }
@@ -128,10 +136,11 @@ public:
 #endif
 
     bool containsOnlyInlineChanges() const;
-    void mergeChanges(const GraphicsContextState&, const std::optional<GraphicsContextState>& lastDrawingState = std::nullopt);
+    bool containsOnlyInlineStrokeChanges() const;
+    void mergeLastChanges(const GraphicsContextState&, const std::optional<GraphicsContextState>& lastDrawingState = std::nullopt);
+    void mergeAllChanges(const GraphicsContextState&);
 
     void didBeginTransparencyLayer();
-    void didEndTransparencyLayer(float originalOpacity);
 
     WTF::TextStream& dump(WTF::TextStream&) const;
 #if PLATFORM(JAVA)
@@ -171,10 +180,10 @@ private:
 
     SourceBrush m_strokeBrush { Color::black };
     float m_strokeThickness { 0 };
-    StrokeStyle m_strokeStyle { SolidStroke };
+    StrokeStyle m_strokeStyle { StrokeStyle::SolidStroke };
 
     CompositeMode m_compositeMode { CompositeOperator::SourceOver, BlendMode::Normal };
-    DropShadow m_dropShadow;
+    std::optional<GraphicsStyle> m_style;
 
     float m_alpha { 1 };
     InterpolationQuality m_imageInterpolationQuality { InterpolationQuality::Default };
@@ -208,7 +217,7 @@ void GraphicsContextState::encode(Encoder& encoder) const
     encode(Change::StrokeStyle,                     &GraphicsContextState::m_strokeStyle);
 
     encode(Change::CompositeMode,                   &GraphicsContextState::m_compositeMode);
-    encode(Change::DropShadow,                      &GraphicsContextState::m_dropShadow);
+    encode(Change::Style,                           &GraphicsContextState::m_style);
 
     encode(Change::Alpha,                           &GraphicsContextState::m_alpha);
     encode(Change::ImageInterpolationQuality,       &GraphicsContextState::m_imageInterpolationQuality);
@@ -262,7 +271,7 @@ std::optional<GraphicsContextState> GraphicsContextState::decode(Decoder& decode
 
     if (!decode(state, Change::CompositeMode,               &GraphicsContextState::m_compositeMode))
         return std::nullopt;
-    if (!decode(state, Change::DropShadow,                  &GraphicsContextState::m_dropShadow))
+    if (!decode(state, Change::Style,                       &GraphicsContextState::m_style))
         return std::nullopt;
 
     if (!decode(state, Change::Alpha,                       &GraphicsContextState::m_alpha))
@@ -308,7 +317,7 @@ template<> struct EnumTraits<WebCore::GraphicsContextState::Change> {
         WebCore::GraphicsContextState::Change::StrokeStyle,
 
         WebCore::GraphicsContextState::Change::CompositeMode,
-        WebCore::GraphicsContextState::Change::DropShadow,
+        WebCore::GraphicsContextState::Change::Style,
 
         WebCore::GraphicsContextState::Change::Alpha,
         WebCore::GraphicsContextState::Change::TextDrawingMode,

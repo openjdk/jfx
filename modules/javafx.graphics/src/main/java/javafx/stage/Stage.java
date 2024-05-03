@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -887,7 +887,7 @@ public class Stage extends Window {
 
     /**
      * Defines whether the {@code Stage} is resizable or not by the user.
-     * Programatically you may still change the size of the Stage. This is
+     * Programmatically you may still change the size of the Stage. This is
      * a hint which allows the implementation to optionally make the Stage
      * resizable by the user.
      * <p>
@@ -1186,6 +1186,10 @@ public class Stage extends Window {
             peer.setIconified(isIconified());
             peer.setMaximized(isMaximized());
             peer.setTitle(getTitle());
+
+            if (!isIconified()) {
+                peer.requestFocus();
+            }
 
             List<Object> platformImages = new ArrayList<>();
             for (Image icon : icons) {

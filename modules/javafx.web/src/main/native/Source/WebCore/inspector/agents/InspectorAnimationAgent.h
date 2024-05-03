@@ -33,6 +33,7 @@
 #include <JavaScriptCore/InspectorProtocolObjects.h>
 #include <wtf/Forward.h>
 #include <wtf/RobinHoodHashMap.h>
+#include <wtf/WeakHashMap.h>
 
 namespace WebCore {
 
@@ -40,10 +41,11 @@ class AnimationEffect;
 class DeclarativeAnimation;
 class Element;
 class Event;
-class Frame;
 class KeyframeEffect;
+class LocalFrame;
 class Page;
 class WebAnimation;
+class WeakPtrImplWithEventTargetData;
 
 struct Styleable;
 
@@ -67,19 +69,20 @@ public:
     Inspector::Protocol::ErrorStringOr<void> stopTracking();
 
     // InspectorInstrumentation
-    void willApplyKeyframeEffect(const Styleable&, KeyframeEffect&, ComputedEffectTiming);
+    void willApplyKeyframeEffect(const Styleable&, KeyframeEffect&, const ComputedEffectTiming&);
     void didChangeWebAnimationName(WebAnimation&);
     void didSetWebAnimationEffect(WebAnimation&);
     void didChangeWebAnimationEffectTiming(WebAnimation&);
     void didChangeWebAnimationEffectTarget(WebAnimation&);
     void didCreateWebAnimation(WebAnimation&);
     void willDestroyWebAnimation(WebAnimation&);
-    void frameNavigated(Frame&);
+    void frameNavigated(LocalFrame&);
 
 private:
     String findAnimationId(WebAnimation&);
     WebAnimation* assertAnimation(Inspector::Protocol::ErrorString&, const String& animationId);
-    void bindAnimation(WebAnimation&, bool captureBacktrace);
+    void bindAnimation(WebAnimation&, RefPtr<Inspector::Protocol::Console::StackTrace> backtrace);
+    void animationBindingTimerFired();
     void unbindAnimation(const String& animationId);
     void animationDestroyedTimerFired();
     void reset();
@@ -93,6 +96,10 @@ private:
     Page& m_inspectedPage;
 
     MemoryCompactRobinHoodHashMap<String, WebAnimation*> m_animationIdMap;
+
+    WeakHashMap<WebAnimation, Ref<Inspector::Protocol::Console::StackTrace>, WeakPtrImplWithEventTargetData> m_animationsPendingBinding;
+    Timer m_animationBindingTimer;
+
     Vector<String> m_removedAnimationIds;
     Timer m_animationDestroyedTimer;
 

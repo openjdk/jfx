@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -2016,9 +2016,10 @@ public abstract class BaseShaderGraphics
 
         CompositeMode blendMode = getCompositeMode();
         // LCD support requires several attributes to function:
-        // FontStrike supports LCD, SRC_OVER CompositeMode and Paint is a COLOR
+        // FontStrike supports LCD, SRC_OVER CompositeMode and Paint is an opaque COLOR
         boolean lcdSupported = blendMode == CompositeMode.SRC_OVER &&
                                textColor != null &&
+                               textColor.getAlpha() == 1.0 &&
                                xform.is2D() &&
                                !getRenderTarget().isMSAA();
 

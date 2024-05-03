@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,15 +26,22 @@
 #include "config.h"
 #include "CSSParserContext.h"
 
-#include "CSSImageValue.h"
 #include "CSSPropertyNames.h"
+#include "CSSValuePool.h"
 #include "Document.h"
 #include "DocumentLoader.h"
+#include "OriginAccessPatterns.h"
 #include "Page.h"
 #include "Settings.h"
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
+
+// https://drafts.csswg.org/css-values/#url-local-url-flag
+bool ResolvedURL::isLocalURL() const
+{
+    return specifiedURLString.startsWith('#');
+}
 
 const CSSParserContext& strictCSSParserContext()
 {
@@ -48,14 +55,20 @@ CSSParserContext::CSSParserContext(CSSParserMode mode, const URL& baseURL)
 {
     // FIXME: We should turn all of the features on from their WebCore Settings defaults.
     if (mode == UASheetMode) {
+        colorMixEnabled = true;
         focusVisibleEnabled = true;
         propertySettings.cssContainmentEnabled = true;
         propertySettings.cssIndividualTransformPropertiesEnabled = true;
         propertySettings.cssInputSecurityEnabled = true;
+        propertySettings.cssCounterStyleAtRulesEnabled = true;
 #if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
         transformStyleOptimized3DEnabled = true;
 #endif
     }
+
+    propertySettings.cssWhiteSpaceLonghandsEnabled = true;
+
+    StaticCSSValuePool::init();
 }
 
 CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBaseURL, const String& charset)
@@ -63,7 +76,7 @@ CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBas
     , charset { charset }
     , mode { document.inQuirksMode() ? HTMLQuirksMode : HTMLStandardMode }
     , isHTMLDocument { document.isHTMLDocument() }
-    , hasDocumentSecurityOrigin { sheetBaseURL.isNull() || document.securityOrigin().canRequest(baseURL) }
+    , hasDocumentSecurityOrigin { sheetBaseURL.isNull() || document.securityOrigin().canRequest(baseURL, OriginAccessPatternsForWebProcess::singleton()) }
     , useSystemAppearance { document.page() ? document.page()->useSystemAppearance() : false }
     , colorContrastEnabled { document.settings().cssColorContrastEnabled() }
     , colorMixEnabled { document.settings().cssColorMixEnabled() }
@@ -83,6 +96,14 @@ CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBas
     , gradientPremultipliedAlphaInterpolationEnabled { document.settings().cssGradientPremultipliedAlphaInterpolationEnabled() }
     , gradientInterpolationColorSpacesEnabled { document.settings().cssGradientInterpolationColorSpacesEnabled() }
     , subgridEnabled { document.settings().subgridEnabled() }
+    , masonryEnabled { document.settings().masonryEnabled() }
+    , cssNestingEnabled { document.settings().cssNestingEnabled() }
+#if ENABLE(CSS_PAINTING_API)
+    , cssPaintingAPIEnabled { document.settings().cssPaintingAPIEnabled() }
+#endif
+    , cssTextUnderlinePositionLeftRightEnabled { document.settings().cssTextUnderlinePositionLeftRightEnabled() }
+    , cssTextWrapNewValuesEnabled { document.settings().cssTextWrapNewValuesEnabled() }
+    , cssWordBreakAutoEnabled { document.settings().cssWordBreakAutoEnabled() }
     , propertySettings { CSSPropertySettings { document.settings() } }
 {
 }
@@ -97,6 +118,7 @@ bool operator==(const CSSParserContext& a, const CSSParserContext& b)
         && a.hasDocumentSecurityOrigin == b.hasDocumentSecurityOrigin
         && a.isContentOpaque == b.isContentOpaque
         && a.useSystemAppearance == b.useSystemAppearance
+        && a.shouldIgnoreImportRules == b.shouldIgnoreImportRules
         && a.colorContrastEnabled == b.colorContrastEnabled
         && a.colorMixEnabled == b.colorMixEnabled
         && a.constantPropertiesEnabled == b.constantPropertiesEnabled
@@ -115,6 +137,12 @@ bool operator==(const CSSParserContext& a, const CSSParserContext& b)
         && a.gradientPremultipliedAlphaInterpolationEnabled == b.gradientPremultipliedAlphaInterpolationEnabled
         && a.gradientInterpolationColorSpacesEnabled == b.gradientInterpolationColorSpacesEnabled
         && a.subgridEnabled == b.subgridEnabled
+        && a.masonryEnabled == b.masonryEnabled
+        && a.cssNestingEnabled == b.cssNestingEnabled
+        && a.cssPaintingAPIEnabled == b.cssPaintingAPIEnabled
+        && a.cssTextUnderlinePositionLeftRightEnabled == b.cssTextUnderlinePositionLeftRightEnabled
+        && a.cssTextWrapNewValuesEnabled == b.cssTextWrapNewValuesEnabled
+        && a.cssWordBreakAutoEnabled == b.cssWordBreakAutoEnabled
         && a.propertySettings == b.propertySettings
     ;
 }
@@ -142,7 +170,13 @@ void add(Hasher& hasher, const CSSParserContext& context)
         | context.gradientPremultipliedAlphaInterpolationEnabled << 16
         | context.gradientInterpolationColorSpacesEnabled   << 17
         | context.subgridEnabled                            << 18
-        | (uint64_t)context.mode                            << 19; // This is multiple bits, so keep it last.
+        | context.masonryEnabled                            << 19
+        | context.cssNestingEnabled                         << 20
+        | context.cssPaintingAPIEnabled                     << 21
+        | context.cssTextUnderlinePositionLeftRightEnabled  << 22
+        | context.cssTextWrapNewValuesEnabled               << 23
+        | context.cssWordBreakAutoEnabled                   << 24
+        | (uint64_t)context.mode                            << 25; // This is multiple bits, so keep it last.
     add(hasher, context.baseURL, context.charset, context.propertySettings, bits);
 }
 

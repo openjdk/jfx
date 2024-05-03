@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -50,7 +50,6 @@ namespace DOMJIT {
 class Signature;
 }
 
-struct ProtoCallFrame;
 class TrackedReferences;
 class VM;
 
@@ -67,7 +66,6 @@ static_assert(WTF::getMSBSetConstexpr(static_cast<std::underlying_type_t<JITType
 
 class JITCode : public ThreadSafeRefCounted<JITCode> {
 public:
-    template<PtrTag tag> using CodePtr = MacroAssemblerCodePtr<tag>;
     template<PtrTag tag> using CodeRef = MacroAssemblerCodeRef<tag>;
 
     static ASCIILiteral typeName(JITType);
@@ -163,13 +161,16 @@ public:
 
     virtual const DOMJIT::Signature* signature() const { return nullptr; }
 
+    virtual bool canSwapCodeRefForDebugger() const { return false; }
+    virtual CodeRef<JSEntryPtrTag> swapCodeRefForDebugger(CodeRef<JSEntryPtrTag>);
+
     enum class ShareAttribute : uint8_t {
         NotShared,
         Shared
     };
 
 protected:
-    JITCode(JITType, JITCode::ShareAttribute = JITCode::ShareAttribute::NotShared);
+    JITCode(JITType, CodePtr<JSEntryPtrTag> = nullptr, JITCode::ShareAttribute = JITCode::ShareAttribute::NotShared);
 
 public:
     virtual ~JITCode();
@@ -189,6 +190,8 @@ public:
         return jitCode->jitType();
     }
 
+    void* addressForCall() const { return m_addressForCall.taggedPtr(); }
+
     virtual CodePtr<JSEntryPtrTag> addressForCall(ArityCheckMode) = 0;
     virtual void* executableAddressAtOffset(size_t offset) = 0;
     void* executableAddress() { return executableAddressAtOffset(0); }
@@ -203,8 +206,6 @@ public:
 
     virtual void validateReferences(const TrackedReferences&);
 
-    JSValue execute(VM*, ProtoCallFrame*);
-
     void* start() { return dataAddressAtOffset(0); }
     virtual size_t size() = 0;
     void* end() { return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(start()) + size()); }
@@ -212,7 +213,7 @@ public:
     virtual bool contains(void*) = 0;
 
 #if ENABLE(JIT)
-    virtual RegisterSet liveRegistersToPreserveAtExceptionHandlingCallSite(CodeBlock*, CallSiteIndex);
+    virtual RegisterSetBuilder liveRegistersToPreserveAtExceptionHandlingCallSite(CodeBlock*, CallSiteIndex);
     virtual std::optional<CodeOrigin> findPC(CodeBlock*, void* pc) { UNUSED_PARAM(pc); return std::nullopt; }
 #endif
 
@@ -231,6 +232,7 @@ private:
     const ShareAttribute m_shareAttribute;
 protected:
     Intrinsic m_intrinsic { NoIntrinsic }; // Effective only in NativeExecutable.
+    CodePtr<JSEntryPtrTag> m_addressForCall;
 };
 
 class JITCodeWithCodeRef : public JITCode {
@@ -247,8 +249,10 @@ public:
     size_t size() override;
     bool contains(void*) override;
 
+    CodeRef<JSEntryPtrTag> swapCodeRefForDebugger(CodeRef<JSEntryPtrTag>) override;
+
 protected:
-    CodeRef<JSEntryPtrTag> m_ref;
+    RefPtr<ExecutableMemoryHandle> m_executableMemory;
 };
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DirectJITCode);
@@ -276,6 +280,8 @@ public:
     ~NativeJITCode() override;
 
     CodePtr<JSEntryPtrTag> addressForCall(ArityCheckMode) override;
+
+    bool canSwapCodeRefForDebugger() const override { return true; }
 };
 
 class NativeDOMJITCode final : public NativeJITCode {

@@ -32,12 +32,12 @@
 namespace WTF {
 
 // Value will be deleted lazily upon rehash or amortized over time. For manual cleanup, call removeNullReferences().
-template<typename KeyType, typename ValueType, typename Counter = EmptyCounter>
+template<typename KeyType, typename ValueType, typename WeakPtrImpl>
 class WeakHashMap final {
     WTF_MAKE_FAST_ALLOCATED;
 public:
 
-    using RefType = Ref<WeakPtrImpl<Counter>>;
+    using RefType = Ref<WeakPtrImpl>;
     using KeyTraits = HashTraits<KeyType>;
     using ValueTraits = HashTraits<ValueType>;
     using WeakHashImplMap = HashMap<RefType, ValueType>;
@@ -131,7 +131,6 @@ public:
         using Base = WeakHashMapIteratorBase<WeakHashMap, typename WeakHashImplMap::iterator, PeekPtrType, PeekType>;
 
         bool operator==(const WeakHashMapIterator& other) const { return Base::m_position == other.Base::m_position; }
-        bool operator!=(const WeakHashMapIterator& other) const { return Base::m_position != other.Base::m_position; }
 
         PeekPtrType get() { return Base::makePeek(); }
         PeekType operator*() { return Base::makePeek(); }
@@ -156,7 +155,6 @@ public:
         using Base = WeakHashMapIteratorBase<const WeakHashMap, typename WeakHashImplMap::const_iterator, const PeekPtrType, const PeekType>;
 
         bool operator==(const WeakHashMapConstIterator& other) const { return Base::m_position == other.Base::m_position; }
-        bool operator!=(const WeakHashMapConstIterator& other) const { return Base::m_position != other.Base::m_position; }
 
         const PeekPtrType get() const { return Base::makePeek(); }
         const PeekType operator*() const { return Base::makePeek(); }
@@ -283,8 +281,7 @@ public:
     template<typename Functor>
     bool removeIf(Functor&& functor)
     {
-        m_operationCountSinceLastCleanup = 0;
-        return m_map.removeIf([&](auto& entry) {
+        bool result = m_map.removeIf([&](auto& entry) {
             auto* key = static_cast<KeyType*>(entry.key->template get<KeyType>());
             bool isReleasedWeakKey = !key;
             if (isReleasedWeakKey)
@@ -292,22 +289,27 @@ public:
             PeekType peek { *key, entry.value };
             return functor(peek);
         });
+        cleanupHappened();
+        return result;
     }
 
     void clear()
     {
-        m_operationCountSinceLastCleanup = 0;
         m_map.clear();
+        cleanupHappened();
     }
 
     unsigned capacity() const { return m_map.capacity(); }
 
     bool isEmptyIgnoringNullReferences() const
     {
-        auto result = begin() == end();
-        if (UNLIKELY(result && m_map.size()))
+        if (m_map.isEmpty())
+            return true;
+
+        auto onlyContainsNullReferences = begin() == end();
+        if (UNLIKELY(onlyContainsNullReferences))
             const_cast<WeakHashMap&>(*this).clear();
-        return result;
+        return onlyContainsNullReferences;
     }
 
     bool hasNullReferences() const
@@ -318,9 +320,9 @@ public:
             return !iterator.key.get();
         });
         if (result)
-            amortizedCleanupIfNeeded(count);
+            increaseOperationCountSinceLastCleanup(count);
         else
-            m_operationCountSinceLastCleanup = 0;
+            cleanupHappened();
         return result;
     }
 
@@ -332,8 +334,9 @@ public:
 
     NEVER_INLINE bool removeNullReferences()
     {
-        m_operationCountSinceLastCleanup = 0;
-        return m_map.removeIf([](auto& iterator) { return !iterator.key.get(); });
+        bool result = m_map.removeIf([](auto& iterator) { return !iterator.key.get(); });
+        cleanupHappened();
+        return result;
     }
 
 #if ASSERT_ENABLED
@@ -343,6 +346,12 @@ public:
 #endif
 
 private:
+    ALWAYS_INLINE void cleanupHappened() const
+    {
+        m_operationCountSinceLastCleanup = 0;
+        m_maxOperationCountWithoutCleanup = std::min(std::numeric_limits<unsigned>::max() / 2, m_map.size()) * 2;
+    }
+
     ALWAYS_INLINE unsigned increaseOperationCountSinceLastCleanup(unsigned operationsPerformed = 1) const
     {
         unsigned currentCount = m_operationCountSinceLastCleanup;
@@ -353,7 +362,7 @@ private:
     ALWAYS_INLINE void amortizedCleanupIfNeeded(unsigned operationsPerformed = 1) const
     {
         unsigned currentCount = increaseOperationCountSinceLastCleanup(operationsPerformed);
-        if (currentCount / 2 > m_map.size())
+        if (currentCount > m_maxOperationCountWithoutCleanup)
             const_cast<WeakHashMap&>(*this).removeNullReferences();
     }
 
@@ -364,16 +373,17 @@ private:
     }
 
     template <typename T>
-    static WeakPtrImpl<Counter>* keyImplIfExists(const T& key)
+    static WeakPtrImpl* keyImplIfExists(const T& key)
     {
         auto& weakPtrImpl = key.weakPtrFactory().m_impl;
-        if (!weakPtrImpl || !*weakPtrImpl)
+        if (auto* pointer = weakPtrImpl.pointer(); pointer && *pointer)
+            return pointer;
             return nullptr;
-        return weakPtrImpl.get();
     }
 
     WeakHashImplMap m_map;
-    mutable unsigned m_operationCountSinceLastCleanup { 0 }; // FIXME: Store this as a HashTable meta data.
+    mutable unsigned m_operationCountSinceLastCleanup { 0 };
+    mutable unsigned m_maxOperationCountWithoutCleanup { 0 };
 
     template <typename, typename, typename, typename> friend class WeakHashMapIteratorBase;
 };

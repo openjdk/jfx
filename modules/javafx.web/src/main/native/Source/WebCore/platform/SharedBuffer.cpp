@@ -261,11 +261,20 @@ Ref<FragmentedSharedBuffer> FragmentedSharedBuffer::copy() const
     return clone;
 }
 
-void FragmentedSharedBuffer::forEachSegment(const Function<void(const Span<const uint8_t>&)>& apply) const
+void FragmentedSharedBuffer::forEachSegment(const Function<void(const std::span<const uint8_t>&)>& apply) const
 {
     auto segments = m_segments;
     for (auto& segment : segments)
-        apply(Span { segment.segment->data(), segment.segment->size() });
+        segment.segment->iterate(apply);
+}
+
+void DataSegment::iterate(const Function<void(const std::span<const uint8_t>&)>& apply) const
+{
+#if USE(FOUNDATION)
+    if (auto* data = std::get_if<RetainPtr<CFDataRef>>(&m_immutableData))
+        return iterate(data->get(), apply);
+#endif
+    apply({ data(), size() });
 }
 
 void FragmentedSharedBuffer::forEachSegmentAsSharedBuffer(const Function<void(Ref<SharedBuffer>&&)>& apply) const
@@ -275,7 +284,7 @@ void FragmentedSharedBuffer::forEachSegmentAsSharedBuffer(const Function<void(Re
         apply(SharedBuffer::create(segment.segment.copyRef()));
 }
 
-bool FragmentedSharedBuffer::startsWith(const Span<const uint8_t>& prefix) const
+bool FragmentedSharedBuffer::startsWith(const std::span<const uint8_t>& prefix) const
 {
     if (prefix.empty())
         return true;
@@ -671,7 +680,7 @@ RefPtr<SharedBuffer> utf8Buffer(const String& string)
                 return nullptr;
         } else {
             const UChar* d = string.characters16();
-            if (WTF::Unicode::convertUTF16ToUTF8(&d, d + length, &p, p + buffer.size()) != WTF::Unicode::ConversionOK)
+            if (WTF::Unicode::convertUTF16ToUTF8(&d, d + length, &p, p + buffer.size()) != WTF::Unicode::ConversionResult::Success)
                 return nullptr;
         }
     }

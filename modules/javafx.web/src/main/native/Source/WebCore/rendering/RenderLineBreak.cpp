@@ -26,14 +26,13 @@
 #include "FontMetrics.h"
 #include "HTMLElement.h"
 #include "HTMLWBRElement.h"
-#include "InlineIteratorBox.h"
+#include "InlineIteratorBoxInlines.h"
 #include "InlineIteratorLineBox.h"
 #include "InlineRunAndOffset.h"
-#include "LegacyInlineElementBox.h"
-#include "LegacyRootInlineBox.h"
 #include "LineSelection.h"
 #include "LogicalSelectionOffsetCaches.h"
 #include "RenderBlock.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderView.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGInlineTextBox.h"
@@ -153,14 +152,15 @@ IntRect RenderLineBreak::linesBoundingBox() const
     return enclosingIntRect(run->visualRectIgnoringBlockDirection());
 }
 
-void RenderLineBreak::absoluteRects(Vector<IntRect>& rects, const LayoutPoint& accumulatedOffset) const
+void RenderLineBreak::boundingRects(Vector<LayoutRect>& rects, const LayoutPoint& accumulatedOffset) const
 {
     auto box = InlineIterator::boxFor(*this);
     if (!box)
         return;
 
-    auto rect = box->visualRectIgnoringBlockDirection();
-    rects.append(enclosingIntRect(FloatRect(accumulatedOffset + rect.location(), rect.size())));
+    auto rect = LayoutRect { box->visualRectIgnoringBlockDirection() };
+    rect.moveBy(accumulatedOffset);
+    rects.append(rect);
 }
 
 void RenderLineBreak::absoluteQuads(Vector<FloatQuad>& quads, bool* wasFixed) const
@@ -189,15 +189,15 @@ void RenderLineBreak::collectSelectionGeometries(Vector<SelectionGeometry>& rect
     auto lineBox = run->lineBox();
 
     auto lineSelectionRect = LineSelection::logicalRect(*lineBox);
-    LayoutRect rect = IntRect(run->logicalLeft(), lineSelectionRect.y(), 0, lineSelectionRect.height());
+    LayoutRect rect = IntRect(run->logicalLeftIgnoringInlineDirection(), lineSelectionRect.y(), 0, lineSelectionRect.height());
     if (!lineBox->isHorizontal())
         rect = rect.transposedRect();
 
     if (lineBox->isFirstAfterPageBreak()) {
         if (run->isHorizontal())
-            rect.shiftYEdgeTo(lineBox->top());
+            rect.shiftYEdgeTo(lineBox->logicalTop());
         else
-            rect.shiftXEdgeTo(lineBox->top());
+            rect.shiftXEdgeTo(lineBox->logicalTop());
     }
 
     // FIXME: Out-of-flow positioned line breaks do not follow normal containing block chain.

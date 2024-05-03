@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -85,78 +85,78 @@ void CJavaPlayerEventDispatcher::Init(JNIEnv *env, jobject PlayerInstance, CMedi
         jclass klass = env->GetObjectClass(m_PlayerInstance);
 
         m_SendWarningMethod = env->GetMethodID(klass, "sendWarning", "(ILjava/lang/String;)V");
-        hasException = javaEnv.reportException();
+        hasException = (javaEnv.reportException() || (NULL == m_SendWarningMethod));
 
         if (!hasException)
         {
             m_SendPlayerMediaErrorEventMethod = env->GetMethodID(klass, "sendPlayerMediaErrorEvent", "(I)V");
-            hasException = javaEnv.reportException();
+            hasException = (javaEnv.reportException() || (NULL == m_SendPlayerMediaErrorEventMethod));
         }
 
         if (!hasException)
         {
             m_SendPlayerHaltEventMethod = env->GetMethodID(klass, "sendPlayerHaltEvent", "(Ljava/lang/String;D)V");
-            hasException = javaEnv.reportException();
+            hasException = (javaEnv.reportException() || (NULL == m_SendPlayerHaltEventMethod));
         }
 
         if (!hasException)
         {
             m_SendPlayerStateEventMethod = env->GetMethodID(klass, "sendPlayerStateEvent", "(ID)V");
-            hasException = javaEnv.reportException();
+            hasException = (javaEnv.reportException() || (NULL == m_SendPlayerStateEventMethod));
         }
 
         if (!hasException)
         {
             m_SendNewFrameEventMethod = env->GetMethodID(klass, "sendNewFrameEvent", "(J)V");
-            hasException = javaEnv.reportException();
+            hasException = (javaEnv.reportException() || (NULL == m_SendNewFrameEventMethod));
         }
 
         if (!hasException)
         {
             m_SendFrameSizeChangedEventMethod = env->GetMethodID(klass, "sendFrameSizeChangedEvent", "(II)V");
-            hasException = javaEnv.reportException();
+            hasException = (javaEnv.reportException() || (NULL == m_SendFrameSizeChangedEventMethod));
         }
 
         if (!hasException)
         {
             m_SendAudioTrackEventMethod = env->GetMethodID(klass, "sendAudioTrack", "(ZJLjava/lang/String;ILjava/lang/String;IIF)V");
-            hasException = javaEnv.reportException();
+            hasException = (javaEnv.reportException() || (NULL == m_SendAudioTrackEventMethod));
         }
 
         if (!hasException)
         {
             m_SendVideoTrackEventMethod = env->GetMethodID(klass, "sendVideoTrack", "(ZJLjava/lang/String;IIIFZ)V");
-            hasException = javaEnv.reportException();
+            hasException = (javaEnv.reportException() || (NULL == m_SendVideoTrackEventMethod));
         }
 
         if (!hasException)
         {
             m_SendSubtitleTrackEventMethod = env->GetMethodID(klass, "sendSubtitleTrack", "(ZJLjava/lang/String;ILjava/lang/String;)V");
-            hasException = javaEnv.reportException();
+            hasException = (javaEnv.reportException() || (NULL == m_SendSubtitleTrackEventMethod));
         }
 
         if (!hasException)
         {
             m_SendMarkerEventMethod = env->GetMethodID(klass, "sendMarkerEvent", "(Ljava/lang/String;D)V");
-            hasException = javaEnv.reportException();
+            hasException = (javaEnv.reportException() || (NULL == m_SendMarkerEventMethod));
         }
 
         if (!hasException)
         {
             m_SendBufferProgressEventMethod = env->GetMethodID(klass, "sendBufferProgressEvent", "(DJJJ)V");
-            hasException = javaEnv.reportException();
+            hasException = (javaEnv.reportException() || (NULL == m_SendBufferProgressEventMethod));
         }
 
         if (!hasException)
         {
             m_SendDurationUpdateEventMethod  = env->GetMethodID(klass, "sendDurationUpdateEvent", "(D)V");
-            hasException = javaEnv.reportException();
+            hasException = (javaEnv.reportException() || (NULL == m_SendDurationUpdateEventMethod));
         }
 
         if (!hasException)
         {
             m_SendAudioSpectrumEventMethod  = env->GetMethodID(klass, "sendAudioSpectrumEvent", "(DDZ)V");
-            hasException = javaEnv.reportException();
+            hasException = (javaEnv.reportException() || (NULL == m_SendAudioSpectrumEventMethod));
         }
 
         env->DeleteLocalRef(klass);
@@ -190,15 +190,12 @@ void CJavaPlayerEventDispatcher::Warning(int warningCode, const char* warningMes
             jstring jmessage = NULL;
             if (warningMessage) {
                 jmessage = pEnv->NewStringUTF(warningMessage);
-                if (!jenv.reportException()) {
+                if (!jenv.reportException() && jmessage != NULL) {
                     pEnv->CallVoidMethod(localPlayer, m_SendWarningMethod,
                                  (jint)warningCode, jmessage);
                     jenv.reportException();
+                    pEnv->DeleteLocalRef(jmessage);
                 }
-            }
-
-            if (jmessage) {
-                pEnv->DeleteLocalRef(jmessage);
             }
 
             pEnv->DeleteLocalRef(localPlayer);
@@ -234,17 +231,13 @@ bool CJavaPlayerEventDispatcher::SendPlayerHaltEvent(const char* message, double
         if (localPlayer) {
             jstring jmessage = NULL;
             jmessage = pEnv->NewStringUTF(message);
-            if (!jenv.reportException()) {
+            if (!jenv.reportException() && jmessage != NULL) {
                 pEnv->CallVoidMethod(localPlayer, m_SendPlayerHaltEventMethod, jmessage, time);
-            }
-
-            if (jmessage) {
                 pEnv->DeleteLocalRef(jmessage);
+                bSucceeded = !jenv.reportException();
             }
 
             pEnv->DeleteLocalRef(localPlayer);
-
-            bSucceeded = !jenv.reportException();
         }
     }
 
@@ -357,10 +350,10 @@ bool CJavaPlayerEventDispatcher::SendAudioTrackEvent(CAudioTrack* pTrack)
             jstring name = NULL;
             jstring language = NULL;
             name = pEnv->NewStringUTF(pTrack->GetName().c_str());
-            if (!jenv.reportException()) {
+            if (!jenv.reportException() && name != NULL) {
                 language = pEnv->NewStringUTF(pTrack->GetLanguage().c_str());
 
-                if (!jenv.reportException()) {
+                if (!jenv.reportException() && language != NULL) {
                     // Translate channel mask bits from native values to Java values.
                     int nativeChannelMask = pTrack->GetChannelMask();
                     jint javaChannelMask = 0;
@@ -389,20 +382,15 @@ bool CJavaPlayerEventDispatcher::SendAudioTrackEvent(CAudioTrack* pTrack)
                                          pTrack->GetNumChannels(),
                                          javaChannelMask,
                                          pTrack->GetSampleRate());
-                }
-            }
+                    bSucceeded = !jenv.reportException();
 
-            if (name) {
+                    pEnv->DeleteLocalRef(language);
+                }
+
                 pEnv->DeleteLocalRef(name);
             }
 
-            if (language) {
-                pEnv->DeleteLocalRef(language);
-            }
-
             pEnv->DeleteLocalRef(localPlayer);
-
-            bSucceeded = !jenv.reportException();
         }
     }
 
@@ -417,22 +405,18 @@ bool CJavaPlayerEventDispatcher::SendVideoTrackEvent(CVideoTrack* pTrack)
     if (pEnv) {
         jobject localPlayer = pEnv->NewLocalRef(m_PlayerInstance);
         if (localPlayer) {
-            jstring name = NULL;
-            name = pEnv->NewStringUTF(pTrack->GetName().c_str());
-            if (!jenv.reportException()) {
+            jstring name = pEnv->NewStringUTF(pTrack->GetName().c_str());
+            if (!jenv.reportException() && name != NULL) {
                 pEnv->CallVoidMethod(localPlayer, m_SendVideoTrackEventMethod,
                                      (jboolean)pTrack->isEnabled(), (jlong)pTrack->GetTrackID(), name, pTrack->GetEncoding(),
                                      pTrack->GetWidth(), pTrack->GetHeight(),
                                      pTrack->GetFrameRate(), pTrack->HasAlphaChannel());
-            }
+                bSucceeded = !jenv.reportException();
 
-            if (name) {
                 pEnv->DeleteLocalRef(name);
             }
 
             pEnv->DeleteLocalRef(localPlayer);
-
-            bSucceeded = !jenv.reportException();
         }
     }
 
@@ -450,26 +434,21 @@ bool CJavaPlayerEventDispatcher::SendSubtitleTrackEvent(CSubtitleTrack* pTrack)
             jstring name = NULL;
             jstring language = NULL;
             name = pEnv->NewStringUTF(pTrack->GetName().c_str());
-            if (!jenv.reportException()) {
+            if (!jenv.reportException() && name != NULL) {
                 language = pEnv->NewStringUTF(pTrack->GetLanguage().c_str());
-                if (!jenv.reportException()) {
+                if (!jenv.reportException() && language != NULL) {
                     pEnv->CallVoidMethod(localPlayer, m_SendSubtitleTrackEventMethod,
                                          (jboolean)pTrack->isEnabled(), (jlong)pTrack->GetTrackID(),
                                          name, pTrack->GetEncoding(), language);
-                }
-            }
+                    bSucceeded = !jenv.reportException();
 
-            if (name) {
+                    pEnv->DeleteLocalRef(language);
+                }
+
                 pEnv->DeleteLocalRef(name);
             }
 
-            if (language) {
-                pEnv->DeleteLocalRef(language);
-            }
-
             pEnv->DeleteLocalRef(localPlayer);
-
-            bSucceeded = !jenv.reportException();
         }
     }
 
@@ -484,20 +463,16 @@ bool CJavaPlayerEventDispatcher::SendMarkerEvent(string name, double time)
     if (pEnv) {
         jobject localPlayer = pEnv->NewLocalRef(m_PlayerInstance);
         if (localPlayer) {
-            jobject jname = NULL;
-            jname = pEnv->NewStringUTF(name.c_str());
-            if (!jenv.reportException()) {
+            jobject jname = pEnv->NewStringUTF(name.c_str());
+            if (!jenv.reportException() && jname != NULL) {
                 pEnv->CallVoidMethod(localPlayer, m_SendMarkerEventMethod,
                                      jname, time);
-            }
+                bSucceeded = !jenv.reportException();
 
-            if (jname) {
                 pEnv->DeleteLocalRef(jname);
             }
 
             pEnv->DeleteLocalRef(localPlayer);
-
-            bSucceeded = !jenv.reportException();
         }
     }
 
@@ -571,14 +546,15 @@ jobject CJavaPlayerEventDispatcher::CreateObject(JNIEnv *env, jmethodID *cid,
     jclass  classe;
     jobject result;
 
+    CJavaEnvironment jenv(env);
     classe = env->FindClass(class_name);
-    if( classe == NULL )
+    if (jenv.reportException() || classe == NULL)
         return NULL; /* can't find/load the class, exception thrown */
 
-    if( *cid == NULL)
+    if (*cid == NULL)
     {
         *cid = env->GetMethodID(classe, "<init>", signature);
-        if( *cid == NULL )
+        if (jenv.reportException() || *cid == NULL)
         {
             env->DeleteLocalRef(classe);
             return NULL; /* can't find/get the method, exception thrown */
@@ -586,6 +562,7 @@ jobject CJavaPlayerEventDispatcher::CreateObject(JNIEnv *env, jmethodID *cid,
     }
 
     result = env->NewObjectA(classe, *cid, value);
+    jenv.reportException();
 
     env->DeleteLocalRef(classe);
     return result;
@@ -637,14 +614,16 @@ jobject CJavaPlayerEventDispatcher::CreateDuration(JNIEnv *env, jlong duration)
     // We receive duration in nanoseconds, but javafx.util.Duration needs in milliseconds
     jdouble millis = duration/1000000.0;
 
+    CJavaEnvironment jenv(env);
+
     jclass durationClass = env->FindClass("javafx/util/Duration");
-    if (durationClass == NULL)
+    if (jenv.reportException() || durationClass == NULL)
         return NULL; /* can't find/load the class, exception thrown */
 
     if (constructorID == NULL)
     {
         constructorID = env->GetMethodID(durationClass, "<init>", "(D)V");
-        if( constructorID == NULL )
+        if (jenv.reportException() || constructorID == NULL)
         {
             env->DeleteLocalRef(durationClass);
             return NULL; /* can't find/get the method, exception thrown */
@@ -652,6 +631,7 @@ jobject CJavaPlayerEventDispatcher::CreateDuration(JNIEnv *env, jlong duration)
     }
 
     jobject result = env->NewObject(durationClass, constructorID, millis);
+    jenv.reportException();
 
     env->DeleteLocalRef(durationClass);
 

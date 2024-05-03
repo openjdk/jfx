@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
- * Copyright (C) 2004-2022 Apple Inc.  All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,6 +55,16 @@ Image::Image(ImageObserver* observer)
 }
 
 Image::~Image() = default;
+
+RefPtr<ImageObserver> Image::imageObserver() const
+{
+    return m_imageObserver.get();
+}
+
+void Image::setImageObserver(RefPtr<ImageObserver>&& observer)
+{
+    m_imageObserver = observer.get();
+}
 
 Image& Image::nullImage()
 {
@@ -146,14 +156,14 @@ void Image::fillWithSolidColor(GraphicsContext& ctxt, const FloatRect& dstRect, 
 
 void Image::drawPattern(GraphicsContext& ctxt, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform,  const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& options)
 {
-    auto tileImage = preTransformedNativeImageForCurrentFrame(options.orientation() == ImageOrientation::FromImage);
+    auto tileImage = preTransformedNativeImageForCurrentFrame(options.orientation() == ImageOrientation::Orientation::FromImage);
     if (!tileImage)
         return;
 
     ctxt.drawPattern(*tileImage, destRect, tileRect, patternTransform, phase, spacing, options);
 
-    if (imageObserver())
-        imageObserver()->didDraw(*this);
+    if (auto observer = imageObserver())
+        observer->didDraw(*this);
 }
 
 ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& destRect, const FloatPoint& srcPoint, const FloatSize& scaledTileSize, const FloatSize& spacing, const ImagePaintingOptions& options)
@@ -278,16 +288,17 @@ ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& dstRect
     bool centerOnGapVertically = false;
     switch (hRule) {
     case RoundTile: {
-        int numItems = std::max<int>(floorf(dstRect.width() / srcRect.width()), 1);
+        float scaledSourceWidth = srcRect.width() * tileScale.width();
+        int numItems = std::max<int>(floorf(dstRect.width() / scaledSourceWidth), 1);
         tileScale.setWidth(dstRect.width() / (srcRect.width() * numItems));
         break;
     }
     case SpaceTile: {
-        int numItems = floorf(dstRect.width() / srcRect.width());
+        float scaledSourceWidth = srcRect.width() * tileScale.width();
+        int numItems = floorf(dstRect.width() / scaledSourceWidth);
         if (!numItems)
             return ImageDrawResult::DidNothing;
-        spacing.setWidth((dstRect.width() - srcRect.width() * numItems) / (numItems + 1));
-        tileScale.setWidth(1);
+        spacing.setWidth((dstRect.width() - scaledSourceWidth * numItems) / (numItems + 1));
         centerOnGapHorizonally = !(numItems & 1);
         break;
     }
@@ -298,16 +309,17 @@ ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& dstRect
 
     switch (vRule) {
     case RoundTile: {
-        int numItems = std::max<int>(floorf(dstRect.height() / srcRect.height()), 1);
+        float scaledSourceHeight = srcRect.height() * tileScale.height();
+        int numItems = std::max<int>(floorf(dstRect.height() / scaledSourceHeight), 1);
         tileScale.setHeight(dstRect.height() / (srcRect.height() * numItems));
         break;
         }
     case SpaceTile: {
-        int numItems = floorf(dstRect.height() / srcRect.height());
+        float scaledSourceHeight = srcRect.height() * tileScale.height();
+        int numItems = floorf(dstRect.height() / scaledSourceHeight);
         if (!numItems)
             return ImageDrawResult::DidNothing;
-        spacing.setHeight((dstRect.height() - srcRect.height() * numItems) / (numItems + 1));
-        tileScale.setHeight(1);
+        spacing.setHeight((dstRect.height() - scaledSourceHeight * numItems) / (numItems + 1));
         centerOnGapVertically = !(numItems & 1);
         break;
     }

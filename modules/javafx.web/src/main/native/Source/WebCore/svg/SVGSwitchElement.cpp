@@ -22,7 +22,7 @@
 #include "config.h"
 #include "SVGSwitchElement.h"
 
-#include "ElementIterator.h"
+#include "ElementChildIteratorInlines.h"
 #include "LegacyRenderSVGTransformableContainer.h"
 #include "RenderSVGTransformableContainer.h"
 #include "SVGElementTypeHelpers.h"
@@ -33,7 +33,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGSwitchElement);
 
 inline SVGSwitchElement::SVGSwitchElement(const QualifiedName& tagName, Document& document)
-    : SVGGraphicsElement(tagName, document)
+    : SVGGraphicsElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::switchTag));
 }

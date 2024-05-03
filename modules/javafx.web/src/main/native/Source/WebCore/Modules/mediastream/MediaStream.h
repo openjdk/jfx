@@ -47,7 +47,7 @@ namespace WebCore {
 class Document;
 
 class MediaStream final
-    : public EventTargetWithInlineData
+    : public EventTarget
     , public ActiveDOMObject
     , public MediaStreamPrivate::Observer
     , private MediaCanStartListener
@@ -78,6 +78,10 @@ public:
 
     RefPtr<MediaStream> clone();
 
+    using MediaStreamPrivate::Observer::weakPtrFactory;
+    using MediaStreamPrivate::Observer::WeakValueType;
+    using MediaStreamPrivate::Observer::WeakPtrImplType;
+
     bool active() const { return m_isActive; }
     bool muted() const { return m_private->muted(); }
 
@@ -96,8 +100,6 @@ public:
     using RefCounted<MediaStream>::deref;
 
     void addTrackFromPlatform(Ref<MediaStreamTrack>&&);
-
-    Document* document() const;
 
 #if !RELEASE_LOG_DISABLED
     const void* logIdentifier() const final { return m_private->logIdentifier(); }
@@ -143,6 +145,8 @@ private:
     void statusDidChange();
 
     MediaStreamTrackVector filteredTracks(const Function<bool(const MediaStreamTrack&)>&) const;
+
+    Document* document() const;
 
     Ref<MediaStreamPrivate> m_private;
 

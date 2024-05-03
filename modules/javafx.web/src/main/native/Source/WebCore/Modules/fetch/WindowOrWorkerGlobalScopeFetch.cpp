@@ -26,13 +26,13 @@
 #include "config.h"
 #include "WindowOrWorkerGlobalScopeFetch.h"
 
-#include "CachedResourceRequestInitiators.h"
-#include "DOMWindow.h"
+#include "CachedResourceRequestInitiatorTypes.h"
 #include "Document.h"
 #include "EventLoop.h"
 #include "FetchResponse.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSFetchResponse.h"
+#include "LocalDOMWindow.h"
 #include "UserGestureIndicator.h"
 #include "WorkerGlobalScope.h"
 
@@ -64,10 +64,10 @@ static void doFetch(ScriptExecutionContext& scope, FetchRequest::Info&& input, F
             UserGestureIndicator gestureIndicator(userGestureToken, UserGestureToken::GestureScope::MediaOnly, UserGestureToken::IsPropagatedFromFetch::Yes);
             promise.settle(WTFMove(result));
         });
-    }, cachedResourceRequestInitiators().fetch);
+    }, cachedResourceRequestInitiatorTypes().fetch);
 }
 
-void WindowOrWorkerGlobalScopeFetch::fetch(DOMWindow& window, FetchRequest::Info&& input, FetchRequest::Init&& init, Ref<DeferredPromise>&& promise)
+void WindowOrWorkerGlobalScopeFetch::fetch(LocalDOMWindow& window, FetchRequest::Info&& input, FetchRequest::Init&& init, Ref<DeferredPromise>&& promise)
 {
     auto* document = window.document();
     if (!document) {

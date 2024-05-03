@@ -37,22 +37,9 @@ struct FourCC {
     static std::optional<FourCC> fromString(StringView);
 
     uint32_t value { 0 };
-
-    template<class Encoder>
-    void encode(Encoder& encoder) const
-    {
-        encoder << value;
-    }
-
-    template <class Decoder>
-    static WARN_UNUSED_RETURN bool decode(Decoder& decoder, FourCC& configuration)
-    {
-        return decoder.decode(configuration.value);
-    }
 };
 
 constexpr bool operator==(FourCC, FourCC);
-constexpr bool operator!=(FourCC, FourCC);
 
 constexpr FourCC::FourCC(const char (&data)[5])
     : value(data[0] << 24 | data[1] << 16 | data[2] << 8 | data[3])
@@ -76,7 +63,6 @@ constexpr std::array<char, 5> FourCC::string() const
 }
 
 constexpr bool operator==(FourCC a, FourCC b) { return a.value == b.value; }
-constexpr bool operator!=(FourCC a, FourCC b) { return a.value != b.value; }
 
 } // namespace WebCore
 

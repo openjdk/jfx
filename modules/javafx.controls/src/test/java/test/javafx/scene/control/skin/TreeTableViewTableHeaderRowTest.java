@@ -33,6 +33,9 @@ import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.control.skin.TableHeaderRow;
 import javafx.scene.control.skin.TableHeaderRowShim;
+import javafx.scene.control.skin.TableViewSkinBase;
+import javafx.scene.control.skin.TreeTableViewSkin;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -203,6 +206,48 @@ public class TreeTableViewTableHeaderRowTest {
 
         assertEquals(treeTableView.getColumns().size(), columnPopupMenu.getItems().size());
         assertTrue(columnPopupMenu.getItems().size() < itemSize);
+    }
+
+    @Test
+    void testOverriddenColumnPopupMenu() {
+        treeTableView.setSkin(new CustomTreeTableViewSkin<>(treeTableView));
+
+        tableHeaderRow = VirtualFlowTestUtils.getTableHeaderRow(treeTableView);
+        cornerRegion = TableHeaderRowShim.getCornerRegion(tableHeaderRow);
+
+        ContextMenu columnPopupMenu = TableHeaderRowShim.getColumnPopupMenu(tableHeaderRow);
+        assertNull(columnPopupMenu);
+
+        MouseEventFirer mouseEventFirer = new MouseEventFirer(cornerRegion);
+        mouseEventFirer.fireMousePressed();
+
+        // Since the showColumnMenu() is overridden, the column popup menu should not be created.
+        columnPopupMenu = TableHeaderRowShim.getColumnPopupMenu(tableHeaderRow);
+        assertNull(columnPopupMenu);
+    }
+
+    private static class CustomTreeTableViewSkin<S> extends TreeTableViewSkin<S> {
+
+        public CustomTreeTableViewSkin(TreeTableView<S> control) {
+            super(control);
+        }
+
+        @Override
+        protected TableHeaderRow createTableHeaderRow() {
+            return new CustomTableHeaderRow(this);
+        }
+
+        private static class CustomTableHeaderRow extends TableHeaderRow {
+
+            public CustomTableHeaderRow(TableViewSkinBase skin) {
+                super(skin);
+            }
+
+            @Override
+            protected void showColumnMenu(MouseEvent mouseEvent) {
+                // noop - overridden for testing
+            }
+        }
     }
 
 }

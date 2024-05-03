@@ -48,9 +48,7 @@ struct EndIterator { };
 class Box {
 public:
     using PathVariant = std::variant<
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
         BoxModernPath,
-#endif
         BoxLegacyPath
     >;
 
@@ -59,19 +57,23 @@ public:
     bool isText() const;
     bool isInlineBox() const;
     bool isRootInlineBox() const;
+    bool isLineBreak() const;
 
     FloatRect visualRect() const;
     FloatRect visualRectIgnoringBlockDirection() const;
+    // Visual in inline direction, logical for writing mode.
+    inline FloatRect logicalRectIgnoringInlineDirection() const;
 
-    float logicalTop() const { return isHorizontal() ? visualRectIgnoringBlockDirection().y() : visualRectIgnoringBlockDirection().x(); }
-    float logicalBottom() const { return isHorizontal() ? visualRectIgnoringBlockDirection().maxY() : visualRectIgnoringBlockDirection().maxX(); }
-    float logicalLeft() const { return isHorizontal() ? visualRectIgnoringBlockDirection().x() : visualRectIgnoringBlockDirection().y(); }
-    float logicalRight() const { return isHorizontal() ? visualRectIgnoringBlockDirection().maxX() : visualRectIgnoringBlockDirection().maxY(); }
-    float logicalWidth() const { return isHorizontal() ? visualRectIgnoringBlockDirection().width() : visualRectIgnoringBlockDirection().height(); }
-    float logicalHeight() const { return isHorizontal() ? visualRectIgnoringBlockDirection().height() : visualRectIgnoringBlockDirection().width(); }
+    inline float logicalTop() const;
+    inline float logicalBottom() const;
+    inline float logicalHeight() const;
+    inline float logicalWidth() const;
 
-    bool isHorizontal() const;
-    bool isLineBreak() const;
+    // Return visual left/right coords in inline direction (they are still considered logical values as there's no flip for writing mode).
+    inline float logicalLeftIgnoringInlineDirection() const;
+    inline float logicalRightIgnoringInlineDirection() const;
+
+    inline bool isHorizontal() const;
 
     unsigned minimumCaretOffset() const;
     unsigned maximumCaretOffset() const;
@@ -85,25 +87,23 @@ public:
     RenderObject::HighlightState selectionState() const;
 
     const RenderObject& renderer() const;
-    const RenderBlockFlow& containingBlock() const;
+    const RenderBlockFlow& formattingContextRoot() const;
     const RenderStyle& style() const;
 
     // FIXME: Remove. For intermediate porting steps only.
     const LegacyInlineBox* legacyInlineBox() const;
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     const InlineDisplay::Box* inlineBox() const;
-#endif
 
     LeafBoxIterator nextOnLine() const;
     LeafBoxIterator previousOnLine() const;
     LeafBoxIterator nextOnLineIgnoringLineBreak() const;
     LeafBoxIterator previousOnLineIgnoringLineBreak() const;
 
+    InlineBoxIterator parentInlineBox() const;
+
     LineBoxIterator lineBox() const;
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     const BoxModernPath& modernPath() const;
-#endif
     const BoxLegacyPath& legacyPath() const;
 
 protected:
@@ -120,10 +120,7 @@ public:
     explicit operator bool() const { return !atEnd(); }
 
     bool operator==(const BoxIterator&) const;
-    bool operator!=(const BoxIterator& other) const { return !(*this == other); }
-
     bool operator==(EndIterator) const { return atEnd(); }
-    bool operator!=(EndIterator) const { return !atEnd(); }
 
     const Box& operator*() const { return m_box; }
     const Box* operator->() const { return &m_box; }
@@ -152,9 +149,7 @@ public:
 
 LeafBoxIterator boxFor(const RenderLineBreak&);
 LeafBoxIterator boxFor(const RenderBox&);
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 LeafBoxIterator boxFor(const LayoutIntegration::InlineContent&, size_t boxIndex);
-#endif
 
 // -----------------------------------------------
 
@@ -188,13 +183,6 @@ inline FloatRect Box::visualRectIgnoringBlockDirection() const
 {
     return WTF::switchOn(m_pathVariant, [](auto& path) {
         return path.visualRectIgnoringBlockDirection();
-    });
-}
-
-inline bool Box::isHorizontal() const
-{
-    return WTF::switchOn(m_pathVariant, [](auto& path) {
-        return path.isHorizontal();
     });
 }
 
@@ -233,10 +221,10 @@ inline const RenderObject& Box::renderer() const
     });
 }
 
-inline const RenderBlockFlow& Box::containingBlock() const
+inline const RenderBlockFlow& Box::formattingContextRoot() const
 {
     return WTF::switchOn(m_pathVariant, [](auto& path) -> const RenderBlockFlow& {
-        return path.containingBlock();
+        return path.formattingContextRoot();
     });
 }
 
@@ -254,14 +242,12 @@ inline const LegacyInlineBox* Box::legacyInlineBox() const
     return std::get<BoxLegacyPath>(m_pathVariant).legacyInlineBox();
 }
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 inline const InlineDisplay::Box* Box::inlineBox() const
 {
     if (!std::holds_alternative<BoxModernPath>(m_pathVariant))
         return nullptr;
     return &std::get<BoxModernPath>(m_pathVariant).box();
 }
-#endif
 
 }
 }

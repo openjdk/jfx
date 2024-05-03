@@ -28,6 +28,8 @@
 
 #include "Exception.h"
 #include "WebCoreJSClientData.h"
+#include <JavaScriptCore/JSArrayBufferViewInlines.h>
+#include <JavaScriptCore/JSObjectInlines.h>
 
 namespace WebCore {
 
@@ -39,8 +41,8 @@ static ExceptionOr<JSC::JSValue> invokeWritableStreamFunction(JSC::JSGlobalObjec
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
     auto function = globalObject.get(&globalObject, identifier);
+    RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
     ASSERT(function.isCallable());
-    scope.assertNoExceptionExceptTermination();
 
     auto callData = JSC::getCallData(function);
 

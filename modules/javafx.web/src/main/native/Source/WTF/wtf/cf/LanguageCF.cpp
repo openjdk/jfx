@@ -54,6 +54,7 @@ static String httpStyleLanguageCode(CFStringRef language, ShouldMinimizeLanguage
         preferredLanguageCode = adoptCF(CFLocaleCreateCanonicalLanguageIdentifierFromString(kCFAllocatorDefault, language));
     else {
 #endif
+        UNUSED_PARAM(shouldMinimizeLanguages);
         SInt32 languageCode;
         SInt32 regionCode;
         SInt32 scriptCode;

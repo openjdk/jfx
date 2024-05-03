@@ -1,7 +1,8 @@
 /*
  * (C) 1999 Lars Knoll (knoll@kde.org)
  * (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2015 Google Inc. All rights reserved.
  * Copyright (C) 2006 Andrew Wellington (proton@wiretapped.net)
  * Copyright (C) 2006 Graham Dennis (graham.dennis@gmail.com)
  *
@@ -32,17 +33,18 @@
 #include "DocumentInlines.h"
 #include "DocumentMarkerController.h"
 #include "FloatQuad.h"
-#include "Frame.h"
-#include "FrameView.h"
-#include "HTMLParserIdioms.h"
 #include "Hyphenation.h"
-#include "InlineIteratorLineBox.h"
+#include "InlineIteratorBoxInlines.h"
+#include "InlineIteratorLineBoxInlines.h"
 #include "InlineIteratorLogicalOrderTraversal.h"
 #include "InlineIteratorTextBox.h"
+#include "InlineIteratorTextBoxInlines.h"
 #include "InlineRunAndOffset.h"
 #include "LayoutIntegrationLineLayout.h"
 #include "LegacyEllipsisBox.h"
 #include "LineSelection.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "Range.h"
 #include "RenderBlock.h"
 #include "RenderCombineText.h"
@@ -57,10 +59,12 @@
 #include "Settings.h"
 #include "Text.h"
 #include "TextResourceDecoder.h"
+#include "TextTransform.h"
 #include "VisiblePosition.h"
 #include "WidthIterator.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/SortedArrayMap.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextBreakIterator.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -85,7 +89,9 @@ struct SameSizeAsRenderText : public RenderObject {
 #if ENABLE(TEXT_AUTOSIZING)
     float candidateTextSize;
 #endif
-    float widths[4];
+    float widths[2];
+    std::optional<float> minWidth;
+    std::optional<float> maxWidth;
     String text;
 };
 
@@ -189,16 +195,58 @@ String capitalize(const String& string, UChar previousCharacter)
     return result == string ? string : result.toString();
 }
 
+static LayoutRect selectionRectForTextBox(const InlineIterator::TextBox& textBox, unsigned rangeStart, unsigned rangeEnd)
+{
+    if (is<SVGInlineTextBox>(textBox.legacyInlineBox()))
+        return downcast<SVGInlineTextBox>(*textBox.legacyInlineBox()).localSelectionRect(rangeStart, rangeEnd);
+
+    bool isCaretCase = rangeStart == rangeEnd;
+
+    auto [clampedStart, clampedEnd] = textBox.selectableRange().clamp(rangeStart, rangeEnd);
+
+    if (clampedStart >= clampedEnd) {
+        if (isCaretCase) {
+            // handle unitary range, e.g.: representing caret position
+            bool isCaretWithinTextBox = rangeStart >= textBox.start() && rangeStart < textBox.end();
+            // For last text box in a InlineTextBox chain, we allow the caret to move to a position 'after' the end of the last text box.
+            bool isCaretWithinLastTextBox = rangeStart >= textBox.start() && rangeStart <= textBox.end();
+
+            auto itEnd = InlineIterator::TextBoxRange { InlineIterator::TextBoxIterator(textBox) }.end();
+            auto isLastTextBox = textBox.nextTextBox() == itEnd;
+
+            if ((isLastTextBox && !isCaretWithinLastTextBox) || (!isLastTextBox && !isCaretWithinTextBox))
+                return { };
+        } else {
+            bool isRangeWithinTextBox = (rangeStart >= textBox.start() && rangeStart <= textBox.end());
+            if (!isRangeWithinTextBox)
+                return { };
+        }
+    }
+
+    auto lineSelectionRect = LineSelection::logicalRect(*textBox.lineBox());
+    auto selectionRect = LayoutRect { textBox.logicalLeftIgnoringInlineDirection(), lineSelectionRect.y(), textBox.logicalWidth(), lineSelectionRect.height() };
+
+    auto textRun = textBox.textRun();
+    if (clampedStart || clampedEnd != textRun.length())
+        textBox.fontCascade().adjustSelectionRectForText(textRun, selectionRect, clampedStart, clampedEnd);
+
+    return snappedSelectionRect(selectionRect, textBox.logicalRightIgnoringInlineDirection(), lineSelectionRect.y(), lineSelectionRect.height(), textBox.isHorizontal());
+}
+
+static unsigned offsetForPositionInRun(const InlineIterator::TextBox& textBox, float x)
+{
+    if (textBox.isLineBreak())
+        return 0;
+    if (x - textBox.logicalLeftIgnoringInlineDirection() > textBox.logicalWidth())
+        return textBox.isLeftToRightDirection() ? textBox.length() : 0;
+    if (x - textBox.logicalLeftIgnoringInlineDirection() < 0)
+        return textBox.isLeftToRightDirection() ? 0 : textBox.length();
+    return textBox.fontCascade().offsetForPosition(textBox.textRun(InlineIterator::TextRunMode::Editing), x - textBox.logicalLeftIgnoringInlineDirection(), true);
+}
+
 inline RenderText::RenderText(Node& node, const String& text)
     : RenderObject(node)
-    , m_hasTab(false)
-    , m_linesDirty(false)
-    , m_needsVisualReordering(false)
-    , m_isAllASCII(text.impl()->isAllASCII())
-    , m_knownToHaveNoOverflowAndNoFallbackFonts(false)
-    , m_useBackslashAsYenSymbol(false)
-    , m_originalTextDiffersFromRendered(false)
-    , m_hasInlineWrapperForDisplayContents(false)
+    , m_containsOnlyASCII(text.impl()->containsOnlyASCII())
     , m_text(text)
 {
     ASSERT(!m_text.isNull());
@@ -251,6 +299,21 @@ bool RenderText::computeUseBackslashAsYenSymbol() const
     return false;
 }
 
+static void initiateFontLoadingByAccessingGlyphDataIfApplicable(const String& textContent, const FontCascade& fontCascade)
+{
+    // See webkit.org/b/252668
+    auto fontVariant = AutoVariant;
+#if USE(FONT_VARIANT_VIA_FEATURES)
+    if (fontCascade.fontDescription().variantCaps() == FontVariantCaps::Small) {
+        // This matches the behavior of ComplexTextController::collectComplexTextRuns(): that function doesn't perform font fallback
+        // on the capitalized characters when small caps is enabled, so we shouldn't here either.
+        fontVariant = NormalVariant;
+    }
+#endif
+    for (size_t i = 0; i < textContent.length(); ++i)
+        fontCascade.glyphDataForCharacter(textContent[i], false, fontVariant);
+}
+
 void RenderText::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     // There is no need to ever schedule repaints from a style change of a text run, since
@@ -263,6 +326,9 @@ void RenderText::styleDidChange(StyleDifference diff, const RenderStyle* oldStyl
     }
 
     const RenderStyle& newStyle = style();
+    if (!oldStyle)
+        initiateFontLoadingByAccessingGlyphDataIfApplicable(m_text, newStyle.fontCascade());
+
     bool needsResetText = false;
     if (!oldStyle) {
         m_useBackslashAsYenSymbol = computeUseBackslashAsYenSymbol();
@@ -272,10 +338,7 @@ void RenderText::styleDidChange(StyleDifference diff, const RenderStyle* oldStyl
         needsResetText = true;
     }
 
-    if (!oldStyle || oldStyle->fontCascade() != newStyle.fontCascade())
-        m_canUseSimplifiedTextMeasuring = computeCanUseSimplifiedTextMeasuring();
-
-    TextTransform oldTransform = oldStyle ? oldStyle->textTransform() : TextTransform::None;
+    auto oldTransform = oldStyle ? oldStyle->textTransform() : OptionSet<TextTransform> { };
     TextSecurity oldSecurity = oldStyle ? oldStyle->textSecurity() : TextSecurity::None;
     if (needsResetText || oldTransform != newStyle.textTransform() || oldSecurity != newStyle.textSecurity())
         RenderText::setText(originalText(), true);
@@ -311,17 +374,21 @@ String RenderText::originalText() const
     return m_originalTextDiffersFromRendered ? originalTextMap().get(this) : m_text;
 }
 
-void RenderText::absoluteRects(Vector<IntRect>& rects, const LayoutPoint& accumulatedOffset) const
+void RenderText::boundingRects(Vector<LayoutRect>& rects, const LayoutPoint& accumulatedOffset) const
 {
     for (auto& run : InlineIterator::textBoxesFor(*this)) {
-        auto rect = run.visualRectIgnoringBlockDirection();
-        rects.append(enclosingIntRect(FloatRect(accumulatedOffset + rect.location(), rect.size())));
+        auto rect = LayoutRect { run.visualRectIgnoringBlockDirection() };
+        rect.moveBy(accumulatedOffset);
+        rects.append(rect);
     }
 }
 
 Vector<IntRect> RenderText::absoluteRectsForRange(unsigned start, unsigned end, bool useSelectionHeight, bool* wasFixed) const
 {
-    return absoluteQuadsForRange(start, end, useSelectionHeight, false /* ignoreEmptyTextSelections */, wasFixed).map([](auto& quad) {
+    OptionSet<RenderObject::BoundingRectBehavior> behavior;
+    if (useSelectionHeight)
+        behavior.add(RenderObject::BoundingRectBehavior::UseSelectionHeight);
+    return absoluteQuadsForRange(start, end, behavior, wasFixed).map([](auto& quad) {
         return quad.enclosingBoundingBox();
     });
 }
@@ -332,31 +399,31 @@ Vector<IntRect> RenderText::absoluteRectsForRange(unsigned start, unsigned end, 
 // Full annotations are added in this class.
 void RenderText::collectSelectionGeometries(Vector<SelectionGeometry>& rects, unsigned start, unsigned end)
 {
-    for (auto run = InlineIterator::firstTextBoxFor(*this); run; run = run.traverseNextTextBox()) {
+    for (auto textBox = InlineIterator::firstTextBoxFor(*this); textBox; textBox = textBox.traverseNextTextBox()) {
         LayoutRect rect;
-        if (start <= run->start() && run->end() <= end)
-            rect = run->selectionRect(start, end);
+        if (start <= textBox->start() && textBox->end() <= end)
+            rect = selectionRectForTextBox(*textBox, start, end);
         else {
-            unsigned realEnd = std::min(run->end(), end);
-            rect = run->selectionRect(start, realEnd);
+            unsigned realEnd = std::min(textBox->end(), end);
+            rect = selectionRectForTextBox(*textBox, start, realEnd);
             if (rect.isEmpty())
                 continue;
         }
 
-        if (run->lineBox()->isFirstAfterPageBreak()) {
-            if (run->isHorizontal())
-                rect.shiftYEdgeTo(run->lineBox()->top());
+        if (textBox->lineBox()->isFirstAfterPageBreak()) {
+            if (textBox->isHorizontal())
+                rect.shiftYEdgeTo(textBox->lineBox()->logicalTop());
             else
-                rect.shiftXEdgeTo(run->lineBox()->top());
+                rect.shiftXEdgeTo(textBox->lineBox()->logicalTop());
         }
 
         RenderBlock* containingBlock = this->containingBlock();
         // Map rect, extended left to leftOffset, and right to rightOffset, through transforms to get minX and maxX.
         LogicalSelectionOffsetCaches cache(*containingBlock);
-        LayoutUnit leftOffset = containingBlock->logicalLeftSelectionOffset(*containingBlock, LayoutUnit(run->logicalTop()), cache);
-        LayoutUnit rightOffset = containingBlock->logicalRightSelectionOffset(*containingBlock, LayoutUnit(run->logicalTop()), cache);
+        LayoutUnit leftOffset = containingBlock->logicalLeftSelectionOffset(*containingBlock, LayoutUnit(textBox->logicalTop()), cache);
+        LayoutUnit rightOffset = containingBlock->logicalRightSelectionOffset(*containingBlock, LayoutUnit(textBox->logicalTop()), cache);
         LayoutRect extentsRect = rect;
-        if (run->isHorizontal()) {
+        if (textBox->isHorizontal()) {
             extentsRect.setX(leftOffset);
             extentsRect.setWidth(rightOffset - leftOffset);
         } else {
@@ -364,19 +431,19 @@ void RenderText::collectSelectionGeometries(Vector<SelectionGeometry>& rects, un
             extentsRect.setHeight(rightOffset - leftOffset);
         }
         extentsRect = localToAbsoluteQuad(FloatRect(extentsRect)).enclosingBoundingBox();
-        if (!run->isHorizontal())
+        if (!textBox->isHorizontal())
             extentsRect = extentsRect.transposedRect();
-        bool isFirstOnLine = !run->previousOnLine();
-        bool isLastOnLine = !run->nextOnLine();
+        bool isFirstOnLine = !textBox->previousOnLine();
+        bool isLastOnLine = !textBox->nextOnLine();
         if (containingBlock->isRubyBase() || containingBlock->isRubyText())
             isLastOnLine = !containingBlock->containingBlock()->inlineBoxWrapper()->nextOnLineExists();
 
-        bool containsStart = run->start() <= start && run->end() >= start;
-        bool containsEnd = run->start() <= end && run->end() >= end;
+        bool containsStart = textBox->start() <= start && textBox->end() >= start;
+        bool containsEnd = textBox->start() <= end && textBox->end() >= end;
 
         bool isFixed = false;
         auto absoluteQuad = localToAbsoluteQuad(FloatRect(rect), UseTransforms, &isFixed);
-        bool boxIsHorizontal = !is<SVGInlineTextBox>(run->legacyInlineBox()) ? run->isHorizontal() : !style().isVerticalWritingMode();
+        bool boxIsHorizontal = !is<SVGInlineTextBox>(textBox->legacyInlineBox()) ? textBox->isHorizontal() : !style().isVerticalWritingMode();
         // If the containing block is an inline element, we want to check the inlineBoxWrapper orientation
         // to determine the orientation of the block. In this case we also use the inlineBoxWrapper to
         // determine if the element is the last on the line.
@@ -387,45 +454,38 @@ void RenderText::collectSelectionGeometries(Vector<SelectionGeometry>& rects, un
             }
         }
 
-        rects.append(SelectionGeometry(absoluteQuad, HTMLElement::selectionRenderingBehavior(textNode()), run->direction(), extentsRect.x(), extentsRect.maxX(), extentsRect.maxY(), 0, run->isLineBreak(), isFirstOnLine, isLastOnLine, containsStart, containsEnd, boxIsHorizontal, isFixed, containingBlock->isRubyText(), view().pageNumberForBlockProgressionOffset(absoluteQuad.enclosingBoundingBox().x())));
+        rects.append(SelectionGeometry(absoluteQuad, HTMLElement::selectionRenderingBehavior(textNode()), textBox->direction(), extentsRect.x(), extentsRect.maxX(), extentsRect.maxY(), 0, textBox->isLineBreak(), isFirstOnLine, isLastOnLine, containsStart, containsEnd, boxIsHorizontal, isFixed, containingBlock->isRubyText(), view().pageNumberForBlockProgressionOffset(absoluteQuad.enclosingBoundingBox().x())));
     }
 }
 #endif
 
-static FloatRect boundariesForTextRun(const InlineIterator::TextBox& run)
+static FloatRect boundariesForTextBox(const InlineIterator::TextBox& textBox)
 {
-    if (is<SVGInlineTextBox>(run.legacyInlineBox()))
-        return downcast<SVGInlineTextBox>(*run.legacyInlineBox()).calculateBoundaries();
+    if (is<SVGInlineTextBox>(textBox.legacyInlineBox()))
+        return downcast<SVGInlineTextBox>(*textBox.legacyInlineBox()).calculateBoundaries();
 
-    return run.visualRectIgnoringBlockDirection();
+    return textBox.visualRectIgnoringBlockDirection();
 }
 
-static IntRect ellipsisRectForTextRun(const InlineIterator::TextBox& run, unsigned start, unsigned end)
+static std::optional<IntRect> ellipsisRectForTextBox(const InlineIterator::TextBox& textBox, unsigned start, unsigned end)
 {
-    // FIXME: No ellipsis support in modern path yet.
-    if (!run.legacyInlineBox())
+    auto lineBox = textBox.lineBox();
+    if (!lineBox->hasEllipsis())
         return { };
 
-    auto& box = *run.legacyInlineBox();
-
-    auto truncation = box.truncation();
-    if (!truncation)
+    auto selectableRange = textBox.selectableRange();
+    if (!selectableRange.truncation)
         return { };
 
-    auto ellipsis = box.root().ellipsisBox();
-    if (!ellipsis)
-        return { };
-
-    int ellipsisStartPosition = std::max<int>(start - box.start(), 0);
-    int ellipsisEndPosition = std::min<int>(end - box.start(), box.len());
-
+    auto ellipsisStartPosition = std::max<unsigned>(start - selectableRange.start, 0);
+    auto ellipsisEndPosition = std::min<unsigned>(end - selectableRange.start, selectableRange.length);
     // The ellipsis should be considered to be selected if the end of
     // the selection is past the beginning of the truncation and the
     // beginning of the selection is before or at the beginning of the truncation.
-    if (ellipsisEndPosition < *truncation && ellipsisStartPosition > *truncation)
+    if (ellipsisEndPosition < *selectableRange.truncation && ellipsisStartPosition > *selectableRange.truncation)
         return { };
 
-    return ellipsis->selectionRect();
+    return IntRect { lineBox->ellipsisVisualRect(InlineIterator::LineBox::AdjustedForSelection::Yes) };
 }
 
 enum class ClippingOption { NoClipping, ClipToEllipsis };
@@ -434,17 +494,16 @@ enum class ClippingOption { NoClipping, ClipToEllipsis };
 static Vector<FloatQuad> collectAbsoluteQuads(const RenderText& textRenderer, bool* wasFixed, ClippingOption clipping)
 {
     Vector<FloatQuad> quads;
-    for (auto& run : InlineIterator::textBoxesFor(textRenderer)) {
-        auto boundaries = boundariesForTextRun(run);
+    for (auto& textBox : InlineIterator::textBoxesFor(textRenderer)) {
+        auto boundaries = boundariesForTextBox(textBox);
 
         // Shorten the width of this text box if it ends in an ellipsis.
         if (clipping == ClippingOption::ClipToEllipsis) {
-            auto ellipsisRect = ellipsisRectForTextRun(run, 0, textRenderer.text().length());
-            if (!ellipsisRect.isEmpty()) {
+            if (auto ellipsisRect = ellipsisRectForTextBox(textBox, 0, textRenderer.text().length())) {
                 if (textRenderer.style().isHorizontalWritingMode())
-                    boundaries.setWidth(ellipsisRect.maxX() - boundaries.x());
+                    boundaries.setWidth(ellipsisRect->maxX() - boundaries.x());
                 else
-                    boundaries.setHeight(ellipsisRect.maxY() - boundaries.y());
+                    boundaries.setHeight(ellipsisRect->maxY() - boundaries.y());
             }
         }
 
@@ -463,17 +522,16 @@ void RenderText::absoluteQuads(Vector<FloatQuad>& quads, bool* wasFixed) const
     quads.appendVector(collectAbsoluteQuads(*this, wasFixed, ClippingOption::NoClipping));
 }
 
-static FloatRect localQuadForTextRun(const InlineIterator::TextBox& run, unsigned start, unsigned end, bool useSelectionHeight)
+static FloatRect localQuadForTextBox(const InlineIterator::TextBox& textBox, unsigned start, unsigned end, bool useSelectionHeight)
 {
-    unsigned realEnd = std::min(run.end(), end);
-    LayoutRect boxSelectionRect = run.selectionRect(start, realEnd);
+    LayoutRect boxSelectionRect = selectionRectForTextBox(textBox, start, end);
     if (!boxSelectionRect.height())
         return { };
     if (useSelectionHeight)
         return boxSelectionRect;
 
-    auto rect = run.visualRectIgnoringBlockDirection();
-    if (run.isHorizontal()) {
+    auto rect = textBox.visualRectIgnoringBlockDirection();
+    if (textBox.isHorizontal()) {
         boxSelectionRect.setHeight(rect.height());
         boxSelectionRect.setY(rect.y());
     } else {
@@ -483,8 +541,33 @@ static FloatRect localQuadForTextRun(const InlineIterator::TextBox& run, unsigne
     return boxSelectionRect;
 }
 
-Vector<FloatQuad> RenderText::absoluteQuadsForRange(unsigned start, unsigned end, bool useSelectionHeight, bool ignoreEmptyTextSelections, bool* wasFixed) const
+static Vector<LayoutRect> characterRects(const InlineIterator::TextBox& run, unsigned rangeStart, unsigned rangeEnd)
 {
+    auto [clampedStart, clampedEnd] = run.selectableRange().clamp(rangeStart, rangeEnd);
+    if (clampedStart >= clampedEnd)
+        return { };
+
+    if (auto* svgTextBox = dynamicDowncast<SVGInlineTextBox>(run.legacyInlineBox())) {
+        Vector<LayoutRect> rects;
+        rects.reserveInitialCapacity(clampedEnd - clampedStart);
+        for (auto index = clampedStart; index < clampedEnd; ++index)
+            rects.uncheckedAppend(svgTextBox->localSelectionRect(index, index + 1));
+        return rects;
+    }
+
+    auto lineSelectionRect = LineSelection::logicalRect(*run.lineBox());
+    auto selectionRect = LayoutRect { run.logicalLeftIgnoringInlineDirection(), lineSelectionRect.y(), run.logicalWidth(), lineSelectionRect.height() };
+    return run.fontCascade().characterSelectionRectsForText(run.textRun(), selectionRect, clampedStart, clampedEnd).map([&](auto& characterRect) {
+        return snappedSelectionRect(characterRect, run.logicalRightIgnoringInlineDirection(), lineSelectionRect.y(), lineSelectionRect.height(), run.isHorizontal());
+    });
+}
+
+Vector<FloatQuad> RenderText::absoluteQuadsForRange(unsigned start, unsigned end, OptionSet<RenderObject::BoundingRectBehavior> behavior, bool* wasFixed) const
+{
+    bool useSelectionHeight = behavior.contains(RenderObject::BoundingRectBehavior::UseSelectionHeight);
+    bool ignoreEmptyTextSelections = behavior.contains(RenderObject::BoundingRectBehavior::IgnoreEmptyTextSelections);
+    bool computeIndividualCharacterRects = behavior.contains(RenderObject::BoundingRectBehavior::ComputeIndividualCharacterRects);
+
     // Work around signed/unsigned issues. This function takes unsigneds, and is often passed UINT_MAX
     // to mean "all the way to the end". LegacyInlineTextBox coordinates are unsigneds, so changing this
     // function to take ints causes various internal mismatches. But selectionRect takes ints, and
@@ -495,16 +578,50 @@ Vector<FloatQuad> RenderText::absoluteQuadsForRange(unsigned start, unsigned end
     start = std::min(start, static_cast<unsigned>(INT_MAX));
     end = std::min(end, static_cast<unsigned>(INT_MAX));
 
+    const unsigned caretMinOffset = static_cast<unsigned>(this->caretMinOffset());
+    const unsigned caretMaxOffset = static_cast<unsigned>(this->caretMaxOffset());
+
+    // Narrows |start| and |end| into |caretMinOffset| and |caretMaxOffset| to ignore unrendered leading
+    // and trailing whitespaces.
+    start = std::min(std::max(caretMinOffset, start), caretMaxOffset);
+    end = std::min(std::max(caretMinOffset, end), caretMaxOffset);
+
     Vector<FloatQuad> quads;
-    for (auto& run : InlineIterator::textBoxesFor(*this)) {
-        if (ignoreEmptyTextSelections && !run.selectableRange().intersects(start, end))
+    for (auto& textBox : InlineIterator::textBoxesFor(*this)) {
+        if (ignoreEmptyTextSelections && !textBox.selectableRange().intersects(start, end))
             continue;
-        if (start <= run.start() && run.end() <= end) {
-            auto boundaries = boundariesForTextRun(run);
+
+        if (computeIndividualCharacterRects) {
+            auto rects = characterRects(textBox, start, end);
+            if (!quads.tryReserveCapacity(quads.size() + rects.size()))
+                continue;
+
+            if (!useSelectionHeight) {
+                for (auto& rect : rects) {
+                    auto visualRect = textBox.visualRectIgnoringBlockDirection();
+                    if (textBox.isHorizontal()) {
+                        rect.setHeight(visualRect.height());
+                        rect.setY(visualRect.y());
+                    } else {
+                        rect.setWidth(visualRect.width());
+                        rect.setX(visualRect.x());
+                    }
+                }
+            }
+
+            for (auto& rect : rects) {
+                if (FloatRect localRect { rect }; !localRect.isZero())
+                    quads.uncheckedAppend(localToAbsoluteQuad(localRect, UseTransforms, wasFixed));
+            }
+            continue;
+        }
+
+        if (start <= textBox.start() && textBox.end() <= end) {
+            auto boundaries = boundariesForTextBox(textBox);
 
             if (useSelectionHeight) {
-                LayoutRect selectionRect = run.selectionRect(start, end);
-                if (run.isHorizontal()) {
+                LayoutRect selectionRect = selectionRectForTextBox(textBox, start, end);
+                if (textBox.isHorizontal()) {
                     boundaries.setHeight(selectionRect.height());
                     boundaries.setY(selectionRect.y());
                 } else {
@@ -515,7 +632,7 @@ Vector<FloatQuad> RenderText::absoluteQuadsForRange(unsigned start, unsigned end
             quads.append(localToAbsoluteQuad(boundaries, UseTransforms, wasFixed));
             continue;
         }
-        FloatRect rect = localQuadForTextRun(run, start, end, useSelectionHeight);
+        FloatRect rect = localQuadForTextBox(textBox, start, end, useSelectionHeight);
         if (!rect.isZero())
             quads.append(localToAbsoluteQuad(rect, UseTransforms, wasFixed));
     }
@@ -536,7 +653,7 @@ static bool lineDirectionPointFitsInBox(int pointLineDirection, const InlineIter
     // the x coordinate is equal to the left edge of this box
     // the affinity must be downstream so the position doesn't jump back to the previous line
     // except when box is the first box in the line
-    if (pointLineDirection <= textRun->logicalLeft()) {
+    if (pointLineDirection <= textRun->logicalLeftIgnoringInlineDirection()) {
         shouldAffinityBeDownstream = !textRun->previousOnLine() ? UpstreamIfPositionIsNotAtStart : AlwaysDownstream;
         return true;
     }
@@ -544,7 +661,7 @@ static bool lineDirectionPointFitsInBox(int pointLineDirection, const InlineIter
 #if !PLATFORM(IOS_FAMILY)
     // and the x coordinate is to the left of the right edge of this box
     // check to see if position goes in this box
-    if (pointLineDirection < textRun->logicalRight()) {
+    if (pointLineDirection < textRun->logicalRightIgnoringInlineDirection()) {
         shouldAffinityBeDownstream = UpstreamIfPositionIsNotAtStart;
         return true;
     }
@@ -552,7 +669,7 @@ static bool lineDirectionPointFitsInBox(int pointLineDirection, const InlineIter
 
     // box is first on line
     // and the x coordinate is to the left of the first text box left edge
-    if (!textRun->previousOnLineIgnoringLineBreak() && pointLineDirection < textRun->logicalLeft())
+    if (!textRun->previousOnLineIgnoringLineBreak() && pointLineDirection < textRun->logicalLeftIgnoringInlineDirection())
         return true;
 
     if (!textRun->nextOnLineIgnoringLineBreak()) {
@@ -684,14 +801,14 @@ VisiblePosition RenderText::positionForPoint(const LayoutPoint& point, const Ren
             if (pointBlockDirection < bottom || (blocksAreFlipped && pointBlockDirection == bottom)) {
                 ShouldAffinityBeDownstream shouldAffinityBeDownstream;
 #if PLATFORM(IOS_FAMILY)
-                if (pointLineDirection != run->logicalLeft() && point.x() < run->visualRectIgnoringBlockDirection().x() + run->logicalWidth()) {
+                if (pointLineDirection != run->logicalLeftIgnoringInlineDirection() && point.x() < run->visualRectIgnoringBlockDirection().x() + run->logicalWidth()) {
                     int half = run->visualRectIgnoringBlockDirection().x() + run->logicalWidth() / 2;
                     auto affinity = point.x() < half ? Affinity::Downstream : Affinity::Upstream;
-                    return createVisiblePosition(run->offsetForPosition(pointLineDirection) + run->start(), affinity);
+                    return createVisiblePosition(offsetForPositionInRun(*run, pointLineDirection) + run->start(), affinity);
                 }
 #endif
                 if (lineDirectionPointFitsInBox(pointLineDirection, run, shouldAffinityBeDownstream))
-                    return createVisiblePositionAfterAdjustingOffsetForBiDi(run, run->offsetForPosition(pointLineDirection), shouldAffinityBeDownstream);
+                    return createVisiblePositionAfterAdjustingOffsetForBiDi(run, offsetForPositionInRun(*run, pointLineDirection), shouldAffinityBeDownstream);
             }
         }
         lastRun = run;
@@ -700,7 +817,7 @@ VisiblePosition RenderText::positionForPoint(const LayoutPoint& point, const Ren
     if (lastRun) {
         ShouldAffinityBeDownstream shouldAffinityBeDownstream;
         lineDirectionPointFitsInBox(pointLineDirection, lastRun, shouldAffinityBeDownstream);
-        return createVisiblePositionAfterAdjustingOffsetForBiDi(lastRun, lastRun->offsetForPosition(pointLineDirection) + lastRun->start(), shouldAffinityBeDownstream);
+        return createVisiblePositionAfterAdjustingOffsetForBiDi(lastRun, offsetForPositionInRun(*lastRun, pointLineDirection) + lastRun->start(), shouldAffinityBeDownstream);
     }
     return createVisiblePosition(0, Affinity::Downstream);
 }
@@ -822,11 +939,11 @@ RenderText::Widths RenderText::trimmedPreferredWidths(float leadWidth, bool& str
 
     unsigned length = this->length();
 
-    if (!length || (stripFrontSpaces && text().isAllSpecialCharacters<isHTMLSpace>()))
+    if (!length || (stripFrontSpaces && text().containsOnly<isASCIIWhitespace>()))
         return widths;
 
-    widths.min = m_minWidth;
-    widths.max = m_maxWidth;
+    widths.min = m_minWidth.value_or(-1);
+    widths.max = m_maxWidth.value_or(-1);
 
     widths.beginMin = m_beginMinWidth;
     widths.endMin = m_endMinWidth;
@@ -891,43 +1008,57 @@ static inline bool isSpaceAccordingToStyle(UChar c, const RenderStyle& style)
 
 float RenderText::minLogicalWidth() const
 {
-    if (preferredLogicalWidthsDirty())
-        const_cast<RenderText*>(this)->computePreferredLogicalWidths(0);
+    if (preferredLogicalWidthsDirty() || !m_minWidth)
+        const_cast<RenderText*>(this)->computePreferredLogicalWidths(0, !preferredLogicalWidthsDirty());
 
-    return m_minWidth;
+    return *m_minWidth;
 }
 
 float RenderText::maxLogicalWidth() const
 {
-    if (preferredLogicalWidthsDirty())
-        const_cast<RenderText*>(this)->computePreferredLogicalWidths(0);
+    if (preferredLogicalWidthsDirty() || !m_maxWidth)
+        const_cast<RenderText*>(this)->computePreferredLogicalWidths(0, !preferredLogicalWidthsDirty());
 
-    return m_maxWidth;
+    return *m_maxWidth;
 }
 
-LineBreakIteratorMode mapLineBreakToIteratorMode(LineBreak lineBreak)
+TextBreakIterator::LineMode::Behavior mapLineBreakToIteratorMode(LineBreak lineBreak)
 {
     switch (lineBreak) {
     case LineBreak::Auto:
     case LineBreak::AfterWhiteSpace:
     case LineBreak::Anywhere:
-        return LineBreakIteratorMode::Default;
+        return TextBreakIterator::LineMode::Behavior::Default;
     case LineBreak::Loose:
-        return LineBreakIteratorMode::Loose;
+        return TextBreakIterator::LineMode::Behavior::Loose;
     case LineBreak::Normal:
-        return LineBreakIteratorMode::Normal;
+        return TextBreakIterator::LineMode::Behavior::Normal;
     case LineBreak::Strict:
-        return LineBreakIteratorMode::Strict;
+        return TextBreakIterator::LineMode::Behavior::Strict;
     }
     ASSERT_NOT_REACHED();
-    return LineBreakIteratorMode::Default;
+    return TextBreakIterator::LineMode::Behavior::Default;
 }
 
-void RenderText::computePreferredLogicalWidths(float leadWidth)
+TextBreakIterator::ContentAnalysis mapWordBreakToContentAnalysis(WordBreak wordBreak)
+{
+    switch (wordBreak) {
+    case WordBreak::Normal:
+    case WordBreak::BreakAll:
+    case WordBreak::KeepAll:
+    case WordBreak::BreakWord:
+        return TextBreakIterator::ContentAnalysis::Mechanical;
+    case WordBreak::Auto:
+        return TextBreakIterator::ContentAnalysis::Linguistic;
+    }
+    return TextBreakIterator::ContentAnalysis::Mechanical;
+}
+
+void RenderText::computePreferredLogicalWidths(float leadWidth, bool forcedMinMaxWidthComputation)
 {
     HashSet<const Font*> fallbackFonts;
     GlyphOverflow glyphOverflow;
-    computePreferredLogicalWidths(leadWidth, fallbackFonts, glyphOverflow);
+    computePreferredLogicalWidths(leadWidth, fallbackFonts, glyphOverflow, forcedMinMaxWidthComputation);
     if (fallbackFonts.isEmpty() && !glyphOverflow.left && !glyphOverflow.right && !glyphOverflow.top && !glyphOverflow.bottom)
         m_knownToHaveNoOverflowAndNoFallbackFonts = true;
 }
@@ -962,7 +1093,7 @@ float RenderText::maxWordFragmentWidth(const RenderStyle& style, const FontCasca
     // and one that measures the single last suffix.
 
     // FIXME: Breaking the string at these places in the middle of words doesn't work with complex text.
-    float minimumFragmentWidthToConsider = font.pixelSize() * 5 / 4 + hyphenWidth(*this, font);
+    float minimumFragmentWidthToConsider = font.size() * 5 / 4 + hyphenWidth(*this, font);
     float maxFragmentWidth = 0;
     for (size_t k = 0; k < hyphenLocations.size(); ++k) {
         int fragmentLength = hyphenLocations[k] - suffixStart;
@@ -992,9 +1123,9 @@ float RenderText::maxWordFragmentWidth(const RenderStyle& style, const FontCasca
     return std::max(maxFragmentWidth, suffixWidth);
 }
 
-void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Font*>& fallbackFonts, GlyphOverflow& glyphOverflow)
+void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Font*>& fallbackFonts, GlyphOverflow& glyphOverflow, bool forcedMinMaxWidthComputation)
 {
-    ASSERT(m_hasTab || preferredLogicalWidthsDirty() || !m_knownToHaveNoOverflowAndNoFallbackFonts);
+    ASSERT_UNUSED(forcedMinMaxWidthComputation, m_hasTab || preferredLogicalWidthsDirty() || forcedMinMaxWidthComputation || !m_knownToHaveNoOverflowAndNoFallbackFonts);
 
     m_minWidth = 0;
     m_beginMinWidth = 0;
@@ -1014,7 +1145,8 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Fo
     auto& string = text();
     unsigned length = string.length();
     auto iteratorMode = mapLineBreakToIteratorMode(style.lineBreak());
-    LazyLineBreakIterator breakIterator(string, style.computedLocale(), iteratorMode);
+    auto contentAnalysis = mapWordBreakToContentAnalysis(style.wordBreak());
+    CachedLineBreakIteratorFactory lineBreakIteratorFactory(string, style.computedLocale(), iteratorMode, contentAnalysis);
     bool needsWordSpacing = false;
     bool ignoringSpaces = false;
     bool isSpace = false;
@@ -1050,7 +1182,7 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Fo
     // word-break, but we support it as though it means break-all.
     bool breakAll = (style.wordBreak() == WordBreak::BreakAll || style.wordBreak() == WordBreak::BreakWord || style.overflowWrap() == OverflowWrap::Anywhere) && style.autoWrap();
     bool keepAllWords = style.wordBreak() == WordBreak::KeepAll;
-    bool canUseLineBreakShortcut = iteratorMode == LineBreakIteratorMode::Default;
+    bool canUseLineBreakShortcut = iteratorMode == TextBreakIterator::LineMode::Behavior::Default;
 
     for (unsigned i = 0; i < length; i++) {
         UChar c = string[i];
@@ -1096,7 +1228,7 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Fo
             continue;
         }
 
-        bool hasBreak = breakAll || isBreakable(breakIterator, i, nextBreakable, breakNBSP, canUseLineBreakShortcut, keepAllWords, breakAnywhere);
+        bool hasBreak = breakAll || isBreakable(lineBreakIteratorFactory, i, nextBreakable, breakNBSP, canUseLineBreakShortcut, keepAllWords, breakAnywhere);
         bool betweenWords = true;
         unsigned j = i;
         while (c != '\n' && !isSpaceAccordingToStyle(c, style) && c != '\t' && (c != softHyphen || style.hyphens() == Hyphens::None)) {
@@ -1107,7 +1239,7 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Fo
             c = string[j];
             if (U_IS_LEAD(previousCharacter) && U_IS_TRAIL(c))
                 continue;
-            if (isBreakable(breakIterator, j, nextBreakable, breakNBSP, canUseLineBreakShortcut, keepAllWords, breakAnywhere) && characterAt(j - 1) != softHyphen)
+            if (isBreakable(lineBreakIteratorFactory, j, nextBreakable, breakNBSP, canUseLineBreakShortcut, keepAllWords, breakAnywhere) && characterAt(j - 1) != softHyphen)
                 break;
             if (breakAll) {
                 // FIXME: This code is ultra wrong.
@@ -1151,7 +1283,7 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Fo
 
             // Add in wordSpacing to our currMaxWidth, but not if this is the last word on a line or the
             // last word in the run.
-            if ((isSpace || isCollapsibleWhiteSpace) && !containsOnlyHTMLWhitespace(j, length - j))
+            if ((isSpace || isCollapsibleWhiteSpace) && !containsOnlyCSSWhitespace(j, length - j))
                 currMaxWidth += wordSpacing;
 
             if (firstWord) {
@@ -1165,7 +1297,7 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Fo
             }
             m_endMinWidth = currMinWidth;
 
-            m_minWidth = std::max(currMinWidth, m_minWidth);
+            m_minWidth = std::max(currMinWidth, *m_minWidth);
 
             i += wordLen - 1;
         } else {
@@ -1182,7 +1314,7 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Fo
                         m_beginMinWidth = currMaxWidth;
                 }
 
-                if (currMaxWidth > m_maxWidth)
+                if (currMaxWidth > *m_maxWidth)
                     m_maxWidth = currMaxWidth;
                 currMaxWidth = 0;
             } else {
@@ -1204,21 +1336,21 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Fo
     if ((needsWordSpacing && length > 1) || (ignoringSpaces && !firstWord))
         currMaxWidth += wordSpacing;
 
-    m_maxWidth = std::max(currMaxWidth, m_maxWidth);
+    m_maxWidth = std::max(currMaxWidth, *m_maxWidth);
 
     if (!style.autoWrap())
         m_minWidth = m_maxWidth;
 
     if (style.whiteSpace() == WhiteSpace::Pre) {
         if (firstLine)
-            m_beginMinWidth = m_maxWidth;
+            m_beginMinWidth = *m_maxWidth;
         m_endMinWidth = currMaxWidth;
     }
 
     setPreferredLogicalWidthsDirty(false);
 }
 
-template<typename CharacterType> static inline bool isAllCollapsibleWhitespace(const CharacterType* characters, unsigned length, const RenderStyle& style)
+template<typename CharacterType> static inline bool containsOnlyCollapsibleWhitespace(const CharacterType* characters, unsigned length, const RenderStyle& style)
 {
     for (unsigned i = 0; i < length; ++i) {
         if (!style.isCollapsibleWhiteSpace(characters[i]))
@@ -1227,14 +1359,15 @@ template<typename CharacterType> static inline bool isAllCollapsibleWhitespace(c
     return true;
 }
 
-bool RenderText::isAllCollapsibleWhitespace() const
+bool RenderText::containsOnlyCollapsibleWhitespace() const
 {
     if (text().is8Bit())
-        return WebCore::isAllCollapsibleWhitespace(text().characters8(), text().length(), style());
-    return WebCore::isAllCollapsibleWhitespace(text().characters16(), text().length(), style());
+        return WebCore::containsOnlyCollapsibleWhitespace(text().characters8(), text().length(), style());
+    return WebCore::containsOnlyCollapsibleWhitespace(text().characters16(), text().length(), style());
 }
 
-template<typename CharacterType> static inline bool isAllPossiblyCollapsibleWhitespace(const CharacterType* characters, unsigned length)
+// FIXME: merge this with isCSSSpace somehow
+template<typename CharacterType> static inline bool containsOnlyPossiblyCollapsibleWhitespace(const CharacterType* characters, unsigned length)
 {
     for (unsigned i = 0; i < length; ++i) {
         if (!(characters[i] == '\n' || characters[i] == ' ' || characters[i] == '\t'))
@@ -1243,14 +1376,14 @@ template<typename CharacterType> static inline bool isAllPossiblyCollapsibleWhit
     return true;
 }
 
-bool RenderText::containsOnlyHTMLWhitespace(unsigned from, unsigned length) const
+bool RenderText::containsOnlyCSSWhitespace(unsigned from, unsigned length) const
 {
     ASSERT(from <= text().length());
     ASSERT(length <= text().length());
     ASSERT(from + length <= text().length());
     if (text().is8Bit())
-        return isAllPossiblyCollapsibleWhitespace(text().characters8() + from, length);
-    return isAllPossiblyCollapsibleWhitespace(text().characters16() + from, length);
+        return containsOnlyPossiblyCollapsibleWhitespace(text().characters8() + from, length);
+    return containsOnlyPossiblyCollapsibleWhitespace(text().characters16() + from, length);
 }
 
 Vector<std::pair<unsigned, unsigned>> RenderText::draggedContentRangesBetweenOffsets(unsigned startOffset, unsigned endOffset) const
@@ -1295,19 +1428,6 @@ void RenderText::setSelectionState(HighlightState state)
         containingBlock->setSelectionState(state);
 }
 
-void RenderText::setTextWithOffset(const String& newText, unsigned offset, unsigned length, bool force)
-{
-    if (!force && text() == newText)
-        return;
-
-    int delta = newText.length() - text().length();
-    unsigned end = offset + length;
-
-    m_linesDirty = m_lineBoxes.dirtyRange(*this, offset, end, delta);
-
-    setText(newText, force || m_linesDirty);
-}
-
 static inline bool isInlineFlowOrEmptyText(const RenderObject& renderer)
 {
     return is<RenderInline>(renderer) || (is<RenderText>(renderer) && downcast<RenderText>(renderer).text().isEmpty());
@@ -1327,20 +1447,96 @@ UChar RenderText::previousCharacter() const
     return previousString[previousString.length() - 1];
 }
 
+static String convertToFullSizeKana(const String& string)
+{
+    // https://www.w3.org/TR/css-text-3/#small-kana
+    static constexpr std::pair<UChar, UChar> kanasMap[] = {
+        { 0x3041, 0x3042 },
+        { 0x3043, 0x3044 },
+        { 0x3045, 0x3046 },
+        { 0x3047, 0x3048 },
+        { 0x3049, 0x304A },
+        { 0x3063, 0x3064 },
+        { 0x3083, 0x3084 },
+        { 0x3085, 0x3086 },
+        { 0x3087, 0x3088 },
+        { 0x308E, 0x308F },
+        { 0x3095, 0x304B },
+        { 0x3096, 0x3051 },
+        { 0x30A1, 0x30A2 },
+        { 0x30A3, 0x30A4 },
+        { 0x30A5, 0x30A6 },
+        { 0x30A7, 0x30A8 },
+        { 0x30A9, 0x30AA },
+        { 0x30C3, 0x30C4 },
+        { 0x30E3, 0x30E4 },
+        { 0x30E5, 0x30E6 },
+        { 0x30E7, 0x30E8 },
+        { 0x30EE, 0x30EF },
+        { 0x30F5, 0x30AB },
+        { 0x30F6, 0x30B1 },
+        { 0x31F0, 0x30AF },
+        { 0x31F1, 0x30B7 },
+        { 0x31F2, 0x30B9 },
+        { 0x31F3, 0x30C8 },
+        { 0x31F4, 0x30CC },
+        { 0x31F5, 0x30CF },
+        { 0x31F6, 0x30D2 },
+        { 0x31F7, 0x30D5 },
+        { 0x31F8, 0x30D8 },
+        { 0x31F9, 0x30DB },
+        { 0x31FA, 0x30E0 },
+        { 0x31FB, 0x30E9 },
+        { 0x31FC, 0x30EA },
+        { 0x31FD, 0x30EB },
+        { 0x31FE, 0x30EC },
+        { 0x31FF, 0x30ED },
+        { 0xFF67, 0xFF71 },
+        { 0xFF68, 0xFF72 },
+        { 0xFF69, 0xFF73 },
+        { 0xFF6A, 0xFF74 },
+        { 0xFF6B, 0xFF75 },
+        { 0xFF6C, 0xFF94 },
+        { 0xFF6D, 0xFF95 },
+        { 0xFF6E, 0xFF96 },
+        { 0xFF6F, 0xFF82 }
+    };
+    static constexpr auto sortedMap = SortedArrayMap { kanasMap };
+
+    StringBuilder result;
+    auto codeUnits = StringView { string }.codeUnits();
+    for (const auto character : codeUnits) {
+        if (auto found = sortedMap.tryGet(character))
+            result.append(*found);
+        else
+            result.append(character);
+    }
+    return result == string ? string : result.toString();
+}
+
 String applyTextTransform(const RenderStyle& style, const String& text, UChar previousCharacter)
 {
-    switch (style.textTransform()) {
-    case TextTransform::None:
-        return text;
-    case TextTransform::Capitalize:
-        return capitalize(text, previousCharacter); // FIXME: Need to take locale into account.
-    case TextTransform::Uppercase:
-        return text.convertToUppercaseWithLocale(style.computedLocale());
-    case TextTransform::Lowercase:
-        return text.convertToLowercaseWithLocale(style.computedLocale());
-    }
-    ASSERT_NOT_REACHED();
+    auto transform = style.textTransform();
+
+    if (transform.isEmpty())
     return text;
+
+    // https://w3c.github.io/csswg-drafts/css-text/#text-transform-order
+    auto modified = text;
+    if (transform.contains(TextTransform::Capitalize))
+        modified = capitalize(modified, previousCharacter); // FIXME: Need to take locale into account.
+    else if (transform.contains(TextTransform::Uppercase))
+        modified = modified.convertToUppercaseWithLocale(style.computedLocale());
+    else if (transform.contains(TextTransform::Lowercase))
+        modified = modified.convertToLowercaseWithLocale(style.computedLocale());
+
+    if (transform.contains(TextTransform::FullWidth))
+        modified = transformToFullWidth(modified);
+
+    if (transform.contains(TextTransform::FullSizeKana))
+        modified = convertToFullSizeKana(modified);
+
+    return modified;
 }
 
 void RenderText::setRenderedText(const String& newText)
@@ -1355,7 +1551,7 @@ void RenderText::setRenderedText(const String& newText)
         m_text = makeStringByReplacingAll(m_text, '\\', yenSign);
 
     const auto& style = this->style();
-    if (style.textTransform() != TextTransform::None)
+    if (!style.textTransform().isEmpty())
         m_text = applyTextTransform(style, m_text, previousCharacter());
 
     // At rendering time, if certain fonts are used, these characters get swapped out with higher-quality PUA characters.
@@ -1385,9 +1581,8 @@ void RenderText::setRenderedText(const String& newText)
 #endif
     }
 
-    m_isAllASCII = text().isAllASCII();
+    m_containsOnlyASCII = text().containsOnlyASCII();
     m_canUseSimpleFontCodePath = computeCanUseSimpleFontCodePath();
-    m_canUseSimplifiedTextMeasuring = computeCanUseSimplifiedTextMeasuring();
 
     if (m_text != originalText) {
         originalTextMap().set(this, originalText);
@@ -1430,43 +1625,26 @@ void RenderText::secureText(UChar maskingCharacter)
         characters[revealedCharactersOffset] = characterToReveal;
 }
 
-bool RenderText::computeCanUseSimplifiedTextMeasuring() const
+static void invalidateLineLayoutPathOnContentChangeIfNeeded(const RenderText& renderer, size_t offset, int delta)
 {
-    if (!m_canUseSimpleFontCodePath)
-        return false;
+    auto* container = LayoutIntegration::LineLayout::blockContainer(renderer);
+    if (!container)
+        return;
 
-    // FIXME: All these checks should be more fine-grained at the inline item level.
-    auto& style = this->style();
-    auto& fontCascade = style.fontCascade();
-    if (fontCascade.wordSpacing() || fontCascade.letterSpacing())
-        return false;
+    auto* modernLineLayout = container->modernLineLayout();
+    if (!modernLineLayout)
+        return;
 
-    // Additional check on the font codepath.
-    TextRun run(m_text);
-    run.setCharacterScanForCodePath(false);
-    if (fontCascade.codePath(run) != FontCascade::CodePath::Simple)
-        return false;
-
-    if (&style != &firstLineStyle() && fontCascade != firstLineStyle().fontCascade())
-        return false;
-
-    auto& primaryFont = fontCascade.primaryFont();
-    if (primaryFont.syntheticBoldOffset())
-        return false;
-
-    auto whitespaceIsCollapsed = style.collapseWhiteSpace();
-    for (unsigned i = 0; i < text().length(); ++i) {
-        auto character = text()[i];
-        if (!WidthIterator::characterCanUseSimplifiedTextMeasuring(character, whitespaceIsCollapsed))
-            return false;
-        auto glyphData = fontCascade.glyphDataForCharacter(character, false);
-        if (!glyphData.isValid() || glyphData.font != &primaryFont)
-            return false;
+    if (LayoutIntegration::LineLayout::shouldInvalidateLineLayoutPathAfterContentChange(*container, renderer, *modernLineLayout)) {
+        container->invalidateLineLayoutPath();
+        return;
     }
-    return true;
+    modernLineLayout->updateTextContent(renderer, offset, delta);
+    if (!modernLineLayout->isDamaged())
+        container->invalidateLineLayoutPath();
 }
 
-void RenderText::setText(const String& text, bool force)
+void RenderText::setTextInternal(const String& text, bool force)
 {
     ASSERT(!text.isNull());
 
@@ -1484,13 +1662,28 @@ void RenderText::setText(const String& text, bool force)
     setNeedsLayoutAndPrefWidthsRecalc();
     m_knownToHaveNoOverflowAndNoFallbackFonts = false;
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-    if (auto* container = LayoutIntegration::LineLayout::blockContainer(*this))
-        container->invalidateLineLayoutPath();
-#endif
-
     if (AXObjectCache* cache = document().existingAXObjectCache())
         cache->deferTextChangedIfNeeded(textNode());
+}
+
+void RenderText::setText(const String& newContent, bool force)
+{
+    setTextInternal(newContent, force);
+    invalidateLineLayoutPathOnContentChangeIfNeeded(*this, 0, text().length());
+}
+
+void RenderText::setTextWithOffset(const String& newText, unsigned offset, unsigned length, bool force)
+{
+    if (!force && text() == newText)
+        return;
+
+    int delta = newText.length() - text().length();
+    unsigned end = offset + length;
+
+    m_linesDirty = m_lineBoxes.dirtyRange(*this, offset, end, delta);
+
+    setTextInternal(newText, force || m_linesDirty);
+    invalidateLineLayoutPathOnContentChangeIfNeeded(*this, offset, delta);
 }
 
 String RenderText::textWithoutConvertingBackslashToYenSymbol() const
@@ -1498,7 +1691,7 @@ String RenderText::textWithoutConvertingBackslashToYenSymbol() const
     if (!m_useBackslashAsYenSymbol || style().textSecurity() != TextSecurity::None)
         return text();
 
-    if (style().textTransform() == TextTransform::None)
+    if (style().textTransform().isEmpty())
         return originalText();
 
     return applyTextTransform(style(), originalText(), previousCharacter());
@@ -1532,11 +1725,7 @@ void RenderText::positionLineBox(LegacyInlineTextBox& textBox)
 
 bool RenderText::usesLegacyLineLayoutPath() const
 {
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     return !LayoutIntegration::LineLayout::containing(*this);
-#else
-    return true;
-#endif
 }
 
 float RenderText::width(unsigned from, unsigned len, float xPos, bool firstLine, HashSet<const Font*>* fallbackFonts, GlyphOverflow* glyphOverflow) const
@@ -1562,7 +1751,7 @@ float RenderText::width(unsigned from, unsigned length, const FontCascade& fontC
         return *width;
 
     if (length == 1 && (characterAt(from) == space))
-        return canUseSimplifiedTextMeasuring() ? fontCascade.primaryFont().spaceWidth() : fontCascade.widthOfSpaceString();
+        return fontCascade.widthOfSpaceString();
 
     float width = 0.f;
     if (&fontCascade == &style.fontCascade()) {
@@ -1574,7 +1763,10 @@ float RenderText::width(unsigned from, unsigned length, const FontCascade& fontC
                     if (fallbackFonts->isEmpty() && !glyphOverflow->left && !glyphOverflow->right && !glyphOverflow->top && !glyphOverflow->bottom)
                         m_knownToHaveNoOverflowAndNoFallbackFonts = true;
                 }
-                width = m_maxWidth;
+                // The rare case of when we switch between IFC and legacy preferred width computation.
+                if (!m_maxWidth)
+                    width = maxLogicalWidth();
+                width = *m_maxWidth;
             } else
                 width = maxLogicalWidth();
         } else
@@ -1651,10 +1843,10 @@ LayoutRect RenderText::collectSelectionGeometriesForLineBoxes(const RenderLayerM
 
     LayoutRect resultRect;
 
-    for (auto& run : InlineIterator::textBoxesFor(*this)) {
+    for (auto& textBox : InlineIterator::textBoxesFor(*this)) {
         LayoutRect rect;
-        rect.unite(run.selectionRect(startOffset, endOffset));
-        rect.unite(ellipsisRectForTextRun(run, startOffset, endOffset));
+        rect.unite(selectionRectForTextBox(textBox, startOffset, endOffset));
+        rect.unite(ellipsisRectForTextBox(textBox, startOffset, endOffset).value_or(IntRect { }));
         if (rect.isEmpty())
             continue;
 
@@ -1763,31 +1955,31 @@ bool RenderText::hasRenderedText() const
 
 int RenderText::previousOffset(int current) const
 {
-    if (m_isAllASCII || text().is8Bit())
+    if (m_containsOnlyASCII || text().is8Bit())
         return current - 1;
 
-    CachedTextBreakIterator iterator(text(), TextBreakIterator::Mode::Caret, nullAtom());
+    CachedTextBreakIterator iterator(text(), nullptr, 0, TextBreakIterator::CaretMode { }, nullAtom());
     return iterator.preceding(current).value_or(current - 1);
 }
 
 int RenderText::previousOffsetForBackwardDeletion(int current) const
 {
-    CachedTextBreakIterator iterator(text(), TextBreakIterator::Mode::Delete, nullAtom());
+    CachedTextBreakIterator iterator(text(), nullptr, 0, TextBreakIterator::DeleteMode { }, nullAtom());
     return iterator.preceding(current).value_or(0);
 }
 
 int RenderText::nextOffset(int current) const
 {
-    if (m_isAllASCII || text().is8Bit())
+    if (m_containsOnlyASCII || text().is8Bit())
         return current + 1;
 
-    CachedTextBreakIterator iterator(text(), TextBreakIterator::Mode::Caret, nullAtom());
+    CachedTextBreakIterator iterator(text(), nullptr, 0, TextBreakIterator::CaretMode { }, nullAtom());
     return iterator.following(current).value_or(current + 1);
 }
 
 bool RenderText::computeCanUseSimpleFontCodePath() const
 {
-    if (m_isAllASCII || text().is8Bit())
+    if (m_containsOnlyASCII || text().is8Bit())
         return true;
     return FontCascade::characterRangeCodePath(text().characters16(), length()) == FontCascade::CodePath::Simple;
 }

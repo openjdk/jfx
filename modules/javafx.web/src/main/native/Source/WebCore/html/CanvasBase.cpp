@@ -26,14 +26,23 @@
 #include "config.h"
 #include "CanvasBase.h"
 
-#include "CSSCanvasValue.h"
+#include "ByteArrayPixelBuffer.h"
 #include "CanvasRenderingContext.h"
+#include "Chrome.h"
+#include "Document.h"
 #include "Element.h"
-#include "FloatRect.h"
+#include "GraphicsClient.h"
 #include "GraphicsContext.h"
+#include "HTMLCanvasElement.h"
+#include "HostWindow.h"
 #include "ImageBuffer.h"
 #include "InspectorInstrumentation.h"
+#include "IntRect.h"
+#include "StyleCanvasImage.h"
+#include "RenderElement.h"
 #include "WebCoreOpaqueRoot.h"
+#include "WorkerClient.h"
+#include "WorkerGlobalScope.h"
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/JSLock.h>
 #include <atomic>
@@ -51,16 +60,20 @@ const InterpolationQuality defaultInterpolationQuality = InterpolationQuality::L
 const InterpolationQuality defaultInterpolationQuality = InterpolationQuality::Default;
 #endif
 
-CanvasBase::CanvasBase(IntSize size)
+static std::optional<size_t> maxCanvasAreaForTesting;
+
+CanvasBase::CanvasBase(IntSize size, const std::optional<NoiseInjectionHashSalt>& noiseHashSalt)
     : m_size(size)
+    , m_canvasNoiseHashSalt(noiseHashSalt)
 {
 }
 
 CanvasBase::~CanvasBase()
 {
     ASSERT(m_didNotifyObserversCanvasDestroyed);
-    ASSERT(m_observers.computesEmpty());
+    ASSERT(m_observers.isEmptyIgnoringNullReferences());
     ASSERT(!m_imageBuffer);
+    m_canvasNoiseHashSalt = std::nullopt;
 }
 
 GraphicsContext* CanvasBase::drawingContext() const
@@ -95,8 +108,11 @@ AffineTransform CanvasBase::baseTransform() const
 
 void CanvasBase::makeRenderingResultsAvailable()
 {
-    if (auto* context = renderingContext())
+    if (auto* context = renderingContext()) {
         context->paintRenderingResultsToCanvas();
+        if (m_canvasNoiseHashSalt)
+            m_canvasNoiseInjection.postProcessDirtyCanvasBuffer(buffer(), *m_canvasNoiseHashSalt);
+    }
 }
 
 size_t CanvasBase::memoryCost() const
@@ -121,11 +137,31 @@ size_t CanvasBase::externalMemoryCost() const
     return m_imageBuffer->externalMemoryCost();
 }
 
+static inline size_t maxCanvasArea()
+{
+    if (maxCanvasAreaForTesting)
+        return *maxCanvasAreaForTesting;
+
+    // Firefox limits width/height to 32767 pixels, but slows down dramatically before it
+    // reaches that limit. We limit by area instead, giving us larger maximum dimensions,
+    // in exchange for a smaller maximum canvas size. The maximum canvas size is in device pixels.
+#if PLATFORM(IOS_FAMILY)
+    return 4096 * 4096;
+#else
+    return 16384 * 16384;
+#endif
+}
+
+void CanvasBase::setMaxCanvasAreaForTesting(std::optional<size_t> size)
+{
+    maxCanvasAreaForTesting = size;
+}
+
 void CanvasBase::addObserver(CanvasObserver& observer)
 {
     m_observers.add(observer);
 
-    if (is<CSSCanvasValue::CanvasObserverProxy>(observer))
+    if (is<StyleCanvasImage>(observer))
         InspectorInstrumentation::didChangeCSSCanvasClientNodes(*this);
 }
 
@@ -133,14 +169,30 @@ void CanvasBase::removeObserver(CanvasObserver& observer)
 {
     m_observers.remove(observer);
 
-    if (is<CSSCanvasValue::CanvasObserverProxy>(observer))
+    if (is<StyleCanvasImage>(observer))
         InspectorInstrumentation::didChangeCSSCanvasClientNodes(*this);
+}
+
+bool CanvasBase::hasObserver(CanvasObserver& observer) const
+{
+    return m_observers.contains(observer);
 }
 
 void CanvasBase::notifyObserversCanvasChanged(const std::optional<FloatRect>& rect)
 {
     for (auto& observer : m_observers)
         observer.canvasChanged(*this, rect);
+}
+
+void CanvasBase::didDraw(const std::optional<FloatRect>& rect, ShouldApplyPostProcessingToDirtyRect shouldApplyPostProcessingToDirtyRect)
+{
+    // FIXME: We should exclude rects with ShouldApplyPostProcessingToDirtyRect::No
+    if (shouldInjectNoiseBeforeReadback() && shouldApplyPostProcessingToDirtyRect == ShouldApplyPostProcessingToDirtyRect::Yes) {
+        if (rect)
+            m_canvasNoiseInjection.updateDirtyRect(intersection(enclosingIntRect(*rect), { { }, size() }));
+        else
+            m_canvasNoiseInjection.updateDirtyRect({ { }, size() });
+    }
 }
 
 void CanvasBase::notifyObserversCanvasResized()
@@ -181,13 +233,13 @@ HashSet<Element*> CanvasBase::cssCanvasClients() const
 {
     HashSet<Element*> cssCanvasClients;
     for (auto& observer : m_observers) {
-        if (!is<CSSCanvasValue::CanvasObserverProxy>(observer))
+        if (!is<StyleCanvasImage>(observer))
             continue;
 
-        auto clients = downcast<CSSCanvasValue::CanvasObserverProxy>(observer).ownerValue().clients();
-        for (auto& entry : clients) {
-            if (RefPtr<Element> element = entry.key->element())
-                cssCanvasClients.add(element.get());
+        for (auto entry : downcast<StyleCanvasImage>(observer).clients()) {
+            auto& client = entry.key;
+            if (auto element = client.element())
+                cssCanvasClients.add(element);
         }
     }
     return cssCanvasClients;
@@ -230,6 +282,89 @@ RefPtr<ImageBuffer> CanvasBase::setImageBuffer(RefPtr<ImageBuffer>&& buffer) con
     }
 
     return returnBuffer;
+}
+
+GraphicsClient* CanvasBase::graphicsClient() const
+{
+    if (scriptExecutionContext()->isDocument() && downcast<Document>(scriptExecutionContext())->page())
+        return &downcast<Document>(scriptExecutionContext())->page()->chrome();
+    if (is<WorkerGlobalScope>(scriptExecutionContext()))
+        return downcast<WorkerGlobalScope>(scriptExecutionContext())->workerClient();
+
+    return nullptr;
+}
+
+bool CanvasBase::shouldAccelerate(const IntSize& size) const
+{
+    auto checkedArea = size.area<RecordOverflow>();
+    if (checkedArea.hasOverflowed())
+        return false;
+
+    return shouldAccelerate(checkedArea.value());
+}
+
+bool CanvasBase::shouldAccelerate(unsigned area) const
+{
+    if (area > scriptExecutionContext()->settingsValues().maximumAccelerated2dCanvasSize)
+        return false;
+
+#if USE(IOSURFACE_CANVAS_BACKING_STORE)
+    return scriptExecutionContext()->settingsValues().canvasUsesAcceleratedDrawing;
+#else
+    return false;
+#endif
+}
+
+RefPtr<ImageBuffer> CanvasBase::allocateImageBuffer(bool usesDisplayListDrawing, bool avoidBackendSizeCheckForTesting) const
+{
+    auto checkedArea = size().area<RecordOverflow>();
+
+    if (checkedArea.hasOverflowed() || checkedArea > maxCanvasArea()) {
+        auto message = makeString("Canvas area exceeds the maximum limit (width * height > ", maxCanvasArea(), ").");
+        scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Warning, message);
+        return nullptr;
+    }
+
+    unsigned area = checkedArea.value();
+    if (!area)
+        return nullptr;
+
+    OptionSet<ImageBufferOptions> bufferOptions;
+    if (shouldAccelerate(area))
+        bufferOptions.add(ImageBufferOptions::Accelerated);
+    // FIXME: Add a new setting for DisplayList drawing on canvas.
+    if (usesDisplayListDrawing || scriptExecutionContext()->settingsValues().displayListDrawingEnabled)
+        bufferOptions.add(ImageBufferOptions::UseDisplayList);
+
+    auto [colorSpace, pixelFormat] = [&] {
+        if (renderingContext())
+            return std::pair { renderingContext()->colorSpace(), renderingContext()->pixelFormat() };
+        return std::pair { DestinationColorSpace::SRGB(), PixelFormat::BGRA8 };
+    }();
+    ImageBufferCreationContext context = { };
+    context.graphicsClient = graphicsClient();
+    context.avoidIOSurfaceSizeCheckInWebProcessForTesting = avoidBackendSizeCheckForTesting;
+    return ImageBuffer::create(size(), RenderingPurpose::Canvas, 1, colorSpace, pixelFormat, bufferOptions, context);
+}
+
+bool CanvasBase::shouldInjectNoiseBeforeReadback() const
+{
+    // Note, every early-return resulting from this check potentially leaks this state. This is a risk that we're accepting right now.
+    return !!m_canvasNoiseHashSalt;
+}
+
+void CanvasBase::recordLastFillText(const String& text)
+{
+    if (!shouldInjectNoiseBeforeReadback())
+        return;
+    m_lastFillText = text;
+}
+
+bool CanvasBase::postProcessPixelBufferResults(Ref<PixelBuffer>&& pixelBuffer) const
+{
+    if (m_canvasNoiseHashSalt)
+        return m_canvasNoiseInjection.postProcessPixelBufferResults(std::forward<Ref<PixelBuffer>>(pixelBuffer), *m_canvasNoiseHashSalt);
+    return false;
 }
 
 size_t CanvasBase::activePixelMemory()

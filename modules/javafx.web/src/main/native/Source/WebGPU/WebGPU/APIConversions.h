@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Apple Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,8 +34,10 @@
 #import "ComputePassEncoder.h"
 #import "ComputePipeline.h"
 #import "Device.h"
+#import "ExternalTexture.h"
 #import "Instance.h"
 #import "PipelineLayout.h"
+#import "PresentationContext.h"
 #import "QuerySet.h"
 #import "Queue.h"
 #import "RenderBundle.h"
@@ -44,10 +46,9 @@
 #import "RenderPipeline.h"
 #import "Sampler.h"
 #import "ShaderModule.h"
-#import "Surface.h"
-#import "SwapChain.h"
 #import "Texture.h"
 #import "TextureView.h"
+#import <wtf/BlockPtr.h>
 #import <wtf/text/WTFString.h>
 
 namespace WebGPU {
@@ -97,6 +98,11 @@ inline ComputePipeline& fromAPI(WGPUComputePipeline computePipeline)
 inline Device& fromAPI(WGPUDevice device)
 {
     return static_cast<Device&>(*device);
+}
+
+inline ExternalTexture& fromAPI(WGPUExternalTexture texture)
+{
+    return static_cast<ExternalTexture&>(*texture);
 }
 
 inline Instance& fromAPI(WGPUInstance instance)
@@ -149,14 +155,14 @@ inline ShaderModule& fromAPI(WGPUShaderModule shaderModule)
     return static_cast<ShaderModule&>(*shaderModule);
 }
 
-inline Surface& fromAPI(WGPUSurface surface)
+inline PresentationContext& fromAPI(WGPUSurface surface)
 {
-    return static_cast<Surface&>(*surface);
+    return static_cast<PresentationContext&>(*surface);
 }
 
-inline SwapChain& fromAPI(WGPUSwapChain swapChain)
+inline PresentationContext& fromAPI(WGPUSwapChain swapChain)
 {
-    return static_cast<SwapChain&>(*swapChain);
+    return static_cast<PresentationContext&>(*swapChain);
 }
 
 inline Texture& fromAPI(WGPUTexture texture)
@@ -174,10 +180,25 @@ inline String fromAPI(const char* string)
     return String::fromUTF8(string);
 }
 
+template<typename R, typename... Args>
+inline BlockPtr<R (Args...)> fromAPI(R (^ __strong &&block)(Args...))
+{
+    return makeBlockPtr(WTFMove(block));
+}
+
 template <typename T>
 inline T* releaseToAPI(Ref<T>&& pointer)
 {
     return &pointer.leakRef();
+}
+
+template <typename T>
+inline T* releaseToAPI(RefPtr<T>&& pointer)
+{
+    // FIXME: We shouldn't need this, because invalid objects should be created instead of returning nullptr.
+    if (pointer)
+        return pointer.leakRef();
+    return nullptr;
 }
 
 } // namespace WebGPU

@@ -106,7 +106,7 @@ ScrollingNodeID ScrollingStateTree::createUnparentedNode(ScrollingNodeType nodeT
 {
     LOG_WITH_STREAM(ScrollingTree, stream << "ScrollingStateTree " << this << " createUnparentedNode " << newNodeID);
 
-    if (auto* node = stateNodeForID(newNodeID)) {
+    if (auto node = stateNodeForID(newNodeID)) {
         if (node->nodeType() == nodeType) {
             // If the node exists and is parented, unparent it. It may already be in m_unparentedNodes.
             unparentNode(newNodeID);
@@ -133,9 +133,9 @@ ScrollingNodeID ScrollingStateTree::insertNode(ScrollingNodeType nodeType, Scrol
     LOG_WITH_STREAM(ScrollingTree, stream << "ScrollingStateTree " << this << " insertNode " << newNodeID << " in parent " << parentID << " at " << childIndex);
     ASSERT(newNodeID);
 
-    if (auto* node = stateNodeForID(newNodeID)) {
-        auto* parent = stateNodeForID(parentID);
-        if (nodeTypeAndParentMatch(*node, nodeType, parent)) {
+    if (auto node = stateNodeForID(newNodeID)) {
+        auto parent = stateNodeForID(parentID);
+        if (nodeTypeAndParentMatch(*node, nodeType, parent.get())) {
             if (!parentID)
                 return newNodeID;
 
@@ -176,7 +176,7 @@ ScrollingNodeID ScrollingStateTree::insertNode(ScrollingNodeType nodeType, Scrol
         newNode = rootStateNode();
         m_hasNewRootStateNode = true;
     } else {
-        auto* parent = stateNodeForID(parentID);
+        auto parent = stateNodeForID(parentID);
         if (!parent) {
             ASSERT_NOT_REACHED();
             return 0;
@@ -283,9 +283,11 @@ void ScrollingStateTree::clear()
 
 std::unique_ptr<ScrollingStateTree> ScrollingStateTree::commit(LayerRepresentation::Type preferredLayerRepresentation)
 {
+    ASSERT(isValid());
+
     if (!m_unparentedNodes.isEmpty()) {
         // We expect temporarily to have unparented nodes when committing when connecting across iframe boundaries, but unparented nodes should not stick around for a long time.
-        LOG(Scrolling, "Committing with %u unparented nodes", m_unparentedNodes.size());
+        LOG(ScrollingTree, "Committing with %u unparented nodes", m_unparentedNodes.size());
     }
 
     // This function clones and resets the current state tree, but leaves the tree structure intact.
@@ -302,6 +304,62 @@ std::unique_ptr<ScrollingStateTree> ScrollingStateTree::commit(LayerRepresentati
     return treeStateClone;
 }
 
+void ScrollingStateTree::traverse(const ScrollingStateNode& node, const Function<void(const ScrollingStateNode&)>& traversalFunc) const
+{
+    traversalFunc(node);
+
+    if (auto* children = node.children()) {
+        for (auto childNode : *children) {
+            ASSERT(childNode);
+            traverse(*childNode, traversalFunc);
+        }
+    }
+}
+
+bool ScrollingStateTree::isValid() const
+{
+    if (!m_rootStateNode)
+        return true;
+
+    bool isValid = true;
+    traverse(*m_rootStateNode, [&](const ScrollingStateNode& node) {
+        switch (node.nodeType()) {
+        case ScrollingNodeType::MainFrame:
+            break;
+        case ScrollingNodeType::Subframe:
+            break;
+        case ScrollingNodeType::FrameHosting:
+            break;
+        case ScrollingNodeType::Overflow:
+            break;
+        case ScrollingNodeType::OverflowProxy: {
+            auto& proxyNode = downcast<ScrollingStateOverflowScrollProxyNode>(node);
+            if (!proxyNode.overflowScrollingNode() || !nodeMap().contains(proxyNode.overflowScrollingNode())) {
+                ALWAYS_LOG_WITH_STREAM(stream << "ScrollingStateOverflowScrollProxyNode " << node.scrollingNodeID() << " refers to non-existant overflow node " << proxyNode.overflowScrollingNode());
+                isValid = false;
+            }
+            break;
+        }
+        case ScrollingNodeType::Fixed:
+            break;
+        case ScrollingNodeType::Sticky:
+            break;
+        case ScrollingNodeType::Positioned: {
+            auto& positionedNode = downcast<ScrollingStatePositionedNode>(node);
+            for (auto relatedNodeID : positionedNode.relatedOverflowScrollingNodes()) {
+                if (!relatedNodeID || !nodeMap().contains(relatedNodeID)) {
+                    ALWAYS_LOG_WITH_STREAM(stream << "ScrollingStatePositionedNode " << node.scrollingNodeID() << " refers to non-existant overflow node " << relatedNodeID);
+                    isValid = false;
+                }
+            }
+            break;
+        }
+        }
+    });
+
+    return isValid;
+}
+
 void ScrollingStateTree::setRootStateNode(Ref<ScrollingStateFrameScrollingNode>&& rootStateNode)
 {
     m_rootStateNode = WTFMove(rootStateNode);
@@ -314,7 +372,7 @@ void ScrollingStateTree::addNode(ScrollingStateNode& node)
 
 void ScrollingStateTree::removeNodeAndAllDescendants(ScrollingStateNode& node)
 {
-    auto* parent = node.parent();
+    auto parent = node.parent();
 
     recursiveNodeWillBeRemoved(node);
 
@@ -347,10 +405,10 @@ void ScrollingStateTree::willRemoveNode(ScrollingStateNode& node)
     setHasChangedProperties();
 }
 
-ScrollingStateNode* ScrollingStateTree::stateNodeForID(ScrollingNodeID scrollLayerID) const
+RefPtr<ScrollingStateNode> ScrollingStateTree::stateNodeForID(ScrollingNodeID nodeID) const
 {
-    auto* node = scrollLayerID ? m_stateNodeMap.get(scrollLayerID) : nullptr;
-    ASSERT(!node || node->scrollingNodeID() == scrollLayerID);
+    RefPtr node = nodeID ? m_stateNodeMap.get(nodeID) : nullptr;
+    RELEASE_ASSERT(!node || node->scrollingNodeID() == nodeID);
     return node;
 }
 
@@ -372,7 +430,7 @@ static void reconcileLayerPositionsRecursive(ScrollingStateNode& currentNode, co
 
 void ScrollingStateTree::reconcileViewportConstrainedLayerPositions(ScrollingNodeID scrollingNodeID, const LayoutRect& layoutViewport, ScrollingLayerPositionAction action)
 {
-    if (auto* scrollingNode = stateNodeForID(scrollingNodeID))
+    if (auto scrollingNode = stateNodeForID(scrollingNodeID))
         reconcileLayerPositionsRecursive(*scrollingNode, layoutViewport, action);
 }
 
