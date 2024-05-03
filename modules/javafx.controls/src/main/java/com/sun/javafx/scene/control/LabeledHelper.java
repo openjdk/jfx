@@ -34,7 +34,7 @@ public class LabeledHelper {
     /** Accessor */
     public interface Accessor {
         /**
-         * Sets the text truncated flag. 
+         * Sets the text truncated flag.
          * @param c the Labeled control
          * @param on the value of the text truncated flag
          */
