@@ -33,6 +33,8 @@ import javafx.scene.control.TableCell;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.skin.ButtonSkin;
 import javafx.scene.control.skin.LabelSkin;
+import javafx.scene.control.skin.LabeledSkinBase;
+import javafx.scene.control.skin.LabeledSkinBaseShim;
 import javafx.scene.control.skin.TableCellSkin;
 import javafx.scene.control.skin.TreeTableCellSkin;
 import javafx.scene.layout.RegionShim;
@@ -85,24 +87,29 @@ public class LabeledTruncatedTest {
 
     private void test(Labeled control) {
         RegionShim.setWidth(control, 1000);
+        LabeledSkinBaseShim.updateDisplayedText((LabeledSkinBase)control.getSkin());
         firePulse();
-        double w = control.prefWidth(-1);
         double h = control.prefHeight(-1);
 
         assertFalse(control.isTextTruncated());
 
         RegionShim.setWidth(control, 10);
         RegionShim.setHeight(control, h);
+        LabeledSkinBaseShim.updateDisplayedText((LabeledSkinBase)control.getSkin());
         firePulse();
 
         assertTrue(control.isTextTruncated());
 
         control.setWrapText(true);
+        RegionShim.setWidth(control, 40);
+        RegionShim.setHeight(control, 10000);
+        LabeledSkinBaseShim.updateDisplayedText((LabeledSkinBase)control.getSkin());
         firePulse();
 
         assertFalse(control.isTextTruncated());
 
         RegionShim.setHeight(control, 2);
+        LabeledSkinBaseShim.updateDisplayedText((LabeledSkinBase)control.getSkin());
         firePulse();
 
         assertTrue(control.isTextTruncated());

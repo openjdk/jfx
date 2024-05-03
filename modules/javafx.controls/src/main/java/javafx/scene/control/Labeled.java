@@ -97,13 +97,12 @@ import com.sun.javafx.scene.control.LabeledHelper;
 public abstract class Labeled extends Control {
 
     private final static String DEFAULT_ELLIPSIS_STRING = "...";
-    private static final Object PROP_USE_ACTUAL_CONTENT_WIDTH = new Object();
 
     static {
         LabeledHelper.setAccessor(new LabeledHelper.Accessor() {
             @Override
-            public boolean isUseActualContentWidth(Labeled c) {
-                return c.isUseActualContentWidth();
+            public void setTextTruncated(Labeled c, boolean on) {
+                c.setTextTruncated(on);
             }
         });
     }
@@ -842,48 +841,22 @@ public abstract class Labeled extends Control {
     private ReadOnlyBooleanWrapper textTruncated;
 
     public final ReadOnlyBooleanProperty textTruncatedProperty() {
-        if (textTruncated == null) {
-            textTruncated = new ReadOnlyBooleanWrapper(this, "textTruncated");
-            textTruncated.bind(
-                Bindings.createBooleanBinding(() -> {
-                    // make sure prefWidth always returns the actual content width
-                    // rather than the column width if inside a table
-                    setUseActualContentWidth(true);
-                    try {
-                        if (isWrapText()) {
-                            return (getHeight() < prefHeight(getWidth()));
-                        }
-
-                        return (getWidth() < prefWidth(getHeight()));
-                    } finally {
-                        setUseActualContentWidth(false);
-                    }
-                },
-                ellipsisStringProperty(),
-                fontProperty(),
-                heightProperty(),
-                textProperty(),
-                widthProperty(),
-                wrapTextProperty()
-            ));
-        }
-        return textTruncated.getReadOnlyProperty();
+        return textTruncated().getReadOnlyProperty();
     }
 
     public final boolean isTextTruncated() {
-        return textTruncatedProperty().get();
+        return textTruncated().get();
     }
 
-    private void setUseActualContentWidth(boolean on) {
-        if (on) {
-            getProperties().put(PROP_USE_ACTUAL_CONTENT_WIDTH, Boolean.TRUE);
-        } else {
-            getProperties().remove(PROP_USE_ACTUAL_CONTENT_WIDTH);
+    private final void setTextTruncated(boolean on) {
+        textTruncated().set(on);
+    }
+
+    private ReadOnlyBooleanWrapper textTruncated() {
+        if (textTruncated == null) {
+            textTruncated = new ReadOnlyBooleanWrapper(this, "textTruncated");
         }
-    }
-
-    private boolean isUseActualContentWidth() {
-        return Boolean.TRUE.equals(getProperties().get(PROP_USE_ACTUAL_CONTENT_WIDTH));
+        return textTruncated;
     }
 
     @Override public String toString() {

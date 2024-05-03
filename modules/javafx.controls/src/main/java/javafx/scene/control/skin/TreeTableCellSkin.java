@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,19 +25,12 @@
 
 package javafx.scene.control.skin;
 
+import com.sun.javafx.scene.control.behavior.BehaviorBase;
+import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
 import java.util.Map;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.scene.Node;
-import javafx.scene.control.Control;
-import javafx.scene.control.TableColumnBase;
-import javafx.scene.control.TreeItem;
-import javafx.scene.control.TreeTableCell;
-import javafx.scene.control.TreeTableColumn;
-import javafx.scene.control.TreeTableRow;
-import javafx.scene.control.TreeTableView;
-import com.sun.javafx.scene.control.LabeledHelper;
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
+import javafx.scene.control.*;
 
 /**
  * Default skin implementation for the {@link TreeTableCell} control.
@@ -130,7 +123,7 @@ public class TreeTableCellSkin<S,T> extends TableCellSkinBase<TreeItem<S>, T, Tr
     @Override
     protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset,
             double leftInset) {
-        if (LabeledHelper.isUseActualContentWidth(getSkinnable()) || isDeferToParentForPrefWidth) {
+        if (isDeferToParentForPrefWidth) {
             return super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset) + calculateIndentation();
         }
 
