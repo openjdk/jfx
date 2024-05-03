@@ -355,6 +355,22 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
             try {
                 locked = true;
+
+                final T oldValue = currentValue;
+
+                if (curChangeSize > 0) {
+
+                    /*
+                     * Because invalidation listeners may get removed during notification, this may
+                     * change the Helper type from Generic to SingleChange. When this transition
+                     * occurs, it is essential the correct current value is passed to the new
+                     * SingleChange instance. This is why the currentValue is already obtained
+                     * before notifying the invalidation listeners.
+                     */
+
+                    currentValue = observable.getValue();
+                }
+
                 for (int i = 0; i < curInvalidationSize; i++) {
                     try {
                         curInvalidationList[i].invalidated(observable);
@@ -363,8 +379,6 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
                     }
                 }
                 if (curChangeSize > 0) {
-                    final T oldValue = currentValue;
-                    currentValue = observable.getValue();
                     final boolean changed = (currentValue == null)? (oldValue != null) : !currentValue.equals(oldValue);
                     if (changed) {
                         for (int i = 0; i < curChangeSize; i++) {
