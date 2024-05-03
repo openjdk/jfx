@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -112,17 +112,7 @@ public class RegionHelper extends ParentHelper {
         regionAccessor = newAccessor;
     }
 
-    public static void setWidth(Node node, double width) {
-        regionAccessor.setWidth(node, width);
-    }
-
-    public static void setHeight(Node node, double height) {
-        regionAccessor.setHeight(node, height);
-    }
-
     public interface RegionAccessor {
-        void setWidth(Node node, double width);
-        void setHeight(Node node, double height);
         void doUpdatePeer(Node node);
         NGNode doCreatePeer(Node node);
         Bounds doComputeLayoutBounds(Node node);

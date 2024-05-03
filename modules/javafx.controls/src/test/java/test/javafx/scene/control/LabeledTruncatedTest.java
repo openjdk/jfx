@@ -35,8 +35,8 @@ import javafx.scene.control.skin.ButtonSkin;
 import javafx.scene.control.skin.LabelSkin;
 import javafx.scene.control.skin.TableCellSkin;
 import javafx.scene.control.skin.TreeTableCellSkin;
+import javafx.scene.layout.RegionShim;
 import org.junit.jupiter.api.Test;
-import com.sun.javafx.scene.layout.RegionHelper;
 import com.sun.javafx.tk.Toolkit;
 
 /**
@@ -84,15 +84,15 @@ public class LabeledTruncatedTest {
     }
 
     private void test(Labeled control) {
-        RegionHelper.setWidth(control, 1000);
+        RegionShim.setWidth(control, 1000);
         firePulse();
         double w = control.prefWidth(-1);
         double h = control.prefHeight(-1);
 
         assertFalse(control.isTextTruncated());
 
-        RegionHelper.setWidth(control, 10);
-        RegionHelper.setHeight(control, h);
+        RegionShim.setWidth(control, 10);
+        RegionShim.setHeight(control, h);
         firePulse();
 
         assertTrue(control.isTextTruncated());
@@ -102,7 +102,7 @@ public class LabeledTruncatedTest {
 
         assertFalse(control.isTextTruncated());
 
-        RegionHelper.setHeight(control, 2);
+        RegionShim.setHeight(control, 2);
         firePulse();
 
         assertTrue(control.isTextTruncated());
