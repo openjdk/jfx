@@ -62,24 +62,6 @@
  */
 #define TYPE_INT_ARGB_PRE   com_sun_pisces_RendererBase_TYPE_INT_ARGB_PRE
 
-#define CORRECT_DIMS(_surface, _x, _y, _w, _h, _x1, _y1) \
-  if (_x < 0) {   \
-    _x1 -= _x;    \
-    _w += _x;     \
-    _x = 0;       \
-  }               \
-  if (_y < 0) {   \
-    _y1 -= _y;    \
-    _h += _y;     \
-    _y = 0;       \
-  }               \
-  if ((_x + _w) > (_surface)->width) {  \
-    _w = (_surface)->width - _x;        \
-  }                                   \
-  if ((_y + _h) > (_surface)->height) { \
-    _h = (_surface)->height - _y;       \
-  }
-
 typedef struct _Surface {
     jint width;
     jint height;

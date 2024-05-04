@@ -124,8 +124,15 @@ public:
     DNTString(int limit) :
        m_limit(limit), m_length(0), m_substrings(NULL), m_count(0)
     {
+        if (limit < MIN_LIMIT) {
+            m_limit = limit = MIN_LIMIT;
+        }
         wszStr = new wchar_t[limit];
-        memset(wszStr, 0, limit*sizeof(wchar_t));
+        if (wszStr) {
+            memset(wszStr, 0, limit * sizeof(wchar_t));
+        } else {
+            m_limit = MIN_LIMIT;
+        }
     }
     ~DNTString() {
         if (wszStr) {
@@ -146,17 +153,25 @@ public:
         wchar_t * const oldStr = wszStr;
         const size_t oldLimit = m_limit;
 
-        m_limit = limit;
-        wszStr = new wchar_t[limit];
-        memset(wszStr, 0, limit*sizeof(wchar_t));
-
-        if (copy && oldStr) {
-            wmemcpy_s(wszStr, m_limit - 1, oldStr, min(oldLimit - 1, m_limit - 1));
-            m_length = min(m_length, m_limit - 2);
+        if (limit < MIN_LIMIT) {
+            limit = MIN_LIMIT;
         }
+        m_limit = limit;
+        wszStr = new wchar_t[m_limit];
+        if (wszStr) {
+            memset(wszStr, 0, m_limit * sizeof(wchar_t));
 
-        if (oldStr) {
-            delete[] oldStr;
+            if (copy && oldStr) {
+                wmemcpy_s(wszStr, m_limit - 1, oldStr, min(oldLimit - 1, m_limit - 1));
+                m_length = min(m_length, m_limit - MIN_LIMIT);
+            }
+
+            if (oldStr) {
+                delete[] oldStr;
+            }
+        } else {
+            wszStr = oldStr;
+            m_limit = oldLimit;
         }
     }
 
@@ -166,31 +181,53 @@ public:
     }
 
     wchar_t* substring(UINT i) {
+        if (wszStr == NULL) {
+            return NULL;
+        }
         calculateSubstrings();
         return wszStr+m_substrings[i];
     }
 
     // appends the count characters of the src string to the DNT string
     void append(const wchar_t *wszSrc, const size_t count, bool allowGrow = false) {
+        if (wszSrc == NULL) {
+            return;
+        }
         if (allowGrow) {
+            if (count > SIZE_MAX - m_length - 2) {
+                return;
+            }
             if (m_length + count > m_limit - 2) {
                 const size_t GROWTH_RATE = 2; // consider parameterizing this const
 
-                setLimit((m_length + count + 2)*GROWTH_RATE, true);
+                if ((m_length + count + 2) < (SIZE_MAX / GROWTH_RATE)) {
+                    setLimit((m_length + count + 2) * GROWTH_RATE, true);
+                } else {
+                    setLimit((m_length + count + 2), true);
+                }
             }
         }
 
-        // "-1" because this is a _double_ null terminated string
-        wcsncpy_s(wszStr + m_length, m_limit - m_length - 1, wszSrc, count);
-        m_length += count;
-        if (m_length > m_limit) {
-            m_length = m_limit;
+        if (m_limit - m_length - 1 >= count) {
+            // "-1" because this is a _double_ null terminated string
+            int res = wcsncpy_s(wszStr + m_length, m_limit - m_length - 1, wszSrc, count);
+            if (res == 0) { // wcsncpy_s succeeded
+                m_length += count;
+                if (m_length > m_limit) {
+                    m_length = m_limit;
+                }
+            } else {
+                m_length = 0;
+            }
         }
     }
 
     // recalculates the length of the DNT string
     // use the function when wszStr could be modified directly
     void calculateLength() {
+        if (wszStr == NULL) {
+            return;
+        }
         size_t i = 0;
         while(wszStr[i] != L'\0' || wszStr[i+1] != L'\0') {
             i++;
@@ -205,6 +242,9 @@ public:
 private:
 
     void calculateSubstrings() {
+        if (wszStr == NULL) {
+            return;
+        }
         if (m_substrings)
             return;
 
@@ -230,6 +270,7 @@ private:
 
     wchar_t *wszStr;
     size_t m_length, m_limit;
+    static const size_t MIN_LIMIT = 2;
 
     size_t *m_substrings;
     UINT m_count; // the count of the substrings
@@ -344,7 +385,8 @@ class MemHolder
 public:
     MemHolder(size_t count)
     {
-        m_pMem = reinterpret_cast<T *>(0==count
+        const bool invalid = (count == 0 || count > SIZE_MAX / sizeof(T));
+        m_pMem = reinterpret_cast<T *>(invalid
             ? NULL
             : malloc(count*sizeof(T)));
     }
@@ -414,6 +456,10 @@ class JBufferArray {
             if (!arr) {
                 data = (T*)env->GetDirectBufferAddress(buf);
             } else {
+                if (offs < 0 || offs > env->GetArrayLength(arr)) {
+                    fprintf(stderr, "Failed to attach bytes array\n");
+                    return;
+                }
                 array.Attach(env, arr);
                 offset = offs;
             }

@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 import javafx.beans.NamedArg;
 import javafx.beans.property.ObjectProperty;
@@ -221,11 +222,13 @@ public final class SortedList<E> extends TransformationList<E, E>{
 
     @Override
     public int getSourceIndex(int index) {
+        Objects.checkIndex(index, size);
         return sorted[index].index;
     }
 
     @Override
     public int getViewIndex(int index) {
+        Objects.checkIndex(index, size);
         return perm[index];
     }
 

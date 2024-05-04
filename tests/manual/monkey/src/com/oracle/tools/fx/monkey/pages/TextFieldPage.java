@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,94 +26,46 @@ package com.oracle.tools.fx.monkey.pages;
 
 import javafx.geometry.Pos;
 import javafx.scene.control.CheckBox;
-import javafx.scene.control.ComboBox;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
+import javafx.scene.control.skin.TextFieldSkin;
+import com.oracle.tools.fx.monkey.options.EnumOption;
+import com.oracle.tools.fx.monkey.options.IntOption;
+import com.oracle.tools.fx.monkey.sheets.TextInputControlPropertySheet;
 import com.oracle.tools.fx.monkey.util.FX;
-import com.oracle.tools.fx.monkey.util.FontSelector;
+import com.oracle.tools.fx.monkey.util.HasSkinnable;
 import com.oracle.tools.fx.monkey.util.OptionPane;
-import com.oracle.tools.fx.monkey.util.PosSelector;
-import com.oracle.tools.fx.monkey.util.Templates;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
-import com.oracle.tools.fx.monkey.util.TextSelector;
 
 /**
- * TextField Page
+ * TextField Page.
  */
-public class TextFieldPage extends TestPaneBase {
+public class TextFieldPage extends TestPaneBase implements HasSkinnable {
     private final TextField control;
-    private final TextSelector textSelector;
     private final CheckBox inScroll;
 
     public TextFieldPage() {
         this(new TextField(), "TextFieldPage");
     }
 
-    protected TextFieldPage(TextField control, String name) {
-        FX.name(this, "TextFieldPage");
-
-        this.control = control;
-        control.setAlignment(Pos.CENTER_LEFT);
-
-        textSelector = TextSelector.fromPairs(
-            "textSelector",
-            (t) -> {
-                control.setText(t);
-            },
-            Templates.singleLineTextPairs()
-        );
-
-        FontSelector fontSelector = new FontSelector("font", control::setFont);
-
-        PosSelector posSelector = new PosSelector(control::setAlignment);
-
-        TextSelector promptChoice = Templates.promptChoice("promptChoice", control::setPromptText);
-
-        ComboBox<Integer> prefColumnCount = new ComboBox<>();
-        FX.name(prefColumnCount, "prefColumnCount");
-        prefColumnCount.getItems().setAll(
-            null,
-            1,
-            5,
-            10,
-            100,
-            1000
-        );
-        prefColumnCount.getSelectionModel().selectedItemProperty().addListener((s, p, c) -> {
-            Integer ct = prefColumnCount.getSelectionModel().getSelectedItem();
-            int count = ct == null ? TextField.DEFAULT_PREF_COLUMN_COUNT : ct;
-            control.setPrefColumnCount(count);
-        });
-
-        CheckBox editable = new CheckBox("editable");
-        FX.name(editable, "editable");
-        editable.selectedProperty().bindBidirectional(control.editableProperty());
+    protected TextFieldPage(TextField f, String name) {
+        super(name);
+        this.control = f;
 
         inScroll = new CheckBox("in scroll pane");
-        FX.name(inScroll, "scroll");
+        FX.name(inScroll, "inScrollPane");
         inScroll.setOnAction((ev) -> updateScroll());
 
         OptionPane op = new OptionPane();
-        op.label("Text:");
-        op.option(textSelector.node());
-        op.option(editable);
-        op.label("Font:");
-        op.option(fontSelector.fontNode());
-        op.label("Size:");
-        op.option(fontSelector.sizeNode());
-        op.label("Alignment:");
-        op.option(posSelector.node());
-        op.label("Prompt:");
-        op.option(promptChoice.node());
-        op.label("Preferred Column Count:");
-        op.option(prefColumnCount);
+        op.option("Alignment:", new EnumOption<>("alignment", false, Pos.class, control.alignmentProperty()));
+        op.option("Preferred Column Count:", new IntOption("prefColumnCount", -1, Integer.MAX_VALUE, control.prefColumnCountProperty()));
+        op.separator();
         op.option(inScroll);
+
+        TextInputControlPropertySheet.appendTo(op, false, control);
 
         setContent(control);
         setOptions(op);
-
-        posSelector.select(Pos.BASELINE_RIGHT);
-        fontSelector.selectSystemFont();
     }
 
     private void updateScroll() {
@@ -123,5 +75,15 @@ public class TextFieldPage extends TestPaneBase {
         } else {
             setContent(control);
         }
+    }
+
+    @Override
+    public void nullSkin() {
+        control.setSkin(null);
+    }
+
+    @Override
+    public void newSkin() {
+        control.setSkin(new TextFieldSkin(control));
     }
 }
