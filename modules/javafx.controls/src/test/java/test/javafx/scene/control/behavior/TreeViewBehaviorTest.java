@@ -44,7 +44,14 @@ import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 public class TreeViewBehaviorTest extends BehaviorTestBase<TreeView<Integer>> {
     @BeforeEach
     public void beforeEach() {
-        TreeItem<Integer> root = new TreeItem(1);
+        TreeItem<Integer> root = new TreeItem<>(1);
+                root.setExpanded(true);
+        root.getChildren().addAll(
+            new TreeItem<>(2),
+            new TreeItem<>(3),
+            new TreeItem<>(4)
+        );
+
         TreeView<Integer> t = new TreeView<>(root);
         t.setCellFactory((v) -> {
             return new TreeCell<>() {
@@ -65,7 +72,7 @@ public class TreeViewBehaviorTest extends BehaviorTestBase<TreeView<Integer>> {
     }
 
     /**
-     * Verifies that alt-shortcut-RIGHT/LEFT scrolls horizontally in LTR orientation.
+     * Verifies that alt-shortcut-RIGHT/LEFT keys scroll horizontally in LTR orientation.
      */
     @Test
     public void testHorizontalScrollKeyboardLTR() {
@@ -94,7 +101,7 @@ public class TreeViewBehaviorTest extends BehaviorTestBase<TreeView<Integer>> {
     }
 
     /**
-     * Verifies that alt-shortcut-RIGHT/LEFT scrolls horizontally in RTL orientation.
+     * Verifies that alt-shortcut-RIGHT/LEFT keys scroll horizontally in RTL orientation.
      */
     @Test
     public void testHorizontalScrollKeyboardRTL() {
@@ -122,8 +129,41 @@ public class TreeViewBehaviorTest extends BehaviorTestBase<TreeView<Integer>> {
         );
     }
 
+    /**
+     * Verifies that alt-shortcut-UP/DOWN keys scroll vertically.
+     */
+    @Test
+    public void testVerticalScrollKeyboard() {
+        AtomicReference<Double> pos = new AtomicReference<>();
+        execute(
+            exe(() -> {
+                control.setMaxHeight(50);
+                double w = vsb().getValue();
+                pos.set(w);
+            }),
+            key(KeyCode.DOWN, KeyModifier.ALT, KeyModifier.getShortcutKey()),
+            exe(() -> {
+                double w = vsb().getValue();
+                // should have scrolled
+                Assertions.assertTrue(pos.get() < w);
+                pos.set(w);
+            }),
+            key(KeyCode.UP, KeyModifier.ALT, KeyModifier.getShortcutKey()),
+            exe(() -> {
+                double w = vsb().getValue();
+                // should have scrolled
+                Assertions.assertTrue(pos.get() > w);
+            })
+        );
+    }
+
     private ScrollBar hsb() {
         var f = VirtualFlowShim.getVirtualFlow(control.getSkin());
         return VirtualFlowShim.getHBar(f);
+    }
+
+    private ScrollBar vsb() {
+        var f = VirtualFlowShim.getVirtualFlow(control.getSkin());
+        return VirtualFlowShim.getVBar(f);
     }
 }

@@ -70,7 +70,7 @@ public class TableViewBehaviorTest extends BehaviorTestBase<TableView<Integer>> 
     }
 
     /**
-     * Verifies that alt-shortcut-RIGHT/LEFT scrolls horizontally in LTR orientation.
+     * Verifies that alt-shortcut-RIGHT/LEFT keys scroll horizontally in LTR orientation.
      */
     @Test
     public void testHorizontalScrollKeyboardLTR() {
@@ -99,7 +99,7 @@ public class TableViewBehaviorTest extends BehaviorTestBase<TableView<Integer>> 
     }
 
     /**
-     * Verifies that alt-shortcut-RIGHT/LEFT scrolls horizontally in RTL orientation.
+     * Verifies that alt-shortcut-RIGHT/LEFT keys scroll horizontally in RTL orientation.
      */
     @Test
     public void testHorizontalScrollKeyboardRTL() {
@@ -127,8 +127,41 @@ public class TableViewBehaviorTest extends BehaviorTestBase<TableView<Integer>> 
         );
     }
 
+    /**
+     * Verifies that alt-shortcut-UP/DOWN keys scroll vertically.
+     */
+    @Test
+    public void testVerticalScrollKeyboard() {
+        AtomicReference<Double> pos = new AtomicReference<>();
+        execute(
+            exe(() -> {
+                control.setMaxHeight(50);
+                double w = vsb().getValue();
+                pos.set(w);
+            }),
+            key(KeyCode.DOWN, KeyModifier.ALT, KeyModifier.getShortcutKey()),
+            exe(() -> {
+                double w = vsb().getValue();
+                // should have scrolled
+                Assertions.assertTrue(pos.get() < w);
+                pos.set(w);
+            }),
+            key(KeyCode.UP, KeyModifier.ALT, KeyModifier.getShortcutKey()),
+            exe(() -> {
+                double w = vsb().getValue();
+                // should have scrolled
+                Assertions.assertTrue(pos.get() > w);
+            })
+        );
+    }
+
     private ScrollBar hsb() {
         var f = VirtualFlowShim.getVirtualFlow(control.getSkin());
         return VirtualFlowShim.getHBar(f);
+    }
+
+    private ScrollBar vsb() {
+        var f = VirtualFlowShim.getVirtualFlow(control.getSkin());
+        return VirtualFlowShim.getVBar(f);
     }
 }
