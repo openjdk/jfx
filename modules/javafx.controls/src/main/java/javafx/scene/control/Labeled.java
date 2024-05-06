@@ -834,7 +834,7 @@ public abstract class Labeled extends Control {
      * <p>
      * When truncated, the {@link #ellipsisStringProperty() ellipsisString}
      * gets inserted in the place dictated by the
-     * {@link #textOverrun} property.
+     * {@link #textOverrunProperty textOverrun} property.
      *
      * @since 23
      */

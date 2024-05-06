@@ -212,6 +212,21 @@ public class Utils {
         return index;
     }
 
+    /**
+     * Computes the actual text to be shown in the Labeled with the text wrapping disabled:
+     * unmodified if it fits into available area,
+     * or with the ellipsis string inserted into strategic place(s) if it does not.
+     * The latter case will cause {@code textTruncated} reference set to {@code true} (the caller is expected
+     * to set the flag to {@code false} before invoking this method).
+     *
+     * @param font the font
+     * @param text the original text
+     * @param width the available width
+     * @param type the truncation style
+     * @param ellipsisString the ellipsis string
+     * @param textTruncated the reference to a flag indicating the truncation
+     * @return the actual text to be shown, with the ellipsis string inserted when needed
+     */
     public static String computeClippedText(
         Font font,
         String text,
@@ -425,6 +440,24 @@ public class Utils {
         }
     }
 
+    /**
+     * Computes the actual text to be shown in the Labeled with the text wrapping enabled:
+     * unmodified if it fits into available area,
+     * or with the ellipsis string inserted into strategic place(s) if it does not.
+     * The latter case will cause {@code textTruncated} reference set to {@code true} (the caller is expected
+     * to set the flag to {@code false} before invoking this method).
+     *
+     * @param font the font
+     * @param text the original text
+     * @param width the available width
+     * @param height the available height
+     * @param lineSpacing the line spacing
+     * @param truncationStyle the truncation style
+     * @param ellipsisString the ellipsis string
+     * @param textTruncated the reference to a flag indicating the truncation
+     * @param boundsType the bounds type
+     * @return the actual text to be shown, with the ellipsis string inserted when needed
+     */
     public static String computeClippedWrappedText(
         Font font,
         String text,
