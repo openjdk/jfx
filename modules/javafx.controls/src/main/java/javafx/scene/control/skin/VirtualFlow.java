@@ -1552,30 +1552,18 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         T targetCell = getVisibleCell(targetIndex + indexDiff);
         if (targetCell != null) {
-            if (targetIndex < 0) {
-                T cell = getCell(targetIndex);
-                setMaxPrefBreadth(Math.max(getMaxPrefBreadth(), getCellBreadth(cell)));
-                if (downOrRight) {
-                    scrollPixels(getCellLength(cell));
-                } else {
-                    // up or left
-                    scrollPixels(-getCellLength(cell));
-                }
-                releaseCell(cell);
+            T cell = getAvailableCell(targetIndex);
+            setCellIndex(cell, targetIndex);
+            resizeCell(cell);
+            setMaxPrefBreadth(Math.max(getMaxPrefBreadth(), getCellBreadth(cell)));
+            cell.setVisible(true);
+            if (downOrRight) {
+                cells.addLast(cell);
+                scrollPixels(getCellLength(cell));
             } else {
-                T cell = getAvailableCell(targetIndex);
-                setCellIndex(cell, targetIndex);
-                resizeCell(cell);
-                setMaxPrefBreadth(Math.max(getMaxPrefBreadth(), getCellBreadth(cell)));
-                cell.setVisible(true);
-                if (downOrRight) {
-                    cells.addLast(cell);
-                    scrollPixels(getCellLength(cell));
-                } else {
-                    // up or left
-                    cells.addFirst(cell);
-                    scrollPixels(-getCellLength(cell));
-                }
+                // up or left
+                cells.addFirst(cell);
+                scrollPixels(-getCellLength(cell));
             }
             return true;
         }
@@ -1810,6 +1798,16 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         setCellIndex(accumCell, index);
         resizeCell(accumCell);
         return accumCell;
+    }
+
+    /**
+     * The amount of pixels by which to adjust the position when the the scroll bar track is clicked.
+     *
+     * @return the value in pixels
+     */
+    public double getBlockIncrement() {
+        // For reasons of backward compatibility, we use the cell length of the empty cell (cell index -1)
+        return getCellLength(-1);
     }
 
     /**
