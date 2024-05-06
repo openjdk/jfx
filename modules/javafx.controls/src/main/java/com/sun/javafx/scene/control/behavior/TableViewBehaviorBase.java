@@ -163,6 +163,8 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
 
                 new KeyMapping(new KeyBinding(RIGHT).shortcut().alt(), e -> horizontalUnitScroll(true)),
                 new KeyMapping(new KeyBinding(LEFT).shortcut().alt(), e -> horizontalUnitScroll(false)),
+                new KeyMapping(new KeyBinding(UP).shortcut().alt(), e -> verticalUnitScroll(false)),
+                new KeyMapping(new KeyBinding(DOWN).shortcut().alt(), e -> verticalUnitScroll(true)),
 
                 new KeyMapping(UP, e -> selectPreviousRow()),
                 new KeyMapping(KP_UP, e -> selectPreviousRow()),
@@ -433,6 +435,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         onFocusRightCell = null;
         onFocusLeftCell = null;
         onHorizontalUnitScroll = null;
+        onVerticalUnitScroll = null;
 
         super.dispose();
     }
@@ -1368,14 +1371,25 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
 
     // TODO not necessary with the new InputMap V2
     private Consumer<Boolean> onHorizontalUnitScroll;
+    private Consumer<Boolean> onVerticalUnitScroll;
 
     public void setOnHorizontalUnitScroll(Consumer<Boolean> f) {
         onHorizontalUnitScroll = f;
     }
 
+    public void setOnVerticalUnitScroll(Consumer<Boolean> f) {
+        onVerticalUnitScroll = f;
+    }
+
     private void horizontalUnitScroll(boolean right) {
         if (onHorizontalUnitScroll != null) {
             onHorizontalUnitScroll.accept(right);
+        }
+    }
+
+    private void verticalUnitScroll(boolean down) {
+        if (onVerticalUnitScroll != null) {
+            onVerticalUnitScroll.accept(down);
         }
     }
 }

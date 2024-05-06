@@ -201,6 +201,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
         behavior.setOnSelectPreviousRow(() -> { onSelectPreviousCell(); });
         behavior.setOnSelectNextRow(() -> { onSelectNextCell(); });
         behavior.setOnHorizontalUnitScroll(this::horizontalUnitScroll);
+        behavior.setOnVerticalUnitScroll(this::verticalUnitScroll);
 
         registerChangeListener(control.rootProperty(), e -> setRoot(getSkinnable().getRoot()));
         registerChangeListener(control.showRootProperty(), e -> {
@@ -626,6 +627,15 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
         }
         ScrollBar sb = flow.getHbar();
         if (right) {
+            sb.increment();
+        } else {
+            sb.decrement();
+        }
+    }
+
+    private void verticalUnitScroll(boolean down) {
+        ScrollBar sb = flow.getVbar();
+        if (down) {
             sb.increment();
         } else {
             sb.decrement();

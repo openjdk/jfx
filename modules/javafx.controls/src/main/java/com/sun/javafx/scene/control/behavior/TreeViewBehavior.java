@@ -201,6 +201,8 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
 
             new KeyMapping(new KeyBinding(RIGHT).shortcut().alt(), e -> horizontalUnitScroll(true)),
             new KeyMapping(new KeyBinding(LEFT).shortcut().alt(), e -> horizontalUnitScroll(false)),
+            new KeyMapping(new KeyBinding(UP).shortcut().alt(), e -> verticalUnitScroll(false)),
+            new KeyMapping(new KeyBinding(DOWN).shortcut().alt(), e -> verticalUnitScroll(true)),
 
             new KeyMapping(MULTIPLY, e -> expandAll()),
             new KeyMapping(ADD, e -> expandRow()),
@@ -270,6 +272,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         onFocusPreviousRow = null;
         onFocusNextRow = null;
         onHorizontalUnitScroll = null;
+        onVerticalUnitScroll = null;
 
         super.dispose();
     }
@@ -868,14 +871,25 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
 
     // TODO not necessary with the new InputMap V2
     private Consumer<Boolean> onHorizontalUnitScroll;
+    private Consumer<Boolean> onVerticalUnitScroll;
 
     public void setOnHorizontalUnitScroll(Consumer<Boolean> f) {
         onHorizontalUnitScroll = f;
     }
 
+    public void setOnVerticalUnitScroll(Consumer<Boolean> f) {
+        onVerticalUnitScroll = f;
+    }
+
     private void horizontalUnitScroll(boolean right) {
         if (onHorizontalUnitScroll != null) {
             onHorizontalUnitScroll.accept(right);
+        }
+    }
+
+    private void verticalUnitScroll(boolean down) {
+        if (onVerticalUnitScroll != null) {
+            onVerticalUnitScroll.accept(down);
         }
     }
 }

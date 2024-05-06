@@ -129,6 +129,7 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
         behavior.setOnFocusLeftCell(() -> onFocusLeftCell());
         behavior.setOnFocusRightCell(() -> onFocusRightCell());
         behavior.setOnHorizontalUnitScroll(this::horizontalUnitScroll);
+        behavior.setOnVerticalUnitScroll(this::verticalUnitScroll);
 
         lh.addChangeListener(control.rootProperty(), (ev) -> {
             // fix for RT-37853
@@ -368,6 +369,15 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
         }
         ScrollBar sb = flow.getHbar();
         if (right) {
+            sb.increment();
+        } else {
+            sb.decrement();
+        }
+    }
+
+    private void verticalUnitScroll(boolean down) {
+        ScrollBar sb = flow.getVbar();
+        if (down) {
             sb.increment();
         } else {
             sb.decrement();

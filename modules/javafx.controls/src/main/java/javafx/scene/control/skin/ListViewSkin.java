@@ -216,6 +216,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         behavior.setOnScrollPageDown(this::onScrollPageDown);
         behavior.setOnScrollPageUp(this::onScrollPageUp);
         behavior.setOnHorizontalUnitScroll(this::horizontalUnitScroll);
+        behavior.setOnVerticalUnitScroll(this::verticalUnitScroll);
 
         EventHandler<MouseEvent> ml = event -> {
             // This ensures that the list maintains the focus, even when the vbar
@@ -685,6 +686,15 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         }
         ScrollBar sb = flow.getHbar();
         if (right) {
+            sb.increment();
+        } else {
+            sb.decrement();
+        }
+    }
+
+    private void verticalUnitScroll(boolean down) {
+        ScrollBar sb = flow.getVbar();
+        if (down) {
             sb.increment();
         } else {
             sb.decrement();

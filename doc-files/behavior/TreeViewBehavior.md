@@ -7,6 +7,7 @@
 |shortcut-A               |         |                  |select all
 |ADD                      |         |                  |expand row
 |DOWN                     |         |                  |select next row
+|alt-shortcut-DOWN        |         |                  |vertical unit scroll down
 |shift-DOWN               |         |                  |extend selection to the next row
 |shift-shortcut-DOWN      |         |                  |discontinuous select next row **function unclear**
 |shortcut-DOWN            |         |                  |focus next row
@@ -28,7 +29,7 @@
 |KP_UP                    |         |                  |select previous row
 |shift-KP_UP              |         |                  |extend selection to the previous row
 |LEFT                     |         |                  |LTR: collapse row; RTL: expand row;
-|alt-shortcut-LEFT        |         |                  |horizontal scroll left (proposed in JDK-8313138)
+|alt-shortcut-LEFT        |         |                  |horizontal unit scroll left
 |MULTIPLY                 |         |                  |expand all
 |PAGE_DOWN                |         |                  |scroll page down
 |shift-PAGE_DOWN          |         |                  |select all page down **function unclear**
@@ -39,7 +40,7 @@
 |shift-shortcut-PAGE_UP   |         |                  |discontinuous select page up **function unclear**
 |shortcut-PAGE_UP         |         |                  |focus page up
 |RIGHT                    |         |                  |LTR: expand row; RTL: collapse row;
-|alt-shortcut-RIGHT       |         |                  |horizontal scroll right (proposed in JDK-8313138)
+|alt-shortcut-RIGHT       |         |                  |horizontal unit scroll right
 |SPACE                    |         |                  |toggle focus owner selection
 |ctrl-SPACE               |non-mac  |                  |toggle focus owner selection
 |ctrl-shortcut-SPACE      |mac      |                  |toggle focus owner selection
@@ -47,6 +48,7 @@
 |shift-shortcut-SPACE     |         |                  |select all to focus, set anchor **function unclear**
 |SUBTRACT                 |         |                  |collapse row
 |UP                       |         |                  |select previous row
+|alt-shortcut-UP          |         |                  |vertical unit scroll up
 |shift-UP                 |         |                  |extend selection to the previous row
 |shift-shortcut-UP        |         |                  |discontinuous select previous row **function unclear**
 |shortcut-UP              |         |                  |focus previous row
@@ -55,12 +57,11 @@
 
 ### Notes
 
-1. On Mac, alt is represented by the Option key.
-2. On Mac, shortcut is represented by the Command key.
-
-### macOS Aliases
-
-- Home: command-LEFT
-- End: command-RIGHT
-- PgUp: fn-UP
-- PgDn: fn-DOWN
+1. On macOS, `alt` is represented by the `option` key
+2. On macOS, `shortcut` is represented by the `command` key
+3. On macOS, Home = `command` left arrow key
+4. On macOS, End = `command` right arrow key
+5. On macOS, PgUp = `fn` + `up arrow` key
+6. On macOS, PgDn = `fn` + `down arrow` key
+7. On macOS, BACKSPACE = `delete` key
+8. On macOS, DELETE = `fn` + `delete` key

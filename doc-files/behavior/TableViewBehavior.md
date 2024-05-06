@@ -9,6 +9,7 @@ TableView behavior shares most of the key bindings with TreeTableView behavior.
 |-------------------------|---------|------------------|----------------------------------------|
 |shortcut-A               |         |                  |select all
 |DOWN                     |         |                  |select next row
+|alt-shortcut-DOWN        |         |                  |vertical unit scroll down
 |shift-DOWN               |         |                  |extend selection to the next row
 |shift-shortcut-DOWN      |         |                  |discontinuous select next row **function unclear**
 |shortcut-DOWN            |         |                  |focus next row
@@ -34,7 +35,7 @@ TableView behavior shares most of the key bindings with TreeTableView behavior.
 |shift-KP_UP              |         |                  |extend selection to the previous row
 |shortcut-KP_RIGHT        |         |                  |LTR: focus right cell; RTL: focus left cell;
 |LEFT                     |         |                  |LTR: select left cell; RTL: select right cell;
-|alt-shortcut-LEFT        |         |                  |horizontal scroll left (proposed in JDK-8313138)
+|alt-shortcut-LEFT        |         |                  |horizontal unti scroll left
 |shift-LEFT               |         |                  |LTR: extend selection left cell; RTL: extend selection right cell;
 |shift-shortcut-LEFT      |         |                  |LTR: discontinuous select previuos column; RTL: discontinuous select next column; **win,linux? on mac, HOME is shortcut-LEFT**
 |shortcut-LEFT            |         |                  |LTR: focus left cell; RTL: focus right cell;
@@ -47,9 +48,9 @@ TableView behavior shares most of the key bindings with TreeTableView behavior.
 |shift-shortcut-PAGE_UP   |         |                  |discontinuous select page up **function unclear**
 |shortcut-PAGE_UP         |         |                  |focus page up
 |RIGHT                    |         |                  |LTR: select right cell; RTL: select left cell;
+|alt-shortcut-RIGHT       |         |                  |horizontal unit scroll right
 |shift-shortcut-RIGHT     |         |                  |LTR: discontinuous select next column; RTL: discontinuous select previous column; **win,linux? on mac, END is shortcut-RIGHT**
 |shortcut-RIGHT           |         |                  |LTR: focus right cell; RTL: focus left cell;
-|alt-shortcut-RIGHT       |         |                  |horizontal scroll right (proposed in JDK-8313138)
 |shift-RIGHT              |         |                  |LTR: extend selection right cell; RTL: extend selection left cell;
 |SPACE                    |         |                  |activate editing
 |ctrl-SPACE               |non-mac  |                  |toggle focus owner selection
@@ -59,6 +60,7 @@ TableView behavior shares most of the key bindings with TreeTableView behavior.
 |TAB                      |         |                  |traverse focus next
 |shift-TAB                |         |                  |traverse focus previous
 |UP                       |         |                  |select previous row
+|alt-shortcut-UP          |         |                  |vertical unit scroll up
 |shift-UP                 |         |                  |extend selection to the previous row
 |shift-shortcut-UP        |         |                  |discontinuous select previous row **function unclear**
 |shortcut-UP              |         |                  |focus previous row
@@ -67,13 +69,11 @@ TableView behavior shares most of the key bindings with TreeTableView behavior.
 
 ### Notes
 
-1. On Mac, alt is represented by the Option key.
-2. On Mac, shortcut is represented by the Command key.
-
-
-### macOS Aliases
-
-- Home: command-LEFT
-- End: command-RIGHT
-- PgUp: fn-UP
-- PgDn: fn-DOWN
+1. On macOS, `alt` is represented by the `option` key
+2. On macOS, `shortcut` is represented by the `command` key
+3. On macOS, Home = `command` left arrow key
+4. On macOS, End = `command` right arrow key
+5. On macOS, PgUp = `fn` + `up arrow` key
+6. On macOS, PgDn = `fn` + `down arrow` key
+7. On macOS, BACKSPACE = `delete` key
+8. On macOS, DELETE = `fn` + `delete` key

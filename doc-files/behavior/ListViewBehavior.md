@@ -7,6 +7,7 @@
 |shortcut-A               |         |not in combo box  |select all
 |shortcut-BACKSLASH       |         |                  |clear selection
 |DOWN                     |         |vertical          |select next row
+|alt-shortcut-DOWN        |         |                  |vertical unit scroll down
 |shift-DOWN               |         |vertical          |extend selection to the next row
 |shift-shortcut-DOWN      |         |vertical          |discontinuous select next row **function unclear**
 |shortcut-DOWN            |         |vertical          |focus next row
@@ -30,7 +31,7 @@
 |KP_UP                    |         |vertical          |select previous row
 |shift-KP_UP              |         |vertical          |extend selection to the previous row
 |LEFT                     |         |horizontal        |select previous row
-|alt-shortcut-LEFT        |         |                  |horizontal scroll left (proposed in JDK-8313138)
+|alt-shortcut-LEFT        |         |                  |horizontal unit scroll left
 |shift-LEFT               |         |horizontal        |extend selection to the previous row
 |shift-shortcut-LEFT      |         |horizontal        |discontinuous select previous row **function unclear**
 |shortcut-LEFT            |         |horizontal        |move focus to the previous row
@@ -43,7 +44,7 @@
 |shift-shortcut-PAGE_UP   |         |vertical          |discontinuous select page up **function unclear**
 |shortcut-PAGE_UP         |         |not in edit field |focus page up
 |RIGHT                    |         |horizontal        |select next row
-|alt-shortcut-RIGHT       |         |                  |horizontal scroll right (proposed in JDK-8313138)
+|alt-shortcut-RIGHT       |         |                  |horizontal unit scroll right
 |shift-RIGHT              |         |horizontal        |extend selection to the next row
 |shift-shortcut-RIGHT     |         |horizontal        |discontinuous select next row **function unclear**
 |shortcut-RIGHT           |         |horizontal        |move focus to the next row
@@ -53,6 +54,7 @@
 |shift-SPACE              |         |                  |select all to focus ??
 |shift-shortcut-SPACE     |         |                  |select all to focus, set anchor **function unclear**
 |UP                       |         |vertical          |select previous row
+|alt-shortcut-UP          |         |                  |vertical unit scroll up
 |shift-UP                 |         |vertical          |extend selection to the previous row
 |shift-shortcut-UP        |         |vertical          |discontinuous select previous row **function unclear**
 |shortcut-UP              |         |vertical          |focus previous row
@@ -61,12 +63,11 @@
 
 ### Notes
 
-1. On Mac, alt is represented by the Option key.
-2. On Mac, shortcut is represented by the Command key.
-
-### macOS Aliases
-
-- Home: command-LEFT
-- End: command-RIGHT
-- PgUp: fn-UP
-- PgDn: fn-DOWN
+1. On macOS, `alt` is represented by the `option` key
+2. On macOS, `shortcut` is represented by the `command` key
+3. On macOS, Home = `command` left arrow key
+4. On macOS, End = `command` right arrow key
+5. On macOS, PgUp = `fn` + `up arrow` key
+6. On macOS, PgDn = `fn` + `down arrow` key
+7. On macOS, BACKSPACE = `delete` key
+8. On macOS, DELETE = `fn` + `delete` key
