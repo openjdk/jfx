@@ -29,59 +29,55 @@ typedef xmlMutex *xmlMutexPtr;
 typedef struct _xmlRMutex xmlRMutex;
 typedef xmlRMutex *xmlRMutexPtr;
 
-#ifdef __cplusplus
-}
-#endif
-#include <libxml/globals.h>
-#ifdef __cplusplus
-extern "C" {
-#endif
-XMLPUBFUN xmlMutexPtr XMLCALL
-                        xmlNewMutex     (void);
-XMLPUBFUN void XMLCALL
-                        xmlMutexLock    (xmlMutexPtr tok);
-XMLPUBFUN void XMLCALL
-                        xmlMutexUnlock  (xmlMutexPtr tok);
-XMLPUBFUN void XMLCALL
-                        xmlFreeMutex    (xmlMutexPtr tok);
+XMLPUBFUN int
+			xmlCheckThreadLocalStorage(void);
 
-XMLPUBFUN xmlRMutexPtr XMLCALL
-                        xmlNewRMutex    (void);
-XMLPUBFUN void XMLCALL
-                        xmlRMutexLock   (xmlRMutexPtr tok);
-XMLPUBFUN void XMLCALL
-                        xmlRMutexUnlock (xmlRMutexPtr tok);
-XMLPUBFUN void XMLCALL
-                        xmlFreeRMutex   (xmlRMutexPtr tok);
+XMLPUBFUN xmlMutexPtr
+			xmlNewMutex	(void);
+XMLPUBFUN void
+			xmlMutexLock	(xmlMutexPtr tok);
+XMLPUBFUN void
+			xmlMutexUnlock	(xmlMutexPtr tok);
+XMLPUBFUN void
+			xmlFreeMutex	(xmlMutexPtr tok);
+
+XMLPUBFUN xmlRMutexPtr
+			xmlNewRMutex	(void);
+XMLPUBFUN void
+			xmlRMutexLock	(xmlRMutexPtr tok);
+XMLPUBFUN void
+			xmlRMutexUnlock	(xmlRMutexPtr tok);
+XMLPUBFUN void
+			xmlFreeRMutex	(xmlRMutexPtr tok);
 
 /*
  * Library wide APIs.
  */
 XML_DEPRECATED
-XMLPUBFUN void XMLCALL
-                        xmlInitThreads  (void);
-XMLPUBFUN void XMLCALL
-                        xmlLockLibrary  (void);
-XMLPUBFUN void XMLCALL
-                        xmlUnlockLibrary(void);
-XMLPUBFUN int XMLCALL
-                        xmlGetThreadId  (void);
-XMLPUBFUN int XMLCALL
-                        xmlIsMainThread (void);
+XMLPUBFUN void
+			xmlInitThreads	(void);
+XMLPUBFUN void
+			xmlLockLibrary	(void);
+XMLPUBFUN void
+			xmlUnlockLibrary(void);
 XML_DEPRECATED
-XMLPUBFUN void XMLCALL
-                        xmlCleanupThreads(void);
-XMLPUBFUN xmlGlobalStatePtr XMLCALL
-                        xmlGetGlobalState(void);
+XMLPUBFUN int
+			xmlGetThreadId	(void);
+XML_DEPRECATED
+XMLPUBFUN int
+			xmlIsMainThread	(void);
+XML_DEPRECATED
+XMLPUBFUN void
+			xmlCleanupThreads(void);
 
-#ifdef HAVE_PTHREAD_H
-#elif defined(HAVE_WIN32_THREADS) && !defined(HAVE_COMPILER_TLS) && (!defined(LIBXML_STATIC) || defined(LIBXML_STATIC_FOR_DLL))
-#if defined(LIBXML_STATIC_FOR_DLL)
-int XMLCALL
+/** DOC_DISABLE */
+#if defined(LIBXML_THREAD_ENABLED) && defined(_WIN32) && \
+    defined(LIBXML_STATIC_FOR_DLL)
+int
 xmlDllMain(void *hinstDLL, unsigned long fdwReason,
            void *lpvReserved);
 #endif
-#endif
+/** DOC_ENABLE */
 
 #ifdef __cplusplus
 }

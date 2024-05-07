@@ -7,10 +7,10 @@
  * Author: Daniel Veillard
  */
 
-#include <libxml/parser.h>
-
 #ifndef __XML_ERROR_H__
 #define __XML_ERROR_H__
+
+#include <libxml/xmlversion.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,9 +23,9 @@ extern "C" {
  */
 typedef enum {
     XML_ERR_NONE = 0,
-    XML_ERR_WARNING = 1,        /* A simple warning */
-    XML_ERR_ERROR = 2,          /* A recoverable error */
-    XML_ERR_FATAL = 3           /* A fatal error */
+    XML_ERR_WARNING = 1,	/* A simple warning */
+    XML_ERR_ERROR = 2,		/* A recoverable error */
+    XML_ERR_FATAL = 3		/* A fatal error */
 } xmlErrorLevel;
 
 /**
@@ -35,33 +35,33 @@ typedef enum {
  */
 typedef enum {
     XML_FROM_NONE = 0,
-    XML_FROM_PARSER,    /* The XML parser */
-    XML_FROM_TREE,      /* The tree module */
-    XML_FROM_NAMESPACE, /* The XML Namespace module */
-    XML_FROM_DTD,       /* The XML DTD validation with parser context*/
-    XML_FROM_HTML,      /* The HTML parser */
-    XML_FROM_MEMORY,    /* The memory allocator */
-    XML_FROM_OUTPUT,    /* The serialization code */
-    XML_FROM_IO,        /* The Input/Output stack */
-    XML_FROM_FTP,       /* The FTP module */
-    XML_FROM_HTTP,      /* The HTTP module */
-    XML_FROM_XINCLUDE,  /* The XInclude processing */
-    XML_FROM_XPATH,     /* The XPath module */
-    XML_FROM_XPOINTER,  /* The XPointer module */
-    XML_FROM_REGEXP,    /* The regular expressions module */
-    XML_FROM_DATATYPE,  /* The W3C XML Schemas Datatype module */
-    XML_FROM_SCHEMASP,  /* The W3C XML Schemas parser module */
-    XML_FROM_SCHEMASV,  /* The W3C XML Schemas validation module */
-    XML_FROM_RELAXNGP,  /* The Relax-NG parser module */
-    XML_FROM_RELAXNGV,  /* The Relax-NG validator module */
-    XML_FROM_CATALOG,   /* The Catalog module */
-    XML_FROM_C14N,      /* The Canonicalization module */
-    XML_FROM_XSLT,      /* The XSLT engine from libxslt */
-    XML_FROM_VALID,     /* The XML DTD validation with valid context */
-    XML_FROM_CHECK,     /* The error checking module */
-    XML_FROM_WRITER,    /* The xmlwriter module */
-    XML_FROM_MODULE,    /* The dynamically loaded module module*/
-    XML_FROM_I18N,      /* The module handling character conversion */
+    XML_FROM_PARSER,	/* The XML parser */
+    XML_FROM_TREE,	/* The tree module */
+    XML_FROM_NAMESPACE,	/* The XML Namespace module */
+    XML_FROM_DTD,	/* The XML DTD validation with parser context*/
+    XML_FROM_HTML,	/* The HTML parser */
+    XML_FROM_MEMORY,	/* The memory allocator */
+    XML_FROM_OUTPUT,	/* The serialization code */
+    XML_FROM_IO,	/* The Input/Output stack */
+    XML_FROM_FTP,	/* The FTP module */
+    XML_FROM_HTTP,	/* The HTTP module */
+    XML_FROM_XINCLUDE,	/* The XInclude processing */
+    XML_FROM_XPATH,	/* The XPath module */
+    XML_FROM_XPOINTER,	/* The XPointer module */
+    XML_FROM_REGEXP,	/* The regular expressions module */
+    XML_FROM_DATATYPE,	/* The W3C XML Schemas Datatype module */
+    XML_FROM_SCHEMASP,	/* The W3C XML Schemas parser module */
+    XML_FROM_SCHEMASV,	/* The W3C XML Schemas validation module */
+    XML_FROM_RELAXNGP,	/* The Relax-NG parser module */
+    XML_FROM_RELAXNGV,	/* The Relax-NG validator module */
+    XML_FROM_CATALOG,	/* The Catalog module */
+    XML_FROM_C14N,	/* The Canonicalization module */
+    XML_FROM_XSLT,	/* The XSLT engine from libxslt */
+    XML_FROM_VALID,	/* The XML DTD validation with valid context */
+    XML_FROM_CHECK,	/* The error checking module */
+    XML_FROM_WRITER,	/* The xmlwriter module */
+    XML_FROM_MODULE,	/* The dynamically loaded module module*/
+    XML_FROM_I18N,	/* The module handling character conversion */
     XML_FROM_SCHEMATRONV,/* The Schematron validator module */
     XML_FROM_BUFFER,    /* The buffers module */
     XML_FROM_URI        /* The URI module */
@@ -76,17 +76,17 @@ typedef enum {
 typedef struct _xmlError xmlError;
 typedef xmlError *xmlErrorPtr;
 struct _xmlError {
-    int         domain; /* What part of the library raised this error */
-    int         code;   /* The error code, e.g. an xmlParserError */
+    int		domain;	/* What part of the library raised this error */
+    int		code;	/* The error code, e.g. an xmlParserError */
     char       *message;/* human-readable informative error message */
     xmlErrorLevel level;/* how consequent is the error */
-    char       *file;   /* the filename */
-    int         line;   /* the line number if available */
-    char       *str1;   /* extra string information */
-    char       *str2;   /* extra string information */
-    char       *str3;   /* extra string information */
-    int         int1;   /* extra number information */
-    int         int2;   /* error column # or 0 if N/A (todo: rename field when we would brk ABI) */
+    char       *file;	/* the filename */
+    int		line;	/* the line number if available */
+    char       *str1;	/* extra string information */
+    char       *str2;	/* extra string information */
+    char       *str3;	/* extra string information */
+    int		int1;	/* extra number information */
+    int		int2;	/* error column # or 0 if N/A (todo: rename field when we would brk ABI) */
     void       *ctxt;   /* the parser context if available */
     void       *node;   /* the node in the tree */
 };
@@ -210,6 +210,7 @@ typedef enum {
     XML_ERR_NAME_TOO_LONG, /* 110 */
     XML_ERR_USER_STOP, /* 111 */
     XML_ERR_COMMENT_ABRUPTLY_ENDED, /* 112 */
+    XML_WAR_ENCODING_MISMATCH, /* 113 */
     XML_NS_ERR_XML_NAMESPACE = 200,
     XML_NS_ERR_UNDEFINED_NAMESPACE, /* 201 */
     XML_NS_ERR_QNAME, /* 202 */
@@ -844,9 +845,9 @@ typedef enum {
  * Signature of the function to use when there is an error and
  * no parsing or validity context available .
  */
-typedef void (XMLCDECL *xmlGenericErrorFunc) (void *ctx,
-                                 const char *msg,
-                                 ...) LIBXML_ATTR_FORMAT(2,3);
+typedef void (*xmlGenericErrorFunc) (void *ctx,
+				 const char *msg,
+				 ...) LIBXML_ATTR_FORMAT(2,3);
 /**
  * xmlStructuredErrorFunc:
  * @userData:  user provided data for the error callback
@@ -855,92 +856,92 @@ typedef void (XMLCDECL *xmlGenericErrorFunc) (void *ctx,
  * Signature of the function to use when there is an error and
  * the module handles the new error reporting mechanism.
  */
-typedef void (XMLCALL *xmlStructuredErrorFunc) (void *userData, xmlErrorPtr error);
+typedef void (*xmlStructuredErrorFunc) (void *userData, const xmlError *error);
+
+/** DOC_DISABLE */
+#define XML_GLOBALS_ERROR \
+  XML_OP(xmlLastError, xmlError, XML_DEPRECATED) \
+  XML_OP(xmlGenericError, xmlGenericErrorFunc, XML_NO_ATTR) \
+  XML_OP(xmlGenericErrorContext, void *, XML_NO_ATTR) \
+  XML_OP(xmlStructuredError, xmlStructuredErrorFunc, XML_NO_ATTR) \
+  XML_OP(xmlStructuredErrorContext, void *, XML_NO_ATTR)
+
+#define XML_OP XML_DECLARE_GLOBAL
+XML_GLOBALS_ERROR
+#undef XML_OP
+
+#if defined(LIBXML_THREAD_ENABLED) && !defined(XML_GLOBALS_NO_REDEFINITION)
+  #define xmlLastError XML_GLOBAL_MACRO(xmlLastError)
+  #define xmlGenericError XML_GLOBAL_MACRO(xmlGenericError)
+  #define xmlGenericErrorContext XML_GLOBAL_MACRO(xmlGenericErrorContext)
+  #define xmlStructuredError XML_GLOBAL_MACRO(xmlStructuredError)
+  #define xmlStructuredErrorContext XML_GLOBAL_MACRO(xmlStructuredErrorContext)
+#endif
+/** DOC_ENABLE */
 
 /*
  * Use the following function to reset the two global variables
  * xmlGenericError and xmlGenericErrorContext.
  */
-XMLPUBFUN void XMLCALL
-    xmlSetGenericErrorFunc      (void *ctx,
+XMLPUBFUN void
+    xmlSetGenericErrorFunc	(void *ctx,
+				 xmlGenericErrorFunc handler);
+XMLPUBFUN void
+    xmlThrDefSetGenericErrorFunc(void *ctx,
                                  xmlGenericErrorFunc handler);
-XMLPUBFUN void XMLCALL
-    initGenericErrorDefaultFunc (xmlGenericErrorFunc *handler);
+XML_DEPRECATED
+XMLPUBFUN void
+    initGenericErrorDefaultFunc	(xmlGenericErrorFunc *handler);
 
-XMLPUBFUN void XMLCALL
-    xmlSetStructuredErrorFunc   (void *ctx,
+XMLPUBFUN void
+    xmlSetStructuredErrorFunc	(void *ctx,
+				 xmlStructuredErrorFunc handler);
+XMLPUBFUN void
+    xmlThrDefSetStructuredErrorFunc(void *ctx,
                                  xmlStructuredErrorFunc handler);
 /*
  * Default message routines used by SAX and Valid context for error
  * and warning reporting.
  */
-XMLPUBFUN void XMLCDECL
-    xmlParserError              (void *ctx,
-                                 const char *msg,
-                                 ...) LIBXML_ATTR_FORMAT(2,3);
-XMLPUBFUN void XMLCDECL
-    xmlParserWarning            (void *ctx,
-                                 const char *msg,
-                                 ...) LIBXML_ATTR_FORMAT(2,3);
-XMLPUBFUN void XMLCDECL
-    xmlParserValidityError      (void *ctx,
-                                 const char *msg,
-                                 ...) LIBXML_ATTR_FORMAT(2,3);
-XMLPUBFUN void XMLCDECL
-    xmlParserValidityWarning    (void *ctx,
-                                 const char *msg,
-                                 ...) LIBXML_ATTR_FORMAT(2,3);
-XMLPUBFUN void XMLCALL
-    xmlParserPrintFileInfo      (xmlParserInputPtr input);
-XMLPUBFUN void XMLCALL
-    xmlParserPrintFileContext   (xmlParserInputPtr input);
+XMLPUBFUN void
+    xmlParserError		(void *ctx,
+				 const char *msg,
+				 ...) LIBXML_ATTR_FORMAT(2,3);
+XMLPUBFUN void
+    xmlParserWarning		(void *ctx,
+				 const char *msg,
+				 ...) LIBXML_ATTR_FORMAT(2,3);
+XMLPUBFUN void
+    xmlParserValidityError	(void *ctx,
+				 const char *msg,
+				 ...) LIBXML_ATTR_FORMAT(2,3);
+XMLPUBFUN void
+    xmlParserValidityWarning	(void *ctx,
+				 const char *msg,
+				 ...) LIBXML_ATTR_FORMAT(2,3);
+struct _xmlParserInput;
+XMLPUBFUN void
+    xmlParserPrintFileInfo	(struct _xmlParserInput *input);
+XMLPUBFUN void
+    xmlParserPrintFileContext	(struct _xmlParserInput *input);
 
 /*
  * Extended error information routines
  */
-XMLPUBFUN xmlErrorPtr XMLCALL
-    xmlGetLastError             (void);
-XMLPUBFUN void XMLCALL
-    xmlResetLastError           (void);
-XMLPUBFUN xmlErrorPtr XMLCALL
-    xmlCtxtGetLastError         (void *ctx);
-XMLPUBFUN void XMLCALL
-    xmlCtxtResetLastError       (void *ctx);
-XMLPUBFUN void XMLCALL
-    xmlResetError               (xmlErrorPtr err);
-XMLPUBFUN int XMLCALL
-    xmlCopyError                (xmlErrorPtr from,
-                                 xmlErrorPtr to);
+XMLPUBFUN const xmlError *
+    xmlGetLastError		(void);
+XMLPUBFUN void
+    xmlResetLastError		(void);
+XMLPUBFUN const xmlError *
+    xmlCtxtGetLastError		(void *ctx);
+XMLPUBFUN void
+    xmlCtxtResetLastError	(void *ctx);
+XMLPUBFUN void
+    xmlResetError		(xmlErrorPtr err);
+XMLPUBFUN int
+    xmlCopyError		(const xmlError *from,
+				 xmlErrorPtr to);
 
-#ifdef IN_LIBXML
-/*
- * Internal callback reporting routine
- */
-XMLPUBFUN void XMLCALL
-    __xmlRaiseError             (xmlStructuredErrorFunc schannel,
-                                 xmlGenericErrorFunc channel,
-                                 void *data,
-                                 void *ctx,
-                                 void *node,
-                                 int domain,
-                                 int code,
-                                 xmlErrorLevel level,
-                                 const char *file,
-                                 int line,
-                                 const char *str1,
-                                 const char *str2,
-                                 const char *str3,
-                                 int int1,
-                                 int col,
-                                 const char *msg,
-                                 ...) LIBXML_ATTR_FORMAT(16,17);
-XMLPUBFUN void XMLCALL
-    __xmlSimpleError            (int domain,
-                                 int code,
-                                 xmlNodePtr node,
-                                 const char *msg,
-                                 const char *extra) LIBXML_ATTR_FORMAT(4,0);
-#endif
 #ifdef __cplusplus
 }
 #endif

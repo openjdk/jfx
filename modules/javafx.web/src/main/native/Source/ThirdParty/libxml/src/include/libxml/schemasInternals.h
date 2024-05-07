@@ -2,7 +2,7 @@
  * Summary: internal interfaces for XML Schemas
  * Description: internal interfaces for the XML Schemas handling
  *              and schema validity checking
- *              The Schemas development is a Work In Progress.
+ *		The Schemas development is a Work In Progress.
  *              Some of those interfaces are not guaranteed to be API or ABI stable !
  *
  * Copy: See Copyright for the status of this software.
@@ -21,6 +21,7 @@
 #include <libxml/xmlregexp.h>
 #include <libxml/hash.h>
 #include <libxml/dict.h>
+#include <libxml/tree.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -947,8 +948,8 @@ struct _xmlSchema {
     void *volatiles; /* Obsolete */
 };
 
-XMLPUBFUN void XMLCALL         xmlSchemaFreeType        (xmlSchemaTypePtr type);
-XMLPUBFUN void XMLCALL         xmlSchemaFreeWildcard(xmlSchemaWildcardPtr wildcard);
+XMLPUBFUN void         xmlSchemaFreeType        (xmlSchemaTypePtr type);
+XMLPUBFUN void         xmlSchemaFreeWildcard(xmlSchemaWildcardPtr wildcard);
 
 #ifdef __cplusplus
 }

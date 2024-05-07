@@ -89,37 +89,37 @@ typedef xmlXIncludeCtxt *xmlXIncludeCtxtPtr;
 /*
  * standalone processing
  */
-XMLPUBFUN int XMLCALL
-                xmlXIncludeProcess      (xmlDocPtr doc);
-XMLPUBFUN int XMLCALL
-                xmlXIncludeProcessFlags (xmlDocPtr doc,
-                                         int flags);
-XMLPUBFUN int XMLCALL
-                xmlXIncludeProcessFlagsData(xmlDocPtr doc,
-                                         int flags,
-                                         void *data);
-XMLPUBFUN int XMLCALL
+XMLPUBFUN int
+		xmlXIncludeProcess	(xmlDocPtr doc);
+XMLPUBFUN int
+		xmlXIncludeProcessFlags	(xmlDocPtr doc,
+					 int flags);
+XMLPUBFUN int
+		xmlXIncludeProcessFlagsData(xmlDocPtr doc,
+					 int flags,
+					 void *data);
+XMLPUBFUN int
                 xmlXIncludeProcessTreeFlagsData(xmlNodePtr tree,
                                          int flags,
                                          void *data);
-XMLPUBFUN int XMLCALL
-                xmlXIncludeProcessTree  (xmlNodePtr tree);
-XMLPUBFUN int XMLCALL
-                xmlXIncludeProcessTreeFlags(xmlNodePtr tree,
-                                         int flags);
+XMLPUBFUN int
+		xmlXIncludeProcessTree	(xmlNodePtr tree);
+XMLPUBFUN int
+		xmlXIncludeProcessTreeFlags(xmlNodePtr tree,
+					 int flags);
 /*
  * contextual processing
  */
-XMLPUBFUN xmlXIncludeCtxtPtr XMLCALL
-                xmlXIncludeNewContext   (xmlDocPtr doc);
-XMLPUBFUN int XMLCALL
-                xmlXIncludeSetFlags     (xmlXIncludeCtxtPtr ctxt,
-                                         int flags);
-XMLPUBFUN void XMLCALL
-                xmlXIncludeFreeContext  (xmlXIncludeCtxtPtr ctxt);
-XMLPUBFUN int XMLCALL
-                xmlXIncludeProcessNode  (xmlXIncludeCtxtPtr ctxt,
-                                         xmlNodePtr tree);
+XMLPUBFUN xmlXIncludeCtxtPtr
+		xmlXIncludeNewContext	(xmlDocPtr doc);
+XMLPUBFUN int
+		xmlXIncludeSetFlags	(xmlXIncludeCtxtPtr ctxt,
+					 int flags);
+XMLPUBFUN void
+		xmlXIncludeFreeContext	(xmlXIncludeCtxtPtr ctxt);
+XMLPUBFUN int
+		xmlXIncludeProcessNode	(xmlXIncludeCtxtPtr ctxt,
+					 xmlNodePtr tree);
 #ifdef __cplusplus
 }
 #endif

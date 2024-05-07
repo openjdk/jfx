@@ -18,61 +18,61 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-XMLPUBFUN void XMLCALL
-        xmlNanoHTTPInit         (void);
-XMLPUBFUN void XMLCALL
-        xmlNanoHTTPCleanup      (void);
-XMLPUBFUN void XMLCALL
-        xmlNanoHTTPScanProxy    (const char *URL);
-XMLPUBFUN int XMLCALL
-        xmlNanoHTTPFetch        (const char *URL,
-                                 const char *filename,
-                                 char **contentType);
-XMLPUBFUN void * XMLCALL
-        xmlNanoHTTPMethod       (const char *URL,
-                                 const char *method,
-                                 const char *input,
-                                 char **contentType,
-                                 const char *headers,
-                                 int   ilen);
-XMLPUBFUN void * XMLCALL
-        xmlNanoHTTPMethodRedir  (const char *URL,
-                                 const char *method,
-                                 const char *input,
-                                 char **contentType,
-                                 char **redir,
-                                 const char *headers,
-                                 int   ilen);
-XMLPUBFUN void * XMLCALL
-        xmlNanoHTTPOpen         (const char *URL,
-                                 char **contentType);
-XMLPUBFUN void * XMLCALL
-        xmlNanoHTTPOpenRedir    (const char *URL,
-                                 char **contentType,
-                                 char **redir);
-XMLPUBFUN int XMLCALL
-        xmlNanoHTTPReturnCode   (void *ctx);
-XMLPUBFUN const char * XMLCALL
-        xmlNanoHTTPAuthHeader   (void *ctx);
-XMLPUBFUN const char * XMLCALL
-        xmlNanoHTTPRedir        (void *ctx);
-XMLPUBFUN int XMLCALL
-        xmlNanoHTTPContentLength( void * ctx );
-XMLPUBFUN const char * XMLCALL
-        xmlNanoHTTPEncoding     (void *ctx);
-XMLPUBFUN const char * XMLCALL
-        xmlNanoHTTPMimeType     (void *ctx);
-XMLPUBFUN int XMLCALL
-        xmlNanoHTTPRead         (void *ctx,
-                                 void *dest,
-                                 int len);
+XMLPUBFUN void
+	xmlNanoHTTPInit		(void);
+XMLPUBFUN void
+	xmlNanoHTTPCleanup	(void);
+XMLPUBFUN void
+	xmlNanoHTTPScanProxy	(const char *URL);
+XMLPUBFUN int
+	xmlNanoHTTPFetch	(const char *URL,
+				 const char *filename,
+				 char **contentType);
+XMLPUBFUN void *
+	xmlNanoHTTPMethod	(const char *URL,
+				 const char *method,
+				 const char *input,
+				 char **contentType,
+				 const char *headers,
+				 int   ilen);
+XMLPUBFUN void *
+	xmlNanoHTTPMethodRedir	(const char *URL,
+				 const char *method,
+				 const char *input,
+				 char **contentType,
+				 char **redir,
+				 const char *headers,
+				 int   ilen);
+XMLPUBFUN void *
+	xmlNanoHTTPOpen		(const char *URL,
+				 char **contentType);
+XMLPUBFUN void *
+	xmlNanoHTTPOpenRedir	(const char *URL,
+				 char **contentType,
+				 char **redir);
+XMLPUBFUN int
+	xmlNanoHTTPReturnCode	(void *ctx);
+XMLPUBFUN const char *
+	xmlNanoHTTPAuthHeader	(void *ctx);
+XMLPUBFUN const char *
+	xmlNanoHTTPRedir	(void *ctx);
+XMLPUBFUN int
+	xmlNanoHTTPContentLength( void * ctx );
+XMLPUBFUN const char *
+	xmlNanoHTTPEncoding	(void *ctx);
+XMLPUBFUN const char *
+	xmlNanoHTTPMimeType	(void *ctx);
+XMLPUBFUN int
+	xmlNanoHTTPRead		(void *ctx,
+				 void *dest,
+				 int len);
 #ifdef LIBXML_OUTPUT_ENABLED
-XMLPUBFUN int XMLCALL
-        xmlNanoHTTPSave         (void *ctxt,
-                                 const char *filename);
+XMLPUBFUN int
+	xmlNanoHTTPSave		(void *ctxt,
+				 const char *filename);
 #endif /* LIBXML_OUTPUT_ENABLED */
-XMLPUBFUN void XMLCALL
-        xmlNanoHTTPClose        (void *ctx);
+XMLPUBFUN void
+	xmlNanoHTTPClose	(void *ctx);
 #ifdef __cplusplus
 }
 #endif
