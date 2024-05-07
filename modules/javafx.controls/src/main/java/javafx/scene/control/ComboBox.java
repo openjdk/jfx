@@ -620,6 +620,9 @@ public class ComboBox<T> extends ComboBoxBase<T> {
                         if (selectedItem.equals(comboBox.getItems().get(i))) {
                             comboBox.setValue(null);
                             setSelectedItem(null);
+
+                            //Restore the previous selection
+                            comboBox.setValue(selectedItem);
                             setSelectedIndex(i);
                             break;
                         }

@@ -2318,4 +2318,34 @@ public class ComboBoxTest {
 
         assertEquals("ComboBox skinProperty changed more than once, which is not expected.", 1, skinChangedCount);
     }
+
+    //JDK-8279140
+    @Test
+    public void testSelectionOnItemChange() {
+        ObservableList<String> comboBoxItemsList = FXCollections.observableArrayList();
+        ObjectProperty<String> selectedValue = new SimpleObjectProperty<>();
+
+        List<String> strings1 = List.of("A", "B", "C");
+        List<String> strings2 = List.of("D", "E", "F");
+
+        comboBox = new ComboBox<>();
+        comboBox.setItems(comboBoxItemsList);
+
+        selectedValue.addListener((obs, oldValue, newValue) -> {
+            if ("D".equals(newValue) || "A".equals(newValue)) {
+                List<String> newContent = "A".equals(newValue) ? strings1 : strings2;
+                comboBoxItemsList.setAll(newContent);
+            }
+        });
+
+        comboBox.valueProperty().bindBidirectional(selectedValue);
+
+        selectedValue.set("A");
+        assertEquals("A", comboBox.getSelectionModel().getSelectedItem());
+        assertEquals("A", selectedValue.get());
+
+        selectedValue.set("D");
+        assertEquals("D", comboBox.getSelectionModel().getSelectedItem());
+        assertEquals("D", selectedValue.get());
+    }
 }
