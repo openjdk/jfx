@@ -215,7 +215,7 @@ public class Utils {
     /**
      * Computes the actual text to be shown in the Labeled with the text wrapping disabled:
      * unmodified if it fits into available area,
-     * or with the ellipsis string inserted into strategic place(s) if it does not.
+     * or with the {@code ellipsisString} inserted into strategic place(s) if it does not.
      * The latter case will cause {@code textTruncated} reference set to {@code true} (the caller is expected
      * to set the flag to {@code false} before invoking this method).
      *
@@ -443,7 +443,7 @@ public class Utils {
     /**
      * Computes the actual text to be shown in the Labeled with the text wrapping enabled:
      * unmodified if it fits into available area,
-     * or with the ellipsis string inserted into strategic place(s) if it does not.
+     * or with the {@code ellipsisString} inserted into strategic place(s) if it does not.
      * The latter case will cause {@code textTruncated} reference set to {@code true} (the caller is expected
      * to set the flag to {@code false} before invoking this method).
      *
