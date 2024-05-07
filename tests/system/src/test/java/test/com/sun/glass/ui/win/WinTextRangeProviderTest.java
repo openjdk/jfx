@@ -53,6 +53,7 @@ public class WinTextRangeProviderTest {
 
     @AfterAll
     static void shutdown() {
+        assumeTrue(PlatformUtil.isWindows());
         Util.shutdown();
     }
 
@@ -73,6 +74,7 @@ public class WinTextRangeProviderTest {
     @ParameterizedTest
     @MethodSource("getEndIndexParameters")
     public void testGetEndIndex(Integer expected, Integer startIndex, Integer length, Integer maxEndIndex) {
+        assumeTrue(PlatformUtil.isWindows());
         assertEquals(expected, WinTextRangeProviderShim.getEndIndex(startIndex, length, maxEndIndex));
     }
 }
