@@ -128,34 +128,10 @@ public class VirtualScrollBar extends ScrollBar {
     @Override public void adjustValue(double pos) {
         if (isVirtual()) {
             adjusting = true;
-            double oldValue = flow.getPosition();
-            double newValue = ((getMax() - getMin()) * Utils.clamp(0, pos, 1)) + getMin();
-            /*
-             * Scroll the block increment further in the direction the user has clicked if only one cell is shown.
-             * Otherwise, a click on the trough would have no effect when cell height > viewport height.
-             */
-            IndexedCell<?> firstVisibleCell = flow.getFirstVisibleCell();
-            IndexedCell<?> lastVisibleCell = flow.getLastVisibleCell();
-            if (firstVisibleCell != null && firstVisibleCell == lastVisibleCell) {
-                if (newValue < oldValue) {
-                    flow.scrollPixels(-flow.getBlockIncrement());
-                } else {
-                    flow.scrollPixels(flow.getBlockIncrement());
-                }
+            if (pos < getValue()) {
+                flow.scrollPixels(-flow.getBlockIncrement());
             } else {
-                if (newValue < oldValue) {
-                    IndexedCell<?> cell = firstVisibleCell;
-                    if (cell == null) {
-                        return;
-                    }
-                    flow.scrollToBottom(cell);
-                } else if (newValue > oldValue) {
-                    IndexedCell<?> cell = lastVisibleCell;
-                    if (cell == null) {
-                        return;
-                    }
-                    flow.scrollToTop(cell);
-                }
+                flow.scrollPixels(flow.getBlockIncrement());
             }
             adjusting = false;
         } else {

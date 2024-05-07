@@ -46,6 +46,7 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.shape.Circle;
 
+import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import test.javafx.scene.control.SkinStub;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.HBox;
@@ -56,6 +57,10 @@ import org.junit.Test;
 
 
 import java.util.List;
+import java.util.function.DoubleSupplier;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
 import javafx.scene.control.IndexedCellShim;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.skin.VirtualFlowShim;
@@ -1841,26 +1846,27 @@ assertEquals(0, firstCell.getIndex());
 
     @Test
     public void testScrollBarValueAdjustmentMovementUp() {
-        testScrollBarValueAdjustment(1, 1.0, 0.2, -100);
-        testScrollBarValueAdjustment(3, 1.0, 0.2, -100);
-        testScrollBarValueAdjustment(1, 0.5, 0.2, -100);
-        testScrollBarValueAdjustment(3, 0.5, 0.2, -100);
+        testScrollBarValueAdjustment(1, 1.0, 0.2, () -> -flow.getBlockIncrement());
+        testScrollBarValueAdjustment(3, 1.0, 0.2, () -> -flow.getBlockIncrement());
+        testScrollBarValueAdjustment(1, 0.5, 0.2, () -> -flow.getBlockIncrement());
+        testScrollBarValueAdjustment(3, 0.5, 0.2, () -> -flow.getBlockIncrement());
     }
 
     @Test
     public void testScrollBarValueAdjustmentMovementDown() {
-        testScrollBarValueAdjustment(1, 0.0, 0.8, 100);
-        testScrollBarValueAdjustment(3, 0.0, 0.8, 100);
-        testScrollBarValueAdjustment(1, 0.5, 0.8, 100);
-        testScrollBarValueAdjustment(3, 0.5, 0.8, 100);
+        testScrollBarValueAdjustment(1, 0.0, 0.8, () -> flow.getBlockIncrement());
+        testScrollBarValueAdjustment(3, 0.0, 0.8, () -> flow.getBlockIncrement());
+        testScrollBarValueAdjustment(1, 0.5, 0.8, () -> flow.getBlockIncrement());
+        testScrollBarValueAdjustment(3, 0.5, 0.8, () -> flow.getBlockIncrement());
     }
 
-    public void testScrollBarValueAdjustment(int cellCount, double position, double adjust, double targetMovement) {
+    public void testScrollBarValueAdjustment(int cellCount, double position, double adjust, DoubleSupplier targetMovement) {
         flow = new VirtualFlowShim<>();
         class C extends CellStub {
             public C(VirtualFlowShim flow) {
                 super(flow);
             }
+
             @Override
             protected double computePrefHeight(double width) {
                 return getIndex() == 0 ? 1000 : 100;
@@ -1883,14 +1889,29 @@ assertEquals(0, firstCell.getIndex());
         flow.setPosition(position);
         pulse();
 
-        IndexedCell<?> cell = flow.getFirstVisibleCell();
-        double position1 = flow.getCellPosition(cell);
+        Supplier<double[]> cellPositionsCalculater = () -> {
+            double[] positions = new double[cellCount];
+            IndexedCell<?> cell = flow.getFirstVisibleCell();
+            positions[cell.getIndex()] = flow.getCellPosition(cell);
+            for (int i = cell.getIndex() + 1; i < cellCount; i++) {
+                positions[i] = positions[i - 1] + flow.getCellSize(i - 1);
+            }
+            for (int i = cell.getIndex() - 1; i >= 0; i--) {
+                positions[i] = positions[i + 1] - flow.getCellSize(i);
+            }
+            return positions;
+        };
+
+        double[] positionsBefore = cellPositionsCalculater.get();
+
         flow.shim_getVbar().adjustValue(adjust);
         pulse();
 
-        double position2 = flow.getCellPosition(cell);
-        double movement = position1 - position2;
-        assertEquals(targetMovement, movement, 0.1);
+        double[] positionsAfter = cellPositionsCalculater.get();
+
+        for (int i = 0; i < positionsBefore.length; i++) {
+            assertEquals(targetMovement.getAsDouble(), positionsBefore[i] - positionsAfter[i], 0.1);
+        }
     }
 
     /**

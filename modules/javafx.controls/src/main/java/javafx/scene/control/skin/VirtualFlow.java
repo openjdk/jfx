@@ -1806,8 +1806,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * @return the value in pixels
      */
     public double getBlockIncrement() {
-        // For reasons of backward compatibility, we use the cell length of the empty cell (cell index -1)
-        return getCellLength(-1);
+        return getViewportLength();
     }
 
     /**
