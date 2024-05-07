@@ -414,11 +414,11 @@ public abstract class SpinnerValueFactory<T> {
      * A {@link javafx.scene.control.SpinnerValueFactory} implementation designed to iterate through
      * integer values.
      * <p>
-     * If {@link #wrapAroundProperty wrapAround} is {@code true}, the {@code IntegerSpinnerValueFactory} will step from
-     * the minimum value to the maximum value (and vice versa). As a consequence of that, the number
-     * of steps required to wrap around to the same value is {@code N+1}, where {@code N} is the number of steps between
-     * {@link #minProperty min} (inclusive) and {@link #maxProperty max} (inclusive). The new value after a step is
-     * {@code val = (val + amountToStepBy) % (max - min + 1)}.
+     * If {@link SpinnerValueFactory#wrapAroundProperty wrapAround} is {@code true}, the
+     * {@code IntegerSpinnerValueFactory} will step from the minimum value to the maximum value (and vice versa).
+     * As a consequence of that, the number of steps required to wrap around to the same value is {@code N+1}, where
+     * {@code N} is the number of steps between {@link #minProperty min} (inclusive) and {@link #maxProperty max}
+     * (inclusive). The new value after a step is {@code val = (val + amountToStepBy) % (max - min + 1)}.
      * <p>
      * Note that the default {@link #converterProperty() converter} is implemented
      * as an {@link javafx.util.converter.IntegerStringConverter} instance.
@@ -617,10 +617,10 @@ public abstract class SpinnerValueFactory<T> {
      * A {@link javafx.scene.control.SpinnerValueFactory} implementation designed to iterate through
      * double values.
      * <p>
-     * If {@link #wrapAroundProperty wrapAround} is {@code true}, the {@code DoubleSpinnerValueFactory} will step
-     * through from the maximum value to the minimum value seamlessly; that is, any step up from the maximum value
-     * is equal to the same step up from the minimum value (and vice versa). The new value after a step is
-     * {@code val = (val + amountToStepBy) % (max - min)}.
+     * If {@link SpinnerValueFactory#wrapAroundProperty wrapAround} is {@code true}, the
+     * {@code DoubleSpinnerValueFactory} will step through from the maximum value to the minimum value seamlessly; that
+     * is, any step up from the maximum value is equal to the same step up from the minimum value (and vice versa).
+     * The new value after a step is {@code val = (val + amountToStepBy) % (max - min)}.
      * <p>
      * Note that the default {@link #converterProperty() converter} is implemented
      * simply as shown below, which may be adequate in many cases, but it is important
