@@ -120,7 +120,7 @@ jobject CLocator::GetAudioStreamConnectionHolder(JNIEnv *env, jobject locator, j
                 "getAudioStreamConnectionHolder",
                 "(Lcom/sun/media/jfxmedia/locator/ConnectionHolder;)Lcom/sun/media/jfxmedia/locator/ConnectionHolder;");
         env->DeleteLocalRef(klass);
-        if (javaEnv.reportException() || (GetAudioStreamConnectionHolder == NULL))
+        if (javaEnv.reportException() || (mid_GetAudioStreamConnectionHolder == NULL))
             return NULL;
     }
 
