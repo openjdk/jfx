@@ -61,8 +61,8 @@ class GlassSystemMenu implements TKSystemMenu {
 
     private List<MenuBase>      systemMenus = null;
     private MenuBar             glassSystemMenuBar = null;
-    private final Map<Menu, ListChangeListener> menuListeners = new HashMap<>();
-    private final Map<ListChangeListener, ObservableList> listenerItems = new HashMap<>();
+    private final Map<Menu, ListChangeListener<MenuItemBase>> menuListeners = new HashMap<>();
+    private final Map<ListChangeListener<MenuItemBase>, ObservableList<MenuItemBase>> listenerItems = new HashMap<>();
     private BooleanProperty active;
 
     private InvalidationListener visibilityListener = valueModel -> {
@@ -167,7 +167,7 @@ class GlassSystemMenu implements TKSystemMenu {
 
         final FilteredList<MenuItemBase> filteredItems = items.filtered(x -> x.isVisible());
 
-        ListChangeListener menuItemListener = createListener(glassMenu);
+        ListChangeListener<MenuItemBase> menuItemListener = createListener(glassMenu);
         filteredItems.addListener(menuItemListener);
         menuListeners.put(glassMenu, menuItemListener);
         listenerItems.put(menuItemListener, filteredItems);
@@ -221,9 +221,9 @@ class GlassSystemMenu implements TKSystemMenu {
 
 
     protected void setMenuBindings(final Menu glassMenu, final MenuBase mb) {
-        mb.textProperty().when(active).addListener(valueModel -> glassMenu.setTitle(parseText(mb)));
-        mb.disableProperty().when(active).addListener(valueModel -> glassMenu.setEnabled(!mb.isDisable()));
-        mb.mnemonicParsingProperty().when(active).addListener(valueModel -> glassMenu.setTitle(parseText(mb)));
+        mb.textProperty().when(active).subscribe(valueModel -> glassMenu.setTitle(parseText(mb)));
+        mb.disableProperty().when(active).subscribe(valueModel -> glassMenu.setEnabled(!mb.isDisable()));
+        mb.mnemonicParsingProperty().when(active).subscribe(valueModel -> glassMenu.setTitle(parseText(mb)));
     }
 
     private void addMenuItem(Menu parent, final MenuItemBase menuitem) {
