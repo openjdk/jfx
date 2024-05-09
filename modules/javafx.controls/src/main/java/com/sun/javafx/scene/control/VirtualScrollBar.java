@@ -129,9 +129,9 @@ public class VirtualScrollBar extends ScrollBar {
         if (isVirtual()) {
             adjusting = true;
             if (pos < getValue()) {
-                flow.scrollPixels(-flow.getBlockIncrement());
+                flow.scrollPixels(-flow.getViewportLength());
             } else {
-                flow.scrollPixels(flow.getBlockIncrement());
+                flow.scrollPixels(flow.getViewportLength());
             }
             adjusting = false;
         } else {

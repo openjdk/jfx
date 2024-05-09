@@ -25,7 +25,6 @@
 
 package test.javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.VirtualScrollBar;
 import java.util.AbstractList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -46,7 +45,6 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.shape.Circle;
 
-import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import test.javafx.scene.control.SkinStub;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.HBox;
@@ -58,7 +56,6 @@ import org.junit.Test;
 
 import java.util.List;
 import java.util.function.DoubleSupplier;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 import javafx.scene.control.IndexedCellShim;
@@ -1846,18 +1843,18 @@ assertEquals(0, firstCell.getIndex());
 
     @Test
     public void testScrollBarValueAdjustmentMovementUp() {
-        testScrollBarValueAdjustment(1, 1.0, 0.2, () -> -flow.getBlockIncrement());
-        testScrollBarValueAdjustment(3, 1.0, 0.2, () -> -flow.getBlockIncrement());
-        testScrollBarValueAdjustment(1, 0.5, 0.2, () -> -flow.getBlockIncrement());
-        testScrollBarValueAdjustment(3, 0.5, 0.2, () -> -flow.getBlockIncrement());
+        testScrollBarValueAdjustment(1, 1.0, 0.2, () -> -flow.getViewportLength());
+        testScrollBarValueAdjustment(3, 1.0, 0.2, () -> -flow.getViewportLength());
+        testScrollBarValueAdjustment(1, 0.5, 0.2, () -> -flow.getViewportLength());
+        testScrollBarValueAdjustment(3, 0.5, 0.2, () -> -flow.getViewportLength());
     }
 
     @Test
     public void testScrollBarValueAdjustmentMovementDown() {
-        testScrollBarValueAdjustment(1, 0.0, 0.8, () -> flow.getBlockIncrement());
-        testScrollBarValueAdjustment(3, 0.0, 0.8, () -> flow.getBlockIncrement());
-        testScrollBarValueAdjustment(1, 0.5, 0.8, () -> flow.getBlockIncrement());
-        testScrollBarValueAdjustment(3, 0.5, 0.8, () -> flow.getBlockIncrement());
+        testScrollBarValueAdjustment(1, 0.0, 0.8, () -> flow.getViewportLength());
+        testScrollBarValueAdjustment(3, 0.0, 0.8, () -> flow.getViewportLength());
+        testScrollBarValueAdjustment(1, 0.5, 0.8, () -> flow.getViewportLength());
+        testScrollBarValueAdjustment(3, 0.5, 0.8, () -> flow.getViewportLength());
     }
 
     public void testScrollBarValueAdjustment(int cellCount, double position, double adjust, DoubleSupplier targetMovement) {

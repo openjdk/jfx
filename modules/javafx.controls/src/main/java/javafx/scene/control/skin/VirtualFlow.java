@@ -1801,15 +1801,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     }
 
     /**
-     * The amount of pixels by which to adjust the position when the the scroll bar track is clicked.
-     *
-     * @return the value in pixels
-     */
-    public double getBlockIncrement() {
-        return getViewportLength();
-    }
-
-    /**
      * The VirtualFlow uses this method to set a cells index (rather than calling
      * {@link IndexedCell#updateIndex(int)} directly), so it is a perfect place
      * for subclasses to override if this if of interest.
@@ -1909,7 +1900,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * The length of the viewport portion of the VirtualFlow as computed
      * during the layout pass. In a vertical flow this would be the same as the
      * clip view height. In a horizontal flow this is the clip view width.
-     * The access on this variable is package ONLY FOR TESTING.
      */
     private double viewportLength;
     void setViewportLength(double value) {
@@ -1920,7 +1910,15 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         this.absoluteOffset = getPosition() * (estimatedSize - viewportLength);
         recalculateEstimatedSize();
     }
-    double getViewportLength() {
+
+    /**
+     * The length of the viewport portion of the VirtualFlow as computed during the layout pass.
+     * For a vertical flow, this corresponds to the height and for a horizontal flow to the width of the clip view,
+     * but it does not necessarily have to be the same value.
+     *
+     * @return the viewport length in pixel
+     */
+    public double getViewportLength() {
         return viewportLength;
     }
 
