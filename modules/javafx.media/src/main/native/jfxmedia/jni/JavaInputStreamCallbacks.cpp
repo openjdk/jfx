@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,8 +48,11 @@ CJavaInputStreamCallbacks::CJavaInputStreamCallbacks()
 CJavaInputStreamCallbacks::~CJavaInputStreamCallbacks()
 {}
 
-bool CJavaInputStreamCallbacks::Init(JNIEnv *env, jobject jLocator)
+bool CJavaInputStreamCallbacks::Init(JNIEnv *env, jobject jConnectionHolder)
 {
+    if (NULL == jConnectionHolder)
+        return false;
+
     env->GetJavaVM(&m_jvm);
     if (env->ExceptionCheck()) {
         env->ExceptionClear();
@@ -59,21 +62,7 @@ bool CJavaInputStreamCallbacks::Init(JNIEnv *env, jobject jLocator)
 
     CJavaEnvironment javaEnv(m_jvm);
 
-    static jmethodID createConnectionHolder = NULL;
-    if (NULL == createConnectionHolder)
-    {
-        jclass klass = env->GetObjectClass(jLocator);
-        createConnectionHolder = env->GetMethodID(klass, "createConnectionHolder", "()Lcom/sun/media/jfxmedia/locator/ConnectionHolder;");
-        env->DeleteLocalRef(klass);
-        if (javaEnv.reportException() || (NULL == createConnectionHolder))
-            return false;
-    }
-
-    jobject connectionHolder = env->CallObjectMethod(jLocator, createConnectionHolder);
-    if (javaEnv.reportException() || (NULL == connectionHolder))
-        return false;
-
-    m_ConnectionHolder = env->NewGlobalRef(connectionHolder);
+    m_ConnectionHolder = env->NewGlobalRef(jConnectionHolder);
     if (NULL == m_ConnectionHolder)
     {
         javaEnv.reportException();

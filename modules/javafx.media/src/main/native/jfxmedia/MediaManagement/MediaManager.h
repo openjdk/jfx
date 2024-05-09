@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,11 +53,7 @@ public:
 
     void    SetWarningListener(CMediaWarningListener* pWarningListener);
 
-    bool CanPlayContentType(string contentType);
-    const ContentTypesList& GetSupportedContentTypes();
-
     uint32_t    CreatePlayer(CLocator* pLocator, CPipelineOptions* pOptions, CMedia** ppMedia);
-    uint32_t    CreateMedia(CLocator* pLocator, CPipelineOptions* pOptions, CMedia** ppMedia);
 
 protected:
     CMediaManager();

@@ -27,6 +27,7 @@
 #import <objc/runtime.h>
 #import "CVVideoFrame.h"
 
+#import <jni/Logger.h>
 #import <PipelineManagement/NullAudioEqualizer.h>
 #import <PipelineManagement/NullAudioSpectrum.h>
 
