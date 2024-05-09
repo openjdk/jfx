@@ -122,9 +122,9 @@ class GlassSystemMenu implements TKSystemMenu {
 
     // Clear the menu to prevent a memory leak, as outlined in RT-34779
     private void clearMenu(Menu menu) {
-        ListChangeListener lcl = menuListeners.get(menu);
+        ListChangeListener<MenuItemBase> lcl = menuListeners.get(menu);
         if (lcl != null) {
-            ObservableList target = listenerItems.get(lcl);
+            ObservableList<MenuItemBase> target = listenerItems.get(lcl);
             target.removeListener(lcl);
             menuListeners.remove(menu);
             listenerItems.remove(lcl);
