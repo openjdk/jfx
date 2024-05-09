@@ -112,6 +112,9 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         textField.sceneProperty().addListener(weakSceneListener);
         if (textField.getScene() != null) {
             textField.getScene().focusOwnerProperty().addListener(weakFocusOwnerListener);
+            if (textField.getScene().getFocusOwner() == textField) {
+                textField.selectRange(textField.getLength(), 0);
+            }
         }
 
         // Only add this if we're on an embedded platform that supports 5-button navigation

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,24 +22,15 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package com.sun.glass.ui.win;
 
-
-#import <Cocoa/Cocoa.h>
-#import "GlassDragSource.h"
-
-@interface GlassDraggingSource : NSObject <NSDraggingSource>
-{
-@public
-    NSDragOperation dragOperation;
-    id<GlassDragSourceDelegate> dragDelegate;
+/**
+ * Provides access to the {@link WinTextRangeProvider} class by making its
+ * package-private fields and methods public for test cases in
+ * {@link test.com.sun.glass.ui.win.WinTextRangeProviderTest WinTextRangeProviderTest}.
+ */
+public class WinTextRangeProviderShim {
+    public static int getEndIndex(int start, int length, int maxEndIndex) {
+        return WinTextRangeProvider.getEndIndex(start, length, maxEndIndex);
+    }
 }
-
-- (GlassDraggingSource*)initWithOperation:(NSDragOperation)operation delegate:(id<GlassDragSourceDelegate>)delegate;
-
-- (void)draggingSession:(NSDraggingSession *)session willBeginAtPoint:(NSPoint)screenPoint;
-- (void)draggingSession:(NSDraggingSession *)session movedToPoint:(NSPoint)screenPoint;
-- (void)draggingSession:(NSDraggingSession *)session endedAtPoint:(NSPoint)screenPoint operation:(NSDragOperation)operation;
-
-- (BOOL)ignoreModifierKeysForDraggingSession:(NSDraggingSession *)session;
-
-@end

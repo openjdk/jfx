@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,24 +22,39 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package com.sun.javafx.scene.control;
 
+import javafx.scene.control.Labeled;
+import com.sun.javafx.util.Utils;
 
-#import <Cocoa/Cocoa.h>
-#import "GlassDragSource.h"
+/**
+ * Labeled Helper.
+ */
+public class LabeledHelper {
+    /** Accessor */
+    public interface Accessor {
+        /**
+         * Sets the text truncated flag.
+         * @param c the Labeled control
+         * @param on the value of the text truncated flag
+         */
+        public void setTextTruncated(Labeled c, boolean on);
+    }
 
-@interface GlassDraggingSource : NSObject <NSDraggingSource>
-{
-@public
-    NSDragOperation dragOperation;
-    id<GlassDragSourceDelegate> dragDelegate;
+    private static Accessor accessor;
+
+    static {
+        Utils.forceInit(Labeled.class);
+    }
+
+    private LabeledHelper() {
+    }
+
+    public static void setAccessor(Accessor a) {
+        accessor = a;
+    }
+
+    public static void setTextTruncated(Labeled c, boolean on) {
+        accessor.setTextTruncated(c, on);
+    }
 }
-
-- (GlassDraggingSource*)initWithOperation:(NSDragOperation)operation delegate:(id<GlassDragSourceDelegate>)delegate;
-
-- (void)draggingSession:(NSDraggingSession *)session willBeginAtPoint:(NSPoint)screenPoint;
-- (void)draggingSession:(NSDraggingSession *)session movedToPoint:(NSPoint)screenPoint;
-- (void)draggingSession:(NSDraggingSession *)session endedAtPoint:(NSPoint)screenPoint operation:(NSDragOperation)operation;
-
-- (BOOL)ignoreModifierKeysForDraggingSession:(NSDraggingSession *)session;
-
-@end
