@@ -169,9 +169,10 @@ public class SpinnerTest {
         assertFalse(spinner.isEditable());
     }
 
-    @Ignore("Waiting for StageLoader")
     @Test public void createDefaultSpinner_defaultSkinIsInstalled() {
+        StageLoader stageLoader = new StageLoader(spinner);
         assertTrue(spinner.getSkin() instanceof SpinnerSkin);
+        stageLoader.dispose();
     }
 
 
@@ -337,7 +338,7 @@ public class SpinnerTest {
      *                                                                         *
      **************************************************************************/
 
-    @Ignore("Need KeyboardEventFirer")
+    @Ignore("JDK-8328701")
     @Test public void editing_commitValidInput() {
         intSpinner.valueProperty().addListener(o -> eventCount++);
         intSpinner.getEditor().setText("3");
@@ -348,7 +349,7 @@ public class SpinnerTest {
         assertEquals("3", intSpinner.getEditor().getText());
     }
 
-    @Ignore("Need KeyboardEventFirer")
+    @Ignore("JDK-8328701")
     @Test public void editing_commitInvalidInput() {
         intSpinner.valueProperty().addListener(o -> eventCount++);
         intSpinner.getEditor().setText("300");
@@ -376,6 +377,15 @@ public class SpinnerTest {
         assertEquals(7, (int) intValueFactory.getValue());
     }
 
+    @Test public void intSpinner_testIncrement_negativeStep() {
+        intValueFactory.increment(-1);
+        assertEquals(4, (int) intValueFactory.getValue());
+        intValueFactory.increment(-2);
+        assertEquals(2, (int) intValueFactory.getValue());
+        intValueFactory.increment(-15);
+        assertEquals(0, (int) intValueFactory.getValue());
+    }
+
     @Test public void intSpinner_testIncrement_manyCalls() {
         for (int i = 0; i < 100; i++) {
             intValueFactory.increment(1);
@@ -396,6 +406,15 @@ public class SpinnerTest {
     @Test public void intSpinner_testDecrement_twoSteps() {
         intValueFactory.decrement(2);
         assertEquals(3, (int) intValueFactory.getValue());
+    }
+
+    @Test public void intSpinner_testDecrement_negativeStep() {
+        intValueFactory.decrement(-1);
+        assertEquals(6, (int) intValueFactory.getValue());
+        intValueFactory.decrement(-2);
+        assertEquals(8, (int) intValueFactory.getValue());
+        intValueFactory.decrement(-15);
+        assertEquals(10, (int) intValueFactory.getValue());
     }
 
     @Test public void intSpinner_testDecrement_manyCalls() {
@@ -431,6 +450,32 @@ public class SpinnerTest {
         assertEquals(2, (int) intValueFactory.getValue());
     }
 
+    @Test public void intSpinner_testWrapAround_increment_largeStep() {
+        intValueFactory.setWrapAround(true);
+        intValueFactory.increment(11);
+        assertEquals(5, (int)intValueFactory.getValue());
+        intValueFactory.increment(12);
+        assertEquals(6, (int)intValueFactory.getValue());
+        intValueFactory.increment(22);
+        assertEquals(6, (int)intValueFactory.getValue());
+        intValueFactory.increment(23);
+        assertEquals(7, (int)intValueFactory.getValue());
+    }
+
+    @Test public void intSpinner_testWrapAround_increment_negativeStep() {
+        intValueFactory.setWrapAround(true);
+        intValueFactory.increment(-1);
+        assertEquals(4, (int)intValueFactory.getValue());
+        intValueFactory.increment(-11);
+        assertEquals(4, (int)intValueFactory.getValue());
+        intValueFactory.increment(-12);
+        assertEquals(3, (int)intValueFactory.getValue());
+        intValueFactory.increment(-22);
+        assertEquals(3, (int)intValueFactory.getValue());
+        intValueFactory.increment(-23);
+        assertEquals(2, (int)intValueFactory.getValue());
+    }
+
     @Test public void intSpinner_testWrapAround_decrement_oneStep() {
         intValueFactory.setWrapAround(true);
         intValueFactory.decrement(1); // 4
@@ -450,6 +495,32 @@ public class SpinnerTest {
         intValueFactory.decrement(2); // 10
         intValueFactory.decrement(2); // 8
         assertEquals(8, (int) intValueFactory.getValue());
+    }
+
+    @Test public void intSpinner_testWrapAround_decrement_largeStep() {
+        intValueFactory.setWrapAround(true);
+        intValueFactory.decrement(11);
+        assertEquals(5, (int)intValueFactory.getValue());
+        intValueFactory.decrement(12);
+        assertEquals(4, (int)intValueFactory.getValue());
+        intValueFactory.decrement(22);
+        assertEquals(4, (int)intValueFactory.getValue());
+        intValueFactory.decrement(23);
+        assertEquals(3, (int)intValueFactory.getValue());
+    }
+
+    @Test public void intSpinner_testWrapAround_decrement_negativeStep() {
+        intValueFactory.setWrapAround(true);
+        intValueFactory.decrement(-1);
+        assertEquals(6, (int)intValueFactory.getValue());
+        intValueFactory.decrement(-11);
+        assertEquals(6, (int)intValueFactory.getValue());
+        intValueFactory.decrement(-12);
+        assertEquals(7, (int)intValueFactory.getValue());
+        intValueFactory.decrement(-22);
+        assertEquals(7, (int)intValueFactory.getValue());
+        intValueFactory.decrement(-23);
+        assertEquals(8, (int)intValueFactory.getValue());
     }
 
     @Test public void intSpinner_assertDefaultConverterIsNonNull() {
@@ -562,6 +633,11 @@ public class SpinnerTest {
         assertEquals(0.6, dblValueFactory.getValue(), 0);
     }
 
+    @Test public void dblSpinner_testIncrement_negativeStep() {
+        dblValueFactory.increment(-2);
+        assertEquals(0.4, dblValueFactory.getValue(), 0);
+    }
+
     @Test public void dblSpinner_testIncrement_manyCalls() {
         for (int i = 0; i < 100; i++) {
             dblValueFactory.increment(1);
@@ -584,6 +660,11 @@ public class SpinnerTest {
         assertEquals(0.4, dblValueFactory.getValue());
     }
 
+    @Test public void dblSpinner_testDecrement_negativeStep() {
+        dblValueFactory.decrement(-2);
+        assertEquals(0.6, dblValueFactory.getValue());
+    }
+
     @Test public void dblSpinner_testDecrement_manyCalls() {
         for (int i = 0; i < 100; i++) {
             dblValueFactory.decrement(1);
@@ -603,7 +684,6 @@ public class SpinnerTest {
         dblValueFactory.increment(1); // 0.90
         dblValueFactory.increment(1); // 0.95
         dblValueFactory.increment(1); // 1.00
-        dblValueFactory.increment(1); // 0.00
         dblValueFactory.increment(1); // 0.05
         dblValueFactory.increment(1); // 0.10
         assertEquals(0.10, dblValueFactory.getValue(), 0);
@@ -614,9 +694,33 @@ public class SpinnerTest {
         dblValueFactory.setValue(0.80);
         dblValueFactory.increment(2); // 0.90
         dblValueFactory.increment(2); // 1.00
-        dblValueFactory.increment(2); // 0.00
         dblValueFactory.increment(2); // 0.10
-        assertEquals(0.10, dblValueFactory.getValue(), 0);
+        dblValueFactory.increment(2); // 0.20
+        assertEquals(0.2, dblValueFactory.getValue(), 0);
+    }
+
+    @Test public void dblSpinner_testWrapAround_increment_largeStep() {
+        dblValueFactory.setWrapAround(true);
+        dblValueFactory.increment(20);
+        assertEquals(0.5, dblValueFactory.getValue(), 0);
+        dblValueFactory.increment(30);
+        assertEquals(1.0, dblValueFactory.getValue(), 0);
+        dblValueFactory.increment(40);
+        assertEquals(1.0, dblValueFactory.getValue(), 0);
+        dblValueFactory.increment(50);
+        assertEquals(0.5, dblValueFactory.getValue(), 0);
+    }
+
+    @Test public void dblSpinner_testWrapAround_increment_negativeStep() {
+        dblValueFactory.setWrapAround(true);
+        dblValueFactory.increment(-9);
+        assertEquals(0.05, dblValueFactory.getValue());
+        dblValueFactory.increment(-1);
+        assertEquals(0.0, dblValueFactory.getValue());
+        dblValueFactory.increment(-1);
+        assertEquals(0.95, dblValueFactory.getValue());
+        dblValueFactory.increment(-20);
+        assertEquals(0.95, dblValueFactory.getValue());
     }
 
     @Test public void dblSpinner_testWrapAround_decrement_oneStep() {
@@ -626,7 +730,6 @@ public class SpinnerTest {
         dblValueFactory.decrement(1); // 0.10
         dblValueFactory.decrement(1); // 0.05
         dblValueFactory.decrement(1); // 0.00
-        dblValueFactory.decrement(1); // 1.00
         dblValueFactory.decrement(1); // 0.95
         dblValueFactory.decrement(1); // 0.90
         assertEquals(0.90, dblValueFactory.getValue(), 0);
@@ -637,9 +740,33 @@ public class SpinnerTest {
         dblValueFactory.setValue(0.20);
         dblValueFactory.decrement(2); // 0.10
         dblValueFactory.decrement(2); // 0.00
-        dblValueFactory.decrement(2); // 1.00
         dblValueFactory.decrement(2); // 0.90
-        assertEquals(0.90, dblValueFactory.getValue());
+        dblValueFactory.decrement(2); // 0.80
+        assertEquals(0.80, dblValueFactory.getValue());
+    }
+
+    @Test public void dblSpinner_testWrapAround_decrement_largeStep() {
+        dblValueFactory.setWrapAround(true);
+        dblValueFactory.decrement(20);
+        assertEquals(0.5, dblValueFactory.getValue());
+        dblValueFactory.decrement(30);
+        assertEquals(0.0, dblValueFactory.getValue());
+        dblValueFactory.decrement(40);
+        assertEquals(0.0, dblValueFactory.getValue());
+        dblValueFactory.decrement(50);
+        assertEquals(0.5, dblValueFactory.getValue());
+    }
+
+    @Test public void dblSpinner_testWrapAround_decrement_negativeStep() {
+        dblValueFactory.setWrapAround(true);
+        dblValueFactory.decrement(-9);
+        assertEquals(0.95, dblValueFactory.getValue());
+        dblValueFactory.decrement(-1);
+        assertEquals(1.0, dblValueFactory.getValue());
+        dblValueFactory.decrement(-1);
+        assertEquals(0.05, dblValueFactory.getValue());
+        dblValueFactory.decrement(-20);
+        assertEquals(0.05, dblValueFactory.getValue());
     }
 
     @Test public void dblSpinner_assertDefaultConverterIsNonNull() {
@@ -751,6 +878,13 @@ public class SpinnerTest {
         assertEquals("string3", listValueFactory.getValue());
     }
 
+    @Test public void listSpinner_testIncrement_negativeStep() {
+        listValueFactory.increment(-1);
+        assertEquals("string1", listValueFactory.getValue());
+        listValueFactory.increment(-15);
+        assertEquals("string1", listValueFactory.getValue());
+    }
+
     @Test public void listSpinner_testIncrement_manyCalls() {
         for (int i = 0; i < 100; i++) {
             listValueFactory.increment(1);
@@ -771,6 +905,13 @@ public class SpinnerTest {
     @Test public void listSpinner_testDecrement_twoSteps() {
         listValueFactory.decrement(2);
         assertEquals("string1", listValueFactory.getValue());
+    }
+
+    @Test public void listSpinner_testDecrement_negativeStep() {
+        listValueFactory.decrement(-1);
+        assertEquals("string2", listValueFactory.getValue());
+        listValueFactory.decrement(-15);
+        assertEquals("string3", listValueFactory.getValue());
     }
 
     @Test public void listSpinner_testDecrement_manyCalls() {
@@ -806,6 +947,15 @@ public class SpinnerTest {
         assertEquals("string3", listValueFactory.getValue());
     }
 
+    @Test public void listSpinner_testWrapAround_increment_negativeStep() {
+        listValueFactory.setWrapAround(true);
+        listValueFactory.increment(-2); // string1 -> string2
+        listValueFactory.increment(-2); // string2 -> string3
+        listValueFactory.increment(-2); // string3 -> string1
+        listValueFactory.increment(-2); // string1 -> string2
+        assertEquals("string2", listValueFactory.getValue());
+    }
+
     @Test public void listSpinner_testWrapAround_decrement_oneStep() {
         listValueFactory.setWrapAround(true);
         listValueFactory.decrement(1); // string3
@@ -825,6 +975,15 @@ public class SpinnerTest {
         listValueFactory.decrement(2); // string3 -> string1
         listValueFactory.decrement(2); // string1 -> string2
         assertEquals("string2", listValueFactory.getValue());
+    }
+
+    @Test public void listSpinner_testWrapAround_decrement_negativeStep() {
+        listValueFactory.setWrapAround(true);
+        listValueFactory.decrement(-2); // string1 -> string3
+        listValueFactory.decrement(-2); // string3 -> string2
+        listValueFactory.decrement(-2); // string2 -> string1
+        listValueFactory.decrement(-2); // string1 -> string3
+        assertEquals("string3", listValueFactory.getValue());
     }
 
     @Test public void listSpinner_assertDefaultConverterIsNonNull() {
@@ -1585,7 +1744,7 @@ public class SpinnerTest {
     }
 
     /**
-     * When Spinner looses focus with misformatted text in the editor,
+     * When Spinner loses focus with misformatted text in the editor,
      * checks that the value is not changed, and the text is reverted to the value
      */
     @Test
@@ -1606,7 +1765,7 @@ public class SpinnerTest {
         spinner.requestFocus();
         spinner.getEditor().setText("2abc");
 
-        // loosing focus triggers cancelEdit() because the text cannot be parsed
+        // losing focus triggers cancelEdit() because the text cannot be parsed
         button.requestFocus();
 
         // check that value remains unchanged, and text is reverted

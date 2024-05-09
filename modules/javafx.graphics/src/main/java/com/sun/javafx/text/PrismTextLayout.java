@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,11 @@
 
 package com.sun.javafx.text;
 
-
+import java.text.Bidi;
+import java.text.BreakIterator;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Hashtable;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
@@ -41,17 +45,11 @@ import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.RoundRectangle2D;
 import com.sun.javafx.geom.Shape;
-import com.sun.javafx.geom.BoxBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.Translate2D;
 import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextSpan;
-import java.text.Bidi;
-import java.text.BreakIterator;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Hashtable;
 
 public class PrismTextLayout implements TextLayout {
     private static final BaseTransform IDENTITY = BaseTransform.IDENTITY_TRANSFORM;
@@ -323,7 +321,7 @@ public class PrismTextLayout implements TextLayout {
             if (lineEnd > offset) break;
             lineIndex++;
         }
-        int sliptCaretOffset = -1;
+        int splitCaretOffset = -1;
         int level = 0;
         float lineX = 0, lineY = 0, lineHeight = 0;
         TextLine line = lines[lineIndex];
@@ -352,13 +350,13 @@ public class PrismTextLayout implements TextLayout {
             if (isLeading) {
                 if (runIndex > 0 && offset == runStart) {
                     level = run.getLevel();
-                    sliptCaretOffset = offset - 1;
+                    splitCaretOffset = offset - 1;
                 }
             } else {
                 int runEnd = run.getEnd();
                 if (runIndex + 1 < runs.length && offset + 1 == runEnd) {
                     level = run.getLevel();
-                    sliptCaretOffset = offset + 1;
+                    splitCaretOffset = offset + 1;
                 }
             }
         } else {
@@ -386,12 +384,12 @@ public class PrismTextLayout implements TextLayout {
         }
         lineX += x;
         lineY += y;
-        if (sliptCaretOffset != -1) {
+        if (splitCaretOffset != -1) {
             for (int i = 0; i < runs.length; i++) {
                 TextRun run = runs[i];
                 int runStart = run.getStart();
                 int runEnd = run.getEnd();
-                if (runStart <= sliptCaretOffset && sliptCaretOffset < runEnd) {
+                if (runStart <= splitCaretOffset && splitCaretOffset < runEnd) {
                     if ((run.getLevel() & 1) != (level & 1)) {
                         Point2D location = run.getLocation();
                         float lineX2 = location.x;
@@ -421,90 +419,44 @@ public class PrismTextLayout implements TextLayout {
     }
 
     @Override
-    public Hit getHitInfo(float x, float y, String text, int textRunStart, int curRunStart) {
+    public Hit getHitInfo(float x, float y) {
         int charIndex = -1;
         int insertionIndex = -1;
         boolean leading = false;
-        int relIndex = 0;
-        int textWidthPrevLine = 0;
 
         ensureLayout();
-        int lineIndex = getLineIndex(y, text, curRunStart);
+        int lineIndex = getLineIndex(y);
         if (lineIndex >= getLineCount()) {
             charIndex = getCharCount();
             insertionIndex = charIndex + 1;
         } else {
-            if (isMirrored()) {
-                x = getMirroringWidth() - x;
-            }
             TextLine line = lines[lineIndex];
             TextRun[] runs = line.getRuns();
             RectBounds bounds = line.getBounds();
             TextRun run = null;
             x -= bounds.getMinX();
-            //TODO binary search
-            if (text == null || spans == null) {
-                for (int i = 0; i < runs.length; i++) {
-                    run = runs[i];
-                    if (x < run.getWidth()) break;
-                    if (i + 1 < runs.length) {
-                        if (runs[i + 1].isLinebreak()) break;
-                        x -= run.getWidth();
-                    }
+            for (int i = 0; i < runs.length; i++) {
+                run = runs[i];
+                if (x < run.getWidth()) {
+                    break;
                 }
-            } else {
-                for (int i = 0; i < lineIndex; i++) {
-                    for (TextRun r: lines[i].runs) {
-                        if (r.getTextSpan() != null && r.getStart() >= textRunStart && r.getTextSpan().getText().equals(text)) {
-                            textWidthPrevLine += r.getLength();
-                        }
-                    }
-                }
-                int prevNodeLength = 0;
-                boolean isPrevNodeExcluded = false;
-                for (TextRun r: runs) {
-                    if (!r.getTextSpan().getText().equals(text) || (r.getStart() < textRunStart && r.getTextSpan().getText().equals(text))) {
-                        prevNodeLength += r.getWidth();
-                        continue;
-                    }
-                    if (r.getTextSpan() != null && r.getTextSpan().getText().equals(text)) {
-                        BaseBounds textBounds = new BoxBounds();
-                        getBounds(r.getTextSpan(), textBounds);
-                        if (textBounds.getMinX() == 0 && !isPrevNodeExcluded) {
-                            x -= prevNodeLength;
-                            isPrevNodeExcluded = true;
-                        }
-                        if (x > r.getWidth()) {
-                            x -= r.getWidth();
-                            relIndex += r.getLength();
-                            continue;
-                        }
-                        run = r;
+                if (i + 1 < runs.length) {
+                    if (runs[i + 1].isLinebreak()) {
                         break;
                     }
+                    x -= run.getWidth();
                 }
             }
-
             if (run != null) {
                 int[] trailing = new int[1];
-                if (text != null && spans != null) {
-                    charIndex = run.getOffsetAtX(x, trailing);
-                    charIndex += textWidthPrevLine;
-                    charIndex += relIndex;
-                } else {
-                    charIndex = run.getStart() + run.getOffsetAtX(x, trailing);
-                }
+                charIndex = run.getStart() + run.getOffsetAtX(x, trailing);
                 leading = (trailing[0] == 0);
 
                 insertionIndex = charIndex;
                 if (getText() != null && insertionIndex < getText().length) {
                     if (!leading) {
                         BreakIterator charIterator = BreakIterator.getCharacterInstance();
-                        if (text != null) {
-                            charIterator.setText(text);
-                        } else {
-                            charIterator.setText(new String(getText()));
-                        }
+                        charIterator.setText(new String(getText()));
                         int next = charIterator.following(insertionIndex);
                         if (next == BreakIterator.DONE) {
                             insertionIndex += 1;
@@ -749,30 +701,17 @@ public class PrismTextLayout implements TextLayout {
      *                                                                         *
      **************************************************************************/
 
-    private int getLineIndex(float y, String text, int runStart) {
+    private int getLineIndex(float y) {
         int index = 0;
         float bottom = 0;
-        /* Initializing textFound as true when text is null
-         * because when this function is called for TextFlow text parameter will be null */
-        boolean textFound = (text == null);
 
         int lineCount = getLineCount();
         while (index < lineCount) {
-            if (!textFound) {
-                for (TextRun r : lines[index].runs) {
-                    if (r.getTextSpan() == null || (r.getStart() == runStart && r.getTextSpan().getText().equals(text))) {
-                        /* Span will present only for Rich Text.
-                         * Hence making textFound as true */
-                        textFound = true;
-                        break;
-                    }
-                }
-            }
             bottom += lines[index].getBounds().getHeight() + spacing;
             if (index + 1 == lineCount) {
                 bottom -= lines[index].getLeading();
             }
-            if (bottom > y && textFound) {
+            if (bottom > y) {
                 break;
             }
             index++;
@@ -991,8 +930,11 @@ public class PrismTextLayout implements TextLayout {
         }
     }
 
-    private TextLine createLine(int start, int end, int startOffset) {
+    private TextLine createLine(int start, int end, int startOffset, float collapsedSpaceWidth) {
         int count = end - start + 1;
+
+        assert count > 0 : "number of TextRuns in a TextLine cannot be less than one: " + count;
+
         TextRun[] lineRuns = new TextRun[count];
         if (start < runCount) {
             System.arraycopy(runs, start, lineRuns, 0, count);
@@ -1009,9 +951,41 @@ public class PrismTextLayout implements TextLayout {
             leading = Math.max(leading, run.getLeading());
             length += run.getLength();
         }
+
+        width -= collapsedSpaceWidth;
+
         if (width > layoutWidth) layoutWidth = width;
         return new TextLine(startOffset, length, lineRuns,
                             width, ascent, descent, leading);
+    }
+
+    /**
+     * Computes the size of the white space trailing a given run.
+     *
+     * @param run the run to compute trailing space width for, cannot be {@code null}
+     * @return the X size of the white space trailing the run
+     */
+    private float computeTrailingSpaceWidth(TextRun run) {
+        float trailingSpaceWidth = 0;
+        char[] chars = getText();
+
+        /*
+         * As the loop below exits when encountering a non-white space character,
+         * testing each trailing glyph in turn for white space is safe, as white
+         * space is always represented with only a single glyph:
+         */
+
+        for (int i = run.getGlyphCount() - 1; i >= 0; i--) {
+            int textOffset = run.getStart() + run.getCharOffset(i);
+
+            if (!Character.isWhitespace(chars[textOffset])) {
+                break;
+            }
+
+            trailingSpaceWidth += run.getAdvance(i);
+        }
+
+        return trailingSpaceWidth;
     }
 
     private void reorderLine(TextLine line) {
@@ -1120,6 +1094,94 @@ public class PrismTextLayout implements TextLayout {
         return tabSize * spaceAdvance;
     }
 
+    /*
+     * The way JavaFX lays out text:
+     *
+     * JavaFX distinguishes between soft wraps and hard wraps. Soft wraps
+     * occur when a wrap width has been set and the text requires wrapping
+     * to stay within the set wrap width. Hard wraps are explicitly part of
+     * the text in the form of line feeds (LF) and carriage returns (CR).
+     * Hard wrapping considers a singular LF or CR, or the combination of
+     * CR+LF (or LF+CR) as a single wrap location. Hard wrapping also occurs
+     * between TextSpans when multiple TextSpans were supplied (for wrapping
+     * purposes, there is no difference between two TextSpans and a single
+     * TextSpan where the text was concatenated with a line break in between).
+     *
+     * Soft wrapping occurs when a wrap width has been set. This occurs at
+     * the first character that does not fit.
+     *
+     * - If that character is not a white space, the break is set immediately
+     *   after the first white space encountered before that character
+     *   - If there is no white space before the preferred break character, the
+     *     break is done at the first character that does not fit (the wrap
+     *     then occurs in the middle of a (long) word)
+     * - If the preferred break character is white space, and it is followed by
+     *   more white space, the break is moved to the end of the white space (thus
+     *   a break in white space always occurs at first non white space character
+     *   following a white space sequence)
+     *
+     * White space collapsing:
+     *
+     * Only white space that is present at soft wrapped locations is collapsed to
+     * zero. Any other white space is preserved. This includes white space between
+     * words, leading and trailing white space, and white space around hard wrapped
+     * locations.
+     *
+     * Alignment:
+     *
+     * The alignment calculation only looks at the width of all the significant
+     * characters in each line. Significant characters are any non white space
+     * characters and any white space that has been preserved (white space that wasn't
+     * collapsed due to soft wrapping).
+     *
+     * Alignment does not take text effects, such as strike through and underline, into
+     * account. This means that such effects can appear unaligned. Trailing spaces at a
+     * soft wrap location (that are underlined for example), may show the underline go
+     * outside the logical bounds of the text.
+     *
+     * Example, where <SW> indicates a soft wrap location, and <LF> is a line feed:
+     *
+     *     "   The   quick <SW>brown fox jumps <SW> over the <LF> lazy dog   "
+     *
+     * Would be rendered as (left aligned):
+     *
+     *     "   The   quick"
+     *     "brown fox jumps"
+     *     "over the "
+     *     " lazy dog   "
+     *
+     * The alignment calculation uses the above bounds indicated by the double
+     * quotes, and so right aligned text would look like:
+     *
+     *      "   The   quick"
+     *     "brown fox jumps"
+     *           "over the "
+     *        " lazy dog   "
+     *
+     * Note that only the white space at the soft wrap locations is collapsed.
+     * In all other locations the space was preserved (the space between words
+     * where no soft wrap occurred, the leading and trailing space, and the
+     * space around the hard wrapped location).
+     *
+     * Text effects have no effect on the alignment, and so with underlining on
+     * the right aligned text would look like:
+     *
+     *      "___The___quick_"     (one collapsed space becomes visible here)
+     *     "brown_fox_jumps__"    (two collapsed spaces become visible here)
+     *           "over_the_"
+     *        "_lazy_dog___"
+     *
+     * Note that text alignment has not changed at all, but the bounds are exceeded
+     * in some locations to allow for the underline. Controls displaying such texts
+     * will likely clip the underlined parts exceeding the bounds.
+     *
+     * Users wishing to mitigate some of these perhaps surprising results can ensure
+     * they use trimmed texts, and avoid the use of line breaks, or at least ensure
+     * that line breaks are not preceded or succeeded by white space (activating
+     * line wrapping is not equivalent to collapsing any consecutive white space
+     * no matter where it occurs).
+     */
+
     private void layout() {
         /* Try the cache */
         initCache();
@@ -1187,17 +1249,22 @@ public class PrismTextLayout implements TextLayout {
                 /* Find offset of the first character that does not fit on the line */
                 int hitOffset = run.getStart() + run.getWrapIndex(wrapWidth - lineWidth);
 
-                /* Only keep whitespaces (not tabs) in the current run to avoid
+                /*
+                 * Only keep white spaces (not tabs) in the current run to avoid
                  * dealing with unshaped runs.
+                 *
+                 * If the run is a tab, the run will be always of length 1 (see
+                 * buildRuns()). As there is no "next" character that can be selected
+                 * as the wrap index in this run, the white space skipping logic
+                 * below won't skip tabs.
                  */
+
                 int offset = hitOffset;
                 int runEnd = run.getEnd();
-                while (offset + 1 < runEnd && chars[offset] == ' ') {
+
+                // Don't take white space into account at the preferred wrap index:
+                while (offset + 1 < runEnd && Character.isWhitespace(chars[offset])) {
                     offset++;
-                    /* Preserve behaviour: only keep one white space in the line
-                     * before wrapping. Needed API to allow change.
-                     */
-                    break;
                 }
 
                 /* Find the break opportunity */
@@ -1294,7 +1361,7 @@ public class PrismTextLayout implements TextLayout {
 
             lineWidth += runWidth;
             if (run.isBreak()) {
-                TextLine line = createLine(startIndex, i, startOffset);
+                TextLine line = createLine(startIndex, i, startOffset, computeTrailingSpaceWidth(runs[i]));
                 linesList.add(line);
                 startIndex = i + 1;
                 startOffset += line.getLength();
@@ -1303,11 +1370,11 @@ public class PrismTextLayout implements TextLayout {
         }
         if (layout != null) layout.dispose();
 
-        linesList.add(createLine(startIndex, runCount - 1, startOffset));
+        linesList.add(createLine(startIndex, runCount - 1, startOffset, 0));
         lines = new TextLine[linesList.size()];
         linesList.toArray(lines);
 
-        float fullWidth = Math.max(wrapWidth, layoutWidth);
+        float fullWidth = wrapWidth > 0 ? wrapWidth : layoutWidth;  // layoutWidth = widest line, wrapWidth is user set
         float lineY = 0;
         float align;
         if (isMirrored()) {
@@ -1324,7 +1391,8 @@ public class PrismTextLayout implements TextLayout {
             RectBounds bounds = line.getBounds();
 
             /* Center and right alignment */
-            float lineX = (fullWidth - bounds.getWidth()) * align;
+            float unusedWidth = fullWidth - bounds.getWidth();
+            float lineX = unusedWidth * align;
             line.setAlignment(lineX);
 
             /* Justify */
@@ -1342,7 +1410,7 @@ public class PrismTextLayout implements TextLayout {
                         if (hitChar && chars[j] == ' ') wsCount++;
                     }
                     if (wsCount != 0) {
-                        float inc = (fullWidth - bounds.getWidth()) / wsCount;
+                        float inc = unusedWidth / wsCount;
                         done:
                         for (int j = 0; j < lineRunCount; j++) {
                             TextRun textRun = lineRuns[j];
