@@ -32,7 +32,7 @@ JavaFX incubator modules have a few differences from JDK incubator modules:
 ## How to add a new incubator module
 
 Use [this patch](https://github.com/openjdk/jfx/pull/1375.diff) as a starting point for your incubator module. Then do the following:
-- Rename `modules/jfx.incubator.myfeature` to the desired name of your module, keeping the `jfx.incubator. prefix`
+- Rename `modules/jfx.incubator.myfeature` to the desired name of your module, keeping the `jfx.incubator.` prefix.
 - Modify `build.gradle`, `settings.gradle`, and `modules/javafx.base/src/main/java/module-info.java` to update the name of your module. Look for comments of the form `// TODO: incubator template` for where to make the changes.
 - Develop your module as you would with any JavaFX module, keeping in mind the rules in this JEP about public exports and dependencies.
 
