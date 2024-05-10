@@ -942,7 +942,7 @@ List<String> computeLibraryPath(boolean working) {
         def modulesLibsDir = "${bundledSdkDir}/modules_libs"
 
         modsWithNative.each() { m ->
-            // TODO: incubator dependency
+            // RFE: incubator dependency
             if (m.hasProperty("moduleName")) {
                 def moduleName = m.ext.moduleName
                 lp << cygpath("${modulesLibsDir}/${moduleName}")
@@ -1680,7 +1680,7 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
         return
     }
 
-    // TODO: incubator dependency
+    // RFE: incubator dependency
     if (!m.hasProperty("moduleName")) {
         fail("Project ${m} has no module name")
     }
@@ -1740,7 +1740,7 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
         project.publishing {
             publications {
                 maven(MavenPublication) {
-                    // TODO: incubator dependency
+                    // RFE: incubator dependency
                     def artifactName = project.moduleName.replace('.', '-')
                     artifactId = artifactName
 
@@ -1761,18 +1761,18 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
 
                         Node projectDependencyPlatform = dependencies.appendNode("dependency")
                         projectDependencyPlatform.appendNode("groupId", MAVEN_GROUP_ID)
-                        // TODO: incubator dependency
+                        // RFE: incubator dependency
                         projectDependencyPlatform.appendNode("artifactId", artifactName)
                         projectDependencyPlatform.appendNode("version", MAVEN_VERSION)
                         projectDependencyPlatform.appendNode("classifier", "\${javafx.platform}")
 
                         if (!projectDependencies.empty) {
                             projectDependencies.each { dep ->
-                                // TODO: incubator dependency
+                                // RFE: incubator dependency
                                 def depName = dep.moduleName.replace('.', '-')
                                 Node projectDependency = dependencies.appendNode("dependency")
                                 projectDependency.appendNode("groupId", MAVEN_GROUP_ID)
-                                // TODO: incubator dependency
+                                // RFE: incubator dependency
                                 projectDependency.appendNode("artifactId", depName)
                                 projectDependency.appendNode("version", MAVEN_VERSION)
                            }
@@ -2772,13 +2772,27 @@ project(":controls") {
     addValidateSourceSets(project, sourceSets)
 }
 
-// TODO: incubator template
+// RFE: incubator dependency
+// TODO: incubator: Add a project declaration for each incubator module here
+// BEGIN: incubator placeholder
+//project(":incubator.mymod") {
+//    project.ext.buildModule = true
+//    project.ext.includeSources = true
+//    project.ext.moduleRuntime = true
+//    project.ext.moduleName = "jfx.incubator.mymod"
+//    project.ext.incubating = true
+//    ...
+//}
+// END: incubator placeholder
+
+// TODO: incubator template -- follow instruction below, then remove this comment
 // To create an incubator module:
 // 1) apply the changes from this patch
 // 2) Look for "TODO: incubator template" comments, and replace "myfeature"
 //    with the name of your feature
 // 3) Refactor / rename the files under "modules/javafx.incubator.myfeature"
 //    to match the name of your feature.
+// 4) Remove this comment block
 project(":incubator.myfeature") {
     project.ext.buildModule = true
     project.ext.includeSources = true
@@ -2825,7 +2839,7 @@ project(":incubator.myfeature") {
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
 
-// TODO: incubator template
+// TODO: incubator template -- follow instruction below, then remove this comment block
 // The following block is used if and only if you have .css resource files
 // in your incubator module. If you do, uncomment the block and make the
 // appropriate changes for the location of your resource files. Otherwise,
@@ -3976,13 +3990,21 @@ project(":systemTests") {
         testImplementation project(":swing").sourceSets.test.output
     }
 
-    // TODO: incubator dependency
+    // RFE: incubator dependency
     def dependentProjects = [
         'base',
         'graphics',
         'controls',
-        // TODO: incubator template
+
+        // RFE: incubator dependency
+        // TODO: incubator: Add entry for each incubator module here
+        // BEGIN: incubator placeholder
+        //'incubator.mymod',
+        // END: incubator placeholder
+
+        // TODO: incubator template -- rename module, then remove this TODO comment
         'incubator.myfeature',
+
         'media',
         'web',
         'swing',
@@ -4366,13 +4388,21 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     group = "Basic"
     description = "Generates the JavaDoc for all the public API"
     executable = JAVADOC
-    // TODO: incubator dependency
+    // RFE: incubator dependency
     def projectsToDocument = [
         project(":base"),
         project(":graphics"),
         project(":controls"),
-        // TODO: incubator template
+
+        // RFE: incubator dependency
+        // TODO: incubator: Add entry for each incubator module here
+        // BEGIN: incubator placeholder
+        //project(":incubator.mymod"),
+        // END: incubator placeholder
+
+        // TODO: incubator template -- rename module, then remove this TODO comment
         project(":incubator.myfeature"),
+
         project(":media"),
         project(":swing"),
         /*project(":swt"),*/
@@ -5701,7 +5731,7 @@ compileTargets { t ->
                 def modnames = []
                 moduleProjList.each { project ->
                     if (project.hasProperty("moduleName") && project.buildModule) {
-                        // TODO: incubator dependency
+                        // RFE: incubator dependency
                         def incubating = project.hasProperty("incubating") && project.ext.incubating
                         modnames << project.ext.moduleName
                         File dir;
@@ -5714,7 +5744,7 @@ compileTargets { t ->
                         def dstModuleDir = cygpath(dir.path)
                         modpath << "${dstModuleDir}"
 
-                        // TODO: incubator dependency
+                        // RFE: incubator dependency
                         if (!incubating) {
                             String themod = dir.toURI()
                             testJavaPolicyFile <<  "grant codeBase \"${themod}\" {\n" +
@@ -5772,7 +5802,7 @@ compileTargets { t ->
             def jmodName = "${moduleName}.jmod"
             def jmodFile = "${jmodsDir}/${jmodName}"
 
-            // TODO: incubator dependency
+            // RFE: incubator dependency
             def incubating = project.hasProperty("incubating") && project.ext.incubating
 
             // On Windows, copy the native libraries in the jmod image
@@ -5816,7 +5846,7 @@ compileTargets { t ->
                         if (sourceDateEpoch != null) {
                             args("--date", extendedTimestamp)
                         }
-                        // TODO: incubator dependency
+                        // RFE: incubator dependency
                         if (incubating) {
                             args("--do-not-resolve-by-default")
                             args("--warn-if-resolved=incubating")

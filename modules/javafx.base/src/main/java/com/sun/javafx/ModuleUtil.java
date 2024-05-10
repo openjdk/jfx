@@ -23,7 +23,7 @@
  * questions.
  */
 
-// TODO: incubator dependency
+// RFE: incubator dependency
 package com.sun.javafx;
 
 import java.security.AccessController;
@@ -41,6 +41,16 @@ public class ModuleUtil {
 
     private static final Module MODULE_JAVA_BASE = Module.class.getModule();
 
+    /**
+     * Prints a warning that an incubator module was loaded. This warning is
+     * printed to {@code System.err} one time per module.
+     * An incubator module should call this method from the static initializer
+     * of each primary class in the module. A primary class is a publicly exported
+     * class that provides functionality that can be used by an application.
+     * An incubator module should choose the set of primary classes such that
+     * any application using an incubating API would access at least one of the
+     * primary classes.
+     */
     @SuppressWarnings("removal")
     public static void incubatorWarning() {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
