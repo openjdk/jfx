@@ -2369,7 +2369,7 @@ project(":graphics") {
     if (IS_INCLUDE_ES2) {
         if (IS_LINUX) {
             addNative(project, "prismES2GLX")
-            addNative(project, "prismES2EGL")
+            addNative(project, "prismES2EGLX11")
         } else {
             addNative(project, "prismES2")
         }
@@ -5259,7 +5259,7 @@ compileTargets { t ->
             def libs = ['font', 'prism', 'prismSW', 'glass', 'iio']
             if (IS_INCLUDE_ES2) {
                 if (IS_LINUX) {
-                    libs += ['prismES2GLX', 'prismES2EGL'];
+                    libs += ['prismES2GLX', 'prismES2EGLX11'];
                 } else {
                     libs += ['prismES2'];
                 }

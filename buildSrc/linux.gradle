@@ -258,17 +258,17 @@ LINUX.prismES2GLX.linker = linker
 LINUX.prismES2GLX.linkFlags = IS_STATIC_BUILD ? linkFlags : [linkFlags, "-lX11", "-lXxf86vm", "-lGL"].flatten()
 LINUX.prismES2GLX.lib = "prism_es2_glx"
 
-LINUX.prismES2EGL = [:]
-LINUX.prismES2EGL.nativeSource = [
+LINUX.prismES2EGLX11 = [:]
+LINUX.prismES2EGLX11.nativeSource = [
     file("${project("graphics").projectDir}/src/main/native-prism-es2"),
     file("${project("graphics").projectDir}/src/main/native-prism-es2/GL"),
     file("${project("graphics").projectDir}/src/main/native-prism-es2/linux/egl")
 ]
-LINUX.prismES2EGL.compiler = compiler
-LINUX.prismES2EGL.ccFlags = ["-DLINUX", "-DIS_LINUX_EGL", cFlags].flatten()
-LINUX.prismES2EGL.linker = linker
-LINUX.prismES2EGL.linkFlags = IS_STATIC_BUILD ? linkFlags : [linkFlags, "-lX11", "-lGL", "-lEGL"].flatten()
-LINUX.prismES2EGL.lib = "prism_es2_egl_x11"
+LINUX.prismES2EGLX11.compiler = compiler
+LINUX.prismES2EGLX11.ccFlags = ["-DLINUX", "-DIS_LINUX_EGL", cFlags].flatten()
+LINUX.prismES2EGLX11.linker = linker
+LINUX.prismES2EGLX11.linkFlags = IS_STATIC_BUILD ? linkFlags : [linkFlags, "-lX11", "-lGL", "-lEGL"].flatten()
+LINUX.prismES2EGLX11.lib = "prism_es2_egl_x11"
 
 def closedDir = file("$projectDir/../rt-closed")
 LINUX.font = [:]
