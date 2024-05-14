@@ -352,9 +352,9 @@ xmlRMutexUnlock(xmlRMutexPtr tok ATTRIBUTE_UNUSED)
 }
 
 /************************************************************************
- *									*
- *			Library wide thread interfaces			*
- *									*
+ *                                                                      *
+ *                      Library wide thread interfaces                  *
+ *                                                                      *
  ************************************************************************/
 
 /**
@@ -437,9 +437,9 @@ xmlCleanupThreads(void)
 }
 
 /************************************************************************
- *									*
- *			Library wide initialization			*
- *									*
+ *                                                                      *
+ *                      Library wide initialization                     *
+ *                                                                      *
  ************************************************************************/
 
 static int xmlParserInitialized = 0;
@@ -535,7 +535,7 @@ xmlGlobalInitMutexUnlock(void) {
         pthread_mutex_unlock(&global_init_lock);
 #elif defined HAVE_WIN32_THREADS
     if (global_init_lock != NULL)
-	LeaveCriticalSection(global_init_lock);
+        LeaveCriticalSection(global_init_lock);
 #endif
 }
 

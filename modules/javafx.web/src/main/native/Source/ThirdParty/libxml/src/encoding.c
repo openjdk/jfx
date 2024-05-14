@@ -123,9 +123,9 @@ closeIcuConverter(uconv_t *conv)
 #endif /* LIBXML_ICU_ENABLED */
 
 /************************************************************************
- *									*
- *		Conversions To/From UTF8 encoding			*
- *									*
+ *                                                                      *
+ *              Conversions To/From UTF8 encoding                       *
+ *                                                                      *
  ************************************************************************/
 
 /**
@@ -156,19 +156,19 @@ asciiToUTF8(unsigned char* out, int *outlen,
 
     inend = in + (*inlen);
     while ((in < inend) && (out - outstart + 5 < *outlen)) {
-	c= *in++;
+        c= *in++;
 
         if (out >= outend)
-	    break;
+            break;
         if (c < 0x80) {
-	    *out++ = c;
-	} else {
-	    *outlen = out - outstart;
-	    *inlen = processed - base;
-	    return(XML_ENC_ERR_INPUT);
-	}
+            *out++ = c;
+        } else {
+            *outlen = out - outstart;
+            *inlen = processed - base;
+            return(XML_ENC_ERR_INPUT);
+        }
 
-	processed = (const unsigned char*) in;
+        processed = (const unsigned char*) in;
     }
     *outlen = out - outstart;
     *inlen = processed - base;
@@ -207,55 +207,55 @@ UTF8Toascii(unsigned char* out, int *outlen,
         return(XML_ENC_ERR_INTERNAL);
     if (in == NULL) {
         /*
-	 * initialization nothing to do
-	 */
-	*outlen = 0;
-	*inlen = 0;
-	return(0);
+         * initialization nothing to do
+         */
+        *outlen = 0;
+        *inlen = 0;
+        return(0);
     }
     inend = in + (*inlen);
     outend = out + (*outlen);
     while (in < inend) {
-	d = *in++;
-	if      (d < 0x80)  { c= d; trailing= 0; }
-	else if (d < 0xC0) {
-	    /* trailing byte in leading position */
-	    *outlen = out - outstart;
-	    *inlen = processed - instart;
-	    return(XML_ENC_ERR_INPUT);
+        d = *in++;
+        if      (d < 0x80)  { c= d; trailing= 0; }
+        else if (d < 0xC0) {
+            /* trailing byte in leading position */
+            *outlen = out - outstart;
+            *inlen = processed - instart;
+            return(XML_ENC_ERR_INPUT);
         } else if (d < 0xE0)  { c= d & 0x1F; trailing= 1; }
         else if (d < 0xF0)  { c= d & 0x0F; trailing= 2; }
         else if (d < 0xF8)  { c= d & 0x07; trailing= 3; }
-	else {
-	    /* no chance for this in Ascii */
-	    *outlen = out - outstart;
-	    *inlen = processed - instart;
-	    return(XML_ENC_ERR_INPUT);
-	}
+        else {
+            /* no chance for this in Ascii */
+            *outlen = out - outstart;
+            *inlen = processed - instart;
+            return(XML_ENC_ERR_INPUT);
+        }
 
-	if (inend - in < trailing) {
-	    break;
-	}
+        if (inend - in < trailing) {
+            break;
+        }
 
-	for ( ; trailing; trailing--) {
-	    if ((in >= inend) || (((d= *in++) & 0xC0) != 0x80))
-		break;
-	    c <<= 6;
-	    c |= d & 0x3F;
-	}
+        for ( ; trailing; trailing--) {
+            if ((in >= inend) || (((d= *in++) & 0xC0) != 0x80))
+                break;
+            c <<= 6;
+            c |= d & 0x3F;
+        }
 
-	/* assertion: c is a single UTF-4 value */
-	if (c < 0x80) {
-	    if (out >= outend)
-		break;
-	    *out++ = c;
-	} else {
-	    /* no chance for this in Ascii */
-	    *outlen = out - outstart;
-	    *inlen = processed - instart;
-	    return(XML_ENC_ERR_INPUT);
-	}
-	processed = in;
+        /* assertion: c is a single UTF-4 value */
+        if (c < 0x80) {
+            if (out >= outend)
+                break;
+            *out++ = c;
+        } else {
+            /* no chance for this in Ascii */
+            *outlen = out - outstart;
+            *inlen = processed - instart;
+            return(XML_ENC_ERR_INPUT);
+        }
+        processed = in;
     }
     *outlen = out - outstart;
     *inlen = processed - instart;
@@ -289,22 +289,22 @@ isolat1ToUTF8(unsigned char* out, int *outlen,
     const unsigned char* instop;
 
     if ((out == NULL) || (in == NULL) || (outlen == NULL) || (inlen == NULL))
-	return(XML_ENC_ERR_INTERNAL);
+        return(XML_ENC_ERR_INTERNAL);
 
     outend = out + *outlen;
     inend = in + (*inlen);
     instop = inend;
 
     while ((in < inend) && (out < outend - 1)) {
-	if (*in >= 0x80) {
-	    *out++ = (((*in) >>  6) & 0x1F) | 0xC0;
+        if (*in >= 0x80) {
+            *out++ = (((*in) >>  6) & 0x1F) | 0xC0;
             *out++ = ((*in) & 0x3F) | 0x80;
-	    ++in;
-	}
-	if ((instop - in) > (outend - out)) instop = in + (outend - out);
-	while ((in < instop) && (*in < 0x80)) {
-	    *out++ = *in++;
-	}
+            ++in;
+        }
+        if ((instop - in) > (outend - out)) instop = in + (outend - out);
+        while ((in < instop) && (*in < 0x80)) {
+            *out++ = *in++;
+        }
     }
     if ((in < inend) && (out < outend) && (*in < 0x80)) {
         *out++ = *in++;
@@ -335,7 +335,7 @@ UTF8ToUTF8(unsigned char* out, int *outlen,
     int len;
 
     if ((out == NULL) || (outlen == NULL) || (inlenb == NULL))
-	return(XML_ENC_ERR_INTERNAL);
+        return(XML_ENC_ERR_INTERNAL);
     if (inb == NULL) {
         /* inb == NULL means output is initialized. */
         *outlen = 0;
@@ -343,12 +343,12 @@ UTF8ToUTF8(unsigned char* out, int *outlen,
         return(0);
     }
     if (*outlen > *inlenb) {
-	len = *inlenb;
+        len = *inlenb;
     } else {
-	len = *outlen;
+        len = *outlen;
     }
     if (len < 0)
-	return(XML_ENC_ERR_INTERNAL);
+        return(XML_ENC_ERR_INTERNAL);
 
     /*
      * FIXME: Conversion functions must assure valid UTF-8, so we have
@@ -395,60 +395,60 @@ UTF8Toisolat1(unsigned char* out, int *outlen,
         return(XML_ENC_ERR_INTERNAL);
     if (in == NULL) {
         /*
-	 * initialization nothing to do
-	 */
-	*outlen = 0;
-	*inlen = 0;
-	return(0);
+         * initialization nothing to do
+         */
+        *outlen = 0;
+        *inlen = 0;
+        return(0);
     }
     inend = in + (*inlen);
     outend = out + (*outlen);
     while (in < inend) {
-	d = *in++;
-	if      (d < 0x80)  { c= d; trailing= 0; }
-	else if (d < 0xC0) {
-	    /* trailing byte in leading position */
-	    *outlen = out - outstart;
-	    *inlen = processed - instart;
-	    return(XML_ENC_ERR_INPUT);
+        d = *in++;
+        if      (d < 0x80)  { c= d; trailing= 0; }
+        else if (d < 0xC0) {
+            /* trailing byte in leading position */
+            *outlen = out - outstart;
+            *inlen = processed - instart;
+            return(XML_ENC_ERR_INPUT);
         } else if (d < 0xE0)  { c= d & 0x1F; trailing= 1; }
         else if (d < 0xF0)  { c= d & 0x0F; trailing= 2; }
         else if (d < 0xF8)  { c= d & 0x07; trailing= 3; }
-	else {
-	    /* no chance for this in IsoLat1 */
-	    *outlen = out - outstart;
-	    *inlen = processed - instart;
-	    return(XML_ENC_ERR_INPUT);
-	}
+        else {
+            /* no chance for this in IsoLat1 */
+            *outlen = out - outstart;
+            *inlen = processed - instart;
+            return(XML_ENC_ERR_INPUT);
+        }
 
-	if (inend - in < trailing) {
-	    break;
-	}
+        if (inend - in < trailing) {
+            break;
+        }
 
-	for ( ; trailing; trailing--) {
-	    if (in >= inend)
-		break;
-	    if (((d= *in++) & 0xC0) != 0x80) {
-		*outlen = out - outstart;
-		*inlen = processed - instart;
-		return(XML_ENC_ERR_INPUT);
-	    }
-	    c <<= 6;
-	    c |= d & 0x3F;
-	}
+        for ( ; trailing; trailing--) {
+            if (in >= inend)
+                break;
+            if (((d= *in++) & 0xC0) != 0x80) {
+                *outlen = out - outstart;
+                *inlen = processed - instart;
+                return(XML_ENC_ERR_INPUT);
+            }
+            c <<= 6;
+            c |= d & 0x3F;
+        }
 
-	/* assertion: c is a single UTF-4 value */
-	if (c <= 0xFF) {
-	    if (out >= outend)
-		break;
-	    *out++ = c;
-	} else {
-	    /* no chance for this in IsoLat1 */
-	    *outlen = out - outstart;
-	    *inlen = processed - instart;
-	    return(XML_ENC_ERR_INPUT);
-	}
-	processed = in;
+        /* assertion: c is a single UTF-4 value */
+        if (c <= 0xFF) {
+            if (out >= outend)
+                break;
+            *out++ = c;
+        } else {
+            /* no chance for this in IsoLat1 */
+            *outlen = out - outstart;
+            *inlen = processed - instart;
+            return(XML_ENC_ERR_INPUT);
+        }
+        processed = in;
     }
     *outlen = out - outstart;
     *inlen = processed - instart;
@@ -497,25 +497,25 @@ UTF16LEToUTF8(unsigned char* out, int *outlen,
     inend = in + inlen;
     while ((in < inend) && (out - outstart + 5 < *outlen)) {
         if (xmlLittleEndian) {
-	    c= *in++;
-	} else {
-	    tmp = (unsigned char *) in;
-	    c = *tmp++;
-	    c = c | (*tmp << 8);
-	    in++;
-	}
+            c= *in++;
+        } else {
+            tmp = (unsigned char *) in;
+            c = *tmp++;
+            c = c | (*tmp << 8);
+            in++;
+        }
         if ((c & 0xFC00) == 0xD800) {    /* surrogates */
-	    if (in >= inend) {           /* handle split mutli-byte characters */
-		break;
-	    }
-	    if (xmlLittleEndian) {
-		d = *in++;
-	    } else {
-		tmp = (unsigned char *) in;
-		d = *tmp++;
-		d = d | (*tmp << 8);
-		in++;
-	    }
+            if (in >= inend) {           /* handle split mutli-byte characters */
+                break;
+            }
+            if (xmlLittleEndian) {
+                d = *in++;
+            } else {
+                tmp = (unsigned char *) in;
+                d = *tmp++;
+                d = d | (*tmp << 8);
+                in++;
+            }
             if ((d & 0xFC00) == 0xDC00) {
                 c &= 0x03FF;
                 c <<= 10;
@@ -523,15 +523,15 @@ UTF16LEToUTF8(unsigned char* out, int *outlen,
                 c += 0x10000;
             }
             else {
-		*outlen = out - outstart;
-		*inlenb = processed - inb;
-	        return(XML_ENC_ERR_INPUT);
-	    }
+                *outlen = out - outstart;
+                *inlenb = processed - inb;
+                return(XML_ENC_ERR_INPUT);
+            }
         }
 
-	/* assertion: c is a single UTF-4 value */
+        /* assertion: c is a single UTF-4 value */
         if (out >= outend)
-	    break;
+            break;
         if      (c <    0x80) {  *out++=  c;                bits= -6; }
         else if (c <   0x800) {  *out++= ((c >>  6) & 0x1F) | 0xC0;  bits=  0; }
         else if (c < 0x10000) {  *out++= ((c >> 12) & 0x0F) | 0xE0;  bits=  6; }
@@ -539,10 +539,10 @@ UTF16LEToUTF8(unsigned char* out, int *outlen,
 
         for ( ; bits >= 0; bits-= 6) {
             if (out >= outend)
-	        break;
+                break;
             *out++= ((c >> bits) & 0x3F) | 0x80;
         }
-	processed = (const unsigned char*) in;
+        processed = (const unsigned char*) in;
     }
     *outlen = out - outstart;
     *inlenb = processed - inb;
@@ -581,9 +581,9 @@ UTF8ToUTF16LE(unsigned char* outb, int *outlen,
     if ((out == NULL) || (outlen == NULL) || (inlen == NULL))
         return(XML_ENC_ERR_INTERNAL);
     if (in == NULL) {
-	*outlen = 0;
-	*inlen = 0;
-	return(0);
+        *outlen = 0;
+        *inlen = 0;
+        return(0);
     }
     inend= in + *inlen;
     outend = out + (*outlen / 2);
@@ -592,17 +592,17 @@ UTF8ToUTF16LE(unsigned char* outb, int *outlen,
       if      (d < 0x80)  { c= d; trailing= 0; }
       else if (d < 0xC0) {
           /* trailing byte in leading position */
-	  *outlen = (out - outstart) * 2;
-	  *inlen = processed - instart;
-	  return(XML_ENC_ERR_INPUT);
+          *outlen = (out - outstart) * 2;
+          *inlen = processed - instart;
+          return(XML_ENC_ERR_INPUT);
       } else if (d < 0xE0)  { c= d & 0x1F; trailing= 1; }
       else if (d < 0xF0)  { c= d & 0x0F; trailing= 2; }
       else if (d < 0xF8)  { c= d & 0x07; trailing= 3; }
       else {
-	/* no chance for this in UTF-16 */
-	*outlen = (out - outstart) * 2;
-	*inlen = processed - instart;
-	return(XML_ENC_ERR_INPUT);
+        /* no chance for this in UTF-16 */
+        *outlen = (out - outstart) * 2;
+        *inlen = processed - instart;
+        return(XML_ENC_ERR_INPUT);
       }
 
       if (inend - in < trailing) {
@@ -611,7 +611,7 @@ UTF8ToUTF16LE(unsigned char* outb, int *outlen,
 
       for ( ; trailing; trailing--) {
           if ((in >= inend) || (((d= *in++) & 0xC0) != 0x80))
-	      break;
+              break;
           c <<= 6;
           c |= d & 0x3F;
       }
@@ -619,40 +619,40 @@ UTF8ToUTF16LE(unsigned char* outb, int *outlen,
       /* assertion: c is a single UTF-4 value */
         if (c < 0x10000) {
             if (out >= outend)
-	        break;
-	    if (xmlLittleEndian) {
-		*out++ = c;
-	    } else {
-		tmp = (unsigned char *) out;
-		*tmp = (unsigned char) c; /* Explicit truncation */
-		*(tmp + 1) = c >> 8 ;
-		out++;
-	    }
+                break;
+            if (xmlLittleEndian) {
+                *out++ = c;
+            } else {
+                tmp = (unsigned char *) out;
+                *tmp = (unsigned char) c; /* Explicit truncation */
+                *(tmp + 1) = c >> 8 ;
+                out++;
+            }
         }
         else if (c < 0x110000) {
             if (out+1 >= outend)
-	        break;
+                break;
             c -= 0x10000;
-	    if (xmlLittleEndian) {
-		*out++ = 0xD800 | (c >> 10);
-		*out++ = 0xDC00 | (c & 0x03FF);
-	    } else {
-		tmp1 = 0xD800 | (c >> 10);
-		tmp = (unsigned char *) out;
-		*tmp = (unsigned char) tmp1; /* Explicit truncation */
-		*(tmp + 1) = tmp1 >> 8;
-		out++;
+            if (xmlLittleEndian) {
+                *out++ = 0xD800 | (c >> 10);
+                *out++ = 0xDC00 | (c & 0x03FF);
+            } else {
+                tmp1 = 0xD800 | (c >> 10);
+                tmp = (unsigned char *) out;
+                *tmp = (unsigned char) tmp1; /* Explicit truncation */
+                *(tmp + 1) = tmp1 >> 8;
+                out++;
 
-		tmp2 = 0xDC00 | (c & 0x03FF);
-		tmp = (unsigned char *) out;
-		*tmp  = (unsigned char) tmp2; /* Explicit truncation */
-		*(tmp + 1) = tmp2 >> 8;
-		out++;
-	    }
+                tmp2 = 0xDC00 | (c & 0x03FF);
+                tmp = (unsigned char *) out;
+                *tmp  = (unsigned char) tmp2; /* Explicit truncation */
+                *(tmp + 1) = tmp2 >> 8;
+                out++;
+            }
         }
         else
-	    break;
-	processed = in;
+            break;
+        processed = in;
     }
     *outlen = (out - outstart) * 2;
     *inlen = processed - instart;
@@ -676,19 +676,19 @@ UTF8ToUTF16(unsigned char* outb, int *outlen,
             const unsigned char* in, int *inlen)
 {
     if (in == NULL) {
-	/*
-	 * initialization, add the Byte Order Mark for UTF-16LE
-	 */
+        /*
+         * initialization, add the Byte Order Mark for UTF-16LE
+         */
         if (*outlen >= 2) {
-	    outb[0] = 0xFF;
-	    outb[1] = 0xFE;
-	    *outlen = 2;
-	    *inlen = 0;
-	    return(2);
-	}
-	*outlen = 0;
-	*inlen = 0;
-	return(0);
+            outb[0] = 0xFF;
+            outb[1] = 0xFE;
+            *outlen = 2;
+            *inlen = 0;
+            return(2);
+        }
+        *outlen = 0;
+        *inlen = 0;
+        return(0);
     }
     return (UTF8ToUTF16LE(outb, outlen, in, inlen));
 }
@@ -734,26 +734,26 @@ UTF16BEToUTF8(unsigned char* out, int *outlen,
     inlen = *inlenb / 2;
     inend= in + inlen;
     while ((in < inend) && (out - outstart + 5 < *outlen)) {
-	if (xmlLittleEndian) {
-	    tmp = (unsigned char *) in;
-	    c = *tmp++;
-	    c = (c << 8) | *tmp;
-	    in++;
-	} else {
-	    c= *in++;
-	}
+        if (xmlLittleEndian) {
+            tmp = (unsigned char *) in;
+            c = *tmp++;
+            c = (c << 8) | *tmp;
+            in++;
+        } else {
+            c= *in++;
+        }
         if ((c & 0xFC00) == 0xD800) {    /* surrogates */
-	    if (in >= inend) {           /* handle split mutli-byte characters */
+            if (in >= inend) {           /* handle split mutli-byte characters */
                 break;
-	    }
-	    if (xmlLittleEndian) {
-		tmp = (unsigned char *) in;
-		d = *tmp++;
-		d = (d << 8) | *tmp;
-		in++;
-	    } else {
-		d= *in++;
-	    }
+            }
+            if (xmlLittleEndian) {
+                tmp = (unsigned char *) in;
+                d = *tmp++;
+                d = (d << 8) | *tmp;
+                in++;
+            } else {
+                d= *in++;
+            }
             if ((d & 0xFC00) == 0xDC00) {
                 c &= 0x03FF;
                 c <<= 10;
@@ -761,15 +761,15 @@ UTF16BEToUTF8(unsigned char* out, int *outlen,
                 c += 0x10000;
             }
             else {
-		*outlen = out - outstart;
-		*inlenb = processed - inb;
-	        return(XML_ENC_ERR_INPUT);
-	    }
+                *outlen = out - outstart;
+                *inlenb = processed - inb;
+                return(XML_ENC_ERR_INPUT);
+            }
         }
 
-	/* assertion: c is a single UTF-4 value */
+        /* assertion: c is a single UTF-4 value */
         if (out >= outend)
-	    break;
+            break;
         if      (c <    0x80) {  *out++=  c;                bits= -6; }
         else if (c <   0x800) {  *out++= ((c >>  6) & 0x1F) | 0xC0;  bits=  0; }
         else if (c < 0x10000) {  *out++= ((c >> 12) & 0x0F) | 0xE0;  bits=  6; }
@@ -777,10 +777,10 @@ UTF16BEToUTF8(unsigned char* out, int *outlen,
 
         for ( ; bits >= 0; bits-= 6) {
             if (out >= outend)
-	        break;
+                break;
             *out++= ((c >> bits) & 0x3F) | 0x80;
         }
-	processed = (const unsigned char*) in;
+        processed = (const unsigned char*) in;
     }
     *outlen = out - outstart;
     *inlenb = processed - inb;
@@ -819,9 +819,9 @@ UTF8ToUTF16BE(unsigned char* outb, int *outlen,
     if ((outb == NULL) || (outlen == NULL) || (inlen == NULL))
         return(XML_ENC_ERR_INTERNAL);
     if (in == NULL) {
-	*outlen = 0;
-	*inlen = 0;
-	return(0);
+        *outlen = 0;
+        *inlen = 0;
+        return(0);
     }
     inend= in + *inlen;
     outend = out + (*outlen / 2);
@@ -830,17 +830,17 @@ UTF8ToUTF16BE(unsigned char* outb, int *outlen,
       if      (d < 0x80)  { c= d; trailing= 0; }
       else if (d < 0xC0)  {
           /* trailing byte in leading position */
-	  *outlen = out - outstart;
-	  *inlen = processed - instart;
-	  return(XML_ENC_ERR_INPUT);
+          *outlen = out - outstart;
+          *inlen = processed - instart;
+          return(XML_ENC_ERR_INPUT);
       } else if (d < 0xE0)  { c= d & 0x1F; trailing= 1; }
       else if (d < 0xF0)  { c= d & 0x0F; trailing= 2; }
       else if (d < 0xF8)  { c= d & 0x07; trailing= 3; }
       else {
           /* no chance for this in UTF-16 */
-	  *outlen = out - outstart;
-	  *inlen = processed - instart;
-	  return(XML_ENC_ERR_INPUT);
+          *outlen = out - outstart;
+          *inlen = processed - instart;
+          return(XML_ENC_ERR_INPUT);
       }
 
       if (inend - in < trailing) {
@@ -856,38 +856,38 @@ UTF8ToUTF16BE(unsigned char* outb, int *outlen,
       /* assertion: c is a single UTF-4 value */
         if (c < 0x10000) {
             if (out >= outend)  break;
-	    if (xmlLittleEndian) {
-		tmp = (unsigned char *) out;
-		*tmp = c >> 8;
-		*(tmp + 1) = (unsigned char) c; /* Explicit truncation */
-		out++;
-	    } else {
-		*out++ = c;
-	    }
+            if (xmlLittleEndian) {
+                tmp = (unsigned char *) out;
+                *tmp = c >> 8;
+                *(tmp + 1) = (unsigned char) c; /* Explicit truncation */
+                out++;
+            } else {
+                *out++ = c;
+            }
         }
         else if (c < 0x110000) {
             if (out+1 >= outend)  break;
             c -= 0x10000;
-	    if (xmlLittleEndian) {
-		tmp1 = 0xD800 | (c >> 10);
-		tmp = (unsigned char *) out;
-		*tmp = tmp1 >> 8;
-		*(tmp + 1) = (unsigned char) tmp1; /* Explicit truncation */
-		out++;
+            if (xmlLittleEndian) {
+                tmp1 = 0xD800 | (c >> 10);
+                tmp = (unsigned char *) out;
+                *tmp = tmp1 >> 8;
+                *(tmp + 1) = (unsigned char) tmp1; /* Explicit truncation */
+                out++;
 
-		tmp2 = 0xDC00 | (c & 0x03FF);
-		tmp = (unsigned char *) out;
-		*tmp = tmp2 >> 8;
-		*(tmp + 1) = (unsigned char) tmp2; /* Explicit truncation */
-		out++;
-	    } else {
-		*out++ = 0xD800 | (c >> 10);
-		*out++ = 0xDC00 | (c & 0x03FF);
-	    }
+                tmp2 = 0xDC00 | (c & 0x03FF);
+                tmp = (unsigned char *) out;
+                *tmp = tmp2 >> 8;
+                *(tmp + 1) = (unsigned char) tmp2; /* Explicit truncation */
+                out++;
+            } else {
+                *out++ = 0xD800 | (c >> 10);
+                *out++ = 0xDC00 | (c & 0x03FF);
+            }
         }
         else
-	    break;
-	processed = in;
+            break;
+        processed = in;
     }
     *outlen = (out - outstart) * 2;
     *inlen = processed - instart;
@@ -896,9 +896,9 @@ UTF8ToUTF16BE(unsigned char* outb, int *outlen,
 #endif /* LIBXML_OUTPUT_ENABLED */
 
 /************************************************************************
- *									*
- *		Generic encoding handling routines			*
- *									*
+ *                                                                      *
+ *              Generic encoding handling routines                      *
+ *                                                                      *
  ************************************************************************/
 
 /**
@@ -918,51 +918,51 @@ xmlDetectCharEncoding(const unsigned char* in, int len)
     if (in == NULL)
         return(XML_CHAR_ENCODING_NONE);
     if (len >= 4) {
-	if ((in[0] == 0x00) && (in[1] == 0x00) &&
-	    (in[2] == 0x00) && (in[3] == 0x3C))
-	    return(XML_CHAR_ENCODING_UCS4BE);
-	if ((in[0] == 0x3C) && (in[1] == 0x00) &&
-	    (in[2] == 0x00) && (in[3] == 0x00))
-	    return(XML_CHAR_ENCODING_UCS4LE);
-	if ((in[0] == 0x00) && (in[1] == 0x00) &&
-	    (in[2] == 0x3C) && (in[3] == 0x00))
-	    return(XML_CHAR_ENCODING_UCS4_2143);
-	if ((in[0] == 0x00) && (in[1] == 0x3C) &&
-	    (in[2] == 0x00) && (in[3] == 0x00))
-	    return(XML_CHAR_ENCODING_UCS4_3412);
-	if ((in[0] == 0x4C) && (in[1] == 0x6F) &&
-	    (in[2] == 0xA7) && (in[3] == 0x94))
-	    return(XML_CHAR_ENCODING_EBCDIC);
-	if ((in[0] == 0x3C) && (in[1] == 0x3F) &&
-	    (in[2] == 0x78) && (in[3] == 0x6D))
-	    return(XML_CHAR_ENCODING_UTF8);
-	/*
-	 * Although not part of the recommendation, we also
-	 * attempt an "auto-recognition" of UTF-16LE and
-	 * UTF-16BE encodings.
-	 */
-	if ((in[0] == 0x3C) && (in[1] == 0x00) &&
-	    (in[2] == 0x3F) && (in[3] == 0x00))
-	    return(XML_CHAR_ENCODING_UTF16LE);
-	if ((in[0] == 0x00) && (in[1] == 0x3C) &&
-	    (in[2] == 0x00) && (in[3] == 0x3F))
-	    return(XML_CHAR_ENCODING_UTF16BE);
+        if ((in[0] == 0x00) && (in[1] == 0x00) &&
+            (in[2] == 0x00) && (in[3] == 0x3C))
+            return(XML_CHAR_ENCODING_UCS4BE);
+        if ((in[0] == 0x3C) && (in[1] == 0x00) &&
+            (in[2] == 0x00) && (in[3] == 0x00))
+            return(XML_CHAR_ENCODING_UCS4LE);
+        if ((in[0] == 0x00) && (in[1] == 0x00) &&
+            (in[2] == 0x3C) && (in[3] == 0x00))
+            return(XML_CHAR_ENCODING_UCS4_2143);
+        if ((in[0] == 0x00) && (in[1] == 0x3C) &&
+            (in[2] == 0x00) && (in[3] == 0x00))
+            return(XML_CHAR_ENCODING_UCS4_3412);
+        if ((in[0] == 0x4C) && (in[1] == 0x6F) &&
+            (in[2] == 0xA7) && (in[3] == 0x94))
+            return(XML_CHAR_ENCODING_EBCDIC);
+        if ((in[0] == 0x3C) && (in[1] == 0x3F) &&
+            (in[2] == 0x78) && (in[3] == 0x6D))
+            return(XML_CHAR_ENCODING_UTF8);
+        /*
+         * Although not part of the recommendation, we also
+         * attempt an "auto-recognition" of UTF-16LE and
+         * UTF-16BE encodings.
+         */
+        if ((in[0] == 0x3C) && (in[1] == 0x00) &&
+            (in[2] == 0x3F) && (in[3] == 0x00))
+            return(XML_CHAR_ENCODING_UTF16LE);
+        if ((in[0] == 0x00) && (in[1] == 0x3C) &&
+            (in[2] == 0x00) && (in[3] == 0x3F))
+            return(XML_CHAR_ENCODING_UTF16BE);
     }
     if (len >= 3) {
-	/*
-	 * Errata on XML-1.0 June 20 2001
-	 * We now allow an UTF8 encoded BOM
-	 */
-	if ((in[0] == 0xEF) && (in[1] == 0xBB) &&
-	    (in[2] == 0xBF))
-	    return(XML_CHAR_ENCODING_UTF8);
+        /*
+         * Errata on XML-1.0 June 20 2001
+         * We now allow an UTF8 encoded BOM
+         */
+        if ((in[0] == 0xEF) && (in[1] == 0xBB) &&
+            (in[2] == 0xBF))
+            return(XML_CHAR_ENCODING_UTF8);
     }
     /* For UTF-16 we can recognize by the BOM */
     if (len >= 2) {
-	if ((in[0] == 0xFE) && (in[1] == 0xFF))
-	    return(XML_CHAR_ENCODING_UTF16BE);
-	if ((in[0] == 0xFF) && (in[1] == 0xFE))
-	    return(XML_CHAR_ENCODING_UTF16LE);
+        if ((in[0] == 0xFE) && (in[1] == 0xFF))
+            return(XML_CHAR_ENCODING_UTF16BE);
+        if ((in[0] == 0xFF) && (in[1] == 0xFE))
+            return(XML_CHAR_ENCODING_UTF16LE);
     }
     return(XML_CHAR_ENCODING_NONE);
 }
@@ -977,13 +977,13 @@ xmlCleanupEncodingAliases(void) {
     int i;
 
     if (xmlCharEncodingAliases == NULL)
-	return;
+        return;
 
     for (i = 0;i < xmlCharEncodingAliasesNb;i++) {
-	if (xmlCharEncodingAliases[i].name != NULL)
-	    xmlFree((char *) xmlCharEncodingAliases[i].name);
-	if (xmlCharEncodingAliases[i].alias != NULL)
-	    xmlFree((char *) xmlCharEncodingAliases[i].alias);
+        if (xmlCharEncodingAliases[i].name != NULL)
+            xmlFree((char *) xmlCharEncodingAliases[i].name);
+        if (xmlCharEncodingAliases[i].alias != NULL)
+            xmlFree((char *) xmlCharEncodingAliases[i].alias);
     }
     xmlCharEncodingAliasesNb = 0;
     xmlCharEncodingAliasesMax = 0;
@@ -1005,14 +1005,14 @@ xmlGetEncodingAlias(const char *alias) {
     char upper[100];
 
     if (alias == NULL)
-	return(NULL);
+        return(NULL);
 
     if (xmlCharEncodingAliases == NULL)
-	return(NULL);
+        return(NULL);
 
     for (i = 0;i < 99;i++) {
         upper[i] = (char) toupper((unsigned char) alias[i]);
-	if (upper[i] == 0) break;
+        if (upper[i] == 0) break;
     }
     upper[i] = 0;
 
@@ -1020,9 +1020,9 @@ xmlGetEncodingAlias(const char *alias) {
      * Walk down the list looking for a definition of the alias
      */
     for (i = 0;i < xmlCharEncodingAliasesNb;i++) {
-	if (!strcmp(xmlCharEncodingAliases[i].alias, upper)) {
-	    return(xmlCharEncodingAliases[i].name);
-	}
+        if (!strcmp(xmlCharEncodingAliases[i].alias, upper)) {
+            return(xmlCharEncodingAliases[i].name);
+        }
     }
     return(NULL);
 }
@@ -1044,11 +1044,11 @@ xmlAddEncodingAlias(const char *name, const char *alias) {
     char *nameCopy, *aliasCopy;
 
     if ((name == NULL) || (alias == NULL))
-	return(-1);
+        return(-1);
 
     for (i = 0;i < 99;i++) {
         upper[i] = (char) toupper((unsigned char) alias[i]);
-	if (upper[i] == 0) break;
+        if (upper[i] == 0) break;
     }
     upper[i] = 0;
 
@@ -1071,17 +1071,17 @@ xmlAddEncodingAlias(const char *name, const char *alias) {
      * Walk down the list looking for a definition of the alias
      */
     for (i = 0;i < xmlCharEncodingAliasesNb;i++) {
-	if (!strcmp(xmlCharEncodingAliases[i].alias, upper)) {
-	    /*
-	     * Replace the definition.
-	     */
-	    nameCopy = xmlMemStrdup(name);
+        if (!strcmp(xmlCharEncodingAliases[i].alias, upper)) {
+            /*
+             * Replace the definition.
+             */
+            nameCopy = xmlMemStrdup(name);
             if (nameCopy == NULL)
                 return(-1);
-	    xmlFree((char *) xmlCharEncodingAliases[i].name);
-	    xmlCharEncodingAliases[i].name = nameCopy;
-	    return(0);
-	}
+            xmlFree((char *) xmlCharEncodingAliases[i].name);
+            xmlCharEncodingAliases[i].name = nameCopy;
+            return(0);
+        }
     }
     /*
      * Add the definition
@@ -1113,22 +1113,22 @@ xmlDelEncodingAlias(const char *alias) {
     int i;
 
     if (alias == NULL)
-	return(-1);
+        return(-1);
 
     if (xmlCharEncodingAliases == NULL)
-	return(-1);
+        return(-1);
     /*
      * Walk down the list looking for a definition of the alias
      */
     for (i = 0;i < xmlCharEncodingAliasesNb;i++) {
-	if (!strcmp(xmlCharEncodingAliases[i].alias, alias)) {
-	    xmlFree((char *) xmlCharEncodingAliases[i].name);
-	    xmlFree((char *) xmlCharEncodingAliases[i].alias);
-	    xmlCharEncodingAliasesNb--;
-	    memmove(&xmlCharEncodingAliases[i], &xmlCharEncodingAliases[i + 1],
-		    sizeof(xmlCharEncodingAlias) * (xmlCharEncodingAliasesNb - i));
-	    return(0);
-	}
+        if (!strcmp(xmlCharEncodingAliases[i].alias, alias)) {
+            xmlFree((char *) xmlCharEncodingAliases[i].name);
+            xmlFree((char *) xmlCharEncodingAliases[i].alias);
+            xmlCharEncodingAliasesNb--;
+            memmove(&xmlCharEncodingAliases[i], &xmlCharEncodingAliases[i + 1],
+                    sizeof(xmlCharEncodingAlias) * (xmlCharEncodingAliasesNb - i));
+            return(0);
+        }
     }
     return(-1);
 }
@@ -1152,18 +1152,18 @@ xmlParseCharEncoding(const char* name)
     int i;
 
     if (name == NULL)
-	return(XML_CHAR_ENCODING_NONE);
+        return(XML_CHAR_ENCODING_NONE);
 
     /*
      * Do the alias resolution
      */
     alias = xmlGetEncodingAlias(name);
     if (alias != NULL)
-	name = alias;
+        name = alias;
 
     for (i = 0;i < 499;i++) {
         upper[i] = (char) toupper((unsigned char) name[i]);
-	if (upper[i] == 0) break;
+        if (upper[i] == 0) break;
     }
     upper[i] = 0;
 
@@ -1229,15 +1229,15 @@ const char*
 xmlGetCharEncodingName(xmlCharEncoding enc) {
     switch (enc) {
         case XML_CHAR_ENCODING_ERROR:
-	    return(NULL);
+            return(NULL);
         case XML_CHAR_ENCODING_NONE:
-	    return(NULL);
+            return(NULL);
         case XML_CHAR_ENCODING_UTF8:
-	    return("UTF-8");
+            return("UTF-8");
         case XML_CHAR_ENCODING_UTF16LE:
-	    return("UTF-16");
+            return("UTF-16");
         case XML_CHAR_ENCODING_UTF16BE:
-	    return("UTF-16");
+            return("UTF-16");
         case XML_CHAR_ENCODING_EBCDIC:
             return("EBCDIC");
         case XML_CHAR_ENCODING_UCS4LE:
@@ -1251,39 +1251,39 @@ xmlGetCharEncodingName(xmlCharEncoding enc) {
         case XML_CHAR_ENCODING_UCS2:
             return("ISO-10646-UCS-2");
         case XML_CHAR_ENCODING_8859_1:
-	    return("ISO-8859-1");
+            return("ISO-8859-1");
         case XML_CHAR_ENCODING_8859_2:
-	    return("ISO-8859-2");
+            return("ISO-8859-2");
         case XML_CHAR_ENCODING_8859_3:
-	    return("ISO-8859-3");
+            return("ISO-8859-3");
         case XML_CHAR_ENCODING_8859_4:
-	    return("ISO-8859-4");
+            return("ISO-8859-4");
         case XML_CHAR_ENCODING_8859_5:
-	    return("ISO-8859-5");
+            return("ISO-8859-5");
         case XML_CHAR_ENCODING_8859_6:
-	    return("ISO-8859-6");
+            return("ISO-8859-6");
         case XML_CHAR_ENCODING_8859_7:
-	    return("ISO-8859-7");
+            return("ISO-8859-7");
         case XML_CHAR_ENCODING_8859_8:
-	    return("ISO-8859-8");
+            return("ISO-8859-8");
         case XML_CHAR_ENCODING_8859_9:
-	    return("ISO-8859-9");
+            return("ISO-8859-9");
         case XML_CHAR_ENCODING_2022_JP:
             return("ISO-2022-JP");
         case XML_CHAR_ENCODING_SHIFT_JIS:
             return("Shift-JIS");
         case XML_CHAR_ENCODING_EUC_JP:
             return("EUC-JP");
-	case XML_CHAR_ENCODING_ASCII:
-	    return(NULL);
+        case XML_CHAR_ENCODING_ASCII:
+            return(NULL);
     }
     return(NULL);
 }
 
 /************************************************************************
- *									*
- *			Char encoding handlers				*
- *									*
+ *                                                                      *
+ *                      Char encoding handlers                          *
+ *                                                                      *
  ************************************************************************/
 
 #if !defined(LIBXML_ICONV_ENABLED) && !defined(LIBXML_ICU_ENABLED) && \
@@ -1405,21 +1405,21 @@ xmlNewCharEncodingHandler(const char *name,
      */
     alias = xmlGetEncodingAlias(name);
     if (alias != NULL)
-	name = alias;
+        name = alias;
 
     /*
      * Keep only the uppercase version of the encoding.
      */
     if (name == NULL)
-	return(NULL);
+        return(NULL);
     for (i = 0;i < 499;i++) {
         upper[i] = (char) toupper((unsigned char) name[i]);
-	if (upper[i] == 0) break;
+        if (upper[i] == 0) break;
     }
     upper[i] = 0;
     up = xmlMemStrdup(upper);
     if (up == NULL)
-	return(NULL);
+        return(NULL);
 
     /*
      * allocate and fill-up an handler block.
@@ -1428,7 +1428,7 @@ xmlNewCharEncodingHandler(const char *name,
               xmlMalloc(sizeof(xmlCharEncodingHandler));
     if (handler == NULL) {
         xmlFree(up);
-	return(NULL);
+        return(NULL);
     }
     memset(handler, 0, sizeof(xmlCharEncodingHandler));
     handler->input = input;
@@ -1494,11 +1494,11 @@ xmlCleanupCharEncodingHandlers(void) {
 
     for (;nbCharEncodingHandler > 0;) {
         nbCharEncodingHandler--;
-	if (handlers[nbCharEncodingHandler] != NULL) {
-	    if (handlers[nbCharEncodingHandler]->name != NULL)
-		xmlFree(handlers[nbCharEncodingHandler]->name);
-	    xmlFree(handlers[nbCharEncodingHandler]);
-	}
+        if (handlers[nbCharEncodingHandler] != NULL) {
+            if (handlers[nbCharEncodingHandler]->name != NULL)
+                xmlFree(handlers[nbCharEncodingHandler]->name);
+            xmlFree(handlers[nbCharEncodingHandler]);
+        }
     }
     xmlFree(handlers);
     handlers = NULL;
@@ -1549,15 +1549,15 @@ xmlGetCharEncodingHandler(xmlCharEncoding enc) {
 
     switch (enc) {
         case XML_CHAR_ENCODING_ERROR:
-	    return(NULL);
+            return(NULL);
         case XML_CHAR_ENCODING_NONE:
-	    return(NULL);
+            return(NULL);
         case XML_CHAR_ENCODING_UTF8:
-	    return(NULL);
+            return(NULL);
         case XML_CHAR_ENCODING_UTF16LE:
-	    return((xmlCharEncodingHandlerPtr) xmlUTF16LEHandler);
+            return((xmlCharEncodingHandlerPtr) xmlUTF16LEHandler);
         case XML_CHAR_ENCODING_UTF16BE:
-	    return((xmlCharEncodingHandlerPtr) xmlUTF16BEHandler);
+            return((xmlCharEncodingHandlerPtr) xmlUTF16BEHandler);
         case XML_CHAR_ENCODING_EBCDIC:
             handler = xmlFindCharEncodingHandler("EBCDIC");
             if (handler != NULL) return(handler);
@@ -1567,7 +1567,7 @@ xmlGetCharEncodingHandler(xmlCharEncoding enc) {
             if (handler != NULL) return(handler);
             handler = xmlFindCharEncodingHandler("IBM-037");
             if (handler != NULL) return(handler);
-	    break;
+            break;
         case XML_CHAR_ENCODING_UCS4BE:
             handler = xmlFindCharEncodingHandler("ISO-10646-UCS-4");
             if (handler != NULL) return(handler);
@@ -1575,7 +1575,7 @@ xmlGetCharEncodingHandler(xmlCharEncoding enc) {
             if (handler != NULL) return(handler);
             handler = xmlFindCharEncodingHandler("UCS4");
             if (handler != NULL) return(handler);
-	    break;
+            break;
         case XML_CHAR_ENCODING_UCS4LE:
             handler = xmlFindCharEncodingHandler("ISO-10646-UCS-4");
             if (handler != NULL) return(handler);
@@ -1583,11 +1583,11 @@ xmlGetCharEncodingHandler(xmlCharEncoding enc) {
             if (handler != NULL) return(handler);
             handler = xmlFindCharEncodingHandler("UCS4");
             if (handler != NULL) return(handler);
-	    break;
+            break;
         case XML_CHAR_ENCODING_UCS4_2143:
-	    break;
+            break;
         case XML_CHAR_ENCODING_UCS4_3412:
-	    break;
+            break;
         case XML_CHAR_ENCODING_UCS2:
             handler = xmlFindCharEncodingHandler("ISO-10646-UCS-2");
             if (handler != NULL) return(handler);
@@ -1595,56 +1595,56 @@ xmlGetCharEncodingHandler(xmlCharEncoding enc) {
             if (handler != NULL) return(handler);
             handler = xmlFindCharEncodingHandler("UCS2");
             if (handler != NULL) return(handler);
-	    break;
+            break;
 
-	    /*
-	     * We used to keep ISO Latin encodings native in the
-	     * generated data. This led to so many problems that
-	     * this has been removed. One can still change this
-	     * back by registering no-ops encoders for those
-	     */
+            /*
+             * We used to keep ISO Latin encodings native in the
+             * generated data. This led to so many problems that
+             * this has been removed. One can still change this
+             * back by registering no-ops encoders for those
+             */
         case XML_CHAR_ENCODING_8859_1:
-	    handler = xmlFindCharEncodingHandler("ISO-8859-1");
-	    if (handler != NULL) return(handler);
-	    break;
+            handler = xmlFindCharEncodingHandler("ISO-8859-1");
+            if (handler != NULL) return(handler);
+            break;
         case XML_CHAR_ENCODING_8859_2:
-	    handler = xmlFindCharEncodingHandler("ISO-8859-2");
-	    if (handler != NULL) return(handler);
-	    break;
+            handler = xmlFindCharEncodingHandler("ISO-8859-2");
+            if (handler != NULL) return(handler);
+            break;
         case XML_CHAR_ENCODING_8859_3:
-	    handler = xmlFindCharEncodingHandler("ISO-8859-3");
-	    if (handler != NULL) return(handler);
-	    break;
+            handler = xmlFindCharEncodingHandler("ISO-8859-3");
+            if (handler != NULL) return(handler);
+            break;
         case XML_CHAR_ENCODING_8859_4:
-	    handler = xmlFindCharEncodingHandler("ISO-8859-4");
-	    if (handler != NULL) return(handler);
-	    break;
+            handler = xmlFindCharEncodingHandler("ISO-8859-4");
+            if (handler != NULL) return(handler);
+            break;
         case XML_CHAR_ENCODING_8859_5:
-	    handler = xmlFindCharEncodingHandler("ISO-8859-5");
-	    if (handler != NULL) return(handler);
-	    break;
+            handler = xmlFindCharEncodingHandler("ISO-8859-5");
+            if (handler != NULL) return(handler);
+            break;
         case XML_CHAR_ENCODING_8859_6:
-	    handler = xmlFindCharEncodingHandler("ISO-8859-6");
-	    if (handler != NULL) return(handler);
-	    break;
+            handler = xmlFindCharEncodingHandler("ISO-8859-6");
+            if (handler != NULL) return(handler);
+            break;
         case XML_CHAR_ENCODING_8859_7:
-	    handler = xmlFindCharEncodingHandler("ISO-8859-7");
-	    if (handler != NULL) return(handler);
-	    break;
+            handler = xmlFindCharEncodingHandler("ISO-8859-7");
+            if (handler != NULL) return(handler);
+            break;
         case XML_CHAR_ENCODING_8859_8:
-	    handler = xmlFindCharEncodingHandler("ISO-8859-8");
-	    if (handler != NULL) return(handler);
-	    break;
+            handler = xmlFindCharEncodingHandler("ISO-8859-8");
+            if (handler != NULL) return(handler);
+            break;
         case XML_CHAR_ENCODING_8859_9:
-	    handler = xmlFindCharEncodingHandler("ISO-8859-9");
-	    if (handler != NULL) return(handler);
-	    break;
+            handler = xmlFindCharEncodingHandler("ISO-8859-9");
+            if (handler != NULL) return(handler);
+            break;
 
 
         case XML_CHAR_ENCODING_2022_JP:
             handler = xmlFindCharEncodingHandler("ISO-2022-JP");
             if (handler != NULL) return(handler);
-	    break;
+            break;
         case XML_CHAR_ENCODING_SHIFT_JIS:
             handler = xmlFindCharEncodingHandler("SHIFT-JIS");
             if (handler != NULL) return(handler);
@@ -1652,13 +1652,13 @@ xmlGetCharEncodingHandler(xmlCharEncoding enc) {
             if (handler != NULL) return(handler);
             handler = xmlFindCharEncodingHandler("Shift_JIS");
             if (handler != NULL) return(handler);
-	    break;
+            break;
         case XML_CHAR_ENCODING_EUC_JP:
             handler = xmlFindCharEncodingHandler("EUC-JP");
             if (handler != NULL) return(handler);
-	    break;
-	default:
-	    break;
+            break;
+        default:
+            break;
     }
 
     return(NULL);
@@ -1698,14 +1698,14 @@ xmlFindCharEncodingHandler(const char *name) {
     norig = name;
     nalias = xmlGetEncodingAlias(name);
     if (nalias != NULL)
-	name = nalias;
+        name = nalias;
 
     /*
      * Check first for directly registered encoding names
      */
     for (i = 0;i < 99;i++) {
         upper[i] = (char) toupper((unsigned char) name[i]);
-	if (upper[i] == 0) break;
+        if (upper[i] == 0) break;
     }
     upper[i] = 0;
 
@@ -1730,34 +1730,34 @@ xmlFindCharEncodingHandler(const char *name) {
         icv_in = iconv_open("UTF-8", upper);
     }
     if (icv_out == (iconv_t) -1) {
-	icv_out = iconv_open(upper, "UTF-8");
+        icv_out = iconv_open(upper, "UTF-8");
     }
     if ((icv_in != (iconv_t) -1) && (icv_out != (iconv_t) -1)) {
-	    enc = (xmlCharEncodingHandlerPtr)
-	          xmlMalloc(sizeof(xmlCharEncodingHandler));
-	    if (enc == NULL) {
-	        iconv_close(icv_in);
-	        iconv_close(icv_out);
-		return(NULL);
-	    }
+            enc = (xmlCharEncodingHandlerPtr)
+                  xmlMalloc(sizeof(xmlCharEncodingHandler));
+            if (enc == NULL) {
+                iconv_close(icv_in);
+                iconv_close(icv_out);
+                return(NULL);
+            }
             memset(enc, 0, sizeof(xmlCharEncodingHandler));
-	    enc->name = xmlMemStrdup(name);
+            enc->name = xmlMemStrdup(name);
             if (enc->name == NULL) {
                 xmlFree(enc);
                 iconv_close(icv_in);
                 iconv_close(icv_out);
                 return(NULL);
             }
-	    enc->input = NULL;
-	    enc->output = NULL;
-	    enc->iconv_in = icv_in;
-	    enc->iconv_out = icv_out;
-	    return enc;
+            enc->input = NULL;
+            enc->output = NULL;
+            enc->iconv_in = icv_in;
+            enc->iconv_out = icv_out;
+            return enc;
     } else if ((icv_in != (iconv_t) -1) || icv_out != (iconv_t) -1) {
-	    if (icv_in != (iconv_t) -1)
-		iconv_close(icv_in);
-	    else
-		iconv_close(icv_out);
+            if (icv_in != (iconv_t) -1)
+                iconv_close(icv_in);
+            else
+                iconv_close(icv_out);
     }
 #endif /* LIBXML_ICONV_ENABLED */
 #ifdef LIBXML_ICU_ENABLED
@@ -1765,26 +1765,26 @@ xmlFindCharEncodingHandler(const char *name) {
     ucv_in = openIcuConverter(name, 1);
     ucv_out = openIcuConverter(name, 0);
     if (ucv_in != NULL && ucv_out != NULL) {
-	    encu = (xmlCharEncodingHandlerPtr)
-	           xmlMalloc(sizeof(xmlCharEncodingHandler));
-	    if (encu == NULL) {
+            encu = (xmlCharEncodingHandlerPtr)
+                   xmlMalloc(sizeof(xmlCharEncodingHandler));
+            if (encu == NULL) {
                 closeIcuConverter(ucv_in);
                 closeIcuConverter(ucv_out);
-		return(NULL);
-	    }
+                return(NULL);
+            }
             memset(encu, 0, sizeof(xmlCharEncodingHandler));
-	    encu->name = xmlMemStrdup(name);
+            encu->name = xmlMemStrdup(name);
             if (encu->name == NULL) {
                 xmlFree(encu);
                 closeIcuConverter(ucv_in);
                 closeIcuConverter(ucv_out);
                 return(NULL);
             }
-	    encu->input = NULL;
-	    encu->output = NULL;
-	    encu->uconv_in = ucv_in;
-	    encu->uconv_out = ucv_out;
-	    return encu;
+            encu->input = NULL;
+            encu->output = NULL;
+            encu->uconv_in = ucv_in;
+            encu->uconv_out = ucv_out;
+            return encu;
     } else if (ucv_in != NULL || ucv_out != NULL) {
             closeIcuConverter(ucv_in);
             closeIcuConverter(ucv_out);
@@ -1799,7 +1799,7 @@ xmlFindCharEncodingHandler(const char *name) {
         const char* canon;
         canon = xmlGetCharEncodingName(alias);
         if ((canon != NULL) && (strcmp(name, canon))) {
-	    return(xmlFindCharEncodingHandler(canon));
+            return(xmlFindCharEncodingHandler(canon));
         }
     }
 
@@ -1808,15 +1808,15 @@ xmlFindCharEncodingHandler(const char *name) {
 }
 
 /************************************************************************
- *									*
- *		ICONV based generic conversion functions		*
- *									*
+ *                                                                      *
+ *              ICONV based generic conversion functions                *
+ *                                                                      *
  ************************************************************************/
 
 #ifdef LIBXML_ICONV_ENABLED
 /**
  * xmlIconvWrapper:
- * @cd:		iconv converter data structure
+ * @cd:         iconv converter data structure
  * @out:  a pointer to an array of bytes to store the result
  * @outlen:  the length of @out
  * @in:  a pointer to an array of input bytes
@@ -1862,9 +1862,9 @@ xmlIconvWrapper(iconv_t cd, unsigned char *out, int *outlen,
 #endif /* LIBXML_ICONV_ENABLED */
 
 /************************************************************************
- *									*
- *		ICU based generic conversion functions		*
- *									*
+ *                                                                      *
+ *              ICU based generic conversion functions          *
+ *                                                                      *
  ************************************************************************/
 
 #ifdef LIBXML_ICU_ENABLED
@@ -1936,9 +1936,9 @@ xmlUconvWrapper(uconv_t *cd, int toUnicode, unsigned char *out, int *outlen,
 #endif /* LIBXML_ICU_ENABLED */
 
 /************************************************************************
- *									*
- *		The real API used by libxml for on-the-fly conversion	*
- *									*
+ *                                                                      *
+ *              The real API used by libxml for on-the-fly conversion   *
+ *                                                                      *
  ************************************************************************/
 
 /**
@@ -2180,7 +2180,7 @@ xmlCharEncInput(xmlParserInputBufferPtr input)
 
 /**
  * xmlCharEncInFunc:
- * @handler:	char encoding transformation data structure
+ * @handler:    char encoding transformation data structure
  * @out:  an xmlBuffer for the output.
  * @in:  an xmlBuffer for the input
  *
@@ -2343,7 +2343,7 @@ error:
 
 /**
  * xmlCharEncOutFunc:
- * @handler:	char encoding transformation data structure
+ * @handler:    char encoding transformation data structure
  * @out:  an xmlBuffer for the output.
  * @in:  an xmlBuffer for the input
  *
@@ -2372,7 +2372,7 @@ retry:
     written = out->size - out->use;
 
     if (written > 0)
-	written--; /* Gennady: count '/0' */
+        written--; /* Gennady: count '/0' */
 
     /*
      * First specific handling of in = NULL, i.e. the initialization call
@@ -2393,7 +2393,7 @@ retry:
     toconv = in->use;
     if (toconv * 4 >= written) {
         xmlBufferGrow(out, toconv * 4);
-	written = out->size - out->use - 1;
+        written = out->size - out->use - 1;
     }
     ret = xmlEncOutputChunk(handler, &out->content[out->use], &written,
                             in->content, &toconv);
@@ -2444,7 +2444,7 @@ retry:
 
 /**
  * xmlCharEncCloseFunc:
- * @handler:	char encoding transformation data structure
+ * @handler:    char encoding transformation data structure
  *
  * Generic front-end for encoding handler close function
  *
@@ -2467,7 +2467,7 @@ xmlCharEncCloseFunc(xmlCharEncodingHandler *handler) {
         for (i = 0;i < nbCharEncodingHandler; i++) {
             if (handler == handlers[i])
                 return(0);
-	}
+        }
     }
 #ifdef LIBXML_ICONV_ENABLED
     /*
@@ -2476,29 +2476,29 @@ xmlCharEncCloseFunc(xmlCharEncodingHandler *handler) {
      */
     if ((handler->iconv_out != NULL) || (handler->iconv_in != NULL)) {
         tofree = 1;
-	if (handler->iconv_out != NULL) {
-	    if (iconv_close(handler->iconv_out))
-		ret = -1;
-	    handler->iconv_out = NULL;
-	}
-	if (handler->iconv_in != NULL) {
-	    if (iconv_close(handler->iconv_in))
-		ret = -1;
-	    handler->iconv_in = NULL;
-	}
+        if (handler->iconv_out != NULL) {
+            if (iconv_close(handler->iconv_out))
+                ret = -1;
+            handler->iconv_out = NULL;
+        }
+        if (handler->iconv_in != NULL) {
+            if (iconv_close(handler->iconv_in))
+                ret = -1;
+            handler->iconv_in = NULL;
+        }
     }
 #endif /* LIBXML_ICONV_ENABLED */
 #ifdef LIBXML_ICU_ENABLED
     if ((handler->uconv_out != NULL) || (handler->uconv_in != NULL)) {
         tofree = 1;
-	if (handler->uconv_out != NULL) {
-	    closeIcuConverter(handler->uconv_out);
-	    handler->uconv_out = NULL;
-	}
-	if (handler->uconv_in != NULL) {
-	    closeIcuConverter(handler->uconv_in);
-	    handler->uconv_in = NULL;
-	}
+        if (handler->uconv_out != NULL) {
+            closeIcuConverter(handler->uconv_out);
+            handler->uconv_out = NULL;
+        }
+        if (handler->uconv_in != NULL) {
+            closeIcuConverter(handler->uconv_in);
+            handler->uconv_in = NULL;
+        }
     }
 #endif
     if (tofree) {
@@ -2535,18 +2535,18 @@ xmlByteConsumed(xmlParserCtxtPtr ctxt) {
     if (in == NULL)  return(-1);
     if ((in->buf != NULL) && (in->buf->encoder != NULL)) {
         unsigned int unused = 0;
-	xmlCharEncodingHandler * handler = in->buf->encoder;
+        xmlCharEncodingHandler * handler = in->buf->encoder;
         /*
-	 * Encoding conversion, compute the number of unused original
-	 * bytes from the input not consumed and subtract that from
-	 * the raw consumed value, this is not a cheap operation
-	 */
+         * Encoding conversion, compute the number of unused original
+         * bytes from the input not consumed and subtract that from
+         * the raw consumed value, this is not a cheap operation
+         */
         if (in->end - in->cur > 0) {
-	    unsigned char convbuf[32000];
-	    const unsigned char *cur = (const unsigned char *)in->cur;
-	    int toconv = in->end - in->cur, written = 32000;
+            unsigned char convbuf[32000];
+            const unsigned char *cur = (const unsigned char *)in->cur;
+            int toconv = in->end - in->cur, written = 32000;
 
-	    int ret;
+            int ret;
 
             do {
                 toconv = in->end - cur;
@@ -2558,10 +2558,10 @@ xmlByteConsumed(xmlParserCtxtPtr ctxt) {
                 unused += written;
                 cur += toconv;
             } while (ret == XML_ENC_ERR_SPACE);
-	}
-	if (in->buf->rawconsumed < unused)
-	    return(-1);
-	return(in->buf->rawconsumed - unused);
+        }
+        if (in->buf->rawconsumed < unused)
+            return(-1);
+        return(in->buf->rawconsumed - unused);
     }
     return(in->consumed + (in->cur - in->base));
 }
@@ -2597,7 +2597,7 @@ UTF8ToISO8859x(unsigned char* out, int *outlen,
 
     if ((out == NULL) || (outlen == NULL) || (inlen == NULL) ||
         (xlattable == NULL))
-	return(XML_ENC_ERR_INTERNAL);
+        return(XML_ENC_ERR_INTERNAL);
     if (in == NULL) {
         /*
         * initialization nothing to do
@@ -2666,9 +2666,9 @@ UTF8ToISO8859x(unsigned char* out, int *outlen,
             }
             c1 = c1 & 0x3F;
             c2 = c2 & 0x3F;
-	    d = d & 0x0F;
-	    d = xlattable [48 + c2 + xlattable [48 + c1 +
-			xlattable [32 + d] * 64] * 64];
+            d = d & 0x0F;
+            d = xlattable [48 + c2 + xlattable [48 + c1 +
+                        xlattable [32 + d] * 64] * 64];
             if (d == 0) {
                 /* not in character set */
                 *outlen = out - outstart;
@@ -2717,7 +2717,7 @@ ISO8859xToUTF8(unsigned char* out, int *outlen,
 
     if ((out == NULL) || (outlen == NULL) || (inlen == NULL) ||
         (in == NULL) || (unicodetable == NULL))
-	return(XML_ENC_ERR_INTERNAL);
+        return(XML_ENC_ERR_INTERNAL);
     outend = out + *outlen;
     inend = in + *inlen;
     instop = inend;
