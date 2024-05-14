@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -766,6 +766,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         // to go back into the TableView.items list - this new value represents
         // just the input for a single cell, so it is likely that it needs to go
         // back into a property within an item in the TableView.items list.
+        @SuppressWarnings("doclint:missing")
         private final T newValue;
 
         // The location of the edit event

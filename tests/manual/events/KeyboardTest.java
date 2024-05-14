@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -519,6 +519,7 @@ public class KeyboardTest extends Application {
             this.keys = k;
         }
 
+        @Override
         public String toString() {
             return label;
         }
@@ -545,6 +546,7 @@ public class KeyboardTest extends Application {
             this.label = l;
         }
 
+        @Override
         public String toString() {
             return label;
         }
@@ -683,6 +685,7 @@ public class KeyboardTest extends Application {
             * This timer is cleared when the RELEASED event calls advance().
             */
             TimerTask task = new TimerTask() {
+                @Override
                 public void run() {
                     Platform.runLater(() -> keyTimedOut());
                 }
@@ -811,10 +814,12 @@ public class KeyboardTest extends Application {
             textArea = ta;
         }
 
+        @Override
         public void clear() {
             textArea.setText("");
         }
 
+        @Override
         public void addLine(String s) {
             textArea.appendText(s + "\n");
         }

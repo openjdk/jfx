@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,9 +27,12 @@ package com.sun.javafx.scene.text;
 
 import com.sun.javafx.geom.RectBounds;
 
+/**
+ * Represents a full line of text that is all rendered on a single line.
+ */
 public interface TextLine {
     /**
-     * Returns the list of GlyphList in the line. The list is visually orderded.
+     * Returns the list of GlyphList in the line. The list is visually ordered.
      */
     public GlyphList[] getRuns();
 

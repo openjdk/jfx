@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -75,14 +75,17 @@ public class MFloat3ArrayImpl extends MDataImpl implements MFloat3Array {
             this.length = length;
         }
 
+        @Override
         public void setSize(int size) {
             array.setSize(base + size);
         }
 
+        @Override
         public int getSize() {
             return length;
         }
 
+        @Override
         public void set(int index, float x, float y, float z) {
             if (index >= length) {
                 throw new ArrayIndexOutOfBoundsException(index);
@@ -90,11 +93,13 @@ public class MFloat3ArrayImpl extends MDataImpl implements MFloat3Array {
             array.set(base + index, x, y, z);
         }
 
+        @Override
         public float[] get() {
             // FIXME
             throw new RuntimeException("Probably shouldn't fetch the data behind a slice");
         }
 
+        @Override
         public void parse(Iterator<String> elements) {
             new Parser(this).parse(elements);
         }
@@ -104,6 +109,7 @@ public class MFloat3ArrayImpl extends MDataImpl implements MFloat3Array {
         super(type);
     }
 
+    @Override
     public void setSize(int size) {
         if (data == null || 3 * size > data.length) {
             float[] newdata = new float[3 * size];
@@ -114,33 +120,40 @@ public class MFloat3ArrayImpl extends MDataImpl implements MFloat3Array {
         }
     }
 
+    @Override
     public void set(int index, float x, float y, float z) {
         data[3 * index + 0] = x;
         data[3 * index + 1] = y;
         data[3 * index + 2] = z;
     }
 
+    @Override
     public int getSize() {
         return data == null ? 0 : data.length / 3;
     }
 
+    @Override
     public float[] get() {
         return data;
     }
 
+    @Override
     public MData getData(int index) {
         // FIXME: should this return an MFloat3 rather than an MFloat3Array?
         return getData(index, index + 1);
     }
 
+    @Override
     public MData getData(int start, int end) {
         return new MFloat3ArraySlice(this, start, end - start + 1);
     }
 
+    @Override
     public void parse(Iterator<String> elements) {
         new Parser(this).parse(elements);
     }
 
+    @Override
     public String toString() {
         String result = getType().getName();
         String sep = " ";

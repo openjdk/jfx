@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -118,7 +118,7 @@ void D3DMeshView::render() {
     RETURN_IF_NULL(material);
     RETURN_IF_NULL(mesh);
 
-    IDirect3DDevice9 *device = context->Get3DDevice();
+    IDirect3DDevice9Ex *device = context->Get3DDevice();
     RETURN_IF_NULL(device);
 
     HRESULT status = SUCCEEDED(device->SetFVF(mesh->getVertexFVF()));

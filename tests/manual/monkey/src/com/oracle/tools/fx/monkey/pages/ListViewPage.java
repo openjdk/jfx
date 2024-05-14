@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,273 +24,95 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
-import javafx.collections.FXCollections;
+import java.util.function.Supplier;
+import javafx.beans.property.ObjectProperty;
 import javafx.collections.ObservableList;
+import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
-import javafx.scene.control.ComboBox;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
-import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.cell.TextFieldListCell;
 import javafx.scene.control.skin.ListViewSkin;
 import javafx.scene.control.skin.VirtualFlow;
-import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.paint.Color;
-import javafx.scene.text.Text;
 import javafx.util.Callback;
+import com.oracle.tools.fx.monkey.options.BooleanOption;
+import com.oracle.tools.fx.monkey.options.EnumOption;
+import com.oracle.tools.fx.monkey.options.ObjectOption;
+import com.oracle.tools.fx.monkey.sheets.ControlPropertySheet;
+import com.oracle.tools.fx.monkey.sheets.Options;
 import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.HasSkinnable;
+import com.oracle.tools.fx.monkey.util.ImageTools;
+import com.oracle.tools.fx.monkey.util.ObjectSelector;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.SequenceNumber;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
+import com.oracle.tools.fx.monkey.util.Utils;
 
 /**
- * ListView page
+ * ListView Page.
  */
 public class ListViewPage extends TestPaneBase implements HasSkinnable {
-    enum Data {
-        EMPTY("Empty"),
-        LARGE("Large"),
-        SMALL("Small"),
-        VARIABLE("Variable Height"),
-        ;
-
-        private final String text;
-        Data(String text) { this.text = text; }
-        public String toString() { return text; }
-    }
-
-    public enum Selection {
-        SINGLE("single selection"),
-        MULTIPLE("multiple selection"),
-        NULL("null selection model");
-
-        private final String text;
-
-        Selection(String text) {
-            this.text = text;
-        }
-
-        public String toString() {
-            return text;
-        }
-    }
-
-    public enum Cmd {
-        ROWS,
-        VARIABLE_ROWS,
-    }
-
-    private enum Cells {
-        DEFAULT,
-        EDITABLE_TEXT_FIELD,
-        LARGE_ICON,
-        VARIABLE,
-    }
-
-    private final ComboBox<Data> dataSelector;
-    private final ComboBox<Cells> cellFactorySelector;
-    private final ComboBox<Selection> selectionSelector;
-    private final CheckBox nullFocusModel;
-    private final CheckBox editable;
     private final ListView<Object> control;
-    private FocusModel<Object> defaultFocusModel;
-    private MultipleSelectionModel<Object> defaultSelectionModel;
 
     public ListViewPage() {
-        FX.name(this, "ListViewPage");
+        super("ListViewPage");
 
         control = new ListView<>();
         control.setTooltip(new Tooltip("edit to 'update' to commit the change"));
         control.setOnEditCommit((ev) -> {
-            if ("update".equals(ev.getNewValue())) {
-                int ix = ev.getIndex();
-                ev.getSource().getItems().set(ix, "UPDATED!");
-                System.out.println("committing the value `UPDATED!`");
-            } else {
-                System.out.println("discarding the new value: " + ev.getNewValue());
-            }
-        });
-        defaultFocusModel = control.getFocusModel();
-        defaultSelectionModel = control.getSelectionModel();
-        setContent(new BorderPane(control));
-
-        dataSelector = new ComboBox<>();
-        FX.name(dataSelector, "demoSelector");
-        dataSelector.getItems().addAll(Data.values());
-        dataSelector.setEditable(false);
-        onChange(dataSelector, true, () -> {
-            updateData();
+            int ix = ev.getIndex();
+            ev.getSource().getItems().set(ix, ev.getNewValue());
         });
 
-        cellFactorySelector = new ComboBox<>();
-        FX.name(cellFactorySelector, "cellSelector");
-        cellFactorySelector.getItems().addAll(Cells.values());
-        cellFactorySelector.setEditable(false);
-        cellFactorySelector.getSelectionModel().selectedItemProperty().addListener((s, p, c) -> {
-            updateCellFactory();
-        });
-
-        selectionSelector = new ComboBox<>();
-        FX.name(selectionSelector, "selectionSelector");
-        selectionSelector.getItems().addAll(Selection.values());
-        selectionSelector.setEditable(false);
-        onChange(selectionSelector, true, () -> {
-            updateSelectionModel();
-        });
-
-        nullFocusModel = new CheckBox("null focus model");
-        FX.name(nullFocusModel, "nullFocusModel");
-        onChange(nullFocusModel, true, () -> {
-            updateFocusModel();
-        });
-
-        Button addButton = new Button("Add Item");
-        addButton.setOnAction((ev) -> {
+        Button addButton = FX.button("Add Item", () -> {
             control.getItems().add(newItem(""));
         });
 
-        Button clearButton = new Button("Clear Items");
-        clearButton.setOnAction((ev) -> {
+        Button clearButton = FX.button("Clear Items", () -> {
             control.getItems().clear();
         });
 
-        Button jumpButton = new Button("Jump w/VirtualFlow");
-        jumpButton.setOnAction((ev) -> {
+        Button jumpButton = FX.button("Jump w/VirtualFlow", () -> {
             jump();
         });
 
-        Button refresh = new Button("Refresh");
-        refresh.setOnAction((ev) -> {
+        Button refresh = FX.button("Refresh", () -> {
             control.refresh();
         });
 
-        editable = new CheckBox("editable");
-        editable.setOnAction((ev) -> {
-            updateEditable();
-        });
-        FX.name(editable, "editable");
-
-        // layout
-
         OptionPane op = new OptionPane();
-        op.label("Data:");
-        op.option(dataSelector);
-        op.option(addButton);
-        op.option(clearButton);
-        op.option(editable);
-        op.label("Cell Factory:");
-        op.option(cellFactorySelector);
-        op.label("Selection Model:");
-        op.option(selectionSelector);
-        op.option(nullFocusModel);
+        op.section("ListView");
+        op.option("Cell Factory:", createCellFactoryOptions());
+        op.option(new BooleanOption("editable", "editable", control.editableProperty()));
+        op.option("Fixed Cell Size:", Options.fixedSizeOption("fixedCellSize", control.fixedCellSizeProperty()));
+        op.option("Focus Model:", createFocusModelOptions("focusModel", control.focusModelProperty()));
+        op.option("Items:", createItemsOptions("items", control.getItems()));
+        op.option(Utils.buttons(addButton, clearButton));
+        op.option("Orientation:", new EnumOption<Orientation>("orientation", Orientation.class, control.orientationProperty()));
+        op.option("Placeholder:", Options.placeholderNode("placeholder", control.placeholderProperty()));
+        op.option("Selection Model:", createSelectionModelOptions("selectionModel"));
+
+        op.separator();
         op.option(jumpButton);
         op.option(refresh);
+        ControlPropertySheet.appendTo(op, control);
         setOptions(op);
-
-        dataSelector.getSelectionModel().selectFirst();
-        selectionSelector.getSelectionModel().select(Selection.MULTIPLE);
+        setContent(new BorderPane(control));
     }
 
-    protected void updateData() {
-        Data d = dataSelector.getSelectionModel().getSelectedItem();
-        ObservableList<Object> items = createData(d);
-        control.setItems(items);
-    }
-
-    private ObservableList<Object> createData(Data d) {
-        ObservableList<Object> items = FXCollections.observableArrayList();
-        if (d != null) {
-            switch (d) {
-            case EMPTY:
-                break;
-            case LARGE:
-                createItems(items, 10_000, this::newItem);
-                break;
-            case SMALL:
-                createItems(items, 3, this::newItem);
-                break;
-            case VARIABLE:
-                createItems(items, 500, this::newVariableItem);
-                break;
-            default:
-                throw new Error("?" + d);
-            }
-        }
-        return items;
-    }
-
-    private void createItems(ObservableList<Object> items, int count, Function<Integer, Object> gen) {
-        for (int i = 0; i < count; i++) {
-            Object v = gen.apply(i);
-            items.add(v);
-        }
-    }
-
-    protected void updateFocusModel() {
-        FocusModel<Object> m;
-        if (nullFocusModel.isSelected()) {
-            m = null;
-        } else {
-            m = defaultFocusModel;
-        }
-        control.setFocusModel(m);
-    }
-
-    protected void updateSelectionModel() {
-        MultipleSelectionModel<Object> sm = defaultSelectionModel;
-        SelectionMode selectionMode = SelectionMode.SINGLE;
-        Selection sel = selectionSelector.getSelectionModel().getSelectedItem();
-        if (sel != null) {
-            switch (sel) {
-            case MULTIPLE:
-                selectionMode = SelectionMode.MULTIPLE;
-                break;
-            case NULL:
-                sm = null;
-                break;
-            case SINGLE:
-                break;
-            default:
-                throw new Error("?" + sel);
-            }
-        }
-
-        control.getSelectionModel().setSelectionMode(selectionMode);
-        control.setSelectionModel(sm);
-    }
-
-    protected String newItem(Object n) {
-        return n + "." + SequenceNumber.next();
-    }
-
-    protected String newVariableItem(Object n) {
-        int rows = 1 << new Random().nextInt(5);
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < rows; i++) {
-            if (i > 0) {
-                sb.append('\n');
-            }
-            sb.append(i);
-        }
-        return n + "." + SequenceNumber.next() + "." + sb;
-    }
-
-    protected void jump() {
+    private void jump() {
         int sz = control.getItems().size();
         int ix = sz / 2;
 
@@ -326,98 +148,117 @@ public class ListViewPage extends TestPaneBase implements HasSkinnable {
         control.setSkin(new ListViewSkin(control));
     }
 
-    private void updateCellFactory() {
-        Cells t = cellFactorySelector.getSelectionModel().getSelectedItem();
-        Callback<ListView<Object>, ListCell<Object>> f = getCellFactory(t);
-        control.setCellFactory(f);
-    }
-
-    private static Image createImage(String s) {
-        byte[] hash;
-        try {
-            hash = MessageDigest.getInstance("sha-256").digest(s.getBytes());
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-            hash = new byte[3];
-        }
-        Color color = Color.rgb(hash[0] & 0xff, hash[1] & 0xff, hash[2] & 0xff);
-        Canvas c = new Canvas(512, 512);
-        GraphicsContext g = c.getGraphicsContext2D();
-        g.setFill(color);
-        g.fillRect(0, 0, c.getWidth(), c.getHeight());
-        return c.snapshot(null, null);
-    }
-
-    private Callback getCellFactory(Cells t) {
-        if (t != null) {
-            switch (t) {
-            case EDITABLE_TEXT_FIELD:
-                return TextFieldListCell.forListView();
-            case LARGE_ICON:
-                return (r) -> {
-                    return new ListCell<Object>() {
-                        @Override
-                        protected void updateItem(Object item, boolean empty) {
-                            super.updateItem(item, empty);
-                            if (item == null) {
-                                super.setText(null);
-                                super.setGraphic(null);
-                            } else {
-                                String s = item.toString();
-                                super.setText(s);
-                                Node n = new ImageView(createImage(s));
-                                super.setGraphic(n);
-                            }
+    private Node createCellFactoryOptions() {
+        var original = control.getCellFactory();
+        ObjectOption<Callback> op = new ObjectOption("cellFactory", control.cellFactoryProperty());
+        op.addChoice("<default>", original);
+        op.addChoiceSupplier("TextFieldListCell", () -> TextFieldListCell.forListView());
+        op.addChoiceSupplier("Large Icon", () -> {
+            return (r) -> {
+                return new ListCell<Object>() {
+                    @Override
+                    protected void updateItem(Object item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if (item == null) {
+                            super.setText(null);
+                            super.setGraphic(null);
+                        } else {
+                            String s = item.toString();
+                            super.setText(s);
+                            Node n = new ImageView(ImageTools.createImage(s, 256, 256));
+                            super.setGraphic(n);
                         }
-                    };
-                };
-            case VARIABLE:
-                return (r) -> {
-                    return new ListCell<Object>() {
-                        @Override
-                        protected void updateItem(Object item, boolean empty) {
-                            super.updateItem(item, empty);
-                            String s =
-                                "111111111111111111111111111111111111111111111" +
-                                "11111111111111111111111111111111111111111\n2\n3\n";
-                            Text t = new Text(s);
-                            t.wrappingWidthProperty().bind(widthProperty());
-                            setPrefHeight(USE_COMPUTED_SIZE);
-                            setGraphic(t);
-                        }
-                    };
-                };
-            }
-        }
-
-        // ListViewSkin
-        return (r) -> new ListCell<Object>() {
-            @Override
-            public void updateItem(Object item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty) {
-                    setText(null);
-                    setGraphic(null);
-                } else if (item instanceof Node) {
-                    setText(null);
-                    Node currentNode = getGraphic();
-                    Node newNode = (Node)item;
-                    if (currentNode == null || !currentNode.equals(newNode)) {
-                        setGraphic(newNode);
                     }
-                } else {
-                    setText(item == null ? "null" : item.toString());
-                    setGraphic(null);
+                };
+            };
+        });
+        op.addChoiceSupplier("ListViewSkin", () -> {
+            return (r) -> new ListCell<Object>() {
+                @Override
+                public void updateItem(Object item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty) {
+                        setText(null);
+                        setGraphic(null);
+                    } else if (item instanceof Node) {
+                        setText(null);
+                        Node currentNode = getGraphic();
+                        Node newNode = (Node)item;
+                        if (currentNode == null || !currentNode.equals(newNode)) {
+                            setGraphic(newNode);
+                        }
+                    } else {
+                        setText(item == null ? "null" : item.toString());
+                        setGraphic(null);
+                    }
                 }
+            };
+        });
+        op.addChoice("<null>", null);
+        return op;
+    }
+
+    private Node createFocusModelOptions(String name, ObjectProperty<FocusModel<Object>> p) {
+        var original = control.getFocusModel();
+        ObjectOption<FocusModel<Object>> s = new ObjectOption<>(name, p);
+        s.addChoice("<default>", original);
+        s.addChoice("<null>", null);
+        s.selectFirst();
+        return s;
+    }
+
+    private Node createSelectionModelOptions(String name) {
+        var original = control.getSelectionModel();
+        ObjectSelector<Boolean> s = new ObjectSelector<>(name, (v) -> {
+            control.setSelectionModel(v == null ? null : original);
+            original.setSelectionMode(Boolean.TRUE.equals(v) ? SelectionMode.MULTIPLE : SelectionMode.SINGLE);
+        });
+        s.addChoice("Single", Boolean.FALSE);
+        s.addChoice("Multiple", Boolean.TRUE);
+        s.addChoice("<null>", null);
+        s.selectFirst();
+        return s;
+    }
+
+    private String newItem(Object n) {
+        return n + "." + SequenceNumber.next();
+    }
+
+    private String newVariableItem(Object n) {
+        int rows = 1 << new Random().nextInt(5);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < rows; i++) {
+            if (i > 0) {
+                sb.append('\n');
             }
+            sb.append(i);
+        }
+        return n + "." + SequenceNumber.next() + "." + sb;
+    }
+
+    private Supplier<List<Object>> createItems(int count, Function<Integer, Object> gen) {
+        return () -> {
+            ArrayList<Object> rv = new ArrayList<>(count);
+            for (int i = 0; i < count; i++) {
+                Object v = gen.apply(i);
+                rv.add(v);
+            }
+            return rv;
         };
     }
 
-    protected void updateEditable() {
-        boolean on = editable.isSelected();
-        control.setEditable(on);
-        if (on) {
-            cellFactorySelector.getSelectionModel().select(Cells.EDITABLE_TEXT_FIELD);
-        }
+    private Node createItemsOptions(String name, ObservableList<Object> items) {
+        ObjectSelector<List<Object>> s = new ObjectSelector<>(name, (v) -> {
+            items.setAll(v);
+        });
+        s.addChoiceSupplier("1 Row", createItems(1, this::newItem));
+        s.addChoiceSupplier("10 Rows", createItems(10, this::newItem));
+        s.addChoiceSupplier("200 Rows", createItems(200, this::newItem));
+        s.addChoiceSupplier("10,000 Rows", createItems(10_000, this::newItem));
+        s.addChoiceSupplier("10 Variable Height Rows", createItems(10, this::newVariableItem));
+        s.addChoiceSupplier("200 Variable HeightRows", createItems(200, this::newVariableItem));
+        s.addChoice("<empty>", List.of());
+        s.selectFirst();
+        return s;
     }
 }

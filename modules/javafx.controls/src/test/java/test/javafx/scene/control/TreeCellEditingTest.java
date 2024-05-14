@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -206,7 +206,7 @@ public class TreeCellEditingTest {
         tree.setEditable(true);
         tree.setShowRoot(false);
         // make sure that focus change doesn't interfere with tests
-        // (editing cell loosing focus will be canceled from focusListener in Cell)
+        // (editing cell losing focus will be canceled from focusListener in Cell)
         tree.getFocusModel().focus(-1);
         cell.updateTreeView(tree);
         assertFalse("sanity: cellIndex not same as editingIndex", cellIndex == editingIndex);
