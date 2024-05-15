@@ -27,5 +27,8 @@
  * <p>The <code>jfx.incubator.scene.control.input</code> package contains classes related
  * to the handling of the input events by the Control: input maps, key bindings, and related classes.
  * </p>
+ * <BR><b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
+ * Will be removed in a future release.</b>
+ * @since 999 TODO
  */
 package jfx.incubator.scene.control.input;

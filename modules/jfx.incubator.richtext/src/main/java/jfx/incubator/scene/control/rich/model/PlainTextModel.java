@@ -167,7 +167,7 @@ public class PlainTextModel extends StyledTextModel {
     }
 
     @Override
-    protected void removeRegion(TextPos start, TextPos end) {
+    protected void removeRange(TextPos start, TextPos end) {
         content.removeRegion(start, end);
     }
 

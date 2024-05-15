@@ -47,7 +47,7 @@ public class RtfFormatHandler extends DataFormatHandler {
     }
 
     @Override
-    public StyledInput createStyledInput(String text) throws IOException {
+    public StyledInput createStyledInput(String text, StyleAttrs attr) throws IOException {
         try (RTFReader rd = new RTFReader(text)) {
             return rd.generateStyledInput();
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,31 +23,14 @@
  * questions.
  */
 
-/**
-<p>Provides classes that represent {@code RichTextArea} Control.</p>
-<h2>Examples</h2>
-<p>Creating a RichTextArea with a simple editable rich text model:</p>
-<pre>
-<code>
-    RichTextArea textArea = new RichTextArea();
-</code>
-</pre>
-<p>Creating a read-only RichTextArea with rich text content:</p>
-<pre>
-<code>
-    SimpleReadOnlyStyledModel m = new SimpleReadOnlyStyledModel();
-    // add text segment using CSS style name (requires a style sheet)
-    m.addSegment("RichTextArea ", null, "HEADER");
-    // add text segment using direct style
-    m.addSegment("Demo", "-fx-font-size:200%;", null);
-    // newline
-    m.nl();
+package jfx.incubator.scene.control.rich.model;
 
-    RichTextArea t = new RichTextArea(m);
-</code>
-</pre>
- * <BR><b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
- * Will be removed in a future release.</b>
- * @since 999 TODO
+/**
+ * Paragraph direction attribute.
  */
-package jfx.incubator.scene.control.rich;
+public enum ParagraphDirection {
+    /** Indicates the left-to-right writing direction. */
+    LEFT_TO_RIGHT,
+    /** Indicates the right-to-left writing direction. */
+    RIGHT_TO_LEFT
+}

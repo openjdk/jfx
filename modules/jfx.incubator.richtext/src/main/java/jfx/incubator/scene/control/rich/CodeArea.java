@@ -50,7 +50,10 @@ import jfx.incubator.scene.control.rich.skin.LineNumberDecorator;
 import jfx.incubator.scene.control.rich.skin.RichTextAreaSkin;
 
 /**
- * CodeArea is a text component which supports styling (a.k.a. "syntax highlighting") of monospaced text.
+ * CodeArea is a text component which supports styling (a.k.a. "syntax highlighting") of plain text.
+ * <p>
+ * Unlike its base class {@link RichTextArea}, the {@code CodeArea} requires a special kind of model to be used,
+ * a {@link CodeTextModel}.
  */
 public class CodeArea extends RichTextArea {
     private static final int DEFAULT_TAB_SIZE = 8;
@@ -62,10 +65,10 @@ public class CodeArea extends RichTextArea {
 
     /**
      * The constructor.
-     * @param m the model to use
+     * @param model the instance of {@link CodeTextModel} to use
      */
-    public CodeArea(CodeTextModel m) {
-        super(m);
+    public CodeArea(CodeTextModel model) {
+        super(model);
 
         modelProperty().addListener((s, prev, newValue) -> {
             // TODO is there a better way?
@@ -84,7 +87,7 @@ public class CodeArea extends RichTextArea {
     }
 
     /**
-     * The constructor.
+     * This constructor creates a CodeArea with the default {@link CodeTextModel}.
      */
     public CodeArea() {
         this(new CodeTextModel());
@@ -101,7 +104,7 @@ public class CodeArea extends RichTextArea {
      * @param d the syntax decorator
      * @see CodeTextModel#setDecorator(SyntaxDecorator)
      */
-    public void setSyntaxDecorator(SyntaxDecorator d) {
+    public final void setSyntaxDecorator(SyntaxDecorator d) {
         CodeTextModel m = codeModel();
         if (m != null) {
             m.setDecorator(d);
@@ -113,7 +116,7 @@ public class CodeArea extends RichTextArea {
      * or null if the said model is null.
      * @return the syntax devocrator value, or null
      */
-    public SyntaxDecorator getSyntaxDecorator() {
+    public final SyntaxDecorator getSyntaxDecorator() {
         CodeTextModel m = codeModel();
         return (m == null) ? null : m.getDecorator();
     }
@@ -364,7 +367,7 @@ public class CodeArea extends RichTextArea {
      * Returns plain text.
      * @return plain text
      */
-    public String getText() {
+    public final String getText() {
         // TODO or use save(DataFormat, Writer) ?
         StyledTextModel m = getModel();
         StringBuilder sb = new StringBuilder(4096);
@@ -383,7 +386,7 @@ public class CodeArea extends RichTextArea {
      * The caret gets reset to the start of the document, selection gets cleared, and an undo event gets created.
      * @param text the text string
      */
-    public void setText(String text) {
+    public final void setText(String text) {
         TextPos end = getEndTextPos();
         getModel().replace(null, TextPos.ZERO, end, text, true);
     }

@@ -66,8 +66,6 @@ public class CodeAreaWindow extends Stage {
         bp.setBottom(status);
 
         Scene scene = new Scene(bp);
-        scene.getStylesheets().addAll(RichTextAreaWindow.class.getResource("RichTextArea-Modena.css").toExternalForm());
-
         setScene(scene);
         setTitle(
             "CodeArea Tester  JFX:" + System.getProperty("javafx.runtime.version") +

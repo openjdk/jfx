@@ -137,10 +137,10 @@ public abstract class StyledTextModel {
      * This method gets called only if the model is editable.
      * The caller guarantees that {@code start} precedes {@code end}.
      *
-     * @param start the start of the region to be removed
-     * @param end the end of the region to be removed, expected to be greater than the start position
+     * @param start the start of the range to be removed
+     * @param end the end of the range to be removed, expected to be greater than the start position
      */
-    protected abstract void removeRegion(TextPos start, TextPos end);
+    protected abstract void removeRange(TextPos start, TextPos end);
 
     /**
      * This method is called to insert a single text segment at the given position.
@@ -588,7 +588,7 @@ public abstract class StyledTextModel {
             UndoableChange ch = allowUndo ? UndoableChange.create(this, start, end) : null;
 
             if (cmp != 0) {
-                removeRegion(start, end);
+                removeRange(start, end);
             }
 
             int index = start.index();
@@ -899,7 +899,7 @@ public abstract class StyledTextModel {
             throw new UnsupportedOperationException("format not supported: " + f);
         }
         String text = RichUtils.readString(input);
-        StyledInput in = h.createStyledInput(text);
+        StyledInput in = h.createStyledInput(text, null);
         replace(r, TextPos.ZERO, end, in, false);
     }
 

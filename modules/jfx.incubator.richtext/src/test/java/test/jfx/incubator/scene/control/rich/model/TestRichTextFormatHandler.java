@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,7 @@ import javafx.scene.text.TextAlignment;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import com.sun.jfx.incubator.scene.control.rich.RichTextFormatHandlerHelper;
+import jfx.incubator.scene.control.rich.model.ParagraphDirection;
 import jfx.incubator.scene.control.rich.model.RichTextFormatHandler;
 import jfx.incubator.scene.control.rich.model.StyleAttribute;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
@@ -56,7 +57,7 @@ public class TestRichTextFormatHandler {
                     a(StyleAttrs.BULLET, "⌘"),
                     a(StyleAttrs.FIRST_LINE_INDENT, 10.0),
                     a(StyleAttrs.LINE_SPACING, 11.0),
-                    StyleAttrs.RIGHT_TO_LEFT
+                    a(StyleAttrs.PARAGRAPH_DIRECTION, ParagraphDirection.RIGHT_TO_LEFT)
                 ),
                 s("bold", StyleAttrs.BOLD),
                 s("font family", a(StyleAttrs.FONT_FAMILY, "Arial")),
@@ -69,7 +70,8 @@ public class TestRichTextFormatHandler {
                     a(StyleAttrs.SPACE_BELOW, 14.0),
                     a(StyleAttrs.SPACE_LEFT, 15.0),
                     a(StyleAttrs.SPACE_RIGHT, 16.0),
-                    a(StyleAttrs.TEXT_ALIGNMENT, TextAlignment.CENTER)
+                    a(StyleAttrs.TEXT_ALIGNMENT, TextAlignment.CENTER),
+                    a(StyleAttrs.PARAGRAPH_DIRECTION, ParagraphDirection.LEFT_TO_RIGHT)
                 ),
                 s("strike through", StyleAttrs.STRIKE_THROUGH),
                 s("text color", a(StyleAttrs.TEXT_COLOR, Color.GREEN)),
@@ -189,7 +191,7 @@ public class TestRichTextFormatHandler {
 
         // import from string
         ArrayList<StyledSegment> segments = new ArrayList<>();
-        StyledInput in = handler.createStyledInput(exported);
+        StyledInput in = handler.createStyledInput(exported, null);
         StyledSegment seg;
         while ((seg = in.nextSegment()) != null) {
             if (DEBUG) {
@@ -227,7 +229,7 @@ public class TestRichTextFormatHandler {
     private void testRoundTrip_DELETE(RichTextFormatHandler handler, String text) throws IOException {
         ArrayList<StyledSegment> segments = new ArrayList<>();
 
-        StyledInput in = handler.createStyledInput(text);
+        StyledInput in = handler.createStyledInput(text, null);
         StyledSegment seg;
         while ((seg = in.nextSegment()) != null) {
             segments.add(seg);

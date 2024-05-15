@@ -28,6 +28,7 @@ package com.sun.jfx.incubator.scene.control.rich;
 import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
 import javafx.util.StringConverter;
+import jfx.incubator.scene.control.rich.model.ParagraphDirection;
 
 /**
  * Converters used to serialize/deserialize text attributes.
@@ -59,6 +60,20 @@ public class Converters {
             @Override
             public Color fromString(String s) {
                 return parseHexColor(s);
+            }
+        };
+    }
+
+    public static StringConverter<ParagraphDirection> paragraphDirectionConverter() {
+        return new StringConverter<ParagraphDirection>() {
+            @Override
+            public String toString(ParagraphDirection d) {
+                return fromParagraphDirection(d);
+            }
+
+            @Override
+            public ParagraphDirection fromString(String s) {
+                return toParagraphDirection(s);
             }
         };
     }
@@ -178,6 +193,26 @@ public class Converters {
             return TextAlignment.RIGHT;
         default:
             throw new IllegalArgumentException("bad text alignment: " + s);
+        }
+    }
+
+    private static String fromParagraphDirection(ParagraphDirection d) {
+        switch(d) {
+        case RIGHT_TO_LEFT:
+            return "R";
+        case LEFT_TO_RIGHT:
+        default:
+            return "L";
+        }
+    }
+
+    private static ParagraphDirection toParagraphDirection(String s) {
+        switch(s) {
+        case "R":
+            return ParagraphDirection.RIGHT_TO_LEFT;
+        case "L":
+        default:
+            return ParagraphDirection.LEFT_TO_RIGHT;
         }
     }
 }

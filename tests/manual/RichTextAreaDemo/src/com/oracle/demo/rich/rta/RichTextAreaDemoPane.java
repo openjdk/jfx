@@ -33,15 +33,6 @@ import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
-import jfx.incubator.scene.control.rich.RichTextArea;
-import jfx.incubator.scene.control.rich.SideDecorator;
-import jfx.incubator.scene.control.rich.StyleHandlerRegistry;
-import jfx.incubator.scene.control.rich.TextPos;
-import jfx.incubator.scene.control.rich.model.EditableRichTextModel;
-import jfx.incubator.scene.control.rich.model.StyleAttribute;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
-import jfx.incubator.scene.control.rich.model.StyledTextModel;
-import jfx.incubator.scene.control.rich.skin.LineNumberDecorator;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
@@ -59,6 +50,7 @@ import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.DataFormat;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -68,6 +60,17 @@ import javafx.stage.Window;
 import javafx.util.Duration;
 import javafx.util.StringConverter;
 import com.oracle.demo.rich.util.FX;
+import jfx.incubator.scene.control.input.KeyBinding;
+import jfx.incubator.scene.control.rich.RichTextArea;
+import jfx.incubator.scene.control.rich.SideDecorator;
+import jfx.incubator.scene.control.rich.StyleHandlerRegistry;
+import jfx.incubator.scene.control.rich.TextPos;
+import jfx.incubator.scene.control.rich.model.EditableRichTextModel;
+import jfx.incubator.scene.control.rich.model.ParagraphDirection;
+import jfx.incubator.scene.control.rich.model.StyleAttribute;
+import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyledTextModel;
+import jfx.incubator.scene.control.rich.skin.LineNumberDecorator;
 
 /**
  * Main Panel contains RichTextArea, split panes for quick size adjustment, and an option pane.
@@ -110,6 +113,11 @@ public class RichTextAreaDemoPane extends BorderPane {
         };
         control.setUseContentHeight(useContentSize);
         control.setUseContentWidth(useContentSize);
+        control.setHighlightCurrentParagraph(true);
+        // custom function
+        control.getInputMap().register(KeyBinding.of(KeyCode.F2), (c) -> {
+            EditableRichTextModel.dump(control.getModel(), System.out);
+        });
 
         Node contentNode;
         if (useContentSize) {
@@ -521,9 +529,10 @@ public class RichTextAreaDemoPane extends BorderPane {
             spaceMenu(m2, "Right", 0, 30, 0, 0);
             spaceMenu(m2, "None", 0, 0, 0, 0);
 
-            items.add(cm = new CheckMenuItem("RTL Orientation"));
-            cm.setSelected(a.getBoolean(StyleAttrs.RIGHT_TO_LEFT));
-            cm.setOnAction((ev) -> applyStyle(StyleAttrs.RIGHT_TO_LEFT, !a.getBoolean(StyleAttrs.RIGHT_TO_LEFT)));
+            items.add(m2 = new Menu("Paragraph Direction"));
+            directionMenu(m2, "Left-to-Right", ParagraphDirection.LEFT_TO_RIGHT);
+            directionMenu(m2, "Right-to-Left", ParagraphDirection.RIGHT_TO_LEFT);
+            directionMenu(m2, "<null>", null);
 
             items.add(m2 = new Menu("Background Color"));
             backgroundMenu(m2, "Red", Color.RED, 0.2);
@@ -587,6 +596,14 @@ public class RichTextAreaDemoPane extends BorderPane {
         menu.getItems().add(m);
         m.setOnAction((ev) -> {
             applyStyle(StyleAttrs.LINE_SPACING, value);
+        });
+    }
+
+    private void directionMenu(Menu menu, String text, ParagraphDirection d) {
+        MenuItem m = new MenuItem(text);
+        menu.getItems().add(m);
+        m.setOnAction((ev) -> {
+            applyStyle(StyleAttrs.PARAGRAPH_DIRECTION, d);
         });
     }
 

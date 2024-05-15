@@ -60,6 +60,7 @@ import jfx.incubator.scene.control.rich.CaretInfo;
 import jfx.incubator.scene.control.rich.RichTextArea;
 import jfx.incubator.scene.control.rich.TextPos;
 import jfx.incubator.scene.control.rich.model.DataFormatHandler;
+import jfx.incubator.scene.control.rich.model.StyleAttrs;
 import jfx.incubator.scene.control.rich.model.StyledInput;
 import jfx.incubator.scene.control.rich.model.StyledTextModel;
 
@@ -852,17 +853,31 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         if (control.hasNonEmptySelection()) {
             deleteSelection(control);
         } else {
-            TextPos end = control.getCaretPosition();
-            if (end == null) {
+            TextPos p = control.getCaretPosition();
+            if (p == null) {
                 return;
             }
 
-            TextPos start = nextCharacterVisually(end, false);
-            if (start != null) {
-                control.getModel().replace(vflow, start, end, StyledInput.EMPTY, true);
-                control.moveCaret(start, false);
-                clearPhantomX();
+            int ix = p.index();
+
+            TextPos start;
+            if (p.offset() == 0) {
+                if (ix == 0) {
+                    return;
+                }
+                int off = getPlainText(ix - 1).length();
+                start = new TextPos(ix - 1, off);
+            } else {
+                String text = getPlainText(p.index());
+                // Do not use charIterator here, because we do want to
+                // break up clusters when deleting backwards.
+                int off = Character.offsetByCodePoints(text, p.offset(), -1);
+                start = new TextPos(ix, off);
             }
+
+            control.getModel().replace(vflow, start, p, StyledInput.EMPTY, true);
+            control.moveCaret(start, false);
+            clearPhantomX();
         }
     }
 
@@ -1098,7 +1113,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 return;
             }
 
-            try (StyledInput in = h.createStyledInput(text)) {
+            StyleAttrs a = control.getActiveStyleAttrs();
+            try (StyledInput in = h.createStyledInput(text, a)) {
                 TextPos p = m.replace(vflow, start, end, in, true);
                 control.moveCaret(p, false);
             } catch (IOException e) {

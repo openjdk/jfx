@@ -307,4 +307,24 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         vflow.invalidateLayout();
         getSkinnable().requestLayout();
     }
+
+    @Override
+    protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+        return Params.PREF_HEIGHT;
+    }
+
+    @Override
+    protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
+        return Params.PREF_WIDTH;
+    }
+
+    @Override
+    protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+        return Params.MIN_HEIGHT;
+    }
+
+    @Override
+    protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
+        return Params.MIN_WIDTH;
+    }
 }

@@ -56,10 +56,6 @@ public class RichEditorDemoWindow extends Stage {
         bp.setBottom(status);
 
         Scene scene = new Scene(bp);
-        scene.getStylesheets().addAll(
-            // will become a part of modena.css
-            RichTextAreaWindow.class.getResource("RichTextArea-Modena.css").toExternalForm()
-        );
 
         // TODO input map for the window: add shortcut-S for saving
 

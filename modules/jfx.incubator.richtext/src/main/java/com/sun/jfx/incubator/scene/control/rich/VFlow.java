@@ -69,6 +69,7 @@ import jfx.incubator.scene.control.rich.SideDecorator;
 import jfx.incubator.scene.control.rich.StyleResolver;
 import jfx.incubator.scene.control.rich.TextPos;
 import jfx.incubator.scene.control.rich.model.ContentChange;
+import jfx.incubator.scene.control.rich.model.ParagraphDirection;
 import jfx.incubator.scene.control.rich.model.RichParagraph;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
 import jfx.incubator.scene.control.rich.model.StyledSegment;
@@ -143,7 +144,6 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         caretPath = new Path();
         caretPath.getStyleClass().add("caret");
         caretPath.setManaged(false);
-        caretPath.setStrokeWidth(1.0);
 
         caretLineHighlight = new Path();
         caretLineHighlight.getStyleClass().add("caret-line");
@@ -828,8 +828,17 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             }
 
             if (control.isWrapText()) {
-                boolean rtl = pa.isRTL();
-                cell.setNodeOrientation(rtl ? NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.LEFT_TO_RIGHT);
+                ParagraphDirection d = pa.getParagraphDirection();
+                if (d != null) {
+                    switch (d) {
+                    case LEFT_TO_RIGHT:
+                        cell.setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
+                        break;
+                    case RIGHT_TO_LEFT:
+                        cell.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+                        break;
+                    }
+                }
             }
         }
 
@@ -1161,7 +1170,9 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
                 Platform.runLater(() -> layoutChildren());
             }
         } else {
-            setPrefHeight(USE_COMPUTED_SIZE);
+            if (getPrefHeight() != USE_COMPUTED_SIZE) {
+                setPrefHeight(USE_COMPUTED_SIZE);
+            }
         }
 
         placeCells();

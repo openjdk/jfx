@@ -105,6 +105,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
 
     private static final StringConverter<Boolean> BOOLEAN_CONVERTER = Converters.booleanConverter();
     private static final StringConverter<Color> COLOR_CONVERTER = Converters.colorConverter();
+    private static final StringConverter<ParagraphDirection> DIRECTION_CONVERTER = Converters.paragraphDirectionConverter();
     private static final DoubleStringConverter DOUBLE_CONVERTER = new DoubleStringConverter();
     private static final StringConverter<String> STRING_CONVERTER = Converters.stringConverter();
     private static final StringConverter<TextAlignment> TEXT_ALIGNMENT_CONVERTER = Converters.textAlignmentConverter();
@@ -134,7 +135,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
         addHandler(StyleAttrs.FONT_SIZE, "fs", DOUBLE_CONVERTER);
         addHandlerBoolean(StyleAttrs.ITALIC, "i");
         addHandler(StyleAttrs.LINE_SPACING, "lineSpacing", DOUBLE_CONVERTER);
-        addHandlerBoolean(StyleAttrs.RIGHT_TO_LEFT, "rtl");
+        addHandler(StyleAttrs.PARAGRAPH_DIRECTION, "dir", DIRECTION_CONVERTER);
         addHandler(StyleAttrs.SPACE_ABOVE, "spaceAbove", DOUBLE_CONVERTER);
         addHandler(StyleAttrs.SPACE_BELOW, "spaceBelow", DOUBLE_CONVERTER);
         addHandler(StyleAttrs.SPACE_LEFT, "spaceLeft", DOUBLE_CONVERTER);
@@ -155,7 +156,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
     }
 
     @Override
-    public StyledInput createStyledInput(String input) {
+    public StyledInput createStyledInput(String input, StyleAttrs attr) {
         return new RichStyledInput(input);
     }
 

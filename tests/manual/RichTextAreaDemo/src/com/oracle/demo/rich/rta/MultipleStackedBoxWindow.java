@@ -103,7 +103,6 @@ public class MultipleStackedBoxWindow extends Stage {
 
         Scene scene = new Scene(sp);
         scene.getStylesheets().addAll(
-            RichTextAreaWindow.class.getResource("RichTextArea-Modena.css").toExternalForm(),
             RichTextAreaWindow.class.getResource("RichTextAreaDemo.css").toExternalForm()
         );
         setScene(scene);

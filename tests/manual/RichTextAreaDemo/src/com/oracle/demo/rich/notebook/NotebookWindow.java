@@ -64,8 +64,6 @@ public class NotebookWindow extends Stage {
 
         Scene scene = new Scene(bp);
         scene.getStylesheets().addAll(
-            // will become a part of modena.css
-            RichTextAreaWindow.class.getResource("RichTextArea-Modena.css").toExternalForm(),
             getClass().getResource("notebook.css").toExternalForm()
         );
         scene.focusOwnerProperty().addListener((s,p,c) -> {

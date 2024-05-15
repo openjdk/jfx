@@ -70,6 +70,18 @@ public class Params {
     /** maximum width for unwrapped TextFlow layout. Neither Double.MAX_VALUE nor 1e20 work, probably bc float */
     public static final double MAX_WIDTH_FOR_LAYOUT = 1_000_000_000.0;
 
+    /** default minimum height */
+    public static final double MIN_HEIGHT = 10;
+
+    /** default minimum width */
+    public static final double MIN_WIDTH = 10;
+
+    /** default preferred height */
+    public static final double PREF_HEIGHT = 100;
+
+    /** default preferred width */
+    public static final double PREF_WIDTH = 200;
+
     /** scroll bars unit increment, fraction of view width/height (between 0.0 and 1.0). */
     public static final double SCROLL_BARS_UNIT_INCREMENT = 0.1;
 

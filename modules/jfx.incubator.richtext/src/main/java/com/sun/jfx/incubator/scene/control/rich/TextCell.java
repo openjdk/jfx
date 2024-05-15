@@ -68,7 +68,6 @@ public final class TextCell extends BorderPane {
         this.content = content;
         setManaged(false);
         setCenter(content);
-        //setAlignment(Pos.TOP_LEFT);
     }
 
     /**
@@ -76,7 +75,13 @@ public final class TextCell extends BorderPane {
      * @param index paragraph index
      */
     public TextCell(int index) {
-        this(index, new TextFlow());
+        this(index, textFlow());
+    }
+
+    private static TextFlow textFlow() {
+        TextFlow t = new TextFlow();
+        t.setMinHeight(0.0); // speeds up the layout
+        return t;
     }
 
     /**

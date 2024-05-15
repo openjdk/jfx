@@ -310,9 +310,11 @@ public class RichTextArea extends Control {
 
     /**
      * Determines the {@link StyledTextModel} to use with this RichTextArea.
-     * The model can be null, which is treated as an immutable, empty model.
+     * The model can be null, which results in an empty, uneditable control.
+     * <p>
+     * Note: Subclasses may impose additional restrictions on the type of the model they require.
      * @return the model property
-     * @defaultValue an instance of {@link EditableRichTextModel}, unless set in the constructor
+     * @defaultValue an instance of {@link EditableRichTextModel}
      */
     public final ObjectProperty<StyledTextModel> modelProperty() {
         if (model == null) {
@@ -548,7 +550,7 @@ public class RichTextArea extends Control {
      * @return the TextPosition
      */
     // TODO or should it be local to control?
-    public TextPos getTextPosition(double screenX, double screenY) {
+    public final TextPos getTextPosition(double screenX, double screenY) {
         Point2D local = vflow().getContentPane().screenToLocal(screenX, screenY);
         return vflow().getTextPosLocal(local.getX(), local.getY());
     }
@@ -579,7 +581,7 @@ public class RichTextArea extends Control {
      * @param p text position
      * @param extendSelection specifies whether to clear (false) or extend (true) any existing selection
      */
-    public void moveCaret(TextPos p, boolean extendSelection) {
+    public final void moveCaret(TextPos p, boolean extendSelection) {
         if (extendSelection) {
             extendSelection(p);
         } else {
@@ -644,7 +646,7 @@ public class RichTextArea extends Control {
     /**
      * Clears existing selection, if any.
      */
-    public void clearSelection() {
+    public final void clearSelection() {
         selectionModel.clear();
     }
 
@@ -652,7 +654,7 @@ public class RichTextArea extends Control {
      * Moves both the caret and the anchor to the specified position, clearing any existing selection.
      * @param pos the text position
      */
-    public void select(TextPos pos) {
+    public final void select(TextPos pos) {
         StyledTextModel model = getModel();
         if (model != null) {
             Marker m = model.getMarker(pos);
@@ -665,7 +667,7 @@ public class RichTextArea extends Control {
      * @param anchor the new selection anchor position
      * @param caret the new caret position
      */
-    public void select(TextPos anchor, TextPos caret) {
+    public final void select(TextPos anchor, TextPos caret) {
         StyledTextModel model = getModel();
         if (model != null) {
             Marker ma = model.getMarker(anchor);
@@ -678,7 +680,7 @@ public class RichTextArea extends Control {
      * Extends selection to the specified position.
      * @param pos the text position
      */
-    public void extendSelection(TextPos pos) {
+    public final void extendSelection(TextPos pos) {
         StyledTextModel model = getModel();
         if (model != null) {
             Marker m = model.getMarker(pos);
@@ -690,7 +692,7 @@ public class RichTextArea extends Control {
      * Returns the number of paragraphs in the model.  If model is null, returns 0.
      * @return the paragraph count
      */
-    public int getParagraphCount() {
+    public final int getParagraphCount() {
         StyledTextModel m = getModel();
         return (m == null) ? 0 : m.size();
     }
@@ -701,7 +703,7 @@ public class RichTextArea extends Control {
      * @return plain text string, or null
      * @throws IllegalArgumentException if the modelIndex is outside of the range supported by the model
      */
-    public String getPlainText(int modelIndex) {
+    public final String getPlainText(int modelIndex) {
         if ((modelIndex < 0) || (modelIndex >= getParagraphCount())) {
             throw new IllegalArgumentException("No paragraph at index=" + modelIndex);
         }
@@ -788,7 +790,7 @@ public class RichTextArea extends Control {
      * is supported by the model, and the skin must be installed; otherwise, this method is a no-op.
      * @param format the data format to use
      */
-    public void copy(DataFormat format) {
+    public final void copy(DataFormat format) {
         RichTextAreaSkin skin = richTextAreaSkin();
         if (skin != null) {
             skin.copy(format);
@@ -1089,7 +1091,7 @@ public class RichTextArea extends Control {
      * <p>
      * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
      */
-    public void pastePlainText() {
+    public final void pastePlainText() {
         execute(Tags.PASTE_PLAIN_TEXT);
     }
 
@@ -1368,7 +1370,7 @@ public class RichTextArea extends Control {
      * @param end the end of text range
      * @param attrs the style attributes to set
      */
-    public void setStyle(TextPos start, TextPos end, StyleAttrs attrs) {
+    public final void setStyle(TextPos start, TextPos end, StyleAttrs attrs) {
         if (canEdit()) {
             StyledTextModel m = getModel();
             m.applyStyle(start, end, attrs, false);
@@ -1537,7 +1539,7 @@ public class RichTextArea extends Control {
      * @return the input map instance
      */
     // TODO to be moved to Control JDK-8314968
-    public InputMap getInputMap() {
+    public final InputMap getInputMap() {
         return inputMap;
     }
 
@@ -1602,10 +1604,17 @@ public class RichTextArea extends Control {
             cx.addStyle("-fx-line-spacing:" + v + ";");
         });
 
-        b.setParHandler(StyleAttrs.RIGHT_TO_LEFT, (ctrl, cx, v) -> {
+        b.setParHandler(StyleAttrs.PARAGRAPH_DIRECTION, (ctrl, cx, v) -> {
             if (ctrl.isWrapText()) {
                 // node orientation property is not styleable (yet?)
-                cx.getNode().setNodeOrientation(v ? NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.LEFT_TO_RIGHT);
+                switch (v) {
+                case LEFT_TO_RIGHT:
+                    cx.getNode().setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
+                    break;
+                case RIGHT_TO_LEFT:
+                    cx.getNode().setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+                    break;
+                }
             }
         });
 
@@ -1652,32 +1661,38 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Appends the styled text to the end of the document.
-     * This method is no-op if either the control or the model is not editable.
+     * Appends the styled text to the end of the document.  Any embedded {@code "\n"} or {@code "\r\n"}
+     * sequences result in a new paragraph being added.
+     * <p>
+     * This method is no-op if either the control or the model is not editable.  It is up to the model
+     * to select whether to accept all, some, or none of the
+     * {@link jfx.incubator.scene.control.rich.model.StyleAttribute StyleAttribute}s.
      *
      * @param text the text to append
      * @param attrs the style attributes
      * @return the text position at the end of the appended text, or null if editing is disabled
      */
-    public TextPos appendText(String text, StyleAttrs attrs) {
+    public final TextPos appendText(String text, StyleAttrs attrs) {
         TextPos p = getEndTextPos();
         return insertText(p, text, attrs);
     }
 
     /**
-     * Appends the styled content to the end of the document.
+     * Appends the styled content to the end of the document.  Any embedded {@code "\n"} or {@code "\r\n"}
+     * sequences result in a new paragraph being added.
      * This method is no-op if either the control or the model is not editable.
      *
      * @param in the input stream
      * @return the text position at the end of the appended text, or null if editing is disabled
      */
-    public TextPos appendText(StyledInput in) {
+    public final TextPos appendText(StyledInput in) {
         TextPos p = getEndTextPos();
         return insertText(p, in);
     }
 
     /**
-     * Inserts the styled text at the specified position.
+     * Inserts the styled text at the specified position.  Any embedded {@code "\n"} or {@code "\r\n"}
+     * sequences result in a new paragraph being added.
      * This method is no-op if either the control or the model is not editable.
      *
      * @param pos the insert position
@@ -1685,7 +1700,7 @@ public class RichTextArea extends Control {
      * @param attrs the style attributes
      * @return the text position at the end of the appended text, or null if editing is disabled
      */
-    public TextPos insertText(TextPos pos, String text, StyleAttrs attrs) {
+    public final TextPos insertText(TextPos pos, String text, StyleAttrs attrs) {
         StyledInput in = StyledInput.of(text, attrs);
         return replaceText(pos, pos, in, true);
     }
@@ -1698,7 +1713,7 @@ public class RichTextArea extends Control {
      * @param in the input stream
      * @return the text position at the end of the appended text, or null if editing is disabled
      */
-    public TextPos insertText(TextPos pos, StyledInput in) {
+    public final TextPos insertText(TextPos pos, StyledInput in) {
         return replaceText(pos, pos, in, true);
     }
 
@@ -1711,7 +1726,7 @@ public class RichTextArea extends Control {
      * @param createUndo when true, creates an undo-redo entry
      * @return the new caret position at the end of inserted text, or null if the change cannot be made
      */
-    public TextPos replaceText(TextPos start, TextPos end, StyledInput in, boolean createUndo) {
+    public final TextPos replaceText(TextPos start, TextPos end, StyledInput in, boolean createUndo) {
         if (canEdit()) {
             StyledTextModel m = getModel();
             return m.replace(vflow(), start, end, in, createUndo);
@@ -1728,7 +1743,7 @@ public class RichTextArea extends Control {
      * @param allowUndo when true, creates an undo-redo entry
      * @return the new caret position at the end of inserted text, or null if the change cannot be made
      */
-    public TextPos replaceText(TextPos start, TextPos end, String text, boolean allowUndo) {
+    public final TextPos replaceText(TextPos start, TextPos end, String text, boolean allowUndo) {
         if (canEdit()) {
             StyledTextModel m = getModel();
             return m.replace(vflow(), start, end, text, allowUndo);
@@ -1740,7 +1755,7 @@ public class RichTextArea extends Control {
      * Clears the undo-redo stack of the underlying model.
      * This method does nothing if the model is null.
      */
-    public void clearUndoRedo() {
+    public final void clearUndoRedo() {
         StyledTextModel m = getModel();
         if (m != null) {
             m.clearUndoRedo();
@@ -1754,7 +1769,7 @@ public class RichTextArea extends Control {
      * @throws IOException if an I/O error occurs
      * @throws UnsupportedOperationException when no suitable data format can be found
      */
-    public void write(OutputStream out) throws IOException {
+    public final void write(OutputStream out) throws IOException {
         DataFormat f = bestDataFormat(true);
         if (f == null) {
             throw new UnsupportedOperationException("no suitable format can be found");
@@ -1770,7 +1785,7 @@ public class RichTextArea extends Control {
      * @throws IOException if an I/O error occurs
      * @throws UnsupportedOperationException when the data format is not supported by the model
      */
-    public void write(DataFormat f, OutputStream out) throws IOException {
+    public final void write(DataFormat f, OutputStream out) throws IOException {
         StyledTextModel m = getModel();
         if (m != null) {
             StyleResolver r = resolver();
@@ -1786,7 +1801,7 @@ public class RichTextArea extends Control {
      * @throws IOException if an I/O error occurs
      * @throws UnsupportedOperationException when the data format is not supported by the model
      */
-    public void read(InputStream in) throws IOException {
+    public final void read(InputStream in) throws IOException {
         DataFormat f = bestDataFormat(false);
         if (f != null) {
             read(f, in);
@@ -1802,7 +1817,7 @@ public class RichTextArea extends Control {
      * @throws IOException if an I/O error occurs
      * @throws UnsupportedOperationException when the data format is not supported by the model
      */
-    public void read(DataFormat f, InputStream in) throws IOException {
+    public final void read(DataFormat f, InputStream in) throws IOException {
         StyledTextModel m = getModel();
         if (m != null) {
             StyleResolver r = resolver();
@@ -1828,7 +1843,7 @@ public class RichTextArea extends Control {
      * a redo entry.
      * This method is no-op if either the control or the model is not editable.
      */
-    public void clear() {
+    public final void clear() {
         TextPos end = getEndTextPos();
         replaceText(TextPos.ZERO, end, StyledInput.EMPTY, true);
     }

@@ -69,8 +69,8 @@ public final class StyleAttrs {
     /** Line spacing paragraph attribute */
     public static final StyleAttribute<Double> LINE_SPACING = new StyleAttribute<>("LINE_SPACING", Double.class, true);
 
-    /** Right-to-left orientation paragraph attribute */
-    public static final StyleAttribute<Boolean> RIGHT_TO_LEFT = new StyleAttribute<>("RIGHT_TO_LEFT", Boolean.class, true);
+    /** Paragraph direction attribute.  This attribute is considered only when text wrapping is enabled. */
+    public static final StyleAttribute<ParagraphDirection> PARAGRAPH_DIRECTION = new StyleAttribute<>("PARAGRAPH_DIRECTION", ParagraphDirection.class, true);
 
     /** Space above (top padding) paragraph attribute */
     public static final StyleAttribute<Double> SPACE_ABOVE = new StyleAttribute<>("SPACE_ABOVE", Double.class, true);
@@ -228,7 +228,7 @@ public final class StyleAttrs {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder(32);
-        sb.append("[");
+        sb.append("{");
         boolean sep = false;
         for (StyleAttribute<?> a : attributes.keySet()) {
             if (sep) {
@@ -241,7 +241,7 @@ public final class StyleAttrs {
             sb.append('=');
             sb.append(v);
         }
-        sb.append("]");
+        sb.append("}");
         return sb.toString();
     }
 
@@ -361,12 +361,12 @@ public final class StyleAttrs {
     }
 
     /**
-     * This convenience method returns true if the value of {@link #RIGHT_TO_LEFT} paragraph attribute is {@code Boolean.TRUE},
-     * false otherwise.
-     * @return the right-to-left paragraph attribute value
+     * This convenience method returns the value of {@link #PARAGRAPH_DIRECTION} paragraph attribute,
+     * or null if the value is not set.
+     * @return the paragraph direction attribute value, or null
      */
-    public boolean isRTL() {
-        return getBoolean(RIGHT_TO_LEFT);
+    public ParagraphDirection getParagraphDirection() {
+        return get(PARAGRAPH_DIRECTION);
     }
 
     /**
@@ -624,12 +624,12 @@ public final class StyleAttrs {
         }
 
         /**
-         * Sets the right-to-left paragraph attribute.
-         * @param on true for RTL
+         * Sets the paragraph direction attribute.
+         * @param d the paragraph direction
          * @return this Builder instance
          */
-        public Builder setRTL(boolean on) {
-            set(RIGHT_TO_LEFT, Boolean.valueOf(on));
+        public Builder setRTL(ParagraphDirection d) {
+            set(PARAGRAPH_DIRECTION, d);
             return this;
         }
 

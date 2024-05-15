@@ -102,7 +102,18 @@ public class TestEditableRichTextModel {
         );
     }
 
-    private TextPos p(int index, int offset) {
+    @Test
+    public void testZeroWidthSegment() {
+        t(
+            "{fs|24.0}{tc|808080}a: {fs|24.0}b{!}\n{0}c: {1}d{!}",
+            (m) -> {
+                m.replace(null, p(0, 4), p(1, 0), "", false);
+            },
+            "{fs|24.0}{tc|808080}a: {fs|24.0}b{0}c: {1}d{!}"
+        );
+    }
+
+    private static TextPos p(int index, int offset) {
         return new TextPos(index, offset);
     }
 
@@ -113,7 +124,7 @@ public class TestEditableRichTextModel {
 
             // set initial text
             if (initial != null) {
-                StyledInput in = h.createStyledInput(initial);
+                StyledInput in = h.createStyledInput(initial, null);
                 TextPos end = m.replace(null, TextPos.ZERO, TextPos.ZERO, in, false);
                 // check initial text
                 StringWriter wr = new StringWriter();

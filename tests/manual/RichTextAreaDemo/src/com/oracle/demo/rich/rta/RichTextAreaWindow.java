@@ -31,11 +31,12 @@ import javafx.scene.Scene;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuBar;
-import jfx.incubator.scene.control.rich.RichTextArea;
-import jfx.incubator.scene.control.rich.TextPos;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import com.oracle.demo.rich.util.FX;
+import jfx.incubator.scene.control.rich.RichTextArea;
+import jfx.incubator.scene.control.rich.TextPos;
 
 /**
  * Rich Text Area Demo window
@@ -69,6 +70,7 @@ public class RichTextAreaWindow extends Stage {
         FX.menu(mb, "_Tests");
         FX.item(mb, "Stacked Vertically", () -> openMultipeStacked(true));
         FX.item(mb, "Stacked Horizontally", () -> openMultipeStacked(false));
+        FX.item(mb, "In a VBox", () -> openInVBox());
         // window
         FX.menu(mb, "_Window");
         FX.item(mb, orientation);
@@ -83,7 +85,6 @@ public class RichTextAreaWindow extends Stage {
 
         Scene scene = new Scene(bp);
         scene.getStylesheets().addAll(
-            RichTextAreaWindow.class.getResource("RichTextArea-Modena.css").toExternalForm(),
             RichTextAreaWindow.class.getResource("RichTextAreaDemo.css").toExternalForm()
         );
 
@@ -128,5 +129,17 @@ public class RichTextAreaWindow extends Stage {
 
     protected void openMultipeStacked(boolean vertical) {
         new MultipleStackedBoxWindow(vertical).show();
+    }
+
+    protected void openInVBox() {
+        RichTextArea richTextArea = new RichTextArea();
+
+        VBox vb = new VBox();
+        vb.getChildren().add(richTextArea);
+
+        Stage w = new Stage();
+        w.setScene(new Scene(vb));
+        w.setTitle("RichTextArea in a VBox");
+        w.show();
     }
 }
