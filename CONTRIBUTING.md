@@ -153,11 +153,12 @@ Once your changes and tests are ready to submit for review:
     Once the review has completed as described above, you can integrate
     the PR.
 
-    A. Verify the commit message. The Skara tooling adds a comment with
-    the commit message that will be used. You can add a summary to the
-    commit message with the `/summary` command. You can add additional
-    contributors with the `/contributor` command. Commands are issued
-    by adding a comment to the PR that starts with a slash `/` character.
+    A. Verify the following: all substantive feedback has been addressed; all Reviewers
+    who have requested the chance to review have done so; the PR has been "rfr"
+    for at least 1 business day (excluding weekends and holidays);
+    the commit message is correct.
+    See the [Code Review Gudelines](README-code-reviews.md#before-you-integrate-or-sponsor-a-pr)
+    for more details.
 
     B. Issue the `/integrate` command. If you have the "Committer" role
     (or higher) in the Project, then the Skara bot will merge the change
