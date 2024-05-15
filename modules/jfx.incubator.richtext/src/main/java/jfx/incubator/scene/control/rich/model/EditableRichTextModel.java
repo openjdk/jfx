@@ -260,7 +260,7 @@ public class EditableRichTextModel extends StyledTextModel {
         public void append(String s) {
             text = text + s;
         }
-        
+
         public void setText(String s) {
             text = s;
         }
