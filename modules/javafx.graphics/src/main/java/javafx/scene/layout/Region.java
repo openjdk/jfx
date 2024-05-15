@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1184,7 +1184,7 @@ public class Region extends Parent {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getPrefWidth(forHeight)</code> will return the region's internally
+     * {@link #prefWidth(forHeight)} will return the region's internally
      * computed preferred width.
      */
     private DoubleProperty prefWidth;
@@ -1209,7 +1209,7 @@ public class Region extends Parent {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getPrefHeight(forWidth)</code> will return the region's internally
+     * {@link #prefHeight(forWidth)} will return the region's internally
      * computed preferred width.
      */
     private DoubleProperty prefHeight;
