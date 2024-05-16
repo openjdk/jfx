@@ -61,9 +61,10 @@ By default, a PR is marked as ready once any "R"eviewer reviews and approves it.
 Here is a list of things to keep in mind when reviewing a PR. This applies to anyone doing a review, but especially a "R"eviewer:
 
 * Make sure you understand why there was an issue to begin with, and why/how the proposed PR solves the issue
-* Focus first on substantive comments rather than stylistic comments
 * Consider the risk of regression
 * Consider any compatibility concerns
+* Check whether it adds any new public (or protected) API, even implicitly (such as overriding a protected method and making it public); if it does, indicate that it needs a CSR
+* Focus first on substantive comments rather than stylistic comments
 * Check whether there is an automated test; if not, ask for one, if it is feasible
 * Make sure that the PR has executed the GHA tests and that they all pass; if they aren't being run, ask the PR author to enable GHA workflows
 * If the PR source branch hasn't synced up from master in a long time, or if there is an upstream commit not in the source branch that might interfere with the PR, ask the PR author to merge the latest upstream master.
