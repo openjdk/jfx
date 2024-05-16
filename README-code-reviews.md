@@ -11,7 +11,7 @@ __Project Co-Lead__: Johan Vos (OpenJDK ID: `jvos`; GitHub ID: `johanvos`)
 
 ### Reviewers
 
-The [List of Reviewers](https://openjdk.java.net/census#openjfx) is on the OpenJDK Census.
+The [List of Reviewers](https://openjdk.org/census#openjfx) is on the OpenJDK Census.
 
 Overview
 --------
@@ -37,7 +37,7 @@ In support of this, the following review policies are in effect. Many of these w
 
 ### 1. The Reviewer role for the OpenJFX Project
 
-We define a formal "Reviewer" role, similar to the JDK project. A [Reviewer](https://openjdk.java.net/census#openjfx) is responsible for reviewing code changes and helping to determine whether a change is suitable for including into OpenJFX. We expect Reviewers to feel responsible not just for their piece, but for the quality of the JavaFX library as a whole. In other words, the role of Reviewer is one of stewardship. See the following section for what constitutes a good review.
+We define a formal "Reviewer" role, similar to the JDK project. A [Reviewer](https://openjdk.org/census#openjfx) is responsible for reviewing code changes and helping to determine whether a change is suitable for including into OpenJFX. We expect Reviewers to feel responsible not just for their piece, but for the quality of the JavaFX library as a whole. In other words, the role of Reviewer is one of stewardship. See the following section for what constitutes a good review.
 
 An experienced Committer can eventually become a Reviewer by providing good quality fixes and participating in code reviews over time, demonstrating the high-level of skill and understanding needed to be a competent reviewer. The JDK uses a threshold of 32 significant contributions. Without wanting to relax this standard too much, one thing we may consider is that a Committer with, say, 24 commits, who regularly participates in reviews, offering good feedback, might be just as good a reviewer (or maybe even better) as someone with 32 commits who rarely, if ever, provides feedback on proposed bug fixes. This is meant to be a somewhat loose guideline. It is up to the Reviewers and the Project Leads to decide whether and when a new Committer is ready to become a Reviewer.
 
