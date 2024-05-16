@@ -67,8 +67,8 @@ Here is a list of things to keep in mind when reviewing a PR. This applies to an
 * Focus first on substantive comments rather than stylistic comments
 * Check whether there is an automated test; if not, ask for one, if it is feasible
 * Make sure that the PR has executed the GitHub Actions (GHA) tests; if they aren't being run, ask the PR author to enable GHA workflows; if the test fails on some platforms, check whether it is a real bug (sometimes a job fails becau se of GHA infrastucture changes or we see a spurious GHA failure)
-* If the PR source branch hasn't synced up from master in a long time, or if there is an upstream commit not in the source branch that might interfere with the PR, ask the PR author to merge the latest upstream master.
 * Test the code locally if you have any concerns as to whether and how it works; as a helpful tip, merge the latest upstream master into your locally fetch PR review branch before testing
+* If the PR source branch hasn't synced up from master in a long time, or if there is an upstream commit not in the source branch that might interfere with the PR, consider asking the PR author to merge the latest upstream master, so we will get an up-to-date GHA run.
 
 #### Before you integrate or sponsor a PR:
 
