@@ -6,8 +6,8 @@ Project Stewardship
 
 The OpenJFX Project is guided by the Project Leads and Reviewers.
 
-__Project Co-Lead__: Kevin Rushforth (kcr) <br>
-__Project Co-Lead__: Johan Vos (jvos)
+__Project Co-Lead__: Kevin Rushforth (OpenJDK ID: `kcr`; GitHub ID: `kevinrushforth`) <br>
+__Project Co-Lead__: Johan Vos (OpenJDK ID: `jvos`; GitHub ID: `johanvos`)
 
 ### Reviewers
 
