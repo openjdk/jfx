@@ -53,7 +53,7 @@ Review comments can either be added directly to the GitHub pull request, or by r
 
 By default, a PR is marked as ready once any "R"eviewer reviews and approves it. Because of this, those who have the Reviewer role should do the following when reviewing a PR _before_ approving it:
 
-* Determine whether this needs 2 reviewers and whether it needs a CSR; issue the `/reviewers 2` or `/csr` command as needed (note that `/reviewers 2` means 2 total approvals, at least one of which has the Reviewer role; if you really feel that a review from a second "R"eviewer is needed, use the command `/reviewers 2 reviewers` )
+* Determine whether this needs 2 reviewers and whether it needs a CSR; issue the `/reviewers 2` or `/csr` command as needed (note that `/reviewers 2` requires approval from 2 total reviewers, at least one of which has the Reviewer role; if you really feel that a review from a second "R"eviewer is needed, use the command `/reviewers 2 reviewers`)
 * If you want to indicate your approval, but still feel additional reviewers are needed, you may increase the number of reviewers (e.g., from 2 to 3)
 * If you want an area expert to review a PR, indicate this in a comment of the form: `Reviewers: @PERSON1 @PERSON2`; the requested reviewers can indicate whether or not they plan to review it
 * If you want to ensure that you have the opportunity to review this PR yourself, add a comment of the form: `@PRAUTHOR Wait for me to review this PR`, optionally add any concerns you might have
