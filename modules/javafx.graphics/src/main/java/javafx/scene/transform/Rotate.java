@@ -769,6 +769,9 @@ public class Rotate extends Transform {
 
     @Override
     protected void transformChanged() {
+        if (inverseCache != null) {
+            inverseCache.invalidate();
+        }
         if (cache != null) {
             cache.invalidate();
         }

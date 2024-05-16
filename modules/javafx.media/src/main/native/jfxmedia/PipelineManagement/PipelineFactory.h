@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,9 +38,6 @@ public:
     static uint32_t GetInstance(CPipelineFactory **ppPipelineFactory);
 
     virtual ~CPipelineFactory();
-
-    virtual bool CanPlayContentType(string contentType) = 0;
-    virtual const ContentTypesList& GetSupportedContentTypes() = 0;
 
     virtual uint32_t CreatePlayerPipeline(CLocator* locator, CPipelineOptions *pOptions, CPipeline** ppPipeline) = 0;
 
