@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -254,9 +254,7 @@ inline HRESULT updateTexture(
     updater.setTarget(pTexResource->GetTexture(), pTexResource->GetSurface(), desc, dstx, dsty);
     updater.setSource(pixels, size, PFormat(format), srcx, srcy, srcw, srch, srcscan);
 
-    int nBytes = pCtx->Get3DExDevice()
-        ? updater.updateD3D9ExTexture(pCtx)
-        : updater.updateLockableTexture();
+    int nBytes = updater.updateD3D9ExTexture(pCtx);
 
 #if defined PERF_COUNTERS
     D3DContext::FrameStats &stats = pCtx->getStats();
@@ -401,7 +399,7 @@ static HRESULT D3DResourceFactory_nReadPixels(D3DContext *pCtx, D3DResource *pRe
 
     TraceLn(NWT_TRACE_INFO, "D3DResourceFactory_nReadPixels");
 
-    IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();
+    IDirect3DDevice9Ex *pd3dDevice = pCtx->Get3DDevice();
     RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
 
     IDirect3DSurface9 *pSrc = pResource->GetSurface();
