@@ -1913,7 +1913,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     }
 
     /**
-     * The length of the viewport portion of the {@code VirtualFlow} as computed during the layout pass.
+     * Returns the length of the viewport portion of the {@code VirtualFlow} as computed during the layout pass.
      * For a vertical flow, this corresponds to the height and for a horizontal flow to the width of the clip view,
      * but it does not necessarily have to be the same value.
      *
