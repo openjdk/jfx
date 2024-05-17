@@ -77,8 +77,9 @@ Here is a list of things to keep in mind when reviewing a PR. This applies to an
 
 Skara will mark a PR as "ready" once the minimum number of reviewers have reviewed it. Before you integrate or sponsor the PR, ensure that the following have been done:
 
-* All substantive feedback has been addressed, especially any objections from one with a Reviewer role.
-* All Reviewers who have requested the chance to review have done so (or indicated that they are OK with it going in without their review). In rare cases a Project Lead may override this.
+* All substantive feedback has been addressed, especially any objections from one with a Reviewer role
+    * If you have pushed any changes in response to a Reviewer's substantive comments, wait for them to re-review the latest version of your PR with those changes (to ensure they are satisfied with the way you addressed them)
+* All Reviewers who have requested the chance to review have done so (or indicated that they are OK with it going in without their review). In rare cases a Project Lead may override this
 * The PR has been "rfr" (as indicated by Skara) for at least 1 business day (at least 24 hours, not including weekends or major holidays). This is to allow sufficient time for those reviewers who might be in other time zones the chance to review if they have concerns. This is measured from the time that Skara has most recently added the "rfr" label (for example, for a PR that was previously in Draft mode, wait for at least 1 business day after the PR has been taken out of Draft and marked "rfr"). In rare cases (e.g., a build breakage) a Reviewer might give the OK to integrate without waiting for 1 business day.
 
 #### A. Low-impact bug fixes.
