@@ -41,8 +41,8 @@ class ContainerNode;
 class Document;
 class DocumentFragment;
 class Element;
-class Frame;
 class HTMLElement;
+class LocalFrame;
 class Node;
 class Page;
 class QualifiedName;
@@ -89,16 +89,16 @@ bool isPlainTextMarkup(Node*);
 // These methods are used by HTMLElement & ShadowRoot to replace the children with respected fragment/text.
 ExceptionOr<void> replaceChildrenWithFragment(ContainerNode&, Ref<DocumentFragment>&&);
 
-enum class ConvertBlocksToInlines : uint8_t { No, Yes };
-enum class SerializeComposedTree : uint8_t { No, Yes };
-enum class IgnoreUserSelectNone: uint8_t { No, Yes };
+enum class ConvertBlocksToInlines : bool { No, Yes };
+enum class SerializeComposedTree : bool { No, Yes };
+enum class IgnoreUserSelectNone : bool { No, Yes };
 WEBCORE_EXPORT String serializePreservingVisualAppearance(const SimpleRange&, Vector<Node*>* = nullptr, AnnotateForInterchange = AnnotateForInterchange::No, ConvertBlocksToInlines = ConvertBlocksToInlines::No, ResolveURLs = ResolveURLs::No);
 String serializePreservingVisualAppearance(const VisibleSelection&, ResolveURLs = ResolveURLs::No, SerializeComposedTree = SerializeComposedTree::No,
     IgnoreUserSelectNone = IgnoreUserSelectNone::Yes, Vector<Node*>* = nullptr);
 
 enum class SerializedNodes : uint8_t { SubtreeIncludingNode, SubtreesOfChildren };
 enum class SerializationSyntax : uint8_t { HTML, XML };
-WEBCORE_EXPORT String serializeFragment(const Node&, SerializedNodes, Vector<Node*>* = nullptr, ResolveURLs = ResolveURLs::No, Vector<QualifiedName>* tagNamesToSkip = nullptr, SerializationSyntax = SerializationSyntax::HTML);
+WEBCORE_EXPORT String serializeFragment(const Node&, SerializedNodes, Vector<Node*>* = nullptr, ResolveURLs = ResolveURLs::No, Vector<QualifiedName>* tagNamesToSkip = nullptr, std::optional<SerializationSyntax> = std::nullopt);
 
 String urlToMarkup(const URL&, const String& title);
 

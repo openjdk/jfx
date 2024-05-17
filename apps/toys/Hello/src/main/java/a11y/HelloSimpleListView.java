@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,7 @@ import javafx.stage.Stage;
 
 public class HelloSimpleListView extends Application {
 
+    @Override
     public void start(Stage stage) {
         stage.setTitle(getClass().getSimpleName());
         ListView<String> listView = new ListView<>();
@@ -50,6 +51,7 @@ public class HelloSimpleListView extends Application {
         }
         listView.setItems(list);
         listView.getSelectionModel().selectedIndexProperty().addListener(new InvalidationListener() {
+            @Override
             public void invalidated(Observable ov) {
                 System.out.println("SelectedIndex: " + listView.getSelectionModel().getSelectedIndex());
             }

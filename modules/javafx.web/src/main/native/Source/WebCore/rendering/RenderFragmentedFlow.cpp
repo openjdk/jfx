@@ -35,11 +35,14 @@
 #include "LegacyInlineElementBox.h"
 #include "Node.h"
 #include "RenderBoxFragmentInfo.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderFragmentContainer.h"
 #include "RenderInline.h"
 #include "RenderLayer.h"
 #include "RenderLayerCompositor.h"
 #include "RenderLayoutState.h"
+#include "RenderStyleInlines.h"
 #include "RenderTableCell.h"
 #include "RenderTableSection.h"
 #include "RenderTheme.h"
@@ -417,6 +420,12 @@ LayoutUnit RenderFragmentedFlow::pageRemainingLogicalHeightForOffset(LayoutUnit 
         // If IncludePageBoundary is set, the line exactly on the top edge of a
         // fragment will act as being part of the previous fragment.
         remainingHeight = intMod(remainingHeight, pageLogicalHeight);
+    } else if (!remainingHeight) {
+        // When pageBoundaryRule is IncludePageBoundary, we shouldn't just return 0 if there's no
+        // space left, because in that case we're at a column boundary, in which case we should
+        // return the amount of space remaining in the *next* column. Note that the page height
+        // itself may be 0, though.
+        remainingHeight = pageLogicalHeight;
     }
     return remainingHeight;
 }

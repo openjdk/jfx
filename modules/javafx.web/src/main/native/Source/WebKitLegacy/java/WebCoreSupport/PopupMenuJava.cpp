@@ -122,7 +122,7 @@ void PopupMenuJava::populate()
     }
 }
 
-void PopupMenuJava::show(const IntRect& r, FrameView* frameView, int index)
+void PopupMenuJava::show(const IntRect& r, LocalFrameView* frameView, int index)
 {
     JNIEnv* env = WTF::GetJavaEnv();
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -2146,7 +2146,7 @@ public abstract class Node implements EventTarget, Styleable {
             w = tempBounds.getWidth();
             h = tempBounds.getHeight();
         }
-        WritableImage result = Scene.doSnapshot(getScene(), x, y, w, h,
+        WritableImage result = Scene.doSnapshot(getScene(), getSubScene(), x, y, w, h,
                 this, transform, params.isDepthBufferInternal(),
                 params.getFill(), params.getEffectiveCamera(), img);
 
@@ -6433,6 +6433,16 @@ public abstract class Node implements EventTarget, Styleable {
      *                                                                         *
      **************************************************************************/
 
+    /**
+     * Node orientation describes the flow of visual data within a node.
+     * In the English speaking world, visual data normally flows from
+     * left-to-right. In an Arabic or Hebrew world, visual data flows
+     * from right-to-left. This is consistent with the reading order
+     * of text in both worlds.
+     *
+     * @defaultValue {@code NodeOrientation.INHERIT}
+     * @since JavaFX 8.0
+     */
     private ObjectProperty<NodeOrientation> nodeOrientation;
     private EffectiveOrientationProperty effectiveNodeOrientationProperty;
 
@@ -6453,19 +6463,7 @@ public abstract class Node implements EventTarget, Styleable {
     public final NodeOrientation getNodeOrientation() {
         return nodeOrientation == null ? NodeOrientation.INHERIT : nodeOrientation.get();
     }
-    /**
-     * Property holding NodeOrientation.
-     * <p>
-     * Node orientation describes the flow of visual data within a node.
-     * In the English speaking world, visual data normally flows from
-     * left-to-right. In an Arabic or Hebrew world, visual data flows
-     * from right-to-left.  This is consistent with the reading order
-     * of text in both worlds.  The default value is left-to-right.
-     * </p>
-     *
-     * @return NodeOrientation
-     * @since JavaFX 8.0
-     */
+
     public final ObjectProperty<NodeOrientation> nodeOrientationProperty() {
         if (nodeOrientation == null) {
             nodeOrientation = new StyleableObjectProperty<NodeOrientation>(NodeOrientation.INHERIT) {

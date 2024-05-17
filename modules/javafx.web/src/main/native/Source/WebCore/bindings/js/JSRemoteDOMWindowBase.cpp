@@ -27,6 +27,7 @@
 #include "JSRemoteDOMWindowBase.h"
 
 #include "JSWindowProxy.h"
+#include <JavaScriptCore/GlobalObjectMethodTable.h>
 
 using namespace JSC;
 
@@ -34,7 +35,9 @@ namespace WebCore {
 
 const ClassInfo JSRemoteDOMWindowBase::s_info = { "Window"_s, &JSDOMGlobalObject::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSRemoteDOMWindowBase) };
 
-const GlobalObjectMethodTable JSRemoteDOMWindowBase::s_globalObjectMethodTable = {
+const GlobalObjectMethodTable* JSRemoteDOMWindowBase::globalObjectMethodTable()
+{
+    static constexpr GlobalObjectMethodTable table = {
     nullptr, // shellSupportsRichSourceInfo
     nullptr, // shouldInterruptScript
     &javaScriptRuntimeFlags,
@@ -54,10 +57,12 @@ const GlobalObjectMethodTable JSRemoteDOMWindowBase::s_globalObjectMethodTable =
     nullptr, // compileStreaming
     nullptr, // instantiateStreaming
     nullptr, // deriveShadowRealmGlobalObject
+    };
+    return &table;
 };
 
 JSRemoteDOMWindowBase::JSRemoteDOMWindowBase(VM& vm, Structure* structure, RefPtr<RemoteDOMWindow>&& window, JSWindowProxy* proxy)
-    : JSDOMGlobalObject(vm, structure, proxy->world(), &s_globalObjectMethodTable)
+    : JSDOMGlobalObject(vm, structure, proxy->world(), globalObjectMethodTable())
     , m_wrapped(WTFMove(window))
 {
 }

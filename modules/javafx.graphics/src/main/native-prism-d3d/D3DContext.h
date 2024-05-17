@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -75,7 +75,7 @@ class D3DResourceManager;
  * This class provides the following functionality:
  *  - holds the state of D3DContext java class (current pixel color,
  *    alpha compositing mode, extra alpha)
- *  - provides access to IDirect3DDevice9 interface (creation,
+ *  - provides access to IDirect3DDevice9Ex interface (creation,
  *    disposal, exclusive access)
  *  - handles state changes of the direct3d device (transform,
  *    compositing mode, current texture)
@@ -105,7 +105,7 @@ public:
      * to initialize and test the device last time, it doesn't attempt
      * to create/init/test the device.
      */
-    static HRESULT CreateInstance(IDirect3D9 *pd3d9, IDirect3D9Ex *pd3d9Ex, UINT adapter, bool isVsyncEnabled, D3DContext **ppCtx);
+    static HRESULT CreateInstance(IDirect3D9Ex *pd3d9, UINT adapter, bool isVsyncEnabled, D3DContext **ppCtx);
 
     // desrtoys this instance
     /* virtual */ int release();
@@ -130,10 +130,9 @@ public:
 
     D3DPRESENT_PARAMETERS *GetPresentationParams() { return &curParams; }
 
-    IDirect3DDevice9 *Get3DDevice() { return pd3dDevice; }
-    IDirect3DDevice9Ex *Get3DExDevice() { return pd3dDeviceEx; }
+    IDirect3DDevice9Ex *Get3DDevice() { return pd3dDevice; }
 
-    IDirect3D9 *Get3DObject() { return pd3dObject; }
+    IDirect3D9Ex *Get3DObject() { return pd3dObject; }
 
     D3DMATRIX *GetViewProjTx() { return &projection; }
 
@@ -259,14 +258,13 @@ private:
 
     HRESULT UpdateVertexShaderTX();
 
-    D3DContext(IDirect3D9 *pd3d, IDirect3D9Ex *pd3dEx, UINT adapter);
-    HRESULT InitDevice(IDirect3DDevice9 *d3dDevice);
+    D3DContext(IDirect3D9Ex *pd3d9, UINT adapter);
+    HRESULT InitDevice(IDirect3DDevice9Ex *d3dDevice);
+    HRESULT createIndexBuffer();
     HRESULT InitContextCaps();
-    IDirect3DDevice9        *pd3dDevice;
-    IDirect3DDevice9Ex      *pd3dDeviceEx;
+    IDirect3DDevice9Ex      *pd3dDevice;
     IDirect3DSurface9       *currentSurface;
-    IDirect3D9              *pd3dObject;
-    IDirect3D9Ex            *pd3dObjectEx;
+    IDirect3D9Ex            *pd3dObject;
 
     D3DPOOL defaulResourcePool;
 
@@ -293,7 +291,7 @@ private:
         IDirect3DTexture9 *texture;
         IDirect3DSurface9 *surface;
         int width, height;
-        IDirect3DTexture9 *getTexture(D3DFORMAT format, int width, int height, IDirect3DSurface9 **pSurface, IDirect3DDevice9 *dev);
+        IDirect3DTexture9 *getTexture(D3DFORMAT format, int width, int height, IDirect3DSurface9 **pSurface, IDirect3DDevice9Ex *dev);
     } textureCache[NUM_TEXTURE_CACHE];
 
 public:

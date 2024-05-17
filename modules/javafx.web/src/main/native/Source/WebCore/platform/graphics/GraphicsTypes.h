@@ -86,11 +86,6 @@ inline bool operator==(const CompositeMode& a, const CompositeMode& b)
     return a.operation == b.operation && a.blendMode == b.blendMode;
 }
 
-inline bool operator!=(const CompositeMode& a, const CompositeMode& b)
-{
-    return !(a == b);
-}
-
 enum class DocumentMarkerLineStyleMode : uint8_t {
         TextCheckingDictationPhraseWithAlternatives,
         Spelling,
@@ -101,36 +96,8 @@ enum class DocumentMarkerLineStyleMode : uint8_t {
 
 struct DocumentMarkerLineStyle {
     DocumentMarkerLineStyleMode mode;
-    bool shouldUseDarkAppearance { false };
-};
-
-// Legacy shadow blur radius is used for canvas, and -webkit-box-shadow.
-// It has different treatment of radii > 8px.
-enum class ShadowRadiusMode : bool {
-    Default,
-    Legacy
-};
-
-struct DropShadow {
-    FloatSize offset;
-    float blurRadius { 0 };
     Color color;
-    ShadowRadiusMode radiusMode { ShadowRadiusMode::Default };
-
-    bool isVisible() const { return color.isVisible(); }
-    bool isBlurred() const { return isVisible() && blurRadius; }
-    bool hasOutsets() const { return isBlurred() || (isVisible() && !offset.isZero()); }
 };
-
-inline bool operator==(const DropShadow& a, const DropShadow& b)
-{
-    return a.offset == b.offset && a.blurRadius == b.blurRadius && a.color == b.color && a.radiusMode == b.radiusMode;
-}
-
-inline bool operator!=(const DropShadow& a, const DropShadow& b)
-{
-    return !(a == b);
-}
 
 enum class GradientSpreadMethod : uint8_t {
     Pad,
@@ -204,7 +171,6 @@ bool parseCompositeAndBlendOperator(const String&, WebCore::CompositeOperator&, 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, WebCore::BlendMode);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, WebCore::CompositeOperator);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, CompositeMode);
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const DropShadow&);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, GradientSpreadMethod);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, InterpolationQuality);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, LineCap);

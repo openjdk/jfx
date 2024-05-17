@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,7 +65,8 @@ import javafx.util.StringConverter;
  * it is recommended to directly observe the boolean properties that are
  * manipulated by the CheckBox.</p>
  *
- * @param <T> The type of the elements contained within the TableColumn.
+ * @param <S> the type of the item contained within the TableView
+ * @param <T> the type of the elements contained within the cell
  * @since JavaFX 2.2
  */
 public class CheckBoxTableCell<S,T> extends TableCell<S,T> {

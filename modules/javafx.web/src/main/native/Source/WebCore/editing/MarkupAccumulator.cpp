@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2009-2022 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,7 +38,9 @@
 #include "HTMLElement.h"
 #include "HTMLNames.h"
 #include "HTMLTemplateElement.h"
+#include "NodeName.h"
 #include "ProcessingInstruction.h"
+#include "ScriptController.h"
 #include "TemplateContentDocumentFragment.h"
 #include "XLinkNames.h"
 #include "XMLNSNames.h"
@@ -54,87 +56,83 @@ using namespace HTMLNames;
 
 struct EntityDescription {
     const char* characters;
-    unsigned char length;
-    unsigned char mask;
+    uint8_t length;
+    std::optional<EntityMask> mask;
 };
 
 static const EntityDescription entitySubstitutionList[] = {
-    { "", 0 , 0 },
-    { "&amp;", 5 , EntityAmp },
-    { "&lt;", 4, EntityLt },
-    { "&gt;", 4, EntityGt },
-    { "&quot;", 6, EntityQuot },
-    { "&nbsp;", 6, EntityNbsp },
-    { "&#9;", 4, EntityTab },
-    { "&#10;", 5, EntityLineFeed },
-    { "&#13;", 5, EntityCarriageReturn },
+    { "", 0, std::nullopt },
+    { "&amp;", 5, EntityMask::Amp },
+    { "&lt;", 4, EntityMask::Lt },
+    { "&gt;", 4, EntityMask::Gt },
+    { "&quot;", 6, EntityMask::Quot },
+    { "&nbsp;", 6, EntityMask::Nbsp },
+    { "&#9;", 4, EntityMask::Tab },
+    { "&#10;", 5, EntityMask::LineFeed },
+    { "&#13;", 5, EntityMask::CarriageReturn },
 };
 
-enum EntitySubstitutionIndex {
-    EntitySubstitutionNullIndex = 0,
-    EntitySubstitutionAmpIndex = 1,
-    EntitySubstitutionLtIndex = 2,
-    EntitySubstitutionGtIndex = 3,
-    EntitySubstitutionQuotIndex = 4,
-    EntitySubstitutionNbspIndex = 5,
-    EntitySubstitutionTabIndex = 6,
-    EntitySubstitutionLineFeedIndex = 7,
-    EntitySubstitutionCarriageReturnIndex = 8,
+namespace EntitySubstitutionIndex {
+constexpr uint8_t Null = 0;
+constexpr uint8_t Amp = 1;
+constexpr uint8_t Lt = 2;
+constexpr uint8_t Gt = 3;
+constexpr uint8_t Quot = 4;
+constexpr uint8_t Nbsp = 5;
+constexpr uint8_t Tab = 6;
+constexpr uint8_t LineFeed = 7;
+constexpr uint8_t CarriageReturn = 8;
 };
 
 static const unsigned maximumEscapedentityCharacter = noBreakSpace;
 static const uint8_t entityMap[maximumEscapedentityCharacter + 1] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0,
-    EntitySubstitutionTabIndex, // '\t'.
-    EntitySubstitutionLineFeedIndex, // '\n'.
+    EntitySubstitutionIndex::Tab, // '\t'.
+    EntitySubstitutionIndex::LineFeed, // '\n'.
     0, 0,
-    EntitySubstitutionCarriageReturnIndex, // '\r'.
+    EntitySubstitutionIndex::CarriageReturn, // '\r'.
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    EntitySubstitutionQuotIndex, // '"'.
+    EntitySubstitutionIndex::Quot, // '"'.
     0, 0, 0,
-    EntitySubstitutionAmpIndex, // '&'.
+    EntitySubstitutionIndex::Amp, // '&'.
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    EntitySubstitutionLtIndex, // '<'.
+    EntitySubstitutionIndex::Lt, // '<'.
     0,
-    EntitySubstitutionGtIndex, // '>'.
+    EntitySubstitutionIndex::Gt, // '>'.
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    EntitySubstitutionNbspIndex // noBreakSpace.
+    EntitySubstitutionIndex::Nbsp // noBreakSpace.
 };
 
 static bool elementCannotHaveEndTag(const Node& node)
 {
-    if (!is<HTMLElement>(node))
+    using namespace ElementNames;
+    if (!is<Element>(node))
         return false;
 
-    // From https://html.spec.whatwg.org/#serialising-html-fragments:
-    // If current node is an area, base, basefont, bgsound, br, col, embed, frame, hr, img,
-    // input, keygen, link, meta, param, source, track or wbr element, then continue on to
-    // the next child node at this point.
-    static const AtomStringImpl* const localNames[] = {
-        areaTag->localName().impl(),
-        baseTag->localName().impl(),
-        basefontTag->localName().impl(),
-        bgsoundTag->localName().impl(),
-        brTag->localName().impl(),
-        colTag->localName().impl(),
-        embedTag->localName().impl(),
-        frameTag->localName().impl(),
-        hrTag->localName().impl(),
-        imgTag->localName().impl(),
-        inputTag->localName().impl(),
-        keygenTag->localName().impl(),
-        linkTag->localName().impl(),
-        metaTag->localName().impl(),
-        paramTag->localName().impl(),
-        sourceTag->localName().impl(),
-        trackTag->localName().impl(),
-        wbrTag->localName().impl()
-    };
-
-    auto* const elementName = downcast<HTMLElement>(node).localName().impl();
-    for (auto* name : localNames) {
-        if (name == elementName)
+    switch (downcast<Element>(node).elementName()) {
+        // https://html.spec.whatwg.org/#void-elements
+    case HTML::area:
+    case HTML::base:
+    case HTML::br:
+    case HTML::col:
+    case HTML::embed:
+    case HTML::hr:
+    case HTML::img:
+    case HTML::input:
+    case HTML::link:
+    case HTML::meta:
+    case HTML::source:
+    case HTML::track:
+    case HTML::wbr:
+        // https://html.spec.whatwg.org/#serializes-as-void
+    case HTML::basefont:
+    case HTML::bgsound:
+    case HTML::frame:
+    case HTML::keygen:
+    case HTML::param:
             return true;
+    default:
+        break;
     }
 
     return false;
@@ -147,7 +145,7 @@ static bool elementCannotHaveEndTag(const Node& node)
 // 4. Other elements self-close.
 static bool shouldSelfClose(const Element& element, SerializationSyntax syntax)
 {
-    if (syntax != SerializationSyntax::XML && element.document().isHTMLDocument())
+    if (syntax != SerializationSyntax::XML)
         return false;
     if (element.hasChildNodes())
         return false;
@@ -157,15 +155,15 @@ static bool shouldSelfClose(const Element& element, SerializationSyntax syntax)
 }
 
 template<typename CharacterType>
-static inline void appendCharactersReplacingEntitiesInternal(StringBuilder& result, const String& source, unsigned offset, unsigned length, EntityMask entityMask)
+static inline void appendCharactersReplacingEntitiesInternal(StringBuilder& result, const String& source, unsigned offset, unsigned length, OptionSet<EntityMask> entityMask)
 {
     const CharacterType* text = source.characters<CharacterType>() + offset;
 
     size_t positionAfterLastEntity = 0;
     for (size_t i = 0; i < length; ++i) {
         CharacterType character = text[i];
-        uint8_t substitution = character < std::size(entityMap) ? entityMap[character] : static_cast<uint8_t>(EntitySubstitutionNullIndex);
-        if (UNLIKELY(substitution != EntitySubstitutionNullIndex) && entitySubstitutionList[substitution].mask & entityMask) {
+        uint8_t substitution = character < std::size(entityMap) ? entityMap[character] : static_cast<uint8_t>(EntitySubstitutionIndex::Null);
+        if (UNLIKELY(substitution != EntitySubstitutionIndex::Null) && entityMask.contains(*entitySubstitutionList[substitution].mask)) {
             result.appendSubstring(source, offset + positionAfterLastEntity, i - positionAfterLastEntity);
             result.appendCharacters(entitySubstitutionList[substitution].characters, entitySubstitutionList[substitution].length);
             positionAfterLastEntity = i + 1;
@@ -174,7 +172,7 @@ static inline void appendCharactersReplacingEntitiesInternal(StringBuilder& resu
     result.appendSubstring(source, offset + positionAfterLastEntity, length - positionAfterLastEntity);
 }
 
-void MarkupAccumulator::appendCharactersReplacingEntities(StringBuilder& result, const String& source, unsigned offset, unsigned length, EntityMask entityMask)
+void MarkupAccumulator::appendCharactersReplacingEntities(StringBuilder& result, const String& source, unsigned offset, unsigned length, OptionSet<EntityMask> entityMask)
 {
     ASSERT(offset + length <= source.length());
 
@@ -305,32 +303,6 @@ void MarkupAccumulator::appendCustomAttributes(StringBuilder&, const Element&, N
 {
 }
 
-void MarkupAccumulator::appendQuotedURLAttributeValue(StringBuilder& result, const Element& element, const Attribute& attribute)
-{
-    ASSERT(element.isURLAttribute(attribute));
-    String resolvedURLString = resolveURLIfNeeded(element, attribute.value());
-    char quoteChar = '"';
-    if (WTF::protocolIsJavaScript(resolvedURLString)) {
-        // minimal escaping for javascript urls
-        if (resolvedURLString.contains('&'))
-            resolvedURLString = makeStringByReplacingAll(resolvedURLString, '&', "&amp;"_s);
-
-        if (resolvedURLString.contains('"')) {
-            if (resolvedURLString.contains('\''))
-                resolvedURLString = makeStringByReplacingAll(resolvedURLString, '"', "&quot;"_s);
-            else
-                quoteChar = '\'';
-        }
-        result.append(quoteChar, resolvedURLString, quoteChar);
-        return;
-    }
-
-    // FIXME: This does not fully match other browsers. Firefox percent-escapes non-ASCII characters for innerHTML.
-    result.append(quoteChar);
-    appendAttributeValue(result, resolvedURLString, false);
-    result.append(quoteChar);
-}
-
 static bool shouldAddNamespaceElement(const Element& element)
 {
     // Don't add namespace attribute if it is already defined for this elem.
@@ -392,17 +364,37 @@ void MarkupAccumulator::appendNamespace(StringBuilder& result, const AtomString&
     result.append('"');
 }
 
-EntityMask MarkupAccumulator::entityMaskForText(const Text& text) const
+static inline bool isScriptEnabled(Node& node)
 {
-    if (!text.document().isHTMLDocument() || inXMLFragmentSerialization())
+    RefPtr frame = node.document().frame();
+    return frame && frame->script().canExecuteScripts(ReasonForCallingCanExecuteScripts::NotAboutToExecuteScript);
+}
+
+OptionSet<EntityMask> MarkupAccumulator::entityMaskForText(const Text& text) const
+{
+    using namespace ElementNames;
+
+    if (inXMLFragmentSerialization())
         return EntityMaskInPCDATA;
 
-    const QualifiedName* parentName = nullptr;
-    if (text.parentElement())
-        parentName = &text.parentElement()->tagQName();
-
-    if (parentName && (*parentName == scriptTag || *parentName == styleTag || *parentName == xmpTag))
+    if (auto* element = text.parentElement()) {
+        switch (element->elementName()) {
+        case HTML::noscript:
+            if (!isScriptEnabled(*element))
+                break;
+            FALLTHROUGH;
+        case HTML::iframe:
+        case HTML::noembed:
+        case HTML::noframes:
+        case HTML::plaintext:
+        case HTML::script:
+        case HTML::style:
+        case HTML::xmp:
         return EntityMaskInCDATA;
+        default:
+            break;
+        }
+    }
     return EntityMaskInHTMLPCDATA;
 }
 
@@ -472,7 +464,7 @@ void MarkupAccumulator::appendOpenTag(StringBuilder& result, const Element& elem
         }
     }
     result.append(element.nodeNamePreservingCase());
-    if ((inXMLFragmentSerialization() || !element.document().isHTMLDocument()) && namespaces && shouldAddNamespaceElement(element))
+    if (inXMLFragmentSerialization() && namespaces && shouldAddNamespaceElement(element))
         appendNamespace(result, element.prefix(), element.namespaceURI(), *namespaces, inXMLFragmentSerialization());
 }
 
@@ -494,7 +486,7 @@ void MarkupAccumulator::generateUniquePrefix(QualifiedName& prefixedName, const 
     AtomString name;
     do {
         // FIXME: We should create makeAtomString, which would be more efficient.
-        name = makeAtomString("NS"_s, ++m_prefixLevel);
+        name = makeAtomString("ns"_s, ++m_prefixLevel);
     } while (namespaces.get(name.impl()));
     prefixedName.setPrefix(name);
 }
@@ -544,30 +536,34 @@ QualifiedName MarkupAccumulator::xmlAttributeSerialization(const Attribute& attr
 
 void MarkupAccumulator::appendAttribute(StringBuilder& result, const Element& element, const Attribute& attribute, Namespaces* namespaces)
 {
-    bool isSerializingHTML = element.document().isHTMLDocument() && !inXMLFragmentSerialization();
+    bool isSerializingHTML = !inXMLFragmentSerialization();
+
+    std::optional<QualifiedName> effectiveXMLPrefixedName;
+
+    // Per https://w3c.github.io/DOM-Parsing/#dfn-xml-serialization-of-the-attributes the xmlns attribute is serialized first
+    if (!isSerializingHTML) {
+        effectiveXMLPrefixedName = xmlAttributeSerialization(attribute, namespaces);
+        if (namespaces && shouldAddNamespaceAttribute(attribute, *namespaces))
+            appendNamespace(result, effectiveXMLPrefixedName->prefix(), effectiveXMLPrefixedName->namespaceURI(), *namespaces);
+    }
 
     result.append(' ');
 
-    std::optional<QualifiedName> effectiveXMLPrefixedName;
     if (isSerializingHTML)
         result.append(htmlAttributeSerialization(attribute));
-    else {
-        effectiveXMLPrefixedName = xmlAttributeSerialization(attribute, namespaces);
+    else
         result.append(effectiveXMLPrefixedName->toString());
-    }
 
     result.append('=');
 
-    if (element.isURLAttribute(attribute))
-        appendQuotedURLAttributeValue(result, element, attribute);
-    else {
         result.append('"');
+    if (element.isURLAttribute(attribute)) {
+        // FIXME: This does not fully match other browsers. Firefox percent-escapes
+        // non-ASCII characters for innerHTML.
+        appendAttributeValue(result, resolveURLIfNeeded(element, attribute.value()), isSerializingHTML);
+    } else
         appendAttributeValue(result, attribute.value(), isSerializingHTML);
         result.append('"');
-    }
-
-    if (!isSerializingHTML && namespaces && shouldAddNamespaceAttribute(attribute, *namespaces))
-        appendNamespace(result, effectiveXMLPrefixedName->prefix(), effectiveXMLPrefixedName->namespaceURI(), *namespaces);
 }
 
 void MarkupAccumulator::appendNonElementNode(StringBuilder& result, const Node& node, Namespaces* namespaces)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@
 package fx83dfeatures;
 
 import javafx.application.Application;
-import static javafx.application.Application.launch;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.geometry.Point3D;

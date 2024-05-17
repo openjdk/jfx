@@ -41,7 +41,7 @@ public:
     const OriginStack& originStack() const { return m_origin; }
     const CString& description() const { return m_description; }
 
-    JSValue toJS(JSGlobalObject*) const;
+    Ref<JSON::Value> toJSON(Dumper&) const;
 
 private:
     OriginStack m_origin;

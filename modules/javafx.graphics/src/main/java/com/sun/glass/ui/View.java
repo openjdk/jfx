@@ -386,7 +386,7 @@ public abstract class View {
 
     protected abstract void _enableInputMethodEvents(long ptr, boolean enable);
     protected void _finishInputMethodComposition(long ptr) {
-        // Action needed only on Windows.
+        // Action needed only on some platforms.
     }
 
     /*

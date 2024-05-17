@@ -50,6 +50,7 @@
 #include "DFGLiveCatchVariablePreservationPhase.h"
 #include "DFGLivenessAnalysisPhase.h"
 #include "DFGLoopPreHeaderCreationPhase.h"
+#include "DFGMovHintRemovalPhase.h"
 #include "DFGOSRAvailabilityAnalysisPhase.h"
 #include "DFGOSREntrypointCreationPhase.h"
 #include "DFGObjectAllocationSinkingPhase.h"
@@ -174,7 +175,10 @@ void Plan::cancel()
     m_mustHandleValues.clear();
     m_compilation = nullptr;
     m_finalizer = nullptr;
-    m_inlineCallFrames = nullptr;
+    if (m_inlineCallFrames) {
+        for (auto i : *m_inlineCallFrames)
+            i->baselineCodeBlock.clear();
+    }
     m_watchpoints = DesiredWatchpoints();
     m_identifiers = DesiredIdentifiers();
     m_weakReferences = DesiredWeakReferences();
@@ -369,13 +373,15 @@ Plan::CompilationPath Plan::compileInThreadImpl()
         RUN_PHASE(performSSALowering);
 
         // Ideally, these would be run to fixpoint with the object allocation sinking phase.
+        if (Options::usePutStackSinking())
+            RUN_PHASE(performPutStackSinking);
         RUN_PHASE(performArgumentsElimination);
         if (Options::usePutStackSinking())
             RUN_PHASE(performPutStackSinking);
 
         RUN_PHASE(performConstantHoisting);
         RUN_PHASE(performGlobalCSE);
-        RUN_PHASE(performLivenessAnalysis);
+        RUN_PHASE(performGraphPackingAndLivenessAnalysis);
         RUN_PHASE(performCFA);
         RUN_PHASE(performConstantFolding);
         RUN_PHASE(performCFGSimplification);
@@ -391,7 +397,7 @@ Plan::CompilationPath Plan::compileInThreadImpl()
         if (changed) {
             // State-at-tail and state-at-head will be invalid if we did strength reduction since
             // it might increase live ranges.
-            RUN_PHASE(performLivenessAnalysis);
+            RUN_PHASE(performGraphPackingAndLivenessAnalysis);
             RUN_PHASE(performCFA);
             RUN_PHASE(performConstantFolding);
             RUN_PHASE(performCFGSimplification);
@@ -402,7 +408,7 @@ Plan::CompilationPath Plan::compileInThreadImpl()
         // wrong with running LICM earlier, if we wanted to put other CFG transforms above this point.
         // Alternatively, we could run loop pre-header creation after SSA conversion - but if we did that
         // then we'd need to do some simple SSA fix-up.
-        RUN_PHASE(performLivenessAnalysis);
+        RUN_PHASE(performGraphPackingAndLivenessAnalysis);
         RUN_PHASE(performCFA);
         RUN_PHASE(performLICM);
 
@@ -413,7 +419,7 @@ Plan::CompilationPath Plan::compileInThreadImpl()
         // by IntegerRangeOptimization.
         //
         // Ideally, the dependencies should be explicit. See https://bugs.webkit.org/show_bug.cgi?id=157534.
-        RUN_PHASE(performLivenessAnalysis);
+        RUN_PHASE(performGraphPackingAndLivenessAnalysis);
         RUN_PHASE(performIntegerRangeOptimization);
 
         RUN_PHASE(performCleanUp);
@@ -424,14 +430,20 @@ Plan::CompilationPath Plan::compileInThreadImpl()
         // about code motion assumes that it's OK to insert GC points in random places.
         dfg.m_fixpointState = FixpointConverged;
 
-        RUN_PHASE(performLivenessAnalysis);
+        RUN_PHASE(performGraphPackingAndLivenessAnalysis);
         RUN_PHASE(performCFA);
         RUN_PHASE(performGlobalStoreBarrierInsertion);
         RUN_PHASE(performStoreBarrierClustering);
+
+        // MovHint removal happens based on the assumption that we no longer inserts random new nodes having new OSR exits.
+        // After this phase, you cannot insert a node having a new OSR exit. (If it does not cause OSR exit, or if it does
+        // not introduce a new OSR exit, then it is totally fine).
+        if (Options::useMovHintRemoval())
+            RUN_PHASE(performMovHintRemoval);
         RUN_PHASE(performCleanUp);
         RUN_PHASE(performDCE); // We rely on this to kill dead code that won't be recognized as dead by B3.
         RUN_PHASE(performStackLayout);
-        RUN_PHASE(performLivenessAnalysis);
+        RUN_PHASE(performGraphPackingAndLivenessAnalysis);
         RUN_PHASE(performOSRAvailabilityAnalysis);
 
         if (FTL::canCompile(dfg) == FTL::CannotCompile) {

@@ -54,9 +54,16 @@ public:
     ContentFilterUnblockHandler(String unblockURLHost, RetainPtr<WebFilterEvaluator>);
 #endif
 
+    WEBCORE_EXPORT ContentFilterUnblockHandler(
+        String&& unblockURLHost,
+        URL&& unreachableURL,
+#if HAVE(PARENTAL_CONTROLS_WITH_UNBLOCK_HANDLER)
+        Vector<uint8_t>&& webFilterEvaluatorData,
+#endif
+        bool unblockedAfterRequest
+    );
+
     WEBCORE_EXPORT bool needsUIProcess() const;
-    WEBCORE_EXPORT void encode(NSCoder *) const;
-    WEBCORE_EXPORT static WARN_UNUSED_RETURN bool decode(NSCoder *, ContentFilterUnblockHandler&);
     WEBCORE_EXPORT bool canHandleRequest(const ResourceRequest&) const;
     WEBCORE_EXPORT void requestUnblockAsync(DecisionHandlerFunction) const;
     void wrapWithDecisionHandler(const DecisionHandlerFunction&);
@@ -65,20 +72,25 @@ public:
     const URL& unreachableURL() const { return m_unreachableURL; }
     void setUnreachableURL(const URL& url) { m_unreachableURL = url; }
 
-#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
-    WEBCORE_EXPORT void setUnblockedAfterRequest(bool);
+#if HAVE(PARENTAL_CONTROLS_WITH_UNBLOCK_HANDLER)
+    WEBCORE_EXPORT Vector<uint8_t> webFilterEvaluatorData() const;
 #endif
 
+    WEBCORE_EXPORT void setUnblockedAfterRequest(bool);
+    bool unblockedAfterRequest() const { return m_unblockedAfterRequest; }
+
 private:
+#if HAVE(PARENTAL_CONTROLS_WITH_UNBLOCK_HANDLER)
+    static RetainPtr<WebFilterEvaluator> unpackWebFilterEvaluatorData(Vector<uint8_t>&&);
+#endif
+
     String m_unblockURLHost;
     URL m_unreachableURL;
     UnblockRequesterFunction m_unblockRequester;
 #if HAVE(PARENTAL_CONTROLS_WITH_UNBLOCK_HANDLER)
     RetainPtr<WebFilterEvaluator> m_webFilterEvaluator;
 #endif
-#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
-    NSNumber* m_unblockedAfterRequest { nil };
-#endif
+    bool m_unblockedAfterRequest { false };
 };
 
 } // namespace WebCore

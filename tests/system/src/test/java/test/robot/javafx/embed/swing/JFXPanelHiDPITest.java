@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,22 @@
 
 package test.robot.javafx.embed.swing;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
+import static test.util.Util.TIMEOUT;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
-import com.sun.javafx.PlatformUtil;
-import javafx.application.Platform;
+import javax.swing.BoxLayout;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 import javafx.embed.swing.JFXPanel;
 import javafx.embed.swing.JFXPanelShim;
 import javafx.scene.Scene;
@@ -40,23 +48,11 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
-
-import javax.swing.BoxLayout;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
-import javax.swing.Timer;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeTrue;
-
-import static test.util.Util.TIMEOUT;
+import com.sun.javafx.PlatformUtil;
+import test.util.Util;
 
 public class JFXPanelHiDPITest {
 
@@ -82,7 +78,7 @@ public class JFXPanelHiDPITest {
         launchLatch = new CountDownLatch(1);
 
         // Start the Application
-        SwingUtilities.invokeLater(() -> myApp = new MyApp());
+        SwingUtilities.invokeAndWait(() -> myApp = new MyApp());
 
         assertTrue("Timeout waiting for Application to launch",
                 launchLatch.await(5 * TIMEOUT, TimeUnit.MILLISECONDS));
@@ -149,7 +145,7 @@ public class JFXPanelHiDPITest {
         }
 
         private void createScene(final JFXPanel fxPanel) {
-            Platform.runLater(() -> {
+            Util.runAndWait(() -> {
                 StackPane root = new StackPane();
 
                 Rectangle rect = new Rectangle(PANEL_WIDTH - 100, (double) PANEL_HEIGHT / 8);

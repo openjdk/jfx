@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,9 @@
 #define _VIDEO_FRAME_H_
 
 #include <stdlib.h>
+#include <stdint.h>
+
+#define MAX_PLANE_COUNT 4
 
 /**
  * class CVideoFrame
@@ -56,18 +59,19 @@ public:
 
     double              GetTime();
 
-    int                 GetWidth();
-    int                 GetHeight();
-    int                 GetEncodedWidth();
-    int                 GetEncodedHeight();
+    unsigned int        GetWidth();
+    unsigned int        GetHeight();
+    unsigned int        GetEncodedWidth();
+    unsigned int        GetEncodedHeight();
 
     FrameType           GetType();
     bool                HasAlpha();
 
-    int                 GetPlaneCount();
-    void*               GetDataForPlane(int planeIndex);
-    unsigned long       GetSizeForPlane(int planeIndex);
-    int                 GetStrideForPlane(int planeIndex);
+    unsigned int        GetPlaneCount();
+    void                SetPlaneCount(unsigned int count);
+    void*               GetDataForPlane(unsigned int planeIndex);
+    unsigned long       GetSizeForPlane(unsigned int planeIndex);
+    unsigned int        GetStrideForPlane(unsigned int planeIndex);
 
     virtual CVideoFrame *ConvertToFormat(FrameType type);
 
@@ -75,22 +79,41 @@ public:
     void                SetFrameDirty(bool dirty) { m_FrameDirty = dirty; }
 
 protected:
-    int                 m_iWidth;
-    int                 m_iHeight;
-    int                 m_iEncodedWidth;
-    int                 m_iEncodedHeight;
+    unsigned int        m_uiWidth;
+    unsigned int        m_uiHeight;
+    unsigned int        m_uiEncodedWidth;
+    unsigned int        m_uiEncodedHeight;
     FrameType           m_typeFrame;
     bool                m_bHasAlpha;
     double              m_dTime;
     bool                m_FrameDirty;
 
     // frame data buffers
-    int                 m_iPlaneCount;
-    void*               m_pvPlaneData[4];
-    unsigned long       m_pulPlaneSize[4];
-    int                 m_piPlaneStrides[4];
+    void*               m_pvPlaneData[MAX_PLANE_COUNT];
+    unsigned long       m_pulPlaneSize[MAX_PLANE_COUNT];
+    unsigned int        m_puiPlaneStrides[MAX_PLANE_COUNT];
 
-    void SwapPlanes(int aa, int bb);
+    void Reset();
+    void SwapPlanes(unsigned int aa, unsigned int bb);
+
+    // CalcSize(), AddSize(), CalcPlanePointer() requires bValid to be set to
+    // true initially, if bValid is false these functions do nothing. It is
+    // implemented this way, so all these functions can be chain called without
+    // checking bValid after each call. bValid will be set to false only if
+    // calculation failed and will never be set to true.
+    // Multiplies a and b, bValid set to false if integer overflow detected.
+    unsigned long CalcSize(unsigned int a, unsigned int b, bool *pbValid);
+    // Adds a and b, bValid set to false if integer overflow detected.
+    unsigned long AddSize(unsigned long a, unsigned long b, bool *pbValid);
+    // Calculates plane pointer (baseAddress + offset) and checks that calculated
+    // pointer within buffer. Returns NULL and sets bValid to false if calculated
+    // pointer is invalid.
+    void* CalcPlanePointer(intptr_t baseAddress, unsigned int offset,
+                           unsigned long planeSize, unsigned long baseSize,
+                           bool *pbValid);
+
+private:
+    unsigned int        m_uiPlaneCount;
 };
 
 #endif  //_VIDEO_FRAME_H_

@@ -25,6 +25,7 @@
 #pragma once
 
 #include "AccessibilityObjectInterface.h"
+#include "ActivityState.h"
 #include <variant>
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
@@ -52,10 +53,14 @@ using AXTreeWeakPtr = std::variant<WeakPtr<AXObjectCache>
 #endif
 >;
 
+AXTreePtr axTreeForID(AXID);
+WEBCORE_EXPORT AXTreePtr findAXTree(Function<bool(AXTreePtr)>&&);
+
 template<typename T>
 class AXTreeStore {
     WTF_MAKE_NONCOPYABLE(AXTreeStore);
     WTF_MAKE_FAST_ALLOCATED;
+    friend WEBCORE_EXPORT AXTreePtr findAXTree(Function<bool(AXTreePtr)>&&);
 public:
     AXID treeID() const { return m_id; }
     static WeakPtr<AXObjectCache> axObjectCacheForID(AXID);
@@ -68,6 +73,7 @@ protected:
         : m_id(axID)
     { }
 
+    static void set(AXID, const AXTreeWeakPtr&);
     static void add(AXID, const AXTreeWeakPtr&);
     static void remove(AXID);
     static bool contains(AXID);
@@ -81,6 +87,24 @@ private:
     static HashMap<AXID, ThreadSafeWeakPtr<AXIsolatedTree>>& isolatedTreeMap() WTF_REQUIRES_LOCK(s_storeLock);
 #endif
 };
+
+template<typename T>
+inline void AXTreeStore<T>::set(AXID axID, const AXTreeWeakPtr& tree)
+{
+    ASSERT(isMainThread());
+
+    switchOn(tree,
+        [&] (const WeakPtr<AXObjectCache>& typedTree) {
+            liveTreeMap().set(axID, typedTree);
+        }
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+        , [&] (const ThreadSafeWeakPtr<AXIsolatedTree>& typedTree) {
+            Locker locker { s_storeLock };
+            isolatedTreeMap().set(axID, typedTree.get());
+        }
+#endif
+    );
+}
 
 template<typename T>
 inline void AXTreeStore<T>::add(AXID axID, const AXTreeWeakPtr& tree)

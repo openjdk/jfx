@@ -33,13 +33,12 @@
 
 #include "Blob.h"
 #include "Document.h"
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
+#include "LocalFrame.h"
 #include "MixedContentChecker.h"
 #include "ScriptExecutionContext.h"
 #include "SocketProvider.h"
 #include "ThreadableWebSocketChannelClientWrapper.h"
-#include "WebSocketChannel.h"
 #include "WebSocketChannelClient.h"
 #include "WorkerGlobalScope.h"
 #include "WorkerLoaderProxy.h"
@@ -56,7 +55,7 @@ WorkerThreadableWebSocketChannel::WorkerThreadableWebSocketChannel(WorkerGlobalS
     , m_workerClientWrapper(ThreadableWebSocketChannelClientWrapper::create(context, client))
     , m_bridge(Bridge::create(m_workerClientWrapper.copyRef(), m_workerGlobalScope.copyRef(), taskMode, provider))
     , m_socketProvider(provider)
-    , m_progressIdentifier(WebSocketChannelIdentifier::generateThreadSafe())
+    , m_progressIdentifier(WebSocketChannelIdentifier::generate())
 {
     m_bridge->initialize(context);
 }
@@ -347,7 +346,7 @@ void WorkerThreadableWebSocketChannel::Peer::didUpgradeURL()
 WorkerThreadableWebSocketChannel::Bridge::Bridge(Ref<ThreadableWebSocketChannelClientWrapper>&& workerClientWrapper, Ref<WorkerGlobalScope>&& workerGlobalScope, const String& taskMode, Ref<SocketProvider>&& socketProvider)
     : m_workerClientWrapper(WTFMove(workerClientWrapper))
     , m_workerGlobalScope(WTFMove(workerGlobalScope))
-    , m_loaderProxy(m_workerGlobalScope->thread().workerLoaderProxy())
+    , m_loaderProxy(*m_workerGlobalScope->thread().workerLoaderProxy())
     , m_taskMode(taskMode)
     , m_socketProvider(WTFMove(socketProvider))
 {
@@ -375,10 +374,12 @@ void WorkerThreadableWebSocketChannel::Bridge::mainThreadInitialize(ScriptExecut
             ASSERT(context.isWorkerGlobalScope() || context.isWorkletGlobalScope());
             if (clientWrapper->failedWebSocketChannelCreation()) {
                 // If Bridge::initialize() quitted earlier, we need to kick mainThreadDestroy() to delete the peer.
-                downcast<WorkerOrWorkletGlobalScope>(context).workerOrWorkletThread()->workerLoaderProxy().postTaskToLoader([peer = WTFMove(peer)](ScriptExecutionContext& context) {
+                if (auto* workerLoaderProxy = downcast<WorkerOrWorkletGlobalScope>(context).workerOrWorkletThread()->workerLoaderProxy()) {
+                    workerLoaderProxy->postTaskToLoader([peer = WTFMove(peer)](ScriptExecutionContext& context) {
                     ASSERT(isMainThread());
                     ASSERT_UNUSED(context, context.isDocument());
                 });
+                }
             } else
                 clientWrapper->didCreateWebSocketChannel(peer.release());
         }

@@ -115,6 +115,7 @@ my (
     $legacyEncryptedMediaSupport,
     $letterpressSupport,
     $macGestureEventsSupport,
+    $managedMediaSourceSupport,
     $mathmlSupport,
     $mediaCaptureSupport,
     $mediaControlsScriptSupport,
@@ -252,12 +253,6 @@ my @features = (
     { option => "css-conic-gradients", desc => "Toggle CSS Conic Gradient support",
       define => "ENABLE_CSS_CONIC_GRADIENTS", value => \$cssConicGradientsSupport },
 
-    { option => "css-device-adaptation", desc => "Toggle CSS Device Adaptation support",
-      define => "ENABLE_CSS_DEVICE_ADAPTATION", value => \$cssDeviceAdaptationSupport },
-
-    { option => "css-image-resolution", desc => "Toggle CSS image-resolution support",
-      define => "ENABLE_CSS_IMAGE_RESOLUTION", value => \$cssImageResolutionSupport },
-
     { option => "css-painting-api", desc => "Toggle CSS Painting API support",
       define => "ENABLE_CSS_PAINTING_API", value => \$cssPaintingAPISupport },
 
@@ -371,6 +366,9 @@ my @features = (
 
     { option => "mac-gesture-events", desc => "Toggle Mac gesture events support",
       define => "ENABLE_MAC_GESTURE_EVENTS", value => \$macGestureEventsSupport },
+
+    { option => "managed-media-source", desc => "Toggle Managed Media Source support",
+      define => "ENABLE_MANAGED_MEDIA_SOURCE", value => \$managedMediaSourceSupport },
 
     { option => "mathml", desc => "Toggle MathML support",
       define => "ENABLE_MATHML", value => \$mathmlSupport },

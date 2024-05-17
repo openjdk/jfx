@@ -38,9 +38,11 @@ namespace JSC {
 
 const ClassInfo WebAssemblyFunctionBase::s_info = { "WebAssemblyFunctionBase"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WebAssemblyFunctionBase) };
 
-WebAssemblyFunctionBase::WebAssemblyFunctionBase(VM& vm, NativeExecutable* executable, JSGlobalObject* globalObject, Structure* structure, WasmToWasmImportableFunction importableFunction)
+WebAssemblyFunctionBase::WebAssemblyFunctionBase(VM& vm, NativeExecutable* executable, JSGlobalObject* globalObject, Structure* structure, JSWebAssemblyInstance* instance, WasmToWasmImportableFunction importableFunction, RefPtr<const Wasm::RTT> rtt)
     : Base(vm, executable, globalObject, structure)
+    , m_instance(instance, WriteBarrierEarlyInit)
     , m_importableFunction(importableFunction)
+    , m_rtt(rtt)
 { }
 
 template<typename Visitor>
@@ -54,11 +56,10 @@ void WebAssemblyFunctionBase::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 
 DEFINE_VISIT_CHILDREN(WebAssemblyFunctionBase);
 
-void WebAssemblyFunctionBase::finishCreation(VM& vm, NativeExecutable* executable, unsigned length, const String& name, JSWebAssemblyInstance* instance)
+void WebAssemblyFunctionBase::finishCreation(VM& vm, NativeExecutable* executable, unsigned length, const String& name)
 {
     Base::finishCreation(vm, executable, length, name);
     ASSERT(inherits(info()));
-    m_instance.set(vm, this, instance);
 }
 
 } // namespace JSC

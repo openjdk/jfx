@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,13 +29,14 @@
 #include "CSSToStyleMap.h"
 #include "CascadeLevel.h"
 #include "PropertyCascade.h"
-#include "RenderStyle.h"
 #include "RuleSet.h"
 #include "SelectorChecker.h"
-#include <wtf/Bitmap.h>
+#include <wtf/BitSet.h>
 
 namespace WebCore {
 
+class FilterOperations;
+class RenderStyle;
 class StyleImage;
 class StyleResolver;
 
@@ -46,10 +47,7 @@ class BuilderState;
 
 void maybeUpdateFontForLetterSpacing(BuilderState&, CSSValue&);
 
-enum class ForVisitedLink : bool {
-    No,
-    Yes
-};
+enum class ForVisitedLink : bool { No, Yes };
 
 struct BuilderContext {
     Ref<const Document> document;
@@ -71,18 +69,18 @@ public:
     const Document& document() const { return m_context.document.get(); }
     const Element* element() const { return m_context.element.get(); }
 
-    void setFontDescription(FontCascadeDescription&& fontDescription) { m_fontDirty |= m_style.setFontDescription(WTFMove(fontDescription)); }
+    inline void setFontDescription(FontCascadeDescription&&);
     void setFontSize(FontCascadeDescription&, float size);
-    void setZoom(float f) { m_fontDirty |= m_style.setZoom(f); }
-    void setEffectiveZoom(float f) { m_fontDirty |= m_style.setEffectiveZoom(f); }
-    void setWritingMode(WritingMode writingMode) { m_fontDirty |= m_style.setWritingMode(writingMode); }
-    void setTextOrientation(TextOrientation textOrientation) { m_fontDirty |= m_style.setTextOrientation(textOrientation); }
+    inline void setZoom(float);
+    inline void setEffectiveZoom(float);
+    inline void setWritingMode(WritingMode);
+    inline void setTextOrientation(TextOrientation);
 
     bool fontDirty() const { return m_fontDirty; }
     void setFontDirty() { m_fontDirty = true; }
 
-    const FontCascadeDescription& fontDescription() { return m_style.fontDescription(); }
-    const FontCascadeDescription& parentFontDescription() { return parentStyle().fontDescription(); }
+    inline const FontCascadeDescription& fontDescription();
+    inline const FontCascadeDescription& parentFontDescription();
 
     // FIXME: These are mutually exclusive, clean up the code to take that into account.
     bool applyPropertyToRegularStyle() const { return m_linkMatch != SelectorChecker::MatchVisited; }
@@ -107,6 +105,11 @@ public:
     CSSToStyleMap& styleMap() { return m_styleMap; }
 
     void setIsBuildingKeyframeStyle() { m_isBuildingKeyframeStyle = true; }
+
+    bool isAuthorOrigin() const
+    {
+        return m_currentProperty && m_currentProperty->cascadeLevel == CascadeLevel::Author;
+    }
 
 private:
     // See the comment in maybeUpdateFontForLetterSpacing() about why this needs to be a friend.
@@ -135,8 +138,8 @@ private:
     HashSet<String> m_appliedCustomProperties;
     HashSet<String> m_inProgressCustomProperties;
     HashSet<String> m_inCycleCustomProperties;
-    Bitmap<numCSSProperties> m_inProgressProperties;
-    Bitmap<numCSSProperties> m_inUnitCycleProperties;
+    WTF::BitSet<numCSSProperties> m_inProgressProperties;
+    WTF::BitSet<numCSSProperties> m_inUnitCycleProperties;
 
     const PropertyCascade::Property* m_currentProperty { nullptr };
     SelectorChecker::LinkMatchMask m_linkMatch { };
@@ -147,5 +150,5 @@ private:
     bool m_isBuildingKeyframeStyle { false };
 };
 
-}
-}
+} // namespace Style
+} // namespace WebCore

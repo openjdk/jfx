@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,7 +32,7 @@ typedef [EnforceRange] unsigned long GPUIntegerCoordinate;
 typedef (sequence<GPUIntegerCoordinate> or GPUExtent3DDict) GPUExtent3D;
 
 [
-    EnabledBySetting=WebGPU,
+    EnabledBySetting=WebGPUEnabled,
     Exposed=(Window), /* https://bugs.webkit.org/show_bug.cgi?id=232542: DedicatedWorker */
     SecureContext
 ]
@@ -62,9 +62,10 @@ interface GPUCommandEncoder {
         GPUImageCopyTexture destination,
         GPUExtent3D copySize);
 
+    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=240219, second parameter should have default value of 0
     undefined clearBuffer(
         GPUBuffer buffer,
-        optional GPUSize64 offset = 0,
+        optional GPUSize64 offset,
         optional GPUSize64 size);
 
     undefined writeTimestamp(GPUQuerySet querySet, GPUSize32 queryIndex);

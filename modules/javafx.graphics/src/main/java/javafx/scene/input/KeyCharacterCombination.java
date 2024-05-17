@@ -112,9 +112,9 @@ public final class KeyCharacterCombination extends KeyCombination {
         if (event.getCode() == KeyCode.UNDEFINED) {
             return false;
         }
-        return (event.getCode().getCode()
-                       == Toolkit.getToolkit().getKeyCodeForChar(getCharacter()))
-                   && super.match(event);
+        int code = event.getCode().getCode();
+        return (super.match(event) &&
+                code == Toolkit.getToolkit().getKeyCodeForChar(getCharacter(), code));
     }
 
     /**

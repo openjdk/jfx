@@ -2,133 +2,176 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = include . doc example fuzz xstc
+SUBDIRS = include . doc example xstc
 if WITH_PYTHON
 SUBDIRS += python
+endif
+if WITH_GLOB
+SUBDIRS += fuzz
 endif
 
 DIST_SUBDIRS = include . doc example fuzz python xstc
 
 AM_CPPFLAGS = -I$(top_builddir)/include -I$(srcdir)/include -DSYSCONFDIR='"$(sysconfdir)"'
 
-AM_CFLAGS = $(EXTRA_CFLAGS)
-
 check_PROGRAMS = \
 	runsuite \
 	runtest \
 	runxmlconf \
-	testAutomata \
 	testModule \
 	testThreads \
 	testapi \
 	testchar \
 	testdict \
 	testlimits \
+	testparser \
 	testrecurse
 
 bin_PROGRAMS = xmllint xmlcatalog
 
-nodist_bin_SCRIPTS = xml2-config
+bin_SCRIPTS = xml2-config
 
 lib_LTLIBRARIES = libxml2.la
-libxml2_la_CFLAGS = $(EXTRA_CFLAGS) $(THREAD_CFLAGS) $(Z_CFLAGS) $(LZMA_CFLAGS)
+libxml2_la_CFLAGS = $(AM_CFLAGS) $(XML_PRIVATE_CFLAGS)
 libxml2_la_LIBADD = $(XML_PRIVATE_LIBS)
 
-if USE_VERSION_SCRIPT
-LIBXML2_VERSION_SCRIPT = $(VERSION_SCRIPT_FLAGS)$(srcdir)/libxml2.syms
-else
-LIBXML2_VERSION_SCRIPT =
-endif
-
-libxml2_la_LDFLAGS = $(CYGWIN_EXTRA_LDFLAGS) $(WIN32_EXTRA_LDFLAGS) \
-		     $(LIBXML2_VERSION_SCRIPT) \
+libxml2_la_LDFLAGS = $(AM_LDFLAGS) -no-undefined \
 		     -version-info $(LIBXML_VERSION_INFO) \
 		     $(MODULE_PLATFORM_LIBS)
-
-if WITH_TRIO_SOURCES
-trio_sources = triostr.c trio.c
-else
-trio_sources =
+if USE_VERSION_SCRIPT
+libxml2_la_LDFLAGS += $(VERSION_SCRIPT_FLAGS)$(srcdir)/libxml2.syms
 endif
 
-libxml2_la_SOURCES = SAX.c entities.c encoding.c error.c parserInternals.c  \
-		parser.c tree.c hash.c list.c xmlIO.c xmlmemory.c uri.c  \
-		valid.c xlink.c HTMLparser.c HTMLtree.c debugXML.c xpath.c  \
-		xpointer.c xinclude.c nanohttp.c nanoftp.c \
-		catalog.c globals.c threads.c c14n.c xmlstring.c buf.c \
-		xmlregexp.c xmlschemas.c xmlschemastypes.c xmlunicode.c \
-		$(trio_sources) \
-		xmlreader.c relaxng.c dict.c SAX2.c \
-		xmlwriter.c legacy.c chvalid.c pattern.c xmlsave.c \
-		xmlmodule.c schematron.c xzlib.c
+libxml2_la_SOURCES = buf.c chvalid.c dict.c entities.c encoding.c error.c \
+		     globals.c hash.c list.c parser.c parserInternals.c \
+		     SAX2.c threads.c tree.c uri.c valid.c xmlIO.c \
+		     xmlmemory.c xmlstring.c
+if WITH_C14N_SOURCES
+libxml2_la_SOURCES += c14n.c
+endif
+if WITH_CATALOG_SOURCES
+libxml2_la_SOURCES += catalog.c
+endif
+if WITH_DEBUG_SOURCES
+libxml2_la_SOURCES += debugXML.c
+endif
+if WITH_FTP_SOURCES
+libxml2_la_SOURCES += nanoftp.c
+endif
+if WITH_HTML_SOURCES
+libxml2_la_SOURCES += HTMLparser.c HTMLtree.c
+endif
+if WITH_HTTP_SOURCES
+libxml2_la_SOURCES += nanohttp.c
+endif
+if WITH_LEGACY_SOURCES
+libxml2_la_SOURCES += legacy.c
+if WITH_SAX1_SOURCES
+libxml2_la_SOURCES += SAX.c
+endif
+endif
+if WITH_LZMA_SOURCES
+libxml2_la_SOURCES += xzlib.c
+endif
+if WITH_MODULES_SOURCES
+libxml2_la_SOURCES += xmlmodule.c
+endif
+if WITH_OUTPUT_SOURCES
+libxml2_la_SOURCES += xmlsave.c
+endif
+if WITH_PATTERN_SOURCES
+libxml2_la_SOURCES += pattern.c
+endif
+if WITH_READER_SOURCES
+libxml2_la_SOURCES += xmlreader.c
+endif
+if WITH_REGEXPS_SOURCES
+libxml2_la_SOURCES += xmlregexp.c xmlunicode.c
+endif
+if WITH_SCHEMAS_SOURCES
+libxml2_la_SOURCES += relaxng.c xmlschemas.c xmlschemastypes.c
+if !WITH_XPATH_SOURCES
+libxml2_la_SOURCES += xpath.c
+endif
+endif
+if WITH_SCHEMATRON_SOURCES
+libxml2_la_SOURCES += schematron.c
+endif
+if WITH_TRIO_SOURCES
+libxml2_la_SOURCES += triostr.c trio.c
+endif
+if WITH_WRITER_SOURCES
+libxml2_la_SOURCES += xmlwriter.c
+endif
+if WITH_XINCLUDE_SOURCES
+libxml2_la_SOURCES += xinclude.c
+endif
+if WITH_XPATH_SOURCES
+libxml2_la_SOURCES += xpath.c
+endif
+if WITH_XPTR_SOURCES
+libxml2_la_SOURCES += xlink.c xpointer.c
+endif
 
 DEPS = $(top_builddir)/libxml2.la
 LDADDS = $(top_builddir)/libxml2.la
 
 
 m4datadir = $(datadir)/aclocal
-m4data_DATA = libxml.m4
+dist_m4data_DATA = libxml.m4
 
 runtest_SOURCES=runtest.c
-runtest_CFLAGS = $(EXTRA_CFLAGS) $(THREAD_CFLAGS)
-runtest_LDFLAGS = 
+runtest_CFLAGS = $(AM_CFLAGS) $(THREAD_CFLAGS)
 runtest_DEPENDENCIES = $(DEPS)
 runtest_LDADD= $(BASE_THREAD_LIBS) $(THREAD_LIBS) $(LDADDS)
 
 testrecurse_SOURCES=testrecurse.c
-testrecurse_LDFLAGS = 
 testrecurse_DEPENDENCIES = $(DEPS)
 testrecurse_LDADD= $(LDADDS)
 
 testlimits_SOURCES=testlimits.c
-testlimits_LDFLAGS = 
 testlimits_DEPENDENCIES = $(DEPS)
 testlimits_LDADD= $(LDADDS)
 
 testchar_SOURCES=testchar.c
-testchar_LDFLAGS = 
 testchar_DEPENDENCIES = $(DEPS)
 testchar_LDADD= $(LDADDS)
 
 testdict_SOURCES=testdict.c
-testdict_LDFLAGS = 
 testdict_DEPENDENCIES = $(DEPS)
 testdict_LDADD= $(LDADDS)
 
+testparser_SOURCES=testparser.c
+testparser_DEPENDENCIES = $(DEPS)
+testparser_LDADD= $(LDADDS)
+
 runsuite_SOURCES=runsuite.c
-runsuite_LDFLAGS = 
 runsuite_DEPENDENCIES = $(DEPS)
 runsuite_LDADD= $(LDADDS)
 
 xmllint_SOURCES=xmllint.c
-xmllint_LDFLAGS = 
+xmllint_CFLAGS = $(AM_CFLAGS) $(RDL_CFLAGS) $(ICONV_CFLAGS)
 xmllint_DEPENDENCIES = $(DEPS)
 xmllint_LDADD=  $(RDL_LIBS) $(LDADDS)
 
 xmlcatalog_SOURCES=xmlcatalog.c
-xmlcatalog_LDFLAGS = 
+xmlcatalog_CFLAGS = $(AM_CFLAGS) $(RDL_CFLAGS) $(ICONV_CFLAGS)
 xmlcatalog_DEPENDENCIES = $(DEPS)
 xmlcatalog_LDADD = $(RDL_LIBS) $(LDADDS)
 
 testThreads_SOURCES = testThreads.c
-testThreads_CFLAGS = $(EXTRA_CFLAGS) $(THREAD_CFLAGS)
-testThreads_LDFLAGS = 
+testThreads_CFLAGS = $(AM_CFLAGS) $(THREAD_CFLAGS)
 testThreads_DEPENDENCIES = $(DEPS)
 testThreads_LDADD= $(BASE_THREAD_LIBS) $(THREAD_LIBS) $(LDADDS)
 
-testAutomata_SOURCES=testAutomata.c
-testAutomata_LDFLAGS = 
-testAutomata_DEPENDENCIES = $(DEPS)
-testAutomata_LDADD= $(LDADDS)
-
 testModule_SOURCES=testModule.c
-testModule_LDFLAGS = 
 testModule_DEPENDENCIES = $(DEPS)
 testModule_LDADD= $(LDADDS)
 
 noinst_LTLIBRARIES = testdso.la
 testdso_la_SOURCES = testdso.c
-testdso_la_LDFLAGS = -module -no-undefined -avoid-version -rpath $(libdir)
+testdso_la_LDFLAGS = $(AM_LDFLAGS) \
+		     -module -no-undefined -avoid-version -rpath $(libdir)
 
 # that one forces the rebuild when "make rebuild" is run on doc/
 rebuild_testapi:
@@ -136,17 +179,14 @@ rebuild_testapi:
 	    $(PYTHON) $(srcdir)/gentest.py $(srcdir) ; fi )
 
 testapi_SOURCES=testapi.c
-testapi_LDFLAGS = 
 testapi_DEPENDENCIES = $(DEPS)
 testapi_LDADD= $(LDADDS)
 
 runxmlconf_SOURCES=runxmlconf.c
-runxmlconf_LDFLAGS = 
 runxmlconf_DEPENDENCIES = $(DEPS)
 runxmlconf_LDADD= $(LDADDS)
 
 #testOOM_SOURCES=testOOM.c testOOMlib.h testOOMlib.c
-#testOOM_LDFLAGS = 
 #testOOM_DEPENDENCIES = $(DEPS)
 #testOOM_LDADD= $(LDADDS)
 
@@ -155,12 +195,14 @@ check-local:
 	[ -d result ] || $(LN_S) $(srcdir)/result .
 	$(CHECKER) ./runtest$(EXEEXT)
 	$(CHECKER) ./testrecurse$(EXEEXT)
-	ASAN_OPTIONS="$$ASAN_OPTIONS:detect_leaks=0" $(CHECKER) ./testapi$(EXEEXT)
+	$(CHECKER) ./testapi$(EXEEXT)
 	$(CHECKER) ./testchar$(EXEEXT)
 	$(CHECKER) ./testdict$(EXEEXT)
+	$(CHECKER) ./testparser$(EXEEXT)
 	$(CHECKER) ./testModule$(EXEEXT)
 	$(CHECKER) ./testThreads$(EXEEXT)
 	$(CHECKER) ./runxmlconf$(EXEEXT)
+	$(CHECKER) ./runsuite$(EXEEXT)
 
 # Compatibility name of the check target
 runtests: check
@@ -175,10 +217,29 @@ asan:
 	./configure CFLAGS="-fsanitize=address,undefined -Wformat -Werror=format-security -Werror=array-bounds -g" CXXFLAGS="-fsanitize=address,undefined -Wformat -Werror=format-security -Werror=array-bounds -g" LDFLAGS="-fsanitize=address,undefined" CC="clang" CXX="clang++" --disable-shared ; OptimOff  ; $(MAKE) clean ; $(MAKE)
 
 # Old test suite. This should be ported to C.
-tests: $(TEST_DEBUG) $(TEST_CATALOG) $(TEST_REGEXPS) $(TEST_SCHEMATRON) Timingtests $(TEST_VTIME) $(PYTHON_TESTS)
+
+OLD_TESTS = Timingtests
+if WITH_CATALOG_SOURCES
+OLD_TESTS += Catatests
+endif
+if WITH_DEBUG_SOURCES
+OLD_TESTS += Scripttests
+endif
+if WITH_SCHEMAS_SOURCES
+if WITH_PYTHON
+OLD_TESTS += RelaxNGPythonTests SchemasPythonTests
+endif
+endif
+if WITH_SCHEMATRON_SOURCES
+OLD_TESTS += Schematrontests
+endif
+if WITH_VALID_SOURCES
+OLD_TESTS += VTimingtests
+endif
+
+tests: $(OLD_TESTS)
 
 Scripttests : xmllint$(EXEEXT)
-	@(echo > .memdump)
 	@echo "## Scripts regression tests"
 	@echo "## Some of the base computations may be different if srcdir != ."
 	-@(for i in $(srcdir)/test/scripts/*.script ; do \
@@ -188,10 +249,8 @@ Scripttests : xmllint$(EXEEXT)
 	  if [ ! -f $(srcdir)/result/scripts/$$name ] ; then \
 	      echo New test file $$name ; \
 	      $(CHECKER) $(top_builddir)/xmllint --shell $$xml < $$i > $(srcdir)/result/scripts/$$name 2> $(srcdir)/result/scripts/$$name.err ; \
-	      grep "MORY ALLO" .memdump  | grep -v "MEMORY ALLOCATED : 0";\
 	  else \
 	      log=`$(CHECKER) $(top_builddir)/xmllint --shell $$xml < $$i > result.$$name 2> result.$$name.err ; \
-	      grep "MORY ALLO" .memdump  | grep -v "MEMORY ALLOCATED : 0";\
 	      diff $(srcdir)/result/scripts/$$name result.$$name ; \
 	      diff $(srcdir)/result/scripts/$$name.err result.$$name.err` ; \
 	      if [ -n "$$log" ] ; then echo $$name result ; echo "$$log" ; fi ; \
@@ -199,7 +258,6 @@ Scripttests : xmllint$(EXEEXT)
 	  fi ; fi ; done)
 
 Catatests : xmlcatalog$(EXEEXT)
-	@(echo > .memdump)
 	@echo "## Catalog regression tests"
 	-@(for i in $(srcdir)/test/catalogs/*.script ; do \
 	  name=`basename $$i .script`; \
@@ -208,10 +266,8 @@ Catatests : xmlcatalog$(EXEEXT)
 	  if [ ! -f $(srcdir)/result/catalogs/$$name ] ; then \
 	      echo New test file $$name ; \
 	      $(CHECKER) $(top_builddir)/xmlcatalog --shell $$xml < $$i 2>&1 > $(srcdir)/result/catalogs/$$name ; \
-	      grep "MORY ALLO" .memdump  | grep -v "MEMORY ALLOCATED : 0";\
 	  else \
 	      log=`$(CHECKER) $(top_builddir)/xmlcatalog --shell $$xml < $$i 2>&1 > result.$$name ; \
-	      grep "MORY ALLO" .memdump  | grep -v "MEMORY ALLOCATED : 0";\
 	      diff $(srcdir)/result/catalogs/$$name result.$$name` ; \
 	      if [ -n "$$log" ] ; then echo $$name result ; echo "$$log" ; fi ; \
 	      rm result.$$name ; \
@@ -223,52 +279,23 @@ Catatests : xmlcatalog$(EXEEXT)
 	  if [ ! -f $(srcdir)/result/catalogs/$$name ] ; then \
 	      echo New test file $$name ; \
 	      $(CHECKER) $(top_builddir)/xmlcatalog --shell $$sgml < $$i > $(srcdir)/result/catalogs/$$name ; \
-	      grep "MORY ALLO" .memdump  | grep -v "MEMORY ALLOCATED : 0";\
 	  else \
 	      log=`$(CHECKER) $(top_builddir)/xmlcatalog --shell $$sgml < $$i > result.$$name ; \
-	      grep "MORY ALLO" .memdump  | grep -v "MEMORY ALLOCATED : 0";\
 	      diff $(srcdir)/result/catalogs/$$name result.$$name` ; \
 	      if [ -n "$$log" ] ; then echo $$name result ; echo "$$log" ; fi ; \
 	      rm result.$$name ; \
 	  fi ; fi ; done)
 	@echo "## Add and del operations on XML Catalogs"
 	-@($(CHECKER) $(top_builddir)/xmlcatalog --create --noout $(srcdir)/result/catalogs/mycatalog; \
-	grep "MORY ALLO" .memdump  | grep -v "MEMORY ALLOCATED : 0"; \
 	$(CHECKER) $(top_builddir)/xmlcatalog --noout --add public Pubid sysid $(srcdir)/result/catalogs/mycatalog; \
-	grep "MORY ALLO" .memdump  | grep -v "MEMORY ALLOCATED : 0"; \
 	$(CHECKER) $(top_builddir)/xmlcatalog --noout --add public Pubid2 sysid2 $(srcdir)/result/catalogs/mycatalog; \
-	grep "MORY ALLO" .memdump  | grep -v "MEMORY ALLOCATED : 0"; \
 	$(CHECKER) $(top_builddir)/xmlcatalog --noout --add public Pubid3 sysid3 $(srcdir)/result/catalogs/mycatalog; \
-	grep "MORY ALLO" .memdump  | grep -v "MEMORY ALLOCATED : 0"; \
 	diff result/catalogs/mycatalog.full $(srcdir)/result/catalogs/mycatalog; \
-	grep "MORY ALLO" .memdump  | grep -v "MEMORY ALLOCATED : 0"; \
 	$(CHECKER) $(top_builddir)/xmlcatalog --noout --del sysid $(srcdir)/result/catalogs/mycatalog; \
-	grep "MORY ALLO" .memdump  | grep -v "MEMORY ALLOCATED : 0"; \
 	$(CHECKER) $(top_builddir)/xmlcatalog --noout --del sysid3 $(srcdir)/result/catalogs/mycatalog; \
-	grep "MORY ALLO" .memdump  | grep -v "MEMORY ALLOCATED : 0"; \
 	$(CHECKER) $(top_builddir)/xmlcatalog --noout --del sysid2 $(srcdir)/result/catalogs/mycatalog; \
-	grep "MORY ALLO" .memdump  | grep -v "MEMORY ALLOCATED : 0"; \
 	diff result/catalogs/mycatalog.empty $(srcdir)/result/catalogs/mycatalog; \
-	grep "MORY ALLO" .memdump  | grep -v "MEMORY ALLOCATED : 0"; \
 	rm -f $(srcdir)/result/catalogs/mycatalog)
-
-Automatatests: testAutomata$(EXEEXT)
-	@(echo > .memdump)
-	@echo "## Automata regression tests"
-	-@(for i in $(srcdir)/test/automata/* ; do \
-	  name=`basename $$i`; \
-	  if [ ! -d $$i ] ; then \
-	  if [ ! -f $(srcdir)/result/automata/$$name ] ; then \
-	      echo New test file $$name ; \
-	      $(CHECKER) $(top_builddir)/testAutomata $$i > $(srcdir)/result/automata/$$name; \
-	      grep "MORY ALLO" .memdump  | grep -v "MEMORY ALLOCATED : 0";\
-	  else \
-	      log=`$(CHECKER) $(top_builddir)/testAutomata $$i 2>&1 > result.$$name ; \
-	      grep "MORY ALLO" .memdump  | grep -v "MEMORY ALLOCATED : 0";\
-	      diff $(srcdir)/result/automata/$$name result.$$name` ; \
-	      if [ -n "$$log" ] ; then echo $$name result ; echo "$$log" ; fi ; \
-	      rm result.$$name ; \
-	  fi ; fi ; done)
 
 dba100000.xml: dbgenattr.pl
 	@echo "## generating dba100000.xml"
@@ -282,30 +309,21 @@ Timingtests: xmllint$(EXEEXT) dba100000.xml
 	@echo "## 3/ repeated DOM parsing"
 	@echo "## 4/ repeated DOM validation"
 	-@($(top_builddir)/xmllint --stream --timing dba100000.xml; \
-	   MEM=`cat .memdump | grep "MEMORY ALLOCATED" | awk '{ print $$7}'`;\
 	   if [ "$$MEM" != "" ] ; then echo Using $$MEM bytes ; fi ; \
-	   grep "MORY ALLO" .memdump  | grep -v "MEMORY ALLOCATED : 0";\
 	   exit 0)
 	-@($(top_builddir)/xmllint --stream --timing --memory dba100000.xml; \
-	   MEM=`cat .memdump | grep "MEMORY ALLOCATED" | awk '{ print $$7}'`;\
 	   if [ "$$MEM" != "" ] ; then echo Using $$MEM bytes ; fi ; \
-	   grep "MORY ALLO" .memdump  | grep -v "MEMORY ALLOCATED : 0";\
 	   exit 0)
 	-@($(top_builddir)/xmllint --noout --timing --repeat $(srcdir)/test/valid/REC-xml-19980210.xml; \
-	   MEM=`cat .memdump | grep "MEMORY ALLOCATED" | awk '{ print $$7}'`;\
 	   if [ "$$MEM" != "" ] ; then echo Using $$MEM bytes ; fi ; \
-	   grep "MORY ALLO" .memdump  | grep -v "MEMORY ALLOCATED : 0";\
 	   exit 0)
 
 VTimingtests: xmllint$(EXEEXT)
 	-@($(top_builddir)/xmllint --noout --timing --valid --repeat $(srcdir)/test/valid/REC-xml-19980210.xml; \
-	   MEM=`cat .memdump | grep "MEMORY ALLOCATED" | awk '{ print $$7}'`;\
 	   if [ "$$MEM" != "" ] ; then echo Using $$MEM bytes ; fi ; \
-	   grep "MORY ALLO" .memdump  | grep -v "MEMORY ALLOCATED : 0";\
 	   exit 0)
 
 Schematrontests: xmllint$(EXEEXT)
-	@(echo > .memdump)
 	@echo "## Schematron regression tests"
 	-@(for i in $(srcdir)/test/schematron/*.sct ; do \
 	  name=`basename $$i | sed 's+\.sct++'`; \
@@ -318,11 +336,9 @@ Schematrontests: xmllint$(EXEEXT)
 		  $(CHECKER) $(top_builddir)/xmllint$(EXEEXT) --schematron $$i $$j \
 		    > $(srcdir)/result/schematron/"$$name"_"$$xno" \
 		    2> $(srcdir)/result/schematron/"$$name"_"$$xno".err; \
-	          grep "MORY ALLO" .memdump  | grep -v "MEMORY ALLOCATED : 0";\
 	      else \
 	          log=`$(CHECKER) $(top_builddir)/xmllint$(EXEEXT) --schematron $$i $$j \
 		    > res.$$name 2> err.$$name;\
-	          grep "MORY ALLO" .memdump  | grep -v "MEMORY ALLOCATED : 0";\
 	          diff $(srcdir)/result/schematron/"$$name"_"$$xno" \
 		       res.$$name;\
 	          diff $(srcdir)/result/schematron/"$$name"_"$$xno".err \
@@ -365,42 +381,25 @@ cleanup:
 dist-hook: cleanup
 	(cd $(srcdir) ; tar -cf - --exclude .git win32 os400 vms test result) | (cd $(distdir); tar xf -)
 
-dist-source: distdir
-	$(AMTAR) -chof - --exclude Tests --exclude test --exclude result $(distdir) | GZIP=$(GZIP_ENV) gzip -c >`echo "$(distdir)" | sed "s+libxml2+libxml2-sources+"`.tar.gz
-
-dist-test: distdir
-	(mkdir -p $(distdir))
-	(cd $(srcdir) ; tar -cf - --exclude .git xstc/Tests) | (cd $(distdir); tar xf -)
-	tar -cf - $(distdir)/test $(distdir)/result $(distdir)/xstc/Tests  $(distdir)/Makefile.tests $(distdir)/README.md $(distdir)/README.tests $(distdir)/testapi.c $(distdir)/runtest.c $(distdir)/runsuite.c | GZIP=$(GZIP_ENV) gzip -c >`echo "$(distdir)" | sed "s+libxml2+libxml2-tests+"`.tar.gz
-	@(rm -rf $(distdir)/xstc/Test)
-
-cleantar:
-	@(rm -f libxml*.tar.gz COPYING.LIB)
-
-rpm: cleanup cleantar
-	@(unset CDPATH ; $(MAKE) dist-source dist && rpmbuild -ta $(distdir).tar.gz)
-
-CLEANFILES = runxmlconf.log test.out *.gcda *.gcno *.res
+CLEANFILES = runsuite.log runxmlconf.log test.out *.gcda *.gcno *.res
 DISTCLEANFILES = COPYING missing.lst
 
-EXTRA_DIST = xml2-config.in libxml.spec.in \
-             libxml.m4 Copyright check-xml-test-suite.py gentest.py \
+EXTRA_DIST = Copyright check-xml-test-suite.py gentest.py \
 	     check-relaxng-test-suite.py check-relaxng-test-suite2.py \
 	     check-xsddata-test-suite.py check-xinclude-test-suite.py \
              example/Makefile.am example/gjobread.c example/gjobs.xml \
-	     libxml-2.0.pc.in libxml-2.0-uninstalled.pc.in \
 	     libxml2-config.cmake.in autogen.sh \
 	     trionan.c trionan.h triostr.c triostr.h trio.c trio.h \
-	     triop.h triodef.h libxml.h xzlib.h buf.h \
-	     enc.h save.h genUnicode.py TODO_SCHEMAS \
+	     triop.h triodef.h libxml.h \
+	     genUnicode.py \
 	     dbgen.pl dbgenattr.pl \
-	     README.tests Makefile.tests libxml2.syms timsort.h \
+	     libxml2.syms timsort.h \
 	     README.zOS README.md \
 	     CMakeLists.txt config.h.cmake.in libxml2-config.cmake.cmake.in
 
 
 pkgconfigdir = $(libdir)/pkgconfig
-nodist_pkgconfig_DATA = libxml-2.0.pc
+pkgconfig_DATA = libxml-2.0.pc
 
 cmakedir = $(libdir)/cmake/libxml2
 cmake_DATA = libxml2-config.cmake
@@ -425,7 +424,7 @@ LCOV = /usr/bin/lcov
 GENHTML = /usr/bin/genhtml
 
 cov: clean-cov
-	if [ "`echo $(LDFLAGS) | grep coverage`" = "" ] ; then \
+	if [ "`echo $(AM_LDFLAGS) | grep coverage`" = "" ] ; then \
 	    echo not configured with coverage; exit 1 ; fi
 	if [ ! -x $(LCOV) -o ! -x $(GENHTML) ] ; then \
 	    echo Need $(LCOV) and $(GENHTML) excecutables; exit 1 ; fi

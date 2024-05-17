@@ -28,11 +28,12 @@
 #if ENABLE(ENCRYPTED_MEDIA)
 
 #include "Document.h"
-#include "Frame.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSMediaKeySystemAccess.h"
+#include "LocalFrame.h"
 #include "Logging.h"
 #include "MediaKeySystemController.h"
+#include "Page.h"
 #include "PlatformMediaSessionManager.h"
 #include "Settings.h"
 #include "WindowEventLoop.h"
@@ -85,12 +86,14 @@ void MediaKeySystemRequest::start()
     controller->requestMediaKeySystem(*this);
 }
 
-void MediaKeySystemRequest::allow(CompletionHandler<void()>&& completionHandler)
+void MediaKeySystemRequest::allow()
 {
-    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [this, handler = WTFMove(completionHandler)]() mutable {
-        auto completionHandler = WTFMove(m_allowCompletionHandler);
-        completionHandler(WTFMove(m_promise));
-        handler();
+    if (!scriptExecutionContext())
+        return;
+
+    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [this] {
+        if (auto allowCompletionHandler = std::exchange(m_allowCompletionHandler, { }))
+            allowCompletionHandler(WTFMove(m_promise));
     });
 }
 

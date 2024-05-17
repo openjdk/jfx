@@ -28,6 +28,7 @@
 #include "IntPoint.h"
 #include "PlatformEvent.h"
 #include "PointerID.h"
+#include <wtf/UUID.h>
 #include <wtf/WindowsExtras.h>
 
 #if PLATFORM(JAVA)
@@ -43,7 +44,7 @@ const double ForceAtForceClick = 2;
     // We use -2 for NoButton because -1 is a valid value in the DOM API for Pointer Events for pointermove events that
     // indicate that the pressed mouse button hasn't changed since the last event.
     enum MouseButton : int8_t { LeftButton = 0, MiddleButton, RightButton, NoButton = -2 };
-    enum SyntheticClickType : int8_t { NoTap, OneFingerTap, TwoFingerTap };
+    enum class SyntheticClickType : uint8_t { NoTap, OneFingerTap, TwoFingerTap };
 #if PLATFORM(JAVA)
     enum MouseButtonMask : uint8_t { NoButtonMask = 0, LeftButtonMask, RightButtonMask, MiddleButtonMask = 4 };
 #endif
@@ -117,8 +118,8 @@ const double ForceAtForceClick = 2;
 #endif
 
     protected:
-        MouseButton m_button { NoButton };
-        SyntheticClickType m_syntheticClickType { NoTap };
+        MouseButton m_button { MouseButton::NoButton };
+        SyntheticClickType m_syntheticClickType { SyntheticClickType::NoTap };
 
         IntPoint m_position;
         IntPoint m_globalPosition;

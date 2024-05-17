@@ -57,10 +57,10 @@ static const std::initializer_list<TypeExtensionPair>& platformMediaTypes()
     return platformMediaTypes;
 }
 
-String MIMETypeRegistry::getMIMETypeForExtension(const String& extension)
+String MIMETypeRegistry::mimeTypeForExtension(StringView extension)
 {
     for (auto& entry : platformMediaTypes()) {
-        if (equalIgnoringASCIICase(extension, entry.extension.characters()))
+        if (equalIgnoringASCIICase(extension, entry.extension))
             return entry.type;
     }
     return emptyString();
@@ -71,13 +71,19 @@ bool MIMETypeRegistry::isApplicationPluginMIMEType(const String&)
     return false;
 }
 
-String MIMETypeRegistry::getPreferredExtensionForMIMEType(const String& mimeType)
+String MIMETypeRegistry::preferredExtensionForMIMEType(const String& mimeType)
 {
     for (auto& entry : platformMediaTypes()) {
-        if (equalIgnoringASCIICase(mimeType, entry.type.characters()))
+        if (equalIgnoringASCIICase(mimeType, entry.type))
             return entry.extension;
     }
     return emptyString();
+}
+
+Vector<String> MIMETypeRegistry::extensionsForMIMEType(const String&)
+{
+    ASSERT_NOT_IMPLEMENTED_YET();
+    return { };
 }
 
 } // namespace WebCore

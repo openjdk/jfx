@@ -42,7 +42,6 @@ public:
     static Ref<ScrollingTreeStickyNodeNicosia> create(ScrollingTree&, ScrollingNodeID);
     virtual ~ScrollingTreeStickyNodeNicosia() = default;
 
-    Nicosia::CompositionLayer* layer() const { return m_layer.get(); }
 
 private:
     ScrollingTreeStickyNodeNicosia(ScrollingTree&, ScrollingNodeID);
