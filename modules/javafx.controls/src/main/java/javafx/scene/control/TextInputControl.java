@@ -810,7 +810,7 @@ public abstract class TextInputControl extends Control {
         int pos = wordIterator.preceding(Utils.clamp(0, getCaretPosition(), textLength));
 
         // Skip the non-word region, then move/select to the beginning of the word.
-        while (pos != BreakIterator.DONE && !isLetterOrDigit(text, pos, textLength - 1)) {
+        while (pos != BreakIterator.DONE && !isLetterOrDigit(text, pos)) {
             pos = wordIterator.preceding(Utils.clamp(0, pos, textLength));
         }
 
@@ -1742,7 +1742,7 @@ public abstract class TextInputControl extends Control {
         }
     }
 
-    private static boolean isLetterOrDigit(String text, int ix, int len) {
+    private static boolean isLetterOrDigit(String text, int ix) {
         if (ix < 0) {
             // should not happen
             return false;
