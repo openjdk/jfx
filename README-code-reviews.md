@@ -57,6 +57,9 @@ By default, a PR is marked as ready once any "R"eviewer reviews and approves it.
 * If you want to indicate your approval, but still feel additional reviewers are needed, you may increase the number of reviewers (e.g., from 2 to 3)
 * If you want an area expert to review a PR, indicate this in a comment of the form: `Reviewers: @PERSON1 @PERSON2`; the requested reviewers can indicate whether or not they plan to review it
 * If you want to ensure that you have the opportunity to review this PR yourself, add a comment of the form: `@PRAUTHOR Wait for me to review this PR`, optionally add any concerns you might have
+* Check that the PR target branch is correct
+    * An ordinary (non-backport) PR must target the `master` branch in almost all cases
+    * A backport PR (which will have the `backport` label) must target the current stabilization branch; a Reviewer should check that the bug being fixed meets the criteria for the current phase of stabilization
 
 Here is a list of things to keep in mind when reviewing a PR. This applies to anyone doing a review, but especially a "R"eviewer:
 
