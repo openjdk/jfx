@@ -64,9 +64,9 @@ By default, a PR is marked as ready once any "R"eviewer reviews and approves it.
 Here is a list of things to keep in mind when reviewing a PR. This applies to anyone doing a review, but especially a "R"eviewer:
 
 * Make sure you understand why there was an issue to begin with, and why/how the proposed PR solves the issue
-* Consider the risk of regression
-* Consider any compatibility concerns
-* Check whether it adds any new public (or protected) API, even implicitly (such as overriding a protected method and making it public); if it does, indicate that it needs a CSR
+* Carefully consider the risk of regression
+* Carefully consider any compatibility concerns
+* Check whether it adds any new public or protected API, even implicitly (such as a public method that overrides a protected method, or a class that is moved from a non-exported to an exported package); if it does, indicate that it needs a CSR
 * Focus first on substantive comments rather than stylistic comments
 * Check whether there is an automated test; if not, ask for one, if it is feasible
 * Make sure that the PR has executed the GitHub Actions (GHA) tests; if they aren't being run, ask the PR author to enable GHA workflows; if the test fails on some platforms, check whether it is a real bug (sometimes a job fails becau se of GHA infrastucture changes or we see a spurious GHA failure)
