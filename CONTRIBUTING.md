@@ -230,7 +230,7 @@ Please also follow these formatting guidelines:
 * Wildcard imports &ndash; for example, `import java.util.*;` &ndash; are forbidden and may cause the build to fail. Please attempt to configure your IDE so it doesn't generate wildcard imports. An exception to this rule is that wildcard static imports in test classes are allowed, for example, `import static org.junit.Assert.*;`.
 * Don't worry too much about import order. Try not to change it but don't worry about fighting your IDE to stop it from doing so.
 
-New code should be formatted consistently in accordance with the above guidelines. However, please do not reformat existing code as part of a bug fix. The makes more changes for code reviewers to track and review, and can lead to merge conflicts. If you want to reformat a class, do that in a separate pull request (which will need its own unique JBS bug ID).
+New code should be formatted consistently in accordance with the above guidelines. However, please do not reformat existing code as part of a bug fix. This makes more changes for code reviewers to track and review, and can lead to merge conflicts.
 
 ### Building and testing
 
