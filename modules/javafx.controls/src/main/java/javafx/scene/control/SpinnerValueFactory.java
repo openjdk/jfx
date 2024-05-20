@@ -114,15 +114,19 @@ public abstract class SpinnerValueFactory<T> {
      * number of steps.
      *
      * @param steps The number of decrements that should be performed on the value.
+     *              If the number is negative, the call is equivalent to calling
+     *              {@link #increment(int)} with the absolute value of {@code steps}.
      */
     public abstract void decrement(int steps);
 
 
     /**
-     * Attempts to omcrement the {@link #valueProperty() value} by the given
+     * Attempts to increment the {@link #valueProperty() value} by the given
      * number of steps.
      *
      * @param steps The number of increments that should be performed on the value.
+     *              If the number is negative, the call is equivalent to calling
+     *              {@link #decrement(int)} with the absolute number of {@code steps}.
      */
     public abstract void increment(int steps);
 
@@ -172,9 +176,9 @@ public abstract class SpinnerValueFactory<T> {
 
     // --- wrapAround
     /**
-     * The wrapAround property is used to specify whether the value factory should
-     * be circular. For example, should an integer-based value model increment
-     * from the maximum value back to the minimum value (and vice versa).
+     * Specifies whether this {@code SpinnerValueFactory} wraps around from the maximum value to
+     * the minimum value, and vice versa. The semantics of the wrap-around behavior are specified
+     * by implementations of this class.
      */
     private BooleanProperty wrapAround;
     public final void setWrapAround(boolean value) {
@@ -409,8 +413,14 @@ public abstract class SpinnerValueFactory<T> {
     /**
      * A {@link javafx.scene.control.SpinnerValueFactory} implementation designed to iterate through
      * integer values.
-     *
-     * <p>Note that the default {@link #converterProperty() converter} is implemented
+     * <p>
+     * If {@link SpinnerValueFactory#wrapAroundProperty wrapAround} is {@code true}, the
+     * {@code IntegerSpinnerValueFactory} will step from the minimum value to the maximum value (and vice versa).
+     * As a consequence of that, the number of steps required to wrap around to the same value is {@code N+1}, where
+     * {@code N} is the number of steps between {@link #minProperty min} (inclusive) and {@link #maxProperty max}
+     * (inclusive). The new value after a step is {@code val = (val + amountToStepBy) % (max - min + 1)}.
+     * <p>
+     * Note that the default {@link #converterProperty() converter} is implemented
      * as an {@link javafx.util.converter.IntegerStringConverter} instance.
      *
      * @since JavaFX 8u40
@@ -606,8 +616,13 @@ public abstract class SpinnerValueFactory<T> {
     /**
      * A {@link javafx.scene.control.SpinnerValueFactory} implementation designed to iterate through
      * double values.
-     *
-     * <p>Note that the default {@link #converterProperty() converter} is implemented
+     * <p>
+     * If {@link SpinnerValueFactory#wrapAroundProperty wrapAround} is {@code true}, the
+     * {@code DoubleSpinnerValueFactory} will step through from the maximum value to the minimum value seamlessly; that
+     * is, any step up from the maximum value is equal to the same step up from the minimum value (and vice versa).
+     * The new value after a step is {@code val = (val + amountToStepBy) % (max - min)}.
+     * <p>
+     * Note that the default {@link #converterProperty() converter} is implemented
      * simply as shown below, which may be adequate in many cases, but it is important
      * for users to ensure that this suits their needs (and adjust when necessary). The
      * main point to note is that this {@link javafx.util.StringConverter} embeds
