@@ -930,7 +930,6 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         if (onMoveToLastCell != null) onMoveToLastCell.run();
     }
 
-    // TODO not necessary with the new InputMap V2
     private Consumer<Boolean> onHorizontalUnitScroll;
     private Consumer<Boolean> onVerticalUnitScroll;
 

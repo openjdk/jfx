@@ -1369,7 +1369,6 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         return FocusTraversalInputMap::traverseRight;
     }
 
-    // TODO not necessary with the new InputMap V2
     private Consumer<Boolean> onHorizontalUnitScroll;
     private Consumer<Boolean> onVerticalUnitScroll;
 
