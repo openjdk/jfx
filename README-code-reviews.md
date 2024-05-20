@@ -66,7 +66,7 @@ Here is a list of things to keep in mind when reviewing a PR. This applies to an
 * Make sure you understand why there was an issue to begin with, and why/how the proposed PR solves the issue
 * Carefully consider the risk of regression
 * Carefully consider any compatibility concerns
-* Check whether it adds any new public or protected API, even implicitly (such as a public method that overrides a protected method, or a class that is moved from a non-exported to an exported package); if it does, indicate that it needs a CSR
+* Check whether it adds, removes, or modifies any public or protected API, even implicitly (such as a public method that overrides a protected method, or a class that is moved from a non-exported to an exported package); if it does, indicate that it needs a CSR
 * Focus first on substantive comments rather than stylistic comments
 * Check whether there is an automated test; if not, ask for one, if it is feasible
 * Make sure that the PR has executed the GitHub Actions (GHA) tests; if they aren't being run, ask the PR author to enable GHA workflows; if the test fails on some platforms, check whether it is a real bug (sometimes a job fails because of GHA infrastructure changes or we see a spurious GHA failure)
