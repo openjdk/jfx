@@ -731,7 +731,8 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
             geometry(),
             resizable(),
             on_top(false),
-            is_fullscreen(false) {
+            is_fullscreen(false),
+            map_received(false) {
     jwindow = mainEnv->NewGlobalRef(_jwindow);
     gdk_windowManagerFunctions = wmf;
 
@@ -971,17 +972,21 @@ void WindowContextTop::process_realize() {
     }
 }
 
+void WindowContextTop::process_map() {
+    map_received = true;
+}
+
 void WindowContextTop::process_configure(GdkEventConfigure* event) {
+    if (!map_received) {
+        return;
+    }
+
     int ww = event->width + geometry.extents.left + geometry.extents.right;
     int wh = event->height + geometry.extents.top + geometry.extents.bottom;
 
-    if (!is_maximized && !is_fullscreen) {
-        geometry.final_width.value = (geometry.final_width.type == BOUNDSTYPE_CONTENT)
-                ? event->width : ww;
+//    fprintf(stderr, "process_configure -> w = %d, h = %d, x = %d, y = %d, maximized %d\n", ww, wh, event->x, event->y, is_maximized);
 
-        geometry.final_height.value = (geometry.final_height.type == BOUNDSTYPE_CONTENT)
-                ? event->height : wh;
-    }
+    bool is_floating = !is_iconified && !is_fullscreen && !is_maximized;
 
     // Do not report if iconified, because Java side would set the state to NORMAL
     if (jwindow && !is_iconified) {
@@ -998,16 +1003,24 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
         }
     }
 
-    int x, y;
-    gdk_window_get_origin(gdk_window, &x, &y);
-    if (frame_type == TITLED && !is_fullscreen) {
-        x -= geometry.extents.left;
-        y -= geometry.extents.top;
-    }
+    if (is_floating) {
+        geometry.final_width.value = (geometry.final_width.type == BOUNDSTYPE_CONTENT)
+                ? event->width : ww;
 
-    geometry.x = x;
-    geometry.y = y;
-    notify_window_move();
+        geometry.final_height.value = (geometry.final_height.type == BOUNDSTYPE_CONTENT)
+                ? event->height : wh;
+
+        int x, y;
+        gdk_window_get_origin(gdk_window, &x, &y);
+        if (frame_type == TITLED && !is_fullscreen) {
+            x -= geometry.extents.left;
+            y -= geometry.extents.top;
+        }
+
+        geometry.x = x;
+        geometry.y = y;
+        notify_window_move();
+    }
 
     glong to_screen = getScreenPtrForLocation(geometry.x, geometry.y);
     if (to_screen != -1) {
