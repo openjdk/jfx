@@ -1211,7 +1211,7 @@ void NotifyTouchInput(
 
     // Sets to 'true' if source device is a touch screen
     // and to 'false' if source device is a touch pad/pen.
-    const bool isDirect = IsTouchEvent();
+    const bool isDirect = (ti->dwFlags & TOUCHEVENTF_PEN) == 0;
 
     jint modifiers = GetModifiers();
     env->CallStaticObjectMethod(gestureSupportCls,
