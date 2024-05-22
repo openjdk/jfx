@@ -145,3 +145,4 @@ gst_structure_new_empty	@143	NONAME
 gst_structure_set	@144	NONAME
 gst_util_group_id_next	@145	NONAME
 gst_value_list_get_value	@146	NONAME
+gst_bin_recalculate_latency	@148	NONAME
