@@ -953,6 +953,7 @@ void WindowContextTop::process_state(GdkEventWindowState* event) {
 
     if (event->changed_mask & GDK_WINDOW_STATE_MAXIMIZED
         && !(event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED)) {
+        fprintf(stderr, "gtk_window_resize process state %d, %d\n", geometry_get_content_width(&geometry), geometry_get_content_height(&geometry));
         gtk_window_resize(GTK_WINDOW(gtk_widget), geometry_get_content_width(&geometry),
                                     geometry_get_content_height(&geometry));
     }
@@ -984,7 +985,7 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
     int ww = event->width + geometry.extents.left + geometry.extents.right;
     int wh = event->height + geometry.extents.top + geometry.extents.bottom;
 
-//    fprintf(stderr, "process_configure -> w = %d, h = %d, x = %d, y = %d, maximized %d\n", ww, wh, event->x, event->y, is_maximized);
+    fprintf(stderr, "process_configure -> w = %d, h = %d, x = %d, y = %d, maximized %d\n", ww, wh, event->x, event->y, is_maximized);
 
     bool is_floating = !is_iconified && !is_fullscreen && !is_maximized;
 
