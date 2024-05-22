@@ -953,7 +953,6 @@ void WindowContextTop::process_state(GdkEventWindowState* event) {
 
     if (event->changed_mask & GDK_WINDOW_STATE_MAXIMIZED
         && !(event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED)) {
-        fprintf(stderr, "gtk_window_resize process state %d, %d\n", geometry_get_content_width(&geometry), geometry_get_content_height(&geometry));
         gtk_window_resize(GTK_WINDOW(gtk_widget), geometry_get_content_width(&geometry),
                                     geometry_get_content_height(&geometry));
     }
@@ -1263,11 +1262,11 @@ WindowFrameExtents WindowContextTop::get_frame_extents() {
 }
 
 void WindowContextTop::update_ontop_tree(bool on_top) {
-    bool effective_on_top = on_top || this->on_top;
-    gtk_window_set_keep_above(GTK_WINDOW(gtk_widget), effective_on_top ? TRUE : FALSE);
-    for (std::set<WindowContextTop*>::iterator it = children.begin(); it != children.end(); ++it) {
-        (*it)->update_ontop_tree(effective_on_top);
-    }
+//    bool effective_on_top = on_top || this->on_top;
+//    gtk_window_set_keep_above(GTK_WINDOW(gtk_widget), effective_on_top ? TRUE : FALSE);
+//    for (std::set<WindowContextTop*>::iterator it = children.begin(); it != children.end(); ++it) {
+//        (*it)->update_ontop_tree(effective_on_top);
+//    }
 }
 
 bool WindowContextTop::on_top_inherited() {
