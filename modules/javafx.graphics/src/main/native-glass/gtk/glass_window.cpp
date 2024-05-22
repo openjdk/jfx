@@ -984,8 +984,6 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
     int ww = event->width + geometry.extents.left + geometry.extents.right;
     int wh = event->height + geometry.extents.top + geometry.extents.bottom;
 
-    fprintf(stderr, "process_configure -> w = %d, h = %d, x = %d, y = %d, maximized %d\n", ww, wh, event->x, event->y, is_maximized);
-
     bool is_floating = !is_iconified && !is_fullscreen && !is_maximized;
 
     // Do not report if iconified, because Java side would set the state to NORMAL
@@ -1037,6 +1035,13 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
 }
 
 void WindowContextTop::update_window_constraints() {
+    bool is_floating = !is_iconified && !is_fullscreen && !is_maximized;
+
+    if (!is_floating) {
+        // window is not floating on the screen
+        return;
+    }
+
     GdkGeometry hints;
 
     if (resizable.value && !is_disabled) {
@@ -1216,7 +1221,7 @@ void WindowContextTop::set_alpha(double alpha) {
 
 void WindowContextTop::set_enabled(bool enabled) {
     is_disabled = !enabled;
-    //update_window_constraints();
+    update_window_constraints();
 }
 
 void WindowContextTop::set_minimum_size(int w, int h) {
@@ -1262,11 +1267,11 @@ WindowFrameExtents WindowContextTop::get_frame_extents() {
 }
 
 void WindowContextTop::update_ontop_tree(bool on_top) {
-//    bool effective_on_top = on_top || this->on_top;
-//    gtk_window_set_keep_above(GTK_WINDOW(gtk_widget), effective_on_top ? TRUE : FALSE);
-//    for (std::set<WindowContextTop*>::iterator it = children.begin(); it != children.end(); ++it) {
-//        (*it)->update_ontop_tree(effective_on_top);
-//    }
+    bool effective_on_top = on_top || this->on_top;
+    gtk_window_set_keep_above(GTK_WINDOW(gtk_widget), effective_on_top ? TRUE : FALSE);
+    for (std::set<WindowContextTop*>::iterator it = children.begin(); it != children.end(); ++it) {
+        (*it)->update_ontop_tree(effective_on_top);
+    }
 }
 
 bool WindowContextTop::on_top_inherited() {
