@@ -1216,7 +1216,7 @@ void WindowContextTop::set_alpha(double alpha) {
 
 void WindowContextTop::set_enabled(bool enabled) {
     is_disabled = !enabled;
-    update_window_constraints();
+    //update_window_constraints();
 }
 
 void WindowContextTop::set_minimum_size(int w, int h) {
