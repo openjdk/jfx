@@ -39,7 +39,7 @@ private:
     bool hasValidAttributeType() const override;
     bool hasValidAttributeName() const override;
 
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
 
     void startAnimation() override;
     void stopAnimation(SVGElement* targetElement) override;
@@ -59,6 +59,7 @@ private:
     void buildTransformForProgress(AffineTransform*, float percentage);
 
     void updateAnimationMode() override;
+    void childrenChanged(const ChildChange&) final;
 
     // Note: we do not support percentage values for to/from coords as the spec implies we should (opera doesn't either)
     FloatPoint m_fromPoint;

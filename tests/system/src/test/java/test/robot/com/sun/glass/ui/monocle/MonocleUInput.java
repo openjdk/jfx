@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,16 +25,14 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import test.robot.com.sun.glass.ui.monocle.TestApplication;
-import com.sun.glass.ui.Application;
-import com.sun.glass.ui.monocle.LinuxInputDeviceRegistryShim;
-import javafx.application.Platform;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
+import javafx.application.Platform;
+import com.sun.glass.ui.Application;
+import com.sun.glass.ui.monocle.LinuxInputDeviceRegistryShim;
 import test.com.sun.glass.ui.monocle.NativeUInput;
 
 class MonocleUInput extends NativeUInput {
@@ -67,6 +65,7 @@ class MonocleUInput extends NativeUInput {
                         "Simulated Linux Input Device"));
     }
 
+    @Override
     protected void openConnection() {
     }
 

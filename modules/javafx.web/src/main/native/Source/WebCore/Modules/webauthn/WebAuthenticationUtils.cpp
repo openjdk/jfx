@@ -44,11 +44,6 @@ Vector<uint8_t> convertBytesToVector(const uint8_t byteArray[], const size_t len
     return { byteArray, length };
 }
 
-Vector<uint8_t> convertArrayBufferToVector(ArrayBuffer* buffer)
-{
-    return convertBytesToVector(static_cast<uint8_t*>(buffer->data()), buffer->byteLength());
-}
-
 Vector<uint8_t> produceRpIdHash(const String& rpId)
 {
     auto crypto = PAL::CryptoDigest::create(PAL::CryptoDigest::Algorithm::SHA_256);
@@ -163,7 +158,7 @@ Vector<uint8_t> buildAttestationObject(Vector<uint8_t>&& authData, String&& form
 }
 
 // FIXME(181948): Add token binding ID.
-Ref<ArrayBuffer> buildClientDataJson(ClientDataType type, const BufferSource& challenge, const SecurityOrigin& origin, WebAuthn::Scope scope)
+Ref<ArrayBuffer> buildClientDataJson(ClientDataType type, const BufferSource& challenge, const SecurityOrigin& origin, WebAuthn::Scope scope, const String& topOrigin)
 {
     auto object = JSON::Object::create();
     switch (type) {
@@ -176,6 +171,10 @@ Ref<ArrayBuffer> buildClientDataJson(ClientDataType type, const BufferSource& ch
     }
     object->setString("challenge"_s, base64URLEncodeToString(challenge.data(), challenge.length()));
     object->setString("origin"_s, origin.toRawString());
+
+    if (!topOrigin.isNull())
+        object->setString("topOrigin"_s, topOrigin);
+
     if (scope != WebAuthn::Scope::SameOrigin)
         object->setBoolean("crossOrigin"_s, scope != WebAuthn::Scope::SameOrigin);
 

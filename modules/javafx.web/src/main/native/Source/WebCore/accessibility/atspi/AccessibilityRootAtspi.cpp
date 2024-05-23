@@ -26,8 +26,8 @@
 #include "AccessibilityAtspiInterfaces.h"
 #include "Document.h"
 #include "FocusController.h"
-#include "Frame.h"
-#include "FrameView.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "Page.h"
 #include <glib/gi18n-lib.h>
 #include <locale.h>
@@ -205,7 +205,11 @@ AccessibilityObjectAtspi* AccessibilityRootAtspi::child() const
     if (!m_page)
         return nullptr;
 
-    Frame& frame = m_page->mainFrame();
+    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
+    if (!localMainFrame)
+        return nullptr;
+
+    auto& frame = *localMainFrame;
     if (!frame.document())
         return nullptr;
 
@@ -300,7 +304,11 @@ IntRect AccessibilityRootAtspi::frameRect(Atspi::CoordinateType coordinateType) 
     if (!m_page)
         return { };
 
-    auto* frameView = m_page->mainFrame().view();
+    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
+    if (!localMainFrame)
+        return { };
+
+    auto* frameView = localMainFrame->view();
     if (!frameView)
         return { };
 

@@ -28,6 +28,7 @@
 #include "GridBaselineAlignment.h"
 #include "GridTrackSize.h"
 #include "LayoutSize.h"
+#include "RenderBoxInlines.h"
 
 namespace WebCore {
 
@@ -119,9 +120,6 @@ public:
 
     // Required by RenderGrid. Try to minimize the exposed surface.
     const Grid& grid() const { return m_grid; }
-    // FIXME (jfernandez): We should remove any public getter for this attribute
-    // and encapsulate any access in the algorithm class.
-    Grid& mutableGrid() const { return m_grid; }
 
     const RenderGrid* renderGrid() const { return m_renderGrid; };
 
@@ -287,6 +285,7 @@ public:
     virtual LayoutUnit freeSpaceForStretchAutoTracksStep() const = 0;
     virtual bool isComputingSizeContainment() const = 0;
     virtual bool isComputingInlineSizeContainment() const = 0;
+    virtual bool isComputingSizeOrInlineSizeContainment() const = 0;
 
 protected:
     GridTrackSizingAlgorithmStrategy(GridTrackSizingAlgorithm& algorithm)

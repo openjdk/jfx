@@ -133,8 +133,8 @@ void WebSocketDeflater::reset()
 
 WebSocketInflater::WebSocketInflater(int windowBits)
     : m_windowBits(windowBits)
+    , m_stream(makeUniqueWithoutFastMallocCheck<z_stream>())
 {
-    m_stream = makeUniqueWithoutFastMallocCheck<z_stream>();
     memset(m_stream.get(), 0, sizeof(z_stream));
 }
 

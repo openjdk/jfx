@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #include "DisplayListItemBuffer.h"
 #include "DisplayListItemType.h"
 #include "DisplayListResourceHeap.h"
+#include "Filter.h"
 #include "FloatRect.h"
 #include "Font.h"
 #include "GraphicsContext.h"
@@ -66,7 +67,7 @@ public:
     WEBCORE_EXPORT bool isEmpty() const;
     WEBCORE_EXPORT size_t sizeInBytes() const;
 
-    String asText(OptionSet<AsTextFlag>) const;
+    WEBCORE_EXPORT String asText(OptionSet<AsTextFlag>) const;
 
     const ResourceHeap& resourceHeap() const { return m_resourceHeap; }
 
@@ -110,9 +111,19 @@ private:
         m_resourceHeap.add(font.renderingResourceIdentifier(), Ref { font });
     }
 
-    void cacheDecomposedGlyphs(WebCore::DecomposedGlyphs& decomposedGlyphs)
+    void cacheDecomposedGlyphs(DecomposedGlyphs& decomposedGlyphs)
     {
         m_resourceHeap.add(decomposedGlyphs.renderingResourceIdentifier(), Ref { decomposedGlyphs });
+    }
+
+    void cacheGradient(Gradient& gradient)
+    {
+        m_resourceHeap.add(gradient.renderingResourceIdentifier(), Ref { gradient });
+    }
+
+    void cacheFilter(Filter& filter)
+    {
+        m_resourceHeap.add(filter.renderingResourceIdentifier(), Ref { filter });
     }
 
     static bool shouldDumpForFlags(OptionSet<AsTextFlag>, ItemHandle);
@@ -127,7 +138,7 @@ void DisplayList::append(Args&&... args)
     itemBuffer().append<T>(std::forward<Args>(args)...);
 }
 
-WTF::TextStream& operator<<(WTF::TextStream&, const DisplayList&);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const DisplayList&);
 
 } // DisplayList
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -456,7 +456,7 @@ static gboolean mpegts_demuxer_sink_event(GstPad *pad, GstObject *parent, GstEve
             {
 #ifdef DEBUG_OUTPUT
                 g_print("MpegTS sinkEvent: NEW_SEGMENT, time=%.2f\n",
-                        time != GST_CLOCK_TIME_NONE ? (double)time/GST_SECOND : -1.0);
+                    segment.time != GST_CLOCK_TIME_NONE ? (double)segment.time/GST_SECOND : -1.0);
 #endif
                 if (segment.format == GST_FORMAT_TIME)
                 {
@@ -749,7 +749,9 @@ static GstFlowReturn process_video_packet(MpegTSDemuxer *demuxer, AVPacket *pack
             stream->discont = FALSE;
 
 #ifdef DEBUG_OUTPUT
-            g_print("MpegTS: [Video] NEWSEGMENT: last_stop = %.4f\n", (double) stream->segment.last_stop / GST_SECOND);
+            g_print("MpegTS: [Video] NEWSEGMENT: start = %.4f stop = %.4f time = %.4f position = %.4f\n",
+                (double) newsegment.start / GST_SECOND, (double) newsegment.stop / GST_SECOND,
+                (double) newsegment.time / GST_SECOND, (double) newsegment.position / GST_SECOND);
 #endif
         }
         g_mutex_unlock(&demuxer->lock);
@@ -836,7 +838,9 @@ static GstFlowReturn process_audio_packet(MpegTSDemuxer *demuxer, AVPacket *pack
             stream->discont = FALSE;
 
 #ifdef DEBUG_OUTPUT
-            g_print("MpegTS: [Audio] NEWSEGMENT: last_stop = %.4f\n", (double) stream->segment.last_stop / GST_SECOND);
+            g_print("MpegTS: [Audio] NEWSEGMENT: start = %.4f stop = %.4f time = %.4f position = %.4f\n",
+                (double) newsegment.start / GST_SECOND, (double) newsegment.stop / GST_SECOND,
+                (double) newsegment.time / GST_SECOND, (double) newsegment.position / GST_SECOND);
 #endif
         }
         g_mutex_unlock(&demuxer->lock);

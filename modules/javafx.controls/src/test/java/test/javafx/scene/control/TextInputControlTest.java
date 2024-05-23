@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -150,10 +150,12 @@ public class TextInputControlTest {
      ********************************************************************/
 
     @Test public void fontSetFromCSS() {
-        textInput.setStyle("-fx-font: 24 Helvetica");
+        assertEquals(Font.font("System", 12), textInput.getFont());
+
+        textInput.setStyle("-fx-font: 24 Amble");
         Scene s = new Scene(textInput);
         textInput.applyCss();
-        assertEquals(Font.font("Helvetica", 24), textInput.getFont());
+        assertEquals(Font.font("Amble", 24), textInput.getFont());
     }
 
     /******************************************************
@@ -2142,5 +2144,30 @@ public class TextInputControlTest {
         ClipboardContent content = new ClipboardContent();
         content.putString(string);
         Clipboard.getSystemClipboard().setContent(content);
+    }
+
+    @Test
+    public void previousWord_Bhojpuri() {
+        // "Bhojpuri \ud804\udca6\ud804\udcb7\ud804\udc94\ud804\udca3\ud804\udcb3\ud804\udca9\ud804\udcb2 test"
+        textInput.setText("Bhojpuri 𑂦𑂷𑂔𑂣𑂳𑂩𑂲 test");
+        textInput.end();
+        verifyCaret(28);
+        textInput.previousWord(); // at the beginning of "test"
+        verifyCaret(24);
+        textInput.previousWord(); // at the beginning of "𑂦𑂷𑂔𑂣𑂳𑂩𑂲"
+        verifyCaret(9);
+        textInput.previousWord(); // at the beginning of "Bhojpuri"
+        verifyCaret(0);
+    }
+
+    private void verifyCaret(int index) {
+        verifyCaret(index, index, false);
+    }
+
+    private void verifyCaret(int caret, int anchor, boolean reverse) {
+        assertEquals(caret, textInput.getCaretPosition());
+        assertEquals(anchor, textInput.getAnchor());
+        IndexRange sel = reverse ? new IndexRange(caret, anchor) : new IndexRange(anchor, caret);
+        assertEquals(sel, textInput.getSelection());
     }
 }

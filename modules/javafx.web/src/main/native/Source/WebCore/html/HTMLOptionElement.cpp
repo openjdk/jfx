@@ -3,8 +3,8 @@
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
  *           (C) 2006 Alexey Proskuryakov (ap@nypop.com)
- * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
- * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2017 Google Inc. All rights reserved.
  * Copyright (C) 2011 Motorola Mobility, Inc.  All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -30,12 +30,12 @@
 #include "AXObjectCache.h"
 #include "Document.h"
 #include "DocumentInlines.h"
-#include "ElementAncestorIterator.h"
+#include "ElementAncestorIteratorInlines.h"
 #include "HTMLDataListElement.h"
 #include "HTMLNames.h"
 #include "HTMLOptGroupElement.h"
-#include "HTMLParserIdioms.h"
 #include "HTMLSelectElement.h"
+#include "NodeName.h"
 #include "NodeRenderStyle.h"
 #include "NodeTraversal.h"
 #include "PseudoClassChangeInvalidation.h"
@@ -54,10 +54,9 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLOptionElement);
 using namespace HTMLNames;
 
 HTMLOptionElement::HTMLOptionElement(const QualifiedName& tagName, Document& document)
-    : HTMLElement(tagName, document)
+    : HTMLElement(tagName, document, CreateHTMLOptionElement)
 {
     ASSERT(hasTagName(optionTag));
-    setHasCustomStyleResolveCallbacks();
 }
 
 Ref<HTMLOptionElement> HTMLOptionElement::create(Document& document)
@@ -91,11 +90,10 @@ ExceptionOr<Ref<HTMLOptionElement>> HTMLOptionElement::createForLegacyFactoryFun
 
 bool HTMLOptionElement::isFocusable() const
 {
-    if (!supportsFocus())
+    RefPtr select = ownerSelectElement();
+    if (select && select->usesMenuList())
         return false;
-    // Option elements do not have a renderer.
-    auto* style = const_cast<HTMLOptionElement&>(*this).computedStyle();
-    return style && style->display() != DisplayType::None;
+    return HTMLElement::isFocusable();
 }
 
 bool HTMLOptionElement::matchesDefaultPseudoClass() const
@@ -109,7 +107,7 @@ String HTMLOptionElement::text() const
 
     // FIXME: Is displayStringModifiedByEncoding helpful here?
     // If it's correct here, then isn't it needed in the value and label functions too?
-    return stripLeadingAndTrailingHTMLSpaces(document().displayStringModifiedByEncoding(text)).simplifyWhiteSpace(isHTMLSpace);
+    return document().displayStringModifiedByEncoding(text).trim(isASCIIWhitespace).simplifyWhiteSpace(isASCIIWhitespace);
 }
 
 void HTMLOptionElement::setText(String&& text)
@@ -123,14 +121,7 @@ void HTMLOptionElement::setText(String&& text)
     bool selectIsMenuList = select && select->usesMenuList();
     int oldSelectedIndex = selectIsMenuList ? select->selectedIndex() : -1;
 
-    // Handle the common special case where there's exactly 1 child node, and it's a text node.
-    RefPtr child = firstChild();
-    if (is<Text>(child) && !child->nextSibling())
-        downcast<Text>(*child).setData(WTFMove(text));
-    else {
-        removeChildren();
-        appendChild(Text::create(document(), WTFMove(text)));
-    }
+    setTextContent(WTFMove(text));
 
     if (selectIsMenuList && select->selectedIndex() != oldSelectedIndex)
         select->setSelectedIndex(oldSelectedIndex);
@@ -174,34 +165,45 @@ int HTMLOptionElement::index() const
     return 0;
 }
 
-void HTMLOptionElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLOptionElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-#if ENABLE(DATALIST_ELEMENT)
-    if (name == valueAttr) {
-        for (auto& dataList : ancestorsOfType<HTMLDataListElement>(*this))
-            dataList.optionElementChildrenChanged();
-    } else
-#endif
-    if (name == disabledAttr) {
-        bool newDisabled = !value.isNull();
+    switch (name.nodeName()) {
+    case AttributeNames::disabledAttr: {
+        bool newDisabled = !newValue.isNull();
         if (m_disabled != newDisabled) {
-            Style::PseudoClassChangeInvalidation disabledInvalidation(*this, { { CSSSelector::PseudoClassDisabled, newDisabled },  { CSSSelector::PseudoClassEnabled, !newDisabled } });
+            Style::PseudoClassChangeInvalidation disabledInvalidation(*this, { { CSSSelector::PseudoClassType::Disabled, newDisabled },  { CSSSelector::PseudoClassType::Enabled, !newDisabled } });
             m_disabled = newDisabled;
             if (renderer() && renderer()->style().hasEffectiveAppearance())
                 renderer()->theme().stateChanged(*renderer(), ControlStates::States::Enabled);
         }
-    } else if (name == selectedAttr) {
+        break;
+    }
+    case AttributeNames::selectedAttr: {
         // FIXME: Use PseudoClassChangeInvalidation in other elements that implement matchesDefaultPseudoClass().
-        Style::PseudoClassChangeInvalidation defaultInvalidation(*this, CSSSelector::PseudoClassDefault, !value.isNull());
-        m_isDefault = !value.isNull();
+        Style::PseudoClassChangeInvalidation defaultInvalidation(*this, CSSSelector::PseudoClassType::Default, !newValue.isNull());
+        m_isDefault = !newValue.isNull();
 
-        // FIXME: This doesn't match what the HTML specification says.
-        // The specification implies that removing the selected attribute or
-        // changing the value of a selected attribute that is already present
-        // has no effect on whether the element is selected.
-        setSelectedState(!value.isNull());
-    } else
-        HTMLElement::parseAttribute(name, value);
+        // FIXME: WebKit still need to implement 'dirtiness'. See: https://bugs.webkit.org/show_bug.cgi?id=258073
+        // https://html.spec.whatwg.org/multipage/form-elements.html#concept-option-selectedness
+        if (oldValue.isNull() != newValue.isNull())
+            setSelected(!newValue.isNull());
+        break;
+    }
+    case AttributeNames::labelAttr: {
+        if (RefPtr select = ownerSelectElement())
+            select->optionElementChildrenChanged();
+        break;
+    }
+#if ENABLE(DATALIST_ELEMENT)
+    case AttributeNames::valueAttr:
+        for (auto& dataList : ancestorsOfType<HTMLDataListElement>(*this))
+            dataList.optionElementChildrenChanged();
+        break;
+#endif
+    default:
+        HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
+        break;
+    }
 }
 
 String HTMLOptionElement::value() const
@@ -209,7 +211,7 @@ String HTMLOptionElement::value() const
     const AtomString& value = attributeWithoutSynchronization(valueAttr);
     if (!value.isNull())
         return value;
-    return stripLeadingAndTrailingHTMLSpaces(collectOptionInnerText()).simplifyWhiteSpace(isHTMLSpace);
+    return collectOptionInnerText().trim(isASCIIWhitespace).simplifyWhiteSpace(isASCIIWhitespace);
 }
 
 void HTMLOptionElement::setValue(const AtomString& value)
@@ -242,7 +244,7 @@ void HTMLOptionElement::setSelectedState(bool selected, AllowStyleInvalidation a
 
     std::optional<Style::PseudoClassChangeInvalidation> checkedInvalidation;
     if (allowStyleInvalidation == AllowStyleInvalidation::Yes)
-        emplace(checkedInvalidation, *this, { { CSSSelector::PseudoClassChecked, selected } });
+        emplace(checkedInvalidation, *this, { { CSSSelector::PseudoClassType::Checked, selected } });
 
     m_isSelected = selected;
 
@@ -259,8 +261,10 @@ void HTMLOptionElement::childrenChanged(const ChildChange& change)
     for (auto& dataList : ancestors)
         dataList->optionElementChildrenChanged();
 #endif
+    if (change.source != ChildChange::Source::Clone) {
     if (RefPtr select = ownerSelectElement())
         select->optionElementChildrenChanged();
+    }
     HTMLElement::childrenChanged(change);
 }
 
@@ -279,15 +283,15 @@ String HTMLOptionElement::label() const
 {
     String label = attributeWithoutSynchronization(labelAttr);
     if (!label.isNull())
-        return stripLeadingAndTrailingHTMLSpaces(label);
-    return stripLeadingAndTrailingHTMLSpaces(collectOptionInnerText()).simplifyWhiteSpace(isHTMLSpace);
+        return label.trim(isASCIIWhitespace);
+    return collectOptionInnerText().trim(isASCIIWhitespace).simplifyWhiteSpace(isASCIIWhitespace);
 }
 
 // Same as label() but ignores the label content attribute in quirks mode for compatibility with other browsers.
 String HTMLOptionElement::displayLabel() const
 {
     if (document().inQuirksMode())
-        return stripLeadingAndTrailingHTMLSpaces(collectOptionInnerText()).simplifyWhiteSpace(isHTMLSpace);
+        return collectOptionInnerText().trim(isASCIIWhitespace).simplifyWhiteSpace(isASCIIWhitespace);
     return label();
 }
 

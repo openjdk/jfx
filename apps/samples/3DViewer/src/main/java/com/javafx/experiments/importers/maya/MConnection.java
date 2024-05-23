@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -51,6 +51,7 @@ public class MConnection {
         return targetPath;
     }
 
+    @Override
     public boolean equals(Object arg) {
         if (!(arg instanceof MConnection)) {
             return false;
@@ -60,6 +61,7 @@ public class MConnection {
                 targetPath.equals(other.targetPath));
     }
 
+    @Override
     public int hashCode() {
         return sourcePath.hashCode() ^ targetPath.hashCode();
     }

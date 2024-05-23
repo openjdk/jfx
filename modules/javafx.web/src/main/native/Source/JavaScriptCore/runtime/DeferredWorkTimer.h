@@ -49,12 +49,12 @@ public:
     private:
         WTF_MAKE_FAST_ALLOCATED;
     public:
-        TicketData(VM&, JSObject* scriptExecutionOwner, Vector<Strong<JSCell>>&& dependencies);
+        inline TicketData(VM&, JSObject* scriptExecutionOwner, Vector<Strong<JSCell>>&& dependencies);
 
-        VM& vm();
+        inline VM& vm();
         JSObject* target();
 
-        void cancel();
+        inline void cancel();
         bool isCancelled() const { return !scriptExecutionOwner.get(); }
 
         FixedVector<Strong<JSCell>> dependencies;
@@ -66,6 +66,7 @@ public:
     void doWork(VM&) final;
 
     Ticket addPendingWork(VM&, JSObject* target, Vector<Strong<JSCell>>&& dependencies);
+    bool hasAnyPendingWork() const;
     bool hasPendingWork(Ticket);
     bool hasDependancyInPendingWork(Ticket, JSCell* dependency);
     bool cancelPendingWork(Ticket);

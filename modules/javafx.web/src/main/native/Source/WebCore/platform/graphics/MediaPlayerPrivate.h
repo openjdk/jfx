@@ -82,6 +82,12 @@ public:
     virtual void videoFullscreenStandbyChanged() { }
 #endif
 
+    using LayerHostingContextIDCallback = CompletionHandler<void(LayerHostingContextID)>;
+    virtual void requestHostingContextID(LayerHostingContextIDCallback&& completionHandler) { completionHandler({ }); }
+    virtual LayerHostingContextID hostingContextID() const { return 0; }
+    virtual FloatSize videoInlineSize() const { return { }; }
+    virtual void setVideoInlineSizeFenced(const FloatSize&, WTF::MachSendRight&&) { }
+
 #if PLATFORM(IOS_FAMILY)
     virtual NSArray *timedMetadata() const { return nil; }
     virtual String accessLog() const { return emptyString(); }
@@ -117,6 +123,7 @@ public:
     virtual float currentTime() const { return 0; }
     virtual double currentTimeDouble() const { return currentTime(); }
     virtual MediaTime currentMediaTime() const { return MediaTime::createWithDouble(currentTimeDouble()); }
+    virtual bool currentMediaTimeMayProgress() const { return readyState() >= MediaPlayer::ReadyState::HaveFutureData; }
 
     virtual bool setCurrentTimeDidChangeCallback(MediaPlayer::CurrentTimeDidChangeCallback&&) { return false; }
 
@@ -159,12 +166,12 @@ public:
     virtual MediaPlayer::NetworkState networkState() const = 0;
     virtual MediaPlayer::ReadyState readyState() const = 0;
 
-    virtual std::unique_ptr<PlatformTimeRanges> seekable() const { return maxMediaTimeSeekable() == MediaTime::zeroTime() ? makeUnique<PlatformTimeRanges>() : makeUnique<PlatformTimeRanges>(minMediaTimeSeekable(), maxMediaTimeSeekable()); }
+    WEBCORE_EXPORT virtual const PlatformTimeRanges& seekable() const;
     virtual float maxTimeSeekable() const { return 0; }
     virtual MediaTime maxMediaTimeSeekable() const { return MediaTime::createWithDouble(maxTimeSeekable()); }
     virtual double minTimeSeekable() const { return 0; }
     virtual MediaTime minMediaTimeSeekable() const { return MediaTime::createWithDouble(minTimeSeekable()); }
-    virtual std::unique_ptr<PlatformTimeRanges> buffered() const = 0;
+    virtual const PlatformTimeRanges& buffered() const = 0;
     virtual double seekableTimeRangesLastModifiedTime() const { return 0; }
     virtual double liveUpdateInterval() const { return 0; }
 
@@ -291,7 +298,7 @@ public:
         if (!duration)
             return 0;
 
-        unsigned long long extra = totalBytes() * buffered()->totalDuration().toDouble() / duration.toDouble();
+        unsigned long long extra = totalBytes() * buffered().totalDuration().toDouble() / duration.toDouble();
         return static_cast<unsigned>(extra);
     }
 
@@ -342,6 +349,9 @@ public:
     virtual void renderVideoWillBeDestroyed() { }
 
     virtual void isLoopingChanged() { }
+
+protected:
+    mutable PlatformTimeRanges m_seekable;
 };
 
 }

@@ -63,14 +63,14 @@ void CSSFontFace::appendSources(CSSFontFace& fontFace, CSSValueList& srcList, Sc
     bool allowDownloading = context && (context->settingsValues().downloadableBinaryFontAllowedTypes != DownloadableBinaryFontAllowedTypes::None);
     for (auto& src : srcList) {
         // An item in the list either specifies a string (local font name) or a URL (remote font to download).
-        if (auto local = dynamicDowncast<CSSFontFaceSrcLocalValue>(src.get())) {
+        if (auto local = dynamicDowncast<CSSFontFaceSrcLocalValue>(src)) {
             if (!local->svgFontFaceElement())
                 fontFace.adoptSource(makeUnique<CSSFontFaceSource>(fontFace, local->fontFaceName()));
             else if (allowDownloading)
                 fontFace.adoptSource(makeUnique<CSSFontFaceSource>(fontFace, local->fontFaceName(), *local->svgFontFaceElement()));
         } else {
             if (allowDownloading) {
-                if (auto request = downcast<CSSFontFaceSrcResourceValue>(src.get()).fontLoadRequest(*context, isInitiatingElementInUserAgentShadowTree))
+                if (auto request = downcast<CSSFontFaceSrcResourceValue>(const_cast<CSSValue&>(src)).fontLoadRequest(*context, isInitiatingElementInUserAgentShadowTree))
                     fontFace.adoptSource(makeUnique<CSSFontFaceSource>(fontFace, *context->cssFontSelector(), makeUniqueRefFromNonNullUniquePtr(WTFMove(request))));
             }
         }
@@ -283,7 +283,7 @@ void CSSFontFace::setUnicodeRange(CSSValueList& list)
     ranges.reserveInitialCapacity(list.length());
 
     for (auto& rangeValue : list) {
-        auto& range = downcast<CSSUnicodeRangeValue>(rangeValue.get());
+        auto& range = downcast<CSSUnicodeRangeValue>(rangeValue);
         ranges.uncheckedAppend({ range.from(), range.to() });
     }
 
@@ -309,7 +309,7 @@ void CSSFontFace::setFeatureSettings(CSSValue& featureSettings)
     if (is<CSSValueList>(featureSettings)) {
         auto& list = downcast<CSSValueList>(featureSettings);
         for (auto& rangeValue : list) {
-            auto& feature = downcast<CSSFontFeatureValue>(rangeValue.get());
+            auto& feature = downcast<CSSFontFeatureValue>(rangeValue);
             settings.insert({ feature.tag(), feature.value() });
         }
     }
@@ -318,6 +318,25 @@ void CSSFontFace::setFeatureSettings(CSSValue& featureSettings)
         return;
 
     m_featureSettings = WTFMove(settings);
+
+    iterateClients(m_clients, [&](Client& client) {
+        client.fontPropertyChanged(*this);
+    });
+}
+
+void CSSFontFace::setSizeAdjust(CSSValue& value)
+{
+    ASSERT(is<CSSPrimitiveValue>(value));
+
+    mutableProperties().setProperty(CSSPropertySizeAdjust, &value);
+
+    auto& sizeAdjustValue = downcast<CSSPrimitiveValue>(value);
+    auto sizeAdjust = sizeAdjustValue.floatValue() / 100;
+
+    if (m_sizeAdjust == sizeAdjust)
+        return;
+
+    m_sizeAdjust = sizeAdjust;
 
     iterateClients(m_clients, [&](Client& client) {
         client.fontPropertyChanged(*this);
@@ -377,6 +396,11 @@ String CSSFontFace::unicodeRange() const
 String CSSFontFace::featureSettings() const
 {
     return properties().getPropertyValue(CSSPropertyFontFeatureSettings);
+}
+
+String CSSFontFace::sizeAdjust() const
+{
+    return properties().getPropertyValue(CSSPropertySizeAdjust);
 }
 
 String CSSFontFace::display() const
@@ -722,7 +746,7 @@ RefPtr<Font> CSSFontFace::font(const FontDescription& fontDescription, bool synt
             return Font::create(FontCache::forCurrentThread().lastResortFallbackFont(fontDescription)->platformData(), Font::Origin::Local, Font::Interstitial::Yes, visibility);
         }
         case CSSFontFaceSource::Status::Success: {
-            FontCreationContext fontCreationContext { m_featureSettings, m_fontSelectionCapabilities, fontPaletteValues, fontFeatureValues };
+            FontCreationContext fontCreationContext { m_featureSettings, m_fontSelectionCapabilities, fontPaletteValues, fontFeatureValues, m_sizeAdjust };
             if (auto result = source->font(fontDescription, syntheticBold, syntheticItalic, fontCreationContext))
                 return result;
             break;

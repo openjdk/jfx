@@ -28,10 +28,10 @@
 #include "WebConsoleAgent.h"
 
 #include "CommandLineAPIHost.h"
-#include "DOMWindow.h"
 #include "InspectorNetworkAgent.h"
 #include "InspectorWebAgentBase.h"
 #include "JSExecState.h"
+#include "LocalDOMWindow.h"
 #include "Logging.h"
 #include "ResourceError.h"
 #include "ResourceResponse.h"
@@ -45,21 +45,23 @@ namespace WebCore {
 
 using namespace Inspector;
 
-#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/WebConsoleAgentAdditions.cpp>)
-#include <WebKitAdditions/WebConsoleAgentAdditions.cpp>
-#else
-static String networkConnectionIntegrityErrorMessage(const ResourceError&)
+static String blockedTrackerErrorMessage(const ResourceError& error)
 {
+#if ENABLE(ADVANCED_PRIVACY_PROTECTIONS)
+    if (error.blockedKnownTracker())
+        return "Blocked connection to known tracker"_s;
+#else
+    UNUSED_PARAM(error);
+#endif
     return { };
 }
-#endif
 
 WebConsoleAgent::WebConsoleAgent(WebAgentContext& context)
     : InspectorConsoleAgent(context)
 {
 }
 
-void WebConsoleAgent::frameWindowDiscarded(DOMWindow& window)
+void WebConsoleAgent::frameWindowDiscarded(LocalDOMWindow& window)
 {
     if (auto* document = window.document()) {
         for (auto& message : m_consoleMessages) {
@@ -88,7 +90,7 @@ void WebConsoleAgent::didFailLoading(ResourceLoaderIdentifier requestIdentifier,
         return;
 
     auto level = MessageLevel::Error;
-    auto message = networkConnectionIntegrityErrorMessage(error);
+    auto message = blockedTrackerErrorMessage(error);
     if (message.isEmpty())
         message = makeString("Failed to load resource", error.localizedDescription().isEmpty() ? "" : ": ", error.localizedDescription());
     else

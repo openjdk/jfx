@@ -106,7 +106,7 @@ static ALWAYS_INLINE EncodedJSValue throwVMToThisNumberError(JSGlobalObject* glo
 {
     auto typeString = jsTypeStringForValue(globalObject, thisValue)->value(globalObject);
     scope.assertNoException();
-    return throwVMTypeError(globalObject, scope, WTF::makeString("thisNumberValue called on incompatible ", typeString));
+    return throwVMTypeError(globalObject, scope, WTF::makeString("thisNumberValue called on incompatible "_s, typeString));
 }
 
 // The largest finite floating point number is 1.mantissa * 2^(0x7fe-0x3ff).
@@ -436,7 +436,7 @@ JSC_DEFINE_HOST_FUNCTION(numberProtoFuncToFixed, (JSGlobalObject* globalObject, 
     // 15.7.4.5.7 states "If x >= 10^21, then let m = ToString(x)"
     // This also covers Ininity, and structure the check so that NaN
     // values are also handled by numberToString
-    if (!(fabs(x) < 1e+21))
+    if (!(std::abs(x) < 1e+21))
         return JSValue::encode(jsString(vm, String::number(x)));
 
     // The check above will return false for NaN or Infinity, these will be
@@ -481,18 +481,51 @@ JSC_DEFINE_HOST_FUNCTION(numberProtoFuncToPrecision, (JSGlobalObject* globalObje
     return JSValue::encode(jsString(vm, String::numberToStringFixedPrecision(x, significantFigures, KeepTrailingZeros)));
 }
 
+JSString* NumericStrings::addJSString(VM& vm, int i)
+{
+    if (static_cast<unsigned>(i) < cacheSize) {
+        auto& entry = lookupSmallString(static_cast<unsigned>(i));
+        if (entry.jsString)
+            return entry.jsString;
+        entry.jsString = jsNontrivialString(vm, entry.value);
+        return entry.jsString;
+    }
+    auto& entry = lookup(i);
+    if (i != entry.key || entry.value.isNull()) {
+        entry.key = i;
+        entry.value = String::number(i);
+    } else {
+        if (entry.jsString)
+            return entry.jsString;
+    }
+    entry.jsString = jsNontrivialString(vm, entry.value);
+    return entry.jsString;
+}
+
+void NumericStrings::initializeSmallIntCache(VM& vm)
+{
+    for (int i = 0; i < 10; ++i) {
+        auto* string = vm.smallStrings.singleCharacterString(i + '0');
+        auto& entry = lookupSmallString(static_cast<unsigned>(i));
+        entry.jsString = string;
+        ASSERT(string->tryGetValueImpl());
+        entry.value = string->tryGetValue();
+    }
+}
+
 static ALWAYS_INLINE JSString* int32ToStringInternal(VM& vm, int32_t value, int32_t radix)
 {
     ASSERT(!(radix < 2 || radix > 36));
+
+    if (radix == 10)
+        return vm.numericStrings.addJSString(vm, value);
+
     // A negative value casted to unsigned would be bigger than 36 (the max radix).
     if (static_cast<unsigned>(value) < static_cast<unsigned>(radix)) {
         ASSERT(value <= 36);
         ASSERT(value >= 0);
         return vm.smallStrings.singleCharacterString(radixDigits[value]);
     }
-
-    if (radix == 10)
-        return jsNontrivialString(vm, vm.numericStrings.add(value));
 
     return jsNontrivialString(vm, toStringWithRadixInternal(value, radix));
 
@@ -573,9 +606,17 @@ JSC_DEFINE_HOST_FUNCTION(numberProtoFuncToLocaleString, (JSGlobalObject* globalO
     if (!toThisNumber(callFrame->thisValue(), x))
         return throwVMToThisNumberError(globalObject, scope, callFrame->thisValue());
 
-    auto* numberFormat = IntlNumberFormat::create(vm, globalObject->numberFormatStructure());
-    numberFormat->initializeNumberFormat(globalObject, callFrame->argument(0), callFrame->argument(1));
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    JSValue locales = callFrame->argument(0);
+    JSValue options = callFrame->argument(1);
+    IntlNumberFormat* numberFormat = nullptr;
+    if (locales.isUndefined() && options.isUndefined())
+        numberFormat = globalObject->defaultNumberFormat();
+    else {
+        numberFormat = IntlNumberFormat::create(vm, globalObject->numberFormatStructure());
+        numberFormat->initializeNumberFormat(globalObject, locales, options);
+    }
+    RETURN_IF_EXCEPTION(scope, { });
+
     RELEASE_AND_RETURN(scope, JSValue::encode(numberFormat->format(globalObject, x)));
 }
 

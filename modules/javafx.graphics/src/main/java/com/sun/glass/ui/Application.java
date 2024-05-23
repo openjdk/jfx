@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -723,17 +723,22 @@ public abstract class Application {
         return _supportsSystemMenu();
     }
 
-    protected abstract int _getKeyCodeForChar(char c);
+    protected abstract int _getKeyCodeForChar(char c, int hint);
     /**
      * Returns a VK_ code of a key capable of producing the given unicode
      * character with respect to the currently active keyboard layout or
-     * VK_UNDEFINED if the character isn't present in the current layout.
+     * VK_UNDEFINED if the character isn't present in the current layout. The
+     * hint is the VK_ code of the key the system is attempting to match
+     * (which may be VK_UNDEFINED for a key on the main keyboard). It can be
+     * used to optimize the search or to distinguish between the main
+     * keyboard and the numeric keypad.
      *
      * @param c the character
+     * @param hint the code of the key the system is attempting to match
      * @return integer code for the given char
      */
-    public static int getKeyCodeForChar(char c) {
-        return application._getKeyCodeForChar(c);
+    public static int getKeyCodeForChar(char c, int hint) {
+        return application._getKeyCodeForChar(c, hint);
     }
 
     protected int _isKeyLocked(int keyCode) {
@@ -800,4 +805,10 @@ public abstract class Application {
     public Map<String, Class<?>> getPlatformKeys() {
         return Map.of();
     }
+
+    /**
+     * Checks whether there are any problems with platform preferences detection,
+     * and if so, emits a warning.
+     */
+    public void checkPlatformPreferencesSupport() {}
 }

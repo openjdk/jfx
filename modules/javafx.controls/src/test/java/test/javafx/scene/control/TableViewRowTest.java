@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,18 +24,18 @@
  */
 package test.javafx.scene.control;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
-
 import org.junit.After;
 import org.junit.Test;
-
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 /**
@@ -153,5 +153,56 @@ public class TableViewRowTest {
         assertFalse(c1.isSelected());
         assertTrue(c2.isSelected());
         assertFalse(row.isSelected());
+    }
+
+    /**
+     * Same index and underlying item should not cause the updateItem(..) method to be called.
+     */
+    @Test
+    public void testSameIndexAndItemShouldNotUpdateItem() {
+        AtomicInteger counter = new AtomicInteger();
+
+        TableView<String> table = ControlUtils.createTableView();
+        table.setRowFactory(view -> new TableRow<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                counter.incrementAndGet();
+                super.updateItem(item, empty);
+            }
+        });
+
+        stageLoader = new StageLoader(table);
+
+        counter.set(0);
+        TableRow<String> row = ControlUtils.getTableRow(table, 0);
+        row.updateIndex(0);
+
+        assertEquals(0, counter.get());
+    }
+
+    /**
+     * The contract of a {@link TableRow} is that isItemChanged(..)
+     * is called when the index is 'changed' to the same number as the old one, to evaluate if we need to call
+     * updateItem(..).
+     */
+    @Test
+    public void testSameIndexIsItemsChangedShouldBeCalled() {
+        AtomicBoolean isItemChangedCalled = new AtomicBoolean();
+
+        TableView<String> table = ControlUtils.createTableView();
+        table.setRowFactory(view -> new TableRow<>() {
+            @Override
+            protected boolean isItemChanged(String oldItem, String newItem) {
+                isItemChangedCalled.set(true);
+                return super.isItemChanged(oldItem, newItem);
+            }
+        });
+
+        stageLoader = new StageLoader(table);
+
+        TableRow<String> row = ControlUtils.getTableRow(table, 0);
+        row.updateIndex(0);
+
+        assertTrue(isItemChangedCalled.get());
     }
 }

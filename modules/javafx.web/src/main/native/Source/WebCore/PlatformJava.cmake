@@ -95,6 +95,7 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/java/ImageBufferJavaBackend.h
     platform/graphics/java/ImageJava.h
     platform/graphics/java/PlatformContextJava.h
+    platform/graphics/java/PathJava.h
     platform/graphics/java/RQRef.h
     platform/graphics/java/RenderingQueue.h
     platform/graphics/texmap/BitmapTextureJava.h

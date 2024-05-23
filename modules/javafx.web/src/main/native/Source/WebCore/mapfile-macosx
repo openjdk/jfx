@@ -1790,10 +1790,6 @@
                _Java_com_sun_webkit_graphics_WCMediaPlayer_notifySeeking
                _Java_com_sun_webkit_graphics_WCMediaPlayer_notifySizeChanged
                _Java_com_sun_webkit_graphics_WCRenderQueue_twkRelease
-               _Java_com_sun_webkit_network_SocketStreamHandle_twkDidClose
-               _Java_com_sun_webkit_network_SocketStreamHandle_twkDidFail
-               _Java_com_sun_webkit_network_SocketStreamHandle_twkDidOpen
-               _Java_com_sun_webkit_network_SocketStreamHandle_twkDidReceiveData
                _Java_com_sun_webkit_network_URLLoaderBase_twkDidFail
                _Java_com_sun_webkit_network_URLLoaderBase_twkDidFinishLoading
                _Java_com_sun_webkit_network_URLLoaderBase_twkDidReceiveData

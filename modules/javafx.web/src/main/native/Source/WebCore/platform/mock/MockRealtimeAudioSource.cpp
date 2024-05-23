@@ -63,8 +63,10 @@ CaptureSourceOrError MockRealtimeAudioSource::create(String&& deviceID, String&&
 #endif
 
     auto source = adoptRef(*new MockRealtimeAudioSource(WTFMove(deviceID), WTFMove(name), WTFMove(hashSalts)));
-    if (constraints && source->applyConstraints(*constraints))
-        return { };
+    if (constraints) {
+        if (auto error = source->applyConstraints(*constraints))
+            return CaptureSourceOrError({ WTFMove(error->badConstraint), MediaAccessDenialReason::InvalidConstraint });
+    }
 
     return CaptureSourceOrError(WTFMove(source));
 }
@@ -92,6 +94,7 @@ const RealtimeMediaSourceSettings& MockRealtimeAudioSource::settings()
     if (!m_currentSettings) {
         RealtimeMediaSourceSettings settings;
         settings.setDeviceId(hashedId());
+        settings.setGroupId(captureDevice().groupId());
         settings.setVolume(volume());
         settings.setEchoCancellation(echoCancellation());
         settings.setSampleRate(sampleRate());
@@ -99,6 +102,7 @@ const RealtimeMediaSourceSettings& MockRealtimeAudioSource::settings()
 
         RealtimeMediaSourceSupportedConstraints supportedConstraints;
         supportedConstraints.setSupportsDeviceId(true);
+        supportedConstraints.setSupportsGroupId(true);
         supportedConstraints.setSupportsVolume(true);
         supportedConstraints.setSupportsEchoCancellation(true);
         supportedConstraints.setSupportsSampleRate(true);
@@ -126,7 +130,7 @@ const RealtimeMediaSourceCapabilities& MockRealtimeAudioSource::capabilities()
         capabilities.setDeviceId(hashedId());
         capabilities.setVolume(CapabilityValueOrRange(0.0, 1.0));
         capabilities.setEchoCancellation(RealtimeMediaSourceCapabilities::EchoCancellation::ReadWrite);
-        capabilities.setSampleRate(CapabilityValueOrRange(44100, 48000));
+        capabilities.setSampleRate(CapabilityValueOrRange(44100, 96000));
 
         m_capabilities = WTFMove(capabilities);
     }
@@ -143,6 +147,7 @@ void MockRealtimeAudioSource::startProducingData()
 #if PLATFORM(IOS_FAMILY)
     PlatformMediaSessionManager::sharedManager().sessionCanProduceAudioChanged();
     ASSERT(AudioSession::sharedSession().category() == AudioSession::CategoryType::PlayAndRecord);
+    ASSERT(AudioSession::sharedSession().mode() == AudioSession::Mode::VideoChat);
 #endif
 
     if (!sampleRate())

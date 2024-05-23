@@ -30,10 +30,10 @@
 #include "Document.h"
 #include "Exception.h"
 #include "FeaturePolicy.h"
-#include "Frame.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSPermissionDescriptor.h"
 #include "JSPermissionStatus.h"
+#include "LocalFrame.h"
 #include "NavigatorBase.h"
 #include "Page.h"
 #include "PermissionController.h"
@@ -113,6 +113,8 @@ std::optional<PermissionName> Permissions::toPermissionName(const String& name)
         return PermissionName::Microphone;
     if (name == "notifications"_s)
         return PermissionName::Notifications;
+    if (name == "push"_s)
+        return PermissionName::Push;
     return std::nullopt;
 }
 
@@ -196,7 +198,8 @@ void Permissions::query(JSC::Strong<JSC::JSObject> permissionDescriptorValue, DO
     });
     };
 
-    workerGlobalScope.thread().workerLoaderProxy().postTaskToLoader(WTFMove(completionHandler));
+    if (auto* workerLoaderProxy = workerGlobalScope.thread().workerLoaderProxy())
+        workerLoaderProxy->postTaskToLoader(WTFMove(completionHandler));
 }
 
 } // namespace WebCore

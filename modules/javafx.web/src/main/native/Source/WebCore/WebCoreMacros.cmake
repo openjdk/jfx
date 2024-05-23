@@ -66,7 +66,6 @@ function(GENERATE_BINDINGS target)
     set(idl_attributes_file ${WEBCORE_DIR}/bindings/scripts/IDLAttributes.json)
     set(idl_files_list ${CMAKE_CURRENT_BINARY_DIR}/idl_files_${target}.tmp)
     set(pp_idl_files_list ${CMAKE_CURRENT_BINARY_DIR}/pp_idl_files_${target}.tmp)
-    set(idl_include_list ${CMAKE_CURRENT_BINARY_DIR}/idl_include_${target}.tmp)
     set(_supplemental_dependency)
 
     set(content)
@@ -93,7 +92,6 @@ function(GENERATE_BINDINGS target)
         --outputDir ${arg_DESTINATION}
         --idlFilesList ${idl_files_list}
         --ppIDLFilesList ${pp_idl_files_list}
-        --includeDirsList ${idl_include_list}
         --preprocessor "${CODE_GENERATOR_PREPROCESSOR}"
         --idlAttributesFile ${idl_attributes_file}
     )
@@ -104,16 +102,13 @@ function(GENERATE_BINDINGS target)
     if (PROCESSOR_COUNT)
         list(APPEND args --numOfJobs ${PROCESSOR_COUNT})
     endif ()
-    set(include_dir)
     foreach (i IN LISTS arg_IDL_INCLUDES)
         if (IS_ABSOLUTE ${i})
-            set(f ${i})
+            list(APPEND args --include ${i})
         else ()
-            set(f ${CMAKE_CURRENT_SOURCE_DIR}/${i})
+            list(APPEND args --include ${CMAKE_CURRENT_SOURCE_DIR}/${i})
         endif ()
-        set(include_dir "${include_dir}${f}\n")
     endforeach ()
-    file(WRITE ${idl_include_list} ${include_dir})
 
     foreach (i IN LISTS arg_PP_EXTRA_OUTPUT)
         list(APPEND args --ppExtraOutput ${i})
@@ -216,8 +211,7 @@ endfunction()
 function(GENERATE_DOM_NAME_ENUM _enum)
     add_custom_command(
         OUTPUT ${WebCore_DERIVED_SOURCES_DIR}/${_enum}.cpp ${WebCore_DERIVED_SOURCES_DIR}/${_enum}.h
-        MAIN_DEPENDENCY ${WEBCORE_DIR}/html/HTMLTagNames.in ${WEBCORE_DIR}/svg/svgtags.in ${WEBCORE_DIR}/mathml/mathtags.in ${WEBCORE_DIR}/html/HTMLAttributeNames.in ${WEBCORE_DIR}/mathml/mathatrs.in ${WEBCORE_DIR}/svg/svgattrs.in ${WEBCORE_DIR}/svg/xlinkattrs.in ${WEBCORE_DIR}/xml/xmlattrs.in ${WEBCORE_DIR}/xml/xmlnsattrs.in
-        DEPENDS ${MAKE_NAMES_DEPENDENCIES} ${WEBCORE_DIR}/dom/make_names.pl  ${SCRIPTS_BINDINGS}
+        DEPENDS ${WEBCORE_DIR}/html/HTMLTagNames.in ${WEBCORE_DIR}/svg/svgtags.in ${WEBCORE_DIR}/mathml/mathtags.in ${WEBCORE_DIR}/html/HTMLAttributeNames.in ${WEBCORE_DIR}/mathml/mathattrs.in ${WEBCORE_DIR}/svg/svgattrs.in ${WEBCORE_DIR}/svg/xlinkattrs.in ${WEBCORE_DIR}/xml/xmlattrs.in ${WEBCORE_DIR}/xml/xmlnsattrs.in ${MAKE_NAMES_DEPENDENCIES} ${WEBCORE_DIR}/dom/make_names.pl  ${SCRIPTS_BINDINGS}
         COMMAND ${PERL_EXECUTABLE} ${WEBCORE_DIR}/dom/make_names.pl --outputDir ${WebCore_DERIVED_SOURCES_DIR} --enum ${_enum} --elements ${WEBCORE_DIR}/html/HTMLTagNames.in --elements ${WEBCORE_DIR}/svg/svgtags.in --elements ${WEBCORE_DIR}/mathml/mathtags.in --attrs ${WEBCORE_DIR}/html/HTMLAttributeNames.in --attrs ${WEBCORE_DIR}/mathml/mathattrs.in --attrs ${WEBCORE_DIR}/svg/svgattrs.in --attrs ${WEBCORE_DIR}/svg/xlinkattrs.in --attrs ${WEBCORE_DIR}/xml/xmlattrs.in --attrs ${WEBCORE_DIR}/xml/xmlnsattrs.in
         VERBATIM)
 endfunction()

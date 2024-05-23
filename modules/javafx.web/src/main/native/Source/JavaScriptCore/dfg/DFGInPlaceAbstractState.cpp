@@ -41,6 +41,7 @@ InPlaceAbstractState::InPlaceAbstractState(Graph& graph)
     : m_graph(graph)
     , m_abstractValues(*graph.m_abstractValuesCache)
     , m_variables(OperandsLike, graph.block(0)->variablesAtHead)
+    , m_tupleAbstractValues(graph.m_tupleData.size())
     , m_block(nullptr)
 {
 }
@@ -304,8 +305,15 @@ bool InPlaceAbstractState::endBasicBlock()
             block->valuesAtTail[i] = atIndex(i);
         }
 
-        for (NodeAbstractValuePair& valueAtTail : block->ssa->valuesAtTail)
-            valueAtTail.value = forNode(valueAtTail.node);
+        for (NodeAbstractValuePair& valueAtTail : block->ssa->valuesAtTail) {
+            NodeFlowProjection& node = valueAtTail.node;
+            if (node->isTuple()) {
+                ASSERT(hasClearedAbstractState(node));
+                valueAtTail.value = AbstractValue();
+                continue;
+            }
+            valueAtTail.value = forNode(node);
+        }
         break;
     }
 
@@ -369,6 +377,9 @@ bool InPlaceAbstractState::merge(BasicBlock* from, BasicBlock* to)
             unsigned valueCountInFromBlock = 0;
             for (NodeAbstractValuePair& fromBlockValueAtTail : from->ssa->valuesAtTail) {
                 if (fromBlockValueAtTail.node == node) {
+                    if (node->isTuple())
+                        ASSERT(hasClearedAbstractState(node) && !fromBlockValueAtTail.value);
+                    else
                     ASSERT(fromBlockValueAtTail.value == forNode(node));
                     ++valueCountInFromBlock;
                 }
@@ -376,6 +387,7 @@ bool InPlaceAbstractState::merge(BasicBlock* from, BasicBlock* to)
             ASSERT(valueCountInFromBlock == 1);
 #endif
 
+            if (!node->isTuple())
             changed |= entry.value.merge(forNode(node));
 
             if (DFGInPlaceAbstractStateInternal::verbose)

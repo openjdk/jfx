@@ -31,19 +31,18 @@
 #include "CacheStorageProvider.h"
 #include "Chrome.h"
 #include "CommonVM.h"
-#include "DOMWindow.h"
 #include "DocumentLoader.h"
 #include "DocumentSVG.h"
 #include "EditorClient.h"
-#include "ElementIterator.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameView.h"
 #include "ImageBuffer.h"
 #include "ImageObserver.h"
 #include "IntRect.h"
 #include "JSDOMWindowBase.h"
 #include "LegacyRenderSVGRoot.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "Page.h"
 #include "PageConfiguration.h"
 #include "RenderSVGRoot.h"
@@ -58,6 +57,7 @@
 #include "ScriptDisallowedScope.h"
 #include "Settings.h"
 #include "SocketProvider.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/JSLock.h>
 #include <wtf/text/TextStream.h>
@@ -81,16 +81,18 @@ SVGImage::~SVGImage()
         // Clear m_page, so that SVGImageChromeClient knows we're destructed.
         m_page = nullptr;
     }
-
-    // Verify that page teardown destroyed the Chrome
-    ASSERT(!m_chromeClient || !m_chromeClient->image());
 }
 
 inline RefPtr<SVGSVGElement> SVGImage::rootElement() const
 {
     if (!m_page)
         return nullptr;
-    return DocumentSVG::rootElement(*m_page->mainFrame().document());
+
+    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
+    if (!localMainFrame)
+        return nullptr;
+
+    return DocumentSVG::rootElement(*localMainFrame->document());
 }
 
 bool SVGImage::renderingTaintsOrigin() const
@@ -188,7 +190,7 @@ ImageDrawResult SVGImage::drawForContainer(GraphicsContext& context, const Float
     if (!m_page)
         return ImageDrawResult::DidNothing;
 
-    ImageObserver* observer = imageObserver();
+    auto observer = imageObserver();
     ASSERT(observer);
 
     // Temporarily reset image observer, we don't want to receive any changeInRect() calls due to this relayout.
@@ -209,7 +211,7 @@ ImageDrawResult SVGImage::drawForContainer(GraphicsContext& context, const Float
 
     ImageDrawResult result = draw(context, dstRect, scaledSrc, options);
 
-    setImageObserver(observer);
+    setImageObserver(WTFMove(observer));
     return result;
 }
 
@@ -230,13 +232,13 @@ RefPtr<NativeImage> SVGImage::nativeImage(const DestinationColorSpace& colorSpac
     if (!imageBuffer)
         return nullptr;
 
-    ImageObserver* observer = imageObserver();
+    auto observer = imageObserver();
     setImageObserver(nullptr);
     setContainerSize(size());
 
     imageBuffer->context().drawImage(*this, FloatPoint(0, 0));
 
-    setImageObserver(observer);
+    setImageObserver(WTFMove(observer));
     return ImageBuffer::sinkIntoNativeImage(WTFMove(imageBuffer));
 }
 
@@ -325,8 +327,8 @@ ImageDrawResult SVGImage::draw(GraphicsContext& context, const FloatRect& dstRec
 
     stateSaver.restore();
 
-    if (imageObserver())
-        imageObserver()->didDraw(*this);
+    if (auto observer = imageObserver())
+        observer->didDraw(*this);
 
     return ImageDrawResult::DidDraw;
 }
@@ -339,11 +341,16 @@ RenderBox* SVGImage::embeddedContentBox() const
     return downcast<RenderBox>(rootElement->renderer());
 }
 
-FrameView* SVGImage::frameView() const
+LocalFrameView* SVGImage::frameView() const
 {
     if (!m_page)
         return nullptr;
-    return m_page->mainFrame().view();
+
+    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
+    if (!localMainFrame)
+        return nullptr;
+
+    return localMainFrame->view();
 }
 
 bool SVGImage::hasRelativeWidth() const
@@ -432,7 +439,10 @@ bool SVGImage::isAnimating() const
 
 void SVGImage::reportApproximateMemoryCost() const
 {
-    RefPtr document = m_page->mainFrame().document();
+    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
+    if (!localMainFrame)
+        return;
+    RefPtr document = localMainFrame->document();
     size_t decodedImageMemoryCost = 0;
 
     for (RefPtr<Node> node = document; node; node = NodeTraversal::next(*node))
@@ -452,9 +462,8 @@ EncodedDataStatus SVGImage::dataChanged(bool allDataReceived)
         return EncodedDataStatus::Complete;
 
     if (allDataReceived) {
-        auto pageConfiguration = pageConfigurationWithEmptyClients(PAL::SessionID::defaultSessionID());
-        m_chromeClient = makeUnique<SVGImageChromeClient>(this);
-        pageConfiguration.chromeClient = m_chromeClient.get();
+        auto pageConfiguration = pageConfigurationWithEmptyClients(std::nullopt, PAL::SessionID::defaultSessionID());
+        pageConfiguration.chromeClient = makeUniqueRef<SVGImageChromeClient>(this);
 
         // FIXME: If this SVG ends up loading itself, we might leak the world.
         // The Cache code does not know about CachedImages holding Frames and
@@ -472,12 +481,15 @@ EncodedDataStatus SVGImage::dataChanged(bool allDataReceived)
         m_page->settings().setShouldAllowUserInstalledFonts(false);
 
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
-        if (auto* observer = imageObserver())
+        if (auto observer = imageObserver())
             m_page->settings().setLayerBasedSVGEngineEnabled(observer->layerBasedSVGEngineEnabled());
 #endif
+        auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
+        if (!localMainFrame)
+            return EncodedDataStatus::Unknown;
 
-        Frame& frame = m_page->mainFrame();
-        frame.setView(FrameView::create(frame));
+        LocalFrame& frame = *localMainFrame;
+        frame.setView(LocalFrameView::create(frame));
         frame.init();
         FrameLoader& loader = frame.loader();
         loader.forceSandboxFlags(SandboxAll);

@@ -195,6 +195,8 @@ static jint supportedActions = com_sun_glass_ui_Clipboard_ACTION_NONE;
             return com_sun_glass_ui_Clipboard_ACTION_MOVE;
         case NSDragOperationLink:
             return com_sun_glass_ui_Clipboard_ACTION_REFERENCE;
+        default:
+            break;
     }
 
     if (operation & (NSDragOperationCopy | NSDragOperationGeneric)) {

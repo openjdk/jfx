@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,23 +58,19 @@ package com.sun.javafx.text;
 
 import static com.sun.javafx.scene.text.TextLayout.FLAGS_ANALYSIS_VALID;
 import static com.sun.javafx.scene.text.TextLayout.FLAGS_HAS_BIDI;
+import static com.sun.javafx.scene.text.TextLayout.FLAGS_HAS_CJK;
 import static com.sun.javafx.scene.text.TextLayout.FLAGS_HAS_COMPLEX;
 import static com.sun.javafx.scene.text.TextLayout.FLAGS_HAS_EMBEDDED;
 import static com.sun.javafx.scene.text.TextLayout.FLAGS_HAS_TABS;
-import static com.sun.javafx.scene.text.TextLayout.FLAGS_HAS_CJK;
 import static com.sun.javafx.scene.text.TextLayout.FLAGS_RTL_BASE;
-
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.text.Bidi;
-
-import com.sun.javafx.font.CharToGlyphMapper;
 import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.PGFont;
 import com.sun.javafx.font.PrismFontFactory;
-import com.sun.javafx.font.PrismFontFile;
 import com.sun.javafx.scene.text.TextSpan;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 
 public abstract class GlyphLayout {
 
