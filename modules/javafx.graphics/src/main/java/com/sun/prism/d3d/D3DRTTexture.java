@@ -172,7 +172,7 @@ class D3DRTTexture extends D3DTexture
 
     @Override
     public boolean isVolatile() {
-        return getContext().isRTTVolatile();
+        return false;
     }
 
     @Override

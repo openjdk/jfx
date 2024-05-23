@@ -127,6 +127,7 @@ public abstract class SStream {
         return defaultValue;
     }
 
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder(64);
         sb.append("[");

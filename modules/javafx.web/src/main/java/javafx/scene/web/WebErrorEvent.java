@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -121,8 +121,9 @@ public final class WebErrorEvent extends Event {
             USER_DATA_DIRECTORY_SECURITY_ERROR = new EventType<>(
                     WebErrorEvent.ANY, "USER_DATA_DIRECTORY_SECURITY_ERROR");
 
-
+    @SuppressWarnings("doclint:missing")
     private final String message;
+    @SuppressWarnings("doclint:missing")
     private final Throwable exception;
 
 
