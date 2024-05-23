@@ -984,8 +984,6 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
     int ww = event->width + geometry.extents.left + geometry.extents.right;
     int wh = event->height + geometry.extents.top + geometry.extents.bottom;
 
-    bool is_floating = !is_iconified && !is_fullscreen && !is_maximized;
-
     // Do not report if iconified, because Java side would set the state to NORMAL
     if (jwindow && !is_iconified) {
         mainEnv->CallVoidMethod(jwindow, jWindowNotifyResize,
@@ -1001,24 +999,24 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
         }
     }
 
-    if (is_floating) {
+    if (!is_iconified && !is_fullscreen && !is_maximized) {
         geometry.final_width.value = (geometry.final_width.type == BOUNDSTYPE_CONTENT)
                 ? event->width : ww;
 
         geometry.final_height.value = (geometry.final_height.type == BOUNDSTYPE_CONTENT)
                 ? event->height : wh;
-
-        int x, y;
-        gdk_window_get_origin(gdk_window, &x, &y);
-        if (frame_type == TITLED && !is_fullscreen) {
-            x -= geometry.extents.left;
-            y -= geometry.extents.top;
-        }
-
-        geometry.x = x;
-        geometry.y = y;
-        notify_window_move();
     }
+
+    int x, y;
+    gdk_window_get_origin(gdk_window, &x, &y);
+    if (frame_type == TITLED && !is_fullscreen) {
+        x -= geometry.extents.left;
+        y -= geometry.extents.top;
+    }
+
+    geometry.x = x;
+    geometry.y = y;
+    notify_window_move();
 
     glong to_screen = getScreenPtrForLocation(geometry.x, geometry.y);
     if (to_screen != -1) {
