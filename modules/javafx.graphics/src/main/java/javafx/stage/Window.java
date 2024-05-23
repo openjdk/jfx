@@ -294,13 +294,22 @@ public class Window implements EventTarget {
      * of this Window's Scene.
      */
     public void sizeToScene() {
-        if (getScene() != null && peer != null) {
+        if (isSizeToSceneAllowed() && getScene() != null && peer != null) {
             SceneHelper.preferredSize(getScene());
             adjustSize(false);
         } else {
             // Remember the request to reapply it later if needed
             sizeToScene = true;
         }
+    }
+
+    /**
+     * Determines whether the {@link #sizeToScene()} request is allowed or not.
+     *
+     * @return true if allowed, false otherwise
+     */
+    boolean isSizeToSceneAllowed() {
+        return true;
     }
 
     private void adjustSize(boolean selfSizePriority) {
