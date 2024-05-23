@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -2189,27 +2189,16 @@ public abstract class NGNode {
         ((ReadbackGraphics) g).releaseReadBackBuffer(bgRTT);
     }
 
-    private void renderRectClip(Graphics g, NGRectangle clipNode) {
-        BaseBounds newClip = clipNode.getShape().getBounds();
-        if (!clipNode.getTransform().isIdentity()) {
-            newClip = clipNode.getTransform().transform(newClip, newClip);
-        }
-        final BaseTransform curXform = g.getTransformNoClone();
-        final Rectangle curClip = g.getClipRectNoClone();
-        newClip = curXform.transform(newClip, newClip);
-        newClip.intersectWith(PrEffectHelper.getGraphicsClipNoClone(g));
-        if (newClip.isEmpty() ||
-            newClip.getWidth() == 0 ||
-            newClip.getHeight() == 0) {
+    private void renderRectClip(Graphics g, Rectangle clipRect) {
+        if (clipRect.isEmpty()) {
             clearDirtyTree();
             return;
         }
+        final Rectangle curClip = g.getClipRectNoClone();
         // REMIND: avoid garbage by changing setClipRect to accept xywh
-        g.setClipRect(new Rectangle(newClip));
+        g.setClipRect(clipRect);
         renderForClip(g);
         g.setClipRect(curClip);
-        clipNode.clearDirty(); // as render() is not called on the clipNode,
-                               // make sure the dirty flags are cleared
     }
 
     void renderClip(Graphics g) {
@@ -2228,19 +2217,19 @@ public abstract class NGNode {
             return;
         }
 
-        if (getClipNode() instanceof NGRectangle) {
-            // optimized case for rectangular clip
-            NGRectangle rectNode = (NGRectangle)getClipNode();
-            if (rectNode.isRectClip(curXform, false)) {
-                renderRectClip(g, rectNode);
-                return;
-            }
-        }
-
         // TODO: optimize this (RT-26936)
         // Extract clip bounds
         Rectangle clipRect = new Rectangle(clipBounds);
         clipRect.intersectWith(PrEffectHelper.getGraphicsClipNoClone(g));
+
+        if (getClipNode() instanceof NGRectangle) {
+            // optimized case for rectangular clip
+            NGRectangle rectNode = (NGRectangle)getClipNode();
+            if (rectNode.isRectClip(curXform, false)) {
+                renderRectClip(g, clipRect);
+                return;
+            }
+        }
 
         if (!curXform.is2D()) {
             Rectangle savedClip = g.getClipRect();

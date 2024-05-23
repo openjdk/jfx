@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -86,7 +86,7 @@ public class NGTestBase {
         node.setTransformedBounds(node.getTransform().transform(effectBounds, effectBounds), false);
     }
 
-    public static TestNGRectangle createRectangle(int x, int y, int width, int height) {
+    public static TestNGRectangle createRectangle(float x, float y, float width, float height) {
         TestNGRectangle rect = new TestNGRectangle();
         rect.updateRectangle(x, y, width, height, 0, 0);
         final RectBounds bounds = new RectBounds(x, y, x + width, y + height);

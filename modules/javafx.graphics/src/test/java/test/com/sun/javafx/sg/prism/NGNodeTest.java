@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,10 @@ package test.com.sun.javafx.sg.prism;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Rectangle;
+import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.geom.transform.Translate2D;
+import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGNodeShim;
 import com.sun.javafx.sg.prism.NGPath;
 import com.sun.javafx.sg.prism.NGRectangle;
@@ -40,6 +43,9 @@ import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.ImageData;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.concurrent.atomic.AtomicReference;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -577,6 +583,35 @@ public class NGNodeTest extends NGTestBase {
         assertNull(n.getOpaqueRegion());
     }
 
+    @Test
+    public void testClipping() {
+        AtomicReference<Rectangle> rectRef = new AtomicReference<>();
+
+        n = new NGNodeMock() {
+            @Override
+            protected void renderContent(Graphics g) {
+                super.renderContent(g);
+
+                rectRef.set(g.getClipRectNoClone());
+            }
+        };
+
+        TestGraphics g = new TestGraphics(146, 625);
+        g.setTransform(new Affine3D(1.25, 0, 0, -3, 0, 1.25, 0, 31, 0, 0, 1, 0));
+
+        final RectBounds bounds = new RectBounds(0, 0, 272, 480);
+        n.setContentBounds(bounds);
+        n.setTransformMatrix(new Translate2D(-15.2, 0));
+
+        TestNGRectangle clip = createRectangle(0, 0, 102.4f, 460.8f);
+        clip.setTransformMatrix(new Translate2D(18.4, 0));
+        n.setClipNode(clip);
+        n.render(g);
+
+        Rectangle rectangle = rectRef.get();
+        assertEquals(1, rectangle.x);
+    }
+
     class NGNodeMock extends NGNodeShim {
         boolean opaqueRegionRecomputed = false;
         RectBounds computedOpaqueRegion = new RectBounds(0, 0, 10, 10);
@@ -584,6 +619,12 @@ public class NGNodeTest extends NGTestBase {
         void changeOpaqueRegion(float x, float y, float x2, float y2) {
             computedOpaqueRegion = new RectBounds(x, y, x2, y2);
             geometryChanged();
+        }
+
+        @Override
+        public void setClipNode(NGNode clipNode) {
+            System.out.println(clipNode);
+            super.setClipNode(clipNode);
         }
 
         @Override
