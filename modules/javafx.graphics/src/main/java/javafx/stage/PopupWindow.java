@@ -458,12 +458,10 @@ public abstract class PopupWindow extends Window {
         SceneHelper.parentEffectiveOrientationInvalidated(sceneValue);
 
         // RT-28447
+        applyStylesheetFromOwner(owner);
+
         final Scene ownerScene = getRootWindow(owner).getScene();
         if (ownerScene != null) {
-            if (ownerScene.getUserAgentStylesheet() != null) {
-                sceneValue.setUserAgentStylesheet(ownerScene.getUserAgentStylesheet());
-            }
-            sceneValue.getStylesheets().setAll(ownerScene.getStylesheets());
             if (sceneValue.getCursor() == null) {
                 sceneValue.setCursor(ownerScene.getCursor());
             }
@@ -476,6 +474,23 @@ public abstract class PopupWindow extends Window {
             // popup calculated below uses the right width and height values for
             // its calculation. (fix for part of RT-10675).
             show();
+        }
+    }
+
+    /**
+     * Applies the stylesheet from the scene of the root owner {@link Window} to the {@link Scene}
+     * associated with that window.
+     *
+     * @param owner the owner {@link Window}
+     */
+    protected void applyStylesheetFromOwner(Window owner) {
+        Scene scene = getScene();
+        final Scene ownerScene = getRootWindow(owner).getScene();
+        if (ownerScene != null) {
+            if (ownerScene.getUserAgentStylesheet() != null) {
+                scene.setUserAgentStylesheet(ownerScene.getUserAgentStylesheet());
+            }
+            scene.getStylesheets().setAll(ownerScene.getStylesheets());
         }
     }
 

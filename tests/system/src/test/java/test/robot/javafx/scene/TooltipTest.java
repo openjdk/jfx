@@ -60,8 +60,26 @@ class TooltipTest {
     static volatile Stage stage;
     static volatile Scene scene;
 
+    private static void assertTooltipShowDelay(long tooltipShowTime, long expectedTime) {
+        // To avoid any small timing error we rather check if the value is between.
+        long maximumTime = expectedTime + 50;
+
+        assertTrue(tooltipShowTime >= expectedTime, tooltipShowTime + " >= " + expectedTime);
+        assertTrue(tooltipShowTime <= maximumTime, tooltipShowTime + " <= " + maximumTime);
+    }
+
+    @BeforeAll
+    public static void initFX() {
+        Util.launch(startupLatch, TestApp.class);
+    }
+
+    @AfterAll
+    public static void exit() {
+        Util.shutdown();
+    }
+
     @Test
-    public void testDefaultTooltip() {
+    void testDefaultTooltip() {
         assertFalse(tooltip.isShowing());
 
         long tooltipShowTime = waitForTooltip();
@@ -71,7 +89,7 @@ class TooltipTest {
     }
 
     @Test
-    public void testCssStylesheetTooltip() {
+    void testCssStylesheetTooltip() {
         scene.getStylesheets().add(getClass().getResource("Tooltip.css").toExternalForm());
 
         assertFalse(tooltip.isShowing());
@@ -83,7 +101,7 @@ class TooltipTest {
     }
 
     @Test
-    public void testSmallShowDelayTooltip() {
+    void testSmallShowDelayTooltip() {
         tooltip.setShowDelay(Duration.millis(100));
 
         assertFalse(tooltip.isShowing());
@@ -95,7 +113,7 @@ class TooltipTest {
     }
 
     @Test
-    public void testSmallShowDelayCssTooltip() {
+    void testSmallShowDelayCssTooltip() {
         tooltip.setStyle("-fx-show-delay: 100ms;");
 
         assertFalse(tooltip.isShowing());
@@ -107,7 +125,7 @@ class TooltipTest {
     }
 
     @Test
-    public void testChangeShowDelayTooltip() {
+    void testChangeShowDelayTooltip() {
         tooltip.setShowDelay(Duration.millis(100));
 
         assertFalse(tooltip.isShowing());
@@ -127,7 +145,7 @@ class TooltipTest {
     }
 
     @Test
-    public void testChangeShowDelayCssTooltip() throws Throwable {
+    void testChangeShowDelayCssTooltip() throws Throwable {
         tooltip.setStyle("-fx-show-delay: 100ms;");
 
         assertFalse(tooltip.isShowing());
@@ -147,7 +165,7 @@ class TooltipTest {
     }
 
     @Test
-    public void testShowDelayCssShowTooltipTwice() {
+    void testShowDelayCssShowTooltipTwice() {
         tooltip.setStyle("-fx-show-delay: 100ms;");
 
         assertFalse(tooltip.isShowing());
@@ -202,42 +220,6 @@ class TooltipTest {
         return finalTime;
     }
 
-    private static void assertTooltipShowDelay(long tooltipShowTime, long expectedTime) {
-        // To avoid any small timing error we rather check if the value is between.
-        long maximumTime = expectedTime + 50;
-
-        assertTrue(tooltipShowTime >= expectedTime, tooltipShowTime + " < " + expectedTime);
-        assertTrue(tooltipShowTime <= maximumTime, tooltipShowTime + " > " + maximumTime);
-    }
-
-    public static class TestApp extends Application {
-
-        @Override
-        public void start(Stage primaryStage) {
-            robot = new Robot();
-            stage = primaryStage;
-
-            button = new Button("Button");
-
-            scene = new Scene(new StackPane(button), 250, 250);
-            stage.setScene(scene);
-            stage.initStyle(StageStyle.UNDECORATED);
-            stage.setAlwaysOnTop(true);
-            stage.setOnShown(event -> Platform.runLater(startupLatch::countDown));
-            stage.show();
-        }
-    }
-
-    @BeforeAll
-    public static void initFX() {
-        Util.launch(startupLatch, TestApp.class);
-    }
-
-    @AfterAll
-    public static void exit() {
-        Util.shutdown(stage);
-    }
-
     @AfterEach
     void resetUI() {
         Util.runAndWait(() -> {
@@ -261,5 +243,23 @@ class TooltipTest {
             });
             button.setTooltip(tooltip);
         });
+    }
+
+    public static class TestApp extends Application {
+
+        @Override
+        public void start(Stage primaryStage) {
+            robot = new Robot();
+            stage = primaryStage;
+
+            button = new Button("Button");
+
+            scene = new Scene(new StackPane(button), 250, 250);
+            stage.setScene(scene);
+            stage.initStyle(StageStyle.UNDECORATED);
+            stage.setAlwaysOnTop(true);
+            stage.setOnShown(event -> Platform.runLater(startupLatch::countDown));
+            stage.show();
+        }
     }
 }
