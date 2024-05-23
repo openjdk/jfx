@@ -428,4 +428,14 @@ public class FX {
             n.pseudoClassStateChanged(name, on);
         }
     }
+
+    public static Button button(String text, Runnable r) {
+        Button b = new Button(text);
+        if (r == null) {
+            b.setDisable(true);
+        } else {
+            b.setOnAction((ev) -> r.run());
+        }
+        return b;
+    }
 }

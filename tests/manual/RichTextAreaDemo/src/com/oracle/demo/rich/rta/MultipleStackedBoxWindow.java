@@ -26,8 +26,8 @@
 package com.oracle.demo.rich.rta;
 
 import javafx.geometry.Insets;
+import jfx.incubator.scene.control.rich.LineNumberDecorator;
 import jfx.incubator.scene.control.rich.RichTextArea;
-import jfx.incubator.scene.control.rich.skin.LineNumberDecorator;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Menu;

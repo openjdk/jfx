@@ -46,11 +46,26 @@ public class Params {
     /** cell cache size. */
     public static final int CELL_CACHE_SIZE = 512;
 
-    /** default content padding. */
-    public static final Insets CONTENT_PADDING = new Insets(4, 8, 4, 8);
-
     /** default caret blink period, in milliseconds. */
     public static final int DEFAULT_CARET_BLINK_PERIOD = 1000;
+
+    /** default content padding. */
+    public static final Insets DEFAULT_CONTENT_PADDING = null;
+
+    /** default value for {@code displayCaret} property */
+    public static final boolean DEFAULT_DISPLAY_CARET = true;
+
+    /** default value for {@code highlightCurrentParagraph} property */
+    public static final boolean DEFAULT_HIGHLIGHT_CURRENT_PARAGRAPH = false;
+
+    /** default value for {@code useContentHeight} property */
+    public static final boolean DEFAULT_USE_CONTENT_HEIGHT = false;
+
+    /** default value for {@code useContentWidth} property */
+    public static final boolean DEFAULT_USE_CONTENT_WIDTH = false;
+
+    /** default value for {@code wrapText} property */
+    public static final boolean DEFAULT_WRAP_TEXT = false;
 
     /** small space between the end of last character and the right edge when typing, in pixels. */
     public static final double HORIZONTAL_GUARD = 10;

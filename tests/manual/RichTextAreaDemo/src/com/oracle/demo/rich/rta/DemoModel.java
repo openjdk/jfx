@@ -170,7 +170,7 @@ public class DemoModel extends SimpleViewOnlyStyledModel {
         */
 
         nl();
-        addSegment("\t\t終 The End.", "-fx-font-size:200%;", null);
+        addSegment("\t\t終 The End.", "-fx-font-size:200%;");
         nl();
 
         registerDataFormatHandler(new RichTextFormatHandler(), true, false, 2000);

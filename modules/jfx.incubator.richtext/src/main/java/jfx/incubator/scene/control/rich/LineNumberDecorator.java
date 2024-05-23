@@ -23,23 +23,18 @@
  * questions.
  */
 
-package jfx.incubator.scene.control.rich.skin;
+package jfx.incubator.scene.control.rich;
 
 import java.text.DecimalFormat;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.BackgroundFill;
-import javafx.scene.paint.Color;
-import jfx.incubator.scene.control.rich.SideDecorator;
 
 /**
  * Side decorator that shows model 1-based line (paragraph) numbers.
  */
 public class LineNumberDecorator implements SideDecorator {
     private final DecimalFormat format;
-    private final Background background;
 
     /**
      * Creates an instance using Western-style group separator.
@@ -54,7 +49,6 @@ public class LineNumberDecorator implements SideDecorator {
      */
     public LineNumberDecorator(String pattern) {
         format = new DecimalFormat(pattern);
-        background = new Background(new BackgroundFill(Color.gray(0.5, 0.5), null, null));
     }
 
     @Override
@@ -77,6 +71,7 @@ public class LineNumberDecorator implements SideDecorator {
         }
 
         Label t = new Label(s);
+        t.getStyleClass().add("line-number-decorator");
         // label needs to fill all available space
         t.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         // do not interfere with vflow layout
@@ -84,8 +79,6 @@ public class LineNumberDecorator implements SideDecorator {
         t.setPrefHeight(1);
         // numbers should be right aligned
         t.setAlignment(Pos.TOP_RIGHT);
-        // not required; one may style the left side pane instead
-        t.setBackground(background);
         t.setOpacity(1.0);
         return t;
     }

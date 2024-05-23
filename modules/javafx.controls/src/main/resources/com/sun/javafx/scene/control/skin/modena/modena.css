@@ -3457,6 +3457,7 @@ is being used to size a border should also be in pixels.
     -fx-background-radius: 3, 2;
     -fx-cursor: text;
     -fx-padding: 0;
+    -fx-content-padding: 4 8 4 8;
 }
 
 .rich-text-area:disabled {
@@ -3482,10 +3483,23 @@ is being used to size a border should also be in pixels.
 
 .rich-text-area .caret-line {
     -fx-stroke: null;
-    -fx-fill: rgba(255, 0, 255, 0.1);
+    -fx-fill: derive(-fx-accent,115%);
 }
 
 .rich-text-area .selection-highlight {
     -fx-stroke: null;
-    -fx-fill: rgba(255, 255, 0, 0.3);
+    -fx-fill: derive(-fx-accent,70%);
+}
+
+.rich-text-area .left-side {
+    -fx-background-color: rgba(127,127,127,0.1);
+}
+
+.rich-text-area .right-side {
+    -fx-background-color: rgba(127,127,127,0.1);
+}
+
+.rich-text-area .line-number-decorator {
+    -fx-font-family: Monospace;
+    -fx-font-size: 90%;
 }

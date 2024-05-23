@@ -30,7 +30,6 @@ import com.sun.jfx.incubator.scene.control.rich.RichTextAreaSkinHelper;
 import com.sun.jfx.incubator.scene.control.rich.util.ListenerHelper;
 import jfx.incubator.scene.control.rich.CellContext;
 import jfx.incubator.scene.control.rich.CodeArea;
-import jfx.incubator.scene.control.rich.ConfigurationParameters;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
 
 /**
@@ -40,10 +39,9 @@ public class CodeAreaSkin extends RichTextAreaSkin {
     /**
      * Constructs the CodeArea skin.
      * @param control the CodeArea instance
-     * @param cnf the configuration parameters
      */
-    public CodeAreaSkin(CodeArea control, ConfigurationParameters cnf) {
-        super(control, cnf);
+    public CodeAreaSkin(CodeArea control) {
+        super(control);
 
         ListenerHelper lh = RichTextAreaSkinHelper.getListenerHelper(this);
         lh.addInvalidationListener(

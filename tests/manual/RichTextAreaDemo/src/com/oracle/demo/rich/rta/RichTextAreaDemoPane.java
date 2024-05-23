@@ -61,6 +61,7 @@ import javafx.util.Duration;
 import javafx.util.StringConverter;
 import com.oracle.demo.rich.util.FX;
 import jfx.incubator.scene.control.input.KeyBinding;
+import jfx.incubator.scene.control.rich.LineNumberDecorator;
 import jfx.incubator.scene.control.rich.RichTextArea;
 import jfx.incubator.scene.control.rich.SideDecorator;
 import jfx.incubator.scene.control.rich.StyleHandlerRegistry;
@@ -70,7 +71,6 @@ import jfx.incubator.scene.control.rich.model.ParagraphDirection;
 import jfx.incubator.scene.control.rich.model.StyleAttribute;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
 import jfx.incubator.scene.control.rich.model.StyledTextModel;
-import jfx.incubator.scene.control.rich.skin.LineNumberDecorator;
 
 /**
  * Main Panel contains RichTextArea, split panes for quick size adjustment, and an option pane.
@@ -175,9 +175,7 @@ public class RichTextAreaDemoPane extends BorderPane {
 
         CheckBox highlightCurrentLine = new CheckBox("highlight current line");
         FX.name(highlightCurrentLine, "highlightCurrentLine");
-        highlightCurrentLine.selectedProperty().addListener((s,p,on) -> {
-            control.setHighlightCurrentParagraph(on);
-        });
+        highlightCurrentLine.selectedProperty().bindBidirectional(control.highlightCurrentParagraphProperty());
 
         Button reloadModelButton = new Button("Reload Model");
         reloadModelButton.setOnAction((ev) -> reloadModel());

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,15 +23,19 @@
  * questions.
  */
 
-package jfx.incubator.scene.control.input;
-
 /**
- * A function tag is a public handle for a function in the context of InputMap.
+ * InputMap (Incubator)
  *
- * @since 999 TODO
+ * <BR><b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
+ * Will be removed in a future release.</b>
+ *
+ * @moduleGraph
+ * @since 999
  */
-public final class FunctionTag {
-    /** Constructs the function tag. */
-    public FunctionTag() {
-    }
+module jfx.incubator.input {
+    requires transitive javafx.base;
+    requires transitive javafx.graphics;
+    requires transitive javafx.controls;
+
+    exports jfx.incubator.scene.control.input;
 }

@@ -44,6 +44,7 @@ import javafx.css.StyleConverter;
 import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableProperty;
+import javafx.css.converter.DurationConverter;
 import javafx.css.converter.InsetsConverter;
 import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
@@ -83,10 +84,23 @@ import jfx.incubator.scene.control.rich.skin.RichTextAreaSkin;
  * <h2>Creating a RichTextArea</h2>
  * <p>
  * The following example creates an editable control with the default {@link EditableRichTextModel}:
- * <pre>{@code
- *     RichTextArea t = new RichTextArea();
+ * <pre>{@code    RichTextArea textArea = new RichTextArea();
  * }</pre>
+ * The methods
+ * {@code appendText()}, {@code insertText()}, {@code replaceText()}, {@code applyStyle()},
+ * {@code setStyle()}, or {@code clear()} can be used to modify text programmatically:
+ * <pre>{@code    // create styles
+ *   StyleAttrs heading = StyleAttrs.builder().setBold(true).setUnderline(true).setFontSize(18).build();
+ *   StyleAttrs mono = StyleAttrs.builder().setFontFamily("Monospaced").build();
  *
+ *   RichTextArea textArea = new RichTextArea();
+ *   // build the content
+ *   textArea.appendText("RichTextArea\n", heading);
+ *   textArea.appendText("Example:\nText is ", StyleAttrs.EMPTY);
+ *   textArea.appendText("monospaced.\n", mono);
+ * }</pre>
+ * Which results in the following visual representation:
+ * <img src="doc-files/RichTextArea.png" alt="Image of the RichTextArea control">
  * <p>
  * A view-only information control requires a different model.  The following example illustrates how to
  * create a model that uses a style sheet for styling:
@@ -99,7 +113,7 @@ import jfx.incubator.scene.control.rich.skin.RichTextAreaSkin;
  *     // newline
  *     m.nl();
  *
- *     RichTextArea t = new RichTextArea(m);
+ *     RichTextArea textArea = new RichTextArea(m);
  * }</pre>
  *
  * <h2>Text Models</h2>
@@ -121,7 +135,7 @@ import jfx.incubator.scene.control.rich.skin.RichTextAreaSkin;
  * <p>
  * The RichTextArea control maintains a single {@link #selectionProperty() contiguous selection segment}
  * as a part of the {@link SelectionModel}.  Additionally,
- * {@link #anchorPositionProperty()} and {@link #caretPositionProperty()}
+ * {@link #anchorPositionProperty()} and {@link #caretPositionProperty()} read-only properties
  * are derived from the {@link #selectionProperty()} for convenience.
  *
  * <h2>Customizing</h2>
@@ -130,13 +144,20 @@ import jfx.incubator.scene.control.rich.skin.RichTextAreaSkin;
  * <li>customizing key bindings with the {@link InputMap}
  * <li>setting {@link #leftDecoratorProperty() leftDecorator}
  * and {@link #rightDecoratorProperty() rightDecorator} properties
- * <li>providing custom scroll bars via {@link ConfigurationParameters}
  * </ul>
  *
  * @since 999 TODO
  */
 public class RichTextArea extends Control {
-    /** Function tags serve as identifiers of methods that can be customized via the {@code InputMap}. */
+    /**
+     * Function tags serve as identifiers of methods that can be customized via the {@code InputMap}.
+     * <p>
+     * Any method in RichTextArea referenced by one of these tags can be customized by providing
+     * a different implementation using {@link InputMap#registerFunction(FunctionTag, FunctionHandler)}.
+     * Additionally, a key binding can be customized (added, removed, or replaced) via
+     * {@link InputMap#registerKey(jfx.incubator.scene.control.input.KeyBinding, FunctionTag)} or
+     * {@link  InputMap#register(jfx.incubator.scene.control.input.KeyBinding, FunctionHandler)}. 
+     */
     public static class Tags {
         /** Deletes the symbol before the caret. */
         public static final FunctionTag BACKSPACE = new FunctionTag();
@@ -252,22 +273,23 @@ public class RichTextArea extends Control {
         private Tags() { }
     }
 
-    /** The instance configuration parameters */
-    protected final ConfigurationParameters config;
     private SimpleObjectProperty<StyledTextModel> model;
-    private final SimpleBooleanProperty displayCaretProperty = new SimpleBooleanProperty(this, "displayCaret", true);
-    private final SimpleObjectProperty<Duration> caretBlinkPeriod = new SimpleObjectProperty<>(this, "caretBlinkPeriod");
     private final SelectionModel selectionModel = new SingleSelectionModel();
     private SimpleBooleanProperty editableProperty;
     private SimpleObjectProperty<SideDecorator> leftDecorator;
     private SimpleObjectProperty<SideDecorator> rightDecorator;
-    private SimpleStyleableObjectProperty<Insets> contentPadding;
-    private SimpleBooleanProperty highlightCurrentParagraph;
-    private SimpleBooleanProperty useContentWidth;
-    private SimpleBooleanProperty useContentHeight;
     private ReadOnlyBooleanWrapper undoable;
     private ReadOnlyBooleanWrapper redoable;
-    /** The style handler registry instance. */
+    // styleables
+    private SimpleStyleableObjectProperty<Duration> caretBlinkPeriod;
+    private SimpleStyleableObjectProperty<Insets> contentPadding;
+    private StyleableBooleanProperty displayCaret;
+    private StyleableBooleanProperty highlightCurrentParagraph;
+    private StyleableBooleanProperty useContentHeight;
+    private StyleableBooleanProperty useContentWidth;
+    private StyleableBooleanProperty wrapText;
+
+    /** The style handler registry instance, made available for use by subclasses to add support for new style attributes. */
     protected static final StyleHandlerRegistry styleHandlerRegistry = initStyleHandlerRegistry();
 
     /**
@@ -279,33 +301,19 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Creates an instance with default configuration parameters, using the specified model.
-     * @param model styled text model
+     * Creates an instance using the specified model.
+     * @param m the model
      */
-    public RichTextArea(StyledTextModel model) {
-        this(ConfigurationParameters.defaultConfig(), model);
-    }
-
-    /**
-     * Creates an instance with the specified configuration parameters and the model.
-     * @param c configuration parameters
-     * @param m styled text model, or null to use the default model
-     */
-    public RichTextArea(ConfigurationParameters c, StyledTextModel m) {
-        this.config = c;
-
+    public RichTextArea(StyledTextModel m) {
         setFocusTraversable(true);
         getStyleClass().add("rich-text-area");
         setAccessibleRole(AccessibleRole.TEXT_AREA);
-
-        if (m != null) {
-            setModel(m);
-        }
+        setModel(m);
     }
 
     @Override
     protected RichTextAreaSkin createDefaultSkin() {
-        return new RichTextAreaSkin(this, config);
+        return new RichTextAreaSkin(this);
     }
 
     /**
@@ -347,7 +355,7 @@ public class RichTextArea extends Control {
     }
 
     public final StyledTextModel getModel() {
-        return model.get();
+        return model == null ? null : model.get();
     }
 
     /**
@@ -355,36 +363,38 @@ public class RichTextArea extends Control {
      * If a run of text exceeds the width of the {@code RichTextArea},
      * then this variable indicates whether the text should wrap onto
      * another line.
-     * Setting this property to {@code true} has a side effect of hiding the horizontal scroll bar.
+     * Setting this property to {@code true} hides the horizontal scroll bar.
+     * @return the wrap text property
      * @defaultValue false
      */
-    private StyleableBooleanProperty wrapText = new StyleableBooleanProperty(false) {
-        @Override
-        public Object getBean() {
-            return RichTextArea.this;
-        }
-
-        @Override
-        public String getName() {
-            return "wrapText";
-        }
-
-        @Override
-        public CssMetaData<RichTextArea, Boolean> getCssMetaData() {
-            return StyleableProperties.WRAP_TEXT;
-        }
-    };
-
     public final BooleanProperty wrapTextProperty() {
+        if (wrapText == null) {
+            wrapText = new StyleableBooleanProperty(Params.DEFAULT_WRAP_TEXT) {
+                @Override
+                public Object getBean() {
+                    return RichTextArea.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "wrapText";
+                }
+
+                @Override
+                public CssMetaData<RichTextArea, Boolean> getCssMetaData() {
+                    return StyleableProperties.WRAP_TEXT;
+                }
+            };
+        }
         return wrapText;
     }
 
     public final boolean isWrapText() {
-        return wrapText.getValue();
+        return wrapText == null ? Params.DEFAULT_WRAP_TEXT : wrapText.getValue();
     }
 
     public final void setWrapText(boolean value) {
-        wrapText.setValue(value);
+        wrapTextProperty().setValue(value);
     }
 
     /**
@@ -393,17 +403,34 @@ public class RichTextArea extends Control {
      * @return the display caret property
      * @defaultValue true
      */
-    // TODO StyleableProperty ?
     public final BooleanProperty displayCaretProperty() {
-        return displayCaretProperty;
+        if (displayCaret == null) {
+            displayCaret = new StyleableBooleanProperty(Params.DEFAULT_DISPLAY_CARET) {
+                @Override
+                public Object getBean() {
+                    return RichTextArea.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "displayCaret";
+                }
+
+                @Override
+                public CssMetaData<RichTextArea, Boolean> getCssMetaData() {
+                    return StyleableProperties.DISPLAY_CARET;
+                }
+            };
+        }
+        return displayCaret;
     }
 
     public final void setDisplayCaret(boolean on) {
-        displayCaretProperty.set(on);
+        displayCaretProperty().set(on);
     }
 
     public final boolean isDisplayCaret() {
-        return displayCaretProperty.get();
+        return displayCaret == null ? Params.DEFAULT_DISPLAY_CARET : displayCaret.get();
     }
 
     /**
@@ -433,22 +460,33 @@ public class RichTextArea extends Control {
 
     /**
      * Indicates whether the current paragraph will be visually highlighted.
-     * TODO StyleableProperty ?
      * @return the highlight current paragraph property
      * @defaultValue false
      */
     public final BooleanProperty highlightCurrentParagraphProperty() {
         if (highlightCurrentParagraph == null) {
-            highlightCurrentParagraph = new SimpleBooleanProperty(this, "highlightCurrentParagraph", false);
+            highlightCurrentParagraph = new StyleableBooleanProperty(Params.DEFAULT_HIGHLIGHT_CURRENT_PARAGRAPH) {
+                @Override
+                public Object getBean() {
+                    return RichTextArea.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "highlightCurrentParagraph";
+                }
+
+                @Override
+                public CssMetaData<RichTextArea, Boolean> getCssMetaData() {
+                    return StyleableProperties.HIGHLIGHT_CURRENT_PARAGRAPH;
+                }
+            };
         }
         return highlightCurrentParagraph;
     }
 
     public final boolean isHighlightCurrentParagraph() {
-        if (highlightCurrentParagraph == null) {
-            return false;
-        }
-        return highlightCurrentParagraph.get();
+        return highlightCurrentParagraph == null ? Params.DEFAULT_HIGHLIGHT_CURRENT_PARAGRAPH : highlightCurrentParagraph.get();
     }
 
     public final void setHighlightCurrentParagraph(boolean on) {
@@ -488,8 +526,22 @@ public class RichTextArea extends Control {
 
     /** Defines styleable properties at the class level */
     private static class StyleableProperties {
+        private static final CssMetaData<RichTextArea, Duration> CARET_BLINK_PERIOD =
+            new CssMetaData<>("-fx-caret-blink-period", DurationConverter.getInstance()) 
+        {
+            @Override
+            public boolean isSettable(RichTextArea t) {
+                return t.caretBlinkPeriod == null || !t.caretBlinkPeriod.isBound();
+            }
+
+            @Override
+            public StyleableProperty<Duration> getStyleableProperty(RichTextArea t) {
+                return (StyleableProperty<Duration>)t.caretBlinkPeriodProperty();
+            }
+        };
+
         private static final CssMetaData<RichTextArea, Insets> CONTENT_PADDING =
-            new CssMetaData<>("-fx-content-padding", InsetsConverter.getInstance(), Params.CONTENT_PADDING)
+            new CssMetaData<>("-fx-content-padding", InsetsConverter.getInstance(), Params.DEFAULT_CONTENT_PADDING)
         {
             @Override
             public boolean isSettable(RichTextArea t) {
@@ -502,25 +554,85 @@ public class RichTextArea extends Control {
             }
         };
 
-        private static final CssMetaData<RichTextArea,Boolean> WRAP_TEXT =
-            new CssMetaData<>("-fx-wrap-text", StyleConverter.getBooleanConverter(), false)
+        private static final CssMetaData<RichTextArea,Boolean> DISPLAY_CARET =
+            new CssMetaData<>("-fx-display-caret", StyleConverter.getBooleanConverter(), Params.DEFAULT_DISPLAY_CARET)
         {
-                @Override
-                public boolean isSettable(RichTextArea t) {
-                    return !t.wrapText.isBound();
-                }
+            @Override
+            public boolean isSettable(RichTextArea t) {
+                return t.displayCaret == null || !t.displayCaret.isBound();
+            }
 
-                @Override
-                public StyleableProperty<Boolean> getStyleableProperty(RichTextArea t) {
-                    return (StyleableProperty<Boolean>)t.wrapTextProperty();
-                }
-            };
+            @Override
+            public StyleableProperty<Boolean> getStyleableProperty(RichTextArea t) {
+                return (StyleableProperty<Boolean>)t.displayCaretProperty();
+            }
+        };
+
+        private static final CssMetaData<RichTextArea,Boolean> HIGHLIGHT_CURRENT_PARAGRAPH =
+            new CssMetaData<>("-fx-highlight-current-paragraph", StyleConverter.getBooleanConverter(), Params.DEFAULT_HIGHLIGHT_CURRENT_PARAGRAPH)
+        {
+            @Override
+            public boolean isSettable(RichTextArea t) {
+                return t.highlightCurrentParagraph == null || !t.highlightCurrentParagraph.isBound();
+            }
+
+            @Override
+            public StyleableProperty<Boolean> getStyleableProperty(RichTextArea t) {
+                return (StyleableProperty<Boolean>)t.highlightCurrentParagraphProperty();
+            }
+        };
+
+        private static final CssMetaData<RichTextArea,Boolean> USE_CONTENT_HEIGHT =
+            new CssMetaData<>("-fx-use-content-height", StyleConverter.getBooleanConverter(), Params.DEFAULT_USE_CONTENT_HEIGHT)
+        {
+            @Override
+            public boolean isSettable(RichTextArea t) {
+                return t.useContentHeight == null || !t.useContentHeight.isBound();
+            }
+
+            @Override
+            public StyleableProperty<Boolean> getStyleableProperty(RichTextArea t) {
+                return (StyleableProperty<Boolean>)t.useContentHeightProperty();
+            }
+        };
+
+        private static final CssMetaData<RichTextArea,Boolean> USE_CONTENT_WIDTH =
+            new CssMetaData<>("-fx-use-content-width", StyleConverter.getBooleanConverter(), Params.DEFAULT_USE_CONTENT_WIDTH)
+        {
+            @Override
+            public boolean isSettable(RichTextArea t) {
+                return t.useContentWidth == null || !t.useContentWidth.isBound();
+            }
+
+            @Override
+            public StyleableProperty<Boolean> getStyleableProperty(RichTextArea t) {
+                return (StyleableProperty<Boolean>)t.useContentWidthProperty();
+            }
+        };
+
+        private static final CssMetaData<RichTextArea,Boolean> WRAP_TEXT =
+            new CssMetaData<>("-fx-wrap-text", StyleConverter.getBooleanConverter(), Params.DEFAULT_WRAP_TEXT)
+        {
+            @Override
+            public boolean isSettable(RichTextArea t) {
+                return t.wrapText == null || !t.wrapText.isBound();
+            }
+
+            @Override
+            public StyleableProperty<Boolean> getStyleableProperty(RichTextArea t) {
+                return (StyleableProperty<Boolean>)t.wrapTextProperty();
+            }
+        };
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES = RichUtils.combine(
             Control.getClassCssMetaData(),
+            CARET_BLINK_PERIOD,
             CONTENT_PADDING,
+            DISPLAY_CARET,
+            HIGHLIGHT_CURRENT_PARAGRAPH,
+            USE_CONTENT_HEIGHT,
+            USE_CONTENT_WIDTH,
             WRAP_TEXT
-            // TODO other?
         );
     }
 
@@ -544,12 +656,12 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Finds a text position corresponding to the specified screen coordinates.
+     * Finds a text position corresponding to the specified screen coordinates, or null if outside of
+     * the text area.
      * @param screenX screen x coordinate
      * @param screenY screen y coordinate
      * @return the TextPosition
      */
-    // TODO or should it be local to control?
     public final TextPos getTextPosition(double screenX, double screenY) {
         Point2D local = vflow().getContentPane().screenToLocal(screenX, screenY);
         return vflow().getTextPosLocal(local.getX(), local.getY());
@@ -564,15 +676,23 @@ public class RichTextArea extends Control {
      * @defaultValue null
      */
     public final ObjectProperty<Duration> caretBlinkPeriodProperty() {
+        if (caretBlinkPeriod == null) {
+            caretBlinkPeriod = new SimpleStyleableObjectProperty<>(
+                StyleableProperties.CARET_BLINK_PERIOD,
+                this,
+                "caretBlinkPeriod",
+                null
+            );
+        }
         return caretBlinkPeriod;
     }
 
     public final void setCaretBlinkPeriod(Duration period) {
-        caretBlinkPeriod.set(period);
+        caretBlinkPeriodProperty().set(period);
     }
 
     public final Duration getCaretBlinkPeriod() {
-        return caretBlinkPeriod.get();
+        return caretBlinkPeriod == null ? null : caretBlinkPeriod.get();
     }
 
     /**
@@ -731,13 +851,28 @@ public class RichTextArea extends Control {
      */
     public final BooleanProperty useContentWidthProperty() {
         if (useContentWidth == null) {
-            useContentWidth = new SimpleBooleanProperty();
+            useContentWidth = new StyleableBooleanProperty(Params.DEFAULT_USE_CONTENT_WIDTH) {
+                @Override
+                public Object getBean() {
+                    return RichTextArea.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "useContentWidth";
+                }
+
+                @Override
+                public CssMetaData<RichTextArea, Boolean> getCssMetaData() {
+                    return StyleableProperties.USE_CONTENT_WIDTH;
+                }
+            };
         }
         return useContentWidth;
     }
 
     public final boolean isUseContentWidth() {
-        return useContentWidth == null ? false : useContentWidth.get();
+        return useContentWidth == null ? Params.DEFAULT_USE_CONTENT_WIDTH : useContentWidth.get();
     }
 
     public final void setUseContentWidth(boolean on) {
@@ -753,13 +888,28 @@ public class RichTextArea extends Control {
      */
     public final BooleanProperty useContentHeightProperty() {
         if (useContentHeight == null) {
-            useContentHeight = new SimpleBooleanProperty();
+            useContentHeight = new StyleableBooleanProperty(Params.DEFAULT_USE_CONTENT_HEIGHT) {
+                @Override
+                public Object getBean() {
+                    return RichTextArea.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "useContentHeight";
+                }
+
+                @Override
+                public CssMetaData<RichTextArea, Boolean> getCssMetaData() {
+                    return StyleableProperties.USE_CONTENT_HEIGHT;
+                }
+            };
         }
         return useContentHeight;
     }
 
     public final boolean isUseContentHeight() {
-        return useContentHeight == null ? false : useContentHeight.get();
+        return useContentHeight == null ? Params.DEFAULT_USE_CONTENT_HEIGHT : useContentHeight.get();
     }
 
     public final void setUseContentHeight(boolean on) {
@@ -769,7 +919,7 @@ public class RichTextArea extends Control {
     /**
      * When selection exists, deletes selected text.  Otherwise, deletes the symbol before the caret.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void backspace() {
         execute(Tags.BACKSPACE);
@@ -779,7 +929,7 @@ public class RichTextArea extends Control {
      * When selection exists, copies the selected rich text to the clipboard in all formats supported
      * by the model.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void copy() {
         execute(Tags.COPY);
@@ -801,7 +951,7 @@ public class RichTextArea extends Control {
      * When selection exists, removes the selected content, placing it into the clipboard.
      * Selection is cleared afterward.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void cut() {
         execute(Tags.CUT);
@@ -810,7 +960,7 @@ public class RichTextArea extends Control {
     /**
      * When selection exists, deletes selected text.  Otherwise, deletes the symbol at the caret.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void delete() {
         execute(Tags.DELETE);
@@ -819,7 +969,7 @@ public class RichTextArea extends Control {
     /**
      * When selection exists, deletes selected paragraphs.  Otherwise, deletes the paragraph at the caret.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void deleteParagraph() {
         execute(Tags.DELETE_PARAGRAPH);
@@ -828,7 +978,7 @@ public class RichTextArea extends Control {
     /**
      * Deletes text from the caret to paragraph start, ignoring selection.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void deleteParagraphStart() {
         execute(Tags.DELETE_PARAGRAPH_START);
@@ -837,7 +987,7 @@ public class RichTextArea extends Control {
     /**
      * Deletes empty paragraph or text to the beginning of the next word.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void deleteWordNextBeg() {
         execute(Tags.DELETE_WORD_NEXT_BEG);
@@ -846,7 +996,7 @@ public class RichTextArea extends Control {
     /**
      * Deletes empty paragraph or text to the end of the next word.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void deleteWordNextEnd() {
         execute(Tags.DELETE_WORD_NEXT_END);
@@ -856,7 +1006,7 @@ public class RichTextArea extends Control {
      * Deletes (multiple) empty paragraphs or text to the beginning of the previous word.
      * This method has a side effect of clearing an existing selection prior to the delete operation.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void deleteWordPrevious() {
         execute(Tags.DELETE_WORD_PREVIOUS);
@@ -865,7 +1015,7 @@ public class RichTextArea extends Control {
     /**
      * Clears any existing selection by moving anchor to the caret position.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void deselect() {
         execute(Tags.DESELECT);
@@ -874,7 +1024,7 @@ public class RichTextArea extends Control {
     /**
      * Inserts a line break at the caret.  If selection exists, first deletes the selected text.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void insertLineBreak() {
         execute(Tags.INSERT_LINE_BREAK);
@@ -883,7 +1033,7 @@ public class RichTextArea extends Control {
     /**
      * Inserts a tab symbol at the caret.  If selection exists, first deletes the selected text.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void insertTab() {
         execute(Tags.INSERT_TAB);
@@ -892,7 +1042,7 @@ public class RichTextArea extends Control {
     /**
      * Moves the caret to after the last character of the text, clearing an existing selection.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void moveDocumentEnd() {
         execute(Tags.MOVE_TO_DOCUMENT_END);
@@ -901,7 +1051,7 @@ public class RichTextArea extends Control {
     /**
      * Moves the caret to before the first character of the text, clearing an existing selection.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void moveDocumentStart() {
         execute(Tags.MOVE_TO_DOCUMENT_START);
@@ -910,7 +1060,7 @@ public class RichTextArea extends Control {
     /**
      * Moves the caret one visual line down, clearing an existing selection.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void moveDown() {
         execute(Tags.MOVE_DOWN);
@@ -919,7 +1069,7 @@ public class RichTextArea extends Control {
     /**
      * Moves the caret left, clearing an existing selection.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void moveLeft() {
         execute(Tags.MOVE_LEFT);
@@ -928,7 +1078,7 @@ public class RichTextArea extends Control {
     /**
      * Moves the caret to the end of the paragraph at caret, clearing an existing selection.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void moveParagraphEnd() {
         execute(Tags.MOVE_TO_PARAGRAPH_END);
@@ -937,7 +1087,7 @@ public class RichTextArea extends Control {
     /**
      * Moves the caret to the start of the current paragraph, clearing an existing selection.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void moveLineStart() {
         execute(Tags.MOVE_TO_PARAGRAPH_START);
@@ -946,7 +1096,7 @@ public class RichTextArea extends Control {
     /**
      * Moves the caret to the end of the current paragraph, or, if already there, to the end of the next paragraph.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void moveParagraphDown() {
         execute(Tags.MOVE_PARAGRAPH_DOWN);
@@ -955,7 +1105,7 @@ public class RichTextArea extends Control {
     /**
      * Moves the caret to the start of the current paragraph, or, if already there, to the start of the previous paragraph.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void moveParagraphUp() {
         execute(Tags.MOVE_PARAGRAPH_UP);
@@ -964,7 +1114,7 @@ public class RichTextArea extends Control {
     /**
      * Extends selection to the end of the current paragraph, or, if already there, to the end of the next paragraph.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void selectParagraphDown() {
         execute(Tags.SELECT_PARAGRAPH_DOWN);
@@ -973,7 +1123,7 @@ public class RichTextArea extends Control {
     /**
      * Extends selection to the start of the current paragraph, or, if already there, to the start of the previous paragraph.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void selectParagraphUp() {
         execute(Tags.SELECT_PARAGRAPH_UP);
@@ -982,7 +1132,7 @@ public class RichTextArea extends Control {
     /**
      * Moves the caret to the next symbol, clearing an existing selection.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void moveRight() {
         execute(Tags.MOVE_RIGHT);
@@ -991,7 +1141,7 @@ public class RichTextArea extends Control {
     /**
      * Moves the caret one visual line up, clearing an existing selection.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void moveUp() {
         execute(Tags.MOVE_UP);
@@ -1001,7 +1151,7 @@ public class RichTextArea extends Control {
      * Moves the caret to the beginning of previous word in a left-to-right setting
      * (or the beginning of the next word in a right-to-left setting), clearing an existing selection.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void moveWordLeft() {
         execute(Tags.MOVE_WORD_LEFT);
@@ -1011,7 +1161,7 @@ public class RichTextArea extends Control {
      * Moves the caret to the beginning of next word in a left-to-right setting
      * (or the beginning of the previous word in a right-to-left setting), clearing an existing selection.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void moveWordRight() {
         execute(Tags.MOVE_WORD_RIGHT);
@@ -1020,7 +1170,7 @@ public class RichTextArea extends Control {
     /**
      * Moves the caret to the beginning of previous word, clearing an existing selection.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void moveWordPrevious() {
         execute(Tags.MOVE_WORD_PREVIOUS);
@@ -1029,7 +1179,7 @@ public class RichTextArea extends Control {
     /**
      * Moves the caret to the beginning of next word, clearing an existing selection.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void moveWordNext() {
         execute(Tags.MOVE_WORD_NEXT);
@@ -1038,7 +1188,7 @@ public class RichTextArea extends Control {
     /**
      * Moves the caret to the end of the next word, clearing an existing selection.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void moveWordNextEnd() {
         execute(Tags.MOVE_WORD_NEXT_END);
@@ -1047,7 +1197,7 @@ public class RichTextArea extends Control {
     /**
      * Move caret one visual page down, clearing an existing selection.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void pageDown() {
         execute(Tags.PAGE_DOWN);
@@ -1056,7 +1206,7 @@ public class RichTextArea extends Control {
     /**
      * Move caret one visual page up, clearing an existing selection.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void pageUp() {
         execute(Tags.PAGE_UP);
@@ -1067,7 +1217,7 @@ public class RichTextArea extends Control {
      * This method clears the selection afterward.
      * The model decides the best format to use.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void paste() {
         execute(Tags.PASTE);
@@ -1089,7 +1239,7 @@ public class RichTextArea extends Control {
     /**
      * Pastes the plain text clipboard content at the caret, or, if selection exists, replacing the selected text.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public final void pastePlainText() {
         execute(Tags.PASTE_PLAIN_TEXT);
@@ -1099,7 +1249,7 @@ public class RichTextArea extends Control {
      * If possible, redoes the last undone modification. If {@link #isRedoable()} returns
      * false, then calling this method has no effect.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void redo() {
         execute(Tags.REDO);
@@ -1109,7 +1259,7 @@ public class RichTextArea extends Control {
      * Selects all the text in the document: the anchor is set at the document start, while the caret is positioned
      * at the end of the document.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void selectAll() {
         execute(Tags.SELECT_ALL);
@@ -1118,7 +1268,7 @@ public class RichTextArea extends Control {
     /**
      * Extends selection to the start of the document.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void selectToDocumentStart() {
         execute(Tags.SELECT_TO_DOCUMENT_START);
@@ -1127,7 +1277,7 @@ public class RichTextArea extends Control {
     /**
      * Extends selection to the end of the document.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void selectToDocumentEnd() {
         execute(Tags.SELECT_TO_DOCUMENT_END);
@@ -1136,7 +1286,7 @@ public class RichTextArea extends Control {
     /**
      * Extends selection one visual text line down.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void selectDown() {
         execute(Tags.SELECT_DOWN);
@@ -1145,7 +1295,7 @@ public class RichTextArea extends Control {
     /**
      * Extends selection one symbol to the left.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void selectLeft() {
         execute(Tags.SELECT_LEFT);
@@ -1154,7 +1304,7 @@ public class RichTextArea extends Control {
     /**
      * Extends selection one visible page down.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void selectPageDown() {
         execute(Tags.SELECT_PAGE_DOWN);
@@ -1163,7 +1313,7 @@ public class RichTextArea extends Control {
     /**
      * Extends selection one visible page up.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void selectPageUp() {
         execute(Tags.SELECT_PAGE_UP);
@@ -1172,7 +1322,7 @@ public class RichTextArea extends Control {
     /**
      * Selects the current paragraph.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void selectParagraph() {
         execute(Tags.SELECT_PARAGRAPH);
@@ -1181,7 +1331,7 @@ public class RichTextArea extends Control {
     /**
      * Selects from the current position to the paragraph end.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void selectParagraphEnd() {
         execute(Tags.SELECT_PARAGRAPH_END);
@@ -1190,7 +1340,7 @@ public class RichTextArea extends Control {
     /**
      * Selects from the current position to the paragraph start.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void selectParagraphStart() {
         execute(Tags.SELECT_PARAGRAPH_START);
@@ -1199,7 +1349,7 @@ public class RichTextArea extends Control {
     /**
      * Extends selection one symbol to the right.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void selectRight() {
         execute(Tags.SELECT_RIGHT);
@@ -1208,7 +1358,7 @@ public class RichTextArea extends Control {
     /**
      * Extends selection one visual text line up.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void selectUp() {
         execute(Tags.SELECT_UP);
@@ -1217,7 +1367,7 @@ public class RichTextArea extends Control {
     /**
      * Selects a word at the caret position.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void selectWord() {
         execute(Tags.SELECT_WORD);
@@ -1230,7 +1380,7 @@ public class RichTextArea extends Control {
      * the selection to be cleared. Rather, the anchor stays put and the caretPosition is
      * moved to the beginning of next word.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void selectWordLeft() {
         execute(Tags.SELECT_WORD_LEFT);
@@ -1243,7 +1393,7 @@ public class RichTextArea extends Control {
      * the selection to be cleared. Rather, the anchor stays put and the caretPosition is
      * moved to the beginning of next word.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void selectWordRight() {
         execute(Tags.SELECT_WORD_RIGHT);
@@ -1254,7 +1404,7 @@ public class RichTextArea extends Control {
      * the selection to be cleared. Rather, the anchor stays put and the caretPosition is
      * moved to the beginning of next word.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void selectWordNext() {
         execute(Tags.SELECT_WORD_NEXT);
@@ -1265,7 +1415,7 @@ public class RichTextArea extends Control {
      * the selection to be cleared. Rather, the anchor stays put and the caretPosition is
      * moved to the beginning of previous word.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void selectWordPrevious() {
         execute(Tags.SELECT_WORD_PREVIOUS);
@@ -1274,7 +1424,7 @@ public class RichTextArea extends Control {
     /**
      * Extends selection to the end of the next word.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void selectWordNextEnd() {
         execute(Tags.SELECT_WORD_NEXT_END);
@@ -1284,7 +1434,7 @@ public class RichTextArea extends Control {
      * If possible, undoes the last modification. If {@link #isUndoable()} returns
      * false, then calling this method has no effect.
      * <p>
-     * This action can be changed by remapping the default behavior, @see {@link #getInputMap()}.
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void undo() {
         execute(Tags.UNDO);
@@ -1378,7 +1528,7 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Returns true if this control's {@link #isEditable()} returns true and the model's
+     * This convenience method returns true if this control's {@link #isEditable()} returns true and the model's
      * {@link StyledTextModel#isUserEditable()} also returns true.
      * @return true if model is not null and is editable
      */
@@ -1514,7 +1664,7 @@ public class RichTextArea extends Control {
                 StyleableProperties.CONTENT_PADDING,
                 this,
                 "contentPadding",
-                Params.CONTENT_PADDING
+                Params.DEFAULT_CONTENT_PADDING
             );
         }
         return contentPadding;
@@ -1525,10 +1675,7 @@ public class RichTextArea extends Control {
     }
 
     public final Insets getContentPadding() {
-        if (contentPadding == null) {
-            return Insets.EMPTY;
-        }
-        return contentPadding.get();
+        return contentPadding == null ? Params.DEFAULT_CONTENT_PADDING : contentPadding.get();
     }
 
     // TODO to be moved to Control JDK-8314968

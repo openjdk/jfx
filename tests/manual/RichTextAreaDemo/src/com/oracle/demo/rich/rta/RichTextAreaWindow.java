@@ -70,10 +70,13 @@ public class RichTextAreaWindow extends Stage {
         FX.menu(mb, "_Tests");
         FX.item(mb, "Stacked Vertically", () -> openMultipeStacked(true));
         FX.item(mb, "Stacked Horizontally", () -> openMultipeStacked(false));
-        FX.item(mb, "In a VBox", () -> openInVBox());
+        FX.item(mb, "In a VBox", this::openInVBox);
         // window
         FX.menu(mb, "_Window");
         FX.item(mb, orientation);
+        // tools
+        FX.menu(mb, "T_ools");
+        FX.item(mb, "CSS Tool", this::openCssTool);
 
         status = new Label();
         status.setPadding(new Insets(2, 10, 2, 10));
@@ -140,6 +143,15 @@ public class RichTextAreaWindow extends Stage {
         Stage w = new Stage();
         w.setScene(new Scene(vb));
         w.setTitle("RichTextArea in a VBox");
+        w.show();
+    }
+
+    protected void openCssTool() {
+        Stage w = new Stage();
+        w.setScene(new Scene(new CssToolPane()));
+        w.setTitle("CSS Tool");
+        w.setWidth(800);
+        w.setHeight(600);
         w.show();
     }
 }

@@ -2752,6 +2752,92 @@ project(":controls") {
     addValidateSourceSets(project, sourceSets)
 }
 
+project(":incubator.input") {
+    project.ext.buildModule = true
+    project.ext.includeSources = true
+    project.ext.moduleRuntime = true
+    project.ext.moduleName = "jfx.incubator.input"
+    project.ext.incubating = true
+
+    sourceSets {
+        main
+        shims {
+            java {
+                compileClasspath += sourceSets.main.output
+                runtimeClasspath += sourceSets.main.output
+            }
+        }
+        test {
+            java {
+                compileClasspath += sourceSets.shims.output
+                runtimeClasspath += sourceSets.shims.output
+            }
+        }
+    }
+
+    project.ext.moduleSourcePath = defaultModuleSourcePath
+    project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
+
+    commonModuleSetup(project, [
+        'base',
+        'graphics',
+        'controls',
+        'incubator.input'
+    ])
+
+    dependencies {
+        testImplementation project(":base").sourceSets.test.output
+        testImplementation project(":graphics").sourceSets.test.output
+        testImplementation project(":controls").sourceSets.test.output
+        implementation project(':base')
+        implementation project(':graphics')
+        implementation project(':controls')
+    }
+
+    test {
+        jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit"
+    }
+
+    def modulePath = "${project.sourceSets.main.java.getDestinationDirectory().get().getAsFile()}"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.controls/build/classes/java/main"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
+
+    // FIXME: KCR
+//    processResources {
+//      doLast {
+//        def cssFiles = fileTree(dir: "$moduleDir/com/sun/javafx/scene/control/skin")
+//        cssFiles.include "**/*.css"
+//        cssFiles.each { css ->
+//            logger.info("converting CSS to BSS ${css}");
+//
+//            javaexec {
+//                executable = JAVA
+//                workingDir = project.projectDir
+//                jvmArgs += patchModuleArgs
+//                jvmArgs += "--module-path=$modulePath"
+//                jvmArgs += "--add-modules=javafx.graphics"
+//                mainClass = "com.sun.javafx.css.parser.Css2Bin"
+//                args css
+//            }
+//        }
+//      }
+//    }
+//
+//    def copyShimBssTask = project.task("copyShimBss", type: Copy,
+//                            dependsOn: [project.tasks.getByName("compileJava"),
+//                                        project.tasks.getByName("processResources")]) {
+//        from project.moduleDir
+//        into project.moduleShimsDir
+//        include "**/*.bss"
+//    }
+//    processShimsResources.dependsOn(copyShimBssTask)
+
+    addMavenPublication(project, [ 'graphics' , 'controls'])
+
+    addValidateSourceSets(project, sourceSets)
+}
+
 project(":incubator.richtext") {
     project.ext.buildModule = true
     project.ext.includeSources = true
@@ -2782,6 +2868,7 @@ project(":incubator.richtext") {
         'base',
         'graphics',
         'controls',
+        'incubator.input',
         'incubator.richtext'
     ])
 
@@ -2789,9 +2876,11 @@ project(":incubator.richtext") {
         testImplementation project(":base").sourceSets.test.output
         testImplementation project(":graphics").sourceSets.test.output
         testImplementation project(":controls").sourceSets.test.output
+        testImplementation project(":incubator.input").sourceSets.test.output
         implementation project(':base')
         implementation project(':graphics')
         implementation project(':controls')
+        implementation project(':incubator.input')
     }
 
     test {
@@ -3953,6 +4042,7 @@ project(":systemTests") {
         'base',
         'graphics',
         'controls',
+        'incubator.input',
         'incubator.richtext',
         'media',
         'web',
@@ -4338,7 +4428,10 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     description = "Generates the JavaDoc for all the public API"
     executable = JAVADOC
     def projectsToDocument = [
-            project(":base"), project(":graphics"), project(":controls"), project(":incubator.richtext"), project(":media"),
+            project(":base"), project(":graphics"), project(":controls"),
+            project(":incubator.input"),
+            project(":incubator.richtext"),
+            project(":media"),
             project(":swing"), /*project(":swt"),*/ project(":fxml"), project(":web")]
     source(projectsToDocument.collect({
         [it.sourceSets.main.java]

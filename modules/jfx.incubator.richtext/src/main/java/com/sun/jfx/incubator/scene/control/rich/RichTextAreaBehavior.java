@@ -651,19 +651,18 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         if (c == null) {
             return;
         }
-        double sp = 0.0; //c.getLineSpacing();
-        double x = (c.getMinX() + c.getMaxX()) / 2.0; // phantom x is unclear in the case of split caret
+        double sp = c.getLineSpacing();
+        double x = (c.getMinX() + c.getMaxX()) / 2.0;
         double y = (deltaPixels < 0) ? c.getMinY() + deltaPixels - sp - 0.5 : c.getMaxY() + deltaPixels + sp;
 
         if (phantomX < 0) {
+            // phantom x is unclear in the case of split caret
             phantomX = x;
         } else {
             x = phantomX;
         }
 
         TextPos p = vflow.getTextPosLocal(x + vflow.leftPadding(), y);
-        // FIX may result in move to the same line in wrapped text with tab characters.
-        // we need to check if same line and try something else then
         if (p != null) {
             control.moveCaret(p, extendSelection);
         }

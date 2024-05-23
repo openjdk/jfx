@@ -23,55 +23,60 @@
  * questions.
  */
 
-package com.oracle.demo.rich.util;
+package com.oracle.demo.rich.rta;
 
-import javafx.scene.control.ScrollBar;
+import javafx.application.Application;
+import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
+import javafx.stage.Stage;
 import jfx.incubator.scene.control.input.FunctionTag;
 import jfx.incubator.scene.control.input.KeyBinding;
-import jfx.incubator.scene.control.rich.ConfigurationParameters;
+import jfx.incubator.scene.control.rich.LineNumberDecorator;
 import jfx.incubator.scene.control.rich.RichTextArea;
 import jfx.incubator.scene.control.rich.TextPos;
 import jfx.incubator.scene.control.rich.model.SimpleViewOnlyStyledModel;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
-import jfx.incubator.scene.control.rich.skin.LineNumberDecorator;
 
 /**
  * The usage examples used in the documentation.
  */
-class UsageExamples {
+public class UsageExamples {
     void createViewOnly() {
         SimpleViewOnlyStyledModel m = new SimpleViewOnlyStyledModel();
         // add text segment using CSS style name (requires a style sheet)
         m.addSegment("RichTextArea ", null, "HEADER");
         // add text segment using direct style
-        m.addSegment("Demo", "-fx-font-size:200%;", null);
+        m.addSegment("Demo", "-fx-font-size:200%;");
         // newline
         m.nl();
 
-        RichTextArea t = new RichTextArea(m);
+        RichTextArea textArea = new RichTextArea(m);
     }
 
-    void appendStyledText() {
+    static RichTextArea appendStyledText() {
         // create styles
-        StyleAttrs heading = StyleAttrs.builder().setBold(true).setFontSize(24).build();
-        StyleAttrs plain = StyleAttrs.builder().setFontFamily("Monospaced").build();
+        StyleAttrs heading = StyleAttrs.builder().setBold(true).setUnderline(true).setFontSize(18).build();
+        StyleAttrs mono = StyleAttrs.builder().setFontFamily("Monospaced").build();
 
-        RichTextArea rta = new RichTextArea();
+        RichTextArea textArea = new RichTextArea();
         // build the content
-        rta.appendText("Heading\n", heading);
-        rta.appendText("Plain monospaced text.\n", plain);
+        textArea.appendText("RichTextArea\n", heading);
+        textArea.appendText("Example:\nText is ", StyleAttrs.EMPTY);
+        textArea.appendText("monospaced.\n", mono);
+        return textArea;
+    }
+
+    void usageExample() {
+        RichTextArea textArea = new RichTextArea();
+        // insert two paragraphs "A" and "B"
+        StyleAttrs bold = StyleAttrs.builder().setBold(true).build();
+        textArea.appendText("A\nB", bold);
     }
 
     private static final FunctionTag PRINT_TO_CONSOLE = new FunctionTag();
 
     void customNavigation() {
-        // sets a custom vertical scroll bar
-        ConfigurationParameters cp = ConfigurationParameters.
-            builder().
-            verticalScrollBar(ScrollBar::new).
-            build();
-        RichTextArea richTextArea = new RichTextArea(cp, null);
+        RichTextArea richTextArea = new RichTextArea();
 
         // creates a new key binding mapped to an external function
         richTextArea.getInputMap().register(KeyBinding.shortcut(KeyCode.W), (c) -> {
@@ -126,5 +131,22 @@ class UsageExamples {
         private void newFunctionImpl(MyControl c) {
             // custom functionality
         }
+    }
+
+    public static class App extends Application {
+        public App() {
+        }
+
+        @Override
+        public void start(Stage stage) throws Exception {
+            RichTextArea textArea = appendStyledText();
+            stage.setScene(new Scene(textArea));
+            //stage.setTitle("RichTextArea");
+            stage.show();
+        }
+    }
+
+    public static void main(String[] args) {
+        App.launch(App.class, args);
     }
 }

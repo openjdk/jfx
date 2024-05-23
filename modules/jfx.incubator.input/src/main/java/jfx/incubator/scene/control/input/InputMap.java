@@ -39,6 +39,7 @@ import javafx.scene.control.Skin;
 import javafx.scene.control.SkinBase;
 import javafx.scene.control.Skinnable;
 import javafx.scene.input.KeyEvent;
+import com.sun.javafx.ModuleUtil;
 import com.sun.jfx.incubator.scene.control.input.EventHandlerPriority;
 import com.sun.jfx.incubator.scene.control.input.KeyEventMapper;
 import com.sun.jfx.incubator.scene.control.input.PHList;
@@ -61,6 +62,8 @@ public final class InputMap {
     private SkinInputMap skinInputMap;
     private final KeyEventMapper kmapper = new KeyEventMapper();
     private final EventHandler<Event> eventHandler = this::handleEvent;
+
+    static { ModuleUtil.incubatorWarning(); }
 
     /**
      * The constructor.

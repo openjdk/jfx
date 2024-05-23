@@ -23,23 +23,19 @@
  * questions.
  */
 
-/**
- * RichTextArea Control (Incubator)
- *
- * <BR><b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
- * Will be removed in a future release.</b>
- *
- * @moduleGraph
- * @since 999
- */
-module jfx.incubator.richtext {
-    requires transitive javafx.base;
-    requires transitive javafx.graphics;
-    requires transitive javafx.controls;
-	requires transitive jfx.incubator.input;
-    requires java.desktop;
+package jfx.incubator.scene.control.input;
 
-    exports jfx.incubator.scene.control.rich;
-    exports jfx.incubator.scene.control.rich.skin;
-    exports jfx.incubator.scene.control.rich.model;
+import com.sun.javafx.ModuleUtil;
+
+/**
+ * A function tag is a public handle for a function in the context of InputMap.
+ *
+ * @since 999 TODO
+ */
+public final class FunctionTag {
+    /** Constructs the function tag. */
+    public FunctionTag() {
+    }
+
+    static { ModuleUtil.incubatorWarning(); }
 }

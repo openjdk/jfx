@@ -58,6 +58,7 @@ public class CellArrangement {
     private double unwrappedWidth;
     private double topHeight;
     private double bottomHeight;
+    private double totalHeight;
     private Node[] left;
     private Node[] right;
 
@@ -197,7 +198,7 @@ public class CellArrangement {
             if (cell != null) {
                 int charIndex = p.charIndex();
                 boolean leading = p.isLeading();
-                double dx = (contentPadding == null) ? 0.0 : -contentPadding.getLeft();
+                double dx = -contentPadding.getLeft();
                 PathElement[] path = cell.getCaretShape(target, charIndex, leading, dx, 0.0);
                 if (path == null) {
                     return null;
@@ -329,7 +330,7 @@ public class CellArrangement {
             double top = -origin.offset() - topHeight;
             if (y < top) {
                 if (topIx == 0) {
-                    double topPadding = (contentPadding == null) ? 0.0 : contentPadding.getTop();
+                    double topPadding = contentPadding.getTop();
                     y = Math.max(y, -topPadding);
                     return new Origin(0, y);
                 }
@@ -372,5 +373,18 @@ public class CellArrangement {
 
     public Node getRightNodeAt(int index) {
         return right[index];
+    }
+
+    /**
+     * Returns the total height of all cells that intersect the viewport, or Double.POSITIVE_INFINITY if there
+     * are at least one cell lays beyond the viewport.
+     * @return the total width
+     */
+    public double getTotalHeight() {
+        return totalHeight;
+    }
+
+    void setTotalHeight(double h) {
+        totalHeight = h;
     }
 }

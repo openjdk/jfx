@@ -27,8 +27,6 @@
 
 package jfx.incubator.scene.control.rich.skin;
 
-import java.util.function.Supplier;
-import javafx.beans.binding.Bindings;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
@@ -45,7 +43,6 @@ import com.sun.jfx.incubator.scene.control.rich.RichTextAreaSkinHelper;
 import com.sun.jfx.incubator.scene.control.rich.VFlow;
 import com.sun.jfx.incubator.scene.control.rich.util.ListenerHelper;
 import jfx.incubator.scene.control.rich.CellContext;
-import jfx.incubator.scene.control.rich.ConfigurationParameters;
 import jfx.incubator.scene.control.rich.RichTextArea;
 import jfx.incubator.scene.control.rich.StyleHandlerRegistry;
 import jfx.incubator.scene.control.rich.StyleResolver;
@@ -64,7 +61,6 @@ import jfx.incubator.scene.control.rich.model.StyledTextModel;
  * </ul>
  */
 public class RichTextAreaSkin extends SkinBase<RichTextArea> {
-    private final ConfigurationParameters config;
     private final ListenerHelper listenerHelper;
     private final RichTextAreaBehavior behavior;
     private final Pane mainPane;
@@ -92,44 +88,27 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     /**
      * Constructs the skin.
      * @param control the owner
-     * @param cnf the configuration parameters
      */
-    public RichTextAreaSkin(RichTextArea control, ConfigurationParameters cnf) {
+    public RichTextAreaSkin(RichTextArea control) {
         super(control);
 
-        this.config = cnf;
         this.listenerHelper = new ListenerHelper();
 
         vscroll = createVScrollBar();
-        vscroll.setManaged(false);
         vscroll.setOrientation(Orientation.VERTICAL);
         vscroll.setMin(0.0);
         vscroll.setMax(1.0);
         vscroll.setUnitIncrement(Params.SCROLL_BARS_UNIT_INCREMENT);
         vscroll.addEventFilter(ScrollEvent.ANY, (ev) -> ev.consume());
-        vscroll.visibleProperty().bind(Bindings.createBooleanBinding(() -> {
-                return !control.isUseContentHeight();
-            },
-            control.useContentHeightProperty()
-        ));
 
         hscroll = createHScrollBar();
-        hscroll.setManaged(false);
         hscroll.setOrientation(Orientation.HORIZONTAL);
         hscroll.setMin(0.0);
         hscroll.setMax(1.0);
         hscroll.setUnitIncrement(Params.SCROLL_BARS_UNIT_INCREMENT);
         hscroll.addEventFilter(ScrollEvent.ANY, (ev) -> ev.consume());
-        hscroll.visibleProperty().bind(Bindings.createBooleanBinding(() -> {
-                return !control.isWrapText() && !control.isUseContentWidth();
-            },
-            control.wrapTextProperty(),
-            control.useContentWidthProperty()
-        ));
 
-        vflow = new VFlow(this, config, vscroll, hscroll);
-
-        // TODO corner? only when both scroll bars are visible
+        vflow = new VFlow(this, vscroll, hscroll);
 
         mainPane = new Pane(vflow, vscroll, hscroll) {
             @Override
@@ -147,49 +126,50 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
             }
 
             @Override
+            protected double computePrefWidth(double height) {
+                if (control.isUseContentWidth()) {
+                    double w = vflow.prefWidth(height); // or use unwrapped width + left + right?
+                    if (vscroll.isVisible()) {
+                        w += vscroll.prefWidth(height);
+                    }
+                    w += (Params.LAYOUT_FOCUS_BORDER * 2);
+                    Insets m = getInsets();
+                    return w + m.getLeft() + m.getRight();
+                }
+                return super.computePrefWidth(height);
+            }
+
+            @Override
             protected void layoutChildren() {
                 double x0 = snappedLeftInset() + snapSizeX(Params.LAYOUT_FOCUS_BORDER);
                 double y0 = snappedTopInset() + snapSizeY(Params.LAYOUT_FOCUS_BORDER);
                 double width = getWidth();
                 double height = getHeight();
 
-                double vscrollWidth;
-                if (vscroll.isVisible()) {
-                    vscrollWidth = vscroll.prefWidth(height);
-                } else {
-                    vscrollWidth = 0.0;
-                }
-
-                double hscrollHeight;
-                if (hscroll.isVisible()) {
-                    hscrollHeight = hscroll.prefHeight(width);
-                } else {
-                    hscrollHeight = 0.0;
-                }
+                double vsbWidth = vscroll.isVisible() ? vscroll.prefWidth(height) : 0.0;
+                double hsbHeight = hscroll.isVisible() ? snapSizeY(hscroll.prefHeight(width)) : 0.0;
 
                 double w;
                 if (control.isUseContentWidth()) {
                     w = vflow.getFlowWidth();
                 } else {
-                    w = snapSizeX(width - x0 - snappedRightInset() - snapSizeX(vscrollWidth) - snapSizeX(Params.LAYOUT_FOCUS_BORDER));
+                    w = snapSizeX(width - x0 - snappedRightInset() - snapSizeX(vsbWidth) - snapSizeX(Params.LAYOUT_FOCUS_BORDER));
                 }
 
                 double h;
                 if (control.isUseContentHeight()) {
                     h = vflow.prefHeight(width);
                 } else {
-                    h = snapSizeY(height - y0 - snappedBottomInset() - snapSizeY(hscrollHeight) - snapSizeY(Params.LAYOUT_FOCUS_BORDER));
+                    h = height - y0 - snappedBottomInset() - snapSizeY(Params.LAYOUT_FOCUS_BORDER) - hsbHeight;
                 }
 
-                //System.out.println(String.format("mainPane.layoutChildren w=%.1f h=%.1f pref=%.1f", w, h, prefHeight(-1))); // FIX
-
-                layoutInArea(vscroll, w, y0, vscrollWidth, h, -1, null, true, true, HPos.RIGHT, VPos.TOP);
-                layoutInArea(hscroll, x0, h, w, hscrollHeight, -1, null, true, true, HPos.LEFT, VPos.BOTTOM);
+                layoutInArea(vscroll, w, y0, vsbWidth, h + hsbHeight, -1, null, true, true, HPos.RIGHT, VPos.TOP);
+                layoutInArea(hscroll, x0, y0 + h, w, hsbHeight, -1, null, true, true, HPos.LEFT, VPos.BOTTOM);
                 layoutInArea(vflow, x0, y0, w, h, -1, null, true, true, HPos.LEFT, VPos.TOP);
             }
         };
+        mainPane.getStyleClass().add("main-pane");
         getChildren().add(mainPane);
-        mainPane.getStyleClass().add("rta-main-pane");
 
         behavior = new RichTextAreaBehavior(control);
 
@@ -235,14 +215,22 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         }
     }
 
-    private final ScrollBar createVScrollBar() {
-        Supplier<ScrollBar> gen = config.scrollBarGeneratorVertical;
-        return gen == null ? new ScrollBar() : gen.get();
+    /**
+     * Creates the vertical scroll bar.  The subclasses may override this method to provide a custom
+     * ScrollBar implementation.
+     * @return the vertical scroll bar
+     */
+    protected ScrollBar createVScrollBar() {
+        return new ScrollBar();
     }
 
-    private final ScrollBar createHScrollBar() {
-        Supplier<ScrollBar> gen = config.scrollBarGeneratorHorizontal;
-        return gen == null ? new ScrollBar() : gen.get();
+    /**
+     * Creates the horizontal scroll bar.  The subclasses may override this method to provide a custom
+     * ScrollBar implementation.
+     * @return the horizontal scroll bar
+     */
+    protected ScrollBar createHScrollBar() {
+        return new ScrollBar();
     }
 
     private VFlow getVFlow() {
@@ -310,11 +298,17 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
 
     @Override
     protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+        if (getSkinnable().isUseContentHeight()) {
+            return super.computePrefHeight(width, topInset, rightInset, bottomInset, leftInset);
+        }
         return Params.PREF_HEIGHT;
     }
 
     @Override
     protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
+        if (getSkinnable().isUseContentWidth()) {
+            return super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
+        }
         return Params.PREF_WIDTH;
     }
 

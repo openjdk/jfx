@@ -46,7 +46,6 @@ import javafx.scene.text.Font;
 import com.sun.jfx.incubator.scene.control.rich.util.RichUtils;
 import jfx.incubator.scene.control.rich.model.StyledTextModel;
 import jfx.incubator.scene.control.rich.skin.CodeAreaSkin;
-import jfx.incubator.scene.control.rich.skin.LineNumberDecorator;
 import jfx.incubator.scene.control.rich.skin.RichTextAreaSkin;
 
 /**
@@ -95,7 +94,7 @@ public class CodeArea extends RichTextArea {
 
     @Override
     protected RichTextAreaSkin createDefaultSkin() {
-        return new CodeAreaSkin(this, config);
+        return new CodeAreaSkin(this);
     }
 
     /**
