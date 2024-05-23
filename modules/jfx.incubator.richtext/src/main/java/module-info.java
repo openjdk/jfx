@@ -36,7 +36,7 @@ module jfx.incubator.richtext {
     requires transitive javafx.base;
     requires transitive javafx.graphics;
     requires transitive javafx.controls;
-	requires transitive jfx.incubator.input;
+    requires transitive jfx.incubator.input;
     requires java.desktop;
 
     exports jfx.incubator.scene.control.rich;

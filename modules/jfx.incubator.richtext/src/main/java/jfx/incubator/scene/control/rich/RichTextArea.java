@@ -156,7 +156,7 @@ public class RichTextArea extends Control {
      * a different implementation using {@link InputMap#registerFunction(FunctionTag, FunctionHandler)}.
      * Additionally, a key binding can be customized (added, removed, or replaced) via
      * {@link InputMap#registerKey(jfx.incubator.scene.control.input.KeyBinding, FunctionTag)} or
-     * {@link  InputMap#register(jfx.incubator.scene.control.input.KeyBinding, FunctionHandler)}. 
+     * {@link  InputMap#register(jfx.incubator.scene.control.input.KeyBinding, FunctionHandler)}.
      */
     public static class Tags {
         /** Deletes the symbol before the caret. */
@@ -527,7 +527,7 @@ public class RichTextArea extends Control {
     /** Defines styleable properties at the class level */
     private static class StyleableProperties {
         private static final CssMetaData<RichTextArea, Duration> CARET_BLINK_PERIOD =
-            new CssMetaData<>("-fx-caret-blink-period", DurationConverter.getInstance()) 
+            new CssMetaData<>("-fx-caret-blink-period", DurationConverter.getInstance())
         {
             @Override
             public boolean isSettable(RichTextArea t) {

@@ -409,7 +409,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
                     setOffsetX(off);
                 }
             }
-            
+
             // TODO set visibility
             updateHorizontalScrollBar();
         }
