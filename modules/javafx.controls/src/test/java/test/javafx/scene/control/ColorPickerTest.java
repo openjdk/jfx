@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,23 +25,27 @@
 
 package test.javafx.scene.control;
 
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
-import javafx.scene.Scene;
-import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
-import javafx.stage.Stage;
-import test.com.sun.javafx.pgstub.StubToolkit;
-import com.sun.javafx.tk.Toolkit;
-import javafx.scene.control.ColorPicker;
-import org.junit.Before;
-import org.junit.Test;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
+import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.control.ColorPicker;
+import javafx.scene.control.PopupControl;
+import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.stage.Stage;
+import javafx.stage.Window;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import com.sun.javafx.tk.Toolkit;
+import test.com.sun.javafx.pgstub.StubToolkit;
 
 public class ColorPickerTest {
     private ColorPicker colorPicker;
@@ -63,6 +67,11 @@ public class ColorPickerTest {
         stage.setScene(scene);
         stage.show();
         tk.firePulse();
+    }
+
+    @After
+    public void after() {
+        stage.hide();
     }
 
     /*********************************************************************
@@ -144,5 +153,42 @@ public class ColorPickerTest {
 
     @Test public void ensureOnActionPropertyReferencesBean() {
         assertEquals(colorPicker, colorPicker.onActionProperty().getBean());
+    }
+
+    // verifies that the hover square is visible after popup is shown because its value is present in the palette
+    @Test
+    public void testHoverRectangleShown() {
+        colorPicker.setValue(Color.WHITE);
+        colorPicker.show();
+        tk.firePulse();
+        Node hoverSquare = getHoverSquare();
+        assertTrue(hoverSquare != null);
+        assertTrue(hoverSquare.isVisible());
+        colorPicker.hide();
+    }
+
+    // verifies that the hover square is NOT visible after popup is shown because its value is NOT in the palette
+    @Test
+    public void testHoverRectangleNotShown() {
+        colorPicker.setValue(Color.CORAL); // coral is not in the palette, JDK-8324327
+        colorPicker.show();
+        tk.firePulse();
+        Node hoverSquare = getHoverSquare();
+        assertTrue(hoverSquare != null);
+        assertFalse(hoverSquare.isVisible());
+        colorPicker.hide();
+    }
+
+    // returns first (and only) hover square found in the popup, or null
+    private Node getHoverSquare() {
+        for (Window w : Window.getWindows()) {
+            if (w instanceof PopupControl c) {
+                var it = c.getScene().getRoot().lookupAll(".hover-square").iterator();
+                if (it.hasNext()) {
+                    return it.next();
+                }
+            }
+        }
+        return null;
     }
 }
