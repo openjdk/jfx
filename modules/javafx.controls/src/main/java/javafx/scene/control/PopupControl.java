@@ -362,11 +362,11 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getMinWidth(forHeight)</code> will return the control's internally
+     * <code>minWidth(forHeight)</code> will return the control's internally
      * computed minimum width.
      * <p>
      * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
-     * <code>getMinWidth(forHeight)</code> to return the control's preferred width,
+     * <code>minWidth(forHeight)</code> to return the control's preferred width,
      * enabling applications to easily restrict the resizability of the control.
      */
     private DoubleProperty minWidth;
@@ -377,11 +377,11 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getMinWidth(forHeight)</code> will return the control's internally
+     * <code>minWidth(forHeight)</code> will return the control's internally
      * computed minimum width.
      * <p>
      * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
-     * <code>getMinWidth(forHeight)</code> to return the control's preferred width,
+     * <code>minWidth(forHeight)</code> to return the control's preferred width,
      * enabling applications to easily restrict the resizability of the control.
      * @param value the minimum width
      */
@@ -393,11 +393,11 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getMinWidth(forHeight)</code> will return the control's internally
+     * <code>minWidth(forHeight)</code> will return the control's internally
      * computed minimum width.
      * <p>
      * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
-     * <code>getMinWidth(forHeight)</code> to return the control's preferred width,
+     * <code>minWidth(forHeight)</code> to return the control's preferred width,
      * enabling applications to easily restrict the resizability of the control.
      * @return the minimum width
      */
@@ -430,11 +430,11 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getMinHeight(forWidth)</code> will return the control's internally
+     * <code>minHeight(forWidth)</code> will return the control's internally
      * computed minimum height.
      * <p>
      * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
-     * <code>getMinHeight(forWidth)</code> to return the control's preferred height,
+     * <code>minHeight(forWidth)</code> to return the control's preferred height,
      * enabling applications to easily restrict the resizability of the control.
      *
      */
@@ -446,11 +446,11 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getMinHeight(forWidth)</code> will return the control's internally
+     * <code>minHeight(forWidth)</code> will return the control's internally
      * computed minimum height.
      * <p>
      * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
-     * <code>getMinHeight(forWidth)</code> to return the control's preferred height,
+     * <code>minHeight(forWidth)</code> to return the control's preferred height,
      * enabling applications to easily restrict the resizability of the control.
      *
      * @param value the minimum height
@@ -463,11 +463,11 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getMinHeight(forWidth)</code> will return the control's internally
+     * <code>minHeight(forWidth)</code> will return the control's internally
      * computed minimum height.
      * <p>
      * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
-     * <code>getMinHeight(forWidth)</code> to return the control's preferred height,
+     * <code>minHeight(forWidth)</code> to return the control's preferred height,
      * enabling applications to easily restrict the resizability of the control.
      *
      * @return the minimum height
@@ -515,7 +515,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getPrefWidth(forHeight)</code> will return the control's internally
+     * <code>prefWidth(forHeight)</code> will return the control's internally
      * computed preferred width.
      */
     private DoubleProperty prefWidth;
@@ -526,7 +526,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getPrefWidth(forHeight)</code> will return the control's internally
+     * <code>prefWidth(forHeight)</code> will return the control's internally
      * computed preferred width.
      * @param value the preferred width
      */
@@ -538,7 +538,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getPrefWidth(forHeight)</code> will return the control's internally
+     * <code>prefWidth(forHeight)</code> will return the control's internally
      * computed preferred width.
      * @return the preferred width
      */
@@ -570,7 +570,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getPrefHeight(forWidth)</code> will return the control's internally
+     * <code>prefHeight(forWidth)</code> will return the control's internally
      * computed preferred width.
      *
      */
@@ -582,7 +582,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getPrefHeight(forWidth)</code> will return the control's internally
+     * <code>prefHeight(forWidth)</code> will return the control's internally
      * computed preferred width.
      *
      * @param value the preferred height
@@ -595,7 +595,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getPrefHeight(forWidth)</code> will return the control's internally
+     * <code>prefHeight(forWidth)</code> will return the control's internally
      * computed preferred width.
      *
      * @return the preferred height
@@ -643,11 +643,11 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getMaxWidth(forHeight)</code> will return the control's internally
+     * <code>maxWidth(forHeight)</code> will return the control's internally
      * computed maximum width.
      * <p>
      * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
-     * <code>getMaxWidth(forHeight)</code> to return the control's preferred width,
+     * <code>maxWidth(forHeight)</code> to return the control's preferred width,
      * enabling applications to easily restrict the resizability of the control.
      */
     private DoubleProperty maxWidth;
@@ -658,11 +658,11 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getMaxWidth(forHeight)</code> will return the control's internally
+     * <code>maxWidth(forHeight)</code> will return the control's internally
      * computed maximum width.
      * <p>
      * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
-     * <code>getMaxWidth(forHeight)</code> to return the control's preferred width,
+     * <code>maxWidth(forHeight)</code> to return the control's preferred width,
      * enabling applications to easily restrict the resizability of the control.
      * @param value the maximum width
      */
@@ -674,11 +674,11 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getMaxWidth(forHeight)</code> will return the control's internally
+     * <code>maxWidth(forHeight)</code> will return the control's internally
      * computed maximum width.
      * <p>
      * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
-     * <code>getMaxWidth(forHeight)</code> to return the control's preferred width,
+     * <code>maxWidth(forHeight)</code> to return the control's preferred width,
      * enabling applications to easily restrict the resizability of the control.
      * @return the maximum width
      */
@@ -710,11 +710,11 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getMaxHeight(forWidth)</code> will return the control's internally
+     * <code>maxHeight(forWidth)</code> will return the control's internally
      * computed maximum height.
      * <p>
      * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
-     * <code>getMaxHeight(forWidth)</code> to return the control's preferred height,
+     * <code>maxHeight(forWidth)</code> to return the control's preferred height,
      * enabling applications to easily restrict the resizability of the control.
      *
      */
@@ -726,11 +726,11 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getMaxHeight(forWidth)</code> will return the control's internally
+     * <code>maxHeight(forWidth)</code> will return the control's internally
      * computed maximum height.
      * <p>
      * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
-     * <code>getMaxHeight(forWidth)</code> to return the control's preferred height,
+     * <code>maxHeight(forWidth)</code> to return the control's preferred height,
      * enabling applications to easily restrict the resizability of the control.
      *
      * @param value the maximum height
@@ -743,11 +743,11 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getMaxHeight(forWidth)</code> will return the control's internally
+     * <code>maxHeight(forWidth)</code> will return the control's internally
      * computed maximum height.
      * <p>
      * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
-     * <code>getMaxHeight(forWidth)</code> to return the control's preferred height,
+     * <code>maxHeight(forWidth)</code> to return the control's preferred height,
      * enabling applications to easily restrict the resizability of the control.
      *
      * @return the maximum height

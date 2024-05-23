@@ -2145,4 +2145,29 @@ public class TextInputControlTest {
         content.putString(string);
         Clipboard.getSystemClipboard().setContent(content);
     }
+
+    @Test
+    public void previousWord_Bhojpuri() {
+        // "Bhojpuri \ud804\udca6\ud804\udcb7\ud804\udc94\ud804\udca3\ud804\udcb3\ud804\udca9\ud804\udcb2 test"
+        textInput.setText("Bhojpuri 𑂦𑂷𑂔𑂣𑂳𑂩𑂲 test");
+        textInput.end();
+        verifyCaret(28);
+        textInput.previousWord(); // at the beginning of "test"
+        verifyCaret(24);
+        textInput.previousWord(); // at the beginning of "𑂦𑂷𑂔𑂣𑂳𑂩𑂲"
+        verifyCaret(9);
+        textInput.previousWord(); // at the beginning of "Bhojpuri"
+        verifyCaret(0);
+    }
+
+    private void verifyCaret(int index) {
+        verifyCaret(index, index, false);
+    }
+
+    private void verifyCaret(int caret, int anchor, boolean reverse) {
+        assertEquals(caret, textInput.getCaretPosition());
+        assertEquals(anchor, textInput.getAnchor());
+        IndexRange sel = reverse ? new IndexRange(caret, anchor) : new IndexRange(anchor, caret);
+        assertEquals(sel, textInput.getSelection());
+    }
 }
