@@ -804,4 +804,10 @@ public abstract class Application {
     public Map<String, Class<?>> getPlatformKeys() {
         return Map.of();
     }
+
+    /**
+     * Checks whether there are any problems with platform preferences detection,
+     * and if so, emits a warning.
+     */
+    public void checkPlatformPreferencesSupport() {}
 }

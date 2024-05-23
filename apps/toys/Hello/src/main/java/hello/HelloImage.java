@@ -41,9 +41,9 @@ import javafx.stage.Stage;
 public class HelloImage extends Application {
 
     private static final String imageURL = "hello/JavaFX.png";
-    //1862x2327 size of duke
+    //3301x4000 size of duke
     private static final String slowImageURL =
-            "http://duke.kenai.com/misc/DrinkingBeer.jpg";
+            "https://cr.openjdk.org/~jeff/Duke/png/Hips.png";
     private static final String animImageURL = "hello/animated_89_c.gif";
     private static final String animCursorURL = "hello/javafx-loading-32x32.gif";
 
@@ -68,9 +68,8 @@ public class HelloImage extends Application {
         final Image slowImage = new Image(slowImageURL, true);
         addImageToObservableList(seq, 20, 160, 560, 250, slowImage, Cursor.CROSSHAIR);
 
-
         addImageToObservableList(seq, 20, 20, 120, 120, animImage,
-                           createImageCursor(slowImageURL, 1862*0.4f, 0));
+                           createImageCursor(slowImageURL, 3301*0.2f, 0));
 
         stage.getIcons().add(slowImage);
         stage.setScene(scene);

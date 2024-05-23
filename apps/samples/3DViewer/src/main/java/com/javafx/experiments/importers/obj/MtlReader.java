@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -31,9 +31,8 @@
  */
 package com.javafx.experiments.importers.obj;
 
+import static com.javafx.experiments.importers.obj.ObjImporter.log;
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -48,8 +47,6 @@ import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Material;
 import javafx.scene.paint.PhongMaterial;
-
-import static com.javafx.experiments.importers.obj.ObjImporter.*;
 
 /** Reader for OBJ file MTL material files. */
 public class MtlReader {

@@ -80,6 +80,7 @@ public class ScrollToEvent<T> extends Event {
 
     private static final long serialVersionUID = -8557345736849482516L;
 
+    @SuppressWarnings("doclint:missing")
     private final T scrollTarget;
 
     /**

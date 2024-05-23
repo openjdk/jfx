@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -140,7 +140,7 @@
  * <tr>
  *     <th scope="row">HTTP Live Streaming (HLS)</th>
  *     <td>Playlist-based media streaming via HTTP or HTTPS</td>
- *     <td><a href="http://tools.ietf.org/html/draft-pantos-http-live-streaming">Internet-Draft: HTTP Live Streaming</a></td>
+ *     <td><a href="https://datatracker.ietf.org/doc/html/rfc8216">HTTP Live Streaming (RFC 8216)</a></td>
  * </tr>
  * </table>
  * <br>
@@ -156,9 +156,17 @@
  * </p>
  * <ul>
  *     <li>On-demand and live playlists.</li>
- *     <li>Elementary MP3 audio streams (audio/mpegurl) and multiplexed MP2T streams
- *         (application/vnd.apple.mpegurl) with one AAC audio and one H.264/AVC video track.</li>
+ *     <li>Elementary MP3 and AAC audio streams (audio/mpegurl).</li>
+ *     <li>Multiplexed MP2T streams (application/vnd.apple.mpegurl) with one AAC audio and one H.264/AVC video track.</li>
+ *     <li>Multiplexed fMP4 streams (application/vnd.apple.mpegurl) with one AAC audio and one H.264/AVC or H.265/HEVC video track.</li>
  *     <li>Playlists with integer or float duration.</li>
+ *     <li>Additional audio renditions via #EXT-X-MEDIA tag:
+ *         <ul>
+ *             <li>MP2T streams with one H.264/AVC video track and elementary AAC audio stream via #EXT-X-MEDIA tag.</li>
+ *             <li>fMP4 streams with one H.264/AVC or H.265/HEVC video track and elementary AAC audio stream via #EXT-X-MEDIA tag.</li>
+ *             <li>fMP4 streams with one H.264/AVC or H.265/HEVC video track and fMP4 streams with one AAC audio track via #EXT-X-MEDIA tag.</li>
+ *         </ul>
+ *     </li>
  * </ul>
  * <p>
  * Sources which do not conform to this basic profile are not guaranteed to be handled.

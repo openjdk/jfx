@@ -753,6 +753,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
         // to go back into the TableView.items list - this new value represents
         // just the input for a single cell, so it is likely that it needs to go
         // back into a property within an item in the TableView.items list.
+        @SuppressWarnings("doclint:missing")
         private final T newValue;
 
         // The location of the edit event
