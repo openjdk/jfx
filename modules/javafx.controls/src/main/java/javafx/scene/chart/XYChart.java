@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -93,6 +93,8 @@ import javafx.css.converter.BooleanConverter;
  *  Tooltip.install(item.getNode(), new Tooltip("Symbol-0"));
  * </code></pre>
  *
+ * @param <X> the X axis value type
+ * @param <Y> the Y axis value type
  * @since JavaFX 2.0
  */
 public abstract class XYChart<X,Y> extends Chart {
@@ -1253,6 +1255,9 @@ public abstract class XYChart<X,Y> extends Chart {
 
     /**
      * A single data item with data for 2 axis charts
+     *
+     * @param <X> the data X value type
+     * @param <Y> the data Y value type
      * @since JavaFX 2.0
      */
     public final static class Data<X,Y> {
@@ -1490,6 +1495,9 @@ public abstract class XYChart<X,Y> extends Chart {
 
     /**
      * A named series of data items
+     *
+     * @param <X> the series X value type
+     * @param <Y> the series Y value type
      * @since JavaFX 2.0
      */
     public static final class Series<X,Y> {

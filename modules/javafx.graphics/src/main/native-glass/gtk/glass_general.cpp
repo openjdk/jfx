@@ -410,7 +410,15 @@ glass_throw_oom(JNIEnv * env, const char * message) {
 
 
 guint8* convert_BGRA_to_RGBA(const int* pixels, int stride, int height) {
+  if (stride <= 0 || height <= 0 || (height > INT_MAX / stride)) {
+    return NULL;
+  }
+
   guint8* new_pixels = (guint8*) g_malloc(height * stride);
+  if (!new_pixels) {
+    return NULL;
+  }
+
   int i = 0;
 
   for (i = 0; i < height * stride; i += 4) {
@@ -605,7 +613,8 @@ glass_gdk_mouse_devices_grab_with_cursor(GdkWindow *gdkWindow, GdkCursor *cursor
                                                 | GDK_BUTTON2_MOTION_MASK
                                                 | GDK_BUTTON3_MOTION_MASK
                                                 | GDK_BUTTON_PRESS_MASK
-                                                | GDK_BUTTON_RELEASE_MASK),
+                                                | GDK_BUTTON_RELEASE_MASK
+                                                | GDK_TOUCH_MASK),
                                             NULL, cursor, GDK_CURRENT_TIME);
 
     return (status == GDK_GRAB_SUCCESS) ? TRUE : FALSE;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,29 +25,20 @@
 
 package test.robot.javafx.stage;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
-
-import com.sun.javafx.PlatformUtil;
+import static test.util.Util.TIMEOUT;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
 import javafx.scene.Scene;
-import javafx.stage.Stage;
-import javafx.stage.StageStyle;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
-
-import test.util.Util;
+import javafx.stage.Stage;
+import javafx.stage.StageStyle;
+import org.junit.Test;
+import com.sun.javafx.PlatformUtil;
 import test.robot.testharness.VisualTestBase;
-
-import static test.util.Util.TIMEOUT;
 
 public class StageAttributesTest extends VisualTestBase {
 

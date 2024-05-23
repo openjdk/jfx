@@ -32,10 +32,36 @@
 
 Bitmap::Bitmap(int width, int height)
 {
-    BYTE *mpixels = new BYTE[width * height];
-    memset(mpixels, 0, width * height);
-    Attach(::CreateBitmap(width, height, 1, 1, mpixels));
-    delete[] mpixels;
+    if (width <= 0 || height <= 0) {
+        return;
+    }
+
+    int numPlanes = 1;
+    int bitCount = 1; // monochrome bitmap
+    // refer : Doc of ::CreateBitmap(): Each scan line in the rectangle must be word aligned
+    if (width > INT_MAX - 15) {
+        fprintf(stderr, "Bitmap: Failed to create monochrome bitmap for icon.\n");
+        return;
+    }
+    int scanLength = (((width * numPlanes * bitCount + 15) >> 4) << 1);
+
+    if (scanLength > INT_MAX / height) {
+        fprintf(stderr, "Bitmap: Failed to create monochrome bitmap for icon.\n");
+        return;
+    }
+
+    int bufSize = scanLength * height;
+    BYTE *mpixels = new BYTE[bufSize];
+    if (mpixels != NULL) {
+        memset(mpixels, 0, bufSize);
+        HBITMAP bmp = ::CreateBitmap(width, height, numPlanes, bitCount, mpixels);
+        if (bmp != NULL) {
+            Attach(bmp);
+        } else {
+            fprintf(stderr, "Bitmap: Failed to create monochrome bitmap for icon.\n");
+        }
+        delete[] mpixels;
+    }
     ASSERT((HBITMAP)*this);
 }
 

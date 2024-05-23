@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,16 +40,6 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.function.Function;
 import java.util.function.IntPredicate;
-import com.sun.javafx.collections.MappingChange;
-import com.sun.javafx.collections.NonIterableChange;
-import com.sun.javafx.scene.control.ConstrainedColumnResize;
-import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
-import com.sun.javafx.scene.control.SelectedCellsMap;
-import com.sun.javafx.scene.control.TableColumnComparatorBase;
-import com.sun.javafx.scene.control.behavior.TableCellBehavior;
-import com.sun.javafx.scene.control.behavior.TableCellBehaviorBase;
-import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
 import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
@@ -87,9 +77,9 @@ import javafx.scene.Node;
 import javafx.scene.control.skin.TreeTableViewSkin;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
-
 import com.sun.javafx.collections.MappingChange;
 import com.sun.javafx.collections.NonIterableChange;
+import com.sun.javafx.scene.control.ConstrainedColumnResize;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.SelectedCellsMap;
@@ -2317,11 +2307,13 @@ public class TreeTableView<S> extends Control {
      *                                                                         *
      **************************************************************************/
 
-     /**
-      * An immutable wrapper class for use in the TableView
+    /**
+     * An immutable wrapper class for use in the TableView
      * {@link TreeTableView#columnResizePolicyProperty() column resize} functionality.
-      * @since JavaFX 8.0
-      */
+     *
+     * @param <S> the type of the TreeItem instances used in this TreeTableView
+     * @since JavaFX 8.0
+     */
      public static class ResizeFeatures<S> extends ResizeFeaturesBase<TreeItem<S>> {
         private TreeTableView<S> treeTable;
 
@@ -2388,8 +2380,11 @@ public class TreeTableView<S> extends Control {
          */
         public static final EventType<?> ANY = EDIT_ANY_EVENT;
 
+        @SuppressWarnings("doclint:missing")
         private final TreeTableView<S> source;
+        @SuppressWarnings("doclint:missing")
         private final S oldValue;
+        @SuppressWarnings("doclint:missing")
         private final S newValue;
         private transient final TreeItem<S> treeItem;
 
@@ -2448,12 +2443,11 @@ public class TreeTableView<S> extends Control {
         }
     }
 
-
-
-     /**
+    /**
      * A simple extension of the {@link SelectionModel} abstract class to
      * allow for special support for TreeTableView controls.
-      *
+     *
+     * @param <S> the type of the TreeItem instances used in this TreeTableView
      * @since JavaFX 8.0
      */
     public static abstract class TreeTableViewSelectionModel<S> extends
@@ -3578,6 +3572,7 @@ public class TreeTableView<S> extends Control {
      * A {@link FocusModel} with additional functionality to support the requirements
      * of a TableView control.
      *
+     * @param <S> the type of the TreeItem instances used in this TreeTableView
      * @see TableView
      * @since JavaFX 8.0
      */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -146,7 +146,6 @@ struct _GstDShowWrapper
     GstClock *clock;
 #endif // ENABLE_CLOCK
 
-    gboolean set_base_pts;
     GstClockTime base_pts;
     GstClockTime last_pts[MAX_OUTPUT_DS_STREAMS];
     GstClockTime offset_pts[MAX_OUTPUT_DS_STREAMS];
@@ -157,6 +156,8 @@ struct _GstDShowWrapper
     gint width;
     gint height;
     guint lengthSizeMinusOne;
+
+    gboolean disable_mp2t_pts_reset;
 };
 
 struct _GstDShowWrapperClass
