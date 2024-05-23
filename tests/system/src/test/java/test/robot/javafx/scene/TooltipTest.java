@@ -90,14 +90,20 @@ class TooltipTest {
 
     @Test
     void testCssStylesheetTooltip() {
-        scene.getStylesheets().add(getClass().getResource("Tooltip.css").toExternalForm());
+        scene.getStylesheets().add(getClass().getResource("tooltip.css").toExternalForm());
 
         assertFalse(tooltip.isShowing());
 
         long tooltipShowTime = waitForTooltip();
 
         assertTrue(tooltip.isShowing());
-        assertTooltipShowDelay(tooltipShowTime, 50);
+
+        // Since the stylesheet needs to be processed we need a bigger timeout here.
+        long expectedTime = 30;
+        long maximumTime = expectedTime + 100;
+
+        assertTrue(tooltipShowTime >= expectedTime, tooltipShowTime + " >= " + expectedTime);
+        assertTrue(tooltipShowTime <= maximumTime, tooltipShowTime + " <= " + maximumTime);
     }
 
     @Test
