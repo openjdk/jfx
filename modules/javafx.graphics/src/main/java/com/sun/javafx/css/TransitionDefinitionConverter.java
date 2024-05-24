@@ -49,6 +49,8 @@ import java.util.Map;
 @SuppressWarnings("rawtypes")
 public final class TransitionDefinitionConverter extends StyleConverter<ParsedValue[], TransitionDefinition> {
 
+    public static final String PROPERTY_ALL = "all";
+
     private static class Holder {
         static final TransitionDefinitionConverter INSTANCE = new TransitionDefinitionConverter();
         static final SequenceConverter SEQUENCE_INSTANCE = new SequenceConverter();
@@ -69,7 +71,7 @@ public final class TransitionDefinitionConverter extends StyleConverter<ParsedVa
         ParsedValue<ParsedValue<?, Size>, Duration> parsedDelay = values[2];
         ParsedValue<?, Interpolator> parsedInterpolator = values[3];
 
-        String propertyName = parsedProperty != null ? parsedProperty.convert(null) : "all";
+        String propertyName = parsedProperty != null ? parsedProperty.convert(null) : PROPERTY_ALL;
         Duration duration = parsedDuration != null ? parsedDuration.convert(null) : Duration.ZERO;
         Duration delay = parsedDelay != null ? parsedDelay.convert(null) : Duration.ZERO;
         Interpolator interpolator = parsedInterpolator != null ?

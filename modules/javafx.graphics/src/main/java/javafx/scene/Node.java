@@ -126,6 +126,7 @@ import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.collections.UnmodifiableListSet;
 import com.sun.javafx.css.PseudoClassState;
 import com.sun.javafx.css.TransitionDefinition;
+import com.sun.javafx.css.TransitionDefinitionConverter;
 import com.sun.javafx.css.TransitionDefinitionCssMetaData;
 import com.sun.javafx.css.TransitionTimer;
 import javafx.css.Selector;
@@ -9078,7 +9079,7 @@ public abstract class Node implements EventTarget, Styleable {
             for (int i = size - 1; i >= 0; --i) {
                 TransitionDefinition transition = get(i);
 
-                boolean selected = "all".equals(transition.propertyName())
+                boolean selected = TransitionDefinitionConverter.PROPERTY_ALL.equals(transition.propertyName())
                     || metadata.getProperty().equals(transition.propertyName());
 
                 if (selected) {

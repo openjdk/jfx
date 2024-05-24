@@ -55,7 +55,8 @@ public record TransitionDefinition(String propertyName, Duration duration,
         Objects.requireNonNull(delay, "delay cannot be null");
         Objects.requireNonNull(interpolator, "interpolator cannot be null");
 
-        propertyName = "all".equalsIgnoreCase(propertyName) ? "all" : propertyName;
+        propertyName = TransitionDefinitionConverter.PROPERTY_ALL.equalsIgnoreCase(propertyName) ?
+            TransitionDefinitionConverter.PROPERTY_ALL : propertyName;
 
         if (duration.lessThan(Duration.ZERO)) {
             throw new IllegalArgumentException("duration cannot be negative");

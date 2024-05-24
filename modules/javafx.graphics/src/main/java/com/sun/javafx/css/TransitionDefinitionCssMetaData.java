@@ -56,7 +56,7 @@ public class TransitionDefinitionCssMetaData extends CssMetaData<Node, Transitio
               new TransitionDefinition[0], false, createSubProperties());
     }
 
-    private static final String[] PROPERTY_ALL = new String[] { "all" };
+    private static final String[] PROPERTY_ALL = new String[] { TransitionDefinitionConverter.PROPERTY_ALL };
 
     private static final Duration[] DURATION_ZERO = new Duration[] { Duration.ZERO };
 
