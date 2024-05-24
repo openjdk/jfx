@@ -45,7 +45,7 @@ public class CachingStyleResolver implements StyleResolver {
     @Override
     public StyleAttrs resolveStyles(StyleAttrs attrs) {
         CssStyles css = attrs.get(CssStyles.CSS);
-        if (css != null) {
+        if (css == null) {
             // no conversion is needed
             return attrs;
         }

@@ -81,10 +81,8 @@ public class RtfStyledOutput implements StyledOutput {
                     StyleAttrs a = seg.getStyleAttrs(resolver);
                     if (a != null) {
                         // colors
-                        Color c = a.getTextColor();
-                        if (c != null) {
-                            colorTable.add(c);
-                        }
+                        Color c = getTextColor(a);
+                        colorTable.add(c);
 
                         // TODO background color
                         //                    c = mixBackground(st.getBackgroundColor());
@@ -256,7 +254,7 @@ public class RtfStyledOutput implements StyledOutput {
 
         StyleAttrs a = seg.getStyleAttrs(resolver);
 
-        if (RichUtils.notEquals(a, prevStyle)) {
+        if (RichUtils.notEquals(a, prevStyle) || RichUtils.notEquals(getTextColor(a), getTextColor(prevStyle))) {
             Color col;
             Color bg;
             boolean bld;
@@ -276,7 +274,7 @@ public class RtfStyledOutput implements StyledOutput {
                 fam = null;
                 fsize = null;
             } else {
-                col = a.getTextColor();
+                col = getTextColor(a);
                 bg = null; // TODO mixBackground(st.getBackgroundColor());
                 bld = a.isBold();
                 ita = a.isItalic();
@@ -516,6 +514,11 @@ public class RtfStyledOutput implements StyledOutput {
     @Override
     public void close() throws IOException {
         writer.close();
+    }
+
+    private static Color getTextColor(StyleAttrs a) {
+        Color c = a.getTextColor();
+        return c == null ? Color.BLACK : c;
     }
 
     /** RTF is unable to specify colors inline it seems, needs a color lookup table */
