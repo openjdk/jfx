@@ -77,17 +77,17 @@ public class HelloButton extends Application {
 //        // test two: the degenerate case - we need to iterate through the mappings
 //        // to find the null keyCombination, so that we may install an interceptor
 //        // to block the tab key. This means all keys except tab will work.
-////        button1.getInputMap().lookupMapping(new KeyBinding(KEY_TYPED)).ifPresent(mapping -> {
-////            System.out.println("adding interceptor for Tab key mapping");
-////            mapping.getInterceptors().add(event -> {
-////                if (! (event instanceof KeyEvent)) return true;
-////                return KeyCode.TAB != ((KeyEvent)event).getCode();
-////            });
-////        });
-////        button1.getInputMap().getInterceptors().add(event -> {
-////            if (! (event instanceof KeyEvent)) return true;
-////            return KeyCode.X != ((KeyEvent)event).getCode();
-////        });
+//--        button1.getInputMap().lookupMapping(new KeyBinding(KEY_TYPED)).ifPresent(mapping -> {
+//--            System.out.println("adding interceptor for Tab key mapping");
+//--            mapping.getInterceptors().add(event -> {
+//--                if (! (event instanceof KeyEvent)) return true;
+//--                return KeyCode.TAB != ((KeyEvent)event).getCode();
+//--            });
+//--        });
+//--        button1.getInputMap().getInterceptors().add(event -> {
+//--            if (! (event instanceof KeyEvent)) return true;
+//--            return KeyCode.X != ((KeyEvent)event).getCode();
+//--        });
 //
 //        button1.getInputMap().getInterceptors().add(new KeyMappingInterceptor(new KeyBinding(SPACE)));
 //
