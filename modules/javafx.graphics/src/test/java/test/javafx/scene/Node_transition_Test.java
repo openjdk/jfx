@@ -141,15 +141,15 @@ public class Node_transition_Test {
     public void testTransitionsAreAppliedWhenPseudoClassIsChanged() {
         String url = "data:text/css;base64," + Base64.getUrlEncoder().encodeToString("""
             .testClass {
-                -fx-background-color: green;
-                transition: -fx-background-color 1s 0.5s ease, -fx-scale-x 1s, -fx-scale-y 1s;
+                -fx-fill: green;
+                transition: -fx-fill 1s 0.5s ease, -fx-scale-x 1s, -fx-scale-y 1s;
             }
 
             .testClass:hover {
-                -fx-background-color: red;
+                -fx-fill: red;
                 -fx-scale-x: 1.2;
                 -fx-scale-y: 1.2;
-                transition: -fx-background-color 1s;
+                transition: -fx-fill 1s;
             }
             """.getBytes(StandardCharsets.UTF_8));
 
@@ -159,7 +159,7 @@ public class Node_transition_Test {
 
         List<TransitionDefinition> transitions = NodeShim.getTransitionDefinitions(node);
         assertEquals(3, transitions.size());
-        assertTransitionEquals("-fx-background-color", Duration.seconds(1), Duration.seconds(0.5), CSS_EASE, transitions.get(0));
+        assertTransitionEquals("-fx-fill", Duration.seconds(1), Duration.seconds(0.5), CSS_EASE, transitions.get(0));
         assertTransitionEquals("-fx-scale-x", Duration.seconds(1), Duration.ZERO, CSS_EASE, transitions.get(1));
         assertTransitionEquals("-fx-scale-y", Duration.seconds(1), Duration.ZERO, CSS_EASE, transitions.get(2));
 
@@ -168,7 +168,7 @@ public class Node_transition_Test {
 
         transitions = NodeShim.getTransitionDefinitions(node);
         assertEquals(1, transitions.size());
-        assertTransitionEquals("-fx-background-color", Duration.seconds(1), Duration.ZERO, CSS_EASE, transitions.get(0));
+        assertTransitionEquals("-fx-fill", Duration.seconds(1), Duration.ZERO, CSS_EASE, transitions.get(0));
     }
 
     @Test
