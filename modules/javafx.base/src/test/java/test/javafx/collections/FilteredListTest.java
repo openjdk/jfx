@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,9 +36,10 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableListWrapperShim;
 import javafx.collections.transformation.FilteredList;
-import static org.junit.Assert.*;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class FilteredListTest {
 
@@ -46,7 +47,7 @@ public class FilteredListTest {
     private MockListObserver<String> mlo;
     private FilteredList<String> filteredList;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         list = FXCollections.observableArrayList();
         list.addAll("a", "c", "d", "c");
@@ -70,7 +71,7 @@ public class FilteredListTest {
     public void test_rt35857_retainFiltered() {
         ObservableList<String> copyFiltered = FXCollections.observableArrayList(filteredList);
         list.retainAll(filteredList);
-        assertEquals("sanity: filteredList unchanged", copyFiltered, filteredList);
+        assertEquals(copyFiltered, filteredList, "sanity: filteredList unchanged");
         assertEquals(filteredList, list);
     }
 
@@ -305,5 +306,19 @@ public class FilteredListTest {
         assertEquals(list.size(), filteredList.size());
         assertEquals(list, filteredList);
         compareIndices();
+    }
+
+    @Test
+    public void testGetSourceIndexOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, () -> filteredList.getSourceIndex(-1));
+        assertThrows(IndexOutOfBoundsException.class, () -> filteredList.getSourceIndex(filteredList.size()));
+        assertDoesNotThrow(() -> filteredList.getSourceIndex(filteredList.size() - 1));
+    }
+
+    @Test
+    public void testGetViewIndexOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, () -> filteredList.getViewIndex(-1));
+        assertThrows(IndexOutOfBoundsException.class, () -> filteredList.getViewIndex(list.size()));
+        assertDoesNotThrow(() -> filteredList.getViewIndex(filteredList.size()));
     }
 }

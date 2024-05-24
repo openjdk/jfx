@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -908,7 +908,9 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstObject *parent, GstBuffe
 
 
 #ifdef VERBOSE_DEBUG
-                g_print("videodecoder: pushing buffer ts=%.4f sec", (double)GST_BUFFER_TIMESTAMP(outbuf)/GST_SECOND);
+                g_print("videodecoder: pushing buffer ts=%.4f, duration=%.4f\n",
+                    GST_BUFFER_TIMESTAMP_IS_VALID(outbuf) ? (double)GST_BUFFER_TIMESTAMP(outbuf)/GST_SECOND : -1.0,
+                    GST_BUFFER_DURATION_IS_VALID(outbuf) ? (double)GST_BUFFER_DURATION(outbuf)/GST_SECOND : -1.0);
 #endif
                 result = gst_pad_push(base->srcpad, outbuf);
 #ifdef VERBOSE_DEBUG
