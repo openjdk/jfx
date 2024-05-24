@@ -692,11 +692,11 @@ final public class CssParser {
         return term.nextLayer;
     }
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     // Parsing routines
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
     ParsedValueImpl valueFor(String property, Term root, CssLexer lexer) throws ParseException {
         final String prop = property.toLowerCase(Locale.ROOT);
@@ -3615,11 +3615,11 @@ final public class CssParser {
         return new ParsedValueImpl<>(layers, URLConverter.SequenceConverter.getInstance());
     }
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     // http://www.w3.org/TR/css3-fonts
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
     /* http://www.w3.org/TR/css3-fonts/#font-size-the-font-size-property */
     private ParsedValueImpl<ParsedValue<?,Size>,Number> parseFontSize(final Term root) throws ParseException {

@@ -184,7 +184,7 @@ public class TouchButtonTest extends ParameterizedTestBase {
         int x = (int) buttonBounds.getMaxX() - 1;
         int y = (int) (buttonBounds.getMinY() + buttonBounds.getMaxY()) / 2;
 
-        ///tap
+        //tap
         int p = device.addPoint(x, y);
         device.sync();
 
@@ -222,7 +222,7 @@ public class TouchButtonTest extends ParameterizedTestBase {
         int x = (int) buttonBounds.getMaxX() - 1;
         int y = (int) (buttonBounds.getMinY() + buttonBounds.getMaxY()) / 2;
 
-        ///tap
+        //tap
         int p = device.addPoint(x, y);
         device.sync();
 
@@ -293,7 +293,7 @@ public class TouchButtonTest extends ParameterizedTestBase {
 
     public void tapOutSideButton() throws Exception {
         Bounds buttonBounds = getButtonBounds(button3);
-        ///tap
+        //tap
         double x = buttonBounds.getMaxX() + device.getTapRadius() + 10;
         double y = buttonBounds.getMaxY() + device.getTapRadius() + 10;
         int p = device.addPoint(x, y);
