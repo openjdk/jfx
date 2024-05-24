@@ -286,13 +286,13 @@ public abstract class Interpolator {
         END,
 
         /**
-         * All rise points are within the open interval (0..1).
+         * The interval starts with a rise point when the input progress value is 0,
+         * and ends with a rise point when the input progress value is 1.
          */
         BOTH,
 
         /**
-         * The interval starts with a rise point when the input progress value is 0,
-         * and ends with a rise point when the input progress value is 1.
+         * All rise points are within the open interval (0..1).
          */
         NONE
     }
