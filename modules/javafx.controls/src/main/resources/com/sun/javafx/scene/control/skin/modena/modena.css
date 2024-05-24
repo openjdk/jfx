@@ -3502,4 +3502,10 @@ is being used to size a border should also be in pixels.
 .rich-text-area .line-number-decorator {
     -fx-font-family: Monospace;
     -fx-font-size: 90%;
+    -fx-min-height:1;
+    -fx-pref-height:1;
+}
+
+.line-number-decorator .text {
+    -fx-bounds-type: visual;
 }

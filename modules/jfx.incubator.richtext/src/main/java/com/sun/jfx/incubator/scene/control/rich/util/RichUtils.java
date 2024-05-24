@@ -195,14 +195,14 @@ public final class RichUtils {
 
     /**
      * Guesses the font style from the font name, until JDK-8092191 is implemented.
-     * @param name font name, must be lowercase'd
+     * @param lowerCaseName font name, must be lowercase'd
      * @return font style: [ normal | italic | oblique ]
      */
-    public static String guessFontStyle(String name) {
+    public static String guessFontStyle(String lowerCaseName) {
         // are we going to encounter a localized font name?
-        if (name.contains("italic")) {
+        if (lowerCaseName.contains("italic")) {
             return "italic";
-        } else if (name.contains("oblique")) {
+        } else if (lowerCaseName.contains("oblique")) {
             return "oblique";
         }
         return "normal";
@@ -210,28 +210,28 @@ public final class RichUtils {
 
     /**
      * Guesses the font weight from the font name, until JDK-8092191 is implemented.
-     * @param name font name, must be lowercase'd
+     * @param lowerCaseName font name, must be lowercase'd
      * @return font weight: [ normal | bold | bolder | lighter | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900 ]
      */
-    public static String guessFontWeight(String name) {
+    public static String guessFontWeight(String lowerCaseName) {
         // are we going to encounter a localized font name?
-        if (name.contains("thin")) {
+        if (lowerCaseName.contains("thin")) {
             return "100";
-        } else if (name.contains("extralight")) {
+        } else if (lowerCaseName.contains("extralight")) {
             return "200";
-        } else if (name.contains("light")) {
+        } else if (lowerCaseName.contains("light")) {
             return "300";
-        } else if (name.contains("medium")) {
+        } else if (lowerCaseName.contains("medium")) {
             return "500";
-        } else if (name.contains("semibold")) {
+        } else if (lowerCaseName.contains("semibold")) {
             return "600";
-        } else if (name.contains("demibold")) {
+        } else if (lowerCaseName.contains("demibold")) {
             return "600";
-        } else if (name.contains("bold")) {
+        } else if (lowerCaseName.contains("bold")) {
             return "700";
-        } else if (name.contains("extrabold")) {
+        } else if (lowerCaseName.contains("extrabold")) {
             return "800";
-        } else if (name.contains("heavy")) {
+        } else if (lowerCaseName.contains("heavy")) {
             return "900";
         }
         return "normal"; // 400, see FontWeight
