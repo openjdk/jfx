@@ -277,22 +277,30 @@ public abstract class Interpolator {
     public enum StepPosition {
         /**
          * The interval starts with a rise point when the input progress value is 0.
+         * <p>
+         * <img width="200" src="doc-files/easing-stepstart.svg" alt="START"/>
          */
         START,
 
         /**
          * The interval ends with a rise point when the input progress value is 1.
+         * <p>
+         * <img width="200" src="doc-files/easing-stepend.svg" alt="END"/>
          */
         END,
 
         /**
          * The interval starts with a rise point when the input progress value is 0,
          * and ends with a rise point when the input progress value is 1.
+         * <p>
+         * <img width="200" src="doc-files/easing-stepboth.svg" alt="BOTH"/>
          */
         BOTH,
 
         /**
          * All rise points are within the open interval (0..1).
+         * <p>
+         * <img width="200" src="doc-files/easing-stepnone.svg" alt="NONE"/>
          */
         NONE
     }
@@ -316,7 +324,7 @@ public abstract class Interpolator {
      * interval being equal in length, where each interval maps to a constant output time value.
      * The output time value is determined by the {@link StepPosition}.
      *
-     * @param intervals the number of intervals in the step interpolator
+     * @param intervalCount the number of intervals in the step interpolator
      * @param position the {@code StepPosition} of the step interpolator
      * @throws IllegalArgumentException if {@code intervals} is less than 1, or if {@code intervals} is
      *                                  less than 2 when {@code position} is {@link StepPosition#NONE}
@@ -325,8 +333,8 @@ public abstract class Interpolator {
      *
      * @since 23
      */
-    public static Interpolator STEPS(int intervals, StepPosition position) {
-        return new StepInterpolator(intervals, position);
+    public static Interpolator STEPS(int intervalCount, StepPosition position) {
+        return new StepInterpolator(intervalCount, position);
     }
 
     /**

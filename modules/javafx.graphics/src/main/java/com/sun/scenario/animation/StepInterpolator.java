@@ -34,20 +34,20 @@ import java.util.Objects;
  */
 public final class StepInterpolator extends Interpolator {
 
-    private final int intervals;
+    private final int intervalCount;
     private final StepPosition position;
 
-    public StepInterpolator(int intervals, StepPosition position) {
-        if (position == StepPosition.NONE && intervals <= 1) {
-            throw new IllegalArgumentException("intervals must be greater than 1");
+    public StepInterpolator(int intervalCount, StepPosition position) {
+        if (position == StepPosition.NONE && intervalCount <= 1) {
+            throw new IllegalArgumentException("intervalCount must be greater than 1");
         }
 
-        if (intervals <= 0) {
-            throw new IllegalArgumentException("intervals must be greater than 0");
+        if (intervalCount <= 0) {
+            throw new IllegalArgumentException("intervalCount must be greater than 0");
         }
 
         this.position = Objects.requireNonNull(position, "position cannot be null");
-        this.intervals = intervals;
+        this.intervalCount = intervalCount;
     }
 
     @Override
@@ -63,13 +63,13 @@ public final class StepInterpolator extends Interpolator {
             t = 1;
         }
 
-        int step = (int)(t * intervals);
+        int step = (int)(t * intervalCount);
 
         if (position == StepPosition.START || position == StepPosition.BOTH) {
             ++step;
         }
 
-        if (before && (t * intervals % 1 == 0)) {
+        if (before && (t * intervalCount % 1 == 0)) {
             --step;
         }
 
@@ -78,9 +78,9 @@ public final class StepInterpolator extends Interpolator {
         }
 
         int jumps = switch (position) {
-            case START, END -> intervals;
-            case NONE -> intervals - 1;
-            case BOTH -> intervals + 1;
+            case START, END -> intervalCount;
+            case NONE -> intervalCount - 1;
+            case BOTH -> intervalCount + 1;
         };
 
         if (t <= 1 && step > jumps) {
@@ -92,19 +92,19 @@ public final class StepInterpolator extends Interpolator {
 
     @Override
     public int hashCode() {
-        return Integer.hashCode(intervals) + 31 * position.hashCode();
+        return Integer.hashCode(intervalCount) + 31 * position.hashCode();
     }
 
     @Override
     public boolean equals(Object obj) {
         return obj instanceof StepInterpolator other
-            && intervals == other.intervals
+            && intervalCount == other.intervalCount
             && position == other.position;
     }
 
     @Override
     public String toString() {
-        return "StepInterpolator [intervals=" + intervals + ", position=" + position + "]";
+        return "StepInterpolator [intervalCount=" + intervalCount + ", position=" + position + "]";
     }
 
 }
