@@ -685,8 +685,8 @@
 
     <h3><a id="introtransitions">Transitions</a></h3>
     <p>JavaFX supports <em>implicit transitions</em> for properties that are styled by CSS. When a property value is
-        changed, it transitions to its new value over a period of time. Implicit transitions are supported for all
-        primitive types, as well as for types that implement <code>javafx.animation.Interpolatable</code>.</p>
+        changed by CSS, it transitions to its new value over a period of time. Implicit transitions are supported for
+        all primitive types, as well as for types that implement <code>javafx.animation.Interpolatable</code>.</p>
     <p>Transitions can be defined for any node in the JavaFX scene graph with the following properties:</p>
     <table class="csspropertytable">
     <caption>Transition Properties</caption>
@@ -742,6 +742,16 @@
         </tr>
       </tbody>
     </table>
+    <p>A transition is not started (or cancelled if already running) in any of these scenarios:
+      <ol>
+        <li>The property value is set programmatically</li>
+        <li>The property is bound</li>
+        <li>The node becomes invisible</li>
+        <li>The node is removed from the scene graph</li>
+      </ol>
+    </p>
+    Nodes fire <a href="../../../javafx/css/TransitionEvent.html">TransitionEvent</a> to signal the creation,
+    beginning, completion and cancellation of transitions.
     <h4>Example</h4>
     <p>A button that smoothly changes its opacity on mouse-hover can be defined in a stylesheet like this:</p>
     <p class="example">
