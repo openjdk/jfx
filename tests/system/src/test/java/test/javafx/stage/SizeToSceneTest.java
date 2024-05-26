@@ -90,6 +90,8 @@ public class SizeToSceneTest {
             mainStage.setScene(new Scene(root));
 
             stageConsumer.accept(mainStage);
+
+            Util.sleep(5000);
         });
 
         Util.waitForLatch(shownLatch, 5, "Stage failed to show");
