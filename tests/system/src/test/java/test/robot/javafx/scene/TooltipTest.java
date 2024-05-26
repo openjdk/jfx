@@ -61,8 +61,12 @@ class TooltipTest {
     static volatile Scene scene;
 
     private static void assertTooltipShowDelay(long tooltipShowTime, long expectedTime) {
+        assertTooltipShowDelay(tooltipShowTime, expectedTime, 50);
+    }
+
+    private static void assertTooltipShowDelay(long tooltipShowTime, long expectedTime, long maximumDifference) {
         // To avoid any small timing error we rather check if the value is between.
-        long maximumTime = expectedTime + 50;
+        long maximumTime = expectedTime + maximumDifference;
 
         assertTrue(tooltipShowTime >= expectedTime, tooltipShowTime + " >= " + expectedTime);
         assertTrue(tooltipShowTime <= maximumTime, tooltipShowTime + " <= " + maximumTime);
@@ -102,8 +106,28 @@ class TooltipTest {
         long expectedTime = 30;
         long maximumTime = expectedTime + 100;
 
-        assertTrue(tooltipShowTime >= expectedTime, tooltipShowTime + " >= " + expectedTime);
-        assertTrue(tooltipShowTime <= maximumTime, tooltipShowTime + " <= " + maximumTime);
+        assertTooltipShowDelay(tooltipShowTime, expectedTime, maximumTime);
+    }
+
+    @Test
+    void testCssStylesheetChangeTooltip() {
+        scene.getStylesheets().add(getClass().getResource("tooltip.css").toExternalForm());
+
+        assertFalse(tooltip.isShowing());
+
+        long tooltipShowTime = waitForTooltip();
+
+        assertTrue(tooltip.isShowing());
+
+        assertTooltipShowDelay(tooltipShowTime, 30, 100);
+
+        scene.getStylesheets().setAll(getClass().getResource("tooltip2.css").toExternalForm());
+        tooltipShownLatch = new CountDownLatch(1);
+        tooltipShowTime = waitForTooltip();
+
+        assertTrue(tooltip.isShowing());
+
+        assertTooltipShowDelay(tooltipShowTime, 200, 100);
     }
 
     @Test

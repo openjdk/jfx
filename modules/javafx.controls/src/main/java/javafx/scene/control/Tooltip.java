@@ -119,7 +119,6 @@ public class Tooltip extends PopupControl {
     private static int TOOLTIP_YOFFSET = 7;
 
     private static TooltipBehavior BEHAVIOR = new TooltipBehavior(false);
-    private boolean cssForced;
 
     /**
      * Associates the given {@link Tooltip} with the given {@link Node}. The tooltip
@@ -996,16 +995,12 @@ public class Tooltip extends PopupControl {
                         }
                         hideTimer.playFromStart();
                     } else {
+                        // styles. Note that this is normally done when showing the tooltip,
+                        // which is too late for some properties,
+                        t.applyStylesheetFromOwner(owner);
                         // Force the CSS to be processed for the tooltip so that it uses the
                         // appropriate timings for showDelay, showDuration, and hideDelay.
-                        if (!t.cssForced) {
-                            // We need to copy the stylesheet from the owner so that we get all the defined tooltip
-                            // styles. Note that this is normally done when showing the tooltip,
-                            // which is too late for some properties,
-                            t.applyStylesheetFromOwner(owner);
-                            t.bridge.applyCss();
-                            t.cssForced = true;
-                        }
+                        t.bridge.applyCss();
 
                         // Start / restart the timer and make sure the tooltip
                         // is marked as activated.
