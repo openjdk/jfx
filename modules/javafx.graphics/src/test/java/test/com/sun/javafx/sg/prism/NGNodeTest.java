@@ -31,7 +31,6 @@ import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.Translate2D;
-import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGNodeShim;
 import com.sun.javafx.sg.prism.NGPath;
 import com.sun.javafx.sg.prism.NGRectangle;
@@ -584,7 +583,7 @@ public class NGNodeTest extends NGTestBase {
     }
 
     @Test
-    public void testClipping() {
+    public void testClippingWithRectangularClipIsCorrectlyCalculated() {
         AtomicReference<Rectangle> rectRef = new AtomicReference<>();
 
         n = new NGNodeMock() {
@@ -596,8 +595,8 @@ public class NGNodeTest extends NGTestBase {
             }
         };
 
-        TestGraphics g = new TestGraphics(146, 625);
-        g.setTransform(new Affine3D(1.25, 0, 0, -3, 0, 1.25, 0, 31, 0, 0, 1, 0));
+        TestGraphics graphics = new TestGraphics(146, 625);
+        graphics.setTransform(new Affine3D(1.25, 0, 0, -3, 0, 1.25, 0, 31, 0, 0, 1, 0));
 
         final RectBounds bounds = new RectBounds(0, 0, 272, 480);
         n.setContentBounds(bounds);
@@ -606,10 +605,10 @@ public class NGNodeTest extends NGTestBase {
         TestNGRectangle clip = createRectangle(0, 0, 102.4f, 460.8f);
         clip.setTransformMatrix(new Translate2D(18.4, 0));
         n.setClipNode(clip);
-        n.render(g);
+        n.render(graphics);
 
-        Rectangle rectangle = rectRef.get();
-        assertEquals(1, rectangle.x);
+        Rectangle clipRect = rectRef.get();
+        assertEquals(1, clipRect.x);
     }
 
     class NGNodeMock extends NGNodeShim {
@@ -619,12 +618,6 @@ public class NGNodeTest extends NGTestBase {
         void changeOpaqueRegion(float x, float y, float x2, float y2) {
             computedOpaqueRegion = new RectBounds(x, y, x2, y2);
             geometryChanged();
-        }
-
-        @Override
-        public void setClipNode(NGNode clipNode) {
-            System.out.println(clipNode);
-            super.setClipNode(clipNode);
         }
 
         @Override
