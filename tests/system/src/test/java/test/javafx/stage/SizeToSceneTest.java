@@ -30,8 +30,8 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
-import javafx.stage.WindowEvent;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import test.util.Util;
@@ -41,7 +41,7 @@ import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class SizeToSceneTest {
+class SizeToSceneTest {
 
     private static final int ROOT_SIZE = 360;
 
@@ -49,14 +49,19 @@ public class SizeToSceneTest {
     static Stage mainStage;
 
     @BeforeAll
-    public static void initFX() throws Exception {
+    static void initFX() throws Exception {
         Platform.setImplicitExit(false);
         Util.startup(startupLatch, startupLatch::countDown);
     }
 
     @AfterAll
-    public static void teardown() {
+    static void teardown() {
         Util.shutdown();
+    }
+
+    @AfterEach
+    void afterEach() {
+        Util.runAndWait(() -> mainStage.hide());
     }
 
     private static void assertStageScreenBounds() {
@@ -83,7 +88,6 @@ public class SizeToSceneTest {
 
         Util.runAndWait(() -> {
             mainStage = new Stage();
-            mainStage.addEventHandler(WindowEvent.WINDOW_SHOWN, e -> shownLatch.countDown());
 
             Button root = new Button();
             root.setMinSize(ROOT_SIZE, ROOT_SIZE);
@@ -91,10 +95,10 @@ public class SizeToSceneTest {
 
             stageConsumer.accept(mainStage);
 
-            Util.sleep(5000);
+            shownLatch.countDown();
         });
 
-        Util.waitForLatch(shownLatch, 5, "Stage failed to show");
+        Util.waitForLatch(shownLatch, 5, "Stage failed to setup and show");
     }
 
     @Test
