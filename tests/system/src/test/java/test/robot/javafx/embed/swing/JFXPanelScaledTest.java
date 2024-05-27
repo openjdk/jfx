@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,28 +30,23 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 import static test.util.Util.TIMEOUT;
-
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
-
-import com.sun.javafx.PlatformUtil;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
 import javafx.embed.swing.JFXPanelShim;
 import javafx.scene.Scene;
 import javafx.scene.layout.Region;
-import junit.framework.AssertionFailedError;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import com.sun.javafx.PlatformUtil;
 
 public class JFXPanelScaledTest {
     static CountDownLatch launchLatch;

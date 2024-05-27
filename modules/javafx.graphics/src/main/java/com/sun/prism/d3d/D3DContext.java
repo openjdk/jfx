@@ -498,14 +498,6 @@ class D3DContext extends BaseShaderContext {
     private static native boolean nGetFrameStats(long pContext,
             D3DFrameStats returnValue, boolean bReset);
 
-    private static native boolean nIsRTTVolatile(long contextHandle);
-
-    public boolean isRTTVolatile() {
-        if (checkDisposed()) return false;
-
-        return nIsRTTVolatile(pContext);
-    }
-
     public static String hResultToString(long hResult) {
         switch ((int)hResult) {
             case D3DERR_DEVICELOST:

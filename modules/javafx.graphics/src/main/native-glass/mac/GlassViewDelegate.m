@@ -46,6 +46,8 @@
 #import "GlassPasteboard.h"
 #import "GlassTouches.h"
 
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 //#define VERBOSE
 #ifndef VERBOSE
     #define LOG(MSG, ...)
@@ -429,6 +431,9 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
         case NSScrollWheel:
             type = com_sun_glass_events_MouseEvent_WHEEL;
+            break;
+
+        default:
             break;
     }
 
@@ -1076,7 +1081,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
         [image release];
     }
 
-    self->draggingSource = [[GlassDraggingSource alloc] initWithOperation:operation];
+    self->draggingSource = [[GlassDraggingSource alloc] initWithOperation:operation delegate:self];
 
     NSDraggingSession *session = [self->nsView beginDraggingSessionWithItems:items event:self->lastEvent source:self->draggingSource];
 }
@@ -1097,7 +1102,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     [self sendJavaMouseEvent:theEvent];
 }
 
-- (void)draggingEnded
+- (void)draggingEnded:(NSDragOperation)operation
 {
     DNDLOG("draggingEnded");
 
@@ -1109,8 +1114,23 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
     [GlassDragSource setDelegate:nil];
 
+    // At the end of dragging we're handed a single definitive
+    // drag operation (no Generic or Any).
+    jint mask = com_sun_glass_ui_Clipboard_ACTION_NONE;
+    if (operation == NSDragOperationNone) {
+        mask = com_sun_glass_ui_Clipboard_ACTION_NONE;
+    } else if (operation == NSDragOperationCopy) {
+        mask = com_sun_glass_ui_Clipboard_ACTION_COPY;
+    } else if (operation == NSDragOperationMove) {
+        mask = com_sun_glass_ui_Clipboard_ACTION_MOVE;
+    } else if (operation == NSDragOperationLink) {
+        mask = com_sun_glass_ui_Clipboard_ACTION_REFERENCE;
+    } else {
+        DNDLOG("Invalid drag operation");
+    }
+
     GET_MAIN_JENV;
-    (*env)->CallVoidMethod(env, self->jView, jViewNotifyDragEnd,  [GlassDragSource getMask]);
+    (*env)->CallVoidMethod(env, self->jView, jViewNotifyDragEnd, mask);
     GLASS_CHECK_EXCEPTION(env);
 
     // RT-36038: OS X won't send mouseUp after DnD is complete, so we synthesize them

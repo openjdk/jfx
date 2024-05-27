@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,6 +54,7 @@ import javafx.collections.WeakListChangeListener;
 /**
  * Default skin implementation for the {@link ChoiceBox} control.
  *
+ * @param <T> the type of the item contained in the ChoiceBox
  * @see ChoiceBox
  * @since 9
  */

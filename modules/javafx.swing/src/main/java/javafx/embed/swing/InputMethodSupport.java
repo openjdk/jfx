@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,15 +25,6 @@
 
 package javafx.embed.swing;
 
-import com.sun.javafx.application.PlatformImpl;
-import com.sun.javafx.collections.ObservableListWrapper;
-import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
-import javafx.application.Platform;
-import javafx.collections.ObservableList;
-import javafx.geometry.Point2D;
-import javafx.scene.input.InputMethodHighlight;
-import javafx.scene.input.InputMethodTextRun;
-
 import java.awt.Rectangle;
 import java.awt.event.InputMethodEvent;
 import java.awt.font.TextHitInfo;
@@ -45,6 +36,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import javafx.collections.ObservableList;
+import javafx.geometry.Point2D;
+import javafx.scene.input.InputMethodHighlight;
+import javafx.scene.input.InputMethodTextRun;
+import com.sun.javafx.application.PlatformImpl;
+import com.sun.javafx.collections.ObservableListWrapper;
+import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
 
 /**
  * A utility class containing the functions to support Input Methods

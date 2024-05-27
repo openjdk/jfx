@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 import javafx.beans.NamedArg;
 import javafx.beans.property.ObjectProperty;
@@ -48,6 +49,7 @@ import javafx.collections.ObservableList;
  * Note: invalid SortedList (as a result of broken comparison) doesn't send any notification to listeners on becoming
  * valid again.
  *
+ * @param <E> the list element type
  * @see TransformationList
  * @since JavaFX 8.0
  */
@@ -160,7 +162,6 @@ public final class SortedList<E> extends TransformationList<E, E>{
      *
      * @param  index index of the element to return
      * @return the element at the specified position in this list
-     * @throws IndexOutOfBoundsException {@inheritDoc}
      */
     @Override
     public E get(int index) {
@@ -221,11 +222,13 @@ public final class SortedList<E> extends TransformationList<E, E>{
 
     @Override
     public int getSourceIndex(int index) {
+        Objects.checkIndex(index, size);
         return sorted[index].index;
     }
 
     @Override
     public int getViewIndex(int index) {
+        Objects.checkIndex(index, size);
         return perm[index];
     }
 

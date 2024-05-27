@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -44,14 +44,17 @@ public class MBoolImpl extends MDataImpl implements MBool {
         super(type);
     }
 
+    @Override
     public void set(boolean value) {
         this.value = value;
     }
 
+    @Override
     public boolean get() {
         return value;
     }
 
+    @Override
     public void parse(Iterator<String> values) {
         String val = values.next();
         if (val.equals("yes") ||
@@ -62,6 +65,7 @@ public class MBoolImpl extends MDataImpl implements MBool {
         }
     }
 
+    @Override
     public String toString() {
         String result = getType().getName();
         result += " " + value;
