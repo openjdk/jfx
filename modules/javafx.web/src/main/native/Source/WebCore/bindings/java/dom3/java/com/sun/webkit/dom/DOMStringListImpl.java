@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,8 @@ public class DOMStringListImpl implements DOMStringList {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
+
+        @Override
         public void dispose() {
             DOMStringListImpl.dispose(peer);
         }
@@ -77,6 +79,7 @@ public class DOMStringListImpl implements DOMStringList {
 
 
 // Attributes
+    @Override
     public int getLength() {
         return getLengthImpl(getPeer());
     }
@@ -84,6 +87,7 @@ public class DOMStringListImpl implements DOMStringList {
 
 
 // Functions
+    @Override
     public String item(int index)
     {
         return itemImpl(getPeer()
@@ -93,6 +97,7 @@ public class DOMStringListImpl implements DOMStringList {
         , int index);
 
 
+    @Override
     public boolean contains(String string)
     {
         return containsImpl(getPeer()

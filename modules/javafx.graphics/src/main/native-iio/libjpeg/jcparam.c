@@ -2,7 +2,7 @@
  * jcparam.c
  *
  * Copyright (C) 1991-1998, Thomas G. Lane.
- * Modified 2003-2019 by Guido Vollbeding.
+ * Modified 2003-2022 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -62,8 +62,9 @@ jpeg_add_quant_table (j_compress_ptr cinfo, int which_tbl,
 
 
 /* These are the sample quantization tables given in JPEG spec section K.1.
- * The spec says that the values given produce "good" quality, and
- * when divided by 2, "very good" quality.
+ * NOTE: chrominance DC value is changed from 17 to 16 for lossless support.
+ * The spec says that the values given produce "good" quality,
+ * and when divided by 2, "very good" quality.
  */
 static const unsigned int std_luminance_quant_tbl[DCTSIZE2] = {
   16,  11,  10,  16,  24,  40,  51,  61,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,31 +41,37 @@ public class HTMLElementImpl extends ElementImpl implements HTMLElement {
 
 
 // Attributes
+    @Override
     public String getId() {
         return getIdImpl(getPeer());
     }
     native static String getIdImpl(long peer);
 
+    @Override
     public void setId(String value) {
         setIdImpl(getPeer(), value);
     }
     native static void setIdImpl(long peer, String value);
 
+    @Override
     public String getTitle() {
         return getTitleImpl(getPeer());
     }
     native static String getTitleImpl(long peer);
 
+    @Override
     public void setTitle(String value) {
         setTitleImpl(getPeer(), value);
     }
     native static void setTitleImpl(long peer, String value);
 
+    @Override
     public String getLang() {
         return getLangImpl(getPeer());
     }
     native static String getLangImpl(long peer);
 
+    @Override
     public void setLang(String value) {
         setLangImpl(getPeer(), value);
     }
@@ -81,11 +87,13 @@ public class HTMLElementImpl extends ElementImpl implements HTMLElement {
     }
     native static void setTranslateImpl(long peer, boolean value);
 
+    @Override
     public String getDir() {
         return getDirImpl(getPeer());
     }
     native static String getDirImpl(long peer);
 
+    @Override
     public void setDir(String value) {
         setDirImpl(getPeer(), value);
     }
@@ -161,6 +169,7 @@ public class HTMLElementImpl extends ElementImpl implements HTMLElement {
     }
     native static void setOuterTextImpl(long peer, String value);
 
+    @Override
     public HTMLCollection getChildren() {
         return HTMLCollectionImpl.getImpl(getChildrenImpl(getPeer()));
     }
