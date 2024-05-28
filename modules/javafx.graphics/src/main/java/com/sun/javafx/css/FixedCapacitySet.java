@@ -409,6 +409,14 @@ public sealed abstract class FixedCapacitySet<T> extends AbstractSet<T> {
 
             this.elements = (T[]) new Object[1 << shift];
             this.mask = (1 << shift) - 1;
+
+            /*
+             * Note: the size of the elements array MUST always be greater than the
+             * requested capacity as the contains check relies on there always being
+             * at least one empty bucket.
+             */
+
+            assert elements.length > requestedCapacity : "must have more buckets than capacity";
         }
 
         @Override
@@ -454,7 +462,12 @@ public sealed abstract class FixedCapacitySet<T> extends AbstractSet<T> {
         @Override
         public boolean contains(Object o) {
             int bucket = determineBucketIndex(o);
-            int start = bucket;
+
+            /*
+             * Note: because the open addressed set always has spare capacity
+             * this loop will always exit because an unused bucket is encountered
+             * at some point.
+             */
 
             while (elements[bucket] != null) {
                 if (elements[bucket].equals(o)) {
@@ -465,10 +478,6 @@ public sealed abstract class FixedCapacitySet<T> extends AbstractSet<T> {
 
                 if (bucket >= elements.length) {
                     bucket = 0;
-                }
-
-                if (bucket == start) {
-                    return false;  // all elements were checked, none matched
                 }
             }
 
