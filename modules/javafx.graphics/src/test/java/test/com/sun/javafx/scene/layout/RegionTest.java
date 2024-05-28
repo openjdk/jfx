@@ -330,8 +330,8 @@ public class RegionTest {
 //
 //        for (int i=0; i<images.size(); i++) {
 //            BackgroundImage image = images.get(i);
-////             TODO: fix this - expected is file:/... actual is jar:file:/...
-////            assertEquals(expectedUrls[i], image.getImage().getUrl());
+//--             TODO: fix this - expected is file:/... actual is jar:file:/...
+//--            assertEquals(expectedUrls[i], image.getImage().getUrl());
 //            assertEquals(expectedRepeats[i].getRepeatX(), image.getRepeatX());
 //            assertEquals(expectedRepeats[i].getRepeatY(), image.getRepeatY());
 //            assertEquals(expectedPositions[i].getTop(), image.getTop(), 0.01);
@@ -355,22 +355,22 @@ public class RegionTest {
 //     @Test
 //     public void testConvertCSSPropertysToImageBorder() {
 //
-////        URI CODEBASE = null;
-////        try {
-////            CODEBASE = URI.create(System.getProperty("javafx.application.codebase"));
-////                //System.out.println("CODEBASE: " + cb);
-////        } catch (Exception e) {
-////            try {
-////                CODEBASE = URI.create(System.getProperty("user.dir"));
-////            } catch (Exception x) {
-////                fail("could not set CODEBASE: " + x.toString());
-////            }
-////        }
+//--        URI CODEBASE = null;
+//--        try {
+//--            CODEBASE = URI.create(System.getProperty("javafx.application.codebase"));
+//--                //System.out.println("CODEBASE: " + cb);
+//--        } catch (Exception e) {
+//--            try {
+//--                CODEBASE = URI.create(System.getProperty("user.dir"));
+//--            } catch (Exception x) {
+//--                fail("could not set CODEBASE: " + x.toString());
+//--            }
+//--        }
 //
 //         String[] expectedUrls = new String[] {
 //            "http://sipi.usc.edu/database/misc/4.2.04.tiff",
 //            "http://sipi.usc.edu/database/misc/4.2.03.tiff",
-////            CODEBASE.resolve("scenic-view.png").toString()
+//--            CODEBASE.resolve("scenic-view.png").toString()
 //         };
 //
 //        BorderImageRepeat[] expectedRepeats = {
@@ -395,7 +395,7 @@ public class RegionTest {
 //
 //        Stylesheet stylesheet = new CssParser().parse(
 //                    "* { " +
-////                        "-fx-border-image-source: url(\"http://sipi.usc.edu/database/misc/4.2.04.tiff\"), url(\"scenic-view.png\");" +
+//--                        "-fx-border-image-source: url(\"http://sipi.usc.edu/database/misc/4.2.04.tiff\"), url(\"scenic-view.png\");" +
 //                        "-fx-border-image-source: url(\"http://sipi.usc.edu/database/misc/4.2.04.tiff\"), url(\"http://sipi.usc.edu/database/misc/4.2.03.tiff\");" +
 //                        "-fx-border-image-repeat: repeat no-repeat, no-repeat;" +
 //                        "-fx-border-image-slice: 30% 20% fill, 0 0 10 10; " +
