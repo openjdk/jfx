@@ -30,12 +30,6 @@ import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
-import jfx.incubator.scene.control.rich.CodeArea;
-import jfx.incubator.scene.control.rich.CodeTextModel;
-import jfx.incubator.scene.control.rich.SyntaxDecorator;
-import jfx.incubator.scene.control.rich.TextPos;
-import jfx.incubator.scene.control.rich.model.StyleAttribute;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -51,9 +45,15 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.stage.Window;
 import javafx.util.StringConverter;
-import com.oracle.demo.rich.rta.FontSelector;
+import com.oracle.demo.rich.rta.FontOption;
 import com.oracle.demo.rich.rta.ROptionPane;
 import com.oracle.demo.rich.util.FX;
+import jfx.incubator.scene.control.rich.CodeArea;
+import jfx.incubator.scene.control.rich.CodeTextModel;
+import jfx.incubator.scene.control.rich.SyntaxDecorator;
+import jfx.incubator.scene.control.rich.TextPos;
+import jfx.incubator.scene.control.rich.model.StyleAttribute;
+import jfx.incubator.scene.control.rich.model.StyleAttrs;
 
 /**
  * Main Panel contains CodeArea, split panes for quick size adjustment, and an option pane.
@@ -78,7 +78,7 @@ public class CodeAreaDemoPane extends BorderPane {
         vsplit.setDividerPositions(1.0);
         vsplit.setOrientation(Orientation.VERTICAL);
 
-        FontSelector fontSelector = new FontSelector("font", control::setFont);
+        FontOption fontOption = new FontOption("font", false, control.fontProperty());
 
         CheckBox editable = new CheckBox("editable");
         FX.name(editable, "editable");
@@ -199,9 +199,7 @@ public class CodeAreaDemoPane extends BorderPane {
         op = new ROptionPane();
         op.option(editable);
         op.label("Font:");
-        op.option(fontSelector.fontNode());
-        op.label("Size:");
-        op.option(fontSelector.sizeNode());
+        op.option(fontOption);
         op.option(wrapText);
         op.option(displayCaret);
         op.option(fatCaret);

@@ -63,15 +63,22 @@ public class CodeAreaSkin extends RichTextAreaSkin {
             // font
             Font f = control.getFont();
             if (f != null) {
-                String lowerCaseName = f.getName().toLowerCase(Locale.ENGLISH);
-                String family = f.getFamily();
+                String name = f.getName();
                 double size = f.getSize();
-                String style = RichUtils.guessFontStyle(lowerCaseName);
-                String weight = RichUtils.guessFontWeight(lowerCaseName);
-                cx.addStyle("-fx-font-family:'" + family + "';");
-                cx.addStyle("-fx-font-style:" + style + ";");
-                cx.addStyle("-fx-font-weight:" + weight + ";");
+                cx.addStyle("-fx-font-family:'" + name + "';");
                 cx.addStyle("-fx-font-size:" + size + ";");
+                System.out.println(name); // FIX
+                
+                // this does not work
+//                String lowerCaseName = f.getName().toLowerCase(Locale.ENGLISH);
+//                String family = f.getFamily();
+//                double size = f.getSize();
+//                String style = RichUtils.guessFontStyle(lowerCaseName);
+//                String weight = RichUtils.guessFontWeight(lowerCaseName);
+//                cx.addStyle("-fx-font-family:'" + family + "';");
+//                cx.addStyle("-fx-font-style:" + style + ";");
+//                cx.addStyle("-fx-font-weight:" + weight + ";");
+//                cx.addStyle("-fx-font-size:" + size + ";");
             }
 
             // line spacing
