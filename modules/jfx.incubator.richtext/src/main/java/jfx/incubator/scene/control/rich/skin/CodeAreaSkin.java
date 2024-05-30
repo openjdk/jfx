@@ -25,11 +25,9 @@
 
 package jfx.incubator.scene.control.rich.skin;
 
-import java.util.Locale;
 import javafx.scene.text.Font;
 import com.sun.jfx.incubator.scene.control.rich.RichTextAreaSkinHelper;
 import com.sun.jfx.incubator.scene.control.rich.util.ListenerHelper;
-import com.sun.jfx.incubator.scene.control.rich.util.RichUtils;
 import jfx.incubator.scene.control.rich.CellContext;
 import jfx.incubator.scene.control.rich.CodeArea;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
@@ -67,18 +65,6 @@ public class CodeAreaSkin extends RichTextAreaSkin {
                 double size = f.getSize();
                 cx.addStyle("-fx-font-family:'" + name + "';");
                 cx.addStyle("-fx-font-size:" + size + ";");
-                System.out.println(name); // FIX
-                
-                // this does not work
-//                String lowerCaseName = f.getName().toLowerCase(Locale.ENGLISH);
-//                String family = f.getFamily();
-//                double size = f.getSize();
-//                String style = RichUtils.guessFontStyle(lowerCaseName);
-//                String weight = RichUtils.guessFontWeight(lowerCaseName);
-//                cx.addStyle("-fx-font-family:'" + family + "';");
-//                cx.addStyle("-fx-font-style:" + style + ";");
-//                cx.addStyle("-fx-font-weight:" + weight + ";");
-//                cx.addStyle("-fx-font-size:" + size + ";");
             }
 
             // line spacing
