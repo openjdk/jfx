@@ -496,19 +496,16 @@ public class RichTextArea extends Control {
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
-        // TODO possibly large text - could we send just what is displayed?
-        // or the current paragraph text (text on line xx, blah blah)
-//        case TEXT: {
-//            String accText = getAccessibleText();
-//            if (accText != null && !accText.isEmpty())
-//                return accText;
-//
-//            String text = getText();
-//            if (text == null || text.isEmpty()) {
-//                text = getPromptText();
-//            }
-//            return text;
-//        }
+        case TEXT:
+            String accText = getAccessibleText();
+            if (accText != null && !accText.isEmpty()) {
+                return accText;
+            }
+            // unlike TextArea, we cannot report the whole text as it might be too large.
+            // there are two choices here:
+            // either report the visible text, or the current paragraph text
+            TextPos p = getCaretPosition();
+            return p == null ? null : getPlainText(p.index());
         case EDITABLE:
             return isEditable();
 //        case SELECTION_START:
@@ -517,8 +514,6 @@ public class RichTextArea extends Control {
 //            return getSelection().getEnd();
 //        case CARET_OFFSET:
 //            return getCaretPosition();
-//        case FONT:
-//            return getFont();
         default:
             return super.queryAccessibleAttribute(attribute, parameters);
         }

@@ -40,6 +40,7 @@ import javafx.css.StyleableIntegerProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.converter.SizeConverter;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.Labeled;
 import javafx.scene.text.Font;
@@ -296,6 +297,16 @@ public class CodeArea extends RichTextArea {
 
     public final double getLineSpacing() {
         return lineSpacing == null ? 0 : lineSpacing.get();
+    }
+
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+        case FONT:
+            return getFont();
+        default:
+            return super.queryAccessibleAttribute(attribute, parameters);
+        }
     }
 
     /** styleable properties */

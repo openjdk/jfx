@@ -31,12 +31,14 @@ import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.Skin;
 import javafx.scene.control.SkinBase;
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
+import javafx.scene.text.Text;
 import com.sun.jfx.incubator.scene.control.rich.Params;
 import com.sun.jfx.incubator.scene.control.rich.RichTextAreaBehavior;
 import com.sun.jfx.incubator.scene.control.rich.RichTextAreaSkinHelper;
@@ -320,5 +322,21 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     @Override
     protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return Params.MIN_WIDTH;
+    }
+
+    @Override
+    protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+        // TextAreaSkin delegates to its Text
+//        case LINE_FOR_OFFSET:
+//        case LINE_START:
+//        case LINE_END:
+//        case BOUNDS_FOR_RANGE:
+//        case OFFSET_AT_POINT:
+//            Text text = getTextNode();
+//            return text.queryAccessibleAttribute(attribute, parameters);
+        default:
+            return super.queryAccessibleAttribute(attribute, parameters);
+        }
     }
 }
