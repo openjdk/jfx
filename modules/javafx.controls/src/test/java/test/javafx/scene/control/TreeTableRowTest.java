@@ -763,19 +763,19 @@ public class TreeTableRowTest {
 //        @Override public TreeItem<String> getModelItem(int index) {
 //            return index == 0 ? root : root.getChildren().get(index - 1);
 //        }
-////
-////        @Override protected void focus(int index) {
-////            // no op
-////        }
-////
-////        @Override protected int getFocusedIndex() {
-////            return tree.getFocusModel().getFocusedIndex();
-////        }
-////
-////        @Override
-////        public void select(int row, TreeTableColumn<String, ?> column) {
-////            //To change body of implemented methods use File | Settings | File Templates.
-////        }
+//--
+//--        @Override protected void focus(int index) {
+//--            // no op
+//--        }
+//--
+//--        @Override protected int getFocusedIndex() {
+//--            return tree.getFocusModel().getFocusedIndex();
+//--        }
+//--
+//--        @Override
+//--        public void select(int row, TreeTableColumn<String, ?> column) {
+//--            //To change body of implemented methods use File | Settings | File Templates.
+//--        }
 //    };
 //
 //    private final class FocusModelMock extends TreeTableView.TreeTableViewFocusModel {

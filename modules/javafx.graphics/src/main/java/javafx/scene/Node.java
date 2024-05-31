@@ -2576,9 +2576,9 @@ public abstract class Node implements EventTarget, Styleable {
                 + "that is not in scene");
     }
 
-    ////////////////////////////
+    //--------------------------
     //  Private Implementation
-    ////////////////////////////
+    //--------------------------
 
     /**
      * If this Node is being used as the clip of another Node, that other node
@@ -6444,9 +6444,9 @@ public abstract class Node implements EventTarget, Styleable {
 
     }
 
-    ////////////////////////////
+    //--------------------------
     //  Private Implementation
-    ////////////////////////////
+    //--------------------------
 
     /* *************************************************************************
      *                                                                         *
@@ -8519,9 +8519,9 @@ public abstract class Node implements EventTarget, Styleable {
         return getScene().traverse(this, dir, method);
     }
 
-    ////////////////////////////
+    //--------------------------
     //  Private Implementation
-    ////////////////////////////
+    //--------------------------
 
      /**
       * Returns a string representation for the object.
