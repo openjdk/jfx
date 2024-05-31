@@ -51,7 +51,6 @@ public class ModuleUtil {
                 .map(StackWalker.StackFrame::getDeclaringClass)
                 .findFirst()
                 .orElseThrow(IllegalStateException::new));
-            //System.err.println("callerClass = " + callerClass);
             var callerModule = callerClass.getModule();
 
             // If we are using incubating API from the unnamed module, issue

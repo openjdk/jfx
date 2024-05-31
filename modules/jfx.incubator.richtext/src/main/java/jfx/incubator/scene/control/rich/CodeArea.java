@@ -114,7 +114,7 @@ public class CodeArea extends RichTextArea {
     /**
      * This convenience method returns the syntax decorator value in the model,
      * or null if the said model is null.
-     * @return the syntax devocrator value, or null
+     * @return the syntax decorator value, or null
      */
     public final SyntaxDecorator getSyntaxDecorator() {
         CodeTextModel m = codeModel();

@@ -29,7 +29,7 @@
 |MOVE_TO_PARAGRAPH_START   |Moves the caret to the beginning of the paragraph at caret
 |MOVE_UP                   |Moves the caret one visual text line up
 |MOVE_WORD_LEFT            |Moves the caret one word left (previous word if LTR, next word if RTL)
-|MOVE_WORD_NEXT            |Moves the caret to the beginning of the next word, or next paragraph if at the start of an empty paragraph
+|MOVE_WORD_NEXT_BEG        |Moves the caret to the beginning of the next word, or next paragraph if at the start of an empty paragraph
 |MOVE_WORD_NEXT_END        |Moves the caret to the end of the next word
 |MOVE_WORD_PREVIOUS        |Moves the caret to the beginning of previous word
 |MOVE_WORD_RIGHT           |Moves the caret one word right (next word if LTR, previous word if RTL)
@@ -145,7 +145,7 @@
 ### Other Mappings
 
 The following functions currently have no mapping:
-MOVE_WORD_NEXT, MOVE_WORD_NEXT_END, MOVE_WORD_PREVIOUS, SELECT_WORD_NEXT, SELECT_WORD_NEXT_END, SELECT_WORD_PREVIOUS
+MOVE_WORD_NEXT_BEG, MOVE_WORD_NEXT_END, MOVE_WORD_PREVIOUS, SELECT_WORD_NEXT, SELECT_WORD_NEXT_END, SELECT_WORD_PREVIOUS
 
 The following functions are mapped to the mouse events:
 SELECT_PARAGRAPH, SELECT_WORD

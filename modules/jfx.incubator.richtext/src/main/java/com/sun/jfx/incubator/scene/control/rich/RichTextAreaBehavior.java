@@ -118,7 +118,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         registerFunction(RichTextArea.Tags.MOVE_TO_PARAGRAPH_END, this::moveParagraphEnd);
         registerFunction(RichTextArea.Tags.MOVE_TO_PARAGRAPH_START, this::moveParagraphStart);
         registerFunction(RichTextArea.Tags.MOVE_UP, this::moveUp);
-        registerFunction(RichTextArea.Tags.MOVE_WORD_NEXT, this::nextWord);
+        registerFunction(RichTextArea.Tags.MOVE_WORD_NEXT_BEG, this::nextWord);
         registerFunction(RichTextArea.Tags.MOVE_WORD_NEXT_END, this::nextWordEnd);
         registerFunction(RichTextArea.Tags.MOVE_WORD_LEFT, this::leftWord);
         registerFunction(RichTextArea.Tags.MOVE_WORD_PREVIOUS, this::previousWord);

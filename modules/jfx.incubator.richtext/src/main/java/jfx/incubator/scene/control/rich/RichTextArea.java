@@ -208,7 +208,7 @@ public class RichTextArea extends Control {
         /** Moves the caret one word left (previous word if LTR, next word if RTL). */
         public static final FunctionTag MOVE_WORD_LEFT = new FunctionTag();
         /** Moves the caret to the beginning of the next word, or next paragraph if at the start of an empty paragraph. */
-        public static final FunctionTag MOVE_WORD_NEXT = new FunctionTag();
+        public static final FunctionTag MOVE_WORD_NEXT_BEG = new FunctionTag();
         /** Moves the caret to the end of the next word. */
         public static final FunctionTag MOVE_WORD_NEXT_END = new FunctionTag();
         /** Moves the caret to the beginning of previous word. */
@@ -1177,7 +1177,7 @@ public class RichTextArea extends Control {
      * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void moveWordNext() {
-        execute(Tags.MOVE_WORD_NEXT);
+        execute(Tags.MOVE_WORD_NEXT_BEG);
     }
 
     /**
