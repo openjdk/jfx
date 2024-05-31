@@ -732,10 +732,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
 
     // package protected for testing purposes
     MenuBarButton menuBarButtonAt(int i) {
-        if (i < container.getChildren().size()) {
-            return (MenuBarButton)container.getChildren().get(i);
-        }
-        return null;
+        return (MenuBarButton)container.getChildren().get(i);
     }
 
     int getFocusedMenuIndex() {
