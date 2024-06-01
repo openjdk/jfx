@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,7 +24,6 @@
 
 package test.robot.javafx.scene.layout;
 
-import test.robot.javafx.scene.layout.RegionUITestBase;
 import org.junit.Test;
 
 /**
@@ -40,12 +39,12 @@ public class RegionBorderStrokeUITest extends RegionUITestBase {
 //     *                                                                        *
 //     *************************************************************************/
 //
-////    public void color_BorderWidth_Thin(Region region) {
-////        region.setStyle("-fx-background-color: lightgrey;" +
-////                        "-fx-border-style: solid;" +
-////                        "-fx-border-width: thin;" +
-////                        "-fx-border-color: red;");
-////    }
+//--    public void color_BorderWidth_Thin(Region region) {
+//--        region.setStyle("-fx-background-color: lightgrey;" +
+//--                        "-fx-border-style: solid;" +
+//--                        "-fx-border-width: thin;" +
+//--                        "-fx-border-color: red;");
+//--    }
 //
 //    public void color_BorderWidth_Thin1(Region region) {
 //        region.setStyle("-fx-background-color: lightgrey;" +
@@ -54,12 +53,12 @@ public class RegionBorderStrokeUITest extends RegionUITestBase {
 //                        "-fx-border-color: red;");
 //    }
 //
-////    public void color_BorderWidth_Medium(Region region) {
-////        region.setStyle("-fx-background-color: lightgrey;" +
-////                        "-fx-border-style: solid;" +
-////                        "-fx-border-width: medium;" +
-////                        "-fx-border-color: red;");
-////    }
+//--    public void color_BorderWidth_Medium(Region region) {
+//--        region.setStyle("-fx-background-color: lightgrey;" +
+//--                        "-fx-border-style: solid;" +
+//--                        "-fx-border-width: medium;" +
+//--                        "-fx-border-color: red;");
+//--    }
 //
 //    public void color_BorderWidth_Medium2(Region region) {
 //        region.setStyle("-fx-background-color: lightgrey;" +
@@ -68,12 +67,12 @@ public class RegionBorderStrokeUITest extends RegionUITestBase {
 //                        "-fx-border-color: red;");
 //    }
 //
-////    public void color_BorderWidth_Thick(Region region) {
-////        region.setStyle("-fx-background-color: lightgrey;" +
-////                        "-fx-border-style: solid;" +
-////                        "-fx-border-width: thick;" +
-////                        "-fx-border-color: red;");
-////    }
+//--    public void color_BorderWidth_Thick(Region region) {
+//--        region.setStyle("-fx-background-color: lightgrey;" +
+//--                        "-fx-border-style: solid;" +
+//--                        "-fx-border-width: thick;" +
+//--                        "-fx-border-color: red;");
+//--    }
 //
 //    public void color_BorderWidth_Thick2(Region region) {
 //        region.setStyle("-fx-background-color: lightgrey;" +
@@ -363,12 +362,12 @@ public class RegionBorderStrokeUITest extends RegionUITestBase {
 //     *                                                                        *
 //     *************************************************************************/
 //
-////    public void image_BorderWidth_Thin(Region region) {
-////        region.setStyle("-fx-background-color: lightgrey;" +
-////                        "-fx-border-style: solid;" +
-////                        "-fx-border-width: thin;" +
-////                        "-fx-border-color: repeating-image-pattern('test/robot/javafx/scene/layout/test20x20.png');");
-////    }
+//--    public void image_BorderWidth_Thin(Region region) {
+//--        region.setStyle("-fx-background-color: lightgrey;" +
+//--                        "-fx-border-style: solid;" +
+//--                        "-fx-border-width: thin;" +
+//--                        "-fx-border-color: repeating-image-pattern('test/robot/javafx/scene/layout/test20x20.png');");
+//--    }
 //
 //    public void image_BorderWidth_Thin1(Region region) {
 //        region.setStyle("-fx-background-color: lightgrey;" +
@@ -377,12 +376,12 @@ public class RegionBorderStrokeUITest extends RegionUITestBase {
 //                        "-fx-border-color: repeating-image-pattern('test/robot/javafx/scene/layout/test20x20.png');");
 //    }
 //
-////    public void image_BorderWidth_Medium(Region region) {
-////        region.setStyle("-fx-background-color: lightgrey;" +
-////                        "-fx-border-style: solid;" +
-////                        "-fx-border-width: medium;" +
-////                        "-fx-border-color: repeating-image-pattern('test/robot/javafx/scene/layout/test20x20.png');");
-////    }
+//--    public void image_BorderWidth_Medium(Region region) {
+//--        region.setStyle("-fx-background-color: lightgrey;" +
+//--                        "-fx-border-style: solid;" +
+//--                        "-fx-border-width: medium;" +
+//--                        "-fx-border-color: repeating-image-pattern('test/robot/javafx/scene/layout/test20x20.png');");
+//--    }
 //
 //    public void image_BorderWidth_Medium2(Region region) {
 //        region.setStyle("-fx-background-color: lightgrey;" +
@@ -391,12 +390,12 @@ public class RegionBorderStrokeUITest extends RegionUITestBase {
 //                        "-fx-border-color: repeating-image-pattern('test/robot/javafx/scene/layout/test20x20.png');");
 //    }
 //
-////    public void image_BorderWidth_Thick(Region region) {
-////        region.setStyle("-fx-background-color: lightgrey;" +
-////                        "-fx-border-style: solid;" +
-////                        "-fx-border-width: thick;" +
-////                        "-fx-border-color: repeating-image-pattern('test/robot/javafx/scene/layout/test20x20.png');");
-////    }
+//--    public void image_BorderWidth_Thick(Region region) {
+//--        region.setStyle("-fx-background-color: lightgrey;" +
+//--                        "-fx-border-style: solid;" +
+//--                        "-fx-border-width: thick;" +
+//--                        "-fx-border-color: repeating-image-pattern('test/robot/javafx/scene/layout/test20x20.png');");
+//--    }
 //
 //    public void image_BorderWidth_Thick2(Region region) {
 //        region.setStyle("-fx-background-color: lightgrey;" +
@@ -686,12 +685,12 @@ public class RegionBorderStrokeUITest extends RegionUITestBase {
 //     *                                                                        *
 //     *************************************************************************/
 //
-////    public void linear_BorderWidth_Thin(Region region) {
-////        region.setStyle("-fx-background-color: lightgrey;" +
-////                        "-fx-border-style: solid;" +
-////                        "-fx-border-width: thin;" +
-////                        "-fx-border-color: linear-gradient(to bottom, red 0%, blue 100%);");
-////    }
+//--    public void linear_BorderWidth_Thin(Region region) {
+//--        region.setStyle("-fx-background-color: lightgrey;" +
+//--                        "-fx-border-style: solid;" +
+//--                        "-fx-border-width: thin;" +
+//--                        "-fx-border-color: linear-gradient(to bottom, red 0%, blue 100%);");
+//--    }
 //
 //    public void linear_BorderWidth_Thin1(Region region) {
 //        region.setStyle("-fx-background-color: lightgrey;" +
@@ -700,12 +699,12 @@ public class RegionBorderStrokeUITest extends RegionUITestBase {
 //                        "-fx-border-color: linear-gradient(to bottom, red 0%, blue 100%);");
 //    }
 //
-////    public void linear_BorderWidth_Medium(Region region) {
-////        region.setStyle("-fx-background-color: lightgrey;" +
-////                        "-fx-border-style: solid;" +
-////                        "-fx-border-width: medium;" +
-////                        "-fx-border-color: linear-gradient(to bottom, red 0%, blue 100%);");
-////    }
+//--    public void linear_BorderWidth_Medium(Region region) {
+//--        region.setStyle("-fx-background-color: lightgrey;" +
+//--                        "-fx-border-style: solid;" +
+//--                        "-fx-border-width: medium;" +
+//--                        "-fx-border-color: linear-gradient(to bottom, red 0%, blue 100%);");
+//--    }
 //
 //    public void linear_BorderWidth_Medium2(Region region) {
 //        region.setStyle("-fx-background-color: lightgrey;" +
@@ -714,12 +713,12 @@ public class RegionBorderStrokeUITest extends RegionUITestBase {
 //                        "-fx-border-color: linear-gradient(to bottom, red 0%, blue 100%);");
 //    }
 //
-////    public void linear_BorderWidth_Thick(Region region) {
-////        region.setStyle("-fx-background-color: lightgrey;" +
-////                        "-fx-border-style: solid;" +
-////                        "-fx-border-width: thick;" +
-////                        "-fx-border-color: linear-gradient(to bottom, red 0%, blue 100%);");
-////    }
+//--    public void linear_BorderWidth_Thick(Region region) {
+//--        region.setStyle("-fx-background-color: lightgrey;" +
+//--                        "-fx-border-style: solid;" +
+//--                        "-fx-border-width: thick;" +
+//--                        "-fx-border-color: linear-gradient(to bottom, red 0%, blue 100%);");
+//--    }
 //
 //    public void linear_BorderWidth_Thick2(Region region) {
 //        region.setStyle("-fx-background-color: lightgrey;" +

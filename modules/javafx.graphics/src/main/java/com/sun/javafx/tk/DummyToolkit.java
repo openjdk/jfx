@@ -226,7 +226,7 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
-    public int getKeyCodeForChar(String character) {
+    public int getKeyCodeForChar(String character, int hint) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

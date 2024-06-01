@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1741,6 +1741,8 @@ public class TreeTableViewTest {
         TreeItem<RT_22463_Person> root = new TreeItem<>(rootPerson);
         root.setExpanded(true);
 
+        stageLoader = new StageLoader(table);
+
         table.setRoot(root);
 
         // before the change things display fine
@@ -1768,6 +1770,50 @@ public class TreeTableViewTest {
         root.getChildren().setAll(
                 new TreeItem<>(new_p1),
                 new TreeItem<>(new_p2));
+        VirtualFlowTestUtils.assertCellTextEquals(table, 1, "1", "updated name1");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 2, "2", "updated name2");
+    }
+
+    @Test
+    public void testSetChildrenShouldUpdateTheCells() {
+        final TreeTableView<RT_22463_Person> table = new TreeTableView<>();
+        TreeTableColumn<RT_22463_Person, ?> c1 = new TreeTableColumn<>("Id");
+        TreeTableColumn<RT_22463_Person, ?> c2 = new TreeTableColumn<>("Name");
+        c1.setCellValueFactory(new TreeItemPropertyValueFactory<>("id"));
+        c2.setCellValueFactory(new TreeItemPropertyValueFactory<>("name"));
+        table.getColumns().addAll(c1, c2);
+
+        RT_22463_Person rootPerson = new RT_22463_Person();
+        rootPerson.setName("Root");
+        TreeItem<RT_22463_Person> root = new TreeItem<>(rootPerson);
+        root.setExpanded(true);
+
+        stageLoader = new StageLoader(table);
+
+        table.setRoot(root);
+
+        RT_22463_Person p1 = new RT_22463_Person();
+        p1.setId(1L);
+        p1.setName("name1");
+        RT_22463_Person p2 = new RT_22463_Person();
+        p2.setId(2L);
+        p2.setName("name2");
+        root.getChildren().addAll(
+                new TreeItem<>(p1),
+                new TreeItem<>(p2));
+        VirtualFlowTestUtils.assertCellTextEquals(table, 1, "1", "name1");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 2, "2", "name2");
+
+        // Replace all TreeItems by the new ones. Cells should get updated.
+        RT_22463_Person newP1 = new RT_22463_Person();
+        newP1.setId(1L);
+        newP1.setName("updated name1");
+        RT_22463_Person newP2 = new RT_22463_Person();
+        newP2.setId(2L);
+        newP2.setName("updated name2");
+        root.getChildren().setAll(
+                new TreeItem<>(newP1),
+                new TreeItem<>(newP2));
         VirtualFlowTestUtils.assertCellTextEquals(table, 1, "1", "updated name1");
         VirtualFlowTestUtils.assertCellTextEquals(table, 2, "2", "updated name2");
     }
@@ -2591,14 +2637,16 @@ public class TreeTableViewTest {
 
         StageLoader sl = new StageLoader(treeTableView);
 
-        assertEquals(22, rt_31200_count);
+        int oldCount = rt_31200_count;
+        assertEquals(18, rt_31200_count);
 
         // resize the stage
         sl.getStage().setHeight(250);
         Toolkit.getToolkit().firePulse();
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
-        assertEquals(22, rt_31200_count);
+        // Should be the same count as above.
+        assertEquals(oldCount, rt_31200_count);
 
         sl.dispose();
     }
@@ -3252,6 +3300,112 @@ public class TreeTableViewTest {
         assertEquals("Andrew", cell.getText());
         assertEquals("Andrew", person1.getFirstName());
         assertEquals(1, test_rt_34685_commitCount);
+    }
+
+    @Test
+    public void testTreeTableViewRemainsFocusedAfterEditCancel() {
+        TreeTableView<Person> table = new TreeTableView<>();
+        table.setEditable(true);
+
+        TreeItem<Person> root = new TreeItem<>(new Person("Root", null, null));
+        root.setExpanded(true);
+        table.setRoot(root);
+        table.setShowRoot(false);
+        root.getChildren().setAll(FXCollections.observableArrayList(
+                new TreeItem<>(new Person("John", "Smith", "john.smith@example.com"))));
+
+        TreeTableColumn<Person,String> first = new TreeTableColumn<>("first");
+        first.setCellValueFactory(new TreeItemPropertyValueFactory<>("firstName"));
+        first.setCellFactory(TextFieldTreeTableCell.forTreeTableColumn());
+        table.getColumns().add(first);
+
+        StageLoader sl = new StageLoader(new Button(), table);
+
+        table.requestFocus();
+        assertTrue(table.isFocused());
+
+        // get the cell at (0,0)
+        TreeTableCell cell = (TreeTableCell) VirtualFlowTestUtils.getCell(table, 0, 0);
+        assertTrue(cell.getSkin() instanceof TreeTableCellSkin);
+        assertNull(cell.getGraphic());
+        assertEquals("John", cell.getText());
+
+        // set the table to be editing the first cell at 0,0
+        table.edit(0, first);
+
+        Toolkit.getToolkit().firePulse();
+        assertNotNull(cell.getGraphic());
+        assertTrue(cell.getGraphic() instanceof TextField);
+
+        TextField textField = (TextField) cell.getGraphic();
+        assertEquals("John", textField.getText());
+
+        textField.setText("Andrew");
+        textField.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertTrue(textField.isFocused());
+        assertFalse(table.isFocused());
+
+        KeyEventFirer keyboard = new KeyEventFirer(textField);
+        keyboard.doKeyPress(KeyCode.ESCAPE);
+
+        assertEquals("John", cell.getText());
+        assertTrue(table.isFocused());
+
+        sl.dispose();
+    }
+
+    @Test
+    public void testTreeTableViewRemainsFocusedAfterEditCommit() {
+        TreeTableView<Person> table = new TreeTableView<>();
+        table.setEditable(true);
+
+        TreeItem<Person> root = new TreeItem<>(new Person("Root", null, null));
+        root.setExpanded(true);
+        table.setRoot(root);
+        table.setShowRoot(false);
+        root.getChildren().setAll(FXCollections.observableArrayList(
+                new TreeItem<>(new Person("John", "Smith", "john.smith@example.com"))));
+
+        TreeTableColumn<Person,String> first = new TreeTableColumn<>("first");
+        first.setCellValueFactory(new TreeItemPropertyValueFactory<>("firstName"));
+        first.setCellFactory(TextFieldTreeTableCell.forTreeTableColumn());
+        table.getColumns().add(first);
+
+        StageLoader sl = new StageLoader(new Button(), table);
+
+        table.requestFocus();
+        assertTrue(table.isFocused());
+
+        // get the cell at (0,0)
+        TreeTableCell cell = (TreeTableCell) VirtualFlowTestUtils.getCell(table, 0, 0);
+        assertTrue(cell.getSkin() instanceof TreeTableCellSkin);
+        assertNull(cell.getGraphic());
+        assertEquals("John", cell.getText());
+
+        // set the table to be editing the first cell at 0,0
+        table.edit(0, first);
+
+        Toolkit.getToolkit().firePulse();
+        assertNotNull(cell.getGraphic());
+        assertTrue(cell.getGraphic() instanceof TextField);
+
+        TextField textField = (TextField) cell.getGraphic();
+        assertEquals("John", textField.getText());
+
+        textField.setText("Andrew");
+        textField.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertTrue(textField.isFocused());
+        assertFalse(table.isFocused());
+
+        KeyEventFirer keyboard = new KeyEventFirer(textField);
+        keyboard.doKeyPress(KeyCode.ENTER);
+
+        assertEquals("Andrew", cell.getText());
+        assertTrue(table.isFocused());
+
+        sl.dispose();
     }
 
     @Test public void test_rt34694() {
@@ -7275,5 +7429,54 @@ public class TreeTableViewTest {
         treeTableView.setRoot(null);
         // Should not throw an NPE.
         treeTableView.queryAccessibleAttribute(AccessibleAttribute.ROW_COUNT);
+    }
+
+    @Test
+    public void testChangeRowFactoryShouldRecreateRows() {
+        String propertyKey = "key";
+        String firstRowKey = "table_row_key1";
+        String secondRowKey = "table_row_key2";
+
+        TreeTableColumn<String, String> c = new TreeTableColumn<>("C");
+        c.setCellValueFactory(value -> new SimpleStringProperty(value.getValue().getValue()));
+        treeTableView.getColumns().add(c);
+
+        treeTableView.setRoot(new TreeItem<>("Root"));
+        treeTableView.getRoot().setExpanded(true);
+        for (int i = 0; i < 4; i++) {
+            TreeItem<String> parent = new TreeItem<String>("item - " + i);
+            treeTableView.getRoot().getChildren().add(parent);
+        }
+
+        treeTableView.setRowFactory(e -> {
+            TreeTableRow<String> row = new TreeTableRow<>();
+            row.getProperties().put(propertyKey, firstRowKey);
+            return row;
+        });
+
+        stageLoader = new StageLoader(treeTableView);
+        stageLoader.getStage().setWidth(300);
+        stageLoader.getStage().setHeight(300);
+
+        for (int index = 0; index < treeTableView.getRoot().getChildren().size(); index++) {
+            IndexedCell<?> cell = VirtualFlowTestUtils.getCell(treeTableView, 0);
+
+            assertEquals(firstRowKey, cell.getProperties().get(propertyKey));
+        }
+
+        // Change the row factory and verify cells again.
+        treeTableView.setRowFactory(e -> {
+            TreeTableRow<String> row = new TreeTableRow<>();
+            row.getProperties().put(propertyKey, secondRowKey);
+            return row;
+        });
+
+        Toolkit.getToolkit().firePulse();
+
+        for (int index = 0; index < treeTableView.getRoot().getChildren().size(); index++) {
+            IndexedCell<?> cell = VirtualFlowTestUtils.getCell(treeTableView, 0);
+
+            assertEquals(secondRowKey, cell.getProperties().get(propertyKey));
+        }
     }
 }

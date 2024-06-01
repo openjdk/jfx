@@ -150,7 +150,7 @@ public:
     bool isSmallCaps() const { return m_fontDescription.variantCaps() == FontVariantCaps::Small; }
 
     float wordSpacing() const { return m_wordSpacing; }
-    float letterSpacing() const { return m_letterSpacing; }
+    float letterSpacing() const { return std::isnan(m_letterSpacing) ? 0.0f : m_letterSpacing; }
     void setWordSpacing(float s) { m_wordSpacing = s; }
     void setLetterSpacing(float s) { m_letterSpacing = s; }
     bool isFixedPitch() const;
@@ -293,7 +293,19 @@ private:
 
     bool advancedTextRenderingMode() const
     {
+#if !PLATFORM(JAVA)
         return m_fontDescription.textRenderingMode() != TextRenderingMode::OptimizeSpeed;
+#else
+        //The current implementation of complex text rendering path on the Java platform is experiencing
+        //side effects. We need to align with WebKit 616.1 standards.
+        auto textRenderingMode = m_fontDescription.textRenderingMode();
+        if (textRenderingMode == TextRenderingMode::GeometricPrecision || textRenderingMode == TextRenderingMode::OptimizeLegibility)
+            return true;
+        if (textRenderingMode == TextRenderingMode::OptimizeSpeed)
+            return false;
+
+        return false;
+#endif
     }
 
     bool computeEnableKerning() const

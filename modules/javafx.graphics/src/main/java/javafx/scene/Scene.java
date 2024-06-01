@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -92,6 +92,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Stream;
 
 import com.sun.javafx.logging.PulseLogger;
 
@@ -1300,7 +1301,7 @@ public class Scene implements EventTarget {
 
     // Shared method for Scene.snapshot and Node.snapshot. It is static because
     // we might be doing a Node snapshot with a null scene
-    static WritableImage doSnapshot(Scene scene,
+    static WritableImage doSnapshot(Scene scene, SubScene subScene,
             double x, double y, double w, double h,
             Node root, BaseTransform transform, boolean depthBuffer,
             Paint fill, Camera camera, WritableImage wimg) {
@@ -1346,14 +1347,15 @@ public class Scene implements EventTarget {
             context.camera = null;
         }
 
-        // Grab the lights from the scene
-        context.lights = null;
-        if (scene != null && !scene.lights.isEmpty()) {
-            context.lights = new NGLightBase[scene.lights.size()];
-            for (int i = 0; i < scene.lights.size(); i++) {
-                context.lights[i] = scene.lights.get(i).getPeer();
-            }
+        // Grab the lights from the scene or subscene
+        Stream<NGLightBase> lights;
+        if (subScene != null) {
+            lights = Optional.of(subScene).stream().flatMap(s -> s.getLights().stream()).map(LightBase::getPeer);
+        } else {
+            lights = Optional.ofNullable(scene).stream().flatMap(s -> s.lights.stream()).map(LightBase::getPeer);
         }
+
+        context.lights = lights.toArray(NGLightBase[]::new);
 
         Toolkit.WritableImageAccessor accessor = Toolkit.getWritableImageAccessor();
         context.platformImage = accessor.getTkImageLoader(wimg);
@@ -1394,7 +1396,7 @@ public class Scene implements EventTarget {
         double h = getHeight();
         BaseTransform transform = BaseTransform.IDENTITY_TRANSFORM;
 
-        return doSnapshot(this, 0, 0, w, h,
+        return doSnapshot(this, null, 0, 0, w, h,
                 getRoot(), transform, isDepthBufferInternal(),
                 getFill(), getEffectiveCamera(), img);
     }
@@ -6244,8 +6246,17 @@ public class Scene implements EventTarget {
         AccessController.doPrivileged(
                 (PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.scene.nodeOrientation.RTL")) ? NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.INHERIT;
 
-
-
+    /**
+     * Node orientation describes the flow of visual data within a node.
+     * In the English speaking world, visual data normally flows from
+     * left-to-right. In an Arabic or Hebrew world, visual data flows
+     * from right-to-left. This is consistent with the reading order
+     * of text in both worlds.
+     *
+     * @defaultValue if the system property {@code javafx.scene.nodeOrientation.RTL} is {@code true},
+     *     {@code NodeOrientation.RIGHT_TO_LEFT}, otherwise {@code NodeOrientation.INHERIT}
+     * @since JavaFX 8.0
+     */
     private ObjectProperty<NodeOrientation> nodeOrientation;
     private EffectiveOrientationProperty effectiveNodeOrientationProperty;
 
@@ -6259,19 +6270,6 @@ public class Scene implements EventTarget {
         return nodeOrientation == null ? defaultNodeOrientation : nodeOrientation.get();
     }
 
-    /**
-     * Property holding NodeOrientation.
-     * <p>
-     * Node orientation describes the flow of visual data within a node.
-     * In the English speaking world, visual data normally flows from
-     * left-to-right. In an Arabic or Hebrew world, visual data flows
-     * from right-to-left.  This is consistent with the reading order
-     * of text in both worlds.  The default value is left-to-right.
-     * </p>
-     *
-     * @return NodeOrientation
-     * @since JavaFX 8.0
-     */
     public final ObjectProperty<NodeOrientation> nodeOrientationProperty() {
         if (nodeOrientation == null) {
             nodeOrientation = new StyleableObjectProperty<NodeOrientation>(defaultNodeOrientation) {

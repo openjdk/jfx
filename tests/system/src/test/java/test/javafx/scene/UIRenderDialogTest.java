@@ -110,7 +110,7 @@ public class UIRenderDialogTest {
                 alert.hide();
             }
         });
-        Util.shutdown(stage);
+        Util.shutdown();
     }
 
     @Test

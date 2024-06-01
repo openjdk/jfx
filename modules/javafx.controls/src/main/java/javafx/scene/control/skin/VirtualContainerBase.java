@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,8 @@ import com.sun.javafx.scene.control.ListenerHelper;
  * This class handles the interaction with the VirtualFlow class, which is the
  * main class handling the virtualization of the contents of this container.
  *
+ * @param <C> the type of the control
+ * @param <I> the type of the index cell
  * @since 9
  */
 public abstract class VirtualContainerBase<C extends Control, I extends IndexedCell> extends SkinBase<C> {

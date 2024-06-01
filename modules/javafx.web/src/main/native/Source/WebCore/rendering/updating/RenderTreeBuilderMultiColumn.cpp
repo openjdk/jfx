@@ -187,10 +187,17 @@ void RenderTreeBuilder::MultiColumn::restoreColumnSpannersForContainer(const Ren
     Vector<RenderMultiColumnSpannerPlaceholder*> placeholdersToRestore;
     for (auto& spannerAndPlaceholder : spanners) {
         auto& placeholder = *spannerAndPlaceholder.value;
-        if (!placeholder.isDescendantOf(&container))
-            continue;
-        placeholdersToRestore.append(&placeholder);
-    }
+#if PLATFORM(JAVA)
+        if (spannerAndPlaceholder.value.get() != nullptr)
+        {
+#endif
+            if (!placeholder.isDescendantOf(&container))
+                continue;
+            placeholdersToRestore.append(&placeholder);
+#if PLATFORM(JAVA)
+        }
+#endif
+     }
     for (auto* placeholder : placeholdersToRestore) {
         auto* spanner = placeholder->spanner();
         if (!spanner) {

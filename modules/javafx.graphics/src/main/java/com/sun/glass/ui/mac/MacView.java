@@ -78,6 +78,7 @@ final class MacView extends View {
     @Override native protected boolean _enterFullscreen(long ptr, boolean animate, boolean keepRatio, boolean hideCursor);
     @Override native protected void _exitFullscreen(long ptr, boolean animate);
     @Override native protected void _enableInputMethodEvents(long ptr, boolean enable);
+    @Override native protected void _finishInputMethodComposition(long ptr);
 
     @Override protected void _uploadPixels(long ptr, Pixels pixels) {
         Buffer data = pixels.getPixels();
