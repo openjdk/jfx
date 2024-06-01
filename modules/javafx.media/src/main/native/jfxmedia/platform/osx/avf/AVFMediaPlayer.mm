@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@
 #import <objc/runtime.h>
 #import "CVVideoFrame.h"
 
+#import <jni/Logger.h>
 #import <PipelineManagement/NullAudioEqualizer.h>
 #import <PipelineManagement/NullAudioSpectrum.h>
 
@@ -48,12 +49,28 @@ static void *AVFMediaPlayerItemStatusContext = &AVFMediaPlayerItemStatusContext;
 static void *AVFMediaPlayerItemDurationContext = &AVFMediaPlayerItemDurationContext;
 static void *AVFMediaPlayerItemTracksContext = &AVFMediaPlayerItemTracksContext;
 
+// See JDK-8328603. For some streams if we let AVFoundation to decide
+// the format and decided format is not supported video will not be outputed
+// after we force AVFoundation to supported format (FALLBACK_VO_FORMAT).
+// Not sure why it happens, but if we provide supported by JavaFX Media format
+// list to AVFoundation will use one of them and no video issue is no longer
+// reproducible. We will still have fallback to FALLBACK_VO_FORMAT even if it
+// is in the list of prefered formats.
+// Uncomment to force list of supported formats by JavaFX.
+// Note: This array should match CVVideoFrame::IsFormatSupported().
+#define VO_FORMATS @{(id)kCVPixelBufferPixelFormatTypeKey: @[@(kCVPixelFormatType_422YpCbCr8),\
+                                                           @(kCVPixelFormatType_420YpCbCr8Planar),\
+                                                           @(kCVPixelFormatType_32BGRA)]}
+// Uncomment to let AVFoundation decide the format...
+//#define VO_FORMATS @{}
+
 #define FORCE_VO_FORMAT 0
 #if FORCE_VO_FORMAT
 // #define FORCED_VO_FORMAT kCVPixelFormatType_32BGRA
 // #define FORCED_VO_FORMAT kCVPixelFormatType_422YpCbCr8
 // #define FORCED_VO_FORMAT kCVPixelFormatType_420YpCbCr8Planar
  #define FORCED_VO_FORMAT kCVPixelFormatType_422YpCbCr8_yuvs // Unsupported, use to test fallback
+// #define FORCED_VO_FORMAT kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange // Unsupported, use to test fallback
 #endif
 
 // Apple really likes to output '2vuy', this should be the least expensive conversion
@@ -268,7 +285,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 #if FORCE_VO_FORMAT
                              @{(id)kCVPixelBufferPixelFormatTypeKey: @(FORCED_VO_FORMAT)}];
 #else
-                             @{}]; // let AVFoundation decide the format...
+                             VO_FORMATS];
 #endif
             if (!_playerOutput) {
                 return;
@@ -751,7 +768,6 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         (AVAssetResourceLoadingRequest *)loadingRequest {
     AVAssetResourceLoadingContentInformationRequest* contentRequest = loadingRequest.contentInformationRequest;
     AVAssetResourceLoadingDataRequest* dataRequest = loadingRequest.dataRequest;
-    NSURLResponse *response = loadingRequest.response;
 
     if (locatorStream == NULL) {
         return NO;
