@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,16 +26,18 @@
 package test.javafx.scene.layout;
 
 import javafx.scene.layout.BorderWidths;
-import org.junit.Test;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * TODO The spec doesn't seem to indicate, but what do we do (if anything) with percentages
  * above 100%?
  */
 public class BorderWidthsTest {
-    @Test public void instanceCreation() {
+    @Test
+    public void instanceCreation() {
         BorderWidths widths = new BorderWidths(1, 2, 3, 4, false, true, false, true);
         assertEquals(1, widths.getTop(), 0);
         assertEquals(2, widths.getRight(), 0);
@@ -95,49 +97,49 @@ public class BorderWidthsTest {
         assertFalse(widths.isLeftAsPercentage());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void cannotSpecifyNegativeWidth() {
-        new BorderWidths(-2);
+        assertThrows(IllegalArgumentException.class, () -> new BorderWidths(-2));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void cannotSpecifyNegativeTop() {
-        new BorderWidths(-2, 0, 0, 0, false, false, false, false);
+        assertThrows(IllegalArgumentException.class, () -> new BorderWidths(-2, 0, 0, 0, false, false, false, false));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void cannotSpecifyNegativeTop2() {
-        new BorderWidths(-2, 0, 0, 0);
+        assertThrows(IllegalArgumentException.class, () -> new BorderWidths(-2, 0, 0, 0));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void cannotSpecifyNegativeRight() {
-        new BorderWidths(0, -2, 0, 0, false, false, false, false);
+        assertThrows(IllegalArgumentException.class, () -> new BorderWidths(0, -2, 0, 0, false, false, false, false));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void cannotSpecifyNegativeRight2() {
-        new BorderWidths(0, -2, 0, 0);
+        assertThrows(IllegalArgumentException.class, () -> new BorderWidths(0, -2, 0, 0));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void cannotSpecifyNegativeBottom() {
-        new BorderWidths(0, 0, -2, 0, false, false, false, false);
+        assertThrows(IllegalArgumentException.class, () -> new BorderWidths(0, 0, -2, 0, false, false, false, false));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void cannotSpecifyNegativeBottom2() {
-        new BorderWidths(0, 0, -2, 0);
+        assertThrows(IllegalArgumentException.class, () -> new BorderWidths(0, 0, -2, 0));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void cannotSpecifyNegativeLeft() {
-        new BorderWidths(0, 0, 0, -2, false, false, false, false);
+        assertThrows(IllegalArgumentException.class, () -> new BorderWidths(0, 0, 0, -2, false, false, false, false));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void cannotSpecifyNegativeLeft2() {
-        new BorderWidths(0, 0, 0, -2);
+        assertThrows(IllegalArgumentException.class, () -> new BorderWidths(0, 0, 0, -2));
     }
 
     @Test public void equality() {
@@ -205,5 +207,51 @@ public class BorderWidthsTest {
     @SuppressWarnings("unlikely-arg-type")
     @Test public void noEqualToRandom() {
         assertFalse(BorderWidths.DEFAULT.equals("Some random value"));
+    }
+
+    @Nested
+    class InterpolationTests {
+        @Test
+        public void interpolateBetweenDifferentValuesReturnsNewInstance() {
+            var a = new BorderWidths(10, 20, 30, 40, true, false, true, false);
+            var b = new BorderWidths(20, 40, 60, 80, true, false, true, false);
+            var expect = new BorderWidths(15, 30, 45, 60, true, false, true, false);
+            assertEquals(expect, a.interpolate(b, 0.5));
+        }
+
+        @Test
+        public void interpolateBetweenEqualValuesReturnsStartInstance() {
+            var a = new BorderWidths(10, 20, 30, 40, true, false, true, false);
+            var b = new BorderWidths(10, 20, 30, 40, true, false, true, false);
+            assertSame(a, a.interpolate(b, 0.5));
+        }
+
+        @Test
+        public void interpolateBetweenAbsoluteAndRelativeValuesReturnsStartInstanceOrNewInstanceEqualToEndValue() {
+            var a = new BorderWidths(10, 20, 30, 40, false, false, false, false);
+            var b = new BorderWidths(10, 20, 30, 40, true, false, false, false);
+            assertSame(a, a.interpolate(b, 0)); // start value for t == 0
+
+            var v = a.interpolate(b, 0.5); // new instance for t > 0
+            assertEquals(b, v);
+            assertNotSame(a, v);
+            assertNotSame(b, v);
+        }
+
+        @Test
+        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+            var a = new BorderWidths(10, 20, 30, 40, true, false, true, false);
+            var b = new BorderWidths(20, 40, 60, 80, true, false, true, false);
+            assertSame(a, a.interpolate(b, 0));
+            assertSame(a, a.interpolate(b, -1));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+            var a = new BorderWidths(10, 20, 30, 40, true, false, true, false);
+            var b = new BorderWidths(20, 40, 60, 80, true, false, true, false);
+            assertSame(b, a.interpolate(b, 1));
+            assertSame(b, a.interpolate(b, 1.5));
+        }
     }
 }

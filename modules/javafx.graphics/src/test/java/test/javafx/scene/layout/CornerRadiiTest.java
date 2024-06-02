@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,6 +59,37 @@ public class CornerRadiiTest {
     @Test
     public void negativeRadiusNotAllowed_singleConstructor() {
         assertThrows(IllegalArgumentException.class, () -> new CornerRadii(-1));
+    }
+
+    @Test
+    public void equality() {
+        for (int i = 0; i < 8; ++i) {
+            double[] r = new double[8];
+            boolean[] p = new boolean[8];
+
+            r[i] = 1;
+            p[i] = true;
+
+            var expected = new CornerRadii(
+                r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7],
+                p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
+
+            var a = new CornerRadii(
+                r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7],
+                p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
+
+            assertEquals(expected, a);
+
+            // change one radius at a time
+            r[i] = 0;
+            p[i] = false;
+
+            var b = new CornerRadii(
+                r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7],
+                p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
+
+            assertNotEquals(expected, b);
+        }
     }
 
     @Nested
@@ -121,6 +152,65 @@ public class CornerRadiiTest {
                     String.join(", ", DoubleStream.of(arg).limit(8).mapToObj(Double::toString).toList()) + ", " +
                     String.join(", ", DoubleStream.of(arg).skip(8).mapToObj(d -> Boolean.toString(d > 0)).toList()));
             }
+        }
+    }
+
+    @Nested
+    class InterpolationTests {
+        @Test
+        public void interpolateBetweenDifferentValuesReturnsNewInstance() {
+            // non-uniform values
+            var a = new CornerRadii(10, 20, 30, 40, false);
+            var b = new CornerRadii(20, 40, 60, 80, false);
+            var expect = new CornerRadii(15, 30, 45, 60, false);
+            assertEquals(expect, a.interpolate(b, 0.5));
+
+            // uniform values
+            a = new CornerRadii(10, 10, 10, 10, false);
+            b = new CornerRadii(20, 20, 20, 20, false);
+            expect = new CornerRadii(15, 15, 15, 15, false);
+            assertEquals(expect, a.interpolate(b, 0.5));
+        }
+
+        @Test
+        public void interpolateBetweenEqualValuesReturnsStartInstance() {
+            // non-uniform values
+            var a = new CornerRadii(10, 20, 30, 40, false);
+            var b = new CornerRadii(10, 20, 30, 40, false);
+            assertSame(a, a.interpolate(b, 0.5));
+
+            // uniform values
+            a = new CornerRadii(10, 10, 10, 10, false);
+            b = new CornerRadii(10, 10, 10, 10, false);
+            assertSame(a, a.interpolate(b, 0.5));
+        }
+
+        @Test
+        public void interpolateBetweenAbsoluteAndRelativeValuesReturnsStartInstanceOrNewInstanceEqualToEndValue() {
+            var a = new CornerRadii(10, 20, 30, 40, false);
+            var b = new CornerRadii(0.5, 0.6, 0.7, 0.8, true);
+            assertSame(a, a.interpolate(b, 0)); // start value for t == 0
+
+            var v = a.interpolate(b, 0.5); // new instance for t > 0
+            assertEquals(b, v);
+            assertNotSame(a, v);
+            assertNotSame(b, v);
+        }
+
+        @Test
+        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+            var a = new CornerRadii(10, 20, 30, 40, false);
+            var b = new CornerRadii(20, 30, 40, 50, false);
+            assertSame(a, a.interpolate(b, 0));
+            assertSame(a, a.interpolate(b, -1));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+            var a = new CornerRadii(10, 20, 30, 40, false);
+            var b = new CornerRadii(20, 30, 40, 50, false);
+            assertSame(b, a.interpolate(b, 1));
+            assertSame(b, a.interpolate(b, 1.5));
         }
     }
 }

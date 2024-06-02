@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package javafx.scene.paint;
 
+import com.sun.javafx.util.Utils;
+import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 import javafx.scene.image.Image;
 import com.sun.javafx.beans.event.AbstractNotifyListener;
@@ -130,7 +132,7 @@ public class HelloImagePattern extends Application {
  *
  * @since JavaFX 2.2
  */
-public final class ImagePattern extends Paint {
+public final class ImagePattern extends Paint implements Interpolatable<ImagePattern> {
 
     private Image image;
 
@@ -268,6 +270,39 @@ public final class ImagePattern extends Paint {
         this.width = width;
         this.height = height;
         this.proportional = proportional;
+    }
+
+    @Override
+    public ImagePattern interpolate(ImagePattern endValue, double t) {
+        if (t <= 0 || equals(endValue)) {
+            return this;
+        }
+
+        if (t >= 1 || proportional != endValue.proportional) {
+            return endValue;
+        }
+
+        return new ImagePattern(
+            endValue.image,
+            Utils.interpolate(x, endValue.x, t),
+            Utils.interpolate(y, endValue.y, t),
+            Utils.interpolate(width, endValue.width, t),
+            Utils.interpolate(height, endValue.height, t),
+            endValue.proportional);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof ImagePattern other) {
+            return proportional == other.proportional
+                && x == other.x
+                && y == other.y
+                && width == other.width
+                && height == other.height
+                && image.equals(other.image);
+        }
+
+        return false;
     }
 
     @Override

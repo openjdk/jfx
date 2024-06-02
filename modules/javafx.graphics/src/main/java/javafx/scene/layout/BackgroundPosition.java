@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package javafx.scene.layout;
 
+import com.sun.javafx.util.Utils;
+import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 import javafx.geometry.Side;
 
@@ -49,7 +51,7 @@ import javafx.geometry.Side;
  * the Region's right edge.
  * @since JavaFX 8.0
  */
-public class BackgroundPosition {
+public final class BackgroundPosition implements Interpolatable<BackgroundPosition> {
     /**
      * The default BackgroundPosition for any BackgroundImage. The default
      * is to have no insets and to be defined as 0% and 0%. That is, the
@@ -173,6 +175,33 @@ public class BackgroundPosition {
         result = 31 * result + (this.horizontalAsPercentage ? 1 : 0);
         result = 31 * result + (this.verticalAsPercentage ? 1 : 0);
         hash = result;
+    }
+
+    @Override
+    public BackgroundPosition interpolate(BackgroundPosition endValue, double t) {
+        if (t <= 0 || equals(endValue)) {
+            return this;
+        }
+
+        if (t >= 1) {
+            return endValue;
+        }
+
+        double horizontalPosition = horizontalSide == endValue.horizontalSide ?
+            Utils.interpolate(
+                this.horizontalPosition, endValue.horizontalPosition,
+                this.horizontalAsPercentage, endValue.horizontalAsPercentage, t) :
+            endValue.horizontalPosition;
+
+        double verticalPosition = verticalSide == endValue.verticalSide ?
+            Utils.interpolate(
+                this.verticalPosition, endValue.verticalPosition,
+                this.verticalAsPercentage, endValue.verticalAsPercentage, t) :
+            endValue.verticalPosition;
+
+        return new BackgroundPosition(
+            endValue.horizontalSide, horizontalPosition, endValue.horizontalAsPercentage,
+            endValue.verticalSide, verticalPosition, endValue.verticalAsPercentage);
     }
 
     /**

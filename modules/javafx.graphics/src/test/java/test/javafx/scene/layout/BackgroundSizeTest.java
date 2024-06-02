@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,15 +26,18 @@
 package test.javafx.scene.layout;
 
 import javafx.scene.layout.BackgroundSize;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static javafx.scene.layout.BackgroundSize.AUTO;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  */
 public class BackgroundSizeTest {
-    @Test public void instanceCreation() {
+    @Test
+    public void instanceCreation() {
         BackgroundSize size = new BackgroundSize(1, 2, true, false, true, false);
         assertEquals(1, size.getWidth(), 0);
         assertEquals(2, size.getHeight(), 0);
@@ -64,32 +67,42 @@ public class BackgroundSizeTest {
         assertFalse(size.isCover());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void negativeWidthThrowsException() {
-        new BackgroundSize(-.2, 1, true, true, false, false);
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> new BackgroundSize(-.2, 1, true, true, false, false));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void negativeWidthThrowsException2() {
-        new BackgroundSize(-2, 1, true, true, false, false);
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> new BackgroundSize(-2, 1, true, true, false, false));
     }
 
-    @Ignore("JDK-8234090")
-    @Test(expected = IllegalArgumentException.class)
+    @Disabled("JDK-8234090")
+    @Test
     public void positiveInfinityWidthThrowsException() {
-        new BackgroundSize(Double.POSITIVE_INFINITY, 1, true, true, false, false);
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> new BackgroundSize(Double.POSITIVE_INFINITY, 1, true, true, false, false));
     }
 
-    @Ignore("JDK-8234090")
-    @Test(expected = IllegalArgumentException.class)
+    @Disabled("JDK-8234090")
+    @Test
     public void negativeInfinityWidthThrowsException() {
-        new BackgroundSize(Double.NEGATIVE_INFINITY, 1, true, true, false, false);
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> new BackgroundSize(Double.NEGATIVE_INFINITY, 1, true, true, false, false));
     }
 
-    @Ignore("JDK-8234090")
-    @Test(expected = IllegalArgumentException.class)
+    @Disabled("JDK-8234090")
+    @Test
     public void nanWidthThrowsException() {
-        new BackgroundSize(Double.NaN, 1, true, true, false, false);
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> new BackgroundSize(Double.NaN, 1, true, true, false, false));
     }
 
     @Test public void negativeZeroWidthIsOK() {
@@ -99,35 +112,45 @@ public class BackgroundSizeTest {
 
     @Test public void autoWidthIsOK() {
         BackgroundSize size = new BackgroundSize(-1, 1, true, true, false, false);
-        assertEquals(BackgroundSize.AUTO, size.getWidth(), 0);
+        assertEquals(AUTO, size.getWidth(), 0);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void negativeHeightThrowsException() {
-        new BackgroundSize(1, -.1, true, true, false, false);
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> new BackgroundSize(1, -.1, true, true, false, false));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void negativeHeightThrowsException2() {
-        new BackgroundSize(1, -2, true, true, false, false);
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> new BackgroundSize(1, -2, true, true, false, false));
     }
 
-    @Ignore("JDK-8234090")
-    @Test(expected = IllegalArgumentException.class)
+    @Disabled("JDK-8234090")
+    @Test
     public void positiveInfinityHeightThrowsException() {
-        new BackgroundSize(1, Double.POSITIVE_INFINITY, true, true, false, false);
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> new BackgroundSize(1, Double.POSITIVE_INFINITY, true, true, false, false));
     }
 
-    @Ignore("JDK-8234090")
-    @Test(expected = IllegalArgumentException.class)
+    @Disabled("JDK-8234090")
+    @Test
     public void negativeInfinityHeightThrowsException() {
-        new BackgroundSize(1, Double.NEGATIVE_INFINITY, true, true, false, false);
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> new BackgroundSize(1, Double.NEGATIVE_INFINITY, true, true, false, false));
     }
 
-    @Ignore("JDK-8234090")
-    @Test(expected = IllegalArgumentException.class)
+    @Disabled("JDK-8234090")
+    @Test
     public void nanHeightThrowsException() {
-        new BackgroundSize(1, Double.NaN, true, true, false, false);
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> new BackgroundSize(1, Double.NaN, true, true, false, false));
     }
 
     @Test public void negativeZeroHeightIsOK() {
@@ -137,7 +160,7 @@ public class BackgroundSizeTest {
 
     @Test public void autoHeightIsOK() {
         BackgroundSize size = new BackgroundSize(1, -1, true, true, false, false);
-        assertEquals(BackgroundSize.AUTO, size.getHeight(), 0);
+        assertEquals(AUTO, size.getHeight(), 0);
     }
 
     @Test public void equivalent() {
@@ -245,5 +268,67 @@ public class BackgroundSizeTest {
     @Test public void notEqualToRandom() {
         BackgroundSize a = new BackgroundSize(1, .5, true, true, true, false);
         assertFalse(a.equals("Some random object"));
+    }
+
+    @Nested
+    class InterpolationTests {
+        @Test
+        public void interpolateBetweenDifferentValuesReturnsNewInstance() {
+            var a = new BackgroundSize(10, 20, false, false, false, false);
+            var b = new BackgroundSize(20, 40, false, false, false, false);
+            var expect = new BackgroundSize(15, 30, false, false, false, false);
+            assertEquals(expect, a.interpolate(b, 0.5));
+        }
+
+        @Test
+        public void interpolateBetweenEqualValuesReturnsStartInstance() {
+            var a = new BackgroundSize(10, 20, false, false, false, false);
+            var b = new BackgroundSize(10, 20, false, false, false, false);
+            assertSame(a, a.interpolate(b, 0.5));
+        }
+
+        @Test
+        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+            var a = new BackgroundSize(10, 20, false, false, false, false);
+            var b = new BackgroundSize(20, 40, false, false, false, false);
+            assertSame(a, a.interpolate(b, 0));
+            assertSame(a, a.interpolate(b, -0.5));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+            var a = new BackgroundSize(10, 20, false, false, false, false);
+            var b = new BackgroundSize(20, 40, false, false, false, false);
+            assertSame(b, a.interpolate(b, 1));
+            assertSame(b, a.interpolate(b, 1.5));
+        }
+
+        @Test
+        public void widthOrHeightLessThanZeroCannotBeInterpolated() {
+            var a = new BackgroundSize(10, 20, false, false, false, false);
+            var b = new BackgroundSize(AUTO, 40, false, false, false, false);
+            var expect = new BackgroundSize(AUTO, 30, false, false, false, false);
+            assertEquals(expect, a.interpolate(b, 0.5));
+
+            a = new BackgroundSize(20, 10, false, false, false, false);
+            b = new BackgroundSize(40, AUTO, false, false, false, false);
+            expect = new BackgroundSize(30, AUTO, false, false, false, false);
+            assertEquals(expect, a.interpolate(b, 0.5));
+        }
+
+        @Test
+        public void notInterpolatableReturnsEndInstance() {
+            var a = new BackgroundSize(10, 10, false, false, false, true);
+            var b = new BackgroundSize(20, 20, false, false, false, false);
+            assertSame(b, a.interpolate(b, 0.5));
+
+            a = new BackgroundSize(10, 10, false, false, false, false);
+            b = new BackgroundSize(20, 20, false, false, true, false);
+            assertSame(b, a.interpolate(b, 0.5));
+
+            a = new BackgroundSize(AUTO, AUTO, false, false, false, false);
+            b = new BackgroundSize(20, 20, false, false, false, false);
+            assertSame(b, a.interpolate(b, 0.5));
+        }
     }
 }

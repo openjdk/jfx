@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,12 +26,10 @@
 package test.javafx.geometry;
 
 import javafx.geometry.Insets;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class InsetsTest {
     @Test
@@ -62,6 +60,39 @@ public class InsetsTest {
     public void testToString() {
         Insets p1 = new Insets(0, 0, 0, 0);
         assertNotNull(p1.toString());
+    }
 
+    @Nested
+    class InterpolationTest {
+        @Test
+        public void interpolateBetweenTwoDifferentValuesReturnsNewInstance() {
+            var a = new Insets(2, 4, 6, 8);
+            var b = new Insets(4, 8, 12, 16);
+            var expected = new Insets(3, 6, 9, 12);
+            assertEquals(expected, a.interpolate(b, 0.5));
+        }
+
+        @Test
+        public void interpolateBetweenTwoEqualValuesReturnsStartInstance() {
+            var a = new Insets(2, 4, 6, 8);
+            var b = new Insets(2, 4, 6, 8);
+            assertSame(a, a.interpolate(b, 0.5));
+        }
+
+        @Test
+        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+            var a = new Insets(2, 4, 6, 8);
+            var b = new Insets(4, 8, 12, 16);
+            assertSame(a, a.interpolate(b, 0));
+            assertSame(a, a.interpolate(b, -1));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+            var a = new Insets(2, 4, 6, 8);
+            var b = new Insets(4, 8, 12, 16);
+            assertSame(b, a.interpolate(b, 1));
+            assertSame(b, a.interpolate(b, 1.5));
+        }
     }
 }

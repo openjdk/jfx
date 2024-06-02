@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,9 @@
 
 package javafx.scene.layout;
 
+import com.sun.javafx.util.Utils;
+import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
-
 
 /**
  * Defines widths for four components (top, right, bottom, and left).
@@ -41,7 +42,7 @@ import javafx.beans.NamedArg;
  * cache, and can safely be reused among multiple Regions.
  * @since JavaFX 8.0
  */
-public final class BorderWidths {
+public final class BorderWidths implements Interpolatable<BorderWidths> {
     /**
      * When used by a BorderStroke, the value of AUTO is interpreted as the
      * value of {@link BorderStroke#MEDIUM} for the corresponding side. When
@@ -221,6 +222,25 @@ public final class BorderWidths {
         result = 31 * result + (this.bottomAsPercentage ? 1 : 0);
         result = 31 * result + (this.leftAsPercentage ? 1 : 0);
         hash = result;
+    }
+
+    @Override
+    public BorderWidths interpolate(BorderWidths endValue, double t) {
+        if (t <= 0 || equals(endValue)) {
+            return this;
+        }
+
+        if (t >= 1) {
+            return endValue;
+        }
+
+        double top = Utils.interpolate(this.top, endValue.top, this.topAsPercentage, endValue.topAsPercentage, t);
+        double right = Utils.interpolate(this.right, endValue.right, this.rightAsPercentage, endValue.rightAsPercentage, t);
+        double bottom = Utils.interpolate(this.bottom, endValue.bottom, this.bottomAsPercentage, endValue.bottomAsPercentage, t);
+        double left = Utils.interpolate(this.left, endValue.left, this.leftAsPercentage, endValue.leftAsPercentage, t);
+
+        return new BorderWidths(top, right, bottom, left, endValue.topAsPercentage, endValue.rightAsPercentage,
+                                endValue.bottomAsPercentage, endValue.leftAsPercentage);
     }
 
     /**

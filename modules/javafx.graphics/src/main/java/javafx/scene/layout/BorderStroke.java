@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package javafx.scene.layout;
 
+import com.sun.javafx.scene.paint.PaintUtils;
+import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 import javafx.geometry.Insets;
 import javafx.scene.paint.Color;
@@ -45,7 +47,7 @@ import javafx.scene.shape.StrokeType;
  *
  * @since JavaFX 8.0
  */
-public class BorderStroke {
+public final class BorderStroke implements Interpolatable<BorderStroke> {
     /**
      * The default insets when "thin" is specified.
      */
@@ -356,6 +358,59 @@ public class BorderStroke {
         } else {
             throw new AssertionError("Unexpected Stroke Type");
         }
+    }
+
+    @Override
+    public BorderStroke interpolate(BorderStroke endValue, double t) {
+        // We don't check equals(endValue) here to prevent unnecessary equality checks,
+        // and only check for equality with 'this' or 'endValue' after interpolation.
+        if (t <= 0) {
+            return this;
+        }
+
+        if (t >= 1) {
+            return endValue;
+        }
+
+        // CornerRadii, BorderWidths, Insets and Paint are implemented such that interpolate() always returns
+        // the existing instance if the intermediate value is equal to the start value or the end value,
+        // which allows us to use an identity comparison in place of a value comparison to determine equality.
+        CornerRadii newRadii = this.radii.interpolate(endValue.radii, t);
+        BorderWidths newWidths = this.widths.interpolate(endValue.widths, t);
+        Insets newInsets = this.insets.interpolate(endValue.insets, t);
+        Paint newTopStroke = PaintUtils.interpolate(this.topStroke, endValue.topStroke, t);
+        Paint newRightStroke = PaintUtils.interpolate(this.rightStroke, endValue.rightStroke, t);
+        Paint newBottomStroke = PaintUtils.interpolate(this.bottomStroke, endValue.bottomStroke, t);
+        Paint newLeftStroke = PaintUtils.interpolate(this.leftStroke, endValue.leftStroke, t);
+
+        if (topStyle == endValue.topStyle
+                && rightStyle == endValue.rightStyle
+                && bottomStyle == endValue.bottomStyle
+                && leftStyle == endValue.leftStyle
+                && isSame(newTopStroke, newRightStroke, newBottomStroke, newLeftStroke,
+                          newRadii, newWidths, newInsets)) {
+            return this;
+        }
+
+        if (endValue.isSame(newTopStroke, newRightStroke, newBottomStroke, newLeftStroke,
+                            newRadii, newWidths, newInsets)) {
+            return endValue;
+        }
+
+        return new BorderStroke(newTopStroke, newRightStroke, newBottomStroke, newLeftStroke,
+                                endValue.topStyle, endValue.rightStyle, endValue.bottomStyle, endValue.leftStyle,
+                                newRadii, newWidths, newInsets);
+    }
+
+    private boolean isSame(Paint topStroke, Paint rightStroke, Paint bottomStroke, Paint leftStroke,
+                           CornerRadii radii, BorderWidths widths, Insets insets) {
+        return this.topStroke == topStroke
+            && this.rightStroke == rightStroke
+            && this.bottomStroke == bottomStroke
+            && this.leftStroke == leftStroke
+            && this.radii == radii
+            && this.widths == widths
+            && this.insets == insets;
     }
 
     /**

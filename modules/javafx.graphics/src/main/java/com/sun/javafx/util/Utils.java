@@ -27,6 +27,8 @@ package com.sun.javafx.util;
 
 import static com.sun.javafx.FXPermissions.ACCESS_WINDOW_LIST_PERMISSION;
 
+import com.sun.javafx.UnmodifiableArrayList;
+import javafx.animation.Interpolatable;
 import javafx.application.Platform;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
@@ -47,6 +49,8 @@ import java.util.List;
 import com.sun.javafx.PlatformUtil;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Objects;
+
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.prism.impl.PrismSettings;
 
@@ -141,6 +145,172 @@ public class Utils {
         double moreDiff = more - value;
         if (lessDiff < moreDiff) return less;
         return more;
+    }
+
+    /**
+     * Utility function that interpolates between two double values.
+     */
+    public static double interpolate(double from, double to, double t) {
+        return from + t * (to - from);
+    }
+
+    /**
+     * Utility function that interpolates between two double values, taking into account whether
+     * the values are absolute or percentage-based. If one value is absolute and the other is a
+     * percentage, then {@code from} is returned when {@code t == 0}, and {@code to} is returned
+     * otherwise.
+     */
+    public static double interpolate(double from, double to,
+                                     boolean fromIsPercentage, boolean toIsPercentage,
+                                     double t) {
+        if (fromIsPercentage == toIsPercentage) {
+            return interpolate(from, to, t);
+        }
+
+        return t > 0 ? to : from;
+    }
+
+    /**
+     * Computes an intermediate list that consists of the pairwise interpolation between two lists,
+     * using the following rules:
+     * <ol>
+     *     <li>The size of the returned list corresponds to the size of the second list.
+     *     <li>If the first list has fewer elements than the second list, the missing elements are copied
+     *         from the second list.
+     *     <li>If the first list has more elements than the second list, the excess elements are discarded.
+     *     <li>If the intermediate list is shallow-equal to the first list passed into the method (i.e. its
+     *         elements are references to the same objects), the existing list is returned.
+     *     <li>If a new list is returned, it is unmodifiable.
+     * </ol>
+     *
+     * @param firstList the first list, not {@code null}
+     * @param secondList the second list, not {@code null}
+     * @return the intermediate list
+     */
+    public static <T extends Interpolatable<T>> List<T> interpolateListsPairwise(
+            List<T> firstList, List<T> secondList, double t) {
+        Objects.requireNonNull(firstList, "firstList");
+        Objects.requireNonNull(secondList, "secondList");
+
+        if (secondList.isEmpty()) {
+            return firstList.isEmpty() ? firstList : secondList;
+        }
+
+        int listSize = firstList.size();
+
+        // For small equisized lists (up to 8 elements), we use an optimization to prevent the allocation
+        // of a new array in case the intermediate list would be equal to the existing list.
+        if (listSize <= 8 && listSize == secondList.size()) {
+            return interpolateEquisizedListsPairwise(firstList, secondList, t);
+        }
+
+        @SuppressWarnings("unchecked")
+        T[] newArray = (T[])new Interpolatable[secondList.size()];
+        boolean equal = firstList.size() == secondList.size();
+
+        for (int i = 0, firstListSize = firstList.size(); i < newArray.length; ++i) {
+            if (firstListSize > i) {
+                newArray[i] = firstList.get(i).interpolate(secondList.get(i), t);
+                equal &= newArray[i] == firstList.get(i);
+            } else {
+                newArray[i] = secondList.get(i);
+            }
+        }
+
+        return equal ? firstList : new UnmodifiableArrayList<>(newArray, newArray.length);
+    }
+
+    /**
+     * Computes an intermediate list that consists of the pairwise interpolation between two lists
+     * of equal size, each containing up to 8 elements.
+     * <p>
+     * This method is an optimization: it does not allocate memory when the intermediate list is
+     * shallow-equal to the list that is passed into this method, i.e. its elements are references
+     * to the same objects. The existing list is returned in this case.
+     */
+    private static <T extends Interpolatable<T>> List<T> interpolateEquisizedListsPairwise(
+            List<T> firstList, List<T> secondList, double t) {
+        int listSize = firstList.size();
+        if (listSize > 8 || listSize != secondList.size()) {
+            throw new AssertionError();
+        }
+
+        T item1 = null, item2 = null, item3 = null, item4 = null, item5 = null, item6 = null, item7 = null;
+        T item0 = firstList.get(0).interpolate(secondList.get(0), t);
+        boolean same = item0 == firstList.get(0);
+
+        if (listSize > 1) {
+            item1 = firstList.get(1).interpolate(secondList.get(1), t);
+            same &= item1 == firstList.get(1);
+
+            if (listSize > 2) {
+                item2 = firstList.get(2).interpolate(secondList.get(2), t);
+                same &= item2 == firstList.get(2);
+
+                if (listSize > 3) {
+                    item3 = firstList.get(3).interpolate(secondList.get(3), t);
+                    same &= item3 == firstList.get(3);
+
+                    if (listSize > 4) {
+                        item4 = firstList.get(4).interpolate(secondList.get(4), t);
+                        same &= item4 == firstList.get(4);
+
+                        if (listSize > 5) {
+                            item5 = firstList.get(5).interpolate(secondList.get(5), t);
+                            same &= item5 == firstList.get(5);
+
+                            if (listSize > 6) {
+                                item6 = firstList.get(6).interpolate(secondList.get(6), t);
+                                same &= item6 == firstList.get(6);
+
+                                if (listSize > 7) {
+                                    item7 = firstList.get(7).interpolate(secondList.get(7), t);
+                                    same &= item7 == firstList.get(7);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (same) {
+            return firstList;
+        }
+
+        @SuppressWarnings("unchecked")
+        T[] newArray = (T[])new Interpolatable[listSize];
+        newArray[0] = item0;
+
+        if (listSize > 1) {
+            newArray[1] = item1;
+
+            if (listSize > 2) {
+                newArray[2] = item2;
+
+                if (listSize > 3) {
+                    newArray[3] = item3;
+
+                    if (listSize > 4) {
+                        newArray[4] = item4;
+
+                        if (listSize > 5) {
+                            newArray[5] = item5;
+
+                            if (listSize > 6) {
+                                newArray[6] = item6;
+
+                                if (listSize > 7) {
+                                    newArray[7] = item7;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return new UnmodifiableArrayList<>(newArray, listSize);
     }
 
     /***************************************************************************

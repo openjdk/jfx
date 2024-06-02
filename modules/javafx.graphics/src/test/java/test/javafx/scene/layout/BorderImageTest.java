@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,54 +26,58 @@
 package test.javafx.scene.layout;
 
 import javafx.geometry.Insets;
-import javafx.scene.layout.BorderStroke;
+import javafx.scene.image.Image;
+import javafx.scene.layout.BorderImage;
+import javafx.scene.layout.BorderRepeat;
 import javafx.scene.layout.BorderWidths;
-import javafx.scene.layout.CornerRadii;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import static javafx.scene.layout.BorderStrokeStyle.*;
-import static javafx.scene.paint.Color.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Tests for BorderStroke.
- */
-public class BorderStrokeTest {
-    // be sure to test the innerEdge and outerEdge, I had bugs there!
-    @Test public void dummy() { }
+public class BorderImageTest {
+
+    private static final Image IMAGE_1 = new Image("test/javafx/scene/layout/red.png");
+    private static final Image IMAGE_2 = new Image("test/javafx/scene/layout/blue.png");
 
     @Nested
     class InterpolationTests {
+        final BorderImage BORDER_IMAGE_A = new BorderImage(
+            IMAGE_1, new BorderWidths(10), new Insets(8), new BorderWidths(6),
+            false, BorderRepeat.REPEAT, BorderRepeat.REPEAT);
+
+        final BorderImage BORDER_IMAGE_B = new BorderImage(
+            IMAGE_2, new BorderWidths(20), new Insets(4), new BorderWidths(12),
+            false, BorderRepeat.REPEAT, BorderRepeat.REPEAT);
+
         @Test
         public void interpolateBetweenDifferentValuesReturnsNewInstance() {
-            var a = new BorderStroke(RED, SOLID, new CornerRadii(10), new BorderWidths(5), new Insets(2));
-            var b = new BorderStroke(GREEN, DOTTED, new CornerRadii(20), new BorderWidths(15), new Insets(6));
-            var expect = new BorderStroke(RED.interpolate(GREEN, 0.5), DOTTED, new CornerRadii(15), new BorderWidths(10), new Insets(4));
-            assertEquals(expect, a.interpolate(b, 0.5));
+            var image = new BorderImage(
+                IMAGE_2, new BorderWidths(15), new Insets(6), new BorderWidths(9),
+                false, BorderRepeat.REPEAT, BorderRepeat.REPEAT);
+
+            assertEquals(image, BORDER_IMAGE_A.interpolate(BORDER_IMAGE_B, 0.5));
         }
 
         @Test
         public void interpolateBetweenEqualValuesReturnsStartInstance() {
-            var a = new BorderStroke(RED, SOLID, new CornerRadii(10), new BorderWidths(5), new Insets(2));
-            var b = new BorderStroke(RED, SOLID, new CornerRadii(10), new BorderWidths(5), new Insets(2));
-            assertSame(a, a.interpolate(b, 0.5));
+            var image = new BorderImage(
+                IMAGE_1, new BorderWidths(10), new Insets(8), new BorderWidths(6),
+                false, BorderRepeat.REPEAT, BorderRepeat.REPEAT);
+
+            assertSame(image, image.interpolate(BORDER_IMAGE_A, 0.5));
         }
 
         @Test
         public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
-            var a = new BorderStroke(RED, SOLID, new CornerRadii(10), new BorderWidths(5), new Insets(2));
-            var b = new BorderStroke(GREEN, SOLID, new CornerRadii(20), new BorderWidths(15), new Insets(6));
-            assertSame(a, a.interpolate(b, 0));
-            assertSame(a, a.interpolate(b, -0.5));
+            assertSame(BORDER_IMAGE_A, BORDER_IMAGE_A.interpolate(BORDER_IMAGE_B, 0));
+            assertSame(BORDER_IMAGE_A, BORDER_IMAGE_A.interpolate(BORDER_IMAGE_B, -0.5));
         }
 
         @Test
         public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
-            var a = new BorderStroke(RED, SOLID, new CornerRadii(10), new BorderWidths(5), new Insets(2));
-            var b = new BorderStroke(GREEN, SOLID, new CornerRadii(20), new BorderWidths(15), new Insets(6));
-            assertSame(b, a.interpolate(b, 1));
-            assertSame(b, a.interpolate(b, 1.5));
+            assertSame(BORDER_IMAGE_B, BORDER_IMAGE_A.interpolate(BORDER_IMAGE_B, 1));
+            assertSame(BORDER_IMAGE_B, BORDER_IMAGE_A.interpolate(BORDER_IMAGE_B, 1.5));
         }
     }
 }

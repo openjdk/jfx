@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,8 @@ import java.util.List;
 
 import com.sun.javafx.scene.paint.GradientUtils;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.Utils;
+import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 
 /**
@@ -72,7 +74,7 @@ r2.setFill(lg2);
 </PRE>
  * @since JavaFX 2.0
  */
-public final class LinearGradient extends Paint {
+public final class LinearGradient extends Paint implements Interpolatable<LinearGradient> {
     private double startX;
 
     /**
@@ -265,6 +267,24 @@ public final class LinearGradient extends Paint {
     }
 
     /**
+     * Private constructor accepting a stop list that is already normalized.
+     * This constructor is only called from the {@link #interpolate} method.
+     */
+    private LinearGradient(
+            double startX, double startY, double endX, double endY,
+            boolean proportional, CycleMethod cycleMethod, List<Stop> stops,
+            int ignored) {
+        this.startX = startX;
+        this.startY = startY;
+        this.endX = endX;
+        this.endY = endY;
+        this.proportional = proportional;
+        this.cycleMethod = cycleMethod;
+        this.stops = stops;
+        this.opaque = determineOpacity();
+    }
+
+    /**
      * Iterate over all the stops. If any one of them has a transparent
      * color, then we return false. If there are no stops, we return false.
      * Otherwise, we return true. Note that this is called AFTER Stop.normalize,
@@ -288,6 +308,45 @@ public final class LinearGradient extends Paint {
             platformPaint = Toolkit.getToolkit().getPaint(this);
         }
         return platformPaint;
+    }
+
+    @Override
+    public LinearGradient interpolate(LinearGradient endValue, double t) {
+        // We don't check equals(endValue) here to prevent unnecessary equality checks,
+        // and only check for equality with 'this' or 'endValue' after interpolation.
+        if (t <= 0.0) {
+            return this;
+        }
+
+        if (t >= 1.0 || proportional != endValue.proportional) {
+            return endValue;
+        }
+
+        double newStartX = Utils.interpolate(this.startX, endValue.startX, t);
+        double newStartY = Utils.interpolate(this.startY, endValue.startY, t);
+        double newEndX = Utils.interpolate(this.endX, endValue.endX, t);
+        double newEndY = Utils.interpolate(this.endY, endValue.endY, t);
+        List<Stop> newStops = Stop.interpolateLists(this.stops, endValue.stops, t);
+
+        if (cycleMethod == endValue.cycleMethod
+                && isSame(newStartX, newStartY, newEndX, newEndY, newStops)) {
+            return this;
+        }
+
+        if (endValue.isSame(newStartX, newStartY, newEndX, newEndY, newStops)) {
+            return endValue;
+        }
+
+        return new LinearGradient(newStartX, newStartY, newEndX, newEndY,
+                                  endValue.proportional, endValue.cycleMethod, newStops, 0);
+    }
+
+    private boolean isSame(double startX, double startY, double endX, double endY, List<Stop> stops) {
+        return this.startX == startX
+            && this.startY == startY
+            && this.endX == endX
+            && this.endY == endY
+            && this.stops == stops;
     }
 
     /**

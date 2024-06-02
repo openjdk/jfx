@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package javafx.scene.layout;
 
+import com.sun.javafx.util.Utils;
+import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 
 
@@ -54,7 +56,7 @@ import javafx.beans.NamedArg;
  * so as to use the image's intrinsic size, or if it cannot be determined, 100%.
  * @since JavaFX 8.0
  */
-public final class BackgroundSize {
+public final class BackgroundSize implements Interpolatable<BackgroundSize> {
     /**
      * From the CSS Specification:
      * <blockquote>
@@ -178,6 +180,33 @@ public final class BackgroundSize {
         result = 31 * result + (this.cover ? 1 : 0);
         result = 31 * result + (this.contain ? 1 : 0);
         hash = result;
+    }
+
+    @Override
+    public BackgroundSize interpolate(BackgroundSize endValue, double t) {
+        if (t <= 0 || equals(endValue)) {
+            return this;
+        }
+
+        if (t >= 1 || !isInterpolatable() || !endValue.isInterpolatable()) {
+            return endValue;
+        }
+
+        double width = this.width != AUTO && endValue.width != AUTO ?
+            Utils.interpolate(this.width, endValue.width, this.widthAsPercentage, endValue.widthAsPercentage, t) :
+            endValue.width;
+
+        double height = this.height != AUTO && endValue.height != AUTO ?
+            Utils.interpolate(this.height, endValue.height, this.heightAsPercentage, endValue.heightAsPercentage, t) :
+            endValue.height;
+
+        return new BackgroundSize(width, height,
+                                  endValue.widthAsPercentage, endValue.heightAsPercentage,
+                                  endValue.contain, endValue.cover);
+    }
+
+    private boolean isInterpolatable() {
+        return !cover && !contain && (width != AUTO || height != AUTO);
     }
 
     /**

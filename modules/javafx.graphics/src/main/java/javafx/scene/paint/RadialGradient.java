@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,8 @@ import java.util.List;
 
 import com.sun.javafx.scene.paint.GradientUtils;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.Utils;
+import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 
 /**
@@ -65,7 +67,7 @@ import javafx.beans.NamedArg;
  * They mark where the gradient should be exactly a particular color.
  * @since JavaFX 2.0
  */
-public final class RadialGradient extends Paint {
+public final class RadialGradient extends Paint implements Interpolatable<RadialGradient> {
     private double focusAngle;
 
     /**
@@ -286,6 +288,24 @@ public final class RadialGradient extends Paint {
     }
 
     /**
+     * Private constructor accepting a stop list that is already normalized.
+     * This constructor is only called from the {@link #interpolate} method.
+     */
+    private RadialGradient(
+            double focusAngle, double focusDistance, double centerX, double centerY, double radius,
+            boolean proportional, CycleMethod cycleMethod, List<Stop> stops, int ignored) {
+        this.focusAngle = focusAngle;
+        this.focusDistance = focusDistance;
+        this.centerX = centerX;
+        this.centerY = centerY;
+        this.radius = radius;
+        this.proportional = proportional;
+        this.cycleMethod = cycleMethod;
+        this.stops = stops;
+        this.opaque = determineOpacity();
+    }
+
+    /**
      * Iterate over all the stops. If any one of them has a transparent
      * color, then we return false. If there are no stops, we return false.
      * Otherwise, we return true. Note that this is called AFTER Stop.normalize,
@@ -309,6 +329,48 @@ public final class RadialGradient extends Paint {
             platformPaint = Toolkit.getToolkit().getPaint(this);
         }
         return platformPaint;
+    }
+
+    @Override
+    public RadialGradient interpolate(RadialGradient endValue, double t) {
+        // We don't check equals(endValue) here to prevent unnecessary equality checks,
+        // and only check for equality with 'this' or 'endValue' after interpolation.
+        if (t <= 0.0) {
+            return this;
+        }
+
+        if (t >= 1.0 || proportional != endValue.proportional) {
+            return endValue;
+        }
+
+        double newFocusAngle = Utils.interpolate(this.focusAngle, endValue.focusAngle, t);
+        double newFocusDistance = Utils.interpolate(this.focusDistance, endValue.focusDistance, t);
+        double newCenterX = Utils.interpolate(this.centerX, endValue.centerX, t);
+        double newCenterY = Utils.interpolate(this.centerY, endValue.centerY, t);
+        double newRadius = Utils.interpolate(this.radius, endValue.radius, t);
+        List<Stop> newStops = Stop.interpolateLists(this.stops, endValue.stops, t);
+
+        if (cycleMethod == endValue.cycleMethod
+                && isSame(newFocusAngle, newFocusDistance, newCenterX, newCenterY, newRadius, newStops)) {
+            return this;
+        }
+
+        if (endValue.isSame(newFocusAngle, newFocusDistance, newCenterX, newCenterY, newRadius, newStops)) {
+            return endValue;
+        }
+
+        return new RadialGradient(newFocusAngle, newFocusDistance, newCenterX, newCenterY, newRadius,
+                                  endValue.proportional, endValue.cycleMethod, newStops, 0);
+    }
+
+    private boolean isSame(double focusAngle, double focusDistance, double centerX, double centerY,
+                           double radius, List<Stop> stops) {
+        return this.focusAngle == focusAngle
+            && this.focusDistance == focusDistance
+            && this.centerX == centerX
+            && this.centerY == centerY
+            && this.radius == radius
+            && this.stops == stops;
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package javafx.scene.layout;
 
+import com.sun.javafx.scene.paint.PaintUtils;
+import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 import javafx.geometry.Insets;
 import javafx.scene.paint.Color;
@@ -41,7 +43,7 @@ import javafx.scene.paint.Paint;
  * When applied to a Region with a defined shape, the corner radii are ignored.
  * @since JavaFX 8.0
  */
-public final class BackgroundFill {
+public final class BackgroundFill implements Interpolatable<BackgroundFill> {
     /**
      * The Paint to use for filling the background of the {@link Region}.
      * This value will never be null.
@@ -101,6 +103,37 @@ public final class BackgroundFill {
         result = 31 * result + this.radii.hashCode();
         result = 31 * result + this.insets.hashCode();
         hash = result;
+    }
+
+    @Override
+    public BackgroundFill interpolate(BackgroundFill endValue, double t) {
+        // We don't check equals(endValue) here to prevent unnecessary equality checks,
+        // and only check for equality with 'this' or 'endValue' after interpolation.
+        if (t <= 0) {
+            return this;
+        }
+
+        if (t >= 1) {
+            return endValue;
+        }
+
+        // CornerRadii, Insets and Paint are implemented such that interpolate() always returns the
+        // existing instance if the intermediate value is equal to the start value or the end value,
+        // which allows us to use an identity comparison in place of a value comparison to determine
+        // equality.
+        CornerRadii newRadii = radii.interpolate(endValue.radii, t);
+        Insets newInsets = insets.interpolate(endValue.insets, t);
+        Paint newFill = PaintUtils.interpolate(fill, endValue.fill, t);
+
+        if (newFill == fill && newRadii == radii && newInsets == insets) {
+            return this;
+        }
+
+        if (newFill == endValue.fill && newRadii == endValue.radii && newInsets == endValue.insets) {
+            return endValue;
+        }
+
+        return new BackgroundFill(newFill, newRadii, newInsets);
     }
 
     /**

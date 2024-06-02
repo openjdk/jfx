@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1938,7 +1938,8 @@ public final class Color extends Paint implements Interpolatable<Color> {
      * {@inheritDoc}
      */
     @Override public Color interpolate(Color endValue, double t) {
-        if (t <= 0.0) return this;
+        // If both instances are equal, return this instance to prevent the creation of numerous small objects.
+        if (t <= 0.0 || equals(endValue)) return this;
         if (t >= 1.0) return endValue;
         float ft = (float) t;
         return new Color(

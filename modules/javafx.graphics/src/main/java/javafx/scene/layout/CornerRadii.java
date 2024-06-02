@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,9 @@
 
 package javafx.scene.layout;
 
+import com.sun.javafx.util.Utils;
+import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
-
 
 /**
  * Defines the radii of each of the four corners of a BorderStroke. The
@@ -37,7 +38,7 @@ import javafx.beans.NamedArg;
  *
  * @since JavaFX 8.0
  */
-public class CornerRadii {
+public class CornerRadii implements Interpolatable<CornerRadii> {
     /**
      * A CornerRadii which is entirely empty, indicating squared corners.
      * This is the default value for a BorderStroke's radii.
@@ -357,6 +358,73 @@ public class CornerRadii {
         result = 31 * result + (bottomLeftHorizontalRadiusAsPercentage ? 1 : 0);
         result = 31 * result + result;
         return result;
+    }
+
+    @Override
+    public CornerRadii interpolate(CornerRadii endValue, double t) {
+        if (t <= 0 || equals(endValue)) {
+            return this;
+        }
+
+        if (t >= 1) {
+            return endValue;
+        }
+
+        return uniform && endValue.uniform ?
+            interpolateUniform(endValue, t) :
+            interpolateNonUniform(endValue, t);
+    }
+
+    private CornerRadii interpolateUniform(CornerRadii endValue, double t) {
+        double radius = Utils.interpolate(
+            this.topLeftHorizontalRadius, endValue.topLeftHorizontalRadius,
+            this.topLeftHorizontalRadiusAsPercentage, endValue.topLeftHorizontalRadiusAsPercentage, t);
+
+        return new CornerRadii(radius, endValue.topLeftHorizontalRadiusAsPercentage);
+    }
+
+    private CornerRadii interpolateNonUniform(CornerRadii endValue, double t) {
+        double topLeftHorizontalRadius = Utils.interpolate(
+            this.topLeftHorizontalRadius, endValue.topLeftHorizontalRadius,
+            this.topLeftHorizontalRadiusAsPercentage, endValue.topLeftHorizontalRadiusAsPercentage, t);
+
+        double topLeftVerticalRadius = Utils.interpolate(
+            this.topLeftVerticalRadius, endValue.topLeftVerticalRadius,
+            this.topLeftVerticalRadiusAsPercentage, endValue.topLeftVerticalRadiusAsPercentage, t);
+
+        double topRightVerticalRadius = Utils.interpolate(
+            this.topRightVerticalRadius, endValue.topRightVerticalRadius,
+            this.topRightVerticalRadiusAsPercentage, endValue.topRightVerticalRadiusAsPercentage, t);
+
+        double topRightHorizontalRadius = Utils.interpolate(
+            this.topRightHorizontalRadius, endValue.topRightHorizontalRadius,
+            this.topRightHorizontalRadiusAsPercentage, endValue.topRightHorizontalRadiusAsPercentage, t);
+
+        double bottomRightHorizontalRadius = Utils.interpolate(
+            this.bottomRightHorizontalRadius, endValue.bottomRightHorizontalRadius,
+            this.bottomRightHorizontalRadiusAsPercentage, endValue.bottomRightHorizontalRadiusAsPercentage, t);
+
+        double bottomRightVerticalRadius = Utils.interpolate(
+            this.bottomRightVerticalRadius, endValue.bottomRightVerticalRadius,
+            this.bottomRightVerticalRadiusAsPercentage, endValue.bottomRightVerticalRadiusAsPercentage, t);
+
+        double bottomLeftVerticalRadius = Utils.interpolate(
+            this.bottomLeftVerticalRadius, endValue.bottomLeftVerticalRadius,
+            this.bottomLeftVerticalRadiusAsPercentage, endValue.bottomLeftVerticalRadiusAsPercentage, t);
+
+        double bottomLeftHorizontalRadius = Utils.interpolate(
+            this.bottomLeftHorizontalRadius, endValue.bottomLeftHorizontalRadius,
+            this.bottomLeftHorizontalRadiusAsPercentage, endValue.bottomLeftHorizontalRadiusAsPercentage, t);
+
+        return new CornerRadii(
+            topLeftHorizontalRadius, topLeftVerticalRadius,
+            topRightVerticalRadius, topRightHorizontalRadius,
+            bottomRightHorizontalRadius, bottomRightVerticalRadius,
+            bottomLeftVerticalRadius, bottomLeftHorizontalRadius,
+            endValue.topLeftHorizontalRadiusAsPercentage, endValue.topLeftVerticalRadiusAsPercentage,
+            endValue.topRightVerticalRadiusAsPercentage, endValue.topRightHorizontalRadiusAsPercentage,
+            endValue.bottomRightHorizontalRadiusAsPercentage, endValue.bottomRightVerticalRadiusAsPercentage,
+            endValue.bottomLeftVerticalRadiusAsPercentage, endValue.bottomLeftHorizontalRadiusAsPercentage);
     }
 
     /**

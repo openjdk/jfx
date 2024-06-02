@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package javafx.scene.layout;
 
+import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 import javafx.scene.image.Image;
 
@@ -43,7 +44,7 @@ import javafx.scene.image.Image;
  * cache, and can safely be reused among multiple Regions.
  * @since JavaFX 8.0
  */
-public final class BackgroundImage {
+public final class BackgroundImage implements Interpolatable<BackgroundImage> {
 
     // TODO we need to attach a listener to the Image such that when the image loads
     // we cause the Region to repaint (probably the Region itself needs to handle this).
@@ -136,6 +137,40 @@ public final class BackgroundImage {
         result = 31 * result + this.position.hashCode();
         result = 31 * result + this.size.hashCode();
         hash = result;
+    }
+
+    @Override
+    public BackgroundImage interpolate(BackgroundImage endValue, double t) {
+        // We don't check equals(endValue) here to prevent unnecessary equality checks,
+        // and only check for equality with 'this' or 'endValue' after interpolation.
+        if (t <= 0) {
+            return this;
+        }
+
+        if (t >= 1) {
+            return endValue;
+        }
+
+        // BackgroundPosition and BackgroundSize are implemented such that interpolate() always returns
+        // the existing instance if the intermediate value is equal to the start value or the end value,
+        // which allows us to use an identity comparison in place of a value comparison to determine
+        // equality.
+        BackgroundPosition newPosition = this.position.interpolate(endValue.position, t);
+        BackgroundSize newSize = this.size.interpolate(endValue.size, t);
+
+        if (image == endValue.image
+                && repeatX == endValue.repeatX
+                && repeatY == endValue.repeatY
+                && position == newPosition
+                && size == newSize) {
+            return this;
+        }
+
+        if (endValue.position == newPosition && endValue.size == newSize) {
+            return endValue;
+        }
+
+        return new BackgroundImage(endValue.image, endValue.repeatX, endValue.repeatY, newPosition, newSize);
     }
 
     /**

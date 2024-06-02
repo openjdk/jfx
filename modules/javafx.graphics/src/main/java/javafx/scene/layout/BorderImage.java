@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package javafx.scene.layout;
 
 import com.sun.javafx.scene.layout.region.BorderImageSlices;
+import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 import javafx.geometry.Insets;
 import javafx.scene.image.Image;
@@ -48,7 +49,7 @@ import javafx.scene.image.Image;
  * When applied to a Region with a defined shape, a BorderImage is ignored.
  * @since JavaFX 8.0
  */
-public class BorderImage {
+public class BorderImage implements Interpolatable<BorderImage> {
     /**
      * The image to be used. This will never be null. If this
      * image fails to load, then the entire BorderImage will
@@ -184,6 +185,45 @@ public class BorderImage {
         result = 31 * result + this.repeatY.hashCode();
         result = 31 * result + (this.filled ? 1 : 0);
         hash = result;
+    }
+
+    @Override
+    public BorderImage interpolate(BorderImage endValue, double t) {
+        // We don't check equals(endValue) here to prevent unnecessary equality checks,
+        // and only check for equality with 'this' or 'endValue' after interpolation.
+        if (t <= 0) {
+            return this;
+        }
+
+        if (t >= 1) {
+            return endValue;
+        }
+
+        // BorderWidths and Insets are implemented such that interpolate() always returns the existing
+        // instance if the intermediate value is equal to the start value or the end value, which allows
+        // us to use an identity comparison in place of a value comparison to determine equality.
+        BorderWidths newWidths = widths.interpolate(endValue.widths, t);
+        BorderWidths newSlices = slices.interpolate(endValue.slices, t);
+        Insets newInsets = insets.interpolate(endValue.insets, t);
+
+        if (filled == endValue.filled
+                && image == endValue.image
+                && repeatX == endValue.repeatX
+                && repeatY == endValue.repeatY
+                && widths == newWidths
+                && slices == newSlices
+                && insets == newInsets) {
+            return this;
+        }
+
+        if (endValue.widths == newWidths
+                && endValue.slices == newSlices
+                && endValue.insets == newInsets) {
+            return endValue;
+        }
+
+        return new BorderImage(
+            endValue.image, newWidths, newInsets, newSlices, endValue.filled, endValue.repeatX, endValue.repeatY);
     }
 
     /**

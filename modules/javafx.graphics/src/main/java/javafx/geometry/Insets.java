@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,15 @@
 
  package javafx.geometry;
 
+ import com.sun.javafx.util.Utils;
+ import javafx.animation.Interpolatable;
  import javafx.beans.NamedArg;
 
 /**
  * A set of inside offsets for the 4 side of a rectangular area
  * @since JavaFX 2.0
  */
-public class Insets {
+public class Insets implements Interpolatable<Insets> {
     /**
      * Empty insets. An {@code Insets} instance with all offsets equal to zero.
      */
@@ -97,6 +99,23 @@ public class Insets {
         this.right = topRightBottomLeft;
         this.bottom = topRightBottomLeft;
         this.left = topRightBottomLeft;
+    }
+
+    @Override
+    public Insets interpolate(Insets endValue, double t) {
+        if (t <= 0 || equals(endValue)) {
+            return this;
+        }
+
+        if (t >= 1) {
+            return endValue;
+        }
+
+        return new Insets(
+            Utils.interpolate(top, endValue.top, t),
+            Utils.interpolate(right, endValue.right, t),
+            Utils.interpolate(bottom, endValue.bottom, t),
+            Utils.interpolate(left, endValue.left, t));
     }
 
     /**
