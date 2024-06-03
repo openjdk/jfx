@@ -18,12 +18,12 @@
 
 .output-text .content {
     -fx-background-color:f8f8f8;
-    -fx-background-insets:1;
+    -fx-background-insets:0;
 }
 
 .output-error .content {
     -fx-background-color:fff0f0;
-    -fx-background-insets:1;
+    -fx-background-insets:0;
 }
 
 .image-result {

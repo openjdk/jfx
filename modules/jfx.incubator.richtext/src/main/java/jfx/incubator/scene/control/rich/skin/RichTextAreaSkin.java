@@ -120,7 +120,6 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                     if (hscroll.isVisible()) {
                         h += hscroll.prefHeight(width);
                     }
-                    h += (Params.LAYOUT_FOCUS_BORDER * 2);
                     Insets m = getInsets();
                     return h + m.getTop() + m.getBottom();
                 }
