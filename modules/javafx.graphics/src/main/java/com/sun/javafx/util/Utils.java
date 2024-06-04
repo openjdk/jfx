@@ -27,7 +27,6 @@ package com.sun.javafx.util;
 
 import static com.sun.javafx.FXPermissions.ACCESS_WINDOW_LIST_PERMISSION;
 
-import com.sun.javafx.UnmodifiableArrayList;
 import javafx.animation.Interpolatable;
 import javafx.application.Platform;
 import javafx.geometry.BoundingBox;
@@ -50,7 +49,7 @@ import com.sun.javafx.PlatformUtil;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Objects;
-
+import com.sun.javafx.UnmodifiableArrayList;
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.prism.impl.PrismSettings;
 

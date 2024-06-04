@@ -25,7 +25,6 @@
 
 package javafx.scene.layout;
 
-import com.sun.javafx.util.Utils;
 import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 import javafx.css.CssMetaData;
@@ -39,9 +38,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-
 import com.sun.javafx.UnmodifiableArrayList;
 import com.sun.javafx.css.SubCssMetaData;
+import com.sun.javafx.util.Utils;
 import javafx.css.converter.InsetsConverter;
 import javafx.css.converter.PaintConverter;
 import javafx.css.converter.URLConverter;
