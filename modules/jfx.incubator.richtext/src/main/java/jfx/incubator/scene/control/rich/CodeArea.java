@@ -54,6 +54,17 @@ import jfx.incubator.scene.control.rich.skin.RichTextAreaSkin;
  * <p>
  * Unlike its base class {@link RichTextArea}, the {@code CodeArea} requires a special kind of model to be used,
  * a {@link CodeTextModel}.
+ * <h2>Creating a CodeArea</h2>
+ * <p>
+ * The following example creates an editable control with the default {@link CodeArea}:
+ * <pre>{@code    CodeArea codeArea = new CodeArea();
+ *   codeArea.setWrapText(true);
+ *   codeArea.setText("Lorem\nIpsum");
+ * }</pre>
+ * Which results in the following visual representation:
+ * <p>
+ * <img src="doc-files/CodeArea.png" alt="Image of the CodeArea control">
+ * </p>
  */
 public class CodeArea extends RichTextArea {
     private static final int DEFAULT_TAB_SIZE = 8;
@@ -70,6 +81,8 @@ public class CodeArea extends RichTextArea {
     public CodeArea(CodeTextModel model) {
         super(model);
 
+        getStyleClass().add("code-area");
+
         modelProperty().addListener((s, prev, newValue) -> {
             // TODO is there a better way?
             // perhaps even block any change of (already set CodeModel)
@@ -80,10 +93,6 @@ public class CodeArea extends RichTextArea {
                 }
             }
         });
-
-        // set default font
-        Font f = Font.getDefault();
-        setFont(Font.font("monospace", f.getSize()));
     }
 
     /**
@@ -200,13 +209,13 @@ public class CodeArea extends RichTextArea {
     }
 
     /**
-     * The default font to use for text in the {@code CodeArea}.
+     * The font to use for text in the {@code CodeArea}.
      * @return the font property
-     * @defaultValue the value supplied by {@link Font#getDefault()}
+     * @defaultValue the Monospaced font with size 12.0 px
      */
     public final ObjectProperty<Font> fontProperty() {
         if (font == null) {
-            font = new StyleableObjectProperty<Font>(Font.getDefault())
+            font = new StyleableObjectProperty<Font>(defaultFont())
             {
                 private boolean fontSetByCss;
 
@@ -260,7 +269,11 @@ public class CodeArea extends RichTextArea {
     }
 
     public final Font getFont() {
-        return font == null ? Font.getDefault() : font.getValue();
+        return font == null ? defaultFont() : font.getValue();
+    }
+
+    private Font defaultFont() {
+        return Font.font("Monospaced", 12.0);
     }
 
     /**

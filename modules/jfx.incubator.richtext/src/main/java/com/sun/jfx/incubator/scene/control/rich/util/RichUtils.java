@@ -194,6 +194,23 @@ public final class RichUtils {
     }
 
     /**
+     * Returns true if the font family corresponds to a logical font as defined in
+     * <a href="https://wiki.openjdk.org/display/OpenJFX/Font+Setup">OpenJFX Font Setup</a> wiki.
+     * @param family the font family
+     * @return true if logical, false otherwise
+     */
+    public static boolean isLogicalFont(String family) {
+        switch (family) {
+        case "System":
+        case "Serif":
+        case "SansSerif":
+        case "Monospaced":
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Guesses the font style from the font name, until JDK-8092191 is implemented.
      * @param lowerCaseName font name, must be lowercase'd
      * @return font style: [ normal | italic | oblique ]

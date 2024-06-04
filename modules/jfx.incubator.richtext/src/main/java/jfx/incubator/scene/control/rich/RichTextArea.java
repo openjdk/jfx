@@ -100,7 +100,9 @@ import jfx.incubator.scene.control.rich.skin.RichTextAreaSkin;
  *   textArea.appendText("monospaced.\n", mono);
  * }</pre>
  * Which results in the following visual representation:
+ * <p>
  * <img src="doc-files/RichTextArea.png" alt="Image of the RichTextArea control">
+ * </p>
  * <p>
  * A view-only information control requires a different model.  The following example illustrates how to
  * create a model that uses a style sheet for styling:
@@ -499,7 +501,7 @@ public class RichTextArea extends Control {
         // FIX System.out.println(attribute + ":" + rv);
         return rv;
     }
-    public Object queryAccessibleAttribute2(AccessibleAttribute attribute, Object... parameters) {
+    private Object queryAccessibleAttribute2(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
 //        case BOUNDS_FOR_RANGE:
 //            {

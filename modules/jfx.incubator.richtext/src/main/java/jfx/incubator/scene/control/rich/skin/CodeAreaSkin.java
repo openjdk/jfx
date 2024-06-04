@@ -25,9 +25,11 @@
 
 package jfx.incubator.scene.control.rich.skin;
 
+import java.util.Locale;
 import javafx.scene.text.Font;
 import com.sun.jfx.incubator.scene.control.rich.RichTextAreaSkinHelper;
 import com.sun.jfx.incubator.scene.control.rich.util.ListenerHelper;
+import com.sun.jfx.incubator.scene.control.rich.util.RichUtils;
 import jfx.incubator.scene.control.rich.CellContext;
 import jfx.incubator.scene.control.rich.CodeArea;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
@@ -61,9 +63,19 @@ public class CodeAreaSkin extends RichTextAreaSkin {
             // font
             Font f = control.getFont();
             if (f != null) {
-                String name = f.getName();
                 double size = f.getSize();
-                cx.addStyle("-fx-font-family:'" + name + "';");
+                String family = f.getFamily();
+                String name = f.getName();
+                if (RichUtils.isLogicalFont(family)) {
+                    String lowerCaseName = name.toLowerCase(Locale.ENGLISH);
+                    String style = RichUtils.guessFontStyle(lowerCaseName);
+                    String weight = RichUtils.guessFontWeight(lowerCaseName);
+                    cx.addStyle("-fx-font-family:'" + family + "';");
+                    cx.addStyle("-fx-font-style:" + style + ";");
+                    cx.addStyle("-fx-font-weight:" + weight + ";");
+                } else {
+                    cx.addStyle("-fx-font-family:'" + name + "';");
+                }
                 cx.addStyle("-fx-font-size:" + size + ";");
             }
 

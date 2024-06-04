@@ -31,6 +31,7 @@ import javafx.scene.input.KeyCode;
 import javafx.stage.Stage;
 import jfx.incubator.scene.control.input.FunctionTag;
 import jfx.incubator.scene.control.input.KeyBinding;
+import jfx.incubator.scene.control.rich.CodeArea;
 import jfx.incubator.scene.control.rich.LineNumberDecorator;
 import jfx.incubator.scene.control.rich.RichTextArea;
 import jfx.incubator.scene.control.rich.TextPos;
@@ -66,11 +67,18 @@ public class UsageExamples {
         return textArea;
     }
 
-    void usageExample() {
+    void richTextAreaExample() {
         RichTextArea textArea = new RichTextArea();
         // insert two paragraphs "A" and "B"
         StyleAttrs bold = StyleAttrs.builder().setBold(true).build();
         textArea.appendText("A\nB", bold);
+    }
+
+    private static CodeArea codeAreaExample() {
+        CodeArea codeArea = new CodeArea();
+        codeArea.setWrapText(true);
+        codeArea.setText("Lorem\nIpsum");
+        return codeArea;
     }
 
     private static final FunctionTag PRINT_TO_CONSOLE = new FunctionTag();
@@ -139,7 +147,9 @@ public class UsageExamples {
 
         @Override
         public void start(Stage stage) throws Exception {
-            RichTextArea textArea = appendStyledText();
+            RichTextArea textArea =
+                // appendStyledText();
+                codeAreaExample();
             stage.setScene(new Scene(textArea));
             //stage.setTitle("RichTextArea");
             stage.show();
