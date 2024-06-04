@@ -48,6 +48,7 @@ import jfx.incubator.scene.control.rich.CellContext;
 import jfx.incubator.scene.control.rich.RichTextArea;
 import jfx.incubator.scene.control.rich.StyleHandlerRegistry;
 import jfx.incubator.scene.control.rich.StyleResolver;
+import jfx.incubator.scene.control.rich.TextPos;
 import jfx.incubator.scene.control.rich.model.StyleAttribute;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
 import jfx.incubator.scene.control.rich.model.StyledTextModel;
@@ -328,8 +329,15 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         switch (attribute) {
         // TextAreaSkin delegates to its Text
 //        case LINE_FOR_OFFSET:
-//        case LINE_START:
-//        case LINE_END:
+        case LINE_START:
+            return 0;
+        case LINE_END:
+            TextPos p = getSkinnable().getCaretPosition();
+            if (p != null) {
+                String s = getSkinnable().getPlainText(p.index());
+                return s.length();
+            }
+            return null;
 //        case BOUNDS_FOR_RANGE:
 //        case OFFSET_AT_POINT:
 //            Text text = getTextNode();

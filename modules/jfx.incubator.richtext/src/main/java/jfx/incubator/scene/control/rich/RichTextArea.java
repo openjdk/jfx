@@ -495,7 +495,36 @@ public class RichTextArea extends Control {
 
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        Object rv = queryAccessibleAttribute2(attribute, parameters);
+        // FIX System.out.println(attribute + ":" + rv);
+        return rv;
+    }
+    public Object queryAccessibleAttribute2(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
+//        case BOUNDS_FOR_RANGE:
+//            {
+//                int start = (Integer)parameters[0];
+//                int end = (Integer)parameters[1];
+//                PathElement[] elements = rangeShape(start, end + 1);
+//                /* Each bounds is defined by a MoveTo (top-left) followed by
+//                 * 4 LineTo (to top-right, bottom-right, bottom-left, back to top-left).
+//                 */
+//                Bounds[] bounds = new Bounds[elements.length / 5];
+//                int index = 0;
+//                for (int i = 0; i < bounds.length; i++) {
+//                    MoveTo topLeft = (MoveTo)elements[index];
+//                    LineTo topRight = (LineTo)elements[index+1];
+//                    LineTo bottomRight = (LineTo)elements[index+2];
+//                    BoundingBox b = new BoundingBox(topLeft.getX(), topLeft.getY(),
+//                                                    topRight.getX() - topLeft.getX(),
+//                                                    bottomRight.getY() - topRight.getY());
+//                    bounds[i] = localToScreen(b);
+//                    index += 5;
+//                }
+//                return bounds;
+//            }
+        case EDITABLE:
+            return isEditable();
         case TEXT:
             String accText = getAccessibleText();
             if (accText != null && !accText.isEmpty()) {
@@ -506,8 +535,7 @@ public class RichTextArea extends Control {
             // either report the visible text, or the current paragraph text
             TextPos p = getCaretPosition();
             return p == null ? null : getPlainText(p.index());
-        case EDITABLE:
-            return isEditable();
+
 //        case SELECTION_START:
 //            return getSelection().getStart();
 //        case SELECTION_END:
