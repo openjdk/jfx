@@ -360,6 +360,11 @@ public class CornerRadii implements Interpolatable<CornerRadii> {
         return result;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @since 23
+     */
     @Override
     public CornerRadii interpolate(CornerRadii endValue, double t) {
         if (t <= 0 || equals(endValue)) {

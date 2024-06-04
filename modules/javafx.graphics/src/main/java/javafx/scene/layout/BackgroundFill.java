@@ -105,6 +105,11 @@ public final class BackgroundFill implements Interpolatable<BackgroundFill> {
         hash = result;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @since 23
+     */
     @Override
     public BackgroundFill interpolate(BackgroundFill endValue, double t) {
         // We don't check equals(endValue) here to prevent unnecessary equality checks,

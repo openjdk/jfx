@@ -139,6 +139,11 @@ public final class BackgroundImage implements Interpolatable<BackgroundImage> {
         hash = result;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @since 23
+     */
     @Override
     public BackgroundImage interpolate(BackgroundImage endValue, double t) {
         // We don't check equals(endValue) here to prevent unnecessary equality checks,

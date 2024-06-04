@@ -182,6 +182,11 @@ public final class BackgroundSize implements Interpolatable<BackgroundSize> {
         hash = result;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @since 23
+     */
     @Override
     public BackgroundSize interpolate(BackgroundSize endValue, double t) {
         if (t <= 0 || equals(endValue)) {

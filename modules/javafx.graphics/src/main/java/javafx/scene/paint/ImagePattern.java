@@ -272,6 +272,11 @@ public final class ImagePattern extends Paint implements Interpolatable<ImagePat
         this.proportional = proportional;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @since 23
+     */
     @Override
     public ImagePattern interpolate(ImagePattern endValue, double t) {
         if (t <= 0 || equals(endValue)) {

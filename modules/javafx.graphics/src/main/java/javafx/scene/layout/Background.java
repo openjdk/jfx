@@ -634,6 +634,11 @@ public final class Background implements Interpolatable<Background> {
         trbl[3] = opaqueRegionLeft;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @since 23
+     */
     @Override
     public Background interpolate(Background endValue, double t) {
         if (t <= 0) {

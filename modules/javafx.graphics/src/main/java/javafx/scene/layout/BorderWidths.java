@@ -224,6 +224,11 @@ public final class BorderWidths implements Interpolatable<BorderWidths> {
         hash = result;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @since 23
+     */
     @Override
     public BorderWidths interpolate(BorderWidths endValue, double t) {
         if (t <= 0 || equals(endValue)) {

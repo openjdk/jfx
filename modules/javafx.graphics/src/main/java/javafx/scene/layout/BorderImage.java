@@ -187,6 +187,11 @@ public class BorderImage implements Interpolatable<BorderImage> {
         hash = result;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @since 23
+     */
     @Override
     public BorderImage interpolate(BorderImage endValue, double t) {
         // We don't check equals(endValue) here to prevent unnecessary equality checks,

@@ -310,6 +310,11 @@ public final class LinearGradient extends Paint implements Interpolatable<Linear
         return platformPaint;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @since 23
+     */
     @Override
     public LinearGradient interpolate(LinearGradient endValue, double t) {
         // We don't check equals(endValue) here to prevent unnecessary equality checks,

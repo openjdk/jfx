@@ -177,6 +177,11 @@ public final class BackgroundPosition implements Interpolatable<BackgroundPositi
         hash = result;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @since 23
+     */
     @Override
     public BackgroundPosition interpolate(BackgroundPosition endValue, double t) {
         if (t <= 0 || equals(endValue)) {

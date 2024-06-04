@@ -331,6 +331,11 @@ public final class RadialGradient extends Paint implements Interpolatable<Radial
         return platformPaint;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @since 23
+     */
     @Override
     public RadialGradient interpolate(RadialGradient endValue, double t) {
         // We don't check equals(endValue) here to prevent unnecessary equality checks,

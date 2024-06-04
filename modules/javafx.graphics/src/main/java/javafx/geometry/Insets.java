@@ -101,6 +101,11 @@ public class Insets implements Interpolatable<Insets> {
         this.left = topRightBottomLeft;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @since 23
+     */
     @Override
     public Insets interpolate(Insets endValue, double t) {
         if (t <= 0 || equals(endValue)) {

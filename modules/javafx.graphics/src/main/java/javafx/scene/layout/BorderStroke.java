@@ -360,6 +360,11 @@ public final class BorderStroke implements Interpolatable<BorderStroke> {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @since 23
+     */
     @Override
     public BorderStroke interpolate(BorderStroke endValue, double t) {
         // We don't check equals(endValue) here to prevent unnecessary equality checks,

@@ -265,6 +265,11 @@ public final class Stop implements Interpolatable<Stop> {
         this.color = Objects.requireNonNull(color, "color cannot be null");
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @since 23
+     */
     @Override
     public Stop interpolate(Stop endValue, double t) {
         // We don't check equals(endValue) here to prevent unnecessary equality checks,

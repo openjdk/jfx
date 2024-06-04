@@ -410,6 +410,11 @@ public final class Border implements Interpolatable<Border> {
         return new Border(new BorderStroke(stroke, BorderStrokeStyle.SOLID, null, null));
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @since 23
+     */
     @Override
     public Border interpolate(Border endValue, double t) {
         if (t <= 0) {
