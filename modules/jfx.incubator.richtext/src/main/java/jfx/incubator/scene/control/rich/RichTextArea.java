@@ -295,8 +295,7 @@ public class RichTextArea extends Control {
     protected static final StyleHandlerRegistry styleHandlerRegistry = initStyleHandlerRegistry();
 
     /**
-     * Creates an editable instance with default configuration parameters,
-     * using an in-memory model {@link EditableRichTextModel}.
+     * Creates an editable instance with the in-memory model {@link EditableRichTextModel}.
      */
     public RichTextArea() {
         this(new EditableRichTextModel());
@@ -304,13 +303,13 @@ public class RichTextArea extends Control {
 
     /**
      * Creates an instance using the specified model.
-     * @param m the model
+     * @param model the model
      */
-    public RichTextArea(StyledTextModel m) {
+    public RichTextArea(StyledTextModel model) {
         setFocusTraversable(true);
         getStyleClass().add("rich-text-area");
         setAccessibleRole(AccessibleRole.TEXT_AREA);
-        setModel(m);
+        setModel(model);
     }
 
     @Override
@@ -675,17 +674,18 @@ public class RichTextArea extends Control {
         return getClassCssMetaData();
     }
 
-    // TODO made package protected for testing (for the shim example)
+    // package protected for testing
     VFlow vflow() {
         return RichTextAreaSkinHelper.getVFlow(this);
     }
 
     /**
-     * Finds a text position corresponding to the specified screen coordinates, or null if outside of
-     * the text area.
-     * @param screenX screen x coordinate
-     * @param screenY screen y coordinate
-     * @return the TextPosition
+     * Finds a text position corresponding to the specified screen coordinates.
+     * This method returns {@code null} if the specified coordinates are outside of the content area.
+     *
+     * @param screenX the screen x coordinate
+     * @param screenY the screen y coordinate
+     * @return the TextPosition, or null
      */
     public final TextPos getTextPosition(double screenX, double screenY) {
         Point2D local = vflow().getContentPane().screenToLocal(screenX, screenY);
@@ -693,12 +693,10 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Determines the caret blink period.
-     * <p>
-     * The period of 1000 ms is used when this property is set to null.
+     * Determines the caret blink period.  This property cannot be set to {@code null}.
      *
      * @return the caret blink period property
-     * @defaultValue null
+     * @defaultValue 1000 ms.
      */
     public final ObjectProperty<Duration> caretBlinkPeriodProperty() {
         if (caretBlinkPeriod == null) {
@@ -706,8 +704,20 @@ public class RichTextArea extends Control {
                 StyleableProperties.CARET_BLINK_PERIOD,
                 this,
                 "caretBlinkPeriod",
-                null
-            );
+                Params.DEFAULT_CARET_BLINK_PERIOD
+            ) {
+                private Duration old;
+
+                @Override
+                public void invalidated() {
+                    final Duration v = get();
+                    if (v == null) {
+                        set(old);
+                        throw new NullPointerException("cannot set caretBlinkPeriodProperty to null");
+                    }
+                    old = v;
+                }
+            };
         }
         return caretBlinkPeriod;
     }
@@ -717,7 +727,7 @@ public class RichTextArea extends Control {
     }
 
     public final Duration getCaretBlinkPeriod() {
-        return caretBlinkPeriod == null ? null : caretBlinkPeriod.get();
+        return caretBlinkPeriod == null ? Params.DEFAULT_CARET_BLINK_PERIOD : caretBlinkPeriod.get();
     }
 
     /**
@@ -834,7 +844,7 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Returns the number of paragraphs in the model.  If model is null, returns 0.
+     * Returns the number of paragraphs in the model.  This method returns 0 if the model is {@code null}.
      * @return the paragraph count
      */
     public final int getParagraphCount() {
@@ -843,16 +853,17 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Returns the plain text at the specified paragraph index.
-     * @param modelIndex paragraph index
-     * @return plain text string, or null
-     * @throws IllegalArgumentException if the modelIndex is outside of the range supported by the model
+     * Returns the plain text at the specified paragraph index.  The value of {@code index} must be between
+     * 0 (inclusive) and the value returned by {@link #getParagraphCount()} (exclusive).
+     * @param index the paragraph index
+     * @return the non-null plain text string
+     * @throws IndexOutOfBoundsException if the index is outside of the range supported by the model
      */
-    public final String getPlainText(int modelIndex) {
-        if ((modelIndex < 0) || (modelIndex >= getParagraphCount())) {
-            throw new IllegalArgumentException("No paragraph at index=" + modelIndex);
+    public final String getPlainText(int index) {
+        if ((index < 0) || (index >= getParagraphCount())) {
+            throw new IndexOutOfBoundsException("index=" + index);
         }
-        return getModel().getPlainText(modelIndex);
+        return getModel().getPlainText(index);
     }
 
     private RichTextAreaSkin richTextAreaSkin() {

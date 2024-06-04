@@ -44,6 +44,7 @@ import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.Labeled;
 import javafx.scene.text.Font;
+import com.sun.jfx.incubator.scene.control.rich.Params;
 import com.sun.jfx.incubator.scene.control.rich.util.RichUtils;
 import jfx.incubator.scene.control.rich.model.StyledTextModel;
 import jfx.incubator.scene.control.rich.skin.CodeAreaSkin;
@@ -67,7 +68,6 @@ import jfx.incubator.scene.control.rich.skin.RichTextAreaSkin;
  * </p>
  */
 public class CodeArea extends RichTextArea {
-    private static final int DEFAULT_TAB_SIZE = 8;
     private BooleanProperty lineNumbers;
     private StyleableIntegerProperty tabSize;
     private StyleableObjectProperty<Font> font;
@@ -180,7 +180,7 @@ public class CodeArea extends RichTextArea {
      */
     public final IntegerProperty tabSizeProperty() {
         if (tabSize == null) {
-            tabSize = new StyleableIntegerProperty(DEFAULT_TAB_SIZE) {
+            tabSize = new StyleableIntegerProperty(Params.DEFAULT_TAB_SIZE) {
                 @Override
                 public Object getBean() {
                     return CodeArea.this;
@@ -201,7 +201,7 @@ public class CodeArea extends RichTextArea {
     }
 
     public final int getTabSize() {
-        return tabSize == null ? DEFAULT_TAB_SIZE : tabSize.get();
+        return tabSize == null ? Params.DEFAULT_TAB_SIZE : tabSize.get();
     }
 
     public final void setTabSize(int spaces) {
@@ -351,7 +351,7 @@ public class CodeArea extends RichTextArea {
         };
 
         private static final CssMetaData<CodeArea, Number> TAB_SIZE =
-            new CssMetaData<>("-fx-tab-size", SizeConverter.getInstance(), DEFAULT_TAB_SIZE)
+            new CssMetaData<>("-fx-tab-size", SizeConverter.getInstance(), Params.DEFAULT_TAB_SIZE)
         {
             @Override
             public boolean isSettable(CodeArea n) {
