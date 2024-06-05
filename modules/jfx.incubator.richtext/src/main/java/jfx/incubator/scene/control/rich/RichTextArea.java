@@ -290,6 +290,8 @@ public class RichTextArea extends Control {
     private StyleableBooleanProperty useContentHeight;
     private StyleableBooleanProperty useContentWidth;
     private StyleableBooleanProperty wrapText;
+    // TODO to be moved to Control JDK-8314968
+    private final InputMap inputMap = new InputMap(this);
 
     /** The style handler registry instance, made available for use by subclasses to add support for new style attributes. */
     protected static final StyleHandlerRegistry styleHandlerRegistry = initStyleHandlerRegistry();
@@ -1072,70 +1074,41 @@ public class RichTextArea extends Control {
         execute(Tags.DELETE_PARAGRAPH_START);
     }
 
-    // TODO
-    // Non-public Methods
-
-    @Override
-    protected RichTextAreaSkin createDefaultSkin() {
-        return new RichTextAreaSkin(this);
-    }
-
-    // package protected for testing
-    VFlow vflow() {
-        return RichTextAreaSkinHelper.getVFlow(this);
+    /**
+     * Deletes empty paragraph or text to the end of the next word.
+     * <p>
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
+     */
+    public void deleteWordNextEnd() {
+        execute(Tags.DELETE_WORD_NEXT_END);
     }
 
     /**
-     * Finds a text position corresponding to the specified screen coordinates.
-     * This method returns {@code null} if the specified coordinates are outside of the content area.
-     *
-     * @param screenX the screen x coordinate
-     * @param screenY the screen y coordinate
-     * @return the TextPosition, or null
+     * Deletes empty paragraph or text to the start of the next word.
+     * <p>
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
-    public final TextPos getTextPosition(double screenX, double screenY) {
-        Point2D local = vflow().getContentPane().screenToLocal(screenX, screenY);
-        return vflow().getTextPosLocal(local.getX(), local.getY());
+    public void deleteWordNextStart() {
+        execute(Tags.DELETE_WORD_NEXT_START);
     }
 
     /**
-     * Moves the caret and anchor to the new position, unless {@code extendSelection} is true, in which case
-     * extend selection from the existing anchor to the newly set caret position.
-     * @param p text position
-     * @param extendSelection specifies whether to clear (false) or extend (true) any existing selection
+     * Deletes (multiple) empty paragraphs or text to the beginning of the previous word.
+     * This method has a side effect of clearing an existing selection prior to the delete operation.
+     * <p>
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
-    public final void moveCaret(TextPos p, boolean extendSelection) {
-        if (extendSelection) {
-            extendSelection(p);
-        } else {
-            select(p, p);
-        }
+    public void deleteWordPrevious() {
+        execute(Tags.DELETE_WORD_PREVIOUS);
     }
 
     /**
-     * Moves both the caret and the anchor to the specified position, clearing any existing selection.
-     * @param pos the text position
+     * Clears any existing selection by moving anchor to the caret position.
+     * <p>
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
-    public final void select(TextPos pos) {
-        StyledTextModel model = getModel();
-        if (model != null) {
-            Marker m = model.getMarker(pos);
-            selectionModel.setSelection(m, m);
-        }
-    }
-
-    /**
-     * Selects the specified range and places the caret at the new position.
-     * @param anchor the new selection anchor position
-     * @param caret the new caret position
-     */
-    public final void select(TextPos anchor, TextPos caret) {
-        StyledTextModel model = getModel();
-        if (model != null) {
-            Marker ma = model.getMarker(anchor);
-            Marker mc = model.getMarker(caret);
-            selectionModel.setSelection(ma, mc);
-        }
+    public void deselect() {
+        execute(Tags.DESELECT);
     }
 
     /**
@@ -1148,6 +1121,53 @@ public class RichTextArea extends Control {
             Marker m = model.getMarker(pos);
             selectionModel.extendSelection(m);
         }
+    }
+
+    /**
+     * Returns {@code StyleAttrs} which contains character and paragraph attributes.
+     * <br>
+     * When selection exists, returns the attributes at the first selected character.
+     * <br>
+     * When no selection exists, returns the attributes at the character which immediately precedes the caret.
+     * When at the beginning of the document, returns the attributes of the first character.
+     * If the model uses CSS styles, this method resolves individual attributes (bold, font size, etc.)
+     * according to the stylesheet for this instance of {@code RichTextArea}.
+     *
+     * @return the non-null {@code StyleAttrs} instance
+     */
+    public final StyleAttrs getActiveStyleAttrs() {
+        StyleResolver r = resolver();
+        return getModelStyleAttrs(r);
+    }
+
+    /**
+     * Returns a TextPos corresponding to the end of paragraph.
+     *
+     * @param index paragraph index
+     * @return text position
+     */
+    public final TextPos getEndOfParagraph(int index) {
+        StyledTextModel m = getModel();
+        return (m == null) ? TextPos.ZERO : m.getEndOfParagraphTextPos(index);
+    }
+
+    /**
+     * Returns a TextPos corresponding to the end of the document.
+     *
+     * @return the text position
+     */
+    public final TextPos getEndTextPos() {
+        StyledTextModel m = getModel();
+        return (m == null) ? TextPos.ZERO : m.getDocumentEnd();
+    }
+
+    /**
+     * Returns the input map instance.
+     * @return the input map instance
+     */
+    // to be moved to Control JDK-8314968
+    public final InputMap getInputMap() {
+        return inputMap;
     }
 
     /**
@@ -1173,53 +1193,40 @@ public class RichTextArea extends Control {
         return getModel().getPlainText(index);
     }
 
-    private RichTextAreaSkin richTextAreaSkin() {
-        return (RichTextAreaSkin)getSkin();
+    /**
+     * Returns the style handler registry for this control.
+     * @return the style handler registry
+     */
+    public StyleHandlerRegistry getStyleHandlerRegistry() {
+        return styleHandlerRegistry;
     }
 
-    private StyleResolver resolver() {
-        RichTextAreaSkin skin = richTextAreaSkin();
-        if (skin != null) {
-            return skin.getStyleResolver();
+    /**
+     * Finds a text position corresponding to the specified screen coordinates.
+     * This method returns {@code null} if the specified coordinates are outside of the content area.
+     *
+     * @param screenX the screen x coordinate
+     * @param screenY the screen y coordinate
+     * @return the TextPosition, or null
+     */
+    public final TextPos getTextPosition(double screenX, double screenY) {
+        Point2D local = vflow().getContentPane().screenToLocal(screenX, screenY);
+        return vflow().getTextPosLocal(local.getX(), local.getY());
+    }
+
+    /**
+     * This convenience method returns true when a non-empty selection exists.
+     * @return true when an non-empty selection exists
+     */
+    public final boolean hasNonEmptySelection() {
+        TextPos ca = getCaretPosition();
+        if (ca != null) {
+            TextPos an = getAnchorPosition();
+            if (an != null) {
+                return !ca.isSameInsertionIndex(an);
+            }
         }
-        return null;
-    }
-
-    /**
-     * Deletes empty paragraph or text to the beginning of the next word.
-     * <p>
-     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
-     */
-    public void deleteWordNextBeg() {
-        execute(Tags.DELETE_WORD_NEXT_START);
-    }
-
-    /**
-     * Deletes empty paragraph or text to the end of the next word.
-     * <p>
-     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
-     */
-    public void deleteWordNextEnd() {
-        execute(Tags.DELETE_WORD_NEXT_END);
-    }
-
-    /**
-     * Deletes (multiple) empty paragraphs or text to the beginning of the previous word.
-     * This method has a side effect of clearing an existing selection prior to the delete operation.
-     * <p>
-     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
-     */
-    public void deleteWordPrevious() {
-        execute(Tags.DELETE_WORD_PREVIOUS);
-    }
-
-    /**
-     * Clears any existing selection by moving anchor to the caret position.
-     * <p>
-     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
-     */
-    public void deselect() {
-        execute(Tags.DESELECT);
+        return false;
     }
 
     /**
@@ -1238,6 +1245,47 @@ public class RichTextArea extends Control {
      */
     public void insertTab() {
         execute(Tags.INSERT_TAB);
+    }
+
+    /**
+     * Inserts the styled text at the specified position.  Any embedded {@code "\n"} or {@code "\r\n"}
+     * sequences result in a new paragraph being added.
+     * This method is no-op if either the control or the model is not editable.
+     *
+     * @param pos the insert position
+     * @param text the text to inser
+     * @param attrs the style attributes
+     * @return the text position at the end of the appended text, or null if editing is disabled
+     */
+    public final TextPos insertText(TextPos pos, String text, StyleAttrs attrs) {
+        StyledInput in = StyledInput.of(text, attrs);
+        return replaceText(pos, pos, in, true);
+    }
+
+    /**
+     * Inserts the content at the specified position.
+     * This method is no-op if either the control or the model is not editable.
+     *
+     * @param pos the insert position
+     * @param in the input stream
+     * @return the text position at the end of the appended text, or null if editing is disabled
+     */
+    public final TextPos insertText(TextPos pos, StyledInput in) {
+        return replaceText(pos, pos, in, true);
+    }
+
+    /**
+     * Moves the caret and anchor to the new position, unless {@code extendSelection} is true, in which case
+     * extend selection from the existing anchor to the newly set caret position.
+     * @param p text position
+     * @param extendSelection specifies whether to clear (false) or extend (true) any existing selection
+     */
+    public final void moveCaret(TextPos p, boolean extendSelection) {
+        if (extendSelection) {
+            extendSelection(p);
+        } else {
+            select(p, p);
+        }
     }
 
     /**
@@ -1277,6 +1325,15 @@ public class RichTextArea extends Control {
     }
 
     /**
+     * Moves the caret to the end of the current paragraph, or, if already there, to the end of the next paragraph.
+     * <p>
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
+     */
+    public void moveParagraphDown() {
+        execute(Tags.MOVE_PARAGRAPH_DOWN);
+    }
+
+    /**
      * Moves the caret to the end of the paragraph at caret, clearing an existing selection.
      * <p>
      * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
@@ -1290,17 +1347,8 @@ public class RichTextArea extends Control {
      * <p>
      * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
-    public void moveLineStart() {
+    public void moveParagraphStart() {
         execute(Tags.MOVE_TO_PARAGRAPH_START);
-    }
-
-    /**
-     * Moves the caret to the end of the current paragraph, or, if already there, to the end of the next paragraph.
-     * <p>
-     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
-     */
-    public void moveParagraphDown() {
-        execute(Tags.MOVE_PARAGRAPH_DOWN);
     }
 
     /**
@@ -1310,24 +1358,6 @@ public class RichTextArea extends Control {
      */
     public void moveParagraphUp() {
         execute(Tags.MOVE_PARAGRAPH_UP);
-    }
-
-    /**
-     * Extends selection to the end of the current paragraph, or, if already there, to the end of the next paragraph.
-     * <p>
-     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
-     */
-    public void selectParagraphDown() {
-        execute(Tags.SELECT_PARAGRAPH_DOWN);
-    }
-
-    /**
-     * Extends selection to the start of the current paragraph, or, if already there, to the start of the previous paragraph.
-     * <p>
-     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
-     */
-    public void selectParagraphUp() {
-        execute(Tags.SELECT_PARAGRAPH_UP);
     }
 
     /**
@@ -1359,13 +1389,21 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Moves the caret to the beginning of next word in a left-to-right setting
-     * (or the beginning of the previous word in a right-to-left setting), clearing an existing selection.
+     * Moves the caret to the end of the next word, clearing an existing selection.
      * <p>
      * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
-    public void moveWordRight() {
-        execute(Tags.MOVE_WORD_RIGHT);
+    public void moveWordNextEnd() {
+        execute(Tags.MOVE_WORD_NEXT_END);
+    }
+
+    /**
+     * Moves the caret to the start of next word, clearing an existing selection.
+     * <p>
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
+     */
+    public void moveWordNextStart() {
+        execute(Tags.MOVE_WORD_NEXT_START);
     }
 
     /**
@@ -1378,21 +1416,13 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Moves the caret to the beginning of next word, clearing an existing selection.
+     * Moves the caret to the beginning of next word in a left-to-right setting
+     * (or the beginning of the previous word in a right-to-left setting), clearing an existing selection.
      * <p>
      * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
-    public void moveWordNext() {
-        execute(Tags.MOVE_WORD_NEXT_START);
-    }
-
-    /**
-     * Moves the caret to the end of the next word, clearing an existing selection.
-     * <p>
-     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
-     */
-    public void moveWordNextEnd() {
-        execute(Tags.MOVE_WORD_NEXT_END);
+    public void moveWordRight() {
+        execute(Tags.MOVE_WORD_RIGHT);
     }
 
     /**
@@ -1447,6 +1477,39 @@ public class RichTextArea extends Control {
     }
 
     /**
+     * Reads the content using the specified {@code DataFormat}.
+     * Any existing content is discarded and undo/redo buffer is cleared.
+     * This method does not close the input stream.
+     * @param f the data format
+     * @param in the input stream
+     * @throws IOException if an I/O error occurs
+     * @throws UnsupportedOperationException when the data format is not supported by the model
+     */
+    public final void read(DataFormat f, InputStream in) throws IOException {
+        StyledTextModel m = getModel();
+        if (m != null) {
+            StyleResolver r = resolver();
+            m.read(r, f, in);
+            select(TextPos.ZERO, TextPos.ZERO);
+        }
+    }
+
+    /**
+     * Reads the content using the model's highest priority {@code DataFormat}.
+     * Any existing content is discarded and undo/redo buffer is cleared.
+     * This method does not close the input stream.
+     * @param in the input stream
+     * @throws IOException if an I/O error occurs
+     * @throws UnsupportedOperationException when the data format is not supported by the model
+     */
+    public final void read(InputStream in) throws IOException {
+        DataFormat f = bestDataFormat(false);
+        if (f != null) {
+            read(f, in);
+        }
+    }
+
+    /**
      * If possible, redoes the last undone modification. If {@link #isRedoable()} returns
      * false, then calling this method has no effect.
      * <p>
@@ -1457,6 +1520,66 @@ public class RichTextArea extends Control {
     }
 
     /**
+     * Replaces the specified range with the new text.
+     *
+     * @param start the start text position
+     * @param end the end text position
+     * @param text the input text
+     * @param allowUndo when true, creates an undo-redo entry
+     * @return the new caret position at the end of inserted text, or null if the change cannot be made
+     */
+    public final TextPos replaceText(TextPos start, TextPos end, String text, boolean allowUndo) {
+        if (canEdit()) {
+            StyledTextModel m = getModel();
+            return m.replace(vflow(), start, end, text, allowUndo);
+        }
+        return null;
+    }
+
+    /**
+     * Replaces the specified range with the new input.
+     *
+     * @param start the start text position
+     * @param end the end text position
+     * @param in the input stream
+     * @param createUndo when true, creates an undo-redo entry
+     * @return the new caret position at the end of inserted text, or null if the change cannot be made
+     */
+    public final TextPos replaceText(TextPos start, TextPos end, StyledInput in, boolean createUndo) {
+        if (canEdit()) {
+            StyledTextModel m = getModel();
+            return m.replace(vflow(), start, end, in, createUndo);
+        }
+        return null;
+    }
+
+    /**
+     * Moves both the caret and the anchor to the specified position, clearing any existing selection.
+     * @param pos the text position
+     */
+    public final void select(TextPos pos) {
+        StyledTextModel model = getModel();
+        if (model != null) {
+            Marker m = model.getMarker(pos);
+            selectionModel.setSelection(m, m);
+        }
+    }
+
+    /**
+     * Selects the specified range and places the caret at the new position.
+     * @param anchor the new selection anchor position
+     * @param caret the new caret position
+     */
+    public final void select(TextPos anchor, TextPos caret) {
+        StyledTextModel model = getModel();
+        if (model != null) {
+            Marker ma = model.getMarker(anchor);
+            Marker mc = model.getMarker(caret);
+            selectionModel.setSelection(ma, mc);
+        }
+    }
+
+    /**
      * Selects all the text in the document: the anchor is set at the document start, while the caret is positioned
      * at the end of the document.
      * <p>
@@ -1464,24 +1587,6 @@ public class RichTextArea extends Control {
      */
     public void selectAll() {
         execute(Tags.SELECT_ALL);
-    }
-
-    /**
-     * Extends selection to the start of the document.
-     * <p>
-     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
-     */
-    public void selectToDocumentStart() {
-        execute(Tags.SELECT_TO_DOCUMENT_START);
-    }
-
-    /**
-     * Extends selection to the end of the document.
-     * <p>
-     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
-     */
-    public void selectToDocumentEnd() {
-        execute(Tags.SELECT_TO_DOCUMENT_END);
     }
 
     /**
@@ -1530,6 +1635,15 @@ public class RichTextArea extends Control {
     }
 
     /**
+     * Extends selection to the end of the current paragraph, or, if already there, to the end of the next paragraph.
+     * <p>
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
+     */
+    public void selectParagraphDown() {
+        execute(Tags.SELECT_PARAGRAPH_DOWN);
+    }
+
+    /**
      * Selects from the current position to the paragraph end.
      * <p>
      * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
@@ -1548,12 +1662,39 @@ public class RichTextArea extends Control {
     }
 
     /**
+     * Extends selection to the start of the current paragraph, or, if already there, to the start of the previous paragraph.
+     * <p>
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
+     */
+    public void selectParagraphUp() {
+        execute(Tags.SELECT_PARAGRAPH_UP);
+    }
+
+    /**
      * Extends selection one symbol to the right.
      * <p>
      * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
     public void selectRight() {
         execute(Tags.SELECT_RIGHT);
+    }
+
+    /**
+     * Extends selection to the end of the document.
+     * <p>
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
+     */
+    public void selectToDocumentEnd() {
+        execute(Tags.SELECT_TO_DOCUMENT_END);
+    }
+
+    /**
+     * Extends selection to the start of the document.
+     * <p>
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
+     */
+    public void selectToDocumentStart() {
+        execute(Tags.SELECT_TO_DOCUMENT_START);
     }
 
     /**
@@ -1588,26 +1729,22 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Moves the caret to the beginning of next word in a left-to-right setting,
-     * or to the beginning of the previous word in a right-to-left setting.
-     * This does not cause
-     * the selection to be cleared. Rather, the anchor stays put and the caretPosition is
-     * moved to the beginning of next word.
+     * Extends selection to the end of the next word.
      * <p>
      * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
-    public void selectWordRight() {
-        execute(Tags.SELECT_WORD_RIGHT);
+    public void selectWordNextEnd() {
+        execute(Tags.SELECT_WORD_NEXT_END);
     }
 
     /**
-     * Moves the caret to the beginning of next word. This does not cause
+     * Moves the caret to the start of the next word. This does not cause
      * the selection to be cleared. Rather, the anchor stays put and the caretPosition is
      * moved to the beginning of next word.
      * <p>
      * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
-    public void selectWordNext() {
+    public void selectWordNextStart() {
         execute(Tags.SELECT_WORD_NEXT);
     }
 
@@ -1623,37 +1760,16 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Extends selection to the end of the next word.
+     * Moves the caret to the beginning of next word in a left-to-right setting,
+     * or to the beginning of the previous word in a right-to-left setting.
+     * This does not cause
+     * the selection to be cleared. Rather, the anchor stays put and the caretPosition is
+     * moved to the beginning of next word.
      * <p>
      * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
      */
-    public void selectWordNextEnd() {
-        execute(Tags.SELECT_WORD_NEXT_END);
-    }
-
-    /**
-     * If possible, undoes the last modification. If {@link #isUndoable()} returns
-     * false, then calling this method has no effect.
-     * <p>
-     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
-     */
-    public void undo() {
-        execute(Tags.UNDO);
-    }
-
-    /**
-     * This convenience method returns true when a non-empty selection exists.
-     * @return true when an non-empty selection exists
-     */
-    public final boolean hasNonEmptySelection() {
-        TextPos ca = getCaretPosition();
-        if (ca != null) {
-            TextPos an = getAnchorPosition();
-            if (an != null) {
-                return !ca.isSameInsertionIndex(an);
-            }
-        }
-        return false;
+    public void selectWordRight() {
+        execute(Tags.SELECT_WORD_RIGHT);
     }
 
     /**
@@ -1670,6 +1786,71 @@ public class RichTextArea extends Control {
             StyledTextModel m = getModel();
             m.applyStyle(start, end, attrs, false);
         }
+    }
+
+    /**
+     * If possible, undoes the last modification. If {@link #isUndoable()} returns
+     * false, then calling this method has no effect.
+     * <p>
+     * This action can be changed by remapping the default behavior, @see {@link RichTextArea.Tags}.
+     */
+    public void undo() {
+        execute(Tags.UNDO);
+    }
+
+    /**
+     * Writes the content the output stream using the specified {@code DataFormat}.
+     * This method does not close the output stream.
+     * @param f the data format
+     * @param out the output stream
+     * @throws IOException if an I/O error occurs
+     * @throws UnsupportedOperationException when the data format is not supported by the model
+     */
+    public final void write(DataFormat f, OutputStream out) throws IOException {
+        StyledTextModel m = getModel();
+        if (m != null) {
+            StyleResolver r = resolver();
+            m.write(r, f, out);
+        }
+    }
+
+    /**
+     * Writes the content the output stream using the model's highest priority {@code DataFormat}.
+     * This method does not close the output stream.
+     * @param out the output stream
+     * @throws IOException if an I/O error occurs
+     * @throws UnsupportedOperationException when no suitable data format can be found
+     */
+    public final void write(OutputStream out) throws IOException {
+        DataFormat f = bestDataFormat(true);
+        if (f == null) {
+            throw new UnsupportedOperationException("no suitable format can be found");
+        }
+        write(f, out);
+    }
+
+    // Non-public Methods
+
+    @Override
+    protected RichTextAreaSkin createDefaultSkin() {
+        return new RichTextAreaSkin(this);
+    }
+
+    // package protected for testing
+    VFlow vflow() {
+        return RichTextAreaSkinHelper.getVFlow(this);
+    }
+
+    private RichTextAreaSkin richTextAreaSkin() {
+        return (RichTextAreaSkin)getSkin();
+    }
+
+    private StyleResolver resolver() {
+        RichTextAreaSkin skin = richTextAreaSkin();
+        if (skin != null) {
+            return skin.getStyleResolver();
+        }
+        return null;
     }
 
     private StyleAttrs getModelStyleAttrs(StyleResolver r) {
@@ -1697,56 +1878,6 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Returns {@code StyleAttrs} which contains character and paragraph attributes.
-     * <br>
-     * When selection exists, returns the attributes at the first selected character.
-     * <br>
-     * When no selection exists, returns the attributes at the character which immediately precedes the caret.
-     * When at the beginning of the document, returns the attributes of the first character.
-     * If the model uses CSS styles, this method resolves individual attributes (bold, font size, etc.)
-     * according to the stylesheet for this instance of {@code RichTextArea}.
-     *
-     * @return the non-null {@code StyleAttrs} instance
-     */
-    public final StyleAttrs getActiveStyleAttrs() {
-        StyleResolver r = resolver();
-        return getModelStyleAttrs(r);
-    }
-
-    /**
-     * Returns a TextPos corresponding to the end of the document.
-     *
-     * @return the text position
-     */
-    public final TextPos getEndTextPos() {
-        StyledTextModel m = getModel();
-        return (m == null) ? TextPos.ZERO : m.getDocumentEnd();
-    }
-
-    /**
-     * Returns a TextPos corresponding to the end of paragraph.
-     *
-     * @param index paragraph index
-     * @return text position
-     */
-    public final TextPos getEndOfParagraph(int index) {
-        StyledTextModel m = getModel();
-        return (m == null) ? TextPos.ZERO : m.getEndOfParagraphTextPos(index);
-    }
-
-    // TODO to be moved to Control JDK-8314968
-    private final InputMap inputMap = new InputMap(this);
-
-    /**
-     * Returns the input map instance.
-     * @return the input map instance
-     */
-    // TODO to be moved to Control JDK-8314968
-    public final InputMap getInputMap() {
-        return inputMap;
-    }
-
-    /**
      * Executes the function tag, if any.
      * @param tag the function tag.
      */
@@ -1756,14 +1887,6 @@ public class RichTextArea extends Control {
         if (f != null) {
             f.handle(this);
         }
-    }
-
-    /**
-     * Returns the style handler registry for this control.
-     * @return the style handler registry
-     */
-    public StyleHandlerRegistry getStyleHandlerRegistry() {
-        return styleHandlerRegistry;
     }
 
     private static StyleHandlerRegistry initStyleHandlerRegistry() {
@@ -1861,131 +1984,6 @@ public class RichTextArea extends Control {
         });
 
         return b.build();
-    }
-
-    /**
-     * Inserts the styled text at the specified position.  Any embedded {@code "\n"} or {@code "\r\n"}
-     * sequences result in a new paragraph being added.
-     * This method is no-op if either the control or the model is not editable.
-     *
-     * @param pos the insert position
-     * @param text the text to inser
-     * @param attrs the style attributes
-     * @return the text position at the end of the appended text, or null if editing is disabled
-     */
-    public final TextPos insertText(TextPos pos, String text, StyleAttrs attrs) {
-        StyledInput in = StyledInput.of(text, attrs);
-        return replaceText(pos, pos, in, true);
-    }
-
-    /**
-     * Inserts the content at the specified position.
-     * This method is no-op if either the control or the model is not editable.
-     *
-     * @param pos the insert position
-     * @param in the input stream
-     * @return the text position at the end of the appended text, or null if editing is disabled
-     */
-    public final TextPos insertText(TextPos pos, StyledInput in) {
-        return replaceText(pos, pos, in, true);
-    }
-
-    /**
-     * Replaces the specified range with the new input.
-     *
-     * @param start the start text position
-     * @param end the end text position
-     * @param in the input stream
-     * @param createUndo when true, creates an undo-redo entry
-     * @return the new caret position at the end of inserted text, or null if the change cannot be made
-     */
-    public final TextPos replaceText(TextPos start, TextPos end, StyledInput in, boolean createUndo) {
-        if (canEdit()) {
-            StyledTextModel m = getModel();
-            return m.replace(vflow(), start, end, in, createUndo);
-        }
-        return null;
-    }
-
-    /**
-     * Replaces the specified range with the new text.
-     *
-     * @param start the start text position
-     * @param end the end text position
-     * @param text the input text
-     * @param allowUndo when true, creates an undo-redo entry
-     * @return the new caret position at the end of inserted text, or null if the change cannot be made
-     */
-    public final TextPos replaceText(TextPos start, TextPos end, String text, boolean allowUndo) {
-        if (canEdit()) {
-            StyledTextModel m = getModel();
-            return m.replace(vflow(), start, end, text, allowUndo);
-        }
-        return null;
-    }
-
-    /**
-     * Writes the content the output stream using the model's highest priority {@code DataFormat}.
-     * This method does not close the output stream.
-     * @param out the output stream
-     * @throws IOException if an I/O error occurs
-     * @throws UnsupportedOperationException when no suitable data format can be found
-     */
-    public final void write(OutputStream out) throws IOException {
-        DataFormat f = bestDataFormat(true);
-        if (f == null) {
-            throw new UnsupportedOperationException("no suitable format can be found");
-        }
-        write(f, out);
-    }
-
-    /**
-     * Writes the content the output stream using the specified {@code DataFormat}.
-     * This method does not close the output stream.
-     * @param f the data format
-     * @param out the output stream
-     * @throws IOException if an I/O error occurs
-     * @throws UnsupportedOperationException when the data format is not supported by the model
-     */
-    public final void write(DataFormat f, OutputStream out) throws IOException {
-        StyledTextModel m = getModel();
-        if (m != null) {
-            StyleResolver r = resolver();
-            m.write(r, f, out);
-        }
-    }
-
-    /**
-     * Reads the content using the model's highest priority {@code DataFormat}.
-     * Any existing content is discarded and undo/redo buffer is cleared.
-     * This method does not close the input stream.
-     * @param in the input stream
-     * @throws IOException if an I/O error occurs
-     * @throws UnsupportedOperationException when the data format is not supported by the model
-     */
-    public final void read(InputStream in) throws IOException {
-        DataFormat f = bestDataFormat(false);
-        if (f != null) {
-            read(f, in);
-        }
-    }
-
-    /**
-     * Reads the content using the specified {@code DataFormat}.
-     * Any existing content is discarded and undo/redo buffer is cleared.
-     * This method does not close the input stream.
-     * @param f the data format
-     * @param in the input stream
-     * @throws IOException if an I/O error occurs
-     * @throws UnsupportedOperationException when the data format is not supported by the model
-     */
-    public final void read(DataFormat f, InputStream in) throws IOException {
-        StyledTextModel m = getModel();
-        if (m != null) {
-            StyleResolver r = resolver();
-            m.read(r, f, in);
-            select(TextPos.ZERO, TextPos.ZERO);
-        }
     }
 
     private DataFormat bestDataFormat(boolean forExport) {
