@@ -10,8 +10,8 @@
 |DELETE                    |Deletes the symbol at the caret
 |DELETE_PARAGRAPH          |Deletes paragraph at the caret, or selected paragraphs
 |DELETE_PARAGRAPH_START    |Deletes text from the caret to paragraph start, ignoring selection
-|DELETE_WORD_NEXT_BEG      |Deletes empty paragraph or text to the beginning of the next word
 |DELETE_WORD_NEXT_END      |Deletes empty paragraph or text to the end of the next word
+|DELETE_WORD_NEXT_START    |Deletes empty paragraph or text to the start of the next word
 |DELETE_WORD_PREVIOUS      |Deletes (multiple) empty paragraphs or text to the beginning of the previous word
 |DESELECT                  |Clears any existing selection by moving anchor to the caret position
 |FOCUS_NEXT                |Transfer focus to the next focusable node
@@ -29,8 +29,8 @@
 |MOVE_TO_PARAGRAPH_START   |Moves the caret to the beginning of the paragraph at caret
 |MOVE_UP                   |Moves the caret one visual text line up
 |MOVE_WORD_LEFT            |Moves the caret one word left (previous word if LTR, next word if RTL)
-|MOVE_WORD_NEXT_BEG        |Moves the caret to the beginning of the next word, or next paragraph if at the start of an empty paragraph
 |MOVE_WORD_NEXT_END        |Moves the caret to the end of the next word
+|MOVE_WORD_NEXT_START      |Moves the caret to the start of the next word, or next paragraph if at the start of an empty paragraph
 |MOVE_WORD_PREVIOUS        |Moves the caret to the beginning of previous word
 |MOVE_WORD_RIGHT           |Moves the caret one word right (next word if LTR, previous word if RTL)
 |PAGE_DOWN                 |Moves the caret one visual page down
@@ -69,8 +69,8 @@
 |shortcut-A            |           |SELECT_ALL                |
 |ctrl-BACK_SLASH       |linux, win |DESELECT                  |
 |BACKSPACE             |           |BACKSPACE                 |7
-|ctrl-BACKSPACE        |linux, win |DELETE_WORD_NEXT_BEG      |
-|option-BACKSPACE      |mac        |DELETE_WORD_NEXT_BEG      |7
+|ctrl-BACKSPACE        |linux, win |DELETE_WORD_NEXT_START    |
+|option-BACKSPACE      |mac        |DELETE_WORD_NEXT_START    |7
 |shift-BACKSPACE       |           |BACKSPACE                 |7
 |shortcut-BACKSPACE    |mac        |DELETE_PARAGRAPH_START    |7, mac only
 |shortcut-C            |           |COPY                      |
@@ -79,7 +79,7 @@
 |shortcut-D            |           |DELETE_PARAGRAPH          |
 |DELETE                |           |DELETE                    |8
 |option-DELETE         |mac        |DELETE_WORD_NEXT_END      |8, option-fn-delete
-|ctrl-DELETE           |linux, win |DELETE_WORD_NEXT_BEG      |
+|ctrl-DELETE           |linux, win |DELETE_WORD_NEXT_START    |
 |DOWN                  |           |MOVE_DOWN                 |
 |ctrl-DOWN             |linux, win |MOVE_PARAGRAPH_DOWN       |
 |ctrl-shift-DOWN       |linux, win |SELECT_PARAGRAPH_DOWN     |
@@ -145,7 +145,7 @@
 ### Other Mappings
 
 The following functions currently have no mapping:
-MOVE_WORD_NEXT_BEG, MOVE_WORD_NEXT_END, MOVE_WORD_PREVIOUS, SELECT_WORD_NEXT, SELECT_WORD_NEXT_END, SELECT_WORD_PREVIOUS
+MOVE_WORD_NEXT_END, MOVE_WORD_NEXT_START, MOVE_WORD_PREVIOUS, SELECT_WORD_NEXT, SELECT_WORD_NEXT_END, SELECT_WORD_PREVIOUS
 
 The following functions are mapped to the mouse events:
 SELECT_PARAGRAPH, SELECT_WORD

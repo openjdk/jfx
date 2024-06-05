@@ -114,7 +114,7 @@ public class UsageExamples {
         });
 
         // change the functionality of an existing key binding
-        richTextArea.getInputMap().registerFunction(RichTextArea.Tags.MOVE_WORD_NEXT_BEG, (c) -> {
+        richTextArea.getInputMap().registerFunction(RichTextArea.Tags.MOVE_WORD_NEXT_START, (c) -> {
             // refers to custom logic
             TextPos p = getCustomNextWordPosition(richTextArea);
             richTextArea.select(p);

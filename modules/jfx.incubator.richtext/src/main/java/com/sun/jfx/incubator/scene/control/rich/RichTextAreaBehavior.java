@@ -100,8 +100,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         registerFunction(RichTextArea.Tags.DELETE, this::delete);
         registerFunction(RichTextArea.Tags.DELETE_PARAGRAPH, this::deleteParagraph);
         registerFunction(RichTextArea.Tags.DELETE_PARAGRAPH_START, this::deleteParagraphStart);
-        registerFunction(RichTextArea.Tags.DELETE_WORD_NEXT_BEG, this::deleteWordNextBeg);
         registerFunction(RichTextArea.Tags.DELETE_WORD_NEXT_END, this::deleteWordNextEnd);
+        registerFunction(RichTextArea.Tags.DELETE_WORD_NEXT_START, this::deleteWordNextBeg);
         registerFunction(RichTextArea.Tags.DELETE_WORD_PREVIOUS, this::deleteWordPrevious);
         registerFunction(RichTextArea.Tags.DESELECT, this::deselect);
         registerFunction(RichTextArea.Tags.FOCUS_NEXT, this::traverseNext);
@@ -118,8 +118,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         registerFunction(RichTextArea.Tags.MOVE_TO_PARAGRAPH_END, this::moveParagraphEnd);
         registerFunction(RichTextArea.Tags.MOVE_TO_PARAGRAPH_START, this::moveParagraphStart);
         registerFunction(RichTextArea.Tags.MOVE_UP, this::moveUp);
-        registerFunction(RichTextArea.Tags.MOVE_WORD_NEXT_BEG, this::nextWord);
         registerFunction(RichTextArea.Tags.MOVE_WORD_NEXT_END, this::nextWordEnd);
+        registerFunction(RichTextArea.Tags.MOVE_WORD_NEXT_START, this::nextWord);
         registerFunction(RichTextArea.Tags.MOVE_WORD_LEFT, this::leftWord);
         registerFunction(RichTextArea.Tags.MOVE_WORD_PREVIOUS, this::previousWord);
         registerFunction(RichTextArea.Tags.MOVE_WORD_RIGHT, this::rightWord);
@@ -213,7 +213,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         } else {
             registerKey(KeyBinding.ctrl(KeyCode.BACK_SLASH), RichTextArea.Tags.DESELECT);
             registerKey(KeyBinding.ctrl(KeyCode.BACK_SPACE), RichTextArea.Tags.DELETE_WORD_PREVIOUS);
-            registerKey(KeyBinding.ctrl(KeyCode.DELETE), RichTextArea.Tags.DELETE_WORD_NEXT_BEG);
+            registerKey(KeyBinding.ctrl(KeyCode.DELETE), RichTextArea.Tags.DELETE_WORD_NEXT_START);
             registerKey(KeyBinding.ctrl(KeyCode.DOWN), RichTextArea.Tags.MOVE_PARAGRAPH_DOWN);
             registerKey(KeyBinding.ctrlShift(KeyCode.DOWN), RichTextArea.Tags.SELECT_PARAGRAPH_DOWN);
             registerKey(KeyBinding.ctrl(KeyCode.H), RichTextArea.Tags.BACKSPACE);
