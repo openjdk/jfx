@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003 - 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Holger Hans Peter Freyther
  *
  * This library is free software; you can redistribute it and/or
@@ -41,7 +41,7 @@ WidthIterator::WidthIterator(const FontCascade& font, const TextRun& run, HashSe
     , m_run(run)
     , m_fallbackFonts(fallbackFonts)
     , m_expansion(run.expansion())
-    , m_isAfterExpansion((run.expansionBehavior() & LeftExpansionMask) == ForbidLeftExpansion)
+    , m_isAfterExpansion(run.expansionBehavior().left == ExpansionBehavior::Behavior::Forbid)
     , m_accountForGlyphBounds(accountForGlyphBounds)
     , m_enableKerning(font.enableKerning())
     , m_requiresShaping(font.requiresShaping())
@@ -89,26 +89,6 @@ inline auto WidthIterator::applyFontTransforms(GlyphBuffer& glyphBuffer, unsigne
         beforeWidth += width(advances[i]);
 
     auto initialAdvance = font.applyTransforms(glyphBuffer, lastGlyphCount, m_currentCharacterIndex, m_enableKerning, m_requiresShaping, m_font.fontDescription().computedLocale(), m_run.text(), m_run.direction());
-
-#if USE(CTFONTSHAPEGLYPHS_WORKAROUND)
-    // <rdar://problem/80798113>: If a character is not in BMP, and we don't have a glyph for it,
-    // we'll end up with two 0 glyphs in a row for the two surrogates of the character.
-    // We need to make sure that, after shaping, these double-0-glyphs aren't preserved.
-    if (&font == &m_font.primaryFont() && !m_run.text().is8Bit()) {
-        for (unsigned i = 0; i < glyphBuffer.size() - 1; ++i) {
-            if (!glyphBuffer.glyphAt(i) && !glyphBuffer.glyphAt(i + 1)) {
-                if (const auto& firstStringOffset = glyphBuffer.checkedStringOffsetAt(i, m_run.length())) {
-                    if (const auto& secondStringOffset = glyphBuffer.checkedStringOffsetAt(i + 1, m_run.length())) {
-                        if (secondStringOffset.value() == firstStringOffset.value() + 1
-                            && U_IS_LEAD(m_run.text()[firstStringOffset.value()]) && U_IS_TRAIL(m_run.text()[secondStringOffset.value()])) {
-                            glyphBuffer.remove(i + 1, 1);
-                        }
-                    }
-                }
-            }
-        }
-    }
-#endif
 
     glyphBufferSize = glyphBuffer.size();
     advances = glyphBuffer.advances(0);
@@ -241,16 +221,13 @@ bool WidthIterator::hasExtraSpacing() const
 static void addToGlyphBuffer(GlyphBuffer& glyphBuffer, Glyph glyph, const Font& font, float width, GlyphBufferStringOffset currentCharacterIndex, UChar32 character)
 {
     glyphBuffer.add(glyph, font, width, currentCharacterIndex);
-#if USE(CTFONTSHAPEGLYPHS)
+
     // These 0 glyphs are needed by shapers if the source text has surrogate pairs.
     // However, CTFontTransformGlyphs() can't delete these 0 glyphs from the shaped text,
     // so we shouldn't add them in the first place if we're using that shaping routine.
     // Any other shaping routine should delete these glyphs from the shaped text.
     if (!U_IS_BMP(character))
         glyphBuffer.add(0, font, 0, currentCharacterIndex + 1);
-#else
-    UNUSED_PARAM(character);
-#endif
 }
 
 template <typename TextIterator>
@@ -296,7 +273,6 @@ inline void WidthIterator::advanceInternal(TextIterator& textIterator, GlyphBuff
         if (!glyph && !characterMustDrawSomething) {
             commitCurrentFontRange(glyphBuffer, lastGlyphCount, currentCharacterIndex, lastFontData, primaryFont, primaryFont, character, widthOfCurrentFontRange, width, charactersTreatedAsSpace);
 
-            Glyph deletedGlyph = 0xFFFF;
             addToGlyphBuffer(glyphBuffer, deletedGlyph, primaryFont, 0, currentCharacterIndex, character);
 
             textIterator.advance(advanceLength);
@@ -323,7 +299,7 @@ inline void WidthIterator::advanceInternal(TextIterator& textIterator, GlyphBuff
         }
 
         if (m_forTextEmphasis && !FontCascade::canReceiveTextEmphasis(character))
-            glyph = 0;
+            glyph = deletedGlyph;
 
         addToGlyphBuffer(glyphBuffer, glyph, font, width, currentCharacterIndex, character);
 
@@ -381,10 +357,10 @@ auto WidthIterator::calculateAdditionalWidth(GlyphBuffer& glyphBuffer, GlyphBuff
             if (!m_run.ltr())
                 std::swap(isLeftmostCharacter, isRightmostCharacter);
 
-            bool forceLeftExpansion = isLeftmostCharacter && (m_run.expansionBehavior() & LeftExpansionMask) == ForceLeftExpansion;
-            bool forceRightExpansion = isRightmostCharacter && (m_run.expansionBehavior() & RightExpansionMask) == ForceRightExpansion;
-            bool forbidLeftExpansion = isLeftmostCharacter && (m_run.expansionBehavior() & LeftExpansionMask) == ForbidLeftExpansion;
-            bool forbidRightExpansion = isRightmostCharacter && (m_run.expansionBehavior() & RightExpansionMask) == ForbidRightExpansion;
+            bool forceLeftExpansion = isLeftmostCharacter && m_run.expansionBehavior().left == ExpansionBehavior::Behavior::Force;
+            bool forceRightExpansion = isRightmostCharacter && m_run.expansionBehavior().right == ExpansionBehavior::Behavior::Force;
+            bool forbidLeftExpansion = isLeftmostCharacter && m_run.expansionBehavior().left == ExpansionBehavior::Behavior::Forbid;
+            bool forbidRightExpansion = isRightmostCharacter && m_run.expansionBehavior().right == ExpansionBehavior::Behavior::Forbid;
 
             bool isIdeograph = FontCascade::canExpandAroundIdeographsInComplexText() && FontCascade::isCJKIdeographOrSymbol(character);
 
@@ -515,9 +491,6 @@ bool WidthIterator::characterCanUseSimplifiedTextMeasuring(UChar character, bool
     switch (character) {
     case newlineCharacter:
     case carriageReturn:
-    case zeroWidthNoBreakSpace:
-    case zeroWidthNonJoiner:
-    case zeroWidthJoiner:
         return true;
     case tabCharacter:
         if (!whitespaceIsCollapsed)
@@ -537,14 +510,14 @@ bool WidthIterator::characterCanUseSimplifiedTextMeasuring(UChar character, bool
     case popDirectionalIsolate:
     case firstStrongIsolate:
     case objectReplacementCharacter:
+    case zeroWidthNoBreakSpace:
+    case zeroWidthNonJoiner:
+    case zeroWidthJoiner:
         return false;
         break;
     }
 
-    if (character >= HiraganaLetterSmallA
-        || u_charType(character) == U_CONTROL_CHAR
-        || (character >= nullCharacter && character < space)
-        || (character >= deleteCharacter && character < noBreakSpace))
+    if (character >= HiraganaLetterSmallA || isControlCharacter(character))
         return false;
 
     return true;
@@ -558,16 +531,15 @@ void WidthIterator::applyCSSVisibilityRules(GlyphBuffer& glyphBuffer, unsigned g
 
     float yPosition = height(glyphBuffer.initialAdvance());
 
-    auto adjustForSyntheticBold = [&] (auto index) {
-    auto glyph = glyphBuffer.glyphAt(index);
-    static constexpr const GlyphBufferGlyph deletedGlyph = 0xFFFF;
-    auto syntheticBoldOffset = glyph == deletedGlyph ? 0 : glyphBuffer.fontAt(index).syntheticBoldOffset();
-    m_runWidthSoFar += syntheticBoldOffset;
-    auto& advance = glyphBuffer.advances(index)[0];
-    setWidth(advance, width(advance) + syntheticBoldOffset);
+    auto adjustForSyntheticBold = [&](auto index) {
+        auto glyph = glyphBuffer.glyphAt(index);
+        auto syntheticBoldOffset = glyph == deletedGlyph ? 0 : glyphBuffer.fontAt(index).syntheticBoldOffset();
+        m_runWidthSoFar += syntheticBoldOffset;
+        auto& advance = glyphBuffer.advances(index)[0];
+        setWidth(advance, width(advance) + syntheticBoldOffset);
     };
 
-    auto clobberGlyph = [&] (auto index, auto newGlyph) {
+    auto clobberGlyph = [&](auto index, auto newGlyph) {
         glyphBuffer.glyphs(index)[0] = newGlyph;
     };
 
@@ -575,16 +547,20 @@ void WidthIterator::applyCSSVisibilityRules(GlyphBuffer& glyphBuffer, unsigned g
     // applied. If the last glyph in a run needs to have its advance clobbered, but the next run has an initial advance, we need
     // to apply the initial advance on the new clobbered advance, rather than clobbering the initial advance entirely.
 
-    auto clobberAdvance = [&] (auto index, auto newAdvance) {
+    auto clobberAdvance = [&](auto index, auto newAdvance) {
         auto advanceBeforeClobbering = glyphBuffer.advanceAt(index);
         glyphBuffer.advances(index)[0] = makeGlyphBufferAdvance(newAdvance, height(advanceBeforeClobbering));
         m_runWidthSoFar += width(glyphBuffer.advanceAt(index)) - width(advanceBeforeClobbering);
         glyphBuffer.origins(index)[0] = makeGlyphBufferOrigin(0, -yPosition);
     };
 
-    auto deleteGlyph = [&] (auto index) {
+    auto deleteGlyph = [&](auto index) {
         m_runWidthSoFar -= width(glyphBuffer.advanceAt(index));
         glyphBuffer.deleteGlyphWithoutAffectingSize(index);
+    };
+
+    auto makeGlyphInvisible = [&](auto index) {
+        glyphBuffer.makeGlyphInvisible(index);
     };
 
     for (unsigned i = glyphBufferStartIndex; i < glyphBuffer.size(); yPosition += height(glyphBuffer.advanceAt(i)), ++i) {
@@ -596,20 +572,26 @@ void WidthIterator::applyCSSVisibilityRules(GlyphBuffer& glyphBuffer, unsigned g
         switch (characterResponsibleForThisGlyph) {
         case newlineCharacter:
         case carriageReturn:
-        case noBreakSpace:
-        case tabCharacter:
             ASSERT(glyphBuffer.fonts(i)[0]);
-            // FIXME: Is this actually necessary? If the font specifically has a glyph for NBSP, I don't see a reason not to use it.
-            clobberGlyph(i, glyphBuffer.fontAt(i).spaceGlyph());
+            // FIXME: It isn't quite right to use the space glyph here, because the space character may be supposed to render with a totally unrelated font (because of fallback).
+            // Instead, we should probably somehow have the caller pass in a Font/glyph pair to use in this situation.
+            if (auto spaceGlyph = glyphBuffer.fontAt(i).spaceGlyph())
+                clobberGlyph(i, spaceGlyph);
+            adjustForSyntheticBold(i);
+            continue;
+        case noBreakSpace:
+            adjustForSyntheticBold(i);
+            continue;
+        case tabCharacter:
+            makeGlyphInvisible(i);
             adjustForSyntheticBold(i);
             continue;
         }
 
         // https://www.w3.org/TR/css-text-3/#white-space-processing
         // "Control characters (Unicode category Cc)—other than tabs (U+0009), line feeds (U+000A), carriage returns (U+000D) and sequences that form a segment break—must be rendered as a visible glyph"
-        // Also, we're omitting NULL (U+0000) from this set because Chrome and Firefox do so and it's needed for compat. See https://github.com/w3c/csswg-drafts/pull/6983.
-        if (characterResponsibleForThisGlyph != nullCharacter
-            && u_charType(characterResponsibleForThisGlyph) == U_CONTROL_CHAR) {
+        // Also, we're omitting Null (U+0000) from this set because Chrome and Firefox do so and it's needed for compat. See https://github.com/w3c/csswg-drafts/pull/6983.
+        if (characterResponsibleForThisGlyph != nullCharacter && isControlCharacter(characterResponsibleForThisGlyph)) {
             // Let's assume that .notdef is visible.
             GlyphBufferGlyph visibleGlyph = 0;
             clobberGlyph(i, visibleGlyph);

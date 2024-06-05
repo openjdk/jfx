@@ -26,7 +26,7 @@ namespace WebCore {
 
 class HTMLImageLoader;
 
-enum class CreatePlugins { No, Yes };
+enum class CreatePlugins : bool { No, Yes };
 
 // Base class for HTMLEmbedElement and HTMLObjectElement.
 // FIXME: This is the only class that derives from HTMLPlugInElement, so we could merge the two classes.
@@ -50,7 +50,7 @@ protected:
 
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) override;
 
-    bool requestObject(const String& url, const String& mimeType, const Vector<String>& paramNames, const Vector<String>& paramValues) final;
+    bool requestObject(const String& url, const String& mimeType, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues) final;
 
     bool isImageType();
     HTMLImageLoader* imageLoader() { return m_imageLoader.get(); }

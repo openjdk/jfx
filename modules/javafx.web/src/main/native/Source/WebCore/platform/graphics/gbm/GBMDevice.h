@@ -26,9 +26,17 @@
 
 #pragma once
 
-#if USE(ANGLE) && USE(NICOSIA)
+#if USE(GBM)
+
+#include <optional>
+#include <wtf/Noncopyable.h>
+#include <wtf/unix/UnixFileDescriptor.h>
 
 struct gbm_device;
+
+namespace WTF {
+class String;
+}
 
 namespace WebCore {
 
@@ -36,17 +44,20 @@ class GBMDevice {
     WTF_MAKE_NONCOPYABLE(GBMDevice);
     WTF_MAKE_FAST_ALLOCATED();
 public:
-    static const GBMDevice& get();
+    static GBMDevice& singleton();
 
-    GBMDevice();
+    GBMDevice() = default;
     ~GBMDevice();
 
-    struct gbm_device* device() const { return m_device; }
+    bool isInitialized() const { return m_device.has_value(); }
+    void initialize(const WTF::String&);
+    struct gbm_device* device() const { RELEASE_ASSERT(m_device.has_value()); return m_device.value(); }
 
 private:
-    struct gbm_device* m_device { nullptr };
+    WTF::UnixFileDescriptor m_fd;
+    std::optional<struct gbm_device*> m_device;
 };
 
 } // namespace WebCore
 
-#endif // USE(ANGLE) && USE(NICOSIA)
+#endif // USE(GBM)

@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2003-2021 Apple Inc.
+ * Copyright (C) 2003-2023 Apple Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -34,11 +34,7 @@
 #include <pal/spi/cg/CoreGraphicsSPI.h>
 #include <wtf/MathExtras.h>
 
-#if PLATFORM(COCOA)
 #include <pal/spi/cf/CoreTextSPI.h>
-#else
-#include <pal/spi/win/CoreTextSPIWin.h>
-#endif
 
 namespace WebCore {
 
@@ -56,66 +52,59 @@ FontCascade::FontCascade(const FontPlatformData& fontData, FontSmoothingMode fon
 
 static const AffineTransform& rotateLeftTransform()
 {
-    static AffineTransform result(0, -1, 1, 0, 0, 0);
+    static constexpr AffineTransform result(0, -1, 1, 0, 0, 0);
+    return result;
+}
+
+AffineTransform computeBaseOverallTextMatrix(const std::optional<AffineTransform>& syntheticOblique)
+{
+    AffineTransform result;
+
+    // This is a Y-flip, because text's coordinate system is increasing-Y-goes-up,
+    // but WebKit's coordinate system is increasing-Y-goes-down.
+    result.setB(-result.b());
+    result.setD(-result.d());
+
+    if (syntheticOblique)
+        result = *syntheticOblique * result;
+
     return result;
 }
 
 AffineTransform computeOverallTextMatrix(const Font& font)
 {
+    std::optional<AffineTransform> syntheticOblique;
     auto& platformData = font.platformData();
-    AffineTransform result;
-    if (!platformData.isColorBitmapFont())
-        result = CTFontGetMatrix(platformData.ctFont());
-    result.setB(-result.b());
-    result.setD(-result.d());
     if (platformData.syntheticOblique()) {
         float obliqueSkew = tanf(deg2rad(FontCascade::syntheticObliqueAngle()));
         if (platformData.orientation() == FontOrientation::Vertical) {
             if (font.isTextOrientationFallback())
-                result = AffineTransform(1, obliqueSkew, 0, 1, 0, 0) * result;
+                syntheticOblique = AffineTransform(1, obliqueSkew, 0, 1, 0, 0);
             else
-                result = AffineTransform(1, -obliqueSkew, 0, 1, 0, 0) * result;
+                syntheticOblique = AffineTransform(1, -obliqueSkew, 0, 1, 0, 0);
         } else
-            result = AffineTransform(1, 0, -obliqueSkew, 1, 0, 0) * result;
+            syntheticOblique = AffineTransform(1, 0, -obliqueSkew, 1, 0, 0);
     }
 
-    // We're emulating the behavior of CGContextSetTextPosition() by adding constant amounts to each glyph's position
-    // (see fillVectorWithHorizontalGlyphPositions() and fillVectorWithVerticalGlyphPositions()).
-    // CGContextSetTextPosition() has the side effect of clobbering the E and F fields of the text matrix,
-    // so we do that explicitly here.
-    result.setE(0);
-    result.setF(0);
-    return result;
+    return computeBaseOverallTextMatrix(syntheticOblique);
+}
+
+AffineTransform computeBaseVerticalTextMatrix(const AffineTransform& previousTextMatrix)
+{
+    // The translation here ("e" and "f" fields) are irrelevant, because
+    // this matrix is inverted in fillVectorWithVerticalGlyphPositions to place the glyphs in the CTM's coordinate system.
+    // All we're trying to do here is rotate the text matrix so glyphs appear visually upright.
+    // We have to include the previous text matrix because it includes things like synthetic oblique.
+    //
+    // Because this is a left-multiply, we're taking the points from user coordinates, which are increasing-Y-goes-down,
+    // and we're rotating the points to the left in that coordinate system, to put them physically upright.
+    return rotateLeftTransform() * previousTextMatrix;
 }
 
 AffineTransform computeVerticalTextMatrix(const Font& font, const AffineTransform& previousTextMatrix)
 {
     ASSERT_UNUSED(font, font.platformData().orientation() == FontOrientation::Vertical);
-    // The translation here ("e" and "f" fields) are irrelevant, because
-    // this matrix is inverted in fillVectorWithVerticalGlyphPositions to place the glyphs in the CTM's coordinate system.
-    // All we're trying to do here is rotate the text matrix so glyphs appear visually upright.
-    // We have to include the previous text matrix because it includes things like synthetic oblique.
-    return rotateLeftTransform() * previousTextMatrix;
-}
-
-#if !PLATFORM(WIN)
-
-// Confusingly, even when CGFontRenderingGetFontSmoothingDisabled() returns true, CGContextSetShouldSmoothFonts() still impacts text
-// rendering, which is why this function uses the "subpixel antialiasing" rather than "smoothing" terminology.
-bool FontCascade::isSubpixelAntialiasingAvailable()
-{
-#if HAVE(CG_FONT_RENDERING_GET_FONT_SMOOTHING_DISABLED)
-    static bool subpixelAntialiasingEnabled;
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [&]() {
-        ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        subpixelAntialiasingEnabled = !CGFontRenderingGetFontSmoothingDisabled();
-        ALLOW_DEPRECATED_DECLARATIONS_END
-    });
-    return subpixelAntialiasingEnabled;
-#else
-    return false;
-#endif
+    return computeBaseVerticalTextMatrix(previousTextMatrix);
 }
 
 static void fillVectorWithHorizontalGlyphPositions(Vector<CGPoint, 256>& positions, CGContextRef context, const CGSize* advances, unsigned count, const FloatPoint& point)
@@ -138,15 +127,134 @@ static void fillVectorWithHorizontalGlyphPositions(Vector<CGPoint, 256>& positio
     }
 }
 
-static void fillVectorWithVerticalGlyphPositions(Vector<CGPoint, 256>& positions, CGContextRef context, const CGSize* translations, const CGSize* advances, unsigned count, const FloatPoint& point, float ascentDelta)
+static void fillVectorWithVerticalGlyphPositions(Vector<CGPoint, 256>& positions, const CGSize translations[], const CGSize advances[], unsigned count, const FloatPoint& point, float ascentDelta, CGAffineTransform textMatrix)
 {
-    // Keep this in sync as the inverse of `DrawGlyphsRecorder::recordDrawGlyphs`.
-    CGAffineTransform transform = CGAffineTransformInvert(CGContextGetTextMatrix(context));
+    // Keep this function in sync as the inverse of `DrawGlyphsRecorder::recordDrawGlyphs`.
 
+    // It's important to realize we're dealing with 4 coordinate systems here:
+    // 1. Physical coordinate system. This is what the user sees.
+    // 2. User coordinate system. This is the coordinate system of just the CTM. For vertical text, this is just like the normal WebKit increasing-Y-down
+    //        coordinate system, except we're rotated right, so logical right is physical down. (We do this so logical inline progression proceeds in the
+    //        logically increasing-X dimension, just as it would if we weren't doing vertical stuff.)
+    // 3. Text coordinate system. This is the coordinate of the text matrix concatenated with the CTM. For vertical text, this is rotated such that
+    //        increasing Y goes physically up, and increasing X goes physically right. The control points in font contours are authored according to this
+    //        increasing-Y-up coordinate system.
+    // 4. Synthetic-oblique-less text coordinate system. This would be identical to the text coordinate system if synthetic oblique was not in effect. This
+    //        is useful because, when we're moving glyphs around, we usually don't want to consider synthetic oblique. Instead, synthetic oblique is just
+    //        a rasterization-time effect, and not used for glyph positioning/layout.
+    //        FIXME: Does this mean that synthetic oblique should always be applied on the result of rotateLeftTransform() in computeVerticalTextMatrix(),
+    //        rather than the other way around?
+
+    // Imagine an vertical upright glyph:
+    // +--------------------------+
+    // |      ___       ___       |
+    // |      \  \     /  /       |
+    // |       \  \   /  /        |
+    // |        \  \ /  /         |
+    // |         \  V  /          |
+    // |          \   /           |
+    // |          |   |           |
+    // |          |   |           |
+    // |          |   |           |
+    // |          |   |           |
+    // |          |___|           |
+    // |                          |
+    // +--------------------------+
+    //
+    // The ideographic baseline lies in the center of the glyph, and the alphabetic baseline lies to the left of it:
+    //     |        |
+    // +---|--------|-------------+
+    // |   |  ___   |   ___       |
+    // |   |  \  \  |  /  /       |
+    // |   |   \  \ | /  /        |
+    // |   |    \  \|/  /         |
+    // |   |     \  |  /          |
+    // |   |      \ | /           |
+    // |   |      | | |           |
+    // |   |      | | |           |
+    // |   |      | | |           |
+    // |   |      | | |           |
+    // |   |      |_|_|           |
+    // |   |        |             |
+    // +---|--------|-------------+
+    //     |        | <== ideographic baseline
+    //     | <== alphabetic baseline
+    //
+    // The glyph itself has a local origin, which is the position sent to Core Text. The control points of the contours are defined relative to this point.
+    // +--------------------------+
+    // |      ___       ___       |
+    // |      \  \     /  /       |
+    // |       \  \   /  /        |
+    // |        \  \ /  /         |
+    // |         \  V  /          |
+    // |          \   /           |
+    // |          |   |           |
+    // |          |   |           |
+    // |          |   |           |
+    // * <= here  |   |           |
+    // |          |___|           |
+    // |                          |
+    // +--------------------------+
+    //
+    // Now, for horizontal text, we can do the simple thing of just:
+    // 1. Place the pen at a position. Record this position as the local origin of the first glyph
+    // 2. Move the pen according to the glyph's advance
+    // 3. Record a new position as the local origin of the next glyph
+    // 4. Go to 2
+    // However, for vertical text, we can't get away with this because the glyph origins are not on the baseline.
+    // This is what the "vertical translation for a glyph" is for. It contains this vector:
+    // +---A--------B-------------+
+    // |           /              |
+    // |          /               |
+    // |        --                |
+    // |       /                  |
+    // |      /                   |
+    // |    --                    |
+    // |   /                      |
+    // |  /                       |
+    // ||_                        |
+    // C                          |
+    // |                          |
+    // |                          |
+    // +--------------------------+
+    // It points from the pen position on the ideographic baseline to the glyph's local origin. This is (usually) physically
+    // down-and-to-the-left. Core Text gives us these vectors in the text coordinate system, and so therefore these vectors (usually) have
+    // both X and Y components negative.
+
+    // The goal of this function is to produce glyph origins in the text coordinate system, because that's what Core Text expects. The "advances"
+    // and "point" parameters to this function are in the user coordinate system. The "translations" parameter is in the "synthetic-oblique-less
+    // text coordinate system."
+
+    // CGContextGetTextMatrix() transforms points from text coordinates to user coordinates. However, we're trying to produce text coordinates from
+    // user coordinates, so we invert it.
+    CGAffineTransform transform = CGAffineTransformInvert(textMatrix);
+
+    // Because the "vertical translation for a glyph" vector starts at the ideographic baseline (the point B in the above diagram), we have to
+    // adjust the pen position to start there. WebKit's text routines start out using the alphabetic baseline (point A in the diagram above) so we
+    // adjust the start position here, which has the effect of shifting the whole run altogether.
+    //
+    // ascentDelta is (usually) a negative number, and represents the distance between the ideographic baseline to the alphabetic baseline.
+    // In user coordinates, we want to adjust the Y component to make a horizontal physical change. And, because the user coordinate system is
+    // logically increasing-Y-down, we add the value, which is negative, to move us logically up, which is physically to the right. Now our position
+    // is at the point labeled B in the above diagram, in user coordinates.
     auto position = CGPointMake(point.x(), point.y() + ascentDelta);
+
+    static const auto constantSyntheticTextMatrixOmittingOblique = computeBaseVerticalTextMatrix(computeBaseOverallTextMatrix(std::nullopt)); // See fillVectorWithVerticalGlyphPositions(), which describes what this is.
+
     for (unsigned i = 0; i < count; ++i) {
-        CGSize translation = CGSizeApplyAffineTransform(translations[i], rotateLeftTransform());
-        positions[i] = CGPointApplyAffineTransform(CGPointMake(position.x - translation.width, position.y + translation.height), transform);
+        // The "translations" parameter is in the "synthetic-oblique-less text coordinate system" and we want to add it to the position in the user
+        // coordinate system. Luckily, the text matrix (or, at least the version of the text matrix that doesn't include synthetic oblique) does exactly
+        // this. So, we just create the synthetic-oblique-less text matrix, and run the translation through it. This gives us the translation in user
+        // coordinates.
+        auto translationInUserCoordinates = CGSizeApplyAffineTransform(translations[i], constantSyntheticTextMatrixOmittingOblique);
+
+        // Now we can add the position in user coordinates with the translation in user coordinates.
+        auto positionInUserCoordinates = CGPointMake(position.x + translationInUserCoordinates.width, position.y + translationInUserCoordinates.height);
+
+        // And then put it back in font coordinates for submission to Core Text. Yay!
+        positions[i] = CGPointApplyAffineTransform(positionInUserCoordinates, transform);
+
+        // Advance the position to the next position in user coordinates. Both the advances and position are in user coordinates.
         position.x += advances[i].width;
         position.y += advances[i].height;
     }
@@ -166,7 +274,7 @@ static void showGlyphsWithAdvances(const FloatPoint& point, const Font& font, CG
         CTFontGetVerticalTranslationsForGlyphs(platformData.ctFont(), glyphs, translations.data(), count);
 
         auto ascentDelta = font.fontMetrics().floatAscent(IdeographicBaseline) - font.fontMetrics().floatAscent();
-        fillVectorWithVerticalGlyphPositions(positions, context, translations.data(), advances, count, point, ascentDelta);
+        fillVectorWithVerticalGlyphPositions(positions, translations.data(), advances, count, point, ascentDelta, CGContextGetTextMatrix(context));
         CTFontDrawGlyphs(platformData.ctFont(), glyphs, positions.data(), count, context);
     } else {
         fillVectorWithHorizontalGlyphPositions(positions, context, advances, count, point);
@@ -201,11 +309,11 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
 
     CGContextRef cgContext = context.platformContext();
 
-    bool shouldAntialias = true;
-    bool shouldSmoothFonts = true;
-
     if (!font.allowsAntialiasing())
         smoothingMode = FontSmoothingMode::NoSmoothing;
+
+    bool shouldAntialias = true;
+    bool shouldSmoothFonts = true;
 
     switch (smoothingMode) {
     case FontSmoothingMode::Antialiased:
@@ -213,7 +321,6 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
         break;
     case FontSmoothingMode::AutoSmoothing:
     case FontSmoothingMode::SubpixelAntialiased:
-        shouldAntialias = true;
         break;
     case FontSmoothingMode::NoSmoothing:
         shouldAntialias = false;
@@ -221,10 +328,9 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
         break;
     }
 
-    if (!shouldUseSmoothing())
-        shouldSmoothFonts = false;
-
-#if !PLATFORM(IOS_FAMILY)
+#if PLATFORM(IOS_FAMILY)
+    UNUSED_VARIABLE(shouldSmoothFonts);
+#else
     bool originalShouldUseFontSmoothing = CGContextGetShouldSmoothFonts(cgContext);
     if (shouldSmoothFonts != originalShouldUseFontSmoothing)
         CGContextSetShouldSmoothFonts(cgContext, shouldSmoothFonts);
@@ -242,10 +348,7 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
     setCGFontRenderingMode(context);
     CGContextSetFontSize(cgContext, platformData.size());
 
-    FloatSize shadowOffset;
-    float shadowBlur;
-    Color shadowColor;
-    context.getShadow(shadowOffset, shadowBlur, shadowColor);
+    auto shadow = context.dropShadow();
 
     AffineTransform contextCTM = context.getCTM();
     float syntheticBoldOffset = font.syntheticBoldOffset();
@@ -258,16 +361,16 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
         }
     };
 
-    bool hasSimpleShadow = context.textDrawingMode() == TextDrawingMode::Fill && shadowColor.isValid() && !shadowBlur && !platformData.isColorBitmapFont() && (!context.shadowsIgnoreTransforms() || contextCTM.isIdentityOrTranslationOrFlipped()) && !context.isInTransparencyLayer();
+    bool hasSimpleShadow = context.textDrawingMode() == TextDrawingMode::Fill && shadow && shadow->color.isValid() && !shadow->radius && !platformData.isColorBitmapFont() && (!context.shadowsIgnoreTransforms() || contextCTM.isIdentityOrTranslationOrFlipped()) && !context.isInTransparencyLayer();
     if (hasSimpleShadow) {
         // Paint simple shadows ourselves instead of relying on CG shadows, to avoid losing subpixel antialiasing.
         context.clearShadow();
         Color fillColor = context.fillColor();
-        Color shadowFillColor = shadowColor.colorWithAlphaMultipliedBy(fillColor.alphaAsFloat());
+        Color shadowFillColor = shadow->color.colorWithAlphaMultipliedBy(fillColor.alphaAsFloat());
         context.setFillColor(shadowFillColor);
-        float shadowTextX = point.x() + shadowOffset.width();
+        float shadowTextX = point.x() + shadow->offset.width();
         // If shadows are ignoring transforms, then we haven't applied the Y coordinate flip yet, so down is negative.
-        float shadowTextY = point.y() + shadowOffset.height() * (context.shadowsIgnoreTransforms() ? -1 : 1);
+        float shadowTextY = point.y() + shadow->offset.height() * (context.shadowsIgnoreTransforms() ? -1 : 1);
         showGlyphsWithAdvances(FloatPoint(shadowTextX, shadowTextY), font, cgContext, glyphs, advances, numGlyphs, textMatrix);
         if (syntheticBoldOffset)
             showGlyphsWithAdvances(FloatPoint(shadowTextX + syntheticBoldOffset, shadowTextY), font, cgContext, glyphs, advances, numGlyphs, textMatrix);
@@ -280,7 +383,7 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
         showGlyphsWithAdvances(FloatPoint(point.x() + syntheticBoldOffset, point.y()), font, cgContext, glyphs, advances, numGlyphs, textMatrix);
 
     if (hasSimpleShadow)
-        context.setShadow(shadowOffset, shadowBlur, shadowColor);
+        context.setDropShadow(*shadow);
 
 #if !PLATFORM(IOS_FAMILY)
     if (shouldSmoothFonts != originalShouldUseFontSmoothing)
@@ -315,7 +418,10 @@ const Font* FontCascade::fontForCombiningCharacterSequence(const UChar* characte
     bool triedBaseCharacterFont = false;
 
     for (unsigned i = 0; !fallbackRangesAt(i).isNull(); ++i) {
-        const Font* font = fallbackRangesAt(i).fontForCharacter(baseCharacter);
+        auto& fontRanges = fallbackRangesAt(i);
+        if (fontRanges.isGeneric() && isPrivateUseAreaCharacter(baseCharacter))
+            continue;
+        const Font* font = fontRanges.fontForCharacter(baseCharacter);
         if (!font)
             continue;
 #if PLATFORM(IOS_FAMILY)
@@ -352,6 +458,57 @@ const Font* FontCascade::fontForCombiningCharacterSequence(const UChar* characte
     return Font::systemFallback();
 }
 
-#endif
+ResolvedEmojiPolicy FontCascade::resolveEmojiPolicy(FontVariantEmoji fontVariantEmoji, UChar32 character)
+{
+    // You may think that this function should be different between macOS and iOS. And you may even be right!
+    //
+    // For "unqualified" characters on https://unicode.org/Public/emoji/latest/emoji-test.txt the apparent behavior
+    // of macOS and iOS is different. Both OSes cascade through the default cascade list, but on macOS,
+    // STIXTwo is ahead of AppleColorEmoji in the list. On iOS, however, AppleColorEmoji is really early in the list
+    // (it appears before almost everything else). So the observed effect is that a lot of these "unqualified"
+    // characters will be emoji style on iOS whereas they will be text style on macOS.
+    //
+    // On the other hand, when Unicode says that a character is Emoji_Presentation, then it needs to be rendered a
+    // emoji style, regardless of which OS you're on. Them's the rules.
+    //
+    // The fact that this function is the same on macOS and iOS is a somewhat-intentional choice. We *could* gather up
+    // all the characters that apparently render differently on macOS and iOS, and force them to maintain those
+    // differences here. However, that has 2 downsides:
+    // 1. Having a big list of characters in WebKit source code is unmaintanable. And generating it at build time is a
+    //        bit of a science project, given Apple's internal build system.
+    // 2. More importantly, it probably isn't what authors want. If authors have their own font-family fallback list,
+    //        they probably don't want us to sidestep _most_ of it in search of an emoji font, just because of the
+    //        particular order of Core Text's native cascade list for native apps.
+    //
+    // So, where we end up here is a situation where these characters will get platform-specific rendering, but only if
+    // the author is using `font-family: system-ui` or we end up falling off the end of the fallback list altogether.
+    // Otherwise, we honor the author's given font-family list. This is probably the best of both words:
+    // 1. If we have a positive signal from Unicode that a character has gotta be rendered in emoji style, then we'll
+    //        honor that,
+    // 2. In all other cases we'll honor the author's fallback list...
+    // 3. Unless the author has (intentionally or unintentionally) asked us to perform a platform-specific fallback
+    //        (via either asking for system-ui or by falling off the end of the list).
 
+    switch (fontVariantEmoji) {
+    case FontVariantEmoji::Normal:
+    case FontVariantEmoji::Unicode:
+        // https://www.unicode.org/reports/tr51/#Presentation_Style
+        // There had been no clear line for implementers between three categories of Unicode characters:
+        // 1. emoji-default: those expected to have an emoji presentation by default, but can also have a text presentation
+        // 2. text-default: those expected to have a text presentation by default, but could also have an emoji presentation
+        // 3. text-only: those that should only have a text presentation
+        // These categories can be distinguished using properties listed in Annex A: Emoji Properties and Data Files.
+        // The first category are characters with Emoji=Yes and Emoji_Presentation=Yes.
+        // The second category are characters with Emoji=Yes and Emoji_Presentation=No.
+        // The third category are characters with Emoji=No.
+        if (u_hasBinaryProperty(character, UCHAR_EMOJI_PRESENTATION))
+            return ResolvedEmojiPolicy::RequireEmoji;
+        return ResolvedEmojiPolicy::NoPreference;
+    case FontVariantEmoji::Text:
+        return ResolvedEmojiPolicy::RequireText;
+    case FontVariantEmoji::Emoji:
+        return ResolvedEmojiPolicy::RequireEmoji;
+    }
 }
+
+} // namespace WebCore

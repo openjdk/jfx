@@ -28,109 +28,82 @@
 
 #if ENABLE(VIDEO)
 
+#if USE(GSTREAMER)
+#include "VideoFrameGStreamer.h"
+#endif
+
 namespace WebCore {
 
-VideoFrame::VideoFrame(MediaTime presentationTime, bool isMirrored, VideoRotation rotation)
+VideoFrame::VideoFrame(MediaTime presentationTime, bool isMirrored, Rotation rotation, PlatformVideoColorSpace&& colorSpace)
     : m_presentationTime(presentationTime)
     , m_isMirrored(isMirrored)
     , m_rotation(rotation)
+    , m_colorSpace(WTFMove(colorSpace))
 {
 }
 
-VideoFrame::~VideoFrame() = default;
-
-MediaTime VideoFrame::presentationTime() const
+void VideoFrame::initializeCharacteristics(MediaTime presentationTime, bool isMirrored, Rotation rotation)
 {
-    return m_presentationTime;
+    const_cast<MediaTime&>(m_presentationTime) = presentationTime;
+    const_cast<bool&>(m_isMirrored) = isMirrored;
+    const_cast<Rotation&>(m_rotation) = rotation;
 }
 
-MediaSample::VideoRotation VideoFrame::videoRotation() const
+#if !PLATFORM(COCOA) && !USE(GSTREAMER)
+RefPtr<VideoFrame> VideoFrame::fromNativeImage(NativeImage&)
 {
-    return m_rotation;
+    // FIXME: Add support.
+    return nullptr;
 }
 
-bool VideoFrame::videoMirrored() const
+RefPtr<VideoFrame> createFromPixelBuffer(Ref<PixelBuffer>&&, PlatformVideoColorSpace&&)
 {
-    return m_isMirrored;
+    // FIXME: Add support.
+    return nullptr;
 }
 
-WebCore::PlatformSample VideoFrame::platformSample() const
+RefPtr<VideoFrame> VideoFrame::createNV12(std::span<const uint8_t>, size_t, size_t, const ComputedPlaneLayout&, const ComputedPlaneLayout&, PlatformVideoColorSpace&&)
 {
-    return { WebCore::PlatformSample::VideoFrameType, { } };
+    // FIXME: Add support.
+    return nullptr;
 }
 
-PlatformSample::Type VideoFrame::platformSampleType() const
+RefPtr<VideoFrame> VideoFrame::createRGBA(std::span<const uint8_t>, size_t, size_t, const ComputedPlaneLayout&, PlatformVideoColorSpace&&)
 {
-    return WebCore::PlatformSample::VideoFrameType;
+    // FIXME: Add support.
+    return nullptr;
 }
 
-MediaTime VideoFrame::decodeTime() const
+RefPtr<VideoFrame> VideoFrame::createBGRA(std::span<const uint8_t>, size_t, size_t, const ComputedPlaneLayout&, PlatformVideoColorSpace&&)
 {
-    ASSERT_NOT_REACHED();
-    return { };
+    // FIXME: Add support.
+    return nullptr;
 }
 
-MediaTime VideoFrame::duration() const
+RefPtr<VideoFrame> VideoFrame::createI420(std::span<const uint8_t>, size_t, size_t, const ComputedPlaneLayout&, const ComputedPlaneLayout&, const ComputedPlaneLayout&, PlatformVideoColorSpace&&)
 {
-    ASSERT_NOT_REACHED();
-    return { };
+    // FIXME: Add support.
+    return nullptr;
 }
 
-AtomString VideoFrame::trackID() const
+RefPtr<VideoFrame> VideoFrame::createI420A(std::span<const uint8_t>, size_t, size_t, const ComputedPlaneLayout&, const ComputedPlaneLayout&, const ComputedPlaneLayout&, const ComputedPlaneLayout&, PlatformVideoColorSpace&&)
 {
-    ASSERT_NOT_REACHED();
-    return { };
+    // FIXME: Add support.
+    return nullptr;
 }
 
-size_t VideoFrame::sizeInBytes() const
+void VideoFrame::copyTo(std::span<uint8_t>, VideoPixelFormat, Vector<ComputedPlaneLayout>&&, CopyCallback&& callback)
 {
-    ASSERT_NOT_REACHED();
-    return 0;
+    // FIXME: Add support.
+    callback({ });
 }
 
-void VideoFrame::offsetTimestampsBy(const MediaTime&)
+void VideoFrame::paintInContext(GraphicsContext&, const FloatRect&, const ImageOrientation&, bool)
 {
-    ASSERT_NOT_REACHED();
+    // FIXME: Add support.
 }
-
-void VideoFrame::setTimestamps(const MediaTime&, const MediaTime&)
-{
-    ASSERT_NOT_REACHED();
-}
-
-bool VideoFrame::isDivisable() const
-{
-    ASSERT_NOT_REACHED();
-    return false;
-}
-
-std::pair<RefPtr<WebCore::MediaSample>, RefPtr<WebCore::MediaSample>> VideoFrame::divide(const MediaTime&, UseEndTime)
-{
-    ASSERT_NOT_REACHED();
-    return { nullptr, nullptr };
-}
-
-Ref<WebCore::MediaSample> VideoFrame::createNonDisplayingCopy() const
-{
-    CRASH();
-}
-
-MediaSample::SampleFlags VideoFrame::flags() const
-{
-    return MediaSample::SampleFlags::None;
-}
-
-std::optional<MediaSample::ByteRange> VideoFrame::byteRange() const
-{
-    // FIXME: Remove from the base class.
-    ASSERT_NOT_REACHED();
-    return std::nullopt;
-}
-
-void VideoFrame::dump(PrintStream&) const
-{
-}
+#endif // !PLATFORM(COCOA)
 
 }
 
-#endif
+#endif // ENABLE(VIDEO)

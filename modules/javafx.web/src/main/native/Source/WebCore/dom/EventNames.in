@@ -5,13 +5,17 @@ useNamespaceAsSuffix=false
 Event
 Events interfaceName=Event
 HTMLEvents interfaceName=Event
-AnimationEvent
 AnimationPlaybackEvent
+BackgroundFetchEvent conditional=SERVICE_WORKER
+BackgroundFetchUpdateUIEvent conditional=SERVICE_WORKER
 BeforeLoadEvent interfaceName=Event
 BeforeUnloadEvent
+BufferedChangeEvent conditional=MANAGED_MEDIA_SOURCE
 ClipboardEvent
 CloseEvent
 CompositionEvent
+CSSAnimationEvent
+CSSTransitionEvent
 CustomEvent
 DragEvent
 ExtendableEvent conditional=SERVICE_WORKER
@@ -39,8 +43,8 @@ PromiseRejectionEvent
 PushEvent conditional=SERVICE_WORKER
 PushSubscriptionChangeEvent conditional=SERVICE_WORKER
 SubmitEvent
+ToggleEvent
 TextEvent
-TransitionEvent
 UIEvent
 UIEvents interfaceName=UIEvent
 WheelEvent
@@ -70,12 +74,11 @@ RTCTrackEvent conditional=WEB_RTC
 RTCTransformEvent conditional=WEB_RTC
 SpeechRecognitionErrorEvent
 SpeechRecognitionEvent
+SpeechSynthesisErrorEvent conditional=SPEECH_SYNTHESIS
 SpeechSynthesisEvent conditional=SPEECH_SYNTHESIS
 WebGLContextEvent conditional=WEBGL
 StorageEvent
 SVGEvents interfaceName=Event
-SVGZoomEvent
-SVGZoomEvents interfaceName=SVGZoomEvent
 IDBVersionChangeEvent
 TouchEvent conditional=TOUCH_EVENTS
 DeviceMotionEvent conditional=DEVICE_ORIENTATION
@@ -86,13 +89,13 @@ WebKitMediaKeyNeededEvent conditional=LEGACY_ENCRYPTED_MEDIA
 TrackEvent conditional=VIDEO
 SecurityPolicyViolationEvent
 GestureEvent conditional=IOS_GESTURE_EVENTS|MAC_GESTURE_EVENTS
-WebKitPlaybackTargetAvailabilityEvent conditional=WIRELESS_PLAYBACK_TARGET
+WebKitPlaybackTargetAvailabilityEvent conditional=WIRELESS_PLAYBACK_TARGET_AVAILABILITY_API
 GamepadEvent conditional=GAMEPAD
 OverconstrainedErrorEvent conditional=MEDIA_STREAM
 MediaEncryptedEvent conditional=ENCRYPTED_MEDIA
 MediaKeyMessageEvent conditional=ENCRYPTED_MEDIA
 PointerEvent
-EnterPictureInPictureEvent conditional=PICTURE_IN_PICTURE_API
+PictureInPictureEvent conditional=PICTURE_IN_PICTURE_API
 XRInputSourceEvent conditional=WEBXR
 XRInputSourcesChangeEvent conditional=WEBXR
 XRReferenceSpaceEvent conditional=WEBXR

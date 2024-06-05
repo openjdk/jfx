@@ -68,7 +68,7 @@ class ScriptExecutionContext;
 struct PerformanceMarkOptions;
 struct PerformanceMeasureOptions;
 
-class Performance final : public RefCounted<Performance>, public ContextDestructionObserver, public EventTargetWithInlineData {
+class Performance final : public RefCounted<Performance>, public ContextDestructionObserver, public EventTarget {
     WTF_MAKE_ISO_ALLOCATED(Performance);
 public:
     static Ref<Performance> create(ScriptExecutionContext* context, MonotonicTime timeOrigin) { return adoptRef(*new Performance(context, timeOrigin)); }
@@ -110,6 +110,7 @@ public:
     static Seconds reduceTimeResolution(Seconds);
 
     DOMHighResTimeStamp relativeTimeFromTimeOriginInReducedResolution(MonotonicTime) const;
+    MonotonicTime monotonicTimeFromRelativeTime(DOMHighResTimeStamp) const;
 
     ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
 

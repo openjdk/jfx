@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,10 +25,12 @@
 
 #pragma once
 
+#include "Icon.h"
 #include "RenderTheme.h"
 #include <wtf/RetainPtr.h>
 
 OBJC_CLASS NSDateComponentsFormatter;
+struct AttachmentLayout;
 
 namespace WebCore {
 
@@ -36,20 +38,27 @@ class RenderThemeCocoa : public RenderTheme {
 public:
     WEBCORE_EXPORT static RenderThemeCocoa& singleton();
 
-    virtual CFStringRef contentSizeCategory() const = 0;
+protected:
+    virtual Color pictureFrameColor(const RenderObject&);
+#if ENABLE(ATTACHMENT_ELEMENT)
+    int attachmentBaseline(const RenderAttachment&) const final;
+    void paintAttachmentText(GraphicsContext&, AttachmentLayout*) final;
+#endif
+
+    Color platformSpellingMarkerColor(OptionSet<StyleColorOptions>) const override;
+    Color platformDictationAlternativesMarkerColor(OptionSet<StyleColorOptions>) const override;
+    Color platformGrammarMarkerColor(OptionSet<StyleColorOptions>) const override;
 
 private:
     void purgeCaches() override;
 
     bool shouldHaveCapsLockIndicator(const HTMLInputElement&) const final;
 
+    void paintFileUploadIconDecorations(const RenderObject& inputRenderer, const RenderObject& buttonRenderer, const PaintInfo&, const IntRect&, Icon*, FileUploadDecorations) override;
+
 #if ENABLE(APPLE_PAY)
     void adjustApplePayButtonStyle(RenderStyle&, const Element*) const override;
-    bool paintApplePayButton(const RenderObject&, const PaintInfo&, const IntRect&) override;
 #endif
-
-    FontCascadeDescription& cachedSystemFontDescription(CSSValueID systemFontID) const override;
-    void updateCachedSystemFontDescription(CSSValueID systemFontID, FontCascadeDescription&) const override;
 
 #if ENABLE(VIDEO) && ENABLE(MODERN_MEDIA_CONTROLS)
     String mediaControlsStyleSheet() override;

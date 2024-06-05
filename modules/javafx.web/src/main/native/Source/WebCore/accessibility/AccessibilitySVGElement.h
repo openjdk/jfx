@@ -32,30 +32,29 @@
 namespace WebCore {
 
 class AccessibilitySVGElement : public AccessibilityRenderObject {
-
 public:
-    static Ref<AccessibilitySVGElement> create(RenderObject*);
+    static Ref<AccessibilitySVGElement> create(RenderObject*, AXObjectCache*);
     virtual ~AccessibilitySVGElement();
 
 protected:
-    explicit AccessibilitySVGElement(RenderObject*);
+    explicit AccessibilitySVGElement(RenderObject*, AXObjectCache*);
+    AXObjectCache* axObjectCache() const override { return m_axObjectCache.get(); }
 
 private:
-    String accessibilityDescription() const final;
+    String description() const final;
     String helpText() const final;
     void accessibilityText(Vector<AccessibilityText>&) const final;
     AccessibilityRole determineAccessibilityRole() final;
     AccessibilityRole determineAriaRoleAttribute() const final;
     bool inheritsPresentationalRole() const final;
-    bool isAccessibilitySVGElement() const final { return true; }
     bool computeAccessibilityIsIgnored() const final;
 
     AccessibilityObject* targetForUseElement() const;
 
     template <typename ChildrenType>
     Element* childElementWithMatchingLanguage(ChildrenType&) const;
+
+    WeakPtr<AXObjectCache> m_axObjectCache;
 };
 
 } // namespace WebCore
-
-SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilitySVGElement, isAccessibilitySVGElement())

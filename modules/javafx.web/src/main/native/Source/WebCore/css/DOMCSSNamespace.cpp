@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2022 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Motorola Mobility Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,59 +33,50 @@
 
 #include "CSSMarkup.h"
 #include "CSSParser.h"
+#include "CSSPropertyNames.h"
 #include "CSSPropertyParser.h"
 #include "Document.h"
 #include "HighlightRegister.h"
+#include "MutableStyleProperties.h"
 #include "StyleProperties.h"
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-static String valueWithoutImportant(const String& value)
-{
-    if (!value.endsWithIgnoringASCIICase("important"))
-        return value;
-
-    String newValue = value;
-    int bangIndex = newValue.length() - 9 - 1;
-    if (newValue[bangIndex] == ' ')
-        bangIndex--;
-    newValue = newValue.left(bangIndex);
-
-    return newValue;
-}
-
 bool DOMCSSNamespace::supports(Document& document, const String& property, const String& value)
 {
-    CSSPropertyID propertyID = cssPropertyID(property.stripWhiteSpace());
-
     CSSParserContext parserContext(document);
-    if (parserContext.isPropertyRuntimeDisabled(propertyID))
+    parserContext.mode = HTMLStandardMode;
+
+    auto propertyNameWithoutWhitespace = property;
+    CSSPropertyID propertyID = cssPropertyID(propertyNameWithoutWhitespace);
+    if (propertyID == CSSPropertyInvalid && isCustomPropertyName(propertyNameWithoutWhitespace)) {
+        auto dummyStyle = MutableStyleProperties::create();
+        constexpr bool importance = false;
+        return CSSParser::parseCustomPropertyValue(dummyStyle, AtomString { propertyNameWithoutWhitespace }, value, importance, parserContext) != CSSParser::ParseResult::Error;
+    }
+
+    if (!isExposed(propertyID, &document.settings()))
         return false;
 
-    if (isInternalCSSProperty(propertyID))
+    if (CSSProperty::isDescriptorOnly(propertyID))
         return false;
 
     if (propertyID == CSSPropertyInvalid)
         return false;
 
-    // CSSParser::parseValue() won't work correctly if !important is present,
-    // so just get rid of it. It doesn't matter to supports() if it's actually
-    // there or not, provided how it's specified in the value is correct.
-    String normalizedValue = value.stripWhiteSpace().simplifyWhiteSpace();
-    normalizedValue = valueWithoutImportant(normalizedValue);
-
-    if (normalizedValue.isEmpty())
+    if (value.isEmpty())
         return false;
 
     auto dummyStyle = MutableStyleProperties::create();
-    return CSSParser::parseValue(dummyStyle, propertyID, normalizedValue, false, parserContext) != CSSParser::ParseResult::Error;
+    return CSSParser::parseValue(dummyStyle, propertyID, value, false, parserContext) != CSSParser::ParseResult::Error;
 }
 
 bool DOMCSSNamespace::supports(Document& document, const String& conditionText)
 {
     CSSParserContext context(document);
+    context.mode = HTMLStandardMode;
     CSSParser parser(context);
     return parser.parseSupportsCondition(conditionText);
 }

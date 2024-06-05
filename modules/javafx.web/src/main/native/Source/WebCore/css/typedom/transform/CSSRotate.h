@@ -25,42 +25,45 @@
 
 #pragma once
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include "CSSNumericValue.h"
 #include "CSSTransformComponent.h"
 
 namespace WebCore {
+
+class CSSFunctionValue;
 
 template<typename> class ExceptionOr;
 
 class CSSRotate : public CSSTransformComponent {
     WTF_MAKE_ISO_ALLOCATED(CSSRotate);
 public:
-    static Ref<CSSRotate> create(CSSNumberish&&, CSSNumberish&&, CSSNumberish&&, Ref<CSSNumericValue>&&);
-    static Ref<CSSRotate> create(Ref<CSSNumericValue>&&);
+    static ExceptionOr<Ref<CSSRotate>> create(CSSNumberish, CSSNumberish, CSSNumberish, Ref<CSSNumericValue>);
+    static ExceptionOr<Ref<CSSRotate>> create(Ref<CSSNumericValue>);
+    static ExceptionOr<Ref<CSSRotate>> create(CSSFunctionValue&);
 
-    const CSSNumberish& x() { return m_x; }
-    const CSSNumberish& y() { return m_x; }
-    const CSSNumberish& z() { return m_x; }
+    CSSNumberish x() { return { m_x.ptr() }; }
+    CSSNumberish y() { return { m_y.ptr() }; }
+    CSSNumberish z() { return { m_z.ptr() }; }
     const CSSNumericValue& angle() { return m_angle.get(); }
 
-    void setX(CSSNumberish&& x) { m_x = WTFMove(x); }
-    void setY(CSSNumberish&& y) { m_y = WTFMove(y); }
-    void setZ(CSSNumberish&& z) { m_z = WTFMove(z); }
-    void setAngle(Ref<CSSNumericValue>&& angle) { m_angle = WTFMove(angle); }
+    ExceptionOr<void> setX(CSSNumberish);
+    ExceptionOr<void> setY(CSSNumberish);
+    ExceptionOr<void> setZ(CSSNumberish);
+    ExceptionOr<void> setAngle(Ref<CSSNumericValue>);
 
-    String toString() const final;
+    void serialize(StringBuilder&) const final;
     ExceptionOr<Ref<DOMMatrix>> toMatrix() final;
 
     CSSTransformType getType() const final { return CSSTransformType::Rotate; }
 
-private:
-    CSSRotate(CSSNumberish&&, CSSNumberish&&, CSSNumberish&&, Ref<CSSNumericValue>&&);
+    RefPtr<CSSValue> toCSSValue() const final;
 
-    CSSNumberish m_x;
-    CSSNumberish m_y;
-    CSSNumberish m_z;
+private:
+    CSSRotate(CSSTransformComponent::Is2D, Ref<CSSNumericValue>, Ref<CSSNumericValue>, Ref<CSSNumericValue>, Ref<CSSNumericValue>);
+
+    Ref<CSSNumericValue> m_x;
+    Ref<CSSNumericValue> m_y;
+    Ref<CSSNumericValue> m_z;
     Ref<CSSNumericValue> m_angle;
 };
 
@@ -69,5 +72,3 @@ private:
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSRotate)
     static bool isType(const WebCore::CSSTransformComponent& transform) { return transform.getType() == WebCore::CSSTransformType::Rotate; }
 SPECIALIZE_TYPE_TRAITS_END()
-
-#endif

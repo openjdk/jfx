@@ -32,6 +32,8 @@
 #include "FontSelector.h"
 #include "MathMLNames.h"
 #include "MathMLRowElement.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderInline.h"
 #include "RenderMathMLFencedOperator.h"
 #include "RenderText.h"
@@ -45,8 +47,8 @@ using namespace MathMLNames;
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderMathMLFenced);
 
-static const char* gOpeningBraceChar = "(";
-static const char* gClosingBraceChar = ")";
+static constexpr auto gOpeningBraceChar = "("_s;
+static constexpr auto gClosingBraceChar = ")"_s;
 
 RenderMathMLFenced::RenderMathMLFenced(MathMLRowElement& element, RenderStyle&& style)
     : RenderMathMLRow(element, WTFMove(style))
@@ -69,13 +71,13 @@ void RenderMathMLFenced::updateFromElement()
     if (!separators.isNull()) {
         StringBuilder characters;
         for (unsigned i = 0; i < separators.length(); i++) {
-            if (!isSpaceOrNewline(separators[i]))
+            if (!deprecatedIsSpaceOrNewline(separators[i]))
                 characters.append(separators[i]);
         }
         m_separators = !characters.length() ? 0 : characters.toString().impl();
     } else {
         // The separator defaults to a single comma.
-        m_separators = StringImpl::create(",");
+        m_separators = StringImpl::create(","_s);
     }
 
     if (firstChild()) {

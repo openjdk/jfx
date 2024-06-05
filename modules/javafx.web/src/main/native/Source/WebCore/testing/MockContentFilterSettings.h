@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <wtf/ArgumentCoder.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -32,7 +33,7 @@ namespace WebCore {
 class MockContentFilterSettings {
     friend class NeverDestroyed<MockContentFilterSettings>;
 public:
-    enum class DecisionPoint {
+    enum class DecisionPoint : uint8_t {
         AfterWillSendRequest,
         AfterRedirect,
         AfterResponse,
@@ -41,14 +42,14 @@ public:
         Never
     };
 
-    enum class Decision {
+    enum class Decision : bool {
         Allow,
         Block
     };
 
     WEBCORE_TESTSUPPORT_EXPORT static MockContentFilterSettings& singleton();
-    static void reset();
-    static const char* unblockURLHost() { return "mock-unblock"; }
+    WEBCORE_TESTSUPPORT_EXPORT static void reset();
+    static ASCIILiteral unblockURLHost() { return "mock-unblock"_s; }
 
     // Trick the generated bindings into thinking we're RefCounted.
     void ref() { }
@@ -58,26 +59,27 @@ public:
     WEBCORE_TESTSUPPORT_EXPORT void setEnabled(bool);
 
     const String& blockedString() const { return m_blockedString; }
-    void setBlockedString(const String& blockedString) { m_blockedString = blockedString; }
+    WEBCORE_TESTSUPPORT_EXPORT void setBlockedString(const String&);
 
     DecisionPoint decisionPoint() const { return m_decisionPoint; }
-    void setDecisionPoint(DecisionPoint decisionPoint) { m_decisionPoint = decisionPoint; }
+    WEBCORE_TESTSUPPORT_EXPORT void setDecisionPoint(DecisionPoint);
 
     Decision decision() const { return m_decision; }
-    void setDecision(Decision decision) { m_decision = decision; }
+    WEBCORE_TESTSUPPORT_EXPORT void setDecision(Decision);
 
     Decision unblockRequestDecision() const { return m_unblockRequestDecision; }
-    void setUnblockRequestDecision(Decision unblockRequestDecision) { m_unblockRequestDecision = unblockRequestDecision; }
+    WEBCORE_TESTSUPPORT_EXPORT void setUnblockRequestDecision(Decision);
 
-    const String& unblockRequestURL() const;
+    WEBCORE_TESTSUPPORT_EXPORT const String& unblockRequestURL() const;
 
     const String& modifiedRequestURL() const { return m_modifiedRequestURL; }
-    void setModifiedRequestURL(const String& modifiedRequestURL) { m_modifiedRequestURL = modifiedRequestURL; }
+    WEBCORE_TESTSUPPORT_EXPORT void setModifiedRequestURL(const String&);
 
-private:
     MockContentFilterSettings() = default;
-    MockContentFilterSettings(const MockContentFilterSettings&) = delete;
+    MockContentFilterSettings(const MockContentFilterSettings&) = default;
     MockContentFilterSettings& operator=(const MockContentFilterSettings&) = default;
+private:
+    friend struct IPC::ArgumentCoder<MockContentFilterSettings, void>;
 
     bool m_enabled { false };
     DecisionPoint m_decisionPoint { DecisionPoint::AfterResponse };

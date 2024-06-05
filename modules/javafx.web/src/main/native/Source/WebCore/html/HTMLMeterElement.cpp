@@ -22,12 +22,14 @@
 #include "HTMLMeterElement.h"
 
 #include "Attribute.h"
+#include "ElementInlines.h"
 #include "ElementIterator.h"
 #include "HTMLDivElement.h"
 #include "HTMLFormElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLStyleElement.h"
+#include "NodeName.h"
 #include "Page.h"
 #include "RenderMeter.h"
 #include "RenderTheme.h"
@@ -43,7 +45,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLMeterElement);
 using namespace HTMLNames;
 
 HTMLMeterElement::HTMLMeterElement(const QualifiedName& tagName, Document& document)
-    : LabelableElement(tagName, document)
+    : HTMLElement(tagName, document)
 {
     ASSERT(hasTagName(meterTag));
 }
@@ -70,12 +72,21 @@ bool HTMLMeterElement::childShouldCreateRenderer(const Node& child) const
     return !is<RenderMeter>(renderer()) && HTMLElement::childShouldCreateRenderer(child);
 }
 
-void HTMLMeterElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLMeterElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == valueAttr || name == minAttr || name == maxAttr || name == lowAttr || name == highAttr || name == optimumAttr)
+    switch (name.nodeName()) {
+    case AttributeNames::valueAttr:
+    case AttributeNames::minAttr:
+    case AttributeNames::maxAttr:
+    case AttributeNames::lowAttr:
+    case AttributeNames::highAttr:
+    case AttributeNames::optimumAttr:
         didElementStateChange();
-    else
-        LabelableElement::parseAttribute(name, value);
+        break;
+    default:
+        HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
+        break;
+    }
 }
 
 double HTMLMeterElement::min() const
@@ -190,15 +201,15 @@ static void setValueClass(HTMLElement& element, HTMLMeterElement::GaugeRegion ga
 {
     switch (gaugeRegion) {
     case HTMLMeterElement::GaugeRegionOptimum:
-        element.setAttribute(HTMLNames::classAttr, "optimum");
+        element.setAttribute(HTMLNames::classAttr, "optimum"_s);
         element.setPseudo(ShadowPseudoIds::webkitMeterOptimumValue());
         return;
     case HTMLMeterElement::GaugeRegionSuboptimal:
-        element.setAttribute(HTMLNames::classAttr, "suboptimum");
+        element.setAttribute(HTMLNames::classAttr, "suboptimum"_s);
         element.setPseudo(ShadowPseudoIds::webkitMeterSuboptimumValue());
         return;
     case HTMLMeterElement::GaugeRegionEvenLessGood:
-        element.setAttribute(HTMLNames::classAttr, "even-less-good");
+        element.setAttribute(HTMLNames::classAttr, "even-less-good"_s);
         element.setPseudo(ShadowPseudoIds::webkitMeterEvenLessGoodValue());
         return;
     default:
@@ -208,7 +219,7 @@ static void setValueClass(HTMLElement& element, HTMLMeterElement::GaugeRegion ga
 
 void HTMLMeterElement::didElementStateChange()
 {
-    m_value->setInlineStyleProperty(CSSPropertyWidth, valueRatio()*100, CSSUnitType::CSS_PERCENTAGE);
+    m_value->setInlineStyleProperty(CSSPropertyInlineSize, valueRatio()*100, CSSUnitType::CSS_PERCENTAGE);
     setValueClass(*m_value, gaugeRegion());
 
     if (RenderMeter* render = renderMeter())
@@ -229,22 +240,22 @@ void HTMLMeterElement::didAddUserAgentShadowRoot(ShadowRoot& root)
     static MainThreadNeverDestroyed<const String> shadowStyle(StringImpl::createWithoutCopying(meterElementShadowUserAgentStyleSheet, sizeof(meterElementShadowUserAgentStyleSheet)));
 
     auto style = HTMLStyleElement::create(HTMLNames::styleTag, document(), false);
-    style->setTextContent(shadowStyle);
-    root.appendChild(style);
+    style->setTextContent(String { shadowStyle });
+    root.appendChild(WTFMove(style));
 
     // Pseudos are set to allow author styling.
     auto inner = HTMLDivElement::create(document());
-    inner->setIdAttribute("inner");
+    inner->setIdAttribute("inner"_s);
     inner->setPseudo(ShadowPseudoIds::webkitMeterInnerElement());
     root.appendChild(inner);
 
     auto bar = HTMLDivElement::create(document());
-    bar->setIdAttribute("bar");
+    bar->setIdAttribute("bar"_s);
     bar->setPseudo(ShadowPseudoIds::webkitMeterBar());
     inner->appendChild(bar);
 
     m_value = HTMLDivElement::create(document());
-    m_value->setIdAttribute("value");
+    m_value->setIdAttribute("value"_s);
     bar->appendChild(*m_value);
 
     didElementStateChange();

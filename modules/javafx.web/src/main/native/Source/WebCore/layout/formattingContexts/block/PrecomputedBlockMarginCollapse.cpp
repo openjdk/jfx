@@ -26,46 +26,42 @@
 #include "config.h"
 #include "BlockMarginCollapse.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "BlockFormattingContext.h"
 #include "BlockFormattingGeometry.h"
 #include "BlockFormattingQuirks.h"
 #include "LayoutBox.h"
-#include "LayoutContainerBox.h"
+#include "LayoutElementBox.h"
 #include "LayoutState.h"
 #include "LayoutUnit.h"
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 
 namespace WebCore {
 namespace Layout {
 
-UsedVerticalMargin::PositiveAndNegativePair::Values BlockMarginCollapse::precomputedPositiveNegativeValues(const Box& layoutBox, const BlockFormattingGeometry& formattingGeometry) const
+UsedVerticalMargin::PositiveAndNegativePair::Values BlockMarginCollapse::precomputedPositiveNegativeValues(const ElementBox& layoutBox, const BlockFormattingGeometry& formattingGeometry) const
 {
-    auto& blockFormattingState = downcast<BlockFormattingState>(layoutState().formattingStateForBox(layoutBox));
-    if (blockFormattingState.hasUsedVerticalMargin(layoutBox))
-        return blockFormattingState.usedVerticalMargin(layoutBox).positiveAndNegativeValues.before;
+    if (formattingState().hasUsedVerticalMargin(layoutBox))
+        return formattingState().usedVerticalMargin(layoutBox).positiveAndNegativeValues.before;
 
-    auto horizontalConstraints = formattingGeometry.constraintsForInFlowContent(layoutBox.containingBlock()).horizontal();
+    auto horizontalConstraints = formattingGeometry.constraintsForInFlowContent(FormattingContext::containingBlock(layoutBox)).horizontal();
     auto computedVerticalMargin = formattingGeometry.computedVerticalMargin(layoutBox, horizontalConstraints);
     auto nonCollapsedMargin = UsedVerticalMargin::NonCollapsedValues { computedVerticalMargin.before.value_or(0), computedVerticalMargin.after.value_or(0) };
     return precomputedPositiveNegativeMarginBefore(layoutBox, nonCollapsedMargin, formattingGeometry);
 }
 
-UsedVerticalMargin::PositiveAndNegativePair::Values BlockMarginCollapse::precomputedPositiveNegativeMarginBefore(const Box& layoutBox, UsedVerticalMargin::NonCollapsedValues nonCollapsedValues, const BlockFormattingGeometry& formattingGeometry) const
+UsedVerticalMargin::PositiveAndNegativePair::Values BlockMarginCollapse::precomputedPositiveNegativeMarginBefore(const ElementBox& layoutBox, UsedVerticalMargin::NonCollapsedValues nonCollapsedValues, const BlockFormattingGeometry& formattingGeometry) const
 {
     auto firstChildCollapsedMarginBefore = [&]() -> UsedVerticalMargin::PositiveAndNegativePair::Values {
         if (!marginBeforeCollapsesWithFirstInFlowChildMarginBefore(layoutBox))
             return { };
-        return precomputedPositiveNegativeValues(*downcast<ContainerBox>(layoutBox).firstInFlowChild(), formattingGeometry);
+        return precomputedPositiveNegativeValues(downcast<ElementBox>(*layoutBox.firstInFlowChild()), formattingGeometry);
     };
 
     auto previouSiblingCollapsedMarginAfter = [&]() -> UsedVerticalMargin::PositiveAndNegativePair::Values {
         if (!marginBeforeCollapsesWithPreviousSiblingMarginAfter(layoutBox))
             return { };
         auto& previousInFlowSibling = *layoutBox.previousInFlowSibling();
-        auto& blockFormattingState = downcast<BlockFormattingState>(layoutState().formattingStateForBox(previousInFlowSibling));
-        return blockFormattingState.usedVerticalMargin(previousInFlowSibling).positiveAndNegativeValues.after;
+        return formattingState().usedVerticalMargin(previousInFlowSibling).positiveAndNegativeValues.after;
     };
 
     // 1. Gather positive and negative margin values from first child if margins are adjoining.
@@ -78,14 +74,14 @@ UsedVerticalMargin::PositiveAndNegativePair::Values BlockMarginCollapse::precomp
 
     auto nonCollapsedBefore = UsedVerticalMargin::PositiveAndNegativePair::Values { };
     if (nonCollapsedValues.before > 0)
-        nonCollapsedBefore = { nonCollapsedValues.before, { }, layoutBox.style().hasMarginBeforeQuirk() };
+        nonCollapsedBefore = { nonCollapsedValues.before, { }, layoutBox.style().marginBefore().hasQuirk() };
     else if (nonCollapsedValues.before < 0)
-        nonCollapsedBefore = { { }, nonCollapsedValues.before, layoutBox.style().hasMarginBeforeQuirk() };
+        nonCollapsedBefore = { { }, nonCollapsedValues.before, layoutBox.style().marginBefore().hasQuirk() };
 
     return computedPositiveAndNegativeMargin(collapsedMarginBefore, nonCollapsedBefore);
 }
 
-PrecomputedMarginBefore BlockMarginCollapse::precomputedMarginBefore(const Box& layoutBox, UsedVerticalMargin::NonCollapsedValues usedNonCollapsedMargin, const BlockFormattingGeometry& formattingGeometry)
+PrecomputedMarginBefore BlockMarginCollapse::precomputedMarginBefore(const ElementBox& layoutBox, UsedVerticalMargin::NonCollapsedValues usedNonCollapsedMargin, const BlockFormattingGeometry& formattingGeometry)
 {
     ASSERT(layoutBox.isBlockLevelBox());
     // Don't pre-compute vertical margins for out of flow boxes.
@@ -99,4 +95,3 @@ PrecomputedMarginBefore BlockMarginCollapse::precomputedMarginBefore(const Box& 
 
 }
 }
-#endif

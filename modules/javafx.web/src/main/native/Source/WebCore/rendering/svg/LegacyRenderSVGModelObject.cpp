@@ -83,10 +83,10 @@ LayoutRect LegacyRenderSVGModelObject::outlineBoundsForRepaint(const RenderLayer
     return LayoutRect(snapRectToDevicePixels(LayoutRect(containerRelativeQuad.boundingBox()), document().deviceScaleFactor()));
 }
 
-void LegacyRenderSVGModelObject::absoluteRects(Vector<IntRect>& rects, const LayoutPoint& accumulatedOffset) const
+void LegacyRenderSVGModelObject::boundingRects(Vector<LayoutRect>& rects, const LayoutPoint& accumulatedOffset) const
 {
-    IntRect rect = enclosingIntRect(strokeBoundingBox());
-    rect.moveBy(roundedIntPoint(accumulatedOffset));
+    auto rect = LayoutRect { strokeBoundingBox() };
+    rect.moveBy(accumulatedOffset);
     rects.append(rect);
 }
 
@@ -105,11 +105,11 @@ void LegacyRenderSVGModelObject::styleDidChange(StyleDifference diff, const Rend
 {
     if (diff == StyleDifference::Layout) {
         setNeedsBoundariesUpdate();
-        if (style().hasTransform() || (oldStyle && oldStyle->hasTransform()))
+        if (style().affectsTransform() || (oldStyle && oldStyle->affectsTransform()))
             setNeedsTransformUpdate();
     }
     RenderElement::styleDidChange(diff, oldStyle);
-    SVGResourcesCache::clientStyleChanged(*this, diff, style());
+    SVGResourcesCache::clientStyleChanged(*this, diff, oldStyle, style());
 }
 
 bool LegacyRenderSVGModelObject::nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation&, const LayoutPoint&, HitTestAction)
@@ -157,7 +157,7 @@ static bool intersectsAllowingEmpty(const FloatRect& r, const FloatRect& other)
 // image, line, path, polygon, polyline, rect, text and use.
 static bool isGraphicsElement(const RenderElement& renderer)
 {
-    return renderer.isLegacySVGShape() || renderer.isSVGText() || renderer.isSVGImage() || renderer.element()->hasTagName(SVGNames::useTag);
+    return renderer.isLegacySVGShape() || renderer.isSVGText() || renderer.isLegacySVGImage() || renderer.element()->hasTagName(SVGNames::useTag);
 }
 
 // The SVG addFocusRingRects() method adds rects in local coordinates so the default absoluteFocusRingQuads
@@ -169,7 +169,7 @@ void LegacyRenderSVGModelObject::absoluteFocusRingQuads(Vector<FloatQuad>& quads
 
 bool LegacyRenderSVGModelObject::checkIntersection(RenderElement* renderer, const FloatRect& rect)
 {
-    if (!renderer || renderer->style().pointerEvents() == PointerEvents::None)
+    if (!renderer || renderer->style().effectivePointerEvents() == PointerEvents::None)
         return false;
     if (!isGraphicsElement(*renderer))
         return false;
@@ -182,7 +182,7 @@ bool LegacyRenderSVGModelObject::checkIntersection(RenderElement* renderer, cons
 
 bool LegacyRenderSVGModelObject::checkEnclosure(RenderElement* renderer, const FloatRect& rect)
 {
-    if (!renderer || renderer->style().pointerEvents() == PointerEvents::None)
+    if (!renderer || renderer->style().effectivePointerEvents() == PointerEvents::None)
         return false;
     if (!isGraphicsElement(*renderer))
         return false;

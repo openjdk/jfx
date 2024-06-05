@@ -28,9 +28,10 @@
 typedef (DOMString or sequence<DOMString>) IDBKeyPath;
 
 [
+    EnabledBySetting=IndexedDBAPIEnabled,
     ActiveDOMObject,
+    GenerateAddOpaqueRoot,
     GenerateIsReachable=Impl,
-    JSCustomMarkFunction,
     SkipVTableValidation,
     Exposed=(Window,Worker)
 ] interface IDBIndex {

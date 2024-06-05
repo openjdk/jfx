@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2021 Metrological Group B.V.
  * Copyright (C) 2021 Igalia S.L.
+ * Copyright (C) 2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,8 +33,7 @@
 
 namespace WebCore {
 
-class CSSFontStyleValue;
-class CSSFontStyleRangeValue;
+class CSSPrimitiveValue;
 class CSSValue;
 class CSSValueList;
 class CSSValuePool;
@@ -49,29 +49,30 @@ public:
     static RefPtr<CSSValue> parseFontFaceStyle(const String&, ScriptExecutionContext&);
     static RefPtr<CSSValue> parseFontFaceWeight(const String&, ScriptExecutionContext&);
     static RefPtr<CSSValue> parseFontFaceStretch(const String&, ScriptExecutionContext&);
-    static RefPtr<CSSValue> parseFontFaceUnicodeRange(const String&, ScriptExecutionContext&);
+    static RefPtr<CSSValueList> parseFontFaceUnicodeRange(const String&, ScriptExecutionContext&);
     static RefPtr<CSSValue> parseFontFaceFeatureSettings(const String&, ScriptExecutionContext&);
-    static RefPtr<CSSValue> parseFontFaceDisplay(const String&, ScriptExecutionContext&);
+    static RefPtr<CSSPrimitiveValue> parseFontFaceDisplay(const String&, ScriptExecutionContext&);
+    static RefPtr<CSSValue> parseFontFaceSizeAdjust(const String&, ScriptExecutionContext&);
 };
 
 namespace CSSPropertyParserHelpersWorkerSafe {
 
 RefPtr<CSSValueList> consumeFontFaceSrc(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSFontStyleValue> consumeFontStyle(CSSParserTokenRange&, CSSParserMode, CSSValuePool&);
-RefPtr<CSSPrimitiveValue> consumeFontStretchKeywordValue(CSSParserTokenRange&, CSSValuePool&);
-RefPtr<CSSPrimitiveValue> consumeFontStretch(CSSParserTokenRange&, CSSValuePool&);
+RefPtr<CSSValue> consumeFontStyle(CSSParserTokenRange&, CSSParserMode);
+RefPtr<CSSPrimitiveValue> consumeFontStretchKeywordValue(CSSParserTokenRange&);
 RefPtr<CSSValueList> consumeFontFaceUnicodeRange(CSSParserTokenRange&);
-RefPtr<CSSValue> consumeFontFeatureSettings(CSSParserTokenRange&, CSSValuePool&);
-RefPtr<CSSPrimitiveValue> consumeFontFaceFontDisplay(CSSParserTokenRange&, CSSValuePool&);
+RefPtr<CSSValue> consumeFeatureTagValue(CSSParserTokenRange&);
+RefPtr<CSSPrimitiveValue> consumeFontFaceFontDisplay(CSSParserTokenRange&);
 
 #if ENABLE(VARIATION_FONTS)
-RefPtr<CSSFontStyleRangeValue> consumeFontStyleRange(CSSParserTokenRange&, CSSParserMode, CSSValuePool&);
-RefPtr<CSSValue> consumeFontWeightAbsoluteRange(CSSParserTokenRange&, CSSValuePool&);
-RefPtr<CSSValue> consumeFontStretchRange(CSSParserTokenRange&, CSSValuePool&);
+RefPtr<CSSValue> consumeFontStyleRange(CSSParserTokenRange&, CSSParserMode);
+RefPtr<CSSValue> consumeFontWeightAbsoluteRange(CSSParserTokenRange&);
+RefPtr<CSSValue> consumeFontStretchRange(CSSParserTokenRange&);
+RefPtr<CSSValue> consumeVariationTagValue(CSSParserTokenRange&);
 #endif
 
 #if !ENABLE(VARIATION_FONTS)
-RefPtr<CSSPrimitiveValue> consumeFontWeightAbsolute(CSSParserTokenRange&, CSSValuePool&);
+RefPtr<CSSPrimitiveValue> consumeFontWeightAbsolute(CSSParserTokenRange&);
 #endif
 
 } // namespace CSSPropertyParserHelpersWorkerSafe

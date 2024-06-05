@@ -27,6 +27,7 @@
 #pragma once
 
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
+
 #include "AffineTransform.h"
 #include "FloatRect.h"
 #include "RenderSVGModelObject.h"
@@ -40,7 +41,6 @@ namespace WebCore {
 
 class FloatPoint;
 class GraphicsContextStateSaver;
-class RenderSVGPath;
 class RenderSVGResource;
 class SVGGraphicsElement;
 
@@ -82,6 +82,10 @@ public:
 
     FloatRect computeMarkerBoundingBox(const SVGBoundingBoxComputation::DecorationOptions&) const;
 
+    bool needsHasSVGTransformFlags() const final;
+
+    void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption>) const final;
+
 protected:
     void element() const = delete;
 
@@ -92,7 +96,7 @@ protected:
     float strokeWidth() const;
     bool hasSmoothStroke() const;
 
-    bool hasNonScalingStroke() const { return style().svgStyle().vectorEffect() == VectorEffect::NonScalingStroke; }
+    inline bool hasNonScalingStroke() const;
     AffineTransform nonScalingStrokeTransform() const;
     Path* nonScalingStrokePath(const Path*, const AffineTransform&) const;
 
@@ -106,7 +110,7 @@ private:
 
     bool isSVGShape() const final { return true; }
     bool canHaveChildren() const final { return false; }
-    const char* renderName() const override { return "RenderSVGShape"; }
+    ASCIILiteral renderName() const override { return "RenderSVGShape"_s; }
 
     void layout() final;
     void paint(PaintInfo&, const LayoutPoint&) final;
@@ -124,8 +128,8 @@ private:
     void processMarkerPositions();
 
     void fillShape(const RenderStyle&, GraphicsContext&);
+    void strokeShapeInternal(const RenderStyle&, GraphicsContext&);
     void strokeShape(const RenderStyle&, GraphicsContext&);
-    void strokeShape(GraphicsContext&);
     void fillStrokeMarkers(PaintInfo&);
     void drawMarkers(PaintInfo&);
 

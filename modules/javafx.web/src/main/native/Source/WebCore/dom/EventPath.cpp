@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2013 Google Inc. All rights reserved.
- * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,12 +21,13 @@
 #include "config.h"
 #include "EventPath.h"
 
-#include "DOMWindow.h"
+#include "ElementRareData.h"
 #include "Event.h"
 #include "EventContext.h"
 #include "EventNames.h"
 #include "FullscreenManager.h"
 #include "HTMLSlotElement.h"
+#include "LocalDOMWindow.h"
 #include "MouseEvent.h"
 #include "Node.h"
 #include "PseudoElement.h"
@@ -37,19 +38,6 @@ namespace WebCore {
 
 static inline bool shouldEventCrossShadowBoundary(Event& event, ShadowRoot& shadowRoot, EventTarget& target)
 {
-#if ENABLE(FULLSCREEN_API) && ENABLE(VIDEO)
-    // Video-only full screen is a mode where we use the shadow DOM as an implementation
-    // detail that should not be detectable by the web content.
-    if (is<Node>(target)) {
-        if (auto* element = downcast<Node>(target).document().fullscreenManager().currentFullscreenElement()) {
-            // FIXME: We assume that if the full screen element is a media element that it's
-            // the video-only full screen. Both here and elsewhere. But that is probably wrong.
-            if (element->isMediaElement() && shadowRoot.host() == element)
-                return false;
-        }
-    }
-#endif
-
     bool targetIsInShadowRoot = is<Node>(target) && &downcast<Node>(target).treeScope().rootNode() == &shadowRoot;
     return !targetIsInShadowRoot || event.composed();
 }
@@ -145,6 +133,9 @@ void EventPath::buildPath(Node& originalTarget, Event& event)
         if (!shouldEventCrossShadowBoundary(event, shadowRoot, originalTarget))
             return;
         node = shadowRoot.host();
+        ASSERT(node);
+        if (!node)
+            return;
         if (shadowRoot.mode() != ShadowRootMode::Open)
             closedShadowDepth--;
         if (exitingShadowTreeOfTarget)
@@ -186,6 +177,17 @@ void EventPath::setRelatedTarget(Node& origin, Node& relatedNode)
         }
 
         previousTreeScope = &currentTreeScope;
+    }
+}
+
+void EventPath::adjustForDisabledFormControl()
+{
+    for (unsigned i = 0; i < m_path.size(); ++i) {
+        auto* element = dynamicDowncast<Element>(m_path[i].node());
+        if (element && element->isDisabledFormControl()) {
+            m_path.shrink(i);
+            return;
+        }
     }
 }
 
@@ -274,11 +276,16 @@ Vector<Ref<EventTarget>> EventPath::computePathUnclosedToTarget(const EventTarge
 
 EventPath::EventPath(const Vector<EventTarget*>& targets)
 {
-    for (auto* target : targets) {
+    m_path = targets.map([&](auto* target) {
         ASSERT(target);
         ASSERT(!is<Node>(target));
-        m_path.append(EventContext { EventContext::Type::Normal, nullptr, target, *targets.begin(), 0 });
-    }
+        return EventContext { EventContext::Type::Normal, nullptr, target, *targets.begin(), 0 };
+    });
+}
+
+EventPath::EventPath(EventTarget& target)
+{
+    m_path = { EventContext { EventContext::Type::Normal, nullptr, &target, &target, 0 } };
 }
 
 static Node* moveOutOfAllShadowRoots(Node& startingNode)
@@ -298,7 +305,8 @@ RelatedNodeRetargeter::RelatedNodeRetargeter(Node& relatedNode, Node& target)
     if (LIKELY(currentTreeScope == &targetTreeScope && target.isConnected() && m_relatedNode->isConnected()))
         return;
 
-    if (&currentTreeScope->documentScope() != &targetTreeScope.documentScope()) {
+    if (&currentTreeScope->documentScope() != &targetTreeScope.documentScope()
+        || (relatedNode.hasBeenInUserAgentShadowTree() && !relatedNode.isConnected())) {
         m_hasDifferentTreeRoot = true;
         m_retargetedRelatedNode = nullptr;
         return;

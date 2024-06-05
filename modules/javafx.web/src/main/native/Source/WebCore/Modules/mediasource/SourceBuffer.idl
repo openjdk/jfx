@@ -34,12 +34,15 @@
 };
 
 [
+    CustomToJSObject,
+    JSGenerateToNativeObject,
     ActiveDOMObject,
     Conditional=MEDIA_SOURCE,
     EnabledBySetting=MediaSourceEnabled,
     ExportMacro=WEBCORE_EXPORT,
     GenerateAddOpaqueRoot,
-    Exposed=Window
+    Exposed=Window,
+    ReportExtraMemoryCost
 ] interface SourceBuffer : EventTarget {
     attribute AppendMode mode;
 

@@ -30,7 +30,7 @@
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
 #include "HTMLCanvasElement.h"
-#include "JSDOMPromiseDeferred.h"
+#include "JSDOMPromiseDeferredForward.h"
 #include "WebGLContextAttributes.h"
 #include "WebGLRenderingContextBase.h"
 #include "XRReferenceSpaceType.h"
@@ -47,13 +47,14 @@ class JSGlobalObject;
 
 namespace WebCore {
 
-class DOMWindow;
+class LocalDOMWindow;
 class Navigator;
 class ScriptExecutionContext;
 class WebXRSession;
+class SecurityOriginData;
 struct XRSessionInit;
 
-class WebXRSystem final : public RefCounted<WebXRSystem>, public EventTargetWithInlineData, public ActiveDOMObject {
+class WebXRSystem final : public RefCounted<WebXRSystem>, public EventTarget, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(WebXRSystem);
 public:
     using IsSessionSupportedPromise = DOMPromiseDeferred<IDLBoolean>;
@@ -98,9 +99,10 @@ private:
     using JSFeatureList = Vector<JSC::JSValue>;
     void obtainCurrentDevice(XRSessionMode, const JSFeatureList& requiredFeatures, const JSFeatureList& optionalFeatures, CompletionHandler<void(PlatformXR::Device*)>&&);
 
-    bool immersiveSessionRequestIsAllowedForGlobalObject(DOMWindow&, Document&) const;
-    bool inlineSessionRequestIsAllowedForGlobalObject(DOMWindow&, Document&, const XRSessionInit&) const;
+    bool immersiveSessionRequestIsAllowedForGlobalObject(LocalDOMWindow&, Document&) const;
+    bool inlineSessionRequestIsAllowedForGlobalObject(LocalDOMWindow&, Document&, const XRSessionInit&) const;
 
+    bool isFeatureSupported(PlatformXR::SessionFeature, XRSessionMode, const PlatformXR::Device&) const;
     struct ResolvedRequestedFeatures;
     std::optional<ResolvedRequestedFeatures> resolveRequestedFeatures(XRSessionMode, const XRSessionInit&, PlatformXR::Device*, JSC::JSGlobalObject&) const;
     void resolveFeaturePermissions(XRSessionMode, const XRSessionInit&, PlatformXR::Device*, JSC::JSGlobalObject&, CompletionHandler<void(std::optional<FeatureList>&&)>&&) const;
@@ -111,7 +113,7 @@ private:
         explicit DummyInlineDevice(ScriptExecutionContext&);
 
     private:
-        void initializeTrackingAndRendering(PlatformXR::SessionMode) final { }
+        void initializeTrackingAndRendering(const WebCore::SecurityOriginData&, PlatformXR::SessionMode, const PlatformXR::Device::FeatureList&) final { }
         void shutDownTrackingAndRendering() final { }
         void initializeReferenceSpace(PlatformXR::ReferenceSpaceType) final { }
 

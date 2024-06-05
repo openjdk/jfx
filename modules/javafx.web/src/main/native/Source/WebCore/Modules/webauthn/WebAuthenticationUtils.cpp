@@ -28,7 +28,9 @@
 
 #if ENABLE(WEB_AUTHN)
 
+#include "CBORReader.h"
 #include "CBORWriter.h"
+#include "FidoConstants.h"
 #include "WebAuthenticationConstants.h"
 #include <pal/crypto/CryptoDigest.h>
 #include <wtf/JSONValues.h>
@@ -45,8 +47,8 @@ Vector<uint8_t> convertBytesToVector(const uint8_t byteArray[], const size_t len
 Vector<uint8_t> produceRpIdHash(const String& rpId)
 {
     auto crypto = PAL::CryptoDigest::create(PAL::CryptoDigest::Algorithm::SHA_256);
-    auto rpIdUtf8 = rpId.utf8();
-    crypto->addBytes(rpIdUtf8.data(), rpIdUtf8.length());
+    auto rpIdUTF8 = rpId.utf8();
+    crypto->addBytes(rpIdUTF8.data(), rpIdUTF8.length());
     return crypto->computeHash();
 }
 
@@ -87,6 +89,22 @@ Vector<uint8_t> buildAttestedCredentialData(const Vector<uint8_t>& aaguid, const
     return attestedCredentialData;
 }
 
+cbor::CBORValue::MapValue buildUserEntityMap(const Vector<uint8_t>& userId, const String& name, const String& displayName)
+{
+    cbor::CBORValue::MapValue userEntityMap;
+    userEntityMap[cbor::CBORValue(fido::kEntityIdMapKey)] = cbor::CBORValue(userId);
+    userEntityMap[cbor::CBORValue(fido::kEntityNameMapKey)] = cbor::CBORValue(name);
+    userEntityMap[cbor::CBORValue(fido::kDisplayNameMapKey)] = cbor::CBORValue(displayName);
+    return userEntityMap;
+}
+
+cbor::CBORValue::MapValue buildCredentialDescriptor(const Vector<uint8_t>& credentialId)
+{
+    cbor::CBORValue::MapValue credential;
+    credential[cbor::CBORValue("id")] = cbor::CBORValue(credentialId);
+    return credential;
+}
+
 Vector<uint8_t> buildAuthData(const String& rpId, const uint8_t flags, const uint32_t counter, const Vector<uint8_t>& optionalAttestedCredentialData)
 {
     Vector<uint8_t> authData;
@@ -110,7 +128,7 @@ Vector<uint8_t> buildAuthData(const String& rpId, const uint8_t flags, const uin
     return authData;
 }
 
-Vector<uint8_t> buildAttestationObject(Vector<uint8_t>&& authData, String&& format, cbor::CBORValue::MapValue&& statementMap, const AttestationConveyancePreference& attestation)
+cbor::CBORValue::MapValue buildAttestationMap(Vector<uint8_t>&& authData, String&& format, cbor::CBORValue::MapValue&& statementMap, const AttestationConveyancePreference& attestation)
 {
     cbor::CBORValue::MapValue attestationObjectMap;
     // The following implements Step 20 with regard to AttestationConveyancePreference
@@ -121,12 +139,18 @@ Vector<uint8_t> buildAttestationObject(Vector<uint8_t>&& authData, String&& form
         const size_t aaguidOffset = rpIdHashLength + flagsLength + signCounterLength;
         if (authData.size() >= aaguidOffset + aaguidLength)
             memset(authData.data() + aaguidOffset, 0, aaguidLength);
-        format = noneAttestationValue;
+        format = String::fromLatin1(noneAttestationValue);
         statementMap.clear();
     }
     attestationObjectMap[cbor::CBORValue("authData")] = cbor::CBORValue(WTFMove(authData));
     attestationObjectMap[cbor::CBORValue("fmt")] = cbor::CBORValue(WTFMove(format));
     attestationObjectMap[cbor::CBORValue("attStmt")] = cbor::CBORValue(WTFMove(statementMap));
+    return attestationObjectMap;
+}
+
+Vector<uint8_t> buildAttestationObject(Vector<uint8_t>&& authData, String&& format, cbor::CBORValue::MapValue&& statementMap, const AttestationConveyancePreference& attestation)
+{
+    cbor::CBORValue::MapValue attestationObjectMap = buildAttestationMap(WTFMove(authData), WTFMove(format), WTFMove(statementMap), attestation);
 
     auto attestationObject = cbor::CBORWriter::write(cbor::CBORValue(WTFMove(attestationObjectMap)));
     ASSERT(attestationObject);
@@ -134,7 +158,7 @@ Vector<uint8_t> buildAttestationObject(Vector<uint8_t>&& authData, String&& form
 }
 
 // FIXME(181948): Add token binding ID.
-Ref<ArrayBuffer> buildClientDataJson(ClientDataType type, const BufferSource& challenge, const SecurityOrigin& origin, WebAuthn::Scope scope)
+Ref<ArrayBuffer> buildClientDataJson(ClientDataType type, const BufferSource& challenge, const SecurityOrigin& origin, WebAuthn::Scope scope, const String& topOrigin)
 {
     auto object = JSON::Object::create();
     switch (type) {
@@ -147,6 +171,10 @@ Ref<ArrayBuffer> buildClientDataJson(ClientDataType type, const BufferSource& ch
     }
     object->setString("challenge"_s, base64URLEncodeToString(challenge.data(), challenge.length()));
     object->setString("origin"_s, origin.toRawString());
+
+    if (!topOrigin.isNull())
+        object->setString("topOrigin"_s, topOrigin);
+
     if (scope != WebAuthn::Scope::SameOrigin)
         object->setBoolean("crossOrigin"_s, scope != WebAuthn::Scope::SameOrigin);
 
@@ -160,6 +188,16 @@ Vector<uint8_t> buildClientDataJsonHash(const ArrayBuffer& clientDataJson)
     auto crypto = PAL::CryptoDigest::create(PAL::CryptoDigest::Algorithm::SHA_256);
     crypto->addBytes(clientDataJson.data(), clientDataJson.byteLength());
     return crypto->computeHash();
+}
+
+Vector<uint8_t> encodeRawPublicKey(const Vector<uint8_t>& x, const Vector<uint8_t>& y)
+{
+    Vector<uint8_t> rawKey;
+    rawKey.reserveInitialCapacity(1 + x.size() + y.size());
+    rawKey.uncheckedAppend(0x04);
+    rawKey.appendVector(x);
+    rawKey.appendVector(y);
+    return rawKey;
 }
 
 } // namespace WebCore

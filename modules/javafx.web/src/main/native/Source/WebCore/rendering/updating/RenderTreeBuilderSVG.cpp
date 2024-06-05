@@ -28,10 +28,11 @@
 
 #include "LegacyRenderSVGContainer.h"
 #include "LegacyRenderSVGRoot.h"
-#include "RenderSVGContainer.h"
 #include "RenderSVGInline.h"
 #include "RenderSVGRoot.h"
 #include "RenderSVGText.h"
+#include "RenderSVGViewportContainer.h"
+#include "RenderStyleSetters.h"
 #include "RenderTreeBuilderBlock.h"
 #include "RenderTreeBuilderBlockFlow.h"
 #include "RenderTreeBuilderInline.h"
@@ -81,7 +82,8 @@ void RenderTreeBuilder::SVG::attach(RenderSVGInline& parent, RenderPtr<RenderObj
 void RenderTreeBuilder::SVG::attach(RenderSVGRoot& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild)
 {
     auto& childToAdd = *child;
-    m_builder.attachToRenderElement(parent, WTFMove(child), beforeChild);
+    m_builder.attachToRenderElement(findOrCreateParentForChild(parent), WTFMove(child), beforeChild);
+
     SVGResourcesCache::clientWasAddedToTree(childToAdd);
 }
 #endif
@@ -146,6 +148,42 @@ RenderPtr<RenderObject> RenderTreeBuilder::SVG::detach(RenderSVGRoot& parent, Re
 {
     SVGResourcesCache::clientWillBeRemovedFromTree(child);
     return m_builder.detachFromRenderElement(parent, child);
+}
+#endif
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+RenderSVGViewportContainer& RenderTreeBuilder::SVG::findOrCreateParentForChild(RenderSVGRoot& parent)
+{
+    if (auto* viewportContainer = parent.viewportContainer())
+        return *viewportContainer;
+    return createViewportContainer(parent);
+}
+
+RenderSVGViewportContainer& RenderTreeBuilder::SVG::createViewportContainer(RenderSVGRoot& parent)
+{
+    auto viewportContainerStyle = RenderStyle::createAnonymousStyleWithDisplay(parent.style(), RenderStyle::initialDisplay());
+    viewportContainerStyle.setUsedZIndex(0); // Enforce a stacking context.
+    viewportContainerStyle.setTransformOriginX(Length(0, LengthType::Fixed));
+    viewportContainerStyle.setTransformOriginY(Length(0, LengthType::Fixed));
+
+    auto viewportContainer = createRenderer<RenderSVGViewportContainer>(parent, WTFMove(viewportContainerStyle));
+    viewportContainer->initializeStyle();
+
+    auto* viewportContainerRenderer = viewportContainer.get();
+    m_builder.attachToRenderElement(parent, WTFMove(viewportContainer), nullptr);
+    return *viewportContainerRenderer;
+}
+
+void RenderTreeBuilder::SVG::updateAfterDescendants(RenderSVGRoot& svgRoot)
+{
+    // Usually the anonymous RenderSVGViewportContainer, wrapping all children of RenderSVGRoot,
+    // is created when the first <svg> child element is inserted into the render tree. We'll
+    // only reach this point with viewportContainer=nullptr, if the <svg> had no children -- we
+    // still need to ensure the creation of the RenderSVGViewportContainer, otherwise computing
+    // e.g. getCTM() would ignore the presence of a 'viewBox' induced transform (and ignore zoom/pan).
+    if (svgRoot.viewportContainer())
+        return;
+    createViewportContainer(svgRoot);
 }
 #endif
 

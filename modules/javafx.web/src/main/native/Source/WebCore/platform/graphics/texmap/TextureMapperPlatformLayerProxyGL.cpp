@@ -54,7 +54,7 @@ TextureMapperPlatformLayerProxyGL::~TextureMapperPlatformLayerProxyGL()
 
 void TextureMapperPlatformLayerProxyGL::activateOnCompositingThread(Compositor* compositor, TextureMapperLayer* targetLayer)
 {
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     if (!m_compositorThread)
         m_compositorThread = &Thread::current();
 #endif
@@ -72,8 +72,8 @@ void TextureMapperPlatformLayerProxyGL::activateOnCompositingThread(Compositor* 
         if (m_targetLayer && m_currentBuffer)
             m_targetLayer->setContentsLayer(m_currentBuffer.get());
 
-        m_releaseUnusedBuffersTimer = makeUnique<RunLoop::Timer<TextureMapperPlatformLayerProxyGL>>(RunLoop::current(), this, &TextureMapperPlatformLayerProxyGL::releaseUnusedBuffersTimerFired);
-        m_compositorThreadUpdateTimer = makeUnique<RunLoop::Timer<TextureMapperPlatformLayerProxyGL>>(RunLoop::current(), this, &TextureMapperPlatformLayerProxyGL::compositorThreadUpdateTimerFired);
+        m_releaseUnusedBuffersTimer = makeUnique<RunLoop::Timer>(RunLoop::current(), this, &TextureMapperPlatformLayerProxyGL::releaseUnusedBuffersTimerFired);
+        m_compositorThreadUpdateTimer = makeUnique<RunLoop::Timer>(RunLoop::current(), this, &TextureMapperPlatformLayerProxyGL::compositorThreadUpdateTimerFired);
 
 #if USE(GLIB_EVENT_LOOP)
         m_compositorThreadUpdateTimer->setPriority(RunLoopSourcePriority::CompositingThreadUpdateTimer);
@@ -90,6 +90,9 @@ void TextureMapperPlatformLayerProxyGL::activateOnCompositingThread(Compositor* 
 void TextureMapperPlatformLayerProxyGL::invalidate()
 {
     ASSERT(m_compositorThread == &Thread::current());
+#if ASSERT_ENABLED
+    m_compositorThread = nullptr;
+#endif
     Function<void()> updateFunction;
     {
         Locker locker { m_lock };

@@ -42,19 +42,23 @@ public:
     void atomCharacterClassAtom(UChar) { }
     void atomCharacterClassRange(UChar, UChar) { }
     void atomCharacterClassBuiltIn(BuiltInCharacterClassID, bool) { }
+    void atomClassStringDisjunction(Vector<Vector<UChar32>>&) { }
+    void atomCharacterClassSetOp(CharacterClassSetOp) { }
+    void atomCharacterClassPushNested() { }
+    void atomCharacterClassPopNested() { }
     void atomCharacterClassEnd() { }
     void atomParenthesesSubpatternBegin(bool = true, std::optional<String> = std::nullopt) { }
-    void atomParentheticalAssertionBegin(bool = false) { }
+    void atomParentheticalAssertionBegin(bool, MatchDirection) { }
     void atomParenthesesEnd() { }
     void atomBackReference(unsigned) { }
     void atomNamedBackReference(const String&) { }
     void atomNamedForwardReference(const String&) { }
     void quantifyAtom(unsigned, unsigned, bool) { }
-    void disjunction() { }
+    void disjunction(CreateDisjunctionPurpose) { }
     void resetForReparsing() { }
 };
 
-ErrorCode checkSyntax(const String& pattern, const String& flags)
+ErrorCode checkSyntax(StringView pattern, StringView flags)
 {
     SyntaxChecker syntaxChecker;
 
@@ -62,7 +66,7 @@ ErrorCode checkSyntax(const String& pattern, const String& flags)
     if (!parsedFlags)
         return ErrorCode::InvalidRegularExpressionFlags;
 
-    return parse(syntaxChecker, pattern, parsedFlags->contains(Flags::Unicode));
+    return parse(syntaxChecker, pattern, compileMode(parsedFlags));
 }
 
 }} // JSC::Yarr

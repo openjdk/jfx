@@ -39,6 +39,7 @@
 #include <wtf/HashSet.h>
 #include <wtf/JSONValues.h>
 #include <wtf/RefPtr.h>
+#include <wtf/RobinHoodHashMap.h>
 #include <wtf/text/WTFString.h>
 
 namespace Inspector {
@@ -49,6 +50,8 @@ namespace WebCore {
 
 class Event;
 class RegisteredEventListener;
+class ResourceRequest;
+class ScriptExecutionContext;
 
 class InspectorDOMDebuggerAgent : public InspectorAgentBase, public Inspector::DOMDebuggerBackendDispatcherHandler, public Inspector::InspectorDebuggerAgent::Listener {
     WTF_MAKE_NONCOPYABLE(InspectorDOMDebuggerAgent);
@@ -65,8 +68,8 @@ public:
     // DOMDebuggerBackendDispatcherHandler
     Inspector::Protocol::ErrorStringOr<void> setURLBreakpoint(const String& url, std::optional<bool>&& isRegex, RefPtr<JSON::Object>&& options) final;
     Inspector::Protocol::ErrorStringOr<void> removeURLBreakpoint(const String& url, std::optional<bool>&& isRegex) final;
-    Inspector::Protocol::ErrorStringOr<void> setEventBreakpoint(Inspector::Protocol::DOMDebugger::EventBreakpointType, const String& eventName, RefPtr<JSON::Object>&& options) final;
-    Inspector::Protocol::ErrorStringOr<void> removeEventBreakpoint(Inspector::Protocol::DOMDebugger::EventBreakpointType, const String& eventName) final;
+    Inspector::Protocol::ErrorStringOr<void> setEventBreakpoint(Inspector::Protocol::DOMDebugger::EventBreakpointType, const String& eventName, std::optional<bool>&& caseSensitive, std::optional<bool>&& isRegex, RefPtr<JSON::Object>&& options) final;
+    Inspector::Protocol::ErrorStringOr<void> removeEventBreakpoint(Inspector::Protocol::DOMDebugger::EventBreakpointType, const String& eventName, std::optional<bool>&& caseSensitive, std::optional<bool>&& isRegex) final;
 
     // InspectorDebuggerAgent::Listener
     void debuggerWasEnabled() override;
@@ -76,10 +79,12 @@ public:
     virtual void mainFrameNavigated();
     void willSendXMLHttpRequest(const String& url);
     void willFetch(const String& url);
-    void willHandleEvent(Event&, const RegisteredEventListener&);
-    void didHandleEvent(Event&, const RegisteredEventListener&);
+    void willHandleEvent(ScriptExecutionContext&, Event&, const RegisteredEventListener&);
+    void didHandleEvent(ScriptExecutionContext&, Event&, const RegisteredEventListener&);
     void willFireTimer(bool oneShot);
     void didFireTimer(bool oneShot);
+    void willSendRequest(ResourceRequest&);
+    void willSendRequestOfType(ResourceRequest&);
 
 protected:
     InspectorDOMDebuggerAgent(WebAgentContext&, Inspector::InspectorDebuggerAgent*);
@@ -91,19 +96,40 @@ protected:
     Inspector::InspectorDebuggerAgent* m_debuggerAgent { nullptr };
 
 private:
-    enum class URLBreakpointSource { Fetch, XHR };
-    void breakOnURLIfNeeded(const String& url, URLBreakpointSource);
+    void breakOnURLIfNeeded(const String&);
 
     RefPtr<Inspector::DOMDebuggerBackendDispatcher> m_backendDispatcher;
     Inspector::InjectedScriptManager& m_injectedScriptManager;
 
-    HashMap<String, Ref<JSC::Breakpoint>> m_listenerBreakpoints;
+    struct EventBreakpoint {
+        String eventName;
+        bool caseSensitive { true };
+        bool isRegex { false };
+
+        // This is only used for the breakpoint configuration (i.e. it's irrelevant when comparing).
+        RefPtr<JSC::Breakpoint> specialBreakpoint;
+
+        inline bool operator==(const EventBreakpoint& other) const
+        {
+            return eventName == other.eventName
+                && caseSensitive == other.caseSensitive
+                && isRegex == other.isRegex;
+        }
+
+        bool matches(const String&);
+
+    private:
+        // Avoid having to (re)match the regex each time an event is dispatched.
+        std::optional<JSC::Yarr::RegularExpression> m_eventNameMatchRegex;
+        HashSet<String> m_knownMatchingEventNames;
+    };
+    Vector<EventBreakpoint> m_listenerBreakpoints;
     RefPtr<JSC::Breakpoint> m_pauseOnAllIntervalsBreakpoint;
     RefPtr<JSC::Breakpoint> m_pauseOnAllListenersBreakpoint;
     RefPtr<JSC::Breakpoint> m_pauseOnAllTimeoutsBreakpoint;
 
-    HashMap<String, Ref<JSC::Breakpoint>> m_urlTextBreakpoints;
-    HashMap<String, Ref<JSC::Breakpoint>> m_urlRegexBreakpoints;
+    MemoryCompactRobinHoodHashMap<String, Ref<JSC::Breakpoint>> m_urlTextBreakpoints;
+    MemoryCompactRobinHoodHashMap<String, Ref<JSC::Breakpoint>> m_urlRegexBreakpoints;
     RefPtr<JSC::Breakpoint> m_pauseOnAllURLsBreakpoint;
 };
 

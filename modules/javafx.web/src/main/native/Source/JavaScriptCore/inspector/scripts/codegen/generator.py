@@ -52,6 +52,7 @@ _ENUM_IDENTIFIER_RENAME_MAP = {
     'canvas-webgl2': 'CanvasWebGL2',  # Recording.Type.canvas-webgl2
     'webgl': 'WebGL',  # Canvas.ContextType.webgl
     'webgl2': 'WebGL2',  # Canvas.ContextType.webgl2
+    'webgpu': 'WebGPU',  # Canvas.ContextType.webgpu
     'bitmaprenderer': 'BitmapRenderer',  # Canvas.ContextType.bitmaprenderer
     'mediasource': 'MediaSource',  # Console.ChannelSource.mediasource
     'webrtc': 'WebRTC',  # Console.ChannelSource.webrtc
@@ -84,6 +85,8 @@ _TYPES_WITH_OPEN_FIELDS = {
     "Timeline.TimelineEvent": [],
     "CSS.CSSProperty": ["priority", "parsedOk", "status"],
     "DOM.HighlightConfig": [],
+    "DOM.GridOverlayConfig": [],
+    "DOM.FlexOverlayConfig": [],
     "DOM.RGBAColor": [],
     "DOMStorage.StorageId": [],
     "Debugger.BreakpointAction": [],
@@ -158,6 +161,9 @@ class Generator:
 
     def generate_output(self):
         pass
+
+    def needs_preprocess(self):
+        return False
 
     def output_filename(self):
         pass

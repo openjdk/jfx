@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "LayoutInitialContainingBlock.h"
 #include <wtf/HashMap.h>
 #include <wtf/UniqueRef.h>
@@ -34,8 +32,12 @@
 
 namespace WebCore {
 
-class RenderBlockFlow;
+class RenderBlock;
 class RenderBoxModelObject;
+class RenderElement;
+class RenderObject;
+class RenderInline;
+class RenderText;
 
 namespace LayoutIntegration {
 
@@ -45,40 +47,47 @@ struct InlineContent;
 
 class BoxTree {
 public:
-    BoxTree(RenderBlockFlow&);
+    BoxTree(RenderBlock&);
+    ~BoxTree();
 
     void updateStyle(const RenderBoxModelObject&);
+    void updateContent(const RenderText&);
+    const Layout::Box& insert(const RenderElement& parent, RenderObject& child, const RenderObject* beforeChild = nullptr);
+    UniqueRef<Layout::Box> remove(const RenderElement& parent, RenderObject& child);
 
-    const RenderBlockFlow& flow() const { return m_flow; }
-    RenderBlockFlow& flow() { return m_flow; }
+    const RenderBlock& rootRenderer() const { return m_rootRenderer; }
+    RenderBlock& rootRenderer() { return m_rootRenderer; }
 
-    const Layout::ContainerBox& rootLayoutBox() const { return m_root; }
-    Layout::ContainerBox& rootLayoutBox() { return m_root; }
+    const Layout::ElementBox& rootLayoutBox() const;
+    Layout::ElementBox& rootLayoutBox();
 
     const Layout::Box& layoutBoxForRenderer(const RenderObject&) const;
     Layout::Box& layoutBoxForRenderer(const RenderObject&);
 
+    const Layout::ElementBox& layoutBoxForRenderer(const RenderElement&) const;
+    Layout::ElementBox& layoutBoxForRenderer(const RenderElement&);
+
     const RenderObject& rendererForLayoutBox(const Layout::Box&) const;
     RenderObject& rendererForLayoutBox(const Layout::Box&);
 
-    size_t boxCount() const { return m_boxes.size(); }
+    size_t boxCount() const { return m_renderers.size(); }
 
-    struct BoxAndRenderer {
-        CheckedRef<Layout::Box> box;
-        RenderObject* renderer { nullptr };
-    };
-    const auto& boxAndRendererList() const { return m_boxes; }
+    const auto& renderers() const { return m_renderers; }
 
 private:
-    void buildTree();
-    void appendChild(UniqueRef<Layout::Box>, RenderObject&);
+    Layout::InitialContainingBlock& initialContainingBlock();
 
-    RenderBlockFlow& m_flow;
-    Layout::ContainerBox m_root;
-    Vector<BoxAndRenderer, 1> m_boxes;
+    static UniqueRef<Layout::Box> createLayoutBox(RenderObject&);
+    static void adjustStyleIfNeeded(const RenderElement&, RenderStyle&, RenderStyle* firstLineStyle);
 
-    HashMap<const RenderObject*, CheckedRef<Layout::Box>> m_rendererToBoxMap;
-    HashMap<CheckedRef<const Layout::Box>, RenderObject*> m_boxToRendererMap;
+    void buildTreeForInlineContent();
+    void buildTreeForFlexContent();
+    void insertChild(UniqueRef<Layout::Box>, RenderObject&, const RenderObject* beforeChild = nullptr);
+
+    RenderBlock& m_rootRenderer;
+    Vector<WeakPtr<RenderObject>, 1> m_renderers;
+
+    HashMap<CheckedRef<const Layout::Box>, WeakPtr<RenderObject>> m_boxToRendererMap;
 };
 
 #if ENABLE(TREE_DEBUGGING)
@@ -87,4 +96,3 @@ void showInlineContent(TextStream&, const InlineContent&, size_t depth);
 }
 }
 
-#endif

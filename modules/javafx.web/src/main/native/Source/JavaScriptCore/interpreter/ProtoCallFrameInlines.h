@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,20 +30,17 @@
 
 namespace JSC {
 
-inline void ProtoCallFrame::init(CodeBlock* codeBlock, JSGlobalObject* globalObject, JSObject* callee, JSValue thisValue, int argCountIncludingThis, JSValue* otherArgs)
+inline void ProtoCallFrame::init(CodeBlock* codeBlock, JSGlobalObject* globalObject, JSObject* callee, JSValue thisValue, int argCountIncludingThis, EncodedJSValue* otherArgs)
 {
     this->args = otherArgs;
     this->setCodeBlock(codeBlock);
     this->setCallee(callee);
     this->setGlobalObject(globalObject);
     this->setArgumentCountIncludingThis(argCountIncludingThis);
+    size_t paddedArgsCount = argCountIncludingThis;
     if (codeBlock && static_cast<unsigned>(argCountIncludingThis) < codeBlock->numParameters())
-        this->hasArityMismatch = true;
-    else
-        this->hasArityMismatch = false;
-
-    // Round up argCountIncludingThis to keep the stack frame size aligned.
-    size_t paddedArgsCount = roundArgumentCountToAlignFrame(argCountIncludingThis);
+        paddedArgsCount = codeBlock->numParameters();
+    paddedArgsCount = roundArgumentCountToAlignFrame(paddedArgsCount);
     this->setPaddedArgCount(paddedArgsCount);
     this->clearCurrentVPC();
     this->setThisValue(thisValue);

@@ -26,13 +26,14 @@
 #pragma once
 
 #include "ActiveDOMCallback.h"
-#include "JSDOMGlobalObject.h"
 #include <JavaScriptCore/HeapInlines.h>
 #include <JavaScriptCore/JSCell.h>
 #include <JavaScriptCore/SlotVisitorInlines.h>
 #include <JavaScriptCore/StrongInlines.h>
 
 namespace WebCore {
+
+class JSDOMGlobalObject;
 
 class WEBCORE_EXPORT DOMGuardedObject : public RefCounted<DOMGuardedObject>, public ActiveDOMCallback {
 public:
@@ -63,7 +64,7 @@ private:
 template <typename T> class DOMGuarded : public DOMGuardedObject {
 protected:
     DOMGuarded(JSDOMGlobalObject& globalObject, T& guarded) : DOMGuardedObject(globalObject, guarded) { }
-    T* guarded() const { return JSC::jsDynamicCast<T*>(globalObject()->vm(), guardedObject()); }
+    T* guarded() const { return JSC::jsDynamicCast<T*>(guardedObject()); }
 };
 
 } // namespace WebCore

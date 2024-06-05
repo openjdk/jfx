@@ -33,10 +33,13 @@
 namespace JSC { namespace Wasm {
 
 class FunctionCodeBlockGenerator;
-class Signature;
+class TypeDefinition;
 struct ModuleInformation;
 
-Expected<std::unique_ptr<FunctionCodeBlockGenerator>, String> parseAndCompileBytecode(const uint8_t*, size_t, const Signature&, ModuleInformation&, uint32_t functionIndex);
+enum class UseDefaultValue : bool { No, Yes };
+enum class ArrayGetKind : unsigned { New, NewDefault, NewFixed };
+
+Expected<std::unique_ptr<FunctionCodeBlockGenerator>, String> parseAndCompileBytecode(const uint8_t*, size_t, const TypeDefinition&, ModuleInformation&, uint32_t functionIndex);
 
 } } // namespace JSC::Wasm
 

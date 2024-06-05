@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -221,13 +221,14 @@ public:
     template<typename... Params>
     Node* addNode(Params... params)
     {
-        return m_nodes.addNew(params...);
+        Node* node = m_nodes.addNew(params...);
+        return node;
     }
 
     template<typename... Params>
     Node* addNode(SpeculatedType type, Params... params)
     {
-        Node* node = m_nodes.addNew(params...);
+        Node* node = addNode(params...);
         node->predict(type);
         return node;
     }
@@ -236,6 +237,7 @@ public:
     unsigned maxNodeCount() const { return m_nodes.size(); }
     Node* nodeAt(unsigned index) const { return m_nodes[index]; }
     void packNodeIndices();
+    void clearAbstractValues();
 
     void dethread();
 
@@ -303,8 +305,8 @@ public:
     {
         return addSpeculationMode(
             add,
-            add->child1()->shouldSpeculateInt32OrBooleanExpectingDefined(),
-            add->child2()->shouldSpeculateInt32OrBooleanExpectingDefined(),
+            add->child1()->shouldSpeculateInt32OrBooleanExpectingDefined(add->mayHaveDoubleResult()),
+            add->child2()->shouldSpeculateInt32OrBooleanExpectingDefined(add->mayHaveDoubleResult()),
             pass);
     }
 
@@ -312,8 +314,8 @@ public:
     {
         return addSpeculationMode(
             add,
-            add->child1()->shouldSpeculateInt32OrBooleanForArithmetic(),
-            add->child2()->shouldSpeculateInt32OrBooleanForArithmetic(),
+            add->child1()->shouldSpeculateInt32OrBooleanForArithmetic(add->mayHaveDoubleResult()),
+            add->child2()->shouldSpeculateInt32OrBooleanForArithmetic(add->mayHaveDoubleResult()),
             pass);
     }
 
@@ -364,7 +366,7 @@ public:
             NodeFlags flags = node->flags() & NodeBytecodeBackPropMask;
             if (!flags)
                 return false;
-            return (flags & (NodeBytecodeUsesAsNumber | NodeBytecodeNeedsNegZero | NodeBytecodeUsesAsInt | NodeBytecodeUsesAsArrayIndex)) == flags;
+            return (flags & (NodeBytecodeUsesAsNumber | NodeBytecodeNeedsNegZero | NodeBytecodeNeedsNaNOrInfinity | NodeBytecodeUsesAsInt | NodeBytecodePrefersArrayIndex)) == flags;
         };
 
         // Wrapping Int52 to Value is also not so cheap. Thus, we allow Int52 addition only when the node is used as number.
@@ -431,6 +433,23 @@ public:
     }
 #endif
 
+    bool variadicArithShouldSpeculateInt32(Node* node, PredictionPass pass)
+    {
+        bool result = true;
+        RareCaseProfilingSource source = AllRareCases;
+        if (pass == PrimaryPass)
+            source = DFGRareCase;
+
+        doToChildren(node, [&](Edge& child) {
+            if (!child->shouldSpeculateInt32OrBooleanForArithmetic())
+                result = false;
+            if (child->sawBooleans())
+                source = DFGRareCase;
+        });
+
+        return result && node->canSpeculateInt32(source);
+    }
+
     bool canOptimizeStringObjectAccess(const CodeOrigin&);
 
     bool getRegExpPrototypeProperty(JSObject* regExpPrototype, Structure* regExpPrototypeStructure, UniquedStringImpl* uid, JSValue& returnJSValue);
@@ -473,20 +492,7 @@ public:
     JSObject* globalThisObjectFor(CodeOrigin codeOrigin)
     {
         JSGlobalObject* object = globalObjectFor(codeOrigin);
-        return jsCast<JSObject*>(object->methodTable(m_vm)->toThis(object, object, ECMAMode::sloppy()));
-    }
-
-    ScriptExecutable* executableFor(InlineCallFrame* inlineCallFrame)
-    {
-        if (!inlineCallFrame)
-            return m_codeBlock->ownerExecutable();
-
-        return inlineCallFrame->baselineCodeBlock->ownerExecutable();
-    }
-
-    ScriptExecutable* executableFor(const CodeOrigin& codeOrigin)
-    {
-        return executableFor(codeOrigin.inlineCallFrame());
+        return object->globalThis();
     }
 
     CodeBlock* baselineCodeBlockFor(InlineCallFrame* inlineCallFrame)
@@ -499,11 +505,6 @@ public:
     CodeBlock* baselineCodeBlockFor(const CodeOrigin& codeOrigin)
     {
         return baselineCodeBlockForOriginAndBaselineCodeBlock(codeOrigin, m_profiledBlock);
-    }
-
-    bool masqueradesAsUndefinedWatchpointIsStillValid(const CodeOrigin& codeOrigin)
-    {
-        return globalObjectFor(codeOrigin)->masqueradesAsUndefinedWatchpoint()->isStillValid();
     }
 
     bool hasGlobalExitSite(const CodeOrigin& codeOrigin, ExitKind exitKind)
@@ -548,6 +549,7 @@ public:
     void killUnreachableBlocks();
 
     void determineReachability();
+    void clearReachability();
     void resetReachability();
 
     void computeRefCounts();
@@ -721,11 +723,6 @@ public:
                 return m_index == other.m_index;
             }
 
-            bool operator!=(const iterator& other) const
-            {
-                return !(*this == other);
-            }
-
         private:
             BlockIndex findNext(BlockIndex index)
             {
@@ -793,14 +790,27 @@ public:
         return result;
     }
 
-    bool isWatchingHavingABadTimeWatchpoint(Node* node)
+    template<typename WatchpointSet>
+    bool isWatchingGlobalObjectWatchpoint(JSGlobalObject* globalObject, WatchpointSet& set, LinkerIR::Type type)
     {
-        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
-        return watchpoints().isWatched(globalObject->havingABadTimeWatchpoint());
+        if (m_plan.isUnlinked()) {
+            if (m_codeBlock->globalObject() != globalObject)
+            return false;
+
+            LinkerIR::Value value { nullptr, type };
+            if (m_constantPoolMap.contains(value))
+                return true;
+
+            if (set.isStillValid()) {
+                auto result = m_constantPoolMap.add(value, m_constantPoolMap.size());
+                ASSERT_UNUSED(result, result.isNewEntry);
+                m_constantPool.append(value);
+                return true;
     }
 
-    bool isWatchingGlobalObjectWatchpoint(JSGlobalObject* globalObject, InlineWatchpointSet& set)
-    {
+            return false;
+        }
+
         if (watchpoints().isWatched(set))
             return true;
 
@@ -817,18 +827,81 @@ public:
         return false;
     }
 
+    bool isWatchingHavingABadTimeWatchpoint(Node* node)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
+        WatchpointSet& set = globalObject->havingABadTimeWatchpointSet();
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::HavingABadTimeWatchpointSet);
+    }
+
+    bool isWatchingMasqueradesAsUndefinedWatchpointSet(Node* node)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
+        WatchpointSet& set = globalObject->masqueradesAsUndefinedWatchpointSet();
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::MasqueradesAsUndefinedWatchpointSet);
+    }
+
     bool isWatchingArrayIteratorProtocolWatchpoint(Node* node)
     {
         JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
         InlineWatchpointSet& set = globalObject->arrayIteratorProtocolWatchpointSet();
-        return isWatchingGlobalObjectWatchpoint(globalObject, set);
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::ArrayIteratorProtocolWatchpointSet);
     }
 
     bool isWatchingNumberToStringWatchpoint(Node* node)
     {
         JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
         InlineWatchpointSet& set = globalObject->numberToStringWatchpointSet();
-        return isWatchingGlobalObjectWatchpoint(globalObject, set);
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::NumberToStringWatchpointSet);
+    }
+
+    bool isWatchingStructureCacheClearedWatchpoint(Node* node)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
+        InlineWatchpointSet& set = globalObject->structureCacheClearedWatchpointSet();
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::StructureCacheClearedWatchpointSet);
+    }
+
+    bool isWatchingStringSymbolReplaceWatchpoint(Node* node)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
+        InlineWatchpointSet& set = globalObject->stringSymbolReplaceWatchpointSet();
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::StringSymbolReplaceWatchpointSet);
+    }
+
+    bool isWatchingRegExpPrimordialPropertiesWatchpoint(Node* node)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
+        InlineWatchpointSet& set = globalObject->regExpPrimordialPropertiesWatchpointSet();
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::RegExpPrimordialPropertiesWatchpointSet);
+    }
+
+    bool isWatchingArraySpeciesWatchpoint(Node* node)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
+        InlineWatchpointSet& set = globalObject->arraySpeciesWatchpointSet();
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::ArraySpeciesWatchpointSet);
+    }
+
+    bool isWatchingArrayPrototypeChainIsSaneWatchpoint(Node* node)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
+        InlineWatchpointSet& set = globalObject->arrayPrototypeChainIsSaneWatchpointSet();
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::ArrayPrototypeChainIsSaneWatchpointSet);
+    }
+
+    bool isWatchingStringPrototypeChainIsSaneWatchpoint(Node* node)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
+        InlineWatchpointSet& set = globalObject->stringPrototypeChainIsSaneWatchpointSet();
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::StringPrototypeChainIsSaneWatchpointSet);
+    }
+
+    bool isWatchingObjectPrototypeChainIsSaneWatchpoint(Node* node)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
+        InlineWatchpointSet& set = globalObject->objectPrototypeChainIsSaneWatchpointSet();
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::ObjectPrototypeChainIsSaneWatchpointSet);
     }
 
     Profiler::Compilation* compilation() { return m_plan.compilation(); }
@@ -850,8 +923,8 @@ public:
 
     // This uses either constant property inference or property type inference to derive a good abstract
     // value for some property accessed with the given abstract value base.
-    AbstractValue inferredValueForProperty(
-        const AbstractValue& base, PropertyOffset, StructureClobberState);
+    AbstractValue inferredValueForProperty(const AbstractValue& base, PropertyOffset, StructureClobberState);
+    AbstractValue inferredValueForProperty(const AbstractValue& base, const RegisteredStructureSet&, PropertyOffset, StructureClobberState);
 
     FullBytecodeLiveness& livenessFor(CodeBlock*);
     FullBytecodeLiveness& livenessFor(InlineCallFrame*);
@@ -996,6 +1069,9 @@ public:
     JSArrayBufferView* tryGetFoldableView(JSValue);
     JSArrayBufferView* tryGetFoldableView(JSValue, ArrayMode arrayMode);
 
+    JSValue tryGetConstantGetter(Node* getterSetter);
+    JSValue tryGetConstantSetter(Node* getterSetter);
+
     bool canDoFastSpread(Node*, const AbstractValue&);
 
     void registerFrozenValues();
@@ -1035,8 +1111,7 @@ public:
     }
     bool willCatchExceptionInMachineFrame(CodeOrigin, CodeOrigin& opCatchOriginOut, HandlerInfo*& catchHandlerOut);
 
-    bool needsScopeRegister() const { return m_hasDebuggerEnabled || m_codeBlock->usesCallEval(); }
-    bool needsFlushedThis() const { return m_codeBlock->usesCallEval(); }
+    bool needsScopeRegister() const { return m_hasDebuggerEnabled; }
 
     void clearCPSCFGData();
 
@@ -1069,28 +1144,39 @@ public:
     const UnlinkedStringJumpTable& unlinkedStringSwitchJumpTable(unsigned index) const { return *m_unlinkedStringSwitchJumpTables[index]; }
     StringJumpTable& stringSwitchJumpTable(unsigned index) { return m_stringSwitchJumpTables[index]; }
 
-    void appendCatchEntrypoint(BytecodeIndex bytecodeIndex, MacroAssemblerCodePtr<ExceptionHandlerPtrTag> machineCode, Vector<FlushFormat>&& argumentFormats)
+    void appendCatchEntrypoint(BytecodeIndex bytecodeIndex, CodePtr<ExceptionHandlerPtrTag> machineCode, Vector<FlushFormat>&& argumentFormats)
     {
         m_catchEntrypoints.append(CatchEntrypointData { machineCode, FixedVector<FlushFormat>(WTFMove(argumentFormats)), bytecodeIndex });
     }
 
     void freeDFGIRAfterLowering();
 
+    const BoyerMooreHorspoolTable<uint8_t>* tryAddStringSearchTable8(const String&);
+
     StackCheck m_stackChecker;
     VM& m_vm;
     Plan& m_plan;
-    CodeBlock* m_codeBlock;
-    CodeBlock* m_profiledBlock;
+    CodeBlock* const m_codeBlock;
+    CodeBlock* const m_profiledBlock;
 
     Vector<RefPtr<BasicBlock>, 8> m_blocks;
     Vector<BasicBlock*, 1> m_roots;
     Vector<Edge, 16> m_varArgChildren;
+
+    struct TupleData {
+        uint16_t refCount { 0 };
+        uint16_t resultFlags { 0 };
+        VirtualRegister virtualRegister;
+    };
+
+    Vector<TupleData> m_tupleData;
 
     // UnlinkedSimpleJumpTable/UnlinkedStringJumpTable are kept by UnlinkedCodeBlocks retained by baseline CodeBlocks handled by DFG / FTL.
     Vector<const UnlinkedSimpleJumpTable*> m_unlinkedSwitchJumpTables;
     Vector<SimpleJumpTable> m_switchJumpTables;
     Vector<const UnlinkedStringJumpTable*> m_unlinkedStringSwitchJumpTables;
     Vector<StringJumpTable> m_stringSwitchJumpTables;
+    HashMap<String, std::unique_ptr<BoyerMooreHorspoolTable<uint8_t>>> m_stringSearchTable8;
 
     HashMap<EncodedJSValue, FrozenValue*, EncodedJSValueHash, EncodedJSValueHashTraits> m_frozenValueMap;
     Bag<FrozenValue> m_frozenValues;
@@ -1183,6 +1269,9 @@ public:
     Bag<double> m_doubleConstants;
 #endif
 
+    Vector<LinkerIR::Value> m_constantPool;
+    HashMap<LinkerIR::Value, LinkerIR::Constant, LinkerIR::ValueHash, LinkerIR::ValueTraits> m_constantPoolMap;
+
     OptimizationFixpointState m_fixpointState;
     StructureRegistrationState m_structureRegistrationState;
     GraphForm m_form;
@@ -1232,11 +1321,24 @@ private:
             return add->canSpeculateInt32(source) ? SpeculateInt32 : DontSpeculateInt32;
 
         double doubleImmediate = immediateValue.asDouble();
+        if (std::isnan(doubleImmediate))
+            return DontSpeculateInt32;
+
         const double twoToThe48 = 281474976710656.0;
         if (doubleImmediate < -twoToThe48 || doubleImmediate > twoToThe48)
             return DontSpeculateInt32;
 
-        return bytecodeCanTruncateInteger(add->arithNodeFlags()) ? SpeculateInt32AndTruncateConstants : DontSpeculateInt32;
+        if (bytecodeCanTruncateInteger(add->arithNodeFlags())) {
+            // If int32 + const double, then we should not speculate this add node with int32 type.
+            // Because ToInt32(int32 + const double) is not always equivalent to int32 + ToInt32(const double).
+            // For example:
+            // let the int32 = -1 and const double = 0.1, then ToInt32(-1 + 0.1) = 0 but -1 + ToInt32(0.1) = -1.
+            if (operandResultType == NodeResultInt32 && !isInteger(doubleImmediate))
+                return DontSpeculateInt32;
+            return SpeculateInt32AndTruncateConstants;
+        }
+
+        return DontSpeculateInt32;
     }
 
     B3::SparseCollection<Node> m_nodes;

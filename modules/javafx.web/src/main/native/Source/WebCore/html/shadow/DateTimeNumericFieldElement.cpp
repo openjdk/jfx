@@ -31,10 +31,11 @@
 
 #include "EventNames.h"
 #include "FontCascade.h"
+#include "HTMLNames.h"
 #include "KeyboardEvent.h"
 #include "PlatformLocale.h"
 #include "RenderBlock.h"
-#include "RenderStyle.h"
+#include "RenderStyleSetters.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
@@ -61,7 +62,7 @@ DateTimeNumericFieldElement::DateTimeNumericFieldElement(Document& document, Fie
 {
 }
 
-void DateTimeNumericFieldElement::adjustMinWidth(RenderStyle& style) const
+void DateTimeNumericFieldElement::adjustMinInlineSize(RenderStyle& style) const
 {
     auto& font = style.fontCascade();
 
@@ -73,13 +74,16 @@ void DateTimeNumericFieldElement::adjustMinWidth(RenderStyle& style) const
 
     auto& locale = localeForOwner();
 
-    float width = 0;
+    float inlineSize = 0;
     for (char c = '0'; c <= '9'; ++c) {
         auto numberString = locale.convertToLocalizedNumber(makeString(pad(c, length, makeString(c))));
-        width = std::max(width, font.width(RenderBlock::constructTextRun(numberString, style)));
+        inlineSize = std::max(inlineSize, font.width(RenderBlock::constructTextRun(numberString, style)));
     }
 
-    style.setMinWidth({ width, LengthType::Fixed });
+    if (style.isHorizontalWritingMode())
+        style.setMinWidth({ inlineSize, LengthType::Fixed });
+    else
+        style.setMinHeight({ inlineSize, LengthType::Fixed });
 }
 
 int DateTimeNumericFieldElement::maximum() const
@@ -114,6 +118,7 @@ void DateTimeNumericFieldElement::setEmptyValue(EventBehavior eventBehavior)
     m_hasValue = false;
     m_typeAheadBuffer.clear();
     updateVisibleValue(eventBehavior);
+    setARIAValueAttributesWithInteger(0);
 }
 
 void DateTimeNumericFieldElement::setValueAsInteger(int value, EventBehavior eventBehavior)
@@ -121,12 +126,19 @@ void DateTimeNumericFieldElement::setValueAsInteger(int value, EventBehavior eve
     m_value = m_range.clampValue(value);
     m_hasValue = true;
     updateVisibleValue(eventBehavior);
+    setARIAValueAttributesWithInteger(value);
 }
 
 void DateTimeNumericFieldElement::setValueAsIntegerByStepping(int value)
 {
     m_typeAheadBuffer.clear();
     setValueAsInteger(value, DispatchInputAndChangeEvents);
+}
+
+void DateTimeNumericFieldElement::setARIAValueAttributesWithInteger(int value)
+{
+    setAttributeWithoutSynchronization(HTMLNames::aria_valuenowAttr, AtomString::number(value));
+    setAttributeWithoutSynchronization(HTMLNames::aria_valuetextAttr, AtomString::number(value));
 }
 
 void DateTimeNumericFieldElement::stepDown()

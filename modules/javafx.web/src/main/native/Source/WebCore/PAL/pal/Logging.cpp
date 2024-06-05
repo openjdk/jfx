@@ -35,11 +35,11 @@
 
 namespace PAL {
 
-void registerNotifyCallback(const String& notifyID, Function<void()>&& callback)
+void registerNotifyCallback(ASCIILiteral notifyID, Function<void()>&& callback)
 {
 #if PLATFORM(COCOA)
     int token;
-    notify_register_dispatch(notifyID.utf8().data(), &token, dispatch_get_main_queue(), makeBlockPtr([callback = WTFMove(callback)](int) {
+    notify_register_dispatch(notifyID.characters(), &token, dispatch_get_main_queue(), makeBlockPtr([callback = WTFMove(callback)](int) {
         callback();
     }).get());
 #else
@@ -47,5 +47,12 @@ void registerNotifyCallback(const String& notifyID, Function<void()>&& callback)
     UNUSED_PARAM(callback);
 #endif
 }
+
+#if !LOG_DISABLED || !RELEASE_LOG_DISABLED
+
+#define DEFINE_PAL_LOG_CHANNEL(name) DEFINE_LOG_CHANNEL(name, LOG_CHANNEL_WEBKIT_SUBSYSTEM)
+PAL_LOG_CHANNELS(DEFINE_PAL_LOG_CHANNEL)
+
+#endif // !LOG_DISABLED || !RELEASE_LOG_DISABLED
 
 } // namespace WebCore

@@ -30,8 +30,8 @@
 #include "Document.h"
 #include "DocumentMarkerController.h"
 #include "EditorClient.h"
-#include "Frame.h"
 #include "FrameSelection.h"
+#include "LocalFrame.h"
 #include "Range.h"
 #include "Settings.h"
 #include "TextCheckerClient.h"
@@ -94,7 +94,6 @@ static void findMisspellings(TextCheckerClient& client, StringView text, Vector<
             TextCheckingResult misspelling;
             misspelling.type = TextCheckingType::Spelling;
             misspelling.range = CharacterRange(wordStart + misspellingLocation, misspellingLength);
-            misspelling.replacement = client.getAutoCorrectSuggestionForMisspelledWord(text.substring(misspelling.range.location, misspelling.range.length).toStringWithoutCopying());
             results.append(misspelling);
         }
 
@@ -337,7 +336,7 @@ auto TextCheckingHelper::findFirstMisspelledWordOrUngrammaticalPhrase(bool check
                 if (checkGrammar)
                     checkingTypes.add(TextCheckingType::Grammar);
                 VisibleSelection currentSelection;
-                if (Frame* frame = paragraphRange.start.document().frame())
+                if (auto* frame = paragraphRange.start.document().frame())
                     currentSelection = frame->selection().selection();
                 checkTextOfParagraph(*m_client.textChecker(), paragraphString, checkingTypes, results, currentSelection);
 
@@ -583,7 +582,7 @@ void checkTextOfParagraph(TextCheckerClient& client, StringView text, OptionSet<
         unsigned grammarCheckLength = text.length();
         for (auto& misspelling : misspellings)
             grammarCheckLength = std::min<unsigned>(grammarCheckLength, misspelling.range.location);
-        findGrammaticalErrors(client, text.substring(0, grammarCheckLength), grammaticalErrors);
+        findGrammaticalErrors(client, text.left(grammarCheckLength), grammaticalErrors);
     }
 
     results = WTFMove(grammaticalErrors);
@@ -595,7 +594,7 @@ void checkTextOfParagraph(TextCheckerClient& client, StringView text, OptionSet<
 #endif // USE(UNIFIED_TEXT_CHECKING)
 }
 
-bool unifiedTextCheckerEnabled(const Frame* frame)
+bool unifiedTextCheckerEnabled(const LocalFrame* frame)
 {
     if (!frame)
         return false;

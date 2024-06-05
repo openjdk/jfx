@@ -7,13 +7,13 @@
 # are met:
 #
 # 1.  Redistributions of source code must retain the above copyright
-#     notice, this list of conditions and the following disclaimer. 
+#     notice, this list of conditions and the following disclaimer.
 # 2.  Redistributions in binary form must reproduce the above copyright
 #     notice, this list of conditions and the following disclaimer in the
-#     documentation and/or other materials provided with the distribution. 
+#     documentation and/or other materials provided with the distribution.
 # 3.  Neither the name of Apple Inc. ("Apple") nor the names of
 #     its contributors may be used to endorse or promote products derived
-#     from this software without specific prior written permission. 
+#     from this software without specific prior written permission.
 #
 # THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
 # EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -126,9 +126,9 @@ for my $file (sort @files) {
     $file =~ s-^./--;
 
     open SOURCE, $file or die "can't open $file\n";
-    
+
     my $inComment = 0;
-    
+
     my $expected = "";
     my $macroLine;
     my $macro;
@@ -137,16 +137,16 @@ for my $file (sort @files) {
     my $comment;
     my $isFormat;
     my $mnemonic;
-    
+
     my $string;
     my $stringLine;
     my $nestingLevel;
-    
+
     my $previousToken = "";
 
     while (<SOURCE>) {
         chomp;
-        
+
         # Handle continued multi-line comment.
         if ($inComment) {
             next unless s-.*\*/--;
@@ -154,7 +154,7 @@ for my $file (sort @files) {
         }
 
         next unless defined $nestingLevel or /(\"|\/\*)/;
-    
+
         # Handle all the tokens in the line.
         while (s-^\s*([#\w]+|/\*|//|[^#\w/'"()\[\],]+|.)--) {
             my $token = $1;
@@ -181,7 +181,7 @@ for my $file (sort @files) {
                 }
                 next;
             }
-            
+
             if (defined $string) {
 handleString:
                 if ($expected) {
@@ -189,7 +189,7 @@ handleString:
                         # FIXME: Validate UTF-8 here?
                         $UIString = $string;
                         $expected = ",";
-                    } elsif (($macro =~ /(WEB_)?UI_(FORMAT_)?(CF)?STRING_KEY(_INTERNAL)?$/) and !defined $key) {
+                    } elsif (($macro =~ /(WEB_)?UI_(FORMAT_)?(CF|NS)?STRING_KEY(_INTERNAL)?$/) and !defined $key) {
                         # FIXME: Validate UTF-8 here?
                         $key = $string;
                         $isFormat = isFormatMacro($macro);
@@ -226,7 +226,7 @@ handleString:
                 $string = undef;
                 last if !defined $token;
             }
-            
+
             $previousToken = $token;
 
             if ($token =~ /^NSLocalized/ && $token !~ /NSLocalizedDescriptionKey/ && $token !~ /NSLocalizedStringFromTableInBundle/ && $token !~ /NSLocalizedFileSizeDescription/ && $token !~ /NSLocalizedDescriptionKey/ && $token !~ /NSLocalizedRecoverySuggestionErrorKey/) {
@@ -250,7 +250,7 @@ handleString:
                     emitError($file, $., "found $token but expected $expected");
                     $expected = "";
                 }
-                if (($token =~ /(WEB_)?UI_(FORMAT_)?(CF)?STRING(_KEY)?(_INTERNAL)?$/) || ($token =~ /WEB_UI_NSSTRING$/) || ($token =~ /WEB_UI_STRING_WITH_MNEMONIC$/)) {
+                if (($token =~ /(WEB_)?UI_(FORMAT_)?(CF|NS)?STRING(_KEY)?(_INTERNAL)?$/) || ($token =~ /WEB_UI_STRING_WITH_MNEMONIC$/)) {
                     $expected = "(";
                     $macro = $token;
                     $UIString = undef;
@@ -277,15 +277,15 @@ handleString:
                 }
             }
         }
-            
+
     }
-    
+
     goto handleString if defined $string;
-    
+
     if ($expected) {
         emitError($file, 0, "reached end of file but expected $expected");
     }
-    
+
     close SOURCE;
 }
 

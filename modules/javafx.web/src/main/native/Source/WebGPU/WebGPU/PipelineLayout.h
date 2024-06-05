@@ -30,36 +30,50 @@
 #import <wtf/RefCounted.h>
 #import <wtf/Vector.h>
 
+struct WGPUPipelineLayoutImpl {
+};
+
 namespace WebGPU {
 
 class BindGroupLayout;
+class Device;
 
-class PipelineLayout : public RefCounted<PipelineLayout> {
+// https://gpuweb.github.io/gpuweb/#gpupipelinelayout
+class PipelineLayout : public WGPUPipelineLayoutImpl, public RefCounted<PipelineLayout> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<PipelineLayout> create(Vector<Ref<BindGroupLayout>>&& bindGroupLayouts)
+    static Ref<PipelineLayout> create(std::optional<Vector<Ref<BindGroupLayout>>>&& bindGroupLayouts, Device& device)
     {
-        return adoptRef(*new PipelineLayout(WTFMove(bindGroupLayouts)));
+        return adoptRef(*new PipelineLayout(WTFMove(bindGroupLayouts), device));
+    }
+    static Ref<PipelineLayout> createInvalid(Device& device)
+    {
+        return adoptRef(*new PipelineLayout(device));
     }
 
     ~PipelineLayout();
 
-    void setLabel(const char*);
+    void setLabel(String&&);
+
+    bool isValid() const { return m_isValid; }
 
     bool operator==(const PipelineLayout&) const;
-    bool operator!=(const PipelineLayout&) const;
 
-    size_t numberOfBindGroupLayouts() const { return m_bindGroupLayouts.size(); }
-    const BindGroupLayout& bindGroupLayout(size_t i) const { return m_bindGroupLayouts[i]; }
+    bool isAutoLayout() const { return !m_bindGroupLayouts.has_value(); }
+    size_t numberOfBindGroupLayouts() const { return m_bindGroupLayouts ? m_bindGroupLayouts->size() : 0; }
+    BindGroupLayout& bindGroupLayout(size_t) const;
+
+    Device& device() const { return m_device; }
+    void makeInvalid();
 
 private:
-    PipelineLayout(Vector<Ref<BindGroupLayout>>&&);
+    PipelineLayout(std::optional<Vector<Ref<BindGroupLayout>>>&&, Device&);
+    PipelineLayout(Device&);
 
-    const Vector<Ref<BindGroupLayout>> m_bindGroupLayouts;
+    std::optional<Vector<Ref<BindGroupLayout>>> m_bindGroupLayouts;
+
+    const Ref<Device> m_device;
+    bool m_isValid { true };
 };
 
 } // namespace WebGPU
-
-struct WGPUPipelineLayoutImpl {
-    Ref<WebGPU::PipelineLayout> pipelineLayout;
-};

@@ -70,7 +70,7 @@ public class ParsedValueTest {
      */
     @Test
     public void testConvert() {
-        ///System.out.println("convert");
+        //System.out.println("convert");
         Font font = Font.getDefault();
         Size size = new Size(1.0, SizeUnits.EM);
         ParsedValue<ParsedValue<?,Size>,Number> value =

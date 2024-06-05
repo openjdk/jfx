@@ -32,9 +32,11 @@
 #include "AXObjectCache.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
-#include "RenderObject.h"
 #include "RenderSlider.h"
+#include "RenderStyleInlines.h"
 #include "SliderThumbElement.h"
+#include "StyleAppearance.h"
+#include <wtf/Scope.h>
 
 namespace WebCore {
 
@@ -52,31 +54,27 @@ Ref<AccessibilitySlider> AccessibilitySlider::create(RenderObject* renderer)
 
 AccessibilityOrientation AccessibilitySlider::orientation() const
 {
-    // Default to horizontal in the unknown case.
-    if (!m_renderer)
-        return AccessibilityOrientation::Horizontal;
-
     auto ariaOrientation = getAttribute(aria_orientationAttr);
-    if (equalLettersIgnoringASCIICase(ariaOrientation, "horizontal"))
+    if (equalLettersIgnoringASCIICase(ariaOrientation, "horizontal"_s))
         return AccessibilityOrientation::Horizontal;
-    if (equalLettersIgnoringASCIICase(ariaOrientation, "vertical"))
+    if (equalLettersIgnoringASCIICase(ariaOrientation, "vertical"_s))
         return AccessibilityOrientation::Vertical;
-    if (equalLettersIgnoringASCIICase(ariaOrientation, "undefined"))
+    if (equalLettersIgnoringASCIICase(ariaOrientation, "undefined"_s))
         return AccessibilityOrientation::Undefined;
 
-    const RenderStyle& style = m_renderer->style();
-
-    ControlPart styleAppearance = style.effectiveAppearance();
-    switch (styleAppearance) {
-    case SliderThumbHorizontalPart:
-    case SliderHorizontalPart:
-    case MediaSliderPart:
-    case MediaFullScreenVolumeSliderPart:
+    const auto* style = this->style();
+    // Default to horizontal in the unknown case.
+    if (!style)
         return AccessibilityOrientation::Horizontal;
 
-    case SliderThumbVerticalPart:
-    case SliderVerticalPart:
-    case MediaVolumeSliderPart:
+    auto styleAppearance = style->effectiveAppearance();
+    switch (styleAppearance) {
+    case StyleAppearance::SliderThumbHorizontal:
+    case StyleAppearance::SliderHorizontal:
+        return AccessibilityOrientation::Horizontal;
+
+    case StyleAppearance::SliderThumbVertical:
+    case StyleAppearance::SliderVertical:
         return AccessibilityOrientation::Vertical;
 
     default:
@@ -87,10 +85,14 @@ AccessibilityOrientation AccessibilitySlider::orientation() const
 void AccessibilitySlider::addChildren()
 {
     ASSERT(!m_childrenInitialized);
-
     m_childrenInitialized = true;
+    auto clearDirtySubtree = makeScopeExit([&] {
+        m_subtreeDirty = false;
+    });
 
-    AXObjectCache* cache = m_renderer->document().axObjectCache();
+    auto* cache = axObjectCache();
+    if (!cache)
+        return;
 
     auto& thumb = downcast<AccessibilitySliderThumb>(*cache->create(AccessibilityRole::SliderThumb));
     thumb.setParent(this);
@@ -155,9 +157,7 @@ bool AccessibilitySlider::setValue(const String& value)
 
 HTMLInputElement* AccessibilitySlider::inputElement() const
 {
-    if (!m_renderer)
-        return nullptr;
-    return downcast<HTMLInputElement>(m_renderer->node());
+    return dynamicDowncast<HTMLInputElement>(node());
 }
 
 

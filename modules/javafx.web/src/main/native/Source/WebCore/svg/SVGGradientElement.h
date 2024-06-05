@@ -59,11 +59,11 @@ struct SVGPropertyTraits<SVGSpreadMethodType> {
 
     static SVGSpreadMethodType fromString(const String& value)
     {
-        if (value == "pad")
+        if (value == "pad"_s)
             return SVGSpreadMethodPad;
-        if (value == "reflect")
+        if (value == "reflect"_s)
             return SVGSpreadMethodReflect;
-        if (value == "repeat")
+        if (value == "repeat"_s)
             return SVGSpreadMethodRepeat;
         return SVGSpreadMethodUnknown;
     }
@@ -92,9 +92,9 @@ public:
     SVGAnimatedTransformList& gradientTransformAnimated() { return m_gradientTransform; }
 
 protected:
-    SVGGradientElement(const QualifiedName&, Document&);
+    SVGGradientElement(const QualifiedName&, Document&, UniqueRef<SVGPropertyRegistry>&&);
 
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;
 
 private:

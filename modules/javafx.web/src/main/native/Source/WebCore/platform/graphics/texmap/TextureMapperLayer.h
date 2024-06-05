@@ -32,7 +32,6 @@
 
 namespace WebCore {
 
-class GraphicsLayer;
 class Region;
 class TextureMapperPaintOptions;
 class TextureMapperPlatformLayer;
@@ -44,14 +43,13 @@ public:
     TextureMapperLayer();
     virtual ~TextureMapperLayer();
 
+#if USE(COORDINATED_GRAPHICS)
     void setID(uint32_t id) { m_id = id; }
     uint32_t id() { return m_id; }
+#endif
 
     const Vector<TextureMapperLayer*>& children() const { return m_children; }
 
-#if !USE(COORDINATED_GRAPHICS)
-    void setChildren(const Vector<GraphicsLayer*>&);
-#endif
     void setChildren(const Vector<TextureMapperLayer*>&);
     void setMaskLayer(TextureMapperLayer*);
     void setReplicaLayer(TextureMapperLayer*);
@@ -81,6 +79,7 @@ public:
     void setContentsTileSize(const FloatSize&);
     void setContentsTilePhase(const FloatSize&);
     void setContentsClippingRect(const FloatRoundedRect&);
+    void setContentsRectClipsDescendants(bool);
     void setFilters(const FilterOperations&);
 
     bool hasFilters() const
@@ -114,7 +113,9 @@ private:
             return m_parent->rootLayer();
         return const_cast<TextureMapperLayer&>(*this);
     }
-    void computeTransformsRecursive();
+
+    struct ComputeTransformData;
+    void computeTransformsRecursive(ComputeTransformData&);
 
     static void sortByZOrder(Vector<TextureMapperLayer* >& array);
 
@@ -136,9 +137,13 @@ private:
     void computeOverlapRegions(ComputeOverlapRegionData&, const TransformationMatrix&, bool includesReplica = true);
 
     void paintRecursive(TextureMapperPaintOptions&);
+    void paintWith3DRenderingContext(TextureMapperPaintOptions&);
+    void paintSelfChildrenReplicaFilterAndMask(TextureMapperPaintOptions&);
     void paintUsingOverlapRegions(TextureMapperPaintOptions&);
     void paintIntoSurface(TextureMapperPaintOptions&);
     void paintWithIntermediateSurface(TextureMapperPaintOptions&, const IntRect&);
+    void paintSelfAndChildrenWithIntermediateSurface(TextureMapperPaintOptions&, const IntRect&);
+    void paintSelfChildrenFilterAndMask(TextureMapperPaintOptions&);
     void paintSelf(TextureMapperPaintOptions&);
     void paintSelfAndChildren(TextureMapperPaintOptions&);
     void paintSelfAndChildrenWithReplica(TextureMapperPaintOptions&);
@@ -190,6 +195,7 @@ private:
         bool drawsContent : 1;
         bool contentsVisible : 1;
         bool contentsOpaque : 1;
+        bool contentsRectClipsDescendants : 1;
         bool backfaceVisibility : 1;
         bool visible : 1;
         bool showDebugBorders : 1;
@@ -205,6 +211,7 @@ private:
             , drawsContent(false)
             , contentsVisible(true)
             , contentsOpaque(false)
+            , contentsRectClipsDescendants(false)
             , backfaceVisibility(true)
             , visible(true)
             , showDebugBorders(false)
@@ -215,8 +222,8 @@ private:
 
     State m_state;
     Nicosia::Animations m_animations;
-    uint32_t m_id { 0 };
 #if USE(COORDINATED_GRAPHICS)
+    uint32_t m_id { 0 };
     RefPtr<Nicosia::AnimatedBackingStoreClient> m_animatedBackingStoreClient;
 #endif
     bool m_isBackdrop { false };

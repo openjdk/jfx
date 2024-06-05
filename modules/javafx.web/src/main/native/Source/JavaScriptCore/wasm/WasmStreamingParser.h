@@ -74,7 +74,7 @@ public:
         FatalError,
     };
 
-    enum class IsEndOfStream { Yes, No };
+    enum class IsEndOfStream : bool { No, Yes };
 
     StreamingParser(ModuleInformation&, StreamingParserClient&);
 
@@ -131,6 +131,10 @@ private:
     State m_state { State::ModuleHeader };
     Section m_section { Section::Begin };
     Section m_previousKnownSection { Section::Begin };
+
+#if ASSERT_ENABLED
+    Vector<uint8_t> m_buffer;
+#endif
 };
 
 

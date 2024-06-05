@@ -25,17 +25,15 @@
 
 #pragma once
 
-#include "FloatRect.h"
+#include "FilterEffectGeometry.h"
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
-class FilterEffect;
-
 struct SVGFilterExpressionTerm {
-    Ref<FilterEffect> effect;
-    std::optional<FilterEffectGeometry> geometry;
+    unsigned index;
     unsigned level;
+    std::optional<FilterEffectGeometry> geometry;
 };
 
 using SVGFilterExpression = Vector<SVGFilterExpressionTerm>;

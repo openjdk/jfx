@@ -30,6 +30,7 @@
 #include <JavaScriptCore/JSCJSValue.h>
 #include <wtf/HashSet.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/RobinHoodHashMap.h>
 #include <wtf/URLHash.h>
 
 namespace JSC {
@@ -52,12 +53,13 @@ class ScriptModuleLoader final : private ModuleScriptLoaderClient {
     WTF_MAKE_NONCOPYABLE(ScriptModuleLoader); WTF_MAKE_FAST_ALLOCATED;
 public:
     enum class OwnerType : uint8_t { Document, WorkerOrWorklet };
-    explicit ScriptModuleLoader(ScriptExecutionContext&, OwnerType);
+    enum class ModuleType : uint8_t { Invalid, JavaScript, WebAssembly, JSON };
+    explicit ScriptModuleLoader(ScriptExecutionContext*, OwnerType);
     ~ScriptModuleLoader();
 
     UniqueRef<ScriptModuleLoader> shadowRealmLoader(JSC::JSGlobalObject* realmGlobal) const;
 
-    ScriptExecutionContext& context() { return m_context; }
+    ScriptExecutionContext* context() { return m_context.get(); }
 
     JSC::Identifier resolve(JSC::JSGlobalObject*, JSC::JSModuleLoader*, JSC::JSValue moduleName, JSC::JSValue importerModuleKey, JSC::JSValue scriptFetcher);
     JSC::JSInternalPromise* fetch(JSC::JSGlobalObject*, JSC::JSModuleLoader*, JSC::JSValue moduleKey, JSC::JSValue parameters, JSC::JSValue scriptFetcher);
@@ -71,8 +73,8 @@ private:
     URL moduleURL(JSC::JSGlobalObject&, JSC::JSValue);
     URL responseURLFromRequestURL(JSC::JSGlobalObject&, JSC::JSValue);
 
-    ScriptExecutionContext& m_context;
-    HashMap<String, URL> m_requestURLToResponseURLMap;
+    WeakPtr<ScriptExecutionContext> m_context;
+    MemoryCompactRobinHoodHashMap<String, URL> m_requestURLToResponseURLMap;
     HashSet<Ref<ModuleScriptLoader>> m_loaders;
     OwnerType m_ownerType;
     JSC::JSGlobalObject* m_shadowRealmGlobal { nullptr };

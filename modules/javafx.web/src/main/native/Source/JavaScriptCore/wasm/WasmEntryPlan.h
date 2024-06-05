@@ -46,8 +46,8 @@ public:
     using Base = Plan;
 
     // Note: CompletionTask should not hold a reference to the Plan otherwise there will be a reference cycle.
-    EntryPlan(Context*, Ref<ModuleInformation>, CompilerMode, CompletionTask&&);
-    JS_EXPORT_PRIVATE EntryPlan(Context*, Vector<uint8_t>&&, CompilerMode, CompletionTask&&);
+    EntryPlan(VM&, Ref<ModuleInformation>, CompilerMode, CompletionTask&&);
+    JS_EXPORT_PRIVATE EntryPlan(VM&, Vector<uint8_t>&&, CompilerMode, CompletionTask&&);
 
     ~EntryPlan() override = default;
 
@@ -107,7 +107,7 @@ protected:
     {
         if (UNLIKELY(!vector.tryReserveCapacity(size))) {
             Locker locker { m_lock };
-            fail(WTF::makeString("Failed allocating enough space for ", size, what));
+            fail(WTF::makeString("Failed allocating enough space for "_s, size, what));
             return false;
         }
         return true;

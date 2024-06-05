@@ -25,48 +25,66 @@
 
 #pragma once
 
-#include "AbstractFrame.h"
-#include "GlobalFrameIdentifier.h"
-#include <wtf/Ref.h>
+#include "Frame.h"
+#include "LayerHostingContextIdentifier.h"
 #include <wtf/RefPtr.h>
 #include <wtf/TypeCasts.h>
+#include <wtf/UniqueRef.h>
 
 namespace WebCore {
 
 class RemoteDOMWindow;
+class RemoteFrameClient;
+class RemoteFrameView;
+class WeakPtrImplWithEventTargetData;
 
-class RemoteFrame final : public AbstractFrame {
+enum class RenderAsTextFlag : uint16_t;
+
+class RemoteFrame final : public Frame {
 public:
-    static Ref<RemoteFrame> create(GlobalFrameIdentifier&& frameIdentifier)
-    {
-        return adoptRef(* new RemoteFrame(WTFMove(frameIdentifier)));
-    }
+    WEBCORE_EXPORT static Ref<RemoteFrame> createMainFrame(Page&, UniqueRef<RemoteFrameClient>&&, FrameIdentifier);
+    WEBCORE_EXPORT static Ref<RemoteFrame> createSubframe(Page&, UniqueRef<RemoteFrameClient>&&, FrameIdentifier, Frame& parent);
+    WEBCORE_EXPORT static Ref<RemoteFrame> createSubframeWithContentsInAnotherProcess(Page&, UniqueRef<RemoteFrameClient>&&, FrameIdentifier, HTMLFrameOwnerElement&, std::optional<LayerHostingContextIdentifier>);
     ~RemoteFrame();
 
-    const GlobalFrameIdentifier& identifier() const { return m_identifier; }
+    RemoteDOMWindow& window() const;
 
-    void setWindow(RemoteDOMWindow* window) { m_window = window; }
-    RemoteDOMWindow* window() const { return m_window; }
+    void setOpener(Frame* opener) { m_opener = opener; }
+    Frame* opener() const { return m_opener.get(); }
 
-    void setOpener(AbstractFrame* opener) { m_opener = opener; }
-    AbstractFrame* opener() const { return m_opener.get(); }
+    WEBCORE_EXPORT void didFinishLoadInAnotherProcess();
+
+    const RemoteFrameClient& client() const { return m_client.get(); }
+    RemoteFrameClient& client() { return m_client.get(); }
+
+    RemoteFrameView* view() const { return m_view.get(); }
+    WEBCORE_EXPORT void setView(RefPtr<RemoteFrameView>&&);
+
+    Markable<LayerHostingContextIdentifier> layerHostingContextIdentifier() const { return m_layerHostingContextIdentifier; }
+
+    String renderTreeAsText(size_t baseIndent, OptionSet<RenderAsTextFlag>);
 
 private:
-    WEBCORE_EXPORT explicit RemoteFrame(GlobalFrameIdentifier&&);
+    WEBCORE_EXPORT explicit RemoteFrame(Page&, UniqueRef<RemoteFrameClient>&&, FrameIdentifier, HTMLFrameOwnerElement*, Frame*, Markable<LayerHostingContextIdentifier>);
 
-    bool isRemoteFrame() const final { return true; }
-    bool isLocalFrame() const final { return false; }
+    void frameDetached() final;
+    bool preventsParentFromBeingComplete() const final;
+    void changeLocation(FrameLoadRequest&&) final;
+    void broadcastFrameRemovalToOtherProcesses() final;
 
-    AbstractDOMWindow* virtualWindow() const final;
+    FrameView* virtualView() const final;
+    DOMWindow* virtualWindow() const final;
 
-    GlobalFrameIdentifier m_identifier;
-    RemoteDOMWindow* m_window { nullptr };
-
-    RefPtr<AbstractFrame> m_opener;
+    Ref<RemoteDOMWindow> m_window;
+    RefPtr<Frame> m_opener;
+    RefPtr<RemoteFrameView> m_view;
+    UniqueRef<RemoteFrameClient> m_client;
+    Markable<LayerHostingContextIdentifier> m_layerHostingContextIdentifier;
+    bool m_preventsParentFromBeingComplete { true };
 };
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::RemoteFrame)
-    static bool isType(const WebCore::AbstractFrame& frame) { return frame.isRemoteFrame(); }
+static bool isType(const WebCore::Frame& frame) { return frame.frameType() == WebCore::Frame::FrameType::Remote; }
 SPECIALIZE_TYPE_TRAITS_END()

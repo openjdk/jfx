@@ -44,7 +44,7 @@ namespace JSC {
 
 static_assert(sizeof(UnlinkedFunctionExecutable) <= 128, "UnlinkedFunctionExecutable should fit in a 128-byte cell to keep allocated blocks count to only one after initializing JSGlobalObject.");
 
-const ClassInfo UnlinkedFunctionExecutable::s_info = { "UnlinkedFunctionExecutable", nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(UnlinkedFunctionExecutable) };
+const ClassInfo UnlinkedFunctionExecutable::s_info = { "UnlinkedFunctionExecutable"_s, nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(UnlinkedFunctionExecutable) };
 
 static UnlinkedFunctionCodeBlock* generateUnlinkedFunctionCodeBlock(
     VM& vm, UnlinkedFunctionExecutable* executable, const SourceCode& source,
@@ -57,7 +57,7 @@ static UnlinkedFunctionCodeBlock* generateUnlinkedFunctionCodeBlock(
     ASSERT(isFunctionParseMode(executable->parseMode()));
     auto* classFieldLocations = executable->classFieldLocations();
     std::unique_ptr<FunctionNode> function = parse<FunctionNode>(
-        vm, source, executable->name(), builtinMode, strictMode, scriptMode, executable->parseMode(), executable->superBinding(), error, nullptr, ConstructorKind::None, DerivedContextType::None, EvalContextType::None, nullptr, nullptr, classFieldLocations);
+        vm, source, executable->name(), executable->implementationVisibility(), builtinMode, strictMode, scriptMode, executable->parseMode(), executable->superBinding(), error, nullptr, ConstructorKind::None, DerivedContextType::None, EvalContextType::None, nullptr, nullptr, classFieldLocations);
 
     if (!function) {
         ASSERT(error.isValid());
@@ -87,7 +87,7 @@ UnlinkedFunctionExecutable::UnlinkedFunctionExecutable(VM& vm, Structure* struct
     , m_isGeneratedFromCache(false)
     , m_lineCount(node->lastLine() - node->firstLine())
     , m_hasCapturedVariables(false)
-    , m_unlinkedFunctionNameStart(node->functionNameStart() - parentSource.startOffset())
+    , m_unlinkedFunctionStart(node->functionStart())
     , m_isBuiltinFunction(kind == UnlinkedBuiltinFunction)
     , m_unlinkedBodyStartColumn(node->startColumn())
     , m_isBuiltinDefaultClassConstructor(isBuiltinDefaultClassConstructor)
@@ -99,14 +99,14 @@ UnlinkedFunctionExecutable::UnlinkedFunctionExecutable(VM& vm, Structure* struct
     , m_superBinding(static_cast<unsigned>(node->superBinding()))
     , m_parametersStartOffset(node->parametersStart())
     , m_isCached(false)
-    , m_typeProfilingStartOffset(node->functionKeywordStart())
+    , m_unlinkedFunctionEnd(node->startStartOffset() + node->source().length() - 1)
     , m_needsClassFieldInitializer(static_cast<unsigned>(needsClassFieldInitializer))
-    , m_typeProfilingEndOffset(node->startStartOffset() + node->source().length() - 1)
     , m_parameterCount(node->parameterCount())
     , m_privateBrandRequirement(static_cast<unsigned>(privateBrandRequirement))
     , m_features(0)
     , m_constructorKind(static_cast<unsigned>(node->constructorKind()))
     , m_sourceParseMode(node->parseMode())
+    , m_implementationVisibility(static_cast<unsigned>(node->implementationVisibility()))
     , m_lexicalScopeFeatures(node->lexicalScopeFeatures())
     , m_functionMode(static_cast<unsigned>(node->functionMode()))
     , m_derivedContextType(static_cast<unsigned>(derivedContextType))
@@ -116,6 +116,7 @@ UnlinkedFunctionExecutable::UnlinkedFunctionExecutable(VM& vm, Structure* struct
     , m_ecmaName(node->ecmaName())
 {
     // Make sure these bitfields are adequately wide.
+    ASSERT(m_implementationVisibility == static_cast<unsigned>(node->implementationVisibility()));
     ASSERT(m_constructAbility == static_cast<unsigned>(constructAbility));
     ASSERT(m_constructorKind == static_cast<unsigned>(node->constructorKind()));
     ASSERT(m_functionMode == static_cast<unsigned>(node->functionMode()));
@@ -288,13 +289,7 @@ UnlinkedFunctionExecutable::RareData& UnlinkedFunctionExecutable::ensureRareData
     return *m_rareData;
 }
 
-void UnlinkedFunctionExecutable::setInvalidTypeProfilingOffsets()
-{
-    m_typeProfilingStartOffset = INT32_MAX;
-    m_typeProfilingEndOffset = std::numeric_limits<unsigned>::max();
-}
-
-void UnlinkedFunctionExecutable::finalizeUnconditionally(VM& vm)
+void UnlinkedFunctionExecutable::finalizeUnconditionally(VM& vm, CollectionScope)
 {
     if (codeBlockEdgeMayBeWeak()) {
         bool isCleared = false;

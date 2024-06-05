@@ -68,33 +68,27 @@ struct OptionSetValueChecker<T, EnumValues<E>> {
     }
 };
 
-
-template<typename E, std::enable_if_t<std::is_enum<E>::value && IsTypeComplete<EnumTraits<E>>>* = nullptr>
-constexpr bool isValidOptionSetEnum(E e)
+template<typename E>
+constexpr std::enable_if_t<std::is_enum_v<E>, bool> isValidOptionSetEnum(E e)
 {
+    if constexpr (IsTypeComplete<EnumTraits<E>>)
     return OptionSetValueChecker<std::underlying_type_t<E>, typename EnumTraits<E>::values>::isValidOptionSetEnum(static_cast<std::underlying_type_t<E>>(e));
-}
-
-template<typename E, std::enable_if_t<std::is_enum<E>::value && !IsTypeComplete<EnumTraits<E>>>* = nullptr>
-constexpr bool isValidOptionSetEnum(E e)
-{
+    else {
     // FIXME: Remove once all OptionSet<> enums have EnumTraits<> defined.
     return hasOneBitSet(static_cast<typename OptionSet<E>::StorageType>(e));
+    }
 }
 
-
-template<typename E, std::enable_if_t<std::is_enum<E>::value && IsTypeComplete<EnumTraits<E>>>* = nullptr>
-constexpr typename OptionSet<E>::StorageType maskRawValue(typename OptionSet<E>::StorageType rawValue)
+template<typename E>
+constexpr std::enable_if_t<std::is_enum_v<E>, typename OptionSet<E>::StorageType> maskRawValue(typename OptionSet<E>::StorageType rawValue)
 {
+    if constexpr (IsTypeComplete<EnumTraits<E>>) {
     auto allValidBitsValue = OptionSetValueChecker<std::underlying_type_t<E>, typename EnumTraits<E>::values>::allValidBits();
     return rawValue & allValidBitsValue;
-}
-
-template<typename E, std::enable_if_t<std::is_enum<E>::value && !IsTypeComplete<EnumTraits<E>>>* = nullptr>
-constexpr typename OptionSet<E>::StorageType maskRawValue(typename OptionSet<E>::StorageType rawValue)
-{
+    } else {
     // FIXME: Remove once all OptionSet<> enums have EnumTraits<> defined.
     return rawValue;
+    }
 }
 
 
@@ -124,7 +118,6 @@ public:
         Iterator& operator++(int) = delete;
 
         bool operator==(const Iterator& other) const { return m_value == other.m_value; }
-        bool operator!=(const Iterator& other) const { return m_value != other.m_value; }
 
     private:
         Iterator(StorageType value) : m_value(value) { }
@@ -167,7 +160,7 @@ public:
     constexpr iterator begin() const { return m_storage; }
     constexpr iterator end() const { return 0; }
 
-    constexpr explicit operator bool() { return !isEmpty(); }
+    constexpr explicit operator bool() const { return !isEmpty(); }
 
     constexpr bool contains(E option) const
     {
@@ -215,11 +208,6 @@ public:
     constexpr friend bool operator==(OptionSet lhs, OptionSet rhs)
     {
         return lhs.m_storage == rhs.m_storage;
-    }
-
-    constexpr friend bool operator!=(OptionSet lhs, OptionSet rhs)
-    {
-        return lhs.m_storage != rhs.m_storage;
     }
 
     constexpr friend OptionSet operator|(OptionSet lhs, OptionSet rhs)

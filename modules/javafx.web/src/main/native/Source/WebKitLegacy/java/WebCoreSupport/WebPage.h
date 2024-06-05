@@ -30,8 +30,9 @@
 #include <WebCore/GraphicsLayerClient.h>
 #include <WebCore/IntRect.h>
 #include <WebCore/PrintContext.h>
-#include <WebCore/RQRef.h>
 #include <WebCore/ScrollTypes.h>
+
+#include "MediaPlayerPrivateJava.h"
 
 #include <jni.h> // todo tav remove when building w/ pch
 
@@ -112,7 +113,7 @@ private:
     // GraphicsLayerClient
     void notifyAnimationStarted(const GraphicsLayer*, const String& /*animationKey*/, MonotonicTime /*time*/) override;
     void notifyFlushRequired(const GraphicsLayer*) override;
-    void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect& /* inClip */, GraphicsLayerPaintBehavior) override;
+    void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect& /* inClip */,  OptionSet<GraphicsLayerPaintBehavior>) override;
 
     bool keyEvent(const PlatformKeyboardEvent& event);
     bool charEvent(const PlatformKeyboardEvent& event);
@@ -123,7 +124,7 @@ private:
                                     ScrollGranularity* scrollGranularity);
     bool propagateScroll(ScrollDirection scrollDirection,
                          ScrollGranularity scrollGranularity);
-    Frame* focusedWebCoreFrame();
+    LocalFrame* focusedWebCoreFrame();
     Node* focusedWebCoreNode();
 
     std::unique_ptr<Page> m_page;

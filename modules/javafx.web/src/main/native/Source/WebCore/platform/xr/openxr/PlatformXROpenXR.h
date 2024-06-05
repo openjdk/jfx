@@ -21,8 +21,7 @@
 
 #if ENABLE(WEBXR) && USE(OPENXR)
 
-#include "GLContextEGL.h"
-#include "GraphicsContextGL.h"
+#include "GLContext.h"
 #include "OpenXRLayer.h"
 #include "OpenXRUtils.h"
 #include "PlatformXR.h"
@@ -30,6 +29,9 @@
 #include <wtf/HashMap.h>
 #include <wtf/WorkQueue.h>
 
+namespace WebCore {
+class GraphicsContextGL;
+}
 namespace PlatformXR {
 
 class OpenXRExtensions;
@@ -50,6 +52,7 @@ class OpenXRInput;
 class OpenXRDevice final : public Device {
 public:
     static Ref<OpenXRDevice> create(XrInstance, XrSystemId, Ref<WorkQueue>&&, const OpenXRExtensions&, CompletionHandler<void()>&&);
+    ~OpenXRDevice();
 
 private:
     OpenXRDevice(XrInstance, XrSystemId, Ref<WorkQueue>&&, const OpenXRExtensions&);
@@ -57,7 +60,7 @@ private:
 
     // PlatformXR::Device
     WebCore::IntSize recommendedResolution(SessionMode) final;
-    void initializeTrackingAndRendering(SessionMode) final;
+    void initializeTrackingAndRendering(const WebCore::SecurityOriginData&, SessionMode, const Device::FeatureList&) final;
     void shutDownTrackingAndRendering() final;
     void initializeReferenceSpace(PlatformXR::ReferenceSpaceType) final;
     bool supportsSessionShutdownNotification() const final { return true; }
@@ -89,7 +92,7 @@ private:
     XrSession m_session { XR_NULL_HANDLE };
     XrSessionState m_sessionState { XR_SESSION_STATE_UNKNOWN };
     XrGraphicsBindingEGLMNDX m_graphicsBinding;
-    std::unique_ptr<WebCore::GLContextEGL> m_egl;
+    std::unique_ptr<WebCore::GLContext> m_egl;
     RefPtr<WebCore::GraphicsContextGL> m_gl;
     XrFrameState m_frameState;
     Vector<XrView> m_frameViews;

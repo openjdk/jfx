@@ -33,8 +33,9 @@
 #include "CSSKeyframesRule.h"
 #include "CSSSelector.h"
 #include "CSSSelectorList.h"
+#include "CommonAtomStrings.h"
 #include "HTMLNames.h"
-#include "MediaQueryEvaluator.h"
+#include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
 #include "SelectorChecker.h"
 #include "SelectorFilter.h"
@@ -56,14 +57,14 @@ struct SameSizeAsRuleData {
     unsigned d[4];
 };
 
-COMPILE_ASSERT(sizeof(RuleData) == sizeof(SameSizeAsRuleData), RuleData_should_stay_small);
+static_assert(sizeof(RuleData) == sizeof(SameSizeAsRuleData), "RuleData should stay small");
 
 static inline MatchBasedOnRuleHash computeMatchBasedOnRuleHash(const CSSSelector& selector)
 {
     if (selector.tagHistory())
         return MatchBasedOnRuleHash::None;
 
-    if (selector.match() == CSSSelector::Tag) {
+    if (selector.match() == CSSSelector::Match::Tag) {
         const QualifiedName& tagQualifiedName = selector.tagQName();
         const AtomString& selectorNamespace = tagQualifiedName.namespaceURI();
         if (selectorNamespace == starAtom() || selectorNamespace == xhtmlNamespaceURI) {
@@ -75,10 +76,12 @@ static inline MatchBasedOnRuleHash computeMatchBasedOnRuleHash(const CSSSelector
     }
     if (SelectorChecker::isCommonPseudoClassSelector(&selector))
         return MatchBasedOnRuleHash::ClassB;
-    if (selector.match() == CSSSelector::Id)
+    if (selector.match() == CSSSelector::Match::Id)
         return MatchBasedOnRuleHash::ClassA;
-    if (selector.match() == CSSSelector::Class)
+    if (selector.match() == CSSSelector::Match::Class)
         return MatchBasedOnRuleHash::ClassB;
+    // FIXME: Valueless [attribute] case can be handled here too.
+
     return MatchBasedOnRuleHash::None;
 }
 
@@ -126,7 +129,7 @@ static bool computeContainsUncommonAttributeSelector(const CSSSelector& rootSele
             }
         }
 
-        if (selector->relation() != CSSSelector::Subselector)
+        if (selector->relation() != CSSSelector::RelationType::Subselector)
             matchesRightmostElement = false;
 
         selector = selector->tagHistory();
@@ -138,10 +141,10 @@ static inline PropertyAllowlist determinePropertyAllowlist(const CSSSelector* se
 {
     for (const CSSSelector* component = selector; component; component = component->tagHistory()) {
 #if ENABLE(VIDEO)
-        if (component->match() == CSSSelector::PseudoElement && (component->pseudoElementType() == CSSSelector::PseudoElementCue || component->value() == ShadowPseudoIds::cue()))
+        if (component->match() == CSSSelector::Match::PseudoElement && (component->pseudoElementType() == CSSSelector::PseudoElementCue || component->value() == ShadowPseudoIds::cue()))
             return PropertyAllowlist::Cue;
 #endif
-        if (component->match() == CSSSelector::PseudoElement && component->pseudoElementType() == CSSSelector::PseudoElementMarker)
+        if (component->match() == CSSSelector::Match::PseudoElement && component->pseudoElementType() == CSSSelector::PseudoElementMarker)
             return propertyAllowlistForPseudoId(PseudoId::Marker);
 
         if (const auto* selectorList = selector->selectorList()) {

@@ -33,7 +33,7 @@
 namespace JSC {
 namespace Bindings {
 
-const ClassInfo JavaRuntimeObject::s_info = { "JavaRuntimeObject", &RuntimeObject::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JavaRuntimeObject) };
+const ClassInfo JavaRuntimeObject::s_info = { "JavaRuntimeObject"_s, &RuntimeObject::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JavaRuntimeObject) };
 
 JavaRuntimeObject::JavaRuntimeObject(JSGlobalObject* globalObject, Structure* structure, RefPtr<JavaInstance> instance)
     : RuntimeObject(globalObject->vm(), structure, instance) // todo tav
@@ -43,7 +43,7 @@ JavaRuntimeObject::JavaRuntimeObject(JSGlobalObject* globalObject, Structure* st
 void JavaRuntimeObject::finishCreation(JSGlobalObject* globalObject)
 {
     Base::finishCreation(globalObject->vm());
-    ASSERT(inherits(globalObject->vm(), &s_info));
+    ASSERT(inherits(&s_info));
 }
 
 JavaInstance* JavaRuntimeObject::getInternalJavaInstance() const

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
- * Copyright (C) 2004, 2005, 2006, 2008, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -52,9 +52,8 @@ BitmapImage::BitmapImage(ImageObserver* observer)
 {
 }
 
-BitmapImage::BitmapImage(RefPtr<NativeImage>&& image, ImageObserver* observer)
-    : Image(observer)
-    , m_source(ImageSource::create(WTFMove(image)))
+BitmapImage::BitmapImage(Ref<NativeImage>&& image)
+    : m_source(ImageSource::create(WTFMove(image)))
 {
 }
 
@@ -77,12 +76,15 @@ void BitmapImage::destroyDecodedData(bool destroyAll)
 {
     LOG(Images, "BitmapImage::%s - %p - url: %s", __FUNCTION__, this, sourceURL().string().utf8().data());
 
-    if (!destroyAll)
-        m_source->destroyDecodedDataBeforeFrame(m_currentFrame);
-    else if (!canDestroyDecodedData())
-        m_source->destroyAllDecodedDataExcludeFrame(m_currentFrame);
-    else {
-        m_source->destroyAllDecodedData();
+    if (!destroyAll) {
+        // Destroy all the frames between frame0 and m_currentFrame.
+        m_source->destroyDecodedData(1, m_currentFrame);
+    } else if (!canDestroyDecodedData()) {
+        // Destroy all the frames except frame0 and m_currentFrame.
+        m_source->destroyDecodedData(1, m_currentFrame);
+        m_source->destroyDecodedData(m_currentFrame + 1, frameCount());
+    } else {
+        m_source->destroyDecodedData(0, frameCount());
         m_currentFrameDecodingStatus = DecodingStatus::Invalid;
     }
 
@@ -115,7 +117,12 @@ EncodedDataStatus BitmapImage::dataChanged(bool allDataReceived)
         m_source->destroyIncompleteDecodedData();
 
     m_currentFrameDecodingStatus = DecodingStatus::Invalid;
-    return m_source->dataChanged(data(), allDataReceived);
+    auto status = m_source->dataChanged(data(), allDataReceived);
+
+    if (allDataReceived && !shouldAnimate() && frameCount() > 1)
+        m_currentFrame = primaryFrameIndex();
+
+    return status;
 }
 
 void BitmapImage::setCurrentFrameDecodingStatusIfNecessary(DecodingStatus decodingStatus)
@@ -128,13 +135,13 @@ void BitmapImage::setCurrentFrameDecodingStatusIfNecessary(DecodingStatus decodi
     m_currentFrameDecodingStatus = decodingStatus;
 }
 
-RefPtr<NativeImage> BitmapImage::frameImageAtIndexCacheIfNeeded(size_t index, SubsamplingLevel subsamplingLevel)
+RefPtr<NativeImage> BitmapImage::frameImageAtIndexCacheIfNeeded(size_t index, SubsamplingLevel subsamplingLevel, const DecodingOptions& decodingOptions)
 {
     if (!frameHasFullSizeNativeImageAtIndex(index, subsamplingLevel)) {
         LOG(Images, "BitmapImage::%s - %p - url: %s [subsamplingLevel was %d, resampling]", __FUNCTION__, this, sourceURL().string().utf8().data(), static_cast<int>(frameSubsamplingLevelAtIndex(index)));
         invalidatePlatformData();
     }
-    return m_source->frameImageAtIndexCacheIfNeeded(index, subsamplingLevel);
+    return m_source->frameImageAtIndexCacheIfNeeded(index, subsamplingLevel, decodingOptions);
 }
 
 RefPtr<NativeImage> BitmapImage::nativeImage(const DestinationColorSpace&)
@@ -154,13 +161,13 @@ RefPtr<NativeImage> BitmapImage::preTransformedNativeImageForCurrentFrame(bool r
     if (!image)
         return image;
 
-    auto orientation = respectOrientation ? orientationForCurrentFrame() : ImageOrientation(ImageOrientation::None);
+    auto orientation = respectOrientation ? orientationForCurrentFrame() : ImageOrientation(ImageOrientation::Orientation::None);
     auto correctedSize = m_source->densityCorrectedSize(orientation);
-    if (orientation == ImageOrientation::None && !correctedSize)
+    if (orientation == ImageOrientation::Orientation::None && !correctedSize)
         return image;
 
     auto correctedSizeFloat = correctedSize ? FloatSize(correctedSize.value()) : size();
-    auto buffer = ImageBuffer::create(correctedSizeFloat, RenderingMode::Unaccelerated, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
+    auto buffer = ImageBuffer::create(correctedSizeFloat, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
     if (!buffer)
         return image;
 
@@ -229,7 +236,6 @@ ImageDrawResult BitmapImage::draw(GraphicsContext& context, const FloatRect& des
     if (destRect.isEmpty() || requestedSrcRect.isEmpty())
         return ImageDrawResult::DidNothing;
 
-
     auto srcRect = requestedSrcRect;
     auto preferredSize = size();
     auto srcSize = sourceSize();
@@ -246,11 +252,10 @@ ImageDrawResult BitmapImage::draw(GraphicsContext& context, const FloatRect& des
 
     RefPtr<NativeImage> image;
     if (options.decodingMode() == DecodingMode::Asynchronous) {
-        ASSERT(!canAnimate());
-        ASSERT(!m_currentFrame || m_animationFinished);
+        ASSERT(!m_currentFrame || !canAnimate());
 
-        bool frameIsCompatible = frameHasDecodedNativeImageCompatibleWithOptionsAtIndex(m_currentFrame, m_currentSubsamplingLevel, DecodingOptions(sizeForDrawing));
-        bool frameIsBeingDecoded = frameIsBeingDecodedAndIsCompatibleWithOptionsAtIndex(m_currentFrame, DecodingOptions(sizeForDrawing));
+        bool frameIsCompatible = frameHasDecodedNativeImageCompatibleWithOptionsAtIndex(m_currentFrame, m_currentSubsamplingLevel, DecodingOptions(DecodingMode::Asynchronous, sizeForDrawing));
+        bool frameIsBeingDecoded = frameIsBeingDecodedAndIsCompatibleWithOptionsAtIndex(m_currentFrame, DecodingOptions(DecodingMode::Asynchronous, sizeForDrawing));
 
         // If the current frame is incomplete, a new request for decoding this frame has to be made even if
         // it is currently being decoded. New data may have been received since the previous request was made.
@@ -263,7 +268,7 @@ ImageDrawResult BitmapImage::draw(GraphicsContext& context, const FloatRect& des
         if (m_currentFrameDecodingStatus == DecodingStatus::Decoding)
             result = ImageDrawResult::DidRequestDecoding;
 
-        if (!frameHasDecodedNativeImageCompatibleWithOptionsAtIndex(m_currentFrame, m_currentSubsamplingLevel, DecodingOptions(DecodingMode::Asynchronous))) {
+        if (!frameHasDecodedNativeImageCompatibleWithOptionsAtIndex(m_currentFrame, m_currentSubsamplingLevel, DecodingOptions(DecodingMode::Asynchronous, sizeForDrawing))) {
             if (m_showDebugBackground)
                 fillWithSolidColor(context, destRect, Color::yellow.colorWithAlphaByte(128), options.compositeOperator());
             return result;
@@ -285,8 +290,8 @@ ImageDrawResult BitmapImage::draw(GraphicsContext& context, const FloatRect& des
         if (m_currentFrameDecodingStatus == DecodingStatus::Invalid)
             m_source->destroyIncompleteDecodedData();
 
-        bool frameIsCompatible = frameHasDecodedNativeImageCompatibleWithOptionsAtIndex(m_currentFrame, m_currentSubsamplingLevel, DecodingOptions(sizeForDrawing));
-        bool frameIsBeingDecoded = frameIsBeingDecodedAndIsCompatibleWithOptionsAtIndex(m_currentFrame, DecodingOptions(DecodingMode::Asynchronous));
+        bool frameIsCompatible = frameHasDecodedNativeImageCompatibleWithOptionsAtIndex(m_currentFrame, m_currentSubsamplingLevel, DecodingOptions(DecodingMode::Asynchronous, sizeForDrawing));
+        bool frameIsBeingDecoded = frameIsBeingDecodedAndIsCompatibleWithOptionsAtIndex(m_currentFrame, DecodingOptions(DecodingMode::Asynchronous, sizeForDrawing));
 
         if (frameIsCompatible) {
             image = frameImageAtIndex(m_currentFrame);
@@ -299,7 +304,7 @@ ImageDrawResult BitmapImage::draw(GraphicsContext& context, const FloatRect& des
             }
             return ImageDrawResult::DidRequestDecoding;
         } else {
-            image = frameImageAtIndexCacheIfNeeded(m_currentFrame, m_currentSubsamplingLevel);
+            image = frameImageAtIndexCacheIfNeeded(m_currentFrame, m_currentSubsamplingLevel, options.decodingMode());
             LOG(Images, "BitmapImage::%s - %p - url: %s [an image frame will be decoded synchronously]", __FUNCTION__, this, sourceURL().string().utf8().data());
         }
 
@@ -318,7 +323,7 @@ ImageDrawResult BitmapImage::draw(GraphicsContext& context, const FloatRect& des
     }
 
     auto orientation = options.orientation();
-    if (orientation == ImageOrientation::FromImage) {
+    if (orientation == ImageOrientation::Orientation::FromImage) {
         orientation = frameOrientationAtIndex(m_currentFrame);
         drawNativeImage(*image, context, destRect, srcRect, IntSize(sourceSize(orientation)), { options, orientation });
     } else
@@ -326,8 +331,8 @@ ImageDrawResult BitmapImage::draw(GraphicsContext& context, const FloatRect& des
 
     m_currentFrameDecodingStatus = frameDecodingStatusAtIndex(m_currentFrame);
 
-    if (imageObserver())
-        imageObserver()->didDraw(*this);
+    if (auto observer = imageObserver())
+        observer->didDraw(*this);
 
     return result;
 }
@@ -342,24 +347,24 @@ void BitmapImage::drawPattern(GraphicsContext& ctxt, const FloatRect& destRect, 
         if (m_currentFrameDecodingStatus == DecodingStatus::Invalid)
             m_source->destroyIncompleteDecodedData();
 
-        Image::drawPattern(ctxt, destRect, tileRect, transform, phase, spacing, { options, ImageOrientation::FromImage });
+        Image::drawPattern(ctxt, destRect, tileRect, transform, phase, spacing, { options, ImageOrientation::Orientation::FromImage });
         m_currentFrameDecodingStatus = frameDecodingStatusAtIndex(m_currentFrame);
         return;
     }
 
     if (!m_cachedImage) {
-        auto buffer = ctxt.createCompatibleImageBuffer(expandedIntSize(tileRect.size()));
+        auto buffer = ctxt.createAlignedImageBuffer(expandedIntSize(tileRect.size()));
         if (!buffer)
             return;
 
-        ImageObserver* observer = imageObserver();
+        auto observer = imageObserver();
 
         // Temporarily reset image observer, we don't want to receive any changeInRect() calls due to this relayout.
         setImageObserver(nullptr);
 
-        draw(buffer->context(), tileRect, tileRect, { options, DecodingMode::Synchronous, ImageOrientation::FromImage });
+        draw(buffer->context(), tileRect, tileRect, { options, DecodingMode::Synchronous, ImageOrientation::Orientation::FromImage });
 
-        setImageObserver(observer);
+        setImageObserver(WTFMove(observer));
         buffer->convertToLuminanceMask();
 
         m_cachedImage = ImageBuffer::sinkIntoImage(WTFMove(buffer), PreserveResolution::Yes);
@@ -368,12 +373,12 @@ void BitmapImage::drawPattern(GraphicsContext& ctxt, const FloatRect& destRect, 
     }
 
     ctxt.setDrawLuminanceMask(false);
-    m_cachedImage->drawPattern(ctxt, destRect, tileRect, transform, phase, spacing, { options, ImageOrientation::FromImage });
+    m_cachedImage->drawPattern(ctxt, destRect, tileRect, transform, phase, spacing, { options, ImageOrientation::Orientation::FromImage });
 }
 
 bool BitmapImage::shouldAnimate() const
 {
-    return repetitionCount() && !m_animationFinished && imageObserver();
+    return repetitionCount() && !m_animationFinished && imageObserver() && imageObserver()->allowsAnimation(*this);
 }
 
 bool BitmapImage::canAnimate() const
@@ -491,7 +496,7 @@ BitmapImage::StartAnimationStatus BitmapImage::internalStartAnimation()
     // through the callback newFrameNativeImageAvailableAtIndex(). Otherwise, advanceAnimation() will be called
     // when the timer fires and m_currentFrame will be advanced to nextFrame since it is not being decoded.
     if (shouldUseAsyncDecodingForAnimatedImages()) {
-        if (frameHasDecodedNativeImageCompatibleWithOptionsAtIndex(nextFrame, m_currentSubsamplingLevel, DecodingOptions(std::optional<IntSize>())))
+        if (frameHasDecodedNativeImageCompatibleWithOptionsAtIndex(nextFrame, m_currentSubsamplingLevel, DecodingMode::Asynchronous))
             LOG(Images, "BitmapImage::%s - %p - url: %s [cachedFrameCount = %ld nextFrame = %ld]", __FUNCTION__, this, sourceURL().string().utf8().data(), ++m_cachedFrameCount, nextFrame);
         else {
             m_source->requestFrameAsyncDecodingAtIndex(nextFrame, m_currentSubsamplingLevel);
@@ -536,8 +541,8 @@ void BitmapImage::internalAdvanceAnimation()
 
     callDecodingCallbacks();
 
-    if (imageObserver())
-        imageObserver()->imageFrameAvailable(*this, ImageAnimatingState::Yes, nullptr, decodingStatus);
+    if (auto observer = imageObserver())
+        observer->imageFrameAvailable(*this, ImageAnimatingState::Yes, nullptr, decodingStatus);
 
     LOG(Images, "BitmapImage::%s - %p - url: %s [m_currentFrame = %ld]", __FUNCTION__, this, sourceURL().string().utf8().data(), m_currentFrame);
 }
@@ -559,7 +564,7 @@ void BitmapImage::stopAnimation()
 void BitmapImage::resetAnimation()
 {
     stopAnimation();
-    m_currentFrame = 0;
+    m_currentFrame = primaryFrameIndex();
     m_repetitionsComplete = RepetitionCountNone;
     m_desiredFrameStartTime = { };
     m_animationFinished = false;
@@ -582,8 +587,8 @@ void BitmapImage::decode(Function<void()>&& callback)
         }
 
         // The animated image has not been displayed. In this case, either the first frame has not been decoded yet or the animation has not started yet.
-        bool frameIsCompatible = frameHasDecodedNativeImageCompatibleWithOptionsAtIndex(m_currentFrame, m_currentSubsamplingLevel, std::optional<IntSize>());
-        bool frameIsBeingDecoded = frameIsBeingDecodedAndIsCompatibleWithOptionsAtIndex(m_currentFrame, std::optional<IntSize>());
+        bool frameIsCompatible = frameHasDecodedNativeImageCompatibleWithOptionsAtIndex(m_currentFrame, m_currentSubsamplingLevel, DecodingMode::Asynchronous);
+        bool frameIsBeingDecoded = frameIsBeingDecodedAndIsCompatibleWithOptionsAtIndex(m_currentFrame, DecodingMode::Asynchronous);
 
         if (frameIsCompatible)
             internalStartAnimation();
@@ -594,8 +599,8 @@ void BitmapImage::decode(Function<void()>&& callback)
         return;
     }
 
-    bool frameIsCompatible = frameHasDecodedNativeImageCompatibleWithOptionsAtIndex(m_currentFrame, m_currentSubsamplingLevel, std::optional<IntSize>());
-    bool frameIsBeingDecoded = frameIsBeingDecodedAndIsCompatibleWithOptionsAtIndex(m_currentFrame, std::optional<IntSize>());
+    bool frameIsCompatible = frameHasDecodedNativeImageCompatibleWithOptionsAtIndex(m_currentFrame, m_currentSubsamplingLevel, DecodingMode::Asynchronous);
+    bool frameIsBeingDecoded = frameIsBeingDecodedAndIsCompatibleWithOptionsAtIndex(m_currentFrame, DecodingMode::Asynchronous);
 
     if (frameIsCompatible)
         callDecodingCallbacks();
@@ -635,7 +640,7 @@ void BitmapImage::imageFrameAvailableAtIndex(size_t index)
         LOG(Images, "BitmapImage::%s - %p - url: %s [More data makes frameCount() > 1]", __FUNCTION__, this, sourceURL().string().utf8().data());
     }
 
-    ASSERT(index == m_currentFrame && !m_currentFrame);
+    ASSERT((!index && !m_currentFrame) || !canAnimate());
     if (m_source->isAsyncDecodingQueueIdle())
         m_source->stopAsyncDecodingQueue();
 
@@ -646,11 +651,11 @@ void BitmapImage::imageFrameAvailableAtIndex(size_t index)
         ++m_decodeCountForTesting;
 
     // Call m_decodingCallbacks only if the image frame was decoded with the native size.
-    if (frameHasDecodedNativeImageCompatibleWithOptionsAtIndex(m_currentFrame, m_currentSubsamplingLevel, std::optional<IntSize>()))
+    if (frameHasDecodedNativeImageCompatibleWithOptionsAtIndex(m_currentFrame, m_currentSubsamplingLevel, DecodingMode::Asynchronous))
         callDecodingCallbacks();
 
-    if (imageObserver())
-        imageObserver()->imageFrameAvailable(*this, ImageAnimatingState::No, nullptr, decodingStatus);
+    if (auto observer = imageObserver())
+        observer->imageFrameAvailable(*this, ImageAnimatingState::No, nullptr, decodingStatus);
 }
 
 DestinationColorSpace BitmapImage::colorSpace()

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -183,10 +183,11 @@ JLObject URLLoader::load(bool asynchronous,
 
     String headerString;
     for (const auto& header : request.httpHeaderFields()) {
-        headerString.append(header.key);
+        headerString = makeString(headerString, header.key, ": ", header.value, "\n");
+       /* headerString.append(header.key);
         headerString.append(": ");
         headerString.append(header.value);
-        headerString.append("\n");
+        headerString.append("\n");*/
     }
 
     JNIEnv* env = WTF::GetJavaEnv();
@@ -200,7 +201,7 @@ JLObject URLLoader::load(bool asynchronous,
             (jstring) request.url().string().toJavaString(env),
             (jstring) request.httpMethod().toJavaString(env),
             (jstring) headerString.toJavaString(env),
-            (jobjectArray) toJava(request.httpBody()),
+            (jobjectArray) toJava(request.httpBody().get()),
             ptr_to_jlong(target));
     WTF::CheckAndClearException(env);
 
@@ -350,7 +351,7 @@ bool URLLoader::SynchronousTarget::willSendRequest(const ResourceResponse& respo
                 String(),
                 com_sun_webkit_LoadListenerClient_INVALID_RESPONSE,
                 m_request.url(),
-                "Illegal redirect"));
+                "Illegal redirect"_s));
         return false;
     }
     return true;
@@ -364,7 +365,7 @@ void URLLoader::SynchronousTarget::didReceiveResponse(
 
 void URLLoader::SynchronousTarget::didReceiveData(const SharedBuffer* data, int length)
 {
-    m_data.append(*data->data());
+    m_data.append(data->data(), (size_t)length);
 }
 
 void URLLoader::SynchronousTarget::didFinishLoading()
@@ -399,19 +400,19 @@ static WebCore::ResourceResponse setupResponse(JNIEnv* env,
     // does
     String contentTypeString(env, contentType);
     if (contentTypeString.isEmpty()) {
-        contentTypeString = "text/html";
+        contentTypeString = "text/html"_s;
     }
     if (!contentTypeString.isEmpty()) {
         response.setMimeType(
-                extractMIMETypeFromMediaType(contentTypeString).convertToLowercaseWithoutLocale());
+               AtomString{extractMIMETypeFromMediaType(contentTypeString).convertToLowercaseWithoutLocale()});
     }
 
     String contentEncodingString(env, contentEncoding);
     if (contentEncodingString.isEmpty() && !contentTypeString.isEmpty()) {
-        contentEncodingString = extractCharsetFromMediaType(contentTypeString);
+        contentEncodingString = extractCharsetFromMediaType(contentTypeString).toString();
     }
     if (!contentEncodingString.isEmpty()) {
-        response.setTextEncodingName(contentEncodingString);
+        response.setTextEncodingName(AtomString{contentEncodingString});
     }
 
     if (contentLength > 0) {
@@ -420,25 +421,25 @@ static WebCore::ResourceResponse setupResponse(JNIEnv* env,
     }
 
     String headersString(env, headers);
-    int splitPos = headersString.find("\n");
+    int splitPos = headersString.find("\n"_s);
     while (splitPos != -1) {
         String s = headersString.left(splitPos);
-        int j = s.find(":");
+        int j = s.find(":"_s);
         if (j != -1) {
             String key = s.left(j);
             String val = s.substring(j + 1);
             response.setHTTPHeaderField(key, val);
         }
         headersString = headersString.substring(splitPos + 1);
-        splitPos = headersString.find("\n");
+        splitPos = headersString.find("\n"_s);
     }
 
     URL kurl = URL(URL(), String(env, url));
     response.setURL(kurl);
 
     // Setup mime type for local resources
-    if (/*kurl.hasPath()*/kurl.pathEnd() != kurl.pathStart() && kurl.protocol() == String("file")) {
-        response.setMimeType(MIMETypeRegistry::mimeTypeForPath(kurl.path().toString()));
+    if (/*kurl.hasPath()*/kurl.pathEnd() != kurl.pathStart() && kurl.protocol() == String("file"_s)) {
+        response.setMimeType(AtomString{MIMETypeRegistry::mimeTypeForPath(kurl.path().toString())});
     }
     return response;
 }

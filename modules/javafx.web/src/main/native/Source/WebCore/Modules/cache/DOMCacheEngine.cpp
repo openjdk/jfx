@@ -69,7 +69,7 @@ Exception convertToExceptionAndLog(ScriptExecutionContext* context, Error error)
 
 static inline bool matchURLs(const ResourceRequest& request, const URL& cachedURL, const CacheQueryOptions& options)
 {
-    ASSERT(options.ignoreMethod || request.httpMethod() == "GET");
+    ASSERT(options.ignoreMethod || request.httpMethod() == "GET"_s);
 
     URL requestURL = request.url();
     URL cachedRequestURL = cachedURL;
@@ -97,13 +97,12 @@ bool queryCacheMatch(const ResourceRequest& request, const ResourceRequest& cach
     varyValue.split(',', [&](StringView view) {
         if (isVarying)
             return;
-        auto nameView = stripLeadingAndTrailingHTTPSpaces(view);
-        if (nameView == "*") {
+        auto nameView = view.trim(isASCIIWhitespaceWithoutFF<UChar>);
+        if (nameView == "*"_s) {
             isVarying = true;
             return;
         }
-        auto name = nameView.toStringWithoutCopying();
-        isVarying = cachedRequest.httpHeaderField(name) != request.httpHeaderField(name);
+        isVarying = cachedRequest.httpHeaderField(nameView) != request.httpHeaderField(nameView);
     });
 
     return !isVarying;
@@ -154,14 +153,52 @@ Record Record::copy() const
     return Record { identifier, updateResponseCounter, requestHeadersGuard, request, options, referrer, responseHeadersGuard, response, copyResponseBody(responseBody), responseBodySize };
 }
 
-static inline CacheInfo isolateCacheInfo(const CacheInfo& info)
+CrossThreadRecord toCrossThreadRecord(Record&& record)
 {
-    return CacheInfo { info.identifier, info.name.isolatedCopy() };
+    return CrossThreadRecord {
+        record.identifier,
+        record.updateResponseCounter,
+        record.requestHeadersGuard,
+        WTFMove(record.request).isolatedCopy(),
+        WTFMove(record.options).isolatedCopy(),
+        WTFMove(record.referrer).isolatedCopy(),
+        record.responseHeadersGuard,
+        record.response.crossThreadData(),
+        isolatedResponseBody(record.responseBody),
+        record.responseBodySize
+    };
 }
 
-CacheInfos CacheInfos::isolatedCopy()
+Record fromCrossThreadRecord(CrossThreadRecord&& record)
 {
-    return { WTF::map(infos, isolateCacheInfo), updateCounter };
+    return Record {
+        record.identifier,
+        record.updateResponseCounter,
+        record.requestHeadersGuard,
+        WTFMove(record.request),
+        WTFMove(record.options),
+        WTFMove(record.referrer),
+        record.responseHeadersGuard,
+        ResourceResponse::fromCrossThreadData(WTFMove(record.response)),
+        WTFMove(record.responseBody),
+        record.responseBodySize
+    };
+}
+
+CrossThreadRecord CrossThreadRecord::isolatedCopy() &&
+{
+    return CrossThreadRecord {
+        identifier,
+        updateResponseCounter,
+        requestHeadersGuard,
+        WTFMove(request).isolatedCopy(),
+        WTFMove(options).isolatedCopy(),
+        WTFMove(referrer).isolatedCopy(),
+        responseHeadersGuard,
+        WTFMove(response).isolatedCopy(),
+        isolatedResponseBody(responseBody),
+        responseBodySize
+    };
 }
 
 } // namespace DOMCacheEngine

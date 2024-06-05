@@ -36,7 +36,8 @@ class HTMLIFrameElement;
 
 class FeaturePolicy {
 public:
-    static FeaturePolicy parse(Document&, const HTMLIFrameElement&, StringView);
+    static FeaturePolicy defaultPolicy(Document& document) { return parse(document, nullptr, { }); }
+    static FeaturePolicy parse(Document& document, const HTMLIFrameElement& frame, StringView allow) { return parse(document, &frame, allow); }
 
     enum class Type {
         Camera,
@@ -45,6 +46,7 @@ public:
         DisplayCapture,
         Geolocation,
         Payment,
+        ScreenWakeLock,
         SyncXHR,
         Fullscreen,
         WebShare,
@@ -69,6 +71,8 @@ public:
     };
 
 private:
+    static FeaturePolicy parse(Document&, const HTMLIFrameElement*, StringView);
+
     AllowRule m_cameraRule;
     AllowRule m_microphoneRule;
     AllowRule m_speakerSelectionRule;
@@ -78,6 +82,7 @@ private:
     AllowRule m_syncXHRRule;
     AllowRule m_fullscreenRule;
     AllowRule m_webShareRule;
+    AllowRule m_screenWakeLockRule;
 
 #if ENABLE(DEVICE_ORIENTATION)
     AllowRule m_gyroscopeRule;
@@ -92,7 +97,7 @@ private:
 #endif
 };
 
-enum class LogFeaturePolicyFailure { No, Yes };
+enum class LogFeaturePolicyFailure : bool { No, Yes };
 extern bool isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type, const Document&, LogFeaturePolicyFailure = LogFeaturePolicyFailure::Yes);
 
 } // namespace WebCore

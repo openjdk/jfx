@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include "DOMMatrix.h"
 #include <wtf/IsoMalloc.h>
 #include <wtf/RefCounted.h>
@@ -34,7 +32,6 @@
 namespace WebCore {
 
 enum class CSSTransformType : uint8_t {
-    Transform,
     MatrixComponent,
     Perspective,
     Rotate,
@@ -49,19 +46,23 @@ class DOMMatrix;
 template<typename> class ExceptionOr;
 
 class CSSTransformComponent : public RefCounted<CSSTransformComponent> {
-    WTF_MAKE_ISO_ALLOCATED(CSSTransformComponent);
+protected:
+    enum class Is2D : bool { No, Yes };
+    CSSTransformComponent(Is2D is2D)
+        : m_is2D(is2D) { }
 public:
-    virtual String toString() const;
-    bool is2D() const { return m_is2D; }
-    void setIs2D(bool is2D) { m_is2D = is2D; }
-    virtual ExceptionOr<Ref<DOMMatrix>> toMatrix();
+    String toString() const;
+    virtual void serialize(StringBuilder&) const = 0;
+    bool is2D() const { return m_is2D == Is2D::Yes; }
+    virtual void setIs2D(bool is2D) { m_is2D = is2D ? Is2D::Yes : Is2D::No; }
+    virtual ExceptionOr<Ref<DOMMatrix>> toMatrix() = 0;
     virtual ~CSSTransformComponent() = default;
-    virtual CSSTransformType getType() const { return CSSTransformType::Transform; }
+    virtual CSSTransformType getType() const = 0;
+
+    virtual RefPtr<CSSValue> toCSSValue() const = 0;
 
 private:
-    bool m_is2D { false };
+    Is2D m_is2D;
 };
 
 } // namespace WebCore
-
-#endif

@@ -33,7 +33,7 @@
 
 namespace JSC {
 
-const ClassInfo WeakMapConstructor::s_info = { "Function", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WeakMapConstructor) };
+const ClassInfo WeakMapConstructor::s_info = { "Function"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WeakMapConstructor) };
 
 void WeakMapConstructor::finishCreation(VM& vm, WeakMapPrototype* prototype)
 {
@@ -73,7 +73,7 @@ JSC_DEFINE_HOST_FUNCTION(constructWeakMap, (JSGlobalObject* globalObject, CallFr
     JSValue adderFunction = weakMap->JSObject::get(globalObject, vm.propertyNames->set);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    auto adderFunctionCallData = getCallData(vm, adderFunction);
+    auto adderFunctionCallData = JSC::getCallData(adderFunction);
     if (adderFunctionCallData.type == CallData::Type::None)
         return throwVMTypeError(globalObject, scope, "'set' property of a WeakMap should be callable."_s);
 
@@ -96,10 +96,11 @@ JSC_DEFINE_HOST_FUNCTION(constructWeakMap, (JSGlobalObject* globalObject, CallFr
         RETURN_IF_EXCEPTION(scope, void());
 
         if (canPerformFastSet) {
-            if (key.isObject())
-                weakMap->set(vm, asObject(key), value);
-            else
-                throwTypeError(asObject(adderFunction)->globalObject(vm), scope, WeakMapNonObjectKeyError);
+            if (UNLIKELY(!canBeHeldWeakly(key))) {
+                throwTypeError(asObject(adderFunction)->globalObject(), scope, WeakMapInvalidKeyError);
+            return;
+        }
+            weakMap->set(vm, key.asCell(), value);
             return;
         }
 

@@ -36,20 +36,14 @@ struct WorkletParameters {
     JSC::RuntimeFlags jsRuntimeFlags;
     float sampleRate;
     String identifier;
+    PAL::SessionID sessionID;
     Settings::Values settingsValues;
+    ReferrerPolicy referrerPolicy;
     bool isAudioContextRealTime;
+    std::optional<uint64_t> noiseInjectionHashSalt;
 
-    WorkletParameters isolatedCopy() const
-    {
-        return {
-            windowURL.isolatedCopy(),
-            jsRuntimeFlags,
-            sampleRate,
-            identifier.isolatedCopy(),
-            settingsValues.isolatedCopy(),
-            isAudioContextRealTime
-        };
-    }
+    WorkletParameters isolatedCopy() const & { return { windowURL.isolatedCopy(), jsRuntimeFlags, sampleRate, identifier.isolatedCopy(), sessionID, settingsValues.isolatedCopy(), referrerPolicy, isAudioContextRealTime, noiseInjectionHashSalt }; }
+    WorkletParameters isolatedCopy() && { return { WTFMove(windowURL).isolatedCopy(), jsRuntimeFlags, sampleRate, WTFMove(identifier).isolatedCopy(), sessionID, WTFMove(settingsValues).isolatedCopy(), referrerPolicy, isAudioContextRealTime, WTFMove(noiseInjectionHashSalt) }; }
 };
 
 } // namespace WebCore

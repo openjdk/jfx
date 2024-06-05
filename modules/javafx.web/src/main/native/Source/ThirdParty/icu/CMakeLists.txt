@@ -106,6 +106,7 @@ set(ICU_COMMON_SOURCES
     source/common/lsr.cpp
     source/common/lstmbe.cpp
     source/common/messagepattern.cpp
+    source/common/mlbe.cpp
     source/common/normalizer2.cpp
     source/common/normalizer2impl.cpp
     source/common/normlzr.cpp
@@ -201,6 +202,8 @@ set(ICU_COMMON_SOURCES
     source/common/uloc.cpp
     source/common/uloc_keytype.cpp
     source/common/uloc_tag.cpp
+    source/common/ulocale.cpp
+    source/common/ulocbuilder.cpp
     source/common/umapfile.cpp
     source/common/umath.cpp
     source/common/umutablecptrie.cpp
@@ -339,6 +342,7 @@ set(ICU_I18N_SOURCES
     source/i18n/double-conversion-fast-dtoa.cpp
     source/i18n/double-conversion-string-to-double.cpp
     source/i18n/double-conversion-strtod.cpp
+    source/i18n/displayoptions.cpp
     source/i18n/dtfmtsym.cpp
     source/i18n/dtitvfmt.cpp
     source/i18n/dtitvinf.cpp
@@ -364,6 +368,7 @@ set(ICU_I18N_SOURCES
     source/i18n/indiancal.cpp
     source/i18n/inputext.cpp
     source/i18n/islamcal.cpp
+    source/i18n/iso8601cal.cpp
     source/i18n/japancal.cpp
     source/i18n/listformatter.cpp
     source/i18n/measfmt.cpp
@@ -399,6 +404,7 @@ set(ICU_I18N_SOURCES
     source/i18n/number_patternstring.cpp
     source/i18n/number_rounding.cpp
     source/i18n/number_scientific.cpp
+    source/i18n/number_simple.cpp
     source/i18n/number_skeletons.cpp
     source/i18n/number_symbolswrapper.cpp
     source/i18n/number_usageprefs.cpp
@@ -584,7 +590,7 @@ target_link_libraries(data_as_asm icuuc icui18n)
 file(GLOB ICU_DATA_ZIP_FILE "${CMAKE_BINARY_DIR}/icu/data/icu4c-*.zip")
 
 # Get just file name without extension
-set(ICU_DATA_FILE_NAME "icudt71l")
+set(ICU_DATA_FILE_NAME "icudt74l")
 
 # Use jar instead of unzip, it will be helpful to get rid of cygwin dependency
 find_package(Java)

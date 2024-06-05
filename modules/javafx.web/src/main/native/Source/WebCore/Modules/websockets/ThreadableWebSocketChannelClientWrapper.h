@@ -74,12 +74,12 @@ public:
     void clearClient();
 
     void didConnect();
-    void didReceiveMessage(const String& message);
+    void didReceiveMessage(String&& message);
     void didReceiveBinaryData(Vector<uint8_t>&&);
     void didUpdateBufferedAmount(unsigned bufferedAmount);
     void didStartClosingHandshake();
     void didClose(unsigned unhandledBufferedAmount, WebSocketChannelClient::ClosingHandshakeCompletionStatus, unsigned short code, const String& reason);
-    void didReceiveMessageError();
+    void didReceiveMessageError(String&& reason);
     void didUpgradeURL();
 
     void suspend();
@@ -90,7 +90,7 @@ private:
 
     void processPendingTasks();
 
-    ScriptExecutionContext& m_context;
+    WeakPtr<ScriptExecutionContext> m_context;
     WebSocketChannelClient* m_client;
     WorkerThreadableWebSocketChannel::Peer* m_peer;
     bool m_failedWebSocketChannelCreation;

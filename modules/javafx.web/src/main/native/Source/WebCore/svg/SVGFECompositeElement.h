@@ -23,6 +23,7 @@
 
 #include "FEComposite.h"
 #include "SVGFilterPrimitiveStandardAttributes.h"
+#include <wtf/SortedArrayMap.h>
 
 namespace WebCore {
 
@@ -60,21 +61,17 @@ struct SVGPropertyTraits<CompositeOperationType> {
 
     static CompositeOperationType fromString(const String& value)
     {
-        if (value == "over")
-            return FECOMPOSITE_OPERATOR_OVER;
-        if (value == "in")
-            return FECOMPOSITE_OPERATOR_IN;
-        if (value == "out")
-            return FECOMPOSITE_OPERATOR_OUT;
-        if (value == "atop")
-            return FECOMPOSITE_OPERATOR_ATOP;
-        if (value == "xor")
-            return FECOMPOSITE_OPERATOR_XOR;
-        if (value == "arithmetic")
-            return FECOMPOSITE_OPERATOR_ARITHMETIC;
-        if (value == "lighter")
-            return FECOMPOSITE_OPERATOR_LIGHTER;
-        return FECOMPOSITE_OPERATOR_UNKNOWN;
+        static constexpr std::pair<ComparableASCIILiteral, CompositeOperationType> mappings[] = {
+            { "arithmetic", FECOMPOSITE_OPERATOR_ARITHMETIC },
+            { "atop", FECOMPOSITE_OPERATOR_ATOP },
+            { "in", FECOMPOSITE_OPERATOR_IN },
+            { "lighter", FECOMPOSITE_OPERATOR_LIGHTER },
+            { "out", FECOMPOSITE_OPERATOR_OUT },
+            { "over", FECOMPOSITE_OPERATOR_OVER },
+            { "xor", FECOMPOSITE_OPERATOR_XOR },
+        };
+        static constexpr SortedArrayMap map { mappings };
+        return map.get(value, FECOMPOSITE_OPERATOR_UNKNOWN);
     }
 };
 
@@ -103,16 +100,14 @@ private:
     SVGFECompositeElement(const QualifiedName&, Document&);
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGFECompositeElement, SVGFilterPrimitiveStandardAttributes>;
-    const SVGPropertyRegistry& propertyRegistry() const final { return m_propertyRegistry; }
 
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;
 
-    bool setFilterEffectAttribute(FilterEffect*, const QualifiedName&) override;
-    Vector<AtomString> filterEffectInputsNames() const override { return { in1(), in2() }; }
-    RefPtr<FilterEffect> filterEffect(const SVGFilterBuilder&, const FilterEffectVector&) const override;
+    bool setFilterEffectAttribute(FilterEffect&, const QualifiedName&) override;
+    Vector<AtomString> filterEffectInputsNames() const override { return { AtomString { in1() }, AtomString { in2() } }; }
+    RefPtr<FilterEffect> createFilterEffect(const FilterEffectVector&, const GraphicsContext& destinationContext) const override;
 
-    PropertyRegistry m_propertyRegistry { *this };
     Ref<SVGAnimatedString> m_in1 { SVGAnimatedString::create(this) };
     Ref<SVGAnimatedString> m_in2 { SVGAnimatedString::create(this) };
     Ref<SVGAnimatedEnumeration> m_svgOperator { SVGAnimatedEnumeration::create(this, FECOMPOSITE_OPERATOR_OVER) };

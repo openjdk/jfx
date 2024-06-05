@@ -26,8 +26,6 @@
 #include "config.h"
 #include "LayoutContext.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "BlockFormattingContext.h"
 #include "BlockFormattingState.h"
 #include "FlexFormattingContext.h"
@@ -36,12 +34,12 @@
 #include "InlineFormattingState.h"
 #include "LayoutBox.h"
 #include "LayoutBoxGeometry.h"
-#include "LayoutContainerBox.h"
+#include "LayoutElementBox.h"
 #include "LayoutPhase.h"
 #include "LayoutTreeBuilder.h"
 #include "RenderStyleConstants.h"
+#include "RenderStyleSetters.h"
 #include "RenderView.h"
-#include "RuntimeEnabledFeatures.h"
 #include "TableFormattingContext.h"
 #include "TableFormattingState.h"
 #include "TableWrapperBlockFormattingContext.h"
@@ -77,7 +75,7 @@ void LayoutContext::layout(const LayoutSize& rootContentBoxSize)
 }
 
 
-void LayoutContext::layoutFormattingContextSubtree(const ContainerBox& formattingContextRoot)
+void LayoutContext::layoutFormattingContextSubtree(const ElementBox& formattingContextRoot)
 {
     RELEASE_ASSERT(formattingContextRoot.establishesFormattingContext());
     if (!formattingContextRoot.hasChild())
@@ -101,7 +99,7 @@ void LayoutContext::layoutFormattingContextSubtree(const ContainerBox& formattin
     }
 }
 
-std::unique_ptr<FormattingContext> LayoutContext::createFormattingContext(const ContainerBox& formattingContextRoot, LayoutState& layoutState)
+std::unique_ptr<FormattingContext> LayoutContext::createFormattingContext(const ElementBox& formattingContextRoot, LayoutState& layoutState)
 {
     ASSERT(formattingContextRoot.establishesFormattingContext());
     if (formattingContextRoot.establishesInlineFormattingContext()) {
@@ -133,4 +131,3 @@ std::unique_ptr<FormattingContext> LayoutContext::createFormattingContext(const 
 }
 }
 
-#endif

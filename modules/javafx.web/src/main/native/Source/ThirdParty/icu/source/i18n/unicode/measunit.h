@@ -19,6 +19,7 @@
 
 #if !UCONFIG_NO_FORMATTING
 
+#include <utility>
 #include "unicode/unistr.h"
 #include "unicode/localpointer.h"
 
@@ -370,7 +371,8 @@ class U_I18N_API MeasureUnit: public UObject {
 
     /**
      * Default constructor.
-     * Populates the instance with the base dimensionless unit.
+     * Populates the instance with the base dimensionless unit, which means that there will be
+     * no unit on the formatted number.
      * @stable ICU 3.0
      */
     MeasureUnit();
@@ -950,23 +952,21 @@ class U_I18N_API MeasureUnit: public UObject {
      */
     static MeasureUnit getSquareYard();
 
-#ifndef U_HIDE_DRAFT_API
     /**
      * Returns by pointer, unit of concentr: item.
      * Caller owns returned value and must free it.
      * Also see {@link #getItem()}.
      * @param status ICU error code.
-     * @draft ICU 70
+     * @stable ICU 70
      */
     static MeasureUnit *createItem(UErrorCode &status);
 
     /**
      * Returns by value, unit of concentr: item.
      * Also see {@link #createItem()}.
-     * @draft ICU 70
+     * @stable ICU 70
      */
     static MeasureUnit getItem();
-#endif /* U_HIDE_DRAFT_API */
 
     /**
      * Returns by pointer, unit of concentr: karat.
@@ -1529,6 +1529,22 @@ class U_I18N_API MeasureUnit: public UObject {
     static MeasureUnit getNanosecond();
 
     /**
+     * Returns by pointer, unit of duration: quarter.
+     * Caller owns returned value and must free it.
+     * Also see {@link #getQuarter()}.
+     * @param status ICU error code.
+     * @stable ICU 72
+     */
+    static MeasureUnit *createQuarter(UErrorCode &status);
+
+    /**
+     * Returns by value, unit of duration: quarter.
+     * Also see {@link #createQuarter()}.
+     * @stable ICU 72
+     */
+    static MeasureUnit getQuarter();
+
+    /**
      * Returns by pointer, unit of duration: second.
      * Caller owns returned value and must free it.
      * Also see {@link #getSecond()}.
@@ -1816,23 +1832,21 @@ class U_I18N_API MeasureUnit: public UObject {
      */
     static MeasureUnit getThermUs();
 
-#ifndef U_HIDE_DRAFT_API
     /**
      * Returns by pointer, unit of force: kilowatt-hour-per-100-kilometer.
      * Caller owns returned value and must free it.
      * Also see {@link #getKilowattHourPer100Kilometer()}.
      * @param status ICU error code.
-     * @draft ICU 70
+     * @stable ICU 70
      */
     static MeasureUnit *createKilowattHourPer100Kilometer(UErrorCode &status);
 
     /**
      * Returns by value, unit of force: kilowatt-hour-per-100-kilometer.
      * Also see {@link #createKilowattHourPer100Kilometer()}.
-     * @draft ICU 70
+     * @stable ICU 70
      */
     static MeasureUnit getKilowattHourPer100Kilometer();
-#endif /* U_HIDE_DRAFT_API */
 
     /**
      * Returns by pointer, unit of force: newton.
@@ -2571,17 +2585,25 @@ class U_I18N_API MeasureUnit: public UObject {
     static MeasureUnit getKilogram();
 
     /**
-     * Returns by pointer, unit of mass: metric-ton.
+     * Returns by pointer, unit of mass: metric-ton
+     * (renamed to tonne in CLDR 42 / ICU 72).
      * Caller owns returned value and must free it.
-     * Also see {@link #getMetricTon()}.
+     * Note: In ICU 74 this will be deprecated in favor of
+     * createTonne(), which is currently draft but will
+     * become stable in ICU 74, and which uses the preferred naming.
+     * Also see {@link #getMetricTon()} and {@link #createTonne()}.
      * @param status ICU error code.
      * @stable ICU 54
      */
     static MeasureUnit *createMetricTon(UErrorCode &status);
 
     /**
-     * Returns by value, unit of mass: metric-ton.
-     * Also see {@link #createMetricTon()}.
+     * Returns by value, unit of mass: metric-ton
+     * (renamed to tonne in CLDR 42 / ICU 72).
+     * Note: In ICU 74 this will be deprecated in favor of
+     * getTonne(), which is currently draft but will
+     * become stable in ICU 74, and which uses the preferred naming.
+     * Also see {@link #createMetricTon()} and {@link #getTonne()}.
      * @stable ICU 64
      */
     static MeasureUnit getMetricTon();
@@ -2715,6 +2737,22 @@ class U_I18N_API MeasureUnit: public UObject {
     static MeasureUnit getTon();
 
     /**
+     * Returns by pointer, unit of mass: tonne.
+     * Caller owns returned value and must free it.
+     * Also see {@link #getTonne()}.
+     * @param status ICU error code.
+     * @stable ICU 72
+     */
+    static MeasureUnit *createTonne(UErrorCode &status);
+
+    /**
+     * Returns by value, unit of mass: tonne.
+     * Also see {@link #createTonne()}.
+     * @stable ICU 72
+     */
+    static MeasureUnit getTonne();
+
+    /**
      * Returns by pointer, unit of power: gigawatt.
      * Caller owns returned value and must free it.
      * Also see {@link #getGigawatt()}.
@@ -2841,6 +2879,24 @@ class U_I18N_API MeasureUnit: public UObject {
      * @stable ICU 65
      */
     static MeasureUnit getBar();
+
+#ifndef U_HIDE_DRAFT_API
+    /**
+     * Returns by pointer, unit of pressure: gasoline-energy-density.
+     * Caller owns returned value and must free it.
+     * Also see {@link #getGasolineEnergyDensity()}.
+     * @param status ICU error code.
+     * @draft ICU 74
+     */
+    static MeasureUnit *createGasolineEnergyDensity(UErrorCode &status);
+
+    /**
+     * Returns by value, unit of pressure: gasoline-energy-density.
+     * Also see {@link #createGasolineEnergyDensity()}.
+     * @draft ICU 74
+     */
+    static MeasureUnit getGasolineEnergyDensity();
+#endif /* U_HIDE_DRAFT_API */
 
     /**
      * Returns by pointer, unit of pressure: hectopascal.
@@ -2969,6 +3025,24 @@ class U_I18N_API MeasureUnit: public UObject {
      * @stable ICU 64
      */
     static MeasureUnit getPoundPerSquareInch();
+
+#ifndef U_HIDE_DRAFT_API
+    /**
+     * Returns by pointer, unit of speed: beaufort.
+     * Caller owns returned value and must free it.
+     * Also see {@link #getBeaufort()}.
+     * @param status ICU error code.
+     * @draft ICU 73
+     */
+    static MeasureUnit *createBeaufort(UErrorCode &status);
+
+    /**
+     * Returns by value, unit of speed: beaufort.
+     * Also see {@link #createBeaufort()}.
+     * @draft ICU 73
+     */
+    static MeasureUnit getBeaufort();
+#endif /* U_HIDE_DRAFT_API */
 
     /**
      * Returns by pointer, unit of speed: kilometer-per-hour.

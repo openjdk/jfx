@@ -30,13 +30,10 @@
 #include "config.h"
 #include "CSSStyleValue.h"
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include "CSSParser.h"
 #include "CSSPropertyParser.h"
 #include "CSSStyleValueFactory.h"
 #include "CSSUnitValue.h"
-#include "CSSValueList.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringView.h>
 
@@ -44,10 +41,10 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(CSSStyleValue);
 
-ExceptionOr<Ref<CSSStyleValue>> CSSStyleValue::parse(const String& property, const String& cssText)
+ExceptionOr<Ref<CSSStyleValue>> CSSStyleValue::parse(const Document& document, const AtomString& property, const String& cssText)
 {
     constexpr bool parseMultiple = false;
-    auto parseResult = CSSStyleValueFactory::parseStyleValue(property, cssText, parseMultiple);
+    auto parseResult = CSSStyleValueFactory::parseStyleValue(property, cssText, parseMultiple, { document });
     if (parseResult.hasException())
         return parseResult.releaseException();
 
@@ -60,10 +57,10 @@ ExceptionOr<Ref<CSSStyleValue>> CSSStyleValue::parse(const String& property, con
     return WTFMove(returnValue.at(0));
 }
 
-ExceptionOr<Vector<Ref<CSSStyleValue>>> CSSStyleValue::parseAll(const String& property, const String& cssText)
+ExceptionOr<Vector<Ref<CSSStyleValue>>> CSSStyleValue::parseAll(const Document& document, const AtomString& property, const String& cssText)
 {
     constexpr bool parseMultiple = true;
-    return CSSStyleValueFactory::parseStyleValue(property, cssText, parseMultiple);
+    return CSSStyleValueFactory::parseStyleValue(property, cssText, parseMultiple, { document });
 }
 
 Ref<CSSStyleValue> CSSStyleValue::create(RefPtr<CSSValue>&& cssValue, String&& property)
@@ -82,15 +79,17 @@ CSSStyleValue::CSSStyleValue(RefPtr<CSSValue>&& cssValue, String&& property)
 {
 }
 
-
 String CSSStyleValue::toString() const
 {
-    if (!m_propertyValue)
-        return emptyString();
+    StringBuilder builder;
+    serialize(builder);
+    return builder.toString();
+}
 
-    return m_propertyValue->cssText();
+void CSSStyleValue::serialize(StringBuilder& builder, OptionSet<SerializationArguments>) const
+{
+    if (m_propertyValue)
+        builder.append(m_propertyValue->cssText());
 }
 
 } // namespace WebCore
-
-#endif

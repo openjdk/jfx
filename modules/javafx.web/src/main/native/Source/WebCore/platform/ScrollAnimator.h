@@ -100,12 +100,11 @@ public:
 
     bool isUserScrollInProgress() const { return m_scrollController.isUserScrollInProgress(); }
     bool isScrollSnapInProgress() const { return m_scrollController.isScrollSnapInProgress(); }
+    bool usesScrollSnap() const { return m_scrollController.usesScrollSnap(); }
 
     void contentsSizeChanged();
 
-    enum NotifyScrollableArea : bool {
-        No, Yes
-    };
+    enum NotifyScrollableArea : bool { No, Yes };
     void setCurrentPosition(const FloatPoint&, NotifyScrollableArea = NotifyScrollableArea::No);
     const FloatPoint& currentPosition() const { return m_currentPosition; }
 

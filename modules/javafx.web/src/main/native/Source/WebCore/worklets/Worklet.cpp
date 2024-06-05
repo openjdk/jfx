@@ -28,6 +28,8 @@
 
 #include "ContentSecurityPolicy.h"
 #include "Document.h"
+#include "JSDOMPromiseDeferred.h"
+#include "Page.h"
 #include "ScriptSourceCode.h"
 #include "SecurityOrigin.h"
 #include "WorkerRunLoop.h"
@@ -59,7 +61,7 @@ Document* Worklet::document()
 void Worklet::addModule(const String& moduleURLString, WorkletOptions&& options, DOMPromiseDeferred<void>&& promise)
 {
     auto* document = this->document();
-    if (!document) {
+    if (!document || !document->page()) {
         promise.reject(Exception { InvalidStateError, "This frame is detached"_s });
         return;
     }
@@ -84,7 +86,7 @@ void Worklet::addModule(const String& moduleURLString, WorkletOptions&& options,
     for (auto& proxy : m_proxies) {
         proxy->postTaskForModeToWorkletGlobalScope([pendingTasks = pendingTasks.copyRef(), moduleURL = moduleURL.isolatedCopy(), credentials = options.credentials, pendingActivity = makePendingActivity(*this)](ScriptExecutionContext& context) mutable {
             downcast<WorkletGlobalScope>(context).fetchAndInvokeScript(moduleURL, credentials, [pendingTasks = WTFMove(pendingTasks), pendingActivity = WTFMove(pendingActivity)](std::optional<Exception>&& exception) mutable {
-                callOnMainThread([pendingTasks = WTFMove(pendingTasks), exception = crossThreadCopy(exception), pendingActivity = WTFMove(pendingActivity)]() mutable {
+                callOnMainThread([pendingTasks = WTFMove(pendingTasks), exception = crossThreadCopy(WTFMove(exception)), pendingActivity = WTFMove(pendingActivity)]() mutable {
                     if (exception)
                         pendingTasks->abort(WTFMove(*exception));
                     else

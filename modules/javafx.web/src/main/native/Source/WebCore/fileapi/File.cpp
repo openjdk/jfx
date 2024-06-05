@@ -45,7 +45,7 @@ Ref<File> File::createWithRelativePath(ScriptExecutionContext* context, const St
     return file;
 }
 
-Ref<File> File::create(ScriptExecutionContext* context, const String& path, const String& replacementPath, const String& nameOverride)
+Ref<File> File::create(ScriptExecutionContext* context, const String& path, const String& replacementPath, const String& nameOverride, const std::optional<FileSystem::PlatformFileID>& fileID)
 {
     String name;
     String type;
@@ -53,9 +53,9 @@ Ref<File> File::create(ScriptExecutionContext* context, const String& path, cons
     computeNameAndContentType(effectivePath, nameOverride, name, type);
 
     auto internalURL = BlobURL::createInternalURL();
-    ThreadableBlobRegistry::registerFileBlobURL(internalURL, path, replacementPath, type);
+    ThreadableBlobRegistry::registerInternalFileBlobURL(internalURL, path, replacementPath, type);
 
-    auto file = adoptRef(*new File(context, WTFMove(internalURL), WTFMove(type), WTFMove(effectivePath), WTFMove(name)));
+    auto file = adoptRef(*new File(context, WTFMove(internalURL), WTFMove(type), WTFMove(effectivePath), WTFMove(name), fileID));
     file->suspendIfNeeded();
     return file;
 }
@@ -67,8 +67,16 @@ File::File(ScriptExecutionContext* context, URL&& url, String&& type, String&& p
 {
 }
 
+File::File(ScriptExecutionContext* context, URL&& url, String&& type, String&& path, String&& name, const std::optional<FileSystem::PlatformFileID>& fileID)
+    : Blob(uninitializedContructor, context, WTFMove(url), WTFMove(type))
+    , m_path(WTFMove(path))
+    , m_name(WTFMove(name))
+    , m_fileID(fileID)
+{
+}
+
 File::File(DeserializationContructor, ScriptExecutionContext* context, const String& path, const URL& url, const String& type, const String& name, const std::optional<int64_t>& lastModified)
-    : Blob(deserializationContructor, context, url, type, { }, path)
+    : Blob(deserializationContructor, context, url, type, { }, 0, path)
     , m_path(path)
     , m_name(name)
     , m_lastModifiedDateOverride(lastModified)
@@ -126,11 +134,17 @@ void File::computeNameAndContentType(const String& path, const String& nameOverr
         return;
     }
 #endif
+
+#if !PLATFORM(JAVA)
     effectiveName = nameOverride.isEmpty() ? FileSystem::pathFileName(path) : nameOverride;
+#else
+    // Use simple path not from std::FileSystem
+    effectiveName = nameOverride.isEmpty() ? path : nameOverride;
+#endif
     size_t index = effectiveName.reverseFind('.');
     if (index != notFound) {
         callOnMainThreadAndWait([&effectiveContentType, &effectiveName, index] {
-            effectiveContentType = MIMETypeRegistry::mimeTypeForExtension(effectiveName.substring(index + 1)).isolatedCopy();
+            effectiveContentType = MIMETypeRegistry::mimeTypeForExtension(StringView(effectiveName).substring(index + 1)).isolatedCopy();
         });
     }
 }

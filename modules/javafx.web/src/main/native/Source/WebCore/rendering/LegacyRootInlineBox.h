@@ -53,6 +53,7 @@ public:
 
     LayoutUnit lineTop() const { return m_lineTop; }
     LayoutUnit lineBottom() const { return m_lineBottom; }
+    LayoutUnit lineBoxWidth() const;
 
     LayoutUnit lineBoxTop() const { return m_lineBoxTop; }
     LayoutUnit lineBoxBottom() const { return m_lineBoxBottom; }
@@ -73,8 +74,7 @@ public:
     void setContainingFragment(RenderFragmentContainer&);
     void clearContainingFragment();
 
-    enum class ForHitTesting : bool { No, Yes };
-    LayoutUnit selectionTop(ForHitTesting = ForHitTesting::No) const;
+    LayoutUnit selectionTop() const;
     LayoutUnit selectionBottom() const;
     LayoutUnit selectionHeight() const { return std::max<LayoutUnit>(0, selectionBottom() - selectionTop()); }
 

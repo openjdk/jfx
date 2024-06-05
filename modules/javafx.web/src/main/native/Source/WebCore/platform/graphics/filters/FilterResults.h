@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc.  All rights reserved.
+ * Copyright (C) 2022-2023 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,8 @@
 
 #include "FilterEffect.h"
 #include "FilterImageVector.h"
+#include "ImageBufferAllocator.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 
@@ -36,40 +38,29 @@ class FilterEffect;
 class FilterImage;
 
 class FilterResults {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    FilterResults() = default;
+    WEBCORE_EXPORT FilterResults(std::unique_ptr<ImageBufferAllocator>&& = nullptr);
 
-    FilterImage* effectResult(FilterEffect& effect) const
-    {
-        return m_results.get(effect);
-    }
+    ImageBufferAllocator& allocator() const { return *m_allocator; }
 
-    void setEffectResult(FilterEffect& effect, const FilterImageVector& inputs, Ref<FilterImage>&& result)
-    {
-        m_results.set({ effect }, WTFMove(result));
-
-        for (auto& input : inputs)
-            m_resultReferences.add(input, FilterEffectSet()).iterator->value.add(effect);
-    }
-
-    void clearEffectResult(FilterEffect& effect)
-    {
-        auto iterator = m_results.find(effect);
-        if (iterator == m_results.end())
-            return;
-
-        auto result = iterator->value;
-        m_results.remove(iterator);
-
-        for (auto& reference : m_resultReferences.get(result))
-            clearEffectResult(reference);
-    }
+    FilterImage* effectResult(FilterEffect&) const;
+    void setEffectResult(FilterEffect&, const FilterImageVector& inputs, Ref<FilterImage>&& result);
+    void clearEffectResult(FilterEffect&);
 
 private:
-    using FilterEffectSet = HashSet<Ref<FilterEffect>>;
+    size_t memoryCost() const;
+    bool canCacheResult(const FilterImage&) const;
+
     HashMap<Ref<FilterEffect>, Ref<FilterImage>> m_results;
+
     // The value is a list of FilterEffects, whose FilterImages depend on the key FilterImage.
+    using FilterEffectSet = HashSet<Ref<FilterEffect>>;
     HashMap<Ref<FilterImage>, FilterEffectSet> m_resultReferences;
+
+    std::unique_ptr<ImageBufferAllocator> m_allocator;
 };
+
+using FilterResultsCreator = Function<std::unique_ptr<FilterResults>()>;
 
 } // namespace WebCore

@@ -44,6 +44,7 @@
 #include "AirLowerStackArgs.h"
 #include "AirOpcodeUtils.h"
 #include "AirOptimizeBlockOrder.h"
+#include "AirOptimizePairedLoadStore.h"
 #include "AirReportUsedRegisters.h"
 #include "AirSimplifyCFG.h"
 #include "AirValidate.h"
@@ -111,7 +112,7 @@ void prepareForGeneration(Code& code)
     eliminateDeadCode(code);
 
     size_t numTmps = code.numTmps(Bank::GP) + code.numTmps(Bank::FP);
-    if (code.optLevel() == 1 || numTmps > Options::maximumTmpsForGraphColoring()) {
+    if (!code.usesSIMD() && (code.optLevel() == 1 || numTmps > Options::maximumTmpsForGraphColoring())) {
         // When we're compiling quickly, we do register and stack allocation in one linear scan
         // phase. It's fast because it computes liveness only once.
         allocateRegistersAndStackByLinearScan(code);
@@ -174,6 +175,14 @@ void prepareForGeneration(Code& code)
     // The control flow graph can be simplified further after we have lowered EntrySwitch.
     simplifyCFG(code);
 
+    // We do this optimization at the very end of Air generation pipeline since it can be beneficial after
+    // spills are lowered to load/store with the frame pointer or the stack pointer. And this is block-local
+    // optimization, so this is more effective after simplifyCFG.
+#if CPU(ARM64)
+    if (Options::useAirOptimizePairedLoadStore())
+        optimizePairedLoadStore(code);
+#endif
+
     // This sorts the basic blocks in Code to achieve an ordering that maximizes the likelihood that a high
     // frequency successor is also the fall-through target.
     optimizeBlockOrder(code);
@@ -193,7 +202,9 @@ static void generateWithAlreadyAllocatedRegisters(Code& code, CCallHelpers& jit)
 {
     CompilerTimingScope timingScope("Air", "generateWithAlreadyAllocatedRegisters");
 
+#if !CPU(ARM)
     DisallowMacroScratchRegisterUsage disallowScratch(jit);
+#endif
 
     // And now, we generate code.
     GenerationContext context;

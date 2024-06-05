@@ -38,11 +38,12 @@
 #include "pas_log.h"
 #include "pas_monotonic_time.h"
 #include "pas_primitive_heap_ref.h"
+#include "pas_probabilistic_guard_malloc_allocator.h"
 #include "pas_segregated_size_directory.h"
 
 pas_heap* pas_heap_create(pas_heap_ref* heap_ref,
                           pas_heap_ref_kind heap_ref_kind,
-                          pas_heap_config* config,
+                          const pas_heap_config* config,
                           pas_heap_runtime_config* runtime_config)
 {
     static const bool verbose = false;
@@ -69,6 +70,10 @@ pas_heap* pas_heap_create(pas_heap_ref* heap_ref,
     heap->heap_ref_kind = heap_ref_kind;
     heap->config_kind = config->kind;
 
+    // PGM being enabled in the config does not guarantee it will be called during runtime.
+    if (config->pgm_enabled)
+        pas_probabilistic_guard_malloc_initialize_pgm();
+
     pas_all_heaps_add_heap(heap);
 
     return heap;
@@ -77,7 +82,7 @@ pas_heap* pas_heap_create(pas_heap_ref* heap_ref,
 size_t pas_heap_get_type_size(pas_heap* heap)
 {
     pas_heap_config_kind kind;
-    pas_heap_config* config;
+    const pas_heap_config* config;
     if (!heap)
         return 1;
     kind = heap->config_kind;
@@ -201,7 +206,7 @@ pas_heap_ensure_size_directory_for_size_slow(
     size_t size,
     size_t alignment,
     pas_size_lookup_mode force_size_lookup,
-    pas_heap_config* config,
+    const pas_heap_config* config,
     unsigned* cached_index)
 {
     pas_segregated_size_directory* result;

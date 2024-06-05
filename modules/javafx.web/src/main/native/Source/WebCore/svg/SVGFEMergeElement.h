@@ -34,12 +34,11 @@ private:
     SVGFEMergeElement(const QualifiedName&, Document&);
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGFEMergeElement, SVGFilterPrimitiveStandardAttributes>;
-    const SVGPropertyRegistry& propertyRegistry() const final { return m_propertyRegistry; }
+
+    void childrenChanged(const ChildChange&) override;
 
     Vector<AtomString> filterEffectInputsNames() const override;
-    RefPtr<FilterEffect> filterEffect(const SVGFilterBuilder&, const FilterEffectVector&) const override;
-
-    PropertyRegistry m_propertyRegistry { *this };
+    RefPtr<FilterEffect> createFilterEffect(const FilterEffectVector&, const GraphicsContext& destinationContext) const override;
 };
 
 } // namespace WebCore

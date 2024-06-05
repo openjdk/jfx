@@ -26,13 +26,12 @@
 #include "config.h"
 #include "TableFormattingGeometry.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "InlineFormattingState.h"
 #include "LayoutBoxGeometry.h"
 #include "LayoutContext.h"
 #include "LayoutDescendantIterator.h"
 #include "LayoutInitialContainingBlock.h"
+#include "RenderStyleInlines.h"
 #include "TableFormattingContext.h"
 #include "TableFormattingQuirks.h"
 
@@ -44,7 +43,7 @@ TableFormattingGeometry::TableFormattingGeometry(const TableFormattingContext& t
 {
 }
 
-LayoutUnit TableFormattingGeometry::cellBoxContentHeight(const ContainerBox& cellBox) const
+LayoutUnit TableFormattingGeometry::cellBoxContentHeight(const ElementBox& cellBox) const
 {
     ASSERT(cellBox.isInFlow());
     if (layoutState().inQuirksMode() && TableFormattingQuirks::shouldIgnoreChildContentVerticalMargin(cellBox)) {
@@ -55,8 +54,8 @@ LayoutUnit TableFormattingGeometry::cellBoxContentHeight(const ContainerBox& cel
         auto& firstInFlowChildGeometry = formattingContext.geometryForBox(firstInFlowChild, FormattingContext::EscapeReason::TableQuirkNeedsGeometryFromEstablishedFormattingContext);
         auto& lastInFlowChildGeometry = formattingContext.geometryForBox(lastInFlowChild, FormattingContext::EscapeReason::TableQuirkNeedsGeometryFromEstablishedFormattingContext);
 
-        auto top = firstInFlowChild.style().hasMarginBeforeQuirk() ? BoxGeometry::borderBoxRect(firstInFlowChildGeometry).top() : BoxGeometry::marginBoxRect(firstInFlowChildGeometry).top();
-        auto bottom = lastInFlowChild.style().hasMarginAfterQuirk() ? BoxGeometry::borderBoxRect(lastInFlowChildGeometry).bottom() : BoxGeometry::marginBoxRect(lastInFlowChildGeometry).bottom();
+        auto top = firstInFlowChild.style().marginBefore().hasQuirk() ? BoxGeometry::borderBoxRect(firstInFlowChildGeometry).top() : BoxGeometry::marginBoxRect(firstInFlowChildGeometry).top();
+        auto bottom = lastInFlowChild.style().marginAfter().hasQuirk() ? BoxGeometry::borderBoxRect(lastInFlowChildGeometry).bottom() : BoxGeometry::marginBoxRect(lastInFlowChildGeometry).bottom();
         return bottom - top;
     }
     return contentHeightForFormattingContextRoot(cellBox);
@@ -109,7 +108,7 @@ Edges TableFormattingGeometry::computedCellBorder(const TableGrid::Cell& cell) c
     return border;
 }
 
-std::optional<LayoutUnit> TableFormattingGeometry::computedColumnWidth(const ContainerBox& columnBox) const
+std::optional<LayoutUnit> TableFormattingGeometry::computedColumnWidth(const ElementBox& columnBox) const
 {
     // Check both style and <col>'s width attribute.
     // FIXME: Figure out what to do with calculated values, like <col style="width: 10%">.
@@ -127,18 +126,21 @@ IntrinsicWidthConstraints TableFormattingGeometry::intrinsicWidthConstraintsForC
     return LayoutContext::createFormattingContext(cellBox, const_cast<LayoutState&>(layoutState))->computedIntrinsicWidthConstraints();
 }
 
-InlineLayoutUnit TableFormattingGeometry::usedBaselineForCell(const ContainerBox& cellBox) const
+InlineLayoutUnit TableFormattingGeometry::usedBaselineForCell(const ElementBox& cellBox) const
 {
     // The baseline of a cell is defined as the baseline of the first in-flow line box in the cell,
     // or the first in-flow table-row in the cell, whichever comes first.
     // If there is no such line box, the baseline is the bottom of content edge of the cell box.
-    if (cellBox.establishesInlineFormattingContext())
-        return layoutState().formattingStateForInlineFormattingContext(cellBox).lines()[0].baseline();
-    for (auto& cellDescendant : descendantsOfType<ContainerBox>(cellBox)) {
+    if (cellBox.establishesInlineFormattingContext()) {
+        // FIXME: Check for baseline value based on display content.
+        ASSERT_NOT_IMPLEMENTED_YET();
+        return { };
+    }
+    for (auto& cellDescendant : descendantsOfType<ElementBox>(cellBox)) {
         if (cellDescendant.establishesInlineFormattingContext()) {
-            auto& inlineFormattingStateForCell = layoutState().formattingStateForInlineFormattingContext(cellDescendant);
-            if (!inlineFormattingStateForCell.lines().isEmpty())
-                return inlineFormattingStateForCell.lines()[0].baseline();
+            // FIXME: Check for baseline value based on display content.
+            ASSERT_NOT_IMPLEMENTED_YET();
+            return { };
         }
         if (cellDescendant.establishesTableFormattingContext())
             return layoutState().formattingStateForTableFormattingContext(cellDescendant).tableGrid().rows().list()[0].baseline();
@@ -178,4 +180,3 @@ LayoutUnit TableFormattingGeometry::verticalSpaceForCellContent(const TableGrid:
 }
 }
 
-#endif

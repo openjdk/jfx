@@ -76,12 +76,12 @@ public:
 
     void objectStoreRecordsChanged();
 
-    enum class ShouldIncludePrefetchedRecords { No, Yes };
+    enum class ShouldIncludePrefetchedRecords : bool { No, Yes };
     void currentData(IDBGetResult&, const std::optional<IDBKeyPath>&, ShouldIncludePrefetchedRecords = ShouldIncludePrefetchedRecords::No);
 
 private:
     bool establishStatement();
-    bool createSQLiteStatement(const String& sql);
+    bool createSQLiteStatement(StringView sql);
     bool bindArguments();
 
     bool resetAndRebindPreIndexStatementIfNecessary();

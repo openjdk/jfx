@@ -147,7 +147,7 @@
 #include <gst/gst_private.h>
 
 #include "gstbasesink.h"
-#include <gst/gst-i18n-lib.h>
+#include <glib/gi18n-lib.h>
 
 GST_DEBUG_CATEGORY_STATIC (gst_base_sink_debug);
 #define GST_CAT_DEFAULT gst_base_sink_debug
@@ -3664,6 +3664,9 @@ gst_base_sink_event (GstPad * pad, GstObject * parent, GstEvent * event)
       if (bclass->event)
         result = bclass->event (basesink, event);
       break;
+    case GST_EVENT_STREAM_START:
+      basesink->priv->received_eos = FALSE;
+      /* fallthrough */
     default:
       if (GST_EVENT_IS_SERIALIZED (event)) {
         GST_BASE_SINK_PREROLL_LOCK (basesink);

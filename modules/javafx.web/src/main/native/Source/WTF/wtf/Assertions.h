@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2019 Apple Inc.  All rights reserved.
+ * Copyright (C) 2003-2023 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,6 +47,10 @@
 #include <stdlib.h>
 #include <wtf/ExportMacros.h>
 
+#if OS(DARWIN) && USE(APPLE_INTERNAL_SDK)
+#include <wtf/spi/darwin/AbortWithReasonSPI.h>
+#endif
+
 #if USE(OS_LOG)
 #include <os/log.h>
 #endif
@@ -69,7 +73,11 @@ extern "C" void _ReadWriteBarrier(void);
 #endif
 #endif
 
-/* ASSERT_ENABLED is defined in Platform.h. */
+#if USE(APPLE_INTERNAL_SDK)
+#include <sys/reason.h>
+#endif
+
+/* ASSERT_ENABLED is defined in PlatformEnable.h. */
 
 #ifndef BACKTRACE_DISABLED
 #define BACKTRACE_DISABLED !ASSERT_ENABLED
@@ -154,6 +162,9 @@ extern "C" {
 enum class WTFLogChannelState : uint8_t { Off, On, OnWithAccumulation };
 #undef Always
 enum class WTFLogLevel : uint8_t { Always, Error, Warning, Info, Debug };
+namespace WTF {
+class PrintStream;
+}
 #else
 typedef uint8_t WTFLogChannelState;
 typedef uint8_t WTFLogLevel;
@@ -225,10 +236,13 @@ WTF_EXPORT_PRIVATE void WTFLogWithLevel(WTFLogChannel*, WTFLogLevel, const char*
 WTF_EXPORT_PRIVATE void WTFSetLogChannelLevel(WTFLogChannel*, WTFLogLevel);
 WTF_EXPORT_PRIVATE bool WTFWillLogWithLevel(WTFLogChannel*, WTFLogLevel);
 
-WTF_EXPORT_PRIVATE void WTFGetBacktrace(void** stack, int* size);
+WTF_EXPORT_PRIVATE NEVER_INLINE void WTFGetBacktrace(void** stack, int* size);
 WTF_EXPORT_PRIVATE void WTFReportBacktraceWithPrefix(const char*);
 WTF_EXPORT_PRIVATE void WTFReportBacktrace(void);
-WTF_EXPORT_PRIVATE void WTFPrintBacktraceWithPrefix(void** stack, int size, const char* prefix);
+#ifdef __cplusplus
+WTF_EXPORT_PRIVATE void WTFReportBacktraceWithPrefixAndPrintStream(WTF::PrintStream&, const char*);
+WTF_EXPORT_PRIVATE void WTFPrintBacktraceWithPrefixAndPrintStream(WTF::PrintStream&, void** stack, int size, const char* prefix);
+#endif
 WTF_EXPORT_PRIVATE void WTFPrintBacktrace(void** stack, int size);
 #if !RELEASE_LOG_DISABLED
 WTF_EXPORT_PRIVATE void WTFReleaseLogStackTrace(WTFLogChannel*);
@@ -251,7 +265,7 @@ WTF_EXPORT_PRIVATE bool WTFIsDebuggerAttached(void);
 #endif
 
 #if COMPILER(MSVC)
-#define WTFBreakpointTrapUnderConstexprContext() __debugbreak()
+#define WTFBreakpointTrapUnderConstexprContext() ((void) 0)
 #else
 #define WTFBreakpointTrapUnderConstexprContext() __builtin_trap()
 #endif
@@ -331,6 +345,7 @@ WTF_EXPORT_PRIVATE NO_RETURN_DUE_TO_CRASH void WTFCrashWithSecurityImplication(v
 #define ASSERT_UNDER_CONSTEXPR_CONTEXT(assertion) ((void)0)
 #define ASSERT_AT(assertion, file, line, function) ((void)0)
 #define ASSERT_NOT_REACHED(...) ((void)0)
+#define ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT(...) ((void)0)
 #define ASSERT_NOT_IMPLEMENTED_YET() ((void)0)
 #define ASSERT_IMPLIES(condition, assertion) ((void)0)
 #define NO_RETURN_DUE_TO_ASSERT
@@ -376,6 +391,10 @@ WTF_EXPORT_PRIVATE NO_RETURN_DUE_TO_CRASH void WTFCrashWithSecurityImplication(v
 #define ASSERT_NOT_REACHED(...) do { \
     WTFReportAssertionFailure(__FILE__, __LINE__, WTF_PRETTY_FUNCTION, 0); \
     CRASH_WITH_INFO(__VA_ARGS__); \
+} while (0)
+
+#define ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT(...) do { \
+    CRASH_UNDER_CONSTEXPR_CONTEXT(); \
 } while (0)
 
 #define ASSERT_NOT_IMPLEMENTED_YET() do { \
@@ -542,6 +561,7 @@ constexpr bool assertionFailureDueToUnreachableCode = false;
 
 #define PUBLIC_LOG_STRING "s"
 #define PRIVATE_LOG_STRING "s"
+#define SENSITIVE_LOG_STRING "s"
 #define RELEASE_LOG(channel, ...) ((void)0)
 #define RELEASE_LOG_ERROR(channel, ...) LOG_ERROR(__VA_ARGS__)
 #define RELEASE_LOG_FAULT(channel, ...) LOG_ERROR(__VA_ARGS__)
@@ -560,6 +580,7 @@ constexpr bool assertionFailureDueToUnreachableCode = false;
 
 #define PUBLIC_LOG_STRING "{public}s"
 #define PRIVATE_LOG_STRING "{private}s"
+#define SENSITIVE_LOG_STRING "{sensitive}s"
 #define RELEASE_LOG(channel, ...) os_log(LOG_CHANNEL(channel).osLogChannel, __VA_ARGS__)
 #define RELEASE_LOG_ERROR(channel, ...) os_log_error(LOG_CHANNEL(channel).osLogChannel, __VA_ARGS__)
 #define RELEASE_LOG_FAULT(channel, ...) os_log_fault(LOG_CHANNEL(channel).osLogChannel, __VA_ARGS__)
@@ -578,6 +599,7 @@ constexpr bool assertionFailureDueToUnreachableCode = false;
 
 #define PUBLIC_LOG_STRING "s"
 #define PRIVATE_LOG_STRING "s"
+#define SENSITIVE_LOG_STRING "s"
 #define SD_JOURNAL_SEND(channel, priority, file, line, function, ...) do { \
     if (LOG_CHANNEL(channel).state != WTFLogChannelState::Off) \
         sd_journal_send_with_location("CODE_FILE=" file, "CODE_LINE=" line, function, "WEBKIT_SUBSYSTEM=%s", LOG_CHANNEL(channel).subsystem, "WEBKIT_CHANNEL=%s", LOG_CHANNEL(channel).name, "PRIORITY=%i", priority, "MESSAGE=" __VA_ARGS__, nullptr); \
@@ -604,6 +626,7 @@ constexpr bool assertionFailureDueToUnreachableCode = false;
 
 #define PUBLIC_LOG_STRING "s"
 #define PRIVATE_LOG_STRING "s"
+#define SENSITIVE_LOG_STRING "s"
 #define LOGF(channel, priority, fmt, ...) do { \
     auto& logChannel = LOG_CHANNEL(channel); \
     if (logChannel.state != WTFLogChannelState::Off) \
@@ -655,6 +678,7 @@ constexpr bool assertionFailureDueToUnreachableCode = false;
 #define RELEASE_ASSERT_WITH_MESSAGE(assertion, ...) RELEASE_ASSERT(assertion)
 #define RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(assertion) RELEASE_ASSERT(assertion)
 #define RELEASE_ASSERT_NOT_REACHED(...) CRASH_WITH_INFO(__VA_ARGS__)
+#define RELEASE_ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT() CRASH_UNDER_CONSTEXPR_CONTEXT();
 #define RELEASE_ASSERT_UNDER_CONSTEXPR_CONTEXT(assertion) do { \
     if (UNLIKELY(!(assertion))) { \
         CRASH_UNDER_CONSTEXPR_CONTEXT(); \
@@ -666,7 +690,8 @@ constexpr bool assertionFailureDueToUnreachableCode = false;
 #define RELEASE_ASSERT(assertion, ...) ASSERT(assertion, __VA_ARGS__)
 #define RELEASE_ASSERT_WITH_MESSAGE(assertion, ...) ASSERT_WITH_MESSAGE(assertion, __VA_ARGS__)
 #define RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(assertion) ASSERT_WITH_SECURITY_IMPLICATION(assertion)
-#define RELEASE_ASSERT_NOT_REACHED() ASSERT_NOT_REACHED()
+#define RELEASE_ASSERT_NOT_REACHED(...) ASSERT_NOT_REACHED(__VA_ARGS__)
+#define RELEASE_ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT() ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT()
 #define RELEASE_ASSERT_UNDER_CONSTEXPR_CONTEXT(assertion) ASSERT_UNDER_CONSTEXPR_CONTEXT(assertion)
 
 #endif /* ASSERT_ENABLED */
@@ -774,9 +799,7 @@ inline void compilerFenceForCrash()
 
 // This is useful if you are going to stuff data into registers before crashing, like the
 // crashWithInfo functions below.
-#if COMPILER(MSVC) || !VA_OPT_SUPPORTED
-// FIXME: Re-check whether MSVC 2020 supports __VA_OPT__ and remove the special
-//        casing once older versions of the compiler are no longer supported.
+#if !VA_OPT_SUPPORTED
 #define CRASH_WITH_INFO(...) do { \
         WTF::isIntegralOrPointerType(__VA_ARGS__); \
         compilerFenceForCrash(); \
@@ -803,13 +826,23 @@ inline void compilerFenceForCrash()
 
 #endif /* __cplusplus */
 
+#if OS(DARWIN) && USE(APPLE_INTERNAL_SDK)
+#define CRASH_WITH_EXTRA_SECURITY_IMPLICATION_AND_INFO(abortReason, abortMsg, ...) do { \
+        if (g_wtfConfig.useSpecialAbortForExtraSecurityImplications) \
+            abort_with_reason(OS_REASON_WEBKIT, abortReason, abortMsg, OS_REASON_FLAG_SECURITY_SENSITIVE); \
+        CRASH_WITH_INFO(__VA_ARGS__); \
+    } while (false)
+#else
+#define CRASH_WITH_EXTRA_SECURITY_IMPLICATION_AND_INFO(abortReason, abortMsg, ...) CRASH_WITH_INFO(__VA_ARGS__)
+#endif
+
 /* UNREACHABLE_FOR_PLATFORM */
 
 #if COMPILER(CLANG)
 // This would be a macro except that its use of #pragma works best around
 // a function. Hence it uses macro naming convention.
 IGNORE_WARNINGS_BEGIN("missing-noreturn")
-static inline void UNREACHABLE_FOR_PLATFORM()
+static inline void UNREACHABLE_FOR_PLATFORM(void)
 {
     // This *MUST* be a release assert. We use it in places where it's better to crash than to keep
     // going.

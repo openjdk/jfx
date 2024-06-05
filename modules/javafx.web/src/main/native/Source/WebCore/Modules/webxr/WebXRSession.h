@@ -29,7 +29,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
-#include "JSDOMPromiseDeferred.h"
+#include "JSDOMPromiseDeferredForward.h"
 #include "WebXRFrame.h"
 #include "WebXRInputSourceArray.h"
 #include "WebXRRenderState.h"
@@ -47,12 +47,13 @@
 namespace WebCore {
 
 class XRFrameRequestCallback;
+class WebCoreOpaqueRoot;
 class WebXRSystem;
 class WebXRView;
 class WebXRViewerSpace;
 struct XRRenderStateInit;
 
-class WebXRSession final : public RefCounted<WebXRSession>, public EventTargetWithInlineData, public ActiveDOMObject, public PlatformXR::TrackingAndRenderingClient {
+class WebXRSession final : public RefCounted<WebXRSession>, public EventTarget, public ActiveDOMObject, public PlatformXR::TrackingAndRenderingClient {
     WTF_MAKE_ISO_ALLOCATED(WebXRSession);
 public:
     using RequestReferenceSpacePromise = DOMPromiseDeferred<IDLInterface<WebXRReferenceSpace>>;
@@ -66,7 +67,8 @@ public:
     using RefCounted<WebXRSession>::deref;
 
     using TrackingAndRenderingClient::weakPtrFactory;
-    using WeakValueType = TrackingAndRenderingClient::WeakValueType;
+    using TrackingAndRenderingClient::WeakValueType;
+    using TrackingAndRenderingClient::WeakPtrImplType;
 
     XREnvironmentBlendMode environmentBlendMode() const;
     XRInteractionMode interactionMode() const;
@@ -96,8 +98,12 @@ public:
 
     const Vector<PlatformXR::Device::ViewData>& views() const { return m_views; }
     const PlatformXR::Device::FrameData& frameData() const { return m_frameData; }
-    const WebXRViewerSpace& viewerReferenceSpace() const { return *m_viewerReferenceSpace; }
+    const WebXRViewerSpace& viewerReferenceSpace() const { return m_viewerReferenceSpace; }
     bool posesCanBeReported(const Document&) const;
+
+#if ENABLE(WEBXR_HANDS)
+    bool isHandTrackingEnabled() const;
+#endif
 
 private:
     WebXRSession(Document&, WebXRSystem&, XRSessionMode, PlatformXR::Device&, FeatureList&&);
@@ -132,7 +138,7 @@ private:
     XRVisibilityState m_visibilityState { XRVisibilityState::Visible };
     UniqueRef<WebXRInputSourceArray> m_inputSources;
     bool m_ended { false };
-    std::optional<EndPromise> m_endPromise;
+    std::unique_ptr<EndPromise> m_endPromise;
 
     WebXRSystem& m_xrSystem;
     XRSessionMode m_mode;
@@ -140,7 +146,7 @@ private:
     FeatureList m_requestedFeatures;
     RefPtr<WebXRRenderState> m_activeRenderState;
     RefPtr<WebXRRenderState> m_pendingRenderState;
-    std::unique_ptr<WebXRViewerSpace> m_viewerReferenceSpace;
+    Ref<WebXRViewerSpace> m_viewerReferenceSpace;
     MonotonicTime m_timeOrigin;
 
     unsigned m_nextCallbackId { 1 };
@@ -160,6 +166,8 @@ private:
     // https://immersive-web.github.io/webxr/#xrsession-promise-resolved
     bool m_inputInitialized { false };
 };
+
+WebCoreOpaqueRoot root(WebXRSession*);
 
 } // namespace WebCore
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,7 +44,7 @@ void genericUnwind(VM& vm, CallFrame* callFrame)
     auto scope = DECLARE_CATCH_SCOPE(vm);
     CallFrame* topJSCallFrame = vm.topJSCallFrame();
     if (UNLIKELY(Options::breakOnThrow())) {
-        CodeBlock* codeBlock = topJSCallFrame->codeBlock();
+        CodeBlock* codeBlock = topJSCallFrame->isWasmFrame() ? nullptr : topJSCallFrame->codeBlock();
         dataLog("In call frame ", RawPointer(topJSCallFrame), " for code block ", codeBlock, "\n");
         WTFBreakpointTrap();
     }
@@ -54,30 +54,38 @@ void genericUnwind(VM& vm, CallFrame* callFrame)
 
     Exception* exception = scope.exception();
     RELEASE_ASSERT(exception);
-    CatchInfo handler = vm.interpreter->unwind(vm, callFrame, exception); // This may update callFrame.
+    CatchInfo handler = vm.interpreter.unwind(vm, callFrame, exception); // This may update callFrame.
 
-    void* catchRoutine;
-    const Instruction* catchPCForInterpreter = nullptr;
+    void* catchRoutine = nullptr;
+    void* dispatchAndCatchRoutine = nullptr;
+    JSOrWasmInstruction catchPCForInterpreter = { static_cast<JSInstruction*>(nullptr) };
     if (handler.m_valid) {
         catchPCForInterpreter = handler.m_catchPCForInterpreter;
 #if ENABLE(JIT)
-        catchRoutine = handler.m_nativeCode.executableAddress();
+        catchRoutine = handler.m_nativeCode.taggedPtr();
+        if (handler.m_nativeCodeForDispatchAndCatch)
+            dispatchAndCatchRoutine = handler.m_nativeCodeForDispatchAndCatch.taggedPtr();
 #else
-        if (catchPCForInterpreter->isWide32())
-            catchRoutine = LLInt::getWide32CodePtr(catchPCForInterpreter->opcodeID());
-        else if (catchPCForInterpreter->isWide16())
-            catchRoutine = LLInt::getWide16CodePtr(catchPCForInterpreter->opcodeID());
+#if ENABLE(WEBASSEMBLY)
+#error WASM requires the JIT, so this section assumes we are in JS
+#endif
+        const auto* pc = std::get<const JSInstruction*>(catchPCForInterpreter);
+        if (pc->isWide32())
+            catchRoutine = LLInt::getWide32CodePtr(pc->opcodeID());
+        else if (pc->isWide16())
+            catchRoutine = LLInt::getWide16CodePtr(pc->opcodeID());
         else
-            catchRoutine = LLInt::getCodePtr(catchPCForInterpreter->opcodeID());
+            catchRoutine = LLInt::getCodePtr(pc->opcodeID());
 #endif
     } else
-        catchRoutine = LLInt::handleUncaughtException(vm).code().executableAddress();
+        catchRoutine = LLInt::handleUncaughtException(vm).code().taggedPtr();
 
     ASSERT(bitwise_cast<uintptr_t>(callFrame) < bitwise_cast<uintptr_t>(vm.topEntryFrame));
 
     assertIsTaggedWith<ExceptionHandlerPtrTag>(catchRoutine);
     vm.callFrameForCatch = callFrame;
     vm.targetMachinePCForThrow = catchRoutine;
+    vm.targetMachinePCAfterCatch = dispatchAndCatchRoutine;
     vm.targetInterpreterPCForThrow = catchPCForInterpreter;
 
     RELEASE_ASSERT(catchRoutine);

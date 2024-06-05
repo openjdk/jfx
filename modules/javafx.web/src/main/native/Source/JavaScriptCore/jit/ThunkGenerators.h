@@ -38,13 +38,8 @@ enum class CallMode;
 template<PtrTag> class MacroAssemblerCodeRef;
 class VM;
 
-#if ENABLE(EXTRA_CTI_THUNKS)
-
-MacroAssemblerCodeRef<JITThunkPtrTag> handleExceptionWithCallFrameRollbackGenerator(VM&);
-
-#endif // ENABLE(EXTRA_CTI_THUNKS)
-
 MacroAssemblerCodeRef<JITThunkPtrTag> handleExceptionGenerator(VM&);
+MacroAssemblerCodeRef<JITThunkPtrTag> handleExceptionWithCallFrameRollbackGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> popThunkStackPreservesAndHandleExceptionGenerator(VM&);
 
 MacroAssemblerCodeRef<JITThunkPtrTag> throwExceptionFromCallSlowPathGenerator(VM&);
@@ -55,7 +50,9 @@ MacroAssemblerCodeRef<JITThunkPtrTag> linkPolymorphicCallThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITStubRoutinePtrTag> virtualThunkFor(VM&, CallMode);
 
 MacroAssemblerCodeRef<JITThunkPtrTag> nativeCallGenerator(VM&);
+MacroAssemblerCodeRef<JITThunkPtrTag> nativeCallWithDebuggerHookGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> nativeConstructGenerator(VM&);
+MacroAssemblerCodeRef<JITThunkPtrTag> nativeConstructWithDebuggerHookGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> nativeTailCallGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> nativeTailCallWithoutSavedTagsGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> internalFunctionCallGenerator(VM&);
@@ -69,6 +66,8 @@ MacroAssemblerCodeRef<JITThunkPtrTag> charAtThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> stringPrototypeCodePointAtThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> clz32ThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> fromCharCodeThunkGenerator(VM&);
+MacroAssemblerCodeRef<JITThunkPtrTag> globalIsNaNThunkGenerator(VM&);
+MacroAssemblerCodeRef<JITThunkPtrTag> numberIsNaNThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> absThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> ceilThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> expThunkGenerator(VM&);
@@ -79,14 +78,14 @@ MacroAssemblerCodeRef<JITThunkPtrTag> sqrtThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> imulThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> randomThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> truncThunkGenerator(VM&);
+MacroAssemblerCodeRef<JITThunkPtrTag> numberConstructorCallThunkGenerator(VM&);
+MacroAssemblerCodeRef<JITThunkPtrTag> stringConstructorCallThunkGenerator(VM&);
 
 MacroAssemblerCodeRef<JITThunkPtrTag> boundFunctionCallGenerator(VM&);
 
 MacroAssemblerCodeRef<JITThunkPtrTag> remoteFunctionCallGenerator(VM&);
 
-#if ENABLE(EXTRA_CTI_THUNKS)
 MacroAssemblerCodeRef<JITThunkPtrTag> checkExceptionGenerator(VM&);
-#endif
 
 } // namespace JSC
 #endif // ENABLE(JIT)

@@ -57,11 +57,11 @@ public:
     constexpr double nanoseconds() const { return microseconds() * 1000; }
 
     // Keep in mind that Seconds is held in double. If the value is not in range of 53bit integer, the result may not be precise.
-    template<typename T> T minutesAs() const { static_assert(std::is_integral<T>::value, ""); return clampToAccepting64<T>(minutes()); }
-    template<typename T> T secondsAs() const { static_assert(std::is_integral<T>::value, ""); return clampToAccepting64<T>(seconds()); }
-    template<typename T> T millisecondsAs() const { static_assert(std::is_integral<T>::value, ""); return clampToAccepting64<T>(milliseconds()); }
-    template<typename T> T microsecondsAs() const { static_assert(std::is_integral<T>::value, ""); return clampToAccepting64<T>(microseconds()); }
-    template<typename T> T nanosecondsAs() const { static_assert(std::is_integral<T>::value, ""); return clampToAccepting64<T>(nanoseconds()); }
+    template<typename T> T minutesAs() const { static_assert(std::is_integral<T>::value); return clampToAccepting64<T>(minutes()); }
+    template<typename T> T secondsAs() const { static_assert(std::is_integral<T>::value); return clampToAccepting64<T>(seconds()); }
+    template<typename T> T millisecondsAs() const { static_assert(std::is_integral<T>::value); return clampToAccepting64<T>(milliseconds()); }
+    template<typename T> T microsecondsAs() const { static_assert(std::is_integral<T>::value); return clampToAccepting64<T>(microseconds()); }
+    template<typename T> T nanosecondsAs() const { static_assert(std::is_integral<T>::value); return clampToAccepting64<T>(nanoseconds()); }
 
     static constexpr Seconds fromMinutes(double minutes)
     {
@@ -193,11 +193,6 @@ public:
         return m_value == other.m_value;
     }
 
-    constexpr bool operator!=(Seconds other) const
-    {
-        return m_value != other.m_value;
-    }
-
     constexpr bool operator<(Seconds other) const
     {
         return m_value < other.m_value;
@@ -223,33 +218,6 @@ public:
     Seconds isolatedCopy() const
     {
         return *this;
-    }
-
-    template<class Encoder>
-    void encode(Encoder& encoder) const
-    {
-        encoder << m_value;
-    }
-
-    template<class Decoder>
-    static std::optional<Seconds> decode(Decoder& decoder)
-    {
-        std::optional<double> seconds;
-        decoder >> seconds;
-        if (!seconds)
-            return std::nullopt;
-        return Seconds(*seconds);
-    }
-
-    template<class Decoder>
-    static WARN_UNUSED_RETURN bool decode(Decoder& decoder, Seconds& seconds)
-    {
-        double value;
-        if (!decoder.decode(value))
-            return false;
-
-        seconds = Seconds(value);
-        return true;
     }
 
     struct MarkableTraits;

@@ -51,6 +51,7 @@ $(PROJECT_DIR)/builtins/GlobalOperations.js
 $(PROJECT_DIR)/builtins/InternalPromiseConstructor.js
 $(PROJECT_DIR)/builtins/IteratorHelpers.js
 $(PROJECT_DIR)/builtins/IteratorPrototype.js
+$(PROJECT_DIR)/builtins/MapConstructor.js
 $(PROJECT_DIR)/builtins/MapIteratorPrototype.js
 $(PROJECT_DIR)/builtins/MapPrototype.js
 $(PROJECT_DIR)/builtins/ModuleLoader.js
@@ -59,6 +60,7 @@ $(PROJECT_DIR)/builtins/ObjectConstructor.js
 $(PROJECT_DIR)/builtins/PromiseConstructor.js
 $(PROJECT_DIR)/builtins/PromiseOperations.js
 $(PROJECT_DIR)/builtins/PromisePrototype.js
+$(PROJECT_DIR)/builtins/ProxyHelpers.js
 $(PROJECT_DIR)/builtins/ReflectObject.js
 $(PROJECT_DIR)/builtins/RegExpPrototype.js
 $(PROJECT_DIR)/builtins/RegExpStringIteratorPrototype.js
@@ -150,6 +152,8 @@ $(PROJECT_DIR)/runtime/IntlDateTimeFormatConstructor.cpp
 $(PROJECT_DIR)/runtime/IntlDateTimeFormatPrototype.cpp
 $(PROJECT_DIR)/runtime/IntlDisplayNamesConstructor.cpp
 $(PROJECT_DIR)/runtime/IntlDisplayNamesPrototype.cpp
+$(PROJECT_DIR)/runtime/IntlDurationFormatConstructor.cpp
+$(PROJECT_DIR)/runtime/IntlDurationFormatPrototype.cpp
 $(PROJECT_DIR)/runtime/IntlListFormatConstructor.cpp
 $(PROJECT_DIR)/runtime/IntlListFormatPrototype.cpp
 $(PROJECT_DIR)/runtime/IntlLocalePrototype.cpp
@@ -171,6 +175,7 @@ $(PROJECT_DIR)/runtime/JSModuleLoader.cpp
 $(PROJECT_DIR)/runtime/JSONObject.cpp
 $(PROJECT_DIR)/runtime/JSPromiseConstructor.cpp
 $(PROJECT_DIR)/runtime/JSPromisePrototype.cpp
+$(PROJECT_DIR)/runtime/MapConstructor.cpp
 $(PROJECT_DIR)/runtime/MapPrototype.cpp
 $(PROJECT_DIR)/runtime/NumberConstructor.cpp
 $(PROJECT_DIR)/runtime/NumberPrototype.cpp
@@ -193,6 +198,8 @@ $(PROJECT_DIR)/runtime/TemporalNow.cpp
 $(PROJECT_DIR)/runtime/TemporalObject.cpp
 $(PROJECT_DIR)/runtime/TemporalPlainDateConstructor.cpp
 $(PROJECT_DIR)/runtime/TemporalPlainDatePrototype.cpp
+$(PROJECT_DIR)/runtime/TemporalPlainDateTimeConstructor.cpp
+$(PROJECT_DIR)/runtime/TemporalPlainDateTimePrototype.cpp
 $(PROJECT_DIR)/runtime/TemporalPlainTimeConstructor.cpp
 $(PROJECT_DIR)/runtime/TemporalPlainTimePrototype.cpp
 $(PROJECT_DIR)/runtime/TemporalTimeZoneConstructor.cpp
@@ -213,6 +220,8 @@ $(PROJECT_DIR)/wasm/generateWasm.py
 $(PROJECT_DIR)/wasm/generateWasmB3IRGeneratorInlinesHeader.py
 $(PROJECT_DIR)/wasm/generateWasmOpsHeader.py
 $(PROJECT_DIR)/wasm/js/JSWebAssembly.cpp
+$(PROJECT_DIR)/wasm/js/WebAssemblyArrayConstructor.cpp
+$(PROJECT_DIR)/wasm/js/WebAssemblyArrayPrototype.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyCompileErrorConstructor.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyCompileErrorPrototype.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyExceptionConstructor.cpp
@@ -229,6 +238,8 @@ $(PROJECT_DIR)/wasm/js/WebAssemblyModuleConstructor.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyModulePrototype.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyRuntimeErrorConstructor.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyRuntimeErrorPrototype.cpp
+$(PROJECT_DIR)/wasm/js/WebAssemblyStructConstructor.cpp
+$(PROJECT_DIR)/wasm/js/WebAssemblyStructPrototype.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyTableConstructor.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyTablePrototype.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyTagConstructor.cpp

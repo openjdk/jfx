@@ -27,10 +27,17 @@
 
 #if ENABLE(IMAGE_ANALYSIS)
 
+#include "Timer.h"
 #include <wtf/FastMalloc.h>
 #include <wtf/PriorityQueue.h>
-#include <wtf/WeakHashSet.h>
+#include <wtf/URL.h>
+#include <wtf/URLHash.h>
+#include <wtf/WeakHashMap.h>
 #include <wtf/WeakPtr.h>
+
+namespace PAL {
+class HysteresisActivity;
+}
 
 namespace WebCore {
 
@@ -38,6 +45,7 @@ class Document;
 class HTMLImageElement;
 class Page;
 class Timer;
+class WeakPtrImplWithEventTargetData;
 
 class ImageAnalysisQueue {
     WTF_MAKE_FAST_ALLOCATED;
@@ -45,18 +53,23 @@ public:
     ImageAnalysisQueue(Page&);
     ~ImageAnalysisQueue();
 
-    WEBCORE_EXPORT void enqueueAllImages(Document&, const String& identifier);
+    WEBCORE_EXPORT void enqueueAllImagesIfNeeded(Document&, const String& sourceLanguageIdentifier, const String& targetLanguageIdentifier);
     void clear();
 
     void enqueueIfNeeded(HTMLImageElement&);
+
+    WEBCORE_EXPORT void setDidBecomeEmptyCallback(Function<void()>&&);
+    WEBCORE_EXPORT void clearDidBecomeEmptyCallback();
 
 private:
     void resumeProcessingSoon();
     void resumeProcessing();
 
+    void enqueueAllImagesRecursive(Document&);
+
     enum class Priority : bool { Low, High };
     struct Task {
-        WeakPtr<HTMLImageElement> element;
+        WeakPtr<HTMLImageElement, WeakPtrImplWithEventTargetData> element;
         Priority priority { Priority::Low };
         unsigned taskNumber { 0 };
     };
@@ -64,13 +77,17 @@ private:
     static bool firstIsHigherPriority(const Task&, const Task&);
     unsigned nextTaskNumber() { return ++m_currentTaskNumber; }
 
-    String m_identifier;
+    // FIXME: Refactor the source and target LIDs into either a std::pair<> of strings, or its own named struct.
+    String m_sourceLanguageIdentifier;
+    String m_targetLanguageIdentifier;
     WeakPtr<Page> m_page;
     Timer m_resumeProcessingTimer;
-    WeakHashSet<HTMLImageElement> m_queuedElements;
+    WeakHashMap<HTMLImageElement, URL, WeakPtrImplWithEventTargetData> m_queuedElements;
     PriorityQueue<Task, firstIsHigherPriority> m_queue;
     unsigned m_pendingRequestCount { 0 };
     unsigned m_currentTaskNumber { 0 };
+    std::unique_ptr<PAL::HysteresisActivity> m_imageQueueEmptyHysteresis;
+    bool m_analysisOfAllImagesOnPageHasStarted { false };
 };
 
 inline bool ImageAnalysisQueue::firstIsHigherPriority(const Task& first, const Task& second)

@@ -24,10 +24,10 @@
 
 #include "AXObjectCache.h"
 #include "DocumentInlines.h"
-#include "ElementIterator.h"
+#include "ElementChildIteratorInlines.h"
+#include "ElementRareData.h"
 #include "EventLoop.h"
 #include "EventNames.h"
-#include "GCReachableRef.h"
 #include "HTMLSlotElement.h"
 #include "HTMLSummaryElement.h"
 #include "LocalizedStrings.h"
@@ -47,11 +47,11 @@ using namespace HTMLNames;
 
 static const AtomString& summarySlotName()
 {
-    static MainThreadNeverDestroyed<const AtomString> summarySlot("summarySlot");
+    static MainThreadNeverDestroyed<const AtomString> summarySlot("summarySlot"_s);
     return summarySlot;
 }
 
-class DetailsSlotAssignment final : public SlotAssignment {
+class DetailsSlotAssignment final : public NamedSlotAssignment {
 private:
     void hostChildElementDidChange(const Element&, ShadowRoot&) override;
     const AtomString& slotNameForHostChild(const Node&) const override;
@@ -64,7 +64,7 @@ void DetailsSlotAssignment::hostChildElementDidChange(const Element& childElemen
         // since we don't know the answer when this function is called inside Element::removedFrom.
         didChangeSlot(summarySlotName(), shadowRoot);
     } else
-        didChangeSlot(SlotAssignment::defaultSlotName(), shadowRoot);
+        didChangeSlot(NamedSlotAssignment::defaultSlotName(), shadowRoot);
 }
 
 const AtomString& DetailsSlotAssignment::slotNameForHostChild(const Node& child) const
@@ -78,7 +78,7 @@ const AtomString& DetailsSlotAssignment::slotNameForHostChild(const Node& child)
         if (&child == childrenOfType<HTMLSummaryElement>(details).first())
             return summarySlotName();
     }
-    return SlotAssignment::defaultSlotName();
+    return NamedSlotAssignment::defaultSlotName();
 }
 
 Ref<HTMLDetailsElement> HTMLDetailsElement::create(const QualifiedName& tagName, Document& document)
@@ -130,11 +130,11 @@ bool HTMLDetailsElement::isActiveSummary(const HTMLSummaryElement& summary) cons
     return slot == m_summarySlot.get();
 }
 
-void HTMLDetailsElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLDetailsElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     if (name == openAttr) {
         bool oldValue = m_isOpen;
-        m_isOpen = !value.isNull();
+        m_isOpen = !newValue.isNull();
         if (oldValue != m_isOpen) {
             RefPtr root = shadowRoot();
             ASSERT(root);
@@ -147,14 +147,14 @@ void HTMLDetailsElement::parseAttribute(const QualifiedName& name, const AtomStr
             if (m_isToggleEventTaskQueued)
                 return;
 
-            document().eventLoop().queueTask(TaskSource::DOMManipulation, [protectedThis = GCReachableRef { *this }] {
-                protectedThis->dispatchEvent(Event::create(eventNames().toggleEvent, Event::CanBubble::No, Event::IsCancelable::No));
-                protectedThis->m_isToggleEventTaskQueued = false;
+            queueTaskKeepingThisNodeAlive(TaskSource::DOMManipulation, [this] {
+                dispatchEvent(Event::create(eventNames().toggleEvent, Event::CanBubble::No, Event::IsCancelable::No));
+                m_isToggleEventTaskQueued = false;
             });
             m_isToggleEventTaskQueued = true;
         }
     } else
-        HTMLElement::parseAttribute(name, value);
+        HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 

@@ -29,8 +29,6 @@
 #pragma once
 
 #include "AccessibilityMockObject.h"
-#include "AccessibilityTable.h"
-#include "IntRect.h"
 
 namespace WebCore {
 
@@ -56,7 +54,6 @@ public:
 private:
     AccessibilityTableColumn();
 
-    AccessibilityObject* headerObjectForSection(RenderTableSection*, bool thTagRequired);
     bool computeAccessibilityIsIgnored() const override;
     bool isTableColumn() const override { return true; }
 
@@ -66,4 +63,6 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilityTableColumn, isAccessibilityTableColumnInstance())
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::AccessibilityTableColumn) \
+    static bool isType(const WebCore::AccessibilityObject& object) { return object.isAccessibilityTableColumnInstance(); } \
+SPECIALIZE_TYPE_TRAITS_END()

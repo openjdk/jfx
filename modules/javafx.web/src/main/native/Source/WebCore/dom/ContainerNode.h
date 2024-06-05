@@ -57,7 +57,7 @@ public:
     ExceptionOr<void> replaceChild(Node& newChild, Node& oldChild);
     WEBCORE_EXPORT ExceptionOr<void> removeChild(Node& child);
     WEBCORE_EXPORT ExceptionOr<void> appendChild(Node& newChild);
-    void stringReplaceAll(const String&);
+    void stringReplaceAll(String&&);
     void replaceAll(Node*);
 
     ContainerNode& rootNode() const { return downcast<ContainerNode>(Node::rootNode()); }
@@ -69,7 +69,7 @@ public:
     void parserRemoveChild(Node&);
     void parserInsertBefore(Node& newChild, Node& refChild);
 
-    void removeChildren();
+    WEBCORE_EXPORT void removeChildren();
 
     void takeAllChildrenFrom(ContainerNode*);
 
@@ -77,13 +77,15 @@ public:
 
     struct ChildChange {
         enum class Type : uint8_t { ElementInserted, ElementRemoved, TextInserted, TextRemoved, TextChanged, AllChildrenRemoved, NonContentsChildRemoved, NonContentsChildInserted, AllChildrenReplaced };
-        enum class Source : bool { Parser, API };
+        enum class Source : uint8_t { Parser, API, Clone };
+        enum class AffectsElements : uint8_t { Unknown, No, Yes };
 
         ChildChange::Type type;
         Element* siblingChanged;
         Element* previousSiblingElement;
         Element* nextSiblingElement;
         ChildChange::Source source;
+        AffectsElements affectsElements;
 
         bool isInsertion() const
         {
@@ -97,25 +99,6 @@ public:
             case ChildChange::Type::TextRemoved:
             case ChildChange::Type::TextChanged:
             case ChildChange::Type::AllChildrenRemoved:
-            case ChildChange::Type::NonContentsChildRemoved:
-                return false;
-            }
-            ASSERT_NOT_REACHED();
-            return false;
-        }
-
-        bool affectsElements() const
-        {
-            switch (type) {
-            case ChildChange::Type::ElementInserted:
-            case ChildChange::Type::ElementRemoved:
-            case ChildChange::Type::AllChildrenRemoved:
-            case ChildChange::Type::AllChildrenReplaced:
-                return true;
-            case ChildChange::Type::TextInserted:
-            case ChildChange::Type::TextRemoved:
-            case ChildChange::Type::TextChanged:
-            case ChildChange::Type::NonContentsChildInserted:
             case ChildChange::Type::NonContentsChildRemoved:
                 return false;
             }
@@ -140,7 +123,7 @@ public:
 
     WEBCORE_EXPORT Ref<HTMLCollection> getElementsByTagName(const AtomString&);
     WEBCORE_EXPORT Ref<HTMLCollection> getElementsByTagNameNS(const AtomString& namespaceURI, const AtomString& localName);
-    WEBCORE_EXPORT Ref<NodeList> getElementsByName(const String& elementName);
+    WEBCORE_EXPORT Ref<NodeList> getElementsByName(const AtomString& elementName);
     WEBCORE_EXPORT Ref<HTMLCollection> getElementsByClassName(const AtomString& classNames);
     Ref<RadioNodeList> radioNodeList(const AtomString&);
 
@@ -159,7 +142,7 @@ public:
 protected:
     explicit ContainerNode(Document&, ConstructionType = CreateContainer);
 
-    friend void addChildNodesToDeletionQueue(Node*& head, Node*& tail, ContainerNode&);
+    friend void removeDetachedChildrenInContainer(ContainerNode&);
 
     void removeDetachedChildren();
     void setFirstChild(Node* child) { m_firstChild = child; }
@@ -169,8 +152,9 @@ protected:
 
 private:
     void executePreparedChildrenRemoval();
-    enum class DeferChildrenChanged { Yes, No };
-    NodeVector removeAllChildrenWithScriptAssertion(ChildChange::Source, DeferChildrenChanged = DeferChildrenChanged::No);
+    enum class DeferChildrenChanged : bool { No, Yes };
+    enum class DidRemoveElements : bool { No, Yes };
+    DidRemoveElements removeAllChildrenWithScriptAssertion(ChildChange::Source, NodeVector& children, DeferChildrenChanged = DeferChildrenChanged::No);
     bool removeNodeWithScriptAssertion(Node&, ChildChange::Source);
     ExceptionOr<void> removeSelfOrChildNodesForInsertion(Node&, NodeVector&);
 
@@ -223,12 +207,10 @@ inline Node& Node::rootNode() const
     return traverseToRootNode();
 }
 
-inline NodeVector collectChildNodes(Node& node)
+inline void collectChildNodes(Node& node, NodeVector& children)
 {
-    NodeVector children;
     for (Node* child = node.firstChild(); child; child = child->nextSibling())
         children.append(*child);
-    return children;
 }
 
 class ChildNodesLazySnapshot {

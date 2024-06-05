@@ -44,6 +44,7 @@
 #include "Logging.h"
 #include "ScriptExecutionContext.h"
 #include "ThreadSafeDataBuffer.h"
+#include "WebCoreOpaqueRoot.h"
 #include <JavaScriptCore/StrongInlines.h>
 #include <variant>
 #include <wtf/IsoMallocInlines.h>
@@ -295,10 +296,15 @@ void IDBRequest::dispatchEvent(Event& event)
     LOG(IndexedDB, "IDBRequest::dispatchEvent - %s (%p)", event.type().string().utf8().data(), this);
 
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
-    ASSERT(m_hasPendingActivity);
     ASSERT(!isContextStopped());
 
     Ref protectedThis { *this };
+    if (!event.isTrusted()) {
+        EventDispatcher::dispatchEvent({ this }, event);
+        return;
+    }
+
+    ASSERT(m_hasPendingActivity);
     m_eventBeingDispatched = &event;
 
     if (event.type() != eventNames().blockedEvent)
@@ -311,9 +317,7 @@ void IDBRequest::dispatchEvent(Event& event)
     else if (m_transaction && !m_transaction->didDispatchAbortOrCommit())
         targets = { this, m_transaction.get(), &m_transaction->database() };
 
-    if (event.isTrusted())
         m_hasPendingActivity = false;
-
     {
         TransactionActivator activator(m_transaction.get());
         EventDispatcher::dispatchEvent(targets, event);
@@ -573,6 +577,11 @@ bool IDBRequest::willAbortTransactionAfterDispatchingEvent() const
         return true;
 
     return !m_eventBeingDispatched->defaultPrevented() && m_eventBeingDispatched->type() == eventNames().errorEvent;
+}
+
+WebCoreOpaqueRoot root(IDBRequest* request)
+{
+    return WebCoreOpaqueRoot { request };
 }
 
 } // namespace WebCore

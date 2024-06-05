@@ -44,6 +44,10 @@ typedef const struct __CTLine * CTLineRef;
 
 typedef struct hb_buffer_t hb_buffer_t;
 
+namespace WTF {
+class CachedTextBreakIterator;
+}
+
 namespace WebCore {
 
 class FontCascade;
@@ -169,6 +173,8 @@ private:
 
     FloatPoint glyphOrigin(unsigned index) const { return index < m_glyphOrigins.size() ? m_glyphOrigins[index] : FloatPoint(); }
 
+    bool advanceByCombiningCharacterSequence(const WTF::CachedTextBreakIterator& graphemeClusterIterator, unsigned& location, UChar32& baseCharacter, unsigned& markCount);
+
     Vector<FloatSize, 256> m_adjustedBaseAdvances;
     Vector<FloatPoint, 256> m_glyphOrigins;
     Vector<CGGlyph, 256> m_adjustedGlyphs;
@@ -213,7 +219,7 @@ private:
     float m_expansionPerOpportunity { 0 };
 
     float m_minGlyphBoundingBoxX { std::numeric_limits<float>::max() };
-    float m_maxGlyphBoundingBoxX { std::numeric_limits<float>::min() };
+    float m_maxGlyphBoundingBoxX { std::numeric_limits<float>::lowest() };
     float m_minGlyphBoundingBoxY { std::numeric_limits<float>::max() };
     float m_maxGlyphBoundingBoxY { std::numeric_limits<float>::min() };
 

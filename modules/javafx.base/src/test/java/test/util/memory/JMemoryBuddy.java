@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.ref.WeakReference;
 import java.text.SimpleDateFormat;
+import java.util.Collection;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.Objects;
@@ -88,6 +89,38 @@ public class JMemoryBuddy {
             AssertCollectable assertCollectable = new AssertCollectable(weakReference);
             createHeapDump();
             throw new AssertionError("Content of WeakReference was not collected. content: " + weakReference.get());
+        }
+    }
+
+    /**
+     * Checks whether the content of all references from a WeakReference array can be collected.
+     * @param weakReferences WeakReference objects to check.
+     */
+    public static void assertCollectable(WeakReference[] weakReferences) {
+        for (WeakReference wr : weakReferences) {
+            assertCollectable(wr);
+        }
+    }
+
+    /**
+     * Checks whether the content of all references from a WeakReference Collection can be collected.
+     * @param weakReferences WeakReference objects to check.
+     */
+    public static <T> void assertCollectable(Collection<WeakReference<T>> weakReferences) {
+        for (WeakReference<T> wr : weakReferences) {
+            assertCollectable(wr);
+        }
+    }
+
+    /**
+     * Checks whether the content of provided WeakReference objects can be collected.
+     * @param weakReference The WeakReference to check.
+     * @param otherWeakReferences Other WeakReference objects to check.
+     */
+    public static void assertCollectable(WeakReference weakReference, WeakReference... otherWeakReferences) {
+        assertCollectable(weakReference);
+        for (WeakReference wr : otherWeakReferences) {
+            assertCollectable(wr);
         }
     }
 

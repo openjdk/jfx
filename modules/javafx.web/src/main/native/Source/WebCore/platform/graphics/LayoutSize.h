@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Google Inc. All rights reserved.
+ * Copyright (c) 2012-2013, Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -49,7 +49,7 @@ enum AspectRatioFit {
 
 class LayoutSize {
 public:
-    LayoutSize() : m_width(0), m_height(0) { }
+    LayoutSize() { }
     LayoutSize(const IntSize& size) : m_width(size.width()), m_height(size.height()) { }
     template<typename T, typename U> LayoutSize(T width, U height) : m_width(width), m_height(height) { }
 
@@ -58,10 +58,13 @@ public:
     LayoutUnit width() const { return m_width; }
     LayoutUnit height() const { return m_height; }
 
+    LayoutUnit minDimension() const { return std::min(m_width, m_height); }
+    LayoutUnit maxDimension() const { return std::max(m_width, m_height); }
+
     template<typename T> void setWidth(T width) { m_width = width; }
     template<typename T> void setHeight(T height) { m_height = height; }
 
-    bool isEmpty() const { return m_width <= 0 || m_height <= 0; }
+    bool isEmpty() const { return m_width.rawValue() <= 0 || m_height.rawValue() <= 0; }
     bool isZero() const { return !m_width && !m_height; }
 
     float aspectRatio() const { return static_cast<float>(m_width) / static_cast<float>(m_height); }
@@ -178,11 +181,6 @@ inline LayoutSize operator-(const LayoutSize& size)
 inline bool operator==(const LayoutSize& a, const LayoutSize& b)
 {
     return a.width() == b.width() && a.height() == b.height();
-}
-
-inline bool operator!=(const LayoutSize& a, const LayoutSize& b)
-{
-    return a.width() != b.width() || a.height() != b.height();
 }
 
 inline IntSize flooredIntSize(const LayoutSize& s)

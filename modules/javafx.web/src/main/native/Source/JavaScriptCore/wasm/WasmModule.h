@@ -28,7 +28,7 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "WasmCalleeGroup.h"
-#include "WasmEmbedder.h"
+#include "WasmJS.h"
 #include "WasmMemory.h"
 #include "WasmOps.h"
 #include <wtf/Expected.h>
@@ -36,10 +36,14 @@
 #include <wtf/SharedTask.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
-namespace JSC { namespace Wasm {
+namespace JSC {
+
+class VM;
+
+namespace Wasm {
 
 class LLIntPlan;
-struct Context;
+class IPIntPlan;
 struct ModuleInformation;
 
 class Module : public ThreadSafeRefCounted<Module> {
@@ -48,19 +52,23 @@ public:
     typedef void CallbackType(ValidationResult&&);
     using AsyncValidationCallback = RefPtr<SharedTask<CallbackType>>;
 
-    static ValidationResult validateSync(Context*, Vector<uint8_t>&& source);
-    static void validateAsync(Context*, Vector<uint8_t>&& source, Module::AsyncValidationCallback&&);
+    static ValidationResult validateSync(VM&, Vector<uint8_t>&& source);
+    static void validateAsync(VM&, Vector<uint8_t>&& source, Module::AsyncValidationCallback&&);
 
     static Ref<Module> create(LLIntPlan& plan)
     {
         return adoptRef(*new Module(plan));
     }
+    static Ref<Module> create(IPIntPlan& plan)
+    {
+        return adoptRef(*new Module(plan));
+    }
 
-    Wasm::SignatureIndex signatureIndexFromFunctionIndexSpace(unsigned functionIndexSpace) const;
+    Wasm::TypeIndex typeIndexFromFunctionIndexSpace(unsigned functionIndexSpace) const;
     const Wasm::ModuleInformation& moduleInformation() const { return m_moduleInformation.get(); }
 
-    Ref<CalleeGroup> compileSync(Context*, MemoryMode);
-    void compileAsync(Context*, MemoryMode, CalleeGroup::AsyncCompilationCallback&&);
+    Ref<CalleeGroup> compileSync(VM&, MemoryMode);
+    void compileAsync(VM&, MemoryMode, CalleeGroup::AsyncCompilationCallback&&);
 
     JS_EXPORT_PRIVATE ~Module();
 
@@ -68,13 +76,18 @@ public:
 
     void copyInitialCalleeGroupToAllMemoryModes(MemoryMode);
 
+    WasmToJSCallee& wasmToJSCallee() { return m_wasmToJSCallee.get(); }
+
 private:
-    Ref<CalleeGroup> getOrCreateCalleeGroup(Context*, MemoryMode);
+    Ref<CalleeGroup> getOrCreateCalleeGroup(VM&, MemoryMode);
 
     Module(LLIntPlan&);
+    Module(IPIntPlan&);
     Ref<ModuleInformation> m_moduleInformation;
-    RefPtr<CalleeGroup> m_calleeGroups[Wasm::NumberOfMemoryModes];
+    RefPtr<CalleeGroup> m_calleeGroups[numberOfMemoryModes];
     Ref<LLIntCallees> m_llintCallees;
+    Ref<IPIntCallees> m_ipintCallees;
+    Ref<WasmToJSCallee> m_wasmToJSCallee;
     MacroAssemblerCodeRef<JITCompilationPtrTag> m_llintEntryThunks;
     Lock m_lock;
 };

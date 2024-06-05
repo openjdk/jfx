@@ -43,11 +43,6 @@
 #include <mutex>
 #include <sys/time.h>
 #elif OS(WINDOWS)
-
-// Windows is first since we want to use hires timers, despite USE(CF)
-// being defined.
-// If defined, WIN32_LEAN_AND_MEAN disables timeBeginPeriod/timeEndPeriod.
-#undef WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <math.h>
 #include <stdint.h>
@@ -185,7 +180,7 @@ static inline double currentTime()
     // force a clock re-sync if we've drifted
     double lowResElapsed = lowResTime - syncLowResUTCTime;
     const double maximumAllowedDriftMsec = 15.625 * 2.0; // 2x the typical low-res accuracy
-    if (fabs(highResElapsed - lowResElapsed) > maximumAllowedDriftMsec)
+    if (std::abs(highResElapsed - lowResElapsed) > maximumAllowedDriftMsec)
         syncedTime = false;
 
     // make sure time doesn't run backwards (only correct if difference is < 2 seconds, since DST or clock changes could occur)
@@ -275,17 +270,6 @@ MonotonicTime MonotonicTime::now()
     struct timespec ts { };
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return fromRawSeconds(static_cast<double>(ts.tv_sec) + ts.tv_nsec / 1.0e9);
-#elif OS(WINDOWS) && PLATFORM(JAVA)
-    // monotonicallyIncreasingTime() implementation is done by taking reference from glib library
-    uint64_t ticks = GetTickCount64();
-    uint32_t ticks32 = timeGetTime();
-    uint32_t ticksAs32Bit = static_cast<uint32_t>(ticks);
-    if (ticks32 - ticksAs32Bit <= INT_MAX) {
-        ticks += ticks32 - ticksAs32Bit;
-    } else {
-        ticks -= ticksAs32Bit - ticks32;
-    }
-    return fromRawSeconds(ticks / 1000.0);
 #else
     static double lastTime = 0;
     double currentTimeNow = currentTime();

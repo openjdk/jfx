@@ -35,12 +35,12 @@ class SVGPathSegList;
 String buildStringFromPath(const Path&);
 
 // String/SVGPathByteStream -> Path
-Path buildPathFromString(const String&);
+Path buildPathFromString(StringView);
 Path buildPathFromByteStream(const SVGPathByteStream&);
 
 // SVGPathSegList/String -> SVGPathByteStream
 bool buildSVGPathByteStreamFromSVGPathSegList(const SVGPathSegList&, SVGPathByteStream& result, PathParsingMode, bool checkForInitialMoveTo = true);
-bool buildSVGPathByteStreamFromString(const String&, SVGPathByteStream&, PathParsingMode);
+bool buildSVGPathByteStreamFromString(StringView, SVGPathByteStream&, PathParsingMode);
 
 // SVGPathByteStream -> String
 bool buildStringFromByteStream(const SVGPathByteStream&, String&, PathParsingMode, bool checkForInitialMoveTo = true);
@@ -59,6 +59,6 @@ FloatPoint getPointAtLengthOfSVGPathByteStream(const SVGPathByteStream&, float l
 
 // Convert an SVG path byte stream containing a mixed of relative/absolute draw commands into another byte stream
 // such that all draw commands are absolute. Returns nullptr if an error occurs.
-std::unique_ptr<SVGPathByteStream> convertSVGPathByteStreamToAbsoluteCoordinates(const SVGPathByteStream&);
+std::optional<SVGPathByteStream> convertSVGPathByteStreamToAbsoluteCoordinates(const SVGPathByteStream&);
 
 } // namespace WebCore

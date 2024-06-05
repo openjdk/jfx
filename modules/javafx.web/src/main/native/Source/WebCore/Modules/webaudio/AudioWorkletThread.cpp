@@ -37,10 +37,10 @@
 
 namespace WebCore {
 
-AudioWorkletThread::AudioWorkletThread(AudioWorkletMessagingProxy& messagingProxy, const WorkletParameters& parameters)
+AudioWorkletThread::AudioWorkletThread(AudioWorkletMessagingProxy& messagingProxy, WorkletParameters&& parameters)
     : WorkerOrWorkletThread(parameters.identifier.isolatedCopy())
-    , m_messagingProxy(messagingProxy)
-    , m_parameters(parameters.isolatedCopy())
+    , m_messagingProxy(&messagingProxy)
+    , m_parameters(WTFMove(parameters).isolatedCopy())
 {
 }
 
@@ -51,7 +51,12 @@ RefPtr<WorkerOrWorkletGlobalScope> AudioWorkletThread::createGlobalScope()
     return AudioWorkletGlobalScope::tryCreate(*this, m_parameters);
 }
 
-WorkerLoaderProxy& AudioWorkletThread::workerLoaderProxy()
+void AudioWorkletThread::clearProxies()
+{
+    m_messagingProxy = nullptr;
+}
+
+WorkerLoaderProxy* AudioWorkletThread::workerLoaderProxy()
 {
     return m_messagingProxy;
 }

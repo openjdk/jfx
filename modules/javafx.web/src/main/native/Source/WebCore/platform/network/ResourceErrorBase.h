@@ -34,8 +34,8 @@ namespace WebCore {
 
 class ResourceError;
 
-WEBCORE_EXPORT extern const char* const errorDomainWebKitInternal; // Used for errors that won't be exposed to clients.
-WEBCORE_EXPORT extern const char* const errorDomainWebKitServiceWorker; // Used for errors that happen when loading a resource from a service worker.
+WEBCORE_EXPORT extern const ASCIILiteral errorDomainWebKitInternal; // Used for errors that won't be exposed to clients.
+WEBCORE_EXPORT extern const ASCIILiteral errorDomainWebKitServiceWorker; // Used for errors that happen when loading a resource from a service worker.
 
 class ResourceErrorBase {
     WTF_MAKE_FAST_ALLOCATED;
@@ -57,6 +57,11 @@ public:
         Timeout
     };
     enum class IsSanitized : bool { No, Yes };
+
+    enum class ErrorRecoveryMethod : bool {
+        NoRecovery,
+        HTTPFallback
+    };
 
     bool isNull() const { return m_type == Type::Null; }
     bool isGeneral() const { return m_type == Type::General; }
@@ -107,7 +112,6 @@ private:
 WEBCORE_EXPORT ResourceError internalError(const URL&);
 
 inline bool operator==(const ResourceError& a, const ResourceError& b) { return ResourceErrorBase::compare(a, b); }
-inline bool operator!=(const ResourceError& a, const ResourceError& b) { return !(a == b); }
 
 } // namespace WebCore
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,7 @@
 #include "JSRemoteDOMWindow.h"
 
 #include "JSDOMExceptionHandling.h"
-#include "JSDOMWindowCustom.h"
+#include "JSLocalDOMWindowCustom.h"
 #include "WebCoreJSClientData.h"
 
 namespace WebCore {
@@ -39,7 +39,7 @@ bool JSRemoteDOMWindow::getOwnPropertySlot(JSObject* object, JSGlobalObject* lex
         return getOwnPropertySlotByIndex(object, lexicalGlobalObject, index.value(), slot);
 
     auto* thisObject = jsCast<JSRemoteDOMWindow*>(object);
-    return jsDOMWindowGetOwnPropertySlotRestrictedAccess<DOMWindowType::Remote>(thisObject, thisObject->wrapped(), *lexicalGlobalObject, propertyName, slot, String());
+    return jsLocalDOMWindowGetOwnPropertySlotRestrictedAccess<DOMWindowType::Remote>(thisObject, thisObject->wrapped(), *lexicalGlobalObject, propertyName, slot, String());
 }
 
 bool JSRemoteDOMWindow::getOwnPropertySlotByIndex(JSObject* object, JSGlobalObject* lexicalGlobalObject, unsigned index, PropertySlot& slot)
@@ -52,7 +52,7 @@ bool JSRemoteDOMWindow::getOwnPropertySlotByIndex(JSObject* object, JSGlobalObje
 
     // FIXME: Add support for indexed properties.
 
-    return jsDOMWindowGetOwnPropertySlotRestrictedAccess<DOMWindowType::Remote>(thisObject, thisObject->wrapped(), *lexicalGlobalObject, Identifier::from(vm, index), slot, String());
+    return jsLocalDOMWindowGetOwnPropertySlotRestrictedAccess<DOMWindowType::Remote>(thisObject, thisObject->wrapped(), *lexicalGlobalObject, Identifier::from(vm, index), slot, String());
 }
 
 bool JSRemoteDOMWindow::put(JSCell* cell, JSGlobalObject* lexicalGlobalObject, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
@@ -68,7 +68,7 @@ bool JSRemoteDOMWindow::put(JSCell* cell, JSGlobalObject* lexicalGlobalObject, P
 
     // We only allow setting "location" attribute cross-origin.
     if (propertyName == builtinNames(vm).locationPublicName()) {
-        auto* setter = s_info.staticPropHashTable->entry(propertyName)->propertyPutter();
+        auto setter = s_info.staticPropHashTable->entry(propertyName)->propertyPutter();
         scope.release();
         setter(lexicalGlobalObject, JSValue::encode(slot.thisValue()), JSValue::encode(value), propertyName);
         return true;

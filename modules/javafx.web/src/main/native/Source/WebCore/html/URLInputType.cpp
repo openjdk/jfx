@@ -33,7 +33,6 @@
 #include "URLInputType.h"
 
 #include "HTMLInputElement.h"
-#include "HTMLParserIdioms.h"
 #include "InputTypeNames.h"
 #include "LocalizedStrings.h"
 #include <wtf/URL.h>
@@ -47,7 +46,7 @@ const AtomString& URLInputType::formControlType() const
 
 bool URLInputType::typeMismatchFor(const String& value) const
 {
-    return !value.isEmpty() && !URL(URL(), value).isValid();
+    return !value.isEmpty() && !URL(value).isValid();
 }
 
 bool URLInputType::typeMismatch() const
@@ -63,7 +62,7 @@ String URLInputType::typeMismatchText() const
 
 String URLInputType::sanitizeValue(const String& proposedValue) const
 {
-    return stripLeadingAndTrailingHTMLSpaces(BaseTextInputType::sanitizeValue(proposedValue));
+    return BaseTextInputType::sanitizeValue(proposedValue).trim(isASCIIWhitespace);
 }
 
 } // namespace WebCore

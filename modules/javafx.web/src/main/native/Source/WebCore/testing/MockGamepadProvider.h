@@ -29,6 +29,8 @@
 
 #include "GamepadProvider.h"
 #include "MockGamepad.h"
+#include <wtf/HashMap.h>
+#include <wtf/HashSet.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -41,10 +43,13 @@ public:
 
     WEBCORE_TESTSUPPORT_EXPORT void startMonitoringGamepads(GamepadProviderClient&) final;
     WEBCORE_TESTSUPPORT_EXPORT void stopMonitoringGamepads(GamepadProviderClient&) final;
-    const Vector<PlatformGamepad*>& platformGamepads() final { return m_connectedGamepadVector; }
+    const Vector<WeakPtr<PlatformGamepad>>& platformGamepads() final { return m_connectedGamepadVector; }
     bool isMockGamepadProvider() const final { return true; }
+    void playEffect(unsigned, const String&, GamepadHapticEffectType, const GamepadEffectParameters&, CompletionHandler<void(bool)>&&) final;
+    void stopEffects(unsigned, const String&, CompletionHandler<void()>&&) final;
+    void clearGamepadsForTesting() final;
 
-    void setMockGamepadDetails(unsigned index, const String& gamepadID, const String& mapping, unsigned axisCount, unsigned buttonCount);
+    void setMockGamepadDetails(unsigned index, const String& gamepadID, const String& mapping, unsigned axisCount, unsigned buttonCount, bool supportsDualRumble);
     bool setMockGamepadAxisValue(unsigned index, unsigned axisIndex, double value);
     bool setMockGamepadButtonValue(unsigned index, unsigned buttonIndex, double value);
     bool connectMockGamepad(unsigned index);
@@ -55,7 +60,8 @@ private:
 
     void gamepadInputActivity();
 
-    Vector<PlatformGamepad*> m_connectedGamepadVector;
+    Vector<WeakPtr<PlatformGamepad>> m_connectedGamepadVector;
+    WeakHashMap<GamepadProviderClient, WeakHashSet<PlatformGamepad>>  m_invisibleGamepadsForClient;
     Vector<std::unique_ptr<MockGamepad>> m_mockGamepadVector;
 
     bool m_shouldScheduleActivityCallback { true };

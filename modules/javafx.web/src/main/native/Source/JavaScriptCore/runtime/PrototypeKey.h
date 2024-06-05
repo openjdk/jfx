@@ -25,24 +25,24 @@
 
 #pragma once
 
-#include <wtf/HashTable.h>
+#include <wtf/HashTraits.h>
 
 namespace JSC {
 
 class FunctionExecutable;
-class JSGlobalObject;
 class JSObject;
+
+struct ClassInfo;
 
 class PrototypeKey {
 public:
     PrototypeKey() { }
 
-    PrototypeKey(JSObject* prototype, FunctionExecutable* executable, unsigned inlineCapacity, const ClassInfo* classInfo, JSGlobalObject* globalObject)
+    PrototypeKey(JSObject* prototype, FunctionExecutable* executable, unsigned inlineCapacity, const ClassInfo* classInfo)
         : m_prototype(prototype)
         , m_executable(executable)
         , m_inlineCapacity(inlineCapacity)
         , m_classInfo(classInfo)
-        , m_globalObject(globalObject)
     {
     }
 
@@ -55,24 +55,21 @@ public:
     FunctionExecutable* executable() const { return m_executable; }
     unsigned inlineCapacity() const { return m_inlineCapacity; }
     const ClassInfo* classInfo() const { return m_classInfo; }
-    JSGlobalObject* globalObject() const { return m_globalObject; }
 
     bool operator==(const PrototypeKey& other) const
     {
         return m_prototype == other.m_prototype
             && m_executable == other.m_executable
             && m_inlineCapacity == other.m_inlineCapacity
-            && m_classInfo == other.m_classInfo
-            && m_globalObject == other.m_globalObject;
+            && m_classInfo == other.m_classInfo;
     }
 
-    bool operator!=(const PrototypeKey& other) const { return !(*this == other); }
     explicit operator bool() const { return *this != PrototypeKey(); }
     bool isHashTableDeletedValue() const { return *this == PrototypeKey(WTF::HashTableDeletedValue); }
 
     unsigned hash() const
     {
-        return WTF::IntHash<uintptr_t>::hash(bitwise_cast<uintptr_t>(m_prototype) ^ bitwise_cast<uintptr_t>(m_executable) ^ bitwise_cast<uintptr_t>(m_classInfo) ^ bitwise_cast<uintptr_t>(m_globalObject)) + m_inlineCapacity;
+        return WTF::IntHash<uintptr_t>::hash(bitwise_cast<uintptr_t>(m_prototype) ^ bitwise_cast<uintptr_t>(m_executable) ^ bitwise_cast<uintptr_t>(m_classInfo)) + m_inlineCapacity;
     }
 
 private:
@@ -82,7 +79,6 @@ private:
     FunctionExecutable* m_executable { nullptr };
     unsigned m_inlineCapacity { 0 };
     const ClassInfo* m_classInfo { nullptr };
-    JSGlobalObject* m_globalObject { nullptr };
 };
 
 struct PrototypeKeyHash {
@@ -102,4 +98,3 @@ template<typename> struct HashTraits;
 template<> struct HashTraits<JSC::PrototypeKey> : SimpleClassHashTraits<JSC::PrototypeKey> { };
 
 } // namespace WTF
-

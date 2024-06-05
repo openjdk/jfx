@@ -23,30 +23,27 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef MediaSourcePrivateClient_h
-#define MediaSourcePrivateClient_h
+#pragma once
 
 #if ENABLE(MEDIA_SOURCE)
 
 #include "PlatformTimeRanges.h"
 #include <wtf/Logger.h>
-#include <wtf/RefCounted.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class MediaSourcePrivate;
 
-class MediaSourcePrivateClient : public RefCounted<MediaSourcePrivateClient> {
+class MediaSourcePrivateClient : public CanMakeWeakPtr<MediaSourcePrivateClient> {
 public:
     virtual ~MediaSourcePrivateClient() = default;
 
     virtual void setPrivateAndOpen(Ref<MediaSourcePrivate>&&) = 0;
     virtual MediaTime duration() const = 0;
-    virtual std::unique_ptr<PlatformTimeRanges> buffered() const = 0;
+    virtual const PlatformTimeRanges& buffered() const = 0;
     virtual void seekToTime(const MediaTime&) = 0;
-#if USE(GSTREAMER)
     virtual void monitorSourceBuffers() = 0;
-#endif
 
 #if !RELEASE_LOG_DISABLED
     virtual void setLogIdentifier(const void*) = 0;
@@ -59,5 +56,3 @@ public:
 }
 
 #endif // ENABLE(MEDIA_SOURCE)
-
-#endif

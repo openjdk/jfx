@@ -29,9 +29,11 @@
 #include "NodeRenderStyle.h"
 #include "RenderElement.h"
 #include "RenderStyle.h"
+#include "ResolvedStyle.h"
 #include "StyleInheritedData.h"
 #include "StyleResolver.h"
 #include "Text.h"
+#include "TextManipulationController.h"
 #include "TextNodeTraversal.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/Ref.h>
@@ -85,13 +87,13 @@ StringWithDirection HTMLTitleElement::computedTextWithDirection()
     if (auto* computedStyle = this->computedStyle())
         direction = computedStyle->direction();
     else
-        direction = styleResolver().styleForElement(*this, { parentElement() ? parentElement()->renderStyle() : nullptr }).renderStyle->direction();
+        direction = styleResolver().styleForElement(*this, { parentElement() ? parentElement()->renderStyle() : nullptr }).style->direction();
     return { text(), direction };
 }
 
-void HTMLTitleElement::setText(const String& value)
+void HTMLTitleElement::setText(String&& value)
 {
-    setTextContent(value);
+    setTextContent(WTFMove(value));
 }
 
 }

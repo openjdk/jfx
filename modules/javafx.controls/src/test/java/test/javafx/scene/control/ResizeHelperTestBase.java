@@ -65,6 +65,14 @@ public abstract class ResizeHelperTestBase {
         }
     }
 
+    protected static double sumColumnWidths(List<? extends TableColumnBase<?,?>> cols) {
+        double w = 0.0;
+        for (TableColumnBase<?,?> c: cols) {
+            w += c.getWidth();
+        }
+        return w;
+    }
+
     protected static class SpecGen {
         public static final int[] WIDTHS = {
             0, 10, 100, 10_000, 200, 50

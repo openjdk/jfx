@@ -44,7 +44,7 @@ public:
     {
     }
 
-#define WASM_SECTION_DECLARE_PARSER(NAME, ID, DESCRIPTION) PartialResult WARN_UNUSED_RETURN parse ## NAME();
+#define WASM_SECTION_DECLARE_PARSER(NAME, ID, ORDERING, DESCRIPTION) PartialResult WARN_UNUSED_RETURN parse ## NAME();
     FOR_EACH_KNOWN_WASM_SECTION(WASM_SECTION_DECLARE_PARSER)
 #undef WASM_SECTION_DECLARE_PARSER
 
@@ -66,17 +66,28 @@ private:
     PartialResult WARN_UNUSED_RETURN parseTableHelper(bool isImport);
     enum class LimitsType { Memory, Table };
     PartialResult WARN_UNUSED_RETURN parseResizableLimits(uint32_t& initial, std::optional<uint32_t>& maximum, bool& isShared, LimitsType);
-    PartialResult WARN_UNUSED_RETURN parseInitExpr(uint8_t&, uint64_t&, Type& initExprType);
+    PartialResult WARN_UNUSED_RETURN parseInitExpr(uint8_t&, uint64_t&, v128_t&, Type& initExprType);
     PartialResult WARN_UNUSED_RETURN parseI32InitExpr(std::optional<I32InitExpr>&, ASCIILiteral failMessage);
 
-    PartialResult WARN_UNUSED_RETURN validateElementTableIdx(uint32_t);
+    PartialResult WARN_UNUSED_RETURN parseFunctionType(uint32_t position, RefPtr<TypeDefinition>&);
+    PartialResult WARN_UNUSED_RETURN parsePackedType(PackedType&);
+    PartialResult WARN_UNUSED_RETURN parseStorageType(StorageType&);
+    PartialResult WARN_UNUSED_RETURN parseStructType(uint32_t position, RefPtr<TypeDefinition>&);
+    PartialResult WARN_UNUSED_RETURN parseArrayType(uint32_t position, RefPtr<TypeDefinition>&);
+    PartialResult WARN_UNUSED_RETURN parseRecursionGroup(uint32_t position, RefPtr<TypeDefinition>&);
+    PartialResult WARN_UNUSED_RETURN parseSubtype(uint32_t position, RefPtr<TypeDefinition>&, Vector<TypeIndex>&);
+
+    PartialResult WARN_UNUSED_RETURN validateElementTableIdx(uint32_t, TableElementType);
     PartialResult WARN_UNUSED_RETURN parseI32InitExprForElementSection(std::optional<I32InitExpr>&);
     PartialResult WARN_UNUSED_RETURN parseElementKind(uint8_t& elementKind);
     PartialResult WARN_UNUSED_RETURN parseIndexCountForElementSection(uint32_t&, const unsigned);
-    PartialResult WARN_UNUSED_RETURN parseElementSegmentVectorOfExpressions(Vector<uint32_t>&, const unsigned, const unsigned);
+    PartialResult WARN_UNUSED_RETURN parseElementSegmentVectorOfExpressions(TableElementType, Vector<uint32_t>&, const unsigned, const unsigned);
     PartialResult WARN_UNUSED_RETURN parseElementSegmentVectorOfIndexes(Vector<uint32_t>&, const unsigned, const unsigned);
 
     PartialResult WARN_UNUSED_RETURN parseI32InitExprForDataSection(std::optional<I32InitExpr>&);
+
+    static bool checkStructuralSubtype(const TypeDefinition&, const TypeDefinition&);
+    static bool checkSubtypeValidity(const TypeDefinition&, const TypeDefinition&);
 
     size_t m_offsetInSource;
     Ref<ModuleInformation> m_info;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,6 +59,7 @@ extern jboolean checkAndClearException(JNIEnv *env);
 
 jstring createJavaString(JNIEnv *env, CFStringRef stringRef)
 {
+    if (stringRef == NULL) return NULL;
     CFIndex length = CFStringGetLength(stringRef);
     UniChar buffer[length];
     CFStringGetCharacters(stringRef, CFRangeMake(0, length), buffer);
@@ -79,7 +80,7 @@ JNIEXPORT jfloat JNICALL Java_com_sun_javafx_font_MacFontFinder_getSystemFontSiz
   (JNIEnv *env, jclass obj)
 {
     CTFontRef font = CTFontCreateUIFontForLanguage(
-                         kCTFontSystemFontType,
+                         kCTFontUIFontSystem,
                          0.0, //get system font with default size
                          NULL);
     jfloat systemFontDefaultSize = (jfloat) CTFontGetSize (font);
@@ -175,7 +176,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_javafx_font_MacFontFinder_getFontDat
      * to the list so JavaFX can find it. If the UI font is added twice it gets
      * handled in Java.
      */
-    CTFontRef font = CTFontCreateUIFontForLanguage(kCTFontSystemFontType, 0, NULL);
+    CTFontRef font = CTFontCreateUIFontForLanguage(kCTFontUIFontSystem, 0, NULL);
     CTFontDescriptorRef fd = CTFontCopyFontDescriptor(font);
     j = addCTFontDescriptor(fd, env, result, j);
     CFRelease(fd);
@@ -183,14 +184,89 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_javafx_font_MacFontFinder_getFontDat
 
     /* Also add the EmphasizedSystemFont as it might make the bold version
      * for the system font available to JavaFX.
+     * NOTE: macOS is using font variations for the system font,
+     * so System Font and System Font Bold are in the same .ttf.
      */
-    font = CTFontCreateUIFontForLanguage(kCTFontEmphasizedSystemFontType, 0, NULL);
+    font = CTFontCreateUIFontForLanguage(kCTFontUIFontEmphasizedSystem, 0, NULL);
     fd = CTFontCopyFontDescriptor(font);
     j = addCTFontDescriptor(fd, env, result, j);
     CFRelease(fd);
     CFRelease(font);
 
     return result;
+}
+
+JNIEXPORT jobjectArray JNICALL
+Java_com_sun_javafx_font_MacFontFinder_getCascadeList
+(JNIEnv *env, jclass cls, jlong fontRef)
+{
+    CTFontRef ctFontRef = (CTFontRef)fontRef;
+
+    CFArrayRef codes = CFLocaleCopyISOLanguageCodes();
+    CFArrayRef fds = CTFontCopyDefaultCascadeListForLanguages(ctFontRef, codes);
+    CFRelease(codes);
+
+    CFIndex cnt = CFArrayGetCount(fds);
+    jclass jStringClass = (*env)->FindClass(env, "java/lang/String");
+    int SPE = 2;
+    jobjectArray names = (*env)->NewObjectArray(env, cnt*SPE, jStringClass, NULL);
+    if (names == NULL) {
+        CFRelease(fds);
+        return NULL;
+    }
+    for (CFIndex i=0; i<cnt; i++) {
+        CTFontDescriptorRef ref = CFArrayGetValueAtIndex(fds, i);
+        CFStringRef fontname = CTFontDescriptorCopyAttribute(ref, kCTFontNameAttribute);
+        CFStringRef displayName = CTFontDescriptorCopyAttribute(ref, kCTFontDisplayNameAttribute);
+        CFURLRef url = CTFontDescriptorCopyAttribute(ref, kCTFontURLAttribute);
+        CFStringRef file = url ? CFURLCopyFileSystemPath(url, kCFURLPOSIXPathStyle) : NULL;
+
+        jstring jFontDisplayName = createJavaString(env, displayName);
+        CFRelease(displayName);
+        jstring jFile = createJavaString(env, file);
+        if (file != NULL) CFRelease(file);
+
+        (*env)->SetObjectArrayElement(env, names, (i*SPE)+0, jFontDisplayName);
+        (*env)->SetObjectArrayElement(env, names, (i*SPE)+1, jFile);
+
+        (*env)->DeleteLocalRef(env, jFontDisplayName);
+        if (jFile != NULL) (*env)->DeleteLocalRef(env, jFile);
+    }
+    CFRelease(fds);
+    return names;
+}
+
+JNIEXPORT jlongArray JNICALL
+Java_com_sun_javafx_font_MacFontFinder_getCascadeListRefs
+(JNIEnv *env, jclass cls, jlong fontRef)
+{
+    CTFontRef ctFontRef = (CTFontRef)fontRef;
+
+    CFArrayRef codes = CFLocaleCopyISOLanguageCodes();
+    CFArrayRef fds = CTFontCopyDefaultCascadeListForLanguages(ctFontRef, codes);
+    CFRelease(codes);
+
+    CFIndex cnt = CFArrayGetCount(fds);
+    jlongArray refs = (*env)->NewLongArray(env, cnt);
+    if (refs == NULL) {
+        CFRelease(fds);
+        return NULL;
+    }
+    jlong *refArr = calloc(cnt, sizeof(jlong));
+    if (refArr == NULL) {
+        CFRelease(fds);
+        (*env)->DeleteLocalRef(env, refs); // not strictly needed.
+        return NULL;
+    }
+    for (CFIndex i=0; i<cnt; i++) {
+        CTFontDescriptorRef descRef = CFArrayGetValueAtIndex(fds, i);
+        CTFontRef ref = CTFontCreateWithFontDescriptor(descRef, 0.0, NULL);
+        refArr[i] = (jlong)ref;
+    }
+    (*env)->SetLongArrayRegion(env, refs, 0, cnt, refArr);
+    free(refArr);
+    CFRelease(fds);
+    return refs;
 }
 
 #endif /* __APPLE__ */

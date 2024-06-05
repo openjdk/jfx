@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Torch Mobile, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,6 +27,7 @@
 #include "config.h"
 #include "CachedSVGFont.h"
 
+#include "ElementChildIteratorInlines.h"
 #include "FontCreationContext.h"
 #include "FontDescription.h"
 #include "FontPlatformData.h"
@@ -39,7 +40,7 @@
 #include "Settings.h"
 #include "SharedBuffer.h"
 #include "TextResourceDecoder.h"
-#include "TypedElementDescendantIterator.h"
+#include "TypedElementDescendantIteratorInlines.h"
 
 namespace WebCore {
 
@@ -55,40 +56,41 @@ CachedSVGFont::CachedSVGFont(CachedResourceRequest&& request, CachedSVGFont& res
 {
 }
 
-RefPtr<Font> CachedSVGFont::createFont(const FontDescription& fontDescription, const AtomString& remoteURI, bool syntheticBold, bool syntheticItalic, const FontCreationContext& fontCreationContext)
+RefPtr<Font> CachedSVGFont::createFont(const FontDescription& fontDescription, bool syntheticBold, bool syntheticItalic, const FontCreationContext& fontCreationContext)
 {
-    ASSERT(firstFontFace(remoteURI));
-    return CachedFont::createFont(fontDescription, remoteURI, syntheticBold, syntheticItalic, fontCreationContext);
+    ASSERT(firstFontFace());
+    return CachedFont::createFont(fontDescription, syntheticBold, syntheticItalic, fontCreationContext);
 }
 
 FontPlatformData CachedSVGFont::platformDataFromCustomData(const FontDescription& fontDescription, bool bold, bool italic, const FontCreationContext& fontCreationContext)
 {
     if (m_externalSVGDocument)
-        return FontPlatformData(fontDescription.computedPixelSize(), bold, italic); // FIXME: This doesn't seem right.
+        return FontPlatformData(fontDescription.computedSize(), bold, italic); // FIXME: Why are we creating a bogus font here?
     return CachedFont::platformDataFromCustomData(fontDescription, bold, italic, fontCreationContext);
 }
 
-bool CachedSVGFont::ensureCustomFontData(const AtomString& remoteURI)
+bool CachedSVGFont::ensureCustomFontData()
 {
     if (!m_externalSVGDocument && !errorOccurred() && !isLoading() && m_data) {
         bool sawError = false;
         {
             // We may get here during render tree updates when events are forbidden.
             // Frameless document can't run scripts or call back to the client so this is safe.
-            m_externalSVGDocument = SVGDocument::create(nullptr, m_settings, URL());
-            auto decoder = TextResourceDecoder::create("application/xml");
+            auto externalSVGDocument = SVGDocument::create(nullptr, m_settings, URL());
+            auto decoder = TextResourceDecoder::create("application/xml"_s);
 
             ScriptDisallowedScope::DisableAssertionsInScope disabledScope;
 
-            m_externalSVGDocument->setContent(decoder->decodeAndFlush(m_data->makeContiguous()->data(), m_data->size()));
+            externalSVGDocument->setContent(decoder->decodeAndFlush(m_data->makeContiguous()->data(), m_data->size()));
             sawError = decoder->sawError();
+            m_externalSVGDocument = WTFMove(externalSVGDocument);
         }
 
         if (sawError)
             m_externalSVGDocument = nullptr;
         if (m_externalSVGDocument)
-            maybeInitializeExternalSVGFontElement(remoteURI);
-        if (!m_externalSVGFontElement || !firstFontFace(remoteURI))
+            maybeInitializeExternalSVGFontElement();
+        if (!m_externalSVGFontElement || !firstFontFace())
             return false;
         if (auto convertedFont = convertSVGToOTFFont(*m_externalSVGFontElement))
             m_convertedFont = SharedBuffer::create(WTFMove(convertedFont.value()));
@@ -102,7 +104,7 @@ bool CachedSVGFont::ensureCustomFontData(const AtomString& remoteURI)
     return m_externalSVGDocument && CachedFont::ensureCustomFontData(m_convertedFont.get());
 }
 
-SVGFontElement* CachedSVGFont::getSVGFontById(const String& fontName) const
+SVGFontElement* CachedSVGFont::getSVGFontById(const AtomString& fontName) const
 {
     ASSERT(m_externalSVGDocument);
     auto elements = descendantsOfType<SVGFontElement>(*m_externalSVGDocument);
@@ -117,21 +119,17 @@ SVGFontElement* CachedSVGFont::getSVGFontById(const String& fontName) const
     return nullptr;
 }
 
-SVGFontElement* CachedSVGFont::maybeInitializeExternalSVGFontElement(const AtomString& remoteURI)
+SVGFontElement* CachedSVGFont::maybeInitializeExternalSVGFontElement()
 {
     if (m_externalSVGFontElement)
         return m_externalSVGFontElement;
-    String fragmentIdentifier;
-    size_t start = remoteURI.find('#');
-    if (start != notFound)
-        fragmentIdentifier = remoteURI.string().substring(start + 1);
-    m_externalSVGFontElement = getSVGFontById(fragmentIdentifier);
+    m_externalSVGFontElement = getSVGFontById(url().fragmentIdentifier().toAtomString());
     return m_externalSVGFontElement;
 }
 
-SVGFontFaceElement* CachedSVGFont::firstFontFace(const AtomString& remoteURI)
+SVGFontFaceElement* CachedSVGFont::firstFontFace()
 {
-    if (!maybeInitializeExternalSVGFontElement(remoteURI))
+    if (!maybeInitializeExternalSVGFontElement())
         return nullptr;
 
     if (auto* firstFontFace = childrenOfType<SVGFontFaceElement>(*m_externalSVGFontElement).first())

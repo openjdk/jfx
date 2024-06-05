@@ -25,7 +25,7 @@
 #include "config.h"
 #include "LibWebRTCDataChannelHandler.h"
 
-#if USE(LIBWEBRTC)
+#if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
 
 #include "EventNames.h"
 #include "LibWebRTCUtils.h"
@@ -73,8 +73,10 @@ RTCDataChannelInit LibWebRTCDataChannelHandler::dataChannelInit() const
 
     RTCDataChannelInit init;
     init.ordered = m_channel->ordered();
-    init.maxPacketLifeTime = m_channel->maxRetransmitTime();
-    init.maxRetransmits = m_channel->maxRetransmits();
+    if (auto maxPacketLifeTime = m_channel->maxPacketLifeTime())
+        init.maxPacketLifeTime = *maxPacketLifeTime;
+    if (auto maxRetransmitsOpt = m_channel->maxRetransmitsOpt())
+        init.maxRetransmits = *maxRetransmitsOpt;
     init.protocol = fromStdString(protocol);
     init.negotiated = m_channel->negotiated();
     init.id = m_channel->id();
@@ -125,6 +127,12 @@ bool LibWebRTCDataChannelHandler::sendRawData(const uint8_t* data, size_t length
 void LibWebRTCDataChannelHandler::close()
 {
     m_channel->Close();
+}
+
+std::optional<unsigned short> LibWebRTCDataChannelHandler::id() const
+{
+    auto id = m_channel->id();
+    return id != -1 ? std::make_optional(id) : std::nullopt;
 }
 
 void LibWebRTCDataChannelHandler::OnStateChange()
@@ -220,4 +228,4 @@ void LibWebRTCDataChannelHandler::postTask(Function<void()>&& function)
 
 } // namespace WebCore
 
-#endif // USE(LIBWEBRTC)
+#endif // ENABLE(WEB_RTC) && USE(LIBWEBRTC)

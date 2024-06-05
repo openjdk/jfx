@@ -27,37 +27,39 @@
 
 #pragma once
 
+#include <wtf/OptionSet.h>
+
 namespace WebCore {
 
-enum ParserContentPolicy {
-    DisallowScriptingAndPluginContent,
-    DisallowScriptingContent,
-    AllowScriptingContent,
-    AllowScriptingContentAndDoNotMarkAlreadyStarted,
+enum class ParserContentPolicy : uint8_t {
+    AllowScriptingContent = 1 << 0,
+    AllowPluginContent = 1 << 1,
+    DoNotMarkAlreadyStarted = 1 << 2,
+    AllowDeclarativeShadowDOM = 1 << 3,
 };
 
-static inline bool scriptingContentIsAllowed(ParserContentPolicy parserContentPolicy)
+constexpr OptionSet<ParserContentPolicy> DefaultParserContentPolicy = { ParserContentPolicy::AllowScriptingContent, ParserContentPolicy::AllowPluginContent, ParserContentPolicy::AllowDeclarativeShadowDOM };
+
+static inline bool scriptingContentIsAllowed(OptionSet<ParserContentPolicy> parserContentPolicy)
 {
-    return parserContentPolicy == AllowScriptingContent || parserContentPolicy == AllowScriptingContentAndDoNotMarkAlreadyStarted;
+    return parserContentPolicy.contains(ParserContentPolicy::AllowScriptingContent);
 }
 
-static inline ParserContentPolicy disallowScriptingContent(ParserContentPolicy parserContentPolicy)
+static inline OptionSet<ParserContentPolicy> disallowScriptingContent(OptionSet<ParserContentPolicy> parserContentPolicy)
 {
-    if (!scriptingContentIsAllowed(parserContentPolicy))
+    parserContentPolicy.remove(ParserContentPolicy::AllowScriptingContent);
         return parserContentPolicy;
-    return DisallowScriptingContent;
 }
 
-static inline bool pluginContentIsAllowed(ParserContentPolicy parserContentPolicy)
+static inline bool pluginContentIsAllowed(OptionSet<ParserContentPolicy> parserContentPolicy)
 {
-    return parserContentPolicy != DisallowScriptingAndPluginContent;
+    return parserContentPolicy.contains(ParserContentPolicy::AllowPluginContent);
 }
 
-static inline ParserContentPolicy allowPluginContent(ParserContentPolicy parserContentPolicy)
+static inline OptionSet<ParserContentPolicy> allowPluginContent(OptionSet<ParserContentPolicy> parserContentPolicy)
 {
-    if (pluginContentIsAllowed(parserContentPolicy))
+    parserContentPolicy.add(ParserContentPolicy::AllowPluginContent);
         return parserContentPolicy;
-    return DisallowScriptingContent;
 }
 
 } // namespace WebCore

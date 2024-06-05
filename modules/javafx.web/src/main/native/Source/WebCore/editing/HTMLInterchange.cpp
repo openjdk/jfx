@@ -27,6 +27,7 @@
 #include "HTMLInterchange.h"
 
 #include "Editing.h"
+#include "RenderStyleInlines.h"
 #include "RenderText.h"
 #include "Text.h"
 #include <wtf/text/StringBuilder.h>
@@ -41,7 +42,7 @@ String convertHTMLTextToInterchangeFormat(const String& in, const Text* node)
         return in;
 
     const char convertedSpaceString[] = "<span class=\"" AppleConvertedSpace "\">\xA0</span>";
-    COMPILE_ASSERT((static_cast<unsigned char>('\xA0') == noBreakSpace), ConvertedSpaceStringSpaceIsNoBreakSpace);
+    static_assert((static_cast<unsigned char>('\xA0') == noBreakSpace), "ConvertedSpaceStringSpace is NoBreakSpace");
 
     StringBuilder s;
 

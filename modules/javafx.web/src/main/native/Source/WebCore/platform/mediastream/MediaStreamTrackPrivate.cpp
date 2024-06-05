@@ -38,7 +38,7 @@
 
 #if PLATFORM(COCOA)
 #include "MediaStreamTrackAudioSourceProviderCocoa.h"
-#elif ENABLE(WEB_AUDIO) && ENABLE(MEDIA_STREAM) && USE(LIBWEBRTC) && USE(GSTREAMER)
+#elif ENABLE(WEB_AUDIO) && ENABLE(MEDIA_STREAM) && USE(GSTREAMER)
 #include "AudioSourceProviderGStreamer.h"
 #else
 #include "WebAudioSourceProvider.h"
@@ -167,15 +167,10 @@ Ref<MediaStreamTrackPrivate> MediaStreamTrackPrivate::clone()
     clonedMediaStreamTrackPrivate->m_contentHint = this->m_contentHint;
     clonedMediaStreamTrackPrivate->updateReadyState();
 
-    if (isProducingData())
+    if (m_source->isProducingData())
         clonedMediaStreamTrackPrivate->startProducingData();
 
     return clonedMediaStreamTrackPrivate;
-}
-
-RealtimeMediaSource::Type MediaStreamTrackPrivate::type() const
-{
-    return m_source->type();
 }
 
 const RealtimeMediaSourceSettings& MediaStreamTrackPrivate::settings() const
@@ -199,7 +194,7 @@ RefPtr<WebAudioSourceProvider> MediaStreamTrackPrivate::createAudioSourceProvide
 
 #if PLATFORM(COCOA)
     return MediaStreamTrackAudioSourceProviderCocoa::create(*this);
-#elif USE(LIBWEBRTC) && USE(GSTREAMER)
+#elif USE(GSTREAMER)
     return AudioSourceProviderGStreamer::create(*this);
 #else
     return nullptr;
@@ -245,6 +240,15 @@ void MediaStreamTrackPrivate::sourceSettingsChanged()
 
     forEachObserver([this](auto& observer) {
         observer.trackSettingsChanged(*this);
+    });
+}
+
+void MediaStreamTrackPrivate::sourceConfigurationChanged()
+{
+    ALWAYS_LOG(LOGIDENTIFIER);
+
+    forEachObserver([this](auto& observer) {
+        observer.trackConfigurationChanged(*this);
     });
 }
 

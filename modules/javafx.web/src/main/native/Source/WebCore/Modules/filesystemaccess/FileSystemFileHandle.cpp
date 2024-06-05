@@ -55,7 +55,7 @@ FileSystemFileHandle::FileSystemFileHandle(ScriptExecutionContext& context, Stri
 void FileSystemFileHandle::getFile(DOMPromiseDeferred<IDLInterface<File>>&& promise)
 {
     if (isClosed())
-        return promise.reject(Exception { InvalidStateError, "Handle is closed" });
+        return promise.reject(Exception { InvalidStateError, "Handle is closed"_s });
 
     connection().getFile(identifier(), [protectedThis = Ref { *this }, promise = WTFMove(promise)](auto result) mutable {
         if (result.hasException())
@@ -72,32 +72,40 @@ void FileSystemFileHandle::getFile(DOMPromiseDeferred<IDLInterface<File>>&& prom
 void FileSystemFileHandle::createSyncAccessHandle(DOMPromiseDeferred<IDLInterface<FileSystemSyncAccessHandle>>&& promise)
 {
     if (isClosed())
-        return promise.reject(Exception { InvalidStateError, "Handle is closed" });
+        return promise.reject(Exception { InvalidStateError, "Handle is closed"_s });
 
     connection().createSyncAccessHandle(identifier(), [protectedThis = Ref { *this }, promise = WTFMove(promise)](auto result) mutable {
         if (result.hasException())
             return promise.reject(result.releaseException());
 
-        auto [identifier, file] = result.releaseReturnValue();
-        if (!file)
+        auto info = result.releaseReturnValue();
+        if (!info.file)
             return promise.reject(Exception { UnknownError, "Invalid platform file handle"_s });
 
         auto* context = protectedThis->scriptExecutionContext();
         if (!context) {
-            protectedThis->closeSyncAccessHandle(identifier, { });
+            protectedThis->closeSyncAccessHandle(info.identifier);
             return promise.reject(Exception { InvalidStateError, "Context has stopped"_s });
         }
 
-        promise.resolve(FileSystemSyncAccessHandle::create(*context, protectedThis.get(), identifier, WTFMove(file)));
+        promise.resolve(FileSystemSyncAccessHandle::create(*context, protectedThis.get(), info.identifier, WTFMove(info.file), info.capacity));
     });
 }
 
-void FileSystemFileHandle::closeSyncAccessHandle(FileSystemSyncAccessHandleIdentifier accessHandleIdentifier, CompletionHandler<void(ExceptionOr<void>&&)>&& completionHandler)
+void FileSystemFileHandle::closeSyncAccessHandle(FileSystemSyncAccessHandleIdentifier accessHandleIdentifier)
 {
     if (isClosed())
-        return completionHandler(Exception { InvalidStateError, "Handle is closed"_s });
+        return;
 
-    connection().closeSyncAccessHandle(identifier(), accessHandleIdentifier, WTFMove(completionHandler));
+    downcast<WorkerFileSystemStorageConnection>(connection()).closeSyncAccessHandle(identifier(), accessHandleIdentifier);
+}
+
+std::optional<uint64_t> FileSystemFileHandle::requestNewCapacityForSyncAccessHandle(FileSystemSyncAccessHandleIdentifier accessHandleIdentifier, uint64_t newCapacity)
+{
+    if (isClosed())
+        return std::nullopt;
+
+    return downcast<WorkerFileSystemStorageConnection>(connection()).requestNewCapacityForSyncAccessHandle(identifier(), accessHandleIdentifier, newCapacity);
 }
 
 void FileSystemFileHandle::registerSyncAccessHandle(FileSystemSyncAccessHandleIdentifier identifier, FileSystemSyncAccessHandle& handle)

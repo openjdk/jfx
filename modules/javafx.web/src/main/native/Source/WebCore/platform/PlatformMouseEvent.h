@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2006, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #include "IntPoint.h"
 #include "PlatformEvent.h"
 #include "PointerID.h"
+#include <wtf/UUID.h>
 #include <wtf/WindowsExtras.h>
 
 #if PLATFORM(JAVA)
@@ -43,7 +44,7 @@ const double ForceAtForceClick = 2;
     // We use -2 for NoButton because -1 is a valid value in the DOM API for Pointer Events for pointermove events that
     // indicate that the pressed mouse button hasn't changed since the last event.
     enum MouseButton : int8_t { LeftButton = 0, MiddleButton, RightButton, NoButton = -2 };
-    enum SyntheticClickType : int8_t { NoTap, OneFingerTap, TwoFingerTap };
+    enum class SyntheticClickType : uint8_t { NoTap, OneFingerTap, TwoFingerTap };
 #if PLATFORM(JAVA)
     enum MouseButtonMask : uint8_t { NoButtonMask = 0, LeftButtonMask, RightButtonMask, MiddleButtonMask = 4 };
 #endif
@@ -51,13 +52,12 @@ const double ForceAtForceClick = 2;
     class PlatformMouseEvent : public PlatformEvent {
     public:
         PlatformMouseEvent()
-            : PlatformEvent(PlatformEvent::MouseMoved)
+            : PlatformEvent(Type::MouseMoved)
         {
         }
 
-        PlatformMouseEvent(const IntPoint& position, const IntPoint& globalPosition, MouseButton button, PlatformEvent::Type type,
-                           int clickCount, bool shiftKey, bool ctrlKey, bool altKey, bool metaKey, WallTime timestamp, double force, SyntheticClickType syntheticClickType, PointerID pointerId = mousePointerID)
-            : PlatformEvent(type, shiftKey, ctrlKey, altKey, metaKey, timestamp)
+        PlatformMouseEvent(const IntPoint& position, const IntPoint& globalPosition, MouseButton button, PlatformEvent::Type type, int clickCount, OptionSet<PlatformEvent::Modifier> modifiers, WallTime timestamp, double force, SyntheticClickType syntheticClickType, PointerID pointerId = mousePointerID)
+            : PlatformEvent(type, modifiers, timestamp)
             , m_button(button)
             , m_syntheticClickType(syntheticClickType)
             , m_position(position)
@@ -106,7 +106,7 @@ const double ForceAtForceClick = 2;
 #endif
 
 #if PLATFORM(WIN)
-        PlatformMouseEvent(HWND, UINT, WPARAM, LPARAM, bool didActivateWebView = false);
+        WEBCORE_EXPORT PlatformMouseEvent(HWND, UINT, WPARAM, LPARAM, bool didActivateWebView = false);
         void setClickCount(int count) { m_clickCount = count; }
         bool didActivateWebView() const { return m_didActivateWebView; }
 #endif
@@ -118,8 +118,8 @@ const double ForceAtForceClick = 2;
 #endif
 
     protected:
-        MouseButton m_button { NoButton };
-        SyntheticClickType m_syntheticClickType { NoTap };
+        MouseButton m_button { MouseButton::NoButton };
+        SyntheticClickType m_syntheticClickType { SyntheticClickType::NoTap };
 
         IntPoint m_position;
         IntPoint m_globalPosition;

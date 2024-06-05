@@ -48,7 +48,7 @@ MediaRecorder::CreatorFunction MediaRecorder::m_customCreator = nullptr;
 
 bool MediaRecorder::isTypeSupported(Document& document, const String& value)
 {
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) || USE(GSTREAMER_TRANSCODER)
     auto* page = document.page();
     return page && page->mediaRecorderProvider().isSupported(value);
 #else
@@ -66,7 +66,7 @@ ExceptionOr<Ref<MediaRecorder>> MediaRecorder::create(Document& document, Ref<Me
         return Exception { InvalidStateError };
 
     if (!isTypeSupported(document, options.mimeType))
-        return Exception { NotSupportedError, "mimeType is not supported" };
+        return Exception { NotSupportedError, "mimeType is not supported"_s };
 
     auto recorder = adoptRef(*new MediaRecorder(document, WTFMove(stream), WTFMove(options)));
     recorder->suspendIfNeeded();
@@ -78,7 +78,7 @@ void MediaRecorder::setCustomPrivateRecorderCreator(CreatorFunction creator)
     m_customCreator = creator;
 }
 
-ExceptionOr<std::unique_ptr<MediaRecorderPrivate>> MediaRecorder::createMediaRecorderPrivate(Document& document, MediaStreamPrivate& stream, const Options& options)
+ExceptionOr<Ref<MediaRecorderPrivate>> MediaRecorder::createMediaRecorderPrivate(Document& document, MediaStreamPrivate& stream, const Options& options)
 {
     auto* page = document.page();
     if (!page)
@@ -87,14 +87,13 @@ ExceptionOr<std::unique_ptr<MediaRecorderPrivate>> MediaRecorder::createMediaRec
     if (m_customCreator)
         return m_customCreator(stream, options);
 
-#if PLATFORM(COCOA)
-    auto result = page->mediaRecorderProvider().createMediaRecorderPrivate(stream, options);
-#else
-    std::unique_ptr<MediaRecorderPrivate> result;
+    RefPtr<MediaRecorderPrivate> result;
+#if PLATFORM(COCOA) || USE(GSTREAMER_TRANSCODER)
+    result = page->mediaRecorderProvider().createMediaRecorderPrivate(stream, options);
 #endif
     if (!result)
         return Exception { NotSupportedError, "The MediaRecorder is unsupported on this platform"_s };
-    return result;
+    return result.releaseNonNull();
 }
 
 MediaRecorder::MediaRecorder(Document& document, Ref<MediaStream>&& stream, Options&& options)
@@ -105,9 +104,7 @@ MediaRecorder::MediaRecorder(Document& document, Ref<MediaStream>&& stream, Opti
 {
     computeInitialBitRates();
 
-    m_tracks = WTF::map(m_stream->getTracks(), [] (auto&& track) -> Ref<MediaStreamTrackPrivate> {
-        return track->privateTrack();
-    });
+    m_tracks = m_stream->privateStream().tracks();
     m_stream->privateStream().addObserver(*this);
 }
 
@@ -167,7 +164,11 @@ ExceptionOr<void> MediaRecorder::startRecording(std::optional<unsigned> timeSlic
         return result.releaseException();
 
     m_private = result.releaseReturnValue();
-    m_private->startRecording([this, pendingActivity = makePendingActivity(*this)](auto&& mimeTypeOrException, unsigned audioBitsPerSecond, unsigned videoBitsPerSecond) mutable {
+    m_private->startRecording([this, weakThis = WeakPtr { *this }, pendingActivity = makePendingActivity(*this)](auto&& mimeTypeOrException, unsigned audioBitsPerSecond, unsigned videoBitsPerSecond) mutable {
+        auto protectedThis = RefPtr { weakThis.get() };
+        if (!protectedThis)
+            return;
+
         if (!m_isActive)
             return;
 
@@ -293,11 +294,11 @@ ExceptionOr<void> MediaRecorder::resumeRecording()
 
 void MediaRecorder::fetchData(FetchDataCallback&& callback, TakePrivateRecorder takeRecorder)
 {
-    auto& privateRecorder = *m_private;
+    Ref privateRecorder = *m_private;
 
-    std::unique_ptr<MediaRecorderPrivate> takenPrivateRecorder;
+    RefPtr<MediaRecorderPrivate> takenPrivateRecorder;
     if (takeRecorder == TakePrivateRecorder::Yes)
-        takenPrivateRecorder = WTFMove(m_private);
+        takenPrivateRecorder = std::exchange(m_private, nullptr);
 
     auto fetchDataCallback = [this, privateRecorder = WTFMove(takenPrivateRecorder), callback = WTFMove(callback)](auto&& buffer, auto& mimeType, auto timeCode) mutable {
         queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [buffer = WTFMove(buffer), mimeType, timeCode, callback = WTFMove(callback)]() mutable {
@@ -311,7 +312,7 @@ void MediaRecorder::fetchData(FetchDataCallback&& callback, TakePrivateRecorder 
     }
 
     m_isFetchingData = true;
-    privateRecorder.fetchData([this, pendingActivity = makePendingActivity(*this), callback = WTFMove(fetchDataCallback)](auto&& buffer, auto& mimeType, auto timeCode) mutable {
+    privateRecorder->fetchData([this, pendingActivity = makePendingActivity(*this), callback = WTFMove(fetchDataCallback)](auto&& buffer, auto& mimeType, auto timeCode) mutable {
         m_isFetchingData = false;
         callback(WTFMove(buffer), mimeType, timeCode);
         for (auto& task : std::exchange(m_pendingFetchDataTasks, { }))

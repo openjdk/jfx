@@ -27,7 +27,9 @@
 
 #if ENABLE(SERVICE_WORKER)
 
+#include "BackgroundFetchInformation.h"
 #include "NotificationClient.h"
+#include "NotificationEventType.h"
 #include "PushSubscriptionData.h"
 #include "ScriptExecutionContextIdentifier.h"
 #include "ServiceWorkerContextData.h"
@@ -47,6 +49,7 @@ class MessagePortChannel;
 class SerializedScriptValue;
 class WorkerObjectProxy;
 struct MessageWithMessagePorts;
+struct NotificationData;
 
 class ServiceWorkerThread : public WorkerThread, public CanMakeWeakPtr<ServiceWorkerThread, WeakPtrFactoryInitialization::Eager> {
 public:
@@ -71,6 +74,11 @@ public:
     void queueTaskToFireActivateEvent();
     void queueTaskToFirePushEvent(std::optional<Vector<uint8_t>>&&, Function<void(bool)>&&);
     void queueTaskToFirePushSubscriptionChangeEvent(std::optional<PushSubscriptionData>&& newSubscriptionData, std::optional<PushSubscriptionData>&& oldSubscriptionData);
+#if ENABLE(NOTIFICATION_EVENT)
+    void queueTaskToFireNotificationEvent(NotificationData&&, NotificationEventType, Function<void(bool)>&&);
+#endif
+    void queueTaskToFireBackgroundFetchEvent(BackgroundFetchInformation&&, Function<void(bool)>&&);
+    void queueTaskToFireBackgroundFetchClickEvent(BackgroundFetchInformation&&, Function<void(bool)>&&);
 
     ServiceWorkerIdentifier identifier() const { return m_serviceWorkerIdentifier; }
     std::optional<ServiceWorkerJobDataIdentifier> jobDataIdentifier() const { return m_jobDataIdentifier; }
@@ -78,15 +86,15 @@ public:
 
     void startFetchEventMonitoring();
     void stopFetchEventMonitoring() { m_isHandlingFetchEvent = false; }
-    void startPushEventMonitoring();
-    void stopPushEventMonitoring() { m_isHandlingPushEvent = false; }
+    void startFunctionalEventMonitoring();
+    void stopFunctionalEventMonitoring() { m_isHandlingFunctionalEvent = false; }
 
 protected:
     Ref<WorkerGlobalScope> createWorkerGlobalScope(const WorkerParameters&, Ref<SecurityOrigin>&&, Ref<SecurityOrigin>&& topOrigin) final;
     void runEventLoop() override;
 
 private:
-    WEBCORE_EXPORT ServiceWorkerThread(ServiceWorkerContextData&&, ServiceWorkerData&&, String&& userAgent, WorkerThreadMode, const Settings::Values&, WorkerLoaderProxy&, WorkerDebuggerProxy&, IDBClient::IDBConnectionProxy*, SocketProvider*, std::unique_ptr<NotificationClient>&&, PAL::SessionID);
+    WEBCORE_EXPORT ServiceWorkerThread(ServiceWorkerContextData&&, ServiceWorkerData&&, String&& userAgent, WorkerThreadMode, const Settings::Values&, WorkerLoaderProxy&, WorkerDebuggerProxy&, WorkerBadgeProxy&, IDBClient::IDBConnectionProxy*, SocketProvider*, std::unique_ptr<NotificationClient>&&, PAL::SessionID, std::optional<uint64_t>);
 
     ASCIILiteral threadName() const final { return "WebCore: ServiceWorker"_s; }
     void finishedEvaluatingScript() final;
@@ -109,7 +117,7 @@ private:
     bool m_doesHandleFetch { false };
 
     bool m_isHandlingFetchEvent { false };
-    bool m_isHandlingPushEvent { false };
+    bool m_isHandlingFunctionalEvent { false };
     uint64_t m_pushSubscriptionChangeEventCount { 0 };
     uint64_t m_messageEventCount { 0 };
     enum class State { Idle, Starting, Installing, Activating };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -151,7 +151,7 @@ public final class WebPage {
             final boolean useJIT = Boolean.valueOf(System.getProperty(
                     "com.sun.webkit.useJIT", "true"));
             final boolean useDFGJIT = Boolean.valueOf(System.getProperty(
-                    "com.sun.webkit.useDFGJIT", "true"));
+                    "com.sun.webkit.useDFGJIT", "false"));
 
             // TODO: Enable CSS3D by default once it is stabilized.
             boolean useCSS3D = Boolean.valueOf(System.getProperty(

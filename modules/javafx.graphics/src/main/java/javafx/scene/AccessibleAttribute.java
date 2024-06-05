@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -336,6 +336,27 @@ public enum AccessibleAttribute {
      * </ul>
      */
     INDETERMINATE(Boolean.class),
+
+    /**
+     * Returns {@link ToggleState toggle state} of CheckBox of CheckBoxTreeItem.
+     * <ul>
+     * <li>Used by: CheckBoxTreeItem</li>
+     * <li>Needs notify: yes </li>
+     * <li>Return Type: {@link ToggleState}
+     *   <ul>
+     *    <li>{@link ToggleState#UNCHECKED ToggleState.UNCHECKED}: control is not selected</li>
+     *    <li>{@link ToggleState#CHECKED ToggleState.CHECKED}: control is selected</li>
+     *    <li>{@link ToggleState#INDETERMINATE ToggleState.INDETERMINATE}:
+     *                                     selection state of control cannot be determined</li>
+     *   </ul>
+     * </li>
+     * <li>Parameters: </li>
+     * </ul>
+     *
+     * @see ToggleState
+     * @since 21
+     */
+    TOGGLE_STATE(ToggleState.class),
 
     /**
      * Returns the item at the given index.
@@ -754,6 +775,19 @@ public enum AccessibleAttribute {
     VALUE(Double.class),
 
     /**
+     * Returns the value as string for the node.
+     * <ul>
+     * <li>Used by: Spinner </li>
+     * <li>Needs notify: yes </li>
+     * <li>Return Type: {@link String} </li>
+     * <li>Parameters: </li>
+     * </ul>
+     *
+     * @since 22
+     */
+    VALUE_STRING(String.class),
+
+    /**
      * Returns the vertical scroll bar for the node.
      * <ul>
      * <li>Used by: ListView, ScrollPane, and others </li>
@@ -799,5 +833,27 @@ public enum AccessibleAttribute {
      */
     public Class<?> getReturnType() {
         return returnClass;
+    }
+
+    /**
+     * This enum describes the values for {@link AccessibleAttribute#TOGGLE_STATE TOGGLE_STATE} attribute.
+     *
+     * @since 21
+     */
+    public enum ToggleState {
+        /**
+         * Indicates that the toggle control is not selected.
+         */
+        UNCHECKED,
+
+        /**
+         * Indicates that the toggle control is selected.
+         */
+        CHECKED,
+
+        /**
+         * Indicates that the toggle state of the control cannot be determined.
+         */
+        INDETERMINATE
     }
 }

@@ -50,7 +50,8 @@
 
     NSAttributedString *nsAttrBuffer;
     BOOL imEnabled;
-    BOOL shouldProcessKeyEvent;
+    BOOL handlingKeyEvent;
+    BOOL didCommitText;
     BOOL isHiDPIAware;
 }
 

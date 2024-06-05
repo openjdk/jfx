@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -637,10 +637,10 @@ final class ListChangeBuilder<E> {
 
     private static class IterableChange<E> extends Change<E> {
 
-        private SubChange[] changes;
+        private SubChange<E>[] changes;
         private int cursor = -1;
 
-        private IterableChange(SubChange[] changes, ObservableList<E> list) {
+        private IterableChange(SubChange<E>[] changes, ObservableList<E> list) {
             super(list);
             this.changes = changes;
         }

@@ -34,7 +34,7 @@ typedef struct __CVPixelBufferPool* CVPixelBufferPoolRef;
 
 namespace WebCore {
 
-class MediaSample;
+class VideoFrame;
 
 class ImageRotationSessionVT final {
     WTF_MAKE_FAST_ALLOCATED;
@@ -47,8 +47,8 @@ public:
         bool isIdentity() const { return !flipX && !flipY && !angle; }
     };
 
-    enum class IsCGImageCompatible { No, Yes };
-    enum class ShouldUseIOSurface { No, Yes };
+    enum class IsCGImageCompatible : bool { No, Yes };
+    enum class ShouldUseIOSurface : bool { No, Yes };
 
     ImageRotationSessionVT(AffineTransform&&, FloatSize, IsCGImageCompatible, ShouldUseIOSurface = ShouldUseIOSurface::Yes);
     ImageRotationSessionVT(const RotationProperties&, FloatSize, IsCGImageCompatible, ShouldUseIOSurface = ShouldUseIOSurface::Yes);
@@ -60,7 +60,7 @@ public:
     const FloatSize& rotatedSize() { return m_rotatedSize; }
 
     RetainPtr<CVPixelBufferRef> rotate(CVPixelBufferRef);
-    WEBCORE_EXPORT RetainPtr<CVPixelBufferRef> rotate(MediaSample&, const RotationProperties&, IsCGImageCompatible);
+    WEBCORE_EXPORT RetainPtr<CVPixelBufferRef> rotate(VideoFrame&, const RotationProperties&, IsCGImageCompatible);
 
 private:
     void initialize(const RotationProperties&, FloatSize, IsCGImageCompatible);
@@ -79,11 +79,6 @@ private:
 inline bool operator==(const ImageRotationSessionVT::RotationProperties& rotation1, const ImageRotationSessionVT::RotationProperties& rotation2)
 {
     return rotation1.flipX == rotation2.flipX && rotation1.flipY == rotation2.flipY && rotation1.angle == rotation2.angle;
-}
-
-inline bool operator!=(const ImageRotationSessionVT::RotationProperties& rotation1, const ImageRotationSessionVT::RotationProperties& rotation2)
-{
-    return !(rotation1 == rotation2);
 }
 
 }

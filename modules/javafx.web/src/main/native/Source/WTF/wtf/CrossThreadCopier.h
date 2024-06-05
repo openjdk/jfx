@@ -119,8 +119,8 @@ template<> struct CrossThreadCopierBase<false, false, WTF::ASCIILiteral> {
     }
 };
 
-template<typename T> struct CrossThreadCopierBase<false, false, ObjectIdentifier<T>> {
-    typedef ObjectIdentifier<T> Type;
+template<typename T, typename U> struct CrossThreadCopierBase<false, false, ObjectIdentifierGeneric<T, U>> {
+    typedef ObjectIdentifierGeneric<T, U> Type;
     static Type copy(const Type& source)
     {
         return source;
@@ -142,6 +142,12 @@ template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t min
             destination.uncheckedAppend(CrossThreadCopier<T>::copy(object));
         return destination;
     }
+    static Type copy(Type&& source)
+    {
+        for (auto iterator = source.begin(), iteratorEnd = source.end(); iterator < iteratorEnd; ++iterator)
+            *iterator = CrossThreadCopier<T>::copy(WTFMove(*iterator));
+        return WTFMove(source);
+    }
 };
 
 // Default specialization for HashSets of CrossThreadCopyable classes
@@ -154,26 +160,43 @@ template<typename T> struct CrossThreadCopierBase<false, false, HashSet<T> > {
             destination.add(CrossThreadCopier<T>::copy(object));
         return destination;
     }
+    static Type copy(Type&& source)
+    {
+        Type destination;
+        destination.reserveInitialCapacity(source.size());
+        while (!source.isEmpty())
+            destination.add(CrossThreadCopier<T>::copy(source.takeAny()));
+        return destination;
+    }
 };
 
 // Default specialization for HashMaps of CrossThreadCopyable classes
-template<typename K, typename V> struct CrossThreadCopierBase<false, false, HashMap<K, V> > {
-    typedef HashMap<K, V> Type;
+template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg, typename TableTraitsArg>
+struct CrossThreadCopierBase<false, false, HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg>> {
+    typedef HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg, TableTraitsArg> Type;
     static Type copy(const Type& source)
     {
         Type destination;
-        for (auto& keyValue : source)
-            destination.add(CrossThreadCopier<K>::copy(keyValue.key), CrossThreadCopier<V>::copy(keyValue.value));
+        for (auto& [key, value] : source)
+            destination.add(CrossThreadCopier<KeyArg>::copy(key), CrossThreadCopier<MappedArg>::copy(value));
         return destination;
+    }
+    static Type copy(Type&& source)
+    {
+        for (auto iterator = source.begin(), end = source.end(); iterator != end; ++iterator) {
+            iterator->key = CrossThreadCopier<KeyArg>::copy(WTFMove(iterator->key));
+            iterator->value = CrossThreadCopier<MappedArg>::copy(WTFMove(iterator->value));
+        }
+        return WTFMove(source);
     }
 };
 
 // Default specialization for pairs of CrossThreadCopyable classes
 template<typename F, typename S> struct CrossThreadCopierBase<false, false, std::pair<F, S> > {
     typedef std::pair<F, S> Type;
-    static Type copy(const Type& source)
+    template<typename U> static Type copy(U&& source)
     {
-        return std::make_pair(CrossThreadCopier<F>::copy(source.first), CrossThreadCopier<S>::copy(source.second));
+        return std::make_pair(CrossThreadCopier<F>::copy(std::get<0>(std::forward<U>(source))), CrossThreadCopier<S>::copy(std::get<1>(std::forward<U>(source))));
     }
 };
 
@@ -187,19 +210,40 @@ template<typename T> struct CrossThreadCopierBase<false, false, std::optional<T>
     }
 };
 
+// Default specialization for Markable of CrossThreadCopyable class.
+template<typename T, typename U> struct CrossThreadCopierBase<false, false, Markable<T, U>> {
+    template<typename V> static Markable<T, U> copy(V&& source)
+    {
+        if (!source)
+            return std::nullopt;
+        return CrossThreadCopier<T>::copy(std::forward<V>(source).value());
+    }
+};
+
+template<> struct CrossThreadCopierBase<false, false, std::nullptr_t> {
+    static std::nullptr_t copy(std::nullptr_t) { return nullptr; }
+};
+
 // Default specialization for std::variant of CrossThreadCopyable classes.
 template<typename... Types> struct CrossThreadCopierBase<false, false, std::variant<Types...>> {
-    template<typename U> static std::variant<Types...> copy(U&& source)
+    using Type = std::variant<Types...>;
+    static std::variant<Types...> copy(const Type& source)
     {
         return std::visit([] (auto& type) -> std::variant<Types...> {
-            return CrossThreadCopier<std::remove_const_t<std::remove_reference_t<decltype(type)>>>::copy(type);
-        }, std::forward<U>(source));
+            return CrossThreadCopier<std::remove_cvref_t<decltype(type)>>::copy(type);
+        }, source);
+    }
+    static std::variant<Types...> copy(Type&& source)
+    {
+        return std::visit([] (auto&& type) -> std::variant<Types...> {
+            return CrossThreadCopier<std::remove_cvref_t<decltype(type)>>::copy(std::forward<decltype(type)>(type));
+        }, WTFMove(source));
     }
 };
 
 template<typename T> auto crossThreadCopy(T&& source)
 {
-    return CrossThreadCopier<std::remove_cv_t<std::remove_reference_t<T>>>::copy(std::forward<T>(source));
+    return CrossThreadCopier<std::remove_cvref_t<T>>::copy(std::forward<T>(source));
 }
 
 } // namespace WTF

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -115,6 +115,8 @@ if (winVsVer >= 120) {
     if (IS_DEBUG_NATIVE) ccDebugFlags += "/FS"
 }
 
+// Enables reproducible builds when defined
+def sourceDateEpoch = System.getenv("SOURCE_DATE_EPOCH")
 
 // Common set of flags for all modules
 def ccFlags = ["/nologo", "/W3", "/EHsc", "/c",
@@ -123,6 +125,9 @@ def ccFlags = ["/nologo", "/W3", "/EHsc", "/c",
         "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
         ccDebugFlags].flatten();
 if (IS_STATIC_BUILD) ccFlags.add("/DSTATIC_BUILD")
+if (sourceDateEpoch != null) {
+    ccFlags.add("/experimental:deterministic")
+}
 
 def linkFlags = ["/nologo"]
 if (!IS_STATIC_BUILD) {
@@ -130,6 +135,9 @@ if (!IS_STATIC_BUILD) {
 }
 if (!IS_64) linkFlags.add("/safeseh");
 if (IS_DEBUG_NATIVE) linkFlags.add("/debug");
+if (sourceDateEpoch != null) {
+    linkFlags.add("/experimental:deterministic")
+}
 
 // Remove C++ static linking if not on VS2010
 if (WINDOWS_VS_VER != "100") {
@@ -461,6 +469,10 @@ WIN.webkit.compiler = compiler
 WIN.webkit.linker = linker
 WIN.webkit.rcCompiler = rcCompiler
 WIN.webkit.rcSource = defaultRcSource
+if (sourceDateEpoch != null) {
+    WIN.webkit.ccFlags = ["/experimental:deterministic"].flatten()
+    WIN.webkit.linkFlags = ["/experimental:deterministic"].flatten()
+}
 WIN.webkit.rcFlags = ["/d", "JFX_FNAME=jfxwebkit.dll", "/d", "JFX_INTERNAL_NAME=webkit", rcFlags].flatten();
 
 String getWinArch(String arch) {

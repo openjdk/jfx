@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2004-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2011 Adobe Systems Incorporated. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -23,13 +23,14 @@
 #include "config.h"
 #include "RenderStyle.h"
 
-#include "CSSComputedStyleDeclaration.h"
 #include "CSSCustomPropertyValue.h"
 #include "CSSParser.h"
 #include "CSSPropertyNames.h"
 #include "CSSPropertyParser.h"
+#include "ComputedStyleExtractor.h"
 #include "ContentData.h"
 #include "CursorList.h"
+#include "CustomPropertyRegistry.h"
 #include "FloatRoundedRect.h"
 #include "FontCascade.h"
 #include "FontSelector.h"
@@ -40,8 +41,10 @@
 #include "QuotesData.h"
 #include "RenderBlock.h"
 #include "RenderObject.h"
+#include "RenderStyleSetters.h"
 #include "RenderTheme.h"
 #include "ScaleTransformOperation.h"
+#include "ScrollbarGutter.h"
 #include "ShadowData.h"
 #include "StyleBuilderConverter.h"
 #include "StyleImage.h"
@@ -49,38 +52,49 @@
 #include "StyleResolver.h"
 #include "StyleScrollSnapPoints.h"
 #include "StyleSelfAlignmentData.h"
+#include "StyleTextBoxEdge.h"
 #include "StyleTreeResolver.h"
-#include "WillChangeData.h"
+#include <algorithm>
 #include <wtf/MathExtras.h>
 #include <wtf/PointerComparison.h>
 #include <wtf/StdLibExtras.h>
-#include <algorithm>
 
 #if ENABLE(TEXT_AUTOSIZING)
 #include <wtf/text/StringHash.h>
 #endif
 
+#define SET_VAR(group, variable, value) do { \
+        if (!compareEqual(group->variable, value)) \
+            group.access().variable = value; \
+    } while (0)
+
+#define SET_NESTED_VAR(group, parentVariable, variable, value) do { \
+        if (!compareEqual(group->parentVariable->variable, value)) \
+            group.access().parentVariable.access().variable = value; \
+    } while (0)
+
 namespace WebCore {
 
 struct SameSizeAsBorderValue {
-    Color m_color;
+    StyleColor m_color;
     float m_width;
     int m_restBits;
 };
 
-COMPILE_ASSERT(sizeof(BorderValue) == sizeof(SameSizeAsBorderValue), BorderValue_should_not_grow);
+static_assert(sizeof(BorderValue) == sizeof(SameSizeAsBorderValue), "BorderValue should not grow");
 
 struct SameSizeAsRenderStyle {
-    void* dataRefs[7];
-    void* ownPtrs[1];
-    void* dataRefSvgStyle;
-    struct InheritedFlags {
-        unsigned m_bitfields[2];
-    } m_inheritedFlags;
-
+    void* nonInheritedDataRefs[1];
     struct NonInheritedFlags {
         unsigned m_bitfields[2];
     } m_nonInheritedFlags;
+    void* inheritedDataRefs[2];
+    struct InheritedFlags {
+        unsigned m_bitfields[2];
+    } m_inheritedFlags;
+    void* pseudos;
+    void* dataRefSvgStyle;
+
 #if ASSERT_ENABLED || ENABLE(SECURITY_ASSERTIONS)
     bool deletionCheck;
 #endif
@@ -88,6 +102,13 @@ struct SameSizeAsRenderStyle {
 
 static_assert(sizeof(RenderStyle) == sizeof(SameSizeAsRenderStyle), "RenderStyle should stay small");
 
+static_assert(PublicPseudoIDBits == static_cast<int>(PseudoId::FirstInternalPseudoId) - static_cast<int>(PseudoId::FirstPublicPseudoId));
+
+static_assert(!(static_cast<unsigned>(maxTextDecorationLineValue) >> TextDecorationLineBits));
+
+static_assert(!(static_cast<unsigned>(maxTextTransformValue) >> TextTransformBits));
+
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PseudoStyleCache);
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(RenderStyle);
 
 RenderStyle& RenderStyle::defaultStyle()
@@ -106,9 +127,21 @@ std::unique_ptr<RenderStyle> RenderStyle::createPtr()
     return clonePtr(defaultStyle());
 }
 
+std::unique_ptr<RenderStyle> RenderStyle::createPtrWithRegisteredInitialValues(const Style::CustomPropertyRegistry& registry)
+{
+    return clonePtr(registry.initialValuePrototypeStyle());
+}
+
 RenderStyle RenderStyle::clone(const RenderStyle& style)
 {
     return RenderStyle(style, Clone);
+}
+
+RenderStyle RenderStyle::cloneIncludingPseudoElements(const RenderStyle& style)
+{
+    auto newStyle = RenderStyle(style, Clone);
+    newStyle.copyPseudoElementsFrom(style);
+    return newStyle;
 }
 
 std::unique_ptr<RenderStyle> RenderStyle::clonePtr(const RenderStyle& style)
@@ -138,29 +171,25 @@ RenderStyle::RenderStyle(RenderStyle&&) = default;
 RenderStyle& RenderStyle::operator=(RenderStyle&&) = default;
 
 RenderStyle::RenderStyle(CreateDefaultStyleTag)
-    : m_boxData(StyleBoxData::create())
-    , m_visualData(StyleVisualData::create())
-    , m_backgroundData(StyleBackgroundData::create())
-    , m_surroundData(StyleSurroundData::create())
-    , m_rareNonInheritedData(StyleRareNonInheritedData::create())
+    : m_nonInheritedData(StyleNonInheritedData::create())
     , m_rareInheritedData(StyleRareInheritedData::create())
     , m_inheritedData(StyleInheritedData::create())
     , m_svgStyle(SVGRenderStyle::create())
 {
     m_inheritedFlags.emptyCells = static_cast<unsigned>(initialEmptyCells());
     m_inheritedFlags.captionSide = static_cast<unsigned>(initialCaptionSide());
-    m_inheritedFlags.listStyleType = static_cast<unsigned>(initialListStyleType());
     m_inheritedFlags.listStylePosition = static_cast<unsigned>(initialListStylePosition());
     m_inheritedFlags.visibility = static_cast<unsigned>(initialVisibility());
     m_inheritedFlags.textAlign = static_cast<unsigned>(initialTextAlign());
-    m_inheritedFlags.textTransform = static_cast<unsigned>(initialTextTransform());
-    m_inheritedFlags.textDecorations = initialTextDecoration().toRaw();
+    m_inheritedFlags.textTransform = initialTextTransform().toRaw();
+    m_inheritedFlags.textDecorationLines = initialTextDecorationLine().toRaw();
     m_inheritedFlags.cursor = static_cast<unsigned>(initialCursor());
 #if ENABLE(CURSOR_VISIBILITY)
     m_inheritedFlags.cursorVisibility = static_cast<unsigned>(initialCursorVisibility());
 #endif
     m_inheritedFlags.direction = static_cast<unsigned>(initialDirection());
-    m_inheritedFlags.whiteSpace = static_cast<unsigned>(initialWhiteSpace());
+    m_inheritedFlags.whiteSpaceCollapse = static_cast<unsigned>(initialWhiteSpaceCollapse());
+    m_inheritedFlags.textWrap = static_cast<unsigned>(initialTextWrap());
     m_inheritedFlags.borderCollapse = static_cast<unsigned>(initialBorderCollapse());
     m_inheritedFlags.rtlOrdering = static_cast<unsigned>(initialRTLOrdering());
     m_inheritedFlags.boxDirection = static_cast<unsigned>(initialBoxDirection());
@@ -183,12 +212,13 @@ RenderStyle::RenderStyle(CreateDefaultStyleTag)
     m_nonInheritedFlags.unicodeBidi = static_cast<unsigned>(initialUnicodeBidi());
     m_nonInheritedFlags.floating = static_cast<unsigned>(initialFloating());
     m_nonInheritedFlags.tableLayout = static_cast<unsigned>(initialTableLayout());
-    m_nonInheritedFlags.hasExplicitlySetBorderRadius = false;
+    m_nonInheritedFlags.textDecorationLine = initialTextDecorationLine().toRaw();
     m_nonInheritedFlags.hasExplicitlySetDirection = false;
     m_nonInheritedFlags.hasExplicitlySetWritingMode = false;
-    m_nonInheritedFlags.hasExplicitlySetTextAlign = false;
-    m_nonInheritedFlags.hasViewportUnits = false;
+    m_nonInheritedFlags.usesViewportUnits = false;
+    m_nonInheritedFlags.usesContainerUnits = false;
     m_nonInheritedFlags.hasExplicitlyInheritedProperties = false;
+    m_nonInheritedFlags.disallowsFastPathInheritance = false;
     m_nonInheritedFlags.isUnique = false;
     m_nonInheritedFlags.emptyState = false;
     m_nonInheritedFlags.firstChildState = false;
@@ -203,11 +233,7 @@ RenderStyle::RenderStyle(CreateDefaultStyleTag)
 }
 
 inline RenderStyle::RenderStyle(const RenderStyle& other, CloneTag)
-    : m_boxData(other.m_boxData)
-    , m_visualData(other.m_visualData)
-    , m_backgroundData(other.m_backgroundData)
-    , m_surroundData(other.m_surroundData)
-    , m_rareNonInheritedData(other.m_rareNonInheritedData)
+    : m_nonInheritedData(other.m_nonInheritedData)
     , m_nonInheritedFlags(other.m_nonInheritedFlags)
     , m_rareInheritedData(other.m_rareInheritedData)
     , m_inheritedData(other.m_inheritedData)
@@ -217,11 +243,7 @@ inline RenderStyle::RenderStyle(const RenderStyle& other, CloneTag)
 }
 
 inline RenderStyle::RenderStyle(RenderStyle& a, RenderStyle&& b)
-    : m_boxData(a.m_boxData.replace(WTFMove(b.m_boxData)))
-    , m_visualData(a.m_visualData.replace(WTFMove(b.m_visualData)))
-    , m_backgroundData(a.m_backgroundData.replace(WTFMove(b.m_backgroundData)))
-    , m_surroundData(a.m_surroundData.replace(WTFMove(b.m_surroundData)))
-    , m_rareNonInheritedData(a.m_rareNonInheritedData.replace(WTFMove(b.m_rareNonInheritedData)))
+    : m_nonInheritedData(a.m_nonInheritedData.replace(WTFMove(b.m_nonInheritedData)))
     , m_nonInheritedFlags(std::exchange(a.m_nonInheritedFlags, b.m_nonInheritedFlags))
     , m_rareInheritedData(a.m_rareInheritedData.replace(WTFMove(b.m_rareInheritedData)))
     , m_inheritedData(a.m_inheritedData.replace(WTFMove(b.m_inheritedData)))
@@ -336,13 +358,53 @@ void RenderStyle::inheritFrom(const RenderStyle& inheritParent)
         m_svgStyle.access().inheritFrom(inheritParent.m_svgStyle.get());
 }
 
+void RenderStyle::inheritIgnoringCustomPropertiesFrom(const RenderStyle& inheritParent)
+{
+    auto oldCustomProperties = m_rareInheritedData->customProperties;
+    inheritFrom(inheritParent);
+    if (oldCustomProperties != m_rareInheritedData->customProperties)
+        m_rareInheritedData.access().customProperties = oldCustomProperties;
+}
+
+void RenderStyle::fastPathInheritFrom(const RenderStyle& inheritParent)
+{
+    ASSERT(!disallowsFastPathInheritance());
+
+    // FIXME: Use this mechanism for other properties too, like variables.
+    m_inheritedFlags.visibility = inheritParent.m_inheritedFlags.visibility;
+
+    if (m_inheritedData.ptr() != inheritParent.m_inheritedData.ptr()) {
+    if (m_inheritedData->nonFastPathInheritedEqual(*inheritParent.m_inheritedData)) {
+        m_inheritedData = inheritParent.m_inheritedData;
+        return;
+    }
+    m_inheritedData.access().fastPathInheritFrom(*inheritParent.m_inheritedData);
+    }
+}
+
+inline void RenderStyle::NonInheritedFlags::copyNonInheritedFrom(const NonInheritedFlags& other)
+{
+    // Only some flags are copied because NonInheritedFlags contains things that are not actually style data.
+    clear = other.clear;
+    disallowsFastPathInheritance = other.disallowsFastPathInheritance;
+    effectiveDisplay = other.effectiveDisplay;
+    floating = other.floating;
+    hasExplicitlyInheritedProperties = other.hasExplicitlyInheritedProperties;
+    originalDisplay = other.originalDisplay;
+    overflowX = other.overflowX;
+    overflowY = other.overflowY;
+    position = other.position;
+    tableLayout = other.tableLayout;
+    textDecorationLine = other.textDecorationLine;
+    unicodeBidi = other.unicodeBidi;
+    usesContainerUnits = other.usesContainerUnits;
+    usesViewportUnits = other.usesViewportUnits;
+    verticalAlign = other.verticalAlign;
+}
+
 void RenderStyle::copyNonInheritedFrom(const RenderStyle& other)
 {
-    m_boxData = other.m_boxData;
-    m_visualData = other.m_visualData;
-    m_backgroundData = other.m_backgroundData;
-    m_surroundData = other.m_surroundData;
-    m_rareNonInheritedData = other.m_rareNonInheritedData;
+    m_nonInheritedData = other.m_nonInheritedData;
     m_nonInheritedFlags.copyNonInheritedFrom(other.m_nonInheritedFlags);
 
     if (m_svgStyle != other.m_svgStyle)
@@ -353,9 +415,18 @@ void RenderStyle::copyNonInheritedFrom(const RenderStyle& other)
 
 void RenderStyle::copyContentFrom(const RenderStyle& other)
 {
-    if (!other.m_rareNonInheritedData->content)
+    if (!other.m_nonInheritedData->miscData->content)
         return;
-    m_rareNonInheritedData.access().content = other.m_rareNonInheritedData->content->clone();
+    m_nonInheritedData.access().miscData.access().content = other.m_nonInheritedData->miscData->content->clone();
+}
+
+void RenderStyle::copyPseudoElementsFrom(const RenderStyle& other)
+{
+    if (!other.m_cachedPseudoStyles)
+        return;
+
+    for (auto& pseudoElementStyle : other.m_cachedPseudoStyles->styles)
+        addCachedPseudoStyle(makeUnique<RenderStyle>(cloneIncludingPseudoElements(*pseudoElementStyle)));
 }
 
 bool RenderStyle::operator==(const RenderStyle& other) const
@@ -363,11 +434,7 @@ bool RenderStyle::operator==(const RenderStyle& other) const
     // compare everything except the pseudoStyle pointer
     return m_inheritedFlags == other.m_inheritedFlags
         && m_nonInheritedFlags == other.m_nonInheritedFlags
-        && m_boxData == other.m_boxData
-        && m_visualData == other.m_visualData
-        && m_backgroundData == other.m_backgroundData
-        && m_surroundData == other.m_surroundData
-        && m_rareNonInheritedData == other.m_rareNonInheritedData
+        && m_nonInheritedData == other.m_nonInheritedData
         && m_rareInheritedData == other.m_rareInheritedData
         && m_inheritedData == other.m_inheritedData
         && m_svgStyle == other.m_svgStyle;
@@ -378,7 +445,7 @@ bool RenderStyle::hasUniquePseudoStyle() const
     if (!m_cachedPseudoStyles || styleType() != PseudoId::None)
         return false;
 
-    for (auto& pseudoStyle : *m_cachedPseudoStyles) {
+    for (auto& pseudoStyle : m_cachedPseudoStyles->styles) {
         if (pseudoStyle->unique())
             return true;
     }
@@ -388,13 +455,10 @@ bool RenderStyle::hasUniquePseudoStyle() const
 
 RenderStyle* RenderStyle::getCachedPseudoStyle(PseudoId pid) const
 {
-    if (!m_cachedPseudoStyles || !m_cachedPseudoStyles->size())
+    if (!m_cachedPseudoStyles)
         return nullptr;
 
-    if (styleType() != PseudoId::None)
-        return nullptr;
-
-    for (auto& pseudoStyle : *m_cachedPseudoStyles) {
+    for (auto& pseudoStyle : m_cachedPseudoStyles->styles) {
         if (pseudoStyle->styleType() == pid)
             return pseudoStyle.get();
     }
@@ -414,22 +478,9 @@ RenderStyle* RenderStyle::addCachedPseudoStyle(std::unique_ptr<RenderStyle> pseu
     if (!m_cachedPseudoStyles)
         m_cachedPseudoStyles = makeUnique<PseudoStyleCache>();
 
-    m_cachedPseudoStyles->append(WTFMove(pseudo));
+    m_cachedPseudoStyles->styles.append(WTFMove(pseudo));
 
     return result;
-}
-
-void RenderStyle::removeCachedPseudoStyle(PseudoId pid)
-{
-    if (!m_cachedPseudoStyles)
-        return;
-    for (size_t i = 0; i < m_cachedPseudoStyles->size(); ++i) {
-        RenderStyle* pseudoStyle = m_cachedPseudoStyles->at(i).get();
-        if (pseudoStyle->styleType() == pid) {
-            m_cachedPseudoStyles->remove(i);
-            return;
-        }
-    }
 }
 
 bool RenderStyle::inheritedEqual(const RenderStyle& other) const
@@ -440,13 +491,52 @@ bool RenderStyle::inheritedEqual(const RenderStyle& other) const
         && m_rareInheritedData == other.m_rareInheritedData;
 }
 
+bool RenderStyle::inheritedCustomPropertiesEqual(const RenderStyle& other) const
+{
+    return m_rareInheritedData->customProperties == other.m_rareInheritedData->customProperties;
+}
+
+bool RenderStyle::fastPathInheritedEqual(const RenderStyle& other) const
+{
+    if (m_inheritedFlags.visibility != other.m_inheritedFlags.visibility)
+        return false;
+    if (m_inheritedData.ptr() == other.m_inheritedData.ptr())
+        return true;
+    return m_inheritedData->fastPathInheritedEqual(*other.m_inheritedData);
+}
+
+bool RenderStyle::nonFastPathInheritedEqual(const RenderStyle& other) const
+{
+    auto withoutFastPathFlags = [](auto flags) {
+        flags.visibility = 0;
+        return flags;
+    };
+    if (withoutFastPathFlags(m_inheritedFlags) != withoutFastPathFlags(other.m_inheritedFlags))
+        return false;
+    if (m_inheritedData.ptr() != other.m_inheritedData.ptr() && !m_inheritedData->nonFastPathInheritedEqual(*other.m_inheritedData))
+        return false;
+    if (m_rareInheritedData != other.m_rareInheritedData)
+        return false;
+    if (m_svgStyle.ptr() != other.m_svgStyle.ptr() && !m_svgStyle->inheritedEqual(other.m_svgStyle))
+        return false;
+    return true;
+}
+
 bool RenderStyle::descendantAffectingNonInheritedPropertiesEqual(const RenderStyle& other) const
 {
-    if (m_rareNonInheritedData.ptr() == other.m_rareNonInheritedData.ptr())
+    if (m_nonInheritedData.ptr() == other.m_nonInheritedData.ptr()
+        || m_nonInheritedData->miscData.ptr() == other.m_nonInheritedData->miscData.ptr())
         return true;
 
-    return m_rareNonInheritedData->alignItems == other.m_rareNonInheritedData->alignItems
-        && m_rareNonInheritedData->justifyItems == other.m_rareNonInheritedData->justifyItems;
+    return m_nonInheritedData->miscData->alignItems == other.m_nonInheritedData->miscData->alignItems
+        && m_nonInheritedData->miscData->justifyItems == other.m_nonInheritedData->miscData->justifyItems;
+}
+
+bool RenderStyle::borderAndBackgroundEqual(const RenderStyle& other) const
+{
+    return border() == other.border()
+        && backgroundLayers() == other.backgroundLayers()
+        && backgroundColor() == other.backgroundColor();
 }
 
 #if ENABLE(TEXT_AUTOSIZING)
@@ -460,8 +550,8 @@ static inline unsigned computeFontHash(const FontCascade& font)
 unsigned RenderStyle::hashForTextAutosizing() const
 {
     // FIXME: Not a very smart hash. Could be improved upon. See <https://bugs.webkit.org/show_bug.cgi?id=121131>.
-    unsigned hash = m_rareNonInheritedData->effectiveAppearance;
-    hash ^= m_rareNonInheritedData->lineClamp.value();
+    unsigned hash = m_nonInheritedData->miscData->effectiveAppearance;
+    hash ^= m_nonInheritedData->rareData->lineClamp.value();
     hash ^= m_rareInheritedData->overflowWrap;
     hash ^= m_rareInheritedData->nbspMode;
     hash ^= m_rareInheritedData->lineBreak;
@@ -473,15 +563,15 @@ unsigned RenderStyle::hashForTextAutosizing() const
     hash ^= m_inheritedFlags.rtlOrdering;
     hash ^= m_nonInheritedFlags.position;
     hash ^= m_nonInheritedFlags.floating;
-    hash ^= m_rareNonInheritedData->textOverflow;
+    hash ^= m_nonInheritedData->miscData->textOverflow;
     hash ^= m_rareInheritedData->textSecurity;
     return hash;
 }
 
 bool RenderStyle::equalForTextAutosizing(const RenderStyle& other) const
 {
-    return m_rareNonInheritedData->effectiveAppearance == other.m_rareNonInheritedData->effectiveAppearance
-        && m_rareNonInheritedData->lineClamp == other.m_rareNonInheritedData->lineClamp
+    return m_nonInheritedData->miscData->effectiveAppearance == other.m_nonInheritedData->miscData->effectiveAppearance
+        && m_nonInheritedData->rareData->lineClamp == other.m_nonInheritedData->rareData->lineClamp
         && m_rareInheritedData->textSizeAdjust == other.m_rareInheritedData->textSizeAdjust
         && m_rareInheritedData->overflowWrap == other.m_rareInheritedData->overflowWrap
         && m_rareInheritedData->nbspMode == other.m_rareInheritedData->nbspMode
@@ -495,37 +585,37 @@ bool RenderStyle::equalForTextAutosizing(const RenderStyle& other) const
         && m_inheritedFlags.rtlOrdering == other.m_inheritedFlags.rtlOrdering
         && m_nonInheritedFlags.position == other.m_nonInheritedFlags.position
         && m_nonInheritedFlags.floating == other.m_nonInheritedFlags.floating
-        && m_rareNonInheritedData->textOverflow == other.m_rareNonInheritedData->textOverflow;
+        && m_nonInheritedData->miscData->textOverflow == other.m_nonInheritedData->miscData->textOverflow;
 }
 
-bool RenderStyle::isIdempotentTextAutosizingCandidate(std::optional<AutosizeStatus> overrideStatus) const
+bool RenderStyle::isIdempotentTextAutosizingCandidate() const
+{
+    return isIdempotentTextAutosizingCandidate(OptionSet<AutosizeStatus::Fields>::fromRaw(m_inheritedFlags.autosizeStatus));
+}
+
+bool RenderStyle::isIdempotentTextAutosizingCandidate(AutosizeStatus status) const
 {
     // Refer to <rdar://problem/51826266> for more information regarding how this function was generated.
-    auto fields = OptionSet<AutosizeStatus::Fields>::fromRaw(m_inheritedFlags.autosizeStatus);
-    if (overrideStatus)
-        fields = overrideStatus->fields();
+    auto fields = status.fields();
 
     if (fields.contains(AutosizeStatus::Fields::AvoidSubtree))
         return false;
 
-    const float smallMinimumDifferenceThresholdBetweenLineHeightAndSpecifiedFontSizeForBoostingText = 5;
-    const float largeMinimumDifferenceThresholdBetweenLineHeightAndSpecifiedFontSizeForBoostingText = 25;
+    constexpr float smallMinimumDifferenceThresholdBetweenLineHeightAndSpecifiedFontSizeForBoostingText = 5;
+    constexpr float largeMinimumDifferenceThresholdBetweenLineHeightAndSpecifiedFontSizeForBoostingText = 25;
 
     if (fields.contains(AutosizeStatus::Fields::FixedHeight)) {
         if (fields.contains(AutosizeStatus::Fields::FixedWidth)) {
             if (whiteSpace() == WhiteSpace::NoWrap) {
                 if (width().isFixed())
                     return false;
-
                 if (height().isFixed() && specifiedLineHeight().isFixed()) {
                     float specifiedSize = specifiedFontSize();
                     if (height().value() == specifiedSize && specifiedLineHeight().value() == specifiedSize)
                         return false;
                 }
-
                 return true;
             }
-
             if (fields.contains(AutosizeStatus::Fields::Floating)) {
                 if (specifiedLineHeight().isFixed() && height().isFixed()) {
                     float specifiedSize = specifiedFontSize();
@@ -536,44 +626,35 @@ bool RenderStyle::isIdempotentTextAutosizingCandidate(std::optional<AutosizeStat
                 }
                 return false;
             }
-
             if (fields.contains(AutosizeStatus::Fields::OverflowXHidden))
                 return false;
-
             return true;
         }
-
         if (fields.contains(AutosizeStatus::Fields::OverflowXHidden)) {
             if (fields.contains(AutosizeStatus::Fields::Floating))
                 return false;
-
             return true;
         }
-
         return true;
     }
 
     if (width().isFixed()) {
         if (breakWords())
             return true;
-
         return false;
     }
 
     if (textSizeAdjust().isPercentage() && textSizeAdjust().percentage() == 100) {
         if (fields.contains(AutosizeStatus::Fields::Floating))
             return true;
-
         if (fields.contains(AutosizeStatus::Fields::FixedWidth))
             return true;
-
         if (specifiedLineHeight().isFixed() && specifiedLineHeight().value() - specifiedFontSize() > largeMinimumDifferenceThresholdBetweenLineHeightAndSpecifiedFontSizeForBoostingText)
             return true;
-
         return false;
     }
 
-    if (hasBackgroundImage() && backgroundRepeatX() == FillRepeat::NoRepeat && backgroundRepeatY() == FillRepeat::NoRepeat)
+    if (hasBackgroundImage() && backgroundRepeat() == FillRepeatXY { FillRepeat::NoRepeat, FillRepeat::NoRepeat })
         return false;
 
     return true;
@@ -620,51 +701,47 @@ static bool positionChangeIsMovementOnly(const LengthBox& a, const LengthBox& b,
 
 inline bool RenderStyle::changeAffectsVisualOverflow(const RenderStyle& other) const
 {
-    if (m_rareNonInheritedData.ptr() != other.m_rareNonInheritedData.ptr()
-        && !arePointingToEqualData(m_rareNonInheritedData->boxShadow, other.m_rareNonInheritedData->boxShadow))
+    if (m_nonInheritedData->miscData.ptr() != other.m_nonInheritedData->miscData.ptr()
+        && !arePointingToEqualData(m_nonInheritedData->miscData->boxShadow, other.m_nonInheritedData->miscData->boxShadow))
         return true;
 
     if (m_rareInheritedData.ptr() != other.m_rareInheritedData.ptr()
         && !arePointingToEqualData(m_rareInheritedData->textShadow, other.m_rareInheritedData->textShadow))
         return true;
 
-    if (m_inheritedFlags.textDecorations != other.m_inheritedFlags.textDecorations
-        || m_rareNonInheritedData->textDecorationStyle != other.m_rareNonInheritedData->textDecorationStyle
-        || m_rareInheritedData->textDecorationThickness != other.m_rareInheritedData->textDecorationThickness
+    if (m_inheritedFlags.textDecorationLines != other.m_inheritedFlags.textDecorationLines
+        || m_nonInheritedData->rareData->textDecorationStyle != other.m_nonInheritedData->rareData->textDecorationStyle
+        || m_nonInheritedData->rareData->textDecorationThickness != other.m_nonInheritedData->rareData->textDecorationThickness
         || m_rareInheritedData->textUnderlineOffset != other.m_rareInheritedData->textUnderlineOffset
         || m_rareInheritedData->textUnderlinePosition != other.m_rareInheritedData->textUnderlinePosition) {
         // Underlines are always drawn outside of their textbox bounds when text-underline-position: under;
         // is specified. We can take an early out here.
         if (textUnderlinePosition() == TextUnderlinePosition::Under || other.textUnderlinePosition() == TextUnderlinePosition::Under)
             return true;
-        return visualOverflowForDecorations(*this, { }) != visualOverflowForDecorations(other, { });
+        return visualOverflowForDecorations(*this) != visualOverflowForDecorations(other);
     }
 
-    if (hasOutlineInVisualOverflow() != other.hasOutlineInVisualOverflow())
+    auto hasOutlineInVisualOverflow = this->hasOutlineInVisualOverflow();
+    auto otherHasOutlineInVisualOverflow = other.hasOutlineInVisualOverflow();
+    if (hasOutlineInVisualOverflow != otherHasOutlineInVisualOverflow
+        || (hasOutlineInVisualOverflow && otherHasOutlineInVisualOverflow && outlineSize() != other.outlineSize()))
         return true;
+
     return false;
 }
 
-static bool rareNonInheritedDataChangeRequiresLayout(const StyleRareNonInheritedData& first, const StyleRareNonInheritedData& second, OptionSet<StyleDifferenceContextSensitiveProperty>& changedContextSensitiveProperties)
+static bool miscDataChangeRequiresLayout(const StyleMiscNonInheritedData& first, const StyleMiscNonInheritedData& second, OptionSet<StyleDifferenceContextSensitiveProperty>& changedContextSensitiveProperties)
 {
     ASSERT(&first != &second);
 
     if (first.effectiveAppearance != second.effectiveAppearance
-        || first.lineClamp != second.lineClamp
-        || first.initialLetter != second.initialLetter
         || first.textOverflow != second.textOverflow)
-        return true;
-
-    if (first.shapeMargin != second.shapeMargin)
         return true;
 
     if (first.deprecatedFlexibleBox != second.deprecatedFlexibleBox)
         return true;
 
     if (first.flexibleBox != second.flexibleBox)
-        return true;
-
-    if (first.columnGap != second.columnGap || first.rowGap != second.rowGap)
         return true;
 
     if (first.order != second.order
@@ -674,9 +751,6 @@ static bool rareNonInheritedDataChangeRequiresLayout(const StyleRareNonInherited
         || first.justifyContent != second.justifyContent
         || first.justifyItems != second.justifyItems
         || first.justifySelf != second.justifySelf)
-        return true;
-
-    if (!arePointingToEqualData(first.boxReflect, second.boxReflect))
         return true;
 
     if (first.multiCol != second.multiCol)
@@ -690,6 +764,48 @@ static bool rareNonInheritedDataChangeRequiresLayout(const StyleRareNonInherited
             // Don't return; keep looking for another change
         }
     }
+
+    if (first.hasOpacity() != second.hasOpacity()) {
+        // FIXME: We would like to use SimplifiedLayout here, but we can't quite do that yet.
+        // We need to make sure SimplifiedLayout can operate correctly on RenderInlines (we will need
+        // to add a selfNeedsSimplifiedLayout bit in order to not get confused and taint every line).
+        // In addition we need to solve the floating object issue when layers come and go. Right now
+        // a full layout is necessary to keep floating object lists sane.
+        return true;
+    }
+
+    if (first.hasFilters() != second.hasFilters())
+        return true;
+
+    if (first.aspectRatioType != second.aspectRatioType
+        || first.aspectRatioWidth != second.aspectRatioWidth
+        || first.aspectRatioHeight != second.aspectRatioHeight) {
+        return true;
+    }
+
+    return false;
+}
+
+static bool rareDataChangeRequiresLayout(const StyleRareNonInheritedData& first, const StyleRareNonInheritedData& second, OptionSet<StyleDifferenceContextSensitiveProperty>& changedContextSensitiveProperties)
+{
+    ASSERT(&first != &second);
+
+    if (first.lineClamp != second.lineClamp
+        || first.initialLetter != second.initialLetter)
+        return true;
+
+    if (first.shapeMargin != second.shapeMargin)
+        return true;
+
+    if (first.columnGap != second.columnGap || first.rowGap != second.rowGap)
+        return true;
+
+    if (!arePointingToEqualData(first.boxReflect, second.boxReflect))
+        return true;
+
+    // If the counter directives change, trigger a relayout to re-calculate counter values and rebuild the counter node tree.
+    if (first.counterDirectives.map != second.counterDirectives.map)
+        return true;
 
     if (!arePointingToEqualData(first.scale, second.scale)
         || !arePointingToEqualData(first.rotate, second.rotate)
@@ -717,15 +833,6 @@ static bool rareNonInheritedDataChangeRequiresLayout(const StyleRareNonInherited
         || first.breakInside != second.breakInside)
         return true;
 
-    if (first.hasOpacity() != second.hasOpacity()) {
-        // FIXME: We would like to use SimplifiedLayout here, but we can't quite do that yet.
-        // We need to make sure SimplifiedLayout can operate correctly on RenderInlines (we will need
-        // to add a selfNeedsSimplifiedLayout bit in order to not get confused and taint every line).
-        // In addition we need to solve the floating object issue when layers come and go. Right now
-        // a full layout is necessary to keep floating object lists sane.
-        return true;
-    }
-
 #if ENABLE(CSS_COMPOSITING)
     if (first.isolation != second.isolation) {
         // Ideally this would trigger a cheaper layout that just updates layer z-order trees (webkit.org/b/190088).
@@ -733,21 +840,38 @@ static bool rareNonInheritedDataChangeRequiresLayout(const StyleRareNonInherited
     }
 #endif
 
-    if (first.hasFilters() != second.hasFilters())
-        return true;
-
 #if ENABLE(FILTERS_LEVEL_2)
     if (first.hasBackdropFilters() != second.hasBackdropFilters())
         return true;
 #endif
 
-    if (first.aspectRatioType != second.aspectRatioType
-        || first.aspectRatioWidth != second.aspectRatioWidth
-        || first.aspectRatioHeight != second.aspectRatioHeight) {
-        return true;
-    }
-
     if (first.inputSecurity != second.inputSecurity)
+        return true;
+
+    if (first.effectiveContainment().contains(Containment::Size) != second.effectiveContainment().contains(Containment::Size)
+        || first.effectiveContainment().contains(Containment::InlineSize) != second.effectiveContainment().contains(Containment::InlineSize))
+        return true;
+
+    // content-visibiliy:hidden turns on contain:size which requires relayout.
+    if ((static_cast<ContentVisibility>(first.contentVisibility) == ContentVisibility::Hidden) != (static_cast<ContentVisibility>(second.contentVisibility) == ContentVisibility::Hidden))
+        return true;
+
+    if (first.scrollPadding != second.scrollPadding)
+        return true;
+
+    if (first.scrollSnapType != second.scrollSnapType)
+        return true;
+
+    if (first.containIntrinsicWidth != second.containIntrinsicWidth || first.containIntrinsicHeight != second.containIntrinsicHeight)
+        return true;
+
+    if (first.marginTrim != second.marginTrim)
+        return true;
+
+    if (first.scrollbarGutter != second.scrollbarGutter)
+        return true;
+
+    if (first.scrollbarWidth != second.scrollbarWidth)
         return true;
 
     return false;
@@ -758,10 +882,8 @@ static bool rareInheritedDataChangeRequiresLayout(const StyleRareInheritedData& 
     ASSERT(&first != &second);
 
     if (first.indent != second.indent
-#if ENABLE(CSS3_TEXT)
         || first.textAlignLast != second.textAlignLast
         || first.textJustify != second.textJustify
-#endif
         || first.textIndentLine != second.textIndentLine
         || first.effectiveZoom != second.effectiveZoom
         || first.textZoom != second.textZoom
@@ -787,18 +909,15 @@ static bool rareInheritedDataChangeRequiresLayout(const StyleRareInheritedData& 
         || first.lineBoxContain != second.lineBoxContain
         || first.lineGrid != second.lineGrid
         || first.imageOrientation != second.imageOrientation
-#if ENABLE(CSS_IMAGE_RESOLUTION)
-        || first.imageResolutionSource != second.imageResolutionSource
-        || first.imageResolutionSnap != second.imageResolutionSnap
-        || first.imageResolution != second.imageResolution
-#endif
         || first.lineSnap != second.lineSnap
         || first.lineAlign != second.lineAlign
         || first.hangingPunctuation != second.hangingPunctuation
+        || first.effectiveSkippedContent != second.effectiveSkippedContent
 #if ENABLE(OVERFLOW_SCROLLING_TOUCH)
         || first.useTouchOverflowScrolling != second.useTouchOverflowScrolling
 #endif
-        || first.listStyleImage != second.listStyleImage) // FIXME: needs arePointingToEqualData()?
+        || first.listStyleType != second.listStyleType
+        || first.listStyleImage != second.listStyleImage)
         return true;
 
     if (first.textStrokeWidth != second.textStrokeWidth)
@@ -819,38 +938,72 @@ static bool rareInheritedDataChangeRequiresLayout(const StyleRareInheritedData& 
 
 bool RenderStyle::changeRequiresLayout(const RenderStyle& other, OptionSet<StyleDifferenceContextSensitiveProperty>& changedContextSensitiveProperties) const
 {
-    if (m_boxData.ptr() != other.m_boxData.ptr()) {
-        if (m_boxData->width() != other.m_boxData->width()
-            || m_boxData->minWidth() != other.m_boxData->minWidth()
-            || m_boxData->maxWidth() != other.m_boxData->maxWidth()
-            || m_boxData->height() != other.m_boxData->height()
-            || m_boxData->minHeight() != other.m_boxData->minHeight()
-            || m_boxData->maxHeight() != other.m_boxData->maxHeight())
+    if (m_svgStyle->changeRequiresLayout(other.m_svgStyle))
+        return true;
+
+    if (m_nonInheritedData.ptr() != other.m_nonInheritedData.ptr()) {
+        if (m_nonInheritedData->boxData.ptr() != other.m_nonInheritedData->boxData.ptr()) {
+            if (m_nonInheritedData->boxData->width() != other.m_nonInheritedData->boxData->width()
+                || m_nonInheritedData->boxData->minWidth() != other.m_nonInheritedData->boxData->minWidth()
+                || m_nonInheritedData->boxData->maxWidth() != other.m_nonInheritedData->boxData->maxWidth()
+                || m_nonInheritedData->boxData->height() != other.m_nonInheritedData->boxData->height()
+                || m_nonInheritedData->boxData->minHeight() != other.m_nonInheritedData->boxData->minHeight()
+                || m_nonInheritedData->boxData->maxHeight() != other.m_nonInheritedData->boxData->maxHeight())
             return true;
 
-        if (m_boxData->verticalAlign() != other.m_boxData->verticalAlign())
+            if (m_nonInheritedData->boxData->verticalAlign() != other.m_nonInheritedData->boxData->verticalAlign())
             return true;
 
-        if (m_boxData->boxSizing() != other.m_boxData->boxSizing())
+            if (m_nonInheritedData->boxData->boxSizing() != other.m_nonInheritedData->boxData->boxSizing())
             return true;
 
-        if (m_boxData->hasAutoUsedZIndex() != other.m_boxData->hasAutoUsedZIndex())
+            if (m_nonInheritedData->boxData->hasAutoUsedZIndex() != other.m_nonInheritedData->boxData->hasAutoUsedZIndex())
             return true;
     }
 
-    if (m_surroundData->margin != other.m_surroundData->margin)
-        return true;
+        if (m_nonInheritedData->surroundData.ptr() != other.m_nonInheritedData->surroundData.ptr()) {
+            if (m_nonInheritedData->surroundData->margin != other.m_nonInheritedData->surroundData->margin)
+            return true;
 
-    if (m_surroundData->padding != other.m_surroundData->padding)
-        return true;
+            if (m_nonInheritedData->surroundData->padding != other.m_nonInheritedData->surroundData->padding)
+            return true;
+
+        // If our border widths change, then we need to layout. Other changes to borders only necessitate a repaint.
+        if (borderLeftWidth() != other.borderLeftWidth()
+            || borderTopWidth() != other.borderTopWidth()
+            || borderBottomWidth() != other.borderBottomWidth()
+            || borderRightWidth() != other.borderRightWidth())
+            return true;
+
+        if (position() != PositionType::Static) {
+                if (m_nonInheritedData->surroundData->offset != other.m_nonInheritedData->surroundData->offset) {
+                // FIXME: We would like to use SimplifiedLayout for relative positioning, but we can't quite do that yet.
+                // We need to make sure SimplifiedLayout can operate correctly on RenderInlines (we will need
+                // to add a selfNeedsSimplifiedLayout bit in order to not get confused and taint every line).
+                if (position() != PositionType::Absolute)
+                    return true;
+
+                // Optimize for the case where a positioned layer is moving but not changing size.
+                    if (!positionChangeIsMovementOnly(m_nonInheritedData->surroundData->offset, other.m_nonInheritedData->surroundData->offset, m_nonInheritedData->boxData->width()))
+                    return true;
+            }
+        }
+    }
+    }
 
     // FIXME: We should add an optimized form of layout that just recomputes visual overflow.
     if (changeAffectsVisualOverflow(other))
         return true;
 
-    if (m_rareNonInheritedData.ptr() != other.m_rareNonInheritedData.ptr()
-        && rareNonInheritedDataChangeRequiresLayout(*m_rareNonInheritedData, *other.m_rareNonInheritedData, changedContextSensitiveProperties))
+    if (m_nonInheritedData.ptr() != other.m_nonInheritedData.ptr()) {
+        if (m_nonInheritedData->miscData.ptr() != other.m_nonInheritedData->miscData.ptr()
+            && miscDataChangeRequiresLayout(*m_nonInheritedData->miscData, *other.m_nonInheritedData->miscData, changedContextSensitiveProperties))
+            return true;
+
+        if (m_nonInheritedData->rareData.ptr() != other.m_nonInheritedData->rareData.ptr()
+            && rareDataChangeRequiresLayout(*m_nonInheritedData->rareData, *other.m_nonInheritedData->rareData, changedContextSensitiveProperties))
         return true;
+    }
 
     if (m_rareInheritedData.ptr() != other.m_rareInheritedData.ptr()
         && rareInheritedDataChangeRequiresLayout(*m_rareInheritedData, *other.m_rareInheritedData))
@@ -897,15 +1050,15 @@ bool RenderStyle::changeRequiresLayout(const RenderStyle& other, OptionSet<Style
     }
 
     if (static_cast<DisplayType>(m_nonInheritedFlags.effectiveDisplay) == DisplayType::ListItem) {
-        if (m_inheritedFlags.listStyleType != other.m_inheritedFlags.listStyleType
-            || m_inheritedFlags.listStylePosition != other.m_inheritedFlags.listStylePosition)
+        if (m_inheritedFlags.listStylePosition != other.m_inheritedFlags.listStylePosition || m_rareInheritedData->listStyleType != other.m_rareInheritedData->listStyleType)
             return true;
     }
 
     if (m_inheritedFlags.textAlign != other.m_inheritedFlags.textAlign
         || m_inheritedFlags.textTransform != other.m_inheritedFlags.textTransform
         || m_inheritedFlags.direction != other.m_inheritedFlags.direction
-        || m_inheritedFlags.whiteSpace != other.m_inheritedFlags.whiteSpace
+        || m_inheritedFlags.whiteSpaceCollapse != other.m_inheritedFlags.whiteSpaceCollapse
+        || m_inheritedFlags.textWrap != other.m_inheritedFlags.textWrap
         || m_nonInheritedFlags.clear != other.m_nonInheritedFlags.clear
         || m_nonInheritedFlags.unicodeBidi != other.m_nonInheritedFlags.unicodeBidi)
         return true;
@@ -919,38 +1072,13 @@ bool RenderStyle::changeRequiresLayout(const RenderStyle& other, OptionSet<Style
         || m_nonInheritedFlags.overflowY != other.m_nonInheritedFlags.overflowY)
         return true;
 
-    // If our border widths change, then we need to layout.  Other changes to borders
-    // only necessitate a repaint.
-    if (borderLeftWidth() != other.borderLeftWidth()
-        || borderTopWidth() != other.borderTopWidth()
-        || borderBottomWidth() != other.borderBottomWidth()
-        || borderRightWidth() != other.borderRightWidth())
-        return true;
-
-    // If the counter directives change, trigger a relayout to re-calculate counter values and rebuild the counter node tree.
-    if (!arePointingToEqualData(m_rareNonInheritedData->counterDirectives, other.m_rareNonInheritedData->counterDirectives))
-        return true;
-
     if ((visibility() == Visibility::Collapse) != (other.visibility() == Visibility::Collapse))
         return true;
-
-    if (position() != PositionType::Static) {
-        if (m_surroundData->offset != other.m_surroundData->offset) {
-            // FIXME: We would like to use SimplifiedLayout for relative positioning, but we can't quite do that yet.
-            // We need to make sure SimplifiedLayout can operate correctly on RenderInlines (we will need
-            // to add a selfNeedsSimplifiedLayout bit in order to not get confused and taint every line).
-            if (position() != PositionType::Absolute)
-                return true;
-
-            // Optimize for the case where a positioned layer is moving but not changing size.
-            if (!positionChangeIsMovementOnly(m_surroundData->offset, other.m_surroundData->offset, m_boxData->width()))
-                return true;
-        }
-    }
 
     bool hasFirstLineStyle = hasPseudoStyle(PseudoId::FirstLine);
     if (hasFirstLineStyle != other.hasPseudoStyle(PseudoId::FirstLine))
         return true;
+
     if (hasFirstLineStyle) {
         auto* firstLineStyle = getCachedPseudoStyle(PseudoId::FirstLine);
         if (!firstLineStyle)
@@ -963,9 +1091,6 @@ bool RenderStyle::changeRequiresLayout(const RenderStyle& other, OptionSet<Style
             return true;
     }
 
-    if (scrollPadding() != other.scrollPadding() || scrollSnapType() != other.scrollSnapType())
-        return true;
-
     return false;
 }
 
@@ -974,22 +1099,17 @@ bool RenderStyle::changeRequiresPositionedLayoutOnly(const RenderStyle& other, O
     if (position() == PositionType::Static)
         return false;
 
-    if (m_surroundData->offset != other.m_surroundData->offset) {
+    if (m_nonInheritedData->surroundData->offset != other.m_nonInheritedData->surroundData->offset) {
         // Optimize for the case where a positioned layer is moving but not changing size.
-        if (position() == PositionType::Absolute && positionChangeIsMovementOnly(m_surroundData->offset, other.m_surroundData->offset, m_boxData->width()))
+        if (position() == PositionType::Absolute && positionChangeIsMovementOnly(m_nonInheritedData->surroundData->offset, other.m_nonInheritedData->surroundData->offset, m_nonInheritedData->boxData->width()))
             return true;
     }
 
     return false;
 }
 
-static bool rareNonInheritedDataChangeRequiresLayerRepaint(const StyleRareNonInheritedData& first, const StyleRareNonInheritedData& second, OptionSet<StyleDifferenceContextSensitiveProperty>& changedContextSensitiveProperties)
+static bool miscDataChangeRequiresLayerRepaint(const StyleMiscNonInheritedData& first, const StyleMiscNonInheritedData& second, OptionSet<StyleDifferenceContextSensitiveProperty>& changedContextSensitiveProperties)
 {
-#if ENABLE(CSS_COMPOSITING)
-    if (first.effectiveBlendMode != second.effectiveBlendMode)
-        return true;
-#endif
-
     if (first.opacity != second.opacity) {
         changedContextSensitiveProperties.add(StyleDifferenceContextSensitiveProperty::Opacity);
         // Don't return true; keep looking for another change.
@@ -1000,15 +1120,34 @@ static bool rareNonInheritedDataChangeRequiresLayerRepaint(const StyleRareNonInh
         // Don't return true; keep looking for another change.
     }
 
+    // FIXME: In SVG this needs to trigger a layout.
+    if (first.mask != second.mask)
+        return true;
+
+    return false;
+}
+
+static bool rareDataChangeRequiresLayerRepaint(const StyleRareNonInheritedData& first, const StyleRareNonInheritedData& second, OptionSet<StyleDifferenceContextSensitiveProperty>& changedContextSensitiveProperties)
+{
+#if PLATFORM(JAVA)
+    UNUSED_PARAM(changedContextSensitiveProperties);
+#endif
+#if ENABLE(CSS_COMPOSITING)
+    if (first.effectiveBlendMode != second.effectiveBlendMode)
+        return true;
+#endif
+
 #if ENABLE(FILTERS_LEVEL_2)
     if (first.backdropFilter != second.backdropFilter) {
         changedContextSensitiveProperties.add(StyleDifferenceContextSensitiveProperty::Filter);
         // Don't return true; keep looking for another change.
     }
+#else
+    UNUSED_PARAM(changedContextSensitiveProperties);
 #endif
 
     // FIXME: In SVG this needs to trigger a layout.
-    if (first.mask != second.mask || first.maskBoxImage != second.maskBoxImage)
+    if (first.maskBoxImage != second.maskBoxImage)
         return true;
 
     return false;
@@ -1017,19 +1156,30 @@ static bool rareNonInheritedDataChangeRequiresLayerRepaint(const StyleRareNonInh
 bool RenderStyle::changeRequiresLayerRepaint(const RenderStyle& other, OptionSet<StyleDifferenceContextSensitiveProperty>& changedContextSensitiveProperties) const
 {
     // Style::Resolver has ensured that zIndex is non-auto only if it's applicable.
-    if (m_boxData->usedZIndex() != other.m_boxData->usedZIndex() || m_boxData->hasAutoUsedZIndex() != other.m_boxData->hasAutoUsedZIndex())
-        return true;
+
+    if (m_nonInheritedData.ptr() != other.m_nonInheritedData.ptr()) {
+        if (m_nonInheritedData->boxData.ptr() != other.m_nonInheritedData->boxData.ptr()) {
+            if (m_nonInheritedData->boxData->usedZIndex() != other.m_nonInheritedData->boxData->usedZIndex() || m_nonInheritedData->boxData->hasAutoUsedZIndex() != other.m_nonInheritedData->boxData->hasAutoUsedZIndex())
+            return true;
+    }
 
     if (position() != PositionType::Static) {
-        if (m_visualData->clip != other.m_visualData->clip || m_visualData->hasClip != other.m_visualData->hasClip) {
-            changedContextSensitiveProperties.add(StyleDifferenceContextSensitiveProperty::ClipRect);
-            return true;
+            if (m_nonInheritedData->rareData.ptr() != other.m_nonInheritedData->rareData.ptr()) {
+                if (m_nonInheritedData->rareData->clip != other.m_nonInheritedData->rareData->clip || m_nonInheritedData->rareData->hasClip != other.m_nonInheritedData->rareData->hasClip) {
+                changedContextSensitiveProperties.add(StyleDifferenceContextSensitiveProperty::ClipRect);
+                return true;
+            }
         }
     }
 
-    if (m_rareNonInheritedData.ptr() != other.m_rareNonInheritedData.ptr()
-        && rareNonInheritedDataChangeRequiresLayerRepaint(*m_rareNonInheritedData, *other.m_rareNonInheritedData, changedContextSensitiveProperties))
+        if (m_nonInheritedData->miscData.ptr() != other.m_nonInheritedData->miscData.ptr()
+            && miscDataChangeRequiresLayerRepaint(*m_nonInheritedData->miscData, *other.m_nonInheritedData->miscData, changedContextSensitiveProperties))
         return true;
+
+        if (m_nonInheritedData->rareData.ptr() != other.m_nonInheritedData->rareData.ptr()
+            && rareDataChangeRequiresLayerRepaint(*m_nonInheritedData->rareData, *other.m_nonInheritedData->rareData, changedContextSensitiveProperties))
+            return true;
+    }
 
     return false;
 }
@@ -1043,16 +1193,18 @@ static bool requiresPainting(const RenderStyle& style)
     return true;
 }
 
-static bool rareNonInheritedDataChangeRequiresRepaint(const StyleRareNonInheritedData& first, const StyleRareNonInheritedData& second, OptionSet<StyleDifferenceContextSensitiveProperty>& changedContextSensitiveProperties)
+static bool miscDataChangeRequiresRepaint(const StyleMiscNonInheritedData& first, const StyleMiscNonInheritedData& second, OptionSet<StyleDifferenceContextSensitiveProperty>&)
 {
     if (first.userDrag != second.userDrag
         || first.objectFit != second.objectFit
         || first.objectPosition != second.objectPosition)
         return true;
 
-    if (first.isNotFinal != second.isNotFinal)
-        return true;
+    return false;
+}
 
+static bool rareDataChangeRequiresRepaint(const StyleRareNonInheritedData& first, const StyleRareNonInheritedData& second, OptionSet<StyleDifferenceContextSensitiveProperty>& changedContextSensitiveProperties)
+{
     if (first.shapeOutside != second.shapeOutside)
         return true;
 
@@ -1079,35 +1231,28 @@ static bool rareInheritedDataChangeRequiresRepaint(const StyleRareInheritedData&
 }
 
 #if ENABLE(CSS_PAINTING_API)
-void RenderStyle::addCustomPaintWatchProperty(const String& name)
+void RenderStyle::addCustomPaintWatchProperty(const AtomString& name)
 {
-    auto& data = m_rareNonInheritedData.access();
-    if (!data.customPaintWatchedProperties)
-        data.customPaintWatchedProperties = makeUnique<HashSet<String>>();
-    data.customPaintWatchedProperties->add(name);
+    auto& data = m_nonInheritedData.access().rareData.access();
+    data.customPaintWatchedProperties.add(name);
 }
 
 inline static bool changedCustomPaintWatchedProperty(const RenderStyle& a, const StyleRareNonInheritedData& aData, const RenderStyle& b, const StyleRareNonInheritedData& bData)
 {
-    auto* propertiesA = aData.customPaintWatchedProperties.get();
-    auto* propertiesB = bData.customPaintWatchedProperties.get();
+    auto& propertiesA = aData.customPaintWatchedProperties;
+    auto& propertiesB = bData.customPaintWatchedProperties;
 
-    if (UNLIKELY(propertiesA || propertiesB)) {
+    if (UNLIKELY(!propertiesA.isEmpty() || !propertiesB.isEmpty())) {
         // FIXME: We should not need to use ComputedStyleExtractor here.
         ComputedStyleExtractor extractor((Element*) nullptr);
 
-        for (auto* watchPropertiesMap : { propertiesA, propertiesB }) {
-            if (!watchPropertiesMap)
-                continue;
-
-            for (auto& name : *watchPropertiesMap) {
-                RefPtr<CSSValue> valueA;
-                RefPtr<CSSValue> valueB;
+        for (auto& watchPropertiesMap : { propertiesA, propertiesB }) {
+            for (auto& name : watchPropertiesMap) {
+                RefPtr<const CSSValue> valueA;
+                RefPtr<const CSSValue> valueB;
                 if (isCustomPropertyName(name)) {
-                    if (a.getCustomProperty(name))
-                        valueA = CSSCustomPropertyValue::create(*a.getCustomProperty(name));
-                    if (b.getCustomProperty(name))
-                        valueB = CSSCustomPropertyValue::create(*b.getCustomProperty(name));
+                    valueA = a.customPropertyValue(name);
+                    valueB = b.customPropertyValue(name);
                 } else {
                     CSSPropertyID propertyID = cssPropertyID(name);
                     if (!propertyID)
@@ -1134,42 +1279,63 @@ inline static bool changedCustomPaintWatchedProperty(const RenderStyle& a, const
 
 bool RenderStyle::changeRequiresRepaint(const RenderStyle& other, OptionSet<StyleDifferenceContextSensitiveProperty>& changedContextSensitiveProperties) const
 {
+    bool currentColorDiffers = m_inheritedData->color != other.m_inheritedData->color;
+
+    if (m_svgStyle->changeRequiresRepaint(other.m_svgStyle, currentColorDiffers))
+        return true;
+
     if (!requiresPainting(*this) && !requiresPainting(other))
         return false;
-
-    bool currentColorDiffers = m_inheritedData->color != other.m_inheritedData->color;
 
     if (m_inheritedFlags.visibility != other.m_inheritedFlags.visibility
         || m_inheritedFlags.printColorAdjust != other.m_inheritedFlags.printColorAdjust
         || m_inheritedFlags.insideLink != other.m_inheritedFlags.insideLink
-        || m_inheritedFlags.insideDefaultButton != other.m_inheritedFlags.insideDefaultButton
-        || m_surroundData->border != other.m_surroundData->border
-        || !m_backgroundData->isEquivalentForPainting(*other.m_backgroundData, currentColorDiffers))
+        || m_inheritedFlags.insideDefaultButton != other.m_inheritedFlags.insideDefaultButton)
         return true;
 
-    if (m_rareNonInheritedData.ptr() != other.m_rareNonInheritedData.ptr()
-        && rareNonInheritedDataChangeRequiresRepaint(*m_rareNonInheritedData, *other.m_rareNonInheritedData, changedContextSensitiveProperties))
+
+    if (currentColorDiffers || m_nonInheritedData.ptr() != other.m_nonInheritedData.ptr()) {
+        if (currentColorDiffers || m_nonInheritedData->backgroundData.ptr() != other.m_nonInheritedData->backgroundData.ptr()) {
+            if (!m_nonInheritedData->backgroundData->isEquivalentForPainting(*other.m_nonInheritedData->backgroundData, currentColorDiffers))
+            return true;
+    }
+
+        if (currentColorDiffers || m_nonInheritedData->surroundData.ptr() != other.m_nonInheritedData->surroundData.ptr()) {
+            if (!m_nonInheritedData->surroundData->border.isEquivalentForPainting(other.m_nonInheritedData->surroundData->border, currentColorDiffers))
+            return true;
+    }
+    }
+
+    if (m_nonInheritedData.ptr() != other.m_nonInheritedData.ptr()) {
+        if (m_nonInheritedData->miscData.ptr() != other.m_nonInheritedData->miscData.ptr()
+            && miscDataChangeRequiresRepaint(*m_nonInheritedData->miscData, *other.m_nonInheritedData->miscData, changedContextSensitiveProperties))
+            return true;
+
+        if (m_nonInheritedData->rareData.ptr() != other.m_nonInheritedData->rareData.ptr()
+            && rareDataChangeRequiresRepaint(*m_nonInheritedData->rareData, *other.m_nonInheritedData->rareData, changedContextSensitiveProperties))
         return true;
+    }
 
     if (m_rareInheritedData.ptr() != other.m_rareInheritedData.ptr()
         && rareInheritedDataChangeRequiresRepaint(*m_rareInheritedData, *other.m_rareInheritedData))
         return true;
 
 #if ENABLE(CSS_PAINTING_API)
-    if (changedCustomPaintWatchedProperty(*this, *m_rareNonInheritedData, other, *other.m_rareNonInheritedData))
+    if (changedCustomPaintWatchedProperty(*this, *m_nonInheritedData->rareData, other, *other.m_nonInheritedData->rareData))
         return true;
 #endif
 
     return false;
 }
 
-bool RenderStyle::changeRequiresRepaintIfTextOrBorderOrOutline(const RenderStyle& other, OptionSet<StyleDifferenceContextSensitiveProperty>&) const
+bool RenderStyle::changeRequiresRepaintIfText(const RenderStyle& other, OptionSet<StyleDifferenceContextSensitiveProperty>&) const
 {
     if (m_inheritedData->color != other.m_inheritedData->color
-        || m_inheritedFlags.textDecorations != other.m_inheritedFlags.textDecorations
-        || m_visualData->textDecoration != other.m_visualData->textDecoration
-        || m_rareNonInheritedData->textDecorationStyle != other.m_rareNonInheritedData->textDecorationStyle
-        || m_rareNonInheritedData->textDecorationColor != other.m_rareNonInheritedData->textDecorationColor
+        || m_inheritedFlags.textDecorationLines != other.m_inheritedFlags.textDecorationLines
+        || m_nonInheritedFlags.textDecorationLine != other.m_nonInheritedFlags.textDecorationLine
+        || m_nonInheritedData->rareData->textDecorationStyle != other.m_nonInheritedData->rareData->textDecorationStyle
+        || m_nonInheritedData->rareData->textDecorationColor != other.m_nonInheritedData->rareData->textDecorationColor
+        || m_nonInheritedData->rareData->textDecorationThickness != other.m_nonInheritedData->rareData->textDecorationThickness
         || m_rareInheritedData->textDecorationSkipInk != other.m_rareInheritedData->textDecorationSkipInk
         || m_rareInheritedData->textFillColor != other.m_rareInheritedData->textFillColor
         || m_rareInheritedData->textStrokeColor != other.m_rareInheritedData->textStrokeColor
@@ -1187,14 +1353,14 @@ bool RenderStyle::changeRequiresRecompositeLayer(const RenderStyle& other, Optio
     if (m_inheritedFlags.pointerEvents != other.m_inheritedFlags.pointerEvents)
         return true;
 
-    if (m_rareNonInheritedData.ptr() != other.m_rareNonInheritedData.ptr()) {
+    if (m_nonInheritedData.ptr() != other.m_nonInheritedData.ptr() && m_nonInheritedData->rareData.ptr() != other.m_nonInheritedData->rareData.ptr()) {
         if (usedTransformStyle3D() != other.usedTransformStyle3D()
-            || m_rareNonInheritedData->backfaceVisibility != other.m_rareNonInheritedData->backfaceVisibility
-            || m_rareNonInheritedData->perspective != other.m_rareNonInheritedData->perspective
-            || m_rareNonInheritedData->perspectiveOriginX != other.m_rareNonInheritedData->perspectiveOriginX
-            || m_rareNonInheritedData->perspectiveOriginY != other.m_rareNonInheritedData->perspectiveOriginY
-            || m_rareNonInheritedData->overscrollBehaviorX != other.m_rareNonInheritedData->overscrollBehaviorX
-            || m_rareNonInheritedData->overscrollBehaviorY != other.m_rareNonInheritedData->overscrollBehaviorY)
+            || m_nonInheritedData->rareData->backfaceVisibility != other.m_nonInheritedData->rareData->backfaceVisibility
+            || m_nonInheritedData->rareData->perspective != other.m_nonInheritedData->rareData->perspective
+            || m_nonInheritedData->rareData->perspectiveOriginX != other.m_nonInheritedData->rareData->perspectiveOriginX
+            || m_nonInheritedData->rareData->perspectiveOriginY != other.m_nonInheritedData->rareData->perspectiveOriginY
+            || m_nonInheritedData->rareData->overscrollBehaviorX != other.m_nonInheritedData->rareData->overscrollBehaviorX
+            || m_nonInheritedData->rareData->overscrollBehaviorY != other.m_nonInheritedData->rareData->overscrollBehaviorY)
             return true;
     }
 
@@ -1205,22 +1371,8 @@ StyleDifference RenderStyle::diff(const RenderStyle& other, OptionSet<StyleDiffe
 {
     changedContextSensitiveProperties = OptionSet<StyleDifferenceContextSensitiveProperty>();
 
-    StyleDifference svgChange = StyleDifference::Equal;
-    if (m_svgStyle != other.m_svgStyle) {
-        svgChange = m_svgStyle->diff(other.m_svgStyle.get());
-        if (svgChange == StyleDifference::Layout)
-            return svgChange;
-    }
-
     if (changeRequiresLayout(other, changedContextSensitiveProperties))
         return StyleDifference::Layout;
-
-    // SVGRenderStyle::diff() might have returned StyleDifference::Repaint, eg. if fill changes.
-    // If eg. the font-size changed at the same time, we're not allowed to return StyleDifference::Repaint,
-    // but have to return StyleDifference::Layout, that's why  this if branch comes after all branches
-    // that are relevant for SVG and might return StyleDifference::Layout.
-    if (svgChange != StyleDifference::Equal)
-        return svgChange;
 
     if (changeRequiresPositionedLayoutOnly(other, changedContextSensitiveProperties))
         return StyleDifference::LayoutPositionedMovementOnly;
@@ -1231,8 +1383,8 @@ StyleDifference RenderStyle::diff(const RenderStyle& other, OptionSet<StyleDiffe
     if (changeRequiresRepaint(other, changedContextSensitiveProperties))
         return StyleDifference::Repaint;
 
-    if (changeRequiresRepaintIfTextOrBorderOrOutline(other, changedContextSensitiveProperties))
-        return StyleDifference::RepaintIfTextOrBorderOrOutline;
+    if (changeRequiresRepaintIfText(other, changedContextSensitiveProperties))
+        return StyleDifference::RepaintIfText;
 
     // FIXME: RecompositeLayer should also behave as a priority bit (e.g when the style change requires layout, we know that
     // the content also needs repaint and it will eventually get repainted,
@@ -1263,7 +1415,7 @@ bool RenderStyle::diffRequiresLayerRepaint(const RenderStyle& style, bool isComp
 
 void RenderStyle::setClip(Length&& top, Length&& right, Length&& bottom, Length&& left)
 {
-    auto& data = m_visualData.access();
+    auto& data = m_nonInheritedData.access().rareData.access();
     data.clip.top() = WTFMove(top);
     data.clip.right() = WTFMove(right);
     data.clip.bottom() = WTFMove(bottom);
@@ -1295,25 +1447,25 @@ void RenderStyle::setQuotes(RefPtr<QuotesData>&& q)
 
 void RenderStyle::setWillChange(RefPtr<WillChangeData>&& willChangeData)
 {
-    if (arePointingToEqualData(m_rareNonInheritedData->willChange.get(), willChangeData.get()))
+    if (arePointingToEqualData(m_nonInheritedData->rareData->willChange.get(), willChangeData.get()))
         return;
 
-    m_rareNonInheritedData.access().willChange = WTFMove(willChangeData);
+    m_nonInheritedData.access().rareData.access().willChange = WTFMove(willChangeData);
 }
 
 void RenderStyle::setScale(RefPtr<ScaleTransformOperation>&& t)
 {
-    m_rareNonInheritedData.access().scale = WTFMove(t);
+    m_nonInheritedData.access().rareData.access().scale = WTFMove(t);
 }
 
 void RenderStyle::setRotate(RefPtr<RotateTransformOperation>&& t)
 {
-    m_rareNonInheritedData.access().rotate = WTFMove(t);
+    m_nonInheritedData.access().rareData.access().rotate = WTFMove(t);
 }
 
 void RenderStyle::setTranslate(RefPtr<TranslateTransformOperation>&& t)
 {
-    m_rareNonInheritedData.access().translate = WTFMove(t);
+    m_nonInheritedData.access().rareData.access().translate = WTFMove(t);
 }
 
 void RenderStyle::clearCursorList()
@@ -1324,8 +1476,8 @@ void RenderStyle::clearCursorList()
 
 void RenderStyle::clearContent()
 {
-    if (m_rareNonInheritedData->content)
-        m_rareNonInheritedData.access().content = nullptr;
+    if (m_nonInheritedData->miscData->content)
+        m_nonInheritedData.access().miscData.access().content = nullptr;
 }
 
 static inline ContentData& lastContent(ContentData& firstContent)
@@ -1338,7 +1490,7 @@ static inline ContentData& lastContent(ContentData& firstContent)
 
 void RenderStyle::setContent(std::unique_ptr<ContentData> contentData, bool add)
 {
-    auto& data = m_rareNonInheritedData.access();
+    auto& data = m_nonInheritedData.access().miscData.access();
     if (add && data.content)
         lastContent(*data.content).setNext(WTFMove(contentData));
     else {
@@ -1358,7 +1510,7 @@ void RenderStyle::setContent(RefPtr<StyleImage>&& image, bool add)
 
 void RenderStyle::setContent(const String& string, bool add)
 {
-    auto& data = m_rareNonInheritedData.access();
+    auto& data = m_nonInheritedData.access().miscData.access();
     if (add && data.content) {
         auto& last = lastContent(*data.content);
         if (!is<TextContentData>(last))
@@ -1389,7 +1541,7 @@ void RenderStyle::setContent(QuoteType quote, bool add)
 
 void RenderStyle::setContentAltText(const String& string)
 {
-    auto& data = m_rareNonInheritedData.access();
+    auto& data = m_nonInheritedData.access().miscData.access();
     data.altText = string;
     if (data.content)
         data.content->setAltText(string);
@@ -1397,51 +1549,116 @@ void RenderStyle::setContentAltText(const String& string)
 
 const String& RenderStyle::contentAltText() const
 {
-    return m_rareNonInheritedData->altText;
+    return m_nonInheritedData->miscData->altText;
 }
 
 void RenderStyle::setHasAttrContent()
 {
     setUnique();
-    SET_VAR(m_rareNonInheritedData, hasAttrContent, true);
+    SET_NESTED_VAR(m_nonInheritedData, miscData, hasAttrContent, true);
+}
+
+bool RenderStyle::affectedByTransformOrigin() const
+{
+    if (m_nonInheritedData->rareData->rotate && !m_nonInheritedData->rareData->rotate->isIdentity())
+        return true;
+
+    if (m_nonInheritedData->rareData->scale && !m_nonInheritedData->rareData->scale->isIdentity())
+        return true;
+
+    auto& transformOperations = m_nonInheritedData->miscData->transform->operations;
+    if (transformOperations.affectedByTransformOrigin())
+        return true;
+
+    if (offsetPath())
+        return true;
+
+    return false;
+}
+
+FloatPoint RenderStyle::computePerspectiveOrigin(const FloatRect& boundingBox) const
+{
+    return boundingBox.location() + floatPointForLengthPoint(perspectiveOrigin(), boundingBox.size());
+}
+
+void RenderStyle::applyPerspective(TransformationMatrix& transform, const FloatPoint& originTranslate) const
+{
+    // https://www.w3.org/TR/css-transforms-2/#perspective
+    // The perspective matrix is computed as follows:
+    // 1. Start with the identity matrix.
+
+    // 2. Translate by the computed X and Y values of perspective-origin
+    transform.translate(originTranslate.x(), originTranslate.y());
+
+    // 3. Multiply by the matrix that would be obtained from the perspective() transform function, where the length is provided by the value of the perspective property
+    transform.applyPerspective(usedPerspective());
+
+    // 4. Translate by the negated computed X and Y values of perspective-origin
+    transform.translate(-originTranslate.x(), -originTranslate.y());
+}
+
+FloatPoint3D RenderStyle::computeTransformOrigin(const FloatRect& boundingBox) const
+{
+    FloatPoint3D originTranslate;
+    originTranslate.setXY(boundingBox.location() + floatPointForLengthPoint(transformOriginXY(), boundingBox.size()));
+    originTranslate.setZ(transformOriginZ());
+    return originTranslate;
+}
+
+void RenderStyle::applyTransformOrigin(TransformationMatrix& transform, const FloatPoint3D& originTranslate) const
+{
+    if (!originTranslate.isZero())
+        transform.translate3d(originTranslate.x(), originTranslate.y(), originTranslate.z());
+}
+
+void RenderStyle::unapplyTransformOrigin(TransformationMatrix& transform, const FloatPoint3D& originTranslate) const
+{
+    if (!originTranslate.isZero())
+        transform.translate3d(-originTranslate.x(), -originTranslate.y(), -originTranslate.z());
 }
 
 void RenderStyle::applyTransform(TransformationMatrix& transform, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption> options) const
+{
+    if (!options.contains(RenderStyle::TransformOperationOption::TransformOrigin) || !affectedByTransformOrigin()) {
+        applyCSSTransform(transform, boundingBox, options);
+        return;
+    }
+
+    auto originTranslate = computeTransformOrigin(boundingBox);
+    applyTransformOrigin(transform, originTranslate);
+    applyCSSTransform(transform, boundingBox, options);
+    unapplyTransformOrigin(transform, originTranslate);
+}
+
+void RenderStyle::applyTransform(TransformationMatrix& transform, const FloatRect& boundingBox) const
+{
+    applyTransform(transform, boundingBox, allTransformOperations());
+}
+
+void RenderStyle::applyCSSTransform(TransformationMatrix& transform, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption> options) const
 {
     // https://www.w3.org/TR/css-transforms-2/#ctm
     // The transformation matrix is computed from the transform, transform-origin, translate, rotate, scale, and offset properties as follows:
     // 1. Start with the identity matrix.
 
-    auto& transformOperations = m_rareNonInheritedData->transform->operations;
-    bool applyTransformOrigin = options.contains(RenderStyle::TransformOperationOption::TransformOrigin)
-        && ((m_rareNonInheritedData->rotate && !m_rareNonInheritedData->rotate->isIdentity())
-            || (m_rareNonInheritedData->scale && !m_rareNonInheritedData->scale->isIdentity())
-            || transformOperations.affectedByTransformOrigin()
-            || offsetPath());
-
     // 2. Translate by the computed X, Y, and Z values of transform-origin.
-    FloatPoint3D originTranslate;
-    if (applyTransformOrigin) {
-        originTranslate.setXY(boundingBox.location() + floatPointForLengthPoint(transformOriginXY(), boundingBox.size()));
-        originTranslate.setZ(transformOriginZ());
-        transform.translate3d(originTranslate.x(), originTranslate.y(), originTranslate.z());
-    }
+    // (implemented in applyTransformOrigin)
 
     // 3. Translate by the computed X, Y, and Z values of translate.
     if (options.contains(RenderStyle::TransformOperationOption::Translate)) {
-        if (TransformOperation* translate = m_rareNonInheritedData->translate.get())
+        if (TransformOperation* translate = m_nonInheritedData->rareData->translate.get())
             translate->apply(transform, boundingBox.size());
     }
 
     // 4. Rotate by the computed <angle> about the specified axis of rotate.
     if (options.contains(RenderStyle::TransformOperationOption::Rotate)) {
-        if (TransformOperation* rotate = m_rareNonInheritedData->rotate.get())
+        if (TransformOperation* rotate = m_nonInheritedData->rareData->rotate.get())
             rotate->apply(transform, boundingBox.size());
     }
 
     // 5. Scale by the computed X, Y, and Z values of scale.
     if (options.contains(RenderStyle::TransformOperationOption::Scale)) {
-        if (TransformOperation* scale = m_rareNonInheritedData->scale.get())
+        if (TransformOperation* scale = m_nonInheritedData->rareData->scale.get())
             scale->apply(transform, boundingBox.size());
     }
 
@@ -1450,22 +1667,12 @@ void RenderStyle::applyTransform(TransformationMatrix& transform, const FloatRec
         applyMotionPathTransform(transform, boundingBox);
 
     // 7. Multiply by each of the transform functions in transform from left to right.
+    auto& transformOperations = m_nonInheritedData->miscData->transform->operations;
     for (auto& operation : transformOperations.operations())
         operation->apply(transform, boundingBox.size());
 
     // 8. Translate by the negated computed X, Y and Z values of transform-origin.
-    if (applyTransformOrigin)
-        transform.translate3d(-originTranslate.x(), -originTranslate.y(), -originTranslate.z());
-}
-
-static std::optional<Path> getPathFromPathOperation(const FloatRect& box, const PathOperation& operation)
-{
-    if (operation.type() == PathOperation::Shape)
-        return downcast<ShapePathOperation>(operation).pathForReferenceRect(box);
-
-    // FIXME: support Reference and Box type.
-    // https://bugs.webkit.org/show_bug.cgi?id=233382
-    return std::nullopt;
+    // (implemented in unapplyTransformOrigin)
 }
 
 static PathTraversalState getTraversalStateAtDistance(const Path& path, const Length& distance)
@@ -1492,18 +1699,19 @@ void RenderStyle::applyMotionPathTransform(TransformationMatrix& transform, cons
     if (!offsetPath())
         return;
 
+    auto transformOrigin = computeTransformOrigin(boundingBox).xy();
+    auto anchor = transformOrigin;
+    if (!offsetAnchor().x().isAuto())
+        anchor = floatPointForLengthPoint(offsetAnchor(), boundingBox.size()) + boundingBox.location();
+
     // Shift element to the point on path specified by offset-path and offset-distance.
-    auto path = getPathFromPathOperation(boundingBox, *offsetPath());
+    auto path = offsetPath()->getPath(boundingBox);
     if (!path)
         return;
     auto traversalState = getTraversalStateAtDistance(*path, offsetDistance());
     transform.translate(traversalState.current().x(), traversalState.current().y());
 
     // Shift element to the anchor specified by offset-anchor.
-    auto transformOrigin = floatPointForLengthPoint(transformOriginXY(), boundingBox.size()) + boundingBox.location();
-    auto anchor = transformOrigin;
-    if (!offsetAnchor().x().isAuto())
-        anchor = floatPointForLengthPoint(offsetAnchor(), boundingBox.size()) + boundingBox.location();
     transform.translate(-anchor.x(), -anchor.y());
 
     auto shiftToOrigin = anchor - transformOrigin;
@@ -1524,7 +1732,7 @@ void RenderStyle::setPageScaleTransform(float scale)
     if (scale == 1)
         return;
     TransformOperations transform;
-    transform.operations().append(ScaleTransformOperation::create(scale, scale, ScaleTransformOperation::SCALE));
+    transform.operations().append(ScaleTransformOperation::create(scale, scale, TransformOperation::Type::Scale));
     setTransform(transform);
     setTransformOriginX(Length(0, LengthType::Fixed));
     setTransformOriginY(Length(0, LengthType::Fixed));
@@ -1546,7 +1754,7 @@ void RenderStyle::setTextShadow(std::unique_ptr<ShadowData> shadowData, bool add
 
 void RenderStyle::setBoxShadow(std::unique_ptr<ShadowData> shadowData, bool add)
 {
-    auto& rareData = m_rareNonInheritedData.access();
+    auto& rareData = m_nonInheritedData.access().miscData.access();
     if (!add) {
         rareData.boxShadow = WTFMove(shadowData);
         return;
@@ -1556,13 +1764,13 @@ void RenderStyle::setBoxShadow(std::unique_ptr<ShadowData> shadowData, bool add)
     rareData.boxShadow = WTFMove(shadowData);
 }
 
-static RoundedRect::Radii calcRadiiFor(const BorderData& border, const LayoutSize& size)
+static RoundedRect::Radii calcRadiiFor(const BorderData::Radii& radii, const LayoutSize& size)
 {
     return {
-        sizeForLengthSize(border.topLeftRadius(), size),
-        sizeForLengthSize(border.topRightRadius(), size),
-        sizeForLengthSize(border.bottomLeftRadius(), size),
-        sizeForLengthSize(border.bottomRightRadius(), size)
+        sizeForLengthSize(radii.topLeft, size),
+        sizeForLengthSize(radii.topRight, size),
+        sizeForLengthSize(radii.bottomLeft, size),
+        sizeForLengthSize(radii.bottomRight, size)
     };
 }
 
@@ -1621,7 +1829,7 @@ RoundedRect RenderStyle::getRoundedBorderFor(const LayoutRect& borderRect, bool 
 {
     RoundedRect roundedRect(borderRect);
     if (hasBorderRadius()) {
-        RoundedRect::Radii radii = calcRadiiFor(m_surroundData->border, borderRect.size());
+        RoundedRect::Radii radii = calcRadiiFor(m_nonInheritedData->surroundData->border.m_radii, borderRect.size());
         radii.scale(calcBorderRadiiConstraintScaleFor(borderRect, radii));
         roundedRect.includeLogicalEdges(radii, isHorizontalWritingMode(), includeLogicalLeftEdge, includeLogicalRightEdge);
     }
@@ -1641,6 +1849,13 @@ RoundedRect RenderStyle::getRoundedInnerBorderFor(const LayoutRect& borderRect, 
 RoundedRect RenderStyle::getRoundedInnerBorderFor(const LayoutRect& borderRect, LayoutUnit topWidth, LayoutUnit bottomWidth,
     LayoutUnit leftWidth, LayoutUnit rightWidth, bool includeLogicalLeftEdge, bool includeLogicalRightEdge) const
 {
+    auto radii = hasBorderRadius() ? std::make_optional(m_nonInheritedData->surroundData->border.m_radii) : std::nullopt;
+    return getRoundedInnerBorderFor(borderRect, topWidth, bottomWidth, leftWidth, rightWidth, radii, isHorizontalWritingMode(), includeLogicalLeftEdge, includeLogicalRightEdge);
+}
+
+RoundedRect RenderStyle::getRoundedInnerBorderFor(const LayoutRect& borderRect, LayoutUnit topWidth, LayoutUnit bottomWidth,
+    LayoutUnit leftWidth, LayoutUnit rightWidth, std::optional<BorderData::Radii> radii, bool isHorizontalWritingMode, bool includeLogicalLeftEdge, bool includeLogicalRightEdge)
+{
     auto width = std::max(0_lu, borderRect.width() - leftWidth - rightWidth);
     auto height = std::max(0_lu, borderRect.height() - topWidth - bottomWidth);
     auto roundedRect = RoundedRect {
@@ -1649,11 +1864,14 @@ RoundedRect RenderStyle::getRoundedInnerBorderFor(const LayoutRect& borderRect, 
         width,
         height
     };
-    if (hasBorderRadius()) {
-        auto radii = getRoundedBorderFor(borderRect).radii();
-        radii.shrink(topWidth, bottomWidth, leftWidth, rightWidth);
-        roundedRect.includeLogicalEdges(radii, isHorizontalWritingMode(), includeLogicalLeftEdge, includeLogicalRightEdge);
+    if (radii) {
+        auto adjustedRadii = calcRadiiFor(*radii, borderRect.size());
+        adjustedRadii.scale(calcBorderRadiiConstraintScaleFor(borderRect, adjustedRadii));
+        adjustedRadii.shrink(topWidth, bottomWidth, leftWidth, rightWidth);
+        roundedRect.includeLogicalEdges(adjustedRadii, isHorizontalWritingMode, includeLogicalLeftEdge, includeLogicalRightEdge);
     }
+    if (!roundedRect.isRenderable())
+        roundedRect.adjustRadii();
     return roundedRect;
 }
 
@@ -1671,26 +1889,14 @@ bool RenderStyle::hasEntirelyFixedBackground() const
     return allLayersAreFixed(backgroundLayers());
 }
 
-bool RenderStyle::hasAnyLocalBackground() const
+const CounterDirectiveMap& RenderStyle::counterDirectives() const
 {
-    for (auto* layer = &backgroundLayers(); layer; layer = layer->next()) {
-        if (layer->image() && layer->attachment() == FillAttachment::LocalBackground)
-            return true;
-    }
-    return false;
-}
-
-const CounterDirectiveMap* RenderStyle::counterDirectives() const
-{
-    return m_rareNonInheritedData->counterDirectives.get();
+    return m_nonInheritedData->rareData->counterDirectives;
 }
 
 CounterDirectiveMap& RenderStyle::accessCounterDirectives()
 {
-    auto& map = m_rareNonInheritedData.access().counterDirectives;
-    if (!map)
-        map = makeUnique<CounterDirectiveMap>();
-    return *map;
+    return m_nonInheritedData.access().rareData.access().counterDirectives;
 }
 
 const AtomString& RenderStyle::hyphenString() const
@@ -1750,7 +1956,7 @@ const AtomString& RenderStyle::textEmphasisMarkString() const
 
 void RenderStyle::adjustAnimations()
 {
-    auto* animationList = m_rareNonInheritedData->animations.get();
+    auto* animationList = m_nonInheritedData->miscData->animations.get();
     if (!animationList)
         return;
 
@@ -1773,7 +1979,7 @@ void RenderStyle::adjustAnimations()
 
 void RenderStyle::adjustTransitions()
 {
-    auto* transitionList = m_rareNonInheritedData->transitions.get();
+    auto* transitionList = m_nonInheritedData->miscData->transitions.get();
     if (!transitionList)
         return;
 
@@ -1796,21 +2002,18 @@ void RenderStyle::adjustTransitions()
 
 AnimationList& RenderStyle::ensureAnimations()
 {
-    if (!m_rareNonInheritedData.access().animations)
-        m_rareNonInheritedData.access().animations = AnimationList::create();
-    return *m_rareNonInheritedData->animations;
+    auto& animations = m_nonInheritedData.access().miscData.access().animations;
+    if (!animations)
+        animations = AnimationList::create();
+    return *animations;
 }
 
 AnimationList& RenderStyle::ensureTransitions()
 {
-    if (!m_rareNonInheritedData.access().transitions)
-        m_rareNonInheritedData.access().transitions = AnimationList::create();
-    return *m_rareNonInheritedData->transitions;
-}
-
-float RenderStyle::usedPerspective(const RenderObject& object) const
-{
-    return object.document().settings().css3DTransformInteroperabilityEnabled() ? std::max(1.0f, perspective()) : perspective();
+    auto& transitions = m_nonInheritedData.access().miscData.access().transitions;
+    if (!transitions)
+        transitions = AnimationList::create();
+    return *transitions;
 }
 
 const FontCascade& RenderStyle::fontCascade() const
@@ -1838,11 +2041,6 @@ float RenderStyle::computedFontSize() const
     return fontDescription().computedSize();
 }
 
-unsigned RenderStyle::computedFontPixelSize() const
-{
-    return fontDescription().computedPixelSize();
-}
-
 const Length& RenderStyle::wordSpacing() const
 {
     return m_rareInheritedData->wordSpacing;
@@ -1851,6 +2049,16 @@ const Length& RenderStyle::wordSpacing() const
 float RenderStyle::letterSpacing() const
 {
     return m_inheritedData->fontCascade.letterSpacing();
+}
+
+TextSpacingTrim RenderStyle::textSpacingTrim() const
+{
+    return m_rareInheritedData->textSpacingTrim;
+}
+
+TextAutospace RenderStyle::textAutospace() const
+{
+    return m_rareInheritedData->textAutospace;
 }
 
 bool RenderStyle::setFontDescription(FontCascadeDescription&& description)
@@ -1902,9 +2110,33 @@ int RenderStyle::computeLineHeight(const Length& lineHeightLength) const
         return metricsOfPrimaryFont().lineSpacing();
 
     if (lineHeightLength.isPercentOrCalculated())
-        return minimumValueForLength(lineHeightLength, computedFontPixelSize());
+        return minimumValueForLength(lineHeightLength, computedFontSize());
 
     return clampTo<int>(lineHeightLength.value());
+}
+
+// FIXME: Remove this after all old calls to whiteSpace() are replaced with appropriate
+// calls to whiteSpaceCollapse() and textWrap().
+WhiteSpace RenderStyle::whiteSpace() const
+{
+    auto whiteSpaceCollapse = static_cast<WhiteSpaceCollapse>(m_inheritedFlags.whiteSpaceCollapse);
+    auto textWrap = static_cast<TextWrap>(m_inheritedFlags.textWrap);
+    if (whiteSpaceCollapse == WhiteSpaceCollapse::BreakSpaces && textWrap == TextWrap::Wrap)
+        return WhiteSpace::BreakSpaces;
+    if (whiteSpaceCollapse == WhiteSpaceCollapse::Collapse && textWrap == TextWrap::Wrap)
+        return WhiteSpace::Normal;
+    if (whiteSpaceCollapse == WhiteSpaceCollapse::Collapse && textWrap == TextWrap::NoWrap)
+        return WhiteSpace::NoWrap;
+    if (whiteSpaceCollapse == WhiteSpaceCollapse::Preserve && textWrap == TextWrap::NoWrap)
+        return WhiteSpace::Pre;
+    if (whiteSpaceCollapse == WhiteSpaceCollapse::PreserveBreaks && textWrap == TextWrap::Wrap)
+        return WhiteSpace::PreLine;
+    if (whiteSpaceCollapse == WhiteSpaceCollapse::Preserve && textWrap == TextWrap::Wrap)
+        return WhiteSpace::PreWrap;
+
+    // Reachable for combinations that can't be represented with the white-space syntax.
+    // Do nothing for now since this is a temporary function.
+    return WhiteSpace::Normal;
 }
 
 void RenderStyle::setWordSpacing(Length&& value)
@@ -1921,7 +2153,7 @@ void RenderStyle::setWordSpacing(Length&& value)
         fontWordSpacing = value.value();
         break;
     case LengthType::Calculated:
-        fontWordSpacing = value.nonNanCalculatedValue(maxValueForCssLength);
+        fontWordSpacing = value.nonNanCalculatedValue(static_cast<float>(maxValueForCssLength));
         break;
     default:
         ASSERT_NOT_REACHED();
@@ -1934,11 +2166,11 @@ void RenderStyle::setWordSpacing(Length&& value)
 
 void RenderStyle::setLetterSpacing(float letterSpacing)
 {
-    FontSelector* currentFontSelector = fontCascade().fontSelector();
+    auto selector = fontCascade().fontSelector();
     auto description = fontDescription();
     description.setShouldDisableLigaturesForSpacing(letterSpacing);
     setFontDescription(WTFMove(description));
-    fontCascade().update(currentFontSelector);
+    fontCascade().update(selector);
 
     setLetterSpacingWithoutUpdatingFontDescription(letterSpacing);
 }
@@ -1959,63 +2191,73 @@ void RenderStyle::setFontSize(float size)
     else
         size = std::min(maximumAllowedFontSize, size);
 
-    FontSelector* currentFontSelector = fontCascade().fontSelector();
+    auto selector = fontCascade().fontSelector();
     auto description = fontDescription();
     description.setSpecifiedSize(size);
     description.setComputedSize(size);
 
     setFontDescription(WTFMove(description));
-    fontCascade().update(currentFontSelector);
+    fontCascade().update(selector);
+}
+
+void RenderStyle::setFontSizeAdjust(FontSizeAdjust sizeAdjust)
+{
+    auto selector = fontCascade().fontSelector();
+    auto description = fontDescription();
+    description.setFontSizeAdjust(sizeAdjust);
+
+    setFontDescription(WTFMove(description));
+    fontCascade().update(selector);
 }
 
 void RenderStyle::setFontVariationSettings(FontVariationSettings settings)
 {
-    FontSelector* currentFontSelector = fontCascade().fontSelector();
+    auto selector = fontCascade().fontSelector();
     auto description = fontDescription();
     description.setVariationSettings(WTFMove(settings));
 
     setFontDescription(WTFMove(description));
-    fontCascade().update(currentFontSelector);
+    fontCascade().update(selector);
 }
 
 void RenderStyle::setFontWeight(FontSelectionValue value)
 {
-    FontSelector* currentFontSelector = fontCascade().fontSelector();
+    auto selector = fontCascade().fontSelector();
     auto description = fontDescription();
     description.setWeight(value);
 
     setFontDescription(WTFMove(description));
-    fontCascade().update(currentFontSelector);
+    fontCascade().update(selector);
 }
 
 void RenderStyle::setFontStretch(FontSelectionValue value)
 {
-    FontSelector* currentFontSelector = fontCascade().fontSelector();
+    auto selector = fontCascade().fontSelector();
     auto description = fontDescription();
     description.setStretch(value);
 
     setFontDescription(WTFMove(description));
-    fontCascade().update(currentFontSelector);
+    fontCascade().update(selector);
 }
 
 void RenderStyle::setFontItalic(std::optional<FontSelectionValue> value)
 {
-    FontSelector* currentFontSelector = fontCascade().fontSelector();
+    auto selector = fontCascade().fontSelector();
     auto description = fontDescription();
     description.setItalic(value);
 
     setFontDescription(WTFMove(description));
-    fontCascade().update(currentFontSelector);
+    fontCascade().update(selector);
 }
 
 void RenderStyle::setFontPalette(FontPalette value)
 {
-    FontSelector* currentFontSelector = fontCascade().fontSelector();
+    auto selector = fontCascade().fontSelector();
     auto description = fontDescription();
     description.setFontPalette(value);
 
     setFontDescription(WTFMove(description));
-    fontCascade().update(currentFontSelector);
+    fontCascade().update(selector);
 }
 
 LayoutBoxExtent RenderStyle::shadowExtent(const ShadowData* shadow)
@@ -2090,7 +2332,7 @@ void RenderStyle::getShadowVerticalExtent(const ShadowData* shadow, LayoutUnit &
     }
 }
 
-Color RenderStyle::unresolvedColorForProperty(CSSPropertyID colorProperty, bool visitedLink) const
+StyleColor RenderStyle::unresolvedColorForProperty(CSSPropertyID colorProperty, bool visitedLink) const
 {
     switch (colorProperty) {
     case CSSPropertyAccentColor:
@@ -2148,24 +2390,9 @@ Color RenderStyle::unresolvedColorForProperty(CSSPropertyID colorProperty, bool 
 
 Color RenderStyle::colorResolvingCurrentColor(CSSPropertyID colorProperty, bool visitedLink) const
 {
-    auto computeBorderStyle = [&] {
-        switch (colorProperty) {
-        case CSSPropertyBorderLeftColor:
-            return borderLeftStyle();
-        case CSSPropertyBorderRightColor:
-            return borderRightStyle();
-        case CSSPropertyBorderTopColor:
-            return borderTopStyle();
-        case CSSPropertyBorderBottomColor:
-            return borderBottomStyle();
-        default:
-            return BorderStyle::None;
-        }
-    };
-
     auto result = unresolvedColorForProperty(colorProperty, visitedLink);
 
-    if (isCurrentColor(result)) {
+    if (result.isCurrentColor()) {
         if (colorProperty == CSSPropertyTextDecorationColor) {
             if (hasPositiveStrokeWidth()) {
                 // Prefer stroke color if possible but not if it's fully transparent.
@@ -2177,28 +2404,24 @@ Color RenderStyle::colorResolvingCurrentColor(CSSPropertyID colorProperty, bool 
             return colorResolvingCurrentColor(CSSPropertyWebkitTextFillColor, visitedLink);
         }
 
-        auto borderStyle = computeBorderStyle();
-        if (!visitedLink && (borderStyle == BorderStyle::Inset || borderStyle == BorderStyle::Outset || borderStyle == BorderStyle::Ridge || borderStyle == BorderStyle::Groove))
-            return SRGBA<uint8_t> { 238, 238, 238 };
-
         return visitedLink ? visitedLinkColor() : color();
     }
 
-    return result;
+    return colorResolvingCurrentColor(result);
 }
 
-Color RenderStyle::colorResolvingCurrentColor(const Color& color) const
+Color RenderStyle::colorResolvingCurrentColor(const StyleColor& color) const
 {
-    if (isCurrentColor(color))
-        return this->color();
-
-    return color;
+    return color.resolveColor(this->color());
 }
 
-Color RenderStyle::visitedDependentColor(CSSPropertyID colorProperty) const
+Color RenderStyle::visitedDependentColor(CSSPropertyID colorProperty, OptionSet<PaintBehavior> paintBehavior) const
 {
     Color unvisitedColor = colorResolvingCurrentColor(colorProperty, false);
     if (insideLink() != InsideLink::InsideVisited)
+        return unvisitedColor;
+
+    if (paintBehavior.contains(PaintBehavior::DontShowVisitedLinks))
         return unvisitedColor;
 
 #if ENABLE(CSS_COMPOSITING)
@@ -2220,12 +2443,12 @@ Color RenderStyle::visitedDependentColor(CSSPropertyID colorProperty) const
     return visitedColor.colorWithAlpha(unvisitedColor.alphaAsFloat());
 }
 
-Color RenderStyle::visitedDependentColorWithColorFilter(CSSPropertyID colorProperty) const
+Color RenderStyle::visitedDependentColorWithColorFilter(CSSPropertyID colorProperty, OptionSet<PaintBehavior> paintBehavior) const
 {
     if (!hasAppleColorFilter())
-        return visitedDependentColor(colorProperty);
+        return visitedDependentColor(colorProperty, paintBehavior);
 
-    return colorByApplyingColorFilter(visitedDependentColor(colorProperty));
+    return colorByApplyingColorFilter(visitedDependentColor(colorProperty, paintBehavior));
 }
 
 Color RenderStyle::colorByApplyingColorFilter(const Color& color) const
@@ -2233,6 +2456,11 @@ Color RenderStyle::colorByApplyingColorFilter(const Color& color) const
     Color transformedColor = color;
     appleColorFilter().transformColor(transformedColor);
     return transformedColor;
+}
+
+Color RenderStyle::colorWithColorFilter(const StyleColor& color) const
+{
+    return colorByApplyingColorFilter(colorResolvingCurrentColor(color));
 }
 
 Color RenderStyle::effectiveAccentColor() const
@@ -2380,7 +2608,7 @@ TextEmphasisMark RenderStyle::textEmphasisMark() const
 
 #if ENABLE(TOUCH_EVENTS)
 
-Color RenderStyle::initialTapHighlightColor()
+StyleColor RenderStyle::initialTapHighlightColor()
 {
     return RenderTheme::tapHighlightColor();
 }
@@ -2419,122 +2647,146 @@ std::pair<FontOrientation, NonCJKGlyphOrientation> RenderStyle::fontAndGlyphOrie
 
 void RenderStyle::setBorderImageSource(RefPtr<StyleImage>&& image)
 {
-    if (m_surroundData->border.m_image.image() == image.get())
+    if (m_nonInheritedData->surroundData->border.m_image.image() == image.get())
         return;
-    m_surroundData.access().border.m_image.setImage(WTFMove(image));
+    m_nonInheritedData.access().surroundData.access().border.m_image.setImage(WTFMove(image));
 }
 
 void RenderStyle::setBorderImageSliceFill(bool fill)
 {
-    if (m_surroundData->border.m_image.fill() == fill)
+    if (m_nonInheritedData->surroundData->border.m_image.fill() == fill)
         return;
-    m_surroundData.access().border.m_image.setFill(fill);
+    m_nonInheritedData.access().surroundData.access().border.m_image.setFill(fill);
 }
 
 void RenderStyle::setBorderImageSlices(LengthBox&& slices)
 {
-    if (m_surroundData->border.m_image.imageSlices() == slices)
+    if (m_nonInheritedData->surroundData->border.m_image.imageSlices() == slices)
         return;
-    m_surroundData.access().border.m_image.setImageSlices(WTFMove(slices));
+    m_nonInheritedData.access().surroundData.access().border.m_image.setImageSlices(WTFMove(slices));
 }
 
 void RenderStyle::setBorderImageWidth(LengthBox&& slices)
 {
-    if (m_surroundData->border.m_image.borderSlices() == slices)
+    if (m_nonInheritedData->surroundData->border.m_image.borderSlices() == slices)
         return;
-    m_surroundData.access().border.m_image.setBorderSlices(WTFMove(slices));
+    m_nonInheritedData.access().surroundData.access().border.m_image.setBorderSlices(WTFMove(slices));
+}
+
+void RenderStyle::setBorderImageWidthOverridesBorderWidths(bool overridesBorderWidths)
+{
+    if (m_nonInheritedData->surroundData->border.m_image.overridesBorderWidths() == overridesBorderWidths)
+        return;
+    m_nonInheritedData.access().surroundData.access().border.m_image.setOverridesBorderWidths(overridesBorderWidths);
 }
 
 void RenderStyle::setBorderImageOutset(LengthBox&& outset)
 {
-    if (m_surroundData->border.m_image.outset() == outset)
+    if (m_nonInheritedData->surroundData->border.m_image.outset() == outset)
         return;
-    m_surroundData.access().border.m_image.setOutset(WTFMove(outset));
+    m_nonInheritedData.access().surroundData.access().border.m_image.setOutset(WTFMove(outset));
 }
 
 void RenderStyle::setBorderImageHorizontalRule(NinePieceImageRule rule)
 {
-    if (m_surroundData->border.m_image.horizontalRule() == rule)
+    if (m_nonInheritedData->surroundData->border.m_image.horizontalRule() == rule)
         return;
-    m_surroundData.access().border.m_image.setHorizontalRule(rule);
+    m_nonInheritedData.access().surroundData.access().border.m_image.setHorizontalRule(rule);
 }
 
 void RenderStyle::setBorderImageVerticalRule(NinePieceImageRule rule)
 {
-    if (m_surroundData->border.m_image.verticalRule() == rule)
+    if (m_nonInheritedData->surroundData->border.m_image.verticalRule() == rule)
         return;
-    m_surroundData.access().border.m_image.setVerticalRule(rule);
+    m_nonInheritedData.access().surroundData.access().border.m_image.setVerticalRule(rule);
 }
 
-void RenderStyle::setColumnStylesFromPaginationMode(const Pagination::Mode& paginationMode)
+void RenderStyle::setColumnStylesFromPaginationMode(PaginationMode paginationMode)
 {
-    if (paginationMode == Pagination::Unpaginated)
+    if (paginationMode == Unpaginated)
         return;
 
     setColumnFill(ColumnFill::Auto);
 
     switch (paginationMode) {
-    case Pagination::LeftToRightPaginated:
+    case LeftToRightPaginated:
         setColumnAxis(ColumnAxis::Horizontal);
         if (isHorizontalWritingMode())
             setColumnProgression(isLeftToRightDirection() ? ColumnProgression::Normal : ColumnProgression::Reverse);
         else
             setColumnProgression(isFlippedBlocksWritingMode() ? ColumnProgression::Reverse : ColumnProgression::Normal);
         break;
-    case Pagination::RightToLeftPaginated:
+    case RightToLeftPaginated:
         setColumnAxis(ColumnAxis::Horizontal);
         if (isHorizontalWritingMode())
             setColumnProgression(isLeftToRightDirection() ? ColumnProgression::Reverse : ColumnProgression::Normal);
         else
             setColumnProgression(isFlippedBlocksWritingMode() ? ColumnProgression::Normal : ColumnProgression::Reverse);
         break;
-    case Pagination::TopToBottomPaginated:
+    case TopToBottomPaginated:
         setColumnAxis(ColumnAxis::Vertical);
         if (isHorizontalWritingMode())
             setColumnProgression(isFlippedBlocksWritingMode() ? ColumnProgression::Reverse : ColumnProgression::Normal);
         else
             setColumnProgression(isLeftToRightDirection() ? ColumnProgression::Normal : ColumnProgression::Reverse);
         break;
-    case Pagination::BottomToTopPaginated:
+    case BottomToTopPaginated:
         setColumnAxis(ColumnAxis::Vertical);
         if (isHorizontalWritingMode())
             setColumnProgression(isFlippedBlocksWritingMode() ? ColumnProgression::Normal : ColumnProgression::Reverse);
         else
             setColumnProgression(isLeftToRightDirection() ? ColumnProgression::Reverse : ColumnProgression::Normal);
         break;
-    case Pagination::Unpaginated:
+    case Unpaginated:
         ASSERT_NOT_REACHED();
         break;
     }
 }
 
-void RenderStyle::deduplicateInheritedCustomProperties(const RenderStyle& other)
+void RenderStyle::deduplicateCustomProperties(const RenderStyle& other)
 {
-    auto& properties = const_cast<DataRef<StyleCustomPropertyData>&>(m_rareInheritedData->customProperties);
-    auto& otherProperties = other.m_rareInheritedData->customProperties;
-    if (properties.ptr() != otherProperties.ptr() && *properties == *otherProperties)
+    auto deduplicate = [&] <typename T> (const DataRef<T>& data, const DataRef<T>& otherData) {
+        auto& properties = const_cast<DataRef<StyleCustomPropertyData>&>(data->customProperties);
+        auto& otherProperties = otherData->customProperties;
+        if (properties.ptr() == otherProperties.ptr() || *properties != *otherProperties)
+            return;
         properties = otherProperties;
+    };
+
+    deduplicate(m_rareInheritedData, other.m_rareInheritedData);
+    deduplicate(m_nonInheritedData->rareData, other.m_nonInheritedData->rareData);
 }
 
-void RenderStyle::setInheritedCustomPropertyValue(const AtomString& name, Ref<CSSCustomPropertyValue>&& value)
+void RenderStyle::setCustomPropertyValue(Ref<const CSSCustomPropertyValue>&& value, bool isInherited)
 {
-    auto* existingValue = m_rareInheritedData->customProperties->values.get(name);
-    if (existingValue && existingValue->equals(value.get()))
-        return;
-    m_rareInheritedData.access().customProperties.access().setCustomPropertyValue(name, WTFMove(value));
+    auto& name = value->name();
+    if (isInherited) {
+        if (auto* existingValue = m_rareInheritedData->customProperties->get(name); !existingValue || !existingValue->equals(value.get()))
+            m_rareInheritedData.access().customProperties.access().set(name, WTFMove(value));
+    } else {
+        if (auto* existingValue = m_nonInheritedData->rareData->customProperties->get(name); !existingValue || !existingValue->equals(value.get()))
+            m_nonInheritedData.access().rareData.access().customProperties.access().set(name, WTFMove(value));
+    }
 }
 
-void RenderStyle::setNonInheritedCustomPropertyValue(const AtomString& name, Ref<CSSCustomPropertyValue>&& value)
+const CSSCustomPropertyValue* RenderStyle::customPropertyValue(const AtomString& name) const
 {
-    auto* existingValue = m_rareNonInheritedData->customProperties->values.get(name);
-    if (existingValue && existingValue->equals(value.get()))
-        return;
-    m_rareNonInheritedData.access().customProperties.access().setCustomPropertyValue(name, WTFMove(value));
+    for (auto* map : { &nonInheritedCustomProperties(), &inheritedCustomProperties() }) {
+        if (auto* value = map->get(name))
+            return value;
+    }
+    return nullptr;
+}
+
+bool RenderStyle::customPropertiesEqual(const RenderStyle& other) const
+{
+    return m_nonInheritedData->rareData->customProperties == other.m_nonInheritedData->rareData->customProperties
+        && m_rareInheritedData->customProperties == other.m_rareInheritedData->customProperties;
 }
 
 const LengthBox& RenderStyle::scrollMargin() const
 {
-    return m_rareNonInheritedData->scrollMargin;
+    return m_nonInheritedData->rareData->scrollMargin;
 }
 
 const Length& RenderStyle::scrollMarginTop() const
@@ -2559,27 +2811,27 @@ const Length& RenderStyle::scrollMarginRight() const
 
 void RenderStyle::setScrollMarginTop(Length&& length)
 {
-    SET_VAR(m_rareNonInheritedData, scrollMargin.top(), WTFMove(length));
+    SET_NESTED_VAR(m_nonInheritedData, rareData, scrollMargin.top(), WTFMove(length));
 }
 
 void RenderStyle::setScrollMarginBottom(Length&& length)
 {
-    SET_VAR(m_rareNonInheritedData, scrollMargin.bottom(), WTFMove(length));
+    SET_NESTED_VAR(m_nonInheritedData, rareData, scrollMargin.bottom(), WTFMove(length));
 }
 
 void RenderStyle::setScrollMarginLeft(Length&& length)
 {
-    SET_VAR(m_rareNonInheritedData, scrollMargin.left(), WTFMove(length));
+    SET_NESTED_VAR(m_nonInheritedData, rareData, scrollMargin.left(), WTFMove(length));
 }
 
 void RenderStyle::setScrollMarginRight(Length&& length)
 {
-    SET_VAR(m_rareNonInheritedData, scrollMargin.right(), WTFMove(length));
+    SET_NESTED_VAR(m_nonInheritedData, rareData, scrollMargin.right(), WTFMove(length));
 }
 
 const LengthBox& RenderStyle::scrollPadding() const
 {
-    return m_rareNonInheritedData->scrollPadding;
+    return m_nonInheritedData->rareData->scrollPadding;
 }
 
 const Length& RenderStyle::scrollPaddingTop() const
@@ -2604,22 +2856,22 @@ const Length& RenderStyle::scrollPaddingRight() const
 
 void RenderStyle::setScrollPaddingTop(Length&& length)
 {
-    SET_VAR(m_rareNonInheritedData, scrollPadding.top(), WTFMove(length));
+    SET_NESTED_VAR(m_nonInheritedData, rareData, scrollPadding.top(), WTFMove(length));
 }
 
 void RenderStyle::setScrollPaddingBottom(Length&& length)
 {
-    SET_VAR(m_rareNonInheritedData, scrollPadding.bottom(), WTFMove(length));
+    SET_NESTED_VAR(m_nonInheritedData, rareData, scrollPadding.bottom(), WTFMove(length));
 }
 
 void RenderStyle::setScrollPaddingLeft(Length&& length)
 {
-    SET_VAR(m_rareNonInheritedData, scrollPadding.left(), WTFMove(length));
+    SET_NESTED_VAR(m_nonInheritedData, rareData, scrollPadding.left(), WTFMove(length));
 }
 
 void RenderStyle::setScrollPaddingRight(Length&& length)
 {
-    SET_VAR(m_rareNonInheritedData, scrollPadding.right(), WTFMove(length));
+    SET_NESTED_VAR(m_nonInheritedData, rareData, scrollPadding.right(), WTFMove(length));
 }
 
 ScrollSnapType RenderStyle::initialScrollSnapType()
@@ -2637,34 +2889,64 @@ ScrollSnapStop RenderStyle::initialScrollSnapStop()
     return ScrollSnapStop::Normal;
 }
 
+ScrollbarGutter RenderStyle::initialScrollbarGutter()
+{
+    return { };
+}
+
+ScrollbarWidth RenderStyle::initialScrollbarWidth()
+{
+    return ScrollbarWidth::Auto;
+}
+
 const ScrollSnapType RenderStyle::scrollSnapType() const
 {
-    return m_rareNonInheritedData->scrollSnapType;
+    return m_nonInheritedData->rareData->scrollSnapType;
 }
 
 const ScrollSnapAlign& RenderStyle::scrollSnapAlign() const
 {
-    return m_rareNonInheritedData->scrollSnapAlign;
+    return m_nonInheritedData->rareData->scrollSnapAlign;
 }
 
 ScrollSnapStop RenderStyle::scrollSnapStop() const
 {
-    return m_rareNonInheritedData->scrollSnapStop;
+    return m_nonInheritedData->rareData->scrollSnapStop;
+}
+
+const ScrollbarGutter RenderStyle::scrollbarGutter() const
+{
+    return m_nonInheritedData->rareData->scrollbarGutter;
+}
+
+ScrollbarWidth RenderStyle::scrollbarWidth() const
+{
+    return m_nonInheritedData->rareData->scrollbarWidth;
 }
 
 void RenderStyle::setScrollSnapType(const ScrollSnapType type)
 {
-    SET_VAR(m_rareNonInheritedData, scrollSnapType, type);
+    SET_NESTED_VAR(m_nonInheritedData, rareData, scrollSnapType, type);
 }
 
 void RenderStyle::setScrollSnapAlign(const ScrollSnapAlign& alignment)
 {
-    SET_VAR(m_rareNonInheritedData, scrollSnapAlign, alignment);
+    SET_NESTED_VAR(m_nonInheritedData, rareData, scrollSnapAlign, alignment);
 }
 
 void RenderStyle::setScrollSnapStop(const ScrollSnapStop stop)
 {
-    SET_VAR(m_rareNonInheritedData, scrollSnapStop, stop);
+    SET_NESTED_VAR(m_nonInheritedData, rareData, scrollSnapStop, stop);
+}
+
+void RenderStyle::setScrollbarGutter(const ScrollbarGutter gutter)
+{
+    SET_NESTED_VAR(m_nonInheritedData, rareData, scrollbarGutter, gutter);
+}
+
+void RenderStyle::setScrollbarWidth(const ScrollbarWidth width)
+{
+    SET_NESTED_VAR(m_nonInheritedData, rareData, scrollbarWidth, width);
 }
 
 bool RenderStyle::hasSnapPosition() const
@@ -2673,28 +2955,45 @@ bool RenderStyle::hasSnapPosition() const
     return alignment.blockAlign != ScrollSnapAxisAlignType::None || alignment.inlineAlign != ScrollSnapAxisAlignType::None;
 }
 
+TextBoxEdge RenderStyle::textBoxEdge() const
+{
+    return m_rareInheritedData->textBoxEdge;
+}
+
+void RenderStyle::setTextBoxEdge(TextBoxEdge textBoxEdgeValue)
+{
+    SET_VAR(m_rareInheritedData, textBoxEdge, textBoxEdgeValue);
+}
+
+TextBoxEdge RenderStyle::initialTextBoxEdge()
+{
+    return { TextBoxEdgeType::Leading, TextBoxEdgeType::Leading };
+}
+
 bool RenderStyle::hasReferenceFilterOnly() const
 {
     if (!hasFilter())
         return false;
-    auto& filterOperations = m_rareNonInheritedData->filter->operations;
-    return filterOperations.size() == 1 && filterOperations.at(0)->type() == FilterOperation::REFERENCE;
+    auto& filterOperations = m_nonInheritedData->miscData->filter->operations;
+    return filterOperations.size() == 1 && filterOperations.at(0)->type() == FilterOperation::Type::Reference;
 }
 
 float RenderStyle::outlineWidth() const
 {
-    if (m_backgroundData->outline.style() == BorderStyle::None)
+    auto& outline = m_nonInheritedData->backgroundData->outline;
+    if (outline.style() == BorderStyle::None)
         return 0;
     if (outlineStyleIsAuto() == OutlineIsAuto::On)
-        return std::max(m_backgroundData->outline.width(), RenderTheme::platformFocusRingWidth());
-    return m_backgroundData->outline.width();
+        return std::max(outline.width(), RenderTheme::platformFocusRingWidth());
+    return outline.width();
 }
 
 float RenderStyle::outlineOffset() const
 {
+    auto& outline = m_nonInheritedData->backgroundData->outline;
     if (outlineStyleIsAuto() == OutlineIsAuto::On)
-        return (m_backgroundData->outline.offset() + RenderTheme::platformFocusRingOffset(outlineWidth()));
-    return m_backgroundData->outline.offset();
+        return (outline.offset() + RenderTheme::platformFocusRingOffset(outlineWidth()));
+    return outline.offset();
 }
 
 bool RenderStyle::shouldPlaceVerticalScrollbarOnLeft() const
@@ -2702,44 +3001,31 @@ bool RenderStyle::shouldPlaceVerticalScrollbarOnLeft() const
     return (!isLeftToRightDirection() && isHorizontalWritingMode()) || writingMode() == WritingMode::RightToLeft;
 }
 
-Vector<PaintType, 3> RenderStyle::paintTypesForPaintOrder(PaintOrder order)
+std::span<const PaintType, 3> RenderStyle::paintTypesForPaintOrder(PaintOrder order)
 {
-    Vector<PaintType, 3> paintOrder;
+    static constexpr std::array fill { PaintType::Fill, PaintType::Stroke, PaintType::Markers };
+    static constexpr std::array fillMarkers { PaintType::Fill, PaintType::Markers, PaintType::Stroke };
+    static constexpr std::array stroke { PaintType::Stroke, PaintType::Fill, PaintType::Markers };
+    static constexpr std::array strokeMarkers { PaintType::Stroke, PaintType::Markers, PaintType::Fill };
+    static constexpr std::array markers { PaintType::Markers, PaintType::Fill, PaintType::Stroke };
+    static constexpr std::array markersStroke { PaintType::Markers, PaintType::Stroke, PaintType::Fill };
     switch (order) {
     case PaintOrder::Normal:
-        FALLTHROUGH;
     case PaintOrder::Fill:
-        paintOrder.append(PaintType::Fill);
-        paintOrder.append(PaintType::Stroke);
-        paintOrder.append(PaintType::Markers);
-        break;
+        return fill;
     case PaintOrder::FillMarkers:
-        paintOrder.append(PaintType::Fill);
-        paintOrder.append(PaintType::Markers);
-        paintOrder.append(PaintType::Stroke);
-        break;
+        return fillMarkers;
     case PaintOrder::Stroke:
-        paintOrder.append(PaintType::Stroke);
-        paintOrder.append(PaintType::Fill);
-        paintOrder.append(PaintType::Markers);
-        break;
+        return stroke;
     case PaintOrder::StrokeMarkers:
-        paintOrder.append(PaintType::Stroke);
-        paintOrder.append(PaintType::Markers);
-        paintOrder.append(PaintType::Fill);
-        break;
+        return strokeMarkers;
     case PaintOrder::Markers:
-        paintOrder.append(PaintType::Markers);
-        paintOrder.append(PaintType::Fill);
-        paintOrder.append(PaintType::Stroke);
-        break;
+        return markers;
     case PaintOrder::MarkersStroke:
-        paintOrder.append(PaintType::Markers);
-        paintOrder.append(PaintType::Stroke);
-        paintOrder.append(PaintType::Fill);
-        break;
+        return markersStroke;
     };
-    return paintOrder;
+    ASSERT_NOT_REACHED();
+    return fill;
 }
 
 float RenderStyle::computedStrokeWidth(const IntSize& viewportSize) const
@@ -2824,23 +3110,19 @@ UsedFloat RenderStyle::usedFloat(const RenderObject& renderer)
     RELEASE_ASSERT_NOT_REACHED();
 }
 
-OptionSet<Containment> RenderStyle::effectiveContainment() const
+UserSelect RenderStyle::effectiveUserSelect() const
 {
-    auto containment = contain();
+    if (effectiveInert())
+        return UserSelect::None;
 
-    switch (containerType()) {
-    case ContainerType::None:
-        break;
-    case ContainerType::Size:
-        containment.add({ Containment::Layout, Containment::Style, Containment::Size });
-        break;
-    case ContainerType::InlineSize:
-        containment.add({ Containment::Layout, Containment::Style, Containment::InlineSize });
-        break;
-    };
+    auto value = userSelect();
+    if (userModify() != UserModify::ReadOnly && userDrag() != UserDrag::Element)
+        return value == UserSelect::None ? UserSelect::Text : value;
 
-    return containment;
+    return value;
 }
 
-
 } // namespace WebCore
+
+#undef SET_VAR
+#undef SET_NESTED_VAR

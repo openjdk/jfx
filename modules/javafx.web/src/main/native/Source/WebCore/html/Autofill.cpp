@@ -26,15 +26,17 @@
 #include "config.h"
 #include "Autofill.h"
 
+#include "CommonAtomStrings.h"
 #include "ElementInlines.h"
 #include "HTMLFormControlElement.h"
 #include "HTMLFormElement.h"
 #include "HTMLNames.h"
+#include <wtf/Assertions.h>
 #include <wtf/SortedArrayMap.h>
 
 namespace WebCore {
 
-enum class AutofillCategory : uint8_t { Off, Automatic, Normal, Contact };
+enum class AutofillCategory : uint8_t { Off, Automatic, Normal, Contact, Credential };
 
 struct AutofillFieldNameMapping {
     AutofillFieldName name;
@@ -97,6 +99,7 @@ static constexpr std::pair<ComparableLettersLiteral, AutofillFieldNameMapping> f
     { "transaction-currency", { AutofillFieldName::TransactionCurrency, AutofillCategory::Normal } },
     { "url", { AutofillFieldName::URL, AutofillCategory::Normal } },
     { "username", { AutofillFieldName::Username, AutofillCategory::Normal } },
+    { "webauthn", { AutofillFieldName::WebAuthn, AutofillCategory::Credential } },
 };
 static constexpr SortedArrayMap fieldNameMap { fieldNameMappings };
 
@@ -105,13 +108,25 @@ AutofillFieldName toAutofillFieldName(const AtomString& value)
     return fieldNameMap.get(value).name;
 }
 
+String nonAutofillCredentialTypeString(NonAutofillCredentialType credentialType)
+{
+    switch (credentialType) {
+    case NonAutofillCredentialType::None:
+        return "none"_s;
+    case NonAutofillCredentialType::WebAuthn:
+        return "webauthn"_s;
+    }
+    return "none"_s;
+}
+
+
 static inline bool isContactToken(const AtomString& token)
 {
-    static MainThreadNeverDestroyed<const AtomString> home("home", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> work("work", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> mobile("mobile", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> fax("fax", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> pager("pager", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> home("home"_s);
+    static MainThreadNeverDestroyed<const AtomString> work("work"_s);
+    static MainThreadNeverDestroyed<const AtomString> mobile("mobile"_s);
+    static MainThreadNeverDestroyed<const AtomString> fax("fax"_s);
+    static MainThreadNeverDestroyed<const AtomString> pager("pager"_s);
 
     return token == home || token == work || token == mobile || token == fax || token == pager;
 }
@@ -128,6 +143,9 @@ static unsigned maxTokensForAutofillFieldCategory(AutofillCategory category)
 
     case AutofillCategory::Contact:
         return 4;
+
+    case AutofillCategory::Credential:
+        return 5;
     }
     ASSERT_NOT_REACHED();
     return 0;
@@ -136,9 +154,6 @@ static unsigned maxTokensForAutofillFieldCategory(AutofillCategory category)
 // https://html.spec.whatwg.org/multipage/forms.html#processing-model-3
 AutofillData AutofillData::createFromHTMLFormControlElement(const HTMLFormControlElement& element)
 {
-    static MainThreadNeverDestroyed<const AtomString> on("on", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> off("off", AtomString::ConstructFromLiteral);
-
     // Label: Default
     // 26. Let the element's IDL-exposed autofill value be the empty string, and its autofill hint set and autofill scope be empty.
     // 27. If the element's autocomplete attribute is wearing the autofill anchor mantle, then let the element's autofill field name be the empty string and abort these steps.
@@ -146,12 +161,12 @@ AutofillData AutofillData::createFromHTMLFormControlElement(const HTMLFormContro
     // 29. If form is not null and form's autocomplete attribute is in the off state, then let the element's autofill field name be "off". Otherwise, let the element's autofill field name be "on".
     auto defaultLabel = [&] () -> AutofillData {
         if (element.autofillMantle() == AutofillMantle::Anchor)
-            return { emptyString(), emptyString() };
+            return { emptyAtom(), emptyString(), NonAutofillCredentialType::None };
 
         auto form = element.form();
-        if (form && form->autocomplete() == off)
-            return { off, emptyString() };
-        return { on, emptyString() };
+        if (form && form->autocomplete() == offAtom())
+            return { offAtom(), emptyString(), NonAutofillCredentialType::None };
+        return { onAtom(), emptyString(), NonAutofillCredentialType::None };
     };
 
 
@@ -162,7 +177,7 @@ AutofillData AutofillData::createFromHTMLFormControlElement(const HTMLFormContro
         return defaultLabel();
 
     // 2. Let tokens be the result of splitting the attribute's value on spaces.
-    SpaceSplitString tokens(attributeValue, true);
+    SpaceSplitString tokens(attributeValue, SpaceSplitString::ShouldFoldCase::Yes);
 
     // 3. If tokens is empty, then jump to the step labeled default.
     if (tokens.isEmpty())
@@ -199,13 +214,13 @@ AutofillData AutofillData::createFromHTMLFormControlElement(const HTMLFormContro
     // autofill hint set be empty, and let its IDL-exposed autofill value be the string "off".
     // Then, abort these steps.
     if (category == AutofillCategory::Off)
-        return { off, off.get().string() };
+        return { offAtom(), offAtom().string(), NonAutofillCredentialType::None };
 
     // 8. If category is Automatic, let the element's autofill field name be the string "on",
     // let its autofill hint set be empty, and let its IDL-exposed autofill value be the string
     // "on". Then, abort these steps.
     if (category == AutofillCategory::Automatic)
-        return { on, on.get().string() };
+        return { onAtom(), onAtom().string(), NonAutofillCredentialType::None };
 
     // 9. Let scope tokens be an empty list.
     // 10. Let hint tokens be an empty set.
@@ -215,9 +230,32 @@ AutofillData AutofillData::createFromHTMLFormControlElement(const HTMLFormContro
     // 11. Let IDL value have the same value as field.
     String idlValue = field;
 
+    // If category is Credential and the indexth token in tokens is an ASCII case-insensitive match for "webauthn", then run the substeps that follow:
+    NonAutofillCredentialType credentialType { NonAutofillCredentialType::None };
+    if (category == AutofillCategory::Credential && field == "webauthn"_s) {
+        // 1. Set credential type to "webauthn".
+        credentialType = NonAutofillCredentialType::WebAuthn;
+        // 2. If the indexth token in tokens is the first entry, then skip to the step labeled done.
+        if (!index)
+            return { field, idlValue, credentialType };
+        // 3. Decrement index by one.
+        index--;
+        // 4. Set the category, maximum tokens pair to the result of determining a field's category given the indexth token in tokens.
+        auto mapEntry = fieldNameMap.tryGet(tokens[index]);
+        if (!mapEntry)
+            return defaultLabel();
+
+        category = mapEntry->category;
+        if (category != AutofillCategory::Normal && category != AutofillCategory::Contact)
+            return defaultLabel();
+        if (tokens.size() > maxTokensForAutofillFieldCategory(category))
+            return defaultLabel();
+        idlValue = makeString(tokens[index], " ", idlValue);
+    }
+
     // 12, If the indexth token in tokens is the first entry, then skip to the step labeled done.
     if (index == 0)
-        return { field, idlValue };
+        return { field, idlValue, credentialType };
 
     // 13. Decrement index by one
     index--;
@@ -240,7 +278,7 @@ AutofillData AutofillData::createFromHTMLFormControlElement(const HTMLFormContro
 
         // 5. If the indexth entry in tokens is the first entry, then skip to the step labeled done.
         if (index == 0)
-            return { field, idlValue };
+            return { field, idlValue, credentialType };
 
         // 6. Decrement index by one.
         index--;
@@ -249,7 +287,7 @@ AutofillData AutofillData::createFromHTMLFormControlElement(const HTMLFormContro
     // 15. If the indexth token in tokens is an ASCII case-insensitive match for one of the strings
     // in the following list, then run the substeps that follow:
     const auto& modeToken = tokens[index];
-    if (equalIgnoringASCIICase(modeToken, "shipping") || equalIgnoringASCIICase(modeToken, "billing")) {
+    if (equalLettersIgnoringASCIICase(modeToken, "shipping"_s) || equalLettersIgnoringASCIICase(modeToken, "billing"_s)) {
         // 1. Let mode be the matching string from the list above.
         const auto& mode = modeToken;
 
@@ -265,7 +303,7 @@ AutofillData AutofillData::createFromHTMLFormControlElement(const HTMLFormContro
 
         // 5. If the indexth entry in tokens is the first entry, then skip to the step labeled done.
         if (index == 0)
-            return { field, idlValue };
+            return { field, idlValue, credentialType };
 
         // 6. Decrement index by one.
         index--;
@@ -278,7 +316,7 @@ AutofillData AutofillData::createFromHTMLFormControlElement(const HTMLFormContro
     // 17. If the first eight characters of the indexth token in tokens are not an ASCII case-insensitive
     // match for the string "section-", then jump to the step labeled default.
     const auto& sectionToken = tokens[index];
-    if (!startsWithLettersIgnoringASCIICase(StringView(sectionToken), "section-"))
+    if (!startsWithLettersIgnoringASCIICase(sectionToken, "section-"_s))
         return defaultLabel();
 
     // 18. Let section be the indexth token in tokens, converted to ASCII lowercase.
@@ -292,7 +330,7 @@ AutofillData AutofillData::createFromHTMLFormControlElement(const HTMLFormContro
     // value of IDL value.
     idlValue = makeString(section, " ", idlValue);
 
-    return { field, idlValue };
+    return { field, idlValue, credentialType };
 }
 
 } // namespace WebCore

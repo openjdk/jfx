@@ -33,8 +33,9 @@
 #include "config.h"
 #include "EventSource.h"
 
-#include "CachedResourceRequestInitiators.h"
+#include "CachedResourceRequestInitiatorTypes.h"
 #include "ContentSecurityPolicy.h"
+#include "EventLoop.h"
 #include "EventNames.h"
 #include "MessageEvent.h"
 #include "ResourceError.h"
@@ -60,9 +61,7 @@ inline EventSource::EventSource(ScriptExecutionContext& context, const URL& url,
     , m_url(url)
     , m_withCredentials(eventSourceInit.withCredentials)
     , m_decoder(TextResourceDecoder::create("text/plain"_s, "UTF-8"))
-    , m_connectTimer(&context, *this, &EventSource::connect)
 {
-    m_connectTimer.suspendIfNeeded();
 }
 
 ExceptionOr<Ref<EventSource>> EventSource::create(ScriptExecutionContext& context, const String& url, const Init& eventSourceInit)
@@ -95,9 +94,10 @@ void EventSource::connect()
     ASSERT(!m_requestInFlight);
 
     ResourceRequest request { m_url };
-    request.setHTTPMethod("GET");
-    request.setHTTPHeaderField(HTTPHeaderName::Accept, "text/event-stream");
-    request.setHTTPHeaderField(HTTPHeaderName::CacheControl, "no-cache");
+    request.setRequester(ResourceRequestRequester::EventSource);
+    request.setHTTPMethod("GET"_s);
+    request.setHTTPHeaderField(HTTPHeaderName::Accept, "text/event-stream"_s);
+    request.setHTTPHeaderField(HTTPHeaderName::CacheControl, "no-cache"_s);
     if (!m_lastEventId.isEmpty())
         request.setHTTPHeaderField(HTTPHeaderName::LastEventID, m_lastEventId);
 
@@ -109,7 +109,7 @@ void EventSource::connect()
     options.cache = FetchOptions::Cache::NoStore;
     options.dataBufferingPolicy = DataBufferingPolicy::DoNotBufferData;
     options.contentSecurityPolicyEnforcement = scriptExecutionContext()->shouldBypassMainWorldContentSecurityPolicy() ? ContentSecurityPolicyEnforcement::DoNotEnforce : ContentSecurityPolicyEnforcement::EnforceConnectSrcDirective;
-    options.initiator = cachedResourceRequestInitiators().eventsource;
+    options.initiatorType = cachedResourceRequestInitiatorTypes().eventsource;
 
     ASSERT(scriptExecutionContext());
     m_loader = ThreadableLoader::create(*scriptExecutionContext(), *this, WTFMove(request), options);
@@ -134,14 +134,22 @@ void EventSource::scheduleInitialConnect()
     ASSERT(m_state == CONNECTING);
     ASSERT(!m_requestInFlight);
 
-    m_connectTimer.startOneShot(0_s);
+    auto* context = scriptExecutionContext();
+    m_connectTimer = context->eventLoop().scheduleTask(0_s, TaskSource::DOMManipulation, [weakThis = WeakPtr { *this }] {
+        if (RefPtr strongThis = weakThis.get())
+            strongThis->connect();
+    });
 }
 
 void EventSource::scheduleReconnect()
 {
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!m_isSuspendedForBackForwardCache);
     m_state = CONNECTING;
-    m_connectTimer.startOneShot(1_ms * m_reconnectDelay);
+    auto* context = scriptExecutionContext();
+    m_connectTimer = context->eventLoop().scheduleTask(1_ms * m_reconnectDelay, TaskSource::DOMManipulation, [weakThis = WeakPtr { *this }] {
+        if (RefPtr strongThis = weakThis.get())
+            strongThis->connect();
+    });
     dispatchErrorEvent();
 }
 
@@ -153,8 +161,7 @@ void EventSource::close()
     }
 
     // Stop trying to connect/reconnect if EventSource was explicitly closed or if ActiveDOMObject::stop() was called.
-    if (m_connectTimer.isActive())
-        m_connectTimer.cancel();
+    m_connectTimer = nullptr;
 
     if (m_requestInFlight)
         doExplicitLoadCancellation();
@@ -170,7 +177,7 @@ bool EventSource::responseIsValid(const ResourceResponse& response) const
     if (response.httpStatusCode() != 200)
         return false;
 
-    if (!equalLettersIgnoringASCIICase(response.mimeType(), "text/event-stream")) {
+    if (!equalLettersIgnoringASCIICase(response.mimeType(), "text/event-stream"_s)) {
         auto message = makeString("EventSource's response has a MIME type (\"", response.mimeType(), "\") that is not \"text/event-stream\". Aborting the connection.");
         // FIXME: Console message would be better with a source code location; where would we get that?
         scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, WTFMove(message));
@@ -180,7 +187,7 @@ bool EventSource::responseIsValid(const ResourceResponse& response) const
     // The specification states we should always decode as UTF-8. If there is a provided charset and it is not UTF-8, then log a warning
     // message but keep going anyway.
     auto& charset = response.textEncodingName();
-    if (!charset.isEmpty() && !equalLettersIgnoringASCIICase(charset, "utf-8")) {
+    if (!charset.isEmpty() && !equalLettersIgnoringASCIICase(charset, "utf-8"_s)) {
         auto message = makeString("EventSource's response has a charset (\"", charset, "\") that is not UTF-8. The response will be decoded as UTF-8.");
         // FIXME: Console message would be better with a source code location; where would we get that?
         scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, WTFMove(message));
@@ -291,7 +298,7 @@ bool EventSource::virtualHasPendingActivity() const
 void EventSource::doExplicitLoadCancellation()
 {
     ASSERT(m_requestInFlight);
-    SetForScope<bool> explicitLoadCancellation(m_isDoingExplicitCancellation, true);
+    SetForScope explicitLoadCancellation(m_isDoingExplicitCancellation, true);
     m_loader->cancel();
 }
 
@@ -367,23 +374,21 @@ void EventSource::parseEventStreamLine(unsigned position, std::optional<unsigned
     position += step;
     unsigned valueLength = lineLength - step;
 
-    if (field == "data") {
+    if (field == "data"_s) {
         m_data.append(&m_receiveBuffer[position], valueLength);
         m_data.append('\n');
-    } else if (field == "event")
+    } else if (field == "event"_s)
         m_eventName = { &m_receiveBuffer[position], valueLength };
-    else if (field == "id") {
+    else if (field == "id"_s) {
         StringView parsedEventId = { &m_receiveBuffer[position], valueLength };
         constexpr UChar nullCharacter = '\0';
         if (!parsedEventId.contains(nullCharacter))
             m_currentlyParsedEventId = parsedEventId.toString();
-    } else if (field == "retry") {
+    } else if (field == "retry"_s) {
         if (!valueLength)
             m_reconnectDelay = defaultReconnectDelay;
         else {
-            // FIXME: Do we really want to ignore trailing junk here?
-            // FIXME: When we can't parse the value, should we really leave m_reconnectDelay alone? Shouldn't we set it to defaultReconnectDelay?
-            if (auto reconnectDelay = parseIntegerAllowingTrailingJunk<uint64_t>({ &m_receiveBuffer[position], valueLength }))
+            if (auto reconnectDelay = parseInteger<uint64_t>({ &m_receiveBuffer[position], valueLength }))
                 m_reconnectDelay = *reconnectDelay;
         }
     }
@@ -431,14 +436,13 @@ void EventSource::dispatchMessageEvent()
 
     auto& name = m_eventName.isEmpty() ? eventNames().messageEvent : m_eventName;
 
-    // Omit the trailing "\n" character.
     ASSERT(!m_data.isEmpty());
-    unsigned size = m_data.size() - 1;
-    auto data = SerializedScriptValue::create({ m_data.data(), size });
-    RELEASE_ASSERT(data);
+
+    // Omit the trailing "\n" character.
+    String data(m_data.data(), m_data.size() - 1);
     m_data = { };
 
-    dispatchEvent(MessageEvent::create(name, data.releaseNonNull(), m_eventStreamOrigin, m_lastEventId));
+    dispatchEvent(MessageEvent::create(name, WTFMove(data), m_eventStreamOrigin, m_lastEventId));
 }
 
 } // namespace WebCore

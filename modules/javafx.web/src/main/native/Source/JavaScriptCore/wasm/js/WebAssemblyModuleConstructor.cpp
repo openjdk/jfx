@@ -31,6 +31,7 @@
 #include "ArrayBuffer.h"
 #include "ButterflyInlines.h"
 #include "JSArrayBuffer.h"
+#include "JSArrayBufferViewInlines.h"
 #include "JSCJSValueInlines.h"
 #include "JSGlobalObjectInlines.h"
 #include "JSObjectInlines.h"
@@ -54,7 +55,7 @@ static JSC_DECLARE_HOST_FUNCTION(constructJSWebAssemblyModule);
 
 namespace JSC {
 
-const ClassInfo WebAssemblyModuleConstructor::s_info = { "Function", &Base::s_info, &constructorTableWebAssemblyModule, nullptr, CREATE_METHOD_TABLE(WebAssemblyModuleConstructor) };
+const ClassInfo WebAssemblyModuleConstructor::s_info = { "Function"_s, &Base::s_info, &constructorTableWebAssemblyModule, nullptr, CREATE_METHOD_TABLE(WebAssemblyModuleConstructor) };
 
 /* Source for WebAssemblyModuleConstructor.lut.h
  @begin constructorTableWebAssemblyModule
@@ -72,11 +73,11 @@ JSC_DEFINE_HOST_FUNCTION(webAssemblyModuleCustomSections, (JSGlobalObject* globa
     if (UNLIKELY(callFrame->argumentCount() < 2))
         return JSValue::encode(throwException(globalObject, throwScope, createNotEnoughArgumentsError(globalObject)));
 
-    JSWebAssemblyModule* module = jsDynamicCast<JSWebAssemblyModule*>(vm, callFrame->uncheckedArgument(0));
+    JSWebAssemblyModule* module = jsDynamicCast<JSWebAssemblyModule*>(callFrame->uncheckedArgument(0));
     if (!module)
         return JSValue::encode(throwException(globalObject, throwScope, createTypeError(globalObject, "WebAssembly.Module.customSections called with non WebAssembly.Module argument"_s)));
 
-    const String sectionNameString = callFrame->uncheckedArgument(1).getString(globalObject);
+    String sectionNameString = callFrame->uncheckedArgument(1).toWTFString(globalObject);
     RETURN_IF_EXCEPTION(throwScope, { });
 
     JSArray* result = constructEmptyArray(globalObject, nullptr);
@@ -102,7 +103,7 @@ JSC_DEFINE_HOST_FUNCTION(webAssemblyModuleImports, (JSGlobalObject* globalObject
     VM& vm = globalObject->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
-    JSWebAssemblyModule* module = jsDynamicCast<JSWebAssemblyModule*>(vm, callFrame->argument(0));
+    JSWebAssemblyModule* module = jsDynamicCast<JSWebAssemblyModule*>(callFrame->argument(0));
     if (!module)
         return JSValue::encode(throwException(globalObject, throwScope, createTypeError(globalObject, "WebAssembly.Module.imports called with non WebAssembly.Module argument"_s)));
 
@@ -111,15 +112,15 @@ JSC_DEFINE_HOST_FUNCTION(webAssemblyModuleImports, (JSGlobalObject* globalObject
 
     const auto& imports = module->moduleInformation().imports;
     if (imports.size()) {
-        Identifier module = Identifier::fromString(vm, "module");
-        Identifier name = Identifier::fromString(vm, "name");
-        Identifier kind = Identifier::fromString(vm, "kind");
+        Identifier module = Identifier::fromString(vm, "module"_s);
+        Identifier name = Identifier::fromString(vm, "name"_s);
+        Identifier kind = Identifier::fromString(vm, "kind"_s);
         for (const Wasm::Import& imp : imports) {
             JSObject* obj = constructEmptyObject(globalObject);
             RETURN_IF_EXCEPTION(throwScope, { });
             obj->putDirect(vm, module, jsString(vm, String::fromUTF8(imp.module)));
             obj->putDirect(vm, name, jsString(vm, String::fromUTF8(imp.field)));
-            obj->putDirect(vm, kind, jsString(vm, String(makeString(imp.kind))));
+            obj->putDirect(vm, kind, jsString(vm, String::fromLatin1(makeString(imp.kind))));
             result->push(globalObject, obj);
             RETURN_IF_EXCEPTION(throwScope, { });
         }
@@ -133,7 +134,7 @@ JSC_DEFINE_HOST_FUNCTION(webAssemblyModuleExports, (JSGlobalObject* globalObject
     VM& vm = globalObject->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
-    JSWebAssemblyModule* module = jsDynamicCast<JSWebAssemblyModule*>(vm, callFrame->argument(0));
+    JSWebAssemblyModule* module = jsDynamicCast<JSWebAssemblyModule*>(callFrame->argument(0));
     if (!module)
         return JSValue::encode(throwException(globalObject, throwScope, createTypeError(globalObject, "WebAssembly.Module.exports called with non WebAssembly.Module argument"_s)));
 
@@ -142,13 +143,13 @@ JSC_DEFINE_HOST_FUNCTION(webAssemblyModuleExports, (JSGlobalObject* globalObject
 
     const auto& exports = module->moduleInformation().exports;
     if (exports.size()) {
-        Identifier name = Identifier::fromString(vm, "name");
-        Identifier kind = Identifier::fromString(vm, "kind");
+        Identifier name = Identifier::fromString(vm, "name"_s);
+        Identifier kind = Identifier::fromString(vm, "kind"_s);
         for (const Wasm::Export& exp : exports) {
             JSObject* obj = constructEmptyObject(globalObject);
             RETURN_IF_EXCEPTION(throwScope, { });
             obj->putDirect(vm, name, jsString(vm, String::fromUTF8(exp.field)));
-            obj->putDirect(vm, kind, jsString(vm, String(makeString(exp.kind))));
+            obj->putDirect(vm, kind, jsString(vm, String::fromLatin1(makeString(exp.kind))));
             result->push(globalObject, obj);
             RETURN_IF_EXCEPTION(throwScope, { });
         }
@@ -184,7 +185,7 @@ JSWebAssemblyModule* WebAssemblyModuleConstructor::createModule(JSGlobalObject* 
     Structure* structure = JSC_GET_DERIVED_STRUCTURE(vm, webAssemblyModuleStructure, newTarget, callFrame->jsCallee());
     RETURN_IF_EXCEPTION(scope, nullptr);
 
-    RELEASE_AND_RETURN(scope, JSWebAssemblyModule::createStub(vm, globalObject, structure, Wasm::Module::validateSync(&vm.wasmContext, WTFMove(buffer))));
+    RELEASE_AND_RETURN(scope, JSWebAssemblyModule::createStub(vm, globalObject, structure, Wasm::Module::validateSync(vm, WTFMove(buffer))));
 }
 
 WebAssemblyModuleConstructor* WebAssemblyModuleConstructor::create(VM& vm, Structure* structure, WebAssemblyModulePrototype* thisPrototype)

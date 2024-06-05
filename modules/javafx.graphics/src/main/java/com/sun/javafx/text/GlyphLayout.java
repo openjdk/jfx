@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,21 +58,19 @@ package com.sun.javafx.text;
 
 import static com.sun.javafx.scene.text.TextLayout.FLAGS_ANALYSIS_VALID;
 import static com.sun.javafx.scene.text.TextLayout.FLAGS_HAS_BIDI;
+import static com.sun.javafx.scene.text.TextLayout.FLAGS_HAS_CJK;
 import static com.sun.javafx.scene.text.TextLayout.FLAGS_HAS_COMPLEX;
 import static com.sun.javafx.scene.text.TextLayout.FLAGS_HAS_EMBEDDED;
 import static com.sun.javafx.scene.text.TextLayout.FLAGS_HAS_TABS;
-import static com.sun.javafx.scene.text.TextLayout.FLAGS_HAS_CJK;
 import static com.sun.javafx.scene.text.TextLayout.FLAGS_RTL_BASE;
-
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.text.Bidi;
-
 import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.PGFont;
 import com.sun.javafx.font.PrismFontFactory;
 import com.sun.javafx.scene.text.TextSpan;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 
 public abstract class GlyphLayout {
 
@@ -203,31 +201,51 @@ public abstract class GlyphLayout {
             char ch = chars[i];
             int codePoint = ch;
             boolean delimiter = ch == '\t' || ch == '\n' || ch == '\r';
+            int surrogate = 0;
 
-            /* special handling for delimiters */
-            if (delimiter) {
-                if (i != start) {
-                    run = addTextRun(layout, chars, start, i - start,
+            if (Character.isHighSurrogate(ch)) {
+                /* Only merge surrogate when the pair is in the same span. */
+                if (i + 1 < spanEnd && Character.isLowSurrogate(chars[i + 1])) {
+                    codePoint = Character.toCodePoint(ch, chars[++i]);
+                    surrogate = 1;
+                }
+            }
+            /*
+             * Since Emojis are usually used one at a time, handle them
+             * similarly to delimiters - if we have any chars in the current run,
+             * break the run there. Then (see code later in the method) create
+             * a new run just for the one emoji and then start the next run.
+             * Having it in a separate run allows rendering code to more
+             * efficiently handle it rather than having to switch rendering
+             * modes in the middle of a drawString.
+             */
+            boolean isEmoji = false;
+            if (font != null) {
+                FontResource fr = font.getFontResource();
+                int glyphID = fr.getGlyphMapper().charToGlyph(codePoint);
+                isEmoji = fr.isColorGlyph(glyphID);
+            }
+
+            /* special handling for delimiters and Emoji */
+            if (delimiter || isEmoji) {
+                if ((i - surrogate) != start) {
+                    run = addTextRun(layout, chars, start, i - surrogate - start,
                                      font, span, bidiLevel, complex);
                     if (complex) {
                         flags |= FLAGS_HAS_COMPLEX;
                         complex = false;
                     }
-                    start = i;
+                    start = i - surrogate;
                 }
             }
+
             boolean spanChanged = i >= spanEnd && i < length;
             boolean levelChanged = i >= bidiEnd && i < length;
             boolean scriptChanged = false;
-            if (!delimiter) {
+
+            if (!delimiter && !isEmoji) {
                 boolean oldComplex = complex;
                 if (checkComplex) {
-                    if (Character.isHighSurrogate(ch)) {
-                        /* Only merge surrogate when the pair is in the same span. */
-                        if (i + 1 < spanEnd && Character.isLowSurrogate(chars[i + 1])) {
-                            codePoint = Character.toCodePoint(ch, chars[++i]);
-                        }
-                    }
 
                     if (isIdeographic(codePoint)) {
                         flags |= FLAGS_HAS_CJK;
@@ -302,6 +320,14 @@ public abstract class GlyphLayout {
                 } else {
                     run.setLinebreak();
                 }
+                layout.addTextRun(run);
+                start = i;
+            }
+            if (isEmoji) {
+                i++;
+                /* Create Emoji run */
+                run = new TextRun(start, i - start, bidiLevel, false,
+                                  ScriptMapper.COMMON, span, 0, false);
                 layout.addTextRun(run);
                 start = i;
             }

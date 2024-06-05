@@ -53,32 +53,29 @@ public:
     WEBCORE_EXPORT static std::unique_ptr<ContentFilter> create(ContentFilterClient&);
     WEBCORE_EXPORT ~ContentFilter();
 
-    static const char* urlScheme() { return "x-apple-content-filter"; }
+    static constexpr ASCIILiteral urlScheme() { return "x-apple-content-filter"_s; }
 
-#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
     WEBCORE_EXPORT void startFilteringMainResource(const URL&);
-#else
     void startFilteringMainResource(CachedRawResource&);
-#endif
     WEBCORE_EXPORT void stopFilteringMainResource();
 
     WEBCORE_EXPORT bool continueAfterWillSendRequest(ResourceRequest&, const ResourceResponse&);
     WEBCORE_EXPORT bool continueAfterResponseReceived(const ResourceResponse&);
-#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
     WEBCORE_EXPORT bool continueAfterDataReceived(const SharedBuffer&, size_t encodedDataLength);
     WEBCORE_EXPORT bool continueAfterNotifyFinished(const URL& resourceURL);
-#else
     bool continueAfterDataReceived(const SharedBuffer&);
     bool continueAfterNotifyFinished(CachedResource&);
-#endif
 
     static bool continueAfterSubstituteDataRequest(const DocumentLoader& activeLoader, const SubstituteData&);
     bool willHandleProvisionalLoadFailure(const ResourceError&) const;
     WEBCORE_EXPORT void handleProvisionalLoadFailure(const ResourceError&);
 
     const ResourceError& blockedError() const { return m_blockedError; }
+    void setBlockedError(const ResourceError& error) { m_blockedError = error; }
     bool isAllowed() const { return m_state == State::Allowed; }
     bool responseReceived() const { return m_responseReceived; }
+
+    WEBCORE_EXPORT static const URL& blockedPageURL();
 
 private:
     using State = PlatformContentFilter::State;
@@ -96,25 +93,19 @@ private:
     template <typename Function> void forEachContentFilterUntilBlocked(Function&&);
     void didDecide(State);
     void deliverResourceData(const SharedBuffer&, size_t encodedDataLength = 0);
-#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
     void deliverStoredResourceData();
-#endif
 
     URL url();
 
     Container m_contentFilters;
     ContentFilterClient& m_client;
-#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
     URL m_mainResourceURL;
     struct ResourceDataItem {
         RefPtr<const SharedBuffer> buffer;
         size_t encodedDataLength;
     };
-
     Vector<ResourceDataItem> m_buffers;
-#else
     CachedResourceHandle<CachedRawResource> m_mainResource;
-#endif
     const PlatformContentFilter* m_blockingContentFilter { nullptr };
     State m_state { State::Stopped };
     ResourceError m_blockedError;

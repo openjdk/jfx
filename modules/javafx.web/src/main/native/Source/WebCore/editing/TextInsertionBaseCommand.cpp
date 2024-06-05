@@ -29,8 +29,8 @@
 #include "BeforeTextInsertedEvent.h"
 #include "Document.h"
 #include "Element.h"
-#include "Frame.h"
 #include "FrameSelection.h"
+#include "LocalFrame.h"
 #include "Node.h"
 
 namespace WebCore {
@@ -40,7 +40,7 @@ TextInsertionBaseCommand::TextInsertionBaseCommand(Document& document, EditActio
 {
 }
 
-void TextInsertionBaseCommand::applyTextInsertionCommand(Frame* frame, TextInsertionBaseCommand& command, const VisibleSelection& selectionForInsertion, const VisibleSelection& endingSelection)
+void TextInsertionBaseCommand::applyTextInsertionCommand(LocalFrame* frame, TextInsertionBaseCommand& command, const VisibleSelection& selectionForInsertion, const VisibleSelection& endingSelection)
 {
     bool changeSelection = selectionForInsertion != endingSelection;
     if (changeSelection) {
@@ -77,7 +77,7 @@ bool canAppendNewLineFeedToSelection(const VisibleSelection& selection)
     if (!node)
         return false;
 
-    Ref<BeforeTextInsertedEvent> event = BeforeTextInsertedEvent::create(String("\n"));
+    Ref<BeforeTextInsertedEvent> event = BeforeTextInsertedEvent::create("\n"_s);
     node->dispatchEvent(event);
     return event->text().length();
 }

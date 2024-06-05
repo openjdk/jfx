@@ -36,18 +36,27 @@
 namespace WebCore {
 
 class NumberInputType final : public TextFieldInputType {
-    template<typename DowncastedType> friend bool isInvalidInputType(const InputType&, const String&);
 public:
-    explicit NumberInputType(HTMLInputElement& element) : TextFieldInputType(Type::Number, element) { }
+    static Ref<NumberInputType> create(HTMLInputElement& element)
+    {
+        return adoptRef(*new NumberInputType(element));
+    }
+
+    bool typeMismatchFor(const String&) const final;
+    bool typeMismatch() const final;
+    bool hasBadInput() const final;
 
 private:
+    explicit NumberInputType(HTMLInputElement& element)
+        : TextFieldInputType(Type::Number, element)
+    {
+    }
+
     const AtomString& formControlType() const final;
-    void setValue(const String&, bool valueChanged, TextFieldEventBehavior) final;
+    void setValue(const String&, bool valueChanged, TextFieldEventBehavior, TextControlSetValueSelection) final;
     double valueAsDouble() const final;
     ExceptionOr<void> setValueAsDouble(double, TextFieldEventBehavior) const final;
     ExceptionOr<void> setValueAsDecimal(const Decimal&, TextFieldEventBehavior) const final;
-    bool typeMismatchFor(const String&) const final;
-    bool typeMismatch() const final;
     bool sizeShouldIncludeDecoration(int defaultSize, int& preferredSize) const final;
     float decorationWidth() const final;
     StepRange createStepRange(AnyStepHandling) const final;
@@ -58,10 +67,11 @@ private:
     String visibleValue() const final;
     String convertFromVisibleValue(const String&) const final;
     String sanitizeValue(const String&) const final;
-    bool hasBadInput() const final;
     String badInputText() const final;
     bool supportsPlaceholder() const final;
     void attributeChanged(const QualifiedName&) final;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_INPUT_TYPE(NumberInputType, Type::Number)

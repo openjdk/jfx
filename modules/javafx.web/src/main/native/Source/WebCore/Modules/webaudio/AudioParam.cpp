@@ -109,7 +109,7 @@ ExceptionOr<void> AudioParam::setValueForBindings(float value)
 ExceptionOr<void> AudioParam::setAutomationRate(AutomationRate automationRate)
 {
     if (m_automationRateMode == AutomationRateMode::Fixed)
-        return Exception { InvalidStateError, "automationRate cannot be changed for this node" };
+        return Exception { InvalidStateError, "automationRate cannot be changed for this node"_s };
 
     m_automationRate = automationRate;
     return { };
@@ -143,7 +143,7 @@ bool AudioParam::smooth()
         m_smoothedValue += (m_value - m_smoothedValue) * SmoothingConstant;
 
         // If we get close enough then snap to actual value.
-        if (fabs(m_smoothedValue - m_value) < SnapThreshold) // FIXME: the threshold needs to be adjustable depending on range - but this is OK general purpose value.
+        if (std::abs(m_smoothedValue - m_value) < SnapThreshold) // FIXME: the threshold needs to be adjustable depending on range - but this is OK general purpose value.
             m_smoothedValue = m_value;
     }
 

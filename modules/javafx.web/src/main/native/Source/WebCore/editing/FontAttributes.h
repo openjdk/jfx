@@ -27,8 +27,10 @@
 
 #include "Font.h"
 #include "FontShadow.h"
+#include "ListStyleType.h"
 #include "RenderStyleConstants.h"
 #include <wtf/RetainPtr.h>
+#include <wtf/text/WTFString.h>
 
 OBJC_CLASS NSDictionary;
 OBJC_CLASS NSTextList;
@@ -36,42 +38,14 @@ OBJC_CLASS NSTextList;
 namespace WebCore {
 
 struct TextList {
-    ListStyleType style { ListStyleType::None };
+    ListStyleType styleType { ListStyleType::Type::None, nullAtom() };
     int startingItemNumber { 0 };
     bool ordered { false };
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<TextList> decode(Decoder&);
 
 #if PLATFORM(COCOA)
     RetainPtr<NSTextList> createTextList() const;
 #endif
 };
-
-template<class Encoder> inline void TextList::encode(Encoder& encoder) const
-{
-    encoder << style << startingItemNumber << ordered;
-}
-
-template<class Decoder> inline std::optional<TextList> TextList::decode(Decoder& decoder)
-{
-    std::optional<ListStyleType> style;
-    decoder >> style;
-    if (!style)
-        return std::nullopt;
-
-    std::optional<int> startingItemNumber;
-    decoder >> startingItemNumber;
-    if (!startingItemNumber)
-        return std::nullopt;
-
-    std::optional<bool> ordered;
-    decoder >> ordered;
-    if (!ordered)
-        return std::nullopt;
-
-    return { { *style, *startingItemNumber, *ordered } };
-}
 
 struct FontAttributes {
     enum class SubscriptOrSuperscript : uint8_t { None, Subscript, Superscript };
@@ -94,27 +68,3 @@ struct FontAttributes {
 };
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::FontAttributes::SubscriptOrSuperscript> {
-    using values = EnumValues<
-        WebCore::FontAttributes::SubscriptOrSuperscript,
-        WebCore::FontAttributes::SubscriptOrSuperscript::None,
-        WebCore::FontAttributes::SubscriptOrSuperscript::Subscript,
-        WebCore::FontAttributes::SubscriptOrSuperscript::Superscript
-    >;
-};
-
-template<> struct EnumTraits<WebCore::FontAttributes::HorizontalAlignment> {
-    using values = EnumValues<
-        WebCore::FontAttributes::HorizontalAlignment,
-        WebCore::FontAttributes::HorizontalAlignment::Left,
-        WebCore::FontAttributes::HorizontalAlignment::Center,
-        WebCore::FontAttributes::HorizontalAlignment::Right,
-        WebCore::FontAttributes::HorizontalAlignment::Justify,
-        WebCore::FontAttributes::HorizontalAlignment::Natural
-    >;
-};
-
-} // namespace WTF

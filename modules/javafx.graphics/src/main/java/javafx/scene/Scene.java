@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,6 +50,7 @@ import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.SceneTraversalEngine;
 import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
+import com.sun.javafx.stage.EmbeddedWindow;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.tk.*;
@@ -91,6 +92,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Stream;
 
 import com.sun.javafx.logging.PulseLogger;
 
@@ -1299,7 +1301,7 @@ public class Scene implements EventTarget {
 
     // Shared method for Scene.snapshot and Node.snapshot. It is static because
     // we might be doing a Node snapshot with a null scene
-    static WritableImage doSnapshot(Scene scene,
+    static WritableImage doSnapshot(Scene scene, SubScene subScene,
             double x, double y, double w, double h,
             Node root, BaseTransform transform, boolean depthBuffer,
             Paint fill, Camera camera, WritableImage wimg) {
@@ -1345,14 +1347,15 @@ public class Scene implements EventTarget {
             context.camera = null;
         }
 
-        // Grab the lights from the scene
-        context.lights = null;
-        if (scene != null && !scene.lights.isEmpty()) {
-            context.lights = new NGLightBase[scene.lights.size()];
-            for (int i = 0; i < scene.lights.size(); i++) {
-                context.lights[i] = scene.lights.get(i).getPeer();
-            }
+        // Grab the lights from the scene or subscene
+        Stream<NGLightBase> lights;
+        if (subScene != null) {
+            lights = Optional.of(subScene).stream().flatMap(s -> s.getLights().stream()).map(LightBase::getPeer);
+        } else {
+            lights = Optional.ofNullable(scene).stream().flatMap(s -> s.lights.stream()).map(LightBase::getPeer);
         }
+
+        context.lights = lights.toArray(NGLightBase[]::new);
 
         Toolkit.WritableImageAccessor accessor = Toolkit.getWritableImageAccessor();
         context.platformImage = accessor.getTkImageLoader(wimg);
@@ -1393,7 +1396,7 @@ public class Scene implements EventTarget {
         double h = getHeight();
         BaseTransform transform = BaseTransform.IDENTITY_TRANSFORM;
 
-        return doSnapshot(this, 0, 0, w, h,
+        return doSnapshot(this, null, 0, 0, w, h,
                 getRoot(), transform, isDepthBufferInternal(),
                 getFill(), getEffectiveCamera(), img);
     }
@@ -2122,6 +2125,10 @@ public class Scene implements EventTarget {
 
         if (windowFocused && accessible != null) {
             accessible.sendNotification(AccessibleAttribute.FOCUS_NODE);
+        }
+
+        if (!windowFocused) {
+            getInternalEventDispatcher().getKeyboardShortcutsHandler().setMnemonicsDisplayEnabled(false);
         }
     }
 
@@ -3274,7 +3281,7 @@ public class Scene implements EventTarget {
 
         private void processDropEnd(DragEvent de) {
             if (source == null) {
-                System.out.println("Scene.DnDGesture.processDropEnd() - UNEXPECTD - source is NULL");
+                System.out.println("Scene.DnDGesture.processDropEnd() - UNEXPECTED - source is NULL");
                 return;
             }
 
@@ -4231,17 +4238,7 @@ public class Scene implements EventTarget {
         }
     }
 
-    // PENDING_DOC_REVIEW
-    /**
-     * Registers an event handler to this scene. The handler is called when the
-     * scene receives an {@code Event} of the specified type during the bubbling
-     * phase of event delivery.
-     *
-     * @param <T> the specific event class of the handler
-     * @param eventType the type of the events to receive by the handler
-     * @param eventHandler the handler to register
-     * @throws NullPointerException if the event type or handler is null
-     */
+    @Override
     public final <T extends Event> void addEventHandler(
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
@@ -4249,18 +4246,7 @@ public class Scene implements EventTarget {
                                     .addEventHandler(eventType, eventHandler);
     }
 
-    // PENDING_DOC_REVIEW
-    /**
-     * Unregisters a previously registered event handler from this scene. One
-     * handler might have been registered for different event types, so the
-     * caller needs to specify the particular event type from which to
-     * unregister the handler.
-     *
-     * @param <T> the specific event class of the handler
-     * @param eventType the event type from which to unregister
-     * @param eventHandler the handler to unregister
-     * @throws NullPointerException if the event type or handler is null
-     */
+    @Override
     public final <T extends Event> void removeEventHandler(
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
@@ -4269,17 +4255,7 @@ public class Scene implements EventTarget {
                                                         eventHandler);
     }
 
-    // PENDING_DOC_REVIEW
-    /**
-     * Registers an event filter to this scene. The filter is called when the
-     * scene receives an {@code Event} of the specified type during the
-     * capturing phase of event delivery.
-     *
-     * @param <T> the specific event class of the filter
-     * @param eventType the type of the events to receive by the filter
-     * @param eventFilter the filter to register
-     * @throws NullPointerException if the event type or filter is null
-     */
+    @Override
     public final <T extends Event> void addEventFilter(
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter) {
@@ -4287,18 +4263,7 @@ public class Scene implements EventTarget {
                                     .addEventFilter(eventType, eventFilter);
     }
 
-    // PENDING_DOC_REVIEW
-    /**
-     * Unregisters a previously registered event filter from this scene. One
-     * filter might have been registered for different event types, so the
-     * caller needs to specify the particular event type from which to
-     * unregister the filter.
-     *
-     * @param <T> the specific event class of the filter
-     * @param eventType the event type from which to unregister
-     * @param eventFilter the filter to unregister
-     * @throws NullPointerException if the event type or filter is null
-     */
+    @Override
     public final <T extends Event> void removeEventFilter(
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter) {
@@ -4390,14 +4355,6 @@ public class Scene implements EventTarget {
                                            .getAccelerators();
     }
 
-    // PENDING_DOC_REVIEW
-    /**
-     * Construct an event dispatch chain for this scene. The event dispatch
-     * chain contains all event dispatchers from the stage to this scene.
-     *
-     * @param tail the initial chain to build from
-     * @return the resulting event dispatch chain for this scene
-     */
     @Override
     public EventDispatchChain buildEventDispatchChain(
             EventDispatchChain tail) {
@@ -6289,8 +6246,17 @@ public class Scene implements EventTarget {
         AccessController.doPrivileged(
                 (PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.scene.nodeOrientation.RTL")) ? NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.INHERIT;
 
-
-
+    /**
+     * Node orientation describes the flow of visual data within a node.
+     * In the English speaking world, visual data normally flows from
+     * left-to-right. In an Arabic or Hebrew world, visual data flows
+     * from right-to-left. This is consistent with the reading order
+     * of text in both worlds.
+     *
+     * @defaultValue if the system property {@code javafx.scene.nodeOrientation.RTL} is {@code true},
+     *     {@code NodeOrientation.RIGHT_TO_LEFT}, otherwise {@code NodeOrientation.INHERIT}
+     * @since JavaFX 8.0
+     */
     private ObjectProperty<NodeOrientation> nodeOrientation;
     private EffectiveOrientationProperty effectiveNodeOrientationProperty;
 
@@ -6304,19 +6270,6 @@ public class Scene implements EventTarget {
         return nodeOrientation == null ? defaultNodeOrientation : nodeOrientation.get();
     }
 
-    /**
-     * Property holding NodeOrientation.
-     * <p>
-     * Node orientation describes the flow of visual data within a node.
-     * In the English speaking world, visual data normally flows from
-     * left-to-right. In an Arabic or Hebrew world, visual data flows
-     * from right-to-left.  This is consistent with the reading order
-     * of text in both worlds.  The default value is left-to-right.
-     * </p>
-     *
-     * @return NodeOrientation
-     * @since JavaFX 8.0
-     */
     public final ObjectProperty<NodeOrientation> nodeOrientationProperty() {
         if (nodeOrientation == null) {
             nodeOrientation = new StyleableObjectProperty<NodeOrientation>(defaultNodeOrientation) {
@@ -6394,6 +6347,8 @@ public class Scene implements EventTarget {
                 Window parent = null;
                 if (window instanceof Stage) {
                     parent = ((Stage)window).getOwner();
+                } else if (window instanceof EmbeddedWindow win) {
+                    return win.getNodeOrientation();
                 } else {
                     if (window instanceof PopupWindow) {
                         parent = ((PopupWindow)window).getOwnerWindow();

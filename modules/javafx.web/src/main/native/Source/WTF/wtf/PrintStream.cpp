@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #include "config.h"
 #include <wtf/PrintStream.h>
 
+#include <wtf/text/AtomString.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 
@@ -44,14 +45,14 @@ void PrintStream::printf(const char* format, ...)
 
 void PrintStream::printfVariableFormat(const char* format, ...)
 {
-    ALLOW_NONLITERAL_FORMAT_BEGIN
-    IGNORE_GCC_WARNINGS_BEGIN("suggest-attribute=format")
+ALLOW_NONLITERAL_FORMAT_BEGIN
+IGNORE_GCC_WARNINGS_BEGIN("suggest-attribute=format")
     va_list argList;
     va_start(argList, format);
     vprintf(format, argList);
     va_end(argList);
-    IGNORE_GCC_WARNINGS_END
-    ALLOW_NONLITERAL_FORMAT_END
+IGNORE_GCC_WARNINGS_END
+ALLOW_NONLITERAL_FORMAT_END
 }
 
 void PrintStream::flush()
@@ -91,7 +92,7 @@ static void printExpectedCStringHelper(PrintStream& out, const char* type, Expec
 
 void printInternal(PrintStream& out, StringView string)
 {
-    printExpectedCStringHelper(out, "StringView", string.tryGetUtf8());
+    printExpectedCStringHelper(out, "StringView", string.tryGetUTF8());
 }
 
 void printInternal(PrintStream& out, const CString& string)
@@ -101,7 +102,12 @@ void printInternal(PrintStream& out, const CString& string)
 
 void printInternal(PrintStream& out, const String& string)
 {
-    printExpectedCStringHelper(out, "String", string.tryGetUtf8());
+    printExpectedCStringHelper(out, "String", string.tryGetUTF8());
+}
+
+void printInternal(PrintStream& out, const AtomString& string)
+{
+    printExpectedCStringHelper(out, "String", string.string().tryGetUTF8());
 }
 
 void printInternal(PrintStream& out, const StringImpl* string)
@@ -110,7 +116,7 @@ void printInternal(PrintStream& out, const StringImpl* string)
         printInternal(out, "(null StringImpl*)");
         return;
     }
-    printExpectedCStringHelper(out, "StringImpl*", string->tryGetUtf8());
+    printExpectedCStringHelper(out, "StringImpl*", string->tryGetUTF8());
 }
 
 void printInternal(PrintStream& out, bool value)
@@ -136,6 +142,11 @@ void printInternal(PrintStream& out, signed char value)
 void printInternal(PrintStream& out, unsigned char value)
 {
     out.printf("%u", static_cast<unsigned>(value));
+}
+
+void printInternal(PrintStream& out, char16_t value)
+{
+    out.printf("%lc", value);
 }
 
 void printInternal(PrintStream& out, short value)
@@ -176,6 +187,17 @@ void printInternal(PrintStream& out, float value)
 void printInternal(PrintStream& out, double value)
 {
     out.printf("%lf", value);
+}
+
+void printInternal(PrintStream& out, RawHex value)
+{
+#if !CPU(ADDRESS64)
+    if (value.is64Bit()) {
+        out.printf("0x%" PRIx64, value.u64());
+        return;
+    }
+#endif
+    out.printf("%p", value.ptr());
 }
 
 void printInternal(PrintStream& out, RawPointer value)

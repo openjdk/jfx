@@ -25,14 +25,14 @@
 #include "HTMLEmbedElement.h"
 
 #include "CSSPropertyNames.h"
-#include "ElementAncestorIterator.h"
-#include "Frame.h"
+#include "ElementAncestorIteratorInlines.h"
 #include "FrameLoader.h"
-#include "FrameView.h"
 #include "HTMLImageLoader.h"
 #include "HTMLNames.h"
 #include "HTMLObjectElement.h"
-#include "HTMLParserIdioms.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
+#include "NodeName.h"
 #include "PluginDocument.h"
 #include "RenderEmbeddedObject.h"
 #include "RenderWidget.h"
@@ -82,10 +82,9 @@ RenderWidget* HTMLEmbedElement::renderWidgetLoadingPlugin() const
 void HTMLEmbedElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == hiddenAttr) {
-        if (equalLettersIgnoringASCIICase(value, "yes") || equalLettersIgnoringASCIICase(value, "true")) {
+        ASSERT(!value.isNull());
             addPropertyToPresentationalHintStyle(style, CSSPropertyWidth, 0, CSSUnitType::CSS_PX);
             addPropertyToPresentationalHintStyle(style, CSSPropertyHeight, 0, CSSUnitType::CSS_PX);
-        }
     } else
         HTMLPlugInImageElement::collectPresentationalHintsForAttribute(name, value, style);
 }
@@ -95,37 +94,45 @@ static bool hasTypeOrSrc(const HTMLEmbedElement& embed)
     return embed.hasAttributeWithoutSynchronization(typeAttr) || embed.hasAttributeWithoutSynchronization(srcAttr);
 }
 
-void HTMLEmbedElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLEmbedElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == typeAttr) {
-        m_serviceType = value.string().left(value.find(';')).convertToASCIILowercase();
+    HTMLPlugInImageElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
+    switch (name.nodeName()) {
+    case AttributeNames::typeAttr:
+        m_serviceType = newValue.string().left(newValue.find(';')).convertToASCIILowercase();
         // FIXME: The only difference between this and HTMLObjectElement's corresponding
         // code is that HTMLObjectElement does setNeedsWidgetUpdate(true). Consider moving
         // this up to the HTMLPlugInImageElement to be shared.
         if (renderer() && !hasTypeOrSrc(*this))
             invalidateStyle();
-    } else if (name == codeAttr) {
-        m_url = stripLeadingAndTrailingHTMLSpaces(value);
+        break;
+    case AttributeNames::codeAttr:
+        // FIXME: trimming whitespace is probably redundant with the URL parser
+        m_url = newValue.string().trim(isASCIIWhitespace);
         // FIXME: Why no call to updateImageLoaderWithNewURLSoon?
         // FIXME: If both code and src attributes are specified, last one parsed/changed wins. That can't be right!
-    } else if (name == srcAttr) {
-        m_url = stripLeadingAndTrailingHTMLSpaces(value);
+        break;
+    case AttributeNames::srcAttr:
+        // FIXME: trimming whitespace is probably redundant with the URL parser
+        m_url = newValue.string().trim(isASCIIWhitespace);
         updateImageLoaderWithNewURLSoon();
         if (renderer() && !hasTypeOrSrc(*this))
             invalidateStyle();
         // FIXME: If both code and src attributes are specified, last one parsed/changed wins. That can't be right!
-    } else
-        HTMLPlugInImageElement::parseAttribute(name, value);
+        break;
+    default:
+        break;
+    }
 }
 
-void HTMLEmbedElement::parametersForPlugin(Vector<String>& paramNames, Vector<String>& paramValues)
+void HTMLEmbedElement::parametersForPlugin(Vector<AtomString>& paramNames, Vector<AtomString>& paramValues)
 {
     if (!hasAttributes())
         return;
 
     for (const Attribute& attribute : attributesIterator()) {
-        paramNames.append(attribute.localName().string());
-        paramValues.append(attribute.value().string());
+        paramNames.append(attribute.localName());
+        paramValues.append(attribute.value());
     }
 }
 
@@ -156,8 +163,8 @@ void HTMLEmbedElement::updateWidget(CreatePlugins createPlugins)
     setNeedsWidgetUpdate(false);
 
     // FIXME: These should be joined into a PluginParameters class.
-    Vector<String> paramNames;
-    Vector<String> paramValues;
+    Vector<AtomString> paramNames;
+    Vector<AtomString> paramValues;
     parametersForPlugin(paramNames, paramValues);
 
     Ref<HTMLEmbedElement> protectedThis(*this); // Loading the plugin might remove us from the document.

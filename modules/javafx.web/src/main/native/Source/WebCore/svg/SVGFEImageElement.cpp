@@ -42,7 +42,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFEImageElement);
 
 inline SVGFEImageElement::SVGFEImageElement(const QualifiedName& tagName, Document& document)
-    : SVGFilterPrimitiveStandardAttributes(tagName, document)
+    : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
     , SVGURIReference(this)
 {
     ASSERT(hasTagName(SVGNames::feImageTag));
@@ -63,12 +63,12 @@ SVGFEImageElement::~SVGFEImageElement()
     clearResourceReferences();
 }
 
-bool SVGFEImageElement::hasSingleSecurityOrigin() const
+bool SVGFEImageElement::renderingTaintsOrigin() const
 {
     if (!m_cachedImage)
-        return true;
+        return false;
     auto* image = m_cachedImage->image();
-    return !image || image->hasSingleSecurityOrigin();
+    return image && image->renderingTaintsOrigin();
 }
 
 void SVGFEImageElement::clearResourceReferences()
@@ -100,42 +100,42 @@ void SVGFEImageElement::buildPendingResource()
     if (!isConnected())
         return;
 
-    auto target = SVGURIReference::targetElementFromIRIString(href(), treeScope());
+    auto target = SVGURIReference::targetElementFromIRIString(href(), treeScopeForSVGReferences());
     if (!target.element) {
         if (target.identifier.isEmpty())
             requestImageResource();
         else {
-            document().accessSVGExtensions().addPendingResource(target.identifier, *this);
+            treeScopeForSVGReferences().addPendingSVGResource(target.identifier, *this);
             ASSERT(hasPendingResources());
         }
     } else if (is<SVGElement>(*target.element))
         downcast<SVGElement>(*target.element).addReferencingElement(*this);
 
-    invalidate();
+    updateSVGRendererForElementChange();
 }
 
-void SVGFEImageElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGFEImageElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == SVGNames::preserveAspectRatioAttr) {
-        m_preserveAspectRatio->setBaseValInternal(SVGPreserveAspectRatioValue { value });
-        return;
-    }
+    if (name == SVGNames::preserveAspectRatioAttr)
+        m_preserveAspectRatio->setBaseValInternal(SVGPreserveAspectRatioValue { newValue });
 
-    SVGFilterPrimitiveStandardAttributes::parseAttribute(name, value);
-    SVGURIReference::parseAttribute(name, value);
+    SVGURIReference::parseAttribute(name, newValue);
+    SVGFilterPrimitiveStandardAttributes::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGFEImageElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (attrName == SVGNames::preserveAspectRatioAttr) {
+    if (PropertyRegistry::isKnownAttribute(attrName)) {
+        ASSERT(attrName == SVGNames::preserveAspectRatioAttr);
         InstanceInvalidationGuard guard(*this);
-        invalidate();
+        updateSVGRendererForElementChange();
         return;
     }
 
     if (SVGURIReference::isKnownAttribute(attrName)) {
         InstanceInvalidationGuard guard(*this);
         buildPendingResource();
+        markFilterEffectForRebuild();
         return;
     }
 
@@ -150,6 +150,7 @@ Node::InsertedIntoAncestorResult SVGFEImageElement::insertedIntoAncestor(Inserti
 
 void SVGFEImageElement::didFinishInsertingNode()
 {
+    SVGFilterPrimitiveStandardAttributes::didFinishInsertingNode();
     buildPendingResource();
 }
 
@@ -177,41 +178,9 @@ void SVGFEImageElement::notifyFinished(CachedResource&, const NetworkLoadMetrics
     RenderSVGResource::markForLayoutAndParentResourceInvalidation(*parentRenderer);
 }
 
-static inline IntRect scaledImageBufferRect(const FloatRect& rect, const FloatSize& scale)
+std::tuple<RefPtr<ImageBuffer>, FloatRect> SVGFEImageElement::imageBufferForEffect(const GraphicsContext& destinationContext) const
 {
-    auto scaledRect = rect;
-    scaledRect.scale(scale);
-    return enclosingIntRect(scaledRect);
-}
-
-static inline FloatSize clampingScaleForImageBufferSize(const FloatSize& size)
-{
-    FloatSize clampingScale(1, 1);
-    ImageBuffer::sizeNeedsClamping(size, clampingScale);
-    return clampingScale;
-}
-
-static RefPtr<ImageBuffer> createImageBuffer(const FloatRect& rect, const FloatSize& scale, HostWindow* hostWindow)
-{
-    auto scaledRect = scaledImageBufferRect(rect, scale);
-    if (scaledRect.isEmpty())
-        return nullptr;
-
-    auto clampingScale = clampingScaleForImageBufferSize(scaledRect.size());
-
-    auto imageBuffer = ImageBuffer::create(scaledRect.size() * clampingScale, RenderingMode::Unaccelerated, ShouldUseDisplayList::No, RenderingPurpose::DOM, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8, hostWindow);
-    if (!imageBuffer)
-        return nullptr;
-
-    imageBuffer->context().scale(clampingScale);
-    imageBuffer->context().translate(-scaledRect.location());
-    imageBuffer->context().scale(scale);
-    return imageBuffer;
-}
-
-std::tuple<RefPtr<ImageBuffer>, FloatRect> SVGFEImageElement::imageBufferForEffect() const
-{
-    auto target = SVGURIReference::targetElementFromIRIString(href(), treeScope());
+    auto target = SVGURIReference::targetElementFromIRIString(href(), const_cast<SVGFEImageElement&>(*this).treeScopeForSVGReferences());
     if (!is<SVGElement>(target.element))
         return { };
 
@@ -231,8 +200,7 @@ std::tuple<RefPtr<ImageBuffer>, FloatRect> SVGFEImageElement::imageBufferForEffe
     FloatSize scale(absoluteTransform.xScale(), absoluteTransform.yScale());
     auto imageRect = renderer->repaintRectInLocalCoordinates();
 
-    // FIXME: Replace this call with GraphicsContext::createImageBuffer() once the destination GraphicsContext is passed to this function.
-    auto imageBuffer = createImageBuffer(imageRect, scale, renderer->hostWindow());
+    auto imageBuffer = destinationContext.createScaledImageBuffer(imageRect, scale);
     if (!imageBuffer)
         return { };
 
@@ -242,7 +210,7 @@ std::tuple<RefPtr<ImageBuffer>, FloatRect> SVGFEImageElement::imageBufferForEffe
     return { imageBuffer, imageRect };
 }
 
-RefPtr<FilterEffect> SVGFEImageElement::filterEffect(const SVGFilterBuilder&, const FilterEffectVector&) const
+RefPtr<FilterEffect> SVGFEImageElement::createFilterEffect(const FilterEffectVector&, const GraphicsContext& destinationContext) const
 {
     if (m_cachedImage) {
         auto image = m_cachedImage->imageForRenderer(renderer());
@@ -257,7 +225,7 @@ RefPtr<FilterEffect> SVGFEImageElement::filterEffect(const SVGFilterBuilder&, co
         return FEImage::create({ nativeImage.releaseNonNull() }, imageRect, preserveAspectRatio());
     }
 
-    auto [imageBuffer, imageRect] = imageBufferForEffect();
+    auto [imageBuffer, imageRect] = imageBufferForEffect(destinationContext);
     if (!imageBuffer)
         return nullptr;
 

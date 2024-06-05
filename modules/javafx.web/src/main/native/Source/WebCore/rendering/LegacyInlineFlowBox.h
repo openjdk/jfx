@@ -51,6 +51,7 @@ public:
         , m_hasAnnotationsAfter(false)
         , m_isFirstAfterPageBreak(false)
         , m_isForTrailingFloats(false)
+        , m_hasSelfPaintInlineBox(false)
 #if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
         , m_hasBadChildList(false)
 #endif
@@ -116,8 +117,8 @@ public:
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom, HitTestAction) override;
 
     // logicalLeft = left in a horizontal line and top in a vertical line.
-    LayoutUnit marginBorderPaddingLogicalLeft() const { return LayoutUnit(marginLogicalLeft() + borderLogicalLeft() + paddingLogicalLeft()); }
-    LayoutUnit marginBorderPaddingLogicalRight() const { return LayoutUnit(marginLogicalRight() + borderLogicalRight() + paddingLogicalRight()); }
+    inline LayoutUnit marginBorderPaddingLogicalLeft() const;
+    inline LayoutUnit marginBorderPaddingLogicalRight() const;
     LayoutUnit marginLogicalLeft() const
     {
         if (!includeLogicalLeftEdge())
@@ -130,30 +131,10 @@ public:
             return 0;
         return isHorizontal() ? renderer().marginRight() : renderer().marginBottom();
     }
-    float borderLogicalLeft() const
-    {
-        if (!includeLogicalLeftEdge())
-            return 0;
-        return isHorizontal() ? lineStyle().borderLeftWidth() : lineStyle().borderTopWidth();
-    }
-    float borderLogicalRight() const
-    {
-        if (!includeLogicalRightEdge())
-            return 0;
-        return isHorizontal() ? lineStyle().borderRightWidth() : lineStyle().borderBottomWidth();
-    }
-    float paddingLogicalLeft() const
-    {
-        if (!includeLogicalLeftEdge())
-            return 0;
-        return isHorizontal() ? renderer().paddingLeft() : renderer().paddingTop();
-    }
-    float paddingLogicalRight() const
-    {
-        if (!includeLogicalRightEdge())
-            return 0;
-        return isHorizontal() ? renderer().paddingRight() : renderer().paddingBottom();
-    }
+    inline float borderLogicalLeft() const;
+    inline float borderLogicalRight() const;
+    inline float paddingLogicalLeft() const;
+    inline float paddingLogicalRight() const;
 
     bool includeLogicalLeftEdge() const { return m_includeLogicalLeftEdge; }
     bool includeLogicalRightEdge() const { return m_includeLogicalRightEdge; }
@@ -181,7 +162,7 @@ public:
         bool strictMode, GlyphOverflowAndFallbackFontsMap&, FontBaseline, VerticalPositionCache&);
     void adjustMaxAscentAndDescent(LayoutUnit& maxAscent, LayoutUnit& maxDescent,
         LayoutUnit maxPositionTop, LayoutUnit maxPositionBottom);
-    void placeBoxesInBlockDirection(LayoutUnit logicalTop, LayoutUnit maxHeight, int maxAscent, bool strictMode, LayoutUnit& lineTop, LayoutUnit& lineBottom, bool& setLineTop,
+    void placeBoxesInBlockDirection(LayoutUnit logicalTop, LayoutUnit maxHeight, LayoutUnit maxAscent, bool strictMode, LayoutUnit& lineTop, LayoutUnit& lineBottom, bool& setLineTop,
         LayoutUnit& lineTopIncludingMargins, LayoutUnit& lineBottomIncludingMargins, bool& hasAnnotationsBefore, bool& hasAnnotationsAfter, FontBaseline);
     void flipLinesInBlockDirection(LayoutUnit lineTop, LayoutUnit lineBottom);
     bool requiresIdeographicBaseline(const GlyphOverflowAndFallbackFontsMap&) const;
@@ -284,7 +265,7 @@ public:
             parent()->clearDescendantsHaveSameLineHeightAndBaseline();
     }
 
-    void computeReplacedAndTextLineTopAndBottom(LayoutUnit& lineTop, LayoutUnit& lineBottom) const;
+    bool hasSelfPaintInlineBox() const { return m_hasSelfPaintInlineBox; }
 
 private:
     bool isInlineFlowBox() const final { return true; }
@@ -320,6 +301,7 @@ protected:
 
     unsigned m_isFirstAfterPageBreak : 1;
     unsigned m_isForTrailingFloats : 1;
+    unsigned m_hasSelfPaintInlineBox : 1;
 
     // End of RootInlineBox-specific members.
 

@@ -111,6 +111,7 @@ private:
     bool shouldEmitSignal(const char* interface, const char* name, const char* detail = "");
 
 #if ENABLE(DEVELOPER_MODE)
+    void notify(AccessibilityObjectAtspi&, const char*, NotificationObserverParameter) const;
     void notifyStateChanged(AccessibilityObjectAtspi&, const char*, bool) const;
     void notifySelectionChanged(AccessibilityObjectAtspi&) const;
     void notifyMenuSelectionChanged(AccessibilityObjectAtspi&) const;
@@ -134,8 +135,8 @@ private:
     unsigned m_cacheID { 0 };
     HashMap<String, AccessibilityObjectAtspi*> m_cache;
     ListHashSet<RefPtr<AccessibilityObjectAtspi>> m_cacheUpdateList;
-    RunLoop::Timer<AccessibilityAtspi> m_cacheUpdateTimer;
-    RunLoop::Timer<AccessibilityAtspi> m_cacheClearTimer;
+    RunLoop::Timer m_cacheUpdateTimer;
+    RunLoop::Timer m_cacheClearTimer;
 #if ENABLE(DEVELOPER_MODE)
     HashMap<void*, NotificationObserver> m_notificationObservers;
 #endif

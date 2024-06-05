@@ -56,12 +56,12 @@ struct WindowFeatures {
     bool noopener { false };
     bool noreferrer { false };
 
-    Vector<String> additionalFeatures;
+    Vector<String> additionalFeatures { };
 };
 
 WindowFeatures parseWindowFeatures(StringView windowFeaturesString);
-WindowFeatures parseDialogFeatures(const String& dialogFeaturesString, const FloatRect& screenAvailableRect);
-OptionSet<DisabledAdaptations> parseDisabledAdaptations(const String&);
+WindowFeatures parseDialogFeatures(StringView dialogFeaturesString, const FloatRect& screenAvailableRect);
+OptionSet<DisabledAdaptations> parseDisabledAdaptations(StringView);
 
 enum class FeatureMode { Window, Viewport };
 void processFeaturesString(StringView features, FeatureMode, const Function<void(StringView type, StringView value)>& callback);

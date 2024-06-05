@@ -3,7 +3,7 @@
  * Copyright (C) 2004, 2005 Rob Buis <buis@kde.org>
  * Copyright (C) 2005 Eric Seidel <eric@webkit.org>
  * Copyright (C) 2010 Zoltan Herczeg <zherczeg@webkit.org>
- * Copyright (C) 2021-2022 Apple Inc.  All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc.  All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -40,6 +40,8 @@ class FEConvolveMatrix : public FilterEffect {
 public:
     WEBCORE_EXPORT static Ref<FEConvolveMatrix> create(const IntSize& kernelSize, float divisor, float bias, const IntPoint& targetOffset, EdgeModeType, const FloatPoint& kernelUnitLength, bool preserveAlpha, const Vector<float>& kernelMatrix);
 
+    bool operator==(const FEConvolveMatrix&) const;
+
     IntSize kernelSize() const { return m_kernelSize; }
     void setKernelSize(const IntSize&);
 
@@ -64,13 +66,12 @@ public:
     bool preserveAlpha() const { return m_preserveAlpha; }
     bool setPreserveAlpha(bool);
 
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<Ref<FEConvolveMatrix>> decode(Decoder&);
-
 private:
     FEConvolveMatrix(const IntSize& kernelSize, float divisor, float bias, const IntPoint& targetOffset, EdgeModeType, const FloatPoint& kernelUnitLength, bool preserveAlpha, const Vector<float>& kernelMatrix);
 
-    FloatRect calculateImageRect(const Filter&, const FilterImageVector& inputs, const FloatRect& primitiveSubregion) const override;
+    bool operator==(const FilterEffect& other) const override { return areEqual<FEConvolveMatrix>(*this, other); }
+
+    FloatRect calculateImageRect(const Filter&, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
 
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;
 
@@ -85,65 +86,6 @@ private:
     bool m_preserveAlpha;
     Vector<float> m_kernelMatrix;
 };
-
-template<class Encoder>
-void FEConvolveMatrix::encode(Encoder& encoder) const
-{
-    encoder << m_kernelSize;
-    encoder << m_divisor;
-    encoder << m_bias;
-    encoder << m_targetOffset;
-    encoder << m_edgeMode;
-    encoder << m_kernelUnitLength;
-    encoder << m_preserveAlpha;
-    encoder << m_kernelMatrix;
-}
-
-template<class Decoder>
-std::optional<Ref<FEConvolveMatrix>> FEConvolveMatrix::decode(Decoder& decoder)
-{
-    std::optional<IntSize> kernelSize;
-    decoder >> kernelSize;
-    if (!kernelSize)
-        return std::nullopt;
-
-    std::optional<float> divisor;
-    decoder >> divisor;
-    if (!divisor)
-        return std::nullopt;
-
-    std::optional<float> bias;
-    decoder >> bias;
-    if (!bias)
-        return std::nullopt;
-
-    std::optional<IntPoint> targetOffset;
-    decoder >> targetOffset;
-    if (!targetOffset)
-        return std::nullopt;
-
-    std::optional<EdgeModeType> edgeMode;
-    decoder >> edgeMode;
-    if (!edgeMode)
-        return std::nullopt;
-
-    std::optional<FloatPoint> kernelUnitLength;
-    decoder >> kernelUnitLength;
-    if (!kernelUnitLength)
-        return std::nullopt;
-
-    std::optional<bool> preserveAlpha;
-    decoder >> preserveAlpha;
-    if (!kernelUnitLength)
-        return std::nullopt;
-
-    std::optional<Vector<float>> kernelMatrix;
-    decoder >> kernelMatrix;
-    if (!kernelMatrix)
-        return std::nullopt;
-
-    return FEConvolveMatrix::create(*kernelSize, *divisor, *bias, *targetOffset, *edgeMode, *kernelUnitLength, *preserveAlpha, WTFMove(*kernelMatrix));
-}
 
 } // namespace WebCore
 

@@ -34,20 +34,16 @@ enum class PlatformVideoMatrixCoefficients : uint8_t {
     Bt709,
     Bt470bg,
     Smpte170m,
+    Smpte240m,
+    Fcc,
+    YCgCo,
+    Bt2020NonconstantLuminance,
+    Bt2020ConstantLuminance,
+    Unspecified,
+
+    // Aliases for WebIDL bindings
+    Bt2020Ncl = Bt2020NonconstantLuminance,
+    Bt2020Cl = Bt2020ConstantLuminance,
 };
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::PlatformVideoMatrixCoefficients> {
-    using values = EnumValues<
-        WebCore::PlatformVideoMatrixCoefficients,
-        WebCore::PlatformVideoMatrixCoefficients::Rgb,
-        WebCore::PlatformVideoMatrixCoefficients::Bt709,
-        WebCore::PlatformVideoMatrixCoefficients::Bt470bg,
-        WebCore::PlatformVideoMatrixCoefficients::Smpte170m
-    >;
-};
-
-}

@@ -27,12 +27,12 @@
 #pragma once
 
 #include <JavaScriptCore/Forward.h>
+#include <span>
 #include <utility>
 #include <variant>
 #include <wtf/FileSystem.h>
 #include <wtf/Forward.h>
 #include <wtf/Function.h>
-#include <wtf/Span.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/Vector.h>
@@ -54,6 +54,7 @@ typedef struct _GBytes GBytes;
 #if USE(FOUNDATION)
 OBJC_CLASS NSArray;
 OBJC_CLASS NSData;
+typedef struct OpaqueCMBlockBuffer* CMBlockBufferRef;
 #endif
 
 namespace WTF {
@@ -101,6 +102,11 @@ public:
     WEBCORE_EXPORT bool containsMappedFileData() const;
 
 private:
+    void iterate(const Function<void(const std::span<const uint8_t>&)>& apply) const;
+#if USE(FOUNDATION)
+    void iterate(CFDataRef, const Function<void(const std::span<const uint8_t>&)>& apply) const;
+#endif
+
     explicit DataSegment(Vector<uint8_t>&& data)
         : m_immutableData(WTFMove(data)) { }
 #if USE(CF)
@@ -149,6 +155,7 @@ public:
 #if USE(FOUNDATION)
     WEBCORE_EXPORT RetainPtr<NSArray> createNSDataArray() const;
     WEBCORE_EXPORT static Ref<FragmentedSharedBuffer> create(NSData*);
+    WEBCORE_EXPORT RetainPtr<CMBlockBufferRef> createCMBlockBuffer() const;
 #endif
 #if USE(CF)
     WEBCORE_EXPORT static Ref<FragmentedSharedBuffer> create(CFDataRef);
@@ -177,10 +184,10 @@ public:
     WEBCORE_EXPORT void copyTo(void* destination, size_t length) const;
     WEBCORE_EXPORT void copyTo(void* destination, size_t offset, size_t length) const;
 
-    WEBCORE_EXPORT void forEachSegment(const Function<void(const Span<const uint8_t>&)>&) const;
-    WEBCORE_EXPORT bool startsWith(const Span<const uint8_t>& prefix) const;
+    WEBCORE_EXPORT void forEachSegment(const Function<void(const std::span<const uint8_t>&)>&) const;
+    WEBCORE_EXPORT bool startsWith(const std::span<const uint8_t>& prefix) const;
     WEBCORE_EXPORT void forEachSegmentAsSharedBuffer(const Function<void(Ref<SharedBuffer>&&)>&) const;
-
+    // REVISIT this commented below line
     using DataSegment = WebCore::DataSegment; // To keep backward compatibility when using FragmentedSharedBuffer::DataSegment
 
     struct DataSegmentVectorEntry {
@@ -194,13 +201,13 @@ public:
 
     // begin and end take O(1) time, this takes O(log(N)) time.
     WEBCORE_EXPORT SharedBufferDataView getSomeData(size_t position) const;
+    WEBCORE_EXPORT Ref<SharedBuffer> getContiguousData(size_t position, size_t length) const;
 
     WEBCORE_EXPORT String toHexString() const;
 
     void hintMemoryNotNeededSoon() const;
 
     WEBCORE_EXPORT bool operator==(const FragmentedSharedBuffer&) const;
-    bool operator!=(const FragmentedSharedBuffer& other) const { return !operator==(other); }
 
     WEBCORE_EXPORT Ref<SharedBuffer> makeContiguous() const;
 
@@ -232,7 +239,7 @@ private:
     friend class SharedBufferBuilder;
     WEBCORE_EXPORT void append(const FragmentedSharedBuffer&);
     WEBCORE_EXPORT void append(const uint8_t*, size_t);
-    void append(Span<const uint8_t> value) { append(value.data(), value.size()); }
+    void append(std::span<const uint8_t> value) { append(value.data(), value.size()); }
     void append(const char* data, size_t length) { append(reinterpret_cast<const uint8_t*>(data), length); }
     WEBCORE_EXPORT void append(Vector<uint8_t>&&);
 #if USE(FOUNDATION)
@@ -246,7 +253,7 @@ private:
 
     // Combines all the segments into a Vector and returns that vector after clearing the FragmentedSharedBuffer.
     WEBCORE_EXPORT Vector<uint8_t> takeData();
-    const DataSegmentVectorEntry* getSegmentForPosition(size_t positition) const;
+    const DataSegmentVectorEntry* getSegmentForPosition(size_t position) const;
 
 #if ASSERT_ENABLED
     bool internallyConsistent() const;
@@ -265,7 +272,7 @@ public:
             && (std::is_same_v<Args, Ref<const DataSegment>> &&...))
             return adoptRef(*new SharedBuffer(std::forward<Args>(args)...));
         else if constexpr (sizeof...(Args) == 1
-            && (std::is_same_v<std::remove_const_t<std::remove_reference_t<Args>>, DataSegment> &&...))
+            && (std::is_same_v<std::remove_cvref_t<Args>, DataSegment> &&...))
             return adoptRef(*new SharedBuffer(std::forward<Args>(args)...));
         else {
             auto buffer = FragmentedSharedBuffer::create(std::forward<Args>(args)...);
@@ -275,6 +282,7 @@ public:
 
     WEBCORE_EXPORT const uint8_t* data() const;
     const char* dataAsCharPtr() const { return reinterpret_cast<const char*>(data()); }
+    std::span<const uint8_t> dataAsSpanForContiguousData() const { RELEASE_ASSERT(isContiguous()); return std::span(data(), size()); }
     WTF::Persistence::Decoder decoder() const;
 
     enum class MayUseFileMapping : bool { No, Yes };

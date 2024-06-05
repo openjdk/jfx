@@ -27,6 +27,7 @@
 
 #include "Color.h"
 #include <optional>
+#include <wtf/Forward.h>
 #include <wtf/Hasher.h>
 
 namespace WebCore {
@@ -34,35 +35,13 @@ namespace WebCore {
 struct GradientColorStop {
     float offset { 0 };
     Color color;
-
-    template<typename Encoder> void encode(Encoder&) const;
-    template<typename Decoder> static std::optional<GradientColorStop> decode(Decoder&);
 };
-
-template<typename Encoder> void GradientColorStop::encode(Encoder& encoder) const
-{
-    encoder << offset;
-    encoder << color;
-}
-
-template<typename Decoder> std::optional<GradientColorStop> GradientColorStop::decode(Decoder& decoder)
-{
-    std::optional<float> offset;
-    decoder >> offset;
-    if (!offset)
-        return std::nullopt;
-
-    std::optional<Color> color;
-    decoder >> color;
-    if (!color)
-        return std::nullopt;
-
-    return {{ *offset, *color }};
-}
 
 inline void add(Hasher& hasher, const GradientColorStop& stop)
 {
     add(hasher, stop.offset, stop.color);
 }
 
-}
+TextStream& operator<<(TextStream&, const GradientColorStop&);
+
+} // namespace WebCore

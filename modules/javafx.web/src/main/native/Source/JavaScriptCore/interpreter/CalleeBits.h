@@ -26,6 +26,7 @@
 #pragma once
 
 #include "JSCJSValue.h"
+#include <wtf/AccessibleAddress.h>
 #include <wtf/StdLibExtras.h>
 
 namespace JSC {
@@ -39,11 +40,21 @@ class JSCell;
 class CalleeBits {
 public:
     CalleeBits() = default;
-    CalleeBits(void* ptr) : m_ptr(ptr) { }
+    CalleeBits(int64_t value)
+#if USE(JSVALUE64)
+        : m_ptr { reinterpret_cast<void*>(value) }
+#elif USE(JSVALUE32_64)
+        : m_ptr { reinterpret_cast<void*>(JSValue::decode(value).payload()) }
+        , m_tag { JSValue::decode(value).tag() }
+#endif
+    { }
 
     CalleeBits& operator=(JSCell* cell)
     {
         m_ptr = cell;
+#if USE(JSVALUE32_64)
+        m_tag = JSValue::CellTag;
+#endif
         ASSERT(isCell());
         return *this;
     }
@@ -51,18 +62,24 @@ public:
 #if ENABLE(WEBASSEMBLY)
     static void* boxWasm(Wasm::Callee* callee)
     {
-        CalleeBits result(reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(callee) | JSValue::WasmTag));
+#if USE(JSVALUE64)
+        CalleeBits result { static_cast<int64_t>((bitwise_cast<uintptr_t>(callee) - lowestAccessibleAddress()) | JSValue::WasmTag) };
         ASSERT(result.isWasm());
         return result.rawPtr();
+#elif USE(JSVALUE32_64)
+        return bitwise_cast<void*>(bitwise_cast<uintptr_t>(callee) - lowestAccessibleAddress());
+#endif
     }
 #endif
 
     bool isWasm() const
     {
-#if ENABLE(WEBASSEMBLY)
-        return (reinterpret_cast<uintptr_t>(m_ptr) & JSValue::WasmMask) == JSValue::WasmTag;
-#else
+#if !ENABLE(WEBASSEMBLY)
         return false;
+#elif USE(JSVALUE64)
+        return (reinterpret_cast<uintptr_t>(m_ptr) & JSValue::WasmMask) == JSValue::WasmTag;
+#elif USE(JSVALUE32_64)
+        return m_tag == JSValue::WasmTag;
 #endif
     }
     bool isCell() const { return !isWasm(); }
@@ -77,7 +94,11 @@ public:
     Wasm::Callee* asWasmCallee() const
     {
         ASSERT(isWasm());
-        return reinterpret_cast<Wasm::Callee*>(reinterpret_cast<uintptr_t>(m_ptr) & ~JSValue::WasmTag);
+#if USE(JSVALUE64)
+        return bitwise_cast<Wasm::Callee*>((bitwise_cast<uintptr_t>(m_ptr) & ~JSValue::WasmTag) + lowestAccessibleAddress());
+#elif USE(JSVALUE32_64)
+        return bitwise_cast<Wasm::Callee*>(bitwise_cast<uintptr_t>(m_ptr) + lowestAccessibleAddress());
+#endif
     }
 #endif
 
@@ -85,6 +106,9 @@ public:
 
 private:
     void* m_ptr { nullptr };
+#if USE(JSVALUE32_64)
+    uint32_t m_tag { JSValue::EmptyValueTag };
+#endif
 };
 
 } // namespace JSC

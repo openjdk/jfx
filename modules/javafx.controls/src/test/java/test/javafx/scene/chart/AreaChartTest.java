@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,6 +42,7 @@ import javafx.scene.shape.Path;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import javafx.scene.shape.PathElement;
 import org.junit.Ignore;
@@ -497,6 +498,24 @@ public class AreaChartTest extends XYChartTestBase {
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(ac).toArray());
     }
 
+    //JDK-8283675
+    @Test public void testChartFillRemovedOnClearingSeries() {
+        startApp();
+        ac.getData().addAll(series1);
+        pulse();
+
+        final ObservableList<Node> children = ((Group) ac.getData().get(0).getNode()).getChildren();
+        ObservableList<PathElement> fillElements = ((Path) children.get(0)).getElements();
+        ObservableList<PathElement> lineElements = ((Path) children.get(1)).getElements();
+
+        assertTrue(0 < fillElements.size());
+        assertTrue(0 < lineElements.size());
+        series1.getData().clear();
+        pulse();
+        assertEquals(0, fillElements.size());
+        assertEquals(0, lineElements.size());
+    }
+
     private List<Point2D> convertSeriesDataToPoint2D(XYChart.Series<Number, Number> series) {
         return series.getData().stream()
                 .map(data -> new Point2D(data.getXValue().doubleValue(), data.getYValue().doubleValue()))
@@ -515,8 +534,8 @@ public class AreaChartTest extends XYChartTestBase {
                 .filter(pathElement -> pathElement instanceof LineTo)
                 .map(pathElement -> (LineTo) pathElement)
                 .map(lineTo -> new Point2D(
-                        xAxis.getValueForDisplay(lineTo.getX()).doubleValue(),
-                        yAxis.getValueForDisplay(lineTo.getY()).doubleValue())
+                        Math.round(xAxis.getValueForDisplay(lineTo.getX()).doubleValue()),
+                        Math.round(yAxis.getValueForDisplay(lineTo.getY()).doubleValue()))
                 )
                 .collect(Collectors.toList());
         // Due to fillPath, one additional LineTo element is added to close the loop

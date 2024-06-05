@@ -25,12 +25,22 @@
 #pragma once
 
 #include "StyleImage.h"
+#include "StyleInvalidImage.h"
 
 namespace WebCore {
 
 class Document;
 
-struct ImageWithScale;
+struct ImageWithScale {
+    RefPtr<StyleImage> image { StyleInvalidImage::create() };
+    float scaleFactor { 1 };
+    String mimeType { String() };
+};
+
+inline bool operator==(const ImageWithScale& a, const ImageWithScale& b)
+{
+    return a.image == b.image && a.scaleFactor == b.scaleFactor;
+}
 
 class StyleMultiImage : public StyleImage {
     WTF_MAKE_FAST_ALLOCATED;
@@ -38,9 +48,11 @@ public:
     virtual ~StyleMultiImage();
 
 protected:
-    StyleMultiImage();
+    StyleMultiImage(Type);
+
     bool equals(const StyleMultiImage& other) const;
-    virtual ImageWithScale selectBestFitImage(const Document&) const = 0;
+
+    virtual ImageWithScale selectBestFitImage(const Document&) = 0;
     CachedImage* cachedImage() const final;
 
 private:
@@ -60,7 +72,7 @@ private:
     void addClient(RenderElement&) final;
     void removeClient(RenderElement&) final;
     bool hasClient(RenderElement&) const final;
-    RefPtr<Image> image(RenderElement*, const FloatSize&) const final;
+    RefPtr<Image> image(const RenderElement*, const FloatSize&) const final;
     float imageScaleFactor() const final;
     bool knownToBeOpaque(const RenderElement&) const final;
     const StyleImage* selectedImage() const final { return m_selectedImage.get(); }

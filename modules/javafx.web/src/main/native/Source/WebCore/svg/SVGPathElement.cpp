@@ -22,6 +22,7 @@
 #include "config.h"
 #include "SVGPathElement.h"
 
+#include "LegacyRenderSVGPath.h"
 #include "RenderSVGPath.h"
 #include "RenderSVGResource.h"
 #include "SVGDocumentExtensions.h"
@@ -37,7 +38,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGPathElement);
 
 inline SVGPathElement::SVGPathElement(const QualifiedName& tagName, Document& document)
-    : SVGGeometryElement(tagName, document)
+    : SVGGeometryElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::pathTag));
 
@@ -52,28 +53,31 @@ Ref<SVGPathElement> SVGPathElement::create(const QualifiedName& tagName, Documen
     return adoptRef(*new SVGPathElement(tagName, document));
 }
 
-void SVGPathElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGPathElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     if (name == SVGNames::dAttr) {
-        if (!m_pathSegList->baseVal()->parse(value))
-            document().accessSVGExtensions().reportError("Problem parsing d=\"" + value + "\"");
-        return;
+        if (!m_pathSegList->baseVal()->parse(newValue))
+            document().accessSVGExtensions().reportError("Problem parsing d=\"" + newValue + "\"");
     }
 
-    SVGGeometryElement::parseAttribute(name, value);
+    SVGGeometryElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGPathElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (attrName == SVGNames::dAttr) {
+    if (PropertyRegistry::isKnownAttribute(attrName)) {
+        ASSERT(attrName == SVGNames::dAttr);
         InstanceInvalidationGuard guard(*this);
         invalidateMPathDependencies();
 
-        if (auto* renderer = downcast<RenderSVGPath>(this->renderer())) {
-            renderer->setNeedsShapeUpdate();
-            RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
-        }
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+        if (auto* path = dynamicDowncast<RenderSVGPath>(renderer()))
+            path->setNeedsShapeUpdate();
+#endif
+        if (auto* path = dynamicDowncast<LegacyRenderSVGPath>(renderer()))
+            path->setNeedsShapeUpdate();
 
+        updateSVGRendererForElementChange();
         return;
     }
 
@@ -92,9 +96,9 @@ void SVGPathElement::invalidateMPathDependencies()
 
 Node::InsertedIntoAncestorResult SVGPathElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
-    SVGGeometryElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+    auto result = SVGGeometryElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
     invalidateMPathDependencies();
-    return InsertedIntoAncestorResult::Done;
+    return result;
 }
 
 void SVGPathElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
@@ -127,20 +131,27 @@ FloatRect SVGPathElement::getBBox(StyleUpdateStrategy styleUpdateStrategy)
     if (styleUpdateStrategy == AllowStyleUpdate)
         document().updateLayoutIgnorePendingStylesheets();
 
-    RenderSVGPath* renderer = downcast<RenderSVGPath>(this->renderer());
-
     // FIXME: Eventually we should support getBBox for detached elements.
     // FIXME: If the path is null it means we're calling getBBox() before laying out this element,
     // which is an error.
-    if (!renderer || !renderer->hasPath())
-        return { };
 
-    return renderer->path().boundingRect();
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+        if (auto* path = dynamicDowncast<RenderSVGPath>(renderer()); path && path->hasPath())
+            return path->path().boundingRect();
+#endif
+        if (auto* path = dynamicDowncast<LegacyRenderSVGPath>(renderer()); path && path->hasPath())
+            return path->path().boundingRect();
+
+    return { };
 }
 
 RenderPtr<RenderElement> SVGPathElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderSVGPath>(*this, WTFMove(style));
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (document().settings().layerBasedSVGEngineEnabled())
+        return createRenderer<RenderSVGPath>(*this, WTFMove(style));
+#endif
+    return createRenderer<LegacyRenderSVGPath>(*this, WTFMove(style));
 }
 
 }

@@ -76,6 +76,9 @@ protected:
         case MoveDouble:
             width = Width64;
             break;
+        case MoveVector:
+            width = Width128;
+            break;
         default:
             return false;
         }
@@ -90,7 +93,7 @@ protected:
             StackSlot* slot = arg.stackSlot();
             if (slot->kind() != StackSlotKind::Spill)
                 return false;
-            if (slot->byteSize() != bytes(width))
+            if (slot->byteSize() != bytesForWidth(width))
                 return false;
         }
 
@@ -318,11 +321,6 @@ private:
             return src == other.src
                 && dst == other.dst
                 && frequency == other.frequency;
-        }
-
-        bool operator!=(const CoalescableMove& other) const
-        {
-            return !(*this == other);
         }
 
         explicit operator bool() const

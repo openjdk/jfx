@@ -42,13 +42,13 @@ public:
 protected:
     LegacyRenderSVGContainer(SVGElement&, RenderStyle&&);
 
-    const char* renderName() const override { return "RenderSVGContainer"; }
+    ASCIILiteral renderName() const override { return "RenderSVGContainer"_s; }
 
     bool canHaveChildren() const final { return true; }
 
     void layout() override;
 
-    void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) final;
+    void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) const final;
 
     FloatRect objectBoundingBox() const final { return m_objectBoundingBox; }
     FloatRect strokeBoundingBox() const final { return m_strokeBoundingBox; }
@@ -56,7 +56,7 @@ protected:
 
     bool nodeAtFloatPoint(const HitTestRequest&, HitTestResult&, const FloatPoint& pointInParent, HitTestAction) override;
 
-    // Allow RenderSVGTransformableContainer to hook in at the right time in layout()
+    // Allow LegacyRenderSVGTransformableContainer to hook in at the right time in layout()
     virtual bool calculateLocalTransform() { return false; }
 
     // Allow RenderSVGViewportContainer to hook in at the right times in layout(), paint() and nodeAtFloatPoint()

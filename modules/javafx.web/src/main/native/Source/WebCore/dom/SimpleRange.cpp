@@ -27,8 +27,8 @@
 #include "SimpleRange.h"
 
 #include "CharacterData.h"
-#include "Frame.h"
 #include "HTMLFrameOwnerElement.h"
+#include "LocalFrame.h"
 #include "NodeTraversal.h"
 #include "ShadowRoot.h"
 
@@ -155,7 +155,10 @@ template<TreeType treeType> bool contains(const SimpleRange& range, const std::o
     return point && contains<treeType>(range, *point);
 }
 
-template bool contains<ComposedTree>(const SimpleRange&, const std::optional<BoundaryPoint>&);
+template<> bool contains<ComposedTree>(const SimpleRange& range, const std::optional<BoundaryPoint>& point)
+{
+    return point && contains<ComposedTree>(range, *point);
+}
 
 bool containsForTesting(TreeType type, const SimpleRange& range, const BoundaryPoint& point)
 {
@@ -171,26 +174,26 @@ bool containsForTesting(TreeType type, const SimpleRange& range, const BoundaryP
     return false;
 }
 
-template<TreeType treeType> PartialOrdering treeOrder(const SimpleRange& range, const BoundaryPoint& point)
+template<TreeType treeType> std::partial_ordering treeOrder(const SimpleRange& range, const BoundaryPoint& point)
 {
     if (auto order = treeOrder<treeType>(range.start, point); !is_lt(order))
         return order;
     if (auto order = treeOrder<treeType>(range.end, point); !is_gt(order))
         return order;
-    return PartialOrdering::equivalent;
+    return std::partial_ordering::equivalent;
 }
 
-template<TreeType treeType> PartialOrdering treeOrder(const BoundaryPoint& point, const SimpleRange& range)
+template<TreeType treeType> std::partial_ordering treeOrder(const BoundaryPoint& point, const SimpleRange& range)
 {
     if (auto order = treeOrder<treeType>(point, range.start); !is_gt(order))
         return order;
     if (auto order = treeOrder<treeType>(point, range.end); !is_lt(order))
         return order;
-    return PartialOrdering::equivalent;
+    return std::strong_ordering::equivalent;
 }
 
-template PartialOrdering treeOrder<Tree>(const SimpleRange&, const BoundaryPoint&);
-template PartialOrdering treeOrder<Tree>(const BoundaryPoint&, const SimpleRange&);
+template std::partial_ordering treeOrder<Tree>(const SimpleRange&, const BoundaryPoint&);
+template std::partial_ordering treeOrder<Tree>(const BoundaryPoint&, const SimpleRange&);
 
 template<TreeType treeType> bool contains(const SimpleRange& outerRange, const SimpleRange& innerRange)
 {

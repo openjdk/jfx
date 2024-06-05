@@ -32,6 +32,7 @@
 #include "B3BottomTupleValue.h"
 #include "B3CCallValue.h"
 #include "B3CheckValue.h"
+#include "B3Const128Value.h"
 #include "B3Const32Value.h"
 #include "B3Const64Value.h"
 #include "B3ConstDoubleValue.h"
@@ -42,6 +43,7 @@
 #include "B3PatchpointValue.h"
 #include "B3PhiChildren.h"
 #include "B3Procedure.h"
+#include "B3SIMDValue.h"
 #include "B3SlotBaseValue.h"
 #include "B3SwitchValue.h"
 #include "B3UpsilonValue.h"
@@ -73,6 +75,8 @@ namespace JSC { namespace B3 {
     case SExt8: \
     case SExt16: \
     case Trunc: \
+    case SExt8To64: \
+    case SExt16To64: \
     case SExt32: \
     case ZExt32: \
     case FloatToDouble: \
@@ -118,6 +122,8 @@ namespace JSC { namespace B3 {
         return MACRO(Const32Value); \
     case Const64: \
         return MACRO(Const64Value); \
+    case Const128: \
+        return MACRO(Const128Value); \
     case ConstFloat: \
         return MACRO(ConstFloatValue); \
     case ConstDouble: \
@@ -168,6 +174,69 @@ namespace JSC { namespace B3 {
         return MACRO(CheckValue); \
     case Patchpoint: \
         return MACRO(PatchpointValue); \
+    case VectorExtractLane: \
+    case VectorReplaceLane: \
+    case VectorDupElement: \
+    case VectorEqual: \
+    case VectorNotEqual: \
+    case VectorLessThan: \
+    case VectorLessThanOrEqual: \
+    case VectorBelow: \
+    case VectorBelowOrEqual: \
+    case VectorGreaterThan: \
+    case VectorGreaterThanOrEqual: \
+    case VectorAbove: \
+    case VectorAboveOrEqual: \
+    case VectorAdd: \
+    case VectorSub: \
+    case VectorAddSat: \
+    case VectorSubSat: \
+    case VectorMul: \
+    case VectorDotProduct: \
+    case VectorDiv: \
+    case VectorMin: \
+    case VectorMax: \
+    case VectorPmin: \
+    case VectorPmax: \
+    case VectorNarrow: \
+    case VectorNot: \
+    case VectorAnd: \
+    case VectorAndnot: \
+    case VectorOr: \
+    case VectorXor: \
+    case VectorShl: \
+    case VectorShr: \
+    case VectorAbs: \
+    case VectorNeg: \
+    case VectorPopcnt: \
+    case VectorCeil: \
+    case VectorFloor: \
+    case VectorTrunc: \
+    case VectorTruncSat: \
+    case VectorRelaxedTruncSat: \
+    case VectorConvert: \
+    case VectorConvertLow: \
+    case VectorNearest: \
+    case VectorSqrt: \
+    case VectorExtendLow: \
+    case VectorExtendHigh: \
+    case VectorPromote: \
+    case VectorDemote: \
+    case VectorSplat: \
+    case VectorAnyTrue: \
+    case VectorAllTrue: \
+    case VectorAvgRound: \
+    case VectorBitmask: \
+    case VectorBitwiseSelect: \
+    case VectorExtaddPairwise: \
+    case VectorMulSat: \
+    case VectorSwizzle: \
+    case VectorRelaxedSwizzle: \
+    case VectorMulByElement: \
+    case VectorShiftByVector: \
+    case VectorRelaxedMAdd: \
+    case VectorRelaxedNMAdd: \
+        return MACRO(SIMDValue); \
     default: \
         RELEASE_ASSERT_NOT_REACHED(); \
     }
@@ -181,6 +250,7 @@ ALWAYS_INLINE size_t Value::adjacencyListOffset() const
 
 ALWAYS_INLINE Value* Value::cloneImpl() const
 {
+    ASSERT(!kind().isCloningForbidden());
 #define VALUE_TYPE_CLONE(ValueType) allocate<ValueType>(*static_cast<const ValueType*>(this))
     DISPATCH_ON_KIND(VALUE_TYPE_CLONE);
 #undef VALUE_TYPE_CLONE
@@ -313,6 +383,21 @@ inline float Value::asFloat() const
     return as<ConstFloatValue>()->value();
 }
 
+inline bool Value::hasV128() const
+{
+    return !!as<Const128Value>();
+}
+
+inline v128_t Value::asV128() const
+{
+    return as<Const128Value>()->value();
+}
+
+inline bool Value::isV128(v128_t value) const
+{
+    return hasV128() && bitEquals(asV128(), value);
+}
+
 inline bool Value::hasNumber() const
 {
     return hasInt() || hasDouble() || hasFloat();
@@ -322,11 +407,11 @@ inline bool Value::isNegativeZero() const
 {
     if (hasDouble()) {
         double value = asDouble();
-        return !value && std::signbit(value);
+        return value == 0.0 && std::signbit(value);
     }
     if (hasFloat()) {
         float value = asFloat();
-        return !value && std::signbit(value);
+        return value == 0.0f && std::signbit(value);
     }
     return false;
 }
@@ -386,6 +471,16 @@ void Value::walk(const Functor& functor, PhiChildren* phiChildren)
             return;
         }
     }
+}
+
+inline bool Value::isSIMDValue() const
+{
+    return !!as<SIMDValue>();
+}
+
+inline SIMDValue* Value::asSIMDValue()
+{
+    return as<SIMDValue>();
 }
 
 } } // namespace JSC::B3

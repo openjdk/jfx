@@ -31,6 +31,7 @@
 #include "Element.h"
 #include "EventNames.h"
 #include "MouseEvent.h"
+#include "PlatformMouseEvent.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
 
@@ -48,7 +49,7 @@ private:
     SimulatedMouseEvent(const AtomString& eventType, RefPtr<WindowProxy>&& view, RefPtr<Event>&& underlyingEvent, Element& target, SimulatedClickSource source)
         : MouseEvent(eventType, CanBubble::Yes, IsCancelable::Yes, IsComposed::Yes,
             underlyingEvent ? underlyingEvent->timeStamp() : MonotonicTime::now(), WTFMove(view), /* detail */ 0,
-            { }, { }, { }, modifiersFromUnderlyingEvent(underlyingEvent), 0, 0, nullptr, 0, 0, IsSimulated::Yes,
+            { }, { }, 0, 0, modifiersFromUnderlyingEvent(underlyingEvent), 0, 0, nullptr, 0, SyntheticClickType::NoTap, IsSimulated::Yes,
             source == SimulatedClickSource::UserAgent ? IsTrusted::Yes : IsTrusted::No)
     {
         setUnderlyingEvent(underlyingEvent.get());
@@ -86,22 +87,23 @@ bool simulateClick(Element& element, Event* underlyingEvent, SimulatedClickMouse
     if (element.isDisabledFormControl())
         return false;
 
-    static NeverDestroyed<HashSet<Element*>> elementsDispatchingSimulatedClicks;
+    static MainThreadNeverDestroyed<HashSet<Element*>> elementsDispatchingSimulatedClicks;
     if (!elementsDispatchingSimulatedClicks.get().add(&element).isNewEntry)
         return false;
 
+    auto& eventNames = WebCore::eventNames();
     if (mouseEventOptions == SendMouseOverUpDownEvents)
-        simulateMouseEvent(eventNames().mouseoverEvent, element, underlyingEvent, creationOptions);
+        simulateMouseEvent(eventNames.mouseoverEvent, element, underlyingEvent, creationOptions);
 
     if (mouseEventOptions != SendNoEvents)
-        simulateMouseEvent(eventNames().mousedownEvent, element, underlyingEvent, creationOptions);
+        simulateMouseEvent(eventNames.mousedownEvent, element, underlyingEvent, creationOptions);
     if (mouseEventOptions != SendNoEvents || visualOptions == ShowPressedLook)
-        element.setActive(true, true);
+        element.setActive(true);
     if (mouseEventOptions != SendNoEvents)
-        simulateMouseEvent(eventNames().mouseupEvent, element, underlyingEvent, creationOptions);
+        simulateMouseEvent(eventNames.mouseupEvent, element, underlyingEvent, creationOptions);
     element.setActive(false);
 
-    simulateMouseEvent(eventNames().clickEvent, element, underlyingEvent, creationOptions);
+    simulateMouseEvent(eventNames.clickEvent, element, underlyingEvent, creationOptions);
 
     elementsDispatchingSimulatedClicks.get().remove(&element);
     return true;

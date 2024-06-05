@@ -26,70 +26,73 @@
 #pragma once
 
 #include "AffineTransform.h"
+#include "IntRectHash.h"
+#include "InteractionRegion.h"
+#include "Node.h"
 #include "Region.h"
+#include "RegionContext.h"
 #include "RenderStyleConstants.h"
 #include "TouchAction.h"
+#include <wtf/ArgumentCoder.h>
 #include <wtf/OptionSet.h>
+#include <wtf/Ref.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
 class EventRegion;
+class Path;
+class RenderObject;
 class RenderStyle;
 
-class EventRegionContext {
+class EventRegionContext : public RegionContext {
 public:
     explicit EventRegionContext(EventRegion&);
+    virtual ~EventRegionContext();
 
-    void pushTransform(const AffineTransform&);
-    void popTransform();
+    bool isEventRegionContext() const final { return true; }
 
-    void pushClip(const IntRect&);
-    void popClip();
-
-    void unite(const Region&, const RenderStyle&, bool overrideUserModifyIsEditable = false);
+    void unite(const Region&, RenderObject&, const RenderStyle&, bool overrideUserModifyIsEditable = false);
     bool contains(const IntRect&) const;
+
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+    void uniteInteractionRegions(const Region&, RenderObject&);
+    bool shouldConsolidateInteractionRegion(IntRect, RenderObject&);
+    void shrinkWrapInteractionRegions();
+    void copyInteractionRegionsToEventRegion();
+#endif
 
 private:
     EventRegion& m_eventRegion;
-    Vector<AffineTransform> m_transformStack;
-    Vector<IntRect> m_clipStack;
-};
 
-class EventRegionContextStateSaver {
-public:
-    EventRegionContextStateSaver(EventRegionContext* context)
-        : m_context(context)
-    {
-    }
-
-    ~EventRegionContextStateSaver()
-    {
-        if (!m_context)
-            return;
-
-        if (m_pushedClip)
-            m_context->popClip();
-    }
-
-    void pushClip(const IntRect& clipRect)
-    {
-        ASSERT(!m_pushedClip);
-        if (m_context)
-            m_context->pushClip(clipRect);
-        m_pushedClip = true;
-    }
-
-    EventRegionContext* context() const { return m_context; }
-
-private:
-    EventRegionContext* m_context;
-    bool m_pushedClip { false };
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+    Vector<InteractionRegion> m_interactionRegions;
+    HashSet<IntRect> m_interactionRects;
+    HashSet<IntRect> m_occlusionRects;
+    HashSet<ElementIdentifier> m_containerRemovalCandidates;
+    HashSet<ElementIdentifier> m_containersToRemove;
+    HashMap<ElementIdentifier, Region> m_discoveredRegionsByElement;
+#endif
 };
 
 class EventRegion {
 public:
     WEBCORE_EXPORT EventRegion();
+    WEBCORE_EXPORT EventRegion(Region&&
+#if ENABLE(TOUCH_ACTION_REGIONS)
+    , Vector<WebCore::Region> touchActionRegions
+#endif
+#if ENABLE(WHEEL_EVENT_REGIONS)
+    , WebCore::Region wheelEventListenerRegion
+    , WebCore::Region nonPassiveWheelEventListenerRegion
+#endif
+#if ENABLE(EDITABLE_REGION)
+    , std::optional<WebCore::Region>
+#endif
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+    , Vector<WebCore::InteractionRegion>
+#endif
+    );
 
     EventRegionContext makeContext() { return EventRegionContext(*this); }
 
@@ -124,14 +127,16 @@ public:
     Vector<IntRect, 1> rectsForEditableElements() const { return m_editableRegion ? m_editableRegion->rects() : Vector<IntRect, 1> { }; }
 #endif
 
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<EventRegion> decode(Decoder&);
-    // FIXME: Remove legacy decode.
-    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, EventRegion&);
-
     void dump(TextStream&) const;
 
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+    const Vector<InteractionRegion>& interactionRegions() const { return m_interactionRegions; }
+    void appendInteractionRegions(const Vector<InteractionRegion>&);
+    void clearInteractionRegions();
+#endif
+
 private:
+    friend struct IPC::ArgumentCoder<EventRegion, void>;
 #if ENABLE(TOUCH_ACTION_REGIONS)
     void uniteTouchActions(const Region&, OptionSet<TouchAction>);
 #endif
@@ -148,83 +153,12 @@ private:
 #if ENABLE(EDITABLE_REGION)
     std::optional<Region> m_editableRegion;
 #endif
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+    Vector<InteractionRegion> m_interactionRegions;
+#endif
 };
 
 WEBCORE_EXPORT TextStream& operator<<(TextStream&, const EventRegion&);
-
-template<class Encoder>
-void EventRegion::encode(Encoder& encoder) const
-{
-    encoder << m_region;
-#if ENABLE(WHEEL_EVENT_REGIONS)
-    encoder << m_wheelEventListenerRegion;
-    encoder << m_nonPassiveWheelEventListenerRegion;
-#endif
-#if ENABLE(TOUCH_ACTION_REGIONS)
-    encoder << m_touchActionRegions;
-#endif
-#if ENABLE(EDITABLE_REGION)
-    encoder << m_editableRegion;
-#endif
-}
-
-template<class Decoder>
-std::optional<EventRegion> EventRegion::decode(Decoder& decoder)
-{
-    std::optional<Region> region;
-    decoder >> region;
-    if (!region)
-        return std::nullopt;
-
-    EventRegion eventRegion;
-    eventRegion.m_region = WTFMove(*region);
-
-#if ENABLE(WHEEL_EVENT_REGIONS)
-    std::optional<Region> wheelEventListenerRegion;
-    decoder >> wheelEventListenerRegion;
-    if (!wheelEventListenerRegion)
-        return std::nullopt;
-
-    eventRegion.m_wheelEventListenerRegion = WTFMove(*wheelEventListenerRegion);
-
-    std::optional<Region> nonPassiveWheelEventListenerRegion;
-    decoder >> nonPassiveWheelEventListenerRegion;
-    if (!nonPassiveWheelEventListenerRegion)
-        return std::nullopt;
-
-    eventRegion.m_nonPassiveWheelEventListenerRegion = WTFMove(*nonPassiveWheelEventListenerRegion);
-#endif
-
-#if ENABLE(TOUCH_ACTION_REGIONS)
-    std::optional<Vector<Region>> touchActionRegions;
-    decoder >> touchActionRegions;
-    if (!touchActionRegions)
-        return std::nullopt;
-
-    eventRegion.m_touchActionRegions = WTFMove(*touchActionRegions);
-#endif
-
-#if ENABLE(EDITABLE_REGION)
-    std::optional<std::optional<Region>> editableRegion;
-    decoder >> editableRegion;
-    if (!editableRegion)
-        return std::nullopt;
-    eventRegion.m_editableRegion = WTFMove(*editableRegion);
-#endif
-
-    return eventRegion;
-}
-
-template<class Decoder>
-bool EventRegion::decode(Decoder& decoder, EventRegion& eventRegion)
-{
-    std::optional<EventRegion> decodedEventRegion;
-    decoder >> decodedEventRegion;
-    if (!decodedEventRegion)
-        return false;
-    eventRegion = WTFMove(*decodedEventRegion);
-    return true;
-}
 
 #if ENABLE(EDITABLE_REGION)
 
@@ -237,3 +171,7 @@ inline void EventRegion::ensureEditableRegion()
 #endif
 
 }
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::EventRegionContext)
+    static bool isType(const WebCore::RegionContext& regionContext) { return regionContext.isEventRegionContext(); }
+SPECIALIZE_TYPE_TRAITS_END()

@@ -38,6 +38,7 @@ namespace Profiler {
 
 class Bytecodes;
 class Database;
+class Dumper;
 
 class Origin {
 public:
@@ -61,13 +62,12 @@ public:
     BytecodeIndex bytecodeIndex() const { return m_bytecodeIndex; }
 
     bool operator==(const Origin&) const;
-    bool operator!=(const Origin& other) const { return !(*this == other); }
     unsigned hash() const;
 
     bool isHashTableDeletedValue() const;
 
     void dump(PrintStream&) const;
-    JSValue toJS(JSGlobalObject*) const;
+    Ref<JSON::Value> toJSON(Dumper&) const;
 
 private:
     Bytecodes* m_bytecodes;

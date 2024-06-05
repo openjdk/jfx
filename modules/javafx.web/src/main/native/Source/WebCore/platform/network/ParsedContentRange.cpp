@@ -66,8 +66,8 @@ static bool parseContentRange(StringView headerValue, int64_t& firstBytePosition
     //                               | "*"
     // instance-length           = 1*DIGIT
 
-    static const char* prefix = "bytes ";
-    static const size_t prefixLength = 6;
+    static constexpr auto prefix = "bytes "_s;
+    static constexpr size_t prefixLength = 6;
 
     if (!headerValue.startsWith(prefix))
         return false;
@@ -81,7 +81,7 @@ static bool parseContentRange(StringView headerValue, int64_t& firstBytePosition
         return false;
 
     auto firstByteString = headerValue.substring(prefixLength, byteSeparatorTokenLoc - prefixLength);
-    if (!firstByteString.isAllSpecialCharacters<isASCIIDigit>())
+    if (!firstByteString.containsOnly<isASCIIDigit>())
         return false;
 
     auto optionalFirstBytePosition = parseInteger<int64_t>(firstByteString);
@@ -90,7 +90,7 @@ static bool parseContentRange(StringView headerValue, int64_t& firstBytePosition
     firstBytePosition = *optionalFirstBytePosition;
 
     auto lastByteString = headerValue.substring(byteSeparatorTokenLoc + 1, instanceLengthSeparatorToken - (byteSeparatorTokenLoc + 1));
-    if (!lastByteString.isAllSpecialCharacters<isASCIIDigit>())
+    if (!lastByteString.containsOnly<isASCIIDigit>())
         return false;
 
     auto optionalLastBytePosition = parseInteger<int64_t>(lastByteString);
@@ -99,10 +99,10 @@ static bool parseContentRange(StringView headerValue, int64_t& firstBytePosition
     lastBytePosition = *optionalLastBytePosition;
 
     auto instanceString = headerValue.substring(instanceLengthSeparatorToken + 1);
-    if (instanceString == "*")
+    if (instanceString == "*"_s)
         instanceLength = ParsedContentRange::unknownLength;
     else {
-        if (!instanceString.isAllSpecialCharacters<isASCIIDigit>())
+        if (!instanceString.containsOnly<isASCIIDigit>())
             return false;
 
         auto optionalInstanceLength = parseInteger<int64_t>(instanceString);

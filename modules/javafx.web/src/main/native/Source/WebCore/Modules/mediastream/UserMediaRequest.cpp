@@ -36,11 +36,12 @@
 
 #if ENABLE(MEDIA_STREAM)
 
+#include "AudioSession.h"
 #include "DocumentInlines.h"
-#include "Frame.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSMediaStream.h"
 #include "JSOverconstrainedError.h"
+#include "LocalFrame.h"
 #include "Logging.h"
 #include "MediaConstraints.h"
 #include "PlatformMediaSessionManager.h"
@@ -52,18 +53,20 @@
 
 namespace WebCore {
 
-Ref<UserMediaRequest> UserMediaRequest::create(Document& document, MediaStreamRequest&& request, DOMPromiseDeferred<IDLInterface<MediaStream>>&& promise)
+Ref<UserMediaRequest> UserMediaRequest::create(Document& document, MediaStreamRequest&& request, TrackConstraints&& audioConstraints, TrackConstraints&& videoConstraints, DOMPromiseDeferred<IDLInterface<MediaStream>>&& promise)
 {
-    auto result = adoptRef(*new UserMediaRequest(document, WTFMove(request), WTFMove(promise)));
+    auto result = adoptRef(*new UserMediaRequest(document, WTFMove(request), WTFMove(audioConstraints), WTFMove(videoConstraints), WTFMove(promise)));
     result->suspendIfNeeded();
     return result;
 }
 
-UserMediaRequest::UserMediaRequest(Document& document, MediaStreamRequest&& request, DOMPromiseDeferred<IDLInterface<MediaStream>>&& promise)
+UserMediaRequest::UserMediaRequest(Document& document, MediaStreamRequest&& request, TrackConstraints&& audioConstraints, TrackConstraints&& videoConstraints, DOMPromiseDeferred<IDLInterface<MediaStream>>&& promise)
     : ActiveDOMObject(document)
     , m_identifier(UserMediaRequestIdentifier::generate())
     , m_promise(makeUniqueRef<DOMPromiseDeferred<IDLInterface<MediaStream>>>(WTFMove(promise)))
     , m_request(WTFMove(request))
+    , m_audioConstraints(WTFMove(audioConstraints))
+    , m_videoConstraints(WTFMove(videoConstraints))
 {
 }
 
@@ -147,7 +150,7 @@ static inline bool isMediaStreamCorrectlyStarted(const MediaStream& stream)
     });
 }
 
-void UserMediaRequest::allow(CaptureDevice&& audioDevice, CaptureDevice&& videoDevice, String&& deviceIdentifierHashSalt, CompletionHandler<void()>&& completionHandler)
+void UserMediaRequest::allow(CaptureDevice&& audioDevice, CaptureDevice&& videoDevice, MediaDeviceHashSalts&& deviceIdentifierHashSalt, CompletionHandler<void()>&& completionHandler)
 {
     RELEASE_LOG(MediaStream, "UserMediaRequest::allow %s %s", audioDevice ? audioDevice.persistentId().utf8().data() : "", videoDevice ? videoDevice.persistentId().utf8().data() : "");
     m_allowCompletionHandler = WTFMove(completionHandler);
@@ -161,8 +164,9 @@ void UserMediaRequest::allow(CaptureDevice&& audioDevice, CaptureDevice&& videoD
 
             if (!privateStreamOrError.has_value()) {
                 RELEASE_LOG(MediaStream, "UserMediaRequest::allow failed to create media stream!");
-                scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, privateStreamOrError.error());
-                deny(MediaAccessDenialReason::HardwareError);
+                auto error = privateStreamOrError.error();
+                scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, error.errorMessage);
+                deny(error.denialReason, error.errorMessage);
                 return;
             }
             auto privateStream = WTFMove(privateStreamOrError).value();
@@ -178,8 +182,20 @@ void UserMediaRequest::allow(CaptureDevice&& audioDevice, CaptureDevice&& videoD
                 return;
             }
 
+            if (auto* audioTrack = stream->getFirstAudioTrack()) {
+#if USE(AUDIO_SESSION)
+                AudioSession::sharedSession().tryToSetActive(true);
+#endif
+                if (std::holds_alternative<MediaTrackConstraints>(m_audioConstraints))
+                    audioTrack->setConstraints(std::get<MediaTrackConstraints>(WTFMove(m_audioConstraints)));
+            }
+            if (auto* videoTrack = stream->getFirstVideoTrack()) {
+                if (std::holds_alternative<MediaTrackConstraints>(m_videoConstraints))
+                    videoTrack->setConstraints(std::get<MediaTrackConstraints>(WTFMove(m_videoConstraints)));
+            }
+
             ASSERT(document.isCapturing());
-            stream->document()->setHasCaptureMediaStreamTrack();
+            document.setHasCaptureMediaStreamTrack();
             m_promise->resolve(WTFMove(stream));
         };
 
@@ -203,6 +219,10 @@ void UserMediaRequest::deny(MediaAccessDenialReason reason, const String& messag
 
     ExceptionCode code;
     switch (reason) {
+    case MediaAccessDenialReason::NoReason:
+        ASSERT_NOT_REACHED();
+        code = AbortError;
+        break;
     case MediaAccessDenialReason::NoConstraints:
         RELEASE_LOG(MediaStream, "UserMediaRequest::deny - no constraints");
         code = TypeError;
@@ -258,33 +278,6 @@ const char* UserMediaRequest::activeDOMObjectName() const
 Document* UserMediaRequest::document() const
 {
     return downcast<Document>(scriptExecutionContext());
-}
-
-void UserMediaRequest::mediaStreamDidFail(RealtimeMediaSource::Type type)
-{
-    RELEASE_LOG(MediaStream, "UserMediaRequest::mediaStreamDidFail");
-    const char* typeDescription = "";
-    switch (type) {
-    case RealtimeMediaSource::Type::Audio:
-        typeDescription = "audio";
-        break;
-    case RealtimeMediaSource::Type::Video:
-        typeDescription = "video";
-        break;
-    case RealtimeMediaSource::Type::Screen:
-        typeDescription = "screen";
-        break;
-    case RealtimeMediaSource::Type::Window:
-        typeDescription = "window";
-        break;
-    case RealtimeMediaSource::Type::SystemAudio:
-        typeDescription = "system audio";
-        break;
-    case RealtimeMediaSource::Type::None:
-        typeDescription = "unknown";
-        break;
-    }
-    m_promise->reject(NotReadableError, makeString("Failed starting capture of a "_s, typeDescription, " track"_s));
 }
 
 } // namespace WebCore

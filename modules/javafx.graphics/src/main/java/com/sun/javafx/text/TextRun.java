@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -284,16 +284,12 @@ public class TextRun implements GlyphList {
              * the run excluding the given glyph. Due to performance reshaping
              * should only be used when the run has contextual shaping.
              */
-            /* Not need to check for compact as bidi disables the simple case */
-            int gi = 0;
+            /* No need to check for compact as bidi disables the simple case */
             float runWidth = positions[glyphCount<<1];
-            while (runWidth > width) {
-                float glyphWidth = positions[(gi+1)<<1] - positions[gi<<1];
-                if (runWidth - glyphWidth <= width) {
+            for (int gi = 0; gi < glyphCount; gi++) {
+                if ((runWidth - positions[gi<<1]) <= width) {
                     return getCharOffset(gi);
                 }
-                runWidth -= glyphWidth;
-                gi++;
             }
         }
         return 0;
@@ -347,6 +343,19 @@ public class TextRun implements GlyphList {
     }
 
     public float getAdvance(int glyphIndex) {
+
+        /*
+         * When positions is null it means that the TextRun only contains
+         * a line break, assuming that the class is used correctly ("shape"
+         * must be called before calling this method, unless the class user is
+         * sure that the run is empty). This class could benefit from better
+         * encapsulation to make it easier to reason about.
+         */
+
+        if (positions == null) {
+            return 0;
+        }
+
         if ((flags & FLAGS_COMPACT) != 0) {
             return positions[start + glyphIndex];
         } else {
@@ -397,7 +406,7 @@ public class TextRun implements GlyphList {
         float runX = 0;
         for (int i = 0; i < glyphCount; i++) {
             float advance = getAdvance(i);
-            if (runX + advance > x) {
+            if (runX + advance >= x) {
                 if (trailing != null) {
                     //TODO handle clusters
                     if (x - runX > advance / 2) {

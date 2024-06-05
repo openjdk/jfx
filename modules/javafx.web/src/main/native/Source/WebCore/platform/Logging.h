@@ -38,6 +38,7 @@ namespace WebCore {
 
 #define WEBCORE_LOG_CHANNELS(M) \
     M(Accessibility) \
+    M(ActivityState) \
     M(Animations) \
     M(AppHighlights) \
     M(ApplePay) \
@@ -49,9 +50,11 @@ namespace WebCore {
     M(CompositingOverlap) \
     M(ContentFiltering) \
     M(ContentObservation) \
+    M(Crypto) \
     M(DatabaseTracker) \
     M(DisplayLink) \
     M(DisplayLists) \
+    M(DragAndDrop) \
     M(DOMTimers) \
     M(Editing) \
     M(EME) \
@@ -60,6 +63,7 @@ namespace WebCore {
     M(EventRegions) \
     M(FileAPI) \
     M(Filters) \
+    M(FingerprintingMitigation) \
     M(Fonts) \
     M(Frames) \
     M(FTP) \
@@ -69,13 +73,14 @@ namespace WebCore {
     M(History) \
     M(IOSurface) \
     M(IconDatabase) \
-    M(LiveConnect) \
     M(Images) \
     M(IndexedDB) \
     M(IndexedDBOperations) \
     M(Inspector) \
+    M(IntersectionObserver) \
     M(Layers) \
     M(Layout) \
+    M(LazyLoading) \
     M(FormattingContextLayout) \
     M(Loading) \
     M(Media) \
@@ -94,12 +99,14 @@ namespace WebCore {
     M(PlatformLeaks) \
     M(Plugins) \
     M(PopupBlocking) \
+    M(Printing) \
     M(PrivateClickMeasurement) \
     M(Process) \
     M(Progress) \
     M(Push) \
     M(RemoteInspector) \
     M(RequestAnimationFrame) \
+    M(ResizeObserver) \
     M(ResourceLoading) \
     M(ResourceLoadObserver) \
     M(ResourceLoadStatistics) \

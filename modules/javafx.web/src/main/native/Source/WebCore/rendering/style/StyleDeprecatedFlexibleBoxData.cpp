@@ -22,9 +22,11 @@
 #include "config.h"
 #include "StyleDeprecatedFlexibleBoxData.h"
 
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 
 namespace WebCore {
+
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleDeprecatedFlexibleBoxData);
 
 StyleDeprecatedFlexibleBoxData::StyleDeprecatedFlexibleBoxData()
     : flex(RenderStyle::initialBoxFlex())

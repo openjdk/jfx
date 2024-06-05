@@ -46,13 +46,13 @@ static String protectionSpaceMapKeyFromURL(const URL& url)
 
     // Remove the last path component that is not a directory to determine the subtree for which credentials will apply.
     // We keep a leading slash, but remove a trailing one.
-    String directoryURL = url.string().substring(0, url.pathEnd());
+    String directoryURL = url.string().left(url.pathEnd());
     unsigned directoryURLPathStart = url.pathStart();
     ASSERT(directoryURL[directoryURLPathStart] == '/');
     if (directoryURL.length() > directoryURLPathStart + 1) {
         size_t index = directoryURL.reverseFind('/');
         ASSERT(index != notFound);
-        directoryURL = directoryURL.substring(0, (index != directoryURLPathStart) ? index : directoryURLPathStart + 1);
+        directoryURL = directoryURL.left((index != directoryURLPathStart) ? index : directoryURLPathStart + 1);
     }
 
     return directoryURL;
@@ -91,11 +91,11 @@ void CredentialStorage::removeCredentialsWithOrigin(const SecurityOriginData& or
     Vector<std::pair<String, ProtectionSpace>> keysToRemove;
     for (auto& keyValuePair : m_protectionSpaceToCredentialMap) {
         auto& protectionSpace = keyValuePair.key.second;
-        if (protectionSpace.host() == origin.host
-            && ((origin.port && protectionSpace.port() == *origin.port)
-                || (!origin.port && protectionSpace.port() == 80))
-            && ((protectionSpace.serverType() == ProtectionSpace::ServerType::HTTP && origin.protocol == "http"_s)
-                || (protectionSpace.serverType() == ProtectionSpace::ServerType::HTTPS && origin.protocol == "https"_s)))
+        if (protectionSpace.host() == origin.host()
+            && ((origin.port() && protectionSpace.port() == *origin.port())
+                || (!origin.port() && protectionSpace.port() == 80))
+            && ((protectionSpace.serverType() == ProtectionSpace::ServerType::HTTP && origin.protocol() == "http"_s)
+                || (protectionSpace.serverType() == ProtectionSpace::ServerType::HTTPS && origin.protocol() == "https"_s)))
             keysToRemove.append(keyValuePair.key);
     }
     for (auto& key : keysToRemove)
@@ -155,7 +155,7 @@ HashMap<String, ProtectionSpace>::iterator CredentialStorage::findDefaultProtect
 
         size_t index = directoryURL.reverseFind('/', directoryURL.length() - 2);
         ASSERT(index != notFound);
-        directoryURL = directoryURL.substring(0, (index == directoryURLPathStart) ? index + 1 : index);
+        directoryURL = directoryURL.left((index == directoryURLPathStart) ? index + 1 : index);
         ASSERT(directoryURL.length() > directoryURLPathStart);
     }
 }
@@ -186,20 +186,5 @@ void CredentialStorage::clearCredentials()
     m_originsWithCredentials.clear();
     m_pathToDefaultProtectionSpaceMap.clear();
 }
-
-#if !PLATFORM(COCOA)
-HashSet<SecurityOriginData> CredentialStorage::originsWithSessionCredentials()
-{
-    return { };
-}
-
-void CredentialStorage::removeSessionCredentialsWithOrigins(const Vector<SecurityOriginData>&)
-{
-}
-
-void CredentialStorage::clearSessionCredentials()
-{
-}
-#endif
 
 } // namespace WebCore

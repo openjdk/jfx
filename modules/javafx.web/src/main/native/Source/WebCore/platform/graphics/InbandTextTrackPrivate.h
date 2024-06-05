@@ -77,9 +77,25 @@ public:
 
     CueFormat cueFormat() const { return m_format; }
 
+    bool operator==(const InbandTextTrackPrivate& track) const
+    {
+        return TrackPrivateBase::operator==(track)
+            && cueFormat() == track.cueFormat()
+            && kind() == track.kind()
+            && isClosedCaptions() == track.isClosedCaptions()
+            && isSDH() == track.isSDH()
+            && containsOnlyForcedSubtitles() == track.containsOnlyForcedSubtitles()
+            && isMainProgramContent() == track.isMainProgramContent()
+            && isEasyToRead() == track.isEasyToRead()
+            && isDefault() == track.isDefault()
+            && inBandMetadataTrackDispatchType() == track.inBandMetadataTrackDispatchType();
+    }
+
 #if !RELEASE_LOG_DISABLED
     const char* logClassName() const override { return "InbandTextTrackPrivate"; }
 #endif
+
+    Type type() const final { return Type::Text; };
 
 protected:
     InbandTextTrackPrivate(CueFormat format)
@@ -94,6 +110,10 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::InbandTextTrackPrivate)
+static bool isType(const WebCore::TrackPrivateBase& track) { return track.type() == WebCore::TrackPrivateBase::Type::Text; }
+SPECIALIZE_TYPE_TRAITS_END()
 
 namespace WTF {
 

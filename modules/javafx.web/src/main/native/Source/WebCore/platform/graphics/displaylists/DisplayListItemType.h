@@ -28,6 +28,11 @@
 namespace WebCore {
 namespace DisplayList {
 
+enum class AsTextFlag : uint8_t {
+    IncludePlatformOperations      = 1 << 0,
+    IncludeResourceIdentifiers     = 1 << 1,
+};
+
 enum class ItemType : uint8_t {
     Save,
     Restore,
@@ -46,14 +51,20 @@ enum class ItemType : uint8_t {
     SetMiterLimit,
     ClearShadow,
     Clip,
+    ClipRoundedRect,
     ClipOut,
+    ClipOutRoundedRect,
     ClipToImageBuffer,
     ClipOutToPath,
     ClipPath,
+    ResetClip,
+    DrawControlPart,
     DrawFilteredImageBuffer,
     DrawGlyphs,
+    DrawDecomposedGlyphs,
     DrawImageBuffer,
     DrawNativeImage,
+    DrawSystemImage,
     DrawPattern,
     DrawRect,
     DrawLine,
@@ -75,9 +86,9 @@ enum class ItemType : uint8_t {
     FillQuadCurve,
     FillBezierCurve,
 #endif
+    FillPathSegment,
     FillPath,
     FillEllipse,
-    FlushContext,
 #if ENABLE(VIDEO)
     PaintFrameForMedia,
 #endif
@@ -88,6 +99,7 @@ enum class ItemType : uint8_t {
     StrokeQuadCurve,
     StrokeBezierCurve,
 #endif
+    StrokePathSegment,
     StrokePath,
     StrokeEllipse,
     ClearRect,

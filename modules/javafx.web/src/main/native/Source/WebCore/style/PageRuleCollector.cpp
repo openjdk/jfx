@@ -29,6 +29,7 @@
 #include "config.h"
 #include "PageRuleCollector.h"
 
+#include "CommonAtomStrings.h"
 #include "StyleProperties.h"
 #include "StyleRule.h"
 #include "UserAgentStyle.h"
@@ -84,18 +85,19 @@ void PageRuleCollector::matchPageRules(RuleSet* rules, bool isLeftPage, bool isF
 
     std::stable_sort(matchedPageRules.begin(), matchedPageRules.end(), comparePageRules);
 
-    for (unsigned i = 0; i < matchedPageRules.size(); i++)
-        m_result.authorDeclarations.append({ &matchedPageRules[i]->properties() });
+    m_result.authorDeclarations.reserveCapacity(m_result.authorDeclarations.size() + matchedPageRules.size());
+    for (auto* pageRule : matchedPageRules)
+        m_result.authorDeclarations.uncheckedAppend({ pageRule->properties() });
 }
 
 static bool checkPageSelectorComponents(const CSSSelector* selector, bool isLeftPage, bool isFirstPage, const String& pageName)
 {
     for (const CSSSelector* component = selector; component; component = component->tagHistory()) {
-        if (component->match() == CSSSelector::Tag) {
+        if (component->match() == CSSSelector::Match::Tag) {
             const AtomString& localName = component->tagQName().localName();
             if (localName != starAtom() && localName != pageName)
                 return false;
-        } else if (component->match() == CSSSelector::PagePseudoClass) {
+        } else if (component->match() == CSSSelector::Match::PagePseudoClass) {
             CSSSelector::PagePseudoClassType pseudoType = component->pagePseudoClassType();
             if ((pseudoType == CSSSelector::PagePseudoClassLeft && !isLeftPage)
                 || (pseudoType == CSSSelector::PagePseudoClassRight && isLeftPage)

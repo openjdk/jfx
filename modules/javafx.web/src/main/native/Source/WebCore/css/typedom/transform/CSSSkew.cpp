@@ -30,8 +30,11 @@
 #include "config.h"
 #include "CSSSkew.h"
 
-#if ENABLE(CSS_TYPED_OM)
-
+#include "CSSFunctionValue.h"
+#include "CSSNumericFactory.h"
+#include "CSSNumericValue.h"
+#include "CSSStyleValueFactory.h"
+#include "CSSUnitValue.h"
 #include "DOMMatrix.h"
 #include "ExceptionOr.h"
 #include <wtf/IsoMallocInlines.h>
@@ -40,29 +43,105 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(CSSSkew);
 
-Ref<CSSSkew> CSSSkew::create(Ref<CSSNumericValue>&& ax, Ref<CSSNumericValue>&& ay)
+ExceptionOr<Ref<CSSSkew>> CSSSkew::create(Ref<CSSNumericValue> ax, Ref<CSSNumericValue> ay)
 {
+    if (!ax->type().matches<CSSNumericBaseType::Angle>()
+        || !ay->type().matches<CSSNumericBaseType::Angle>())
+        return Exception { TypeError };
     return adoptRef(*new CSSSkew(WTFMove(ax), WTFMove(ay)));
 }
 
-CSSSkew::CSSSkew(Ref<CSSNumericValue>&& ax, Ref<CSSNumericValue>&& ay)
-    : m_ax(WTFMove(ax))
+ExceptionOr<Ref<CSSSkew>> CSSSkew::create(CSSFunctionValue& cssFunctionValue)
+{
+    if (cssFunctionValue.name() != CSSValueSkew) {
+        ASSERT_NOT_REACHED();
+        return CSSSkew::create(CSSNumericFactory::deg(0), CSSNumericFactory::deg(0));
+    }
+
+    Vector<Ref<CSSNumericValue>> components;
+    for (auto& componentCSSValue : cssFunctionValue) {
+        auto valueOrException = CSSStyleValueFactory::reifyValue(componentCSSValue, std::nullopt);
+        if (valueOrException.hasException())
+            return valueOrException.releaseException();
+        if (!is<CSSNumericValue>(valueOrException.returnValue()))
+            return Exception { TypeError, "Expected a CSSNumericValue."_s };
+        components.append(downcast<CSSNumericValue>(valueOrException.releaseReturnValue().get()));
+    }
+
+    auto numberOfComponents = components.size();
+    if (numberOfComponents < 1 || numberOfComponents > 2) {
+        ASSERT_NOT_REACHED();
+        return Exception { TypeError, "Unexpected number of values."_s };
+    }
+
+    if (components.size() == 2)
+        return CSSSkew::create(components[0], components[1]);
+    return CSSSkew::create(components[0], CSSNumericFactory::deg(0));
+}
+
+CSSSkew::CSSSkew(Ref<CSSNumericValue> ax, Ref<CSSNumericValue> ay)
+    : CSSTransformComponent(Is2D::Yes)
+    , m_ax(WTFMove(ax))
     , m_ay(WTFMove(ay))
 {
 }
 
-// FIXME: Fix all the following virtual functions
-
-String CSSSkew::toString() const
+ExceptionOr<void> CSSSkew::setAx(Ref<CSSNumericValue> ax)
 {
-    return emptyString();
+    if (!ax->type().matches<CSSNumericBaseType::Angle>())
+        return Exception { TypeError };
+
+    m_ax = WTFMove(ax);
+    return { };
+}
+
+ExceptionOr<void> CSSSkew::setAy(Ref<CSSNumericValue> ay)
+{
+    if (!ay->type().matches<CSSNumericBaseType::Angle>())
+        return Exception { TypeError };
+
+    m_ay = WTFMove(ay);
+    return { };
+}
+
+void CSSSkew::serialize(StringBuilder& builder) const
+{
+    // https://drafts.css-houdini.org/css-typed-om/#serialize-a-cssskew
+    builder.append("skew(");
+    m_ax->serialize(builder);
+    if (!is<CSSUnitValue>(m_ay) || downcast<CSSUnitValue>(m_ay.get()).value()) {
+        builder.append(", ");
+        m_ay->serialize(builder);
+    }
+    builder.append(')');
 }
 
 ExceptionOr<Ref<DOMMatrix>> CSSSkew::toMatrix()
 {
-    return DOMMatrix::fromMatrix(DOMMatrixInit { });
+    if (!is<CSSUnitValue>(m_ax) || !is<CSSUnitValue>(m_ay))
+        return Exception { TypeError };
+
+    auto x = downcast<CSSUnitValue>(m_ax.get()).convertTo(CSSUnitType::CSS_DEG);
+    auto y = downcast<CSSUnitValue>(m_ay.get()).convertTo(CSSUnitType::CSS_DEG);
+
+    if (!x || !y)
+        return Exception { TypeError };
+
+    TransformationMatrix matrix { };
+    matrix.skew(x->value(), y->value());
+
+    return { DOMMatrix::create(WTFMove(matrix), DOMMatrixReadOnly::Is2D::Yes) };
+}
+
+RefPtr<CSSValue> CSSSkew::toCSSValue() const
+{
+    auto ax = m_ax->toCSSValue();
+    auto ay = m_ay->toCSSValue();
+    if (!ax || !ay)
+        return nullptr;
+    if (is<CSSUnitValue>(m_ay.get()) && !downcast<CSSUnitValue>(m_ay.get()).value())
+        return CSSFunctionValue::create(CSSValueSkew, ax.releaseNonNull());
+    return CSSFunctionValue::create(CSSValueSkew, ax.releaseNonNull(), ay.releaseNonNull());
 }
 
 } // namespace WebCore
-
-#endif

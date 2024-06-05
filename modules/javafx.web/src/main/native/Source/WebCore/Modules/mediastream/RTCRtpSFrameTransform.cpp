@@ -30,6 +30,7 @@
 
 #include "CryptoKeyRaw.h"
 #include "JSDOMConvertBufferSource.h"
+#include "JSDOMPromiseDeferred.h"
 #include "JSRTCEncodedAudioFrame.h"
 #include "JSRTCEncodedVideoFrame.h"
 #include "JSWritableStreamSink.h"
@@ -77,7 +78,7 @@ void RTCRtpSFrameTransform::setEncryptionKey(CryptoKey& key, std::optional<uint6
         return;
     }
 
-    if (std::get<CryptoKeyAlgorithm>(algorithm).name != "HKDF") {
+    if (std::get<CryptoKeyAlgorithm>(algorithm).name != "HKDF"_s) {
         promise.reject(Exception { TypeError, "Only HKDF is supported"_s });
         return;
     }
@@ -122,7 +123,7 @@ static RTCRtpSFrameTransformErrorEvent::Type errorTypeFromInformation(const RTCR
     }
 }
 
-static std::optional<Vector<uint8_t>> processFrame(Span<const uint8_t> data, RTCRtpSFrameTransformer& transformer, ScriptExecutionContextIdentifier identifier, const WeakPtr<RTCRtpSFrameTransform>& weakTransform)
+static std::optional<Vector<uint8_t>> processFrame(std::span<const uint8_t> data, RTCRtpSFrameTransformer& transformer, ScriptExecutionContextIdentifier identifier, const WeakPtr<RTCRtpSFrameTransform, WeakPtrImplWithEventTargetData>& weakTransform)
 {
     auto result = transformer.transform(data);
     if (!result.has_value()) {
@@ -194,7 +195,7 @@ void RTCRtpSFrameTransform::willClearBackend(RTCRtpTransformBackend& backend)
     backend.clearTransformableFrameCallback();
 }
 
-static void transformFrame(Span<const uint8_t> data, JSDOMGlobalObject& globalObject, RTCRtpSFrameTransformer& transformer, SimpleReadableStreamSource& source, ScriptExecutionContextIdentifier identifier, const WeakPtr<RTCRtpSFrameTransform>& weakTransform)
+static void transformFrame(std::span<const uint8_t> data, JSDOMGlobalObject& globalObject, RTCRtpSFrameTransformer& transformer, SimpleReadableStreamSource& source, ScriptExecutionContextIdentifier identifier, const WeakPtr<RTCRtpSFrameTransform, WeakPtrImplWithEventTargetData>& weakTransform)
 {
     auto result = processFrame(data, transformer, identifier, weakTransform);
     auto buffer = result ? SharedBuffer::create(WTFMove(*result)) : SharedBuffer::create();
@@ -202,25 +203,26 @@ static void transformFrame(Span<const uint8_t> data, JSDOMGlobalObject& globalOb
 }
 
 template<typename Frame>
-void transformFrame(Frame& frame, JSDOMGlobalObject& globalObject, RTCRtpSFrameTransformer& transformer, SimpleReadableStreamSource& source, ScriptExecutionContextIdentifier identifier, const WeakPtr<RTCRtpSFrameTransform>& weakTransform)
+void transformFrame(Frame& frame, JSDOMGlobalObject& globalObject, RTCRtpSFrameTransformer& transformer, SimpleReadableStreamSource& source, ScriptExecutionContextIdentifier identifier, const WeakPtr<RTCRtpSFrameTransform, WeakPtrImplWithEventTargetData>& weakTransform)
 {
-    auto chunk = frame.rtcFrame().data();
+    auto rtcFrame = frame.rtcFrame();
+    auto chunk = rtcFrame->data();
     auto result = processFrame(chunk, transformer, identifier, weakTransform);
-    Span<const uint8_t> transformedChunk;
+    std::span<const uint8_t> transformedChunk;
     if (result)
         transformedChunk = { result->data(), result->size() };
-    frame.rtcFrame().setData(transformedChunk);
+    rtcFrame->setData(transformedChunk);
     source.enqueue(toJS(&globalObject, &globalObject, frame));
 }
 
 ExceptionOr<void> RTCRtpSFrameTransform::createStreams()
 {
-    auto* globalObject = scriptExecutionContext() ? scriptExecutionContext()->globalObject() : nullptr;
+    auto* globalObject = scriptExecutionContext() ? JSC::jsCast<JSDOMGlobalObject*>(scriptExecutionContext()->globalObject()) : nullptr;
     if (!globalObject)
         return Exception { InvalidStateError };
 
     m_readableStreamSource = SimpleReadableStreamSource::create();
-    auto readable = ReadableStream::create(*globalObject, m_readableStreamSource.copyRef());
+    auto readable = ReadableStream::create(*globalObject, *m_readableStreamSource);
     if (readable.hasException())
         return readable.releaseException();
 

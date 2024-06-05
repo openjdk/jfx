@@ -107,13 +107,18 @@ const String& PerformanceResourceTiming::nextHopProtocol() const
 
 double PerformanceResourceTiming::workerStart() const
 {
-    // FIXME: <https://webkit.org/b/179377> Implement PerformanceResourceTiming.workerStart in ServiceWorkers
-    return 0.0;
+    if (m_resourceTiming.networkLoadMetrics().failsTAOCheck)
+        return 0.0;
+
+    return networkLoadTimeToDOMHighResTimeStamp(m_timeOrigin, m_resourceTiming.networkLoadMetrics().workerStart);
 }
 
 double PerformanceResourceTiming::redirectStart() const
 {
     if (m_resourceTiming.networkLoadMetrics().failsTAOCheck)
+        return 0.0;
+
+    if (m_resourceTiming.isLoadedFromServiceWorker())
         return 0.0;
 
     if (!m_resourceTiming.networkLoadMetrics().redirectCount)
@@ -125,6 +130,9 @@ double PerformanceResourceTiming::redirectStart() const
 double PerformanceResourceTiming::redirectEnd() const
 {
     if (m_resourceTiming.networkLoadMetrics().failsTAOCheck)
+        return 0.0;
+
+    if (m_resourceTiming.isLoadedFromServiceWorker())
         return 0.0;
 
     if (!m_resourceTiming.networkLoadMetrics().redirectCount)
@@ -145,6 +153,9 @@ double PerformanceResourceTiming::domainLookupStart() const
     if (m_resourceTiming.networkLoadMetrics().failsTAOCheck)
         return 0.0;
 
+    if (m_resourceTiming.isLoadedFromServiceWorker())
+        return fetchStart();
+
     if (!m_resourceTiming.networkLoadMetrics().domainLookupStart)
         return fetchStart();
 
@@ -155,6 +166,9 @@ double PerformanceResourceTiming::domainLookupEnd() const
 {
     if (m_resourceTiming.networkLoadMetrics().failsTAOCheck)
         return 0.0;
+
+    if (m_resourceTiming.isLoadedFromServiceWorker())
+        return fetchStart();
 
     if (!m_resourceTiming.networkLoadMetrics().domainLookupEnd)
         return domainLookupStart();
@@ -167,6 +181,9 @@ double PerformanceResourceTiming::connectStart() const
     if (m_resourceTiming.networkLoadMetrics().failsTAOCheck)
         return 0.0;
 
+    if (m_resourceTiming.isLoadedFromServiceWorker())
+        return fetchStart();
+
     if (!m_resourceTiming.networkLoadMetrics().connectStart)
         return domainLookupEnd();
 
@@ -177,6 +194,9 @@ double PerformanceResourceTiming::connectEnd() const
 {
     if (m_resourceTiming.networkLoadMetrics().failsTAOCheck)
         return 0.0;
+
+    if (m_resourceTiming.isLoadedFromServiceWorker())
+        return fetchStart();
 
     if (!m_resourceTiming.networkLoadMetrics().connectEnd)
         return connectStart();
@@ -251,7 +271,9 @@ double PerformanceResourceTiming::responseEnd() const
 
 uint64_t PerformanceResourceTiming::transferSize() const
 {
-    if (m_resourceTiming.networkLoadMetrics().failsTAOCheck)
+    // This is intentionally stricter than a TAO check.
+    // See https://github.com/w3c/server-timing/issues/89
+    if (!m_resourceTiming.isSameOriginRequest())
         return 0;
 
     auto encodedBodySize = m_resourceTiming.networkLoadMetrics().responseBodyBytesReceived;
@@ -259,12 +281,15 @@ uint64_t PerformanceResourceTiming::transferSize() const
         return 0;
 
     // https://w3c.github.io/resource-timing/#dom-performanceresourcetiming-transfersize
+    // Motivated by https://github.com/w3c/resource-timing/issues/238
     return encodedBodySize + 300;
 }
 
 uint64_t PerformanceResourceTiming::encodedBodySize() const
 {
-    if (m_resourceTiming.networkLoadMetrics().failsTAOCheck)
+    // This is intentionally stricter than a TAO check.
+    // See https://github.com/w3c/server-timing/issues/89
+    if (!m_resourceTiming.isSameOriginRequest())
         return 0;
 
     auto encodedBodySize = m_resourceTiming.networkLoadMetrics().responseBodyBytesReceived;
@@ -276,7 +301,9 @@ uint64_t PerformanceResourceTiming::encodedBodySize() const
 
 uint64_t PerformanceResourceTiming::decodedBodySize() const
 {
-    if (m_resourceTiming.networkLoadMetrics().failsTAOCheck)
+    // This is intentionally stricter than a TAO check.
+    // See https://github.com/w3c/server-timing/issues/89
+    if (!m_resourceTiming.isSameOriginRequest())
         return 0;
 
     auto decodedBodySize = m_resourceTiming.networkLoadMetrics().responseBodyDecodedSize;

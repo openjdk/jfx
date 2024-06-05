@@ -28,10 +28,10 @@
 
 #include "RenderButton.h"
 #include "RenderChildIterator.h"
-#include "RenderFullScreen.h"
 #include "RenderMultiColumnFlow.h"
 #include "RenderRuby.h"
 #include "RenderRubyRun.h"
+#include "RenderStyleInlines.h"
 #include "RenderTextControl.h"
 #include "RenderTreeBuilderMultiColumn.h"
 
@@ -178,15 +178,19 @@ void RenderTreeBuilder::Block::attachIgnoringContinuation(RenderBlock& parent, R
             // If the requested beforeChild is not one of our children, then this is because
             // there is an anonymous container within this object that contains the beforeChild.
             RenderElement* beforeChildAnonymousContainer = beforeChildContainer;
-            if (beforeChildAnonymousContainer->isAnonymousBlock()
-#if ENABLE(FULLSCREEN_API)
-                // Full screen renderers and full screen placeholders act as anonymous blocks, not tables:
-                || beforeChildAnonymousContainer->isRenderFullScreen()
-                || beforeChildAnonymousContainer->isRenderFullScreenPlaceholder()
-#endif
-                ) {
-                // Insert the child into the anonymous block box instead of here.
-                if (child->isInline() || beforeChildAnonymousContainer->firstChild() != beforeChild)
+            if (beforeChildAnonymousContainer->isAnonymousBlock()) {
+                auto mayUseBeforeChildContainerAsParent = [&] {
+                    if (child->isOutOfFlowPositioned() && beforeChildAnonymousContainer->isFlexItemIncludingDeprecated()) {
+                        // Do not try to move an out-of-flow block box under an anonymous flex item. It should stay a direct child of the flex container.
+                        // https://www.w3.org/TR/css-flexbox-1/#abspos-items
+                        // As it is out-of-flow, an absolutely-positioned child of a flex container does not participate in flex layout.
+                        // The static position of an absolutely-positioned child of a flex container is determined such that the
+                        // child is positioned as if it were the sole flex item in the flex container,
+                        return false;
+                    }
+                    return child->isInline() || beforeChildAnonymousContainer->firstChild() != beforeChild;
+                };
+                if (mayUseBeforeChildContainerAsParent())
                     m_builder.attach(*beforeChildAnonymousContainer, WTFMove(child), beforeChild);
                 else
                     m_builder.attach(parent, WTFMove(child), beforeChild->parent());
@@ -369,10 +373,11 @@ void RenderTreeBuilder::Block::dropAnonymousBoxChild(RenderBlock& parent, Render
 {
     parent.setNeedsLayoutAndPrefWidthsRecalc();
     parent.setChildrenInline(child.childrenInline());
-    auto* nextSibling = child.nextSibling();
 
+    // FIXME: This should really just be a moveAllChilrenTo (see webkit.org/b/182495)
+    moveAllChildrenToInternal(child, parent);
     auto toBeDeleted = m_builder.detachFromRenderElement(parent, child);
-    m_builder.moveAllChildren(child, parent, nextSibling, RenderTreeBuilder::NormalizeAfterInsertion::No);
+
     // Delete the now-empty block's lines and nuke it.
     child.deleteLines();
 }

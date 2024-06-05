@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -150,8 +150,8 @@ PluginWidgetJava::PluginWidgetJava(
     const IntSize& size,
     const String& url,
     const String& mimeType,
-    const Vector<String>& paramNames,
-    const Vector<String>& paramValues)
+    const Vector<AtomString>& paramNames,
+    const Vector<AtomString>& paramValues)
       : m_element(element),
         m_url(url),
         m_mimeType(mimeType),
@@ -203,7 +203,7 @@ void PluginWidgetJava::paint(
     GraphicsContext& context,
     const IntRect& rc /*page coordinates*/,
     SecurityOriginPaintPolicy,
-    EventRegionContext*) {
+    RegionContext*) {
     //Widget::paint(context, rc);
     /*
     if (!m_isStarted) {
@@ -212,8 +212,8 @@ void PluginWidgetJava::paint(
         return;
     }
     */
-    if (context.paintingDisabled())
-        return;
+    //if (context.paintingDisabled())
+        //return;
 
     JLObject obj = platformWidget();
     if (obj){
@@ -264,8 +264,6 @@ void PluginWidgetJava::updatePluginWidget()
 {
     if (!parent())
         return;
-
-    ASSERT(parent()->isFrameView());
 
     FrameView* frameView = static_cast<FrameView*>(parent());
     IntRect windowRect(frameView->contentsToWindow(frameRect().location()), frameRect().size());

@@ -37,14 +37,18 @@
 namespace WebCore {
 
 class DateTimeLocalInputType final : public BaseDateAndTimeInputType {
-    template<typename DowncastedType> friend bool isInvalidInputType(const InputType&, const String&);
 public:
+    static Ref<DateTimeLocalInputType> create(HTMLInputElement& element)
+    {
+        return adoptRef(*new DateTimeLocalInputType(element));
+    }
+
+private:
     explicit DateTimeLocalInputType(HTMLInputElement& element)
         : BaseDateAndTimeInputType(Type::DateTimeLocal, element)
     {
     }
 
-private:
     const AtomString& formControlType() const final;
     DateComponentsType dateType() const final;
     WallTime valueAsDate() const final;
@@ -60,5 +64,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_INPUT_TYPE(DateTimeLocalInputType, Type::DateTimeLocal)
 
 #endif

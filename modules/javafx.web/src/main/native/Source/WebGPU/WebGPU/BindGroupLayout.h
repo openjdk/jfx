@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,39 +26,93 @@
 #pragma once
 
 #import <wtf/FastMalloc.h>
+#import <wtf/HashMap.h>
+#import <wtf/HashTraits.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
+#import <wtf/Vector.h>
+
+struct WGPUBindGroupLayoutImpl {
+};
 
 namespace WebGPU {
 
-class BindGroupLayout : public RefCounted<BindGroupLayout> {
+enum class ShaderStage {
+    Vertex = 0,
+    Fragment = 1,
+    Compute = 2
+};
+
+class Device;
+
+// https://gpuweb.github.io/gpuweb/#gpubindgrouplayout
+class BindGroupLayout : public WGPUBindGroupLayoutImpl, public RefCounted<BindGroupLayout> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<BindGroupLayout> create(id <MTLArgumentEncoder> vertexArgumentEncoder, id <MTLArgumentEncoder> fragmentArgumentEncoder, id <MTLArgumentEncoder> computeArgumentEncoder)
+    struct Entry {
+        uint32_t binding;
+        WGPUShaderStageFlags visibility;
+        using BindingLayout = std::variant<WGPUBufferBindingLayout, WGPUSamplerBindingLayout, WGPUTextureBindingLayout, WGPUStorageTextureBindingLayout, WGPUExternalTextureBindingLayout>;
+        BindingLayout bindingLayout;
+    };
+
+#if USE(METAL_ARGUMENT_ACCESS_ENUMS)
+    using BindingAccess = MTLArgumentAccess;
+    static constexpr auto BindingAccessReadOnly = MTLArgumentAccessReadOnly;
+    static constexpr auto BindingAccessReadWrite = MTLArgumentAccessReadWrite;
+    static constexpr auto BindingAccessWriteOnly = MTLArgumentAccessWriteOnly;
+#else
+    using BindingAccess = MTLBindingAccess;
+    static constexpr auto BindingAccessReadOnly = MTLBindingAccessReadOnly;
+    static constexpr auto BindingAccessReadWrite = MTLBindingAccessReadWrite;
+    static constexpr auto BindingAccessWriteOnly = MTLBindingAccessWriteOnly;
+#endif
+    using StageMapValue = std::pair<NSUInteger, BindingAccess>;
+    using StageMapTable = HashMap<uint64_t, StageMapValue, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>>;
+
+    static Ref<BindGroupLayout> create(StageMapTable&& stageMapTable, id<MTLArgumentEncoder> vertexArgumentEncoder, id<MTLArgumentEncoder> fragmentArgumentEncoder, id<MTLArgumentEncoder> computeArgumentEncoder, Vector<Entry>&& entries)
     {
-        return adoptRef(*new BindGroupLayout(vertexArgumentEncoder, fragmentArgumentEncoder, computeArgumentEncoder));
+        return adoptRef(*new BindGroupLayout(WTFMove(stageMapTable), vertexArgumentEncoder, fragmentArgumentEncoder, computeArgumentEncoder, WTFMove(entries)));
+    }
+    static Ref<BindGroupLayout> createInvalid(Device&)
+    {
+        return adoptRef(*new BindGroupLayout());
     }
 
     ~BindGroupLayout();
 
-    void setLabel(const char*);
+    void setLabel(String&&);
 
-    NSUInteger encodedLength() const;
+    bool isValid() const { return m_valid; }
 
-    id <MTLArgumentEncoder> vertexArgumentEncoder() const { return m_vertexArgumentEncoder; }
-    id <MTLArgumentEncoder> fragmentArgumentEncoder() const { return m_fragmentArgumentEncoder; }
-    id <MTLArgumentEncoder> computeArgumentEncoder() const { return m_computeArgumentEncoder; }
+    NSUInteger encodedLength(ShaderStage) const;
+
+    id<MTLArgumentEncoder> vertexArgumentEncoder() const { return m_vertexArgumentEncoder; }
+    id<MTLArgumentEncoder> fragmentArgumentEncoder() const { return m_fragmentArgumentEncoder; }
+    id<MTLArgumentEncoder> computeArgumentEncoder() const { return m_computeArgumentEncoder; }
+
+    std::optional<StageMapValue> indexForBinding(uint32_t bindingIndex, ShaderStage renderStage) const;
+
+    static bool isPresent(const WGPUBufferBindingLayout&);
+    static bool isPresent(const WGPUSamplerBindingLayout&);
+    static bool isPresent(const WGPUTextureBindingLayout&);
+    static bool isPresent(const WGPUStorageTextureBindingLayout&);
+    static bool isPresent(const WGPUExternalTextureBindingLayout&);
+
+    const Vector<Entry>& entries() const { return m_bindGroupLayoutEntries; }
 
 private:
-    BindGroupLayout(id <MTLArgumentEncoder> vertexArgumentEncoder, id <MTLArgumentEncoder> fragmentArgumentEncoder, id <MTLArgumentEncoder> computeArgumentEncoder);
+    BindGroupLayout(StageMapTable&&, id<MTLArgumentEncoder>, id<MTLArgumentEncoder>, id<MTLArgumentEncoder>, Vector<Entry>&&);
+    explicit BindGroupLayout();
 
-    id <MTLArgumentEncoder> m_vertexArgumentEncoder { nil };
-    id <MTLArgumentEncoder> m_fragmentArgumentEncoder { nil };
-    id <MTLArgumentEncoder> m_computeArgumentEncoder { nil };
+    const StageMapTable m_indicesForBinding;
+
+    const id<MTLArgumentEncoder> m_vertexArgumentEncoder { nil };
+    const id<MTLArgumentEncoder> m_fragmentArgumentEncoder { nil };
+    const id<MTLArgumentEncoder> m_computeArgumentEncoder { nil };
+
+    const Vector<Entry> m_bindGroupLayoutEntries;
+    const bool m_valid { true };
 };
 
 } // namespace WebGPU
-
-struct WGPUBindGroupLayoutImpl {
-    Ref<WebGPU::BindGroupLayout> bindGroupLayout;
-};

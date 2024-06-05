@@ -109,13 +109,16 @@ public:
     WEBCORE_EXPORT void setFixedElementsLayoutRelativeToFrame(bool);
 
     bool asyncFrameOrOverflowScrollingEnabled() const { return m_asyncFrameOrOverflowScrollingEnabled; }
-    void setAsyncFrameOrOverflowScrollingEnabled(bool);
+    WEBCORE_EXPORT void setAsyncFrameOrOverflowScrollingEnabled(bool);
 
     bool scrollingPerformanceTestingEnabled() const { return m_scrollingPerformanceTestingEnabled; }
     WEBCORE_EXPORT void setScrollingPerformanceTestingEnabled(bool);
 
     bool wheelEventGesturesBecomeNonBlocking() const { return m_wheelEventGesturesBecomeNonBlocking; }
     WEBCORE_EXPORT void setWheelEventGesturesBecomeNonBlocking(bool);
+
+    bool overlayScrollbarsEnabled() const { return m_overlayScrollbarsEnabled; }
+    WEBCORE_EXPORT void setOverlayScrollbarsEnabled(bool);
 
     void dumpProperties(WTF::TextStream&, OptionSet<ScrollingStateTreeAsTextBehavior>) const override;
 
@@ -149,6 +152,7 @@ private:
     bool m_asyncFrameOrOverflowScrollingEnabled { false };
     bool m_wheelEventGesturesBecomeNonBlocking { false };
     bool m_scrollingPerformanceTestingEnabled { false };
+    bool m_overlayScrollbarsEnabled { false };
 };
 
 } // namespace WebCore

@@ -27,9 +27,10 @@
 #include "ResourceTiming.h"
 
 #include "CachedResource.h"
+#include "DeprecatedGlobalSettings.h"
 #include "DocumentLoadTiming.h"
+#include "OriginAccessPatterns.h"
 #include "PerformanceServerTiming.h"
-#include "RuntimeEnabledFeatures.h"
 #include "SecurityOrigin.h"
 #include "ServerTimingParser.h"
 #include <wtf/CrossThreadCopier.h>
@@ -51,32 +52,59 @@ ResourceTiming ResourceTiming::fromSynchronousLoad(const URL& url, const String&
     return ResourceTiming(url, initiator, loadTiming, networkLoadMetrics, response, securityOrigin);
 }
 
-ResourceTiming::ResourceTiming(const URL& url, const String& initiator, const ResourceLoadTiming& timing, const NetworkLoadMetrics& networkLoadMetrics, const ResourceResponse& response, const SecurityOrigin&)
+ResourceTiming::ResourceTiming(const URL& url, const String& initiatorType, const ResourceLoadTiming& timing, const NetworkLoadMetrics& networkLoadMetrics, const ResourceResponse& response, const SecurityOrigin& origin)
     : m_url(url)
-    , m_initiator(initiator)
+    , m_initiatorType(initiatorType)
     , m_resourceLoadTiming(timing)
     , m_networkLoadMetrics(networkLoadMetrics)
+    , m_serverTiming(ServerTimingParser::parseServerTiming(response.httpHeaderField(HTTPHeaderName::ServerTiming)))
+    , m_isLoadedFromServiceWorker(response.source() == ResourceResponse::Source::ServiceWorker)
+    , m_isSameOriginRequest(!m_networkLoadMetrics.hasCrossOriginRedirect
+        && origin.protocol() == url.protocol()
+        && origin.host() == url.host()
+        && origin.port() == url.port())
 {
-    if (RuntimeEnabledFeatures::sharedFeatures().serverTimingEnabled() && !m_networkLoadMetrics.failsTAOCheck)
-        m_serverTiming = ServerTimingParser::parseServerTiming(response.httpHeaderField(HTTPHeaderName::ServerTiming));
+}
+
+void ResourceTiming::updateExposure(const SecurityOrigin& origin)
+{
+    m_isSameOriginRequest = m_isSameOriginRequest && origin.canRequest(m_url, OriginAccessPatternsForWebProcess::singleton());
 }
 
 Vector<Ref<PerformanceServerTiming>> ResourceTiming::populateServerTiming() const
 {
+    // To increase privacy, this additional check was proposed at https://github.com/w3c/resource-timing/issues/342 .
+    if (!m_isSameOriginRequest)
+        return { };
+
+    if (!DeprecatedGlobalSettings::serverTimingEnabled())
+        return { };
+
     return WTF::map(m_serverTiming, [] (auto& entry) {
         return PerformanceServerTiming::create(String(entry.name), entry.duration, String(entry.description));
     });
 }
 
-ResourceTiming ResourceTiming::isolatedCopy() const
+ResourceTiming ResourceTiming::isolatedCopy() const &
 {
-    return ResourceTiming(
+    return ResourceTiming {
         m_url.isolatedCopy(),
-        m_initiator.isolatedCopy(),
+        m_initiatorType.isolatedCopy(),
         m_resourceLoadTiming.isolatedCopy(),
         m_networkLoadMetrics.isolatedCopy(),
         crossThreadCopy(m_serverTiming)
-    );
+    };
+}
+
+ResourceTiming ResourceTiming::isolatedCopy() &&
+{
+    return ResourceTiming {
+        WTFMove(m_url).isolatedCopy(),
+        WTFMove(m_initiatorType).isolatedCopy(),
+        WTFMove(m_resourceLoadTiming).isolatedCopy(),
+        WTFMove(m_networkLoadMetrics).isolatedCopy(),
+        crossThreadCopy(WTFMove(m_serverTiming))
+    };
 }
 
 } // namespace WebCore

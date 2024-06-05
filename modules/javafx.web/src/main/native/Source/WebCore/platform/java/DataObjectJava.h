@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,21 +40,21 @@ public:
     static const URL& emptyURL()            { static URL r; return r; }
     static const String& emptyString()      { static String r; return r; }
 
-    static const String &mimePlainText()    { static String r("text/plain"); return r; }
-    static const String &mimeHTML()         { static String r("text/html"); return r; }
-    static const String &mimeURIList()      { static String r("text/uri-list"); return r; }
-    static const String &mimeShortcutName() { static String r("text/ie-shortcut-filename"); return r; }
+    static const String &mimePlainText()    { static String r("text/plain"_s); return r; }
+    static const String &mimeHTML()         { static String r("text/html"_s); return r; }
+    static const String &mimeURIList()      { static String r("text/uri-list"_s); return r; }
+    static const String &mimeShortcutName() { static String r("text/ie-shortcut-filename"_s); return r; }
 
     // We provide the IE clipboard types (URL and Text),
     // and the clipboard types specified in the WHATWG Web Applications 1.0 draft
     // see http://www.whatwg.org/specs/web-apps/current-work/ Section 6.3.5.3
     static String normalizeMIMEType(const String& type)
     {
-        String qType = type.stripWhiteSpace().convertToLowercaseWithoutLocale();
+        String qType = type.convertToLowercaseWithoutLocale();
         // two special cases for IE compatibility
-        if (qType == "text" || qType.startsWith("text/plain;"))
+        if (qType == "text"_s || qType.startsWith("text/plain;"_s))
             return mimePlainText();
-        if (qType == "url")
+        if (qType == "url"_s)
             return mimeURIList();
         return qType;
     }

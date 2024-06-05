@@ -48,6 +48,7 @@
 namespace WebCore {
 
 class AnimationEffect : public RefCounted<AnimationEffect>, public CanMakeWeakPtr<AnimationEffect> {
+    WTF_MAKE_ISO_ALLOCATED(AnimationEffect);
 public:
     virtual ~AnimationEffect();
 
@@ -67,6 +68,7 @@ public:
     virtual void animationWasCanceled() { };
     virtual void animationSuspensionStateDidChange(bool) { };
     virtual void animationTimelineDidChange(AnimationTimeline*) { };
+    virtual void animationDidFinish() { };
 
     WebAnimation* animation() const { return m_animation.get(); }
     virtual void setAnimation(WebAnimation*);
@@ -100,7 +102,9 @@ public:
 
     void updateStaticTimingProperties();
 
-    virtual Seconds timeToNextTick(BasicEffectTiming) const;
+    virtual Seconds timeToNextTick(const BasicEffectTiming&) const;
+
+    virtual bool preventsAnimationReadiness() const { return false; }
 
 protected:
     explicit AnimationEffect();
@@ -114,7 +118,7 @@ private:
     FillMode m_fill { FillMode::Auto };
     PlaybackDirection m_direction { PlaybackDirection::Normal };
 
-    WeakPtr<WebAnimation> m_animation;
+    WeakPtr<WebAnimation, WeakPtrImplWithEventTargetData> m_animation;
     RefPtr<TimingFunction> m_timingFunction;
 
     double m_iterationStart { 0 };

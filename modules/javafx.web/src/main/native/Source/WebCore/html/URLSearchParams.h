@@ -25,6 +25,7 @@
 #pragma once
 
 #include "ExceptionOr.h"
+#include "ScriptExecutionContext.h"
 #include <variant>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
@@ -33,6 +34,7 @@
 namespace WebCore {
 
 class DOMURL;
+class ScriptExecutionContext;
 
 class URLSearchParams : public RefCounted<URLSearchParams> {
 public:
@@ -42,11 +44,13 @@ public:
         return adoptRef(*new URLSearchParams(string, associatedURL));
     }
 
+    size_t size() const { return m_pairs.size(); }
+
     void append(const String& name, const String& value);
-    void remove(const String& name);
+    void remove(const String& name, const String& value = { });
     String get(const String& name) const;
     Vector<String> getAll(const String& name) const;
-    bool has(const String& name) const;
+    bool has(const String& name, const String& value = { }) const;
     void set(const String& name, const String& value);
     String toString() const;
     void updateFromAssociatedURL();
@@ -61,7 +65,7 @@ public:
         Ref<URLSearchParams> m_target;
         size_t m_index { 0 };
     };
-    Iterator createIterator() { return Iterator { *this }; }
+    Iterator createIterator(ScriptExecutionContext*) { return Iterator { *this }; }
 
 private:
     const Vector<KeyValuePair<String, String>>& pairs() const { return m_pairs; }

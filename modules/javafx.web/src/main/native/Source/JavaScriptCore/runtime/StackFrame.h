@@ -45,11 +45,13 @@ public:
     StackFrame(Wasm::IndexOrName);
 
     bool hasLineAndColumnInfo() const { return !!m_codeBlock; }
+    CodeBlock* codeBlock() const { return m_codeBlock.get(); }
 
     void computeLineAndColumn(unsigned& line, unsigned& column) const;
     String functionName(VM&) const;
     SourceID sourceID() const;
-    String sourceURL() const;
+    String sourceURL(VM&) const;
+    String sourceURLStripped(VM&) const;
     String toString(VM&) const;
 
     bool hasBytecodeIndex() const { return m_bytecodeIndex && !m_isWasmFrame; }

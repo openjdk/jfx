@@ -27,12 +27,12 @@
 
 #include "Attribute.h"
 #include "SpaceSplitString.h"
-#include <wtf/RefCounted.h>
 #include <wtf/TypeCasts.h>
 
 namespace WebCore {
 
 class Attr;
+class MutableStyleProperties;
 class ShareableElementData;
 class StyleProperties;
 class UniqueElementData;
@@ -50,7 +50,6 @@ public:
     AttributeConstIterator& operator++() { ++m_offset; return *this; }
 
     bool operator==(const AttributeConstIterator& other) const { return m_offset == other.m_offset; }
-    bool operator!=(const AttributeConstIterator& other) const { return !(*this == other); }
 
 private:
     const Attribute* m_array;
@@ -85,7 +84,7 @@ public:
 
     static const unsigned attributeNotFound = static_cast<unsigned>(-1);
 
-    void setClassNames(const SpaceSplitString& classNames) const { m_classNames = classNames; }
+    void setClassNames(SpaceSplitString&& classNames) const { m_classNames = WTFMove(classNames); }
     const SpaceSplitString& classNames() const { return m_classNames; }
     static ptrdiff_t classNamesMemoryOffset() { return OBJECT_OFFSETOF(ElementData, m_classNames); }
 
@@ -94,7 +93,7 @@ public:
     void setIdForStyleResolution(const AtomString& newId) const { m_idForStyleResolution = newId; }
 
     const StyleProperties* inlineStyle() const { return m_inlineStyle.get(); }
-    const StyleProperties* presentationalHintStyle() const;
+    const MutableStyleProperties* presentationalHintStyle() const;
 
     unsigned length() const;
     bool isEmpty() const { return !length(); }
@@ -104,7 +103,6 @@ public:
     const Attribute* findAttributeByName(const QualifiedName&) const;
     unsigned findAttributeIndexByName(const QualifiedName&) const;
     unsigned findAttributeIndexByName(const AtomString& name, bool shouldIgnoreAttributeCase) const;
-    const Attribute* findLanguageAttribute() const;
 
     bool hasID() const { return !m_idForStyleResolution.isNull(); }
     bool hasClass() const { return !m_classNames.isEmpty(); }
@@ -132,6 +130,7 @@ private:
     static const uint32_t s_flagStyleAttributeIsDirty = 1 << 3;
     static const uint32_t s_flagAnimatedSVGAttributesAreDirty = 1 << 4;
     static const uint32_t s_flagsMask = (1 << s_flagCount) - 1;
+    // FIXME: could the SVG specific flags go to some SVG class?
 
     inline void updateFlag(uint32_t flag, bool set) const
     {
@@ -189,9 +188,9 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ShareableElementData);
 class ShareableElementData : public ElementData {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ShareableElementData);
 public:
-    static Ref<ShareableElementData> createWithAttributes(const Vector<Attribute>&);
+    static Ref<ShareableElementData> createWithAttributes(std::span<const Attribute>);
 
-    explicit ShareableElementData(const Vector<Attribute>&);
+    explicit ShareableElementData(std::span<const Attribute>);
     explicit ShareableElementData(const UniqueElementData&);
     ~ShareableElementData();
 
@@ -222,7 +221,7 @@ public:
 
     static ptrdiff_t attributeVectorMemoryOffset() { return OBJECT_OFFSETOF(UniqueElementData, m_attributeVector); }
 
-    mutable RefPtr<StyleProperties> m_presentationalHintStyle;
+    mutable RefPtr<MutableStyleProperties> m_presentationalHintStyle;
     typedef Vector<Attribute, 4> AttributeVector;
     AttributeVector m_attributeVector;
 };
@@ -248,7 +247,7 @@ inline const Attribute* ElementData::attributeBase() const
     return downcast<ShareableElementData>(*this).m_attributeArray;
 }
 
-inline const StyleProperties* ElementData::presentationalHintStyle() const
+inline const MutableStyleProperties* ElementData::presentationalHintStyle() const
 {
     if (!is<UniqueElementData>(*this))
         return nullptr;

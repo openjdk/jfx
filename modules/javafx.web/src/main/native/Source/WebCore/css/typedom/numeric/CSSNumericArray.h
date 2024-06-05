@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include "CSSNumericBaseType.h"
 #include "CSSNumericType.h"
 #include "CSSNumericValue.h"
@@ -40,16 +38,18 @@ template<typename> class ExceptionOr;
 class CSSNumericArray : public RefCounted<CSSNumericArray> {
     WTF_MAKE_ISO_ALLOCATED(CSSNumericArray);
 public:
-    static Ref<CSSNumericArray> create(const FixedVector<CSSNumberish>&);
-    static Ref<CSSNumericArray> create(FixedVector<Ref<CSSNumericValue>>&&);
+    static Ref<CSSNumericArray> create(FixedVector<CSSNumberish>&&);
+    static Ref<CSSNumericArray> create(Vector<Ref<CSSNumericValue>>&&);
     size_t length() const { return m_array.size(); };
-    ExceptionOr<Ref<CSSNumericValue>> item(size_t index);
+    RefPtr<CSSNumericValue> item(size_t index);
+    bool isSupportedPropertyIndex(unsigned index) const { return index < m_array.size(); }
+    const Vector<Ref<CSSNumericValue>>& array() const { return m_array; }
+    void forEach(Function<void(const CSSNumericValue&, bool first)>);
 
 private:
-    FixedVector<Ref<CSSNumericValue>> m_array;
+    Vector<Ref<CSSNumericValue>> m_array;
+    CSSNumericArray(Vector<Ref<CSSNumericValue>>&&);
     CSSNumericArray(FixedVector<Ref<CSSNumericValue>>&&);
 };
 
 } // namespace WebCore
-
-#endif

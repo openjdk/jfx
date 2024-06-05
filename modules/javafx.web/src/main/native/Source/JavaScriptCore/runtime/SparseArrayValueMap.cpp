@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,16 +35,11 @@
 
 namespace JSC {
 
-const ClassInfo SparseArrayValueMap::s_info = { "SparseArrayValueMap", nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(SparseArrayValueMap) };
+const ClassInfo SparseArrayValueMap::s_info = { "SparseArrayValueMap"_s, nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(SparseArrayValueMap) };
 
 SparseArrayValueMap::SparseArrayValueMap(VM& vm)
     : Base(vm, vm.sparseArrayValueMapStructure.get())
 {
-}
-
-void SparseArrayValueMap::finishCreation(VM& vm)
-{
-    Base::finishCreation(vm);
 }
 
 SparseArrayValueMap* SparseArrayValueMap::create(VM& vm)
@@ -106,7 +101,7 @@ bool SparseArrayValueMap::putEntry(JSGlobalObject* globalObject, JSObject* array
     // To save a separate find & add, we first always add to the sparse map.
     // In the uncommon case that this is a new property, and the array is not
     // extensible, this is not the right thing to have done - so remove again.
-    if (result.isNewEntry && !array->isStructureExtensible(vm)) {
+    if (result.isNewEntry && !array->isStructureExtensible()) {
         remove(result.iterator);
         return typeError(globalObject, scope, shouldThrow, ReadonlyPropertyWriteError);
     }
@@ -128,7 +123,7 @@ bool SparseArrayValueMap::putDirect(JSGlobalObject* globalObject, JSObject* arra
     // To save a separate find & add, we first always add to the sparse map.
     // In the uncommon case that this is a new property, and the array is not
     // extensible, this is not the right thing to have done - so remove again.
-    if (mode != PutDirectIndexLikePutDirect && result.isNewEntry && !array->isStructureExtensible(vm)) {
+    if (mode != PutDirectIndexLikePutDirect && result.isNewEntry && !array->isStructureExtensible()) {
         remove(result.iterator);
         return typeError(globalObject, scope, shouldThrow, NonExtensibleObjectPropertyDefineError);
     }

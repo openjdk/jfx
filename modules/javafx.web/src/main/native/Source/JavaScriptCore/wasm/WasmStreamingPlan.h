@@ -47,7 +47,7 @@ public:
     uint32_t functionIndex() const { return m_functionIndex; }
 
     // Note: CompletionTask should not hold a reference to the Plan otherwise there will be a reference cycle.
-    StreamingPlan(Context*, Ref<ModuleInformation>&&, Ref<LLIntPlan>&&, uint32_t functionIndex, CompletionTask&&);
+    StreamingPlan(VM&, Ref<ModuleInformation>&&, Ref<LLIntPlan>&&, uint32_t functionIndex, CompletionTask&&);
 
 private:
     // For some reason friendship doesn't extend to parent classes...
@@ -61,8 +61,8 @@ private:
     }
 
     Ref<LLIntPlan> m_plan;
-    bool m_completed { false };
     uint32_t m_functionIndex;
+    bool m_completed { false };
 };
 
 } } // namespace JSC::Wasm

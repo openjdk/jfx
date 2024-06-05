@@ -39,7 +39,7 @@ class AuthenticatorAssertionResponse : public AuthenticatorResponse {
 public:
     static Ref<AuthenticatorAssertionResponse> create(Ref<ArrayBuffer>&& rawId, Ref<ArrayBuffer>&& authenticatorData, Ref<ArrayBuffer>&& signature, RefPtr<ArrayBuffer>&& userHandle, std::optional<AuthenticationExtensionsClientOutputs>&&, AuthenticatorAttachment);
     WEBCORE_EXPORT static Ref<AuthenticatorAssertionResponse> create(const Vector<uint8_t>& rawId, const Vector<uint8_t>& authenticatorData, const Vector<uint8_t>& signature,  const Vector<uint8_t>& userHandle, AuthenticatorAttachment);
-    WEBCORE_EXPORT static Ref<AuthenticatorAssertionResponse> create(Ref<ArrayBuffer>&& rawId, Ref<ArrayBuffer>&& userHandle, String&& name, SecAccessControlRef, AuthenticatorAttachment);
+    WEBCORE_EXPORT static Ref<AuthenticatorAssertionResponse> create(Ref<ArrayBuffer>&& rawId, RefPtr<ArrayBuffer>&& userHandle, String&& name, SecAccessControlRef, AuthenticatorAttachment);
     virtual ~AuthenticatorAssertionResponse() = default;
 
     ArrayBuffer* authenticatorData() const { return m_authenticatorData.get(); }
@@ -52,6 +52,8 @@ public:
     const String& group() const { return m_group; }
     bool synchronizable() const { return m_synchronizable; }
     LAContext * laContext() const { return m_laContext.get(); }
+    RefPtr<ArrayBuffer> largeBlob() const { return m_largeBlob; }
+    const String& accessGroup() const { return m_accessGroup; }
 
     WEBCORE_EXPORT void setAuthenticatorData(Vector<uint8_t>&&);
     void setSignature(Ref<ArrayBuffer>&& signature) { m_signature = WTFMove(signature); }
@@ -61,10 +63,12 @@ public:
     void setGroup(const String& group) { m_group = group; }
     void setSynchronizable(bool synchronizable) { m_synchronizable = synchronizable; }
     void setLAContext(LAContext *context) { m_laContext = context; }
+    void setLargeBlob(Ref<ArrayBuffer>&& largeBlob) { m_largeBlob = WTFMove(largeBlob); }
+    void setAccessGroup(const String& accessGroup) { m_accessGroup = accessGroup; }
 
 private:
     AuthenticatorAssertionResponse(Ref<ArrayBuffer>&&, Ref<ArrayBuffer>&&, Ref<ArrayBuffer>&&, RefPtr<ArrayBuffer>&&, AuthenticatorAttachment);
-    AuthenticatorAssertionResponse(Ref<ArrayBuffer>&&, Ref<ArrayBuffer>&&, String&&, SecAccessControlRef, AuthenticatorAttachment);
+    AuthenticatorAssertionResponse(Ref<ArrayBuffer>&&, RefPtr<ArrayBuffer>&&, String&&, SecAccessControlRef, AuthenticatorAttachment);
 
     Type type() const final { return Type::Assertion; }
     AuthenticatorResponseData data() const final;
@@ -80,6 +84,8 @@ private:
     size_t m_numberOfCredentials { 0 };
     RetainPtr<SecAccessControlRef> m_accessControl;
     RetainPtr<LAContext> m_laContext;
+    RefPtr<ArrayBuffer> m_largeBlob;
+    String m_accessGroup;
 };
 
 } // namespace WebCore

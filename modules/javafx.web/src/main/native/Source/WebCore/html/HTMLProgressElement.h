@@ -20,14 +20,14 @@
 
 #pragma once
 
-#include "LabelableElement.h"
+#include "HTMLElement.h"
 
 namespace WebCore {
 
 class ProgressValueElement;
 class RenderProgress;
 
-class HTMLProgressElement final : public LabelableElement {
+class HTMLProgressElement final : public HTMLElement {
     WTF_MAKE_ISO_ALLOCATED(HTMLProgressElement);
 public:
     static const double IndeterminatePosition;
@@ -44,27 +44,30 @@ public:
     double position() const;
 
 private:
+    constexpr static auto CreateHTMLProgressElement = CreateHTMLElement | NodeFlag::HasCustomStyleResolveCallbacks;
     HTMLProgressElement(const QualifiedName&, Document&);
     virtual ~HTMLProgressElement();
 
     bool shouldAppearIndeterminate() const final;
-    bool supportLabels() const final { return true; }
+    bool isLabelable() const final { return true; }
 
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
     bool childShouldCreateRenderer(const Node&) const final;
     RenderProgress* renderProgress() const;
 
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
 
     void didAttachRenderers() final;
 
+    void updateDeterminateState();
     void didElementStateChange();
     void didAddUserAgentShadowRoot(ShadowRoot&) final;
-    bool isDeterminate() const;
+    bool isDeterminate() const { return m_isDeterminate; };
 
     bool canContainRangeEndPoint() const final { return false; }
 
     ProgressValueElement* m_value;
+    bool m_isDeterminate { false };
 };
 
 } // namespace

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -72,7 +72,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLOptionElementImpl_getLabel
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLOptionElementImpl_setLabelImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setLabel(String(env, value));
+    IMPL->setLabel(AtomString {String(env, value)});
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLOptionElementImpl_getDefaultSelectedImpl(JNIEnv*, jclass, jlong peer)
@@ -108,7 +108,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLOptionElementImpl_getValue
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLOptionElementImpl_setValueImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setValue(String(env, value));
+    IMPL->setValue(AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLOptionElementImpl_getTextImpl(JNIEnv* env, jclass, jlong peer)

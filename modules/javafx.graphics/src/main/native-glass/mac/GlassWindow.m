@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,6 +40,8 @@
 #import "GlassApplication.h"
 #import "GlassLayer3D.h"
 #import "GlassHelper.h"
+
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 //#include <stdio.h>
 //#include <stdarg.h>
@@ -194,6 +196,8 @@ static inline NSView<GlassView> *getMacView(JNIEnv *env, jobject jview)
             [button setAction:nil];                                                     \
             [button setEnabled:NO];                                                     \
             break;                                                                      \
+        default:                                                                        \
+            break;                                                                      \
     }                                                                                   \
     return button;                                                                      \
 }                                                                                       \
@@ -208,6 +212,22 @@ static inline NSView<GlassView> *getMacView(JNIEnv *env, jobject jview)
 
 @implementation GlassWindow_Normal
 GLASS_NS_WINDOW_IMPLEMENTATION
+
+-(NSRect)windowWillUseStandardFrame:(NSWindow*)window defaultFrame:(NSRect)newFrame
+{
+    // For windows without titlebars the OS will suggest a frame that's the
+    // same size as the existing window, not the screen.
+    if (window.screen != nil && (window.styleMask & NSWindowStyleMaskTitled) == 0) {
+        return window.screen.visibleFrame;
+    }
+    return newFrame;
+}
+
+-(BOOL)isZoomed
+{
+    // Ensure the window is not reported as maximized during initialization
+    return self.screen != nil && [super isZoomed];
+}
 @end
 
 @implementation GlassWindow_Panel
@@ -307,7 +327,7 @@ GLASS_NS_WINDOW_IMPLEMENTATION
 
 - (void)sendEvent:(NSEvent *)event
 {
-    if ([event type] == NSLeftMouseDown || [event type] == NSRightMouseDown || [event type] == NSOtherMouseDown)
+    if ([event type] == NSEventTypeLeftMouseDown || [event type] == NSEventTypeRightMouseDown || [event type] == NSEventTypeOtherMouseDown)
     {
         NSPoint p = [NSEvent mouseLocation];
         NSRect frame = [self->nsWindow frame];
@@ -383,11 +403,11 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
 
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     {
-        NSUInteger styleMask = NSBorderlessWindowMask;
+        NSUInteger styleMask = NSWindowStyleMaskBorderless;
         // only titled windows get title
         if ((jStyleMask&com_sun_glass_ui_Window_TITLED) != 0)
         {
-            styleMask = styleMask|NSTitledWindowMask;
+            styleMask = styleMask|NSWindowStyleMaskTitled;
         }
 
         bool isUtility = (jStyleMask & com_sun_glass_ui_Window_UTILITY) != 0;
@@ -398,7 +418,7 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
         {
             if ((jStyleMask&com_sun_glass_ui_Window_CLOSABLE) != 0)
             {
-                styleMask = styleMask|NSClosableWindowMask;
+                styleMask = styleMask|NSWindowStyleMaskClosable;
             }
 
             if (((jStyleMask&com_sun_glass_ui_Window_MINIMIZABLE) != 0) ||
@@ -406,23 +426,23 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
             {
                 // on Mac OS X there is one set for min/max buttons,
                 // so if clients requests either one, we turn them both on
-                styleMask = styleMask|NSMiniaturizableWindowMask;
+                styleMask = styleMask|NSWindowStyleMaskMiniaturizable;
             }
 
             if ((jStyleMask&com_sun_glass_ui_Window_UNIFIED) != 0) {
-                styleMask = styleMask|NSTexturedBackgroundWindowMask;
+                styleMask = styleMask|NSWindowStyleMaskTexturedBackground;
             }
 
             if (isUtility)
             {
-                styleMask = styleMask | NSUtilityWindowMask | NSNonactivatingPanelMask;
+                styleMask = styleMask | NSWindowStyleMaskUtilityWindow | NSWindowStyleMaskNonactivatingPanel;
             }
         }
 
         if (isPopup)
         {
             // can receive keyboard input without activating the owning application
-            styleMask = styleMask|NSNonactivatingPanelMask;
+            styleMask = styleMask|NSWindowStyleMaskNonactivatingPanel;
         }
 
         // initial size must be 0x0 otherwise we don't get resize update if the initial size happens to be the exact same size as the later programatical one!
@@ -704,19 +724,19 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setEnabled
         NSButton *zoomButton = [window->nsWindow standardWindowButton:NSWindowZoomButton];
         if ((window->isEnabled) && (window->isResizable)){
             [window->nsWindow setStyleMask: window->enabledStyleMask];
-            if (window->enabledStyleMask & NSResizableWindowMask) {
+            if (window->enabledStyleMask & NSWindowStyleMaskResizable) {
                 [zoomButton setEnabled:YES];
             }
         }
         else if((window->isEnabled) && (!window->isResizable)){
             [window->nsWindow setStyleMask:
-                (window->enabledStyleMask & ~(NSUInteger) NSResizableWindowMask)];
+                (window->enabledStyleMask & ~(NSUInteger) NSWindowStyleMaskResizable)];
             [zoomButton setEnabled:NO];
         }
         else{
             window->enabledStyleMask = [window->nsWindow styleMask];
             [window->nsWindow setStyleMask:
-                (window->enabledStyleMask & ~(NSUInteger)(NSMiniaturizableWindowMask | NSResizableWindowMask))];
+                (window->enabledStyleMask & ~(NSUInteger)(NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable))];
             [zoomButton setEnabled:NO];
         }
     }
@@ -819,7 +839,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setView
         {
             CALayer *layer = [window->view layer];
             if (([layer isKindOfClass:[CAOpenGLLayer class]] == YES) &&
-                (([window->nsWindow styleMask] & NSTexturedBackgroundWindowMask) == NO))
+                (([window->nsWindow styleMask] & NSWindowStyleMaskTexturedBackground) == NO))
             {
                 [((CAOpenGLLayer*)layer) setOpaque:[window->nsWindow isOpaque]];
             }
@@ -1024,7 +1044,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1maximize
         {
             window->preZoomedRect = [window->nsWindow frame];
 
-            if ([window->nsWindow styleMask] != NSBorderlessWindowMask)
+            if ([window->nsWindow styleMask] != NSWindowStyleMaskBorderless)
             {
                 [window->nsWindow zoom:nil];
                 // windowShouldZoom will be called automatically in this case
@@ -1268,13 +1288,13 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1minimize
         GlassWindow *window = getGlassWindow(env, jPtr);
 
         NSUInteger styleMask = [window->nsWindow styleMask];
-        BOOL isMiniaturizable = (styleMask & NSMiniaturizableWindowMask) != 0;
+        BOOL isMiniaturizable = (styleMask & NSWindowStyleMaskMiniaturizable) != 0;
 
         // if the window does not have NSMiniaturizableWindowMask set
         // we need to temporarily set it to allow the window to
         // be programmatically minimized or restored.
         if (!isMiniaturizable) {
-            [window->nsWindow setStyleMask: styleMask | NSMiniaturizableWindowMask];
+            [window->nsWindow setStyleMask: styleMask | NSWindowStyleMaskMiniaturizable];
         }
 
         if (jMiniaturize == JNI_TRUE)

@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderSVGInline.h"
 #include "SVGTextPositioningElement.h"
 
@@ -37,7 +38,7 @@ public:
 
 private:
     void graphicsElement() const = delete;
-    const char* renderName() const override { return "RenderSVGTSpan"; }
+    ASCIILiteral renderName() const override { return "RenderSVGTSpan"_s; }
     bool isSVGTSpan() const override { return true; }
 };
 

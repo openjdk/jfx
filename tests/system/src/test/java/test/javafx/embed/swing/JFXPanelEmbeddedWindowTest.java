@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,19 +40,6 @@ public class JFXPanelEmbeddedWindowTest {
     private static JFrame frame;
     private static JFXPanel jfxPanel;
     private static Throwable th;
-
-    public static void main(String[] args) throws Exception {
-        init();
-        try {
-            new JFXPanelEmbeddedWindowTest().testShowThenRemove();
-            teardown();
-        } catch (Throwable th) {
-            th.printStackTrace();
-            System.exit(1);
-        } finally {
-            System.exit(0);
-        }
-    }
 
     @BeforeClass
     public static void init() throws Exception {

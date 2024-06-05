@@ -31,7 +31,10 @@
 
 #include "Document.h"
 #include "EventNames.h"
+#include "JSDOMPromiseDeferred.h"
 #include "JSWebXRReferenceSpace.h"
+#include "SecurityOrigin.h"
+#include "WebCoreOpaqueRoot.h"
 #include "WebXRBoundedReferenceSpace.h"
 #include "WebXRFrame.h"
 #include "WebXRSystem.h"
@@ -61,12 +64,12 @@ WebXRSession::WebXRSession(Document& document, WebXRSystem& system, XRSessionMod
     , m_device(device)
     , m_requestedFeatures(WTFMove(requestedFeatures))
     , m_activeRenderState(WebXRRenderState::create(mode))
-    , m_viewerReferenceSpace(makeUnique<WebXRViewerSpace>(document, *this))
+    , m_viewerReferenceSpace(WebXRViewerSpace::create(document, *this))
     , m_timeOrigin(MonotonicTime::now())
     , m_views(device.views(mode))
 {
     m_device->setTrackingAndRenderingClient(*this);
-    m_device->initializeTrackingAndRendering(mode);
+    m_device->initializeTrackingAndRendering(document.securityOrigin().data(), mode, m_requestedFeatures);
 
     // https://immersive-web.github.io/webxr/#ref-for-dom-xrreferencespacetype-viewer%E2%91%A2
     // Every session MUST support viewer XRReferenceSpaces.
@@ -166,7 +169,7 @@ ExceptionOr<void> WebXRSession::updateRenderState(const XRRenderStateInit& newSt
 bool WebXRSession::referenceSpaceIsSupported(XRReferenceSpaceType type) const
 {
     // 1. If type is not contained in session’s XR device's list of enabled features for mode return false.
-    if (!m_requestedFeatures.contains(type))
+    if (!m_requestedFeatures.contains(sessionFeatureFromReferenceSpaceType(type)))
         return false;
 
     // 2. If type is viewer, return true.
@@ -376,7 +379,7 @@ void WebXRSession::didCompleteShutdown()
     // Resolve end promise from XRSession::end()
     if (m_endPromise) {
         m_endPromise->resolve();
-        m_endPromise = std::nullopt;
+        m_endPromise = nullptr;
     }
 
     // From https://immersive-web.github.io/webxr/#shut-down-the-session
@@ -396,7 +399,7 @@ ExceptionOr<void> WebXRSession::end(EndPromise&& promise)
         return Exception { InvalidStateError, "Cannot end a session more than once"_s };
 
     ASSERT(!m_endPromise);
-    m_endPromise = WTFMove(promise);
+    m_endPromise = makeUnique<EndPromise>(WTFMove(promise));
 
     // 1. Let promise be a new Promise.
     // 2. Shut down the target XRSession object.
@@ -643,6 +646,18 @@ bool WebXRSession::posesCanBeReported(const Document& document) const
     // prevent fingerprintint in pose data and return false in case we don't.
     // We're going to apply them so let's just return true.
     return true;
+}
+
+#if ENABLE(WEBXR_HANDS)
+bool WebXRSession::isHandTrackingEnabled() const
+{
+    return m_requestedFeatures.contains(PlatformXR::SessionFeature::HandTracking);
+}
+#endif
+
+WebCoreOpaqueRoot root(WebXRSession* session)
+{
+    return WebCoreOpaqueRoot { session };
 }
 
 } // namespace WebCore

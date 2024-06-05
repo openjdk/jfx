@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,7 @@
 #include <WebCore/HTMLNames.h>
 #include <WebCore/HTMLTableSectionElement.h>
 #include <WebCore/JSExecState.h>
+#include <WebCore/HTMLTableRowElement.h>
 
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
@@ -56,7 +57,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableSectionElementImpl_ge
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableSectionElementImpl_setAlignImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::alignAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::alignAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableSectionElementImpl_getChImpl(JNIEnv* env, jclass, jlong peer)
@@ -68,7 +69,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableSectionElementImpl_ge
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableSectionElementImpl_setChImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::charAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::charAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableSectionElementImpl_getChOffImpl(JNIEnv* env, jclass, jlong peer)
@@ -80,7 +81,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableSectionElementImpl_ge
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableSectionElementImpl_setChOffImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::charoffAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::charoffAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableSectionElementImpl_getVAlignImpl(JNIEnv* env, jclass, jlong peer)
@@ -92,7 +93,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableSectionElementImpl_ge
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableSectionElementImpl_setVAlignImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::valignAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::valignAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLTableSectionElementImpl_getRowsImpl(JNIEnv* env, jclass, jlong peer)
@@ -107,7 +108,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLTableSectionElementImpl_inse
     , jint index)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<HTMLElement>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->insertRow(index))));
+    return JavaReturn<HTMLTableRowElement>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->insertRow(index))));
 }
 
 

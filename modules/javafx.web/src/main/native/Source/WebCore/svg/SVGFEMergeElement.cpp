@@ -22,7 +22,7 @@
 #include "config.h"
 #include "SVGFEMergeElement.h"
 
-#include "ElementIterator.h"
+#include "ElementChildIteratorInlines.h"
 #include "FEMerge.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGFEMergeNodeElement.h"
@@ -34,7 +34,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFEMergeElement);
 
 inline SVGFEMergeElement::SVGFEMergeElement(const QualifiedName& tagName, Document& document)
-    : SVGFilterPrimitiveStandardAttributes(tagName, document)
+    : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::feMergeTag));
 }
@@ -42,6 +42,13 @@ inline SVGFEMergeElement::SVGFEMergeElement(const QualifiedName& tagName, Docume
 Ref<SVGFEMergeElement> SVGFEMergeElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(*new SVGFEMergeElement(tagName, document));
+}
+
+void SVGFEMergeElement::childrenChanged(const ChildChange& change)
+{
+    SVGFilterPrimitiveStandardAttributes::childrenChanged(change);
+    InstanceInvalidationGuard guard(*this);
+    markFilterEffectForRebuild();
 }
 
 Vector<AtomString> SVGFEMergeElement::filterEffectInputsNames() const
@@ -52,7 +59,7 @@ Vector<AtomString> SVGFEMergeElement::filterEffectInputsNames() const
     return inputsNames;
 }
 
-RefPtr<FilterEffect> SVGFEMergeElement::filterEffect(const SVGFilterBuilder&, const FilterEffectVector& inputs) const
+RefPtr<FilterEffect> SVGFEMergeElement::createFilterEffect(const FilterEffectVector& inputs, const GraphicsContext&) const
 {
     return FEMerge::create(inputs.size());
 }

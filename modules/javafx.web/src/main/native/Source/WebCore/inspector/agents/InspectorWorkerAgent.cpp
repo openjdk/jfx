@@ -28,9 +28,9 @@
 
 #include "Document.h"
 #include "InstrumentingAgents.h"
+#include "Page.h"
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
-
 
 namespace WebCore {
 
@@ -107,9 +107,9 @@ Protocol::ErrorStringOr<void> InspectorWorkerAgent::sendMessageToWorker(const St
     return { };
 }
 
-void InspectorWorkerAgent::sendMessageFromWorkerToFrontend(WorkerInspectorProxy& proxy, const String& message)
+void InspectorWorkerAgent::sendMessageFromWorkerToFrontend(WorkerInspectorProxy& proxy, String&& message)
 {
-    m_frontendDispatcher->dispatchMessageFromWorker(proxy.identifier(), message);
+    m_frontendDispatcher->dispatchMessageFromWorker(proxy.identifier(), WTFMove(message));
 }
 
 bool InspectorWorkerAgent::shouldWaitForDebuggerOnStart() const
@@ -137,7 +137,7 @@ void InspectorWorkerAgent::connectToAllWorkerInspectorProxiesForPage()
 {
     ASSERT(m_connectedProxies.isEmpty());
 
-    for (Ref proxy : WorkerInspectorProxy::allWorkerInspectorProxies()) {
+    for (Ref proxy : WorkerInspectorProxy::allWorkerInspectorProxiesCopy()) {
         if (!is<Document>(proxy->scriptExecutionContext()))
             continue;
 

@@ -214,7 +214,7 @@ private:
     typedef HashMap<uint32_t, float, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> SingleCharMap;
     static const int s_minInterval = -3; // A cache hit pays for about 3 cache misses.
     static const int s_maxInterval = 20; // Sampling at this interval has almost no overhead.
-    static const int s_maxSize = 500000; // Just enough to guard against pathological growth.
+    static constexpr unsigned s_maxSize = 500000; // Just enough to guard against pathological growth.
 
     int m_interval;
     int m_countdown;
@@ -222,11 +222,26 @@ private:
     Map m_map;
 };
 
+#if PLATFORM(JAVA)
+inline bool check_equal(const UChar* a, const UChar* b, unsigned length)
+{
+    for (unsigned i = 0; i < length; ++i) {
+        if (a[i] != b[i])
+            return false;
+    }
+    return true;
+}
+#endif
+
 inline bool operator==(const WidthCache::SmallStringKey& a, const WidthCache::SmallStringKey& b)
 {
     if (a.length() != b.length())
         return false;
+#if PLATFORM(JAVA)
+    return check_equal(a.characters(), b.characters(), a.length());
+#else
     return equal(a.characters(), b.characters(), a.length());
+#endif
 }
 
 } // namespace WebCore

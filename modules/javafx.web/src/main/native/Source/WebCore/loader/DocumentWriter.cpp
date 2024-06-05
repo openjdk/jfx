@@ -32,15 +32,18 @@
 
 #include "ContentSecurityPolicy.h"
 #include "DOMImplementation.h"
-#include "DOMWindow.h"
 #include "DocumentInlines.h"
 #include "DocumentLoader.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "FrameLoaderStateMachine.h"
-#include "FrameView.h"
+#include "HistoryController.h"
+#include "HistoryItem.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
+#include "LocalFrameView.h"
 #include "MIMETypeRegistry.h"
+#include "Page.h"
 #include "PluginDocument.h"
 #include "RawDataDocumentParser.h"
 #include "ScriptController.h"
@@ -56,7 +59,7 @@
 
 namespace WebCore {
 
-static inline bool canReferToParentFrameEncoding(const Frame* frame, const Frame* parentFrame)
+static inline bool canReferToParentFrameEncoding(const LocalFrame* frame, const LocalFrame* parentFrame)
 {
     if (is<XMLDocument>(frame->document()))
         return false;
@@ -125,7 +128,7 @@ Ref<Document> DocumentWriter::createDocument(const URL& url, ScriptExecutionCont
     return DOMImplementation::createDocument(m_mimeType, m_frame.get(), m_frame->settings(), url, documentIdentifier);
 }
 
-bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* ownerDocument, ScriptExecutionContextIdentifier documentIdentifier)
+bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* ownerDocument, ScriptExecutionContextIdentifier documentIdentifier, const NavigationAction* triggeringAction)
 {
     // We grab a local copy of the URL because it's easy for callers to supply
     // a URL that will be deallocated during the execution of this function.
@@ -191,19 +194,32 @@ bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* own
         document->setContentSecurityPolicy(makeUnique<ContentSecurityPolicy>(URL { url }, document));
         document->contentSecurityPolicy()->copyStateFrom(ownerDocument->contentSecurityPolicy());
         document->contentSecurityPolicy()->setInsecureNavigationRequestsToUpgrade(ownerDocument->contentSecurityPolicy()->takeNavigationRequestsToUpgrade());
-    } else if (existingDocument) {
-        if (url.protocolIsData() || url.protocolIsBlob()) {
-            document->setContentSecurityPolicy(makeUnique<ContentSecurityPolicy>(URL { url }, document));
-            document->contentSecurityPolicy()->copyStateFrom(existingDocument->contentSecurityPolicy());
-            document->setCrossOriginEmbedderPolicy(existingDocument->crossOriginEmbedderPolicy());
+    } else if (url.protocolIsAbout() || url.protocolIsData()) {
+        // https://html.spec.whatwg.org/multipage/origin.html#determining-navigation-params-policy-container
+        auto* currentHistoryItem = m_frame->loader().history().currentItem();
 
-            // Fix up 'self' for blob: and data:, which is inherited from its embedding document or opener.
-            auto* parentFrame = m_frame->tree().parent();
-            if (auto* ownerFrame = parentFrame ? parentFrame : m_frame->loader().opener())
-                document->contentSecurityPolicy()->updateSourceSelf(ownerFrame->document()->securityOrigin());
+        if (currentHistoryItem && currentHistoryItem->policyContainer()) {
+            const auto& policyContainerFromHistory = currentHistoryItem->policyContainer();
+            ASSERT(policyContainerFromHistory);
+            document->inheritPolicyContainerFrom(*policyContainerFromHistory);
+        } else if (url == aboutSrcDocURL()) {
+            auto* parentFrame = dynamicDowncast<LocalFrame>(m_frame->tree().parent());
+            if (parentFrame && parentFrame->document()) {
+                document->inheritPolicyContainerFrom(parentFrame->document()->policyContainer());
+                document->contentSecurityPolicy()->updateSourceSelf(parentFrame->document()->securityOrigin());
+            }
+        } else if (triggeringAction && triggeringAction->requester()) {
+            document->inheritPolicyContainerFrom(triggeringAction->requester()->policyContainer);
+            document->contentSecurityPolicy()->updateSourceSelf(triggeringAction->requester()->securityOrigin);
         }
+
+        // https://html.spec.whatwg.org/multipage/origin.html#requires-storing-the-policy-container-in-history
+        if (triggeringAction && triggeringAction->type() != NavigationType::BackForward && currentHistoryItem)
+            currentHistoryItem->setPolicyContainer(document->policyContainer());
+        }
+
+    if (existingDocument && existingDocument->contentSecurityPolicy() && document->contentSecurityPolicy())
         document->contentSecurityPolicy()->setInsecureNavigationRequestsToUpgrade(existingDocument->contentSecurityPolicy()->takeNavigationRequestsToUpgrade());
-    }
 
     Ref protectedFrame = *m_frame;
 
@@ -229,7 +245,7 @@ TextResourceDecoder& DocumentWriter::decoder()
         m_decoder = TextResourceDecoder::create(m_mimeType,
             m_frame->settings().defaultTextEncodingName(),
             m_frame->settings().usesEncodingDetector());
-        Frame* parentFrame = m_frame->tree().parent();
+        auto* parentFrame = dynamicDowncast<LocalFrame>(m_frame->tree().parent());
         // Set the hint encoding to the parent frame encoding only if
         // the parent and the current frames share the security origin.
         // We impose this condition because somebody can make a child frame
@@ -296,7 +312,7 @@ void DocumentWriter::end()
     // http://bugs.webkit.org/show_bug.cgi?id=10854
     // The frame's last ref may be removed and it can be deleted by checkCompleted(),
     // so we'll add a protective refcount
-    Ref<Frame> protect(*m_frame);
+    Ref protectedFrame { *m_frame };
 
     if (!m_parser)
         return;
@@ -314,7 +330,7 @@ void DocumentWriter::setEncoding(const String& name, IsEncodingUserChosen isUser
     m_encodingWasChosenByUser = isUserChosen == IsEncodingUserChosen::Yes;
 }
 
-void DocumentWriter::setFrame(Frame& frame)
+void DocumentWriter::setFrame(LocalFrame& frame)
 {
     m_frame = frame;
 }

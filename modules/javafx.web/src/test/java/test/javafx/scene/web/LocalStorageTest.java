@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,19 +28,19 @@ package test.javafx.scene.web;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
-import org.junit.AfterClass;
-import org.junit.Test;
 
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
-
 import javafx.scene.web.WebView;
 import javafx.scene.web.WebEngine;
 
-
 public class LocalStorageTest extends TestBase {
 
-    private static final File LOCAL_STORAGE_DIR = new File("LocalStorageDir");
+    private static final File LOCAL_STORAGE_DIR = new File("build/localstorage");
 
     private static void deleteRecursively(File file) throws IOException {
         if (file.isDirectory()) {
@@ -48,6 +48,7 @@ public class LocalStorageTest extends TestBase {
                 deleteRecursively(f);
             }
         }
+
         if (!file.delete()) {
             // If WebKit takes time to close the file, better
             // delete it during VM shutdown.
@@ -69,9 +70,20 @@ public class LocalStorageTest extends TestBase {
         });
     }
 
+    @BeforeClass
+    public static void beforeClass() throws IOException {
+        deleteRecursively(LOCAL_STORAGE_DIR);
+    }
+
     @AfterClass
     public static void afterClass() throws IOException {
         deleteRecursively(LOCAL_STORAGE_DIR);
+    }
+
+    @After
+    public void after() {
+        final WebEngine webEngine = getEngine();
+        webEngine.setUserDataDirectory(null);
     }
 
     @Test

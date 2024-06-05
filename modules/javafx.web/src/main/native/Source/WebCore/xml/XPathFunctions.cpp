@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2005 Frerich Raabe <raabe@kde.org>
  * Copyright (C) 2006, 2009, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2019 Google Inc. All rights reserved.
  * Copyright (C) 2007 Alexey Proskuryakov <ap@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,6 +38,7 @@
 #include <wtf/MathExtras.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RobinHoodHashMap.h>
+#include <wtf/SetForScope.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -290,7 +292,7 @@ void Function::setArguments(const String& name, Vector<std::unique_ptr<Expressio
     // Functions that use the context node as an implicit argument are context node sensitive when they
     // have no arguments, but when explicit arguments are added, they are no longer context node sensitive.
     // As of this writing, the only exception to this is the "lang" function.
-    if (name != "lang" && !arguments.isEmpty())
+    if (name != "lang"_s && !arguments.isEmpty())
         setIsContextNodeSensitive(false);
 
     setSubexpressions(WTFMove(arguments));
@@ -304,14 +306,6 @@ Value FunLast::evaluate() const
 Value FunPosition::evaluate() const
 {
     return Expression::evaluationContext().position;
-}
-
-// FIXME: Should StringBuilder offer this as a member function?
-static StringView toStringView(StringBuilder& builder)
-{
-    if (builder.is8Bit())
-        return { builder.characters8(), builder.length() };
-    return { builder.characters16(), builder.length() };
 }
 
 Value FunId::evaluate() const
@@ -347,7 +341,7 @@ Value FunId::evaluate() const
 
         // If there are several nodes with the same id, id() should return the first one.
         // In WebKit, getElementById behaves so, too, although its behavior in this case is formally undefined.
-        Node* node = contextScope.getElementById(toStringView(idList).substring(startPos, endPos - startPos));
+        Node* node = contextScope.getElementById(StringView(idList).substring(startPos, endPos - startPos));
         if (node && resultSet.add(*node).isNewEntry)
             result.append(node);
 
@@ -434,8 +428,9 @@ Value FunConcat::evaluate() const
     result.reserveCapacity(1024);
 
     for (unsigned i = 0, count = argumentCount(); i < count; ++i) {
-        String str(argument(i).evaluate().toString());
-        result.append(str);
+        EvaluationContext clonedContext(Expression::evaluationContext());
+        SetForScope<EvaluationContext> contextForScope(Expression::evaluationContext(), clonedContext);
+        result.append(argument(i).evaluate().toString());
     }
 
     return result.toString();
@@ -443,8 +438,14 @@ Value FunConcat::evaluate() const
 
 Value FunStartsWith::evaluate() const
 {
+    auto clonedContext = Expression::evaluationContext();
+
     String s1 = argument(0).evaluate().toString();
-    String s2 = argument(1).evaluate().toString();
+    String s2;
+    {
+        SetForScope<EvaluationContext> contextForScope(Expression::evaluationContext(), clonedContext);
+        s2 = argument(1).evaluate().toString();
+    }
 
     if (s2.isEmpty())
         return true;
@@ -454,8 +455,14 @@ Value FunStartsWith::evaluate() const
 
 Value FunContains::evaluate() const
 {
+    auto clonedContext = Expression::evaluationContext();
+
     String s1 = argument(0).evaluate().toString();
-    String s2 = argument(1).evaluate().toString();
+    String s2;
+    {
+        SetForScope<EvaluationContext> contextForScope(Expression::evaluationContext(), clonedContext);
+        s2 = argument(1).evaluate().toString();
+    }
 
     if (s2.isEmpty())
         return true;
@@ -465,8 +472,15 @@ Value FunContains::evaluate() const
 
 Value FunSubstringBefore::evaluate() const
 {
+    auto clonedContext = Expression::evaluationContext();
+
     String s1 = argument(0).evaluate().toString();
-    String s2 = argument(1).evaluate().toString();
+    String s2;
+
+    {
+        SetForScope<EvaluationContext> contextForScope(Expression::evaluationContext(), clonedContext);
+        s2 = argument(1).evaluate().toString();
+    }
 
     if (s2.isEmpty())
         return emptyString();
@@ -481,8 +495,15 @@ Value FunSubstringBefore::evaluate() const
 
 Value FunSubstringAfter::evaluate() const
 {
+    auto clonedContext = Expression::evaluationContext();
+
     String s1 = argument(0).evaluate().toString();
-    String s2 = argument(1).evaluate().toString();
+    String s2;
+
+    {
+        SetForScope<EvaluationContext> contextForScope(Expression::evaluationContext(), clonedContext);
+        s2 = argument(1).evaluate().toString();
+    }
 
     size_t i = s1.find(s2);
     if (i == notFound)
@@ -493,8 +514,21 @@ Value FunSubstringAfter::evaluate() const
 
 Value FunSubstring::evaluate() const
 {
-    String s = argument(0).evaluate().toString();
-    double doublePos = argument(1).evaluate().toNumber();
+    EvaluationContext clonedContext1(Expression::evaluationContext());
+    EvaluationContext clonedContext2(Expression::evaluationContext());
+
+    String s;
+    double doublePos;
+
+    {
+        SetForScope<EvaluationContext> contextForScope(Expression::evaluationContext(), clonedContext1);
+        s = argument(0).evaluate().toString();
+    }
+    {
+        SetForScope<EvaluationContext> contextForScope(Expression::evaluationContext(), clonedContext2);
+        doublePos = argument(1).evaluate().toNumber();
+    }
+
     if (std::isnan(doublePos))
         return emptyString();
     long pos = static_cast<long>(FunRound::round(doublePos));
@@ -531,20 +565,31 @@ Value FunStringLength::evaluate() const
 
 Value FunNormalizeSpace::evaluate() const
 {
+    // https://www.w3.org/TR/1999/REC-xpath-19991116/#function-normalize-space
     if (!argumentCount()) {
         String s = Value(Expression::evaluationContext().node.get()).toString();
-        return s.simplifyWhiteSpace();
+        return s.simplifyWhiteSpace(isASCIIWhitespaceWithoutFF<UChar>);
     }
-
     String s = argument(0).evaluate().toString();
-    return s.simplifyWhiteSpace();
+    return s.simplifyWhiteSpace(isASCIIWhitespaceWithoutFF<UChar>);
 }
 
 Value FunTranslate::evaluate() const
 {
+    EvaluationContext clonedContext1(Expression::evaluationContext());
+    EvaluationContext clonedContext2(Expression::evaluationContext());
+
     String s1 = argument(0).evaluate().toString();
-    String s2 = argument(1).evaluate().toString();
-    String s3 = argument(2).evaluate().toString();
+    String s2, s3;
+    {
+        SetForScope<EvaluationContext> contextForScope(Expression::evaluationContext(), clonedContext1);
+        s2 = argument(1).evaluate().toString();
+    }
+    {
+        SetForScope<EvaluationContext> contextForScope(Expression::evaluationContext(), clonedContext2);
+        s3 = argument(2).evaluate().toString();
+    }
+
     StringBuilder result;
 
     for (unsigned i1 = 0; i1 < s1.length(); ++i1) {

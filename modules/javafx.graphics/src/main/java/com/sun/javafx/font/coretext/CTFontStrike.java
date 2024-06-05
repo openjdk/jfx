@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -78,19 +78,7 @@ class CTFontStrike extends PrismFontStrike<CTFontFile> {
             }
         }
 
-        if (fontResource.isEmbeddedFont()) {
-            final long cgFontRef = fontResource.getCGFontRef();
-            if (cgFontRef != 0) {
-                fontRef = OS.CTFontCreateWithGraphicsFont(
-                        cgFontRef, size, matrix, 0);
-            }
-        } else {
-            final long psNameRef = OS.CFStringCreate(fontResource.getPSName());
-            if (psNameRef != 0) {
-                fontRef = OS.CTFontCreateWithName(psNameRef, size, matrix);
-                OS.CFRelease(psNameRef);
-            }
-        }
+        fontRef = fontResource.getFontRef(size, matrix);
         if (fontRef == 0) {
             if (PrismFontFactory.debugFonts) {
                 System.err.println("Failed to create CTFont for " + this);

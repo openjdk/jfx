@@ -32,7 +32,7 @@
 #include <wtf/ProcessPrivilege.h>
 #include <wtf/UUID.h>
 #include <wtf/text/StringConcatenateNumbers.h>
-
+#include <wtf/NeverDestroyed.h>
 static std::unique_ptr<WebCore::NetworkStorageSession>& defaultNetworkStorageSession()
 {
     ASSERT(isMainThread());
@@ -62,9 +62,9 @@ WebCore::NetworkStorageSession& NetworkStorageSessionMap::defaultStorageSession(
 
 void NetworkStorageSessionMap::switchToNewTestingSession()
 {
-#if PLATFORM(COCOA) || USE(CFURLCONNECTION)
+#if PLATFORM(COCOA)
     // Session name should be short enough for shared memory region name to be under the limit, otherwise sandbox rules won't work (see <rdar://problem/13642852>).
-    auto session = WebCore::createPrivateStorageSession(makeString("WebKit Test-", getCurrentProcessID()).createCFString().get());
+    auto session = WebCore::createPrivateStorageSession(makeString("WebKit Test-"_s, getCurrentProcessID()).createCFString().get());
 
     RetainPtr<CFHTTPCookieStorageRef> cookieStorage;
     if (WebCore::NetworkStorageSession::processMayUseCookieAPI()) {
@@ -79,18 +79,18 @@ void NetworkStorageSessionMap::switchToNewTestingSession()
 
 void NetworkStorageSessionMap::ensureSession(PAL::SessionID sessionID, const String& identifierBase)
 {
-#if PLATFORM(COCOA) || USE(CFURLCONNECTION)
+#if PLATFORM(COCOA)
     auto addResult = globalSessionMap().add(sessionID, nullptr);
     if (!addResult.isNewEntry)
         return;
 
-    auto identifier = makeString(identifierBase, ".PrivateBrowsing.", createVersion4UUIDString()).createCFString();
+    auto identifier = makeString(identifierBase, ".PrivateBrowsing."_s, WTF::UUID::createVersion4()).createCFString();
 
     RetainPtr<CFURLStorageSessionRef> storageSession;
     if (sessionID.isEphemeral())
         storageSession = WebCore::createPrivateStorageSession(identifier.get());
     else
-        storageSession = WebCore::NetworkStorageSession::createCFStorageSessionForIdentifier(identifier.get(), WebCore::NetworkStorageSession::ShouldDisableCFURLCache::Yes);
+        storageSession = WebCore::NetworkStorageSession::createCFStorageSessionForIdentifier(identifier.get());
 
     RetainPtr<CFHTTPCookieStorageRef> cookieStorage;
     if (WebCore::NetworkStorageSession::processMayUseCookieAPI()) {
@@ -100,11 +100,6 @@ void NetworkStorageSessionMap::ensureSession(PAL::SessionID sessionID, const Str
     }
 
     addResult.iterator->value = makeUnique<WebCore::NetworkStorageSession>(sessionID, WTFMove(storageSession), WTFMove(cookieStorage));
-
-#elif USE(CURL)
-    globalSessionMap().ensure(sessionID, [sessionID] {
-        return makeUnique<WebCore::NetworkStorageSession>(sessionID);
-    });
 #endif
 }
 

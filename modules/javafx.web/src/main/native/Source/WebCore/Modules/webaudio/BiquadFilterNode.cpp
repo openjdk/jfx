@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011, Google Inc. All rights reserved.
+ * Copyright (C) 2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +28,7 @@
 #if ENABLE(WEB_AUDIO)
 
 #include "BiquadFilterNode.h"
+#include <JavaScriptCore/Float32Array.h>
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -74,7 +76,7 @@ ExceptionOr<void> BiquadFilterNode::getFrequencyResponse(const Ref<Float32Array>
 {
     unsigned length = frequencyHz->length();
     if (magResponse->length() != length || phaseResponse->length() != length)
-        return Exception { InvalidAccessError, "The arrays passed as arguments must have the same length" };
+        return Exception { InvalidAccessError, "The arrays passed as arguments must have the same length"_s };
 
     if (length)
         biquadProcessor()->getFrequencyResponse(length, frequencyHz->data(), magResponse->data(), phaseResponse->data());

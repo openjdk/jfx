@@ -42,6 +42,11 @@ public:
         return adoptRef(*new EmptyScriptExecutionContext(vm));
     }
 
+    ~EmptyScriptExecutionContext()
+    {
+        m_eventLoop->removeAssociatedContext(*this);
+    }
+
     bool isSecureContext() const final { return false; }
     bool isJSExecutionForbidden() const final { return false; }
     EventLoopTaskGroup& eventLoop() final
@@ -65,6 +70,8 @@ public:
 
     SecurityOrigin& topOrigin() const final { return m_origin.get(); };
 
+    std::optional<uint64_t> noiseInjectionHashSalt() const { return std::nullopt; }
+
     void postTask(Task&&) final { ASSERT_NOT_REACHED(); }
     EventTarget* errorEventTarget() final { return nullptr; };
 
@@ -81,10 +88,11 @@ public:
 private:
     EmptyScriptExecutionContext(JSC::VM& vm)
         : m_vm(vm)
-        , m_origin(SecurityOrigin::createUnique())
+        , m_origin(SecurityOrigin::createOpaque())
         , m_eventLoop(EmptyEventLoop::create(vm))
         , m_eventLoopTaskGroup(makeUnique<EventLoopTaskGroup>(m_eventLoop))
     {
+        m_eventLoop->addAssociatedContext(*this);
     }
 
     void addMessage(MessageSource, MessageLevel, const String&, const String&, unsigned, unsigned, RefPtr<Inspector::ScriptCallStack>&&, JSC::JSGlobalObject* = nullptr, unsigned long = 0) final { }
@@ -109,7 +117,7 @@ private:
 
     private:
         explicit EmptyEventLoop(JSC::VM& vm)
-            : m_queue(MicrotaskQueue(vm))
+            : m_queue(MicrotaskQueue(vm, *this))
         {
         }
 

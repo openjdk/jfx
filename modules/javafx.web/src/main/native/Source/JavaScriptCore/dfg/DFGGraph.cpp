@@ -229,6 +229,8 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
         out.print(comma, SpeculationDump(node->prediction()));
     if (node->hasNumberOfArgumentsToSkip())
         out.print(comma, "numberOfArgumentsToSkip = ", node->numberOfArgumentsToSkip());
+    if (node->hasNumberOfBoundArguments())
+        out.print(comma, "numberOfBoundArguments = ", node->numberOfBoundArguments());
     if (node->hasArrayMode())
         out.print(comma, node->arrayMode());
     if (node->hasArithUnaryType())
@@ -277,7 +279,7 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
                 if (ExecutableBase* executable = variant.executable()) {
                     if (executable->isHostFunction())
                         out.print(comma, "<host function>");
-                    else if (FunctionExecutable* functionExecutable = jsDynamicCast<FunctionExecutable*>(m_vm, executable))
+                    else if (FunctionExecutable* functionExecutable = jsDynamicCast<FunctionExecutable*>(executable))
                         out.print(comma, FunctionExecutableDump(functionExecutable));
                     else
                         out.print(comma, "<non-function executable>");
@@ -287,6 +289,8 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     }
     if (node->hasQueriedType())
         out.print(comma, node->queriedType());
+    if (node->hasStructureFlags())
+        out.print(comma, node->structureFlags());
     if (node->hasStorageAccessData()) {
         StorageAccessData& storageAccessData = node->storageAccessData();
         out.print(comma, "id", storageAccessData.identifierNumber, "{", identifiers()[storageAccessData.identifierNumber], "}");
@@ -389,6 +393,8 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
         out.print(comma, *node->putByStatus());
     if (node->hasEnumeratorMetadata())
         out.print(comma, "enumeratorModes = ", node->enumeratorMetadata().toRaw());
+    if (node->hasExtractOffset())
+        out.print(comma, "<<", node->extractOffset());
     if (node->isJump())
         out.print(comma, "T:", *node->targetBlock());
     if (node->isBranch())
@@ -530,7 +536,11 @@ void Graph::dumpBlockHeader(PrintStream& out, const char* prefixStr, BasicBlock*
             ASSERT(phiNode->op() == Phi);
             if (!phiNode->shouldGenerate() && phiNodeDumpMode == DumpLivePhisOnly)
                 continue;
-            out.print(" D@", phiNode->index(), "<", phiNode->operand(), ",", phiNode->refCount(), ">->(");
+
+            out.print(" D@", phiNode->index(), "<", phiNode->operand(), ",", phiNode->refCount());
+            if (toCString(NodeFlagsDump(phiNode->flags())) != "<empty>")
+                out.print(", ", NodeFlagsDump(phiNode->flags()));
+            out.print(">->(");
             if (phiNode->child1()) {
                 out.print("D@", phiNode->child1()->index());
                 if (phiNode->child2()) {
@@ -675,6 +685,11 @@ void Graph::packNodeIndices()
     m_nodes.packIndices();
 }
 
+void Graph::clearAbstractValues()
+{
+    m_abstractValuesCache->clear();
+}
+
 void Graph::dethread()
 {
     if (m_form == LoadStore || m_form == SSA)
@@ -721,7 +736,7 @@ void Graph::determineReachability()
     }
 }
 
-void Graph::resetReachability()
+void Graph::clearReachability()
 {
     for (BlockIndex blockIndex = m_blocks.size(); blockIndex--;) {
         BasicBlock* block = m_blocks[blockIndex].get();
@@ -730,7 +745,11 @@ void Graph::resetReachability()
         block->isReachable = false;
         block->predecessors.clear();
     }
+}
 
+void Graph::resetReachability()
+{
+    clearReachability();
     determineReachability();
 }
 
@@ -755,6 +774,8 @@ public:
             for (unsigned phiIndex = block->phis.size(); phiIndex--;)
                 block->phis[phiIndex]->setRefCount(0);
         }
+        for (auto& tupleData : m_graph.m_tupleData)
+            tupleData.refCount = 0;
 
         // Now find the roots:
         // - Nodes that are must-generate.
@@ -810,8 +831,7 @@ private:
         // will just not have gotten around to it.
         if (edge.isProved() || edge.willNotHaveCheck())
             return;
-        if (!edge->postfixRef())
-            m_worklist.append(edge.node());
+        countNode(edge.node());
     }
 
     void countNode(Node* node)
@@ -821,11 +841,14 @@ private:
         m_worklist.append(node);
     }
 
-    void countEdge(Node*, Edge edge)
+    void countEdge(Node* node, Edge edge)
     {
         // Don't count edges that are already counted for their type checks.
         if (!(edge.isProved() || edge.willNotHaveCheck()))
             return;
+        // Tuples are special and have a reference count for each result.
+        if (node->op() == ExtractFromTuple)
+            m_graph.m_tupleData.at(node->tupleIndex()).refCount++;
         countNode(edge.node());
     }
 
@@ -1061,7 +1084,10 @@ void Graph::clearFlagsOnAllNodes(NodeFlags flags)
 
 bool Graph::watchCondition(const ObjectPropertyCondition& key)
 {
-    if (!key.isWatchable())
+    if (m_plan.isUnlinked())
+        return false;
+
+    if (!key.isWatchable(PropertyCondition::MakeNoChanges))
         return false;
 
     DesiredWeakReferences& weakReferences = m_plan.weakReferences();
@@ -1081,6 +1107,9 @@ bool Graph::watchCondition(const ObjectPropertyCondition& key)
 
 bool Graph::watchConditions(const ObjectPropertyConditionSet& keys)
 {
+    if (m_plan.isUnlinked())
+        return false;
+
     if (!keys.isValid())
         return false;
 
@@ -1098,6 +1127,9 @@ bool Graph::isSafeToLoad(JSObject* base, PropertyOffset offset)
 
 bool Graph::watchGlobalProperty(JSGlobalObject* globalObject, unsigned identifierNumber)
 {
+    if (m_plan.isUnlinked())
+        return false;
+
     UniquedStringImpl* uid = identifiers()[identifierNumber];
     // If we already have a WatchpointSet, and it is already invalidated, it means that this scope operation must be changed from GlobalProperty to GlobalLexicalVar,
     // but we still have stale metadata here since we have not yet executed this bytecode operation since the invalidation. Just emitting ForceOSRExit to update the
@@ -1267,6 +1299,9 @@ unsigned Graph::requiredRegisterCountForExecutionAndExit()
 JSValue Graph::tryGetConstantProperty(
     JSValue base, const RegisteredStructureSet& structureSet, PropertyOffset offset)
 {
+    if (m_plan.isUnlinked())
+        return JSValue();
+
     if (!base || !base.isObject())
         return JSValue();
 
@@ -1282,7 +1317,7 @@ JSValue Graph::tryGetConstantProperty(
         ASSERT(structure->isValidOffset(offset));
         ASSERT(!structure->isUncacheableDictionary());
 
-        watchpoints().addLazily(set);
+        watchpoints().addLazily(*set);
     }
 
     // What follows may require some extra thought. We need this load to load a valid JSValue. If
@@ -1306,11 +1341,39 @@ JSValue Graph::tryGetConstantProperty(
     // incompatible with the getDirect we're trying to do. The easiest way to do that is to
     // determine if the structure belongs to the proven set.
 
-    Structure* structure = object->structure(m_vm);
-    if (!structureSet.toStructureSet().contains(structure))
+    JSValue result;
+    auto set = structureSet.toStructureSet();
+    {
+        Locker cellLock { object->cellLock() };
+        Structure* structure = object->structure();
+        if (!set.contains(structure))
+            return JSValue();
+        result = object->getDirectConcurrently(cellLock, structure, offset);
+    }
+
+    if (!result)
         return JSValue();
 
-    return object->getDirectConcurrently(structure, offset);
+    // If all structures are watched, we don't need to consider whether object transitions and changes the value.
+    // If the object gets transition while compiling, then it invalidates the code.
+    bool allAreWatched = true;
+    for (unsigned i = structureSet.size(); i--;) {
+        RegisteredStructure structure = structureSet[i];
+        if (!structure->dfgShouldWatch()) {
+            allAreWatched = false;
+            break;
+        }
+    }
+    if (allAreWatched)
+        return result;
+
+    // However, if structures transitions are not watched, then object can get to the one of the structures transitively while it is changing the value.
+    // But we can still optimize it if StructureSet is only one: in that case, there is no way to fulfill Structure requirement while changing the property
+    // and avoiding the replacement watchpoint firing.
+    if (structureSet.size() != 1)
+        return JSValue();
+
+    return result;
 }
 
 JSValue Graph::tryGetConstantProperty(JSValue base, Structure* structure, PropertyOffset offset)
@@ -1349,14 +1412,28 @@ AbstractValue Graph::inferredValueForProperty(
     return AbstractValue::heapTop();
 }
 
+AbstractValue Graph::inferredValueForProperty(const AbstractValue& base, const RegisteredStructureSet& structureSet, PropertyOffset offset, StructureClobberState clobberState)
+{
+    if (JSValue value = tryGetConstantProperty(base.m_value, structureSet, offset)) {
+        AbstractValue result;
+        result.set(*this, *freeze(value), clobberState);
+        return result;
+    }
+
+    return AbstractValue::heapTop();
+}
+
 JSValue Graph::tryGetConstantClosureVar(JSValue base, ScopeOffset offset)
 {
     // This has an awesome concurrency story. See comment for GetGlobalVar in ByteCodeParser.
 
+    if (m_plan.isUnlinked())
+        return JSValue();
+
     if (!base)
         return JSValue();
 
-    JSLexicalEnvironment* activation = jsDynamicCast<JSLexicalEnvironment*>(m_vm, base);
+    JSLexicalEnvironment* activation = jsDynamicCast<JSLexicalEnvironment*>(base);
     if (!activation)
         return JSValue();
 
@@ -1383,7 +1460,7 @@ JSValue Graph::tryGetConstantClosureVar(JSValue base, ScopeOffset offset)
             return JSValue();
     }
 
-    watchpoints().addLazily(set);
+    watchpoints().addLazily(*set);
 
     return value;
 }
@@ -1402,9 +1479,11 @@ JSValue Graph::tryGetConstantClosureVar(Node* node, ScopeOffset offset)
 
 JSArrayBufferView* Graph::tryGetFoldableView(JSValue value)
 {
+    if (m_plan.isUnlinked())
+        return nullptr;
     if (!value)
         return nullptr;
-    JSArrayBufferView* view = jsDynamicCast<JSArrayBufferView*>(m_vm, value);
+    JSArrayBufferView* view = jsDynamicCast<JSArrayBufferView*>(value);
     if (!view)
         return nullptr;
     if (!view->length())
@@ -1420,6 +1499,22 @@ JSArrayBufferView* Graph::tryGetFoldableView(JSValue value, ArrayMode arrayMode)
     if (arrayMode.type() != Array::AnyTypedArray && arrayMode.typedArrayType() == NotTypedArray)
         return nullptr;
     return tryGetFoldableView(value);
+}
+
+JSValue Graph::tryGetConstantGetter(Node* getterSetter)
+{
+    auto* cell = getterSetter->dynamicCastConstant<GetterSetter*>();
+    if (!cell)
+        return JSValue();
+    return cell->getterConcurrently();
+}
+
+JSValue Graph::tryGetConstantSetter(Node* getterSetter)
+{
+    auto* cell = getterSetter->dynamicCastConstant<GetterSetter*>();
+    if (!cell)
+        return JSValue();
+    return cell->setterConcurrently();
 }
 
 void Graph::registerFrozenValues()
@@ -1469,7 +1564,7 @@ FrozenValue* Graph::freeze(JSValue value)
     // point to other CodeBlocks. We don't want to have them be
     // part of the weak pointer set. For example, an optimized CodeBlock
     // having a weak pointer to itself will cause it to get collected.
-    RELEASE_ASSERT(!jsDynamicCast<CodeBlock*>(m_vm, value));
+    RELEASE_ASSERT(!jsDynamicCast<CodeBlock*>(value));
 
     auto result = m_frozenValueMap.add(JSValue::encode(value), nullptr);
     if (LIKELY(!result.isNewEntry))
@@ -1681,10 +1776,8 @@ MethodOfGettingAValueProfile Graph::methodOfGettingAValueProfileFor(Node* curren
                 Node* argumentNode = m_rootToArguments.find(block(0))->value[argument];
                 // FIXME: We should match SetArgumentDefinitely nodes at other entrypoints as well:
                 // https://bugs.webkit.org/show_bug.cgi?id=175841
-                if (argumentNode && node->variableAccessData() == argumentNode->variableAccessData()) {
-                    CodeBlock* profiledBlock = baselineCodeBlockFor(node->origin.semantic);
-                    return &profiledBlock->valueProfileForArgument(argument);
-                }
+                if (argumentNode && node->variableAccessData() == argumentNode->variableAccessData())
+                    return MethodOfGettingAValueProfile::argumentValueProfile(node->origin.semantic, node->operand());
             }
         }
 
@@ -1693,22 +1786,44 @@ MethodOfGettingAValueProfile Graph::methodOfGettingAValueProfileFor(Node* curren
             CodeBlock* profiledBlock = baselineCodeBlockFor(node->origin.semantic);
 
             if (node->accessesStack(*this)) {
-                if (node->op() == GetLocal) {
-                    return MethodOfGettingAValueProfile::fromLazyOperand(
-                        profiledBlock,
-                        LazyOperandValueProfileKey(
-                            node->origin.semantic.bytecodeIndex(), node->operand()));
+                if (node->op() == GetLocal)
+                    return MethodOfGettingAValueProfile::lazyOperandValueProfile(node->origin.semantic, node->operand());
+            }
+
+            if (node->hasHeapPrediction()) {
+                auto instruction = profiledBlock->instructions().at(node->origin.semantic.bytecodeIndex());
+                OpcodeID opcodeID = instruction->opcodeID();
+                switch (opcodeID) {
+                case op_tail_call:
+                case op_tail_call_varargs:
+                case op_tail_call_forward_arguments: {
+                    InlineCallFrame* inlineCallFrame = node->origin.semantic.inlineCallFrame();
+                    if (!inlineCallFrame)
+                        return { }; // TailCall in the outermost function.
+
+                    CodeOrigin* codeOrigin = inlineCallFrame->getCallerSkippingTailCalls();
+                    if (!codeOrigin)
+                        return { };
+
+                    CodeBlock* callerBlock = baselineCodeBlockFor(*codeOrigin);
+                    auto* valueProfile = callerBlock->tryGetValueProfileForBytecodeIndex(codeOrigin->bytecodeIndex());
+                    if (!valueProfile)
+                        return { };
+
+                    return MethodOfGettingAValueProfile::bytecodeValueProfile(*codeOrigin);
+                }
+                case op_call_ignore_result:
+                    return { };
+                default:
+                return MethodOfGettingAValueProfile::bytecodeValueProfile(node->origin.semantic);
                 }
             }
 
-            if (node->hasHeapPrediction())
-                return &profiledBlock->valueProfileForBytecodeIndex(node->origin.semantic.bytecodeIndex());
-
             if (profiledBlock->hasBaselineJITProfiling()) {
-                if (BinaryArithProfile* result = profiledBlock->binaryArithProfileForBytecodeIndex(node->origin.semantic.bytecodeIndex()))
-                    return result;
-                if (UnaryArithProfile* result = profiledBlock->unaryArithProfileForBytecodeIndex(node->origin.semantic.bytecodeIndex()))
-                    return result;
+                if (profiledBlock->binaryArithProfileForBytecodeIndex(node->origin.semantic.bytecodeIndex()))
+                    return MethodOfGettingAValueProfile::binaryArithProfile(node->origin.semantic);
+                if (profiledBlock->unaryArithProfileForBytecodeIndex(node->origin.semantic.bytecodeIndex()))
+                    return MethodOfGettingAValueProfile::unaryArithProfile(node->origin.semantic);
             }
         }
 
@@ -1725,11 +1840,14 @@ MethodOfGettingAValueProfile Graph::methodOfGettingAValueProfileFor(Node* curren
         }
     }
 
-    return MethodOfGettingAValueProfile();
+    return { };
 }
 
 bool Graph::getRegExpPrototypeProperty(JSObject* regExpPrototype, Structure* regExpPrototypeStructure, UniquedStringImpl* uid, JSValue& returnJSValue)
 {
+    if (m_plan.isUnlinked())
+        return false;
+
     PropertyOffset offset = regExpPrototypeStructure->getConcurrently(uid);
     if (!isValidOffset(offset))
         return false;
@@ -1740,9 +1858,9 @@ bool Graph::getRegExpPrototypeProperty(JSObject* regExpPrototype, Structure* reg
 
     // We only care about functions and getters at this point. If you want to access other properties
     // you'll have to add code for those types.
-    JSFunction* function = jsDynamicCast<JSFunction*>(m_vm, value);
+    JSFunction* function = jsDynamicCast<JSFunction*>(value);
     if (!function) {
-        GetterSetter* getterSetter = jsDynamicCast<GetterSetter*>(m_vm, value);
+        GetterSetter* getterSetter = jsDynamicCast<GetterSetter*>(value);
 
         if (!getterSetter)
             return false;
@@ -1764,7 +1882,7 @@ bool Graph::isStringPrototypeMethodSane(JSGlobalObject* globalObject, UniquedStr
 
     ObjectPropertyCondition equivalenceCondition = conditions.slotBaseCondition();
     RELEASE_ASSERT(equivalenceCondition.hasRequiredValue());
-    JSFunction* function = jsDynamicCast<JSFunction*>(m_vm, equivalenceCondition.condition().requiredValue());
+    JSFunction* function = jsDynamicCast<JSFunction*>(equivalenceCondition.condition().requiredValue());
     if (!function)
         return false;
 
@@ -1777,6 +1895,9 @@ bool Graph::isStringPrototypeMethodSane(JSGlobalObject* globalObject, UniquedStr
 
 bool Graph::canOptimizeStringObjectAccess(const CodeOrigin& codeOrigin)
 {
+    if (m_plan.isUnlinked())
+        return false;
+
     if (hasExitSite(codeOrigin, BadCache) || hasExitSite(codeOrigin, BadConstantCache))
         return false;
 
@@ -1784,7 +1905,7 @@ bool Graph::canOptimizeStringObjectAccess(const CodeOrigin& codeOrigin)
     Structure* stringObjectStructure = globalObjectFor(codeOrigin)->stringObjectStructure();
     registerStructure(stringObjectStructure);
     ASSERT(stringObjectStructure->storedPrototype().isObject());
-    ASSERT(stringObjectStructure->storedPrototype().asCell()->classInfo(stringObjectStructure->storedPrototype().asCell()->vm()) == StringPrototype::info());
+    ASSERT(stringObjectStructure->storedPrototype().asCell()->classInfo() == StringPrototype::info());
 
     if (!watchConditions(generateConditionsForPropertyMissConcurrently(m_vm, globalObject, stringObjectStructure, m_vm.propertyNames->toPrimitiveSymbol.impl())))
         return false;
@@ -1828,6 +1949,9 @@ bool Graph::canDoFastSpread(Node* node, const AbstractValue& value)
 {
     // The parameter 'value' is the AbstractValue for child1 (the thing being spread).
     ASSERT(node->op() == Spread);
+
+    if (m_plan.isUnlinked())
+        return false;
 
     if (node->child1().useKind() != ArrayUse) {
         // Note: we only speculate on ArrayUse when we've set up the necessary watchpoints
@@ -1883,6 +2007,18 @@ void Graph::freeDFGIRAfterLowering()
     m_backwardsCFG = nullptr;
     m_backwardsDominators = nullptr;
     m_controlEquivalenceAnalysis = nullptr;
+}
+
+const BoyerMooreHorspoolTable<uint8_t>* Graph::tryAddStringSearchTable8(const String& string)
+{
+    constexpr unsigned minPatternLength = 9;
+    if (string.length() > BoyerMooreHorspoolTable<uint8_t>::maxPatternLength)
+        return nullptr;
+    if (string.length() < minPatternLength)
+        return nullptr;
+    return m_stringSearchTable8.ensure(string, [&]() {
+        return makeUnique<BoyerMooreHorspoolTable<uint8_t>>(string);
+    }).iterator->value.get();
 }
 
 void Prefix::dump(PrintStream& out) const

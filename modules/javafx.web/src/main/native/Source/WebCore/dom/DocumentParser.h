@@ -23,16 +23,17 @@
 
 #pragma once
 
-#include "Document.h"
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
+class Document;
 class DocumentWriter;
 class SegmentedString;
 class ScriptableDocumentParser;
+class WeakPtrImplWithEventTargetData;
 
 class DocumentParser : public RefCounted<DocumentParser> {
 public:
@@ -113,7 +114,7 @@ private:
 
     // Every DocumentParser needs a pointer back to the document.
     // m_document will be 0 after the parser is stopped.
-    WeakPtr<Document> m_document;
+    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
 };
 
 } // namespace WebCore

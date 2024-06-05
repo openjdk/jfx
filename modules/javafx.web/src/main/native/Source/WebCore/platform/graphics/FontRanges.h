@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2009, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -61,7 +61,7 @@ public:
 
         UChar32 from() const { return m_from; }
         UChar32 to() const { return m_to; }
-        const Font* font(ExternalResourceDownloadPolicy) const;
+        WEBCORE_EXPORT const Font* font(ExternalResourceDownloadPolicy) const;
         const FontAccessor& fontAccessor() const { return m_fontAccessor; }
 
     private:
@@ -70,11 +70,12 @@ public:
         Ref<FontAccessor> m_fontAccessor;
     };
 
-    FontRanges();
+    FontRanges() = default;
     explicit FontRanges(RefPtr<Font>&&);
     ~FontRanges();
 
     FontRanges(const FontRanges&) = default;
+    FontRanges(FontRanges&& other, bool isGeneric);
     FontRanges& operator=(FontRanges&&) = default;
 
     bool isNull() const { return m_ranges.isEmpty(); }
@@ -89,9 +90,11 @@ public:
     WEBCORE_EXPORT const Font* fontForCharacter(UChar32) const;
     WEBCORE_EXPORT const Font& fontForFirstRange() const;
     bool isLoading() const;
+    bool isGeneric() const { return m_isGeneric; }
 
 private:
     Vector<Range, 1> m_ranges;
+    bool m_isGeneric { false };
 };
 
 }

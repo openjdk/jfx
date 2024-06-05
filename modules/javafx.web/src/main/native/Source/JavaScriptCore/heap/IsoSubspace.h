@@ -92,18 +92,13 @@ private:
 
 ALWAYS_INLINE Allocator IsoSubspace::allocatorFor(size_t size, AllocatorForMode)
 {
-    RELEASE_ASSERT(WTF::roundUpToMultipleOf<MarkedBlock::atomSize>(size) == cellSize());
+    RELEASE_ASSERT(size <= cellSize());
     return Allocator(&m_localAllocator);
 }
 
 } // namespace GCClient
 
-#define ISO_SUBSPACE_INIT(heap, heapCellType, type) ("Isolated " #type " Space", (heap), (heapCellType), sizeof(type), type::numberOfLowerTierCells)
-
-template<typename T>
-struct isAllocatedFromIsoSubspace {
-    static constexpr bool value = std::is_same<std::invoke_result_t<decltype(T::template subspaceFor<T, SubspaceAccess::OnMainThread>)&, VM&>, IsoSubspace*>::value;
-};
+#define ISO_SUBSPACE_INIT(heap, heapCellType, type) ("IsoSpace " #type, (heap), (heapCellType), sizeof(type), type::numberOfLowerTierCells)
 
 } // namespace JSC
 

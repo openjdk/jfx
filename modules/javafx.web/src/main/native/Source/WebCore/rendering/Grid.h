@@ -58,8 +58,9 @@ public:
     void setGridItemArea(const RenderBox& item, GridArea);
 
     GridSpan gridItemSpan(const RenderBox&, GridTrackSizingDirection) const;
+    GridSpan gridItemSpanIgnoringCollapsedTracks(const RenderBox&, GridTrackSizingDirection) const;
 
-    const GridCell& cell(unsigned row, unsigned column) const { return m_grid[row][column]; }
+    const GridCell& cell(unsigned row, unsigned column) const;
 
     unsigned explicitGridStart(GridTrackSizingDirection) const;
     void setExplicitGridStart(unsigned rowStart, unsigned columnStart);
@@ -85,8 +86,11 @@ public:
     void setNeedsItemsPlacement(bool);
     bool needsItemsPlacement() const { return m_needsItemsPlacement; };
 
+    void setupGridForMasonryLayout();
+    unsigned maxRows() const { return m_maxRows; }
+    unsigned maxColumns() const { return m_maxColumns; }
 private:
-    friend class GridIterator;
+    void ensureStorageForRow(unsigned row);
 
     OrderIterator m_orderIterator;
 
@@ -128,7 +132,7 @@ public:
     }
 
 private:
-    const GridAsMatrix& m_grid;
+    const Grid& m_grid;
     GridTrackSizingDirection m_direction;
     unsigned m_rowIndex;
     unsigned m_columnIndex;

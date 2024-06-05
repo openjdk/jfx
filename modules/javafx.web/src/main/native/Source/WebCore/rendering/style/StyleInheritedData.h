@@ -24,9 +24,9 @@
 
 #pragma once
 
-#include "Color.h"
 #include "FontCascade.h"
 #include "Length.h"
+#include "StyleColor.h"
 
 namespace WebCore {
 
@@ -38,7 +38,10 @@ public:
     Ref<StyleInheritedData> copy() const;
 
     bool operator==(const StyleInheritedData&) const;
-    bool operator!=(const StyleInheritedData& other) const { return !(*this == other); }
+
+    bool fastPathInheritedEqual(const StyleInheritedData&) const;
+    bool nonFastPathInheritedEqual(const StyleInheritedData&) const;
+    void fastPathInheritFrom(const StyleInheritedData&);
 
     float horizontalBorderSpacing;
     float verticalBorderSpacing;

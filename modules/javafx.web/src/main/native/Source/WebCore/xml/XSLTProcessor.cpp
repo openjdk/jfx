@@ -29,9 +29,9 @@
 #include "CachedResourceLoader.h"
 #include "ContentSecurityPolicy.h"
 #include "DocumentFragment.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameView.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "SecurityOrigin.h"
 #include "SecurityOriginPolicy.h"
 #include "Text.h"
@@ -45,8 +45,8 @@ namespace WebCore {
 static inline void transformTextStringToXHTMLDocumentString(String& text)
 {
     // Modify the output so that it is a well-formed XHTML document with a <pre> tag enclosing the text.
-    text.replaceWithLiteral('&', "&amp;");
-    text.replaceWithLiteral('<', "&lt;");
+    text = makeStringByReplacingAll(text, '&', "&amp;"_s);
+    text = makeStringByReplacingAll(text, '<', "&lt;"_s);
     text = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
         "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n"
         "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n"
@@ -64,14 +64,14 @@ XSLTProcessor::~XSLTProcessor()
 }
 
 Ref<Document> XSLTProcessor::createDocumentFromSource(const String& sourceString,
-    const String& sourceEncoding, const String& sourceMIMEType, Node* sourceNode, Frame* frame)
+    const String& sourceEncoding, const String& sourceMIMEType, Node* sourceNode, LocalFrame* frame)
 {
     Ref<Document> ownerDocument(sourceNode->document());
     bool sourceIsDocument = (sourceNode == &ownerDocument.get());
     String documentSource = sourceString;
 
     RefPtr<Document> result;
-    if (sourceMIMEType == "text/plain") {
+    if (sourceMIMEType == "text/plain"_s) {
         result = XMLDocument::createXHTML(frame, ownerDocument->settings(), sourceIsDocument ? ownerDocument->url() : URL());
         transformTextStringToXHTMLDocumentString(documentSource);
     } else
@@ -80,7 +80,7 @@ Ref<Document> XSLTProcessor::createDocumentFromSource(const String& sourceString
     // Before parsing, we need to save & detach the old document and get the new document
     // in place. We have to do this only if we're rendering the result document.
     if (frame) {
-        if (FrameView* view = frame->view())
+        if (auto* view = frame->view())
             view->clear();
 
         if (Document* oldDocument = frame->document()) {
@@ -125,11 +125,11 @@ RefPtr<DocumentFragment> XSLTProcessor::transformToFragment(Node& sourceNode, Do
 
     // If the output document is HTML, default to HTML method.
     if (outputDocument.isHTMLDocument())
-        resultMIMEType = "text/html";
+        resultMIMEType = "text/html"_s;
 
     if (!transformToString(sourceNode, resultMIMEType, resultString, resultEncoding))
         return nullptr;
-    return createFragmentForTransformToFragment(outputDocument, resultString, resultMIMEType);
+    return createFragmentForTransformToFragment(outputDocument, WTFMove(resultString), WTFMove(resultMIMEType));
 }
 
 void XSLTProcessor::setParameter(const String& /*namespaceURI*/, const String& localName, const String& value)

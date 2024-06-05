@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,7 +57,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventTargetImpl_addEventListenerI
     , jboolean useCapture)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->addEventListenerForBindings(String(env, type)
+    IMPL->addEventListenerForBindings(AtomString{String(env, type)}
             , static_cast<EventListener*>(jlong_to_ptr(listener))
             , static_cast<bool>(useCapture));
 }
@@ -69,7 +69,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventTargetImpl_removeEventListen
     , jboolean useCapture)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->removeEventListenerForBindings(String(env, type)
+    IMPL->removeEventListenerForBindings(AtomString{String(env, type)}
             , static_cast<EventListener*>(jlong_to_ptr(listener))
             , static_cast<bool>(useCapture));
 }

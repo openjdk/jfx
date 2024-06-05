@@ -22,6 +22,7 @@
 #pragma once
 
 #include "CSSSelector.h"
+#include "CommonAtomStrings.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
@@ -50,12 +51,13 @@ enum class MatchElement : uint8_t {
     HasDescendant,
     HasSibling,
     HasSiblingDescendant,
-    HasNonSubject, // FIXME: This is a catch-all for cases where :has() is in non-subject position.
+    HasNonSubjectOrScopeBreaking, // FIXME: This is a catch-all for cases where :has() is in a non-subject position, or may break scope.
     Host
 };
 constexpr unsigned matchElementCount = static_cast<unsigned>(MatchElement::Host) + 1;
 
 enum class IsNegation : bool { No, Yes };
+enum class CanBreakScope : bool { No, Yes }; // :is/not() inside scoped selector can be affected by things outside the scope.
 
 // For MSVC.
 #pragma pack(push, 4)
@@ -73,7 +75,7 @@ struct RuleFeature : public RuleAndSelector {
     MatchElement matchElement;
     IsNegation isNegation; // Whether the selector is in a (non-paired) :not() context.
 };
-static_assert(sizeof(RuleFeature) <= 16, "RuleFeature is a frquently alocated object. Keep it small.");
+static_assert(sizeof(RuleFeature) <= 16, "RuleFeature is a frequently allocated object. Keep it small.");
 
 struct RuleFeatureWithInvalidationSelector : public RuleFeature {
     RuleFeatureWithInvalidationSelector(const RuleData&, MatchElement, IsNegation, const CSSSelector* invalidationSelector);
@@ -99,7 +101,7 @@ struct RuleFeatureSet {
 
     HashSet<AtomString> idsInRules;
     HashSet<AtomString> idsMatchingAncestorsInRules;
-    HashSet<AtomString> attributeCanonicalLocalNamesInRules;
+    HashSet<AtomString> attributeLowercaseLocalNamesInRules;
     HashSet<AtomString> attributeLocalNamesInRules;
     HashSet<AtomString> contentAttributeNamesInRules;
     Vector<RuleAndSelector> siblingRules;
@@ -133,7 +135,7 @@ private:
         Vector<InvalidationFeature> pseudoClasses;
         Vector<InvalidationFeature> hasPseudoClasses;
     };
-    void recursivelyCollectFeaturesFromSelector(SelectorFeatures&, const CSSSelector&, MatchElement = MatchElement::Subject, IsNegation = IsNegation::No);
+    void recursivelyCollectFeaturesFromSelector(SelectorFeatures&, const CSSSelector&, MatchElement = MatchElement::Subject, IsNegation = IsNegation::No, CanBreakScope = CanBreakScope::No);
 };
 
 bool isHasPseudoClassMatchElement(MatchElement);
@@ -153,7 +155,7 @@ inline bool RuleFeatureSet::usesHasPseudoClass() const
         || usesMatchElement(MatchElement::HasDescendant)
         || usesMatchElement(MatchElement::HasSiblingDescendant)
         || usesMatchElement(MatchElement::HasSibling)
-        || usesMatchElement(MatchElement::HasNonSubject);
+        || usesMatchElement(MatchElement::HasNonSubjectOrScopeBreaking);
 }
 
 } // namespace Style

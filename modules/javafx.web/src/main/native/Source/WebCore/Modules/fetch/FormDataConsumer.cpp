@@ -47,12 +47,14 @@ FormDataConsumer::~FormDataConsumer()
 
 void FormDataConsumer::read()
 {
+    if (isCancelled())
+        return;
+
     ASSERT(m_callback);
-    ASSERT(m_context);
     ASSERT(!m_blobLoader);
 
     if (m_currentElementIndex >= m_formData->elements().size()) {
-        m_callback(Span<const uint8_t> { });
+        m_callback(std::span<const uint8_t> { });
         return;
     }
 
@@ -78,8 +80,7 @@ void FormDataConsumer::consumeFile(const String& filename)
                 return;
 
             if (!content) {
-                if (weakThis->m_callback)
-                    weakThis->m_callback(Exception { InvalidStateError, "Unable to read form data file"_s });
+                weakThis->didFail(Exception { InvalidStateError, "Unable to read form data file"_s });
                 return;
             }
 
@@ -99,24 +100,21 @@ void FormDataConsumer::consumeBlob(const URL& blobURL)
             return;
 
         if (auto optionalErrorCode = loader->errorCode()) {
-            if (weakThis->m_callback)
-                weakThis->m_callback(Exception { InvalidStateError, "Failed to read form data blob"_s });
+            weakThis->didFail(Exception { InvalidStateError, "Failed to read form data blob"_s });
             return;
         }
 
         if (auto data = loader->arrayBufferResult())
-            weakThis->consume(Span<const uint8_t> { static_cast<const uint8_t*>(data->data()), data->byteLength() });
+            weakThis->consume(std::span<const uint8_t> { static_cast<const uint8_t*>(data->data()), data->byteLength() });
     });
 
     m_blobLoader->start(blobURL, m_context.get(), FileReaderLoader::ReadAsArrayBuffer);
 
-    if (!m_blobLoader || !m_blobLoader->isLoading()) {
-        m_callback(Exception { InvalidStateError, "Unable to read form data blob"_s });
-        m_blobLoader = nullptr;
-    }
+    if (!m_blobLoader || !m_blobLoader->isLoading())
+        didFail(Exception { InvalidStateError, "Unable to read form data blob"_s });
 }
 
-void FormDataConsumer::consume(Span<const uint8_t> content)
+void FormDataConsumer::consume(std::span<const uint8_t> content)
 {
     if (!m_callback)
         return;
@@ -128,13 +126,19 @@ void FormDataConsumer::consume(Span<const uint8_t> content)
     read();
 }
 
+void FormDataConsumer::didFail(auto&& exception)
+{
+    auto callback = std::exchange(m_callback, nullptr);
+    cancel();
+    if (callback)
+        callback(WTFMove(exception));
+}
+
 void FormDataConsumer::cancel()
 {
     m_callback = nullptr;
-    if (m_blobLoader) {
-        m_blobLoader->cancel();
-        m_blobLoader = nullptr;
-    }
+    if (auto loader = std::exchange(m_blobLoader, { }))
+        loader->cancel();
     m_context = nullptr;
 }
 

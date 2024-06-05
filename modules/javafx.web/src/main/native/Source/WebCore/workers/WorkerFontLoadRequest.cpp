@@ -51,7 +51,7 @@ void WorkerFontLoadRequest::load(WorkerGlobalScope& workerGlobalScope)
     m_context = workerGlobalScope;
 
     ResourceRequest request { m_url };
-    ASSERT(request.httpMethod() == "GET");
+    ASSERT(request.httpMethod() == "GET"_s);
 
     FetchOptions fetchOptions;
     fetchOptions.mode = FetchOptions::Mode::SameOrigin;
@@ -64,6 +64,7 @@ void WorkerFontLoadRequest::load(WorkerGlobalScope& workerGlobalScope)
     options.sendLoadCallbacks = SendCallbackPolicy::SendCallbacks;
     options.contentSecurityPolicyEnforcement = m_context->shouldBypassMainWorldContentSecurityPolicy() ? ContentSecurityPolicyEnforcement::DoNotEnforce : ContentSecurityPolicyEnforcement::EnforceWorkerSrcDirective;
     options.loadedFromOpaqueSource = m_loadedFromOpaqueSource;
+    options.sameOriginDataURLFlag = SameOriginDataURLFlag::Set;
 
     options.serviceWorkersMode = ServiceWorkersMode::All;
 #if ENABLE(SERVICE_WORKER)
@@ -74,14 +75,13 @@ void WorkerFontLoadRequest::load(WorkerGlobalScope& workerGlobalScope)
     WorkerThreadableLoader::loadResourceSynchronously(workerGlobalScope, WTFMove(request), *this, options);
 }
 
-bool WorkerFontLoadRequest::ensureCustomFontData(const AtomString&)
+bool WorkerFontLoadRequest::ensureCustomFontData()
 {
     if (!m_fontCustomPlatformData && !m_errorOccurred && !m_isLoading) {
         RefPtr<SharedBuffer> contiguousData;
         if (m_data)
             contiguousData = m_data.takeAsContiguous();
 #if PLATFORM(JAVA)
-#else
         convertWOFFToSfntIfNecessary(contiguousData);
 #endif
         if (contiguousData) {
@@ -95,7 +95,7 @@ bool WorkerFontLoadRequest::ensureCustomFontData(const AtomString&)
     return m_fontCustomPlatformData.get();
 }
 
-RefPtr<Font> WorkerFontLoadRequest::createFont(const FontDescription& fontDescription, const AtomString&, bool syntheticBold, bool syntheticItalic, const FontCreationContext& fontCreationContext)
+RefPtr<Font> WorkerFontLoadRequest::createFont(const FontDescription& fontDescription, bool syntheticBold, bool syntheticItalic, const FontCreationContext& fontCreationContext)
 {
     ASSERT(m_fontCustomPlatformData);
     ASSERT(m_context);
@@ -141,6 +141,8 @@ void WorkerFontLoadRequest::didFinishLoading(ResourceLoaderIdentifier, const Net
 void WorkerFontLoadRequest::didFail(const ResourceError&)
 {
     m_errorOccurred = true;
+    if (m_fontLoadRequestClient)
+        m_fontLoadRequestClient->fontLoaded(*this);
 }
 
 } // namespace WebCore

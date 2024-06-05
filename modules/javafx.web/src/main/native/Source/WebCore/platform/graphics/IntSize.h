@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "PlatformExportMacros.h"
 #include <algorithm>
 #include <wtf/JSONValues.h>
 #include <wtf/Forward.h>
@@ -119,22 +120,26 @@ public:
 
     void clampToMinimumSize(const IntSize& minimumSize)
     {
-        if (m_width < minimumSize.width())
-            m_width = minimumSize.width();
-        if (m_height < minimumSize.height())
-            m_height = minimumSize.height();
+        m_width = std::max(m_width, minimumSize.width());
+        m_height = std::max(m_height, minimumSize.height());
+    }
+
+    void clampToMaximumSize(const IntSize& maximumSize)
+    {
+        m_width = std::min(m_width, maximumSize.width());
+        m_height = std::min(m_height, maximumSize.height());
     }
 
     WEBCORE_EXPORT IntSize constrainedBetween(const IntSize& min, const IntSize& max) const;
 
     template<typename T = CrashOnOverflow> Checked<unsigned, T> area() const
     {
-        return Checked<unsigned, T>(abs(m_width)) * abs(m_height);
+        return Checked<unsigned, T>(std::abs(m_width)) * std::abs(m_height);
     }
 
     uint64_t unclampedArea() const
     {
-        return static_cast<uint64_t>(abs(m_width)) * abs(m_height);
+        return static_cast<uint64_t>(std::abs(m_width)) * std::abs(m_height);
     }
 
     constexpr int diagonalLengthSquared() const
@@ -158,8 +163,8 @@ public:
 #endif
 
 #if PLATFORM(WIN)
-    IntSize(const SIZE&);
-    operator SIZE() const;
+    WEBCORE_EXPORT IntSize(const SIZE&);
+    WEBCORE_EXPORT operator SIZE() const;
 #endif
 
     String toJSONString() const;
@@ -202,11 +207,6 @@ constexpr IntSize operator-(const IntSize& size)
 constexpr bool operator==(const IntSize& a, const IntSize& b)
 {
     return a.width() == b.width() && a.height() == b.height();
-}
-
-constexpr bool operator!=(const IntSize& a, const IntSize& b)
-{
-    return a.width() != b.width() || a.height() != b.height();
 }
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const IntSize&);

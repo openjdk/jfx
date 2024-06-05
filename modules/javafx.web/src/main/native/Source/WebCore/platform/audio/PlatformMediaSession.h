@@ -44,7 +44,7 @@ class Document;
 class MediaPlaybackTarget;
 class PlatformMediaSessionClient;
 class PlatformMediaSessionManager;
-enum class DelayCallingUpdateNowPlaying { No, Yes };
+enum class DelayCallingUpdateNowPlaying : bool { No, Yes };
 struct NowPlayingInfo;
 
 class PlatformMediaSession
@@ -102,7 +102,7 @@ public:
         MayResumePlaying = 1 << 0,
     };
 
-    void clientCharacteristicsChanged();
+    virtual void clientCharacteristicsChanged(bool);
 
     void beginInterruption(InterruptionType);
     void endInterruption(EndInterruptionFlags);
@@ -159,6 +159,7 @@ public:
     bool isHidden() const;
     bool isSuspended() const;
     bool isPlaying() const;
+    bool isAudible() const;
 
     bool shouldOverrideBackgroundLoadingRestriction() const;
 
@@ -179,13 +180,14 @@ public:
 
     bool activeAudioSessionRequired() const;
     bool canProduceAudio() const;
+    bool hasMediaStreamSource() const;
     void canProduceAudioChanged();
 
     virtual void resetPlaybackSessionState() { }
     String sourceApplicationIdentifier() const;
 
-    bool hasPlayedSinceLastInterruption() const { return m_hasPlayedSinceLastInterruption; }
-    void clearHasPlayedSinceLastInterruption() { m_hasPlayedSinceLastInterruption = false; }
+    bool hasPlayedAudiblySinceLastInterruption() const { return m_hasPlayedAudiblySinceLastInterruption; }
+    void clearHasPlayedAudiblySinceLastInterruption() { m_hasPlayedAudiblySinceLastInterruption = false; }
 
     bool preparingToPlay() const { return m_preparingToPlay; }
 
@@ -226,7 +228,7 @@ private:
     bool m_active { false };
     bool m_notifyingClient { false };
     bool m_isPlayingToWirelessPlaybackTarget { false };
-    bool m_hasPlayedSinceLastInterruption { false };
+    bool m_hasPlayedAudiblySinceLastInterruption { false };
     bool m_preparingToPlay { false };
 
 #if !RELEASE_LOG_DISABLED
@@ -257,6 +259,7 @@ public:
     virtual bool canProduceAudio() const { return false; }
     virtual bool isSuspended() const { return false; };
     virtual bool isPlaying() const { return false; };
+    virtual bool isAudible() const { return false; };
 
     virtual bool shouldOverrideBackgroundPlaybackRestriction(PlatformMediaSession::InterruptionType) const = 0;
     virtual bool shouldOverrideBackgroundLoadingRestriction() const { return false; }

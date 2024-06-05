@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@ import java.io.IOException;
 import javafx.css.CssParser;
 import javafx.css.PseudoClass;
 import javafx.css.Stylesheet;
+import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
@@ -106,13 +107,13 @@ public class CssStyleHelperTest {
         Toolkit.getToolkit().firePulse();
         assertEquals("Italic", C.getFont().getStyle());
         assertEquals("Italic", D.getFont().getStyle());
-        assertNull(E.getFont().getStyle());
+        assertEquals("Regular", E.getFont().getStyle());
 
         B.getChildren().add(D); //move D
         Toolkit.getToolkit().firePulse();
         assertEquals("Italic", C.getFont().getStyle());
-        assertNull(D.getFont().getStyle());
-        assertNull(E.getFont().getStyle());
+        assertEquals("Regular", D.getFont().getStyle());
+        assertEquals("Regular", E.getFont().getStyle());
     }
 
     @Test
@@ -193,7 +194,7 @@ public class CssStyleHelperTest {
         Toolkit.getToolkit().firePulse();
         assertEquals("Italic", C.getFont().getStyle());
         assertEquals("Italic", D.getFont().getStyle());
-        assertNull(E.getFont().getStyle());
+        assertEquals("Regular", E.getFont().getStyle());
 
         A.getChildren().remove(D); //move D
         Toolkit.getToolkit().firePulse();
@@ -201,8 +202,8 @@ public class CssStyleHelperTest {
         Toolkit.getToolkit().firePulse();
 
         assertEquals("Italic", C.getFont().getStyle());
-        assertNull(D.getFont().getStyle());
-        assertNull(E.getFont().getStyle());
+        assertEquals("Regular", D.getFont().getStyle());
+        assertEquals("Regular", E.getFont().getStyle());
     }
 
     @Test
@@ -481,7 +482,7 @@ public class CssStyleHelperTest {
         A.getChildren().add(C);
         Toolkit.getToolkit().firePulse();
 
-        assertNull(C.getFont().getStyle());
+        assertEquals("Regular", C.getFont().getStyle());
     }
 
     @Test
@@ -517,7 +518,7 @@ public class CssStyleHelperTest {
         A.getChildren().add(C);
         Toolkit.getToolkit().firePulse();
 
-        assertNull(C.getFont().getStyle());
+        assertEquals("Regular", C.getFont().getStyle());
     }
 
     @Test
@@ -552,7 +553,7 @@ public class CssStyleHelperTest {
         A.getChildren().add(C);
         Toolkit.getToolkit().firePulse();
 
-        assertNull(C.getFont().getStyle());
+        assertEquals("Regular", C.getFont().getStyle());
     }
 
     @Test
@@ -607,5 +608,54 @@ public class CssStyleHelperTest {
         assertEquals(Color.BLUE, D.backgroundProperty().getValue().getFills().get(0).getFill());
         assertEquals(Color.BLUE, E.backgroundProperty().getValue().getFills().get(0).getFill());
         assertEquals(Color.BLUE, F.backgroundProperty().getValue().getFills().get(0).getFill());
+    }
+
+    @Test
+    public void initialNodeWithUserSetValueShouldNotResetValuesOnOtherNodesWithoutOverriddenValue() throws IOException {
+        Stylesheet stylesheet = new CssParser().parse(
+            "initialNodeWithUserSetValueShouldNotResetValuesOnOtherNodesWithoutOverridenValue",
+            """
+                .pane {
+                    -fx-padding: 4;
+                }
+            """
+        );
+
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
+        Pane a = new Pane();
+        Pane b = new Pane();
+
+        a.getStyleClass().add("pane");
+        a.setPadding(new Insets(10));
+
+        b.getStyleClass().add("pane");
+
+        root.getChildren().addAll(a, b);
+
+        stage.show();
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(new Insets(10), a.getPadding());
+        assertEquals(new Insets(4), b.getPadding());
+
+        // When changing a to focused, this will be the first time that the padding
+        // property is seen in the state focused. A new cache entry is created, which
+        // despite the padding value being overridden, should still add the padding value
+        // that comes from the USER_AGENT stylesheet as this entry is shared with
+        // all other nodes with the same property, with the same state at the same nesting level.
+        a.pseudoClassStateChanged(PseudoClass.getPseudoClass("focused"), true);
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(new Insets(10), a.getPadding());
+        assertEquals(new Insets(4), b.getPadding());
+
+        // When changing b to focused, it should not have its padding changed. If b
+        // padding does change, then the cache entry was incorrect.
+        a.pseudoClassStateChanged(PseudoClass.getPseudoClass("focused"), false);
+        b.pseudoClassStateChanged(PseudoClass.getPseudoClass("focused"), true);
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(new Insets(10), a.getPadding());
+        assertEquals(new Insets(4), b.getPadding());
     }
 }

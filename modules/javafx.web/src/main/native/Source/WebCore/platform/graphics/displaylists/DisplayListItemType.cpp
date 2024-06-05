@@ -68,22 +68,32 @@ static size_t sizeOfItemInBytes(ItemType type)
         return sizeof(ClearShadow);
     case ItemType::Clip:
         return sizeof(Clip);
+    case ItemType::ClipRoundedRect:
+        return sizeof(ClipRoundedRect);
     case ItemType::ClipOut:
         return sizeof(ClipOut);
+    case ItemType::ClipOutRoundedRect:
+        return sizeof(ClipOutRoundedRect);
     case ItemType::ClipToImageBuffer:
         return sizeof(ClipToImageBuffer);
     case ItemType::ClipOutToPath:
         return sizeof(ClipOutToPath);
     case ItemType::ClipPath:
         return sizeof(ClipPath);
+    case ItemType::ResetClip:
+        return sizeof(ResetClip);
     case ItemType::DrawFilteredImageBuffer:
         return sizeof(DrawFilteredImageBuffer);
     case ItemType::DrawGlyphs:
         return sizeof(DrawGlyphs);
+    case ItemType::DrawDecomposedGlyphs:
+        return sizeof(DrawDecomposedGlyphs);
     case ItemType::DrawImageBuffer:
         return sizeof(DrawImageBuffer);
     case ItemType::DrawNativeImage:
         return sizeof(DrawNativeImage);
+    case ItemType::DrawSystemImage:
+        return sizeof(DrawSystemImage);
     case ItemType::DrawPattern:
         return sizeof(DrawPattern);
     case ItemType::DrawRect:
@@ -124,12 +134,12 @@ static size_t sizeOfItemInBytes(ItemType type)
     case ItemType::FillBezierCurve:
         return sizeof(FillBezierCurve);
 #endif
+    case ItemType::FillPathSegment:
+        return sizeof(FillPathSegment);
     case ItemType::FillPath:
         return sizeof(FillPath);
     case ItemType::FillEllipse:
         return sizeof(FillEllipse);
-    case ItemType::FlushContext:
-        return sizeof(FlushContext);
 #if ENABLE(VIDEO)
     case ItemType::PaintFrameForMedia:
         return sizeof(PaintFrameForMedia);
@@ -146,12 +156,16 @@ static size_t sizeOfItemInBytes(ItemType type)
     case ItemType::StrokeBezierCurve:
         return sizeof(StrokeBezierCurve);
 #endif
+    case ItemType::StrokePathSegment:
+        return sizeof(StrokePathSegment);
     case ItemType::StrokePath:
         return sizeof(StrokePath);
     case ItemType::StrokeEllipse:
         return sizeof(StrokeEllipse);
     case ItemType::ClearRect:
         return sizeof(ClearRect);
+    case ItemType::DrawControlPart:
+        return sizeof(DrawControlPart);
     case ItemType::BeginTransparencyLayer:
         return sizeof(BeginTransparencyLayer);
     case ItemType::EndTransparencyLayer:
@@ -182,12 +196,14 @@ bool isDrawingItem(ItemType type)
 #endif
     case ItemType::ClearShadow:
     case ItemType::Clip:
+    case ItemType::ClipRoundedRect:
     case ItemType::ClipOut:
+    case ItemType::ClipOutRoundedRect:
     case ItemType::ClipToImageBuffer:
     case ItemType::ClipOutToPath:
     case ItemType::ClipPath:
+    case ItemType::ResetClip:
     case ItemType::ConcatenateCTM:
-    case ItemType::FlushContext:
     case ItemType::Restore:
     case ItemType::Rotate:
     case ItemType::Save:
@@ -205,16 +221,19 @@ bool isDrawingItem(ItemType type)
         return false;
     case ItemType::BeginTransparencyLayer:
     case ItemType::ClearRect:
+    case ItemType::DrawControlPart:
     case ItemType::DrawDotsForDocumentMarker:
     case ItemType::DrawEllipse:
     case ItemType::DrawFilteredImageBuffer:
     case ItemType::DrawFocusRingPath:
     case ItemType::DrawFocusRingRects:
     case ItemType::DrawGlyphs:
+    case ItemType::DrawDecomposedGlyphs:
     case ItemType::DrawImageBuffer:
     case ItemType::DrawLine:
     case ItemType::DrawLinesForText:
     case ItemType::DrawNativeImage:
+    case ItemType::DrawSystemImage:
     case ItemType::DrawPattern:
     case ItemType::DrawPath:
     case ItemType::DrawRect:
@@ -227,6 +246,7 @@ bool isDrawingItem(ItemType type)
     case ItemType::FillQuadCurve:
     case ItemType::FillBezierCurve:
 #endif
+    case ItemType::FillPathSegment:
     case ItemType::FillPath:
     case ItemType::FillRect:
     case ItemType::FillRectWithColor:
@@ -242,6 +262,7 @@ bool isDrawingItem(ItemType type)
     case ItemType::StrokeQuadCurve:
     case ItemType::StrokeBezierCurve:
 #endif
+    case ItemType::StrokePathSegment:
     case ItemType::StrokePath:
     case ItemType::StrokeRect:
     case ItemType::StrokeLine:
@@ -280,6 +301,8 @@ bool isInlineItem(ItemType type)
     switch (type) {
     case ItemType::ClipOutToPath:
     case ItemType::ClipPath:
+    case ItemType::DrawControlPart:
+    case ItemType::DrawDotsForDocumentMarker:
     case ItemType::DrawFocusRingPath:
     case ItemType::DrawFocusRingRects:
     case ItemType::DrawGlyphs:
@@ -294,6 +317,7 @@ bool isInlineItem(ItemType type)
     case ItemType::SetLineDash:
     case ItemType::SetState:
     case ItemType::StrokePath:
+    case ItemType::DrawSystemImage:
         return false;
     case ItemType::ApplyDeviceScaleFactor:
 #if USE(CG)
@@ -304,12 +328,15 @@ bool isInlineItem(ItemType type)
     case ItemType::ClearRect:
     case ItemType::ClearShadow:
     case ItemType::Clip:
+    case ItemType::ClipRoundedRect:
     case ItemType::ClipOut:
+    case ItemType::ClipOutRoundedRect:
     case ItemType::ClipToImageBuffer:
+    case ItemType::ResetClip:
     case ItemType::ConcatenateCTM:
-    case ItemType::DrawDotsForDocumentMarker:
     case ItemType::DrawEllipse:
     case ItemType::DrawFilteredImageBuffer:
+    case ItemType::DrawDecomposedGlyphs:
     case ItemType::DrawImageBuffer:
     case ItemType::DrawNativeImage:
     case ItemType::DrawPattern:
@@ -323,8 +350,8 @@ bool isInlineItem(ItemType type)
     case ItemType::FillQuadCurve:
     case ItemType::FillBezierCurve:
 #endif
+    case ItemType::FillPathSegment:
     case ItemType::FillRect:
-    case ItemType::FlushContext:
 #if ENABLE(VIDEO)
     case ItemType::PaintFrameForMedia:
 #endif
@@ -345,6 +372,7 @@ bool isInlineItem(ItemType type)
     case ItemType::StrokeQuadCurve:
     case ItemType::StrokeBezierCurve:
 #endif
+    case ItemType::StrokePathSegment:
     case ItemType::StrokeRect:
     case ItemType::StrokeLine:
     case ItemType::Translate:

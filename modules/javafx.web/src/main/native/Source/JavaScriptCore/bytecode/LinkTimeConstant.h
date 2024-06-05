@@ -33,7 +33,7 @@ class CodeBlock;
 class JSGlobalObject;
 
 #define JSC_FOREACH_LINK_TIME_CONSTANTS(v) \
-    JSC_FOREACH_BUILTIN_FUNCTION_PRIVATE_GLOBAL_NAME(v) \
+    JSC_FOREACH_BUILTIN_LINK_TIME_CONSTANT(v) \
     v(throwTypeErrorFunction, nullptr) \
     v(importModule, nullptr) \
     v(mapBucketHead, nullptr) \
@@ -43,6 +43,7 @@ class JSGlobalObject;
     v(setBucketHead, nullptr) \
     v(setBucketNext, nullptr) \
     v(setBucketKey, nullptr) \
+    v(setClone, nullptr) \
     v(setPrototypeDirect, nullptr) \
     v(setPrototypeDirectOrThrow, nullptr) \
     v(copyDataProperties, nullptr) \
@@ -50,14 +51,16 @@ class JSGlobalObject;
     v(makeTypeError, nullptr) \
     v(AggregateError, nullptr) \
     v(typedArrayLength, nullptr) \
+    v(typedArrayClone, nullptr) \
     v(typedArrayContentType, nullptr) \
     v(typedArrayGetOriginalConstructor, nullptr) \
     v(typedArraySort, nullptr) \
     v(isTypedArrayView, nullptr) \
     v(isSharedTypedArrayView, nullptr) \
+    v(isResizableOrGrowableSharedTypedArrayView, nullptr) \
+    v(typedArrayFromFast, nullptr) \
     v(isDetached, nullptr) \
     v(typedArrayDefaultComparator, nullptr) \
-    v(typedArraySubarrayCreate, nullptr) \
     v(isBoundFunction, nullptr) \
     v(hasInstanceBoundFunction, nullptr) \
     v(instanceOf, nullptr) \
@@ -70,7 +73,6 @@ class JSGlobalObject;
     v(InternalPromise, nullptr) \
     v(defaultPromiseThen, nullptr) \
     v(repeatCharacter, nullptr) \
-    v(arraySpeciesCreate, nullptr) \
     v(isArray, nullptr) \
     v(isArraySlow, nullptr) \
     v(concatMemcpy, nullptr) \
@@ -79,6 +81,7 @@ class JSGlobalObject;
     v(Set, nullptr) \
     v(Map, nullptr) \
     v(thisTimeValue, nullptr) \
+    v(importMapStatus, nullptr) \
     v(importInRealm, nullptr) \
     v(evalInRealm, nullptr) \
     v(moveFunctionToRealm, nullptr) \
@@ -91,6 +94,7 @@ class JSGlobalObject;
     v(regExpProtoSourceGetter, nullptr) \
     v(regExpProtoStickyGetter, nullptr) \
     v(regExpProtoUnicodeGetter, nullptr) \
+    v(regExpProtoUnicodeSetsGetter, nullptr) \
     v(regExpBuiltinExec, nullptr) \
     v(regExpCreate, nullptr) \
     v(isRegExp, nullptr) \
@@ -103,9 +107,10 @@ class JSGlobalObject;
     v(stringIncludesInternal, nullptr) \
     v(stringIndexOfInternal, nullptr) \
     v(stringSplitFast, nullptr) \
-    v(stringSubstringInternal, nullptr) \
-    v(makeBoundFunction, nullptr) \
-    v(hasOwnLengthProperty, nullptr) \
+    v(stringSubstring, nullptr) \
+    v(handleNegativeProxyHasTrapResult, nullptr) \
+    v(handlePositiveProxySetTrapResult, nullptr) \
+    v(handleProxyGetTrapResult, nullptr) \
     v(dateTimeFormat, nullptr) \
     v(webAssemblyCompileStreamingInternal, nullptr) \
     v(webAssemblyInstantiateStreamingInternal, nullptr) \
@@ -119,6 +124,21 @@ class JSGlobalObject;
     v(sentinelString, nullptr) \
     v(createRemoteFunction, nullptr) \
     v(isRemoteFunction, nullptr) \
+    v(arraySort, nullptr) \
+    v(jsonParse, nullptr) \
+    v(jsonStringify, nullptr) \
+    v(String, nullptr) \
+    v(Int8Array, nullptr) \
+    v(Uint8Array, nullptr) \
+    v(Uint8ClampedArray, nullptr) \
+    v(Int16Array, nullptr) \
+    v(Uint16Array, nullptr) \
+    v(Int32Array, nullptr) \
+    v(Uint32Array, nullptr) \
+    v(Float32Array, nullptr) \
+    v(Float64Array, nullptr) \
+    v(BigInt64Array, nullptr) \
+    v(BigUint64Array, nullptr) \
 
 
 #define DECLARE_LINK_TIME_CONSTANT(name, code) name,

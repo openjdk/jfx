@@ -22,12 +22,14 @@
 #include "RegExp.h"
 
 #include "InitializeThreading.h"
+#include "JSArrayBufferViewInlines.h"
 #include "JSCInlines.h"
 #include "YarrFlags.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <wtf/Vector.h>
+#include <wtf/WTFProcess.h>
 #include <wtf/text/StringBuilder.h>
 
 #if COMPILER(MSVC)
@@ -122,7 +124,7 @@ private:
 };
 STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(GlobalObject, JSGlobalObject);
 
-const ClassInfo GlobalObject::s_info = { "global", &JSGlobalObject::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(GlobalObject) };
+const ClassInfo GlobalObject::s_info = { "global"_s, &JSGlobalObject::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(GlobalObject) };
 
 GlobalObject::GlobalObject(VM& vm, Structure* structure, const Vector<String>& arguments)
     : JSGlobalObject(vm, structure)
@@ -318,7 +320,7 @@ static RegExp* parseRegExpLine(VM& vm, char* line, int lineLength, const char** 
 
     ++i;
 
-    auto flags = Yarr::parseFlags(line + i);
+    auto flags = Yarr::parseFlags(StringView::fromLatin1(line + i));
     if (!flags) {
         *regexpError = Yarr::errorMessage(Yarr::ErrorCode::InvalidRegularExpressionFlags);
         return nullptr;
@@ -494,7 +496,7 @@ static NO_RETURN void printUsageStatement(bool help = false)
     fprintf(stderr, "  -h|--help  Prints this help message\n");
     fprintf(stderr, "  -v|--verbose  Verbose output\n");
 
-    exit(help ? EXIT_SUCCESS : EXIT_FAILURE);
+    exitProcess(help ? EXIT_SUCCESS : EXIT_FAILURE);
 }
 
 static void parseArguments(int argc, char** argv, CommandLine& options)
@@ -507,11 +509,11 @@ static void parseArguments(int argc, char** argv, CommandLine& options)
         if (!strcmp(arg, "-v") || !strcmp(arg, "--verbose"))
             options.verbose = true;
         else
-            options.files.append(argv[i]);
+            options.files.append(String::fromLatin1(argv[i]));
     }
 
     for (; i < argc; ++i)
-        options.arguments.append(argv[i]);
+        options.arguments.append(String::fromLatin1(argv[i]));
 }
 
 int realMain(int argc, char** argv)

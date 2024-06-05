@@ -63,12 +63,16 @@ bool FloatRoundedRect::Radii::isZero() const
     return m_topLeft.isZero() && m_topRight.isZero() && m_bottomLeft.isZero() && m_bottomRight.isZero();
 }
 
-bool FloatRoundedRect::Radii::isUniformCornerRadius() const
+bool FloatRoundedRect::Radii::hasEvenCorners() const
 {
-    return WTF::areEssentiallyEqual(m_topLeft.width(), m_topLeft.height())
-        && areEssentiallyEqual(m_topLeft, m_topRight)
+    return areEssentiallyEqual(m_topLeft, m_topRight)
         && areEssentiallyEqual(m_topLeft, m_bottomLeft)
         && areEssentiallyEqual(m_topLeft, m_bottomRight);
+}
+
+bool FloatRoundedRect::Radii::isUniformCornerRadius() const
+{
+    return WTF::areEssentiallyEqual(m_topLeft.width(), m_topLeft.height()) && hasEvenCorners();
 }
 
 void FloatRoundedRect::Radii::scale(float factor)
@@ -205,16 +209,12 @@ bool FloatRoundedRect::intersectionIsRectangular(const FloatRect& rect) const
 
 TextStream& operator<<(TextStream& ts, const FloatRoundedRect& roundedRect)
 {
-    ts << roundedRect.rect().x() << " " << roundedRect.rect().y() << " " << roundedRect.rect().width() << " " << roundedRect.rect().height() << "\n";
-
-    TextStream::IndentScope indentScope(ts);
-    ts << indent << "topLeft=" << roundedRect.topLeftCorner().width() << " " << roundedRect.topLeftCorner().height() << "\n";
-    ts << indent << "topRight=" << roundedRect.topRightCorner().width() << " " << roundedRect.topRightCorner().height() << "\n";
-    ts << indent << "bottomLeft=" << roundedRect.bottomLeftCorner().width() << " " << roundedRect.bottomLeftCorner().height() << "\n";
-    ts << indent << "bottomRight=" << roundedRect.bottomRightCorner().width() << " " << roundedRect.bottomRightCorner().height();
+    ts << roundedRect.rect();
+    ts.dumpProperty("top-left", roundedRect.radii().topLeft());
+    ts.dumpProperty("top-right", roundedRect.radii().topRight());
+    ts.dumpProperty("bottom-left", roundedRect.radii().bottomLeft());
+    ts.dumpProperty("bottom-right", roundedRect.radii().bottomRight());
     return ts;
 }
-
-
 
 } // namespace WebCore

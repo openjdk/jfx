@@ -29,7 +29,7 @@
 #include "LLIntCommon.h"
 #include "LLIntData.h"
 #include "LLIntThunks.h"
-#include "WasmContextInlines.h"
+#include "WasmContext.h"
 
 #if LLINT_TRACING
 #include "CatchScope.h"
@@ -38,7 +38,7 @@
 
 namespace JSC { namespace LLInt {
 
-Instruction* returnToThrow(VM& vm)
+JSInstruction* returnToThrow(VM& vm)
 {
     UNUSED_PARAM(vm);
 #if LLINT_TRACING
@@ -50,7 +50,7 @@ Instruction* returnToThrow(VM& vm)
     return LLInt::exceptionInstructions();
 }
 
-Instruction* wasmReturnToThrow(VM& vm)
+WasmInstruction* wasmReturnToThrow(VM& vm)
 {
     UNUSED_PARAM(vm);
 #if LLINT_TRACING
@@ -112,7 +112,7 @@ MacroAssemblerCodeRef<ExceptionHandlerPtrTag> handleWasmCatch(OpcodeSize size)
     if (Options::useJIT())
         return handleWasmCatchThunk(size);
 #endif
-    WasmOpcodeID opcode = Wasm::Context::useFastTLS() ? wasm_catch : wasm_catch_no_tls;
+    WasmOpcodeID opcode = wasm_catch;
     switch (size) {
     case OpcodeSize::Narrow:
         return LLInt::getCodeRef<ExceptionHandlerPtrTag>(opcode);
@@ -131,7 +131,7 @@ MacroAssemblerCodeRef<ExceptionHandlerPtrTag> handleWasmCatchAll(OpcodeSize size
     if (Options::useJIT())
         return handleWasmCatchAllThunk(size);
 #endif
-    WasmOpcodeID opcode = Wasm::Context::useFastTLS() ? wasm_catch_all : wasm_catch_all_no_tls;
+    WasmOpcodeID opcode = wasm_catch_all;
     switch (size) {
     case OpcodeSize::Narrow:
         return LLInt::getCodeRef<ExceptionHandlerPtrTag>(opcode);

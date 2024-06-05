@@ -30,7 +30,7 @@
 
 namespace WebCore {
 
-TextStream& operator<<(TextStream& ts, OptionSet<ActivityState::Flag> flags)
+TextStream& operator<<(TextStream& ts, OptionSet<ActivityState> flags)
 {
     bool didAppend = false;
 
@@ -52,6 +52,7 @@ TextStream& operator<<(TextStream& ts, OptionSet<ActivityState::Flag> flags)
     appendIf(ActivityState::IsAudible, "audible");
     appendIf(ActivityState::IsLoading, "loading");
     appendIf(ActivityState::IsCapturingMedia, "capturing media");
+    appendIf(ActivityState::IsConnectedToHardwareConsole, "attached to hardware console");
 
     return ts;
 }

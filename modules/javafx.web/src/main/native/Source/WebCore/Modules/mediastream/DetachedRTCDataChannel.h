@@ -38,13 +38,15 @@ struct DetachedRTCDataChannel {
     WTF_MAKE_NONCOPYABLE(DetachedRTCDataChannel);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    DetachedRTCDataChannel(RTCDataChannelIdentifier identifier, const String& label, const RTCDataChannelInit& options, RTCDataChannelState state)
+    DetachedRTCDataChannel(RTCDataChannelIdentifier identifier, String&& label, RTCDataChannelInit&& options, RTCDataChannelState state)
         : identifier(identifier)
-        , label(label.isolatedCopy())
-        , options(options.isolatedCopy())
+        , label(WTFMove(label).isolatedCopy())
+        , options(WTFMove(options).isolatedCopy())
         , state(state)
     {
     }
+    DetachedRTCDataChannel(DetachedRTCDataChannel&&) = default;
+    DetachedRTCDataChannel& operator=(DetachedRTCDataChannel&&) = default;
 
     size_t memoryCost() const { return label.sizeInBytes(); }
 
@@ -52,39 +54,7 @@ public:
     String label;
     RTCDataChannelInit options;
     RTCDataChannelState state { RTCDataChannelState::Closed };
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::unique_ptr<DetachedRTCDataChannel> decode(Decoder&);
 };
-
-template<class Encoder> void DetachedRTCDataChannel::encode(Encoder& encoder) const
-{
-    encoder << identifier << label << options << state;
-}
-
-template<class Decoder> std::unique_ptr<DetachedRTCDataChannel> DetachedRTCDataChannel::decode(Decoder& decoder)
-{
-    std::optional<RTCDataChannelIdentifier> identifier;
-    decoder >> identifier;
-    if (!identifier)
-        return { };
-
-    String label;
-    if (!decoder.decode(label))
-        return { };
-
-    std::optional<RTCDataChannelInit> options;
-    decoder >> options;
-    if (!options)
-        return { };
-
-    std::optional<RTCDataChannelState> state;
-    decoder >> state;
-    if (!state)
-        return { };
-
-    return makeUnique<DetachedRTCDataChannel>(*identifier, WTFMove(label), *options, *state);
-}
 
 } // namespace WebCore
 

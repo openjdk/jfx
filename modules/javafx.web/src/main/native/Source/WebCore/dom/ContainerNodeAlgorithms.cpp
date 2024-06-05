@@ -26,12 +26,14 @@
 #include "config.h"
 #include "ContainerNodeAlgorithms.h"
 
+#include "ElementChildIteratorInlines.h"
+#include "ElementRareData.h"
 #include "HTMLFrameOwnerElement.h"
 #include "HTMLTextAreaElement.h"
 #include "InspectorInstrumentation.h"
 #include "ScriptDisallowedScope.h"
 #include "ShadowRoot.h"
-#include "TypedElementDescendantIterator.h"
+#include "TypedElementDescendantIteratorInlines.h"
 
 namespace WebCore {
 
@@ -86,7 +88,9 @@ static void notifyNodeInsertedIntoTree(ContainerNode& parentOfInsertedTree, Node
         notifyNodeInsertedIntoTree(parentOfInsertedTree, *root, TreeScopeChange::DidNotChange, postInsertionNotificationTargets);
 }
 
-NodeVector notifyChildNodeInserted(ContainerNode& parentOfInsertedTree, Node& node)
+// We intentionally use an out-parameter for postInsertionNotificationTargets instead of returning the vector. This is because
+// NodeVector has a large inline buffer and is thus not cheap to move.
+void notifyChildNodeInserted(ContainerNode& parentOfInsertedTree, Node& node, NodeVector& postInsertionNotificationTargets)
 {
     ASSERT(ScriptDisallowedScope::InMainThread::hasDisallowedScope());
 
@@ -95,16 +99,12 @@ NodeVector notifyChildNodeInserted(ContainerNode& parentOfInsertedTree, Node& no
     Ref<Document> protectDocument(node.document());
     Ref<Node> protectNode(node);
 
-    NodeVector postInsertionNotificationTargets;
-
     // Tree scope has changed if the container node into which "node" is inserted is in a document or a shadow root.
     auto treeScopeChange = parentOfInsertedTree.isInTreeScope() ? TreeScopeChange::Changed : TreeScopeChange::DidNotChange;
     if (parentOfInsertedTree.isConnected())
         notifyNodeInsertedIntoDocument(parentOfInsertedTree, node, treeScopeChange, postInsertionNotificationTargets);
     else
         notifyNodeInsertedIntoTree(parentOfInsertedTree, node, treeScopeChange, postInsertionNotificationTargets);
-
-    return postInsertionNotificationTargets;
 }
 
 inline RemovedSubtreeObservability observabilityOfRemovedNode(Node& node)
@@ -179,9 +179,8 @@ RemovedSubtreeObservability notifyChildNodeRemoved(ContainerNode& oldParentOfRem
     return notifyNodeRemovedFromTree(oldParentOfRemovedTree, treeScopeChange, child);
 }
 
-void addChildNodesToDeletionQueue(Node*& head, Node*& tail, ContainerNode& container)
+void removeDetachedChildrenInContainer(ContainerNode& container)
 {
-    // We have to tell all children that their parent has died.
     RefPtr<Node> next = nullptr;
     for (RefPtr<Node> node = container.firstChild(); node; node = next) {
         ASSERT(!node->m_deletionHasBegun);
@@ -193,54 +192,13 @@ void addChildNodesToDeletionQueue(Node*& head, Node*& tail, ContainerNode& conta
         if (next)
             next->setPreviousSibling(nullptr);
 
-        if (!node->refCount()) {
-#ifndef NDEBUG
-            node->m_deletionHasBegun = true;
-#endif
-            // Add the node to the list of nodes to be deleted.
-            // Reuse the nextSibling pointer for this purpose.
-            if (tail)
-                tail->setNextSibling(node.get());
-            else
-                head = node.get();
-
-            tail = node.get();
-        } else {
             node->setTreeScopeRecursively(container.document());
             if (node->isInTreeScope())
                 notifyChildNodeRemoved(container, *node);
             ASSERT_WITH_SECURITY_IMPLICATION(!node->isInTreeScope());
         }
-    }
 
     container.setLastChild(nullptr);
-}
-
-void removeDetachedChildrenInContainer(ContainerNode& container)
-{
-    // List of nodes to be deleted.
-    Node* head = nullptr;
-    Node* tail = nullptr;
-
-    addChildNodesToDeletionQueue(head, tail, container);
-
-    Node* node;
-    Node* next;
-    while ((node = head)) {
-        ASSERT(node->m_deletionHasBegun);
-
-        next = node->nextSibling();
-        node->setNextSibling(nullptr);
-
-        head = next;
-        if (!next)
-            tail = nullptr;
-
-        if (is<ContainerNode>(*node))
-            addChildNodesToDeletionQueue(head, tail, downcast<ContainerNode>(*node));
-
-        delete node;
-    }
 }
 
 #ifndef NDEBUG
@@ -302,7 +260,7 @@ void disconnectSubframes(ContainerNode& root, SubframeDisconnectPolicy policy)
 
     Vector<Ref<HTMLFrameOwnerElement>> frameOwners;
 
-    if (policy == RootAndDescendants) {
+    if (policy == SubframeDisconnectPolicy::RootAndDescendants) {
         if (is<HTMLFrameOwnerElement>(root))
             frameOwners.append(downcast<HTMLFrameOwnerElement>(root));
     }

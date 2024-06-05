@@ -28,20 +28,20 @@
 
 namespace WebCore {
 
-class FormAssociatedElement;
+class FormListedElement;
 class HTMLImageElement;
 
 // This class is just a big hack to find form elements even in malformed HTML elements.
 // The famous <table><tr><form><td> problem.
 
-class HTMLFormControlsCollection final : public CachedHTMLCollection<HTMLFormControlsCollection, CollectionTypeTraits<FormControls>::traversalType> {
+class HTMLFormControlsCollection final : public CachedHTMLCollection<HTMLFormControlsCollection, CollectionTypeTraits<CollectionType::FormControls>::traversalType> {
     WTF_MAKE_ISO_ALLOCATED(HTMLFormControlsCollection);
 public:
     static Ref<HTMLFormControlsCollection> create(ContainerNode&, CollectionType);
     virtual ~HTMLFormControlsCollection();
 
     HTMLElement* item(unsigned offset) const override;
-    std::optional<std::variant<RefPtr<RadioNodeList>, RefPtr<Element>>> namedItemOrItems(const String&) const;
+    std::optional<std::variant<RefPtr<RadioNodeList>, RefPtr<Element>>> namedItemOrItems(const AtomString&) const;
 
     HTMLFormElement& ownerNode() const;
 
@@ -58,11 +58,6 @@ private:
     mutable unsigned m_cachedElementOffsetInArray;
 };
 
-inline HTMLElement* HTMLFormControlsCollection::item(unsigned offset) const
-{
-    return downcast<HTMLElement>(CachedHTMLCollection::item(offset));
-}
-
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_HTMLCOLLECTION(HTMLFormControlsCollection, FormControls)
+SPECIALIZE_TYPE_TRAITS_HTMLCOLLECTION(HTMLFormControlsCollection, CollectionType::FormControls)

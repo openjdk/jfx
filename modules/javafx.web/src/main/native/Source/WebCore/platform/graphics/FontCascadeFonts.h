@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2010, 2013-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -26,7 +26,10 @@
 #include "FontSelector.h"
 #include "GlyphPage.h"
 #include "WidthCache.h"
+#include <wtf/EnumeratedArray.h>
 #include <wtf/Forward.h>
+#include <wtf/HashFunctions.h>
+#include <wtf/HashTraits.h>
 #include <wtf/MainThread.h>
 
 #if PLATFORM(IOS_FAMILY)
@@ -54,7 +57,7 @@ public:
 
     bool isForPlatformFont() const { return m_isForPlatformFont; }
 
-    GlyphData glyphDataForCharacter(UChar32, const FontCascadeDescription&, FontVariant);
+    GlyphData glyphDataForCharacter(UChar32, const FontCascadeDescription&, FontVariant, ResolvedEmojiPolicy);
 
     bool isFixedPitch(const FontCascadeDescription&);
     void determinePitch(const FontCascadeDescription&);
@@ -78,8 +81,8 @@ private:
     FontCascadeFonts(RefPtr<FontSelector>&&);
     FontCascadeFonts(const FontPlatformData&);
 
-    GlyphData glyphDataForSystemFallback(UChar32, const FontCascadeDescription&, FontVariant, bool systemFallbackShouldBeInvisible);
-    GlyphData glyphDataForVariant(UChar32, const FontCascadeDescription&, FontVariant, unsigned fallbackIndex = 0);
+    GlyphData glyphDataForSystemFallback(UChar32, const FontCascadeDescription&, FontVariant, ResolvedEmojiPolicy, bool systemFallbackShouldBeInvisible);
+    GlyphData glyphDataForVariant(UChar32, const FontCascadeDescription&, FontVariant, ResolvedEmojiPolicy, unsigned fallbackIndex = 0);
 
     Vector<FontRanges, 1> m_realizedFallbackRanges;
     unsigned m_lastRealizedFallbackIndex { 0 };
@@ -100,8 +103,7 @@ private:
         std::unique_ptr<MixedFontGlyphPage> m_mixedFont;
     };
 
-    GlyphPageCacheEntry m_cachedPageZero;
-    HashMap<int, GlyphPageCacheEntry> m_cachedPages;
+    EnumeratedArray<ResolvedEmojiPolicy, HashMap<unsigned, GlyphPageCacheEntry, IntHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>>> m_cachedPages;
 
     HashSet<RefPtr<Font>> m_systemFallbackFontSet;
 
@@ -133,7 +135,7 @@ inline const Font& FontCascadeFonts::primaryFont(const FontCascadeDescription& d
         auto& primaryRanges = realizeFallbackRangesAt(description, 0);
         m_cachedPrimaryFont = primaryRanges.glyphDataForCharacter(' ', ExternalResourceDownloadPolicy::Allow).font;
         if (!m_cachedPrimaryFont)
-            m_cachedPrimaryFont = &primaryRanges.fontForFirstRange();
+            m_cachedPrimaryFont = primaryRanges.rangeAt(0).font(ExternalResourceDownloadPolicy::Allow);
         else if (m_cachedPrimaryFont->isInterstitial()) {
             for (unsigned index = 1; ; ++index) {
                 auto& localRanges = realizeFallbackRangesAt(description, index);

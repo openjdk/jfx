@@ -53,7 +53,7 @@ public:
     template<typename T> WARN_UNUSED_RETURN
     bool decodeBytes(const String& key, Vector<T>& vector)
     {
-        static_assert(sizeof(T) == 1, "");
+        static_assert(sizeof(T) == 1);
 
         size_t size;
         const uint8_t* bytes;
@@ -61,7 +61,7 @@ public:
             return false;
 
         vector.resize(size);
-        std::copy(bytes, bytes + size, vector.data());
+        std::copy_n(bytes, size, vector.data());
         return true;
     }
 

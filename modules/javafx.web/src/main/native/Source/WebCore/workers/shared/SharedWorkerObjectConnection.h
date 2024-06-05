@@ -39,6 +39,7 @@ class SharedWorkerScriptLoader;
 
 struct SharedWorkerKey;
 struct WorkerFetchResult;
+struct WorkerInitializationData;
 struct WorkerOptions;
 
 class SharedWorkerObjectConnection : public RefCounted<SharedWorkerObjectConnection> {
@@ -47,10 +48,12 @@ public:
 
     virtual void requestSharedWorker(const SharedWorkerKey&, SharedWorkerObjectIdentifier, TransferredMessagePort&&, const WorkerOptions&) = 0;
     virtual void sharedWorkerObjectIsGoingAway(const SharedWorkerKey&, SharedWorkerObjectIdentifier) = 0;
+    virtual void suspendForBackForwardCache(const SharedWorkerKey&, SharedWorkerObjectIdentifier) = 0;
+    virtual void resumeForBackForwardCache(const SharedWorkerKey&, SharedWorkerObjectIdentifier) = 0;
 
 protected:
     // IPC messages.
-    WEBCORE_EXPORT void fetchScriptInClient(URL&&, WebCore::SharedWorkerObjectIdentifier, WorkerOptions&&, CompletionHandler<void(WorkerFetchResult&&)>&&);
+    WEBCORE_EXPORT void fetchScriptInClient(URL&&, WebCore::SharedWorkerObjectIdentifier, WorkerOptions&&, CompletionHandler<void(WorkerFetchResult&&, WorkerInitializationData&&)>&&);
     WEBCORE_EXPORT void notifyWorkerObjectOfLoadCompletion(WebCore::SharedWorkerObjectIdentifier, const ResourceError&);
     WEBCORE_EXPORT void postExceptionToWorkerObject(SharedWorkerObjectIdentifier, const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL);
 

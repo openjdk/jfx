@@ -33,7 +33,7 @@
 namespace WebCore {
 
 class CachedPage;
-class Frame;
+class LocalFrame;
 class Page;
 
 enum class PruningReason { None, ProcessSuspended, MemoryPressure, ReachedMaxSize };
@@ -60,6 +60,8 @@ public:
 
     void removeAllItemsForPage(Page&);
 
+    WEBCORE_EXPORT void clearEntriesForOrigins(const HashSet<RefPtr<SecurityOrigin>>&);
+
     unsigned pageCount() const { return m_items.size(); }
     WEBCORE_EXPORT unsigned frameCount() const;
 
@@ -73,7 +75,7 @@ private:
     BackForwardCache();
     ~BackForwardCache() = delete; // Make sure nobody accidentally calls delete -- WebCore does not delete singletons.
 
-    static bool canCachePageContainingThisFrame(Frame&);
+    static bool canCachePageContainingThisFrame(LocalFrame&);
 
     enum class ForceSuspension : bool { No, Yes };
     std::unique_ptr<CachedPage> trySuspendPage(Page&, ForceSuspension);

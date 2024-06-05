@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,26 +25,35 @@
 
 #pragma once
 
+#import "CommandsMixin.h"
 #import <wtf/FastMalloc.h>
-#import <wtf/Function.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
 #import <wtf/Vector.h>
+
+struct WGPURenderPassEncoderImpl {
+};
 
 namespace WebGPU {
 
 class BindGroup;
 class Buffer;
+class Device;
 class QuerySet;
 class RenderBundle;
 class RenderPipeline;
 
-class RenderPassEncoder : public RefCounted<RenderPassEncoder> {
+// https://gpuweb.github.io/gpuweb/#gpurenderpassencoder
+class RenderPassEncoder : public WGPURenderPassEncoderImpl, public RefCounted<RenderPassEncoder>, public CommandsMixin {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<RenderPassEncoder> create(id <MTLRenderCommandEncoder> renderCommandEncoder)
+    static Ref<RenderPassEncoder> create(id<MTLRenderCommandEncoder> renderCommandEncoder, const WGPURenderPassDescriptor& descriptor, NSUInteger visibilityResultBufferSize, bool depthReadOnly, bool stencilReadOnly, Device& device)
     {
-        return adoptRef(*new RenderPassEncoder(renderCommandEncoder));
+        return adoptRef(*new RenderPassEncoder(renderCommandEncoder, descriptor, visibilityResultBufferSize, depthReadOnly, stencilReadOnly, device));
+    }
+    static Ref<RenderPassEncoder> createInvalid(Device& device)
+    {
+        return adoptRef(*new RenderPassEncoder(device));
     }
 
     ~RenderPassEncoder();
@@ -59,27 +68,49 @@ public:
     void endPass();
     void endPipelineStatisticsQuery();
     void executeBundles(Vector<std::reference_wrapper<const RenderBundle>>&& bundles);
-    void insertDebugMarker(const char* markerLabel);
+    void insertDebugMarker(String&& markerLabel);
     void popDebugGroup();
-    void pushDebugGroup(const char* groupLabel);
+    void pushDebugGroup(String&& groupLabel);
     void setBindGroup(uint32_t groupIndex, const BindGroup&, uint32_t dynamicOffsetCount, const uint32_t* dynamicOffsets);
-    void setBlendConstant(const WGPUColor*);
+    void setBlendConstant(const WGPUColor&);
     void setIndexBuffer(const Buffer&, WGPUIndexFormat, uint64_t offset, uint64_t size);
     void setPipeline(const RenderPipeline&);
     void setScissorRect(uint32_t x, uint32_t y, uint32_t width, uint32_t height);
     void setStencilReference(uint32_t);
     void setVertexBuffer(uint32_t slot, const Buffer&, uint64_t offset, uint64_t size);
     void setViewport(float x, float y, float width, float height, float minDepth, float maxDepth);
-    void setLabel(const char*);
+    void setLabel(String&&);
+
+    Device& device() const { return m_device; }
+
+    bool isValid() const { return m_renderCommandEncoder; }
 
 private:
-    RenderPassEncoder(id <MTLRenderCommandEncoder>);
+    RenderPassEncoder(id<MTLRenderCommandEncoder>, const WGPURenderPassDescriptor&, NSUInteger, bool depthReadOnly, bool stencilReadOnly, Device&);
+    RenderPassEncoder(Device&);
 
-    id <MTLRenderCommandEncoder> m_renderCommandEncoder { nil };
+    bool validatePopDebugGroup() const;
+
+    void makeInvalid();
+
+    id<MTLRenderCommandEncoder> m_renderCommandEncoder { nil };
+
+    uint64_t m_debugGroupStackSize { 0 };
+    struct PendingTimestampWrites {
+        Ref<QuerySet> querySet;
+        uint32_t queryIndex;
+    };
+    Vector<PendingTimestampWrites> m_pendingTimestampWrites;
+
+    const Ref<Device> m_device;
+    MTLPrimitiveType m_primitiveType { MTLPrimitiveTypeTriangle };
+    id<MTLBuffer> m_indexBuffer { nil };
+    MTLIndexType m_indexType { MTLIndexTypeUInt16 };
+    NSUInteger m_indexBufferOffset { 0 };
+    NSUInteger m_visibilityResultBufferOffset { 0 };
+    NSUInteger m_visibilityResultBufferSize { 0 };
+    bool m_depthReadOnly { false };
+    bool m_stencilReadOnly { false };
 };
 
 } // namespace WebGPU
-
-struct WGPURenderPassEncoderImpl {
-    Ref<WebGPU::RenderPassEncoder> renderPassEncoder;
-};

@@ -33,19 +33,24 @@ enum class PlatformVideoTransferCharacteristics : uint8_t {
     Bt709,
     Smpte170m,
     Iec6196621,
+    Gamma22curve,
+    Gamma28curve,
+    Smpte240m,
+    Linear,
+    Log,
+    LogSqrt,
+    Iec6196624,
+    Bt1361ExtendedColourGamut,
+    Bt2020_10bit,
+    Bt2020_12bit,
+    SmpteSt2084,
+    SmpteSt4281,
+    AribStdB67Hlg,
+    Unspecified,
+
+    // Aliases for WebIDL bindings
+    PQ = SmpteSt2084,
+    HLG = AribStdB67Hlg,
 };
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::PlatformVideoTransferCharacteristics> {
-    using values = EnumValues<
-        WebCore::PlatformVideoTransferCharacteristics,
-        WebCore::PlatformVideoTransferCharacteristics::Bt709,
-        WebCore::PlatformVideoTransferCharacteristics::Smpte170m,
-        WebCore::PlatformVideoTransferCharacteristics::Iec6196621
-    >;
-};
-
-}

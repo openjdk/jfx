@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -50,7 +50,7 @@ std::unique_ptr<FullBytecodeLiveness> BytecodeLivenessAnalysis::computeFullLiven
     size_t size = codeBlock->instructions().size();
     auto result = makeUnique<FullBytecodeLiveness>(size);
 
-    for (BytecodeBasicBlock& block : m_graph.basicBlocksInReverseOrder()) {
+    for (auto& block : m_graph.basicBlocksInReverseOrder()) {
         if (block.isEntryBlock() || block.isExitBlock())
             continue;
 
@@ -96,9 +96,9 @@ void BytecodeLivenessAnalysis::dumpResults(CodeBlock* codeBlock)
 
     unsigned numberOfBlocks = m_graph.size();
     Vector<FastBitVector> predecessors(numberOfBlocks);
-    for (BytecodeBasicBlock& block : m_graph)
+    for (auto& block : m_graph)
         predecessors[block.index()].resize(numberOfBlocks);
-    for (BytecodeBasicBlock& block : m_graph) {
+    for (auto& block : m_graph) {
         for (unsigned successorIndex : block.successors()) {
             unsigned blockIndex = block.index();
             predecessors[successorIndex][blockIndex] = true;
@@ -112,7 +112,7 @@ void BytecodeLivenessAnalysis::dumpResults(CodeBlock* codeBlock)
         }
     };
 
-    for (BytecodeBasicBlock& block : m_graph) {
+    for (auto& block : m_graph) {
         dataLogF("\nBytecode basic block %u: %p (offset: %u, length: %u)\n", i++, &block, block.leaderOffset(), block.totalLength());
 
         dataLogF("Predecessors:");
@@ -165,9 +165,9 @@ constexpr bool enumValuesEqualAsIntegral(EnumType1 v1, EnumType2 v2)
         return static_cast<IntType2>(v1) == static_cast<IntType2>(v2);
 }
 
-Bitmap<maxNumCheckpointTmps> tmpLivenessForCheckpoint(const CodeBlock& codeBlock, BytecodeIndex bytecodeIndex)
+WTF::BitSet<maxNumCheckpointTmps> tmpLivenessForCheckpoint(const CodeBlock& codeBlock, BytecodeIndex bytecodeIndex)
 {
-    Bitmap<maxNumCheckpointTmps> result;
+    WTF::BitSet<maxNumCheckpointTmps> result;
     Checkpoint checkpoint = bytecodeIndex.checkpoint();
 
     if (!checkpoint)

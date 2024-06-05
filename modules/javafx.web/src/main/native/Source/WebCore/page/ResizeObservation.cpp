@@ -28,8 +28,11 @@
 
 #include "ElementInlines.h"
 #include "HTMLFrameOwnerElement.h"
-#include "RenderBox.h"
+#include "Logging.h"
+#include "RenderBoxInlines.h"
+#include "RenderElementInlines.h"
 #include "SVGElement.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
@@ -38,8 +41,11 @@ Ref<ResizeObservation> ResizeObservation::create(Element& target, ResizeObserver
     return adoptRef(*new ResizeObservation(target, observedBox));
 }
 
+WTF_MAKE_ISO_ALLOCATED_IMPL(ResizeObservation);
+
 ResizeObservation::ResizeObservation(Element& element, ResizeObserverBoxOptions observedBox)
     : m_target { element }
+    , m_lastObservationSizes { LayoutSize(-1, -1), LayoutSize(-1, -1), LayoutSize(-1, -1) }
     , m_observedBox { observedBox }
 {
 }
@@ -51,24 +57,36 @@ void ResizeObservation::updateObservationSize(const BoxSizes& boxSizes)
     m_lastObservationSizes = boxSizes;
 }
 
-auto ResizeObservation::computeObservedSizes() const -> BoxSizes
+void ResizeObservation::resetObservationSize()
 {
-    if (m_target->isSVGElement()) {
-        if (auto svgRect = downcast<SVGElement>(*m_target).getBoundingBox()) {
-            auto size = LayoutSize(svgRect->width(), svgRect->height());
-            return { size, size, size };
+    m_lastObservationSizes = { LayoutSize(-1, -1), LayoutSize(-1, -1), LayoutSize(-1, -1) };
+}
+
+auto ResizeObservation::computeObservedSizes() const -> std::optional<BoxSizes>
+{
+    if (auto* svg = dynamicDowncast<SVGElement>(target())) {
+        if (svg->hasAssociatedSVGLayoutBox()) {
+            LayoutSize size;
+            if (auto svgRect = svg->getBoundingBox()) {
+                size.setWidth(svgRect->width());
+                size.setHeight(svgRect->height());
+            }
+            return { { size, size, size } };
         }
     }
+
     auto* box = m_target->renderBox();
     if (box) {
-        return {
+        if (box->isSkippedContent())
+            return std::nullopt;
+        return { {
             adjustLayoutSizeForAbsoluteZoom(box->contentSize(), *box),
             adjustLayoutSizeForAbsoluteZoom(box->contentLogicalSize(), *box),
             adjustLayoutSizeForAbsoluteZoom(box->borderBoxLogicalSize(), *box)
-        };
+        } };
     }
 
-    return { };
+    return BoxSizes { };
 }
 
 LayoutPoint ResizeObservation::computeTargetLocation() const
@@ -104,14 +122,18 @@ FloatSize ResizeObservation::snappedContentBoxSize() const
 std::optional<ResizeObservation::BoxSizes> ResizeObservation::elementSizeChanged() const
 {
     auto currentSizes = computeObservedSizes();
+    if (!currentSizes)
+        return std::nullopt;
+
+    LOG_WITH_STREAM(ResizeObserver, stream << "ResizeObservation " << this << " elementSizeChanged - new content box " << currentSizes->contentBoxSize);
 
     switch (m_observedBox) {
     case ResizeObserverBoxOptions::BorderBox:
-        if (m_lastObservationSizes.borderBoxLogicalSize != currentSizes.borderBoxLogicalSize)
+        if (m_lastObservationSizes.borderBoxLogicalSize != currentSizes->borderBoxLogicalSize)
             return currentSizes;
         break;
     case ResizeObserverBoxOptions::ContentBox:
-        if (m_lastObservationSizes.contentBoxLogicalSize != currentSizes.contentBoxLogicalSize)
+        if (m_lastObservationSizes.contentBoxLogicalSize != currentSizes->contentBoxLogicalSize)
             return currentSizes;
         break;
     }
@@ -119,15 +141,25 @@ std::optional<ResizeObservation::BoxSizes> ResizeObservation::elementSizeChanged
     return { };
 }
 
+// https://drafts.csswg.org/resize-observer/#calculate-depth-for-node
 size_t ResizeObservation::targetElementDepth() const
 {
     unsigned depth = 0;
     for (Element* ownerElement = m_target.get(); ownerElement; ownerElement = ownerElement->document().ownerElement()) {
-        for (Element* parent = ownerElement; parent; parent = parent->parentElement())
+        for (Element* parent = ownerElement; parent; parent = parent->parentElementInComposedTree())
             ++depth;
     }
 
     return depth;
+}
+
+TextStream& operator<<(TextStream& ts, const ResizeObservation& observation)
+{
+    ts.dumpProperty("target", ValueOrNull(observation.target()));
+    ts.dumpProperty("border box", observation.borderBoxSize());
+    ts.dumpProperty("content box", observation.contentBoxSize());
+    ts.dumpProperty("snapped content box", observation.snappedContentBoxSize());
+    return ts;
 }
 
 } // namespace WebCore

@@ -49,9 +49,9 @@ public:
     {
     }
 
-    Strong(VM&, ExternalType = ExternalType());
+    inline Strong(VM&, ExternalType = ExternalType());
 
-    Strong(VM&, Handle<T>);
+    inline Strong(VM&, Handle<T>);
 
     Strong(const Strong& other)
         : Handle<T>()
@@ -94,7 +94,7 @@ public:
 
     ExternalType get() const { return HandleTypes<T>::getFromSlot(this->slot()); }
 
-    void set(VM&, ExternalType);
+    inline void set(VM&, ExternalType);
 
     template <typename U> Strong& operator=(const Strong<U>& other)
     {
@@ -141,7 +141,7 @@ private:
     {
         ASSERT(slot());
         JSValue value = HandleTypes<T>::toJSValue(externalType);
-        HandleSet::heapFor(slot())->writeBarrier(slot(), value);
+        HandleSet::heapFor(slot())->template writeBarrier<std::is_base_of_v<JSCell, T>>(slot(), value);
         *slot() = value;
     }
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,22 +24,23 @@
  */
 package com.sun.javafx.css;
 
+import java.util.AbstractSet;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+
 import com.sun.javafx.collections.SetListenerHelper;
+
 import javafx.beans.InvalidationListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
 
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-
-
 /**
  * Pseudo-class state and style-classes are represented as bits in a long[]
  * which makes matching faster.
  */
-abstract class BitSet<T> implements ObservableSet<T> {
+abstract class BitSet<T> extends AbstractSet<T> implements ObservableSet<T> {
 
     /** Create an empty set of T */
     protected BitSet () {
@@ -180,10 +181,16 @@ abstract class BitSet<T> implements ObservableSet<T> {
             return false;
         }
 
-        T t = cast(o);
+        Class<T> elementType = getElementType();
 
-        final int element = getIndex(t) / Long.SIZE;
-        final long bit = 1l << (getIndex(t) % Long.SIZE);
+        if (!elementType.isInstance(o)) {  // if cast failed, it can't be part of this set, so not modified
+            return false;
+        }
+
+        T t = elementType.cast(o);
+        int index = getIndex(t);
+        int element = index / Long.SIZE;
+        long bit = 1l << (index % Long.SIZE);
 
         if (element >= bits.length) {
             // not in this Set!
@@ -218,21 +225,29 @@ abstract class BitSet<T> implements ObservableSet<T> {
             return false;
         }
 
-        final T t = cast(o);
+        Class<T> elementType = getElementType();
 
-        final int element = getIndex(t) / Long.SIZE;
-        final long bit = 1l << (getIndex(t) % Long.SIZE);
+        if (!elementType.isInstance(o)) {
+            return false;
+        }
+
+        int index = getIndex(elementType.cast(o));
+        int element = index / Long.SIZE;
+        long bit = 1L << (index % Long.SIZE);
 
         return (element < bits.length) && (bits[element] & bit) == bit;
     }
 
-    /** {@inheritDoc} */
     @Override
     public boolean containsAll(Collection<?> c) {
+        if (this.getClass() != c.getClass()) {  // implicit null check here is intended
+            for (Object obj : c) {
+                if (!contains(obj)) {
+                    return false;
+                }
+            }
 
-        if (c == null || this.getClass() != c.getClass()) {
-            // this not modified!
-            return false;
+            return true;
         }
 
         BitSet other = (BitSet)c;
@@ -254,14 +269,16 @@ abstract class BitSet<T> implements ObservableSet<T> {
         return true;
     }
 
-
-    /** {@inheritDoc} */
     @Override
     public boolean addAll(Collection<? extends T> c) {
+        if (this.getClass() != c.getClass()) {  // implicit null check here is intended
+            boolean modified = false;
 
-        if (c == null || this.getClass() != c.getClass()) {
-            // this not modified!
-            return false;
+            for (T obj : c) {
+                modified |= add(obj);
+            }
+
+            return modified;
         }
 
         boolean modified = false;
@@ -327,13 +344,21 @@ abstract class BitSet<T> implements ObservableSet<T> {
 
     }
 
-    /** {@inheritDoc} */
     @Override
     public boolean retainAll(Collection<?> c) {
+        if (this.getClass() != c.getClass()) {  // implicit null check here is intended
+            boolean modified = false;
 
-        if (c == null || this.getClass() != c.getClass()) {
-            clear();
-            return true;
+            for (Iterator<T> iterator = this.iterator(); iterator.hasNext();) {
+                T obj = iterator.next();
+
+                if (!c.contains(obj)) {
+                    iterator.remove();
+                    modified = true;
+                }
+            }
+
+            return modified;
         }
 
         boolean modified = false;
@@ -408,14 +433,16 @@ abstract class BitSet<T> implements ObservableSet<T> {
         return modified;
     }
 
-
-    /** {@inheritDoc} */
     @Override
     public boolean removeAll(Collection<?> c) {
+        if (this.getClass() != c.getClass()) {  // implicit null check here is intended
+            boolean modified = false;
 
-        if (c == null || this.getClass() != c.getClass()) {
-            // this not modified!
-            return false;
+            for (Object obj : c) {
+                modified |= remove(obj);
+            }
+
+            return modified;
         }
 
         boolean modified = false;
@@ -473,7 +500,6 @@ abstract class BitSet<T> implements ObservableSet<T> {
         return modified;
     }
 
-    /** {@inheritDoc} */
     @Override
     public void clear() {
 
@@ -495,56 +521,53 @@ abstract class BitSet<T> implements ObservableSet<T> {
 
     @Override
     public int hashCode() {
-        int hash = 7;
-        if (bits.length > 0) {
-            for (int n = 0; n < bits.length; n++) {
-                final long mask = bits[n];
-                hash = 71 * hash + (int)(mask ^ (mask >>> 32));
-            }
-        }
-        return hash;
+        // Note: overridden because equals is overridden; both equals and hashCode MUST
+        // respect the Set contract to interact correctly with sets of other types!
+        return super.hashCode();
     }
 
     @Override
     public boolean equals(Object obj) {
-
-        if (this == obj) {
+        // Note: overridden to provide a fast path; both equals and hashCode MUST respect
+        // the Set contract to interact correctly with sets of other types!
+        if (obj == this) {
             return true;
         }
-
-        if (obj == null || this.getClass() != obj.getClass()) {
-            return false;
+        if (getClass() == obj.getClass()) {  // fast path if other is exact same type of BitSet
+            return equalsBitSet((BitSet<?>) obj);
         }
 
-        final BitSet other = (BitSet) obj;
+        return super.equals(obj);
+    }
 
-        final int a = this.bits != null ? this.bits.length : 0;
-        final int b = other.bits != null ? other.bits.length : 0;
+    private boolean equalsBitSet(BitSet<?> other) {
+        int a = this.bits != null ? this.bits.length : 0;
+        int b = other.bits != null ? other.bits.length : 0;
+        int max = Math.max(a, b);
 
-        if (a != b) return false;
+        for (int i = 0; i < max; i++) {
+            long m0 = i >= a ? 0 : this.bits[i];
+            long m1 = i >= b ? 0 : other.bits[i];
 
-        for(int m=0; m<a; m++) {
-            final long m0 = this.bits[m];
-            final long m1 = other.bits[m];
             if (m0 != m1) {
                 return false;
             }
         }
+
         return true;
     }
 
-    abstract protected T getT(int index);
-    abstract protected int getIndex(T t);
+    protected abstract T getT(int index);
+    protected abstract int getIndex(T t);
 
-    /*
-     * Try to cast the arg to a T.
-     * @throws ClassCastException if the class of the argument is
-     *         is not a T
-     * @throws NullPointerException if the argument is null
+    /**
+     * Returns the element type.
+     *
+     * @return a {@link Class} of type {@code T}, never {@code null}
      */
-    abstract protected T cast(Object o);
+    protected abstract Class<T> getElementType();
 
-    protected long[] getBits() {
+    long[] getBits() {
         return bits;
     }
 
@@ -601,7 +624,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
     @Override
     public void removeListener(SetChangeListener<? super T> setChangeListener) {
         if (setChangeListener != null) {
-            SetListenerHelper.removeListener(listenerHelper, setChangeListener);
+            listenerHelper = SetListenerHelper.removeListener(listenerHelper, setChangeListener);
         }
     }
 
@@ -615,7 +638,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
     @Override
     public void removeListener(InvalidationListener invalidationListener) {
         if (invalidationListener != null) {
-            SetListenerHelper.removeListener(listenerHelper, invalidationListener);
+            listenerHelper = SetListenerHelper.removeListener(listenerHelper, invalidationListener);
         }
     }
 
@@ -626,4 +649,3 @@ abstract class BitSet<T> implements ObservableSet<T> {
         }
     }
 }
-

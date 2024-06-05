@@ -57,6 +57,7 @@ public:
         virtual void trackEnded(MediaStreamTrackPrivate&) = 0;
         virtual void trackMutedChanged(MediaStreamTrackPrivate&) = 0;
         virtual void trackSettingsChanged(MediaStreamTrackPrivate&) = 0;
+        virtual void trackConfigurationChanged(MediaStreamTrackPrivate&) { };
         virtual void trackEnabledChanged(MediaStreamTrackPrivate&) = 0;
         virtual void readyStateChanged(MediaStreamTrackPrivate&) { };
     };
@@ -81,10 +82,10 @@ public:
     void stopProducingData() { m_source->stop(); }
     bool isProducingData() { return m_source->isProducingData(); }
 
-    bool isIsolated() const { return m_source->isIsolated(); }
-
     bool muted() const;
     void setMuted(bool muted) { m_source->setMuted(muted); }
+
+    void setIsInBackground(bool value) { m_source->setIsInBackground(value); }
 
     bool isCaptureTrack() const;
 
@@ -95,9 +96,10 @@ public:
 
     RealtimeMediaSource& source() { return m_source.get(); }
     const RealtimeMediaSource& source() const { return m_source.get(); }
-    WEBCORE_EXPORT RealtimeMediaSource::Type type() const;
-    bool hasVideo() const { return m_source->hasVideo(); }
-    bool hasAudio() const { return m_source->hasAudio(); }
+    RealtimeMediaSource::Type type() const { return m_source->type(); }
+    CaptureDevice::DeviceType deviceType() const { return m_source->deviceType(); }
+    bool isVideo() const { return m_source->isVideo(); }
+    bool isAudio() const { return m_source->isAudio(); }
 
     void endTrack();
 
@@ -132,6 +134,7 @@ private:
     void sourceStopped() final;
     void sourceMutedChanged() final;
     void sourceSettingsChanged() final;
+    void sourceConfigurationChanged() final;
     bool preventSourceFromStopping() final;
     void audioUnitWillStart() final;
     void hasStartedProducingData() final;
@@ -160,7 +163,7 @@ private:
 #endif
 };
 
-typedef Vector<RefPtr<MediaStreamTrackPrivate>> MediaStreamTrackPrivateVector;
+typedef Vector<Ref<MediaStreamTrackPrivate>> MediaStreamTrackPrivateVector;
 
 } // namespace WebCore
 

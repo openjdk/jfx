@@ -30,11 +30,10 @@
 #include "config.h"
 #include "CSSUnparsedValue.h"
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include "CSSOMVariableReferenceValue.h"
-#include "CSSParserToken.h"
 #include "CSSParserTokenRange.h"
+#include "CSSTokenizer.h"
+#include "CSSVariableReferenceValue.h"
 #include "ExceptionOr.h"
 #include <variant>
 #include <wtf/IsoMallocInlines.h>
@@ -119,40 +118,39 @@ CSSUnparsedValue::CSSUnparsedValue(Vector<CSSUnparsedSegment>&& segments)
 {
 }
 
-String CSSUnparsedValue::toString() const
-{
-    StringBuilder builder;
-    serialize(builder);
-
-    return builder.toString();
-}
-
-void CSSUnparsedValue::serialize(StringBuilder& builder) const
+void CSSUnparsedValue::serialize(StringBuilder& builder, OptionSet<SerializationArguments> arguments) const
 {
     for (auto& segment : m_segments) {
         std::visit(WTF::makeVisitor([&] (const String& value) {
             builder.append(value);
         }, [&] (const RefPtr<CSSOMVariableReferenceValue>& value) {
-            value->serialize(builder);
+            value->serialize(builder, arguments);
         }), segment);
     }
 }
 
-ExceptionOr<CSSUnparsedSegment> CSSUnparsedValue::item(size_t index)
+std::optional<CSSUnparsedSegment> CSSUnparsedValue::item(size_t index)
 {
     if (index >= m_segments.size())
-        return Exception { RangeError, makeString("Index ", index, " exceeds index range for unparsed segments.") };
+        return std::nullopt;
     return CSSUnparsedSegment { m_segments[index] };
 }
 
 ExceptionOr<CSSUnparsedSegment> CSSUnparsedValue::setItem(size_t index, CSSUnparsedSegment&& val)
 {
-    if (index >= m_segments.size())
+    if (index > m_segments.size())
         return Exception { RangeError, makeString("Index ", index, " exceeds index range for unparsed segments.") };
+    if (index == m_segments.size())
+        m_segments.append(WTFMove(val));
+    else
     m_segments[index] = WTFMove(val);
     return CSSUnparsedSegment { m_segments[index] };
 }
 
-} // namespace WebCore
+RefPtr<CSSValue> CSSUnparsedValue::toCSSValue() const
+{
+    CSSTokenizer tokenizer(toString());
+    return CSSVariableReferenceValue::create(tokenizer.tokenRange(), strictCSSParserContext());
+}
 
-#endif
+} // namespace WebCore

@@ -27,8 +27,11 @@
 #include "RenderScrollbarPart.h"
 
 #include "PaintInfo.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderScrollbar.h"
 #include "RenderScrollbarTheme.h"
+#include "RenderStyleInlines.h"
 #include "RenderView.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
@@ -113,16 +116,6 @@ void RenderScrollbarPart::computeScrollbarHeight()
     // Buttons and track pieces can all have margins along the axis of the scrollbar.
     m_marginBox.setTop(minimumValueForLength(style().marginTop(), { }));
     m_marginBox.setBottom(minimumValueForLength(style().marginBottom(), { }));
-}
-
-void RenderScrollbarPart::computePreferredLogicalWidths()
-{
-    if (!preferredLogicalWidthsDirty())
-        return;
-
-    m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = 0;
-
-    setPreferredLogicalWidthsDirty(false);
 }
 
 void RenderScrollbarPart::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)

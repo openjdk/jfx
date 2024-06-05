@@ -25,6 +25,8 @@
 
 #pragma once
 
+#if USE(THEME_ADWAITA)
+
 #include "ScrollbarThemeComposite.h"
 
 namespace WebCore {
@@ -44,7 +46,7 @@ protected:
     void paintScrollCorner(ScrollableArea&, GraphicsContext&, const IntRect&) override;
     ScrollbarButtonPressAction handleMousePressEvent(Scrollbar&, const PlatformMouseEvent&, ScrollbarPart) override;
 
-    int scrollbarThickness(ScrollbarControlSize, ScrollbarExpansionState) override;
+    int scrollbarThickness(ScrollbarWidth, ScrollbarExpansionState) override;
     int minimumThumbLength(Scrollbar&) override;
 
     bool hasButtons(Scrollbar&) override;
@@ -56,3 +58,5 @@ protected:
 };
 
 } // namespace WebCore
+
+#endif // USE(THEME_ADWAITA)

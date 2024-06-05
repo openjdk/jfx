@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -91,7 +91,7 @@ ALWAYS_INLINE JIT::Call JIT::emitNakedNearCall(CodePtr<NoPtrTag> target)
 {
     ASSERT(m_bytecodeIndex); // This method should only be called during hot/cold path generation, so that m_bytecodeIndex is set.
     Call nakedCall = nearCall();
-    m_nearCalls.append(NearCallRecord(nakedCall, FunctionPtr<JSInternalPtrTag>(target.retagged<JSInternalPtrTag>())));
+    m_nearCalls.append(NearCallRecord(nakedCall, target.retagged<JSInternalPtrTag>()));
     return nakedCall;
 }
 
@@ -99,7 +99,7 @@ ALWAYS_INLINE JIT::Call JIT::emitNakedNearTailCall(CodePtr<NoPtrTag> target)
 {
     ASSERT(m_bytecodeIndex); // This method should only be called during hot/cold path generation, so that m_bytecodeIndex is set.
     Call nakedCall = nearTailCall();
-    m_nearCalls.append(NearCallRecord(nakedCall, FunctionPtr<JSInternalPtrTag>(target.retagged<JSInternalPtrTag>())));
+    m_nearCalls.append(NearCallRecord(nakedCall, target.retagged<JSInternalPtrTag>()));
     return nakedCall;
 }
 
@@ -118,7 +118,7 @@ ALWAYS_INLINE void JIT::updateTopCallFrame()
     prepareCallOperation(*m_vm);
 }
 
-ALWAYS_INLINE MacroAssembler::Call JIT::appendCallWithExceptionCheck(const FunctionPtr<CFunctionPtrTag> function)
+ALWAYS_INLINE MacroAssembler::Call JIT::appendCallWithExceptionCheck(const CodePtr<CFunctionPtrTag> function)
 {
     updateTopCallFrame();
     MacroAssembler::Call call = appendCall(function);
@@ -133,25 +133,7 @@ ALWAYS_INLINE void JIT::appendCallWithExceptionCheck(Address function)
     exceptionCheck();
 }
 
-#if OS(WINDOWS) && CPU(X86_64)
-ALWAYS_INLINE MacroAssembler::Call JIT::appendCallWithExceptionCheckAndSlowPathReturnType(const FunctionPtr<CFunctionPtrTag> function)
-{
-    updateTopCallFrame();
-    MacroAssembler::Call call = appendCallWithSlowPathReturnType(function);
-    exceptionCheck();
-    return call;
-}
-#endif
-
-ALWAYS_INLINE MacroAssembler::Call JIT::appendCallWithCallFrameRollbackOnException(const FunctionPtr<CFunctionPtrTag> function)
-{
-    updateTopCallFrame(); // The callee is responsible for setting topCallFrame to their caller
-    MacroAssembler::Call call = appendCall(function);
-    exceptionCheckWithCallFrameRollback();
-    return call;
-}
-
-ALWAYS_INLINE MacroAssembler::Call JIT::appendCallWithExceptionCheckSetJSValueResult(const FunctionPtr<CFunctionPtrTag> function, VirtualRegister dst)
+ALWAYS_INLINE MacroAssembler::Call JIT::appendCallWithExceptionCheckSetJSValueResult(const CodePtr<CFunctionPtrTag> function, VirtualRegister dst)
 {
     MacroAssembler::Call call = appendCallWithExceptionCheck(function);
     emitPutVirtualRegister(dst, returnValueJSR);
@@ -165,7 +147,7 @@ ALWAYS_INLINE void JIT::appendCallWithExceptionCheckSetJSValueResult(Address fun
 }
 
 template<typename Bytecode>
-ALWAYS_INLINE MacroAssembler::Call JIT::appendCallWithExceptionCheckSetJSValueResultWithProfile(const Bytecode& bytecode, const FunctionPtr<CFunctionPtrTag> function, VirtualRegister dst)
+ALWAYS_INLINE MacroAssembler::Call JIT::appendCallWithExceptionCheckSetJSValueResultWithProfile(const Bytecode& bytecode, const CodePtr<CFunctionPtrTag> function, VirtualRegister dst)
 {
     MacroAssembler::Call call = appendCallWithExceptionCheck(function);
     emitValueProfilingSite(bytecode, returnValueJSR);
@@ -230,7 +212,7 @@ inline MacroAssembler::Label JIT::fastPathResumePoint() const
     if (iter != m_fastPathResumeLabels.end())
         return iter->value;
     // Next instruction in sequence
-    const Instruction* currentInstruction = m_unlinkedCodeBlock->instructions().at(m_bytecodeIndex).ptr();
+    const auto* currentInstruction = m_unlinkedCodeBlock->instructions().at(m_bytecodeIndex).ptr();
     return m_labels[m_bytecodeIndex.offset() + currentInstruction->size()];
 }
 
@@ -442,7 +424,7 @@ ALWAYS_INLINE void JIT::emitJumpSlowCaseIfNotJSCell(JSValueRegs jsReg, VirtualRe
         emitJumpSlowCaseIfNotJSCell(jsReg);
 }
 
-ALWAYS_INLINE int JIT::jumpTarget(const Instruction* instruction, int target)
+ALWAYS_INLINE int JIT::jumpTarget(const JSInstruction* instruction, int target)
 {
     if (target)
         return target;
@@ -503,14 +485,24 @@ ALWAYS_INLINE void JIT::materializePointerIntoMetadata(const Bytecode& bytecode,
     addPtr(TrustedImm32(m_profiledCodeBlock->metadataTable()->offsetInMetadataTable(bytecode) + offset), s_metadataGPR, result);
 }
 
+ALWAYS_INLINE void JIT::loadConstant(CCallHelpers& jit, JITConstantPool::Constant constantIndex, GPRReg result)
+{
+    jit.loadPtr(Address(s_constantsGPR, BaselineJITData::offsetOfData() + static_cast<uintptr_t>(constantIndex) * sizeof(void*)), result);
+}
+
+ALWAYS_INLINE void JIT::loadGlobalObject(CCallHelpers& jit, GPRReg result)
+{
+    loadConstant(jit, s_globalObjectConstant, result);
+}
+
 ALWAYS_INLINE void JIT::loadConstant(JITConstantPool::Constant constantIndex, GPRReg result)
 {
-    loadPtr(Address(s_constantsGPR, BaselineJITData::offsetOfData() + static_cast<uintptr_t>(constantIndex) * sizeof(void*)), result);
+    loadConstant(*this, constantIndex, result);
 }
 
 ALWAYS_INLINE void JIT::loadGlobalObject(GPRReg result)
 {
-    loadConstant(m_globalObjectConstant, result);
+    loadGlobalObject(*this, result);
 }
 
 ALWAYS_INLINE static void loadAddrOfCodeBlockConstantBuffer(JIT &jit, GPRReg dst)

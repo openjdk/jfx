@@ -102,8 +102,8 @@ std::optional<Vector<uint8_t>> convertToU2fRegisterCommand(const Vector<uint8_t>
     if (!isConvertibleToU2fRegisterCommand(request))
         return std::nullopt;
 
-    auto appId = processGoogleLegacyAppIdSupportExtension(request.extensions);
-    return constructU2fRegisterCommand(produceRpIdHash(!appId ? request.rp.id : appId), clientDataHash);
+    ASSERT(request.rp.id);
+    return constructU2fRegisterCommand(produceRpIdHash(*request.rp.id), clientDataHash);
 }
 
 std::optional<Vector<uint8_t>> convertToU2fCheckOnlySignCommand(const Vector<uint8_t>& clientDataHash, const PublicKeyCredentialCreationOptions& request, const PublicKeyCredentialDescriptor& keyHandle)
@@ -111,7 +111,8 @@ std::optional<Vector<uint8_t>> convertToU2fCheckOnlySignCommand(const Vector<uin
     if (keyHandle.type != PublicKeyCredentialType::PublicKey)
         return std::nullopt;
 
-    return constructU2fSignCommand(produceRpIdHash(request.rp.id), clientDataHash, keyHandle.id, true /* checkOnly */);
+    ASSERT(request.rp.id);
+    return constructU2fSignCommand(produceRpIdHash(*request.rp.id), clientDataHash, keyHandle.id, true /* checkOnly */);
 }
 
 std::optional<Vector<uint8_t>> convertToU2fSignCommand(const Vector<uint8_t>& clientDataHash, const PublicKeyCredentialRequestOptions& request, const WebCore::BufferSource& keyHandle, bool isAppId)
@@ -128,19 +129,6 @@ std::optional<Vector<uint8_t>> convertToU2fSignCommand(const Vector<uint8_t>& cl
 Vector<uint8_t> constructBogusU2fRegistrationCommand()
 {
     return constructU2fRegisterCommand(convertBytesToVector(kBogusAppParam, sizeof(kBogusAppParam)), convertBytesToVector(kBogusChallenge, sizeof(kBogusChallenge)));
-}
-
-String processGoogleLegacyAppIdSupportExtension(const std::optional<AuthenticationExtensionsClientInputs>& extensions)
-{
-    if (!extensions) {
-        // AuthenticatorCoordinator::create should always set it.
-        ASSERT_NOT_REACHED();
-        return String();
-    }
-
-    if (!extensions->googleLegacyAppidSupport)
-        return String();
-    return "https://www.gstatic.com/securitykey/origins.json"_s;
 }
 
 } // namespace fido

@@ -28,11 +28,11 @@
 #include "AXObjectCache.h"
 #include "Attr.h"
 #include "ChildListMutationScope.h"
+#include "CommonAtomStrings.h"
 #include "CommonVM.h"
 #include "ComposedTreeAncestorIterator.h"
 #include "ContainerNodeAlgorithms.h"
 #include "ContextMenuController.h"
-#include "DOMWindow.h"
 #include "DataTransfer.h"
 #include "DocumentInlines.h"
 #include "DocumentType.h"
@@ -41,8 +41,9 @@
 #include "ElementTraversal.h"
 #include "EventDispatcher.h"
 #include "EventHandler.h"
+#include "EventLoop.h"
 #include "EventNames.h"
-#include "FrameView.h"
+#include "GCReachableRef.h"
 #include "HTMLAreaElement.h"
 #include "HTMLBodyElement.h"
 #include "HTMLDialogElement.h"
@@ -54,14 +55,21 @@
 #include "InspectorController.h"
 #include "InspectorInstrumentation.h"
 #include "KeyboardEvent.h"
+#include "LiveNodeListInlines.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrameView.h"
 #include "Logging.h"
 #include "MutationEvent.h"
+#include "NodeName.h"
+#include "NodeRareDataInlines.h"
 #include "NodeRenderStyle.h"
+#include "PointerEvent.h"
 #include "ProcessingInstruction.h"
 #include "ProgressEvent.h"
 #include "RenderBlock.h"
 #include "RenderBox.h"
 #include "RenderTextControl.h"
+#include "RenderTreeUpdater.h"
 #include "RenderView.h"
 #include "SVGElement.h"
 #include "ScopedEventQueue.h"
@@ -74,6 +82,7 @@
 #include "TextEvent.h"
 #include "TextManipulationController.h"
 #include "TouchEvent.h"
+#include "WebCoreOpaqueRoot.h"
 #include "WheelEvent.h"
 #include "XMLNSNames.h"
 #include "XMLNames.h"
@@ -102,36 +111,64 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(Node);
 
 using namespace HTMLNames;
 
+struct SameSizeAsNode : public EventTarget {
+#if ASSERT_ENABLED
+    bool deletionHasBegun;
+    bool inRemovedLastRefFunction;
+    bool adoptionIsRequired;
+#endif
+    uint32_t refCountAndParentBit;
+    uint32_t nodeFlags;
+    void* parentNode;
+    void* treeScope;
+    void* previous;
+    void* next;
+    uint8_t rendererWithStyleFlags[8];
+    uint8_t rareDataWithBitfields[8];
+};
+
+static_assert(sizeof(Node) == sizeof(SameSizeAsNode), "Node should stay small");
+
 #if DUMP_NODE_STATISTICS
-static WeakHashSet<Node>& liveNodeSet()
+static WeakHashSet<Node, WeakPtrImplWithEventTargetData>& liveNodeSet()
 {
-    static NeverDestroyed<WeakHashSet<Node>> liveNodes;
+    static NeverDestroyed<WeakHashSet<Node, WeakPtrImplWithEventTargetData>> liveNodes;
     return liveNodes;
 }
 
 static const char* stringForRareDataUseType(NodeRareData::UseType useType)
 {
     switch (useType) {
+    case NodeRareData::UseType::TabIndex:
+        return "TabIndex";
+    case NodeRareData::UseType::ChildIndex:
+        return "ChildIndex";
     case NodeRareData::UseType::NodeList:
         return "NodeList";
     case NodeRareData::UseType::MutationObserver:
         return "MutationObserver";
-    case NodeRareData::UseType::TabIndex:
-        return "TabIndex";
-    case NodeRareData::UseType::MinimumSize:
-        return "MinimumSize";
+    case NodeRareData::UseType::ManuallyAssignedSlot:
+        return "ManuallyAssignedSlot";
     case NodeRareData::UseType::ScrollingPosition:
         return "ScrollingPosition";
     case NodeRareData::UseType::ComputedStyle:
         return "ComputedStyle";
+    case NodeRareData::UseType::DisplayContentsStyle:
+        return "DisplayContentsStyle";
+    case NodeRareData::UseType::EffectiveLang:
+        return "EffectiveLang";
     case NodeRareData::UseType::Dataset:
         return "Dataset";
     case NodeRareData::UseType::ClassList:
         return "ClassList";
     case NodeRareData::UseType::ShadowRoot:
         return "ShadowRoot";
-    case NodeRareData::UseType::CustomElementQueue:
-        return "CustomElementQueue";
+    case NodeRareData::UseType::CustomElementReactionQueue:
+        return "CustomElementReactionQueue";
+    case NodeRareData::UseType::CustomElementDefaultARIA:
+        return "CustomElementDefaultARIA";
+    case NodeRareData::UseType::FormAssociatedCustomElement:
+        return "FormAssociatedCustomElement";
     case NodeRareData::UseType::AttributeMap:
         return "AttributeMap";
     case NodeRareData::UseType::InteractionObserver:
@@ -142,12 +179,18 @@ static const char* stringForRareDataUseType(NodeRareData::UseType useType)
         return "Animations";
     case NodeRareData::UseType::PseudoElements:
         return "PseudoElements";
-    case NodeRareData::UseType::StyleMap:
-        return "StyleMap";
+    case NodeRareData::UseType::AttributeStyleMap:
+        return "AttributeStyleMap";
+    case NodeRareData::UseType::ComputedStyleMap:
+        return "ComputedStyleMap";
     case NodeRareData::UseType::PartList:
         return "PartList";
     case NodeRareData::UseType::PartNames:
         return "PartNames";
+    case NodeRareData::UseType::Nonce:
+        return "Nonce";
+    case NodeRareData::UseType::ExplicitlySetAttrElementsMap:
+        return "ExplicitlySetAttrElementsMap";
     }
     return nullptr;
 }
@@ -178,7 +221,7 @@ void Node::dumpStatistics()
     size_t elementsWithRareData = 0;
     size_t elementsWithNamedNodeMap = 0;
 
-    HashMap<uint16_t, size_t> rareDataSingleUseTypeCounts;
+    HashMap<uint32_t, size_t> rareDataSingleUseTypeCounts;
     size_t mixedRareDataUseCount = 0;
 
     for (auto& node : liveNodeSet()) {
@@ -197,7 +240,7 @@ void Node::dumpStatistics()
                 useTypeCount++;
             }
             if (useTypeCount == 1) {
-                auto result = rareDataSingleUseTypeCounts.add(static_cast<uint16_t>(*useTypes.begin()), 0);
+                auto result = rareDataSingleUseTypeCounts.add(static_cast<uint32_t>(*useTypes.begin()), 0);
                 result.iterator->value++;
             } else
                 mixedRareDataUseCount++;
@@ -301,9 +344,9 @@ DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, nodeCounter, ("WebCoreNode"
 #ifndef NDEBUG
 static bool shouldIgnoreLeaks = false;
 
-static WeakHashSet<Node>& ignoreSet()
+static WeakHashSet<Node, WeakPtrImplWithEventTargetData>& ignoreSet()
 {
-    static NeverDestroyed<WeakHashSet<Node>> ignore;
+    static NeverDestroyed<WeakHashSet<Node, WeakPtrImplWithEventTargetData>> ignore;
     return ignore;
 }
 
@@ -337,15 +380,29 @@ void Node::trackForDebugging()
 #endif
 }
 
+inline void NodeRareData::operator delete(NodeRareData* nodeRareData, std::destroying_delete_t)
+{
+    auto destroyAndFree = [&](auto& value) {
+        std::destroy_at(&value);
+        std::decay_t<decltype(value)>::freeAfterDestruction(&value);
+    };
+
+    if (nodeRareData->m_isElementRareData)
+        destroyAndFree(static_cast<ElementRareData&>(*nodeRareData));
+    else
+        destroyAndFree(*nodeRareData);
+}
+
 Node::Node(Document& document, ConstructionType type)
-    : m_nodeFlags(type)
+    : EventTarget(ConstructNode)
+    , m_nodeFlags(type)
     , m_treeScope(&document)
 {
     ASSERT(isMainThread());
 
     document.incrementReferencingNodeCount();
 
-#if !defined(NDEBUG) || (defined(DUMP_NODE_STATISTICS) && DUMP_NODE_STATISTICS)
+#if !defined(NDEBUG) || DUMP_NODE_STATISTICS
     trackForDebugging();
 #endif
 }
@@ -368,23 +425,10 @@ Node::~Node()
     liveNodeSet().remove(*this);
 #endif
 
-    RELEASE_ASSERT(!renderer());
+    ASSERT(!renderer());
     ASSERT(!parentNode());
     ASSERT(!m_previous);
     ASSERT(!m_next);
-
-    if (hasRareData())
-        clearRareData();
-
-    auto* textManipulationController = document().textManipulationControllerIfExists();
-    if (UNLIKELY(textManipulationController))
-        textManipulationController->removeNode(*this);
-
-    if (!isContainerNode())
-        willBeDeletedFrom(document());
-
-    if (hasEventTargetData())
-        clearEventTargetData();
 
     document().decrementReferencingNodeCount();
 
@@ -420,30 +464,17 @@ void Node::willBeDeletedFrom(Document& document)
 void Node::materializeRareData()
 {
     if (is<Element>(*this))
-        m_rareDataWithBitfields.setPointer(std::unique_ptr<NodeRareData, NodeRareDataDeleter>(new ElementRareData));
+        m_rareDataWithBitfields.setPointer(makeUnique<ElementRareData>());
     else
-        m_rareDataWithBitfields.setPointer(std::unique_ptr<NodeRareData, NodeRareDataDeleter>(new NodeRareData));
-}
-
-inline void Node::NodeRareDataDeleter::operator()(NodeRareData* rareData) const
-{
-    if (rareData->isElementRareData())
-        delete static_cast<ElementRareData*>(rareData);
-    else
-        delete static_cast<NodeRareData*>(rareData);
+        m_rareDataWithBitfields.setPointer(makeUnique<NodeRareData>());
 }
 
 void Node::clearRareData()
 {
     ASSERT(hasRareData());
-    ASSERT(!transientMutationObserverRegistry() || transientMutationObserverRegistry()->isEmpty());
+    ASSERT(!transientMutationObserverRegistry() || transientMutationObserverRegistry()->isEmptyIgnoringNullReferences());
 
     m_rareDataWithBitfields.setPointer(nullptr);
-}
-
-bool Node::isNode() const
-{
-    return true;
 }
 
 String Node::nodeValue() const
@@ -451,10 +482,9 @@ String Node::nodeValue() const
     return String();
 }
 
-ExceptionOr<void> Node::setNodeValue(const String&)
+void Node::setNodeValue(const String&)
 {
     // By default, setting nodeValue has no effect.
-    return { };
 }
 
 RefPtr<NodeList> Node::childNodes()
@@ -558,7 +588,7 @@ ExceptionOr<RefPtr<Node>> Node::convertNodesOrStringsIntoNode(FixedVector<NodeOr
     for (auto& variant : nodeOrStringVector) {
         WTF::switchOn(variant,
             [&](RefPtr<Node>& node) { nodes.uncheckedAppend(*node.get()); },
-            [&](String& string) { nodes.uncheckedAppend(Text::create(document(), string)); }
+            [&](String& string) { nodes.uncheckedAppend(Text::create(document(), WTFMove(string))); }
         );
     }
 
@@ -741,12 +771,12 @@ const AtomString& Node::namespaceURI() const
 
 bool Node::isContentEditable() const
 {
-    return computeEditability(UserSelectAllDoesNotAffectEditability, ShouldUpdateStyle::Update) != Editability::ReadOnly;
+    return computeEditability(UserSelectAllTreatment::Editable, ShouldUpdateStyle::Update) != Editability::ReadOnly;
 }
 
 bool Node::isContentRichlyEditable() const
 {
-    return computeEditability(UserSelectAllIsAlwaysNonEditable, ShouldUpdateStyle::Update) == Editability::CanEditRichly;
+    return computeEditability(UserSelectAllTreatment::NotEditable, ShouldUpdateStyle::Update) == Editability::CanEditRichly;
 }
 
 void Node::inspect()
@@ -755,27 +785,21 @@ void Node::inspect()
         document().page()->inspectorController().inspect(this);
 }
 
-static Node::Editability computeEditabilityFromComputedStyle(const Node& startNode, Node::UserSelectAllTreatment treatment, PageIsEditable pageIsEditable)
+static Node::Editability computeEditabilityFromComputedStyle(const RenderStyle& style, Node::UserSelectAllTreatment treatment, PageIsEditable pageIsEditable)
 {
     // Ideally we'd call ASSERT(!needsStyleRecalc()) here, but
     // ContainerNode::setFocus() calls invalidateStyleForSubtree(), so the assertion
     // would fire in the middle of Document::setFocusedElement().
 
-    for (const Node* node = &startNode; node; node = node->parentNode()) {
-        auto* style = node->isDocumentNode() ? node->renderStyle() : const_cast<Node*>(node)->computedStyle();
-        if (!style)
-            continue;
-        if (style->display() == DisplayType::None)
-            continue;
         // Elements with user-select: all style are considered atomic
         // therefore non editable.
-        if (treatment == Node::UserSelectAllIsAlwaysNonEditable && style->userSelectIncludingInert() == UserSelect::All)
+    if (treatment == Node::UserSelectAllTreatment::NotEditable && style.effectiveUserSelect() == UserSelect::All)
             return Node::Editability::ReadOnly;
 
         if (pageIsEditable == PageIsEditable::Yes)
             return Node::Editability::CanEditRichly;
 
-        switch (style->userModify()) {
+    switch (style.effectiveUserModify()) {
         case UserModify::ReadOnly:
             return Node::Editability::ReadOnly;
         case UserModify::ReadWrite:
@@ -785,15 +809,9 @@ static Node::Editability computeEditabilityFromComputedStyle(const Node& startNo
         }
         ASSERT_NOT_REACHED();
         return Node::Editability::ReadOnly;
-    }
-
-    if (pageIsEditable == PageIsEditable::Yes)
-        return Node::Editability::CanEditRichly;
-
-    return Node::Editability::ReadOnly;
 }
 
-Node::Editability Node::computeEditability(UserSelectAllTreatment treatment, ShouldUpdateStyle shouldUpdateStyle) const
+Node::Editability Node::computeEditabilityWithStyle(const RenderStyle* incomingStyle, UserSelectAllTreatment treatment, ShouldUpdateStyle shouldUpdateStyle) const
 {
     if (!document().hasLivingRenderTree() || isPseudoElement())
         return Editability::ReadOnly;
@@ -810,7 +828,24 @@ Node::Editability Node::computeEditability(UserSelectAllTreatment treatment, Sho
         document->updateStyleIfNeeded();
     }
 
-    return computeEditabilityFromComputedStyle(*this, treatment, pageIsEditable);
+    auto* style = [&] {
+        if (incomingStyle)
+            return incomingStyle;
+        if (isDocumentNode())
+            return renderStyle();
+        auto* element = is<Element>(this) ? downcast<Element>(this) : parentElementInComposedTree();
+        return element ? const_cast<Element&>(*element).computedStyleForEditability() : nullptr;
+    }();
+
+    if (!style)
+        return Editability::ReadOnly;
+
+    return computeEditabilityFromComputedStyle(*style, treatment, pageIsEditable);
+}
+
+Node::Editability Node::computeEditability(UserSelectAllTreatment treatment, ShouldUpdateStyle shouldUpdateStyle) const
+{
+    return computeEditabilityWithStyle(nullptr, treatment, shouldUpdateStyle);
 }
 
 RenderBox* Node::renderBox() const
@@ -840,6 +875,7 @@ LayoutRect Node::renderRect(bool* isReplaced)
         }
         renderer = renderer->parent();
     }
+    *isReplaced = false;
     return LayoutRect();
 }
 
@@ -864,7 +900,20 @@ void Node::adjustStyleValidity(Style::Validity validity, Style::InvalidationMode
         setStyleFlag(NodeStyleFlag::StyleResolutionShouldRecompositeLayer);
 }
 
-inline void Node::updateAncestorsForStyleRecalc()
+void Node::updateAncestorsForStyleRecalc()
+{
+    markAncestorsForInvalidatedStyle();
+
+    auto* documentElement = document().documentElement();
+    if (!documentElement)
+        return;
+    if (!documentElement->childNeedsStyleRecalc() && !documentElement->needsStyleRecalc())
+        return;
+    document().setChildNeedsStyleRecalc();
+    document().scheduleStyleRecalc();
+}
+
+void Node::markAncestorsForInvalidatedStyle()
 {
     auto composedAncestors = composedTreeAncestors(*this);
     auto it = composedAncestors.begin();
@@ -881,14 +930,6 @@ inline void Node::updateAncestorsForStyleRecalc()
             it->setChildNeedsStyleRecalc();
         }
     }
-
-    auto* documentElement = document().documentElement();
-    if (!documentElement)
-        return;
-    if (!documentElement->childNeedsStyleRecalc() && !documentElement->needsStyleRecalc())
-        return;
-    document().setChildNeedsStyleRecalc();
-    document().scheduleStyleRecalc();
 }
 
 void Node::invalidateStyle(Style::Validity validity, Style::InvalidationMode mode)
@@ -944,7 +985,7 @@ inline bool Document::shouldInvalidateNodeListAndCollectionCaches() const
 
 inline bool Document::shouldInvalidateNodeListAndCollectionCachesForAttribute(const QualifiedName& attrName) const
 {
-    return shouldInvalidateNodeListCachesForAttr<DoNotInvalidateOnAttributeChanges + 1>(m_nodeListAndCollectionCounts, attrName);
+    return shouldInvalidateNodeListCachesForAttr<static_cast<uint8_t>(NodeListInvalidationType::DoNotInvalidateOnAttributeChanges) + 1>(m_nodeListAndCollectionCounts, attrName);
 }
 
 template <typename InvalidationFunction>
@@ -1128,7 +1169,7 @@ Node* Node::pseudoAwareLastChild() const
 
 const RenderStyle* Node::computedStyle(PseudoId pseudoElementSpecifier)
 {
-    auto* composedParent = composedTreeAncestors(*this).first();
+    auto* composedParent = parentElementInComposedTree();
     if (!composedParent)
         return nullptr;
     return composedParent->computedStyle(pseudoElementSpecifier);
@@ -1146,7 +1187,7 @@ bool Node::canStartSelection() const
 
         // We allow selections to begin within an element that has -webkit-user-select: none set,
         // but if the element is draggable then dragging should take priority over selection.
-        if (style.userDrag() == UserDrag::Element && style.userSelectIncludingInert() == UserSelect::None)
+        if (style.userDrag() == UserDrag::Element && style.effectiveUserSelect() == UserSelect::None)
             return false;
     }
     return parentOrShadowHostNode() ? parentOrShadowHostNode()->canStartSelection() : true;
@@ -1221,6 +1262,33 @@ HTMLSlotElement* Node::assignedSlotForBindings() const
     return nullptr;
 }
 
+HTMLSlotElement* Node::manuallyAssignedSlot() const
+{
+    if (!hasRareData())
+        return nullptr;
+    return rareData()->manuallyAssignedSlot();
+}
+
+void Node::setManuallyAssignedSlot(HTMLSlotElement* slotElement)
+{
+    if (RefPtr element = dynamicDowncast<Element>(*this))
+        RenderTreeUpdater::tearDownRenderers(*element);
+    else if (RefPtr text = dynamicDowncast<Text>(*this))
+        RenderTreeUpdater::tearDownRenderer(*text);
+
+    ensureRareData().setManuallyAssignedSlot(slotElement);
+}
+
+bool Node::hasEverPaintedImages() const
+{
+    return hasRareData() && rareData()->hasEverPaintedImages();
+}
+
+void Node::setHasEverPaintedImages(bool hasEverPaintedImages)
+{
+    ensureRareData().setHasEverPaintedImages(hasEverPaintedImages);
+}
+
 ContainerNode* Node::parentInComposedTree() const
 {
     ASSERT(isMainThreadOrGCThread());
@@ -1244,6 +1312,17 @@ Element* Node::parentElementInComposedTree() const
             return downcast<Element>(parent);
     }
     return nullptr;
+}
+
+TreeScope& Node::treeScopeForSVGReferences() const
+{
+    if (auto* shadowRoot = containingShadowRoot(); shadowRoot && shadowRoot->mode() == ShadowRootMode::UserAgent) {
+        if (shadowRoot->host() && shadowRoot->host()->elementName() == ElementNames::SVG::use) {
+            ASSERT(m_treeScope->parentTreeScope());
+            return *m_treeScope->parentTreeScope();
+        }
+    }
+    return treeScope();
 }
 
 bool Node::isInUserAgentShadowTree() const
@@ -1310,6 +1389,20 @@ Node& Node::shadowIncludingRoot() const
 Node& Node::getRootNode(const GetRootNodeOptions& options) const
 {
     return options.composed ? shadowIncludingRoot() : rootNode();
+}
+
+void Node::queueTaskKeepingThisNodeAlive(TaskSource source, Function<void ()>&& task)
+{
+    document().eventLoop().queueTask(source, [protectedThis = GCReachableRef(*this), task = WTFMove(task)] () {
+        task();
+    });
+}
+
+void Node::queueTaskToDispatchEvent(TaskSource source, Ref<Event>&& event)
+{
+    queueTaskKeepingThisNodeAlive(source, [protectedThis = Ref { *this }, event = WTFMove(event)]() {
+        protectedThis->dispatchEvent(event);
+    });
 }
 
 Node::InsertedIntoAncestorResult Node::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
@@ -1452,6 +1545,11 @@ static const AtomString& locateDefaultNamespace(const Node& node, const AtomStri
 {
     switch (node.nodeType()) {
     case Node::ELEMENT_NODE: {
+        if (prefix == xmlAtom())
+            return XMLNames::xmlNamespaceURI.get();
+        if (prefix == xmlnsAtom())
+            return XMLNSNames::xmlnsNamespaceURI.get();
+
         auto& element = downcast<Element>(node);
         auto& namespaceURI = element.namespaceURI();
         if (!namespaceURI.isNull() && element.prefix() == prefix)
@@ -1596,7 +1694,7 @@ String Node::textContent(bool convertBRsToNewlines) const
     return isNullString ? String() : content.toString();
 }
 
-ExceptionOr<void> Node::setTextContent(const String& text)
+void Node::setTextContent(String&& text)
 {
     switch (nodeType()) {
     case ATTRIBUTE_NODE:
@@ -1604,18 +1702,18 @@ ExceptionOr<void> Node::setTextContent(const String& text)
     case CDATA_SECTION_NODE:
     case COMMENT_NODE:
     case PROCESSING_INSTRUCTION_NODE:
-        return setNodeValue(text);
+        setNodeValue(WTFMove(text));
+        return;
     case ELEMENT_NODE:
     case DOCUMENT_FRAGMENT_NODE:
-        downcast<ContainerNode>(*this).stringReplaceAll(text);
-        return { };
+        downcast<ContainerNode>(*this).stringReplaceAll(WTFMove(text));
+        return;
     case DOCUMENT_NODE:
     case DOCUMENT_TYPE_NODE:
         // Do nothing.
-        return { };
+        return;
     }
     ASSERT_NOT_REACHED();
-    return { };
 }
 
 static SHA1::Digest hashPointer(const void* pointer)
@@ -1804,9 +1902,8 @@ void Node::showNode(const char* prefix) const
     if (!prefix)
         prefix = "";
     if (isTextNode()) {
-        String value = nodeValue();
-        value.replaceWithLiteral('\\', "\\\\");
-        value.replaceWithLiteral('\n', "\\n");
+        String value = makeStringByReplacingAll(nodeValue(), '\\', "\\\\"_s);
+        value = makeStringByReplacingAll(value, '\n', "\\n"_s);
         fprintf(stderr, "%s%s\t%p \"%s\"\n", prefix, nodeName().utf8().data(), this, value.utf8().data());
     } else {
         StringBuilder attrs;
@@ -1935,7 +2032,7 @@ void Node::showTreeForThisAcrossFrame() const
     Node* rootNode = const_cast<Node*>(this);
     while (parentOrShadowHostOrFrameOwner(rootNode))
         rootNode = parentOrShadowHostOrFrameOwner(rootNode);
-    showSubTreeAcrossFrame(rootNode, this, "");
+    showSubTreeAcrossFrame(rootNode, this, emptyString());
 }
 
 #endif // ENABLE(TREE_DEBUGGING)
@@ -2012,7 +2109,7 @@ inline void Node::moveShadowTreeToNewDocument(ShadowRoot& shadowRoot, Document& 
         node.moveNodeToNewDocument(oldDocument, newDocument);
     }, [&oldDocument, &newDocument](ShadowRoot& innerShadowRoot) {
         RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(&innerShadowRoot.document() == &oldDocument);
-        innerShadowRoot.moveShadowRootToNewDocument(newDocument);
+        innerShadowRoot.moveShadowRootToNewDocument(oldDocument, newDocument);
         moveShadowTreeToNewDocument(innerShadowRoot, oldDocument, newDocument);
     });
 }
@@ -2023,11 +2120,14 @@ void Node::moveTreeToNewScope(Node& root, TreeScope& oldScope, TreeScope& newSco
 
     Document& oldDocument = oldScope.documentScope();
     Document& newDocument = newScope.documentScope();
+    bool newScopeIsUAShadowTree = newScope.rootNode().hasBeenInUserAgentShadowTree();
     if (&oldDocument != &newDocument) {
         oldDocument.incrementReferencingNodeCount();
         traverseSubtreeToUpdateTreeScope(root, [&](Node& node) {
             ASSERT(!node.isTreeScope());
             RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(&node.treeScope() == &oldScope);
+            if (newScopeIsUAShadowTree)
+                node.setNodeFlag(NodeFlag::HasBeenInUserAgentShadowTree);
             node.setTreeScope(newScope);
             node.moveNodeToNewDocument(oldDocument, newDocument);
         }, [&](ShadowRoot& shadowRoot) {
@@ -2041,6 +2141,8 @@ void Node::moveTreeToNewScope(Node& root, TreeScope& oldScope, TreeScope& newSco
         traverseSubtreeToUpdateTreeScope(root, [&](Node& node) {
             ASSERT(!node.isTreeScope());
             RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(&node.treeScope() == &oldScope);
+            if (newScopeIsUAShadowTree)
+                node.setNodeFlag(NodeFlag::HasBeenInUserAgentShadowTree);
             node.setTreeScope(newScope);
             if (UNLIKELY(!node.hasRareData()))
                 return;
@@ -2066,7 +2168,7 @@ void Node::moveNodeToNewDocument(Document& oldDocument, Document& newDocument)
         }
         if (auto* transientRegistry = transientMutationObserverRegistry()) {
             for (auto& registration : *transientRegistry)
-                newDocument.addMutationObserverTypes(registration->mutationTypes());
+                newDocument.addMutationObserverTypes(registration.mutationTypes());
         }
     } else {
         ASSERT(!mutationObserverRegistry());
@@ -2088,12 +2190,13 @@ void Node::moveNodeToNewDocument(Document& oldDocument, Document& newDocument)
         textManipulationController->removeNode(*this);
 
     if (auto* eventTargetData = this->eventTargetData()) {
+        auto& eventNames = WebCore::eventNames();
         if (!eventTargetData->eventListenerMap.isEmpty()) {
             for (auto& type : eventTargetData->eventListenerMap.eventTypes())
                 newDocument.addListenerTypeIfNeeded(type);
         }
 
-        unsigned numWheelEventHandlers = eventListeners(eventNames().mousewheelEvent).size() + eventListeners(eventNames().wheelEvent).size();
+        unsigned numWheelEventHandlers = eventListeners(eventNames.mousewheelEvent).size() + eventListeners(eventNames.wheelEvent).size();
         for (unsigned i = 0; i < numWheelEventHandlers; ++i) {
             oldDocument.didRemoveWheelEventHandler(*this);
             newDocument.didAddWheelEventHandler(*this);
@@ -2102,11 +2205,11 @@ void Node::moveNodeToNewDocument(Document& oldDocument, Document& newDocument)
         unsigned numTouchEventListeners = 0;
 #if ENABLE(TOUCH_EVENTS)
         if (newDocument.quirks().shouldDispatchSimulatedMouseEvents(this)) {
-            for (auto& name : eventNames().extendedTouchRelatedEventNames())
+            for (auto& name : eventNames.extendedTouchRelatedEventNames())
                 numTouchEventListeners += eventListeners(name).size();
         } else {
 #endif
-            for (auto& name : eventNames().touchRelatedEventNames())
+            for (auto& name : eventNames.touchRelatedEventNames())
                 numTouchEventListeners += eventListeners(name).size();
 #if ENABLE(TOUCH_EVENTS)
         }
@@ -2123,7 +2226,7 @@ void Node::moveNodeToNewDocument(Document& oldDocument, Document& newDocument)
 
 #if ENABLE(TOUCH_EVENTS) && ENABLE(IOS_GESTURE_EVENTS)
         unsigned numGestureEventListeners = 0;
-        for (auto& name : eventNames().gestureEventNames())
+        for (auto& name : eventNames.gestureEventNames())
             numGestureEventListeners += eventListeners(name).size();
 
         for (unsigned i = 0; i < numGestureEventListeners; ++i) {
@@ -2157,25 +2260,29 @@ static inline bool tryAddEventListener(Node* targetNode, const AtomString& event
            static_cast<JavaEventListener *> (&listener.copyRef().get()));
 #endif
     targetNode->document().addListenerTypeIfNeeded(eventType);
-    if (eventNames().isWheelEventType(eventType))
+
+    auto& eventNames = WebCore::eventNames();
+    if (eventNames.isWheelEventType(eventType))
         targetNode->document().didAddWheelEventHandler(*targetNode);
-    else if (eventNames().isTouchRelatedEventType(eventType, *targetNode))
+    else if (eventNames.isTouchRelatedEventType(eventType, *targetNode))
         targetNode->document().didAddTouchEventHandler(*targetNode);
+    else if (eventNames.isMouseClickRelatedEventType(eventType))
+        targetNode->document().didAddOrRemoveMouseEventHandler(*targetNode);
 
 #if PLATFORM(IOS_FAMILY)
-    if (targetNode == &targetNode->document() && eventType == eventNames().scrollEvent) {
+    if (targetNode == &targetNode->document() && eventType == eventNames.scrollEvent) {
         if (auto* window = targetNode->document().domWindow())
             window->incrementScrollEventListenersCount();
     }
 
 #if ENABLE(TOUCH_EVENTS)
-    if (eventNames().isTouchRelatedEventType(eventType, *targetNode))
+    if (eventNames.isTouchRelatedEventType(eventType, *targetNode))
         targetNode->document().addTouchEventListener(*targetNode);
 #endif
 #endif // PLATFORM(IOS_FAMILY)
 
 #if ENABLE(IOS_GESTURE_EVENTS) && ENABLE(TOUCH_EVENTS)
-    if (eventNames().isGestureEventType(eventType))
+    if (eventNames.isGestureEventType(eventType))
         targetNode->document().addTouchEventHandler(*targetNode);
 #endif
 
@@ -2194,25 +2301,28 @@ static inline bool tryRemoveEventListener(Node* targetNode, const AtomString& ev
 
     // FIXME: Notify Document that the listener has vanished. We need to keep track of a number of
     // listeners for each type, not just a bool - see https://bugs.webkit.org/show_bug.cgi?id=33861
-    if (eventNames().isWheelEventType(eventType))
+    auto& eventNames = WebCore::eventNames();
+    if (eventNames.isWheelEventType(eventType))
         targetNode->document().didRemoveWheelEventHandler(*targetNode);
-    else if (eventNames().isTouchRelatedEventType(eventType, *targetNode))
+    else if (eventNames.isTouchRelatedEventType(eventType, *targetNode))
         targetNode->document().didRemoveTouchEventHandler(*targetNode);
+    else if (eventNames.isMouseClickRelatedEventType(eventType))
+        targetNode->document().didAddOrRemoveMouseEventHandler(*targetNode);
 
 #if PLATFORM(IOS_FAMILY)
-    if (targetNode == &targetNode->document() && eventType == eventNames().scrollEvent) {
+    if (targetNode == &targetNode->document() && eventType == eventNames.scrollEvent) {
         if (auto* window = targetNode->document().domWindow())
             window->decrementScrollEventListenersCount();
     }
 
 #if ENABLE(TOUCH_EVENTS)
-    if (eventNames().isTouchRelatedEventType(eventType, *targetNode))
+    if (eventNames.isTouchRelatedEventType(eventType, *targetNode))
         targetNode->document().removeTouchEventListener(*targetNode);
 #endif
 #endif // PLATFORM(IOS_FAMILY)
 
 #if ENABLE(IOS_GESTURE_EVENTS) && ENABLE(TOUCH_EVENTS)
-    if (eventNames().isGestureEventType(eventType))
+    if (eventNames.isGestureEventType(eventType))
         targetNode->document().removeTouchEventHandler(*targetNode);
 #endif
 
@@ -2224,111 +2334,58 @@ bool Node::removeEventListener(const AtomString& eventType, EventListener& liste
     return tryRemoveEventListener(this, eventType, listener, options);
 }
 
-typedef HashMap<Node*, std::unique_ptr<EventTargetData>> EventTargetDataMap;
-
-static EventTargetDataMap& eventTargetDataMap()
-{
-    static NeverDestroyed<EventTargetDataMap> map;
-
-    return map;
-}
-
-static Lock s_eventTargetDataMapLock;
-
-EventTargetData* Node::eventTargetData()
-{
-    return hasEventTargetData() ? eventTargetDataMap().get(this) : nullptr;
-}
-
-EventTargetData* Node::eventTargetDataConcurrently()
-{
-    // Not holding the lock when the world is stopped accelerates parallel constraint solving, which
-    // calls this function from many threads. Parallel constraint solving can happen with the world
-    // running or stopped, but if we do it with a running world, then we're usually mixing constraint
-    // solving with other work. Therefore, the most likely time for contention on this lock is when the
-    // world is stopped. We don't have to hold the lock when the world is stopped, because a stopped world
-    // means that we will never mutate the event target data map.
-    JSC::VM* vm = commonVMOrNull();
-    if (vm && vm->heap.worldIsRunning()) {
-        Locker locker { s_eventTargetDataMapLock };
-        return hasEventTargetData() ? eventTargetDataMap().get(this) : nullptr;
-    }
-    return hasEventTargetData() ? eventTargetDataMap().get(this) : nullptr;
-}
-
-EventTargetData& Node::ensureEventTargetData()
-{
-    if (hasEventTargetData())
-        return *eventTargetDataMap().get(this);
-
-    JSC::VM* vm = commonVMOrNull();
-    RELEASE_ASSERT(!vm || vm->heap.worldIsRunning());
-
-    Locker locker { s_eventTargetDataMapLock };
-    setHasEventTargetData(true);
-    return *eventTargetDataMap().add(this, makeUnique<EventTargetData>()).iterator->value;
-}
-
-void Node::clearEventTargetData()
-{
-    JSC::VM* vm = commonVMOrNull();
-    RELEASE_ASSERT(!vm || vm->heap.worldIsRunning());
-    Locker locker { s_eventTargetDataMapLock };
-    eventTargetDataMap().remove(this);
-}
-
 Vector<std::unique_ptr<MutationObserverRegistration>>* Node::mutationObserverRegistry()
 {
     if (!hasRareData())
         return nullptr;
-    auto* data = rareData()->mutationObserverData();
+    auto* data = rareData()->mutationObserverDataIfExists();
     if (!data)
         return nullptr;
     return &data->registry;
 }
 
-HashSet<MutationObserverRegistration*>* Node::transientMutationObserverRegistry()
+WeakHashSet<MutationObserverRegistration>* Node::transientMutationObserverRegistry()
 {
     if (!hasRareData())
         return nullptr;
-    auto* data = rareData()->mutationObserverData();
+    auto* data = rareData()->mutationObserverDataIfExists();
     if (!data)
         return nullptr;
     return &data->transientRegistry;
 }
 
-template<typename Registry> static inline void collectMatchingObserversForMutation(HashMap<Ref<MutationObserver>, MutationRecordDeliveryOptions>& observers, Registry* registry, Node& target, MutationObserverOptionType type, const QualifiedName* attributeName)
+HashMap<Ref<MutationObserver>, MutationRecordDeliveryOptions> Node::registeredMutationObservers(MutationObserverOptionType type, const QualifiedName* attributeName)
 {
-    if (!registry)
-        return;
+    HashMap<Ref<MutationObserver>, MutationRecordDeliveryOptions> observers;
+    ASSERT((type == MutationObserverOptionType::Attributes && attributeName) || !attributeName);
 
-    for (auto& registration : *registry) {
-        if (registration->shouldReceiveMutationFrom(target, type, attributeName)) {
-            auto deliveryOptions = registration->deliveryOptions();
-            auto result = observers.add(registration->observer(), deliveryOptions);
+    auto collectMatchingObserversForMutation = [&](MutationObserverRegistration& registration) {
+        if (registration.shouldReceiveMutationFrom(*this, type, attributeName)) {
+            auto deliveryOptions = registration.deliveryOptions();
+            auto result = observers.add(registration.observer(), deliveryOptions);
             if (!result.isNewEntry)
                 result.iterator->value.add(deliveryOptions);
         }
+    };
+
+    for (RefPtr node = this; node; node = node->parentNode()) {
+        if (auto* registry = node->mutationObserverRegistry()) {
+            for (auto& registration : *registry)
+                collectMatchingObserversForMutation(*registration);
     }
+        if (auto* registry = node->transientMutationObserverRegistry()) {
+            for (auto& registration : *registry)
+                collectMatchingObserversForMutation(registration);
+        }
+    }
+
+    return observers;
 }
 
-HashMap<Ref<MutationObserver>, MutationRecordDeliveryOptions> Node::registeredMutationObservers(MutationObserverOptionType type, const QualifiedName* attributeName)
-{
-    HashMap<Ref<MutationObserver>, MutationRecordDeliveryOptions> result;
-    ASSERT((type == MutationObserverOptionType::Attributes && attributeName) || !attributeName);
-    collectMatchingObserversForMutation(result, mutationObserverRegistry(), *this, type, attributeName);
-    collectMatchingObserversForMutation(result, transientMutationObserverRegistry(), *this, type, attributeName);
-    for (Node* node = parentNode(); node; node = node->parentNode()) {
-        collectMatchingObserversForMutation(result, node->mutationObserverRegistry(), *this, type, attributeName);
-        collectMatchingObserversForMutation(result, node->transientMutationObserverRegistry(), *this, type, attributeName);
-    }
-    return result;
-}
-
-void Node::registerMutationObserver(MutationObserver& observer, MutationObserverOptions options, const HashSet<AtomString>& attributeFilter)
+void Node::registerMutationObserver(MutationObserver& observer, MutationObserverOptions options, const MemoryCompactLookupOnlyRobinHoodHashSet<AtomString>& attributeFilter)
 {
     MutationObserverRegistration* registration = nullptr;
-    auto& registry = ensureRareData().ensureMutationObserverData().registry;
+    auto& registry = ensureRareData().mutationObserverData().registry;
 
     for (auto& candidateRegistration : registry) {
         if (&candidateRegistration->observer() == &observer) {
@@ -2359,7 +2416,7 @@ void Node::unregisterMutationObserver(MutationObserverRegistration& registration
 
 void Node::registerTransientMutationObserver(MutationObserverRegistration& registration)
 {
-    ensureRareData().ensureMutationObserverData().transientRegistry.add(&registration);
+    ensureRareData().mutationObserverData().transientRegistry.add(registration);
 }
 
 void Node::unregisterTransientMutationObserver(MutationObserverRegistration& registration)
@@ -2369,8 +2426,8 @@ void Node::unregisterTransientMutationObserver(MutationObserverRegistration& reg
     if (!transientRegistry)
         return;
 
-    ASSERT(transientRegistry->contains(&registration));
-    transientRegistry->remove(&registration);
+    ASSERT(transientRegistry->contains(registration));
+    transientRegistry->remove(registration);
 }
 
 void Node::notifyMutationObserversNodeWillDetach()
@@ -2384,8 +2441,8 @@ void Node::notifyMutationObserversNodeWillDetach()
                 registration->observedSubtreeNodeWillDetach(*this);
         }
         if (auto* transientRegistry = node->transientMutationObserverRegistry()) {
-            for (auto* registration : *transientRegistry)
-                registration->observedSubtreeNodeWillDetach(*this);
+            for (auto& registration : *transientRegistry)
+                registration.observedSubtreeNodeWillDetach(*this);
         }
     }
 }
@@ -2407,7 +2464,7 @@ void Node::dispatchSubtreeModifiedEvent()
 
     ASSERT_WITH_SECURITY_IMPLICATION(ScriptDisallowedScope::InMainThread::isEventDispatchAllowedInSubtree(*this));
 
-    if (!document().hasListenerType(Document::DOMSUBTREEMODIFIED_LISTENER))
+    if (!document().hasListenerType(Document::ListenerType::DOMSubtreeModified))
         return;
     const AtomString& subtreeModifiedEventName = eventNames().DOMSubtreeModifiedEvent;
     if (!parentNode() && !hasEventListeners(subtreeModifiedEventName))
@@ -2436,27 +2493,29 @@ void Node::defaultEventHandler(Event& event)
 {
     if (event.target() != this)
         return;
-    const AtomString& eventType = event.type();
-    if (eventType == eventNames().keydownEvent || eventType == eventNames().keypressEvent || eventType == eventNames().keyupEvent) {
+    auto& eventType = event.type();
+    auto& eventNames = WebCore::eventNames();
+    if (eventType == eventNames.keydownEvent || eventType == eventNames.keypressEvent || eventType == eventNames.keyupEvent) {
         if (is<KeyboardEvent>(event)) {
-            if (Frame* frame = document().frame())
+            if (auto* frame = document().frame())
                 frame->eventHandler().defaultKeyboardEventHandler(downcast<KeyboardEvent>(event));
         }
-    } else if (eventType == eventNames().clickEvent) {
+    } else if (eventType == eventNames.clickEvent) {
         dispatchDOMActivateEvent(event);
 #if ENABLE(CONTEXT_MENUS)
-    } else if (eventType == eventNames().contextmenuEvent) {
-        if (Frame* frame = document().frame())
-            if (Page* page = frame->page())
+    } else if (eventType == eventNames.contextmenuEvent) {
+        if (auto* frame = document().frame()) {
+            if (auto* page = frame->page())
                 page->contextMenuController().handleContextMenuEvent(event);
+        }
 #endif
-    } else if (eventType == eventNames().textInputEvent) {
+    } else if (eventType == eventNames.textInputEvent) {
         if (is<TextEvent>(event)) {
-            if (Frame* frame = document().frame())
+            if (auto* frame = document().frame())
                 frame->eventHandler().defaultTextInputEventHandler(downcast<TextEvent>(event));
         }
 #if ENABLE(PAN_SCROLLING)
-    } else if (eventType == eventNames().mousedownEvent && is<MouseEvent>(event)) {
+    } else if (eventType == eventNames.mousedownEvent && is<MouseEvent>(event)) {
         if (downcast<MouseEvent>(event).button() == MiddleButton) {
             if (enclosingLinkEventParentOrSelf())
                 return;
@@ -2472,12 +2531,12 @@ void Node::defaultEventHandler(Event& event)
                 renderer = renderer->parent();
 
             if (renderer) {
-                if (Frame* frame = document().frame())
+                if (auto* frame = document().frame())
                     frame->eventHandler().startPanScrolling(downcast<RenderBox>(*renderer));
             }
         }
 #endif
-    } else if (eventNames().isWheelEventType(eventType) && is<WheelEvent>(event)) {
+    } else if (eventNames.isWheelEventType(eventType) && is<WheelEvent>(event)) {
         // If we don't have a renderer, send the wheel event to the first node we find with a renderer.
         // This is needed for <option> and <optgroup> elements so that <select>s get a wheel scroll.
         Node* startNode = this;
@@ -2485,13 +2544,13 @@ void Node::defaultEventHandler(Event& event)
             startNode = startNode->parentOrShadowHostNode();
 
         if (startNode && startNode->renderer()) {
-            if (Frame* frame = document().frame())
+            if (auto* frame = document().frame())
                 frame->eventHandler().defaultWheelEventHandler(startNode, downcast<WheelEvent>(event));
         }
 #if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY)
-    } else if (is<TouchEvent>(event) && eventNames().isTouchRelatedEventType(eventType, *this)) {
+    } else if (is<TouchEvent>(event) && eventNames.isTouchRelatedEventType(eventType, *this)) {
         // Capture the target node's visibility state before dispatching touchStart.
-        if (is<Element>(*this) && eventType == eventNames().touchstartEvent) {
+        if (is<Element>(*this) && eventType == eventNames.touchstartEvent) {
 #if ENABLE(CONTENT_CHANGE_OBSERVER)
             auto& contentChangeObserver = document().contentChangeObserver();
             if (ContentChangeObserver::isVisuallyHidden(*this))
@@ -2506,14 +2565,14 @@ void Node::defaultEventHandler(Event& event)
             renderer = renderer->parent();
 
         if (renderer && renderer->node()) {
-            if (Frame* frame = document().frame())
+            if (auto* frame = document().frame())
                 frame->eventHandler().defaultTouchEventHandler(*renderer->node(), downcast<TouchEvent>(event));
         }
 #endif
     }
 }
 
-bool Node::willRespondToMouseMoveEvents()
+bool Node::willRespondToMouseMoveEvents() const
 {
     // FIXME: Why is the iOS code path different from the non-iOS code path?
 #if !PLATFORM(IOS_FAMILY)
@@ -2522,27 +2581,53 @@ bool Node::willRespondToMouseMoveEvents()
     if (downcast<Element>(*this).isDisabledFormControl())
         return false;
 #endif
-    return hasEventListeners(eventNames().mousemoveEvent) || hasEventListeners(eventNames().mouseoverEvent) || hasEventListeners(eventNames().mouseoutEvent);
+    auto& eventNames = WebCore::eventNames();
+    return eventTypes().containsIf([&](const auto& type) {
+        return eventNames.isMouseMoveRelatedEventType(type);
+    });
 }
 
-bool Node::willRespondToMouseClickEvents()
+bool Node::willRespondToTouchEvents() const
+{
+    auto& eventNames = WebCore::eventNames();
+    return eventTypes().containsIf([&](const auto& type) {
+        return eventNames.isTouchRelatedEventType(type, *this);
+    });
+}
+
+Node::Editability Node::computeEditabilityForMouseClickEvents(const RenderStyle* style) const
 {
     // FIXME: Why is the iOS code path different from the non-iOS code path?
 #if PLATFORM(IOS_FAMILY)
-    return isContentEditable() || hasEventListeners(eventNames().mouseupEvent) || hasEventListeners(eventNames().mousedownEvent) || hasEventListeners(eventNames().clickEvent);
+    auto userSelectAllTreatment = UserSelectAllTreatment::Editable;
 #else
+    auto userSelectAllTreatment = UserSelectAllTreatment::NotEditable;
+#endif
+
+    return computeEditabilityWithStyle(style, userSelectAllTreatment, style ? ShouldUpdateStyle::DoNotUpdate : ShouldUpdateStyle::Update);
+}
+
+bool Node::willRespondToMouseClickEvents() const
+{
+    return willRespondToMouseClickEventsWithEditability(computeEditabilityForMouseClickEvents());
+}
+
+bool Node::willRespondToMouseClickEventsWithEditability(Editability editability) const
+{
+    // FIXME: Why is the iOS code path different from the non-iOS code path?
+#if !PLATFORM(IOS_FAMILY)
     if (!is<Element>(*this))
         return false;
     if (downcast<Element>(*this).isDisabledFormControl())
         return false;
-    return computeEditability(UserSelectAllIsAlwaysNonEditable, ShouldUpdateStyle::Update) != Editability::ReadOnly
-        || hasEventListeners(eventNames().mouseupEvent) || hasEventListeners(eventNames().mousedownEvent) || hasEventListeners(eventNames().clickEvent) || hasEventListeners(eventNames().DOMActivateEvent);
 #endif
-}
+    if (editability != Editability::ReadOnly)
+        return true;
 
-bool Node::willRespondToMouseWheelEvents()
-{
-    return hasEventListeners(eventNames().mousewheelEvent);
+    auto& eventNames = WebCore::eventNames();
+    return eventTypes().containsIf([&](const auto& type) {
+        return eventNames.isMouseClickRelatedEventType(type);
+    });
 }
 
 // It's important not to inline removedLastRef, because we don't want to inline the code to
@@ -2573,7 +2658,7 @@ void Node::removedLastRef()
 
 void Node::incrementConnectedSubframeCount(unsigned amount)
 {
-    static_assert(RareDataBitFields { Page::maxNumberOfFrames, 0, 0 }.connectedSubframeCount == Page::maxNumberOfFrames, "connectedSubframeCount must fit Page::maxNumberOfFrames");
+    static_assert(RareDataBitFields { Page::maxNumberOfFrames, 0, 0, 0, 0 }.connectedSubframeCount == Page::maxNumberOfFrames, "connectedSubframeCount must fit Page::maxNumberOfFrames");
 
     ASSERT(isContainerNode());
     auto bitfields = rareDataBitfields();
@@ -2613,13 +2698,35 @@ void Node::updateAncestorConnectedSubframeCountForInsertion() const
         node->incrementConnectedSubframeCount(count);
 }
 
+TextDirection Node::effectiveTextDirection() const
+{
+    if (rareDataBitfields().usesEffectiveTextDirection)
+        return static_cast<TextDirection>(rareDataBitfields().effectiveTextDirection);
+    return document().documentElementTextDirection();
+}
+
+void Node::setEffectiveTextDirection(TextDirection direction)
+{
+    auto bitfields = rareDataBitfields();
+    bitfields.effectiveTextDirection = static_cast<uint16_t>(direction);
+    setRareDataBitfields(bitfields);
+}
+
+void Node::setUsesEffectiveTextDirection(bool value)
+{
+    auto bitfields = rareDataBitfields();
+    bitfields.usesEffectiveTextDirection = value;
+    setRareDataBitfields(bitfields);
+}
+
 bool Node::inRenderedDocument() const
 {
     return isConnected() && document().hasLivingRenderTree();
 }
 
-void* Node::opaqueRootSlow() const
+WebCoreOpaqueRoot Node::traverseToOpaqueRoot() const
 {
+    ASSERT_WITH_MESSAGE(!isConnected(), "Call opaqueRoot() or document() when the node is connected");
     const Node* node = this;
     for (;;) {
         const Node* nextNode = node->parentOrShadowHostNode();
@@ -2627,29 +2734,12 @@ void* Node::opaqueRootSlow() const
             break;
         node = nextNode;
     }
-    return const_cast<void*>(static_cast<const void*>(node));
+    return WebCoreOpaqueRoot { const_cast<Node*>(node) };
 }
 
-// Please use RenderStyle::effectiveInert instead!
-bool Node::deprecatedIsInert() const
+void Node::notifyInspectorOfRendererChange()
 {
-    if (!isConnected())
-        return true;
-
-    if (this != &document()) {
-        Node* activeModalDialog = document().activeModalDialog();
-        if (activeModalDialog && !activeModalDialog->containsIncludingShadowDOM(this))
-            return true;
-    }
-
-    if (document().settings().inertAttributeEnabled()) {
-        for (RefPtr element = this; element; element = element->parentElementInComposedTree()) {
-            if (is<HTMLElement>(*element) && downcast<HTMLElement>(*element).hasAttribute(HTMLNames::inertAttr))
-                return true;
-        }
-    }
-
-        return false;
+    InspectorInstrumentation::didChangeRendererForDOMNode(*this);
 }
 
 template<> ContainerNode* parent<Tree>(const Node& node)
@@ -2733,44 +2823,35 @@ static bool isSiblingSubsequent(const Node& siblingA, const Node& siblingB)
     return false;
 }
 
-#if PLATFORM(JAVA)
-// VS 2017 has buggy support for compile-time inline constants, so they
-// are defined here as runtime constants
-const PartialOrdering PartialOrdering::less(Type::Less);
-const PartialOrdering PartialOrdering::equivalent(Type::Equivalent);
-const PartialOrdering PartialOrdering::greater(Type::Greater);
-const PartialOrdering PartialOrdering::unordered(Type::Unordered);
-#endif
-
-template<TreeType treeType> PartialOrdering treeOrder(const Node& a, const Node& b)
+template<TreeType treeType> std::partial_ordering treeOrder(const Node& a, const Node& b)
 {
     if (&a == &b)
-        return PartialOrdering::equivalent;
+        return std::partial_ordering::equivalent;
     auto result = commonInclusiveAncestorAndChildren<treeType>(a, b);
     if (!result.commonAncestor)
-        return PartialOrdering::unordered;
+        return std::partial_ordering::unordered;
     if (!result.distinctAncestorA)
-        return PartialOrdering::less;
+        return std::partial_ordering::less;
     if (!result.distinctAncestorB)
-        return PartialOrdering::greater;
+        return std::partial_ordering::greater;
     bool isShadowRootA = result.distinctAncestorA->isShadowRoot();
     bool isShadowRootB = result.distinctAncestorB->isShadowRoot();
     if (isShadowRootA || isShadowRootB) {
         if (!isShadowRootB)
-            return PartialOrdering::less;
+            return std::partial_ordering::less;
         if (!isShadowRootA)
-            return PartialOrdering::greater;
+            return std::partial_ordering::greater;
         ASSERT_NOT_REACHED();
-        return PartialOrdering::unordered;
+        return std::partial_ordering::unordered;
     }
-    return isSiblingSubsequent(*result.distinctAncestorA, *result.distinctAncestorB) ? PartialOrdering::less : PartialOrdering::greater;
+    return isSiblingSubsequent(*result.distinctAncestorA, *result.distinctAncestorB) ? std::partial_ordering::less : std::partial_ordering::greater;
 }
 
-template PartialOrdering treeOrder<Tree>(const Node&, const Node&);
-template PartialOrdering treeOrder<ShadowIncludingTree>(const Node&, const Node&);
-template PartialOrdering treeOrder<ComposedTree>(const Node&, const Node&);
+template std::partial_ordering treeOrder<Tree>(const Node&, const Node&);
+template std::partial_ordering treeOrder<ShadowIncludingTree>(const Node&, const Node&);
+template std::partial_ordering treeOrder<ComposedTree>(const Node&, const Node&);
 
-PartialOrdering treeOrderForTesting(TreeType type, const Node& a, const Node& b)
+std::partial_ordering treeOrderForTesting(TreeType type, const Node& a, const Node& b)
 {
     switch (type) {
     case Tree:
@@ -2781,7 +2862,7 @@ PartialOrdering treeOrderForTesting(TreeType type, const Node& a, const Node& b)
         return treeOrder<ComposedTree>(a, b);
     }
     ASSERT_NOT_REACHED();
-    return PartialOrdering::unordered;
+    return std::partial_ordering::unordered;
 }
 
 TextStream& operator<<(TextStream& ts, const Node& node)

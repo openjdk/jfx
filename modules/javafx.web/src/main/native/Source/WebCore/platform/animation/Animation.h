@@ -29,6 +29,7 @@
 #include "RenderStyleConstants.h"
 #include "StyleScopeOrdinal.h"
 #include "TimingFunction.h"
+#include "WebAnimationTypes.h"
 
 namespace WebCore {
 
@@ -106,18 +107,18 @@ public:
 
     struct TransitionProperty {
         TransitionMode mode;
-        CSSPropertyID id;
+        AnimatableProperty animatableProperty;
     };
 
-    enum AnimationDirection {
-        AnimationDirectionNormal,
-        AnimationDirectionAlternate,
-        AnimationDirectionReverse,
-        AnimationDirectionAlternateReverse
+    enum class Direction : uint8_t {
+        Normal,
+        Alternate,
+        Reverse,
+        AlternateReverse
     };
 
-    AnimationDirection direction() const { return static_cast<AnimationDirection>(m_direction); }
-    bool directionIsForwards() const { return m_direction == AnimationDirectionNormal || m_direction == AnimationDirectionAlternate; }
+    Direction direction() const { return static_cast<Direction>(m_direction); }
+    bool directionIsForwards() const { return direction() == Direction::Normal || direction() == Direction::Alternate; }
 
     AnimationFillMode fillMode() const { return static_cast<AnimationFillMode>(m_fillMode); }
 
@@ -135,12 +136,11 @@ public:
     Style::ScopeOrdinal nameStyleScopeOrdinal() const { return m_nameStyleScopeOrdinal; }
     AnimationPlayState playState() const { return static_cast<AnimationPlayState>(m_playState); }
     TransitionProperty property() const { return m_property; }
-    const String& unknownProperty() const { return m_unknownProperty; }
     TimingFunction* timingFunction() const { return m_timingFunction.get(); }
     TimingFunction* defaultTimingFunctionForKeyframes() const { return m_defaultTimingFunctionForKeyframes.get(); }
 
     void setDelay(double c) { m_delay = c; m_delaySet = true; }
-    void setDirection(AnimationDirection d) { m_direction = d; m_directionSet = true; }
+    void setDirection(Direction d) { m_direction = static_cast<unsigned>(d); m_directionSet = true; }
     void setDuration(double d) { ASSERT(d >= 0); m_duration = d; m_durationSet = true; }
     void setPlaybackRate(double d) { m_playbackRate = d; }
     void setFillMode(AnimationFillMode f) { m_fillMode = static_cast<unsigned>(f); m_fillModeSet = true; }
@@ -153,14 +153,13 @@ public:
     }
     void setPlayState(AnimationPlayState d) { m_playState = static_cast<unsigned>(d); m_playStateSet = true; }
     void setProperty(TransitionProperty t) { m_property = t; m_propertySet = true; }
-    void setUnknownProperty(const String& property) { m_unknownProperty = property; }
     void setTimingFunction(RefPtr<TimingFunction>&& function) { m_timingFunction = WTFMove(function); m_timingFunctionSet = true; }
     void setDefaultTimingFunctionForKeyframes(RefPtr<TimingFunction>&& function) { m_defaultTimingFunctionForKeyframes = WTFMove(function); }
 
     void setIsNoneAnimation(bool n) { m_isNone = n; }
 
     void fillDelay(double delay) { setDelay(delay); m_delayFilled = true; }
-    void fillDirection(AnimationDirection direction) { setDirection(direction); m_directionFilled = true; }
+    void fillDirection(Direction direction) { setDirection(direction); m_directionFilled = true; }
     void fillDuration(double duration) { setDuration(duration); m_durationFilled = true; }
     void fillFillMode(AnimationFillMode fillMode) { setFillMode(fillMode); m_fillModeFilled = true; }
     void fillIterationCount(double iterationCount) { setIterationCount(iterationCount); m_iterationCountFilled = true; }
@@ -184,7 +183,6 @@ public:
 
     // return true every Animation in the chain (defined by m_next) match
     bool operator==(const Animation& o) const { return animationsMatch(o); }
-    bool operator!=(const Animation& o) const { return !(*this == o); }
 
     bool fillsBackwards() const { return m_fillModeSet && (fillMode() == AnimationFillMode::Backwards || fillMode() == AnimationFillMode::Both); }
     bool fillsForwards() const { return m_fillModeSet && (fillMode() == AnimationFillMode::Forwards || fillMode() == AnimationFillMode::Both); }
@@ -200,7 +198,6 @@ private:
     TransitionProperty m_property { TransitionMode::All, CSSPropertyInvalid };
 
     Name m_name;
-    String m_unknownProperty;
     double m_iterationCount;
     double m_delay;
     double m_duration;
@@ -210,7 +207,7 @@ private:
 
     Style::ScopeOrdinal m_nameStyleScopeOrdinal { Style::ScopeOrdinal::Element };
 
-    unsigned m_direction : 2; // AnimationDirection
+    unsigned m_direction : 2; // Direction
     unsigned m_fillMode : 2; // AnimationFillMode
     unsigned m_playState : 2; // AnimationPlayState
     unsigned m_compositeOperation : 2; // CompositeOperation
@@ -240,7 +237,7 @@ private:
 
 public:
     static double initialDelay() { return 0; }
-    static AnimationDirection initialDirection() { return AnimationDirectionNormal; }
+    static Direction initialDirection() { return Direction::Normal; }
     static double initialDuration() { return 0; }
     static AnimationFillMode initialFillMode() { return AnimationFillMode::None; }
     static double initialIterationCount() { return 1.0; }
@@ -253,7 +250,7 @@ public:
 
 WTF::TextStream& operator<<(WTF::TextStream&, AnimationPlayState);
 WTF::TextStream& operator<<(WTF::TextStream&, Animation::TransitionProperty);
-WTF::TextStream& operator<<(WTF::TextStream&, Animation::AnimationDirection);
+WTF::TextStream& operator<<(WTF::TextStream&, Animation::Direction);
 WTF::TextStream& operator<<(WTF::TextStream&, const Animation&);
 
 } // namespace WebCore

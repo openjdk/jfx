@@ -71,6 +71,7 @@ if (APPLE)
         cocoa/WorkQueueCocoa.cpp
         text/cf/StringCF.cpp
         text/cf/StringImplCF.cpp
+	text/cocoa/ASCIILiteralCocoa.mm
         text/cocoa/StringImplCocoa.mm
     )
 
@@ -103,6 +104,7 @@ elseif (WIN32)
         win/OSAllocatorWin.cpp
         win/RunLoopWin.cpp
         win/ThreadingWin.cpp
+        win/Win32Handle.cpp
     )
 
     list(APPEND WTF_PUBLIC_HEADERS

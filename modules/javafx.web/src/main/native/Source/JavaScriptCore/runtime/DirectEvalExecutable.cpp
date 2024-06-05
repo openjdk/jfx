@@ -29,6 +29,7 @@
 #include "CodeCache.h"
 #include "Debugger.h"
 #include "Error.h"
+#include "GlobalObjectMethodTable.h"
 #include "JSCJSValueInlines.h"
 #include "ParserError.h"
 
@@ -63,7 +64,7 @@ DirectEvalExecutable* DirectEvalExecutable::create(JSGlobalObject* globalObject,
         return nullptr;
     }
 
-    executable->m_unlinkedEvalCodeBlock.set(vm, executable, unlinkedEvalCode);
+    executable->m_unlinkedCodeBlock.set(vm, executable, unlinkedEvalCode);
 
     return executable;
 }

@@ -41,7 +41,7 @@
 #include "HTMLNames.h"
 #include "Page.h"
 #include "RenderBlock.h"
-#include "RenderObject.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "ScriptDisallowedScope.h"
 #include "Settings.h"
 #include "ShadowPseudoIds.h"
@@ -54,7 +54,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-ValidationMessage::ValidationMessage(HTMLFormControlElement* element)
+ValidationMessage::ValidationMessage(HTMLElement& element)
     : m_element(element)
 {
     ASSERT(m_element);
@@ -77,7 +77,7 @@ ValidationMessageClient* ValidationMessage::validationMessageClient() const
     return 0;
 }
 
-void ValidationMessage::updateValidationMessage(const String& message)
+void ValidationMessage::updateValidationMessage(HTMLElement& element, const String& message)
 {
     // We want to hide the validation message as soon as the user starts
     // typing, even if a constraint is still violated. Thefore, we hide the message instead
@@ -103,6 +103,8 @@ void ValidationMessage::updateValidationMessage(const String& message)
         requestToHideMessage();
         return;
     }
+
+    m_element = element;
     setMessage(updatedMessage);
 }
 
@@ -131,15 +133,18 @@ void ValidationMessage::setMessageDOMAndStartTimer()
     ASSERT(m_messageBody);
     m_messageHeading->removeChildren();
     m_messageBody->removeChildren();
-    Vector<String> lines = m_message.split('\n');
-    Document& document = m_messageHeading->document();
-    for (unsigned i = 0; i < lines.size(); ++i) {
-        if (i) {
-            m_messageBody->appendChild(Text::create(document, lines[i]));
-            if (i < lines.size() - 1)
+
+    auto& document = m_messageHeading->document();
+    auto lines = StringView(m_message).split('\n');
+    auto it = lines.begin();
+    if (it != lines.end()) {
+        m_messageHeading->setInnerText((*it).toString());
+        auto firstBodyLineIterator = ++it;
+        for (; it != lines.end(); ++it) {
+            if (it != firstBodyLineIterator)
                 m_messageBody->appendChild(HTMLBRElement::create(document));
-        } else
-            m_messageHeading->setInnerText(lines[i]);
+            m_messageBody->appendChild(Text::create(document, (*it).toString()));
+        }
     }
 
     int magnification = document.page() ? document.page()->settings().validationMessageTimerMagnification() : -1;
@@ -225,14 +230,7 @@ void ValidationMessage::buildBubbleTree()
     setMessageDOMAndStartTimer();
 
     // FIXME: Use transition to show the bubble.
-
-    if (!document.view())
-        return;
-    document.view()->queuePostLayoutCallback([weakThis = WeakPtr { *this }] {
-        if (!weakThis)
-            return;
-        weakThis->adjustBubblePosition();
-    });
+    document.scheduleToAdjustValidationMessagePosition(*this);
 }
 
 void ValidationMessage::requestToHideMessage()

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,8 @@
 #include <PiscesSysutils.h>
 
 #include <PiscesRenderer.inl>
+
+#include <limits.h>
 
 #define RENDERER_NATIVE_PTR 0
 #define RENDERER_SURFACE 1
@@ -246,13 +248,17 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_setTextureImpl
 {
     Renderer* rdr;
     Transform6 textureTransform;
-    jint *data;
+    jint *data = NULL;
+    jsize dataLength = (*env)->GetArrayLength(env, dataArray);
 
-    transform_get6(&textureTransform, env, jTransform);
+    if (width > 0 && height > 0 && (width < (INT_MAX / height / sizeof(jint)))
+        && stride > 0 && (height - 1) <= (dataLength - width) / stride) {
+        transform_get6(&textureTransform, env, jTransform);
 
-    rdr = (Renderer*)JLongToPointer((*env)->GetLongField(env, this, fieldIds[RENDERER_NATIVE_PTR]));
+        rdr = (Renderer*)JLongToPointer((*env)->GetLongField(env, this, fieldIds[RENDERER_NATIVE_PTR]));
 
-    data = (jint*)(*env)->GetPrimitiveArrayCritical(env, dataArray, NULL);
+        data = (jint*)(*env)->GetPrimitiveArrayCritical(env, dataArray, NULL);
+    }
     if (data != NULL) {
         jint *alloc_data = my_malloc(jint, width * height);
         if (alloc_data != NULL) {
@@ -684,10 +690,33 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_fillAlphaMaskImpl
     jint maskOffset;
     rdr = (Renderer*)JLongToPointer((*env)->GetLongField(env, this, fieldIds[RENDERER_NATIVE_PTR]));
 
+    if (x <= -(INT_MAX - maskWidth) || y <= -(INT_MAX - maskHeight)) {
+        return;
+    }
+
+    if (x >= INT_MAX - maskWidth || y >= INT_MAX - maskHeight) {
+        return;
+    }
+
     minX = MAX(x, rdr->_clip_bbMinX);
     minY = MAX(y, rdr->_clip_bbMinY);
     maxX = MIN(x + maskWidth - 1, rdr->_clip_bbMaxX);
     maxY = MIN(y + maskHeight - 1, rdr->_clip_bbMaxY);
+
+    // offset, width, height and stride cannot be negative - checked in Java code.
+    // below checks might be a bit excessive (probably won't happen because fillMaskAlpha()
+    // min/max check will make maskOffset not be used at all) but better to be safe than sorry
+    if (maskWidth > 0 && (minY - y) >= (INT_MAX / maskWidth)) {
+        return;
+    }
+
+    if ((minX - x) >= INT_MAX - ((minY - y) * maskWidth)) {
+        return;
+    }
+
+    if (offset >= INT_MAX - ((minY - y) * maskWidth + minX - x)) {
+        return;
+    }
 
     maskOffset = offset + (minY - y) * maskWidth + minX - x;
 
@@ -721,10 +750,34 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_fillLCDAlphaMaskImpl
     jint maskOffset;
     rdr = (Renderer*)JLongToPointer((*env)->GetLongField(env, this, fieldIds[RENDERER_NATIVE_PTR]));
 
+    if (x < -(INT_MAX - maskWidth/3) || y < -(INT_MAX - maskHeight)) {
+        return;
+    }
+
+    if (x >= INT_MAX - (maskWidth/3) || y >= INT_MAX - maskHeight) {
+        return;
+    }
+
     minX = MAX(x, rdr->_clip_bbMinX);
     minY = MAX(y, rdr->_clip_bbMinY);
     maxX = MIN(x + (maskWidth/3) - 1, rdr->_clip_bbMaxX);
     maxY = MIN(y + maskHeight - 1, rdr->_clip_bbMaxY);
+
+    if (maskWidth > 0 && (minY - y) >= (INT_MAX / maskWidth)) {
+        return;
+    }
+
+    if ((minX - x) >= INT_MAX / 3) {
+        return;
+    }
+
+    if (((minX - x) * 3) >= INT_MAX - ((minY - y) * maskWidth)) {
+        return;
+    }
+
+    if (offset >= INT_MAX - ((minY - y) * maskWidth + (minX - x) * 3)) {
+        return;
+    }
 
     maskOffset = offset + (minY - y) * maskWidth + (minX - x) * 3;
 

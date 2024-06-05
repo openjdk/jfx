@@ -28,13 +28,15 @@
 
 namespace WebCore {
 
+enum class RequestPriority : uint8_t;
+
 class HTMLScriptElement final : public HTMLElement, public ScriptElement {
     WTF_MAKE_ISO_ALLOCATED(HTMLScriptElement);
 public:
     static Ref<HTMLScriptElement> create(const QualifiedName&, Document&, bool wasInsertedByParser, bool alreadyStarted = false);
 
     String text() const { return scriptContent(); }
-    WEBCORE_EXPORT void setText(const String&);
+    WEBCORE_EXPORT void setText(String&&);
 
     URL src() const;
 
@@ -51,12 +53,16 @@ public:
     using HTMLElement::ref;
     using HTMLElement::deref;
 
-    static bool supports(StringView type) { return type == "classic" || type == "module"; }
+    static bool supports(StringView type) { return type == "classic"_s || type == "module"_s || type == "importmap"_s; }
+
+    void setFetchPriorityForBindings(const AtomString&);
+    String fetchPriorityForBindings() const;
+    RequestPriority fetchPriorityHint() const override;
 
 private:
     HTMLScriptElement(const QualifiedName&, Document&, bool wasInsertedByParser, bool alreadyStarted);
 
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
     void didFinishInsertingNode() final;
     void childrenChanged(const ChildChange&) final;
@@ -69,14 +75,14 @@ private:
     String charsetAttributeValue() const final;
     String typeAttributeValue() const final;
     String languageAttributeValue() const final;
-    String forAttributeValue() const final;
-    String eventAttributeValue() const final;
     bool hasAsyncAttribute() const final;
     bool hasDeferAttribute() const final;
     bool hasNoModuleAttribute() const final;
     bool hasSourceAttribute() const final;
 
     void dispatchLoadEvent() final;
+
+    bool isScriptPreventedByAttributes() const final;
 
     Ref<Element> cloneElementWithoutAttributesAndChildren(Document&) final;
 };

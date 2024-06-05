@@ -28,13 +28,15 @@
 
 #include "ClipboardImageReader.h"
 #include "ClipboardItem.h"
+#include "CommonAtomStrings.h"
 #include "Document.h"
 #include "Editor.h"
-#include "Frame.h"
 #include "JSBlob.h"
 #include "JSClipboardItem.h"
 #include "JSDOMPromiseDeferred.h"
+#include "LocalFrame.h"
 #include "Navigator.h"
+#include "Page.h"
 #include "PagePasteboardContext.h"
 #include "Pasteboard.h"
 #include "Settings.h"
@@ -48,7 +50,7 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(Clipboard);
 
-static bool shouldProceedWithClipboardWrite(const Frame& frame)
+static bool shouldProceedWithClipboardWrite(const LocalFrame& frame)
 {
     auto& settings = frame.settings();
     if (settings.javaScriptCanAccessClipboard() || frame.editor().isCopyingFromMenuOrKeyBinding())
@@ -234,7 +236,7 @@ void Clipboard::getType(ClipboardItem& item, const String& type, Ref<DeferredPro
         resultAsString = activePasteboard().readURL(itemIndex, title).string();
     }
 
-    if (type == "text/plain"_s) {
+    if (type == textPlainContentTypeAtom()) {
         PasteboardPlainText plainTextReader;
         activePasteboard().read(plainTextReader, PlainTextURLReadingPolicy::IgnoreURL, itemIndex);
         resultAsString = WTFMove(plainTextReader.text);
@@ -251,6 +253,9 @@ void Clipboard::getType(ClipboardItem& item, const String& type, Ref<DeferredPro
         promise->reject(NotAllowedError);
         return;
     }
+
+    if (auto* page = frame->page())
+        resultAsString = page->applyLinkDecorationFiltering(resultAsString, LinkDecorationFilteringTrigger::Paste);
 
     promise->resolve<IDLInterface<Blob>>(ClipboardItem::blobFromString(frame->document(), resultAsString, type));
 }
@@ -288,7 +293,7 @@ void Clipboard::didResolveOrReject(Clipboard::ItemWriter& writer)
         m_activeItemWriter = nullptr;
 }
 
-Frame* Clipboard::frame() const
+LocalFrame* Clipboard::frame() const
 {
     return m_navigator ? m_navigator->frame() : nullptr;
 }
@@ -313,9 +318,7 @@ void Clipboard::ItemWriter::write(const Vector<RefPtr<ClipboardItem>>& items)
 {
     ASSERT(m_promise);
     ASSERT(m_clipboard);
-#if PLATFORM(COCOA)
     m_changeCountAtStart = m_pasteboard->changeCount();
-#endif
     m_dataToWrite.fill(std::nullopt, items.size());
     m_pendingItemCount = items.size();
     for (size_t index = 0; index < items.size(); ++index) {
@@ -350,7 +353,6 @@ void Clipboard::ItemWriter::didSetAllData()
     if (!m_promise)
         return;
 
-#if PLATFORM(COCOA)
     auto newChangeCount = m_pasteboard->changeCount();
     if (m_changeCountAtStart != newChangeCount) {
         // FIXME: Instead of checking the changeCount here, send it over to the client (e.g. the UI process
@@ -358,7 +360,7 @@ void Clipboard::ItemWriter::didSetAllData()
         reject();
         return;
     }
-#endif // PLATFORM(COCOA)
+
     auto dataToWrite = std::exchange(m_dataToWrite, { });
     Vector<PasteboardCustomData> customData;
     customData.reserveInitialCapacity(dataToWrite.size());

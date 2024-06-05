@@ -27,6 +27,8 @@
 
 #if ENABLE(WEB_AUTHN)
 
+#include "AuthenticationExtensionsClientOutputs.h"
+#include "AuthenticatorTransport.h"
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <wtf/Forward.h>
 
@@ -41,7 +43,7 @@ struct AuthenticatorResponseData {
     RefPtr<ArrayBuffer> rawId;
 
     // Extensions
-    std::optional<bool> appid;
+    std::optional<AuthenticationExtensionsClientOutputs> extensionOutputs;
 
     // AuthenticatorAttestationResponse
     RefPtr<ArrayBuffer> attestationObject;
@@ -51,6 +53,8 @@ struct AuthenticatorResponseData {
     RefPtr<ArrayBuffer> signature;
     RefPtr<ArrayBuffer> userHandle;
 
+    Vector<WebCore::AuthenticatorTransport> transports;
+
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static std::optional<AuthenticatorResponseData> decode(Decoder&);
 };
@@ -58,26 +62,17 @@ struct AuthenticatorResponseData {
 template<class Encoder>
 static void encodeArrayBuffer(Encoder& encoder, const ArrayBuffer& buffer)
 {
-    encoder << static_cast<uint64_t>(buffer.byteLength());
-    encoder.encodeFixedLengthData(static_cast<const uint8_t*>(buffer.data()), buffer.byteLength(), 1);
+    encoder << std::span(reinterpret_cast<const uint8_t*>(buffer.data()), buffer.byteLength());
 }
 
 template<class Decoder>
 RefPtr<ArrayBuffer> WARN_UNUSED_RETURN decodeArrayBuffer(Decoder& decoder)
 {
-    std::optional<uint64_t> length;
-    decoder >> length;
-    if (!length)
-        return nullptr;
-
-    if (!decoder.template bufferIsLargeEnoughToContain<uint8_t>(length.value()))
-        return nullptr;
-    auto buffer = ArrayBuffer::tryCreate(length.value(), sizeof(uint8_t));
+    std::optional<std::span<const uint8_t>> buffer;
+    decoder >> buffer;
     if (!buffer)
         return nullptr;
-    if (!decoder.decodeFixedLengthData(static_cast<uint8_t*>(buffer->data()), length.value(), 1))
-        return nullptr;
-    return buffer;
+    return ArrayBuffer::tryCreate(buffer->data(), buffer->size_bytes());
 }
 
 template<class Encoder>
@@ -89,11 +84,13 @@ void AuthenticatorResponseData::encode(Encoder& encoder) const
     }
     encoder << false;
     encodeArrayBuffer(encoder, *rawId);
+    encoder << extensionOutputs;
 
     encoder << isAuthenticatorAttestationResponse;
 
     if (isAuthenticatorAttestationResponse && attestationObject) {
         encodeArrayBuffer(encoder, *attestationObject);
+        encoder << transports;
         return;
     }
 
@@ -101,9 +98,6 @@ void AuthenticatorResponseData::encode(Encoder& encoder) const
         return;
     encodeArrayBuffer(encoder, *authenticatorData);
     encodeArrayBuffer(encoder, *signature);
-
-    // Encode AppID before user handle to avoid the userHandle flag.
-    encoder << appid;
 
     if (!userHandle) {
         encoder << false;
@@ -129,6 +123,12 @@ std::optional<AuthenticatorResponseData> AuthenticatorResponseData::decode(Decod
     if (!result.rawId)
         return std::nullopt;
 
+    std::optional<std::optional<AuthenticationExtensionsClientOutputs>> extensionOutputs;
+    decoder >> extensionOutputs;
+    if (!extensionOutputs)
+        return std::nullopt;
+    result.extensionOutputs = WTFMove(*extensionOutputs);
+
     std::optional<bool> isAuthenticatorAttestationResponse;
     decoder >> isAuthenticatorAttestationResponse;
     if (!isAuthenticatorAttestationResponse)
@@ -139,6 +139,12 @@ std::optional<AuthenticatorResponseData> AuthenticatorResponseData::decode(Decod
         result.attestationObject = decodeArrayBuffer(decoder);
         if (!result.attestationObject)
             return std::nullopt;
+
+        std::optional<Vector<AuthenticatorTransport>> transports;
+        decoder >> transports;
+        if (!transports)
+            return std::nullopt;
+        result.transports = WTFMove(*transports);
         return result;
     }
 
@@ -149,12 +155,6 @@ std::optional<AuthenticatorResponseData> AuthenticatorResponseData::decode(Decod
     result.signature = decodeArrayBuffer(decoder);
     if (!result.signature)
         return std::nullopt;
-
-    std::optional<std::optional<bool>> appid;
-    decoder >> appid;
-    if (!appid)
-        return std::nullopt;
-    result.appid = WTFMove(*appid);
 
     std::optional<bool> hasUserHandle;
     decoder >> hasUserHandle;

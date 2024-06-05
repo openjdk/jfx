@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2006 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006, 2007 Rob Buis <buis@kde.org>
- * Copyright (C) 2007-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2023 Apple Inc. All rights reserved.
  * Copyright (C) Research In Motion Limited 2011. All rights reserved.
  * Copyright (C) 2014 Adobe Systems Incorporated. All rights reserved.
  *
@@ -26,10 +26,9 @@
 
 #include "CSSHelper.h"
 #include "FontMetrics.h"
-#include "Frame.h"
 #include "LegacyRenderSVGRoot.h"
 #include "LengthFunctions.h"
-#include "RenderSVGViewportContainer.h"
+#include "LocalFrame.h"
 #include "RenderView.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGSVGElement.h"
@@ -98,8 +97,7 @@ float SVGLengthContext::valueForLength(const Length& length, SVGLengthMode lengt
     if (length.isAuto() || !length.isSpecified())
         return 0;
 
-    FloatSize viewportSize;
-    determineViewport(viewportSize);
+    auto viewportSize = this->viewportSize().value_or(FloatSize { });
 
     switch (lengthMode) {
     case SVGLengthMode::Width:
@@ -115,7 +113,7 @@ float SVGLengthContext::valueForLength(const Length& length, SVGLengthMode lengt
 ExceptionOr<float> SVGLengthContext::convertValueToUserUnits(float value, SVGLengthType lengthType, SVGLengthMode lengthMode) const
 {
     // If the SVGLengthContext carries a custom viewport, force resolving against it.
-    if (!m_overriddenViewport.isEmpty()) {
+    if (!m_overriddenViewport.isZero()) {
         // 100% = 100.0 instead of 1.0 for historical reasons, this could eventually be changed
         if (lengthType == SVGLengthType::Percentage)
             value /= 100;
@@ -184,17 +182,17 @@ ExceptionOr<float> SVGLengthContext::convertValueFromUserUnits(float value, SVGL
 
 ExceptionOr<float> SVGLengthContext::convertValueFromUserUnitsToPercentage(float value, SVGLengthMode lengthMode) const
 {
-    FloatSize viewportSize;
-    if (!determineViewport(viewportSize))
+    auto viewportSize = this->viewportSize();
+    if (!viewportSize)
         return Exception { NotSupportedError };
 
     switch (lengthMode) {
     case SVGLengthMode::Width:
-        return value / viewportSize.width() * 100;
+        return value / viewportSize->width() * 100;
     case SVGLengthMode::Height:
-        return value / viewportSize.height() * 100;
+        return value / viewportSize->height() * 100;
     case SVGLengthMode::Other:
-        return value / (viewportSize.diagonalLength() / sqrtOfTwoFloat) * 100;
+        return value / (viewportSize->diagonalLength() / sqrtOfTwoFloat) * 100;
     };
 
     ASSERT_NOT_REACHED();
@@ -203,17 +201,17 @@ ExceptionOr<float> SVGLengthContext::convertValueFromUserUnitsToPercentage(float
 
 ExceptionOr<float> SVGLengthContext::convertValueFromPercentageToUserUnits(float value, SVGLengthMode lengthMode) const
 {
-    FloatSize viewportSize;
-    if (!determineViewport(viewportSize))
+    auto viewportSize = this->viewportSize();
+    if (!viewportSize)
         return Exception { NotSupportedError };
 
     switch (lengthMode) {
     case SVGLengthMode::Width:
-        return value * viewportSize.width();
+        return value * viewportSize->width();
     case SVGLengthMode::Height:
-        return value * viewportSize.height();
+        return value * viewportSize->height();
     case SVGLengthMode::Other:
-        return value * viewportSize.diagonalLength() / sqrtOfTwoFloat;
+        return value * viewportSize->diagonalLength() / sqrtOfTwoFloat;
     };
 
     ASSERT_NOT_REACHED();
@@ -232,8 +230,6 @@ static inline const RenderStyle* renderStyleForLengthResolving(const SVGElement*
         currentContext = currentContext->parentNode();
     } while (currentContext);
 
-    // There must be at least a LegacyRenderSVGRoot renderer, carrying a style.
-    ASSERT_NOT_REACHED();
     return nullptr;
 }
 
@@ -243,7 +239,7 @@ ExceptionOr<float> SVGLengthContext::convertValueFromUserUnitsToEMS(float value)
     if (!style)
         return Exception { NotSupportedError };
 
-    float fontSize = style->computedFontPixelSize();
+    float fontSize = style->computedFontSize();
     if (!fontSize)
         return Exception { NotSupportedError };
 
@@ -256,7 +252,7 @@ ExceptionOr<float> SVGLengthContext::convertValueFromEMSToUserUnits(float value)
     if (!style)
         return Exception { NotSupportedError };
 
-    return value * style->computedFontPixelSize();
+    return value * style->computedFontSize();
 }
 
 ExceptionOr<float> SVGLengthContext::convertValueFromUserUnitsToEXS(float value) const
@@ -285,34 +281,46 @@ ExceptionOr<float> SVGLengthContext::convertValueFromEXSToUserUnits(float value)
     return value * std::ceil(style->metricsOfPrimaryFont().xHeight());
 }
 
-bool SVGLengthContext::determineViewport(FloatSize& viewportSize) const
+std::optional<FloatSize> SVGLengthContext::viewportSize() const
 {
     if (!m_context)
-        return false;
+        return std::nullopt;
 
     // If an overridden viewport is given, it has precedence.
-    if (!m_overriddenViewport.isEmpty()) {
-        viewportSize = m_overriddenViewport.size();
-        return true;
-    }
+    if (!m_overriddenViewport.isZero())
+        return m_overriddenViewport.size();
 
-    // Root <svg> element lengths are resolved against the top level viewport.
-    if (m_context->isOutermostSVGSVGElement()) {
-        viewportSize = downcast<SVGSVGElement>(*m_context).currentViewportSize();
-        return true;
-    }
+    if (!m_viewportSize)
+        m_viewportSize = computeViewportSize();
+
+    return m_viewportSize;
+}
+
+std::optional<FloatSize> SVGLengthContext::computeViewportSize() const
+{
+    ASSERT(m_overriddenViewport.isZero());
+    ASSERT(m_context);
+
+    // Root <svg> element lengths are resolved against the top level viewport,
+    // however excluding 'zoom' induced scaling. Length within the <svg> subtree
+    // shall be resolved against the 'vanilla' viewport size, excluding zoom, because
+    // the (anonymous) RenderSVGViewportContainer (first and only child of RenderSVGRoot)
+    // applies zooming/panning for the whole SVG subtree as affine transform. Therefore
+    // any length within the SVG subtree needs to exclude the 'zoom' information.
+    if (m_context->isOutermostSVGSVGElement())
+        return downcast<SVGSVGElement>(*m_context).currentViewportSizeExcludingZoom();
 
     // Take size from nearest viewport element.
     RefPtr viewportElement = m_context->viewportElement();
     if (!is<SVGSVGElement>(viewportElement))
-        return false;
+        return std::nullopt;
 
     const SVGSVGElement& svg = downcast<SVGSVGElement>(*viewportElement);
-    viewportSize = svg.currentViewBoxRect().size();
+    auto viewportSize = svg.currentViewBoxRect().size();
     if (viewportSize.isEmpty())
-        viewportSize = svg.currentViewportSize();
+        viewportSize = svg.currentViewportSizeExcludingZoom();
 
-    return true;
+    return viewportSize;
 }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,7 +36,7 @@
 
 namespace JSC {
 
-const ClassInfo IntlDisplayNames::s_info = { "Object", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(IntlDisplayNames) };
+const ClassInfo IntlDisplayNames::s_info = { "Object"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(IntlDisplayNames) };
 
 IntlDisplayNames* IntlDisplayNames::create(VM& vm, Structure* structure)
 {
@@ -53,12 +53,6 @@ Structure* IntlDisplayNames::createStructure(VM& vm, JSGlobalObject* globalObjec
 IntlDisplayNames::IntlDisplayNames(VM& vm, Structure* structure)
     : Base(vm, structure)
 {
-}
-
-void IntlDisplayNames::finishCreation(VM& vm)
-{
-    Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
 }
 
 // https://tc39.es/ecma402/#sec-Intl.DisplayNames
@@ -132,7 +126,7 @@ void IntlDisplayNames::initializeDisplayNames(JSGlobalObject* globalObject, JSVa
         UDISPCTX_NO_SUBSTITUTE,
     };
     m_localeCString = m_locale.utf8();
-    m_displayNames = std::unique_ptr<ULocaleDisplayNames, ULocaleDisplayNamesDeleter>(uldn_openForContext(m_localeCString.data(), contexts, WTF_ARRAY_LENGTH(contexts), &status));
+    m_displayNames = std::unique_ptr<ULocaleDisplayNames, ULocaleDisplayNamesDeleter>(uldn_openForContext(m_localeCString.data(), contexts, std::size(contexts), &status));
     if (U_FAILURE(status)) {
         throwTypeError(globalObject, scope, "failed to initialize DisplayNames"_s);
         return;
@@ -152,7 +146,7 @@ JSValue IntlDisplayNames::of(JSGlobalObject* globalObject, JSValue codeValue) co
 
     // https://tc39.es/proposal-intl-displaynames/#sec-canonicalcodefordisplaynames
     auto canonicalizeCodeForDisplayNames = [](Type type, String&& code) -> CString {
-        ASSERT(code.isAllASCII());
+        ASSERT(code.containsOnlyASCII());
         switch (type) {
         case Type::Language: {
             return canonicalizeUnicodeLocaleID(code.ascii()).ascii();
@@ -237,7 +231,7 @@ JSValue IntlDisplayNames::of(JSGlobalObject* globalObject, JSValue codeValue) co
             throwRangeError(globalObject, scope, "argument is not a well-formed currency code"_s);
             return { };
         }
-        ASSERT(code.isAllASCII());
+        ASSERT(code.containsOnlyASCII());
 
         UCurrNameStyle style = UCURR_LONG_NAME;
         switch (m_style) {
@@ -338,8 +332,8 @@ JSValue IntlDisplayNames::of(JSGlobalObject* globalObject, JSValue codeValue) co
 
         buffer = vm.intlCache().getFieldDisplayName(m_localeCString.data(), field.value(), style, status);
         if (U_FAILURE(status))
-            return (m_fallback == Fallback::None) ? jsUndefined() : jsString(vm, code);
-        return jsString(vm, String(buffer));
+            return (m_fallback == Fallback::None) ? jsUndefined() : jsString(vm, WTFMove(code));
+        return jsString(vm, String(WTFMove(buffer)));
     }
     }
     if (U_FAILURE(status)) {
@@ -349,7 +343,7 @@ JSValue IntlDisplayNames::of(JSGlobalObject* globalObject, JSValue codeValue) co
             return (m_fallback == Fallback::None) ? jsUndefined() : jsString(vm, String(canonicalCode.data(), canonicalCode.length()));
         return throwTypeError(globalObject, scope, "Failed to query a display name."_s);
     }
-    return jsString(vm, String(buffer));
+    return jsString(vm, String(WTFMove(buffer)));
 }
 
 // https://tc39.es/proposal-intl-displaynames/#sec-Intl.DisplayNames.prototype.resolvedOptions
@@ -377,7 +371,7 @@ ASCIILiteral IntlDisplayNames::styleString(Style style)
         return "long"_s;
     }
     ASSERT_NOT_REACHED();
-    return ASCIILiteral::null();
+    return { };
 }
 
 ASCIILiteral IntlDisplayNames::typeString(Type type)
@@ -397,7 +391,7 @@ ASCIILiteral IntlDisplayNames::typeString(Type type)
         return "dateTimeField"_s;
     }
     ASSERT_NOT_REACHED();
-    return ASCIILiteral::null();
+    return { };
 }
 
 ASCIILiteral IntlDisplayNames::fallbackString(Fallback fallback)
@@ -409,7 +403,7 @@ ASCIILiteral IntlDisplayNames::fallbackString(Fallback fallback)
         return "none"_s;
     }
     ASSERT_NOT_REACHED();
-    return ASCIILiteral::null();
+    return { };
 }
 
 ASCIILiteral IntlDisplayNames::languageDisplayString(LanguageDisplay languageDisplay)
@@ -421,7 +415,7 @@ ASCIILiteral IntlDisplayNames::languageDisplayString(LanguageDisplay languageDis
         return "standard"_s;
     }
     ASSERT_NOT_REACHED();
-    return ASCIILiteral::null();
+    return { };
 }
 
 } // namespace JSC

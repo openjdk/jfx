@@ -25,11 +25,11 @@
 
 #pragma once
 
-#if ENABLE(CSS_TYPED_OM)
+#include <array>
 
 namespace WebCore {
 
-enum class CSSNumericBaseType: uint8_t {
+enum class CSSNumericBaseType : uint8_t {
     Length,
     Angle,
     Time,
@@ -39,6 +39,38 @@ enum class CSSNumericBaseType: uint8_t {
     Percent,
 };
 
-} // namespace WebCore
+constexpr std::array<CSSNumericBaseType, 7> eachBaseType()
+{
+    return {
+        CSSNumericBaseType::Length,
+        CSSNumericBaseType::Angle,
+        CSSNumericBaseType::Time,
+        CSSNumericBaseType::Frequency,
+        CSSNumericBaseType::Resolution,
+        CSSNumericBaseType::Flex,
+        CSSNumericBaseType::Percent
+    };
+}
 
-#endif
+constexpr const char* debugString(CSSNumericBaseType type)
+{
+    switch (type) {
+    case CSSNumericBaseType::Length:
+        return "length";
+    case CSSNumericBaseType::Angle:
+        return "angle";
+    case CSSNumericBaseType::Time:
+        return "time";
+    case CSSNumericBaseType::Frequency:
+        return "frequency";
+    case CSSNumericBaseType::Resolution:
+        return "resolution";
+    case CSSNumericBaseType::Flex:
+        return "flex";
+    case CSSNumericBaseType::Percent:
+        return "percent";
+    }
+    return "invalid";
+}
+
+} // namespace WebCore

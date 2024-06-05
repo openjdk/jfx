@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,7 +36,7 @@
 #include "LLIntPCRanges.h"
 #include "MachineContext.h"
 #include "MacroAssemblerCodeRef.h"
-#include "VMEntryScope.h"
+#include "VMEntryScopeInlines.h"
 #include "VMTrapsInlines.h"
 #include "Watchdog.h"
 #include <wtf/ProcessID.h>
@@ -49,7 +49,7 @@ namespace JSC {
 
 struct VMTraps::SignalContext {
 private:
-    SignalContext(PlatformRegisters& registers, MacroAssemblerCodePtr<PlatformRegistersPCPtrTag> trapPC)
+    SignalContext(PlatformRegisters& registers, CodePtr<PlatformRegistersPCPtrTag> trapPC)
         : registers(registers)
         , trapPC(trapPC)
         , stackPointer(MachineContext::stackPointer(registers))
@@ -66,7 +66,7 @@ public:
     }
 
     PlatformRegisters& registers;
-    MacroAssemblerCodePtr<PlatformRegistersPCPtrTag> trapPC;
+    CodePtr<PlatformRegistersPCPtrTag> trapPC;
     void* stackPointer;
     void* framePointer;
 };
@@ -90,7 +90,7 @@ void VMTraps::tryInstallTrapBreakpoints(VMTraps::SignalContext& context, StackBo
     // This must be the initial signal to get the mutator thread's attention.
     // Let's get the thread to break at invalidation points if needed.
     VM& vm = this->vm();
-    void* trapPC = context.trapPC.untaggedExecutableAddress();
+    void* trapPC = context.trapPC.untaggedPtr();
     // We must ensure we're in JIT/LLint code. If we are, we know a few things:
     // - The JS thread isn't holding the malloc lock. Therefore, it's safe to malloc below.
     // - The JS thread isn't holding the CodeBlockSet lock.
@@ -102,7 +102,16 @@ void VMTraps::tryInstallTrapBreakpoints(VMTraps::SignalContext& context, StackBo
 
     CallFrame* callFrame = reinterpret_cast<CallFrame*>(context.framePointer);
 
-    Locker codeBlockSetLocker { vm.heap.codeBlockSet().getLock() };
+    // Even though we know the mutator thread is not in C++ code and therefore, not holding
+    // this lock, the sampling profiler may have acquired this lock before acquiring
+    // ThreadSuspendLocker and suspending the mutator. Since VMTraps acquires the
+    // ThreadSuspendLocker first, we can deadlock with the Sampling Profiler thread, and
+    // leave the mutator in a suspended state, or forever blocked on the codeBlockSet lock.
+    Lock& codeBlockSetLock = vm.heap.codeBlockSet().getLock();
+    if (!codeBlockSetLock.tryLock())
+        return;
+
+    Locker codeBlockSetLocker { AdoptLock, codeBlockSetLock };
 
     CodeBlock* foundCodeBlock = nullptr;
     EntryFrame* entryFrame = vm.topEntryFrame;
@@ -136,7 +145,7 @@ void VMTraps::tryInstallTrapBreakpoints(VMTraps::SignalContext& context, StackBo
         return;
     }
 
-    if (JITCode::isOptimizingJIT(foundCodeBlock->jitType())) {
+    if (foundCodeBlock->canInstallVMTrapBreakpoints()) {
         if (!m_lock->tryLock())
             return; // Let the SignalSender try again later.
 
@@ -146,7 +155,7 @@ void VMTraps::tryInstallTrapBreakpoints(VMTraps::SignalContext& context, StackBo
             return;
         }
 
-        if (!foundCodeBlock->hasInstalledVMTrapBreakpoints())
+        if (!foundCodeBlock->hasInstalledVMTrapsBreakpoints())
             foundCodeBlock->installVMTrapBreakpoints();
         return;
     }
@@ -177,7 +186,7 @@ void VMTraps::invalidateCodeBlocksOnStack(Locker<Lock>&, CallFrame* topCallFrame
         return; // Not running JS code. Nothing to invalidate.
 
     while (callFrame) {
-        CodeBlock* codeBlock = callFrame->codeBlock();
+        CodeBlock* codeBlock = callFrame->isWasmFrame() ? nullptr : callFrame->codeBlock();
         if (codeBlock && JITCode::isOptimizingJIT(codeBlock->jitType()))
             codeBlock->jettison(Profiler::JettisonDueToVMTraps);
         callFrame = callFrame->callerFrame(entryFrame);
@@ -204,7 +213,7 @@ public:
                 if (!signalContext)
                     return SignalAction::NotHandled;
 
-                void* trapPC = signalContext->trapPC.untaggedExecutableAddress();
+                void* trapPC = signalContext->trapPC.untaggedPtr();
                 if (!isJITPC(trapPC))
                     return SignalAction::NotHandled;
 
@@ -213,15 +222,27 @@ public:
                     // Either we trapped for some other reason, e.g. Wasm OOB, or we didn't properly monitor the PC. Regardless, we can't do much now...
                     return SignalAction::NotHandled;
                 }
-                ASSERT(currentCodeBlock->hasInstalledVMTrapBreakpoints());
+                ASSERT(currentCodeBlock->hasInstalledVMTrapsBreakpoints());
                 VM& vm = currentCodeBlock->vm();
 
-                // We are in JIT code so it's safe to acquire this lock.
+                // This signal handler is triggered by the mutator thread due to the installed halt instructions
+                // in JIT code (which we already confirmed above). Hence, the current thread (the mutator)
+                // cannot be in C++ code, and therefore, cannot be already holding the codeBlockSet lock.
+                // The only time the codeBlockSet lock could be in contention is if the Sampling Profiler thread
+                // is holding it. In that case, we'll simply wait till the Sampling Profiler is done with it.
+                // There are no lock ordering issues w.r.t. the Sampling Profiler on this code path.
+                //
+                // Note that it is not ok to return SignalAction::NotHandled here if we see contention. Doing
+                // so will cause the fault to be handled by the default handler, which will crash. It is also not
+                // productive to return SignalAction::Handled on contention. Doing so will simply trigger this
+                // fault handler over and over again. We might as well wait for the Sampling Profiler to release
+                // the lock, which is what we do here.
                 Locker codeBlockSetLocker { vm.heap.codeBlockSet().getLock() };
+
                 bool sawCurrentCodeBlock = false;
                 vm.heap.forEachCodeBlockIgnoringJITPlans(codeBlockSetLocker, [&] (CodeBlock* codeBlock) {
                     // We want to jettison all code blocks that have vm traps breakpoints, otherwise we could hit them later.
-                    if (codeBlock->hasInstalledVMTrapBreakpoints()) {
+                    if (codeBlock->hasInstalledVMTrapsBreakpoints()) {
                         if (currentCodeBlock == codeBlock)
                             sawCurrentCodeBlock = true;
 
@@ -358,7 +379,7 @@ void VMTraps::handleTraps(VMTraps::BitField mask)
         Locker codeBlockSetLocker { vm.heap.codeBlockSet().getLock() };
         vm.heap.forEachCodeBlockIgnoringJITPlans(codeBlockSetLocker, [&] (CodeBlock* codeBlock) {
             // We want to jettison all code blocks that have vm traps breakpoints, otherwise we could hit them later.
-            if (codeBlock->hasInstalledVMTrapBreakpoints())
+            if (codeBlock->hasInstalledVMTrapsBreakpoints())
                 codeBlock->jettison(Profiler::JettisonDueToVMTraps);
         });
     }
@@ -380,11 +401,11 @@ void VMTraps::handleTraps(VMTraps::BitField mask)
             ASSERT(vm.watchdog());
             if (LIKELY(!vm.watchdog()->isActive() || !vm.watchdog()->shouldTerminate(vm.entryScope->globalObject())))
                 continue;
-            vm.setTerminationInProgress(true);
+            vm.setHasTerminationRequest();
             FALLTHROUGH;
 
         case NeedTermination:
-            ASSERT(vm.terminationInProgress());
+            ASSERT(vm.hasTerminationRequest());
             scope.release();
             if (!isDeferringTermination())
                 vm.throwTerminationException();
@@ -420,7 +441,7 @@ void VMTraps::deferTerminationSlow(DeferAction)
 
     VM& vm = this->vm();
     if (vm.hasPendingTerminationException()) {
-        ASSERT(vm.terminationInProgress());
+        ASSERT(vm.hasTerminationRequest());
         vm.clearException();
         m_suspendedTerminationException = true;
     }
@@ -431,7 +452,7 @@ void VMTraps::undoDeferTerminationSlow(DeferAction deferAction)
     ASSERT(m_deferTerminationCount == 0);
 
     VM& vm = this->vm();
-    ASSERT(vm.terminationInProgress());
+    ASSERT(vm.hasTerminationRequest());
     if (m_suspendedTerminationException || (deferAction == DeferAction::DeferUntilEndOfScope)) {
         vm.throwTerminationException();
         m_suspendedTerminationException = false;

@@ -21,6 +21,7 @@
 #include "config.h"
 #include "RenderFileUploadControl.h"
 
+#include "ElementRareData.h"
 #include "FileList.h"
 #include "FontCascade.h"
 #include "GraphicsContext.h"
@@ -29,7 +30,10 @@
 #include "Icon.h"
 #include "LocalizedStrings.h"
 #include "PaintInfo.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderButton.h"
+#include "RenderElementInlines.h"
 #include "RenderText.h"
 #include "RenderTheme.h"
 #include "ShadowRoot.h"
@@ -45,18 +49,22 @@ using namespace HTMLNames;
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderFileUploadControl);
 
-const int afterButtonSpacing = 4;
-#if !PLATFORM(IOS_FAMILY)
-const int iconHeight = 16;
-const int iconWidth = 16;
-const int iconFilenameSpacing = 2;
-const int defaultWidthNumChars = 34;
-#else
-// On iOS the icon height matches the button height, to maximize the icon size.
-const int iconFilenameSpacing = afterButtonSpacing;
-const int defaultWidthNumChars = 38;
+constexpr int afterButtonSpacing = 4;
+constexpr int buttonShadowHeight = 2;
+
+#if !PLATFORM(COCOA)
+// On Cocoa platforms the icon height matches the button height, to maximize the icon size.
+constexpr int iconHeight = 16;
+constexpr int iconWidth = 16;
 #endif
-const int buttonShadowHeight = 2;
+
+#if !PLATFORM(IOS_FAMILY)
+constexpr int iconFilenameSpacing = 2;
+constexpr int defaultWidthNumChars = 34;
+#else
+constexpr int iconFilenameSpacing = afterButtonSpacing;
+constexpr int defaultWidthNumChars = 38;
+#endif
 
 RenderFileUploadControl::RenderFileUploadControl(HTMLInputElement& input, RenderStyle&& style)
     : RenderBlockFlow(input, WTFMove(style))
@@ -96,7 +104,7 @@ static int nodeWidth(Node* node)
     return (node && node->renderBox()) ? roundToInt(node->renderBox()->size().width()) : 0;
 }
 
-#if PLATFORM(IOS_FAMILY)
+#if PLATFORM(COCOA)
 static int nodeHeight(Node* node)
 {
     return (node && node->renderBox()) ? roundToInt(node->renderBox()->size().height()) : 0;
@@ -105,7 +113,7 @@ static int nodeHeight(Node* node)
 
 int RenderFileUploadControl::maxFilenameWidth() const
 {
-#if PLATFORM(IOS_FAMILY)
+#if PLATFORM(COCOA)
     int iconWidth = nodeHeight(uploadButton());
 #endif
     return std::max(0, snappedIntRect(contentBoxRect()).width() - nodeWidth(uploadButton()) - afterButtonSpacing
@@ -117,9 +125,15 @@ void RenderFileUploadControl::paintObject(PaintInfo& paintInfo, const LayoutPoin
     if (style().visibility() != Visibility::Visible)
         return;
 
-    if (paintInfo.context().paintingDisabled())
-        return;
+    if (!paintInfo.context().paintingDisabled())
+        paintControl(paintInfo, paintOffset);
 
+    // Paint the children.
+    RenderBlockFlow::paintObject(paintInfo, paintOffset);
+}
+
+void RenderFileUploadControl::paintControl(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
+{
     // Push a clip.
     GraphicsContextStateSaver stateSaver(paintInfo.context(), false);
     if (paintInfo.phase == PaintPhase::Foreground || paintInfo.phase == PaintPhase::ChildBlockBackgrounds) {
@@ -134,9 +148,8 @@ void RenderFileUploadControl::paintObject(PaintInfo& paintInfo, const LayoutPoin
     if (paintInfo.phase == PaintPhase::Foreground) {
         const String& displayedFilename = fileTextValue();
         const FontCascade& font = style().fontCascade();
-        TextRun textRun = constructTextRun(displayedFilename, style(), AllowRightExpansion, RespectDirection | RespectDirectionOverride);
-
-#if PLATFORM(IOS_FAMILY)
+        TextRun textRun = constructTextRun(displayedFilename, style(), ExpansionBehavior::allowRightOnly(), RespectDirection | RespectDirectionOverride);
+#if PLATFORM(COCOA)
         int iconHeight = nodeHeight(uploadButton());
         int iconWidth = iconHeight;
 #endif
@@ -177,7 +190,7 @@ void RenderFileUploadControl::paintObject(PaintInfo& paintInfo, const LayoutPoin
             else
                 iconX = contentLeft + contentWidth() - buttonWidth - afterButtonSpacing - iconWidth;
 
-#if PLATFORM(IOS_FAMILY)
+#if PLATFORM(COCOA)
             if (RenderButton* buttonRenderer = downcast<RenderButton>(button->renderer())) {
                 // Draw the file icon and decorations.
                 IntRect iconRect(iconX, iconY, iconWidth, iconHeight);
@@ -190,25 +203,27 @@ void RenderFileUploadControl::paintObject(PaintInfo& paintInfo, const LayoutPoin
 #endif
         }
     }
-
-    // Paint the children.
-    RenderBlockFlow::paintObject(paintInfo, paintOffset);
 }
 
 void RenderFileUploadControl::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const
 {
-    if (shouldApplySizeContainment(*this))
+    if (shouldApplySizeOrInlineSizeContainment()) {
+        if (auto width = explicitIntrinsicInnerLogicalWidth()) {
+            minLogicalWidth = width.value();
+            maxLogicalWidth = width.value();
+        }
         return;
+    }
     // Figure out how big the filename space needs to be for a given number of characters
     // (using "0" as the nominal character).
     const UChar character = '0';
     const String characterAsString = String(&character, 1);
     const FontCascade& font = style().fontCascade();
     // FIXME: Remove the need for this const_cast by making constructTextRun take a const RenderObject*.
-    float minDefaultLabelWidth = defaultWidthNumChars * font.width(constructTextRun(characterAsString, style(), AllowRightExpansion));
+    float minDefaultLabelWidth = defaultWidthNumChars * font.width(constructTextRun(characterAsString, style(), ExpansionBehavior::allowRightOnly()));
 
     const String label = theme().fileListDefaultLabel(inputElement().multiple());
-    float defaultLabelWidth = font.width(constructTextRun(label, style(), AllowRightExpansion));
+    float defaultLabelWidth = font.width(constructTextRun(label, style(), ExpansionBehavior::allowRightOnly()));
     if (HTMLInputElement* button = uploadButton())
         if (RenderObject* buttonRenderer = button->renderer())
             defaultLabelWidth += buttonRenderer->maxPreferredLogicalWidth() + afterButtonSpacing;
@@ -257,9 +272,14 @@ String RenderFileUploadControl::buttonValue()
 String RenderFileUploadControl::fileTextValue() const
 {
     auto& input = inputElement();
-    ASSERT(inputElement().files());
-    if (input.files()->length() && !input.displayString().isEmpty())
+    if (!input.files())
+        return { };
+    if (input.files()->length() && !input.displayString().isEmpty()) {
+        if (input.files()->length() == 1)
+            return StringTruncator::centerTruncate(input.displayString(), maxFilenameWidth(), style().fontCascade());
+
         return StringTruncator::rightTruncate(input.displayString(), maxFilenameWidth(), style().fontCascade());
+    }
     return theme().fileListNameForWidth(input.files(), style().fontCascade(), maxFilenameWidth(), input.multiple());
 }
 

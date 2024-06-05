@@ -29,7 +29,8 @@
 #if USE(LIBWPE)
 
 #include "DocumentFragment.h"
-#include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
+#include "LocalFrame.h"
 #include "NotImplemented.h"
 #include "Pasteboard.h"
 #include "Settings.h"
@@ -37,7 +38,7 @@
 
 namespace WebCore {
 
-static RefPtr<DocumentFragment> createFragmentFromPasteboardData(Pasteboard& pasteboard, Frame& frame, const SimpleRange& range, bool allowPlainText, bool& chosePlainText)
+static RefPtr<DocumentFragment> createFragmentFromPasteboardData(Pasteboard& pasteboard, LocalFrame& frame, const SimpleRange& range, bool allowPlainText, bool& chosePlainText)
 {
     chosePlainText = false;
 
@@ -45,17 +46,17 @@ static RefPtr<DocumentFragment> createFragmentFromPasteboardData(Pasteboard& pas
     if (types.isEmpty())
         return nullptr;
 
-    if (types.contains("text/html;charset=utf-8") && frame.document()) {
-        String markup = pasteboard.readString("text/html;charset=utf-8");
-        return createFragmentFromMarkup(*frame.document(), markup, emptyString(), DisallowScriptingAndPluginContent);
+    if (types.contains("text/html;charset=utf-8"_s) && frame.document()) {
+        String markup = pasteboard.readString("text/html;charset=utf-8"_s);
+        return createFragmentFromMarkup(*frame.document(), markup, emptyString(), { });
     }
 
     if (!allowPlainText)
         return nullptr;
 
-    if (types.contains("text/plain;charset=utf-8")) {
+    if (types.contains("text/plain;charset=utf-8"_s)) {
         chosePlainText = true;
-        return createFragmentFromText(range, pasteboard.readString("text/plain;charset=utf-8"));
+        return createFragmentFromText(range, pasteboard.readString("text/plain;charset=utf-8"_s));
     }
 
     return nullptr;
@@ -65,7 +66,7 @@ void Editor::writeSelectionToPasteboard(Pasteboard& pasteboard)
 {
     PasteboardWebContent pasteboardContent;
     pasteboardContent.text = selectedTextForDataTransfer();
-    pasteboardContent.markup = serializePreservingVisualAppearance(m_document.selection().selection(), ResolveURLs::YesExcludingLocalFileURLsForPrivacy, SerializeComposedTree::Yes);
+    pasteboardContent.markup = serializePreservingVisualAppearance(m_document.selection().selection(), ResolveURLs::YesExcludingURLsForPrivacy, SerializeComposedTree::Yes, IgnoreUserSelectNone::Yes);
     pasteboard.write(pasteboardContent);
 }
 

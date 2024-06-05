@@ -30,12 +30,13 @@
 #include "EventContext.h"
 #include "EventNames.h"
 #include "EventPath.h"
-#include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
-#include "FrameView.h"
 #include "HTMLInputElement.h"
 #include "InputEvent.h"
 #include "KeyboardEvent.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "Logging.h"
 #include "MouseEvent.h"
 #include "ScopedEventQueue.h"
@@ -50,7 +51,7 @@ namespace WebCore {
 void EventDispatcher::dispatchScopedEvent(Node& node, Event& event)
 {
     // Need to set the target here so the scoped event queue knows which node to dispatch to.
-    event.setTarget(EventPath::eventTargetRespectingTargetRules(node));
+    event.setTarget(RefPtr { EventPath::eventTargetRespectingTargetRules(node) });
     ScopedEventQueue::singleton().enqueueEvent(event);
 }
 
@@ -62,17 +63,15 @@ static void callDefaultEventHandlersInBubblingOrder(Event& event, const EventPat
     // Non-bubbling events call only one default event handler, the one for the target.
     Ref rootNode { *path.contextAt(0).node() };
     rootNode->defaultEventHandler(event);
-    ASSERT(!event.defaultPrevented());
 
-    if (event.defaultHandled() || !event.bubbles())
+    if (event.defaultHandled() || !event.bubbles() || event.defaultPrevented())
         return;
 
     size_t size = path.size();
     for (size_t i = 1; i < size; ++i) {
         Ref currentNode { *path.contextAt(i).node() };
         currentNode->defaultEventHandler(event);
-        ASSERT(!event.defaultPrevented());
-        if (event.defaultHandled())
+        if (event.defaultPrevented() || event.defaultHandled())
             return;
     }
 }
@@ -121,7 +120,11 @@ static bool shouldSuppressEventDispatchInDOM(Node& node, Event& event)
     if (!frame)
         return false;
 
-    if (!frame->mainFrame().loader().shouldSuppressTextInputFromEditing())
+    auto* localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
+    if (!localFrame)
+        return false;
+
+    if (!localFrame->loader().shouldSuppressTextInputFromEditing())
         return false;
 
     if (is<TextEvent>(event)) {
@@ -154,7 +157,12 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
 
     EventPath eventPath { node, event };
 
-    std::optional<bool> shouldClearTargetsAfterDispatch;
+    if (node.document().settings().sendMouseEventsToDisabledFormControlsEnabled() && event.isTrusted() && event.isMouseEvent()
+        && (event.type() == eventNames().mousedownEvent || event.type() == eventNames().mouseupEvent || event.type() == eventNames().clickEvent)) {
+        eventPath.adjustForDisabledFormControl();
+    }
+
+    bool shouldClearTargetsAfterDispatch = false;
     for (size_t i = eventPath.size(); i > 0; --i) {
         const EventContext& eventContext = eventPath.contextAt(i - 1);
         // FIXME: We should also set shouldClearTargetsAfterDispatch to true if an EventTarget object in eventContext's touch target list
@@ -169,23 +177,19 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
 
     event.resetBeforeDispatch();
 
-    event.setTarget(EventPath::eventTargetRespectingTargetRules(node));
+    event.setTarget(RefPtr { EventPath::eventTargetRespectingTargetRules(node) });
     if (!event.target())
         return;
 
     InputElementClickState clickHandlingState;
 
-    bool isActivationEvent = event.type() == eventNames().clickEvent;
     RefPtr inputForLegacyPreActivationBehavior = dynamicDowncast<HTMLInputElement>(node);
-    if (!inputForLegacyPreActivationBehavior && isActivationEvent && event.bubbles())
+    if (!inputForLegacyPreActivationBehavior && event.bubbles() && event.type() == eventNames().clickEvent)
         inputForLegacyPreActivationBehavior = findInputElementInEventPath(eventPath);
     if (inputForLegacyPreActivationBehavior)
         inputForLegacyPreActivationBehavior->willDispatchEvent(event, clickHandlingState);
 
-    if (shouldSuppressEventDispatchInDOM(node, event))
-        event.stopPropagation();
-
-    if (!event.propagationStopped() && !eventPath.isEmpty()) {
+    if (!event.propagationStopped() && !eventPath.isEmpty() && !shouldSuppressEventDispatchInDOM(node, event)) {
         event.setEventPath(eventPath);
         dispatchEventInDOM(event, eventPath);
     }
@@ -201,13 +205,13 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
     if (!event.defaultPrevented() && !event.defaultHandled() && !event.isDefaultEventHandlerIgnored()) {
         // FIXME: Not clear why we need to reset the target for the default event handlers.
         // We should research this, and remove this code if possible.
-        auto* finalTarget = event.target();
-        event.setTarget(EventPath::eventTargetRespectingTargetRules(node));
+        RefPtr finalTarget = event.target();
+        event.setTarget(RefPtr { EventPath::eventTargetRespectingTargetRules(node) });
         callDefaultEventHandlersInBubblingOrder(event, eventPath);
-        event.setTarget(finalTarget);
+        event.setTarget(WTFMove(finalTarget));
     }
 
-    if (shouldClearTargetsAfterDispatch.value_or(false)) {
+    if (shouldClearTargetsAfterDispatch) {
         event.setTarget(nullptr);
         event.setRelatedTarget(nullptr);
         // FIXME: We should also clear the event's touch target list.
@@ -221,7 +225,7 @@ static void dispatchEventWithType(const Vector<T*>& targets, Event& event)
     ASSERT(*targets.begin());
 
     EventPath eventPath { targets };
-    event.setTarget(*targets.begin());
+    event.setTarget(RefPtr { *targets.begin() });
     event.setEventPath(eventPath);
     event.resetBeforeDispatch();
     dispatchEventInDOM(event, eventPath);

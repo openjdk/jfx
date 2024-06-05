@@ -88,6 +88,20 @@ static ExceptionOr<CryptoAlgorithmIdentifier> toHashIdentifier(JSGlobalObject& s
     return digestParams.returnValue()->identifier;
 }
 
+static bool isRSAESPKCSWebCryptoDeprecated(JSGlobalObject& state)
+{
+    auto& globalObject = *JSC::jsCast<JSDOMGlobalObject*>(&state);
+    auto* context = globalObject.scriptExecutionContext();
+    return context && context->settingsValues().deprecateRSAESPKCSWebCryptoEnabled;
+}
+
+static bool isSafeCurvesEnabled(JSGlobalObject& state)
+{
+    auto& globalObject = *JSC::jsCast<JSDOMGlobalObject*>(&state);
+    auto* context = globalObject.scriptExecutionContext();
+    return context && context->settingsValues().webCryptoSafeCurvesEnabled;
+}
+
 static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAlgorithmParameters(JSGlobalObject& state, SubtleCrypto::AlgorithmIdentifier algorithmIdentifier, Operations operation)
 {
     VM& vm = state.vm();
@@ -95,7 +109,7 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
 
     if (std::holds_alternative<String>(algorithmIdentifier)) {
         auto newParams = Strong<JSObject>(vm, constructEmptyObject(&state));
-        newParams->putDirect(vm, Identifier::fromString(vm, "name"), jsString(vm, std::get<String>(algorithmIdentifier)));
+        newParams->putDirect(vm, Identifier::fromString(vm, "name"_s), jsString(vm, std::get<String>(algorithmIdentifier)));
 
         return normalizeCryptoAlgorithmParameters(state, newParams, operation);
     }
@@ -109,12 +123,17 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
     if (UNLIKELY(!identifier))
         return Exception { NotSupportedError };
 
+    if (*identifier == CryptoAlgorithmIdentifier::Ed25519 && !isSafeCurvesEnabled(state))
+        return Exception { NotSupportedError };
+
     std::unique_ptr<CryptoAlgorithmParameters> result;
     switch (operation) {
     case Operations::Encrypt:
     case Operations::Decrypt:
         switch (*identifier) {
         case CryptoAlgorithmIdentifier::RSAES_PKCS1_v1_5:
+            if (isRSAESPKCSWebCryptoDeprecated(state))
+                return Exception { NotSupportedError, "RSAES-PKCS1-v1_5 support is deprecated"_s };
             result = makeUnique<CryptoAlgorithmParameters>(params);
             break;
         case CryptoAlgorithmIdentifier::RSA_OAEP: {
@@ -151,6 +170,7 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
         switch (*identifier) {
         case CryptoAlgorithmIdentifier::RSASSA_PKCS1_v1_5:
         case CryptoAlgorithmIdentifier::HMAC:
+        case CryptoAlgorithmIdentifier::Ed25519:
             result = makeUnique<CryptoAlgorithmParameters>(params);
             break;
         case CryptoAlgorithmIdentifier::ECDSA: {
@@ -189,6 +209,8 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
     case Operations::GenerateKey:
         switch (*identifier) {
         case CryptoAlgorithmIdentifier::RSAES_PKCS1_v1_5: {
+            if (isRSAESPKCSWebCryptoDeprecated(state))
+                return Exception { NotSupportedError, "RSAES-PKCS1-v1_5 support is deprecated"_s };
             auto params = convertDictionary<CryptoAlgorithmRsaKeyGenParams>(state, value.get());
             RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
             result = makeUnique<CryptoAlgorithmRsaKeyGenParams>(params);
@@ -233,6 +255,9 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
             result = makeUnique<CryptoAlgorithmEcKeyParams>(params);
             break;
         }
+        case CryptoAlgorithmIdentifier::Ed25519:
+            result = makeUnique<CryptoAlgorithmParameters>(params);
+            break;
         default:
             return Exception { NotSupportedError };
         }
@@ -241,11 +266,11 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
         switch (*identifier) {
         case CryptoAlgorithmIdentifier::ECDH: {
             // Remove this hack once https://bugs.webkit.org/show_bug.cgi?id=169333 is fixed.
-            JSValue nameValue = value.get()->get(&state, Identifier::fromString(vm, "name"));
-            JSValue publicValue = value.get()->get(&state, Identifier::fromString(vm, "public"));
+            JSValue nameValue = value.get()->get(&state, Identifier::fromString(vm, "name"_s));
+            JSValue publicValue = value.get()->get(&state, Identifier::fromString(vm, "public"_s));
             JSObject* newValue = constructEmptyObject(&state);
-            newValue->putDirect(vm, Identifier::fromString(vm, "name"), nameValue);
-            newValue->putDirect(vm, Identifier::fromString(vm, "publicKey"), publicValue);
+            newValue->putDirect(vm, Identifier::fromString(vm, "name"_s), nameValue);
+            newValue->putDirect(vm, Identifier::fromString(vm, "publicKey"_s), publicValue);
 
             auto params = convertDictionary<CryptoAlgorithmEcdhKeyDeriveParams>(state, newValue);
             RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
@@ -279,6 +304,8 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
     case Operations::ImportKey:
         switch (*identifier) {
         case CryptoAlgorithmIdentifier::RSAES_PKCS1_v1_5:
+            if (isRSAESPKCSWebCryptoDeprecated(state))
+                return Exception { NotSupportedError, "RSAES-PKCS1-v1_5 support is deprecated"_s };
             result = makeUnique<CryptoAlgorithmParameters>(params);
             break;
         case CryptoAlgorithmIdentifier::RSASSA_PKCS1_v1_5:
@@ -298,6 +325,7 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
         case CryptoAlgorithmIdentifier::AES_GCM:
         case CryptoAlgorithmIdentifier::AES_CFB:
         case CryptoAlgorithmIdentifier::AES_KW:
+        case CryptoAlgorithmIdentifier::Ed25519:
             result = makeUnique<CryptoAlgorithmParameters>(params);
             break;
         case CryptoAlgorithmIdentifier::HMAC: {
@@ -321,7 +349,11 @@ static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAl
         case CryptoAlgorithmIdentifier::PBKDF2:
             result = makeUnique<CryptoAlgorithmParameters>(params);
             break;
-        default:
+        case CryptoAlgorithmIdentifier::SHA_1:
+        case CryptoAlgorithmIdentifier::SHA_224:
+        case CryptoAlgorithmIdentifier::SHA_256:
+        case CryptoAlgorithmIdentifier::SHA_384:
+        case CryptoAlgorithmIdentifier::SHA_512:
             return Exception { NotSupportedError };
         }
         break;
@@ -482,10 +514,11 @@ static Vector<uint8_t> copyToVector(BufferSource&& data)
     return { data.data(), data.length() };
 }
 
-static bool isSupportedExportKey(CryptoAlgorithmIdentifier identifier)
+static bool isSupportedExportKey(JSGlobalObject& state, CryptoAlgorithmIdentifier identifier)
 {
     switch (identifier) {
     case CryptoAlgorithmIdentifier::RSAES_PKCS1_v1_5:
+        return !isRSAESPKCSWebCryptoDeprecated(state);
     case CryptoAlgorithmIdentifier::RSASSA_PKCS1_v1_5:
     case CryptoAlgorithmIdentifier::RSA_PSS:
     case CryptoAlgorithmIdentifier::RSA_OAEP:
@@ -497,6 +530,7 @@ static bool isSupportedExportKey(CryptoAlgorithmIdentifier identifier)
     case CryptoAlgorithmIdentifier::HMAC:
     case CryptoAlgorithmIdentifier::ECDSA:
     case CryptoAlgorithmIdentifier::ECDH:
+    case CryptoAlgorithmIdentifier::Ed25519:
         return true;
     default:
         return false;
@@ -532,8 +566,12 @@ static std::unique_ptr<CryptoAlgorithmParameters> crossThreadCopyImportParams(co
 
 void SubtleCrypto::addAuthenticatedEncryptionWarningIfNecessary(CryptoAlgorithmIdentifier algorithmIdentifier)
 {
-    if (algorithmIdentifier == CryptoAlgorithmIdentifier::AES_CBC || algorithmIdentifier == CryptoAlgorithmIdentifier::AES_CTR)
-        scriptExecutionContext()->addConsoleMessage(MessageSource::Security, MessageLevel::Warning, "AES-CBC and AES-CTR do not provide authentication by default, and implementing it manually can result in minor, but serious mistakes. We recommended using authenticated encryption like AES-GCM to protect against chosen-ciphertext attacks.");
+    if (algorithmIdentifier == CryptoAlgorithmIdentifier::AES_CBC || algorithmIdentifier == CryptoAlgorithmIdentifier::AES_CTR) {
+        if (!scriptExecutionContext()->hasLoggedAuthenticatedEncryptionWarning()) {
+            scriptExecutionContext()->addConsoleMessage(MessageSource::Security, MessageLevel::Warning, "AES-CBC and AES-CTR do not provide authentication by default, and implementing it manually can result in minor, but serious mistakes. We recommended using authenticated encryption like AES-GCM to protect against chosen-ciphertext attacks."_s);
+            scriptExecutionContext()->setHasLoggedAuthenticatedEncryptionWarning(true);
+        }
+    }
 }
 
 // MARK: - Exposed functions.
@@ -928,7 +966,7 @@ void SubtleCrypto::importKey(JSC::JSGlobalObject& state, KeyFormat format, KeyDa
 
 void SubtleCrypto::exportKey(KeyFormat format, CryptoKey& key, Ref<DeferredPromise>&& promise)
 {
-    if (!isSupportedExportKey(key.algorithmIdentifier())) {
+    if (!isSupportedExportKey(*promise->globalObject(), key.algorithmIdentifier())) {
         promise->reject(Exception { NotSupportedError });
         return;
     }
@@ -999,7 +1037,7 @@ void SubtleCrypto::wrapKey(JSC::JSGlobalObject& state, KeyFormat format, CryptoK
         return;
     }
 
-    if (!isSupportedExportKey(key.algorithmIdentifier())) {
+    if (!isSupportedExportKey(state, key.algorithmIdentifier())) {
         promise->reject(Exception { NotSupportedError });
         return;
     }
@@ -1019,7 +1057,7 @@ void SubtleCrypto::wrapKey(JSC::JSGlobalObject& state, KeyFormat format, CryptoK
     WeakPtr weakThis { *this };
     auto callback = [index, weakThis, wrapAlgorithm, wrappingKey = Ref { wrappingKey }, wrapParams = WTFMove(wrapParams), isEncryption, context, workQueue = m_workQueue](SubtleCrypto::KeyFormat format, KeyData&& key) mutable {
         if (weakThis) {
-            if (auto promise = weakThis->m_pendingPromises.get(index)) {
+            if (RefPtr promise = weakThis->m_pendingPromises.get(index)) {
                 Vector<uint8_t> bytes;
                 switch (format) {
                 case SubtleCrypto::KeyFormat::Spki:
@@ -1031,8 +1069,8 @@ void SubtleCrypto::wrapKey(JSC::JSGlobalObject& state, KeyFormat format, CryptoK
                     // FIXME: Converting to JS just to JSON-Stringify seems inefficient. We should find a way to go directly from the struct to JSON.
                     auto jwk = toJS<IDLDictionary<JsonWebKey>>(*(promise->globalObject()), *(promise->globalObject()), WTFMove(std::get<JsonWebKey>(key)));
                     String jwkString = JSONStringify(promise->globalObject(), jwk, 0);
-                    CString jwkUtf8String = jwkString.utf8(StrictConversion);
-                    bytes.append(jwkUtf8String.data(), jwkUtf8String.length());
+                    CString jwkUTF8String = jwkString.utf8(StrictConversion);
+                    bytes.append(jwkUTF8String.data(), jwkUTF8String.length());
                 }
                 }
 

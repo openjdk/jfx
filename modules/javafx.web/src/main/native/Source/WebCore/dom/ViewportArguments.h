@@ -41,7 +41,7 @@ enum ViewportErrorCode {
     MaximumScaleTooLargeError
 };
 
-enum class ViewportFit {
+enum class ViewportFit : uint8_t {
     Auto,
     Contain,
     Cover
@@ -123,11 +123,6 @@ struct ViewportArguments {
             && widthWasExplicit == other.widthWasExplicit;
     }
 
-    bool operator!=(const ViewportArguments& other) const
-    {
-        return !(*this == other);
-    }
-
 #if PLATFORM(GTK)
     // FIXME: We're going to keep this constant around until all embedders
     // refactor their code to no longer need it.
@@ -143,7 +138,7 @@ WEBCORE_EXPORT float computeMinimumScaleFactorForContentContained(const Viewport
 
 typedef Function<void(ViewportErrorCode, const String&)> ViewportErrorHandler;
 void setViewportFeature(ViewportArguments&, Document&, StringView key, StringView value);
-WEBCORE_EXPORT void setViewportFeature(ViewportArguments&, StringView key, StringView value, bool viewportFitEnabled, const ViewportErrorHandler&);
+WEBCORE_EXPORT void setViewportFeature(ViewportArguments&, StringView key, StringView value, const ViewportErrorHandler&);
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const ViewportArguments&);
 

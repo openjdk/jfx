@@ -32,6 +32,7 @@
 
 namespace WebCore {
 
+class Image;
 struct NowPlayingInfo;
 
 class WEBCORE_EXPORT NowPlayingManager : public RemoteCommandListenerClient {
@@ -65,12 +66,12 @@ private:
     virtual void clearNowPlayingInfoPrivate();
     virtual void setNowPlayingInfoPrivate(const NowPlayingInfo&);
     void ensureRemoteCommandListenerCreated();
-    std::unique_ptr<RemoteCommandListener> m_remoteCommandListener;
+    RefPtr<RemoteCommandListener> m_remoteCommandListener;
     WeakPtr<Client> m_client;
     std::optional<NowPlayingInfo> m_nowPlayingInfo;
     struct ArtworkCache {
         String src;
-        RefPtr<FragmentedSharedBuffer> imageData;
+        RefPtr<Image> image;
     };
     std::optional<ArtworkCache> m_nowPlayingInfoArtwork;
     bool m_setAsNowPlayingApplication { false };

@@ -152,6 +152,26 @@ SharedBufferDataView FragmentedSharedBuffer::getSomeData(size_t position) const
     return { element->segment.copyRef(), position - element->beginPosition };
 }
 
+Ref<SharedBuffer> FragmentedSharedBuffer::getContiguousData(size_t position, size_t length) const
+{
+    if (position >= m_size)
+        return SharedBuffer::create();
+    length = std::min(m_size - position, length);
+    const DataSegmentVectorEntry* element = getSegmentForPosition(position);
+    size_t offsetInSegment = position - element->beginPosition;
+    ASSERT(element->segment->size() > offsetInSegment);
+    if (element->segment->size() - offsetInSegment >= length)
+        return SharedBufferDataView { element->segment.copyRef(), offsetInSegment, length }.createSharedBuffer();
+    Vector<uint8_t> combinedData;
+    combinedData.reserveInitialCapacity(length);
+    combinedData.append(element->segment->data() + offsetInSegment, element->segment->size() - offsetInSegment);
+    for (++element; combinedData.size() < length && element != m_segments.end(); element++) {
+        auto canCopy = std::min(length - combinedData.size(), element->segment->size());
+        combinedData.append(element->segment->data(), canCopy);
+    }
+    return SharedBuffer::create(WTFMove(combinedData));
+}
+
 const FragmentedSharedBuffer::DataSegmentVectorEntry* FragmentedSharedBuffer::getSegmentForPosition(size_t position) const
 {
     RELEASE_ASSERT(position < m_size);
@@ -206,9 +226,7 @@ void FragmentedSharedBuffer::append(const FragmentedSharedBuffer& data)
 void FragmentedSharedBuffer::append(const uint8_t* data, size_t length)
 {
     ASSERT(!m_contiguous);
-    Vector<uint8_t> vector;
-    vector.append(data, length);
-    m_segments.append({ m_size, DataSegment::create(WTFMove(vector)) });
+    m_segments.append({ m_size, DataSegment::create(Vector { data, length }) });
     m_size += length;
     ASSERT(internallyConsistent());
 }
@@ -243,11 +261,20 @@ Ref<FragmentedSharedBuffer> FragmentedSharedBuffer::copy() const
     return clone;
 }
 
-void FragmentedSharedBuffer::forEachSegment(const Function<void(const Span<const uint8_t>&)>& apply) const
+void FragmentedSharedBuffer::forEachSegment(const Function<void(const std::span<const uint8_t>&)>& apply) const
 {
     auto segments = m_segments;
     for (auto& segment : segments)
-        apply(Span { segment.segment->data(), segment.segment->size() });
+        segment.segment->iterate(apply);
+}
+
+void DataSegment::iterate(const Function<void(const std::span<const uint8_t>&)>& apply) const
+{
+#if USE(FOUNDATION)
+    if (auto* data = std::get_if<RetainPtr<CFDataRef>>(&m_immutableData))
+        return iterate(data->get(), apply);
+#endif
+    apply({ data(), size() });
 }
 
 void FragmentedSharedBuffer::forEachSegmentAsSharedBuffer(const Function<void(Ref<SharedBuffer>&&)>& apply) const
@@ -257,7 +284,7 @@ void FragmentedSharedBuffer::forEachSegmentAsSharedBuffer(const Function<void(Re
         apply(SharedBuffer::create(segment.segment.copyRef()));
 }
 
-bool FragmentedSharedBuffer::startsWith(const Span<const uint8_t>& prefix) const
+bool FragmentedSharedBuffer::startsWith(const std::span<const uint8_t>& prefix) const
 {
     if (prefix.empty())
         return true;
@@ -333,10 +360,10 @@ void FragmentedSharedBuffer::copyTo(void* destination, size_t offset, size_t len
     size_t positionInSegment = offset - segment->beginPosition;
     size_t amountToCopyThisTime = std::min(remaining, segment->segment->size() - positionInSegment);
     memcpy(destinationPtr, segment->segment->data() + positionInSegment, amountToCopyThisTime);
-        remaining -= amountToCopyThisTime;
-        if (!remaining)
-            return;
-        destinationPtr += amountToCopyThisTime;
+    remaining -= amountToCopyThisTime;
+    if (!remaining)
+        return;
+    destinationPtr += amountToCopyThisTime;
 
     // If we reach here, there must be at least another segment available as we have content left to be fetched.
     for (++segment; segment != end(); ++segment) {
@@ -653,7 +680,7 @@ RefPtr<SharedBuffer> utf8Buffer(const String& string)
                 return nullptr;
         } else {
             const UChar* d = string.characters16();
-            if (WTF::Unicode::convertUTF16ToUTF8(&d, d + length, &p, p + buffer.size()) != WTF::Unicode::ConversionOK)
+            if (WTF::Unicode::convertUTF16ToUTF8(&d, d + length, &p, p + buffer.size()) != WTF::Unicode::ConversionResult::Success)
                 return nullptr;
         }
     }

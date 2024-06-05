@@ -33,10 +33,10 @@
 #include "CVUtilities.h"
 #include "Logging.h"
 #include "MediaRecorderPrivateWriterCocoa.h"
-#include "MediaSampleAVFObjC.h"
 #include "MediaStreamPrivate.h"
 #include "RealtimeIncomingVideoSourceCocoa.h"
 #include "SharedBuffer.h"
+#include "VideoFrameCV.h"
 #include "WebAudioBufferList.h"
 
 #include "CoreVideoSoftLink.h"
@@ -44,7 +44,7 @@
 
 namespace WebCore {
 
-std::unique_ptr<MediaRecorderPrivateAVFImpl> MediaRecorderPrivateAVFImpl::create(MediaStreamPrivate& stream, const MediaRecorderPrivateOptions& options)
+RefPtr<MediaRecorderPrivateAVFImpl> MediaRecorderPrivateAVFImpl::create(MediaStreamPrivate& stream, const MediaRecorderPrivateOptions& options)
 {
     // FIXME: we will need to implement support for multiple audio/video tracks
     // Currently we only choose the first track as the recorded track.
@@ -56,7 +56,7 @@ std::unique_ptr<MediaRecorderPrivateAVFImpl> MediaRecorderPrivateAVFImpl::create
     if (!writer)
         return nullptr;
 
-    auto recorder = std::unique_ptr<MediaRecorderPrivateAVFImpl>(new MediaRecorderPrivateAVFImpl(writer.releaseNonNull()));
+    auto recorder = adoptRef(*new MediaRecorderPrivateAVFImpl(writer.releaseNonNull()));
     if (selectedTracks.audioTrack) {
         recorder->setAudioSource(&selectedTracks.audioTrack->source());
         recorder->checkTrackState(*selectedTracks.audioTrack);
@@ -75,6 +75,7 @@ MediaRecorderPrivateAVFImpl::MediaRecorderPrivateAVFImpl(Ref<MediaRecorderPrivat
 
 MediaRecorderPrivateAVFImpl::~MediaRecorderPrivateAVFImpl()
 {
+    m_writer->close();
 }
 
 void MediaRecorderPrivateAVFImpl::startRecording(StartRecordingCallback&& callback)
@@ -83,40 +84,19 @@ void MediaRecorderPrivateAVFImpl::startRecording(StartRecordingCallback&& callba
     callback(String(m_writer->mimeType()), m_writer->audioBitRate(), m_writer->videoBitRate());
 }
 
-void MediaRecorderPrivateAVFImpl::videoSampleAvailable(MediaSample& sampleBuffer, VideoSampleMetadata)
+void MediaRecorderPrivateAVFImpl::videoFrameAvailable(VideoFrame& videoFrame, VideoFrameTimeMetadata)
 {
     if (shouldMuteVideo()) {
         if (!m_blackFrame) {
-            m_blackFrameDescription = PAL::CMSampleBufferGetFormatDescription(sampleBuffer.platformSample().sample.cmSampleBuffer);
-            auto dimensions = PAL::CMVideoFormatDescriptionGetDimensions(m_blackFrameDescription.get());
-            m_blackFrame = createBlackPixelBuffer(dimensions.width, dimensions.height);
-
-            CMVideoFormatDescriptionRef formatDescription = nullptr;
-            auto status = PAL::CMVideoFormatDescriptionCreateForImageBuffer(kCFAllocatorDefault, m_blackFrame.get(), &formatDescription);
-            if (status != noErr) {
-                RELEASE_LOG_ERROR(Media, "MediaRecorderPrivateAVFImpl::videoSampleAvailable ::unable to create a black frame description: %d", static_cast<int>(status));
-                m_blackFrame = nullptr;
-                return;
-            }
-            m_blackFrameDescription = adoptCF(formatDescription);
+            auto size = videoFrame.presentationSize();
+            m_blackFrame = VideoFrameCV::create(videoFrame.presentationTime(), videoFrame.isMirrored(), videoFrame.rotation(), createBlackPixelBuffer(size.width(), size.height()));
         }
-
-        CMSampleBufferRef sample = nullptr;
-        CMSampleTimingInfo timingInfo { PAL::kCMTimeInvalid, PAL::toCMTime(sampleBuffer.presentationTime()), PAL::toCMTime(sampleBuffer.decodeTime()) };
-        auto status = PAL::CMSampleBufferCreateReadyWithImageBuffer(kCFAllocatorDefault, (CVImageBufferRef)m_blackFrame.get(), m_blackFrameDescription.get(), &timingInfo, &sample);
-
-        if (status != noErr) {
-            RELEASE_LOG_ERROR(MediaStream, "MediaRecorderPrivateAVFImpl::videoSampleAvailable - unable to create a black frame: %d", static_cast<int>(status));
-            return;
-        }
-        auto newSample = adoptCF(sample);
-        m_writer->appendVideoSampleBuffer(MediaSampleAVFObjC::create(newSample.get(), sampleBuffer.videoRotation(), sampleBuffer.videoMirrored()));
+        m_writer->appendVideoFrame(*m_blackFrame);
         return;
     }
 
     m_blackFrame = nullptr;
-    m_blackFrameDescription = nullptr;
-    m_writer->appendVideoSampleBuffer(sampleBuffer);
+    m_writer->appendVideoFrame(videoFrame);
 }
 
 void MediaRecorderPrivateAVFImpl::audioSamplesAvailable(const MediaTime& mediaTime, const PlatformAudioData& data, const AudioStreamDescription& description, size_t sampleCount)
@@ -127,7 +107,7 @@ void MediaRecorderPrivateAVFImpl::audioSamplesAvailable(const MediaTime& mediaTi
     if (shouldMuteAudio()) {
         if (!m_audioBuffer || m_description != toCAAudioStreamDescription(description)) {
             m_description = toCAAudioStreamDescription(description);
-            m_audioBuffer = makeUnique<WebAudioBufferList>(m_description, sampleCount);
+            m_audioBuffer = makeUnique<WebAudioBufferList>(*m_description, sampleCount);
         } else
             m_audioBuffer->setSampleCount(sampleCount);
         m_audioBuffer->zeroFlatBuffer();

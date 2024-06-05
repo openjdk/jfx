@@ -45,6 +45,7 @@ public:
 
     AudioTrack* getTrackById(const AtomString&) const;
 
+    bool isSupportedPropertyIndex(unsigned index) const { return index < m_inbandTracks.size(); }
     AudioTrack* item(unsigned index) const;
     AudioTrack* lastItem() const { return item(length() - 1); }
     void append(Ref<AudioTrack>&&);
@@ -58,7 +59,7 @@ private:
 
     const char* activeDOMObjectName() const final;
 };
-static_assert(sizeof(AudioTrackList) == sizeof(TrackListBase), "");
+static_assert(sizeof(AudioTrackList) == sizeof(TrackListBase));
 
 } // namespace WebCore
 

@@ -43,9 +43,9 @@ public:
     static bool containsValidVariableReferences(CSSParserTokenRange, const CSSParserContext&);
 
     static RefPtr<CSSCustomPropertyValue> parseDeclarationValue(const AtomString&, CSSParserTokenRange, const CSSParserContext&);
+    static RefPtr<CSSCustomPropertyValue> parseInitialValueForUniversalSyntax(const AtomString&, CSSParserTokenRange);
 
     static bool isValidVariableName(const CSSParserToken&);
-    static bool isValidVariableName(const String&);
 };
 
 } // namespace WebCore

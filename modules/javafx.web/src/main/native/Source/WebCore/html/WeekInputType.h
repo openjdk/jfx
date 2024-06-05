@@ -37,20 +37,24 @@
 namespace WebCore {
 
 class WeekInputType final : public BaseDateAndTimeInputType {
-    template<typename DowncastedType> friend bool isInvalidInputType(const InputType&, const String&);
 public:
+    static Ref<WeekInputType> create(HTMLInputElement& element)
+    {
+        return adoptRef(*new WeekInputType(element));
+    }
+
+private:
     explicit WeekInputType(HTMLInputElement& element)
         : BaseDateAndTimeInputType(Type::Week, element)
     {
     }
 
-private:
-    const AtomString& formControlType() const override;
-    DateComponentsType dateType() const override;
-    StepRange createStepRange(AnyStepHandling) const override;
-    std::optional<DateComponents> parseToDateComponents(StringView) const override;
-    std::optional<DateComponents> setMillisecondToDateComponents(double) const override;
-    void handleDOMActivateEvent(Event&) override;
+    const AtomString& formControlType() const final;
+    DateComponentsType dateType() const final;
+    StepRange createStepRange(AnyStepHandling) const final;
+    std::optional<DateComponents> parseToDateComponents(StringView) const final;
+    std::optional<DateComponents> setMillisecondToDateComponents(double) const final;
+    void handleDOMActivateEvent(Event&) final;
 
     bool isValidFormat(OptionSet<DateTimeFormatValidationResults>) const final;
     String formatDateTimeFieldsState(const DateTimeFieldsState&) const final;
@@ -58,5 +62,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_INPUT_TYPE(WeekInputType, Type::Week)
 
 #endif // ENABLE(INPUT_TYPE_WEEK)

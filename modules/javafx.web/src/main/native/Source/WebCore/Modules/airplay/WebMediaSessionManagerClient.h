@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 #include "PlatformView.h"
 #include "PlaybackTargetClientContextIdentifier.h"
 #include <wtf/Ref.h>
+#include <wtf/RetainPtr.h>
 
 namespace WebCore {
 
@@ -44,8 +45,7 @@ public:
     virtual void setShouldPlayToPlaybackTarget(PlaybackTargetClientContextIdentifier, bool) = 0;
     virtual void playbackTargetPickerWasDismissed(PlaybackTargetClientContextIdentifier) = 0;
     virtual bool alwaysOnLoggingAllowed() const { return false; }
-    virtual bool useiTunesAVOutputContext() const { return true; }
-    virtual PlatformView* platformView() const = 0;
+    virtual RetainPtr<PlatformView> platformView() const = 0;
 };
 
 } // namespace WebCore

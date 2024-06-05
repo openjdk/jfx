@@ -35,8 +35,9 @@
 #include "CrossOriginAccessControl.h"
 #include "Document.h"
 #include "Element.h"
-#include "FrameLoaderClient.h"
+#include "FrameDestructionObserverInlines.h"
 #include "InspectorInstrumentation.h"
+#include "LocalFrameLoaderClient.h"
 #include "SecurityOrigin.h"
 #include <wtf/NeverDestroyed.h>
 
@@ -87,7 +88,7 @@ RefPtr<PlatformMediaResource> MediaResourceLoader::requestResource(ResourceReque
     DataBufferingPolicy bufferingPolicy = options & LoadOption::BufferData ? DataBufferingPolicy::BufferData : DataBufferingPolicy::DoNotBufferData;
     auto cachingPolicy = options & LoadOption::DisallowCaching ? CachingPolicy::DisallowCaching : CachingPolicy::AllowCaching;
 
-    request.setRequester(ResourceRequest::Requester::Media);
+    request.setRequester(ResourceRequestRequester::Media);
 
     if (m_element)
         request.setInspectorInitiatorNodeIdentifier(InspectorInstrumentation::identifierForNode(*m_element));
@@ -180,7 +181,7 @@ void MediaResource::responseReceived(CachedResource& resource, const ResourceRes
 
     RefPtr<MediaResource> protectedThis(this);
     if (m_resource->resourceError().isAccessControl()) {
-        static NeverDestroyed<const String> consoleMessage("Cross-origin media resource load denied by Cross-Origin Resource Sharing policy.");
+        static NeverDestroyed<const String> consoleMessage("Cross-origin media resource load denied by Cross-Origin Resource Sharing policy."_s);
         m_loader->document()->addConsoleMessage(MessageSource::Security, MessageLevel::Error, consoleMessage.get());
         m_didPassAccessControlCheck = false;
         if (m_client)

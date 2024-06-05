@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -73,11 +73,6 @@ bool operator==(const TestFeatures& a, const TestFeatures& b)
     return true;
 }
 
-bool operator!=(const TestFeatures& a, const TestFeatures& b)
-{
-    return !(a == b);
-}
-
 static bool pathContains(const std::string& pathOrURL, const char* substring)
 {
     return pathOrURL.find(substring) != std::string::npos;
@@ -122,6 +117,11 @@ static bool shouldDumpJSConsoleLogInStdErr(const std::string& pathOrURL)
         || pathContains(pathOrURL, "localhost:8800/websockets") || pathContains(pathOrURL, "localhost:9443/websockets");
 }
 
+static bool shouldEnableWebGPU(const std::string& pathOrURL)
+{
+    return pathContains(pathOrURL, "127.0.0.1:8000/webgpu");
+}
+
 TestFeatures hardcodedFeaturesBasedOnPathForTest(const TestCommand& command)
 {
     TestFeatures features;
@@ -138,6 +138,8 @@ TestFeatures hardcodedFeaturesBasedOnPathForTest(const TestCommand& command)
         features.doubleTestRunnerFeatures.insert({ "viewWidth", viewWidthAndHeight->first });
         features.doubleTestRunnerFeatures.insert({ "viewHeight", viewWidthAndHeight->second });
     }
+    if (shouldEnableWebGPU(command.pathOrURL))
+        features.boolWebPreferenceFeatures.insert({ "WebGPUEnabled", true });
 
     return features;
 }

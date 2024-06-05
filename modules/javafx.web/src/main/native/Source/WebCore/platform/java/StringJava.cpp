@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,7 @@ namespace WebCore {
 
 using WTF::String;
 
-jobjectArray strVect2JArray(JNIEnv* env, const Vector<String>& strVect)
+jobjectArray strVect2JArray(JNIEnv* env, const Vector<AtomString>& strVect)
 {
     if (!strVect.size()) {
         jobjectArray arr = (jobjectArray) env->NewObjectArray(0,
@@ -42,7 +42,7 @@ jobjectArray strVect2JArray(JNIEnv* env, const Vector<String>& strVect)
     }
 
     ASSERT(strVect[0]);
-    JLString str(strVect[0].toJavaString(env));
+    JLString str(strVect[0].string().toJavaString(env));
 
     JLClass sclass(env->GetObjectClass(str));
     jobjectArray strArray =
@@ -53,7 +53,7 @@ jobjectArray strVect2JArray(JNIEnv* env, const Vector<String>& strVect)
 
     for (size_t i = 1; i < strVect.size(); i++) {
         ASSERT(strVect[i]);
-        str = strVect[i].toJavaString(env);
+        str = strVect[i].string().toJavaString(env);
         env->SetObjectArrayElement(strArray, i, (jstring)str);
     }
 

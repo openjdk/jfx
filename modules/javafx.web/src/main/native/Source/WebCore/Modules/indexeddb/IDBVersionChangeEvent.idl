@@ -25,9 +25,10 @@
  */
 
 [
+    EnabledBySetting=IndexedDBAPIEnabled,
     Exposed=(Window,Worker)
 ] interface IDBVersionChangeEvent : Event {
-    constructor(DOMString type, optional IDBVersionChangeEventInit eventInitDict);
+    constructor([AtomString] DOMString type, optional IDBVersionChangeEventInit eventInitDict);
     readonly attribute unsigned long long oldVersion;
     readonly attribute unsigned long long? newVersion;
 };

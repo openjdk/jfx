@@ -26,8 +26,9 @@
 
 #include "GraphicsContext.h"
 #include "ImageQualityController.h"
+#include "LayoutRect.h"
 #include "LengthFunctions.h"
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/PointerComparison.h>
 #include <wtf/text/TextStream.h>
@@ -55,8 +56,8 @@ NinePieceImage::NinePieceImage(Type imageType)
 {
 }
 
-NinePieceImage::NinePieceImage(RefPtr<StyleImage>&& image, LengthBox imageSlices, bool fill, LengthBox borderSlices, LengthBox outset, NinePieceImageRule horizontalRule, NinePieceImageRule verticalRule)
-    : m_data(Data::create(WTFMove(image), imageSlices, fill, borderSlices, outset, horizontalRule, verticalRule))
+NinePieceImage::NinePieceImage(RefPtr<StyleImage>&& image, LengthBox imageSlices, bool fill, LengthBox borderSlices, bool overridesBorderWidths, LengthBox outset, NinePieceImageRule horizontalRule, NinePieceImageRule verticalRule)
+    : m_data(Data::create(WTFMove(image), imageSlices, fill, borderSlices, overridesBorderWidths, outset, horizontalRule, verticalRule))
 {
 }
 
@@ -198,7 +199,7 @@ Vector<FloatSize> NinePieceImage::computeTileScales(const Vector<FloatRect>& des
     return scales;
 }
 
-void NinePieceImage::paint(GraphicsContext& graphicsContext, RenderElement* renderer, const RenderStyle& style, const LayoutRect& destination, const LayoutSize& source, float deviceScaleFactor, CompositeOperator op) const
+void NinePieceImage::paint(GraphicsContext& graphicsContext, const RenderElement* renderer, const RenderStyle& style, const LayoutRect& destination, const LayoutSize& source, float deviceScaleFactor, CompositeOperator op) const
 {
     StyleImage* styleImage = image();
     ASSERT(styleImage);
@@ -223,20 +224,21 @@ void NinePieceImage::paint(GraphicsContext& graphicsContext, RenderElement* rend
             continue;
 
         if (isCornerPiece(piece)) {
-            graphicsContext.drawImage(*image, destinationRects[piece], sourceRects[piece], { op, ImageOrientation::FromImage });
+            graphicsContext.drawImage(*image, destinationRects[piece], sourceRects[piece], { op, ImageOrientation::Orientation::FromImage });
             continue;
         }
 
         Image::TileRule hRule = isHorizontalPiece(piece) ? static_cast<Image::TileRule>(horizontalRule()) : Image::StretchTile;
         Image::TileRule vRule = isVerticalPiece(piece) ? static_cast<Image::TileRule>(verticalRule()) : Image::StretchTile;
-        graphicsContext.drawTiledImage(*image, destinationRects[piece], sourceRects[piece], tileScales[piece], hRule, vRule, { op, ImageOrientation::FromImage });
+        graphicsContext.drawTiledImage(*image, destinationRects[piece], sourceRects[piece], tileScales[piece], hRule, vRule, { op, ImageOrientation::Orientation::FromImage });
     }
 }
 
 inline NinePieceImage::Data::Data() = default;
 
-inline NinePieceImage::Data::Data(RefPtr<StyleImage>&& image, LengthBox imageSlices, bool fill, LengthBox borderSlices, LengthBox outset, NinePieceImageRule horizontalRule, NinePieceImageRule verticalRule)
+inline NinePieceImage::Data::Data(RefPtr<StyleImage>&& image, LengthBox imageSlices, bool fill, LengthBox borderSlices, bool overridesBorderWidths, LengthBox outset, NinePieceImageRule horizontalRule, NinePieceImageRule verticalRule)
     : fill(fill)
+    , overridesBorderWidths(overridesBorderWidths)
     , horizontalRule(horizontalRule)
     , verticalRule(verticalRule)
     , image(WTFMove(image))
@@ -249,6 +251,7 @@ inline NinePieceImage::Data::Data(RefPtr<StyleImage>&& image, LengthBox imageSli
 inline NinePieceImage::Data::Data(const Data& other)
     : RefCounted<Data>()
     , fill(other.fill)
+    , overridesBorderWidths(other.overridesBorderWidths)
     , horizontalRule(other.horizontalRule)
     , verticalRule(other.verticalRule)
     , image(other.image)
@@ -263,9 +266,9 @@ inline Ref<NinePieceImage::Data> NinePieceImage::Data::create()
     return adoptRef(*new Data);
 }
 
-inline Ref<NinePieceImage::Data> NinePieceImage::Data::create(RefPtr<StyleImage>&& image, LengthBox imageSlices, bool fill, LengthBox borderSlices, LengthBox outset, NinePieceImageRule horizontalRule, NinePieceImageRule verticalRule)
+inline Ref<NinePieceImage::Data> NinePieceImage::Data::create(RefPtr<StyleImage>&& image, LengthBox imageSlices, bool fill, LengthBox borderSlices, bool overridesBorderWidths, LengthBox outset, NinePieceImageRule horizontalRule, NinePieceImageRule verticalRule)
 {
-    return adoptRef(*new Data(WTFMove(image), imageSlices, fill, borderSlices, outset, horizontalRule, verticalRule));
+    return adoptRef(*new Data(WTFMove(image), imageSlices, fill, borderSlices, overridesBorderWidths, outset, horizontalRule, verticalRule));
 }
 
 Ref<NinePieceImage::Data> NinePieceImage::Data::copy() const
@@ -279,6 +282,7 @@ bool NinePieceImage::Data::operator==(const Data& other) const
         && imageSlices == other.imageSlices
         && fill == other.fill
         && borderSlices == other.borderSlices
+        && overridesBorderWidths == other.overridesBorderWidths
         && outset == other.outset
         && horizontalRule == other.horizontalRule
         && verticalRule == other.verticalRule;

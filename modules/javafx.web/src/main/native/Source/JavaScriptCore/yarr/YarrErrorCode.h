@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/Forward.h>
+
 namespace JSC {
 
 class CallFrame;
@@ -40,6 +42,7 @@ enum class ErrorCode : uint8_t {
     QuantifierWithoutAtom,
     QuantifierTooLarge,
     QuantifierIncomplete,
+    CantQuantifyAtom,
     MissingParentheses,
     BracketUnmatched,
     ParenthesesUnmatched,
@@ -49,6 +52,7 @@ enum class ErrorCode : uint8_t {
     CharacterClassUnmatched,
     CharacterClassRangeOutOfOrder,
     CharacterClassRangeInvalid,
+    ClassStringDisjunctionUnmatched,
     EscapeUnterminated,
     InvalidUnicodeEscape,
     InvalidUnicodeCodePointEscape,
@@ -61,9 +65,12 @@ enum class ErrorCode : uint8_t {
     TooManyDisjunctions,
     OffsetTooLarge,
     InvalidRegularExpressionFlags,
+    InvalidClassSetOperation,
+    NegatedClassSetMayContainStrings,
+    InvalidClassSetCharacter,
 };
 
-JS_EXPORT_PRIVATE const char* errorMessage(ErrorCode);
+JS_EXPORT_PRIVATE ASCIILiteral errorMessage(ErrorCode);
 inline bool hasError(ErrorCode errorCode)
 {
     return errorCode != ErrorCode::NoError;

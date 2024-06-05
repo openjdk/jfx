@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <wtf/FastMalloc.h>
 #include <wtf/StdLibExtras.h>
 
 namespace WTF {
@@ -37,17 +38,20 @@ namespace WTF {
 // and recompiled. Sorry.
 //
 // macOS x86_64 uses 4 KiB, but Apple's aarch64 systems use 16 KiB. Use 16 KiB on all Apple systems
-// for consistency. Linux on Apple Silicon also needs to use 16KiB for best performance, so use that
-// for Linux on aarch64 as well.
+// for consistency.
 //
 // Most Linux and Windows systems use a page size of 4 KiB.
 //
 // On Linux, Power systems normally use 64 KiB pages.
 //
+// aarch64 systems seem to be all over the place. Most Linux distros use 4 KiB, but RHEL uses
+// 64 KiB. Linux on Apple Silicon uses 16KiB for best performance, so use that for Linux on
+// aarch64 by default. USE(64KB_PAGE_BLOCK) allows overriding this.
+//
 // Use 64 KiB for any unknown CPUs to be conservative.
-#if OS(DARWIN) || PLATFORM(PLAYSTATION) || CPU(MIPS) || CPU(MIPS64) || (OS(LINUX) && CPU(ARM64))
+#if OS(DARWIN) || PLATFORM(PLAYSTATION) || CPU(MIPS) || CPU(MIPS64) || CPU(LOONGARCH64) || (OS(LINUX) && CPU(ARM64) && !USE(64KB_PAGE_BLOCK))
 constexpr size_t CeilingOnPageSize = 16 * KB;
-#elif CPU(PPC) || CPU(PPC64) || CPU(PPC64LE) || CPU(UNKNOWN)
+#elif USE(64KB_PAGE_BLOCK) || CPU(PPC) || CPU(PPC64) || CPU(PPC64LE) || CPU(UNKNOWN)
 constexpr size_t CeilingOnPageSize = 64 * KB;
 #elif OS(WINDOWS) || CPU(X86) || CPU(X86_64) || CPU(ARM) || CPU(ARM64) || CPU(RISCV64)
 constexpr size_t CeilingOnPageSize = 4 * KB;
@@ -56,10 +60,13 @@ constexpr size_t CeilingOnPageSize = 4 * KB;
 #endif
 
 WTF_EXPORT_PRIVATE size_t pageSize();
-WTF_EXPORT_PRIVATE size_t pageMask();
-inline bool isPageAligned(void* address) { return !(reinterpret_cast<intptr_t>(address) & (pageSize() - 1)); }
-inline bool isPageAligned(size_t size) { return !(size & (pageSize() - 1)); }
-inline bool isPowerOfTwo(size_t size) { return !(size & (size - 1)); }
+
+inline bool isPageAligned(size_t pageSize, void* address) { return !(reinterpret_cast<intptr_t>(address) & (pageSize - 1)); }
+inline bool isPageAligned(size_t pageSize, size_t size) { return !(size & (pageSize - 1)); }
+
+inline bool isPageAligned(void* address) { return isPageAligned(pageSize(), address); }
+inline bool isPageAligned(size_t size) { return isPageAligned(pageSize(), size); }
+
 
 class PageBlock {
     WTF_MAKE_FAST_ALLOCATED;
@@ -68,6 +75,7 @@ public:
     PageBlock(void*, size_t, bool hasGuardPages);
 
     void* base() const { return m_base; }
+    void* end() const { return reinterpret_cast<uint8_t*>(m_base) + size(); }
     size_t size() const { return m_size; }
 
     operator bool() const { return !!m_realBase; }

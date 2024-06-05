@@ -42,7 +42,7 @@
 
 namespace Inspector {
 
-ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, unsigned long requestIdentifier)
+ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, unsigned long requestIdentifier, WallTime timestamp)
     : m_source(source)
     , m_type(type)
     , m_level(level)
@@ -50,9 +50,10 @@ ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLe
     , m_url()
     , m_requestId(IdentifiersFactory::requestId(requestIdentifier))
 {
+    m_timestamp = timestamp ? timestamp : WallTime::now();
 }
 
-ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, const String& url, unsigned line, unsigned column, JSC::JSGlobalObject* globalObject, unsigned long requestIdentifier)
+ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, const String& url, unsigned line, unsigned column, JSC::JSGlobalObject* globalObject, unsigned long requestIdentifier, WallTime timestamp)
     : m_source(source)
     , m_type(type)
     , m_level(level)
@@ -62,10 +63,11 @@ ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLe
     , m_column(column)
     , m_requestId(IdentifiersFactory::requestId(requestIdentifier))
 {
+    m_timestamp = timestamp ? timestamp : WallTime::now();
     autogenerateMetadata(globalObject);
 }
 
-ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, Ref<ScriptCallStack>&& callStack, unsigned long requestIdentifier)
+ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, Ref<ScriptCallStack>&& callStack, unsigned long requestIdentifier, WallTime timestamp)
     : m_source(source)
     , m_type(type)
     , m_level(level)
@@ -74,6 +76,7 @@ ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLe
     , m_url()
     , m_requestId(IdentifiersFactory::requestId(requestIdentifier))
 {
+    m_timestamp = timestamp ? timestamp : WallTime::now();
     const ScriptCallFrame* frame = m_callStack ? m_callStack->firstNonNativeCallFrame() : nullptr;
     if (frame) {
         m_url = frame->sourceURL();
@@ -82,7 +85,7 @@ ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLe
     }
 }
 
-ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, Ref<ScriptArguments>&& arguments, Ref<ScriptCallStack>&& callStack, unsigned long requestIdentifier)
+ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, Ref<ScriptArguments>&& arguments, Ref<ScriptCallStack>&& callStack, unsigned long requestIdentifier, WallTime timestamp)
     : m_source(source)
     , m_type(type)
     , m_level(level)
@@ -92,6 +95,7 @@ ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLe
     , m_url()
     , m_requestId(IdentifiersFactory::requestId(requestIdentifier))
 {
+    m_timestamp = timestamp ? timestamp : WallTime::now();
     const ScriptCallFrame* frame = m_callStack ? m_callStack->firstNonNativeCallFrame() : nullptr;
     if (frame) {
         m_url = frame->sourceURL();
@@ -100,7 +104,7 @@ ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLe
     }
 }
 
-ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, Ref<ScriptArguments>&& arguments, JSC::JSGlobalObject* globalObject, unsigned long requestIdentifier)
+ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, Ref<ScriptArguments>&& arguments, JSC::JSGlobalObject* globalObject, unsigned long requestIdentifier, WallTime timestamp)
     : m_source(source)
     , m_type(type)
     , m_level(level)
@@ -109,16 +113,18 @@ ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLe
     , m_url()
     , m_requestId(IdentifiersFactory::requestId(requestIdentifier))
 {
+    m_timestamp = timestamp ? timestamp : WallTime::now();
     autogenerateMetadata(globalObject);
 }
 
-ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, Vector<JSONLogValue>&& messages, JSC::JSGlobalObject* globalObject, unsigned long requestIdentifier)
+ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, Vector<JSONLogValue>&& messages, JSC::JSGlobalObject* globalObject, unsigned long requestIdentifier, WallTime timestamp)
     : m_source(source)
     , m_type(type)
     , m_level(level)
     , m_url()
     , m_requestId(IdentifiersFactory::requestId(requestIdentifier))
 {
+    m_timestamp = timestamp ? timestamp : WallTime::now();
     if (globalObject)
         m_globalObject = { globalObject->vm(), globalObject };
 
@@ -249,6 +255,9 @@ void ConsoleMessage::addToFrontend(ConsoleFrontendDispatcher& consoleFrontendDis
     if (m_source == MessageSource::Network && !m_requestId.isEmpty())
         messageObject->setNetworkRequestId(m_requestId);
 
+    if (m_timestamp)
+        messageObject->setTimestamp(m_timestamp.secondsSinceEpoch().value());
+
     if ((m_arguments && m_arguments->argumentCount()) || m_jsonLogValues.size()) {
         InjectedScript injectedScript = injectedScriptManager.injectedScriptFor(globalObject());
         if (!injectedScript.hasNoValue()) {
@@ -306,7 +315,7 @@ void ConsoleMessage::addToFrontend(ConsoleFrontendDispatcher& consoleFrontendDis
     }
 
     if (m_callStack)
-        messageObject->setStackTrace(m_callStack->buildInspectorArray());
+        messageObject->setStackTrace(m_callStack->buildInspectorObject());
 
     consoleFrontendDispatcher.messageAdded(WTFMove(messageObject));
 }
@@ -324,7 +333,8 @@ String ConsoleMessage::toString() const
 
 void ConsoleMessage::updateRepeatCountInConsole(ConsoleFrontendDispatcher& consoleFrontendDispatcher)
 {
-    consoleFrontendDispatcher.messageRepeatCountUpdated(m_repeatCount);
+    auto timestamp = WallTime::now();
+    consoleFrontendDispatcher.messageRepeatCountUpdated(m_repeatCount, timestamp.secondsSinceEpoch().value());
 }
 
 bool ConsoleMessage::isEqual(ConsoleMessage* msg) const

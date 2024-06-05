@@ -26,6 +26,7 @@
 #include "RenderBlock.h"
 #include "RenderIterator.h"
 #include "RenderMultiColumnFlow.h"
+#include "RenderStyleInlines.h"
 #include "RenderTreeBuilder.h"
 #include "Text.h"
 #include <wtf/IsoMallocInlines.h>
@@ -69,17 +70,10 @@ bool RenderTextFragment::canBeSelectionLeaf() const
     return textNode() && textNode()->hasEditableStyle();
 }
 
-void RenderTextFragment::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
+void RenderTextFragment::setTextInternal(const String& newText, bool force)
 {
-    RenderText::styleDidChange(diff, oldStyle);
+    RenderText::setTextInternal(newText, force);
 
-    if (RenderBlock* block = blockForAccompanyingFirstLetter())
-        block->mutableStyle().removeCachedPseudoStyle(PseudoId::FirstLetter);
-}
-
-void RenderTextFragment::setText(const String& newText, bool force)
-{
-    RenderText::setText(newText, force);
     m_start = 0;
     m_end = text().length();
     if (!m_firstLetter)

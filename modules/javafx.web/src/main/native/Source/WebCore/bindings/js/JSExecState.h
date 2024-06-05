@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -119,10 +119,10 @@ public:
         task.run(lexicalGlobalObject);
     }
 
-    static JSC::JSInternalPromise& loadModule(JSC::JSGlobalObject& lexicalGlobalObject, const String& moduleName, JSC::JSValue parameters, JSC::JSValue scriptFetcher)
+    static JSC::JSInternalPromise& loadModule(JSC::JSGlobalObject& lexicalGlobalObject, const URL& topLevelModuleURL, JSC::JSValue parameters, JSC::JSValue scriptFetcher)
     {
         JSExecState currentState(&lexicalGlobalObject);
-        return *JSC::loadModule(&lexicalGlobalObject, moduleName, parameters, scriptFetcher);
+        return *JSC::loadModule(&lexicalGlobalObject, JSC::Identifier::fromString(lexicalGlobalObject.vm(), topLevelModuleURL.string()), parameters, scriptFetcher);
     }
 
     static JSC::JSInternalPromise& loadModule(JSC::JSGlobalObject& lexicalGlobalObject, const JSC::SourceCode& sourceCode, JSC::JSValue scriptFetcher)
@@ -184,7 +184,7 @@ private:
         threadGlobalData().setCurrentState(lexicalGlobalObject);
     }
 
-    JSC::JSGlobalObject* m_previousState;
+    JSC::JSGlobalObject* const m_previousState;
     JSC::JSLockHolder m_lock;
 
     static void didLeaveScriptContext(JSC::JSGlobalObject*);
@@ -211,7 +211,7 @@ public:
     }
 
 private:
-    JSC::JSGlobalObject* m_previousState;
+    JSC::JSGlobalObject* const m_previousState;
     CustomElementReactionStack m_customElementReactionStack;
 };
 

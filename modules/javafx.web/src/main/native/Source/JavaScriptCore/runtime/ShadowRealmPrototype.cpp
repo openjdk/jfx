@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2021 Igalia S.L.
+ * Copyright (C) 2022-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +33,7 @@
 #include "JSGlobalObject.h"
 #include "JSInternalPromise.h"
 #include "JSModuleLoader.h"
+#include "JSObjectInlines.h"
 #include "ShadowRealmObject.h"
 #include "StructureInlines.h"
 
@@ -46,7 +48,7 @@ namespace JSC {
 @end
 */
 
-const ClassInfo ShadowRealmPrototype::s_info = { "ShadowRealm", &Base::s_info, &shadowRealmPrototypeTable, nullptr, CREATE_METHOD_TABLE(ShadowRealmPrototype) };
+const ClassInfo ShadowRealmPrototype::s_info = { "ShadowRealm"_s, &Base::s_info, &shadowRealmPrototypeTable, nullptr, CREATE_METHOD_TABLE(ShadowRealmPrototype) };
 
 ShadowRealmPrototype::ShadowRealmPrototype(VM& vm, Structure* structure)
     : JSNonFinalObject(vm, structure)
@@ -56,7 +58,7 @@ ShadowRealmPrototype::ShadowRealmPrototype(VM& vm, Structure* structure)
 void ShadowRealmPrototype::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
@@ -66,7 +68,7 @@ JSC_DEFINE_HOST_FUNCTION(importInRealm, (JSGlobalObject* globalObject, CallFrame
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue thisValue = callFrame->uncheckedArgument(0);
-    ShadowRealmObject* thisRealm = jsDynamicCast<ShadowRealmObject*>(vm, thisValue);
+    ShadowRealmObject* thisRealm = jsDynamicCast<ShadowRealmObject*>(thisValue);
     ASSERT(thisRealm);
 
     auto* promise = JSPromise::create(vm, globalObject->promiseStructure());
@@ -90,7 +92,7 @@ JSC_DEFINE_HOST_FUNCTION(evalInRealm, (JSGlobalObject* globalObject, CallFrame* 
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue thisValue = callFrame->argument(0);
-    ShadowRealmObject* thisRealm = jsDynamicCast<ShadowRealmObject*>(vm, thisValue);
+    ShadowRealmObject* thisRealm = jsDynamicCast<ShadowRealmObject*>(thisValue);
     ASSERT(thisRealm);
     JSGlobalObject* realmGlobalObject = thisRealm->globalObject();
 
@@ -103,22 +105,28 @@ JSC_DEFINE_HOST_FUNCTION(evalInRealm, (JSGlobalObject* globalObject, CallFrame* 
     SourceCode source = makeSource(script, callFrame->callerSourceOrigin(vm));
     EvalExecutable* eval = IndirectEvalExecutable::create(realmGlobalObject, source, DerivedContextType::None, false, EvalContextType::None, executableError);
     if (executableError) {
-        ErrorInstance* error = jsDynamicCast<ErrorInstance*>(vm, JSValue(executableError.get()));
-        if (error != nullptr && error->errorType() == ErrorType::SyntaxError) {
+        JSValue error = executableError.get();
+        ErrorInstance* errorInstance = jsDynamicCast<ErrorInstance*>(error);
+        if (errorInstance != nullptr && errorInstance->errorType() == ErrorType::SyntaxError) {
             scope.clearException();
-            const String syntaxErrorMessage = error->sanitizedMessageString(globalObject);
+            const String syntaxErrorMessage = errorInstance->sanitizedMessageString(globalObject);
             RETURN_IF_EXCEPTION(scope, { });
-            throwVMError(globalObject, scope, createSyntaxError(globalObject, syntaxErrorMessage));
-        } else
-            throwVMError(globalObject, scope, createTypeError(globalObject, "Error encountered during evaluation"_s));
-        return JSValue::encode(jsUndefined());
+            return throwVMError(globalObject, scope, createSyntaxError(globalObject, syntaxErrorMessage));
+        }
+        auto typeError = createTypeErrorCopy(globalObject, error);
+        RETURN_IF_EXCEPTION(scope, { });
+        return throwVMError(globalObject, scope, typeError);
     }
     RETURN_IF_EXCEPTION(scope, { });
 
-    JSValue result = vm.interpreter->execute(eval, realmGlobalObject, realmGlobalObject->globalThis(), realmGlobalObject->globalScope());
+    JSValue result = vm.interpreter.executeEval(eval, realmGlobalObject->globalThis(), realmGlobalObject->globalScope());
     if (UNLIKELY(scope.exception())) {
+        NakedPtr<Exception> exception = scope.exception();
+        JSValue error = exception->value();
         scope.clearException();
-        return throwVMError(globalObject, scope, createTypeError(globalObject, "Error encountered during evaluation"_s));
+        auto typeError = createTypeErrorCopy(globalObject, error);
+        RETURN_IF_EXCEPTION(scope, { });
+        return throwVMError(globalObject, scope, typeError);
     }
 
     RELEASE_AND_RETURN(scope, JSValue::encode(result));
@@ -130,9 +138,9 @@ JSC_DEFINE_HOST_FUNCTION(moveFunctionToRealm, (JSGlobalObject* globalObject, Cal
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue wrappedFnArg = callFrame->argument(0);
-    JSFunction* wrappedFn = jsDynamicCast<JSFunction*>(vm, wrappedFnArg);
+    JSFunction* wrappedFn = jsDynamicCast<JSFunction*>(wrappedFnArg);
     JSValue targetRealmArg = callFrame->argument(1);
-    ShadowRealmObject* targetRealm = jsDynamicCast<ShadowRealmObject*>(vm, targetRealmArg);
+    ShadowRealmObject* targetRealm = jsDynamicCast<ShadowRealmObject*>(targetRealmArg);
     ASSERT(targetRealm);
     RETURN_IF_EXCEPTION(scope, { });
 

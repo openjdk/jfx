@@ -91,7 +91,7 @@ CFLAGS =   -DWIN32 \
            -D_WINDLL \
            -D_MBCS \
            -DINITGUID \
-	   $(INCLUDES) \
+           $(INCLUDES) \
            $(COMPILER_FLAGS)
 
 OBJECTS = $(patsubst %.cpp,$(OBJBASE_DIR)/%.obj,$(CPP_SOURCES)) $(patsubst %.c,$(OBJBASE_DIR)/%.obj,$(C_SOURCES))
@@ -111,6 +111,12 @@ ifeq ($(ARCH), x32)
 else
     CFLAGS += -D_WIN64
     LDFLAGS += -MACHINE:x64
+endif
+
+# Enables reproducible builds when defined
+ifdef SOURCE_DATE_EPOCH
+    CFLAGS += -experimental:deterministic
+    LDFLAGS += -experimental:deterministic
 endif
 
 LIBS = $(addprefix $(BUILD_DIR)/,$(MODULES))

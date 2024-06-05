@@ -33,6 +33,7 @@
 #include "RenderElement.h"
 #include "RenderImage.h"
 #include "RenderImageResourceStyleImage.h"
+#include "RenderStyleInlines.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -63,6 +64,10 @@ void RenderImageResource::setCachedImage(CachedImage* newImage)
 
     if (m_cachedImage && m_renderer && m_cachedImageRemoveClientIsNeeded)
         m_cachedImage->removeClient(*m_renderer);
+    if (!m_renderer) {
+        // removeClient may have destroyed the renderer.
+        return;
+    }
     m_cachedImage = newImage;
     m_cachedImageRemoveClientIsNeeded = true;
     if (!m_cachedImage)

@@ -29,6 +29,7 @@
 #include "ClientOrigin.h"
 #include "Document.h"
 #include "EventNames.h"
+#include "FrameDestructionObserverInlines.h"
 #include "Page.h"
 #include "SpeechRecognitionError.h"
 #include "SpeechRecognitionErrorEvent.h"
@@ -203,6 +204,10 @@ void SpeechRecognition::didEnd()
     m_state = State::Inactive;
 
     queueTaskToDispatchEvent(*this, TaskSource::Speech, Event::create(eventNames().endEvent, Event::CanBubble::No, Event::IsCancelable::No));
+}
+
+SpeechRecognition::~SpeechRecognition()
+{
 }
 
 } // namespace WebCore

@@ -25,13 +25,15 @@
 
 #pragma once
 
-#include "SlowPathReturnType.h"
+#include "UGPRPair.h"
 
 namespace JSC {
 
 class CallFrame;
-struct Instruction;
+template<typename> struct BaseInstruction;
+struct JSOpcodeTraits;
+using JSInstruction = BaseInstruction<JSOpcodeTraits>;
 
-using SlowPathFunction = SlowPathReturnType(JIT_OPERATION_ATTRIBUTES*)(CallFrame*, const Instruction*);
+using SlowPathFunction = UGPRPair(JIT_OPERATION_ATTRIBUTES*)(CallFrame*, const JSInstruction*);
 
 } // namespace JSC

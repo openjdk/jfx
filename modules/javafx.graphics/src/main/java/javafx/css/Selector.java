@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -92,8 +92,18 @@ abstract public class Selector {
     }
 
     /**
+     * Gets the immutable set of style class names of this Selector.
+     *
+     * @return an immutable set with style class names, never {@code null},
+     *     or contains {@code null}s, but can be empty
+     * @since 23
+     */
+    public abstract Set<String> getStyleClassNames();
+
+    /**
      * Creates a {@code Match}.
-     * @return match
+     *
+     * @return a match, never {@code null}
      */
     public abstract Match createMatch();
 

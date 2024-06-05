@@ -26,9 +26,9 @@
 
 #pragma once
 
-#include "ElementInlines.h"
 #include "JSDOMBinding.h"
 #include "JSNode.h"
+#include "WebCoreOpaqueRoot.h"
 
 namespace JSC {
 namespace JSCastingHelpers {
@@ -38,9 +38,9 @@ struct InheritsTraits<WebCore::JSNode> {
     static constexpr std::optional<JSTypeRange> typeRange { { static_cast<JSType>(WebCore::JSNodeType), static_cast<JSType>(WebCore::JSNodeType + WebCore::JSNodeTypeMask) } };
     static_assert(std::numeric_limits<uint8_t>::max() == typeRange->last);
     template<typename From>
-    static inline bool inherits(VM& vm, From* from)
+    static inline bool inherits(From* from)
     {
-        return inheritsJSTypeImpl<WebCore::JSNode>(vm, from, *typeRange);
+        return inheritsJSTypeImpl<WebCore::JSNode>(from, *typeRange);
     }
 };
 
@@ -76,15 +76,9 @@ inline void willCreatePossiblyOrphanedTreeByRemoval(Node& root)
         willCreatePossiblyOrphanedTreeByRemovalSlowCase(root);
 }
 
-inline void* root(Node* node)
-{
-    return node ? node->opaqueRoot() : nullptr;
-}
-
-inline void* root(Node& node)
-{
-    return root(&node);
-}
+inline WebCoreOpaqueRoot root(Node&);
+inline WebCoreOpaqueRoot root(Node*);
+inline WebCoreOpaqueRoot root(Document*);
 
 ALWAYS_INLINE JSC::JSValue JSNode::nodeType(JSC::JSGlobalObject&) const
 {

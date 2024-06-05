@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -66,10 +66,12 @@ public class CellTest {
                 {Cell.class},
                 {ListCell.class},
                 {TableRow.class},
-                {TableCell.class},
+                // Note: We use the shim here, so we can lock the item. The behaviour is the same otherwise.
+                {TableCellShim.class},
                 {TreeCell.class},
                 {TreeTableRow.class},
-                {TreeTableCell.class}
+                // Note: We use the shim here, so we can lock the item.  The behaviour is the same otherwise.
+                {TreeTableCellShim.class}
         });
     }
 
@@ -90,12 +92,12 @@ public class CellTest {
             TableRow tableRow = new TableRow();
             CellShim.updateItem(tableRow, "TableRow", false);
             ((TableCell)cell).updateTableRow(tableRow);
-            TableCellShim.set_lockItemOnEdit((TableCell)cell, true);
+            ((TableCellShim)cell).setLockItemOnStartEdit(true);
         } else if (cell instanceof TreeTableCell) {
             TreeTableRow tableRow = new TreeTableRow();
             CellShim.updateItem(tableRow, "TableRow", false);
             ((TreeTableCell)cell).updateTableRow(tableRow);
-            TreeTableCellShim.set_lockItemOnEdit((TreeTableCell)cell, true);
+            ((TreeTableCellShim)cell).setLockItemOnStartEdit(true);
         }
     }
 
@@ -274,9 +276,6 @@ public class CellTest {
     }
 
     @Test public void startEditWhenEditableIsTrue() {
-        if ((cell instanceof TableCell)) {
-            TableCellShim.set_lockItemOnEdit((TableCell) cell, true);
-        }
         CellShim.updateItem(cell, "Apples", false);
         cell.startEdit();
         assertTrue(cell.isEditing());
@@ -290,9 +289,6 @@ public class CellTest {
     }
 
     @Test public void startEditWhileAlreadyEditingIsIgnored() {
-        if (cell instanceof TableCell) {
-            TableCellShim.set_lockItemOnEdit((TableCell) cell, true);
-        }
         CellShim.updateItem(cell, "Apples", false);
         cell.startEdit();
         cell.startEdit();

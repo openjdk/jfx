@@ -72,6 +72,8 @@ Value* ValueKey::materialize(Procedure& proc, Origin origin) const
     case Depend:
     case SExt8:
     case SExt16:
+    case SExt8To64:
+    case SExt16To64:
     case SExt32:
     case ZExt32:
     case Clz:
@@ -114,6 +116,8 @@ Value* ValueKey::materialize(Procedure& proc, Origin origin) const
         return proc.add<Const32Value>(origin, static_cast<int32_t>(value()));
     case Const64:
         return proc.add<Const64Value>(origin, value());
+    case Const128:
+        return proc.add<Const128Value>(origin, vectorValue());
     case ConstDouble:
         return proc.add<ConstDoubleValue>(origin, doubleValue());
     case ConstFloat:
@@ -124,6 +128,76 @@ Value* ValueKey::materialize(Procedure& proc, Origin origin) const
         return proc.add<ArgumentRegValue>(origin, Reg::fromIndex(static_cast<unsigned>(value())));
     case SlotBase:
         return proc.add<SlotBaseValue>(origin, proc.stackSlots()[value()]);
+    case VectorNot:
+    case VectorSplat:
+    case VectorAbs:
+    case VectorNeg:
+    case VectorPopcnt:
+    case VectorCeil:
+    case VectorFloor:
+    case VectorTrunc:
+    case VectorTruncSat:
+    case VectorRelaxedTruncSat:
+    case VectorConvert:
+    case VectorConvertLow:
+    case VectorNearest:
+    case VectorSqrt:
+    case VectorExtendLow:
+    case VectorExtendHigh:
+    case VectorPromote:
+    case VectorDemote:
+    case VectorBitmask:
+    case VectorAnyTrue:
+    case VectorAllTrue:
+    case VectorExtaddPairwise:
+        return proc.add<SIMDValue>(origin, kind(), type(), simdInfo(), child(proc, 0));
+    case VectorExtractLane:
+    case VectorDupElement:
+        return proc.add<SIMDValue>(origin, kind(), type(), simdInfo(), static_cast<uint8_t>(u.indices[1]), child(proc, 0));
+    case VectorEqual:
+    case VectorNotEqual:
+    case VectorLessThan:
+    case VectorLessThanOrEqual:
+    case VectorBelow:
+    case VectorBelowOrEqual:
+    case VectorGreaterThan:
+    case VectorGreaterThanOrEqual:
+    case VectorAbove:
+    case VectorAboveOrEqual:
+    case VectorAdd:
+    case VectorSub:
+    case VectorAddSat:
+    case VectorSubSat:
+    case VectorMul:
+    case VectorDotProduct:
+    case VectorDiv:
+    case VectorMin:
+    case VectorMax:
+    case VectorPmin:
+    case VectorPmax:
+    case VectorNarrow:
+    case VectorAnd:
+    case VectorAndnot:
+    case VectorOr:
+    case VectorXor:
+    case VectorShl:
+    case VectorShr:
+    case VectorMulSat:
+    case VectorAvgRound:
+    case VectorShiftByVector:
+    case VectorRelaxedSwizzle:
+        return proc.add<SIMDValue>(origin, kind(), type(), simdInfo(), child(proc, 0), child(proc, 1));
+    case VectorReplaceLane:
+    case VectorMulByElement:
+        return proc.add<SIMDValue>(origin, kind(), type(), simdInfo(), static_cast<uint8_t>(u.indices[2]), child(proc, 0), child(proc, 1));
+    case VectorRelaxedMAdd:
+    case VectorRelaxedNMAdd:
+    case VectorBitwiseSelect:
+        return proc.add<SIMDValue>(origin, kind(), type(), simdInfo(), child(proc, 0), child(proc, 1), child(proc, 2));
+    case VectorSwizzle:
+        if (u.indices[2] == UINT32_MAX)
+            return proc.add<SIMDValue>(origin, kind(), type(), simdInfo(), child(proc, 0), child(proc, 1));
+        return proc.add<SIMDValue>(origin, kind(), type(), simdInfo(), child(proc, 0), child(proc, 1), child(proc, 2));
     default:
         return nullptr;
     }

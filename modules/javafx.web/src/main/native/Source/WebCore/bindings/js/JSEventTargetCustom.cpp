@@ -26,14 +26,15 @@
 #include "config.h"
 #include "JSEventTarget.h"
 
-#include "DOMWindow.h"
 #include "EventTarget.h"
 #include "EventTargetHeaders.h"
 #include "EventTargetInterfaces.h"
-#include "JSDOMWindow.h"
+#include "JSDOMGlobalObjectInlines.h"
 #include "JSEventListener.h"
+#include "JSLocalDOMWindow.h"
 #include "JSWindowProxy.h"
 #include "JSWorkerGlobalScope.h"
+#include "LocalDOMWindow.h"
 #include "WorkerGlobalScope.h"
 
 #if ENABLE(OFFSCREEN_CANVAS)
@@ -48,28 +49,28 @@ JSValue toJSNewlyCreated(JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<E
     return createWrapper<EventTarget>(globalObject, WTFMove(value));
 }
 
-EventTarget* JSEventTarget::toWrapped(VM& vm, JSValue value)
+EventTarget* JSEventTarget::toWrapped(VM&, JSValue value)
 {
-    if (value.inherits<JSWindowProxy>(vm))
+    if (value.inherits<JSWindowProxy>())
         return &jsCast<JSWindowProxy*>(asObject(value))->wrapped();
-    if (value.inherits<JSDOMWindow>(vm))
-        return &jsCast<JSDOMWindow*>(asObject(value))->wrapped();
-    if (value.inherits<JSWorkerGlobalScope>(vm))
+    if (value.inherits<JSLocalDOMWindow>())
+        return &jsCast<JSLocalDOMWindow*>(asObject(value))->wrapped();
+    if (value.inherits<JSWorkerGlobalScope>())
         return &jsCast<JSWorkerGlobalScope*>(asObject(value))->wrapped();
-    if (value.inherits<JSEventTarget>(vm))
+    if (value.inherits<JSEventTarget>())
         return &jsCast<JSEventTarget*>(asObject(value))->wrapped();
     return nullptr;
 }
 
-std::unique_ptr<JSEventTargetWrapper> jsEventTargetCast(VM& vm, JSValue thisValue)
+JSEventTargetWrapper jsEventTargetCast(VM& vm, JSValue thisValue)
 {
-    if (auto* target = jsDynamicCast<JSEventTarget*>(vm, thisValue))
-        return makeUnique<JSEventTargetWrapper>(target->wrapped(), *target);
-    if (auto* window = toJSDOMGlobalObject<JSDOMWindow>(vm, thisValue))
-        return makeUnique<JSEventTargetWrapper>(window->wrapped(), *window);
+    if (auto* target = jsDynamicCast<JSEventTarget*>(thisValue))
+        return { target->wrapped(), *target };
+    if (auto* window = toJSDOMGlobalObject<JSLocalDOMWindow>(vm, thisValue))
+        return { window->wrapped(), *window };
     if (auto* scope = toJSDOMGlobalObject<JSWorkerGlobalScope>(vm, thisValue))
-        return makeUnique<JSEventTargetWrapper>(scope->wrapped(), *scope);
-    return nullptr;
+        return { scope->wrapped(), *scope };
+    return { };
 }
 
 template<typename Visitor>

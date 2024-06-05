@@ -93,7 +93,7 @@ private:
     class MainThreadBridge : public ThreadableLoaderClient {
     public:
         // All executed on the worker context's thread.
-        MainThreadBridge(ThreadableLoaderClientWrapper&, WorkerLoaderProxy&, const String& taskMode, ResourceRequest&&, const ThreadableLoaderOptions&, const String& outgoingReferrer, WorkerOrWorkletGlobalScope&);
+        MainThreadBridge(ThreadableLoaderClientWrapper&, WorkerLoaderProxy*, ScriptExecutionContextIdentifier, const String& taskMode, ResourceRequest&&, const ThreadableLoaderOptions&, const String& outgoingReferrer, WorkerOrWorkletGlobalScope&);
         void cancel();
         void destroy();
         void computeIsDone();
@@ -103,7 +103,6 @@ private:
         void clearClientWrapper();
 
         // All executed on the main thread.
-        void redirectReceived(const URL& redirectURL) override;
         void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent) override;
         void didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse&) override;
         void didReceiveData(const SharedBuffer&) override;
@@ -121,12 +120,13 @@ private:
         RefPtr<ThreadableLoaderClientWrapper> m_workerClientWrapper;
 
         // May be used on either thread.
-        WorkerLoaderProxy& m_loaderProxy;
+        WorkerLoaderProxy* m_loaderProxy;
 
         // For use on the main thread.
         String m_taskMode;
         ResourceLoaderIdentifier m_workerRequestIdentifier;
         NetworkLoadMetrics m_networkLoadMetrics;
+        ScriptExecutionContextIdentifier m_contextIdentifier;
     };
 
     WorkerThreadableLoader(WorkerOrWorkletGlobalScope&, ThreadableLoaderClient&, const String& taskMode, ResourceRequest&&, const ThreadableLoaderOptions&, const String& referrer);

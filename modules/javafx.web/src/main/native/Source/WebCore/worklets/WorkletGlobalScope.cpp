@@ -27,9 +27,9 @@
 #include "config.h"
 #include "WorkletGlobalScope.h"
 
-#include "Frame.h"
 #include "InspectorInstrumentation.h"
 #include "JSWorkletGlobalScope.h"
+#include "LocalFrame.h"
 #include "PageConsoleClient.h"
 #include "SecurityOriginPolicy.h"
 #include "Settings.h"
@@ -50,22 +50,23 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(WorkletGlobalScope);
 static std::atomic<unsigned> gNumberOfWorkletGlobalScopes { 0 };
 
 WorkletGlobalScope::WorkletGlobalScope(WorkerOrWorkletThread& thread, Ref<JSC::VM>&& vm, const WorkletParameters& parameters)
-    : WorkerOrWorkletGlobalScope(WorkerThreadType::Worklet, WTFMove(vm), &thread)
-    , m_topOrigin(SecurityOrigin::createUnique())
+    : WorkerOrWorkletGlobalScope(WorkerThreadType::Worklet, parameters.sessionID, WTFMove(vm), parameters.referrerPolicy, &thread, parameters.noiseInjectionHashSalt)
+    , m_topOrigin(SecurityOrigin::createOpaque())
     , m_url(parameters.windowURL)
     , m_jsRuntimeFlags(parameters.jsRuntimeFlags)
     , m_settingsValues(parameters.settingsValues)
 {
     ++gNumberOfWorkletGlobalScopes;
 
+    setStorageBlockingPolicy(parameters.settingsValues.storageBlockingPolicy);
     setSecurityOriginPolicy(SecurityOriginPolicy::create(SecurityOrigin::create(this->url())));
     setContentSecurityPolicy(makeUnique<ContentSecurityPolicy>(URL { this->url() }, *this));
 }
 
 WorkletGlobalScope::WorkletGlobalScope(Document& document, Ref<JSC::VM>&& vm, ScriptSourceCode&& code)
-    : WorkerOrWorkletGlobalScope(WorkerThreadType::Worklet, WTFMove(vm), nullptr)
+    : WorkerOrWorkletGlobalScope(WorkerThreadType::Worklet, *document.sessionID(), WTFMove(vm), document.referrerPolicy(), nullptr, document.noiseInjectionHashSalt())
     , m_document(document)
-    , m_topOrigin(SecurityOrigin::createUnique())
+    , m_topOrigin(SecurityOrigin::createOpaque())
     , m_url(code.url())
     , m_jsRuntimeFlags(document.settings().javaScriptRuntimeFlags())
     , m_code(WTFMove(code))
@@ -75,6 +76,7 @@ WorkletGlobalScope::WorkletGlobalScope(Document& document, Ref<JSC::VM>&& vm, Sc
 
     ASSERT(document.page());
 
+    setStorageBlockingPolicy(m_document->settings().storageBlockingPolicy());
     setSecurityOriginPolicy(SecurityOriginPolicy::create(SecurityOrigin::create(this->url())));
     setContentSecurityPolicy(makeUnique<ContentSecurityPolicy>(URL { this->url() }, *this));
 }
@@ -105,7 +107,7 @@ void WorkletGlobalScope::prepareForDestruction()
 String WorkletGlobalScope::userAgent(const URL& url) const
 {
     if (!m_document)
-        return "";
+        return emptyString();
     return m_document->userAgent(url);
 }
 
@@ -148,11 +150,6 @@ void WorkletGlobalScope::addMessage(MessageSource source, MessageLevel level, co
     if (!m_document || isJSExecutionForbidden())
         return;
     m_document->addMessage(source, level, messageText, sourceURL, lineNumber, columnNumber, WTFMove(callStack), nullptr, requestIdentifier);
-}
-
-ReferrerPolicy WorkletGlobalScope::referrerPolicy() const
-{
-    return ReferrerPolicy::NoReferrer;
 }
 
 void WorkletGlobalScope::fetchAndInvokeScript(const URL& moduleURL, FetchRequestCredentials credentials, CompletionHandler<void(std::optional<Exception>&&)>&& completionHandler)

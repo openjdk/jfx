@@ -34,7 +34,6 @@
 #include "CSSParserObserverWrapper.h"
 #include "CSSParserTokenRange.h"
 #include "CSSTokenizerInputStream.h"
-#include "HTMLParserIdioms.h"
 #include "JSDOMConvertStrings.h"
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringToIntegerConversion.h>
@@ -43,13 +42,13 @@
 namespace WebCore {
 
 // https://drafts.csswg.org/css-syntax/#input-preprocessing
-String CSSTokenizer::preprocessString(String string)
+String CSSTokenizer::preprocessString(const String& string)
 {
     // We don't replace '\r' and '\f' with '\n' as the specification suggests, instead
     // we treat them all the same in the isNewLine function below.
     StringImpl* oldImpl = string.impl();
-    string.replace('\0', replacementCharacter);
-    String replaced = replaceUnpairedSurrogatesWithReplacementCharacter(WTFMove(string));
+    String replaced = makeStringByReplacingAll(string, '\0', replacementCharacter);
+    replaced = replaceUnpairedSurrogatesWithReplacementCharacter(WTFMove(replaced));
     if (replaced.impl() != oldImpl)
         registerString(replaced);
     return replaced;
@@ -595,13 +594,13 @@ CSSParserToken CSSTokenizer::consumeIdentLikeToken()
 {
     StringView name = consumeName();
     if (consumeIfNext('(')) {
-        if (equalIgnoringASCIICase(name, "url")) {
+        if (equalLettersIgnoringASCIICase(name, "url"_s)) {
             // The spec is slightly different so as to avoid dropping whitespace
             // tokens, but they wouldn't be used and this is easier.
             m_input.advanceUntilNonWhitespace();
             UChar next = m_input.peek(0);
             if (next != '"' && next != '\'')
-                return consumeUrlToken();
+                return consumeURLToken();
         }
         return blockStart(LeftParenthesisToken, FunctionToken, name);
     }
@@ -655,7 +654,7 @@ static bool isNonPrintableCodePoint(UChar cc)
 }
 
 // http://dev.w3.org/csswg/css-syntax/#consume-url-token
-CSSParserToken CSSTokenizer::consumeUrlToken()
+CSSParserToken CSSTokenizer::consumeURLToken()
 {
     m_input.advanceUntilNonWhitespace();
 
@@ -677,7 +676,7 @@ CSSParserToken CSSTokenizer::consumeUrlToken()
         if (cc == ')' || cc == kEndOfFileMarker)
             return CSSParserToken(UrlToken, registerString(result.toString()));
 
-        if (isHTMLSpace(cc)) {
+        if (isASCIIWhitespace(cc)) {
             m_input.advanceUntilNonWhitespace();
             if (consumeIfNext(')') || m_input.nextInputChar() == kEndOfFileMarker)
                 return CSSParserToken(UrlToken, registerString(result.toString()));
@@ -716,11 +715,11 @@ void CSSTokenizer::consumeBadUrlRemnants()
 
 void CSSTokenizer::consumeSingleWhitespaceIfNext()
 {
-    // We check for \r\n and HTML spaces since we don't do preprocessing
+    // We check for \r\n and ASCII whitespace since we don't do preprocessing
     UChar next = m_input.peek(0);
     if (next == '\r' && m_input.peek(1) == '\n')
         m_input.advance(2);
-    else if (isHTMLSpace(next))
+    else if (isASCIIWhitespace(next))
         m_input.advance();
 }
 
@@ -805,7 +804,7 @@ UChar32 CSSTokenizer::consumeEscape()
         };
         consumeSingleWhitespaceIfNext();
         auto codePoint = parseInteger<uint32_t>(hexChars, 16).value();
-        if (!codePoint || (0xD800 <= codePoint && codePoint <= 0xDFFF) || codePoint > 0x10FFFF)
+        if (!codePoint || U_IS_SURROGATE(codePoint) || codePoint > UCHAR_MAX_VALUE)
             return replacementCharacter;
         return codePoint;
     }

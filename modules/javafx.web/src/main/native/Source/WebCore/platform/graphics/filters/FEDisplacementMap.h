@@ -2,7 +2,7 @@
  * Copyright (C) 2004, 2005, 2006, 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005 Rob Buis <buis@kde.org>
  * Copyright (C) 2005 Eric Seidel <eric@webkit.org>
- * Copyright (C) 2021-2022 Apple Inc.  All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc.  All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -39,6 +39,8 @@ class FEDisplacementMap : public FilterEffect {
 public:
     WEBCORE_EXPORT static Ref<FEDisplacementMap> create(ChannelSelectorType xChannelSelector, ChannelSelectorType yChannelSelector, float scale);
 
+    bool operator==(const FEDisplacementMap&) const;
+
     ChannelSelectorType xChannelSelector() const { return m_xChannelSelector; }
     bool setXChannelSelector(const ChannelSelectorType);
 
@@ -48,15 +50,14 @@ public:
     float scale() const { return m_scale; }
     bool setScale(float);
 
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<Ref<FEDisplacementMap>> decode(Decoder&);
-
 private:
     FEDisplacementMap(ChannelSelectorType xChannelSelector, ChannelSelectorType yChannelSelector, float);
 
+    bool operator==(const FilterEffect& other) const override { return areEqual<FEDisplacementMap>(*this, other); }
+
     unsigned numberOfEffectInputs() const override { return 2; }
 
-    FloatRect calculateImageRect(const Filter&, const FilterImageVector& inputs, const FloatRect& primitiveSubregion) const override;
+    FloatRect calculateImageRect(const Filter&, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
 
     const DestinationColorSpace& resultColorSpace(const FilterImageVector&) const override;
     void transformInputsColorSpace(const FilterImageVector& inputs) const override;
@@ -69,35 +70,6 @@ private:
     ChannelSelectorType m_yChannelSelector;
     float m_scale;
 };
-
-template<class Encoder>
-void FEDisplacementMap::encode(Encoder& encoder) const
-{
-    encoder << m_xChannelSelector;
-    encoder << m_yChannelSelector;
-    encoder << m_scale;
-}
-
-template<class Decoder>
-std::optional<Ref<FEDisplacementMap>> FEDisplacementMap::decode(Decoder& decoder)
-{
-    std::optional<ChannelSelectorType> xChannelSelector;
-    decoder >> xChannelSelector;
-    if (!xChannelSelector)
-        return std::nullopt;
-
-    std::optional<ChannelSelectorType> yChannelSelector;
-    decoder >> yChannelSelector;
-    if (!yChannelSelector)
-        return std::nullopt;
-
-    std::optional<float> scale;
-    decoder >> scale;
-    if (!scale)
-        return std::nullopt;
-
-    return FEDisplacementMap::create(*xChannelSelector, *yChannelSelector, *scale);
-}
 
 } // namespace WebCore
 

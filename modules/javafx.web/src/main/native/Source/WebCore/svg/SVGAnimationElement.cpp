@@ -2,10 +2,11 @@
  * Copyright (C) 2004, 2005 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006, 2007 Rob Buis <buis@kde.org>
  * Copyright (C) 2007 Eric Seidel <eric@webkit.org>
- * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Cameron McCormack <cam@mcc.id.au>
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
  * Copyright (C) 2014 Adobe Systems Incorporated. All rights reserved.
+ * Copyright (C) 2013-2014 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -31,6 +32,7 @@
 #include "CSSPropertyParser.h"
 #include "Document.h"
 #include "FloatConversion.h"
+#include "NodeName.h"
 #include "RenderObject.h"
 #include "SVGAnimateColorElement.h"
 #include "SVGAnimateElement.h"
@@ -51,33 +53,32 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGAnimationElement);
 
 SVGAnimationElement::SVGAnimationElement(const QualifiedName& tagName, Document& document)
-    : SVGSMILElement(tagName, document)
+    : SVGSMILElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
     , SVGTests(this)
 {
 }
 
-static void parseKeyTimes(const String& parse, Vector<float>& result, bool verifyOrder)
+static Vector<float> parseKeyTimes(StringView value, bool verifyOrder)
 {
-    result.clear();
-    bool isFirst = true;
-    for (StringView timeString : StringView(parse).split(';')) {
+    auto keyTimes = value.split(';');
+    Vector<float> result;
+
+    for (auto keyTime : keyTimes) {
+        keyTime = keyTime.trim(isUnicodeCompatibleASCIIWhitespace<UChar>);
+
         bool ok;
-        float time = timeString.toFloat(ok);
+        float time = keyTime.toFloat(ok);
+
         if (!ok || time < 0 || time > 1)
-            goto fail;
-        if (verifyOrder) {
-            if (isFirst) {
-                if (time)
-                    goto fail;
-                isFirst = false;
-            } else if (time < result.last())
-                goto fail;
-        }
+            return { };
+
+        if (verifyOrder && (result.isEmpty() ? time : time < result.last()))
+            return { };
+
         result.append(time);
     }
-    return;
-fail:
-    result.clear();
+
+    return result;
 }
 
 static std::optional<Vector<UnitBezier>> parseKeySplines(StringView string)
@@ -147,59 +148,67 @@ bool SVGAnimationElement::isSupportedAttribute(const QualifiedName& attrName)
     return supportedAttributes.get().contains<SVGAttributeHashTranslator>(attrName);
 }
 
-void SVGAnimationElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+bool SVGAnimationElement::attributeContainsJavaScriptURL(const Attribute& attribute) const
 {
-    if (name == SVGNames::valuesAttr) {
+    if (attribute.name() == SVGNames::fromAttr || attribute.name() == SVGNames::toAttr)
+        return WTF::protocolIsJavaScript(attribute.value());
+
+    if (attribute.name() == SVGNames::valuesAttr) {
+        for (auto innerValue : StringView(attribute.value()).split(';')) {
+            if (WTF::protocolIsJavaScript(innerValue))
+                return true;
+        }
+        return false;
+    }
+    return Element::attributeContainsJavaScriptURL(attribute);
+}
+
+void SVGAnimationElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
+{
+    switch (name.nodeName()) {
+    case AttributeNames::valuesAttr:
         // Per the SMIL specification, leading and trailing white space,
         // and white space before and after semicolon separators, is allowed and will be ignored.
         // http://www.w3.org/TR/SVG11/animate.html#ValuesAttribute
-        m_values = value.string().split(';');
-        for (auto& value : m_values)
-            value = value.stripWhiteSpace();
-
+        m_values.clear();
+        newValue.string().split(';', [this](StringView innerValue) {
+            m_values.append(innerValue.trim(isASCIIWhitespace<UChar>).toString());
+        });
         updateAnimationMode();
-        return;
-    }
-
-    if (name == SVGNames::keyTimesAttr) {
-        parseKeyTimes(value, m_keyTimesFromAttribute, true);
-        return;
-    }
-
-    if (name == SVGNames::keyPointsAttr) {
+        break;
+    case AttributeNames::keyTimesAttr:
+        m_keyTimesFromAttribute = parseKeyTimes(newValue, true);
+        break;
+    case AttributeNames::keyPointsAttr:
         if (hasTagName(SVGNames::animateMotionTag)) {
             // This is specified to be an animateMotion attribute only but it is simpler to put it here
             // where the other timing calculatations are.
-            parseKeyTimes(value, m_keyPoints, false);
-        }
-        return;
+            m_keyPoints = parseKeyTimes(newValue, false);
     }
-
-    if (name == SVGNames::keySplinesAttr) {
-        if (auto keySplines = parseKeySplines(value))
+        break;
+    case AttributeNames::keySplinesAttr:
+        if (auto keySplines = parseKeySplines(newValue))
             m_keySplines = WTFMove(*keySplines);
         else
             m_keySplines.clear();
-        return;
-    }
-
-    if (name == SVGNames::attributeTypeAttr) {
-        setAttributeType(value);
-        return;
-    }
-
-    if (name == SVGNames::calcModeAttr) {
-        setCalcMode(value);
-        return;
-    }
-
-    if (name == SVGNames::fromAttr || name == SVGNames::toAttr || name == SVGNames::byAttr) {
+        break;
+    case AttributeNames::attributeTypeAttr:
+        setAttributeType(newValue);
+        break;
+    case AttributeNames::calcModeAttr:
+        setCalcMode(newValue);
+        break;
+    case AttributeNames::fromAttr:
+    case AttributeNames::toAttr:
+    case AttributeNames::byAttr:
         updateAnimationMode();
-        return;
+        break;
+    default:
+        break;
     }
 
-    SVGSMILElement::parseAttribute(name, value);
-    SVGTests::parseAttribute(name, value);
+    SVGTests::parseAttribute(name, newValue);
+    SVGSMILElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGAnimationElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -241,7 +250,7 @@ void SVGAnimationElement::beginElement()
 
 void SVGAnimationElement::beginElementAt(float offset)
 {
-    if (std::isnan(offset))
+    if (!std::isfinite(offset))
         return;
     SMILTime elapsed = this->elapsed();
     addBeginTime(elapsed, elapsed + offset, SMILTimeWithOrigin::ScriptOrigin);
@@ -254,7 +263,7 @@ void SVGAnimationElement::endElement()
 
 void SVGAnimationElement::endElementAt(float offset)
 {
-    if (std::isnan(offset))
+    if (!std::isfinite(offset))
         return;
     SMILTime elapsed = this->elapsed();
     addEndTime(elapsed, elapsed + offset, SMILTimeWithOrigin::ScriptOrigin);
@@ -275,10 +284,10 @@ void SVGAnimationElement::updateAnimationMode()
 
 void SVGAnimationElement::setCalcMode(const AtomString& calcMode)
 {
-    static MainThreadNeverDestroyed<const AtomString> discrete("discrete", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> linear("linear", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> paced("paced", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> spline("spline", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> discrete("discrete"_s);
+    static MainThreadNeverDestroyed<const AtomString> linear("linear"_s);
+    static MainThreadNeverDestroyed<const AtomString> paced("paced"_s);
+    static MainThreadNeverDestroyed<const AtomString> spline("spline"_s);
     if (calcMode == discrete)
         setCalcMode(CalcMode::Discrete);
     else if (calcMode == linear)
@@ -293,8 +302,8 @@ void SVGAnimationElement::setCalcMode(const AtomString& calcMode)
 
 void SVGAnimationElement::setAttributeType(const AtomString& attributeType)
 {
-    static MainThreadNeverDestroyed<const AtomString> css("CSS", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> xml("XML", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> css("CSS"_s);
+    static MainThreadNeverDestroyed<const AtomString> xml("XML"_s);
     if (attributeType == css)
         m_attributeType = AttributeType::CSS;
     else if (attributeType == xml)
@@ -318,18 +327,22 @@ String SVGAnimationElement::fromValue() const
     return attributeWithoutSynchronization(SVGNames::fromAttr);
 }
 
+static const AtomString& sumAtom()
+{
+    static MainThreadNeverDestroyed<const AtomString> sum("sum"_s);
+    return sum;
+}
+
 bool SVGAnimationElement::isAdditive() const
 {
-    static MainThreadNeverDestroyed<const AtomString> sum("sum", AtomString::ConstructFromLiteral);
     const AtomString& value = attributeWithoutSynchronization(SVGNames::additiveAttr);
-    return value == sum || animationMode() == AnimationMode::By;
+    return value == sumAtom() || animationMode() == AnimationMode::By;
 }
 
 bool SVGAnimationElement::isAccumulated() const
 {
-    static MainThreadNeverDestroyed<const AtomString> sum("sum", AtomString::ConstructFromLiteral);
     const AtomString& value = attributeWithoutSynchronization(SVGNames::accumulateAttr);
-    return value == sum && animationMode() != AnimationMode::To;
+    return value == sumAtom() && animationMode() != AnimationMode::To;
 }
 
 bool SVGAnimationElement::isTargetAttributeCSSProperty(SVGElement* targetElement, const QualifiedName& attributeName)
@@ -383,10 +396,12 @@ unsigned SVGAnimationElement::calculateKeyTimesIndex(float percent) const
     const auto& keyTimes = this->keyTimes();
     unsigned index;
     unsigned keyTimesCount = keyTimes.size();
-    // Compare index + 1 to keyTimesCount because the last keyTimes entry is
-    // required to be 1, and percent can never exceed 1; i.e., the second last
-    // keyTimes entry defines the beginning of the final interval
-    for (index = 1; index + 1 < keyTimesCount; ++index) {
+    // For linear and spline animations, the last value must be '1'. In those
+    // cases we don't need to consider the last value, since |percent| is never
+    // greater than one.
+    if (keyTimesCount && calcMode() != CalcMode::Discrete)
+        --keyTimesCount;
+    for (index = 1; index < keyTimesCount; ++index) {
         if (keyTimes[index] > percent)
             break;
     }
@@ -417,14 +432,15 @@ float SVGAnimationElement::calculatePercentFromKeyPoints(float percent) const
         return m_keyPoints[m_keyPoints.size() - 1];
 
     unsigned index = calculateKeyTimesIndex(percent);
-    float fromPercent = keyTimes[index];
-    float toPercent = keyTimes[index + 1];
     float fromKeyPoint = m_keyPoints[index];
-    float toKeyPoint = m_keyPoints[index + 1];
 
     if (calcMode() == CalcMode::Discrete)
         return fromKeyPoint;
 
+    ASSERT(index + 1 < keyTimes.size());
+    float fromPercent = keyTimes[index];
+    float toPercent = keyTimes[index + 1];
+    float toKeyPoint = m_keyPoints[index + 1];
     float keyPointPercent = (percent - fromPercent) / (toPercent - fromPercent);
 
     if (calcMode() == CalcMode::Spline) {
@@ -548,15 +564,15 @@ void SVGAnimationElement::startedActiveInterval()
         && (hasAttributeWithoutSynchronization(SVGNames::keyPointsAttr) && hasAttributeWithoutSynchronization(SVGNames::keyTimesAttr) && (keyTimes.size() < 2 || keyTimes.size() != m_keyPoints.size())))
         return;
     if (animationMode == AnimationMode::FromTo)
-        m_animationValid = calculateFromAndToValues(from, to);
+        m_animationValid = setFromAndToValues(from, to);
     else if (animationMode == AnimationMode::To) {
         // For to-animations the from value is the current accumulated value from lower priority animations.
         // The value is not static and is determined during the animation.
-        m_animationValid = calculateFromAndToValues(emptyString(), to);
+        m_animationValid = setFromAndToValues(emptyString(), to);
     } else if (animationMode == AnimationMode::FromBy)
-        m_animationValid = calculateFromAndByValues(from, by);
+        m_animationValid = setFromAndByValues(from, by);
     else if (animationMode == AnimationMode::By)
-        m_animationValid = calculateFromAndByValues(emptyString(), by);
+        m_animationValid = setFromAndByValues(emptyString(), by);
     else if (animationMode == AnimationMode::Values) {
         m_animationValid = m_values.size() >= 1
             && (calcMode == CalcMode::Paced || !hasAttributeWithoutSynchronization(SVGNames::keyTimesAttr) || hasAttributeWithoutSynchronization(SVGNames::keyPointsAttr) || (m_values.size() == keyTimes.size()))
@@ -564,7 +580,7 @@ void SVGAnimationElement::startedActiveInterval()
             && (calcMode != CalcMode::Spline || ((m_keySplines.size() && (m_keySplines.size() == m_values.size() - 1)) || m_keySplines.size() == m_keyPoints.size() - 1))
             && (!hasAttributeWithoutSynchronization(SVGNames::keyPointsAttr) || (keyTimes.size() > 1 && keyTimes.size() == m_keyPoints.size()));
         if (m_animationValid)
-            m_animationValid = calculateToAtEndOfDurationValue(m_values.last());
+            m_animationValid = setToAtEndOfDurationValue(m_values.last());
         if (calcMode == CalcMode::Paced && m_animationValid)
             calculateKeyTimesForCalcModePaced();
     } else if (animationMode == AnimationMode::Path)
@@ -584,7 +600,7 @@ void SVGAnimationElement::updateAnimation(float percent, unsigned repeatCount)
         String to;
         currentValuesForValuesAnimation(percent, effectivePercent, from, to);
         if (from != m_lastValuesAnimationFrom || to != m_lastValuesAnimationTo) {
-            m_animationValid = calculateFromAndToValues(from, to);
+            m_animationValid = setFromAndToValues(from, to);
             if (!m_animationValid)
                 return;
             m_lastValuesAnimationFrom = from;

@@ -34,13 +34,11 @@
 
 #include "AddEventListenerOptions.h"
 #include "DOMStringList.h"
-#include "DOMWindow.h"
 #include "Document.h"
 #include "Event.h"
 #include "EventListener.h"
 #include "EventNames.h"
 #include "EventTarget.h"
-#include "Frame.h"
 #include "IDBBindingUtilities.h"
 #include "IDBCursor.h"
 #include "IDBCursorWithValue.h"
@@ -56,7 +54,9 @@
 #include "IDBTransaction.h"
 #include "InspectorPageAgent.h"
 #include "InstrumentingAgents.h"
-#include "JSDOMWindowCustom.h"
+#include "JSLocalDOMWindowCustom.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrame.h"
 #include "SecurityOrigin.h"
 #include "WindowOrWorkerGlobalScopeIndexedDatabase.h"
 #include <JavaScriptCore/HeapInlines.h>
@@ -95,15 +95,10 @@ public:
         return adoptRef(*new OpenDatabaseCallback(executableWithDatabase));
     }
 
-    bool operator==(const EventListener& other) const final
-    {
-        return this == &other;
-    }
-
     void handleEvent(ScriptExecutionContext&, Event& event) final
     {
         if (event.type() != eventNames().successEvent) {
-            m_executableWithDatabase->requestCallback().sendFailure("Unexpected event type.");
+            m_executableWithDatabase->requestCallback().sendFailure("Unexpected event type."_s);
             return;
         }
 
@@ -111,13 +106,13 @@ public:
 
         auto result = request.result();
         if (result.hasException()) {
-            m_executableWithDatabase->requestCallback().sendFailure("Could not get result in callback.");
+            m_executableWithDatabase->requestCallback().sendFailure("Could not get result in callback."_s);
             return;
         }
 
         auto resultValue = result.releaseReturnValue();
         if (!std::holds_alternative<RefPtr<IDBDatabase>>(resultValue)) {
-            m_executableWithDatabase->requestCallback().sendFailure("Unexpected result type.");
+            m_executableWithDatabase->requestCallback().sendFailure("Unexpected result type."_s);
             return;
         }
 
@@ -136,13 +131,13 @@ private:
 void ExecutableWithDatabase::start(IDBFactory* idbFactory, SecurityOrigin*, const String& databaseName)
 {
     if (!context()) {
-        requestCallback().sendFailure("Could not open database.");
+        requestCallback().sendFailure("Could not open database."_s);
         return;
     }
 
     auto result = idbFactory->open(*context(), databaseName, std::nullopt);
     if (result.hasException()) {
-        requestCallback().sendFailure("Could not open database.");
+        requestCallback().sendFailure("Could not open database."_s);
         return;
     }
 
@@ -341,15 +336,10 @@ public:
 
     ~OpenCursorCallback() override = default;
 
-    bool operator==(const EventListener& other) const override
-    {
-        return this == &other;
-    }
-
     void handleEvent(ScriptExecutionContext& context, Event& event) override
     {
         if (event.type() != eventNames().successEvent) {
-            m_requestCallback->sendFailure("Unexpected event type.");
+            m_requestCallback->sendFailure("Unexpected event type."_s);
             return;
         }
 
@@ -357,7 +347,7 @@ public:
 
         auto result = request.result();
         if (result.hasException()) {
-            m_requestCallback->sendFailure("Could not get result in callback.");
+            m_requestCallback->sendFailure("Could not get result in callback."_s);
             return;
         }
 
@@ -371,7 +361,7 @@ public:
 
         if (m_skipCount) {
             if (cursor->advance(m_skipCount).hasException())
-                m_requestCallback->sendFailure("Could not advance cursor.");
+                m_requestCallback->sendFailure("Could not advance cursor."_s);
             m_skipCount = 0;
             return;
         }
@@ -383,7 +373,7 @@ public:
 
         // Continue cursor before making injected script calls, otherwise transaction might be finished.
         if (cursor->continueFunction(nullptr).hasException()) {
-            m_requestCallback->sendFailure("Could not continue cursor.");
+            m_requestCallback->sendFailure("Could not continue cursor."_s);
             return;
         }
 
@@ -449,13 +439,13 @@ public:
 
         auto idbTransaction = transactionForDatabase(&database, m_objectStoreName);
         if (!idbTransaction) {
-            m_requestCallback->sendFailure("Could not get transaction");
+            m_requestCallback->sendFailure("Could not get transaction"_s);
             return;
         }
 
         auto idbObjectStore = objectStoreForTransaction(idbTransaction.get(), m_objectStoreName);
         if (!idbObjectStore) {
-            m_requestCallback->sendFailure("Could not get object store");
+            m_requestCallback->sendFailure("Could not get object store"_s);
             return;
         }
 
@@ -464,7 +454,7 @@ public:
         if (!m_indexName.isEmpty()) {
             auto idbIndex = indexForObjectStore(idbObjectStore.get(), m_indexName);
             if (!idbIndex) {
-                m_requestCallback->sendFailure("Could not get index");
+                m_requestCallback->sendFailure("Could not get index"_s);
                 return;
             }
 
@@ -478,7 +468,7 @@ public:
         }
 
         if (!idbRequest) {
-            m_requestCallback->sendFailure("Could not open cursor to populate database data");
+            m_requestCallback->sendFailure("Could not open cursor to populate database data"_s);
             return;
         }
 
@@ -536,7 +526,7 @@ Protocol::ErrorStringOr<void> InspectorIndexedDBAgent::disable()
     return { };
 }
 
-static Protocol::ErrorStringOr<Document*> documentFromFrame(Frame* frame)
+static Protocol::ErrorStringOr<Document*> documentFromFrame(LocalFrame* frame)
 {
     Document* document = frame ? frame->document() : nullptr;
     if (!document)
@@ -547,7 +537,7 @@ static Protocol::ErrorStringOr<Document*> documentFromFrame(Frame* frame)
 
 static Protocol::ErrorStringOr<IDBFactory*> IDBFactoryFromDocument(Document* document)
 {
-    DOMWindow* domWindow = document->domWindow();
+    auto* domWindow = document->domWindow();
     if (!domWindow)
         return makeUnexpected("Missing window for given document"_s);
 
@@ -558,7 +548,7 @@ static Protocol::ErrorStringOr<IDBFactory*> IDBFactoryFromDocument(Document* doc
     return idbFactory;
 }
 
-static bool getDocumentAndIDBFactoryFromFrameOrSendFailure(Frame* frame, Document*& out_document, IDBFactory*& out_idbFactory, BackendDispatcher::CallbackBase& callback)
+static bool getDocumentAndIDBFactoryFromFrameOrSendFailure(LocalFrame* frame, Document*& outDocument, IDBFactory*& outIDBFactory, BackendDispatcher::CallbackBase& callback)
 {
     Protocol::ErrorStringOr<Document*> document = documentFromFrame(frame);
     if (!document.has_value()) {
@@ -572,8 +562,8 @@ static bool getDocumentAndIDBFactoryFromFrameOrSendFailure(Frame* frame, Documen
         return false;
     }
 
-    out_document = document.value();
-    out_idbFactory = idbFactory.value();
+    outDocument = document.value();
+    outIDBFactory = idbFactory.value();
     return true;
 }
 
@@ -643,17 +633,12 @@ public:
 
     ~ClearObjectStoreListener() override = default;
 
-    bool operator==(const EventListener& other) const override
-    {
-        return this == &other;
-    }
-
     void handleEvent(ScriptExecutionContext&, Event& event) override
     {
         if (!m_requestCallback->isActive())
             return;
         if (event.type() != eventNames().completeEvent) {
-            m_requestCallback->sendFailure("Unexpected event type.");
+            m_requestCallback->sendFailure("Unexpected event type."_s);
             return;
         }
 
@@ -690,13 +675,13 @@ public:
 
         auto idbTransaction = transactionForDatabase(&database, m_objectStoreName, IDBTransactionMode::Readwrite);
         if (!idbTransaction) {
-            m_requestCallback->sendFailure("Could not get transaction");
+            m_requestCallback->sendFailure("Could not get transaction"_s);
             return;
         }
 
         auto idbObjectStore = objectStoreForTransaction(idbTransaction.get(), m_objectStoreName);
         if (!idbObjectStore) {
-            m_requestCallback->sendFailure("Could not get object store");
+            m_requestCallback->sendFailure("Could not get object store"_s);
             return;
         }
 

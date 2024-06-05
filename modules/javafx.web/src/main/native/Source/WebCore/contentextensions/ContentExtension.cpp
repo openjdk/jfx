@@ -26,7 +26,9 @@
 #include "config.h"
 #include "ContentExtension.h"
 
+#include "CSSParserContext.h"
 #include "CompiledContentExtension.h"
+#include "ContentExtensionParser.h"
 #include "ContentExtensionsBackend.h"
 #include "StyleSheetContents.h"
 #include <wtf/text/StringBuilder.h>
@@ -46,8 +48,7 @@ ContentExtension::ContentExtension(const String& identifier, Ref<CompiledContent
     , m_extensionBaseURL(WTFMove(extensionBaseURL))
 {
     DFABytecodeInterpreter interpreter(m_compiledExtension->urlFiltersBytecode());
-    for (uint64_t action : interpreter.actionsMatchingEverything())
-        m_universalActions.append(action);
+    m_universalActions = copyToVector(interpreter.actionsMatchingEverything());
 
     if (shouldCompileCSS == ShouldCompileCSS::Yes)
         compileGlobalDisplayNoneStyleSheet();
@@ -99,7 +100,7 @@ void ContentExtension::compileGlobalDisplayNoneStyleSheet()
     css.append(ContentExtensionsBackend::displayNoneCSSRule());
     css.append('}');
 
-    m_globalDisplayNoneStyleSheet = StyleSheetContents::create();
+    m_globalDisplayNoneStyleSheet = StyleSheetContents::create(contentExtensionCSSParserContext());
     m_globalDisplayNoneStyleSheet->setIsUserStyleSheet(true);
     if (!m_globalDisplayNoneStyleSheet->parseString(css.toString()))
         m_globalDisplayNoneStyleSheet = nullptr;

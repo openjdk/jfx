@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,21 +30,21 @@
 
 #include "ContentSecurityPolicy.h"
 #include "DOMPromiseProxy.h"
+#include "DedicatedWorkerGlobalScope.h"
 #include "Document.h"
 #include "Event.h"
 #include "EventLoop.h"
 #include "EventNames.h"
 #include "Exception.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "IDLTypes.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSNavigationPreloadState.h"
 #include "JSPushSubscription.h"
 #include "JSServiceWorkerRegistration.h"
 #include "LegacySchemeRegistry.h"
+#include "LocalFrameLoaderClient.h"
 #include "Logging.h"
-#include "MessageEvent.h"
 #include "NavigatorBase.h"
 #include "Page.h"
 #include "PushSubscriptionOptions.h"
@@ -57,6 +57,7 @@
 #include "ServiceWorkerJobData.h"
 #include "ServiceWorkerProvider.h"
 #include "ServiceWorkerThread.h"
+#include "SharedWorkerGlobalScope.h"
 #include "WorkerFetchResult.h"
 #include "WorkerSWClientConnection.h"
 #include <wtf/IsoMallocInlines.h>
@@ -132,7 +133,7 @@ auto ServiceWorkerContainer::ready() -> ReadyPromise&
 ServiceWorker* ServiceWorkerContainer::controller() const
 {
     auto* context = scriptExecutionContext();
-    ASSERT_WITH_MESSAGE(!context || is<Document>(*context) || !context->activeServiceWorker(), "Only documents can have a controller at the moment.");
+    ASSERT_WITH_MESSAGE(!context || is<Document>(*context) || is<DedicatedWorkerGlobalScope>(*context)  || is<SharedWorkerGlobalScope>(*context) || !context->activeServiceWorker(), "Only documents, dedicated and shared workers can have a controller.");
     return context ? context->activeServiceWorker() : nullptr;
 }
 
@@ -174,7 +175,7 @@ void ServiceWorkerContainer::addRegistration(const String& relativeScriptURL, co
     }
 
     auto path = jobData.scriptURL.path();
-    if (path.containsIgnoringASCIICase("%2f") || path.containsIgnoringASCIICase("%5c")) {
+    if (path.containsIgnoringASCIICase("%2f"_s) || path.containsIgnoringASCIICase("%5c"_s)) {
         CONTAINER_RELEASE_LOG_ERROR("addRegistration: scriptURL contains invalid character");
         promise->reject(Exception { TypeError, "serviceWorker.register() must be called with a script URL whose path does not contain '%2f' or '%5c'"_s });
         return;
@@ -183,7 +184,7 @@ void ServiceWorkerContainer::addRegistration(const String& relativeScriptURL, co
     if (!options.scope.isEmpty())
         jobData.scopeURL = context->completeURL(options.scope);
     else
-        jobData.scopeURL = URL(jobData.scriptURL, "./");
+        jobData.scopeURL = URL(jobData.scriptURL, "./"_s);
 
     if (!jobData.scopeURL.isNull() && !jobData.scopeURL.protocolIsInHTTPFamily() && !jobData.isFromServiceWorkerPage) {
         CONTAINER_RELEASE_LOG_ERROR("addRegistration: scopeURL scheme is not HTTP or HTTPS");
@@ -192,7 +193,7 @@ void ServiceWorkerContainer::addRegistration(const String& relativeScriptURL, co
     }
 
     path = jobData.scopeURL.path();
-    if (path.containsIgnoringASCIICase("%2f") || path.containsIgnoringASCIICase("%5c")) {
+    if (path.containsIgnoringASCIICase("%2f"_s) || path.containsIgnoringASCIICase("%5c"_s)) {
         CONTAINER_RELEASE_LOG_ERROR("addRegistration: scopeURL contains invalid character");
         promise->reject(Exception { TypeError, "Scope URL provided to serviceWorker.register() cannot have a path that contains '%2f' or '%5c'"_s });
         return;
@@ -204,6 +205,7 @@ void ServiceWorkerContainer::addRegistration(const String& relativeScriptURL, co
     jobData.topOrigin = context->topOrigin().data();
     jobData.workerType = options.type;
     jobData.type = ServiceWorkerJobType::Register;
+    jobData.domainForCachePartition = context->domainForCachePartition();
     jobData.registrationOptions = options;
 
     scheduleJob(makeUnique<ServiceWorkerJob>(*this, WTFMove(promise), WTFMove(jobData)));
@@ -216,7 +218,11 @@ void ServiceWorkerContainer::willSettleRegistrationPromise(bool success)
     if (!page || !page->isServiceWorkerPage())
         return;
 
-    page->mainFrame().loader().client().didFinishServiceWorkerPageRegistration(success);
+    auto* localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    if (!localMainFrame)
+        return;
+
+    localMainFrame->loader().client().didFinishServiceWorkerPageRegistration(success);
 }
 
 void ServiceWorkerContainer::unregisterRegistration(ServiceWorkerRegistrationIdentifier registrationIdentifier, DOMPromiseDeferred<IDLBoolean>&& promise)
@@ -252,6 +258,7 @@ void ServiceWorkerContainer::updateRegistration(const URL& scopeURL, const URL& 
     jobData.topOrigin = context.topOrigin().data();
     jobData.workerType = workerType;
     jobData.type = ServiceWorkerJobType::Update;
+    jobData.domainForCachePartition = context.domainForCachePartition();
     jobData.scopeURL = scopeURL;
     jobData.scriptURL = scriptURL;
 
@@ -345,10 +352,19 @@ void ServiceWorkerContainer::getRegistrations(Ref<DeferredPromise>&& promise)
 
 void ServiceWorkerContainer::startMessages()
 {
+    auto* context = this->context();
+    if (!context) {
+        CONTAINER_RELEASE_LOG_ERROR("Container without ScriptExecutionContext is attempting to start post message delivery");
+        return;
+    }
+
     m_shouldDeferMessageEvents = false;
-    auto deferredMessageEvents = WTFMove(m_deferredMessageEvents);
-    for (auto& messageEvent : deferredMessageEvents)
-        queueTaskToDispatchEvent(*this, TaskSource::DOMManipulation, WTFMove(messageEvent));
+
+    for (auto&& messageEvent : std::exchange(m_deferredMessageEvents, Vector<MessageEvent::MessageEventWithStrongData> { })) {
+        queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [this, messageEvent = WTFMove(messageEvent)] {
+            dispatchEvent(messageEvent.event);
+        });
+    }
 }
 
 void ServiceWorkerContainer::jobFailedWithException(ServiceWorkerJob& job, const Exception& exception)
@@ -427,6 +443,8 @@ void ServiceWorkerContainer::jobResolvedWithRegistration(ServiceWorkerJob& job, 
                 notifyRegistrationIsSettled(iterator->value);
                 m_ongoingSettledRegistrations.remove(iterator);
             });
+            if (UNLIKELY(promise->needsAbort()))
+                return;
         }
 
         promise->resolve<IDLInterface<ServiceWorkerRegistration>>(WTFMove(registration));
@@ -436,14 +454,32 @@ void ServiceWorkerContainer::jobResolvedWithRegistration(ServiceWorkerJob& job, 
 void ServiceWorkerContainer::postMessage(MessageWithMessagePorts&& message, ServiceWorkerData&& sourceData, String&& sourceOrigin)
 {
     auto& context = *scriptExecutionContext();
+    if (UNLIKELY(context.isJSExecutionForbidden()))
+        return;
+
+    auto* globalObject = context.globalObject();
+    if (!globalObject)
+        return;
+
+    auto& vm = globalObject->vm();
+    auto scope = DECLARE_CATCH_SCOPE(vm);
+
     MessageEventSource source = RefPtr<ServiceWorker> { ServiceWorker::getOrCreate(context, WTFMove(sourceData)) };
 
-    auto messageEvent = MessageEvent::create(MessagePort::entanglePorts(context, WTFMove(message.transferredPorts)), message.message.releaseNonNull(), sourceOrigin, { }, WTFMove(source));
+    auto messageEvent = MessageEvent::create(*globalObject, message.message.releaseNonNull(), sourceOrigin, { }, WTFMove(source), MessagePort::entanglePorts(context, WTFMove(message.transferredPorts)));
+    if (UNLIKELY(scope.exception())) {
+        // Currently, we assume that the only way we can get here is if we have a termination.
+        RELEASE_ASSERT(vm.hasPendingTerminationException());
+        return;
+    }
+
     if (m_shouldDeferMessageEvents)
         m_deferredMessageEvents.append(WTFMove(messageEvent));
     else {
         ASSERT(m_deferredMessageEvents.isEmpty());
-        queueTaskToDispatchEvent(*this, TaskSource::DOMManipulation, WTFMove(messageEvent));
+        queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [this, messageEvent = WTFMove(messageEvent)] {
+            dispatchEvent(messageEvent.event);
+        });
     }
 }
 
@@ -491,13 +527,13 @@ void ServiceWorkerContainer::startScriptFetchForJob(ServiceWorkerJob& job, Fetch
     job.fetchScriptWithContext(*context, cachePolicy);
 }
 
-void ServiceWorkerContainer::jobFinishedLoadingScript(ServiceWorkerJob& job, const WorkerFetchResult& fetchResult)
+void ServiceWorkerContainer::jobFinishedLoadingScript(ServiceWorkerJob& job, WorkerFetchResult&& fetchResult)
 {
     ASSERT(m_creationThread.ptr() == &Thread::current());
 
     CONTAINER_RELEASE_LOG("jobFinishedLoadingScript: Successfuly finished fetching script for job %" PRIu64, job.identifier().toUInt64());
 
-    ensureSWClientConnection().finishFetchingScriptInServer(job.data().identifier(), job.data().registrationKey(), fetchResult);
+    ensureSWClientConnection().finishFetchingScriptInServer(job.data().identifier(), ServiceWorkerRegistrationKey { job.data().registrationKey() }, WTFMove(fetchResult));
 }
 
 void ServiceWorkerContainer::jobFailedLoadingScript(ServiceWorkerJob& job, const ResourceError& error, Exception&& exception)
@@ -522,7 +558,7 @@ void ServiceWorkerContainer::jobFailedLoadingScript(ServiceWorkerJob& job, const
 
 void ServiceWorkerContainer::notifyFailedFetchingScript(ServiceWorkerJob& job, const ResourceError& error)
 {
-    ensureSWClientConnection().finishFetchingScriptInServer(job.data().identifier(), job.data().registrationKey(), workerFetchError(ResourceError { error }));
+    ensureSWClientConnection().finishFetchingScriptInServer(job.data().identifier(), ServiceWorkerRegistrationKey { job.data().registrationKey() }, workerFetchError(ResourceError { error }));
 }
 
 void ServiceWorkerContainer::destroyJob(ServiceWorkerJob& job)
@@ -610,6 +646,30 @@ void ServiceWorkerContainer::getPushPermissionState(ServiceWorkerRegistrationIde
     });
 }
 
+#if ENABLE(NOTIFICATIONS)
+void ServiceWorkerContainer::getNotifications(const URL& serviceWorkerRegistrationURL, const String& tag, DOMPromiseDeferred<IDLSequence<IDLInterface<Notification>>>&& promise)
+{
+    ensureSWClientConnection().getNotifications(serviceWorkerRegistrationURL, tag, [promise = WTFMove(promise), protectedThis = Ref { *this }](auto&& result) mutable {
+        auto* context = protectedThis->scriptExecutionContext();
+        if (!context)
+            return;
+
+        if (result.hasException()) {
+            promise.reject(result.releaseException());
+            return;
+        }
+
+        auto data = result.releaseReturnValue();
+        auto notifications = map(data, [context](auto&& data) {
+            auto notification = Notification::create(*context, WTFMove(data));
+            notification->markAsShown();
+            return notification;
+        });
+        promise.resolve(WTFMove(notifications));
+    });
+}
+#endif
+
 void ServiceWorkerContainer::queueTaskToDispatchControllerChangeEvent()
 {
     ASSERT(m_creationThread.ptr() == &Thread::current());
@@ -657,7 +717,7 @@ bool ServiceWorkerContainer::addEventListener(const AtomString& eventType, Ref<E
     if (eventListener->isAttribute() && eventType == eventNames().messageEvent)
         startMessages();
 
-    return EventTargetWithInlineData::addEventListener(eventType, WTFMove(eventListener), options);
+    return EventTarget::addEventListener(eventType, WTFMove(eventListener), options);
 }
 
 void ServiceWorkerContainer::enableNavigationPreload(ServiceWorkerRegistrationIdentifier identifier, VoidPromise&& promise)

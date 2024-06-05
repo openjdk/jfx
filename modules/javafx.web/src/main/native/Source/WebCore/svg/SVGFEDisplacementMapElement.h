@@ -50,13 +50,13 @@ struct SVGPropertyTraits<ChannelSelectorType> {
 
     static ChannelSelectorType fromString(const String& value)
     {
-        if (value == "R")
+        if (value == "R"_s)
             return CHANNEL_R;
-        if (value == "G")
+        if (value == "G"_s)
             return CHANNEL_G;
-        if (value == "B")
+        if (value == "B"_s)
             return CHANNEL_B;
-        if (value == "A")
+        if (value == "A"_s)
             return CHANNEL_A;
         return CHANNEL_UNKNOWN;
     }
@@ -85,16 +85,14 @@ private:
     SVGFEDisplacementMapElement(const QualifiedName& tagName, Document&);
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGFEDisplacementMapElement, SVGFilterPrimitiveStandardAttributes>;
-    const SVGPropertyRegistry& propertyRegistry() const final { return m_propertyRegistry; }
 
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;
 
-    bool setFilterEffectAttribute(FilterEffect*, const QualifiedName& attrName) override;
-    Vector<AtomString> filterEffectInputsNames() const override { return { in1(), in2() }; }
-    RefPtr<FilterEffect> filterEffect(const SVGFilterBuilder&, const FilterEffectVector&) const override;
+    bool setFilterEffectAttribute(FilterEffect&, const QualifiedName& attrName) override;
+    Vector<AtomString> filterEffectInputsNames() const override { return { AtomString { in1() }, AtomString { in2() } }; }
+    RefPtr<FilterEffect> createFilterEffect(const FilterEffectVector&, const GraphicsContext& destinationContext) const override;
 
-    PropertyRegistry m_propertyRegistry { *this };
     Ref<SVGAnimatedString> m_in1 { SVGAnimatedString::create(this) };
     Ref<SVGAnimatedString> m_in2 { SVGAnimatedString::create(this) };
     Ref<SVGAnimatedEnumeration> m_xChannelSelector { SVGAnimatedEnumeration::create(this, CHANNEL_A) };

@@ -24,7 +24,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-@globalPrivate
+@linkTimeConstant
 function isFinite(value)
 {
     "use strict";
@@ -34,13 +34,4 @@ function isFinite(value)
     if (numberValue !== numberValue)
         return false;
     return numberValue !== @Infinity && numberValue !== -@Infinity;
-}
-
-@globalPrivate
-function isNaN(value)
-{
-    "use strict";
-
-    var numberValue = @toNumber(value);
-    return numberValue !== numberValue;
 }

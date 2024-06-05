@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1098,9 +1098,14 @@ public class FXMLLoader {
                     if (loadListener != null) {
                         loadListener.readInternalAttribute(localName, value);
                     }
-
-                    resources = ResourceBundle.getBundle(value, Locale.getDefault(),
-                            FXMLLoader.this.resources.getClass().getClassLoader());
+                    if (FXMLLoader.this.resources == null) {
+                        resources = ResourceBundle.getBundle(value, Locale.getDefault());
+                    } else {
+                        final ClassLoader cl = FXMLLoader.this.resources.getClass().getClassLoader();
+                        resources = (cl == null) ?
+                                ResourceBundle.getBundle(value, Locale.getDefault()) :
+                                ResourceBundle.getBundle(value, Locale.getDefault(), cl);
+                    }
                 } else if (localName.equals(INCLUDE_CHARSET_ATTRIBUTE)) {
                     if (loadListener != null) {
                         loadListener.readInternalAttribute(localName, value);
@@ -1899,6 +1904,8 @@ public class FXMLLoader {
 
     private static BuilderFactory DEFAULT_BUILDER_FACTORY = new JavaFXBuilderFactory();
 
+    private static final Boolean ALLOW_JAVASCRIPT;
+
     /**
      * The character set used when character set is not explicitly specified.
      */
@@ -2132,6 +2139,11 @@ public class FXMLLoader {
             }
         });
         JAVAFX_VERSION = tmp;
+
+        @SuppressWarnings("removal")
+        boolean tmp2 = AccessController.doPrivileged((PrivilegedAction<Boolean>)
+                () -> Boolean.getBoolean("javafx.allowjs"));
+        ALLOW_JAVASCRIPT = tmp2;
 
         FXMLLoaderHelper.setFXMLLoaderAccessor(new FXMLLoaderHelper.FXMLLoaderAccessor() {
             @Override
@@ -2771,12 +2783,32 @@ public class FXMLLoader {
         }
     }
 
+    private boolean isLanguageJavaScript(String str) {
+        if (str == null) return false;
+
+        str = str.trim();
+
+        String[] jsLang = {"nashorn", "javascript", "js", "ecmascript"};
+
+        for (String item : jsLang) {
+            if (str.equalsIgnoreCase(item)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void processLanguage() throws LoadException {
         if (scriptEngine != null) {
             throw constructLoadException("Page language already set.");
         }
 
         String language = xmlStreamReader.getPIData();
+
+        // Check whether the language is javascript
+        if (isLanguageJavaScript(language) && ALLOW_JAVASCRIPT == false) {
+           throw constructLoadException("JavaScript script engine is disabled.");
+        }
 
         if (loadListener != null) {
             loadListener.readLanguageProcessingInstruction(language);
@@ -2785,6 +2817,16 @@ public class FXMLLoader {
         if (!staticLoad) {
             ScriptEngineManager scriptEngineManager = getScriptEngineManager();
             scriptEngine = scriptEngineManager.getEngineByName(language);
+        }
+
+        // Additionally check the script engine type.
+        // It is a second level check to ensure that a Nashorn script engine does not get created
+        // when ALLOW_JAVASCRIPT is false.
+        if (scriptEngine != null) {
+            String engineName = scriptEngine.getFactory().getEngineName();
+            if (engineName.toLowerCase(Locale.ROOT).contains("nashorn") && ALLOW_JAVASCRIPT == false) {
+               throw constructLoadException("JavaScript script engine is disabled.");
+            }
         }
     }
 

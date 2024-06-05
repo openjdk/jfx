@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2015 Google Inc. All rights reserved.
  * Copyright (C) 2005 Alexey Proskuryakov.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,8 +32,8 @@
 #include "Document.h"
 #include "Editing.h"
 #include "ElementInlines.h"
+#include "ElementRareData.h"
 #include "FontCascade.h"
-#include "Frame.h"
 #include "HTMLBodyElement.h"
 #include "HTMLElement.h"
 #include "HTMLFrameOwnerElement.h"
@@ -46,9 +47,10 @@
 #include "HTMLTextAreaElement.h"
 #include "HTMLTextFormControlElement.h"
 #include "ImageOverlay.h"
-#include "LegacyInlineTextBox.h"
+#include "LocalFrame.h"
 #include "NodeTraversal.h"
 #include "Range.h"
+#include "RenderBoxInlines.h"
 #include "RenderImage.h"
 #include "RenderIterator.h"
 #include "RenderTableCell.h"
@@ -173,7 +175,8 @@ bool BitStack::top() const
     if (!m_size)
         return false;
     unsigned shift = (m_size - 1) & bitInWordMask;
-    return m_words.last() & (1U << shift);
+    unsigned index = (m_size - 1) / bitsInWord;
+    return m_words[index] & (1U << shift);
 }
 
 // --------
@@ -275,7 +278,7 @@ bool isRendererReplacedElement(RenderObject* renderer, TextIteratorBehaviors beh
         Element& element = downcast<Element>(*renderer->node());
         if (is<HTMLFormControlElement>(element) || is<HTMLLegendElement>(element) || is<HTMLProgressElement>(element) || element.hasTagName(meterTag))
             return true;
-        if (equalLettersIgnoringASCIICase(element.attributeWithoutSynchronization(roleAttr), "img"))
+        if (equalLettersIgnoringASCIICase(element.attributeWithoutSynchronization(roleAttr), "img"_s))
             return true;
 #if USE(ATSPI)
         // Links are also replaced with object replacement character in ATSPI.
@@ -424,6 +427,11 @@ static inline bool hasDisplayContents(Node& node)
     return is<Element>(node) && downcast<Element>(node).hasDisplayContents();
 }
 
+static bool isRendererVisible(const RenderObject* renderer, TextIteratorBehaviors behaviors)
+{
+    return renderer && !(renderer->style().effectiveUserSelect() == UserSelect::None && behaviors.contains(TextIteratorBehavior::IgnoresUserSelectNone));
+}
+
 void TextIterator::advance()
 {
     ASSERT(!atEnd());
@@ -469,9 +477,11 @@ void TextIterator::advance()
 
         auto* renderer = m_node->renderer();
         if (!m_handledNode) {
-            if (!renderer) {
+            if (!isRendererVisible(renderer, m_behaviors)) {
                 m_handledNode = true;
-                m_handledChildren = !hasDisplayContents(*m_node);
+                m_handledChildren = !hasDisplayContents(*m_node) && !renderer;
+            } else if (is<Element>(m_node) && renderer->isSkippedContentRoot()) {
+                m_handledChildren = true;
             } else {
                 // handle current node according to its type
                 if (renderer->isText() && m_node->isTextNode())
@@ -497,7 +507,7 @@ void TextIterator::advance()
                 while (!next && parentNode) {
                     if ((pastEnd && parentNode == m_endContainer) || isDescendantOf(m_behaviors, *m_endContainer, *parentNode))
                         return;
-                    bool haveRenderer = m_node->renderer();
+                    bool haveRenderer = isRendererVisible(m_node->renderer(), m_behaviors);
                     Node* exitedNode = m_node;
                     m_node = parentNode;
                     m_fullyClippedStack.pop();
@@ -510,7 +520,7 @@ void TextIterator::advance()
                         return;
                     }
                     next = nextSibling(m_behaviors, *m_node);
-                    if (next && m_node->renderer())
+                    if (next && isRendererVisible(m_node->renderer(), m_behaviors))
                         exitNode(m_node);
                 }
             }
@@ -622,9 +632,20 @@ void TextIterator::handleTextRun()
         unsigned textRunStart = m_textRun->start();
         unsigned runStart = std::max(textRunStart, start);
 
+        unsigned textRunEnd = textRunStart + m_textRun->length();
+        unsigned runEnd = std::min(textRunEnd, end);
+
+        // Determine what the next text run will be, but don't advance yet
+        auto nextTextRun = InlineIterator::nextTextBoxInLogicalOrder(m_textRun, m_textRunLogicalOrderCache);
+
         // Check for collapsed space at the start of this run.
         bool needSpace = m_lastTextNodeEndedWithCollapsedSpace || (m_textRun == firstTextRun && textRunStart == runStart && runStart);
         if (needSpace && !renderer.style().isCollapsibleWhiteSpace(m_lastCharacter) && m_lastCharacter) {
+            if (runStart >= runEnd && m_behaviors.contains(TextIteratorBehavior::IgnoresWhiteSpaceAtEndOfRun)) {
+                m_textRun = nextTextRun;
+                continue;
+            }
+
             if (m_lastTextNode == &textNode && runStart && rendererText[runStart - 1] == ' ') {
                 unsigned spaceRunStart = runStart - 1;
                 while (spaceRunStart && rendererText[spaceRunStart - 1] == ' ')
@@ -634,11 +655,6 @@ void TextIterator::handleTextRun()
                 emitCharacter(' ', textNode, nullptr, runStart, runStart);
             return;
         }
-        unsigned textRunEnd = textRunStart + m_textRun->length();
-        unsigned runEnd = std::min(textRunEnd, end);
-
-        // Determine what the next text run will be, but don't advance yet
-        auto nextTextRun = InlineIterator::nextTextBoxInLogicalOrder(m_textRun, m_textRunLogicalOrderCache);
 
         if (runStart < runEnd) {
             auto isNewlineOrTab = [&](UChar character) {
@@ -926,8 +942,8 @@ static bool shouldEmitExtraNewlineForNode(Node& node)
     if (!renderBox.height())
         return false;
 
-    int bottomMargin = renderBox.collapsedMarginAfter();
-    int fontSize = renderBox.style().fontDescription().computedPixelSize();
+    auto bottomMargin = renderBox.collapsedMarginAfter();
+    auto fontSize = renderBox.style().fontDescription().computedSize();
     return bottomMargin * 2 >= fontSize;
 }
 
@@ -1353,9 +1369,10 @@ bool SimplifiedBackwardsTextIterator::handleReplacedElement()
 
 bool SimplifiedBackwardsTextIterator::handleNonTextNode()
 {
-    // We can use a linefeed in place of a tab because this simple iterator is only used to
-    // find boundaries, not actual content. A linefeed breaks words, sentences, and paragraphs.
-    if (shouldEmitNewlineForNode(m_node, m_behaviors.contains(TextIteratorBehavior::EmitsOriginalText)) || shouldEmitNewlineAfterNode(*m_node) || shouldEmitTabBeforeNode(*m_node)) {
+    if (shouldEmitTabBeforeNode(*m_node)) {
+        unsigned index = m_node->computeNodeIndex();
+        emitCharacter('\t', *m_node->parentNode(), index + 1, index + 1);
+    } else if (shouldEmitNewlineForNode(m_node, m_behaviors.contains(TextIteratorBehavior::EmitsOriginalText)) || shouldEmitNewlineAfterNode(*m_node)) {
         if (m_lastCharacter != '\n') {
             // Corresponds to the same check in TextIterator::exitNode.
             unsigned index = m_node->computeNodeIndex();
@@ -1369,7 +1386,9 @@ bool SimplifiedBackwardsTextIterator::handleNonTextNode()
 
 void SimplifiedBackwardsTextIterator::exitNode()
 {
-    if (shouldEmitNewlineForNode(m_node, m_behaviors.contains(TextIteratorBehavior::EmitsOriginalText)) || shouldEmitNewlineBeforeNode(*m_node) || shouldEmitTabBeforeNode(*m_node)) {
+    if (shouldEmitTabBeforeNode(*m_node))
+        emitCharacter('\t', *m_node, 0, 0);
+    else if (shouldEmitNewlineForNode(m_node, m_behaviors.contains(TextIteratorBehavior::EmitsOriginalText)) || shouldEmitNewlineBeforeNode(*m_node)) {
         // The start of this emitted range is wrong. Ensuring correctness would require
         // VisiblePositions and so would be slow. previousBoundary expects this.
         emitCharacter('\n', *m_node, 0, 0);
@@ -1571,7 +1590,7 @@ void WordAwareIterator::advance()
 
     while (1) {
         // If this chunk ends in whitespace we can just use it as our chunk.
-        if (isSpaceOrNewline(m_underlyingIterator.text()[m_underlyingIterator.text().length() - 1]))
+        if (deprecatedIsSpaceOrNewline(m_underlyingIterator.text()[m_underlyingIterator.text().length() - 1]))
             return;
 
         // If this is the first chunk that failed, save it in previousText before look ahead
@@ -1580,7 +1599,7 @@ void WordAwareIterator::advance()
 
         // Look ahead to next chunk. If it is whitespace or a break, we can use the previous stuff
         m_underlyingIterator.advance();
-        if (m_underlyingIterator.atEnd() || !m_underlyingIterator.text().length() || isSpaceOrNewline(m_underlyingIterator.text()[0])) {
+        if (m_underlyingIterator.atEnd() || !m_underlyingIterator.text().length() || deprecatedIsSpaceOrNewline(m_underlyingIterator.text()[0])) {
             m_didLookAhead = true;
             return;
         }
@@ -1612,11 +1631,33 @@ static inline UChar foldQuoteMark(UChar c)
         case leftDoubleQuotationMark:
         case leftLowDoubleQuotationMark:
         case rightDoubleQuotationMark:
+        case leftPointingDoubleAngleQuotationMark:
+        case rightPointingDoubleAngleQuotationMark:
+        case doubleHighReversed9QuotationMark:
+        case doubleLowReversed9QuotationMark:
+        case reversedDoublePrimeQuotationMark:
+        case doublePrimeQuotationMark:
+        case lowDoublePrimeQuotationMark:
+        case fullwidthQuotationMark:
             return '"';
         case hebrewPunctuationGeresh:
         case leftSingleQuotationMark:
         case leftLowSingleQuotationMark:
         case rightSingleQuotationMark:
+        case singleLow9QuotationMark:
+        case singleLeftPointingAngleQuotationMark:
+        case singleRightPointingAngleQuotationMark:
+        case leftCornerBracket:
+        case rightCornerBracket:
+        case leftWhiteCornerBracket:
+        case rightWhiteCornerBracket:
+        case presentationFormForVerticalLeftCornerBracket:
+        case presentationFormForVerticalRightCornerBracket:
+        case presentationFormForVerticalLeftWhiteCornerBracket:
+        case presentationFormForVerticalRightWhiteCornerBracket:
+        case fullwidthApostrophe:
+        case halfwidthLeftCornerBracket:
+        case halfwidthRightCornerBracket:
             return '\'';
         default:
             return c;
@@ -1628,17 +1669,36 @@ static inline UChar foldQuoteMark(UChar c)
 // to add tailoring on top of the locale-specific tailoring as of this writing.
 String foldQuoteMarks(const String& stringToFold)
 {
-    String result(stringToFold);
-    result.replace(hebrewPunctuationGeresh, '\'');
-    result.replace(hebrewPunctuationGershayim, '"');
-    result.replace(leftDoubleQuotationMark, '"');
-    result.replace(leftLowDoubleQuotationMark, '"');
-    result.replace(leftSingleQuotationMark, '\'');
-    result.replace(leftLowSingleQuotationMark, '\'');
-    result.replace(rightDoubleQuotationMark, '"');
-    result.replace(rightSingleQuotationMark, '\'');
-
-    return result;
+    String result = makeStringByReplacingAll(stringToFold, hebrewPunctuationGeresh, '\'');
+    result = makeStringByReplacingAll(result, hebrewPunctuationGershayim, '"');
+    result = makeStringByReplacingAll(result, leftDoubleQuotationMark, '"');
+    result = makeStringByReplacingAll(result, leftLowDoubleQuotationMark, '"');
+    result = makeStringByReplacingAll(result, leftSingleQuotationMark, '\'');
+    result = makeStringByReplacingAll(result, leftLowSingleQuotationMark, '\'');
+    result = makeStringByReplacingAll(result, rightDoubleQuotationMark, '"');
+    result = makeStringByReplacingAll(result, singleLow9QuotationMark, '\'');
+    result = makeStringByReplacingAll(result, singleLeftPointingAngleQuotationMark, '\'');
+    result = makeStringByReplacingAll(result, singleRightPointingAngleQuotationMark, '\'');
+    result = makeStringByReplacingAll(result, leftCornerBracket, '\'');
+    result = makeStringByReplacingAll(result, rightCornerBracket, '\'');
+    result = makeStringByReplacingAll(result, leftWhiteCornerBracket, '\'');
+    result = makeStringByReplacingAll(result, rightWhiteCornerBracket, '\'');
+    result = makeStringByReplacingAll(result, presentationFormForVerticalLeftCornerBracket, '\'');
+    result = makeStringByReplacingAll(result, presentationFormForVerticalRightCornerBracket, '\'');
+    result = makeStringByReplacingAll(result, presentationFormForVerticalLeftWhiteCornerBracket, '\'');
+    result = makeStringByReplacingAll(result, presentationFormForVerticalRightWhiteCornerBracket, '\'');
+    result = makeStringByReplacingAll(result, fullwidthApostrophe, '\'');
+    result = makeStringByReplacingAll(result, halfwidthLeftCornerBracket, '\'');
+    result = makeStringByReplacingAll(result, halfwidthRightCornerBracket, '\'');
+    result = makeStringByReplacingAll(result, leftPointingDoubleAngleQuotationMark, '"');
+    result = makeStringByReplacingAll(result, rightPointingDoubleAngleQuotationMark, '"');
+    result = makeStringByReplacingAll(result, doubleHighReversed9QuotationMark, '"');
+    result = makeStringByReplacingAll(result, doubleLowReversed9QuotationMark, '"');
+    result = makeStringByReplacingAll(result, reversedDoublePrimeQuotationMark, '"');
+    result = makeStringByReplacingAll(result, doublePrimeQuotationMark, '"');
+    result = makeStringByReplacingAll(result, lowDoublePrimeQuotationMark, '"');
+    result = makeStringByReplacingAll(result, fullwidthQuotationMark, '"');
+    return makeStringByReplacingAll(result, rightSingleQuotationMark, '\'');
 }
 
 #if !UCONFIG_NO_COLLATION
@@ -1657,7 +1717,7 @@ static UStringSearch* createSearcher()
     UErrorCode status = U_ZERO_ERROR;
     auto searchCollatorName = makeString(currentSearchLocaleID(), "@collation=search");
     UStringSearch* searcher = usearch_open(&newlineCharacter, 1, &newlineCharacter, 1, searchCollatorName.utf8().data(), 0, &status);
-    ASSERT(status == U_ZERO_ERROR || status == U_USING_FALLBACK_WARNING || status == U_USING_DEFAULT_WARNING);
+    ASSERT(U_SUCCESS(status) || status == U_USING_FALLBACK_WARNING || status == U_USING_DEFAULT_WARNING);
     return searcher;
 }
 
@@ -1964,10 +2024,10 @@ inline SearchBuffer::SearchBuffer(const String& target, FindOptions options)
 
     UErrorCode status = U_ZERO_ERROR;
     usearch_setAttribute(searcher, USEARCH_ELEMENT_COMPARISON, comparator, &status);
-    ASSERT(status == U_ZERO_ERROR);
+    ASSERT(U_SUCCESS(status));
 
     usearch_setPattern(searcher, m_targetCharacters, targetLength, &status);
-    ASSERT(status == U_ZERO_ERROR);
+    ASSERT(U_SUCCESS(status));
 
     // The kana workaround requires a normalized copy of the target string.
     if (m_targetRequiresKanaWorkaround)
@@ -1979,9 +2039,9 @@ inline SearchBuffer::~SearchBuffer()
     // Leave the static object pointing to a valid string.
     UErrorCode status = U_ZERO_ERROR;
     usearch_setPattern(WebCore::searcher(), &newlineCharacter, 1, &status);
-    ASSERT(status == U_ZERO_ERROR);
+    ASSERT(U_SUCCESS(status));
     usearch_setText(WebCore::searcher(), &newlineCharacter, 1, &status);
-    ASSERT(status == U_ZERO_ERROR);
+    ASSERT(U_SUCCESS(status));
 
     unlockSearcher();
 }
@@ -2027,7 +2087,7 @@ inline void SearchBuffer::prependContext(StringView text)
     size_t wordBoundaryContextStart = text.length();
     if (wordBoundaryContextStart) {
         U16_BACK_1(text, 0, wordBoundaryContextStart);
-        wordBoundaryContextStart = startOfLastWordBoundaryContext(text.substring(0, wordBoundaryContextStart));
+        wordBoundaryContextStart = startOfLastWordBoundaryContext(text.left(wordBoundaryContextStart));
     }
 
     size_t usableLength = std::min(m_buffer.capacity() - m_prefixLength, text.length() - wordBoundaryContextStart);
@@ -2189,10 +2249,10 @@ inline size_t SearchBuffer::search(size_t& start)
 
     UErrorCode status = U_ZERO_ERROR;
     usearch_setText(searcher, m_buffer.data(), size, &status);
-    ASSERT(status == U_ZERO_ERROR);
+    ASSERT(U_SUCCESS(status));
 
     usearch_setOffset(searcher, m_prefixLength, &status);
-    ASSERT(status == U_ZERO_ERROR);
+    ASSERT(U_SUCCESS(status));
 
     int matchStart = usearch_next(searcher, &status);
     ASSERT(U_SUCCESS(status));
@@ -2230,7 +2290,7 @@ nextMatch:
         || (m_options.contains(AtWordStarts) && !isWordStartMatch(matchStart, matchedLength))
         || (m_options.contains(AtWordEnds) && !isWordEndMatch(matchStart, matchedLength))) {
         matchStart = usearch_next(searcher, &status);
-        ASSERT(status == U_ZERO_ERROR);
+        ASSERT(U_SUCCESS(status));
         goto nextMatch;
     }
 
@@ -2475,7 +2535,7 @@ String plainText(const SimpleRange& range, TextIteratorBehaviors defaultBehavior
 
 String plainTextReplacingNoBreakSpace(const SimpleRange& range, TextIteratorBehaviors defaultBehaviors, bool isDisplayString)
 {
-    return plainText(range, defaultBehaviors, isDisplayString).replace(noBreakSpace, ' ');
+    return makeStringByReplacingAll(plainText(range, defaultBehaviors, isDisplayString), noBreakSpace, ' ');
 }
 
 static void forEachMatch(const SimpleRange& range, const String& target, FindOptions options, const Function<bool(CharacterRange)>& match)

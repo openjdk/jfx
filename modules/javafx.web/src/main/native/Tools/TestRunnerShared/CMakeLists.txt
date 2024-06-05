@@ -1,14 +1,12 @@
-WEBKIT_FRAMEWORK_DECLARE(TestRunnerShared)
-
 set(DumpRenderTree_BINDINGS_DIR ${TOOLS_DIR}/DumpRenderTree/Bindings)
 set(TestRunnerShared_DIR ${TOOLS_DIR}/TestRunnerShared)
 
 file(MAKE_DIRECTORY ${TestRunnerShared_DERIVED_SOURCES_DIR})
 
 set(TestRunnerShared_SOURCES
-    ReftestFunctions.cpp
     TestCommand.cpp
     TestFeatures.cpp
+    WPTFunctions.cpp
 
     Bindings/JSBasics.cpp
     Bindings/JSWrapper.cpp
@@ -17,15 +15,16 @@ set(TestRunnerShared_SOURCES
     UIScriptContext/UIScriptControllerShared.cpp
 )
 
-set(TestRunnerShared_PRIVATE_LIBRARIES
-    WebKit::WebCoreTestSupport
-)
-
+set(TestRunnerShared_LIBRARIES WebKit::WebCoreTestSupport)
 set(TestRunnerShared_FRAMEWORKS
     JavaScriptCore
+    PAL
+    WTF
+    WebCore
 )
-
-add_dependencies(TestRunnerShared WebCore_CopyPrivateHeaders)
+if (NOT USE_SYSTEM_MALLOC)
+    list(APPEND WebKitTestRunner_FRAMEWORKS bmalloc)
+endif ()
 
 set(TestRunnerShared_PRIVATE_INCLUDE_DIRECTORIES
     ${CMAKE_BINARY_DIR}
@@ -34,12 +33,6 @@ set(TestRunnerShared_PRIVATE_INCLUDE_DIRECTORIES
     ${TestRunnerShared_DIR}/Bindings
     ${TestRunnerShared_DIR}/UIScriptContext
     ${TestRunnerShared_DIR}/config
-    ${WebCore_PRIVATE_FRAMEWORK_HEADERS_DIR}
-)
-
-list(APPEND TestRunnerShared_PRIVATE_INCLUDE_DIRECTORIES
-    ${PAL_FRAMEWORK_HEADERS_DIR}
-    ${WebCore_PRIVATE_FRAMEWORK_HEADERS_DIR}
 )
 
 set(TestRunnerShared_IDL_FILES
@@ -55,8 +48,14 @@ GENERATE_BINDINGS(TestRunnerSharedBindings
     DESTINATION ${TestRunnerShared_DERIVED_SOURCES_DIR}
     GENERATOR DumpRenderTree)
 
-set(TestRunnerShared_LIBRARY_TYPE OBJECT)
 set(TestRunnerShared_DEPENDENCIES TestRunnerSharedBindings)
+set(TestRunnerShared_INTERFACE_LIBRARIES TestRunnerShared)
+set(TestRunnerShared_INTERFACE_INCLUDE_DIRECTORIES
+    ${TestRunnerShared_DIR}
+    ${TestRunnerShared_DIR}/Bindings
+    ${TestRunnerShared_DIR}/UIScriptContext
+)
 
+WEBKIT_LIBRARY_DECLARE(TestRunnerShared)
 WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
-WEBKIT_FRAMEWORK(TestRunnerShared)
+WEBKIT_LIBRARY(TestRunnerShared)

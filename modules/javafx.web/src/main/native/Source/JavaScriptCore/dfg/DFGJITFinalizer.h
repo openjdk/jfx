@@ -35,17 +35,18 @@ namespace JSC { namespace DFG {
 
 class JITFinalizer final : public Finalizer {
 public:
-    JITFinalizer(Plan&, Ref<JITCode>&&, std::unique_ptr<LinkBuffer>, MacroAssemblerCodePtr<JSEntryPtrTag> withArityCheck = MacroAssemblerCodePtr<JSEntryPtrTag>(MacroAssemblerCodePtr<JSEntryPtrTag>::EmptyValue));
+    JITFinalizer(Plan&, Ref<JITCode>&&, std::unique_ptr<LinkBuffer>, CodePtr<JSEntryPtrTag> withArityCheck = CodePtr<JSEntryPtrTag>(CodePtr<JSEntryPtrTag>::EmptyValue));
     ~JITFinalizer() final;
 
     size_t codeSize() final;
     bool finalize() final;
+    bool isFailed() final { return false; }
 
 private:
 
     Ref<JITCode> m_jitCode;
     std::unique_ptr<LinkBuffer> m_linkBuffer;
-    MacroAssemblerCodePtr<JSEntryPtrTag> m_withArityCheck;
+    CodePtr<JSEntryPtrTag> m_withArityCheck;
 };
 
 } } // namespace JSC::DFG

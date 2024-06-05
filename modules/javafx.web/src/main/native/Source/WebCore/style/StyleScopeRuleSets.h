@@ -35,10 +35,14 @@ namespace WebCore {
 class CSSStyleRule;
 class CSSStyleSheet;
 class ExtensionStyleSheets;
+
+namespace MQ {
 class MediaQueryEvaluator;
+};
 
 namespace Style {
 
+enum class CascadeLevel : uint8_t;
 class InspectorCSSOMWrappers;
 class Resolver;
 
@@ -58,6 +62,8 @@ public:
     RuleSet* userAgentMediaQueryStyle() const;
     RuleSet& authorStyle() const { return *m_authorStyle; }
     RuleSet* userStyle() const;
+    RuleSet* styleForCascadeLevel(CascadeLevel);
+
     const RuleFeatureSet& features() const;
     RuleSet* sibling() const { return m_siblingRuleSet.get(); }
     RuleSet* uncommonAttribute() const { return m_uncommonAttributeRuleSet.get(); }
@@ -74,21 +80,24 @@ public:
     void initializeUserStyle();
 
     void resetAuthorStyle();
-    void appendAuthorStyleSheets(const Vector<RefPtr<CSSStyleSheet>>&, MediaQueryEvaluator*, Style::InspectorCSSOMWrappers&);
+    void appendAuthorStyleSheets(const Vector<RefPtr<CSSStyleSheet>>&, MQ::MediaQueryEvaluator*, Style::InspectorCSSOMWrappers&);
 
     void resetUserAgentMediaQueryStyle();
 
     bool hasViewportDependentMediaQueries() const;
+    bool hasContainerQueries() const;
 
-    std::optional<DynamicMediaQueryEvaluationChanges> evaluateDynamicMediaQueryRules(const MediaQueryEvaluator&);
+    std::optional<DynamicMediaQueryEvaluationChanges> evaluateDynamicMediaQueryRules(const MQ::MediaQueryEvaluator&);
 
     RuleFeatureSet& mutableFeatures();
 
     bool& isInvalidatingStyleWithRuleSets() { return m_isInvalidatingStyleWithRuleSets; }
 
+    bool hasMatchingUserOrAuthorStyle(const Function<bool(RuleSet&)>&);
+
 private:
     void collectFeatures() const;
-    void collectRulesFromUserStyleSheets(const Vector<RefPtr<CSSStyleSheet>>&, RuleSet& userStyle, const MediaQueryEvaluator&);
+    void collectRulesFromUserStyleSheets(const Vector<RefPtr<CSSStyleSheet>>&, RuleSet& userStyle, const MQ::MediaQueryEvaluator&);
     void updateUserAgentMediaQueryStyleIfNeeded() const;
 
     RefPtr<RuleSet> m_authorStyle;

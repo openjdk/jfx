@@ -33,6 +33,7 @@ class Node;
 class ShadowRoot;
 class StyleSheet;
 class CSSStyleSheet;
+class WeakPtrImplWithEventTargetData;
 
 class StyleSheetList final : public RefCounted<StyleSheetList> {
 public:
@@ -40,10 +41,12 @@ public:
     static Ref<StyleSheetList> create(ShadowRoot& shadowRoot) { return adoptRef(*new StyleSheetList(shadowRoot)); }
     WEBCORE_EXPORT ~StyleSheetList();
 
+    bool isSupportedPropertyIndex(unsigned index) const { return index < length(); }
     WEBCORE_EXPORT unsigned length() const;
     WEBCORE_EXPORT StyleSheet* item(unsigned index);
 
     CSSStyleSheet* namedItem(const AtomString&) const;
+    bool isSupportedPropertyName(const AtomString&) const;
     Vector<AtomString> supportedPropertyNames();
 
     Node* ownerNode() const;
@@ -55,7 +58,7 @@ private:
     StyleSheetList(ShadowRoot&);
     const Vector<RefPtr<StyleSheet>>& styleSheets() const;
 
-    WeakPtr<Document> m_document;
+    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
     ShadowRoot* m_shadowRoot { nullptr };
     Vector<RefPtr<StyleSheet>> m_detachedStyleSheets;
 };

@@ -28,19 +28,20 @@
 
 #if ENABLE(MEDIA_SESSION)
 
-#include "DOMWindow.h"
 #include "EventNames.h"
 #include "HTMLMediaElement.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSMediaPositionState.h"
 #include "JSMediaSessionAction.h"
 #include "JSMediaSessionPlaybackState.h"
+#include "LocalDOMWindow.h"
 #include "Logging.h"
 #include "MediaMetadata.h"
 #include "MediaSessionCoordinator.h"
 #include "Navigator.h"
 #include "Page.h"
 #include "PlatformMediaSessionManager.h"
+#include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/JSONValues.h>
 #include <wtf/SortedArrayMap.h>
 
@@ -48,7 +49,7 @@ namespace WebCore {
 
 static const void* nextLogIdentifier()
 {
-    static uint64_t logIdentifier = cryptographicallyRandomNumber();
+    static uint64_t logIdentifier = cryptographicallyRandomNumber<uint32_t>();
     return reinterpret_cast<const void*>(++logIdentifier);
 }
 
@@ -175,6 +176,11 @@ void MediaSession::stop()
 #endif
 }
 
+bool MediaSession::virtualHasPendingActivity() const
+{
+    return hasActiveActionHandlers();
+}
+
 void MediaSession::setMetadata(RefPtr<MediaMetadata>&& metadata)
 {
     ALWAYS_LOG(LOGIDENTIFIER);
@@ -228,11 +234,8 @@ void MediaSession::setPlaybackState(MediaSessionPlaybackState state)
 
     ALWAYS_LOG(LOGIDENTIFIER, state);
 
-    auto currentPosition = this->currentPosition();
-    if (m_positionState && currentPosition) {
-        m_positionState->position = *currentPosition;
-        m_timeAtLastPositionUpdate = MonotonicTime::now();
-    }
+    updateReportedPosition();
+
     m_playbackState = state;
     notifyPlaybackStateObservers();
 }
@@ -241,15 +244,22 @@ void MediaSession::setActionHandler(MediaSessionAction action, RefPtr<MediaSessi
 {
     if (handler) {
         ALWAYS_LOG(LOGIDENTIFIER, "adding ", action);
+        {
+            Locker lock { m_actionHandlersLock };
         m_actionHandlers.set(action, handler);
+        }
         auto platformCommand = platformCommandForMediaSessionAction(action);
         if (platformCommand != PlatformMediaSession::NoCommand)
             PlatformMediaSessionManager::sharedManager().addSupportedCommand(platformCommand);
     } else {
-        if (m_actionHandlers.contains(action)) {
-            ALWAYS_LOG(LOGIDENTIFIER, "removing ", action);
-            m_actionHandlers.remove(action);
+        bool containedAction;
+        {
+            Locker lock { m_actionHandlersLock };
+            containedAction = m_actionHandlers.remove(action);
         }
+
+        if (containedAction)
+            ALWAYS_LOG(LOGIDENTIFIER, "removing ", action);
         PlatformMediaSessionManager::sharedManager().removeSupportedCommand(platformCommandForMediaSessionAction(action));
     }
 
@@ -270,7 +280,12 @@ void MediaSession::callActionHandler(const MediaSessionActionDetails& actionDeta
 
 bool MediaSession::callActionHandler(const MediaSessionActionDetails& actionDetails, TriggerGestureIndicator triggerGestureIndicator)
 {
-    if (auto handler = m_actionHandlers.get(actionDetails.action)) {
+    RefPtr<MediaSessionActionHandler> handler;
+    {
+        Locker lock { m_actionHandlersLock };
+        handler = m_actionHandlers.get(actionDetails.action);
+    }
+    if (handler) {
         std::optional<UserGestureIndicator> maybeGestureIndicator;
         if (triggerGestureIndicator == TriggerGestureIndicator::Yes)
             maybeGestureIndicator.emplace(ProcessingUserGesture, document());
@@ -394,6 +409,29 @@ RefPtr<HTMLMediaElement> MediaSession::activeMediaElement() const
         return nullptr;
 
     return HTMLMediaElement::bestMediaElementForRemoteControls(MediaElementSession::PlaybackControlsPurpose::MediaSession, doc);
+}
+
+void MediaSession::updateReportedPosition()
+{
+    auto currentPosition = this->currentPosition();
+    if (m_positionState && currentPosition) {
+        m_lastReportedPosition = m_positionState->position = *currentPosition;
+        m_timeAtLastPositionUpdate = MonotonicTime::now();
+    }
+}
+
+void MediaSession::willBeginPlayback()
+{
+    updateReportedPosition();
+    m_playbackState = MediaSessionPlaybackState::Playing;
+    notifyPositionStateObservers();
+}
+
+void MediaSession::willPausePlayback()
+{
+    updateReportedPosition();
+    m_playbackState = MediaSessionPlaybackState::Paused;
+    notifyPositionStateObservers();
 }
 
 #if ENABLE(MEDIA_SESSION_COORDINATOR)

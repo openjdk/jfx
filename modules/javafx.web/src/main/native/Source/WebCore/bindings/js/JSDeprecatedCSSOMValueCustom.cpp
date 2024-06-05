@@ -30,7 +30,7 @@
 #include "JSDeprecatedCSSOMPrimitiveValue.h"
 #include "JSDeprecatedCSSOMValueList.h"
 #include "JSNode.h"
-
+#include "WebCoreOpaqueRootInlines.h"
 
 namespace WebCore {
 using namespace JSC;
@@ -38,13 +38,13 @@ using namespace JSC;
 bool JSDeprecatedCSSOMValueOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, AbstractSlotVisitor& visitor, const char** reason)
 {
     JSDeprecatedCSSOMValue* jsCSSValue = jsCast<JSDeprecatedCSSOMValue*>(handle.slot()->asCell());
-    if (!jsCSSValue->hasCustomProperties(jsCSSValue->vm()))
+    if (!jsCSSValue->hasCustomProperties())
         return false;
 
     if (UNLIKELY(reason))
         *reason = "CSSStyleDeclaration is opaque root";
 
-    return visitor.containsOpaqueRoot(root(&jsCSSValue->wrapped().owner()));
+    return containsWebCoreOpaqueRoot(visitor, jsCSSValue->wrapped().owner());
 }
 
 JSValue toJSNewlyCreated(JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<DeprecatedCSSOMValue>&& value)

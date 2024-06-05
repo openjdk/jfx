@@ -28,6 +28,7 @@
 #include "DebugHeap.h"
 #include "Environment.h"
 #include "PerProcess.h"
+#include "ProcessCheck.h"
 
 #if BENABLE(LIBPAS)
 #include "bmalloc_heap_config.h"
@@ -160,7 +161,7 @@ bool isEnabled(HeapKind)
 void setScavengerThreadQOSClass(qos_class_t overrideClass)
 {
 #if BENABLE(LIBPAS)
-    pas_scavenger_requested_qos_class = overrideClass;
+    pas_scavenger_set_requested_qos_class(overrideClass);
 #endif
 #if !BUSE(LIBPAS)
     if (!DebugHeap::tryGet()) {
@@ -198,9 +199,12 @@ void decommitAlignedPhysical(void* object, size_t size, HeapKind kind)
 void enableMiniMode()
 {
 #if BENABLE(LIBPAS)
+    if (!shouldAllowMiniMode())
+        return;
+
     // Speed up the scavenger.
-    pas_scavenger_period_in_milliseconds = 10.;
-    pas_scavenger_max_epoch_delta = 10ll * 1000ll * 1000ll;
+    pas_scavenger_period_in_milliseconds = 5.;
+    pas_scavenger_max_epoch_delta = 5ll * 1000ll * 1000ll;
 
     // Do eager scavenging anytime pages are allocated or committed.
     pas_physical_page_sharing_pool_balancing_enabled = true;

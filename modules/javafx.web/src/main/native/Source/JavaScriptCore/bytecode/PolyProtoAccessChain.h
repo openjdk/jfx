@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "CacheableIdentifier.h"
 #include "StructureID.h"
 #include "VM.h"
 #include <wtf/FixedVector.h>
@@ -41,18 +42,14 @@ class Structure;
 class PolyProtoAccessChain final : public ThreadSafeRefCounted<PolyProtoAccessChain> {
 public:
     // Returns nullptr when invalid.
-    static RefPtr<PolyProtoAccessChain> tryCreate(JSGlobalObject*, JSCell* base, const PropertySlot&);
-    static RefPtr<PolyProtoAccessChain> tryCreate(JSGlobalObject*, JSCell* base, JSObject* target);
+    static RefPtr<PolyProtoAccessChain> tryCreate(JSGlobalObject*, JSCell* base, CacheableIdentifier, const PropertySlot&);
+    static RefPtr<PolyProtoAccessChain> tryCreate(JSGlobalObject*, JSCell* base, CacheableIdentifier, JSObject* target);
 
     const FixedVector<StructureID>& chain() const { return m_chain; }
 
     void dump(Structure* baseStructure, PrintStream& out) const;
 
-    bool operator==(const PolyProtoAccessChain& other) const;
-    bool operator!=(const PolyProtoAccessChain& other) const
-    {
-        return !(*this == other);
-    }
+    bool operator==(const PolyProtoAccessChain&) const;
 
     bool needImpurePropertyWatchpoint(VM&) const;
 

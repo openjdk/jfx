@@ -34,6 +34,7 @@
 
 #include "DOMTokenList.h"
 #include "Document.h"
+#include "ElementInlines.h"
 #include "HTMLFormElement.h"
 #include "HTMLNames.h"
 #include <wtf/IsoMallocInlines.h>
@@ -60,7 +61,7 @@ Ref<HTMLOutputElement> HTMLOutputElement::create(Document& document)
 
 const AtomString& HTMLOutputElement::formControlType() const
 {
-    static MainThreadNeverDestroyed<const AtomString> output("output", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> output("output"_s);
     return output;
 }
 
@@ -69,15 +70,16 @@ bool HTMLOutputElement::supportsFocus() const
     return HTMLElement::supportsFocus();
 }
 
-void HTMLOutputElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLOutputElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     if (name == HTMLNames::forAttr && m_forTokens)
-        m_forTokens->associatedAttributeValueChanged(value);
-    HTMLFormControlElement::parseAttribute(name, value);
+        m_forTokens->associatedAttributeValueChanged(newValue);
+    HTMLFormControlElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void HTMLOutputElement::reset()
 {
+    setInteractedWithSinceLastFormSubmitEvent(false);
     stringReplaceAll(defaultValue());
     m_defaultValueOverride = { };
 }
@@ -87,10 +89,10 @@ String HTMLOutputElement::value() const
     return textContent();
 }
 
-void HTMLOutputElement::setValue(const String& value)
+void HTMLOutputElement::setValue(String&& value)
 {
     m_defaultValueOverride = defaultValue();
-    stringReplaceAll(value);
+    stringReplaceAll(WTFMove(value));
 }
 
 String HTMLOutputElement::defaultValue() const
@@ -98,18 +100,18 @@ String HTMLOutputElement::defaultValue() const
     return m_defaultValueOverride.isNull() ? textContent() : m_defaultValueOverride;
 }
 
-void HTMLOutputElement::setDefaultValue(const String& value)
+void HTMLOutputElement::setDefaultValue(String&& value)
 {
     if (m_defaultValueOverride.isNull())
-        stringReplaceAll(value);
+        stringReplaceAll(WTFMove(value));
     else
-        m_defaultValueOverride = value;
+        m_defaultValueOverride = WTFMove(value);
 }
 
 DOMTokenList& HTMLOutputElement::htmlFor()
 {
     if (!m_forTokens)
-        m_forTokens = makeUnique<DOMTokenList>(*this, HTMLNames::forAttr);
+        m_forTokens = makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::forAttr);
     return *m_forTokens;
 }
 

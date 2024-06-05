@@ -62,13 +62,10 @@ private:
     SampleFlags flags() const override;
     PlatformSample platformSample() const override;
     PlatformSample::Type platformSampleType() const override { return PlatformSample::MockSampleBoxType; }
-    std::optional<ByteRange> byteRange() const override { return std::nullopt; }
     FloatSize presentationSize() const override { return FloatSize(); }
     void dump(PrintStream&) const override;
     void offsetTimestampsBy(const MediaTime& offset) override { m_box.offsetTimestampsBy(offset); }
     void setTimestamps(const MediaTime& presentationTimestamp, const MediaTime& decodeTimestamp) override { m_box.setTimestamps(presentationTimestamp, decodeTimestamp); }
-    bool isDivisable() const override { return false; }
-    std::pair<RefPtr<MediaSample>, RefPtr<MediaSample>> divide(const MediaTime&, UseEndTime) override { return {nullptr, nullptr}; }
     Ref<MediaSample> createNonDisplayingCopy() const override;
 
     unsigned generation() const { return m_box.generation(); }
@@ -136,12 +133,12 @@ MockSourceBufferPrivate::MockSourceBufferPrivate(MockMediaSourcePrivate* parent)
 
 MockSourceBufferPrivate::~MockSourceBufferPrivate() = default;
 
-void MockSourceBufferPrivate::append(Vector<uint8_t>&& data)
+void MockSourceBufferPrivate::appendInternal(Ref<SharedBuffer>&& data)
 {
-    m_inputBuffer.appendVector(data);
-    SourceBufferPrivateClient::AppendResult result = SourceBufferPrivateClient::AppendResult::AppendSucceeded;
+    m_inputBuffer.appendVector(data->extractData());
+    bool parsingSucceeded = true;
 
-    while (m_inputBuffer.size() && result == SourceBufferPrivateClient::AppendResult::AppendSucceeded) {
+    while (m_inputBuffer.size() && parsingSucceeded) {
         auto buffer = ArrayBuffer::create(m_inputBuffer.data(), m_inputBuffer.size());
         uint64_t boxLength = MockBox::peekLength(buffer.ptr());
         if (boxLength > buffer->byteLength())
@@ -155,17 +152,11 @@ void MockSourceBufferPrivate::append(Vector<uint8_t>&& data)
             MockSampleBox sampleBox = MockSampleBox(buffer.ptr());
             didReceiveSample(sampleBox);
         } else
-            result = SourceBufferPrivateClient::AppendResult::ParsingFailed;
-
+            parsingSucceeded = false;
         m_inputBuffer.remove(0, boxLength);
     }
 
-    // Resolve the changes in TrackBuffers' buffered ranges
-    // into the SourceBuffer's buffered ranges
-    updateBufferedFromTrackBuffers(m_mediaSource->isEnded());
-
-    if (m_client)
-        m_client->sourceBufferPrivateAppendComplete(result);
+    SourceBufferPrivate::appendCompleted(parsingSucceeded, m_mediaSource->isEnded());
 }
 
 void MockSourceBufferPrivate::didReceiveInitializationSegment(const MockInitializationBox& initBox)
@@ -196,7 +187,10 @@ void MockSourceBufferPrivate::didReceiveInitializationSegment(const MockInitiali
         }
     }
 
-    SourceBufferPrivate::didReceiveInitializationSegment(WTFMove(segment), []() { });
+    SourceBufferPrivate::didReceiveInitializationSegment(
+        WTFMove(segment),
+        [] (auto&) { return true; },
+        [] (auto) { });
 }
 
 void MockSourceBufferPrivate::didReceiveSample(const MockSampleBox& sampleBox)
@@ -207,11 +201,7 @@ void MockSourceBufferPrivate::didReceiveSample(const MockSampleBox& sampleBox)
     SourceBufferPrivate::didReceiveSample(MockMediaSample::create(sampleBox));
 }
 
-void MockSourceBufferPrivate::abort()
-{
-}
-
-void MockSourceBufferPrivate::resetParserState()
+void MockSourceBufferPrivate::resetParserStateInternal()
 {
 }
 
@@ -223,13 +213,13 @@ void MockSourceBufferPrivate::removedFromMediaSource()
 
 MediaPlayer::ReadyState MockSourceBufferPrivate::readyState() const
 {
-    return m_mediaSource ? m_mediaSource->player().readyState() : MediaPlayer::ReadyState::HaveNothing;
+    return m_mediaSource && m_mediaSource->player() ? m_mediaSource->player()->readyState() : MediaPlayer::ReadyState::HaveNothing;
 }
 
 void MockSourceBufferPrivate::setReadyState(MediaPlayer::ReadyState readyState)
 {
-    if (m_mediaSource)
-        m_mediaSource->player().setReadyState(readyState);
+    if (m_mediaSource && m_mediaSource->player())
+        m_mediaSource->player()->setReadyState(readyState);
 }
 
 void MockSourceBufferPrivate::setActive(bool isActive)

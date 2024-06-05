@@ -37,12 +37,12 @@
 #include "DOMApplicationCache.h"
 #include "DocumentLoader.h"
 #include "EventNames.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "HTTPHeaderNames.h"
 #include "HTTPHeaderValues.h"
 #include "InspectorInstrumentation.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "NavigationScheduler.h"
 #include "NetworkLoadMetrics.h"
 #include "Page.h"
@@ -120,7 +120,7 @@ ApplicationCache* ApplicationCacheGroup::fallbackCacheForMainRequest(const Resou
     return group->newestCache();
 }
 
-void ApplicationCacheGroup::selectCache(Frame& frame, const URL& passedManifestURL)
+void ApplicationCacheGroup::selectCache(LocalFrame& frame, const URL& passedManifestURL)
 {
     ASSERT(frame.document());
     ASSERT(frame.page());
@@ -138,7 +138,7 @@ void ApplicationCacheGroup::selectCache(Frame& frame, const URL& passedManifestU
     }
 
     // Don't access anything on disk if private browsing is enabled.
-    if (frame.page()->usesEphemeralSession() || !frame.document()->securityOrigin().canAccessApplicationCache(frame.tree().top().document()->securityOrigin())) {
+    if (frame.page()->usesEphemeralSession() || frame.document()->canAccessResource(ScriptExecutionContext::ResourceType::ApplicationCache) != ScriptExecutionContext::HasResourceAccess::Yes) {
         postListenerTask(eventNames().checkingEvent, documentLoader);
         postListenerTask(eventNames().errorEvent, documentLoader);
         return;
@@ -200,7 +200,7 @@ void ApplicationCacheGroup::selectCache(Frame& frame, const URL& passedManifestU
     group.update(frame, ApplicationCacheUpdateWithBrowsingContext);
 }
 
-void ApplicationCacheGroup::selectCacheWithoutManifestURL(Frame& frame)
+void ApplicationCacheGroup::selectCacheWithoutManifestURL(LocalFrame& frame)
 {
     if (!frame.settings().offlineWebApplicationCacheEnabled())
         return;
@@ -212,7 +212,7 @@ void ApplicationCacheGroup::selectCacheWithoutManifestURL(Frame& frame)
     ASSERT(!documentLoader.applicationCacheHost().applicationCache());
 
     // Don't access anything on disk if private browsing is enabled.
-    if (frame.page()->usesEphemeralSession() || !frame.document()->securityOrigin().canAccessApplicationCache(frame.tree().top().document()->securityOrigin())) {
+    if (frame.page()->usesEphemeralSession() || frame.document()->canAccessResource(ScriptExecutionContext::ResourceType::ApplicationCache) != ScriptExecutionContext::HasResourceAccess::Yes) {
         postListenerTask(eventNames().checkingEvent, documentLoader);
         postListenerTask(eventNames().errorEvent, documentLoader);
         return;
@@ -366,7 +366,7 @@ void ApplicationCacheGroup::cacheDestroyed(ApplicationCache& cache)
     }
 }
 
-void ApplicationCacheGroup::stopLoadingInFrame(Frame& frame)
+void ApplicationCacheGroup::stopLoadingInFrame(LocalFrame& frame)
 {
     if (&frame != m_frame)
         return;
@@ -392,7 +392,7 @@ void ApplicationCacheGroup::makeObsolete()
     ASSERT(!m_storageID);
 }
 
-void ApplicationCacheGroup::update(Frame& frame, ApplicationCacheUpdateOption updateOption)
+void ApplicationCacheGroup::update(LocalFrame& frame, ApplicationCacheUpdateOption updateOption)
 {
     ASSERT(frame.loader().documentLoader());
     auto& documentLoader = *frame.loader().documentLoader();
@@ -407,7 +407,7 @@ void ApplicationCacheGroup::update(Frame& frame, ApplicationCacheUpdateOption up
     }
 
     // Don't access anything on disk if private browsing is enabled.
-    if (frame.page()->usesEphemeralSession() || !frame.document()->securityOrigin().canAccessApplicationCache(frame.tree().top().document()->securityOrigin())) {
+    if (frame.page()->usesEphemeralSession() || frame.document()->canAccessResource(ScriptExecutionContext::ResourceType::ApplicationCache) != ScriptExecutionContext::HasResourceAccess::Yes) {
         ASSERT(m_pendingMasterResourceLoaders.isEmpty());
         ASSERT(m_pendingEntries.isEmpty());
         ASSERT(!m_cacheBeingUpdated);
@@ -438,7 +438,7 @@ void ApplicationCacheGroup::update(Frame& frame, ApplicationCacheUpdateOption up
     auto request = createRequest(URL { m_manifestURL }, m_newestCache ? m_newestCache->manifestResource() : nullptr);
 
     m_currentResourceIdentifier = ResourceLoaderIdentifier::generate();
-    InspectorInstrumentation::willSendRequest(m_frame.get(), m_currentResourceIdentifier, m_frame->loader().documentLoader(), request, ResourceResponse { }, nullptr);
+    InspectorInstrumentation::willSendRequest(m_frame.get(), m_currentResourceIdentifier, m_frame->loader().documentLoader(), request, ResourceResponse { }, nullptr, nullptr);
 
     m_manifestLoader = ApplicationCacheResourceLoader::create(ApplicationCacheResource::Type::Manifest, documentLoader.cachedResourceLoader(), WTFMove(request), [this] (auto&& resourceOrError) {
         // 'this' is only valid if returned value is not Error::Abort.
@@ -478,7 +478,7 @@ ResourceRequest ApplicationCacheGroup::createRequest(URL&& url, ApplicationCache
     return request;
 }
 
-void ApplicationCacheGroup::abort(Frame& frame)
+void ApplicationCacheGroup::abort(LocalFrame& frame)
 {
     if (m_updateStatus == Idle)
         return;
@@ -896,10 +896,10 @@ void ApplicationCacheGroup::startLoadingEntry()
     ASSERT(!m_manifestLoader);
     ASSERT(!m_entryLoader);
 
-    auto request = createRequest(URL { { }, firstPendingEntryURL }, m_newestCache ? m_newestCache->resourceForURL(firstPendingEntryURL) : nullptr);
+    auto request = createRequest(URL { firstPendingEntryURL }, m_newestCache ? m_newestCache->resourceForURL(firstPendingEntryURL) : nullptr);
 
     m_currentResourceIdentifier = ResourceLoaderIdentifier::generate();
-    InspectorInstrumentation::willSendRequest(m_frame.get(), m_currentResourceIdentifier, m_frame->loader().documentLoader(), request, ResourceResponse { }, nullptr);
+    InspectorInstrumentation::willSendRequest(m_frame.get(), m_currentResourceIdentifier, m_frame->loader().documentLoader(), request, ResourceResponse { }, nullptr, nullptr);
 
     auto& documentLoader = *m_frame->loader().documentLoader();
     auto requestURL = request.url();
@@ -973,6 +973,7 @@ void ApplicationCacheGroup::associateDocumentLoaderWithCache(DocumentLoader* loa
 }
 
 class ChromeClientCallbackTimer final : public TimerBase {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     ChromeClientCallbackTimer(ApplicationCacheGroup& group)
         : m_group(group)

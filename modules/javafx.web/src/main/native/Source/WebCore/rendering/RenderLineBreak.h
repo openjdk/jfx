@@ -36,7 +36,7 @@ public:
     virtual ~RenderLineBreak();
 
     // FIXME: The lies here keep render tree dump based test results unchanged.
-    const char* renderName() const final { return m_isWBR ? "RenderWordBreak" : "RenderBR"; }
+    ASCIILiteral renderName() const final { return m_isWBR ? "RenderWordBreak"_s : "RenderBR"_s; }
 
     bool isWBR() const final { return m_isWBR; }
 
@@ -49,7 +49,7 @@ public:
 
     IntRect linesBoundingBox() const;
 
-    void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const final;
+    void boundingRects(Vector<LayoutRect>&, const LayoutPoint& accumulatedOffset) const final;
     void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed = nullptr) const final;
 #if PLATFORM(IOS_FAMILY)
     void collectSelectionGeometries(Vector<SelectionGeometry>&, unsigned startOffset = 0, unsigned endOffset = std::numeric_limits<unsigned>::max()) final;

@@ -31,6 +31,7 @@
 #include "ExecutableInfo.h"
 #include "ExpressionRangeInfo.h"
 #include "Identifier.h"
+#include "ImplementationVisibility.h"
 #include "Intrinsic.h"
 #include "JSCast.h"
 #include "ParserModes.h"
@@ -107,15 +108,13 @@ public:
     unsigned linkedStartColumn(unsigned parentStartColumn) const { return m_unlinkedBodyStartColumn + (!m_firstLineOffset ? parentStartColumn : 1); }
     unsigned linkedEndColumn(unsigned startColumn) const { return m_unlinkedBodyEndColumn + (!m_lineCount ? startColumn : 1); }
 
-    unsigned unlinkedFunctionNameStart() const { return m_unlinkedFunctionNameStart; }
+    unsigned unlinkedFunctionStart() const { return m_unlinkedFunctionStart; }
+    unsigned unlinkedFunctionEnd() const { return m_unlinkedFunctionEnd; }
     unsigned unlinkedBodyStartColumn() const { return m_unlinkedBodyStartColumn; }
     unsigned unlinkedBodyEndColumn() const { return m_unlinkedBodyEndColumn; }
     unsigned startOffset() const { return m_startOffset; }
     unsigned sourceLength() { return m_sourceLength; }
     unsigned parametersStartOffset() const { return m_parametersStartOffset; }
-    unsigned typeProfilingStartOffset() const { return m_typeProfilingStartOffset; }
-    unsigned typeProfilingEndOffset() const { return m_typeProfilingEndOffset; }
-    void setInvalidTypeProfilingOffsets();
 
     UnlinkedFunctionCodeBlock* unlinkedCodeBlockFor(
         VM&, const SourceCode&, CodeSpecializationKind, OptionSet<CodeGenerationMode>,
@@ -152,6 +151,7 @@ public:
     static constexpr bool needsDestruction = true;
     static void destroy(JSCell*);
 
+    ImplementationVisibility implementationVisibility() const { return static_cast<ImplementationVisibility>(m_implementationVisibility); }
     bool isBuiltinFunction() const { return m_isBuiltinFunction; }
     ConstructAbility constructAbility() const { return static_cast<ConstructAbility>(m_constructAbility); }
     JSParserScriptMode scriptMode() const { return static_cast<JSParserScriptMode>(m_scriptMode); }
@@ -213,7 +213,7 @@ public:
         ensureRareData().m_sourceMappingURLDirective = sourceMappingURL;
     }
 
-    void finalizeUnconditionally(VM&);
+    void finalizeUnconditionally(VM&, CollectionScope);
 
     struct RareData {
         WTF_MAKE_STRUCT_FAST_ALLOCATED;
@@ -261,7 +261,7 @@ private:
     unsigned m_isGeneratedFromCache : 1;
     unsigned m_lineCount : 31;
     unsigned m_hasCapturedVariables : 1;
-    unsigned m_unlinkedFunctionNameStart : 31;
+    unsigned m_unlinkedFunctionStart: 31;
     unsigned m_isBuiltinFunction : 1;
     unsigned m_unlinkedBodyStartColumn : 31;
     unsigned m_isBuiltinDefaultClassConstructor : 1;
@@ -273,17 +273,17 @@ private:
     unsigned m_superBinding : 1;
     unsigned m_parametersStartOffset : 31;
     unsigned m_isCached : 1;
-    unsigned m_typeProfilingStartOffset : 31;
+    unsigned m_unlinkedFunctionEnd : 31;
     unsigned m_needsClassFieldInitializer : 1;
-    unsigned m_typeProfilingEndOffset;
     unsigned m_parameterCount : 31;
     unsigned m_privateBrandRequirement : 1;
-    unsigned m_features : 14;
-    unsigned m_constructorKind : 2;
+    CodeFeatures m_features : bitWidthOfCodeFeatures;
+    uint16_t m_constructorKind : 2;
     SourceParseMode m_sourceParseMode;
-    unsigned m_lexicalScopeFeatures : 4;
-    unsigned m_functionMode : 2; // FunctionMode
-    unsigned m_derivedContextType: 2;
+    uint8_t m_implementationVisibility : bitWidthOfImplementationVisibility;
+    uint8_t m_lexicalScopeFeatures : bitWidthOfLexicalScopeFeatures;
+    uint8_t m_functionMode : 2; // FunctionMode
+    uint8_t m_derivedContextType : 2;
 
     union {
         WriteBarrier<UnlinkedFunctionCodeBlock> m_unlinkedCodeBlockForCall;
@@ -319,5 +319,9 @@ public:
 
     DECLARE_EXPORT_INFO;
 };
+
+#if !ASSERT_ENABLED
+static_assert(sizeof(UnlinkedFunctionExecutable) <= 96, "UnlinkedFunctionExecutable needs to be small");
+#endif
 
 } // namespace JSC

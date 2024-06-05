@@ -40,9 +40,9 @@ public:
     };
 
     Animation()
-        : m_keyframes(WebCore::AnimatedPropertyInvalid)
+        : m_keyframes(WebCore::AnimatedProperty::Invalid)
     { }
-    Animation(const String&, const WebCore::KeyframeValueList&, const WebCore::FloatSize&, const WebCore::Animation&, bool, MonotonicTime, Seconds, AnimationState);
+    Animation(const String&, const WebCore::KeyframeValueList&, const WebCore::FloatSize&, const WebCore::Animation&, MonotonicTime, Seconds, AnimationState);
 
     WEBCORE_EXPORT Animation(const Animation&);
     Animation& operator=(const Animation&);
@@ -69,9 +69,8 @@ private:
     RefPtr<WebCore::TimingFunction> m_timingFunction;
     double m_iterationCount;
     double m_duration;
-    WebCore::Animation::AnimationDirection m_direction;
+    WebCore::Animation::Direction m_direction;
     bool m_fillsForwards;
-    bool m_listsMatch;
     MonotonicTime m_startTime;
     Seconds m_pauseTime;
     Seconds m_totalRunningTime;
@@ -85,7 +84,7 @@ public:
 
     void add(const Animation&);
     void remove(const String& name);
-    void remove(const String& name, WebCore::AnimatedPropertyID);
+    void remove(const String& name, WebCore::AnimatedProperty);
     void pause(const String&, Seconds);
     void suspend(MonotonicTime);
     void resume();
@@ -99,7 +98,7 @@ public:
     Vector<Animation>& animations() { return m_animations; }
 
     bool hasRunningAnimations() const;
-    bool hasActiveAnimationsOfType(WebCore::AnimatedPropertyID type) const;
+    bool hasActiveAnimationsOfType(WebCore::AnimatedProperty type) const;
 
 private:
     Vector<Animation> m_animations;

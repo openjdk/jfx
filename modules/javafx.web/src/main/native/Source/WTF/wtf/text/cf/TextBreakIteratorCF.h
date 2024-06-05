@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -20,9 +20,8 @@
 
 #pragma once
 
-#include <wtf/RetainPtr.h>
-#include <wtf/spi/cf/CFStringSPI.h>
-#include <wtf/text/StringView.h>
+#include <wtf/text/cf/TextBreakIteratorCFCharacterCluster.h>
+#include <wtf/text/cf/TextBreakIteratorCFStringTokenizer.h>
 
 namespace WTF {
 
@@ -30,21 +29,18 @@ class TextBreakIteratorCF {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     enum class Mode {
-        Caret,
-        Delete
+        ComposedCharacter,
+        BackwardDeletion,
+        Word,
+        Sentence,
+        Paragraph,
+        LineBreak,
+        WordBoundary,
     };
 
-    TextBreakIteratorCF(StringView string, Mode mode)
-        : m_string(string.createCFStringWithoutCopying())
+    TextBreakIteratorCF(StringView string, StringView priorContext, Mode mode, const AtomString& locale)
+        : m_backing(mapModeToBackingIterator(string, priorContext, mode, locale))
     {
-        switch (mode) {
-        case Mode::Caret:
-            m_type = kCFStringComposedCharacterCluster;
-            break;
-        case Mode::Delete:
-            m_type = kCFStringBackwardDeletionCluster;
-            break;
-        }
     }
 
     TextBreakIteratorCF() = delete;
@@ -53,41 +49,58 @@ public:
     TextBreakIteratorCF& operator=(const TextBreakIteratorCF&) = delete;
     TextBreakIteratorCF& operator=(TextBreakIteratorCF&&) = default;
 
-    void setText(StringView string)
+    void setText(StringView string, const UChar* priorContext, unsigned priorContextLength)
     {
-        m_string = string.createCFStringWithoutCopying();
+        return switchOn(m_backing, [&](auto& iterator) {
+            return iterator.setText(string, { priorContext, priorContextLength });
+        });
     }
 
     std::optional<unsigned> preceding(unsigned location) const
     {
-        if (!location)
-            return { };
-        auto length = static_cast<unsigned long>(CFStringGetLength(m_string.get()));
-        if (location > length)
-            return length;
-        auto range = CFStringGetRangeOfCharacterClusterAtIndex(m_string.get(), location - 1, m_type);
-        return range.location;
+        return switchOn(m_backing, [&](const auto& iterator) {
+            return iterator.preceding(location);
+        });
     }
 
     std::optional<unsigned> following(unsigned location) const
     {
-        if (location >= static_cast<unsigned long>(CFStringGetLength(m_string.get())))
-            return { };
-        auto range = CFStringGetRangeOfCharacterClusterAtIndex(m_string.get(), location, m_type);
-        return range.location + range.length;
+        return switchOn(m_backing, [&](const auto& iterator) {
+            return iterator.following(location);
+        });
     }
 
     bool isBoundary(unsigned location) const
     {
-        if (location == static_cast<unsigned long>(CFStringGetLength(m_string.get())))
-            return true;
-        auto range = CFStringGetRangeOfCharacterClusterAtIndex(m_string.get(), location, m_type);
-        return static_cast<unsigned long>(range.location) == location;
+        return switchOn(m_backing, [&](const auto& iterator) {
+            return iterator.isBoundary(location);
+        });
     }
 
 private:
-    RetainPtr<CFStringRef> m_string;
-    CFStringCharacterClusterType m_type;
+    using BackingVariant = std::variant<TextBreakIteratorCFCharacterCluster, TextBreakIteratorCFStringTokenizer>;
+
+    static BackingVariant mapModeToBackingIterator(StringView string, StringView priorContext, Mode mode, const AtomString& locale)
+    {
+        switch (mode) {
+        case Mode::ComposedCharacter:
+            return TextBreakIteratorCFCharacterCluster(string, priorContext, TextBreakIteratorCFCharacterCluster::Mode::ComposedCharacter);
+        case Mode::BackwardDeletion:
+            return TextBreakIteratorCFCharacterCluster(string, priorContext, TextBreakIteratorCFCharacterCluster::Mode::BackwardDeletion);
+        case Mode::Word:
+            return TextBreakIteratorCFStringTokenizer(string, priorContext, TextBreakIteratorCFStringTokenizer::Mode::Word, locale);
+        case Mode::Sentence:
+            return TextBreakIteratorCFStringTokenizer(string, priorContext, TextBreakIteratorCFStringTokenizer::Mode::Sentence, locale);
+        case Mode::Paragraph:
+            return TextBreakIteratorCFStringTokenizer(string, priorContext, TextBreakIteratorCFStringTokenizer::Mode::Paragraph, locale);
+        case Mode::LineBreak:
+            return TextBreakIteratorCFStringTokenizer(string, priorContext, TextBreakIteratorCFStringTokenizer::Mode::LineBreak, locale);
+        case Mode::WordBoundary:
+            return TextBreakIteratorCFStringTokenizer(string, priorContext, TextBreakIteratorCFStringTokenizer::Mode::WordBoundary, locale);
+        }
+    }
+
+    BackingVariant m_backing;
 };
 
-}
+} // namespace WTF

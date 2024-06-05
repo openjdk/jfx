@@ -28,8 +28,11 @@
 #include "IntersectionObserverEntry.h"
 
 #include "Element.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(IntersectionObserverEntry);
 
 IntersectionObserverEntry::IntersectionObserverEntry(const Init& init)
     : m_time(init.time)
@@ -41,6 +44,27 @@ IntersectionObserverEntry::IntersectionObserverEntry(const Init& init)
 {
     if (init.rootBounds)
         m_rootBounds = DOMRectReadOnly::fromRect(*init.rootBounds);
+}
+
+TextStream& operator<<(TextStream& ts, const IntersectionObserverEntry& entry)
+{
+    TextStream::GroupScope scope(ts);
+    ts << "IntersectionObserverEntry " << &entry;
+    ts.dumpProperty("time", entry.time());
+
+    if (entry.rootBounds())
+        ts.dumpProperty("rootBounds", entry.rootBounds()->toFloatRect());
+
+    if (entry.boundingClientRect())
+        ts.dumpProperty("boundingClientRect", entry.boundingClientRect()->toFloatRect());
+
+    if (entry.intersectionRect())
+        ts.dumpProperty("intersectionRect", entry.intersectionRect()->toFloatRect());
+
+    ts.dumpProperty("isIntersecting", entry.isIntersecting());
+    ts.dumpProperty("intersectionRatio", entry.intersectionRatio());
+
+    return ts;
 }
 
 } // namespace WebCore

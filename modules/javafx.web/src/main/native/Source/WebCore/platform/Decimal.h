@@ -63,7 +63,6 @@ public:
         EncodedData(Sign, int exponent, uint64_t coefficient);
 
         bool operator==(const EncodedData&) const;
-        bool operator!=(const EncodedData& another) const { return !operator==(another); }
 
         uint64_t coefficient() const { return m_coefficient; }
         int countDigits() const;
@@ -132,7 +131,7 @@ public:
     bool isZero() const { return m_data.isZero(); }
 
     Decimal abs() const;
-    Decimal ceiling() const;
+    Decimal ceil() const;
     Decimal floor() const;
     Decimal remainder(const Decimal&) const;
     Decimal round() const;
@@ -149,7 +148,7 @@ public:
     //  exponent-marker ::= 'e' | 'E'
     //  digit ::= '0' | '1' | ... | '9'
     // Note: fromString doesn't support "infinity" and "nan".
-    static Decimal fromString(const String&);
+    static Decimal fromString(StringView);
     static Decimal infinity(Sign);
     static Decimal nan();
     static Decimal zero(Sign);

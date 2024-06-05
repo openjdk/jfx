@@ -26,7 +26,9 @@
 #include "config.h"
 #include "CachedResourceRequest.h"
 
+#include "CachePolicy.h"
 #include "CachedResourceLoader.h"
+#include "CachedResourceRequestInitiatorTypes.h"
 #include "ContentExtensionsBackend.h"
 #include "CrossOriginAccessControl.h"
 #include "Document.h"
@@ -34,10 +36,14 @@
 #include "FrameLoader.h"
 #include "HTTPHeaderValues.h"
 #include "ImageDecoder.h"
+#include "LocalFrame.h"
+#include "MIMETypeRegistry.h"
 #include "MemoryCache.h"
+#include "OriginAccessPatterns.h"
 #include "SecurityPolicy.h"
 #include "ServiceWorkerRegistrationData.h"
 #include <wtf/NeverDestroyed.h>
+#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
@@ -64,25 +70,25 @@ String CachedResourceRequest::splitFragmentIdentifierFromRequestURL(ResourceRequ
 void CachedResourceRequest::setInitiator(Element& element)
 {
     ASSERT(!m_initiatorElement);
-    ASSERT(m_initiatorName.isEmpty());
+    ASSERT(m_initiatorType.isEmpty());
     m_initiatorElement = &element;
 }
 
-void CachedResourceRequest::setInitiator(const AtomString& name)
+void CachedResourceRequest::setInitiatorType(const AtomString& type)
 {
     ASSERT(!m_initiatorElement);
-    ASSERT(m_initiatorName.isEmpty());
-    m_initiatorName = name;
+    ASSERT(m_initiatorType.isEmpty());
+    m_initiatorType = type;
 }
 
-const AtomString& CachedResourceRequest::initiatorName() const
+const AtomString& CachedResourceRequest::initiatorType() const
 {
     if (m_initiatorElement)
         return m_initiatorElement->localName();
-    if (!m_initiatorName.isEmpty())
-        return m_initiatorName;
+    if (!m_initiatorType.isEmpty())
+        return m_initiatorType;
 
-    static MainThreadNeverDestroyed<const AtomString> defaultName("other", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> defaultName("other"_s);
     return defaultName;
 }
 
@@ -122,17 +128,66 @@ void CachedResourceRequest::setDomainForCachePartition(const String& domain)
     m_resourceRequest.setDomainForCachePartition(domain);
 }
 
-static inline constexpr ASCIILiteral acceptHeaderValueForImageResource(bool supportsVideoImage)
+static constexpr ASCIILiteral acceptHeaderValueForWebPImageResource()
 {
 #if HAVE(WEBP) || USE(WEBP)
-    #define WEBP_HEADER_PART "image/webp,"
+    return "image/webp,"_s;
 #else
-    #define WEBP_HEADER_PART ""
+    return ""_s;
 #endif
+}
+
+static constexpr ASCIILiteral acceptHeaderValueForAVIFImageResource()
+{
+#if HAVE(AVIF) || USE(AVIF)
+    return "image/avif,"_s;
+#else
+    return ""_s;
+#endif
+}
+
+static constexpr ASCIILiteral acceptHeaderValueForJPEGXLImageResource()
+{
+#if HAVE(JPEGXL) || USE(JPEGXL)
+    return "image/jxl,"_s;
+#else
+    return ""_s;
+#endif
+}
+
+static constexpr ASCIILiteral acceptHeaderValueForHEICImageResource()
+{
+#if HAVE(HEIC)
+    return "image/heic,image/heic-sequence,"_s;
+#else
+    return ""_s;
+#endif
+}
+
+static String acceptHeaderValueForAdditionalSupportedImageMIMETypes()
+{
+    StringBuilder sb;
+    for (const auto& additionalSupportedImageMIMEType : MIMETypeRegistry::additionalSupportedImageMIMETypes())
+        sb.append(makeString(additionalSupportedImageMIMEType, ','));
+    return sb.toString();
+}
+
+static constexpr ASCIILiteral acceptHeaderValueForVideoImageResource(bool supportsVideoImage)
+{
     if (supportsVideoImage)
-        return WEBP_HEADER_PART "image/png,image/svg+xml,image/*;q=0.8,video/*;q=0.8,*/*;q=0.5"_s;
-    return WEBP_HEADER_PART "image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5"_s;
-    #undef WEBP_HEADER_PART
+        return "video/*;q=0.8,"_s;
+    return ""_s;
+}
+
+static String acceptHeaderValueForImageResource()
+{
+    return String(acceptHeaderValueForWebPImageResource())
+        + acceptHeaderValueForAVIFImageResource()
+        + acceptHeaderValueForJPEGXLImageResource()
+        + acceptHeaderValueForHEICImageResource()
+        + acceptHeaderValueForAdditionalSupportedImageMIMETypes()
+        + acceptHeaderValueForVideoImageResource(ImageDecoder::supportsMediaType(ImageDecoder::MediaType::Video))
+        + "image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5"_s;
 }
 
 String CachedResourceRequest::acceptHeaderValueFromType(CachedResource::Type type)
@@ -141,7 +196,7 @@ String CachedResourceRequest::acceptHeaderValueFromType(CachedResource::Type typ
     case CachedResource::Type::MainResource:
         return "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"_s;
     case CachedResource::Type::ImageResource:
-        return acceptHeaderValueForImageResource(ImageDecoder::supportsMediaType(ImageDecoder::MediaType::Video));
+        return acceptHeaderValueForImageResource();
     case CachedResource::Type::CSSStyleSheet:
         return "text/css,*/*;q=0.1"_s;
     case CachedResource::Type::SVGDocumentResource:
@@ -162,6 +217,12 @@ void CachedResourceRequest::setAcceptHeaderIfNone(CachedResource::Type type)
         m_resourceRequest.setHTTPHeaderField(HTTPHeaderName::Accept, acceptHeaderValueFromType(type));
 }
 
+void CachedResourceRequest::disableCachingIfNeeded()
+{
+    if (m_options.cache == FetchOptions::Cache::NoStore)
+        m_options.cachingPolicy = CachingPolicy::DisallowCaching;
+}
+
 void CachedResourceRequest::updateAccordingCacheMode()
 {
     if (m_options.cache == FetchOptions::Cache::Default
@@ -178,7 +239,6 @@ void CachedResourceRequest::updateAccordingCacheMode()
         m_resourceRequest.addHTTPHeaderFieldIfNotPresent(HTTPHeaderName::CacheControl, HTTPHeaderValues::maxAge0());
         break;
     case FetchOptions::Cache::NoStore:
-        m_options.cachingPolicy = CachingPolicy::DisallowCaching;
         m_resourceRequest.setCachePolicy(ResourceRequestCachePolicy::DoNotUseAnyCache);
         m_resourceRequest.addHTTPHeaderFieldIfNotPresent(HTTPHeaderName::Pragma, HTTPHeaderValues::noCache());
         m_resourceRequest.addHTTPHeaderFieldIfNotPresent(HTTPHeaderName::CacheControl, HTTPHeaderValues::noCache());
@@ -197,6 +257,12 @@ void CachedResourceRequest::updateAccordingCacheMode()
         m_resourceRequest.setCachePolicy(ResourceRequestCachePolicy::ReturnCacheDataDontLoad);
         break;
     }
+}
+
+void CachedResourceRequest::updateCacheModeIfNeeded(CachePolicy cachePolicy)
+{
+    if (cachePolicy == CachePolicy::Reload && m_options.cache == FetchOptions::Cache::Default && m_options.cachingPolicy == CachingPolicy::AllowCaching)
+        m_options.cache = FetchOptions::Cache::Reload;
 }
 
 void CachedResourceRequest::updateAcceptEncodingHeader()
@@ -238,15 +304,19 @@ void CachedResourceRequest::updateReferrerAndOriginHeaders(FrameLoader& frameLoa
     String outgoingReferrer = frameLoader.outgoingReferrer();
     if (m_resourceRequest.hasHTTPReferrer())
         outgoingReferrer = m_resourceRequest.httpReferrer();
-    updateRequestReferrer(m_resourceRequest, m_options.referrerPolicy, outgoingReferrer);
+    updateRequestReferrer(m_resourceRequest, m_options.referrerPolicy, outgoingReferrer, OriginAccessPatternsForWebProcess::singleton());
 
     if (!m_resourceRequest.httpOrigin().isEmpty())
         return;
+
+    auto* document = frameLoader.frame().document();
+    auto actualOrigin = (document && m_options.destination == FetchOptionsDestination::EmptyString && m_initiatorType == cachedResourceRequestInitiatorTypes().fetch) ? Ref { document->securityOrigin() } : SecurityOrigin::createFromString(outgoingReferrer);
     String outgoingOrigin;
     if (m_options.mode == FetchOptions::Mode::Cors)
-        outgoingOrigin = SecurityOrigin::createFromString(outgoingReferrer)->toString();
+        outgoingOrigin = actualOrigin->toString();
     else
-        outgoingOrigin = SecurityPolicy::generateOriginHeader(m_options.referrerPolicy, m_resourceRequest.url(), SecurityOrigin::createFromString(outgoingReferrer));
+        outgoingOrigin = SecurityPolicy::generateOriginHeader(m_options.referrerPolicy, m_resourceRequest.url(), actualOrigin, OriginAccessPatternsForWebProcess::singleton());
+
     FrameLoader::addHTTPOriginIfNeeded(m_resourceRequest, outgoingOrigin);
 }
 
@@ -268,7 +338,7 @@ bool isRequestCrossOrigin(SecurityOrigin* origin, const URL& requestURL, const R
     if (requestURL.protocolIsData() && options.sameOriginDataURLFlag == SameOriginDataURLFlag::Set)
         return false;
 
-    return !origin->canRequest(requestURL);
+    return !origin->canRequest(requestURL, OriginAccessPatternsForWebProcess::singleton());
 }
 
 void CachedResourceRequest::setDestinationIfNotSet(FetchOptions::Destination destination)
@@ -282,7 +352,7 @@ void CachedResourceRequest::setDestinationIfNotSet(FetchOptions::Destination des
 void CachedResourceRequest::setClientIdentifierIfNeeded(ScriptExecutionContextIdentifier clientIdentifier)
 {
     if (!m_options.clientIdentifier)
-        m_options.clientIdentifier = clientIdentifier;
+        m_options.clientIdentifier = clientIdentifier.object();
 }
 
 void CachedResourceRequest::setSelectedServiceWorkerRegistrationIdentifierIfNeeded(ServiceWorkerRegistrationIdentifier identifier)

@@ -28,9 +28,11 @@
 
 #pragma once
 
+#include "CachedResourceLoader.h"
 #include "FrameLoaderTypes.h"
 #include "ResourceLoader.h"
 #include <wtf/CompletionHandler.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -43,13 +45,15 @@ class SecurityOrigin;
 
 class SubresourceLoader final : public ResourceLoader {
 public:
-    WEBCORE_EXPORT static void create(Frame&, CachedResource&, ResourceRequest&&, const ResourceLoaderOptions&, CompletionHandler<void(RefPtr<SubresourceLoader>&&)>&&);
+    WEBCORE_EXPORT static void create(LocalFrame&, CachedResource&, ResourceRequest&&, const ResourceLoaderOptions&, CompletionHandler<void(RefPtr<SubresourceLoader>&&)>&&);
 
     virtual ~SubresourceLoader();
 
     void cancelIfNotFinishing();
     bool isSubresourceLoader() const override;
-    CachedResource* cachedResource() const override { return m_resource; };
+    CachedResource* cachedResource() const override { return m_resource.get(); }
+    CachedResourceHandle<CachedResource> protectedCachedResource() const { return cachedResource(); }
+
     WEBCORE_EXPORT const HTTPHeaderMap* originalHeaders() const;
 
     const SecurityOrigin* origin() const { return m_origin.get(); }
@@ -66,8 +70,11 @@ public:
     void markInAsyncResponsePolicyCheck() { m_inAsyncResponsePolicyCheck = true; }
     void didReceiveResponsePolicy();
 
+    void clearRequestCountTracker() { m_requestCountTracker = std::nullopt; }
+    void resetRequestCountTracker(CachedResourceLoader& loader, const CachedResource& resource) { m_requestCountTracker = RequestCountTracker { loader, resource }; }
+
 private:
-    SubresourceLoader(Frame&, CachedResource&, const ResourceLoaderOptions&);
+    SubresourceLoader(LocalFrame&, CachedResource&, const ResourceLoaderOptions&);
 
     void init(ResourceRequest&&, CompletionHandler<void(bool)>&&) override;
 
@@ -118,16 +125,18 @@ private:
 #endif
     public:
         RequestCountTracker(CachedResourceLoader&, const CachedResource&);
+        RequestCountTracker(RequestCountTracker&&);
+        RequestCountTracker& operator=(RequestCountTracker&&);
         ~RequestCountTracker();
     private:
-        CachedResourceLoader& m_cachedResourceLoader;
-        const CachedResource& m_resource;
+        WeakPtr<CachedResourceLoader> m_cachedResourceLoader;
+        WeakPtr<const CachedResource> m_resource;
     };
 
 #if PLATFORM(IOS_FAMILY)
     ResourceRequest m_iOSOriginalRequest;
 #endif
-    CachedResource* m_resource;
+    WeakPtr<CachedResource> m_resource;
     SubresourceLoaderState m_state;
     std::optional<RequestCountTracker> m_requestCountTracker;
     RefPtr<SecurityOrigin> m_origin;
@@ -135,6 +144,7 @@ private:
     unsigned m_redirectCount { 0 };
     bool m_loadingMultipartContent { false };
     bool m_inAsyncResponsePolicyCheck { false };
+    FetchMetadataSite m_site { FetchMetadataSite::SameOrigin };
 };
 
 }

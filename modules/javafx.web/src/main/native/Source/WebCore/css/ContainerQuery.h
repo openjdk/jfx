@@ -24,63 +24,45 @@
 
 #pragma once
 
+#include "GenericMediaQueryTypes.h"
+#include <wtf/Forward.h>
+#include <wtf/OptionSet.h>
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
 class CSSValue;
+class Element;
 
 namespace CQ {
 
-struct ContainerCondition;
-struct SizeCondition;
-struct SizeFeature;
-
-struct UnknownQuery { };
-
-using SizeQuery = std::variant<SizeCondition, SizeFeature>;
-using ContainerQuery = std::variant<ContainerCondition, SizeQuery, UnknownQuery>;
-
-enum class LogicalOperator : uint8_t { And, Or, Not };
-enum class ComparisonOperator : uint8_t { LessThan, LessThanOrEqual, Equal, GreaterThan, GreaterThanOrEqual };
-
-struct ContainerCondition {
-    LogicalOperator logicalOperator { LogicalOperator::And };
-    Vector<ContainerQuery> queries;
+namespace FeatureSchemas {
+const MQ::FeatureSchema& width();
+const MQ::FeatureSchema& height();
+const MQ::FeatureSchema& inlineSize();
+const MQ::FeatureSchema& blockSize();
+const MQ::FeatureSchema& aspectRatio();
+const MQ::FeatureSchema& orientation();
 };
 
-struct SizeCondition {
-    LogicalOperator logicalOperator { LogicalOperator::And };
-    Vector<SizeQuery> queries;
+enum class Axis : uint8_t {
+    Block   = 1 << 0,
+    Inline  = 1 << 1,
+    Width   = 1 << 2,
+    Height  = 1 << 3,
 };
+OptionSet<Axis> requiredAxesForFeature(const MQ::Feature&);
 
-struct Comparison {
-    ComparisonOperator op { ComparisonOperator::Equal };
-    RefPtr<CSSValue> value;
-};
-
-struct SizeFeature {
+struct ContainerQuery {
     AtomString name;
-    std::optional<Comparison> leftComparison;
-    std::optional<Comparison> rightComparison;
+    OptionSet<CQ::Axis> axisFilter;
+    MQ::Condition condition;
 };
 
-namespace FeatureNames {
-const AtomString& width();
-const AtomString& height();
-const AtomString& inlineSize();
-const AtomString& blockSize();
-const AtomString& aspectRatio();
-const AtomString& orientation();
-};
+void serialize(StringBuilder&, const ContainerQuery&);
 
 }
 
-using ContainerQuery = CQ::ContainerQuery;
-
-struct FilteredContainerQuery {
-    AtomString nameFilter;
-    ContainerQuery query;
-};
+using CachedQueryContainers = Vector<Ref<const Element>>;
 
 }

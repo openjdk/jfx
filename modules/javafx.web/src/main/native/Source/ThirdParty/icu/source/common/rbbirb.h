@@ -54,8 +54,8 @@ public:                                       //   of these structs for each ent
     ~RBBISymbolTableEntry();
 
 private:
-    RBBISymbolTableEntry(const RBBISymbolTableEntry &other); // forbid copying of this class
-    RBBISymbolTableEntry &operator=(const RBBISymbolTableEntry &other); // forbid copying of this class
+    RBBISymbolTableEntry(const RBBISymbolTableEntry &other) = delete; // forbid copying of this class
+    RBBISymbolTableEntry &operator=(const RBBISymbolTableEntry &other) = delete; // forbid copying of this class
 };
 
 
@@ -159,9 +159,6 @@ public:
     UBool                         fChainRules;       // True for chained Unicode TR style rules.
                                                      // False for traditional regexp rules.
 
-    UBool                         fLBCMNoChain;      // True:  suppress chaining of rules on
-                                                     //   chars with LineBreak property == CM.
-
     UBool                         fLookAheadHardBreak;  // True:  Look ahead matches cause an
                                                      // immediate break, no continuing for the
                                                      // longest match.
@@ -177,8 +174,8 @@ public:
     RBBIDataHeader                *flattenData();    // Create the flattened (runtime format)
                                                      // data tables..
 private:
-    RBBIRuleBuilder(const RBBIRuleBuilder &other); // forbid copying of this class
-    RBBIRuleBuilder &operator=(const RBBIRuleBuilder &other); // forbid copying of this class
+    RBBIRuleBuilder(const RBBIRuleBuilder &other) = delete; // forbid copying of this class
+    RBBIRuleBuilder &operator=(const RBBIRuleBuilder &other) = delete; // forbid copying of this class
 };
 
 

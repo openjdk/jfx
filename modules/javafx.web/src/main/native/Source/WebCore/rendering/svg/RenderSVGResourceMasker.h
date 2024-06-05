@@ -43,7 +43,7 @@ public:
 
     inline SVGMaskElement& maskElement() const;
 
-    void removeAllClientsFromCache(bool markForInvalidation = true) override;
+    void removeAllClientsFromCacheIfNeeded(bool markForInvalidation, WeakHashSet<RenderObject>* visitedRenderers) override;
     void removeClientFromCache(RenderElement&, bool markForInvalidation = true) override;
     bool applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>) override;
     FloatRect resourceBoundingBox(const RenderObject&) override;
@@ -56,7 +56,7 @@ public:
 private:
     void element() const = delete;
 
-    const char* renderName() const override { return "RenderSVGResourceMasker"; }
+    ASCIILiteral renderName() const override { return "RenderSVGResourceMasker"_s; }
 
     bool drawContentIntoMaskImage(MaskerData*, const DestinationColorSpace&, RenderObject*);
     void calculateMaskContentRepaintRect();

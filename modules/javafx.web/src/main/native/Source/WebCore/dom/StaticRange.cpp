@@ -29,6 +29,7 @@
 #include "ContainerNode.h"
 #include "JSNode.h"
 #include "Text.h"
+#include "WebCoreOpaqueRootInlines.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -78,8 +79,23 @@ ExceptionOr<Ref<StaticRange>> StaticRange::create(Init&& init)
 
 void StaticRange::visitNodesConcurrently(JSC::AbstractSlotVisitor& visitor) const
 {
-    visitor.addOpaqueRoot(root(start.container.get()));
-    visitor.addOpaqueRoot(root(end.container.get()));
+    addWebCoreOpaqueRoot(visitor, start.container.get());
+    addWebCoreOpaqueRoot(visitor, end.container.get());
 }
 
+bool StaticRange::computeValidity() const
+{
+    Node& startContainer = this->startContainer();
+    Node& endContainer = this->endContainer();
+
+    if (!connectedInSameTreeScope(&startContainer.rootNode(), &endContainer.rootNode()))
+        return false;
+    if (startOffset() > startContainer.length())
+        return false;
+    if (endOffset() > endContainer.length())
+        return false;
+    if (&startContainer == &endContainer)
+        return endOffset() > startOffset();
+    return !is_gt(treeOrder<ComposedTree>(startContainer, endContainer));
 }
+} // namespace WebCore

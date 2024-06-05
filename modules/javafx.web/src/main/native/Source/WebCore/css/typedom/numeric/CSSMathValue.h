@@ -25,31 +25,56 @@
 
 #pragma once
 
-#if ENABLE(CSS_TYPED_OM)
-
+#include "CSSCalcExpressionNode.h"
+#include "CSSCalcValue.h"
 #include "CSSMathOperator.h"
+#include "CSSNumericArray.h"
 #include "CSSNumericValue.h"
+#include "CSSPrimitiveValue.h"
 #include "CSSStyleValue.h"
 
 namespace WebCore {
 
 class CSSMathValue : public CSSNumericValue {
-    WTF_MAKE_ISO_ALLOCATED(CSSMathValue);
 public:
-    virtual CSSMathOperator getOperator() const { return m_operator; }
+    CSSMathValue(CSSNumericType type)
+        : CSSNumericValue(WTFMove(type)) { }
+    virtual CSSMathOperator getOperator() const = 0;
 
-    CSSStyleValueType getType() const final { return CSSStyleValueType::CSSMathValue; }
+    template <typename T>
+    bool equalsImpl(const CSSNumericValue& other) const
+    {
+        // https://drafts.css-houdini.org/css-typed-om/#equal-numeric-value
+        auto* otherT = dynamicDowncast<T>(other);
+        if (!otherT)
+            return false;
 
-protected:
-    CSSMathValue(CSSMathOperator);
-    CSSMathOperator m_operator;
+        ASSERT(getType() == other.getType());
+        auto& thisValues = static_cast<const T*>(this)->values();
+        auto& otherValues = otherT->values();
+        auto length = thisValues.length();
+        if (length != otherValues.length())
+            return false;
+
+        for (size_t i = 0 ; i < length; ++i) {
+            if (!thisValues.array()[i]->equals(otherValues.array()[i].get()))
+                return false;
+        }
+
+        return true;
+    }
+
+    RefPtr<CSSValue> toCSSValue() const final
+    {
+        auto node = toCalcExpressionNode();
+        if (!node)
+            return nullptr;
+        return CSSPrimitiveValue::create(CSSCalcValue::create(node.releaseNonNull()));
+    }
 };
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSMathValue)
-    static bool isType(const WebCore::CSSStyleValue& styleValue) { return styleValue.getType() == WebCore::CSSStyleValueType::CSSMathValue; }
-    static bool isType(const WebCore::CSSNumericValue& numericValue) { return numericValue.getType() == WebCore::CSSStyleValueType::CSSMathValue; }
+static bool isType(const WebCore::CSSStyleValue& styleValue) { return WebCore::isCSSMathValue(styleValue.getType()); }
 SPECIALIZE_TYPE_TRAITS_END()
-
-#endif

@@ -28,10 +28,10 @@
 
 #include "ContextDestructionObserver.h"
 #include "DataTransferItem.h"
+#include "DeprecatedGlobalSettings.h"
 #include "Document.h"
 #include "FileList.h"
 #include "Pasteboard.h"
-#include "RuntimeEnabledFeatures.h"
 #include "Settings.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -52,6 +52,11 @@ unsigned DataTransferItemList::length() const
     return ensureItems().size();
 }
 
+bool DataTransferItemList::isSupportedPropertyIndex(unsigned index)
+{
+    return index < ensureItems().size();
+}
+
 RefPtr<DataTransferItem> DataTransferItemList::item(unsigned index)
 {
     auto& items = ensureItems();
@@ -62,10 +67,10 @@ RefPtr<DataTransferItem> DataTransferItemList::item(unsigned index)
 
 static bool shouldExposeTypeInItemList(const String& type)
 {
-    return RuntimeEnabledFeatures::sharedFeatures().customPasteboardDataEnabled() || Pasteboard::isSafeTypeForDOMToReadAndWrite(type);
+    return DeprecatedGlobalSettings::customPasteboardDataEnabled() || Pasteboard::isSafeTypeForDOMToReadAndWrite(type);
 }
 
-ExceptionOr<RefPtr<DataTransferItem>> DataTransferItemList::add(const String& data, const String& type)
+ExceptionOr<RefPtr<DataTransferItem>> DataTransferItemList::add(Document& document, const String& data, const String& type)
 {
     if (!m_dataTransfer.canWriteData())
         return nullptr;
@@ -80,7 +85,7 @@ ExceptionOr<RefPtr<DataTransferItem>> DataTransferItemList::add(const String& da
     if (!shouldExposeTypeInItemList(lowercasedType))
         return nullptr;
 
-    m_dataTransfer.setDataFromItemList(lowercasedType, data);
+    m_dataTransfer.setDataFromItemList(document, lowercasedType, data);
     ASSERT(m_items);
     m_items->append(DataTransferItem::create(*this, lowercasedType));
     return m_items->last().ptr();
@@ -103,7 +108,7 @@ ExceptionOr<void> DataTransferItemList::remove(unsigned index)
 
     auto& items = ensureItems();
     if (items.size() <= index)
-        return Exception { IndexSizeError }; // Matches Gecko. See https://github.com/whatwg/html/issues/2925
+        return { };
 
     // FIXME: Remove the file from the pasteboard object once we add support for it.
     Ref<DataTransferItem> removedItem = items[index].copyRef();

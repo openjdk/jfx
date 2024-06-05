@@ -49,9 +49,8 @@ my @ppExtraArgs;
 my $numOfJobs = 1;
 my $idlAttributesFile;
 my $showProgress;
-my $includeDirsList;
 
-GetOptions('includeDirsList=s' => \$includeDirsList,
+GetOptions('include=s@' => \@idlDirectories,
            'outputDir=s' => \$outputDirectory,
            'idlFilesList=s' => \$idlFilesList,
            'ppIDLFilesList=s' => \$ppIDLFilesList,
@@ -69,17 +68,14 @@ GetOptions('includeDirsList=s' => \$includeDirsList,
 $| = 1;
 my @idlFiles;
 open(my $fh, '<', $idlFilesList) or die "Cannot open $idlFilesList";
-@idlFiles = map { (my $path = $_) =~ s/\r?\n?$//; CygwinPathIfNeeded($path) } <$fh>;
+@idlFiles = map { CygwinPathIfNeeded(s/\r?\n?$//r) } <$fh>;
 close($fh) or die;
 
 my @ppIDLFiles;
 open($fh, '<', $ppIDLFilesList) or die "Cannot open $ppIDLFilesList";
-@ppIDLFiles = map { (my $path = $_) =~ s/\r?\n?$//; CygwinPathIfNeeded(s/\r?\n?$//r) } <$fh>;
+@ppIDLFiles = map { CygwinPathIfNeeded(s/\r?\n?$//r) } <$fh>;
 close($fh) or die;
 
-open(my $dh, '<', $includeDirsList) or die "Cannot open $includeDirsList";
-@idlDirectories = map { (my $path = $_) =~ s/\r?\n?$//; CygwinPathIfNeeded($path) } <$dh>;
-close($dh) or die;
 
 my %oldSupplements;
 my %newSupplements;
@@ -107,7 +103,7 @@ my @args = (File::Spec->catfile($scriptDir, 'generate-bindings.pl'),
             '--preprocessor', $preprocessor,
             '--idlAttributesFile', $idlAttributesFile,
             '--write-dependencies');
-push @args, map { ('--includeDirsList', $_) } $includeDirsList;
+push @args, map { ('--include', $_) } @idlDirectories;
 push @args, '--supplementalDependencyFile', $supplementalDependencyFile if $supplementalDependencyFile;
 
 my %directoryCache;
@@ -231,8 +227,7 @@ sub spawnCommand
 sub quoteCommand
 {
     return map {
-        (my $qStr = $_) =~ s/([\\\"])/\\$1/g;
-        '"' . $qStr . '"';
+        '"' . s/([\\\"])/\\$1/gr . '"';
     } @_;
 }
 

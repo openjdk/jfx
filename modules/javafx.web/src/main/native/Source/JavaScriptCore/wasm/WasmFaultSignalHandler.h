@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,16 +25,16 @@
 
 #pragma once
 
-#if ENABLE(WEBASSEMBLY)
-
 namespace JSC {
 
 namespace Wasm {
 
-bool fastMemoryEnabled();
-JS_EXPORT_PRIVATE void prepareFastMemory();
-JS_EXPORT_PRIVATE void enableFastMemory();
+#if ENABLE(WEBASSEMBLY)
+void activateSignalingMemory();
+void prepareSignalingMemory();
+#else
+inline void activateSignalingMemory() { }
+inline void prepareSignalingMemory() { }
+#endif // ENABLE(WEBASSEMBLY)
 
 } } // namespace JSC::Wasm
-
-#endif // ENABLE(WEBASSEMBLY)

@@ -45,12 +45,34 @@ ContentSecurityPolicyResponseHeaders::ContentSecurityPolicyResponseHeaders(const
     m_httpStatusCode = response.httpStatusCode();
 }
 
-ContentSecurityPolicyResponseHeaders ContentSecurityPolicyResponseHeaders::isolatedCopy() const
+ContentSecurityPolicyResponseHeaders ContentSecurityPolicyResponseHeaders::isolatedCopy() const &
 {
     ContentSecurityPolicyResponseHeaders isolatedCopy;
     isolatedCopy.m_headers = crossThreadCopy(m_headers);
     isolatedCopy.m_httpStatusCode = m_httpStatusCode;
     return isolatedCopy;
+}
+
+ContentSecurityPolicyResponseHeaders ContentSecurityPolicyResponseHeaders::isolatedCopy() &&
+{
+    ContentSecurityPolicyResponseHeaders isolatedCopy;
+    isolatedCopy.m_headers = crossThreadCopy(WTFMove(m_headers));
+    isolatedCopy.m_httpStatusCode = m_httpStatusCode;
+    return isolatedCopy;
+}
+
+void ContentSecurityPolicyResponseHeaders::addPolicyHeadersTo(ResourceResponse& response) const
+{
+    for (const auto& header : m_headers) {
+        switch (header.second) {
+        case ContentSecurityPolicyHeaderType::Enforce:
+            response.setHTTPHeaderField(HTTPHeaderName::ContentSecurityPolicy, header.first);
+            break;
+        case ContentSecurityPolicyHeaderType::Report:
+            response.setHTTPHeaderField(HTTPHeaderName::ContentSecurityPolicyReportOnly, header.first);
+            break;
+        }
+    }
 }
 
 } // namespace WebCore

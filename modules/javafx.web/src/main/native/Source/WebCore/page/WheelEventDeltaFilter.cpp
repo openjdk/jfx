@@ -58,6 +58,7 @@ bool WheelEventDeltaFilter::shouldApplyFilteringForEvent(const PlatformWheelEven
     auto phase = event.phase();
     return phase == PlatformWheelEventPhase::Began || phase == PlatformWheelEventPhase::Changed;
 #else
+    UNUSED_PARAM(event);
     return false;
 #endif
 }
@@ -150,7 +151,7 @@ void BasicWheelEventDeltaFilter::reset()
 
 static inline bool deltaIsPredominantlyVertical(const FloatSize& delta)
 {
-    return fabs(delta.height()) > fabs(delta.width());
+    return std::abs(delta.height()) > std::abs(delta.width());
 }
 
 std::optional<ScrollEventAxis> BasicWheelEventDeltaFilter::dominantAxis() const

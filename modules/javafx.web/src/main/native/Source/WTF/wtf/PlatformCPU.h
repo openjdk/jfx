@@ -55,6 +55,12 @@
 #define WTF_MIPS_FP64 (defined __mips_fpr && __mips_fpr == 64)
 #endif
 
+/* CPU(LOONGARCH64) - LOONGARCH64 */
+#if defined(__loongarch64)
+#define WTF_CPU_LOONGARCH64 1
+#define WTF_CPU_KNOWN 1
+#endif
+
 /* CPU(PPC64) - PowerPC 64-bit Big Endian */
 #if (  defined(__ppc64__)      \
     || defined(__PPC64__))     \
@@ -207,7 +213,9 @@
     || defined(__ARM_ARCH_7K__) \
     || defined(__ARM_ARCH_7M__) \
     || defined(__ARM_ARCH_7R__) \
-    || defined(__ARM_ARCH_7S__)
+    || defined(__ARM_ARCH_7S__) \
+    || defined(__ARM_ARCH_8__) \
+    || defined(__ARM_ARCH_8A__)
 #define WTF_THUMB_ARCH_VERSION 4
 
 /* RVCT sets __TARGET_ARCH_THUMB */
@@ -289,7 +297,7 @@
 #define WTF_CPU_UNKNOWN 1
 #endif
 
-#if CPU(ARM) || CPU(MIPS) || CPU(UNKNOWN)
+#if CPU(ARM) || CPU(MIPS) || CPU(RISCV64) || CPU(UNKNOWN)
 #define WTF_CPU_NEEDS_ALIGNED_ACCESS 1
 #endif
 

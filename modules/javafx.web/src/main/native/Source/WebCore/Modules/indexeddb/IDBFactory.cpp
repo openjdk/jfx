@@ -27,11 +27,13 @@
 #include "IDBFactory.h"
 
 #include "Document.h"
+#include "FrameDestructionObserverInlines.h"
 #include "IDBBindingUtilities.h"
 #include "IDBConnectionProxy.h"
 #include "IDBDatabaseIdentifier.h"
 #include "IDBKey.h"
 #include "IDBOpenDBRequest.h"
+#include "JSDOMPromiseDeferred.h"
 #include "JSIDBFactory.h"
 #include "Logging.h"
 #include "Page.h"
@@ -54,10 +56,7 @@ static bool shouldThrowSecurityException(ScriptExecutionContext& context)
             return true;
     }
 
-    if (!context.securityOrigin()->canAccessDatabase(nullptr))
-        return true;
-
-    return false;
+    return context.canAccessResource(ScriptExecutionContext::ResourceType::IndexedDB) == ScriptExecutionContext::HasResourceAccess::No;
 }
 
 Ref<IDBFactory> IDBFactory::create(IDBClient::IDBConnectionProxy& connectionProxy)
@@ -91,7 +90,7 @@ ExceptionOr<Ref<IDBOpenDBRequest>> IDBFactory::openInternal(ScriptExecutionConte
         return Exception { SecurityError, "IDBFactory.open() called in an invalid security context"_s };
 
     ASSERT(context.securityOrigin());
-    bool isTransient = !context.securityOrigin()->canAccessDatabase(&context.topOrigin());
+    bool isTransient = (context.canAccessResource(ScriptExecutionContext::ResourceType::IndexedDB) == ScriptExecutionContext::HasResourceAccess::DefaultForThirdParty);
     IDBDatabaseIdentifier databaseIdentifier(name, SecurityOriginData { context.securityOrigin()->data() }, SecurityOriginData { context.topOrigin().data() }, isTransient);
     if (!databaseIdentifier.isValid())
         return Exception { TypeError, "IDBFactory.open() called with an invalid security origin"_s };
@@ -112,7 +111,7 @@ ExceptionOr<Ref<IDBOpenDBRequest>> IDBFactory::deleteDatabase(ScriptExecutionCon
         return Exception { SecurityError, "IDBFactory.deleteDatabase() called in an invalid security context"_s };
 
     ASSERT(context.securityOrigin());
-    bool isTransient = !context.securityOrigin()->canAccessDatabase(&context.topOrigin());
+    bool isTransient = (context.canAccessResource(ScriptExecutionContext::ResourceType::IndexedDB) == ScriptExecutionContext::HasResourceAccess::DefaultForThirdParty);
     IDBDatabaseIdentifier databaseIdentifier(name, SecurityOriginData { context.securityOrigin()->data() }, SecurityOriginData { context.topOrigin().data() }, isTransient);
     if (!databaseIdentifier.isValid())
         return Exception { TypeError, "IDBFactory.deleteDatabase() called with an invalid security origin"_s };

@@ -44,7 +44,6 @@ private:
     explicit AccessibilityScrollbar(Scrollbar*);
 
     bool canSetValueAttribute() const override { return true; }
-    bool canSetNumericValue() const override { return true; }
 
     bool isAccessibilityScrollbar() const override { return true; }
     LayoutRect elementRect() const override;
@@ -63,4 +62,7 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilityScrollbar, isAccessibilityScrollbar())
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::AccessibilityScrollbar) \
+    static bool isType(const WebCore::AccessibilityObject& object) { return object.isAccessibilityScrollbar(); } \
+SPECIALIZE_TYPE_TRAITS_END()

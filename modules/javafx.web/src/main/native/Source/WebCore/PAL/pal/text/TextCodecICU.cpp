@@ -68,7 +68,7 @@ DECLARE_ALIASES(x_mac_centraleurroman, "windows-10029", "x-mac-ce", "macce", "ma
 DECLARE_ALIASES(x_mac_turkish, "windows-10081", "mactr", "x-MacTurkish");
 
 #define DECLARE_ENCODING_NAME(encoding, alias_array) \
-    { encoding, WTF_ARRAY_LENGTH(alias_array##_aliases), alias_array##_aliases }
+    { encoding, std::size(alias_array##_aliases), alias_array##_aliases }
 
 #define DECLARE_ENCODING_NAME_NO_ALIASES(encoding) \
     { encoding, 0, nullptr }
@@ -115,42 +115,19 @@ void TextCodecICU::registerCodecs(TextCodecRegistrar registrar)
     for (auto& encodingName : encodingNames) {
         const char* name = encodingName.name;
 
-        // These encodings currently don't have standard names, so we need to register encoders manually.
-        // http://demo.icu-project.org/icu-bin/convexp
-        if (!strcmp(name, "windows-949")) {
-            registrar(name, [name] {
-                return makeUnique<TextCodecICU>(name, "windows-949-2000");
-            });
-            continue;
-        }
-        if (!strcmp(name, "x-mac-cyrillic")) {
-            registrar(name, [name] {
-                return makeUnique<TextCodecICU>(name, "macos-7_3-10.2");
-            });
-            continue;
-        }
-        if (!strcmp(name, "x-mac-greek")) {
-            registrar(name, [name] {
-                return makeUnique<TextCodecICU>(name, "macos-6_2-10.4");
-            });
-            continue;
-        }
-        if (!strcmp(name, "x-mac-centraleurroman")) {
-            registrar(name, [name] {
-                return makeUnique<TextCodecICU>(name, "macos-29-10.2");
-            });
-            continue;
-        }
-        if (!strcmp(name, "x-mac-turkish")) {
-            registrar(name, [name] {
-                return makeUnique<TextCodecICU>(name, "macos-35-10.2");
-            });
-            continue;
-        }
-
         UErrorCode error = U_ZERO_ERROR;
         const char* canonicalConverterName = ucnv_getCanonicalName(name, "IANA", &error);
         ASSERT(U_SUCCESS(error));
+        if (!canonicalConverterName) {
+            auto converter = ICUConverterPtr { ucnv_open(name, &error) };
+            ASSERT(U_SUCCESS(error));
+            canonicalConverterName = ucnv_getName(converter.get(), &error);
+            ASSERT(U_SUCCESS(error));
+            if (!canonicalConverterName) {
+                ASSERT_NOT_REACHED();
+                continue;
+            }
+        }
         registrar(name, [name, canonicalConverterName] {
             return makeUnique<TextCodecICU>(name, canonicalConverterName);
         });
@@ -161,6 +138,7 @@ TextCodecICU::TextCodecICU(const char* encoding, const char* canonicalConverterN
     : m_encodingName(encoding)
     , m_canonicalConverterName(canonicalConverterName)
 {
+    ASSERT(m_canonicalConverterName);
 }
 
 TextCodecICU::~TextCodecICU()
@@ -208,7 +186,7 @@ public:
         if (m_shouldStopOnEncodingErrors) {
             UErrorCode err = U_ZERO_ERROR;
             ucnv_setToUCallBack(&m_converter, UCNV_TO_U_CALLBACK_SUBSTITUTE, UCNV_SUB_STOP_ON_ILLEGAL, &m_savedAction, &m_savedContext, &err);
-            ASSERT(err == U_ZERO_ERROR);
+            ASSERT(U_SUCCESS(err));
         }
     }
     ~ErrorCallbackSetter()
@@ -220,7 +198,7 @@ public:
             ucnv_setToUCallBack(&m_converter, m_savedAction, m_savedContext, &oldAction, &oldContext, &err);
             ASSERT(oldAction == UCNV_TO_U_CALLBACK_SUBSTITUTE);
             ASSERT(!strcmp(static_cast<const char*>(oldContext), UCNV_SUB_STOP_ON_ILLEGAL));
-            ASSERT(err == U_ZERO_ERROR);
+            ASSERT(U_SUCCESS(err));
         }
     }
 
@@ -302,23 +280,12 @@ Vector<uint8_t> TextCodecICU::encode(StringView string, UnencodableHandling hand
     // Encoding will change the yen sign back into a backslash.
     String copy;
     if (shouldShowBackslashAsCurrencySymbolIn(m_encodingName)) {
-        copy = string.toStringWithoutCopying();
-        copy.replace('\\', yenSign);
+        copy = makeStringByReplacingAll(string, '\\', yenSign);
         string = copy;
     }
 
     UErrorCode error;
     switch (handling) {
-    case UnencodableHandling::QuestionMarks:
-        error = U_ZERO_ERROR;
-        ucnv_setSubstChars(m_converter.get(), "?", 1, &error);
-        if (U_FAILURE(error))
-            return { };
-        error = U_ZERO_ERROR;
-        ucnv_setFromUCallBack(m_converter.get(), UCNV_FROM_U_CALLBACK_SUBSTITUTE, 0, 0, 0, &error);
-        if (U_FAILURE(error))
-            return { };
-        break;
     case UnencodableHandling::Entities:
         error = U_ZERO_ERROR;
         ucnv_setFromUCallBack(m_converter.get(), UCNV_FROM_U_CALLBACK_ESCAPE, UCNV_ESCAPE_XML_DEC, 0, 0, &error);

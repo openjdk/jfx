@@ -37,7 +37,6 @@
 #include <JavaScriptCore/RuntimeFlags.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Deque.h>
-#include <wtf/ObjectIdentifier.h>
 #include <wtf/URL.h>
 #include <wtf/WeakPtr.h>
 
@@ -71,8 +70,6 @@ public:
     const URL& url() const final { return m_url; }
 
     void evaluate();
-
-    ReferrerPolicy referrerPolicy() const final;
 
     void addConsoleMessage(std::unique_ptr<Inspector::ConsoleMessage>&&) final;
 
@@ -117,7 +114,7 @@ private:
     String userAgent(const URL&) const final;
     const Settings::Values& settingsValues() const final { return m_settingsValues; }
 
-    WeakPtr<Document> m_document;
+    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
 
     Ref<SecurityOrigin> m_topOrigin;
 

@@ -72,7 +72,7 @@ struct _GstPushSrcClass {
 
   /**
    * GstPushSrcClass::create:
-   * @buf: (inout):
+   * @buf: (inout) (nullable):
    *
    * Ask the subclass to create a buffer, the default implementation will call alloc if
    * no allocated @buf is provided and then call fill.
@@ -80,7 +80,7 @@ struct _GstPushSrcClass {
   GstFlowReturn (*create) (GstPushSrc *src, GstBuffer **buf);
   /**
    * GstPushSrcClass::alloc:
-   * @buf: (out):
+   * @buf: (out) (nullable):
    *
    * Allocate memory for a buffer.
    */

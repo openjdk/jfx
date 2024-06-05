@@ -39,7 +39,7 @@
 
 namespace JSC {
 
-const ClassInfo JSWebAssemblyModule::s_info = { "WebAssembly.Module", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWebAssemblyModule) };
+const ClassInfo JSWebAssemblyModule::s_info = { "WebAssembly.Module"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWebAssemblyModule) };
 
 JSWebAssemblyModule* JSWebAssemblyModule::createStub(VM& vm, JSGlobalObject* globalObject, Structure* structure, Wasm::Module::ValidationResult&& result)
 {
@@ -79,7 +79,7 @@ JSWebAssemblyModule::JSWebAssemblyModule(VM& vm, Structure* structure, Ref<Wasm:
 void JSWebAssemblyModule::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 
     // On success, a new WebAssembly.Module object is returned with [[Module]] set to the validated Ast.module.
     SymbolTable* exportSymbolTable = SymbolTable::create(vm);
@@ -100,7 +100,7 @@ void JSWebAssemblyModule::finishCreation(VM& vm)
 void JSWebAssemblyModule::destroy(JSCell* cell)
 {
     static_cast<JSWebAssemblyModule*>(cell)->JSWebAssemblyModule::~JSWebAssemblyModule();
-    Wasm::SignatureInformation::tryCleanup();
+    Wasm::TypeInformation::tryCleanup();
 }
 
 const Wasm::ModuleInformation& JSWebAssemblyModule::moduleInformation() const
@@ -113,9 +113,9 @@ SymbolTable* JSWebAssemblyModule::exportSymbolTable() const
     return m_exportSymbolTable.get();
 }
 
-Wasm::SignatureIndex JSWebAssemblyModule::signatureIndexFromFunctionIndexSpace(unsigned functionIndexSpace) const
+Wasm::TypeIndex JSWebAssemblyModule::typeIndexFromFunctionIndexSpace(unsigned functionIndexSpace) const
 {
-    return m_module->signatureIndexFromFunctionIndexSpace(functionIndexSpace);
+    return m_module->typeIndexFromFunctionIndexSpace(functionIndexSpace);
 }
 
 Wasm::Module& JSWebAssemblyModule::module()
@@ -137,25 +137,25 @@ DEFINE_VISIT_CHILDREN(JSWebAssemblyModule);
 
 void JSWebAssemblyModule::clearJSCallICs(VM& vm)
 {
-    for (auto iter = m_callLinkInfos.begin(); !!iter; ++iter)
-        (*iter)->unlink(vm);
+    for (auto& callLinkInfo : m_callLinkInfos)
+        callLinkInfo.unlink(vm);
 }
 
-void JSWebAssemblyModule::finalizeUnconditionally(VM& vm)
+void JSWebAssemblyModule::finalizeUnconditionally(VM& vm, CollectionScope)
 {
-    for (auto iter = m_callLinkInfos.begin(); !!iter; ++iter)
-        (*iter)->visitWeak(vm);
+    for (auto& callLinkInfo : m_callLinkInfos)
+        callLinkInfo.visitWeak(vm);
 }
 
 Expected<void, Wasm::BindingFailure> JSWebAssemblyModule::generateWasmToJSStubs(VM& vm)
 {
     const Wasm::ModuleInformation& moduleInformation = m_module->moduleInformation();
     if (moduleInformation.importFunctionCount()) {
-        Bag<OptimizingCallLinkInfo> callLinkInfos;
+        FixedVector<OptimizingCallLinkInfo> callLinkInfos(moduleInformation.importFunctionCount());
         FixedVector<MacroAssemblerCodeRef<WasmEntryPtrTag>> stubs(moduleInformation.importFunctionCount());
         for (unsigned importIndex = 0; importIndex < moduleInformation.importFunctionCount(); ++importIndex) {
-            Wasm::SignatureIndex signatureIndex = moduleInformation.importFunctionSignatureIndices.at(importIndex);
-            auto binding = Wasm::wasmToJS(vm, callLinkInfos, signatureIndex, importIndex);
+            Wasm::TypeIndex typeIndex = moduleInformation.importFunctionTypeIndices.at(importIndex);
+            auto binding = Wasm::wasmToJS(vm, m_module->wasmToJSCallee(), callLinkInfos[importIndex], typeIndex, importIndex);
             if (UNLIKELY(!binding))
                 return makeUnexpected(binding.error());
             stubs[importIndex] = binding.value();

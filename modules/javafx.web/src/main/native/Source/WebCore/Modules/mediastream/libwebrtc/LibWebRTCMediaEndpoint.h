@@ -24,7 +24,7 @@
 
 #pragma once
 
-#if USE(LIBWEBRTC)
+#if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
 
 #include "LibWebRTCObservers.h"
 #include "LibWebRTCProvider.h"
@@ -34,6 +34,7 @@
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_COMMA_BEGIN
 
 #include <webrtc/api/jsep.h>
 #include <webrtc/api/peer_connection_interface.h>
@@ -42,8 +43,10 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
 
 ALLOW_DEPRECATED_DECLARATIONS_END
 ALLOW_UNUSED_PARAMETERS_END
+ALLOW_COMMA_END
 
 #include <wtf/LoggerHelper.h>
+#include <wtf/RobinHoodHashMap.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace webrtc {
@@ -125,8 +128,6 @@ private:
     // webrtc::PeerConnectionObserver API
     void OnSignalingChange(webrtc::PeerConnectionInterface::SignalingState) final;
     void OnDataChannel(rtc::scoped_refptr<webrtc::DataChannelInterface>) final;
-    void OnTrack(rtc::scoped_refptr<webrtc::RtpTransceiverInterface>) final;
-    void OnRemoveTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface>) final;
 
     void OnNegotiationNeededEvent(uint32_t) final;
     void OnStandardizedIceConnectionChange(webrtc::PeerConnectionInterface::IceConnectionState) final;
@@ -140,10 +141,6 @@ private:
     void setLocalSessionDescriptionFailed(ExceptionCode, const char*);
     void setRemoteSessionDescriptionSucceeded();
     void setRemoteSessionDescriptionFailed(ExceptionCode, const char*);
-    void newTransceiver(rtc::scoped_refptr<webrtc::RtpTransceiverInterface>&&);
-    void removeRemoteTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface>&&);
-
-    void addPendingTrackEvent(Ref<RTCRtpReceiver>&&, MediaStreamTrack&, const std::vector<rtc::scoped_refptr<webrtc::MediaStreamInterface>>&, RefPtr<RTCRtpTransceiver>&&);
 
     template<typename T>
     ExceptionOr<Backends> createTransceiverBackends(T&&, webrtc::RtpTransceiverInit&&, LibWebRTCRtpSenderBackend::Source&&);
@@ -155,7 +152,7 @@ private:
 
     rtc::scoped_refptr<LibWebRTCStatsCollector> createStatsCollector(Ref<DeferredPromise>&&);
 
-    MediaStream& mediaStreamFromRTCStream(webrtc::MediaStreamInterface&);
+    MediaStream& mediaStreamFromRTCStreamId(const String&);
 
     void AddRef() const { ref(); }
     rtc::RefCountReleaseStatus Release() const
@@ -190,13 +187,13 @@ private:
     SetLocalSessionDescriptionObserver<LibWebRTCMediaEndpoint> m_setLocalSessionDescriptionObserver;
     SetRemoteSessionDescriptionObserver<LibWebRTCMediaEndpoint> m_setRemoteSessionDescriptionObserver;
 
-    HashMap<String, RefPtr<MediaStream>> m_remoteStreamsById;
+    MemoryCompactRobinHoodHashMap<String, RefPtr<MediaStream>> m_remoteStreamsById;
     HashMap<MediaStreamTrack*, Vector<String>> m_remoteStreamsFromRemoteTrack;
 
     bool m_isInitiator { false };
     Timer m_statsLogTimer;
 
-    HashMap<String, rtc::scoped_refptr<webrtc::MediaStreamInterface>> m_localStreams;
+    MemoryCompactRobinHoodHashMap<String, rtc::scoped_refptr<webrtc::MediaStreamInterface>> m_localStreams;
 
     std::unique_ptr<LibWebRTCProvider::SuspendableSocketFactory> m_rtcSocketFactory;
 #if !RELEASE_LOG_DISABLED
@@ -208,4 +205,4 @@ private:
 
 } // namespace WebCore
 
-#endif // USE(LIBWEBRTC)
+#endif // ENABLE(WEB_RTC) && USE(LIBWEBRTC)

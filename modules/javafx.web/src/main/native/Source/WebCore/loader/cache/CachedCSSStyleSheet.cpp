@@ -28,6 +28,7 @@
 #include "CachedResourceClientWalker.h"
 #include "CachedResourceRequest.h"
 #include "CachedStyleSheetClient.h"
+#include "CommonAtomStrings.h"
 #include "HTTPHeaderNames.h"
 #include "HTTPParsers.h"
 #include "MemoryCache.h"
@@ -40,7 +41,7 @@ namespace WebCore {
 
 CachedCSSStyleSheet::CachedCSSStyleSheet(CachedResourceRequest&& request, PAL::SessionID sessionID, const CookieJar* cookieJar)
     : CachedResource(WTFMove(request), Type::CSSStyleSheet, sessionID, cookieJar)
-    , m_decoder(TextResourceDecoder::create("text/css", request.charset()))
+    , m_decoder(TextResourceDecoder::create(cssContentTypeAtom(), request.charset()))
 {
 }
 
@@ -59,7 +60,7 @@ void CachedCSSStyleSheet::didAddClient(CachedResourceClient& client)
     CachedResource::didAddClient(client);
 
     if (!isLoading())
-        static_cast<CachedStyleSheetClient&>(client).setCSSStyleSheet(m_resourceRequest.url().string(), m_response.url(), m_decoder->encoding().name(), this);
+        downcast<CachedStyleSheetClient>(client).setCSSStyleSheet(m_resourceRequest.url().string(), response().url(), String::fromLatin1(m_decoder->encoding().name()), this);
 }
 
 void CachedCSSStyleSheet::setEncoding(const String& chs)
@@ -69,7 +70,7 @@ void CachedCSSStyleSheet::setEncoding(const String& chs)
 
 String CachedCSSStyleSheet::encoding() const
 {
-    return m_decoder->encoding().name();
+    return String::fromLatin1(m_decoder->encoding().name());
 }
 
 const String CachedCSSStyleSheet::sheetText(MIMETypeCheckHint mimeTypeCheckHint, bool* hasValidMIMEType) const
@@ -103,7 +104,7 @@ void CachedCSSStyleSheet::finishLoading(const FragmentedSharedBuffer* data, cons
         auto contiguousData = data->makeContiguous();
         setEncodedSize(data->size());
         // Decode the data to find out the encoding and keep the sheet text around during checkNotify()
-        m_decodedSheetText = m_decoder->decodeAndFlush(contiguousData->data(), data->size());
+        m_decodedSheetText = protectedDecoder()->decodeAndFlush(contiguousData->data(), data->size());
         m_data = WTFMove(contiguousData);
     } else {
         m_data = nullptr;
@@ -115,24 +116,29 @@ void CachedCSSStyleSheet::finishLoading(const FragmentedSharedBuffer* data, cons
     m_decodedSheetText = String();
 }
 
+Ref<TextResourceDecoder> CachedCSSStyleSheet::protectedDecoder() const
+{
+    return m_decoder;
+}
+
 void CachedCSSStyleSheet::checkNotify(const NetworkLoadMetrics&)
 {
     if (isLoading())
         return;
 
-    CachedResourceClientWalker<CachedStyleSheetClient> w(m_clients);
-    while (CachedStyleSheetClient* c = w.next())
-        c->setCSSStyleSheet(m_resourceRequest.url().string(), m_response.url(), m_decoder->encoding().name(), this);
+    CachedResourceClientWalker<CachedStyleSheetClient> walker(*this);
+    while (CachedStyleSheetClient* c = walker.next())
+        c->setCSSStyleSheet(m_resourceRequest.url().string(), response().url(), String::fromLatin1(m_decoder->encoding().name()), this);
 }
 
 String CachedCSSStyleSheet::responseMIMEType() const
 {
-    return extractMIMETypeFromMediaType(m_response.httpHeaderField(HTTPHeaderName::ContentType));
+    return extractMIMETypeFromMediaType(response().httpHeaderField(HTTPHeaderName::ContentType));
 }
 
 bool CachedCSSStyleSheet::mimeTypeAllowedByNosniff() const
 {
-    return parseContentTypeOptionsHeader(m_response.httpHeaderField(HTTPHeaderName::XContentTypeOptions)) != ContentTypeOptionsDisposition::Nosniff || equalLettersIgnoringASCIICase(responseMIMEType(), "text/css");
+    return parseContentTypeOptionsHeader(response().httpHeaderField(HTTPHeaderName::XContentTypeOptions)) != ContentTypeOptionsDisposition::Nosniff || equalLettersIgnoringASCIICase(responseMIMEType(), "text/css"_s);
 }
 
 bool CachedCSSStyleSheet::canUseSheet(MIMETypeCheckHint mimeTypeCheckHint, bool* hasValidMIMEType) const
@@ -157,7 +163,7 @@ bool CachedCSSStyleSheet::canUseSheet(MIMETypeCheckHint mimeTypeCheckHint, bool*
     // This code defaults to allowing the stylesheet for non-HTTP protocols so
     // folks can use standards mode for local HTML documents.
     String mimeType = responseMIMEType();
-    bool typeOK = mimeType.isEmpty() || equalLettersIgnoringASCIICase(mimeType, "text/css") || equalLettersIgnoringASCIICase(mimeType, "application/x-unknown-content-type") || !isValidContentType(mimeType);
+    bool typeOK = mimeType.isEmpty() || equalLettersIgnoringASCIICase(mimeType, "text/css"_s) || equalLettersIgnoringASCIICase(mimeType, "application/x-unknown-content-type"_s) || !isValidContentType(mimeType);
     if (hasValidMIMEType)
         *hasValidMIMEType = typeOK;
     return typeOK;

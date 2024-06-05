@@ -36,6 +36,7 @@ namespace WebCore::Style {
 class MatchRequest;
 class ScopeRuleSets;
 struct SelectorMatchingState;
+enum class CascadeLevel : uint8_t;
 
 class PseudoElementRequest {
 public:
@@ -80,11 +81,13 @@ public:
 
     void setMode(SelectorChecker::Mode mode) { m_mode = mode; }
     void setPseudoElementRequest(const PseudoElementRequest& request) { m_pseudoElementRequest = request; }
-    void setMedium(const MediaQueryEvaluator* medium) { m_isPrintStyle = medium->mediaTypeMatchSpecific("print"); }
+    void setMedium(const MQ::MediaQueryEvaluator& medium) { m_isPrintStyle = medium.isPrintMedia(); }
 
     bool hasAnyMatchingRules(const RuleSet&);
 
     const MatchResult& matchResult() const;
+    std::unique_ptr<MatchResult> releaseMatchResult();
+
     const Vector<RefPtr<const StyleRule>>& matchedRuleList() const;
 
     void clearMatchedRules();
@@ -93,31 +96,33 @@ public:
     const Relations& styleRelations() const { return m_styleRelations; }
     bool didMatchUncommonAttributeSelector() const { return m_didMatchUncommonAttributeSelector; }
 
+    void addAuthorKeyframeRules(const StyleRuleKeyframe&);
+
 private:
-    void addElementStyleProperties(const StyleProperties*, bool isCacheable = true, FromStyleAttribute = FromStyleAttribute::No);
+    void addElementStyleProperties(const StyleProperties*, CascadeLayerPriority, bool isCacheable = true, FromStyleAttribute = FromStyleAttribute::No);
 
     void matchUARules(const RuleSet&);
 
-    void collectMatchingAuthorRules();
     void addElementInlineStyleProperties(bool includeSMILProperties);
 
-    void matchAuthorShadowPseudoElementRules();
-    void matchHostPseudoClassRules();
-    void matchSlottedPseudoElementRules();
-    void matchPartPseudoElementRules();
-    void matchPartPseudoElementRulesForScope(const Element& partMatchingElement);
+    void matchShadowPseudoElementRules(CascadeLevel);
+    void matchHostPseudoClassRules(CascadeLevel);
+    void matchSlottedPseudoElementRules(CascadeLevel);
+    void matchPartPseudoElementRules(CascadeLevel);
+    void matchPartPseudoElementRulesForScope(const Element& partMatchingElement, CascadeLevel);
 
     void collectMatchingShadowPseudoElementRules(const MatchRequest&);
 
+    void collectMatchingRules(CascadeLevel);
     void collectMatchingRules(const MatchRequest&);
     void collectMatchingRulesForList(const RuleSet::RuleDataVector*, const MatchRequest&);
     bool ruleMatches(const RuleData&, unsigned& specificity, ScopeOrdinal);
-    bool containerQueriesMatch(const Vector<const FilteredContainerQuery*>&);
+    bool containerQueriesMatch(const RuleData&, const MatchRequest&);
 
     void sortMatchedRules();
 
     enum class DeclarationOrigin { UserAgent, User, Author };
-    static Vector<MatchedProperties>& declarationsForOrigin(MatchResult&, DeclarationOrigin);
+    Vector<MatchedProperties>& declarationsForOrigin(DeclarationOrigin);
     void sortAndTransferMatchedRules(DeclarationOrigin);
     void transferMatchedRules(DeclarationOrigin, std::optional<ScopeOrdinal> forScope = { });
 
@@ -143,7 +148,7 @@ private:
     // Output.
     Vector<RefPtr<const StyleRule>> m_matchedRuleList;
     bool m_didMatchUncommonAttributeSelector { false };
-    MatchResult m_result;
+    std::unique_ptr<MatchResult> m_result;
     Relations m_styleRelations;
     PseudoIdSet m_matchedPseudoElementIds;
 };

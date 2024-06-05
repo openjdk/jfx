@@ -28,6 +28,8 @@
 
 #if ENABLE(SERVICE_WORKER)
 
+#include "ClientOrigin.h"
+#include "RegistrableDomain.h"
 #include "SecurityOrigin.h"
 #include <wtf/URLHash.h>
 #include <wtf/text/StringToIntegerConversion.h>
@@ -44,15 +46,6 @@ ServiceWorkerRegistrationKey::ServiceWorkerRegistrationKey(SecurityOriginData&& 
 ServiceWorkerRegistrationKey ServiceWorkerRegistrationKey::emptyKey()
 {
     return { };
-}
-
-unsigned ServiceWorkerRegistrationKey::hash() const
-{
-    unsigned hashes[2];
-    hashes[0] = SecurityOriginDataHash::hash(m_topOrigin);
-    hashes[1] = StringHash::hash(m_scope.string());
-
-    return StringHasher::hashMemory(hashes, sizeof(hashes));
 }
 
 bool ServiceWorkerRegistrationKey::operator==(const ServiceWorkerRegistrationKey& other) const
@@ -91,13 +84,18 @@ bool ServiceWorkerRegistrationKey::relatesToOrigin(const SecurityOriginData& sec
     return SecurityOriginData::fromURL(m_scope) == securityOrigin;
 }
 
+RegistrableDomain ServiceWorkerRegistrationKey::firstPartyForCookies() const
+{
+    return RegistrableDomain::uncheckedCreateFromHost(m_topOrigin.host());
+}
+
 static const char separatorCharacter = '_';
 
 String ServiceWorkerRegistrationKey::toDatabaseKey() const
 {
-    if (m_topOrigin.port)
-        return makeString(m_topOrigin.protocol, separatorCharacter, m_topOrigin.host, separatorCharacter, String::number(m_topOrigin.port.value()), separatorCharacter, m_scope.string());
-    return makeString(m_topOrigin.protocol, separatorCharacter, m_topOrigin.host, separatorCharacter, separatorCharacter, m_scope.string());
+    if (m_topOrigin.port())
+        return makeString(m_topOrigin.protocol(), separatorCharacter, m_topOrigin.host(), separatorCharacter, String::number(m_topOrigin.port().value()), separatorCharacter, m_scope.string());
+    return makeString(m_topOrigin.protocol(), separatorCharacter, m_topOrigin.host(), separatorCharacter, separatorCharacter, m_scope.string());
 }
 
 std::optional<ServiceWorkerRegistrationKey> ServiceWorkerRegistrationKey::fromDatabaseKey(const String& key)
@@ -123,11 +121,24 @@ std::optional<ServiceWorkerRegistrationKey> ServiceWorkerRegistrationKey::fromDa
             return std::nullopt;
     }
 
-    auto scope = URL { URL(), key.substring(third + 1) };
+    auto scheme = StringView(key).left(first);
+    auto host = StringView(key).substring(first + 1, second - first - 1);
+
+    URL topOriginURL { makeString(scheme, "://", host) };
+    if (!topOriginURL.isValid())
+        return std::nullopt;
+
+    URL scope { key.substring(third + 1) };
     if (!scope.isValid())
         return std::nullopt;
 
-    return ServiceWorkerRegistrationKey { { key.substring(0, first), key.substring(first + 1, second - first - 1), shortPort }, WTFMove(scope) };
+    SecurityOriginData topOrigin { scheme.toString(), host.toString(), shortPort };
+    return ServiceWorkerRegistrationKey { WTFMove(topOrigin), WTFMove(scope) };
+}
+
+ClientOrigin ServiceWorkerRegistrationKey::clientOrigin() const
+{
+    return ClientOrigin { m_topOrigin, SecurityOriginData::fromURL(m_scope) };
 }
 
 #if !LOG_DISABLED

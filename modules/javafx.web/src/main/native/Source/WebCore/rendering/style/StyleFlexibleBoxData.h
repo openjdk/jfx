@@ -31,16 +31,14 @@
 
 namespace WebCore {
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleFlexibleBoxData);
 class StyleFlexibleBoxData : public RefCounted<StyleFlexibleBoxData> {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleFlexibleBoxData);
 public:
     static Ref<StyleFlexibleBoxData> create() { return adoptRef(*new StyleFlexibleBoxData); }
     Ref<StyleFlexibleBoxData> copy() const;
 
     bool operator==(const StyleFlexibleBoxData&) const;
-    bool operator!=(const StyleFlexibleBoxData& o) const
-    {
-        return !(*this == o);
-    }
 
     float flexGrow;
     float flexShrink;

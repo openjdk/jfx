@@ -24,7 +24,7 @@
  */
 
 [
-    EnabledAtRuntime=DirectoryUploadEnabled,
+    EnabledBySetting=DirectoryUploadEnabled,
     Exposed=Window
 ] interface FileSystemDirectoryEntry : FileSystemEntry {
     [CallWith=CurrentScriptExecutionContext] FileSystemDirectoryReader createReader();

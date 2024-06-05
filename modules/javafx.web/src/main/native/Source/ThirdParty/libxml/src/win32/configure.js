@@ -35,9 +35,9 @@ var withHttp = true;
 var withHtml = true;
 var withC14n = true;
 var withCatalog = true;
-var withDocb = true;
 var withXpath = true;
 var withXptr = true;
+var withXptrLocs = false;
 var withXinclude = true;
 var withIconv = true;
 var withIcu = false;
@@ -46,7 +46,6 @@ var withZlib = false;
 var withLzma = false;
 var withDebug = true;
 var withMemDebug = false;
-var withRunDebug = false;
 var withSchemas = true;
 var withSchematron = true;
 var withRegExps = true;
@@ -121,9 +120,9 @@ function usage()
 	txt += "  html:       Enable HTML processor (" + (withHtml? "yes" : "no")  + ")\n";
 	txt += "  c14n:       Enable C14N support (" + (withC14n? "yes" : "no")  + ")\n";
 	txt += "  catalog:    Enable catalog support (" + (withCatalog? "yes" : "no")  + ")\n";
-	txt += "  docb:       Enable DocBook support (" + (withDocb? "yes" : "no")  + ")\n";
 	txt += "  xpath:      Enable XPath support (" + (withXpath? "yes" : "no")  + ")\n";
 	txt += "  xptr:       Enable XPointer support (" + (withXptr? "yes" : "no")  + ")\n";
+	txt += "  xptr_locs:  Enable XPointer locs support (" + (withXptrLocs? "yes" : "no")  + ")\n";
 	txt += "  xinclude:   Enable XInclude support (" + (withXinclude? "yes" : "no")  + ")\n";
 	txt += "  iconv:      Enable iconv support (" + (withIconv? "yes" : "no")  + ")\n";
 	txt += "  icu:        Enable icu support (" + (withIcu? "yes" : "no")  + ")\n";
@@ -132,7 +131,6 @@ function usage()
 	txt += "  lzma:       Enable lzma support (" + (withLzma? "yes" : "no")  + ")\n";
 	txt += "  xml_debug:  Enable XML debbugging module (" + (withDebug? "yes" : "no")  + ")\n";
 	txt += "  mem_debug:  Enable memory debugger (" + (withMemDebug? "yes" : "no")  + ")\n";
-	txt += "  run_debug:  Enable memory debugger (" + (withRunDebug? "yes" : "no")  + ")\n";
 	txt += "  regexps:    Enable regular expressions (" + (withRegExps? "yes" : "no") + ")\n";
 	txt += "  modules:    Enable module support (" + (withModules? "yes" : "no") + ")\n";
 	txt += "  tree:       Enable tree api (" + (withTree? "yes" : "no") + ")\n";
@@ -218,9 +216,9 @@ function discoverVersion()
 	vf.WriteLine("WITH_HTML=" + (withHtml? "1" : "0"));
 	vf.WriteLine("WITH_C14N=" + (withC14n? "1" : "0"));
 	vf.WriteLine("WITH_CATALOG=" + (withCatalog? "1" : "0"));
-	vf.WriteLine("WITH_DOCB=" + (withDocb? "1" : "0"));
 	vf.WriteLine("WITH_XPATH=" + (withXpath? "1" : "0"));
 	vf.WriteLine("WITH_XPTR=" + (withXptr? "1" : "0"));
+	vf.WriteLine("WITH_XPTR_LOCS=" + (withXptrLocs? "1" : "0"));
 	vf.WriteLine("WITH_XINCLUDE=" + (withXinclude? "1" : "0"));
 	vf.WriteLine("WITH_ICONV=" + (withIconv? "1" : "0"));
 	vf.WriteLine("WITH_ICU=" + (withIcu? "1" : "0"));
@@ -229,7 +227,6 @@ function discoverVersion()
 	vf.WriteLine("WITH_LZMA=" + (withLzma? "1" : "0"));
 	vf.WriteLine("WITH_DEBUG=" + (withDebug? "1" : "0"));
 	vf.WriteLine("WITH_MEM_DEBUG=" + (withMemDebug? "1" : "0"));
-	vf.WriteLine("WITH_RUN_DEBUG=" + (withRunDebug? "1" : "0"));
 	vf.WriteLine("WITH_SCHEMAS=" + (withSchemas? "1" : "0"));
 	vf.WriteLine("WITH_SCHEMATRON=" + (withSchematron? "1" : "0"));
 	vf.WriteLine("WITH_REGEXPS=" + (withRegExps? "1" : "0"));
@@ -315,12 +312,12 @@ function configureLibxml()
 			of.WriteLine(s.replace(/\@WITH_C14N\@/, withC14n? "1" : "0"));
 		} else if (s.search(/\@WITH_CATALOG\@/) != -1) {
 			of.WriteLine(s.replace(/\@WITH_CATALOG\@/, withCatalog? "1" : "0"));
-		} else if (s.search(/\@WITH_DOCB\@/) != -1) {
-			of.WriteLine(s.replace(/\@WITH_DOCB\@/, withDocb? "1" : "0"));
 		} else if (s.search(/\@WITH_XPATH\@/) != -1) {
 			of.WriteLine(s.replace(/\@WITH_XPATH\@/, withXpath? "1" : "0"));
 		} else if (s.search(/\@WITH_XPTR\@/) != -1) {
 			of.WriteLine(s.replace(/\@WITH_XPTR\@/, withXptr? "1" : "0"));
+		} else if (s.search(/\@WITH_XPTR_LOCS\@/) != -1) {
+			of.WriteLine(s.replace(/\@WITH_XPTR_LOCS\@/, withXptrLocs? "1" : "0"));
 		} else if (s.search(/\@WITH_XINCLUDE\@/) != -1) {
 			of.WriteLine(s.replace(/\@WITH_XINCLUDE\@/, withXinclude? "1" : "0"));
 		} else if (s.search(/\@WITH_ICONV\@/) != -1) {
@@ -337,8 +334,6 @@ function configureLibxml()
 			of.WriteLine(s.replace(/\@WITH_DEBUG\@/, withDebug? "1" : "0"));
 		} else if (s.search(/\@WITH_MEM_DEBUG\@/) != -1) {
 			of.WriteLine(s.replace(/\@WITH_MEM_DEBUG\@/, withMemDebug? "1" : "0"));
-		} else if (s.search(/\@WITH_RUN_DEBUG\@/) != -1) {
-			of.WriteLine(s.replace(/\@WITH_RUN_DEBUG\@/, withRunDebug? "1" : "0"));
 		} else if (s.search(/\@WITH_SCHEMAS\@/) != -1) {
 			of.WriteLine(s.replace(/\@WITH_SCHEMAS\@/, withSchemas? "1" : "0"));
 		} else if (s.search(/\@WITH_SCHEMATRON\@/) != -1) {
@@ -470,12 +465,12 @@ for (i = 0; (i < WScript.Arguments.length) && (error == 0); i++) {
 			withC14n = strToBool(arg.substring(opt.length + 1, arg.length));
 		else if (opt == "catalog")
 			withCatalog = strToBool(arg.substring(opt.length + 1, arg.length));
-		else if (opt == "docb")
-			withDocb = strToBool(arg.substring(opt.length + 1, arg.length));
 		else if (opt == "xpath")
 			withXpath = strToBool(arg.substring(opt.length + 1, arg.length));
 		else if (opt == "xptr")
 			withXptr = strToBool(arg.substring(opt.length + 1, arg.length));
+		else if (opt == "xptr_locs")
+			withXptrLocs = strToBool(arg.substring(opt.length + 1, arg.length));
 		else if (opt == "xinclude")
 			withXinclude = strToBool(arg.substring(opt.length + 1, arg.length));
 		else if (opt == "iconv")
@@ -492,8 +487,6 @@ for (i = 0; (i < WScript.Arguments.length) && (error == 0); i++) {
 			withDebug = strToBool(arg.substring(opt.length + 1, arg.length));
 		else if (opt == "mem_debug")
 			withMemDebug = strToBool(arg.substring(opt.length + 1, arg.length));
-		else if (opt == "run_debug")
-			withRunDebug = strToBool(arg.substring(opt.length + 1, arg.length));
 		else if (opt == "schemas")
 			withSchemas = strToBool(arg.substring(opt.length + 1, arg.length));
 		else if (opt == "schematron")
@@ -661,9 +654,9 @@ txtOut += "       HTTP client: " + boolToStr(withHttp) + "\n";
 txtOut += "    HTML processor: " + boolToStr(withHtml) + "\n";
 txtOut += "      C14N support: " + boolToStr(withC14n) + "\n";
 txtOut += "   Catalog support: " + boolToStr(withCatalog) + "\n";
-txtOut += "   DocBook support: " + boolToStr(withDocb) + "\n";
 txtOut += "     XPath support: " + boolToStr(withXpath) + "\n";
 txtOut += "  XPointer support: " + boolToStr(withXptr) + "\n";
+txtOut += "     XPointer locs: " + boolToStr(withXptrLocs) + "\n";
 txtOut += "  XInclude support: " + boolToStr(withXinclude) + "\n";
 txtOut += "     iconv support: " + boolToStr(withIconv) + "\n";
 txtOut += "     icu   support: " + boolToStr(withIcu) + "\n";
@@ -672,7 +665,6 @@ txtOut += "      zlib support: " + boolToStr(withZlib) + "\n";
 txtOut += "      lzma support: " + boolToStr(withLzma) + "\n";
 txtOut += "  Debugging module: " + boolToStr(withDebug) + "\n";
 txtOut += "  Memory debugging: " + boolToStr(withMemDebug) + "\n";
-txtOut += " Runtime debugging: " + boolToStr(withRunDebug) + "\n";
 txtOut += "    Regexp support: " + boolToStr(withRegExps) + "\n";
 txtOut += "    Module support: " + boolToStr(withModules) + "\n";
 txtOut += "      Tree support: " + boolToStr(withTree) + "\n";
@@ -706,6 +698,10 @@ txtOut += "Put static libs in: " + buildLibPrefix + "\n";
 txtOut += "Put shared libs in: " + buildSoPrefix + "\n";
 txtOut += "      Include path: " + buildInclude + "\n";
 txtOut += "          Lib path: " + buildLib + "\n";
+txtOut += "\n";
+txtOut += "DEPRECATION WARNING: The build system in the win32 directory is\n";
+txtOut += "deprecated and will be removed in a future release. Please switch\n";
+txtOut += "to CMake.\n";
 WScript.Echo(txtOut);
 
 //

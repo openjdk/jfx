@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2005-2017 Apple Inc. All rights reserved.
- * Copyright (C) 2009, 2010, 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2009-2022 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,15 +33,16 @@
 #include "BreakBlockquoteCommand.h"
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSStyleDeclaration.h"
+#include "CommonAtomStrings.h"
 #include "DOMWrapperWorld.h"
 #include "DataTransfer.h"
 #include "Document.h"
 #include "DocumentFragment.h"
 #include "Editing.h"
 #include "EditingBehavior.h"
-#include "ElementIterator.h"
+#include "ElementIteratorInlines.h"
 #include "EventNames.h"
-#include "Frame.h"
+#include "FilterOperations.h"
 #include "FrameSelection.h"
 #include "HTMLBRElement.h"
 #include "HTMLBaseElement.h"
@@ -53,18 +54,22 @@
 #include "HTMLNames.h"
 #include "HTMLStyleElement.h"
 #include "HTMLTitleElement.h"
+#include "LocalFrame.h"
 #include "NodeList.h"
+#include "NodeName.h"
 #include "NodeRenderStyle.h"
 #include "Position.h"
 #include "RenderInline.h"
+#include "RenderStyleInlines.h"
 #include "RenderText.h"
 #include "ScriptDisallowedScope.h"
 #include "ScriptElement.h"
 #include "SimplifyMarkupCommand.h"
 #include "SmartReplace.h"
-#include "StyleProperties.h"
+#include "StylePropertiesInlines.h"
 #include "Text.h"
 #include "TextIterator.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include "VisibleUnits.h"
 #include "markup.h"
 #include <wtf/NeverDestroyed.h>
@@ -114,13 +119,13 @@ private:
 
 static bool isInterchangeNewlineNode(const Node* node)
 {
-    static NeverDestroyed<String> interchangeNewlineClassString(AppleInterchangeNewline);
+    static NeverDestroyed<String> interchangeNewlineClassString = AppleInterchangeNewline ""_s;
     return is<HTMLBRElement>(node) && downcast<HTMLBRElement>(*node).attributeWithoutSynchronization(classAttr) == interchangeNewlineClassString;
 }
 
 static bool isInterchangeConvertedSpaceSpan(const Node* node)
 {
-    static NeverDestroyed<String> convertedSpaceSpanClassString(AppleConvertedSpace);
+    static NeverDestroyed<String> convertedSpaceSpanClassString = AppleConvertedSpace ""_s;
     return is<HTMLElement>(node) && downcast<HTMLElement>(*node).attributeWithoutSynchronization(classAttr) == convertedSpaceSpanClassString;
 }
 
@@ -180,11 +185,15 @@ ReplacementFragment::ReplacementFragment(DocumentFragment* fragment, const Visib
     }
 
     auto page = createPageForSanitizingWebContent();
-    RefPtr stagingDocument { page->mainFrame().document() };
+    auto* localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    if (!localMainFrame)
+        return;
+
+    RefPtr stagingDocument { localMainFrame->document() };
     ASSERT(stagingDocument->body());
 
     ComputedStyleExtractor computedStyleOfEditableRoot(editableRoot.get());
-    stagingDocument->body()->setAttributeWithoutSynchronization(styleAttr, computedStyleOfEditableRoot.copyProperties()->asText());
+    stagingDocument->body()->setAttributeWithoutSynchronization(styleAttr, computedStyleOfEditableRoot.copyProperties()->asTextAtom());
 
     RefPtr<StyledElement> holder = insertFragmentForTestRendering(stagingDocument->body());
     if (!holder) {
@@ -237,7 +246,7 @@ void ReplacementFragment::removeContentsWithSideEffects()
         }
         if (element->hasAttributes()) {
             for (auto& attribute : element->attributesIterator()) {
-                if (element->isEventHandlerAttribute(attribute) || element->isJavaScriptURLAttribute(attribute))
+                if (element->isEventHandlerAttribute(attribute) || element->attributeContainsJavaScriptURL(attribute))
                     attributesToRemove.append({ element.copyRef(), attribute.name() });
             }
         }
@@ -434,8 +443,11 @@ inline void ReplaceSelectionCommand::InsertedNodes::willRemoveNode(Node* node)
         m_lastNodeInserted = nullptr;
     } else if (m_firstNodeInserted == node)
         m_firstNodeInserted = NodeTraversal::nextSkippingChildren(*m_firstNodeInserted);
-    else if (m_lastNodeInserted == node)
+    else if (m_lastNodeInserted == node) {
         m_lastNodeInserted = NodeTraversal::previousSkippingChildren(*m_lastNodeInserted);
+        if (!m_lastNodeInserted)
+            m_lastNodeInserted = m_firstNodeInserted;
+    }
 }
 
 inline void ReplaceSelectionCommand::InsertedNodes::didReplaceNode(Node* node, Node* newNode)
@@ -568,7 +580,7 @@ static bool fragmentNeedsColorTransformed(ReplacementFragment& fragment, const P
 
         const auto& colorFilter = editableRootRenderer->style().appleColorFilter();
         for (const auto& colorFilterOperation : colorFilter.operations()) {
-            if (colorFilterOperation->type() != FilterOperation::APPLE_INVERT_LIGHTNESS)
+            if (colorFilterOperation->type() != FilterOperation::Type::AppleInvertLightness)
                 return false;
         }
     }
@@ -622,7 +634,7 @@ void ReplaceSelectionCommand::inverseTransformColor(InsertedNodes& insertedNodes
         if (editingStyle.ptr() == transformedStyle.ptr())
             continue;
 
-        setNodeAttribute(element, styleAttr, transformedStyle->style()->asText());
+        setNodeAttribute(element, styleAttr, transformedStyle->style()->asTextAtom());
     }
 }
 
@@ -685,7 +697,7 @@ void ReplaceSelectionCommand::removeRedundantStylesAndKeepStyleSpanInline(Insert
             }
             removeNodeAttribute(*element, styleAttr);
         } else if (newInlineStyle->style()->propertyCount() != inlineStyle->propertyCount())
-            setNodeAttribute(*element, styleAttr, newInlineStyle->style()->asText());
+            setNodeAttribute(*element, styleAttr, newInlineStyle->style()->asTextAtom());
 
         // FIXME: Tolerate differences in id, class, and style attributes.
         if (element->parentNode() && isNonTableCellHTMLBlockElement(element) && areIdenticalElements(*element, *element->parentNode())
@@ -716,74 +728,72 @@ void ReplaceSelectionCommand::removeRedundantStylesAndKeepStyleSpanInline(Insert
 
             // Mutate using the CSSOM wrapper so we get the same event behavior as a script.
             if (isBlock(element))
-                element->cssomStyle().setPropertyInternal(CSSPropertyDisplay, "inline", false);
+                element->cssomStyle().setPropertyInternal(CSSPropertyDisplay, "inline"_s, false);
             if (element->renderer() && element->renderer()->style().isFloating())
-                element->cssomStyle().setPropertyInternal(CSSPropertyFloat, "none", false);
+                element->cssomStyle().setPropertyInternal(CSSPropertyFloat, noneAtom(), false);
         }
     }
 }
 
-static bool isProhibitedParagraphChild(const AtomString& name)
+static bool isProhibitedParagraphChild(const QualifiedName& name)
 {
-    static NeverDestroyed localNames = [] {
-    // https://dvcs.w3.org/hg/editing/raw-file/57abe6d3cb60/editing.html#prohibited-paragraph-child
-        static constexpr std::array tags {
-            &addressTag,
-            &articleTag,
-            &asideTag,
-            &blockquoteTag,
-            &captionTag,
-            &centerTag,
-            &colTag,
-            &colgroupTag,
-            &ddTag,
-            &detailsTag,
-            &dirTag,
-            &divTag,
-            &dlTag,
-            &dtTag,
-            &fieldsetTag,
-            &figcaptionTag,
-            &figureTag,
-            &footerTag,
-            &formTag,
-            &h1Tag,
-            &h2Tag,
-            &h3Tag,
-            &h4Tag,
-            &h5Tag,
-            &h6Tag,
-            &headerTag,
-            &hgroupTag,
-            &hrTag,
-            &liTag,
-            &listingTag,
-            &mainTag, // Missing in the specification.
-            &menuTag,
-            &navTag,
-            &olTag,
-            &pTag,
-            &plaintextTag,
-            &preTag,
-            &sectionTag,
-            &summaryTag,
-            &tableTag,
-            &tbodyTag,
-            &tdTag,
-            &tfootTag,
-            &thTag,
-            &theadTag,
-            &trTag,
-            &ulTag,
-            &xmpTag,
-        };
-        MemoryCompactLookupOnlyRobinHoodHashSet<AtomString> set;
-        set.reserveInitialCapacity(std::size(tags));
-        for (auto& tag : tags)
-            set.add(tag->get().localName());
-        return set;
-    }();
-    return localNames.get().contains(name);
+    using namespace ElementNames;
+
+        // https://dvcs.w3.org/hg/editing/raw-file/57abe6d3cb60/editing.html#prohibited-paragraph-child
+    switch (name.nodeName()) {
+    case HTML::address:
+    case HTML::article:
+    case HTML::aside:
+    case HTML::blockquote:
+    case HTML::caption:
+    case HTML::center:
+    case HTML::col:
+    case HTML::colgroup:
+    case HTML::dd:
+    case HTML::details:
+    case HTML::dir:
+    case HTML::div:
+    case HTML::dl:
+    case HTML::dt:
+    case HTML::fieldset:
+    case HTML::figcaption:
+    case HTML::figure:
+    case HTML::footer:
+    case HTML::form:
+    case HTML::h1:
+    case HTML::h2:
+    case HTML::h3:
+    case HTML::h4:
+    case HTML::h5:
+    case HTML::h6:
+    case HTML::header:
+    case HTML::hgroup:
+    case HTML::hr:
+    case HTML::li:
+    case HTML::listing:
+    case HTML::main: // Missing in the specification.
+    case HTML::menu:
+    case HTML::nav:
+    case HTML::ol:
+    case HTML::p:
+    case HTML::plaintext:
+    case HTML::pre:
+    case HTML::section:
+    case HTML::summary:
+    case HTML::table:
+    case HTML::tbody:
+    case HTML::td:
+    case HTML::tfoot:
+    case HTML::th:
+    case HTML::thead:
+    case HTML::tr:
+    case HTML::ul:
+    case HTML::xmp:
+        return true;
+    default:
+        break;
+    }
+    return false;
 }
 
 void ReplaceSelectionCommand::makeInsertedContentRoundTrippableWithHTMLTreeBuilder(InsertedNodes& insertedNodes)
@@ -799,7 +809,7 @@ void ReplaceSelectionCommand::makeInsertedContentRoundTrippableWithHTMLTreeBuild
         if (!node->isConnected())
             continue;
 
-        if (isProhibitedParagraphChild(downcast<HTMLElement>(*node).localName())) {
+        if (isProhibitedParagraphChild(downcast<HTMLElement>(*node).tagQName())) {
             if (RefPtr paragraphElement = enclosingElementWithTag(positionInParentBeforeNode(node.get()), pTag)) {
                 RefPtr parent { paragraphElement->parentNode() };
                 if (parent && parent->hasEditableStyle()) {
@@ -832,6 +842,9 @@ void ReplaceSelectionCommand::moveNodeOutOfAncestor(Node& node, Node& ancestor, 
 {
     Ref<Node> protectedNode = node;
     Ref<Node> protectedAncestor = ancestor;
+
+    if (!protectedAncestor->parentNode()->hasEditableStyle())
+        return;
 
     VisiblePosition positionAtEndOfNode = lastPositionInOrAfterNode(&node);
     VisiblePosition lastPositionInParagraph = lastPositionInNode(&ancestor);
@@ -989,7 +1002,7 @@ void ReplaceSelectionCommand::handleStyleSpans(InsertedNodes& insertedNodes)
         insertedNodes.willRemoveNodePreservingChildren(wrappingStyleSpan.get());
         removeNodePreservingChildren(*wrappingStyleSpan);
     } else
-        setNodeAttribute(*wrappingStyleSpan, styleAttr, style->style()->asText());
+        setNodeAttribute(*wrappingStyleSpan, styleAttr, style->style()->asTextAtom());
 }
 
 void ReplaceSelectionCommand::mergeEndIfNeeded()
@@ -1070,7 +1083,7 @@ static bool isInlineNodeWithStyle(const Node* node)
     const HTMLElement* element = static_cast<const HTMLElement*>(node);
     const AtomString& classAttributeValue = element->attributeWithoutSynchronization(classAttr);
     if (classAttributeValue == AppleTabSpanClass
-        || classAttributeValue == AppleConvertedSpace
+        || classAttributeValue == AppleConvertedSpace ""_s
         || classAttributeValue == ApplePasteAsQuotation)
         return true;
 
@@ -1121,8 +1134,8 @@ void ReplaceSelectionCommand::doApply()
         return;
 
     // We can skip matching the style if the selection is plain text.
-    if ((selection.start().deprecatedNode()->renderer() && selection.start().deprecatedNode()->renderer()->style().userModify() == UserModify::ReadWritePlaintextOnly)
-        && (selection.end().deprecatedNode()->renderer() && selection.end().deprecatedNode()->renderer()->style().userModify() == UserModify::ReadWritePlaintextOnly))
+    if ((selection.start().deprecatedNode()->renderer() && selection.start().deprecatedNode()->renderer()->style().effectiveUserModify() == UserModify::ReadWritePlaintextOnly)
+        && (selection.end().deprecatedNode()->renderer() && selection.end().deprecatedNode()->renderer()->style().effectiveUserModify() == UserModify::ReadWritePlaintextOnly))
         m_matchStyle = false;
 
     if (m_matchStyle) {
@@ -1303,7 +1316,7 @@ void ReplaceSelectionCommand::doApply()
 
     RefPtr blockStart { enclosingBlock(insertionPos.deprecatedNode()) };
     bool isInsertingIntoList = (isListHTMLElement(refNode.get()) || (isLegacyAppleStyleSpan(refNode.get()) && isListHTMLElement(refNode->firstChild())))
-    && blockStart && blockStart->renderer()->isListItem();
+    && blockStart && blockStart->renderer()->isListItem() && blockStart->parentNode()->hasEditableStyle();
     if (isInsertingIntoList)
         refNode = insertAsListItems(downcast<HTMLElement>(*refNode), blockStart.get(), insertionPos, insertedNodes);
     else if (isEditablePosition(insertionPos)) {
@@ -1353,7 +1366,7 @@ void ReplaceSelectionCommand::doApply()
     if (!startOfInsertedContent.isNull() && insertionBlock && insertionPos.deprecatedNode() == insertionBlock->parentNode() && (unsigned)insertionPos.deprecatedEditingOffset() < insertionBlock->computeNodeIndex() && !isStartOfParagraph(startOfInsertedContent))
         insertNodeAt(HTMLBRElement::create(document()), startOfInsertedContent.deepEquivalent());
 
-    if (endBR && (plainTextFragment || shouldRemoveEndBR(endBR.get(), originalVisPosBeforeEndBR))) {
+    if (endBR && (plainTextFragment || (shouldRemoveEndBR(endBR.get(), originalVisPosBeforeEndBR) && !(fragment.hasInterchangeNewlineAtEnd() && selectionIsPlainText)))) {
         RefPtr parent { endBR->parentNode() };
         insertedNodes.willRemoveNode(endBR.get());
         removeNode(*endBR);
@@ -1594,11 +1607,11 @@ void ReplaceSelectionCommand::addSpacesForSmartReplace()
     if (needsTrailingSpace && endNode) {
         bool collapseWhiteSpace = !endNode->renderer() || endNode->renderer()->style().collapseWhiteSpace();
         if (is<Text>(*endNode)) {
-            insertTextIntoNode(downcast<Text>(*endNode), endOffset, collapseWhiteSpace ? nonBreakingSpaceString() : " ");
+            insertTextIntoNode(downcast<Text>(*endNode), endOffset, collapseWhiteSpace ? nonBreakingSpaceString() : " "_s);
             if (m_endOfInsertedContent.containerNode() == endNode)
                 m_endOfInsertedContent.moveToOffset(m_endOfInsertedContent.offsetInContainerNode() + 1);
         } else {
-            auto node = document().createEditingTextNode(collapseWhiteSpace ? nonBreakingSpaceString() : " ");
+            auto node = document().createEditingTextNode(collapseWhiteSpace ? String { nonBreakingSpaceString() } : " "_s);
             insertNodeAfter(node.copyRef(), *endNode);
             updateNodesInserted(node.ptr());
         }
@@ -1618,11 +1631,11 @@ void ReplaceSelectionCommand::addSpacesForSmartReplace()
     if (needsLeadingSpace && startNode) {
         bool collapseWhiteSpace = !startNode->renderer() || startNode->renderer()->style().collapseWhiteSpace();
         if (is<Text>(*startNode)) {
-            insertTextIntoNode(downcast<Text>(*startNode), startOffset, collapseWhiteSpace ? nonBreakingSpaceString() : " ");
+            insertTextIntoNode(downcast<Text>(*startNode), startOffset, collapseWhiteSpace ? nonBreakingSpaceString() : " "_s);
             if (m_endOfInsertedContent.containerNode() == startNode && m_endOfInsertedContent.offsetInContainerNode())
                 m_endOfInsertedContent.moveToOffset(m_endOfInsertedContent.offsetInContainerNode() + 1);
         } else {
-            auto node = document().createEditingTextNode(collapseWhiteSpace ? nonBreakingSpaceString() : " ");
+            auto node = document().createEditingTextNode(collapseWhiteSpace ? String { nonBreakingSpaceString() } : " "_s);
             // Don't updateNodesInserted. Doing so would set m_endOfInsertedContent to be the node containing the leading space,
             // but m_endOfInsertedContent is supposed to mark the end of pasted content.
             insertNodeBefore(node, *startNode);
@@ -1734,7 +1747,7 @@ static HTMLElement* singleChildList(HTMLElement& element)
     return isListHTMLElement(child.get()) ? &downcast<HTMLElement>(*child) : nullptr;
 }
 
-static HTMLElement& deepestSingleChildList(HTMLElement& topLevelList)
+static Ref<HTMLElement> deepestSingleChildList(HTMLElement& topLevelList)
 {
     Ref list { topLevelList };
     while (auto childList = singleChildList(list))
@@ -1746,7 +1759,7 @@ static HTMLElement& deepestSingleChildList(HTMLElement& topLevelList)
 // we put the list items into the existing list.
 Node* ReplaceSelectionCommand::insertAsListItems(HTMLElement& passedListElement, Node* insertionBlock, const Position& insertPos, InsertedNodes& insertedNodes)
 {
-    Ref<HTMLElement> listElement = deepestSingleChildList(passedListElement);
+    Ref listElement = deepestSingleChildList(passedListElement);
 
     bool isStart = isStartOfParagraph(insertPos);
     bool isEnd = isEndOfParagraph(insertPos);
@@ -1797,6 +1810,21 @@ ReplacementFragment* ReplaceSelectionCommand::ensureReplacementFragment()
     return m_replacementFragment.get();
 }
 
+static bool fullySelectsEnclosingLink(const VisibleSelection& selection)
+{
+    auto start = selection.start();
+    auto end = selection.end();
+    RefPtr ancestor = commonInclusiveAncestor(start, end);
+    if (!ancestor)
+        return false;
+
+    RefPtr link = ancestor->enclosingLinkEventParentOrSelf();
+    if (!link)
+        return false;
+
+    return positionBeforeNode(link.get()).downstream().equals(start) && positionAfterNode(link.get()).upstream().equals(end);
+}
+
 // During simple pastes, where we're just pasting a text node into a run of text, we insert the text node
 // directly into the text node that holds the selection.  This is much faster than the generalized code in
 // ReplaceSelectionCommand, and works around <https://bugs.webkit.org/show_bug.cgi?id=6148> since we don't
@@ -1813,6 +1841,9 @@ bool ReplaceSelectionCommand::performTrivialReplace(const ReplacementFragment& f
 
     // e.g. when "bar" is inserted after "foo" in <div><u>foo</u></div>, "bar" should not be underlined.
     if (nodeToSplitToAvoidPastingIntoInlineNodesWithStyle(endingSelection().start()))
+        return false;
+
+    if (fullySelectsEnclosingLink(endingSelection()))
         return false;
 
     RefPtr<Node> nodeAfterInsertionPos = endingSelection().end().downstream().anchorNode();

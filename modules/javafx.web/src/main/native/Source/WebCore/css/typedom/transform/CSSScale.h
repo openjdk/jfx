@@ -25,39 +25,42 @@
 
 #pragma once
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include "CSSNumericValue.h"
 #include "CSSTransformComponent.h"
 
 namespace WebCore {
+
+class CSSFunctionValue;
 
 template<typename> class ExceptionOr;
 
 class CSSScale : public CSSTransformComponent {
     WTF_MAKE_ISO_ALLOCATED(CSSScale);
 public:
-    static Ref<CSSScale> create(CSSNumberish&& x, CSSNumberish&& y, std::optional<CSSNumberish>&& z);
+    static ExceptionOr<Ref<CSSScale>> create(CSSNumberish x, CSSNumberish y, std::optional<CSSNumberish>&& z);
+    static ExceptionOr<Ref<CSSScale>> create(CSSFunctionValue&);
 
-    String toString() const final;
+    void serialize(StringBuilder&) const final;
     ExceptionOr<Ref<DOMMatrix>> toMatrix() final;
 
-    CSSNumberish x() { return m_x; }
-    CSSNumberish y() { return m_y; }
-    CSSNumberish z() { return m_z ? *m_z : 0.0; }
+    CSSNumberish x() const { return m_x.ptr(); }
+    CSSNumberish y() const { return m_y.ptr(); }
+    CSSNumberish z() const { return m_z.ptr(); }
 
-    void setX(CSSNumberish&& x) { m_x = WTFMove(x); }
-    void setY(CSSNumberish&& y) { m_y = WTFMove(y); }
-    void setZ(CSSNumberish&& z) { m_z = WTFMove(z); }
+    void setX(CSSNumberish);
+    void setY(CSSNumberish);
+    void setZ(CSSNumberish);
 
     CSSTransformType getType() const final { return CSSTransformType::Scale; }
 
-private:
-    CSSScale(CSSNumberish&& x, CSSNumberish&& y, std::optional<CSSNumberish>&& z);
+    RefPtr<CSSValue> toCSSValue() const final;
 
-    CSSNumberish m_x;
-    CSSNumberish m_y;
-    std::optional<CSSNumberish> m_z;
+private:
+    CSSScale(CSSTransformComponent::Is2D, Ref<CSSNumericValue>, Ref<CSSNumericValue>, Ref<CSSNumericValue>);
+
+    Ref<CSSNumericValue> m_x;
+    Ref<CSSNumericValue> m_y;
+    Ref<CSSNumericValue> m_z;
 };
 
 } // namespace WebCore
@@ -65,5 +68,3 @@ private:
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSScale)
     static bool isType(const WebCore::CSSTransformComponent& transform) { return transform.getType() == WebCore::CSSTransformType::Scale; }
 SPECIALIZE_TYPE_TRAITS_END()
-
-#endif

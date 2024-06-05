@@ -44,7 +44,7 @@ FunctionAllowlist::FunctionAllowlist(const char* filename)
     if (!f) {
         if (errno == ENOENT) {
             m_hasActiveAllowlist = true;
-            m_entries.add(filename);
+            m_entries.add(String::fromLatin1(filename));
         } else
             dataLogF("Failed to open file %s. Did you add the file-read-data entitlement to WebProcess.sb? Error code: %s\n", filename, safeStrerror(errno).data());
         return;
@@ -100,6 +100,14 @@ bool FunctionAllowlist::shouldDumpWasmFunction(uint32_t index) const
 {
     if (!m_hasActiveAllowlist)
         return false;
+    return containsWasmFunction(index);
+}
+
+bool FunctionAllowlist::containsWasmFunction(uint32_t index) const
+{
+    if (!m_hasActiveAllowlist)
+        return true;
+
     if (m_entries.isEmpty())
         return false;
     return m_entries.contains(String::number(index));

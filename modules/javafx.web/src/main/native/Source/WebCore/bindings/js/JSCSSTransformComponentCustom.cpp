@@ -26,8 +26,6 @@
 #include "config.h"
 #include "JSCSSTransformComponent.h"
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include "JSCSSMatrixComponent.h"
 #include "JSCSSPerspective.h"
 #include "JSCSSRotate.h"
@@ -37,6 +35,7 @@
 #include "JSCSSSkewY.h"
 #include "JSCSSTranslate.h"
 #include "JSDOMWrapperCache.h"
+#include <JavaScriptCore/JSCJSValueInlines.h>
 
 namespace WebCore {
 using namespace JSC;
@@ -44,8 +43,6 @@ using namespace JSC;
 JSValue toJSNewlyCreated(JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<CSSTransformComponent>&& value)
 {
     switch (value->getType()) {
-    case CSSTransformType::Transform:
-        return createWrapper<CSSTransformComponent>(globalObject, WTFMove(value));
     case CSSTransformType::MatrixComponent:
         return createWrapper<CSSMatrixComponent>(globalObject, WTFMove(value));
     case CSSTransformType::Perspective:
@@ -73,5 +70,3 @@ JSValue toJS(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObjec
 }
 
 } // namespace WebCore
-
-#endif
