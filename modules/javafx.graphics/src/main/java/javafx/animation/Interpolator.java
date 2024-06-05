@@ -278,14 +278,14 @@ public abstract class Interpolator {
         /**
          * The interval starts with a rise point when the input progress value is 0.
          * <p>
-         * <img width="200" src="doc-files/easing-stepstart.svg" alt="START"/>
+         * <img width="200" src="../scene/doc-files/easing-stepstart.svg" alt="START"/>
          */
         START,
 
         /**
          * The interval ends with a rise point when the input progress value is 1.
          * <p>
-         * <img width="200" src="doc-files/easing-stepend.svg" alt="END"/>
+         * <img width="200" src="../scene/doc-files/easing-stepend.svg" alt="END"/>
          */
         END,
 
@@ -293,14 +293,14 @@ public abstract class Interpolator {
          * The interval starts with a rise point when the input progress value is 0,
          * and ends with a rise point when the input progress value is 1.
          * <p>
-         * <img width="200" src="doc-files/easing-stepboth.svg" alt="BOTH"/>
+         * <img width="200" src="../scene/doc-files/easing-stepboth.svg" alt="BOTH"/>
          */
         BOTH,
 
         /**
          * All rise points are within the open interval (0..1).
          * <p>
-         * <img width="200" src="doc-files/easing-stepnone.svg" alt="NONE"/>
+         * <img width="200" src="../scene/doc-files/easing-stepnone.svg" alt="NONE"/>
          */
         NONE
     }
