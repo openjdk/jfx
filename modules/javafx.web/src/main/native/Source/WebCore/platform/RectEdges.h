@@ -89,12 +89,33 @@ public:
     void setEnd(const T& end, WritingMode writingMode, TextDirection direction = TextDirection::LTR) { this->end(writingMode, direction) = end; }
 
     bool operator==(const RectEdges& other) const { return m_sides == other.m_sides; }
-    bool operator!=(const RectEdges& other) const { return m_sides != other.m_sides; }
+
+    bool isZero() const
+    {
+        return !top() && !right() && !bottom() && !left();
+    }
 
 private:
     std::array<T, 4> m_sides { };
 };
 
+template<typename T>
+constexpr RectEdges<T> operator+(const RectEdges<T>& a, const RectEdges<T>& b)
+{
+    return {
+        a.top() + b.top(),
+        a.right() + b.right(),
+        a.bottom() + b.bottom(),
+        a.left() + b.left()
+    };
+}
+
+template<typename T>
+inline RectEdges<T>& operator+=(RectEdges<T>& a, const RectEdges<T>& b)
+{
+    a = a + b;
+    return a;
+}
 
 template<typename T>
 TextStream& operator<<(TextStream& ts, const RectEdges<T>& edges)

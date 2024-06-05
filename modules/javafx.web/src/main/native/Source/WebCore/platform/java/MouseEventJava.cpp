@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -64,16 +64,16 @@ PlatformEvent::Type getWebCoreMouseEventType(jint eventID)
 {
     switch (eventID) {
     case com_sun_webkit_event_WCMouseEvent_MOUSE_PRESSED:
-        return PlatformEvent::MousePressed;
+        return PlatformEvent::Type::MousePressed;
     case com_sun_webkit_event_WCMouseEvent_MOUSE_RELEASED:
-        return PlatformEvent::MouseReleased;
+        return PlatformEvent::Type::MouseReleased;
     case com_sun_webkit_event_WCMouseEvent_MOUSE_MOVED:
     case com_sun_webkit_event_WCMouseEvent_MOUSE_DRAGGED:
-        return PlatformEvent::MouseMoved;
+        return PlatformEvent::Type::MouseMoved;
     case com_sun_webkit_event_WCMouseEvent_MOUSE_WHEEL:
-        return PlatformEvent::MouseScroll;
+        return PlatformEvent::Type::MouseScroll;
     default:
-        return PlatformEvent::MouseMoved;
+        return PlatformEvent::Type::MouseMoved;
     }
 }
 

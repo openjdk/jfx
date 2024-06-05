@@ -45,6 +45,7 @@ public:
     void popParentsUntil(Element* parent);
     bool parentStackIsEmpty() const { return m_parentStack.isEmpty(); }
     bool parentStackIsConsistent(const ContainerNode* parentNode) const;
+    void parentStackReserveInitialCapacity(size_t initialCapacity) { m_parentStack.reserveInitialCapacity(initialCapacity); }
 
     using Hashes = std::array<unsigned, 4>;
     bool fastRejectSelector(const Hashes&) const;
@@ -61,9 +62,12 @@ public:
     };
     static void collectSimpleSelectorHash(CollectedSelectorHashes&, const CSSSelector&);
 
+    WEBCORE_EXPORT static CollectedSelectorHashes collectHashesForTesting(const CSSSelector&);
+
 private:
     void initializeParentStack(Element& parent);
-    static CollectedSelectorHashes collectSelectorHashes(const CSSSelector& rightmostSelector);
+    enum class IncludeRightmost : bool { No, Yes };
+    static void collectSelectorHashes(CollectedSelectorHashes&, const CSSSelector& rightmostSelector, IncludeRightmost);
     static Hashes chooseSelectorHashesForFilter(const CollectedSelectorHashes&);
 
     struct ParentStackFrame {

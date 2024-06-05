@@ -41,6 +41,7 @@ public:
     struct Entry {
         WEBCORE_EXPORT Entry();
         WEBCORE_EXPORT Entry(const Entry&);
+        WEBCORE_EXPORT Entry(const String&, const String&, const std::variant<String, Ref<WebCore::SharedBuffer>>&);
         WEBCORE_EXPORT Entry(Entry&&);
         WEBCORE_EXPORT Entry& operator=(const Entry& otherData);
         WEBCORE_EXPORT Entry& operator=(Entry&& otherData);
@@ -76,9 +77,9 @@ public:
     void clear(const String& type);
 
 #if PLATFORM(COCOA)
-    WEBCORE_EXPORT static const char* cocoaType();
+    WEBCORE_EXPORT static ASCIILiteral cocoaType();
 #elif PLATFORM(GTK)
-    static const char* gtkType() { return "org.webkitgtk.WebKit.custom-pasteboard-data"; }
+    static ASCIILiteral gtkType() { return "org.webkitgtk.WebKit.custom-pasteboard-data"_s; }
 #endif
 
     void forEachType(Function<void(const String&)>&&) const;

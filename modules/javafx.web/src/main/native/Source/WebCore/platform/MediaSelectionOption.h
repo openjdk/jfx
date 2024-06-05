@@ -30,21 +30,34 @@
 namespace WebCore {
 
 struct MediaSelectionOption {
-    enum class Type {
+    enum class MediaType : uint8_t {
+        Unknown,
+        Audio,
+        Subtitles,
+        Captions,
+        Metadata,
+    };
+
+    enum class LegibleType : uint8_t {
         Regular,
         LegibleOff,
         LegibleAuto,
     };
 
     MediaSelectionOption() = default;
-    MediaSelectionOption(const String& displayName, Type type)
-        : displayName { displayName }
-        , type { type }
+    MediaSelectionOption(MediaType mediaType, const String& displayName, LegibleType legibleType)
+        : mediaType { mediaType }
+        , displayName { displayName }
+        , legibleType { legibleType }
     {
     }
 
+    MediaSelectionOption isolatedCopy() const & { return { mediaType, displayName.isolatedCopy(), legibleType }; }
+    MediaSelectionOption isolatedCopy() && { return { mediaType, WTFMove(displayName).isolatedCopy(), legibleType }; }
+
+    MediaType mediaType { MediaType::Unknown };
     String displayName;
-    Type type { Type::Regular };
+    LegibleType legibleType { LegibleType::Regular };
 };
 
 } // namespace WebCore

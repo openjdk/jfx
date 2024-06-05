@@ -29,11 +29,12 @@
 #include "ElementTraversal.h"
 #include "NodeRenderStyle.h"
 #include "PseudoClassChangeInvalidation.h"
+#include "RenderElement.h"
 #include "ShadowRoot.h"
 #include "SlotAssignment.h"
 #include "StyleResolver.h"
 #include "StyleScopeRuleSets.h"
-#include "TypedElementDescendantIterator.h"
+#include "TypedElementDescendantIteratorInlines.h"
 
 namespace WebCore::Style {
 
@@ -52,7 +53,7 @@ void ChildChangeInvalidation::invalidateForChangedElement(Element& changedElemen
             return isChild;
         case MatchElement::HasDescendant:
         case MatchElement::HasSiblingDescendant:
-        case MatchElement::HasNonSubject:
+        case MatchElement::HasNonSubjectOrScopeBreaking:
             return true;
         default:
             ASSERT_NOT_REACHED();
@@ -101,7 +102,7 @@ void ChildChangeInvalidation::invalidateForChangedElement(Element& changedElemen
         }
     };
 
-    for (auto key : makePseudoClassInvalidationKeys(CSSSelector::PseudoClassHas, changedElement))
+    for (auto key : makePseudoClassInvalidationKeys(CSSSelector::PseudoClassType::Has, changedElement))
         addHasInvalidation(ruleSets.hasPseudoClassInvalidationRuleSets(key));
 
     Invalidator::invalidateWithMatchElementRuleSets(changedElement, matchElementRuleSets);
@@ -137,7 +138,7 @@ void ChildChangeInvalidation::invalidateForHasAfterMutation()
 
 static bool needsDescendantTraversal(const RuleFeatureSet& features)
 {
-    if (features.usesMatchElement(MatchElement::HasNonSubject))
+    if (features.usesMatchElement(MatchElement::HasNonSubjectOrScopeBreaking))
         return true;
     return features.usesMatchElement(MatchElement::HasDescendant) || features.usesMatchElement(MatchElement::HasSiblingDescendant);
 };

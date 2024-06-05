@@ -92,12 +92,11 @@ bool SQLiteStatement::executeCommand()
     return step() == SQLITE_DONE;
 }
 
-int SQLiteStatement::bindBlob(int index, Span<const uint8_t> blob)
+int SQLiteStatement::bindBlob(int index, std::span<const uint8_t> blob)
 {
     ASSERT(index > 0);
     ASSERT(static_cast<unsigned>(index) <= bindParameterCount());
     ASSERT(blob.data() || !blob.size());
-    ASSERT(blob.size() >= 0);
 
     return sqlite3_bind_blob(m_statement, index, blob.data(), blob.size(), SQLITE_TRANSIENT);
 }
@@ -114,7 +113,7 @@ int SQLiteStatement::bindBlob(int index, const String& text)
     else
         characters = upconvertedCharacters;
 
-    return bindBlob(index, Span { reinterpret_cast<const uint8_t*>(characters), text.length() * sizeof(UChar) });
+    return bindBlob(index, std::span(reinterpret_cast<const uint8_t*>(characters), text.length() * sizeof(UChar)));
 }
 
 int SQLiteStatement::bindText(int index, StringView text)
@@ -123,7 +122,7 @@ int SQLiteStatement::bindText(int index, StringView text)
     ASSERT(static_cast<unsigned>(index) <= bindParameterCount());
 
     // Fast path when the input text is all ASCII.
-    if (text.is8Bit() && text.isAllASCII())
+    if (text.is8Bit() && text.containsOnlyASCII())
         return sqlite3_bind_text(m_statement, index, text.length() ? reinterpret_cast<const char*>(text.characters8()) : "", text.length(), SQLITE_TRANSIENT);
 
     auto utf8Text = text.utf8();
@@ -184,7 +183,7 @@ int SQLiteStatement::columnCount()
 bool SQLiteStatement::isColumnDeclaredAsBlob(int col)
 {
     ASSERT(col >= 0);
-    return equalLettersIgnoringASCIICase(StringView(sqlite3_column_decltype(m_statement, col)), "blob");
+    return equalLettersIgnoringASCIICase(StringView::fromLatin1(sqlite3_column_decltype(m_statement, col)), "blob"_s);
 }
 
 String SQLiteStatement::columnName(int col)
@@ -293,7 +292,7 @@ Vector<uint8_t> SQLiteStatement::columnBlob(int col)
     return { span.data(), span.size() };
 }
 
-Span<const uint8_t> SQLiteStatement::columnBlobAsSpan(int col)
+std::span<const uint8_t> SQLiteStatement::columnBlobAsSpan(int col)
 {
     ASSERT(col >= 0);
 

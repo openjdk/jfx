@@ -35,20 +35,18 @@ namespace WebCore {
 class AccessibilityARIAGridCell final : public AccessibilityTableCell {
 public:
     static Ref<AccessibilityARIAGridCell> create(RenderObject*);
+    static Ref<AccessibilityARIAGridCell> create(Node&);
     virtual ~AccessibilityARIAGridCell();
 
 private:
     explicit AccessibilityARIAGridCell(RenderObject*);
-
-    // Returns the start location and row span of the cell.
-    std::pair<unsigned, unsigned> rowIndexRange() const override;
-    // Returns the start location and column span of the cell.
-    std::pair<unsigned, unsigned> columnIndexRange() const override;
+    explicit AccessibilityARIAGridCell(Node&);
+    bool isAccessibilityARIAGridCellInstance() const override { return true; }
 
     AccessibilityTable* parentTable() const override;
-    AccessibilityObject* parentRowGroup() const;
-    unsigned axRowSpanWithRowIndex(unsigned index) const;
     String readOnlyValue() const override;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilityARIAGridCell, isAccessibilityARIAGridCellInstance())

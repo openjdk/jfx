@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "DisplayGeometryTypes.h"
 #include "DisplayStyle.h"
 #include "FloatRect.h"
@@ -79,6 +77,7 @@ public:
     const Box* nextSibling() const { return m_nextSibling.get(); }
     void setNextSibling(std::unique_ptr<Box>&&);
 
+    // FIXME: we need to check this name is correct in light of https://bugs.webkit.org/show_bug.cgi?id=250901.
     void setHasTransform(bool value) { m_styleFlags.set(StyleFlags::HasTransform, value); }
     bool hasTransform() const { return m_styleFlags.contains(StyleFlags::HasTransform); }
 
@@ -106,4 +105,3 @@ SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::Display::ToValueTypeName) \
     static bool isType(const WebCore::Display::Box& box) { return box.predicate; } \
 SPECIALIZE_TYPE_TRAITS_END()
 
-#endif // ENABLE(LAYOUT_FORMATTING_CONTEXT)

@@ -27,12 +27,16 @@
 #include "AnimationEffect.h"
 
 #include "CSSAnimation.h"
+#include "CommonAtomStrings.h"
 #include "FillMode.h"
 #include "JSComputedEffectTiming.h"
 #include "WebAnimation.h"
 #include "WebAnimationUtilities.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(AnimationEffect);
 
 AnimationEffect::AnimationEffect()
     : m_timingFunction(LinearTimingFunction::create())
@@ -55,8 +59,8 @@ void AnimationEffect::setAnimation(WebAnimation* animation)
 
 EffectTiming AnimationEffect::getBindingsTiming() const
 {
-    if (is<DeclarativeAnimation>(animation()))
-        downcast<DeclarativeAnimation>(*animation()).flushPendingStyleChanges();
+    if (auto* declarativeAnimation = dynamicDowncast<DeclarativeAnimation>(animation()))
+        declarativeAnimation->flushPendingStyleChanges();
     return getTiming();
 }
 
@@ -69,7 +73,7 @@ EffectTiming AnimationEffect::getTiming() const
     timing.iterationStart = m_iterationStart;
     timing.iterations = m_iterations;
     if (m_iterationDuration == 0_s)
-        timing.duration = "auto";
+        timing.duration = autoAtom();
     else
         timing.duration = secondsToWebAnimationsAPITime(m_iterationDuration);
     timing.direction = m_direction;
@@ -172,8 +176,8 @@ BasicEffectTiming AnimationEffect::getBasicTiming(std::optional<Seconds> startTi
 
 ComputedEffectTiming AnimationEffect::getBindingsComputedTiming() const
 {
-    if (is<DeclarativeAnimation>(animation()))
-        downcast<DeclarativeAnimation>(*animation()).flushPendingStyleChanges();
+    if (auto* declarativeAnimation = dynamicDowncast<DeclarativeAnimation>(animation()))
+        declarativeAnimation->flushPendingStyleChanges();
     return getComputedTiming();
 }
 
@@ -399,7 +403,7 @@ ExceptionOr<void> AnimationEffect::updateTiming(std::optional<OptionalEffectTimi
             if (durationAsDouble < 0 || std::isnan(durationAsDouble))
                 return Exception { TypeError };
         } else {
-            if (std::get<String>(timing->duration.value()) != "auto")
+            if (std::get<String>(timing->duration.value()) != autoAtom())
                 return Exception { TypeError };
         }
     }
@@ -561,7 +565,7 @@ std::optional<double> AnimationEffect::progressUntilNextStep(double iterationPro
     return nextStepProgress - iterationProgress;
 }
 
-Seconds AnimationEffect::timeToNextTick(BasicEffectTiming timing) const
+Seconds AnimationEffect::timeToNextTick(const BasicEffectTiming& timing) const
 {
     switch (timing.phase) {
     case AnimationEffectPhase::Before:

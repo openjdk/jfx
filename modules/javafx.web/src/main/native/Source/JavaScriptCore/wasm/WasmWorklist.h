@@ -36,9 +36,10 @@
 
 namespace JSC {
 
+class VM;
+
 namespace Wasm {
 
-struct Context;
 class Plan;
 
 class Worklist {
@@ -48,7 +49,7 @@ public:
     ~Worklist();
 
     JS_EXPORT_PRIVATE void enqueue(Ref<Plan>);
-    void stopAllPlansForContext(Context&);
+    void stopAllPlansForContext(VM&);
 
     JS_EXPORT_PRIVATE void completePlanSynchronously(Plan&);
 
@@ -90,7 +91,7 @@ private:
     // Priority it the wrong order, which isn't wrong, just suboptimal.
     Ticket m_lastGrantedTicket { 0 };
     PriorityQueue<QueueElement, isHigherPriority, 10> m_queue;
-    Vector<std::unique_ptr<Thread>> m_threads;
+    Vector<Ref<Thread>> m_threads;
 };
 
 Worklist* existingWorklistOrNull();

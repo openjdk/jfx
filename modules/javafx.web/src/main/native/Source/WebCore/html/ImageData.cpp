@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2014 Adobe Systems Incorporated. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,6 +30,7 @@
 #include "config.h"
 #include "ImageData.h"
 
+#include <JavaScriptCore/GenericTypedArrayViewInlines.h>
 #include <JavaScriptCore/JSCInlines.h>
 #include <wtf/text/TextStream.h>
 
@@ -50,17 +51,17 @@ PredefinedColorSpace ImageData::computeColorSpace(std::optional<ImageDataSetting
     return defaultColorSpace;
 }
 
-Ref<ImageData> ImageData::create(PixelBuffer&& pixelBuffer)
+Ref<ImageData> ImageData::create(Ref<ByteArrayPixelBuffer>&& pixelBuffer)
 {
-    auto colorSpace = toPredefinedColorSpace(pixelBuffer.format().colorSpace);
-    return adoptRef(*new ImageData(pixelBuffer.size(), pixelBuffer.takeData(), *colorSpace));
+    auto colorSpace = toPredefinedColorSpace(pixelBuffer->format().colorSpace);
+    return adoptRef(*new ImageData(pixelBuffer->size(), pixelBuffer->takeData(), *colorSpace));
 }
 
-RefPtr<ImageData> ImageData::create(std::optional<PixelBuffer>&& pixelBuffer)
+RefPtr<ImageData> ImageData::create(RefPtr<ByteArrayPixelBuffer>&& pixelBuffer)
 {
     if (!pixelBuffer)
         return nullptr;
-    return create(WTFMove(*pixelBuffer));
+    return create(pixelBuffer.releaseNonNull());
 }
 
 RefPtr<ImageData> ImageData::create(const IntSize& size)
@@ -153,10 +154,15 @@ ImageData::ImageData(const IntSize& size, Ref<JSC::Uint8ClampedArray>&& data, Pr
 
 ImageData::~ImageData() = default;
 
-PixelBuffer ImageData::pixelBuffer() const
+Ref<ByteArrayPixelBuffer> ImageData::pixelBuffer() const
 {
     PixelBufferFormat format { AlphaPremultiplication::Unpremultiplied, PixelFormat::RGBA8, toDestinationColorSpace(m_colorSpace) };
-    return { format, m_size, m_data.get() };
+    return ByteArrayPixelBuffer::create(format, m_size, m_data.get());
+}
+
+RefPtr<ImageData> ImageData::clone() const
+{
+    return ImageData::create(m_size, Uint8ClampedArray::create(m_data->data(), m_data->length()), m_colorSpace);
 }
 
 TextStream& operator<<(TextStream& ts, const ImageData& imageData)

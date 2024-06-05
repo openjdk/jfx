@@ -30,7 +30,7 @@
 
 #include "FetchBodySource.h"
 #include "FormDataConsumer.h"
-#include "JSDOMPromiseDeferred.h"
+#include "JSDOMPromiseDeferredForward.h"
 #include "ReadableStreamSink.h"
 #include "ScriptExecutionContextIdentifier.h"
 #include "SharedBuffer.h"
@@ -40,6 +40,7 @@ namespace WebCore {
 
 class Blob;
 class DOMFormData;
+class FetchBodyOwner;
 class FetchBodySource;
 class FormData;
 class ReadableStream;
@@ -48,7 +49,10 @@ class FetchBodyConsumer {
 public:
     enum class Type { None, ArrayBuffer, Blob, JSON, Text, FormData };
 
-    explicit FetchBodyConsumer(Type type) : m_type(type) { }
+    explicit FetchBodyConsumer(Type);
+    FetchBodyConsumer(FetchBodyConsumer&&);
+    ~FetchBodyConsumer();
+    FetchBodyConsumer& operator=(FetchBodyConsumer&&);
 
     FetchBodyConsumer clone();
 
@@ -62,13 +66,12 @@ public:
     RefPtr<JSC::ArrayBuffer> takeAsArrayBuffer();
     String takeAsText();
 
-    void setContentType(const String& contentType) { m_contentType = contentType; }
     void setType(Type type) { m_type = type; }
 
     void clean();
 
     void extract(ReadableStream&, ReadableStreamToSharedBufferSink::Callback&&);
-    void resolve(Ref<DeferredPromise>&&, const String& contentType, ReadableStream*);
+    void resolve(Ref<DeferredPromise>&&, const String& contentType, FetchBodyOwner*, ReadableStream*);
     void resolveWithData(Ref<DeferredPromise>&&, const String& contentType, const unsigned char*, unsigned);
     void resolveWithFormData(Ref<DeferredPromise>&&, const String& contentType, const FormData&, ScriptExecutionContext*);
     void consumeFormDataAsStream(const FormData&, FetchBodySource&, ScriptExecutionContext*);
@@ -84,11 +87,10 @@ public:
     static RefPtr<DOMFormData> packageFormData(ScriptExecutionContext*, const String& contentType, const uint8_t* data, size_t length);
 
 private:
-    Ref<Blob> takeAsBlob(ScriptExecutionContext*);
+    Ref<Blob> takeAsBlob(ScriptExecutionContext*, const String& contentType);
     void resetConsumePromise();
 
     Type m_type;
-    String m_contentType;
     SharedBufferBuilder m_buffer;
     RefPtr<DeferredPromise> m_consumePromise;
     RefPtr<ReadableStreamToSharedBufferSink> m_sink;

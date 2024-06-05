@@ -59,7 +59,7 @@ GCController::GCController()
 {
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
-        PAL::registerNotifyCallback("com.apple.WebKit.dumpGCHeap", [] {
+        PAL::registerNotifyCallback("com.apple.WebKit.dumpGCHeap"_s, [] {
             GCController::singleton().dumpHeap();
         });
     });
@@ -74,7 +74,7 @@ void GCController::garbageCollectSoon()
     JSLockHolder lock(commonVM());
     commonVM().heap.reportAbandonedObjectGraph();
 #else
-    garbageCollectOnNextRunLoop();
+    garbageCollectNow();
 #endif
 }
 
@@ -105,7 +105,7 @@ void GCController::garbageCollectNowIfNotDoneRecently()
     if (!commonVM().heap.currentThreadIsDoingGCWork())
         commonVM().heap.collectNowFullIfNotDoneRecently(Async);
 #else
-    garbageCollectSoon();
+    garbageCollectNow();
 #endif
 }
 

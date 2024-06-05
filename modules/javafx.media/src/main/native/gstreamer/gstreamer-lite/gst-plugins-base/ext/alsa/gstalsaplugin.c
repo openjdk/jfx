@@ -28,7 +28,7 @@
 #include "gstalsadeviceprovider.h"
 #endif // GSTREAMER_LITE
 
-#include <gst/gst-i18n-plugin.h>
+#include <glib/gi18n-lib.h>
 
 #ifdef GSTREAMER_LITE
 gboolean
@@ -50,7 +50,7 @@ plugin_init (GstPlugin * plugin)
   ret |= GST_ELEMENT_REGISTER (alsamidisrc, plugin);
 #endif // GSTREAMER_LITE
 
-  return TRUE;
+  return ret;
 }
 
 #ifndef GSTREAMER_LITE

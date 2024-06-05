@@ -48,6 +48,12 @@ Region::Region(const IntRect& rect)
 {
 }
 
+Region::Region(IntRect&& bounds, std::unique_ptr<Region::Shape>&& shape)
+    : m_bounds(WTFMove(bounds))
+    , m_shape(WTFMove(shape))
+{
+}
+
 Region::Region(const Region& other)
     : m_bounds(other.m_bounds)
     , m_shape(other.copyShape())
@@ -270,6 +276,12 @@ Region::Shape::Shape(const IntRect& rect)
 {
 }
 
+Region::Shape::Shape(Vector<int, 32>&& segments, Vector<Span, 16>&& spans)
+    : m_segments(WTFMove(segments))
+    , m_spans(WTFMove(spans))
+{
+}
+
 void Region::Shape::appendSpan(int y)
 {
     m_spans.append({ y, m_segments.size() });
@@ -402,7 +414,9 @@ IntRect Region::Shape::bounds() const
     ASSERT(minX <= maxX);
     ASSERT(minY <= maxY);
 
-    return IntRect(minX, minY, maxX - minX, maxY - minY);
+    CheckedInt32 width = checkedDifference<int32_t>(maxX, minX);
+    CheckedInt32 height = checkedDifference<int32_t>(maxY, minY);
+    return IntRect(minX, minY, width.hasOverflowed() ? std::numeric_limits<int32_t>::max() : width.value(), height.hasOverflowed() ? std::numeric_limits<int32_t>::max() : height.value());
 }
 
 void Region::Shape::translate(const IntSize& offset)
@@ -421,8 +435,8 @@ enum {
 template<typename Operation>
 Region::Shape Region::Shape::shapeOperation(const Shape& shape1, const Shape& shape2)
 {
-    COMPILE_ASSERT(!(!Operation::shouldAddRemainingSegmentsFromSpan1 && Operation::shouldAddRemainingSegmentsFromSpan2), invalid_segment_combination);
-    COMPILE_ASSERT(!(!Operation::shouldAddRemainingSpansFromShape1 && Operation::shouldAddRemainingSpansFromShape2), invalid_span_combination);
+    static_assert(!(!Operation::shouldAddRemainingSegmentsFromSpan1 && Operation::shouldAddRemainingSegmentsFromSpan2), "invalid segment combination");
+    static_assert(!(!Operation::shouldAddRemainingSpansFromShape1 && Operation::shouldAddRemainingSpansFromShape2), "invalid span combination");
 
     Shape result;
     if (Operation::trySimpleOperation(shape1, shape2, result))

@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "JSDOMPromiseDeferredForward.h"
 #include "NavigatorBase.h"
 #include "Supplementable.h"
 #include <wtf/text/WTFString.h>
@@ -38,6 +39,11 @@ public:
     const String& userAgent() const final;
     bool onLine() const final;
     void setIsOnline(bool isOnline) { m_isOnline = isOnline; }
+
+#if ENABLE(BADGING)
+    void setAppBadge(std::optional<unsigned long long>, Ref<DeferredPromise>&&);
+    void clearAppBadge(Ref<DeferredPromise>&&);
+#endif
 
     GPU* gpu();
 

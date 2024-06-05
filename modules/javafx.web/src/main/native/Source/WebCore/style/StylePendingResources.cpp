@@ -32,11 +32,13 @@
 #include "CursorData.h"
 #include "CursorList.h"
 #include "Document.h"
-#include "RenderStyle.h"
+#include "FillLayer.h"
+#include "RenderStyleInlines.h"
 #include "SVGURIReference.h"
 #include "Settings.h"
-#include "StyleCachedImage.h"
-#include "StyleGeneratedImage.h"
+#include "ShapeValue.h"
+#include "StyleImage.h"
+#include "StyleReflection.h"
 #include "TransformFunctions.h"
 
 namespace WebCore {
@@ -103,6 +105,10 @@ void loadPendingResources(RenderStyle& style, Document& document, const Element*
 
     if (style.shapeOutside())
         loadPendingImage(document, style.shapeOutside()->image(), element, LoadPolicy::Anonymous);
+
+    // Are there other pseudo-elements that need resource loading?
+    if (auto* firstLineStyle = style.getCachedPseudoStyle(PseudoId::FirstLine))
+        loadPendingResources(*firstLineStyle, document, element);
 }
 
 }

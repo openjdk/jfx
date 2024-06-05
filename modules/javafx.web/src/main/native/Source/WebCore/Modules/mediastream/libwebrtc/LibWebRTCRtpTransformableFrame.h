@@ -24,7 +24,7 @@
 
 #pragma once
 
-#if ENABLE(WEB_RTC)
+#if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
 
 #include "RTCRtpTransformableFrame.h"
 #include <wtf/Ref.h>
@@ -47,8 +47,8 @@ private:
     LibWebRTCRtpTransformableFrame(std::unique_ptr<webrtc::TransformableFrameInterface>&&, bool isAudioSenderFrame);
 
     // RTCRtpTransformableFrame
-    Span<const uint8_t> data() const final;
-    void setData(Span<const uint8_t>) final;
+    std::span<const uint8_t> data() const final;
+    void setData(std::span<const uint8_t>) final;
     bool isKeyFrame() const final;
     uint64_t timestamp() const final;
     RTCEncodedAudioFrameMetadata audioMetadata() const final;
@@ -60,4 +60,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(WEB_RTC)
+#endif // ENABLE(WEB_RTC) && USE(LIBWEBRTC)

@@ -36,10 +36,12 @@
 #include "RealtimeMediaSource.h"
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
+ALLOW_COMMA_BEGIN
 
 #include <webrtc/api/media_stream_interface.h>
 
 ALLOW_UNUSED_PARAMETERS_END
+ALLOW_COMMA_END
 
 #include <wtf/RetainPtr.h>
 
@@ -51,6 +53,7 @@ class RealtimeIncomingAudioSource
     : public RealtimeMediaSource
     , private webrtc::AudioTrackSinkInterface
     , private webrtc::ObserverInterface
+    , public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<RealtimeIncomingAudioSource, WTF::DestructionThread::MainRunLoop>
 {
 public:
     static Ref<RealtimeIncomingAudioSource> create(rtc::scoped_refptr<webrtc::AudioTrackInterface>&&, String&&);
@@ -58,9 +61,12 @@ public:
     void setAudioModule(RefPtr<LibWebRTCAudioModule>&&);
     LibWebRTCAudioModule* audioModule() { return m_audioModule.get(); }
 
+    void ref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<RealtimeIncomingAudioSource, WTF::DestructionThread::MainRunLoop>::ref(); }
+    void deref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<RealtimeIncomingAudioSource, WTF::DestructionThread::MainRunLoop>::deref(); }
+    ThreadSafeWeakPtrControlBlock& controlBlock() const final { return ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<RealtimeIncomingAudioSource, WTF::DestructionThread::MainRunLoop>::controlBlock(); }
+    ~RealtimeIncomingAudioSource();
 protected:
     RealtimeIncomingAudioSource(rtc::scoped_refptr<webrtc::AudioTrackInterface>&&, String&&);
-    ~RealtimeIncomingAudioSource();
 
 #if !RELEASE_LOG_DISABLED
     const char* logClassName() const final { return "RealtimeIncomingAudioSource"; }

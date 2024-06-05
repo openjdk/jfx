@@ -32,6 +32,9 @@
 #include "GraphicsContext.h"
 #include "MathMLNames.h"
 #include "PaintInfo.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
+#include "RoundedRect.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/MathExtras.h>
 
@@ -219,7 +222,7 @@ void RenderMathMLMenclose::paint(PaintInfo& info, const LayoutPoint& paintOffset
     GraphicsContextStateSaver stateSaver(paintInfo.context());
 
     paintInfo.context().setStrokeThickness(thickness);
-    paintInfo.context().setStrokeStyle(SolidStroke);
+    paintInfo.context().setStrokeStyle(StrokeStyle::SolidStroke);
     paintInfo.context().setStrokeColor(style().visitedDependentColorWithColorFilter(CSSPropertyColor));
     paintInfo.context().setFillColor(Color::transparentBlack);
     paintInfo.applyTransform(AffineTransform().translate(paintOffset + location()));
@@ -341,7 +344,7 @@ void RenderMathMLMenclose::paint(PaintInfo& info, const LayoutPoint& paintOffset
         ellipseRect.setX(m_contentRect.x() - (ellipseRect.width() - m_contentRect.width()) / 2);
         ellipseRect.setY(m_contentRect.y() - (ellipseRect.height() - m_contentRect.height()) / 2);
         Path path;
-        path.addEllipse(ellipseRect);
+        path.addEllipseInRect(ellipseRect);
         paintInfo.context().strokePath(path);
     }
 }

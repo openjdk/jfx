@@ -36,15 +36,23 @@
 namespace WebCore {
 
 class RadioInputType final : public BaseCheckableInputType {
-    template<typename DowncastedType> friend bool isInvalidInputType(const InputType&, const String&);
 public:
-    explicit RadioInputType(HTMLInputElement& element) : BaseCheckableInputType(Type::Radio, element) { }
+    static Ref<RadioInputType> create(HTMLInputElement& element)
+    {
+        return adoptRef(*new RadioInputType(element));
+    }
 
     static void forEachButtonInDetachedGroup(ContainerNode& rootName, const String& groupName, const Function<bool(HTMLInputElement&)>&);
 
-private:
-    const AtomString& formControlType() const final;
     bool valueMissing(const String&) const final;
+
+private:
+    explicit RadioInputType(HTMLInputElement& element)
+        : BaseCheckableInputType(Type::Radio, element)
+    {
+    }
+
+    const AtomString& formControlType() const final;
     String valueMissingText() const final;
     void handleClickEvent(MouseEvent&) final;
     ShouldCallBaseEventHandler handleKeydownEvent(KeyboardEvent&) final;
@@ -58,3 +66,5 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_INPUT_TYPE(RadioInputType, Type::Radio)

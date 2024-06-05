@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,42 +51,6 @@ TextStream& operator<<(TextStream& ts, AnimationPlayState playState)
     }
     return ts;
 }
-
-#if ENABLE(APPLE_PAY)
-TextStream& operator<<(TextStream& ts, ApplePayButtonStyle buttonStyle)
-{
-    switch (buttonStyle) {
-    case ApplePayButtonStyle::White: ts << "white"; break;
-    case ApplePayButtonStyle::WhiteOutline: ts << "white-outline"; break;
-    case ApplePayButtonStyle::Black: ts << "black"; break;
-    }
-    return ts;
-}
-
-TextStream& operator<<(TextStream& ts, ApplePayButtonType playState)
-{
-    switch (playState) {
-    case ApplePayButtonType::Plain: ts << "plain"; break;
-    case ApplePayButtonType::Buy: ts << "buy"; break;
-    case ApplePayButtonType::SetUp: ts << "setup"; break;
-    case ApplePayButtonType::Donate: ts << "donate"; break;
-    case ApplePayButtonType::CheckOut: ts << "checkout"; break;
-    case ApplePayButtonType::Book: ts << "book"; break;
-    case ApplePayButtonType::Subscribe: ts << "subscribe"; break;
-#if ENABLE(APPLE_PAY_NEW_BUTTON_TYPES)
-    case ApplePayButtonType::Reload: ts << "reload"; break;
-    case ApplePayButtonType::AddMoney: ts << "add-money"; break;
-    case ApplePayButtonType::TopUp: ts << "top-up"; break;
-    case ApplePayButtonType::Order: ts << "order"; break;
-    case ApplePayButtonType::Rent: ts << "rent"; break;
-    case ApplePayButtonType::Support: ts << "support"; break;
-    case ApplePayButtonType::Contribute: ts << "contribute"; break;
-    case ApplePayButtonType::Tip: ts << "tip"; break;
-#endif
-    }
-    return ts;
-}
-#endif
 
 TextStream& operator<<(TextStream& ts, AspectRatioType aspectRatioType)
 {
@@ -260,8 +224,6 @@ TextStream& operator<<(TextStream& ts, CaptionSide side)
     switch (side) {
     case CaptionSide::Top: ts << "top"; break;
     case CaptionSide::Bottom: ts << "bottom"; break;
-    case CaptionSide::Left: ts << "left"; break;
-    case CaptionSide::Right: ts << "right"; break;
     }
     return ts;
 }
@@ -477,6 +439,7 @@ TextStream& operator<<(TextStream& ts, EventListenerRegionType listenerType)
     switch (listenerType) {
     case EventListenerRegionType::Wheel: ts << "wheel"; break;
     case EventListenerRegionType::NonPassiveWheel: ts << "active wheel"; break;
+    case EventListenerRegionType::MouseClick: ts << "mouse click"; break;
     }
     return ts;
 }
@@ -583,7 +546,6 @@ TextStream& operator<<(TextStream& ts, GridAutoFlow gridAutoFlow)
 TextStream& operator<<(TextStream& ts, HangingPunctuation punctuation)
 {
     switch (punctuation) {
-    case HangingPunctuation::None: ts << "none"; break;
     case HangingPunctuation::First: ts << "first"; break;
     case HangingPunctuation::Last: ts << "last"; break;
     case HangingPunctuation::AllowEnd: ts << "allow-end"; break;
@@ -705,9 +667,15 @@ TextStream& operator<<(TextStream& ts, ListStylePosition position)
     return ts;
 }
 
-TextStream& operator<<(TextStream& ts, ListStyleType styleType)
+TextStream& operator<<(TextStream& ts, MarginTrimType marginTrimType)
 {
-    return ts << getValueName(toCSSValueID(styleType));
+    switch (marginTrimType) {
+    case MarginTrimType::BlockStart: ts << "block-start"; break;
+    case MarginTrimType::BlockEnd: ts << "block-end"; break;
+    case MarginTrimType::InlineStart: ts << "inline-start"; break;
+    case MarginTrimType::InlineEnd: ts << "inline-end"; break;
+    }
+    return ts;
 }
 
 TextStream& operator<<(TextStream& ts, MarqueeBehavior marqueeBehavior)
@@ -918,6 +886,8 @@ TextStream& operator<<(TextStream& ts, Resize resize)
     case Resize::Both: ts << "both"; break;
     case Resize::Horizontal: ts << "horizontal"; break;
     case Resize::Vertical: ts << "vertical"; break;
+    case Resize::Block: ts << "block"; break;
+    case Resize::Inline: ts << "inline"; break;
     }
     return ts;
 }
@@ -973,11 +943,9 @@ TextStream& operator<<(TextStream& ts, ScrollSnapStop stop)
     }
     return ts;
 }
-
 TextStream& operator<<(TextStream& ts, SpeakAs speakAs)
 {
     switch (speakAs) {
-    case SpeakAs::Normal: ts << "normal"; break;
     case SpeakAs::SpellOut: ts << "spell-out"; break;
     case SpeakAs::Digits: ts << "digits"; break;
     case SpeakAs::LiteralPunctuation: ts << "literal-punctuation"; break;
@@ -992,7 +960,7 @@ TextStream& operator<<(TextStream& ts, StyleDifference diff)
     case StyleDifference::Equal: ts << "equal"; break;
     case StyleDifference::RecompositeLayer: ts << "recomposite layer"; break;
     case StyleDifference::Repaint: ts << "repaint"; break;
-    case StyleDifference::RepaintIfTextOrBorderOrOutline: ts << "repaint if text or border or outline"; break;
+    case StyleDifference::RepaintIfText: ts << "repaint if text"; break;
     case StyleDifference::RepaintLayer: ts << "repaint layer"; break;
     case StyleDifference::LayoutPositionedMovementOnly: ts << "layout positioned movement only"; break;
     case StyleDifference::SimplifiedLayout: ts << "simplified layout"; break;
@@ -1028,6 +996,21 @@ TextStream& operator<<(TextStream& ts, TextAlignMode alignMode)
     return ts;
 }
 
+TextStream& operator<<(TextStream& ts, TextAlignLast textAlignLast)
+{
+    switch (textAlignLast) {
+    case TextAlignLast::Auto: ts << "auto"; break;
+    case TextAlignLast::Start: ts << "start"; break;
+    case TextAlignLast::End: ts << "end"; break;
+    case TextAlignLast::Left: ts << "left"; break;
+    case TextAlignLast::Right: ts << "right"; break;
+    case TextAlignLast::Center: ts << "center"; break;
+    case TextAlignLast::Justify: ts << "justify"; break;
+    }
+
+    return ts;
+}
+
 TextStream& operator<<(TextStream& ts, TextCombine textCombine)
 {
     switch (textCombine) {
@@ -1040,7 +1023,6 @@ TextStream& operator<<(TextStream& ts, TextCombine textCombine)
 TextStream& operator<<(TextStream& ts, TextDecorationLine line)
 {
     switch (line) {
-    case TextDecorationLine::None: ts << "none"; break;
     case TextDecorationLine::Underline: ts << "underline"; break;
     case TextDecorationLine::Overline: ts << "overline"; break;
     case TextDecorationLine::LineThrough: ts << "line-through"; break;
@@ -1106,6 +1088,32 @@ TextStream& operator<<(TextStream& ts, TextEmphasisPosition position)
     return ts;
 }
 
+TextStream& operator<<(TextStream& ts, TextGroupAlign textGroupAlign)
+{
+    switch (textGroupAlign) {
+    case TextGroupAlign::None: ts << "none"; break;
+    case TextGroupAlign::Start: ts << "start"; break;
+    case TextGroupAlign::End: ts << "end"; break;
+    case TextGroupAlign::Left: ts << "left"; break;
+    case TextGroupAlign::Right: ts << "right"; break;
+    case TextGroupAlign::Center: ts << "center"; break;
+    }
+
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, TextJustify justify)
+{
+    switch (justify) {
+    case TextJustify::Auto: ts << "auto"; break;
+    case TextJustify::InterCharacter: ts << "inter-character"; break;
+    case TextJustify::InterWord: ts << "inter-word"; break;
+    case TextJustify::None: ts << "none"; break;
+    }
+
+    return ts;
+}
+
 TextStream& operator<<(TextStream& ts, TextOrientation orientation)
 {
     switch (orientation) {
@@ -1141,7 +1149,8 @@ TextStream& operator<<(TextStream& ts, TextTransform textTransform)
     case TextTransform::Capitalize: ts << "capitalize"; break;
     case TextTransform::Uppercase: ts << "uppercase"; break;
     case TextTransform::Lowercase: ts << "lowercase"; break;
-    case TextTransform::None: ts << "none"; break;
+    case TextTransform::FullSizeKana: ts << "full-size-kana"; break;
+    case TextTransform::FullWidth: ts << "full-width"; break;
     }
     return ts;
 }
@@ -1152,6 +1161,45 @@ TextStream& operator<<(TextStream& ts, TextUnderlinePosition underlinePosition)
     case TextUnderlinePosition::Auto: ts << "Auto"; break;
     case TextUnderlinePosition::Under: ts << "Under"; break;
     case TextUnderlinePosition::FromFont: ts << "FromFont"; break;
+    case TextUnderlinePosition::Left: ts << "Left"; break;
+    case TextUnderlinePosition::Right: ts << "Right"; break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, TextWrap wrap)
+{
+    switch (wrap) {
+    case TextWrap::Wrap: ts << "wrap"; break;
+    case TextWrap::NoWrap: ts << "nowrap"; break;
+    case TextWrap::Balance: ts << "balance"; break;
+    case TextWrap::Stable: ts << "stable"; break;
+    case TextWrap::Pretty: ts << "pretty"; break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, TextBoxTrim textBoxTrim)
+{
+    switch (textBoxTrim) {
+    case TextBoxTrim::None: ts << "None"; break;
+    case TextBoxTrim::Start: ts << "Start"; break;
+    case TextBoxTrim::End: ts << "End"; break;
+    case TextBoxTrim::Both: ts << "Both"; break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, TextBoxEdgeType textBoxEdgeType)
+{
+    switch (textBoxEdgeType) {
+    case TextBoxEdgeType::Leading: ts << "half-leading"; break;
+    case TextBoxEdgeType::Text: ts << "text-over/under baseline"; break;
+    case TextBoxEdgeType::CapHeight: ts << "cap-height baseline"; break;
+    case TextBoxEdgeType::ExHeight: ts << "x-height baseline"; break;
+    case TextBoxEdgeType::Alphabetic: ts << "alphabetic baseline"; break;
+    case TextBoxEdgeType::CJKIdeographic: ts << "ideographic-over baseline"; break;
+    case TextBoxEdgeType::CJKIdeographicInk: ts << "ideographic-ink-over/ink-under baseline"; break;
     }
     return ts;
 }
@@ -1255,8 +1303,18 @@ TextStream& operator<<(TextStream& ts, WhiteSpace whiteSpace)
     case WhiteSpace::PreWrap: ts << "pre-wrap"; break;
     case WhiteSpace::PreLine: ts << "pre-line"; break;
     case WhiteSpace::NoWrap: ts << "nowrap"; break;
-    case WhiteSpace::KHTMLNoWrap: ts << "khtml-nowrap"; break;
     case WhiteSpace::BreakSpaces: ts << "break-spaces"; break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, WhiteSpaceCollapse whiteSpaceCollapse)
+{
+    switch (whiteSpaceCollapse) {
+    case WhiteSpaceCollapse::Collapse: ts << "collapse"; break;
+    case WhiteSpaceCollapse::Preserve: ts << "preserve"; break;
+    case WhiteSpaceCollapse::PreserveBreaks: ts << "preserve-breaks"; break;
+    case WhiteSpaceCollapse::BreakSpaces: ts << "break-spaces"; break;
     }
     return ts;
 }
@@ -1268,6 +1326,7 @@ TextStream& operator<<(TextStream& ts, WordBreak wordBreak)
     case WordBreak::BreakAll: ts << "break-all"; break;
     case WordBreak::KeepAll: ts << "keep-all"; break;
     case WordBreak::BreakWord: ts << "break-word"; break;
+    case WordBreak::Auto: ts << "auto"; break;
     }
     return ts;
 }
@@ -1277,6 +1336,25 @@ TextStream& operator<<(TextStream& ts, MathStyle mathStyle)
     switch (mathStyle) {
     case MathStyle::Normal: ts << "normal"; break;
     case MathStyle::Compact: ts << "compact"; break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, ContainIntrinsicSizeType containIntrinsicSizeType)
+{
+    switch (containIntrinsicSizeType) {
+    case ContainIntrinsicSizeType::None:
+        ts << "none";
+        break;
+    case ContainIntrinsicSizeType::Length:
+        ts << "length";
+        break;
+    case ContainIntrinsicSizeType::AutoAndLength:
+        ts << "autoandlength";
+        break;
+    case ContainIntrinsicSizeType::AutoAndNone:
+        ts << "autoandnone";
+        break;
     }
     return ts;
 }
@@ -1304,7 +1382,5 @@ CSSBoxType transformBoxToCSSBoxType(TransformBox transformBox)
         return CSSBoxType::BorderBox;
     }
 }
-
-const float defaultMiterLimit = 4;
 
 } // namespace WebCore

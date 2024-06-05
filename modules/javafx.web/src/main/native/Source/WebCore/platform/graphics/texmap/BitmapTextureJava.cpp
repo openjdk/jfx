@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,7 @@ void BitmapTextureJava::updateContents(const void*, const IntRect&, const IntPoi
 void BitmapTextureJava::didReset()
 {
     float devicePixelRatio = 1.0;
-    m_image = ImageBuffer::create(contentSize(), RenderingMode::Accelerated, devicePixelRatio,
+    m_image = ImageBuffer::create(contentSize(), RenderingPurpose::Unspecified, devicePixelRatio,
                      DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
 }
 
@@ -49,7 +49,7 @@ void BitmapTextureJava::updateContents(Image* image, const IntRect& targetRect, 
     m_image->context().drawImage(*image, targetRect, IntRect(offset, targetRect.size()), CompositeOperator::Copy);
 }
 
-RefPtr<BitmapTexture> BitmapTextureJava::applyFilters(TextureMapper&, const FilterOperations&)
+RefPtr<BitmapTexture> BitmapTextureJava::applyFilters(TextureMapper&, const FilterOperations&, bool)
 {
     notImplemented();
     return this;

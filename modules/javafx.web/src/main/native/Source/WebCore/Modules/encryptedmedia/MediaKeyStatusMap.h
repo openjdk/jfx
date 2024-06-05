@@ -38,7 +38,8 @@
 namespace WebCore {
 
 class MediaKeySession;
-class FragmentedSharedBuffer;
+class ScriptExecutionContext;
+class SharedBuffer;
 
 class MediaKeyStatusMap : public RefCounted<MediaKeyStatusMap> {
 public:
@@ -66,7 +67,7 @@ public:
         Ref<MediaKeyStatusMap> m_map;
         size_t m_index { 0 };
     };
-    Iterator createIterator() { return Iterator(*this); }
+    Iterator createIterator(ScriptExecutionContext*) { return Iterator(*this); }
 
 private:
     MediaKeyStatusMap(const MediaKeySession&);

@@ -26,11 +26,11 @@
 #include "config.h"
 #include "FrameDestructionObserver.h"
 
-#include "Frame.h"
+#include "LocalFrame.h"
 
 namespace WebCore {
 
-FrameDestructionObserver::FrameDestructionObserver(Frame* frame)
+FrameDestructionObserver::FrameDestructionObserver(LocalFrame* frame)
     : m_frame(nullptr)
 {
     observeFrame(frame);
@@ -42,12 +42,7 @@ FrameDestructionObserver::~FrameDestructionObserver()
 
 }
 
-Frame* FrameDestructionObserver::frame() const
-{
-    return m_frame.get();
-}
-
-void FrameDestructionObserver::observeFrame(Frame* frame)
+void FrameDestructionObserver::observeFrame(LocalFrame* frame)
 {
     if (m_frame)
         m_frame->removeDestructionObserver(*this);

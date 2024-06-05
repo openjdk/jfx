@@ -33,10 +33,7 @@
 #include <wtf/text/TextBreakIterator.h>
 #include <wtf/unicode/CharacterNames.h>
 
-#if USE(CF)
-#if PLATFORM(WIN)
-#include "WebCoreBundleWin.h"
-#endif
+#if PLATFORM(COCOA)
 #include <wtf/RetainPtr.h>
 #endif
 
@@ -46,7 +43,7 @@
 
 namespace WebCore {
 
-#if USE(CF) && !PLATFORM(WIN)
+#if PLATFORM(COCOA)
 String formatLocalizedString(CFStringRef format, ...)
 {
     va_list arguments;
@@ -61,20 +58,23 @@ ALLOW_NONLITERAL_FORMAT_END
     va_end(arguments);
     return result.get();
 }
+#elif PLATFORM(WIN)
+String formatLocalizedString(const wchar_t* format, ...)
+{
+    va_list arguments;
+    va_start(arguments, format);
+    int len = _vscwprintf(format, arguments);
+    Vector<wchar_t> buffer(len + 1);
+    _vsnwprintf(buffer.data(), len + 1, format, arguments);
+    va_end(arguments);
+    return { buffer.data() };
+}
 #else
 // Because |format| is used as the second parameter to va_start, it cannot be a reference
 // type according to section 18.7/3 of the C++ N1905 standard.
 String formatLocalizedString(const char* format, ...)
 {
-#if USE(CF) && PLATFORM(WIN)
-    auto cfFormat = adoptCF(CFStringCreateWithCStringNoCopy(nullptr, format, kCFStringEncodingUTF8, kCFAllocatorNull));
-    va_list arguments;
-    va_start(arguments, format);
-    auto localizedFormat = copyLocalizedString(cfFormat.get());
-    auto result = adoptCF(CFStringCreateWithFormatAndArguments(0, 0, localizedFormat.get(), arguments));
-    va_end(arguments);
-    return result.get();
-#elif USE(GLIB)
+#if USE(GLIB)
     va_list arguments;
     va_start(arguments, format);
     GUniquePtr<gchar> result(g_strdup_vprintf(format, arguments));
@@ -82,20 +82,18 @@ String formatLocalizedString(const char* format, ...)
     return String::fromUTF8(result.get());
 #else
     notImplemented();
-    return format;
+    return String::fromUTF8(format);
 #endif
 }
 #endif
 
-#if USE(CF)
-#if !PLATFORM(WIN)
+#if PLATFORM(COCOA)
 static CFBundleRef webCoreBundle()
 {
     static NeverDestroyed<RetainPtr<CFBundleRef>> bundle = CFBundleGetBundleWithIdentifier(CFSTR("com.apple.WebCore"));
     ASSERT(bundle.get());
     return bundle.get().get();
 }
-#endif
 
 RetainPtr<CFStringRef> copyLocalizedString(CFStringRef key)
 {
@@ -107,12 +105,7 @@ RetainPtr<CFStringRef> copyLocalizedString(CFStringRef key)
 
     static CFStringRef notFound = CFSTR("localized string not found");
 
-#if PLATFORM(WIN)
-    CFBundleRef bundle = webKitBundle();
-#else
-    CFBundleRef bundle = webCoreBundle();
-#endif
-    auto result = adoptCF(CFBundleCopyLocalizedString(bundle, key, notFound, nullptr));
+    auto result = adoptCF(CFBundleCopyLocalizedString(webCoreBundle(), key, notFound, nullptr));
 
 #if ASSERT_ENABLED
     if (result.get() == notFound) {
@@ -126,31 +119,31 @@ RetainPtr<CFStringRef> copyLocalizedString(CFStringRef key)
 }
 #endif
 
-#if USE(CF) && !PLATFORM(WIN)
+#if PLATFORM(COCOA)
 String localizedString(CFStringRef key)
 {
     return copyLocalizedString(key).get();
 }
+#elif PLATFORM(WIN)
+String localizedString(const wchar_t* key)
+{
+    return key;
+}
 #else
 String localizedString(const char* key)
 {
-#if USE(CF)
-    auto keyString = adoptCF(CFStringCreateWithCStringNoCopy(nullptr, key, kCFStringEncodingUTF8, kCFAllocatorNull));
-    return copyLocalizedString(keyString.get()).get();
-#else
     return String::fromUTF8(key, strlen(key));
-#endif
 }
 #endif
 
-#if ENABLE(CONTEXT_MENUS)
+#if ENABLE(CONTEXT_MENUS) && PLATFORM(COCOA)
 
 static String truncatedStringForMenuItem(const String& original)
 {
     // Truncate the string if it's too long. This number is roughly the same as the one used by AppKit.
     unsigned maxNumberOfGraphemeClustersInLookupMenuItem = 24;
 
-    String trimmed = original.stripWhiteSpace();
+    auto trimmed = original.trim(deprecatedIsSpaceOrNewline);
     unsigned numberOfCharacters = numCodeUnitsInGraphemeClusters(trimmed, maxNumberOfGraphemeClustersInLookupMenuItem);
     return numberOfCharacters == trimmed.length() ? trimmed : makeString(trimmed.left(numberOfCharacters), horizontalEllipsis);
 }
@@ -294,26 +287,19 @@ String contextMenuItemTagLearnSpelling()
     return WEB_UI_STRING_WITH_MNEMONIC("Learn Spelling", "_Learn Spelling", "Learn Spelling context menu item");
 }
 
+#if !PLATFORM(COCOA)
+String contextMenuItemTagSearchWeb()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Search the Web", "_Search the Web", "Search the Web context menu item");
+}
+#endif
+
+#if PLATFORM(COCOA)
 String contextMenuItemTagLookUpInDictionary(const String& selectedString)
 {
-#if USE(CF)
     auto selectedCFString = truncatedStringForMenuItem(selectedString).createCFString();
     return WEB_UI_FORMAT_CFSTRING("Look Up “%@”", "Look Up context menu item with selected word", selectedCFString.get());
-#elif USE(GLIB)
-    return WEB_UI_FORMAT_STRING("Look Up “%s”", "Look Up context menu item with selected word", truncatedStringForMenuItem(selectedString).utf8().data());
-#else
-    return WEB_UI_STRING("Look Up “<selection>”", "Look Up context menu item with selected word").replace("<selection>", truncatedStringForMenuItem(selectedString));
-#endif
 }
-
-#if HAVE(TRANSLATION_UI_SERVICES)
-
-String contextMenuItemTagTranslate(const String& selectedString)
-{
-    auto selectedCFString = truncatedStringForMenuItem(selectedString).createCFString();
-    return WEB_UI_FORMAT_CFSTRING("Translate “%@”", "Translate context menu item with selected word", selectedCFString.get());
-}
-
 #endif
 
 String contextMenuItemTagOpenLink()
@@ -482,19 +468,101 @@ String contextMenuItemTagMediaMute()
     return WEB_UI_STRING_WITH_MNEMONIC("Mute", "_Mute", "Media Mute context menu item");
 }
 
+#if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
+String contextMenuItemTagPlayAllAnimations()
+{
+    return WEB_UI_STRING("Play All Animations", "Play All Animations context menu item");
+}
+
+String contextMenuItemTagPauseAllAnimations()
+{
+    return WEB_UI_STRING("Pause All Animations", "Pause All Animations context menu item");
+}
+
+String contextMenuItemTagPlayAnimation()
+{
+    return WEB_UI_STRING("Play Animation", "Title for play animation action button or context menu item");
+}
+
+String contextMenuItemTagPauseAnimation()
+{
+    return WEB_UI_STRING("Pause Animation", "Title for pause animation action button or context menu item");
+}
+#endif // ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
+
 String contextMenuItemTagInspectElement()
 {
     return WEB_UI_STRING_WITH_MNEMONIC("Inspect Element", "Inspect _Element", "Inspect Element context menu item");
 }
 
-#if !PLATFORM(COCOA)
-String contextMenuItemTagSearchWeb()
+#if HAVE(TRANSLATION_UI_SERVICES)
+String contextMenuItemTagTranslate(const String& selectedString)
 {
-    return WEB_UI_STRING_WITH_MNEMONIC("Search the Web", "_Search the Web", "Search the Web context menu item");
+    auto selectedCFString = truncatedStringForMenuItem(selectedString).createCFString();
+    return WEB_UI_FORMAT_CFSTRING("Translate “%@”", "Translate context menu item with selected word", selectedCFString.get());
 }
 #endif
 
+#if ENABLE(PDFJS)
+String contextMenuItemPDFAutoSize()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Automatically Resize", "_Automatically Resize", "Automatically Resize context menu item");
+}
+
+String contextMenuItemPDFZoomIn()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Zoom In", "_Zoom In", "Zoom In Continuous context menu item");
+}
+
+String contextMenuItemPDFZoomOut()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Zoom Out", "_Zoom Out", "Zoom Out context menu item");
+}
+
+String contextMenuItemPDFActualSize()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Actual Size", "_Actual Size", "Actual Size context menu item");
+}
+
+String contextMenuItemPDFSinglePage()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Single Page", "_Single Page", "Single Page context menu item");
+}
+
+String contextMenuItemPDFSinglePageContinuous()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Single Page Continuous", "_Single Page Continuous", "Single Page Continuous context menu item");
+}
+
+String contextMenuItemPDFTwoPages()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Two Pages", "_Two Pages", "Two Pages context menu item");
+}
+
+String contextMenuItemPDFTwoPagesContinuous()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Two Pages Continuous", "_Two Pages Continuous", "Two Pages Continuous context menu item");
+}
+
+String contextMenuItemPDFNextPage()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Next Page", "_Next Page", "Next Page context menu item");
+}
+
+String contextMenuItemPDFPreviousPage()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Previous Page", "_Previous Page", "Previous Page context menu item");
+}
+#endif
 #endif // ENABLE(CONTEXT_MENUS)
+
+#if !PLATFORM(COCOA)
+String pdfDocumentTypeDescription()
+{
+    // Also exposed to DOM.
+    return WEB_UI_STRING("Portable Document Format", "Description of the primary type supported by the PDF pseudo plug-in.");
+}
+#endif // !PLATFORM(COCOA)
 
 #if !PLATFORM(IOS_FAMILY)
 
@@ -580,6 +648,11 @@ String AXFooterRoleDescriptionText()
     return WEB_UI_STRING("footer", "accessibility role description for a footer");
 }
 
+String AXSuggestionRoleDescriptionText()
+{
+    return WEB_UI_STRING("suggestion", "accessibility role description for a suggestion element");
+}
+
 String AXFileUploadButtonText()
 {
     return WEB_UI_STRING("file upload button", "accessibility role description for a file upload button");
@@ -635,6 +708,21 @@ String AXTimeFieldText()
     return WEB_UI_STRING("time field", "accessibility role description for a time field.");
 }
 
+String AXDateFieldMonthText()
+{
+    return WEB_UI_STRING("month", "accessibility label for a date field month input.");
+}
+
+String AXDateFieldDayText()
+{
+    return WEB_UI_STRING("day", "accessibility label for a date field day input.");
+}
+
+String AXDateFieldYearText()
+{
+    return WEB_UI_STRING("year", "accessibility label for a date field year input.");
+}
+
 String AXDateTimeFieldText()
 {
     return WEB_UI_STRING("date and time field", "accessibility role description for a date and time field.");
@@ -655,49 +743,49 @@ String AXWeekFieldText()
     return WEB_UI_STRING("week and year field", "accessibility role description for a time field.");
 }
 
-String AXARIAContentGroupText(const String& ariaType)
+String AXARIAContentGroupText(StringView ariaType)
 {
-    if (ariaType == "ARIAApplicationAlert")
+    if (ariaType == "ARIAApplicationAlert"_s)
         return WEB_UI_STRING("alert", "An ARIA accessibility group that acts as an alert.");
-    if (ariaType == "ARIAApplicationAlertDialog")
+    if (ariaType == "ARIAApplicationAlertDialog"_s)
         return WEB_UI_STRING("web alert dialog", "An ARIA accessibility group that acts as an alert dialog.");
-    if (ariaType == "ARIAApplicationDialog")
+    if (ariaType == "ARIAApplicationDialog"_s)
         return WEB_UI_STRING("web dialog", "An ARIA accessibility group that acts as an dialog.");
-    if (ariaType == "ARIAApplicationLog")
+    if (ariaType == "ARIAApplicationLog"_s)
         return WEB_UI_STRING("log", "An ARIA accessibility group that acts as a console log.");
-    if (ariaType == "ARIAApplicationMarquee")
+    if (ariaType == "ARIAApplicationMarquee"_s)
         return WEB_UI_STRING("marquee", "An ARIA accessibility group that acts as a marquee.");
-    if (ariaType == "ARIAApplicationStatus")
+    if (ariaType == "ARIAApplicationStatus"_s)
         return WEB_UI_STRING("application status", "An ARIA accessibility group that acts as a status update.");
-    if (ariaType == "ARIAApplicationTimer")
+    if (ariaType == "ARIAApplicationTimer"_s)
         return WEB_UI_STRING("timer", "An ARIA accessibility group that acts as an updating timer.");
-    if (ariaType == "ARIADocument")
+    if (ariaType == "ARIADocument"_s)
         return WEB_UI_STRING("document", "An ARIA accessibility group that acts as a document.");
-    if (ariaType == "ARIADocumentArticle")
+    if (ariaType == "ARIADocumentArticle"_s)
         return WEB_UI_STRING("article", "An ARIA accessibility group that acts as an article.");
-    if (ariaType == "ARIADocumentNote")
+    if (ariaType == "ARIADocumentNote"_s)
         return WEB_UI_STRING("note", "An ARIA accessibility group that acts as a note in a document.");
-    if (ariaType == "ARIAWebApplication")
+    if (ariaType == "ARIAWebApplication"_s)
         return WEB_UI_STRING("web application", "An ARIA accessibility group that acts as an application.");
-    if (ariaType == "ARIALandmarkBanner")
+    if (ariaType == "ARIALandmarkBanner"_s)
         return WEB_UI_STRING("banner", "An ARIA accessibility group that acts as a banner.");
-    if (ariaType == "ARIALandmarkComplementary")
+    if (ariaType == "ARIALandmarkComplementary"_s)
         return WEB_UI_STRING("complementary", "An ARIA accessibility group that acts as a region of complementary information.");
-    if (ariaType == "ARIALandmarkContentInfo")
+    if (ariaType == "ARIALandmarkContentInfo"_s)
         return WEB_UI_STRING("content information", "An ARIA accessibility group that contains content.");
-    if (ariaType == "ARIALandmarkMain")
+    if (ariaType == "ARIALandmarkMain"_s)
         return WEB_UI_STRING("main", "An ARIA accessibility group that is the main portion of the website.");
-    if (ariaType == "ARIALandmarkNavigation")
+    if (ariaType == "ARIALandmarkNavigation"_s)
         return WEB_UI_STRING("navigation", "An ARIA accessibility group that contains the main navigation elements of a website.");
-    if (ariaType == "ARIALandmarkRegion")
+    if (ariaType == "ARIALandmarkRegion"_s)
         return WEB_UI_STRING("region", "An ARIA accessibility group that acts as a distinct region in a document.");
-    if (ariaType == "ARIALandmarkSearch")
+    if (ariaType == "ARIALandmarkSearch"_s)
         return WEB_UI_STRING("search", "An ARIA accessibility group that contains a search feature of a website.");
-    if (ariaType == "ARIAUserInterfaceTooltip")
+    if (ariaType == "ARIAUserInterfaceTooltip"_s)
         return WEB_UI_STRING("tooltip", "An ARIA accessibility group that acts as a tooltip.");
-    if (ariaType == "ARIATabPanel")
+    if (ariaType == "ARIATabPanel"_s)
         return WEB_UI_STRING("tab panel", "An ARIA accessibility group that contains the content of a tab.");
-    if (ariaType == "ARIADocumentMath")
+    if (ariaType == "ARIADocumentMath"_s)
         return WEB_UI_STRING("math", "An ARIA accessibility group that contains mathematical symbols.");
     return String();
 }
@@ -745,19 +833,19 @@ String AXLinkActionVerb()
 String AXMenuListPopupActionVerb()
 {
     notImplemented();
-    return "select";
+    return "select"_s;
 }
 
 String AXMenuListActionVerb()
 {
     notImplemented();
-    return "select";
+    return "select"_s;
 }
 
 String AXListItemActionVerb()
 {
     notImplemented();
-    return "select";
+    return "select"_s;
 }
 
 #if ENABLE(APPLE_PAY)
@@ -852,6 +940,11 @@ String AXAutoFillCreditCardLabel()
     return WEB_UI_STRING("credit card AutoFill", "Label for the credit card AutoFill button inside a text field.");
 }
 
+String AXAutoFillLoadingLabel()
+{
+    return WEB_UI_STRING("loading AutoFill", "Label for the loading AutoFill button inside a text field.");
+}
+
 String autoFillStrongPasswordLabel()
 {
     return WEB_UI_STRING("Strong Password", "Label for strong password.");
@@ -899,7 +992,7 @@ String unknownFileSizeText()
 
 String imageTitle(const String& filename, const IntSize& size)
 {
-#if USE(CF)
+#if PLATFORM(COCOA)
     auto locale = adoptCF(CFLocaleCopyCurrent());
     auto formatter = adoptCF(CFNumberFormatterCreate(0, locale.get(), kCFNumberFormatterDecimalStyle));
 
@@ -912,10 +1005,12 @@ String imageTitle(const String& filename, const IntSize& size)
     auto heightString = adoptCF(CFNumberFormatterCreateStringWithNumber(0, formatter.get(), height.get()));
 
     return WEB_UI_FORMAT_CFSTRING("%@ %@×%@ pixels", "window title for a standalone image (uses multiplication symbol, not x)", filename.createCFString().get(), widthString.get(), heightString.get());
+#elif PLATFORM(WIN)
+    return WEB_UI_FORMAT_STRING("%s %d×%d pixels", "window title for a standalone image (uses multiplication symbol, not x)", filename.wideCharacters().data(), size.width(), size.height());
 #elif USE(GLIB)
     return WEB_UI_FORMAT_STRING("%s %d×%d pixels", "window title for a standalone image (uses multiplication symbol, not x)", filename.utf8().data(), size.width(), size.height());
 #else
-    return WEB_UI_FORMAT_STRING("<filename> %d×%d pixels", "window title for a standalone image (uses multiplication symbol, not x)", size.width(), size.height()).replace("<filename>", filename);
+    return makeStringByReplacingAll(WEB_UI_FORMAT_STRING("<filename> %d×%d pixels", "window title for a standalone image (uses multiplication symbol, not x)", size.width(), size.height()), "<filename>"_s, filename);
 #endif
 }
 
@@ -931,47 +1026,47 @@ String mediaElementLiveBroadcastStateText()
 
 String localizedMediaControlElementString(const String& name)
 {
-    if (name == "AudioElement")
+    if (name == "AudioElement"_s)
         return WEB_UI_STRING("audio playback", "accessibility label for audio element controller");
-    if (name == "VideoElement")
+    if (name == "VideoElement"_s)
         return WEB_UI_STRING("video playback", "accessibility label for video element controller");
-    if (name == "MuteButton")
+    if (name == "MuteButton"_s)
         return WEB_UI_STRING("mute", "accessibility label for mute button");
-    if (name == "UnMuteButton")
+    if (name == "UnMuteButton"_s)
         return WEB_UI_STRING("unmute", "accessibility label for turn mute off button");
-    if (name == "PlayButton")
+    if (name == "PlayButton"_s)
         return WEB_UI_STRING("play", "accessibility label for play button");
-    if (name == "PauseButton")
+    if (name == "PauseButton"_s)
         return WEB_UI_STRING("pause", "accessibility label for pause button");
-    if (name == "Slider")
+    if (name == "Slider"_s)
         return WEB_UI_STRING("movie time", "accessibility label for timeline slider");
-    if (name == "SliderThumb")
+    if (name == "SliderThumb"_s)
         return WEB_UI_STRING("timeline slider thumb", "accessibility label for timeline thumb");
-    if (name == "RewindButton")
+    if (name == "RewindButton"_s)
         return WEB_UI_STRING("back 30 seconds", "accessibility label for seek back 30 seconds button");
-    if (name == "ReturnToRealtimeButton")
+    if (name == "ReturnToRealtimeButton"_s)
         return WEB_UI_STRING("return to real time", "accessibility label for return to real time button");
-    if (name == "CurrentTimeDisplay")
+    if (name == "CurrentTimeDisplay"_s)
         return WEB_UI_STRING("elapsed time", "accessibility label for elapsed time display");
-    if (name == "TimeRemainingDisplay")
+    if (name == "TimeRemainingDisplay"_s)
         return WEB_UI_STRING("remaining time", "accessibility label for time remaining display");
-    if (name == "StatusDisplay")
+    if (name == "StatusDisplay"_s)
         return WEB_UI_STRING("status", "accessibility label for movie status");
-    if (name == "EnterFullscreenButton")
+    if (name == "EnterFullscreenButton"_s)
         return WEB_UI_STRING("enter full screen", "accessibility label for enter full screen button");
-    if (name == "ExitFullscreenButton")
+    if (name == "ExitFullscreenButton"_s)
         return WEB_UI_STRING("exit full screen", "accessibility label for exit full screen button");
-    if (name == "SeekForwardButton")
+    if (name == "SeekForwardButton"_s)
         return WEB_UI_STRING("fast forward", "accessibility label for fast forward button");
-    if (name == "SeekBackButton")
+    if (name == "SeekBackButton"_s)
         return WEB_UI_STRING("fast reverse", "accessibility label for fast reverse button");
-    if (name == "ShowClosedCaptionsButton")
+    if (name == "ShowClosedCaptionsButton"_s)
         return WEB_UI_STRING("show closed captions", "accessibility label for show closed captions button");
-    if (name == "HideClosedCaptionsButton")
+    if (name == "HideClosedCaptionsButton"_s)
         return WEB_UI_STRING("hide closed captions", "accessibility label for hide closed captions button");
 
     // FIXME: the ControlsPanel container should never be visible in the accessibility hierarchy.
-    if (name == "ControlsPanel")
+    if (name == "ControlsPanel"_s)
         return String();
 
     ASSERT_NOT_REACHED();
@@ -980,45 +1075,45 @@ String localizedMediaControlElementString(const String& name)
 
 String localizedMediaControlElementHelpText(const String& name)
 {
-    if (name == "AudioElement")
+    if (name == "AudioElement"_s)
         return WEB_UI_STRING("audio element playback controls and status display", "accessibility help text for audio element controller");
-    if (name == "VideoElement")
+    if (name == "VideoElement"_s)
         return WEB_UI_STRING("video element playback controls and status display", "accessibility help text for video element controller");
-    if (name == "MuteButton")
+    if (name == "MuteButton"_s)
         return WEB_UI_STRING("mute audio tracks", "accessibility help text for mute button");
-    if (name == "UnMuteButton")
+    if (name == "UnMuteButton"_s)
         return WEB_UI_STRING("unmute audio tracks", "accessibility help text for un mute button");
-    if (name == "PlayButton")
+    if (name == "PlayButton"_s)
         return WEB_UI_STRING("begin playback", "accessibility help text for play button");
-    if (name == "PauseButton")
+    if (name == "PauseButton"_s)
         return WEB_UI_STRING("pause playback", "accessibility help text for pause button");
-    if (name == "Slider")
+    if (name == "Slider"_s)
         return WEB_UI_STRING("movie time scrubber", "accessibility help text for timeline slider");
-    if (name == "SliderThumb")
+    if (name == "SliderThumb"_s)
         return WEB_UI_STRING("movie time scrubber thumb", "accessibility help text for timeline slider thumb");
-    if (name == "RewindButton")
+    if (name == "RewindButton"_s)
         return WEB_UI_STRING("seek movie back 30 seconds", "accessibility help text for jump back 30 seconds button");
-    if (name == "ReturnToRealtimeButton")
+    if (name == "ReturnToRealtimeButton"_s)
         return WEB_UI_STRING("resume real time streaming", "accessibility help text for return streaming movie to real time button");
-    if (name == "CurrentTimeDisplay")
+    if (name == "CurrentTimeDisplay"_s)
         return WEB_UI_STRING("current movie time in seconds", "accessibility help text for elapsed time display");
-    if (name == "TimeRemainingDisplay")
+    if (name == "TimeRemainingDisplay"_s)
         return WEB_UI_STRING("number of seconds of movie remaining", "accessibility help text for remaining time display");
-    if (name == "StatusDisplay")
+    if (name == "StatusDisplay"_s)
         return WEB_UI_STRING("current movie status", "accessibility help text for movie status display");
-    if (name == "SeekBackButton")
+    if (name == "SeekBackButton"_s)
         return WEB_UI_STRING("seek quickly back", "accessibility help text for fast rewind button");
-    if (name == "SeekForwardButton")
+    if (name == "SeekForwardButton"_s)
         return WEB_UI_STRING("seek quickly forward", "accessibility help text for fast forward button");
-    if (name == "FullscreenButton")
+    if (name == "FullscreenButton"_s)
         return WEB_UI_STRING("Play movie in full screen mode", "accessibility help text for enter full screen button");
-    if (name == "ShowClosedCaptionsButton")
+    if (name == "ShowClosedCaptionsButton"_s)
         return WEB_UI_STRING("start displaying closed captions", "accessibility help text for show closed captions button");
-    if (name == "HideClosedCaptionsButton")
+    if (name == "HideClosedCaptionsButton"_s)
         return WEB_UI_STRING("stop displaying closed captions", "accessibility help text for hide closed captions button");
 
     // The description of this button is descriptive enough that it doesn't require help text.
-    if (name == "EnterFullscreenButton")
+    if (name == "EnterFullscreenButton"_s)
         return String();
 
     ASSERT_NOT_REACHED();
@@ -1030,7 +1125,7 @@ String localizedMediaTimeDescription(float time)
     if (!std::isfinite(time))
         return WEB_UI_STRING("indefinite time", "accessibility help text for an indefinite media controller time value");
 
-    int seconds = static_cast<int>(fabsf(time));
+    int seconds = static_cast<int>(std::abs(time));
     int days = seconds / (60 * 60 * 24);
     int hours = seconds / (60 * 60);
     int minutes = (seconds / 60) % 60;
@@ -1100,6 +1195,18 @@ String validationMessagePatternMismatchText()
     return WEB_UI_STRING("Match the requested format", "Validation message for input form controls requiring a constrained value according to pattern");
 }
 
+String validationMessagePatternMismatchText(const String& title)
+{
+#if PLATFORM(COCOA)
+    return WEB_UI_FORMAT_CFSTRING("Match the requested format: %@", "Validation message for input form controls requiring a constrained value according to pattern followed by a website-provided description of the pattern", title.createCFString().get());
+#elif USE(GLIB)
+    return WEB_UI_FORMAT_STRING("Match the requested format: %s", "Validation message for input form controls requiring a constrained value according to pattern followed by a website-provided description of the pattern", title.utf8().data());
+#else
+    UNUSED_PARAM(title);
+    return validationMessagePatternMismatchText();
+#endif
+}
+
 #if !PLATFORM(GTK)
 String validationMessageTooShortText(int, int minLength)
 {
@@ -1116,7 +1223,7 @@ String validationMessageTooLongText(int, int maxLength)
 
 String validationMessageRangeUnderflowText(const String& minimum)
 {
-#if USE(CF)
+#if PLATFORM(COCOA)
     return WEB_UI_FORMAT_CFSTRING("Value must be greater than or equal to %@", "Validation message for input form controls with value lower than allowed minimum", minimum.createCFString().get());
 #elif USE(GLIB)
     return WEB_UI_FORMAT_STRING("Value must be greater than or equal to %s", "Validation message for input form controls with value lower than allowed minimum", minimum.utf8().data());
@@ -1128,7 +1235,7 @@ String validationMessageRangeUnderflowText(const String& minimum)
 
 String validationMessageRangeOverflowText(const String& maximum)
 {
-#if USE(CF)
+#if PLATFORM(COCOA)
     return WEB_UI_FORMAT_CFSTRING("Value must be less than or equal to %@", "Validation message for input form controls with value higher than allowed maximum", maximum.createCFString().get());
 #elif USE(GLIB)
     return WEB_UI_FORMAT_STRING("Value must be less than or equal to %s", "Validation message for input form controls with value higher than allowed maximum", maximum.utf8().data());
@@ -1170,7 +1277,7 @@ String textTrackAutomaticMenuItemText()
     return WEB_UI_STRING_KEY("Auto (Recommended)", "Auto (Recommended) (text track)", "Menu item label for automatic track selection behavior.");
 }
 
-#if USE(CF)
+#if PLATFORM(COCOA)
 
 String addTrackLabelAsSuffix(const String& text, const String& label)
 {
@@ -1297,7 +1404,12 @@ String addAudioTrackKindCommentarySuffix(const String& text)
     return WEB_UI_FORMAT_CFSTRING_KEY("%@ Commentary", "%@ Commentary (audio track)", "Commentary audio track display name format that includes the language and/or locale (e.g. 'English Commentary').", text.createCFString().get());
 }
 
-#endif // USE(CF)
+#endif // PLATFORM(COCOA)
+
+String contextMenuItemTagShowMediaStats()
+{
+    return WEB_UI_STRING("Show Media Stats", "Media stats context menu item");
+}
 
 #endif // ENABLE(VIDEO)
 
@@ -1316,16 +1428,16 @@ String useBlockedPlugInContextMenuTitle()
     return WEB_UI_STRING("Show in blocked plug-in", "Title of the context menu item to show when PDFPlugin was used instead of a blocked plugin");
 }
 
-#if ENABLE(WEB_CRYPTO)
+#if ENABLE(WEB_CRYPTO) && PLATFORM(COCOA)
 
 String webCryptoMasterKeyKeychainLabel(const String& localizedApplicationName)
 {
-#if USE(CF)
+#if PLATFORM(COCOA)
     return WEB_UI_FORMAT_CFSTRING("%@ WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain", localizedApplicationName.createCFString().get());
 #elif USE(GLIB)
     return WEB_UI_FORMAT_STRING("%s WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain", localizedApplicationName.utf8().data());
 #else
-    return WEB_UI_STRING("<application> WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain").replace("<application>", localizedApplicationName);
+    return makeStringByReplacingAll(WEB_UI_STRING("<application> WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain"), "<application>"_s, localizedApplicationName);
 #endif
 }
 

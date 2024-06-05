@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2022 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -24,7 +24,14 @@
 
 #include "ConstructData.h"
 #include "JSCast.h"
+#include <wtf/CompactPtr.h>
 #include <wtf/PtrTag.h>
+
+#if HAVE(36BIT_ADDRESS)
+#define CLASS_INFO_ALIGNMENT alignas(16)
+#else
+#define CLASS_INFO_ALIGNMENT
+#endif
 
 namespace WTF {
 class PrintStream;
@@ -67,9 +74,6 @@ struct MethodTable {
 
     using GetOwnPropertySlotByIndexFunctionPtr = bool (*)(JSObject*, JSGlobalObject*, unsigned, PropertySlot&);
     GetOwnPropertySlotByIndexFunctionPtr METHOD_TABLE_ENTRY(getOwnPropertySlotByIndex);
-
-    using ToThisFunctionPtr = JSValue (*)(JSCell*, JSGlobalObject*, ECMAMode);
-    ToThisFunctionPtr METHOD_TABLE_ENTRY(toThis);
 
     using GetOwnPropertyNamesFunctionPtr = void (*)(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
     GetOwnPropertyNamesFunctionPtr METHOD_TABLE_ENTRY(getOwnPropertyNames);
@@ -121,6 +125,8 @@ struct MethodTable {
     ALWAYS_INLINE void visitOutputConstraints(JSCell* cell, AbstractSlotVisitor& visitor) const { visitOutputConstraintsWithAbstractSlotVisitor(cell, visitor); }
 };
 
+#undef METHOD_TABLE_ENTRY
+
 #define CREATE_MEMBER_CHECKER(member) \
     template <typename T> \
     struct MemberCheck##member { \
@@ -152,7 +158,6 @@ struct MethodTable {
         &ClassName::deletePropertyByIndex, \
         &ClassName::getOwnPropertySlot, \
         &ClassName::getOwnPropertySlotByIndex, \
-        &ClassName::toThis, \
         &ClassName::getOwnPropertyNames, \
         &ClassName::getOwnSpecialPropertyNames, \
         &ClassName::customHasInstance, \
@@ -169,14 +174,14 @@ struct MethodTable {
         &ClassName::visitOutputConstraints, \
         &ClassName::visitOutputConstraints, \
     }, \
-    ClassName::TypedArrayStorageType, \
-    sizeof(ClassName),
+    sizeof(ClassName), \
+    ClassName::isResizableOrGrowableSharedTypedArray, \
 
-struct ClassInfo {
+struct CLASS_INFO_ALIGNMENT ClassInfo {
     using CheckJSCastSnippetFunctionPtr = Ref<Snippet> (*)(void);
 
     // A string denoting the class name. Example: "Window".
-    const char* className;
+    ASCIILiteral className;
     // Pointer to the class information of the base class.
     // nullptrif there is none.
     const ClassInfo* parentClass;
@@ -184,8 +189,8 @@ struct ClassInfo {
     CheckJSCastSnippetFunctionPtr checkSubClassSnippet;
     const std::optional<JSTypeRange> inheritsJSTypeRange; // This is range of JSTypes for doing inheritance checking. Has the form: [firstJSType, lastJSType] (inclusive).
     MethodTable methodTable;
-    const TypedArrayType typedArrayStorageType;
     const unsigned staticClassSize;
+    const bool isResizableOrGrowableSharedTypedArray;
 
     static ptrdiff_t offsetOfParentClass()
     {
@@ -203,7 +208,7 @@ struct ClassInfo {
 
     JS_EXPORT_PRIVATE void dump(PrintStream&) const;
 
-    JS_EXPORT_PRIVATE bool hasStaticSetterOrReadonlyProperties() const;
+    JS_EXPORT_PRIVATE bool hasStaticPropertyWithAnyOfAttributes(uint8_t attributes) const;
 };
 
 } // namespace JSC

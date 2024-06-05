@@ -26,8 +26,10 @@
 #include "config.h"
 #include "JSCSSRule.h"
 
+#include "CSSContainerRule.h"
 #include "CSSCounterStyleRule.h"
 #include "CSSFontFaceRule.h"
+#include "CSSFontFeatureValuesRule.h"
 #include "CSSFontPaletteValuesRule.h"
 #include "CSSImportRule.h"
 #include "CSSKeyframeRule.h"
@@ -37,10 +39,13 @@
 #include "CSSMediaRule.h"
 #include "CSSNamespaceRule.h"
 #include "CSSPageRule.h"
+#include "CSSPropertyRule.h"
 #include "CSSStyleRule.h"
 #include "CSSSupportsRule.h"
+#include "JSCSSContainerRule.h"
 #include "JSCSSCounterStyleRule.h"
 #include "JSCSSFontFaceRule.h"
+#include "JSCSSFontFeatureValuesRule.h"
 #include "JSCSSFontPaletteValuesRule.h"
 #include "JSCSSImportRule.h"
 #include "JSCSSKeyframeRule.h"
@@ -50,10 +55,12 @@
 #include "JSCSSMediaRule.h"
 #include "JSCSSNamespaceRule.h"
 #include "JSCSSPageRule.h"
+#include "JSCSSPropertyRule.h"
 #include "JSCSSStyleRule.h"
 #include "JSCSSSupportsRule.h"
 #include "JSNode.h"
 #include "JSStyleSheetCustom.h"
+#include "WebCoreOpaqueRootInlines.h"
 
 
 namespace WebCore {
@@ -62,7 +69,7 @@ using namespace JSC;
 template<typename Visitor>
 void JSCSSRule::visitAdditionalChildren(Visitor& visitor)
 {
-    visitor.addOpaqueRoot(root(&wrapped()));
+    addWebCoreOpaqueRoot(visitor, wrapped());
 }
 
 DEFINE_VISIT_ADDITIONAL_CHILDREN(JSCSSRule);
@@ -72,12 +79,16 @@ JSValue toJSNewlyCreated(JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<C
     switch (rule->styleRuleType()) {
     case StyleRuleType::Style:
         return createWrapper<CSSStyleRule>(globalObject, WTFMove(rule));
+    case StyleRuleType::StyleWithNesting:
+        return createWrapper<CSSStyleRule>(globalObject, WTFMove(rule));
     case StyleRuleType::Media:
         return createWrapper<CSSMediaRule>(globalObject, WTFMove(rule));
     case StyleRuleType::FontFace:
         return createWrapper<CSSFontFaceRule>(globalObject, WTFMove(rule));
     case StyleRuleType::FontPaletteValues:
         return createWrapper<CSSFontPaletteValuesRule>(globalObject, WTFMove(rule));
+    case StyleRuleType::FontFeatureValues:
+        return createWrapper<CSSFontFeatureValuesRule>(globalObject, WTFMove(rule));
     case StyleRuleType::Page:
         return createWrapper<CSSPageRule>(globalObject, WTFMove(rule));
     case StyleRuleType::Import:
@@ -97,9 +108,13 @@ JSValue toJSNewlyCreated(JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<C
     case StyleRuleType::LayerStatement:
         return createWrapper<CSSLayerStatementRule>(globalObject, WTFMove(rule));
     case StyleRuleType::Container:
+        return createWrapper<CSSContainerRule>(globalObject, WTFMove(rule));
+    case StyleRuleType::Property:
+        return createWrapper<CSSPropertyRule>(globalObject, WTFMove(rule));
     case StyleRuleType::Unknown:
     case StyleRuleType::Charset:
     case StyleRuleType::Margin:
+    case StyleRuleType::FontFeatureValuesBlock:
         return createWrapper<CSSRule>(globalObject, WTFMove(rule));
     }
     RELEASE_ASSERT_NOT_REACHED();

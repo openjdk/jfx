@@ -45,13 +45,13 @@ namespace WebCore {
     class Document;
     class ThreadableLoaderClient;
 
-    class DocumentThreadableLoader : public RefCounted<DocumentThreadableLoader>, public ThreadableLoader, public CanMakeWeakPtr<DocumentThreadableLoader>, private CachedRawResourceClient {
+    class DocumentThreadableLoader : public RefCounted<DocumentThreadableLoader>, public ThreadableLoader, public CachedRawResourceClient {
         WTF_MAKE_FAST_ALLOCATED;
     public:
         static void loadResourceSynchronously(Document&, ResourceRequest&&, ThreadableLoaderClient&, const ThreadableLoaderOptions&, RefPtr<SecurityOrigin>&&, std::unique_ptr<ContentSecurityPolicy>&&, std::optional<CrossOriginEmbedderPolicy>&&);
         static void loadResourceSynchronously(Document&, ResourceRequest&&, ThreadableLoaderClient&, const ThreadableLoaderOptions&);
 
-        enum class ShouldLogError { No, Yes };
+        enum class ShouldLogError : bool { No, Yes };
         static RefPtr<DocumentThreadableLoader> create(Document&, ThreadableLoaderClient&, ResourceRequest&&, const ThreadableLoaderOptions&, RefPtr<SecurityOrigin>&&, std::unique_ptr<ContentSecurityPolicy>&&, std::optional<CrossOriginEmbedderPolicy>&&, String&& referrer, ShouldLogError);
         static RefPtr<DocumentThreadableLoader> create(Document&, ThreadableLoaderClient&, ResourceRequest&&, const ThreadableLoaderOptions&, String&& referrer = String());
 
@@ -140,6 +140,7 @@ namespace WebCore {
         std::optional<CrossOriginEmbedderPolicy> m_crossOriginEmbedderPolicy;
         std::optional<CrossOriginPreflightChecker> m_preflightChecker;
         std::optional<HTTPHeaderMap> m_originalHeaders;
+        URL m_responseURL;
 
         ShouldLogError m_shouldLogError;
 #if ENABLE(SERVICE_WORKER)

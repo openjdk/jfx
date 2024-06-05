@@ -452,9 +452,12 @@ void InProcessIDBServer::databaseConnectionClosed(uint64_t databaseConnectionIde
     });
 }
 
-void InProcessIDBServer::abortOpenAndUpgradeNeeded(uint64_t databaseConnectionIdentifier, const WebCore::IDBResourceIdentifier& transactionIdentifier)
+void InProcessIDBServer::abortOpenAndUpgradeNeeded(uint64_t databaseConnectionIdentifier, const std::optional<WebCore::IDBResourceIdentifier>& transactionIdentifier)
 {
-    dispatchTask([this, protectedThis = Ref { *this }, databaseConnectionIdentifier, transactionIdentifier = transactionIdentifier.isolatedCopy()] {
+    std::optional<WebCore::IDBResourceIdentifier> transactionIdentifierCopy;
+    if (transactionIdentifier)
+        transactionIdentifierCopy = transactionIdentifier->isolatedCopy();
+    dispatchTask([this, protectedThis = Ref { *this }, databaseConnectionIdentifier, transactionIdentifier = WTFMove(transactionIdentifierCopy)] {
         Locker locker { m_serverLock };
         m_server->abortOpenAndUpgradeNeeded(databaseConnectionIdentifier, transactionIdentifier);
     });
@@ -484,9 +487,9 @@ void InProcessIDBServer::getAllDatabaseNamesAndVersions(const WebCore::IDBResour
     });
 }
 
-void InProcessIDBServer::didGetAllDatabaseNamesAndVersions(const WebCore::IDBResourceIdentifier& requestIdentifier, const Vector<WebCore::IDBDatabaseNameAndVersion>& databases)
+void InProcessIDBServer::didGetAllDatabaseNamesAndVersions(const WebCore::IDBResourceIdentifier& requestIdentifier, Vector<WebCore::IDBDatabaseNameAndVersion>&& databases)
 {
-    dispatchTaskReply([this, protectedThis = Ref { *this }, requestIdentifier, databases = databases.isolatedCopy()]() mutable {
+    dispatchTaskReply([this, protectedThis = Ref { *this }, requestIdentifier, databases = crossThreadCopy(WTFMove(databases))]() mutable {
         m_connectionToServer->didGetAllDatabaseNamesAndVersions(requestIdentifier, WTFMove(databases));
     });
 }

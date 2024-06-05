@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,15 +25,17 @@
 #include "config.h"
 #include "PluginDocument.h"
 
+#include "CSSValuePool.h"
 #include "DocumentLoader.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
-#include "FrameView.h"
 #include "HTMLBodyElement.h"
 #include "HTMLEmbedElement.h"
 #include "HTMLHtmlElement.h"
 #include "HTMLNames.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
+#include "LocalFrameView.h"
+#include "PluginViewBase.h"
 #include "RawDataDocumentParser.h"
 #include "RenderEmbeddedObject.h"
 #include <wtf/IsoMallocInlines.h>
@@ -61,7 +63,7 @@ private:
     void appendBytes(DocumentWriter&, const uint8_t*, size_t) final;
     void createDocumentStructure();
 
-    WeakPtr<HTMLEmbedElement> m_embedElement;
+    WeakPtr<HTMLEmbedElement, WeakPtrImplWithEventTargetData> m_embedElement;
 };
 
 void PluginDocumentParser::createDocumentStructure()
@@ -71,6 +73,8 @@ void PluginDocumentParser::createDocumentStructure()
     auto rootElement = HTMLHtmlElement::create(document);
     document.appendChild(rootElement);
     rootElement->insertedByParser();
+    rootElement->setInlineStyleProperty(CSSPropertyHeight, 100, CSSUnitType::CSS_PERCENTAGE);
+    rootElement->setInlineStyleProperty(CSSPropertyWidth, 100, CSSUnitType::CSS_PERCENTAGE);
 
     if (document.frame())
         document.frame()->injectUserScripts(UserScriptInjectionTime::DocumentStart);
@@ -81,28 +85,35 @@ void PluginDocumentParser::createDocumentStructure()
 #endif
 
     auto body = HTMLBodyElement::create(document);
-    body->setAttributeWithoutSynchronization(marginwidthAttr, AtomString("0", AtomString::ConstructFromLiteral));
-    body->setAttributeWithoutSynchronization(marginheightAttr, AtomString("0", AtomString::ConstructFromLiteral));
+    body->setAttributeWithoutSynchronization(marginwidthAttr, "0"_s);
+    body->setAttributeWithoutSynchronization(marginheightAttr, "0"_s);
 #if PLATFORM(IOS_FAMILY)
-    body->setAttribute(styleAttr, AtomString("background-color: rgb(217,224,233)", AtomString::ConstructFromLiteral));
+    constexpr auto bodyBackgroundColor = SRGBA<uint8_t> { 217, 224, 233 };
 #else
-    body->setAttribute(styleAttr, AtomString("background-color: rgb(38,38,38)", AtomString::ConstructFromLiteral));
+    constexpr auto bodyBackgroundColor = SRGBA<uint8_t> { 38, 38, 38 };
 #endif
+
+    // If the plugin is a PDF, the background color is overriden in `PDFPlugin::PDFPlugin`.
+    body->setInlineStyleProperty(CSSPropertyBackgroundColor, CSSValuePool::singleton().createColorValue(bodyBackgroundColor));
+    body->setInlineStyleProperty(CSSPropertyHeight, 100, CSSUnitType::CSS_PERCENTAGE);
+    body->setInlineStyleProperty(CSSPropertyWidth, 100, CSSUnitType::CSS_PERCENTAGE);
+    body->setInlineStyleProperty(CSSPropertyOverflow, CSSValueHidden);
+    body->setInlineStyleProperty(CSSPropertyMargin, 0, CSSUnitType::CSS_PERCENTAGE);
 
     rootElement->appendChild(body);
 
     auto embedElement = HTMLEmbedElement::create(document);
 
     m_embedElement = embedElement.get();
-    embedElement->setAttributeWithoutSynchronization(widthAttr, "100%");
-    embedElement->setAttributeWithoutSynchronization(heightAttr, "100%");
+    embedElement->setAttributeWithoutSynchronization(widthAttr, "100%"_s);
+    embedElement->setAttributeWithoutSynchronization(heightAttr, "100%"_s);
 
-    embedElement->setAttributeWithoutSynchronization(nameAttr, AtomString("plugin", AtomString::ConstructFromLiteral));
-    embedElement->setAttributeWithoutSynchronization(srcAttr, document.url().string());
+    embedElement->setAttributeWithoutSynchronization(nameAttr, "plugin"_s);
+    embedElement->setAttributeWithoutSynchronization(srcAttr, AtomString { document.url().string() });
 
     ASSERT(document.loader());
     if (RefPtr loader = document.loader())
-        m_embedElement->setAttributeWithoutSynchronization(typeAttr, loader->writer().mimeType());
+        m_embedElement->setAttributeWithoutSynchronization(typeAttr, AtomString { loader->writer().mimeType() });
 
     document.setPluginElement(*m_embedElement);
 
@@ -143,10 +154,10 @@ void PluginDocumentParser::appendBytes(DocumentWriter&, const uint8_t*, size_t)
     }
 }
 
-PluginDocument::PluginDocument(Frame& frame, const URL& url)
+PluginDocument::PluginDocument(LocalFrame& frame, const URL& url)
     : HTMLDocument(&frame, frame.settings(), url, { }, { DocumentClass::Plugin })
 {
-    setCompatibilityMode(DocumentCompatibilityMode::QuirksMode);
+    setCompatibilityMode(DocumentCompatibilityMode::NoQuirksMode);
     lockCompatibilityMode();
 }
 
@@ -155,14 +166,14 @@ Ref<DocumentParser> PluginDocument::createParser()
     return PluginDocumentParser::create(*this);
 }
 
-Widget* PluginDocument::pluginWidget()
+PluginViewBase* PluginDocument::pluginWidget()
 {
     if (!m_pluginElement)
         return nullptr;
-    auto* renderer = m_pluginElement->renderer();
+    auto* renderer = dynamicDowncast<RenderEmbeddedObject>(m_pluginElement->renderer());
     if (!renderer)
         return nullptr;
-    return downcast<RenderEmbeddedObject>(*m_pluginElement->renderer()).widget();
+    return dynamicDowncast<PluginViewBase>(renderer->widget());
 }
 
 void PluginDocument::setPluginElement(HTMLPlugInElement& element)

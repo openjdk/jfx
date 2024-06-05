@@ -25,10 +25,11 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
+#include "FlexFormattingConstraints.h"
 #include "FlexFormattingGeometry.h"
 #include "FlexFormattingState.h"
+#include "FlexLayout.h"
+#include "FlexRect.h"
 #include "FormattingQuirks.h"
 #include <wtf/IsoMalloc.h>
 
@@ -40,18 +41,19 @@ namespace Layout {
 class FlexFormattingContext final : public FormattingContext {
     WTF_MAKE_ISO_ALLOCATED(FlexFormattingContext);
 public:
-    FlexFormattingContext(const ContainerBox& formattingContextRoot, FlexFormattingState&);
-    void layoutInFlowContent(const ConstraintsForInFlowContent&) override;
-    LayoutUnit usedContentHeight() const override;
+    FlexFormattingContext(const ElementBox& formattingContextRoot, FlexFormattingState&);
 
-    IntrinsicWidthConstraints computedIntrinsicWidthConstraints() override;
+    void layout(const ConstraintsForFlexContent&);
+    IntrinsicWidthConstraints computedIntrinsicWidthConstraints();
 
     const FlexFormattingGeometry& formattingGeometry() const final { return m_flexFormattingGeometry; }
     const FormattingQuirks& formattingQuirks() const final { return m_flexFormattingQuirks; }
 
 private:
-    void sizeAndPlaceFlexItems(const ConstraintsForInFlowContent&);
-    void computeIntrinsicWidthConstraintsForFlexItems();
+    FlexLayout::LogicalFlexItems convertFlexItemsToLogicalSpace(const ConstraintsForFlexContent&);
+    void setFlexItemsGeometry(const FlexLayout::LogicalFlexItems&, const FlexLayout::LogicalFlexItemRects&, const ConstraintsForFlexContent&);
+
+    std::optional<LayoutUnit> computedAutoMarginValueForFlexItems(const ConstraintsForFlexContent&);
 
     const FlexFormattingState& formattingState() const { return downcast<FlexFormattingState>(FormattingContext::formattingState()); }
     FlexFormattingState& formattingState() { return downcast<FlexFormattingState>(FormattingContext::formattingState()); }
@@ -65,4 +67,3 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_LAYOUT_FORMATTING_CONTEXT(FlexFormattingContext, isFlexFormattingContext())
 
-#endif

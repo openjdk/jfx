@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,8 @@ package javafx.animation;
  * A value that can be interpolated. It defines single
  * {@link #interpolate(Object, double)} method, which returns interpolated value
  * of given fraction.
+ *
+ * @param <T> the interpolatable value type
  * @since JavaFX 2.0
  */
 @FunctionalInterface

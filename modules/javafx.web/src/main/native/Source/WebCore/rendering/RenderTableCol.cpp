@@ -26,10 +26,14 @@
 #include "config.h"
 #include "RenderTableCol.h"
 
+#include "BorderData.h"
 #include "HTMLNames.h"
 #include "HTMLTableColElement.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderChildIterator.h"
 #include "RenderIterator.h"
+#include "RenderStyleInlines.h"
 #include "RenderTable.h"
 #include "RenderTableCaption.h"
 #include "RenderTableCell.h"
@@ -93,7 +97,7 @@ void RenderTableCol::updateFromElement()
         HTMLTableColElement& tc = static_cast<HTMLTableColElement&>(*element());
         m_span = tc.span();
     } else
-        m_span = !(hasInitializedStyle() && style().display() == DisplayType::TableColumnGroup);
+        m_span = 1;
     if (m_span != oldSpan && hasInitializedStyle() && parent())
         setNeedsLayoutAndPrefWidthsRecalc();
 }
@@ -107,7 +111,10 @@ void RenderTableCol::insertedIntoTree(IsInternalMove isInternalMove)
 void RenderTableCol::willBeRemovedFromTree(IsInternalMove isInternalMove)
 {
     RenderBox::willBeRemovedFromTree(isInternalMove);
-    table()->removeColumn(this);
+    if (auto* table = this->table()) {
+        // We only need to invalidate the column cache when only individual columns are being removed (as opposed to when the entire table is being collapsed).
+        table->invalidateColumns();
+    }
 }
 
 bool RenderTableCol::isChildAllowed(const RenderObject& child, const RenderStyle& style) const
@@ -182,13 +189,7 @@ RenderTableCol* RenderTableCol::nextColumn() const
     if (!next && is<RenderTableCol>(*parent()))
         next = parent()->nextSibling();
 
-    for (; next && !is<RenderTableCol>(*next); next = next->nextSibling()) {
-        // We allow captions mixed with columns and column-groups.
-        if (is<RenderTableCaption>(*next))
-            continue;
-
-        return nullptr;
-    }
+    for (; next && !is<RenderTableCol>(*next); next = next->nextSibling()) { }
 
     return downcast<RenderTableCol>(next);
 }

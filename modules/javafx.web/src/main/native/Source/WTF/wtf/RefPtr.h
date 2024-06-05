@@ -30,15 +30,16 @@
 namespace WTF {
 
 template<typename T> struct DefaultRefDerefTraits {
-    static ALWAYS_INLINE void refIfNotNull(T* ptr)
+    static ALWAYS_INLINE T* refIfNotNull(T* ptr)
     {
-        if (LIKELY(ptr != nullptr))
+        if (LIKELY(ptr))
             ptr->ref();
+        return ptr;
     }
 
     static ALWAYS_INLINE void derefIfNotNull(T* ptr)
     {
-        if (LIKELY(ptr != nullptr))
+        if (LIKELY(ptr))
             ptr->deref();
     }
 };
@@ -59,9 +60,9 @@ public:
 
     ALWAYS_INLINE constexpr RefPtr() : m_ptr(nullptr) { }
     ALWAYS_INLINE constexpr RefPtr(std::nullptr_t) : m_ptr(nullptr) { }
-    ALWAYS_INLINE RefPtr(T* ptr) : m_ptr(ptr) { RefDerefTraits::refIfNotNull(ptr); }
-    ALWAYS_INLINE RefPtr(const RefPtr& o) : m_ptr(o.m_ptr) { RefDerefTraits::refIfNotNull(PtrTraits::unwrap(m_ptr)); }
-    template<typename X, typename Y, typename Z> RefPtr(const RefPtr<X, Y, Z>& o) : m_ptr(o.get()) { RefDerefTraits::refIfNotNull(PtrTraits::unwrap(m_ptr)); }
+    ALWAYS_INLINE RefPtr(T* ptr) : m_ptr(RefDerefTraits::refIfNotNull(ptr)) { }
+    ALWAYS_INLINE RefPtr(const RefPtr& o) : m_ptr(RefDerefTraits::refIfNotNull(PtrTraits::unwrap(o.m_ptr))) { }
+    template<typename X, typename Y, typename Z> RefPtr(const RefPtr<X, Y, Z>& o) : m_ptr(RefDerefTraits::refIfNotNull(PtrTraits::unwrap(o.get()))) { }
 
     ALWAYS_INLINE RefPtr(RefPtr&& o) : m_ptr(o.leakRef()) { }
     template<typename X, typename Y, typename Z> RefPtr(RefPtr<X, Y, Z>&& o) : m_ptr(o.leakRef()) { }
@@ -110,11 +111,21 @@ private:
     friend RefPtr adoptRef<T, PtrTraits, RefDerefTraits>(T*);
     template<typename X, typename Y, typename Z> friend class RefPtr;
 
+    template<typename T1, typename U, typename V, typename X, typename Y, typename Z>
+    friend bool operator==(const RefPtr<T1, U, V>&, const RefPtr<X, Y, Z>&);
+    template<typename T1, typename U, typename V, typename X>
+    friend bool operator==(const RefPtr<T1, U, V>&, X*);
+    template<typename T1, typename X, typename Y, typename Z>
+    friend bool operator==(T1*, const RefPtr<X, Y, Z>&);
+
     enum AdoptTag { Adopt };
     RefPtr(T* ptr, AdoptTag) : m_ptr(ptr) { }
 
     typename PtrTraits::StorageType m_ptr;
 };
+
+// Template deduction guide.
+template<typename X, typename Y> RefPtr(Ref<X, Y>&&) -> RefPtr<X, Y, DefaultRefDerefTraits<X>>;
 
 template<typename T, typename U, typename V>
 template<typename X, typename Y>
@@ -203,37 +214,26 @@ inline void swap(RefPtr<T, U, V>& a, RefPtr<T, U, V>& b)
 template<typename T, typename U, typename V, typename X, typename Y, typename Z>
 inline bool operator==(const RefPtr<T, U, V>& a, const RefPtr<X, Y, Z>& b)
 {
-    return a.get() == b.get();
+    return a.m_ptr == b.m_ptr;
 }
 
 template<typename T, typename U, typename V, typename X>
 inline bool operator==(const RefPtr<T, U, V>& a, X* b)
 {
-    return a.get() == b;
+    return a.m_ptr == b;
 }
 
 template<typename T, typename X, typename Y, typename Z>
 inline bool operator==(T* a, const RefPtr<X, Y, Z>& b)
 {
-    return a == b.get();
+    return a == b.m_ptr;
 }
 
-template<typename T, typename U, typename V, typename X, typename Y, typename Z>
-inline bool operator!=(const RefPtr<T, U, V>& a, const RefPtr<X, Y, Z>& b)
+template<typename T, typename U, typename V>
+inline RefPtr<T, U, V> adoptRef(T* p)
 {
-    return a.get() != b.get();
-}
-
-template<typename T, typename U, typename V, typename X>
-inline bool operator!=(const RefPtr<T, U, V>& a, X* b)
-{
-    return a.get() != b;
-}
-
-template<typename T, typename X, typename Y, typename Z>
-inline bool operator!=(T* a, const RefPtr<X, Y, Z>& b)
-{
-    return a != b.get();
+    adopted(p);
+    return RefPtr<T, U, V>(p, RefPtr<T, U, V>::Adopt);
 }
 
 template<typename T, typename U = RawPtrTraits<T>, typename V = DefaultRefDerefTraits<T>, typename X, typename Y, typename Z>
@@ -242,17 +242,16 @@ inline RefPtr<T, U, V> static_pointer_cast(const RefPtr<X, Y, Z>& p)
     return RefPtr<T, U, V>(static_cast<T*>(p.get()));
 }
 
+template<typename T, typename U = RawPtrTraits<T>, typename V = DefaultRefDerefTraits<T>, typename X, typename Y, typename Z>
+inline RefPtr<T, U, V> static_pointer_cast(RefPtr<X, Y, Z>&& p)
+{
+    return adoptRef(static_cast<T*>(p.leakRef()));
+}
+
 template <typename T, typename U, typename V>
 struct IsSmartPtr<RefPtr<T, U, V>> {
     static constexpr bool value = true;
 };
-
-template<typename T, typename U, typename V>
-inline RefPtr<T, U, V> adoptRef(T* p)
-{
-    adopted(p);
-    return RefPtr<T, U, V>(p, RefPtr<T, U, V>::Adopt);
-}
 
 template<typename ExpectedType, typename ArgType, typename PtrTraits, typename RefDerefTraits>
 inline bool is(RefPtr<ArgType, PtrTraits, RefDerefTraits>& source)
@@ -264,6 +263,49 @@ template<typename ExpectedType, typename ArgType, typename PtrTraits, typename R
 inline bool is(const RefPtr<ArgType, PtrTraits, RefDerefTraits>& source)
 {
     return is<ExpectedType>(source.get());
+}
+
+template<typename Target, typename Source, typename PtrTraits, typename RefDerefTraits>
+inline RefPtr<Target> checkedDowncast(RefPtr<Source, PtrTraits, RefDerefTraits> source)
+{
+    static_assert(!std::is_same_v<Source, Target>, "Unnecessary cast to same type");
+    static_assert(std::is_base_of_v<Source, Target>, "Should be a downcast");
+    RELEASE_ASSERT(!source || is<Target>(*source));
+    return static_pointer_cast<Target>(WTFMove(source));
+}
+
+template<typename Target, typename Source, typename PtrTraits, typename RefDerefTraits>
+inline Target* downcast(RefPtr<Source, PtrTraits, RefDerefTraits>& source)
+{
+    return downcast<Target>(source.get());
+}
+
+template<typename Target, typename Source, typename PtrTraits, typename RefDerefTraits>
+inline Target* downcast(const RefPtr<Source, PtrTraits, RefDerefTraits>& source)
+{
+    return downcast<Target>(source.get());
+}
+
+template<typename Target, typename Source, typename TargetPtrTraits = RawPtrTraits<Target>, typename TargetRefDerefTraits = DefaultRefDerefTraits<Target>,
+    typename SourcePtrTraits, typename SourceRefDerefTraits>
+inline RefPtr<Target, TargetPtrTraits, TargetRefDerefTraits> dynamicDowncast(const RefPtr<Source, SourcePtrTraits, SourceRefDerefTraits>& source)
+{
+    static_assert(!std::is_same_v<Source, Target>, "Unnecessary cast to same type");
+    static_assert(std::is_base_of_v<Source, Target>, "Should be a downcast");
+    if (!is<Target>(source))
+        return nullptr;
+    return static_pointer_cast<Target, TargetPtrTraits, TargetRefDerefTraits>(source);
+}
+
+template<typename Target, typename Source, typename TargetPtrTraits = RawPtrTraits<Target>, typename TargetRefDerefTraits = DefaultRefDerefTraits<Target>,
+    typename SourcePtrTraits, typename SourceRefDerefTraits>
+inline RefPtr<Target, TargetPtrTraits, TargetRefDerefTraits> dynamicDowncast(RefPtr<Source, SourcePtrTraits, SourceRefDerefTraits>&& source)
+{
+    static_assert(!std::is_same_v<Source, Target>, "Unnecessary cast to same type");
+    static_assert(std::is_base_of_v<Source, Target>, "Should be a downcast");
+    if (!is<Target>(source))
+        return nullptr;
+    return static_pointer_cast<Target, TargetPtrTraits, TargetRefDerefTraits>(WTFMove(source));
 }
 
 } // namespace WTF

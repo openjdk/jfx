@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,32 @@
 #if ENABLE(ASSEMBLER)
 
 #include "JSCJSValue.h"
+
+#define DEFINE_SIMD_FUNC(name, func, lane) \
+    template <typename ...Args> \
+    void name(Args&&... args) { func(lane, std::forward<Args>(args)...); }
+
+#define DEFINE_SIMD_FUNC_WITH_SIGN_EXTEND_MODE(name, func, lane, mode) \
+    template <typename ...Args> \
+    void name(Args&&... args) { func(lane, mode, std::forward<Args>(args)...); }
+
+#define DEFINE_SIMD_FUNCS(name) \
+    DEFINE_SIMD_FUNC(name##Int8, name, SIMDLane::i8x16) \
+    DEFINE_SIMD_FUNC(name##Int16, name, SIMDLane::i16x8) \
+    DEFINE_SIMD_FUNC(name##Int32, name, SIMDLane::i32x4) \
+    DEFINE_SIMD_FUNC(name##Int64, name, SIMDLane::i64x2) \
+    DEFINE_SIMD_FUNC(name##Float32, name, SIMDLane::f32x4) \
+    DEFINE_SIMD_FUNC(name##Float64, name, SIMDLane::f64x2)
+
+#define DEFINE_SIGNED_SIMD_FUNCS(name) \
+    DEFINE_SIMD_FUNC_WITH_SIGN_EXTEND_MODE(name##SignedInt8, name, SIMDLane::i8x16, SIMDSignMode::Signed) \
+    DEFINE_SIMD_FUNC_WITH_SIGN_EXTEND_MODE(name##UnsignedInt8, name, SIMDLane::i8x16, SIMDSignMode::Unsigned) \
+    DEFINE_SIMD_FUNC_WITH_SIGN_EXTEND_MODE(name##SignedInt16, name, SIMDLane::i16x8, SIMDSignMode::Signed) \
+    DEFINE_SIMD_FUNC_WITH_SIGN_EXTEND_MODE(name##UnsignedInt16, name, SIMDLane::i16x8, SIMDSignMode::Unsigned) \
+    DEFINE_SIMD_FUNC_WITH_SIGN_EXTEND_MODE(name##Int32, name, SIMDLane::i32x4, SIMDSignMode::None) \
+    DEFINE_SIMD_FUNC_WITH_SIGN_EXTEND_MODE(name##Int64, name, SIMDLane::i64x2, SIMDSignMode::None) \
+    DEFINE_SIMD_FUNC(name##Float32, name, SIMDLane::f32x4) \
+    DEFINE_SIMD_FUNC(name##Float64, name, SIMDLane::f64x2)
 
 #if CPU(ARM_THUMB2)
 #define TARGET_ASSEMBLER ARMv7Assembler
@@ -77,10 +103,17 @@ namespace JSC {
 
 namespace Probe {
 
+enum class SavedFPWidth {
+    SaveVectors,
+    DontSaveVectors
+};
+
 class Context;
 typedef void (*Function)(Context&);
 
 } // namespace Probe
+
+using Probe::SavedFPWidth;
 
 namespace Printer {
 
@@ -154,6 +187,8 @@ public:
 
 #if CPU(ARM64) || CPU(X86_64) || CPU(RISCV64)
     using MacroAssemblerBase::and64;
+    using MacroAssemblerBase::or64;
+    using MacroAssemblerBase::xor64;
     using MacroAssemblerBase::convertInt32ToDouble;
     using MacroAssemblerBase::store64;
 #endif
@@ -425,41 +460,49 @@ public:
 #if !CPU(ARM_THUMB2) && !CPU(ARM64)
     PatchableJump patchableBranchPtr(RelationalCondition cond, Address left, TrustedImmPtr right = TrustedImmPtr(nullptr))
     {
+        padBeforePatch();
         return PatchableJump(branchPtr(cond, left, right));
     }
 
     PatchableJump patchableBranchPtrWithPatch(RelationalCondition cond, Address left, DataLabelPtr& dataLabel, TrustedImmPtr initialRightValue = TrustedImmPtr(nullptr))
     {
+        padBeforePatch();
         return PatchableJump(branchPtrWithPatch(cond, left, dataLabel, initialRightValue));
     }
 
     PatchableJump patchableBranch32WithPatch(RelationalCondition cond, Address left, DataLabel32& dataLabel, TrustedImm32 initialRightValue = TrustedImm32(0))
     {
+        padBeforePatch();
         return PatchableJump(branch32WithPatch(cond, left, dataLabel, initialRightValue));
     }
 
     PatchableJump patchableJump()
     {
+        padBeforePatch();
         return PatchableJump(jump());
     }
 
     PatchableJump patchableBranchTest32(ResultCondition cond, RegisterID reg, TrustedImm32 mask = TrustedImm32(-1))
     {
+        padBeforePatch();
         return PatchableJump(branchTest32(cond, reg, mask));
     }
 
     PatchableJump patchableBranch32(RelationalCondition cond, RegisterID reg, TrustedImm32 imm)
     {
+        padBeforePatch();
         return PatchableJump(branch32(cond, reg, imm));
     }
 
     PatchableJump patchableBranch8(RelationalCondition cond, Address address, TrustedImm32 imm)
     {
+        padBeforePatch();
         return PatchableJump(branch8(cond, address, imm));
     }
 
     PatchableJump patchableBranch32(RelationalCondition cond, Address address, TrustedImm32 imm)
     {
+        padBeforePatch();
         return PatchableJump(branch32(cond, address, imm));
     }
 #endif
@@ -533,12 +576,6 @@ public:
     {
         loadFloat(src, scratch);
         storeFloat(scratch, dest);
-    }
-
-    // Overload mostly for use in templates.
-    void move(FPRegisterID src, FPRegisterID dest)
-    {
-        moveDouble(src, dest);
     }
 
     void moveDouble(Address src, Address dest, FPRegisterID scratch)
@@ -675,9 +712,19 @@ public:
         sub32(src, dest);
     }
 
+    void subPtr(RegisterID left, RegisterID right, RegisterID dest)
+    {
+        sub32(left, right, dest);
+    }
+
     void subPtr(TrustedImm32 imm, RegisterID dest)
     {
         sub32(imm, dest);
+    }
+
+    void subPtr(RegisterID left, TrustedImm32 right, RegisterID dest)
+    {
+        sub32(left, right, dest);
     }
 
     void subPtr(TrustedImmPtr imm, RegisterID dest)
@@ -721,6 +768,16 @@ public:
     void loadPtr(const void* address, RegisterID dest)
     {
         load32(address, dest);
+    }
+
+    void loadPairPtr(RegisterID src, RegisterID dest1, RegisterID dest2)
+    {
+        loadPair32(src, dest1, dest2);
+    }
+
+    void loadPairPtr(RegisterID src, TrustedImm32 offset, RegisterID dest1, RegisterID dest2)
+    {
+        loadPair32(src, offset, dest1, dest2);
     }
 
 #if ENABLE(FAST_TLS_JIT)
@@ -783,6 +840,16 @@ public:
     void storePtr(TrustedImmPtr imm, BaseIndex address)
     {
         store32(TrustedImm32(imm), address);
+    }
+
+    void storePairPtr(RegisterID src1, RegisterID src2, RegisterID dest)
+    {
+        storePair32(src1, src2, dest);
+    }
+
+    void storePairPtr(RegisterID src1, RegisterID src2, RegisterID dest, TrustedImm32 offset)
+    {
+        storePair32(src1, src2, dest, offset);
     }
 
     Jump branchPtr(RelationalCondition cond, RegisterID left, RegisterID right)
@@ -1008,9 +1075,19 @@ public:
         sub64(src, dest);
     }
 
+    void subPtr(RegisterID left, RegisterID right, RegisterID dest)
+    {
+        sub64(left, right, dest);
+    }
+
     void subPtr(TrustedImm32 imm, RegisterID dest)
     {
         sub64(imm, dest);
+    }
+
+    void subPtr(RegisterID left, TrustedImm32 right, RegisterID dest)
+    {
+        sub64(left, right, dest);
     }
 
     void subPtr(TrustedImmPtr imm, RegisterID dest)
@@ -1062,6 +1139,16 @@ public:
         load64(address, dest);
     }
 
+    void loadPairPtr(RegisterID src, RegisterID dest1, RegisterID dest2)
+    {
+        loadPair64(src, dest1, dest2);
+    }
+
+    void loadPairPtr(RegisterID src, TrustedImm32 offset, RegisterID dest1, RegisterID dest2)
+    {
+        loadPair64(src, offset, dest1, dest2);
+    }
+
 #if ENABLE(FAST_TLS_JIT)
     void loadFromTLSPtr(uint32_t offset, RegisterID dst)
     {
@@ -1101,6 +1188,16 @@ public:
     void storePtr(TrustedImmPtr imm, BaseIndex address)
     {
         store64(TrustedImm64(imm), address);
+    }
+
+    void storePairPtr(RegisterID src1, RegisterID src2, RegisterID dest)
+    {
+        storePair64(src1, src2, dest);
+    }
+
+    void storePairPtr(RegisterID src1, RegisterID src2, RegisterID dest, TrustedImm32 offset)
+    {
+        storePair64(src1, src2, dest, offset);
     }
 
     void comparePtr(RelationalCondition cond, RegisterID left, TrustedImm32 right, RegisterID dest)
@@ -1230,6 +1327,87 @@ public:
 
 #endif // !CPU(ADDRESS64)
 
+#if CPU(REGISTER64)
+    void loadRegWord(Address address, RegisterID dest)
+    {
+        load64(address, dest);
+    }
+
+    void loadRegWord(BaseIndex address, RegisterID dest)
+    {
+#if CPU(NEEDS_ALIGNED_ACCESS)
+        ASSERT(address.scale == ScaleRegWord || address.scale == TimesOne);
+#endif
+        load64(address, dest);
+    }
+
+    void loadRegWord(const void* address, RegisterID dest)
+    {
+        load64(address, dest);
+    }
+
+    void storeRegWord(RegisterID src, Address address)
+    {
+        store64(src, address);
+    }
+
+    void storeRegWord(RegisterID src, BaseIndex address)
+    {
+        store64(src, address);
+    }
+
+    void storeRegWord(RegisterID src, void* address)
+    {
+        store64(src, address);
+    }
+
+    void storeRegWord(TrustedImm64 imm, Address address)
+    {
+        store64(imm, address);
+    }
+
+#elif CPU(REGISTER32)
+    void loadRegWord(Address address, RegisterID dest)
+    {
+        load32(address, dest);
+    }
+
+    void loadRegWord(BaseIndex address, RegisterID dest)
+    {
+#if CPU(NEEDS_ALIGNED_ACCESS)
+        ASSERT(address.scale == ScaleRegWord || address.scale == TimesOne);
+#endif
+        load32(address, dest);
+    }
+
+    void loadRegWord(const void* address, RegisterID dest)
+    {
+        load32(address, dest);
+    }
+
+    void storeRegWord(RegisterID src, Address address)
+    {
+        store32(src, address);
+    }
+
+    void storeRegWord(RegisterID src, BaseIndex address)
+    {
+        store32(src, address);
+    }
+
+    void storeRegWord(RegisterID src, void* address)
+    {
+        store32(src, address);
+    }
+
+    void storeRegWord(TrustedImm32 imm, Address address)
+    {
+        store32(imm, address);
+    }
+#else
+#  error "Unknown register size"
+#endif
+
 #if USE(JSVALUE64)
     bool shouldBlindDouble(double value)
     {
@@ -1242,7 +1420,7 @@ public:
         if (bitwise_cast<uint64_t>(value * 1.0) != bitwise_cast<uint64_t>(value))
             return shouldConsiderBlinding();
 
-        value = fabs(value);
+        value = std::abs(value);
         // Only allow a limited set of fractional components
         double scaledValue = value * 8;
         if (scaledValue / 8 != value)
@@ -1261,10 +1439,10 @@ public:
         return shouldBlindForSpecificArch(static_cast<uint64_t>(value));
     }
 
+#if CPU(X86_64)
     bool shouldBlind(ImmPtr imm)
     {
-        if (!canBlind())
-            return false;
+        static_assert(canBlind());
 
 #if ENABLE(FORCED_JIT_BLINDING)
         UNUSED_PARAM(imm);
@@ -1298,6 +1476,13 @@ public:
 
         return shouldBlindPointerForSpecificArch(static_cast<uintptr_t>(value));
     }
+#else
+    static constexpr bool shouldBlind(ImmPtr)
+    {
+        static_assert(!canBlind());
+        return false;
+    }
+#endif
 
     uint8_t generateRotationSeed(size_t widthInBits)
     {
@@ -1330,8 +1515,11 @@ public:
         rotateRightPtr(constant.rotation, dest);
     }
 
+#if CPU(X86_64)
     bool shouldBlind(Imm64 imm)
     {
+        static_assert(canBlind());
+
 #if ENABLE(FORCED_JIT_BLINDING)
         UNUSED_PARAM(imm);
         // Debug always blind all constants, if only so we know
@@ -1373,6 +1561,13 @@ public:
 
         return shouldBlindForSpecificArch(value);
     }
+#else
+    static constexpr bool shouldBlind(Imm64)
+    {
+        static_assert(!canBlind());
+        return false;
+    }
+#endif
 
     struct RotatedImm64 {
         RotatedImm64(uint64_t v1, uint8_t v2)
@@ -1424,12 +1619,6 @@ public:
             move(imm.asTrustedImm64(), dest);
     }
 
-    void moveDouble(Imm64 imm, FPRegisterID dest)
-    {
-        move(imm, scratchRegister());
-        move64ToDouble(scratchRegister(), dest);
-    }
-
     void and64(Imm32 imm, RegisterID dest)
     {
         if (shouldBlind(imm)) {
@@ -1440,7 +1629,44 @@ public:
             and64(imm.asTrustedImm32(), dest);
     }
 
+    void and64(Imm32 imm, RegisterID src, RegisterID dest)
+    {
+        if (shouldBlind(imm)) {
+            move(src, dest);
+            and64(imm, dest);
+        } else
+            and64(imm.asTrustedImm32(), src, dest);
+    }
+
 #endif // USE(JSVALUE64)
+
+#if CPU(X86_64) || CPU(RISCV64)
+    void moveFloat(Imm32 imm, FPRegisterID dest)
+    {
+        move(imm, scratchRegister());
+        move32ToFloat(scratchRegister(), dest);
+    }
+
+    void moveDouble(Imm64 imm, FPRegisterID dest)
+    {
+        move(imm, scratchRegister());
+        move64ToDouble(scratchRegister(), dest);
+    }
+#endif
+
+#if CPU(ARM64)
+    void moveFloat(Imm32 imm, FPRegisterID dest)
+    {
+        move(imm, getCachedMemoryTempRegisterIDAndInvalidate());
+        move32ToFloat(getCachedMemoryTempRegisterIDAndInvalidate(), dest);
+    }
+
+    void moveDouble(Imm64 imm, FPRegisterID dest)
+    {
+        move(imm, getCachedMemoryTempRegisterIDAndInvalidate());
+        move64ToDouble(getCachedMemoryTempRegisterIDAndInvalidate(), dest);
+    }
+#endif
 
 #if !CPU(X86) && !CPU(X86_64) && !CPU(ARM64)
     // We should implement this the right way eventually, but for now, it's fine because it arises so
@@ -1451,6 +1677,14 @@ public:
         Jump falseCase = branchDouble(invert(cond), left, right);
         move(TrustedImm32(1), dest);
         falseCase.link(this);
+    }
+
+    void compareDoubleWithZero(DoubleCondition cond, FPRegisterID left, RegisterID dest)
+    {
+        UNUSED_PARAM(cond);
+        UNUSED_PARAM(left);
+        UNUSED_PARAM(dest);
+        UNREACHABLE_FOR_PLATFORM();
     }
 #endif
 
@@ -1466,8 +1700,11 @@ public:
     }
 #endif // CPU(X86_64) || CPU(ARM64)
 
+#if CPU(X86_64)
     bool shouldBlind(Imm32 imm)
     {
+        static_assert(canBlind());
+
 #if ENABLE(FORCED_JIT_BLINDING)
         UNUSED_PARAM(imm);
         // Debug always blind all constants, if only so we know
@@ -1496,6 +1733,13 @@ public:
         return shouldBlindForSpecificArch(value);
 #endif // ENABLE(FORCED_JIT_BLINDING)
     }
+#else
+    static constexpr bool shouldBlind(Imm32)
+    {
+        static_assert(!canBlind());
+        return false;
+    }
+#endif
 
     struct BlindedImm32 {
         BlindedImm32(int32_t v1, int32_t v2)
@@ -1934,7 +2178,6 @@ public:
         MacroAssemblerBase::mul32(imm, src, dest);
     }
 
-    // If the result jump is taken that means the assert passed.
     void jitAssert(const WTF::ScopedLambda<Jump(void)>&);
 
     // This function emits code to preserve the CPUState (e.g. registers),
@@ -1986,7 +2229,7 @@ public:
     //
     // Note: this version of probe() should be implemented by the target specific
     // MacroAssembler.
-    void probe(Probe::Function, void* arg);
+    void probe(Probe::Function, void* arg, SavedFPWidth = SavedFPWidth::DontSaveVectors);
 
     // This leaks memory. Must not be used for production.
     JS_EXPORT_PRIVATE void probeDebug(Function<void(Probe::Context&)>);

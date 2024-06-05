@@ -62,6 +62,25 @@ void SharedWorkerContextManager::stopSharedWorker(SharedWorkerIdentifier sharedW
         // a race towards its destruction.
         callOnMainThread([worker = WTFMove(worker)] { });
     });
+
+    if (auto* connection = SharedWorkerContextManager::singleton().connection())
+        connection->sharedWorkerTerminated(sharedWorkerIdentifier);
+}
+
+void SharedWorkerContextManager::suspendSharedWorker(SharedWorkerIdentifier sharedWorkerIdentifier)
+{
+    auto* worker = m_workerMap.get(sharedWorkerIdentifier);
+    RELEASE_LOG(SharedWorker, "SharedWorkerContextManager::suspendSharedWorker: sharedWorkerIdentifier=%" PRIu64 ", worker=%p", sharedWorkerIdentifier.toUInt64(), worker);
+    if (worker)
+        worker->thread().suspend();
+}
+
+void SharedWorkerContextManager::resumeSharedWorker(SharedWorkerIdentifier sharedWorkerIdentifier)
+{
+    auto* worker = m_workerMap.get(sharedWorkerIdentifier);
+    RELEASE_LOG(SharedWorker, "SharedWorkerContextManager::resumeSharedWorker: sharedWorkerIdentifier=%" PRIu64 ", worker=%p", sharedWorkerIdentifier.toUInt64(), worker);
+    if (worker)
+        worker->thread().resume();
 }
 
 void SharedWorkerContextManager::stopAllSharedWorkers()
@@ -92,18 +111,19 @@ void SharedWorkerContextManager::registerSharedWorkerThread(Ref<SharedWorkerThre
     proxy->thread().start([](const String& /*exceptionMessage*/) { });
 }
 
-void SharedWorkerContextManager::Connection::postConnectEvent(SharedWorkerIdentifier sharedWorkerIdentifier, TransferredMessagePort&& transferredPort, String&& sourceOrigin)
+void SharedWorkerContextManager::Connection::postConnectEvent(SharedWorkerIdentifier sharedWorkerIdentifier, TransferredMessagePort&& transferredPort, String&& sourceOrigin, CompletionHandler<void(bool)>&& completionHandler)
 {
     ASSERT(isMainThread());
     auto* proxy = SharedWorkerContextManager::singleton().sharedWorker(sharedWorkerIdentifier);
     RELEASE_LOG(SharedWorker, "SharedWorkerContextManager::Connection::postConnectEvent: sharedWorkerIdentifier=%" PRIu64 ", proxy=%p", sharedWorkerIdentifier.toUInt64(), proxy);
     if (!proxy)
-        return;
+        return completionHandler(false);
 
     proxy->thread().runLoop().postTask([transferredPort = WTFMove(transferredPort), sourceOrigin = WTFMove(sourceOrigin).isolatedCopy()] (auto& scriptExecutionContext) mutable {
         ASSERT(!isMainThread());
         downcast<SharedWorkerGlobalScope>(scriptExecutionContext).postConnectEvent(WTFMove(transferredPort), WTFMove(sourceOrigin));
     });
+    completionHandler(true);
 }
 
 void SharedWorkerContextManager::Connection::terminateSharedWorker(SharedWorkerIdentifier sharedWorkerIdentifier)
@@ -111,6 +131,22 @@ void SharedWorkerContextManager::Connection::terminateSharedWorker(SharedWorkerI
     ASSERT(isMainThread());
     RELEASE_LOG(SharedWorker, "SharedWorkerContextManager::Connection::terminateSharedWorker: sharedWorkerIdentifier=%" PRIu64, sharedWorkerIdentifier.toUInt64());
     SharedWorkerContextManager::singleton().stopSharedWorker(sharedWorkerIdentifier);
+}
+
+void SharedWorkerContextManager::Connection::suspendSharedWorker(SharedWorkerIdentifier identifier)
+{
+    SharedWorkerContextManager::singleton().suspendSharedWorker(identifier);
+}
+
+void SharedWorkerContextManager::Connection::resumeSharedWorker(SharedWorkerIdentifier identifier)
+{
+    SharedWorkerContextManager::singleton().resumeSharedWorker(identifier);
+}
+
+void SharedWorkerContextManager::forEachSharedWorker(const Function<Function<void(ScriptExecutionContext&)>()>& createTask)
+{
+    for (auto& worker : m_workerMap.values())
+        worker->thread().runLoop().postTask(createTask());
 }
 
 } // namespace WebCore

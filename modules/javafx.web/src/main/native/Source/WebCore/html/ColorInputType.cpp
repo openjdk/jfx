@@ -35,11 +35,13 @@
 
 #include "ColorInputType.h"
 
+#include "AXObjectCache.h"
 #include "CSSPropertyNames.h"
 #include "Chrome.h"
 #include "Color.h"
 #include "ColorSerialization.h"
-#include "ElementChildIterator.h"
+#include "ElementChildIteratorInlines.h"
+#include "ElementRareData.h"
 #include "Event.h"
 #include "HTMLDataListElement.h"
 #include "HTMLDivElement.h"
@@ -48,8 +50,10 @@
 #include "InputTypeNames.h"
 #include "RenderView.h"
 #include "ScopedEventQueue.h"
+#include "ScriptDisallowedScope.h"
 #include "ShadowPseudoIds.h"
 #include "ShadowRoot.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include "UserGestureIndicator.h"
 
 namespace WebCore {
@@ -93,9 +97,6 @@ bool ColorInputType::isKeyboardFocusable(KeyboardEvent*) const
 {
     ASSERT(element());
 #if PLATFORM(IOS_FAMILY)
-    if (element()->isReadOnly())
-        return false;
-
     return element()->isTextFormControlFocusable();
 #else
     return false;
@@ -144,18 +145,21 @@ void ColorInputType::createShadowSubtree()
 
     Document& document = element()->document();
     auto wrapperElement = HTMLDivElement::create(document);
-    wrapperElement->setPseudo(ShadowPseudoIds::webkitColorSwatchWrapper());
     auto colorSwatch = HTMLDivElement::create(document);
-    colorSwatch->setPseudo(ShadowPseudoIds::webkitColorSwatch());
-    wrapperElement->appendChild(ContainerNode::ChildChange::Source::Parser, colorSwatch);
+
+    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { *element()->userAgentShadowRoot() };
     element()->userAgentShadowRoot()->appendChild(ContainerNode::ChildChange::Source::Parser, wrapperElement);
+
+    wrapperElement->appendChild(ContainerNode::ChildChange::Source::Parser, colorSwatch);
+    wrapperElement->setPseudo(ShadowPseudoIds::webkitColorSwatchWrapper());
+    colorSwatch->setPseudo(ShadowPseudoIds::webkitColorSwatch());
 
     updateColorSwatch();
 }
 
-void ColorInputType::setValue(const String& value, bool valueChanged, TextFieldEventBehavior eventBehavior)
+void ColorInputType::setValue(const String& value, bool valueChanged, TextFieldEventBehavior eventBehavior, TextControlSetValueSelection selection)
 {
-    InputType::setValue(value, valueChanged, eventBehavior);
+    InputType::setValue(value, valueChanged, eventBehavior, selection);
 
     if (!valueChanged)
         return;
@@ -167,8 +171,12 @@ void ColorInputType::setValue(const String& value, bool valueChanged, TextFieldE
 
 void ColorInputType::attributeChanged(const QualifiedName& name)
 {
-    if (name == valueAttr)
+    if (name == valueAttr) {
         updateColorSwatch();
+
+        if (auto* cache = element()->document().existingAXObjectCache())
+            cache->valueChanged(element());
+    }
 
     InputType::attributeChanged(name);
 }
@@ -182,14 +190,23 @@ void ColorInputType::handleDOMActivateEvent(Event& event)
     if (!UserGestureIndicator::processingUserGesture())
         return;
 
+    showPicker();
+    event.setDefaultHandled();
+}
+
+void ColorInputType::showPicker()
+{
     if (Chrome* chrome = this->chrome()) {
         if (!m_chooser)
             m_chooser = chrome->createColorChooser(*this, valueAsColor());
         else
             m_chooser->reattachColorChooser(valueAsColor());
     }
+}
 
-    event.setDefaultHandled();
+bool ColorInputType::allowsShowPickerAcrossFrames()
+{
+    return true;
 }
 
 void ColorInputType::detach()
@@ -226,6 +243,9 @@ void ColorInputType::didChooseColor(const Color& color)
     element()->setValueFromRenderer(serializationForHTML(color));
     updateColorSwatch();
     element()->dispatchFormControlChangeEvent();
+
+    if (auto* cache = element()->document().existingAXObjectCache())
+        cache->valueChanged(element());
 }
 
 void ColorInputType::didEndChooser()

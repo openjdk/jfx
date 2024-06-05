@@ -90,13 +90,22 @@
     display: none;
 }
 
-.media-controls > * {
+.media-controls-container:has(.media-controls.inherits-border-radius),
+.media-controls.inherits-border-radius {
+    border-radius: inherit;
+}
+
+.media-controls > *,
+.media-controls::before,
+.media-controls::after {
     /* We always want to avoid showing the text selection magnifier on iOS. */
     -webkit-user-select: none;
     transition: opacity 0.1s linear;
 }
 
-.media-controls.faded > *:not(.placard) {
+.media-controls.faded > *:not(.placard),
+.media-controls.faded::before,
+.media-controls.faded::after {
     opacity: 0;
     pointer-events: none;
     transition-duration: 0.25s;
@@ -115,6 +124,41 @@
 .media-controls .status-label {
     color: var(--secondary-glyph-color);
     mix-blend-mode: plus-lighter;
+}
+
+.backdrop {
+    pointer-events: none;
+}
+
+.stats-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: calc(100% - 40px);
+    height: calc(100% - 40px);
+    padding: 20px;
+    pointer-events: none;
+}
+
+.stats-container > table {
+    padding: 5px;
+    font-size: 11px;
+    font-family: sans-serif;
+    color: hsl(0, 0%, 95%);
+    background-color: hsla(0, 0%, 25%, 0.6);
+    border-radius: 5px;
+    -webkit-backdrop-filter: blur(5px);
+}
+
+.stats-container > table > tr > :is(th, td) {
+    margin: 0;
+    padding: 0;
+    pointer-events: auto;
+}
+
+.stats-container > table > tr > th {
+    padding-inline-end: 5px;
+    text-align: end;
 }
 
 @keyframes fade-in {

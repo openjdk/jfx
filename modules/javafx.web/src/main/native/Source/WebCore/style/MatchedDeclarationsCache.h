@@ -28,15 +28,18 @@
 #include "MatchResult.h"
 #include "RenderStyle.h"
 #include "Timer.h"
+#include <wtf/CheckedRef.h>
 
 namespace WebCore {
 
 namespace Style {
 
+class Resolver;
+
 class MatchedDeclarationsCache {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    MatchedDeclarationsCache();
+    explicit MatchedDeclarationsCache(const Resolver&);
     ~MatchedDeclarationsCache();
 
     static bool isCacheable(const Element&, const RenderStyle&, const RenderStyle& parentStyle);
@@ -46,22 +49,28 @@ public:
         MatchResult matchResult;
         std::unique_ptr<const RenderStyle> renderStyle;
         std::unique_ptr<const RenderStyle> parentRenderStyle;
+        std::unique_ptr<const RenderStyle> userAgentAppearanceStyle;
 
         bool isUsableAfterHighPriorityProperties(const RenderStyle&) const;
     };
 
     const Entry* find(unsigned hash, const MatchResult&);
-    void add(const RenderStyle&, const RenderStyle& parentStyle, unsigned hash, const MatchResult&);
+    void add(const RenderStyle&, const RenderStyle& parentStyle, const RenderStyle* userAgentAppearanceStyle, unsigned hash, const MatchResult&);
+    void remove(unsigned hash);
 
     // Every N additions to the matched declaration cache trigger a sweep where entries holding
     // the last reference to a style declaration are garbage collected.
     void invalidate();
     void clearEntriesAffectedByViewportUnits();
 
+    void ref() const;
+    void deref() const;
+
 private:
     void sweep();
 
-    HashMap<unsigned, Entry> m_entries;
+    CheckedRef<const Resolver> m_owner;
+    HashMap<unsigned, Entry, AlreadyHashed> m_entries;
     Timer m_sweepTimer;
     unsigned m_additionsSinceLastSweep { 0 };
 };

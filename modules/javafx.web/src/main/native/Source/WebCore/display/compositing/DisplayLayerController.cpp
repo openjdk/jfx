@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,6 @@
 #include "config.h"
 #include "DisplayLayerController.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "DisplayCSSPainter.h"
@@ -35,8 +33,9 @@
 #include "DisplayPaintingContext.h"
 #include "DisplayTree.h"
 #include "DisplayView.h"
-#include "Frame.h"
-#include "FrameView.h"
+#include "GraphicsLayer.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "Logging.h"
 #include "Page.h"
 #include "Settings.h"
@@ -56,7 +55,7 @@ void LayerController::RootLayerClient::notifyFlushRequired(const GraphicsLayer*)
     m_layerController.scheduleRenderingUpdate();
 }
 
-void LayerController::RootLayerClient::paintContents(const GraphicsLayer* layer, GraphicsContext& context, const FloatRect& dirtyRect, GraphicsLayerPaintBehavior)
+void LayerController::RootLayerClient::paintContents(const GraphicsLayer* layer, GraphicsContext& context, const FloatRect& dirtyRect, OptionSet<GraphicsLayerPaintBehavior>)
 {
     ASSERT_UNUSED(layer, layer == m_layerController.contentLayer());
 
@@ -218,4 +217,3 @@ GraphicsLayerFactory* LayerController::graphicsLayerFactory() const
 } // namespace Display
 } // namespace WebCore
 
-#endif // ENABLE(LAYOUT_FORMATTING_CONTEXT)

@@ -24,6 +24,30 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+@linkTimeConstant
+function asyncFromSyncIteratorOnRejected(error, promise)
+{
+    "use strict";
+
+    return @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, error);
+}
+
+@linkTimeConstant
+function asyncFromSyncIteratorOnFulfilledContinue(result, promise)
+{
+    "use strict";
+
+    return @resolvePromiseWithFirstResolvingFunctionCallCheck(promise, { value: result, done: false });
+}
+
+@linkTimeConstant
+function asyncFromSyncIteratorOnFulfilledDone(result, promise)
+{
+    "use strict";
+
+    return @resolvePromiseWithFirstResolvingFunctionCallCheck(promise, { value: result, done: true });
+}
+
 function next(value)
 {
     "use strict";
@@ -40,11 +64,8 @@ function next(value)
 
     try {
         var nextResult = @argumentCount() === 0 ? nextMethod.@call(syncIterator) : nextMethod.@call(syncIterator, value);
-        var nextDone = !!nextResult.done;
-        var nextValue = nextResult.value;
-        @resolveWithoutPromise(nextValue,
-            function (result) { @resolvePromiseWithFirstResolvingFunctionCallCheck(promise, { value: result, done: nextDone }); },
-            function (error) { @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, error); });
+        var onFulfilled = nextResult.done ? @asyncFromSyncIteratorOnFulfilledDone : @asyncFromSyncIteratorOnFulfilledContinue;
+        @resolveWithoutPromiseForAsyncAwait(nextResult.value, onFulfilled, @asyncFromSyncIteratorOnRejected, promise);
     } catch (e) {
         @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, e);
     }
@@ -87,11 +108,8 @@ function return(value)
             return promise;
         }
 
-        var resultDone = !!returnResult.done;
-        var resultValue = returnResult.value;
-        @resolveWithoutPromise(resultValue,
-            function (result) { @resolvePromiseWithFirstResolvingFunctionCallCheck(promise, { value: result, done: resultDone }); },
-            function (error) { @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, error); });
+        var onFulfilled = returnResult.done ? @asyncFromSyncIteratorOnFulfilledDone : @asyncFromSyncIteratorOnFulfilledContinue;
+        @resolveWithoutPromiseForAsyncAwait(returnResult.value, onFulfilled, @asyncFromSyncIteratorOnRejected, promise);
     } catch (e) {
         @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, e);
     }
@@ -134,11 +152,8 @@ function throw(exception)
             return promise;
         }
         
-        var throwDone = !!throwResult.done;
-        var throwValue = throwResult.value;
-        @resolveWithoutPromise(throwValue,
-            function (result) { @resolvePromiseWithFirstResolvingFunctionCallCheck(promise, { value: result, done: throwDone }); },
-            function (error) { @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, error); });
+        var onFulfilled = throwResult.done ? @asyncFromSyncIteratorOnFulfilledDone : @asyncFromSyncIteratorOnFulfilledContinue;
+        @resolveWithoutPromiseForAsyncAwait(throwResult.value, onFulfilled, @asyncFromSyncIteratorOnRejected, promise);
     } catch (e) {
         @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, e);
     }
@@ -146,7 +161,7 @@ function throw(exception)
     return promise;
 }
 
-@globalPrivate
+@linkTimeConstant
 function createAsyncFromSyncIterator(syncIterator, nextMethod)
 {
     "use strict";
@@ -157,7 +172,7 @@ function createAsyncFromSyncIterator(syncIterator, nextMethod)
     return new @AsyncFromSyncIterator(syncIterator, nextMethod);
 }
 
-@globalPrivate
+@linkTimeConstant
 @constructor
 function AsyncFromSyncIterator(syncIterator, nextMethod)
 {

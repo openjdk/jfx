@@ -37,7 +37,7 @@ namespace WebCore {
 
 class DOMWrapperWorld;
 class Document;
-class Frame;
+class LocalFrame;
 class Page;
 class UserGestureEmulationScope;
 
@@ -53,20 +53,21 @@ public:
     Inspector::Protocol::ErrorStringOr<std::tuple<Ref<Inspector::Protocol::Runtime::RemoteObject>, std::optional<bool> /* wasThrown */, std::optional<int> /* savedResultIndex */>> evaluateOnCallFrame(const Inspector::Protocol::Debugger::CallFrameId&, const String& expression, const String& objectGroup, std::optional<bool>&& includeCommandLineAPI, std::optional<bool>&& doNotPauseOnExceptionsAndMuteConsole, std::optional<bool>&& returnByValue, std::optional<bool>&& generatePreview, std::optional<bool>&& saveResult, std::optional<bool>&& emulateUserGesture);
 
     // JSC::Debugger::Client
-    void debuggerWillEvaluate(JSC::Debugger&, const JSC::Breakpoint::Action&);
-    void debuggerDidEvaluate(JSC::Debugger&, const JSC::Breakpoint::Action&);
+    void debuggerWillEvaluate(JSC::Debugger&, JSC::JSGlobalObject*, const JSC::Breakpoint::Action&);
+    void debuggerDidEvaluate(JSC::Debugger&, JSC::JSGlobalObject*, const JSC::Breakpoint::Action&);
 
     // JSC::Debugger::Observer
     void breakpointActionLog(JSC::JSGlobalObject*, const String& data);
 
     // InspectorInstrumentation
-    void didClearWindowObjectInWorld(Frame&, DOMWrapperWorld&);
+    void didClearWindowObjectInWorld(LocalFrame&, DOMWrapperWorld&);
     void mainFrameStartedLoading();
     void mainFrameStoppedLoading();
     void mainFrameNavigated();
     void didRequestAnimationFrame(int callbackId, Document&);
     void willFireAnimationFrame(int callbackId);
     void didCancelAnimationFrame(int callbackId);
+    void didFireAnimationFrame(int callbackId);
 
 private:
     void internalEnable();

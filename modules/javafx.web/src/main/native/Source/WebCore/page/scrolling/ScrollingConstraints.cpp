@@ -30,6 +30,12 @@
 
 namespace WebCore {
 
+AbsolutePositionConstraints::AbsolutePositionConstraints(const FloatSize& alignmentOffset, const FloatPoint& layerPositionAtLastLayout)
+    : m_alignmentOffset(alignmentOffset)
+    , m_layerPositionAtLastLayout(layerPositionAtLastLayout)
+{
+}
+
 FloatPoint FixedPositionViewportConstraints::layerPositionForViewportRect(const FloatRect& viewportRect) const
 {
     FloatSize offset;
@@ -129,6 +135,10 @@ TextStream& operator<<(TextStream& ts, const StickyPositionViewportConstraints& 
 {
     ts.dumpProperty("sticky-position-at-last-layout", constraints.stickyOffsetAtLastLayout());
     ts.dumpProperty("layer-position-at-last-layout", constraints.layerPositionAtLastLayout());
+
+    ts.dumpProperty("sticky-box-rect", constraints.stickyBoxRect());
+    ts.dumpProperty("containing-block-rect", constraints.containingBlockRect());
+    ts.dumpProperty("constraining-rect-at-last-layout", constraints.constrainingRectAtLastLayout());
 
     return ts;
 }

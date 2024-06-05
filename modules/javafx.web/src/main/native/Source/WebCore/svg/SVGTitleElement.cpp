@@ -31,7 +31,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGTitleElement);
 
 inline SVGTitleElement::SVGTitleElement(const QualifiedName& tagName, Document& document)
-    : SVGElement(tagName, document)
+    : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::titleTag));
 }
@@ -43,9 +43,9 @@ Ref<SVGTitleElement> SVGTitleElement::create(const QualifiedName& tagName, Docum
 
 Node::InsertedIntoAncestorResult SVGTitleElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
-    SVGElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+    auto result = SVGElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
     document().titleElementAdded(*this);
-    return InsertedIntoAncestorResult::Done;
+    return result;
 }
 
 void SVGTitleElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)

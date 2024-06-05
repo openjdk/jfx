@@ -32,7 +32,6 @@
 #include "MathMLStyle.h"
 #include "RenderBlock.h"
 #include "RenderTable.h"
-#include "StyleInheritedData.h"
 
 namespace WebCore {
 
@@ -68,29 +67,20 @@ public:
 protected:
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
-    LayoutUnit ruleThicknessFallback() const
-    {
-        // This function returns a value for the default rule thickness (TeX's \xi_8) to be used as a fallback when we lack a MATH table.
-        // This arbitrary value of 0.05em was used in early WebKit MathML implementations for the thickness of the fraction bars.
-        // Note that Gecko has a slower but more accurate version that measures the thickness of U+00AF MACRON to be more accurate and otherwise fallback to some arbitrary value.
-        return LayoutUnit(0.05f * style().fontCascade().size());
-    }
+    inline LayoutUnit ruleThicknessFallback() const;
 
     LayoutUnit mathAxisHeight() const;
     LayoutUnit mirrorIfNeeded(LayoutUnit horizontalOffset, LayoutUnit boxWidth = 0_lu) const;
-    LayoutUnit mirrorIfNeeded(LayoutUnit horizontalOffset, const RenderBox& child) const { return mirrorIfNeeded(horizontalOffset, child.logicalWidth()); }
+    inline LayoutUnit mirrorIfNeeded(LayoutUnit horizontalOffset, const RenderBox& child) const;
 
-    static LayoutUnit ascentForChild(const RenderBox& child)
-    {
-        return child.firstLineBaseline().value_or(child.logicalHeight().toInt());
-    }
+    static inline LayoutUnit ascentForChild(const RenderBox& child);
 
     void layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight = 0_lu) override;
     void layoutInvalidMarkup(bool relayoutChildren);
 
 private:
     bool isRenderMathMLBlock() const final { return true; }
-    const char* renderName() const override { return "RenderMathMLBlock"; }
+    ASCIILiteral renderName() const override { return "RenderMathMLBlock"_s; }
     bool avoidsFloats() const final { return true; }
     bool canDropAnonymousBlockChild() const final { return false; }
     void layoutItems(bool relayoutChildren);
@@ -101,18 +91,13 @@ private:
 class RenderMathMLTable final : public RenderTable {
     WTF_MAKE_ISO_ALLOCATED(RenderMathMLTable);
 public:
-    explicit RenderMathMLTable(MathMLElement& element, RenderStyle&& style)
-        : RenderTable(element, WTFMove(style))
-        , m_mathMLStyle(MathMLStyle::create())
-    {
-    }
-
+    inline RenderMathMLTable(MathMLElement&, RenderStyle&&);
 
     MathMLStyle& mathMLStyle() const { return m_mathMLStyle; }
 
 private:
     bool isRenderMathMLTable() const final { return true; }
-    const char* renderName() const final { return "RenderMathMLTable"; }
+    ASCIILiteral renderName() const final { return "RenderMathMLTable"_s; }
     std::optional<LayoutUnit> firstLineBaseline() const final;
 
     Ref<MathMLStyle> m_mathMLStyle;

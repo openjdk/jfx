@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003, 2007-2008, 2011, 2016 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2022 Apple Inc. All rights reserved.
  *  Copyright (C) 2003 Peter Kelly (pmk@post.com)
  *  Copyright (C) 2006 Alexey Proskuryakov (ap@nypop.com)
  *
@@ -25,8 +25,12 @@
 #include "ArrayConstructor.h"
 
 #include "ArrayPrototype.h"
+#include "BuiltinNames.h"
+#include "ExecutableBaseInlines.h"
 #include "JSCInlines.h"
 #include "ProxyObject.h"
+
+#include "VMInlines.h"
 
 #include "ArrayConstructor.lut.h"
 
@@ -34,12 +38,12 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(ArrayConstructor);
 
-const ClassInfo ArrayConstructor::s_info = { "Function", &InternalFunction::s_info, &arrayConstructorTable, nullptr, CREATE_METHOD_TABLE(ArrayConstructor) };
+const ClassInfo ArrayConstructor::s_info = { "Function"_s, &InternalFunction::s_info, &arrayConstructorTable, nullptr, CREATE_METHOD_TABLE(ArrayConstructor) };
 
 /* Source for ArrayConstructor.lut.h
 @begin arrayConstructorTable
   of        JSBuiltin                   DontEnum|Function 0
-  from      JSBuiltin                   DontEnum|Function 0
+  from      JSBuiltin                   DontEnum|Function 1
 @end
 */
 
@@ -57,6 +61,11 @@ void ArrayConstructor::finishCreation(VM& vm, JSGlobalObject* globalObject, Arra
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, arrayPrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
     putDirectNonIndexAccessorWithoutTransition(vm, vm.propertyNames->speciesSymbol, speciesSymbol, PropertyAttribute::Accessor | PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->isArray, arrayConstructorIsArrayCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
+
+    JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().fromPrivateName(), arrayConstructorFromCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
+
+    if (Options::useArrayFromAsync())
+        JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().fromAsyncPublicName(), arrayConstructorFromAsyncCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
 
 // ------------------------------ Functions ---------------------------
@@ -104,8 +113,18 @@ static ALWAYS_INLINE bool isArraySlowInline(JSGlobalObject* globalObject, ProxyO
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     while (true) {
-        if (proxy->isRevoked()) {
-            throwTypeError(globalObject, scope, "Array.isArray cannot be called on a Proxy that has been revoked"_s);
+        if (UNLIKELY(proxy->isRevoked())) {
+            auto* callFrame = vm.topJSCallFrame();
+            auto* callee = callFrame && !callFrame->isWasmFrame() ? callFrame->jsCallee() : nullptr;
+            ASCIILiteral calleeName = "Array.isArray"_s;
+            auto* function = callee ? jsDynamicCast<JSFunction*>(callee) : nullptr;
+            // If this function is from a different globalObject than the one passed in above,
+            // then this test will fail even if function is Object.prototype.toString. The only
+            // way this test will be work everytime is if we check against the
+            // Object.prototype.toString of the function's own globalObject.
+            if (function && function == function->globalObject()->objectProtoToStringFunctionConcurrently())
+                calleeName = "Object.prototype.toString"_s;
+            throwTypeError(globalObject, scope, makeString(calleeName, " cannot be called on a Proxy that has been revoked"_s));
             return false;
         }
         JSObject* argument = proxy->target();
@@ -131,7 +150,7 @@ bool isArraySlow(JSGlobalObject* globalObject, ProxyObject* argument)
 // https://tc39.github.io/ecma262/#sec-isarray
 JSC_DEFINE_HOST_FUNCTION(arrayConstructorPrivateFuncIsArraySlow, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    ASSERT_UNUSED(globalObject, jsDynamicCast<ProxyObject*>(globalObject->vm(), callFrame->argument(0)));
+    ASSERT_UNUSED(globalObject, jsDynamicCast<ProxyObject*>(callFrame->argument(0)));
     return JSValue::encode(jsBoolean(isArraySlowInline(globalObject, jsCast<ProxyObject*>(callFrame->uncheckedArgument(0)))));
 }
 

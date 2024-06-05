@@ -49,20 +49,20 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(RTCDataChannel);
 
 static const AtomString& blobKeyword()
 {
-    static MainThreadNeverDestroyed<const AtomString> blob("blob", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> blob("blob"_s);
     return blob;
 }
 
 static const AtomString& arraybufferKeyword()
 {
-    static MainThreadNeverDestroyed<const AtomString> arraybuffer("arraybuffer", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> arraybuffer("arraybuffer"_s);
     return arraybuffer;
 }
 
-Ref<RTCDataChannel> RTCDataChannel::create(ScriptExecutionContext& context, std::unique_ptr<RTCDataChannelHandler>&& handler, String&& label, RTCDataChannelInit&& options)
+Ref<RTCDataChannel> RTCDataChannel::create(ScriptExecutionContext& context, std::unique_ptr<RTCDataChannelHandler>&& handler, String&& label, RTCDataChannelInit&& options, RTCDataChannelState state)
 {
     ASSERT(handler);
-    auto channel = adoptRef(*new RTCDataChannel(context, WTFMove(handler), WTFMove(label), WTFMove(options)));
+    auto channel = adoptRef(*new RTCDataChannel(context, WTFMove(handler), WTFMove(label), WTFMove(options), state));
     channel->suspendIfNeeded();
     queueTaskKeepingObjectAlive(channel.get(), TaskSource::Networking, [channel = channel.ptr()] {
         if (!channel->m_isDetachable)
@@ -93,15 +93,24 @@ NetworkSendQueue RTCDataChannel::createMessageQueue(ScriptExecutionContext& cont
     } };
 }
 
-RTCDataChannel::RTCDataChannel(ScriptExecutionContext& context, std::unique_ptr<RTCDataChannelHandler>&& handler, String&& label, RTCDataChannelInit&& options)
+RTCDataChannel::RTCDataChannel(ScriptExecutionContext& context, std::unique_ptr<RTCDataChannelHandler>&& handler, String&& label, RTCDataChannelInit&& options, RTCDataChannelState readyState)
     : ActiveDOMObject(&context)
     , m_handler(WTFMove(handler))
-    , m_identifier(RTCDataChannelIdentifier { Process::identifier(), ObjectIdentifier<RTCDataChannelLocalIdentifierType>::generateThreadSafe() })
+    , m_identifier(RTCDataChannelIdentifier { Process::identifier(), RTCDataChannelLocalIdentifier::generate() })
     , m_contextIdentifier(context.isDocument() ? ScriptExecutionContextIdentifier { } : context.identifier())
+    , m_readyState(readyState)
     , m_label(WTFMove(label))
     , m_options(WTFMove(options))
     , m_messageQueue(createMessageQueue(context, *this))
 {
+}
+
+std::optional<unsigned short> RTCDataChannel::id() const
+{
+    if (!m_options.id && m_handler)
+        const_cast<RTCDataChannel*>(this)->m_options.id = m_handler->id();
+
+    return m_options.id;
 }
 
 const AtomString& RTCDataChannel::binaryType() const
@@ -127,7 +136,7 @@ ExceptionOr<void> RTCDataChannel::setBinaryType(const AtomString& binaryType)
         m_binaryType = BinaryType::ArrayBuffer;
         return { };
     }
-    return Exception { TypeMismatchError };
+    return Exception { SyntaxError };
 }
 
 ExceptionOr<void> RTCDataChannel::send(const String& data)
@@ -199,7 +208,10 @@ void RTCDataChannel::didChangeReadyState(RTCDataChannelState newState)
         if (m_stopped || m_readyState == RTCDataChannelState::Closed || m_readyState == newState)
             return;
 
-        if (m_readyState == RTCDataChannelState::Closing && newState == RTCDataChannelState::Open)
+        if (m_readyState == RTCDataChannelState::Closing && (newState == RTCDataChannelState::Open || newState == RTCDataChannelState::Connecting))
+            return;
+
+        if (m_readyState == RTCDataChannelState::Open && newState == RTCDataChannelState::Connecting)
             return;
 
         m_readyState = newState;
@@ -259,6 +271,7 @@ void RTCDataChannel::stop()
 {
     removeFromDataChannelLocalMapIfNeeded();
 
+    id();
     close();
     m_stopped = true;
     m_handler = nullptr;
@@ -303,7 +316,7 @@ std::unique_ptr<DetachedRTCDataChannel> RTCDataChannel::detach()
     Locker locker { s_rtcDataChannelLocalMapLock };
     rtcDataChannelLocalMap().add(identifier().channelIdentifier, WTFMove(m_handler));
 
-    return makeUnique<DetachedRTCDataChannel>(identifier(), label().isolatedCopy(), options(), state);
+    return makeUnique<DetachedRTCDataChannel>(identifier(), String { label() }, RTCDataChannelInit { options() }, state);
 }
 
 void RTCDataChannel::removeFromDataChannelLocalMapIfNeeded()
@@ -323,9 +336,14 @@ std::unique_ptr<RTCDataChannelHandler> RTCDataChannel::handlerFromIdentifier(RTC
 
 static Ref<RTCDataChannel> createClosedChannel(ScriptExecutionContext& context, String&& label, RTCDataChannelInit&& options)
 {
-    auto channel = RTCDataChannel::create(context, nullptr, WTFMove(label), WTFMove(options));
-    channel->close();
+    auto channel = RTCDataChannel::create(context, nullptr, WTFMove(label), WTFMove(options), RTCDataChannelState::Closed);
     return channel;
+}
+
+void RTCDataChannel::fireOpenEventIfNeeded()
+{
+    if (readyState() != RTCDataChannelState::Closing && readyState() != RTCDataChannelState::Closed)
+        dispatchEvent(Event::create(eventNames().openEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
 Ref<RTCDataChannel> RTCDataChannel::create(ScriptExecutionContext& context, RTCDataChannelIdentifier identifier, String&& label, RTCDataChannelInit&& options, RTCDataChannelState state)
@@ -343,11 +361,16 @@ Ref<RTCDataChannel> RTCDataChannel::create(ScriptExecutionContext& context, RTCD
     if (!handler)
         return createClosedChannel(context, WTFMove(label), WTFMove(options));
 
-    auto channel = RTCDataChannel::create(context, WTFMove(handler), WTFMove(label), WTFMove(options));
-    channel->m_readyState = state;
+    auto channel = RTCDataChannel::create(context, WTFMove(handler), WTFMove(label), WTFMove(options), state);
 
     if (remoteHandlerPtr)
         remoteHandlerPtr->setLocalIdentifier(channel->identifier());
+
+    if (state == RTCDataChannelState::Open) {
+        channel->queueTaskKeepingObjectAlive(channel.get(), TaskSource::Networking, [channel = channel.ptr()] {
+            channel->fireOpenEventIfNeeded();
+        });
+    }
 
     return channel;
 }

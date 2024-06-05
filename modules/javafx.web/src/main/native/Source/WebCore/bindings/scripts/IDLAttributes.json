@@ -35,6 +35,7 @@
         },
         "CEReactions": {
             "contextsAllowed": ["attribute", "operation"],
+            "values": ["Needed", "NotNeeded"],
             "standard": {
                 "url": "https://html.spec.whatwg.org/multipage/custom-elements.html#cereactions"
             }
@@ -176,7 +177,7 @@
             "values": ["*"],
             "supportsConjunction": true
         },
-        "EnabledAtRuntime": {
+        "EnabledByDeprecatedGlobalSetting": {
             "contextsAllowed": ["interface", "namespace", "dictionary", "enum", "attribute", "operation", "constant", "iterable", "includes"],
             "values": ["*"],
             "supportsConjunction": true
@@ -317,8 +318,7 @@
             "contextsAllowed": ["attribute"],
             "standard": {
                 "url": "https://webidl.spec.whatwg.org/#LegacyLenientSetter"
-            },
-            "unsupported": true
+            }
         },
         "LegacyLenientThis": {
             "contextsAllowed": ["attribute"],
@@ -420,6 +420,10 @@
                 "url": "https://webidl.spec.whatwg.org/#PutForwards"
             }
         },
+        "RaisesException": {
+            "contextsAllowed": ["operation"],
+            "notes": "Should only be used on indexed getters that have to throw an exception in some cases"
+        },
         "Reflect": {
             "contextsAllowed": ["attribute"],
             "values": ["*"]
@@ -448,11 +452,6 @@
         "ReturnValue": {
             "contextsAllowed": ["argument"]
         },
-        "RuntimeConditionallyReadWrite": {
-            "contextsAllowed": ["attribute"],
-            "values": ["*"],
-            "supportsConjunction": true
-        },
         "SameObject": {
             "contextsAllowed": ["attribute"],
             "standard": {
@@ -461,7 +460,7 @@
             "unsupported": true
         },
         "SecureContext": {
-            "contextsAllowed": ["interface", "dictionary", "enum", "attribute", "operation", "constant"],
+            "contextsAllowed": ["interface", "namespace", "dictionary", "enum", "attribute", "operation", "constant"],
             "standard": {
                 "url": "https://webidl.spec.whatwg.org/#SecureContext"
             }
@@ -478,10 +477,13 @@
             "values": ["CurrentScriptExecutionContext", "CurrentGlobalObject", "ActiveWindow", "FirstWindow", "PropertyName"],
             "supportsConjunction": true
         },
-        "SettingsConditionallyReadWrite": {
+        "EnabledConditionallyReadWriteBySetting": {
             "contextsAllowed": ["attribute"],
             "values": ["*"],
             "supportsConjunction": true
+        },
+        "SkipCallbackInvokeCheck": {
+            "contextsAllowed": ["operation", "callback-function"]
         },
         "SkipVTableValidation": {
             "contextsAllowed": ["interface"]

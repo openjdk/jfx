@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.function.Function;
 import java.util.function.IntPredicate;
 import com.sun.javafx.collections.MappingChange;
 import com.sun.javafx.collections.NonIterableChange;
@@ -255,6 +256,73 @@ import javafx.util.Callback;
  *
  * <p>See the {@link Cell} class documentation for a more complete
  * description of how to write custom Cells.
+ *
+ * <h4>Warning: Nodes should not be inserted directly into the TableView cells</h4>
+ * {@code TableView} allows for it's cells to contain elements of any type, including
+ * {@link Node} instances. Putting nodes into
+ * the TableView cells is <strong>strongly discouraged</strong>, as it can
+ * lead to unexpected results.
+ *
+ * <p>Important points to note:
+ * <ul>
+ * <li>Avoid inserting {@code Node} instances directly into the {@code TableView} cells or its data model.</li>
+ * <li>The recommended approach is to put the relevant information into the items list, and
+ * provide a custom {@link TableColumn#cellFactoryProperty() cell factory} to create the nodes for a
+ * given cell and update them on demand using the data stored in the item for that cell.</li>
+ * <li>Avoid creating new {@code Node}s in the {@code updateItem} method of a custom {@link TableColumn#cellFactoryProperty() cell factory}.</li>
+ * </ul>
+ * <p>The following minimal example shows how to create a custom cell factory for {@code TableView} containing {@code Node}s:
+ * <pre> {@code
+ *  class CustomColor {
+ *    private SimpleObjectProperty<Color> color;
+ *
+ *    CustomColor(Color col) {
+ *      this.color = new SimpleObjectProperty<Color>(col);
+ *    }
+ *    public Color getColor() { return color.getValue(); }
+ *    public void setColor(Color c) { color.setValue(c); }
+ *    public SimpleObjectProperty<Color> colorProperty() { return color; }
+ *  }
+ *
+ *  TableView<CustomColor> tableview = new TableView<CustomColor>();
+ *
+ *  ObservableList<CustomColor> colorList = FXCollections.observableArrayList();
+ *  colorList.addAll(
+ *      new CustomColor(Color.RED),
+ *      new CustomColor(Color.GREEN),
+ *      new CustomColor(Color.BLUE));
+ *
+ *  TableColumn<CustomColor, Color> col = new TableColumn<CustomColor, Color>("Color");
+ *  col.setCellValueFactory(data -> data.getValue().colorProperty());
+ *
+ *  col.setCellFactory(p -> {
+ *    return new TableCell<CustomColor, Color> () {
+ *        private final Rectangle rectangle;
+ *        {
+ *            setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+ *            rectangle = new Rectangle(10, 10);
+ *        }
+ *
+ *        @Override
+ *        protected void updateItem(Color item, boolean empty) {
+ *          super.updateItem(item, empty);
+ *
+ *          if (item == null || empty) {
+ *              setGraphic(null);
+ *          } else {
+ *              rectangle.setFill(item);
+ *              setGraphic(rectangle);
+ *          }
+ *        }
+ *     };
+ *  });
+ *
+ *  tableview.getColumns().add(col);
+ *  tableview.setItems(colorList); }</pre>
+ *
+ * <p> This example has an anonymous custom {@code TableCell} class in the custom cell factory.
+ * Note that the {@code Rectangle} ({@code Node}) object needs to be created in the instance initialization block
+ * or the constructor of the custom {@code TableCell} class and updated/used in its {@code updateItem} method.
  *
  * <h3>Sorting</h3>
  * <p>Prior to JavaFX 8.0, the TableView control would treat the
@@ -1338,18 +1406,18 @@ public class TableView<S> extends Control {
      */
     private ObjectProperty<EventHandler<SortEvent<TableView<S>>>> onSort;
 
-    public void setOnSort(EventHandler<SortEvent<TableView<S>>> value) {
+    public final void setOnSort(EventHandler<SortEvent<TableView<S>>> value) {
         onSortProperty().set(value);
     }
 
-    public EventHandler<SortEvent<TableView<S>>> getOnSort() {
+    public final EventHandler<SortEvent<TableView<S>>> getOnSort() {
         if( onSort != null ) {
             return onSort.get();
         }
         return null;
     }
 
-    public ObjectProperty<EventHandler<SortEvent<TableView<S>>>> onSortProperty() {
+    public final ObjectProperty<EventHandler<SortEvent<TableView<S>>>> onSortProperty() {
         if( onSort == null ) {
             onSort = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
@@ -1439,18 +1507,18 @@ public class TableView<S> extends Control {
      */
     private ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollTo;
 
-    public void setOnScrollTo(EventHandler<ScrollToEvent<Integer>> value) {
+    public final void setOnScrollTo(EventHandler<ScrollToEvent<Integer>> value) {
         onScrollToProperty().set(value);
     }
 
-    public EventHandler<ScrollToEvent<Integer>> getOnScrollTo() {
+    public final EventHandler<ScrollToEvent<Integer>> getOnScrollTo() {
         if( onScrollTo != null ) {
             return onScrollTo.get();
         }
         return null;
     }
 
-    public ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollToProperty() {
+    public final ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollToProperty() {
         if( onScrollTo == null ) {
             onScrollTo = new ObjectPropertyBase<>() {
                 @Override
@@ -1498,18 +1566,18 @@ public class TableView<S> extends Control {
      */
     private ObjectProperty<EventHandler<ScrollToEvent<TableColumn<S, ?>>>> onScrollToColumn;
 
-    public void setOnScrollToColumn(EventHandler<ScrollToEvent<TableColumn<S, ?>>> value) {
+    public final void setOnScrollToColumn(EventHandler<ScrollToEvent<TableColumn<S, ?>>> value) {
         onScrollToColumnProperty().set(value);
     }
 
-    public EventHandler<ScrollToEvent<TableColumn<S, ?>>> getOnScrollToColumn() {
+    public final EventHandler<ScrollToEvent<TableColumn<S, ?>>> getOnScrollToColumn() {
         if( onScrollToColumn != null ) {
             return onScrollToColumn.get();
         }
         return null;
     }
 
-    public ObjectProperty<EventHandler<ScrollToEvent<TableColumn<S, ?>>>> onScrollToColumnProperty() {
+    public final ObjectProperty<EventHandler<ScrollToEvent<TableColumn<S, ?>>>> onScrollToColumnProperty() {
         if( onScrollToColumn == null ) {
             onScrollToColumn = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
@@ -1851,7 +1919,7 @@ public class TableView<S> extends Control {
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case COLUMN_COUNT: return getVisibleLeafColumns().size();
-            case ROW_COUNT: return getItems().size();
+            case ROW_COUNT: return getItems() != null ? getItems().size() : 0;
             case SELECTED_ITEMS: {
                 // TableViewSkin returns TableRows back to TableView.
                 // TableRowSkin returns TableCells back to TableRow.
@@ -1890,18 +1958,19 @@ public class TableView<S> extends Control {
         }
     }
 
-
     /* *************************************************************************
      *                                                                         *
      * Support Interfaces                                                      *
      *                                                                         *
      **************************************************************************/
 
-     /**
-      * An immutable wrapper class for use in the TableView
+    /**
+     * An immutable wrapper class for use in the TableView
      * {@link TableView#columnResizePolicyProperty() column resize} functionality.
-      * @since JavaFX 2.0
-      */
+     *
+     * @param <S> the type of the objects contained within the TableView items list
+     * @since JavaFX 2.0
+     */
      public static class ResizeFeatures<S> extends ResizeFeaturesBase<S> {
         private TableView<S> table;
 
@@ -1962,6 +2031,8 @@ public class TableView<S> extends Control {
     /**
      * A simple extension of the {@link SelectionModel} abstract class to
      * allow for special support for TableView controls.
+     *
+     * @param <S> the type of the item contained within the TableView
      * @since JavaFX 2.0
      */
     public static abstract class TableViewSelectionModel<S> extends TableSelectionModel<S> {
@@ -2178,8 +2249,6 @@ public class TableView<S> extends Control {
     static class TableViewArrayListSelectionModel<S> extends TableViewSelectionModel<S> {
 
         private int itemCount = 0;
-
-        private final MappingChange.Map<TablePosition<S,?>,Integer> cellToIndicesMap = f -> f.getRow();
 
         /* *********************************************************************
          *                                                                     *
@@ -2642,7 +2711,7 @@ public class TableView<S> extends Control {
         }
 
         @Override public void selectIndices(int row, int... rows) {
-            if (rows == null) {
+            if (rows == null || rows.length == 0) {
                 select(row);
                 return;
             }
@@ -3122,7 +3191,7 @@ public class TableView<S> extends Control {
                 return;
             }
 
-            selectedCellsSeq.callObservers(new MappingChange<>(c, MappingChange.NOOP_MAP, selectedCellsSeq));
+            selectedCellsSeq.callObservers(new MappingChange<>(c, Function.identity(), selectedCellsSeq));
         }
     }
 
@@ -3133,6 +3202,7 @@ public class TableView<S> extends Control {
      * A {@link FocusModel} with additional functionality to support the requirements
      * of a TableView control.
      *
+     * @param <S> the type of the item contained within the TableView
      * @see TableView
      * @since JavaFX 2.0
      */

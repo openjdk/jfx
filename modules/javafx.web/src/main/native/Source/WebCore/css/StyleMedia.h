@@ -26,21 +26,20 @@
 
 #pragma once
 
-#include "DOMWindowProperty.h"
+#include "LocalDOMWindowProperty.h"
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-class StyleMedia final : public RefCounted<StyleMedia>, public DOMWindowProperty {
+class StyleMedia final : public RefCounted<StyleMedia>, public LocalDOMWindowProperty {
 public:
-    static Ref<StyleMedia> create(DOMWindow& window) { return adoptRef(*new StyleMedia(window)); }
+    static Ref<StyleMedia> create(LocalDOMWindow& window) { return adoptRef(*new StyleMedia(window)); }
 
     String type() const;
-    bool matchMedium(const String&) const;
 
 private:
-    explicit StyleMedia(DOMWindow&);
+    explicit StyleMedia(LocalDOMWindow&);
 };
 
 } // namespace WebCore

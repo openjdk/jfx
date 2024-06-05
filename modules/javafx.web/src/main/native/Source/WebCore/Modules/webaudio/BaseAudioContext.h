@@ -31,7 +31,8 @@
 #include "AudioDestinationNode.h"
 #include "AudioIOCallback.h"
 #include "EventTarget.h"
-#include "JSDOMPromiseDeferred.h"
+#include "JSDOMPromiseDeferredForward.h"
+#include "NoiseInjectionPolicy.h"
 #include "OscillatorType.h"
 #include "PeriodicWaveConstraints.h"
 #include <atomic>
@@ -39,8 +40,15 @@
 #include <wtf/LoggerHelper.h>
 #include <wtf/MainThread.h>
 #include <wtf/RecursiveLockAdapter.h>
+#include <wtf/RobinHoodHashMap.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Threading.h>
+
+namespace JSC {
+class ArrayBuffer;
+enum class MessageLevel : uint8_t;
+enum class MessageSource : uint8_t;
+}
 
 namespace WebCore {
 
@@ -75,15 +83,13 @@ class WaveShaperNode;
 struct AudioIOPosition;
 struct AudioParamDescriptor;
 
-template<typename IDLType> class DOMPromiseDeferred;
-
 // AudioContext is the cornerstone of the web audio API and all AudioNodes are created from it.
 // For thread safety between the audio thread and the main thread, it has a rendering graph locking mechanism.
 
 class BaseAudioContext
     : public ActiveDOMObject
     , public ThreadSafeRefCounted<BaseAudioContext>
-    , public EventTargetWithInlineData
+    , public EventTarget
 #if !RELEASE_LOG_DISABLED
     , public LoggerHelper
 #endif
@@ -112,7 +118,8 @@ public:
     float sampleRate() const { return destination().sampleRate(); }
 
     // Asynchronous audio file data decoding.
-    void decodeAudioData(Ref<ArrayBuffer>&&, RefPtr<AudioBufferCallback>&&, RefPtr<AudioBufferCallback>&&, std::optional<Ref<DeferredPromise>>&& = std::nullopt);
+    void decodeAudioData(Ref<JSC::ArrayBuffer>&&, RefPtr<AudioBufferCallback>&&, RefPtr<AudioBufferCallback>&&);
+    void decodeAudioData(Ref<JSC::ArrayBuffer>&&, RefPtr<AudioBufferCallback>&&, RefPtr<AudioBufferCallback>&&, std::optional<Ref<DeferredPromise>>&&);
 
     AudioListener& listener() { return m_listener; }
 
@@ -214,7 +221,7 @@ public:
     void postTask(Function<void()>&&);
     bool isStopped() const { return m_isStopScheduled; }
     const SecurityOrigin* origin() const;
-    void addConsoleMessage(MessageSource, MessageLevel, const String& message);
+    void addConsoleMessage(JSC::MessageSource, JSC::MessageLevel, const String& message);
 
     virtual void lazyInitialize();
 
@@ -223,7 +230,9 @@ public:
     PeriodicWave& periodicWave(OscillatorType);
 
     void addAudioParamDescriptors(const String& processorName, Vector<AudioParamDescriptor>&&);
-    const HashMap<String, Vector<AudioParamDescriptor>>& parameterDescriptorMap() const { return m_parameterDescriptorMap; }
+    const MemoryCompactRobinHoodHashMap<String, Vector<AudioParamDescriptor>>& parameterDescriptorMap() const { return m_parameterDescriptorMap; }
+
+    NoiseInjectionPolicy noiseInjectionPolicy() const { return m_noiseInjectionPolicy; }
 
 protected:
     explicit BaseAudioContext(Document&);
@@ -345,7 +354,7 @@ private:
 
     AudioIOPosition m_outputPosition;
 
-    HashMap<String, Vector<AudioParamDescriptor>> m_parameterDescriptorMap;
+    MemoryCompactRobinHoodHashMap<String, Vector<AudioParamDescriptor>> m_parameterDescriptorMap;
 
     // These are cached per audio context for performance reasons. They cannot be
     // static because they rely on the sample rate.
@@ -362,6 +371,7 @@ private:
     bool m_isAudioThreadFinished { false };
     bool m_automaticPullNodesNeedUpdating { false };
     bool m_hasFinishedAudioSourceNodes { false };
+    NoiseInjectionPolicy m_noiseInjectionPolicy { NoiseInjectionPolicy::None };
 };
 
 } // WebCore

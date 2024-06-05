@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,19 +25,18 @@
 
 #pragma once
 
+#include "GPUBindGroupLayout.h"
+#include "WebGPURenderPipeline.h"
 #include <cstdint>
-#include <pal/graphics/WebGPU/WebGPURenderPipeline.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-class GPUBindGroupLayout;
-
 class GPURenderPipeline : public RefCounted<GPURenderPipeline> {
 public:
-    static Ref<GPURenderPipeline> create(Ref<PAL::WebGPU::RenderPipeline>&& backing)
+    static Ref<GPURenderPipeline> create(Ref<WebGPU::RenderPipeline>&& backing)
     {
         return adoptRef(*new GPURenderPipeline(WTFMove(backing)));
     }
@@ -47,16 +46,16 @@ public:
 
     Ref<GPUBindGroupLayout> getBindGroupLayout(uint32_t index);
 
-    PAL::WebGPU::RenderPipeline& backing() { return m_backing; }
-    const PAL::WebGPU::RenderPipeline& backing() const { return m_backing; }
+    WebGPU::RenderPipeline& backing() { return m_backing; }
+    const WebGPU::RenderPipeline& backing() const { return m_backing; }
 
 private:
-    GPURenderPipeline(Ref<PAL::WebGPU::RenderPipeline>&& backing)
+    GPURenderPipeline(Ref<WebGPU::RenderPipeline>&& backing)
         : m_backing(WTFMove(backing))
     {
     }
 
-    Ref<PAL::WebGPU::RenderPipeline> m_backing;
+    Ref<WebGPU::RenderPipeline> m_backing;
 };
 
 }

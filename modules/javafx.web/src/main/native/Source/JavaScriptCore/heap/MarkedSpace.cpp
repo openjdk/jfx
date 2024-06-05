@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2018 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2022 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Eric Seidel <eric@webkit.org>
  *
  *  This library is free software; you can redistribute it and/or
@@ -41,7 +41,7 @@ static Vector<size_t> sizeClasses()
 
     if (UNLIKELY(Options::dumpSizeClasses())) {
         dataLog("Block size: ", MarkedBlock::blockSize, "\n");
-        dataLog("Footer size: ", sizeof(MarkedBlock::Footer), "\n");
+        dataLog("Header size: ", sizeof(MarkedBlock::Header), "\n");
     }
 
     auto add = [&] (size_t sizeClass) {
@@ -272,22 +272,6 @@ void MarkedSpace::enablePreciseAllocationTracking()
     for (auto* allocation : m_preciseAllocations)
         m_preciseAllocationSet->add(allocation->cell());
 }
-
-template<typename Visitor>
-void MarkedSpace::visitWeakSets(Visitor& visitor)
-{
-    auto visit = [&] (WeakSet* weakSet) {
-        weakSet->visit(visitor);
-    };
-
-    m_newActiveWeakSets.forEach(visit);
-
-    if (heap().collectionScope() == CollectionScope::Full)
-        m_activeWeakSets.forEach(visit);
-}
-
-template void MarkedSpace::visitWeakSets(AbstractSlotVisitor&);
-template void MarkedSpace::visitWeakSets(SlotVisitor&);
 
 void MarkedSpace::reapWeakSets()
 {

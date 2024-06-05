@@ -25,14 +25,10 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "FormattingGeometry.h"
 
 namespace WebCore {
 namespace Layout {
-
-class BlockFormattingContext;
 
 class BlockFormattingContext;
 
@@ -41,20 +37,20 @@ class BlockFormattingGeometry : public FormattingGeometry {
 public:
     BlockFormattingGeometry(const BlockFormattingContext&);
 
-    ContentHeightAndMargin inFlowContentHeightAndMargin(const Box&, const HorizontalConstraints&, const OverriddenVerticalValues&) const;
-    ContentWidthAndMargin inFlowContentWidthAndMargin(const Box&, const HorizontalConstraints&, const OverriddenHorizontalValues&) const;
+    ContentHeightAndMargin inFlowContentHeightAndMargin(const ElementBox&, const HorizontalConstraints&, const OverriddenVerticalValues&) const;
+    ContentWidthAndMargin inFlowContentWidthAndMargin(const ElementBox&, const HorizontalConstraints&, const OverriddenHorizontalValues&) const;
 
-    LayoutUnit staticVerticalPosition(const Box&, LayoutUnit containingBlockContentBoxTop) const;
-    LayoutUnit staticHorizontalPosition(const Box&, const HorizontalConstraints&) const;
+    LayoutUnit staticVerticalPosition(const ElementBox&, LayoutUnit containingBlockContentBoxTop) const;
+    LayoutUnit staticHorizontalPosition(const ElementBox&, const HorizontalConstraints&) const;
 
-    IntrinsicWidthConstraints intrinsicWidthConstraints(const Box&) const;
+    IntrinsicWidthConstraints intrinsicWidthConstraints(const ElementBox&) const;
 
-    ContentWidthAndMargin computedContentWidthAndMargin(const Box&, const HorizontalConstraints&, std::optional<LayoutUnit> availableWidthFloatAvoider) const;
+    ContentWidthAndMargin computedContentWidthAndMargin(const ElementBox&, const HorizontalConstraints&, std::optional<LayoutUnit> availableWidthFloatAvoider) const;
 
 private:
-    ContentHeightAndMargin inFlowNonReplacedContentHeightAndMargin(const Box&, const HorizontalConstraints&, const OverriddenVerticalValues&) const;
-    ContentWidthAndMargin inFlowNonReplacedContentWidthAndMargin(const Box&, const HorizontalConstraints&, const OverriddenHorizontalValues&) const;
-    ContentWidthAndMargin inFlowReplacedContentWidthAndMargin(const ReplacedBox&, const HorizontalConstraints&, const OverriddenHorizontalValues&) const;
+    ContentHeightAndMargin inFlowNonReplacedContentHeightAndMargin(const ElementBox&, const HorizontalConstraints&, const OverriddenVerticalValues&) const;
+    ContentWidthAndMargin inFlowNonReplacedContentWidthAndMargin(const ElementBox&, const HorizontalConstraints&, const OverriddenHorizontalValues&) const;
+    ContentWidthAndMargin inFlowReplacedContentWidthAndMargin(const ElementBox&, const HorizontalConstraints&, const OverriddenHorizontalValues&) const;
 
     const BlockFormattingContext& formattingContext() const { return downcast<BlockFormattingContext>(FormattingGeometry::formattingContext()); }
 };
@@ -64,4 +60,3 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_LAYOUT_FORMATTING_GEOMETRY(BlockFormattingGeometry, isBlockFormattingGeometry())
 
-#endif

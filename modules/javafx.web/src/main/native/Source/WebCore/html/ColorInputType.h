@@ -40,21 +40,31 @@
 namespace WebCore {
 
 class ColorInputType final : public BaseClickableWithKeyInputType, private ColorChooserClient {
-    template<typename DowncastedType> friend bool isInvalidInputType(const InputType&, const String&);
 public:
+    static Ref<ColorInputType> create(HTMLInputElement& element)
+    {
+        return adoptRef(*new ColorInputType(element));
+    }
+
+    Vector<Color> suggestedColors() const;
+    Color valueAsColor() const;
+    void selectColor(StringView);
+
+    virtual ~ColorInputType();
+    bool typeMismatchFor(const String&) const final;
+
+    void detach() final;
+
+private:
     explicit ColorInputType(HTMLInputElement& element)
         : BaseClickableWithKeyInputType(Type::Color, element)
     {
         ASSERT(needsShadowSubtree());
     }
 
-    virtual ~ColorInputType();
-
-private:
     void didChooseColor(const Color&) final;
     void didEndChooser() final;
     IntRect elementRectRelativeToRootView() const final;
-    Vector<Color> suggestedColors() const final;
     bool isMouseFocusable() const final;
     bool isKeyboardFocusable(KeyboardEvent*) const final;
     bool isPresentingAttachedView() const final;
@@ -63,16 +73,14 @@ private:
     String fallbackValue() const final;
     String sanitizeValue(const String&) const final;
     void createShadowSubtree() final;
-    void setValue(const String&, bool valueChanged, TextFieldEventBehavior) final;
+    void setValue(const String&, bool valueChanged, TextFieldEventBehavior, TextControlSetValueSelection) final;
     void attributeChanged(const QualifiedName&) final;
     void handleDOMActivateEvent(Event&) final;
-    void detach() final;
+    void showPicker() final;
+    bool allowsShowPickerAcrossFrames() final;
     void elementDidBlur() final;
     bool shouldRespectListAttribute() final;
-    bool typeMismatchFor(const String&) const final;
     bool shouldResetOnDocumentActivation() final;
-    Color valueAsColor() const final;
-    void selectColor(StringView) final;
 
     void endColorChooser();
     void updateColorSwatch();
@@ -82,5 +90,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_INPUT_TYPE(ColorInputType, Type::Color)
 
 #endif // ENABLE(INPUT_TYPE_COLOR)

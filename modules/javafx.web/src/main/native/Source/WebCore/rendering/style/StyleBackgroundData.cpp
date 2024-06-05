@@ -22,10 +22,13 @@
 #include "config.h"
 #include "StyleBackgroundData.h"
 
-#include "RenderStyle.h"
+#include "BorderData.h"
 #include "RenderStyleConstants.h"
+#include "RenderStyleInlines.h"
 
 namespace WebCore {
+
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleBackgroundData);
 
 StyleBackgroundData::StyleBackgroundData()
     : background(FillLayer::create(FillLayerType::Background))
@@ -55,11 +58,11 @@ bool StyleBackgroundData::isEquivalentForPainting(const StyleBackgroundData& oth
 {
     if (background != other.background || color != other.color)
         return false;
-    if (currentColorDiffers && color == RenderStyle::currentColor())
+    if (currentColorDiffers && color.containsCurrentColor())
         return false;
     if (!outline.isVisible() && !other.outline.isVisible())
         return true;
-    if (currentColorDiffers && outline.color() == RenderStyle::currentColor())
+    if (currentColorDiffers && outline.color().containsCurrentColor())
         return false;
     return outline == other.outline;
 }

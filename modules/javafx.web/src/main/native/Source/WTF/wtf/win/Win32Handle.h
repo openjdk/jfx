@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 Patrick Gansterer <paroga@paroga.com>
+ * Copyright (C) 2023 Sony Interactive Entertainment Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,45 +25,35 @@
 
 #pragma once
 
-#include <memory>
 #include <windows.h>
-#include <wtf/Noncopyable.h>
+#include <wtf/FastMalloc.h>
 
 namespace WTF {
 
 class Win32Handle {
     WTF_MAKE_FAST_ALLOCATED;
-    WTF_MAKE_NONCOPYABLE(Win32Handle);
-
 public:
-    Win32Handle() : m_handle(INVALID_HANDLE_VALUE) { }
-    explicit Win32Handle(HANDLE handle) : m_handle(handle) { }
+    WTF_EXPORT_PRIVATE static Win32Handle adopt(HANDLE);
 
-    ~Win32Handle() { clear(); }
+    Win32Handle() = default;
+    WTF_EXPORT_PRIVATE explicit Win32Handle(const Win32Handle&);
+    WTF_EXPORT_PRIVATE Win32Handle(Win32Handle&&);
+    WTF_EXPORT_PRIVATE ~Win32Handle();
 
-    void clear()
-    {
-        if (!isValid())
-            return;
-        CloseHandle(m_handle);
-        m_handle = INVALID_HANDLE_VALUE;
-    }
+    WTF_EXPORT_PRIVATE Win32Handle& operator=(Win32Handle&&);
 
-    bool isValid() const { return m_handle != INVALID_HANDLE_VALUE; }
+    explicit operator bool() const { return m_handle != INVALID_HANDLE_VALUE; }
 
     HANDLE get() const { return m_handle; }
-    HANDLE release() { HANDLE ret = m_handle; m_handle = INVALID_HANDLE_VALUE; return ret; }
 
-    Win32Handle& operator=(HANDLE handle)
-    {
-        clear();
-        m_handle = handle;
-        return *this;
-    }
+    WTF_EXPORT_PRIVATE HANDLE leak() WARN_UNUSED_RETURN;
 
 private:
-    HANDLE m_handle;
+    explicit Win32Handle(HANDLE);
+
+    HANDLE m_handle { INVALID_HANDLE_VALUE };
 };
 
 } // namespace WTF
 
+using WTF::Win32Handle;

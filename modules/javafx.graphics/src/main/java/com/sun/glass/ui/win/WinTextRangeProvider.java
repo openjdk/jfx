@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,8 @@ package com.sun.glass.ui.win;
 
 import static javafx.scene.AccessibleAttribute.*;
 import java.text.BreakIterator;
+
+import com.sun.javafx.util.Utils;
 import javafx.geometry.Bounds;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
@@ -98,8 +100,26 @@ class WinTextRangeProvider {
         }
 
         int length = text.length();
-        start = Math.max(0, Math.min(start, length));
-        end = Math.max(start, Math.min(end, length));
+        start = Utils.clamp(0, start, length);
+        end = Utils.clamp(start, end, length);
+    }
+
+    /**
+     * In the context of substrings, this method calculates the end index based on the start index,
+     * requested string length, and the maximum end index. <code>0 <= start <= end <= length</code>;
+     * see {@link #validateRange(String)}.
+     *
+     * @param startIndex The start index in a string. Needs to be 0 or more (not checked in the code).
+     * @param length The requested length of a string when starting from "start".
+     *               Negative numbers are treated as full length.
+     * @param endIndex The maximum end index to return. Needs to be equal or greater than startIndex
+     *                    (not checked in the code).
+     */
+    static int getEndIndex(int startIndex, int length, int endIndex) {
+        if (length < 0 || (endIndex - startIndex) <= length) {
+            return endIndex;
+        }
+        return startIndex + length;
     }
 
     void setRange(int start, int end) {
@@ -358,11 +378,16 @@ class WinTextRangeProvider {
         return accessible.getNativeAccessible();
     }
 
+    /**
+     * Returns the text contained in the TEXT attribute, starting from the start index and ending at the end index.
+     *
+     * @param maxLength The maximum length of the returned string
+     */
     private String GetText(int maxLength) {
         String text = (String)getAttribute(TEXT);
         if (text == null) return null;
         validateRange(text);
-        int endOffset = maxLength != -1 ? Math.min(end, start + maxLength) : end;
+        int endOffset = getEndIndex(start, maxLength, end);
 //        System.out.println("+GetText [" + text.substring(start, endOffset)+"]");
         return text.substring(start, endOffset);
     }

@@ -43,10 +43,10 @@ public:
     static Ref<HighlightRegister> create() { return adoptRef(*new HighlightRegister); }
 
     void initializeMapLike(DOMMapAdapter&);
-    void setFromMapLike(String&&, Ref<Highlight>&&);
+    void setFromMapLike(AtomString&&, Ref<Highlight>&&);
     void clear();
-    bool remove(const String&);
-
+    bool remove(const AtomString&);
+    bool isEmpty() const { return map().isEmpty(); }
 
     HighlightVisibility highlightsVisibility() const { return m_highlightVisibility; }
 #if ENABLE(APP_HIGHLIGHTS)
@@ -54,11 +54,13 @@ public:
 #endif
 
     WEBCORE_EXPORT void addAnnotationHighlightWithRange(Ref<StaticRange>&&);
-    const HashMap<String, Ref<Highlight>>& map() const { return m_map; }
+    const HashMap<AtomString, Ref<Highlight>>& map() const { return m_map; }
+    const Vector<AtomString>& highlightNames() const { return m_highlightNames; }
 
 private:
     HighlightRegister() = default;
-    HashMap<String, Ref<Highlight>> m_map;
+    HashMap<AtomString, Ref<Highlight>> m_map;
+    Vector<AtomString> m_highlightNames;
 
     HighlightVisibility m_highlightVisibility { HighlightVisibility::Hidden };
 };

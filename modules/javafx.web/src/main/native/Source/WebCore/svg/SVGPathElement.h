@@ -108,9 +108,8 @@ private:
     SVGPathElement(const QualifiedName&, Document&);
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGPathElement, SVGGeometryElement>;
-    const SVGPropertyRegistry& propertyRegistry() const final { return m_propertyRegistry; }
 
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     void svgAttributeChanged(const QualifiedName&) final;
 
     bool isValid() const final { return SVGTests::isValid(); }
@@ -124,7 +123,6 @@ private:
     void invalidateMPathDependencies();
 
 private:
-    PropertyRegistry m_propertyRegistry { *this };
     Ref<SVGAnimatedPathSegList> m_pathSegList { SVGAnimatedPathSegList::create(this) };
 };
 

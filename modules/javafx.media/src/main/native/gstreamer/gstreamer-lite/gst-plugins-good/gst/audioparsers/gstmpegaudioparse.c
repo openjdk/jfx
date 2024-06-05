@@ -35,6 +35,84 @@
  *
  */
 
+/* Notes about gapless playback, "Frankenstein" streams, and the Xing header frame:
+ *
+ * Gapless playback is based on the LAME tag, which is located in the Xing
+ * header frame. The tag contains the encoder delay and encoder padding.
+ * The encoder delay specifies how many padding nullsamples have been prepended
+ * by the encoder at the start of the mp3 stream, while the encoder padding
+ * specifies how many padding nullsamples got added at the end of the stream.
+ *
+ * In addition, there is also a "decoder delay". This affects all existing
+ * mp3 decoders - they themselves introduce a delay into the signal due to
+ * the way mp3 decoding works. This delay is 529 samples long in all known
+ * decoders. Unlike the encoder delay, the decoder delay is not specified
+ * anywhere in the mp3 stream. Players/decoders therefore hardcode the
+ * decoder delay as 529 samples.
+ *
+ * (The LAME tech FAQ mentions 528 samples instead of 529, but LAME seems to
+ * use 529 samples. Also, decoders like mpg123 use 529 samples instead of 528.
+ * The situation is a little unclear, but 529 samples seems to be standard.)
+ *
+ * For proper gapless playback, both mpegaudioparse and a downstream MPEG
+ * audio decoder must do their part. mpegaudioparse adjusts buffer PTS/DTS
+ * and durations, and adds GstAudioClippingMeta to outgoing buffers if
+ * clipping is necessary. MPEG decoders then clip decoded frames according
+ * to that meta (if present).
+ *
+ * To detect when to add GstAudioClippingMeta and when to adjust PTS/DTS/
+ * durations, the number of the current frame is retrieved. Based on that, the
+ * current stream position in samples is calculated. With the sample position,
+ * it is determined whether or not the current playback position is still
+ * if the actual playback range (= in the actual playback range of the stream
+ * that excludes padding samples), or if it is already outside, or partially
+ * outside.
+ *
+ * start_of_actual_samples and end_of_actual_samples define the start/end
+ * of this actual playback range, in samples. So:
+ * If sample_pos >= start_of_actual_samples and sample_pos end_of_actual_samples
+ * -> sample_pos is inside the actual playback range.
+ *
+ * (The decoder delay could in theory be left for the decoder to worry
+ * about. But then, the decoder would also have to adjust PTS/DTS/durations
+ * of decoded buffers, which is not something a GstAudioDecoder based element
+ * should have to deal with. So, for convenience, mpegaudioparse also factors
+ * that delay into its calculations.)
+ *
+ *
+ * "Frankenstein" streams are MPEG streams which have streams beyond
+ * what the Xing metadata indicates. Such streams typically are the
+ * result of poorly stitching individual mp3s together, like this:
+ *
+ *   cat first.mp3 second.mp3 > joined.mp3
+ *
+ * The resulting mp3 is not guaranteed to be valid. In particular, this can
+ * cause confusion when first.mp3 contains a Xing header frame. Its length
+ * indicator then does not match the actual length (which is bigger). When
+ * this is detected, a log line about this being a Frankenstein stream is
+ * generated.
+ *
+ *
+ * Xing header frames are empty dummy MPEG frames. They only exist for
+ * supplying metadata. They are encoded as valid silent MPEG frames for
+ * backwards compatibility with older hardware MP3 players, but can be safely
+ * dropped.
+ *
+ * For more about Xing header frames, see:
+ * https://www.codeproject.com/Articles/8295/MPEG-Audio-Frame-Header#XINGHeader
+ * https://www.compuphase.com/mp3/mp3loops.htm#PADDING_DELAYS
+ *
+ * To facilitate gapless playback and ensure that MPEG audio decoders don't
+ * actually decode this frame as an empty MPEG frame, it is marked here as
+ * GST_BUFFER_FLAG_DECODE_ONLY / GST_BUFFER_FLAG_DROPPABLE in mpegaudioparse
+ * after its metadata got extracted. It is also marked as such if it is
+ * encountered again after the user for example seeked back to the beginning
+ * of the mp3 stream. Its duration is also set to zero to make sure that the
+ * frame does not cause baseparse to increment the timestamp of the frame that
+ * follows this one.
+ *
+ */
+
 /* FIXME: we should make the base class (GstBaseParse) aware of the
  * XING seek table somehow, so it can use it properly for things like
  * accurate seeks. Currently it can only do a lookup via the convert function,
@@ -98,11 +176,19 @@ static GstFlowReturn gst_mpeg_audio_parse_handle_frame (GstBaseParse * parse,
     GstBaseParseFrame * frame, gint * skipsize);
 static GstFlowReturn gst_mpeg_audio_parse_pre_push_frame (GstBaseParse * parse,
     GstBaseParseFrame * frame);
+static gboolean gst_mpeg_audio_parse_src_query (GstBaseParse * parse,
+    GstQuery * query);
+static gboolean gst_mpeg_audio_parse_sink_event (GstBaseParse * parse,
+    GstEvent * event);
 static gboolean gst_mpeg_audio_parse_convert (GstBaseParse * parse,
     GstFormat src_format, gint64 src_value,
     GstFormat dest_format, gint64 * dest_value);
 static GstCaps *gst_mpeg_audio_parse_get_sink_caps (GstBaseParse * parse,
     GstCaps * filter);
+
+static gboolean
+gst_mpeg_audio_parse_check_if_is_xing_header_frame (GstMpegAudioParse *
+    mp3parse, GstBuffer * buf);
 
 static void gst_mpeg_audio_parse_handle_first_frame (GstMpegAudioParse *
     mp3parse, GstBuffer * buf);
@@ -166,6 +252,8 @@ gst_mpeg_audio_parse_class_init (GstMpegAudioParseClass * klass)
       GST_DEBUG_FUNCPTR (gst_mpeg_audio_parse_handle_frame);
   parse_class->pre_push_frame =
       GST_DEBUG_FUNCPTR (gst_mpeg_audio_parse_pre_push_frame);
+  parse_class->src_query = GST_DEBUG_FUNCPTR (gst_mpeg_audio_parse_src_query);
+  parse_class->sink_event = GST_DEBUG_FUNCPTR (gst_mpeg_audio_parse_sink_event);
   parse_class->convert = GST_DEBUG_FUNCPTR (gst_mpeg_audio_parse_convert);
   parse_class->get_sink_caps =
       GST_DEBUG_FUNCPTR (gst_mpeg_audio_parse_get_sink_caps);
@@ -194,12 +282,16 @@ gst_mpeg_audio_parse_class_init (GstMpegAudioParseClass * klass)
 static void
 gst_mpeg_audio_parse_reset (GstMpegAudioParse * mp3parse)
 {
+  mp3parse->upstream_format = GST_FORMAT_UNDEFINED;
   mp3parse->channels = -1;
   mp3parse->rate = -1;
   mp3parse->sent_codec_tag = FALSE;
   mp3parse->last_posted_crc = CRC_UNKNOWN;
   mp3parse->last_posted_channel_mode = MPEG_AUDIO_CHANNEL_MODE_UNKNOWN;
   mp3parse->freerate = 0;
+  mp3parse->spf = 0;
+
+  mp3parse->outgoing_frame_is_xing_header = FALSE;
 
   mp3parse->hdr_bitrate = 0;
   mp3parse->bitrate_is_constant = TRUE;
@@ -224,6 +316,12 @@ gst_mpeg_audio_parse_reset (GstMpegAudioParse * mp3parse)
 
   mp3parse->encoder_delay = 0;
   mp3parse->encoder_padding = 0;
+  mp3parse->decoder_delay = 0;
+  mp3parse->start_of_actual_samples = 0;
+  mp3parse->end_of_actual_samples = 0;
+  mp3parse->total_padding_time = GST_CLOCK_TIME_NONE;
+  mp3parse->start_padding_time = GST_CLOCK_TIME_NONE;
+  mp3parse->end_padding_time = GST_CLOCK_TIME_NONE;
 }
 
 static void
@@ -756,6 +854,11 @@ gst_mpeg_audio_parse_handle_frame (GstBaseParse * parse,
       mp3parse->spf = 576;
     }
 
+    /* We need the frame duration for calculating the frame number later
+     * in gst_mpeg_audio_parse_pre_push_frame (). */
+    mp3parse->frame_duration = gst_util_uint64_scale (GST_SECOND,
+        mp3parse->spf, mp3parse->rate);
+
     /* lead_in:
      * We start pushing 9 frames earlier (29 frames for MPEG2) than
      * segment start to be able to decode the first frame we want.
@@ -775,6 +878,21 @@ gst_mpeg_audio_parse_handle_frame (GstBaseParse * parse,
   }
   mp3parse->hdr_bitrate = bitrate;
 
+  /* While during normal playback, the Xing header frame is seen only once
+   * (right at the beginning), we may see it again if the user seeked back
+   * to the beginning. To make sure it is dropped again and NOT pushed
+   * downstream, we have to check every frame for Xing IDs.
+   *
+   * (sent_codec_tag is TRUE after this Xing frame got parsed.) */
+  if (G_LIKELY (mp3parse->sent_codec_tag)) {
+    if (G_UNLIKELY (gst_mpeg_audio_parse_check_if_is_xing_header_frame
+            (mp3parse, buf))) {
+      GST_DEBUG_OBJECT (mp3parse, "This is a Xing header frame, which "
+          "contains no meaningful audio data, and can be safely dropped");
+      mp3parse->outgoing_frame_is_xing_header = TRUE;
+    }
+  }
+
   /* For first frame; check for seek tables and output a codec tag */
   gst_mpeg_audio_parse_handle_first_frame (mp3parse, buf);
 
@@ -785,11 +903,70 @@ gst_mpeg_audio_parse_handle_frame (GstBaseParse * parse,
 cleanup:
   gst_buffer_unmap (buf, &map);
 
+  /* We don't actually drop the frame right here, but rather in
+   * gst_mpeg_audio_parse_pre_push_frame (), since it is still important
+   * to let other code bits do their work there even if we want to drop
+   * the current frame. */
+  if (G_UNLIKELY (mp3parse->outgoing_frame_is_xing_header)) {
+    frame->flags |= GST_BASE_PARSE_FRAME_FLAG_NO_FRAME;
+    /* Set duration to zero to prevent the baseparse class
+     * from incrementing outgoing timestamps */
+    GST_BUFFER_DURATION (frame->buffer) = 0;
+  }
+
   if (res && bpf <= map.size) {
     return gst_base_parse_finish_frame (parse, frame, bpf);
   }
 
   return GST_FLOW_OK;
+}
+
+static gboolean
+gst_mpeg_audio_parse_check_if_is_xing_header_frame (GstMpegAudioParse *
+    mp3parse, GstBuffer * buf)
+{
+  /* TODO: get rid of code duplication
+   * (see gst_mpeg_audio_parse_handle_first_frame ()) */
+
+  const guint32 xing_id = 0x58696e67;   /* 'Xing' in hex */
+  const guint32 info_id = 0x496e666f;   /* 'Info' in hex - found in LAME CBR files */
+
+  gint offset_xing;
+  GstMapInfo map;
+  guint8 *data;
+  guint64 avail;
+  guint32 read_id_xing = 0;
+  gboolean ret = FALSE;
+
+  /* Check first frame for Xing info */
+  if (mp3parse->version == 1) { /* MPEG-1 file */
+    if (mp3parse->channels == 1)
+      offset_xing = 0x11;
+    else
+      offset_xing = 0x20;
+  } else {                      /* MPEG-2 header */
+    if (mp3parse->channels == 1)
+      offset_xing = 0x09;
+    else
+      offset_xing = 0x11;
+  }
+
+  /* Skip the 4 bytes of the MP3 header too */
+  offset_xing += 4;
+
+  /* Check if we have enough data to read the Xing header */
+  gst_buffer_map (buf, &map, GST_MAP_READ);
+  data = map.data;
+  avail = map.size;
+
+  if (avail >= offset_xing + 4) {
+    read_id_xing = GST_READ_UINT32_BE (data + offset_xing);
+    ret = (read_id_xing == xing_id || read_id_xing == info_id);
+  }
+
+  gst_buffer_unmap (buf, &map);
+
+  return ret;
 }
 
 static void
@@ -852,9 +1029,14 @@ gst_mpeg_audio_parse_handle_first_frame (GstMpegAudioParse * mp3parse,
     guint32 xing_flags;
     guint bytes_needed = offset_xing + 8;
     gint64 total_bytes;
+    guint64 num_xing_samples = 0;
     GstClockTime total_time;
 
     GST_DEBUG_OBJECT (mp3parse, "Found Xing header marker 0x%x", xing_id);
+
+    GST_DEBUG_OBJECT (mp3parse, "This is a Xing header frame, which contains "
+        "no meaningful audio data, and can be safely dropped");
+    mp3parse->outgoing_frame_is_xing_header = TRUE;
 
     /* Move data after Xing header */
     data += offset_xing + 4;
@@ -886,9 +1068,9 @@ gst_mpeg_audio_parse_handle_first_frame (GstMpegAudioParse * mp3parse,
             "Invalid number of frames in Xing header");
         mp3parse->xing_flags &= ~XING_FRAMES_FLAG;
       } else {
+        num_xing_samples = (guint64) (mp3parse->xing_frames) * (mp3parse->spf);
         mp3parse->xing_total_time = gst_util_uint64_scale (GST_SECOND,
-            (guint64) (mp3parse->xing_frames) * (mp3parse->spf),
-            mp3parse->rate);
+            num_xing_samples, mp3parse->rate);
       }
 
       data += 4;
@@ -896,6 +1078,10 @@ gst_mpeg_audio_parse_handle_first_frame (GstMpegAudioParse * mp3parse,
       mp3parse->xing_frames = 0;
       mp3parse->xing_total_time = 0;
     }
+
+    /* Store the entire time as actual total time for now. Should there be
+     * any padding present, this value will get adjusted accordingly. */
+    mp3parse->xing_actual_total_time = mp3parse->xing_total_time;
 
     if (xing_flags & XING_BYTES_FLAG) {
       mp3parse->xing_bytes = GST_READ_UINT32_BE (data);
@@ -978,8 +1164,10 @@ gst_mpeg_audio_parse_handle_first_frame (GstMpegAudioParse * mp3parse,
     } else
       mp3parse->xing_vbr_scale = 0;
 
-    GST_DEBUG_OBJECT (mp3parse, "Xing header reported %u frames, time %"
-        GST_TIME_FORMAT ", %u bytes, vbr scale %u", mp3parse->xing_frames,
+    GST_DEBUG_OBJECT (mp3parse, "Xing header reported %u frames, %"
+        G_GUINT64_FORMAT " samples, time %" GST_TIME_FORMAT
+        " (this includes potentially present padding data), %u bytes,"
+        " vbr scale %u", mp3parse->xing_frames, num_xing_samples,
         GST_TIME_ARGS (mp3parse->xing_total_time), mp3parse->xing_bytes,
         mp3parse->xing_vbr_scale);
 
@@ -997,6 +1185,8 @@ gst_mpeg_audio_parse_handle_first_frame (GstMpegAudioParse * mp3parse,
       gchar lame_version[10] = { 0, };
       guint tag_rev;
       guint32 encoder_delay, encoder_padding;
+      guint64 total_padding_samples;
+      guint64 actual_num_xing_samples;
 
       memcpy (lame_version, data, 9);
       data += 9;
@@ -1012,11 +1202,63 @@ gst_mpeg_audio_parse_handle_first_frame (GstMpegAudioParse * mp3parse,
       encoder_padding = GST_READ_UINT24_BE (data);
       encoder_padding &= 0x000fff;
 
+      total_padding_samples = encoder_delay + encoder_padding;
+
       mp3parse->encoder_delay = encoder_delay;
       mp3parse->encoder_padding = encoder_padding;
 
-      GST_DEBUG_OBJECT (mp3parse, "Encoder delay %u, encoder padding %u",
-          encoder_delay, encoder_padding);
+      /* As mentioned in the overview at the beginning of this source
+       * file, decoders exhibit a delay of 529 samples. */
+      mp3parse->decoder_delay = 529;
+
+      /* Where the actual, non-padding samples start & end, in sample offsets. */
+      mp3parse->start_of_actual_samples = mp3parse->encoder_delay +
+          mp3parse->decoder_delay;
+      mp3parse->end_of_actual_samples = num_xing_samples +
+          mp3parse->decoder_delay - mp3parse->encoder_padding;
+
+      /* Length of padding at the start and at the end of the stream,
+       * in nanoseconds. */
+      mp3parse->start_padding_time = gst_util_uint64_scale_int (GST_SECOND,
+          mp3parse->start_of_actual_samples, mp3parse->rate);
+      mp3parse->end_padding_time = mp3parse->xing_total_time -
+          gst_util_uint64_scale_int (mp3parse->end_of_actual_samples,
+          GST_SECOND, mp3parse->rate);
+
+      /* Total length of all combined padding samples, in nanoseconds. */
+      mp3parse->total_padding_time = gst_util_uint64_scale_int (GST_SECOND,
+          total_padding_samples, mp3parse->rate);
+
+      /* Length of media, in samples, without the number of padding samples. */
+      actual_num_xing_samples = (num_xing_samples >= total_padding_samples) ?
+          (num_xing_samples - total_padding_samples) : 0;
+      /* Length of media, converted to nanoseconds. This is used for setting
+       * baseparse's duration. */
+      mp3parse->xing_actual_total_time = gst_util_uint64_scale (GST_SECOND,
+          actual_num_xing_samples, mp3parse->rate);
+
+      GST_DEBUG_OBJECT (mp3parse, "Encoder delay: %u samples",
+          mp3parse->encoder_delay);
+      GST_DEBUG_OBJECT (mp3parse, "Encoder padding: %u samples",
+          mp3parse->encoder_padding);
+      GST_DEBUG_OBJECT (mp3parse, "Decoder delay: %u samples",
+          mp3parse->decoder_delay);
+      GST_DEBUG_OBJECT (mp3parse, "Start of actual samples: %"
+          G_GUINT64_FORMAT, mp3parse->start_of_actual_samples);
+      GST_DEBUG_OBJECT (mp3parse, "End of actual samples: %"
+          G_GUINT64_FORMAT, mp3parse->end_of_actual_samples);
+      GST_DEBUG_OBJECT (mp3parse, "Total padding samples: %" G_GUINT64_FORMAT,
+          total_padding_samples);
+      GST_DEBUG_OBJECT (mp3parse, "Start padding time: %" GST_TIME_FORMAT,
+          GST_TIME_ARGS (mp3parse->start_padding_time));
+      GST_DEBUG_OBJECT (mp3parse, "End padding time: %" GST_TIME_FORMAT,
+          GST_TIME_ARGS (mp3parse->end_padding_time));
+      GST_DEBUG_OBJECT (mp3parse, "Total padding time: %" GST_TIME_FORMAT,
+          GST_TIME_ARGS (mp3parse->total_padding_time));
+      GST_DEBUG_OBJECT (mp3parse, "Actual total media samples: %"
+          G_GUINT64_FORMAT, actual_num_xing_samples);
+      GST_DEBUG_OBJECT (mp3parse, "Actual total media length: %"
+          GST_TIME_FORMAT, GST_TIME_ARGS (mp3parse->xing_actual_total_time));
     }
   } else if (read_id_vbri == vbri_id) {
     gint64 total_bytes, total_frames;
@@ -1154,7 +1396,7 @@ gst_mpeg_audio_parse_handle_first_frame (GstMpegAudioParse * mp3parse,
   /* set duration if tables provided a valid one */
   if (mp3parse->xing_flags & XING_FRAMES_FLAG) {
     gst_base_parse_set_duration (GST_BASE_PARSE (mp3parse), GST_FORMAT_TIME,
-        mp3parse->xing_total_time, 0);
+        mp3parse->xing_actual_total_time, 0);
   }
   if (mp3parse->vbri_total_time != 0 && mp3parse->vbri_valid) {
     gst_base_parse_set_duration (GST_BASE_PARSE (mp3parse), GST_FORMAT_TIME,
@@ -1330,6 +1572,91 @@ gst_mpeg_audio_parse_bytepos_to_time (GstMpegAudioParse * mp3parse,
 }
 
 static gboolean
+gst_mpeg_audio_parse_src_query (GstBaseParse * parse, GstQuery * query)
+{
+  gboolean res = FALSE;
+  GstMpegAudioParse *mp3parse = GST_MPEG_AUDIO_PARSE (parse);
+
+  res = GST_BASE_PARSE_CLASS (parent_class)->src_query (parse, query);
+  if (!res)
+    return FALSE;
+
+  /* If upstream operates in BYTE format then consider any parsed Xing/LAME
+   * header to remove encoder/decoder delay and padding samples from the
+   * position query. */
+  if (mp3parse->upstream_format == GST_FORMAT_BYTES
+      || GST_PAD_MODE (GST_BASE_PARSE_SINK_PAD (parse)) == GST_PAD_MODE_PULL) {
+    switch (GST_QUERY_TYPE (query)) {
+      case GST_QUERY_POSITION:{
+        GstFormat format;
+        gint64 position, new_position;
+        GstClockTime duration_to_skip;
+        gst_query_parse_position (query, &format, &position);
+
+        /* Adjust the position to exclude padding samples. */
+
+        if ((position < 0) || (format != GST_FORMAT_TIME))
+          break;
+
+        duration_to_skip = mp3parse->frame_duration +
+            mp3parse->start_padding_time;
+
+        if (position < duration_to_skip)
+          new_position = 0;
+        else
+          new_position = position - duration_to_skip;
+
+        if (new_position > (mp3parse->xing_actual_total_time))
+          new_position = mp3parse->xing_actual_total_time;
+
+        GST_LOG_OBJECT (mp3parse, "applying gapless padding info to position "
+            "query response: %" GST_TIME_FORMAT " -> %" GST_TIME_FORMAT,
+            GST_TIME_ARGS (position), GST_TIME_ARGS (new_position));
+
+        gst_query_set_position (query, GST_FORMAT_TIME, new_position);
+
+        break;
+      }
+
+      default:
+        break;
+    }
+  }
+
+  return res;
+}
+
+static gboolean
+gst_mpeg_audio_parse_sink_event (GstBaseParse * parse, GstEvent * event)
+{
+  gboolean res = FALSE;
+  GstMpegAudioParse *mp3parse = GST_MPEG_AUDIO_PARSE (parse);
+
+  res =
+      GST_BASE_PARSE_CLASS (parent_class)->sink_event (parse,
+      gst_event_ref (event));
+  if (!res) {
+    gst_event_unref (event);
+    return FALSE;
+  }
+
+  switch (GST_EVENT_TYPE (event)) {
+    case GST_EVENT_SEGMENT:{
+      const GstSegment *segment;
+
+      gst_event_parse_segment (event, &segment);
+      mp3parse->upstream_format = segment->format;
+    }
+    default:
+      break;
+  }
+
+  gst_event_unref (event);
+
+  return res;
+}
+
+static gboolean
 gst_mpeg_audio_parse_convert (GstBaseParse * parse, GstFormat src_format,
     gint64 src_value, GstFormat dest_format, gint64 * dest_value)
 {
@@ -1427,6 +1754,179 @@ gst_mpeg_audio_parse_pre_push_frame (GstBaseParse * parse,
   if (taglist) {
     gst_base_parse_merge_tags (parse, taglist, GST_TAG_MERGE_REPLACE);
     gst_tag_list_unref (taglist);
+  }
+
+  /* adjust buffer PTS/DTS/durations according to gapless playback info */
+  if ((mp3parse->upstream_format == GST_FORMAT_BYTES
+          || GST_PAD_MODE (GST_BASE_PARSE_SINK_PAD (parse)) ==
+          GST_PAD_MODE_PULL)
+      && GST_CLOCK_TIME_IS_VALID (mp3parse->total_padding_time)) {
+    guint64 frame_nr;
+    GstClockTime pts, dts;
+    gboolean add_clipping_meta = FALSE;
+    guint32 start_clip = 0, end_clip = 0;
+    GstClockTime timestamp_decrement;
+    guint64 sample_pos;
+    guint64 sample_pos_end;
+
+    /* Get the number of the current frame so we can determine where we
+     * currently are in the MPEG stream.
+     *
+     * Gapless playback is best done based on samples, not timestamps,
+     * to avoid potential rounding errors that can otherwise cause a few
+     * samples to be incorrectly clipped or not clipped.
+     *
+     * TODO: At the moment, there is no dedicated baseparse API for finding
+     * out what frame we are currently in. The frame number is calculated
+     * out of the PTS of the current frame. Each frame has the same duration,
+     * and at this point, the buffer's PTS has not been adjusted to exclude
+     * the padding samples, so the PTS will be an integer multiple of
+     * frame_duration. However, this is not an ideal solution. Investigate
+     * how to properly implement this. */
+    frame_nr = GST_BUFFER_PTS (frame->buffer) / mp3parse->frame_duration;
+    GST_LOG_OBJECT (mp3parse, "Handling MP3 frame #%" G_GUINT64_FORMAT,
+        frame_nr);
+
+    /* By default, we subtract the start_padding_time from the timestamps.
+     * start_padding_time specifies the duration of the padding samples
+     * at the beginning of the MPEG stream. To factor out these padding
+     * samples, we have to shift the timestamps back, which is done with
+     * this decrement. */
+    timestamp_decrement = mp3parse->start_padding_time;
+
+    pts = GST_BUFFER_PTS (frame->buffer);
+    dts = GST_BUFFER_DTS (frame->buffer);
+
+    /* sample_pos specifies the current position of the beginning of the
+     * current frame, while sample_pos_end specifies the current position
+     * of 1 samples past the end of the current frame. Both values are
+     * in samples. */
+    sample_pos = frame_nr * mp3parse->spf;
+    sample_pos_end = sample_pos + mp3parse->spf;
+
+    /* Check if the frame is not (fully) within the actual playback range. */
+    if (G_UNLIKELY (sample_pos <= mp3parse->start_of_actual_samples ||
+            (sample_pos_end >= mp3parse->end_of_actual_samples))) {
+
+      if (G_UNLIKELY (frame_nr >= mp3parse->xing_frames)) {
+        /* Test #1: Check if the current position lies past the length
+         * that is specified by the Xing frame header. This normally does
+         * not happen, but does occur with "Frankenstein" streams (see
+         * the explanation at the beginning of this source file for more).
+         * Do this first, since the other test may yield false positives
+         * in this case. */
+        GST_LOG_OBJECT (mp3parse, "There are frames beyond what the Xing "
+            "metadata indicates; this is a Frankenstein stream!");
+
+        /* The frames past the "officially" last one (= the last one according
+         * to the Xing header frame) are located past the padding samples
+         * that follow the actual playback range. The length of these
+         * padding samples in nanoseconds is stored in end_padding_time.
+         * We need to shift the PTS to compensate for these padding samples,
+         * otherwise there would be a timestamp discontinuity between the
+         * last "official" frame and the first "Frankenstein" frame. */
+        timestamp_decrement += mp3parse->end_padding_time;
+      } else if (sample_pos_end <= mp3parse->start_of_actual_samples) {
+        /* Test #2: Check if the frame lies completely before the actual
+         * playback range. This happens if the number of padding samples
+         * at the start of the stream exceeds the size of a frame, meaning
+         * that the entire frame will be filled with padding samples.
+         * This has not been observed so far. However, it is in theory
+         * possible, so handle it here. */
+
+        /* We want to clip all samples in the frame. Since this is a frame
+         * at the start of the stream, set start_clip to the frame size.
+         * Also set the buffer duration to 0 to make sure baseparse does not
+         * increment timestamps after this current frame is finished. */
+        start_clip = mp3parse->spf;
+        GST_BUFFER_DURATION (frame->buffer) = 0;
+
+        add_clipping_meta = TRUE;
+      } else if (sample_pos <= mp3parse->start_of_actual_samples) {
+        /* Test #3: Check if a portion of the frame lies before the actual
+         * playback range. Set the duration to the number of samples that
+         * remain after clipping. */
+
+        start_clip = mp3parse->start_of_actual_samples - sample_pos;
+        GST_BUFFER_DURATION (frame->buffer) =
+            gst_util_uint64_scale_int (sample_pos_end -
+            mp3parse->start_of_actual_samples, GST_SECOND, mp3parse->rate);
+
+        add_clipping_meta = TRUE;
+      } else if (sample_pos >= mp3parse->end_of_actual_samples) {
+        /* Test #4: Check if the frame lies completely after the actual
+         * playback range. Similar to test #2, this happens if the number
+         * of padding samples at the end of the stream exceeds the size of
+         * a frame, meaning that the entire frame will be filled with padding
+         * samples. Unlike test #2, this has been observed in mp3s several
+         * times: The penultimate frame is partially clipped, the final
+         * frame is fully clipped. */
+
+        GstClockTime padding_ns;
+
+        /* We want to clip all samples in the frame. Since this is a frame
+         * at the end of the stream, set end_clip to the frame size.
+         * Also set the buffer duration to 0 to make sure baseparse does not
+         * increment timestamps after this current frame is finished. */
+        end_clip = mp3parse->spf;
+        GST_BUFFER_DURATION (frame->buffer) = 0;
+
+        /* Even though this frame will be fully clipped, we still have to
+         * make sure its timestamps are not discontinuous with the preceding
+         * ones. To that end, it is necessary to subtract the time range
+         * between the current position and the last valid playback range
+         * position from the PTS and DTS. */
+        padding_ns = gst_util_uint64_scale_int (sample_pos -
+            mp3parse->end_of_actual_samples, GST_SECOND, mp3parse->rate);
+        timestamp_decrement += padding_ns;
+
+        add_clipping_meta = TRUE;
+      } else if (sample_pos_end >= mp3parse->end_of_actual_samples) {
+        /* Test #5: Check if a portion of the frame lies after the actual
+         * playback range. Set the duration to the number of samples that
+         * remain after clipping. */
+
+        end_clip = sample_pos_end - mp3parse->end_of_actual_samples;
+        GST_BUFFER_DURATION (frame->buffer) =
+            gst_util_uint64_scale_int (mp3parse->end_of_actual_samples -
+            sample_pos, GST_SECOND, mp3parse->rate);
+
+        add_clipping_meta = TRUE;
+      }
+    }
+
+    if (G_UNLIKELY (add_clipping_meta)) {
+      GST_DEBUG_OBJECT (mp3parse, "Adding clipping meta: start %"
+          G_GUINT32_FORMAT " end %" G_GUINT32_FORMAT, start_clip, end_clip);
+      gst_buffer_add_audio_clipping_meta (frame->buffer, GST_FORMAT_DEFAULT,
+          start_clip, end_clip);
+    }
+
+    /* Adjust the timestamps by subtracting from them. The decrement
+     * is computed above. */
+    GST_BUFFER_PTS (frame->buffer) = (pts >= timestamp_decrement) ? (pts -
+        timestamp_decrement) : 0;
+    GST_BUFFER_DTS (frame->buffer) = (dts >= timestamp_decrement) ? (dts -
+        timestamp_decrement) : 0;
+
+    /* NOTE: We do not adjust the size here, just the timestamps and duration.
+     * We also do not drop fully clipped frames. This is because downstream
+     * MPEG audio decoders still need the data of the frame, even if it gets
+     * fully clipped later. They do need these frames for their decoding process.
+     * If these frames were dropped, the decoders would not fully decode all
+     * of the data from the MPEG stream. */
+
+    /* TODO: Should offset/offset_end also be adjusted? */
+  }
+
+  /* Check if this frame can safely be dropped (for example, because it is an
+   * empty Xing header frame). */
+  if (G_UNLIKELY (mp3parse->outgoing_frame_is_xing_header)) {
+    GST_DEBUG_OBJECT (mp3parse, "Marking frame as decode-only / droppable");
+    mp3parse->outgoing_frame_is_xing_header = FALSE;
+    GST_BUFFER_DURATION (frame->buffer) = 0;
+    GST_BUFFER_FLAG_SET (frame->buffer, GST_BUFFER_FLAG_DECODE_ONLY);
+    GST_BUFFER_FLAG_SET (frame->buffer, GST_BUFFER_FLAG_DROPPABLE);
   }
 
   /* usual clipping applies */

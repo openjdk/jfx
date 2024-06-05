@@ -25,25 +25,23 @@
 
 #pragma once
 
+#include "YarrFlags.h"
+#include <wtf/OptionSet.h>
 #include <wtf/text/WTFString.h>
 
 namespace JSC { namespace Yarr {
 
-enum MultilineMode { MultilineDisabled, MultilineEnabled };
-enum TextCaseSensitivity { TextCaseSensitive, TextCaseInsensitive };
-enum UnicodeMode { UnicodeUnawareMode, UnicodeAwareMode };
-
 class JS_EXPORT_PRIVATE RegularExpression {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit RegularExpression(const String&, TextCaseSensitivity = TextCaseSensitive, MultilineMode = MultilineDisabled, UnicodeMode = UnicodeUnawareMode);
+    explicit RegularExpression(StringView, OptionSet<Flags> = { });
     ~RegularExpression();
 
     RegularExpression(const RegularExpression&);
     RegularExpression& operator=(const RegularExpression&);
 
-    int match(const String&, int startFrom = 0, int* matchLength = nullptr) const;
-    int searchRev(const String&) const;
+    int match(StringView, unsigned startFrom = 0, int* matchLength = nullptr) const;
+    int searchRev(StringView) const;
 
     int matchedLength() const;
     bool isValid() const;
@@ -53,6 +51,6 @@ private:
     RefPtr<Private> d;
 };
 
-void JS_EXPORT_PRIVATE replace(String&, const RegularExpression&, const String&);
+void JS_EXPORT_PRIVATE replace(String&, const RegularExpression&, StringView);
 
 } } // namespace JSC::Yarr

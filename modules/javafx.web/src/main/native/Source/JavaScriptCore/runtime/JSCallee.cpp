@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,11 +30,11 @@
 
 namespace JSC {
 
-const ClassInfo JSCallee::s_info = { "Callee", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSCallee) };
+const ClassInfo JSCallee::s_info = { "Callee"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSCallee) };
 
 JSCallee::JSCallee(VM& vm, JSGlobalObject* globalObject, Structure* structure)
     : Base(vm, structure)
-    , m_scope(vm, this, globalObject)
+    , m_scope(globalObject, WriteBarrierEarlyInit)
 {
 }
 
@@ -42,12 +42,6 @@ JSCallee::JSCallee(VM& vm, JSScope* scope, Structure* structure)
     : Base(vm, structure)
 {
     setScope(vm, scope);
-}
-
-void JSCallee::finishCreation(VM& vm)
-{
-    Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
 }
 
 template<typename Visitor>

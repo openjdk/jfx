@@ -78,8 +78,8 @@ void RTCIceTransport::onStateChanged(RTCIceTransportState state)
             return;
 
         m_transportState = state;
-        if (m_connection)
-            m_connection->processIceTransportStateChange(*this);
+        if (auto connection = this->connection())
+            connection->processIceTransportStateChange(*this);
     });
 }
 
@@ -95,6 +95,26 @@ void RTCIceTransport::onGatheringStateChanged(RTCIceGatheringState state)
         m_gatheringState = state;
         dispatchEvent(Event::create(eventNames().gatheringstatechangeEvent, Event::CanBubble::Yes, Event::IsCancelable::No));
     });
+}
+
+void RTCIceTransport::onSelectedCandidatePairChanged(RefPtr<RTCIceCandidate>&& local, RefPtr<RTCIceCandidate>&& remote)
+{
+    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, local = WTFMove(local), remote = WTFMove(remote)]() mutable {
+        if (m_isStopped)
+            return;
+
+        m_selectedCandidatePair = CandidatePair { WTFMove(local), WTFMove(remote) };
+        dispatchEvent(Event::create(eventNames().selectedcandidatepairchangeEvent, Event::CanBubble::Yes, Event::IsCancelable::No));
+    });
+}
+
+std::optional<RTCIceTransport::CandidatePair> RTCIceTransport::getSelectedCandidatePair()
+{
+    if (m_transportState == RTCIceTransportState::Closed)
+        return { };
+
+    ASSERT(m_transportState != RTCIceTransportState::New || !m_selectedCandidatePair);
+    return m_selectedCandidatePair;
 }
 
 } // namespace WebCore

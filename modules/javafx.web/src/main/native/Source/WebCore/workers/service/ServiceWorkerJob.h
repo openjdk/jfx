@@ -34,6 +34,7 @@
 #include "ServiceWorkerTypes.h"
 #include "WorkerScriptLoader.h"
 #include "WorkerScriptLoaderClient.h"
+#include <wtf/CompletionHandler.h>
 #include <wtf/RefPtr.h>
 #include <wtf/RunLoop.h>
 #include <wtf/ThreadSafeRefCounted.h>
@@ -44,7 +45,7 @@ namespace WebCore {
 class DeferredPromise;
 class Exception;
 class ScriptExecutionContext;
-enum class ServiceWorkerJobType;
+enum class ServiceWorkerJobType : uint8_t;
 struct ServiceWorkerRegistrationData;
 
 class ServiceWorkerJob : public WorkerScriptLoaderClient {

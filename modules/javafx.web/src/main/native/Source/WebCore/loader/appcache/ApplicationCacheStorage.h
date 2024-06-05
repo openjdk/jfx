@@ -56,6 +56,7 @@ public:
     }
 
 
+    const String& cacheDirectory() const { return m_cacheDirectory; }
     WEBCORE_EXPORT void setMaximumSize(int64_t size);
     WEBCORE_EXPORT int64_t maximumSize() const;
     bool isMaximumSizeReached() const;
@@ -122,7 +123,7 @@ private:
     bool ensureOriginRecord(const SecurityOrigin*);
     static bool shouldStoreResourceAsFlatFile(ApplicationCacheResource*);
     void deleteTables();
-    bool writeDataToUniqueFileInDirectory(FragmentedSharedBuffer&, const String& directory, String& outFilename, const String& fileExtension);
+    bool writeDataToUniqueFileInDirectory(FragmentedSharedBuffer&, const String& directory, String& outFilename, StringView fileExtension);
 
     void loadManifestHostHashes();
 

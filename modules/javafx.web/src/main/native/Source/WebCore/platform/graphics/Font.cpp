@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Alexey Proskuryakov
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,11 +39,11 @@
 #include "FontCache.h"
 #include "FontCascade.h"
 #include "FontCustomPlatformData.h"
-#include "OpenTypeMathData.h"
 #include "SharedBuffer.h"
 #include <wtf/MathExtras.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/AtomStringHash.h>
+#include <wtf/text/TextStream.h>
 
 #if ENABLE(OPENTYPE_VERTICAL)
 #include "OpenTypeVerticalData.h"
@@ -76,15 +76,11 @@ Ref<Font> Font::create(Ref<SharedBuffer>&& fontFaceData, Font::Origin origin, fl
 
 Font::Font(const FontPlatformData& platformData, Origin origin, Interstitial interstitial, Visibility visibility, OrientationFallback orientationFallback, std::optional<RenderingResourceIdentifier> renderingResourceIdentifier)
     : m_platformData(platformData)
-    , m_renderingResourceIdentifier(renderingResourceIdentifier)
-    , m_origin(origin)
-    , m_visibility(visibility)
+    , m_attributes({ renderingResourceIdentifier, origin, interstitial, visibility, orientationFallback })
     , m_treatAsFixedPitch(false)
-    , m_isInterstitial(interstitial == Interstitial::Yes)
-    , m_isTextOrientationFallback(orientationFallback == OrientationFallback::Yes)
     , m_isBrokenIdeographFallback(false)
     , m_hasVerticalGlyphs(false)
-    , m_isUsedInSystemFallbackCache(false)
+    , m_isUsedInSystemFallbackFontCache(false)
     , m_allowsAntialiasing(true)
 #if PLATFORM(IOS_FAMILY)
     , m_shouldNotBeUsedForArabic(false)
@@ -174,14 +170,19 @@ void Font::platformGlyphInit()
 
 Font::~Font()
 {
-    removeFromSystemFallbackCache();
+    SystemFallbackFontCache::forCurrentThread().remove(this);
 }
 
 RenderingResourceIdentifier Font::renderingResourceIdentifier() const
 {
-    if (!m_renderingResourceIdentifier)
-        m_renderingResourceIdentifier = RenderingResourceIdentifier::generate();
-    return *m_renderingResourceIdentifier;
+    return m_attributes.ensureRenderingResourceIdentifier();
+}
+
+RenderingResourceIdentifier Font::Attributes::ensureRenderingResourceIdentifier() const
+{
+    if (!renderingResourceIdentifier)
+        renderingResourceIdentifier = RenderingResourceIdentifier::generate();
+    return *renderingResourceIdentifier;
 }
 
 static bool fillGlyphPage(GlyphPage& pageToFill, UChar* buffer, unsigned bufferLength, const Font& font)
@@ -300,13 +301,13 @@ static std::optional<size_t> codePointSupportIndex(UChar32 codePoint)
         zeroWidthNoBreakSpace
     };
     bool found = false;
-    for (size_t i = 0; i < WTF_ARRAY_LENGTH(codePointOrder); ++i) {
+    for (size_t i = 0; i < std::size(codePointOrder); ++i) {
         if (codePointOrder[i] == codePoint) {
             ASSERT(i == result);
             found = true;
         }
     }
-    ASSERT(found == static_cast<bool>(result));
+    ASSERT_UNUSED(found, found == static_cast<bool>(result));
 #endif
     return result;
 }
@@ -403,11 +404,6 @@ static RefPtr<GlyphPage> createAndFillGlyphPage(unsigned pageNumber, const Font&
 
 const GlyphPage* Font::glyphPage(unsigned pageNumber) const
 {
-    if (!pageNumber) {
-        if (!m_glyphPageZero)
-            m_glyphPageZero = createAndFillGlyphPage(0, *this);
-        return m_glyphPageZero.get();
-    }
     auto addResult = m_glyphPages.add(pageNumber, nullptr);
     if (addResult.isNewEntry)
         addResult.iterator->value = createAndFillGlyphPage(pageNumber, *this);
@@ -523,12 +519,13 @@ bool Font::isProbablyOnlyUsedToRenderIcons() const
 String Font::description() const
 {
     if (origin() == Origin::Remote)
-        return "[custom font]";
+        return "[custom font]"_s;
 
     return platformData().description();
 }
 #endif
 
+#if ENABLE(MATHML)
 const OpenTypeMathData* Font::mathData() const
 {
     if (isInterstitial())
@@ -540,6 +537,7 @@ const OpenTypeMathData* Font::mathData() const
     }
     return m_mathData.get();
 }
+#endif
 
 RefPtr<Font> Font::createScaledFont(const FontDescription& fontDescription, float scaleFactor) const
 {
@@ -553,87 +551,13 @@ GlyphBufferAdvance Font::applyTransforms(GlyphBuffer&, unsigned, unsigned, bool,
 }
 #endif
 
-struct CharacterFallbackMapKey {
-    AtomString locale;
-    UChar32 character { 0 };
-    bool isForPlatformFont { false };
-};
-
-inline bool operator==(const CharacterFallbackMapKey& a, const CharacterFallbackMapKey& b)
+RefPtr<Font> Font::systemFallbackFontForCharacter(UChar32 character, const FontDescription& description, ResolvedEmojiPolicy resolvedEmojiPolicy, IsForPlatformFont isForPlatformFont) const
 {
-    return a.locale == b.locale && a.character == b.character && a.isForPlatformFont == b.isForPlatformFont;
-}
-
-struct CharacterFallbackMapKeyHash {
-    static unsigned hash(const CharacterFallbackMapKey& key) { return computeHash(key.locale, key.character, key.isForPlatformFont); }
-    static bool equal(const CharacterFallbackMapKey& a, const CharacterFallbackMapKey& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
-};
-
-struct CharacterFallbackMapKeyHashTraits : SimpleClassHashTraits<CharacterFallbackMapKey> {
-    static void constructDeletedValue(CharacterFallbackMapKey& slot) { new (NotNull, &slot) CharacterFallbackMapKey { { }, U_SENTINEL, { } }; }
-    static bool isDeletedValue(const CharacterFallbackMapKey& key) { return key.character == U_SENTINEL; }
-};
-
-// Fonts are not ref'd to avoid cycles.
-// FIXME: Consider changing these maps to use WeakPtr instead of raw pointers.
-using CharacterFallbackMap = HashMap<CharacterFallbackMapKey, Font*, CharacterFallbackMapKeyHash, CharacterFallbackMapKeyHashTraits>;
-using SystemFallbackCache = HashMap<const Font*, CharacterFallbackMap>;
-
-static SystemFallbackCache& systemFallbackCache()
-{
-    static NeverDestroyed<SystemFallbackCache> map;
-    return map.get();
-}
-
-RefPtr<Font> Font::systemFallbackFontForCharacter(UChar32 character, const FontDescription& description, IsForPlatformFont isForPlatformFont) const
-{
-    auto fontAddResult = systemFallbackCache().add(this, CharacterFallbackMap());
-
-    if (!character) {
-        UChar codeUnit = 0;
-        return FontCache::forCurrentThread().systemFallbackForCharacters(description, this, isForPlatformFont, FontCache::PreferColoredFont::No, &codeUnit, 1);
-    }
-
-    auto key = CharacterFallbackMapKey { description.computedLocale(), character, isForPlatformFont != IsForPlatformFont::No };
-    return fontAddResult.iterator->value.ensure(WTFMove(key), [&] {
-        UChar codeUnits[2];
-        unsigned codeUnitsLength;
-        if (U_IS_BMP(character)) {
-            codeUnits[0] = FontCascade::normalizeSpaces(character);
-            codeUnitsLength = 1;
-        } else {
-            codeUnits[0] = U16_LEAD(character);
-            codeUnits[1] = U16_TRAIL(character);
-            codeUnitsLength = 2;
-        }
-        auto font = FontCache::forCurrentThread().systemFallbackForCharacters(description, this, isForPlatformFont, FontCache::PreferColoredFont::No, codeUnits, codeUnitsLength).get();
-        if (font)
-            font->m_isUsedInSystemFallbackCache = true;
-        return font;
-    }).iterator->value;
-}
-
-void Font::removeFromSystemFallbackCache()
-{
-    systemFallbackCache().remove(this);
-
-    if (!m_isUsedInSystemFallbackCache)
-        return;
-
-    for (auto& characterMap : systemFallbackCache().values()) {
-        Vector<CharacterFallbackMapKey, 512> toRemove;
-        for (auto& entry : characterMap) {
-            if (entry.value == this)
-                toRemove.append(entry.key);
-        }
-        for (auto& key : toRemove)
-            characterMap.remove(key);
-    }
+    return SystemFallbackFontCache::forCurrentThread().systemFallbackFontForCharacter(this, character, description, resolvedEmojiPolicy, isForPlatformFont);
 }
 
 #if !PLATFORM(COCOA) && !USE(FREETYPE)
-bool Font::variantCapsSupportsCharacterForSynthesis(FontVariantCaps fontVariantCaps, UChar32) const
+bool Font::variantCapsSupportedForSynthesis(FontVariantCaps fontVariantCaps) const
 {
     switch (fontVariantCaps) {
     case FontVariantCaps::Small:
@@ -670,8 +594,6 @@ bool Font::supportsCodePoint(UChar32 character) const
 
 bool Font::canRenderCombiningCharacterSequence(const UChar* characters, size_t length) const
 {
-    ASSERT(isMainThread());
-
     auto codePoints = StringView(characters, length).codePoints();
     auto it = codePoints.begin();
     auto end = codePoints.end();
@@ -695,14 +617,40 @@ bool Font::canRenderCombiningCharacterSequence(const UChar* characters, size_t l
     return true;
 }
 
-// Don't store the result of this! The hash map is free to rehash at any point, leaving this reference dangling.
-const Path& Font::pathForGlyph(Glyph glyph) const
+Path Font::pathForGlyph(Glyph glyph) const
 {
-    if (const auto& path = m_glyphPathMap.existingMetricsForGlyph(glyph))
+    if (m_glyphPathMap) {
+        if (const auto& path = m_glyphPathMap->existingMetricsForGlyph(glyph))
         return *path;
+    }
     auto path = platformPathForGlyph(glyph);
-    m_glyphPathMap.setMetricsForGlyph(glyph, path);
-    return *m_glyphPathMap.existingMetricsForGlyph(glyph);
+    if (!m_glyphPathMap)
+        m_glyphPathMap = makeUnique<GlyphMetricsMap<std::optional<Path>>>();
+
+    m_glyphPathMap->setMetricsForGlyph(glyph, path);
+    return *m_glyphPathMap->existingMetricsForGlyph(glyph);
 }
+
+ColorGlyphType Font::colorGlyphType(Glyph glyph) const
+{
+    if (glyph == deletedGlyph)
+        return ColorGlyphType::Outline;
+
+    return WTF::switchOn(m_emojiType, [](NoEmojiGlyphs) {
+        return ColorGlyphType::Outline;
+    }, [](AllEmojiGlyphs) {
+        return ColorGlyphType::Color;
+    }, [glyph](const SomeEmojiGlyphs& someEmojiGlyphs) {
+        return someEmojiGlyphs.colorGlyphs.get(glyph) ? ColorGlyphType::Color : ColorGlyphType::Outline;
+    });
+}
+
+#if !LOG_DISABLED
+TextStream& operator<<(TextStream& ts, const Font& font)
+{
+    ts << font.description();
+    return ts;
+}
+#endif
 
 } // namespace WebCore

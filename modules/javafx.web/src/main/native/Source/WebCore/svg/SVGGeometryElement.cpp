@@ -36,8 +36,8 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGGeometryElement);
 
-SVGGeometryElement::SVGGeometryElement(const QualifiedName& tagName, Document& document)
-    : SVGGraphicsElement(tagName, document)
+SVGGeometryElement::SVGGeometryElement(const QualifiedName& tagName, Document& document, UniqueRef<SVGPropertyRegistry>&& propertyRegistry)
+    : SVGGraphicsElement(tagName, document, WTFMove(propertyRegistry))
 {
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
@@ -69,14 +69,14 @@ ExceptionOr<Ref<SVGPoint>> SVGGeometryElement::getPointAtLength(float distance) 
 {
     document().updateLayoutIgnorePendingStylesheets();
 
+    // Spec: Clamp distance to [0, length].
+    distance = clampTo<float>(distance, 0, getTotalLength());
+
     auto* renderer = this->renderer();
 
     // Spec: If current element is a non-rendered element, throw an InvalidStateError.
     if (!renderer)
         return Exception { InvalidStateError };
-
-    // Spec: Clamp distance to [0, length].
-    distance = clampTo<float>(distance, 0, getTotalLength());
 
     // Spec: Return a newly created, detached SVGPoint object.
     if (is<LegacyRenderSVGShape>(renderer))
@@ -133,24 +133,23 @@ bool SVGGeometryElement::isPointInStroke(DOMPointInit&& pointInit)
     return false;
 }
 
-void SVGGeometryElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGGeometryElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     if (name == SVGNames::pathLengthAttr) {
-        m_pathLength->setBaseValInternal(value.toFloat());
+        m_pathLength->setBaseValInternal(newValue.toFloat());
         if (m_pathLength->baseVal() < 0)
-            document().accessSVGExtensions().reportError("A negative value for path attribute <pathLength> is not allowed");
-        return;
+            document().accessSVGExtensions().reportError("A negative value for path attribute <pathLength> is not allowed"_s);
     }
 
-    SVGGraphicsElement::parseAttribute(name, value);
+    SVGGraphicsElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGGeometryElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (attrName == SVGNames::pathLengthAttr) {
+    if (PropertyRegistry::isKnownAttribute(attrName)) {
+        ASSERT(attrName == SVGNames::pathLengthAttr);
         InstanceInvalidationGuard guard(*this);
-        if (auto* renderer = this->renderer())
-            RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
+        updateSVGRendererForElementChange();
         return;
     }
 

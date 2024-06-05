@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "CSSComputedStyleDeclaration.h"
 #include "CSSPropertyParser.h"
+#include "ComputedStyleExtractor.h"
 #include "SVGAttributeAnimator.h"
 #include "SVGElement.h"
 
@@ -72,7 +72,7 @@ protected:
 
     String adjustForInheritance(SVGElement& targetElement, const String& value) const
     {
-        static MainThreadNeverDestroyed<const AtomString> inherit("inherit", AtomString::ConstructFromLiteral);
+        static MainThreadNeverDestroyed<const AtomString> inherit("inherit"_s);
         return value == inherit ? computeInheritedCSSPropertyValue(targetElement) : value;
     }
 

@@ -44,7 +44,7 @@ static JSC_DECLARE_HOST_FUNCTION(temporalPlainDateConstructorFuncCompare);
 
 namespace JSC {
 
-const ClassInfo TemporalPlainDateConstructor::s_info = { "Function", &Base::s_info, &temporalPlainDateConstructorTable, nullptr, CREATE_METHOD_TABLE(TemporalPlainDateConstructor) };
+const ClassInfo TemporalPlainDateConstructor::s_info = { "Function"_s, &Base::s_info, &temporalPlainDateConstructorTable, nullptr, CREATE_METHOD_TABLE(TemporalPlainDateConstructor) };
 
 /* Source for TemporalPlainDateConstructor.lut.h
 @begin temporalPlainDateConstructorTable
@@ -75,7 +75,7 @@ TemporalPlainDateConstructor::TemporalPlainDateConstructor(VM& vm, Structure* st
 
 void TemporalPlainDateConstructor::finishCreation(VM& vm, TemporalPlainDatePrototype* plainDatePrototype)
 {
-    Base::finishCreation(vm, 0, "PlainDate"_s, PropertyAdditionMode::WithoutStructureTransition);
+    Base::finishCreation(vm, 3, "PlainDate"_s, PropertyAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, plainDatePrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
     plainDatePrototype->putDirectWithoutTransition(vm, vm.propertyNames->constructor, this, static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
@@ -141,7 +141,7 @@ JSC_DEFINE_HOST_FUNCTION(temporalPlainDateConstructorFuncFrom, (JSGlobalObject* 
 
     JSValue itemValue = callFrame->argument(0);
 
-    if (itemValue.inherits<TemporalPlainDate>(vm))
+    if (itemValue.inherits<TemporalPlainDate>())
         RELEASE_AND_RETURN(scope, JSValue::encode(TemporalPlainDate::create(vm, globalObject->plainDateStructure(), jsCast<TemporalPlainDate*>(itemValue)->plainDate())));
 
     RELEASE_AND_RETURN(scope, JSValue::encode(TemporalPlainDate::from(globalObject, itemValue, overflow)));
@@ -159,7 +159,7 @@ JSC_DEFINE_HOST_FUNCTION(temporalPlainDateConstructorFuncCompare, (JSGlobalObjec
     auto* two = TemporalPlainDate::from(globalObject, callFrame->argument(1), std::nullopt);
     RETURN_IF_EXCEPTION(scope, { });
 
-    return JSValue::encode(jsNumber(TemporalPlainDate::compare(one, two)));
+    return JSValue::encode(jsNumber(TemporalCalendar::isoDateCompare(one->plainDate(), two->plainDate())));
 }
 
 } // namespace JSC

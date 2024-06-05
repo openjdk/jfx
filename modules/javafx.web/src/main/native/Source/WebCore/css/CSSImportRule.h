@@ -22,12 +22,16 @@
 #pragma once
 
 #include "CSSRule.h"
-#include "StyleRule.h"
 
 namespace WebCore {
 
 class MediaList;
 class StyleRuleImport;
+
+namespace MQ {
+struct MediaQuery;
+using MediaQueryList = Vector<MediaQuery>;
+}
 
 class CSSImportRule final : public CSSRule, public CanMakeWeakPtr<CSSImportRule> {
 public:
@@ -41,11 +45,16 @@ public:
     String layerName() const;
 
 private:
+    friend class MediaList;
+
     CSSImportRule(StyleRuleImport&, CSSStyleSheet*);
 
     StyleRuleType styleRuleType() const final { return StyleRuleType::Import; }
     String cssText() const final;
     void reattach(StyleRuleBase&) final;
+
+    const MQ::MediaQueryList& mediaQueries() const;
+    void setMediaQueries(MQ::MediaQueryList&&);
 
     Ref<StyleRuleImport> m_importRule;
     mutable RefPtr<MediaList> m_mediaCSSOMWrapper;

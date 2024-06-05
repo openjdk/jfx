@@ -35,16 +35,26 @@
 namespace WebCore {
 
 class URLInputType final : public BaseTextInputType {
-    template<typename DowncastedType> friend bool isInvalidInputType(const InputType&, const String&);
 public:
-    explicit URLInputType(HTMLInputElement& element) : BaseTextInputType(Type::URL, element) { }
+    static Ref<URLInputType> create(HTMLInputElement& element)
+    {
+        return adoptRef(*new URLInputType(element));
+    }
+
+    bool typeMismatchFor(const String&) const final;
+    bool typeMismatch() const final;
 
 private:
-    const AtomString& formControlType() const override;
-    bool typeMismatchFor(const String&) const override;
-    bool typeMismatch() const override;
-    String typeMismatchText() const override;
-    String sanitizeValue(const String&) const override;
+    explicit URLInputType(HTMLInputElement& element)
+        : BaseTextInputType(Type::URL, element)
+    {
+    }
+
+    const AtomString& formControlType() const final;
+    String typeMismatchText() const final;
+    String sanitizeValue(const String&) const final;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_INPUT_TYPE(URLInputType, Type::URL)

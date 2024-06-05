@@ -21,6 +21,7 @@
 #include "config.h"
 #include "SVGFEDropShadowElement.h"
 
+#include "NodeName.h"
 #include "RenderStyle.h"
 #include "SVGNames.h"
 #include "SVGParserUtilities.h"
@@ -32,7 +33,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFEDropShadowElement);
 
 inline SVGFEDropShadowElement::SVGFEDropShadowElement(const QualifiedName& tagName, Document& document)
-    : SVGFilterPrimitiveStandardAttributes(tagName, document)
+    : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::feDropShadowTag));
 
@@ -54,49 +55,98 @@ void SVGFEDropShadowElement::setStdDeviation(float x, float y)
 {
     m_stdDeviationX->setBaseValInternal(x);
     m_stdDeviationY->setBaseValInternal(y);
-    invalidate();
+    updateSVGRendererForElementChange();
 }
 
-void SVGFEDropShadowElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGFEDropShadowElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == SVGNames::stdDeviationAttr) {
-        if (auto result = parseNumberOptionalNumber(value)) {
+    switch (name.nodeName()) {
+    case AttributeNames::stdDeviationAttr:
+        if (auto result = parseNumberOptionalNumber(newValue)) {
             m_stdDeviationX->setBaseValInternal(result->first);
             m_stdDeviationY->setBaseValInternal(result->second);
         }
-        return;
+        break;
+    case AttributeNames::inAttr:
+        m_in1->setBaseValInternal(newValue);
+        break;
+    case AttributeNames::dxAttr:
+        m_dx->setBaseValInternal(newValue.toFloat());
+        break;
+    case AttributeNames::dyAttr:
+        m_dy->setBaseValInternal(newValue.toFloat());
+        break;
+    default:
+        break;
     }
 
-    if (name == SVGNames::inAttr) {
-        m_in1->setBaseValInternal(value);
-        return;
-    }
-
-    if (name == SVGNames::dxAttr) {
-        m_dx->setBaseValInternal(value.toFloat());
-        return;
-    }
-
-    if (name == SVGNames::dyAttr) {
-        m_dy->setBaseValInternal(value.toFloat());
-        return;
-    }
-
-    SVGFilterPrimitiveStandardAttributes::parseAttribute(name, value);
+    SVGFilterPrimitiveStandardAttributes::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGFEDropShadowElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (PropertyRegistry::isKnownAttribute(attrName)) {
+    switch (attrName.nodeName()) {
+    case AttributeNames::inAttr: {
         InstanceInvalidationGuard guard(*this);
-        invalidate();
+        updateSVGRendererForElementChange();
+        break;
+    }
+    case AttributeNames::stdDeviationAttr: {
+        if (stdDeviationX() < 0 || stdDeviationY() < 0) {
+        InstanceInvalidationGuard guard(*this);
+        markFilterEffectForRebuild();
         return;
     }
-
+        FALLTHROUGH;
+    }
+    case AttributeNames::dxAttr:
+    case AttributeNames::dyAttr: {
+        InstanceInvalidationGuard guard(*this);
+        primitiveAttributeChanged(attrName);
+        break;
+    }
+    default:
     SVGFilterPrimitiveStandardAttributes::svgAttributeChanged(attrName);
+        break;
+    }
 }
 
-RefPtr<FilterEffect> SVGFEDropShadowElement::filterEffect(const SVGFilterBuilder&, const FilterEffectVector&) const
+bool SVGFEDropShadowElement::setFilterEffectAttribute(FilterEffect& filterEffect, const QualifiedName& attrName)
+{
+    auto& effect = downcast<FEDropShadow>(filterEffect);
+    switch (attrName.nodeName()) {
+    case AttributeNames::stdDeviationAttr:
+        return effect.setStdDeviationX(stdDeviationX()) || effect.setStdDeviationY(stdDeviationY());
+    case AttributeNames::dxAttr:
+        return effect.setDx(dx());
+    case AttributeNames::dyAttr:
+        return effect.setDy(dy());
+    case AttributeNames::flood_colorAttr: {
+        auto& style = renderer()->style();
+        return effect.setShadowColor(style.colorResolvingCurrentColor(style.svgStyle().floodColor()));
+    }
+    case AttributeNames::flood_opacityAttr:
+        return effect.setShadowOpacity(renderer()->style().svgStyle().floodOpacity());
+    default:
+        break;
+    }
+    ASSERT_NOT_REACHED();
+    return false;
+}
+
+bool SVGFEDropShadowElement::isIdentity() const
+{
+    return !stdDeviationX() && !stdDeviationY() && !dx() && !dy();
+}
+
+IntOutsets SVGFEDropShadowElement::outsets(const FloatRect& targetBoundingBox, SVGUnitTypes::SVGUnitType primitiveUnits) const
+{
+    auto offset = SVGFilter::calculateResolvedSize({ dx(), dy() }, targetBoundingBox, primitiveUnits);
+    auto stdDeviation = SVGFilter::calculateResolvedSize({ stdDeviationX(), stdDeviationY() }, targetBoundingBox, primitiveUnits);
+    return FEDropShadow::calculateOutsets(offset, stdDeviation);
+}
+
+RefPtr<FilterEffect> SVGFEDropShadowElement::createFilterEffect(const FilterEffectVector&, const GraphicsContext&) const
 {
     RenderObject* renderer = this->renderer();
     if (!renderer)
@@ -105,9 +155,10 @@ RefPtr<FilterEffect> SVGFEDropShadowElement::filterEffect(const SVGFilterBuilder
     if (stdDeviationX() < 0 || stdDeviationY() < 0)
         return nullptr;
 
-    const SVGRenderStyle& svgStyle = renderer->style().svgStyle();
+    auto& style = renderer->style();
+    const SVGRenderStyle& svgStyle = style.svgStyle();
 
-    Color color = renderer->style().colorByApplyingColorFilter(svgStyle.floodColor());
+    Color color = style.colorWithColorFilter(svgStyle.floodColor());
     float opacity = svgStyle.floodOpacity();
 
     return FEDropShadow::create(stdDeviationX(), stdDeviationY(), dx(), dy(), color, opacity);

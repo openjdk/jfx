@@ -97,19 +97,23 @@ void OSAllocator::commit(void* address, size_t bytes, bool writable, bool execut
 
 void OSAllocator::decommit(void* address, size_t bytes)
 {
-    // According to http://msdn.microsoft.com/en-us/library/aa366892(VS.85).aspx,
-    // bytes (i.e. dwSize) being 0 when dwFreeType is MEM_DECOMMIT means that we'll
-    // decommit the entire region allocated by VirtualAlloc() instead of decommitting
-    // nothing as we would expect. Hence, we should check if bytes is 0 and handle it
-    // appropriately before calling VirtualFree().
-    // See: https://bugs.webkit.org/show_bug.cgi?id=121972.
+    // https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualalloc
+    // Use MEM_RESET to purge physical pages at timing of OS's preference. This is aligned to
+    // madvise MADV_FREE / MADV_FREE_REUSABLE.
+    // https://devblogs.microsoft.com/oldnewthing/20170113-00/?p=95185
+    // > The fact that MEM_RESET does not remove the page from the working set is not actually mentioned
+    // > in the documentation for the MEM_RESET flag. Instead, it’s mentioned in the documentation for
+    // > the Offer­Virtual­Memory function, and in a sort of backhanded way
+    // So, we need VirtualUnlock call.
     if (!bytes)
         return;
-    // Silence warning about using MEM_DECOMMIT instead of MEM_RELEASE:
-#pragma warning(suppress: 6250)
-    bool result = VirtualFree(address, bytes, MEM_DECOMMIT);
+    void* result = VirtualAlloc(address, bytes, MEM_RESET, PAGE_READWRITE);
     if (!result)
         CRASH();
+    // Calling VirtualUnlock on a range of memory that is not locked releases the pages from the
+    // process's working set.
+    // https://devblogs.microsoft.com/oldnewthing/20170317-00/?p=95755
+    VirtualUnlock(address, bytes);
 }
 
 void OSAllocator::releaseDecommitted(void* address, size_t bytes)
@@ -127,6 +131,22 @@ void OSAllocator::releaseDecommitted(void* address, size_t bytes)
 
 void OSAllocator::hintMemoryNotNeededSoon(void*, size_t)
 {
+}
+
+bool OSAllocator::protect(void* address, size_t bytes, bool readable, bool writable)
+{
+    if (!bytes)
+        return true;
+    DWORD protection = 0;
+    if (readable) {
+        if (writable)
+            protection = PAGE_READWRITE;
+        else
+            protection = PAGE_READONLY;
+        return VirtualAlloc(address, bytes, MEM_COMMIT, protection);
+    }
+    ASSERT(!readable && !writable);
+    return VirtualFree(address, bytes, MEM_DECOMMIT);
 }
 
 } // namespace WTF

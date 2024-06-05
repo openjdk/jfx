@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,8 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PlatformMediaSessionManager_h
-#define PlatformMediaSessionManager_h
+#pragma once
 
 #include "MediaUniqueIdentifier.h"
 #include "PlatformMediaSession.h"
@@ -50,6 +49,7 @@ public:
     WEBCORE_EXPORT static PlatformMediaSessionManager& sharedManager();
 
     static void updateNowPlayingInfoIfNecessary();
+    static void updateAudioSessionCategoryIfNecessary();
 
     WEBCORE_EXPORT static void setShouldDeactivateAudioSession(bool);
     WEBCORE_EXPORT static bool shouldDeactivateAudioSession();
@@ -60,6 +60,10 @@ public:
     WEBCORE_EXPORT static bool vorbisDecoderEnabled();
     WEBCORE_EXPORT static void setOpusDecoderEnabled(bool);
     WEBCORE_EXPORT static bool opusDecoderEnabled();
+    WEBCORE_EXPORT static void setAlternateWebMPlayerEnabled(bool);
+    WEBCORE_EXPORT static bool alternateWebMPlayerEnabled();
+    WEBCORE_EXPORT static void setUseSCContentSharingPicker(bool);
+    WEBCORE_EXPORT static bool useSCContentSharingPicker();
 
 #if ENABLE(VP9)
     WEBCORE_EXPORT static void setShouldEnableVP9Decoder(bool);
@@ -131,13 +135,14 @@ public:
     virtual void sessionWillEndPlayback(PlatformMediaSession&, DelayCallingUpdateNowPlaying);
     virtual void sessionStateChanged(PlatformMediaSession&);
     virtual void sessionDidEndRemoteScrubbing(PlatformMediaSession&) { };
-    virtual void clientCharacteristicsChanged(PlatformMediaSession&) { }
+    virtual void clientCharacteristicsChanged(PlatformMediaSession&, bool) { }
     virtual void sessionCanProduceAudioChanged();
 
 #if PLATFORM(IOS_FAMILY)
-    virtual void configureWireLessTargetMonitoring() { }
+    virtual void configureWirelessTargetMonitoring() { }
 #endif
     virtual bool hasWirelessTargetsAvailable() { return false; }
+    virtual bool isMonitoringWirelessTargets() const { return false; }
 
     virtual void setCurrentSession(PlatformMediaSession&);
     PlatformMediaSession* currentSession() const;
@@ -157,7 +162,7 @@ public:
 
     WEBCORE_EXPORT void processDidReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType, const PlatformMediaSession::RemoteCommandArgument&);
 
-    bool isInterrupted() const { return m_interrupted; }
+    bool isInterrupted() const { return !!m_currentInterruption; }
     bool hasNoSession() const;
 
     virtual void addSupportedCommand(PlatformMediaSession::RemoteControlCommandType) { };
@@ -168,6 +173,9 @@ public:
     WEBCORE_EXPORT void processSystemDidWake();
 
     virtual void resetHaveEverRegisteredAsNowPlayingApplicationForTesting() { };
+    virtual void resetSessionState() { };
+
+    bool isApplicationInBackground() const { return m_isApplicationInBackground; }
 
 protected:
     friend class PlatformMediaSession;
@@ -181,7 +189,6 @@ protected:
     void forEachSessionInGroup(MediaSessionGroupIdentifier, const Function<void(PlatformMediaSession&)>&);
     bool anyOfSessions(const Function<bool(const PlatformMediaSession&)>&) const;
 
-    bool isApplicationInBackground() const { return m_isApplicationInBackground; }
     void maybeDeactivateAudioSession();
     bool maybeActivateAudioSession();
 
@@ -207,12 +214,13 @@ private:
     SessionRestrictions m_restrictions[static_cast<unsigned>(PlatformMediaSession::MediaType::WebAudio) + 1];
     mutable Vector<WeakPtr<PlatformMediaSession>> m_sessions;
 
-    bool m_interrupted { false };
+    std::optional<PlatformMediaSession::InterruptionType> m_currentInterruption;
     mutable bool m_isApplicationInBackground { false };
     bool m_willIgnoreSystemInterruptions { false };
     bool m_processIsSuspended { false };
     bool m_isPlayingToAutomotiveHeadUnit { false };
 
+    bool m_alreadyScheduledSessionStatedUpdate { false };
 #if USE(AUDIO_SESSION)
     bool m_becameActive { false };
 #endif
@@ -229,6 +237,12 @@ private:
 #if ENABLE(OPUS)
     static bool m_opusDecoderEnabled;
 #endif
+#if ENABLE(ALTERNATE_WEBM_PLAYER)
+    static bool m_alternateWebMPlayerEnabled;
+#endif
+#if HAVE(SC_CONTENT_SHARING_PICKER)
+    static bool s_useSCContentSharingPicker;
+#endif
 
 #if ENABLE(VP9)
     static bool m_vp9DecoderEnabled;
@@ -241,6 +255,4 @@ private:
 #endif
 };
 
-}
-
-#endif // PlatformMediaSessionManager_h
+} // namespace WebCore

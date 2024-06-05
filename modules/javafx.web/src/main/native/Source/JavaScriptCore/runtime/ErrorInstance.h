@@ -30,7 +30,8 @@ namespace JSC {
 class ErrorInstance : public JSNonFinalObject {
 public:
     using Base = JSNonFinalObject;
-    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetOwnSpecialPropertyNames | OverridesPut;
+
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetOwnSpecialPropertyNames | OverridesPut | GetOwnPropertySlotIsImpureForPropertyAbsence;
     static constexpr bool needsDestruction = true;
 
     static void destroy(JSCell* cell)
@@ -45,7 +46,7 @@ public:
     }
 
     enum SourceTextWhereErrorOccurred { FoundExactSource, FoundApproximateSource };
-    typedef String (*SourceAppender) (const String& originalMessage, const String& sourceText, RuntimeType, SourceTextWhereErrorOccurred);
+    typedef String (*SourceAppender) (const String& originalMessage, StringView sourceText, RuntimeType, SourceTextWhereErrorOccurred);
 
     DECLARE_EXPORT_INFO;
 
@@ -61,6 +62,7 @@ public:
         return instance;
     }
 
+    JS_EXPORT_PRIVATE static ErrorInstance* create(JSGlobalObject*, String&& message, ErrorType, unsigned line, unsigned column, String&& sourceURL, String&& stackString);
     static ErrorInstance* create(JSGlobalObject*, Structure*, JSValue message, JSValue options, SourceAppender = nullptr, RuntimeType = TypeNothing, ErrorType = ErrorType::Error, bool useCurrentFrame = true);
 
     bool hasSourceAppender() const { return !!m_sourceAppender; }
@@ -94,12 +96,13 @@ public:
     bool materializeErrorInfoIfNeeded(VM&);
     bool materializeErrorInfoIfNeeded(VM&, PropertyName);
 
-    void finalizeUnconditionally(VM&);
+    void finalizeUnconditionally(VM&, CollectionScope);
 
 protected:
     explicit ErrorInstance(VM&, Structure*, ErrorType);
 
     void finishCreation(VM&, JSGlobalObject*, const String& message, JSValue cause, SourceAppender = nullptr, RuntimeType = TypeNothing, bool useCurrentFrame = true);
+    void finishCreation(VM&, String&& message, unsigned line, unsigned column, String&& sourceURL, String&& stackString);
 
     static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
     static void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);

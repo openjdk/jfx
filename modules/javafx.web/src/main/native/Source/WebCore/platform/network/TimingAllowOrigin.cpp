@@ -42,8 +42,8 @@ bool passesTimingAllowOriginCheck(const ResourceResponse& response, const Securi
     const auto& timingAllowOriginString = response.httpHeaderField(HTTPHeaderName::TimingAllowOrigin);
     const auto& securityOrigin = initiatorSecurityOrigin.toString();
     for (auto originWithSpace : StringView(timingAllowOriginString).split(',')) {
-        auto origin = stripLeadingAndTrailingHTTPSpaces(originWithSpace);
-        if (origin == "*" || origin == securityOrigin)
+        auto origin = originWithSpace.trim(isASCIIWhitespaceWithoutFF<UChar>);
+        if (origin == "*"_s || origin == securityOrigin)
             return true;
     }
 

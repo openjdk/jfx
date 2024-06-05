@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2004-2020 Apple Inc. All rights reserved.
+ *  Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -27,23 +27,17 @@
 
 namespace JSC {
 
-const ClassInfo DateInstance::s_info = {"Date", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(DateInstance)};
+const ClassInfo DateInstance::s_info = { "Date"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(DateInstance) };
 
 DateInstance::DateInstance(VM& vm, Structure* structure)
     : Base(vm, structure)
 {
 }
 
-void DateInstance::finishCreation(VM& vm)
-{
-    Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
-}
-
 void DateInstance::finishCreation(VM& vm, double time)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
     m_internalNumber = timeClip(time);
 }
 

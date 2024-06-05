@@ -21,7 +21,7 @@
 #include "DOMPluginArray.h"
 
 #include "DOMPlugin.h"
-#include "Frame.h"
+#include "LocalFrame.h"
 #include "Page.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/text/AtomString.h>
@@ -71,10 +71,16 @@ RefPtr<DOMPlugin> DOMPluginArray::namedItem(const AtomString& propertyName)
     return nullptr;
 }
 
+bool DOMPluginArray::isSupportedPropertyName(const AtomString& propertyName) const
+{
+    return m_publiclyVisiblePlugins.containsIf([&](auto& plugin) { return plugin->name() == propertyName; })
+        || m_additionalWebVisibilePlugins.containsIf([&](auto& plugin) { return plugin->name() == propertyName; });
+}
+
 Vector<AtomString> DOMPluginArray::supportedPropertyNames() const
 {
-    return m_publiclyVisiblePlugins.map([](auto& plugin) -> AtomString {
-        return plugin->name();
+    return m_publiclyVisiblePlugins.map([](auto& plugin) {
+        return AtomString { plugin->name() };
     });
 }
 

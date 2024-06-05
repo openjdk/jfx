@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
  */
 
 #include "config.h"
+#include <wtf/text/StringBuilder.h>
 #include "ImageBufferJavaBackend.h"
 
 #include "BufferImageJava.h"
@@ -31,11 +32,11 @@
 #include "ImageData.h"
 #include "MIMETypeRegistry.h"
 #include "PlatformContextJava.h"
-
+#include "GraphicsContextJava.h"
 namespace WebCore {
 
 std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
-    const Parameters& parameters, const HostWindow*)
+    const Parameters& parameters, const ImageBufferCreationContext&)
 {
     IntSize backendSize = ImageBufferBackend::calculateBackendSize(parameters);
     if (backendSize.isEmpty())
@@ -106,6 +107,37 @@ JLObject ImageBufferJavaBackend::getWCImage() const
     return m_image->getImage()->cloneLocalCopy();
 }
 
+Vector<uint8_t> ImageBufferJavaBackend::toDataJava(const String& mimeType, std::optional<double>)
+{
+    if (MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType)) {
+        // RenderQueue need to be processed before pixel buffer extraction.
+        // For that purpose it has to be in actual state.
+        context().platformContext()->rq().flushBuffer();
+
+        JNIEnv* env = WTF::GetJavaEnv();
+
+        static jmethodID midToData = env->GetMethodID(
+                PG_GetImageClass(env),
+                "toData",
+                "(Ljava/lang/String;)[B");
+        ASSERT(midToData);
+
+        JLocalRef<jbyteArray> jdata((jbyteArray)env->CallObjectMethod(
+                getWCImage(),
+                midToData,
+                (jstring) JLString(mimeType.toJavaString(env))));
+
+        if (!WTF::CheckAndClearException(env) && jdata) {
+            uint8_t* dataArray = (uint8_t*)env->GetPrimitiveArrayCritical((jbyteArray)jdata, 0);
+            Vector<uint8_t> data;
+            data.append(dataArray, env->GetArrayLength(jdata));
+            env->ReleasePrimitiveArrayCritical(jdata, dataArray, 0);
+            return data;
+        }
+    }
+    return { };
+}
+
 void *ImageBufferJavaBackend::getData() const
 {
     JNIEnv* env = WTF::GetJavaEnv();
@@ -157,119 +189,47 @@ IntSize ImageBufferJavaBackend::backendSize() const
     return m_backendSize;
 }
 
-RefPtr<NativeImage> ImageBufferJavaBackend::copyNativeImage(BackingStoreCopy) const
+RefPtr<NativeImage> ImageBufferJavaBackend::copyNativeImage(BackingStoreCopy)
 {
     return NativeImage::create((m_image.get()));
 }
 
-RefPtr<Image> ImageBufferJavaBackend::copyImage(BackingStoreCopy, PreserveResolution) const
+RefPtr<NativeImage> ImageBufferJavaBackend::copyNativeImageForDrawing(GraphicsContext& destination)
 {
-    return BufferImage::create(m_image);
+     return copyNativeImage(DontCopyBackingStore);   //REVISIT
 }
 
-void ImageBufferJavaBackend::draw(GraphicsContext& context, const FloatRect& destRect,
-    const FloatRect& srcRect, const ImagePaintingOptions& options)
-{
-    RefPtr<Image> imageCopy = copyImage();
-    context.drawImage(*imageCopy, destRect, srcRect, options);
-}
-
-void ImageBufferJavaBackend::drawPattern(GraphicsContext& context, const FloatRect& destRect,
-    const FloatRect& srcRect, const AffineTransform& patternTransform,
-    const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& options)
-{
-    RefPtr<Image> imageCopy = copyImage();
-    imageCopy->drawPattern(context, destRect, srcRect, patternTransform, phase, spacing, options);
-}
-
-String ImageBufferJavaBackend::toDataURL(const String& mimeType, std::optional<double>, PreserveResolution) const
-{
-    if (MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType)) {
-        // RenderQueue need to be processed before pixel buffer extraction.
-        // For that purpose it has to be in actual state.
-        context().platformContext()->rq().flushBuffer();
-
-        JNIEnv* env = WTF::GetJavaEnv();
-
-        static jmethodID midToDataURL = env->GetMethodID(
-                PG_GetImageClass(env),
-                "toDataURL",
-                "(Ljava/lang/String;)Ljava/lang/String;");
-        ASSERT(midToDataURL);
-
-        JLString data((jstring) env->CallObjectMethod(
-                getWCImage(),
-                midToDataURL,
-                (jstring) JLString(mimeType.toJavaString(env))));
-
-        if (!WTF::CheckAndClearException(env) && data) {
-            return String(env, data);
-        }
-    }
-    return "data:,";
-}
-
-Vector<uint8_t> ImageBufferJavaBackend::toData(const String& mimeType, std::optional<double>) const
-{
-    if (MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType)) {
-        // RenderQueue need to be processed before pixel buffer extraction.
-        // For that purpose it has to be in actual state.
-        context().platformContext()->rq().flushBuffer();
-
-        JNIEnv* env = WTF::GetJavaEnv();
-
-        static jmethodID midToData = env->GetMethodID(
-                PG_GetImageClass(env),
-                "toData",
-                "(Ljava/lang/String;)[B");
-        ASSERT(midToData);
-
-        JLocalRef<jbyteArray> jdata((jbyteArray)env->CallObjectMethod(
-                getWCImage(),
-                midToData,
-                (jstring) JLString(mimeType.toJavaString(env))));
-
-        if (!WTF::CheckAndClearException(env) && jdata) {
-            uint8_t* dataArray = (uint8_t*)env->GetPrimitiveArrayCritical((jbyteArray)jdata, 0);
-            Vector<uint8_t> data;
-            data.append(dataArray, env->GetArrayLength(jdata));
-            env->ReleasePrimitiveArrayCritical(jdata, dataArray, 0);
-            return data;
-        }
-    }
-    return { };
-}
-
-std::optional<PixelBuffer> ImageBufferJavaBackend::getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect) const
-{
-    void *data = getData();
-    if (!data)
-        return std::nullopt;
-
-    return getPixelBuffer(outputFormat, srcRect, data);
-}
-
-void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer,
-    const IntRect& srcRect, const IntPoint& dstPoint, AlphaPremultiplication destFormat)
+void ImageBufferJavaBackend::getPixelBuffer(const IntRect& srcRect, PixelBuffer& destination)
 {
     void *data = getData();
     if (!data)
         return;
+    return getPixelBuffer(srcRect, data, destination);
 
-    putPixelBuffer(sourcePixelBuffer, srcRect, dstPoint, destFormat, data);
-    update();
 }
 
-std::optional<PixelBuffer> ImageBufferJavaBackend::getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, void* data) const
+void ImageBufferJavaBackend::getPixelBuffer(const IntRect& srcRect, void* data, PixelBuffer& destination)
 {
-    return ImageBufferBackend::getPixelBuffer(outputFormat, srcRect, data);
+
+    return ImageBufferBackend::getPixelBuffer(srcRect, data,destination);
+
 }
 
-void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer,
-    const IntRect& srcRect, const IntPoint& dstPoint, AlphaPremultiplication destFormat, void* data)
+void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat, void* destination)
 {
-    ImageBufferBackend::putPixelBuffer(sourcePixelBuffer, srcRect, dstPoint, destFormat, data);
+    ImageBufferBackend::putPixelBuffer(sourcePixelBuffer, srcRect, destPoint, destFormat, destination);
     update();
+
+}
+
+void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
+{
+    void *data = getData();
+    if (!data)
+        return;
+    putPixelBuffer(sourcePixelBuffer, srcRect, destPoint, destFormat, data);
+    update();
+
 }
 
 size_t ImageBufferJavaBackend::calculateMemoryCost(const Parameters& parameters)
@@ -288,6 +248,13 @@ unsigned ImageBufferJavaBackend::bytesPerRow() const
 {
     IntSize backendSize = calculateBackendSize(m_parameters);
     return calculateBytesPerRow(backendSize);
+}
+
+String ImageBufferJavaBackend::debugDescription() const
+{
+     StringBuilder builder;
+     builder.append("ImageBufferBackendJava");
+     return builder.toString();
 }
 
 } // namespace WebCore

@@ -39,7 +39,7 @@ class Document;
 class ScriptExecutionContext;
 class WebXRRigidTransform;
 
-class WebXRSpace : public EventTargetWithInlineData, public ContextDestructionObserver {
+class WebXRSpace : public EventTarget, public ContextDestructionObserver {
     WTF_MAKE_ISO_ALLOCATED(WebXRSpace);
 public:
     virtual ~WebXRSpace();
@@ -73,18 +73,26 @@ private:
 // https://immersive-web.github.io/webxr/#xrsession-viewer-reference-space
 // This is a helper class to implement the viewer space owned by a WebXRSession.
 // It avoids a circular reference between the session and the reference space.
-class WebXRViewerSpace : public WebXRSpace {
+class WebXRViewerSpace : public RefCounted<WebXRViewerSpace>, public WebXRSpace {
     WTF_MAKE_ISO_ALLOCATED(WebXRViewerSpace);
 public:
-    WebXRViewerSpace(Document&, WebXRSession&);
+    static Ref< WebXRViewerSpace> create(Document& document, WebXRSession& session)
+    {
+        return adoptRef(*new WebXRViewerSpace(document, session));
+    }
     virtual ~WebXRViewerSpace();
 
+    using RefCounted::ref;
+    using RefCounted::deref;
+
 private:
+    WebXRViewerSpace(Document&, WebXRSession&);
+
     WebXRSession* session() const final { return m_session.get(); }
     std::optional<TransformationMatrix> nativeOrigin() const final;
 
-    void refEventTarget() final { RELEASE_ASSERT_NOT_REACHED(); }
-    void derefEventTarget() final { RELEASE_ASSERT_NOT_REACHED(); }
+    void refEventTarget() final { ref(); }
+    void derefEventTarget() final { deref(); }
 
     WeakPtr<WebXRSession> m_session;
 };

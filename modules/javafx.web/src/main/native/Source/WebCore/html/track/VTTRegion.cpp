@@ -36,9 +36,8 @@
 
 #include "DOMRect.h"
 #include "DOMTokenList.h"
-#include "ElementChildIterator.h"
+#include "ElementChildIteratorInlines.h"
 #include "HTMLDivElement.h"
-#include "HTMLParserIdioms.h"
 #include "Logging.h"
 #include "RenderElement.h"
 #include "ShadowPseudoIds.h"
@@ -127,7 +126,7 @@ ExceptionOr<void> VTTRegion::setViewportAnchorY(double value)
 
 static const AtomString& upKeyword()
 {
-    static MainThreadNeverDestroyed<const AtomString> upKeyword("up", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> upKeyword("up"_s);
     return upKeyword;
 }
 
@@ -164,7 +163,7 @@ void VTTRegion::setRegionSettings(const String& inputString)
     VTTScanner input(inputString);
 
     while (!input.isAtEnd()) {
-        input.skipWhile<WebVTTParser::isValidSettingDelimiter>();
+        input.skipWhile<isTabOrSpace>();
         if (input.isAtEnd())
             break;
 
@@ -173,7 +172,7 @@ void VTTRegion::setRegionSettings(const String& inputString)
 
         // Verify that we're looking at a ':'.
         if (name == None || !input.scan(':')) {
-            input.skipUntil<isHTMLSpace<UChar>>();
+            input.skipUntil<isASCIIWhitespace<UChar>>();
             continue;
         }
 
@@ -207,12 +206,12 @@ static inline bool parsedEntireRun(const VTTScanner& input, const VTTScanner::Ru
 
 void VTTRegion::parseSettingValue(RegionSetting setting, VTTScanner& input)
 {
-    VTTScanner::Run valueRun = input.collectUntil<isHTMLSpace<UChar>>();
+    VTTScanner::Run valueRun = input.collectUntil<isASCIIWhitespace<UChar>>();
 
     switch (setting) {
     case Id: {
         String stringValue = input.extractString(valueRun);
-        if (stringValue.find("-->") == notFound)
+        if (stringValue.find("-->"_s) == notFound)
             m_id = stringValue;
         break;
     }
@@ -263,7 +262,7 @@ void VTTRegion::parseSettingValue(RegionSetting setting, VTTScanner& input)
 
 const AtomString& VTTRegion::textTrackCueContainerScrollingClass()
 {
-    static MainThreadNeverDestroyed<const AtomString> trackRegionCueContainerScrollingClass("scrolling", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> trackRegionCueContainerScrollingClass("scrolling"_s);
 
     return trackRegionCueContainerScrollingClass;
 }

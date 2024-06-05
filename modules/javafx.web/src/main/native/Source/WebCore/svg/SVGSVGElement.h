@@ -71,6 +71,7 @@ public: // DOM
 
     void pauseAnimations();
     void unpauseAnimations();
+    bool resumePausedAnimationsIfNeeded(const IntRect&);
     bool animationsPaused() const;
     bool hasActiveAnimation() const;
     float getCurrentTime() const;
@@ -100,10 +101,11 @@ public:
     Length intrinsicWidth() const;
     Length intrinsicHeight() const;
 
-    FloatSize currentViewportSize() const;
+    FloatSize currentViewportSizeExcludingZoom() const;
     FloatRect currentViewBoxRect() const;
 
     AffineTransform viewBoxToViewTransform(float viewWidth, float viewHeight) const;
+    bool hasTransformRelatedAttributes() const final;
 
     const SVGLengthValue& x() const { return m_x->currentValue(); }
     const SVGLengthValue& y() const { return m_y->currentValue(); }
@@ -122,9 +124,8 @@ private:
     virtual ~SVGSVGElement();
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGSVGElement, SVGGraphicsElement, SVGFitToViewBox>;
-    const SVGPropertyRegistry& propertyRegistry() const final { return m_propertyRegistry; }
 
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;
     bool selfHasRelativeLengths() const override;
     bool isValid() const override;
@@ -138,7 +139,7 @@ private:
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) override;
 
     AffineTransform localCoordinateSpaceTransform(SVGLocatable::CTMScope) const override;
-    RefPtr<Frame> frameForCurrentScale() const;
+    RefPtr<LocalFrame> frameForCurrentScale() const;
     Ref<NodeList> collectIntersectionOrEnclosureList(SVGRect&, SVGElement*, bool (*checkFunction)(SVGElement&, SVGRect&));
 
     SVGViewElement* findViewAnchor(StringView fragmentIdentifier) const;
@@ -153,7 +154,6 @@ private:
 
     Ref<SVGPoint> m_currentTranslate { SVGPoint::create() };
 
-    PropertyRegistry m_propertyRegistry { *this };
     Ref<SVGAnimatedLength> m_x { SVGAnimatedLength::create(this, SVGLengthMode::Width) };
     Ref<SVGAnimatedLength> m_y { SVGAnimatedLength::create(this, SVGLengthMode::Height) };
     Ref<SVGAnimatedLength> m_width { SVGAnimatedLength::create(this, SVGLengthMode::Width, "100%"_s) };

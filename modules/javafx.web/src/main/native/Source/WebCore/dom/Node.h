@@ -29,7 +29,9 @@
 #include "LayoutRect.h"
 #include "RenderStyleConstants.h"
 #include "StyleValidity.h"
+#include "TaskSource.h"
 #include "TreeScope.h"
+#include <compare>
 #include <wtf/CompactPointerTuple.h>
 #include <wtf/CompactUniquePtrTuple.h>
 #include <wtf/FixedVector.h>
@@ -38,6 +40,7 @@
 #include <wtf/ListHashSet.h>
 #include <wtf/MainThread.h>
 #include <wtf/OptionSet.h>
+#include <wtf/RobinHoodHashSet.h>
 #include <wtf/URLHash.h>
 #include <wtf/WeakPtr.h>
 
@@ -68,6 +71,7 @@ class RenderStyle;
 class SVGQualifiedName;
 class ShadowRoot;
 class TouchEvent;
+class WebCoreOpaqueRoot;
 
 enum class MutationObserverOptionType : uint8_t;
 using MutationObserverOptions = OptionSet<MutationObserverOptionType>;
@@ -122,7 +126,7 @@ public:
     inline bool hasTagName(const SVGQualifiedName&) const;
     virtual String nodeName() const = 0;
     virtual String nodeValue() const;
-    virtual ExceptionOr<void> setNodeValue(const String&);
+    virtual void setNodeValue(const String&);
     virtual NodeType nodeType() const = 0;
     virtual size_t approximateMemoryCost() const { return sizeof(*this); }
     ContainerNode* parentNode() const;
@@ -175,7 +179,7 @@ public:
     WEBCORE_EXPORT const AtomString& lookupNamespaceURI(const AtomString& prefix) const;
 
     WEBCORE_EXPORT String textContent(bool convertBRsToNewlines = false) const;
-    WEBCORE_EXPORT ExceptionOr<void> setTextContent(const String&);
+    WEBCORE_EXPORT void setTextContent(String&&);
 
     Node* lastDescendant() const;
     Node* firstDescendant() const;
@@ -194,6 +198,7 @@ public:
 
     bool isElementNode() const { return hasNodeFlag(NodeFlag::IsElement); }
     bool isContainerNode() const { return hasNodeFlag(NodeFlag::IsContainerNode); }
+    bool isCharacterData() const { return hasNodeFlag(NodeFlag::IsCharacterData); }
     bool isTextNode() const { return hasNodeFlag(NodeFlag::IsText); }
     bool isHTMLElement() const { return hasNodeFlag(NodeFlag::IsHTMLElement); }
     bool isSVGElement() const { return hasNodeFlag(NodeFlag::IsSVGElement); }
@@ -232,19 +237,30 @@ public:
     bool hasShadowRootContainingSlots() const { return hasNodeFlag(NodeFlag::HasShadowRootContainingSlots); }
     void setHasShadowRootContainingSlots(bool flag) { setNodeFlag(NodeFlag::HasShadowRootContainingSlots, flag); }
 
+    bool needsSVGRendererUpdate() const { return hasNodeFlag(NodeFlag::NeedsSVGRendererUpdate); }
+    void setNeedsSVGRendererUpdate(bool flag) { setNodeFlag(NodeFlag::NeedsSVGRendererUpdate, flag); }
+
     // If this node is in a shadow tree, returns its shadow host. Otherwise, returns null.
     WEBCORE_EXPORT Element* shadowHost() const;
     ShadowRoot* containingShadowRoot() const;
-    ShadowRoot* shadowRoot() const; // Defined in ShadowRoot.h
+    inline ShadowRoot* shadowRoot() const; // Defined in ElementRareData.h
     bool isClosedShadowHidden(const Node&) const;
 
     HTMLSlotElement* assignedSlot() const;
     HTMLSlotElement* assignedSlotForBindings() const;
+    HTMLSlotElement* manuallyAssignedSlot() const;
+    void setManuallyAssignedSlot(HTMLSlotElement*);
 
-    bool isUndefinedCustomElement() const { return customElementState() == CustomElementState::Undefined || customElementState() == CustomElementState::Failed; }
+    bool hasEverPaintedImages() const;
+    void setHasEverPaintedImages(bool);
+
+    bool isUncustomizedCustomElement() const { return customElementState() == CustomElementState::Uncustomized; }
     bool isCustomElementUpgradeCandidate() const { return customElementState() == CustomElementState::Undefined; }
     bool isDefinedCustomElement() const { return customElementState() == CustomElementState::Custom; }
-    bool isFailedCustomElement() const { return customElementState() == CustomElementState::Failed; }
+    bool isFailedCustomElement() const { return customElementState() == CustomElementState::FailedOrPrecustomized && isUnknownElement(); }
+    bool isFailedOrPrecustomizedCustomElement() const { return customElementState() == CustomElementState::FailedOrPrecustomized; }
+    bool isPrecustomizedCustomElement() const { return customElementState() == CustomElementState::FailedOrPrecustomized && !isUnknownElement(); }
+    bool isPrecustomizedOrDefinedCustomElement() const { return isPrecustomizedCustomElement() || isDefinedCustomElement(); }
 
     // Returns null, a child of ShadowRoot, or a legacy shadow root.
     Node* nonBoundaryShadowTreeRootNode();
@@ -256,7 +272,7 @@ public:
     Element* parentOrShadowHostElement() const;
     void setParentNode(ContainerNode*);
     Node& rootNode() const;
-    Node& traverseToRootNode() const;
+    WEBCORE_EXPORT Node& traverseToRootNode() const;
     Node& shadowIncludingRoot() const;
 
     struct GetRootNodeOptions {
@@ -264,18 +280,28 @@ public:
     };
     Node& getRootNode(const GetRootNodeOptions&) const;
 
-    void* opaqueRoot() const;
+    inline WebCoreOpaqueRoot opaqueRoot() const; // Defined in DocumentInlines.h.
+    WebCoreOpaqueRoot traverseToOpaqueRoot() const;
+
+    void queueTaskKeepingThisNodeAlive(TaskSource, Function<void ()>&&);
+    void queueTaskToDispatchEvent(TaskSource, Ref<Event>&&);
 
     // Use when it's guaranteed to that shadowHost is null.
     ContainerNode* parentNodeGuaranteedHostFree() const;
     // Returns the parent node, but null if the parent node is a ShadowRoot.
     ContainerNode* nonShadowBoundaryParentNode() const;
 
-    bool selfOrAncestorHasDirAutoAttribute() const { return hasNodeFlag(NodeFlag::SelfOrAncestorHasDirAuto); }
-    void setSelfOrAncestorHasDirAutoAttribute(bool flag) { setNodeFlag(NodeFlag::SelfOrAncestorHasDirAuto, flag); }
+    bool selfOrPrecedingNodesAffectDirAuto() const { return hasNodeFlag(NodeFlag::SelfOrPrecedingNodesAffectDirAuto); }
+    void setSelfOrPrecedingNodesAffectDirAuto(bool flag) { setNodeFlag(NodeFlag::SelfOrPrecedingNodesAffectDirAuto, flag); }
+
+    TextDirection effectiveTextDirection() const;
+    void setEffectiveTextDirection(TextDirection);
+
+    bool usesEffectiveTextDirection() const { return rareDataBitfields().usesEffectiveTextDirection; }
+    void setUsesEffectiveTextDirection(bool);
 
     // Returns the enclosing event parent Element (or self) that, when clicked, would trigger a navigation.
-    Element* enclosingLinkEventParentOrSelf();
+    WEBCORE_EXPORT Element* enclosingLinkEventParentOrSelf();
 
     // These low-level calls give the caller responsibility for maintaining the integrity of the tree.
     void setPreviousSibling(Node* previous) { m_previous = previous; }
@@ -320,19 +346,16 @@ public:
     bool isLink() const { return hasNodeFlag(NodeFlag::IsLink); }
     void setIsLink(bool flag) { setNodeFlag(NodeFlag::IsLink, flag); }
 
-    bool hasEventTargetData() const { return hasNodeFlag(NodeFlag::HasEventTargetData); }
-    void setHasEventTargetData(bool flag) { setNodeFlag(NodeFlag::HasEventTargetData, flag); }
+    bool isInGCReacheableRefMap() const { return hasNodeFlag(NodeFlag::IsInGCReachableRefMap); }
+    void setIsInGCReacheableRefMap(bool flag) { setNodeFlag(NodeFlag::IsInGCReachableRefMap, flag); }
 
     WEBCORE_EXPORT bool isContentEditable() const;
     bool isContentRichlyEditable() const;
 
     WEBCORE_EXPORT void inspect();
 
-    enum UserSelectAllTreatment {
-        UserSelectAllDoesNotAffectEditability,
-        UserSelectAllIsAlwaysNonEditable
-    };
-    bool hasEditableStyle(UserSelectAllTreatment treatment = UserSelectAllIsAlwaysNonEditable) const
+    enum class UserSelectAllTreatment : bool { NotEditable, Editable };
+    bool hasEditableStyle(UserSelectAllTreatment treatment = UserSelectAllTreatment::NotEditable) const
     {
         return computeEditability(treatment, ShouldUpdateStyle::DoNotUpdate) != Editability::ReadOnly;
     }
@@ -340,12 +363,13 @@ public:
     // FIXME: Replace every use of this function by helpers in Editing.h
     bool hasRichlyEditableStyle() const
     {
-        return computeEditability(UserSelectAllIsAlwaysNonEditable, ShouldUpdateStyle::DoNotUpdate) == Editability::CanEditRichly;
+        return computeEditability(UserSelectAllTreatment::NotEditable, ShouldUpdateStyle::DoNotUpdate) == Editability::CanEditRichly;
     }
 
     enum class Editability { ReadOnly, CanEditPlainText, CanEditRichly };
     enum class ShouldUpdateStyle { Update, DoNotUpdate };
     WEBCORE_EXPORT Editability computeEditability(UserSelectAllTreatment, ShouldUpdateStyle) const;
+    Editability computeEditabilityWithStyle(const RenderStyle*, UserSelectAllTreatment, ShouldUpdateStyle) const;
 
     WEBCORE_EXPORT LayoutRect renderRect(bool* isReplaced);
     IntRect pixelSnappedRenderRect(bool* isReplaced) { return snappedIntRect(renderRect(isReplaced)); }
@@ -367,12 +391,15 @@ public:
     void setTreeScopeRecursively(TreeScope&);
     static ptrdiff_t treeScopeMemoryOffset() { return OBJECT_OFFSETOF(Node, m_treeScope); }
 
+    TreeScope& treeScopeForSVGReferences() const;
+
     // Returns true if this node is associated with a document and is in its associated document's
     // node tree, false otherwise (https://dom.spec.whatwg.org/#connected).
     bool isConnected() const { return hasNodeFlag(NodeFlag::IsConnected); }
     bool isInUserAgentShadowTree() const;
     bool isInShadowTree() const { return hasNodeFlag(NodeFlag::IsInShadowTree); }
     bool isInTreeScope() const { return hasNodeFlag(NodeFlag::IsConnected) || hasNodeFlag(NodeFlag::IsInShadowTree); }
+    bool hasBeenInUserAgentShadowTree() const { return hasNodeFlag(NodeFlag::HasBeenInUserAgentShadowTree); }
 
     // https://dom.spec.whatwg.org/#in-a-document-tree
     bool isInDocumentTree() const { return isConnected() && !isInShadowTree(); }
@@ -454,14 +481,16 @@ public:
     NodeListsNodeData* nodeLists();
     void clearNodeLists();
 
-    virtual bool willRespondToMouseMoveEvents();
-    virtual bool willRespondToMouseClickEvents();
-    virtual bool willRespondToMouseWheelEvents();
+    virtual bool willRespondToMouseMoveEvents() const;
+    bool willRespondToMouseClickEvents() const;
+    Editability computeEditabilityForMouseClickEvents(const RenderStyle* = nullptr) const;
+    virtual bool willRespondToMouseClickEventsWithEditability(Editability) const;
+    virtual bool willRespondToTouchEvents() const;
 
     WEBCORE_EXPORT unsigned short compareDocumentPosition(Node&);
 
     EventTargetInterface eventTargetInterface() const override;
-    ScriptExecutionContext* scriptExecutionContext() const final; // Implemented in Document.h
+    ScriptExecutionContext* scriptExecutionContext() const final; // Implemented in DocumentInlines.h.
 
     WEBCORE_EXPORT bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) override;
     bool removeEventListener(const AtomString& eventType, EventListener&, const EventListenerOptions&) override;
@@ -494,12 +523,8 @@ public:
     bool m_adoptionIsRequired { true };
 #endif
 
-    EventTargetData* eventTargetData() final;
-    EventTargetData* eventTargetDataConcurrently() final;
-    EventTargetData& ensureEventTargetData() final;
-
     HashMap<Ref<MutationObserver>, MutationRecordDeliveryOptions> registeredMutationObservers(MutationObserverOptionType, const QualifiedName* attributeName);
-    void registerMutationObserver(MutationObserver&, MutationObserverOptions, const HashSet<AtomString>& attributeFilter);
+    void registerMutationObserver(MutationObserver&, MutationObserverOptions, const MemoryCompactLookupOnlyRobinHoodHashSet<AtomString>& attributeFilter);
     void unregisterMutationObserver(MutationObserverRegistration&);
     void registerTransientMutationObserver(MutationObserverRegistration&);
     void unregisterTransientMutationObserver(MutationObserverRegistration&);
@@ -528,9 +553,6 @@ public:
     static int32_t flagIsParsingChildrenFinished() { return static_cast<int32_t>(NodeFlag::IsParsingChildrenFinished); }
 #endif // ENABLE(JIT)
 
-    // Whether a node is inert, please use RenderStyle::effectiveInert instead!
-    bool deprecatedIsInert() const;
-
 protected:
     enum class NodeFlag : uint32_t {
         IsCharacterData = 1 << 0,
@@ -546,30 +568,31 @@ protected:
         IsConnected = 1 << 10,
         IsInShadowTree = 1 << 11,
         IsUnknownElement = 1 << 12,
-        HasEventTargetData = 1 << 13,
 
         // These bits are used by derived classes, pulled up here so they can
         // be stored in the same memory word as the Node bits above.
-        IsDocumentFragmentForInnerOuterHTML = 1 << 14, // DocumentFragment
-        IsEditingText = 1 << 15, // Text
-        IsLink = 1 << 16, // Element
-        IsUserActionElement = 1 << 17,
-        IsParsingChildrenFinished = 1 << 18,
-        HasSyntheticAttrChildNodes = 1 << 19,
-        SelfOrAncestorHasDirAuto = 1 << 20,
+        IsDocumentFragmentForInnerOuterHTML = 1 << 13, // DocumentFragment
+        IsEditingText = 1 << 14, // Text
+        IsLink = 1 << 15, // Element
+        IsUserActionElement = 1 << 16,
+        IsParsingChildrenFinished = 1 << 17,
+        HasSyntheticAttrChildNodes = 1 << 18,
+        SelfOrPrecedingNodesAffectDirAuto = 1 << 19,
 
-        HasCustomStyleResolveCallbacks = 1 << 21,
-
-        HasPendingResources = 1 << 22,
-        HasElementIdentifier = 1 << 23,
+        HasCustomStyleResolveCallbacks = 1 << 20,
+        HasPendingResources = 1 << 21,
+        IsInGCReachableRefMap = 1 << 22,
+        IsComputedStyleInvalidFlag = 1 << 23,
+        HasShadowRootContainingSlots = 1 << 24,
+        IsInTopLayer = 1 << 25,
+        NeedsSVGRendererUpdate = 1 << 26,
+        NeedsUpdateQueryContainerDependentStyle = 1 << 27,
+        HasBeenInUserAgentShadowTree = 1 << 28,
 #if ENABLE(FULLSCREEN_API)
-        ContainsFullScreenElement = 1 << 24,
+        IsFullscreen = 1 << 29,
+        IsIFrameFullscreen = 1 << 30,
 #endif
-        IsComputedStyleInvalidFlag = 1 << 25,
-        HasShadowRootContainingSlots = 1 << 26,
-        IsInTopLayer = 1 << 27,
-
-        // Bits 28-31 are free.
+        HasFormAssociatedCustomElementInterface = 1U << 31,
     };
 
     enum class TabIndexState : uint8_t {
@@ -583,13 +606,15 @@ protected:
         Uncustomized = 0,
         Undefined = 1,
         Custom = 2,
-        Failed = 3,
+        FailedOrPrecustomized = 3,
     };
 
     struct RareDataBitFields {
         uint16_t connectedSubframeCount : 10;
         uint16_t tabIndexState : 2;
         uint16_t customElementState : 2;
+        uint16_t usesEffectiveTextDirection : 1;
+        uint16_t effectiveTextDirection : 1;
     };
 
     bool hasNodeFlag(NodeFlag flag) const { return m_nodeFlags.contains(flag); }
@@ -615,7 +640,7 @@ protected:
     constexpr static auto CreateText = CreateCharacterData | NodeFlag::IsText;
     constexpr static auto CreateContainer = DefaultNodeFlags | NodeFlag::IsContainerNode;
     constexpr static auto CreateElement = CreateContainer | NodeFlag::IsElement;
-    constexpr static auto CreatePseudoElement = CreateElement | NodeFlag::IsConnected;
+    constexpr static auto CreatePseudoElement = CreateElement | NodeFlag::IsConnected | NodeFlag::HasCustomStyleResolveCallbacks;
     constexpr static auto CreateDocumentFragment = CreateContainer | NodeFlag::IsDocumentFragment;
     constexpr static auto CreateShadowRoot = CreateDocumentFragment | NodeFlag::IsShadowRoot | NodeFlag::IsInShadowTree;
     constexpr static auto CreateHTMLElement = CreateElement | NodeFlag::IsHTMLElement;
@@ -646,7 +671,6 @@ protected:
         DescendantsAffectedByForwardPositionalRules             = 1 << 10,
         ChildrenAffectedByBackwardPositionalRules               = 1 << 11,
         DescendantsAffectedByBackwardPositionalRules            = 1 << 12,
-        ChildrenAffectedByPropertyBasedBackwardPositionalRules  = 1 << 13,
     };
 
     struct StyleBitfields {
@@ -681,14 +705,11 @@ protected:
     NodeRareData& ensureRareData();
     void clearRareData();
 
-    void clearEventTargetData();
-
-    void setHasCustomStyleResolveCallbacks() { setNodeFlag(NodeFlag::HasCustomStyleResolveCallbacks); }
-
     void setTreeScope(TreeScope& scope) { m_treeScope = &scope; }
 
     void invalidateStyle(Style::Validity, Style::InvalidationMode = Style::InvalidationMode::Normal);
     void updateAncestorsForStyleRecalc();
+    void markAncestorsForInvalidatedStyle();
 
     ExceptionOr<RefPtr<Node>> convertNodesOrStringsIntoNode(FixedVector<NodeOrString>&&);
 
@@ -703,25 +724,20 @@ private:
 
     void refEventTarget() final;
     void derefEventTarget() final;
-    bool isNode() const final;
 
     void trackForDebugging();
     void materializeRareData();
 
     Vector<std::unique_ptr<MutationObserverRegistration>>* mutationObserverRegistry();
-    HashSet<MutationObserverRegistration*>* transientMutationObserverRegistry();
+    WeakHashSet<MutationObserverRegistration>* transientMutationObserverRegistry();
 
     void adjustStyleValidity(Style::Validity, Style::InvalidationMode);
-
-    void* opaqueRootSlow() const;
 
     static void moveShadowTreeToNewDocument(ShadowRoot&, Document& oldDocument, Document& newDocument);
     static void moveTreeToNewScope(Node&, TreeScope& oldScope, TreeScope& newScope);
     void moveNodeToNewDocument(Document& oldDocument, Document& newDocument);
 
-    struct NodeRareDataDeleter {
-        void operator()(NodeRareData*) const;
-    };
+    WEBCORE_EXPORT void notifyInspectorOfRendererChange();
 
     mutable uint32_t m_refCountAndParentBit { s_refCountIncrement };
     mutable OptionSet<NodeFlag> m_nodeFlags;
@@ -731,43 +747,22 @@ private:
     Node* m_previous { nullptr };
     Node* m_next { nullptr };
     CompactPointerTuple<RenderObject*, uint16_t> m_rendererWithStyleFlags;
-    CompactUniquePtrTuple<NodeRareData, uint16_t, NodeRareDataDeleter> m_rareDataWithBitfields;
+    CompactUniquePtrTuple<NodeRareData, uint16_t> m_rareDataWithBitfields;
 };
 
 bool connectedInSameTreeScope(const Node*, const Node*);
 
-// Designed to be used the same way as C++20 std::partial_ordering class.
-// FIXME: Consider putting this in a separate header.
-// FIXME: Once we can require C++20, replace with std::partial_ordering.
-class PartialOrdering {
-public:
-    static const PartialOrdering less;
-    static const PartialOrdering equivalent;
-    static const PartialOrdering greater;
-    static const PartialOrdering unordered;
-
-    friend constexpr bool is_eq(PartialOrdering);
-    friend constexpr bool is_lt(PartialOrdering);
-    friend constexpr bool is_gt(PartialOrdering);
-
-private:
-    enum class Type : uint8_t { Less, Equivalent, Greater, Unordered };
-    constexpr PartialOrdering(Type type) : m_type { type } { }
-    Type m_type;
-};
-constexpr bool is_eq(PartialOrdering);
-constexpr bool is_lt(PartialOrdering);
-constexpr bool is_gt(PartialOrdering);
-constexpr bool is_neq(PartialOrdering);
-constexpr bool is_lteq(PartialOrdering);
-constexpr bool is_gteq(PartialOrdering);
+// FIXME: We should remove these but std::is_eq() / std::is_neq() are not available in
+// some of our SDKs yet (rdar://87314077).
+constexpr bool is_eq(std::partial_ordering cmp) { return cmp == 0; }
+constexpr bool is_neq(std::partial_ordering cmp) { return cmp != 0; }
 
 enum TreeType { Tree, ShadowIncludingTree, ComposedTree };
 template<TreeType = Tree> ContainerNode* parent(const Node&);
 template<TreeType = Tree> Node* commonInclusiveAncestor(const Node&, const Node&);
-template<TreeType = Tree> PartialOrdering treeOrder(const Node&, const Node&);
+template<TreeType = Tree> std::partial_ordering treeOrder(const Node&, const Node&);
 
-WEBCORE_EXPORT PartialOrdering treeOrderForTesting(TreeType, const Node&, const Node&);
+WEBCORE_EXPORT std::partial_ordering treeOrderForTesting(TreeType, const Node&, const Node&);
 
 #if ASSERT_ENABLED
 
@@ -843,15 +838,6 @@ inline ContainerNode* Node::parentNode() const
     return m_parentNode;
 }
 
-inline void* Node::opaqueRoot() const
-{
-    // FIXME: Possible race?
-    // https://bugs.webkit.org/show_bug.cgi?id=165713
-    if (isConnected())
-        return &document();
-    return opaqueRootSlow();
-}
-
 inline ContainerNode* Node::parentNodeGuaranteedHostFree() const
 {
     ASSERT(!isShadowRoot());
@@ -896,44 +882,20 @@ inline void Node::setTreeScopeRecursively(TreeScope& newTreeScope)
         moveTreeToNewScope(*this, *m_treeScope, newTreeScope);
 }
 
-#if PLATFORM(JAVA)
-// VS 2017 has buggy support for compile-time inline constants, so the
-// definitions are moved to Node.cpp
-#else
-inline constexpr PartialOrdering PartialOrdering::less(Type::Less);
-inline constexpr PartialOrdering PartialOrdering::equivalent(Type::Equivalent);
-inline constexpr PartialOrdering PartialOrdering::greater(Type::Greater);
-inline constexpr PartialOrdering PartialOrdering::unordered(Type::Unordered);
-#endif
-
-constexpr bool is_eq(PartialOrdering ordering)
+inline void EventTarget::ref()
 {
-    return ordering.m_type == PartialOrdering::Type::Equivalent;
+    if (LIKELY(isNode()))
+        downcast<Node>(*this).ref();
+    else
+        refEventTarget();
 }
 
-constexpr bool is_lt(PartialOrdering ordering)
+inline void EventTarget::deref()
 {
-    return ordering.m_type == PartialOrdering::Type::Less;
-}
-
-constexpr bool is_gt(PartialOrdering ordering)
-{
-    return ordering.m_type == PartialOrdering::Type::Greater;
-}
-
-constexpr bool is_neq(PartialOrdering ordering)
-{
-    return is_lt(ordering) || is_gt(ordering);
-}
-
-constexpr bool is_lteq(PartialOrdering ordering)
-{
-    return is_lt(ordering) || is_eq(ordering);
-}
-
-constexpr bool is_gteq(PartialOrdering ordering)
-{
-    return is_gt(ordering) || is_eq(ordering);
+    if (LIKELY(isNode()))
+        downcast<Node>(*this).deref();
+    else
+        derefEventTarget();
 }
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const Node&);

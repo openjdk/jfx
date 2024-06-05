@@ -39,6 +39,8 @@
 
 namespace WebCore {
 
+static const constexpr GlyphBufferGlyph deletedGlyph = 0xFFFF;
+
 class Font;
 
 class GlyphBuffer {
@@ -119,10 +121,14 @@ public:
 
     void deleteGlyphWithoutAffectingSize(unsigned index)
     {
-        // GlyphID 0xFFFF is the "deleted glyph" and is supposed to be invisible when rendered.
-        static const constexpr GlyphBufferGlyph deletedGlyph = 0xFFFF;
-        m_glyphs[index] = deletedGlyph;
+        makeGlyphInvisible(index);
         m_advances[index] = makeGlyphBufferAdvance();
+    }
+
+    void makeGlyphInvisible(unsigned index)
+    {
+        // GlyphID 0xFFFF is the "deleted glyph" and is supposed to be invisible when rendered.
+        m_glyphs[index] = deletedGlyph;
     }
 
     void makeHole(unsigned location, unsigned length, const Font* font)

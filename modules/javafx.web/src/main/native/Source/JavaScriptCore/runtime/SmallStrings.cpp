@@ -33,7 +33,7 @@ namespace JSC {
 
 SmallStrings::SmallStrings()
 {
-    COMPILE_ASSERT(singleCharacterStringCount == sizeof(m_singleCharacterStrings) / sizeof(m_singleCharacterStrings[0]), IsNumCharactersConstInSyncWithClassUsage);
+    static_assert(singleCharacterStringCount == sizeof(m_singleCharacterStrings) / sizeof(m_singleCharacterStrings[0]), "characters count is in sync with class usage");
 
     for (unsigned i = 0; i < singleCharacterStringCount; ++i)
         m_singleCharacterStrings[i] = nullptr;
@@ -52,17 +52,27 @@ void SmallStrings::initializeCommonStrings(VM& vm)
         ASSERT(m_needsToBeVisited);
     }
 
-#define JSC_COMMON_STRINGS_ATTRIBUTE_INITIALIZE(name) initialize(&vm, m_##name, #name);
+#define JSC_COMMON_STRINGS_ATTRIBUTE_INITIALIZE(name) initialize(&vm, m_##name, #name ## _s);
     JSC_COMMON_STRINGS_EACH_NAME(JSC_COMMON_STRINGS_ATTRIBUTE_INITIALIZE)
 #undef JSC_COMMON_STRINGS_ATTRIBUTE_INITIALIZE
-    initialize(&vm, m_objectStringStart, "[object ");
-    initialize(&vm, m_nullObjectString, "[object Null]");
-    initialize(&vm, m_undefinedObjectString, "[object Undefined]");
-    initialize(&vm, m_boundPrefixString, "bound ");
-    initialize(&vm, m_notEqualString, "not-equal");
-    initialize(&vm, m_timedOutString, "timed-out");
-    initialize(&vm, m_okString, "ok");
-    initialize(&vm, m_sentinelString, "$");
+    initialize(&vm, m_objectStringStart, "[object "_s);
+    initialize(&vm, m_objectNullString, "[object Null]"_s);
+    initialize(&vm, m_objectUndefinedString, "[object Undefined]"_s);
+    initialize(&vm, m_objectObjectString, "[object Object]"_s);
+    initialize(&vm, m_objectArrayString, "[object Array]"_s);
+    initialize(&vm, m_objectFunctionString, "[object Function]"_s);
+    initialize(&vm, m_objectArgumentsString, "[object Arguments]"_s);
+    initialize(&vm, m_objectDateString, "[object Date]"_s);
+    initialize(&vm, m_objectRegExpString, "[object RegExp]"_s);
+    initialize(&vm, m_objectErrorString, "[object Error]"_s);
+    initialize(&vm, m_objectBooleanString, "[object Boolean]"_s);
+    initialize(&vm, m_objectNumberString, "[object Number]"_s);
+    initialize(&vm, m_objectStringString, "[object String]"_s);
+    initialize(&vm, m_boundPrefixString, "bound "_s);
+    initialize(&vm, m_notEqualString, "not-equal"_s);
+    initialize(&vm, m_timedOutString, "timed-out"_s);
+    initialize(&vm, m_okString, "ok"_s);
+    initialize(&vm, m_sentinelString, "$"_s);
 
     setIsInitialized(true);
 }
@@ -78,8 +88,18 @@ void SmallStrings::visitStrongReferences(Visitor& visitor)
     JSC_COMMON_STRINGS_EACH_NAME(JSC_COMMON_STRINGS_ATTRIBUTE_VISIT)
 #undef JSC_COMMON_STRINGS_ATTRIBUTE_VISIT
     visitor.appendUnbarriered(m_objectStringStart);
-    visitor.appendUnbarriered(m_nullObjectString);
-    visitor.appendUnbarriered(m_undefinedObjectString);
+    visitor.appendUnbarriered(m_objectNullString);
+    visitor.appendUnbarriered(m_objectUndefinedString);
+    visitor.appendUnbarriered(m_objectObjectString);
+    visitor.appendUnbarriered(m_objectArrayString);
+    visitor.appendUnbarriered(m_objectFunctionString);
+    visitor.appendUnbarriered(m_objectArgumentsString);
+    visitor.appendUnbarriered(m_objectDateString);
+    visitor.appendUnbarriered(m_objectRegExpString);
+    visitor.appendUnbarriered(m_objectErrorString);
+    visitor.appendUnbarriered(m_objectBooleanString);
+    visitor.appendUnbarriered(m_objectNumberString);
+    visitor.appendUnbarriered(m_objectStringString);
     visitor.appendUnbarriered(m_boundPrefixString);
     visitor.appendUnbarriered(m_notEqualString);
     visitor.appendUnbarriered(m_timedOutString);
@@ -102,9 +122,9 @@ Ref<AtomStringImpl> SmallStrings::singleCharacterStringRep(unsigned char charact
     return AtomStringImpl::add(string, 1).releaseNonNull();
 }
 
-void SmallStrings::initialize(VM* vm, JSString*& string, const char* value)
+void SmallStrings::initialize(VM* vm, JSString*& string, ASCIILiteral value)
 {
-    string = JSString::create(*vm, AtomStringImpl::add(value).releaseNonNull());
+    string = JSString::create(*vm, AtomStringImpl::add(value));
     ASSERT(m_needsToBeVisited);
 }
 

@@ -31,9 +31,15 @@
 #include "MediaStreamTrackPrivate.h"
 #include "SharedBuffer.h"
 #include "Timer.h"
+#include <wtf/MediaTime.h>
 #include <wtf/MonotonicTime.h>
 
 namespace WebCore {
+
+Ref<MediaRecorderPrivateMock> MediaRecorderPrivateMock::create(MediaStreamPrivate& stream)
+{
+    return adoptRef(*new MediaRecorderPrivateMock(stream));
+}
 
 MediaRecorderPrivateMock::MediaRecorderPrivateMock(MediaStreamPrivate& stream)
 {
@@ -67,7 +73,7 @@ void MediaRecorderPrivateMock::resumeRecording(CompletionHandler<void()>&& compl
     completionHandler();
 }
 
-void MediaRecorderPrivateMock::videoSampleAvailable(MediaSample&, VideoSampleMetadata)
+void MediaRecorderPrivateMock::videoFrameAvailable(VideoFrame&, VideoFrameTimeMetadata)
 {
     Locker locker { m_bufferLock };
     m_buffer.append("Video Track ID: ");

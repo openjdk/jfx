@@ -34,13 +34,13 @@
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
 #include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 
 namespace WebCore {
 
 class Page;
 
-class WheelEventTestMonitor : public ThreadSafeRefCounted<WheelEventTestMonitor> {
-    WTF_MAKE_NONCOPYABLE(WheelEventTestMonitor); WTF_MAKE_FAST_ALLOCATED;
+class WheelEventTestMonitor : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<WheelEventTestMonitor> {
 public:
     WheelEventTestMonitor(Page&);
 
@@ -60,7 +60,7 @@ public:
     };
     typedef const void* ScrollableAreaIdentifier;
 
-    WEBCORE_EXPORT void receivedWheelEvent(const PlatformWheelEvent&);
+    WEBCORE_EXPORT void receivedWheelEventWithPhases(PlatformWheelEventPhase phase, PlatformWheelEventPhase momentumPhase);
     WEBCORE_EXPORT void deferForReason(ScrollableAreaIdentifier, DeferReason);
     WEBCORE_EXPORT void removeDeferralForReason(ScrollableAreaIdentifier, DeferReason);
 
@@ -113,7 +113,26 @@ private:
     WheelEventTestMonitor::DeferReason m_reason;
 };
 
-WTF::TextStream& operator<<(WTF::TextStream&, WheelEventTestMonitor::DeferReason);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, WheelEventTestMonitor::DeferReason);
 WTF::TextStream& operator<<(WTF::TextStream&, const WheelEventTestMonitor::ScrollableAreaReasonMap&);
 
 } // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::WheelEventTestMonitor::DeferReason> {
+    using values = EnumValues<
+        WebCore::WheelEventTestMonitor::DeferReason,
+        WebCore::WheelEventTestMonitor::DeferReason::HandlingWheelEvent,
+        WebCore::WheelEventTestMonitor::DeferReason::HandlingWheelEventOnMainThread,
+        WebCore::WheelEventTestMonitor::DeferReason::PostMainThreadWheelEventHandling,
+        WebCore::WheelEventTestMonitor::DeferReason::RubberbandInProgress,
+        WebCore::WheelEventTestMonitor::DeferReason::ScrollSnapInProgress,
+        WebCore::WheelEventTestMonitor::DeferReason::ScrollAnimationInProgress,
+        WebCore::WheelEventTestMonitor::DeferReason::ScrollingThreadSyncNeeded,
+        WebCore::WheelEventTestMonitor::DeferReason::ContentScrollInProgress,
+        WebCore::WheelEventTestMonitor::DeferReason::RequestedScrollPosition
+    >;
+};
+
+} // namespace WTF

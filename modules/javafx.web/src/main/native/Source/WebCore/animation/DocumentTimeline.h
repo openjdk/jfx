@@ -28,6 +28,7 @@
 #include "AnimationFrameRate.h"
 #include "AnimationTimeline.h"
 #include "DocumentTimelineOptions.h"
+#include "ExceptionOr.h"
 #include "Timer.h"
 #include <wtf/Ref.h>
 #include <wtf/WeakPtr.h>
@@ -36,9 +37,13 @@ namespace WebCore {
 
 class AnimationEventBase;
 class CustomEffectCallback;
+class Document;
 class DocumentTimelinesController;
+class Element;
 class RenderBoxModelObject;
 class RenderElement;
+class WeakPtrImplWithEventTargetData;
+class WebAnimation;
 
 struct CustomAnimationOptions;
 
@@ -47,9 +52,6 @@ class DocumentTimeline final : public AnimationTimeline
 public:
     static Ref<DocumentTimeline> create(Document&);
     static Ref<DocumentTimeline> create(Document&, DocumentTimelineOptions&&);
-    ~DocumentTimeline();
-
-    bool isDocumentTimeline() const final { return true; }
 
     Document* document() const { return m_document.get(); }
 
@@ -58,20 +60,19 @@ public:
 
     void animationTimingDidChange(WebAnimation&) override;
     void removeAnimation(WebAnimation&) override;
-    void transitionDidComplete(RefPtr<CSSTransition>);
+    void transitionDidComplete(Ref<CSSTransition>&&);
 
     void animationAcceleratedRunningStateDidChange(WebAnimation&);
     void detachFromDocument();
 
     void enqueueAnimationEvent(AnimationEventBase&);
 
-    enum class ShouldUpdateAnimationsAndSendEvents : uint8_t { Yes, No };
+    enum class ShouldUpdateAnimationsAndSendEvents : bool { No, Yes };
     ShouldUpdateAnimationsAndSendEvents documentWillUpdateAnimationsAndSendEvents();
     void removeReplacedAnimations();
     AnimationEvents prepareForPendingAnimationEventsDispatch();
     void documentDidUpdateAnimationsAndSendEvents();
 
-    void updateThrottlingState();
     WEBCORE_EXPORT Seconds animationInterval() const;
     void suspendAnimations();
     void resumeAnimations();
@@ -79,6 +80,8 @@ public:
     WEBCORE_EXPORT unsigned numberOfActiveAnimationsForTesting() const;
     WEBCORE_EXPORT Vector<std::pair<String, double>> acceleratedAnimationsForElement(Element&) const;
     WEBCORE_EXPORT unsigned numberOfAnimationTimelineInvalidationsForTesting() const;
+
+    Seconds convertTimelineTimeToOriginRelativeTime(Seconds) const;
 
     std::optional<FramesPerSecond> maximumFrameRate() const;
 
@@ -98,7 +101,7 @@ private:
     Timer m_tickScheduleTimer;
     HashSet<RefPtr<WebAnimation>> m_acceleratedAnimationsPendingRunningStateChange;
     AnimationEvents m_pendingAnimationEvents;
-    WeakPtr<Document> m_document;
+    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
     Seconds m_originTime;
     unsigned m_numberOfAnimationTimelineInvalidationsForTesting { 0 };
     bool m_animationResolutionScheduled { false };

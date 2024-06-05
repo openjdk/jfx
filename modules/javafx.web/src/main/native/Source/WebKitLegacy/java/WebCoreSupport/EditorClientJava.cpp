@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,6 +42,8 @@
 #include <WebCore/Widget.h>
 
 #include <wtf/Assertions.h>
+//#include <wtf/text/ASCIILiteral.h>
+
 
 #include "com_sun_webkit_event_WCKeyEvent.h"
 
@@ -256,12 +258,12 @@ const char* EditorClientJava::interpretKeyEvent(const KeyboardEvent* evt)
         keyDownCommandsMap = new HashMap<int, const char*>;
         keyPressCommandsMap = new HashMap<int, const char*>;
 
-        for (unsigned i = 0; i < WTF_ARRAY_LENGTH(keyDownEntries); i++) {
+        for (unsigned i = 0; i < std::size(keyDownEntries); i++) {
             keyDownCommandsMap->set(keyDownEntries[i].modifiers << 16 | keyDownEntries[i].virtualKey,
                                     keyDownEntries[i].name);
         }
 
-        for (unsigned i = 0; i < WTF_ARRAY_LENGTH(keyPressEntries); i++) {
+        for (unsigned i = 0; i < std::size(keyPressEntries); i++) {
             keyPressCommandsMap->set(keyPressEntries[i].modifiers << 16 | keyPressEntries[i].charCode,
                                      keyPressEntries[i].name);
         }
@@ -277,7 +279,7 @@ const char* EditorClientJava::interpretKeyEvent(const KeyboardEvent* evt)
     if (keyEvent->metaKey())
         modifiers |= MetaKey;
 
-    if (keyEvent->type() == PlatformKeyboardEvent::RawKeyDown) {
+    if (keyEvent->type() == PlatformEvent::Type::RawKeyDown) {
         int mapKey = modifiers << 16 | evt->keyCode();
         return mapKey ? keyDownCommandsMap->get(mapKey) : 0;
     }
@@ -293,13 +295,14 @@ bool EditorClientJava::handleEditingKeyboardEvent(KeyboardEvent* evt)
         return false;
 
     Frame* frame = downcast<Node>(evt->target())->document().frame();
-    if (!frame)
+    auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+    if (!frame || !localFrame)
         return false;
 
-    String commandName = interpretKeyEvent(evt);
-    Editor::Command command = frame->editor().command(commandName);
+    String commandName = String::fromLatin1(interpretKeyEvent(evt));
+    Editor::Command command = localFrame->editor().command(commandName);
 
-    if (keyEvent->type() == PlatformKeyboardEvent::RawKeyDown) {
+    if (keyEvent->type() == PlatformEvent::Type::RawKeyDown) {
         // WebKit doesn't have enough information about mode to decide how
         // commands that just insert text if executed via Editor should be treated,
         // so we leave it upon WebCore to either handle them immediately
@@ -352,10 +355,10 @@ bool EditorClientJava::handleEditingKeyboardEvent(KeyboardEvent* evt)
 #endif
     }
 
-    if (!frame->editor().canEdit())
+    if (!localFrame->editor().canEdit())
         return false;
 
-    return frame->editor().insertText(evt->underlyingPlatformEvent()->text(), evt);
+    return localFrame->editor().insertText(evt->underlyingPlatformEvent()->text(), evt);
 }
 
 void EditorClientJava::handleKeyboardEvent(KeyboardEvent& evt)
@@ -444,7 +447,7 @@ void EditorClientJava::respondToChangedContents()
     notImplemented();
 }
 
-void EditorClientJava::respondToChangedSelection(Frame *frame)
+void EditorClientJava::respondToChangedSelection(LocalFrame *frame)
 {
     if (!frame || !frame->editor().hasComposition()
         || frame->editor().ignoreSelectionChanges()) {
@@ -532,33 +535,33 @@ void EditorClientJava::toggleGrammarChecking()
     notImplemented();
 }
 
-void EditorClientJava::textFieldDidBeginEditing(Element*)
+void EditorClientJava::textFieldDidBeginEditing(Element&)
 {
     notImplemented();
 }
 
-void EditorClientJava::textFieldDidEndEditing(Element*)
+void EditorClientJava::textFieldDidEndEditing(Element&)
 {
     notImplemented();
 }
 
-void EditorClientJava::textDidChangeInTextField(Element*)
+void EditorClientJava::textDidChangeInTextField(Element&)
 {
     notImplemented();
 }
 
-bool EditorClientJava::doTextFieldCommandFromEvent(Element*, KeyboardEvent*)
+bool EditorClientJava::doTextFieldCommandFromEvent(Element&, KeyboardEvent*)
 {
     notImplemented();
     return false;
 }
 
-void EditorClientJava::textWillBeDeletedInTextField(Element*)
+void EditorClientJava::textWillBeDeletedInTextField(Element&)
 {
     notImplemented();
 }
 
-void EditorClientJava::textDidChangeInTextArea(Element*)
+void EditorClientJava::textDidChangeInTextArea(Element&)
 {
     notImplemented();
 }
@@ -626,17 +629,17 @@ void EditorClientJava::willSetInputMethodState()
     notImplemented();
 }
 
-bool EditorClientJava::canCopyCut(Frame*, bool defaultValue) const
+bool EditorClientJava::canCopyCut(LocalFrame*, bool defaultValue) const
 {
     return defaultValue;
 }
 
-bool EditorClientJava::canPaste(Frame*, bool defaultValue) const
+bool EditorClientJava::canPaste(LocalFrame*, bool defaultValue) const
 {
     return defaultValue;
 }
 
-void EditorClientJava::discardedComposition(Frame*)
+void EditorClientJava::discardedComposition(const Document&)
 {
 }
 
@@ -701,11 +704,11 @@ void EditorClientJava::checkSpellingOfString(StringView, int*, int*)
     notImplemented();
 }
 
-String EditorClientJava::getAutoCorrectSuggestionForMisspelledWord(const String&)
+/*String EditorClientJava::getAutoCorrectSuggestionForMisspelledWord(const String&)
 {
     notImplemented();
     return String();
-}
+}*/
 
 void EditorClientJava::checkGrammarOfString(StringView, Vector<GrammarDetail>&, int*, int*)
 {

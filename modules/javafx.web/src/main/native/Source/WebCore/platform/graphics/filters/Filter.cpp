@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2022 Apple Inc.  All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,15 +28,20 @@
 
 #include "FilterEffect.h"
 #include "FilterImage.h"
+#include "FilterResults.h"
+#include "FilterStyle.h"
 #include "ImageBuffer.h"
 
 namespace WebCore {
 
-Filter::Filter(Filter::Type filterType, RenderingMode renderingMode, const FloatSize& filterScale, ClipOperation clipOperation, const FloatRect& filterRegion)
-    : FilterFunction(filterType)
-    , m_renderingMode(renderingMode)
+Filter::Filter(Filter::Type filterType, std::optional<RenderingResourceIdentifier> renderingResourceIdentifier)
+    : FilterFunction(filterType, renderingResourceIdentifier)
+{
+}
+
+Filter::Filter(Filter::Type filterType, const FloatSize& filterScale, const FloatRect& filterRegion, std::optional<RenderingResourceIdentifier> renderingResourceIdentifier)
+    : FilterFunction(filterType, renderingResourceIdentifier)
     , m_filterScale(filterScale)
-    , m_clipOperation(clipOperation)
     , m_filterRegion(filterRegion)
 {
 }
@@ -66,7 +71,7 @@ FloatRect Filter::maxEffectRect(const FloatRect& primitiveSubregion) const
 FloatRect Filter::clipToMaxEffectRect(const FloatRect& imageRect, const FloatRect& primitiveSubregion) const
 {
     auto maxEffectRect = this->maxEffectRect(primitiveSubregion);
-    return m_clipOperation == ClipOperation::Intersect ? intersection(imageRect, maxEffectRect) : unionRect(imageRect, maxEffectRect);
+    return intersection(imageRect, maxEffectRect);
 }
 
 bool Filter::clampFilterRegionIfNeeded()
@@ -81,13 +86,28 @@ bool Filter::clampFilterRegionIfNeeded()
     return true;
 }
 
+RenderingMode Filter::renderingMode() const
+{
+    if (m_filterRenderingModes.contains(FilterRenderingMode::Accelerated))
+        return RenderingMode::Accelerated;
+
+    ASSERT(m_filterRenderingModes.contains(FilterRenderingMode::Software));
+    return RenderingMode::Unaccelerated;
+}
+
+void Filter::setFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes)
+{
+    m_filterRenderingModes = preferredFilterRenderingModes & supportedFilterRenderingModes();
+    ASSERT(m_filterRenderingModes.contains(FilterRenderingMode::Software));
+}
+
 RefPtr<FilterImage> Filter::apply(ImageBuffer* sourceImage, const FloatRect& sourceImageRect, FilterResults& results)
 {
     RefPtr<FilterImage> input;
 
     if (sourceImage) {
         auto absoluteSourceImageRect = enclosingIntRect(scaledByFilterScale(sourceImageRect));
-        input = FilterImage::create(m_filterRegion, sourceImageRect, absoluteSourceImageRect, Ref { *sourceImage });
+        input = FilterImage::create(m_filterRegion, sourceImageRect, absoluteSourceImageRect, Ref { *sourceImage }, results.allocator());
         if (!input)
             return nullptr;
     }
@@ -98,6 +118,18 @@ RefPtr<FilterImage> Filter::apply(ImageBuffer* sourceImage, const FloatRect& sou
 
     result->correctPremultipliedPixelBuffer();
     result->transformToColorSpace(DestinationColorSpace::SRGB());
+    return result;
+}
+
+FilterStyleVector Filter::createFilterStyles(const FloatRect& sourceImageRect) const
+{
+    auto input = FilterStyle { std::nullopt, m_filterRegion, sourceImageRect };
+    auto result = createFilterStyles(input);
+    if (result.isEmpty())
+        return { };
+
+    result.reverse();
+    result.shrinkToFit();
     return result;
 }
 

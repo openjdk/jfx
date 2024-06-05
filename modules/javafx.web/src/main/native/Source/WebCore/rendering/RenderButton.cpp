@@ -1,5 +1,6 @@
 /**
- * Copyright (C) 2005 Apple Inc.
+ * Copyright (C) 2005-2022 Apple Inc.
+ * Copyright (C) 2015 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -25,6 +26,10 @@
 #include "GraphicsContext.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
+#include "RenderElementInlines.h"
+#include "RenderStyleSetters.h"
 #include "RenderTextFragment.h"
 #include "RenderTheme.h"
 #include "RenderTreeBuilder.h"
@@ -150,7 +155,7 @@ static LayoutUnit synthesizedBaselineFromContentBox(const RenderBox& box, LineDi
 
 LayoutUnit RenderButton::baselinePosition(FontBaseline fontBaseline, bool firstLine, LineDirectionMode direction, LinePositionMode mode) const
 {
-    if (shouldApplyLayoutContainment(*this))
+    if (shouldApplyLayoutContainment())
         return RenderFlexibleBox::baselinePosition(fontBaseline, firstLine, direction, mode);
     // We cannot rely on RenderFlexibleBox::baselinePosition() because of flexboxes have some special behavior
     // regarding baselines that shouldn't apply to buttons.
@@ -168,5 +173,11 @@ void RenderButton::layout()
     RenderThemeIOS::adjustRoundBorderRadius(mutableStyle(), *this);
 }
 #endif
+
+// Only clip overflow on input elements, to match other browsers.
+bool RenderButton::hasControlClip() const
+{
+    return is<HTMLInputElement>(formControlElement());
+}
 
 } // namespace WebCore

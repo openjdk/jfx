@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2009 Google Inc. All rights reserved.
+ * Copyright (C) 2023 Apple Inc. All right reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -54,28 +55,30 @@ public:
     void layoutExcludedChildren(bool relayoutChildren) override;
     void layout() override;
     void layoutBlock(bool relayoutChildren, LayoutUnit pageHeight = 0_lu) override;
+    LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const final;
 
     bool isChildAllowed(const RenderObject&, const RenderStyle&) const override;
 
-    RenderBlock* firstLineBlock() const override;
-
     void getOverhang(bool firstLine, RenderObject* startRenderer, RenderObject* endRenderer, float& startOverhang, float& endOverhang) const;
+    std::pair<float, float> startAndEndOverhang(bool forFirstLine) const;
 
     static RenderPtr<RenderRubyRun> staticCreateRubyRun(const RenderObject* parentRuby);
 
-    void updatePriorContextFromCachedBreakIterator(LazyLineBreakIterator&) const;
+    void updatePriorContextFromCachedBreakIterator(CachedLineBreakIteratorFactory&) const;
     void setCachedPriorCharacters(UChar last, UChar secondToLast)
     {
         m_lastCharacter = last;
         m_secondToLastCharacter = secondToLast;
     }
-    bool canBreakBefore(const LazyLineBreakIterator&) const;
+    bool canBreakBefore(const CachedLineBreakIteratorFactory&) const;
+
+    std::pair<LayoutUnit, LayoutUnit> annotationsAboveAndBelow() const;
 
     RenderPtr<RenderRubyBase> createRubyBase() const;
 
 private:
     bool isRubyRun() const override { return true; }
-    const char* renderName() const override { return "RenderRubyRun (anonymous)"; }
+    ASCIILiteral renderName() const override { return "RenderRubyRun (anonymous)"_s; }
     bool createsAnonymousWrapper() const override { return true; }
     bool canDropAnonymousBlockChild() const override { return false; }
 

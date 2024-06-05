@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2023 Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,17 +25,20 @@
 
 package test.javafx.scene.control.skin;
 
-import com.sun.javafx.tk.Toolkit;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.lang.ref.WeakReference;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.control.IndexedCell;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.scene.control.Skin;
-import javafx.scene.control.TableRow;
-import javafx.scene.control.TableView;
 import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
@@ -43,16 +46,15 @@ import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.scene.control.skin.TableColumnHeader;
 import javafx.scene.control.skin.TableColumnHeaderShim;
 import javafx.scene.control.skin.TreeTableRowSkin;
+import javafx.scene.shape.Rectangle;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
-
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import test.util.memory.JMemoryBuddy;
 
 public class TreeTableRowSkinTest {
 
@@ -213,10 +215,12 @@ public class TreeTableRowSkinTest {
         int right = 20;
         int bottom = 30;
         int left = 40;
+        double fixed = 24;
 
         int horizontalPadding = left + right;
 
-        treeTableView.setFixedCellSize(24);
+        treeTableView.setFixedCellSize(fixed);
+        Toolkit.getToolkit().firePulse();
 
         IndexedCell cell = VirtualFlowTestUtils.getCell(treeTableView, 0);
 
@@ -226,6 +230,8 @@ public class TreeTableRowSkinTest {
         double width = cell.getWidth();
 
         double minHeight = cell.minHeight(-1);
+        assertEquals(fixed, minHeight, 0);
+
         double prefHeight = cell.prefHeight(-1);
         double maxHeight = cell.maxHeight(-1);
         double height = cell.getHeight();
@@ -239,6 +245,7 @@ public class TreeTableRowSkinTest {
         treeTableView.refresh();
         Toolkit.getToolkit().firePulse();
 
+        assertNotEquals(cell, VirtualFlowTestUtils.getCell(treeTableView, 0));
         cell = VirtualFlowTestUtils.getCell(treeTableView, 0);
 
         assertEquals(minWidth + horizontalPadding, cell.minWidth(-1), 0);
@@ -250,6 +257,53 @@ public class TreeTableRowSkinTest {
         assertEquals(prefHeight, cell.prefHeight(-1), 0);
         assertEquals(maxHeight, cell.maxHeight(-1), 0);
         assertEquals(height, cell.getHeight(), 0);
+    }
+
+    /**
+     * When we set a fixed cell size and make an invisible column visible we expect the underlying cells to be visible,
+     * e.g. width > 0.
+     * See also: JDK-8305248
+     */
+    @Test
+    public void testMakeInvisibleColumnVisible() {
+        treeTableView.setFixedCellSize(24);
+        TreeTableColumn<Person, ?> firstColumn = treeTableView.getColumns().get(0);
+        firstColumn.setVisible(false);
+
+        treeTableView.refresh();
+        Toolkit.getToolkit().firePulse();
+
+        firstColumn.setVisible(true);
+        Toolkit.getToolkit().firePulse();
+
+        IndexedCell<?> row = VirtualFlowTestUtils.getCell(treeTableView, 0);
+        for (Node node : row.getChildrenUnmodifiable()) {
+            if (node instanceof TreeTableCell<?, ?> cell) {
+                double width = cell.getWidth();
+                assertNotEquals(0.0, width);
+            }
+        }
+    }
+
+    @Test
+    public void testMakeVisibleColumnInvisible() {
+        treeTableView.setFixedCellSize(24);
+        TreeTableColumn<Person, ?> firstColumn = treeTableView.getColumns().get(0);
+        assertTrue(firstColumn.isVisible());
+
+        treeTableView.refresh();
+        Toolkit.getToolkit().firePulse();
+
+        firstColumn.setVisible(false);
+        Toolkit.getToolkit().firePulse();
+
+        IndexedCell<?> row = VirtualFlowTestUtils.getCell(treeTableView, 0);
+        for (Node cellNode : row.getChildrenUnmodifiable()) {
+            if (cellNode instanceof TreeTableCell<?, ?> cell) {
+                double width = cell.getWidth();
+                assertNotEquals(0.0, width);
+            }
+        }
     }
 
     @Test
@@ -274,9 +328,87 @@ public class TreeTableRowSkinTest {
         invisibleColumnsShouldRemoveCorrespondingCellsInRowImpl();
     }
 
+    /** TreeTableView.refresh() must release all discarded cells JDK-8307538 */
+    @Test
+    public void cellsMustBeCollectableAfterRefresh() {
+        IndexedCell<?> row = VirtualFlowTestUtils.getCell(treeTableView, 0);
+        assertNotNull(row);
+        WeakReference<Object> ref = new WeakReference<>(row);
+        row = null;
+
+        treeTableView.refresh();
+        Toolkit.getToolkit().firePulse();
+
+        JMemoryBuddy.assertCollectable(ref);
+    }
+
+    /** TreeTableView.setRowFactory() must release all discarded cells JDK-8307538 */
+    @Test
+    public void cellsMustBeCollectableAfterRowFactoryChange() {
+        IndexedCell<?> row = VirtualFlowTestUtils.getCell(treeTableView, 0);
+        assertNotNull(row);
+        WeakReference<Object> ref = new WeakReference<>(row);
+        row = null;
+
+        treeTableView.setRowFactory((x) -> {
+            return new TreeTableRow<>();
+        });
+        Toolkit.getToolkit().firePulse();
+
+        JMemoryBuddy.assertCollectable(ref);
+    }
+
+    // See JDK-8285700
+    @Test
+    public void testGraphicVisibilityOfTreeItem() {
+        TreeTableView<String> tree = new TreeTableView<>();
+        stageLoader = new StageLoader(tree);
+
+        TreeTableColumn<String, String> column = new TreeTableColumn<>("Column");
+        tree.getColumns().add(column);
+        tree.setRoot(new TreeItem("Root"));
+
+        for (int i = 0; i < 4; i++) {
+            TreeItem<String> parent = new TreeItem<>("item - " + i, new Rectangle(10, 10));
+            TreeItem<String> subNode = new TreeItem<>("sub-node - " + i, new Rectangle(10, 10));
+            parent.getChildren().addAll(subNode);
+            tree.getRoot().getChildren().add(parent);
+        }
+        tree.getRoot().setExpanded(true);
+
+        int itemNodeSize = tree.getRoot().getChildren().size();
+        TreeItem treeItem = tree.getRoot().getChildren().get(itemNodeSize - 2);
+        TreeItem treeItemSubNode = tree.getRoot().getChildren().get(itemNodeSize - 2).getChildren().get(0);
+        TreeItem lastItem = tree.getRoot().getChildren().get(itemNodeSize - 1);
+
+        Toolkit.getToolkit().firePulse();
+        assertFalse(treeItem.isExpanded());
+        double lastItemBeforeExpand = lastItem.getGraphic().localToScene(lastItem.getGraphic().getBoundsInLocal()).getMinY();
+
+        treeItem.setExpanded(true);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(treeItem.isExpanded());
+        assertNotEquals(lastItemBeforeExpand, lastItem.getGraphic().localToScene(lastItem.getGraphic().getBoundsInLocal()).getMinY());
+        double treeItemSubNodeAfterExpand = treeItemSubNode.getGraphic().localToScene(treeItemSubNode.getGraphic().getBoundsInLocal()).getMinY();
+
+        treeItem.setExpanded(false);
+        Toolkit.getToolkit().firePulse();
+        assertFalse(treeItem.isExpanded());
+        assertEquals(lastItemBeforeExpand, lastItem.getGraphic().localToScene(lastItem.getGraphic().getBoundsInLocal()).getMinY());
+        assertNotEquals(treeItemSubNodeAfterExpand, treeItemSubNode.getGraphic().localToScene(treeItemSubNode.getGraphic().getBoundsInLocal()).getMinY());
+
+        treeItem.setExpanded(true);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(treeItem.isExpanded());
+        assertEquals(treeItemSubNodeAfterExpand, treeItemSubNode.getGraphic().localToScene(treeItemSubNode.getGraphic().getBoundsInLocal()).getMinY());
+    }
+
     @AfterEach
     public void after() {
-        stageLoader.dispose();
+        if (stageLoader != null) {
+            stageLoader.dispose();
+            stageLoader = null;
+        }
     }
 
     private void invisibleColumnsShouldRemoveCorrespondingCellsInRowImpl() {

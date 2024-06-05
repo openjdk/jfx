@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2021 Apple Inc.  All rights reserved.
+ * Copyright (C) 2020-2023 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,34 +25,30 @@
 
 #pragma once
 
-#include "ConcreteImageBuffer.h"
 #include "DisplayListDrawingContext.h"
+#include "ImageBuffer.h"
 #include "InMemoryDisplayList.h"
 
 namespace WebCore {
 namespace DisplayList {
 
-template<typename BackendType>
-class ImageBuffer final : public ConcreteImageBuffer<BackendType> {
-    using BaseConcreteImageBuffer = ConcreteImageBuffer<BackendType>;
-    using BaseConcreteImageBuffer::truncatedLogicalSize;
-    using BaseConcreteImageBuffer::logicalSize;
-    using BaseConcreteImageBuffer::baseTransform;
-
+class ImageBuffer final : public WebCore::ImageBuffer {
 public:
-    static auto create(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat, const HostWindow* hostWindow)
+    template<typename BackendType>
+    static auto create(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat, RenderingPurpose purpose, const WebCore::ImageBufferCreationContext& creationContext)
     {
-        return BaseConcreteImageBuffer::template create<ImageBuffer>(size, resolutionScale, colorSpace, pixelFormat, hostWindow);
+        return WebCore::ImageBuffer::create<BackendType, ImageBuffer>(size, resolutionScale, colorSpace, pixelFormat, purpose, creationContext);
     }
 
-    static auto create(const FloatSize& size, const GraphicsContext& context)
+    template<typename BackendType>
+    static auto create(const FloatSize& size, const GraphicsContext& context, RenderingPurpose purpose)
     {
-        return BaseConcreteImageBuffer::template create<ImageBuffer>(size, context);
+        return WebCore::ImageBuffer::create<BackendType, ImageBuffer>(size, context, purpose);
     }
 
-    ImageBuffer(const ImageBufferBackend::Parameters& parameters, std::unique_ptr<BackendType>&& backend)
-        : BaseConcreteImageBuffer(parameters, WTFMove(backend))
-        , m_drawingContext(logicalSize(), baseTransform())
+    ImageBuffer(const ImageBufferBackend::Parameters& parameters, const ImageBufferBackend::Info& info, std::unique_ptr<ImageBufferBackend>&& backend)
+        : WebCore::ImageBuffer(parameters, info, WTFMove(backend))
+        , m_drawingContext(logicalSize(), baseTransform(), colorSpace())
         , m_writingClient(makeUnique<InMemoryDisplayList::WritingClient>())
         , m_readingClient(makeUnique<InMemoryDisplayList::ReadingClient>())
     {
@@ -60,9 +56,9 @@ public:
         m_drawingContext.displayList().setItemBufferReadingClient(m_readingClient.get());
     }
 
-    ImageBuffer(const ImageBufferBackend::Parameters& parameters)
-        : BaseConcreteImageBuffer(parameters)
-        , m_drawingContext(logicalSize(), baseTransform())
+    ImageBuffer(const ImageBufferBackend::Parameters& parameters, const ImageBufferBackend::Info& info)
+        : WebCore::ImageBuffer(parameters, info)
+        , m_drawingContext(logicalSize(), baseTransform(), colorSpace())
         , m_writingClient(makeUnique<InMemoryDisplayList::WritingClient>())
         , m_readingClient(makeUnique<InMemoryDisplayList::ReadingClient>())
     {
@@ -80,18 +76,10 @@ public:
         return m_drawingContext.context();
     }
 
-    GraphicsContext* drawingContext() override { return &m_drawingContext.context(); }
-
     void flushDrawingContext() final
     {
         if (!m_drawingContext.displayList().isEmpty())
-            m_drawingContext.replayDisplayList(BaseConcreteImageBuffer::context());
-    }
-
-    void clearBackend() final
-    {
-        m_drawingContext.displayList().clear();
-        BaseConcreteImageBuffer::clearBackend();
+            m_drawingContext.replayDisplayList(WebCore::ImageBuffer::context());
     }
 
 protected:

@@ -27,13 +27,54 @@
 #include "config.h"
 #include "ImageBufferPipe.h"
 
+#include "GraphicsLayer.h"
+#include "GraphicsLayerContentsDisplayDelegate.h"
+#include <wtf/Lock.h>
+
 namespace WebCore {
 
 #if !USE(NICOSIA)
 
+class ImageBufferPipeSourceDelegate : public ImageBufferPipe::Source {
+public:
+    ImageBufferPipeSourceDelegate()
+    { }
+
+    void handle(ImageBuffer& image) final
+    {
+        Locker locker { m_lock };
+        if (m_delegate)
+            m_delegate->tryCopyToLayer(image);
+    }
+
+    Lock m_lock;
+    RefPtr<GraphicsLayerAsyncContentsDisplayDelegate> m_delegate WTF_GUARDED_BY_LOCK(m_lock);
+};
+
+class ImageBufferPipeDelegate : public ImageBufferPipe {
+public:
+    ImageBufferPipeDelegate()
+        : m_source(adoptRef(*new ImageBufferPipeSourceDelegate))
+    {
+    }
+
+    void setContentsToLayer(GraphicsLayer& layer) final
+    {
+        Locker locker { m_source->m_lock };
+        m_source->m_delegate = layer.createAsyncContentsDisplayDelegate(m_source->m_delegate.get());
+    }
+
+    RefPtr<ImageBufferPipe::Source> source() const final
+    {
+        return m_source.ptr();
+    }
+
+    Ref<ImageBufferPipeSourceDelegate> m_source;
+};
+
 RefPtr<ImageBufferPipe> ImageBufferPipe::create()
 {
-    return nullptr;
+    return adoptRef(new ImageBufferPipeDelegate);
 }
 
 #endif

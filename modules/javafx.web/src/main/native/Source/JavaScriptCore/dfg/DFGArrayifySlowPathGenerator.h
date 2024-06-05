@@ -80,7 +80,7 @@ private:
             case Array::Int32:
             case Array::Double:
             case Array::Contiguous:
-                m_badPropertyJump.fill(jit, jit->m_jit.branch32(
+                m_badPropertyJump.fill(jit, jit->branch32(
                     MacroAssembler::AboveOrEqual, m_propertyGPR,
                     MacroAssembler::TrustedImm32(MIN_SPARSE_ARRAY_INDEX)));
                 break;
@@ -94,17 +94,17 @@ private:
         VM& vm = jit->vm();
         switch (m_arrayMode.type()) {
         case Array::Int32:
-            jit->callOperation(operationEnsureInt32, m_tempGPR, &vm, m_baseGPR);
+            jit->callOperation(operationEnsureInt32, m_tempGPR, SpeculativeJIT::TrustedImmPtr(&vm), m_baseGPR);
             break;
         case Array::Double:
-            jit->callOperation(operationEnsureDouble, m_tempGPR, &vm, m_baseGPR);
+            jit->callOperation(operationEnsureDouble, m_tempGPR, SpeculativeJIT::TrustedImmPtr(&vm), m_baseGPR);
             break;
         case Array::Contiguous:
-            jit->callOperation(operationEnsureContiguous, m_tempGPR, &vm, m_baseGPR);
+            jit->callOperation(operationEnsureContiguous, m_tempGPR, SpeculativeJIT::TrustedImmPtr(&vm), m_baseGPR);
             break;
         case Array::ArrayStorage:
         case Array::SlowPutArrayStorage:
-            jit->callOperation(operationEnsureArrayStorage, m_tempGPR, &vm, m_baseGPR);
+            jit->callOperation(operationEnsureArrayStorage, m_tempGPR, SpeculativeJIT::TrustedImmPtr(&vm), m_baseGPR);
             break;
         default:
             CRASH();
@@ -112,18 +112,18 @@ private:
         }
         for (unsigned i = m_plans.size(); i--;)
             jit->silentFill(m_plans[i]);
-        jit->m_jit.exceptionCheck();
+        jit->exceptionCheck();
 
         if (m_op == ArrayifyToStructure) {
             ASSERT(m_structure.get());
             m_badIndexingTypeJump.fill(
-                jit, jit->m_jit.branchWeakStructure(MacroAssembler::NotEqual, MacroAssembler::Address(m_baseGPR, JSCell::structureIDOffset()), m_structure));
+                jit, jit->branchWeakStructure(MacroAssembler::NotEqual, MacroAssembler::Address(m_baseGPR, JSCell::structureIDOffset()), m_structure));
         } else {
             // Finally, check that we have the kind of array storage that we wanted to get.
             // Note that this is a backwards speculation check, which will result in the
             // bytecode operation corresponding to this arrayification being reexecuted.
             // That's fine, since arrayification is not user-visible.
-            jit->m_jit.load8(
+            jit->load8(
                 MacroAssembler::Address(m_baseGPR, JSCell::indexingTypeAndMiscOffset()),
                 m_structureGPR);
             m_badIndexingTypeJump.fill(

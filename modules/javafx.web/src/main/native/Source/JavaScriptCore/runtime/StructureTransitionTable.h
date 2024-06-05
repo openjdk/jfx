@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,30 +35,33 @@ namespace JSC {
 class JSCell;
 class Structure;
 
+// In fact, it should be 7 bits. See PropertySlot and Structure definitions.
 using TransitionPropertyAttributes = uint8_t;
 
+// This must be 5 bits (less than 32).
 enum class TransitionKind : uint8_t {
-    Unknown,
-    PropertyAddition,
-    PropertyDeletion,
-    PropertyAttributeChange,
+    Unknown = 0,
+    PropertyAddition = 1,
+    PropertyDeletion = 2,
+    PropertyAttributeChange = 3,
 
     // Support for transitions not related to properties.
     // If any of these are used, the string portion of the key should be 0.
-    AllocateUndecided,
-    AllocateInt32,
-    AllocateDouble,
-    AllocateContiguous,
-    AllocateArrayStorage,
-    AllocateSlowPutArrayStorage,
-    SwitchToSlowPutArrayStorage,
-    AddIndexedAccessors,
-    PreventExtensions,
-    Seal,
-    Freeze,
+    AllocateUndecided = 4,
+    AllocateInt32 = 5,
+    AllocateDouble = 6,
+    AllocateContiguous = 7,
+    AllocateArrayStorage = 8,
+    AllocateSlowPutArrayStorage = 9,
+    SwitchToSlowPutArrayStorage = 10,
+    AddIndexedAccessors = 11,
+    PreventExtensions = 12,
+    Seal = 13,
+    Freeze = 14,
+    BecomePrototype = 15,
 
     // Support for transitions related with private brand
-    SetBrand
+    SetBrand = 16
 };
 
 static constexpr auto FirstNonPropertyTransitionKind = TransitionKind::AllocateUndecided;
@@ -90,6 +93,7 @@ inline IndexingType newIndexingType(IndexingType oldType, TransitionKind transit
         ASSERT(!hasIndexedProperties(oldType) || hasUndecided(oldType) || oldType == CopyOnWriteArrayWithInt32);
         return (oldType & ~IndexingShapeAndWritabilityMask) | Int32Shape;
     case TransitionKind::AllocateDouble:
+        ASSERT(Options::allowDoubleShape());
         ASSERT(!hasIndexedProperties(oldType) || hasUndecided(oldType) || hasInt32(oldType) || oldType == CopyOnWriteArrayWithDouble);
         return (oldType & ~IndexingShapeAndWritabilityMask) | DoubleShape;
     case TransitionKind::AllocateContiguous:
@@ -191,11 +195,6 @@ class StructureTransitionTable {
                 return a.m_encodedData == b.m_encodedData;
             }
 
-            friend bool operator!=(const Key& a, const Key& b)
-            {
-                return a.m_encodedData != b.m_encodedData;
-            }
-
         private:
             uintptr_t m_encodedData { 0 };
         };
@@ -235,10 +234,7 @@ class StructureTransitionTable {
     typedef WeakGCMap<Hash::Key, Structure, Hash, Hash::KeyTraits> TransitionMap;
 
 public:
-    StructureTransitionTable()
-        : m_data(UsingSingleSlotFlag)
-    {
-    }
+    StructureTransitionTable() = default;
 
     ~StructureTransitionTable()
     {
@@ -246,16 +242,15 @@ public:
             delete map();
             return;
         }
-
-        WeakImpl* impl = this->weakImpl();
-        if (!impl)
-            return;
-        WeakSet::deallocate(impl);
     }
 
-    void add(VM&, Structure*);
+    void add(VM&, JSCell* owner, Structure*);
     bool contains(UniquedStringImpl*, unsigned attributes, TransitionKind) const;
     Structure* get(UniquedStringImpl*, unsigned attributes, TransitionKind) const;
+
+    Structure* trySingleTransition() const;
+
+    void finalizeUnconditionally(VM&, CollectionScope);
 
 private:
     friend class SingleSlotTransitionWeakOwner;
@@ -271,29 +266,17 @@ private:
         return bitwise_cast<TransitionMap*>(m_data);
     }
 
-    WeakImpl* weakImpl() const
-    {
-        ASSERT(isUsingSingleSlot());
-        return bitwise_cast<WeakImpl*>(m_data & ~UsingSingleSlotFlag);
-    }
-
     void setMap(TransitionMap* map)
     {
         ASSERT(isUsingSingleSlot());
-
-        if (WeakImpl* impl = this->weakImpl())
-            WeakSet::deallocate(impl);
-
         // This implicitly clears the flag that indicates we're using a single transition
         m_data = bitwise_cast<intptr_t>(map);
-
         ASSERT(!isUsingSingleSlot());
     }
 
-    Structure* singleTransition() const;
-    void setSingleTransition(Structure*);
+    void setSingleTransition(VM&, JSCell* owner, Structure*);
 
-    intptr_t m_data;
+    intptr_t m_data { UsingSingleSlotFlag };
 };
 
 } // namespace JSC

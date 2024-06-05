@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc.  All rights reserved.
+ * Copyright (C) 2017-2022 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,12 +27,13 @@
 #include "HeapFinalizerCallback.h"
 
 #include "APICast.h"
+#include "IntegrityInlines.h"
 
 namespace JSC {
 
 void HeapFinalizerCallback::dump(PrintStream& out) const
 {
-    out.print(RawPointer(bitwise_cast<void*>(m_finalizer)), ":", RawPointer(m_userData));
+    out.print(RawPointer(m_finalizer), ":", RawPointer(m_userData));
 }
 
 void HeapFinalizerCallback::run(VM& vm) const

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,14 +63,18 @@ import javafx.scene.chart.LineChart.SortingPolicy;
 /**
  * AreaChart - Plots the area between the line that connects the data points and
  * the 0 line on the Y axis.
+ *
+ * @param <X> the X axis value type
+ * @param <Y> the Y axis value type
  * @since JavaFX 2.0
  */
 public class AreaChart<X,Y> extends XYChart<X,Y> {
 
     // -------------- PRIVATE FIELDS ------------------------------------------
 
-    /** A multiplier for teh Y values that we store for each series, it is used to animate in a new series */
+    /** A multiplier for the Y values that we store for each series, it is used to animate in a new series */
     private Map<Series<X,Y>, DoubleProperty> seriesYMultiplierMap = new HashMap<>();
+    private Timeline timeline;
 
     // -------------- PUBLIC PROPERTIES ----------------------------------------
 
@@ -262,7 +266,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             boolean animate = false;
             // dataSize represents size of currently visible data. After this operation, the number will decrement by 1
             final int dataSize = series.getDataSize();
-            // This is the size of current data list in Series. Note that it might be totaly different from dataSize as
+            // This is the size of current data list in Series. Note that it might be totally different from dataSize as
             // some big operation might have happened on the list.
             final int dataListSize = series.getData().size();
             if (itemIndex > 0 && itemIndex < dataSize -1) {
@@ -410,8 +414,8 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         seriesYMultiplierMap.remove(series);
         // remove all symbol nodes
         if (shouldAnimate()) {
-            Timeline tl = new Timeline(createSeriesRemoveTimeLine(series, 400));
-            tl.play();
+            timeline = new Timeline(createSeriesRemoveTimeLine(series, 400));
+            timeline.play();
         } else {
             getPlotChildren().remove(series.getNode());
             for (Data<X,Y> d:series.getData()) getPlotChildren().remove(d.getNode());
@@ -449,6 +453,13 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         final double dataYMax = sortY ? axisY.getHeight() + hlw : Double.POSITIVE_INFINITY;
         LineTo prevDataPoint = null;
         LineTo nextDataPoint = null;
+        ObservableList<PathElement> lineElements = linePath.getElements();
+        ObservableList<PathElement> fillElements = null;
+        if (fillPath != null) {
+            fillElements = fillPath.getElements();
+            fillElements.clear();
+        }
+        lineElements.clear();
         constructedPath.clear();
         for (Iterator<Data<X, Y>> it = chart.getDisplayedDataIterator(series); it.hasNext(); ) {
             Data<X, Y> item = it.next();
@@ -509,16 +520,10 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             LineTo first = constructedPath.get(0);
             LineTo last = constructedPath.get(constructedPath.size()-1);
 
-            final double displayYPos = first.getY();
-
-            ObservableList<PathElement> lineElements = linePath.getElements();
-            lineElements.clear();
-            lineElements.add(new MoveTo(first.getX(), displayYPos));
+            lineElements.add(new MoveTo(first.getX(), first.getY()));
             lineElements.addAll(constructedPath);
 
             if (fillPath != null) {
-                ObservableList<PathElement> fillElements = fillPath.getElements();
-                fillElements.clear();
                 double yOrigin = axisY.getDisplayPosition(axisY.toRealValue(0.0));
 
                 fillElements.add(new MoveTo(first.getX(), yOrigin));
@@ -552,6 +557,18 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         legendItem.getSymbol().getStyleClass().addAll("chart-area-symbol", "series" + seriesIndex,
                 "area-legend-symbol", series.defaultColorStyleClass);
         return legendItem;
+    }
+
+    /** {@inheritDoc} */
+    @Override void seriesBeingRemovedIsAdded(Series<X,Y> series) {
+        if (timeline != null) {
+            timeline.setOnFinished(null);
+            timeline.stop();
+            timeline = null;
+            getPlotChildren().remove(series.getNode());
+            for (Data<X,Y> d:series.getData()) getPlotChildren().remove(d.getNode());
+            removeSeriesFromDisplay(series);
+        }
     }
 
     // -------------- STYLESHEET HANDLING --------------------------------------

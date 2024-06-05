@@ -42,9 +42,7 @@ struct PaintInfo;
 class InlineBoxPainter {
 public:
     InlineBoxPainter(const LegacyInlineFlowBox&, PaintInfo&, const LayoutPoint& paintOffset);
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     InlineBoxPainter(const LayoutIntegration::InlineContent&, const InlineDisplay::Box&, PaintInfo&, const LayoutPoint& paintOffset);
-#endif
     ~InlineBoxPainter();
 
     void paint();
@@ -67,7 +65,7 @@ private:
     PaintInfo& m_paintInfo;
     const LayoutPoint m_paintOffset;
     const RenderBoxModelObject& m_renderer;
-    const bool m_isFirstLine;
+    const bool m_isFirstLineBox;
     const bool m_isRootInlineBox;
     const bool m_isHorizontal;
 };

@@ -57,11 +57,11 @@
     [DOMJIT=Getter] readonly attribute Node? previousSibling;
     [DOMJIT=Getter] readonly attribute Node? nextSibling;
 
-    [CEReactions] attribute DOMString? nodeValue;
-    [CEReactions] attribute DOMString? textContent;
-    [CEReactions] undefined normalize();
+    [CEReactions=Needed] attribute DOMString? nodeValue;
+    [CEReactions=Needed] attribute DOMString? textContent;
+    [CEReactions=Needed] undefined normalize();
 
-    [CEReactions, ImplementedAs=cloneNodeForBindings, NewObject] Node cloneNode(optional boolean deep = false);
+    [CEReactions=Needed, ImplementedAs=cloneNodeForBindings, NewObject] Node cloneNode(optional boolean deep = false);
     boolean isEqualNode(Node? other);
     boolean isSameNode(Node? other); // Historical alias of ===.
 
@@ -74,14 +74,14 @@
     unsigned short compareDocumentPosition(Node other);
     boolean contains(Node? other);
 
-    DOMString? lookupPrefix(DOMString? namespaceURI);
-    DOMString? lookupNamespaceURI(DOMString? prefix);
-    boolean isDefaultNamespace(DOMString? namespaceURI);
+    DOMString? lookupPrefix([AtomString] DOMString? namespaceURI);
+    DOMString? lookupNamespaceURI([AtomString] DOMString? prefix);
+    boolean isDefaultNamespace([AtomString] DOMString? namespaceURI);
 
-    [CEReactions] Node insertBefore([ReturnValue] Node node, Node? child);
-    [CEReactions] Node appendChild([ReturnValue] Node node);
-    [CEReactions] Node replaceChild(Node node, [ReturnValue] Node child);
-    [CEReactions] Node removeChild([ReturnValue] Node child);
+    [CEReactions=Needed] Node insertBefore([ReturnValue] Node node, Node? child);
+    [CEReactions=Needed] Node appendChild([ReturnValue] Node node);
+    [CEReactions=Needed] Node replaceChild(Node node, [ReturnValue] Node child);
+    [CEReactions=Needed] Node removeChild([ReturnValue] Node child);
 };
 
 dictionary GetRootNodeOptions {

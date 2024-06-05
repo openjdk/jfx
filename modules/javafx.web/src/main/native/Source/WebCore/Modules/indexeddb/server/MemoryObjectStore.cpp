@@ -247,7 +247,7 @@ IDBError MemoryObjectStore::addRecord(MemoryBackingStoreTransaction& transaction
 {
     IndexIDToIndexKeyMap indexKeys;
     callOnIDBSerializationThreadAndWait([info = m_info.isolatedCopy(), keyData = keyData.isolatedCopy(), value = value.isolatedCopy(), &indexKeys](auto& globalObject) {
-        indexKeys = generateIndexKeyMapForValue(globalObject, info, keyData, value);
+        indexKeys = generateIndexKeyMapForValueIsolatedCopy(globalObject, info, keyData, value);
     });
     return addRecord(transaction, keyData, indexKeys, value);
 }
@@ -310,7 +310,7 @@ IDBError MemoryObjectStore::updateIndexesForPutRecord(const IDBKeyData& key, con
         auto* index = m_indexesByIdentifier.get(indexID);
         ASSERT(index);
         if (!index) {
-            error = IDBError { InvalidStateError, "Missing index metadata" };
+            error = IDBError { InvalidStateError, "Missing index metadata"_s };
             break;
         }
 
@@ -344,7 +344,7 @@ IDBError MemoryObjectStore::populateIndexWithExistingRecords(MemoryIndex& index)
 
             IndexKey indexKey;
             generateIndexKeyForValue(globalObject, indexInfo, jsValue, indexKey, info.keyPath(), key);
-            resultIndexKey = indexKey.isolatedCopy();
+            resultIndexKey = WTFMove(indexKey).isolatedCopy();
         });
 
         if (!resultIndexKey)
@@ -510,8 +510,9 @@ void MemoryObjectStore::renameIndex(MemoryIndex& index, const String& newName)
     ASSERT(m_indexesByName.get(index.info().name()) == &index);
     ASSERT(!m_indexesByName.contains(newName));
     ASSERT(m_info.infoForExistingIndex(index.info().name()));
+    ASSERT(m_info.infoForExistingIndex(index.info().identifier()) == m_info.infoForExistingIndex(index.info().name()));
 
-    m_info.infoForExistingIndex(index.info().name())->rename(newName);
+    m_info.infoForExistingIndex(index.info().identifier())->rename(newName);
     m_indexesByName.set(newName, m_indexesByName.take(index.info().name()));
     index.rename(newName);
 }

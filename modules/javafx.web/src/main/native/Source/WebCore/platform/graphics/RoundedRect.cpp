@@ -28,6 +28,7 @@
 #include "config.h"
 #include "RoundedRect.h"
 
+#include "FloatQuad.h"
 #include "FloatRoundedRect.h"
 #include "GeometryUtilities.h"
 #include "LayoutRect.h"
@@ -379,6 +380,16 @@ Region approximateAsRegion(const RoundedRect& roundedRect, unsigned stepLength)
     }
 
     return region;
+}
+
+TextStream& operator<<(TextStream& ts, const RoundedRect& roundedRect)
+{
+    ts << roundedRect.rect();
+    ts.dumpProperty("top-left", roundedRect.radii().topLeft());
+    ts.dumpProperty("top-right", roundedRect.radii().topRight());
+    ts.dumpProperty("bottom-left", roundedRect.radii().bottomLeft());
+    ts.dumpProperty("bottom-right", roundedRect.radii().bottomRight());
+    return ts;
 }
 
 } // namespace WebCore

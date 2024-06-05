@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -47,7 +48,6 @@ struct TestFeatures {
 };
 
 bool operator==(const TestFeatures&, const TestFeatures&);
-bool operator!=(const TestFeatures&, const TestFeatures&);
 
 void merge(TestFeatures& base, TestFeatures additional);
 

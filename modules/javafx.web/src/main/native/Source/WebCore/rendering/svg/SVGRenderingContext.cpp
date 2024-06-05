@@ -28,10 +28,10 @@
 #include "SVGRenderingContext.h"
 
 #include "BasicShapes.h"
-#include "Frame.h"
-#include "FrameView.h"
+#include "LegacyRenderSVGImage.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "RenderLayer.h"
-#include "RenderSVGImage.h"
 #include "RenderSVGResourceClipper.h"
 #include "RenderSVGResourceFilter.h"
 #include "RenderSVGResourceMasker.h"
@@ -161,7 +161,7 @@ void SVGRenderingContext::prepareToRenderSVGContent(RenderElement& renderer, Pai
 
     if (!isRenderingMask) {
         m_filter = resources->filter();
-        if (m_filter) {
+        if (m_filter && !m_filter->isIdentity()) {
             m_savedContext = &m_paintInfo->context();
             m_savedPaintRect = m_paintInfo->rect;
             // Return with false here may mean that we don't need to draw the content
@@ -268,7 +268,7 @@ void SVGRenderingContext::clipToImageBuffer(GraphicsContext& context, const Floa
 bool SVGRenderingContext::bufferForeground(RefPtr<ImageBuffer>& imageBuffer)
 {
     ASSERT(m_paintInfo);
-    ASSERT(is<RenderSVGImage>(*m_renderer));
+    ASSERT(is<LegacyRenderSVGImage>(*m_renderer));
     FloatRect boundingBox = m_renderer->objectBoundingBox();
 
     // Invalidate an existing buffer if the scale is not correct.
@@ -282,7 +282,7 @@ bool SVGRenderingContext::bufferForeground(RefPtr<ImageBuffer>& imageBuffer)
 
     // Create a new buffer and paint the foreground into it.
     if (!imageBuffer) {
-        imageBuffer = m_paintInfo->context().createCompatibleImageBuffer(expandedIntSize(boundingBox.size()));
+        imageBuffer = m_paintInfo->context().createAlignedImageBuffer(expandedIntSize(boundingBox.size()));
         if (!imageBuffer)
             return false;
     }
@@ -291,7 +291,7 @@ bool SVGRenderingContext::bufferForeground(RefPtr<ImageBuffer>& imageBuffer)
     bufferedRenderingContext.translate(-boundingBox.location());
     PaintInfo bufferedInfo(*m_paintInfo);
     bufferedInfo.setContext(bufferedRenderingContext);
-    downcast<RenderSVGImage>(*m_renderer).paintForeground(bufferedInfo);
+    downcast<LegacyRenderSVGImage>(*m_renderer).paintForeground(bufferedInfo);
 
     m_paintInfo->context().drawImageBuffer(*imageBuffer, boundingBox);
     return true;

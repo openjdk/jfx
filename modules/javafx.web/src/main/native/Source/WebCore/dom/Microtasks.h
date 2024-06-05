@@ -23,6 +23,7 @@
 
 #include <wtf/Forward.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakPtr.h>
 
 namespace JSC {
 class VM;
@@ -30,18 +31,21 @@ class VM;
 
 namespace WebCore {
 
+class EventLoop;
 class EventLoopTask;
 
 class MicrotaskQueue final {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    WEBCORE_EXPORT MicrotaskQueue(JSC::VM&);
+    WEBCORE_EXPORT MicrotaskQueue(JSC::VM&, EventLoop&);
     WEBCORE_EXPORT ~MicrotaskQueue();
 
     WEBCORE_EXPORT void append(std::unique_ptr<EventLoopTask>&&);
     WEBCORE_EXPORT void performMicrotaskCheckpoint();
 
     WEBCORE_EXPORT void addCheckpointTask(std::unique_ptr<EventLoopTask>&&);
+
+    bool isEmpty() const { return m_microtaskQueue.isEmpty(); }
 
 private:
     JSC::VM& vm() const { return m_vm.get(); }
@@ -50,6 +54,7 @@ private:
     Vector<std::unique_ptr<EventLoopTask>> m_microtaskQueue;
     // For the main thread the VM lives forever. For workers it's lifetime is tied to our owning WorkerGlobalScope. Regardless, we retain the VM here to be safe.
     Ref<JSC::VM> m_vm;
+    WeakPtr<EventLoop> m_eventLoop;
 
     Vector<std::unique_ptr<EventLoopTask>> m_checkpointTasks;
 };

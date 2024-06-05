@@ -33,13 +33,14 @@
 #include "ExceptionOr.h"
 #include "JSValueInWrappedObject.h"
 #include <JavaScriptCore/Forward.h>
-#include <JavaScriptCore/GenericTypedArrayView.h>
+#include <JavaScriptCore/TypedArrayAdaptersForwardDeclarations.h>
 #include <wtf/Lock.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
 class AudioBus;
+class WebCoreOpaqueRoot;
 
 class AudioBuffer : public RefCounted<AudioBuffer> {
 public:
@@ -85,6 +86,8 @@ public:
 
     bool topologyMatches(const AudioBuffer&) const;
 
+    void setNeedsAdditionalNoise() { m_needsAdditionalNoise = true; }
+
 private:
     AudioBuffer(unsigned numberOfChannels, size_t length, float sampleRate, LegacyPreventDetaching = LegacyPreventDetaching::No);
     explicit AudioBuffer(AudioBus&);
@@ -93,9 +96,12 @@ private:
 
     bool hasDetachedChannelBuffer() const;
 
+    void applyNoiseIfNeeded();
+
     // We do not currently support having the Float32Arrays in m_channels being more than 2GB,
     // and we have tests that we return an error promptly on trying to create such a huge AudioBuffer.
-    static constexpr uint64_t s_maxLength = (1ull << 32) / sizeof(float);
+    static constexpr uint64_t s_maxChannelLength = (1ull << 32) / sizeof(float);
+    static constexpr uint64_t s_maxLength = 1ull << 32;
 
     float m_sampleRate;
     size_t m_originalLength;
@@ -103,6 +109,9 @@ private:
     FixedVector<JSValueInWrappedObject> m_channelWrappers;
     bool m_isDetachable { true };
     mutable Lock m_channelsLock;
+    bool m_needsAdditionalNoise { false };
 };
+
+WebCoreOpaqueRoot root(AudioBuffer*);
 
 } // namespace WebCore

@@ -36,7 +36,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGClipPathElement);
 
 inline SVGClipPathElement::SVGClipPathElement(const QualifiedName& tagName, Document& document)
-    : SVGGraphicsElement(tagName, document)
+    : SVGGraphicsElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::clipPathTag));
 
@@ -50,16 +50,15 @@ Ref<SVGClipPathElement> SVGClipPathElement::create(const QualifiedName& tagName,
     return adoptRef(*new SVGClipPathElement(tagName, document));
 }
 
-void SVGClipPathElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGClipPathElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     if (name == SVGNames::clipPathUnitsAttr) {
-        auto propertyValue = SVGPropertyTraits<SVGUnitTypes::SVGUnitType>::fromString(value);
+        auto propertyValue = SVGPropertyTraits<SVGUnitTypes::SVGUnitType>::fromString(newValue);
         if (propertyValue > 0)
             m_clipPathUnits->setBaseValInternal<SVGUnitTypes::SVGUnitType>(propertyValue);
-        return;
     }
 
-    SVGGraphicsElement::parseAttribute(name, value);
+    SVGGraphicsElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGClipPathElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -67,8 +66,7 @@ void SVGClipPathElement::svgAttributeChanged(const QualifiedName& attrName)
     if (PropertyRegistry::isKnownAttribute(attrName)) {
         InstanceInvalidationGuard guard(*this);
 
-        if (RenderObject* object = renderer())
-            object->setNeedsLayout();
+        updateSVGRendererForElementChange();
         return;
     }
 
@@ -82,8 +80,7 @@ void SVGClipPathElement::childrenChanged(const ChildChange& change)
     if (change.source == ChildChange::Source::Parser)
         return;
 
-    if (RenderObject* object = renderer())
-        object->setNeedsLayout();
+    updateSVGRendererForElementChange();
 }
 
 RenderPtr<RenderElement> SVGClipPathElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)

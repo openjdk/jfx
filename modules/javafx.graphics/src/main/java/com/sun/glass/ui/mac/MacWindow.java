@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,6 +52,8 @@ final class MacWindow extends Window {
     @Override native protected boolean _setMenubar(long ptr, long menubarPtr);
     @Override native protected boolean _minimize(long ptr, boolean minimize);
     @Override native protected boolean _maximize(long ptr, boolean maximize, boolean wasMaximized);
+    // empty - not needed by this implementation
+    @Override protected void _updateViewSize(long ptr) {}
     @Override protected void _setBounds(long ptr,
                                         int x, int y, boolean xSet, boolean ySet,
                                         int w, int h, int cw, int ch,

@@ -27,15 +27,17 @@
 #include "ContentSecurityPolicy.h"
 #include "DocumentLoader.h"
 #include "ElementInlines.h"
+#include "EventLoop.h"
 #include "EventNames.h"
-#include "Frame.h"
-#include "FrameLoaderClient.h"
+#include "GCReachableRef.h"
 #include "HTMLImageLoader.h"
 #include "JSDOMConvertBoolean.h"
 #include "JSDOMConvertInterface.h"
 #include "JSDOMConvertStrings.h"
 #include "JSShadowRoot.h"
 #include "LegacySchemeRegistry.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "LocalizedStrings.h"
 #include "Logging.h"
 #include "MouseEvent.h"
@@ -45,12 +47,13 @@
 #include "RenderImage.h"
 #include "RenderTreeUpdater.h"
 #include "ScriptController.h"
+#include "ScriptDisallowedScope.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
 #include "StyleTreeResolver.h"
 #include "SubframeLoader.h"
-#include "TypedElementDescendantIterator.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include "UserGestureIndicator.h"
 #include <JavaScriptCore/CatchScope.h>
 #include <JavaScriptCore/JSGlobalObjectInlines.h>
@@ -79,7 +82,7 @@ RenderEmbeddedObject* HTMLPlugInImageElement::renderEmbeddedObject() const
 
 bool HTMLPlugInImageElement::isImageType()
 {
-    if (m_serviceType.isEmpty() && protocolIs(m_url, "data"))
+    if (m_serviceType.isEmpty() && protocolIs(m_url, "data"_s))
         m_serviceType = mimeTypeFromDataURL(m_url);
 
     if (RefPtr frame = document().frame())
@@ -180,9 +183,8 @@ void HTMLPlugInImageElement::didAttachRenderers()
 
 void HTMLPlugInImageElement::willDetachRenderers()
 {
-    RefPtr widget = pluginWidget(PluginLoadingPolicy::DoNotLoad);
-    if (is<PluginViewBase>(widget))
-        downcast<PluginViewBase>(*widget).willDetachRenderer();
+    if (RefPtr widget = pluginWidget(PluginLoadingPolicy::DoNotLoad))
+        widget->willDetachRenderer();
 
     HTMLPlugInElement::willDetachRenderers();
 }
@@ -196,8 +198,8 @@ void HTMLPlugInImageElement::scheduleUpdateForAfterStyleResolution()
 
     m_hasUpdateScheduledForAfterStyleResolution = true;
 
-    Style::deprecatedQueuePostResolutionCallback([protectedThis = Ref { *this }] {
-        protectedThis->updateAfterStyleResolution();
+    document().eventLoop().queueTask(TaskSource::DOMManipulation, [element = GCReachableRef { *this }] {
+        element->updateAfterStyleResolution();
     });
 }
 
@@ -305,7 +307,7 @@ bool HTMLPlugInImageElement::canLoadPlugInContent(const String& relativeURL, con
     return contentSecurityPolicy.allowPluginType(mimeType, declaredMimeType, completedURL);
 }
 
-bool HTMLPlugInImageElement::requestObject(const String& relativeURL, const String& mimeType, const Vector<String>& paramNames, const Vector<String>& paramValues)
+bool HTMLPlugInImageElement::requestObject(const String& relativeURL, const String& mimeType, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues)
 {
     ASSERT(document().frame());
 
@@ -320,7 +322,14 @@ bool HTMLPlugInImageElement::requestObject(const String& relativeURL, const Stri
     if (HTMLPlugInElement::requestObject(relativeURL, mimeType, paramNames, paramValues))
         return true;
 
-    return document().frame()->loader().subframeLoader().requestObject(*this, relativeURL, getNameAttribute(), mimeType, paramNames, paramValues);
+    Ref document = this->document();
+    if (ScriptDisallowedScope::InMainThread::isScriptAllowed())
+        return document->frame()->loader().subframeLoader().requestObject(*this, relativeURL, getNameAttribute(), mimeType, paramNames, paramValues);
+
+    document->eventLoop().queueTask(TaskSource::Networking, [this, protectedThis = Ref { *this }, document, relativeURL, nameAttribute = getNameAttribute(), mimeType, paramNames, paramValues]() mutable {
+        document->frame()->loader().subframeLoader().requestObject(*this, relativeURL, nameAttribute, mimeType, paramNames, paramValues);
+    });
+    return true;
 }
 
 void HTMLPlugInImageElement::updateImageLoaderWithNewURLSoon()

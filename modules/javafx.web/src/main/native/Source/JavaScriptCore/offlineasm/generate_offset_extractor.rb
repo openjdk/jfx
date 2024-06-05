@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-# Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+# Copyright (C) 2011-2023 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -33,6 +33,7 @@ require 'optparse'
 require "parser"
 require "self_hash"
 require "settings"
+require "shellwords"
 require "transform"
 
 IncludeFile.processIncludeOptions()
@@ -40,17 +41,24 @@ IncludeFile.processIncludeOptions()
 inputFlnm = ARGV.shift
 settingsFlnm = ARGV.shift
 outputFlnm = ARGV.shift
+tempFlnm = File.join(
+    ENV['TARGET_TEMP_DIR'] || File.dirname(outputFlnm),
+    "#{File.basename(outputFlnm)}.part"
+)
 
-validBackends = canonicalizeBackendNames(ARGV.shift.split(/[,\s]+/))
-includeOnlyBackends(validBackends)
+inputBackends = canonicalizeBackendNames(ARGV.shift.split(/[,\s]+/))
+includeOnlyBackends(inputBackends)
 
 variants = ARGV.shift.split(/[,\s]+/)
 
 $options = {}
 OptionParser.new do |opts|
-    opts.banner = "Usage: generate_offset_extractor.rb asmFile settingFile outputFileName backends variants [--webkit-additions-path=<path>]"
+    opts.banner = "Usage: generate_offset_extractor.rb asmFile settingFile outputFileName backends variants [--webkit-additions-path=<path>] [--depfile=<depfile>]"
     opts.on("--webkit-additions-path=PATH", "WebKitAdditions path.") do |path|
         $options[:webkit_additions_path] = path
+    end
+    opts.on("--depfile=DEPFILE", "path to write Makefile-style discovered dependencies to.") do |path|
+        $options[:depfile] = path
     end
 end.parse!
 
@@ -69,9 +77,9 @@ def emitMagicNumber
 end
 
 configurationHash = Digest::SHA1.hexdigest(configurationList.join(' '))
-inputHash = "// OffsetExtractor input hash: #{parseHash(inputFlnm, $options)} #{configurationHash} #{selfHash}"
+inputHash = "// OffsetExtractor input hash: #{parseHash(inputFlnm, $options)} #{configurationHash} #{selfHash} #{validBackends.join(' ')}"
 
-if FileTest.exist? outputFlnm
+if FileTest.exist?(outputFlnm) and (not $options[:depfile] or FileTest.exist?($options[:depfile]))
     File.open(outputFlnm, "r") {
         | inp |
         firstLine = inp.gets
@@ -82,10 +90,17 @@ if FileTest.exist? outputFlnm
     }
 end
 
-ast = parse(inputFlnm, $options)
+sources = Set.new
+ast = parse(inputFlnm, $options, sources)
 settingsCombinations = computeSettingsCombinations(ast)
 
-File.open(outputFlnm, "w") {
+if $options[:depfile]
+    depfile = File.open($options[:depfile], "w")
+    depfile.print(Shellwords.escape(outputFlnm), ": ")
+    depfile.puts(Shellwords.join(sources.sort))
+end
+
+File.open(tempFlnm, "w") {
     | outp |
     $output = outp
     outp.puts inputHash
@@ -139,5 +154,5 @@ File.open(outputFlnm, "w") {
     }
 
     outp.puts "static const int64_t offsetExtractorTable[] = { };" if not configurationList.size
-
 }
+File.rename(tempFlnm, outputFlnm)

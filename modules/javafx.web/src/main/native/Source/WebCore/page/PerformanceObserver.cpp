@@ -26,12 +26,11 @@
 #include "config.h"
 #include "PerformanceObserver.h"
 
-#include "DOMWindow.h"
 #include "Document.h"
 #include "InspectorInstrumentation.h"
+#include "LocalDOMWindow.h"
 #include "Performance.h"
 #include "PerformanceObserverEntryList.h"
-#include "RuntimeEnabledFeatures.h"
 #include "WorkerGlobalScope.h"
 
 namespace WebCore {
@@ -41,7 +40,7 @@ PerformanceObserver::PerformanceObserver(ScriptExecutionContext& scriptExecution
 {
     if (is<Document>(scriptExecutionContext)) {
         auto& document = downcast<Document>(scriptExecutionContext);
-        if (DOMWindow* window = document.domWindow())
+        if (auto* window = document.domWindow())
             m_performance = &window->performance();
     } else if (is<WorkerGlobalScope>(scriptExecutionContext)) {
         auto& workerGlobalScope = downcast<WorkerGlobalScope>(scriptExecutionContext);

@@ -31,7 +31,7 @@
 
 namespace JSC {
 
-const ClassInfo FunctionRareData::s_info = { "FunctionRareData", nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(FunctionRareData) };
+const ClassInfo FunctionRareData::s_info = { "FunctionRareData"_s, nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(FunctionRareData) };
 
 FunctionRareData* FunctionRareData::create(VM& vm, ExecutableBase* executable)
 {
@@ -73,11 +73,11 @@ FunctionRareData::FunctionRareData(VM& vm, ExecutableBase* executable)
     // the first allocation don't disable optimizations. This isn't super important, since the
     // function is unlikely to allocate a rare data until the first allocation anyway.
     , m_allocationProfileWatchpointSet(ClearWatchpoint)
-    , m_executable(vm, this, executable)
+    , m_executable(executable, WriteBarrierEarlyInit)
     , m_hasReifiedLength(false)
     , m_hasReifiedName(false)
-    , m_hasModifiedLengthForNonHostFunction(false)
-    , m_hasModifiedNameForNonHostFunction(false)
+    , m_hasModifiedLengthForBoundOrNonHostFunction(false)
+    , m_hasModifiedNameForBoundOrNonHostFunction(false)
 {
 }
 

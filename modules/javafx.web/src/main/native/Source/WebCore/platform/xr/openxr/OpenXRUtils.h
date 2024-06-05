@@ -60,7 +60,7 @@ inline String resultToString(XrResult value, XrInstance instance)
     char buffer[XR_MAX_RESULT_STRING_SIZE];
     XrResult result = xrResultToString(instance, value, buffer);
     if (result == XR_SUCCESS)
-        return String(buffer);
+        return String::fromLatin1(buffer);
     return makeString("<unknown ", int(value), ">");
 }
 
@@ -98,7 +98,7 @@ inline Device::FrameData::Pose XrPosefToPose(XrPosef pose)
 inline Device::FrameData::View xrViewToPose(XrView view)
 {
     Device::FrameData::View pose;
-    pose.projection = Device::FrameData::Fov { fabs(view.fov.angleUp), fabs(view.fov.angleDown), fabs(view.fov.angleLeft), fabs(view.fov.angleRight) };
+    pose.projection = Device::FrameData::Fov { std::abs(view.fov.angleUp), std::abs(view.fov.angleDown), std::abs(view.fov.angleLeft), std::abs(view.fov.angleRight) };
     pose.offset = XrPosefToPose(view.pose);
     return pose;
 }
@@ -127,12 +127,12 @@ inline String handenessToString(XRHandedness handeness)
 {
     switch (handeness) {
     case XRHandedness::Left:
-        return "left";
+        return "left"_s;
     case XRHandedness::Right:
-        return "right";
+        return "right"_s;
     default:
         ASSERT_NOT_REACHED();
-        return "";
+        return emptyString();
     }
 }
 

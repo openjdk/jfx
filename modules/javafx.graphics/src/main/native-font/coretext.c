@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@
 
 #if TARGET_OS_MAC
 
+#include <stdint.h>
 #include <jni.h>
 #include <com_sun_javafx_font_coretext_OS.h>
 
@@ -42,6 +43,12 @@
 
 
 #define OS_NATIVE(func) Java_com_sun_javafx_font_coretext_OS_##func
+
+#define SAFE_FREE(PTR)  \
+    if ((PTR) != NULL) {  \
+        free(PTR);     \
+        (PTR) = NULL;     \
+    }
 
 extern jboolean checkAndClearException(JNIEnv *env);
 
@@ -370,6 +377,25 @@ JNIEXPORT void JNICALL OS_NATIVE(CFRelease)
     CFRelease((CFTypeRef)arg0);
 }
 
+JNIEXPORT void JNICALL OS_NATIVE(CFRetain)
+    (JNIEnv *env, jclass that, jlong arg0)
+{
+    CFRetain((CFTypeRef)arg0);
+}
+
+JNIEXPORT jlong JNICALL OS_NATIVE(CTFontCreateCopyWithAttributes)
+    (JNIEnv *env, jclass that, jlong ctfont, jdouble size, jobject matrix, jlong attributes)
+{
+    CGAffineTransform transform;
+    if (matrix) {
+        getCGAffineTransformFields(env, matrix, &transform);
+    } else {
+        transform = CGAffineTransformIdentity;
+    }
+    return (jlong)CTFontCreateCopyWithAttributes((CTFontRef)ctfont, (CGFloat)size,
+                                                 &transform, (CTFontDescriptorRef)attributes);
+}
+
 JNIEXPORT jlong JNICALL OS_NATIVE(CTFontCreateWithGraphicsFont)
     (JNIEnv *env, jclass that, jlong cgFont, jdouble size, jobject matrix, jlong attributes)
 {
@@ -380,6 +406,23 @@ JNIEXPORT jlong JNICALL OS_NATIVE(CTFontCreateWithGraphicsFont)
         transform = CGAffineTransformIdentity;
     }
     return (jlong)CTFontCreateWithGraphicsFont((CGFontRef)cgFont, (CGFloat)size, &transform, (CTFontDescriptorRef)attributes);
+}
+
+JNIEXPORT jlong JNICALL OS_NATIVE(CTFontCreateUIFontForLanguage)
+    (JNIEnv *env, jclass that, jdouble size, jobject matrix, jboolean bold) {
+
+    CGAffineTransform _matrix, *lpmatrix=NULL;
+    CTFontUIFontType fType = bold ? kCTFontUIFontEmphasizedSystem : kCTFontUIFontSystem;
+    CTFontRef font = CTFontCreateUIFontForLanguage(fType, (CGFloat)size, NULL);
+    if (matrix == NULL) {
+        return (jlong)font;
+    }
+    if ((lpmatrix = getCGAffineTransformFields(env, matrix, &_matrix)) == NULL) {
+         return (jlong)font;
+    }
+    jlong txfont = (jlong)CTFontCreateCopyWithAttributes(font, (CGFloat)size, (CGAffineTransform*)lpmatrix, NULL);
+    CFRelease(font);
+    return txfont;
 }
 
 JNIEXPORT jlong JNICALL OS_NATIVE(CTFontCreateWithName)
@@ -629,7 +672,13 @@ JNIEXPORT jlong JNICALL OS_NATIVE(CFStringCreateWithCharacters__J_3CJJ)
 {
     jchar *lparg1=NULL;
     jlong rc = 0;
-    if (arg1) if ((lparg1 = (*env)->GetPrimitiveArrayCritical(env, arg1, NULL)) == NULL) goto fail;
+    if (!arg1) goto fail;
+    if ((lparg1 = (*env)->GetPrimitiveArrayCritical(env, arg1, NULL)) == NULL) goto fail;
+    if (arg2 < 0) goto fail;
+    if (arg3 < 0) goto fail;
+    if (arg2 > LONG_MAX - arg3) goto fail;
+    if (arg2 + arg3 > (*env)->GetArrayLength(env, arg1)) goto fail;
+
     UniChar* str = lparg1 + arg2;
     rc = (jlong)CFStringCreateWithCharacters((CFAllocatorRef)arg0, str, (CFIndex)arg3);
 fail:
@@ -643,7 +692,7 @@ JNIEXPORT jint JNICALL OS_NATIVE(CTRunGetGlyphs)
     CTRunRef run = (CTRunRef)runRef;
     const CGGlyph * glyphs = CTRunGetGlyphsPtr(run);
     CFIndex count = CTRunGetGlyphCount(run);
-    if (count == 0) {
+    if (count == 0 || count > SIZE_MAX / sizeof(CGGlyph)) {
         return 0;
     }
 
@@ -756,6 +805,21 @@ JNIEXPORT jint JNICALL OS_NATIVE(CTRunGetStringIndices)
     return i;
 }
 
+JNIEXPORT jstring JNICALL OS_NATIVE(CTFontCopyURLAttribute)
+    (JNIEnv *env, jclass that, jlong arg0)
+{
+    CFURLRef urlRef = CTFontCopyAttribute((CTFontRef)arg0, kCTFontURLAttribute);
+    if (urlRef == NULL) return NULL;
+    CFStringRef stringRef = CFURLCopyFileSystemPath(urlRef, kCFURLPOSIXPathStyle);
+    CFRelease(urlRef);
+    if (stringRef == NULL) return NULL;
+    CFIndex length = CFStringGetLength(stringRef);
+    UniChar buffer[length];
+    CFStringGetCharacters(stringRef, CFRangeMake(0, length), buffer);
+    CFRelease(stringRef);
+    return (*env)->NewString(env, (jchar *)buffer, length);
+}
+
 JNIEXPORT jstring JNICALL OS_NATIVE(CTFontCopyAttributeDisplayName)
     (JNIEnv *env, jclass that, jlong arg0)
 {
@@ -768,15 +832,80 @@ JNIEXPORT jstring JNICALL OS_NATIVE(CTFontCopyAttributeDisplayName)
     return (*env)->NewString(env, (jchar *)buffer, length);
 }
 
+JNIEXPORT jbyteArray JNICALL OS_NATIVE(CGImageContextGetData)
+    (JNIEnv *env, jclass that, jlong arg0, jint dstWidth, jint dstHeight, jint bpp)
+{
+    jbyteArray result = NULL;
+    if (dstWidth <= 0) return NULL;
+    if (dstHeight <= 0) return NULL;
+    if (bpp != 32) return NULL;
+
+    size_t dstStep = bpp / 8;
+    // for these checks we tested above that dstWidth/dstHeight/bpp cannot be 0
+    // checks are against INT_MAX - dst* variables are used later in
+    // (*env)->NewByteArray() which expects jint
+    if (dstWidth > (INT_MAX / dstStep)) return NULL;
+    if (dstHeight > (INT_MAX / (dstWidth * dstStep))) return NULL;
+
+    CGContextRef context = (CGContextRef)arg0;
+    if (context == NULL) return NULL;
+    jbyte *srcData = (jbyte*)CGBitmapContextGetData(context);
+
+    if (srcData) {
+        size_t srcWidth = CGBitmapContextGetWidth(context);
+        if (srcWidth < dstWidth) return NULL;
+        size_t srcHeight =  CGBitmapContextGetHeight(context);
+        if (srcHeight < dstHeight) return NULL;
+        size_t srcBytesPerRow = CGBitmapContextGetBytesPerRow(context);
+        size_t srcStep = CGBitmapContextGetBitsPerPixel(context) / 8;
+        if (srcBytesPerRow == 0) return NULL;
+        if ((srcHeight - dstHeight) > SIZE_MAX / srcBytesPerRow) return NULL;
+        size_t srcOffset = (srcHeight - dstHeight) * srcBytesPerRow;
+
+        size_t size = dstWidth * dstHeight * dstStep;
+        jbyte* data = (jbyte*)calloc(size, sizeof(jbyte));
+        if (data == NULL) return NULL;
+
+        int x, y, sx;
+        int dstOffset = 0;
+        for (y = 0; y < dstHeight; y++) {
+            for (x = 0, sx = 0; x < dstWidth; x++, dstOffset += dstStep, sx += srcStep) {
+                /* BGRA to BGRA */
+                data[dstOffset + 0] = srcData[srcOffset + sx + 0];
+                data[dstOffset + 1] = srcData[srcOffset + sx + 1];
+                data[dstOffset + 2] = srcData[srcOffset + sx + 2];
+                data[dstOffset + 3] = srcData[srcOffset + sx + 3];
+            }
+            srcOffset += srcBytesPerRow;
+        }
+
+        result = (*env)->NewByteArray(env, size);
+        if (result) {
+            (*env)->SetByteArrayRegion(env, result, 0, size, data);
+        }
+        free(data);
+    }
+    return result;
+}
+
 JNIEXPORT jbyteArray JNICALL OS_NATIVE(CGBitmapContextGetData)
     (JNIEnv *env, jclass that, jlong arg0, jint dstWidth, jint dstHeight, jint bpp)
 {
     jbyteArray result = NULL;
-    if (dstWidth < 0) return NULL;
-    if (dstHeight < 0) return NULL;
+    if (dstWidth <= 0) return NULL;
+    if (dstHeight <= 0) return NULL;
     if (bpp != 8 && bpp != 24) return NULL;
     CGContextRef context = (CGContextRef)arg0;
     if (context == NULL) return NULL;
+
+    //bits per pixel, either 8 for gray or 24 for LCD.
+    size_t dstStep = bpp / 8;
+    // for these checks we tested above that dstWidth/dstHeight/bpp cannot be 0
+    // checks are against INT_MAX - dst* variables are used later in
+    // (*env)->NewByteArray() which expects jint
+    if (dstWidth > (INT_MAX / dstStep)) return NULL;
+    if (dstHeight > (INT_MAX / (dstWidth * dstStep))) return NULL;
+
     jbyte *srcData = (jbyte*)CGBitmapContextGetData(context);
 
     if (srcData) {
@@ -786,12 +915,11 @@ JNIEXPORT jbyteArray JNICALL OS_NATIVE(CGBitmapContextGetData)
         size_t srcHeight =  CGBitmapContextGetHeight(context);
         if (srcHeight < dstHeight) return NULL;
         size_t srcBytesPerRow = CGBitmapContextGetBytesPerRow(context);
+        if (srcBytesPerRow == 0) return NULL;
+        if ((srcHeight - dstHeight) > SIZE_MAX / srcBytesPerRow) return NULL;
         size_t srcStep = CGBitmapContextGetBitsPerPixel(context) / 8;
-        int srcOffset = (srcHeight - dstHeight) * srcBytesPerRow;
+        size_t srcOffset = (srcHeight - dstHeight) * srcBytesPerRow;
 
-
-        //bits per pixel, either 8 for gray or 24 for LCD.
-        int dstStep = bpp / 8;
         size_t size = dstWidth * dstHeight * dstStep;
         jbyte* data = (jbyte*)calloc(size, sizeof(jbyte));
         if (data == NULL) return NULL;
@@ -843,6 +971,15 @@ JNIEXPORT void JNICALL OS_NATIVE(CTFontDrawGlyphs)
     CGGlyph glyphs[] = {arg1};
     CGPoint pos[] = {CGPointMake(arg2, arg3)};
     CTFontDrawGlyphs((CTFontRef)arg0, glyphs, pos, 1, (CGContextRef)contextRef);
+}
+
+JNIEXPORT jobject JNICALL OS_NATIVE(CTFontGetBoundingRectForGlyphs)
+    (JNIEnv *env, jclass that, jlong arg1, jshort arg2)
+{
+    CTFontRef fontRef = (CTFontRef)arg1;
+    CGGlyph glyphs[] = {arg2};
+    CGRect bb = CTFontGetBoundingRectsForGlyphs(fontRef, (CTFontOrientation)0, glyphs, NULL, 1);
+    return newCGRect(env, &bb);
 }
 
 JNIEXPORT jboolean JNICALL OS_NATIVE(CTFontGetBoundingRectForGlyphUsingTables)
@@ -946,18 +1083,37 @@ static const int DEFAULT_LEN_TYPES = 10;
 static const int DEFAULT_LEN_COORDS = 50;
 typedef struct _PathData {
     jbyte* pointTypes;
-    int numTypes;
-    int lenTypes;
+    size_t numTypes;
+    size_t lenTypes;
     jfloat* pointCoords;
-    int numCoords;
-    int lenCoords;
+    size_t numCoords;
+    size_t lenCoords;
 } PathData;
 
 void pathApplierFunctionFast(void *i, const CGPathElement *e) {
     PathData *info = (PathData *)i;
+
+    // point data buffers should always be valid, skip consecutive path
+    // applications if realloc() calls failed earlier on
+    if (info->pointTypes == NULL || info->pointCoords == NULL) {
+        return;
+    }
+
     if (info->numTypes == info->lenTypes) {
+        if (info->lenTypes > SIZE_MAX - DEFAULT_LEN_TYPES) {
+            goto fail;
+        }
         info->lenTypes += DEFAULT_LEN_TYPES;
-        info->pointTypes = (jbyte*)realloc(info->pointTypes, info->lenTypes * sizeof(jbyte));
+
+        if (info->lenTypes > (SIZE_MAX / sizeof(jbyte))) {
+            goto fail;
+        }
+        jbyte* newPointTypes = (jbyte*)realloc(info->pointTypes, info->lenTypes * sizeof(jbyte));
+        if (newPointTypes == NULL) {
+            goto fail;
+        }
+
+        info->pointTypes = newPointTypes;
     }
     jint type;
     int coordCount = 0;
@@ -986,8 +1142,20 @@ void pathApplierFunctionFast(void *i, const CGPathElement *e) {
     info->pointTypes[info->numTypes++] = type;
 
     if (info->numCoords + (coordCount * 2) > info->lenCoords) {
+        if (info->lenCoords > SIZE_MAX - DEFAULT_LEN_COORDS) {
+            goto fail;
+        }
         info->lenCoords += DEFAULT_LEN_COORDS;
-        info->pointCoords = (jfloat*)realloc(info->pointCoords, info->lenCoords * sizeof(jfloat));
+
+        if (info->lenCoords > (SIZE_MAX / sizeof(jfloat))) {
+            goto fail;
+        }
+        jfloat* newPointCoords = (jfloat*)realloc(info->pointCoords, info->lenCoords * sizeof(jfloat));
+        if (newPointCoords == NULL) {
+            goto fail;
+        }
+
+        info->pointCoords = newPointCoords;
     }
     int j;
     for (j = 0; j < coordCount; j++) {
@@ -995,6 +1163,13 @@ void pathApplierFunctionFast(void *i, const CGPathElement *e) {
         info->pointCoords[info->numCoords++] = pt.x;
         info->pointCoords[info->numCoords++] = pt.y;
     }
+
+    return;
+
+fail:
+    fprintf(stderr, "OS_NATIVE error: pathApplierFunctionFast allocations failed");
+    SAFE_FREE(info->pointCoords);
+    SAFE_FREE(info->pointTypes);
 }
 
 JNIEXPORT jobject JNICALL OS_NATIVE(CGPathApply)
@@ -1009,7 +1184,15 @@ JNIEXPORT jobject JNICALL OS_NATIVE(CGPathApply)
     data.numCoords = 0;
     data.lenCoords = DEFAULT_LEN_COORDS;
 
+    if (data.pointTypes == NULL || data.pointCoords == NULL) {
+        goto fail;
+    }
+
     CGPathApply((CGPathRef)arg0, &data, pathApplierFunctionFast);
+
+    if (data.pointTypes == NULL || data.pointCoords == NULL) {
+        goto fail;
+    }
 
     static jclass path2DClass = NULL;
     static jmethodID path2DCtr = NULL;
@@ -1049,8 +1232,8 @@ JNIEXPORT jobject JNICALL OS_NATIVE(CGPathApply)
         }
     }
 fail:
-    free(data.pointTypes);
-    free(data.pointCoords);
+    SAFE_FREE(data.pointTypes);
+    SAFE_FREE(data.pointCoords);
     return path2D;
 }
 

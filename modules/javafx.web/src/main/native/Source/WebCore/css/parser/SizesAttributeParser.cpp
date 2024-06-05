@@ -34,7 +34,6 @@
 #include "CSSToLengthConversionData.h"
 #include "CSSTokenizer.h"
 #include "FontCascade.h"
-#include "MediaList.h"
 #include "MediaQueryEvaluator.h"
 #include "MediaQueryParser.h"
 #include "MediaQueryParserContext.h"
@@ -51,7 +50,7 @@ float SizesAttributeParser::computeLength(double value, CSSUnitType type, const 
         return 0;
     auto& style = renderer->style();
 
-    CSSToLengthConversionData conversionData(&style, &style, renderer->parentStyle(), renderer);
+    CSSToLengthConversionData conversionData(style, &style, renderer->parentStyle(), renderer);
     // Because we evaluate "sizes" at parse time (before style has been resolved), the font metrics used for these specific units
     // are not available. The font selector's internal consistency isn't guaranteed just yet, so we can just temporarily clear
     // the pointer to it for the duration of the unit evaluation. This is acceptible because the style always comes from the
@@ -67,9 +66,8 @@ float SizesAttributeParser::computeLength(double value, CSSUnitType type, const 
     return clampTo<float>(CSSPrimitiveValue::computeNonCalcLengthDouble(conversionData, type, value));
 }
 
-SizesAttributeParser::SizesAttributeParser(const String& attribute, const Document& document, MediaQueryDynamicResults* mediaQueryDynamicResults)
+SizesAttributeParser::SizesAttributeParser(const String& attribute, const Document& document)
     : m_document(document)
-    , m_mediaQueryDynamicResults(mediaQueryDynamicResults)
 {
     m_isValid = parse(CSSTokenizer(attribute).tokenRange());
 }
@@ -105,14 +103,14 @@ bool SizesAttributeParser::calculateLengthInPixels(CSSParserTokenRange range, fl
     return false;
 }
 
-bool SizesAttributeParser::mediaConditionMatches(const MediaQuerySet& mediaCondition)
+bool SizesAttributeParser::mediaConditionMatches(const MQ::MediaQuery& mediaCondition)
 {
     // A Media Condition cannot have a media type other than screen.
     auto* renderer = m_document.renderView();
     if (!renderer)
         return false;
     auto& style = renderer->style();
-    return MediaQueryEvaluator { "screen", m_document, &style }.evaluate(mediaCondition, m_mediaQueryDynamicResults);
+    return MQ::MediaQueryEvaluator { screenAtom(), m_document, &style }.evaluate(mediaCondition);
 }
 
 bool SizesAttributeParser::parse(CSSParserTokenRange range)
@@ -134,8 +132,14 @@ bool SizesAttributeParser::parse(CSSParserTokenRange range)
         float length;
         if (!calculateLengthInPixels(range.makeSubRange(lengthTokenStart, lengthTokenEnd), length))
             continue;
-        RefPtr<MediaQuerySet> mediaCondition = MediaQueryParser::parseMediaCondition(range.makeSubRange(mediaConditionStart, lengthTokenStart), MediaQueryParserContext(m_document));
-        if (!mediaCondition || !mediaConditionMatches(*mediaCondition))
+        auto mediaCondition = MQ::MediaQueryParser::parseCondition(range.makeSubRange(mediaConditionStart, lengthTokenStart), MediaQueryParserContext(m_document));
+        if (!mediaCondition)
+            continue;
+        bool matches = mediaConditionMatches(*mediaCondition);
+        MQ::MediaQueryEvaluator evaluator { screenAtom() };
+        if (!evaluator.collectDynamicDependencies(*mediaCondition).isEmpty())
+            m_dynamicMediaQueryResults.append({ MQ::MediaQueryList { *mediaCondition }, matches });
+        if (!matches)
             continue;
         m_length = length;
         m_lengthWasSet = true;
@@ -157,7 +161,7 @@ unsigned SizesAttributeParser::effectiveSizeDefaultValue()
     if (!renderer)
         return 0;
     auto& style = renderer->style();
-    return clampTo<float>(CSSPrimitiveValue::computeNonCalcLengthDouble({ &style, &style, renderer->parentStyle(), renderer }, CSSUnitType::CSS_VW, 100.0));
+    return clampTo<float>(CSSPrimitiveValue::computeNonCalcLengthDouble({ style, &style, renderer->parentStyle(), renderer }, CSSUnitType::CSS_VW, 100.0));
 }
 
 } // namespace WebCore

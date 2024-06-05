@@ -37,7 +37,7 @@ namespace JSC { namespace DFG {
 class SaneStringGetByValSlowPathGenerator final : public JumpingSlowPathGenerator<MacroAssembler::Jump> {
 public:
     SaneStringGetByValSlowPathGenerator(
-        const MacroAssembler::Jump& from, SpeculativeJIT* jit, JSValueRegs resultRegs, CCallHelpers::TrustedImmPtr globalObject, GPRReg baseReg, GPRReg propertyReg)
+        const MacroAssembler::Jump& from, SpeculativeJIT* jit, JSValueRegs resultRegs, JITCompiler::LinkableConstant globalObject, GPRReg baseReg, GPRReg propertyReg)
         : JumpingSlowPathGenerator<MacroAssembler::Jump>(from, jit)
         , m_resultRegs(resultRegs)
         , m_globalObject(globalObject)
@@ -52,34 +52,34 @@ private:
     {
         linkFrom(jit);
 
-        MacroAssembler::Jump isNeg = jit->m_jit.branch32(
+        MacroAssembler::Jump isNeg = jit->branch32(
             MacroAssembler::LessThan, m_propertyReg, MacroAssembler::TrustedImm32(0));
 
 #if USE(JSVALUE64)
-        jit->m_jit.move(
+        jit->move(
             MacroAssembler::TrustedImm64(JSValue::encode(jsUndefined())), m_resultRegs.gpr());
 #else
-        jit->m_jit.move(
+        jit->move(
             MacroAssembler::TrustedImm32(JSValue::UndefinedTag), m_resultRegs.tagGPR());
-        jit->m_jit.move(
+        jit->move(
             MacroAssembler::TrustedImm32(0), m_resultRegs.payloadGPR());
 #endif
         jumpTo(jit);
 
-        isNeg.link(&jit->m_jit);
+        isNeg.link(jit);
 
         for (unsigned i = 0; i < m_plans.size(); ++i)
             jit->silentSpill(m_plans[i]);
         jit->callOperation(operationGetByValStringInt, extractResult(m_resultRegs), m_globalObject, m_baseReg, m_propertyReg);
         for (unsigned i = m_plans.size(); i--;)
             jit->silentFill(m_plans[i]);
-        jit->m_jit.exceptionCheck();
+        jit->exceptionCheck();
 
         jumpTo(jit);
     }
 
     JSValueRegs m_resultRegs;
-    CCallHelpers::TrustedImmPtr m_globalObject;
+    JITCompiler::LinkableConstant m_globalObject;
     GPRReg m_baseReg;
     GPRReg m_propertyReg;
     Vector<SilentRegisterSavePlan, 2> m_plans;

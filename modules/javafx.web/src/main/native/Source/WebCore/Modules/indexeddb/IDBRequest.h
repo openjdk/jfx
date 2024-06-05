@@ -54,13 +54,14 @@ class IDBObjectStore;
 class IDBResultData;
 class IDBTransaction;
 class ThreadSafeDataBuffer;
+class WebCoreOpaqueRoot;
 
 namespace IDBClient {
 class IDBConnectionProxy;
 class IDBConnectionToServer;
 }
 
-class IDBRequest : public EventTargetWithInlineData, public IDBActiveDOMObject, public ThreadSafeRefCounted<IDBRequest> {
+class IDBRequest : public EventTarget, public IDBActiveDOMObject, public ThreadSafeRefCounted<IDBRequest> {
     WTF_MAKE_ISO_ALLOCATED(IDBRequest);
 public:
     enum class NullResultType {
@@ -199,5 +200,7 @@ private:
     bool m_hasUncaughtException { false };
     RefPtr<Event> m_eventBeingDispatched;
 };
+
+WebCoreOpaqueRoot root(IDBRequest*);
 
 } // namespace WebCore

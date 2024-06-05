@@ -24,8 +24,8 @@
 #include "ContentSecurityPolicy.h"
 #include "DocumentInlines.h"
 #include "Element.h"
-#include "Frame.h"
 #include "JSNode.h"
+#include "LocalFrame.h"
 #include "QualifiedName.h"
 #include "SVGElement.h"
 #include "ScriptController.h"
@@ -46,7 +46,7 @@ struct JSLazyEventListener::CreationArguments {
     const QualifiedName& attributeName;
     const AtomString& attributeValue;
     Document& document;
-    WeakPtr<ContainerNode> node;
+    WeakPtr<ContainerNode, WeakPtrImplWithEventTargetData> node;
     JSObject* wrapper;
     bool shouldUseSVGEventName;
 };
@@ -129,7 +129,7 @@ JSObject* JSLazyEventListener::initializeJSFunction(ScriptExecutionContext& exec
         return nullptr;
 
     auto& script = document.frame()->script();
-    if (!script.canExecuteScripts(AboutToCreateEventListener) || script.isPaused())
+    if (!script.canExecuteScripts(ReasonForCallingCanExecuteScripts::AboutToCreateEventListener) || script.isPaused())
         return nullptr;
 
     ASSERT_WITH_MESSAGE(document.settings().scriptMarkupEnabled(), "Scripting element attributes should have been stripped during parsing");
@@ -138,7 +138,12 @@ JSObject* JSLazyEventListener::initializeJSFunction(ScriptExecutionContext& exec
 
     if (!executionContextDocument.frame())
         return nullptr;
-    auto* globalObject = toJSDOMWindow(*executionContextDocument.frame(), isolatedWorld());
+
+    auto* isolatedWorld = this->isolatedWorld();
+    if (UNLIKELY(!isolatedWorld))
+        return nullptr;
+
+    auto* globalObject = toJSLocalDOMWindow(*executionContextDocument.frame(), *isolatedWorld);
     if (!globalObject)
         return nullptr;
 
@@ -191,8 +196,8 @@ RefPtr<JSLazyEventListener> JSLazyEventListener::create(CreationArguments&& argu
     // FIXME: We should be able to provide source information for frameless documents too (e.g. for importing nodes from XMLHttpRequest.responseXML).
     TextPosition position;
     URL sourceURL;
-    if (Frame* frame = arguments.document.frame()) {
-        if (!frame->script().canExecuteScripts(AboutToCreateEventListener))
+    if (auto* frame = arguments.document.frame()) {
+        if (!frame->script().canExecuteScripts(ReasonForCallingCanExecuteScripts::AboutToCreateEventListener))
             return nullptr;
         position = frame->script().eventHandlerPosition();
         sourceURL = arguments.document.url();
@@ -213,12 +218,12 @@ RefPtr<JSLazyEventListener> JSLazyEventListener::create(Document& document, cons
     return create({ attributeName, attributeValue, document, document, nullptr, false });
 }
 
-RefPtr<JSLazyEventListener> JSLazyEventListener::create(DOMWindow& window, const QualifiedName& attributeName, const AtomString& attributeValue)
+RefPtr<JSLazyEventListener> JSLazyEventListener::create(LocalDOMWindow& window, const QualifiedName& attributeName, const AtomString& attributeValue)
 {
     ASSERT(window.document());
     auto& document = *window.document();
     ASSERT(document.frame());
-    return create({ attributeName, attributeValue, document, nullptr, toJSDOMWindow(document.frame(), mainThreadNormalWorld()), document.isSVGDocument() });
+    return create({ attributeName, attributeValue, document, nullptr, toJSLocalDOMWindow(document.frame(), mainThreadNormalWorld()), document.isSVGDocument() });
 }
 
 } // namespace WebCore

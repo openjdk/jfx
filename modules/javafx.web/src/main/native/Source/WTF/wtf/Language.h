@@ -35,13 +35,14 @@
 
 namespace WTF {
 
-enum class ShouldMinimizeLanguages { No, Yes };
+enum class ShouldMinimizeLanguages : bool { No, Yes };
 
 WTF_EXPORT_PRIVATE String defaultLanguage(ShouldMinimizeLanguages = ShouldMinimizeLanguages::Yes); // Thread-safe.
 WTF_EXPORT_PRIVATE Vector<String> userPreferredLanguages(ShouldMinimizeLanguages = ShouldMinimizeLanguages::Yes); // Thread-safe, returns BCP 47 language tags.
 WTF_EXPORT_PRIVATE Vector<String> userPreferredLanguagesOverride();
 WTF_EXPORT_PRIVATE void overrideUserPreferredLanguages(const Vector<String>&);
 WTF_EXPORT_PRIVATE size_t indexOfBestMatchingLanguageInList(const String& language, const Vector<String>& languageList, bool& exactMatch);
+WTF_EXPORT_PRIVATE bool userPrefersSimplifiedChinese();
 
 // Called from platform specific code when the user's preferred language(s) change.
 WTF_EXPORT_PRIVATE void languageDidChange();
@@ -68,6 +69,7 @@ using WTF::userPreferredLanguages;
 using WTF::userPreferredLanguagesOverride;
 using WTF::overrideUserPreferredLanguages;
 using WTF::indexOfBestMatchingLanguageInList;
+using WTF::userPrefersSimplifiedChinese;
 using WTF::addLanguageChangeObserver;
 using WTF::removeLanguageChangeObserver;
 using WTF::displayNameForLanguageLocale;

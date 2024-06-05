@@ -4,6 +4,8 @@
  *  g_execvpe implementation based on GNU libc execvp:
  *   Copyright 1991, 92, 95, 96, 97, 98, 99 Free Software Foundation, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -30,6 +32,7 @@
 #include <string.h>
 #include <stdlib.h>   /* for fdwalk */
 #include <dirent.h>
+#include <unistd.h>
 
 #ifdef HAVE_SPAWN_H
 #include <spawn.h>
@@ -66,6 +69,18 @@
 #include "gutils.h"
 #include "glibintl.h"
 #include "glib-unix.h"
+
+#ifdef __APPLE__
+#include <libproc.h>
+#include <sys/proc_info.h>
+#endif
+
+#define INHERITS_OR_NULL_STDIN  (G_SPAWN_STDIN_FROM_DEV_NULL | G_SPAWN_CHILD_INHERITS_STDIN)
+#define INHERITS_OR_NULL_STDOUT (G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_CHILD_INHERITS_STDOUT)
+#define INHERITS_OR_NULL_STDERR (G_SPAWN_STDERR_TO_DEV_NULL | G_SPAWN_CHILD_INHERITS_STDERR)
+
+#define IS_STD_FILENO(_fd) ((_fd >= STDIN_FILENO) && (_fd <= STDERR_FILENO))
+#define IS_VALID_FILENO(_fd) (_fd >= 0)
 
 /* posix_spawn() is assumed the fastest way to spawn, but glibc's
  * implementation was buggy before glibc 2.24, so avoid it on old versions.
@@ -156,8 +171,6 @@ extern char **environ;
  */
 
 
-static gint safe_close (gint fd);
-
 static gint g_execute (const gchar  *file,
                        gchar       **argv,
                        gchar       **argv_buffer,
@@ -205,8 +218,9 @@ G_DEFINE_QUARK (g-spawn-exit-error-quark, g_spawn_exit_error)
  * @envp: (array zero-terminated=1) (element-type filename) (nullable):
  *     child's environment, or %NULL to inherit parent's
  * @flags: flags from #GSpawnFlags
- * @child_setup: (scope async) (nullable): function to run in the child just before exec()
- * @user_data: (closure): user data for @child_setup
+ * @child_setup: (scope async) (closure user_data) (nullable): function to run
+ *     in the child just before `exec()`
+ * @user_data: user data for @child_setup
  * @child_pid: (out) (optional): return location for child process reference, or %NULL
  * @error: return location for error
  *
@@ -239,8 +253,6 @@ g_spawn_async (const gchar          *working_directory,
                GPid                 *child_pid,
                GError              **error)
 {
-  g_return_val_if_fail (argv != NULL, FALSE);
-
   return g_spawn_async_with_pipes (working_directory,
                                    argv, envp,
                                    flags,
@@ -263,11 +275,9 @@ close_and_invalidate (gint *fd)
 {
   if (*fd < 0)
     return;
-  else
-    {
-      safe_close (*fd);
-      *fd = -1;
-    }
+
+  g_close (*fd, NULL);
+  *fd = -1;
 }
 
 /* Some versions of OS X define READ_OK in public headers */
@@ -323,8 +333,9 @@ read_data (GString *str,
  * @envp: (array zero-terminated=1) (element-type filename) (nullable):
  *     child's environment, or %NULL to inherit parent's
  * @flags: flags from #GSpawnFlags
- * @child_setup: (scope async) (nullable): function to run in the child just before exec()
- * @user_data: (closure): user data for @child_setup
+ * @child_setup: (scope call) (closure user_data) (nullable): function to run
+ *     in the child just before `exec()`
+ * @user_data: user data for @child_setup
  * @standard_output: (out) (array zero-terminated=1) (element-type guint8) (optional): return location for child output, or %NULL
  * @standard_error: (out) (array zero-terminated=1) (element-type guint8) (optional): return location for child error messages, or %NULL
  * @wait_status: (out) (optional): return location for child wait status, as returned by waitpid(), or %NULL
@@ -584,8 +595,9 @@ g_spawn_sync (const gchar          *working_directory,
  *     child's environment, or %NULL to inherit parent's, in the GLib file
  *     name encoding
  * @flags: flags from #GSpawnFlags
- * @child_setup: (scope async) (nullable): function to run in the child just before exec()
- * @user_data: (closure): user data for @child_setup
+ * @child_setup: (scope async) (closure user_data) (nullable): function to run
+ *     in the child just before `exec()`
+ * @user_data: user data for @child_setup
  * @child_pid: (out) (optional): return location for child process ID, or %NULL
  * @standard_input: (out) (optional): return location for file descriptor to write to child's stdin, or %NULL
  * @standard_output: (out) (optional): return location for file descriptor to read child's stdout, or %NULL
@@ -610,37 +622,18 @@ g_spawn_async_with_pipes (const gchar          *working_directory,
                           gint                 *standard_error,
                           GError              **error)
 {
-  g_return_val_if_fail (argv != NULL, FALSE);
-  g_return_val_if_fail (argv[0] != NULL, FALSE);
-  g_return_val_if_fail (standard_output == NULL ||
-                        !(flags & G_SPAWN_STDOUT_TO_DEV_NULL), FALSE);
-  g_return_val_if_fail (standard_error == NULL ||
-                        !(flags & G_SPAWN_STDERR_TO_DEV_NULL), FALSE);
-  /* can't inherit stdin if we have an input pipe. */
-  g_return_val_if_fail (standard_input == NULL ||
-                        !(flags & G_SPAWN_CHILD_INHERITS_STDIN), FALSE);
-
-  return fork_exec (!(flags & G_SPAWN_DO_NOT_REAP_CHILD),
-                    working_directory,
-                    (const gchar * const *) argv,
-                    (const gchar * const *) envp,
-                    !(flags & G_SPAWN_LEAVE_DESCRIPTORS_OPEN),
-                    (flags & G_SPAWN_SEARCH_PATH) != 0,
-                    (flags & G_SPAWN_SEARCH_PATH_FROM_ENVP) != 0,
-                    (flags & G_SPAWN_STDOUT_TO_DEV_NULL) != 0,
-                    (flags & G_SPAWN_STDERR_TO_DEV_NULL) != 0,
-                    (flags & G_SPAWN_CHILD_INHERITS_STDIN) != 0,
-                    (flags & G_SPAWN_FILE_AND_ARGV_ZERO) != 0,
-                    (flags & G_SPAWN_CLOEXEC_PIPES) != 0,
-                    child_setup,
-                    user_data,
-                    child_pid,
-                    standard_input,
-                    standard_output,
-                    standard_error,
-                    -1, -1, -1,
-                    NULL, NULL, 0,
-                    error);
+  return g_spawn_async_with_pipes_and_fds (working_directory,
+                                           (const gchar * const *) argv,
+                                           (const gchar * const *) envp,
+                                           flags,
+                                           child_setup, user_data,
+                                           -1, -1, -1,
+                                           NULL, NULL, 0,
+                                           child_pid,
+                                           standard_input,
+                                           standard_output,
+                                           standard_error,
+                                           error);
 }
 
 /**
@@ -653,8 +646,9 @@ g_spawn_async_with_pipes (const gchar          *working_directory,
  *     child's environment, or %NULL to inherit parent's, in the GLib file
  *     name encoding
  * @flags: flags from #GSpawnFlags
- * @child_setup: (scope async) (nullable): function to run in the child just before `exec()`
- * @user_data: (closure): user data for @child_setup
+ * @child_setup: (scope async) (closure user_data) (nullable): function to run
+ *     in the child just before `exec()`
+ * @user_data: user data for @child_setup
  * @stdin_fd: file descriptor to use for child's stdin, or `-1`
  * @stdout_fd: file descriptor to use for child's stdout, or `-1`
  * @stderr_fd: file descriptor to use for child's stderr, or `-1`
@@ -749,17 +743,23 @@ g_spawn_async_with_pipes (const gchar          *working_directory,
  * @envp. If both %G_SPAWN_SEARCH_PATH and %G_SPAWN_SEARCH_PATH_FROM_ENVP
  * are used, the value from @envp takes precedence over the environment.
  *
- * %G_SPAWN_STDOUT_TO_DEV_NULL means that the child's standard output
- * will be discarded, instead of going to the same location as the parent's
- * standard output. If you use this flag, @stdout_pipe_out must be %NULL.
- *
- * %G_SPAWN_STDERR_TO_DEV_NULL means that the child's standard error
- * will be discarded, instead of going to the same location as the parent's
- * standard error. If you use this flag, @stderr_pipe_out must be %NULL.
- *
  * %G_SPAWN_CHILD_INHERITS_STDIN means that the child will inherit the parent's
  * standard input (by default, the child's standard input is attached to
- * `/dev/null`). If you use this flag, @stdin_pipe_out must be %NULL.
+ * `/dev/null`). %G_SPAWN_STDIN_FROM_DEV_NULL explicitly imposes the default
+ * behavior. Both flags cannot be enabled at the same time and, in both cases,
+ * the @stdin_pipe_out argument is ignored.
+ *
+ * %G_SPAWN_STDOUT_TO_DEV_NULL means that the child's standard output
+ * will be discarded (by default, it goes to the same location as the parent's
+ * standard output). %G_SPAWN_CHILD_INHERITS_STDOUT explicitly imposes the
+ * default behavior. Both flags cannot be enabled at the same time and, in
+ * both cases, the @stdout_pipe_out argument is ignored.
+ *
+ * %G_SPAWN_STDERR_TO_DEV_NULL means that the child's standard error
+ * will be discarded (by default, it goes to the same location as the parent's
+ * standard error). %G_SPAWN_CHILD_INHERITS_STDERR explicitly imposes the
+ * default behavior. Both flags cannot be enabled at the same time and, in
+ * both cases, the @stderr_pipe_out argument is ignored.
  *
  * It is valid to pass the same FD in multiple parameters (e.g. you can pass
  * a single FD for both @stdout_fd and @stderr_fd, and include it in
@@ -883,17 +883,21 @@ g_spawn_async_with_pipes_and_fds (const gchar           *working_directory,
 {
   g_return_val_if_fail (argv != NULL, FALSE);
   g_return_val_if_fail (argv[0] != NULL, FALSE);
-  g_return_val_if_fail (stdout_pipe_out == NULL ||
-                        !(flags & G_SPAWN_STDOUT_TO_DEV_NULL), FALSE);
-  g_return_val_if_fail (stderr_pipe_out == NULL ||
-                        !(flags & G_SPAWN_STDERR_TO_DEV_NULL), FALSE);
-  /* can't inherit stdin if we have an input pipe. */
-  g_return_val_if_fail (stdin_pipe_out == NULL ||
-                        !(flags & G_SPAWN_CHILD_INHERITS_STDIN), FALSE);
+  /* can’t both inherit and set pipes to /dev/null */
+  g_return_val_if_fail ((flags & INHERITS_OR_NULL_STDIN) != INHERITS_OR_NULL_STDIN, FALSE);
+  g_return_val_if_fail ((flags & INHERITS_OR_NULL_STDOUT) != INHERITS_OR_NULL_STDOUT, FALSE);
+  g_return_val_if_fail ((flags & INHERITS_OR_NULL_STDERR) != INHERITS_OR_NULL_STDERR, FALSE);
   /* can’t use pipes and stdin/stdout/stderr FDs */
   g_return_val_if_fail (stdin_pipe_out == NULL || stdin_fd < 0, FALSE);
   g_return_val_if_fail (stdout_pipe_out == NULL || stdout_fd < 0, FALSE);
   g_return_val_if_fail (stderr_pipe_out == NULL || stderr_fd < 0, FALSE);
+
+  if ((flags & INHERITS_OR_NULL_STDIN) != 0)
+    stdin_pipe_out = NULL;
+  if ((flags & INHERITS_OR_NULL_STDOUT) != 0)
+    stdout_pipe_out = NULL;
+  if ((flags & INHERITS_OR_NULL_STDERR) != 0)
+    stderr_pipe_out = NULL;
 
   return fork_exec (!(flags & G_SPAWN_DO_NOT_REAP_CHILD),
                     working_directory,
@@ -929,8 +933,9 @@ g_spawn_async_with_pipes_and_fds (const gchar           *working_directory,
  *   it must be non-empty and %NULL-terminated
  * @envp: (array zero-terminated=1) (nullable): child's environment, or %NULL to inherit parent's, in the GLib file name encoding
  * @flags: flags from #GSpawnFlags
- * @child_setup: (scope async) (nullable): function to run in the child just before exec()
- * @user_data: (closure): user data for @child_setup
+ * @child_setup: (scope async) (closure user_data) (nullable): function to run
+ *   in the child just before `exec()`
+ * @user_data: user data for @child_setup
  * @child_pid: (out) (optional): return location for child process ID, or %NULL
  * @stdin_fd: file descriptor to use for child's stdin, or `-1`
  * @stdout_fd: file descriptor to use for child's stdout, or `-1`
@@ -1343,27 +1348,31 @@ dupfd_cloexec (int old_fd, int new_fd_min)
   return fd;
 }
 
-/* This function is called between fork() and exec() and hence must be
- * async-signal-safe (see signal-safety(7)). */
-static gint
-safe_close (gint fd)
-{
-  gint ret;
-
-  do
-    ret = close (fd);
-  while (ret < 0 && errno == EINTR);
-
-  return ret;
-}
-
-/* This function is called between fork() and exec() and hence must be
- * async-signal-safe (see signal-safety(7)). */
+/* fdwalk()-compatible callback to close a fd for non-compliant
+ * implementations of fdwalk() that potentially pass already
+ * closed fds.
+ *
+ * It is not an error to pass an invalid fd to this function.
+ *
+ * This function is called between fork() and exec() and hence must be
+ * async-signal-safe (see signal-safety(7)).
+ */
 G_GNUC_UNUSED static int
-close_func (void *data, int fd)
+close_func_with_invalid_fds (void *data, int fd)
 {
+  /* We use close and not g_close here because on some platforms, we
+   * don't know how to close only valid, open file descriptors, so we
+   * have to pass bad fds to close too. g_close warns if given a bad
+   * fd.
+   *
+   * This function returns no error, because there is nothing that the caller
+   * could do with that information. That is even the case for EINTR. See
+   * g_close() about the specialty of EINTR and why that is correct.
+   * If g_close() ever gets extended to handle EINTR specially, then this place
+   * should get updated to do the same handling.
+   */
   if (fd >= GPOINTER_TO_INT (data))
-    (void) safe_close (fd);
+    close (fd);
 
   return 0;
 }
@@ -1408,6 +1417,8 @@ filename_to_fd (const char *p)
 }
 #endif
 
+static int safe_fdwalk_with_invalid_fds (int (*cb)(void *data, int fd), void *data);
+
 /* This function is called between fork() and exec() and hence must be
  * async-signal-safe (see signal-safety(7)). */
 static int
@@ -1423,31 +1434,34 @@ safe_fdwalk (int (*cb)(void *data, int fd), void *data)
   return fdwalk (cb, data);
 #else
   /* Fallback implementation of fdwalk. It should be async-signal safe, but it
-   * may be slow on non-Linux operating systems, especially on systems allowing
-   * very high number of open file descriptors.
+   * may fail on non-Linux operating systems. See safe_fdwalk_with_invalid_fds
+   * for a slower alternative.
    */
-  gint open_max = -1;
+
+#ifdef __linux__
   gint fd;
   gint res = 0;
 
-#if 0 && defined(HAVE_SYS_RESOURCE_H)
-  struct rlimit rl;
-#endif
-
-#ifdef __linux__
   /* Avoid use of opendir/closedir since these are not async-signal-safe. */
   int dir_fd = open ("/proc/self/fd", O_RDONLY | O_DIRECTORY);
   if (dir_fd >= 0)
     {
-      char buf[4096];
+      /* buf needs to be aligned correctly to receive linux_dirent64.
+       * C11 has _Alignof for this purpose, but for now a
+       * union serves the same purpose. */
+      union
+      {
+        char buf[4096];
+        struct linux_dirent64 alignment;
+      } u;
       int pos, nread;
       struct linux_dirent64 *de;
 
-      while ((nread = syscall (SYS_getdents64, dir_fd, buf, sizeof(buf))) > 0)
+      while ((nread = syscall (SYS_getdents64, dir_fd, u.buf, sizeof (u.buf))) > 0)
         {
           for (pos = 0; pos < nread; pos += de->d_reclen)
             {
-              de = (struct linux_dirent64 *)(buf + pos);
+              de = (struct linux_dirent64 *) (u.buf + pos);
 
               fd = filename_to_fd (de->d_name);
               if (fd < 0 || fd == dir_fd)
@@ -1458,11 +1472,12 @@ safe_fdwalk (int (*cb)(void *data, int fd), void *data)
             }
         }
 
-      safe_close (dir_fd);
+      g_close (dir_fd, NULL);
       return res;
     }
 
-  /* If /proc is not mounted or not accessible we fall back to the old
+  /* If /proc is not mounted or not accessible we fail here and rely on
+   * safe_fdwalk_with_invalid_fds to fall back to the old
    * rlimit trick. */
 
 #endif
@@ -1478,6 +1493,8 @@ safe_fdwalk (int (*cb)(void *data, int fd), void *data)
  * fcntl(fd, F_PREVFD)
  * - return highest allocated file descriptor < fd.
  */
+  gint fd;
+  gint res = 0;
 
   open_max = fcntl (INT_MAX, F_PREVFD); /* find the maximum fd */
   if (open_max < 0) /* No open files */
@@ -1486,9 +1503,30 @@ safe_fdwalk (int (*cb)(void *data, int fd), void *data)
   for (fd = -1; (fd = fcntl (fd, F_NEXTFD, open_max)) != -1; )
     if ((res = cb (data, fd)) != 0 || fd == open_max)
       break;
-#else
+
+  return res;
+#endif
+
+  return safe_fdwalk_with_invalid_fds (cb, data);
+#endif
+}
+
+/* This function is called between fork() and exec() and hence must be
+ * async-signal-safe (see signal-safety(7)). */
+static int
+safe_fdwalk_with_invalid_fds (int (*cb)(void *data, int fd), void *data)
+{
+  /* Fallback implementation of fdwalk. It should be async-signal safe, but it
+   * may be slow, especially on systems allowing very high number of open file
+   * descriptors.
+   */
+  gint open_max = -1;
+  gint fd;
+  gint res = 0;
 
 #if 0 && defined(HAVE_SYS_RESOURCE_H)
+  struct rlimit rl;
+
   /* Use getrlimit() function provided by the system if it is known to be
    * async-signal safe.
    *
@@ -1518,13 +1556,41 @@ safe_fdwalk (int (*cb)(void *data, int fd), void *data)
   if (open_max < 0)
     open_max = 4096;
 
+#if defined(__APPLE__)
+  /* proc_pidinfo isn't documented as async-signal-safe but looking at the implementation
+   * in the darwin tree here:
+   *
+   * https://opensource.apple.com/source/Libc/Libc-498/darwin/libproc.c.auto.html
+   *
+   * It's just a thin wrapper around a syscall, so it's probably okay.
+   */
+  {
+    char buffer[4096 * PROC_PIDLISTFD_SIZE];
+    ssize_t buffer_size;
+
+    buffer_size = proc_pidinfo (getpid (), PROC_PIDLISTFDS, 0, buffer, sizeof (buffer));
+
+    if (buffer_size > 0 &&
+        sizeof (buffer) >= (size_t) buffer_size &&
+        (buffer_size % PROC_PIDLISTFD_SIZE) == 0)
+      {
+        const struct proc_fdinfo *fd_info = (const struct proc_fdinfo *) buffer;
+        size_t number_of_fds = (size_t) buffer_size / PROC_PIDLISTFD_SIZE;
+
+        for (size_t i = 0; i < number_of_fds; i++)
+          if ((res = cb (data, fd_info[i].proc_fd)) != 0)
+            break;
+
+        return res;
+      }
+  }
+#endif
+
   for (fd = 0; fd < open_max; fd++)
       if ((res = cb (data, fd)) != 0)
           break;
-#endif
 
   return res;
-#endif
 }
 
 /* This function is called between fork() and exec() and hence must be
@@ -1532,6 +1598,8 @@ safe_fdwalk (int (*cb)(void *data, int fd), void *data)
 static int
 safe_fdwalk_set_cloexec (int lowfd)
 {
+  int ret;
+
 #if defined(HAVE_CLOSE_RANGE) && defined(CLOSE_RANGE_CLOEXEC)
   /* close_range() is available in Linux since kernel 5.9, and on FreeBSD at
    * around the same time. It was designed for use in async-signal-safe
@@ -1543,11 +1611,14 @@ safe_fdwalk_set_cloexec (int lowfd)
    * Handle ENOSYS in case it’s supported in libc but not the kernel; if so,
    * fall back to safe_fdwalk(). Handle EINVAL in case `CLOSE_RANGE_CLOEXEC`
    * is not supported. */
-  int ret = close_range (lowfd, G_MAXUINT, CLOSE_RANGE_CLOEXEC);
+  ret = close_range (lowfd, G_MAXUINT, CLOSE_RANGE_CLOEXEC);
   if (ret == 0 || !(errno == ENOSYS || errno == EINVAL))
     return ret;
 #endif  /* HAVE_CLOSE_RANGE */
-  return safe_fdwalk (set_cloexec, GINT_TO_POINTER (lowfd));
+
+  ret = safe_fdwalk (set_cloexec, GINT_TO_POINTER (lowfd));
+
+  return ret;
 }
 
 /* This function is called between fork() and exec() and hence must be
@@ -1557,6 +1628,20 @@ safe_fdwalk_set_cloexec (int lowfd)
 static int
 safe_closefrom (int lowfd)
 {
+  int ret;
+
+#if defined(HAVE_CLOSE_RANGE)
+  /* close_range() is available in Linux since kernel 5.9, and on FreeBSD at
+   * around the same time. It was designed for use in async-signal-safe
+   * situations: https://bugs.python.org/issue38061
+   *
+   * Handle ENOSYS in case it’s supported in libc but not the kernel; if so,
+   * fall back to safe_fdwalk(). */
+  ret = close_range (lowfd, G_MAXUINT, 0);
+  if (ret == 0 || errno != ENOSYS)
+    return ret;
+#endif  /* HAVE_CLOSE_RANGE */
+
 #if defined(__FreeBSD__) || defined(__OpenBSD__) || \
   (defined(__sun__) && defined(F_CLOSEFROM))
   /* Use closefrom function provided by the system if it is known to be
@@ -1588,19 +1673,9 @@ safe_closefrom (int lowfd)
    */
   return fcntl (lowfd, F_CLOSEM);
 #else
+  ret = safe_fdwalk (close_func_with_invalid_fds, GINT_TO_POINTER (lowfd));
 
-#if defined(HAVE_CLOSE_RANGE)
-  /* close_range() is available in Linux since kernel 5.9, and on FreeBSD at
-   * around the same time. It was designed for use in async-signal-safe
-   * situations: https://bugs.python.org/issue38061
-   *
-   * Handle ENOSYS in case it’s supported in libc but not the kernel; if so,
-   * fall back to safe_fdwalk(). */
-  int ret = close_range (lowfd, G_MAXUINT, 0);
-  if (ret == 0 || errno != ENOSYS)
-    return ret;
-#endif  /* HAVE_CLOSE_RANGE */
-  return safe_fdwalk (close_func, GINT_TO_POINTER (lowfd));
+  return ret;
 #endif
 }
 
@@ -1616,6 +1691,30 @@ safe_dup2 (gint fd1, gint fd2)
   while (ret < 0 && (errno == EINTR || errno == EBUSY));
 
   return ret;
+}
+
+/* This function is called between fork() and exec() and hence must be
+ * async-signal-safe (see signal-safety(7)). */
+static gboolean
+relocate_fd_out_of_standard_range (gint *fd)
+{
+  gint ret = -1;
+  const int min_fileno = STDERR_FILENO + 1;
+
+  do
+    ret = fcntl (*fd, F_DUPFD, min_fileno);
+  while (ret < 0 && errno == EINTR);
+
+  /* Note we don't need to close the old fd, because the caller is expected
+   * to close fds in the standard range itself.
+   */
+  if (ret >= min_fileno)
+    {
+      *fd = ret;
+      return TRUE;
+    }
+
+  return FALSE;
 }
 
 /* This function is called between fork() and exec() and hence must be
@@ -1637,7 +1736,7 @@ enum
   CHILD_CHDIR_FAILED,
   CHILD_EXEC_FAILED,
   CHILD_OPEN_FAILED,
-  CHILD_DUP2_FAILED,
+  CHILD_DUPFD_FAILED,
   CHILD_FORK_FAILED,
   CHILD_CLOSE_FAILED,
 };
@@ -1677,16 +1776,41 @@ do_exec (gint                  child_err_report_fd,
     write_err_and_exit (child_err_report_fd,
                         CHILD_CHDIR_FAILED);
 
-  /* Redirect pipes as required */
-  if (stdin_fd >= 0)
+  /* It's possible the caller assigned stdin to an fd with a
+   * file number that is supposed to be reserved for
+   * stdout or stderr.
+   *
+   * If so, move it up out of the standard range, so it doesn't
+   * cause a conflict.
+   */
+  if (IS_STD_FILENO (stdin_fd) && stdin_fd != STDIN_FILENO)
+    {
+      int old_fd = stdin_fd;
+
+      if (!relocate_fd_out_of_standard_range (&stdin_fd))
+        write_err_and_exit (child_err_report_fd, CHILD_DUPFD_FAILED);
+
+      if (stdout_fd == old_fd)
+        stdout_fd = stdin_fd;
+
+      if (stderr_fd == old_fd)
+        stderr_fd = stdin_fd;
+    }
+
+  /* Redirect pipes as required
+   *
+   * There are two cases where we don't need to do the redirection
+   * 1. Where the associated file descriptor is cleared/invalid
+   * 2. When the associated file descriptor is already given the
+   * correct file number.
+   */
+  if (IS_VALID_FILENO (stdin_fd) && stdin_fd != STDIN_FILENO)
     {
       if (safe_dup2 (stdin_fd, 0) < 0)
         write_err_and_exit (child_err_report_fd,
-                            CHILD_DUP2_FAILED);
+                            CHILD_DUPFD_FAILED);
 
-      if (!((stdout_fd >= 0 || stdout_to_null) && stdin_fd == 1) &&
-          !((stderr_fd >= 0 || stderr_to_null) && stdin_fd == 2))
-        set_cloexec (GINT_TO_POINTER(0), stdin_fd);
+      set_cloexec (GINT_TO_POINTER(0), stdin_fd);
     }
   else if (!child_inherits_stdin)
     {
@@ -1697,19 +1821,34 @@ do_exec (gint                  child_err_report_fd,
                             CHILD_OPEN_FAILED);
       if (safe_dup2 (read_null, 0) < 0)
         write_err_and_exit (child_err_report_fd,
-                            CHILD_DUP2_FAILED);
+                            CHILD_DUPFD_FAILED);
       close_and_invalidate (&read_null);
     }
 
-  if (stdout_fd >= 0)
+  /* Like with stdin above, it's possible the caller assigned
+   * stdout to an fd with a file number that's intruding on the
+   * standard range.
+   *
+   * If so, move it out of the way, too.
+   */
+  if (IS_STD_FILENO (stdout_fd) && stdout_fd != STDOUT_FILENO)
+    {
+      int old_fd = stdout_fd;
+
+      if (!relocate_fd_out_of_standard_range (&stdout_fd))
+        write_err_and_exit (child_err_report_fd, CHILD_DUPFD_FAILED);
+
+      if (stderr_fd == old_fd)
+        stderr_fd = stdout_fd;
+    }
+
+  if (IS_VALID_FILENO (stdout_fd) && stdout_fd != STDOUT_FILENO)
     {
       if (safe_dup2 (stdout_fd, 1) < 0)
         write_err_and_exit (child_err_report_fd,
-                            CHILD_DUP2_FAILED);
+                            CHILD_DUPFD_FAILED);
 
-      if (!((stdin_fd >= 0 || !child_inherits_stdin) && stdout_fd == 0) &&
-          !((stderr_fd >= 0 || stderr_to_null) && stdout_fd == 2))
-        set_cloexec (GINT_TO_POINTER(0), stdout_fd);
+      set_cloexec (GINT_TO_POINTER(0), stdout_fd);
     }
   else if (stdout_to_null)
     {
@@ -1719,19 +1858,29 @@ do_exec (gint                  child_err_report_fd,
                             CHILD_OPEN_FAILED);
       if (safe_dup2 (write_null, 1) < 0)
         write_err_and_exit (child_err_report_fd,
-                            CHILD_DUP2_FAILED);
+                            CHILD_DUPFD_FAILED);
       close_and_invalidate (&write_null);
     }
 
-  if (stderr_fd >= 0)
+  if (IS_STD_FILENO (stderr_fd) && stderr_fd != STDERR_FILENO)
+    {
+      if (!relocate_fd_out_of_standard_range (&stderr_fd))
+        write_err_and_exit (child_err_report_fd, CHILD_DUPFD_FAILED);
+    }
+
+  /* Like with stdin/stdout above, it's possible the caller assigned
+   * stderr to an fd with a file number that's intruding on the
+   * standard range.
+   *
+   * Make sure it's out of the way, also.
+   */
+  if (IS_VALID_FILENO (stderr_fd) && stderr_fd != STDERR_FILENO)
     {
       if (safe_dup2 (stderr_fd, 2) < 0)
         write_err_and_exit (child_err_report_fd,
-                            CHILD_DUP2_FAILED);
+                            CHILD_DUPFD_FAILED);
 
-      if (!((stdin_fd >= 0 || !child_inherits_stdin) && stderr_fd == 0) &&
-          !((stdout_fd >= 0 || stdout_to_null) && stderr_fd == 1))
-        set_cloexec (GINT_TO_POINTER(0), stderr_fd);
+      set_cloexec (GINT_TO_POINTER(0), stderr_fd);
     }
   else if (stderr_to_null)
     {
@@ -1741,7 +1890,7 @@ do_exec (gint                  child_err_report_fd,
                             CHILD_OPEN_FAILED);
       if (safe_dup2 (write_null, 2) < 0)
         write_err_and_exit (child_err_report_fd,
-                            CHILD_DUP2_FAILED);
+                            CHILD_DUPFD_FAILED);
       close_and_invalidate (&write_null);
     }
 
@@ -1755,7 +1904,7 @@ do_exec (gint                  child_err_report_fd,
       if (child_setup == NULL && n_fds == 0)
         {
           if (safe_dup2 (child_err_report_fd, 3) < 0)
-            write_err_and_exit (child_err_report_fd, CHILD_DUP2_FAILED);
+            write_err_and_exit (child_err_report_fd, CHILD_DUPFD_FAILED);
           set_cloexec (GINT_TO_POINTER (0), 3);
           if (safe_closefrom (4) < 0)
             write_err_and_exit (child_err_report_fd, CHILD_CLOSE_FAILED);
@@ -1791,7 +1940,7 @@ do_exec (gint                  child_err_report_fd,
       if (max_target_fd == G_MAXINT)
         {
           errno = EINVAL;
-          write_err_and_exit (child_err_report_fd, CHILD_DUP2_FAILED);
+          write_err_and_exit (child_err_report_fd, CHILD_DUPFD_FAILED);
         }
 
       /* If we're doing remapping fd assignments, we need to handle
@@ -1805,7 +1954,7 @@ do_exec (gint                  child_err_report_fd,
             {
               source_fds[i] = dupfd_cloexec (source_fds[i], max_target_fd + 1);
               if (source_fds[i] < 0)
-                write_err_and_exit (child_err_report_fd, CHILD_DUP2_FAILED);
+                write_err_and_exit (child_err_report_fd, CHILD_DUPFD_FAILED);
             }
         }
 
@@ -1827,11 +1976,11 @@ do_exec (gint                  child_err_report_fd,
                 {
                   child_err_report_fd = dupfd_cloexec (child_err_report_fd, max_target_fd + 1);
                   if (child_err_report_fd < 0)
-                    write_err_and_exit (child_err_report_fd, CHILD_DUP2_FAILED);
+                    write_err_and_exit (child_err_report_fd, CHILD_DUPFD_FAILED);
                 }
 
               if (safe_dup2 (source_fds[i], target_fds[i]) < 0)
-                write_err_and_exit (child_err_report_fd, CHILD_DUP2_FAILED);
+                write_err_and_exit (child_err_report_fd, CHILD_DUPFD_FAILED);
 
               close_and_invalidate (&source_fds[i]);
             }
@@ -2197,6 +2346,9 @@ fork_exec (gboolean              intermediate_child,
     {
       if (!g_unix_open_pipe (stdin_pipe, pipe_flags, error))
         goto cleanup_and_fail;
+      if (_g_spawn_invalid_source_fd (stdin_pipe[0], source_fds, n_fds, error) ||
+          _g_spawn_invalid_source_fd (stdin_pipe[1], source_fds, n_fds, error))
+        goto cleanup_and_fail;
       child_close_fds[n_child_close_fds++] = stdin_pipe[1];
       stdin_fd = stdin_pipe[0];
     }
@@ -2205,6 +2357,9 @@ fork_exec (gboolean              intermediate_child,
     {
       if (!g_unix_open_pipe (stdout_pipe, pipe_flags, error))
         goto cleanup_and_fail;
+      if (_g_spawn_invalid_source_fd (stdout_pipe[0], source_fds, n_fds, error) ||
+          _g_spawn_invalid_source_fd (stdout_pipe[1], source_fds, n_fds, error))
+        goto cleanup_and_fail;
       child_close_fds[n_child_close_fds++] = stdout_pipe[0];
       stdout_fd = stdout_pipe[1];
     }
@@ -2212,6 +2367,9 @@ fork_exec (gboolean              intermediate_child,
   if (stderr_pipe_out != NULL)
     {
       if (!g_unix_open_pipe (stderr_pipe, pipe_flags, error))
+        goto cleanup_and_fail;
+      if (_g_spawn_invalid_source_fd (stderr_pipe[0], source_fds, n_fds, error) ||
+          _g_spawn_invalid_source_fd (stderr_pipe[1], source_fds, n_fds, error))
         goto cleanup_and_fail;
       child_close_fds[n_child_close_fds++] = stderr_pipe[0];
       stderr_fd = stderr_pipe[1];
@@ -2354,9 +2512,18 @@ fork_exec (gboolean              intermediate_child,
 
   if (!g_unix_open_pipe (child_err_report_pipe, pipe_flags, error))
     goto cleanup_and_fail;
-
-  if (intermediate_child && !g_unix_open_pipe (child_pid_report_pipe, pipe_flags, error))
+  if (_g_spawn_invalid_source_fd (child_err_report_pipe[0], source_fds, n_fds, error) ||
+      _g_spawn_invalid_source_fd (child_err_report_pipe[1], source_fds, n_fds, error))
     goto cleanup_and_fail;
+
+  if (intermediate_child)
+    {
+      if (!g_unix_open_pipe (child_pid_report_pipe, pipe_flags, error))
+        goto cleanup_and_fail;
+      if (_g_spawn_invalid_source_fd (child_pid_report_pipe[0], source_fds, n_fds, error) ||
+          _g_spawn_invalid_source_fd (child_pid_report_pipe[1], source_fds, n_fds, error))
+        goto cleanup_and_fail;
+    }
 
   pid = fork ();
 
@@ -2551,7 +2718,7 @@ fork_exec (gboolean              intermediate_child,
                            g_strerror (buf[1]));
               break;
 
-            case CHILD_DUP2_FAILED:
+            case CHILD_DUPFD_FAILED:
               g_set_error (error,
                            G_SPAWN_ERROR,
                            G_SPAWN_ERROR_FAILED,

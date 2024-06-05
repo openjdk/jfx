@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,45 +24,51 @@
  */
 
 // https://wicg.github.io/aom/spec/aria-reflection.html#AriaAttributes
-[
-    EnabledAtRuntime=AriaReflectionEnabled,
-] interface mixin AriaAttributes {
-    [Reflect=aria_atomic]           attribute DOMString? ariaAtomic;
-    [Reflect=aria_autocomplete]     attribute DOMString? ariaAutoComplete;
-    [Reflect=aria_busy]             attribute DOMString? ariaBusy;
-    [Reflect=aria_checked]          attribute DOMString? ariaChecked;
-    [Reflect=aria_colcount]         attribute DOMString? ariaColCount;
-    [Reflect=aria_colindex]         attribute DOMString? ariaColIndex;
-    [Reflect=aria_colspan]          attribute DOMString? ariaColSpan;
-    [Reflect=aria_current]          attribute DOMString? ariaCurrent;
-    [Reflect=aria_disabled]         attribute DOMString? ariaDisabled;
-    [Reflect=aria_expanded]         attribute DOMString? ariaExpanded;
-    [Reflect=aria_haspopup]         attribute DOMString? ariaHasPopup;
-    [Reflect=aria_hidden]           attribute DOMString? ariaHidden;
-    [Reflect=aria_invalid]          attribute DOMString? ariaInvalid;
-    [Reflect=aria_keyshortcuts]     attribute DOMString? ariaKeyShortcuts;
-    [Reflect=aria_label]            attribute DOMString? ariaLabel;
-    [Reflect=aria_level]            attribute DOMString? ariaLevel;
-    [Reflect=aria_live]             attribute DOMString? ariaLive;
-    [Reflect=aria_modal]            attribute DOMString? ariaModal;
-    [Reflect=aria_multiline]        attribute DOMString? ariaMultiLine;
-    [Reflect=aria_multiselectable]  attribute DOMString? ariaMultiSelectable;
-    [Reflect=aria_orientation]      attribute DOMString? ariaOrientation;
-    [Reflect=aria_placeholder]      attribute DOMString? ariaPlaceholder;
-    [Reflect=aria_posinset]         attribute DOMString? ariaPosInSet;
-    [Reflect=aria_pressed]          attribute DOMString? ariaPressed;
-    [Reflect=aria_readonly]         attribute DOMString? ariaReadOnly;
-    [Reflect=aria_relevant]         attribute DOMString? ariaRelevant;
-    [Reflect=aria_required]         attribute DOMString? ariaRequired;
-    [Reflect=aria_roledescription]  attribute DOMString? ariaRoleDescription;
-    [Reflect=aria_rowcount]         attribute DOMString? ariaRowCount;
-    [Reflect=aria_rowindex]         attribute DOMString? ariaRowIndex;
-    [Reflect=aria_rowspan]          attribute DOMString? ariaRowSpan;
-    [Reflect=aria_selected]         attribute DOMString? ariaSelected;
-    [Reflect=aria_setsize]          attribute DOMString? ariaSetSize;
-    [Reflect=aria_sort]             attribute DOMString? ariaSort;
-    [Reflect=aria_valuemax]         attribute DOMString? ariaValueMax;
-    [Reflect=aria_valuemin]         attribute DOMString? ariaValueMin;
-    [Reflect=aria_valuenow]         attribute DOMString? ariaValueNow;
-    [Reflect=aria_valuetext]        attribute DOMString? ariaValueText;
+interface mixin AriaAttributes {
+    [CEReactions=Needed, Reflect=aria_activedescendant, EnabledBySetting=AriaReflectionForElementReferencesEnabled] attribute Element? ariaActiveDescendantElement;
+    [CEReactions=Needed, Reflect=aria_atomic]           attribute DOMString? ariaAtomic;
+    [CEReactions=Needed, Reflect=aria_autocomplete]     attribute DOMString? ariaAutoComplete;
+    [CEReactions=Needed, Reflect=aria_busy]             attribute DOMString? ariaBusy;
+    [CEReactions=Needed, Reflect=aria_checked]          attribute DOMString? ariaChecked;
+    [CEReactions=Needed, Reflect=aria_colcount]         attribute DOMString? ariaColCount;
+    [CEReactions=Needed, Reflect=aria_colindex]         attribute DOMString? ariaColIndex;
+    [CEReactions=Needed, Reflect=aria_colspan]          attribute DOMString? ariaColSpan;
+    [CEReactions=Needed, CustomGetter, Reflect=aria_controls, EnabledBySetting=AriaReflectionForElementReferencesEnabled] attribute FrozenArray<Element>? ariaControlsElements;
+    [CEReactions=Needed, Reflect=aria_current]          attribute DOMString? ariaCurrent;
+    [CEReactions=Needed, CustomGetter, Reflect=aria_describedby, EnabledBySetting=AriaReflectionForElementReferencesEnabled] attribute FrozenArray<Element>? ariaDescribedByElements;
+    [CEReactions=Needed, CustomGetter, Reflect=aria_details, EnabledBySetting=AriaReflectionForElementReferencesEnabled] attribute FrozenArray<Element>? ariaDetailsElements;
+    [CEReactions=Needed, Reflect=aria_disabled]         attribute DOMString? ariaDisabled;
+    [CEReactions=Needed, CustomGetter, Reflect=aria_errormessage, EnabledBySetting=AriaReflectionForElementReferencesEnabled] attribute FrozenArray<Element>? ariaErrorMessageElements;
+    [CEReactions=Needed, Reflect=aria_expanded]         attribute DOMString? ariaExpanded;
+    [CEReactions=Needed, CustomGetter, Reflect=aria_flowto, EnabledBySetting=AriaReflectionForElementReferencesEnabled] attribute FrozenArray<Element>? ariaFlowToElements;
+    [CEReactions=Needed, Reflect=aria_haspopup]         attribute DOMString? ariaHasPopup;
+    [CEReactions=Needed, Reflect=aria_hidden]           attribute DOMString? ariaHidden;
+    [CEReactions=Needed, Reflect=aria_invalid]          attribute DOMString? ariaInvalid;
+    [CEReactions=Needed, Reflect=aria_keyshortcuts]     attribute DOMString? ariaKeyShortcuts;
+    [CEReactions=Needed, Reflect=aria_label]            attribute DOMString? ariaLabel;
+    [CEReactions=Needed, CustomGetter, Reflect=aria_labelledby, EnabledBySetting=AriaReflectionForElementReferencesEnabled] attribute FrozenArray<Element>? ariaLabelledByElements;
+    [CEReactions=Needed, Reflect=aria_level]            attribute DOMString? ariaLevel;
+    [CEReactions=Needed, Reflect=aria_live]             attribute DOMString? ariaLive;
+    [CEReactions=Needed, Reflect=aria_modal]            attribute DOMString? ariaModal;
+    [CEReactions=Needed, Reflect=aria_multiline]        attribute DOMString? ariaMultiLine;
+    [CEReactions=Needed, Reflect=aria_multiselectable]  attribute DOMString? ariaMultiSelectable;
+    [CEReactions=Needed, Reflect=aria_orientation]      attribute DOMString? ariaOrientation;
+    [CEReactions=Needed, CustomGetter, Reflect=aria_owns, EnabledBySetting=AriaReflectionForElementReferencesEnabled] attribute FrozenArray<Element>? ariaOwnsElements;
+    [CEReactions=Needed, Reflect=aria_placeholder]      attribute DOMString? ariaPlaceholder;
+    [CEReactions=Needed, Reflect=aria_posinset]         attribute DOMString? ariaPosInSet;
+    [CEReactions=Needed, Reflect=aria_pressed]          attribute DOMString? ariaPressed;
+    [CEReactions=Needed, Reflect=aria_readonly]         attribute DOMString? ariaReadOnly;
+    [CEReactions=Needed, Reflect=aria_relevant]         attribute DOMString? ariaRelevant;
+    [CEReactions=Needed, Reflect=aria_required]         attribute DOMString? ariaRequired;
+    [CEReactions=Needed, Reflect=aria_roledescription]  attribute DOMString? ariaRoleDescription;
+    [CEReactions=Needed, Reflect=aria_rowcount]         attribute DOMString? ariaRowCount;
+    [CEReactions=Needed, Reflect=aria_rowindex]         attribute DOMString? ariaRowIndex;
+    [CEReactions=Needed, Reflect=aria_rowspan]          attribute DOMString? ariaRowSpan;
+    [CEReactions=Needed, Reflect=aria_selected]         attribute DOMString? ariaSelected;
+    [CEReactions=Needed, Reflect=aria_setsize]          attribute DOMString? ariaSetSize;
+    [CEReactions=Needed, Reflect=aria_sort]             attribute DOMString? ariaSort;
+    [CEReactions=Needed, Reflect=aria_valuemax]         attribute DOMString? ariaValueMax;
+    [CEReactions=Needed, Reflect=aria_valuemin]         attribute DOMString? ariaValueMin;
+    [CEReactions=Needed, Reflect=aria_valuenow]         attribute DOMString? ariaValueNow;
+    [CEReactions=Needed, Reflect=aria_valuetext]        attribute DOMString? ariaValueText;
 };

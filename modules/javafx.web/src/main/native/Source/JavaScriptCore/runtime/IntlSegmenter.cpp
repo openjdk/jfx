@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,7 +34,7 @@
 
 namespace JSC {
 
-const ClassInfo IntlSegmenter::s_info = { "Object", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(IntlSegmenter) };
+const ClassInfo IntlSegmenter::s_info = { "Object"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(IntlSegmenter) };
 
 IntlSegmenter* IntlSegmenter::create(VM& vm, Structure* structure)
 {
@@ -51,12 +51,6 @@ Structure* IntlSegmenter::createStructure(VM& vm, JSGlobalObject* globalObject, 
 IntlSegmenter::IntlSegmenter(VM& vm, Structure* structure)
     : Base(vm, structure)
 {
-}
-
-void IntlSegmenter::finishCreation(VM& vm)
-{
-    Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
 }
 
 // https://tc39.es/proposal-intl-segmenter/#sec-intl.segmenter
@@ -161,7 +155,7 @@ ASCIILiteral IntlSegmenter::granularityString(Granularity granularity)
         return "sentence"_s;
     }
     ASSERT_NOT_REACHED();
-    return ASCIILiteral::null();
+    return { };
 }
 
 JSObject* IntlSegmenter::createSegmentDataObject(JSGlobalObject* globalObject, JSString* string, int32_t startIndex, int32_t endIndex, UBreakIterator& segmenter, Granularity granularity)

@@ -57,18 +57,25 @@ OBJC_CLASS WAKView;
 
 namespace WebCore {
 
-class EventRegionContext;
 class FloatQuad;
 class HostWindow;
 class LegacyTileCache;
+class RegionContext;
 class Scrollbar;
+
+enum class DelegatedScrollingMode : uint8_t {
+    NotDelegated,
+    DelegatedToNativeScrollView,
+    DelegatedToWebKit,
+};
 
 class ScrollView : public Widget, public ScrollableArea {
 public:
     virtual ~ScrollView();
 
-    using WeakValueType = Widget::WeakValueType;
     using Widget::weakPtrFactory;
+    using Widget::WeakValueType;
+    using Widget::WeakPtrImplType;
 
     // ScrollableArea functions.
     WEBCORE_EXPORT void setScrollOffset(const ScrollOffset&) final;
@@ -121,7 +128,6 @@ public:
 
     WEBCORE_EXPORT virtual void setCanHaveScrollbars(bool);
 
-    virtual bool avoidScrollbarCreation() const { return false; }
 
     void setScrollbarOverlayStyle(ScrollbarOverlayStyle) final;
 
@@ -130,11 +136,13 @@ public:
     bool paintsEntireContents() const { return m_paintsEntireContents; }
     WEBCORE_EXPORT void setPaintsEntireContents(bool);
 
-    // By default programmatic scrolling is handled by WebCore and not by the UI application.
-    // In the case of using a tiled backing store, this mode can be set, so that the scroll requests
-    // are delegated to the UI application.
-    bool delegatesScrolling() const { return m_delegatesScrolling; }
-    WEBCORE_EXPORT void setDelegatesScrolling(bool);
+    // By default scrolling is handled by WebCore, but some WebKit implementations take over scrolling,
+    // delegating it to a native scrolling widget or the UI process.
+    DelegatedScrollingMode delegatedScrollingMode() const { return m_delegatedScrollingMode; }
+    WEBCORE_EXPORT void setDelegatedScrollingMode(DelegatedScrollingMode);
+
+    bool delegatesScrolling() const { return m_delegatedScrollingMode != DelegatedScrollingMode::NotDelegated; }
+    bool delegatesScrollingToNativeView() const { return m_delegatedScrollingMode == DelegatedScrollingMode::DelegatedToNativeScrollView; }
 
     // Overridden by FrameView to create custom CSS scrollbars if applicable.
     virtual Ref<Scrollbar> createScrollbar(ScrollbarOrientation);
@@ -169,6 +177,7 @@ public:
     // will be returned instead of the value set on Page.
     enum class TopContentInsetType { WebCoreContentInset, WebCoreOrPlatformContentInset };
     virtual float topContentInset(TopContentInsetType = TopContentInsetType::WebCoreContentInset) const { return 0; }
+    IntRect frameRectShrunkByInset() const;
 
     // The visible content rect has a location that is the scrolled offset of the document. The width and height are the unobscured viewport
     // width and height. By default the scrollbars themselves are excluded from this rectangle, but an optional boolean argument allows them
@@ -328,7 +337,7 @@ public:
 
     // Functions for converting to and from screen coordinates.
     WEBCORE_EXPORT IntRect contentsToScreen(const IntRect&) const;
-    IntPoint screenToContents(const IntPoint&) const;
+    WEBCORE_EXPORT IntPoint screenToContents(const IntPoint&) const;
 
     // The purpose of this function is to answer whether or not the scroll view is currently visible. Animations and painting updates can be suspended if
     // we know that we are either not in a window right now or if that window is not visible.
@@ -374,7 +383,7 @@ public:
     }
 
     // Widget override. Handles painting of the contents of the view as well as the scrollbars.
-    WEBCORE_EXPORT void paint(GraphicsContext&, const IntRect&, Widget::SecurityOriginPaintPolicy = SecurityOriginPaintPolicy::AnyOrigin, EventRegionContext* = nullptr) final;
+    WEBCORE_EXPORT void paint(GraphicsContext&, const IntRect&, Widget::SecurityOriginPaintPolicy = SecurityOriginPaintPolicy::AnyOrigin, RegionContext* = nullptr) final;
     void paintScrollbars(GraphicsContext&, const IntRect&);
 
     // Widget overrides to ensure that our children's visibility status is kept up to date when we get shown and hidden.
@@ -409,17 +418,20 @@ public:
     bool managesScrollbars() const;
     virtual void updateScrollbarSteps();
 
+    // Called to update the scrollbars to accurately reflect the state of the view.
+    void updateScrollbars(const ScrollPosition& desiredPosition);
+
 protected:
     ScrollView();
 
     virtual void repaintContentRectangle(const IntRect&);
-    virtual void paintContents(GraphicsContext&, const IntRect& damageRect, SecurityOriginPaintPolicy = SecurityOriginPaintPolicy::AnyOrigin, EventRegionContext* = nullptr) = 0;
+    virtual void paintContents(GraphicsContext&, const IntRect& damageRect, SecurityOriginPaintPolicy = SecurityOriginPaintPolicy::AnyOrigin, RegionContext* = nullptr) = 0;
 
     virtual void paintOverhangAreas(GraphicsContext&, const IntRect& horizontalOverhangArea, const IntRect& verticalOverhangArea, const IntRect& dirtyRect);
 
     void availableContentSizeChanged(AvailableSizeChangeReason) override;
     virtual void addedOrRemovedScrollbar() = 0;
-    virtual void delegatesScrollingDidChange() = 0;
+    virtual void delegatedScrollingModeDidChange() = 0;
 
     // These functions are used to create/destroy scrollbars.
     // They return true if the scrollbar was added or removed.
@@ -439,9 +451,6 @@ protected:
     // Subclassed by FrameView to check the writing-mode of the document.
     virtual bool isVerticalDocument() const = 0;
     virtual bool isFlippedDocument() const = 0;
-
-    // Called to update the scrollbars to accurately reflect the state of the view.
-    void updateScrollbars(const ScrollPosition& desiredPosition);
 
     float platformTopContentInset() const;
     void platformSetTopContentInset(float);
@@ -563,6 +572,8 @@ private:
     unsigned m_updateScrollbarsPass { 0 };
     unsigned m_prohibitsScrollingWhenChangingContentSizeCount { 0 };
 
+    DelegatedScrollingMode m_delegatedScrollingMode { DelegatedScrollingMode::NotDelegated };
+
     bool m_horizontalScrollbarLock { false };
     bool m_verticalScrollbarLock { false };
 
@@ -580,7 +591,6 @@ private:
     bool m_useFixedLayout { false };
 
     bool m_paintsEntireContents { false };
-    bool m_delegatesScrolling { false };
 
 }; // class ScrollView
 

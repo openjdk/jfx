@@ -59,6 +59,12 @@ int malloc_engaged_nano(void);
 
 namespace bmalloc {
 
+static bool isWebKitMallocForceEnabled()
+{
+    const char* value = getenv("WebKitMallocForceEnabled");
+    return value ? atoi(value) : false;
+}
+
 static bool isMallocEnvironmentVariableImplyingSystemMallocSet()
 {
     const char* list[] = {
@@ -67,7 +73,6 @@ static bool isMallocEnvironmentVariableImplyingSystemMallocSet()
         "MallocGuardEdges",
         "MallocDoNotProtectPrelude",
         "MallocDoNotProtectPostlude",
-        "MallocStackLoggingNoCompact",
         "MallocScribble",
         "MallocCheckHeapStart",
         "MallocCheckHeapEach",
@@ -84,10 +89,9 @@ static bool isMallocEnvironmentVariableImplyingSystemMallocSet()
             return true;
     }
 
-    // Use system malloc anytime MallocStackLogging is enabled, except when the "vm" or "vmlite" logging modes are enabled.
-    // Those modes only intercept syscalls rather than mallocs, so they don't necessarily imply the use of system malloc.
+    // FIXME: Remove this once lite logging works with memgraph capture (rdar://109283870).
     const char* mallocStackLogging = getenv("MallocStackLogging");
-    if (mallocStackLogging && strncmp(mallocStackLogging, "vm", 2))
+    if (mallocStackLogging && !strcmp(mallocStackLogging, "lite"))
         return true;
 
     return false;
@@ -169,6 +173,8 @@ Environment::Environment(const LockHolder&)
 
 bool Environment::computeIsDebugHeapEnabled()
 {
+    if (isWebKitMallocForceEnabled())
+        return false;
     if (isMallocEnvironmentVariableImplyingSystemMallocSet())
         return true;
     if (isLibgmallocEnabled())

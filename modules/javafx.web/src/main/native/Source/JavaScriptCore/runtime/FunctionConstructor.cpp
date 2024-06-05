@@ -23,6 +23,7 @@
 
 #include "ExceptionHelpers.h"
 #include "FunctionPrototype.h"
+#include "GlobalObjectMethodTable.h"
 #include "JSAsyncFunction.h"
 #include "JSAsyncGeneratorFunction.h"
 #include "JSFunction.h"
@@ -35,7 +36,7 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(FunctionConstructor);
 
-const ClassInfo FunctionConstructor::s_info = { "Function", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(FunctionConstructor) };
+const ClassInfo FunctionConstructor::s_info = { "Function"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(FunctionConstructor) };
 
 static JSC_DECLARE_HOST_FUNCTION(constructWithFunctionConstructor);
 static JSC_DECLARE_HOST_FUNCTION(callFunctionConstructor);
@@ -87,11 +88,11 @@ static String stringifyFunction(JSGlobalObject* globalObject, const ArgList& arg
     String program;
     functionConstructorParametersEndPosition = std::nullopt;
     if (args.isEmpty())
-        program = makeString(prefix, functionName.string(), "() {\n\n}");
+        program = makeString(prefix, functionName.string(), "() {\n\n}"_s);
     else if (args.size() == 1) {
         auto body = args.at(0).toWTFString(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
-        program = tryMakeString(prefix, functionName.string(), "() {\n", body, "\n}");
+        program = tryMakeString(prefix, functionName.string(), "() {\n"_s, body, "\n}"_s);
         if (UNLIKELY(!program)) {
             throwOutOfMemoryError(globalObject, scope);
             return { };

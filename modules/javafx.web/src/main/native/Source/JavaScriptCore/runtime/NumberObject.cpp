@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000,2003 Harri Porten (porten@kde.org)
- *  Copyright (C) 2007, 2008 Apple Inc. All rights reserved.
+ *  Copyright (C) 2007-2023 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -28,19 +28,21 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(NumberObject);
 
-const ClassInfo NumberObject::s_info = { "Number", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(NumberObject) };
+const ClassInfo NumberObject::s_info = { "Number"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(NumberObject) };
 
 NumberObject::NumberObject(VM& vm, Structure* structure)
     : Base(vm, structure)
 {
 }
 
+#if ASSERT_ENABLED
 void NumberObject::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
     ASSERT(type() == NumberObjectType);
 }
+#endif
 
 NumberObject* constructNumber(JSGlobalObject* globalObject, JSValue number)
 {

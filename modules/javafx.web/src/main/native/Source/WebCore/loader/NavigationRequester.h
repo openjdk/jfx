@@ -25,8 +25,9 @@
 
 #pragma once
 
-#include "CrossOriginOpenerPolicy.h"
 #include "GlobalFrameIdentifier.h"
+#include "PolicyContainer.h"
+#include "SecurityContext.h"
 #include "SecurityOrigin.h"
 
 namespace WebCore {
@@ -39,46 +40,11 @@ struct NavigationRequester {
     URL url;
     Ref<SecurityOrigin> securityOrigin;
     Ref<SecurityOrigin> topOrigin;
-    CrossOriginOpenerPolicy crossOriginOpenerPolicy;
-    std::optional<GlobalFrameIdentifier> globalFrameIdentifier;
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<NavigationRequester> decode(Decoder&);
+    PolicyContainer policyContainer;
+    std::optional<FrameIdentifier> frameID;
+    std::optional<PageIdentifier> pageID;
+    ScriptExecutionContextIdentifier documentIdentifier;
+    SandboxFlags sandboxFlags;
 };
-
-template<class Encoder>
-void NavigationRequester::encode(Encoder& encoder) const
-{
-    encoder << url << securityOrigin.get() << topOrigin.get() << crossOriginOpenerPolicy << globalFrameIdentifier;
-}
-
-template<class Decoder>
-std::optional<NavigationRequester> NavigationRequester::decode(Decoder& decoder)
-{
-    std::optional<URL> url;
-    decoder >> url;
-    if (!url)
-        return std::nullopt;
-
-    auto securityOrigin = SecurityOrigin::decode(decoder);
-    if (!securityOrigin)
-        return std::nullopt;
-
-    auto topOrigin = SecurityOrigin::decode(decoder);
-    if (!topOrigin)
-        return std::nullopt;
-
-    std::optional<CrossOriginOpenerPolicy> crossOriginOpenerPolicy;
-    decoder >> crossOriginOpenerPolicy;
-    if (!crossOriginOpenerPolicy)
-        return std::nullopt;
-
-    std::optional<std::optional<GlobalFrameIdentifier>> globalFrameIdentifier;
-    decoder >> globalFrameIdentifier;
-    if (!globalFrameIdentifier)
-        return std::nullopt;
-
-    return NavigationRequester { WTFMove(*url), securityOrigin.releaseNonNull(), topOrigin.releaseNonNull(), WTFMove(*crossOriginOpenerPolicy), *globalFrameIdentifier };
-}
 
 } // namespace WebCore

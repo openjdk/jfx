@@ -29,18 +29,9 @@
 #if ENABLE(TEXT_AUTOSIZING)
 
 #include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 
 namespace WebCore {
-
-AutosizeStatus::AutosizeStatus(OptionSet<Fields> fields)
-    : m_fields(fields)
-{
-}
-
-bool AutosizeStatus::contains(Fields fields) const
-{
-    return m_fields.contains(fields);
-}
 
 bool AutosizeStatus::probablyContainsASmallFixedNumberOfLines(const RenderStyle& style)
 {
@@ -142,8 +133,8 @@ float AutosizeStatus::idempotentTextSize(float specifiedSize, float pageScale)
     if (specifiedSize <= 0)
         return 0;
 
-    float result = scalePoint(points[WTF_ARRAY_LENGTH(points) - 1]).y();
-    for (size_t i = 1; i < WTF_ARRAY_LENGTH(points); ++i) {
+    float result = scalePoint(points[std::size(points) - 1]).y();
+    for (size_t i = 1; i < std::size(points); ++i) {
         if (points[i].x() < specifiedSize)
             continue;
         auto leftPoint = scalePoint(points[i - 1]);

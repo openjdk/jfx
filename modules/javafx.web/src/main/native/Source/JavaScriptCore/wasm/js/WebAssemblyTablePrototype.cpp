@@ -35,6 +35,7 @@
 #include "JSWebAssemblyHelpers.h"
 #include "JSWebAssemblyTable.h"
 #include "StructureInlines.h"
+#include "WasmTypeDefinition.h"
 
 namespace JSC {
 static JSC_DECLARE_CUSTOM_GETTER(webAssemblyTableProtoGetterLength);
@@ -48,7 +49,7 @@ static JSC_DECLARE_HOST_FUNCTION(webAssemblyTableProtoFuncType);
 
 namespace JSC {
 
-const ClassInfo WebAssemblyTablePrototype::s_info = { "WebAssembly.Table", &Base::s_info, &prototypeTableWebAssemblyTable, nullptr, CREATE_METHOD_TABLE(WebAssemblyTablePrototype) };
+const ClassInfo WebAssemblyTablePrototype::s_info = { "WebAssembly.Table"_s, &Base::s_info, &prototypeTableWebAssemblyTable, nullptr, CREATE_METHOD_TABLE(WebAssemblyTablePrototype) };
 
 /* Source for WebAssemblyTablePrototype.lut.h
  @begin prototypeTableWebAssemblyTable
@@ -63,7 +64,7 @@ const ClassInfo WebAssemblyTablePrototype::s_info = { "WebAssembly.Table", &Base
 static ALWAYS_INLINE JSWebAssemblyTable* getTable(JSGlobalObject* globalObject, VM& vm, JSValue v)
 {
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    JSWebAssemblyTable* result = jsDynamicCast<JSWebAssemblyTable*>(vm, v);
+    JSWebAssemblyTable* result = jsDynamicCast<JSWebAssemblyTable*>(v);
     if (!result) {
         throwException(globalObject, throwScope,
             createTypeError(globalObject, "expected |this| value to be an instance of WebAssembly.Table"_s));
@@ -99,7 +100,7 @@ JSC_DEFINE_HOST_FUNCTION(webAssemblyTableProtoFuncGrow, (JSGlobalObject* globalO
     else
         defaultValue = callFrame->uncheckedArgument(1);
 
-    if (table->table()->isFuncrefTable() && !defaultValue.isNull() && !isWebAssemblyHostFunction(vm, defaultValue))
+    if (table->table()->isFuncrefTable() && !defaultValue.isNull() && !isWebAssemblyHostFunction(defaultValue))
         return throwVMTypeError(globalObject, throwScope, "WebAssembly.Table.prototype.grow expects the second argument to be null or an instance of WebAssembly.Function"_s);
     uint32_t oldLength = table->length();
 
@@ -146,21 +147,31 @@ JSC_DEFINE_HOST_FUNCTION(webAssemblyTableProtoFuncSet, (JSGlobalObject* globalOb
     if (table->table()->asFuncrefTable()) {
         WebAssemblyFunction* wasmFunction = nullptr;
         WebAssemblyWrapperFunction* wasmWrapperFunction = nullptr;
-        if (!value.isNull() && !isWebAssemblyHostFunction(vm, value, wasmFunction, wasmWrapperFunction))
+        if (!value.isNull() && !isWebAssemblyHostFunction(value, wasmFunction, wasmWrapperFunction))
             return throwVMTypeError(globalObject, throwScope, "WebAssembly.Table.prototype.set expects the second argument to be null or an instance of WebAssembly.Function"_s);
 
         if (value.isNull())
             table->clear(index);
         else {
-            ASSERT(value.isObject() && isWebAssemblyHostFunction(vm, jsCast<JSObject*>(value), wasmFunction, wasmWrapperFunction));
+            ASSERT(value.isObject() && isWebAssemblyHostFunction(jsCast<JSObject*>(value), wasmFunction, wasmWrapperFunction));
             ASSERT(!!wasmFunction || !!wasmWrapperFunction);
             if (wasmFunction)
                 table->set(index, wasmFunction);
             else
                 table->set(index, wasmWrapperFunction);
         }
-    } else
+    } else {
+        // FIXME: Once non-defaultable table types are allowed, this will need to check for null if a non-null table type is used.
+        if (isExternref(table->table()->wasmType()))
         table->set(index, value);
+        else {
+            RELEASE_ASSERT(Options::useWebAssemblyGC());
+            JSValue internalValue = Wasm::internalizeExternref(value);
+            if (!Wasm::TypeInformation::castReference(internalValue, true, table->table()->wasmType().index))
+                return throwVMTypeError(globalObject, throwScope, "WebAssembly.Table.prototype.set failed to cast the second argument to the table's element type"_s);
+            table->set(index, internalValue);
+        }
+    }
 
     return JSValue::encode(jsUndefined());
 }
@@ -190,7 +201,7 @@ Structure* WebAssemblyTablePrototype::createStructure(VM& vm, JSGlobalObject* gl
 void WebAssemblyTablePrototype::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 

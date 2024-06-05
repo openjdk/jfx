@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,7 +52,7 @@ using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<DOMWindow*>(jlong_to_ptr(peer)))
+#define IMPL (dynamicDowncast<LocalDOMWindow>(static_cast<DOMWindow*>(jlong_to_ptr(peer))))
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_dispose(JNIEnv*, jclass, jlong peer)
 {
@@ -166,7 +166,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_getNameImpl(JNIE
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_setNameImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setName(String(env, value));
+    IMPL->setName(AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_getStatusImpl(JNIEnv* env, jclass, jlong peer)
@@ -178,7 +178,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_getStatusImpl(JN
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_setStatusImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setStatus(String(env, value));
+    IMPL->setStatus(AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_getDefaultStatusImpl(JNIEnv* env, jclass, jlong peer)
@@ -190,7 +190,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_getDefaultStatus
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_setDefaultStatusImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setDefaultStatus(String(env, value));
+    IMPL->setDefaultStatus(AtomString{String(env, value)});
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_getSelfImpl(JNIEnv* env, jclass, jlong peer)
@@ -216,19 +216,19 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_getFramesImpl(JNIE
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_getOpenerImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DOMWindow>(env, WTF::getPtr(downcast<DOMWindow>(IMPL->opener()->window())));
+    return JavaReturn<DOMWindow>(env, WTF::getPtr(IMPL->opener()->window()));
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_getParentImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DOMWindow>(env, WTF::getPtr(downcast<DOMWindow>(IMPL->parent()->window())));
+    return JavaReturn<DOMWindow>(env, WTF::getPtr(IMPL->parent()->window()));
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_getTopImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DOMWindow>(env, WTF::getPtr(downcast<DOMWindow>(IMPL->top()->window())));
+    return JavaReturn<DOMWindow>(env, WTF::getPtr(IMPL->top()->window()));
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_getDocumentExImpl(JNIEnv* env, jclass, jlong peer)
@@ -1179,7 +1179,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_alertImpl(JNIEnv* e
     , jstring message)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->alert(String(env, message));
+    IMPL->alert(AtomString{String(env, message)});
 }
 
 
@@ -1187,7 +1187,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_confirmImpl(JNI
     , jstring message)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->confirmForBindings(String(env, message));
+    return IMPL->confirmForBindings(AtomString{String(env, message)});
 }
 
 
@@ -1196,8 +1196,8 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_promptImpl(JNIEn
     , jstring defaultValue)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->prompt(String(env, message)
-            , String(env, defaultValue)));
+    return JavaReturn<String>(env, IMPL->prompt(AtomString{String(env, message)}
+            , AtomString{String(env, defaultValue)}));
 }
 
 
@@ -1211,7 +1211,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_findImpl(JNIEnv
     , jboolean showDialog)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->find(String(env, string)
+    return IMPL->find(AtomString{String(env, string)}
             , caseSensitive
             , backwards
             , wrap
@@ -1300,7 +1300,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_getComputedStyleIm
         return {};
     }
     return JavaReturn<CSSStyleDeclaration>(env, WTF::getPtr(IMPL->getComputedStyle(*static_cast<Element*>(jlong_to_ptr(element))
-            , String(env, pseudoElement))));
+            , AtomString{String(env, pseudoElement)})));
 }
 
 
@@ -1324,7 +1324,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_addEventListenerImp
     , jboolean useCapture)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->addEventListenerForBindings(String(env, type)
+    IMPL->addEventListenerForBindings(AtomString{String(env, type)}
             , static_cast<EventListener*>(jlong_to_ptr(listener))
             , static_cast<bool>(useCapture));
 }
@@ -1336,7 +1336,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_removeEventListener
     , jboolean useCapture)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->removeEventListenerForBindings(String(env, type)
+    IMPL->removeEventListenerForBindings(AtomString{String(env, type)}
             , static_cast<EventListener*>(jlong_to_ptr(listener))
             , static_cast<bool>(useCapture));
 }
@@ -1358,7 +1358,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_atobImpl(JNIEnv*
     , jstring string)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, raiseOnDOMError(env, IMPL->atob(String(env, string))));
+    return JavaReturn<String>(env, raiseOnDOMError(env, IMPL->atob(AtomString{String(env, string)})));
 }
 
 
@@ -1366,7 +1366,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_btoaImpl(JNIEnv*
     , jstring string)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, raiseOnDOMError(env, IMPL->btoa(String(env, string))));
+    return JavaReturn<String>(env, raiseOnDOMError(env, IMPL->btoa(AtomString{String(env, string)})));
 }
 
 

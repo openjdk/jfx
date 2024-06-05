@@ -26,9 +26,7 @@
 #include "config.h"
 #include "DisplayBoxDecorationData.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 
 namespace WebCore {
 namespace Display {
@@ -159,4 +157,3 @@ bool BoxDecorationData::borderObscuresBackgroundEdge(const FloatSize& contextSca
 } // namespace Display
 } // namespace WebCore
 
-#endif // ENABLE(LAYOUT_FORMATTING_CONTEXT)

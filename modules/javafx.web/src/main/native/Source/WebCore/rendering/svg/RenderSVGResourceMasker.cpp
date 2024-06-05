@@ -22,11 +22,12 @@
 #include "RenderSVGResourceMasker.h"
 
 #include "Element.h"
-#include "ElementIterator.h"
+#include "ElementChildIteratorInlines.h"
 #include "FloatPoint.h"
 #include "Image.h"
 #include "IntRect.h"
 #include "RenderSVGResourceMaskerInlines.h"
+#include "SVGRenderStyle.h"
 #include "SVGRenderingContext.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -41,12 +42,12 @@ RenderSVGResourceMasker::RenderSVGResourceMasker(SVGMaskElement& element, Render
 
 RenderSVGResourceMasker::~RenderSVGResourceMasker() = default;
 
-void RenderSVGResourceMasker::removeAllClientsFromCache(bool markForInvalidation)
+void RenderSVGResourceMasker::removeAllClientsFromCacheIfNeeded(bool markForInvalidation, WeakHashSet<RenderObject>* visitedRenderers)
 {
     m_maskContentBoundaries = FloatRect();
     m_masker.clear();
 
-    markAllClientsForInvalidation(markForInvalidation ? LayoutAndBoundariesInvalidation : ParentOnlyInvalidation);
+    markAllClientsForInvalidationIfNeeded(markForInvalidation ? LayoutAndBoundariesInvalidation : ParentOnlyInvalidation, visitedRenderers);
 }
 
 void RenderSVGResourceMasker::removeClientFromCache(RenderElement& client, bool markForInvalidation)
@@ -76,12 +77,11 @@ bool RenderSVGResourceMasker::applyResource(RenderElement& renderer, const Rende
     ImageBuffer::sizeNeedsClamping(repaintRect.size(), scale);
 
     if (!maskerData->maskImage && !repaintRect.isEmpty()) {
-        const SVGRenderStyle& svgStyle = style().svgStyle();
-
         auto maskColorSpace = DestinationColorSpace::SRGB();
         auto drawColorSpace = DestinationColorSpace::SRGB();
 
 #if ENABLE(DESTINATION_COLOR_SPACE_LINEAR_SRGB)
+        const SVGRenderStyle& svgStyle = style().svgStyle();
         if (svgStyle.colorInterpolation() == ColorInterpolation::LinearRGB) {
 #if USE(CG)
             maskColorSpace = DestinationColorSpace::LinearSRGB();
@@ -90,7 +90,7 @@ bool RenderSVGResourceMasker::applyResource(RenderElement& renderer, const Rende
         }
 #endif
         // FIXME (149470): This image buffer should not be unconditionally unaccelerated. Making it match the context breaks alpha masking, though.
-        maskerData->maskImage = context->createImageBuffer(repaintRect, scale, maskColorSpace, RenderingMode::Unaccelerated);
+        maskerData->maskImage = context->createScaledImageBuffer(repaintRect, scale, maskColorSpace, RenderingMode::Unaccelerated);
         if (!maskerData->maskImage)
             return false;
 

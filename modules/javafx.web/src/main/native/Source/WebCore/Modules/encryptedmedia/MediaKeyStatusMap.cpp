@@ -56,12 +56,12 @@ unsigned long MediaKeyStatusMap::size()
     return m_session->statuses().size();
 }
 
-static bool keyIdsMatch(const FragmentedSharedBuffer& a, const BufferSource& b)
+static bool keyIdsMatch(const SharedBuffer& a, const BufferSource& b)
 {
     auto length = a.size();
     if (!length || length != b.length())
         return false;
-    return !std::memcmp(a.makeContiguous()->data(), b.data(), length);
+    return !std::memcmp(a.data(), b.data(), length);
 }
 
 bool MediaKeyStatusMap::has(const BufferSource& keyId)
@@ -85,7 +85,7 @@ JSC::JSValue MediaKeyStatusMap::get(JSC::JSGlobalObject& state, const BufferSour
 
     if (it == statuses.end())
         return JSC::jsUndefined();
-    return convertEnumerationToJS(state, it->second);
+    return convertEnumerationToJS(state.vm(), it->second);
 }
 
 MediaKeyStatusMap::Iterator::Iterator(MediaKeyStatusMap& map)

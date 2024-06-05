@@ -40,12 +40,12 @@ class Document;
 class DragClient;
 class DragData;
 class Element;
-class Frame;
 class FrameSelection;
 class HTMLImageElement;
 class HTMLInputElement;
 class HitTestResult;
 class IntRect;
+class LocalFrame;
 class Page;
 class PlatformMouseEvent;
 
@@ -61,10 +61,10 @@ public:
 
     static DragOperation platformGenericDragOperation();
 
-    WEBCORE_EXPORT std::optional<DragOperation> dragEntered(const DragData&);
-    WEBCORE_EXPORT void dragExited(const DragData&);
-    WEBCORE_EXPORT std::optional<DragOperation> dragUpdated(const DragData&);
-    WEBCORE_EXPORT bool performDragOperation(const DragData&);
+    WEBCORE_EXPORT std::optional<DragOperation> dragEntered(DragData&&);
+    WEBCORE_EXPORT void dragExited(DragData&&);
+    WEBCORE_EXPORT std::optional<DragOperation> dragUpdated(DragData&&);
+    WEBCORE_EXPORT bool performDragOperation(DragData&&);
     WEBCORE_EXPORT void dragCancelled();
 
     bool mouseIsOverFileInput() const { return m_fileInputElementUnderMouse; }
@@ -85,7 +85,7 @@ public:
     OptionSet<DragDestinationAction> dragDestinationActionMask() const { return m_dragDestinationActionMask; }
     OptionSet<DragSourceAction> delegateDragSourceAction(const IntPoint& rootViewPoint);
 
-    Element* draggableElement(const Frame*, Element* start, const IntPoint&, DragState&) const;
+    Element* draggableElement(const LocalFrame*, Element* start, const IntPoint&, DragState&) const;
     WEBCORE_EXPORT void dragEnded();
 
     WEBCORE_EXPORT void placeDragCaret(const IntPoint&);
@@ -96,8 +96,8 @@ public:
     WEBCORE_EXPORT void finalizeDroppedImagePlaceholder(HTMLImageElement&, CompletionHandler<void()>&&);
     WEBCORE_EXPORT void insertDroppedImagePlaceholdersAtCaret(const Vector<IntSize>& imageSizes);
 
-    void prepareForDragStart(Frame& sourceFrame, OptionSet<DragSourceAction>, Element& sourceElement, DataTransfer&, const IntPoint& dragOrigin) const;
-    bool startDrag(Frame& src, const DragState&, OptionSet<DragOperation>, const PlatformMouseEvent& dragEvent, const IntPoint& dragOrigin, HasNonDefaultPasteboardData);
+    void prepareForDragStart(LocalFrame& sourceFrame, OptionSet<DragSourceAction>, Element& sourceElement, DataTransfer&, const IntPoint& dragOrigin) const;
+    bool startDrag(LocalFrame& src, const DragState&, OptionSet<DragOperation>, const PlatformMouseEvent& dragEvent, const IntPoint& dragOrigin, HasNonDefaultPasteboardData);
     static const IntSize& maxDragImageSize();
 
     static const int MaxOriginalImageArea;
@@ -107,10 +107,10 @@ public:
 
 private:
     void updateSupportedTypeIdentifiersForDragHandlingMethod(DragHandlingMethod, const DragData&) const;
-    bool dispatchTextInputEventFor(Frame*, const DragData&);
+    bool dispatchTextInputEventFor(LocalFrame*, const DragData&);
     bool canProcessDrag(const DragData&);
     bool concludeEditDrag(const DragData&);
-    std::optional<DragOperation> dragEnteredOrUpdated(const DragData&);
+    std::optional<DragOperation> dragEnteredOrUpdated(DragData&&);
     std::optional<DragOperation> operationForLoad(const DragData&);
     DragHandlingMethod tryDocumentDrag(const DragData&, OptionSet<DragDestinationAction>, std::optional<DragOperation>&);
     bool tryDHTMLDrag(const DragData&, std::optional<DragOperation>&);
@@ -121,13 +121,14 @@ private:
 
     void mouseMovedIntoDocument(Document*);
     bool shouldUseCachedImageForDragImage(const Image&) const;
+    void disallowFileAccessIfNeeded(DragData&);
 
-    std::optional<HitTestResult> hitTestResultForDragStart(Frame&, Element&, const IntPoint&) const;
+    std::optional<HitTestResult> hitTestResultForDragStart(LocalFrame&, Element&, const IntPoint&) const;
 
-    void doImageDrag(Element&, const IntPoint&, const IntRect&, Frame&, IntPoint&, const DragState&, PromisedAttachmentInfo&&);
-    void doSystemDrag(DragImage, const IntPoint&, const IntPoint&, Frame&, const DragState&, PromisedAttachmentInfo&&);
+    void doImageDrag(Element&, const IntPoint&, const IntRect&, LocalFrame&, IntPoint&, const DragState&, PromisedAttachmentInfo&&);
+    void doSystemDrag(DragImage, const IntPoint&, const IntPoint&, LocalFrame&, const DragState&, PromisedAttachmentInfo&&);
 
-    void beginDrag(DragItem, Frame&, const IntPoint& mouseDownPoint, const IntPoint& mouseDraggedPoint, DataTransfer&, DragSourceAction);
+    void beginDrag(DragItem, LocalFrame&, const IntPoint& mouseDownPoint, const IntPoint& mouseDraggedPoint, DataTransfer&, DragSourceAction);
 
     bool canLoadDataFromDraggingPasteboard() const
     {

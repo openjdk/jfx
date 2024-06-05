@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,11 +26,11 @@
 package com.sun.media.jfxmediaimpl.platform.osx;
 
 import com.sun.glass.utils.NativeLibLoader;
+import com.sun.javafx.PlatformUtil;
 import com.sun.media.jfxmedia.Media;
 import com.sun.media.jfxmedia.MediaPlayer;
 import com.sun.media.jfxmedia.locator.Locator;
 import com.sun.media.jfxmedia.logging.Logger;
-import com.sun.media.jfxmediaimpl.HostUtils;
 import com.sun.media.jfxmediaimpl.platform.Platform;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -106,7 +106,7 @@ public final class OSXPlatform extends Platform {
      */
     @Override
     public boolean loadPlatform() {
-        if (!HostUtils.isMacOSX()) {
+        if (!PlatformUtil.isMac()) {
             return false;
         }
 

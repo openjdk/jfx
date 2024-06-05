@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,11 +50,9 @@ import static org.junit.Assert.assertTrue;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.attemptGC;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.replaceSkin;
 import static test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils.getCell;
-
 import java.lang.ref.WeakReference;
 import java.util.List;
 import java.util.stream.Collectors;
-
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -77,7 +75,6 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
-import javafx.scene.control.TableViewShim;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToolBar;
@@ -102,14 +99,11 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
-
 import com.sun.javafx.tk.Toolkit;
-
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
 
@@ -1345,6 +1339,37 @@ public class SkinCleanupTest {
         InputMethodRequests im2 = t.getInputMethodRequests();
 
         assertNotEquals("InputMethodRequests set by an old skin must be replaced by the new skin", im, im2);
+    }
+
+    /**
+     * Test that both inputMethodRequests and onInputMethodTextChanged properties, required for IME to work
+     * (see Scene:2239) are set by a skin, on replacing a skin, and on uninstalling a skin.
+     */
+    @Test
+    public void testTextInput_BothIME() {
+        TextField t = new TextField();
+        installDefaultSkin(t);
+        InputMethodRequests mr1 = t.getInputMethodRequests();
+        EventHandler<? super InputMethodEvent> tc1 = t.getOnInputMethodTextChanged();
+
+        assertNotNull("InputMethodRequests must be set by a skin", mr1);
+        assertNotNull("onInputMethodTextChanged must be set by a skin", tc1);
+
+        replaceSkin(t);
+        InputMethodRequests mr2 = t.getInputMethodRequests();
+        EventHandler<? super InputMethodEvent> tc2 = t.getOnInputMethodTextChanged();
+
+        assertNotNull("InputMethodRequests must be set by a skin 2", mr2);
+        assertNotNull("onInputMethodTextChanged must be set by a skin 2", tc2);
+
+        assertNotEquals("InputMethodRequests set by an old skin must be replaced by the new skin", mr1, mr2);
+        assertNotEquals("onInputMethodTextChanged set by an old skin must be replaced by the new skin", tc1, tc2);
+
+        t.setSkin(null);
+        InputMethodRequests mr3 = t.getInputMethodRequests();
+        EventHandler<? super InputMethodEvent> tc3 = t.getOnInputMethodTextChanged();
+        assertNull("InputMethodRequests must be cleared by uninstalling a skin", mr3);
+        assertNull("onInputMethodTextChanged must be cleared by uninstalling a skin", tc3);
     }
 
     /**

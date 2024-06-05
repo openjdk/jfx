@@ -30,18 +30,18 @@
 #include "ChromeClient.h"
 #include "Document.h"
 #include "Editor.h"
-#include "Frame.h"
 #include "FrameSelection.h"
 #include "GraphicsContext.h"
 #include "HTMLElement.h"
 #include "ImageOverlay.h"
 #include "IntRect.h"
 #include "LayoutRect.h"
+#include "LocalFrame.h"
 #include "Page.h"
 #include "PageOverlayController.h"
 #include "PlatformMouseEvent.h"
 #include "RenderElement.h"
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 #include "SimpleRange.h"
 #include "VisiblePosition.h"
 
@@ -54,7 +54,7 @@ ImageOverlayController::ImageOverlayController(Page& page)
 {
 }
 
-void ImageOverlayController::selectionQuadsDidChange(Frame& frame, const Vector<FloatQuad>& quads)
+void ImageOverlayController::selectionQuadsDidChange(LocalFrame& frame, const Vector<FloatQuad>& quads)
 {
     if (!m_page || !m_page->chrome().client().needsImageOverlayControllerForSelectionPainting())
         return;
@@ -76,7 +76,7 @@ void ImageOverlayController::selectionQuadsDidChange(Frame& frame, const Vector<
             return nullptr;
 
         if (RefPtr host = selectedRange->startContainer().shadowHost(); is<HTMLElement>(host))
-            return static_pointer_cast<HTMLElement>(host);
+            return static_pointer_cast<HTMLElement>(WTFMove(host));
 
         return nullptr;
     })();
@@ -207,7 +207,7 @@ bool ImageOverlayController::platformHandleMouseEvent(const PlatformMouseEvent&)
     return false;
 }
 
-void ImageOverlayController::elementUnderMouseDidChange(Frame&, Element*)
+void ImageOverlayController::elementUnderMouseDidChange(LocalFrame&, Element*)
 {
 }
 

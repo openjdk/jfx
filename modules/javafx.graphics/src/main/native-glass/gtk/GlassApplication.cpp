@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,11 +42,13 @@
 #include "glass_dnd.h"
 #include "glass_window.h"
 #include "glass_screen.h"
+#include "PlatformSupport.h"
 
 GdkEventFunc process_events_prev;
 static void process_events(GdkEvent*, gpointer);
 
 JNIEnv* mainEnv; // Use only with main loop thread!!!
+PlatformSupport* platformSupport = NULL;
 
 extern gboolean disableGrab;
 
@@ -72,6 +74,13 @@ static gboolean call_runnable (gpointer data)
     return FALSE;
 }
 
+static void call_update_preferences()
+{
+    if (platformSupport) {
+        platformSupport->updatePreferences();
+    }
+}
+
 extern "C" {
 
 #pragma GCC diagnostic push
@@ -95,9 +104,9 @@ jboolean gtk_verbose = JNI_FALSE;
 /*
  * Class:     com_sun_glass_ui_gtk_GtkApplication
  * Method:    _initGTK
- * Signature: (IZ)I
+ * Signature: (IZ)V
  */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1initGTK
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1initGTK
   (JNIEnv *env, jclass clazz, jint version, jboolean verbose, jfloat uiScale)
 {
     (void) clazz;
@@ -112,7 +121,20 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1initGTK
     gdk_threads_enter();
     gtk_init(NULL, NULL);
 
-    return JNI_TRUE;
+    // Major version is checked before loading
+    if (version == 3
+        && gtk_check_version(version, GTK_3_MIN_MINOR_VERSION, GTK_3_MIN_MICRO_VERSION)) {
+        char message[100];
+        snprintf(message, sizeof(message),
+                 "Minimum GTK version required is %d.%d.%d. System has %d.%d.%d.",
+                 version, GTK_3_MIN_MINOR_VERSION, GTK_3_MIN_MICRO_VERSION,
+                 gtk_major_version, gtk_minor_version, gtk_micro_version);
+
+        jclass uoe = env->FindClass("java/lang/UnsupportedOperationException");
+        env->ThrowNew(uoe, message);
+
+        return;
+    }
 }
 
 /*
@@ -173,6 +195,14 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1init
 
     GdkWindow *root = gdk_screen_get_root_window(default_gdk_screen);
     gdk_window_set_events(root, static_cast<GdkEventMask>(gdk_window_get_events(root) | GDK_PROPERTY_CHANGE_MASK));
+
+    platformSupport = new PlatformSupport(env, obj);
+
+    GtkSettings* settings = gtk_settings_get_default();
+    if (settings != NULL) {
+        g_signal_connect(G_OBJECT(settings), "notify::gtk-theme-name",
+                         G_CALLBACK(call_update_preferences), NULL);
+    }
 }
 
 /*
@@ -236,6 +266,11 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1terminateLoop
     (void)obj;
 
     gtk_main_quit();
+
+    if (platformSupport) {
+        delete platformSupport;
+        platformSupport = NULL;
+    }
 }
 
 /*
@@ -249,8 +284,13 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1submitForLater
     (void)obj;
 
     RunnableContext* context = (RunnableContext*)malloc(sizeof(RunnableContext));
-    context->runnable = env->NewGlobalRef(runnable);
-    gdk_threads_add_idle_full(G_PRIORITY_HIGH_IDLE + 30, call_runnable, context, NULL);
+    if (context != NULL) {
+        context->runnable = env->NewGlobalRef(runnable);
+        gdk_threads_add_idle_full(G_PRIORITY_HIGH_IDLE + 30, call_runnable, context, NULL);
+        // we release this context in call_runnable
+    } else {
+        fprintf(stderr, "malloc failed in GtkApplication__1submitForLaterInvocation\n");
+    }
 }
 
 /*
@@ -388,6 +428,17 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1supportsTr
             && gdk_screen_is_composited(gdk_screen_get_default());
 }
 
+/*
+ * Class:     com_sun_glass_ui_gtk_GtkApplication
+ * Method:    getPlatformPreferences
+ * Signature: ()Ljava/util/Map;
+ */
+JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkApplication_getPlatformPreferences
+  (JNIEnv *env, jobject self)
+{
+    return platformSupport ? platformSupport->collectPreferences() : NULL;
+}
+
 } // extern "C"
 
 bool is_window_enabled_for_event(GdkWindow * window, WindowContext *ctx, gint event_type) {
@@ -429,6 +480,8 @@ static void process_events(GdkEvent* event, gpointer data)
         return;
     }
 
+    EventsCounterHelper helper(ctx);
+
     if (ctx != NULL && ctx->hasIME() && ctx->filterIME(event)) {
         return;
     }
@@ -436,12 +489,12 @@ static void process_events(GdkEvent* event, gpointer data)
     glass_evloop_call_hooks(event);
 
     if (ctx != NULL) {
-        EventsCounterHelper helper(ctx);
         try {
             switch (event->type) {
                 case GDK_PROPERTY_NOTIFY:
-                    ctx->process_property_notify(&event->property);
+                    // let gtk handle it first to prevent a glitch
                     gtk_main_do_event(event);
+                    ctx->process_property_notify(&event->property);
                     break;
                 case GDK_CONFIGURE:
                     ctx->process_configure(&event->configure);
@@ -492,7 +545,6 @@ static void process_events(GdkEvent* event, gpointer data)
                     process_dnd_target(ctx, &event->dnd);
                     break;
                 case GDK_MAP:
-                    ctx->process_map();
                     // fall-through
                 case GDK_UNMAP:
                 case GDK_CLIENT_EVENT:

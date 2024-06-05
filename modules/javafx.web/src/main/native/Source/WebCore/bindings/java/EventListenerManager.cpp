@@ -25,7 +25,7 @@
 
 #include "EventListenerManager.h"
 #include "JavaEventListener.h"
-#include "DOMWindow.h"
+#include "LocalDOMWindow.h"
 
 namespace WebCore {
 
@@ -68,27 +68,27 @@ JGObject EventListenerManager::getListenerJObject(JavaEventListener *listener)
     return nullptr;
 }
 
-void EventListenerManager::registerDOMWindow(DOMWindow* window, JavaEventListener *listener)
+void EventListenerManager::registerDOMWindow(LocalDOMWindow* window, JavaEventListener *listener)
 {
     std::map<JavaEventListener*, ListenerJObjectWrapper*>::iterator it;
     it = listenerJObjectMap.find(listener);
     if (it != listenerJObjectMap.end())
         it->second->ref();
 
-    std::pair<JavaEventListener*, DOMWindow*> entry{ listener, window};
+    std::pair<JavaEventListener*, LocalDOMWindow*> entry{ listener, window};
     listenerDOMWindowMultiMap.insert(entry);
 }
 
-void EventListenerManager::unregisterDOMWindow(DOMWindow* window)
+void EventListenerManager::unregisterDOMWindow(LocalDOMWindow* window)
 {
-    std::multimap<JavaEventListener*, DOMWindow*>::iterator win_it;
+    std::multimap<JavaEventListener*, LocalDOMWindow*>::iterator win_it;
     for (win_it = listenerDOMWindowMultiMap.begin(); win_it != listenerDOMWindowMultiMap.end();) {
         // de register associated event listeners with window
         // and remove the entry from the map
         if (window == win_it->second) {
             unregisterListener(win_it->first);
 
-            std::multimap<JavaEventListener*, DOMWindow*>::iterator tmp_it;
+            std::multimap<JavaEventListener*, LocalDOMWindow*>::iterator tmp_it;
             tmp_it = win_it;
             ++win_it;
             listenerDOMWindowMultiMap.erase(tmp_it);

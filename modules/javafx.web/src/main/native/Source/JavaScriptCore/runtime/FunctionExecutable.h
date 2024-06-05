@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExecutableToCodeBlockEdge.h"
 #include "JSFunction.h"
 #include "ScriptExecutable.h"
 #include "SourceCode.h"
@@ -51,8 +50,8 @@ public:
 
     static FunctionExecutable* create(VM& vm, ScriptExecutable* topLevelExecutable, const SourceCode& source, UnlinkedFunctionExecutable* unlinkedExecutable, Intrinsic intrinsic, bool isInsideOrdinaryFunction)
     {
-        FunctionExecutable* executable = new (NotNull, allocateCell<FunctionExecutable>(vm)) FunctionExecutable(vm, source, unlinkedExecutable, intrinsic, isInsideOrdinaryFunction);
-        executable->finishCreation(vm, topLevelExecutable);
+        FunctionExecutable* executable = new (NotNull, allocateCell<FunctionExecutable>(vm)) FunctionExecutable(vm, topLevelExecutable, source, unlinkedExecutable, intrinsic, isInsideOrdinaryFunction);
+        executable->finishCreation(vm);
         return executable;
     }
     static FunctionExecutable* fromGlobalCode(
@@ -69,34 +68,31 @@ public:
     // Returns either call or construct bytecode. This can be appropriate
     // for answering questions that that don't vary between call and construct --
     // for example, argumentsRegister().
-    FunctionCodeBlock* eitherCodeBlock()
+    FunctionCodeBlock* eitherCodeBlock() const
     {
-        ExecutableToCodeBlockEdge* edge;
-        if (m_codeBlockForCall)
-            edge = m_codeBlockForCall.get();
-        else
-            edge = m_codeBlockForConstruct.get();
-        return bitwise_cast<FunctionCodeBlock*>(ExecutableToCodeBlockEdge::unwrap(edge));
+        if (auto* result = codeBlockForCall())
+            return result;
+        return codeBlockForConstruct();
     }
 
     bool isGeneratedForCall() const
     {
-        return !!m_codeBlockForCall;
+        return !!codeBlockForCall();
     }
 
-    FunctionCodeBlock* codeBlockForCall()
+    FunctionCodeBlock* codeBlockForCall() const
     {
-        return bitwise_cast<FunctionCodeBlock*>(ExecutableToCodeBlockEdge::unwrap(m_codeBlockForCall.get()));
+        return bitwise_cast<FunctionCodeBlock*>(m_codeBlockForCall.get());
     }
 
     bool isGeneratedForConstruct() const
     {
-        return !!m_codeBlockForConstruct;
+        return !!codeBlockForConstruct();
     }
 
-    FunctionCodeBlock* codeBlockForConstruct()
+    FunctionCodeBlock* codeBlockForConstruct() const
     {
-        return bitwise_cast<FunctionCodeBlock*>(ExecutableToCodeBlockEdge::unwrap(m_codeBlockForConstruct.get()));
+        return bitwise_cast<FunctionCodeBlock*>(m_codeBlockForConstruct.get());
     }
 
     bool isGeneratedFor(CodeSpecializationKind kind)
@@ -122,6 +118,8 @@ public:
         return baselineCodeBlockFor(kind);
     }
 
+    FunctionCodeBlock* replaceCodeBlockWith(VM&, CodeSpecializationKind, CodeBlock*);
+
     RefPtr<TypeSet> returnStatementTypeSet()
     {
         RareData& rareData = ensureRareData();
@@ -131,6 +129,7 @@ public:
     }
 
     FunctionMode functionMode() { return m_unlinkedExecutable->functionMode(); }
+    ImplementationVisibility implementationVisibility() const { return m_unlinkedExecutable->implementationVisibility(); }
     bool isBuiltinFunction() const { return m_unlinkedExecutable->isBuiltinFunction(); }
     ConstructAbility constructAbility() const { return m_unlinkedExecutable->constructAbility(); }
     bool isClass() const { return m_unlinkedExecutable->isClass(); }
@@ -162,6 +161,7 @@ public:
     SourceCode classSource() const { return m_unlinkedExecutable->classSource(); }
 
     DECLARE_VISIT_CHILDREN;
+    DECLARE_VISIT_OUTPUT_CONSTRAINTS;
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
     {
         return Structure::create(vm, globalObject, proto, TypeInfo(FunctionExecutableType, StructureFlags), info());
@@ -208,28 +208,18 @@ public:
         return firstLine() + lineCount();
     }
 
-    unsigned typeProfilingStartOffset(VM&) const
-    {
-        return typeProfilingStartOffset();
-    }
-
-    unsigned typeProfilingStartOffset() const
+    unsigned functionEnd() const
     {
         if (UNLIKELY(m_rareData))
-            return m_rareData->m_typeProfilingStartOffset;
-        return m_unlinkedExecutable->typeProfilingStartOffset();
+            return m_rareData->m_functionEnd;
+        return m_unlinkedExecutable->unlinkedFunctionEnd();
     }
 
-    unsigned typeProfilingEndOffset(VM&) const
-    {
-        return typeProfilingEndOffset();
-    }
-
-    unsigned typeProfilingEndOffset() const
+    unsigned functionStart() const
     {
         if (UNLIKELY(m_rareData))
-            return m_rareData->m_typeProfilingEndOffset;
-        return m_unlinkedExecutable->typeProfilingEndOffset();
+            return m_rareData->m_functionStart;
+        return m_unlinkedExecutable->unlinkedFunctionStart();
     }
 
     unsigned parametersStartOffset() const
@@ -278,7 +268,7 @@ public:
 
     TemplateObjectMap& ensureTemplateObjectMap(VM&);
 
-    void finalizeUnconditionally(VM&);
+    void finalizeUnconditionally(VM&, CollectionScope);
 
     JSString* toString(JSGlobalObject*);
     JSString* asStringConcurrently() const
@@ -289,31 +279,45 @@ public:
     }
 
     static inline ptrdiff_t offsetOfRareData() { return OBJECT_OFFSETOF(FunctionExecutable, m_rareData); }
-    static inline ptrdiff_t offsetOfAsStringInRareData() { return OBJECT_OFFSETOF(RareData, m_asString); }
     static inline ptrdiff_t offsetOfCodeBlockForCall() { return OBJECT_OFFSETOF(FunctionExecutable, m_codeBlockForCall); }
     static inline ptrdiff_t offsetOfCodeBlockForConstruct() { return OBJECT_OFFSETOF(FunctionExecutable, m_codeBlockForConstruct); }
 
-private:
-    friend class ExecutableBase;
-    FunctionExecutable(VM&, const SourceCode&, UnlinkedFunctionExecutable*, Intrinsic, bool isInsideOrdinaryFunction);
-
-    void finishCreation(VM&, ScriptExecutable* topLevelExecutable);
-
-    friend class ScriptExecutable;
+    static ptrdiff_t offsetOfCodeBlockFor(CodeSpecializationKind kind)
+    {
+        switch (kind) {
+        case CodeForCall:
+            return OBJECT_OFFSETOF(FunctionExecutable, m_codeBlockForCall);
+        case CodeForConstruct:
+            return OBJECT_OFFSETOF(FunctionExecutable, m_codeBlockForConstruct);
+        }
+        RELEASE_ASSERT_NOT_REACHED();
+        return 0;
+    }
 
     struct RareData {
         WTF_MAKE_STRUCT_FAST_ALLOCATED;
+
+        static inline ptrdiff_t offsetOfAsString() { return OBJECT_OFFSETOF(RareData, m_asString); }
+
         RefPtr<TypeSet> m_returnStatementTypeSet;
         unsigned m_lineCount;
         unsigned m_endColumn;
         Markable<int, IntegralMarkableTraits<int, -1>> m_overrideLineNumber;
         unsigned m_parametersStartOffset { 0 };
-        unsigned m_typeProfilingStartOffset { UINT_MAX };
-        unsigned m_typeProfilingEndOffset { UINT_MAX };
         WriteBarrierStructureID m_cachedPolyProtoStructureID;
         std::unique_ptr<TemplateObjectMap> m_templateObjectMap;
         WriteBarrier<JSString> m_asString;
+        unsigned m_functionStart { UINT_MAX };
+        unsigned m_functionEnd { UINT_MAX };
     };
+
+private:
+    friend class ExecutableBase;
+    FunctionExecutable(VM&, ScriptExecutable* topLevelExecutable, const SourceCode&, UnlinkedFunctionExecutable*, Intrinsic, bool isInsideOrdinaryFunction);
+
+    DECLARE_DEFAULT_FINISH_CREATION;
+
+    friend class ScriptExecutable;
 
     RareData& ensureRareData()
     {
@@ -331,8 +335,8 @@ private:
     std::unique_ptr<RareData> m_rareData;
     WriteBarrier<ScriptExecutable> m_topLevelExecutable;
     WriteBarrier<UnlinkedFunctionExecutable> m_unlinkedExecutable;
-    WriteBarrier<ExecutableToCodeBlockEdge> m_codeBlockForCall;
-    WriteBarrier<ExecutableToCodeBlockEdge> m_codeBlockForConstruct;
+    WriteBarrier<CodeBlock> m_codeBlockForCall;
+    WriteBarrier<CodeBlock> m_codeBlockForConstruct;
     InferredValue<JSFunction> m_singleton;
     Box<InlineWatchpointSet> m_polyProtoWatchpoint;
 };

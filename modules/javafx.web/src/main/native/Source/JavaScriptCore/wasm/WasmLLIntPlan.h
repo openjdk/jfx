@@ -37,18 +37,20 @@ class CallLinkInfo;
 namespace Wasm {
 
 class LLIntCallee;
-class EmbedderEntrypointCallee;
+class JSEntrypointCallee;
 class StreamingCompiler;
 
-using EmbedderEntrypointCalleeMap = HashMap<uint32_t, RefPtr<EmbedderEntrypointCallee>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>;
+using JSEntrypointCalleeMap = HashMap<uint32_t, RefPtr<JSEntrypointCallee>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>;
+
+using TailCallGraph = HashMap<uint32_t, HashSet<uint32_t, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>;
 
 class LLIntPlan final : public EntryPlan {
     using Base = EntryPlan;
 
 public:
-    JS_EXPORT_PRIVATE LLIntPlan(Context*, Vector<uint8_t>&&, CompilerMode, CompletionTask&&);
-    LLIntPlan(Context*, Ref<ModuleInformation>, const Ref<LLIntCallee>*, CompletionTask&&);
-    LLIntPlan(Context*, Ref<ModuleInformation>, CompilerMode, CompletionTask&&); // For StreamingCompiler.
+    JS_EXPORT_PRIVATE LLIntPlan(VM&, Vector<uint8_t>&&, CompilerMode, CompletionTask&&);
+    LLIntPlan(VM&, Ref<ModuleInformation>, const Ref<LLIntCallee>*, CompletionTask&&);
+    LLIntPlan(VM&, Ref<ModuleInformation>, CompilerMode, CompletionTask&&); // For StreamingCompiler.
 
     MacroAssemblerCodeRef<JITCompilationPtrTag>&& takeEntryThunks()
     {
@@ -62,10 +64,10 @@ public:
         return WTFMove(m_calleesVector);
     }
 
-    EmbedderEntrypointCalleeMap&& takeEmbedderCallees()
+    JSEntrypointCalleeMap&& takeJSCallees()
     {
         RELEASE_ASSERT(!failed() && !hasWork());
-        return WTFMove(m_embedderCallees);
+        return WTFMove(m_jsEntrypointCallees);
     }
 
     bool hasWork() const final
@@ -87,10 +89,14 @@ private:
     bool prepareImpl() final;
     void didCompleteCompilation() WTF_REQUIRES_LOCK(m_lock) final;
 
+    void addTailCallEdge(uint32_t, uint32_t);
+    void computeTransitiveTailCalls() const;
+
     Vector<std::unique_ptr<FunctionCodeBlockGenerator>> m_wasmInternalFunctions;
     const Ref<LLIntCallee>* m_callees { nullptr };
     Vector<Ref<LLIntCallee>> m_calleesVector;
-    EmbedderEntrypointCalleeMap m_embedderCallees;
+    JSEntrypointCalleeMap m_jsEntrypointCallees;
+    TailCallGraph m_tailCallGraph;
     MacroAssemblerCodeRef<JITCompilationPtrTag> m_entryThunks;
 };
 

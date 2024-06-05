@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include "CSSStyleValue.h"
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
@@ -34,8 +32,10 @@
 namespace WebCore {
 
 template<typename> class ExceptionOr;
+class CSSKeywordValue;
+using CSSKeywordish = std::variant<String, RefPtr<CSSKeywordValue>>;
 
-class CSSKeywordValue : public CSSStyleValue {
+class CSSKeywordValue final : public CSSStyleValue {
     WTF_MAKE_ISO_ALLOCATED(CSSKeywordValue);
 public:
     static ExceptionOr<Ref<CSSKeywordValue>> create(const String&);
@@ -44,7 +44,14 @@ public:
     ExceptionOr<void> setValue(const String&);
 
     CSSStyleValueType getType() const final { return CSSStyleValueType::CSSKeywordValue; }
+
+    static Ref<CSSKeywordValue> rectifyKeywordish(CSSKeywordish&&);
+
+    RefPtr<CSSValue> toCSSValue() const final;
+
 private:
+    void serialize(StringBuilder&, OptionSet<SerializationArguments>) const final;
+
     explicit CSSKeywordValue(const String& value)
         : m_value(value) { }
     String m_value;
@@ -55,5 +62,3 @@ private:
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSKeywordValue)
     static bool isType(const WebCore::CSSStyleValue& styleValue) { return styleValue.getType() == WebCore::CSSStyleValueType::CSSKeywordValue; }
 SPECIALIZE_TYPE_TRAITS_END()
-
-#endif

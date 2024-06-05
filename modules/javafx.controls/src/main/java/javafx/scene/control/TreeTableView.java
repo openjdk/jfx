@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,17 +38,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.function.Function;
 import java.util.function.IntPredicate;
-import com.sun.javafx.collections.MappingChange;
-import com.sun.javafx.collections.NonIterableChange;
-import com.sun.javafx.scene.control.ConstrainedColumnResize;
-import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
-import com.sun.javafx.scene.control.SelectedCellsMap;
-import com.sun.javafx.scene.control.TableColumnComparatorBase;
-import com.sun.javafx.scene.control.behavior.TableCellBehavior;
-import com.sun.javafx.scene.control.behavior.TableCellBehaviorBase;
-import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
 import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
@@ -86,9 +77,9 @@ import javafx.scene.Node;
 import javafx.scene.control.skin.TreeTableViewSkin;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
-
 import com.sun.javafx.collections.MappingChange;
 import com.sun.javafx.collections.NonIterableChange;
+import com.sun.javafx.scene.control.ConstrainedColumnResize;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.SelectedCellsMap;
@@ -282,6 +273,84 @@ import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
  *
  * <p>See the {@link Cell} class documentation for a more complete
  * description of how to write custom Cells.
+ *
+ * <h4>Warning: Nodes should not be inserted directly into the TreeTableView cells</h4>
+ * {@code TreeTableView} allows for it's cells to contain elements of any type, including
+ * {@link Node} instances. Putting nodes into
+ * the TreeTableView cells is <strong>strongly discouraged</strong>, as it can
+ * lead to unexpected results.
+ *
+ * <p>Important points to note:
+ * <ul>
+ * <li>Avoid inserting {@code Node} instances directly into the {@code TreeTableView} cells or its data model.</li>
+ * <li>The recommended approach is to put the relevant information into the items list, and
+ * provide a custom {@link TreeTableColumn#cellFactoryProperty() cell factory} to create the nodes for a
+ * given cell and update them on demand using the data stored in the item for that cell.</li>
+ * <li>Avoid creating new {@code Node}s in the {@code updateItem} method of a custom {@link TreeTableColumn#cellFactoryProperty() cell factory}.</li>
+ * </ul>
+ * <p>The following minimal example shows how to create a custom cell factory for {@code TreeTableView} containing {@code Node}s:
+ * <pre> {@code
+ *  class ColorModel {
+ *    private SimpleObjectProperty<Color> color;
+ *    private StringProperty name;
+ *
+ *    public ColorModel (String name, Color col) {
+ *      this.color = new SimpleObjectProperty<Color>(col);
+ *      this.name = new SimpleStringProperty(name);
+ *    }
+ *
+ *    public Color getColor() { return color.getValue(); }
+ *    public void setColor(Color c) { color.setValue(c); }
+ *    public SimpleObjectProperty<Color> colorProperty() { return color; }
+ *
+ *    public String getName() { return name.getValue(); }
+ *    public void setName(String s) { name.setValue(s); }
+ *    public StringProperty nameProperty() { return name; }
+ *  }
+ *
+ *  ColorModel rootModel = new ColorModel("Color", Color.WHITE);
+ *  TreeItem<ColorModel> treeRoot = new TreeItem<ColorModel>(rootModel);
+ *  treeRoot.setExpanded(true);
+ *  treeRoot.getChildren().addAll(
+ *      new TreeItem<ColorModel>(new ColorModel("Red", Color.RED)),
+ *      new TreeItem<ColorModel>(new ColorModel("Green", Color.GREEN)),
+ *      new TreeItem<ColorModel>(new ColorModel("Blue", Color.BLUE)));
+ *
+ *  TreeTableView<ColorModel> treeTable = new TreeTableView<ColorModel>(treeRoot);
+ *
+ *  TreeTableColumn<ColorModel, String> nameCol = new TreeTableColumn<>("Color Name");
+ *  TreeTableColumn<ColorModel, Color> colorCol = new TreeTableColumn<>("Color");
+ *
+ *  treeTable.getColumns().setAll(nameCol, colorCol);
+ *
+ *  colorCol.setCellValueFactory(p -> p.getValue().getValue().colorProperty());
+ *  nameCol.setCellValueFactory(p -> p.getValue().getValue().nameProperty());
+ *
+ *  colorCol.setCellFactory(p -> {
+ *      return new TreeTableCell<ColorModel, Color> () {
+ *          private final Rectangle rectangle;
+ *          {
+ *              setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+ *              rectangle = new Rectangle(10, 10);
+ *          }
+ *
+ *          @Override
+ *          protected void updateItem(Color item, boolean empty) {
+ *              super.updateItem(item, empty);
+ *
+ *              if (item == null || empty) {
+ *                  setGraphic(null);
+ *              } else {
+ *                  rectangle.setFill(item);
+ *                  setGraphic(rectangle);
+ *              }
+ *          }
+ *      };
+ *  });}</pre>
+ *
+ * <p> This example has an anonymous custom {@code TreeTableCell} class in the custom cell factory.
+ * Note that the {@code Rectangle} ({@code Node}) object needs to be created in the instance initialization block
+ * or the constructor of the custom {@code TreeTableCell} class and updated/used in its {@code updateItem} method.
  *
  * <h3>Editing</h3>
  * <p>This control supports inline editing of values, and this section attempts to
@@ -1553,18 +1622,18 @@ public class TreeTableView<S> extends Control {
      */
     private ObjectProperty<EventHandler<SortEvent<TreeTableView<S>>>> onSort;
 
-    public void setOnSort(EventHandler<SortEvent<TreeTableView<S>>> value) {
+    public final void setOnSort(EventHandler<SortEvent<TreeTableView<S>>> value) {
         onSortProperty().set(value);
     }
 
-    public EventHandler<SortEvent<TreeTableView<S>>> getOnSort() {
+    public final EventHandler<SortEvent<TreeTableView<S>>> getOnSort() {
         if( onSort != null ) {
             return onSort.get();
         }
         return null;
     }
 
-    public ObjectProperty<EventHandler<SortEvent<TreeTableView<S>>>> onSortProperty() {
+    public final ObjectProperty<EventHandler<SortEvent<TreeTableView<S>>>> onSortProperty() {
         if( onSort == null ) {
             onSort = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
@@ -1619,18 +1688,18 @@ public class TreeTableView<S> extends Control {
      */
     private ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollTo;
 
-    public void setOnScrollTo(EventHandler<ScrollToEvent<Integer>> value) {
+    public final void setOnScrollTo(EventHandler<ScrollToEvent<Integer>> value) {
         onScrollToProperty().set(value);
     }
 
-    public EventHandler<ScrollToEvent<Integer>> getOnScrollTo() {
+    public final EventHandler<ScrollToEvent<Integer>> getOnScrollTo() {
         if( onScrollTo != null ) {
             return onScrollTo.get();
         }
         return null;
     }
 
-    public ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollToProperty() {
+    public final ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollToProperty() {
         if( onScrollTo == null ) {
             onScrollTo = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
@@ -1673,18 +1742,18 @@ public class TreeTableView<S> extends Control {
      */
     private ObjectProperty<EventHandler<ScrollToEvent<TreeTableColumn<S, ?>>>> onScrollToColumn;
 
-    public void setOnScrollToColumn(EventHandler<ScrollToEvent<TreeTableColumn<S, ?>>> value) {
+    public final void setOnScrollToColumn(EventHandler<ScrollToEvent<TreeTableColumn<S, ?>>> value) {
         onScrollToColumnProperty().set(value);
     }
 
-    public EventHandler<ScrollToEvent<TreeTableColumn<S, ?>>> getOnScrollToColumn() {
+    public final EventHandler<ScrollToEvent<TreeTableColumn<S, ?>>> getOnScrollToColumn() {
         if( onScrollToColumn != null ) {
             return onScrollToColumn.get();
         }
         return null;
     }
 
-    public ObjectProperty<EventHandler<ScrollToEvent<TreeTableColumn<S, ?>>>> onScrollToColumnProperty() {
+    public final ObjectProperty<EventHandler<ScrollToEvent<TreeTableColumn<S, ?>>>> onScrollToColumnProperty() {
         if( onScrollToColumn == null ) {
             onScrollToColumn = new ObjectPropertyBase<>() {
                 @Override
@@ -2238,11 +2307,13 @@ public class TreeTableView<S> extends Control {
      *                                                                         *
      **************************************************************************/
 
-     /**
-      * An immutable wrapper class for use in the TableView
+    /**
+     * An immutable wrapper class for use in the TableView
      * {@link TreeTableView#columnResizePolicyProperty() column resize} functionality.
-      * @since JavaFX 8.0
-      */
+     *
+     * @param <S> the type of the TreeItem instances used in this TreeTableView
+     * @since JavaFX 8.0
+     */
      public static class ResizeFeatures<S> extends ResizeFeaturesBase<TreeItem<S>> {
         private TreeTableView<S> treeTable;
 
@@ -2309,8 +2380,11 @@ public class TreeTableView<S> extends Control {
          */
         public static final EventType<?> ANY = EDIT_ANY_EVENT;
 
+        @SuppressWarnings("doclint:missing")
         private final TreeTableView<S> source;
+        @SuppressWarnings("doclint:missing")
         private final S oldValue;
+        @SuppressWarnings("doclint:missing")
         private final S newValue;
         private transient final TreeItem<S> treeItem;
 
@@ -2369,12 +2443,11 @@ public class TreeTableView<S> extends Control {
         }
     }
 
-
-
-     /**
+    /**
      * A simple extension of the {@link SelectionModel} abstract class to
      * allow for special support for TreeTableView controls.
-      *
+     *
+     * @param <S> the type of the TreeItem instances used in this TreeTableView
      * @since JavaFX 8.0
      */
     public static abstract class TreeTableViewSelectionModel<S> extends
@@ -2508,8 +2581,6 @@ public class TreeTableView<S> extends Control {
      */
     // package for testing
     static class TreeTableViewArrayListSelectionModel<S> extends TreeTableViewSelectionModel<S> {
-
-        private final MappingChange.Map<TreeTablePosition<S,?>,Integer> cellToIndicesMap = f -> f.getRow();
 
         private TreeTableView<S> treeTableView = null;
 
@@ -3009,7 +3080,7 @@ public class TreeTableView<S> extends Control {
         }
 
         @Override public void selectIndices(int row, int... rows) {
-            if (rows == null) {
+            if (rows == null || rows.length == 0) {
                 select(row);
                 return;
             }
@@ -3490,7 +3561,7 @@ public class TreeTableView<S> extends Control {
                 return;
             }
 
-            selectedCellsSeq.callObservers(new MappingChange<>(c, MappingChange.NOOP_MAP, selectedCellsSeq));
+            selectedCellsSeq.callObservers(new MappingChange<>(c, Function.identity(), selectedCellsSeq));
         }
     }
 
@@ -3501,6 +3572,7 @@ public class TreeTableView<S> extends Control {
      * A {@link FocusModel} with additional functionality to support the requirements
      * of a TableView control.
      *
+     * @param <S> the type of the TreeItem instances used in this TreeTableView
      * @see TableView
      * @since JavaFX 8.0
      */

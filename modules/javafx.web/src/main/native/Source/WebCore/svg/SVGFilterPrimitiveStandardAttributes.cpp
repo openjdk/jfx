@@ -2,7 +2,7 @@
  * Copyright (C) 2004, 2005, 2006, 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006 Rob Buis <buis@kde.org>
  * Copyright (C) 2009 Dirk Schulze <krit@webkit.org>
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,9 +24,9 @@
 #include "SVGFilterPrimitiveStandardAttributes.h"
 
 #include "FilterEffect.h"
+#include "NodeName.h"
 #include "RenderSVGResourceFilterPrimitive.h"
 #include "SVGElementInlines.h"
-#include "SVGFilterBuilder.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
 
@@ -34,8 +34,8 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFilterPrimitiveStandardAttributes);
 
-SVGFilterPrimitiveStandardAttributes::SVGFilterPrimitiveStandardAttributes(const QualifiedName& tagName, Document& document)
-    : SVGElement(tagName, document)
+SVGFilterPrimitiveStandardAttributes::SVGFilterPrimitiveStandardAttributes(const QualifiedName& tagName, Document& document, UniqueRef<SVGPropertyRegistry>&& propertyRegistry)
+    : SVGElement(tagName, document, WTFMove(propertyRegistry))
 {
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
@@ -47,38 +47,90 @@ SVGFilterPrimitiveStandardAttributes::SVGFilterPrimitiveStandardAttributes(const
     });
 }
 
-void SVGFilterPrimitiveStandardAttributes::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGFilterPrimitiveStandardAttributes::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     SVGParsingError parseError = NoError;
 
-    if (name == SVGNames::xAttr)
-        m_x->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, value, parseError));
-    else if (name == SVGNames::yAttr)
-        m_y->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, value, parseError));
-    else if (name == SVGNames::widthAttr)
-        m_width->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, value, parseError));
-    else if (name == SVGNames::heightAttr)
-        m_height->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, value, parseError));
-    else if (name == SVGNames::resultAttr)
-        m_result->setBaseValInternal(value);
+    switch (name.nodeName()) {
+    case AttributeNames::xAttr:
+        m_x->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
+        break;
+    case AttributeNames::yAttr:
+        m_y->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError));
+        break;
+    case AttributeNames::widthAttr:
+        m_width->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
+        break;
+    case AttributeNames::heightAttr:
+        m_height->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError));
+        break;
+    case AttributeNames::resultAttr:
+        m_result->setBaseValInternal(newValue);
+        break;
+    default:
+        break;
+    }
+    reportAttributeParsingError(parseError, name, newValue);
 
-    reportAttributeParsingError(parseError, name, value);
-
-    SVGElement::parseAttribute(name, value);
+    SVGElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
-bool SVGFilterPrimitiveStandardAttributes::setFilterEffectAttribute(FilterEffect*, const QualifiedName&)
+OptionSet<FilterEffectGeometry::Flags> SVGFilterPrimitiveStandardAttributes::effectGeometryFlags() const
 {
-    // When all filters support this method, it will be changed to a pure virtual method.
-    ASSERT_NOT_REACHED();
-    return false;
+    OptionSet<FilterEffectGeometry::Flags> flags;
+
+    if (hasAttribute(SVGNames::xAttr))
+        flags.add(FilterEffectGeometry::Flags::HasX);
+    if (hasAttribute(SVGNames::yAttr))
+        flags.add(FilterEffectGeometry::Flags::HasY);
+    if (hasAttribute(SVGNames::widthAttr))
+        flags.add(FilterEffectGeometry::Flags::HasWidth);
+    if (hasAttribute(SVGNames::heightAttr))
+        flags.add(FilterEffectGeometry::Flags::HasHeight);
+
+    return flags;
+}
+
+RefPtr<FilterEffect> SVGFilterPrimitiveStandardAttributes::filterEffect(const FilterEffectVector& inputs, const GraphicsContext& destinationContext)
+{
+    if (!m_effect)
+        m_effect = createFilterEffect(inputs, destinationContext);
+    return m_effect;
+}
+
+void SVGFilterPrimitiveStandardAttributes::primitiveAttributeChanged(const QualifiedName& attribute)
+{
+    if (m_effect && !setFilterEffectAttribute(*m_effect, attribute))
+        return;
+
+    if (auto* renderer = this->renderer())
+        static_cast<RenderSVGResourceFilterPrimitive*>(renderer)->markFilterEffectForRepaint(m_effect.get());
+}
+
+void SVGFilterPrimitiveStandardAttributes::primitiveAttributeOnChildChanged(const Element& child, const QualifiedName& attribute)
+{
+    ASSERT(child.parentNode() == this);
+
+    if (m_effect && !setFilterEffectAttributeFromChild(*m_effect, child, attribute))
+        return;
+
+    if (auto* renderer = this->renderer())
+        static_cast<RenderSVGResourceFilterPrimitive*>(renderer)->markFilterEffectForRepaint(m_effect.get());
+}
+
+void SVGFilterPrimitiveStandardAttributes::markFilterEffectForRebuild()
+{
+    if (auto* renderer = this->renderer())
+        static_cast<RenderSVGResourceFilterPrimitive*>(renderer)->markFilterEffectForRebuild();
+
+    m_effect = nullptr;
 }
 
 void SVGFilterPrimitiveStandardAttributes::svgAttributeChanged(const QualifiedName& attrName)
 {
     if (PropertyRegistry::isKnownAttribute(attrName)) {
         InstanceInvalidationGuard guard(*this);
-        invalidate();
+        updateSVGRendererForElementChange();
         return;
     }
 
@@ -91,7 +143,7 @@ void SVGFilterPrimitiveStandardAttributes::childrenChanged(const ChildChange& ch
 
     if (change.source == ChildChange::Source::Parser)
         return;
-    invalidate();
+    updateSVGRendererForElementChange();
 }
 
 RenderPtr<RenderElement> SVGFilterPrimitiveStandardAttributes::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
@@ -107,7 +159,7 @@ bool SVGFilterPrimitiveStandardAttributes::rendererIsNeeded(const RenderStyle& s
     return false;
 }
 
-void invalidateFilterPrimitiveParent(SVGElement* element)
+void SVGFilterPrimitiveStandardAttributes::invalidateFilterPrimitiveParent(SVGElement* element)
 {
     if (!element)
         return;
@@ -120,7 +172,7 @@ void invalidateFilterPrimitiveParent(SVGElement* element)
     if (!renderer || !renderer->isSVGResourceFilterPrimitive())
         return;
 
-    RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer, false);
+    downcast<SVGElement>(*parent).updateSVGRendererForElementChange();
 }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,7 @@ public:
     inline GraphicsContext* graphicsContext() { return m_image ? &(m_image->context()) : nullptr; }
     void updateContents(Image*, const IntRect&, const IntPoint&) override;
     void updateContents(const void*, const IntRect& target, const IntPoint& sourceOffset, int bytesPerLine) override;
-    RefPtr<BitmapTexture> applyFilters(TextureMapper&, const FilterOperations&) override;
+    RefPtr<BitmapTexture> applyFilters(TextureMapper&, const FilterOperations&, bool) override;
     ImageBuffer* image() const { return m_image.get(); }
 
 private:

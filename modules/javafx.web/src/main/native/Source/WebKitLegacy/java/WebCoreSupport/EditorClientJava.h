@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -64,7 +64,7 @@ public:
 
     void didBeginEditing() override;
     void respondToChangedContents() override;
-    void respondToChangedSelection(Frame*) override;
+    void respondToChangedSelection(LocalFrame*) override;
     void didEndUserTriggeredSelectionChanges() override { }
     void updateEditorStateAfterLayoutIfEditabilityChanged() override;
     void didEndEditing() override;
@@ -74,15 +74,15 @@ public:
     void didUpdateComposition() override { }
 
     DOMPasteAccessResponse requestDOMPasteAccess(DOMPasteAccessCategory, const String& originIdentifier) override;
-    void discardedComposition(Frame*) override;
+    void discardedComposition(const Document&) override;
     void canceledComposition() override;
 
     void registerUndoStep(UndoStep&) override;
     void registerRedoStep(UndoStep&) override;
     void clearUndoRedoOperations() override;
 
-    bool canCopyCut(Frame*, bool defaultValue) const override;
-    bool canPaste(Frame*, bool defaultValue) const override;
+    bool canCopyCut(LocalFrame*, bool defaultValue) const override;
+    bool canPaste(LocalFrame*, bool defaultValue) const override;
     bool canUndo() const override;
     bool canRedo() const override;
 
@@ -92,12 +92,12 @@ public:
     void handleKeyboardEvent(KeyboardEvent&) override;
     void handleInputMethodKeydown(KeyboardEvent&) override;
 
-    void textFieldDidBeginEditing(Element*) override;
-    void textFieldDidEndEditing(Element*) override;
-    void textDidChangeInTextField(Element*) override;
-    bool doTextFieldCommandFromEvent(Element*, KeyboardEvent*) override;
-    void textWillBeDeletedInTextField(Element*) override;
-    void textDidChangeInTextArea(Element*) override;
+    void textFieldDidBeginEditing(Element&) override;
+    void textFieldDidEndEditing(Element&) override;
+    void textDidChangeInTextField(Element&) override;
+    bool doTextFieldCommandFromEvent(Element&, KeyboardEvent*) override;
+    void textWillBeDeletedInTextField(Element&) override;
+    void textDidChangeInTextArea(Element&) override;
     void overflowScrollPositionChanged() override;
     void subFrameScrollPositionChanged() override;
 
@@ -141,7 +141,6 @@ public:
     void ignoreWordInSpellDocument(const String&) override;
     void learnWord(const String&) override;
     void checkSpellingOfString(StringView, int* misspellingLocation, int* misspellingLength) override;
-    String getAutoCorrectSuggestionForMisspelledWord(const String& misspelledWord) override;
     void checkGrammarOfString(StringView, Vector<GrammarDetail>&, int* badGrammarLocation, int* badGrammarLength) override;
 
 #if USE(UNIFIED_TEXT_CHECKING)
@@ -154,7 +153,7 @@ public:
     void getGuessesForWord(const String& word, const String& context, const VisibleSelection& currentSelection, Vector<String>& guesses) override;
     void requestCheckingOfString(TextCheckingRequest&, const VisibleSelection& currentSelection) override;
     bool performTwoStepDrop(DocumentFragment&, const SimpleRange&, bool) final { return false; }
-    bool canShowFontPanel() const final { return false; }
+    bool canShowFontPanel() const  { return false; }
 
 
 protected:

@@ -38,6 +38,12 @@ class TextureMapper;
 class TextureMapperGL;
 class FilterOperation;
 
+#if OS(WINDOWS)
+#define USE_TEXMAP_DEPTH_STENCIL_BUFFER 1
+#else
+#define USE_TEXMAP_DEPTH_STENCIL_BUFFER 0
+#endif
+
 class BitmapTextureGL : public BitmapTexture {
 public:
     static Ref<BitmapTexture> create(const TextureMapperContextAttributes& contextAttributes, const Flags flags = NoFlag, GLint internalFormat = GL_DONT_CARE)
@@ -60,7 +66,7 @@ public:
     void updateContents(const void*, const IntRect& target, const IntPoint& sourceOffset, int bytesPerLine) override;
     bool isBackedByOpenGL() const override { return true; }
 
-    RefPtr<BitmapTexture> applyFilters(TextureMapper&, const FilterOperations&) override;
+    RefPtr<BitmapTexture> applyFilters(TextureMapper&, const FilterOperations&, bool defersLastFilter) override;
     struct FilterInfo {
         RefPtr<FilterOperation> filter;
         unsigned pass;
@@ -78,10 +84,6 @@ public:
     GLint internalFormat() const { return m_internalFormat; }
 
     void copyFromExternalTexture(GLuint textureID);
-#if USE(ANGLE)
-    void setPendingContents(RefPtr<Image>&&);
-    void updatePendingContents(const IntRect& targetRect, const IntPoint& offset);
-#endif
 
     TextureMapperGL::Flags colorConvertFlags() const { return m_colorConvertFlags; }
 
@@ -90,16 +92,17 @@ private:
 
     GLuint m_id { 0 };
     IntSize m_textureSize;
-    IntRect m_dirtyRect;
     GLuint m_fbo { 0 };
+#if !USE(TEXMAP_DEPTH_STENCIL_BUFFER)
     GLuint m_rbo { 0 };
+#endif
     GLuint m_depthBufferObject { 0 };
     bool m_shouldClear { true };
     ClipStack m_clipStack;
     TextureMapperContextAttributes m_contextAttributes;
     TextureMapperGL::Flags m_colorConvertFlags { TextureMapperGL::NoFlag };
 
-#if USE(ANGLE)
+#if ENABLE(WEBGL)
     RefPtr<Image> m_pendingContents { nullptr };
 #endif
 

@@ -34,7 +34,11 @@ class CSSStyleSheet;
 class ProcessingInstruction final : public CharacterData, private CachedStyleSheetClient {
     WTF_MAKE_ISO_ALLOCATED(ProcessingInstruction);
 public:
-    static Ref<ProcessingInstruction> create(Document&, const String& target, const String& data);
+    using CharacterData::weakPtrFactory;
+    using CharacterData::WeakValueType;
+    using CharacterData::WeakPtrImplType;
+
+    static Ref<ProcessingInstruction> create(Document&, String&& target, String&& data);
     virtual ~ProcessingInstruction();
 
     const String& target() const { return m_target; }
@@ -53,7 +57,7 @@ public:
 
 private:
     friend class CharacterData;
-    ProcessingInstruction(Document&, const String& target, const String& data);
+    ProcessingInstruction(Document&, String&& target, String&& data);
 
     String nodeName() const override;
     NodeType nodeType() const override;

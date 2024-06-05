@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,10 @@
  */
 
 package javafx.scene.control.cell;
+
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleAttribute.ToggleState;
+import javafx.scene.AccessibleRole;
 
 import javafx.scene.control.CheckBoxTreeItem;
 import javafx.beans.property.BooleanProperty;
@@ -344,6 +348,7 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
 
         // by default the graphic is null until the cell stops being empty
         setGraphic(null);
+        setAccessibleRole(AccessibleRole.CHECK_BOX_TREE_ITEM);
     }
 
 
@@ -478,5 +483,20 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
         // no-op
         // This was done to resolve RT-33603, but will impact the ability for
         // TreeItem.graphic to change dynamically.
+    }
+
+    /** {@inheritDoc} */
+    @Override public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case TOGGLE_STATE:
+                if (checkBox.isIndeterminate()) {
+                    return ToggleState.INDETERMINATE;
+                } else if (checkBox.isSelected()) {
+                    return ToggleState.CHECKED;
+                } else {
+                    return ToggleState.UNCHECKED;
+                }
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
     }
 }

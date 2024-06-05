@@ -33,7 +33,6 @@
 #include "CSSCalcPrimitiveValueNode.h"
 #include "CSSCalcSymbolTable.h"
 #include "CSSCalcValue.h"
-#include "CSSParserToken.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPropertyParserHelpers.h"
 #include "Logging.h"
@@ -140,11 +139,6 @@ bool CSSCalcExpressionNodeParser::parseCalcFunction(CSSParserTokenRange& tokens,
     std::optional<unsigned> maxArgumentCount;
 
     switch (functionID) {
-    case CSSValueMin:
-    case CSSValueMax:
-    case CSSValueHypot:
-        maxArgumentCount = std::nullopt;
-        break;
     case CSSValueClamp:
         minArgumentCount = 3;
         maxArgumentCount = 3;

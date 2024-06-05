@@ -25,30 +25,34 @@
 
 #pragma once
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include "CSSNumericValue.h"
 #include "CSSTransformComponent.h"
 
 namespace WebCore {
+
+class CSSFunctionValue;
 
 template<typename> class ExceptionOr;
 
 class CSSSkewX : public CSSTransformComponent {
     WTF_MAKE_ISO_ALLOCATED(CSSSkewX);
 public:
-    static Ref<CSSSkewX> create(Ref<CSSNumericValue>&& ax);
+    static ExceptionOr<Ref<CSSSkewX>> create(Ref<CSSNumericValue>);
+    static ExceptionOr<Ref<CSSSkewX>> create(CSSFunctionValue&);
 
-    CSSNumericValue& ax() { return m_ax.get(); }
-    void setAx(Ref<CSSNumericValue>&& ax) { m_ax = WTFMove(ax); }
+    const CSSNumericValue& ax() const { return m_ax.get(); }
+    ExceptionOr<void> setAx(Ref<CSSNumericValue>);
 
-    String toString() const final;
+    void serialize(StringBuilder&) const final;
     ExceptionOr<Ref<DOMMatrix>> toMatrix() final;
+    void setIs2D(bool) final { };
 
     CSSTransformType getType() const final { return CSSTransformType::SkewX; }
 
+    RefPtr<CSSValue> toCSSValue() const final;
+
 private:
-    CSSSkewX(Ref<CSSNumericValue>&& ax);
+    CSSSkewX(Ref<CSSNumericValue> ax);
 
     Ref<CSSNumericValue> m_ax;
 };
@@ -58,5 +62,3 @@ private:
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSSkewX)
     static bool isType(const WebCore::CSSTransformComponent& transform) { return transform.getType() == WebCore::CSSTransformType::SkewX; }
 SPECIALIZE_TYPE_TRAITS_END()
-
-#endif

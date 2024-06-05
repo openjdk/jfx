@@ -26,7 +26,9 @@
 #include "config.h"
 #include "StyleChange.h"
 
-#include "RenderStyle.h"
+#include "RenderStyleConstants.h"
+#include "RenderStyleInlines.h"
+#include <wtf/text/AtomString.h>
 
 namespace WebCore {
 namespace Style {
@@ -57,29 +59,21 @@ Change determineChange(const RenderStyle& s1, const RenderStyle& s2)
     if (s1.hasTextCombine() != s2.hasTextCombine())
         return Change::Renderer;
 
-    if (!s1.inheritedEqual(s2))
-        return Change::Inherited;
+    // Query container changes affect descendant style.
+    if (s1.containerType() != s2.containerType() || s1.containerNames() != s2.containerNames())
+        return Change::Descendants;
 
     if (!s1.descendantAffectingNonInheritedPropertiesEqual(s2))
         return Change::Inherited;
 
+    if (!s1.nonFastPathInheritedEqual(s2))
+        return Change::Inherited;
+
+    if (!s1.fastPathInheritedEqual(s2))
+        return Change::FastPathInherited;
+
     if (s1 != s2)
         return Change::NonInherited;
-
-    // If the pseudoStyles have changed, we want any StyleChange that is not NoChange
-    // because setStyle will do the right thing with anything else.
-    if (s1.hasAnyPublicPseudoStyles()) {
-        for (PseudoId pseudoId = PseudoId::FirstPublicPseudoId; pseudoId < PseudoId::FirstInternalPseudoId; pseudoId = static_cast<PseudoId>(static_cast<unsigned>(pseudoId) + 1)) {
-            if (s1.hasPseudoStyle(pseudoId)) {
-                RenderStyle* ps2 = s2.getCachedPseudoStyle(pseudoId);
-                if (!ps2)
-                    return Change::NonInherited;
-                RenderStyle* ps1 = s1.getCachedPseudoStyle(pseudoId);
-                if (!ps1 || *ps1 != *ps2)
-                    return Change::NonInherited;
-            }
-        }
-    }
 
     return Change::None;
 }

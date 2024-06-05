@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,6 @@
 namespace WTF {
 
 static size_t s_pageSize;
-static size_t s_pageMask;
 
 #if OS(UNIX)
 
@@ -51,11 +50,9 @@ inline size_t systemPageSize()
 
 inline size_t systemPageSize()
 {
-    static size_t size = 0;
     SYSTEM_INFO system_info;
     GetSystemInfo(&system_info);
-    size = system_info.dwPageSize;
-    return size;
+    return system_info.dwPageSize;
 }
 
 #endif
@@ -66,15 +63,9 @@ size_t pageSize()
         s_pageSize = systemPageSize();
         RELEASE_ASSERT(isPowerOfTwo(s_pageSize));
         RELEASE_ASSERT_WITH_MESSAGE(s_pageSize <= CeilingOnPageSize, "CeilingOnPageSize is too low, raise it in PageBlock.h!");
+        RELEASE_ASSERT(roundUpToMultipleOf(s_pageSize, CeilingOnPageSize) == CeilingOnPageSize);
     }
     return s_pageSize;
-}
-
-size_t pageMask()
-{
-    if (!s_pageMask)
-        s_pageMask = ~(pageSize() - 1);
-    return s_pageMask;
 }
 
 } // namespace WTF

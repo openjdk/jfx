@@ -44,6 +44,7 @@ public:
     bool popupIsVisible() const { return m_searchPopupIsVisible; }
     void showPopup();
     void hidePopup();
+    WEBCORE_EXPORT std::span<const RecentSearch> recentSearches();
 
 private:
     bool isSearchField() const final { return true; }
@@ -81,7 +82,7 @@ private:
     void setTextFromItem(unsigned listIndex) override;
     FontSelector* fontSelector() const override;
     HostWindow* hostWindow() const override;
-    Ref<Scrollbar> createScrollbar(ScrollableArea&, ScrollbarOrientation, ScrollbarControlSize) override;
+    Ref<Scrollbar> createScrollbar(ScrollableArea&, ScrollbarOrientation, ScrollbarWidth) override;
 
     HTMLElement* resultsButtonElement() const;
     HTMLElement* cancelButtonElement() const;

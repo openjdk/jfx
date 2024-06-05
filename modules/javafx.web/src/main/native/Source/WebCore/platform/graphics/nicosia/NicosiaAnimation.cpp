@@ -68,14 +68,14 @@ static FilterOperations applyFilterAnimation(const FilterOperations& from, const
     return result;
 }
 
-static bool shouldReverseAnimationValue(WebCore::Animation::AnimationDirection direction, int loopCount)
+static bool shouldReverseAnimationValue(WebCore::Animation::Direction direction, int loopCount)
 {
-    return (direction == WebCore::Animation::AnimationDirectionAlternate && loopCount & 1)
-        || (direction == WebCore::Animation::AnimationDirectionAlternateReverse && !(loopCount & 1))
-        || direction == WebCore::Animation::AnimationDirectionReverse;
+    return (direction == WebCore::Animation::Direction::Alternate && loopCount & 1)
+        || (direction == WebCore::Animation::Direction::AlternateReverse && !(loopCount & 1))
+        || direction == WebCore::Animation::Direction::Reverse;
 }
 
-static double normalizedAnimationValue(double runningTime, double duration, WebCore::Animation::AnimationDirection direction, double iterationCount)
+static double normalizedAnimationValue(double runningTime, double duration, WebCore::Animation::Direction direction, double iterationCount)
 {
     if (!duration)
         return 0;
@@ -89,11 +89,11 @@ static double normalizedAnimationValue(double runningTime, double duration, WebC
     return shouldReverseAnimationValue(direction, loopCount) ? 1 - normalized : normalized;
 }
 
-static double normalizedAnimationValueForFillsForwards(double iterationCount, WebCore::Animation::AnimationDirection direction)
+static double normalizedAnimationValueForFillsForwards(double iterationCount, WebCore::Animation::Direction direction)
 {
-    if (direction == WebCore::Animation::AnimationDirectionNormal)
+    if (direction == WebCore::Animation::Direction::Normal)
         return 1;
-    if (direction == WebCore::Animation::AnimationDirectionReverse)
+    if (direction == WebCore::Animation::Direction::Reverse)
         return 0;
     return shouldReverseAnimationValue(direction, iterationCount) ? 1 : 0;
 }
@@ -110,7 +110,7 @@ static float applyOpacityAnimation(float fromOpacity, float toOpacity, double pr
     return fromOpacity + progress * (toOpacity - fromOpacity);
 }
 
-static TransformationMatrix applyTransformAnimation(const TransformOperations& from, const TransformOperations& to, double progress, const FloatSize& boxSize, bool listsMatch)
+static TransformationMatrix applyTransformAnimation(const TransformOperations& from, const TransformOperations& to, double progress, const FloatSize& boxSize)
 {
     TransformationMatrix matrix;
 
@@ -126,35 +126,7 @@ static TransformationMatrix applyTransformAnimation(const TransformOperations& f
         return matrix;
     }
 
-    // If we have incompatible operation lists, we blend the resulting matrices.
-    if (!listsMatch) {
-        TransformationMatrix fromMatrix;
-        to.apply(boxSize, matrix);
-        from.apply(boxSize, fromMatrix);
-        matrix.blend(fromMatrix, progress);
-        return matrix;
-    }
-
-    // Animation to "-webkit-transform: none".
-    if (!to.size()) {
-        TransformOperations blended(from);
-        for (auto& operation : blended.operations())
-            operation->blend(nullptr, progress, true)->apply(matrix, boxSize);
-        return matrix;
-    }
-
-    // Animation from "-webkit-transform: none".
-    if (!from.size()) {
-        TransformOperations blended(to);
-        for (auto& operation : blended.operations())
-            operation->blend(nullptr, 1 - progress, true)->apply(matrix, boxSize);
-        return matrix;
-    }
-
-    // Normal animation with a matching operation list.
-    TransformOperations blended(to);
-    for (size_t i = 0; i < blended.operations().size(); ++i)
-        blended.operations()[i]->blend(from.at(i), progress, !from.at(i))->apply(matrix, boxSize);
+    to.blend(from, progress, LayoutSize { boxSize }).apply(boxSize, matrix);
     return matrix;
 }
 
@@ -169,7 +141,7 @@ static const TimingFunction& timingFunctionForAnimationValue(const AnimationValu
 
 static KeyframeValueList createThreadsafeKeyFrames(const KeyframeValueList& originalKeyframes, const FloatSize& boxSize)
 {
-    if (originalKeyframes.property() != AnimatedPropertyTransform)
+    if (originalKeyframes.property() != AnimatedProperty::Transform)
         return originalKeyframes;
 
     // Currently translation operations are the only transform operations that store a non-fixed
@@ -193,7 +165,7 @@ static KeyframeValueList createThreadsafeKeyFrames(const KeyframeValueList& orig
     return keyframes;
 }
 
-Animation::Animation(const String& name, const KeyframeValueList& keyframes, const FloatSize& boxSize, const WebCore::Animation& animation, bool listsMatch, MonotonicTime startTime, Seconds pauseTime, AnimationState state)
+Animation::Animation(const String& name, const KeyframeValueList& keyframes, const FloatSize& boxSize, const WebCore::Animation& animation, MonotonicTime startTime, Seconds pauseTime, AnimationState state)
     : m_name(name.isSafeToSendToAnotherThread() ? name : name.isolatedCopy())
     , m_keyframes(createThreadsafeKeyFrames(keyframes, boxSize))
     , m_boxSize(boxSize)
@@ -202,7 +174,6 @@ Animation::Animation(const String& name, const KeyframeValueList& keyframes, con
     , m_duration(animation.duration())
     , m_direction(animation.direction())
     , m_fillsForwards(animation.fillsForwards())
-    , m_listsMatch(listsMatch)
     , m_startTime(startTime)
     , m_pauseTime(pauseTime)
     , m_totalRunningTime(0_s)
@@ -220,7 +191,6 @@ Animation::Animation(const Animation& other)
     , m_duration(other.m_duration)
     , m_direction(other.m_direction)
     , m_fillsForwards(other.m_fillsForwards)
-    , m_listsMatch(other.m_listsMatch)
     , m_startTime(other.m_startTime)
     , m_pauseTime(other.m_pauseTime)
     , m_totalRunningTime(other.m_totalRunningTime)
@@ -239,7 +209,6 @@ Animation& Animation::operator=(const Animation& other)
     m_duration = other.m_duration;
     m_direction = other.m_direction;
     m_fillsForwards = other.m_fillsForwards;
-    m_listsMatch = other.m_listsMatch;
     m_startTime = other.m_startTime;
     m_pauseTime = other.m_pauseTime;
     m_totalRunningTime = other.m_totalRunningTime;
@@ -337,15 +306,15 @@ Seconds Animation::computeTotalRunningTime(MonotonicTime time)
 void Animation::applyInternal(ApplicationResult& applicationResults, const AnimationValue& from, const AnimationValue& to, float progress)
 {
     switch (m_keyframes.property()) {
-    case AnimatedPropertyTransform:
-        applicationResults.transform = applyTransformAnimation(static_cast<const TransformAnimationValue&>(from).value(), static_cast<const TransformAnimationValue&>(to).value(), progress, m_boxSize, m_listsMatch);
+    case AnimatedProperty::Transform:
+        applicationResults.transform = applyTransformAnimation(static_cast<const TransformAnimationValue&>(from).value(), static_cast<const TransformAnimationValue&>(to).value(), progress, m_boxSize);
         return;
-    case AnimatedPropertyOpacity:
+    case AnimatedProperty::Opacity:
         applicationResults.opacity = applyOpacityAnimation((static_cast<const FloatAnimationValue&>(from).value()), (static_cast<const FloatAnimationValue&>(to).value()), progress);
         return;
-    case AnimatedPropertyFilter:
+    case AnimatedProperty::Filter:
 #if ENABLE(FILTERS_LEVEL_2)
-    case AnimatedPropertyWebkitBackdropFilter:
+    case AnimatedProperty::WebkitBackdropFilter:
 #endif
         applicationResults.filters = applyFilterAnimation(static_cast<const FilterAnimationValue&>(from).value(), static_cast<const FilterAnimationValue&>(to).value(), progress, m_boxSize);
         return;
@@ -369,7 +338,7 @@ void Animations::remove(const String& name)
     });
 }
 
-void Animations::remove(const String& name, AnimatedPropertyID property)
+void Animations::remove(const String& name, AnimatedProperty property)
 {
     m_animations.removeAllMatching([&name, property] (const Animation& animation) {
         return animation.name() == name && animation.keyframes().property() == property;
@@ -410,7 +379,7 @@ void Animations::applyKeepingInternalState(Animation::ApplicationResult& applica
         animation.applyKeepingInternalState(applicationResults, time);
 }
 
-bool Animations::hasActiveAnimationsOfType(AnimatedPropertyID type) const
+bool Animations::hasActiveAnimationsOfType(AnimatedProperty type) const
 {
     return std::any_of(m_animations.begin(), m_animations.end(),
         [&type](const Animation& animation) {

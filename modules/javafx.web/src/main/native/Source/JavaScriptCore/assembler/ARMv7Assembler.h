@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2010 University of Szeged
  *
  * Redistribution and use in source and binary forms, with or without
@@ -477,7 +477,7 @@ public:
             struct CopyTypes {
                 uint32_t content[3];
             } copyTypes;
-            COMPILE_ASSERT(sizeof(RealTypes) == sizeof(CopyTypes), LinkRecordCopyStructSizeEqualsRealStruct);
+            static_assert(sizeof(RealTypes) == sizeof(CopyTypes), "LinkRecord's CopyStruct size equals to RealStruct");
         } data;
     };
 
@@ -490,6 +490,16 @@ public:
     AssemblerBuffer& buffer() { return m_formatter.m_buffer; }
 
 private:
+
+    // In the ARMv7 ISA, the LSB of a code pointer indicates whether the target uses Thumb vs ARM
+    // encoding. These utility functions are there for when we need to deal with this.
+    static bool isEven(const void* ptr) { return !(reinterpret_cast<uintptr_t>(ptr) & 1); }
+    static bool isEven(AssemblerLabel &label) { return !(label.offset() & 1); }
+    static void* makeEven(const void* ptr)
+    {
+        ASSERT(!isEven(ptr));
+        return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(ptr) & ~1);
+    }
 
     // ARMv7, Appx-A.6.3
     static bool BadReg(RegisterID reg)
@@ -552,19 +562,32 @@ private:
         OP_ADD_SP_imm_T1    = 0xA800,
         OP_ADD_SP_imm_T2    = 0xB000,
         OP_SUB_SP_imm_T1    = 0xB080,
+        OP_SXTH_T1          = 0xB200,
+        OP_SXTB_T1          = 0xB240,
+        OP_UXTH_T1          = 0xB280,
+        OP_UXTB_T1          = 0xB2C0,
         OP_PUSH_T1          = 0xB400,
         OP_POP_T1           = 0xBC00,
         OP_BKPT             = 0xBE00,
         OP_IT               = 0xBF00,
         OP_NOP_T1           = 0xBF00,
+        OP_UDF              = 0xDE00
     } OpcodeID;
 
     typedef enum {
         OP_B_T1         = 0xD000,
         OP_B_T2         = 0xE000,
         OP_STRD_imm_T1  = 0xE840,
+        OP_STREX_T1     = 0xE840,
         OP_LDRD_imm_T1  = 0xE850,
+        OP_LDREX_T1     = 0xE850,
         OP_POP_T2       = 0xE8BD,
+        OP_STREXB_T1    = 0xE8C0,
+        OP_STREXD_T1    = 0xE8C0,
+        OP_STREXH_T1    = 0xE8C0,
+        OP_LDREXB_T1    = 0xE8D0,
+        OP_LDREXD_T1    = 0xE8D0,
+        OP_LDREXH_T1    = 0xE8D0,
         OP_PUSH_T2      = 0xE92D,
         OP_AND_reg_T2   = 0xEA00,
         OP_TST_reg_T2   = 0xEA10,
@@ -578,11 +601,15 @@ private:
         OP_EOR_reg_T2   = 0xEA80,
         OP_ADD_reg_T3   = 0xEB00,
         OP_ADD_S_reg_T3 = 0xEB10,
+        OP_ADC_reg_T2   = 0xEB40,
+        OP_SBC_reg_T2   = 0xEB60,
         OP_SUB_reg_T2   = 0xEBA0,
         OP_SUB_S_reg_T2 = 0xEBB0,
         OP_CMP_reg_T2   = 0xEBB0,
         OP_VMOV_CtoD    = 0xEC00,
         OP_VMOV_DtoC    = 0xEC10,
+        OP_VSTMIA       = 0xEC80,
+        OP_VLDMIA       = 0xEC90,
         OP_FSTS         = 0xED00,
         OP_VSTR         = 0xED00,
         OP_FLDS         = 0xED10,
@@ -607,6 +634,7 @@ private:
         OP_VORR_T1      = 0xEF20,
         OP_B_T3a        = 0xF000,
         OP_B_T4a        = 0xF000,
+        OP_BL_T4a       = 0xF000,
         OP_AND_imm_T1   = 0xF000,
         OP_TST_imm      = 0xF010,
         OP_BIC_imm_T1   = 0xF020,
@@ -648,14 +676,24 @@ private:
         OP_LDRH_imm_T2  = 0xF8B0,
         OP_STR_imm_T3   = 0xF8C0,
         OP_LDR_imm_T3   = 0xF8D0,
+        OP_LDRSB_imm_T2 = 0xF910,
         OP_LDRSB_reg_T2 = 0xF910,
+        OP_LDRSH_imm_T2 = 0xF930,
         OP_LDRSH_reg_T2 = 0xF930,
+        OP_LDRSB_imm_T1 = 0xF990,
+        OP_LDRSH_imm_T1 = 0xF9B0,
         OP_LSL_reg_T2   = 0xFA00,
+        OP_SXTH_T2      = 0xFA0F,
+        OP_UXTH_T2      = 0xFA1F,
+        OP_SXTB_T2      = 0xFA4F,
+        OP_UXTB_T2      = 0xFA5F,
         OP_LSR_reg_T2   = 0xFA20,
         OP_ASR_reg_T2   = 0xFA40,
         OP_ROR_reg_T2   = 0xFA60,
+        OP_RBIT         = 0xFA90,
         OP_CLZ          = 0xFAB0,
         OP_SMULL_T1     = 0xFB80,
+        OP_UMULL_T1     = 0xFBA0,
 #if HAVE(ARM_IDIV_INSTRUCTIONS)
         OP_SDIV_T1      = 0xFB90,
         OP_UDIV_T1      = 0xFBB0,
@@ -688,11 +726,15 @@ private:
         OP_VSQRT_T1b     = 0x0A40,
         OP_VCVTSD_T1b    = 0x0A40,
         OP_VCVTDS_T1b    = 0x0A40,
+        OP_VSTMIAb       = 0x0B00,
+        OP_VLDMIAb       = 0x0B00,
         OP_NOP_T2b       = 0x8000,
         OP_DMB_SY_T1b    = 0x8F5F,
         OP_DMB_ISHST_T1b = 0x8F5A,
+        OP_DMB_ISH_T1b   = 0x8F5B,
         OP_B_T3b         = 0x8000,
         OP_B_T4b         = 0x9000,
+        OP_BL_T4b        = 0xD000,
     } OpcodeID2;
 
     struct FourFours {
@@ -713,6 +755,11 @@ private:
                 unsigned f3 : 4;
             };
         } m_u;
+    };
+
+    enum class BranchWithLink : bool {
+        No = false,
+        Yes = true
     };
 
     class ARMInstructionFormatter;
@@ -764,6 +811,15 @@ public:
         ASSERT(imm.isEncodedImm());
 
         m_formatter.twoWordOp5i6Imm4Reg4EncodedImm(OP_ADC_imm, rn, rd, imm);
+    }
+
+    void adc(RegisterID rd, RegisterID rn, RegisterID rm, ShiftTypeAndAmount shift = ShiftTypeAndAmount { })
+    {
+        // Rd can only be SP if Rn is also SP.
+        ASSERT(!BadReg(rd));
+        ASSERT(!BadReg(rn));
+        ASSERT(!BadReg(rm));
+        m_formatter.twoWordOp12Reg4FourFours(OP_ADC_reg_T2, rn, FourFours(shift.hi4(), rd, shift.lo4(), rm));
     }
 
     void add(RegisterID rd, RegisterID rn, ARMThumbImmediate imm)
@@ -919,6 +975,13 @@ public:
     }
 
     // Only allowed in IT (if then) block if last instruction.
+    ALWAYS_INLINE AssemblerLabel bl()
+    {
+        m_formatter.twoWordOp16Op16(OP_BL_T4a, OP_BL_T4b);
+        return m_formatter.label();
+    }
+
+    // Only allowed in IT (if then) block if last instruction.
     ALWAYS_INLINE AssemblerLabel blx(RegisterID rm)
     {
         ASSERT(rm != ARMRegisters::pc);
@@ -944,6 +1007,11 @@ public:
     void bkpt(uint8_t imm = 0)
     {
         m_formatter.oneWordOp8Imm8(OP_BKPT, imm);
+    }
+
+    void udf(uint8_t imm = 0)
+    {
+        m_formatter.oneWordOp8Imm8(OP_UDF, imm);
     }
 
     static bool isBkpt(void* address)
@@ -1127,9 +1195,8 @@ public:
     {
         ASSERT(rn != ARMRegisters::pc); // LDR (literal)
         ASSERT(imm.isUInt12());
-        ASSERT(!(imm.getUInt12() & 1));
 
-        if (!((rt | rn) & 8) && imm.isUInt6())
+        if (!((rt | rn) & 8) && imm.isUInt6() && !(imm.getUInt6() & 1))
             m_formatter.oneWordOp5Imm5Reg3Reg3(OP_LDRH_imm_T1, imm.getUInt6() >> 1, rn, rt);
         else
             m_formatter.twoWordOp12Reg4Reg4Imm12(OP_LDRH_imm_T2, rn, rt, imm.getUInt12());
@@ -1227,6 +1294,37 @@ public:
             m_formatter.twoWordOp12Reg4FourFours(OP_LDRB_reg_T2, rn, FourFours(rt, 0, shift, rm));
     }
 
+    void ldrsb(RegisterID rt, RegisterID rn, ARMThumbImmediate imm)
+    {
+        ASSERT(rt != ARMRegisters::sp);
+        ASSERT(rn != ARMRegisters::pc); // LDR (literal)
+        ASSERT(imm.isUInt12());
+
+        m_formatter.twoWordOp12Reg4Reg4Imm12(OP_LDRSB_imm_T1, rn, rt, imm.getUInt12());
+    }
+
+    void ldrsb(RegisterID rt, RegisterID rn, int offset, bool index, bool wback)
+    {
+        ASSERT(!BadReg(rt));
+        ASSERT(rn != ARMRegisters::pc); // LDR (literal)
+        ASSERT(index || wback);
+        ASSERT(!wback | (rt != rn));
+
+        bool add = true;
+        if (offset < 0) {
+            add = false;
+            offset = -offset;
+        }
+        ASSERT(!(offset & ~0xff));
+
+        offset |= (wback << 8);
+        offset |= (add   << 9);
+        offset |= (index << 10);
+        offset |= (1 << 11);
+
+        m_formatter.twoWordOp12Reg4Reg4Imm12(OP_LDRSB_imm_T2, rn, rt, offset);
+    }
+
     void ldrsb(RegisterID rt, RegisterID rn, RegisterID rm, unsigned shift = 0)
     {
         ASSERT(rn != ARMRegisters::pc);
@@ -1237,6 +1335,37 @@ public:
             m_formatter.oneWordOp7Reg3Reg3Reg3(OP_LDRSB_reg_T1, rm, rn, rt);
         else
             m_formatter.twoWordOp12Reg4FourFours(OP_LDRSB_reg_T2, rn, FourFours(rt, 0, shift, rm));
+    }
+
+    void ldrsh(RegisterID rt, RegisterID rn, ARMThumbImmediate imm)
+    {
+        ASSERT(rt != ARMRegisters::sp);
+        ASSERT(rn != ARMRegisters::pc); // LDR (literal)
+        ASSERT(imm.isUInt12());
+
+        m_formatter.twoWordOp12Reg4Reg4Imm12(OP_LDRSH_imm_T1, rn, rt, imm.getUInt12());
+    }
+
+    void ldrsh(RegisterID rt, RegisterID rn, int offset, bool index, bool wback)
+    {
+        ASSERT(!BadReg(rt));
+        ASSERT(rn != ARMRegisters::pc); // LDR (literal)
+        ASSERT(index || wback);
+        ASSERT(!wback | (rt != rn));
+
+        bool add = true;
+        if (offset < 0) {
+            add = false;
+            offset = -offset;
+        }
+        ASSERT(!(offset & ~0xff));
+
+        offset |= (wback << 8);
+        offset |= (add   << 9);
+        offset |= (index << 10);
+        offset |= (1 << 11);
+
+        m_formatter.twoWordOp12Reg4Reg4Imm12(OP_LDRSH_imm_T2, rn, rt, offset);
     }
 
     void ldrsh(RegisterID rt, RegisterID rn, RegisterID rm, unsigned shift = 0)
@@ -1292,6 +1421,36 @@ public:
         m_formatter.twoWordOp12Reg4Reg4Reg4Imm8(static_cast<OpcodeID1>(opcode), rn, rt, rt2, offset);
     }
 
+    ALWAYS_INLINE void ldrex(RegisterID rt, RegisterID rn, int32_t offset)
+    {
+        ASSERT(!BadReg(rt));
+        ASSERT(rn != ARMRegisters::pc);
+        ASSERT(!(offset & ~0x3fc));
+        m_formatter.twoWordOp12Reg4Reg4Imm12(OP_LDREX_T1, rn, rt, (0xf << 8 | offset >> 2));
+    }
+
+    ALWAYS_INLINE void ldrexb(RegisterID rt, RegisterID rn)
+    {
+        ASSERT(!BadReg(rt));
+        ASSERT(rn != ARMRegisters::pc);
+        m_formatter.twoWordOp12Reg4FourFours(OP_LDREXB_T1, rn, FourFours(rt, 0xf, 0x4, 0xf));
+    }
+
+    ALWAYS_INLINE void ldrexh(RegisterID rt, RegisterID rn)
+    {
+        ASSERT(!BadReg(rt));
+        ASSERT(rn != ARMRegisters::pc);
+        m_formatter.twoWordOp12Reg4FourFours(OP_LDREXH_T1, rn, FourFours(rt, 0xf, 0x5, 0xf));
+    }
+
+    ALWAYS_INLINE void ldrexd(RegisterID rt, RegisterID rt2, RegisterID rn)
+    {
+        ASSERT(!BadReg(rt));
+        ASSERT(!BadReg(rt2));
+        ASSERT(rn != ARMRegisters::pc);
+        m_formatter.twoWordOp12Reg4FourFours(OP_LDREXD_T1, rn, FourFours(rt, rt2, 0x7, 0xf));
+    }
+
     void lsl(RegisterID rd, RegisterID rm, int32_t shiftAmount)
     {
         ASSERT(!BadReg(rd));
@@ -1344,7 +1503,7 @@ public:
             twoWordOp5i6Imm4Reg4EncodedImmSecond(right, lo16),
             twoWordOp5i6Imm4Reg4EncodedImmFirst(OP_MOVT, hi16),
             twoWordOp5i6Imm4Reg4EncodedImmSecond(right, hi16),
-            static_cast<uint16_t>(OP_CMP_reg_T2 | left)
+            static_cast<uint16_t>(static_cast<uint16_t>(OP_CMP_reg_T2) | static_cast<uint16_t>(left))
         };
         performJITMemcpy(address, instruction, sizeof(uint16_t) * 5);
         cacheFlush(address, sizeof(uint16_t) * 5);
@@ -1474,6 +1633,13 @@ public:
             orr_S(rd, rn, rm, ShiftTypeAndAmount());
     }
 
+    ALWAYS_INLINE void rbit(RegisterID rd, RegisterID rm)
+    {
+        ASSERT(!BadReg(rd));
+        ASSERT(!BadReg(rm));
+        m_formatter.twoWordOp12Reg4FourFours(OP_RBIT, rm, FourFours(0xf, rd, 0xa, rm));
+    }
+
     ALWAYS_INLINE void ror(RegisterID rd, RegisterID rm, int32_t shiftAmount)
     {
         ASSERT(!BadReg(rd));
@@ -1528,6 +1694,15 @@ public:
         m_formatter.twoWordOp16Imm16(OP_PUSH_T2, registerList);
     }
 
+    void sbc(RegisterID rd, RegisterID rn, RegisterID rm, ShiftTypeAndAmount shift = ShiftTypeAndAmount { })
+    {
+        // Rd can only be SP if Rn is also SP.
+        ASSERT(!BadReg(rd));
+        ASSERT(!BadReg(rn));
+        ASSERT(!BadReg(rm));
+        m_formatter.twoWordOp12Reg4FourFours(OP_SBC_reg_T2, rn, FourFours(shift.hi4(), rd, shift.lo4(), rm));
+    }
+
 #if HAVE(ARM_IDIV_INSTRUCTIONS)
     template<int datasize>
     ALWAYS_INLINE void sdiv(RegisterID rd, RegisterID rn, RegisterID rm)
@@ -1548,6 +1723,16 @@ public:
         ASSERT(!BadReg(rm));
         ASSERT(rdLo != rdHi);
         m_formatter.twoWordOp12Reg4FourFours(OP_SMULL_T1, rn, FourFours(rdLo, rdHi, 0, rm));
+    }
+
+    ALWAYS_INLINE void umull(RegisterID rdLo, RegisterID rdHi, RegisterID rn, RegisterID rm)
+    {
+        ASSERT(!BadReg(rdLo));
+        ASSERT(!BadReg(rdHi));
+        ASSERT(!BadReg(rn));
+        ASSERT(!BadReg(rm));
+        ASSERT(rdLo != rdHi);
+        m_formatter.twoWordOp12Reg4FourFours(OP_UMULL_T1, rn, FourFours(rdLo, rdHi, 0, rm));
     }
 
     // rt == ARMRegisters::pc only allowed if last instruction in IT (if then) block.
@@ -1769,6 +1954,49 @@ public:
         m_formatter.twoWordOp12Reg4Reg4Reg4Imm8(static_cast<OpcodeID1>(opcode), rn, rt, rt2, offset);
     }
 
+    ALWAYS_INLINE void strex(RegisterID rd, RegisterID rt, RegisterID rn, int32_t offset)
+    {
+        ASSERT(!BadReg(rd));
+        ASSERT(!BadReg(rt));
+        ASSERT(rn != ARMRegisters::pc);
+        ASSERT(rd != rn);
+        ASSERT(rd != rt);
+        ASSERT(!(offset & ~0x3fc));
+        m_formatter.twoWordOp12Reg4Reg4Reg4Imm8(OP_STREX_T1, rn, rt, rd, offset >> 2);
+    }
+
+    ALWAYS_INLINE void strexb(RegisterID rd, RegisterID rt, RegisterID rn)
+    {
+        ASSERT(!BadReg(rd));
+        ASSERT(!BadReg(rt));
+        ASSERT(rn != ARMRegisters::pc);
+        ASSERT(rd != rn);
+        ASSERT(rd != rt);
+        m_formatter.twoWordOp12Reg4FourFours(OP_STREXB_T1, rn, FourFours(rt, 0xf, 0x4, rd));
+    }
+
+    ALWAYS_INLINE void strexh(RegisterID rd, RegisterID rt, RegisterID rn)
+    {
+        ASSERT(!BadReg(rd));
+        ASSERT(!BadReg(rt));
+        ASSERT(rn != ARMRegisters::pc);
+        ASSERT(rd != rn);
+        ASSERT(rd != rt);
+        m_formatter.twoWordOp12Reg4FourFours(OP_STREXH_T1, rn, FourFours(rt, 0xf, 0x5, rd));
+    }
+
+    ALWAYS_INLINE void strexd(RegisterID rd, RegisterID rt, RegisterID rt2, RegisterID rn)
+    {
+        ASSERT(!BadReg(rd));
+        ASSERT(!BadReg(rt));
+        ASSERT(!BadReg(rt2));
+        ASSERT(rn != ARMRegisters::pc);
+        ASSERT(rd != rn);
+        ASSERT(rd != rt);
+        ASSERT(rd != rt2);
+        m_formatter.twoWordOp12Reg4FourFours(OP_STREXD_T1, rn, FourFours(rt, rt2, 0x7, rd));
+    }
+
     ALWAYS_INLINE void sub(RegisterID rd, RegisterID rn, ARMThumbImmediate imm)
     {
         // Rd can only be SP if Rn is also SP.
@@ -1885,6 +2113,22 @@ public:
             sub_S(rd, rn, rm, ShiftTypeAndAmount());
     }
 
+    ALWAYS_INLINE void sxtb(RegisterID rd, RegisterID rm)
+    {
+        if (!((rd | rm) & 8))
+            m_formatter.oneWordOp10Reg3Reg3(OP_SXTB_T1, rm, rd);
+        else
+            m_formatter.twoWordOp16FourFours(OP_SXTB_T2, FourFours(0xf, rd, 0x8, rm));
+    }
+
+    ALWAYS_INLINE void sxth(RegisterID rd, RegisterID rm)
+    {
+        if (!((rd | rm) & 8))
+            m_formatter.oneWordOp10Reg3Reg3(OP_SXTH_T1, rm, rd);
+        else
+            m_formatter.twoWordOp16FourFours(OP_SXTH_T2, FourFours(0xf, rd, 0x8, rm));
+    }
+
     ALWAYS_INLINE void tst(RegisterID rn, ARMThumbImmediate imm)
     {
         ASSERT(!BadReg(rn));
@@ -1926,6 +2170,34 @@ public:
     }
 #endif
 
+    ALWAYS_INLINE void uxtb(RegisterID rd, RegisterID rm)
+    {
+        if (!((rd | rm) & 8))
+            m_formatter.oneWordOp10Reg3Reg3(OP_UXTB_T1, rm, rd);
+        else
+            m_formatter.twoWordOp16FourFours(OP_UXTB_T2, FourFours(0xf, rd, 0x8, rm));
+    }
+
+    ALWAYS_INLINE void uxth(RegisterID rd, RegisterID rm)
+    {
+        if (!((rd | rm) & 8))
+            m_formatter.oneWordOp10Reg3Reg3(OP_UXTH_T1, rm, rd);
+        else
+            m_formatter.twoWordOp16FourFours(OP_UXTH_T2, FourFours(0xf, rd, 0x8, rm));
+    }
+
+    void vldmia(RegisterID rn, FPDoubleRegisterID rs, uint32_t count)
+    {
+        ASSERT(count < 16);
+        m_formatter.vfpMemOp(OP_VLDMIA, OP_VLDMIAb, true, rn, rs, count << 3);
+    }
+
+    void vstmia(RegisterID rn, FPDoubleRegisterID rs, uint32_t count)
+    {
+        ASSERT(count < 16);
+        m_formatter.vfpMemOp(OP_VSTMIA, OP_VSTMIAb, true, rn, rs, count << 3);
+    }
+
     void vand(FPDoubleRegisterID rd, FPDoubleRegisterID rn, FPDoubleRegisterID rm)
     {
         m_formatter.vfpOp(OP_VAND_T1, OP_VAND_T1b, true, rn, rd, rm);
@@ -1936,9 +2208,19 @@ public:
         m_formatter.vfpOp(OP_VORR_T1, OP_VORR_T1b, true, rn, rd, rm);
     }
 
+    void vadd(FPSingleRegisterID rd, FPSingleRegisterID rn, FPSingleRegisterID rm)
+    {
+        m_formatter.vfpOp(OP_VADD_T2, OP_VADD_T2b, false, rn, rd, rm);
+    }
+
     void vadd(FPDoubleRegisterID rd, FPDoubleRegisterID rn, FPDoubleRegisterID rm)
     {
         m_formatter.vfpOp(OP_VADD_T2, OP_VADD_T2b, true, rn, rd, rm);
+    }
+
+    void vcmp(FPSingleRegisterID rd, FPSingleRegisterID rm)
+    {
+        m_formatter.vfpOp(OP_VCMP, OP_VCMPb, false, VFPOperand(4), rd, rm);
     }
 
     void vcmp(FPDoubleRegisterID rd, FPDoubleRegisterID rm)
@@ -1951,10 +2233,16 @@ public:
         m_formatter.vfpOp(OP_VCMP, OP_VCMPb, true, VFPOperand(5), rd, VFPOperand(0));
     }
 
-    void vcvt_signedToFloatingPoint(FPDoubleRegisterID rd, FPSingleRegisterID rm)
+    void vcvt_signedToFloatingPoint(FPDoubleRegisterID rd, FPSingleRegisterID rm, bool toDouble = true)
     {
         // boolean values are 64bit (toInt, unsigned, roundZero)
-        m_formatter.vfpOp(OP_VCVT_FPIVFP, OP_VCVT_FPIVFPb, true, vcvtOp(false, false, false), rd, rm);
+        m_formatter.vfpOp(OP_VCVT_FPIVFP, OP_VCVT_FPIVFPb, toDouble, vcvtOp(false, false, false), rd, rm);
+    }
+
+    void vcvt_unsignedToFloatingPoint(FPDoubleRegisterID rd, FPSingleRegisterID rm, bool toDouble = true)
+    {
+        // boolean values are 64bit (toInt, unsigned, roundZero)
+        m_formatter.vfpOp(OP_VCVT_FPIVFP, OP_VCVT_FPIVFPb, toDouble, vcvtOp(false, true, false), rd, rm);
     }
 
     void vcvt_floatingPointToSigned(FPSingleRegisterID rd, FPDoubleRegisterID rm)
@@ -1967,6 +2255,23 @@ public:
     {
         // boolean values are 64bit (toInt, unsigned, roundZero)
         m_formatter.vfpOp(OP_VCVT_FPIVFP, OP_VCVT_FPIVFPb, true, vcvtOp(true, true, true), rd, rm);
+    }
+
+    void vcvt_floatingPointToSigned(FPSingleRegisterID rd, FPSingleRegisterID rm)
+    {
+        // boolean values are 64bit (toInt, unsigned, roundZero)
+        m_formatter.vfpOp(OP_VCVT_FPIVFP, OP_VCVT_FPIVFPb, false, vcvtOp(true, false, true), rd, rm);
+    }
+
+    void vcvt_floatingPointToUnsigned(FPSingleRegisterID rd, FPSingleRegisterID rm)
+    {
+        // boolean values are 64bit (toInt, unsigned, roundZero)
+        m_formatter.vfpOp(OP_VCVT_FPIVFP, OP_VCVT_FPIVFPb, false, vcvtOp(true, true, true), rd, rm);
+    }
+
+    void vdiv(FPSingleRegisterID rd, FPSingleRegisterID rn, FPSingleRegisterID rm)
+    {
+        m_formatter.vfpOp(OP_VDIV, OP_VDIVb, false, rn, rd, rm);
     }
 
     void vdiv(FPDoubleRegisterID rd, FPDoubleRegisterID rn, FPDoubleRegisterID rm)
@@ -2021,6 +2326,11 @@ public:
         m_formatter.vfpOp(OP_VMRS, OP_VMRSb, false, VFPOperand(1), VFPOperand(0x10 | reg), VFPOperand(0));
     }
 
+    void vmul(FPSingleRegisterID rd, FPSingleRegisterID rn, FPSingleRegisterID rm)
+    {
+        m_formatter.vfpOp(OP_VMUL_T2, OP_VMUL_T2b, false, rn, rd, rm);
+    }
+
     void vmul(FPDoubleRegisterID rd, FPDoubleRegisterID rn, FPDoubleRegisterID rm)
     {
         m_formatter.vfpOp(OP_VMUL_T2, OP_VMUL_T2b, true, rn, rd, rm);
@@ -2036,9 +2346,19 @@ public:
         m_formatter.vfpMemOp(OP_FSTS, OP_FSTSb, false, rn, rd, imm);
     }
 
+    void vsub(FPSingleRegisterID rd, FPSingleRegisterID rn, FPSingleRegisterID rm)
+    {
+        m_formatter.vfpOp(OP_VSUB_T2, OP_VSUB_T2b, false, rn, rd, rm);
+    }
+
     void vsub(FPDoubleRegisterID rd, FPDoubleRegisterID rn, FPDoubleRegisterID rm)
     {
         m_formatter.vfpOp(OP_VSUB_T2, OP_VSUB_T2b, true, rn, rd, rm);
+    }
+
+    void vabs(FPSingleRegisterID rd, FPSingleRegisterID rm)
+    {
+        m_formatter.vfpOp(OP_VABS_T2, OP_VABS_T2b, false, VFPOperand(16), rd, rm);
     }
 
     void vabs(FPDoubleRegisterID rd, FPDoubleRegisterID rm)
@@ -2046,9 +2366,19 @@ public:
         m_formatter.vfpOp(OP_VABS_T2, OP_VABS_T2b, true, VFPOperand(16), rd, rm);
     }
 
+    void vneg(FPSingleRegisterID rd, FPSingleRegisterID rm)
+    {
+        m_formatter.vfpOp(OP_VNEG_T2, OP_VNEG_T2b, false, VFPOperand(1), rd, rm);
+    }
+
     void vneg(FPDoubleRegisterID rd, FPDoubleRegisterID rm)
     {
         m_formatter.vfpOp(OP_VNEG_T2, OP_VNEG_T2b, true, VFPOperand(1), rd, rm);
+    }
+
+    void vsqrt(FPSingleRegisterID rd, FPSingleRegisterID rm)
+    {
+        m_formatter.vfpOp(OP_VSQRT_T1, OP_VSQRT_T1b, false, VFPOperand(17), rd, rm);
     }
 
     void vsqrt(FPDoubleRegisterID rd, FPDoubleRegisterID rm)
@@ -2120,6 +2450,11 @@ public:
         m_formatter.twoWordOp16Op16(OP_DMB_T1a, OP_DMB_ISHST_T1b);
     }
 
+    void dmbISH()
+    {
+        m_formatter.twoWordOp16Op16(OP_DMB_T1a, OP_DMB_ISH_T1b);
+    }
+
     AssemblerLabel labelIgnoringWatchpoints()
     {
         return m_formatter.label();
@@ -2170,11 +2505,6 @@ public:
     static int jumpSizeDelta(JumpType jumpType, JumpLinkType jumpLinkType) { return JUMP_ENUM_SIZE(jumpType) - JUMP_ENUM_SIZE(jumpLinkType); }
 
     // Assembler admin methods:
-
-    static ALWAYS_INLINE bool linkRecordSourceComparator(const LinkRecord& a, const LinkRecord& b)
-    {
-        return a.from() < b.from();
-    }
 
     static bool canCompact(JumpType jumpType)
     {
@@ -2238,7 +2568,9 @@ public:
 
     Vector<LinkRecord, 0, UnsafeVectorOverflow>& jumpsToLink()
     {
-        std::sort(m_jumpsToLink.begin(), m_jumpsToLink.end(), linkRecordSourceComparator);
+        std::sort(m_jumpsToLink.begin(), m_jumpsToLink.end(), [](auto& a, auto& b) {
+            return a.from() < b.from();
+        });
         return m_jumpsToLink;
     }
 
@@ -2257,7 +2589,7 @@ public:
             linkJumpT3<copy>(record.condition(), reinterpret_cast_ptr<uint16_t*>(from), fromInstruction, to);
             break;
         case LinkJumpT4:
-            linkJumpT4<copy>(reinterpret_cast_ptr<uint16_t*>(from), fromInstruction, to);
+            linkJumpT4<copy>(reinterpret_cast_ptr<uint16_t*>(from), fromInstruction, to, BranchWithLink::No);
             break;
         case LinkConditionalJumpT4:
             linkConditionalJumpT4<copy>(record.condition(), reinterpret_cast_ptr<uint16_t*>(from), fromInstruction, to);
@@ -2305,12 +2637,20 @@ public:
         linkJumpAbsolute(location, location, to);
     }
 
-    static void linkCall(void* code, AssemblerLabel from, void* to)
+    static void linkTailCall(void* code, AssemblerLabel from, void* to)
     {
-        ASSERT(!(reinterpret_cast<intptr_t>(code) & 1));
         ASSERT(from.isSet());
 
-        setPointer(reinterpret_cast<uint16_t*>(reinterpret_cast<intptr_t>(code) + from.offset()) - 1, to, false);
+        uint16_t* location = reinterpret_cast<uint16_t*>(reinterpret_cast<intptr_t>(code) + from.offset());
+        linkBranch(location, location, makeEven(to), BranchWithLink::No);
+    }
+
+    static void linkCall(void* code, AssemblerLabel from, void* to)
+    {
+        ASSERT(from.isSet());
+
+        uint16_t* location = reinterpret_cast<uint16_t*>(reinterpret_cast<intptr_t>(code) + from.offset());
+        linkBranch(location, location, makeEven(to), BranchWithLink::Yes);
     }
 
     static void linkPointer(void* code, AssemblerLabel where, void* value)
@@ -2334,42 +2674,53 @@ public:
 
     static void relinkCall(void* from, void* to)
     {
-        ASSERT(!(reinterpret_cast<intptr_t>(from) & 1));
+        ASSERT(isEven(from));
 
-        setPointer(reinterpret_cast<uint16_t*>(from) - 1, to, true);
+        uint16_t* location = reinterpret_cast<uint16_t*>(from);
+        if (isBL(location - 2)) {
+            linkBranch(location, location, makeEven(to), BranchWithLink::Yes);
+            cacheFlush(location - 2, 2 * sizeof(uint16_t));
+            return;
+        }
+
+        setPointer(location - 1, to, true);
     }
+
+    static void relinkTailCall(void* from, void* to)
+    {
+        ASSERT(isEven(from));
+
+        uint16_t* location = reinterpret_cast<uint16_t*>(from);
+        linkBranch(location, location, to, BranchWithLink::No);
+        cacheFlush(location - 2, 2 * sizeof(uint16_t));
+    }
+
+#if ENABLE(JUMP_ISLANDS)
+    static void* prepareForAtomicRelinkJumpConcurrently(void* from, void* to)
+    {
+        ASSERT(isEven(from));
+        ASSERT(isEven(to));
+
+        intptr_t offset = bitwise_cast<intptr_t>(to) - bitwise_cast<intptr_t>(from);
+        ASSERT(static_cast<int>(offset) == offset);
+
+        if (isInt<25>(offset))
+            return to;
+
+        return ExecutableAllocator::singleton().getJumpIslandToConcurrently(from, to);
+    }
+
+    static void* prepareForAtomicRelinkCallConcurrently(void* from, void* to)
+    {
+        ASSERT(isEven(from));
+
+        return prepareForAtomicRelinkJumpConcurrently(from, makeEven(to));
+    }
+#endif
 
     static void* readCallTarget(void* from)
     {
         return readPointer(reinterpret_cast<uint16_t*>(from) - 1);
-    }
-
-    static void repatchInt32(void* where, int32_t value)
-    {
-        ASSERT(!(reinterpret_cast<intptr_t>(where) & 1));
-
-        setInt32(where, value, true);
-    }
-
-    static void repatchCompact(void* where, int32_t offset)
-    {
-        ASSERT(offset >= -255 && offset <= 255);
-
-        bool add = true;
-        if (offset < 0) {
-            add = false;
-            offset = -offset;
-        }
-
-        offset |= (add << 9);
-        offset |= (1 << 10);
-        offset |= (1 << 11);
-
-        uint16_t* location = reinterpret_cast<uint16_t*>(where);
-        uint16_t instruction = location[1] & ~((1 << 12) - 1);
-        instruction |= offset;
-        performJITMemcpy(location + 1, &instruction, sizeof(uint16_t));
-        cacheFlush(location, sizeof(uint16_t) * 2);
     }
 
     static void repatchPointer(void* where, void* value)
@@ -2392,7 +2743,7 @@ public:
 #if OS(LINUX)
         if (canBeJumpT4(reinterpret_cast<uint16_t*>(instructionStart), to)) {
             uint16_t* ptr = reinterpret_cast<uint16_t*>(instructionStart) + 2;
-            linkJumpT4(ptr, ptr, to);
+            linkJumpT4(ptr, ptr, to, BranchWithLink::No);
             cacheFlush(ptr - 2, sizeof(uint16_t) * 2);
         } else {
             uint16_t* ptr = reinterpret_cast<uint16_t*>(instructionStart) + 5;
@@ -2401,7 +2752,7 @@ public:
         }
 #else
         uint16_t* ptr = reinterpret_cast<uint16_t*>(instructionStart) + 2;
-        linkJumpT4(ptr, ptr, to);
+        linkJumpT4(ptr, ptr, to, BranchWithLink::No);
         cacheFlush(ptr - 2, sizeof(uint16_t) * 2);
 #endif
     }
@@ -2418,52 +2769,6 @@ public:
     static constexpr ptrdiff_t patchableJumpSize()
     {
         return 10;
-    }
-
-    static void replaceWithLoad(void* instructionStart)
-    {
-        ASSERT(!(bitwise_cast<uintptr_t>(instructionStart) & 1));
-        uint16_t* ptr = reinterpret_cast<uint16_t*>(instructionStart);
-        switch (ptr[0] & 0xFFF0) {
-        case OP_LDR_imm_T3:
-            break;
-        case OP_ADD_imm_T3: {
-            ASSERT(!(ptr[1] & 0xF000));
-            uint16_t instructions[2];
-            instructions[0] = ptr[0] & 0x000F;
-            instructions[0] |= OP_LDR_imm_T3;
-            instructions[1] = ptr[1] | (ptr[1] & 0x0F00) << 4;
-            instructions[1] &= 0xF0FF;
-            performJITMemcpy(ptr, instructions, sizeof(uint16_t) * 2);
-            cacheFlush(ptr, sizeof(uint16_t) * 2);
-            break;
-        }
-        default:
-            RELEASE_ASSERT_NOT_REACHED();
-        }
-    }
-
-    static void replaceWithAddressComputation(void* instructionStart)
-    {
-        ASSERT(!(bitwise_cast<uintptr_t>(instructionStart) & 1));
-        uint16_t* ptr = reinterpret_cast<uint16_t*>(instructionStart);
-        switch (ptr[0] & 0xFFF0) {
-        case OP_LDR_imm_T3: {
-            ASSERT(!(ptr[1] & 0x0F00));
-            uint16_t instructions[2];
-            instructions[0] = ptr[0] & 0x000F;
-            instructions[0] |= OP_ADD_imm_T3;
-            instructions[1] = ptr[1] | (ptr[1] & 0xF000) >> 4;
-            instructions[1] &= 0x0FFF;
-            performJITMemcpy(ptr, instructions, sizeof(uint16_t) * 2);
-            cacheFlush(ptr, sizeof(uint16_t) * 2);
-            break;
-        }
-        case OP_ADD_imm_T3:
-            break;
-        default:
-            RELEASE_ASSERT_NOT_REACHED();
-        }
     }
 
     unsigned debugOffset() { return m_formatter.debugOffset(); }
@@ -2489,7 +2794,7 @@ public:
     static void cacheFlush(void* code, size_t size)
     {
 #if OS(DARWIN)
-        sys_cache_control(kCacheFunctionPrepareForExecution, code, size);
+        sys_icache_invalidate(code, size);
 #elif OS(LINUX)
         size_t page = pageSize();
         uintptr_t current = reinterpret_cast<uintptr_t>(code);
@@ -2512,10 +2817,18 @@ public:
 #endif
     }
 
+    static ALWAYS_INLINE bool canEmitJump(void* from, void* to)
+    {
+        // 'from' holds the address of the branch instruction. The branch range however is relative
+        // to the architectural value of the PC which is 4 larger than the address of the branch.
+        intptr_t offset = bitwise_cast<intptr_t>(to) - (bitwise_cast<intptr_t>(from) + 4);
+        return isInt<25>(offset);
+    }
+
 private:
     // VFP operations commonly take one or more 5-bit operands, typically representing a
-    // floating point register number.  This will commonly be encoded in the instruction
-    // in two parts, with one single bit field, and one 4-bit field.  In the case of
+    // floating point register number. This will commonly be encoded in the instruction
+    // in two parts, with one single bit field, and one 4-bit field. In the case of
     // double precision operands the high bit of the register number will be encoded
     // separately, and for single precision operands the high bit of the register number
     // will be encoded individually.
@@ -2636,6 +2949,12 @@ private:
     {
         const uint16_t* instruction = static_cast<const uint16_t*>(address);
         return ((instruction[0] & 0xf800) == OP_B_T4a) && ((instruction[1] & 0xd000) == OP_B_T4b);
+    }
+
+    static bool isBL(const void* address)
+    {
+        const uint16_t* instruction = static_cast<const uint16_t*>(address);
+        return ((instruction[0] & 0xf800) == OP_BL_T4a) && ((instruction[1] & 0xd000) == OP_BL_T4b);
     }
 
     static bool isBX(const void* address)
@@ -2771,7 +3090,7 @@ private:
     }
 
     template<CopyFunction copy = performJITMemcpy>
-    static void linkJumpT4(uint16_t* writeTarget, const uint16_t* instruction, void* target)
+    static void linkJumpT4(uint16_t* writeTarget, const uint16_t* instruction, void* target, BranchWithLink link)
     {
         // FIMXE: this should be up in the MacroAssembler layer. :-(
         ASSERT(!(reinterpret_cast<intptr_t>(instruction) & 1));
@@ -2787,7 +3106,7 @@ private:
         ASSERT(!(relative & 1));
         uint16_t instructions[2];
         instructions[0] = OP_B_T4a | ((relative & 0x1000000) >> 14) | ((relative & 0x3ff000) >> 12);
-        instructions[1] = OP_B_T4b | ((relative & 0x800000) >> 10) | ((relative & 0x400000) >> 11) | ((relative & 0xffe) >> 1);
+        instructions[1] = OP_B_T4b | (static_cast<uint16_t>(link) << 14) | ((relative & 0x800000) >> 10) | ((relative & 0x400000) >> 11) | ((relative & 0xffe) >> 1);
         copy(writeTarget - 2, instructions, 2 * sizeof(uint16_t));
     }
 
@@ -2800,7 +3119,7 @@ private:
 
         uint16_t newInstruction = ifThenElse(cond) | OP_IT;
         copy(writeTarget - 3, &newInstruction, sizeof(uint16_t));
-        linkJumpT4<copy>(writeTarget, instruction, target);
+        linkJumpT4<copy>(writeTarget, instruction, target, BranchWithLink::No);
     }
 
     template<CopyFunction copy = performJITMemcpy>
@@ -2856,7 +3175,7 @@ private:
             instructions[1] = OP_NOP_T2a;
             instructions[2] = OP_NOP_T2b;
             performJITMemcpy(writeTarget - 5, instructions, 3 * sizeof(uint16_t));
-            linkJumpT4(writeTarget, instruction, target);
+            linkJumpT4(writeTarget, instruction, target, BranchWithLink::No);
         } else {
             const uint16_t JUMP_TEMPORARY_REGISTER = ARMRegisters::ip;
             ARMThumbImmediate lo16 = ARMThumbImmediate::makeUInt16(static_cast<uint16_t>(reinterpret_cast<uint32_t>(target) + 1));
@@ -2870,6 +3189,25 @@ private:
             instructions[4] = OP_BX | (JUMP_TEMPORARY_REGISTER << 3);
             performJITMemcpy(writeTarget - 5, instructions, 5 * sizeof(uint16_t));
         }
+    }
+
+    static void linkBranch(uint16_t* from, const uint16_t* fromInstruction, void* to, BranchWithLink link)
+    {
+        ASSERT(isEven(fromInstruction));
+        ASSERT(isEven(from));
+        ASSERT(isEven(to));
+        ASSERT(link == BranchWithLink::Yes ? isBL(from - 2) : isB(from - 2));
+
+        intptr_t offset = bitwise_cast<intptr_t>(to) - bitwise_cast<intptr_t>(fromInstruction);
+#if ENABLE(JUMP_ISLANDS)
+        if (!isInt<25>(offset)) {
+            to = ExecutableAllocator::singleton().getJumpIslandTo(bitwise_cast<void*>(fromInstruction), to);
+            offset = bitwise_cast<intptr_t>(to) - bitwise_cast<intptr_t>(fromInstruction);
+        }
+#endif
+        RELEASE_ASSERT(isInt<25>(offset));
+
+        linkJumpT4(from, fromInstruction, to, link);
     }
 
     static uint16_t twoWordOp5i6Imm4Reg4EncodedImmFirst(uint16_t op, ARMThumbImmediate imm)
@@ -2938,7 +3276,7 @@ private:
 
         ALWAYS_INLINE void twoWordOp12Reg4FourFours(OpcodeID1 op, RegisterID reg, FourFours ff)
         {
-            m_buffer.putShort(op | reg);
+            m_buffer.putShort(static_cast<uint16_t>(op) | static_cast<uint16_t>(reg));
             m_buffer.putShort(ff.m_u.value);
         }
 
@@ -2971,19 +3309,19 @@ private:
 
         ALWAYS_INLINE void twoWordOp12Reg4Reg4Imm12(OpcodeID1 op, RegisterID reg1, RegisterID reg2, uint16_t imm)
         {
-            m_buffer.putShort(op | reg1);
+            m_buffer.putShort(static_cast<uint16_t>(op) | static_cast<uint16_t>(reg1));
             m_buffer.putShort((reg2 << 12) | imm);
         }
 
         ALWAYS_INLINE void twoWordOp12Reg4Reg4Reg4Imm8(OpcodeID1 op, RegisterID reg1, RegisterID reg2, RegisterID reg3, uint8_t imm)
         {
-            m_buffer.putShort(op | reg1);
+            m_buffer.putShort(static_cast<uint16_t>(op) | static_cast<uint16_t>(reg1));
             m_buffer.putShort((reg2 << 12) | (reg3 << 8) | imm);
         }
 
         ALWAYS_INLINE void twoWordOp12Reg40Imm3Reg4Imm20Imm5(OpcodeID1 op, RegisterID reg1, RegisterID reg2, uint16_t imm1, uint16_t imm2, uint16_t imm3)
         {
-            m_buffer.putShort(op | reg1);
+            m_buffer.putShort(static_cast<uint16_t>(op) | static_cast<uint16_t>(reg1));
             m_buffer.putShort((imm1 << 12) | (reg2 << 8) | (imm2 << 6) | imm3);
         }
 

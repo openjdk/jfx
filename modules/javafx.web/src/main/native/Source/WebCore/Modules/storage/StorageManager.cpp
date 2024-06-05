@@ -33,6 +33,7 @@
 #include "FileSystemStorageConnection.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSFileSystemDirectoryHandle.h"
+#include "JSStorageManager.h"
 #include "NavigatorBase.h"
 #include "SecurityOrigin.h"
 #include "WorkerGlobalScope.h"
@@ -67,9 +68,11 @@ static ExceptionOr<ConnectionInfo> connectionInfo(NavigatorBase* navigator)
     if (!context)
         return Exception { InvalidStateError, "Context is invalid"_s };
 
+    if (context->canAccessResource(ScriptExecutionContext::ResourceType::StorageManager) == ScriptExecutionContext::HasResourceAccess::No)
+        return Exception { TypeError, "Context not access storage"_s };
+
     auto* origin = context->securityOrigin();
-    if (!origin)
-        return Exception { InvalidStateError, "Origin is invalid"_s };
+    ASSERT(origin);
 
     if (is<Document>(context)) {
         if (auto* connection = downcast<Document>(context)->storageConnection())
@@ -91,7 +94,7 @@ void StorageManager::persisted(DOMPromiseDeferred<IDLBoolean>&& promise)
         return promise.reject(connectionInfoOrException.releaseException());
 
     auto connectionInfo = connectionInfoOrException.releaseReturnValue();
-    connectionInfo.connection.getPersisted(connectionInfo.origin, [promise = WTFMove(promise)](bool persisted) mutable {
+    connectionInfo.connection.getPersisted(WTFMove(connectionInfo.origin), [promise = WTFMove(promise)](bool persisted) mutable {
         promise.resolve(persisted);
     });
 }
@@ -108,6 +111,18 @@ void StorageManager::persist(DOMPromiseDeferred<IDLBoolean>&& promise)
     });
 }
 
+void StorageManager::estimate(DOMPromiseDeferred<IDLDictionary<StorageEstimate>>&& promise)
+{
+    auto connectionInfoOrException = connectionInfo(m_navigator.get());
+    if (connectionInfoOrException.hasException())
+        return promise.reject(connectionInfoOrException.releaseException());
+
+    auto connectionInfo = connectionInfoOrException.releaseReturnValue();
+    connectionInfo.connection.getEstimate(WTFMove(connectionInfo.origin), [promise = WTFMove(promise)](auto&& result) mutable {
+        promise.settle(WTFMove(result));
+    });
+}
+
 void StorageManager::fileSystemAccessGetDirectory(DOMPromiseDeferred<IDLInterface<FileSystemDirectoryHandle>>&& promise)
 {
     auto connectionInfoOrException = connectionInfo(m_navigator.get());
@@ -115,7 +130,7 @@ void StorageManager::fileSystemAccessGetDirectory(DOMPromiseDeferred<IDLInterfac
         return promise.reject(connectionInfoOrException.releaseException());
 
     auto connectionInfo = connectionInfoOrException.releaseReturnValue();
-    connectionInfo.connection.fileSystemGetDirectory(connectionInfo.origin, [promise = WTFMove(promise), weakNavigator = m_navigator](auto result) mutable {
+    connectionInfo.connection.fileSystemGetDirectory(WTFMove(connectionInfo.origin), [promise = WTFMove(promise), weakNavigator = m_navigator](auto&& result) mutable {
         if (result.hasException())
             return promise.reject(result.releaseException());
 

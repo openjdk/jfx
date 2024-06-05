@@ -27,8 +27,12 @@
 #include "ElementData.h"
 
 #include "Attr.h"
+#include "Element.h"
 #include "HTMLNames.h"
+#include "ImmutableStyleProperties.h"
+#include "MutableStyleProperties.h"
 #include "StyleProperties.h"
+#include "StylePropertiesInlines.h"
 #include "XMLNames.h"
 
 namespace WebCore {
@@ -59,14 +63,14 @@ struct SameSizeAsElementData : public RefCounted<SameSizeAsElementData> {
     void* refPtrs[3];
 };
 
-COMPILE_ASSERT(sizeof(ElementData) == sizeof(SameSizeAsElementData), element_attribute_data_should_stay_small);
+static_assert(sizeof(ElementData) == sizeof(SameSizeAsElementData), "element attribute data should stay small");
 
 static size_t sizeForShareableElementDataWithAttributeCount(unsigned count)
 {
     return sizeof(ShareableElementData) + sizeof(Attribute) * count;
 }
 
-Ref<ShareableElementData> ShareableElementData::createWithAttributes(const Vector<Attribute>& attributes)
+Ref<ShareableElementData> ShareableElementData::createWithAttributes(std::span<const Attribute> attributes)
 {
     void* slot = ShareableElementDataMalloc::malloc(sizeForShareableElementDataWithAttributeCount(attributes.size()));
     return adoptRef(*new (NotNull, slot) ShareableElementData(attributes));
@@ -77,7 +81,7 @@ Ref<UniqueElementData> UniqueElementData::create()
     return adoptRef(*new UniqueElementData);
 }
 
-ShareableElementData::ShareableElementData(const Vector<Attribute>& attributes)
+ShareableElementData::ShareableElementData(std::span<const Attribute> attributes)
     : ElementData(attributes.size())
 {
     unsigned attributeArraySize = arraySize();
@@ -186,24 +190,4 @@ Attribute* UniqueElementData::findAttributeByName(const QualifiedName& name)
     return nullptr;
 }
 
-const Attribute* ElementData::findLanguageAttribute() const
-{
-    ASSERT(XMLNames::langAttr->localName() == HTMLNames::langAttr->localName());
-
-    const Attribute* attributes = attributeBase();
-    // Spec: xml:lang takes precedence over html:lang -- http://www.w3.org/TR/xhtml1/#C_7
-    const Attribute* languageAttribute = nullptr;
-    for (unsigned i = 0, count = length(); i < count; ++i) {
-        const QualifiedName& name = attributes[i].name();
-        if (name.localName() != HTMLNames::langAttr->localName())
-            continue;
-        if (name.namespaceURI() == XMLNames::langAttr->namespaceURI())
-            return &attributes[i];
-        if (name.namespaceURI() == HTMLNames::langAttr->namespaceURI())
-            languageAttribute = &attributes[i];
-    }
-    return languageAttribute;
 }
-
-}
-

@@ -19,7 +19,6 @@
  * along with this library; see the file COPYING.LIB.  If not, write to
  * the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301, USA.
- *
  */
 
 #pragma once
@@ -36,19 +35,18 @@ struct BlendingContext;
 class TransformOperations {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit TransformOperations(bool makeIdentity = false);
+    TransformOperations() = default;
+    WEBCORE_EXPORT explicit TransformOperations(Vector<RefPtr<TransformOperation>>&&);
 
     bool operator==(const TransformOperations& o) const;
-    bool operator!=(const TransformOperations& o) const
+
+    void apply(const FloatSize& size, TransformationMatrix& matrix) const { apply(0, size, matrix); }
+    void apply(unsigned start, const FloatSize& size, TransformationMatrix& matrix) const
     {
-        return !(*this == o);
+        for (unsigned i = start; i < m_operations.size(); ++i)
+            m_operations[i]->apply(matrix, size);
     }
 
-    void apply(const FloatSize& sz, TransformationMatrix& t) const
-    {
-        for (unsigned i = 0; i < m_operations.size(); ++i)
-            m_operations[i]->apply(t, sz);
-    }
 
     // Return true if any of the operation types are 3D operation types (even if the
     // values describe affine transforms)
@@ -64,7 +62,7 @@ public:
     bool hasMatrixOperation() const
     {
         return std::any_of(m_operations.begin(), m_operations.end(), [](auto operation) {
-            return operation->type() == WebCore::TransformOperation::MATRIX;
+            return operation->type() == WebCore::TransformOperation::Type::Matrix;
         });
     }
 
@@ -76,13 +74,6 @@ public:
         }
         return true;
     }
-
-    bool operationsMatch(const TransformOperations&) const;
-
-    // Find a list of transform primitives for the given TransformOperations which are compatible with the primitives
-    // stored in sharedPrimitives. The results are written back into sharedPrimitives. This returns false if any element
-    // of TransformOperation does not have a shared primitive, otherwise it returns true.
-    bool updateSharedPrimitives(Vector<TransformOperation::OperationType>& sharedPrimitives) const;
 
     void clear()
     {
@@ -105,12 +96,29 @@ public:
 
     bool shouldFallBackToDiscreteAnimation(const TransformOperations&, const LayoutSize&) const;
 
-    TransformOperations blendByMatchingOperations(const TransformOperations& from, const BlendingContext&, const LayoutSize&) const;
-    TransformOperations blendByUsingMatrixInterpolation(const TransformOperations& from, const BlendingContext&, const LayoutSize&) const;
-    TransformOperations blend(const TransformOperations& from, const BlendingContext&, const LayoutSize&) const;
+    RefPtr<TransformOperation> createBlendedMatrixOperationFromOperationsSuffix(const TransformOperations& from, unsigned start, const BlendingContext&, const LayoutSize& referenceBoxSize) const;
+    TransformOperations blend(const TransformOperations& from, const BlendingContext&, const LayoutSize&, std::optional<unsigned> prefixLength = std::nullopt) const;
 
 private:
     Vector<RefPtr<TransformOperation>> m_operations;
+};
+
+// SharedPrimitivesPrefix is used to find a shared prefix of transform function primitives (as
+// defined by CSS Transforms Level 1 & 2). Given a series of TransformOperations in the keyframes
+// of an animation. After update() is called with the TransformOperations of every keyframe,
+// primitive() will return the prefix of primitives that are shared by all keyframes passed
+// to update().
+class SharedPrimitivesPrefix {
+public:
+    SharedPrimitivesPrefix() = default;
+    virtual ~SharedPrimitivesPrefix() = default;
+    void update(const TransformOperations&);
+    bool hadIncompatibleTransformFunctions() { return m_indexOfFirstMismatch.has_value(); }
+    const Vector<TransformOperation::Type>& primitives() const { return m_primitives; }
+
+private:
+    std::optional<size_t> m_indexOfFirstMismatch;
+    Vector<TransformOperation::Type> m_primitives;
 };
 
 WTF::TextStream& operator<<(WTF::TextStream&, const TransformOperations&);

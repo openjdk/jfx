@@ -40,6 +40,7 @@ namespace WebCore {
 class Document;
 class FormSubmission;
 class Frame;
+class LocalFrame;
 class ScheduledNavigation;
 class SecurityOrigin;
 
@@ -65,6 +66,8 @@ public:
 
     void cancel(NewLoadInProgress = NewLoadInProgress::No);
     void clear();
+
+    bool hasQueuedNavigation() const;
 
 private:
     bool shouldScheduleNavigation() const;

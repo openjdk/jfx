@@ -32,6 +32,8 @@
 #include "MessagePort.h"
 #include "SerializedScriptValue.h"
 #include "StructuredSerializeOptions.h"
+#include <JavaScriptCore/Exception.h>
+#include <JavaScriptCore/JSCJSValueInlines.h>
 
 namespace WebCore {
 
@@ -39,7 +41,7 @@ void WindowOrWorkerGlobalScope::reportError(JSDOMGlobalObject& globalObject, JSC
 {
     auto& vm = globalObject.vm();
     RELEASE_ASSERT(vm.currentThreadIsHoldingAPILock());
-    auto* exception = JSC::jsDynamicCast<JSC::Exception*>(vm, error);
+    auto* exception = JSC::jsDynamicCast<JSC::Exception*>(error);
     if (!exception)
         exception = JSC::Exception::create(vm, error);
 
@@ -49,7 +51,7 @@ void WindowOrWorkerGlobalScope::reportError(JSDOMGlobalObject& globalObject, JSC
 ExceptionOr<JSC::JSValue> WindowOrWorkerGlobalScope::structuredClone(JSDOMGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& relevantGlobalObject, JSC::JSValue value, StructuredSerializeOptions&& options)
 {
     Vector<RefPtr<MessagePort>> ports;
-    auto messageData = SerializedScriptValue::create(lexicalGlobalObject, value, WTFMove(options.transfer), ports, SerializationContext::WindowPostMessage);
+    auto messageData = SerializedScriptValue::create(lexicalGlobalObject, value, WTFMove(options.transfer), ports, SerializationForStorage::No, SerializationContext::WindowPostMessage);
     if (messageData.hasException())
         return messageData.releaseException();
 

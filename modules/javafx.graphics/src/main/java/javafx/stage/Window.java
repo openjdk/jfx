@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -632,6 +632,7 @@ public class Window implements EventTarget {
         width.set(value);
         peerBoundsConfigurator.setWindowWidth(value);
         widthExplicit = true;
+        sizeToScene = false;
     }
     public final double getWidth() { return width.get(); }
     public final ReadOnlyDoubleProperty widthProperty() { return width.getReadOnlyProperty(); }
@@ -664,6 +665,7 @@ public class Window implements EventTarget {
         height.set(value);
         peerBoundsConfigurator.setWindowHeight(value);
         heightExplicit = true;
+        sizeToScene = false;
     }
     public final double getHeight() { return height.get(); }
     public final ReadOnlyDoubleProperty heightProperty() { return height.getReadOnlyProperty(); }
@@ -1311,17 +1313,7 @@ public class Window implements EventTarget {
 
     private WindowEventDispatcher internalEventDispatcher;
 
-    // PENDING_DOC_REVIEW
-    /**
-     * Registers an event handler to this node. The handler is called when the
-     * node receives an {@code Event} of the specified type during the bubbling
-     * phase of event delivery.
-     *
-     * @param <T> the specific event class of the handler
-     * @param eventType the type of the events to receive by the handler
-     * @param eventHandler the handler to register
-     * @throws NullPointerException if the event type or handler is null
-     */
+    @Override
     public final <T extends Event> void addEventHandler(
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
@@ -1329,18 +1321,7 @@ public class Window implements EventTarget {
                                     .addEventHandler(eventType, eventHandler);
     }
 
-    // PENDING_DOC_REVIEW
-    /**
-     * Unregisters a previously registered event handler from this node. One
-     * handler might have been registered for different event types, so the
-     * caller needs to specify the particular event type from which to
-     * unregister the handler.
-     *
-     * @param <T> the specific event class of the handler
-     * @param eventType the event type from which to unregister
-     * @param eventHandler the handler to unregister
-     * @throws NullPointerException if the event type or handler is null
-     */
+    @Override
     public final <T extends Event> void removeEventHandler(
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
@@ -1349,17 +1330,7 @@ public class Window implements EventTarget {
                                                         eventHandler);
     }
 
-    // PENDING_DOC_REVIEW
-    /**
-     * Registers an event filter to this node. The filter is called when the
-     * node receives an {@code Event} of the specified type during the capturing
-     * phase of event delivery.
-     *
-     * @param <T> the specific event class of the filter
-     * @param eventType the type of the events to receive by the filter
-     * @param eventFilter the filter to register
-     * @throws NullPointerException if the event type or filter is null
-     */
+    @Override
     public final <T extends Event> void addEventFilter(
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter) {
@@ -1367,18 +1338,7 @@ public class Window implements EventTarget {
                                     .addEventFilter(eventType, eventFilter);
     }
 
-    // PENDING_DOC_REVIEW
-    /**
-     * Unregisters a previously registered event filter from this node. One
-     * filter might have been registered for different event types, so the
-     * caller needs to specify the particular event type from which to
-     * unregister the filter.
-     *
-     * @param <T> the specific event class of the filter
-     * @param eventType the event type from which to unregister
-     * @param eventFilter the filter to unregister
-     * @throws NullPointerException if the event type or filter is null
-     */
+    @Override
     public final <T extends Event> void removeEventFilter(
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter) {
@@ -1433,13 +1393,6 @@ public class Window implements EventTarget {
         Event.fireEvent(this, event);
     }
 
-    // PENDING_DOC_REVIEW
-    /**
-     * Construct an event dispatch chain for this window.
-     *
-     * @param tail the initial chain to build from
-     * @return the resulting event dispatch chain for this window
-     */
     @Override
     public EventDispatchChain buildEventDispatchChain(
             EventDispatchChain tail) {

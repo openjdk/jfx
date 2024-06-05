@@ -55,19 +55,17 @@ static String collectDigits(const LChar* input, unsigned length, unsigned& posit
     return digits.toString();
 }
 
-static String collectFraction(const LChar* input, unsigned length, unsigned& position)
+static StringView collectFraction(const LChar* input, unsigned length, unsigned& position)
 {
-    StringBuilder digits;
-
     // http://www.ietf.org/rfc/rfc2326.txt
     // [ "." *DIGIT ]
     if (input[position] != '.')
-        return String();
+        return { };
 
-    digits.append(input[position++]);
+    unsigned start = position++;
     while (position < length && isASCIIDigit(input[position]))
-        digits.append(input[position++]);
-    return digits.toString();
+        ++position;
+    return StringView { input + start, position - start };
 }
 
 MediaFragmentURIParser::MediaFragmentURIParser(const URL& url)
@@ -134,11 +132,11 @@ void MediaFragmentURIParser::parseFragments()
         //     name or value are not valid UTF-8 strings, then remove the name-value pair from the list.
         bool validUTF8 = false;
         if (!name.isEmpty() && !value.isEmpty()) {
-            name = name.utf8(StrictConversion).data();
+            name = String::fromUTF8(name.utf8(StrictConversion).data());
             validUTF8 = !name.isEmpty();
 
             if (validUTF8) {
-                value = value.utf8(StrictConversion).data();
+                value = String::fromUTF8(value.utf8(StrictConversion).data());
                 validUTF8 = !value.isEmpty();
             }
         }
@@ -166,7 +164,7 @@ void MediaFragmentURIParser::parseTimeFragment()
         // http://www.w3.org/2008/WebVideo/Fragments/WD-media-fragments-spec/#naming-time
         // Temporal clipping is denoted by the name t, and specified as an interval with a begin
         // time and an end time
-        if (fragment.first != "t")
+        if (fragment.first != "t"_s)
             continue;
 
         // http://www.w3.org/2008/WebVideo/Fragments/WD-media-fragments-spec/#npt-time
@@ -270,8 +268,9 @@ bool MediaFragmentURIParser::parseNPTTime(const LChar* timeString, unsigned leng
     if (timeString[offset] == '.') {
         if (offset == length)
             return true;
-        String digits = collectFraction(timeString, length, offset);
-        fraction = MediaTime::createWithDouble(digits.toDouble());
+        auto digits = collectFraction(timeString, length, offset);
+        bool isValid;
+        fraction = MediaTime::createWithDouble(digits.toDouble(isValid));
         time = MediaTime::createWithDouble(value1) + fraction;
         return true;
     }
@@ -308,8 +307,10 @@ bool MediaFragmentURIParser::parseNPTTime(const LChar* timeString, unsigned leng
         value1 = 0;
     }
 
-    if (offset < length && timeString[offset] == '.')
-        fraction = MediaTime::createWithDouble(collectFraction(timeString, length, offset).toDouble());
+    if (offset < length && timeString[offset] == '.') {
+        bool isValid;
+        fraction = MediaTime::createWithDouble(collectFraction(timeString, length, offset).toDouble(isValid));
+    }
 
     time = MediaTime::createWithDouble((value1 * secondsPerHour) + (value2 * secondsPerMinute) + value3) + fraction;
     return true;

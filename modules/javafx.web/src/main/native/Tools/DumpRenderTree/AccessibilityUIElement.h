@@ -43,10 +43,6 @@ OBJC_CLASS NSString;
 #include <WebCore/COMPtr.h>
 #include <oleacc.h>
 typedef COMPtr<IAccessible> PlatformUIElement;
-#elif ENABLE(ACCESSIBILITY) && PLATFORM(GTK)
-#include "AccessibilityNotificationHandlerAtk.h"
-#include <atk/atk.h>
-typedef AtkObject* PlatformUIElement;
 #else
 typedef void* PlatformUIElement;
 #endif
@@ -137,6 +133,8 @@ public:
     JSRetainPtr<JSStringRef> accessibilityValue() const;
     void setValue(JSStringRef);
     JSRetainPtr<JSStringRef> helpText() const;
+    JSRetainPtr<JSStringRef> liveRegionRelevant() const;
+    JSRetainPtr<JSStringRef> liveRegionStatus() const;
     JSRetainPtr<JSStringRef> orientation() const;
     double x();
     double y();
@@ -149,6 +147,9 @@ public:
     JSRetainPtr<JSStringRef> valueDescription();
     int insertionPointLineNumber();
     JSRetainPtr<JSStringRef> selectedTextRange();
+    JSRetainPtr<JSStringRef> textInputMarkedRange() const;
+    bool isAtomicLiveRegion() const;
+    bool isBusy() const;
     bool isEnabled();
     bool isRequired() const;
 
@@ -203,6 +204,7 @@ public:
     int columnCount();
     void rowHeaders(Vector<AccessibilityUIElement>& elements) const;
     void columnHeaders(Vector<AccessibilityUIElement>& elements) const;
+    JSValueRef selectedCells(JSContextRef) const;
 
     // Tree/Outline specific attributes
     AccessibilityUIElement selectedRowAtIndex(unsigned);
@@ -214,6 +216,10 @@ public:
     AccessibilityUIElement ariaOwnsElementAtIndex(unsigned);
     AccessibilityUIElement ariaFlowToElementAtIndex(unsigned);
     AccessibilityUIElement ariaControlsElementAtIndex(unsigned);
+
+#if PLATFORM(COCOA)
+    JSRetainPtr<JSStringRef> customContent() const;
+#endif
 
     // ARIA Drag and Drop
     bool ariaIsGrabbed() const;
@@ -237,7 +243,6 @@ public:
 #endif
 
 #if PLATFORM(IOS_FAMILY)
-    void elementsForRange(unsigned location, unsigned length, Vector<AccessibilityUIElement>& elements);
     JSRetainPtr<JSStringRef> stringForSelection();
     void increaseTextSelection();
     void decreaseTextSelection();
@@ -249,16 +254,14 @@ public:
     bool scrollPageRight();
 
     bool hasContainedByFieldsetTrait();
+    bool hasTextEntryTrait();
     AccessibilityUIElement fieldsetAncestorElement();
     JSRetainPtr<JSStringRef> attributedStringForElement();
-#endif
 
-#if PLATFORM(GTK)
-    // Text-specific
-    JSRetainPtr<JSStringRef> characterAtOffset(int offset);
-    JSRetainPtr<JSStringRef> wordAtOffset(int offset);
-    JSRetainPtr<JSStringRef> lineAtOffset(int offset);
-    JSRetainPtr<JSStringRef> sentenceAtOffset(int offset);
+    bool isDeletion();
+    bool isInsertion();
+    bool isFirstItemInSuggestion();
+    bool isLastItemInSuggestion();
 #endif
 
     // Table-specific
@@ -298,6 +301,7 @@ public:
     bool setSelectedTextMarkerRange(AccessibilityTextMarkerRange*);
     bool replaceTextInRange(JSStringRef, int position, int length);
     bool insertText(JSStringRef);
+    AccessibilityTextMarkerRange textInputMarkedTextMarkerRange() const;
 
     JSRetainPtr<JSStringRef> stringForTextMarkerRange(AccessibilityTextMarkerRange*);
     JSRetainPtr<JSStringRef> attributedStringForTextMarkerRange(AccessibilityTextMarkerRange*);
@@ -306,6 +310,7 @@ public:
     bool attributedStringForTextMarkerRangeContainsAttribute(JSStringRef, AccessibilityTextMarkerRange*);
     int indexForTextMarker(AccessibilityTextMarker*);
     bool isTextMarkerValid(AccessibilityTextMarker*);
+    bool isTextMarkerNull(AccessibilityTextMarker*);
     AccessibilityTextMarker textMarkerForIndex(int);
 
     void scrollToMakeVisible();
@@ -330,6 +335,8 @@ public:
     bool isTextArea() const;
     bool isSearchField() const;
 
+    bool isMarkAnnotation() const;
+
     AccessibilityTextMarkerRange textMarkerRangeMatchesTextNearMarkers(JSStringRef, AccessibilityTextMarker*, AccessibilityTextMarker*);
 #endif // PLATFORM(IOS_FAMILY)
 
@@ -346,8 +353,9 @@ public:
     JSRetainPtr<JSStringRef> mathPrescriptsDescription() const;
 #endif
 
-private:
     static JSClassRef getJSClass();
+
+private:
 
 #if !PLATFORM(COCOA)
     PlatformUIElement m_element;
@@ -356,9 +364,5 @@ private:
 #if PLATFORM(COCOA)
     RetainPtr<id> m_element;
     RetainPtr<id> m_notificationHandler;
-#endif
-
-#if ENABLE(ACCESSIBILITY) && PLATFORM(GTK)
-    RefPtr<AccessibilityNotificationHandler> m_notificationHandler;
 #endif
 };

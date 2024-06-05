@@ -46,10 +46,12 @@ public:
 
     virtual StyledElement* parentElement() const { return nullptr; }
     virtual CSSRule* parentRule() const = 0;
+    virtual CSSRule* cssRules() const = 0;
     virtual String cssText() const = 0;
     virtual ExceptionOr<void> setCssText(const String&) = 0;
     virtual unsigned length() const = 0;
     virtual String item(unsigned index) const = 0;
+    bool isSupportedPropertyIndex(unsigned index) const { return index < length(); }
     virtual RefPtr<DeprecatedCSSOMValue> getPropertyCSSValue(const String& propertyName) = 0;
     virtual String getPropertyValue(const String& propertyName) = 0;
     virtual String getPropertyPriority(const String& propertyName) = 0;
@@ -63,8 +65,6 @@ public:
 
     // CSSPropertyID versions of the CSSOM functions to support bindings and editing.
     // Use the non-virtual methods in the concrete subclasses when possible.
-    // The CSSValue returned by this function should not be exposed to the web as it may be used by multiple documents at the same time.
-    virtual RefPtr<CSSValue> getPropertyCSSValueInternal(CSSPropertyID) = 0;
     virtual String getPropertyValueInternal(CSSPropertyID) = 0;
     virtual ExceptionOr<void> setPropertyInternal(CSSPropertyID, const String& value, bool important) = 0;
 

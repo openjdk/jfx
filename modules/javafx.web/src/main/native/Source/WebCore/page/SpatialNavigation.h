@@ -29,9 +29,9 @@
 namespace WebCore {
 
 class Element;
-class Frame;
 class HTMLAreaElement;
 class IntRect;
+class LocalFrame;
 class RenderObject;
 
 inline long long maxDistance()
@@ -44,7 +44,7 @@ inline int fudgeFactor()
     return 2;
 }
 
-bool isSpatialNavigationEnabled(const Frame*);
+bool isSpatialNavigationEnabled(const LocalFrame*);
 
 // Spatially speaking, two given elements in a web page can be:
 // 1) Fully aligned: There is a full intersection between the rects, either
@@ -89,7 +89,7 @@ bool isSpatialNavigationEnabled(const Frame*);
 // "Totally Aligned" elements are preferable candidates to move
 // focus to over "Partially Aligned" ones, that on its turns are
 // more preferable than "Not Aligned".
-enum RectsAlignment {
+enum class RectsAlignment {
     None = 0,
     Partial,
     Full
@@ -101,7 +101,7 @@ struct FocusCandidate {
         , focusableNode(nullptr)
         , enclosingScrollableBox(nullptr)
         , distance(maxDistance())
-        , alignment(None)
+        , alignment(RectsAlignment::None)
         , isOffscreen(true)
         , isOffscreenAfterScrolling(true)
     {
@@ -128,17 +128,17 @@ struct FocusCandidate {
 };
 
 bool hasOffscreenRect(Node*, FocusDirection = FocusDirection::None);
-bool scrollInDirection(Frame*, FocusDirection);
+bool scrollInDirection(LocalFrame*, FocusDirection);
 bool scrollInDirection(Node* container, FocusDirection);
 bool canScrollInDirection(const Node* container, FocusDirection);
-bool canScrollInDirection(const Frame*, FocusDirection);
+bool canScrollInDirection(const LocalFrame*, FocusDirection);
 bool canBeScrolledIntoView(FocusDirection, const FocusCandidate&);
 bool areElementsOnSameLine(const FocusCandidate& firstCandidate, const FocusCandidate& secondCandidate);
 bool isValidCandidate(FocusDirection, const FocusCandidate&, FocusCandidate&);
 void distanceDataForNode(FocusDirection, const FocusCandidate& current, FocusCandidate& candidate);
 Node* scrollableEnclosingBoxOrParentFrameForNodeInDirection(FocusDirection, Node*);
 LayoutRect nodeRectInAbsoluteCoordinates(Node*, bool ignoreBorder = false);
-LayoutRect frameRectInAbsoluteCoordinates(Frame*);
+LayoutRect frameRectInAbsoluteCoordinates(LocalFrame*);
 LayoutRect virtualRectForDirection(FocusDirection, const LayoutRect& startingRect, LayoutUnit width = 0_lu);
 LayoutRect virtualRectForAreaElementAndDirection(HTMLAreaElement*, FocusDirection);
 HTMLFrameOwnerElement* frameOwnerElement(FocusCandidate&);

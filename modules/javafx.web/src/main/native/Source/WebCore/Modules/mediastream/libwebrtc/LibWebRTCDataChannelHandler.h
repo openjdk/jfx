@@ -24,7 +24,7 @@
 
 #pragma once
 
-#if USE(LIBWEBRTC)
+#if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
 
 #include "LibWebRTCMacros.h"
 #include "ProcessQualified.h"
@@ -36,10 +36,12 @@
 #include <wtf/WeakPtr.h>
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
+ALLOW_COMMA_BEGIN
 
 #include <webrtc/api/data_channel_interface.h>
 
 ALLOW_UNUSED_PARAMETERS_END
+ALLOW_COMMA_END
 
 namespace webrtc {
 struct DataChannelInit;
@@ -70,6 +72,7 @@ private:
     bool sendStringData(const CString&) final;
     bool sendRawData(const uint8_t*, size_t) final;
     void close() final;
+    std::optional<unsigned short> id() const final;
 
     // webrtc::DataChannelObserver API
     void OnStateChange();
@@ -100,4 +103,4 @@ private:
 
 } // namespace WebCore
 
-#endif // USE(LIBWEBRTC)
+#endif // ENABLE(WEB_RTC) && USE(LIBWEBRTC)

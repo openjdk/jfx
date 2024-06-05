@@ -48,10 +48,10 @@ namespace WebCore {
 class Blob;
 class ThreadableWebSocketChannel;
 
-class WebSocket final : public RefCounted<WebSocket>, public EventTargetWithInlineData, public ActiveDOMObject, private WebSocketChannelClient {
+class WebSocket final : public RefCounted<WebSocket>, public EventTarget, public ActiveDOMObject, private WebSocketChannelClient {
     WTF_MAKE_ISO_ALLOCATED(WebSocket);
 public:
-    static const char* subprotocolSeparator();
+    static ASCIILiteral subprotocolSeparator();
 
     static ExceptionOr<Ref<WebSocket>> create(ScriptExecutionContext&, const String& url);
     static ExceptionOr<Ref<WebSocket>> create(ScriptExecutionContext&, const String& url, const String& protocol);
@@ -88,8 +88,9 @@ public:
     String protocol() const;
     String extensions() const;
 
-    String binaryType() const;
-    ExceptionOr<void> setBinaryType(const String&);
+    enum class BinaryType : bool { Blob, Arraybuffer };
+    BinaryType binaryType() const { return m_binaryType; }
+    ExceptionOr<void> setBinaryType(BinaryType);
 
     ScriptExecutionContext* scriptExecutionContext() const final;
 
@@ -113,9 +114,9 @@ private:
     void derefEventTarget() final { deref(); }
 
     void didConnect() final;
-    void didReceiveMessage(const String& message) final;
+    void didReceiveMessage(String&& message) final;
     void didReceiveBinaryData(Vector<uint8_t>&&) final;
-    void didReceiveMessageError() final;
+    void didReceiveMessageError(String&& reason) final;
     void didUpdateBufferedAmount(unsigned bufferedAmount) final;
     void didStartClosingHandshake() final;
     void didClose(unsigned unhandledBufferedAmount, ClosingHandshakeCompletionStatus, unsigned short code, const String& reason) final;
@@ -124,8 +125,6 @@ private:
     size_t getFramingOverhead(size_t payloadSize);
 
     void failAsynchronously();
-
-    enum class BinaryType { Blob, ArrayBuffer };
 
     static Lock s_allActiveWebSocketsLock;
     RefPtr<ThreadableWebSocketChannel> m_channel;

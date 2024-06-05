@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,6 +46,7 @@ import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.text.Font;
 import com.sun.glass.ui.Accessible;
+import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import static javafx.scene.AccessibleAttribute.*;
@@ -361,7 +362,13 @@ final class MacAccessible extends Accessible {
             },
             null
         ),
-        NSAccessibilityRowRole(new AccessibleRole[] {AccessibleRole.LIST_ITEM, AccessibleRole.TABLE_ROW, AccessibleRole.TREE_ITEM, AccessibleRole.TREE_TABLE_ROW},
+        NSAccessibilityRowRole(new AccessibleRole[] {
+                AccessibleRole.LIST_ITEM,
+                AccessibleRole.TABLE_ROW,
+                AccessibleRole.TREE_ITEM,
+                AccessibleRole.CHECK_BOX_TREE_ITEM,
+                AccessibleRole.TREE_TABLE_ROW
+            },
             new MacAttribute[] {
                 MacAttribute.NSAccessibilitySubroleAttribute,
                 MacAttribute.NSAccessibilityIndexAttribute,
@@ -483,7 +490,11 @@ final class MacAccessible extends Accessible {
     private static enum MacSubrole {
         NSAccessibilityTableRowSubrole(AccessibleRole.LIST_ITEM, AccessibleRole.TABLE_ROW),
         NSAccessibilitySecureTextFieldSubrole(AccessibleRole.PASSWORD_FIELD),
-        NSAccessibilityOutlineRowSubrole(new AccessibleRole[] { AccessibleRole.TREE_ITEM, AccessibleRole.TREE_TABLE_ROW },
+        NSAccessibilityOutlineRowSubrole(new AccessibleRole[] {
+                AccessibleRole.TREE_ITEM,
+                AccessibleRole.CHECK_BOX_TREE_ITEM,
+                AccessibleRole.TREE_TABLE_ROW
+            },
             new MacAttribute[] {
                 MacAttribute.NSAccessibilityDisclosedByRowAttribute,
                 MacAttribute.NSAccessibilityDisclosedRowsAttribute,
@@ -633,11 +644,14 @@ final class MacAccessible extends Accessible {
     /* The native peer associated with the instance */
     private long peer;
 
-    /* Creates a GlassAccessible linked to the caller (GlobalRef) */
-    private native long _createGlassAccessible();
+    /* Creates a native accessible peer linked to the caller (GlobalRef) */
+    private native long _createAccessiblePeer(String forRole);
 
-    /* Releases the GlassAccessible and deletes the GlobalRef */
-    private native void _destroyGlassAccessible(long accessible);
+    /* Releases the native accessible peer and deletes the GlobalRef */
+    private native void _destroyAccessiblePeer(long accessible);
+
+    /* Notify accessible peer about hierarchy change to invalidate parent */
+    private native void _invalidateParent(long accessible);
 
     private static native String getString(long nsString);
     private static native boolean isEqualToString(long nsString1, long nsString);
@@ -655,19 +669,16 @@ final class MacAccessible extends Accessible {
     private static final int kAXMenuItemModifierNoCommand    = (1 << 3);
 
     MacAccessible() {
-        this.peer = _createGlassAccessible();
-        if (this.peer == 0L) {
-            throw new RuntimeException("could not create platform accessible");
-        }
     }
 
     @Override
     public void dispose() {
+        Application.checkEventThread();
         if (peer != 0L) {
             if (getView() == null) {
                 NSAccessibilityPostNotification(peer, MacNotification.NSAccessibilityUIElementDestroyedNotification.ptr);
             }
-            _destroyGlassAccessible(peer);
+            _destroyAccessiblePeer(peer);
             peer = 0L;
         }
         super.dispose();
@@ -675,6 +686,7 @@ final class MacAccessible extends Accessible {
 
     @Override
     public void sendNotification(AccessibleAttribute notification) {
+        Application.checkEventThread();
         if (isDisposed()) return;
 
         MacNotification macNotification = null;
@@ -748,8 +760,9 @@ final class MacAccessible extends Accessible {
                 }
 
                 AccessibleRole role = (AccessibleRole) getAttribute(ROLE);
-                if (role == AccessibleRole.TREE_ITEM || role == AccessibleRole.TREE_TABLE_ROW) {
-                    AccessibleRole containerRole = role == AccessibleRole.TREE_ITEM ? AccessibleRole.TREE_VIEW : AccessibleRole.TREE_TABLE_VIEW;
+                if (role == AccessibleRole.TREE_ITEM || role == AccessibleRole.CHECK_BOX_TREE_ITEM || role == AccessibleRole.TREE_TABLE_ROW) {
+                    AccessibleRole containerRole = (role == AccessibleRole.TREE_ITEM || role == AccessibleRole.CHECK_BOX_TREE_ITEM) ?
+                                                                                AccessibleRole.TREE_VIEW : AccessibleRole.TREE_TABLE_VIEW;
                     MacAccessible container = (MacAccessible)getContainerAccessible(containerRole);
                     if (container != null) {
                         NSAccessibilityPostNotification(container.getNativeAccessible(), MacNotification.NSAccessibilityRowCountChangedNotification.ptr);
@@ -791,7 +804,15 @@ final class MacAccessible extends Accessible {
                     macNotification = MacNotification.NSAccessibilityValueChangedNotification;
                 }
                 break;
+            case VALUE_STRING:
+                if (getAttribute(ROLE) == AccessibleRole.SPINNER) {
+                    macNotification = MacNotification.NSAccessibilityValueChangedNotification;
+                }
+                break;
             case PARENT:
+                if (peer != 0L) {
+                    _invalidateParent(peer);
+                }
                 ignoreInnerText = null;
                 break;
             default:
@@ -799,17 +820,28 @@ final class MacAccessible extends Accessible {
         }
         if (macNotification != null) {
             View view = getView();
-            long id = view != null ? view.getNativeView() : peer;
+            long id = view != null ? view.getNativeView() : getNativeAccessible();
             NSAccessibilityPostNotification(id, macNotification.ptr);
         }
     }
 
     @Override
     protected long getNativeAccessible() {
+        Application.checkEventThread();
+        if (this.peer == 0L) {
+            AccessibleRole role = (AccessibleRole) getAttribute(ROLE);
+            if (role == null) role = AccessibleRole.NODE;
+            this.peer = _createAccessiblePeer(role.toString());
+            if (this.peer == 0L) {
+                throw new RuntimeException("could not create platform accessible");
+            }
+        }
+
         return peer;
     }
 
     private View getRootView(Scene scene) {
+        Application.checkEventThread();
         if (scene == null) return null;
         Accessible acc = getAccessible(scene);
         if (acc == null || acc.isDisposed()) return null;
@@ -819,6 +851,7 @@ final class MacAccessible extends Accessible {
     }
 
     private long[] getUnignoredChildren(ObservableList<Node> children) {
+        Application.checkEventThread();
         if (children == null) return new long[0];
         long[] ids = children.stream()
                              .filter(Node::isVisible)
@@ -953,9 +986,7 @@ final class MacAccessible extends Accessible {
     }
 
     private Bounds flipBounds(Bounds bounds) {
-        View view = getRootView((Scene)getAttribute(SCENE));
-        if (view == null || view.getWindow() == null) return null;
-        Screen screen = view.getWindow().getScreen();
+        Screen screen = Screen.getMainScreen();
         float height = screen.getHeight();
         return new BoundingBox(bounds.getMinX(),
                                height - bounds.getMinY() - bounds.getHeight(),
@@ -965,6 +996,7 @@ final class MacAccessible extends Accessible {
 
     /* NSAccessibility Protocol - JNI entry points */
     private long[] accessibilityAttributeNames() {
+        Application.checkEventThread();
         if (getView() != null) return null; /* Let NSView answer for the Scene */
         AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
         if (role != null) {
@@ -1011,6 +1043,7 @@ final class MacAccessible extends Accessible {
     }
 
     private int accessibilityArrayAttributeCount(long attribute) {
+        Application.checkEventThread();
         MacAttribute attr = MacAttribute.getAttribute(attribute);
         if (attr == null) {
             return -1;
@@ -1066,6 +1099,7 @@ final class MacAccessible extends Accessible {
     }
 
     private long[] accessibilityArrayAttributeValues(long attribute, int index, int maxCount) {
+        Application.checkEventThread();
         MacAttribute attr = MacAttribute.getAttribute(attribute);
         if (attr == null) {
             return null;
@@ -1125,6 +1159,7 @@ final class MacAccessible extends Accessible {
     }
 
     private boolean accessibilityIsAttributeSettable(long attribute) {
+        Application.checkEventThread();
         MacAttribute attr = MacAttribute.getAttribute(attribute);
         if (attr == null) return false;
         switch (attr) {
@@ -1152,6 +1187,7 @@ final class MacAccessible extends Accessible {
     }
 
     private MacVariant accessibilityAttributeValue(long attribute) {
+        Application.checkEventThread();
         MacAttribute attr = MacAttribute.getAttribute(attribute);
         if (attr == null) {
             return null;
@@ -1188,6 +1224,10 @@ final class MacAccessible extends Accessible {
                         case TEXT_AREA:
                         case COMBO_BOX:
                             jfxAttr = TEXT;
+                            map = MacVariant::createNSString;
+                            break;
+                        case SPINNER:
+                            jfxAttr = VALUE_STRING;
                             map = MacVariant::createNSString;
                             break;
                         case CHECK_BOX:
@@ -1594,6 +1634,7 @@ final class MacAccessible extends Accessible {
     }
 
     private void accessibilitySetValue(long value, long attribute) {
+        Application.checkEventThread();
         MacAttribute attr = MacAttribute.getAttribute(attribute);
         if (attr != null) {
             switch (attr) {
@@ -1685,6 +1726,7 @@ final class MacAccessible extends Accessible {
     }
 
     private long[] accessibilityParameterizedAttributeNames() {
+        Application.checkEventThread();
         if (getView() != null) return null; /* Let NSView answer for the Scene */
         AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
         if (role != null) {
@@ -1714,6 +1756,7 @@ final class MacAccessible extends Accessible {
     }
 
     private MacVariant accessibilityAttributeValueForParameter(long attribute, long parameter) {
+        Application.checkEventThread();
         MacAttribute attr = MacAttribute.getAttribute(attribute);
         if (attr == null || attr.inputType == 0 || attr.jfxAttr == null) {
             return null;
@@ -1834,6 +1877,7 @@ final class MacAccessible extends Accessible {
     }
 
     private long[] accessibilityActionNames() {
+        Application.checkEventThread();
         if (getView() != null) return null; /* Let NSView answer for the Scene */
         AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
         List<MacAction> actions = new ArrayList<>();
@@ -1886,6 +1930,7 @@ final class MacAccessible extends Accessible {
     }
 
     private long accessibilityFocusedUIElement() {
+        Application.checkEventThread();
         Node node = (Node)getAttribute(FOCUS_NODE);
         if (node == null) return 0L;
 
@@ -1895,6 +1940,7 @@ final class MacAccessible extends Accessible {
     }
 
     private boolean accessibilityIsIgnored() {
+        Application.checkEventThread();
         if (isIgnored()) return true;
         if (isInSlider()) {
             /*
@@ -1915,6 +1961,7 @@ final class MacAccessible extends Accessible {
     }
 
     private long accessibilityHitTest(float x, float y) {
+        Application.checkEventThread();
         View view = getView();
         if (view == null || view.getWindow() == null) {
             return 0L;

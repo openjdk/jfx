@@ -55,8 +55,8 @@ private:
     bool isLoading() const final { return m_isLoading; }
     bool errorOccurred() const final { return m_errorOccurred; }
 
-    bool ensureCustomFontData(const AtomString& remoteURI) final;
-    RefPtr<Font> createFont(const FontDescription&, const AtomString& remoteURI, bool syntheticBold, bool syntheticItalic, const FontCreationContext&) final;
+    bool ensureCustomFontData() final;
+    RefPtr<Font> createFont(const FontDescription&, bool syntheticBold, bool syntheticItalic, const FontCreationContext&) final;
 
     void setClient(FontLoadRequestClient*) final;
 
@@ -77,7 +77,7 @@ private:
 
     WeakPtr<ScriptExecutionContext> m_context;
     SharedBufferBuilder m_data;
-    std::unique_ptr<FontCustomPlatformData> m_fontCustomPlatformData;
+    RefPtr<FontCustomPlatformData> m_fontCustomPlatformData;
 };
 
 } // namespace WebCore

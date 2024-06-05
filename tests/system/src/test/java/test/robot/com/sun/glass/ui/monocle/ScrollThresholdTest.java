@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,11 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import test.robot.com.sun.glass.ui.monocle.ScrollTestBase;
-import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 
 /**
  * Scroll tests that are checking scroll threshold
@@ -53,6 +52,7 @@ public class ScrollThresholdTest extends ScrollTestBase {
     }
 
     @Before
+    @Override
     public void init() {
         super.init();
         Assume.assumeTrue(device.getTapRadius() < getScrollThreshold());

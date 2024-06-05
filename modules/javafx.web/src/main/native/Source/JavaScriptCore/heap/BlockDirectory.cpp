@@ -59,32 +59,32 @@ void BlockDirectory::setSubspace(Subspace* subspace)
 
 void BlockDirectory::updatePercentageOfPagedOutPages(SimpleStats& stats)
 {
-    // FIXME: We should figure out a solution for Windows.
-#if OS(UNIX)
+    // FIXME: We should figure out a solution for Windows and PlayStation.
+#if OS(UNIX) && !PLATFORM(PLAYSTATION)
     size_t pageSize = WTF::pageSize();
     ASSERT(!(MarkedBlock::blockSize % pageSize));
     auto numberOfPagesInMarkedBlock = MarkedBlock::blockSize / pageSize;
     // For some reason this can be unsigned char or char on different OSes...
     using MincoreBufferType = std::remove_pointer_t<FunctionTraits<decltype(mincore)>::ArgumentType<2>>;
     static_assert(std::is_same_v<std::make_unsigned_t<MincoreBufferType>, unsigned char>);
-    // pageSize is effectively a constant so this isn't really variable.
-    IGNORE_CLANG_WARNINGS_BEGIN("vla")
-    MincoreBufferType pagedBits[numberOfPagesInMarkedBlock];
-    IGNORE_CLANG_WARNINGS_END
+    Vector<MincoreBufferType, 16> pagedBits(numberOfPagesInMarkedBlock, MincoreBufferType { });
 
     for (auto* handle : m_blocks) {
         if (!handle)
             continue;
 
-        auto markedBlockSizeInBytes = static_cast<size_t>(reinterpret_cast<char*>(handle->end()) - reinterpret_cast<char*>(handle->start()));
+        auto* pageStart = handle->pageStart();
+        auto markedBlockSizeInBytes = handle->backingStorageSize();
         RELEASE_ASSERT(markedBlockSizeInBytes / pageSize <= numberOfPagesInMarkedBlock);
         // We could cache this in bulk (e.g. 25 MB chunks) but we haven't seen any data that it actually matters.
-        auto result = mincore(handle->start(), markedBlockSizeInBytes, pagedBits);
+        auto result = mincore(pageStart, markedBlockSizeInBytes, pagedBits.data());
         RELEASE_ASSERT(!result);
         constexpr unsigned pageIsResidentAndNotCompressed = 1;
         for (unsigned i = 0; i < numberOfPagesInMarkedBlock; ++i)
             stats.add(!(pagedBits[i] & pageIsResidentAndNotCompressed));
     }
+#else
+    UNUSED_PARAM(stats);
 #endif
 }
 

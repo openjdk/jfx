@@ -74,7 +74,7 @@
 
 #include "gsttypefindelement.h"
 #include "gstcoreelementselements.h"
-#include "gst/gst-i18n-lib.h"
+#include <glib/gi18n-lib.h>
 #include "gst/base/gsttypefindhelper.h"
 
 #include <gst/gsttypefind.h>
@@ -803,6 +803,8 @@ gst_type_find_get_extension (GstTypeFindElement * typefind, GstPad * pad)
   gchar *uri, *result, *path, *base_path, *find;
   GstUri *gst_uri;
 
+  base_path = NULL;
+
   query = gst_query_new_uri ();
 
   /* try getting the caps with an uri query and from the extension */
@@ -812,6 +814,11 @@ gst_type_find_get_extension (GstTypeFindElement * typefind, GstPad * pad)
   gst_query_parse_uri (query, &uri);
   if (uri == NULL)
     goto no_uri;
+
+  /* data URIs paths are opaque and do not semantically represent a
+     filesystem-like resource path, so skip URI parsing for this case. */
+  if (g_str_has_prefix (uri, "data:"))
+    goto no_extension;
 
   GST_DEBUG_OBJECT (typefind, "finding extension of %s", uri);
 

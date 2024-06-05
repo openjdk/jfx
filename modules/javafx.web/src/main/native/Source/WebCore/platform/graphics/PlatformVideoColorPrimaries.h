@@ -33,19 +33,18 @@ enum class PlatformVideoColorPrimaries : uint8_t {
     Bt709,
     Bt470bg,
     Smpte170m,
+    Bt470m,
+    Smpte240m,
+    Film,
+    Bt2020,
+    SmpteSt4281,
+    SmpteRp431,
+    SmpteEg432,
+    JedecP22Phosphors,
+    Unspecified,
+
+    // Aliases for WebIDL bindings
+    Smpte432 = SmpteEg432,
 };
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::PlatformVideoColorPrimaries> {
-    using values = EnumValues<
-        WebCore::PlatformVideoColorPrimaries,
-        WebCore::PlatformVideoColorPrimaries::Bt709,
-        WebCore::PlatformVideoColorPrimaries::Bt470bg,
-        WebCore::PlatformVideoColorPrimaries::Smpte170m
-    >;
-};
-
-}

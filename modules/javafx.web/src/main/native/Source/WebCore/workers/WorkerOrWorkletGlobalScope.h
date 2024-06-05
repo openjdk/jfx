@@ -39,14 +39,15 @@ class WorkerInspectorController;
 class WorkerOrWorkletScriptController;
 class WorkerOrWorkletThread;
 
-class WorkerOrWorkletGlobalScope : public ScriptExecutionContext, public RefCounted<WorkerOrWorkletGlobalScope>, public EventTargetWithInlineData {
+class WorkerOrWorkletGlobalScope : public ScriptExecutionContext, public RefCounted<WorkerOrWorkletGlobalScope>, public EventTarget {
     WTF_MAKE_ISO_ALLOCATED(WorkerOrWorkletGlobalScope);
     WTF_MAKE_NONCOPYABLE(WorkerOrWorkletGlobalScope);
 public:
     virtual ~WorkerOrWorkletGlobalScope();
 
     using ScriptExecutionContext::weakPtrFactory;
-    using WeakValueType = ScriptExecutionContext::WeakValueType;
+    using ScriptExecutionContext::WeakValueType;
+    using ScriptExecutionContext::WeakPtrImplType;
 
     bool isClosing() const { return m_isClosing; }
     WorkerOrWorkletThread* workerOrWorkletThread() const { return m_thread; }
@@ -60,10 +61,14 @@ public:
     ScriptModuleLoader& moduleLoader() { return *m_moduleLoader; }
 
     // ScriptExecutionContext.
-    ScriptExecutionContext* scriptExecutionContext() const final { return const_cast<WorkerOrWorkletGlobalScope*>(this); }
     EventLoopTaskGroup& eventLoop() final;
     bool isContextThread() const final;
     void postTask(Task&&) final; // Executes the task on context's thread asynchronously.
+    std::optional<PAL::SessionID> sessionID() const final { return m_sessionID; }
+
+    // Defined specifcially for WorkerOrWorkletGlobalScope for cooperation with
+    // WorkerEventLoop and WorkerRunLoop, not part of ScriptExecutionContext.
+    void postTaskForMode(Task&&, const String&);
 
     virtual void prepareForDestruction();
 
@@ -74,9 +79,11 @@ public:
     virtual void resume() { }
 
     virtual FetchOptions::Destination destination() const = 0;
+    ReferrerPolicy referrerPolicy() const final { return m_referrerPolicy; }
+    std::optional<uint64_t> noiseInjectionHashSalt() const final { return m_noiseInjectionHashSalt; }
 
 protected:
-    WorkerOrWorkletGlobalScope(WorkerThreadType, Ref<JSC::VM>&&, WorkerOrWorkletThread*);
+    WorkerOrWorkletGlobalScope(WorkerThreadType, PAL::SessionID, Ref<JSC::VM>&&, ReferrerPolicy, WorkerOrWorkletThread*, std::optional<uint64_t>,  ScriptExecutionContextIdentifier = { });
 
     // ScriptExecutionContext.
     bool isJSExecutionForbidden() const final;
@@ -91,6 +98,7 @@ private:
     void derefScriptExecutionContext() final { deref(); }
 
     // EventTarget.
+    ScriptExecutionContext* scriptExecutionContext() const final { return const_cast<WorkerOrWorkletGlobalScope*>(this); }
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
@@ -104,7 +112,10 @@ private:
     RefPtr<WorkerEventLoop> m_eventLoop;
     std::unique_ptr<EventLoopTaskGroup> m_defaultTaskGroup;
     std::unique_ptr<WorkerInspectorController> m_inspectorController;
+    PAL::SessionID m_sessionID;
+    ReferrerPolicy m_referrerPolicy;
     bool m_isClosing { false };
+    std::optional<uint64_t> m_noiseInjectionHashSalt;
 };
 
 } // namespace WebCore

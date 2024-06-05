@@ -213,7 +213,6 @@ public:
 };
 
 template<typename T, typename U> inline bool operator==(const FastAllocator<T>&, const FastAllocator<U>&) { return true; }
-template<typename T, typename U> inline bool operator!=(const FastAllocator<T>&, const FastAllocator<U>&) { return false; }
 
 struct FastMalloc {
     static void* malloc(size_t size) { return fastMalloc(size); }
@@ -254,7 +253,7 @@ struct FastMalloc {
 
 template<typename T>
 struct FastFree {
-    static_assert(std::is_trivially_destructible<T>::value, "");
+    static_assert(std::is_trivially_destructible<T>::value);
 
     void operator()(T* pointer) const
     {
@@ -264,7 +263,7 @@ struct FastFree {
 
 template<typename T>
 struct FastFree<T[]> {
-    static_assert(std::is_trivially_destructible<T>::value, "");
+    static_assert(std::is_trivially_destructible<T>::value);
 
     void operator()(T* pointer) const
     {
@@ -338,6 +337,10 @@ using WTF::fastAlignedFree;
         ASSERT(location); \
         return location; \
     } \
+    static void freeAfterDestruction(void* p) \
+    { \
+        ::WTF::fastFree(p); \
+    } \
     using webkitFastMalloced = int; \
 
 // FIXME: WTF_MAKE_FAST_ALLOCATED should take class name so that we can create malloc_zone per this macro.
@@ -381,6 +384,10 @@ using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
     { \
         ASSERT(location); \
         return location; \
+    } \
+    static void freeAfterDestruction(void* p) \
+    { \
+        classname##Malloc::free(p); \
     } \
     using webkitFastMalloced = int; \
 

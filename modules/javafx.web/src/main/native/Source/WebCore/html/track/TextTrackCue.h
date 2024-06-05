@@ -41,6 +41,7 @@
 
 namespace WebCore {
 
+class SpeechSynthesis;
 class TextTrack;
 class TextTrackCue;
 
@@ -50,20 +51,21 @@ public:
     static Ref<TextTrackCueBox> create(Document&, TextTrackCue&);
 
     TextTrackCue* getCue() const;
-    virtual void applyCSSProperties(const IntSize&) { }
+    virtual void applyCSSProperties() { }
 
 protected:
     void initialize();
 
+    constexpr static auto CreateTextTrackCueBox = CreateHTMLElement | NodeFlag::HasCustomStyleResolveCallbacks;
     TextTrackCueBox(Document&, TextTrackCue&);
     ~TextTrackCueBox() { }
 
 private:
 
-    WeakPtr<TextTrackCue> m_cue;
+    WeakPtr<TextTrackCue, WeakPtrImplWithEventTargetData> m_cue;
 };
 
-class TextTrackCue : public RefCounted<TextTrackCue>, public EventTargetWithInlineData, public ActiveDOMObject {
+class TextTrackCue : public RefCounted<TextTrackCue>, public EventTarget, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(TextTrackCue);
 public:
     static ExceptionOr<Ref<TextTrackCue>> create(Document&, double start, double end, DocumentFragment&);
@@ -71,8 +73,8 @@ public:
     TextTrack* track() const;
     void setTrack(TextTrack*);
 
-    const String& id() const { return m_id; }
-    void setId(const String&);
+    const AtomString& id() const { return m_id; }
+    void setId(const AtomString&);
 
     double startTime() const { return startMediaTime().toDouble(); }
     void setStartTime(double);
@@ -107,10 +109,11 @@ public:
     void willChange();
     virtual void didChange();
 
-    virtual RefPtr<TextTrackCueBox> getDisplayTree(const IntSize& videoSize, int fontSize);
+    virtual RefPtr<TextTrackCueBox> getDisplayTree();
     virtual void removeDisplayTree();
 
     virtual RefPtr<DocumentFragment> getCueAsHTML();
+    virtual const String& text() const { return emptyString(); }
 
     String toJSONString() const;
 
@@ -118,17 +121,24 @@ public:
     using RefCounted::deref;
 
     virtual void recalculateStyles() { m_displayTreeNeedsUpdate = true; }
-    virtual void setFontSize(int fontSize, const IntSize& videoSize, bool important);
+    virtual void setFontSize(int fontSize, bool important);
     virtual void updateDisplayTree(const MediaTime&) { }
 
     unsigned cueIndex() const;
 
+    using SpeakCueCompletionHandler = Function<void(const TextTrackCue&)>;
+    virtual void prepareToSpeak(SpeechSynthesis&, double, double, SpeakCueCompletionHandler&&) { }
+    virtual void beginSpeaking() { }
+    virtual void pauseSpeaking() { }
+    virtual void cancelSpeaking() { }
+
+    virtual bool cueContentsMatch(const TextTrackCue&) const;
+
 protected:
     TextTrackCue(Document&, const MediaTime& start, const MediaTime& end);
 
-    Document& ownerDocument() { return m_document; }
+    Document* document() const;
 
-    virtual bool cueContentsMatch(const TextTrackCue&) const;
     virtual void toJSON(JSON::Object&) const;
 
 private:
@@ -147,14 +157,12 @@ private:
 
     void rebuildDisplayTree();
 
-    String m_id;
+    AtomString m_id;
     MediaTime m_startTime;
     MediaTime m_endTime;
     int m_processingCueChanges { 0 };
 
     TextTrack* m_track { nullptr };
-
-    Document& m_document;
 
     RefPtr<DocumentFragment> m_cueNode;
     RefPtr<TextTrackCueBox> m_displayTree;

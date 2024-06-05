@@ -32,9 +32,10 @@
 #include "CachedFont.h"
 #include "CachedResourceLoader.h"
 #include "CachedResourceRequest.h"
-#include "CachedResourceRequestInitiators.h"
-#include "Frame.h"
+#include "CachedResourceRequestInitiatorTypes.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
+#include "LocalFrame.h"
 
 namespace WebCore {
 
@@ -54,9 +55,10 @@ CachedFont* DocumentFontLoader::cachedFont(URL&& url, bool isSVG, bool isInitiat
     ResourceLoaderOptions options = CachedResourceLoader::defaultCachedResourceOptions();
     options.contentSecurityPolicyImposition = isInitiatingElementInUserAgentShadowTree ? ContentSecurityPolicyImposition::SkipPolicyCheck : ContentSecurityPolicyImposition::DoPolicyCheck;
     options.loadedFromOpaqueSource = loadedFromOpaqueSource;
+    options.sameOriginDataURLFlag = SameOriginDataURLFlag::Set;
 
     CachedResourceRequest request(ResourceRequest(WTFMove(url)), options);
-    request.setInitiator(cachedResourceRequestInitiators().css);
+    request.setInitiatorType(cachedResourceRequestInitiatorTypes().css);
     return m_document.cachedResourceLoader().requestFont(WTFMove(request), isSVG).value_or(nullptr).get();
 }
 

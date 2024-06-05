@@ -29,14 +29,10 @@
 
 #pragma once
 
-#include "CSSParserToken.h"
 #include "CSSParserTokenRange.h"
-#include "CSSRegisteredCustomProperty.h"
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
-
-class CSSParserTokenRange;
 
 class CSSVariableData : public RefCounted<CSSVariableData> {
     WTF_MAKE_NONCOPYABLE(CSSVariableData);
@@ -59,8 +55,6 @@ private:
 
     String m_backingString;
     Vector<CSSParserToken> m_tokens;
-
-    // FIXME-NEWPARSER: We want to cache StyleProperties once we support @apply.
 };
 
 } // namespace WebCore

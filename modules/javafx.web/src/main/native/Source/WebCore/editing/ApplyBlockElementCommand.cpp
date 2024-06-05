@@ -31,7 +31,7 @@
 #include "HTMLBRElement.h"
 #include "HTMLNames.h"
 #include "RenderElement.h"
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 #include "Text.h"
 #include "VisibleUnits.h"
 
@@ -78,10 +78,13 @@ void ApplyBlockElementCommand::doApply()
     }
 
     VisibleSelection selection = selectionForParagraphIteration(endingSelection());
+
     VisiblePosition startOfSelection = selection.visibleStart();
+    if (startOfSelection.isNull())
+        return;
     VisiblePosition endOfSelection = selection.visibleEnd();
-    ASSERT(!startOfSelection.isNull());
-    ASSERT(!endOfSelection.isNull());
+    if (endOfSelection.isNull())
+        return;
     RefPtr<ContainerNode> startScope;
     int startIndex = indexForVisiblePosition(startOfSelection, startScope);
     RefPtr<ContainerNode> endScope;
@@ -102,8 +105,11 @@ void ApplyBlockElementCommand::doApply()
         // FIXME: Add a new TextIteratorBehavior to suppress it.
         if (start.isNotNull() && end.isNull())
             end = lastPositionInNode(endScope.get());
-        if (start.isNotNull() && end.isNotNull())
-            setEndingSelection(VisibleSelection(start, end, endingSelection().isDirectional()));
+        if (start.isNotNull() && end.isNotNull()) {
+            VisibleSelection selection { start, end, endingSelection().isDirectional() };
+            // Use canonicalized positions for start & end.
+            setEndingSelection(VisibleSelection(selection.start(), selection.end(), selection.isDirectional()));
+        }
     }
 }
 
@@ -238,7 +244,7 @@ void ApplyBlockElementCommand::rangeForParagraphSplittingTextNodesIfNeeded(const
         unsigned endOffset = end.offsetInContainerNode();
         bool preservesNewLine = endStyle->preserveNewline();
         bool collapseWhiteSpace = endStyle->collapseWhiteSpace();
-        auto userModify = endStyle->userModify();
+        auto userModify = endStyle->effectiveUserModify();
         endStyle = nullptr;
 
         if (preservesNewLine && start == end && endOffset < end.containerNode()->length()) {

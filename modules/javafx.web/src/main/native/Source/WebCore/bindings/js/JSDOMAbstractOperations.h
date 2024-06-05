@@ -33,7 +33,7 @@ namespace WebCore {
 // Implementations of the abstract operations defined at
 // https://webidl.spec.whatwg.org/#legacy-platform-object-abstract-ops
 
-enum class LegacyOverrideBuiltIns { No, Yes };
+enum class LegacyOverrideBuiltIns : bool { No, Yes };
 
 // An implementation of the 'named property visibility algorithm'
 // https://webidl.spec.whatwg.org/#dfn-named-property-visibility
@@ -70,7 +70,7 @@ static bool isVisibleNamedProperty(JSC::JSGlobalObject& lexicalGlobalObject, JSC
     //    1. If prototype is not a named properties object, and prototype has an own property named P, then return false.
     // FIXME: Implement checking for 'named properties object'.
     //    2. Set prototype to be the value of the internal [[Prototype]] property of prototype.
-    auto prototype = thisObject.getPrototypeDirect(JSC::getVM(&lexicalGlobalObject));
+    auto prototype = thisObject.getPrototypeDirect();
     if (prototype.isObject() && JSC::asObject(prototype)->getPropertySlot(&lexicalGlobalObject, propertyName, slot))
         return false;
 
@@ -143,7 +143,7 @@ static auto accessVisibleNamedProperty(JSC::JSGlobalObject& lexicalGlobalObject,
     //    1. If prototype is not a named properties object, and prototype has an own property named P, then return false.
     // FIXME: Implement checking for 'named properties object'.
     //    2. Set prototype to be the value of the internal [[Prototype]] property of prototype.
-    auto prototype = thisObject.getPrototypeDirect(JSC::getVM(&lexicalGlobalObject));
+    auto prototype = thisObject.getPrototypeDirect();
     if (prototype.isObject() && JSC::asObject(prototype)->getPropertySlot(&lexicalGlobalObject, propertyName, slot))
         return std::nullopt;
 

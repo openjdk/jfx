@@ -49,7 +49,7 @@
 #define PAS_MARGE_PAGE_DEFAULT_SHIFT     22
 #define PAS_MARGE_PAGE_DEFAULT_SIZE      ((size_t)1 << PAS_MARGE_PAGE_DEFAULT_SHIFT)
 
-#if PAS_ARM64
+#if PAS_ARM64 || PAS_PLATFORM(PLAYSTATION)
 #define PAS_GRANULE_DEFAULT_SHIFT        14
 #else
 #define PAS_GRANULE_DEFAULT_SHIFT        12
@@ -64,6 +64,9 @@
 
 #define PAS_MIN_ALIGN_SHIFT              4
 #define PAS_MIN_ALIGN                    ((size_t)1 << PAS_MIN_ALIGN_SHIFT)
+
+/* Use VA-based memory zeroing when the allocation size exceeds this threshold. */
+#define PAS_VA_BASED_ZERO_MEMORY_SHIFT   24
 
 /* This is the same as PAS_BITVECTOR_WORD_SHIFT, which is a nice performance optimization but
    isn't necessary. It's a performance optimization because there are specialized fast code

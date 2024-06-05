@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 Andy VanWagoner (andy@vanwagoner.family)
- * Copyright (C) 2021-2022 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -59,7 +59,7 @@ public:
     DECLARE_INFO;
 
     void initializeCollator(JSGlobalObject*, JSValue locales, JSValue optionsValue);
-    JSValue compareStrings(JSGlobalObject*, StringView, StringView) const;
+    UCollationResult compareStrings(JSGlobalObject*, StringView, StringView) const;
     JSObject* resolvedOptions(JSGlobalObject*) const;
 
     JSBoundFunction* boundCompare() const { return m_boundCompare.get(); }
@@ -80,7 +80,7 @@ public:
 
 private:
     IntlCollator(VM&, Structure*);
-    void finishCreation(VM&);
+    DECLARE_DEFAULT_FINISH_CREATION;
     DECLARE_VISIT_CHILDREN;
 
     bool updateCanDoASCIIUCADUCETComparison() const;

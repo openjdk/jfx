@@ -34,11 +34,9 @@ enum FrameEdge { LeftFrameEdge, RightFrameEdge, TopFrameEdge, BottomFrameEdge };
 
 struct FrameEdgeInfo {
     explicit FrameEdgeInfo(bool preventResize = false, bool allowBorder = true)
-        : m_preventResize(4)
-        , m_allowBorder(4)
+        : m_preventResize(4, preventResize)
+        , m_allowBorder(4, allowBorder)
     {
-        m_preventResize.fill(preventResize);
-        m_allowBorder.fill(allowBorder);
     }
 
     bool preventResize(FrameEdge edge) const { return m_preventResize[edge]; }
@@ -64,9 +62,6 @@ public:
 
     bool userResize(MouseEvent&);
 
-    bool isResizingRow() const;
-    bool isResizingColumn() const;
-
     bool canResizeRow(const IntPoint&) const;
     bool canResizeColumn(const IntPoint&) const;
 
@@ -91,7 +86,7 @@ private:
         int m_splitResizeOffset;
     };
 
-    const char* renderName() const override { return "RenderFrameSet"; }
+    ASCIILiteral renderName() const override { return "RenderFrameSet"_s; }
     bool isFrameSet() const override { return true; }
 
     void layout() override;
@@ -100,15 +95,12 @@ private:
     bool isChildAllowed(const RenderObject&, const RenderStyle&) const override;
     CursorDirective getCursor(const LayoutPoint&, Cursor&) const override;
 
-    bool flattenFrameSet() const;
-
     void setIsResizing(bool);
 
     void layOutAxis(GridAxis&, const Length*, int availableSpace);
     void computeEdgeInfo();
     void fillFromEdgeInfo(const FrameEdgeInfo& edgeInfo, int r, int c);
     void positionFrames();
-    void positionFramesWithFlattening();
 
     int splitPosition(const GridAxis&, int split) const;
     int hitTestSplit(const GridAxis&, int position) const;
@@ -123,7 +115,6 @@ private:
     GridAxis m_cols;
 
     bool m_isResizing;
-    bool m_isChildResizing;
 };
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1985,6 +1985,10 @@ public abstract class BaseShaderGraphics
     public void drawString(GlyphList gl, FontStrike strike, float x, float y,
                            Color selectColor, int selectStart, int selectEnd) {
 
+        if (strike.getFontResource().isColorGlyph(gl.getGlyphCode(0))) {
+            drawColorGlyph(gl, strike, x, y, selectColor, selectStart, selectEnd);
+            return;
+        }
         if (isComplexPaint ||
             paint.getType().isImagePattern() ||
             strike.drawAsShapes())
@@ -2012,9 +2016,10 @@ public abstract class BaseShaderGraphics
 
         CompositeMode blendMode = getCompositeMode();
         // LCD support requires several attributes to function:
-        // FontStrike supports LCD, SRC_OVER CompositeMode and Paint is a COLOR
+        // FontStrike supports LCD, SRC_OVER CompositeMode and Paint is an opaque COLOR
         boolean lcdSupported = blendMode == CompositeMode.SRC_OVER &&
                                textColor != null &&
+                               textColor.getAlpha() == 1.0 &&
                                xform.is2D() &&
                                !getRenderTarget().isMSAA();
 

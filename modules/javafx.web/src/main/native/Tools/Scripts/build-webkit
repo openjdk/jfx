@@ -51,7 +51,11 @@ sub writeCongrats();
 checkRequiredSystemConfig();
 setConfiguration();
 
-if (shouldUseFlatpak()) {
+if (shouldBuildForCrossTarget()) {
+    print("Enabling cross-build for target machine: '". getCrossTargetName() . "'\n");
+    my @command = (File::Spec->catfile(sourceDir(), "Tools", "Scripts", "build-webkit"));
+    runInCrossTargetEnvironment(@command);
+} elsif (shouldUseFlatpak()) {
     print "Building flatpak based environment\n";
     my @command = (File::Spec->catfile(sourceDir(), "Tools", "Scripts", "build-webkit"));
     runInFlatpak(@command);
@@ -74,8 +78,7 @@ my $coverageSupport = 0;
 my $shouldRunStaticAnalyzer = 0;
 my $noExperimentalFeatures = 0;
 my $ltoMode = "default";
-my $xcbuild = undef;
-my $useWorkspace = undef;
+my $useWorkspace = 1;
 my $startTime = time();
 my $archs32bit = 0;
 my $skipLibraryUpdate = 0;
@@ -123,14 +126,13 @@ Usage: $programName [options] [options to pass to build system]
   --coverage                        Enable code coverage support (Mac only)
   --analyze                         Enable static anaylsis (Apple platforms only)
   --lto-mode=<mode>                 Set Link Time Optimization mode (full, thin, or none) (LLVM only)
-  --[no-]xcbuild                    DEPRECATED use of XCBuild or not
-  --[no-]use-workspace              Use WebKit.xcworkspace and XCBuild (Apple platforms only)
+  --no-use-workspace                Build projects one at a time instead of using WebKit.xcworkspace (Apple platforms only)
+  --cross-target=<target_machine>   Use the cross-toolchain-helper to build WebKit for the specified machine (Linux platforms only)
 
   --java                            Build the Open JavaFX port
-  --ftw                             Build the FTW Windows port
   --gtk                             Build the GTK+ port
   --wpe                             Build the WPE port
-  --wincairo                        Build using Cairo (rather than CoreGraphics) on Windows
+  --wincairo                        Build the Windows port
   --playstation                     Build the PlayStation port
 
   --inspector-frontend              Copy Web Inspector user interface resources to the build directory
@@ -167,7 +169,6 @@ my %options = (
     'analyze' => \$shouldRunStaticAnalyzer,
     'no-experimental-features' => \$noExperimentalFeatures,
     'lto-mode=s' => \$ltoMode,
-    'xcbuild!' => \$xcbuild,
     'use-workspace!' => \$useWorkspace,
     'skip-library-update' => \$skipLibraryUpdate,
     'use-ccache!' => \$useCCache,
@@ -210,7 +211,7 @@ push @projects, ("Source/WebKitLegacy");
 
 
 # Build WTF as a separate static library on ports which support it.
-splice @projects, 0, 0, "Source/WTF" if isAppleWebKit() or isWinCairo() or isFTW();
+splice @projects, 0, 0, "Source/WTF" if isWinCairo();
 
 splice @projects, 0, 0, "Source/bmalloc" if isAppleCocoaWebKit();
 
@@ -223,22 +224,25 @@ if (!isCMakeBuild()) {
     }
 }
 
-if ((isAppleWebKit() || isWinCairo() || isPlayStation() || isFTW()) && !-d "WebKitLibraries") {
+if ((isAppleWebKit() || isWinCairo() || isPlayStation()) && !-d "WebKitLibraries") {
     die "Error: No WebKitLibraries directory found. Please do a fresh checkout.\n";
 }
 
 my @options = ();
 
 if (isAppleCocoaWebKit()) {
-    push @options, XcodeOptions();
-    if ($xcbuild) {
-        # Deprecated: Eventually, all XCBuild invocations will build through the workspace.
-        push @options, "-UseNewBuildSystem=YES";
-    } elsif (!$useWorkspace) {
-        push @options, "-UseNewBuildSystem=NO";
-    } elsif (defined $xcbuild) {
-        die "Error: --use-workspace and --no-xcbuild are not compatible. Workspaces builds require XCBuild.\n";
+    if (!$useWorkspace) {
+        # Ignore any workspace set by set-webkit-configuration
+        overrideConfiguredXcodeWorkspace("");
     }
+
+    if (xcodeVersion() ge "14.0" && xcodeVersion() lt "15.0" && !defined($ENV{UseSRCROOTSupportForTAPI})) {
+        # The call to XcodeOptions below checks this environment variable and
+        # sets TAPI_USE_SRCROOT for xcconfigs.
+        $ENV{UseSRCROOTSupportForTAPI} = "YES";
+    }
+
+    push @options, XcodeOptions();
 
     sub option($$)
     {
@@ -254,6 +258,11 @@ if (isAppleCocoaWebKit()) {
 
     # In workspaces, build order is determined by XCBuild.
     if (!$useWorkspace) {
+        print STDERR "warning: Building with --no-use-workspace is " .
+        "deprecated.\nIf you have a workflow requirement that depends " .
+        "on building targets in manual order, please document it in " .
+        "https://bugs.webkit.org/show_bug.cgi?id=241295.\n";
+        
     # ANGLE and libwebrtc must come before WebCore
     splice @projects, 0, 0, ("Source/ThirdParty/ANGLE");
     # if (not $archs32bit and (portName() eq Mac or portName() eq iOS or portName() eq watchOS)) {
@@ -281,12 +290,6 @@ if (isAppleCocoaWebKit()) {
 
 } elsif (isWinCairo() && !$skipLibraryUpdate) {
     (system("python Tools/Scripts/update-webkit-wincairo-libs.py") == 0) or die;
-} elsif (isAppleWinWebKit() && !$skipLibraryUpdate) {
-    # Copy WebKitSupportLibrary to the correct location in WebKitLibraries so it can be found.
-    # Will fail if WebKitSupportLibrary.zip is not in source root.
-    (system("perl Tools/Scripts/update-webkit-support-libs") == 0) or die;
-    (system("perl Tools/Scripts/update-webkit-auxiliary-libs") == 0) or die;
-    setupAppleWinEnv()
 }
 
 # If asked to build just the WebKit project, overwrite the projects
@@ -302,7 +305,7 @@ if (isInspectorFrontend()) {
 }
 
 if (isCMakeBuild()) {
-    if ((!canUseNinja() || defined($ENV{NUMBER_OF_PROCESSORS})) && !(isJava() && isAnyWindows())) {
+    if ((!canUseNinja() || defined($ENV{NUMBER_OF_PROCESSORS})) && !(webkitdirs::isJava() && isAnyWindows())) {
         # If the user environment is not setting a specific number of process,
         # then don't pass the number of jobs to Ninja. Because Ninja will
         # automatically determine the number of jobs to run in parallel.
@@ -321,13 +324,13 @@ if (isCMakeBuild()) {
 }
 
 my $baseProductDir = baseProductDir();
-if (isAppleWinWebKit() || isWinCairo() || isPlayStation() || isFTW()) {
+if (isWinCairo() || isPlayStation()) {
     my @featureArgs = cmakeArgsFromFeatures(@features, !$noExperimentalFeatures);
     removeCMakeCache(@featureArgs);
 
     chdirWebKit();
     if (exitStatus(generateBuildSystemFromCMakeProject($prefixPath, @featureArgs, @cmakeArgs))) {
-        die "Run Visual Studio 2017 installation vcvars.bat before build-webkit when using ninja";
+        die "Run Visual Studio installation vcvars.bat before build-webkit when using ninja";
     }
 
     exit 0 if isGenerateProjectOnly();
@@ -340,12 +343,6 @@ if (isAppleWinWebKit() || isWinCairo() || isPlayStation() || isFTW()) {
         $result = buildVisualStudioProject(File::Spec->catfile($baseProductDir, configuration(), "WebKit.sln"), $clean);
     }
     if (exitStatus($result)) {
-        my $scriptDir = relativeScriptsDir();
-        if (isAppleWinWebKit() || isWinCairo() || isFTW()) {
-            print "\n\n===== BUILD FAILED ======\n\n";
-            print "Please ensure you have run $scriptDir/update-webkit to install dependencies.\n\n";
-            print "You can view build errors by checking the BuildLog.htm files located at:\n$baseProductDir/obj/<project>/<config>.\n";
-        }
         exit exitStatus($result);
     }
 } elsif (isAppleCocoaWebKit() && !isCMakeBuild()) {
@@ -355,11 +352,21 @@ if (isAppleWinWebKit() || isWinCairo() || isPlayStation() || isFTW()) {
     push @local_options, XcodeCoverageSupportOptions() if $coverageSupport;
     push @local_options, XcodeStaticAnalyzerOption() if $shouldRunStaticAnalyzer;
     push @local_options, "WK_LTO_MODE=$ltoMode" if ($ltoMode ne "default");
+    # FIXME: Move this setting to xcconfigs once all local Xcode builds of WebKit
+    # happen in the workspace. When this is only passed on the command line, it
+    # invalidates build results made in the IDE (rdar://88135402).
+    ## When we know we're in a workspace (and not an individual project), turn
+    ## on dependency validation errors. Other conditions (e.g. whether we're in
+    ## a script phase or not) influence the actual VALIDATE_DEPENDENCIES setting
+    ## recognized by the build system.
+    #push @local_options, "WK_VALIDATE_DEPENDENCIES=YES_ERROR" if $useWorkspace;
+ 
+    markBaseProductDirectoryAsCreatedByXcodeBuildSystem();
 
     # Build, and abort if the build fails.
     if ($useWorkspace) {
-        my $scheme = $onlyWebKitProject ? "WebKitLegacy" : "All Modules";
-        $result = buildXCodeWorkspace("WebKit.xcworkspace", $scheme, $clean, @local_options, @ARGV);
+        my $scheme = $onlyWebKitProject ? "WebKitLegacy" : "Everything up to WebKit + Tools";
+        $result = buildXcodeScheme($scheme, $clean, @local_options, @ARGV);
         if (exitStatus($result)) {
             exit exitStatus($result);
         }
@@ -385,6 +392,11 @@ if (isAppleWinWebKit() || isWinCairo() || isPlayStation() || isFTW()) {
         exit exitStatus($result);
     }
 
+    if ($clean) {
+        # No need to have build-imagediff do cleaning, the build directory has already been deleted.
+        exit exitStatus($result);
+    }
+
     # Build ImageDiff for host
     my @command = File::Spec->catfile(getcwd(), "/Tools/Scripts/build-imagediff");
     chdirWebKit();
@@ -392,9 +404,6 @@ if (isAppleWinWebKit() || isWinCairo() || isPlayStation() || isFTW()) {
         die "build-imagediff script not found";
     }
 
-    if ($clean) {
-        push @command, " --clean";
-    }
     push @command, argumentsForConfiguration();
     push @command, @ARGV;
     @command = extractNonMacOSHostConfiguration(\@command);

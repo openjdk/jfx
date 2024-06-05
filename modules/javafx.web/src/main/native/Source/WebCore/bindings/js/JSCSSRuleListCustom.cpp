@@ -39,21 +39,21 @@ using namespace JSC;
 bool JSCSSRuleListOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, AbstractSlotVisitor& visitor, const char** reason)
 {
     JSCSSRuleList* jsCSSRuleList = jsCast<JSCSSRuleList*>(handle.slot()->asCell());
-    if (!jsCSSRuleList->hasCustomProperties(jsCSSRuleList->vm()))
+    if (!jsCSSRuleList->hasCustomProperties())
         return false;
 
     if (CSSStyleSheet* styleSheet = jsCSSRuleList->wrapped().styleSheet()) {
         if (UNLIKELY(reason))
             *reason = "CSSStyleSheet is opaque root";
 
-        return visitor.containsOpaqueRoot(root(styleSheet));
+        return containsWebCoreOpaqueRoot(visitor, styleSheet);
     }
 
     if (CSSRule* cssRule = jsCSSRuleList->wrapped().item(0)) {
         if (UNLIKELY(reason))
             *reason = "CSSRule is opaque root";
 
-        return visitor.containsOpaqueRoot(root(cssRule));
+        return containsWebCoreOpaqueRoot(visitor, cssRule);
     }
     return false;
 }

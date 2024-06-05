@@ -16,14 +16,16 @@
 #include <libxml/parser.h>
 #include <libxml/uri.h>
 #include <libxml/HTMLtree.h>
+#include <libxml/SAX2.h>
 
 #ifdef LIBXML_WRITER_ENABLED
 
 #include <libxml/xmlwriter.h>
 
-#include "buf.h"
-#include "enc.h"
-#include "save.h"
+#include "private/buf.h"
+#include "private/enc.h"
+#include "private/error.h"
+#include "private/save.h"
 
 #define B64LINELEN 72
 #define B64CRLF "\r\n"
@@ -188,7 +190,7 @@ xmlNewTextWriter(xmlOutputBufferPtr out)
                         "xmlNewTextWriter : out of memory!\n");
         return NULL;
     }
-    memset(ret, 0, (size_t) sizeof(xmlTextWriter));
+    memset(ret, 0, sizeof(xmlTextWriter));
 
     ret->nodes = xmlListCreate(xmlFreeTextWriterStackEntry,
                                xmlCmpTextWriterStackEntry);
@@ -708,7 +710,11 @@ xmlTextWriterEndDocument(xmlTextWriterPtr writer)
         sum += count;
     }
 
-    sum += xmlTextWriterFlush(writer);
+    count = xmlTextWriterFlush(writer);
+    if (count < 0)
+        return -1;
+    sum += count;
+
 
     return sum;
 }
@@ -863,7 +869,7 @@ xmlTextWriterEndComment(xmlTextWriterPtr writer)
  *
  * Returns the bytes written (may be 0 because of buffering) or -1 in case of error
  */
-int XMLCDECL
+int
 xmlTextWriterWriteFormatComment(xmlTextWriterPtr writer,
                                 const char *format, ...)
 {
@@ -1291,7 +1297,7 @@ xmlTextWriterFullEndElement(xmlTextWriterPtr writer)
  *
  * Returns the bytes written (may be 0 because of buffering) or -1 in case of error
  */
-int XMLCDECL
+int
 xmlTextWriterWriteFormatRaw(xmlTextWriterPtr writer, const char *format,
                             ...)
 {
@@ -1417,7 +1423,7 @@ xmlTextWriterWriteRaw(xmlTextWriterPtr writer, const xmlChar * content)
  *
  * Returns the bytes written (may be 0 because of buffering) or -1 in case of error
  */
-int XMLCDECL
+int
 xmlTextWriterWriteFormatString(xmlTextWriterPtr writer, const char *format,
                                ...)
 {
@@ -1541,7 +1547,7 @@ static int
 xmlOutputBufferWriteBase64(xmlOutputBufferPtr out, int len,
                            const unsigned char *data)
 {
-    static unsigned char dtable[64] =
+    static const unsigned char dtable[64] =
             {'A','B','C','D','E','F','G','H','I','J','K','L','M',
              'N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
              'a','b','c','d','e','f','g','h','i','j','k','l','m',
@@ -1674,7 +1680,7 @@ xmlOutputBufferWriteBinHex(xmlOutputBufferPtr out,
 {
     int count;
     int sum;
-    static char hex[16] =
+    static const char hex[16] =
         {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
     int i;
 
@@ -1963,7 +1969,7 @@ xmlTextWriterEndAttribute(xmlTextWriterPtr writer)
  *
  * Returns the bytes written (may be 0 because of buffering) or -1 in case of error
  */
-int XMLCDECL
+int
 xmlTextWriterWriteFormatAttribute(xmlTextWriterPtr writer,
                                   const xmlChar * name, const char *format,
                                   ...)
@@ -2058,7 +2064,7 @@ xmlTextWriterWriteAttribute(xmlTextWriterPtr writer, const xmlChar * name,
  *
  * Returns the bytes written (may be 0 because of buffering) or -1 in case of error
  */
-int XMLCDECL
+int
 xmlTextWriterWriteFormatAttributeNS(xmlTextWriterPtr writer,
                                     const xmlChar * prefix,
                                     const xmlChar * name,
@@ -2166,7 +2172,7 @@ xmlTextWriterWriteAttributeNS(xmlTextWriterPtr writer,
  *
  * Returns the bytes written (may be 0 because of buffering) or -1 in case of error
  */
-int XMLCDECL
+int
 xmlTextWriterWriteFormatElement(xmlTextWriterPtr writer,
                                 const xmlChar * name, const char *format,
                                 ...)
@@ -2263,7 +2269,7 @@ xmlTextWriterWriteElement(xmlTextWriterPtr writer, const xmlChar * name,
  *
  * Returns the bytes written (may be 0 because of buffering) or -1 in case of error
  */
-int XMLCDECL
+int
 xmlTextWriterWriteFormatElementNS(xmlTextWriterPtr writer,
                                   const xmlChar * prefix,
                                   const xmlChar * name,
@@ -2520,7 +2526,7 @@ xmlTextWriterEndPI(xmlTextWriterPtr writer)
  *
  * Returns the bytes written (may be 0 because of buffering) or -1 in case of error
  */
-int XMLCDECL
+int
 xmlTextWriterWriteFormatPI(xmlTextWriterPtr writer, const xmlChar * target,
                            const char *format, ...)
 {
@@ -2735,7 +2741,7 @@ xmlTextWriterEndCDATA(xmlTextWriterPtr writer)
  *
  * Returns the bytes written (may be 0 because of buffering) or -1 in case of error
  */
-int XMLCDECL
+int
 xmlTextWriterWriteFormatCDATA(xmlTextWriterPtr writer, const char *format,
                               ...)
 {
@@ -3044,7 +3050,7 @@ xmlTextWriterEndDTD(xmlTextWriterPtr writer)
  *
  * Returns the bytes written (may be 0 because of buffering) or -1 in case of error
  */
-int XMLCDECL
+int
 xmlTextWriterWriteFormatDTD(xmlTextWriterPtr writer,
                             const xmlChar * name,
                             const xmlChar * pubid,
@@ -3288,7 +3294,7 @@ xmlTextWriterEndDTDElement(xmlTextWriterPtr writer)
  *
  * Returns the bytes written (may be 0 because of buffering) or -1 in case of error
  */
-int XMLCDECL
+int
 xmlTextWriterWriteFormatDTDElement(xmlTextWriterPtr writer,
                                    const xmlChar * name,
                                    const char *format, ...)
@@ -3525,7 +3531,7 @@ xmlTextWriterEndDTDAttlist(xmlTextWriterPtr writer)
  *
  * Returns the bytes written (may be 0 because of buffering) or -1 in case of error
  */
-int XMLCDECL
+int
 xmlTextWriterWriteFormatDTDAttlist(xmlTextWriterPtr writer,
                                    const xmlChar * name,
                                    const char *format, ...)
@@ -3783,7 +3789,7 @@ xmlTextWriterEndDTDEntity(xmlTextWriterPtr writer)
  *
  * Returns the bytes written (may be 0 because of buffering) or -1 in case of error
  */
-int XMLCDECL
+int
 xmlTextWriterWriteFormatDTDInternalEntity(xmlTextWriterPtr writer,
                                           int pe,
                                           const xmlChar * name,
@@ -4733,6 +4739,4 @@ xmlTextWriterHandleStateDependencies(xmlTextWriterPtr writer,
     return sum;
 }
 
-#define bottom_xmlwriter
-#include "elfgcchack.h"
 #endif

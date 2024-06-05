@@ -116,7 +116,8 @@ WEBCORE_EXPORT HashSet<RefPtr<HTMLImageElement>> visibleImageElementsInRangeWith
 Position nextCandidate(const Position&);
 Position previousCandidate(const Position&);
 
-Position nextVisuallyDistinctCandidate(const Position&);
+enum class SkipDisplayContents : bool { No, Yes };
+Position nextVisuallyDistinctCandidate(const Position&, SkipDisplayContents = SkipDisplayContents::Yes);
 Position previousVisuallyDistinctCandidate(const Position&);
 
 Position firstPositionInOrBeforeNode(Node*);
@@ -169,7 +170,7 @@ Node* enclosingListChild(Node*);
 // -------------------------------------------------------------------------
 
 Ref<Element> createTabSpanElement(Document&);
-Ref<Element> createTabSpanElement(Document&, const String& tabText);
+Ref<Element> createTabSpanElement(Document&, String&& tabText);
 Ref<Element> createBlockPlaceholderElement(Document&);
 
 Element* editableRootForPosition(const Position&, EditableType = ContentIsEditable);
@@ -194,7 +195,7 @@ bool deprecatedIsCollapsibleWhitespace(UChar);
 
 bool isAmbiguousBoundaryCharacter(UChar);
 
-String stringWithRebalancedWhitespace(const String&, bool startIsStartOfParagraph, bool endIsEndOfParagraph);
+String stringWithRebalancedWhitespace(const String&, bool startIsStartOfParagraph, bool shouldEmitNBSPbeforeEnd);
 const String& nonBreakingSpaceString();
 
 // Miscellaneous functions for caret rendering.

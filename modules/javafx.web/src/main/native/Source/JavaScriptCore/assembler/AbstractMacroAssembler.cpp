@@ -28,19 +28,34 @@
 
 #if ENABLE(ASSEMBLER)
 
+#include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/PrintStream.h>
+
+namespace JSC {
+
+void AbstractMacroAssemblerBase::initializeRandom()
+{
+    // No strong cryptographic characteristics are necessary.
+    static std::once_flag onceKey;
+    static uint32_t globalCounter;
+    std::call_once(onceKey, [&] {
+        globalCounter = cryptographicallyRandomNumber<uint32_t>();
+    });
+    ASSERT(!m_randomSource);
+    m_randomSource.emplace(globalCounter++);
+}
+
+}
 
 namespace WTF {
 
-using namespace JSC;
-
-void printInternal(PrintStream& out, AbstractMacroAssemblerBase::StatusCondition condition)
+void printInternal(PrintStream& out, JSC::AbstractMacroAssemblerBase::StatusCondition condition)
 {
     switch (condition) {
-    case AbstractMacroAssemblerBase::Success:
+    case JSC::AbstractMacroAssemblerBase::Success:
         out.print("Success");
         return;
-    case AbstractMacroAssemblerBase::Failure:
+    case JSC::AbstractMacroAssemblerBase::Failure:
         out.print("Failure");
         return;
     }

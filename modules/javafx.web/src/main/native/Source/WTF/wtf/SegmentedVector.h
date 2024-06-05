@@ -47,8 +47,8 @@ namespace WTF {
         using iterator_category = std::forward_iterator_tag;
         using value_type = T;
         using difference_type = ptrdiff_t;
-        using pointer = const T*;
-        using reference = const T&;
+        using pointer = T*;
+        using reference = T&;
 
         ~SegmentedVectorIterator() { }
 
@@ -65,11 +65,6 @@ namespace WTF {
         bool operator==(const Iterator& other) const
         {
             return m_index == other.m_index && &m_vector == &other.m_vector;
-        }
-
-        bool operator!=(const Iterator& other) const
-        {
-            return m_index != other.m_index || &m_vector != &other.m_vector;
         }
 
         SegmentedVectorIterator& operator=(const SegmentedVectorIterator<T, SegmentSize>& other)

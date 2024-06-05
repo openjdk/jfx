@@ -41,13 +41,13 @@ static JSC_DECLARE_HOST_FUNCTION(constructSharedArrayBuffer);
 
 template<>
 const ClassInfo JSArrayBufferConstructor::s_info = {
-    "Function", &Base::s_info, nullptr, nullptr,
+    "Function"_s, &Base::s_info, nullptr, nullptr,
     CREATE_METHOD_TABLE(JSArrayBufferConstructor)
 };
 
 template<>
 const ClassInfo JSSharedArrayBufferConstructor::s_info = {
-    "Function", &Base::s_info, nullptr, nullptr,
+    "Function"_s, &Base::s_info, nullptr, nullptr,
     CREATE_METHOD_TABLE(JSSharedArrayBufferConstructor)
 };
 
@@ -66,8 +66,8 @@ void JSGenericArrayBufferConstructor<sharingMode>::finishCreation(VM& vm, JSArra
 
     if (sharingMode == ArrayBufferSharingMode::Default) {
         JSGlobalObject* globalObject = this->globalObject();
-        JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->isView, arrayBufferFuncIsView, static_cast<unsigned>(PropertyAttribute::DontEnum), 1);
-        JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().isViewPrivateName(), arrayBufferFuncIsView, static_cast<unsigned>(PropertyAttribute::DontEnum), 1);
+        JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->isView, arrayBufferFuncIsView, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public);
+        JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().isViewPrivateName(), arrayBufferFuncIsView, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public);
     }
 }
 
@@ -81,27 +81,48 @@ EncodedJSValue JSGenericArrayBufferConstructor<sharingMode>::constructImpl(JSGlo
     Structure* structure = JSC_GET_DERIVED_STRUCTURE(vm, arrayBufferStructureWithSharingMode<sharingMode>, newTarget, callFrame->jsCallee());
     RETURN_IF_EXCEPTION(scope, { });
 
-    size_t length;
+    size_t length = 0;
+    std::optional<size_t> maxByteLength;
     if (callFrame->argumentCount()) {
-        length = callFrame->uncheckedArgument(0).toTypedArrayIndex(globalObject, "length");
-        RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    } else {
-        // Although the documentation doesn't say so, it is in fact correct to say
-        // "new ArrayBuffer()". The result is the same as allocating an array buffer
-        // with a zero length.
-        length = 0;
+        length = callFrame->uncheckedArgument(0).toTypedArrayIndex(globalObject, "length"_s);
+        RETURN_IF_EXCEPTION(scope, { });
+
+        if (Options::useResizableArrayBuffer()) {
+            JSValue options = callFrame->argument(1);
+            if (options.isObject()) {
+                JSValue maxByteLengthValue = asObject(options)->get(globalObject, vm.propertyNames->maxByteLength);
+                RETURN_IF_EXCEPTION(scope, { });
+                if (!maxByteLengthValue.isUndefined()) {
+                    maxByteLength = maxByteLengthValue.toTypedArrayIndex(globalObject, "maxByteLength"_s);
+                    RETURN_IF_EXCEPTION(scope, { });
+                }
+            }
+        }
     }
 
-    auto buffer = ArrayBuffer::tryCreate(length, 1);
+    // https://tc39.es/proposal-resizablearraybuffer/#sec-allocatesharedarraybuffer
+    RefPtr<ArrayBuffer> buffer;
+    if (maxByteLength) {
+        if (maxByteLength.value() < length)
+            return throwVMRangeError(globalObject, scope, "ArrayBuffer length exceeds maxByteLength option"_s);
+        if constexpr (sharingMode == ArrayBufferSharingMode::Shared) {
+            buffer = ArrayBuffer::tryCreateShared(vm, length, 1, maxByteLength.value());
     if (!buffer)
         return JSValue::encode(throwOutOfMemoryError(globalObject, scope));
+        }
+    }
 
-    if (sharingMode == ArrayBufferSharingMode::Shared)
+    if (!buffer) {
+        buffer = ArrayBuffer::tryCreate(length, 1, maxByteLength);
+        if (!buffer)
+            return JSValue::encode(throwOutOfMemoryError(globalObject, scope));
+        if constexpr (sharingMode == ArrayBufferSharingMode::Shared)
         buffer->makeShared();
+    }
+
     ASSERT(sharingMode == buffer->sharingMode());
 
-    JSArrayBuffer* result = JSArrayBuffer::create(vm, structure, WTFMove(buffer));
-    return JSValue::encode(result);
+    return JSValue::encode(JSArrayBuffer::create(vm, structure, WTFMove(buffer)));
 }
 
 template<ArrayBufferSharingMode sharingMode>
@@ -136,9 +157,9 @@ JSC_DEFINE_HOST_FUNCTION(constructSharedArrayBuffer, (JSGlobalObject* globalObje
 // ------------------------------ Functions --------------------------------
 
 // ECMA 24.1.3.1
-JSC_DEFINE_HOST_FUNCTION(arrayBufferFuncIsView, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_HOST_FUNCTION(arrayBufferFuncIsView, (JSGlobalObject*, CallFrame* callFrame))
 {
-    return JSValue::encode(jsBoolean(jsDynamicCast<JSArrayBufferView*>(globalObject->vm(), callFrame->argument(0))));
+    return JSValue::encode(jsBoolean(jsDynamicCast<JSArrayBufferView*>(callFrame->argument(0))));
 }
 
 // Instantiate JSGenericArrayBufferConstructors.

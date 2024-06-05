@@ -30,22 +30,24 @@ namespace WebCore {
 
 class HTMLSelectElement;
 
-enum class AllowStyleInvalidation { Yes, No };
+enum class AllowStyleInvalidation : bool { No, Yes };
 
 class HTMLOptionElement final : public HTMLElement {
     WTF_MAKE_ISO_ALLOCATED(HTMLOptionElement);
 public:
     static Ref<HTMLOptionElement> create(Document&);
     static Ref<HTMLOptionElement> create(const QualifiedName&, Document&);
-    static ExceptionOr<Ref<HTMLOptionElement>> createForLegacyFactoryFunction(Document&, const String& text, const String& value, bool defaultSelected, bool selected);
+    static ExceptionOr<Ref<HTMLOptionElement>> createForLegacyFactoryFunction(Document&, String&& text, const AtomString& value, bool defaultSelected, bool selected);
 
     WEBCORE_EXPORT String text() const;
-    void setText(const String&);
+    void setText(String&&);
+
+    WEBCORE_EXPORT HTMLFormElement* form() const;
 
     WEBCORE_EXPORT int index() const;
 
     WEBCORE_EXPORT String value() const;
-    WEBCORE_EXPORT void setValue(const String&);
+    WEBCORE_EXPORT void setValue(const AtomString&);
 
     WEBCORE_EXPORT bool selected(AllowStyleInvalidation = AllowStyleInvalidation::Yes) const;
     WEBCORE_EXPORT void setSelected(bool);
@@ -53,8 +55,8 @@ public:
     WEBCORE_EXPORT HTMLSelectElement* ownerSelectElement() const;
 
     WEBCORE_EXPORT String label() const;
-    String displayLabel() const;
-    WEBCORE_EXPORT void setLabel(const String&);
+    WEBCORE_EXPORT String displayLabel() const;
+    WEBCORE_EXPORT void setLabel(const AtomString&);
 
     bool ownElementDisabled() const { return m_disabled; }
 
@@ -66,13 +68,14 @@ public:
     bool selectedWithoutUpdate() const { return m_isSelected; }
 
 private:
+    constexpr static auto CreateHTMLOptionElement = CreateHTMLElement | NodeFlag::HasCustomStyleResolveCallbacks;
     HTMLOptionElement(const QualifiedName&, Document&);
 
     bool isFocusable() const final;
     bool rendererIsNeeded(const RenderStyle&) final { return false; }
     bool matchesDefaultPseudoClass() const final;
 
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
 
     bool accessKeyAction(bool) final;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -49,9 +49,11 @@ namespace JSC {
         inline Jump emitLoadInt32(VirtualRegister, RegisterID dst);
         inline Jump emitLoadDouble(VirtualRegister, FPRegisterID dst, RegisterID scratch);
 
+        inline void emitLoadJSValue(VirtualRegister, JSValueRegs dst);
+
         VM* vm() const { return m_vm; }
 
-        VM* m_vm;
+        VM* const m_vm;
     };
 
 #if USE(JSVALUE32_64)
@@ -59,7 +61,7 @@ namespace JSC {
     {
         ASSERT(virtualRegister < VirtualRegister(FirstConstantRegisterIndex));
         loadPtr(payloadFor(virtualRegister), payload);
-        return branch32(NotEqual, tagFor(virtualRegister), TrustedImm32(JSValue::CellTag));
+        return branchIfNotCell(tagFor(virtualRegister));
     }
 
     inline JSInterfaceJIT::Jump JSInterfaceJIT::emitLoadInt32(VirtualRegister virtualRegister, RegisterID dst)
@@ -111,6 +113,11 @@ namespace JSC {
         return notNumber;
     }
 #endif
+
+inline void JSInterfaceJIT::emitLoadJSValue(VirtualRegister virtualRegister, JSValueRegs dst)
+{
+    loadValue(addressFor(virtualRegister), dst);
+}
 
 } // namespace JSC
 

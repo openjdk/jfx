@@ -1,6 +1,8 @@
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 1995-1998  Peter Mattis, Spencer Kimball and Josh MacDonald
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -111,8 +113,10 @@
  * @minor: the minor version to check for
  * @micro: the micro version to check for
  *
- * Checks the version of the GLib library that is being compiled
- * against. See glib_check_version() for a runtime check.
+ * Checks whether the version of the GLib library that is being compiled
+ * against is greater than or equal to the given one.
+ *
+ * See glib_check_version() for a runtime check.
  *
  * Returns: %TRUE if the version of the GLib header files
  * is the same as or newer than the passed-in version.

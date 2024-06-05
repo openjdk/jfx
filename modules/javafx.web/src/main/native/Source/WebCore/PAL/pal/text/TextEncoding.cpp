@@ -53,9 +53,14 @@ TextEncoding::TextEncoding(const char* name)
 {
 }
 
-TextEncoding::TextEncoding(const String& name)
+TextEncoding::TextEncoding(StringView name)
     : m_name(atomCanonicalTextEncodingName(name))
     , m_backslashAsCurrencySymbol(backslashAsCurrencySymbol())
+{
+}
+
+TextEncoding::TextEncoding(const String& name)
+    : TextEncoding(StringView { name })
 {
 }
 

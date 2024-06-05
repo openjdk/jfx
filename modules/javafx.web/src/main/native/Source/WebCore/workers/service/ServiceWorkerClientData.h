@@ -27,6 +27,8 @@
 
 #if ENABLE(SERVICE_WORKER)
 
+#include "FrameIdentifier.h"
+#include "PageIdentifier.h"
 #include "ProcessQualified.h"
 #include "ScriptExecutionContextIdentifier.h"
 #include "ServiceWorkerClientType.h"
@@ -41,56 +43,26 @@ class ScriptExecutionContext;
 enum class LastNavigationWasAppInitiated : bool { No, Yes };
 
 struct ServiceWorkerClientData {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+
     ScriptExecutionContextIdentifier identifier;
     ServiceWorkerClientType type;
     ServiceWorkerClientFrameType frameType;
     URL url;
+    URL ownerURL;
+    std::optional<PageIdentifier> pageIdentifier;
+    std::optional<FrameIdentifier> frameIdentifier;
     LastNavigationWasAppInitiated lastNavigationWasAppInitiated;
+    bool isVisible { false };
+    bool isFocused { false };
+    uint64_t focusOrder { 0 };
+    Vector<String> ancestorOrigins;
 
-    ServiceWorkerClientData isolatedCopy() const;
+    WEBCORE_EXPORT ServiceWorkerClientData isolatedCopy() const &;
+    WEBCORE_EXPORT ServiceWorkerClientData isolatedCopy() &&;
 
-    static ServiceWorkerClientData from(ScriptExecutionContext&);
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<ServiceWorkerClientData> decode(Decoder&);
+    WEBCORE_EXPORT static ServiceWorkerClientData from(ScriptExecutionContext&);
 };
-
-template<class Encoder>
-void ServiceWorkerClientData::encode(Encoder& encoder) const
-{
-    encoder << identifier << type << frameType << url << lastNavigationWasAppInitiated;
-}
-
-template<class Decoder>
-std::optional<ServiceWorkerClientData> ServiceWorkerClientData::decode(Decoder& decoder)
-{
-    std::optional<ScriptExecutionContextIdentifier> identifier;
-    decoder >> identifier;
-    if (!identifier)
-        return std::nullopt;
-
-    std::optional<ServiceWorkerClientType> type;
-    decoder >> type;
-    if (!type)
-        return std::nullopt;
-
-    std::optional<ServiceWorkerClientFrameType> frameType;
-    decoder >> frameType;
-    if (!frameType)
-        return std::nullopt;
-
-    std::optional<URL> url;
-    decoder >> url;
-    if (!url)
-        return std::nullopt;
-
-    std::optional<LastNavigationWasAppInitiated> lastNavigationWasAppInitiated;
-    decoder >> lastNavigationWasAppInitiated;
-    if (!lastNavigationWasAppInitiated)
-        return std::nullopt;
-
-    return { { WTFMove(*identifier), WTFMove(*type), WTFMove(*frameType), WTFMove(*url), WTFMove(*lastNavigationWasAppInitiated) } };
-}
 
 using ServiceWorkerClientsMatchAllCallback = CompletionHandler<void(Vector<ServiceWorkerClientData>&&)>;
 

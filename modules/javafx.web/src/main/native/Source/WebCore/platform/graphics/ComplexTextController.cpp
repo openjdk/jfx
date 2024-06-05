@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,10 +28,12 @@
 #include "CharacterProperties.h"
 #include "FloatSize.h"
 #include "FontCascade.h"
+#include "GlyphBuffer.h"
 #include "RenderBlock.h"
 #include "RenderText.h"
 #include "TextRun.h"
 #include <unicode/ubrk.h>
+#include <unicode/utf16.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/TextBreakIterator.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -209,7 +211,7 @@ unsigned ComplexTextController::offsetForPosition(float h, bool includePartialGl
                 }
 
                 unsigned stringLength = complexTextRun.stringLength();
-                CachedTextBreakIterator cursorPositionIterator(StringView(complexTextRun.characters(), stringLength), TextBreakIterator::Mode::Caret, nullAtom());
+                CachedTextBreakIterator cursorPositionIterator(StringView(complexTextRun.characters(), stringLength), nullptr, 0, TextBreakIterator::CaretMode { }, nullAtom());
                 unsigned clusterStart;
                 if (cursorPositionIterator.isBoundary(hitIndex))
                     clusterStart = hitIndex;
@@ -260,55 +262,35 @@ unsigned ComplexTextController::offsetForPosition(float h, bool includePartialGl
     return 0;
 }
 
-// FIXME: We should consider reimplementing this function using ICU to advance by grapheme.
-// The current implementation only considers explicitly emoji sequences and emoji variations.
-static bool advanceByCombiningCharacterSequence(const UChar*& iterator, const UChar* end, UChar32& baseCharacter, unsigned& markCount)
+bool ComplexTextController::advanceByCombiningCharacterSequence(const CachedTextBreakIterator& graphemeClusterIterator, unsigned& currentIndex, UChar32& baseCharacter, unsigned& markCount)
 {
-    ASSERT(iterator < end);
+    unsigned remainingCharacters = m_end - currentIndex;
+    ASSERT(remainingCharacters);
 
-    markCount = 0;
+    UChar buffer[2];
+    unsigned bufferLength = 1;
+    buffer[0] = m_run[currentIndex];
+    buffer[1] = 0;
+    if (remainingCharacters >= 2) {
+        buffer[1] = m_run[currentIndex + 1];
+        bufferLength = 2;
+    }
 
     unsigned i = 0;
-    unsigned remainingCharacters = end - iterator;
-    U16_NEXT(iterator, i, remainingCharacters, baseCharacter);
-    iterator = iterator + i;
-    if (U_IS_SURROGATE(baseCharacter))
+    U16_NEXT(buffer, i, bufferLength, baseCharacter);
+    if (U_IS_SURROGATE(baseCharacter)) {
+        markCount = 0;
+        currentIndex += i;
         return false;
-
-    // Consume marks.
-    bool sawEmojiGroupCandidate = isEmojiGroupCandidate(baseCharacter);
-    bool sawJoiner = false;
-    bool sawRegionalIndicator = isEmojiRegionalIndicator(baseCharacter);
-    while (iterator < end) {
-        UChar32 nextCharacter;
-        unsigned markLength = 0;
-        bool shouldContinue = false;
-        ASSERT(end >= iterator);
-        U16_NEXT(iterator, markLength, static_cast<unsigned>(end - iterator), nextCharacter);
-
-        if (isVariationSelector(nextCharacter) || isEmojiFitzpatrickModifier(nextCharacter))
-            shouldContinue = true;
-
-        if (sawRegionalIndicator && isEmojiRegionalIndicator(nextCharacter)) {
-            shouldContinue = true;
-            sawRegionalIndicator = false;
-        }
-
-        if (sawJoiner && isEmojiGroupCandidate(nextCharacter))
-            shouldContinue = true;
-
-        sawJoiner = false;
-        if (sawEmojiGroupCandidate && nextCharacter == zeroWidthJoiner) {
-            sawJoiner = true;
-            shouldContinue = true;
-        }
-
-        if (!shouldContinue && !(U_GET_GC_MASK(nextCharacter) & U_GC_M_MASK))
-            break;
-
-        markCount += markLength;
-        iterator += markLength;
     }
+
+    int delta = remainingCharacters;
+
+    if (auto following = graphemeClusterIterator.following(currentIndex))
+        delta = *following - currentIndex;
+
+    markCount = delta - 1;
+    currentIndex += delta;
 
     return true;
 }
@@ -332,11 +314,11 @@ static bool shouldSynthesize(bool dontSynthesizeSmallCaps, const Font* nextFont,
         return false;
     if (!nextFont || nextFont == Font::systemFallback())
         return false;
-    if (engageAllSmallCapsProcessing && isASCIISpace(baseCharacter))
+    if (engageAllSmallCapsProcessing && isUnicodeCompatibleASCIIWhitespace(baseCharacter))
         return false;
     if (!engageAllSmallCapsProcessing && !capitalizedBase)
         return false;
-    return !nextFont->variantCapsSupportsCharacterForSynthesis(fontVariantCaps, baseCharacter);
+    return !nextFont->variantCapsSupportedForSynthesis(fontVariantCaps);
 }
 
 void ComplexTextController::collectComplexTextRuns()
@@ -345,38 +327,45 @@ void ComplexTextController::collectComplexTextRuns()
         return;
 
     // We break up glyph run generation for the string by Font.
-    const UChar* cp;
 
-    if (m_run.is8Bit()) {
-        String stringFor8BitRun = String::make16BitFrom8BitSource(m_run.characters8(), m_run.length());
-        m_stringsFor8BitRuns.append(WTFMove(stringFor8BitRun));
-        cp = m_stringsFor8BitRuns.last().characters16();
-    } else
-        cp = m_run.characters16();
+    const UChar* baseOfString = [&] {
+        // We need a 16-bit string to pass to Core Text.
+        if (!m_run.is8Bit())
+            return m_run.characters16();
+        String stringConvertedTo16Bit = m_run.textAsString();
+        stringConvertedTo16Bit.convertTo16Bit();
+        auto characters = stringConvertedTo16Bit.characters16();
+        m_stringsFor8BitRuns.append(WTFMove(stringConvertedTo16Bit));
+        return characters;
+    }();
 
     auto fontVariantCaps = m_font.fontDescription().variantCaps();
-    bool dontSynthesizeSmallCaps = !static_cast<bool>(m_font.fontDescription().fontSynthesis() & FontSynthesisSmallCaps);
+    bool dontSynthesizeSmallCaps = !m_font.fontDescription().hasAutoFontSynthesisSmallCaps();
     bool engageAllSmallCapsProcessing = fontVariantCaps == FontVariantCaps::AllSmall || fontVariantCaps == FontVariantCaps::AllPetite;
     bool engageSmallCapsProcessing = engageAllSmallCapsProcessing || fontVariantCaps == FontVariantCaps::Small || fontVariantCaps == FontVariantCaps::Petite;
 
     if (engageAllSmallCapsProcessing || engageSmallCapsProcessing)
         m_smallCapsBuffer.resize(m_end);
 
+    unsigned currentIndex = 0;
     unsigned indexOfFontTransition = 0;
-    const UChar* curr = cp;
-    const UChar* end = cp + m_end;
 
-    const Font* font;
-    const Font* nextFont;
+    const Font* font = nullptr;
+    const Font* nextFont = nullptr;
     const Font* synthesizedFont = nullptr;
     const Font* smallSynthesizedFont = nullptr;
 
+    CachedTextBreakIterator graphemeClusterIterator(m_run.text(), nullptr, 0, TextBreakIterator::CharacterMode { }, m_font.fontDescription().computedLocale());
+
     unsigned markCount;
     UChar32 baseCharacter;
-    if (!advanceByCombiningCharacterSequence(curr, end, baseCharacter, markCount))
+    if (!advanceByCombiningCharacterSequence(graphemeClusterIterator, currentIndex, baseCharacter, markCount))
         return;
 
-    nextFont = m_font.fontForCombiningCharacterSequence(cp, curr - cp);
+    // We don't perform font fallback on the capitalized characters when small caps is synthesized.
+    // We may want to change this code to do so in the future; if we do, then the logic in initiateFontLoadingByAccessingGlyphDataIfApplicable()
+    // would need to be updated accordingly too.
+    nextFont = m_font.fontForCombiningCharacterSequence(baseOfString, currentIndex);
 
     bool isSmallCaps = false;
     bool nextIsSmallCaps = false;
@@ -385,42 +374,39 @@ void ComplexTextController::collectComplexTextRuns()
     if (shouldSynthesize(dontSynthesizeSmallCaps, nextFont, baseCharacter, capitalizedBase, fontVariantCaps, engageAllSmallCapsProcessing)) {
         synthesizedFont = &nextFont->noSynthesizableFeaturesFont();
         smallSynthesizedFont = synthesizedFont->smallCapsFont(m_font.fontDescription());
-        UChar32 characterToWrite = capitalizedBase ? capitalizedBase.value() : cp[0];
+        UChar32 characterToWrite = capitalizedBase ? capitalizedBase.value() : baseOfString[0];
         unsigned characterIndex = 0;
         U16_APPEND_UNSAFE(m_smallCapsBuffer, characterIndex, characterToWrite);
-        for (unsigned i = characterIndex; cp + i < curr; ++i)
-            m_smallCapsBuffer[i] = cp[i];
+        for (unsigned i = characterIndex; i < currentIndex; ++i)
+            m_smallCapsBuffer[i] = baseOfString[i];
         nextIsSmallCaps = true;
     }
 
-    while (curr < end) {
+    while (currentIndex < m_end) {
         font = nextFont;
         isSmallCaps = nextIsSmallCaps;
-        unsigned index = curr - cp;
+        auto previousIndex = currentIndex;
 
-        if (!advanceByCombiningCharacterSequence(curr, end, baseCharacter, markCount))
+        if (!advanceByCombiningCharacterSequence(graphemeClusterIterator, currentIndex, baseCharacter, markCount))
             return;
 
         if (synthesizedFont) {
             if (auto capitalizedBase = capitalized(baseCharacter)) {
-                unsigned characterIndex = index;
+                unsigned characterIndex = previousIndex;
                 U16_APPEND_UNSAFE(m_smallCapsBuffer, characterIndex, capitalizedBase.value());
-                for (unsigned i = 0; i < markCount; ++i)
-                    m_smallCapsBuffer[i + characterIndex] = cp[i + characterIndex];
+                for (unsigned i = characterIndex; i < currentIndex; ++i)
+                    m_smallCapsBuffer[i] = baseOfString[i];
                 nextIsSmallCaps = true;
             } else {
                 if (engageAllSmallCapsProcessing) {
-                    for (unsigned i = 0; i < curr - cp - index; ++i)
-                        m_smallCapsBuffer[index + i] = cp[index + i];
+                    for (unsigned i = previousIndex; i < currentIndex; ++i)
+                        m_smallCapsBuffer[i] = baseOfString[i];
                 }
                 nextIsSmallCaps = engageAllSmallCapsProcessing;
             }
         }
 
-        if (baseCharacter == zeroWidthJoiner)
-            nextFont = font;
-        else
-            nextFont = m_font.fontForCombiningCharacterSequence(cp + index, curr - cp - index);
+        nextFont = m_font.fontForCombiningCharacterSequence(baseOfString + previousIndex, currentIndex - previousIndex);
 
         capitalizedBase = capitalized(baseCharacter);
         if (!synthesizedFont && shouldSynthesize(dontSynthesizeSmallCaps, nextFont, baseCharacter, capitalizedBase, fontVariantCaps, engageAllSmallCapsProcessing)) {
@@ -428,28 +414,28 @@ void ComplexTextController::collectComplexTextRuns()
             synthesizedFont = &nextFont->noSynthesizableFeaturesFont();
             smallSynthesizedFont = synthesizedFont->smallCapsFont(m_font.fontDescription());
             nextIsSmallCaps = true;
-            curr = cp + indexOfFontTransition;
+            currentIndex = indexOfFontTransition;
             continue;
         }
 
         if (nextFont != font || nextIsSmallCaps != isSmallCaps) {
-            unsigned itemLength = index - indexOfFontTransition;
+            unsigned itemLength = previousIndex - indexOfFontTransition;
             if (itemLength) {
                 unsigned itemStart = indexOfFontTransition;
                 if (synthesizedFont) {
                     if (isSmallCaps)
                         collectComplexTextRunsForCharacters(m_smallCapsBuffer.data() + itemStart, itemLength, itemStart, smallSynthesizedFont);
                     else
-                        collectComplexTextRunsForCharacters(cp + itemStart, itemLength, itemStart, synthesizedFont);
+                        collectComplexTextRunsForCharacters(baseOfString + itemStart, itemLength, itemStart, synthesizedFont);
                 } else
-                    collectComplexTextRunsForCharacters(cp + itemStart, itemLength, itemStart, font);
+                    collectComplexTextRunsForCharacters(baseOfString + itemStart, itemLength, itemStart, font);
                 if (nextFont != font) {
                     synthesizedFont = nullptr;
                     smallSynthesizedFont = nullptr;
                     nextIsSmallCaps = false;
                 }
             }
-            indexOfFontTransition = index;
+            indexOfFontTransition = previousIndex;
         }
     }
 
@@ -461,9 +447,9 @@ void ComplexTextController::collectComplexTextRuns()
             if (nextIsSmallCaps)
                 collectComplexTextRunsForCharacters(m_smallCapsBuffer.data() + itemStart, itemLength, itemStart, smallSynthesizedFont);
             else
-                collectComplexTextRunsForCharacters(cp + itemStart, itemLength, itemStart, synthesizedFont);
+                collectComplexTextRunsForCharacters(baseOfString + itemStart, itemLength, itemStart, synthesizedFont);
         } else
-            collectComplexTextRunsForCharacters(cp + itemStart, itemLength, itemStart, nextFont);
+            collectComplexTextRunsForCharacters(baseOfString + itemStart, itemLength, itemStart, nextFont);
     }
 
     if (!m_run.ltr())
@@ -673,13 +659,13 @@ static inline std::pair<bool, bool> expansionLocation(bool ideograph, bool treat
 
 void ComplexTextController::adjustGlyphsAndAdvances()
 {
-    bool afterExpansion = (m_run.expansionBehavior() & LeftExpansionMask) == ForbidLeftExpansion;
+    bool afterExpansion = m_run.expansionBehavior().left == ExpansionBehavior::Behavior::Forbid;
     size_t runCount = m_complexTextRuns.size();
     bool hasExtraSpacing = (m_font.letterSpacing() || m_font.wordSpacing() || m_expansion) && !m_run.spacingDisabled();
-    bool runForcesLeftExpansion = (m_run.expansionBehavior() & LeftExpansionMask) == ForceLeftExpansion;
-    bool runForcesRightExpansion = (m_run.expansionBehavior() & RightExpansionMask) == ForceRightExpansion;
-    bool runForbidsLeftExpansion = (m_run.expansionBehavior() & LeftExpansionMask) == ForbidLeftExpansion;
-    bool runForbidsRightExpansion = (m_run.expansionBehavior() & RightExpansionMask) == ForbidRightExpansion;
+    bool runForcesLeftExpansion = m_run.expansionBehavior().left == ExpansionBehavior::Behavior::Force;
+    bool runForcesRightExpansion = m_run.expansionBehavior().right == ExpansionBehavior::Behavior::Force;
+    bool runForbidsLeftExpansion = m_run.expansionBehavior().left == ExpansionBehavior::Behavior::Forbid;
+    bool runForbidsRightExpansion = m_run.expansionBehavior().right == ExpansionBehavior::Behavior::Forbid;
 
     // We are iterating in glyph order, not string order. Compare this to WidthIterator::advanceInternal()
     for (size_t runIndex = 0; runIndex < runCount; ++runIndex) {
@@ -715,11 +701,24 @@ void ComplexTextController::adjustGlyphsAndAdvances()
             CGGlyph glyph = glyphs[i];
             FloatSize advance = treatAsSpace ? FloatSize(spaceWidth, advances[i].height()) : advances[i];
 
-            if (ch == tabCharacter && m_run.allowTabs())
+            if (ch == tabCharacter && m_run.allowTabs()) {
                 advance.setWidth(m_font.tabWidth(font, m_run.tabSize(), m_run.xPos() + m_totalAdvance.width(), Font::SyntheticBoldInclusion::Exclude));
+                // Like simple text path in WidthIterator::applyCSSVisibilityRules,
+                // make tabCharacter glyph invisible after advancing.
+                glyph = deletedGlyph;
+            }
             else if (FontCascade::treatAsZeroWidthSpace(ch) && !treatAsSpace) {
                 advance.setWidth(0);
                 glyph = font.spaceGlyph();
+            }
+
+            // https://www.w3.org/TR/css-text-3/#white-space-processing
+            // "Control characters (Unicode category Cc)—other than tabs (U+0009), line feeds (U+000A), carriage returns (U+000D) and sequences that form a segment break—must be rendered as a visible glyph"
+            // Also, we're omitting Null (U+0000) from this set because Chrome and Firefox do so and it's needed for compat. See https://github.com/w3c/csswg-drafts/pull/6983.
+            if (ch != newlineCharacter && ch != carriageReturn && ch != noBreakSpace && ch != tabCharacter && ch != nullCharacter && isControlCharacter(ch)) {
+                // Let's assume that .notdef is visible.
+                glyph = 0;
+                advance.setWidth(font.widthForGlyph(glyph));
             }
 
             if (!i) {
@@ -786,9 +785,14 @@ void ComplexTextController::adjustGlyphsAndAdvances()
 
             m_totalAdvance += advance;
 
+            if (m_forTextEmphasis) {
+                UChar32 ch32 = ch;
+                if (U16_IS_SURROGATE(ch))
+                    U16_GET(cp, 0, characterIndex, complexTextRun.stringLength(), ch32);
             // FIXME: Combining marks should receive a text emphasis mark if they are combine with a space.
-            if (m_forTextEmphasis && (!FontCascade::canReceiveTextEmphasis(ch) || (U_GET_GC_MASK(ch) & U_GC_M_MASK)))
-                glyph = 0;
+                if (!FontCascade::canReceiveTextEmphasis(ch32) || (U_GET_GC_MASK(ch) & U_GC_M_MASK))
+                    glyph = deletedGlyph;
+            }
 
             m_adjustedBaseAdvances.append(advance);
             if (auto* origins = complexTextRun.glyphOrigins()) {

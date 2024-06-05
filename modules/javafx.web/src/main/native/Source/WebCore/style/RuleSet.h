@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "MediaList.h"
+#include "MediaQuery.h"
 #include "RuleData.h"
 #include "RuleFeature.h"
 #include "SelectorCompiler.h"
@@ -35,8 +35,11 @@
 namespace WebCore {
 
 class CSSSelector;
-class MediaQueryEvaluator;
 class StyleSheetContents;
+
+namespace MQ {
+class MediaQueryEvaluator;
+}
 
 namespace Style {
 
@@ -80,12 +83,13 @@ public:
 
     bool hasViewportDependentMediaQueries() const { return m_hasViewportDependentMediaQueries; }
 
-    std::optional<DynamicMediaQueryEvaluationChanges> evaluateDynamicMediaQueryRules(const MediaQueryEvaluator&);
+    std::optional<DynamicMediaQueryEvaluationChanges> evaluateDynamicMediaQueryRules(const MQ::MediaQueryEvaluator&);
 
     const RuleFeatureSet& features() const { return m_features; }
 
     const RuleDataVector* idRules(const AtomString& key) const { return m_idRules.get(key); }
     const RuleDataVector* classRules(const AtomString& key) const { return m_classRules.get(key); }
+    const RuleDataVector* attributeRules(const AtomString& key, bool isHTMLName) const;
     const RuleDataVector* tagRules(const AtomString& key, bool isHTMLName) const;
     const RuleDataVector* shadowPseudoElementRules(const AtomString& key) const { return m_shadowPseudoElementRules.get(key); }
     const RuleDataVector* linkPseudoClassRules() const { return &m_linkPseudoClassRules; }
@@ -102,15 +106,17 @@ public:
 
     unsigned ruleCount() const { return m_ruleCount; }
 
+    bool hasAttributeRules() const { return !m_attributeLocalNameRules.isEmpty(); }
     bool hasShadowPseudoElementRules() const { return !m_shadowPseudoElementRules.isEmpty(); }
     bool hasHostPseudoClassRulesMatchingInShadowTree() const { return m_hasHostPseudoClassRulesMatchingInShadowTree; }
 
+    static constexpr auto cascadeLayerPriorityForPresentationalHints = std::numeric_limits<CascadeLayerPriority>::min();
     static constexpr auto cascadeLayerPriorityForUnlayered = std::numeric_limits<CascadeLayerPriority>::max();
 
     CascadeLayerPriority cascadeLayerPriorityFor(const RuleData&) const;
 
     bool hasContainerQueries() const { return !m_containerQueries.isEmpty(); }
-    Vector<const FilteredContainerQuery*> containerQueriesFor(const RuleData&) const;
+    Vector<const CQ::ContainerQuery*> containerQueriesFor(const RuleData&) const;
 
 private:
     friend class RuleSetBuilder;
@@ -132,7 +138,7 @@ private:
         Vector<size_t> changedQueryIndexes { };
         Vector<Vector<Ref<const StyleRule>>*> affectedRules { };
     };
-    CollectedMediaQueryChanges evaluateDynamicMediaQueryRules(const MediaQueryEvaluator&, size_t startIndex);
+    CollectedMediaQueryChanges evaluateDynamicMediaQueryRules(const MQ::MediaQueryEvaluator&, size_t startIndex);
 
     template<typename Function> void traverseRuleDatas(Function&&);
 
@@ -151,7 +157,7 @@ private:
     };
 
     struct DynamicMediaQueryRules {
-        Vector<Ref<const MediaQuerySet>> mediaQuerySets;
+        Vector<MQ::MediaQueryList> mediaQueries;
         Vector<size_t> affectedRulePositions;
         Vector<Ref<const StyleRule>> affectedRules;
         bool requiresFullReset { false };
@@ -159,7 +165,7 @@ private:
 
         void shrinkToFit()
         {
-            mediaQuerySets.shrinkToFit();
+            mediaQueries.shrinkToFit();
             affectedRulePositions.shrinkToFit();
             affectedRules.shrinkToFit();
         }
@@ -167,6 +173,8 @@ private:
 
     AtomRuleMap m_idRules;
     AtomRuleMap m_classRules;
+    AtomRuleMap m_attributeLocalNameRules;
+    AtomRuleMap m_attributeLowercaseLocalNameRules;
     AtomRuleMap m_tagLocalNameRules;
     AtomRuleMap m_tagLowercaseLocalNameRules;
     AtomRuleMap m_shadowPseudoElementRules;
@@ -198,14 +206,16 @@ private:
     bool m_hasViewportDependentMediaQueries { false };
 };
 
+inline const RuleSet::RuleDataVector* RuleSet::attributeRules(const AtomString& key, bool isHTMLName) const
+{
+    auto& rules = isHTMLName ? m_attributeLowercaseLocalNameRules : m_attributeLocalNameRules;
+    return rules.get(key);
+}
+
 inline const RuleSet::RuleDataVector* RuleSet::tagRules(const AtomString& key, bool isHTMLName) const
 {
-    const AtomRuleMap* tagRules;
-    if (isHTMLName)
-        tagRules = &m_tagLowercaseLocalNameRules;
-    else
-        tagRules = &m_tagLocalNameRules;
-    return tagRules->get(key);
+    auto& rules = isHTMLName ? m_tagLowercaseLocalNameRules : m_tagLocalNameRules;
+    return rules.get(key);
 }
 
 inline CascadeLayerPriority RuleSet::cascadeLayerPriorityForIdentifier(CascadeLayerIdentifier identifier) const
@@ -223,23 +233,22 @@ inline CascadeLayerPriority RuleSet::cascadeLayerPriorityFor(const RuleData& rul
     return cascadeLayerPriorityForIdentifier(identifier);
 }
 
-inline Vector<const FilteredContainerQuery*> RuleSet::containerQueriesFor(const RuleData& ruleData) const
+inline Vector<const CQ::ContainerQuery*> RuleSet::containerQueriesFor(const RuleData& ruleData) const
 {
     if (m_containerQueryIdentifierForRulePosition.size() <= ruleData.position())
         return { };
 
-    Vector<const FilteredContainerQuery*> queries;
+    Vector<const CQ::ContainerQuery*> queries;
 
     auto identifier = m_containerQueryIdentifierForRulePosition[ruleData.position()];
     while (identifier) {
         auto& query = m_containerQueries[identifier - 1];
-        queries.append(&query.containerRule->filteredQuery());
+        queries.append(&query.containerRule->containerQuery());
         identifier = query.parent;
     };
 
     return queries;
 }
-
 
 } // namespace Style
 } // namespace WebCore

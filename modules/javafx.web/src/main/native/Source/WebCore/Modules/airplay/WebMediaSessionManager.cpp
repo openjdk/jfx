@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,7 +51,7 @@ struct ClientState {
     {
     }
 
-    bool operator == (ClientState const& other) const
+    bool operator==(const ClientState& other) const
     {
         return contextId == other.contextId && &client == &other.client;
     }
@@ -257,7 +257,7 @@ void WebMediaSessionManager::showPlaybackTargetPicker(WebMediaSessionManagerClie
     ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, m_clientState[index].get());
 
     bool hasActiveRoute = flagsAreSet(m_clientState[index]->flags, MediaProducerMediaState::IsPlayingToExternalDevice);
-    targetPicker().showPlaybackTargetPicker(client.platformView(), FloatRect(rect), hasActiveRoute, useDarkAppearance, client.useiTunesAVOutputContext());
+    targetPicker().showPlaybackTargetPicker(client.platformView().get(), FloatRect(rect), hasActiveRoute, useDarkAppearance);
 }
 
 void WebMediaSessionManager::clientStateDidChange(WebMediaSessionManagerClient& client, PlaybackTargetClientContextIdentifier contextId, MediaProducerMediaStateFlags newFlags)

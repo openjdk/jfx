@@ -29,7 +29,7 @@
 #include "Color.h"
 #include "LayoutUnit.h"
 #include "RenderObject.h"
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 
 namespace WebCore {
 
@@ -59,6 +59,20 @@ BorderEdges borderEdges(const RenderStyle& style, float deviceScaleFactor, bool 
         constructBorderEdge(style.borderRightWidth(), CSSPropertyBorderRightColor, style.borderRightStyle(), style.borderRightIsTransparent(), !horizontal || includeLogicalRightEdge),
         constructBorderEdge(style.borderBottomWidth(), CSSPropertyBorderBottomColor, style.borderBottomStyle(), style.borderBottomIsTransparent(), horizontal || includeLogicalRightEdge),
         constructBorderEdge(style.borderLeftWidth(), CSSPropertyBorderLeftColor, style.borderLeftStyle(), style.borderLeftIsTransparent(), !horizontal || includeLogicalLeftEdge)
+    };
+}
+
+BorderEdges borderEdgesForOutline(const RenderStyle& style, float deviceScaleFactor)
+{
+    auto color = style.visitedDependentColorWithColorFilter(CSSPropertyOutlineColor);
+    auto isTransparent = color.isValid() && !color.isVisible();
+    auto size = style.outlineWidth();
+    auto outlineStyle = style.outlineStyle();
+    return {
+        BorderEdge { size, color, outlineStyle, isTransparent, true, deviceScaleFactor },
+        BorderEdge { size, color, outlineStyle, isTransparent, true, deviceScaleFactor },
+        BorderEdge { size, color, outlineStyle, isTransparent, true, deviceScaleFactor },
+        BorderEdge { size, color, outlineStyle, isTransparent, true, deviceScaleFactor }
     };
 }
 

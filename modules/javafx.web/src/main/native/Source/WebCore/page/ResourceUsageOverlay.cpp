@@ -29,8 +29,8 @@
 
 #include "ResourceUsageOverlay.h"
 
-#include "Frame.h"
-#include "FrameView.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "Page.h"
 #include "PageOverlayController.h"
 #include "PlatformMouseEvent.h"
@@ -51,18 +51,23 @@ ResourceUsageOverlay::ResourceUsageOverlay(Page& page)
 ResourceUsageOverlay::~ResourceUsageOverlay()
 {
     platformDestroy();
-
+    if (auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page.mainFrame())) {
     // FIXME: This is a hack so we don't try to uninstall the PageOverlay during Page destruction.
-    if (m_page.mainFrame().page())
+        if (localMainFrame->page())
         m_page.pageOverlayController().uninstallPageOverlay(*m_overlay, PageOverlay::FadeMode::DoNotFade);
+    }
 }
 
 void ResourceUsageOverlay::initialize()
 {
-    if (!m_page.mainFrame().view())
+    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page.mainFrame());
+    if (!localMainFrame)
         return;
 
-    FrameView& frameView = *m_page.mainFrame().view();
+    if (!localMainFrame->view())
+        return;
+
+    auto& frameView = *localMainFrame->view();
 
     IntRect initialRect(frameView.width() / 2 - normalWidth / 2, frameView.height() - normalHeight - 20, normalWidth, normalHeight);
 
@@ -82,21 +87,21 @@ bool ResourceUsageOverlay::mouseEvent(PageOverlay&, const PlatformMouseEvent& ev
         return false;
 
     switch (event.type()) {
-    case PlatformEvent::MousePressed: {
+    case PlatformEvent::Type::MousePressed: {
         m_overlay->setShouldIgnoreMouseEventsOutsideBounds(false);
         m_dragging = true;
         IntPoint location = m_overlay->frame().location();
         m_dragPoint = event.position() + IntPoint(-location.x(), -location.y());
         return true;
     }
-    case PlatformEvent::MouseReleased:
+    case PlatformEvent::Type::MouseReleased:
         if (m_dragging) {
             m_overlay->setShouldIgnoreMouseEventsOutsideBounds(true);
             m_dragging = false;
             return true;
         }
         break;
-    case PlatformEvent::MouseMoved:
+    case PlatformEvent::Type::MouseMoved:
         if (m_dragging) {
             IntRect newFrame = m_overlay->frame();
 
@@ -109,7 +114,10 @@ bool ResourceUsageOverlay::mouseEvent(PageOverlay&, const PlatformMouseEvent& ev
                 newFrame.setX(0);
             if (newFrame.y() < m_page.topContentInset())
                 newFrame.setY(m_page.topContentInset());
-            FrameView& frameView = *m_page.mainFrame().view();
+            auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page.mainFrame());
+            if (!localMainFrame)
+                break;
+            auto& frameView = *localMainFrame->view();
             if (newFrame.maxX() > frameView.width())
                 newFrame.setX(frameView.width() - newFrame.width());
             if (newFrame.maxY() > frameView.height())

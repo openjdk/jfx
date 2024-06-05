@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1250,34 +1250,102 @@ public class RegionTest {
         assertFalse(peer.isClean());
     }
 
-    // Test for JDK-8255415
-    @Test public void snappingASnappedValueGivesTheSameValueTest() {
+    @Test
+    public void snapFunctionsShouldHandleExtremelyLargeValuesWithoutReturningNaN() {
         Stage stage = new Stage();
         Region region = new Region();
         Scene scene = new Scene(region);
         stage.setScene(scene);
 
-        double[] scales = new double[] {1.0, 1.25, 1.5, 1.75, 2.0, 1.374562997};
+        // Size functions:
+
+        assertEquals(Double.MAX_VALUE, region.snapSizeX(Double.MAX_VALUE), Math.ulp(Double.MAX_VALUE));
+        assertEquals(Double.MAX_VALUE, region.snapSizeY(Double.MAX_VALUE), Math.ulp(Double.MAX_VALUE));
+        assertEquals(Double.NEGATIVE_INFINITY, region.snapSizeX(-Double.MAX_VALUE), 0.0);
+        assertEquals(Double.NEGATIVE_INFINITY, region.snapSizeY(-Double.MAX_VALUE), 0.0);
+
+        assertEquals(Double.POSITIVE_INFINITY, region.snapSizeX(Double.POSITIVE_INFINITY), 0.0);
+        assertEquals(Double.POSITIVE_INFINITY, region.snapSizeY(Double.POSITIVE_INFINITY), 0.0);
+        assertEquals(Double.NEGATIVE_INFINITY, region.snapSizeX(Double.NEGATIVE_INFINITY), 0.0);
+        assertEquals(Double.NEGATIVE_INFINITY, region.snapSizeY(Double.NEGATIVE_INFINITY), 0.0);
+
+        // Space functions:
+
+        // These are bugged because they use Math.round instead of Math.rint, but better than Double.NaN...
+        assertEquals(Long.MAX_VALUE, region.snapSpaceX(Double.MAX_VALUE), 0.0);
+        assertEquals(Long.MAX_VALUE, region.snapSpaceY(Double.MAX_VALUE), 0.0);
+        assertEquals(Long.MIN_VALUE, region.snapSpaceX(-Double.MAX_VALUE), 0.0);
+        assertEquals(Long.MIN_VALUE, region.snapSpaceY(-Double.MAX_VALUE), 0.0);
+
+        assertEquals(Long.MAX_VALUE, region.snapSpaceX(Double.POSITIVE_INFINITY), 0.0);
+        assertEquals(Long.MAX_VALUE, region.snapSpaceY(Double.POSITIVE_INFINITY), 0.0);
+        assertEquals(Long.MIN_VALUE, region.snapSpaceX(Double.NEGATIVE_INFINITY), 0.0);
+        assertEquals(Long.MIN_VALUE, region.snapSpaceY(Double.NEGATIVE_INFINITY), 0.0);
+
+        stage.setRenderScaleX(1.5);
+        stage.setRenderScaleY(1.5);
+
+        // Size functions:
+
+        assertEquals(Double.MAX_VALUE, region.snapSizeX(Double.MAX_VALUE), Math.ulp(Double.MAX_VALUE));
+        assertEquals(Double.MAX_VALUE, region.snapSizeY(Double.MAX_VALUE), Math.ulp(Double.MAX_VALUE));
+        assertEquals(-Double.MAX_VALUE, region.snapSizeX(-Double.MAX_VALUE), 0.0);
+        assertEquals(-Double.MAX_VALUE, region.snapSizeY(-Double.MAX_VALUE), 0.0);
+
+        assertEquals(Double.POSITIVE_INFINITY, region.snapSizeX(Double.POSITIVE_INFINITY), 0.0);
+        assertEquals(Double.POSITIVE_INFINITY, region.snapSizeY(Double.POSITIVE_INFINITY), 0.0);
+        assertEquals(Double.NEGATIVE_INFINITY, region.snapSizeX(Double.NEGATIVE_INFINITY), 0.0);
+        assertEquals(Double.NEGATIVE_INFINITY, region.snapSizeY(Double.NEGATIVE_INFINITY), 0.0);
+
+        // Space functions:
+
+        // These are even more bugged, they divide the long max/min value by scale after using the round instead of rint
+        assertEquals(Long.MAX_VALUE / 1.5, region.snapSpaceX(Double.MAX_VALUE), 0.0);
+        assertEquals(Long.MAX_VALUE / 1.5, region.snapSpaceY(Double.MAX_VALUE), 0.0);
+        assertEquals(Long.MIN_VALUE / 1.5, region.snapSpaceX(-Double.MAX_VALUE), 0.0);
+        assertEquals(Long.MIN_VALUE / 1.5, region.snapSpaceY(-Double.MAX_VALUE), 0.0);
+
+        assertEquals(Long.MAX_VALUE / 1.5, region.snapSpaceX(Double.POSITIVE_INFINITY), 0.0);
+        assertEquals(Long.MAX_VALUE / 1.5, region.snapSpaceY(Double.POSITIVE_INFINITY), 0.0);
+        assertEquals(Long.MIN_VALUE / 1.5, region.snapSpaceX(Double.NEGATIVE_INFINITY), 0.0);
+        assertEquals(Long.MIN_VALUE / 1.5, region.snapSpaceY(Double.NEGATIVE_INFINITY), 0.0);
+    }
+
+    // Test for JDK-8255415
+    @Test
+    public void snappingASnappedValueGivesTheSameValueTest() {
+        Stage stage = new Stage();
+        Region region = new Region();
+        Scene scene = new Scene(region);
+        stage.setScene(scene);
+
+        double[] scales = new double[] {1.0, 1.25, 1.5, 1.75, 2.0, 1.374562997, 20.0};
+        Random random = new Random();
+        long seed = random.nextLong();
 
         // test snapSizeX/snapSizeY methods
+
+        String failMessage = "Seed was: " + seed;
+
+        random.setSeed(seed);
 
         for (double scale : scales) {
             stage.setRenderScaleX(scale);
             for (int j = 0; j < 1000; j++) {
-                double value = new Random().nextDouble() * 100 - 50;
+                double value = random.nextDouble() * Integer.MAX_VALUE;
                 double snappedValue = region.snapSizeX(value);
                 double snapOfSnappedValue = region.snapSizeX(snappedValue);
-                assertEquals(snappedValue, snapOfSnappedValue, 1.0e-14);
+                assertEquals(failMessage, snappedValue, snapOfSnappedValue, 0.0);
             }
         }
 
         for (double scale : scales) {
             stage.setRenderScaleY(scale);
             for (int j = 0; j < 1000; j++) {
-                double value = new Random().nextDouble() * 100 - 50;
+                double value = random.nextDouble() * Integer.MAX_VALUE;
                 double snappedValue = region.snapSizeY(value);
                 double snapOfSnappedValue = region.snapSizeY(snappedValue);
-                assertEquals(snappedValue, snapOfSnappedValue, 1.0e-14);
+                assertEquals(failMessage, snappedValue, snapOfSnappedValue, 0.0);
             }
         }
 
@@ -1286,20 +1354,20 @@ public class RegionTest {
         for (double scale : scales) {
             stage.setRenderScaleX(scale);
             for (int j = 0; j < 1000; j++) {
-                double value = new Random().nextDouble() * 100 - 50;
+                double value = random.nextDouble() * Integer.MAX_VALUE;
                 double snappedValue = RegionShim.snapPortionX(region, value);
                 double snapOfSnappedValue = RegionShim.snapPortionX(region, snappedValue);
-                assertEquals(snappedValue, snapOfSnappedValue, 1.0e-14);
+                assertEquals(failMessage, snappedValue, snapOfSnappedValue, 0.0);
             }
         }
 
         for (double scale : scales) {
             stage.setRenderScaleY(scale);
             for (int j = 0; j < 1000; j++) {
-                double value = new Random().nextDouble() * 100 - 50;
+                double value = random.nextDouble() * Integer.MAX_VALUE;
                 double snappedValue = RegionShim.snapPortionY(region, value);
                 double snapOfSnappedValue = RegionShim.snapPortionY(region, snappedValue);
-                assertEquals(snappedValue, snapOfSnappedValue, 1.0e-14);
+                assertEquals(failMessage, snappedValue, snapOfSnappedValue, 0.0);
             }
         }
     }

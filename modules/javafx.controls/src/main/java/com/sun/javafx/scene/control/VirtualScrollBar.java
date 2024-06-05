@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -128,19 +128,11 @@ public class VirtualScrollBar extends ScrollBar {
     @Override public void adjustValue(double pos) {
         if (isVirtual()) {
             adjusting = true;
-            double oldValue = flow.getPosition();
-
-            double newValue = ((getMax() - getMin()) * Utils.clamp(0, pos, 1))+getMin();
-            if (newValue < oldValue) {
-                IndexedCell cell = flow.getFirstVisibleCell();
-                if (cell == null) return;
-                flow.scrollToBottom(cell);
-            } else if (newValue > oldValue) {
-                IndexedCell cell = flow.getLastVisibleCell();
-                if (cell == null) return;
-                flow.scrollToTop(cell);
+            if (pos < getValue()) {
+                flow.scrollPixels(-flow.getViewportLength());
+            } else {
+                flow.scrollPixels(flow.getViewportLength());
             }
-
             adjusting = false;
         } else {
             super.adjustValue(pos);

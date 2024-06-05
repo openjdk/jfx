@@ -35,62 +35,16 @@
 namespace WebCore {
 
 enum class TranslationContextMenuMode : bool { NonEditable, Editable };
+enum class TranslationContextMenuSource : bool { Unspecified, Image };
 
 struct TranslationContextMenuInfo {
     String text;
     IntRect selectionBoundsInRootView;
     IntPoint locationInRootView;
     TranslationContextMenuMode mode { TranslationContextMenuMode::NonEditable };
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<TranslationContextMenuInfo> decode(Decoder&);
+    TranslationContextMenuSource source { TranslationContextMenuSource::Unspecified };
 };
-
-template<class Encoder> void TranslationContextMenuInfo::encode(Encoder& encoder) const
-{
-    encoder << text;
-    encoder << selectionBoundsInRootView;
-    encoder << locationInRootView;
-    encoder << mode;
-}
-
-template<class Decoder> std::optional<TranslationContextMenuInfo> TranslationContextMenuInfo::decode(Decoder& decoder)
-{
-    std::optional<String> text;
-    decoder >> text;
-    if (!text)
-        return std::nullopt;
-
-    std::optional<IntRect> selectionBoundsInRootView;
-    decoder >> selectionBoundsInRootView;
-    if (!selectionBoundsInRootView)
-        return std::nullopt;
-
-    std::optional<IntPoint> locationInRootView;
-    decoder >> locationInRootView;
-    if (!locationInRootView)
-        return std::nullopt;
-
-    std::optional<TranslationContextMenuMode> mode;
-    decoder >> mode;
-    if (!mode)
-        return std::nullopt;
-
-    return {{ WTFMove(*text), WTFMove(*selectionBoundsInRootView), WTFMove(*locationInRootView), *mode }};
-}
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::TranslationContextMenuMode> {
-    using values = EnumValues<
-        WebCore::TranslationContextMenuMode,
-        WebCore::TranslationContextMenuMode::NonEditable,
-        WebCore::TranslationContextMenuMode::Editable
-    >;
-};
-
-} // namespace WTF
 
 #endif // HAVE(TRANSLATION_UI_SERVICES) && ENABLE(CONTEXT_MENUS)

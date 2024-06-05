@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,9 +47,14 @@ import com.sun.javafx.charts.Legend.LegendItem;
 /**
  * Chart type that plots bubbles for the data points in a series. The extra value property of Data is used to represent
  * the radius of the bubble it should be a java.lang.Number.
+ *
+ * @param <X> the X axis value type
+ * @param <Y> the Y axis value type
  * @since JavaFX 2.0
  */
 public class BubbleChart<X,Y> extends XYChart<X,Y> {
+
+    private ParallelTransition parallelTransition;
 
     // -------------- CONSTRUCTORS ----------------------------------------------
 
@@ -195,8 +200,8 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
     @Override protected  void seriesRemoved(final Series<X,Y> series) {
         // remove all bubble nodes
         if (shouldAnimate()) {
-            ParallelTransition pt = new ParallelTransition();
-            pt.setOnFinished(event -> {
+            parallelTransition = new ParallelTransition();
+            parallelTransition.setOnFinished(event -> {
                 removeSeriesFromDisplay(series);
             });
             for (XYChart.Data<X,Y> d : series.getData()) {
@@ -208,9 +213,9 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
                     getPlotChildren().remove(bubble);
                     bubble.setOpacity(1.0);
                 });
-                pt.getChildren().add(ft);
+                parallelTransition.getChildren().add(ft);
             }
-            pt.play();
+            parallelTransition.play();
         } else {
             for (XYChart.Data<X,Y> d : series.getData()) {
                 final Node bubble = d.getNode();
@@ -219,6 +224,18 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
             removeSeriesFromDisplay(series);
         }
 
+    }
+
+    /** {@inheritDoc} */
+    @Override void seriesBeingRemovedIsAdded(Series<X,Y> series) {
+        if (parallelTransition != null) {
+            parallelTransition.setOnFinished(null);
+            parallelTransition.stop();
+            parallelTransition = null;
+            getPlotChildren().remove(series.getNode());
+            for (Data<X,Y> d:series.getData()) getPlotChildren().remove(d.getNode());
+            removeSeriesFromDisplay(series);
+        }
     }
 
     /**

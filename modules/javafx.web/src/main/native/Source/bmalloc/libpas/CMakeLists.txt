@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.21)
 
 project(libpas)
 
-set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to be used")
-add_compile_options(-Wall -Werror)
+set(CMAKE_CXX_STANDARD 20 CACHE STRING "C++ standard to be used")
+add_compile_options(-Wall)
 
 # Get sources
 AUX_SOURCE_DIRECTORY( "src/libpas"       libpasSources   )
@@ -14,16 +14,16 @@ AUX_SOURCE_DIRECTORY( "src/toys"         toysSources     )
 AUX_SOURCE_DIRECTORY( "src/verifier"     verifierSources )
 
 # Directories
-include_directories(    ${CMAKE_SOURCE_DIR}/src/libpas 
+include_directories(    ${CMAKE_SOURCE_DIR}/src/libpas
                         ${CMAKE_SOURCE_DIR}/src/verifier
-                        ${CMAKE_SOURCE_DIR}/src/chaos 
+                        ${CMAKE_SOURCE_DIR}/src/chaos
                         ${CMAKE_SOURCE_DIR}/src/toys
                         ${CMAKE_SOURCE_DIR}/src/test
                         ${CMAKE_SOURCE_DIR}/src/mbmalloc )
 
-link_directories(       ${CMAKE_SOURCE_DIR}/src/libpas 
+link_directories(       ${CMAKE_SOURCE_DIR}/src/libpas
                         ${CMAKE_SOURCE_DIR}/src/verifier
-                        ${CMAKE_SOURCE_DIR}/src/chaos 
+                        ${CMAKE_SOURCE_DIR}/src/chaos
                         ${CMAKE_SOURCE_DIR}/src/toys
                         ${CMAKE_SOURCE_DIR}/src/test
                         ${CMAKE_SOURCE_DIR}/src/mbmalloc )

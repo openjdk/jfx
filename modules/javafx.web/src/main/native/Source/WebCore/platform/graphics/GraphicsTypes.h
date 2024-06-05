@@ -25,7 +25,10 @@
 
 #pragma once
 
+#include "Color.h"
+#include "FloatSize.h"
 #include "WindRule.h"
+#include <optional>
 #include <wtf/EnumTraits.h>
 #include <wtf/Forward.h>
 
@@ -73,6 +76,29 @@ enum class BlendMode : uint8_t {
     PlusLighter
 };
 
+struct CompositeMode {
+    CompositeOperator operation;
+    BlendMode blendMode;
+};
+
+inline bool operator==(const CompositeMode& a, const CompositeMode& b)
+{
+    return a.operation == b.operation && a.blendMode == b.blendMode;
+}
+
+enum class DocumentMarkerLineStyleMode : uint8_t {
+        TextCheckingDictationPhraseWithAlternatives,
+        Spelling,
+        Grammar,
+        AutocorrectionReplacement,
+        DictationAlternatives
+};
+
+struct DocumentMarkerLineStyle {
+    DocumentMarkerLineStyleMode mode;
+    Color color;
+};
+
 enum class GradientSpreadMethod : uint8_t {
     Pad,
     Reflect,
@@ -105,6 +131,21 @@ enum HorizontalAlignment {
     AlignHCenter
 };
 
+enum class StrokeStyle : uint8_t {
+    NoStroke,
+    SolidStroke,
+    DottedStroke,
+    DashedStroke,
+    DoubleStroke,
+    WavyStroke,
+};
+
+enum class TextDrawingMode : uint8_t {
+    Fill = 1 << 0,
+    Stroke = 1 << 1,
+};
+using TextDrawingModeFlags = OptionSet<TextDrawingMode>;
+
 enum TextBaseline {
     AlphabeticTextBaseline,
     TopTextBaseline,
@@ -129,94 +170,13 @@ bool parseCompositeAndBlendOperator(const String&, WebCore::CompositeOperator&, 
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, WebCore::BlendMode);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, WebCore::CompositeOperator);
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, WindRule);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, CompositeMode);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, GradientSpreadMethod);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, InterpolationQuality);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, LineCap);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, LineJoin);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, StrokeStyle);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, TextDrawingMode);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, WindRule);
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::CompositeOperator> {
-    using values = EnumValues<
-    WebCore::CompositeOperator,
-    WebCore::CompositeOperator::Clear,
-    WebCore::CompositeOperator::Copy,
-    WebCore::CompositeOperator::SourceOver,
-    WebCore::CompositeOperator::SourceIn,
-    WebCore::CompositeOperator::SourceOut,
-    WebCore::CompositeOperator::SourceAtop,
-    WebCore::CompositeOperator::DestinationOver,
-    WebCore::CompositeOperator::DestinationIn,
-    WebCore::CompositeOperator::DestinationOut,
-    WebCore::CompositeOperator::DestinationAtop,
-    WebCore::CompositeOperator::XOR,
-    WebCore::CompositeOperator::PlusDarker,
-    WebCore::CompositeOperator::PlusLighter,
-    WebCore::CompositeOperator::Difference
-    >;
-};
-
-template<> struct EnumTraits<WebCore::BlendMode> {
-    using values = EnumValues<
-    WebCore::BlendMode,
-    WebCore::BlendMode::Normal,
-    WebCore::BlendMode::Multiply,
-    WebCore::BlendMode::Screen,
-    WebCore::BlendMode::Darken,
-    WebCore::BlendMode::Lighten,
-    WebCore::BlendMode::Overlay,
-    WebCore::BlendMode::ColorDodge,
-    WebCore::BlendMode::ColorBurn,
-    WebCore::BlendMode::HardLight,
-    WebCore::BlendMode::SoftLight,
-    WebCore::BlendMode::Difference,
-    WebCore::BlendMode::Exclusion,
-    WebCore::BlendMode::Hue,
-    WebCore::BlendMode::Saturation,
-    WebCore::BlendMode::Color,
-    WebCore::BlendMode::Luminosity,
-    WebCore::BlendMode::PlusDarker,
-    WebCore::BlendMode::PlusLighter
-    >;
-};
-
-template<> struct EnumTraits<WebCore::GradientSpreadMethod> {
-    using values = EnumValues<
-    WebCore::GradientSpreadMethod,
-    WebCore::GradientSpreadMethod::Pad,
-    WebCore::GradientSpreadMethod::Reflect,
-    WebCore::GradientSpreadMethod::Repeat
-    >;
-};
-
-template<> struct EnumTraits<WebCore::InterpolationQuality> {
-    using values = EnumValues<
-    WebCore::InterpolationQuality,
-    WebCore::InterpolationQuality::Default,
-    WebCore::InterpolationQuality::DoNotInterpolate,
-    WebCore::InterpolationQuality::Low,
-    WebCore::InterpolationQuality::Medium,
-    WebCore::InterpolationQuality::High
-    >;
-};
-
-template<> struct EnumTraits<WebCore::LineCap> {
-    using values = EnumValues<
-    WebCore::LineCap,
-    WebCore::LineCap::Butt,
-    WebCore::LineCap::Round,
-    WebCore::LineCap::Square
-    >;
-};
-
-template<> struct EnumTraits<WebCore::LineJoin> {
-    using values = EnumValues<
-    WebCore::LineJoin,
-    WebCore::LineJoin::Miter,
-    WebCore::LineJoin::Round,
-    WebCore::LineJoin::Bevel
-    >;
-};
-
-} // namespace WTF

@@ -25,45 +25,42 @@
 #include "config.h"
 #include "ContainerQuery.h"
 
+#include "CSSMarkup.h"
+#include "CSSValue.h"
+#include "ContainerQueryFeatures.h"
+#include "GenericMediaQuerySerialization.h"
 #include <wtf/NeverDestroyed.h>
+#include <wtf/text/StringBuilder.h>
 
-namespace WebCore::CQ::FeatureNames {
+namespace WebCore {
+namespace CQ {
 
-const AtomString& width()
+OptionSet<Axis> requiredAxesForFeature(const MQ::Feature& feature)
 {
-    static MainThreadNeverDestroyed<AtomString> name { "width"_s };
-    return name;
+    if (feature.schema == &Features::width())
+        return { Axis::Width };
+    if (feature.schema == &Features::height())
+        return { Axis::Height };
+    if (feature.schema == &Features::inlineSize())
+        return { Axis::Inline };
+    if (feature.schema == &Features::blockSize())
+        return { Axis::Block };
+    if (feature.schema == &Features::aspectRatio() || feature.schema == &Features::orientation())
+        return { Axis::Inline, Axis::Block };
+    return { };
 }
 
-const AtomString& height()
+void serialize(StringBuilder& builder, const ContainerQuery& query)
 {
-    static MainThreadNeverDestroyed<AtomString> name { "height"_s };
-    return name;
+    auto name = query.name;
+    if (!name.isEmpty()) {
+        serializeIdentifier(name, builder);
+        builder.append(' ');
+    }
+
+    serialize(builder, query.condition);
 }
 
-const AtomString& inlineSize()
-{
-    static MainThreadNeverDestroyed<AtomString> name { "inline-size"_s };
-    return name;
 }
-
-const AtomString& blockSize()
-{
-    static MainThreadNeverDestroyed<AtomString> name { "block-size"_s };
-    return name;
-}
-
-const AtomString& aspectRatio()
-{
-    static MainThreadNeverDestroyed<AtomString> name { "aspect-ratio"_s };
-    return name;
-}
-
-const AtomString& orientation()
-{
-    static MainThreadNeverDestroyed<AtomString> name { "orientation"_s };
-    return name;
-}
-
 }
 

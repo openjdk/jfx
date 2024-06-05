@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,9 @@
 
 package javafx.beans;
 
+import java.util.Objects;
+
+import javafx.util.Subscription;
 
 /**
  * An {@code Observable} is an entity that wraps content and allows to
@@ -93,4 +96,36 @@ public interface Observable {
      */
     void removeListener(InvalidationListener listener);
 
+    /**
+     * Creates a {@code Subscription} on this {@code Observable} which calls
+     * {@code invalidationSubscriber} whenever it becomes invalid. The provided
+     * subscriber is akin to an {@code InvalidationListener} without the
+     * {@code Observable} parameter. If the same subscriber is subscribed more
+     * than once, then it will be notified more than once. That is, no check is
+     * made to ensure uniqueness.
+     * <p>
+     * Note that the same subscriber instance may be safely subscribed for
+     * different {@code Observables}.
+     * <p>
+     * Also note that when subscribing on an {@code Observable} with a longer
+     * lifecycle than the subscriber, the subscriber must be unsubscribed
+     * when no longer needed as the subscription will otherwise keep the subscriber
+     * from being garbage collected.
+     *
+     * @param invalidationSubscriber a {@code Runnable} to call whenever this
+     *     value becomes invalid, cannot be {@code null}
+     * @return a {@code Subscription} which can be used to cancel this
+     *     subscription, never {@code null}
+     * @throws NullPointerException if the subscriber is {@code null}
+     * @see #addListener(InvalidationListener)
+     * @since 21
+     */
+    default Subscription subscribe(Runnable invalidationSubscriber) {
+        Objects.requireNonNull(invalidationSubscriber, "invalidationSubscriber cannot be null");
+        InvalidationListener listener = obs -> invalidationSubscriber.run();
+
+        addListener(listener);
+
+        return () -> removeListener(listener);
+    }
 }

@@ -34,6 +34,7 @@
 #include "pas_heap_lock.h"
 #include "pas_heap_ref.h"
 #include "pas_large_heap.h"
+#include "pas_malloc_stack_logging.h"
 #include "pas_segregated_page_inlines.h"
 #include "pas_thread_local_cache.h"
 #include "pas_utils.h"
@@ -41,11 +42,11 @@
 PAS_BEGIN_EXTERN_C;
 
 PAS_API bool pas_try_deallocate_slow(uintptr_t begin,
-                                     pas_heap_config* config,
+                                     const pas_heap_config* config,
                                      pas_deallocation_mode deallocation_mode);
 
 PAS_API bool pas_try_deallocate_slow_no_cache(void* ptr,
-                                              pas_heap_config* config_ptr,
+                                              const pas_heap_config* config_ptr,
                                               pas_deallocation_mode deallocation_mode);
 
 static PAS_ALWAYS_INLINE void
@@ -65,11 +66,11 @@ pas_deallocate_known_segregated(void* ptr,
 }
 
 PAS_API bool pas_try_deallocate_known_large(void* ptr,
-                                            pas_heap_config* config,
+                                            const pas_heap_config* config,
                                             pas_deallocation_mode deallocation_mode);
 
 PAS_API void pas_deallocate_known_large(void* ptr,
-                                        pas_heap_config* config);
+                                        const pas_heap_config* config);
 
 static PAS_ALWAYS_INLINE bool pas_try_deallocate_not_small_exclusive_segregated(
     pas_thread_local_cache* thread_local_cache,
@@ -103,6 +104,7 @@ static PAS_ALWAYS_INLINE bool pas_try_deallocate_not_small_exclusive_segregated(
         pas_debug_heap_free((void*)begin);
         return true;
     }
+    pas_msl_free_logging((void*)begin);
 
     page_base = config.page_header_func(begin);
     if (page_base) {

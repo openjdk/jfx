@@ -278,11 +278,14 @@ private:
                 case PutByValDirect:
                 case PutByVal:
                 case PutByValAlias:
+                case PutByValMegamorphic:
+                case EnumeratorPutByVal:
                 case GetArrayLength:
                 case GetTypedArrayLengthAsInt52:
                 case CheckArray:
                 case CheckDetached:
                 case GetIndexedPropertyStorage:
+                case ResolveRope:
                 case GetTypedArrayByteOffset:
                 case GetTypedArrayByteOffsetAsInt52:
                 case Phantom:
@@ -360,9 +363,12 @@ private:
                 case PutByValDirect:
                 case PutByVal:
                 case PutByValAlias:
+                case PutByValMegamorphic:
+                case EnumeratorPutByVal:
                 case GetArrayLength:
                 case GetTypedArrayLengthAsInt52:
                 case GetIndexedPropertyStorage:
+                case ResolveRope:
                 case Phantom:
                 case MovHint:
                 case MultiGetByOffset:

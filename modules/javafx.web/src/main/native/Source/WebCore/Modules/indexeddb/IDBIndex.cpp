@@ -34,6 +34,7 @@
 #include "IDBRequest.h"
 #include "IDBTransaction.h"
 #include "Logging.h"
+#include "WebCoreOpaqueRoot.h"
 #include <JavaScriptCore/HeapInlines.h>
 #include <wtf/IsoMallocInlines.h>
 
@@ -297,7 +298,7 @@ ExceptionOr<Ref<IDBRequest>> IDBIndex::doGet(ExceptionOr<IDBKeyRangeData> range)
         return range.releaseException();
     auto keyRange = range.releaseReturnValue();
 
-    if (keyRange.isNull)
+    if (keyRange.isNull())
         return Exception { DataError };
 
     return transaction.requestGetValue(*this, keyRange);
@@ -336,7 +337,7 @@ ExceptionOr<Ref<IDBRequest>> IDBIndex::doGetKey(ExceptionOr<IDBKeyRangeData> ran
         return range.releaseException();
     auto keyRange = range.releaseReturnValue();
 
-    if (keyRange.isNull)
+    if (keyRange.isNull())
         return Exception { DataError };
 
     return transaction.requestGetKey(*this, keyRange);
@@ -432,6 +433,16 @@ void IDBIndex::ref()
 void IDBIndex::deref()
 {
     m_objectStore.deref();
+}
+
+WebCoreOpaqueRoot IDBIndex::opaqueRoot()
+{
+    return WebCoreOpaqueRoot { &m_objectStore };
+}
+
+WebCoreOpaqueRoot root(IDBIndex* index)
+{
+    return index ? index->opaqueRoot() : nullptr;
 }
 
 } // namespace WebCore

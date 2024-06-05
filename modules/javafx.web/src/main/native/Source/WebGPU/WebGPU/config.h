@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -27,6 +27,7 @@
 
 #include "WebGPU.h"
 #include "WebGPUExt.h"
+#include "WebGPUInternal.h"
 
 #include <Metal/Metal.h>
 
@@ -35,3 +36,5 @@
 #include <wtf/DisallowCType.h>
 
 #include <wtf/Platform.h>
+
+#include <wtf/RetainPtr.h>

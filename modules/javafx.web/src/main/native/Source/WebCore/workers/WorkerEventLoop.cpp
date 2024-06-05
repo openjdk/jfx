@@ -39,6 +39,7 @@ Ref<WorkerEventLoop> WorkerEventLoop::create(WorkerOrWorkletGlobalScope& context
 WorkerEventLoop::WorkerEventLoop(WorkerOrWorkletGlobalScope& context)
     : ContextDestructionObserver(&context)
 {
+    addAssociatedContext(context);
 }
 
 WorkerEventLoop::~WorkerEventLoop()
@@ -47,10 +48,13 @@ WorkerEventLoop::~WorkerEventLoop()
 
 void WorkerEventLoop::scheduleToRun()
 {
-    ASSERT(scriptExecutionContext());
-    scriptExecutionContext()->postTask([eventLoop = Ref { *this }] (ScriptExecutionContext&) {
+    auto* globalScope = downcast<WorkerOrWorkletGlobalScope>(scriptExecutionContext());
+    ASSERT(globalScope);
+    // Post this task with a special event mode, so that it can be separated from other
+    // kinds of tasks so that queued microtasks can run even if other tasks are ignored.
+    globalScope->postTaskForMode([eventLoop = Ref { *this }] (ScriptExecutionContext&) {
         eventLoop->run();
-    });
+    }, WorkerEventLoop::taskMode());
 }
 
 bool WorkerEventLoop::isContextThread() const
@@ -62,7 +66,7 @@ MicrotaskQueue& WorkerEventLoop::microtaskQueue()
 {
     ASSERT(scriptExecutionContext());
     if (!m_microtaskQueue)
-        m_microtaskQueue = makeUnique<MicrotaskQueue>(scriptExecutionContext()->vm());
+        m_microtaskQueue = makeUnique<MicrotaskQueue>(scriptExecutionContext()->vm(), *this);
     return *m_microtaskQueue;
 }
 
@@ -71,4 +75,8 @@ void WorkerEventLoop::clearMicrotaskQueue()
     m_microtaskQueue = nullptr;
 }
 
+const String WorkerEventLoop::taskMode()
+{
+    return "workerEventLoopTaskMode"_s;
+}
 } // namespace WebCore

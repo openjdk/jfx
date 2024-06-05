@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,6 @@
 #pragma once
 
 #include "Debugger.h"
-#include "JSGlobalObject.h"
 
 namespace JSC {
 
@@ -81,9 +80,9 @@ private:
         return true;
     }
 
-    JSGlobalObject* m_globalObject { nullptr };
+    JSGlobalObject* const m_globalObject { nullptr };
     std::optional<Seconds> m_startTime;
-    ProfilingReason m_reason;
+    const ProfilingReason m_reason;
 };
 
 } // namespace JSC

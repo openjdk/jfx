@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -126,8 +126,12 @@ public class DateStringConverter extends DateTimeStringConverter {
 
     // --------------------------------------------------------- Private Methods
 
-    /** {@inheritDoc} */
-    @Override protected DateFormat getDateFormat() {
+    /**
+     * @deprecated This method was exposed erroneously and will be removed in a future version.
+     */
+    @Deprecated(forRemoval = true, since = "22")
+    @Override
+    protected DateFormat getDateFormat() {
         DateFormat df = null;
 
         if (dateFormat != null) {

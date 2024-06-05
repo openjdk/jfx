@@ -235,21 +235,15 @@ inline Ref<T, U> Ref<T, U>::replace(Ref<X, Y>&& reference)
 }
 
 template<typename T, typename U = RawPtrTraits<T>, typename X, typename Y>
-inline Ref<T, U> static_reference_cast(Ref<X, Y>& reference)
-{
-    return Ref<T, U>(static_cast<T&>(reference.get()));
-}
-
-template<typename T, typename U = RawPtrTraits<T>, typename X, typename Y>
 inline Ref<T, U> static_reference_cast(Ref<X, Y>&& reference)
 {
     return adoptRef(static_cast<T&>(reference.leakRef()));
 }
 
 template<typename T, typename U = RawPtrTraits<T>, typename X, typename Y>
-inline Ref<T, U> static_reference_cast(const Ref<X, Y>& reference)
+ALWAYS_INLINE Ref<T, U> static_reference_cast(const Ref<X, Y>& reference)
 {
-    return Ref<T, U>(static_cast<T&>(reference.copyRef().get()));
+    return static_reference_cast<T, U>(reference.copyRef());
 }
 
 template <typename T, typename U>
@@ -282,40 +276,25 @@ inline bool is(const Ref<ArgType, PtrTraits>& source)
     return is<ExpectedType>(source.get());
 }
 
-template<typename T, typename U, typename V, typename W>
-inline bool operator==(const Ref<T, U>& a, const Ref<V, W>& b)
+template<typename Target, typename Source, typename PtrTraits>
+inline Target& downcast(Ref<Source, PtrTraits>& source)
 {
-    return a.ptr() == b.ptr();
+    return downcast<Target>(source.get());
 }
 
-template<typename T, typename U, typename V>
-inline bool operator==(const Ref<T, U>& a, V& b)
+template<typename Target, typename Source, typename PtrTraits>
+inline Ref<Target> checkedDowncast(Ref<Source, PtrTraits> source)
 {
-    return a.ptr() == &b;
+    static_assert(!std::is_same_v<Source, Target>, "Unnecessary cast to same type");
+    static_assert(std::is_base_of_v<Source, Target>, "Should be a downcast");
+    RELEASE_ASSERT(is<Target>(source));
+    return static_reference_cast<Target>(WTFMove(source));
 }
 
-template<typename T, typename U, typename V>
-inline bool operator==(T& a, const Ref<U, V>& b)
+template<typename Target, typename Source, typename PtrTraits>
+inline Target& downcast(const Ref<Source, PtrTraits>& source)
 {
-    return &a == b.ptr();
-}
-
-template<typename T, typename U, typename V, typename W>
-inline bool operator!=(const Ref<T, U>& a, const Ref<V, W>& b)
-{
-    return a.ptr() != b.ptr();
-}
-
-template<typename T, typename U, typename V>
-inline bool operator!=(const Ref<T, U>& a, V& b)
-{
-    return a.ptr() != &b;
-}
-
-template<typename T, typename U, typename V>
-inline bool operator!=(T& a, const Ref<U, V>& b)
-{
-    return &a != b.ptr();
+    return downcast<Target>(source.get());
 }
 
 } // namespace WTF

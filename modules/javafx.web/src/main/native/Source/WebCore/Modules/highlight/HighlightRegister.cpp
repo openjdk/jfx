@@ -38,18 +38,24 @@ void HighlightRegister::initializeMapLike(DOMMapAdapter& map)
         map.set<IDLDOMString, IDLInterface<Highlight>>(keyValue.key, keyValue.value);
 }
 
-void HighlightRegister::setFromMapLike(String&& key, Ref<Highlight>&& value)
+void HighlightRegister::setFromMapLike(AtomString&& key, Ref<Highlight>&& value)
 {
-    m_map.set(WTFMove(key), WTFMove(value));
+    auto addResult = m_map.set(key, WTFMove(value));
+    if (addResult.isNewEntry) {
+        ASSERT(!m_highlightNames.contains(key));
+        m_highlightNames.append(WTFMove(key));
+    }
 }
 
 void HighlightRegister::clear()
 {
     m_map.clear();
+    m_highlightNames.clear();
 }
 
-bool HighlightRegister::remove(const String& key)
+bool HighlightRegister::remove(const AtomString& key)
 {
+    m_highlightNames.removeFirst(key);
     return m_map.remove(key);
 }
 #if ENABLE(APP_HIGHLIGHTS)
@@ -74,7 +80,7 @@ void HighlightRegister::addAnnotationHighlightWithRange(Ref<StaticRange>&& value
     if (m_map.contains(annotationHighlightKey()))
         m_map.get(annotationHighlightKey())->addToSetLike(value);
     else
-        setFromMapLike(annotationHighlightKey(), Highlight::create(WTFMove(value)));
+        setFromMapLike(annotationHighlightKey(), Highlight::create({ std::ref<AbstractRange>(value.get()) }));
 }
 
 }

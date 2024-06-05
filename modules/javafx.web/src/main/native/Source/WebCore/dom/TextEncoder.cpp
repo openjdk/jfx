@@ -38,9 +38,12 @@ String TextEncoder::encoding() const
 
 RefPtr<Uint8Array> TextEncoder::encode(String&& input) const
 {
-    // FIXME: We should not need to allocate a CString to encode into a Uint8Array.
-    CString utf8 = input.utf8();
-    return Uint8Array::tryCreate(utf8.dataAsUInt8Ptr(), utf8.length());
+    auto result = input.tryGetUTF8([&](std::span<const char> span) -> RefPtr<Uint8Array> {
+            return Uint8Array::tryCreate(reinterpret_cast<const uint8_t*>(span.data()), span.size());
+    });
+        if (result)
+            return result.value();
+    return Uint8Array::tryCreate(nullptr, 0);
 }
 
 auto TextEncoder::encodeInto(String&& input, Ref<Uint8Array>&& array) -> EncodeIntoResult

@@ -45,6 +45,7 @@
 #include "YarrJIT.h"
 #include <wtf/Bag.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/text/StringSearch.h>
 
 namespace JSC {
 
@@ -79,17 +80,20 @@ struct WeakReferenceTransition {
 class CommonData : public MathICHolder {
     WTF_MAKE_NONCOPYABLE(CommonData);
 public:
-    CommonData()
+    CommonData(bool isUnlinked)
         : codeOrigins(CodeOriginPool::create())
+        , m_isUnlinked(isUnlinked)
     { }
     ~CommonData();
 
     void shrinkToFit();
 
-    bool invalidate(); // Returns true if we did invalidate, or false if the code block was already invalidated.
-    bool hasInstalledVMTrapsBreakpoints() const { return isStillValid && hasVMTrapsBreakpointsInstalled; }
+    bool invalidateLinkedCode(); // Returns true if we did invalidate, or false if the code block was already invalidated.
+    bool hasInstalledVMTrapsBreakpoints() const { return m_isStillValid && m_hasVMTrapsBreakpointsInstalled; }
     void installVMTrapBreakpoints(CodeBlock* owner);
-    bool isVMTrapBreakpoint(void* address);
+
+    bool isUnlinked() const { return m_isUnlinked; }
+    bool isStillValid() const { return m_isStillValid; }
 
     CatchEntrypointData* catchOSREntryDataForBytecodeIndex(BytecodeIndex bytecodeIndex)
     {
@@ -111,11 +115,6 @@ public:
 
     void clearWatchpoints();
 
-    OptimizingCallLinkInfo* addCallLinkInfo(CodeOrigin codeOrigin)
-    {
-        return m_callLinkInfos.add(codeOrigin);
-    }
-
     RefPtr<InlineCallFrameSet> inlineCallFrames;
     Ref<CodeOriginPool> codeOrigins;
 
@@ -129,15 +128,14 @@ public:
     FixedVector<AdaptiveInferredPropertyValueWatchpoint> m_adaptiveInferredPropertyValueWatchpoints;
     std::unique_ptr<PCToCodeOriginMap> m_pcToCodeOriginMap;
     RecordedStatuses recordedStatuses;
-    Vector<JumpReplacement> m_jumpReplacements;
+    FixedVector<JumpReplacement> m_jumpReplacements;
+    FixedVector<std::unique_ptr<BoyerMooreHorspoolTable<uint8_t>>> m_stringSearchTable8;
     Bag<StructureStubInfo> m_stubInfos;
     Bag<OptimizingCallLinkInfo> m_callLinkInfos;
-    Yarr::YarrBoyerMoyerData m_boyerMooreData;
+    Yarr::YarrBoyerMooreData m_boyerMooreData;
 
     ScratchBuffer* catchOSREntryBuffer;
     RefPtr<Profiler::Compilation> compilation;
-    bool isStillValid { true };
-    bool hasVMTrapsBreakpointsInstalled { false };
 
 #if USE(JSVALUE32_64)
     Bag<double> doubleConstants;
@@ -145,6 +143,11 @@ public:
 
     unsigned frameRegisterCount { std::numeric_limits<unsigned>::max() };
     unsigned requiredRegisterCountForExit { std::numeric_limits<unsigned>::max() };
+
+private:
+    bool m_isUnlinked { false };
+    bool m_isStillValid { true };
+    bool m_hasVMTrapsBreakpointsInstalled { false };
 };
 
 CodeBlock* codeBlockForVMTrapPC(void* pc);

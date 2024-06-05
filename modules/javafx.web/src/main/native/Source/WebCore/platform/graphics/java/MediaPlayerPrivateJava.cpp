@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -256,7 +256,6 @@ HashSet<String, ASCIICaseInsensitiveHash>& MediaPlayerPrivate::GetSupportedTypes
     return supportedTypes;
 }
 
-
 // *********************************************************
 // MediaPlayerPrivate
 // *********************************************************
@@ -430,7 +429,13 @@ float MediaPlayerPrivate::currentTime() const
         LOG_TRACE1("MediaPlayerPrivate currentTime returns (seekTime): %f\n", m_seekTime);
         return m_seekTime;
     }
+
     JNIEnv* env = WTF::GetJavaEnv();
+    // in case of error Unsupported protocol Data in JavaMediaPlayer
+    // The Native MediaElement is getting garbage collected in javascript core, hence calling
+    // currentTime from gc thread, GetJavaEnv will return null env
+    if (!env)
+        return MediaTime::zeroTime().toFloat();
     static jmethodID s_mID
         = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkGetCurrentTime", "()F");
     ASSERT(s_mID);
@@ -553,9 +558,9 @@ bool MediaPlayerPrivate::didLoadingProgress() const
     return didLoadingProgress;
 }
 
-std::unique_ptr<PlatformTimeRanges> MediaPlayerPrivate::buffered() const
+const PlatformTimeRanges& MediaPlayerPrivate::buffered() const
 {
-    return std::make_unique<PlatformTimeRanges>(); //XXX recheck; USE m_buffered
+    return *m_buffered;
 }
 
 unsigned MediaPlayerPrivate::bytesLoaded() const

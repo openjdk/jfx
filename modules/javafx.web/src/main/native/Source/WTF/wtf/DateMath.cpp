@@ -76,9 +76,15 @@
 #include <limits>
 #include <stdint.h>
 #include <time.h>
+#include <unicode/ucal.h>
 #include <wtf/Assertions.h>
 #include <wtf/ASCIICType.h>
+#include <wtf/Language.h>
+#include <wtf/NeverDestroyed.h>
+#include <wtf/ThreadSpecific.h>
 #include <wtf/text/StringBuilder.h>
+#include <wtf/unicode/UTF8Conversion.h>
+#include <wtf/unicode/icu/ICUHelpers.h>
 
 #if OS(WINDOWS)
 #include <windows.h>
@@ -92,17 +98,28 @@ template<unsigned length> inline bool startsWithLettersIgnoringASCIICase(const c
     return equalLettersIgnoringASCIICase(string, lowercaseLetters, length - 1);
 }
 
+static Lock innerTimeZoneOverrideLock;
+static Vector<UChar>& innerTimeZoneOverride() WTF_REQUIRES_LOCK(innerTimeZoneOverrideLock)
+{
+    static NeverDestroyed<Vector<UChar>> timeZoneOverride;
+    return timeZoneOverride;
+}
+
 /* Constants */
 
-const char* const weekdayName[7] = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
-const char* const monthName[12] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
-const char* const monthFullName[12] = { "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December" };
+const ASCIILiteral weekdayName[7] = { "Mon"_s, "Tue"_s, "Wed"_s, "Thu"_s, "Fri"_s, "Sat"_s, "Sun"_s };
+const ASCIILiteral monthName[12] = { "Jan"_s, "Feb"_s, "Mar"_s, "Apr"_s, "May"_s, "Jun"_s, "Jul"_s, "Aug"_s, "Sep"_s, "Oct"_s, "Nov"_s, "Dec"_s };
+const ASCIILiteral monthFullName[12] = { "January"_s, "February"_s, "March"_s, "April"_s, "May"_s, "June"_s, "July"_s, "August"_s, "September"_s, "October"_s, "November"_s, "December"_s };
 
 // Day of year for the first day of each month, where index 0 is January, and day 0 is January 1.
 // First for non-leap years, then for leap years.
 const int firstDayOfMonth[2][12] = {
     {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334},
     {0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335}
+};
+
+const int8_t daysInMonths[12] = {
+    31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
 };
 
 #if !OS(WINDOWS) || HAVE(TM_GMTOFF)
@@ -266,15 +283,13 @@ static int32_t calculateUTCOffset()
 #if !HAVE(TM_GMTOFF)
 
 #if OS(WINDOWS)
-// Code taken from http://support.microsoft.com/kb/167296
+// Code taken from <https://learn.microsoft.com/en-us/windows/win32/sysinfo/converting-a-time-t-value-to-a-file-time>
 static void UnixTimeToFileTime(time_t t, LPFILETIME pft)
 {
-    // Note that LONGLONG is a 64-bit value
-    LONGLONG ll;
-
-    ll = Int32x32To64(t, 10000000) + 116444736000000000;
-    pft->dwLowDateTime = (DWORD)ll;
-    pft->dwHighDateTime = ll >> 32;
+    ULARGE_INTEGER timeValue;
+    timeValue.QuadPart = (t * 10000000LL) + 116444736000000000LL;
+    pft->dwLowDateTime = timeValue.LowPart;
+    pft->dwHighDateTime = timeValue.HighPart;
 }
 #endif
 
@@ -412,7 +427,7 @@ inline static void skipSpacesAndComments(const char*& s)
     int nesting = 0;
     char ch;
     while ((ch = *s)) {
-        if (!isASCIISpace(ch)) {
+        if (!isUnicodeCompatibleASCIIWhitespace(ch)) {
             if (ch == '(')
                 nesting++;
             else if (ch == ')' && nesting > 0)
@@ -474,7 +489,10 @@ static char* parseES5DatePortion(const char* currentPosition, int& year, long& m
     // This is a bit more lenient on the year string than ES5 specifies:
     // instead of restricting to 4 digits (or 6 digits with mandatory +/-),
     // it accepts any integer value. Consider this an implementation fallback.
+    bool hasNegativeYear = *currentPosition == '-';
     if (!parseInt(currentPosition, &postParsePosition, 10, &year))
+        return nullptr;
+    if (!year && hasNegativeYear)
         return nullptr;
 
     // Check for presence of -MM portion.
@@ -706,7 +724,7 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& isLoc
     const char *wordStart = dateString;
     // Check contents of first words if not number
     while (*dateString && !isASCIIDigit(*dateString)) {
-        if (isASCIISpace(*dateString) || *dateString == '(') {
+        if (isUnicodeCompatibleASCIIWhitespace(*dateString) || *dateString == '(') {
             if (dateString - wordStart >= 3)
                 month = findMonth(wordStart);
             skipSpacesAndComments(dateString);
@@ -781,14 +799,14 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& isLoc
             if (month == -1)
                 return std::numeric_limits<double>::quiet_NaN();
 
-            while (*dateString && *dateString != '-' && *dateString != ',' && !isASCIISpace(*dateString))
+            while (*dateString && *dateString != '-' && *dateString != ',' && !isUnicodeCompatibleASCIIWhitespace(*dateString))
                 dateString++;
 
             if (!*dateString)
                 return std::numeric_limits<double>::quiet_NaN();
 
             // '-99 23:12:40 GMT'
-            if (*dateString != '-' && *dateString != '/' && *dateString != ',' && !isASCIISpace(*dateString))
+            if (*dateString != '-' && *dateString != '/' && *dateString != ',' && !isUnicodeCompatibleASCIIWhitespace(*dateString))
                 return std::numeric_limits<double>::quiet_NaN();
             dateString++;
         }
@@ -813,14 +831,19 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& isLoc
         dateString = newPosStr;
     else {
         // ' 23:12:40 GMT'
-        if (!(isASCIISpace(*newPosStr) || *newPosStr == ',')) {
+        if (!(isUnicodeCompatibleASCIIWhitespace(*newPosStr) || *newPosStr == ',')) {
             if (*newPosStr != ':')
                 return std::numeric_limits<double>::quiet_NaN();
             // There was no year; the number was the hour.
             year = std::nullopt;
         } else {
             // in the normal case (we parsed the year), advance to the next number
-            dateString = ++newPosStr;
+            // ' at 23:12:40 GMT'
+            if (isUnicodeCompatibleASCIIWhitespace(newPosStr[0]) && isASCIIAlphaCaselessEqual(newPosStr[1], 'a') && isASCIIAlphaCaselessEqual(newPosStr[2], 't'))
+                newPosStr += 3;
+            else
+                ++newPosStr; // space or comma
+            dateString = newPosStr;
             skipSpacesAndComments(dateString);
         }
 
@@ -851,7 +874,7 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& isLoc
                 return std::numeric_limits<double>::quiet_NaN();
 
             // ':40 GMT'
-            if (*dateString && *dateString != ':' && !isASCIISpace(*dateString))
+            if (*dateString && *dateString != ':' && !isUnicodeCompatibleASCIIWhitespace(*dateString))
                 return std::numeric_limits<double>::quiet_NaN();
 
             // seconds are optional in rfc822 + rfc2822
@@ -868,14 +891,14 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& isLoc
 
             skipSpacesAndComments(dateString);
 
-            if (startsWithLettersIgnoringASCIICase(dateString, "am")) {
+            if (startsWithLettersIgnoringASCIICase(StringView::fromLatin1(dateString), "am"_s)) {
                 if (hour > 12)
                     return std::numeric_limits<double>::quiet_NaN();
                 if (hour == 12)
                     hour = 0;
                 dateString += 2;
                 skipSpacesAndComments(dateString);
-            } else if (startsWithLettersIgnoringASCIICase(dateString, "pm")) {
+            } else if (startsWithLettersIgnoringASCIICase(StringView::fromLatin1(dateString), "pm"_s)) {
                 if (hour > 12)
                     return std::numeric_limits<double>::quiet_NaN();
                 if (hour != 12)
@@ -899,7 +922,7 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& isLoc
     // Don't fail if the time zone is missing.
     // Some websites omit the time zone (4275206).
     if (*dateString) {
-        if (startsWithLettersIgnoringASCIICase(dateString, "gmt") || startsWithLettersIgnoringASCIICase(dateString, "utc")) {
+        if (startsWithLettersIgnoringASCIICase(StringView ::fromLatin1(dateString), "gmt"_s) || startsWithLettersIgnoringASCIICase(StringView::fromLatin1(dateString), "utc"_s)) {
             dateString += 3;
             isLocalTime = false;
         }
@@ -914,7 +937,7 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& isLoc
                 return std::numeric_limits<double>::quiet_NaN();
 
             int sgn = (o < 0) ? -1 : 1;
-            o = abs(o);
+            o = std::abs(o);
             if (*dateString != ':') {
                 if (o >= 24)
                     offset = ((o / 100) * 60 + (o % 100)) * sgn;
@@ -1009,11 +1032,52 @@ String makeRFC2822DateString(unsigned dayOfWeek, unsigned day, unsigned month, u
     stringBuilder.append(' ');
 
     stringBuilder.append(utcOffset > 0 ? '+' : '-');
-    int absoluteUTCOffset = abs(utcOffset);
+    int absoluteUTCOffset = std::abs(utcOffset);
     appendTwoDigitNumber(stringBuilder, absoluteUTCOffset / 60);
     appendTwoDigitNumber(stringBuilder, absoluteUTCOffset % 60);
 
     return stringBuilder.toString();
+}
+
+static std::optional<Vector<UChar, 32>> validateTimeZone(StringView timeZone)
+{
+    auto buffer = timeZone.upconvertedCharacters();
+    const UChar* characters = buffer;
+    Vector<UChar, 32> canonicalBuffer;
+    auto status = callBufferProducingFunction(ucal_getCanonicalTimeZoneID, characters, timeZone.length(), canonicalBuffer, nullptr);
+    if (!U_SUCCESS(status))
+        return std::nullopt;
+    return canonicalBuffer;
+}
+
+bool isTimeZoneValid(StringView timeZone)
+{
+    return validateTimeZone(timeZone).has_value();
+}
+
+bool setTimeZoneOverride(StringView timeZone)
+{
+    if (timeZone.isEmpty()) {
+        Locker locker { innerTimeZoneOverrideLock };
+        innerTimeZoneOverride().clear();
+        return true;
+    }
+
+    auto canonicalBuffer = validateTimeZone(timeZone);
+    if (!canonicalBuffer)
+        return false;
+
+    {
+        Locker locker { innerTimeZoneOverrideLock };
+        innerTimeZoneOverride() = WTFMove(*canonicalBuffer);
+    }
+    return true;
+}
+
+void getTimeZoneOverride(Vector<UChar, 32>& timeZoneID)
+{
+    Locker locker { innerTimeZoneOverrideLock };
+    timeZoneID = innerTimeZoneOverride();
 }
 
 } // namespace WTF

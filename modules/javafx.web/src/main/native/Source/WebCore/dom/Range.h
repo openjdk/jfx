@@ -26,19 +26,20 @@
 
 #include "AbstractRange.h"
 #include "RangeBoundaryPoint.h"
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class DOMRect;
 class DOMRectList;
-class DOMWindow;
 class DocumentFragment;
+class LocalDOMWindow;
 class NodeWithIndex;
 class Text;
 
 struct SimpleRange;
 
-class Range final : public AbstractRange {
+class Range final : public AbstractRange, public CanMakeWeakPtr<Range> {
     WTF_MAKE_ISO_ALLOCATED(Range);
 public:
     WEBCORE_EXPORT static Ref<Range> create(Document&);
@@ -50,6 +51,9 @@ public:
     unsigned endOffset() const final { return m_end.offset(); }
     bool collapsed() const final { return m_start == m_end; }
     WEBCORE_EXPORT Node* commonAncestorContainer() const;
+
+    void resetDidChangeHighlight() { m_didChangeHighlight = false; }
+    bool didChangeHighlight() const { return m_didChangeHighlight; }
 
     WEBCORE_EXPORT ExceptionOr<void> setStart(Ref<Node>&&, unsigned offset);
     WEBCORE_EXPORT ExceptionOr<void> setEnd(Ref<Node>&&, unsigned offset);
@@ -107,7 +111,7 @@ public:
     void updateFromSelection(const SimpleRange&);
 
     // For use by garbage collection. Returns nullptr for ranges not assocated with selection.
-    DOMWindow* window() const;
+    LocalDOMWindow* window() const;
 
     static ExceptionOr<Node*> checkNodeOffsetPair(Node&, unsigned offset);
 
@@ -132,6 +136,7 @@ private:
     RangeBoundaryPoint m_start;
     RangeBoundaryPoint m_end;
     bool m_isAssociatedWithSelection { false };
+    bool m_didChangeHighlight { false };
 };
 
 WEBCORE_EXPORT SimpleRange makeSimpleRange(const Range&);

@@ -47,6 +47,7 @@ namespace JSC { namespace B3 {
 class BasicBlock;
 class CheckValue;
 class InsertionSet;
+class SIMDValue;
 class PhiChildren;
 class Procedure;
 
@@ -76,6 +77,7 @@ public:
     // instead of value->kind().isBlah().
     bool isChill() const { return kind().isChill(); }
     bool traps() const { return kind().traps(); }
+    bool isSensitiveToNaN() const { return kind().isSensitiveToNaN(); }
 
     Origin origin() const { return m_origin; }
     void setOrigin(Origin origin) { m_origin = origin; }
@@ -238,6 +240,10 @@ public:
     virtual Value* floorConstant(Procedure&) const;
     virtual Value* sqrtConstant(Procedure&) const;
 
+    virtual Value* vectorAndConstant(Procedure&, const Value* other) const;
+    virtual Value* vectorOrConstant(Procedure&, const Value* other) const;
+    virtual Value* vectorXorConstant(Procedure&, const Value* other) const;
+
     virtual TriState equalConstant(const Value* other) const;
     virtual TriState notEqualConstant(const Value* other) const;
     virtual TriState lessThanConstant(const Value* other) const;
@@ -279,6 +285,10 @@ public:
     bool hasFloat() const;
     float asFloat() const;
 
+    bool hasV128() const;
+    v128_t asV128() const;
+    bool isV128(v128_t) const;
+
     bool hasNumber() const;
     template<typename T> bool isRepresentableAs() const;
     template<typename T> T asNumber() const;
@@ -294,6 +304,9 @@ public:
     TriState asTriState() const;
     bool isLikeZero() const { return asTriState() == TriState::False; }
     bool isLikeNonZero() const { return asTriState() == TriState::True; }
+
+    bool isSIMDValue() const;
+    SIMDValue* asSIMDValue();
 
     Effects effects() const;
 
@@ -393,6 +406,7 @@ protected:
         case Const64:
         case ConstFloat:
         case ConstDouble:
+        case Const128:
         case BottomTuple:
         case Fence:
         case SlotBase:
@@ -410,6 +424,8 @@ protected:
         case SExt8:
         case SExt16:
         case Trunc:
+        case SExt8To64:
+        case SExt16To64:
         case SExt32:
         case ZExt32:
         case FloatToDouble:
@@ -430,6 +446,30 @@ protected:
         case Set:
         case WasmAddress:
         case WasmBoundsCheck:
+        case VectorExtractLane:
+        case VectorSplat:
+        case VectorNot:
+        case VectorAbs:
+        case VectorNeg:
+        case VectorPopcnt:
+        case VectorCeil:
+        case VectorFloor:
+        case VectorTrunc:
+        case VectorTruncSat:
+        case VectorRelaxedTruncSat:
+        case VectorConvert:
+        case VectorConvertLow:
+        case VectorNearest:
+        case VectorSqrt:
+        case VectorExtendLow:
+        case VectorExtendHigh:
+        case VectorPromote:
+        case VectorDemote:
+        case VectorBitmask:
+        case VectorAnyTrue:
+        case VectorAllTrue:
+        case VectorExtaddPairwise:
+        case VectorDupElement:
             return sizeof(Value*);
         case Add:
         case Sub:
@@ -468,10 +508,47 @@ protected:
         case Store8:
         case Store16:
         case Store:
+        case VectorReplaceLane:
+        case VectorEqual:
+        case VectorNotEqual:
+        case VectorLessThan:
+        case VectorLessThanOrEqual:
+        case VectorBelow:
+        case VectorBelowOrEqual:
+        case VectorGreaterThan:
+        case VectorGreaterThanOrEqual:
+        case VectorAbove:
+        case VectorAboveOrEqual:
+        case VectorAdd:
+        case VectorSub:
+        case VectorAddSat:
+        case VectorSubSat:
+        case VectorMul:
+        case VectorDotProduct:
+        case VectorDiv:
+        case VectorMin:
+        case VectorMax:
+        case VectorPmin:
+        case VectorPmax:
+        case VectorNarrow:
+        case VectorAnd:
+        case VectorAndnot:
+        case VectorOr:
+        case VectorXor:
+        case VectorShl:
+        case VectorShr:
+        case VectorMulSat:
+        case VectorAvgRound:
+        case VectorMulByElement:
+        case VectorShiftByVector:
+        case VectorRelaxedSwizzle:
             return 2 * sizeof(Value*);
         case Select:
         case AtomicWeakCAS:
         case AtomicStrongCAS:
+        case VectorBitwiseSelect:
+        case VectorRelaxedMAdd:
+        case VectorRelaxedNMAdd:
             return 3 * sizeof(Value*);
         case CCall:
         case Check:
@@ -479,6 +556,7 @@ protected:
         case CheckSub:
         case CheckMul:
         case Patchpoint:
+        case VectorSwizzle:
             return sizeof(Vector<Value*, 3>);
 #ifdef NDEBUG
         default:
@@ -586,6 +664,8 @@ private:
         case SExt8:
         case SExt16:
         case Trunc:
+        case SExt8To64:
+        case SExt16To64:
         case SExt32:
         case ZExt32:
         case FloatToDouble:
@@ -595,6 +675,30 @@ private:
         case BitwiseCast:
         case Branch:
         case Depend:
+        case VectorExtractLane:
+        case VectorNot:
+        case VectorSplat:
+        case VectorAbs:
+        case VectorNeg:
+        case VectorPopcnt:
+        case VectorCeil:
+        case VectorFloor:
+        case VectorTrunc:
+        case VectorTruncSat:
+        case VectorConvert:
+        case VectorConvertLow:
+        case VectorNearest:
+        case VectorSqrt:
+        case VectorExtendLow:
+        case VectorExtendHigh:
+        case VectorPromote:
+        case VectorDemote:
+        case VectorBitmask:
+        case VectorAnyTrue:
+        case VectorAllTrue:
+        case VectorExtaddPairwise:
+        case VectorDupElement:
+        case VectorRelaxedTruncSat:
             if (UNLIKELY(numArgs != 1))
                 badKind(kind, numArgs);
             return One;
@@ -626,10 +730,47 @@ private:
         case AboveEqual:
         case BelowEqual:
         case EqualOrUnordered:
+        case VectorReplaceLane:
+        case VectorEqual:
+        case VectorNotEqual:
+        case VectorLessThan:
+        case VectorLessThanOrEqual:
+        case VectorBelow:
+        case VectorBelowOrEqual:
+        case VectorGreaterThan:
+        case VectorGreaterThanOrEqual:
+        case VectorAbove:
+        case VectorAboveOrEqual:
+        case VectorAdd:
+        case VectorSub:
+        case VectorAddSat:
+        case VectorSubSat:
+        case VectorMul:
+        case VectorDotProduct:
+        case VectorDiv:
+        case VectorMin:
+        case VectorMax:
+        case VectorPmin:
+        case VectorPmax:
+        case VectorNarrow:
+        case VectorAnd:
+        case VectorAndnot:
+        case VectorOr:
+        case VectorXor:
+        case VectorShl:
+        case VectorShr:
+        case VectorMulSat:
+        case VectorAvgRound:
+        case VectorMulByElement:
+        case VectorShiftByVector:
+        case VectorRelaxedSwizzle:
             if (UNLIKELY(numArgs != 2))
                 badKind(kind, numArgs);
             return Two;
         case Select:
+        case VectorBitwiseSelect:
+        case VectorRelaxedMAdd:
+        case VectorRelaxedNMAdd:
             if (UNLIKELY(numArgs != 3))
                 badKind(kind, numArgs);
             return Three;
@@ -730,7 +871,22 @@ private:
 
     NO_RETURN_DUE_TO_CRASH static void badKind(Kind, unsigned);
 
+#if ASSERT_ENABLED
+    String m_compilerConstructionSite { emptyString() };
+
 public:
+    static String generateCompilerConstructionSite();
+#endif
+
+public:
+    String compilerConstructionSite() const
+    {
+#if ASSERT_ENABLED
+        return m_compilerConstructionSite;
+#endif
+        return nullString();
+    }
+
     BasicBlock* owner { nullptr }; // computed by Procedure::resetValueOwners().
 };
 

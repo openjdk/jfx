@@ -38,7 +38,7 @@ namespace WebCore {
 class AuthenticationChallenge;
 class CachedResource;
 class DocumentLoader;
-class Frame;
+class LocalFrame;
 class NetworkLoadMetrics;
 class ResourceError;
 class ResourceLoader;
@@ -49,7 +49,7 @@ class SharedBuffer;
 class ResourceLoadNotifier {
     WTF_MAKE_NONCOPYABLE(ResourceLoadNotifier);
 public:
-    explicit ResourceLoadNotifier(Frame&);
+    explicit ResourceLoadNotifier(LocalFrame&);
 
     void didReceiveAuthenticationChallenge(ResourceLoader*, const AuthenticationChallenge&);
     void didReceiveAuthenticationChallenge(ResourceLoaderIdentifier, DocumentLoader*, const AuthenticationChallenge&);
@@ -61,7 +61,7 @@ public:
     void didFailToLoad(ResourceLoader*, const ResourceError&);
 
     void assignIdentifierToInitialRequest(ResourceLoaderIdentifier, DocumentLoader*, const ResourceRequest&);
-    void dispatchWillSendRequest(DocumentLoader*, ResourceLoaderIdentifier, ResourceRequest&, const ResourceResponse& redirectResponse, const CachedResource*);
+    void dispatchWillSendRequest(DocumentLoader*, ResourceLoaderIdentifier, ResourceRequest&, const ResourceResponse& redirectResponse, const CachedResource*, ResourceLoader* = nullptr);
     void dispatchDidReceiveResponse(DocumentLoader*, ResourceLoaderIdentifier, const ResourceResponse&, ResourceLoader* = nullptr);
     void dispatchDidReceiveData(DocumentLoader*, ResourceLoaderIdentifier, const SharedBuffer*, int expectedDataLength, int encodedDataLength);
     void dispatchDidFinishLoading(DocumentLoader*, ResourceLoaderIdentifier, const NetworkLoadMetrics&, ResourceLoader*);
@@ -75,7 +75,7 @@ public:
     }
 
 private:
-    Frame& m_frame;
+    LocalFrame& m_frame;
     std::optional<ResourceLoaderIdentifier> m_initialRequestIdentifier;
 };
 

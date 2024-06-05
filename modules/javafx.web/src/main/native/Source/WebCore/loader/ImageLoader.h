@@ -37,12 +37,13 @@ class ImageLoader;
 class Page;
 class RenderImageResource;
 
-template<typename T> class EventSender;
-using ImageEventSender = EventSender<ImageLoader>;
+template<typename T, typename Counter> class EventSender;
+using ImageEventSender = EventSender<ImageLoader, WTF::DefaultWeakPtrImpl>;
 
-enum class RelevantMutation : bool { Yes, No };
+enum class RelevantMutation : bool { No, Yes };
+enum class LazyImageLoadState : uint8_t { None, Deferred, LoadImmediately, FullImage };
 
-class ImageLoader : public CachedImageClient, public CanMakeWeakPtr<ImageLoader> {
+class ImageLoader : public CachedImageClient {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     virtual ~ImageLoader();
@@ -63,7 +64,7 @@ public:
     bool imageComplete() const { return m_imageComplete; }
 
     CachedImage* image() const { return m_image.get(); }
-    void clearImage(); // Cancels pending beforeload and load events, and doesn't dispatch new ones.
+    void clearImage(); // Cancels pending load events, and doesn't dispatch new ones.
 
     size_t pendingDecodePromisesCountForTesting() const { return m_decodingPromises.size(); }
     void decode(Ref<DeferredPromise>&&);
@@ -72,13 +73,11 @@ public:
 
     // FIXME: Delete this code. beforeload event no longer exists.
     bool hasPendingBeforeLoadEvent() const { return m_hasPendingBeforeLoadEvent; }
-    bool hasPendingActivity() const { return m_hasPendingLoadEvent || m_hasPendingErrorEvent; }
+    bool hasPendingActivity() const;
 
-    void dispatchPendingEvent(ImageEventSender*);
+    void dispatchPendingEvent(ImageEventSender*, const AtomString& eventType);
 
-    static void dispatchPendingBeforeLoadEvents(Page*);
     static void dispatchPendingLoadEvents(Page*);
-    static void dispatchPendingErrorEvents(Page*);
 
     void loadDeferredImage();
 
@@ -92,12 +91,12 @@ protected:
 
 private:
     void resetLazyImageLoading(Document&);
-    enum class LazyImageLoadState : uint8_t { None, Deferred, LoadImmediately, FullImage };
 
     virtual void dispatchLoadEvent() = 0;
     virtual String sourceURI(const AtomString&) const = 0;
 
     void updatedHasPendingEvent();
+    void didUpdateCachedImage(RelevantMutation, CachedResourceHandle<CachedImage>&&);
 
     void dispatchPendingBeforeLoadEvent();
     void dispatchPendingLoadEvent();
@@ -111,7 +110,7 @@ private:
 
     bool hasPendingDecodePromises() const { return !m_decodingPromises.isEmpty(); }
     void resolveDecodePromises();
-    void rejectDecodePromises(const char* message);
+    void rejectDecodePromises(ASCIILiteral message);
     void decode();
 
     void timerFired();
@@ -123,6 +122,7 @@ private:
     Timer m_derefElementTimer;
     RefPtr<Element> m_protectedElement;
     AtomString m_failedLoadURL;
+    AtomString m_pendingURL;
     Vector<RefPtr<DeferredPromise>> m_decodingPromises;
     bool m_hasPendingBeforeLoadEvent : 1;
     bool m_hasPendingLoadEvent : 1;

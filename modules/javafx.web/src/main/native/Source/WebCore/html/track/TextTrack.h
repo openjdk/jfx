@@ -44,7 +44,7 @@ class TextTrackCueList;
 class VTTRegion;
 class VTTRegionList;
 
-class TextTrack : public TrackBase, public EventTargetWithInlineData, public ActiveDOMObject {
+class TextTrack : public TrackBase, public EventTarget, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(TextTrack);
 public:
     static Ref<TextTrack> create(Document*, const AtomString& kind, const AtomString& id, const AtomString& label, const AtomString& language);
@@ -53,7 +53,6 @@ public:
     static TextTrack& captionMenuOffItem();
     static TextTrack& captionMenuAutomaticItem();
 
-    static const AtomString& subtitlesKeyword();
     static bool isValidKindKeyword(const AtomString&);
 
     TextTrackList* textTrackList() const;
@@ -67,7 +66,7 @@ public:
     const AtomString& kindKeyword() const;
     void setKindKeywordIgnoringASCIICase(StringView);
 
-    virtual AtomString inBandMetadataTrackDispatchType() const { return emptyString(); }
+    virtual AtomString inBandMetadataTrackDispatchType() const { return emptyAtom(); }
 
     enum class Mode { Disabled, Hidden, Showing };
     Mode mode() const;
@@ -108,6 +107,7 @@ public:
     void invalidateTrackIndex();
 
     bool isRendered();
+    bool isSpoken();
     int trackIndexRelativeToRenderedTracks();
 
     bool hasBeenConfigured() const { return m_hasBeenConfigured; }
@@ -132,14 +132,15 @@ public:
     const std::optional<Vector<String>>& styleSheets() const { return m_styleSheets; }
 
     virtual bool shouldPurgeCuesFromUnbufferedRanges() const { return false; }
-    virtual void removeCuesNotInTimeRanges(PlatformTimeRanges&);
+    virtual void removeCuesNotInTimeRanges(const PlatformTimeRanges&);
+
+    Document& document() const;
 
 protected:
     TextTrack(ScriptExecutionContext*, const AtomString& kind, const AtomString& id, const AtomString& label, const AtomString& language, TextTrackType);
 
-    Document& document() const;
-
-    bool hasCue(TextTrackCue&, TextTrackCue::CueMatchRules = TextTrackCue::MatchAllFields);
+    RefPtr<TextTrackCue> matchCue(TextTrackCue&, TextTrackCue::CueMatchRules = TextTrackCue::MatchAllFields);
+    bool hasCue(TextTrackCue& cue, TextTrackCue::CueMatchRules rules = TextTrackCue::MatchAllFields) { return matchCue(cue, rules); }
     void setKind(Kind);
 
     void newCuesAvailable(const TextTrackCueList&);
@@ -163,8 +164,6 @@ private:
 #if !RELEASE_LOG_DISABLED
     const char* logClassName() const override { return "TextTrack"; }
 #endif
-
-    WeakPtr<TextTrackList> m_textTrackList;
 
     VTTRegionList& ensureVTTRegionList();
     RefPtr<VTTRegionList> m_regions;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,8 @@
 
 package hello;
 
-import java.util.List;
 import javafx.application.Application;
 import javafx.collections.ListChangeListener;
-import javafx.collections.ListChangeListener.Change;
 import javafx.collections.MapChangeListener;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
@@ -61,12 +59,14 @@ public class HelloMedia extends Application {
 
             if (media.getError() == null) {
                 media.setOnError(new Runnable() {
+                    @Override
                     public void run() {
                         System.err.println(">>> Media ERR: " + media.getError());
                         exitOnError();
                     }
                 });
                 media.getMetadata().addListener(new MapChangeListener<String, Object>() {
+                    @Override
                     public void onChanged(Change<? extends String, ? extends Object> change) {
                         String key = change.getKey();
 
@@ -83,6 +83,7 @@ public class HelloMedia extends Application {
                 });
 
                 media.getTracks().addListener(new ListChangeListener<Track>() {
+                    @Override
                     public void onChanged(Change<? extends Track> change) {
                         try {
                             while (change.next()) {
@@ -101,6 +102,7 @@ public class HelloMedia extends Application {
                 try {
                     final MediaPlayer mediaPlayer = new MediaPlayer(media);
                     mediaPlayer.setOnError(new Runnable() {
+                        @Override
                         public void run() {
                             System.err.println(">>> MediaPlayer ERR: " + mediaPlayer.getError());
                             exitOnError();
@@ -113,12 +115,14 @@ public class HelloMedia extends Application {
 
                         MediaView mediaView = new MediaView(mediaPlayer);
                         mediaView.setOnError(new EventHandler<MediaErrorEvent>() {
+                            @Override
                             public void handle(MediaErrorEvent t) {
                                 System.err.println(">>> MediaView ERR: " + t);
                                 exitOnError();
                             }
                         });
                         mediaView.getProperties().addListener(new MapChangeListener<Object, Object>() {
+                            @Override
                             public void onChanged(Change<? extends Object, ? extends Object> change) {
                                 System.err.println(change.getKey()
                                         + ": " + change.getValueRemoved() + " -> " + change.getValueAdded());

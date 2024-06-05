@@ -34,29 +34,23 @@ class MediaDocumentController
         mediaController.controls.shouldUseAudioLayout = true;
         mediaController.controls.timeControl.loading = true;
 
-        this._hasDeterminedMediaType = false;
-
         const media = mediaController.media;
         media.classList.add("media-document");
         media.classList.add("audio");
 
         let deviceType = window.navigator.platform;
         if (deviceType == "MacIntel")
-            deviceType = GestureRecognizer.SupportsTouches ? "ipad" : "mac";
+            deviceType = mediaController.layoutTraits.supportsTouches() ? "ipad" : "mac";
+        else if (deviceType.startsWith('Linux'))
+            deviceType = "linux";
 
         media.classList.add(deviceType);
-
-        media.addEventListener("error", this);
-        media.addEventListener("play", this);
     }
 
     // Public
 
     layout()
     {
-        if (!this._hasDeterminedMediaType)
-            return;
-
         scheduler.scheduleLayout(() => {
             const media = this.mediaController.media;
             const isInvalid = media.error !== null && media.played.length === 0;
@@ -67,18 +61,6 @@ class MediaDocumentController
             classList.toggle("video", useVideoLayout);
             classList.toggle("audio", !useVideoLayout);
         });
-    }
-
-    // Protected
-
-    handleEvent(event)
-    {
-        event.currentTarget.removeEventListener(event.type, this);
-
-        if (event.type === "play" || event.type === "error") {
-            this._hasDeterminedMediaType = true;
-            this.layout();
-        }
     }
 
 }

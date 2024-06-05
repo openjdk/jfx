@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,8 +28,11 @@ package test.javafx.scene.control;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javafx.beans.property.SimpleStringProperty;
+import javafx.scene.control.IndexedCell;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -59,7 +62,7 @@ import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 /**
  */
 public class TableCellTest {
-    private TableCell<String,String> cell;
+    private TableCellShim<String, String> cell;
     private TableView<String> table;
     private TableColumn<String, String> editingColumn;
     private TableRow<String> row;
@@ -75,7 +78,7 @@ public class TableCellTest {
             }
         });
 
-        cell = new TableCell<>();
+        cell = new TableCellShim<>();
         model = FXCollections.observableArrayList("Four", "Five", "Fear"); // "Flop", "Food", "Fizz"
         table = new TableView<>(model);
         editingColumn = new TableColumn<>("TEST");
@@ -852,7 +855,7 @@ public class TableCellTest {
          }
          if (editingColumn != null ) cell.updateTableColumn(editingColumn);
          // force into editable state (not empty)
-         TableCellShim.set_lockItemOnEdit(cell, true);
+         cell.setLockItemOnStartEdit(true);
          CellShim.updateItem(cell, "something", false);
      }
 
@@ -900,6 +903,80 @@ public class TableCellTest {
             assertFalse("cell must not be editing", cell.isEditing());
             assertNull("table editing must be cancelled by cell", table.getEditingCell());
         }
+    }
+
+    /**
+     * See also: <a href="https://bugs.openjdk.org/browse/JDK-8187314">JDK-8187314</a>.
+     */
+    @Test
+    public void testEditCommitValueChangeIsReflectedInCell() {
+        setupForEditing();
+        editingColumn.setCellValueFactory(cc -> new SimpleObjectProperty<>(cc.getValue()));
+        editingColumn.setOnEditCommit(event -> {
+            assertEquals("ABCDEF", event.getNewValue());
+            // Change the underlying item.
+            model.set(0, "ABCDEF [Changed]");
+        });
+
+        cell.updateIndex(0);
+
+        assertEquals("Four", cell.getItem());
+
+        cell.startEdit();
+        cell.commitEdit("ABCDEF");
+
+        assertEquals("ABCDEF [Changed]", cell.getItem());
+    }
+
+    /**
+     * Same index and underlying item should not cause the updateItem(..) method to be called.
+     */
+    @Test
+    public void testSameIndexAndItemShouldNotUpdateItem() {
+        AtomicInteger counter = new AtomicInteger();
+
+        editingColumn.setCellFactory(view -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                counter.incrementAndGet();
+                super.updateItem(item, empty);
+            }
+        });
+        setupForEditing();
+
+        stageLoader = new StageLoader(table);
+
+        counter.set(0);
+        IndexedCell<String> cell = VirtualFlowTestUtils.getCell(table, 0, 0);
+        cell.updateIndex(0);
+
+        assertEquals(0, counter.get());
+    }
+
+    /**
+     * The contract of a {@link TableCell} is that isItemChanged(..)
+     * is called when the index is 'changed' to the same number as the old one, to evaluate if we need to call
+     * updateItem(..).
+     */
+    @Test
+    public void testSameIndexIsItemsChangedShouldBeCalled() {
+        AtomicBoolean isItemChangedCalled = new AtomicBoolean();
+
+        editingColumn.setCellFactory(view -> new TableCell<>() {
+            @Override
+            protected boolean isItemChanged(String oldItem, String newItem) {
+                isItemChangedCalled.set(true);
+                return super.isItemChanged(oldItem, newItem);
+            }
+        });
+        setupForEditing();
+
+        stageLoader = new StageLoader(table);
+
+        IndexedCell<String> cell = VirtualFlowTestUtils.getCell(table, 0, 0);
+        cell.updateIndex(0);
+
+        assertTrue(isItemChangedCalled.get());
     }
 
     public static class MisbehavingOnCancelTableCell<S, T> extends TableCell<S, T> {

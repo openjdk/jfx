@@ -23,7 +23,7 @@
 
 #include "Document.h"
 #include "DocumentParser.h"
-#include "Frame.h"
+#include "LocalFrame.h"
 #include "Page.h"
 #include "PageGroup.h"
 #include "ScriptRunner.h"
@@ -33,15 +33,22 @@ namespace WebCore {
 PageGroupLoadDeferrer::PageGroupLoadDeferrer(Page& page, bool deferSelf)
 {
     for (auto& otherPage : page.group().pages()) {
-        if ((deferSelf || &otherPage != &page)) {
-            if (!otherPage.defersLoading()) {
-                m_deferredFrames.append(&otherPage.mainFrame());
+        if (!deferSelf && &otherPage == &page)
+            continue;
+        if (otherPage.defersLoading())
+            continue;
+        auto* localMainFrame = dynamicDowncast<LocalFrame>(otherPage.mainFrame());
+        if (!localMainFrame)
+            continue;
+        m_deferredFrames.append(localMainFrame);
 
                 // This code is not logically part of load deferring, but we do not want JS code executed beneath modal
                 // windows or sheets, which is exactly when PageGroupLoadDeferrer is used.
-                for (auto* frame = &otherPage.mainFrame(); frame; frame = frame->tree().traverseNext())
-                    frame->document()->suspendScheduledTasks(ReasonForSuspension::WillDeferLoading);
-            }
+        for (Frame* frame = localMainFrame; frame; frame = frame->tree().traverseNext()) {
+            auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+            if (!localFrame)
+                continue;
+            localFrame->document()->suspendScheduledTasks(ReasonForSuspension::WillDeferLoading);
         }
     }
 
@@ -54,11 +61,16 @@ PageGroupLoadDeferrer::PageGroupLoadDeferrer(Page& page, bool deferSelf)
 PageGroupLoadDeferrer::~PageGroupLoadDeferrer()
 {
     for (auto& deferredFrame : m_deferredFrames) {
-        if (Page* page = deferredFrame->page()) {
+        auto* page = deferredFrame->page();
+        if (!page)
+            continue;
             page->setDefersLoading(false);
 
-            for (Frame* frame = &page->mainFrame(); frame; frame = frame->tree().traverseNext())
-                frame->document()->resumeScheduledTasks(ReasonForSuspension::WillDeferLoading);
+        for (Frame* frame = &page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+            auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+            if (!localFrame)
+                continue;
+            localFrame->document()->resumeScheduledTasks(ReasonForSuspension::WillDeferLoading);
         }
     }
 }

@@ -83,7 +83,7 @@ private:
     bool hasControlClip() const override { return true; }
     bool canHaveGeneratedChildren() const override { return false; }
 
-    const char* renderName() const override { return "RenderMenuList"; }
+    ASCIILiteral renderName() const override { return "RenderMenuList"_s; }
 
     void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
     void computePreferredLogicalWidths() override;
@@ -119,7 +119,7 @@ private:
     bool multiple() const override;
     FontSelector* fontSelector() const override;
     HostWindow* hostWindow() const override;
-    Ref<Scrollbar> createScrollbar(ScrollableArea&, ScrollbarOrientation, ScrollbarControlSize) override;
+    Ref<Scrollbar> createScrollbar(ScrollableArea&, ScrollbarOrientation, ScrollbarWidth) override;
 
     bool hasLineIfEmpty() const override { return true; }
 

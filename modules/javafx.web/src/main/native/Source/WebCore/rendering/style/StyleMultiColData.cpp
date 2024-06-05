@@ -22,9 +22,11 @@
 #include "config.h"
 #include "StyleMultiColData.h"
 
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 
 namespace WebCore {
+
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleMultiColData);
 
 StyleMultiColData::StyleMultiColData()
     : count(RenderStyle::initialColumnCount())

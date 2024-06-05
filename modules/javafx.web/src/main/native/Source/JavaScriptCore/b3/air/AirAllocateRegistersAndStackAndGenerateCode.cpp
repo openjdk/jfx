@@ -37,8 +37,14 @@
 #include "AirTmpMap.h"
 #include "CCallHelpers.h"
 #include "DisallowMacroScratchRegisterUsage.h"
+#include "Reg.h"
+#include <wtf/ListDump.h>
 
 namespace JSC { namespace B3 { namespace Air {
+
+namespace GenerateAndAllocateRegistersInternal {
+static bool verbose = false;
+}
 
 GenerateAndAllocateRegisters::GenerateAndAllocateRegisters(Code& code)
     : m_code(code)
@@ -54,21 +60,21 @@ ALWAYS_INLINE void GenerateAndAllocateRegisters::checkConsistency()
             if (!reg)
                 return;
 
-            ASSERT(!m_availableRegs[tmp.bank()].contains(reg));
+            ASSERT(!m_availableRegs[tmp.bank()].contains(reg, IgnoreVectors));
             ASSERT(m_currentAllocation->at(reg) == tmp);
         });
 
-        for (Reg reg : RegisterSet::allRegisters()) {
+        for (Reg reg : RegisterSetBuilder::allRegisters()) {
             if (isDisallowedRegister(reg))
                 continue;
 
             Tmp tmp = m_currentAllocation->at(reg);
             if (!tmp) {
-                ASSERT(m_availableRegs[bankForReg(reg)].contains(reg));
+                ASSERT(m_availableRegs[bankForReg(reg)].contains(reg, IgnoreVectors));
                 continue;
             }
 
-            ASSERT(!m_availableRegs[tmp.bank()].contains(reg));
+            ASSERT(!m_availableRegs[tmp.bank()].contains(reg, IgnoreVectors));
             ASSERT(m_map[tmp].reg == reg);
         }
     }
@@ -78,7 +84,7 @@ void GenerateAndAllocateRegisters::buildLiveRanges(UnifiedTmpLiveness& liveness)
 {
     m_liveRangeEnd = TmpMap<size_t>(m_code, 0);
 
-    m_globalInstIndex = 0;
+    m_globalInstIndex = 1;
     for (BasicBlock* block : m_code) {
         for (Tmp tmp : liveness.liveAtHead(block)) {
             if (!tmp.isReg())
@@ -137,21 +143,34 @@ void GenerateAndAllocateRegisters::insertBlocksForFlushAfterTerminalPatchpoints(
     blockInsertionSet.execute();
 }
 
-static ALWAYS_INLINE CCallHelpers::Address callFrameAddr(CCallHelpers& jit, intptr_t offsetFromFP)
+static ALWAYS_INLINE Air::Arg callFrameAddr(Air::Opcode opcode, CCallHelpers& jit, intptr_t offsetFromFP, intptr_t frameSize, Width width)
 {
     if (isX86()) {
-        ASSERT(Arg::addr(Air::Tmp(GPRInfo::callFrameRegister), offsetFromFP).isValidForm(Width64));
-        return CCallHelpers::Address(GPRInfo::callFrameRegister, offsetFromFP);
+        ASSERT(Arg::addr(Air::Tmp(GPRInfo::callFrameRegister), offsetFromFP).isValidForm(opcode, width));
     }
 
-    ASSERT(pinnedExtendedOffsetAddrRegister());
     auto addr = Arg::addr(Air::Tmp(GPRInfo::callFrameRegister), offsetFromFP);
-    if (addr.isValidForm(Width64))
-        return CCallHelpers::Address(GPRInfo::callFrameRegister, offsetFromFP);
-    GPRReg reg = *pinnedExtendedOffsetAddrRegister();
+    if (addr.isValidForm(opcode, width))
+        return addr;
+
+    // Try finding a valid offset from the stack pointer register instead.
+    auto offsetFromSP = offsetFromFP + frameSize;
+    addr = Arg::addr(Air::Tmp(MacroAssembler::stackPointerRegister), offsetFromSP);
+    if (addr.isValidForm(opcode, width))
+        return addr;
+
+    // Try finding a valid indexing of extendedOffsetAddrRegister
+    // into the frame pointer register.
+    // (Have to materialze the offset into extendedOffsetAddrRegister.)
+    GPRReg reg = extendedOffsetAddrRegister();
     jit.move(CCallHelpers::TrustedImmPtr(offsetFromFP), reg);
-    jit.add64(GPRInfo::callFrameRegister, reg);
-    return CCallHelpers::Address(reg);
+    auto index = Arg::index(Air::Tmp(GPRInfo::callFrameRegister), Air::Tmp(reg), 1, 0);
+    if (index.isValidForm(opcode, width))
+        return index;
+
+    // Resort to computing the absolute address in extendedOffsetAddrRegister.
+    jit.addPtr(GPRInfo::callFrameRegister, reg);
+    return Arg::addr(Air::Tmp(reg));
 }
 
 ALWAYS_INLINE void GenerateAndAllocateRegisters::release(Tmp tmp, Reg reg)
@@ -159,8 +178,8 @@ ALWAYS_INLINE void GenerateAndAllocateRegisters::release(Tmp tmp, Reg reg)
     ASSERT(reg);
     ASSERT(m_currentAllocation->at(reg) == tmp);
     m_currentAllocation->at(reg) = Tmp();
-    ASSERT(!m_availableRegs[tmp.bank()].contains(reg));
-    m_availableRegs[tmp.bank()].set(reg);
+    ASSERT(!m_availableRegs[tmp.bank()].contains(reg, IgnoreVectors));
+    m_availableRegs[tmp.bank()].add(reg, IgnoreVectors);
     ASSERT(m_map[tmp].reg == reg);
     m_map[tmp].reg = Reg();
 }
@@ -170,48 +189,102 @@ ALWAYS_INLINE void GenerateAndAllocateRegisters::flush(Tmp tmp, Reg reg)
 {
     ASSERT(tmp);
     intptr_t offset = m_map[tmp].spillSlot->offsetFromFP();
-    if (tmp.isGP())
-        m_jit->store64(reg.gpr(), callFrameAddr(*m_jit, offset));
-    else
-        m_jit->storeDouble(reg.fpr(), callFrameAddr(*m_jit, offset));
+    JIT_COMMENT(*m_jit, "Flush(", tmp, ", ", reg, ", offset=", offset, ")");
+    if (tmp.isGP()) {
+        auto dest = callFrameAddr(Air::Move, *m_jit, offset, m_code.frameSize(), registerWidth());
+        if (dest.isAddr())
+            m_jit->storeRegWord(reg.gpr(), dest.asAddress());
+        else
+            m_jit->storeRegWord(reg.gpr(), dest.asBaseIndex());
+    } else if (B3::conservativeRegisterBytes(B3::FP) == sizeof(double) || !m_code.usesSIMD()) {
+        ASSERT(m_map[tmp].spillSlot->byteSize() == bytesForWidth(Width64));
+        auto dest = callFrameAddr(Air::MoveDouble, *m_jit, offset, m_code.frameSize(), Width64);
+        if (dest.isAddr())
+            m_jit->storeDouble(reg.fpr(), dest.asAddress());
+        else
+            m_jit->storeDouble(reg.fpr(), dest.asBaseIndex());
+    } else {
+        ASSERT(m_map[tmp].spillSlot->byteSize() == bytesForWidth(Width128));
+        auto dest = callFrameAddr(Air::MoveVector, *m_jit, offset, m_code.frameSize(), Width128);
+        if (dest.isAddr())
+            m_jit->storeVector(reg.fpr(), dest.asAddress());
+        else
+            m_jit->storeVector(reg.fpr(), dest.asBaseIndex());
+    }
 }
 
 ALWAYS_INLINE void GenerateAndAllocateRegisters::spill(Tmp tmp, Reg reg)
 {
     ASSERT(reg);
     ASSERT(m_map[tmp].reg == reg);
+    ASSERT(tmp.isReg() || m_liveRangeEnd[tmp] >= m_globalInstIndex);
     flush(tmp, reg);
     release(tmp, reg);
 }
 
-ALWAYS_INLINE void GenerateAndAllocateRegisters::alloc(Tmp tmp, Reg reg, bool isDef)
+ALWAYS_INLINE void GenerateAndAllocateRegisters::alloc(Tmp tmp, Reg reg, Arg::Role role)
 {
     if (Tmp occupyingTmp = m_currentAllocation->at(reg))
         spill(occupyingTmp, reg);
     else {
         ASSERT(!m_currentAllocation->at(reg));
-        ASSERT(m_availableRegs[tmp.bank()].get(reg));
+        ASSERT(m_availableRegs[tmp.bank()].contains(reg, IgnoreVectors));
     }
 
     m_map[tmp].reg = reg;
-    m_availableRegs[tmp.bank()].clear(reg);
+    m_availableRegs[tmp.bank()].remove(reg);
     m_currentAllocation->at(reg) = tmp;
 
-    if (!isDef) {
+    if (Arg::isAnyUse(role)) {
+        JIT_COMMENT(*m_jit, "Alloc(", tmp, ", ", reg, ", role=", role, ")");
         intptr_t offset = m_map[tmp].spillSlot->offsetFromFP();
-        if (tmp.bank() == GP)
-            m_jit->load64(callFrameAddr(*m_jit, offset), reg.gpr());
-        else
-            m_jit->loadDouble(callFrameAddr(*m_jit, offset), reg.fpr());
+        if (tmp.bank() == GP) {
+            auto src = callFrameAddr(Air::Move, *m_jit, offset, m_code.frameSize(), registerWidth());
+            if (src.isAddr())
+                m_jit->loadRegWord(src.asAddress(), reg.gpr());
+            else
+                m_jit->loadRegWord(src.asBaseIndex(), reg.gpr());
+        } else if (B3::conservativeRegisterBytes(B3::FP) == sizeof(double) || !m_code.usesSIMD()) {
+            ASSERT(m_map[tmp].spillSlot->byteSize() == bytesForWidth(Width64));
+            auto src = callFrameAddr(Air::MoveDouble, *m_jit, offset, m_code.frameSize(), Width64);
+            if (src.isAddr())
+                m_jit->loadDouble(src.asAddress(), reg.fpr());
+            else
+                m_jit->loadDouble(src.asBaseIndex(), reg.fpr());
+        } else {
+            ASSERT(m_map[tmp].spillSlot->byteSize() == bytesForWidth(Width128));
+            auto src = callFrameAddr(Air::MoveVector, *m_jit, offset, m_code.frameSize(), Width128);
+            if (src.isAddr())
+                m_jit->loadVector(src.asAddress(), reg.fpr());
+            else
+                m_jit->loadVector(src.asBaseIndex(), reg.fpr());
+        }
     }
 }
 
-ALWAYS_INLINE void GenerateAndAllocateRegisters::freeDeadTmpsIfNeeded()
+// freeDeadTmpsAtCurrentInst and freeDeadTmpsAtCurrentBlock are needed for correctness because
+// we reuse stack slots between Tmps that don't interfere. So we need to make sure we don't
+// spill a dead Tmp to a live Tmp's slot.
+// freeDeadTmpsAtCurrentInst is meant to be called as we walk through each instruction in a basic block
+// because it doesn't consult the entire register file, and is faster than freeDeadTmpsAtCurrentBlock.
+// However, it only prunes things that die at a particular inst index within a block, and doesn't prevent
+// us from propagating a Tmp that is live in one block to the head of a block where it is dead. If
+// something dies within a block, freeDeadTmpsAtCurrentInst will catch it. freeDeadTmpsAtCurrentBlock is
+// meant to ensure we prune away any Tmps that are dead at the head of a block.
+ALWAYS_INLINE void GenerateAndAllocateRegisters::freeDeadTmpsAtCurrentInst()
 {
-    if (m_didAlreadyFreeDeadSlots)
-        return;
+    auto iter = m_tmpsToRelease.find(m_globalInstIndex);
+    if (iter != m_tmpsToRelease.end()) {
+        for (Tmp tmp : iter->value) {
+            ASSERT(m_liveRangeEnd[tmp] < m_globalInstIndex);
+            if (Reg reg = m_map[tmp].reg)
+                release(tmp, reg);
+        }
+    }
+}
 
-    m_didAlreadyFreeDeadSlots = true;
+ALWAYS_INLINE void GenerateAndAllocateRegisters::freeDeadTmpsAtCurrentBlock()
+{
     for (size_t i = 0; i < m_currentAllocation->size(); ++i) {
         Tmp tmp = m_currentAllocation->at(i);
         if (!tmp)
@@ -225,44 +298,73 @@ ALWAYS_INLINE void GenerateAndAllocateRegisters::freeDeadTmpsIfNeeded()
     }
 }
 
-ALWAYS_INLINE bool GenerateAndAllocateRegisters::assignTmp(Tmp& tmp, Bank bank, bool isDef)
+ALWAYS_INLINE bool GenerateAndAllocateRegisters::assignTmp(Tmp& tmp, Bank bank, Arg::Role role)
 {
     ASSERT(!tmp.isReg());
-    if (Reg reg = m_map[tmp].reg) {
-        ASSERT(!m_namedDefdRegs.contains(reg));
-        tmp = Tmp(reg);
-        m_namedUsedRegs.set(reg);
-        ASSERT(!m_availableRegs[bank].get(reg));
-        return true;
-    }
 
-    if (!m_availableRegs[bank].numberOfSetRegisters())
-        freeDeadTmpsIfNeeded();
+    auto markRegisterAsUsed = [&] (Reg reg) {
+        if (Arg::isAnyDef(role))
+            m_clobberedToClear.remove(reg);
+        // At this point, it doesn't matter if we add it to the m_namedUsedRegs or m_namedDefdRegs.
+        // We just need to mark that we can't use it again for another tmp.
+        m_namedUsedRegs.add(reg, conservativeWidth(reg));
+    };
+
+    bool mightInterfere = m_earlyClobber.numberOfSetRegisters() || m_lateClobber.numberOfSetRegisters();
+
+    auto interferesWithClobber = [&] (Reg reg) {
+        if (!mightInterfere)
+            return false;
+        if (Arg::isAnyUse(role) && m_earlyClobber.buildWithLowerBits().contains(reg, IgnoreVectors))
+            return true;
+        if (Arg::isAnyDef(role) && m_lateClobber.buildWithLowerBits().contains(reg, IgnoreVectors))
+            return true;
+        if (Arg::activeAt(role, Arg::Phase::Early) && m_earlyClobber.buildWithLowerBits().contains(reg, IgnoreVectors))
+            return true;
+        if (Arg::activeAt(role, Arg::Phase::Late) && m_lateClobber.buildWithLowerBits().contains(reg, IgnoreVectors))
+            return true;
+        return false;
+    };
+
+    if (Reg reg = m_map[tmp].reg) {
+        if (!interferesWithClobber(reg)) {
+            ASSERT(!m_namedDefdRegs.contains(reg, IgnoreVectors));
+            tmp = Tmp(reg);
+            markRegisterAsUsed(reg);
+            ASSERT(!m_availableRegs[bank].contains(reg, IgnoreVectors));
+            return true;
+        }
+        // This is a rare case when we've already allocated a Tmp in some way, but another
+        // Role of the Tmp imposes some restriction on the register value. E.g, if
+        // we have a program like:
+        // Patch Use:tmp1, LateUse:tmp1, lateClobber:x0
+        // The first use of tmp1 can be allocated to x0, but the second cannot.
+        spill(tmp, reg);
+
+    }
 
     if (m_availableRegs[bank].numberOfSetRegisters()) {
         // We first take an available register.
         for (Reg reg : m_registers[bank]) {
-            if (m_namedUsedRegs.contains(reg) || m_namedDefdRegs.contains(reg))
+            if (interferesWithClobber(reg) || m_namedUsedRegs.contains(reg, IgnoreVectors) || m_namedDefdRegs.contains(reg, IgnoreVectors))
                 continue;
-            if (!m_availableRegs[bank].contains(reg))
+            if (!m_availableRegs[bank].contains(reg, IgnoreVectors))
                 continue;
-            m_namedUsedRegs.set(reg); // At this point, it doesn't matter if we add it to the m_namedUsedRegs or m_namedDefdRegs. We just need to mark that we can't use it again.
-            alloc(tmp, reg, isDef);
+
+            markRegisterAsUsed(reg);
+            alloc(tmp, reg, role);
             tmp = Tmp(reg);
             return true;
         }
-
-        RELEASE_ASSERT_NOT_REACHED();
     }
 
     // Nothing was available, let's make some room.
     for (Reg reg : m_registers[bank]) {
-        if (m_namedUsedRegs.contains(reg) || m_namedDefdRegs.contains(reg))
+        if (interferesWithClobber(reg) || m_namedUsedRegs.contains(reg, IgnoreVectors) || m_namedDefdRegs.contains(reg, IgnoreVectors))
             continue;
 
-        m_namedUsedRegs.set(reg);
-
-        alloc(tmp, reg, isDef);
+        markRegisterAsUsed(reg);
+        alloc(tmp, reg, role);
         tmp = Tmp(reg);
         return true;
     }
@@ -273,13 +375,13 @@ ALWAYS_INLINE bool GenerateAndAllocateRegisters::assignTmp(Tmp& tmp, Bank bank, 
 
 ALWAYS_INLINE bool GenerateAndAllocateRegisters::isDisallowedRegister(Reg reg)
 {
-    return !m_allowedRegisters.get(reg);
+    return !m_allowedRegisters.contains(reg, IgnoreVectors);
 }
 
 void GenerateAndAllocateRegisters::prepareForGeneration()
 {
     // We pessimistically assume we use all callee saves.
-    handleCalleeSaves(m_code, RegisterSet::calleeSaveRegisters());
+    handleCalleeSaves(m_code, RegisterSetBuilder::calleeSaveRegisters());
     allocateEscapedStackSlots(m_code);
 
     insertBlocksForFlushAfterTerminalPatchpoints();
@@ -298,7 +400,7 @@ void GenerateAndAllocateRegisters::prepareForGeneration()
 
         Vector<StackSlot*, 16> freeSlots;
         Vector<StackSlot*, 4> toFree;
-        m_globalInstIndex = 0;
+        m_globalInstIndex = 1;
         for (BasicBlock* block : m_code) {
             auto assignStackSlotToTmp = [&] (Tmp tmp) {
                 if (tmp.isReg())
@@ -311,10 +413,16 @@ void GenerateAndAllocateRegisters::prepareForGeneration()
                     return;
                 }
 
-                if (freeSlots.size())
+                unsigned slotSize = conservativeRegisterBytes(tmp.bank());
+                if (!m_code.usesSIMD())
+                    slotSize = conservativeRegisterBytesWithoutVectors(tmp.bank());
+
+                if (freeSlots.size() && freeSlots.last()->byteSize() >= slotSize)
                     data.spillSlot = freeSlots.takeLast();
                 else
-                    data.spillSlot = m_code.addStackSlot(8, StackSlotKind::Spill);
+                    data.spillSlot = m_code.addStackSlot(slotSize, StackSlotKind::Spill);
+
+                dataLogLnIf(GenerateAndAllocateRegistersInternal::verbose, "assignStackSlotToTmp block: ", *block, ", tmp: ", tmp, " -> slot ", data.spillSlot);
                 data.reg = Reg();
             };
 
@@ -351,26 +459,29 @@ void GenerateAndAllocateRegisters::prepareForGeneration()
         }
     }
 
-    m_allowedRegisters = RegisterSet();
+    m_allowedRegisters = { };
 
     forEachBank([&] (Bank bank) {
         m_registers[bank] = m_code.regsInPriorityOrder(bank);
 
         for (Reg reg : m_registers[bank]) {
-            m_allowedRegisters.set(reg);
+            m_allowedRegisters.add(reg, IgnoreVectors);
             TmpData& data = m_map[Tmp(reg)];
-            data.spillSlot = m_code.addStackSlot(8, StackSlotKind::Spill);
+            unsigned slotSize = conservativeRegisterBytes(bank);
+            if (!m_code.usesSIMD())
+                slotSize = conservativeRegisterBytesWithoutVectors(bank);
+            data.spillSlot = m_code.addStackSlot(slotSize, StackSlotKind::Spill);
+            dataLogLnIf(GenerateAndAllocateRegistersInternal::verbose, "allowedRegisters: reg: ", reg, " -> slot ", data.spillSlot);
             data.reg = Reg();
         }
     });
 
     {
-        unsigned nextIndex = 0;
+        intptr_t offset = -static_cast<intptr_t>(m_code.frameSize());
         for (StackSlot* slot : m_code.stackSlots()) {
             if (slot->isLocked())
                 continue;
-            intptr_t offset = -static_cast<intptr_t>(m_code.frameSize()) - static_cast<intptr_t>(nextIndex) * 8 - 8;
-            ++nextIndex;
+            offset -= std::max(slot->byteSize(), conservativeRegisterBytesWithoutVectors(B3::FP));
             slot->setOffsetFromFP(offset);
         }
     }
@@ -424,6 +535,12 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
 
     buildLiveRanges(*m_liveness);
 
+    m_code.forEachTmp([&] (Tmp tmp) {
+        ASSERT(!tmp.isReg());
+        if (size_t liveRangeEnd = m_liveRangeEnd[tmp])
+            m_tmpsToRelease.add(liveRangeEnd + 1, Vector<Tmp, 2>()).iterator->value.append(tmp);
+    });
+
     IndexMap<BasicBlock*, IndexMap<Reg, Tmp>> currentAllocationMap(m_code.size());
     {
         IndexMap<Reg, Tmp> defaultCurrentAllocation(Reg::maxIndex() + 1);
@@ -461,7 +578,7 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
 
     Disassembler* disassembler = m_code.disassembler();
 
-    m_globalInstIndex = 0;
+    m_globalInstIndex = 1;
 
     for (BasicBlock* block : m_code) {
         context.currentBlock = block;
@@ -505,9 +622,9 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
                 ASSERT(m_map[tmp].reg == Reg());
 #endif
 
-            RegisterSet availableRegisters;
+            ScalarRegisterSet availableRegisters;
             for (Reg reg : m_registers[bank])
-                availableRegisters.set(reg);
+                availableRegisters.add(reg, IgnoreVectors);
             m_availableRegs[bank] = WTFMove(availableRegisters);
         });
 
@@ -520,10 +637,12 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
                 continue;
             Reg reg = Reg::fromIndex(i);
             m_map[tmp].reg = reg;
-            m_availableRegs[tmp.bank()].clear(reg);
+            m_availableRegs[tmp.bank()].remove(reg);
         }
 
         ++m_globalInstIndex;
+
+        freeDeadTmpsAtCurrentBlock();
 
         bool isReplayingSameInst = false;
         for (size_t instIndex = 0; instIndex < block->size(); ++instIndex) {
@@ -535,15 +654,30 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
             context.indexInBlock = instIndex;
 
             Inst& inst = block->at(instIndex);
+            Inst instCopy = inst;
 
-            m_didAlreadyFreeDeadSlots = false;
+            m_namedUsedRegs = { };
+            m_namedDefdRegs = { };
+            m_earlyClobber = { };
+            m_lateClobber = { };
+            m_clobberedToClear = { };
 
-            m_namedUsedRegs = RegisterSet();
-            m_namedDefdRegs = RegisterSet();
+            bool isOrdinaryMove = ([&] {
+                if (inst.kind.opcode == Move)
+                    return true;
+                if (inst.kind.opcode == MoveDouble)
+                    return true;
+                // on 32 bit, a Move32 doesn't have the same zero-extending
+                // semantics it does on 64-bit, so we can treat it exactly like
+                // a Move
+                if (is32Bit() && inst.kind.opcode == Move32)
+                    return true;
+                return false;
+            })();
 
-            bool needsToGenerate = ([&] () -> bool {
+            bool needsToGenerate = ([&]() -> bool {
                 // FIXME: We should consider trying to figure out if we can also elide Mov32s
-                if (!(inst.kind.opcode == Move || inst.kind.opcode == MoveDouble))
+                if (!isOrdinaryMove)
                     return true;
 
                 ASSERT(inst.args.size() >= 2);
@@ -552,9 +686,10 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
                 if (!source.isTmp() || !dest.isTmp())
                     return true;
 
-                // FIXME: We don't track where the last use of a reg is globally so we don't know where we can elide them.
                 ASSERT(source.isReg() || m_liveRangeEnd[source.tmp()] >= m_globalInstIndex);
-                if (source.isReg() || m_liveRangeEnd[source.tmp()] != m_globalInstIndex)
+                const auto sourceIsAtEndOfLifetime = m_liveRangeEnd[source.tmp()] == m_globalInstIndex;
+                // FIXME: We don't track where the last use of a reg is globally so we don't know where we can elide them.
+                if (source.isReg())
                     return true;
 
                 // If we are doing a self move at the end of the temps liveness we can trivially elide the move.
@@ -567,8 +702,29 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
                     return true;
 
                 ASSERT(m_currentAllocation->at(sourceReg) == source.tmp());
+                if (dest.isReg()) {
+                    const auto destReg = dest.reg();
+                    if (destReg != sourceReg)
+                        return true;
 
-                if (dest.isReg() && dest.reg() != sourceReg)
+                    // In this situation, we are moving a source tmp into the
+                    // dest reg where it is currently available--so we just need
+                    // to do a small amount of bookkeeping to elide the move:
+                    //
+                    // If the source tmp isn't dead after here, we need to
+                    // spill it to the stack, but we don't want to generate
+                    // the move as that will generate a redundant load and
+                    // store and use an unnecessary register
+                    if (!sourceIsAtEndOfLifetime)
+                        spill(source.tmp(), sourceReg);
+                    else
+                        release(source.tmp(), sourceReg);
+
+                    alloc(dest.tmp(), destReg, Arg::Def);
+                    return false;
+                }
+
+                if (!sourceIsAtEndOfLifetime)
                     return true;
 
                 if (Reg oldReg = m_map[dest.tmp()].reg)
@@ -581,19 +737,21 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
             })();
             checkConsistency();
 
-            inst.forEachTmp([&] (const Tmp& tmp, Arg::Role role, Bank, Width) {
+            inst.forEachTmp([&] (const Tmp& tmp, Arg::Role role, Bank, Width width) {
+                ASSERT(width <= Width64 || Options::useWebAssemblySIMD());
                 if (tmp.isReg() && isDisallowedRegister(tmp.reg()))
                     return;
 
                 if (tmp.isReg()) {
                     if (Arg::isAnyUse(role))
-                        m_namedUsedRegs.set(tmp.reg());
+                        m_namedUsedRegs.add(tmp.reg(), width);
                     if (Arg::isAnyDef(role))
-                        m_namedDefdRegs.set(tmp.reg());
+                        m_namedDefdRegs.add(tmp.reg(), width);
                 }
             });
 
-            inst.forEachArg([&] (Arg& arg, Arg::Role role, Bank, Width) {
+            inst.forEachArg([&] (Arg& arg, Arg::Role role, Bank, Width width) {
+                ASSERT_UNUSED(width, width <= Width64 || Options::useWebAssemblySIMD());
                 if (!arg.isTmp())
                     return;
 
@@ -610,47 +768,53 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
                 auto& entry = m_map[tmp];
                 if (!entry.reg) {
                     // We're a cold use, and our current location is already on the stack. Just use that.
+                    ASSERT(entry.spillSlot->byteSize() <= bytesForWidth(Width64) || m_code.usesSIMD());
                     arg = Arg::addr(Tmp(GPRInfo::callFrameRegister), entry.spillSlot->offsetFromFP());
                 }
             });
 
-            RegisterSet clobberedRegisters;
-            RegisterSet earlyNextClobberedRegisters;
-            {
-                Inst* nextInst = block->get(instIndex + 1);
-                if (inst.kind.opcode == Patch || (nextInst && nextInst->kind.opcode == Patch)) {
-                    if (inst.kind.opcode == Patch)
-                        clobberedRegisters.merge(inst.extraClobberedRegs());
-                    if (nextInst && nextInst->kind.opcode == Patch)
-                        earlyNextClobberedRegisters.merge(nextInst->extraEarlyClobberedRegs());
+            if (inst.kind.opcode == Patch) {
+                m_earlyClobber.merge(inst.extraEarlyClobberedRegs().buildWithLowerBits());
+                m_lateClobber.merge(inst.extraClobberedRegs().buildWithLowerBits());
 
-                    clobberedRegisters.filter(m_allowedRegisters);
-                    clobberedRegisters.exclude(m_namedDefdRegs);
-                    earlyNextClobberedRegisters.filter(m_allowedRegisters);
+                m_earlyClobber.filter(m_allowedRegisters.includeWholeRegisterWidth());
+                m_lateClobber.filter(m_allowedRegisters.includeWholeRegisterWidth());
 
-                    m_namedDefdRegs.merge(clobberedRegisters);
-                }
+                m_clobberedToClear.merge(m_earlyClobber);
+                m_clobberedToClear.merge(m_lateClobber);
+                m_clobberedToClear.exclude(m_namedDefdRegs.includeWholeRegisterWidth());
             }
 
-            auto allocNamed = [&] (const RegisterSet& named, bool isDef) {
-                for (Reg reg : named) {
+            auto allocNamed = [&] (const RegisterSet& named, Arg::Role role) {
+                named.forEachWithWidth([&] (Reg reg, Width) {
                     if (Tmp occupyingTmp = currentAllocation[reg]) {
                         if (occupyingTmp == Tmp(reg))
-                            continue;
+                            return;
                     }
 
-                    freeDeadTmpsIfNeeded(); // We don't want to spill a dead tmp.
-                    alloc(Tmp(reg), reg, isDef);
-                }
+                    alloc(Tmp(reg), reg, role);
+                });
             };
 
-            allocNamed(m_namedUsedRegs, false); // Must come before the defd registers since we may use and def the same register.
-            allocNamed(m_namedDefdRegs, true);
+            auto spillIfNeeded = [&] (const RegisterSet& set) {
+                set.forEachWithWidth([&] (Reg reg, Width) {
+                    if (Tmp tmp = m_currentAllocation->at(reg))
+                        spill(tmp, reg);
+                });
+            };
+
+            freeDeadTmpsAtCurrentInst();
+
+            spillIfNeeded(m_earlyClobber.buildWithLowerBits());
+            spillIfNeeded(m_lateClobber.buildWithLowerBits());
+
+            allocNamed(m_namedUsedRegs, Arg::Role::Use); // Must come before the defd registers since we may use and def the same register.
+            allocNamed(m_namedDefdRegs, Arg::Role::Def);
 
             if (needsToGenerate) {
                 auto tryAllocate = [&] {
-                    Vector<Tmp*, 8> usesToAlloc;
-                    Vector<Tmp*, 8> defsToAlloc;
+                    Vector<std::pair<Tmp*, Arg::Role>, 8> usesToAlloc;
+                    Vector<std::pair<Tmp*, Arg::Role>, 8> defsToAlloc;
 
                     inst.forEachTmp([&] (Tmp& tmp, Arg::Role role, Bank, Width) {
                         if (tmp.isReg())
@@ -658,15 +822,18 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
 
                         // We treat Use+Def as a use.
                         if (Arg::isAnyUse(role))
-                            usesToAlloc.append(&tmp);
+                            usesToAlloc.append(std::pair { &tmp, role });
                         else if (Arg::isAnyDef(role))
-                            defsToAlloc.append(&tmp);
+                            defsToAlloc.append(std::pair { &tmp, role });
                     });
 
-                    auto tryAllocateTmps = [&] (auto& vector, bool isDef) {
+                    auto tryAllocateTmps = [&] (auto& vector) {
                         bool success = true;
-                        for (Tmp* tmp : vector)
-                            success &= assignTmp(*tmp, tmp->bank(), isDef);
+                        for (std::pair<Tmp*, Arg::Role> pair : vector) {
+                            Tmp& tmp = *std::get<0>(pair);
+                            Arg::Role role = std::get<1>(pair);
+                            success &= assignTmp(tmp, tmp.bank(), role);
+                        }
                         return success;
                     };
 
@@ -676,8 +843,8 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
                     // some tmps may both be used and defd. So we handle uses first since forEachTmp could
                     // walk uses/defs in any order.
                     bool success = true;
-                    success &= tryAllocateTmps(usesToAlloc, false);
-                    success &= tryAllocateTmps(defsToAlloc, true);
+                    success &= tryAllocateTmps(usesToAlloc);
+                    success &= tryAllocateTmps(defsToAlloc);
                     return success;
                 };
 
@@ -689,26 +856,7 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
                 if (!success) {
                     RELEASE_ASSERT(!isReplayingSameInst); // We should only need to do the below at most once per inst.
 
-                    // We need to capture the register state before we start spilling things
-                    // since we may have multiple arguments that are the same register.
-                    IndexMap<Reg, Tmp> allocationSnapshot = currentAllocation;
-
-                    // We rewind this Inst to be in its previous state, however, if any arg admits stack,
-                    // we move to providing that arg in stack form. This will allow us to fully allocate
-                    // this inst when we rewind.
-                    inst.forEachTmpFast([&] (Tmp& tmp) {
-                        if (!tmp.isReg())
-                            return;
-                        if (isDisallowedRegister(tmp.reg()))
-                            return;
-                        Tmp originalTmp = allocationSnapshot[tmp.reg()];
-                        if (originalTmp.isReg()) {
-                            ASSERT(tmp.reg() == originalTmp.reg());
-                            // This means this Inst referred to this reg directly. We leave these as is.
-                            return;
-                        }
-                        tmp = originalTmp;
-                    });
+                    inst = instCopy;
                     inst.forEachArg([&] (Arg& arg, Arg::Role, Bank, Width) {
                         if (arg.isTmp() && !arg.tmp().isReg() && inst.admitsStack(arg)) {
                             Tmp tmp = arg.tmp();
@@ -719,7 +867,18 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
                             arg = Arg::addr(Tmp(GPRInfo::callFrameRegister), entry.spillSlot->offsetFromFP());
                         }
                     });
-
+                    int pinnedRegisterUses = 0;
+                    inst.forEachArg([&] (Arg& arg, Arg::Role role, Bank, Width) {
+                        if (arg.isAddr() && arg.isAnyUse(role) && !arg.isValidForm(inst.kind.opcode)) {
+                            GPRReg reg = extendedOffsetAddrRegister();
+                            m_jit->move(CCallHelpers::TrustedImmPtr(arg.offset()), reg);
+                            m_jit->addPtr(arg.base().gpr(), reg);
+                            arg = Arg::addr(Tmp(reg));
+                            ++pinnedRegisterUses;
+                            RELEASE_ASSERT(pinnedRegisterUses < 2);
+                            return;
+                        }
+                    });
                     --instIndex;
                     isReplayingSameInst = true;
                     continue;
@@ -729,22 +888,18 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
             }
 
             if (m_code.needsUsedRegisters() && inst.kind.opcode == Patch) {
-                freeDeadTmpsIfNeeded();
-                RegisterSet registerSet;
+                RegisterSetBuilder registerSetBuilder;
                 for (size_t i = 0; i < currentAllocation.size(); ++i) {
                     if (currentAllocation[i])
-                        registerSet.set(Reg::fromIndex(i));
+                        registerSetBuilder.add(Reg::fromIndex(i), m_code.usesSIMD() ? conservativeWidth(Reg::fromIndex(i)) : conservativeWidthWithoutVectors(Reg::fromIndex(i)));
                 }
-                inst.reportUsedRegisters(registerSet);
+                inst.reportUsedRegisters(registerSetBuilder);
             }
 
-            auto clobber = [&] (const RegisterSet& set) {
-                for (Reg reg : set) {
-                    Tmp tmp(reg);
-                    ASSERT(currentAllocation[reg] == tmp);
-                    m_availableRegs[tmp.bank()].set(reg);
-                    m_currentAllocation->at(reg) = Tmp();
-                    m_map[tmp].reg = Reg();
+            auto handleClobber = [&] {
+                for (Reg reg : m_clobberedToClear.buildWithLowerBits()) {
+                    if (Tmp tmp = m_currentAllocation->at(reg))
+                        release(tmp, reg);
                 }
             };
 
@@ -754,14 +909,11 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
                     jump = inst.generate(*m_jit, context);
                 ASSERT_UNUSED(jump, !jump.isSet());
 
-                allocNamed(earlyNextClobberedRegisters, true);
-                clobberedRegisters.merge(earlyNextClobberedRegisters);
-                clobber(clobberedRegisters);
+                handleClobber();
             } else {
                 ASSERT(needsToGenerate);
 
-                clobber(clobberedRegisters);
-                ASSERT(earlyNextClobberedRegisters.isEmpty());
+                handleClobber();
 
                 if (block->numSuccessors()) {
                     // By default, we spill everything between block boundaries. However, we have a small

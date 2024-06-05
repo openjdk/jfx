@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2013 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,29 +56,20 @@ float findSlope(const FloatPoint& p1, const FloatPoint& p2, float& c)
 
 bool findIntersection(const FloatPoint& p1, const FloatPoint& p2, const FloatPoint& d1, const FloatPoint& d2, FloatPoint& intersection)
 {
-    float pOffset = 0;
-    float pSlope = findSlope(p1, p2, pOffset);
+    float pxLength = p2.x() - p1.x();
+    float pyLength = p2.y() - p1.y();
 
-    float dOffset = 0;
-    float dSlope = findSlope(d1, d2, dOffset);
+    float dxLength = d2.x() - d1.x();
+    float dyLength = d2.y() - d1.y();
 
-    if (dSlope == pSlope)
+    float denom = pxLength * dyLength - pyLength * dxLength;
+    if (!denom)
         return false;
 
-    if (pSlope == std::numeric_limits<float>::infinity()) {
-        intersection.setX(p1.x());
-        intersection.setY(dSlope * intersection.x() + dOffset);
-        return true;
-    }
-    if (dSlope == std::numeric_limits<float>::infinity()) {
-        intersection.setX(d1.x());
-        intersection.setY(pSlope * intersection.x() + pOffset);
-        return true;
-    }
+    float param = ((d1.x() - p1.x()) * dyLength - (d1.y() - p1.y()) * dxLength) / denom;
 
-    // Find x at intersection, where ys overlap; x = (c' - c) / (m - m')
-    intersection.setX((dOffset - pOffset) / (pSlope - dSlope));
-    intersection.setY(pSlope * intersection.x() + pOffset);
+    intersection.setX(p1.x() + param * pxLength);
+    intersection.setY(p1.y() + param * pyLength);
     return true;
 }
 
@@ -266,6 +258,90 @@ RotatedRect rotatedBoundingRectWithMinimumAngleOfRotation(const FloatQuad& quad,
     auto leftMidToCenterDistance = (midPointToMidPointDistance + rightMargin - leftMargin) / 2;
     auto center = leftMidPoint + (widthVector * leftMidToCenterDistance / midPointToMidPointDistance);
     return { center, { width, height }, angle };
+}
+
+float toPositiveAngle(float angle)
+{
+    angle = fmod(angle, 360);
+    while (angle < 0)
+        angle += 360.0;
+    return angle;
+}
+
+// Compute acute angle from vertical axis
+float toRelatedAcuteAngle(float angle)
+{
+    angle = toPositiveAngle(angle);
+    if (angle < 90)
+        return angle;
+    if (angle > 90 || angle < 180)
+        return std::abs(180 - angle);
+    return std::abs(360 - angle);
+}
+
+RectEdges<double> distanceOfPointToSidesOfRect(const FloatRect& box, const FloatPoint& position)
+{
+    // Compute distance to each side of the containing box
+    double top = std::abs(position.y());
+    double bottom = std::abs(position.y() - box.height());
+    double left = std::abs(position.x());
+    double right = std::abs(position.x() - box.width());
+    return RectEdges<double>(top, right, bottom, left);
+}
+
+std::array<FloatPoint, 4> verticesForBox(const FloatRect& box, const FloatPoint position)
+{
+    return { FloatPoint(-position.x(), -position.y()),
+        FloatPoint(box.width() - position.x(), -position.y()),
+        FloatPoint(box.width() - position.x(), box.height() - position.y()),
+        FloatPoint(-position.x(), box.height() - position.y()) };
+}
+
+double lengthOfRayIntersectionWithBoundingBox(const FloatRect& boundingRect, const std::pair<const FloatPoint&, float> ray)
+{
+    auto length = lengthOfPointToSideOfIntersection(boundingRect, ray);
+    auto angleOfTriangle = angleOfPointToSideOfIntersection(boundingRect, ray);
+    // Given a length and angle of a right triangle, calculate the hypotenuse, which corresponds to
+    // the length from the given point to the intersecting point on the box
+    return length / cos(deg2rad(angleOfTriangle));
+}
+
+// Get the side of box the ray intersects with
+static BoxSide intersectionSide(const FloatRect& boundingRect, const std::pair<const FloatPoint&, float> ray)
+{
+    auto position = ray.first;
+    auto angleInRadians = deg2rad(ray.second);
+    auto distances = distanceOfPointToSidesOfRect(boundingRect, position);
+    // Get possible intersection sides
+    auto s1 = cos(angleInRadians) >= 0 ? distances.top() : distances.bottom();
+    auto s2 = sin(angleInRadians) >= 0 ? distances.right() : distances.left();
+    auto vertical = cos(angleInRadians) >= 0 ? BoxSide::Top : BoxSide::Bottom;
+    auto horizontal = sin(angleInRadians) >= 0 ? BoxSide::Right : BoxSide::Left;
+    auto acuteAngle = deg2rad(toRelatedAcuteAngle(ray.second));
+    return sin(acuteAngle) * s1  > cos(acuteAngle) * s2 ? horizontal : vertical;
+}
+
+double lengthOfPointToSideOfIntersection(const FloatRect& boundingRect, const std::pair<const FloatPoint&, float> ray)
+{
+    auto position = ray.first;
+    if (position.x() < 0 || position.x() > boundingRect.width() || position.y() < 0 || position.y() > boundingRect.height())
+        return 0;
+    auto distances = distanceOfPointToSidesOfRect(boundingRect, position);
+    return distances.at(intersectionSide(boundingRect, ray));
+}
+
+float angleOfPointToSideOfIntersection(const FloatRect& boundingRect, const std::pair<const FloatPoint&, float> ray)
+{
+    auto angle = ray.second;
+    auto side = intersectionSide(boundingRect, ray);
+    angle = toRelatedAcuteAngle(toPositiveAngle(angle));
+    return side == BoxSide::Top || side == BoxSide::Bottom ? angle : 90 - angle;
+}
+
+float normalizeAngleInRadians(float radians)
+{
+    float circles = radians / radiansPerTurnFloat;
+    return radiansPerTurnFloat * (circles - floor(circles));
 }
 
 }

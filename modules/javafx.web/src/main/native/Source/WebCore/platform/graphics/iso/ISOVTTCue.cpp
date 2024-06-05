@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -52,6 +52,10 @@ private:
             return true;
         }
 
+        auto bytesRemaining = view.byteLength() - localOffset;
+        if (characterCount > bytesRemaining)
+            return false;
+
         Vector<LChar> characters;
         characters.reserveInitialCapacity(static_cast<size_t>(characterCount));
         while (characterCount--) {
@@ -80,7 +84,7 @@ ISOWebVTTCue::ISOWebVTTCue(const MediaTime& presentationTime, const MediaTime& d
 {
 }
 
-ISOWebVTTCue::ISOWebVTTCue(MediaTime&& presentationTime, MediaTime&& duration, String&& cueID, String&& cueText, String&& settings, String&& sourceID, String&& originalStartTime)
+ISOWebVTTCue::ISOWebVTTCue(MediaTime&& presentationTime, MediaTime&& duration, AtomString&& cueID, String&& cueText, String&& settings, String&& sourceID, String&& originalStartTime)
     : m_presentationTime(WTFMove(presentationTime))
     , m_duration(WTFMove(duration))
     , m_sourceID(WTFMove(sourceID))
@@ -91,6 +95,7 @@ ISOWebVTTCue::ISOWebVTTCue(MediaTime&& presentationTime, MediaTime&& duration, S
 {
 }
 
+ISOWebVTTCue::ISOWebVTTCue() = default;
 ISOWebVTTCue::ISOWebVTTCue(ISOWebVTTCue&&) = default;
 ISOWebVTTCue::~ISOWebVTTCue() = default;
 
@@ -105,7 +110,7 @@ bool ISOWebVTTCue::parse(DataView& view, unsigned& offset)
         if (stringBox.boxType() == vttCueSourceIDBoxType())
             m_sourceID = stringBox.contents();
         else if (stringBox.boxType() == vttIdBoxType())
-            m_identifier = stringBox.contents();
+            m_identifier = AtomString { stringBox.contents() };
         else if (stringBox.boxType() == vttCurrentTimeBoxType())
             m_originalStartTime = stringBox.contents();
         else if (stringBox.boxType() == vttSettingsBoxType())
@@ -122,9 +127,7 @@ String ISOWebVTTCue::toJSONString() const
 {
     auto object = JSON::Object::create();
 
-#if !LOG_DISABLED
     object->setString("text"_s, m_cueText);
-#endif
     object->setString("sourceId"_s, encodeWithURLEscapeSequences(m_sourceID));
     object->setString("id"_s, encodeWithURLEscapeSequences(m_identifier));
 

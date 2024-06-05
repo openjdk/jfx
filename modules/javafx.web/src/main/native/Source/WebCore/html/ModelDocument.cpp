@@ -32,7 +32,6 @@
 #include "DocumentLoader.h"
 #include "EventNames.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "HTMLBodyElement.h"
 #include "HTMLHeadElement.h"
 #include "HTMLHtmlElement.h"
@@ -41,6 +40,7 @@
 #include "HTMLNames.h"
 #include "HTMLSourceElement.h"
 #include "HTMLStyleElement.h"
+#include "LocalFrameLoaderClient.h"
 #include "RawDataDocumentParser.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
@@ -70,7 +70,7 @@ private:
     void appendBytes(DocumentWriter&, const uint8_t*, size_t) final;
     void finish() final;
 
-    WeakPtr<HTMLModelElement> m_modelElement;
+    WeakPtr<HTMLModelElement, WeakPtrImplWithEventTargetData> m_modelElement;
     String m_outgoingReferrer;
 };
 
@@ -90,8 +90,8 @@ void ModelDocumentParser::createDocumentStructure()
     rootElement->appendChild(headElement);
 
     auto metaElement = HTMLMetaElement::create(document);
-    metaElement->setAttributeWithoutSynchronization(nameAttr, AtomString("viewport", AtomString::ConstructFromLiteral));
-    metaElement->setAttributeWithoutSynchronization(contentAttr, AtomString("width=device-width,initial-scale=1", AtomString::ConstructFromLiteral));
+    metaElement->setAttributeWithoutSynchronization(nameAttr, "viewport"_s);
+    metaElement->setAttributeWithoutSynchronization(contentAttr, "width=device-width,initial-scale=1"_s);
     headElement->appendChild(metaElement);
 
     auto styleElement = HTMLStyleElement::create(document);
@@ -109,9 +109,9 @@ void ModelDocumentParser::createDocumentStructure()
     modelElement->setAttributeWithoutSynchronization(interactiveAttr, emptyAtom());
 
     auto sourceElement = HTMLSourceElement::create(HTMLNames::sourceTag, document);
-    sourceElement->setAttributeWithoutSynchronization(srcAttr, document.url().string());
+    sourceElement->setAttributeWithoutSynchronization(srcAttr, AtomString { document.url().string() });
     if (RefPtr loader = document.loader())
-        sourceElement->setAttributeWithoutSynchronization(typeAttr, loader->responseMIMEType());
+        sourceElement->setAttributeWithoutSynchronization(typeAttr, AtomString { loader->responseMIMEType() });
 
     modelElement->appendChild(sourceElement);
 
@@ -137,7 +137,7 @@ void ModelDocumentParser::finish()
     document()->finishedParsing();
 }
 
-ModelDocument::ModelDocument(Frame* frame, const Settings& settings, const URL& url)
+ModelDocument::ModelDocument(LocalFrame* frame, const Settings& settings, const URL& url)
     : HTMLDocument(frame, settings, url, { }, { DocumentClass::Model })
 {
     if (frame)

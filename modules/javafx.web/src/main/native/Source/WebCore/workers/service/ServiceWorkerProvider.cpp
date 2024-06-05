@@ -29,10 +29,10 @@
 #if ENABLE(SERVICE_WORKER)
 
 #include "Document.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "LegacySchemeRegistry.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "Page.h"
 #include "SWClientConnection.h"
 
@@ -46,6 +46,7 @@ ServiceWorkerProvider::~ServiceWorkerProvider()
 
 ServiceWorkerProvider& ServiceWorkerProvider::singleton()
 {
+    ASSERT(isMainThread());
     RELEASE_ASSERT(sharedProvider);
     return *sharedProvider;
 }

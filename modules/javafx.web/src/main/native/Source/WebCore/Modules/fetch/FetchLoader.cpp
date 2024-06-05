@@ -30,7 +30,7 @@
 #include "FetchLoader.h"
 
 #include "BlobURL.h"
-#include "CachedResourceRequestInitiators.h"
+#include "CachedResourceRequestInitiatorTypes.h"
 #include "ContentSecurityPolicy.h"
 #include "FetchBody.h"
 #include "FetchBodyConsumer.h"
@@ -46,12 +46,6 @@
 
 namespace WebCore {
 
-FetchLoader::~FetchLoader()
-{
-    if (!m_urlForReading.isEmpty())
-        ThreadableBlobRegistry::unregisterBlobURL(m_urlForReading);
-}
-
 void FetchLoader::start(ScriptExecutionContext& context, const Blob& blob)
 {
     return startLoadingBlobURL(context, blob.url());
@@ -59,7 +53,8 @@ void FetchLoader::start(ScriptExecutionContext& context, const Blob& blob)
 
 void FetchLoader::startLoadingBlobURL(ScriptExecutionContext& context, const URL& blobURL)
 {
-    m_urlForReading = BlobURL::createPublicURL(context.securityOrigin());
+    m_urlForReading = { BlobURL::createPublicURL(context.securityOrigin()), context.topOrigin().data() };
+
     if (m_urlForReading.isEmpty()) {
         m_client.didFail({ errorDomainWebKitInternal, 0, URL(), "Could not create URL for Blob"_s });
         return;
@@ -69,7 +64,7 @@ void FetchLoader::startLoadingBlobURL(ScriptExecutionContext& context, const URL
 
     ResourceRequest request(m_urlForReading);
     request.setInitiatorIdentifier(context.resourceRequestIdentifier());
-    request.setHTTPMethod("GET");
+    request.setHTTPMethod("GET"_s);
 
     ThreadableLoaderOptions options;
     options.sendLoadCallbacks = SendCallbackPolicy::SendCallbacks;
@@ -95,6 +90,9 @@ void FetchLoader::start(ScriptExecutionContext& context, const FetchRequest& req
     options.dataBufferingPolicy = DataBufferingPolicy::DoNotBufferData;
     options.sameOriginDataURLFlag = SameOriginDataURLFlag::Set;
     options.navigationPreloadIdentifier = request.navigationPreloadIdentifier();
+    options.contentEncodingSniffingPolicy = ContentEncodingSniffingPolicy::Disable;
+    if (context.settingsValues().fetchPriorityEnabled)
+        options.fetchPriorityHint = request.fetchPriorityHint();
 
     ResourceRequest fetchRequest = request.resourceRequest();
 
@@ -109,11 +107,11 @@ void FetchLoader::start(ScriptExecutionContext& context, const FetchRequest& req
     }
 
     String referrer = request.internalRequestReferrer();
-    if (referrer == "no-referrer") {
+    if (referrer == "no-referrer"_s) {
         options.referrerPolicy = ReferrerPolicy::NoReferrer;
         referrer = String();
     } else
-        referrer = (referrer == "client") ? context.url().strippedForUseAsReferrer() : URL(context.url(), referrer).strippedForUseAsReferrer();
+        referrer = (referrer == "client"_s) ? context.url().strippedForUseAsReferrer() : URL(context.url(), referrer).strippedForUseAsReferrer();
     if (options.referrerPolicy == ReferrerPolicy::EmptyString)
         options.referrerPolicy = context.referrerPolicy();
 

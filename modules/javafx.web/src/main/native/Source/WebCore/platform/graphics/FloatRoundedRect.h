@@ -85,6 +85,7 @@ public:
         const FloatSize& bottomRight() const { return m_bottomRight; }
 
         bool isZero() const;
+        bool hasEvenCorners() const;
         bool isUniformCornerRadius() const; // Including no radius.
 
         void scale(float factor);
@@ -102,9 +103,9 @@ public:
     };
 
     WEBCORE_EXPORT explicit FloatRoundedRect(const FloatRect& = FloatRect(), const Radii& = Radii());
+    WEBCORE_EXPORT FloatRoundedRect(const FloatRect&, const FloatSize& topLeft, const FloatSize& topRight, const FloatSize& bottomLeft, const FloatSize& bottomRight);
     explicit FloatRoundedRect(const RoundedRect&);
     FloatRoundedRect(float x, float y, float width, float height);
-    FloatRoundedRect(const FloatRect&, const FloatSize& topLeft, const FloatSize& topRight, const FloatSize& bottomLeft, const FloatSize& bottomRight);
 
     const FloatRect& rect() const { return m_rect; }
     const Radii& radii() const { return m_radii; }
@@ -154,19 +155,9 @@ inline bool operator==(const FloatRoundedRect::Radii& a, const FloatRoundedRect:
     return a.topLeft() == b.topLeft() && a.topRight() == b.topRight() && a.bottomLeft() == b.bottomLeft() && a.bottomRight() == b.bottomRight();
 }
 
-inline bool operator!=(const FloatRoundedRect::Radii& a, const FloatRoundedRect::Radii& b)
-{
-    return !(a == b);
-}
-
 inline bool operator==(const FloatRoundedRect& a, const FloatRoundedRect& b)
 {
     return a.rect() == b.rect() && a.radii() == b.radii();
-}
-
-inline bool operator!=(const FloatRoundedRect& a, const FloatRoundedRect& b)
-{
-    return !(a == b);
 }
 
 inline float calcBorderRadiiConstraintScaleFor(const FloatRect& rect, const FloatRoundedRect::Radii& radii)

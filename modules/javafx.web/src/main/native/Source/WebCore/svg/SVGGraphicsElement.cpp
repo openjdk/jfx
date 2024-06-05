@@ -22,6 +22,11 @@
 #include "config.h"
 #include "SVGGraphicsElement.h"
 
+#include "LegacyRenderSVGPath.h"
+#include "RenderAncestorIterator.h"
+#include "RenderElementInlines.h"
+#include "RenderLayer.h"
+#include "RenderSVGHiddenContainer.h"
 #include "RenderSVGPath.h"
 #include "RenderSVGResource.h"
 #include "SVGMatrix.h"
@@ -38,8 +43,8 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGGraphicsElement);
 
-SVGGraphicsElement::SVGGraphicsElement(const QualifiedName& tagName, Document& document)
-    : SVGElement(tagName, document)
+SVGGraphicsElement::SVGGraphicsElement(const QualifiedName& tagName, Document& document, UniqueRef<SVGPropertyRegistry>&& propertyRegistry)
+    : SVGElement(tagName, document, WTFMove(propertyRegistry))
     , SVGTests(this)
     , m_shouldIsolateBlending(false)
 {
@@ -73,6 +78,15 @@ AffineTransform SVGGraphicsElement::getScreenCTM(StyleUpdateStrategy styleUpdate
 
 AffineTransform SVGGraphicsElement::animatedLocalTransform() const
 {
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    // LBSE handles transforms via RenderLayer, no need to handle CSS transforms here.
+    if (document().settings().layerBasedSVGEngineEnabled()) {
+        if (m_supplementalTransform)
+            return *m_supplementalTransform * transform().concatenate();
+        return transform().concatenate();
+    }
+#endif
+
     AffineTransform matrix;
 
     auto* style = renderer() ? &renderer()->style() : nullptr;
@@ -80,12 +94,10 @@ AffineTransform SVGGraphicsElement::animatedLocalTransform() const
 
     // Honor any of the transform-related CSS properties if set.
     if (hasSpecifiedTransform || (style && (style->translate() || style->scale() || style->rotate()))) {
-        auto boundingBox = SVGRenderSupport::transformReferenceBox(*renderer(), *this, *style);
-
         // Note: objectBoundingBox is an emptyRect for elements like pattern or clipPath.
         // See the "Object bounding box units" section of http://dev.w3.org/csswg/css3-transforms/
         TransformationMatrix transform;
-        style->applyTransform(transform, boundingBox);
+        style->applyTransform(transform, renderer()->transformReferenceBoxRect());
 
         // Flatten any 3D transform.
         matrix = transform.toAffineTransform();
@@ -100,8 +112,7 @@ AffineTransform SVGGraphicsElement::animatedLocalTransform() const
 
     // If we didn't have the CSS "transform" property set, we must account for the "transform" attribute.
     if (!hasSpecifiedTransform && style) {
-        auto boundingBox = SVGRenderSupport::transformReferenceBox(*renderer(), *this, *style);
-        auto t = floatPointForLengthPoint(style->transformOriginXY(), boundingBox.size()) + boundingBox.location();
+        auto t = style->computeTransformOrigin(renderer()->transformReferenceBoxRect()).xy();
         matrix.translate(t);
         matrix *= transform().concatenate();
         matrix.translate(-t.x(), -t.y());
@@ -112,34 +123,39 @@ AffineTransform SVGGraphicsElement::animatedLocalTransform() const
     return matrix;
 }
 
-AffineTransform* SVGGraphicsElement::supplementalTransform()
+AffineTransform* SVGGraphicsElement::ensureSupplementalTransform()
 {
     if (!m_supplementalTransform)
         m_supplementalTransform = makeUnique<AffineTransform>();
     return m_supplementalTransform.get();
 }
 
-void SVGGraphicsElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGGraphicsElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == SVGNames::transformAttr) {
-        m_transform->baseVal()->parse(value);
-        return;
-    }
+    if (name == SVGNames::transformAttr)
+        m_transform->baseVal()->parse(newValue);
 
-    SVGElement::parseAttribute(name, value);
-    SVGTests::parseAttribute(name, value);
+    SVGTests::parseAttribute(name, newValue);
+    SVGElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGGraphicsElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (attrName == SVGNames::transformAttr) {
+    if (PropertyRegistry::isKnownAttribute(attrName)) {
+        ASSERT(attrName == SVGNames::transformAttr);
         InstanceInvalidationGuard guard(*this);
 
-        if (auto renderer = this->renderer()) {
-            renderer->setNeedsTransformUpdate();
-            RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
-        }
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+            if (document().settings().layerBasedSVGEngineEnabled()) {
+            if (auto* layerRenderer = dynamicDowncast<RenderLayerModelObject>(renderer()))
+                layerRenderer->repaintOrRelayoutAfterSVGTransformChange();
+                return;
+            }
+#endif
 
+        if (auto* renderer = this->renderer())
+            renderer->setNeedsTransformUpdate();
+        updateSVGRendererForElementChange();
         return;
     }
 
@@ -169,11 +185,28 @@ FloatRect SVGGraphicsElement::getBBox(StyleUpdateStrategy styleUpdateStrategy)
 
 RenderPtr<RenderElement> SVGGraphicsElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderSVGPath>(*this, WTFMove(style));
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (document().settings().layerBasedSVGEngineEnabled())
+        return createRenderer<RenderSVGPath>(*this, WTFMove(style));
+#endif
+    return createRenderer<LegacyRenderSVGPath>(*this, WTFMove(style));
+}
+
+void SVGGraphicsElement::didAttachRenderers()
+{
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (document().settings().layerBasedSVGEngineEnabled()) {
+        if (auto* svgRenderer = dynamicDowncast<RenderLayerModelObject>(renderer()); svgRenderer && lineageOfType<RenderSVGHiddenContainer>(*svgRenderer).first()) {
+            if (auto* layer = svgRenderer->layer())
+                layer->dirtyVisibleContentStatus();
+        }
+    }
+#endif
 }
 
 Path SVGGraphicsElement::toClipPath()
 {
+    // FIXME: [LBSE] Stop mutating the path here and stop calling animatedLocalTransform().
     Path path = pathFromGraphicsElement(this);
     // FIXME: How do we know the element has done a layout?
     path.transform(animatedLocalTransform());

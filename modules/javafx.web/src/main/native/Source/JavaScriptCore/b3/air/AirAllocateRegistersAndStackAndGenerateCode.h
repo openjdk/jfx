@@ -59,9 +59,10 @@ private:
     void release(Tmp, Reg);
     void flush(Tmp, Reg);
     void spill(Tmp, Reg);
-    void alloc(Tmp, Reg, bool isDef);
-    void freeDeadTmpsIfNeeded();
-    bool assignTmp(Tmp&, Bank, bool isDef);
+    void alloc(Tmp, Reg, Arg::Role);
+    void freeDeadTmpsAtCurrentInst();
+    void freeDeadTmpsAtCurrentBlock();
+    bool assignTmp(Tmp&, Bank, Arg::Role);
     void buildLiveRanges(UnifiedTmpLiveness&);
     bool isDisallowedRegister(Reg);
 
@@ -77,13 +78,16 @@ private:
 #endif
 
     Vector<Reg> m_registers[numBanks];
-    RegisterSet m_availableRegs[numBanks];
+    ScalarRegisterSet m_availableRegs[numBanks];
     size_t m_globalInstIndex;
     IndexMap<Reg, Tmp>* m_currentAllocation { nullptr };
-    bool m_didAlreadyFreeDeadSlots;
     TmpMap<size_t> m_liveRangeEnd;
+    HashMap<size_t, Vector<Tmp, 2>> m_tmpsToRelease;
     RegisterSet m_namedUsedRegs;
     RegisterSet m_namedDefdRegs;
+    RegisterSetBuilder m_earlyClobber;
+    RegisterSetBuilder m_lateClobber;
+    RegisterSetBuilder m_clobberedToClear;
     RegisterSet m_allowedRegisters;
     std::unique_ptr<UnifiedTmpLiveness> m_liveness;
 

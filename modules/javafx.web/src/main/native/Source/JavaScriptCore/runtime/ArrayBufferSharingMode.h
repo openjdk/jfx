@@ -30,10 +30,7 @@
 
 namespace JSC {
 
-enum class ArrayBufferSharingMode : uint8_t {
-    Default = 0,
-    Shared
-};
+enum class ArrayBufferSharingMode : bool { Default, Shared };
 
 inline ASCIILiteral arrayBufferSharingModeName(ArrayBufferSharingMode sharingMode)
 {
@@ -44,7 +41,7 @@ inline ASCIILiteral arrayBufferSharingModeName(ArrayBufferSharingMode sharingMod
         return "SharedArrayBuffer"_s;
     }
     RELEASE_ASSERT_NOT_REACHED();
-    return ASCIILiteral::null();
+    return { };
 }
 
 } // namespace JSC

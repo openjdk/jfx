@@ -55,11 +55,12 @@ class SourceBufferPrivate;
 class TextTrackList;
 class TimeRanges;
 class VideoTrackList;
+class WebCoreOpaqueRoot;
 
-class SourceBuffer final
+class SourceBuffer
     : public RefCounted<SourceBuffer>
     , public ActiveDOMObject
-    , public EventTargetWithInlineData
+    , public EventTarget
     , private SourceBufferPrivateClient
     , private AudioTrackClient
     , private VideoTrackClient
@@ -70,14 +71,15 @@ class SourceBuffer final
 {
     WTF_MAKE_ISO_ALLOCATED(SourceBuffer);
 public:
-    using WeakValueType = EventTarget::WeakValueType;
     using EventTarget::weakPtrFactory;
+    using EventTarget::WeakValueType;
+    using EventTarget::WeakPtrImplType;
 
-    static Ref<SourceBuffer> create(Ref<SourceBufferPrivate>&&, MediaSource*);
+    static Ref<SourceBuffer> create(Ref<SourceBufferPrivate>&&, MediaSource&);
     virtual ~SourceBuffer();
 
     bool updating() const { return m_updating; }
-    ExceptionOr<Ref<TimeRanges>> buffered() const;
+    ExceptionOr<Ref<TimeRanges>> buffered();
     double timestampOffset() const;
     ExceptionOr<void> setTimestampOffset(double);
 
@@ -99,13 +101,13 @@ public:
     ExceptionOr<void> remove(const MediaTime&, const MediaTime&);
     ExceptionOr<void> changeType(const String&);
 
-    const TimeRanges& bufferedInternal() const { ASSERT(m_private->buffered()); return *m_private->buffered(); }
+    const PlatformTimeRanges& bufferedInternal() const { return m_private->buffered(); }
 
     void abortIfUpdating();
     void removedFromMediaSource();
     void seekToTime(const MediaTime&);
 
-    bool canPlayThroughRange(PlatformTimeRanges&);
+    bool canPlayThroughRange(const PlatformTimeRanges&);
 
     bool hasVideo() const;
 
@@ -130,6 +132,8 @@ public:
     MediaTime highestPresentationTimestamp() const;
     void readyStateChanged();
 
+    size_t memoryCost() const;
+
     void setMediaSourceEnded(bool isEnded);
 
 #if !RELEASE_LOG_DISABLED
@@ -139,11 +143,17 @@ public:
     WTFLogChannel& logChannel() const final;
 #endif
 
-    void* opaqueRoot() { return this; }
+    WebCoreOpaqueRoot opaqueRoot();
+
+#if ENABLE(MANAGED_MEDIA_SOURCE)
+    virtual bool isManaged() const { return false; }
+    void memoryPressure();
+#endif
+
+protected:
+    SourceBuffer(Ref<SourceBufferPrivate>&&, MediaSource&);
 
 private:
-    SourceBuffer(Ref<SourceBufferPrivate>&&, MediaSource*);
-
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
@@ -153,15 +163,14 @@ private:
     bool virtualHasPendingActivity() const final;
 
     // SourceBufferPrivateClient
-    void sourceBufferPrivateDidReceiveInitializationSegment(InitializationSegment&&, CompletionHandler<void()>&&) final;
+    void sourceBufferPrivateDidReceiveInitializationSegment(InitializationSegment&&, CompletionHandler<void(ReceiveResult)>&&) final;
     void sourceBufferPrivateStreamEndedWithDecodeError() final;
-    void sourceBufferPrivateAppendError(bool decodeError) final;
     void sourceBufferPrivateAppendComplete(AppendResult) final;
+    void sourceBufferPrivateBufferedChanged(const PlatformTimeRanges&, CompletionHandler<void()>&&) final;
     void sourceBufferPrivateHighestPresentationTimestampChanged(const MediaTime&) final;
-    void sourceBufferPrivateDurationChanged(const MediaTime& duration) final;
+    void sourceBufferPrivateDurationChanged(const MediaTime& duration, CompletionHandler<void()>&&) final;
     void sourceBufferPrivateDidParseSample(double sampleDuration) final;
     void sourceBufferPrivateDidDropSample() final;
-    void sourceBufferPrivateBufferedDirtyChanged(bool) final;
     void sourceBufferPrivateDidReceiveRenderingError(int64_t errorCode) final;
     void sourceBufferPrivateReportExtraMemoryCost(uint64_t) final;
 
@@ -220,7 +229,7 @@ private:
     MediaSource* m_source;
     AppendMode m_mode { AppendMode::Segments };
 
-    WTF::Observer<void*()> m_opaqueRootProvider;
+    WTF::Observer<WebCoreOpaqueRoot()> m_opaqueRootProvider;
 
     RefPtr<SharedBuffer> m_pendingAppendData;
     Timer m_appendBufferTimer;
@@ -245,7 +254,10 @@ private:
     double m_averageBufferRate { 0 };
     bool m_bufferedDirty { true };
 
+    // Can only grow.
     uint64_t m_reportedExtraMemoryCost { 0 };
+    // Can grow and shrink.
+    uint64_t m_extraMemoryCost { 0 };
 
     MediaTime m_pendingRemoveStart;
     MediaTime m_pendingRemoveEnd;
@@ -256,7 +268,7 @@ private:
     bool m_active { false };
     bool m_shouldGenerateTimestamps { false };
     bool m_pendingInitializationSegmentForChangeType { false };
-
+    Ref<TimeRanges> m_buffered;
 #if !RELEASE_LOG_DISABLED
     Ref<const Logger> m_logger;
     const void* m_logIdentifier;

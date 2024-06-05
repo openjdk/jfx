@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -94,7 +94,7 @@ static JSC_DECLARE_CUSTOM_GETTER(dataViewProtoGetterByteOffset);
 namespace JSC {
 
 const ClassInfo JSDataViewPrototype::s_info = {
-    "DataView", &Base::s_info, &dataViewTable, nullptr,
+    "DataView"_s, &Base::s_info, &dataViewTable, nullptr,
     CREATE_METHOD_TABLE(JSDataViewPrototype)
 };
 
@@ -112,10 +112,10 @@ JSDataViewPrototype* JSDataViewPrototype::create(VM& vm, Structure* structure)
     return prototype;
 }
 
-void JSDataViewPrototype::finishCreation(JSC::VM& vm)
+void JSDataViewPrototype::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
@@ -132,7 +132,7 @@ EncodedJSValue getData(JSGlobalObject* globalObject, CallFrame* callFrame)
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSDataView* dataView = jsDynamicCast<JSDataView*>(vm, callFrame->thisValue());
+    JSDataView* dataView = jsDynamicCast<JSDataView*>(callFrame->thisValue());
     if (!dataView)
         return throwVMTypeError(globalObject, scope, "Receiver of DataView method must be a DataView"_s);
 
@@ -146,10 +146,12 @@ EncodedJSValue getData(JSGlobalObject* globalObject, CallFrame* callFrame)
         RETURN_IF_EXCEPTION(scope, encodedJSValue());
     }
 
-    if (dataView->isDetached())
-        return throwVMTypeError(globalObject, scope, "Underlying ArrayBuffer has been detached from the view"_s);
+    IdempotentArrayBufferByteLengthGetter<std::memory_order_relaxed> getter;
+    auto byteLengthValue = dataView->viewByteLength(getter);
+    if (UNLIKELY(!byteLengthValue))
+        return throwVMTypeError(globalObject, scope, typedArrayBufferHasBeenDetachedErrorMessage);
 
-    size_t byteLength = dataView->length();
+    size_t byteLength = byteLengthValue.value();
     if (elementSize > byteLength || byteOffset > byteLength - elementSize)
         return throwVMRangeError(globalObject, scope, "Out of bounds access"_s);
 
@@ -178,7 +180,7 @@ EncodedJSValue setData(JSGlobalObject* globalObject, CallFrame* callFrame)
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSDataView* dataView = jsDynamicCast<JSDataView*>(vm, callFrame->thisValue());
+    JSDataView* dataView = jsDynamicCast<JSDataView*>(callFrame->thisValue());
     if (!dataView)
         return throwVMTypeError(globalObject, scope, "Receiver of DataView method must be a DataView"_s);
 
@@ -201,10 +203,12 @@ EncodedJSValue setData(JSGlobalObject* globalObject, CallFrame* callFrame)
         RETURN_IF_EXCEPTION(scope, encodedJSValue());
     }
 
-    if (dataView->isDetached())
-        return throwVMTypeError(globalObject, scope, "Underlying ArrayBuffer has been detached from the view"_s);
+    IdempotentArrayBufferByteLengthGetter<std::memory_order_relaxed> getter;
+    auto byteLengthValue = dataView->viewByteLength(getter);
+    if (UNLIKELY(!byteLengthValue))
+        return throwVMTypeError(globalObject, scope, typedArrayBufferHasBeenDetachedErrorMessage);
 
-    size_t byteLength = dataView->length();
+    size_t byteLength = byteLengthValue.value();
     if (elementSize > byteLength || byteOffset > byteLength - elementSize)
         return throwVMRangeError(globalObject, scope, "Out of bounds access"_s);
 
@@ -221,16 +225,14 @@ EncodedJSValue setData(JSGlobalObject* globalObject, CallFrame* callFrame)
     return JSValue::encode(jsUndefined());
 }
 
-IGNORE_CLANG_WARNINGS_BEGIN("missing-prototypes")
-
 JSC_DEFINE_CUSTOM_GETTER(dataViewProtoGetterBuffer, (JSGlobalObject* globalObject, EncodedJSValue thisValue, PropertyName))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSDataView* view = jsDynamicCast<JSDataView*>(vm, JSValue::decode(thisValue));
+    JSDataView* view = jsDynamicCast<JSDataView*>(JSValue::decode(thisValue));
     if (!view)
-        return throwVMTypeError(globalObject, scope, "DataView.prototype.buffer expects |this| to be a DataView object");
+        return throwVMTypeError(globalObject, scope, "DataView.prototype.buffer expects |this| to be a DataView object"_s);
 
     RELEASE_AND_RETURN(scope, JSValue::encode(view->possiblySharedJSBuffer(globalObject)));
 }
@@ -240,13 +242,16 @@ JSC_DEFINE_CUSTOM_GETTER(dataViewProtoGetterByteLength, (JSGlobalObject* globalO
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSDataView* view = jsDynamicCast<JSDataView*>(vm, JSValue::decode(thisValue));
+    JSDataView* view = jsDynamicCast<JSDataView*>(JSValue::decode(thisValue));
     if (!view)
-        return throwVMTypeError(globalObject, scope, "DataView.prototype.byteLength expects |this| to be a DataView object");
-    if (view->isDetached())
-        return throwVMTypeError(globalObject, scope, "Underlying ArrayBuffer has been detached from the view"_s);
+        return throwVMTypeError(globalObject, scope, "DataView.prototype.byteLength expects |this| to be a DataView object"_s);
 
-    return JSValue::encode(jsNumber(view->length()));
+    IdempotentArrayBufferByteLengthGetter<std::memory_order_seq_cst> getter;
+    auto byteLengthValue = view->viewByteLength(getter);
+    if (UNLIKELY(!byteLengthValue))
+        return throwVMTypeError(globalObject, scope, typedArrayBufferHasBeenDetachedErrorMessage);
+
+    return JSValue::encode(jsNumber(byteLengthValue.value()));
 }
 
 JSC_DEFINE_CUSTOM_GETTER(dataViewProtoGetterByteOffset, (JSGlobalObject* globalObject, EncodedJSValue thisValue, PropertyName))
@@ -254,13 +259,16 @@ JSC_DEFINE_CUSTOM_GETTER(dataViewProtoGetterByteOffset, (JSGlobalObject* globalO
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSDataView* view = jsDynamicCast<JSDataView*>(vm, JSValue::decode(thisValue));
+    JSDataView* view = jsDynamicCast<JSDataView*>(JSValue::decode(thisValue));
     if (!view)
-        return throwVMTypeError(globalObject, scope, "DataView.prototype.byteOffset expects |this| to be a DataView object");
-    if (view->isDetached())
-        return throwVMTypeError(globalObject, scope, "Underlying ArrayBuffer has been detached from the view"_s);
+        return throwVMTypeError(globalObject, scope, "DataView.prototype.byteOffset expects |this| to be a DataView object"_s);
 
-    return JSValue::encode(jsNumber(view->byteOffset()));
+    IdempotentArrayBufferByteLengthGetter<std::memory_order_seq_cst> getter;
+    auto byteLengthValue = view->viewByteLength(getter);
+    if (UNLIKELY(!byteLengthValue))
+        return throwVMTypeError(globalObject, scope, typedArrayBufferHasBeenDetachedErrorMessage);
+
+    return JSValue::encode(jsNumber(view->byteOffsetRaw()));
 }
 
 JSC_DEFINE_HOST_FUNCTION(dataViewProtoFuncGetInt8, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -362,6 +370,5 @@ JSC_DEFINE_HOST_FUNCTION(dataViewProtoFuncSetBigUint64, (JSGlobalObject* globalO
 {
     return setData<BigUint64Adaptor>(globalObject, callFrame);
 }
-IGNORE_CLANG_WARNINGS_END
 
 } // namespace JSC

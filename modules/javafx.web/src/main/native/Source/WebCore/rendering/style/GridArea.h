@@ -58,6 +58,11 @@ public:
         return GridSpan(0, 1, Indefinite);
     }
 
+    static GridSpan masonryAxisTranslatedDefiniteGridSpan()
+    {
+        return GridSpan(0, 1, TranslatedDefinite);
+    }
+
     bool operator==(const GridSpan& o) const
     {
         return m_type == o.m_type && m_startLine == o.m_startLine && m_endLine == o.m_endLine;
@@ -227,15 +232,13 @@ public:
         return columns == o.columns && rows == o.rows;
     }
 
-    bool operator!=(const GridArea& o) const
-    {
-        return !(*this == o);
-    }
-
     GridSpan columns;
     GridSpan rows;
 };
 
-typedef HashMap<String, GridArea> NamedGridAreaMap;
+struct NamedGridAreaMap {
+    HashMap<String, GridArea> map;
+};
+inline bool operator==(const NamedGridAreaMap& a, const NamedGridAreaMap& b) { return a.map == b.map; }
 
 } // namespace WebCore

@@ -27,25 +27,32 @@
 #include "RenderTable.h"
 
 #include "AutoTableLayout.h"
+#include "BackgroundPainter.h"
+#include "BorderPainter.h"
 #include "CollapsedBorderValue.h"
 #include "Document.h"
 #include "FixedTableLayout.h"
-#include "FrameView.h"
 #include "HitTestResult.h"
 #include "HTMLNames.h"
 #include "HTMLTableElement.h"
 #include "InlineIteratorInlineBox.h"
 #include "LayoutRepainter.h"
+#include "LocalFrameView.h"
 #include "RenderBlockFlow.h"
+#include "RenderBoxInlines.h"
 #include "RenderChildIterator.h"
 #include "RenderDescendantIterator.h"
+#include "RenderElementInlines.h"
 #include "RenderIterator.h"
 #include "RenderLayer.h"
 #include "RenderLayoutState.h"
+#include "RenderObjectInlines.h"
 #include "RenderTableCaption.h"
-#include "RenderTableCell.h"
+#include "RenderTableCellInlines.h"
 #include "RenderTableCol.h"
-#include "RenderTableSection.h"
+#include "RenderTableInlines.h"
+#include "RenderTableRowInlines.h"
+#include "RenderTableSectionInlines.h"
 #include "RenderTreeBuilder.h"
 #include "RenderView.h"
 #include "StyleInheritedData.h"
@@ -61,6 +68,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(RenderTable);
 
 RenderTable::RenderTable(Element& element, RenderStyle&& style)
     : RenderBlock(element, WTFMove(style), 0)
+    , m_columnPos(1, 0)
     , m_currentBorder(nullptr)
     , m_collapsedBordersValid(false)
     , m_collapsedEmptyBorderIsPresent(false)
@@ -75,11 +83,11 @@ RenderTable::RenderTable(Element& element, RenderStyle&& style)
     , m_columnOffsetHeight(-1)
 {
     setChildrenInline(false);
-    m_columnPos.fill(0, 1);
 }
 
 RenderTable::RenderTable(Document& document, RenderStyle&& style)
     : RenderBlock(document, WTFMove(style), 0)
+    , m_columnPos(1, 0)
     , m_currentBorder(nullptr)
     , m_collapsedBordersValid(false)
     , m_collapsedEmptyBorderIsPresent(false)
@@ -92,7 +100,6 @@ RenderTable::RenderTable(Document& document, RenderStyle&& style)
     , m_borderEnd(0)
 {
     setChildrenInline(false);
-    m_columnPos.fill(0, 1);
 }
 
 RenderTable::~RenderTable() = default;
@@ -127,17 +134,17 @@ void RenderTable::styleDidChange(StyleDifference diff, const RenderStyle* oldSty
     RenderBlock::styleDidChange(diff, oldStyle);
     propagateStyleToAnonymousChildren(PropagateToAllChildren);
 
-    auto oldTableLayout = oldStyle ? oldStyle->tableLayout() : TableLayoutType::Auto;
+    bool oldFixedTableLayout = oldStyle ? oldStyle->isFixedTableLayout() : false;
 
     // In the collapsed border model, there is no cell spacing.
     m_hSpacing = collapseBorders() ? 0 : style().horizontalBorderSpacing();
     m_vSpacing = collapseBorders() ? 0 : style().verticalBorderSpacing();
     m_columnPos[0] = m_hSpacing;
 
-    if (!m_tableLayout || style().tableLayout() != oldTableLayout) {
+    if (!m_tableLayout || style().isFixedTableLayout() != oldFixedTableLayout) {
         // According to the CSS2 spec, you only use fixed table layout if an
         // explicit width is specified on the table.  Auto width implies auto table layout.
-        if (style().tableLayout() == TableLayoutType::Fixed && !style().logicalWidth().isAuto())
+        if (style().isFixedTableLayout())
             m_tableLayout = makeUnique<FixedTableLayout>(this);
         else
             m_tableLayout = makeUnique<AutoTableLayout>(this);
@@ -226,7 +233,7 @@ void RenderTable::addColumn(const RenderTableCol*)
     invalidateCachedColumns();
 }
 
-void RenderTable::removeColumn(const RenderTableCol*)
+void RenderTable::invalidateColumns()
 {
     invalidateCachedColumns();
     // We don't really need to recompute our sections, but we need to update our
@@ -316,7 +323,7 @@ void RenderTable::updateLogicalWidth()
             containerLogicalWidthForAutoMargins = containingBlockAvailableLineWidthInFragment(0); // FIXME: Work with regions someday.
         ComputedMarginValues marginValues;
         bool hasInvertedDirection =  cb.style().isLeftToRightDirection() == style().isLeftToRightDirection();
-        computeInlineDirectionMargins(cb, containerLogicalWidthForAutoMargins, logicalWidth(),
+        computeInlineDirectionMargins(cb, availableLogicalWidth, containerLogicalWidthForAutoMargins, logicalWidth(),
             hasInvertedDirection ? marginValues.m_start : marginValues.m_end,
             hasInvertedDirection ? marginValues.m_end : marginValues.m_start);
         setMarginStart(marginValues.m_start);
@@ -413,9 +420,13 @@ void RenderTable::distributeExtraLogicalHeight(LayoutUnit extraLogicalHeight)
 
 void RenderTable::simplifiedNormalFlowLayout()
 {
+    for (auto& caption : m_captions)
+        caption->layoutIfNeeded();
     for (RenderTableSection* section = topSection(); section; section = sectionBelow(section)) {
         section->layoutIfNeeded();
+        section->layoutRows();
         section->computeOverflowFromCells();
+        section->addVisualEffectOverflow();
     }
 }
 
@@ -446,7 +457,7 @@ void RenderTable::layout()
 
     LayoutRepainter repainter(*this, checkForRepaintDuringLayout());
     {
-        LayoutStateMaintainer statePusher(*this, locationOffset(), hasTransform() || hasReflection() || style().isFlippedBlocksWritingMode());
+        LayoutStateMaintainer statePusher(*this, locationOffset(), isTransformed() || hasReflection() || style().isFlippedBlocksWritingMode());
 
         LayoutUnit oldLogicalWidth = logicalWidth();
         LayoutUnit oldLogicalHeight = logicalHeight();
@@ -555,6 +566,8 @@ void RenderTable::layout()
             section->setLogicalLocation(LayoutPoint(sectionLogicalLeft, logicalHeight()));
 
             setLogicalHeight(logicalHeight() + section->logicalHeight());
+            section->addVisualEffectOverflow();
+
             section = sectionBelow(section);
         }
 
@@ -597,7 +610,7 @@ void RenderTable::layout()
     if (sectionMoved && paginated) {
         // FIXME: Table layout should always stabilize even when section moves (see webkit.org/b/174412).
         if (m_recursiveSectionMovedWithPaginationLevel < sectionCount) {
-            SetForScope<unsigned> recursiveSectionMovedWithPaginationLevel(m_recursiveSectionMovedWithPaginationLevel, m_recursiveSectionMovedWithPaginationLevel + 1);
+            SetForScope recursiveSectionMovedWithPaginationLevel(m_recursiveSectionMovedWithPaginationLevel, m_recursiveSectionMovedWithPaginationLevel + 1);
             markForPaginationRelayoutIfNeeded();
             layoutIfNeeded();
         } else
@@ -791,14 +804,30 @@ void RenderTable::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint& p
     LayoutRect rect(paintOffset, size());
     adjustBorderBoxRectForPainting(rect);
 
+    BackgroundPainter backgroundPainter { *this, paintInfo };
+
     BackgroundBleedAvoidance bleedAvoidance = determineBackgroundBleedAvoidance(paintInfo.context());
-    if (!boxShadowShouldBeAppliedToBackground(rect.location(), bleedAvoidance, { }))
-        paintBoxShadow(paintInfo, rect, style(), ShadowStyle::Normal);
-    paintBackground(paintInfo, rect, bleedAvoidance);
-    paintBoxShadow(paintInfo, rect, style(), ShadowStyle::Inset);
+    if (!BackgroundPainter::boxShadowShouldBeAppliedToBackground(*this, rect.location(), bleedAvoidance, { }))
+        backgroundPainter.paintBoxShadow(rect, style(), ShadowStyle::Normal);
+
+    GraphicsContextStateSaver stateSaver(paintInfo.context(), false);
+    if (bleedAvoidance == BackgroundBleedUseTransparencyLayer) {
+        // To avoid the background color bleeding out behind the border, we'll render background and border
+        // into a transparency layer, and then clip that in one go (which requires setting up the clip before
+        // beginning the layer).
+        stateSaver.save();
+        paintInfo.context().clipRoundedRect(style().getRoundedBorderFor(rect).pixelSnappedRoundedRectForPainting(document().deviceScaleFactor()));
+        paintInfo.context().beginTransparencyLayer(1);
+    }
+
+    backgroundPainter.paintBackground(rect, bleedAvoidance);
+    backgroundPainter.paintBoxShadow(rect, style(), ShadowStyle::Inset);
 
     if (style().hasVisibleBorderDecoration() && !collapseBorders())
-        paintBorder(paintInfo, rect, style());
+        BorderPainter { *this, paintInfo }.paintBorder(rect, style());
+
+    if (bleedAvoidance == BackgroundBleedUseTransparencyLayer)
+        paintInfo.context().endTransparencyLayer();
 }
 
 void RenderTable::paintMask(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -881,11 +910,19 @@ RenderTableSection* RenderTable::topNonEmptySection() const
     return section;
 }
 
+RenderTableSection* RenderTable::bottomNonEmptySection() const
+{
+    auto* section = bottomSection();
+    if (section && !section->numRows())
+        section = sectionAbove(section, SkipEmptySections);
+    return section;
+}
+
 void RenderTable::splitColumn(unsigned position, unsigned firstSpan)
 {
     // We split the column at "position", taking "firstSpan" cells from the span.
     ASSERT(m_columns[position].span > firstSpan);
-    m_columns.insert(position, ColumnStruct(firstSpan));
+    m_columns.insert(position, { firstSpan });
     m_columns[position + 1].span -= firstSpan;
 
     // Propagate the change in our columns representation to the sections that don't need
@@ -903,7 +940,7 @@ void RenderTable::splitColumn(unsigned position, unsigned firstSpan)
 void RenderTable::appendColumn(unsigned span)
 {
     unsigned newColumnIndex = m_columns.size();
-    m_columns.append(ColumnStruct(span));
+    m_columns.append({ span });
 
     // Unless the table has cell(s) with colspan that exceed the number of columns afforded
     // by the other rows in the table we can use the fast path when mapping columns to effective columns.
@@ -926,12 +963,7 @@ RenderTableCol* RenderTable::firstColumn() const
     for (auto& child : childrenOfType<RenderObject>(*this)) {
         if (is<RenderTableCol>(child))
             return &const_cast<RenderTableCol&>(downcast<RenderTableCol>(child));
-
-        // We allow only table-captions before columns or column-groups.
-        if (!is<RenderTableCaption>(child))
-            return nullptr;
     }
-
     return nullptr;
 }
 
@@ -1491,16 +1523,11 @@ RenderTableCell* RenderTable::cellAfter(const RenderTableCell* cell) const
     return cell->section()->primaryCellAt(cell->rowIndex(), effCol);
 }
 
-RenderBlock* RenderTable::firstLineBlock() const
-{
-    return nullptr;
-}
-
 LayoutUnit RenderTable::baselinePosition(FontBaseline baselineType, bool firstLine, LineDirectionMode direction, LinePositionMode linePositionMode) const
 {
-    return valueOrCompute(firstLineBaseline(), [&] {
+    if (auto baselinePos = firstLineBaseline())
+        return (direction == HorizontalLine ? marginTop() : marginRight()) + baselinePos.value();
         return RenderBox::baselinePosition(baselineType, firstLine, direction, linePositionMode);
-    });
 }
 
 std::optional<LayoutUnit> RenderTable::inlineBlockBaseline(LineDirectionMode) const
@@ -1515,7 +1542,7 @@ std::optional<LayoutUnit> RenderTable::firstLineBaseline() const
     // doesn't define the baseline of a 'table' only an 'inline-table').
     // This is also needed to properly determine the baseline of a cell if it has a table child.
 
-    if (isWritingModeRoot() || shouldApplyLayoutContainment(*this))
+    if ((isWritingModeRoot() && !isFlexItem()) || shouldApplyLayoutContainment())
         return std::optional<LayoutUnit>();
 
     recalcSectionsIfNeeded();
@@ -1529,6 +1556,22 @@ std::optional<LayoutUnit> RenderTable::firstLineBaseline() const
 
     // FIXME: A table row always has a baseline per CSS 2.1. Will this return the right value?
     return std::optional<LayoutUnit>();
+}
+
+std::optional<LayoutUnit> RenderTable::lastLineBaseline() const
+{
+    if (isWritingModeRoot() || shouldApplyLayoutContainment())
+        return { };
+
+    recalcSectionsIfNeeded();
+
+    auto* tableSection = bottomNonEmptySection();
+    if (!tableSection)
+        return { };
+
+    if (auto baseline = tableSection->lastLineBaseline())
+        return LayoutUnit { baseline.value() + tableSection->logicalTop() };
+    return { };
 }
 
 LayoutRect RenderTable::overflowClipRect(const LayoutPoint& location, RenderFragmentContainer* fragment, OverlayScrollbarSizeRelevancy relevancy, PaintPhase phase) const

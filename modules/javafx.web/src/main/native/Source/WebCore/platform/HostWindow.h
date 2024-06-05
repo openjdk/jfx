@@ -25,22 +25,16 @@
 
 #pragma once
 
-#include "GraphicsContextGL.h"
+#include "GraphicsClient.h"
 #include "Widget.h"
 
 namespace WebCore {
 
 class Cursor;
-class DestinationColorSpace;
-class ImageBuffer;
-
-enum class PixelFormat : uint8_t;
-enum class RenderingMode : bool;
-enum class RenderingPurpose : uint8_t;
 
 using FramesPerSecond = unsigned;
 
-class HostWindow {
+class HostWindow : public GraphicsClient {
     WTF_MAKE_NONCOPYABLE(HostWindow); WTF_MAKE_FAST_ALLOCATED;
 public:
     HostWindow() = default;
@@ -64,12 +58,6 @@ public:
     virtual IntPoint accessibilityScreenToRootView(const IntPoint&) const = 0;
     virtual IntRect rootViewToAccessibilityScreen(const IntRect&) const = 0;
 
-    virtual RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingMode, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, PixelFormat) const = 0;
-
-#if ENABLE(WEBGL)
-    virtual RefPtr<GraphicsContextGL> createGraphicsContextGL(const GraphicsContextGLAttributes&) const = 0;
-#endif
-
     // Method for retrieving the native client of the page.
     virtual PlatformPageClient platformPageClient() const = 0;
 
@@ -78,7 +66,6 @@ public:
 
     virtual void setCursorHiddenUntilMouseMoves(bool) = 0;
 
-    virtual PlatformDisplayID displayID() const = 0;
     virtual void windowScreenDidChange(PlatformDisplayID, std::optional<FramesPerSecond> nominalFramesPerSecond) = 0;
 
     virtual FloatSize screenSize() const = 0;

@@ -25,11 +25,14 @@
 
 #pragma once
 
+#include "ImplementationVisibility.h"
 #include "Lexer.h"
 #include "ParserFunctionInfo.h"
 #include "YarrSyntaxChecker.h"
 
 namespace JSC {
+
+enum class InferName;
 
 class SyntaxChecker {
 public:
@@ -147,6 +150,7 @@ public:
     static constexpr OptionSet<LexerFlags> DontBuildStrings = LexerFlags::DontBuildStrings;
 
     int createSourceElements() { return SourceElementsResult; }
+    ExpressionType makeStaticBlockFunctionCallNode(const JSTokenLocation&, ExpressionType, int, int, int) { return CallExpr; }
     ExpressionType makeFunctionCallNode(const JSTokenLocation&, ExpressionType, bool, int, int, int, int, size_t, bool) { return CallExpr; }
     ExpressionType createCommaExpr(const JSTokenLocation&, ExpressionType) { return CommaExpr; }
     ExpressionType appendToCommaExpr(const JSTokenLocation&, ExpressionType, ExpressionType, ExpressionType) { return CommaExpr; }
@@ -197,7 +201,7 @@ public:
     ExpressionType createFunctionExpr(const JSTokenLocation&, const ParserFunctionInfo<SyntaxChecker>&) { return FunctionExpr; }
     ExpressionType createGeneratorFunctionBody(const JSTokenLocation&, const ParserFunctionInfo<SyntaxChecker>&, const Identifier&) { return FunctionExpr; }
     ExpressionType createAsyncFunctionBody(const JSTokenLocation&, const ParserFunctionInfo<SyntaxChecker>&) { return FunctionExpr; }
-    int createFunctionMetadata(const JSTokenLocation&, const JSTokenLocation&, unsigned, unsigned, int, int, int, LexicalScopeFeatures, ConstructorKind, SuperBinding, unsigned, SourceParseMode, bool) { return FunctionBodyResult; }
+    int createFunctionMetadata(const JSTokenLocation&, const JSTokenLocation&, unsigned, unsigned, int, int, int, ImplementationVisibility, LexicalScopeFeatures, ConstructorKind, SuperBinding, unsigned, SourceParseMode, bool) { return FunctionBodyResult; }
     ExpressionType createArrowFunctionExpr(const JSTokenLocation&, const ParserFunctionInfo<SyntaxChecker>&) { return FunctionExpr; }
     ExpressionType createMethodDefinition(const JSTokenLocation&, const ParserFunctionInfo<SyntaxChecker>&) { return FunctionExpr; }
     void setFunctionNameStart(int, int) { }
@@ -235,6 +239,10 @@ public:
         return Property(type);
     }
     Property createProperty(const Identifier*, int, int, PropertyNode::Type type, SuperBinding, ClassElementTag)
+    {
+        return Property(type);
+    }
+    Property createProperty(const Identifier*, PropertyNode::Type type, SuperBinding, ClassElementTag)
     {
         return Property(type);
     }

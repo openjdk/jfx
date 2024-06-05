@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Joone Hur <joone@kldp.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -266,6 +266,16 @@ static JSValueRef removeAllVisitedLinksCallback(JSContextRef context, JSObjectRe
     return JSValueMakeUndefined(context);
 }
 
+static JSValueRef removeAllCookiesCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
+{
+    if (argumentCount < 1)
+        return JSValueMakeUndefined(context);
+
+    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
+    controller->removeAllCookies(JSValueToObject(context, arguments[0], 0));
+    return JSValueMakeUndefined(context);
+}
+
 static JSValueRef repaintSweepHorizontallyCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
 {
     TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
@@ -300,7 +310,7 @@ static JSValueRef setAudioResultCallback(JSContextRef context, JSObjectRef funct
     JSC::VM& vm = toJS(context)->vm();
     JSC::JSLockHolder lock(vm);
 
-    JSC::JSArrayBufferView* jsBufferView = JSC::jsDynamicCast<JSC::JSArrayBufferView*>(vm, toJS(toJS(context), arguments[0]));
+    JSC::JSArrayBufferView* jsBufferView = JSC::jsDynamicCast<JSC::JSArrayBufferView*>(toJS(toJS(context), arguments[0]));
     ASSERT(jsBufferView);
     RefPtr<JSC::ArrayBufferView> bufferView = jsBufferView->unsharedImpl();
     auto buffer = static_cast<const uint8_t*>(bufferView->baseAddress());
@@ -523,6 +533,17 @@ static JSValueRef findStringCallback(JSContextRef context, JSObjectRef function,
 
     TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
     return JSValueMakeBoolean(context, controller->findString(context, target.get(), options));
+}
+
+static JSValueRef generateTestReportCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
+{
+    auto message = argumentCount > 0 ? WTR::createJSString(context, arguments[0]) : JSRetainPtr<JSStringRef>();
+    auto group = argumentCount > 1 ? WTR::createJSString(context, arguments[1]) : JSRetainPtr<JSStringRef>();
+
+    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
+    controller->generateTestReport(message.get(), group.get());
+
+    return JSValueMakeUndefined(context);
 }
 
 static JSValueRef goBackCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
@@ -1636,7 +1657,7 @@ static JSValueRef getWebHistoryItemCountCallback(JSContextRef context, JSObjectR
 static JSValueRef getSecureEventInputIsEnabledCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
 {
 #if PLATFORM(MAC) && !PLATFORM(IOS_FAMILY)
-    return JSValueMakeBoolean(context, IsSecureEventInputEnabled());
+    return JSValueMakeBoolean(context, static_cast<TestRunner*>(JSObjectGetPrivate(thisObject))->isSecureEventInputEnabled());
 #else
     return JSValueMakeBoolean(context, false);
 #endif
@@ -2010,6 +2031,7 @@ const JSStaticFunction* TestRunner::staticFunctions()
         { "evaluateScriptInIsolatedWorld", evaluateScriptInIsolatedWorldCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "execCommand", execCommandCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "findString", findStringCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "generateTestReport", generateTestReportCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "originsWithApplicationCache", originsWithApplicationCacheCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "goBack", goBackCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "ignoreLegacyWebNotificationPermissionRequests", ignoreLegacyWebNotificationPermissionRequestsCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
@@ -2027,6 +2049,7 @@ const JSStaticFunction* TestRunner::staticFunctions()
         { "queueLoadingScript", queueLoadingScriptCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "queueNonLoadingScript", queueNonLoadingScriptCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "queueReload", queueReloadCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "removeAllCookies", removeAllCookiesCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "removeAllVisitedLinks", removeAllVisitedLinksCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "removeOriginAccessAllowListEntry", removeOriginAccessAllowListEntryCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "repaintSweepHorizontally", repaintSweepHorizontallyCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
@@ -2220,7 +2243,7 @@ void TestRunner::setAccummulateLogsForChannel(JSStringRef channel)
     auto buffer = makeUniqueArray<char>(maxLength + 1);
     JSStringGetUTF8CString(channel, buffer.get(), maxLength + 1);
 
-    WebCoreTestSupport::setLogChannelToAccumulate({ buffer.get() });
+    WebCoreTestSupport::setLogChannelToAccumulate(String::fromLatin1(buffer.get()));
 }
 
 using CallbackMap = WTF::HashMap<unsigned, JSObjectRef>;
@@ -2321,6 +2344,11 @@ void TestRunner::setAllowsAnySSLCertificate(bool allowsAnySSLCertificate)
     WebCoreTestSupport::setAllowsAnySSLCertificate(allowsAnySSLCertificate);
 }
 
+bool TestRunner::allowsAnySSLCertificate()
+{
+    return WebCoreTestSupport::allowsAnySSLCertificate();
+}
+
 void TestRunner::setOpenPanelFiles(JSContextRef context, JSValueRef filesValue)
 {
     if (!JSValueIsArray(context, filesValue))
@@ -2350,7 +2378,7 @@ void TestRunner::setOpenPanelFilesMediaIcon(JSContextRef context, JSValueRef med
     JSC::VM& vm = toJS(context)->vm();
     JSC::JSLockHolder lock(vm);
 
-    JSC::JSArrayBufferView* jsBufferView = JSC::jsDynamicCast<JSC::JSArrayBufferView*>(vm, toJS(toJS(context), mediaIcon));
+    JSC::JSArrayBufferView* jsBufferView = JSC::jsDynamicCast<JSC::JSArrayBufferView*>(toJS(toJS(context), mediaIcon));
     ASSERT(jsBufferView);
     RefPtr<JSC::ArrayBufferView> bufferView = jsBufferView->unsharedImpl();
     auto buffer = static_cast<const uint8_t*>(bufferView->baseAddress());
@@ -2374,3 +2402,12 @@ void TestRunner::willNavigate()
         m_shouldSwapToDefaultSessionOnNextNavigation = false;
     }
 }
+
+#if !PLATFORM(MAC)
+
+bool TestRunner::isSecureEventInputEnabled() const
+{
+    return false;
+}
+
+#endif

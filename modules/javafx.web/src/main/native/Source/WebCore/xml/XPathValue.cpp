@@ -27,6 +27,7 @@
 #include "config.h"
 #include "XPathValue.h"
 
+#include "CommonAtomStrings.h"
 #include "XPathExpressionNode.h"
 #include "XPathUtil.h"
 #include <limits>
@@ -86,7 +87,7 @@ double Value::toNumber() const
         case NumberValue:
             return m_number;
         case StringValue: {
-            const String& str = m_data->string.simplifyWhiteSpace();
+            const String& str = m_data->string.simplifyWhiteSpace(deprecatedIsSpaceOrNewline);
 
             // String::toDouble() supports exponential notation, which is not allowed in XPath.
             unsigned len = str.length();
@@ -128,7 +129,7 @@ String Value::toString() const
                 return std::signbit(m_number) ? "-Infinity"_s : "Infinity"_s;
             return String::number(m_number);
         case BooleanValue:
-            return m_bool ? "true"_s : "false"_s;
+            return m_bool ? trueAtom() : falseAtom();
     }
 
     ASSERT_NOT_REACHED();

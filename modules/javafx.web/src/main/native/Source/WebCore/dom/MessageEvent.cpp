@@ -30,6 +30,7 @@
 
 #include "Blob.h"
 #include "EventNames.h"
+#include "JSMessageEvent.h"
 #include <JavaScriptCore/JSCInlines.h>
 #include <wtf/IsoMallocInlines.h>
 
@@ -52,8 +53,8 @@ inline MessageEvent::MessageEvent(const AtomString& type, Init&& initializer, Is
 {
 }
 
-inline MessageEvent::MessageEvent(DataType&& data, const String& origin, const String& lastEventId, std::optional<MessageEventSource>&& source, Vector<RefPtr<MessagePort>>&& ports)
-    : Event(eventNames().messageEvent, CanBubble::No, IsCancelable::No)
+inline MessageEvent::MessageEvent(const AtomString& type, DataType&& data, const String& origin, const String& lastEventId, std::optional<MessageEventSource>&& source, Vector<RefPtr<MessagePort>>&& ports)
+    : Event(type, CanBubble::No, IsCancelable::No)
     , m_data(WTFMove(data))
     , m_origin(origin)
     , m_lastEventId(lastEventId)
@@ -62,37 +63,34 @@ inline MessageEvent::MessageEvent(DataType&& data, const String& origin, const S
 {
 }
 
-inline MessageEvent::MessageEvent(const AtomString& type, Ref<SerializedScriptValue>&& data, const String& origin, const String& lastEventId)
-    : Event(type, CanBubble::No, IsCancelable::No)
-    , m_data(WTFMove(data))
-    , m_origin(origin)
-    , m_lastEventId(lastEventId)
+auto MessageEvent::create(JSC::JSGlobalObject& globalObject, Ref<SerializedScriptValue>&& data, const String& origin, const String& lastEventId, std::optional<MessageEventSource>&& source, Vector<RefPtr<MessagePort>>&& ports) -> MessageEventWithStrongData
 {
+    auto& vm = globalObject.vm();
+    Locker<JSC::JSLock> locker(vm.apiLock());
+
+    bool didFail = false;
+
+    auto deserialized = data->deserialize(globalObject, &globalObject, ports, SerializationErrorMode::NonThrowing, &didFail);
+    JSC::Strong<JSC::Unknown> strongData(vm, deserialized);
+
+    auto& eventType = didFail ? eventNames().messageerrorEvent : eventNames().messageEvent;
+    auto event = adoptRef(*new MessageEvent(eventType, WTFMove(data), origin, lastEventId, WTFMove(source), WTFMove(ports)));
+    JSC::Strong<JSC::JSObject> strongWrapper(vm, JSC::jsCast<JSC::JSObject*>(toJS(&globalObject, JSC::jsCast<JSDOMGlobalObject*>(&globalObject), event.get())));
+    // Since we've already deserialized the SerializedScriptValue, cache the result so we don't have to deserialize
+    // again the next time JSMessageEvent::data() gets called by the main world.
+    event->cachedData().set(vm, strongWrapper.get(), deserialized);
+
+    return MessageEventWithStrongData { event, WTFMove(strongWrapper) };
 }
 
-Ref<MessageEvent> MessageEvent::create(Vector<RefPtr<MessagePort>>&& ports, Ref<SerializedScriptValue>&& data, const String& origin, const String& lastEventId, std::optional<MessageEventSource>&& source)
+Ref<MessageEvent> MessageEvent::create(const AtomString& type, DataType&& data, const String& origin, const String& lastEventId, std::optional<MessageEventSource>&& source, Vector<RefPtr<MessagePort>>&& ports)
 {
-    return adoptRef(*new MessageEvent(WTFMove(data), origin, lastEventId, WTFMove(source), WTFMove(ports)));
+    return adoptRef(*new MessageEvent(type, WTFMove(data), origin, lastEventId, WTFMove(source), WTFMove(ports)));
 }
 
-Ref<MessageEvent> MessageEvent::create(const AtomString& type, Ref<SerializedScriptValue>&& data, const String& origin, const String& lastEventId)
+Ref<MessageEvent> MessageEvent::create(DataType&& data, const String& origin, const String& lastEventId, std::optional<MessageEventSource>&& source, Vector<RefPtr<MessagePort>>&& ports)
 {
-    return adoptRef(*new MessageEvent(type, WTFMove(data), origin, lastEventId));
-}
-
-Ref<MessageEvent> MessageEvent::create(const String& data, const String& origin)
-{
-    return adoptRef(*new MessageEvent(data, origin));
-}
-
-Ref<MessageEvent> MessageEvent::create(Ref<Blob>&& data, const String& origin)
-{
-    return adoptRef(*new MessageEvent(WTFMove(data), origin));
-}
-
-Ref<MessageEvent> MessageEvent::create(Ref<ArrayBuffer>&& data, const String& origin)
-{
-    return adoptRef(*new MessageEvent(WTFMove(data), origin));
+    return create(eventNames().messageEvent, WTFMove(data), origin, lastEventId, WTFMove(source), WTFMove(ports));
 }
 
 Ref<MessageEvent> MessageEvent::createForBindings()
@@ -115,7 +113,7 @@ void MessageEvent::initMessageEvent(const AtomString& type, bool canBubble, bool
     initEvent(type, canBubble, cancelable);
 
     {
-        Locker { m_concurrentDataAccessLock };
+        Locker locker { m_concurrentDataAccessLock };
         m_data = JSValueTag { };
     }
     // FIXME: This code is wrong: we should emit a write-barrier. Otherwise, GC can collect it.
@@ -136,7 +134,7 @@ EventInterface MessageEvent::eventInterface() const
 
 size_t MessageEvent::memoryCost() const
 {
-    Locker { m_concurrentDataAccessLock };
+    Locker locker { m_concurrentDataAccessLock };
     return WTF::switchOn(m_data, [] (JSValueTag) -> size_t {
         return 0;
     }, [] (const Ref<SerializedScriptValue>& data) -> size_t {
@@ -144,7 +142,7 @@ size_t MessageEvent::memoryCost() const
     }, [] (const String& string) -> size_t {
         return string.sizeInBytes();
     }, [] (const Ref<Blob>& blob) -> size_t {
-        return blob->size();
+        return blob->memoryCost();
     }, [] (const Ref<ArrayBuffer>& buffer) -> size_t {
         return buffer->byteLength();
     });

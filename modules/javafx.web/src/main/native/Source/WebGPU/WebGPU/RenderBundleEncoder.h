@@ -25,24 +25,36 @@
 
 #pragma once
 
+#import "CommandsMixin.h"
+#import "RenderBundle.h"
 #import <wtf/FastMalloc.h>
+#import <wtf/Function.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
-#import <wtf/RefPtr.h>
+#import <wtf/Vector.h>
+
+struct WGPURenderBundleEncoderImpl {
+};
 
 namespace WebGPU {
 
 class BindGroup;
 class Buffer;
+class Device;
 class RenderBundle;
 class RenderPipeline;
 
-class RenderBundleEncoder : public RefCounted<RenderBundleEncoder> {
+// https://gpuweb.github.io/gpuweb/#gpurenderbundleencoder
+class RenderBundleEncoder : public WGPURenderBundleEncoderImpl, public RefCounted<RenderBundleEncoder>, public CommandsMixin {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<RenderBundleEncoder> create(id <MTLIndirectCommandBuffer> indirectCommandBuffer)
+    static Ref<RenderBundleEncoder> create(MTLIndirectCommandBufferDescriptor *indirectCommandBufferDescriptor, Device& device)
     {
-        return adoptRef(*new RenderBundleEncoder(indirectCommandBuffer));
+        return adoptRef(*new RenderBundleEncoder(indirectCommandBufferDescriptor, device));
+    }
+    static Ref<RenderBundleEncoder> createInvalid(Device& device)
+    {
+        return adoptRef(*new RenderBundleEncoder(device));
     }
 
     ~RenderBundleEncoder();
@@ -51,24 +63,41 @@ public:
     void drawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex, uint32_t firstInstance);
     void drawIndexedIndirect(const Buffer& indirectBuffer, uint64_t indirectOffset);
     void drawIndirect(const Buffer& indirectBuffer, uint64_t indirectOffset);
-    RefPtr<RenderBundle> finish(const WGPURenderBundleDescriptor*);
-    void insertDebugMarker(const char* markerLabel);
+    Ref<RenderBundle> finish(const WGPURenderBundleDescriptor&);
+    void insertDebugMarker(String&& markerLabel);
     void popDebugGroup();
-    void pushDebugGroup(const char* groupLabel);
+    void pushDebugGroup(String&& groupLabel);
     void setBindGroup(uint32_t groupIndex, const BindGroup&, uint32_t dynamicOffsetCount, const uint32_t* dynamicOffsets);
     void setIndexBuffer(const Buffer&, WGPUIndexFormat, uint64_t offset, uint64_t size);
     void setPipeline(const RenderPipeline&);
     void setVertexBuffer(uint32_t slot, const Buffer&, uint64_t offset, uint64_t size);
-    void setLabel(const char*);
+    void setLabel(String&&);
+
+    Device& device() const { return m_device; }
+
+    bool isValid() const { return m_indirectCommandBuffer; }
 
 private:
-    RenderBundleEncoder(id <MTLIndirectCommandBuffer>);
+    RenderBundleEncoder(MTLIndirectCommandBufferDescriptor*, Device&);
+    RenderBundleEncoder(Device&);
 
-    id <MTLIndirectCommandBuffer> m_indirectCommandBuffer { nil };
+    bool validatePopDebugGroup() const;
+    id<MTLIndirectRenderCommand> currentRenderCommand();
+
+    void makeInvalid() { m_indirectCommandBuffer = nil; }
+
+    id<MTLIndirectCommandBuffer> m_indirectCommandBuffer { nil };
+    MTLIndirectCommandBufferDescriptor *m_icbDescriptor { nil };
+
+    uint64_t m_debugGroupStackSize { 0 };
+    uint64_t m_currentCommandIndex { 0 };
+    id<MTLBuffer> m_indexBuffer { nil };
+    MTLPrimitiveType m_primitiveType { MTLPrimitiveTypeTriangle };
+    MTLIndexType m_indexType { MTLIndexTypeUInt16 };
+    NSUInteger m_indexBufferOffset { 0 };
+    Vector<WTF::Function<void(void)>> m_recordedCommands;
+    Vector<BindableResources> m_resources;
+    const Ref<Device> m_device;
 };
 
 } // namespace WebGPU
-
-struct WGPURenderBundleEncoderImpl {
-    Ref<WebGPU::RenderBundleEncoder> renderBundleEncoder;
-};

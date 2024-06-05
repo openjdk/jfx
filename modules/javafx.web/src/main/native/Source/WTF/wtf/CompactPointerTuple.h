@@ -27,6 +27,7 @@
 #pragma once
 
 #include <type_traits>
+#include <utility>
 #include <wtf/FastMalloc.h>
 #include <wtf/MathExtras.h>
 #include <wtf/StdLibExtras.h>
@@ -44,9 +45,9 @@ template<typename PointerType, typename Type>
 class CompactPointerTuple final {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static_assert(sizeof(Type) <= 2, "");
-    static_assert(std::is_pointer<PointerType>::value, "");
-    static_assert(std::is_integral<Type>::value || std::is_enum<Type>::value, "");
+    static_assert(sizeof(Type) <= 2);
+    static_assert(std::is_pointer<PointerType>::value);
+    static_assert(std::is_integral<Type>::value || std::is_enum<Type>::value);
     using UnsignedType = std::make_unsigned_t<std::conditional_t<std::is_same_v<Type, bool>, uint8_t, Type>>;
     static_assert(sizeof(UnsignedType) == sizeof(Type));
 
@@ -95,6 +96,11 @@ public:
 
     uint64_t data() const { return m_data; }
 
+    bool operator==(const CompactPointerTuple& other) const
+    {
+        return m_data == other.m_data;
+    }
+
 private:
     static constexpr uint64_t encodeType(Type type)
     {
@@ -130,6 +136,11 @@ public:
     void setPointer(PointerType pointer) { m_pointer = pointer; }
     Type type() const { return m_type; }
     void setType(Type type) { m_type = type; }
+
+    bool operator==(const CompactPointerTuple& other) const
+    {
+        return m_type == other.m_type && m_pointer == other.m_pointer;
+    }
 
 private:
     PointerType m_pointer { nullptr };

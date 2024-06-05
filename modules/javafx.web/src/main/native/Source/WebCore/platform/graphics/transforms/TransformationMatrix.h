@@ -55,10 +55,6 @@ const int MCOUNT = 6;
 typedef double* PlatformTransformationMatrix;
 #endif
 
-#if PLATFORM(WIN)
-struct D2D_MATRIX_3X2_F;
-typedef D2D_MATRIX_3X2_F D2D1_MATRIX_3X2_F;
-#endif
 
 namespace WTF {
 class TextStream;
@@ -106,6 +102,16 @@ public:
             { c, d, 0, 0 },
             { 0, 0, 1, 0 },
             { e, f, 0, 1 },
+        }
+    {
+    }
+
+    constexpr TransformationMatrix(double tx, double ty)
+        : m_matrix {
+            { 1, 0, 0, 0 },
+            { 0, 1, 0, 0 },
+            { 0, 0, 1, 0 },
+            { tx, ty, 0, 1 },
         }
     {
     }
@@ -260,25 +266,33 @@ public:
 
     // this = mat * this.
     WEBCORE_EXPORT TransformationMatrix& multiply(const TransformationMatrix&);
+    // Identical to multiply(TransformationMatrix&), but saving a AffineTransform -> TransformationMatrix roundtrip for identity or translation matrices.
+    TransformationMatrix& multiplyAffineTransform(const AffineTransform&);
 
     WEBCORE_EXPORT TransformationMatrix& scale(double);
     WEBCORE_EXPORT TransformationMatrix& scaleNonUniform(double sx, double sy);
     TransformationMatrix& scale3d(double sx, double sy, double sz);
 
+    enum class RotationSnapping {
+        None,
+        Snap90degRotations,
+    };
+
     // Angle is in degrees.
-    WEBCORE_EXPORT TransformationMatrix& rotate(double);
+    WEBCORE_EXPORT TransformationMatrix& rotate(double, RotationSnapping = RotationSnapping::Snap90degRotations);
+    WEBCORE_EXPORT TransformationMatrix& rotateRadians(double, RotationSnapping = RotationSnapping::Snap90degRotations);
     TransformationMatrix& rotateFromVector(double x, double y);
-    WEBCORE_EXPORT TransformationMatrix& rotate3d(double rx, double ry, double rz);
+    WEBCORE_EXPORT TransformationMatrix& rotate3d(double rx, double ry, double rz, RotationSnapping = RotationSnapping::Snap90degRotations);
 
     // The vector (x,y,z) is normalized if it's not already. A vector of (0,0,0) uses a vector of (0,0,1).
-    TransformationMatrix& rotate3d(double x, double y, double z, double angle);
+    TransformationMatrix& rotate3d(double x, double y, double z, double angle, RotationSnapping = RotationSnapping::Snap90degRotations);
 
     WEBCORE_EXPORT TransformationMatrix& translate(double tx, double ty);
-    TransformationMatrix& translate3d(double tx, double ty, double tz);
+    WEBCORE_EXPORT TransformationMatrix& translate3d(double tx, double ty, double tz);
 
     // translation added with a post-multiply
     TransformationMatrix& translateRight(double tx, double ty);
-    TransformationMatrix& translateRight3d(double tx, double ty, double tz);
+    WEBCORE_EXPORT TransformationMatrix& translateRight3d(double tx, double ty, double tz);
 
     WEBCORE_EXPORT TransformationMatrix& flipX();
     WEBCORE_EXPORT TransformationMatrix& flipY();
@@ -291,6 +305,16 @@ public:
 
     // Returns a transformation that maps a rect to a rect.
     WEBCORE_EXPORT static TransformationMatrix rectToRect(const FloatRect&, const FloatRect&);
+
+    // Changes the transform to:
+    //
+    //     scale3d(z, z, z) * mat * scale3d(1/z, 1/z, 1/z)
+    //
+    // Useful for mapping zoomed points to their zoomed transformed result:
+    //
+    //     new_mat * (scale3d(z, z, z) * x) == scale3d(z, z, z) * (mat * x)
+    //
+    TransformationMatrix& zoom(double zoomFactor);
 
     WEBCORE_EXPORT bool isInvertible() const;
     WEBCORE_EXPORT std::optional<TransformationMatrix> inverse() const;
@@ -328,10 +352,10 @@ public:
         }
     };
 
-    bool decompose2(Decomposed2Type&) const;
+    bool decompose2(Decomposed2Type&) const WARN_UNUSED_RETURN;
     void recompose2(const Decomposed2Type&);
 
-    bool decompose4(Decomposed4Type&) const;
+    bool decompose4(Decomposed4Type&) const WARN_UNUSED_RETURN;
     void recompose4(const Decomposed4Type&);
 
     WEBCORE_EXPORT void blend(const TransformationMatrix& from, double progress, CompositeOperation = CompositeOperation::Replace);
@@ -369,8 +393,6 @@ public:
                 m_matrix[3][3] == m2.m_matrix[3][3]);
     }
 
-    bool operator!=(const TransformationMatrix& other) const { return !(*this == other); }
-
     // *this = *this * t
     TransformationMatrix& operator*=(const TransformationMatrix& t)
     {
@@ -395,7 +417,7 @@ public:
 #endif
 
 #if PLATFORM(WIN) || (PLATFORM(GTK) && OS(WINDOWS))
-    operator XFORM() const;
+    WEBCORE_EXPORT operator XFORM() const;
 #endif
 
     bool isIdentityOrTranslation() const

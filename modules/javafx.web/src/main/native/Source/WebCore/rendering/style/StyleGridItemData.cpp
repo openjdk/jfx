@@ -31,9 +31,11 @@
 #include "config.h"
 #include "StyleGridItemData.h"
 
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 
 namespace WebCore {
+
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleGridItemData);
 
 StyleGridItemData::StyleGridItemData()
     : gridColumnStart(RenderStyle::initialGridItemColumnStart())

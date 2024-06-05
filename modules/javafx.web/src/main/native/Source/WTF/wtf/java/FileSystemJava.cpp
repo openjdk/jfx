@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -164,6 +164,26 @@ String pathByAppendingComponent(const String& path, const String& component)
     return String(env, result);
 }
 
+String pathByAppendingComponent(StringView path, StringView component)
+{
+    JNIEnv* env = WTF::GetJavaEnv();
+
+    static jmethodID mid = env->GetStaticMethodID(
+            comSunWebkitFileSystem,
+            "fwkPathByAppendingComponent",
+            "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;");
+    ASSERT(mid);
+
+    JLString result = static_cast<jstring>(env->CallStaticObjectMethod(
+            comSunWebkitFileSystem,
+            mid,
+            (jstring)path.toString().toJavaString(env),
+            (jstring)component.toString().toJavaString(env)));
+    WTF::CheckAndClearException(env);
+
+    return String(env, result);
+}
+
 bool makeAllDirectories(const String& path)
 {
     JNIEnv* env = WTF::GetJavaEnv();
@@ -311,7 +331,7 @@ std::optional<WallTime> fileCreationTime(const String&) // Not all platforms sto
 String homeDirectoryPath()
 {
     fprintf(stderr, "homeDirectoryPath() NOT IMPLEMENTED\n");
-    return "";
+    return String();
 }
 
 String directoryName(String const &)
@@ -352,9 +372,9 @@ bool truncateFile(PlatformFileHandle, long long offset)
     return false;
 }
 
-std::optional<int32_t> getFileDeviceId(const CString&)
+std::optional<int32_t> getFileDeviceId(const String&)
 {
-    fprintf(stderr, "getFileDeviceId(const CString&) NOT IMPLEMENTED\n");
+    fprintf(stderr, "getFileDeviceId(const String&) NOT IMPLEMENTED\n");
     return {};
 }
 
@@ -389,10 +409,12 @@ bool deleteEmptyDirectory(String const &)
     return false;
 }
 
-String openTemporaryFile(const String&, PlatformFileHandle& handle, const String&)
+String openTemporaryFile(StringView prefix, PlatformFileHandle& handle, StringView suffix)
 {
     fprintf(stderr, "openTemporaryFile(const String&, PlatformFileHandle& handle, const String&) NOT IMPLEMENTED\n");
     handle = invalidPlatformFileHandle;
+        UNUSED_PARAM(prefix);
+        UNUSED_PARAM(suffix);
     return String();
 }
 
@@ -400,7 +422,7 @@ String parentPath(const String& path)
 {
     fprintf(stderr, "parentPath(const String& path) NOT IMPLEMENTED\n");
     UNUSED_PARAM(path);
-    return "";
+    return String();
 }
 
 bool moveFile(const String& oldPath, const String& newPath)
@@ -421,7 +443,9 @@ bool isHiddenFile(const String& path)
 
 String pathFileName(const String& path)
 {
-    return path.substring(path.reverseFind('/') + 1);
+    UNUSED_PARAM(path);
+   // return path.substring(path.reverseFind('/') + 1);
+   return nullString();
 }
 
 bool hardLinkOrCopyFile(const String& targetPath, const String& linkPath)
@@ -488,6 +512,20 @@ std::optional<uint64_t> fileSize(PlatformFileHandle handle)
     fprintf(stderr, "readEntireFile(PlatformFileHandle) NOT IMPLEMENTED\n");
     UNUSED_PARAM(handle);
     return size;
+}
+
+std::optional<PlatformFileID> fileID(PlatformFileHandle fileHandle)
+{
+    UNUSED_PARAM(fileHandle);
+    return std::nullopt;
+}
+
+bool fileIDsAreEqual(std::optional<PlatformFileID> a, std::optional<PlatformFileID> b)
+{
+    fprintf(stderr, "fileIDsAreEqual(std::optional<PlatformFileID> a, std::optional<PlatformFileID> b) NOT IMPLEMENTED\n");
+    UNUSED_PARAM(a);
+    UNUSED_PARAM(b);
+    return true;
 }
 
 } // namespace FileSystemImpl

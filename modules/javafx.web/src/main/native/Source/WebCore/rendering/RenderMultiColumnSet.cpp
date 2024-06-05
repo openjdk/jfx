@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2012 Apple Inc.  All rights reserved.
+ * Copyright (C) 2012-2023 Apple Inc.  All rights reserved.
+ * Copyright (C) 2015 Google Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,10 +27,13 @@
 #include "config.h"
 #include "RenderMultiColumnSet.h"
 
-#include "FrameView.h"
+#include "BorderPainter.h"
 #include "HitTestResult.h"
+#include "LocalFrameView.h"
 #include "PaintInfo.h"
+#include "RenderBlockInlines.h"
 #include "RenderBoxFragmentInfo.h"
+#include "RenderBoxInlines.h"
 #include "RenderLayer.h"
 #include "RenderMultiColumnFlow.h"
 #include "RenderMultiColumnSpannerPlaceholder.h"
@@ -241,6 +245,13 @@ LayoutUnit RenderMultiColumnSet::calculateBalancedHeight(bool initial) const
         return m_computedColumnHeight + sizeContainmentShortage;
     }
 
+    if (m_computedColumnHeight >= m_maxColumnHeight) {
+        // We cannot stretch any further. We'll just have to live with the overflowing columns. This
+        // typically happens if the max column height is less than the height of the tallest piece
+        // of unbreakable content (e.g. lines).
+        return m_computedColumnHeight;
+    }
+
     // If the initial guessed column height wasn't enough, stretch it now. Stretch by the lowest
     // amount of space shortage found during layout.
 
@@ -428,7 +439,7 @@ LayoutUnit RenderMultiColumnSet::columnGap() const
     // go to the parent block to get the gap.
     RenderBlockFlow& parentBlock = downcast<RenderBlockFlow>(*parent());
     if (parentBlock.style().columnGap().isNormal())
-        return parentBlock.style().fontDescription().computedPixelSize(); // "1em" is recommended as the normal gap setting. Matches <p> margins.
+        return LayoutUnit(parentBlock.style().fontDescription().computedSize()); // "1em" is recommended as the normal gap setting. Matches <p> margins.
     return valueForLength(parentBlock.style().columnGap().length(), parentBlock.availableLogicalWidth());
 }
 
@@ -445,7 +456,10 @@ unsigned RenderMultiColumnSet::columnCount() const
     if (logicalHeightInColumns <= 0)
         return 1;
 
-    unsigned count = ceilf(static_cast<float>(logicalHeightInColumns) / computedColumnHeight);
+    unsigned count = (logicalHeightInColumns / computedColumnHeight).floor();
+    // logicalHeightInColumns may be saturated, so detect the remainder manually.
+    if (count * computedColumnHeight < logicalHeightInColumns)
+        ++count;
     ASSERT(count >= 1);
     return count;
 }
@@ -584,7 +598,7 @@ LayoutRect RenderMultiColumnSet::fragmentedFlowPortionOverflowRect(const LayoutR
 
     // Calculate the overflow rectangle, based on the flow thread's, clipped at column logical
     // top/bottom unless it's the first/last column.
-    LayoutRect overflowRect = overflowRectForFragmentedFlowPortion(portionRect, isFirstColumn && isFirstFragment(), isLastColumn && isLastFragment(), VisualOverflow);
+    LayoutRect overflowRect = overflowRectForFragmentedFlowPortion(portionRect, isFirstColumn && isFirstFragment(), isLastColumn && isLastFragment());
 
     // For RenderViews only (i.e., iBooks), avoid overflowing into neighboring columns, by clipping in the middle of adjacent column gaps. Also make sure that we avoid rounding errors.
     if (&view() == parent()) {
@@ -623,7 +637,7 @@ void RenderMultiColumnSet::paintColumnRules(PaintInfo& paintInfo, const LayoutPo
     if (colCount <= 1)
         return;
 
-    bool antialias = shouldAntialiasLines(paintInfo.context());
+    bool antialias = BorderPainter::shouldAntialiasLines(paintInfo.context());
 
     if (fragmentedFlow->progressionIsInline()) {
         bool leftToRight = style().isLeftToRightDirection() ^ fragmentedFlow->progressionIsReversed();
@@ -652,7 +666,7 @@ void RenderMultiColumnSet::paintColumnRules(PaintInfo& paintInfo, const LayoutPo
                 LayoutUnit ruleTop = isHorizontalWritingMode() ? paintOffset.y() + borderTop() + paddingTop() : paintOffset.y() + ruleLogicalLeft - ruleThickness / 2 + ruleAdd;
                 LayoutUnit ruleBottom = isHorizontalWritingMode() ? ruleTop + contentHeight() : ruleTop + ruleThickness;
                 IntRect pixelSnappedRuleRect = snappedIntRect(ruleLeft, ruleTop, ruleRight - ruleLeft, ruleBottom - ruleTop);
-                drawLineForBoxSide(paintInfo.context(), pixelSnappedRuleRect, boxSide, ruleColor, ruleStyle, 0, 0, antialias);
+                BorderPainter::drawLineForBoxSide(paintInfo.context(), document(), pixelSnappedRuleRect, boxSide, ruleColor, ruleStyle, 0, 0, antialias);
             }
 
             ruleLogicalLeft = currLogicalLeftOffset;
@@ -683,7 +697,7 @@ void RenderMultiColumnSet::paintColumnRules(PaintInfo& paintInfo, const LayoutPo
         for (unsigned i = 1; i < colCount; i++) {
             ruleRect.move(step);
             IntRect pixelSnappedRuleRect = snappedIntRect(ruleRect);
-            drawLineForBoxSide(paintInfo.context(), pixelSnappedRuleRect, boxSide, ruleColor, ruleStyle, 0, 0, antialias);
+            BorderPainter::drawLineForBoxSide(paintInfo.context(), document(), pixelSnappedRuleRect, boxSide, ruleColor, ruleStyle, 0, 0, antialias);
         }
     }
 }
@@ -924,12 +938,6 @@ LayoutPoint RenderMultiColumnSet::columnTranslationForOffset(const LayoutUnit& o
     return translationOffset;
 }
 
-void RenderMultiColumnSet::adjustFragmentBoundsFromFragmentedFlowPortionRect(LayoutRect&) const
-{
-    // This only fires for named flow thread compositing code, so let's make sure to ASSERT if this ever gets invoked.
-    ASSERT_NOT_REACHED();
-}
-
 void RenderMultiColumnSet::addOverflowFromChildren()
 {
     // FIXME: Need to do much better here.
@@ -1046,9 +1054,9 @@ void RenderMultiColumnSet::updateHitTestResult(HitTestResult& result, const Layo
     }
 }
 
-const char* RenderMultiColumnSet::renderName() const
+ASCIILiteral RenderMultiColumnSet::renderName() const
 {
-    return "RenderMultiColumnSet";
+    return "RenderMultiColumnSet"_s;
 }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,21 +26,25 @@
 #pragma once
 
 #if ENABLE(WEBGL)
+#include <optional>
+#include <wtf/EnumTraits.h>
 
 namespace WebCore {
 
-enum class GraphicsContextGLPowerPreference {
+enum class GraphicsContextGLPowerPreference : uint8_t {
     Default,
     LowPower,
     HighPerformance
 };
 
-enum class GraphicsContextGLWebGLVersion {
+enum class GraphicsContextGLWebGLVersion : uint8_t {
     WebGL1,
-#if ENABLE(WEBGL2)
     WebGL2
-#endif
 };
+
+#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
+using PlatformGPUID = uint64_t;
+#endif
 
 struct GraphicsContextGLAttributes {
     // WebGLContextAttributes
@@ -62,12 +66,18 @@ struct GraphicsContextGLAttributes {
     using WebGLVersion = GraphicsContextGLWebGLVersion;
     WebGLVersion webGLVersion { WebGLVersion::WebGL1 };
     bool forceRequestForHighPerformanceGPU { false };
+#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
+    PlatformGPUID windowGPUID { 0 };
+#endif
 #if PLATFORM(COCOA)
     bool useMetal { true };
 #endif
 #if ENABLE(WEBXR)
     bool xrCompatible { false };
 #endif
+    bool failPlatformContextCreationForTesting { false };
+    unsigned remoteIPCBufferSizeLog2ForTesting { 0 }; // Not serialized.
+
     PowerPreference effectivePowerPreference() const
     {
         if (forceRequestForHighPerformanceGPU)

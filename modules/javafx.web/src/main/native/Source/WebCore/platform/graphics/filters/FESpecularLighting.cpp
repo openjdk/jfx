@@ -2,7 +2,8 @@
  * Copyright (C) 2004, 2005, 2006, 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005 Rob Buis <buis@kde.org>
  * Copyright (C) 2005 Eric Seidel <eric@webkit.org>
- * Copyright (C) 2021 Apple Inc.  All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2014 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -29,11 +30,6 @@
 
 namespace WebCore {
 
-Ref<FESpecularLighting> FESpecularLighting::create(const Color& lightingColor, float surfaceScale, float, float specularConstant, float specularExponent, float kernelUnitLengthX, float kernelUnitLengthY, Ref<LightSource>&& lightSource)
-{
-    return create(lightingColor, surfaceScale, specularConstant, specularExponent, kernelUnitLengthX, kernelUnitLengthY, WTFMove(lightSource));
-}
-
 Ref<FESpecularLighting> FESpecularLighting::create(const Color& lightingColor, float surfaceScale, float specularConstant, float specularExponent, float kernelUnitLengthX, float kernelUnitLengthY, Ref<LightSource>&& lightSource)
 {
     return adoptRef(*new FESpecularLighting(lightingColor, surfaceScale, specularConstant, specularExponent, kernelUnitLengthX, kernelUnitLengthY, WTFMove(lightSource)));
@@ -46,6 +42,7 @@ FESpecularLighting::FESpecularLighting(const Color& lightingColor, float surface
 
 bool FESpecularLighting::setSpecularConstant(float specularConstant)
 {
+    specularConstant = std::max(specularConstant, 0.0f);
     if (m_specularConstant == specularConstant)
         return false;
     m_specularConstant = specularConstant;
@@ -54,6 +51,7 @@ bool FESpecularLighting::setSpecularConstant(float specularConstant)
 
 bool FESpecularLighting::setSpecularExponent(float specularExponent)
 {
+    specularExponent = clampTo<float>(specularExponent, 1.0f, 128.0f);
     if (m_specularExponent == specularExponent)
         return false;
     m_specularExponent = specularExponent;

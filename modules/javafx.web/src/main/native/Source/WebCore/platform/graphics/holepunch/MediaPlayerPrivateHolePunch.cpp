@@ -33,6 +33,7 @@ static const FloatSize s_holePunchDefaultFrameSize(1280, 720);
 MediaPlayerPrivateHolePunch::MediaPlayerPrivateHolePunch(MediaPlayer* player)
     : m_player(player)
     , m_readyTimer(RunLoop::main(), this, &MediaPlayerPrivateHolePunch::notifyReadyState)
+    , m_networkState(MediaPlayer::NetworkState::Empty)
 #if USE(NICOSIA)
     , m_nicosiaLayer(Nicosia::ContentLayer::create(Nicosia::ContentLayerTextureMapperImpl::createFactory(*this)))
 #else
@@ -109,12 +110,12 @@ static HashSet<String, ASCIICaseInsensitiveHash>& mimeTypeCache()
     if (typeListInitialized)
         return cache;
 
-    const char* mimeTypes[] = {
-        "video/holepunch"
+    const ASCIILiteral mimeTypes[] = {
+        "video/holepunch"_s
     };
 
     for (unsigned i = 0; i < (sizeof(mimeTypes) / sizeof(*mimeTypes)); ++i)
-        cache.get().add(String(mimeTypes[i]));
+        cache.get().add(mimeTypes[i]);
 
     typeListInitialized = true;
 
@@ -169,7 +170,27 @@ void MediaPlayerPrivateHolePunch::registerMediaEngine(MediaEngineRegistrar regis
 void MediaPlayerPrivateHolePunch::notifyReadyState()
 {
     // Notify the ready state so the GraphicsLayer gets created.
-    m_player->readyStateChanged();
+    if (auto player = m_player.get())
+        player->readyStateChanged();
 }
+
+void MediaPlayerPrivateHolePunch::setNetworkState(MediaPlayer::NetworkState networkState)
+{
+    m_networkState = networkState;
+    if (auto player = m_player.get())
+        player->networkStateChanged();
 }
+
+void MediaPlayerPrivateHolePunch::load(const String&)
+{
+    auto player = m_player.get();
+    if (!player)
+        return;
+
+    auto mimeType = player->contentMIMEType();
+    if (mimeType.isEmpty() || !mimeTypeCache().contains(mimeType))
+        setNetworkState(MediaPlayer::NetworkState::FormatError);
+}
+
+} // namespace WebCore
 #endif // USE(EXTERNAL_HOLEPUNCH)

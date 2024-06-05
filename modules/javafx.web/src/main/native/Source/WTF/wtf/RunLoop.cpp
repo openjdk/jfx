@@ -27,7 +27,9 @@
 #include <wtf/RunLoop.h>
 
 #include <wtf/NeverDestroyed.h>
+#include <wtf/Ref.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/threads/BinarySemaphore.h>
 
 namespace WTF {
 
@@ -102,11 +104,23 @@ RunLoop* RunLoop::webIfExists()
 }
 #endif
 
-bool RunLoop::isMain()
+Ref<RunLoop> RunLoop::create(const char* threadName, ThreadType threadType, Thread::QOS qos)
 {
-    ASSERT(s_mainRunLoop);
+    RunLoop* runLoop = nullptr;
+    BinarySemaphore semaphore;
+    Thread::create(threadName, [&] {
+        runLoop = &RunLoop::current();
+        semaphore.signal();
+        runLoop->run();
+    }, threadType, qos)->detach();
+    semaphore.wait();
+    return *runLoop;
+}
+
+bool RunLoop::isCurrent() const
+{
     // Avoid constructing the RunLoop for the current thread if it has not been created yet.
-    return runLoopHolder().isSet() && s_mainRunLoop == &RunLoop::current();
+    return runLoopHolder().isSet() && this == &RunLoop::current();
 }
 
 void RunLoop::performWork()
@@ -174,15 +188,17 @@ void RunLoop::dispatch(Function<void()>&& function)
 #endif
 }
 
-void RunLoop::dispatchAfter(Seconds delay, Function<void()>&& function)
+Ref<RunLoop::DispatchTimer> RunLoop::dispatchAfter(Seconds delay, Function<void()>&& function)
 {
     RELEASE_ASSERT(function);
-    auto timer = new DispatchTimer(*this);
-    timer->setFunction([timer, function = WTFMove(function)] {
+    Ref<DispatchTimer> timer = adoptRef(*new DispatchTimer(*this));
+    timer->setFunction([timer = timer.copyRef(), function = WTFMove(function)]() mutable {
+        Ref<DispatchTimer> protectedTimer { WTFMove(timer) };
         function();
-        delete timer;
+        protectedTimer->stop();
     });
     timer->startOneShot(delay);
+    return timer;
 }
 
 void RunLoop::suspendFunctionDispatchForCurrentCycle()
@@ -205,11 +221,17 @@ void RunLoop::threadWillExit()
     }
 }
 
+#if ASSERT_ENABLED
+void RunLoop::assertIsCurrent() const
+{
+    ASSERT(this == &current());
+}
+#endif
+
 #if PLATFORM(JAVA)
 void RunLoop::dispatchFunctionsFromMainThread()
 {
     performWork();
 }
 #endif
-
 } // namespace WTF

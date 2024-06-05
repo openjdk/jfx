@@ -40,7 +40,7 @@ namespace WebCore {
 
 static void skipSpaces(StringView input, unsigned& startIndex)
 {
-    while (startIndex < input.length() && isHTTPSpace(input[startIndex]))
+    while (startIndex < input.length() && isASCIIWhitespaceWithoutFF(input[startIndex]))
         ++startIndex;
 }
 
@@ -78,7 +78,7 @@ static StringView parseToken(StringView input, unsigned& startIndex, CharacterMe
             while (input[tokenEnd - 1] == ' ')
                 --tokenEnd;
         } else {
-            while (isHTTPSpace(input[tokenEnd - 1]))
+            while (isASCIIWhitespaceWithoutFF(input[tokenEnd - 1]))
                 --tokenEnd;
         }
     }
@@ -329,7 +329,7 @@ bool ParsedContentType::parseContentType(Mode mode)
 
 std::optional<ParsedContentType> ParsedContentType::create(const String& contentType, Mode mode)
 {
-    ParsedContentType parsedContentType(mode == Mode::Rfc2045 ? contentType : stripLeadingAndTrailingHTTPSpaces(contentType));
+    ParsedContentType parsedContentType(mode == Mode::Rfc2045 ? contentType : contentType.trim(isASCIIWhitespaceWithoutFF<UChar>));
     if (!parsedContentType.parseContentType(mode))
         return std::nullopt;
     return { WTFMove(parsedContentType) };
@@ -347,7 +347,7 @@ ParsedContentType::ParsedContentType(const String& contentType)
 
 String ParsedContentType::charset() const
 {
-    return parameterValueForName("charset");
+    return parameterValueForName("charset"_s);
 }
 
 void ParsedContentType::setCharset(String&& charset)
@@ -365,13 +365,13 @@ size_t ParsedContentType::parameterCount() const
     return m_parameterValues.size();
 }
 
-void ParsedContentType::setContentType(StringView contentRange, Mode mode)
+void ParsedContentType::setContentType(String&& contentRange, Mode mode)
 {
-    m_mimeType = contentRange.toString();
+    m_mimeType = WTFMove(contentRange);
     if (mode == Mode::MimeSniff)
-        m_mimeType = stripLeadingAndTrailingHTTPSpaces(m_mimeType).convertToASCIILowercase();
+        m_mimeType = StringView(m_mimeType).trim(isASCIIWhitespaceWithoutFF<UChar>).convertToASCIILowercase();
     else
-        m_mimeType = m_mimeType.stripWhiteSpace();
+        m_mimeType = m_mimeType.trim(deprecatedIsSpaceOrNewline);
 }
 
 static bool containsNonQuoteStringTokenCharacters(const String& input)

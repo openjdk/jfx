@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,7 +34,7 @@
 /* On Linux with clang, libgcc is usually used instead of compiler-rt, and it does
  * not provide the __mulodi4 symbol used by clang for __builtin_mul_overflow
  */
-#if COMPILER(GCC) || (COMPILER(CLANG) && !(CPU(ARM) && OS(LINUX)))
+#if COMPILER(GCC) || (COMPILER(CLANG) && !(CPU(ARM) && OS(LINUX))) && !PLATFORM(IOS_FAMILY_SIMULATOR)
 #define USE_MUL_OVERFLOW 1
 #endif
 
@@ -596,7 +596,6 @@ inline constexpr bool observesOverflow<AssertNoOverflow>() { return ASSERT_ENABL
 template <typename U, typename V, typename R> static inline bool safeAdd(U lhs, V rhs, R& result)
 {
     return ArithmeticOperations<U, V, R>::add(lhs, rhs, result);
-    return true;
 }
 
 template <class OverflowHandler, typename U, typename V, typename R, typename = std::enable_if_t<!std::is_scalar<OverflowHandler>::value>>
@@ -859,11 +858,6 @@ public:
         return value() == Checked(rhs.value());
     }
 
-    template <typename U> bool operator!=(U rhs)
-    {
-        return !(*this == rhs);
-    }
-
     // Other comparisons
     template <typename V> bool operator<(Checked<T, V> rhs) const
     {
@@ -1000,6 +994,12 @@ Checked<T, RecordOverflow> checkedSum(U value, Args... args)
     return Checked<T, RecordOverflow>(value) + checkedSum<T>(args...);
 }
 
+template<typename T, typename U, typename V>
+Checked<T, RecordOverflow> checkedDifference(U left, V right)
+{
+    return Checked<T, RecordOverflow>(left) - Checked<T, RecordOverflow>(right);
+}
+
 // Sometimes, you just want to check if some math would overflow - the code to do the math is
 // already in place, and you want to guard it.
 
@@ -1010,7 +1010,7 @@ template<typename T, typename... Args> bool sumOverflows(Args... args)
 
 template<typename T, typename U> bool differenceOverflows(U left, U right)
 {
-    return (Checked<T, RecordOverflow>(left) - Checked<T, RecordOverflow>(right)).hasOverflowed();
+    return checkedDifference<T>(left, right).hasOverflowed();
 }
 
 template<typename T, typename U>
@@ -1056,6 +1056,8 @@ using WTF::CheckedSize;
 using WTF::CrashOnOverflow;
 using WTF::RecordOverflow;
 using WTF::checkedSum;
+using WTF::checkedDifference;
+using WTF::checkedProduct;
 using WTF::differenceOverflows;
 using WTF::isInBounds;
 using WTF::productOverflows;

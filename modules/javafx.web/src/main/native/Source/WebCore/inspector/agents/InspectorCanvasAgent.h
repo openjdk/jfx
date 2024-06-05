@@ -26,6 +26,7 @@
 #pragma once
 
 #include "CanvasBase.h"
+#include "CanvasObserver.h"
 #include "InspectorCanvas.h"
 #include "InspectorCanvasCallTracer.h"
 #include "InspectorWebAgentBase.h"
@@ -34,6 +35,8 @@
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
 #include <initializer_list>
 #include <wtf/Forward.h>
+#include <wtf/RobinHoodHashMap.h>
+#include <wtf/RobinHoodHashSet.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -44,7 +47,7 @@ class InjectedScriptManager;
 namespace WebCore {
 
 class CanvasRenderingContext;
-class Frame;
+class LocalFrame;
 
 #if ENABLE(WEBGL)
 class InspectorShaderProgram;
@@ -52,7 +55,7 @@ class WebGLProgram;
 class WebGLRenderingContextBase;
 #endif // ENABLE(WEBGL)
 
-class InspectorCanvasAgent final : public InspectorAgentBase, public Inspector::CanvasBackendDispatcherHandler, public CanvasObserver, public CanMakeWeakPtr<InspectorCanvasAgent> {
+class InspectorCanvasAgent final : public InspectorAgentBase, public Inspector::CanvasBackendDispatcherHandler, public CanvasObserver {
     WTF_MAKE_NONCOPYABLE(InspectorCanvasAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -87,7 +90,7 @@ public:
     void canvasDestroyed(CanvasBase&) final;
 
     // InspectorInstrumentation
-    void frameNavigated(Frame&);
+    void frameNavigated(LocalFrame&);
     void didChangeCSSCanvasClientNodes(CanvasBase&);
     void didCreateCanvasRenderingContext(CanvasRenderingContext&);
     void didChangeCanvasMemory(CanvasRenderingContext&);
@@ -141,17 +144,17 @@ private:
     Inspector::InjectedScriptManager& m_injectedScriptManager;
     Page& m_inspectedPage;
 
-    HashMap<String, RefPtr<InspectorCanvas>> m_identifierToInspectorCanvas;
+    MemoryCompactRobinHoodHashMap<String, RefPtr<InspectorCanvas>> m_identifierToInspectorCanvas;
     Vector<String> m_removedCanvasIdentifiers;
     Timer m_canvasDestroyedTimer;
 
 #if ENABLE(WEBGL)
-    HashMap<String, RefPtr<InspectorShaderProgram>> m_identifierToInspectorProgram;
+    MemoryCompactRobinHoodHashMap<String, RefPtr<InspectorShaderProgram>> m_identifierToInspectorProgram;
     Vector<String> m_removedProgramIdentifiers;
     Timer m_programDestroyedTimer;
 #endif // ENABLE(WEBGL)
 
-    HashSet<String> m_recordingCanvasIdentifiers;
+    MemoryCompactRobinHoodHashSet<String> m_recordingCanvasIdentifiers;
 
     std::optional<size_t> m_recordingAutoCaptureFrameCount;
 };

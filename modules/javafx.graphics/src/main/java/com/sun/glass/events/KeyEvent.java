@@ -251,12 +251,18 @@ public class KeyEvent {
     /**
      * Returns a VK_ code of a key capable of producing the given unicode
      * character with respect to the currently active keyboard layout or
-     * VK_UNDEFINED if the character isn't present in the current layout.
+     * VK_UNDEFINED if the character isn't present in the current layout. The
+     * hint is the VK_ code of the key the system is attempting to match
+     * (which may be VK_UNDEFINED for a key on the main keyboard). It can be
+     * used to optimize the search or to distinguish between the main
+     * keyboard and the numeric keypad.
      *
+     * @param c the character
+     * @param hint the code of the key the system is attempting to match
      * @return integer code for the given char
      */
-    public static int getKeyCodeForChar(char c) {
-        return Application.getKeyCodeForChar(c);
+    public static int getKeyCodeForChar(char c, int hint) {
+        return Application.getKeyCodeForChar(c, hint);
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,14 +41,6 @@ class VM;
 using JITWriteSeparateHeapsFunction = void (*)(off_t, const void*, size_t);
 #endif
 
-#if defined(STRUCTURE_HEAP_ADDRESS_SIZE_IN_MB) && STRUCTURE_HEAP_ADDRESS_SIZE_IN_MB > 0
-constexpr uintptr_t structureHeapAddressSize = STRUCTURE_HEAP_ADDRESS_SIZE_IN_MB * MB;
-#elif PLATFORM(IOS_FAMILY) && CPU(ARM64) && !CPU(ARM64E)
-constexpr uintptr_t structureHeapAddressSize = 512 * MB;
-#else
-constexpr uintptr_t structureHeapAddressSize = 1 * GB;
-#endif
-
 struct Config {
     static Config& singleton();
 
@@ -72,6 +64,8 @@ struct Config {
     bool disabledFreezingForTesting;
     bool restrictedOptionsEnabled;
     bool jitDisabled;
+    bool vmCreationDisallowed;
+    bool vmEntryDisallowed;
 
     bool useFastJITPermissions;
 
@@ -85,12 +79,17 @@ struct Config {
         bool canUseJIT;
     } vm;
 
+#if CPU(ARM64E)
+    bool canUseFPAC;
+#endif
+
     ExecutableAllocator* executableAllocator;
     FixedVMPoolExecutableAllocator* fixedVMPoolExecutableAllocator;
     void* startExecutableMemory;
     void* endExecutableMemory;
     uintptr_t startOfFixedWritableMemoryPool;
     uintptr_t startOfStructureHeap;
+    uintptr_t sizeOfStructureHeap;
 
 #if ENABLE(SEPARATED_WX_HEAP)
     JITWriteSeparateHeapsFunction jitWriteSeparateHeaps;
@@ -101,8 +100,8 @@ struct Config {
     void (*shellTimeoutCheckCallback)(VM&);
 
     struct {
-        uint8_t exceptionInstructions[maxOpcodeLength + 1];
-        uint8_t wasmExceptionInstructions[maxOpcodeLength + 1];
+        uint8_t exceptionInstructions[maxBytecodeStructLength + 1];
+        uint8_t wasmExceptionInstructions[maxBytecodeStructLength + 1];
         const void* gateMap[numberOfGates];
     } llint;
 
@@ -133,6 +132,11 @@ extern "C" JS_EXPORT_PRIVATE Config g_jscConfig;
 constexpr size_t offsetOfJSCConfigInitializeHasBeenCalled = offsetof(JSC::Config, initializeHasBeenCalled);
 constexpr size_t offsetOfJSCConfigGateMap = offsetof(JSC::Config, llint.gateMap);
 constexpr size_t offsetOfJSCConfigStartOfStructureHeap = offsetof(JSC::Config, startOfStructureHeap);
+
+ALWAYS_INLINE PURE_FUNCTION uintptr_t startOfStructureHeap()
+{
+    return g_jscConfig.startOfStructureHeap;
+}
 
 } // namespace JSC
 

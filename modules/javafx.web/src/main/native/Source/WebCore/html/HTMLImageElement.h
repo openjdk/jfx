@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2004, 2008, 2010 Apple Inc. All rights reserved.
- * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2015 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -23,12 +23,12 @@
 
 #pragma once
 
+#include "ActiveDOMObject.h"
 #include "DecodingOptions.h"
-#include "FormNamedItem.h"
-#include "GraphicsLayer.h"
+#include "FormAssociatedElement.h"
 #include "GraphicsTypes.h"
 #include "HTMLElement.h"
-#include "MediaQueryEvaluator.h"
+#include "MediaQuery.h"
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -39,15 +39,16 @@ class HTMLAttachmentElement;
 class HTMLFormElement;
 class HTMLImageLoader;
 class HTMLMapElement;
+class Image;
 
 struct ImageCandidate;
 
 enum class ReferrerPolicy : uint8_t;
 enum class RelevantMutation : bool;
+enum class RequestPriority : uint8_t;
 
-class HTMLImageElement : public HTMLElement, public FormNamedItem {
+class HTMLImageElement : public HTMLElement, public FormAssociatedElement, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(HTMLImageElement);
-    friend class HTMLFormElement;
 public:
     static Ref<HTMLImageElement> create(Document&);
     static Ref<HTMLImageElement> create(const QualifiedName&, Document&, HTMLFormElement* = nullptr);
@@ -55,11 +56,17 @@ public:
 
     virtual ~HTMLImageElement();
 
-    WEBCORE_EXPORT unsigned width(bool ignorePendingStylesheets = false);
-    WEBCORE_EXPORT unsigned height(bool ignorePendingStylesheets = false);
+    using HTMLElement::ref;
+    using HTMLElement::deref;
 
-    WEBCORE_EXPORT int naturalWidth() const;
-    WEBCORE_EXPORT int naturalHeight() const;
+    void formOwnerRemovedFromTree(const Node& formRoot);
+
+    WEBCORE_EXPORT unsigned width();
+    WEBCORE_EXPORT unsigned height();
+
+    WEBCORE_EXPORT unsigned naturalWidth() const;
+    WEBCORE_EXPORT unsigned naturalHeight() const;
+    const URL& currentURL() const { return m_currentURL; }
     const AtomString& currentSrc() const { return m_currentSrc; }
 
     bool isServerMap() const;
@@ -80,7 +87,7 @@ public:
     WEBCORE_EXPORT void setHeight(unsigned);
 
     URL src() const;
-    void setSrc(const String&);
+    void setSrc(const AtomString&);
 
     WEBCORE_EXPORT void setCrossOrigin(const AtomString&);
     WEBCORE_EXPORT String crossOrigin() const;
@@ -92,7 +99,7 @@ public:
 
     WEBCORE_EXPORT bool complete() const;
 
-    void setDecoding(String&&);
+    void setDecoding(AtomString&&);
     String decoding() const;
 
     DecodingMode decodingMode() const;
@@ -100,16 +107,19 @@ public:
     WEBCORE_EXPORT void decode(Ref<DeferredPromise>&&);
 
 #if PLATFORM(IOS_FAMILY)
-    bool willRespondToMouseClickEvents() override;
+    bool willRespondToMouseClickEventsWithEditability(Editability) const override;
+
+    enum class IgnoreTouchCallout : bool { No, Yes };
+    bool willRespondToMouseClickEventsWithEditability(Editability, IgnoreTouchCallout) const;
 #endif
 
 #if ENABLE(ATTACHMENT_ELEMENT)
     void setAttachmentElement(Ref<HTMLAttachmentElement>&&);
     RefPtr<HTMLAttachmentElement> attachmentElement() const;
     const String& attachmentIdentifier() const;
+    void didUpdateAttachmentIdentifier();
 #endif
 
-    bool hasPendingActivity() const;
     WEBCORE_EXPORT size_t pendingDecodePromisesCountForTesting() const;
 
     bool canContainRangeEndPoint() const override { return false; }
@@ -117,7 +127,8 @@ public:
     const AtomString& imageSourceURL() const override;
 
 #if ENABLE(SERVICE_CONTROLS)
-    bool imageMenuEnabled() const { return m_imageMenuEnabled; }
+    bool isImageMenuEnabled() const { return m_isImageMenuEnabled; }
+    void setImageMenuEnabled(bool value) { m_isImageMenuEnabled = value; }
 #endif
 
     HTMLPictureElement* pictureElement() const;
@@ -129,11 +140,16 @@ public:
 
     void loadDeferredImage();
 
+    AtomString srcsetForBindings() const;
+    void setSrcsetForBindings(const AtomString&);
+
+    bool usesSrcsetOrPicture() const;
+
     const AtomString& loadingForBindings() const;
     void setLoadingForBindings(const AtomString&);
 
     bool isLazyLoadable() const;
-    static bool hasLazyLoadableAttributeValue(const AtomString&);
+    static bool hasLazyLoadableAttributeValue(StringView);
 
     bool isDeferred() const;
 
@@ -148,22 +164,40 @@ public:
 
     bool allowsOrientationOverride() const;
 
-#if ENABLE(SERVICE_CONTROLS)
-    WEBCORE_EXPORT bool hasImageControls() const;
+    bool allowsAnimation() const;
+#if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
+    WEBCORE_EXPORT void setAllowsAnimation(std::optional<bool>);
 #endif
 
+    void setFetchPriorityForBindings(const AtomString&);
+    String fetchPriorityForBindings() const;
+    RequestPriority fetchPriorityHint() const;
+
+    bool originClean(const SecurityOrigin&) const;
+
 protected:
+    constexpr static auto CreateHTMLImageElement = CreateHTMLElement | NodeFlag::HasCustomStyleResolveCallbacks;
     HTMLImageElement(const QualifiedName&, Document&, HTMLFormElement* = nullptr);
 
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) override;
 
 private:
+    void resetFormOwner() final;
+    void refFormAssociatedElement() const final { HTMLElement::ref(); }
+    void derefFormAssociatedElement() const final { HTMLElement::deref(); }
+    void setFormInternal(RefPtr<HTMLFormElement>&&) final;
+
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const override;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) override;
     void collectExtraStyleForPresentationalHints(MutableStyleProperties&) override;
     void invalidateAttributeMapping();
+
+    Ref<Element> cloneElementWithoutAttributesAndChildren(Document& targetDocument) final;
+
+    // ActiveDOMObject.
+    const char* activeDOMObjectName() const final;
+    bool virtualHasPendingActivity() const final;
 
     void didAttachRenderers() override;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
@@ -173,7 +207,7 @@ private:
 
     bool isURLAttribute(const Attribute&) const override;
     bool attributeContainsURL(const Attribute&) const override;
-    String completeURLsInAttributeValue(const URL& base, const Attribute&) const override;
+    String completeURLsInAttributeValue(const URL& base, const Attribute&, ResolveURLs = ResolveURLs::Yes) const override;
 
     bool isDraggableIgnoringAttributes() const final { return true; }
 
@@ -182,8 +216,8 @@ private:
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) override;
     void removedFromAncestor(RemovalType, ContainerNode&) override;
 
-    bool isFormAssociatedElement() const final { return false; }
-    FormNamedItem* asFormNamedItem() final { return this; }
+    bool isFormListedElement() const final { return false; }
+    FormAssociatedElement* asFormAssociatedElement() final { return this; }
     HTMLImageElement& asHTMLElement() final { return *this; }
     const HTMLImageElement& asHTMLElement() const final { return *this; }
 
@@ -198,9 +232,6 @@ private:
     float effectiveImageDevicePixelRatio() const;
 
 #if ENABLE(SERVICE_CONTROLS)
-    void updateImageControls();
-    void tryCreateImageControls();
-    void destroyImageControls();
     bool childShouldCreateRenderer(const Node&) const override;
 #endif
 
@@ -208,28 +239,30 @@ private:
     void setSourceElement(HTMLSourceElement*);
 
     std::unique_ptr<HTMLImageLoader> m_imageLoader;
-    WeakPtr<HTMLFormElement> m_form;
-    WeakPtr<HTMLFormElement> m_formSetByParser;
 
     CompositeOperator m_compositeOperator;
     AtomString m_bestFitImageURL;
     AtomString m_currentSrc;
+    URL m_currentURL;
     AtomString m_parsedUsemap;
     float m_imageDevicePixelRatio;
 #if ENABLE(SERVICE_CONTROLS)
-    bool m_imageMenuEnabled { false };
+    bool m_isImageMenuEnabled { false };
 #endif
     bool m_hadNameBeforeAttributeChanged { false }; // FIXME: We only need this because parseAttribute() can't see the old value.
     bool m_isDroppedImagePlaceholder { false };
 
-    WeakPtr<HTMLPictureElement> m_pictureElement;
+    WeakPtr<HTMLPictureElement, WeakPtrImplWithEventTargetData> m_pictureElement;
     // The source element that was selected to provide the source URL.
-    WeakPtr<HTMLSourceElement> m_sourceElement;
-    MediaQueryDynamicResults m_mediaQueryDynamicResults;
+    WeakPtr<HTMLSourceElement, WeakPtrImplWithEventTargetData> m_sourceElement;
+
+    Vector<MQ::MediaQueryResult> m_dynamicMediaQueryResults;
 
 #if ENABLE(ATTACHMENT_ELEMENT)
     String m_pendingClonedAttachmentID;
 #endif
+
+    Image* image() const;
 
     friend class HTMLPictureElement;
 };

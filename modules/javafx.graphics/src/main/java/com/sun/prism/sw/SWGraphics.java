@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package com.sun.prism.sw;
 
 import com.sun.glass.ui.Screen;
+import com.sun.javafx.font.CharToGlyphMapper;
 import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.Glyph;
@@ -62,7 +63,6 @@ import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.ImagePattern;
 import com.sun.prism.paint.Paint;
-import com.sun.javafx.font.CharToGlyphMapper;
 
 final class SWGraphics implements ReadbackGraphics {
 
@@ -632,6 +632,11 @@ final class SWGraphics implements ReadbackGraphics {
                     ", selectStart: " + selectStart + ", selectEnd: " + selectEnd);
         }
 
+        if (strike.getFontResource().isColorGlyph(gl.getGlyphCode(0))) {
+            drawColorGlyph(gl, strike, x, y, selectColor, selectStart, selectEnd);
+            return;
+        }
+
         final float bx, by, bw, bh;
         if (paint.isProportional()) {
             if (nodeBounds != null) {
@@ -654,7 +659,8 @@ final class SWGraphics implements ReadbackGraphics {
         final boolean doLCDText = drawAsMasks &&
                 (strike.getAAMode() == FontResource.AA_LCD) &&
                 getRenderTarget().isOpaque() &&
-                (this.paint.getType() == Paint.Type.COLOR) &&
+                this.paint instanceof Color c &&
+                c.getAlpha() == 1.0f &&
                 tx.is2D();
         BaseTransform glyphTx = null;
 

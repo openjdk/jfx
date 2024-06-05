@@ -35,11 +35,12 @@ IDBObjectStoreInfo::IDBObjectStoreInfo()
 {
 }
 
-IDBObjectStoreInfo::IDBObjectStoreInfo(uint64_t identifier, const String& name, std::optional<IDBKeyPath>&& keyPath, bool autoIncrement)
+IDBObjectStoreInfo::IDBObjectStoreInfo(uint64_t identifier, const String& name, std::optional<IDBKeyPath>&& keyPath, bool autoIncrement, HashMap<uint64_t, IDBIndexInfo>&& indexMap)
     : m_identifier(identifier)
     , m_name(name)
     , m_keyPath(WTFMove(keyPath))
     , m_autoIncrement(autoIncrement)
+    , m_indexMap(WTFMove(indexMap))
 {
 }
 
@@ -92,13 +93,17 @@ IDBIndexInfo* IDBObjectStoreInfo::infoForExistingIndex(uint64_t identifier)
     return &iterator->value;
 }
 
-IDBObjectStoreInfo IDBObjectStoreInfo::isolatedCopy() const
+IDBObjectStoreInfo IDBObjectStoreInfo::isolatedCopy() const &
 {
     IDBObjectStoreInfo result = { m_identifier, m_name.isolatedCopy(), crossThreadCopy(m_keyPath), m_autoIncrement };
+    result.m_indexMap = crossThreadCopy(m_indexMap);
+    return result;
+}
 
-    for (auto& iterator : m_indexMap)
-        result.m_indexMap.set(iterator.key, iterator.value.isolatedCopy());
-
+IDBObjectStoreInfo IDBObjectStoreInfo::isolatedCopy() &&
+{
+    IDBObjectStoreInfo result = { m_identifier, WTFMove(m_name).isolatedCopy(), crossThreadCopy(WTFMove(m_keyPath)), m_autoIncrement };
+    result.m_indexMap = crossThreadCopy(WTFMove(m_indexMap));
     return result;
 }
 

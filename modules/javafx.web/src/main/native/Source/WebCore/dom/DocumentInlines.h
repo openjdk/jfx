@@ -25,10 +25,14 @@
 
 #pragma once
 
+#include "ClientOrigin.h"
 #include "Document.h"
+#include "FocusOptions.h"
+#include "FrameDestructionObserverInlines.h"
 #include "MediaProducer.h"
 #include "SecurityOrigin.h"
 #include "TextResourceDecoder.h"
+#include "WebCoreOpaqueRoot.h"
 
 namespace WebCore {
 
@@ -39,7 +43,7 @@ inline PAL::TextEncoding Document::textEncoding() const
     return PAL::TextEncoding();
 }
 
-inline AtomString Document::encoding() const { return textEncoding().domName(); }
+inline AtomString Document::encoding() const { return AtomString::fromLatin1(textEncoding().domName()); }
 
 inline String Document::charset() const { return Document::encoding(); }
 
@@ -57,7 +61,9 @@ inline AXObjectCache* Document::existingAXObjectCache() const
 
 inline Ref<Document> Document::create(const Settings& settings, const URL& url)
 {
-    return adoptRef(*new Document(nullptr, settings, url));
+    auto document = adoptRef(*new Document(nullptr, settings, url));
+    document->addToContextsMap();
+    return document;
 }
 
 inline void Document::invalidateAccessKeyCache()
@@ -76,8 +82,23 @@ inline bool Document::hasMutationObserversOfType(MutationObserverOptionType type
     return m_mutationObserverTypes.containsAny(type);
 }
 
+inline ClientOrigin Document::clientOrigin() const { return { topOrigin().data(), securityOrigin().data() }; }
+
 inline bool Document::isSameOriginAsTopDocument() const { return securityOrigin().isSameOriginAs(topOrigin()); }
 
+inline bool Document::shouldMaskURLForBindings(const URL& urlToMask) const
+{
+    if (LIKELY(urlToMask.protocolIsInHTTPFamily()))
+        return false;
+    return shouldMaskURLForBindingsInternal(urlToMask);
+}
+
+inline const URL& Document::maskedURLForBindingsIfNeeded(const URL& url) const
+{
+    if (UNLIKELY(shouldMaskURLForBindings(url)))
+        return maskedURLForBindings();
+    return url;
+}
 
 // These functions are here because they require the Document class definition and we want to inline them.
 
@@ -86,5 +107,21 @@ inline ScriptExecutionContext* Node::scriptExecutionContext() const
     return &document().contextDocument();
 }
 
-
+inline bool Document::hasBrowsingContext() const
+{
+    return !!frame();
 }
+
+inline WebCoreOpaqueRoot Node::opaqueRoot() const
+{
+    // FIXME: Possible race?
+    // https://bugs.webkit.org/show_bug.cgi?id=165713
+    if (isConnected())
+        return WebCoreOpaqueRoot { &document() };
+    return traverseToOpaqueRoot();
+}
+
+inline bool Document::wasLastFocusByClick() const { return m_latestFocusTrigger == FocusTrigger::Click; }
+
+
+} // namespace WebCore

@@ -30,19 +30,14 @@
 
 #if USE(NICOSIA) && USE(TEXTURE_MAPPER)
 
-#include "GraphicsContextGLANGLE.h"
 #include "NicosiaContentLayerTextureMapperImpl.h"
-#include <memory>
-
-typedef void *EGLConfig;
-typedef void *EGLContext;
-typedef void *EGLDisplay;
-typedef void *EGLSurface;
 
 namespace WebCore {
-class IntSize;
-class GLContext;
-class PlatformDisplay;
+class GraphicsContextGLANGLE;
+class GraphicsContextGLTextureMapperANGLE;
+#if USE(ANGLE_GBM)
+class GraphicsContextGLGBM;
+#endif
 }
 
 namespace Nicosia {
@@ -50,45 +45,18 @@ namespace Nicosia {
 class GCGLANGLELayer final : public ContentLayerTextureMapperImpl::Client {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    class ANGLEContext {
-        WTF_MAKE_NONCOPYABLE(ANGLEContext);
-    public:
-        static const char* errorString(int statusCode);
-        static const char* lastErrorString();
-
-        static std::unique_ptr<ANGLEContext> createContext(bool isForWebGL2);
-        virtual ~ANGLEContext();
-
-        bool makeContextCurrent();
-#if ENABLE(WEBGL)
-        GCGLContext platformContext() const;
-        GCGLDisplay platformDisplay() const;
-        GCGLConfig platformConfig() const;
+    GCGLANGLELayer(WebCore::GraphicsContextGLTextureMapperANGLE&);
+#if USE(ANGLE_GBM)
+    GCGLANGLELayer(WebCore::GraphicsContextGLGBM&);
 #endif
 
-    private:
-        ANGLEContext(EGLDisplay, EGLConfig, EGLContext, EGLSurface);
-
-        EGLDisplay m_display { nullptr };
-        EGLConfig m_config { nullptr };
-        EGLContext m_context { nullptr };
-        EGLSurface m_surface { nullptr };
-    };
-
-    GCGLANGLELayer(WebCore::GraphicsContextGLANGLE&);
     virtual ~GCGLANGLELayer();
-
-    bool makeContextCurrent();
-    GCGLContext platformContext() const;
-    GCGLDisplay platformDisplay() const;
-    GCGLConfig platformConfig() const;
 
     ContentLayer& contentLayer() const { return m_contentLayer; }
     void swapBuffersIfNeeded() final;
 
 private:
     WebCore::GraphicsContextGLANGLE& m_context;
-    std::unique_ptr<ANGLEContext> m_angleContext;
     Ref<ContentLayer> m_contentLayer;
 };
 

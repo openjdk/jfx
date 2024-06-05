@@ -25,38 +25,48 @@
 
 #pragma once
 
+#include "KeyboardEvent.h"
 #include "KeyboardScroll.h" // FIXME: This is a layering violation.
 #include "RectEdges.h"
-#include "ScrollAnimator.h"
+#include "ScrollableArea.h"
 
 namespace WebCore {
 
 class PlatformKeyboardEvent;
 
-class KeyboardScrollingAnimator {
+enum class KeyboardScrollingKey : uint8_t {
+    LeftArrow,
+    RightArrow,
+    UpArrow,
+    DownArrow,
+    Space,
+    PageUp,
+    PageDown,
+    Home,
+    End
+};
+
+const std::optional<KeyboardScrollingKey> keyboardScrollingKeyForKeyboardEvent(const KeyboardEvent&);
+const std::optional<ScrollDirection> scrollDirectionForKeyboardEvent(const KeyboardEvent&);
+const std::optional<ScrollGranularity> scrollGranularityForKeyboardEvent(const KeyboardEvent&);
+
+class KeyboardScrollingAnimator : public CanMakeWeakPtr<KeyboardScrollingAnimator> {
     WTF_MAKE_NONCOPYABLE(KeyboardScrollingAnimator);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    KeyboardScrollingAnimator(ScrollAnimator&, ScrollingEffectsController&);
+    KeyboardScrollingAnimator(ScrollableArea&);
 
-    bool beginKeyboardScrollGesture(const PlatformKeyboardEvent&);
+    bool beginKeyboardScrollGesture(ScrollDirection, ScrollGranularity, bool isKeyRepeat);
     void handleKeyUpEvent();
-    void updateKeyboardScrollPosition(MonotonicTime);
+    WEBCORE_EXPORT void stopScrollingImmediately();
 
 private:
-    void stopKeyboardScrollAnimation();
-    RectEdges<bool> scrollableDirectionsFromPosition(FloatPoint) const;
-    std::optional<KeyboardScroll> keyboardScrollForKeyboardEvent(const PlatformKeyboardEvent&) const;
+    std::optional<KeyboardScroll> makeKeyboardScroll(ScrollDirection, ScrollGranularity) const;
     float scrollDistance(ScrollDirection, ScrollGranularity) const;
+    RectEdges<bool> rubberbandableDirections() const;
 
-    ScrollAnimator& m_scrollAnimator;
-    ScrollingEffectsController& m_scrollController;
-    std::optional<WebCore::KeyboardScroll> m_currentKeyboardScroll;
+    ScrollableArea& m_scrollableArea;
     bool m_scrollTriggeringKeyIsPressed { false };
-    FloatSize m_velocity;
-    MonotonicTime m_timeAtLastFrame;
-    FloatPoint m_idealPositionForMinimumTravel;
-    FloatPoint m_idealPosition;
 };
 
 } // namespace WebCore

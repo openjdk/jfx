@@ -53,18 +53,22 @@ public:
     bool failedToLoadPosterImage() const;
 
     void updateFromElement() final;
+    bool hasVideoMetadata() const;
+    bool hasPosterFrameSize() const;
+    bool hasDefaultObjectSize() const;
 
 private:
     void willBeDestroyed() override;
     void mediaElement() const = delete;
 
     void intrinsicSizeChanged() final;
+    LayoutSize calculateIntrinsicSizeInternal();
     LayoutSize calculateIntrinsicSize();
     bool updateIntrinsicSize();
 
     void imageChanged(WrappedImagePtr, const IntRect*) final;
 
-    const char* renderName() const final { return "RenderVideo"; }
+    ASCIILiteral renderName() const final { return "RenderVideo"_s; }
 
     bool requiresLayer() const final { return true; }
     bool isVideo() const final { return true; }
@@ -72,18 +76,12 @@ private:
     void paintReplaced(PaintInfo&, const LayoutPoint&) final;
 
     void layout() final;
+    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
 
     void visibleInViewportStateChanged() final;
 
     LayoutUnit computeReplacedLogicalWidth(ShouldComputePreferred  = ComputeActual) const final;
     LayoutUnit minimumReplacedHeight() const final;
-
-#if ENABLE(FULLSCREEN_API)
-    LayoutUnit offsetLeft() const final;
-    LayoutUnit offsetTop() const final;
-    LayoutUnit offsetWidth() const final;
-    LayoutUnit offsetHeight() const final;
-#endif
 
     void updatePlayer();
 

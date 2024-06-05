@@ -53,8 +53,6 @@ enum class CSSUnitType : uint8_t {
     CSS_URI,
     CSS_IDENT,
     CSS_ATTR,
-    CSS_COUNTER,
-    CSS_RECT,
     CSS_RGBCOLOR,
 
     CSS_VW,
@@ -84,6 +82,13 @@ enum class CSSUnitType : uint8_t {
     FirstViewportCSSUnitType = CSS_VW,
     LastViewporCSSUnitType = CSS_DVI,
 
+    CSS_CQW,
+    CSS_CQH,
+    CSS_CQI,
+    CSS_CQB,
+    CSS_CQMIN,
+    CSS_CQMAX,
+
     CSS_DPPX,
     CSS_X,
     CSS_DPI,
@@ -95,8 +100,6 @@ enum class CSSUnitType : uint8_t {
 
     CustomIdent,
 
-    CSS_PAIR,
-    CSS_UNICODE_RANGE,
     CSS_TURN,
     CSS_REMS,
     CSS_CHS,
@@ -104,15 +107,13 @@ enum class CSSUnitType : uint8_t {
 
     CSS_COUNTER_NAME,
 
-    CSS_SHAPE,
-
-    CSS_QUAD,
-
     CSS_CALC,
     CSS_CALC_PERCENTAGE_WITH_NUMBER,
     CSS_CALC_PERCENTAGE_WITH_LENGTH,
 
     CSS_FONT_FAMILY,
+
+    CSS_UNRESOLVED_COLOR,
 
     CSS_PROPERTY_ID,
     CSS_VALUE_ID,
@@ -129,17 +130,20 @@ enum class CSSUnitType : uint8_t {
 enum class CSSUnitCategory : uint8_t {
     Number,
     Percent,
-    Length,
+    AbsoluteLength,
+    FontRelativeLength,
+    ViewportPercentageLength,
     Angle,
     Time,
     Frequency,
     Resolution,
+    Flex,
     Other
 };
 
 CSSUnitCategory unitCategory(CSSUnitType);
 CSSUnitType canonicalUnitTypeForCategory(CSSUnitCategory);
-CSSUnitType canonicalUnitType(CSSUnitType);
+CSSUnitType canonicalUnitTypeForUnitType(CSSUnitType);
 
 WTF::TextStream& operator<<(WTF::TextStream&, CSSUnitCategory);
 WTF::TextStream& operator<<(WTF::TextStream&, CSSUnitType);

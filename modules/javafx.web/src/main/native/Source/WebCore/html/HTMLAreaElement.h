@@ -52,9 +52,9 @@ public:
 private:
     HTMLAreaElement(const QualifiedName&, Document&);
 
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     bool supportsFocus() const final;
-    String target() const final;
+    AtomString target() const final;
     bool isKeyboardFocusable(KeyboardEvent*) const final;
     bool isMouseFocusable() const final;
     bool isFocusable() const final;

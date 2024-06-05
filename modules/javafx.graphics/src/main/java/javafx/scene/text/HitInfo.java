@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,19 +25,15 @@
 
 package javafx.scene.text;
 
-import java.text.BreakIterator;
-
 /**
  * Represents the hit information in a Text node.
  *
  * @since 9
  */
 public class HitInfo {
-
-    private int charIndex;
-    private boolean leading;
-    private int insertionIndex;
-    private String text;
+    private final int charIndex;
+    private final boolean leading;
+    private final int insertionIndex;
 
     /**
      * Create a HitInfo object representing a text index and forward bias.
@@ -45,18 +41,19 @@ public class HitInfo {
      * @param charIndex the character index.
      * @param leading whether the hit is on the leading edge of the character. If it is false, it represents the trailing edge.
      */
-    HitInfo(int charIndex, int insertionIndex, boolean leading, String text) {
+    HitInfo(int charIndex, int insertionIndex, boolean leading) {
         this.charIndex = charIndex;
         this.leading = leading;
         this.insertionIndex = insertionIndex;
-        this.text = text;
     }
 
     /**
      * The index of the character which this hit information refers to.
      * @return the index of the character which this hit information refers to
      */
-    public int getCharIndex() { return charIndex; }
+    public int getCharIndex() {
+        return charIndex;
+    }
 
     /**
      * Indicates whether the hit is on the leading edge of the character.
@@ -64,39 +61,20 @@ public class HitInfo {
      * @return if true the hit is on the leading edge of the character, otherwise
      * the trailing edge
      */
-    public boolean isLeading() { return leading; }
-
-    private static BreakIterator charIterator = BreakIterator.getCharacterInstance();
+    public boolean isLeading() {
+        return leading;
+    }
 
     /**
      * Returns the index of the insertion position.
      * @return the index of the insertion position
      */
     public int getInsertionIndex() {
-        if (insertionIndex == -1) {
-            insertionIndex = charIndex;
-            if (!leading) {
-                if (text != null) {
-                    // Skip complex character clusters / ligatures.
-                    int next;
-                    synchronized(charIterator) {
-                        charIterator.setText(text);
-                        next = charIterator.following(insertionIndex);
-                    }
-                    if (next == BreakIterator.DONE) {
-                        insertionIndex += 1;
-                    } else {
-                        insertionIndex = next;
-                    }
-                } else {
-                    insertionIndex += 1;
-                }
-            }
-        }
         return insertionIndex;
     }
 
-    @Override public String toString() {
-        return "charIndex: " + charIndex + ", isLeading: " + leading + ", insertionIndex: " + getInsertionIndex();
+    @Override
+    public String toString() {
+        return "charIndex: " + charIndex + ", isLeading: " + leading + ", insertionIndex: " + insertionIndex;
     }
 }

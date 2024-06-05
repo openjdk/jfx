@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -66,7 +66,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLStyleElementImpl_getMediaI
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLStyleElementImpl_setMediaImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::mediaAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::mediaAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLStyleElementImpl_getTypeImpl(JNIEnv* env, jclass, jlong peer)
@@ -78,7 +78,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLStyleElementImpl_getTypeIm
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLStyleElementImpl_setTypeImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::typeAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::typeAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLStyleElementImpl_getSheetImpl(JNIEnv* env, jclass, jlong peer)

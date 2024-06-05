@@ -95,7 +95,13 @@ inline bool isDefaultIgnorableCodePoint(UChar32 character)
 
 inline bool isControlCharacter(UChar32 character)
 {
-    return u_getIntPropertyValue(character, UCHAR_GENERAL_CATEGORY) == U_CONTROL_CHAR;
+    return u_charType(character) == U_CONTROL_CHAR;
+}
+
+inline bool isPrivateUseAreaCharacter(UChar32 character)
+{
+    auto block = ublock_getCode(character);
+    return block == UBLOCK_PRIVATE_USE_AREA || block == UBLOCK_SUPPLEMENTARY_PRIVATE_USE_AREA_A || block == UBLOCK_SUPPLEMENTARY_PRIVATE_USE_AREA_B;
 }
 
 }

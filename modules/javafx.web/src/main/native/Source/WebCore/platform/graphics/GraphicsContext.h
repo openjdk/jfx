@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2008-2009 Torch Mobile, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,251 +26,64 @@
 
 #pragma once
 
+#include "ControlPart.h"
 #include "DashArray.h"
 #include "DestinationColorSpace.h"
 #include "FloatRect.h"
 #include "FontCascade.h"
-#include "GraphicsTypes.h"
+#include "GraphicsContextState.h"
 #include "Image.h"
 #include "ImageOrientation.h"
 #include "ImagePaintingOptions.h"
 #include "IntRect.h"
 #include "Pattern.h"
+#include "PlatformGraphicsContext.h"
 #include "RenderingMode.h"
 #include <wtf/Function.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/OptionSet.h>
 
-#if USE(CG)
-typedef struct CGContext PlatformGraphicsContext;
-#elif USE(CAIRO)
-namespace WebCore {
-class GraphicsContextCairo;
-}
-typedef WebCore::GraphicsContextCairo PlatformGraphicsContext;
-#elif PLATFORM(JAVA)
-namespace WebCore {
-class PlatformContextJava;
-}
-typedef WebCore::PlatformContextJava PlatformGraphicsContext;
-#else
-typedef void PlatformGraphicsContext;
-#endif
-
-#if PLATFORM(WIN)
-#include "DIBPixelData.h"
-typedef struct HDC__* HDC;
-#if !USE(CG)
-// UInt8 is defined in CoreFoundation/CFBase.h
-typedef unsigned char UInt8;
-#endif
-#endif
-
-// X11 headers define a bunch of macros with common terms, interfering with WebCore and WTF enum values.
-// As a workaround, we explicitly undef them here.
-#if defined(None)
-#undef None
-#endif
-#if defined(Below)
-#undef Below
-#endif
-#if defined(Success)
-#undef Success
-#endif
 
 namespace WebCore {
 
 class AffineTransform;
+class DecomposedGlyphs;
 class Filter;
 class FilterResults;
 class FloatRoundedRect;
 class Gradient;
 class GraphicsContextPlatformPrivate;
 class ImageBuffer;
-class IntRect;
 class MediaPlayer;
-class RoundedRect;
 class GraphicsContextGL;
 class Path;
+class SystemImage;
 class TextRun;
-class TransformationMatrix;
+class VideoFrame;
 
 namespace DisplayList {
-class Recorder;
+class DrawNativeImage;
 }
-
-enum class TextDrawingMode : uint8_t {
-    Fill = 1 << 0,
-    Stroke = 1 << 1,
-};
-using TextDrawingModeFlags = OptionSet<TextDrawingMode>;
-
-// Legacy shadow blur radius is used for canvas, and -webkit-box-shadow.
-// It has different treatment of radii > 8px.
-enum class ShadowRadiusMode : bool {
-    Default,
-    Legacy
-};
-
-enum StrokeStyle {
-    NoStroke,
-    SolidStroke,
-    DottedStroke,
-    DashedStroke,
-    DoubleStroke,
-    WavyStroke,
-};
-
-struct DocumentMarkerLineStyle {
-    enum class Mode : uint8_t {
-        TextCheckingDictationPhraseWithAlternatives,
-        Spelling,
-        Grammar,
-        AutocorrectionReplacement,
-        DictationAlternatives
-    } mode;
-    bool shouldUseDarkAppearance { false };
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<DocumentMarkerLineStyle> decode(Decoder&);
-};
-
-template<class Encoder>
-void DocumentMarkerLineStyle::encode(Encoder& encoder) const
-{
-    encoder << mode;
-    encoder << shouldUseDarkAppearance;
-}
-
-template<class Decoder>
-std::optional<DocumentMarkerLineStyle> DocumentMarkerLineStyle::decode(Decoder& decoder)
-{
-    std::optional<Mode> mode;
-    decoder >> mode;
-    if (!mode)
-        return std::nullopt;
-
-    std::optional<bool> shouldUseDarkAppearance;
-    decoder >> shouldUseDarkAppearance;
-    if (!shouldUseDarkAppearance)
-        return std::nullopt;
-
-    return {{ *mode, *shouldUseDarkAppearance }};
-}
-
-struct GraphicsContextStateChange;
-
-struct GraphicsContextState {
-    WEBCORE_EXPORT GraphicsContextState();
-    WEBCORE_EXPORT ~GraphicsContextState();
-
-    GraphicsContextState(const GraphicsContextState&);
-    WEBCORE_EXPORT GraphicsContextState(GraphicsContextState&&);
-
-    GraphicsContextState& operator=(const GraphicsContextState&);
-    WEBCORE_EXPORT GraphicsContextState& operator=(GraphicsContextState&&);
-
-    enum Change : uint32_t {
-        StrokeGradientChange                    = 1 << 0,
-        StrokePatternChange                     = 1 << 1,
-        FillGradientChange                      = 1 << 2,
-        FillPatternChange                       = 1 << 3,
-        StrokeThicknessChange                   = 1 << 4,
-        StrokeColorChange                       = 1 << 5,
-        StrokeStyleChange                       = 1 << 6,
-        FillColorChange                         = 1 << 7,
-        FillRuleChange                          = 1 << 8,
-        ShadowChange                            = 1 << 9,
-        ShadowsIgnoreTransformsChange           = 1 << 10,
-        AlphaChange                             = 1 << 11,
-        CompositeOperationChange                = 1 << 12,
-        BlendModeChange                         = 1 << 13,
-        TextDrawingModeChange                   = 1 << 14,
-        ShouldAntialiasChange                   = 1 << 15,
-        ShouldSmoothFontsChange                 = 1 << 16,
-        ShouldSubpixelQuantizeFontsChange       = 1 << 17,
-        DrawLuminanceMaskChange                 = 1 << 18,
-        ImageInterpolationQualityChange         = 1 << 19,
-#if HAVE(OS_DARK_MODE_SUPPORT)
-        UseDarkAppearanceChange                 = 1 << 20,
-#endif
-    };
-    using StateChangeFlags = OptionSet<Change>;
-
-    void mergeChanges(const GraphicsContextState&, GraphicsContextState::StateChangeFlags);
-
-    RefPtr<Gradient> strokeGradient;
-    RefPtr<Pattern> strokePattern;
-
-    RefPtr<Gradient> fillGradient;
-    RefPtr<Pattern> fillPattern;
-
-    FloatSize shadowOffset;
-
-    Color strokeColor { Color::black };
-    Color fillColor { Color::black };
-    Color shadowColor;
-
-    AffineTransform strokeGradientSpaceTransform;
-    AffineTransform fillGradientSpaceTransform;
-
-    float strokeThickness { 0 };
-    float shadowBlur { 0 };
-    float alpha { 1 };
-
-    StrokeStyle strokeStyle { SolidStroke };
-    WindRule fillRule { WindRule::NonZero };
-
-    TextDrawingModeFlags textDrawingMode { TextDrawingMode::Fill };
-    CompositeOperator compositeOperator { CompositeOperator::SourceOver };
-    BlendMode blendMode { BlendMode::Normal };
-    InterpolationQuality imageInterpolationQuality { InterpolationQuality::Default };
-    ShadowRadiusMode shadowRadiusMode { ShadowRadiusMode::Default };
-
-    bool shouldAntialias : 1;
-    bool shouldSmoothFonts : 1;
-    bool shouldSubpixelQuantizeFonts : 1;
-    bool shadowsIgnoreTransforms : 1;
-#if PLATFORM(JAVA)
-    AffineTransform transform;
-    FloatRect clipBounds;
-#endif
-    bool drawLuminanceMask : 1;
-#if HAVE(OS_DARK_MODE_SUPPORT)
-    bool useDarkAppearance : 1;
-#endif
-};
-
-struct GraphicsContextStateChange {
-    GraphicsContextStateChange() = default;
-    GraphicsContextStateChange(const GraphicsContextState& state, GraphicsContextState::StateChangeFlags flags)
-        : m_state(state)
-        , m_changeFlags(flags)
-    {
-    }
-
-    GraphicsContextState::StateChangeFlags changesFromState(const GraphicsContextState&) const;
-
-    void accumulate(const GraphicsContextState&, GraphicsContextState::StateChangeFlags);
-    void apply(GraphicsContext&) const;
-
-    void dump(WTF::TextStream&) const;
-
-    GraphicsContextState m_state;
-    GraphicsContextState::StateChangeFlags m_changeFlags;
-};
-
-WTF::TextStream& operator<<(WTF::TextStream&, const GraphicsContextStateChange&);
 
 class GraphicsContext {
     WTF_MAKE_NONCOPYABLE(GraphicsContext); WTF_MAKE_FAST_ALLOCATED;
+    friend class BifurcatedGraphicsContext;
+    friend class DisplayList::DrawNativeImage;
+    friend class NativeImage;
+    friend class ImageBuffer;
 public:
-
-    WEBCORE_EXPORT GraphicsContext() = default;
+    WEBCORE_EXPORT GraphicsContext(const GraphicsContextState::ChangeFlags& = { }, InterpolationQuality = InterpolationQuality::Default);
+    WEBCORE_EXPORT GraphicsContext(const GraphicsContextState&);
     WEBCORE_EXPORT virtual ~GraphicsContext();
 
     virtual bool hasPlatformContext() const { return false; }
+#if !PLATFORM(JAVA)
     virtual PlatformGraphicsContext* platformContext() const { return nullptr; }
+#else
+    virtual PlatformGraphicsContext* platformContext() { return nullptr; }
+#endif
+
+    virtual const DestinationColorSpace& colorSpace() const { return DestinationColorSpace::SRGB(); }
 
     virtual bool paintingDisabled() const { return false; }
     virtual bool performingPaintInvalidation() const { return false; }
@@ -280,83 +93,89 @@ public:
 
     // Context State
 
-    void setStrokeThickness(float thickness) { m_state.strokeThickness = thickness; didUpdateState(m_state, GraphicsContextState::StrokeThicknessChange); }
-    float strokeThickness() const { return m_state.strokeThickness; }
+    const SourceBrush& fillBrush() const { return m_state.fillBrush(); }
+    const Color& fillColor() const { return fillBrush().color(); }
+    Gradient* fillGradient() const { return fillBrush().gradient(); }
+    const AffineTransform& fillGradientSpaceTransform() const { return fillBrush().gradientSpaceTransform(); }
+    Pattern* fillPattern() const { return fillBrush().pattern(); }
+    void setFillBrush(const SourceBrush& brush) { m_state.setFillBrush(brush); didUpdateState(m_state); }
+    void setFillColor(const Color& color) { m_state.setFillColor(color); didUpdateState(m_state); }
+    void setFillGradient(Ref<Gradient>&& gradient, const AffineTransform& spaceTransform = { }) { m_state.setFillGradient(WTFMove(gradient), spaceTransform); didUpdateState(m_state); }
+    void setFillPattern(Ref<Pattern>&& pattern) { m_state.setFillPattern(WTFMove(pattern)); didUpdateState(m_state); }
 
-    void setStrokeStyle(StrokeStyle style) { m_state.strokeStyle = style; didUpdateState(m_state, GraphicsContextState::StrokeStyleChange); }
-    StrokeStyle strokeStyle() const { return m_state.strokeStyle; }
+    WindRule fillRule() const { return m_state.fillRule(); }
+    void setFillRule(WindRule fillRule) { m_state.setFillRule(fillRule); didUpdateState(m_state); }
 
-    WEBCORE_EXPORT void setStrokeColor(const Color&);
-    const Color& strokeColor() const { return m_state.strokeColor; }
+    const SourceBrush& strokeBrush() const { return m_state.strokeBrush(); }
+    const Color& strokeColor() const { return strokeBrush().color(); }
+    Gradient* strokeGradient() const { return strokeBrush().gradient(); }
+    const AffineTransform& strokeGradientSpaceTransform() const { return strokeBrush().gradientSpaceTransform(); }
+    Pattern* strokePattern() const { return strokeBrush().pattern(); }
+    void setStrokeBrush(const SourceBrush& brush) { m_state.setStrokeBrush(brush); didUpdateState(m_state); }
+    void setStrokeColor(const Color& color) { m_state.setStrokeColor(color); didUpdateState(m_state); }
+    void setStrokeGradient(Ref<Gradient>&& gradient, const AffineTransform& spaceTransform = { }) { m_state.setStrokeGradient(WTFMove(gradient), spaceTransform); didUpdateState(m_state); }
+    void setStrokePattern(Ref<Pattern>&& pattern) { m_state.setStrokePattern(WTFMove(pattern)); didUpdateState(m_state); }
 
-    WEBCORE_EXPORT void setStrokePattern(Ref<Pattern>&&);
-    Pattern* strokePattern() const { return m_state.strokePattern.get(); }
+    float strokeThickness() const { return m_state.strokeThickness(); }
+    void setStrokeThickness(float thickness) { m_state.setStrokeThickness(thickness); didUpdateState(m_state); }
 
-    WEBCORE_EXPORT void setStrokeGradient(Ref<Gradient>&&, const AffineTransform& = { });
-    Gradient* strokeGradient() const { return m_state.strokeGradient.get(); }
+    StrokeStyle strokeStyle() const { return m_state.strokeStyle(); }
+    void setStrokeStyle(StrokeStyle style) { m_state.setStrokeStyle(style); didUpdateState(m_state); }
 
-    void setFillRule(WindRule fillRule) { m_state.fillRule = fillRule; didUpdateState(m_state, GraphicsContextState::FillRuleChange); }
-    WindRule fillRule() const { return m_state.fillRule; }
+    std::optional<GraphicsDropShadow> dropShadow() const { return m_state.dropShadow(); }
+    void setDropShadow(const GraphicsDropShadow& dropShadow) { m_state.setStyle(dropShadow); didUpdateState(m_state); }
+    WEBCORE_EXPORT void clearShadow();
+    bool hasVisibleShadow() const;
+    bool hasBlurredShadow() const;
+    bool hasShadow() const;
 
-    WEBCORE_EXPORT void setFillColor(const Color&);
-    const Color& fillColor() const { return m_state.fillColor; }
+    std::optional<GraphicsStyle> style() const { return m_state.style(); }
+    void setStyle(const std::optional<GraphicsStyle>& style) { m_state.setStyle(style); didUpdateState(m_state); }
 
-    WEBCORE_EXPORT void setFillPattern(Ref<Pattern>&&);
-    Pattern* fillPattern() const { return m_state.fillPattern.get(); }
+    CompositeMode compositeMode() const { return m_state.compositeMode(); }
+    CompositeOperator compositeOperation() const { return compositeMode().operation; }
+    BlendMode blendMode() const { return compositeMode().blendMode; }
+    void setCompositeMode(CompositeMode compositeMode) { m_state.setCompositeMode(compositeMode); didUpdateState(m_state); }
+    void setCompositeOperation(CompositeOperator operation, BlendMode blendMode = BlendMode::Normal) { setCompositeMode({ operation, blendMode }); }
 
-    WEBCORE_EXPORT void setFillGradient(Ref<Gradient>&&, const AffineTransform& = { });
-    Gradient* fillGradient() const { return m_state.fillGradient.get(); }
+    float alpha() const { return m_state.alpha(); }
+    void setAlpha(float alpha) { m_state.setAlpha(alpha); didUpdateState(m_state); }
 
-    void setShadowsIgnoreTransforms(bool shadowsIgnoreTransforms) { m_state.shadowsIgnoreTransforms = shadowsIgnoreTransforms; didUpdateState(m_state, GraphicsContextState::ShadowsIgnoreTransformsChange); }
-    bool shadowsIgnoreTransforms() const { return m_state.shadowsIgnoreTransforms; }
+    TextDrawingModeFlags textDrawingMode() const { return m_state.textDrawingMode(); }
+    void setTextDrawingMode(TextDrawingModeFlags textDrawingMode) { m_state.setTextDrawingMode(textDrawingMode); didUpdateState(m_state); }
 
-    void setShouldAntialias(bool shouldAntialias) { m_state.shouldAntialias = shouldAntialias; didUpdateState(m_state, GraphicsContextState::ShouldAntialiasChange); }
-    bool shouldAntialias() const { return m_state.shouldAntialias; }
+    InterpolationQuality imageInterpolationQuality() const { return m_state.imageInterpolationQuality(); }
+    void setImageInterpolationQuality(InterpolationQuality imageInterpolationQuality) { m_state.setImageInterpolationQuality(imageInterpolationQuality); didUpdateState(m_state); }
 
-    void setShouldSmoothFonts(bool shouldSmoothFonts) { m_state.shouldSmoothFonts = shouldSmoothFonts; didUpdateState(m_state, GraphicsContextState::ShouldSmoothFontsChange); }
-    bool shouldSmoothFonts() const { return m_state.shouldSmoothFonts; }
+    bool shouldAntialias() const { return m_state.shouldAntialias(); }
+    void setShouldAntialias(bool shouldAntialias) { m_state.setShouldAntialias(shouldAntialias); didUpdateState(m_state); }
+
+    bool shouldSmoothFonts() const { return m_state.shouldSmoothFonts(); }
+    void setShouldSmoothFonts(bool shouldSmoothFonts) { m_state.setShouldSmoothFonts(shouldSmoothFonts); didUpdateState(m_state); }
 
     // Normally CG enables subpixel-quantization because it improves the performance of aligning glyphs.
     // In some cases we have to disable to to ensure a high-quality output of the glyphs.
-    void setShouldSubpixelQuantizeFonts(bool shouldSubpixelQuantizeFonts) { m_state.shouldSubpixelQuantizeFonts = shouldSubpixelQuantizeFonts; didUpdateState(m_state, GraphicsContextState::ShouldSubpixelQuantizeFontsChange); }
-    bool shouldSubpixelQuantizeFonts() const { return m_state.shouldSubpixelQuantizeFonts; }
+    bool shouldSubpixelQuantizeFonts() const { return m_state.shouldSubpixelQuantizeFonts(); }
+    void setShouldSubpixelQuantizeFonts(bool shouldSubpixelQuantizeFonts) { m_state.setShouldSubpixelQuantizeFonts(shouldSubpixelQuantizeFonts); didUpdateState(m_state); }
 
-    void setImageInterpolationQuality(InterpolationQuality quality) { m_state.imageInterpolationQuality = quality; didUpdateState(m_state, GraphicsContextState::ImageInterpolationQualityChange); }
-    InterpolationQuality imageInterpolationQuality() const { return m_state.imageInterpolationQuality; }
+    bool shadowsIgnoreTransforms() const { return m_state.shadowsIgnoreTransforms(); }
+    void setShadowsIgnoreTransforms(bool shadowsIgnoreTransforms) { m_state.setShadowsIgnoreTransforms(shadowsIgnoreTransforms); didUpdateState(m_state); }
 
-    void setAlpha(float alpha) { m_state.alpha = alpha; didUpdateState(m_state, GraphicsContextState::AlphaChange); }
-    float alpha() const { return m_state.alpha; }
-
-    WEBCORE_EXPORT void setCompositeOperation(CompositeOperator, BlendMode = BlendMode::Normal);
-    CompositeOperator compositeOperation() const { return m_state.compositeOperator; }
-    BlendMode blendModeOperation() const { return m_state.blendMode; }
-
-    void setDrawLuminanceMask(bool drawLuminanceMask) { m_state.drawLuminanceMask = drawLuminanceMask; didUpdateState(m_state, GraphicsContextState::DrawLuminanceMaskChange); }
-    bool drawLuminanceMask() const { return m_state.drawLuminanceMask; }
-
-    void setTextDrawingMode(TextDrawingModeFlags mode) { m_state.textDrawingMode = mode; didUpdateState(m_state, GraphicsContextState::TextDrawingModeChange); }
-    TextDrawingModeFlags textDrawingMode() const { return m_state.textDrawingMode; }
-
-    WEBCORE_EXPORT void setShadow(const FloatSize&, float blur, const Color&, ShadowRadiusMode = ShadowRadiusMode::Default);
-    WEBCORE_EXPORT virtual void clearShadow();
-    WEBCORE_EXPORT bool getShadow(FloatSize&, float&, Color&) const;
-
-    bool hasVisibleShadow() const { return m_state.shadowColor.isVisible(); }
-    bool hasShadow() const { return hasVisibleShadow() && (m_state.shadowBlur || m_state.shadowOffset.width() || m_state.shadowOffset.height()); }
-    bool hasBlurredShadow() const { return hasVisibleShadow() && m_state.shadowBlur; }
+    bool drawLuminanceMask() const { return m_state.drawLuminanceMask(); }
+    void setDrawLuminanceMask(bool drawLuminanceMask) { m_state.setDrawLuminanceMask(drawLuminanceMask); didUpdateState(m_state); }
 
 #if HAVE(OS_DARK_MODE_SUPPORT)
-    void setUseDarkAppearance(bool useDarkAppearance) { m_state.useDarkAppearance = useDarkAppearance; didUpdateState(m_state, GraphicsContextState::UseDarkAppearanceChange); }
-    bool useDarkAppearance() const { return m_state.useDarkAppearance; }
+    bool useDarkAppearance() const { return m_state.useDarkAppearance(); }
+    void setUseDarkAppearance(bool useDarkAppearance) { m_state.setUseDarkAppearance(useDarkAppearance); didUpdateState(m_state); }
 #endif
 
     virtual const GraphicsContextState& state() const { return m_state; }
-
-    void updateState(const GraphicsContextState&, GraphicsContextState::StateChangeFlags);
+    void mergeLastChanges(const GraphicsContextState&, const std::optional<GraphicsContextState>& lastDrawingState = std::nullopt);
+    void mergeAllChanges(const GraphicsContextState&);
 
     // Called *after* any change to GraphicsContextState; generally used to propagate changes
     // to the platform context's state.
-    virtual void didUpdateState(const GraphicsContextState&, GraphicsContextState::StateChangeFlags) = 0;
+    virtual void didUpdateState(GraphicsContextState&) = 0;
 
     WEBCORE_EXPORT virtual void save();
     WEBCORE_EXPORT virtual void restore();
@@ -369,11 +188,7 @@ public:
     virtual void applyFillPattern() = 0;
 
     // FIXME: Can we make this a why instead of a what, and then have it exist cross-platform?
-    virtual void setIsCALayerContext(bool) = 0;
     virtual bool isCALayerContext() const = 0;
-
-    // FIXME: Can this be a GraphicsContextCG constructor parameter? Or just be read off the context?
-    virtual void setIsAcceleratedContext(bool) = 0;
 #endif
 
     virtual RenderingMode renderingMode() const { return RenderingMode::Unaccelerated; }
@@ -384,7 +199,6 @@ public:
         RoundAllSides,
         RoundOriginAndDimensions
     };
-    virtual FloatRect roundToDevicePixels(const FloatRect&, RoundingMode = RoundAllSides) = 0;
     WEBCORE_EXPORT static void adjustLineToPixelBoundaries(FloatPoint& p1, FloatPoint& p2, float strokeWidth, StrokeStyle);
 
     // Shapes
@@ -427,21 +241,28 @@ public:
     virtual void setLineJoin(LineJoin) = 0;
     virtual void setMiterLimit(float) = 0;
 
-    // Images, Patterns, and Media
+    // Images, Patterns, ControlParts, and Media
 
     IntSize compatibleImageBufferSize(const FloatSize&) const;
 
-    WEBCORE_EXPORT RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, const FloatSize& scale = { 1, 1 }, const DestinationColorSpace& = DestinationColorSpace::SRGB(), std::optional<RenderingMode> = std::nullopt, RenderingMethod = RenderingMethod::Default) const;
-    WEBCORE_EXPORT RefPtr<ImageBuffer> createImageBuffer(const FloatRect&, const FloatSize& scale = { 1, 1 }, const DestinationColorSpace& = DestinationColorSpace::SRGB(), std::optional<RenderingMode> = std::nullopt, RenderingMethod = RenderingMethod::Default) const;
+    WEBCORE_EXPORT virtual RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, float resolutionScale = 1, const DestinationColorSpace& = DestinationColorSpace::SRGB(), std::optional<RenderingMode> = std::nullopt, std::optional<RenderingMethod> = std::nullopt) const;
 
-    WEBCORE_EXPORT virtual RefPtr<ImageBuffer> createCompatibleImageBuffer(const FloatSize&, const DestinationColorSpace& = DestinationColorSpace::SRGB(), RenderingMethod = RenderingMethod::Default) const;
-    WEBCORE_EXPORT virtual RefPtr<ImageBuffer> createCompatibleImageBuffer(const FloatRect&, const DestinationColorSpace& = DestinationColorSpace::SRGB(), RenderingMethod = RenderingMethod::Default) const;
+    WEBCORE_EXPORT RefPtr<ImageBuffer> createScaledImageBuffer(const FloatSize&, const FloatSize& scale = { 1, 1 }, const DestinationColorSpace& = DestinationColorSpace::SRGB(), std::optional<RenderingMode> = std::nullopt, std::optional<RenderingMethod> = std::nullopt) const;
+    WEBCORE_EXPORT RefPtr<ImageBuffer> createScaledImageBuffer(const FloatRect&, const FloatSize& scale = { 1, 1 }, const DestinationColorSpace& = DestinationColorSpace::SRGB(), std::optional<RenderingMode> = std::nullopt, std::optional<RenderingMethod> = std::nullopt) const;
 
-    virtual void drawNativeImage(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& = { }) = 0;
+    WEBCORE_EXPORT virtual RefPtr<ImageBuffer> createAlignedImageBuffer(const FloatSize&, const DestinationColorSpace& = DestinationColorSpace::SRGB(), std::optional<RenderingMethod> = std::nullopt) const;
+    WEBCORE_EXPORT virtual RefPtr<ImageBuffer> createAlignedImageBuffer(const FloatRect&, const DestinationColorSpace& = DestinationColorSpace::SRGB(), std::optional<RenderingMethod> = std::nullopt) const;
 
-    WEBCORE_EXPORT ImageDrawResult drawImage(Image&, const FloatPoint& destination, const ImagePaintingOptions& = { ImageOrientation::FromImage });
-    WEBCORE_EXPORT ImageDrawResult drawImage(Image&, const FloatRect& destination, const ImagePaintingOptions& = { ImageOrientation::FromImage });
-    WEBCORE_EXPORT virtual ImageDrawResult drawImage(Image&, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& = { ImageOrientation::FromImage });
+    WEBCORE_EXPORT void drawNativeImage(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& = { });
+
+    virtual bool needsCachedNativeImageInvalidationWorkaround(RenderingMode) { return true; }
+
+
+    WEBCORE_EXPORT virtual void drawSystemImage(SystemImage&, const FloatRect&);
+
+    WEBCORE_EXPORT ImageDrawResult drawImage(Image&, const FloatPoint& destination, const ImagePaintingOptions& = { ImageOrientation::Orientation::FromImage });
+    WEBCORE_EXPORT ImageDrawResult drawImage(Image&, const FloatRect& destination, const ImagePaintingOptions& = { ImageOrientation::Orientation::FromImage });
+    WEBCORE_EXPORT virtual ImageDrawResult drawImage(Image&, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& = { ImageOrientation::Orientation::FromImage });
 
     WEBCORE_EXPORT virtual ImageDrawResult drawTiledImage(Image&, const FloatRect& destination, const FloatPoint& source, const FloatSize& tileSize, const FloatSize& spacing, const ImagePaintingOptions& = { });
     WEBCORE_EXPORT virtual ImageDrawResult drawTiledImage(Image&, const FloatRect& destination, const FloatRect& source, const FloatSize& tileScaleFactor, Image::TileRule, Image::TileRule, const ImagePaintingOptions& = { });
@@ -452,19 +273,23 @@ public:
 
     WEBCORE_EXPORT void drawConsumingImageBuffer(RefPtr<ImageBuffer>, const FloatPoint& destination, const ImagePaintingOptions& = { });
     WEBCORE_EXPORT void drawConsumingImageBuffer(RefPtr<ImageBuffer>, const FloatRect& destination, const ImagePaintingOptions& = { });
-    WEBCORE_EXPORT virtual void drawConsumingImageBuffer(RefPtr<ImageBuffer>, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& = { });
+    WEBCORE_EXPORT void drawConsumingImageBuffer(RefPtr<ImageBuffer>, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& = { });
 
     WEBCORE_EXPORT virtual void drawFilteredImageBuffer(ImageBuffer* sourceImage, const FloatRect& sourceImageRect, Filter&, FilterResults&);
 
     virtual void drawPattern(NativeImage&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { }) = 0;
     WEBCORE_EXPORT virtual void drawPattern(ImageBuffer&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { });
 
+    WEBCORE_EXPORT virtual void drawControlPart(ControlPart&, const FloatRoundedRect& borderRect, float deviceScaleFactor, const ControlStyle&);
+
 #if ENABLE(VIDEO)
     WEBCORE_EXPORT virtual void paintFrameForMedia(MediaPlayer&, const FloatRect& destination);
+    WEBCORE_EXPORT virtual void paintVideoFrame(VideoFrame&, const FloatRect& destination, bool shouldDiscardAlpha);
 #endif
 
     // Clipping
 
+    virtual void resetClip() = 0;
     virtual void clip(const FloatRect&) = 0;
     WEBCORE_EXPORT virtual void clipRoundedRect(const FloatRoundedRect&);
 
@@ -472,41 +297,38 @@ public:
     virtual void clipOut(const Path&) = 0;
     WEBCORE_EXPORT virtual void clipOutRoundedRect(const FloatRoundedRect&);
     virtual void clipPath(const Path&, WindRule = WindRule::EvenOdd) = 0;
-    WEBCORE_EXPORT virtual void clipToImageBuffer(ImageBuffer&, const FloatRect&);
+    WEBCORE_EXPORT virtual void clipToImageBuffer(ImageBuffer&, const FloatRect&) = 0;
     WEBCORE_EXPORT virtual IntRect clipBounds() const;
 
     // Text
 
     WEBCORE_EXPORT virtual FloatSize drawText(const FontCascade&, const TextRun&, const FloatPoint&, unsigned from = 0, std::optional<unsigned> to = std::nullopt);
-    WEBCORE_EXPORT virtual void drawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned numGlyphs, const FloatPoint&, FontSmoothingMode);
     WEBCORE_EXPORT virtual void drawEmphasisMarks(const FontCascade&, const TextRun&, const AtomString& mark, const FloatPoint&, unsigned from = 0, std::optional<unsigned> to = std::nullopt);
     WEBCORE_EXPORT virtual void drawBidiText(const FontCascade&, const TextRun&, const FloatPoint&, FontCascade::CustomFontNotReadyAction = FontCascade::DoNotPaintIfFontNotReady);
 
-    virtual void drawGlyphsAndCacheFont(const Font& font, const GlyphBufferGlyph* glyphs, const GlyphBufferAdvance* advances, unsigned numGlyphs, const FloatPoint& point, FontSmoothingMode fontSmoothingMode)
+    virtual void drawGlyphsAndCacheResources(const Font& font, const GlyphBufferGlyph* glyphs, const GlyphBufferAdvance* advances, unsigned numGlyphs, const FloatPoint& point, FontSmoothingMode fontSmoothingMode)
     {
         drawGlyphs(font, glyphs, advances, numGlyphs, point, fontSmoothingMode);
     }
 
+    WEBCORE_EXPORT virtual void drawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned numGlyphs, const FloatPoint&, FontSmoothingMode);
+    WEBCORE_EXPORT virtual void drawDecomposedGlyphs(const Font&, const DecomposedGlyphs&);
+
     WEBCORE_EXPORT FloatRect computeUnderlineBoundsForText(const FloatRect&, bool printing);
-    WEBCORE_EXPORT void drawLineForText(const FloatRect&, bool printing, bool doubleLines = false, StrokeStyle = SolidStroke);
-    virtual void drawLinesForText(const FloatPoint&, float thickness, const DashArray& widths, bool printing, bool doubleLines = false, StrokeStyle = SolidStroke) = 0;
+    WEBCORE_EXPORT void drawLineForText(const FloatRect&, bool printing, bool doubleLines = false, StrokeStyle = StrokeStyle::SolidStroke);
+    virtual void drawLinesForText(const FloatPoint&, float thickness, const DashArray& widths, bool printing, bool doubleLines = false, StrokeStyle = StrokeStyle::SolidStroke) = 0;
     virtual void drawDotsForDocumentMarker(const FloatRect&, DocumentMarkerLineStyle) = 0;
 
     // Transparency Layers
 
     WEBCORE_EXPORT virtual void beginTransparencyLayer(float opacity);
     WEBCORE_EXPORT virtual void endTransparencyLayer();
-    bool isInTransparencyLayer() const { return (m_transparencyLayerCount > 0) && supportsTransparencyLayers(); }
+    bool isInTransparencyLayer() const { return (m_transparencyLayerCount > 0); }
 
     // Focus Rings
 
-    virtual void drawFocusRing(const Vector<FloatRect>&, float width, float offset, const Color&) = 0;
-    virtual void drawFocusRing(const Path&, float width, float offset, const Color&) = 0;
-    // FIXME: Can we hide these in the CG implementation? Or elsewhere?
-#if PLATFORM(MAC)
-    virtual void drawFocusRing(const Path&, double timeOffset, bool& needsRedraw, const Color&) = 0;
-    virtual void drawFocusRing(const Vector<FloatRect>&, double timeOffset, bool& needsRedraw, const Color&) = 0;
-#endif
+    virtual void drawFocusRing(const Path&, float outlineWidth, const Color&) = 0;
+    virtual void drawFocusRing(const Vector<FloatRect>&, float outlineOffset, float outlineWidth, const Color&) = 0;
 
     // Transforms
 
@@ -543,7 +365,7 @@ public:
     // Contentful Paint Detection
 
     void setContentfulPaintDetected() { m_contentfulPaintDetected = true; }
-    bool contenfulPaintDetected() const { return m_contentfulPaintDetected; }
+    bool contentfulPaintDetected() const { return m_contentfulPaintDetected; }
 
     // FIXME: Nothing in this section belongs here, and should be moved elsewhere.
 #if OS(WINDOWS)
@@ -551,20 +373,12 @@ public:
     void releaseWindowsContext(HDC, const IntRect&, bool supportAlphaBlend); // The passed in HDC should be the one handed back by getWindowsContext.
 #endif
 
-#if OS(WINDOWS) && !USE(CAIRO)
-    // FIXME: This should not exist; we need a different place to
-    // put code shared between Windows CG and Windows Cairo backends.
-    virtual GraphicsContextPlatformPrivate* deprecatedPrivateContext() const { return nullptr; }
-#endif
-
 private:
-    virtual bool supportsTransparencyLayers() const { return true; }
+    virtual void drawNativeImageInternal(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& = { }) = 0;
 
 protected:
-    void fillEllipseAsPath(const FloatRect&);
-    void strokeEllipseAsPath(const FloatRect&);
-
-    WEBCORE_EXPORT virtual RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, const DestinationColorSpace&, RenderingMode, RenderingMethod) const;
+    WEBCORE_EXPORT void fillEllipseAsPath(const FloatRect&);
+    WEBCORE_EXPORT void strokeEllipseAsPath(const FloatRect&);
 
     FloatRect computeLineBoundsAndAntialiasingModeForText(const FloatRect&, bool printing, Color&);
 
@@ -582,182 +396,6 @@ private:
     bool m_contentfulPaintDetected { false };
 };
 
-class GraphicsContextStateSaver {
-    WTF_MAKE_FAST_ALLOCATED;
-public:
-    GraphicsContextStateSaver(GraphicsContext& context, bool saveAndRestore = true)
-    : m_context(context)
-    , m_saveAndRestore(saveAndRestore)
-    {
-        if (m_saveAndRestore)
-            m_context.save();
-    }
-
-    ~GraphicsContextStateSaver()
-    {
-        if (m_saveAndRestore)
-            m_context.restore();
-    }
-
-    void save()
-    {
-        ASSERT(!m_saveAndRestore);
-        m_context.save();
-        m_saveAndRestore = true;
-    }
-
-    void restore()
-    {
-        ASSERT(m_saveAndRestore);
-        m_context.restore();
-        m_saveAndRestore = false;
-    }
-
-    GraphicsContext* context() const { return &m_context; }
-
-private:
-    GraphicsContext& m_context;
-    bool m_saveAndRestore;
-};
-
-class TransparencyLayerScope {
-public:
-    TransparencyLayerScope(GraphicsContext& context, float alpha, bool beginLayer = true)
-        : m_context(context)
-        , m_alpha(alpha)
-        , m_beganLayer(beginLayer)
-    {
-        if (beginLayer)
-            m_context.beginTransparencyLayer(m_alpha);
-    }
-
-    void beginLayer(float alpha)
-    {
-        m_alpha = alpha;
-        m_context.beginTransparencyLayer(m_alpha);
-        m_beganLayer = true;
-    }
-
-    ~TransparencyLayerScope()
-    {
-        if (m_beganLayer)
-            m_context.endTransparencyLayer();
-    }
-
-private:
-    GraphicsContext& m_context;
-    float m_alpha;
-    bool m_beganLayer;
-};
-
-class GraphicsContextStateStackChecker {
-public:
-    GraphicsContextStateStackChecker(GraphicsContext& context)
-        : m_context(context)
-        , m_stackSize(context.stackSize())
-    { }
-
-    ~GraphicsContextStateStackChecker()
-    {
-        if (m_context.stackSize() != m_stackSize)
-            WTFLogAlways("GraphicsContext %p stack changed by %d", &m_context, (int)m_context.stackSize() - (int)m_stackSize);
-    }
-
-private:
-    GraphicsContext& m_context;
-    unsigned m_stackSize;
-};
-
-class InterpolationQualityMaintainer {
-public:
-    explicit InterpolationQualityMaintainer(GraphicsContext& graphicsContext, InterpolationQuality interpolationQualityToUse)
-        : m_graphicsContext(graphicsContext)
-        , m_currentInterpolationQuality(graphicsContext.imageInterpolationQuality())
-        , m_interpolationQualityChanged(interpolationQualityToUse != InterpolationQuality::Default && m_currentInterpolationQuality != interpolationQualityToUse)
-    {
-        if (m_interpolationQualityChanged)
-            m_graphicsContext.setImageInterpolationQuality(interpolationQualityToUse);
-    }
-
-    explicit InterpolationQualityMaintainer(GraphicsContext& graphicsContext, std::optional<InterpolationQuality> interpolationQuality)
-        : InterpolationQualityMaintainer(graphicsContext, interpolationQuality ? interpolationQuality.value() : graphicsContext.imageInterpolationQuality())
-    {
-    }
-
-    ~InterpolationQualityMaintainer()
-    {
-        if (m_interpolationQualityChanged)
-            m_graphicsContext.setImageInterpolationQuality(m_currentInterpolationQuality);
-    }
-
-private:
-    GraphicsContext& m_graphicsContext;
-    InterpolationQuality m_currentInterpolationQuality;
-    bool m_interpolationQualityChanged;
-};
-
 } // namespace WebCore
 
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::DocumentMarkerLineStyle::Mode> {
-    using values = EnumValues<
-    WebCore::DocumentMarkerLineStyle::Mode,
-    WebCore::DocumentMarkerLineStyle::Mode::TextCheckingDictationPhraseWithAlternatives,
-    WebCore::DocumentMarkerLineStyle::Mode::Spelling,
-    WebCore::DocumentMarkerLineStyle::Mode::Grammar,
-    WebCore::DocumentMarkerLineStyle::Mode::AutocorrectionReplacement,
-    WebCore::DocumentMarkerLineStyle::Mode::DictationAlternatives
-    >;
-};
-
-template<> struct EnumTraits<WebCore::GraphicsContextState::Change> {
-    using values = EnumValues<
-        WebCore::GraphicsContextState::Change,
-        WebCore::GraphicsContextState::Change::StrokeGradientChange,
-        WebCore::GraphicsContextState::Change::StrokePatternChange,
-        WebCore::GraphicsContextState::Change::FillGradientChange,
-        WebCore::GraphicsContextState::Change::FillPatternChange,
-        WebCore::GraphicsContextState::Change::StrokeThicknessChange,
-        WebCore::GraphicsContextState::Change::StrokeColorChange,
-        WebCore::GraphicsContextState::Change::StrokeStyleChange,
-        WebCore::GraphicsContextState::Change::FillColorChange,
-        WebCore::GraphicsContextState::Change::FillRuleChange,
-        WebCore::GraphicsContextState::Change::ShadowChange,
-        WebCore::GraphicsContextState::Change::ShadowsIgnoreTransformsChange,
-        WebCore::GraphicsContextState::Change::AlphaChange,
-        WebCore::GraphicsContextState::Change::CompositeOperationChange,
-        WebCore::GraphicsContextState::Change::BlendModeChange,
-        WebCore::GraphicsContextState::Change::TextDrawingModeChange,
-        WebCore::GraphicsContextState::Change::ShouldAntialiasChange,
-        WebCore::GraphicsContextState::Change::ShouldSmoothFontsChange,
-        WebCore::GraphicsContextState::Change::ShouldSubpixelQuantizeFontsChange,
-        WebCore::GraphicsContextState::Change::DrawLuminanceMaskChange,
-        WebCore::GraphicsContextState::Change::ImageInterpolationQualityChange
-#if HAVE(OS_DARK_MODE_SUPPORT)
-        , WebCore::GraphicsContextState::Change::UseDarkAppearanceChange
-#endif
-    >;
-};
-
-template<> struct EnumTraits<WebCore::StrokeStyle> {
-    using values = EnumValues<
-    WebCore::StrokeStyle,
-    WebCore::StrokeStyle::NoStroke,
-    WebCore::StrokeStyle::SolidStroke,
-    WebCore::StrokeStyle::DottedStroke,
-    WebCore::StrokeStyle::DashedStroke,
-    WebCore::StrokeStyle::DoubleStroke,
-    WebCore::StrokeStyle::WavyStroke
-    >;
-};
-
-template<> struct EnumTraits<WebCore::TextDrawingMode> {
-    using values = EnumValues<
-        WebCore::TextDrawingMode,
-        WebCore::TextDrawingMode::Fill,
-        WebCore::TextDrawingMode::Stroke
-    >;
-};
-
-} // namespace WTF
+#include "GraphicsContextStateSaver.h"

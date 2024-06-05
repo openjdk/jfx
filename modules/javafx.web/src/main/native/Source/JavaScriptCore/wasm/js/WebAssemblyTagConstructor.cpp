@@ -36,7 +36,7 @@
 
 namespace JSC {
 
-const ClassInfo WebAssemblyTagConstructor::s_info = { "Function", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WebAssemblyTagConstructor) };
+const ClassInfo WebAssemblyTagConstructor::s_info = { "Function"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WebAssemblyTagConstructor) };
 
 static JSC_DECLARE_HOST_FUNCTION(callJSWebAssemblyTag);
 static JSC_DECLARE_HOST_FUNCTION(constructJSWebAssemblyTag);
@@ -71,7 +71,7 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyTag, (JSGlobalObject* globalObjec
             type = Wasm::Types::F32;
         else if (valueString == "f64"_s)
             type = Wasm::Types::F64;
-        else if (valueString == "anyfunc"_s)
+        else if (valueString == "funcref"_s || valueString == "anyfunc"_s)
             type = Wasm::Types::Funcref;
         else if (valueString == "externref"_s)
             type = Wasm::Types::Externref;
@@ -84,9 +84,10 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyTag, (JSGlobalObject* globalObjec
     });
     RETURN_IF_EXCEPTION(scope, { });
 
-    RefPtr<Wasm::Signature> signature = Wasm::SignatureInformation::signatureFor({ }, parameters);
+    RefPtr<Wasm::TypeDefinition> typeDefinition = Wasm::TypeInformation::typeDefinitionForFunction({ }, parameters);
     Structure* structure = JSC_GET_DERIVED_STRUCTURE(vm, webAssemblyTagStructure, asObject(callFrame->newTarget()), callFrame->jsCallee());
-    RELEASE_AND_RETURN(scope, JSValue::encode(JSWebAssemblyTag::create(vm, globalObject, structure, Wasm::Tag::create(*signature).get())));
+    RETURN_IF_EXCEPTION(scope, { });
+    RELEASE_AND_RETURN(scope, JSValue::encode(JSWebAssemblyTag::create(vm, globalObject, structure, Wasm::Tag::create(*typeDefinition).get())));
 }
 
 JSC_DEFINE_HOST_FUNCTION(callJSWebAssemblyTag, (JSGlobalObject* globalObject, CallFrame*))

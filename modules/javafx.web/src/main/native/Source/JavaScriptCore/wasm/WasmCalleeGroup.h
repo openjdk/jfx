@@ -28,8 +28,10 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "MacroAssemblerCodeRef.h"
+#include "MemoryMode.h"
 #include "WasmCallee.h"
-#include "WasmEmbedder.h"
+#include "WasmCallsiteCollection.h"
+#include "WasmJS.h"
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/FixedVector.h>
 #include <wtf/Lock.h>
@@ -40,23 +42,25 @@
 
 namespace JSC {
 
+class VM;
+
 namespace Wasm {
 
-struct Context;
 class EntryPlan;
 struct ModuleInformation;
 struct UnlinkedWasmToWasmCall;
-enum class MemoryMode : uint8_t;
 
 class CalleeGroup final : public ThreadSafeRefCounted<CalleeGroup> {
 public:
+    friend class CallsiteCollection;
     typedef void CallbackType(Ref<CalleeGroup>&&);
     using AsyncCompilationCallback = RefPtr<WTF::SharedTask<CallbackType>>;
-    static Ref<CalleeGroup> create(Context*, MemoryMode, ModuleInformation&, RefPtr<LLIntCallees>);
+    static Ref<CalleeGroup> createFromLLInt(VM&, MemoryMode, ModuleInformation&, RefPtr<LLIntCallees>);
+    static Ref<CalleeGroup> createFromIPInt(VM&, MemoryMode, ModuleInformation&, RefPtr<IPIntCallees>);
     static Ref<CalleeGroup> createFromExisting(MemoryMode, const CalleeGroup&);
 
     void waitUntilFinished();
-    void compileAsync(Context*, AsyncCompilationCallback&&);
+    void compileAsync(VM&, AsyncCompilationCallback&&);
 
     bool compilationFinished()
     {
@@ -76,13 +80,13 @@ public:
 
     // These two callee getters are only valid once the callees have been populated.
 
-    Callee& embedderEntrypointCalleeFromFunctionIndexSpace(unsigned functionIndexSpace)
+    Callee& jsEntrypointCalleeFromFunctionIndexSpace(unsigned functionIndexSpace)
     {
         ASSERT(runnable());
         RELEASE_ASSERT(functionIndexSpace >= functionImportCount());
         unsigned calleeIndex = functionIndexSpace - functionImportCount();
 
-        auto callee = m_embedderCallees.get(calleeIndex);
+        auto callee = m_jsEntrypointCallees.get(calleeIndex);
         RELEASE_ASSERT(callee);
         return *callee;
     }
@@ -141,14 +145,14 @@ public:
     }
 #endif
 
-    MacroAssemblerCodePtr<WasmEntryPtrTag>* entrypointLoadLocationFromFunctionIndexSpace(unsigned functionIndexSpace)
+    CodePtr<WasmEntryPtrTag>* entrypointLoadLocationFromFunctionIndexSpace(unsigned functionIndexSpace)
     {
         RELEASE_ASSERT(functionIndexSpace >= functionImportCount());
         unsigned calleeIndex = functionIndexSpace - functionImportCount();
         return &m_wasmIndirectCallEntryPoints[calleeIndex];
     }
 
-    MacroAssemblerCodePtr<WasmEntryPtrTag> wasmToWasmExitStub(unsigned functionIndex)
+    CodePtr<WasmEntryPtrTag> wasmToWasmExitStub(unsigned functionIndex)
     {
         return m_wasmToWasmExitStubs[functionIndex].code();
     }
@@ -156,6 +160,9 @@ public:
     bool isSafeToRun(MemoryMode);
 
     MemoryMode mode() const { return m_mode; }
+
+    CallsiteCollection& callsiteCollection() { return m_callsiteCollection; }
+    const CallsiteCollection& callsiteCollection() const { return m_callsiteCollection; }
 
     ~CalleeGroup();
 private:
@@ -166,7 +173,8 @@ private:
     friend class OSREntryPlan;
 #endif
 
-    CalleeGroup(Context*, MemoryMode, ModuleInformation&, RefPtr<LLIntCallees>);
+    CalleeGroup(VM&, MemoryMode, ModuleInformation&, RefPtr<LLIntCallees>);
+    CalleeGroup(VM&, MemoryMode, ModuleInformation&, RefPtr<IPIntCallees>);
     CalleeGroup(MemoryMode, const CalleeGroup&);
     void setCompilationFinished();
     unsigned m_calleeCount;
@@ -175,12 +183,13 @@ private:
     FixedVector<RefPtr<OMGCallee>> m_omgCallees;
     FixedVector<RefPtr<BBQCallee>> m_bbqCallees;
 #endif
+    RefPtr<IPIntCallees> m_ipintCallees;
     RefPtr<LLIntCallees> m_llintCallees;
-    HashMap<uint32_t, RefPtr<EmbedderEntrypointCallee>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_embedderCallees;
-    FixedVector<MacroAssemblerCodePtr<WasmEntryPtrTag>> m_wasmIndirectCallEntryPoints;
-    FixedVector<Vector<UnlinkedWasmToWasmCall>> m_wasmToWasmCallsites;
+    HashMap<uint32_t, RefPtr<JSEntrypointCallee>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_jsEntrypointCallees;
+    FixedVector<CodePtr<WasmEntryPtrTag>> m_wasmIndirectCallEntryPoints;
     FixedVector<MacroAssemblerCodeRef<WasmEntryPtrTag>> m_wasmToWasmExitStubs;
     RefPtr<EntryPlan> m_plan;
+    CallsiteCollection m_callsiteCollection;
     std::atomic<bool> m_compilationFinished { false };
     String m_errorMessage;
 public:

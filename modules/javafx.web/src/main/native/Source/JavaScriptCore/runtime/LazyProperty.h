@@ -25,13 +25,11 @@
 
 #pragma once
 
-#include "VM.h"
+#include "Heap.h"
 
 namespace JSC {
 
 class JSCell;
-class SlotVisitor;
-class VM;
 
 // Note that if all you're doing is calling LazyProperty::get(), it's completely safe to bitcast
 // this LazyProperty<JSCell, JSCell>.
@@ -89,6 +87,8 @@ public:
             return nullptr;
         return bitwise_cast<ElementType*>(pointer);
     }
+
+    bool isInitialized() const { return !(m_pointer & lazyTag); }
 
     ElementType* getInitializedOnMainThread(const OwnerType* owner) const
     {

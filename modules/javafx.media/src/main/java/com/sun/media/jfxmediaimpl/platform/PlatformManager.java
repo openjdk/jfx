@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,6 @@ import com.sun.media.jfxmedia.MetadataParser;
 import com.sun.media.jfxmedia.locator.Locator;
 import com.sun.media.jfxmedia.logging.Logger;
 import com.sun.media.jfxmediaimpl.platform.java.JavaPlatform;
-import com.sun.media.jfxmediaimpl.HostUtils;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
@@ -97,7 +96,7 @@ public final class PlatformManager {
             }
         }
 
-        if (!HostUtils.isIOS() && isPlatformEnabled("GSTPlatform")) {
+        if (!PlatformUtil.isIOS() && isPlatformEnabled("GSTPlatform")) {
             platty = getPlatformInstance(
                     "com.sun.media.jfxmediaimpl.platform.gstreamer.GSTPlatform");
             if (null != platty) {
@@ -106,7 +105,7 @@ public final class PlatformManager {
         }
 
         // Add after GSTPlatform so it's used as a fallback
-        if (HostUtils.isMacOSX() && isPlatformEnabled("OSXPlatform")) {
+        if (PlatformUtil.isMac() && isPlatformEnabled("OSXPlatform")) {
             platty = getPlatformInstance(
                     "com.sun.media.jfxmediaimpl.platform.osx.OSXPlatform");
             if (null != platty) {
@@ -114,7 +113,7 @@ public final class PlatformManager {
             }
         }
 
-        if (HostUtils.isIOS() && isPlatformEnabled("IOSPlatform")) {
+        if (PlatformUtil.isIOS() && isPlatformEnabled("IOSPlatform")) {
             platty = getPlatformInstance(
                     "com.sun.media.jfxmediaimpl.platform.ios.IOSPlatform");
             if (null != platty) {

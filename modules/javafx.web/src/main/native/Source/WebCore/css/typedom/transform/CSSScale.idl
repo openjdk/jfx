@@ -25,9 +25,9 @@
 
 typedef (double or CSSNumericValue) CSSNumberish;
 
+// https://drafts.css-houdini.org/css-typed-om/#cssscale
 [
-    EnabledAtRuntime=CSSTypedOMEnabled,
-    Conditional=CSS_TYPED_OM,
+    EnabledBySetting=CSSTypedOMEnabled,
     Exposed=(Window,Worker,PaintWorklet)
 ] interface CSSScale : CSSTransformComponent {
     constructor(CSSNumberish x, CSSNumberish y, optional CSSNumberish z);

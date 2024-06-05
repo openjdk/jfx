@@ -102,9 +102,10 @@ void DOMPatchSupport::patchDocument(const String& markup)
     std::unique_ptr<Digest> newInfo = createDigest(*newDocument->documentElement(), &m_unusedNodesMap);
 
     if (innerPatchNode(*oldInfo, *newInfo).hasException()) {
+        Ref document { m_document };
         // Fall back to rewrite.
-        m_document.write(nullptr, markup);
-        m_document.close();
+        document->write(nullptr, markup);
+        document->close();
     }
 }
 
@@ -120,7 +121,7 @@ ExceptionOr<Node*> DOMPatchSupport::patchNode(Node& node, const String& markup)
     // FIXME: This code should use one of createFragment* in markup.h
     auto fragment = DocumentFragment::create(m_document);
     if (m_document.isHTMLDocument())
-        fragment->parseHTML(markup, node.parentElement() ? node.parentElement() : m_document.documentElement());
+        fragment->parseHTML(markup, node.parentElement() ? *node.parentElement() : *m_document.documentElement());
     else
         fragment->parseXML(markup, node.parentElement() ? node.parentElement() : m_document.documentElement());
 
@@ -135,9 +136,9 @@ ExceptionOr<Node*> DOMPatchSupport::patchNode(Node& node, const String& markup)
     for (Node* child = parentNode->firstChild(); child != &node; child = child->nextSibling())
         newList.append(createDigest(*child, nullptr));
     for (Node* child = fragment->firstChild(); child; child = child->nextSibling()) {
-        if (child->hasTagName(headTag) && !child->firstChild() && !markup.containsIgnoringASCIICase("</head>"))
+        if (child->hasTagName(headTag) && !child->firstChild() && !markup.containsIgnoringASCIICase("</head>"_s))
             continue; // HTML5 parser inserts empty <head> tag whenever it parses <body>
-        if (child->hasTagName(bodyTag) && !child->firstChild() && !markup.containsIgnoringASCIICase("</body>"))
+        if (child->hasTagName(bodyTag) && !child->firstChild() && !markup.containsIgnoringASCIICase("</body>"_s))
             continue; // HTML5 parser inserts empty <body> tag whenever it parses </head>
         newList.append(createDigest(*child, &m_unusedNodesMap));
     }

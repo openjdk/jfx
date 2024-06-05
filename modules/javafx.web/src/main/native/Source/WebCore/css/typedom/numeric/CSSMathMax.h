@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include "CSSMathValue.h"
 #include "CSSNumericValue.h"
 
@@ -34,23 +32,30 @@ namespace WebCore {
 
 class CSSNumericArray;
 
-class CSSMathMax : public CSSMathValue {
+class CSSMathMax final : public CSSMathValue {
     WTF_MAKE_ISO_ALLOCATED(CSSMathMax);
 public:
-    static Ref<CSSMathMax> create(FixedVector<CSSNumberish>&&);
+    static ExceptionOr<Ref<CSSMathMax>> create(FixedVector<CSSNumberish>&&);
+    static ExceptionOr<Ref<CSSMathMax>> create(Vector<Ref<CSSNumericValue>>&&);
     const CSSNumericArray& values() const;
 
+    RefPtr<CSSCalcExpressionNode> toCalcExpressionNode() const final;
+
 private:
-    CSSMathMax(FixedVector<CSSNumberish>&&);
+    CSSMathOperator getOperator() const final { return CSSMathOperator::Max; }
+    CSSStyleValueType getType() const final { return CSSStyleValueType::CSSMathMax; }
+    void serialize(StringBuilder&, OptionSet<SerializationArguments>) const final;
+    std::optional<SumValue> toSumValue() const final;
+    bool equals(const CSSNumericValue& other) const final { return equalsImpl<CSSMathMax>(other); }
+
+    CSSMathMax(Vector<Ref<CSSNumericValue>>&&, CSSNumericType&&);
     Ref<CSSNumericArray> m_values;
 };
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSMathMax)
-    static bool isType(const WebCore::CSSStyleValue& styleValue) { return is<WebCore::CSSNumericValue>(styleValue) && isType(downcast<WebCore::CSSNumericValue>(styleValue)); }
-    static bool isType(const WebCore::CSSNumericValue& numericValue) { return is<WebCore::CSSMathValue>(numericValue) && isType(downcast<WebCore::CSSMathValue>(numericValue)); }
-static bool isType(const WebCore::CSSMathValue& mathValue) { return mathValue.getOperator() == WebCore::CSSMathOperator::Max; }
+static bool isType(const WebCore::CSSStyleValue& styleValue) { return styleValue.getType() == WebCore::CSSStyleValueType::CSSMathMax; }
+static bool isType(const WebCore::CSSNumericValue& numericValue) { return numericValue.getType() == WebCore::CSSStyleValueType::CSSMathMax; }
+static bool isType(const WebCore::CSSMathValue& mathValue) { return mathValue.getType() == WebCore::CSSStyleValueType::CSSMathMax; }
 SPECIALIZE_TYPE_TRAITS_END()
-
-#endif

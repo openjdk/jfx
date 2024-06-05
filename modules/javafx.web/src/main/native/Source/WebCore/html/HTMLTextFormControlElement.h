@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "HTMLFormControlElementWithState.h"
+#include "HTMLFormControlElement.h"
 #include "PointerEventTypeNames.h"
 
 namespace WebCore {
@@ -36,11 +36,12 @@ class VisiblePosition;
 
 struct SimpleRange;
 
-enum class AutoFillButtonType : uint8_t { None, Credentials, Contacts, StrongPassword, CreditCard };
+enum class AutoFillButtonType : uint8_t { None, Credentials, Contacts, StrongPassword, CreditCard, Loading };
 enum TextFieldSelectionDirection { SelectionHasNoDirection, SelectionHasForwardDirection, SelectionHasBackwardDirection };
 enum TextFieldEventBehavior { DispatchNoEvent, DispatchChangeEvent, DispatchInputAndChangeEvent };
+enum TextControlSetValueSelection { SetSelectionToEnd, Clamp, DoNotSet };
 
-class HTMLTextFormControlElement : public HTMLFormControlElementWithState {
+class HTMLTextFormControlElement : public HTMLFormControlElement {
     WTF_MAKE_ISO_ALLOCATED(HTMLTextFormControlElement);
 public:
     // Common flag for HTMLInputElement::tooLong() / tooShort() and HTMLTextAreaElement::tooLong() / tooShort().
@@ -69,32 +70,36 @@ public:
 
     int indexForVisiblePosition(const VisiblePosition&) const;
     WEBCORE_EXPORT VisiblePosition visiblePositionForIndex(int index) const;
-    WEBCORE_EXPORT int selectionStart() const;
-    WEBCORE_EXPORT int selectionEnd() const;
+    WEBCORE_EXPORT unsigned selectionStart() const;
+    WEBCORE_EXPORT unsigned selectionEnd() const;
     WEBCORE_EXPORT const AtomString& selectionDirection() const;
-    WEBCORE_EXPORT void setSelectionStart(int);
-    WEBCORE_EXPORT void setSelectionEnd(int);
+    WEBCORE_EXPORT void setSelectionStart(unsigned);
+    WEBCORE_EXPORT void setSelectionEnd(unsigned);
     WEBCORE_EXPORT void setSelectionDirection(const String&);
     WEBCORE_EXPORT void select(SelectionRevealMode = SelectionRevealMode::DoNotReveal, const AXTextStateChangeIntent& = AXTextStateChangeIntent());
-    WEBCORE_EXPORT virtual ExceptionOr<void> setRangeText(const String& replacement);
-    WEBCORE_EXPORT virtual ExceptionOr<void> setRangeText(const String& replacement, unsigned start, unsigned end, const String& selectionMode);
-    void setSelectionRange(int start, int end, const String& direction, const AXTextStateChangeIntent& = AXTextStateChangeIntent());
-    WEBCORE_EXPORT void setSelectionRange(int start, int end, TextFieldSelectionDirection = SelectionHasNoDirection, SelectionRevealMode = SelectionRevealMode::DoNotReveal, const AXTextStateChangeIntent& = AXTextStateChangeIntent());
+    WEBCORE_EXPORT ExceptionOr<void> setRangeText(StringView replacement);
+    WEBCORE_EXPORT virtual ExceptionOr<void> setRangeText(StringView replacement, unsigned start, unsigned end, const String& selectionMode);
+    void setSelectionRange(unsigned start, unsigned end, const String& direction, const AXTextStateChangeIntent& = AXTextStateChangeIntent());
+    WEBCORE_EXPORT bool setSelectionRange(unsigned start, unsigned end, TextFieldSelectionDirection = SelectionHasNoDirection, SelectionRevealMode = SelectionRevealMode::DoNotReveal, const AXTextStateChangeIntent& = AXTextStateChangeIntent());
+
+    TextFieldSelectionDirection computeSelectionDirection() const;
 
     std::optional<SimpleRange> selection() const;
     String selectedText() const;
 
     void dispatchFormControlChangeEvent() final;
+    void scheduleSelectEvent();
 
     virtual String value() const = 0;
 
+    virtual ExceptionOr<void> setValue(const String&, TextFieldEventBehavior = DispatchNoEvent, TextControlSetValueSelection = TextControlSetValueSelection::SetSelectionToEnd) = 0;
     virtual RefPtr<TextControlInnerTextElement> innerTextElement() const = 0;
     virtual RefPtr<TextControlInnerTextElement> innerTextElementCreatingShadowSubtreeIfNeeded() = 0;
     virtual RenderStyle createInnerTextStyle(const RenderStyle&) = 0;
 
     void selectionChanged(bool shouldFireSelectEvent);
     WEBCORE_EXPORT bool lastChangeWasUserEdit() const;
-    void setInnerTextValue(const String&);
+    void setInnerTextValue(String&&);
     String innerTextValue() const;
 
     String directionForFormData() const;
@@ -103,27 +108,28 @@ public:
 
     WEBCORE_EXPORT virtual bool isInnerTextElementEditable() const;
 
+    bool canContainRangeEndPoint() const override { return false; }
+
 protected:
     HTMLTextFormControlElement(const QualifiedName&, Document&, HTMLFormElement*);
     bool isPlaceholderEmpty() const;
     virtual void updatePlaceholderText() = 0;
 
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
 
     void disabledStateChanged() override;
     void readOnlyStateChanged() override;
+    bool readOnlyBarsFromConstraintValidation() const final { return true; }
 
     void updateInnerTextElementEditability();
 
-    void cacheSelection(int start, int end, TextFieldSelectionDirection direction)
-    {
-        m_cachedSelectionStart = start;
-        m_cachedSelectionEnd = end;
-        m_cachedSelectionDirection = direction;
-    }
+    bool cacheSelection(unsigned start, unsigned end, TextFieldSelectionDirection);
 
     void restoreCachedSelection(SelectionRevealMode, const AXTextStateChangeIntent& = AXTextStateChangeIntent());
-    bool hasCachedSelection() const { return m_cachedSelectionStart >= 0; }
+    bool hasCachedSelection() const { return m_hasCachedSelection; }
+
+    unsigned computeSelectionStart() const;
+    unsigned computeSelectionEnd() const;
 
     virtual void subtreeHasChanged() = 0;
 
@@ -141,11 +147,7 @@ private:
 
     bool isTextFormControlElement() const final { return true; }
 
-    int computeSelectionStart() const;
-    int computeSelectionEnd() const;
-    TextFieldSelectionDirection computeSelectionDirection() const;
-
-    void dispatchFocusEvent(RefPtr<Element>&& oldFocusedElement, FocusDirection) final;
+    void dispatchFocusEvent(RefPtr<Element>&& oldFocusedElement, const FocusOptions&) final;
     void dispatchBlurEvent(RefPtr<Element>&& newFocusedElement) final;
     bool childShouldCreateRenderer(const Node&) const override;
 
@@ -171,11 +173,13 @@ private:
 
     String m_textAsOfLastFormControlChangeEvent;
 
-    int m_cachedSelectionStart;
-    int m_cachedSelectionEnd;
+    unsigned m_cachedSelectionStart;
+    unsigned m_cachedSelectionEnd;
 
     int m_maxLength { -1 };
     int m_minLength { -1 };
+
+    bool m_hasCachedSelection { false };
 };
 
 WEBCORE_EXPORT HTMLTextFormControlElement* enclosingTextFormControl(const Position&);

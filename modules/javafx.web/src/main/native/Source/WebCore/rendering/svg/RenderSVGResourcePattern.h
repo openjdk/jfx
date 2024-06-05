@@ -45,7 +45,7 @@ public:
     RenderSVGResourcePattern(SVGPatternElement&, RenderStyle&&);
     SVGPatternElement& patternElement() const;
 
-    void removeAllClientsFromCache(bool markForInvalidation = true) override;
+    void removeAllClientsFromCacheIfNeeded(bool markForInvalidation, WeakHashSet<RenderObject>* visitedRenderers) override;
     void removeClientFromCache(RenderElement&, bool markForInvalidation = true) override;
 
     bool applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>) override;
@@ -58,7 +58,7 @@ public:
 
 private:
     void element() const = delete;
-    const char* renderName() const override { return "RenderSVGResourcePattern"; }
+    ASCIILiteral renderName() const override { return "RenderSVGResourcePattern"_s; }
 
     bool buildTileImageTransform(RenderElement&, const PatternAttributes&, const SVGPatternElement&, FloatRect& patternBoundaries, AffineTransform& tileImageTransform) const;
 

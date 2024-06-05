@@ -36,10 +36,10 @@
 #include "BaseAudioContext.h"
 #include "CacheStorageConnection.h"
 #include "Document.h"
-#include "Frame.h"
-#include "LibWebRTCProvider.h"
+#include "LocalFrame.h"
 #include "Page.h"
 #include "Settings.h"
+#include "WebRTCProvider.h"
 #include "WorkletParameters.h"
 #include "WorkletPendingTasks.h"
 
@@ -49,14 +49,18 @@ static WorkletParameters generateWorkletParameters(AudioWorklet& worklet)
 {
     auto* document = worklet.document();
     auto jsRuntimeFlags = document->settings().javaScriptRuntimeFlags();
+    RELEASE_ASSERT(document->sessionID());
 
     return {
         document->url(),
         jsRuntimeFlags,
         worklet.audioContext() ? worklet.audioContext()->sampleRate() : 0.0f,
         worklet.identifier(),
+        *document->sessionID(),
         document->settingsValues(),
-        worklet.audioContext() ? !worklet.audioContext()->isOfflineContext() : false
+        document->referrerPolicy(),
+        worklet.audioContext() ? !worklet.audioContext()->isOfflineContext() : false,
+        document->noiseInjectionHashSalt()
     };
 }
 
@@ -73,6 +77,7 @@ AudioWorkletMessagingProxy::AudioWorkletMessagingProxy(AudioWorklet& worklet)
 AudioWorkletMessagingProxy::~AudioWorkletMessagingProxy()
 {
     m_workletThread->stop();
+    m_workletThread->clearProxies();
 }
 
 bool AudioWorkletMessagingProxy::postTaskForModeToWorkletGlobalScope(ScriptExecutionContext::Task&& task, const String& mode)
@@ -92,17 +97,17 @@ RefPtr<RTCDataChannelRemoteHandlerConnection> AudioWorkletMessagingProxy::create
     ASSERT(isMainThread());
     if (!m_document->page())
         return nullptr;
-    return m_document->page()->libWebRTCProvider().createRTCDataChannelRemoteHandlerConnection();
+    return m_document->page()->webRTCProvider().createRTCDataChannelRemoteHandlerConnection();
+}
+
+ScriptExecutionContextIdentifier AudioWorkletMessagingProxy::loaderContextIdentifier() const
+{
+    return m_document->identifier();
 }
 
 void AudioWorkletMessagingProxy::postTaskToLoader(ScriptExecutionContext::Task&& task)
 {
     m_document->postTask(WTFMove(task));
-}
-
-bool AudioWorkletMessagingProxy::postTaskForModeToWorkerOrWorkletGlobalScope(ScriptExecutionContext::Task&& task, const String& mode)
-{
-    return postTaskForModeToWorkletGlobalScope(WTFMove(task), mode);
 }
 
 void AudioWorkletMessagingProxy::postTaskToAudioWorklet(Function<void(AudioWorklet&)>&& task)

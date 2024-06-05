@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,6 +38,13 @@ Java_com_sun_scenario_effect_impl_sw_sse_SSEBoxBlurPeer_filterHorizontal
      jintArray dstPixels_arr, jint dstw, jint dsth, jint dstscan,
      jintArray srcPixels_arr, jint srcw, jint srch, jint srcscan)
 {
+    if ((checkRange(env,
+                    dstPixels_arr, dstw, dsth,
+                    srcPixels_arr, srcw, srch)) ||
+        dsth > srch) { // We should not move out of source vertical bounds
+        return;
+    }
+
     jint *srcPixels = (jint *)env->GetPrimitiveArrayCritical(srcPixels_arr, 0);
     if (srcPixels == NULL) return;
     jint *dstPixels = (jint *)env->GetPrimitiveArrayCritical(dstPixels_arr, 0);
@@ -89,6 +96,13 @@ Java_com_sun_scenario_effect_impl_sw_sse_SSEBoxBlurPeer_filterVertical
      jintArray dstPixels_arr, jint dstw, jint dsth, jint dstscan,
      jintArray srcPixels_arr, jint srcw, jint srch, jint srcscan)
 {
+    if ((checkRange(env,
+                    dstPixels_arr, dstw, dsth,
+                    srcPixels_arr, srcw, srch)) ||
+        dstw > srcw) { // We should not move out of source horizontal bounds
+        return;
+    }
+
     jint *srcPixels = (jint *)env->GetPrimitiveArrayCritical(srcPixels_arr, 0);
     if (srcPixels == NULL) return;
     jint *dstPixels = (jint *)env->GetPrimitiveArrayCritical(dstPixels_arr, 0);
@@ -149,6 +163,13 @@ Java_com_sun_scenario_effect_impl_sw_sse_SSEBoxBlurPeer_filterTranspose
      jintArray srcPixels_arr, jint srcw, jint srch, jint srcscan,
      jint ksize)
 {
+    if ((checkRange(env,
+                    dstPixels_arr, dstw, dsth,
+                    srcPixels_arr, srcw, srch)) ||
+        dstw > srcw) { // We should not move out of source horizontal bounds
+        return;
+    }
+
     jint *srcPixels = (jint *)env->GetPrimitiveArrayCritical(srcPixels_arr, 0);
     if (srcPixels == NULL) return;
     jint *dstPixels = (jint *)env->GetPrimitiveArrayCritical(dstPixels_arr, 0);

@@ -19,11 +19,13 @@
 #pragma once
 
 #include "ExceptionOr.h"
+#include "ParseFromStringOptions.h"
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class Document;
+class WeakPtrImplWithEventTargetData;
 class Settings;
 
 class DOMParser : public RefCounted<DOMParser> {
@@ -31,12 +33,12 @@ public:
     static Ref<DOMParser> create(Document& contextDocument);
     ~DOMParser();
 
-    ExceptionOr<Ref<Document>> parseFromString(const String&, const String& contentType);
+    ExceptionOr<Ref<Document>> parseFromString(const String&, const String& contentType, ParseFromStringOptions);
 
 private:
     explicit DOMParser(Document& contextDocument);
 
-    WeakPtr<Document> m_contextDocument;
+    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_contextDocument;
     const Ref<const Settings> m_settings;
 };
 

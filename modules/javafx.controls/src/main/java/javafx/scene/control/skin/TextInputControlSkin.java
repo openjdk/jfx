@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -94,6 +94,7 @@ import javafx.util.Duration;
 /**
  * Abstract base class for text input skins.
  *
+ * @param <T> the type of the text input control
  * @since 9
  * @see TextFieldSkin
  * @see TextAreaSkin
@@ -326,8 +327,6 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
                 }
             });
         }
-
-        control.addEventHandler(InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, inputMethodTextChangedHandler);
     }
 
     @Override
@@ -335,6 +334,11 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         super.install();
 
         TextInputControl control = getSkinnable();
+
+        // IMPORTANT: both setOnInputMethodTextChanged() and setInputMethodRequests() are required for IME to work
+        if (control.getOnInputMethodTextChanged() == null) {
+            control.setOnInputMethodTextChanged(inputMethodTextChangedHandler);
+        }
 
         if (control.getInputMethodRequests() == null) {
             inputMethodRequests = new ExtendedInputMethodRequests() {
@@ -402,11 +406,14 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
             return;
         }
 
-        getSkinnable().removeEventHandler(InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, inputMethodTextChangedHandler);
-
         if (getSkinnable().getInputMethodRequests() == inputMethodRequests) {
             getSkinnable().setInputMethodRequests(null);
         }
+
+        if (getSkinnable().getOnInputMethodTextChanged() == inputMethodTextChangedHandler) {
+            getSkinnable().setOnInputMethodTextChanged(null);
+        }
+
         super.dispose();
     }
 

@@ -29,7 +29,6 @@
 #include "HTTPHeaderMap.h"
 #include <wtf/Box.h>
 #include <wtf/MonotonicTime.h>
-#include <wtf/persistence/PersistentCoder.h>
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(COCOA)
@@ -54,6 +53,7 @@ enum class PrivacyStance : uint8_t {
     Proxied,
     Failed,
     Direct,
+    FailedUnreachable,
 };
 
 constexpr MonotonicTime reusedTLSConnectionSentinel { MonotonicTime::fromRawSeconds(-1) };
@@ -64,8 +64,7 @@ class NetworkLoadMetrics {
     WTF_MAKE_FAST_ALLOCATED(NetworkLoadMetrics);
 public:
     WEBCORE_EXPORT NetworkLoadMetrics();
-
-    static const NetworkLoadMetrics& emptyMetrics();
+    WEBCORE_EXPORT static const NetworkLoadMetrics& emptyMetrics();
 
     WEBCORE_EXPORT NetworkLoadMetrics isolatedCopy() const;
 
@@ -74,6 +73,8 @@ public:
 
     bool isComplete() const { return complete; }
     void markComplete() { complete = true; }
+
+    void updateFromFinalMetrics(const NetworkLoadMetrics&);
 
     // https://www.w3.org/TR/resource-timing-2/#attribute-descriptions
     MonotonicTime redirectStart;
@@ -86,20 +87,21 @@ public:
     MonotonicTime requestStart;
     MonotonicTime responseStart;
     MonotonicTime responseEnd;
+    MonotonicTime workerStart;
 
     // ALPN Protocol ID: https://w3c.github.io/resource-timing/#bib-RFC7301
     String protocol;
 
     uint16_t redirectCount { 0 };
 
-    bool complete : 1;
-    bool cellular : 1;
-    bool expensive : 1;
-    bool constrained : 1;
-    bool multipath : 1;
-    bool isReusedConnection : 1;
-    bool failsTAOCheck : 1;
-    bool hasCrossOriginRedirect : 1;
+    bool complete : 1 { false };
+    bool cellular : 1 { false };
+    bool expensive : 1 { false };
+    bool constrained : 1 { false };
+    bool multipath : 1 { false };
+    bool isReusedConnection : 1 { false };
+    bool failsTAOCheck : 1 { false };
+    bool hasCrossOriginRedirect : 1 { false };
 
     PrivacyStance privacyStance { PrivacyStance::Unknown };
 
@@ -131,6 +133,8 @@ struct AdditionalNetworkLoadMetricsForWebInspector : public RefCounted<Additiona
     uint64_t requestHeaderBytesSent { std::numeric_limits<uint64_t>::max() };
     uint64_t responseHeaderBytesReceived { std::numeric_limits<uint64_t>::max() };
     uint64_t requestBodyBytesSent { std::numeric_limits<uint64_t>::max() };
+
+    bool isProxyConnection { false };
 private:
     AdditionalNetworkLoadMetricsForWebInspector() { }
 };
@@ -155,6 +159,7 @@ void NetworkLoadMetrics::encode(Encoder& encoder) const
     encoder << requestStart;
     encoder << responseStart;
     encoder << responseEnd;
+    encoder << workerStart;
 
     encoder << protocol;
 
@@ -187,19 +192,84 @@ std::optional<NetworkLoadMetrics> NetworkLoadMetrics::decode(Decoder& decoder)
     static_assert(Decoder::isIPCDecoder, "NetworkLoadMetrics should not be stored by the WTF::Persistence::Encoder");
 
     NetworkLoadMetrics metrics;
-    if (!(decoder.decode(metrics.redirectStart)
-        && decoder.decode(metrics.fetchStart)
-        && decoder.decode(metrics.domainLookupStart)
-        && decoder.decode(metrics.domainLookupEnd)
-        && decoder.decode(metrics.connectStart)
-        && decoder.decode(metrics.secureConnectionStart)
-        && decoder.decode(metrics.connectEnd)
-        && decoder.decode(metrics.requestStart)
-        && decoder.decode(metrics.responseStart)
-        && decoder.decode(metrics.responseEnd)
-        && decoder.decode(metrics.protocol)
-        && decoder.decode(metrics.redirectCount)))
+
+    std::optional<MonotonicTime> redirectStart;
+    decoder >> redirectStart;
+    if (!redirectStart)
         return std::nullopt;
+    metrics.redirectStart = WTFMove(*redirectStart);
+
+    std::optional<MonotonicTime> fetchStart;
+    decoder >> fetchStart;
+    if (!fetchStart)
+        return std::nullopt;
+    metrics.fetchStart = WTFMove(*fetchStart);
+
+    std::optional<MonotonicTime> domainLookupStart;
+    decoder >> domainLookupStart;
+    if (!domainLookupStart)
+        return std::nullopt;
+    metrics.domainLookupStart = WTFMove(*domainLookupStart);
+
+    std::optional<MonotonicTime> domainLookupEnd;
+    decoder >> domainLookupEnd;
+    if (!domainLookupEnd)
+        return std::nullopt;
+    metrics.domainLookupEnd = WTFMove(*domainLookupEnd);
+
+    std::optional<MonotonicTime> connectStart;
+    decoder >> connectStart;
+    if (!connectStart)
+        return std::nullopt;
+    metrics.connectStart = WTFMove(*connectStart);
+
+    std::optional<MonotonicTime> secureConnectionStart;
+    decoder >> secureConnectionStart;
+    if (!secureConnectionStart)
+        return std::nullopt;
+    metrics.secureConnectionStart = WTFMove(*secureConnectionStart);
+
+    std::optional<MonotonicTime> connectEnd;
+    decoder >> connectEnd;
+    if (!connectEnd)
+        return std::nullopt;
+    metrics.connectEnd = WTFMove(*connectEnd);
+
+    std::optional<MonotonicTime> requestStart;
+    decoder >> requestStart;
+    if (!requestStart)
+        return std::nullopt;
+    metrics.requestStart = WTFMove(*requestStart);
+
+    std::optional<MonotonicTime> responseStart;
+    decoder >> responseStart;
+    if (!responseStart)
+        return std::nullopt;
+    metrics.responseStart = WTFMove(*responseStart);
+
+    std::optional<MonotonicTime> responseEnd;
+    decoder >> responseEnd;
+    if (!responseEnd)
+        return std::nullopt;
+    metrics.responseEnd = WTFMove(*responseEnd);
+
+    std::optional<MonotonicTime> workerStart;
+    decoder >> workerStart;
+    if (!workerStart)
+        return std::nullopt;
+    metrics.workerStart = WTFMove(*workerStart);
+
+    std::optional<String> protocol;
+    decoder >> protocol;
+    if (!protocol)
+        return std::nullopt;
+    metrics.protocol = WTFMove(*protocol);
+
+    std::optional<uint16_t> redirectCount;
+    decoder >> redirectCount;
+    if (!redirectCount)
+        return std::nullopt;
+    metrics.redirectCount = WTFMove(*redirectCount);
 
     std::optional<bool> complete;
     decoder >> complete;
@@ -281,6 +351,8 @@ void AdditionalNetworkLoadMetricsForWebInspector::encode(Encoder& encoder) const
     encoder << requestHeaderBytesSent;
     encoder << responseHeaderBytesReceived;
     encoder << requestBodyBytesSent;
+
+    encoder << isProxyConnection;
 }
 
 template<class Decoder>
@@ -331,6 +403,11 @@ RefPtr<AdditionalNetworkLoadMetricsForWebInspector> AdditionalNetworkLoadMetrics
     if (!requestBodyBytesSent)
         return nullptr;
 
+    std::optional<bool> isProxyConnection;
+    decoder >> isProxyConnection;
+    if (!isProxyConnection)
+        return nullptr;
+
     auto decoded = AdditionalNetworkLoadMetricsForWebInspector::create();
     decoded->priority = WTFMove(*priority);
     decoded->remoteAddress = WTFMove(*remoteAddress);
@@ -341,32 +418,8 @@ RefPtr<AdditionalNetworkLoadMetricsForWebInspector> AdditionalNetworkLoadMetrics
     decoded->requestHeaderBytesSent = WTFMove(*requestHeaderBytesSent);
     decoded->responseHeaderBytesReceived = WTFMove(*responseHeaderBytesReceived);
     decoded->requestBodyBytesSent = WTFMove(*requestBodyBytesSent);
+    decoded->isProxyConnection = WTFMove(*isProxyConnection);
     return decoded;
 }
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::PrivacyStance> {
-    using values = EnumValues<
-        WebCore::PrivacyStance,
-        WebCore::PrivacyStance::Unknown,
-        WebCore::PrivacyStance::NotEligible,
-        WebCore::PrivacyStance::Proxied,
-        WebCore::PrivacyStance::Failed,
-        WebCore::PrivacyStance::Direct
-    >;
-};
-
-template<> struct EnumTraits<WebCore::NetworkLoadPriority> {
-    using values = EnumValues<
-        WebCore::NetworkLoadPriority,
-        WebCore::NetworkLoadPriority::Low,
-        WebCore::NetworkLoadPriority::Medium,
-        WebCore::NetworkLoadPriority::High,
-        WebCore::NetworkLoadPriority::Unknown
-    >;
-};
-
-}

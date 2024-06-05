@@ -35,7 +35,7 @@ public:
 
     inline SVGMarkerElement& markerElement() const;
 
-    void removeAllClientsFromCache(bool markForInvalidation = true) override;
+    void removeAllClientsFromCacheIfNeeded(bool markForInvalidation, WeakHashSet<RenderObject>* visitedRenderers) override;
     void removeClientFromCache(RenderElement&, bool markForInvalidation = true) override;
 
     void draw(PaintInfo&, const AffineTransform&);
@@ -54,7 +54,7 @@ public:
     FloatRect resourceBoundingBox(const RenderObject&) override { return FloatRect(); }
 
     FloatPoint referencePoint() const;
-    float angle() const;
+    std::optional<float> angle() const;
     inline SVGMarkerUnitsType markerUnits() const;
 
     RenderSVGResourceType resourceType() const override { return MarkerResourceType; }
@@ -62,7 +62,7 @@ public:
 private:
     void element() const = delete;
 
-    const char* renderName() const override { return "RenderSVGResourceMarker"; }
+    ASCIILiteral renderName() const override { return "RenderSVGResourceMarker"_s; }
 
     // Generates a transformation matrix usable to render marker content. Handles scaling the marker content
     // acording to SVGs markerUnits="strokeWidth" concept, when a strokeWidth value != -1 is passed in.

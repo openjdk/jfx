@@ -75,7 +75,7 @@ term:
     '\'                  n backslash
     '|'                  n  term                                    doOrOperator
     ')'                  n  pop                                     doCloseParen
-    eof                    term                                     doPatFinish
+    eof	                   term                                     doPatFinish
     default                errorDeath                               doRuleError
 
 
@@ -157,7 +157,7 @@ open-paren-lookbehind:
 #
 paren-comment:
     ')'                  n  pop
-    eof                   errorDeath                              doMismatchedParenErr
+    eof		                errorDeath                              doMismatchedParenErr
     default              n  paren-comment
 
 #
@@ -225,7 +225,7 @@ interval-open:
 
 interval-lower:
     digit_char           n  interval-lower                          doIntevalLowerDigit
-    ','              n  interval-upper
+    ','			         n  interval-upper
     '}'                  n  interval-type                           doIntervalSame             # {n}
     default                 errorDeath                              doIntervalError
 

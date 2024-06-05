@@ -57,15 +57,15 @@ void LegacyRenderSVGContainer::layout()
     // LegacyRenderSVGRoot disables paint offset cache for the SVG rendering tree.
     ASSERT(!view().frameView().layoutContext().isPaintOffsetCacheEnabled());
 
-    LayoutRepainter repainter(*this, SVGRenderSupport::checkForSVGRepaintDuringLayout(*this) || selfWillPaint());
+    LayoutRepainter repainter(*this, SVGRenderSupport::checkForSVGRepaintDuringLayout(*this) || selfWillPaint(), RepaintOutlineBounds::No);
 
-    // Allow RenderSVGViewportContainer to update its viewport.
+    // Allow LegacyRenderSVGViewportContainer to update its viewport.
     calcViewport();
 
-    // Allow RenderSVGTransformableContainer to update its transform.
+    // Allow LegacyRenderSVGTransformableContainer to update its transform.
     bool updatedTransform = calculateLocalTransform();
 
-    // RenderSVGViewportContainer needs to set the 'layout size changed' flag.
+    // LegacyRenderSVGViewportContainer needs to set the 'layout size changed' flag.
     determineIfLayoutSizeChanged();
 
     SVGRenderSupport::layoutChildren(*this, selfNeedsLayout() || SVGRenderSupport::filtersForceContainerLayout(*this));
@@ -79,6 +79,9 @@ void LegacyRenderSVGContainer::layout()
     if (m_needsBoundariesUpdate || updatedTransform) {
         updateCachedBoundaries();
         m_needsBoundariesUpdate = false;
+
+        // New bounds can affect transforms, so recompute them here if needed.
+        calculateLocalTransform();
 
         // If our bounds changed, notify the parents.
         LegacyRenderSVGModelObject::setNeedsBoundariesUpdate();
@@ -111,7 +114,7 @@ void LegacyRenderSVGContainer::paint(PaintInfo& paintInfo, const LayoutPoint&)
     {
         GraphicsContextStateSaver stateSaver(childPaintInfo.context());
 
-        // Let the RenderSVGViewportContainer subclass clip if necessary
+        // Let the LegacyRenderSVGViewportContainer subclass clip if necessary
         applyViewportClip(childPaintInfo);
 
         childPaintInfo.applyTransform(localToParentTransform());
@@ -142,7 +145,7 @@ void LegacyRenderSVGContainer::paint(PaintInfo& paintInfo, const LayoutPoint&)
 }
 
 // addFocusRingRects is called from paintOutline and needs to be in the same coordinates as the paintOuline call
-void LegacyRenderSVGContainer::addFocusRingRects(Vector<LayoutRect>& rects, const LayoutPoint&, const RenderLayerModelObject*)
+void LegacyRenderSVGContainer::addFocusRingRects(Vector<LayoutRect>& rects, const LayoutPoint&, const RenderLayerModelObject*) const
 {
     LayoutRect paintRectInParent = LayoutRect(localToParentTransform().mapRect(repaintRectInLocalCoordinates()));
     if (!paintRectInParent.isEmpty())
@@ -157,7 +160,7 @@ void LegacyRenderSVGContainer::updateCachedBoundaries()
 
 bool LegacyRenderSVGContainer::nodeAtFloatPoint(const HitTestRequest& request, HitTestResult& result, const FloatPoint& pointInParent, HitTestAction hitTestAction)
 {
-    // Give RenderSVGViewportContainer a chance to apply its viewport clip
+    // Give LegacyRenderSVGViewportContainer a chance to apply its viewport clip
     if (!pointIsInsideViewportClip(pointInParent))
         return false;
 

@@ -42,16 +42,16 @@ class MediaRecorderPrivateAVFImpl final
     : public MediaRecorderPrivate {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static std::unique_ptr<MediaRecorderPrivateAVFImpl> create(MediaStreamPrivate&, const MediaRecorderPrivateOptions&);
+    static RefPtr<MediaRecorderPrivateAVFImpl> create(MediaStreamPrivate&, const MediaRecorderPrivateOptions&);
     ~MediaRecorderPrivateAVFImpl();
 
 private:
     explicit MediaRecorderPrivateAVFImpl(Ref<MediaRecorderPrivateWriter>&&);
 
     // MediaRecorderPrivate
-    void videoSampleAvailable(MediaSample&, VideoSampleMetadata) final;
+    void videoFrameAvailable(VideoFrame&, VideoFrameTimeMetadata) final;
     void fetchData(FetchDataCallback&&) final;
-    void audioSamplesAvailable(const MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t) final;
+    void audioSamplesAvailable(const WTF::MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t) final;
     void startRecording(StartRecordingCallback&&) final;
     const String& mimeType() const final;
 
@@ -60,9 +60,8 @@ private:
     void resumeRecording(CompletionHandler<void()>&&) final;
 
     Ref<MediaRecorderPrivateWriter> m_writer;
-    RetainPtr<CVPixelBufferRef> m_blackFrame;
-    RetainPtr<CMFormatDescriptionRef> m_blackFrameDescription;
-    CAAudioStreamDescription m_description;
+    RefPtr<VideoFrame> m_blackFrame;
+    std::optional<CAAudioStreamDescription> m_description;
     std::unique_ptr<WebAudioBufferList> m_audioBuffer;
 };
 

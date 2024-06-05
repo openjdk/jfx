@@ -47,9 +47,9 @@ private:
 
     void finishParsingChildren() final;
     void childrenChanged(const ChildChange&) final;
-    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason = ModifiedDirectly) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason = AttributeModificationReason::Directly) final;
     void defaultEventHandler(Event&) final;
-    bool willRespondToMouseClickEvents() final;
+    bool willRespondToMouseClickEventsWithEditability(Editability) const final;
 
     void toggle();
     int getSelectedActionChildAndIndex(Element*& selectedChild);

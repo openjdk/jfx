@@ -25,9 +25,9 @@
 
 typedef (double or CSSNumericValue) CSSNumberish;
 
+// https://drafts.css-houdini.org/css-typed-om/#cssmathnegate
 [
-    EnabledAtRuntime=CSSTypedOMEnabled,
-    Conditional=CSS_TYPED_OM,
+    EnabledBySetting=CSSTypedOMEnabled,
     Exposed=(Window,Worker,PaintWorklet)
 ] interface CSSMathNegate : CSSMathValue {
     constructor(CSSNumberish arg);

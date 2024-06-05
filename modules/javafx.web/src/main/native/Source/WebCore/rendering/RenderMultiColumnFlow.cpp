@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2012 Apple Inc.  All rights reserved.
+ * Copyright (C) 2012-2023 Apple Inc.  All rights reserved.
+ * Copyright (C) 2014 Google Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,10 +28,13 @@
 #include "RenderMultiColumnFlow.h"
 
 #include "HitTestResult.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderIterator.h"
 #include "RenderLayoutState.h"
 #include "RenderMultiColumnSet.h"
 #include "RenderMultiColumnSpannerPlaceholder.h"
+#include "RenderStyleInlines.h"
 #include "RenderTreeBuilder.h"
 #include "RenderView.h"
 #include "TransformState.h"
@@ -49,9 +53,9 @@ RenderMultiColumnFlow::RenderMultiColumnFlow(Document& document, RenderStyle&& s
 
 RenderMultiColumnFlow::~RenderMultiColumnFlow() = default;
 
-const char* RenderMultiColumnFlow::renderName() const
+ASCIILiteral RenderMultiColumnFlow::renderName() const
 {
-    return "RenderMultiColumnFlowThread";
+    return "RenderMultiColumnFlowThread"_s;
 }
 
 RenderMultiColumnSet* RenderMultiColumnFlow::firstMultiColumnSet() const
@@ -100,7 +104,7 @@ RenderBox* RenderMultiColumnFlow::previousColumnSetOrSpannerSiblingOf(const Rend
     return nullptr;
 }
 
-RenderMultiColumnSpannerPlaceholder* RenderMultiColumnFlow::findColumnSpannerPlaceholder(RenderBox* spanner) const
+RenderMultiColumnSpannerPlaceholder* RenderMultiColumnFlow::findColumnSpannerPlaceholder(const RenderBox* spanner) const
 {
     return m_spannerMap->get(spanner).get();
 }
@@ -184,6 +188,13 @@ LayoutUnit RenderMultiColumnFlow::initialLogicalWidth() const
 
 void RenderMultiColumnFlow::setPageBreak(const RenderBlock* block, LayoutUnit offset, LayoutUnit spaceShortage)
 {
+    // Only positive values are interesting (and allowed) here. Zero space shortage may be reported
+    // when we're at the top of a column and the element has zero height. Ignore this, and also
+    // ignore any negative values, which may occur when we set an early break in order to honor
+    // widows in the next column.
+    if (spaceShortage <= 0)
+        return;
+
     if (auto* multicolSet = downcast<RenderMultiColumnSet>(fragmentAtBlockOffset(block, offset)))
         multicolSet->recordSpaceShortage(spaceShortage);
 }
@@ -208,7 +219,10 @@ RenderFragmentContainer* RenderMultiColumnFlow::fragmentAtBlockOffset(const Rend
     // Layout in progress. We are calculating the set heights as we speak, so the fragment range
     // information is not up-to-date.
 
-    RenderMultiColumnSet* columnSet = m_lastSetWorkedOn ? m_lastSetWorkedOn : firstMultiColumnSet();
+    if (m_lastSetWorkedOn && m_lastSetWorkedOn->fragmentedFlow() != this)
+        m_lastSetWorkedOn = nullptr;
+
+    RenderMultiColumnSet* columnSet = m_lastSetWorkedOn ? m_lastSetWorkedOn.get() : firstMultiColumnSet();
     if (!columnSet) {
         // If there's no set, bail. This multicol is empty or only consists of spanners. There
         // are no fragments.
@@ -309,13 +323,7 @@ void RenderMultiColumnFlow::mapAbsoluteToLocalPoint(OptionSet<MapCoordinatesMode
     // Once we have a good guess as to which fragment we hit tested through (and yes, this was just a heuristic, but it's
     // the best we could do), then we can map from the fragment into the flow thread.
     LayoutSize translationOffset = physicalTranslationFromFragmentToFlow(candidateColumnSet, candidatePoint) + candidateContainerOffset;
-    bool preserve3D = mode.contains(UseTransforms) && (parent()->style().preserves3D() || style().preserves3D());
-    if (mode.contains(UseTransforms) && shouldUseTransformFromContainer(parent())) {
-        TransformationMatrix t;
-        getTransformFromContainer(parent(), translationOffset, t);
-        transformState.applyTransform(t, preserve3D ? TransformState::AccumulateTransform : TransformState::FlattenTransform);
-    } else
-        transformState.move(translationOffset.width(), translationOffset.height(), preserve3D ? TransformState::AccumulateTransform : TransformState::FlattenTransform);
+    pushOntoTransformState(transformState, mode, nullptr, parent(), translationOffset, false);
 }
 
 LayoutSize RenderMultiColumnFlow::physicalTranslationFromFragmentToFlow(const RenderMultiColumnSet* columnSet, const LayoutPoint& physicalPoint) const

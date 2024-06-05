@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,8 +28,9 @@
 #if ENABLE(APPLE_PAY)
 
 #include "ApplePaySetupConfiguration.h"
+#include "JSDOMPromiseDeferred.h"
 #include <WebCore/ActiveDOMObject.h>
-#include <WebCore/JSDOMPromiseDeferred.h>
+#include <WebCore/JSDOMPromiseDeferredForward.h>
 #include <wtf/Forward.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -38,7 +39,6 @@
 namespace WebCore {
 
 class ApplePaySetupFeature;
-class DeferredPromise;
 class Document;
 
 class ApplePaySetup : public ActiveDOMObject, public RefCounted<ApplePaySetup> {

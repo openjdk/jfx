@@ -59,9 +59,6 @@ public:
     using EditingBehaviorType = WebCore::EditingBehaviorType;
     ExceptionOr<void> setEditingBehavior(EditingBehaviorType);
 
-    using PDFImageCachingPolicy = WebCore::PDFImageCachingPolicy;
-    ExceptionOr<void> setPDFImageCachingPolicy(PDFImageCachingPolicy);
-
     using StorageBlockingPolicy = WebCore::StorageBlockingPolicy;
     ExceptionOr<void> setStorageBlockingPolicy(StorageBlockingPolicy);
 
@@ -73,9 +70,6 @@ public:
 
     using FontLoadTimingOverride = WebCore::FontLoadTimingOverride;
     ExceptionOr<void> setFontLoadTimingOverride(FontLoadTimingOverride);
-
-    using FrameFlatteningValue = FrameFlattening;
-    ExceptionOr<void> setFrameFlattening(FrameFlatteningValue);
 
     using ForcedAccessibilityValue = WebCore::ForcedAccessibilityValue;
     ForcedAccessibilityValue forcedColorsAreInvertedAccessibilityValue() const;
@@ -89,14 +83,15 @@ public:
     ForcedAccessibilityValue forcedSupportsHighDynamicRangeValue() const;
     void setForcedSupportsHighDynamicRangeValue(ForcedAccessibilityValue);
 
-    // RuntimeEnabledFeatures.
+    ExceptionOr<void> setAllowAnimationControlsOverride(bool);
+
+    // DeprecatedGlobalSettings.
     ExceptionOr<void> setFetchAPIKeepAliveEnabled(bool);
     ExceptionOr<void> setCustomPasteboardDataEnabled(bool);
 
     bool vp9DecoderEnabled() const;
     bool mediaSourceInlinePaintingEnabled() const;
 
-    // DeprecatedGlobalSettings.
     ExceptionOr<void> setShouldManageAudioSessionCategory(bool);
 
     // CaptionUserPreferences.
@@ -154,19 +149,15 @@ private:
         WebCore::StorageBlockingPolicy m_storageBlockingPolicy;
         WebCore::UserInterfaceDirectionPolicy m_userInterfaceDirectionPolicy;
         TextDirection m_systemLayoutDirection;
-        WebCore::PDFImageCachingPolicy m_pdfImageCachingPolicy;
         WebCore::ForcedAccessibilityValue m_forcedColorsAreInvertedAccessibilityValue;
         WebCore::ForcedAccessibilityValue m_forcedDisplayIsMonochromeAccessibilityValue;
         WebCore::ForcedAccessibilityValue m_forcedPrefersContrastAccessibilityValue;
         WebCore::ForcedAccessibilityValue m_forcedPrefersReducedMotionAccessibilityValue;
         WebCore::FontLoadTimingOverride m_fontLoadTimingOverride;
-        WebCore::FrameFlattening m_frameFlattening;
-
-        // RuntimeEnabledFeatures
-        bool m_fetchAPIKeepAliveAPIEnabled;
-        bool m_customPasteboardDataEnabled;
 
         // DeprecatedGlobalSettings
+        bool m_fetchAPIKeepAliveAPIEnabled;
+        bool m_customPasteboardDataEnabled;
         bool m_originalMockScrollbarsEnabled;
 #if USE(AUDIO_SESSION)
         bool m_shouldManageAudioSessionCategory;
@@ -174,12 +165,9 @@ private:
 
         // PlatformMediaSessionManager
         bool m_shouldDeactivateAudioSession;
-
-        // RenderTheme/FontCache
-        bool m_shouldMockBoldSystemFontForAccessibility;
     };
 
-    Page* m_page;
+    WeakPtr<Page> m_page;
     Backup m_backup;
 };
 

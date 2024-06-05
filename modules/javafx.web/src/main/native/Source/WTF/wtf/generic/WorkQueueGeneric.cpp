@@ -45,13 +45,15 @@ WorkQueueBase::WorkQueueBase(RunLoop& runLoop)
 
 void WorkQueueBase::platformInitialize(const char* name, Type, QOS qos)
 {
+    m_runLoop = RunLoop::create(name, ThreadType::Unknown, qos).ptr();
+#if ASSERT_ENABLED
     BinarySemaphore semaphore;
-    Thread::create(name, [&] {
-        m_runLoop = &RunLoop::current();
+    m_runLoop->dispatch([&] {
+        m_threadID = Thread::current().uid();
         semaphore.signal();
-        m_runLoop->run();
-    }, ThreadType::Unknown, qos)->detach();
+    });
     semaphore.wait();
+#endif
 }
 
 void WorkQueueBase::platformInvalidate()
@@ -107,5 +109,12 @@ Ref<WorkQueue> WorkQueue::constructMainWorkQueue()
 {
     return adoptRef(*new WorkQueue(RunLoop::main()));
 }
+
+#if ASSERT_ENABLED
+ThreadLikeAssertion WorkQueue::threadLikeAssertion() const
+{
+    return createThreadLikeAssertion(m_threadID);
+}
+#endif
 
 }

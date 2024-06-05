@@ -29,39 +29,21 @@
 #include "Logging.h"
 #include <wtf/Deque.h>
 #include <wtf/URL.h>
+#include <wtf/URLParser.h>
 #include <wtf/text/TextStream.h>
 
 
 namespace WebCore {
 
-FragmentDirectiveParser::FragmentDirectiveParser(const URL& url)
+FragmentDirectiveParser::FragmentDirectiveParser(StringView fragmentDirective)
 {
-    ASCIILiteral fragmentDirectiveDelimiter = ":~:"_s;
-    auto fragmentIdentifier = url.fragmentIdentifier();
-
-    if (fragmentIdentifier.isEmpty()) {
-        m_remainingURLFragment = fragmentIdentifier;
-        return;
-    }
-
-    auto fragmentDirectiveStart = fragmentIdentifier.find(StringView(fragmentDirectiveDelimiter));
-
-    if (fragmentDirectiveStart == notFound) {
-        m_remainingURLFragment = fragmentIdentifier;
-        return;
-    }
-
-    auto fragmentDirective = fragmentIdentifier.substring(fragmentDirectiveStart + fragmentDirectiveDelimiter.length());
-
-    // FIXME: this needs to be set on the original URL
-    m_remainingURLFragment = fragmentIdentifier.left(fragmentDirectiveStart);
-
     parseFragmentDirective(fragmentDirective);
 
     m_fragmentDirective = fragmentDirective;
     m_isValid = true;
 }
 
+// https://wicg.github.io/scroll-to-text-fragment/#parse-a-text-directive
 void FragmentDirectiveParser::parseFragmentDirective(StringView fragmentDirective)
 {
     LOG_WITH_STREAM(TextFragment, stream << " parseFragmentDirective: ");
@@ -91,7 +73,6 @@ void FragmentDirectiveParser::parseFragmentDirective(StringView fragmentDirectiv
         }
         if (containsEmptyToken)
             continue;
-        // FIXME: add decoding for % encoded strings.
         if (tokens.size() > 4 || tokens.size() < 1) {
             LOG_WITH_STREAM(TextFragment, stream << " wrong number of tokens ");
             continue;
@@ -100,14 +81,20 @@ void FragmentDirectiveParser::parseFragmentDirective(StringView fragmentDirectiv
         ParsedTextDirective parsedTextDirective;
 
         if (tokens.first().endsWith('-') && tokens.first().length() > 1) {
-            tokens.first().truncate(tokens.first().length() - 2);
-            parsedTextDirective.prefix = tokens.first();
-            tokens.removeFirst();
+            auto takenFirstToken = tokens.takeFirst();
+            if (auto prefix = WTF::URLParser::formURLDecode(StringView(takenFirstToken).left(takenFirstToken.length() - 1)))
+                parsedTextDirective.prefix = WTFMove(*prefix);
+            else
+                LOG_WITH_STREAM(TextFragment, stream << " could not decode prefix ");
         }
 
         if (tokens.last().startsWith('-') && tokens.last().length() > 1) {
-            tokens.last().remove(0);
-            parsedTextDirective.suffix = tokens.takeLast();
+            tokens.last() = tokens.last().substring(1);
+
+            if (auto suffix = WTF::URLParser::formURLDecode(tokens.takeLast()))
+                parsedTextDirective.suffix = WTFMove(*suffix);
+            else
+                LOG_WITH_STREAM(TextFragment, stream << " could not decode suffix ");
         }
 
         if (tokens.size() != 1 && tokens.size() != 2) {
@@ -115,10 +102,17 @@ void FragmentDirectiveParser::parseFragmentDirective(StringView fragmentDirectiv
             continue;
         }
 
-        parsedTextDirective.textStart = tokens.first();
+        if (auto start = WTF::URLParser::formURLDecode(tokens.first()))
+            parsedTextDirective.textStart = WTFMove(*start);
+        else
+            LOG_WITH_STREAM(TextFragment, stream << " could not decode start ");
 
-        if (tokens.size() == 2)
-            parsedTextDirective.textEnd = tokens.last();
+        if (tokens.size() == 2) {
+            if (auto end = WTF::URLParser::formURLDecode(tokens.last()))
+                parsedTextDirective.textEnd = WTFMove(*end);
+            else
+                LOG_WITH_STREAM(TextFragment, stream << " could not decode end ");
+        }
 
         parsedTextDirectives.append(parsedTextDirective);
     }

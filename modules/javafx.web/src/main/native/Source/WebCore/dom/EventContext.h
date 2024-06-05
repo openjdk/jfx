@@ -64,7 +64,7 @@ public:
     void setRelatedTarget(Node*);
 
 #if ENABLE(TOUCH_EVENTS)
-    enum TouchListType { Touches, TargetTouches, ChangedTouches };
+    enum class TouchListType : uint8_t { Touches, TargetTouches, ChangedTouches };
     TouchList& touchList(TouchListType);
 #endif
 
@@ -91,6 +91,7 @@ private:
     int m_closedShadowDepth { 0 };
     bool m_currentTargetIsInShadowTree { false };
     bool m_contextNodeIsFormElement { false };
+    bool m_relatedTargetIsSet { false };
     Type m_type { Type::Normal };
 };
 
@@ -114,7 +115,6 @@ inline EventContext::EventContext(Type type, Node* node, RefPtr<EventTarget>&& c
 inline EventContext::EventContext(Type type, Node* node, EventTarget* currentTarget, EventTarget* origin, int closedShadowDepth)
     : EventContext(type, node, RefPtr { currentTarget }, origin, closedShadowDepth)
 {
-    ASSERT(!is<Node>(currentTarget));
 }
 
 // This variant avoids calling EventTarget::ref() which is a virtual function call.
@@ -128,6 +128,7 @@ inline void EventContext::setRelatedTarget(Node* relatedTarget)
 {
     ASSERT(!isUnreachableNode(relatedTarget));
     m_relatedTarget = relatedTarget;
+    m_relatedTargetIsSet = true;
 }
 
 #if ENABLE(TOUCH_EVENTS)
@@ -135,11 +136,11 @@ inline void EventContext::setRelatedTarget(Node* relatedTarget)
 inline TouchList& EventContext::touchList(TouchListType type)
 {
     switch (type) {
-    case Touches:
+    case TouchListType::Touches:
         return *m_touches;
-    case TargetTouches:
+    case TouchListType::TargetTouches:
         return *m_targetTouches;
-    case ChangedTouches:
+    case TouchListType::ChangedTouches:
         return *m_changedTouches;
     }
     ASSERT_NOT_REACHED();

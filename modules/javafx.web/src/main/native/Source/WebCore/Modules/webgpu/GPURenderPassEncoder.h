@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,9 +28,9 @@
 #include "GPUColorDict.h"
 #include "GPUIndexFormat.h"
 #include "GPUIntegralTypes.h"
+#include "WebGPURenderPassEncoder.h"
 #include <JavaScriptCore/Uint32Array.h>
 #include <optional>
-#include <pal/graphics/WebGPU/WebGPURenderPassEncoder.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -47,7 +47,7 @@ class GPURenderPipeline;
 
 class GPURenderPassEncoder : public RefCounted<GPURenderPassEncoder> {
 public:
-    static Ref<GPURenderPassEncoder> create(Ref<PAL::WebGPU::RenderPassEncoder>&& backing)
+    static Ref<GPURenderPassEncoder> create(Ref<WebGPU::RenderPassEncoder>&& backing)
     {
         return adoptRef(*new GPURenderPassEncoder(WTFMove(backing)));
     }
@@ -57,15 +57,15 @@ public:
 
     void setPipeline(const GPURenderPipeline&);
 
-    void setIndexBuffer(const GPUBuffer&, GPUIndexFormat, GPUSize64 offset, std::optional<GPUSize64>);
-    void setVertexBuffer(GPUIndex32 slot, const GPUBuffer&, GPUSize64 offset, std::optional<GPUSize64>);
+    void setIndexBuffer(const GPUBuffer&, GPUIndexFormat, std::optional<GPUSize64> offset, std::optional<GPUSize64>);
+    void setVertexBuffer(GPUIndex32 slot, const GPUBuffer&, std::optional<GPUSize64> offset, std::optional<GPUSize64>);
 
-    void draw(GPUSize32 vertexCount, GPUSize32 instanceCount,
-        GPUSize32 firstVertex, GPUSize32 firstInstance);
-    void drawIndexed(GPUSize32 indexCount, GPUSize32 instanceCount,
-        GPUSize32 firstIndex,
-        GPUSignedOffset32 baseVertex,
-        GPUSize32 firstInstance);
+    void draw(GPUSize32 vertexCount, std::optional<GPUSize32> instanceCount,
+        std::optional<GPUSize32> firstVertex, std::optional<GPUSize32> firstInstance);
+    void drawIndexed(GPUSize32 indexCount, std::optional<GPUSize32> instanceCount,
+        std::optional<GPUSize32> firstIndex,
+        std::optional<GPUSignedOffset32> baseVertex,
+        std::optional<GPUSize32> firstInstance);
 
     void drawIndirect(const GPUBuffer& indirectBuffer, GPUSize64 indirectOffset);
     void drawIndexedIndirect(const GPUBuffer& indirectBuffer, GPUSize64 indirectOffset);
@@ -98,16 +98,16 @@ public:
     void executeBundles(Vector<RefPtr<GPURenderBundle>>&&);
     void end();
 
-    PAL::WebGPU::RenderPassEncoder& backing() { return m_backing; }
-    const PAL::WebGPU::RenderPassEncoder& backing() const { return m_backing; }
+    WebGPU::RenderPassEncoder& backing() { return m_backing; }
+    const WebGPU::RenderPassEncoder& backing() const { return m_backing; }
 
 private:
-    GPURenderPassEncoder(Ref<PAL::WebGPU::RenderPassEncoder>&& backing)
+    GPURenderPassEncoder(Ref<WebGPU::RenderPassEncoder>&& backing)
         : m_backing(WTFMove(backing))
     {
     }
 
-    Ref<PAL::WebGPU::RenderPassEncoder> m_backing;
+    Ref<WebGPU::RenderPassEncoder> m_backing;
 };
 
 }

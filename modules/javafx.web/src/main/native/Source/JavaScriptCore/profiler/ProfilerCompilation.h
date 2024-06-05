@@ -47,6 +47,7 @@ namespace Profiler {
 
 class Bytecodes;
 class Database;
+class Dumper;
 
 // Represents the act of executing some bytecodes in some engine, and does
 // all of the counting for those executions.
@@ -70,7 +71,7 @@ public:
     void addDescription(const CompiledBytecode&);
     void addDescription(const OriginStack&, const CString& description);
     ExecutionCounter* executionCounterFor(const OriginStack&);
-    void addOSRExitSite(const Vector<MacroAssemblerCodePtr<JSInternalPtrTag>>& codeAddresses);
+    void addOSRExitSite(const Vector<CodePtr<JSInternalPtrTag>>& codeAddresses);
     OSRExit* addOSRExit(unsigned id, const OriginStack&, ExitKind, bool isWatchpoint);
 
     void setJettisonReason(JettisonReason, const FireDetail*);
@@ -78,7 +79,7 @@ public:
     UID uid() const { return m_uid; }
 
     void dump(PrintStream&) const;
-    JSValue toJS(JSGlobalObject*) const;
+    Ref<JSON::Value> toJSON(Dumper&) const;
 
 private:
     CompilationKind m_kind;

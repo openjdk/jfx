@@ -31,19 +31,18 @@
 
 namespace JSC {
 
-BrandedStructure::BrandedStructure(VM& vm, Structure* previous, UniquedStringImpl* brandUid, DeferredStructureTransitionWatchpointFire* deferred)
-    : Structure(vm, previous, deferred)
+BrandedStructure::BrandedStructure(VM& vm, Structure* previous, UniquedStringImpl* brandUid)
+    : Structure(vm, previous)
     , m_brand(brandUid)
+    , m_parentBrand(previous->isBrandedStructure() ? previous : nullptr, WriteBarrierEarlyInit)
 {
-    if (previous->isBrandedStructure())
-        m_parentBrand.set(vm, this, jsCast<BrandedStructure*>(previous));
     this->setIsBrandedStructure(true);
 }
 
-BrandedStructure::BrandedStructure(VM& vm, BrandedStructure* previous, DeferredStructureTransitionWatchpointFire* deferred)
-    : Structure(vm, previous, deferred)
+BrandedStructure::BrandedStructure(VM& vm, BrandedStructure* previous)
+    : Structure(vm, previous)
     , m_brand(previous->m_brand)
-    , m_parentBrand(vm, this, previous->m_parentBrand.get(), WriteBarrier<BrandedStructure>::MayBeNull)
+    , m_parentBrand(previous->m_parentBrand.get(), WriteBarrierEarlyInit)
 {
     this->setIsBrandedStructure(true);
 }
@@ -51,8 +50,8 @@ BrandedStructure::BrandedStructure(VM& vm, BrandedStructure* previous, DeferredS
 Structure* BrandedStructure::create(VM& vm, Structure* previous, UniquedStringImpl* brandUid, DeferredStructureTransitionWatchpointFire* deferred)
 {
     ASSERT(vm.structureStructure);
-    BrandedStructure* newStructure = new (NotNull, allocateCell<BrandedStructure>(vm)) BrandedStructure(vm, previous, brandUid, deferred);
-    newStructure->finishCreation(vm, previous);
+    BrandedStructure* newStructure = new (NotNull, allocateCell<BrandedStructure>(vm)) BrandedStructure(vm, previous, brandUid);
+    newStructure->finishCreation(vm, previous, deferred);
     ASSERT(newStructure->type() == StructureType);
     return newStructure;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,9 +26,9 @@
 #include "config.h"
 #include "InspectorFrontendAPIDispatcher.h"
 
-#include "Frame.h"
 #include "InspectorController.h"
 #include "JSDOMPromise.h"
+#include "LocalFrame.h"
 #include "Page.h"
 #include "ScriptController.h"
 #include "ScriptDisallowedScope.h"
@@ -107,7 +107,11 @@ JSDOMGlobalObject* InspectorFrontendAPIDispatcher::frontendGlobalObject()
     if (!m_frontendPage)
         return nullptr;
 
-    return m_frontendPage->mainFrame().script().globalObject(mainThreadNormalWorld());
+    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_frontendPage->mainFrame());
+    if (!localMainFrame)
+        return nullptr;
+
+    return localMainFrame->script().globalObject(mainThreadNormalWorld());
 }
 
 static String expressionForEvaluatingCommand(const String& command, Vector<Ref<JSON::Value>>&& arguments)
@@ -178,8 +182,7 @@ void InspectorFrontendAPIDispatcher::evaluateOrQueueExpression(const String& exp
 
     JSC::JSLockHolder lock(globalObject);
 
-    auto& vm = globalObject->vm();
-    auto* castedPromise = JSC::jsDynamicCast<JSC::JSPromise*>(vm, result.value());
+    auto* castedPromise = JSC::jsDynamicCast<JSC::JSPromise*>(result.value());
     if (!castedPromise) {
         // Simple case: result is NOT a promise, just return the JSValue.
         optionalResultHandler(result);
@@ -259,8 +262,10 @@ ValueOrException InspectorFrontendAPIDispatcher::evaluateExpression(const String
     ASSERT(!m_suspended);
     ASSERT(m_queuedEvaluations.isEmpty());
 
-    JSC::SuspendExceptionScope scope(&m_frontendPage->inspectorController().vm());
-    return m_frontendPage->mainFrame().script().evaluateInWorld(ScriptSourceCode(expression), mainThreadNormalWorld());
+    JSC::SuspendExceptionScope scope(m_frontendPage->inspectorController().vm());
+
+    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_frontendPage->mainFrame());
+    return localMainFrame->script().evaluateInWorld(ScriptSourceCode(expression), mainThreadNormalWorld());
 }
 
 void InspectorFrontendAPIDispatcher::evaluateExpressionForTesting(const String& expression)

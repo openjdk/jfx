@@ -29,6 +29,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "WebCoreOpaqueRoot.h"
 #include <wtf/Observer.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
@@ -38,7 +39,7 @@ namespace WebCore {
 
 class TrackBase;
 
-class TrackListBase : public RefCounted<TrackListBase>, public EventTargetWithInlineData, public ActiveDOMObject {
+class TrackListBase : public RefCounted<TrackListBase>, public EventTarget, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(TrackListBase);
 public:
     virtual ~TrackListBase();
@@ -56,9 +57,9 @@ public:
     using RefCounted<TrackListBase>::deref;
     ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
 
-    void* opaqueRoot();
+    WebCoreOpaqueRoot opaqueRoot();
 
-    using OpaqueRootObserver = WTF::Observer<void*()>;
+    using OpaqueRootObserver = WTF::Observer<WebCoreOpaqueRoot()>;
     void setOpaqueRootObserver(const OpaqueRootObserver& observer) { m_opaqueRootObserver = observer; };
 
     // Needs to be public so tracks can call it
@@ -87,7 +88,7 @@ private:
     bool m_isChangeEventScheduled { false };
 };
 
-inline void* root(TrackListBase* trackList)
+inline WebCoreOpaqueRoot root(TrackListBase* trackList)
 {
     return trackList->opaqueRoot();
 }

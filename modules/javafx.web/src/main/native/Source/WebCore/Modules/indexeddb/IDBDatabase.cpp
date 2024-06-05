@@ -45,6 +45,13 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(IDBDatabase);
 
+static Vector<String> sortAndRemoveDuplicates(Vector<String>&& vector)
+{
+    std::sort(vector.begin(), vector.end(), WTF::codePointCompareLessThan);
+    removeRepeatedElements(vector);
+    return WTFMove(vector);
+}
+
 Ref<IDBDatabase> IDBDatabase::create(ScriptExecutionContext& context, IDBClient::IDBConnectionProxy& connectionProxy, const IDBResultData& resultData)
 {
     auto database = adoptRef(*new IDBDatabase(context, connectionProxy, resultData));
@@ -102,9 +109,7 @@ Ref<DOMStringList> IDBDatabase::objectStoreNames() const
 {
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
-    auto objectStoreNames = DOMStringList::create();
-    for (auto& name : m_info.objectStoreNames())
-        objectStoreNames->append(name);
+    auto objectStoreNames = DOMStringList::create(m_info.objectStoreNames());
     objectStoreNames->sort();
     return objectStoreNames;
 }
@@ -175,18 +180,12 @@ ExceptionOr<Ref<IDBTransaction>> IDBDatabase::transaction(StringOrVectorOfString
         return Exception { InvalidStateError, "Failed to execute 'transaction' on 'IDBDatabase': The database connection is closing."_s };
 
     Vector<String> objectStores;
-    if (std::holds_alternative<Vector<String>>(storeNames))
-        objectStores = WTFMove(std::get<Vector<String>>(storeNames));
-    else
-        objectStores.append(WTFMove(std::get<String>(storeNames)));
-
-    // It is valid for javascript to pass in a list of object store names with the same name listed twice,
-    // so we need to put them all in a set to get a unique list.
-    HashSet<String> objectStoreSet;
-    for (auto& objectStore : objectStores)
-        objectStoreSet.add(objectStore);
-
-    objectStores = copyToVector(objectStoreSet);
+    if (std::holds_alternative<Vector<String>>(storeNames)) {
+        // It is valid for JavaScript to pass in a list of object store names with the same name listed twice,
+        // so we need to drop the duplicates.
+        objectStores = sortAndRemoveDuplicates(std::get<Vector<String>>(WTFMove(storeNames)));
+    } else
+        objectStores = { std::get<String>(WTFMove(storeNames)) };
 
     for (auto& objectStoreName : objectStores) {
         if (m_info.hasObjectStore(objectStoreName))
@@ -272,13 +271,13 @@ void IDBDatabase::connectionToServerLost(const IDBError& error)
         transaction->connectionClosedFromServer(error);
 
     auto errorEvent = Event::create(m_eventNames.errorEvent, Event::CanBubble::Yes, Event::IsCancelable::No);
-    errorEvent->setTarget(this);
+    errorEvent->setTarget(Ref { * this });
 
     if (scriptExecutionContext())
         queueTaskToDispatchEvent(*this, TaskSource::DatabaseAccess, WTFMove(errorEvent));
 
     auto closeEvent = Event::create(m_eventNames.closeEvent, Event::CanBubble::Yes, Event::IsCancelable::No);
-    closeEvent->setTarget(this);
+    closeEvent->setTarget(Ref { * this });
 
     if (scriptExecutionContext())
         queueTaskToDispatchEvent(*this, TaskSource::DatabaseAccess, WTFMove(closeEvent));
@@ -434,7 +433,7 @@ void IDBDatabase::didCommitOrAbortTransaction(IDBTransaction& transaction)
     if (m_abortingTransactions.contains(transaction.info().identifier()))
         ++count;
 
-    ASSERT(count == 1);
+    ASSERT_UNUSED(count, count == 1);
 #endif
 
     m_activeTransactions.remove(transaction.info().identifier());
@@ -468,7 +467,7 @@ void IDBDatabase::dispatchEvent(Event& event)
 
     Ref protectedThis { *this };
 
-    EventTargetWithInlineData::dispatchEvent(event);
+    EventTarget::dispatchEvent(event);
 
     if (event.isVersionChangeEvent() && event.type() == m_eventNames.versionchangeEvent)
         m_connectionProxy->didFireVersionChangeEvent(m_databaseConnectionIdentifier, downcast<IDBVersionChangeEvent>(event).requestIdentifier());

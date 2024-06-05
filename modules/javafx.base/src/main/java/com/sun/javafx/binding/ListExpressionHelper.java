@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,7 +50,7 @@ import static javafx.collections.ListChangeListener.Change;
 public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
 
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------------------------------------------
     // Static methods
 
     public static <E> ListExpressionHelper<E> addListener(ListExpressionHelper<E> helper, ObservableListValue<E> observable, InvalidationListener listener) {
@@ -108,7 +108,7 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------------------------------------------
     // Common implementations
 
     protected final ObservableListValue<E> observable;
@@ -129,7 +129,7 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
     protected abstract void fireValueChangedEvent();
     protected abstract void fireValueChangedEvent(Change<? extends E> change);
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------------------------------------------
     // Implementations
 
     private static class SingleInvalidation<E> extends ListExpressionHelper<E> {
@@ -554,7 +554,7 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
                         final ObservableList<E> safeOldValue = (oldValue == null)?
                                 FXCollections.<E>emptyObservableList()
                                 : FXCollections.unmodifiableObservableList(oldValue);
-                        change = new NonIterableChange.GenericAddRemoveChange(0, safeSize, safeOldValue, observable);
+                        change = new NonIterableChange.GenericAddRemoveChange<>(0, safeSize, safeOldValue, observable);
                     }
                     notifyListeners(oldValue, change, false);
                 } else {

@@ -40,6 +40,11 @@ public:
     bool characterStartsNewTextChunk(int position) const;
     SVGTextLayoutAttributes* layoutAttributes() { return &m_layoutAttributes; }
 
+    // computeScalingFactor() returns the font-size scaling factor, ignoring the text-rendering mode.
+    // scalingFactor() takes it into account, and thus returns 1 whenever text-rendering is set to 'geometricPrecision'.
+    // Therefore if you need access to the vanilla scaling factor, use this method directly (e.g. for non-scaling-stroke).
+    static float computeScalingFactorForRenderer(const RenderObject&);
+
     float scalingFactor() const { return m_scalingFactor; }
     const FontCascade& scaledFont() const { return m_scaledFont; }
     void updateScaledFont();
@@ -51,7 +56,7 @@ public:
     SVGInlineTextBox* firstTextBox() const;
 
 private:
-    const char* renderName() const override { return "RenderSVGInlineText"; }
+    ASCIILiteral renderName() const override { return "RenderSVGInlineText"_s; }
 
     String originalText() const override;
     void setRenderedText(const String&) override;

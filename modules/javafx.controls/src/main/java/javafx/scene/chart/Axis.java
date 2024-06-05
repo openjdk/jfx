@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -75,6 +75,8 @@ import javafx.util.Duration;
  * Some examples of concrete subclasses include {@link NumberAxis} whose axis plots data
  * in numbers and {@link CategoryAxis} whose values / ticks represent string
  * categories along its axis.
+ *
+ * @param<T> the axis data type
  * @since JavaFX 2.0
  */
 public abstract class Axis<T> extends Region {
@@ -977,6 +979,8 @@ public abstract class Axis<T> extends Region {
     /**
      * TickMark represents the label text, its associated properties for each tick
      * along the Axis.
+     *
+     * @param <T> the axis data type
      * @since JavaFX 2.0
      */
     public static final class TickMark<T> {

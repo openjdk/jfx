@@ -97,7 +97,9 @@ public:
 
     static Prototype* createPrototype(JSC::VM& vm, JSC::JSGlobalObject& globalObject)
     {
-        return Prototype::create(vm, &globalObject, Prototype::createStructure(vm, &globalObject, globalObject.iteratorPrototype()));
+        auto* structure = Prototype::createStructure(vm, &globalObject, globalObject.iteratorPrototype());
+        structure->setMayBePrototype(true);
+        return Prototype::create(vm, &globalObject, structure);
     }
 
     JSC::JSValue next(JSC::JSGlobalObject&);
@@ -107,7 +109,7 @@ public:
 protected:
     JSDOMIteratorBase(JSC::Structure* structure, JSWrapper& iteratedObject, IterationKind kind)
         : Base(structure, *iteratedObject.globalObject())
-        , m_iterator(iteratedObject.wrapped().createIterator())
+        , m_iterator(iteratedObject.wrapped().createIterator(iteratedObject.globalObject()->scriptExecutionContext()))
         , m_kind(kind)
     {
     }
@@ -206,11 +208,11 @@ template<typename JSIterator> JSC::JSValue iteratorForEach(JSC::JSGlobalObject& 
     JSC::JSValue callback = callFrame.argument(0);
     JSC::JSValue thisValue = callFrame.argument(1);
 
-    auto callData = JSC::getCallData(JSC::getVM(&lexicalGlobalObject), callback);
+    auto callData = JSC::getCallData(callback);
     if (callData.type == JSC::CallData::Type::None)
         return throwTypeError(&lexicalGlobalObject, scope, "Cannot call callback"_s);
 
-    auto iterator = thisObject.wrapped().createIterator();
+    auto iterator = thisObject.wrapped().createIterator(JSC::jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject)->scriptExecutionContext());
     while (auto value = iterator.next()) {
         JSC::MarkedArgumentBuffer arguments;
         appendForEachArguments<JSIterator>(lexicalGlobalObject, *thisObject.globalObject(), arguments, value);
@@ -251,7 +253,7 @@ JSC::EncodedJSValue JSC_HOST_CALL_ATTRIBUTES JSDOMIteratorPrototype<JSWrapper, I
     JSC::VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto iterator = JSC::jsDynamicCast<JSDOMIteratorBase<JSWrapper, IteratorTraits>*>(vm, callFrame->thisValue());
+    auto iterator = JSC::jsDynamicCast<JSDOMIteratorBase<JSWrapper, IteratorTraits>*>(callFrame->thisValue());
     if (!iterator)
         return JSC::JSValue::encode(throwTypeError(globalObject, scope, "Cannot call next() on a non-Iterator object"_s));
 
@@ -262,9 +264,9 @@ template<typename JSWrapper, typename IteratorTraits>
 void JSDOMIteratorPrototype<JSWrapper, IteratorTraits>::finishCreation(JSC::VM& vm, JSC::JSGlobalObject* globalObject)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 
-    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->next, next, 0, 0, JSC::NoIntrinsic);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->next, next, 0, 0, JSC::ImplementationVisibility::Public);
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 

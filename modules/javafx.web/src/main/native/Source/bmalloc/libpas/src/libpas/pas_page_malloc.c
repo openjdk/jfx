@@ -54,6 +54,8 @@ bool pas_page_malloc_decommit_zero_fill = false;
 
 #if PAS_OS(DARWIN)
 #define PAS_VM_TAG VM_MAKE_TAG(VM_MEMORY_TCMALLOC)
+#elif PAS_PLATFORM(PLAYSTATION) && defined(VM_MAKE_TAG)
+#define PAS_VM_TAG VM_MAKE_TAG(VM_TYPE_USER1)
 #else
 #define PAS_VM_TAG -1
 #endif
@@ -210,6 +212,10 @@ static void commit_impl(void* ptr, size_t size, bool do_mprotect, pas_mmap_capab
 
 #if PAS_OS(LINUX)
     PAS_SYSCALL(madvise(ptr, size, MADV_DODUMP));
+#elif PAS_PLATFORM(PLAYSTATION)
+    // We don't need to call madvise to map page.
+#elif PAS_OS(FREEBSD)
+    PAS_SYSCALL(madvise(ptr, size, MADV_NORMAL));
 #endif
 }
 

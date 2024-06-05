@@ -27,10 +27,9 @@
 
 #if USE(LIBEPOXY)
 #include <epoxy/gl.h>
-#elif USE(OPENGL_ES)
-#include <GLES2/gl2.h>
 #else
-#include "OpenGLShims.h"
+#include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
 #endif
 
 #ifndef GL_BGRA

@@ -27,54 +27,16 @@
 
 #if ENABLE(APPLE_PAY) && ENABLE(PAYMENT_REQUEST)
 
+#include "ApplePayPaymentOrderDetails.h"
 #include <optional>
-
-#if USE(APPLE_INTERNAL_SDK)
-#include <WebKitAdditions/ApplePayPaymentCompleteDetailsAdditions.h>
-#endif
 
 namespace WebCore {
 
 struct ApplePayPaymentCompleteDetails {
-#if defined(ApplePayPaymentCompleteDetailsAdditions_members)
-    ApplePayPaymentCompleteDetailsAdditions_members
+#if ENABLE(APPLE_PAY_PAYMENT_ORDER_DETAILS)
+    std::optional<ApplePayPaymentOrderDetails> orderDetails;
 #endif
-
-    template<typename Encoder> void encode(Encoder&) const;
-    template<typename Decoder> static std::optional<ApplePayPaymentCompleteDetails> decode(Decoder&);
 };
-
-template<typename Encoder>
-void ApplePayPaymentCompleteDetails::encode(Encoder& encoder) const
-{
-    UNUSED_PARAM(encoder);
-#if defined(ApplePayPaymentCompleteDetailsAdditions_encode)
-    ApplePayPaymentCompleteDetailsAdditions_encode
-#endif
-}
-
-template<typename Decoder>
-std::optional<ApplePayPaymentCompleteDetails> ApplePayPaymentCompleteDetails::decode(Decoder& decoder)
-{
-#define DECODE(name, type) \
-    std::optional<type> name; \
-    decoder >> name; \
-    if (!name) \
-        return std::nullopt; \
-
-    UNUSED_PARAM(decoder);
-#if defined(ApplePayPaymentCompleteDetailsAdditions_decode_members)
-    ApplePayPaymentCompleteDetailsAdditions_decode_members
-#endif
-
-#undef DECODE
-
-    return { {
-#if defined(ApplePayPaymentCompleteDetailsAdditions_decode_return)
-        ApplePayPaymentCompleteDetailsAdditions_decode_return
-#endif
-    } };
-}
 
 } // namespace WebCore
 

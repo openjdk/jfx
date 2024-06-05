@@ -27,13 +27,13 @@
 #include "SharedWorkerThreadProxy.h"
 
 #include "CacheStorageProvider.h"
+#include "Chrome.h"
 #include "ErrorEvent.h"
 #include "EventLoop.h"
 #include "EventNames.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "LibWebRTCProvider.h"
 #include "LoaderStrategy.h"
+#include "LocalFrame.h"
 #include "MessageEvent.h"
 #include "MessagePort.h"
 #include "Page.h"
@@ -43,25 +43,30 @@
 #include "SharedWorkerContextManager.h"
 #include "SharedWorkerGlobalScope.h"
 #include "SharedWorkerThread.h"
+#include "WebRTCProvider.h"
+#include "WorkerClient.h"
 #include "WorkerFetchResult.h"
+#include "WorkerInitializationData.h"
 #include "WorkerThread.h"
 #include <JavaScriptCore/IdentifiersFactory.h>
 
 namespace WebCore {
 
-static HashSet<SharedWorkerThreadProxy*>& allSharedWorkerThreadProxies()
+static HashMap<ScriptExecutionContextIdentifier, SharedWorkerThreadProxy*>& allSharedWorkerThreadProxies()
 {
-    static NeverDestroyed<HashSet<SharedWorkerThreadProxy*>> set;
-    return set;
+    static MainThreadNeverDestroyed<HashMap<ScriptExecutionContextIdentifier, SharedWorkerThreadProxy*>> map;
+    return map;
 }
 
-static WorkerParameters generateWorkerParameters(const WorkerFetchResult& workerFetchResult, WorkerOptions&& workerOptions, const String& userAgent, Document& document)
+static WorkerParameters generateWorkerParameters(const WorkerFetchResult& workerFetchResult, WorkerOptions&& workerOptions, WorkerInitializationData&& initializationData, Document& document)
 {
-    return WorkerParameters {
-        workerFetchResult.lastRequestURL,
+    RELEASE_ASSERT(document.sessionID());
+    return {
+        workerFetchResult.responseURL,
+        document.url(),
         workerOptions.name,
         "sharedworker:" + Inspector::IdentifiersFactory::createIdentifier(),
-        userAgent,
+        WTFMove(initializationData.userAgent),
         platformStrategies()->loaderStrategy()->isOnLine(),
         workerFetchResult.contentSecurityPolicy,
         false,
@@ -70,30 +75,54 @@ static WorkerParameters generateWorkerParameters(const WorkerFetchResult& worker
         parseReferrerPolicy(workerFetchResult.referrerPolicy, ReferrerPolicySource::HTTPHeader).value_or(ReferrerPolicy::EmptyString),
         workerOptions.type,
         workerOptions.credentials,
-        document.settingsValues()
+        document.settingsValues(),
+        WorkerThreadMode::CreateNewThread,
+        *document.sessionID(),
+#if ENABLE(SERVICE_WORKER)
+        WTFMove(initializationData.serviceWorkerData),
+#endif
+        *initializationData.clientIdentifier,
+        document.noiseInjectionHashSalt()
     };
 }
 
-SharedWorkerThreadProxy::SharedWorkerThreadProxy(UniqueRef<Page>&& page, SharedWorkerIdentifier sharedWorkerIdentifier, const ClientOrigin& clientOrigin, WorkerFetchResult&& workerFetchResult, WorkerOptions&& workerOptions, const String& userAgent, CacheStorageProvider& cacheStorageProvider)
-    : m_page(WTFMove(page))
-    , m_document(*m_page->mainFrame().document())
-    , m_workerThread(SharedWorkerThread::create(sharedWorkerIdentifier, generateWorkerParameters(workerFetchResult, WTFMove(workerOptions), userAgent, m_document), WTFMove(workerFetchResult.script), *this, *this, *this, WorkerThreadStartMode::Normal, clientOrigin.topOrigin.securityOrigin(), m_document->idbConnectionProxy(), m_document->socketProvider(), JSC::RuntimeFlags::createAllEnabled()))
-    , m_cacheStorageProvider(cacheStorageProvider)
+SharedWorkerThreadProxy* SharedWorkerThreadProxy::byIdentifier(ScriptExecutionContextIdentifier identifier)
 {
-    ASSERT(!allSharedWorkerThreadProxies().contains(this));
-    allSharedWorkerThreadProxies().add(this);
+    return allSharedWorkerThreadProxies().get(identifier);
+}
+
+bool SharedWorkerThreadProxy::hasInstances()
+{
+    return !allSharedWorkerThreadProxies().isEmpty();
+}
+
+SharedWorkerThreadProxy::SharedWorkerThreadProxy(UniqueRef<Page>&& page, SharedWorkerIdentifier sharedWorkerIdentifier, const ClientOrigin& clientOrigin, WorkerFetchResult&& workerFetchResult, WorkerOptions&& workerOptions, WorkerInitializationData&& initializationData, CacheStorageProvider& cacheStorageProvider)
+    : m_page(WTFMove(page))
+    , m_document(*dynamicDowncast<LocalFrame>(m_page->mainFrame())->document())
+    , m_contextIdentifier(*initializationData.clientIdentifier)
+    , m_workerThread(SharedWorkerThread::create(sharedWorkerIdentifier, generateWorkerParameters(workerFetchResult, WTFMove(workerOptions), WTFMove(initializationData), m_document), WTFMove(workerFetchResult.script), *this, *this, *this, *this, WorkerThreadStartMode::Normal, clientOrigin.topOrigin.securityOrigin(), m_document->idbConnectionProxy(), m_document->socketProvider(), JSC::RuntimeFlags::createAllEnabled()))
+    , m_cacheStorageProvider(cacheStorageProvider)
+    , m_clientOrigin(clientOrigin)
+{
+    ASSERT(!allSharedWorkerThreadProxies().contains(m_contextIdentifier));
+    allSharedWorkerThreadProxies().add(m_contextIdentifier, this);
 
     static bool addedListener;
     if (!addedListener) {
         platformStrategies()->loaderStrategy()->addOnlineStateChangeListener(&networkStateChanged);
         addedListener = true;
     }
+
+    if (auto workerClient = m_page->chrome().createWorkerClient(thread()))
+        thread().setWorkerClient(WTFMove(workerClient));
 }
 
 SharedWorkerThreadProxy::~SharedWorkerThreadProxy()
 {
-    ASSERT(allSharedWorkerThreadProxies().contains(this));
-    allSharedWorkerThreadProxies().remove(this);
+    ASSERT(allSharedWorkerThreadProxies().contains(m_contextIdentifier));
+    allSharedWorkerThreadProxies().remove(m_contextIdentifier);
+
+    m_workerThread->clearProxies();
 }
 
 SharedWorkerIdentifier SharedWorkerThreadProxy::identifier() const
@@ -138,7 +167,12 @@ RefPtr<CacheStorageConnection> SharedWorkerThreadProxy::createCacheStorageConnec
 RefPtr<RTCDataChannelRemoteHandlerConnection> SharedWorkerThreadProxy::createRTCDataChannelRemoteHandlerConnection()
 {
     ASSERT(isMainThread());
-    return m_page->libWebRTCProvider().createRTCDataChannelRemoteHandlerConnection();
+    return m_page->webRTCProvider().createRTCDataChannelRemoteHandlerConnection();
+}
+
+ScriptExecutionContextIdentifier SharedWorkerThreadProxy::loaderContextIdentifier() const
+{
+    return m_document->identifier();
 }
 
 void SharedWorkerThreadProxy::postTaskToLoader(ScriptExecutionContext::Task&& task)
@@ -169,8 +203,28 @@ void SharedWorkerThreadProxy::setResourceCachingDisabledByWebInspector(bool)
 
 void SharedWorkerThreadProxy::networkStateChanged(bool isOnLine)
 {
-    for (auto* proxy : allSharedWorkerThreadProxies())
+    for (auto* proxy : allSharedWorkerThreadProxies().values())
         proxy->notifyNetworkStateChange(isOnLine);
+}
+
+void SharedWorkerThreadProxy::workerGlobalScopeClosed()
+{
+    callOnMainThread([identifier = thread().identifier()] {
+        SharedWorkerContextManager::singleton().stopSharedWorker(identifier);
+    });
+}
+
+ReportingClient* SharedWorkerThreadProxy::reportingClient() const
+{
+    return &m_document.get();
+}
+
+void SharedWorkerThreadProxy::setAppBadge(std::optional<uint64_t> badge)
+{
+    ASSERT(!isMainThread());
+    callOnMainRunLoop([badge = WTFMove(badge), this, protectedThis = Ref { *this }] {
+        m_page->badgeClient().setAppBadge(nullptr, m_clientOrigin.clientOrigin, badge);
+    });
 }
 
 } // namespace WebCore

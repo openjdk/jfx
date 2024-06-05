@@ -27,69 +27,53 @@
 #include "config.h"
 #include "GBMDevice.h"
 
-#if USE(ANGLE) && USE(NICOSIA)
+#if USE(GBM)
 
 #include <fcntl.h>
 #include <gbm.h>
 #include <mutex>
-#include <wtf/ThreadSpecific.h>
-#include <xf86drm.h>
+#include <unistd.h>
+#include <wtf/SafeStrerror.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-static ThreadSpecific<GBMDevice>& threadSpecificDevice()
+GBMDevice& GBMDevice::singleton()
 {
-    static ThreadSpecific<GBMDevice>* s_gbmDevice;
+    static std::unique_ptr<GBMDevice> s_device;
     static std::once_flag s_onceFlag;
     std::call_once(s_onceFlag,
         [] {
-            s_gbmDevice = new ThreadSpecific<GBMDevice>;
+            s_device = makeUnique<GBMDevice>();
         });
-    return *s_gbmDevice;
-}
-
-const GBMDevice& GBMDevice::get()
-{
-    return *threadSpecificDevice();
-}
-
-GBMDevice::GBMDevice()
-{
-    static int s_globalFd { -1 };
-    static std::once_flag s_onceFlag;
-    std::call_once(s_onceFlag, [] {
-        drmDevicePtr devices[64];
-        memset(devices, 0, sizeof(devices));
-
-        int numDevices = drmGetDevices2(0, devices, WTF_ARRAY_LENGTH(devices));
-        if (numDevices <= 0)
-            return;
-
-        for (int i = 0; i < numDevices; ++i) {
-            drmDevice* device = devices[i];
-            if (!(device->available_nodes & (1 << DRM_NODE_RENDER)))
-                continue;
-
-            s_globalFd = open(device->nodes[DRM_NODE_RENDER], O_RDWR | O_CLOEXEC);
-            if (s_globalFd >= 0)
-                break;
-        }
-
-        drmFreeDevices(devices, numDevices);
-    });
-
-    if (s_globalFd >= 0)
-        m_device = gbm_create_device(s_globalFd);
+    return *s_device;
 }
 
 GBMDevice::~GBMDevice()
 {
-    if (m_device) {
-        gbm_device_destroy(m_device);
-        m_device = nullptr;
-    }
+    if (m_device.has_value() && m_device.value())
+        gbm_device_destroy(m_device.value());
+}
+
+void GBMDevice::initialize(const String& deviceFile)
+{
+    RELEASE_ASSERT(!m_device.has_value());
+    if (!deviceFile.isEmpty()) {
+        m_fd = UnixFileDescriptor { open(deviceFile.utf8().data(), O_RDWR | O_CLOEXEC), UnixFileDescriptor::Adopt };
+        if (m_fd) {
+            m_device = gbm_create_device(m_fd.value());
+            if (m_device.value())
+            return;
+
+            WTFLogAlways("Failed to create GBM device for render device: %s: %s", deviceFile.utf8().data(), safeStrerror(errno).data());
+            m_fd = { };
+        } else
+            WTFLogAlways("Failed to open DRM render device %s: %s", deviceFile.utf8().data(), safeStrerror(errno).data());
+        }
+    m_device = nullptr;
 }
 
 } // namespace WebCore
 
-#endif // USE(ANGLE) && USE(NICOSIA)
+#endif // USE(GBM)

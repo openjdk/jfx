@@ -28,17 +28,18 @@
 
 #include "CDATASection.h"
 #include "Comment.h"
+#include "CommonAtomStrings.h"
 #include "Document.h"
 #include "DocumentFragment.h"
 #include "DocumentType.h"
-#include "ElementAncestorIterator.h"
-#include "Frame.h"
+#include "ElementAncestorIteratorInlines.h"
 #include "FrameLoader.h"
-#include "FrameView.h"
 #include "HTMLLinkElement.h"
 #include "HTMLNames.h"
 #include "HTMLStyleElement.h"
 #include "ImageLoader.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "PendingScript.h"
 #include "ProcessingInstruction.h"
 #include "ResourceError.h"
@@ -124,9 +125,6 @@ void XMLDocumentParser::append(RefPtr<StringImpl>&& inputSource)
     }
 
     doWrite(source);
-
-    // After parsing, dispatch image beforeload events.
-    ImageLoader::dispatchPendingBeforeLoadEvents(nullptr);
 }
 
 void XMLDocumentParser::handleError(XMLErrors::ErrorType type, const char* m, TextPosition position)
@@ -147,7 +145,7 @@ void XMLDocumentParser::createLeafTextNode()
 
     ASSERT(m_bufferedText.size() == 0);
     ASSERT(!m_leafTextNode);
-    m_leafTextNode = Text::create(m_currentNode->document(), "");
+    m_leafTextNode = Text::create(m_currentNode->document(), String { emptyString() });
     m_currentNode->parserAppendChild(*m_leafTextNode);
 }
 
@@ -207,7 +205,7 @@ void XMLDocumentParser::end()
 
     if (isParsing())
         prepareToStopParsing();
-    document()->setReadyState(Document::Interactive);
+    document()->setReadyState(Document::ReadyState::Interactive);
     clearCurrentNodeStack();
     document()->finishedParsing();
 }
@@ -270,17 +268,11 @@ static XMLParsingNamespaces findXMLParsingNamespaces(Element* contextElement)
 
     XMLParsingNamespaces result;
 
-    bool stopLookingForDefaultNamespace = false;
+    result.defaultNamespace = contextElement->lookupNamespaceURI(nullAtom());
 
     for (auto& element : lineageOfType<Element>(*contextElement)) {
-        if (is<SVGForeignObjectElement>(element))
-            stopLookingForDefaultNamespace = true;
-        else if (!stopLookingForDefaultNamespace)
-            result.defaultNamespace = element.namespaceURI();
-
         if (!element.hasAttributes())
             continue;
-
         for (auto& attribute : element.attributesIterator()) {
             if (attribute.prefix() == xmlnsAtom())
                 result.prefixNamespaces.set(attribute.localName(), attribute.value());
@@ -290,7 +282,7 @@ static XMLParsingNamespaces findXMLParsingNamespaces(Element* contextElement)
     return result;
 }
 
-bool XMLDocumentParser::parseDocumentFragment(const String& chunk, DocumentFragment& fragment, Element* contextElement, ParserContentPolicy parserContentPolicy)
+bool XMLDocumentParser::parseDocumentFragment(const String& chunk, DocumentFragment& fragment, Element* contextElement, OptionSet<ParserContentPolicy> parserContentPolicy)
 {
     if (!chunk.length())
         return true;
@@ -299,7 +291,7 @@ bool XMLDocumentParser::parseDocumentFragment(const String& chunk, DocumentFragm
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/the-xhtml-syntax.html#xml-fragment-parsing-algorithm
     // For now we have a hack for script/style innerHTML support:
     if (contextElement && (contextElement->hasLocalName(HTMLNames::scriptTag->localName()) || contextElement->hasLocalName(HTMLNames::styleTag->localName()))) {
-        fragment.parserAppendChild(fragment.document().createTextNode(chunk));
+        fragment.parserAppendChild(fragment.document().createTextNode(String { chunk }));
         return true;
     }
 

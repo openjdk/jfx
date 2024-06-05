@@ -33,26 +33,26 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(ProxyRevoke);
 
-const ClassInfo ProxyRevoke::s_info = { "ProxyRevoke", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ProxyRevoke) };
+const ClassInfo ProxyRevoke::s_info = { "ProxyRevoke"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ProxyRevoke) };
 
 ProxyRevoke* ProxyRevoke::create(VM& vm, Structure* structure, ProxyObject* proxy)
 {
-    ProxyRevoke* revoke = new (NotNull, allocateCell<ProxyRevoke>(vm)) ProxyRevoke(vm, structure);
-    revoke->finishCreation(vm, proxy);
+    ProxyRevoke* revoke = new (NotNull, allocateCell<ProxyRevoke>(vm)) ProxyRevoke(vm, structure, proxy);
+    revoke->finishCreation(vm);
     return revoke;
 }
 
 static JSC_DECLARE_HOST_FUNCTION(performProxyRevoke);
 
-ProxyRevoke::ProxyRevoke(VM& vm, Structure* structure)
+ProxyRevoke::ProxyRevoke(VM& vm, Structure* structure, ProxyObject* proxy)
     : Base(vm, structure, performProxyRevoke, nullptr)
+    , m_proxy(proxy, WriteBarrierEarlyInit)
 {
 }
 
-void ProxyRevoke::finishCreation(VM& vm, ProxyObject* proxy)
+void ProxyRevoke::finishCreation(VM& vm)
 {
     Base::finishCreation(vm, 0, emptyString());
-    m_proxy.set(vm, this, proxy);
 }
 
 JSC_DEFINE_HOST_FUNCTION(performProxyRevoke, (JSGlobalObject* globalObject, CallFrame* callFrame))

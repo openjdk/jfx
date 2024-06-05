@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,8 +34,13 @@ namespace JSC {
 class Heap;
 class WeakImpl;
 
+namespace Integrity {
+class Analyzer;
+}
+
 class WeakSet : public BasicRawSentinelNode<WeakSet> {
     friend class LLIntOffsetsExtractor;
+    friend class Integrity::Analyzer;
 
 public:
     static WeakImpl* allocate(JSValue, WeakHandleOwner* = nullptr, void* context = nullptr);
@@ -51,14 +56,21 @@ public:
     bool isEmpty() const;
     bool isTriviallyDestructible() const;
 
-    template<typename Visitor> void visit(Visitor&);
-
     void reap();
     void sweep();
     void shrink();
     void resetAllocator();
 
     static ptrdiff_t offsetOfVM() { return OBJECT_OFFSETOF(WeakSet, m_vm); }
+
+    WeakBlock* head() { return m_blocks.head(); }
+
+    template<typename Functor>
+    void forEachBlock(const Functor& functor)
+    {
+        for (WeakBlock* block = m_blocks.head(); block; block = block->next())
+            functor(*block);
+    }
 
 private:
     JS_EXPORT_PRIVATE WeakBlock::FreeCell* findAllocator(CellContainer);
@@ -71,7 +83,7 @@ private:
     DoublyLinkedList<WeakBlock> m_blocks;
     // m_vm must be a pointer (instead of a reference) because the JSCLLIntOffsetsExtractor
     // cannot handle it being a reference.
-    VM* m_vm;
+    VM* const m_vm;
 };
 
 inline WeakSet::WeakSet(VM& vm)
@@ -103,28 +115,23 @@ inline bool WeakSet::isTriviallyDestructible() const
     return true;
 }
 
-inline void WeakSet::deallocate(WeakImpl* weakImpl)
+ALWAYS_INLINE void WeakSet::deallocate(WeakImpl* weakImpl)
 {
-    weakImpl->setState(WeakImpl::Deallocated);
+    weakImpl->clear();
 }
 
 inline void WeakSet::lastChanceToFinalize()
 {
-    for (WeakBlock* block = m_blocks.head(); block; block = block->next())
-        block->lastChanceToFinalize();
-}
-
-template<typename Visitor>
-inline void WeakSet::visit(Visitor& visitor)
-{
-    for (WeakBlock* block = m_blocks.head(); block; block = block->next())
-        block->visit(visitor);
+    forEachBlock([](WeakBlock& block) {
+        block.lastChanceToFinalize();
+    });
 }
 
 inline void WeakSet::reap()
 {
-    for (WeakBlock* block = m_blocks.head(); block; block = block->next())
-        block->reap();
+    forEachBlock([](WeakBlock& block) {
+        block.reap();
+    });
 }
 
 inline void WeakSet::resetAllocator()

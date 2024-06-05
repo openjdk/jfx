@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "Element.h"
 #include "ElementData.h"
 #include "HTMLNames.h"
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 #include "StyleChange.h"
 
 namespace WebCore {
@@ -88,6 +88,11 @@ inline const AtomString& Element::attributeWithoutSynchronization(const Qualifie
             return attribute->value();
     }
     return nullAtom();
+}
+
+inline URL Element::getURLAttributeForBindings(const QualifiedName& name) const
+{
+    return document().maskedURLForBindingsIfNeeded(getURLAttribute(name));
 }
 
 inline bool Element::hasAttributesWithoutUpdate() const
@@ -171,6 +176,27 @@ inline bool shouldIgnoreAttributeCase(const Element& element)
     return element.isHTMLElement() && element.document().isHTMLDocument();
 }
 
+inline const Attribute* Element::getAttributeInternal(const QualifiedName& name) const
+{
+    if (!elementData())
+        return nullptr;
+    synchronizeAttribute(name);
+    return findAttributeByName(name);
+}
+
+inline const Attribute* Element::getAttributeInternal(const AtomString& qualifiedName) const
+{
+    if (!elementData() || qualifiedName.isEmpty())
+        return nullptr;
+    synchronizeAttribute(qualifiedName);
+    return elementData()->findAttributeByName(qualifiedName, shouldIgnoreAttributeCase(*this));
+}
+
+inline AtomString Element::getAttributeNSForBindings(const AtomString& namespaceURI, const AtomString& localName, ResolveURLs resolveURLs) const
+{
+    return getAttributeForBindings(QualifiedName(nullAtom(), localName, namespaceURI), resolveURLs);
+}
+
 template<typename... QualifiedNames>
 inline const AtomString& Element::getAttribute(const QualifiedName& name, const QualifiedNames&... names) const
 {
@@ -185,5 +211,17 @@ inline bool isInTopLayerOrBackdrop(const RenderStyle& style, const Element* elem
     return (element && element->isInTopLayer()) || style.styleType() == PseudoId::Backdrop;
 }
 
+inline void Element::hideNonce()
+{
+    // In the common case, Elements don't have a nonce parameter to hide.
+    if (LIKELY(!isConnected() || !hasAttributeWithoutSynchronization(HTMLNames::nonceAttr)))
+        return;
+    hideNonceSlow();
+}
+
+inline Element* Document::cssTarget() const
+{
+    return m_cssTarget.get();
+}
 
 }

@@ -24,6 +24,8 @@
 
 #pragma once
 
+#if ENABLE(PDFJS)
+
 #include "HTMLDocument.h"
 
 namespace WebCore {
@@ -34,21 +36,25 @@ class PDFDocumentEventListener;
 class PDFDocument final : public HTMLDocument {
     WTF_MAKE_ISO_ALLOCATED(PDFDocument);
 public:
-    static Ref<PDFDocument> create(Frame& frame, const URL& url)
+    static Ref<PDFDocument> create(LocalFrame& frame, const URL& url)
     {
-        return adoptRef(*new PDFDocument(frame, url));
+        auto document = adoptRef(*new PDFDocument(frame, url));
+        document->addToContextsMap();
+        return document;
     }
 
     void updateDuringParsing();
     void finishedParsing();
-    void injectContentScript();
+    void injectStyleAndContentScript();
 
+    void postMessageToIframe(const String& name, JSC::JSObject* data);
     void sendPDFArrayBuffer();
+
     bool isFinishedParsing() const { return m_isFinishedParsing; }
     void setContentScriptLoaded(bool loaded) { m_isContentScriptLoaded = loaded; }
 
 private:
-    PDFDocument(Frame&, const URL&);
+    PDFDocument(LocalFrame&, const URL&);
 
     Ref<DocumentParser> createParser() override;
 
@@ -65,3 +71,5 @@ SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::PDFDocument)
     static bool isType(const WebCore::Document& document) { return document.isPDFDocument(); }
     static bool isType(const WebCore::Node& node) { return is<WebCore::Document>(node) && isType(downcast<WebCore::Document>(node)); }
 SPECIALIZE_TYPE_TRAITS_END()
+
+#endif // ENABLE(PDFJS)

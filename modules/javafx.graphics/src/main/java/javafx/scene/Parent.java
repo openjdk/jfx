@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1654,12 +1654,12 @@ public abstract class Parent extends Node {
         }
     }
 
-    private final int LEFT_INVALID = 1;
-    private final int TOP_INVALID = 1 << 1;
-    private final int NEAR_INVALID = 1 << 2;
-    private final int RIGHT_INVALID = 1 << 3;
-    private final int BOTTOM_INVALID = 1 << 4;
-    private final int FAR_INVALID = 1 << 5;
+    private static final int LEFT_INVALID = 1;
+    private static final int TOP_INVALID = 1 << 1;
+    private static final int NEAR_INVALID = 1 << 2;
+    private static final int RIGHT_INVALID = 1 << 3;
+    private static final int BOTTOM_INVALID = 1 << 4;
+    private static final int FAR_INVALID = 1 << 5;
 
     private boolean updateCachedBounds(final List<Node> dirtyNodes,
                                        int remainingDirtyNodes) {

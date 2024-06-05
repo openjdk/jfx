@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,7 +36,7 @@
 
 namespace JSC {
 
-const ClassInfo JSModuleRecord::s_info = { "ModuleRecord", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSModuleRecord) };
+const ClassInfo JSModuleRecord::s_info = { "ModuleRecord"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSModuleRecord) };
 
 
 Structure* JSModuleRecord::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
@@ -44,17 +44,18 @@ Structure* JSModuleRecord::createStructure(VM& vm, JSGlobalObject* globalObject,
     return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
 }
 
-JSModuleRecord* JSModuleRecord::create(JSGlobalObject* globalObject, VM& vm, Structure* structure, const Identifier& moduleKey, const SourceCode& sourceCode, const VariableEnvironment& declaredVariables, const VariableEnvironment& lexicalVariables)
+JSModuleRecord* JSModuleRecord::create(JSGlobalObject* globalObject, VM& vm, Structure* structure, const Identifier& moduleKey, const SourceCode& sourceCode, const VariableEnvironment& declaredVariables, const VariableEnvironment& lexicalVariables, CodeFeatures features)
 {
-    JSModuleRecord* instance = new (NotNull, allocateCell<JSModuleRecord>(vm)) JSModuleRecord(vm, structure, moduleKey, sourceCode, declaredVariables, lexicalVariables);
+    JSModuleRecord* instance = new (NotNull, allocateCell<JSModuleRecord>(vm)) JSModuleRecord(vm, structure, moduleKey, sourceCode, declaredVariables, lexicalVariables, features);
     instance->finishCreation(globalObject, vm);
     return instance;
 }
-JSModuleRecord::JSModuleRecord(VM& vm, Structure* structure, const Identifier& moduleKey, const SourceCode& sourceCode, const VariableEnvironment& declaredVariables, const VariableEnvironment& lexicalVariables)
+JSModuleRecord::JSModuleRecord(VM& vm, Structure* structure, const Identifier& moduleKey, const SourceCode& sourceCode, const VariableEnvironment& declaredVariables, const VariableEnvironment& lexicalVariables, CodeFeatures features)
     : Base(vm, structure, moduleKey)
     , m_sourceCode(sourceCode)
     , m_declaredVariables(declaredVariables)
     , m_lexicalVariables(lexicalVariables)
+    , m_features(features)
 {
 }
 
@@ -67,7 +68,7 @@ void JSModuleRecord::destroy(JSCell* cell)
 void JSModuleRecord::finishCreation(JSGlobalObject* globalObject, VM& vm)
 {
     Base::finishCreation(globalObject, vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 }
 
 template<typename Visitor>
@@ -96,7 +97,7 @@ Synchronousness JSModuleRecord::link(JSGlobalObject* globalObject, JSValue scrip
     RETURN_IF_EXCEPTION(scope, Synchronousness::Sync);
     m_moduleProgramExecutable.set(vm, this, executable);
 
-    return executable->unlinkedModuleProgramCodeBlock()->isAsync() ? Synchronousness::Async : Synchronousness::Sync;
+    return executable->unlinkedCodeBlock()->isAsync() ? Synchronousness::Async : Synchronousness::Sync;
 }
 
 void JSModuleRecord::instantiateDeclarations(JSGlobalObject* globalObject, ModuleProgramExecutable* moduleProgramExecutable, JSValue scriptFetcher)
@@ -125,15 +126,15 @@ void JSModuleRecord::instantiateDeclarations(JSGlobalObject* globalObject, Modul
             RETURN_IF_EXCEPTION(scope, void());
             switch (resolution.type) {
             case Resolution::Type::NotFound:
-                throwSyntaxError(globalObject, scope, makeString("Indirectly exported binding name '", String(exportEntry.exportName.impl()), "' is not found."));
+                throwSyntaxError(globalObject, scope, makeString("Indirectly exported binding name '"_s, StringView(exportEntry.exportName.impl()), "' is not found."_s));
                 return;
 
             case Resolution::Type::Ambiguous:
-                throwSyntaxError(globalObject, scope, makeString("Indirectly exported binding name '", String(exportEntry.exportName.impl()), "' cannot be resolved due to ambiguous multiple bindings."));
+                throwSyntaxError(globalObject, scope, makeString("Indirectly exported binding name '"_s, StringView(exportEntry.exportName.impl()), "' cannot be resolved due to ambiguous multiple bindings."_s));
                 return;
 
             case Resolution::Type::Error:
-                throwSyntaxError(globalObject, scope, makeString("Indirectly exported binding name 'default' cannot be resolved by star export entries."));
+                throwSyntaxError(globalObject, scope, "Indirectly exported binding name 'default' cannot be resolved by star export entries."_s);
                 return;
 
             case Resolution::Type::Resolved:
@@ -150,6 +151,19 @@ void JSModuleRecord::instantiateDeclarations(JSGlobalObject* globalObject, Modul
     for (const auto& pair : importEntries()) {
         const ImportEntry& importEntry = pair.value;
         AbstractModuleRecord* importedModule = hostResolveImportedModule(globalObject, importEntry.moduleRequest);
+
+#if CPU(ADDRESS64)
+        // rdar://107531050: Speculative crash mitigation
+        if (UNLIKELY(importedModule == bitwise_cast<AbstractModuleRecord*>(encodedJSUndefined()))) {
+            RELEASE_ASSERT(vm.exceptionForInspection(), vm.traps().maybeNeedHandling(), vm.exceptionForInspection(), importedModule);
+            RELEASE_ASSERT(vm.traps().maybeNeedHandling(), vm.traps().maybeNeedHandling(), vm.exceptionForInspection(), importedModule);
+            if (!vm.exceptionForInspection() || !vm.traps().maybeNeedHandling()) {
+                throwSyntaxError(globalObject, scope, makeString("Importing module '", String(importEntry.moduleRequest.impl()), "' is not found."));
+                return;
+            }
+        }
+#endif
+
         RETURN_IF_EXCEPTION(scope, void());
         switch (importEntry.type) {
         case AbstractModuleRecord::ImportEntryType::Namespace: {
@@ -166,15 +180,15 @@ void JSModuleRecord::instantiateDeclarations(JSGlobalObject* globalObject, Modul
             RETURN_IF_EXCEPTION(scope, void());
             switch (resolution.type) {
             case Resolution::Type::NotFound:
-                throwSyntaxError(globalObject, scope, makeString("Importing binding name '", String(importEntry.importName.impl()), "' is not found."));
+                throwSyntaxError(globalObject, scope, makeString("Importing binding name '"_s, StringView(importEntry.importName.impl()), "' is not found."_s));
                 return;
 
             case Resolution::Type::Ambiguous:
-                throwSyntaxError(globalObject, scope, makeString("Importing binding name '", String(importEntry.importName.impl()), "' cannot be resolved due to ambiguous multiple bindings."));
+                throwSyntaxError(globalObject, scope, makeString("Importing binding name '"_s, StringView(importEntry.importName.impl()), "' cannot be resolved due to ambiguous multiple bindings."_s));
                 return;
 
             case Resolution::Type::Error:
-                throwSyntaxError(globalObject, scope, makeString("Importing binding name 'default' cannot be resolved by star export entries."));
+                throwSyntaxError(globalObject, scope, "Importing binding name 'default' cannot be resolved by star export entries."_s);
                 return;
 
             case Resolution::Type::Resolved: {
@@ -209,7 +223,7 @@ void JSModuleRecord::instantiateDeclarations(JSGlobalObject* globalObject, Modul
     // section 15.2.1.16.4 step 16-a-iv.
     // Initialize heap allocated function declarations.
     // They can be called before the body of the module is executed under circular dependencies.
-    UnlinkedModuleProgramCodeBlock* unlinkedCodeBlock = moduleProgramExecutable->unlinkedModuleProgramCodeBlock();
+    UnlinkedModuleProgramCodeBlock* unlinkedCodeBlock = moduleProgramExecutable->unlinkedCodeBlock();
     for (size_t i = 0, numberOfFunctions = unlinkedCodeBlock->numberOfFunctionDecls(); i < numberOfFunctions; ++i) {
         UnlinkedFunctionExecutable* unlinkedFunctionExecutable = unlinkedCodeBlock->functionDecl(i);
         SymbolTableEntry entry = symbolTable->get(unlinkedFunctionExecutable->name().impl());
@@ -218,8 +232,8 @@ void JSModuleRecord::instantiateDeclarations(JSGlobalObject* globalObject, Modul
             ASSERT(!unlinkedFunctionExecutable->name().isEmpty());
             if (vm.typeProfiler() || vm.controlFlowProfiler()) {
                 vm.functionHasExecutedCache()->insertUnexecutedRange(moduleProgramExecutable->sourceID(),
-                    unlinkedFunctionExecutable->typeProfilingStartOffset(),
-                    unlinkedFunctionExecutable->typeProfilingEndOffset());
+                    unlinkedFunctionExecutable->unlinkedFunctionStart(),
+                    unlinkedFunctionExecutable->unlinkedFunctionEnd());
             }
             JSFunction* function = JSFunction::create(vm, unlinkedFunctionExecutable->link(vm, moduleProgramExecutable, moduleProgramExecutable->source()), moduleEnvironment);
             bool putResult = false;
@@ -228,7 +242,7 @@ void JSModuleRecord::instantiateDeclarations(JSGlobalObject* globalObject, Modul
         }
     }
 
-    {
+    if (m_features & ImportMetaFeature) {
         JSObject* metaProperties = globalObject->moduleLoader()->createImportMetaProperties(globalObject, identifierToJSValue(vm, moduleKey()), this, scriptFetcher);
         RETURN_IF_EXCEPTION(scope, void());
         bool putResult = false;
@@ -246,7 +260,7 @@ JSValue JSModuleRecord::evaluate(JSGlobalObject* globalObject, JSValue sentValue
         return jsUndefined();
     VM& vm = globalObject->vm();
     ModuleProgramExecutable* executable = m_moduleProgramExecutable.get();
-    JSValue resultOrAwaitedValue = vm.interpreter->executeModuleProgram(this, executable, globalObject, moduleEnvironment(), sentValue, resumeMode);
+    JSValue resultOrAwaitedValue = vm.interpreter.executeModuleProgram(this, executable, globalObject, moduleEnvironment(), sentValue, resumeMode);
     if (JSValue state = internalField(Field::State).get(); !state.isNumber() || state.asNumber() == static_cast<unsigned>(State::Executing))
         m_moduleProgramExecutable.clear();
     return resultOrAwaitedValue;

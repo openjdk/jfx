@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,8 +26,11 @@
 #pragma once
 
 #include "RenderTheme.h"
+#include "ModernMediaControlResource.h"
 #include "GraphicsContext.h"
 #include "StyleResolver.h"
+#include "RenderStyleSetters.h"
+#include "RenderStyleInlines.h"
 
 #include <jni.h>
 
@@ -82,20 +85,8 @@ protected:
     virtual Vector<String, 2> mediaControlsScripts() override;
     String extraMediaControlsStyleSheet() override;
 
-    String formatMediaControlsCurrentTime(float currentTime, float duration) const override;
-    String formatMediaControlsRemainingTime(float currentTime, float duration) const override;
-
-    bool paintMediaPlayButton(const RenderObject&, const PaintInfo&, const IntRect&) override;
-    bool paintMediaMuteButton(const RenderObject&, const PaintInfo&, const IntRect&) override;
     bool paintMediaSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) override;
     bool paintMediaSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) override;
-    bool paintMediaVolumeSliderContainer(const RenderObject&, const PaintInfo&, const IntRect&) override;
-    bool paintMediaVolumeSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) override;
-    bool paintMediaVolumeSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) override;
-    bool paintMediaControlsBackground(const RenderObject&, const PaintInfo&, const IntRect&) override;
-    bool paintMediaCurrentTime(const RenderObject&, const PaintInfo&, const IntRect&) override;
-    bool paintMediaTimeRemaining(const RenderObject&, const PaintInfo&, const IntRect&) override;
-
 #endif
 
     Seconds animationRepeatIntervalForProgressBar(const RenderProgress&) const override;
@@ -103,7 +94,7 @@ protected:
     void adjustProgressBarStyle(RenderStyle&, const Element*) const override;
     bool paintProgressBar(const RenderObject&, const PaintInfo&, const IntRect&) override;
 
-    bool supportsMeter(ControlPart, const HTMLMeterElement&) const override;
+    bool supportsMeter(StyleAppearance, const HTMLMeterElement&) const override;
     bool paintMeter(const RenderObject&, const PaintInfo&, const IntRect&) override;
 
 #if ENABLE(DATALIST_ELEMENT)
@@ -119,17 +110,17 @@ protected:
 
     void adjustSliderTrackStyle(RenderStyle&, const Element*) const override;
     bool paintSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) override;
-
+    String mediaControlsBase64StringForIconNameAndType(const String&, const String&);
+    String mediaControlsStyleSheet();
 
 private:
-    virtual void updateCachedSystemFontDescription(CSSValueID, FontCascadeDescription&) const override;
-
     int createWidgetState(const RenderObject& o);
     bool paintWidget(int widgetIndex, const RenderObject& o,
                      const PaintInfo& i, const IntRect& rect);
     bool paintWidget(int widgetIndex, const RenderObject& o,
                      const PaintInfo& i, const FloatRect& rect);
     Color getSelectionColor(int index) const;
+    std::unique_ptr<MediaControlResource> mediaResource;
 #if ENABLE(VIDEO)
     bool paintMediaControl(jint type, const RenderObject&, const PaintInfo&, const IntRect&);
 #endif

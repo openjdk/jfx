@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,11 +36,7 @@
 #if USE(CORE_TEXT)
 #include <CoreGraphics/CoreGraphics.h>
 #include <CoreText/CoreText.h>
-#if PLATFORM(WIN)
-#include <pal/spi/win/CoreTextSPIWin.h>
-#else
 #include <pal/spi/cf/CoreTextSPI.h>
-#endif
 #include <pal/spi/cg/CoreGraphicsSPI.h>
 #endif
 
@@ -52,14 +48,15 @@ class GlyphBuffer;
 class GraphicsContext;
 
 class DrawGlyphsRecorder {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(DrawGlyphsRecorder);
 public:
-    enum class DeconstructDrawGlyphs : bool { No, Yes };
     enum class DeriveFontFromContext : bool { No, Yes };
-    explicit DrawGlyphsRecorder(GraphicsContext&, DeconstructDrawGlyphs = DeconstructDrawGlyphs::No, DeriveFontFromContext = DeriveFontFromContext::No);
+    explicit DrawGlyphsRecorder(GraphicsContext&, float scaleFactor = 1, DeriveFontFromContext = DeriveFontFromContext::No);
 
     void drawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned numGlyphs, const FloatPoint& anchorPoint, FontSmoothingMode);
 
-#if USE(CORE_TEXT) && !PLATFORM(WIN)
+#if USE(CORE_TEXT)
     void drawNativeText(CTFontRef, CGFloat fontSize, CTLineRef, CGRect lineRect);
 
     void recordBeginLayer(CGRenderingStateRef, CGGStateRef, CGRect);
@@ -68,10 +65,8 @@ public:
     void recordDrawImage(CGRenderingStateRef, CGGStateRef, CGRect, CGImageRef);
 #endif
 
-    DeconstructDrawGlyphs deconstructDrawGlyphs() const { return m_deconstructDrawGlyphs; }
-
 private:
-#if USE(CORE_TEXT) && !PLATFORM(WIN)
+#if USE(CORE_TEXT)
     UniqueRef<GraphicsContext> createInternalContext();
 #endif
 
@@ -82,56 +77,51 @@ private:
     void populateInternalState(const GraphicsContextState&);
     void populateInternalContext(const GraphicsContextState&);
     void prepareInternalContext(const Font&, FontSmoothingMode);
+    void recordInitialColors();
     void concludeInternalContext();
 
-    void updateFillColor(const Color&, Gradient* = nullptr, Pattern* = nullptr);
-    void updateStrokeColor(const Color&, Gradient* = nullptr, Pattern* = nullptr);
+    void updateFillBrush(const SourceBrush&);
+    void updateStrokeBrush(const SourceBrush&);
     void updateCTM(const AffineTransform&);
     enum class ShadowsIgnoreTransforms {
         Unspecified,
         Yes,
         No
     };
-    void updateShadow(const FloatSize& shadowOffset, float shadowBlur, const Color& shadowColor, ShadowsIgnoreTransforms);
+    void updateShadow(const std::optional<GraphicsDropShadow>&, ShadowsIgnoreTransforms);
 
-#if USE(CORE_TEXT) && !PLATFORM(WIN)
+#if USE(CORE_TEXT)
+    void updateFillColor(CGColorRef);
+    void updateStrokeColor(CGColorRef);
     void updateShadow(CGStyleRef);
 #endif
 
     GraphicsContext& m_owner;
-    DeconstructDrawGlyphs m_deconstructDrawGlyphs;
-    DeriveFontFromContext m_deriveFontFromContext;
 
-#if USE(CORE_TEXT) && !PLATFORM(WIN)
+#if USE(CORE_TEXT)
     UniqueRef<GraphicsContext> m_internalContext;
 #endif
 
     const Font* m_originalFont { nullptr };
+
+    const DeriveFontFromContext m_deriveFontFromContext;
     FontSmoothingMode m_smoothingMode { FontSmoothingMode::AutoSmoothing };
+
     AffineTransform m_originalTextMatrix;
 
     struct State {
-        struct Style {
-            Color color;
-            RefPtr<Gradient> gradient;
-            AffineTransform gradientSpaceTransform;
-            RefPtr<Pattern> pattern;
-        };
-        Style fillStyle;
-        Style strokeStyle;
-
+        SourceBrush fillBrush;
+        SourceBrush strokeBrush;
         AffineTransform ctm;
-
-        struct ShadowState {
-            FloatSize offset;
-            float blur { 0 };
-            Color color;
-            bool ignoreTransforms { false };
-        };
-        ShadowState shadow;
+        std::optional<GraphicsDropShadow> dropShadow;
+        bool ignoreTransforms { false };
     };
     State m_originalState;
-    State m_currentState;
+
+#if USE(CORE_TEXT)
+    RetainPtr<CGColorRef> m_initialFillColor;
+    RetainPtr<CGColorRef> m_initialStrokeColor;
+#endif
 };
 
 } // namespace WebCore

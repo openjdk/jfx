@@ -28,9 +28,9 @@
 
 #include "CachedScriptFetcher.h"
 #include "DOMWrapperWorld.h"
-#include "Frame.h"
 #include "JSDOMBinding.h"
 #include "JSDOMPromiseDeferred.h"
+#include "LocalFrame.h"
 #include "ModuleFetchParameters.h"
 #include "ResourceLoaderOptions.h"
 #include "ScriptController.h"
@@ -42,12 +42,12 @@
 
 namespace WebCore {
 
-Ref<WorkerModuleScriptLoader> WorkerModuleScriptLoader::create(ModuleScriptLoaderClient& client, DeferredPromise& promise, WorkerScriptFetcher& scriptFetcher, RefPtr<ModuleFetchParameters>&& parameters)
+Ref<WorkerModuleScriptLoader> WorkerModuleScriptLoader::create(ModuleScriptLoaderClient& client, DeferredPromise& promise, WorkerScriptFetcher& scriptFetcher, RefPtr<JSC::ScriptFetchParameters>&& parameters)
 {
     return adoptRef(*new WorkerModuleScriptLoader(client, promise, scriptFetcher, WTFMove(parameters)));
 }
 
-WorkerModuleScriptLoader::WorkerModuleScriptLoader(ModuleScriptLoaderClient& client, DeferredPromise& promise, WorkerScriptFetcher& scriptFetcher, RefPtr<ModuleFetchParameters>&& parameters)
+WorkerModuleScriptLoader::WorkerModuleScriptLoader(ModuleScriptLoaderClient& client, DeferredPromise& promise, WorkerScriptFetcher& scriptFetcher, RefPtr<JSC::ScriptFetchParameters>&& parameters)
     : ModuleScriptLoader(client, promise, scriptFetcher, WTFMove(parameters))
     , m_scriptLoader(WorkerScriptLoader::create())
 {

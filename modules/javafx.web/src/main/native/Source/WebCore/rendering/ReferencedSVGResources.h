@@ -26,8 +26,8 @@
 #pragma once
 
 #include <wtf/FastMalloc.h>
-#include <wtf/HashMap.h>
 #include <wtf/IsoMalloc.h>
+#include <wtf/RobinHoodHashMap.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/AtomStringHash.h>
 
@@ -44,6 +44,7 @@ class RenderStyle;
 class QualifiedName;
 class SVGElement;
 class SVGFilterElement;
+class TreeScope;
 
 class ReferencedSVGResources {
     WTF_MAKE_ISO_ALLOCATED(ReferencedSVGResources);
@@ -52,20 +53,20 @@ public:
     ~ReferencedSVGResources();
 
     static Vector<std::pair<AtomString, QualifiedName>> referencedSVGResourceIDs(const RenderStyle&);
-    void updateReferencedResources(Document&, const Vector<std::pair<AtomString, QualifiedName>>&);
+    void updateReferencedResources(TreeScope&, const Vector<std::pair<AtomString, QualifiedName>>&);
 
     // Clipping needs a renderer, filters use an element.
-    RenderSVGResourceClipper* referencedClipperRenderer(Document&, const ReferencePathOperation&);
-    SVGFilterElement* referencedFilterElement(Document&, const ReferenceFilterOperation&);
+    RenderSVGResourceClipper* referencedClipperRenderer(TreeScope&, const ReferencePathOperation&);
+    SVGFilterElement* referencedFilterElement(TreeScope&, const ReferenceFilterOperation&);
 
 private:
-    static SVGElement* elementForResourceID(Document&, const AtomString& resourceID, const QualifiedName& tagName);
+    static SVGElement* elementForResourceID(TreeScope&, const AtomString& resourceID, const QualifiedName& tagName);
 
     void addClientForTarget(SVGElement& targetElement, const AtomString&);
-    void removeClientForTarget(Document&, const AtomString&);
+    void removeClientForTarget(TreeScope&, const AtomString&);
 
     RenderElement& m_renderer;
-    HashMap<AtomString, std::unique_ptr<CSSSVGResourceElementClient>> m_elementClients;
+    MemoryCompactRobinHoodHashMap<AtomString, std::unique_ptr<CSSSVGResourceElementClient>> m_elementClients;
 };
 
 } // namespace WebCore

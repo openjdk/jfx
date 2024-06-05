@@ -28,48 +28,88 @@
 #if ENABLE(WEBGL)
 
 #include "WebGLRenderingContextBase.h"
+#include <wtf/ForbidHeapAllocation.h>
+#include <wtf/Noncopyable.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TypeCasts.h>
 
 namespace WebCore {
+
+class WebGLExtensionScopedContext final {
+    WTF_FORBID_HEAP_ALLOCATION;
+    WTF_MAKE_NONCOPYABLE(WebGLExtensionScopedContext);
+public:
+    explicit WebGLExtensionScopedContext(WebGLExtension*);
+
+    template<typename T>
+    constexpr T* downcast() const { return WTF::downcast<T>(m_context); }
+    constexpr bool isLost() const { return !m_context; }
+
+    constexpr WebGLRenderingContextBase& operator*() const { ASSERT(!isLost()); return *m_context; }
+    constexpr WebGLRenderingContextBase* operator->() const { ASSERT(!isLost()); return m_context; }
+
+private:
+    WebGLRenderingContextBase* m_context;
+};
 
 class WebGLExtension : public RefCounted<WebGLExtension> {
     WTF_MAKE_ISO_ALLOCATED(WebGLExtension);
 public:
     // Extension names are needed to properly wrap instances in JavaScript objects.
     enum ExtensionName {
-        WebGLLoseContextName,
+        ANGLEInstancedArraysName,
         EXTBlendMinMaxName,
+        EXTClipControlName,
+        EXTColorBufferFloatName,
+        EXTColorBufferHalfFloatName,
+        EXTConservativeDepthName,
+        EXTDepthClampName,
+        EXTDisjointTimerQueryName,
+        EXTDisjointTimerQueryWebGL2Name,
+        EXTFloatBlendName,
         EXTFragDepthName,
+        EXTPolygonOffsetClampName,
+        EXTRenderSnormName,
         EXTShaderTextureLODName,
+        EXTTextureCompressionBPTCName,
         EXTTextureCompressionRGTCName,
         EXTTextureFilterAnisotropicName,
+        EXTTextureMirrorClampToEdgeName,
+        EXTTextureNorm16Name,
         EXTsRGBName,
         KHRParallelShaderCompileName,
+        NVShaderNoperspectiveInterpolationName,
+        OESDrawBuffersIndexedName,
+        OESElementIndexUintName,
+        OESFBORenderMipmapName,
+        OESSampleVariablesName,
+        OESShaderMultisampleInterpolationName,
+        OESStandardDerivativesName,
         OESTextureFloatName,
         OESTextureFloatLinearName,
         OESTextureHalfFloatName,
         OESTextureHalfFloatLinearName,
-        OESStandardDerivativesName,
         OESVertexArrayObjectName,
-        WebGLDebugRendererInfoName,
-        WebGLDebugShadersName,
-        WebGLCompressedTextureS3TCName,
-        WebGLCompressedTextureS3TCsRGBName,
-        WebGLDepthTextureName,
-        WebGLDrawBuffersName,
-        OESElementIndexUintName,
-        OESFBORenderMipmapName,
-        WebGLCompressedTextureATCName,
+        WebGLClipCullDistanceName,
+        WebGLColorBufferFloatName,
+        WebGLCompressedTextureASTCName,
         WebGLCompressedTextureETCName,
         WebGLCompressedTextureETC1Name,
         WebGLCompressedTexturePVRTCName,
-        WebGLCompressedTextureASTCName,
-        ANGLEInstancedArraysName,
-        EXTColorBufferHalfFloatName,
-        EXTFloatBlendName,
-        WebGLColorBufferFloatName,
-        EXTColorBufferFloatName,
+        WebGLCompressedTextureS3TCName,
+        WebGLCompressedTextureS3TCsRGBName,
+        WebGLDebugRendererInfoName,
+        WebGLDebugShadersName,
+        WebGLDepthTextureName,
+        WebGLDrawBuffersName,
+        WebGLDrawInstancedBaseVertexBaseInstanceName,
+        WebGLLoseContextName,
         WebGLMultiDrawName,
+        WebGLMultiDrawInstancedBaseVertexBaseInstanceName,
+        WebGLPolygonModeName,
+        WebGLProvokingVertexName,
+        WebGLRenderSharedExponentName,
+        WebGLStencilTexturingName,
     };
 
     WebGLRenderingContextBase* context() { return m_context; }
@@ -83,10 +123,12 @@ public:
     // context loss. However, all extensions must be lost when
     // destroying their WebGLRenderingContextBase.
     virtual void loseParentContext(WebGLRenderingContextBase::LostContextMode);
-    bool isLost() { return !m_context; }
+    bool isLostContext() { return !m_context; }
 
 protected:
     WebGLExtension(WebGLRenderingContextBase&);
+
+private:
     WebGLRenderingContextBase* m_context;
 };
 

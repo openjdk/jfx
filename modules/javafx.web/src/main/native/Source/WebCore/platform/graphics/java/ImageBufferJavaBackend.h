@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@
 
 #include "ImageBufferBackend.h"
 #include <wtf/IsoMalloc.h>
+#include "ImageBuffer.h"
 
 #include "PlatformImage.h"
 #include "RQRef.h"
@@ -40,10 +41,11 @@ public:
     static size_t calculateMemoryCost(const Parameters&);
     void transformToColorSpace(const DestinationColorSpace&) override { }
 
-    static std::unique_ptr<ImageBufferJavaBackend> create(const Parameters&, const HostWindow*);
+    static std::unique_ptr<ImageBufferJavaBackend> create(const Parameters&, const ImageBufferCreationContext&);
     static std::unique_ptr<ImageBufferJavaBackend> create(const Parameters&, const GraphicsContext&);
 
     JLObject getWCImage() const;
+    Vector<uint8_t> toDataJava(const String& mimeType, std::optional<double>) override;
     void* getData() const;
     void update() const;
 
@@ -52,27 +54,22 @@ public:
 
     IntSize backendSize() const override;
 
-    RefPtr<NativeImage> copyNativeImage(BackingStoreCopy = CopyBackingStore) const override;
-    RefPtr<Image> copyImage(BackingStoreCopy = CopyBackingStore, PreserveResolution = PreserveResolution::No) const override;
 
-    void draw(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect,
-        const ImagePaintingOptions&) override;
-    void drawPattern(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect,
-        const AffineTransform& patternTransform, const FloatPoint& phase,
-        const FloatSize& spacing, const ImagePaintingOptions&) override;
+    RefPtr<NativeImage> copyNativeImage(BackingStoreCopy = CopyBackingStore) override;
+    RefPtr<NativeImage> copyNativeImageForDrawing(GraphicsContext& destination) override;
 
-    String toDataURL(const String& mimeType, std::optional<double> quality, PreserveResolution) const override;
-    Vector<uint8_t> toData(const String& mimeType, std::optional<double> quality) const override;
 
+    String debugDescription() const override;
+
+    void getPixelBuffer(const IntRect& srcRect, PixelBuffer& destination) override ;
+    void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) override;
 
 protected:
     ImageBufferJavaBackend(const Parameters&, PlatformImagePtr, std::unique_ptr<GraphicsContext>&&, IntSize);
 
+    void getPixelBuffer(const IntRect& srcRect, void* data, PixelBuffer& destination);
+    void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat, void* destination);
 
-    std::optional<PixelBuffer> getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect) const override;
-    std::optional<PixelBuffer> getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, void* data) const;
-    void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) override;
-    void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat, void* data);
 
     unsigned bytesPerRow() const override;
 

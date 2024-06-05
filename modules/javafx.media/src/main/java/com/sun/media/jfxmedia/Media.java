@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package com.sun.media.jfxmedia;
 
-import java.util.Collections;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
@@ -88,20 +87,14 @@ public abstract class Media {
     /**
      * Gets the tracks found in the media. The returned value will be
      * <code>null</code> if no tracks have yet been encountered while scanning
-     * the media. The returned <code>List</code> us unmodifiable.
+     * the media. The returned <code>List</code> is unmodifiable.
      *
      * @return the tracks in the media or <code>null</code> if no tracks found.
      */
     public List<Track> getTracks() {
-        List<Track> returnValue;
         synchronized(tracks) {
-            if (tracks.isEmpty()) {
-                returnValue = null;
-            } else {
-                returnValue = Collections.unmodifiableList(new ArrayList<>(tracks));
-            }
+            return tracks.isEmpty() ? null : List.copyOf(tracks);
         }
-        return returnValue;
     }
 
     /**

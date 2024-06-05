@@ -50,6 +50,7 @@ public:
 
     JS_EXPORT_PRIVATE bool isShared() const;
     ArrayBufferSharingMode sharingMode() const;
+    bool isResizableOrGrowableShared() const { return m_impl->isResizableOrGrowableShared(); }
 
     DECLARE_EXPORT_INFO;
 
@@ -66,9 +67,9 @@ private:
     ArrayBuffer* m_impl;
 };
 
-inline ArrayBuffer* toPossiblySharedArrayBuffer(VM& vm, JSValue value)
+inline ArrayBuffer* toPossiblySharedArrayBuffer(VM&, JSValue value)
 {
-    JSArrayBuffer* wrapper = jsDynamicCast<JSArrayBuffer*>(vm, value);
+    JSArrayBuffer* wrapper = jsDynamicCast<JSArrayBuffer*>(value);
     if (!wrapper)
         return nullptr;
     return wrapper->impl();
@@ -84,12 +85,18 @@ inline ArrayBuffer* toUnsharedArrayBuffer(VM& vm, JSValue value)
 
 inline ArrayBuffer* JSArrayBuffer::toWrapped(VM& vm, JSValue value)
 {
-    return toUnsharedArrayBuffer(vm, value);
+    auto result = toUnsharedArrayBuffer(vm, value);
+    if (!result || result->isResizableOrGrowableShared())
+        return nullptr;
+    return result;
 }
 
 inline ArrayBuffer* JSArrayBuffer::toWrappedAllowShared(VM& vm, JSValue value)
 {
-    return toPossiblySharedArrayBuffer(vm, value);
+    auto result = toPossiblySharedArrayBuffer(vm, value);
+    if (!result || result->isResizableOrGrowableShared())
+        return nullptr;
+    return result;
 }
 
 } // namespace JSC

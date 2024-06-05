@@ -45,9 +45,68 @@ FEDropShadow::FEDropShadow(float stdX, float stdY, float dx, float dy, const Col
 {
 }
 
-FloatRect FEDropShadow::calculateImageRect(const Filter& filter, const FilterImageVector& inputs, const FloatRect& primitiveSubregion) const
+bool FEDropShadow::operator==(const FEDropShadow& other) const
 {
-    auto imageRect = inputs[0]->imageRect();
+    return FilterEffect::operator==(other)
+        && m_stdX == other.m_stdX
+        && m_stdY == other.m_stdY
+        && m_dx == other.m_dx
+        && m_dy == other.m_dy
+        && m_shadowColor == other.m_shadowColor
+        && m_shadowOpacity == other.m_shadowOpacity;
+}
+
+bool FEDropShadow::setStdDeviationX(float stdX)
+{
+    if (m_stdX == stdX)
+        return false;
+    m_stdX = stdX;
+    return true;
+}
+
+bool FEDropShadow::setStdDeviationY(float stdY)
+{
+    if (m_stdY == stdY)
+        return false;
+    m_stdY = stdY;
+    return true;
+}
+
+bool FEDropShadow::setDx(float dx)
+{
+    if (m_dx == dx)
+        return false;
+    m_dx = dx;
+    return true;
+}
+
+bool FEDropShadow::setDy(float dy)
+{
+    if (m_dy == dy)
+        return false;
+    m_dy = dy;
+    return true;
+}
+
+bool FEDropShadow::setShadowColor(const Color& shadowColor)
+{
+    if (m_shadowColor == shadowColor)
+        return false;
+    m_shadowColor = shadowColor;
+    return true;
+}
+
+bool FEDropShadow::setShadowOpacity(float shadowOpacity)
+{
+    if (m_shadowOpacity == shadowOpacity)
+        return false;
+    m_shadowOpacity = shadowOpacity;
+    return true;
+}
+
+FloatRect FEDropShadow::calculateImageRect(const Filter& filter, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const
+{
+    auto imageRect = inputImageRects[0];
     auto imageRectWithOffset(imageRect);
     imageRectWithOffset.move(filter.resolvedSize({ m_dx, m_dy }));
     imageRect.unite(imageRectWithOffset);
@@ -61,15 +120,37 @@ FloatRect FEDropShadow::calculateImageRect(const Filter& filter, const FilterIma
     return filter.clipToMaxEffectRect(imageRect, primitiveSubregion);
 }
 
-IntOutsets FEDropShadow::outsets(const Filter&) const
+IntOutsets FEDropShadow::calculateOutsets(const FloatSize& offset, const FloatSize& stdDeviation)
 {
-    IntSize outsetSize = FEGaussianBlur::calculateOutsetSize({ m_stdX, m_stdY });
-    return {
-        std::max<int>(0, outsetSize.height() - m_dy),
-        std::max<int>(0, outsetSize.width() + m_dx),
-        std::max<int>(0, outsetSize.height() + m_dy),
-        std::max<int>(0, outsetSize.width() - m_dx)
-    };
+    IntSize outsetSize = FEGaussianBlur::calculateOutsetSize(stdDeviation);
+
+    int top = std::max<int>(0, outsetSize.height() - offset.height());
+    int right = std::max<int>(0, outsetSize.width() + offset.width());
+    int bottom = std::max<int>(0, outsetSize.height() + offset.height());
+    int left = std::max<int>(0, outsetSize.width() - offset.width());
+
+    return { top, right, bottom, left };
+}
+
+OptionSet<FilterRenderingMode> FEDropShadow::supportedFilterRenderingModes() const
+{
+    OptionSet<FilterRenderingMode> modes = FilterRenderingMode::Software;
+#if HAVE(CGSTYLE_CREATE_SHADOW2)
+    if (m_stdX == m_stdY)
+        modes.add(FilterRenderingMode::GraphicsContext);
+#endif
+    return modes;
+}
+
+std::optional<GraphicsStyle> FEDropShadow::createGraphicsStyle(const Filter& filter) const
+{
+    ASSERT(m_stdX == m_stdY);
+
+    auto offset = filter.resolvedSize({ m_dx, m_dy });
+    auto radius = FEGaussianBlur::calculateUnscaledKernelSize(filter.resolvedSize({ m_stdX, m_stdY }));
+    auto color = m_shadowColor.colorWithAlpha(m_shadowOpacity);
+
+    return GraphicsDropShadow { offset, static_cast<float>(radius.width()), color, ShadowRadiusMode::Default };
 }
 
 std::unique_ptr<FilterEffectApplier> FEDropShadow::createSoftwareApplier() const

@@ -37,6 +37,7 @@
 #include "ServiceWorkerInspectorProxy.h"
 #include "ServiceWorkerThread.h"
 #include "StorageBlockingPolicy.h"
+#include "WorkerBadgeProxy.h"
 #include "WorkerDebuggerProxy.h"
 #include "WorkerLoaderProxy.h"
 #include <wtf/HashMap.h>
@@ -53,7 +54,7 @@ class ServiceWorkerInspectorProxy;
 struct ServiceWorkerContextData;
 enum class WorkerThreadMode : bool;
 
-class ServiceWorkerThreadProxy final : public ThreadSafeRefCounted<ServiceWorkerThreadProxy>, public WorkerLoaderProxy, public WorkerDebuggerProxy {
+class ServiceWorkerThreadProxy final : public ThreadSafeRefCounted<ServiceWorkerThreadProxy>, public WorkerLoaderProxy, public WorkerDebuggerProxy, public WorkerBadgeProxy {
 public:
     template<typename... Args> static Ref<ServiceWorkerThreadProxy> create(Args&&... args)
     {
@@ -79,14 +80,20 @@ public:
     WEBCORE_EXPORT void convertFetchToDownload(SWServerConnectionIdentifier, FetchIdentifier);
     WEBCORE_EXPORT void continueDidReceiveFetchResponse(SWServerConnectionIdentifier, FetchIdentifier);
     WEBCORE_EXPORT void removeFetch(SWServerConnectionIdentifier, FetchIdentifier);
+    WEBCORE_EXPORT void navigationPreloadIsReady(SWServerConnectionIdentifier, FetchIdentifier, ResourceResponse&&);
+    WEBCORE_EXPORT void navigationPreloadFailed(SWServerConnectionIdentifier, FetchIdentifier, ResourceError&&);
 
-    void postMessageToServiceWorker(MessageWithMessagePorts&&, ServiceWorkerOrClientData&&);
+    WEBCORE_EXPORT void fireMessageEvent(MessageWithMessagePorts&&, ServiceWorkerOrClientData&&);
+
     void fireInstallEvent();
     void fireActivateEvent();
     void firePushEvent(std::optional<Vector<uint8_t>>&&, CompletionHandler<void(bool)>&&);
     void firePushSubscriptionChangeEvent(std::optional<PushSubscriptionData>&& newSubscriptionData, std::optional<PushSubscriptionData>&& oldSubscriptionData);
+    void fireNotificationEvent(NotificationData&&, NotificationEventType, CompletionHandler<void(bool)>&&);
+    void fireBackgroundFetchEvent(BackgroundFetchInformation&&, CompletionHandler<void(bool)>&&);
+    void fireBackgroundFetchClickEvent(BackgroundFetchInformation&&, CompletionHandler<void(bool)>&&);
 
-    void didSaveScriptsToDisk(ScriptBuffer&&, HashMap<URL, ScriptBuffer>&& importedScripts);
+    WEBCORE_EXPORT void didSaveScriptsToDisk(ScriptBuffer&&, HashMap<URL, ScriptBuffer>&& importedScripts);
 
     WEBCORE_EXPORT void setLastNavigationWasAppInitiated(bool);
     WEBCORE_EXPORT bool lastNavigationWasAppInitiated();
@@ -95,16 +102,20 @@ private:
     WEBCORE_EXPORT ServiceWorkerThreadProxy(UniqueRef<Page>&&, ServiceWorkerContextData&&, ServiceWorkerData&&, String&& userAgent, WorkerThreadMode, CacheStorageProvider&, std::unique_ptr<NotificationClient>&&);
 
     WEBCORE_EXPORT static void networkStateChanged(bool isOnLine);
+    bool postTaskForModeToWorkerOrWorkletGlobalScope(ScriptExecutionContext::Task&&, const String& mode);
 
     // WorkerLoaderProxy
-    bool postTaskForModeToWorkerOrWorkletGlobalScope(ScriptExecutionContext::Task&&, const String& mode) final;
     void postTaskToLoader(ScriptExecutionContext::Task&&) final;
+    ScriptExecutionContextIdentifier loaderContextIdentifier() const final;
     RefPtr<CacheStorageConnection> createCacheStorageConnection() final;
     RefPtr<RTCDataChannelRemoteHandlerConnection> createRTCDataChannelRemoteHandlerConnection() final;
 
     // WorkerDebuggerProxy
     void postMessageToDebugger(const String&) final;
     void setResourceCachingDisabledByWebInspector(bool) final;
+
+    // WorkerBadgeProxy
+    void setAppBadge(std::optional<uint64_t>) final;
 
     UniqueRef<Page> m_page;
     Ref<Document> m_document;
@@ -117,9 +128,11 @@ private:
     bool m_isTerminatingOrTerminated { false };
 
     ServiceWorkerInspectorProxy m_inspectorProxy;
+    uint64_t m_functionalEventTasksCounter { 0 };
+    HashMap<uint64_t, CompletionHandler<void(bool)>> m_ongoingFunctionalEventTasks;
+
+    // Accessed in worker thread.
     HashMap<std::pair<SWServerConnectionIdentifier, FetchIdentifier>, Ref<ServiceWorkerFetch::Client>> m_ongoingFetchTasks;
-    uint64_t m_pushTasksCounter { 0 };
-    HashMap<uint64_t, CompletionHandler<void(bool)>> m_ongoingPushTasks;
 };
 
 } // namespace WebKit

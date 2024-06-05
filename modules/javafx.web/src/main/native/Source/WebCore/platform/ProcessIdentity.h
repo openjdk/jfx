@@ -28,6 +28,7 @@
 #include <optional>
 
 #if HAVE(TASK_IDENTITY_TOKEN)
+#include <wtf/ArgumentCoder.h>
 #include <wtf/MachSendRight.h>
 #else
 #include <variant>
@@ -47,45 +48,23 @@ public:
 
     // Creates an empty process identity that does not grant any access.
     ProcessIdentity() = default;
+    WEBCORE_EXPORT ProcessIdentity(const ProcessIdentity&) = default;
 
     // Returns true for a process identity or false on empty identity.
     WEBCORE_EXPORT operator bool() const;
+
+    WEBCORE_EXPORT ProcessIdentity& operator=(const ProcessIdentity&);
 
 #if HAVE(TASK_IDENTITY_TOKEN)
     task_id_token_t taskIdToken() const { return m_taskIdToken.sendRight(); }
 #endif
 
-    template<typename Encoder> void encode(Encoder&) const;
-    template<typename Decoder> static std::optional<ProcessIdentity> decode(Decoder&);
-
 private:
 #if HAVE(TASK_IDENTITY_TOKEN)
+    friend struct IPC::ArgumentCoder<ProcessIdentity, void>;
     WEBCORE_EXPORT ProcessIdentity(MachSendRight&& taskIdToken);
     MachSendRight m_taskIdToken;
 #endif
 };
-
-template<typename Encoder> void ProcessIdentity::encode(Encoder& encoder) const
-{
-#if HAVE(TASK_IDENTITY_TOKEN)
-    encoder << m_taskIdToken;
-#else
-    UNUSED_PARAM(encoder);
-#endif
-}
-
-template<typename Decoder> std::optional<ProcessIdentity> ProcessIdentity::decode(Decoder& decoder)
-{
-#if HAVE(TASK_IDENTITY_TOKEN)
-    std::optional<MachSendRight> identitySendRight;
-    decoder >> identitySendRight;
-    if (identitySendRight)
-        return ProcessIdentity { WTFMove(*identitySendRight) };
-    return std::nullopt;
-#else
-    UNUSED_PARAM(decoder);
-    return ProcessIdentity { };
-#endif
-}
 
 }

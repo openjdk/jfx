@@ -27,8 +27,13 @@
 
 #if ENABLE(APPLE_PAY)
 
+#include "ApplePayAutomaticReloadPaymentRequest.h"
+#include "ApplePayDeferredPaymentRequest.h"
 #include "ApplePayError.h"
+#include "ApplePayLaterAvailability.h"
 #include "ApplePayLineItem.h"
+#include "ApplePayPaymentTokenContext.h"
+#include "ApplePayRecurringPaymentRequest.h"
 #include "ApplePayShippingContactEditingMode.h"
 #include "ApplePayShippingMethod.h"
 #include "PaymentContact.h"
@@ -37,10 +42,6 @@
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
-
-#if USE(APPLE_INTERNAL_SDK)
-#include <WebKitAdditions/ApplePaySessionPaymentRequestAdditions.h>
-#endif
 
 namespace WebCore {
 
@@ -141,6 +142,31 @@ public:
     void setShippingContactEditingMode(const std::optional<ApplePayShippingContactEditingMode>& shippingContactEditingMode) { m_shippingContactEditingMode = shippingContactEditingMode; }
 #endif
 
+#if ENABLE(APPLE_PAY_RECURRING_PAYMENTS)
+    const std::optional<ApplePayRecurringPaymentRequest>& recurringPaymentRequest() const { return m_recurringPaymentRequest; }
+    void setRecurringPaymentRequest(std::optional<ApplePayRecurringPaymentRequest>&& recurringPaymentRequest) { m_recurringPaymentRequest = WTFMove(recurringPaymentRequest); }
+#endif
+
+#if ENABLE(APPLE_PAY_AUTOMATIC_RELOAD_PAYMENTS)
+    const std::optional<ApplePayAutomaticReloadPaymentRequest>& automaticReloadPaymentRequest() const { return m_automaticReloadPaymentRequest; }
+    void setAutomaticReloadPaymentRequest(std::optional<ApplePayAutomaticReloadPaymentRequest>&& automaticReloadPaymentRequest) { m_automaticReloadPaymentRequest = WTFMove(automaticReloadPaymentRequest); }
+#endif
+
+#if ENABLE(APPLE_PAY_MULTI_MERCHANT_PAYMENTS)
+    const std::optional<Vector<ApplePayPaymentTokenContext>>& multiTokenContexts() const { return m_multiTokenContexts; }
+    void setMultiTokenContexts(std::optional<Vector<ApplePayPaymentTokenContext>>&& multiTokenContexts) { m_multiTokenContexts = WTFMove(multiTokenContexts); }
+#endif
+
+#if ENABLE(APPLE_PAY_DEFERRED_PAYMENTS)
+    const std::optional<ApplePayDeferredPaymentRequest>& deferredPaymentRequest() const { return m_deferredPaymentRequest; }
+    void setDeferredPaymentRequest(std::optional<ApplePayDeferredPaymentRequest>&& deferredPaymentRequest) { m_deferredPaymentRequest = WTFMove(deferredPaymentRequest); }
+#endif
+
+#if ENABLE(APPLE_PAY_LATER_AVAILABILITY)
+    const std::optional<ApplePayLaterAvailability>& applePayLaterAvailability() const { return m_applePayLaterAvailability; }
+    void setApplePayLaterAvailability(const std::optional<ApplePayLaterAvailability>& applePayLaterAvailability) { m_applePayLaterAvailability = applePayLaterAvailability; }
+#endif
+
 private:
     unsigned m_version { 0 };
 
@@ -180,8 +206,24 @@ private:
     String m_couponCode;
 #endif
 
-#if defined(ApplePaySessionPaymentRequestAdditions_members)
-    ApplePaySessionPaymentRequestAdditions_members
+#if ENABLE(APPLE_PAY_RECURRING_PAYMENTS)
+    std::optional<ApplePayRecurringPaymentRequest> m_recurringPaymentRequest;
+#endif
+
+#if ENABLE(APPLE_PAY_AUTOMATIC_RELOAD_PAYMENTS)
+    std::optional<ApplePayAutomaticReloadPaymentRequest> m_automaticReloadPaymentRequest;
+#endif
+
+#if ENABLE(APPLE_PAY_MULTI_MERCHANT_PAYMENTS)
+    std::optional<Vector<ApplePayPaymentTokenContext>> m_multiTokenContexts;
+#endif
+
+#if ENABLE(APPLE_PAY_DEFERRED_PAYMENTS)
+    std::optional<ApplePayDeferredPaymentRequest> m_deferredPaymentRequest;
+#endif
+
+#if ENABLE(APPLE_PAY_LATER_AVAILABILITY)
+    std::optional<ApplePayLaterAvailability> m_applePayLaterAvailability;
 #endif
 };
 

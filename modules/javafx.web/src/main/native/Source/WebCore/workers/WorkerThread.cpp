@@ -54,6 +54,7 @@ WorkerParameters WorkerParameters::isolatedCopy() const
 {
     return {
         scriptURL.isolatedCopy(),
+        ownerURL.isolatedCopy(),
         name.isolatedCopy(),
         inspectorIdentifier.isolatedCopy(),
         userAgent.isolatedCopy(),
@@ -68,6 +69,11 @@ WorkerParameters WorkerParameters::isolatedCopy() const
         settingsValues.isolatedCopy(),
         workerThreadMode,
         sessionID,
+#if ENABLE(SERVICE_WORKER)
+        crossThreadCopy(serviceWorkerData),
+#endif
+        clientIdentifier,
+        noiseInjectionHashSalt
     };
 }
 
@@ -92,11 +98,12 @@ WorkerThreadStartupData::WorkerThreadStartupData(const WorkerParameters& other, 
 {
 }
 
-WorkerThread::WorkerThread(const WorkerParameters& params, const ScriptBuffer& sourceCode, WorkerLoaderProxy& workerLoaderProxy, WorkerDebuggerProxy& workerDebuggerProxy, WorkerReportingProxy& workerReportingProxy, WorkerThreadStartMode startMode, const SecurityOrigin& topOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider, JSC::RuntimeFlags runtimeFlags)
+WorkerThread::WorkerThread(const WorkerParameters& params, const ScriptBuffer& sourceCode, WorkerLoaderProxy& workerLoaderProxy, WorkerDebuggerProxy& workerDebuggerProxy, WorkerReportingProxy& workerReportingProxy, WorkerBadgeProxy& badgeProxy, WorkerThreadStartMode startMode, const SecurityOrigin& topOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider, JSC::RuntimeFlags runtimeFlags)
     : WorkerOrWorkletThread(params.inspectorIdentifier.isolatedCopy(), params.workerThreadMode)
-    , m_workerLoaderProxy(workerLoaderProxy)
-    , m_workerDebuggerProxy(workerDebuggerProxy)
-    , m_workerReportingProxy(workerReportingProxy)
+    , m_workerLoaderProxy(&workerLoaderProxy)
+    , m_workerDebuggerProxy(&workerDebuggerProxy)
+    , m_workerReportingProxy(&workerReportingProxy)
+    , m_workerBadgeProxy(&badgeProxy)
     , m_runtimeFlags(runtimeFlags)
     , m_startupData(makeUnique<WorkerThreadStartupData>(params, sourceCode, startMode, topOrigin))
     , m_idbConnectionProxy(connectionProxy)
@@ -142,7 +149,7 @@ bool WorkerThread::shouldWaitForWebInspectorOnStartup() const
 
 void WorkerThread::evaluateScriptIfNecessary(String& exceptionMessage)
 {
-    SetForScope<bool> isInStaticScriptEvaluation(m_isInStaticScriptEvaluation, true);
+    SetForScope isInStaticScriptEvaluation(m_isInStaticScriptEvaluation, true);
 
     // We are currently holding only the initial script code. If the WorkerType is Module, we should fetch the entire graph before executing the rest of this.
     // We invoke module loader as if we are executing inline module script tag in Document.
@@ -154,8 +161,9 @@ void WorkerThread::evaluateScriptIfNecessary(String& exceptionMessage)
         globalScope()->script()->evaluate(sourceCode, &exceptionMessage);
         finishedEvaluatingScript();
     } else {
-        auto scriptFetcher = WorkerScriptFetcher::create(globalScope()->credentials(), globalScope()->destination(), globalScope()->referrerPolicy());
-        ScriptSourceCode sourceCode(m_startupData->sourceCode, URL(m_startupData->params.scriptURL), { }, JSC::SourceProviderSourceType::Module, scriptFetcher.copyRef());
+        auto parameters = ModuleFetchParameters::create(JSC::ScriptFetchParameters::Type::JavaScript, emptyString(), /* isTopLevelModule */ true);
+        auto scriptFetcher = WorkerScriptFetcher::create(WTFMove(parameters), globalScope()->credentials(), globalScope()->destination(), globalScope()->referrerPolicy());
+        ScriptSourceCode sourceCode(m_startupData->sourceCode, URL(m_startupData->params.scriptURL), { }, { }, JSC::SourceProviderSourceType::Module, scriptFetcher.copyRef());
         sourceProvider = static_cast<ScriptBufferSourceProvider&>(sourceCode.provider());
         bool success = globalScope()->script()->loadModuleSynchronously(scriptFetcher.get(), sourceCode);
         if (success) {
@@ -193,6 +201,14 @@ SocketProvider* WorkerThread::socketProvider()
 WorkerGlobalScope* WorkerThread::globalScope()
 {
     return downcast<WorkerGlobalScope>(WorkerOrWorkletThread::globalScope());
+}
+
+void WorkerThread::clearProxies()
+{
+    m_workerLoaderProxy = nullptr;
+    m_workerDebuggerProxy = nullptr;
+    m_workerReportingProxy = nullptr;
+    m_workerBadgeProxy = nullptr;
 }
 
 } // namespace WebCore

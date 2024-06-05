@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -65,7 +65,7 @@ LinkBuffer::CodeRef<LinkBufferPtrTag> LinkBuffer::finalizeCodeWithDisassemblyImp
         va_start(argList, format);
         out.vprintf(format, argList);
         va_end(argList);
-        PerfLog::log(out.toCString(), result.code().untaggedExecutableAddress<const uint8_t*>(), result.size());
+        PerfLog::log(out.toCString(), result.code().untaggedPtr<const uint8_t*>(), result.size());
     }
 #endif
 
@@ -75,11 +75,29 @@ LinkBuffer::CodeRef<LinkBufferPtrTag> LinkBuffer::finalizeCodeWithDisassemblyImp
     out.printf("Generated JIT code for ");
     va_list argList;
     va_start(argList, format);
-    out.vprintf(format, argList);
+
+    if (m_isThunk) {
+        va_list preflightArgs;
+        va_copy(preflightArgs, argList);
+        size_t stringLength = vsnprintf(nullptr, 0, format, preflightArgs);
+        va_end(preflightArgs);
+
+        const char prefix[] = "thunk: ";
+        char* buffer = 0;
+        size_t length = stringLength + sizeof(prefix);
+        CString label = CString::newUninitialized(length, buffer);
+        snprintf(buffer, length, "%s", prefix);
+        vsnprintf(buffer + sizeof(prefix) - 1, stringLength + 1, format, argList);
+        out.printf("%s", buffer);
+
+        registerLabel(result.code().untaggedPtr(), WTFMove(label));
+    } else
+        out.vprintf(format, argList);
+
     va_end(argList);
     out.printf(":\n");
 
-    uint8_t* executableAddress = result.code().untaggedExecutableAddress<uint8_t*>();
+    uint8_t* executableAddress = result.code().untaggedPtr<uint8_t*>();
     out.printf("    Code at [%p, %p)%s\n", executableAddress, executableAddress + result.size(), justDumpingHeader ? "." : ":");
 
     CString header = out.toCString();
@@ -90,14 +108,17 @@ LinkBuffer::CodeRef<LinkBufferPtrTag> LinkBuffer::finalizeCodeWithDisassemblyImp
         return result;
     }
 
+    void* codeStart = entrypoint<DisassemblyPtrTag>().untaggedPtr();
+    void* codeEnd = bitwise_cast<uint8_t*>(codeStart) + size();
+
     if (Options::asyncDisassembly()) {
         CodeRef<DisassemblyPtrTag> codeRefForDisassembly = result.retagged<DisassemblyPtrTag>();
-        disassembleAsynchronously(header, WTFMove(codeRefForDisassembly), m_size, "    ");
+        disassembleAsynchronously(header, WTFMove(codeRefForDisassembly), m_size, codeStart, codeEnd, "    ");
         return result;
     }
 
     dataLog(header);
-    disassemble(result.retaggedCode<DisassemblyPtrTag>(), m_size, "    ", WTF::dataFile());
+    disassemble(result.retaggedCode<DisassemblyPtrTag>(), m_size, codeStart, codeEnd, "    ", WTF::dataFile());
 
     return result;
 }
@@ -390,7 +411,7 @@ void LinkBuffer::copyCompactAndLinkCode(MacroAssembler& macroAssembler, JITCompi
 void LinkBuffer::linkCode(MacroAssembler& macroAssembler, JITCompilationEffort effort)
 {
     // Ensure that the end of the last invalidation point does not extend beyond the end of the buffer.
-    macroAssembler.label();
+    macroAssembler.padBeforePatch();
 
 #if !ENABLE(BRANCH_COMPACTION)
 #if defined(ASSEMBLER_HAS_CONSTANT_POOL) && ASSEMBLER_HAS_CONSTANT_POOL
@@ -417,6 +438,8 @@ void LinkBuffer::linkCode(MacroAssembler& macroAssembler, JITCompilationEffort e
 
     m_linkTasks = WTFMove(macroAssembler.m_linkTasks);
     m_lateLinkTasks = WTFMove(macroAssembler.m_lateLinkTasks);
+
+    linkComments(macroAssembler);
 }
 
 void LinkBuffer::allocate(MacroAssembler& macroAssembler, JITCompilationEffort effort)
@@ -444,9 +467,29 @@ void LinkBuffer::allocate(MacroAssembler& macroAssembler, JITCompilationEffort e
     m_executableMemory = ExecutableAllocator::singleton().allocate(initialSize, effort);
     if (!m_executableMemory)
         return;
-    m_code = MacroAssemblerCodePtr<LinkBufferPtrTag>(m_executableMemory->start().retaggedPtr<LinkBufferPtrTag>());
+    m_code = CodePtr<LinkBufferPtrTag>(m_executableMemory->start().retaggedPtr<LinkBufferPtrTag>());
     m_size = initialSize;
     m_didAllocate = true;
+}
+
+void LinkBuffer::linkComments(MacroAssembler& assembler)
+{
+    if (LIKELY(!Options::needDisassemblySupport()) || !m_executableMemory)
+        return;
+    AssemblyCommentRegistry::CommentMap map;
+    for (auto& comment : assembler.m_comments) {
+        void* commentLocation = locationOf<DisassemblyPtrTag>(comment.first).dataLocation();
+        auto key = reinterpret_cast<uintptr_t>(commentLocation);
+
+        auto& string = comment.second;
+        auto addResult = map.ensure(key, [&] {
+            return string.isolatedCopy();
+        });
+        if (!addResult.isNewEntry)
+            addResult.iterator->value = addResult.iterator->value + "\n; "_s + string;
+    }
+
+    AssemblyCommentRegistry::singleton().registerCodeRange(m_executableMemory->start().untaggedPtr(), m_executableMemory->end().untaggedPtr(), WTFMove(map));
 }
 
 void LinkBuffer::performFinalization()

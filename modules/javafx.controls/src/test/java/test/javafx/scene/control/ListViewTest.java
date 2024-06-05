@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -66,6 +66,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.cell.CheckBoxListCell;
 import javafx.scene.control.cell.ComboBoxListCell;
 import javafx.scene.control.cell.TextFieldListCell;
+import javafx.scene.control.skin.ListCellSkin;
 import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
@@ -584,6 +585,9 @@ public class ListViewTest {
         RT_22463_Person p2 = new RT_22463_Person();
         p2.setId(2l);
         p2.setName("name2");
+
+        stageLoader = new StageLoader(list);
+
         list.setItems(FXCollections.observableArrayList(p1, p2));
         VirtualFlowTestUtils.assertCellTextEquals(list, 0, "name1");
         VirtualFlowTestUtils.assertCellTextEquals(list, 1, "name2");
@@ -598,6 +602,35 @@ public class ListViewTest {
         new_p2.setName("updated name2");
         list.getItems().clear();
         list.setItems(FXCollections.observableArrayList(new_p1, new_p2));
+        VirtualFlowTestUtils.assertCellTextEquals(list, 0, "updated name1");
+        VirtualFlowTestUtils.assertCellTextEquals(list, 1, "updated name2");
+    }
+
+    @Test
+    public void testSetItemsShouldUpdateTheCells() {
+        final ListView<RT_22463_Person> list = new ListView<>();
+
+        RT_22463_Person p1 = new RT_22463_Person();
+        p1.setId(1L);
+        p1.setName("name1");
+        RT_22463_Person p2 = new RT_22463_Person();
+        p2.setId(2L);
+        p2.setName("name2");
+
+        stageLoader = new StageLoader(list);
+
+        list.setItems(FXCollections.observableArrayList(p1, p2));
+        VirtualFlowTestUtils.assertCellTextEquals(list, 0, "name1");
+        VirtualFlowTestUtils.assertCellTextEquals(list, 1, "name2");
+
+        // Replace all Items by the new ones. Cells should get updated.
+        RT_22463_Person newP1 = new RT_22463_Person();
+        newP1.setId(1L);
+        newP1.setName("updated name1");
+        RT_22463_Person newP2 = new RT_22463_Person();
+        newP2.setId(2L);
+        newP2.setName("updated name2");
+        list.setItems(FXCollections.observableArrayList(newP1, newP2));
         VirtualFlowTestUtils.assertCellTextEquals(list, 0, "updated name1");
         VirtualFlowTestUtils.assertCellTextEquals(list, 1, "updated name2");
     }
@@ -1226,6 +1259,84 @@ public class ListViewTest {
         listView.getItems().clear();
         assertEquals(1, rt_37853_cancelCount);
         assertEquals(0, rt_37853_commitCount);
+
+        sl.dispose();
+    }
+
+    @Test
+    public void testListViewRemainsFocusedAfterEditCancel() {
+        listView.setCellFactory(TextFieldListCell.forListView());
+        listView.setEditable(true);
+        listView.getItems().add("John");
+
+        StageLoader sl = new StageLoader(new Button(), listView);
+        listView.requestFocus();
+        assertTrue(listView.isFocused());
+
+        ListCell cell = (ListCell) VirtualFlowTestUtils.getCell(listView, 0);
+        assertTrue(cell.getSkin() instanceof ListCellSkin);
+        assertNull(cell.getGraphic());
+        assertEquals("John", cell.getText());
+
+        listView.edit(0);
+
+        Toolkit.getToolkit().firePulse();
+        assertNotNull(cell.getGraphic());
+        assertTrue(cell.getGraphic() instanceof TextField);
+
+        TextField textField = (TextField) cell.getGraphic();
+        assertEquals("John", textField.getText());
+
+        textField.setText("Andrew");
+        textField.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertTrue(textField.isFocused());
+        assertFalse(listView.isFocused());
+
+        KeyEventFirer keyboard = new KeyEventFirer(textField);
+        keyboard.doKeyPress(KeyCode.ESCAPE);
+
+        assertEquals("John", cell.getText());
+        assertTrue(listView.isFocused());
+
+        sl.dispose();
+    }
+
+    @Test
+    public void testListViewRemainsFocusedAfterEditCommit() {
+        listView.setCellFactory(TextFieldListCell.forListView());
+        listView.setEditable(true);
+        listView.getItems().add("John");
+
+        StageLoader sl = new StageLoader(new Button(), listView);
+        listView.requestFocus();
+        assertTrue(listView.isFocused());
+
+        ListCell cell = (ListCell) VirtualFlowTestUtils.getCell(listView, 0);
+        assertTrue(cell.getSkin() instanceof ListCellSkin);
+        assertNull(cell.getGraphic());
+        assertEquals("John", cell.getText());
+
+        listView.edit(0);
+
+        Toolkit.getToolkit().firePulse();
+        assertNotNull(cell.getGraphic());
+        assertTrue(cell.getGraphic() instanceof TextField);
+
+        TextField textField = (TextField) cell.getGraphic();
+        assertEquals("John", textField.getText());
+
+        textField.setText("Andrew");
+        textField.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertTrue(textField.isFocused());
+        assertFalse(listView.isFocused());
+
+        KeyEventFirer keyboard = new KeyEventFirer(textField);
+        keyboard.doKeyPress(KeyCode.ENTER);
+
+        assertEquals("Andrew", cell.getText());
+        assertTrue(listView.isFocused());
 
         sl.dispose();
     }
@@ -2515,6 +2626,48 @@ public class ListViewTest {
             vf.scrollPixels(-1);
             assertEquals("Upper cell should move 1 pixels, after scrolling 1 pixel", previousLayoutY + 1, scrollToCell.getLayoutY(), 1.);
         }
+
+    }
+
+    @Test
+    public void fixListViewCrash_JDK_8303680() {
+        final ListView<String> listView = new ListView<>();
+
+        // add 100 entries
+        listView.setPrefSize(200, 200);
+        for (int i = 0; i < 100; i++) {
+            listView.getItems().add("Item " + i);
+        }
+        StageLoader sl = new StageLoader(new VBox(listView, new Button()));
+
+        // pulse
+        Toolkit.getToolkit().firePulse();
+
+        // get virtual flow
+        VirtualFlow vf = VirtualFlowTestUtils.getVirtualFlow(listView);
+
+        // scroll to 50 and scroll 1 pixel
+        vf.scrollTo(50);
+        vf.scrollPixels(1);
+
+        // another pulse
+        Toolkit.getToolkit().firePulse();
+
+        // scroll to cell
+        IndexedCell<Integer> cell = vf.getCell(50);//VirtualFlowTestUtils.getCell(listView, 70);
+
+        // shouldn't be null
+        assertNotNull(cell);
+
+        // should be visible
+        assertTrue("Cell should be visible", cell.isVisible());
+
+        // should have parent
+        assertNotNull("Cell should have parent", cell.getParent());
+
+        // Note:
+        // We don't check for the position of the cell, because it's currently don't work properly.
+        // But we wan't to ensure, that the VirtualFlow "Doesn't crash" - which was the case before.
 
     }
 

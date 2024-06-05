@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,11 @@
 
 package test.robot.javafx.web;
 
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 import static test.util.Util.TIMEOUT;
-
 import java.lang.ref.WeakReference;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.concurrent.Worker;
@@ -43,12 +40,11 @@ import javafx.scene.paint.Color;
 import javafx.scene.robot.Robot;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
 import test.util.Util;
+import test.util.memory.JMemoryBuddy;
 
 public class TooltipFXTest {
 
@@ -164,13 +160,6 @@ public class TooltipFXTest {
             scene = null;
         });
 
-        for (int j = 0; j < 5; ++j) {
-            System.gc();
-            if (webViewRef.get() == null) {
-                break;
-            }
-            Util.sleep(SLEEP_TIME);
-        }
-        assertNull("webViewRef is not null", webViewRef.get());
+        JMemoryBuddy.assertCollectable(webViewRef);
     }
 }

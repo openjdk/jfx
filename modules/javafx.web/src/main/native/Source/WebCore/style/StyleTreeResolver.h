@@ -45,7 +45,9 @@ class ShadowRoot;
 namespace Style {
 
 class Resolver;
+struct MatchResult;
 struct ResolutionContext;
+struct ResolvedStyle;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(TreeResolverScope);
 class TreeResolver {
@@ -55,20 +57,30 @@ public:
 
     std::unique_ptr<Update> resolve();
 
-    bool hasUnresolvedQueryContainers() const { return !m_unresolvedQueryContainers.isEmpty(); }
+    bool hasUnresolvedQueryContainers() const { return m_hasUnresolvedQueryContainers; }
 
 private:
-    std::unique_ptr<RenderStyle> styleForStyleable(const Styleable&, const ResolutionContext&);
+    enum class ResolutionType : uint8_t { FastPathInherit, Full };
+    ResolvedStyle styleForStyleable(const Styleable&, ResolutionType, const ResolutionContext&);
 
     void resolveComposedTree();
 
-    enum class QueryContainerAction : uint8_t { None, Continue, Layout };
-    QueryContainerAction updateQueryContainer(Element&, const RenderStyle&);
+    const RenderStyle* existingStyle(const Element&);
 
-    ElementUpdates resolveElement(Element&);
+    enum class QueryContainerAction : uint8_t { None, Resolve, Continue };
+    enum class DescendantsToResolve : uint8_t { None, ChildrenWithExplicitInherit, Children, All };
 
-    static ElementUpdate createAnimatedElementUpdate(std::unique_ptr<RenderStyle>, const Styleable&, Change, const ResolutionContext&);
-    std::optional<ElementUpdate> resolvePseudoStyle(Element&, const ElementUpdate&, PseudoId);
+    QueryContainerAction updateStateForQueryContainer(Element&, const RenderStyle*, ContainerType previousContainerType, Change&, DescendantsToResolve&);
+
+    std::pair<ElementUpdate, DescendantsToResolve> resolveElement(Element&, const RenderStyle* existingStyle, ResolutionType);
+
+    ElementUpdate createAnimatedElementUpdate(ResolvedStyle&&, const Styleable&, Change, const ResolutionContext&);
+    HashSet<AnimatableProperty> applyCascadeAfterAnimation(RenderStyle&, const HashSet<AnimatableProperty>&, bool isTransition, const MatchResult&, const Element&, const ResolutionContext&);
+
+    std::optional<ElementUpdate> resolvePseudoElement(Element&, PseudoId, const ElementUpdate&);
+    std::optional<ElementUpdate> resolveAncestorPseudoElement(Element&, PseudoId, const ElementUpdate&);
+    std::optional<ResolvedStyle> resolveAncestorFirstLinePseudoElement(Element&, const ElementUpdate&);
+    std::optional<ResolvedStyle> resolveAncestorFirstLetterPseudoElement(Element&, const ElementUpdate&, ResolutionContext&);
 
     struct Scope : RefCounted<Scope> {
         WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(TreeResolverScope);
@@ -89,6 +101,8 @@ private:
         Change change { Change::None };
         DescendantsToResolve descendantsToResolve { DescendantsToResolve::None };
         bool didPushScope { false };
+        bool resolvedFirstLineAndLetterChild { false };
+        bool needsUpdateQueryContainerDependentStyle { false };
 
         Parent(Document&);
         Parent(Element&, const RenderStyle&, Change, DescendantsToResolve);
@@ -105,10 +119,21 @@ private:
     void popParent();
     void popParentsToDepth(unsigned depth);
 
+    static DescendantsToResolve computeDescendantsToResolve(Change, Validity, DescendantsToResolve);
+    static std::optional<ResolutionType> determineResolutionType(const Element&, const RenderStyle*, DescendantsToResolve, Change parentChange);
+    static void resetDescendantStyleRelations(Element&, DescendantsToResolve);
+
     ResolutionContext makeResolutionContext();
-    ResolutionContext makeResolutionContextForPseudoElement(const ElementUpdate&);
+    ResolutionContext makeResolutionContextForPseudoElement(const ElementUpdate&, PseudoId);
+    std::optional<ResolutionContext> makeResolutionContextForInheritedFirstLine(const ElementUpdate&, const RenderStyle& inheritStyle);
+    const Parent* boxGeneratingParent() const;
     const RenderStyle* parentBoxStyle() const;
     const RenderStyle* parentBoxStyleForPseudoElement(const ElementUpdate&) const;
+
+    struct QueryContainerState {
+        Change change { Change::None };
+        DescendantsToResolve descendantsToResolve { DescendantsToResolve::None };
+    };
 
     Document& m_document;
     std::unique_ptr<RenderStyle> m_documentElementStyle;
@@ -117,8 +142,8 @@ private:
     Vector<Parent, 32> m_parentStack;
     bool m_didSeePendingStylesheet { false };
 
-    HashSet<RefPtr<Element>> m_unresolvedQueryContainers;
-    HashSet<RefPtr<Element>> m_resolvedQueryContainers;
+    HashMap<Ref<Element>, std::optional<QueryContainerState>> m_queryContainerStates;
+    bool m_hasUnresolvedQueryContainers { false };
 
     std::unique_ptr<Update> m_update;
 };
@@ -129,7 +154,7 @@ bool postResolutionCallbacksAreSuspended();
 
 class PostResolutionCallbackDisabler {
 public:
-    enum class DrainCallbacks { Yes, No };
+    enum class DrainCallbacks : bool { No, Yes };
     explicit PostResolutionCallbackDisabler(Document&, DrainCallbacks = DrainCallbacks::Yes);
     ~PostResolutionCallbackDisabler();
 private:

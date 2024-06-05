@@ -27,7 +27,10 @@
 #include "GridLayoutFunctions.h"
 
 #include "LengthFunctions.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderGrid.h"
+#include "RenderStyleInlines.h"
 
 namespace WebCore {
 
@@ -60,15 +63,10 @@ LayoutUnit computeMarginLogicalSizeForChild(const RenderGrid& grid, GridTrackSiz
     LayoutUnit marginStart;
     LayoutUnit marginEnd;
     if (direction == ForColumns)
-        child.computeInlineDirectionMargins(grid, child.containingBlockLogicalWidthForContentInFragment(nullptr), child.logicalWidth(), marginStart, marginEnd);
+        child.computeInlineDirectionMargins(grid, child.containingBlockLogicalWidthForContentInFragment(nullptr), { }, child.logicalWidth(), marginStart, marginEnd);
     else
         child.computeBlockDirectionMargins(grid, marginStart, marginEnd);
     return marginStartIsAuto(child, flowAwareDirection) ? marginEnd : marginEndIsAuto(child, flowAwareDirection) ? marginStart : marginStart + marginEnd;
-}
-
-static inline GridTrackSizingDirection directionFromSide(GridPositionSide side)
-{
-    return side == ColumnStartSide || side == ColumnEndSide ? ForColumns : ForRows;
 }
 
 static bool hasRelativeOrIntrinsicSizeForChild(const RenderBox& child, GridTrackSizingDirection direction)
@@ -103,7 +101,7 @@ static LayoutUnit extraMarginForSubgrid(const RenderGrid& parent, unsigned start
     return mbp;
 }
 
-static LayoutUnit extraMarginForSubgridAncestors(GridTrackSizingDirection direction, const RenderBox& child)
+LayoutUnit extraMarginForSubgridAncestors(GridTrackSizingDirection direction, const RenderBox& child)
 {
     const RenderGrid* grid = downcast<RenderGrid>(child.parent());
     LayoutUnit mbp;
@@ -139,8 +137,10 @@ LayoutUnit marginLogicalSizeForChild(const RenderGrid& grid, GridTrackSizingDire
         margin = marginStart + marginEnd;
     }
 
-    if (&grid != child.parent())
-        margin += extraMarginForSubgridAncestors(direction, child);
+    if (&grid != child.parent()) {
+        GridTrackSizingDirection subgridDirection = flowAwareDirectionForChild(grid, *downcast<RenderGrid>(child.parent()), direction);
+        margin += extraMarginForSubgridAncestors(subgridDirection, child);
+    }
 
     return margin;
 }

@@ -67,8 +67,8 @@ public:
     // FIXME: This does not handle [table, 0] correctly.
     Element* rootEditableElement() const { return m_deepPosition.isNotNull() ? m_deepPosition.deprecatedNode()->rootEditableElement() : 0; }
 
-    InlineRunAndOffset inlineRunAndOffset() const;
-    InlineRunAndOffset inlineRunAndOffset(TextDirection primaryDirection) const;
+    InlineBoxAndOffset inlineBoxAndOffset() const;
+    InlineBoxAndOffset inlineBoxAndOffset(TextDirection primaryDirection) const;
 
     struct LocalCaretRect {
         LayoutRect rect;
@@ -106,9 +106,8 @@ private:
 };
 
 bool operator==(const VisiblePosition&, const VisiblePosition&);
-bool operator!=(const VisiblePosition&, const VisiblePosition&);
 
-WEBCORE_EXPORT PartialOrdering documentOrder(const VisiblePosition&, const VisiblePosition&);
+WEBCORE_EXPORT std::partial_ordering documentOrder(const VisiblePosition&, const VisiblePosition&);
 bool operator<(const VisiblePosition&, const VisiblePosition&);
 bool operator>(const VisiblePosition&, const VisiblePosition&);
 bool operator<=(const VisiblePosition&, const VisiblePosition&);
@@ -133,6 +132,9 @@ struct VisiblePositionRange {
     VisiblePosition end;
 
     bool isNull() const { return start.isNull() || end.isNull(); }
+#if ENABLE(TREE_DEBUGGING)
+    String debugDescription() const;
+#endif
 };
 
 WEBCORE_EXPORT std::optional<SimpleRange> makeSimpleRange(const VisiblePositionRange&);
@@ -151,11 +153,6 @@ inline bool operator==(const VisiblePosition& a, const VisiblePosition& b)
 {
     // FIXME: Is it correct and helpful for this to be ignoring differences in affinity?
     return a.deepEquivalent() == b.deepEquivalent();
-}
-
-inline bool operator!=(const VisiblePosition& a, const VisiblePosition& b)
-{
-    return !(a == b);
 }
 
 inline bool operator<(const VisiblePosition& a, const VisiblePosition& b)

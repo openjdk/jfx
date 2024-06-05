@@ -37,6 +37,7 @@
 #include "HTMLNames.h"
 #include "LoadableTextTrack.h"
 #include "Logging.h"
+#include "NodeName.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/SetForScope.h>
 #include <wtf/text/CString.h>
@@ -55,7 +56,7 @@ static String urlForLoggingTrack(const URL& url)
 
     if (url.string().length() < maximumURLLengthForLogging)
         return url.string();
-    return url.string().substring(0, maximumURLLengthForLogging) + "...";
+    return makeString(StringView(url.string()).left(maximumURLLengthForLogging), "...");
 }
 
 #endif
@@ -103,21 +104,28 @@ void HTMLTrackElement::removedFromAncestor(RemovalType removalType, ContainerNod
         downcast<HTMLMediaElement>(oldParentOfRemovedTree).didRemoveTextTrack(*this);
 }
 
-void HTMLTrackElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLTrackElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == srcAttr) {
-        scheduleLoad();
-
     // 4.8.10.12.3 Sourcing out-of-band text tracks
     // As the kind, label, and srclang attributes are set, changed, or removed, the text track must update accordingly...
-    } else if (name == kindAttr)
-        track().setKindKeywordIgnoringASCIICase(value.string());
-    else if (name == labelAttr)
-        track().setLabel(value);
-    else if (name == srclangAttr)
-        track().setLanguage(value);
+    switch (name.nodeName()) {
+    case AttributeNames::srcAttr:
+        scheduleLoad();
+        break;
+    case AttributeNames::kindAttr:
+        track().setKindKeywordIgnoringASCIICase(newValue.string());
+        break;
+    case AttributeNames::labelAttr:
+        track().setLabel(newValue);
+        break;
+    case AttributeNames::srclangAttr:
+        track().setLanguage(newValue);
+        break;
+    default:
+        break;
+    }
 
-    HTMLElement::parseAttribute(name, value);
+    HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 const AtomString& HTMLTrackElement::kind()
@@ -174,7 +182,7 @@ void HTMLTrackElement::scheduleLoad()
     m_loadPending = true;
     scheduleTask([this]() mutable {
 
-        SetForScope<bool> loadPending { m_loadPending, true, false };
+        SetForScope loadPending { m_loadPending, true, false };
 
         if (!hasAttributeWithoutSynchronization(srcAttr)) {
             track().removeAllCues();
@@ -265,10 +273,10 @@ void HTMLTrackElement::didCompleteLoad(LoadStatus status)
 }
 
 // NOTE: The values in the TextTrack::ReadinessState enum must stay in sync with those in HTMLTrackElement::ReadyState.
-COMPILE_ASSERT(HTMLTrackElement::NONE == static_cast<HTMLTrackElement::ReadyState>(TextTrack::NotLoaded), TextTrackEnumNotLoaded_Is_Wrong_Should_Be_HTMLTrackElementEnumNONE);
-COMPILE_ASSERT(HTMLTrackElement::LOADING == static_cast<HTMLTrackElement::ReadyState>(TextTrack::Loading), TextTrackEnumLoadingIsWrong_ShouldBe_HTMLTrackElementEnumLOADING);
-COMPILE_ASSERT(HTMLTrackElement::LOADED == static_cast<HTMLTrackElement::ReadyState>(TextTrack::Loaded), TextTrackEnumLoaded_Is_Wrong_Should_Be_HTMLTrackElementEnumLOADED);
-COMPILE_ASSERT(HTMLTrackElement::TRACK_ERROR == static_cast<HTMLTrackElement::ReadyState>(TextTrack::FailedToLoad), TextTrackEnumFailedToLoad_Is_Wrong_Should_Be_HTMLTrackElementEnumTRACK_ERROR);
+static_assert(HTMLTrackElement::NONE == static_cast<HTMLTrackElement::ReadyState>(TextTrack::NotLoaded), "TextTrackEnumNotLoaded is wrong. Should be HTMLTrackElementEnumNONE");
+static_assert(HTMLTrackElement::LOADING == static_cast<HTMLTrackElement::ReadyState>(TextTrack::Loading), "TextTrackEnumLoading is wrong. Should be HTMLTrackElementEnumLOADING");
+static_assert(HTMLTrackElement::LOADED == static_cast<HTMLTrackElement::ReadyState>(TextTrack::Loaded), "TextTrackEnumLoaded is wrong. Should be HTMLTrackElementEnumLOADED");
+static_assert(HTMLTrackElement::TRACK_ERROR == static_cast<HTMLTrackElement::ReadyState>(TextTrack::FailedToLoad), "TextTrackEnumFailedToLoad is wrong. Should be HTMLTrackElementEnumTRACK_ERROR");
 
 void HTMLTrackElement::setReadyState(ReadyState state)
 {

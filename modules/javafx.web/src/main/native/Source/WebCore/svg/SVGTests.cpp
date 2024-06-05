@@ -24,6 +24,7 @@
 
 #include "DOMImplementation.h"
 #include "HTMLNames.h"
+#include "NodeName.h"
 #include "SVGElement.h"
 #include "SVGNames.h"
 #include "SVGStringList.h"
@@ -88,18 +89,22 @@ constexpr ComparableLettersLiteral supportedSVGFeatureArray[] = {
 
 constexpr SortedArraySet supportedSVGFeatureSet { supportedSVGFeatureArray };
 
-SVGTests::SVGTests(SVGElement* contextElement)
-    : m_contextElement(*contextElement)
-    , m_requiredFeatures(SVGStringList::create(contextElement))
-    , m_requiredExtensions(SVGStringList::create(contextElement))
-    , m_systemLanguage(SVGStringList::create(contextElement))
+SVGConditionalProcessingAttributes::SVGConditionalProcessingAttributes(SVGElement& contextElement)
+    : m_requiredFeatures(SVGStringList::create(&contextElement))
+    , m_requiredExtensions(SVGStringList::create(&contextElement))
+    , m_systemLanguage(SVGStringList::create(&contextElement))
 {
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
-        PropertyRegistry::registerProperty<SVGNames::requiredFeaturesAttr, &SVGTests::m_requiredFeatures>();
-        PropertyRegistry::registerProperty<SVGNames::requiredExtensionsAttr, &SVGTests::m_requiredExtensions>();
-        PropertyRegistry::registerProperty<SVGNames::systemLanguageAttr, &SVGTests::m_systemLanguage>();
+        SVGTests::PropertyRegistry::registerConditionalProcessingAttributeProperty<SVGNames::requiredFeaturesAttr, &SVGConditionalProcessingAttributes::m_requiredFeatures>();
+        SVGTests::PropertyRegistry::registerConditionalProcessingAttributeProperty<SVGNames::requiredExtensionsAttr, &SVGConditionalProcessingAttributes::m_requiredExtensions>();
+        SVGTests::PropertyRegistry::registerConditionalProcessingAttributeProperty<SVGNames::systemLanguageAttr, &SVGConditionalProcessingAttributes::m_systemLanguage>();
     });
+}
+
+SVGTests::SVGTests(SVGElement* contextElement)
+    : m_contextElement(*contextElement)
+{
 }
 
 bool SVGTests::hasExtension(const String& extension)
@@ -114,15 +119,21 @@ bool SVGTests::hasExtension(const String& extension)
 
 bool SVGTests::isValid() const
 {
-    for (auto& feature : m_requiredFeatures->items()) {
+    auto attributes = conditionalProcessingAttributesIfExists();
+    if (!attributes)
+        return true;
+
+    for (auto& feature : attributes->requiredFeatures().items()) {
         if (feature.isEmpty() || !supportedSVGFeatureSet.contains(feature))
             return false;
     }
-    for (auto& language : m_systemLanguage->items()) {
-        if (language != defaultLanguage().substring(0, 2))
+    String defaultLanguage = WTF::defaultLanguage();
+    auto genericDefaultLanguage = StringView(defaultLanguage).left(2);
+    for (auto& language : attributes->systemLanguage().items()) {
+        if (language != genericDefaultLanguage)
             return false;
     }
-    for (auto& extension : m_requiredExtensions->items()) {
+    for (auto& extension : attributes->requiredExtensions().items()) {
         if (!hasExtension(extension))
             return false;
     }
@@ -131,12 +142,19 @@ bool SVGTests::isValid() const
 
 void SVGTests::parseAttribute(const QualifiedName& attributeName, const AtomString& value)
 {
-    if (attributeName == SVGNames::requiredFeaturesAttr)
-        m_requiredFeatures->reset(value);
-    if (attributeName == SVGNames::requiredExtensionsAttr)
-        m_requiredExtensions->reset(value);
-    if (attributeName == SVGNames::systemLanguageAttr)
-        m_systemLanguage->reset(value);
+    switch (attributeName.nodeName()) {
+    case AttributeNames::requiredFeaturesAttr:
+        requiredFeatures().reset(value);
+        break;
+    case AttributeNames::requiredExtensionsAttr:
+        requiredExtensions().reset(value);
+        break;
+    case AttributeNames::systemLanguageAttr:
+        systemLanguage().reset(value);
+        break;
+    default:
+        break;
+    }
 }
 
 void SVGTests::svgAttributeChanged(const QualifiedName& attrName)
@@ -163,18 +181,28 @@ bool SVGTests::hasFeatureForLegacyBindings(const String& feature, const String& 
     // This is what the DOMImplementation function now does in JavaScript as is now suggested in the DOM specification.
     // The behavior implemented below is quirky, but preserves what WebKit has done for at least the last few years.
 
-    bool hasSVG10FeaturePrefix = startsWithLettersIgnoringASCIICase(feature, "org.w3c.dom.svg") || startsWithLettersIgnoringASCIICase(feature, "org.w3c.svg");
-    bool hasSVG11FeaturePrefix = startsWithLettersIgnoringASCIICase(feature, "http://www.w3.org/tr/svg");
+    bool hasSVG10FeaturePrefix = startsWithLettersIgnoringASCIICase(feature, "org.w3c.dom.svg"_s) || startsWithLettersIgnoringASCIICase(feature, "org.w3c.svg"_s);
+    bool hasSVG11FeaturePrefix = startsWithLettersIgnoringASCIICase(feature, "http://www.w3.org/tr/svg"_s);
 
     // We don't even try to handle feature names that don't look like the SVG ones, so just return true for all of those.
     if (!(hasSVG10FeaturePrefix || hasSVG11FeaturePrefix))
         return true;
 
     // If the version number matches the style of the feature name, then use the set to see if the feature is supported.
-    if (version.isEmpty() || (hasSVG10FeaturePrefix && version == "1.0") || (hasSVG11FeaturePrefix && version == "1.1"))
+    if (version.isEmpty() || (hasSVG10FeaturePrefix && version == "1.0"_s) || (hasSVG11FeaturePrefix && version == "1.1"_s))
         return supportedSVGFeatureSet.contains(feature);
 
     return false;
+}
+
+SVGConditionalProcessingAttributes& SVGTests::conditionalProcessingAttributes()
+{
+    return m_contextElement.conditionalProcessingAttributes();
+}
+
+SVGConditionalProcessingAttributes* SVGTests::conditionalProcessingAttributesIfExists() const
+{
+    return m_contextElement.conditionalProcessingAttributesIfExists();
 }
 
 }

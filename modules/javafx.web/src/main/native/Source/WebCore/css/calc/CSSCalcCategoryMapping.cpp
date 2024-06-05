@@ -75,6 +75,12 @@ CalculationCategory calcUnitCategory(CSSUnitType type)
     case CSSUnitType::CSS_DVMAX:
     case CSSUnitType::CSS_DVB:
     case CSSUnitType::CSS_DVI:
+    case CSSUnitType::CSS_CQW:
+    case CSSUnitType::CSS_CQH:
+    case CSSUnitType::CSS_CQI:
+    case CSSUnitType::CSS_CQB:
+    case CSSUnitType::CSS_CQMIN:
+    case CSSUnitType::CSS_CQMAX:
         return CalculationCategory::Length;
     case CSSUnitType::CSS_PERCENTAGE:
         return CalculationCategory::Percent;
@@ -89,6 +95,11 @@ CalculationCategory calcUnitCategory(CSSUnitType type)
     case CSSUnitType::CSS_HZ:
     case CSSUnitType::CSS_KHZ:
         return CalculationCategory::Frequency;
+    case CSSUnitType::CSS_DPPX:
+    case CSSUnitType::CSS_X:
+    case CSSUnitType::CSS_DPI:
+    case CSSUnitType::CSS_DPCM:
+        return CalculationCategory::Resolution;
     default:
         return CalculationCategory::Other;
     }
@@ -121,6 +132,11 @@ CalculationCategory calculationCategoryForCombination(CSSUnitType type)
     case CSSUnitType::CSS_HZ:
     case CSSUnitType::CSS_KHZ:
         return CalculationCategory::Frequency;
+    case CSSUnitType::CSS_DPPX:
+    case CSSUnitType::CSS_DPI:
+    case CSSUnitType::CSS_DPCM:
+    case CSSUnitType::CSS_X:
+        return CalculationCategory::Resolution;
     case CSSUnitType::CSS_EMS:
     case CSSUnitType::CSS_EXS:
     case CSSUnitType::CSS_LHS:
@@ -152,6 +168,12 @@ CalculationCategory calculationCategoryForCombination(CSSUnitType type)
     case CSSUnitType::CSS_DVMAX:
     case CSSUnitType::CSS_DVB:
     case CSSUnitType::CSS_DVI:
+    case CSSUnitType::CSS_CQW:
+    case CSSUnitType::CSS_CQH:
+    case CSSUnitType::CSS_CQI:
+    case CSSUnitType::CSS_CQB:
+    case CSSUnitType::CSS_CQMIN:
+    case CSSUnitType::CSS_CQMAX:
     default:
         return CalculationCategory::Other;
     }
@@ -166,6 +188,7 @@ CSSUnitType canonicalUnitTypeForCalculationCategory(CalculationCategory category
     case CalculationCategory::Angle: return CSSUnitType::CSS_DEG;
     case CalculationCategory::Time: return CSSUnitType::CSS_S;
     case CalculationCategory::Frequency: return CSSUnitType::CSS_HZ;
+    case CalculationCategory::Resolution: return CSSUnitType::CSS_DPPX;
     case CalculationCategory::Other:
     case CalculationCategory::PercentNumber:
     case CalculationCategory::PercentLength:
@@ -233,6 +256,12 @@ bool hasDoubleValue(CSSUnitType type)
     case CSSUnitType::CSS_Q:
     case CSSUnitType::CSS_LHS:
     case CSSUnitType::CSS_RLHS:
+    case CSSUnitType::CSS_CQW:
+    case CSSUnitType::CSS_CQH:
+    case CSSUnitType::CSS_CQI:
+    case CSSUnitType::CSS_CQB:
+    case CSSUnitType::CSS_CQMIN:
+    case CSSUnitType::CSS_CQMAX:
         return true;
     case CSSUnitType::CSS_UNKNOWN:
     case CSSUnitType::CSS_STRING:
@@ -241,18 +270,13 @@ bool hasDoubleValue(CSSUnitType type)
     case CSSUnitType::CSS_IDENT:
     case CSSUnitType::CustomIdent:
     case CSSUnitType::CSS_ATTR:
-    case CSSUnitType::CSS_COUNTER:
-    case CSSUnitType::CSS_RECT:
     case CSSUnitType::CSS_RGBCOLOR:
-    case CSSUnitType::CSS_PAIR:
-    case CSSUnitType::CSS_UNICODE_RANGE:
     case CSSUnitType::CSS_COUNTER_NAME:
-    case CSSUnitType::CSS_SHAPE:
-    case CSSUnitType::CSS_QUAD:
     case CSSUnitType::CSS_QUIRKY_EMS:
     case CSSUnitType::CSS_CALC:
     case CSSUnitType::CSS_CALC_PERCENTAGE_WITH_NUMBER:
     case CSSUnitType::CSS_CALC_PERCENTAGE_WITH_LENGTH:
+    case CSSUnitType::CSS_UNRESOLVED_COLOR:
     case CSSUnitType::CSS_PROPERTY_ID:
     case CSSUnitType::CSS_VALUE_ID:
         return false;

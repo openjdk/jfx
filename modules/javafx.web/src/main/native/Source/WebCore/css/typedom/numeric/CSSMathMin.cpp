@@ -26,24 +26,37 @@
 #include "config.h"
 #include "CSSMathMin.h"
 
+#include "CSSCalcOperationNode.h"
 #include "CSSNumericArray.h"
-
-#if ENABLE(CSS_TYPED_OM)
-
+#include "ExceptionOr.h"
+#include <wtf/FixedVector.h>
 #include <wtf/IsoMallocInlines.h>
+#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(CSSMathMin);
 
-Ref<CSSMathMin> CSSMathMin::create(FixedVector<CSSNumberish>&& numberishes)
+ExceptionOr<Ref<CSSMathMin>> CSSMathMin::create(FixedVector<CSSNumberish>&& numberishes)
 {
-    return adoptRef(*new CSSMathMin(WTFMove(numberishes)));
+    return create(WTF::map(WTFMove(numberishes), rectifyNumberish));
 }
 
-CSSMathMin::CSSMathMin(FixedVector<CSSNumberish>&& numberishes)
-    : CSSMathValue(CSSMathOperator::Min)
-    , m_values(CSSNumericArray::create(WTFMove(numberishes)))
+ExceptionOr<Ref<CSSMathMin>> CSSMathMin::create(Vector<Ref<CSSNumericValue>>&& values)
+{
+    if (values.isEmpty())
+        return Exception { SyntaxError };
+
+    auto type = CSSNumericType::addTypes(values);
+    if (!type)
+        return Exception { TypeError };
+
+    return adoptRef(*new CSSMathMin(WTFMove(values), WTFMove(*type)));
+}
+
+CSSMathMin::CSSMathMin(Vector<Ref<CSSNumericValue>>&& values, CSSNumericType&& type)
+    : CSSMathValue(WTFMove(type))
+    , m_values(CSSNumericArray::create(WTFMove(values)))
 {
 }
 
@@ -52,6 +65,50 @@ const CSSNumericArray& CSSMathMin::values() const
     return m_values.get();
 }
 
-} // namespace WebCore
+void CSSMathMin::serialize(StringBuilder& builder, OptionSet<SerializationArguments> arguments) const
+{
+    // https://drafts.css-houdini.org/css-typed-om/#calc-serialization
+    if (!arguments.contains(SerializationArguments::WithoutParentheses))
+        builder.append("min(");
+    m_values->forEach([&](auto& numericValue, bool first) {
+        if (!first)
+            builder.append(", ");
+        numericValue.serialize(builder, { SerializationArguments::Nested, SerializationArguments::WithoutParentheses });
+    });
+    if (!arguments.contains(SerializationArguments::WithoutParentheses))
+        builder.append(')');
+}
 
-#endif
+auto CSSMathMin::toSumValue() const -> std::optional<SumValue>
+{
+    // https://drafts.css-houdini.org/css-typed-om/#create-a-sum-value
+    auto& valuesArray = m_values->array();
+    std::optional<SumValue> currentMax = valuesArray[0]->toSumValue();
+    if (!currentMax || currentMax->size() != 1)
+        return std::nullopt;
+    for (size_t i = 1; i < valuesArray.size(); ++i) {
+        auto currentValue = valuesArray[i]->toSumValue();
+        if (!currentValue
+            || currentValue->size() != 1
+            || (*currentValue)[0].units != (*currentMax)[0].units)
+            return std::nullopt;
+        if ((*currentValue)[0].value < (*currentMax)[0].value)
+            currentMax = WTFMove(currentValue);
+    }
+    return currentMax;
+}
+
+RefPtr<CSSCalcExpressionNode> CSSMathMin::toCalcExpressionNode() const
+{
+    Vector<Ref<CSSCalcExpressionNode>> values;
+    values.reserveInitialCapacity(m_values->length());
+    for (auto& value : m_values->array()) {
+        if (auto valueNode = value->toCalcExpressionNode())
+            values.append(valueNode.releaseNonNull());
+    }
+    if (values.isEmpty())
+        return nullptr;
+    return CSSCalcOperationNode::createMinOrMaxOrClamp(CalcOperator::Min, WTFMove(values), CalculationCategory::Length);
+}
+
+} // namespace WebCore

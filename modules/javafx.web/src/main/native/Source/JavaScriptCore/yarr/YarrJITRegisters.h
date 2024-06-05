@@ -68,7 +68,7 @@ public:
     static constexpr GPRReg regT2 = ARM64Registers::x8;
     static constexpr GPRReg remainingMatchCount = ARM64Registers::x9;
     static constexpr GPRReg regUnicodeInputAndTrail = ARM64Registers::x10;
-    static constexpr GPRReg unicodeTemp = ARM64Registers::x5;
+    static constexpr GPRReg unicodeAndSubpatternIdTemp = ARM64Registers::x5;
     static constexpr GPRReg initialStart = ARM64Registers::x11;
     static constexpr GPRReg supplementaryPlanesBase = ARM64Registers::x12;
     static constexpr GPRReg leadingSurrogateTag = ARM64Registers::x13;
@@ -132,7 +132,7 @@ public:
     static constexpr GPRReg remainingMatchCount = X86Registers::esi;
 #endif
     static constexpr GPRReg regUnicodeInputAndTrail = X86Registers::r13;
-    static constexpr GPRReg unicodeTemp = X86Registers::r14;
+    static constexpr GPRReg unicodeAndSubpatternIdTemp = X86Registers::r14;
     static constexpr GPRReg endOfStringAddress = X86Registers::r15;
 
     static constexpr GPRReg returnRegister = X86Registers::eax;
@@ -158,7 +158,7 @@ public:
     static constexpr GPRReg regT2 = RISCV64Registers::x5;
     static constexpr GPRReg remainingMatchCount = RISCV64Registers::x6;
     static constexpr GPRReg regUnicodeInputAndTrail = RISCV64Registers::x7;
-    static constexpr GPRReg unicodeTemp = RISCV64Registers::x15;
+    static constexpr GPRReg unicodeAndSubpatternIdTemp = RISCV64Registers::x15;
     static constexpr GPRReg initialStart = RISCV64Registers::x28;
     static constexpr GPRReg endOfStringAddress = RISCV64Registers::x29;
 
@@ -175,8 +175,30 @@ public:
 #if ENABLE(YARR_JIT_REGEXP_TEST_INLINE)
 class YarrJITRegisters {
 public:
-    YarrJITRegisters()
+    YarrJITRegisters() = default;
+
+    void validate()
     {
+#if ASSERT_ENABLED
+        ASSERT(input != InvalidGPRReg);
+        ASSERT(index != InvalidGPRReg);
+        ASSERT(length != InvalidGPRReg);
+        ASSERT(output != InvalidGPRReg);
+
+        ASSERT(returnRegister != InvalidGPRReg);
+        ASSERT(returnRegister2 != InvalidGPRReg);
+
+        ASSERT(regT0 != InvalidGPRReg);
+        ASSERT(regT1 != InvalidGPRReg);
+
+        ASSERT(noOverlap(input, index, length, output, regT0, regT1));
+        ASSERT(noOverlap(returnRegister, returnRegister2));
+        ASSERT(noOverlap(index, output, returnRegister));
+
+#if CPU(X86_64) && OS(WINDOWS)
+        ASSERT(noOverlap(X86Registers::ecx, returnRegister, m_regs.returnRegister2));
+#endif
+#endif
     }
 
     // Argument registers
@@ -184,6 +206,7 @@ public:
     GPRReg index { InvalidGPRReg };
     GPRReg length { InvalidGPRReg };
     GPRReg output { InvalidGPRReg };
+
     GPRReg matchingContext { InvalidGPRReg };
     GPRReg freelistRegister { InvalidGPRReg };
     GPRReg freelistSizeRegister { InvalidGPRReg };
@@ -202,7 +225,7 @@ public:
     // Unicode character processing
     GPRReg remainingMatchCount { InvalidGPRReg };
     GPRReg regUnicodeInputAndTrail { InvalidGPRReg };
-    GPRReg unicodeTemp { InvalidGPRReg };
+    GPRReg unicodeAndSubpatternIdTemp { InvalidGPRReg };
     GPRReg endOfStringAddress { InvalidGPRReg };
 
     const MacroAssembler::TrustedImm32 supplementaryPlanesBase = MacroAssembler::TrustedImm32(0x10000);

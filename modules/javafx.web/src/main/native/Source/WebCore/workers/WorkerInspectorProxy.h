@@ -41,7 +41,7 @@ class WorkerThread;
 
 enum class WorkerThreadStartMode;
 
-class WorkerInspectorProxy : public RefCounted<WorkerInspectorProxy>, public CanMakeWeakPtr<WorkerInspectorProxy> {
+class WorkerInspectorProxy : public RefCounted<WorkerInspectorProxy>, public CanMakeWeakPtr<WorkerInspectorProxy, WeakPtrFactoryInitialization::Eager> {
     WTF_MAKE_NONCOPYABLE(WorkerInspectorProxy);
     WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -56,10 +56,10 @@ public:
     class PageChannel {
     public:
         virtual ~PageChannel() = default;
-        virtual void sendMessageFromWorkerToFrontend(WorkerInspectorProxy&, const String&) = 0;
+        virtual void sendMessageFromWorkerToFrontend(WorkerInspectorProxy&, String&&) = 0;
     };
 
-    static WeakHashSet<WorkerInspectorProxy>& allWorkerInspectorProxies();
+    static WeakHashSet<WorkerInspectorProxy> allWorkerInspectorProxiesCopy();
 
     const URL& url() const { return m_url; }
     const String& name() const { return m_name; }
@@ -74,7 +74,7 @@ public:
     void connectToWorkerInspectorController(PageChannel&);
     void disconnectFromWorkerInspectorController();
     void sendMessageToWorkerInspectorController(const String&);
-    void sendMessageFromWorkerToFrontend(const String&);
+    void sendMessageFromWorkerToFrontend(String&&);
 
 private:
     explicit WorkerInspectorProxy(const String& identifier);

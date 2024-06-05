@@ -114,6 +114,7 @@ public:
     virtual bool isMouseEvent() const { return false; }
     virtual bool isPointerEvent() const { return false; }
     virtual bool isTextEvent() const { return false; }
+    virtual bool isToggleEvent() const { return false; }
     virtual bool isTouchEvent() const { return false; }
     virtual bool isUIEvent() const { return false; }
     virtual bool isVersionChangeEvent() const { return false; }
@@ -151,7 +152,7 @@ public:
     bool isBeingDispatched() const { return eventPhase(); }
 
     virtual EventTarget* relatedTarget() const { return nullptr; }
-    virtual void setRelatedTarget(EventTarget*) { }
+    virtual void setRelatedTarget(RefPtr<EventTarget>&&) { }
 
     virtual String debugDescription() const;
 
@@ -162,6 +163,8 @@ protected:
     Event(const AtomString& type, const EventInit&, IsTrusted);
 
     virtual void receivedTarget() { }
+
+    bool isConstructedFromInitializer() const { return m_isConstructedFromInitializer; }
 
 private:
     explicit Event(MonotonicTime createTime, const AtomString& type, IsTrusted, CanBubble, IsCancelable, IsComposed);
@@ -183,6 +186,10 @@ private:
     unsigned m_currentTargetIsInShadowTree : 1;
 
     unsigned m_eventPhase : 2;
+
+    // We consult this flag since the EventInit dictionary takes priority in initializing event attribute values.
+    // See step 4 of https://dom.spec.whatwg.org/#inner-event-creation-steps
+    unsigned m_isConstructedFromInitializer : 1 { false };
 
     AtomString m_type;
 

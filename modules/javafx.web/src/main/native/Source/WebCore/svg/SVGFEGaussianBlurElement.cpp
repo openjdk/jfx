@@ -23,6 +23,7 @@
 #include "SVGFEGaussianBlurElement.h"
 
 #include "FEGaussianBlur.h"
+#include "NodeName.h"
 #include "SVGNames.h"
 #include "SVGParserUtilities.h"
 #include <wtf/IsoMallocInlines.h>
@@ -32,7 +33,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFEGaussianBlurElement);
 
 inline SVGFEGaussianBlurElement::SVGFEGaussianBlurElement(const QualifiedName& tagName, Document& document)
-    : SVGFilterPrimitiveStandardAttributes(tagName, document)
+    : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::feGaussianBlurTag));
 
@@ -53,48 +54,92 @@ void SVGFEGaussianBlurElement::setStdDeviation(float x, float y)
 {
     m_stdDeviationX->setBaseValInternal(x);
     m_stdDeviationY->setBaseValInternal(y);
-    invalidate();
+    updateSVGRendererForElementChange();
 }
 
-void SVGFEGaussianBlurElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGFEGaussianBlurElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == SVGNames::stdDeviationAttr) {
-        if (auto result = parseNumberOptionalNumber(value)) {
+    switch (name.nodeName()) {
+    case AttributeNames::stdDeviationAttr:
+        if (auto result = parseNumberOptionalNumber(newValue)) {
             m_stdDeviationX->setBaseValInternal(result->first);
             m_stdDeviationY->setBaseValInternal(result->second);
         }
-        return;
-    }
-
-    if (name == SVGNames::inAttr) {
-        m_in1->setBaseValInternal(value);
-        return;
-    }
-
-    if (name == SVGNames::edgeModeAttr) {
-        auto propertyValue = SVGPropertyTraits<EdgeModeType>::fromString(value);
+        break;
+    case AttributeNames::inAttr:
+        m_in1->setBaseValInternal(newValue);
+        break;
+    case AttributeNames::edgeModeAttr: {
+        auto propertyValue = SVGPropertyTraits<EdgeModeType>::fromString(newValue);
         if (propertyValue != EdgeModeType::Unknown)
             m_edgeMode->setBaseValInternal<EdgeModeType>(propertyValue);
         else
-            document().accessSVGExtensions().reportWarning("feGaussianBlur: problem parsing edgeMode=\"" + value + "\". Filtered element will not be displayed.");
-        return;
+            document().accessSVGExtensions().reportWarning("feGaussianBlur: problem parsing edgeMode=\"" + newValue + "\". Filtered element will not be displayed.");
+        break;
+    }
+    default:
+        break;
     }
 
-    SVGFilterPrimitiveStandardAttributes::parseAttribute(name, value);
+    SVGFilterPrimitiveStandardAttributes::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGFEGaussianBlurElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (PropertyRegistry::isKnownAttribute(attrName)) {
+    switch (attrName.nodeName()) {
+    case AttributeNames::inAttr: {
         InstanceInvalidationGuard guard(*this);
-        invalidate();
+        updateSVGRendererForElementChange();
+        break;
+    }
+    case AttributeNames::stdDeviationAttr: {
+        if (stdDeviationX() < 0 || stdDeviationY() < 0) {
+        InstanceInvalidationGuard guard(*this);
+        markFilterEffectForRebuild();
         return;
     }
-
+        FALLTHROUGH;
+    }
+    case AttributeNames::edgeModeAttr: {
+        InstanceInvalidationGuard guard(*this);
+        primitiveAttributeChanged(attrName);
+        break;
+    }
+    default:
     SVGFilterPrimitiveStandardAttributes::svgAttributeChanged(attrName);
+        break;
+    }
 }
 
-RefPtr<FilterEffect> SVGFEGaussianBlurElement::filterEffect(const SVGFilterBuilder&, const FilterEffectVector&) const
+bool SVGFEGaussianBlurElement::setFilterEffectAttribute(FilterEffect& effect, const QualifiedName& attrName)
+{
+    auto& feGaussianBlur = downcast<FEGaussianBlur>(effect);
+
+    if (attrName == SVGNames::stdDeviationAttr) {
+        bool stdDeviationXChanged = feGaussianBlur.setStdDeviationX(stdDeviationX());
+        bool stdDeviationYChanged = feGaussianBlur.setStdDeviationY(stdDeviationY());
+        return stdDeviationXChanged || stdDeviationYChanged;
+    }
+
+    if (attrName == SVGNames::edgeModeAttr)
+        return feGaussianBlur.setEdgeMode(edgeMode());
+
+    ASSERT_NOT_REACHED();
+    return false;
+}
+
+bool SVGFEGaussianBlurElement::isIdentity() const
+{
+    return !stdDeviationX() && !stdDeviationY();
+}
+
+IntOutsets SVGFEGaussianBlurElement::outsets(const FloatRect& targetBoundingBox, SVGUnitTypes::SVGUnitType primitiveUnits) const
+{
+    auto stdDeviation = SVGFilter::calculateResolvedSize({ stdDeviationX(), stdDeviationY() }, targetBoundingBox, primitiveUnits);
+    return FEGaussianBlur::calculateOutsets(stdDeviation);
+}
+
+RefPtr<FilterEffect> SVGFEGaussianBlurElement::createFilterEffect(const FilterEffectVector&, const GraphicsContext&) const
 {
     if (stdDeviationX() < 0 || stdDeviationY() < 0)
         return nullptr;

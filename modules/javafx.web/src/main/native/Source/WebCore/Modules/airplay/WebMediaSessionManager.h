@@ -31,7 +31,6 @@
 #include "MediaPlaybackTargetPicker.h"
 #include "MediaPlaybackTargetPickerMock.h"
 #include "MediaProducer.h"
-#include "PlatformView.h"
 #include "PlaybackTargetClientContextIdentifier.h"
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
@@ -103,8 +102,8 @@ private:
 
     WebMediaSessionLogger& logger();
 
-    RunLoop::Timer<WebMediaSessionManager> m_taskTimer;
-    RunLoop::Timer<WebMediaSessionManager> m_watchdogTimer;
+    RunLoop::Timer m_taskTimer;
+    RunLoop::Timer m_watchdogTimer;
 
     Vector<std::unique_ptr<ClientState>> m_clientState;
     RefPtr<MediaPlaybackTarget> m_playbackTarget;

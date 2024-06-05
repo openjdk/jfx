@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -359,14 +359,20 @@ public final class QuantumToolkit extends Toolkit {
             };
             pulseTimer = Application.GetApplication().createTimer(timerRunnable);
 
+            // Initialize the platform preferences
+            PlatformImpl.initPreferences(
+                Application.GetApplication().getPlatformKeys(),
+                Application.GetApplication().getPlatformKeyMappings(),
+                Application.GetApplication().getPlatformPreferences());
+
             Application.GetApplication().setEventHandler(new Application.EventHandler() {
                 @Override public void handleQuitAction(Application app, long time) {
                     GlassStage.requestClosingAllWindows();
                 }
 
-                @Override public boolean handleThemeChanged(String themeName) {
-                    String highContrastSchemeName = Application.GetApplication().getHighContrastScheme(themeName);
-                    return PlatformImpl.setAccessibilityTheme(highContrastSchemeName);
+                @Override
+                public void handlePreferencesChanged(Map<String, Object> preferences) {
+                    PlatformImpl.updatePreferences(preferences);
                 }
             });
         }
@@ -621,6 +627,8 @@ public final class QuantumToolkit extends Toolkit {
     }
 
     @Override public boolean canStartNestedEventLoop() {
+        checkFxUserThread();
+
         return inPulse == 0;
     }
 
@@ -1077,10 +1085,10 @@ public final class QuantumToolkit extends Toolkit {
         return 2;
     }
 
-    @Override public int getKeyCodeForChar(String character) {
+    @Override public int getKeyCodeForChar(String character, int hint) {
         return (character.length() == 1)
                 ? com.sun.glass.events.KeyEvent.getKeyCodeForChar(
-                          character.charAt(0))
+                          character.charAt(0), hint)
                 : com.sun.glass.events.KeyEvent.VK_UNDEFINED;
     }
 
@@ -1803,11 +1811,6 @@ public final class QuantumToolkit extends Toolkit {
     @Override
     public int getMultiClickMaxY() {
         return View.getMultiClickMaxY();
-    }
-
-    @Override
-    public String getThemeName() {
-        return Application.GetApplication().getHighContrastTheme();
     }
 
     @Override

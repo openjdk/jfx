@@ -27,7 +27,6 @@
 
 #include "CallFrame.h"
 #include "JSCallee.h"
-#include "JSGlobalObject.h"
 #include "RegisterInlines.h"
 
 namespace JSC {
@@ -59,6 +58,7 @@ inline JSObject* CallFrame::jsCallee() const
 
 inline CodeBlock* CallFrame::codeBlock() const
 {
+    ASSERT(!callee().isWasm());
     return this[static_cast<int>(CallFrameSlot::codeBlock)].Register::codeBlock();
 }
 
@@ -76,6 +76,14 @@ inline JSGlobalObject* CallFrame::lexicalGlobalObject(VM& vm) const
 #endif
     return jsCallee()->globalObject();
 }
+
+#if ENABLE(WEBASSEMBLY)
+inline Wasm::Instance* CallFrame::wasmInstance() const
+{
+    ASSERT(callee().isWasm());
+    return bitwise_cast<Wasm::Instance*>(const_cast<CallFrame*>(this)->uncheckedR(CallFrameSlot::codeBlock).asanUnsafePointer());
+}
+#endif
 
 inline bool CallFrame::isStackOverflowFrame() const
 {

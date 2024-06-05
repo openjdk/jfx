@@ -84,8 +84,6 @@ public:
 
     ~Color();
 
-    unsigned hash() const;
-
     bool isValid() const;
     bool isSemantic() const;
     bool usesColorFunctionSerialization() const;
@@ -180,11 +178,13 @@ public:
     String debugDescription() const;
 
 private:
+    friend void add(Hasher&, const Color&);
+
     class OutOfLineComponents : public ThreadSafeRefCounted<OutOfLineComponents> {
     public:
-        static Ref<OutOfLineComponents> create(ColorComponents<float, 4> components)
+        static Ref<OutOfLineComponents> create(ColorComponents<float, 4>&& components)
         {
-            return adoptRef(*new OutOfLineComponents(components));
+            return adoptRef(*new OutOfLineComponents(WTFMove(components)));
         }
 
         float unresolvedAlpha() const { return m_components[3]; }
@@ -193,8 +193,8 @@ private:
         ColorComponents<float, 4> resolvedComponents() const { return resolveColorComponents(m_components); }
 
     private:
-        OutOfLineComponents(ColorComponents<float, 4> components)
-            : m_components(components)
+        OutOfLineComponents(ColorComponents<float, 4>&& components)
+            : m_components(WTFMove(components))
         {
         }
 
@@ -257,8 +257,15 @@ private:
     uint64_t m_colorAndFlags { invalidColorAndFlags };
 };
 
+inline void add(Hasher& hasher, const Color& color)
+{
+    if (color.isOutOfLine())
+        add(hasher, color.asOutOfLine().unresolvedComponents(), color.colorSpace(), color.flags());
+    else
+        add(hasher, color.asPackedInline().value, color.flags());
+}
+
 bool operator==(const Color&, const Color&);
-bool operator!=(const Color&, const Color&);
 
 // One or both must be out of line colors.
 bool outOfLineComponentsEqual(const Color&, const Color&);
@@ -277,11 +284,6 @@ inline bool operator==(const Color& a, const Color& b)
     if (a.isOutOfLine() || b.isOutOfLine())
         return outOfLineComponentsEqual(a, b);
     return a.m_colorAndFlags == b.m_colorAndFlags;
-}
-
-inline bool operator!=(const Color& a, const Color& b)
-{
-    return !(a == b);
 }
 
 inline bool outOfLineComponentsEqual(const Color& a, const Color& b)
@@ -363,13 +365,6 @@ inline Color::~Color()
 {
     if (isOutOfLine())
         asOutOfLine().deref();
-}
-
-inline unsigned Color::hash() const
-{
-    if (isOutOfLine())
-        return computeHash(asOutOfLine().unresolvedComponents(), colorSpace(), flags().toRaw());
-    return computeHash(asPackedInline().value, flags().toRaw());
 }
 
 inline bool Color::isValid() const
@@ -625,12 +620,6 @@ template<class Decoder> std::optional<Color> Color::decode(Decoder& decoder)
         return std::nullopt;
 
     return Color { asSRGBA(PackedColor::RGBA { value }), flags };
-}
-
-inline void add(Hasher& hasher, const Color& color)
-{
-    // FIXME: We don't want to hash a hash; do better.
-    add(hasher, color.hash());
 }
 
 } // namespace WebCore

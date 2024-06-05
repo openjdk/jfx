@@ -29,7 +29,7 @@
 
 #include "CompilationResult.h"
 #include "WasmB3IRGenerator.h"
-#include "WasmEmbedder.h"
+#include "WasmJS.h"
 #include "WasmModuleInformation.h"
 #include <wtf/Bag.h>
 #include <wtf/CrossThreadCopier.h>
@@ -40,11 +40,11 @@
 namespace JSC {
 
 class CallLinkInfo;
+class VM;
 
 namespace Wasm {
 
 class CalleeGroup;
-struct Context;
 
 class Plan : public ThreadSafeRefCounted<Plan> {
 public:
@@ -52,15 +52,15 @@ public:
     using CompletionTask = RefPtr<SharedTask<CallbackType>>;
 
     static CompletionTask dontFinalize() { return createSharedTask<CallbackType>([](Plan&) { }); }
-    Plan(Context*, Ref<ModuleInformation>, CompletionTask&&);
+    Plan(VM&, Ref<ModuleInformation>, CompletionTask&&);
 
     // Note: This constructor should only be used if you are not actually building a module e.g. validation/function tests
-    JS_EXPORT_PRIVATE Plan(Context*, CompletionTask&&);
+    JS_EXPORT_PRIVATE Plan(VM&, CompletionTask&&);
     virtual JS_EXPORT_PRIVATE ~Plan();
 
     // If you guarantee the ordering here, you can rely on FIFO of the
     // completion tasks being called.
-    void addCompletionTask(Context*, CompletionTask&&);
+    void addCompletionTask(VM&, CompletionTask&&);
 
     void setMode(MemoryMode mode) { m_mode = mode; }
     MemoryMode mode() const { return m_mode; }
@@ -75,7 +75,7 @@ public:
 
     void waitForCompletion();
     // Returns true if it cancelled the plan.
-    bool tryRemoveContextAndCancelIfLast(Context&);
+    bool tryRemoveContextAndCancelIfLast(VM&);
 
 protected:
     void runCompletionTasks() WTF_REQUIRES_LOCK(m_lock);
@@ -84,18 +84,15 @@ protected:
     virtual bool isComplete() const = 0;
     virtual void complete() WTF_REQUIRES_LOCK(m_lock) = 0;
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
-    static void updateCallSitesToCallUs(const AbstractLocker& calleeGroupLocker, CalleeGroup&, CodeLocationLabel<WasmEntryPtrTag> entrypoint, uint32_t functionIndex, uint32_t functionIndexSpace);
-#endif
-
-    Ref<ModuleInformation> m_moduleInformation;
-
-    Vector<std::pair<Context*, CompletionTask>, 1> m_completionTasks;
-
-    String m_errorMessage;
     MemoryMode m_mode { MemoryMode::BoundsChecking };
     Lock m_lock;
     Condition m_completed;
+
+    Ref<ModuleInformation> m_moduleInformation;
+
+    Vector<std::pair<VM*, CompletionTask>, 1> m_completionTasks;
+
+    String m_errorMessage;
 };
 
 

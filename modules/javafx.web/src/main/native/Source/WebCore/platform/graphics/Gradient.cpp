@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Alp Toker <alp@atoker.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,16 +30,19 @@
 #include "FloatRect.h"
 #include <wtf/HashFunctions.h>
 #include <wtf/Hasher.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
-Ref<Gradient> Gradient::create(Data&& data, ColorInterpolationMethod colorInterpolationMethod, GradientSpreadMethod spreadMethod, GradientColorStops&& stops)
+Ref<Gradient> Gradient::create(Data&& data, ColorInterpolationMethod colorInterpolationMethod, GradientSpreadMethod spreadMethod, GradientColorStops&& stops, std::optional<RenderingResourceIdentifier> renderingResourceIdentifier)
 {
-    return adoptRef(*new Gradient(WTFMove(data), colorInterpolationMethod, spreadMethod, WTFMove(stops)));
+    return adoptRef(*new Gradient(WTFMove(data), colorInterpolationMethod, spreadMethod, WTFMove(stops), renderingResourceIdentifier));
 }
 
-Gradient::Gradient(Data&& data, ColorInterpolationMethod colorInterpolationMethod, GradientSpreadMethod spreadMethod, GradientColorStops&& stops)
-    : m_data { WTFMove(data) }
+Gradient::Gradient(Data&& data, ColorInterpolationMethod colorInterpolationMethod, GradientSpreadMethod spreadMethod, GradientColorStops&& stops, std::optional<RenderingResourceIdentifier> renderingResourceIdentifier)
+    : RenderingResource(renderingResourceIdentifier)
+    , m_data { WTFMove(data) }
     , m_colorInterpolationMethod { colorInterpolationMethod }
     , m_spreadMethod { spreadMethod }
     , m_stops { WTFMove(stops) }
@@ -120,4 +123,29 @@ unsigned Gradient::hash() const
     return m_cachedHash;
 }
 
+TextStream& operator<<(TextStream& ts, const Gradient& gradient)
+{
+    WTF::switchOn(gradient.data(),
+        [&] (const Gradient::LinearData& data) {
+            ts.dumpProperty("p0", data.point0);
+            ts.dumpProperty("p1", data.point1);
+        },
+        [&] (const Gradient::RadialData& data) {
+            ts.dumpProperty("p0", data.point0);
+            ts.dumpProperty("p1", data.point1);
+            ts.dumpProperty("start-radius", data.startRadius);
+            ts.dumpProperty("end-radius", data.endRadius);
+            ts.dumpProperty("aspect-ratio", data.aspectRatio);
+        },
+        [&] (const Gradient::ConicData& data) {
+            ts.dumpProperty("p0", data.point0);
+            ts.dumpProperty("angle-radians", data.angleRadians);
+        }
+    );
+    ts.dumpProperty("color-interpolation-method", gradient.colorInterpolationMethod());
+    ts.dumpProperty("spread-method", gradient.spreadMethod());
+    ts.dumpProperty("stops", gradient.stops());
+    return ts;
 }
+
+} // namespace WebCore

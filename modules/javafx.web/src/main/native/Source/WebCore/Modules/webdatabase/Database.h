@@ -48,7 +48,7 @@ class SQLTransactionCoordinator;
 class SQLTransactionErrorCallback;
 class SQLTransactionWrapper;
 class VoidCallback;
-struct SecurityOriginData;
+class SecurityOriginData;
 
 using DatabaseGUID = int;
 
@@ -81,7 +81,7 @@ public:
 
     // Direct support for the DOM API
     String version() const;
-    void changeVersion(const String& oldVersion, const String& newVersion, RefPtr<SQLTransactionCallback>&&, RefPtr<SQLTransactionErrorCallback>&&, RefPtr<VoidCallback>&& successCallback);
+    void changeVersion(String&& oldVersion, String&& newVersion, RefPtr<SQLTransactionCallback>&&, RefPtr<SQLTransactionErrorCallback>&&, RefPtr<VoidCallback>&& successCallback);
     void transaction(RefPtr<SQLTransactionCallback>&&, RefPtr<SQLTransactionErrorCallback>&&, RefPtr<VoidCallback>&& successCallback);
     void readTransaction(RefPtr<SQLTransactionCallback>&&, RefPtr<SQLTransactionErrorCallback>&&, RefPtr<VoidCallback>&& successCallback);
 

@@ -36,19 +36,19 @@ ifneq ($(SDKROOT),)
     SDK_FLAGS = -isysroot $(SDKROOT)
 endif
 
-ifeq ($(USE_LLVM_TARGET_TRIPLES_FOR_CLANG),YES)
-    WK_CURRENT_ARCH = $(word 1, $(ARCHS))
-    TARGET_TRIPLE_FLAGS = -target $(WK_CURRENT_ARCH)-$(LLVM_TARGET_TRIPLE_VENDOR)-$(LLVM_TARGET_TRIPLE_OS_VERSION)$(LLVM_TARGET_TRIPLE_SUFFIX)
-endif
+WK_CURRENT_ARCH = $(word 1, $(ARCHS))
+TARGET_TRIPLE_FLAGS = -target $(WK_CURRENT_ARCH)-$(LLVM_TARGET_TRIPLE_VENDOR)-$(LLVM_TARGET_TRIPLE_OS_VERSION)$(LLVM_TARGET_TRIPLE_SUFFIX)
 
-FRAMEWORK_FLAGS := $(shell echo $(BUILT_PRODUCTS_DIR) $(FRAMEWORK_SEARCH_PATHS) $(SYSTEM_FRAMEWORK_SEARCH_PATHS) | $(PERL) -e 'print "-F " . join(" -F ", split(" ", <>));')
-HEADER_FLAGS := $(shell echo $(BUILT_PRODUCTS_DIR) $(HEADER_SEARCH_PATHS) $(SYSTEM_HEADER_SEARCH_PATHS) | $(PERL) -e 'print "-I" . join(" -I", split(" ", <>));')
+FRAMEWORK_FLAGS := $(addprefix -F, $(BUILT_PRODUCTS_DIR) $(FRAMEWORK_SEARCH_PATHS) $(SYSTEM_FRAMEWORK_SEARCH_PATHS))
+HEADER_FLAGS := $(addprefix -I, $(BUILT_PRODUCTS_DIR) $(HEADER_SEARCH_PATHS) $(SYSTEM_HEADER_SEARCH_PATHS))
+EXTERNAL_FLAGS := -DRELEASE_WITHOUT_OPTIMIZATIONS $(addprefix -D, $(GCC_PREPROCESSOR_DEFINITIONS))
 
-platform_h_compiler_command = $(CC) -std=c++2a -x c++ $(1) $(SDK_FLAGS) $(TARGET_TRIPLE_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" /dev/null
+platform_h_compiler_command = $(CC) -std=c++2a -x c++ $(1) $(SDK_FLAGS) $(TARGET_TRIPLE_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) $(EXTERNAL_FLAGS) -include "wtf/Platform.h" /dev/null
 
 FEATURE_AND_PLATFORM_DEFINES := $(shell $(call platform_h_compiler_command,-E -P -dM) | $(PERL) -ne "print if s/\#define ((HAVE_|USE_|ENABLE_|WTF_PLATFORM_)\w+) 1/\1/")
 
-PLATFORM_HEADER_DIR := $(realpath $(BUILT_PRODUCTS_DIR)/usr/local/include)
+PLATFORM_HEADER_DIR := $(realpath $(BUILT_PRODUCTS_DIR)$(WK_LIBRARY_HEADERS_FOLDER_PATH))
+
 PLATFORM_HEADER_DEPENDENCIES := $(filter $(PLATFORM_HEADER_DIR)/%,$(realpath $(shell $(call platform_h_compiler_command,-M) | $(PERL) -e "local \$$/; my (\$$target, \$$deps) = split(/:/, <>); print split(/\\\\/, \$$deps);")))
 FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES = DerivedSources.make $(PLATFORM_HEADER_DEPENDENCIES)
 
@@ -68,8 +68,6 @@ JavaScriptCore_SCRIPTS_DIR = $(JavaScriptCore)/Scripts
 
 .PHONY : all
 all : \
-    InjectedScriptSource.h \
-    JSCBuiltins.h \
     Lexer.lut.h \
     KeywordLookup.h \
     RegExpJitTables.h \
@@ -80,6 +78,10 @@ all : \
 #
 
 # JavaScript builtins.
+
+JSC_BUILTINS_FILES = JSCBuiltins.h JSCBuiltins.cpp
+
+all : $(JSC_BUILTINS_FILES)
 
 BUILTINS_GENERATOR_SCRIPTS = \
     $(JavaScriptCore_SCRIPTS_DIR)/wkbuiltins/__init__.py \
@@ -115,6 +117,7 @@ JavaScriptCore_BUILTINS_SOURCES = \
     $(JavaScriptCore)/builtins/InternalPromiseConstructor.js \
     $(JavaScriptCore)/builtins/IteratorHelpers.js \
     $(JavaScriptCore)/builtins/IteratorPrototype.js \
+    $(JavaScriptCore)/builtins/MapConstructor.js \
     $(JavaScriptCore)/builtins/MapIteratorPrototype.js \
     $(JavaScriptCore)/builtins/MapPrototype.js \
     $(JavaScriptCore)/builtins/ModuleLoader.js \
@@ -123,6 +126,7 @@ JavaScriptCore_BUILTINS_SOURCES = \
     $(JavaScriptCore)/builtins/PromiseConstructor.js \
     $(JavaScriptCore)/builtins/PromiseOperations.js \
     $(JavaScriptCore)/builtins/PromisePrototype.js \
+    $(JavaScriptCore)/builtins/ProxyHelpers.js \
     $(JavaScriptCore)/builtins/ReflectObject.js \
     $(JavaScriptCore)/builtins/RegExpPrototype.js \
     ${JavaScriptCore}/builtins/RegExpStringIteratorPrototype.js \
@@ -135,6 +139,7 @@ JavaScriptCore_BUILTINS_SOURCES = \
     $(JavaScriptCore)/builtins/TypedArrayConstructor.js \
     $(JavaScriptCore)/builtins/TypedArrayPrototype.js \
     $(JavaScriptCore)/builtins/WebAssembly.js \
+    $(JavaScriptCore)/inspector/InjectedScriptSource.js \
 #
 
 # The combined output file depends on the contents of builtins and generator scripts, so
@@ -143,7 +148,9 @@ JavaScriptCore_BUILTINS_SOURCES = \
 JavaScriptCore_BUILTINS_DEPENDENCIES_LIST : $(JavaScriptCore_SCRIPTS_DIR)/UpdateContents.py DerivedSources.make
 	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/UpdateContents.py '$(JavaScriptCore_BUILTINS_SOURCES) $(BUILTINS_GENERATOR_SCRIPTS)' $@
 
-JSCBuiltins.h: $(BUILTINS_GENERATOR_SCRIPTS) $(JavaScriptCore_BUILTINS_SOURCES) JavaScriptCore_BUILTINS_DEPENDENCIES_LIST
+JSC_BUILTINS_FILES_PATTERNS = $(subst .,%,$(JSC_BUILTINS_FILES))
+
+$(JSC_BUILTINS_FILES_PATTERNS) : $(BUILTINS_GENERATOR_SCRIPTS) $(JavaScriptCore_BUILTINS_SOURCES) JavaScriptCore_BUILTINS_DEPENDENCIES_LIST
 	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/generate-js-builtins.py --combined --output-directory . --framework JavaScriptCore $(JavaScriptCore_BUILTINS_SOURCES)
 
 # Perfect hash lookup tables for JavaScript classes.
@@ -165,6 +172,8 @@ OBJECT_LUT_HEADERS = \
     IntlDateTimeFormatPrototype.lut.h \
     IntlDisplayNamesConstructor.lut.h \
     IntlDisplayNamesPrototype.lut.h \
+    IntlDurationFormatConstructor.lut.h \
+    IntlDurationFormatPrototype.lut.h \
     IntlListFormatConstructor.lut.h \
     IntlListFormatPrototype.lut.h \
     IntlLocalePrototype.lut.h \
@@ -182,18 +191,16 @@ OBJECT_LUT_HEADERS = \
     JSDataViewPrototype.lut.h \
     JSGlobalObject.lut.h \
     JSInternalPromiseConstructor.lut.h \
-    JSModuleLoader.lut.h \
     JSONObject.lut.h \
     JSPromiseConstructor.lut.h \
     JSPromisePrototype.lut.h \
     JSWebAssembly.lut.h \
-    MapPrototype.lut.h \
+    MapConstructor.lut.h \
     NumberConstructor.lut.h \
     NumberPrototype.lut.h \
     ObjectConstructor.lut.h \
     ReflectObject.lut.h \
     RegExpConstructor.lut.h \
-    SetPrototype.lut.h \
     ShadowRealmPrototype.lut.h \
     StringConstructor.lut.h \
     StringPrototype.lut.h \
@@ -209,10 +216,14 @@ OBJECT_LUT_HEADERS = \
     TemporalObject.lut.h \
     TemporalPlainDateConstructor.lut.h \
     TemporalPlainDatePrototype.lut.h \
+    TemporalPlainDateTimeConstructor.lut.h \
+    TemporalPlainDateTimePrototype.lut.h \
     TemporalPlainTimeConstructor.lut.h \
     TemporalPlainTimePrototype.lut.h \
     TemporalTimeZoneConstructor.lut.h \
     TemporalTimeZonePrototype.lut.h \
+    WebAssemblyArrayConstructor.lut.h \
+    WebAssemblyArrayPrototype.lut.h \
     WebAssemblyCompileErrorConstructor.lut.h \
     WebAssemblyCompileErrorPrototype.lut.h \
     WebAssemblyExceptionConstructor.lut.h \
@@ -229,6 +240,8 @@ OBJECT_LUT_HEADERS = \
     WebAssemblyModulePrototype.lut.h \
     WebAssemblyRuntimeErrorConstructor.lut.h \
     WebAssemblyRuntimeErrorPrototype.lut.h \
+    WebAssemblyStructConstructor.lut.h \
+    WebAssemblyStructPrototype.lut.h \
     WebAssemblyTableConstructor.lut.h \
     WebAssemblyTablePrototype.lut.h \
     WebAssemblyTagConstructor.lut.h \
@@ -323,7 +336,6 @@ INSPECTOR_GENERATOR_SCRIPTS = \
 	$(JavaScriptCore)/inspector/scripts/codegen/generator_templates.py \
 	$(JavaScriptCore)/inspector/scripts/codegen/generator.py \
 	$(JavaScriptCore)/inspector/scripts/codegen/models.py \
-	$(JavaScriptCore)/inspector/scripts/codegen/preprocess.pl \
 	$(JavaScriptCore)/inspector/scripts/generate-inspector-protocol-bindings.py \
 	$(JavaScriptCore_SCRIPTS_DIR)/generate-combined-inspector-json.py \
 #
@@ -332,6 +344,7 @@ INSPECTOR_GENERATOR_SCRIPTS = \
 # generate-inspector-protocol-bindings.py and ./CombinedDomains.json?
 INSPECTOR_DISPATCHER_FILES = \
     inspector/InspectorAlternateBackendDispatchers.h \
+    inspector/InspectorBackendCommands.js \
     inspector/InspectorBackendDispatchers.cpp \
     inspector/InspectorBackendDispatchers.h \
     inspector/InspectorFrontendDispatchers.cpp \
@@ -341,7 +354,7 @@ INSPECTOR_DISPATCHER_FILES = \
 #
 INSPECTOR_DISPATCHER_FILES_PATTERNS = $(subst .,%,$(INSPECTOR_DISPATCHER_FILES))
 
-all : $(INSPECTOR_DISPATCHER_FILES) inspector/InspectorBackendCommands.js
+all : $(INSPECTOR_DISPATCHER_FILES)
 
 # The combined JSON file depends on the actual set of domains and their file contents, so that
 # adding, modifying, or removing domains will trigger regeneration of inspector files.
@@ -351,23 +364,11 @@ EnabledInspectorDomains : $(JavaScriptCore_SCRIPTS_DIR)/UpdateContents.py force
 	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/UpdateContents.py '$(INSPECTOR_DOMAINS)' $@
 
 CombinedDomains.json : $(JavaScriptCore_SCRIPTS_DIR)/generate-combined-inspector-json.py $(INSPECTOR_DOMAINS) EnabledInspectorDomains
-	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/generate-combined-inspector-json.py $(INSPECTOR_DOMAINS) > ./CombinedDomains.json
+	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/generate-combined-inspector-json.py $(INSPECTOR_DOMAINS) "$(FEATURE_AND_PLATFORM_DEFINES)" > ./CombinedDomains.json
 
 # Inspector Backend Dispatchers, Frontend Dispatchers, Type Builders
 $(INSPECTOR_DISPATCHER_FILES_PATTERNS) : CombinedDomains.json $(INSPECTOR_GENERATOR_SCRIPTS)
 	$(PYTHON) $(JavaScriptCore)/inspector/scripts/generate-inspector-protocol-bindings.py --framework JavaScriptCore --outputDir inspector ./CombinedDomains.json
-
-inspector/InspectorBackendCommands.js : CombinedDomains.json $(INSPECTOR_GENERATOR_SCRIPTS) $(FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES)
-	$(PYTHON) $(JavaScriptCore)/inspector/scripts/generate-inspector-protocol-bindings.py --framework WebInspectorUI --outputDir inspector ./CombinedDomains.json
-	@echo Pre-processing InspectorBackendCommands...
-	$(PERL) $(JavaScriptCore)/inspector/scripts/codegen/preprocess.pl --input inspector/InspectorBackendCommands.js.in --defines "$(FEATURE_AND_PLATFORM_DEFINES)" --output inspector/InspectorBackendCommands.js
-	$(DELETE) inspector/InspectorBackendCommands.js.in
-
-InjectedScriptSource.h : inspector/InjectedScriptSource.js $(JavaScriptCore_SCRIPTS_DIR)/jsmin.py $(JavaScriptCore_SCRIPTS_DIR)/xxd.pl
-	echo "//# sourceURL=__InjectedScript_InjectedScriptSource.js" > ./InjectedScriptSource.min.js
-	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/jsmin.py < $(JavaScriptCore)/inspector/InjectedScriptSource.js >> ./InjectedScriptSource.min.js
-	$(PERL) $(JavaScriptCore_SCRIPTS_DIR)/xxd.pl InjectedScriptSource_js ./InjectedScriptSource.min.js InjectedScriptSource.h
-	$(DELETE) InjectedScriptSource.min.js
 
 AIR_OPCODE_FILES = \
     AirOpcode.h \

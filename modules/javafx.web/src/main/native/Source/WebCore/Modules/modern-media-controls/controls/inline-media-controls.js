@@ -86,6 +86,7 @@ class InlineMediaControls extends MediaControls
             return;
 
         this._showsStartButton = flag;
+        this.element.classList.toggle("shows-start-button", flag);
         this.layout();
     }
 
@@ -127,12 +128,12 @@ class InlineMediaControls extends MediaControls
             return;
 
         // Update the top left controls bar.
-        this._topLeftControlsBarContainer.children = this._topLeftContainerButtons();
+        this._topLeftControlsBarContainer.children = this.topLeftContainerButtons();
         this._topLeftControlsBarContainer.layout();
         this.topLeftControlsBar.width = this._topLeftControlsBarContainer.width;
         this.topLeftControlsBar.visible = this._topLeftControlsBarContainer.children.some(button => button.visible);
 
-        this._centerControlsBarContainer.children = this._centerContainerButtons();
+        this._centerControlsBarContainer.children = this.centerContainerButtons();
         this._centerControlsBarContainer.layout();
         this.centerControlsBar.width = this._centerControlsBarContainer.width;
         this.centerControlsBar.visible = this._centerControlsBarContainer.children.some(button => button.visible);
@@ -165,13 +166,13 @@ class InlineMediaControls extends MediaControls
         // Iterate through controls to see if we need to drop any of them. Reset all default states before we proceed.
         this.bottomControlsBar.visible = true;
         this.playPauseButton.style = Button.Styles.Bar;
-        this.leftContainer.children = this._leftContainerButtons();
-        this.rightContainer.children = this._rightContainerButtons();
+        this.leftContainer.children = this.leftContainerButtons();
+        this.rightContainer.children = this.rightContainerButtons();
         this.rightContainer.children.concat(this.leftContainer.children).forEach(button => delete button.dropped);
         this.muteButton.style = this.preferredMuteButtonStyle;
-        this.overflowButton.clearContextMenuOptions();
+        this.overflowButton.clearExtraContextMenuOptions();
 
-        for (let button of this._droppableButtons()) {
+        for (let button of this.droppableButtons()) {
             // If the button is not enabled, we can skip it.
             if (!button.enabled)
                 continue;
@@ -188,10 +189,10 @@ class InlineMediaControls extends MediaControls
             button.dropped = true;
 
             if (button !== this.overflowButton)
-                this.overflowButton.addContextMenuOptions(button.contextMenuOptions);
+                this.overflowButton.addExtraContextMenuOptions(button.contextMenuOptions);
         }
 
-        let collapsableButtons = this._collapsableButtons();
+        let collapsableButtons = this.collapsableButtons();
         let shownRightContainerButtons = this.rightContainer.children.filter(button => button.enabled && !button.dropped);
         let maximumRightContainerButtonCount = this.maximumRightContainerButtonCountOverride ?? 2; // Allow AirPlay and overflow if all buttons are shown.
         for (let i = shownRightContainerButtons.length - 1; i >= 0 && shownRightContainerButtons.length > maximumRightContainerButtonCount; --i) {
@@ -200,15 +201,19 @@ class InlineMediaControls extends MediaControls
                 continue;
 
             button.dropped = true;
-            this.overflowButton.addContextMenuOptions(button.contextMenuOptions);
+            this.overflowButton.addExtraContextMenuOptions(button.contextMenuOptions);
         }
 
         // Update layouts once more.
         this.leftContainer.layout();
         this.rightContainer.layout();
 
+        // Get the definitive list of shown buttons in the right container since we may have dropped some of
+        // the buttons and associated them with the overflow button.
+        const visibleRightContainerButtons = this.rightContainer.children.filter(button => button.visible);
+
         const widthLeftOfTimeControl = this.leftContainer.children.length > 0 ? this.leftContainer.width : this.leftContainer.leftMargin;
-        const widthRightOfTimeControl = this.rightContainer.children.length > 0 ? this.rightContainer.width : this.rightContainer.rightMargin;
+        const widthRightOfTimeControl = visibleRightContainerButtons.length > 0 ? this.rightContainer.width : this.rightContainer.rightMargin;
         centerControl.x = widthLeftOfTimeControl;
         centerControl.width = this.bottomControlsBar.width - widthLeftOfTimeControl - widthRightOfTimeControl;
         centerControl.layout();
@@ -218,7 +223,7 @@ class InlineMediaControls extends MediaControls
         if (this.leftContainer.children.length)
             controlsBarChildren.push(this.leftContainer);
         controlsBarChildren.push(centerControl);
-        if (this.rightContainer.children.length) {
+        if (visibleRightContainerButtons.length) {
             controlsBarChildren.push(this.rightContainer);
             this.rightContainer.x = this.bottomControlsBar.width - this.rightContainer.width;
         }
@@ -254,14 +259,7 @@ class InlineMediaControls extends MediaControls
         return (this._shouldUseAudioLayout || this._shouldUseSingleBarLayout) ? Button.Styles.Bar : Button.Styles.Corner;
     }
 
-    // Private
-
-    _updateBottomControlsBarLabel()
-    {
-        this.bottomControlsBar.element.setAttribute("aria-label", this._shouldUseAudioLayout ? UIString("Audio Controls") : UIString("Video Controls"));
-    }
-    
-    _topLeftContainerButtons()
+    topLeftContainerButtons()
     {
         if (this._shouldUseSingleBarLayout)
             return [];
@@ -270,33 +268,34 @@ class InlineMediaControls extends MediaControls
         return [this.pipButton, this.fullscreenButton];
     }
 
-    _leftContainerButtons()
+    leftContainerButtons()
     {
         return [this.skipBackButton, this.playPauseButton, this.skipForwardButton];
     }
 
-    _centerContainerButtons() {
+    centerContainerButtons() {
         return [];
     }
 
-    _rightContainerButtons()
+    rightContainerButtons()
     {
-        if (this._shouldUseAudioLayout)
-            return [this.muteButton, this.airplayButton, this.tracksButton, this.overflowButton];
-
-        if (this._shouldUseSingleBarLayout)
-            return [this.muteButton, this.airplayButton, this.pipButton, this.tracksButton, this.fullscreenButton, this.overflowButton];
-
         const buttons = [];
-        if (this.preferredMuteButtonStyle === Button.Styles.Bar)
-            buttons.push(this.muteButton);
-        buttons.push(this.airplayButton, this.tracksButton, this.overflowButton);
-        return buttons;
+        if (this._shouldUseAudioLayout)
+            buttons.push(this.muteButton, this.airplayButton, this.tracksButton);
+        else if (this._shouldUseSingleBarLayout)
+            buttons.push(this.muteButton, this.airplayButton, this.pipButton, this.tracksButton, this.fullscreenButton);
+        else {
+            if (this.preferredMuteButtonStyle === Button.Styles.Bar)
+                buttons.push(this.muteButton);
+            buttons.push(this.airplayButton, this.tracksButton);
+        }
+        buttons.push(this.overflowButton);
+        return buttons.filter(button => button !== null);
     }
 
-    _droppableButtons()
+    droppableButtons()
     {
-        let buttons = this._collapsableButtons();
+        let buttons = this.collapsableButtons();
         buttons.add(this.skipForwardButton);
         buttons.add(this.skipBackButton);
         if (this._shouldUseSingleBarLayout || this.preferredMuteButtonStyle === Button.Styles.Bar)
@@ -305,10 +304,11 @@ class InlineMediaControls extends MediaControls
         if (this._shouldUseSingleBarLayout)
             buttons.add(this.fullscreenButton);
         buttons.add(this.overflowButton);
+        buttons.delete(null);
         return buttons;
     }
 
-    _collapsableButtons()
+    collapsableButtons()
     {
         let buttons = new Set([
             this.tracksButton,
@@ -316,6 +316,13 @@ class InlineMediaControls extends MediaControls
         if (this._shouldUseSingleBarLayout)
             buttons.add(this.pipButton);
         return buttons;
+    }
+
+    // Private
+
+    _updateBottomControlsBarLabel()
+    {
+        this.bottomControlsBar.element.setAttribute("aria-label", this._shouldUseAudioLayout ? UIString("Audio Controls") : UIString("Video Controls"));
     }
 
     _addTopRightBarWithMuteButtonToChildren(children)

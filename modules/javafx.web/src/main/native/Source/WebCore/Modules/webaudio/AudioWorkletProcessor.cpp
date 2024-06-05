@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,6 +38,7 @@
 #include "JSCallbackData.h"
 #include "JSDOMExceptionHandling.h"
 #include "MessagePort.h"
+#include "WebCoreOpaqueRoot.h"
 #include <JavaScriptCore/JSTypedArrays.h>
 #include <wtf/GetPtr.h>
 #include <wtf/IsoMallocInlines.h>
@@ -60,23 +61,24 @@ static unsigned busChannelCount(const AudioBus* bus)
 
 static JSArray* toJSArray(JSValueInWrappedObject& wrapper)
 {
-    return wrapper ? jsCast<JSArray*>(wrapper.getValue()) : nullptr;
+    return wrapper ? jsDynamicCast<JSArray*>(wrapper.getValue()) : nullptr;
 }
 
 static JSObject* toJSObject(JSValueInWrappedObject& wrapper)
 {
-    return wrapper ? jsCast<JSObject*>(wrapper.getValue()) : nullptr;
+    return wrapper ? jsDynamicCast<JSObject*>(wrapper.getValue()) : nullptr;
 }
 
 static JSFloat32Array* constructJSFloat32Array(JSGlobalObject& globalObject, unsigned length, const float* data = nullptr)
 {
-    auto* jsArray = JSFloat32Array::create(&globalObject, globalObject.typedArrayStructure(TypeFloat32), length);
+    constexpr bool isResizableOrGrowableShared = false;
+    auto* jsArray = JSFloat32Array::create(&globalObject, globalObject.typedArrayStructure(TypeFloat32, isResizableOrGrowableShared), length);
     if (data)
         memcpy(jsArray->typedVector(), data, sizeof(float) * length);
     return jsArray;
 }
 
-static JSObject* constructFrozenKeyValueObject(VM& vm, JSGlobalObject& globalObject, const HashMap<String, std::unique_ptr<AudioFloatArray>>& paramValuesMap)
+static JSObject* constructFrozenKeyValueObject(VM& vm, JSGlobalObject& globalObject, const MemoryCompactLookupOnlyRobinHoodHashMap<String, std::unique_ptr<AudioFloatArray>>& paramValuesMap)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
     auto* plainObjectStructure = JSFinalObject::createStructure(vm, &globalObject, globalObject.objectPrototype(), 0);
@@ -125,11 +127,15 @@ static void copyDataFromJSArrayToBuses(JSGlobalObject& globalObject, const JSArr
     // We can safely make assumptions about the structure of the JSArray since we use frozen arrays.
     for (unsigned i = 0; i < buses.size(); ++i) {
         auto& bus = buses[i];
-        auto* channelsArray = jsCast<JSArray*>(jsArray.getIndex(&globalObject, i));
+        auto* channelsArray = jsDynamicCast<JSArray*>(jsArray.getIndex(&globalObject, i));
+        if (UNLIKELY(!channelsArray)) {
+            bus->zero();
+            continue;
+        }
         for (unsigned j = 0; j < bus->numberOfChannels(); ++j) {
             auto* channel = bus->channel(j);
-            auto* jsChannelData = jsCast<JSFloat32Array*>(channelsArray->getIndex(&globalObject, j));
-            if (jsChannelData->length() == channel->length())
+            auto* jsChannelData = jsDynamicCast<JSFloat32Array*>(channelsArray->getIndex(&globalObject, j));
+            if (LIKELY(jsChannelData && jsChannelData->length() == channel->length()))
                 memcpy(channel->mutableData(), jsChannelData->typedVector(), sizeof(float) * channel->length());
             else
                 channel->zero();
@@ -137,20 +143,20 @@ static void copyDataFromJSArrayToBuses(JSGlobalObject& globalObject, const JSArr
     }
 }
 
-static bool copyDataFromBusesToJSArray(VM& vm, JSGlobalObject& globalObject, const Vector<RefPtr<AudioBus>>& buses, JSArray* jsArray)
+static bool copyDataFromBusesToJSArray(JSGlobalObject& globalObject, const Vector<RefPtr<AudioBus>>& buses, JSArray* jsArray)
 {
     if (!jsArray)
         return false;
 
     for (size_t busIndex = 0; busIndex < buses.size(); ++busIndex) {
         auto& bus = buses[busIndex];
-        auto* jsChannelsArray = jsDynamicCast<JSArray*>(vm, jsArray->getIndex(&globalObject, busIndex));
+        auto* jsChannelsArray = jsDynamicCast<JSArray*>(jsArray->getIndex(&globalObject, busIndex));
         unsigned numberOfChannels = busChannelCount(bus.get());
         if (!jsChannelsArray || jsChannelsArray->length() != numberOfChannels)
             return false;
         for (unsigned channelIndex = 0; channelIndex < numberOfChannels; ++channelIndex) {
             auto* channel = bus->channel(channelIndex);
-            auto* jsChannelArray = jsDynamicCast<JSFloat32Array*>(vm, jsChannelsArray->getIndex(&globalObject, channelIndex));
+            auto* jsChannelArray = jsDynamicCast<JSFloat32Array*>(jsChannelsArray->getIndex(&globalObject, channelIndex));
             if (!jsChannelArray || jsChannelArray->length() != channel->length())
                 return false;
             memcpy(jsChannelArray->typedVector(), channel->mutableData(), sizeof(float) * jsChannelArray->length());
@@ -159,13 +165,13 @@ static bool copyDataFromBusesToJSArray(VM& vm, JSGlobalObject& globalObject, con
     return true;
 }
 
-static bool copyDataFromParameterMapToJSObject(VM& vm, JSGlobalObject& globalObject, const HashMap<String, std::unique_ptr<AudioFloatArray>>& paramValuesMap, JSObject* jsObject)
+static bool copyDataFromParameterMapToJSObject(VM& vm, JSGlobalObject& globalObject, const MemoryCompactLookupOnlyRobinHoodHashMap<String, std::unique_ptr<AudioFloatArray>>& paramValuesMap, JSObject* jsObject)
 {
     if (!jsObject)
         return false;
 
     for (auto& pair : paramValuesMap) {
-        auto* jsTypedArray = jsDynamicCast<JSFloat32Array*>(vm, jsObject->get(&globalObject, Identifier::fromString(vm, pair.key)));
+        auto* jsTypedArray = jsDynamicCast<JSFloat32Array*>(jsObject->get(&globalObject, Identifier::fromString(vm, pair.key)));
         if (!jsTypedArray)
             return false;
         unsigned expectedLength = pair.value->containsConstantValue() ? 1 : pair.value->size();
@@ -176,20 +182,20 @@ static bool copyDataFromParameterMapToJSObject(VM& vm, JSGlobalObject& globalObj
     return true;
 }
 
-static bool zeroJSArray(VM& vm, JSGlobalObject& globalObject, const Vector<Ref<AudioBus>>& outputs, JSArray* jsArray)
+static bool zeroJSArray(JSGlobalObject& globalObject, const Vector<Ref<AudioBus>>& outputs, JSArray* jsArray)
 {
     if (!jsArray)
         return false;
 
     for (size_t busIndex = 0; busIndex < outputs.size(); ++busIndex) {
         auto& bus = outputs[busIndex];
-        auto* jsChannelsArray = jsDynamicCast<JSArray*>(vm, jsArray->getIndex(&globalObject, busIndex));
+        auto* jsChannelsArray = jsDynamicCast<JSArray*>(jsArray->getIndex(&globalObject, busIndex));
         unsigned numberOfChannels = busChannelCount(bus.get());
         if (!jsChannelsArray || jsChannelsArray->length() != numberOfChannels)
             return false;
         for (unsigned channelIndex = 0; channelIndex < numberOfChannels; ++channelIndex) {
             auto* channel = bus->channel(channelIndex);
-            auto* jsChannelArray = jsDynamicCast<JSFloat32Array*>(vm, jsChannelsArray->getIndex(&globalObject, channelIndex));
+            auto* jsChannelArray = jsDynamicCast<JSFloat32Array*>(jsChannelsArray->getIndex(&globalObject, channelIndex));
             if (!jsChannelArray || jsChannelArray->length() != channel->length())
                 return false;
             memset(jsChannelArray->typedVector(), 0, sizeof(float) * jsChannelArray->length());
@@ -218,14 +224,14 @@ AudioWorkletProcessor::AudioWorkletProcessor(AudioWorkletGlobalScope& globalScop
     ASSERT(!isMainThread());
 }
 
-void AudioWorkletProcessor::buildJSArguments(VM& vm, JSGlobalObject& globalObject, MarkedArgumentBufferBase& args, const Vector<RefPtr<AudioBus>>& inputs, Vector<Ref<AudioBus>>& outputs, const HashMap<String, std::unique_ptr<AudioFloatArray>>& paramValuesMap)
+void AudioWorkletProcessor::buildJSArguments(VM& vm, JSGlobalObject& globalObject, MarkedArgumentBuffer& args, const Vector<RefPtr<AudioBus>>& inputs, Vector<Ref<AudioBus>>& outputs, const MemoryCompactLookupOnlyRobinHoodHashMap<String, std::unique_ptr<AudioFloatArray>>& paramValuesMap)
 {
     // For performance reasons, we cache the arrays passed to JS and reconstruct them only when the topology changes.
-    if (!copyDataFromBusesToJSArray(vm, globalObject, inputs, toJSArray(m_jsInputs)))
+    if (!copyDataFromBusesToJSArray(globalObject, inputs, toJSArray(m_jsInputs)))
         m_jsInputs.setWeakly(constructFrozenJSArray(vm, globalObject, inputs, ShouldPopulateWithBusData::Yes));
     args.append(m_jsInputs.getValue());
 
-    if (!zeroJSArray(vm, globalObject, outputs, toJSArray(m_jsOutputs)))
+    if (!zeroJSArray(globalObject, outputs, toJSArray(m_jsOutputs)))
         m_jsOutputs.setWeakly(constructFrozenJSArray(vm, globalObject, outputs, ShouldPopulateWithBusData::No));
     args.append(m_jsOutputs.getValue());
 
@@ -234,34 +240,43 @@ void AudioWorkletProcessor::buildJSArguments(VM& vm, JSGlobalObject& globalObjec
     args.append(m_jsParamValues.getValue());
 }
 
-bool AudioWorkletProcessor::process(const Vector<RefPtr<AudioBus>>& inputs, Vector<Ref<AudioBus>>& outputs, const HashMap<String, std::unique_ptr<AudioFloatArray>>& paramValuesMap, bool& threwException)
+bool AudioWorkletProcessor::process(const Vector<RefPtr<AudioBus>>& inputs, Vector<Ref<AudioBus>>& outputs, const MemoryCompactLookupOnlyRobinHoodHashMap<String, std::unique_ptr<AudioFloatArray>>& paramValuesMap, bool& threwException)
 {
     // Heap allocations are forbidden on the audio thread for performance reasons so we need to
     // explicitly allow the following allocation(s).
     DisableMallocRestrictionsForCurrentThreadScope disableMallocRestrictions;
 
     ASSERT(wrapper());
-    auto& globalObject = *jsCast<JSDOMGlobalObject*>(m_globalScope.globalObject());
-    ASSERT(globalObject.scriptExecutionContext());
-    ASSERT(globalObject.scriptExecutionContext()->isContextThread());
+    auto* globalObject = jsDynamicCast<JSDOMGlobalObject*>(m_globalScope.globalObject());
+    if (UNLIKELY(!globalObject))
+        return false;
 
-    auto& vm = globalObject.vm();
+    ASSERT(globalObject->scriptExecutionContext());
+    ASSERT(globalObject->scriptExecutionContext()->isContextThread());
+
+    auto& vm = globalObject->vm();
     JSLockHolder lock(vm);
 
     MarkedArgumentBuffer args;
-    buildJSArguments(vm, globalObject, args, inputs, outputs, paramValuesMap);
+    buildJSArguments(vm, *globalObject, args, inputs, outputs, paramValuesMap);
+    ASSERT(!args.hasOverflowed());
 
     NakedPtr<JSC::Exception> returnedException;
-    auto result = JSCallbackData::invokeCallback(vm, wrapper(), jsUndefined(), args, JSCallbackData::CallbackType::Object, Identifier::fromString(vm, "process"), returnedException);
+    auto result = JSCallbackData::invokeCallback(*globalObject, wrapper(), jsUndefined(), args, JSCallbackData::CallbackType::Object, Identifier::fromString(vm, "process"_s), returnedException);
     if (returnedException) {
-        reportException(&globalObject, returnedException);
+        reportException(globalObject, returnedException);
         threwException = true;
         return false;
     }
 
-    copyDataFromJSArrayToBuses(globalObject, *toJSArray(m_jsOutputs), outputs);
+    copyDataFromJSArrayToBuses(*globalObject, *toJSArray(m_jsOutputs), outputs);
 
-    return result.toBoolean(&globalObject);
+    return result.toBoolean(globalObject);
+}
+
+WebCoreOpaqueRoot root(AudioWorkletProcessor* processor)
+{
+    return WebCoreOpaqueRoot { processor };
 }
 
 } // namespace WebCore

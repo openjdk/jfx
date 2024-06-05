@@ -52,7 +52,7 @@ Ref<IDBConnectionToServer> IDBConnectionToServer::create(IDBConnectionToServerDe
 
 IDBConnectionToServer::IDBConnectionToServer(IDBConnectionToServerDelegate& delegate)
     : m_delegate(delegate)
-    , m_proxy(makeUnique<IDBConnectionProxy>(*this))
+    , m_proxy(makeUniqueWithoutRefCountedCheck<IDBConnectionProxy>(*this))
 {
 }
 
@@ -246,7 +246,7 @@ void IDBConnectionToServer::getRecord(const IDBRequestData& requestData, const I
 {
     LOG(IndexedDB, "IDBConnectionToServer::getRecord");
     ASSERT(isMainThread());
-    ASSERT(!getRecordData.keyRangeData.isNull);
+    ASSERT(!getRecordData.keyRangeData.isNull());
 
     if (m_serverConnectionIsValid)
         m_delegate->getRecord(requestData, getRecordData);
@@ -281,7 +281,7 @@ void IDBConnectionToServer::getCount(const IDBRequestData& requestData, const ID
 {
     LOG(IndexedDB, "IDBConnectionToServer::getCount");
     ASSERT(isMainThread());
-    ASSERT(!keyRangeData.isNull);
+    ASSERT(!keyRangeData.isNull());
 
     if (m_serverConnectionIsValid)
         m_delegate->getCount(requestData, keyRangeData);
@@ -299,7 +299,7 @@ void IDBConnectionToServer::deleteRecord(const IDBRequestData& requestData, cons
 {
     LOG(IndexedDB, "IDBConnectionToServer::deleteRecord");
     ASSERT(isMainThread());
-    ASSERT(!keyRangeData.isNull);
+    ASSERT(!keyRangeData.isNull());
 
     if (m_serverConnectionIsValid)
         m_delegate->deleteRecord(requestData, keyRangeData);
@@ -487,7 +487,7 @@ void IDBConnectionToServer::databaseConnectionClosed(uint64_t databaseConnection
         m_delegate->databaseConnectionClosed(databaseConnectionIdentifier);
 }
 
-void IDBConnectionToServer::abortOpenAndUpgradeNeeded(uint64_t databaseConnectionIdentifier, const IDBResourceIdentifier& transactionIdentifier)
+void IDBConnectionToServer::abortOpenAndUpgradeNeeded(uint64_t databaseConnectionIdentifier, const std::optional<IDBResourceIdentifier>& transactionIdentifier)
 {
     LOG(IndexedDB, "IDBConnectionToServer::abortOpenAndUpgradeNeeded");
     ASSERT(isMainThread());

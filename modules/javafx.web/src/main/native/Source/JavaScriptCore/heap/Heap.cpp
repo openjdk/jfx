@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2022 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Eric Seidel <eric@webkit.org>
  *
  *  This library is free software; you can redistribute it and/or
@@ -62,6 +62,8 @@
 #include "MarkedJSValueRefArray.h"
 #include "MarkedSpaceInlines.h"
 #include "MarkingConstraintSet.h"
+#include "MegamorphicCache.h"
+#include "NumberObject.h"
 #include "PreventCollectionScope.h"
 #include "SamplingProfiler.h"
 #include "ShadowChicken.h"
@@ -144,16 +146,16 @@ size_t proportionalHeapSize(size_t heapSize, size_t ramSize)
     return Options::largeHeapGrowthFactor() * heapSize;
 }
 
-void recordType(VM& vm, TypeCountSet& set, JSCell* cell)
+void recordType(TypeCountSet& set, JSCell* cell)
 {
     const char* typeName = "[unknown]";
-    const ClassInfo* info = cell->classInfo(vm);
+    const ClassInfo* info = cell->classInfo();
     if (info && info->className)
         typeName = info->className;
     set.add(typeName);
 }
 
-bool measurePhaseTiming()
+constexpr bool measurePhaseTiming()
 {
     return false;
 }
@@ -269,7 +271,7 @@ private:
     , name ISO_SUBSPACE_INIT(*this, heapCellType, type)
 
 #define INIT_SERVER_STRUCTURE_ISO_SUBSPACE(name, heapCellType, type) \
-    , name("Isolated" #name "Space", *this, heapCellType, sizeof(type), type::numberOfLowerTierCells, makeUnique<StructureAlignedMemoryAllocator>("Structure"))
+    , name("IsoSubspace" #name, *this, heapCellType, WTF::roundUpToMultipleOf<type::atomSize>(sizeof(type)), type::numberOfLowerTierCells, makeUnique<StructureAlignedMemoryAllocator>("Structure"))
 
 Heap::Heap(VM& vm, HeapType heapType)
     : m_heapType(heapType)
@@ -318,6 +320,7 @@ Heap::Heap(VM& vm, HeapType heapType)
     , injectedScriptHostSpaceHeapCellType(IsoHeapCellType::Args<Inspector::JSInjectedScriptHost>())
     , javaScriptCallFrameHeapCellType(IsoHeapCellType::Args<Inspector::JSJavaScriptCallFrame>())
     , jsModuleRecordHeapCellType(IsoHeapCellType::Args<JSModuleRecord>())
+    , syntheticModuleRecordHeapCellType(IsoHeapCellType::Args<SyntheticModuleRecord>())
     , moduleNamespaceObjectHeapCellType(IsoHeapCellType::Args<JSModuleNamespaceObject>())
     , nativeStdFunctionHeapCellType(IsoHeapCellType::Args<JSNativeStdFunction>())
     , weakMapHeapCellType(IsoHeapCellType::Args<JSWeakMap>())
@@ -334,6 +337,7 @@ Heap::Heap(VM& vm, HeapType heapType)
     , intlCollatorHeapCellType(IsoHeapCellType::Args<IntlCollator>())
     , intlDateTimeFormatHeapCellType(IsoHeapCellType::Args<IntlDateTimeFormat>())
     , intlDisplayNamesHeapCellType(IsoHeapCellType::Args<IntlDisplayNames>())
+    , intlDurationFormatHeapCellType(IsoHeapCellType::Args<IntlDurationFormat>())
     , intlListFormatHeapCellType(IsoHeapCellType::Args<IntlListFormat>())
     , intlLocaleHeapCellType(IsoHeapCellType::Args<IntlLocale>())
     , intlNumberFormatHeapCellType(IsoHeapCellType::Args<IntlNumberFormat>())
@@ -343,11 +347,13 @@ Heap::Heap(VM& vm, HeapType heapType)
     , intlSegmenterHeapCellType(IsoHeapCellType::Args<IntlSegmenter>())
     , intlSegmentsHeapCellType(IsoHeapCellType::Args<IntlSegments>())
 #if ENABLE(WEBASSEMBLY)
+    , webAssemblyArrayHeapCellType(IsoHeapCellType::Args<JSWebAssemblyArray>())
     , webAssemblyExceptionHeapCellType(IsoHeapCellType::Args<JSWebAssemblyException>())
     , webAssemblyFunctionHeapCellType(IsoHeapCellType::Args<WebAssemblyFunction>())
     , webAssemblyGlobalHeapCellType(IsoHeapCellType::Args<JSWebAssemblyGlobal>())
     , webAssemblyInstanceHeapCellType(IsoHeapCellType::Args<JSWebAssemblyInstance>())
     , webAssemblyMemoryHeapCellType(IsoHeapCellType::Args<JSWebAssemblyMemory>())
+    , webAssemblyStructHeapCellType(IsoHeapCellType::Args<JSWebAssemblyStruct>())
     , webAssemblyModuleHeapCellType(IsoHeapCellType::Args<JSWebAssemblyModule>())
     , webAssemblyModuleRecordHeapCellType(IsoHeapCellType::Args<WebAssemblyModuleRecord>())
     , webAssemblyTableHeapCellType(IsoHeapCellType::Args<JSWebAssemblyTable>())
@@ -368,8 +374,6 @@ Heap::Heap(VM& vm, HeapType heapType)
     , destructibleObjectSpace("JSDestructibleObject", *this, destructibleObjectHeapCellType, fastMallocAllocator.get()) // Hash:0x4f5ed7a9
     FOR_EACH_JSC_COMMON_ISO_SUBSPACE(INIT_SERVER_ISO_SUBSPACE)
     FOR_EACH_JSC_STRUCTURE_ISO_SUBSPACE(INIT_SERVER_STRUCTURE_ISO_SUBSPACE)
-    , executableToCodeBlockEdgesWithConstraints(executableToCodeBlockEdgeSpace)
-    , executableToCodeBlockEdgesWithFinalizers(executableToCodeBlockEdgeSpace)
     , codeBlockSpaceAndSet ISO_SUBSPACE_INIT(*this, destructibleCellHeapCellType, CodeBlock) // Hash:0x77e66ec9
     , functionExecutableSpaceAndSet ISO_SUBSPACE_INIT(*this, destructibleCellHeapCellType, FunctionExecutable) // Hash:0x5d158f3
     , programExecutableSpaceAndSet ISO_SUBSPACE_INIT(*this, destructibleCellHeapCellType, ProgramExecutable) // Hash:0x527c77e7
@@ -583,10 +587,10 @@ void Heap::releaseDelayedReleasedObjects()
 #endif
 }
 
-void Heap::reportExtraMemoryAllocatedSlowCase(size_t size)
+void Heap::reportExtraMemoryAllocatedSlowCase(GCDeferralContext* deferralContext, size_t size)
 {
     didAllocate(size);
-    collectIfNecessaryOrDefer();
+    collectIfNecessaryOrDefer(deferralContext);
 }
 
 void Heap::deprecatedReportExtraMemorySlowCase(size_t size)
@@ -596,7 +600,7 @@ void Heap::deprecatedReportExtraMemorySlowCase(size_t size)
     CheckedSize checkedNewSize = m_deprecatedExtraMemorySize;
     checkedNewSize += size;
     m_deprecatedExtraMemorySize = UNLIKELY(checkedNewSize.hasOverflowed()) ? std::numeric_limits<size_t>::max() : checkedNewSize.value();
-    reportExtraMemoryAllocatedSlowCase(size);
+    reportExtraMemoryAllocatedSlowCase(nullptr, size);
 }
 
 bool Heap::overCriticalMemoryThreshold(MemoryThresholdCallType memoryThresholdCallType)
@@ -662,43 +666,62 @@ void Heap::addReference(JSCell* cell, ArrayBuffer* buffer)
 }
 
 template<typename CellType, typename CellSet>
-void Heap::finalizeMarkedUnconditionalFinalizers(CellSet& cellSet)
+void Heap::finalizeMarkedUnconditionalFinalizers(CellSet& cellSet, CollectionScope collectionScope)
 {
     cellSet.forEachMarkedCell(
         [&] (HeapCell* cell, HeapCell::Kind) {
-            static_cast<CellType*>(cell)->finalizeUnconditionally(vm());
+            static_cast<CellType*>(cell)->finalizeUnconditionally(vm(), collectionScope);
         });
 }
 
 void Heap::finalizeUnconditionalFinalizers()
 {
     VM& vm = this->vm();
-    vm.builtinExecutables()->finalizeUnconditionally();
-    finalizeMarkedUnconditionalFinalizers<FunctionExecutable>(functionExecutableSpaceAndSet.space);
-    finalizeMarkedUnconditionalFinalizers<SymbolTable>(symbolTableSpace);
-    finalizeMarkedUnconditionalFinalizers<ExecutableToCodeBlockEdge>(executableToCodeBlockEdgesWithFinalizers); // We run this before CodeBlock's unconditional finalizer since CodeBlock looks at the owner executable's installed CodeBlock in its finalizeUnconditionally.
+    CollectionScope collectionScope = this->collectionScope().value_or(CollectionScope::Full);
+
+    vm.builtinExecutables()->finalizeUnconditionally(collectionScope);
+
+    {
+        // We run this before CodeBlock's unconditional finalizer since CodeBlock looks at the owner executable's installed CodeBlock in its finalizeUnconditionally.
+
+        // FunctionExecutable requires all live instances to run finalizers. Thus, we do not use finalizer set.
+        finalizeMarkedUnconditionalFinalizers<FunctionExecutable>(functionExecutableSpaceAndSet.space, collectionScope);
+
+        finalizeMarkedUnconditionalFinalizers<ProgramExecutable>(programExecutableSpaceAndSet.finalizerSet, collectionScope);
+        if (m_evalExecutableSpace)
+            finalizeMarkedUnconditionalFinalizers<EvalExecutable>(m_evalExecutableSpace->finalizerSet, collectionScope);
+        if (m_moduleProgramExecutableSpace)
+            finalizeMarkedUnconditionalFinalizers<ModuleProgramExecutable>(m_moduleProgramExecutableSpace->finalizerSet, collectionScope);
+    }
+
+    finalizeMarkedUnconditionalFinalizers<SymbolTable>(symbolTableSpace, collectionScope);
+
     forEachCodeBlockSpace(
         [&] (auto& space) {
-            this->finalizeMarkedUnconditionalFinalizers<CodeBlock>(space.set);
+            this->finalizeMarkedUnconditionalFinalizers<CodeBlock>(space.set, collectionScope);
         });
-    finalizeMarkedUnconditionalFinalizers<StructureRareData>(structureRareDataSpace);
-    finalizeMarkedUnconditionalFinalizers<UnlinkedFunctionExecutable>(unlinkedFunctionExecutableSpaceAndSet.set);
+    if (collectionScope == CollectionScope::Full) {
+        finalizeMarkedUnconditionalFinalizers<Structure>(structureSpace, collectionScope);
+        finalizeMarkedUnconditionalFinalizers<BrandedStructure>(brandedStructureSpace, collectionScope);
+    }
+    finalizeMarkedUnconditionalFinalizers<StructureRareData>(structureRareDataSpace, collectionScope);
+    finalizeMarkedUnconditionalFinalizers<UnlinkedFunctionExecutable>(unlinkedFunctionExecutableSpaceAndSet.set, collectionScope);
     if (m_weakSetSpace)
-        finalizeMarkedUnconditionalFinalizers<JSWeakSet>(*m_weakSetSpace);
+        finalizeMarkedUnconditionalFinalizers<JSWeakSet>(*m_weakSetSpace, collectionScope);
     if (m_weakMapSpace)
-        finalizeMarkedUnconditionalFinalizers<JSWeakMap>(*m_weakMapSpace);
+        finalizeMarkedUnconditionalFinalizers<JSWeakMap>(*m_weakMapSpace, collectionScope);
     if (m_weakObjectRefSpace)
-        finalizeMarkedUnconditionalFinalizers<JSWeakObjectRef>(*m_weakObjectRefSpace);
+        finalizeMarkedUnconditionalFinalizers<JSWeakObjectRef>(*m_weakObjectRefSpace, collectionScope);
     if (m_errorInstanceSpace)
-        finalizeMarkedUnconditionalFinalizers<ErrorInstance>(*m_errorInstanceSpace);
+        finalizeMarkedUnconditionalFinalizers<ErrorInstance>(*m_errorInstanceSpace, collectionScope);
 
     // FinalizationRegistries currently rely on serial finalization because they can post tasks to the deferredWorkTimer, which normally expects tasks to only be posted by the API lock holder.
     if (m_finalizationRegistrySpace)
-        finalizeMarkedUnconditionalFinalizers<JSFinalizationRegistry>(*m_finalizationRegistrySpace);
+        finalizeMarkedUnconditionalFinalizers<JSFinalizationRegistry>(*m_finalizationRegistrySpace, collectionScope);
 
 #if ENABLE(WEBASSEMBLY)
     if (m_webAssemblyModuleSpace)
-        finalizeMarkedUnconditionalFinalizers<JSWebAssemblyModule>(*m_webAssemblyModuleSpace);
+        finalizeMarkedUnconditionalFinalizers<JSWebAssemblyModule>(*m_webAssemblyModuleSpace, collectionScope);
 #endif
 }
 
@@ -779,7 +802,7 @@ void Heap::gatherStackRoots(ConservativeRoots& roots)
 void Heap::gatherJSStackRoots(ConservativeRoots& roots)
 {
 #if ENABLE(C_LOOP)
-    vm().interpreter->cloopStack().gatherConservativeRoots(roots, *m_jitStubRoutines, *m_codeBlocks);
+    vm().interpreter.cloopStack().gatherConservativeRoots(roots, *m_jitStubRoutines, *m_codeBlocks);
 #else
     UNUSED_PARAM(roots);
 #endif
@@ -803,6 +826,7 @@ void Heap::beginMarking()
     TimingScope timingScope(*this, "Heap::beginMarking");
     m_jitStubRoutines->clearMarks();
     m_objectSpace.beginMarking();
+    vm().beginMarking();
     setMutatorShouldBeFenced(true);
 }
 
@@ -816,9 +840,8 @@ void Heap::removeDeadCompilerWorklistEntries()
 }
 
 struct GatherExtraHeapData : MarkedBlock::CountFunctor {
-    GatherExtraHeapData(VM& vm, HeapAnalyzer& analyzer)
-        : m_vm(vm)
-        , m_analyzer(analyzer)
+    GatherExtraHeapData(HeapAnalyzer& analyzer)
+        : m_analyzer(analyzer)
     {
     }
 
@@ -826,12 +849,11 @@ struct GatherExtraHeapData : MarkedBlock::CountFunctor {
     {
         if (isJSCellKind(kind)) {
             JSCell* cell = static_cast<JSCell*>(heapCell);
-            cell->methodTable(m_vm)->analyzeHeap(cell, m_analyzer);
+            cell->methodTable()->analyzeHeap(cell, m_analyzer);
         }
         return IterationStatus::Continue;
     }
 
-    VM& m_vm;
     HeapAnalyzer& m_analyzer;
 };
 
@@ -839,7 +861,7 @@ void Heap::gatherExtraHeapData(HeapProfiler& heapProfiler)
 {
     if (auto* analyzer = heapProfiler.activeHeapAnalyzer()) {
         HeapIterationScope heapIterationScope(*this);
-        GatherExtraHeapData functor(vm(), *analyzer);
+        GatherExtraHeapData functor(*analyzer);
         m_objectSpace.forEachLiveCell(heapIterationScope, functor);
     }
 }
@@ -966,7 +988,7 @@ std::unique_ptr<TypeCountSet> Heap::protectedObjectTypeCounts()
     std::unique_ptr<TypeCountSet> result = makeUnique<TypeCountSet>();
     forEachProtectedCell(
         [&] (JSCell* cell) {
-            recordType(vm(), *result, cell);
+            recordType(*result, cell);
         });
     return result;
 }
@@ -979,7 +1001,7 @@ std::unique_ptr<TypeCountSet> Heap::objectTypeCounts()
         iterationScope,
         [&] (HeapCell* cell, HeapCell::Kind kind) -> IterationStatus {
             if (isJSCellKind(kind))
-                recordType(vm(), *result, static_cast<JSCell*>(cell));
+                recordType(*result, static_cast<JSCell*>(cell));
             return IterationStatus::Continue;
         });
     return result;
@@ -1003,7 +1025,7 @@ void Heap::deleteAllCodeBlocks(DeleteAllCodeEffort effort)
     forEachScriptExecutableSpace(
         [&] (auto& spaceAndSet) {
             HeapIterationScope heapIterationScope(*this);
-            auto& set = spaceAndSet.set;
+            auto& set = spaceAndSet.clearableCodeSet;
             set.forEachLiveCell(
                 [&] (HeapCell* cell, HeapCell::Kind) {
                     ScriptExecutable* executable = static_cast<ScriptExecutable*>(cell);
@@ -1113,6 +1135,9 @@ void Heap::addToRememberedSet(const JSCell* constCell)
 
 void Heap::sweepSynchronously()
 {
+    if (UNLIKELY(!Options::useGC()))
+        return;
+
     MonotonicTime before { };
     if (UNLIKELY(Options::logGC())) {
         dataLog("Full sweep: ", capacity() / 1024, "kb ");
@@ -1128,6 +1153,9 @@ void Heap::sweepSynchronously()
 
 void Heap::collect(Synchronousness synchronousness, GCRequest request)
 {
+    if (UNLIKELY(!Options::useGC()))
+        return;
+
     switch (synchronousness) {
     case Async:
         collectAsync(request);
@@ -1141,6 +1169,9 @@ void Heap::collect(Synchronousness synchronousness, GCRequest request)
 
 void Heap::collectNow(Synchronousness synchronousness, GCRequest request)
 {
+    if (UNLIKELY(!Options::useGC()))
+        return;
+
     if constexpr (validateDFGDoesGC)
         vm().verifyCanGC();
 
@@ -1174,6 +1205,9 @@ void Heap::collectNow(Synchronousness synchronousness, GCRequest request)
 
 void Heap::collectAsync(GCRequest request)
 {
+    if (UNLIKELY(!Options::useGC()))
+        return;
+
     if constexpr (validateDFGDoesGC)
         vm().verifyCanGC();
 
@@ -1198,6 +1232,9 @@ void Heap::collectAsync(GCRequest request)
 
 void Heap::collectSync(GCRequest request)
 {
+    if (UNLIKELY(!Options::useGC()))
+        return;
+
     if constexpr (validateDFGDoesGC)
         vm().verifyCanGC();
 
@@ -1244,10 +1281,10 @@ void Heap::checkConn(GCConductor conn)
     unsigned worldState = m_worldState.load();
     switch (conn) {
     case GCConductor::Mutator:
-        RELEASE_ASSERT(worldState & mutatorHasConnBit, worldState, asInt(m_lastPhase), asInt(m_currentPhase), asInt(m_nextPhase), vm().id(), VM::numberOfIDs(), vm().isEntered());
+        RELEASE_ASSERT(worldState & mutatorHasConnBit, worldState, asInt(m_lastPhase), asInt(m_currentPhase), asInt(m_nextPhase), vm().identifier().toUInt64(), vm().isEntered());
         return;
     case GCConductor::Collector:
-        RELEASE_ASSERT(!(worldState & mutatorHasConnBit), worldState, asInt(m_lastPhase), asInt(m_currentPhase), asInt(m_nextPhase), vm().id(), VM::numberOfIDs(), vm().isEntered());
+        RELEASE_ASSERT(!(worldState & mutatorHasConnBit), worldState, asInt(m_lastPhase), asInt(m_currentPhase), asInt(m_nextPhase), vm().identifier().toUInt64(), vm().isEntered());
         return;
     }
     RELEASE_ASSERT_NOT_REACHED();
@@ -1331,7 +1368,7 @@ NEVER_INLINE bool Heap::runBeginPhase(GCConductor conn)
     m_beforeGC = MonotonicTime::now();
 
     if (!Options::seedOfVMRandomForFuzzer())
-        vm().random().setSeed(cryptographicallyRandomNumber());
+        vm().random().setSeed(cryptographicallyRandomNumber<uint32_t>());
 
     if (m_collectionScope) {
         dataLogLn("Collection scope already set during GC: ", *m_collectionScope);
@@ -2139,9 +2176,16 @@ void Heap::finalize()
 
     if (HasOwnPropertyCache* cache = vm().hasOwnPropertyCache())
         cache->clear();
+    if (auto* cache = vm().megamorphicCache())
+        cache->age(m_lastCollectionScope && m_lastCollectionScope.value() == CollectionScope::Full ? CollectionScope::Full : CollectionScope::Eden);
 
     if (m_lastCollectionScope && m_lastCollectionScope.value() == CollectionScope::Full)
         vm().jsonAtomStringCache.clear();
+    vm().keyAtomStringCache.clear();
+    vm().stringSplitCache.clear();
+    vm().stringReplaceCache.clear();
+    if (m_lastCollectionScope && m_lastCollectionScope.value() == CollectionScope::Full)
+        vm().numericStrings.clearOnGarbageCollection();
 
     m_possiblyAccessedStringsFromConcurrentThreads.clear();
 
@@ -2273,7 +2317,7 @@ void Heap::pruneStaleEntriesFromWeakGCHashTables()
 
 void Heap::sweepArrayBuffers()
 {
-    m_arrayBuffers.sweep(vm());
+    m_arrayBuffers.sweep(vm(), collectionScope().value_or(CollectionScope::Eden));
 }
 
 void Heap::snapshotUnswept()
@@ -2657,7 +2701,7 @@ void Heap::collectIfNecessaryOrDefer(GCDeferralContext* deferralContext)
     case MutatorState::Collecting:
         return;
     }
-    if (!Options::useGC())
+    if (UNLIKELY(!Options::useGC()))
         return;
 
     if (mayNeedToStop()) {
@@ -2825,8 +2869,9 @@ void Heap::addCoreConstraints()
                 scanExternalRememberedSet(vm, visitor);
             }
 
-            if (vm.smallStrings.needsToBeVisited(*m_collectionScope)) {
+            {
                 SetRootMarkReasonScope rootScope(visitor, RootMarkReason::StrongReferences);
+                if (vm.smallStrings.needsToBeVisited(*m_collectionScope))
                 vm.smallStrings.visitStrongReferences(visitor);
             }
 
@@ -2836,9 +2881,9 @@ void Heap::addCoreConstraints()
                     visitor.appendUnbarriered(pair.key);
             }
 
-            if (m_markListSet && m_markListSet->size()) {
+            if (!m_markListSet.isEmpty()) {
                 SetRootMarkReasonScope rootScope(visitor, RootMarkReason::ConservativeScan);
-                MarkedArgumentBufferBase::markLists(visitor, *m_markListSet);
+                MarkedVectorBase::markLists(visitor, m_markListSet);
             }
 
             {
@@ -2867,6 +2912,7 @@ void Heap::addCoreConstraints()
         MAKE_MARKING_CONSTRAINT_EXECUTOR_PAIR(([this] (auto& visitor) {
             SetRootMarkReasonScope rootScope(visitor, RootMarkReason::StrongHandles);
             m_handleSet.visitStrongHandles(visitor);
+            vm().visitAggregate(visitor);
         })),
         ConstraintVolatility::GreyedByExecution);
 
@@ -2891,9 +2937,11 @@ void Heap::addCoreConstraints()
         "Ws", "Weak Sets",
         MAKE_MARKING_CONSTRAINT_EXECUTOR_PAIR(([this] (auto& visitor) {
             SetRootMarkReasonScope rootScope(visitor, RootMarkReason::WeakSets);
-            m_objectSpace.visitWeakSets(visitor);
+            RefPtr<SharedTask<void(decltype(visitor)&)>> task = m_objectSpace.forEachWeakInParallel<decltype(visitor)>();
+            visitor.addParallelConstraintTask(WTFMove(task));
         })),
-        ConstraintVolatility::GreyedByMarking);
+        ConstraintVolatility::GreyedByMarking,
+        ConstraintParallelism::Parallel);
 
     m_constraintSet->add(
         "O", "Output",
@@ -2905,19 +2953,23 @@ void Heap::addCoreConstraints()
             // arg here. Giving it a unique name works around this issue.
             auto callOutputConstraint = [] (auto& visitor2, HeapCell* heapCell, HeapCell::Kind) {
                 SetRootMarkReasonScope rootScope(visitor2, RootMarkReason::Output);
-                VM& vm = visitor2.vm();
                 JSCell* cell = static_cast<JSCell*>(heapCell);
-                cell->methodTable(vm)->visitOutputConstraints(cell, visitor2);
+                cell->methodTable()->visitOutputConstraints(cell, visitor2);
             };
 
             auto add = [&] (auto& set) {
                 RefPtr<SharedTask<void(decltype(visitor)&)>> task = set.template forEachMarkedCellInParallel<decltype(visitor)>(callOutputConstraint);
-                visitor.addParallelConstraintTask(task);
+                visitor.addParallelConstraintTask(WTFMove(task));
             };
 
             {
                 SetRootMarkReasonScope rootScope(visitor, RootMarkReason::ExecutableToCodeBlockEdges);
-                add(heap->executableToCodeBlockEdgesWithConstraints);
+                add(heap->functionExecutableSpaceAndSet.outputConstraintsSet);
+                add(heap->programExecutableSpaceAndSet.outputConstraintsSet);
+                if (heap->m_evalExecutableSpace)
+                    add(heap->m_evalExecutableSpace->outputConstraintsSet);
+                if (heap->m_moduleProgramExecutableSpace)
+                    add(heap->m_moduleProgramExecutableSpace->outputConstraintsSet);
             }
             if (heap->m_weakMapSpace) {
                 SetRootMarkReasonScope rootScope(visitor, RootMarkReason::WeakMapSpace);
@@ -2976,6 +3028,9 @@ void Heap::addMarkingConstraint(std::unique_ptr<MarkingConstraint> constraint)
 
 void Heap::notifyIsSafeToCollect()
 {
+    if (UNLIKELY(!Options::useGC()))
+        return;
+
     MonotonicTime before;
     if (UNLIKELY(Options::logGC())) {
         before = MonotonicTime::now();
@@ -3169,18 +3224,18 @@ FOR_EACH_JSC_DYNAMIC_ISO_SUBSPACE(DEFINE_DYNAMIC_ISO_SUBSPACE_MEMBER_SLOW)
 
 #undef DEFINE_DYNAMIC_ISO_SUBSPACE_MEMBER_SLOW
 
-#define DEFINE_DYNAMIC_SPACE_AND_SET_MEMBER_SLOW(name, heapCellType, type) \
+#define DEFINE_DYNAMIC_SPACE_AND_SET_MEMBER_SLOW(name, heapCellType, type, spaceType) \
     IsoSubspace* Heap::name##Slow() \
     { \
         ASSERT(!m_##name); \
-        auto space = makeUnique<SpaceAndSet> ISO_SUBSPACE_INIT(*this, heapCellType, type); \
+        auto space = makeUnique<spaceType> ISO_SUBSPACE_INIT(*this, heapCellType, type); \
         WTF::storeStoreFence(); \
         m_##name = WTFMove(space); \
         return &m_##name->space; \
     }
 
-DEFINE_DYNAMIC_SPACE_AND_SET_MEMBER_SLOW(evalExecutableSpace, destructibleCellHeapCellType, EvalExecutable) // Hash:0x958e3e9d
-DEFINE_DYNAMIC_SPACE_AND_SET_MEMBER_SLOW(moduleProgramExecutableSpace, destructibleCellHeapCellType, ModuleProgramExecutable) // Hash:0x6506fa3c
+DEFINE_DYNAMIC_SPACE_AND_SET_MEMBER_SLOW(evalExecutableSpace, destructibleCellHeapCellType, EvalExecutable, Heap::ScriptExecutableSpaceAndSets) // Hash:0x958e3e9d
+DEFINE_DYNAMIC_SPACE_AND_SET_MEMBER_SLOW(moduleProgramExecutableSpace, destructibleCellHeapCellType, ModuleProgramExecutable, Heap::ScriptExecutableSpaceAndSets) // Hash:0x6506fa3c
 
 #undef DEFINE_DYNAMIC_SPACE_AND_SET_MEMBER_SLOW
 

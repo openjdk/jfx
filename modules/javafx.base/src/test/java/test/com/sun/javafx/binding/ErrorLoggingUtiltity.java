@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,6 +38,7 @@ public class ErrorLoggingUtiltity {
     private static ErrorLogger errorLogger = Logging.getLogger();
 
     public static void reset() {
+        Logging.setKeepException(true);
         errorLogger.setErrorLogRecord(null);
     }
 
@@ -60,6 +61,7 @@ public class ErrorLoggingUtiltity {
     }
 
     public static void check(Level expectedLevel, Class<?> expectedException) {
+        assertTrue(Logging.getKeepException());
         ErrorLogRecord errorLogRecord = errorLogger.getErrorLogRecord();
         assertNotNull(errorLogRecord);
         assertEquals(expectedLevel, errorLogRecord.getLevel());

@@ -39,7 +39,7 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(JSScope);
 
-const ClassInfo JSScope::s_info = { "Scope", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSScope) };
+const ClassInfo JSScope::s_info = { "Scope"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSScope) };
 
 template<typename Visitor>
 void JSScope::visitChildrenImpl(JSCell* cell, Visitor& visitor)
@@ -99,7 +99,7 @@ static inline bool abstractAccess(JSGlobalObject* globalObject, JSScope* scope, 
             }
         }
 
-        if (symbolTable->usesNonStrictEval())
+        if (symbolTable->usesSloppyEval())
             needsVarInjectionChecks = true;
         return false;
     }
@@ -166,7 +166,7 @@ static inline bool abstractAccess(JSGlobalObject* globalObject, JSScope* scope, 
             return true;
         }
 
-        Structure* structure = globalObject->structure(vm);
+        Structure* structure = globalObject->structure();
         if (!slot.isCacheableValue()
             || !structure->propertyAccessesAreCacheable()
             || (structure->hasReadOnlyOrGetterSetterPropertiesExcludingProto() && getOrPut == Put)) {
@@ -236,7 +236,7 @@ ALWAYS_INLINE JSObject* JSScope::resolve(JSGlobalObject* globalObject, JSScope* 
 
         // Global scope.
         if (++it == end) {
-            JSScope* globalScopeExtension = scope->globalObject(vm)->globalScopeExtension();
+            JSScope* globalScopeExtension = scope->globalObject()->globalScopeExtension();
             if (UNLIKELY(globalScopeExtension)) {
                 bool hasProperty = object->hasProperty(globalObject, ident);
                 RETURN_IF_EXCEPTION(throwScope, nullptr);
@@ -277,17 +277,15 @@ JSValue JSScope::resolveScopeForHoistingFuncDeclInEval(JSGlobalObject* globalObj
         return scope->isVarScope();
     };
     auto skipPredicate = [&] (JSScope* scope) -> bool {
-        return scope->isWithScope();
+        return scope->isWithScope() || scope->isCatchScopeWithSimpleParameter();
     };
     JSObject* object = resolve(globalObject, scope, ident, returnPredicate, skipPredicate);
     RETURN_IF_EXCEPTION(throwScope, { });
 
     bool result = false;
-    if (JSScope* scope = jsDynamicCast<JSScope*>(vm, object)) {
-        if (SymbolTable* scopeSymbolTable = scope->symbolTable(vm)) {
-            result = scope->isGlobalObject()
-                ? JSObject::isExtensible(object, globalObject)
-                : scopeSymbolTable->scopeType() == SymbolTable::ScopeType::VarScope;
+    if (JSScope* scope = jsDynamicCast<JSScope*>(object)) {
+        if (SymbolTable* scopeSymbolTable = scope->symbolTable()) {
+            result = scope->isGlobalObject() || scopeSymbolTable->scopeType() == SymbolTable::ScopeType::VarScope;
         }
     }
 
@@ -336,7 +334,7 @@ void JSScope::collectClosureVariablesUnderTDZ(JSScope* scope, TDZEnvironment& re
         }
 
         SymbolTable* symbolTable = jsCast<JSSymbolTableObject*>(scope)->symbolTable();
-        ASSERT(symbolTable->scopeType() == SymbolTable::ScopeType::LexicalScope || symbolTable->scopeType() == SymbolTable::ScopeType::CatchScope);
+        ASSERT(symbolTable->scopeType() == SymbolTable::ScopeType::LexicalScope || symbolTable->scopeType() == SymbolTable::ScopeType::CatchScope || symbolTable->scopeType() == SymbolTable::ScopeType::CatchScopeWithSimpleParameter);
         ConcurrentJSLocker locker(symbolTable->m_lock);
         for (auto end = symbolTable->end(locker), iter = symbolTable->begin(locker); iter != end; ++iter)
             result.add(iter->key);
@@ -372,7 +370,17 @@ bool JSScope::isCatchScope()
 {
     if (type() != LexicalEnvironmentType)
         return false;
-    return jsCast<JSLexicalEnvironment*>(this)->symbolTable()->scopeType() == SymbolTable::ScopeType::CatchScope;
+
+    auto scopeType = jsCast<JSLexicalEnvironment*>(this)->symbolTable()->scopeType();
+    return scopeType == SymbolTable::ScopeType::CatchScope
+        || scopeType == SymbolTable::ScopeType::CatchScopeWithSimpleParameter;
+}
+
+bool JSScope::isCatchScopeWithSimpleParameter()
+{
+    if (type() != LexicalEnvironmentType)
+        return false;
+    return jsCast<JSLexicalEnvironment*>(this)->symbolTable()->scopeType() == SymbolTable::ScopeType::CatchScopeWithSimpleParameter;
 }
 
 bool JSScope::isFunctionNameScopeObject()
@@ -408,19 +416,12 @@ JSScope* JSScope::constantScopeForCodeBlock(ResolveType type, CodeBlock* codeBlo
     return nullptr;
 }
 
-SymbolTable* JSScope::symbolTable(VM& vm)
+SymbolTable* JSScope::symbolTable()
 {
-    if (JSSymbolTableObject* symbolTableObject = jsDynamicCast<JSSymbolTableObject*>(vm, this))
+    if (JSSymbolTableObject* symbolTableObject = jsDynamicCast<JSSymbolTableObject*>(this))
         return symbolTableObject->symbolTable();
 
     return nullptr;
-}
-
-JSValue JSScope::toThis(JSCell*, JSGlobalObject* globalObject, ECMAMode ecmaMode)
-{
-    if (ecmaMode.isStrict())
-        return jsUndefined();
-    return globalObject->globalThis();
 }
 
 } // namespace JSC

@@ -26,10 +26,10 @@
 #include "config.h"
 #include "LazyLoadImageObserver.h"
 
-#include "Frame.h"
 #include "HTMLImageElement.h"
 #include "IntersectionObserverCallback.h"
-
+#include "IntersectionObserverEntry.h"
+#include "LocalFrame.h"
 #include <limits>
 
 namespace WebCore {
@@ -86,7 +86,7 @@ IntersectionObserver* LazyLoadImageObserver::intersectionObserver(Document& docu
     if (!m_observer) {
         auto callback = LazyImageLoadIntersectionObserverCallback::create(document);
         static NeverDestroyed<const String> lazyLoadingRootMarginFallback(MAKE_STATIC_STRING_IMPL("100%"));
-        IntersectionObserver::Init options { std::nullopt, lazyLoadingRootMarginFallback, { } };
+        IntersectionObserver::Init options { &document, lazyLoadingRootMarginFallback, { } };
         auto observer = IntersectionObserver::create(document, WTFMove(callback), WTFMove(options));
         if (observer.hasException())
             return nullptr;

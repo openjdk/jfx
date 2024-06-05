@@ -28,6 +28,7 @@
 
 #include "config.h"
 #include "FormState.h"
+#include "FrameDestructionObserverInlines.h"
 
 #include "Document.h"
 #include "HTMLFormElement.h"
@@ -43,6 +44,8 @@ inline FormState::FormState(HTMLFormElement& form, StringPairVector&& textFieldV
 {
     RELEASE_ASSERT(sourceDocument.frame());
 }
+
+FormState::~FormState() = default;
 
 Ref<FormState> FormState::create(HTMLFormElement& form, StringPairVector&& textFieldValues, Document& sourceDocument, FormSubmissionTrigger formSubmissionTrigger)
 {

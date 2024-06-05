@@ -30,11 +30,12 @@
 
 #include <string>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/text/ASCIILiteral.h>
 
 namespace WebCore {
 namespace ContentExtensions {
 
-const char* WebKitContentBlockerDomain = "WebKitContentBlockerDomain";
+ASCIILiteral WebKitContentBlockerDomain = "WebKitContentBlockerDomain"_s;
 
 const std::error_category& contentExtensionErrorCategory()
 {
@@ -125,6 +126,8 @@ const std::error_category& contentExtensionErrorCategory()
                 return "A modify-headers operation of \"set\" or \"append\" must have a value";
             case ContentExtensionError::JSONModifyHeadersNotArray:
                 return "A headers member must be an array";
+            case ContentExtensionError::JSONModifyHeadersInvalidPriority:
+                return "A priority must be a positive integer";
             }
 
             return std::string();
