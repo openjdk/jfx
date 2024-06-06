@@ -156,7 +156,7 @@ class CTGlyphLayout extends GlyphLayout {
                 positions[posStart] = (float)OS.CTLineGetTypographicBounds(lineRef);
             }
             /* JDK-8330559 - Mac specific issue.
-             * When traling spces are present in the text containing LTR and RTL
+             * When trailing spaces are present in the text containing LTR and RTL
              * text together, negative position values are returned for spaces from
              * the native side. Since TextRun expects positive value relative to the
              * first glyph in the text run, shifting the position of each glyph by the
