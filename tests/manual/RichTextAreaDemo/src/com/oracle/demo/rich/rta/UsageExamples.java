@@ -77,6 +77,7 @@ public class UsageExamples {
     private static CodeArea codeAreaExample() {
         CodeArea codeArea = new CodeArea();
         codeArea.setWrapText(true);
+        codeArea.setLineNumbersEnabled(true);
         codeArea.setText("Lorem\nIpsum");
         return codeArea;
     }

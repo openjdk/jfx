@@ -60,6 +60,7 @@ import jfx.incubator.scene.control.rich.skin.RichTextAreaSkin;
  * The following example creates an editable control with the default {@link CodeArea}:
  * <pre>{@code    CodeArea codeArea = new CodeArea();
  *   codeArea.setWrapText(true);
+ *   codeArea.setLineNumbersEnabled(true);
  *   codeArea.setText("Lorem\nIpsum");
  * }</pre>
  * Which results in the following visual representation:
