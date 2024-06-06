@@ -155,6 +155,20 @@ class CTGlyphLayout extends GlyphLayout {
             if (size > 0) {
                 positions[posStart] = (float)OS.CTLineGetTypographicBounds(lineRef);
             }
+            /* JDK-8330559 - Mac specific issue.
+             * When traling spces are present in the text containing LTR and RTL
+             * text together, negative position values are returned for spaces from
+             * the native side. Since TextRun expects positive value relative to the
+             * first glyph in the text run, shifting the position of each glyph by the
+             * absolute value of negative value of first character */
+            if (positions[0] < 0) {
+                float offsetVal = Math.abs(positions[0]);
+                int idx = 0;
+                while (idx < positions.length - 2) {
+                    positions[idx] += offsetVal;
+                    idx += 2;
+                }
+            }
             run.shape(glyphCount, glyphs, positions, indices);
         }
         OS.CFRelease(lineRef);

@@ -329,13 +329,6 @@ public class TextRun implements GlyphList {
                 cacheWidth = x;
                 return x;
             }
-            int prevIdx = (glyphIndex - 1)<<1;
-            while (prevIdx > 0 && positions[prevIdx] < 0) {
-                prevIdx -= 2;
-            }
-            if (prevIdx >= 0 && positions[prevIdx] < 0) {
-                return Math.abs(positions[prevIdx]);
-            }
             return positions[glyphIndex<<1];
         }
         return glyphIndex == 0 ? 0 : getWidth();
