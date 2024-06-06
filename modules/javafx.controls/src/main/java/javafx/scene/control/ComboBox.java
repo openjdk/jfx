@@ -627,14 +627,11 @@ public class ComboBox<T> extends ComboBoxBase<T> {
                     T selectedItem = getSelectedItem();
                     for (int i = 0; i < comboBox.getItems().size(); i++) {
                         if (selectedItem.equals(comboBox.getItems().get(i))) {
-                            comboBox.setValue(null);
-                            setSelectedItem(null);
-                            setSelectedIndex(i);
+                            clearAndSelect(i);
                             break;
                         }
                     }
                 }
-
                 comboBox.previousItemCount = getItemCount();
             }
         };
