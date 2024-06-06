@@ -22,24 +22,40 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package jfx.incubator.scene.control.input;
 
-import javafx.scene.control.Skinnable;
+package com.sun.jfx.incubator.scene.control.input;
+
+import com.sun.javafx.util.Utils;
+import jfx.incubator.scene.control.input.FunctionTag;
+import jfx.incubator.scene.control.input.InputMap;
 
 /**
- * A functional interface which denotes code associated with a {@code FunctionTag} or a key binding.
- * Unlike {@link FunctionHandler}, this handler allows for controlling whether the matching KeyEvent
- * will be consumed or not.
- *
- * @param <C> the type of the skinnable
- * @since 999 TODO
+ * Hides execute() methods in InputMap from the public.
  */
-@FunctionalInterface
-public interface FunctionHandlerConditional<C extends Skinnable> {
-    /**
-     * Handles the event associated with a function tag or a key binding.
-     * @param control the control instance
-     * @return true to consume the key event, false otherwise
-     */
-    public boolean handle(C control);
+public class InputMapHelper {
+    public interface Accessor {
+        public void execute(Object source, InputMap inputMap, FunctionTag tag);
+        public void executeDefault(Object source, InputMap inputMap, FunctionTag tag);
+    }
+
+    static {
+        Utils.forceInit(InputMap.class);
+    }
+
+    private static Accessor accessor;
+
+    public static void setAccessor(Accessor a) {
+        if (accessor != null) {
+            throw new IllegalStateException();
+        }
+        accessor = a;
+    }
+
+    public static void execute(Object source, InputMap inputMap, FunctionTag tag) {
+        accessor.execute(source, inputMap, tag);
+    }
+
+    public static void executeDefault(Object source, InputMap inputMap, FunctionTag tag) {
+        accessor.executeDefault(source, inputMap, tag);
+    }
 }

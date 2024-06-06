@@ -334,33 +334,31 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         return false;
     }
 
-    public void insertTab(RichTextArea control) {
+    public void insertTab() {
         if (canEdit()) {
             handleTypedChar("\t");
         } else {
-            traverseNext(control);
+            traverseNext();
         }
     }
 
-    public void insertLineBreak(RichTextArea control) {
-        if (!canEdit()) {
-            return;
-        }
+    public void insertLineBreak() {
+        if (canEdit()) {
+            RichTextArea control = getControl();
+            StyledTextModel m = control.getModel();
+            TextPos start = control.getCaretPosition();
+            if (start == null) {
+                return;
+            }
+            TextPos end = control.getAnchorPosition();
+            if (end == null) {
+                return;
+            }
 
-        StyledTextModel m = control.getModel();
-        TextPos start = control.getCaretPosition();
-        if (start == null) {
-            return;
+            TextPos pos = m.replace(vflow, start, end, StyledInput.of("\n"), true);
+            control.moveCaret(pos, false);
+            clearPhantomX();
         }
-        TextPos end = control.getAnchorPosition();
-        if (end == null) {
-            return;
-        }
-
-        // TODO use previous paragraph attributes?
-        TextPos pos = m.replace(vflow, start, end, StyledInput.of("\n"), true);
-        control.moveCaret(pos, false);
-        clearPhantomX();
     }
 
     protected void handleMouseClicked(MouseEvent ev) {
@@ -529,52 +527,52 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         control.extendSelection(p);
     }
 
-    public void pageDown(RichTextArea control) {
-        moveLine(control, vflow.getViewHeight(), false);
+    public void pageDown() {
+        moveLine(vflow.getViewHeight(), false);
     }
 
-    public void pageUp(RichTextArea control) {
-        moveLine(control, -vflow.getViewHeight(), false);
+    public void pageUp() {
+        moveLine(-vflow.getViewHeight(), false);
     }
 
-    public void moveRight(RichTextArea control) {
-        moveCharacter(control, true, false);
+    public void moveRight() {
+        moveCharacter(true, false);
     }
 
-    public void moveLeft(RichTextArea control) {
-        moveCharacter(control, false, false);
+    public void moveLeft() {
+        moveCharacter(false, false);
     }
 
-    public void moveParagraphStart(RichTextArea control) {
-        moveCaret(control, false, this::paragraphStart);
+    public void moveParagraphStart() {
+        moveCaret(false, this::paragraphStart);
     }
 
-    public void moveParagraphEnd(RichTextArea control) {
-        moveCaret(control, false, this::paragraphEnd);
+    public void moveParagraphEnd() {
+        moveCaret(false, this::paragraphEnd);
     }
 
-    public void selectParagraphStart(RichTextArea control) {
-        moveCaret(control, true, this::paragraphStart);
+    public void selectParagraphStart() {
+        moveCaret(true, this::paragraphStart);
     }
 
-    public void selectParagraphEnd(RichTextArea control) {
-        moveCaret(control, true, this::paragraphEnd);
+    public void selectParagraphEnd() {
+        moveCaret(true, this::paragraphEnd);
     }
 
-    public void moveParagraphDown(RichTextArea control) {
-        moveCaret(control, false, this::paragraphDown);
+    public void moveParagraphDown() {
+        moveCaret(false, this::paragraphDown);
     }
 
-    public void selectParagraphDown(RichTextArea control) {
-        moveCaret(control, true, this::paragraphDown);
+    public void selectParagraphDown() {
+        moveCaret(true, this::paragraphDown);
     }
 
-    public void moveParagraphUp(RichTextArea control) {
-        moveCaret(control, false, this::paragraphUp);
+    public void moveParagraphUp() {
+        moveCaret(false, this::paragraphUp);
     }
 
-    public void selectParagraphUp(RichTextArea control) {
-        moveCaret(control, true, this::paragraphUp);
+    public void selectParagraphUp() {
+        moveCaret(true, this::paragraphUp);
     }
 
     private TextPos paragraphDown(RichTextArea control, TextPos caret) {
@@ -608,7 +606,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         return control.getEndOfParagraph(ix);
     }
 
-    private void moveCaret(RichTextArea control, boolean extSelection, BiFunction<RichTextArea, TextPos, TextPos> h) {
+    private void moveCaret(boolean extSelection, BiFunction<RichTextArea, TextPos, TextPos> h) {
+        RichTextArea control = getControl();
         TextPos caret = control.getCaretPosition();
         if (caret != null) {
             TextPos p = h.apply(control, caret);
@@ -623,30 +622,32 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         return new TextPos(caret.index(), 0);
     }
 
-    public void moveUp(RichTextArea control) {
-        moveLine(control, -1.0, false);
+    public void moveUp() {
+        moveLine(-1.0, false);
     }
 
-    public void moveDown(RichTextArea control) {
-        moveLine(control, 1.0, false);
+    public void moveDown() {
+        moveLine(1.0, false);
     }
 
     /**
      * Moves the caret to before the first character of the text, also clearing the selection.
      */
-    public void moveDocumentStart(RichTextArea control) {
+    public void moveDocumentStart() {
+        RichTextArea control = getControl();
         control.select(TextPos.ZERO);
     }
 
     /**
      * Moves the caret to after the last character of the text, also clearing the selection.
      */
-    public void moveDocumentEnd(RichTextArea control) {
+    public void moveDocumentEnd() {
+        RichTextArea control = getControl();
         TextPos pos = control.getEndTextPos();
         control.select(pos);
     }
 
-    protected void moveLine(RichTextArea control, double deltaPixels, boolean extendSelection) {
+    protected void moveLine(double deltaPixels, boolean extendSelection) {
         CaretInfo c = vflow.getCaretInfo();
         if (c == null) {
             return;
@@ -664,12 +665,13 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
 
         TextPos p = vflow.getTextPosLocal(x + vflow.leftPadding(), y);
         if (p != null) {
-            control.moveCaret(p, extendSelection);
+            getControl().moveCaret(p, extendSelection);
         }
     }
 
-    protected void moveCharacter(RichTextArea control, boolean moveRight, boolean extendSelection) {
+    protected void moveCharacter(boolean moveRight, boolean extendSelection) {
         // TODO bidi
+        RichTextArea control = getControl();
         TextPos caret = control.getCaretPosition();
         if (caret == null) {
             return;
@@ -754,48 +756,51 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         phantomX = -1.0;
     }
 
-    public void selectLeft(RichTextArea control) {
-        moveCharacter(control, false, true);
+    public void selectLeft() {
+        moveCharacter(false, true);
     }
 
-    public void selectRight(RichTextArea control) {
-        moveCharacter(control, true, true);
+    public void selectRight() {
+        moveCharacter(true, true);
     }
 
-    public void selectUp(RichTextArea control) {
-        moveLine(control, -1.0, true);
+    public void selectUp() {
+        moveLine(-1.0, true);
     }
 
-    public void selectDown(RichTextArea control) {
-        moveLine(control, 1.0, true);
+    public void selectDown() {
+        moveLine(1.0, true);
     }
 
-    public void selectPageDown(RichTextArea control) {
-        moveLine(control, vflow.getViewHeight(), true);
+    public void selectPageDown() {
+        moveLine(vflow.getViewHeight(), true);
     }
 
-    public void selectPageUp(RichTextArea control) {
-        moveLine(control, -vflow.getViewHeight(), true);
+    public void selectPageUp() {
+        moveLine(-vflow.getViewHeight(), true);
     }
 
-    public void selectAll(RichTextArea control) {
+    public void selectAll() {
+        RichTextArea control = getControl();
         TextPos end = control.getEndTextPos();
         control.select(TextPos.ZERO, end);
         clearPhantomX();
     }
 
     /** selects from the anchor position to the document start */
-    public void selectDocumentStart(RichTextArea control) {
-        control.extendSelection(TextPos.ZERO);
+    public void selectDocumentStart() {
+        getControl().extendSelection(TextPos.ZERO);
     }
 
     /** selects from the anchor position to the document end */
-    public void selectDocumentEnd(RichTextArea control) {
+    public void selectDocumentEnd() {
+        RichTextArea control = getControl();
         TextPos pos = control.getEndTextPos();
         control.extendSelection(pos);
     }
 
-    public void selectWord(RichTextArea control) {
+    public void selectWord() {
+        RichTextArea control = getControl();
         TextPos caret = control.getCaretPosition();
         if (caret == null) {
             return;
@@ -834,7 +839,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         }
     }
 
-    public void selectParagraph(RichTextArea control) {
+    public void selectParagraph() {
+        RichTextArea control = getControl();
         TextPos p = control.getCaretPosition();
         if (p != null) {
             int ix = p.index();
@@ -844,11 +850,12 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         }
     }
 
-    public void backspace(RichTextArea control) {
+    public void backspace() {
         if (!canEdit()) {
             return;
         }
 
+        RichTextArea control = getControl();
         if (control.hasNonEmptySelection()) {
             deleteSelection(control);
         } else {
@@ -880,20 +887,19 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         }
     }
 
-    public void delete(RichTextArea control) {
-        if (!canEdit()) {
-            return;
-        }
-
-        if (control.hasNonEmptySelection()) {
-            deleteSelection(control);
-        } else {
-            TextPos start = control.getCaretPosition();
-            TextPos end = nextCharacterVisually(start, true);
-            if (end != null) {
-                control.getModel().replace(vflow, start, end, StyledInput.EMPTY, true);
-                control.moveCaret(start, false);
-                clearPhantomX();
+    public void delete() {
+        if (canEdit()) {
+            RichTextArea control = getControl();
+            if (control.hasNonEmptySelection()) {
+                deleteSelection(control);
+            } else {
+                TextPos start = control.getCaretPosition();
+                TextPos end = nextCharacterVisually(start, true);
+                if (end != null) {
+                    control.getModel().replace(vflow, start, end, StyledInput.EMPTY, true);
+                    control.moveCaret(start, false);
+                    clearPhantomX();
+                }
             }
         }
     }
@@ -906,7 +912,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         return getControl().getModel().clamp(p);
     }
 
-    public void deleteParagraph(RichTextArea control) {
+    public void deleteParagraph() {
         if (canEdit()) {
             SelInfo sel = sel();
             if (sel != null) {
@@ -915,6 +921,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
 
                 TextPos p0 = new TextPos(ix0, 0);
                 TextPos p1 = clamp(new TextPos(ix1 + 1, 0));
+                RichTextArea control = getControl();
                 control.getModel().replace(vflow, p0, p1, StyledInput.EMPTY, true);
                 clearPhantomX();
                 control.moveCaret(p0, false);
@@ -922,8 +929,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         }
     }
 
-    public void deleteParagraphStart(RichTextArea control) {
-        deleteIgnoreSelection(control, this::paragraphStart);
+    public void deleteParagraphStart() {
+        deleteIgnoreSelection(this::paragraphStart);
     }
 
     protected void deleteSelection(RichTextArea control) {
@@ -937,7 +944,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         }
     }
 
-    protected void deselect(RichTextArea control) {
+    protected void deselect() {
+        RichTextArea control = getControl();
         TextPos p = control.getCaretPosition();
         if (p != null) {
             clearPhantomX();
@@ -1048,19 +1056,19 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         m.setOnAction((ev) -> control.selectAll());
     }
 
-    public void copy(RichTextArea control) {
-        copy(control, false);
+    public void copy() {
+        copy(false);
     }
 
-    public void cut(RichTextArea control) {
-        copy(control, true);
+    public void cut() {
+        copy(true);
     }
 
-    public void paste(RichTextArea control) {
+    public void paste() {
         if (canEdit()) {
             DataFormat f = findFormatForPaste();
             if (f != null) {
-                pasteLocal(control, f);
+                pasteLocal(f);
             }
         }
     }
@@ -1069,12 +1077,12 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         if (canEdit()) {
             Clipboard c = Clipboard.getSystemClipboard();
             if (c.hasContent(f)) {
-                pasteLocal(getControl(), f);
+                pasteLocal(f);
             }
         }
     }
 
-    public void pastePlainText(RichTextArea control) {
+    public void pastePlainText() {
         paste(DataFormat.PLAIN_TEXT);
     }
 
@@ -1096,9 +1104,10 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         return null;
     }
 
-    private void pasteLocal(RichTextArea control, DataFormat f) {
+    private void pasteLocal(DataFormat f) {
         SelInfo sel = sel();
         if (sel != null) {
+            RichTextArea control = getControl();
             TextPos start = sel.getMin();
             TextPos end = sel.getMax();
 
@@ -1122,7 +1131,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         }
     }
 
-    protected void copy(RichTextArea control, boolean cut) {
+    protected void copy(boolean cut) {
+        RichTextArea control = getControl();
         if (control.hasNonEmptySelection()) {
             StyledTextModel m = control.getModel(); // non null at this point
             DataFormat[] fs = m.getSupportedDataFormats(true);
@@ -1186,34 +1196,34 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
      * Moves the caret to the beginning of previous word. This function
      * also has the effect of clearing the selection.
      */
-    public void previousWord(RichTextArea control) {
-        moveCaret(control, false, this::previousWord);
+    public void previousWord() {
+        moveCaret(false, this::previousWord);
     }
 
     /** moves the caret to the beginning of the previos word (LTR) or next word (RTL) */
-    public void leftWord(RichTextArea control) {
-        leftWord(control, false);
+    public void leftWord() {
+        leftWord(false);
     }
 
     /** moves the caret to the beginning of the next word (LTR) or previous word (RTL) */
-    public void rightWord(RichTextArea control) {
-        rightWord(control, false);
+    public void rightWord() {
+        rightWord(false);
     }
 
     /**
      * Moves the caret to the beginning of next word. This function
      * also has the effect of clearing the selection.
      */
-    public void nextWord(RichTextArea control) {
-        moveCaret(control, false, this::nextWordBeg);
+    public void nextWord() {
+        moveCaret(false, this::nextWordBeg);
     }
 
     /**
      * Moves the caret to the end of the next word. This function
      * also has the effect of clearing the selection.
      */
-    public void nextWordEnd(RichTextArea control) {
-        moveCaret(control, false, this::nextWordEnd);
+    public void nextWordEnd() {
+        moveCaret(false, this::nextWordEnd);
     }
 
     /**
@@ -1221,8 +1231,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
      * the selection to be cleared. Rather, the anchor stays put and the caretPosition is
      * moved to the beginning of previous word.
      */
-    public void selectWordPrevious(RichTextArea control) {
-        moveCaret(control, true, this::previousWord);
+    public void selectWordPrevious() {
+        moveCaret(true, this::previousWord);
     }
 
     /**
@@ -1230,16 +1240,16 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
      * the selection to be cleared. Rather, the anchor stays put and the caretPosition is
      * moved to the beginning of next word.
      */
-    public void selectWordNext(RichTextArea control) {
-        moveCaret(control, true, this::nextWordBeg);
+    public void selectWordNext() {
+        moveCaret(true, this::nextWordBeg);
     }
 
     /**
      * Moves the caret to the end of the next word. This does not cause
      * the selection to be cleared.
      */
-    public void selectNextWordEnd(RichTextArea control) {
-        moveCaret(control, true, this::nextWordEnd);
+    public void selectNextWordEnd() {
+        moveCaret(true, this::nextWordEnd);
     }
 
     /**
@@ -1248,8 +1258,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
      * the selection to be cleared. Rather, the anchor stays put and the caretPosition is
      * moved to the beginning of previous word.
      */
-    public void selectWordLeft(RichTextArea control) {
-        leftWord(control, true);
+    public void selectWordLeft() {
+        leftWord(true);
     }
 
     /**
@@ -1258,30 +1268,30 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
      * the selection to be cleared. Rather, the anchor stays put and the caretPosition is
      * moved to the beginning of next word.
      */
-    public void selectWordRight(RichTextArea control) {
-        rightWord(control, true);
+    public void selectWordRight() {
+        rightWord(true);
     }
 
-    protected void leftWord(RichTextArea control, boolean extendSelection) {
+    protected void leftWord(boolean extendSelection) {
         if (isRTLText()) {
             if (isWindows()) {
-                moveCaret(control, extendSelection, this::nextWordBeg);
+                moveCaret(extendSelection, this::nextWordBeg);
             } else {
-                moveCaret(control, extendSelection, this::nextWordEnd);
+                moveCaret(extendSelection, this::nextWordEnd);
             }
         } else {
-            moveCaret(control, extendSelection, this::previousWord);
+            moveCaret(extendSelection, this::previousWord);
         }
     }
 
-    protected void rightWord(RichTextArea control, boolean extendSelection) {
+    protected void rightWord(boolean extendSelection) {
         if (isRTLText()) {
-            moveCaret(control, extendSelection, this::previousWord);
+            moveCaret(extendSelection, this::previousWord);
         } else {
             if (isWindows()) {
-                moveCaret(control, extendSelection, this::nextWordBeg);
+                moveCaret(extendSelection, this::nextWordBeg);
             } else {
-                moveCaret(control, extendSelection, this::nextWordEnd);
+                moveCaret(extendSelection, this::nextWordEnd);
             }
         }
     }
@@ -1429,7 +1439,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         }
     }
 
-    public void redo(RichTextArea control) {
+    public void redo() {
+        RichTextArea control = getControl();
         StyledTextModel m = control.getModel();
         if (m != null) {
             TextPos[] sel = m.redo(vflow);
@@ -1439,7 +1450,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         }
     }
 
-    public void undo(RichTextArea control) {
+    public void undo() {
+        RichTextArea control = getControl();
         StyledTextModel m = control.getModel();
         if (m != null) {
             TextPos[] sel = m.undo(vflow);
@@ -1481,19 +1493,20 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         );
     }
 
-    public void deleteWordNextBeg(RichTextArea control) {
-        deleteIgnoreSelection(control, this::nextWordBeg);
+    public void deleteWordNextBeg() {
+        deleteIgnoreSelection(this::nextWordBeg);
     }
 
-    public void deleteWordNextEnd(RichTextArea control) {
-        deleteIgnoreSelection(control, this::nextWordEnd);
+    public void deleteWordNextEnd() {
+        deleteIgnoreSelection(this::nextWordEnd);
     }
 
-    public void deleteWordPrevious(RichTextArea control) {
-        deleteIgnoreSelection(control, this::previousWord);
+    public void deleteWordPrevious() {
+        deleteIgnoreSelection(this::previousWord);
     }
 
-    private void deleteIgnoreSelection(RichTextArea control, BiFunction<RichTextArea,TextPos,TextPos> getter) {
+    private void deleteIgnoreSelection(BiFunction<RichTextArea, TextPos, TextPos> getter) {
+        RichTextArea control = getControl();
         TextPos caret = control.getCaretPosition();
         if (caret != null) {
             TextPos p = getter.apply(control, caret);

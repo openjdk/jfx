@@ -115,7 +115,7 @@ public class RichTextAreaDemoPane extends BorderPane {
         control.setUseContentWidth(useContentSize);
         control.setHighlightCurrentParagraph(true);
         // custom function
-        control.getInputMap().register(KeyBinding.of(KeyCode.F2), (c) -> {
+        control.getInputMap().register(KeyBinding.of(KeyCode.F2), () -> {
             EditableRichTextModel.dump(control.getModel(), System.out);
         });
 

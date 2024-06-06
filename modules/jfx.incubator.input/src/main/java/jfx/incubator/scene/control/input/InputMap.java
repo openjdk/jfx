@@ -30,17 +30,15 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.BooleanSupplier;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.control.Control;
-import javafx.scene.control.Skin;
-import javafx.scene.control.SkinBase;
 import javafx.scene.control.Skinnable;
 import javafx.scene.input.KeyEvent;
 import com.sun.javafx.ModuleUtil;
 import com.sun.jfx.incubator.scene.control.input.EventHandlerPriority;
+import com.sun.jfx.incubator.scene.control.input.InputMapHelper;
 import com.sun.jfx.incubator.scene.control.input.KeyEventMapper;
 import com.sun.jfx.incubator.scene.control.input.PHList;
 
@@ -55,15 +53,20 @@ import com.sun.jfx.incubator.scene.control.input.PHList;
 public final class InputMap {
     private static final Object NULL = new Object();
     private final Control control;
-    // KeyBinding -> FunctionTag or FunctionHandler
-    // FunctionTag -> FunctionHandler
-    // EventType -> PHList
+    /**
+     * <pre> KeyBinding -> FunctionTag or Runnable
+     * FunctionTag -> Runnable
+     * EventType -> PHList</pre>
+     */
     private final HashMap<Object, Object> map = new HashMap<>();
     private SkinInputMap skinInputMap;
     private final KeyEventMapper kmapper = new KeyEventMapper();
     private final EventHandler<Event> eventHandler = this::handleEvent;
 
-    static { ModuleUtil.incubatorWarning(); }
+    static {
+        ModuleUtil.incubatorWarning();
+        initAccessor();
+    }
 
     /**
      * The constructor.
@@ -168,38 +171,108 @@ public final class InputMap {
 
         KeyBinding k = KeyBinding.from((KeyEvent)ev);
         if (k != null) {
-            FunctionHandler f = getFunction(k);
-            if (f != null) {
-                f.handleKeyBinding(ev, control);
+            boolean consume = execute(ev.getSource(), k);
+            if (consume) {
+                ev.consume();
             }
         }
     }
 
-    static <C extends Skinnable> FunctionHandler<C> toFunctionHandler(FunctionHandlerConditional<C> h) {
-        return new FunctionHandler<C>() {
-            @Override
-            public void handle(C control) {
-                boolean consume = h.handle(control);
-            }
-
-            @Override
-            public void handleKeyBinding(Event ev, C control) {
-                boolean consume = h.handle(control);
-                if (consume) {
-                    ev.consume();
-                }
-            }
-        };
+    private boolean execute(Object source, KeyBinding k) {
+        Object x = resolve(k);
+        if (x instanceof FunctionTag tag) {
+            return execute(source, tag);
+        } else if (x instanceof FunctionHandler h) {
+            return h.execute();
+        } else if (x instanceof Runnable r) {
+            r.run();
+            return true;
+        }
+        return false;
     }
+
+    boolean execute(Object source, FunctionTag tag) {
+        Object x = map.get(tag);
+        if (x instanceof Runnable r) {
+            r.run();
+            return true;
+        }
+
+        return executeDefault(source, tag);
+    }
+
+    boolean executeDefault(Object source, FunctionTag tag) {
+        if (skinInputMap != null) {
+            return skinInputMap.execute(source, tag);
+        }
+        return false;
+    }
+
+    private Object resolve(KeyBinding k) {
+        Object x = map.get(k);
+        if (x != null) {
+            return x;
+        }
+        if (skinInputMap != null) {
+            return skinInputMap.resolve(k);
+        }
+        return null;
+    }
+
+    /**
+     * Returns a {@code Runnable} mapped to the specified function tag, or null if no such mapping exists.
+     *
+     * @param tag the function tag
+     * @return the function, or null
+     */
+//    public Runnable getFunction(FunctionTag tag) {
+//        Object x = map.get(tag);
+//        if (x instanceof Runnable r) {
+//            return r;
+//        } else if (skinInputMap != null) {
+//            return skinInputMap.getFunction(tag);
+//        }
+//        return null;
+//    }
+
+    /**
+     * Returns a default {@code Runnable} mapped to the specified function tag, or null if no such mapping exists.
+     *
+     * @implNote the return value might be a lambda, i.e. it will return a new instance each time this method is called.
+     *
+     * @param tag the function tag
+     * @return the function, or null
+     */
+//    public Runnable getDefaultFunction(FunctionTag tag) {
+//        if (skinInputMap != null) {
+//            return skinInputMap.getFunction(tag);
+//        }
+//        return null;
+//    }
+
+    /**
+     * Returns a {@code Runnable} mapped to the specified {@link KeyBinding},
+     * or null if no such mapping exists.
+     *
+     * @param k the key binding
+     * @return the function, or null
+     */
+//    public Runnable getFunction(KeyBinding k) {
+//        Object x = resolve(k);
+//        if (x instanceof FunctionTag tag) {
+//            return getFunction(tag);
+//        }
+//        return null;
+//    }
 
     /**
      * Registers a function for the given key binding.  This mapping will  take precedence
      * over any such mapping set by the skin.
-     * @param <C> the skinnable type
+     *
      * @param k the key binding
      * @param function the function
      */
-    public <C extends Skinnable> void register(KeyBinding k, FunctionHandler<C> function) {
+    public void register(KeyBinding k, Runnable function) {
         Objects.requireNonNull(k, "key binding must not be null");
         Objects.requireNonNull(function, "function must not be null");
         map.put(k, function);
@@ -209,29 +282,13 @@ public final class InputMap {
      * Adds (or overrides) a user-specified function under the given function tag.
      * This function will take precedence over any function set by the skin.
      *
-     * @param <C> the skinnable type
      * @param tag the function tag
      * @param function the function
      */
-    public <C extends Skinnable> void registerFunction(FunctionTag tag, FunctionHandler<C> function) {
+    public void registerFunction(FunctionTag tag, Runnable function) {
         Objects.requireNonNull(tag, "function tag must not be null");
         Objects.requireNonNull(function, "function must not be null");
         map.put(tag, function);
-    }
-
-    /**
-     * Adds (or overrides) a user-specified function under the given function tag.
-     * This function will take precedence over any function set by the skin.
-     * This method allows for controlling whether the matching event will be consumed or not.
-     *
-     * @param <C> the skinnable type
-     * @param tag the function tag
-     * @param function the function
-     */
-    public <C extends Skinnable> void registerFunctionCond(FunctionTag tag, FunctionHandlerConditional<C> function) {
-        Objects.requireNonNull(tag, "function tag must not be null");
-        Objects.requireNonNull(function, "function must not be null");
-        map.put(tag, toFunctionHandler(function));
     }
 
     /**
@@ -251,69 +308,6 @@ public final class InputMap {
 
         EventType<KeyEvent> t = kmapper.addType(k);
         extendHandler(t, null, EventHandlerPriority.USER_KB);
-    }
-
-    /**
-     * Returns a {@code FunctionHandler} mapped to the specified function tag, or null if no such mapping exists.
-     *
-     * @param <C> the skinnable type
-     * @param tag the function tag
-     * @return the function, or null
-     */
-    public <C extends Skinnable> FunctionHandler<C> getFunction(FunctionTag tag) {
-        Object x = map.get(tag);
-        // TODO check for NULL?
-        if (x instanceof FunctionHandler r) {
-            return r;
-        } else if (skinInputMap != null) {
-            return skinInputMap.getFunction(tag);
-        }
-        return null;
-    }
-
-    /**
-     * Returns a default {@code FunctionHandler} mapped to the specified function tag, or null if no such mapping exists.
-     *
-     * @implNote the return value might be a lambda, i.e. it will return a new instance each time this method is called.
-     *
-     * @param <C> the skinnable type
-     * @param tag the function tag
-     * @return the function, or null
-     */
-    public <C extends Skinnable> FunctionHandler<C> getDefaultFunction(FunctionTag tag) {
-        if (skinInputMap != null) {
-            return skinInputMap.getFunction(tag);
-        }
-        return null;
-    }
-
-    /**
-     * Returns a {@code FunctionHandler} mapped to the specified {@link KeyBinding},
-     * or null if no such mapping exists.
-     *
-     * @param <C> the skinnable type
-     * @param k the key binding
-     * @return the function, or null
-     */
-    public <C extends Skinnable> FunctionHandler<C> getFunction(KeyBinding k) {
-        Object x = resolve(k);
-        if (x instanceof FunctionTag tag) {
-            return getFunction(tag);
-        } else if (x instanceof FunctionHandler h) {
-            return h;
-        }
-        return null;
-    }
-
-    private Object resolve(KeyBinding k) {
-        Object x = map.get(k);
-        if (x != null) {
-            return x;
-        }
-        if (skinInputMap != null) {
-            return skinInputMap.resolve(k);
-        }
-        return null;
     }
 
     /**
@@ -378,6 +372,7 @@ public final class InputMap {
         return collectKeyBindings(tag);
     }
 
+    // null tag collects all bindings
     private Set<KeyBinding> collectKeyBindings(FunctionTag tag) {
         HashSet<KeyBinding> bindings = new HashSet<>();
         for (Map.Entry<Object, Object> en : map.entrySet()) {
@@ -409,15 +404,18 @@ public final class InputMap {
             Map.Entry<Object, Object> en = it.next();
             if (tag == en.getValue()) {
                 // the entry must be KeyBinding -> FunctionTag
-                it.remove();
+                if (en.getKey() instanceof KeyBinding) {
+                    it.remove();
+                }
             }
         }
     }
 
     /**
      * Sets the skin input map, adding necessary event handlers to the control instance when required.
-     * This method must be called by the skin only from its {@link Skin#install()} or
-     * {@code SkinBase#setSkinInputMap(SkinInputMap)} method.
+     * This method must be called by the skin only from its
+     * {@link javafx.scene.control.Skin#install() Skin.install()}
+     * method.
      * <p>
      * This method removes all the mappings from the previous skin input map, if any.
      * @param m the skin input map
@@ -457,5 +455,21 @@ public final class InputMap {
                 extendHandler(KeyEvent.KEY_TYPED, null, EventHandlerPriority.SKIN_KB);
             }
         }
+    }
+
+    private static void initAccessor() {
+        InputMapHelper.setAccessor(new InputMapHelper.Accessor() {
+            // will be unnecessary after JDK-8314968
+            @Override
+            public void executeDefault(Object source, InputMap inputMap, FunctionTag tag) {
+                inputMap.executeDefault(source, tag);
+            }
+
+            // will be unnecessary after JDK-8314968
+            @Override
+            public void execute(Object source, InputMap inputMap, FunctionTag tag) {
+                inputMap.execute(source, tag);
+            }
+        });
     }
 }

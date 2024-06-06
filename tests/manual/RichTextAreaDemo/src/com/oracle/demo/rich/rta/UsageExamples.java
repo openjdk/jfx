@@ -87,7 +87,7 @@ public class UsageExamples {
         RichTextArea richTextArea = new RichTextArea();
 
         // creates a new key binding mapped to an external function
-        richTextArea.getInputMap().register(KeyBinding.shortcut(KeyCode.W), (c) -> {
+        richTextArea.getInputMap().register(KeyBinding.shortcut(KeyCode.W), () -> {
             System.out.println("console!");
         });
 
@@ -100,7 +100,7 @@ public class UsageExamples {
         richTextArea.getInputMap().registerKey(KeyBinding.shortcut(KeyCode.W), RichTextArea.Tags.PASTE_PLAIN_TEXT);
 
         // redefine a function
-        richTextArea.getInputMap().registerFunction(RichTextArea.Tags.PASTE_PLAIN_TEXT, (c) -> { });
+        richTextArea.getInputMap().registerFunction(RichTextArea.Tags.PASTE_PLAIN_TEXT, () -> { });
         richTextArea.pastePlainText(); // becomes a no-op
         // revert back to the default behavior
         richTextArea.getInputMap().restoreDefaultFunction(RichTextArea.Tags.PASTE_PLAIN_TEXT);
@@ -108,16 +108,23 @@ public class UsageExamples {
         // sets a side decorator
         richTextArea.setLeftDecorator(new LineNumberDecorator());
 
-        richTextArea.getInputMap().registerFunction(PRINT_TO_CONSOLE, (c) -> {
+        richTextArea.getInputMap().registerFunction(PRINT_TO_CONSOLE, () -> {
             // new functionality
             System.out.println("PRINT_TO_CONSOLE executed");
         });
 
         // change the functionality of an existing key binding
-        richTextArea.getInputMap().registerFunction(RichTextArea.Tags.MOVE_WORD_NEXT_START, (c) -> {
+        richTextArea.getInputMap().registerFunction(RichTextArea.Tags.MOVE_WORD_NEXT_START, () -> {
             // refers to custom logic
             TextPos p = getCustomNextWordPosition(richTextArea);
             richTextArea.select(p);
+        });
+    }
+
+    void testGeneric() {
+        MyControl c = new MyControl();
+        c.getInputMap().registerFunction(MyControl.MY_TAG, () -> {
+            c.newFunctionImpl();
         });
     }
 
@@ -136,7 +143,7 @@ public class UsageExamples {
             getInputMap().registerKey(KeyBinding.shortcut(KeyCode.W), MY_TAG);
         }
 
-        private void newFunctionImpl(MyControl c) {
+        public void newFunctionImpl() {
             // custom functionality
         }
     }
@@ -147,11 +154,20 @@ public class UsageExamples {
 
         @Override
         public void start(Stage stage) throws Exception {
-            RichTextArea textArea =
-                // appendStyledText();
-                codeAreaExample();
-            stage.setScene(new Scene(textArea));
-            //stage.setTitle("RichTextArea");
+            RichTextArea t = true ? appendStyledText() : codeAreaExample();
+            stage.setScene(new Scene(t));
+            t.selectionProperty().addListener((s,p,c) -> {
+                System.out.println("selection: " + c);
+            });
+            t.anchorPositionProperty().addListener((s,p,c) -> {
+                System.out.println("anchor: " + c);
+            });
+            t.caretPositionProperty().addListener((s,p,c) -> {
+                System.out.println("caret: " + c);
+            });
+            t.getInputMap().register(KeyBinding.of(KeyCode.F1), () -> {
+                t.insertText(TextPos.ZERO, "F1", StyleAttrs.EMPTY);
+            });
             stage.show();
         }
     }

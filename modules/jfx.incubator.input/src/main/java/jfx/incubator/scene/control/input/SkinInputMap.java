@@ -41,14 +41,14 @@ import com.sun.jfx.incubator.scene.control.input.PHList;
 /**
  * The Input Map for use by the Skin.
  *
- * @param <C> the control type
  * @since 999 TODO
  */
-public class SkinInputMap<C extends Skinnable> {
-    // KeyBinding -> FunctionTag
-    // FunctionTag -> FunctionHandler
-    // ON_KEY_ENTER/ON_KEY_EXIT -> Runnable
-    // EventType -> PHList
+public class SkinInputMap {
+    /**
+     * <pre> KeyBinding -> FunctionTag
+     * FunctionTag -> Runnable or FunctionHandler
+     * EventType -> PHList</pre>
+     */
     final HashMap<Object, Object> map = new HashMap<>();
     final KeyEventMapper kmapper = new KeyEventMapper();
 
@@ -189,7 +189,7 @@ public class SkinInputMap<C extends Skinnable> {
      * @param tag the function tag
      * @param function the function
      */
-    public final void registerFunction(FunctionTag tag, FunctionHandler<C> function) {
+    public final void registerFunction(FunctionTag tag, Runnable function) {
         map.put(tag, function);
     }
 
@@ -200,8 +200,8 @@ public class SkinInputMap<C extends Skinnable> {
      * @param tag the function tag
      * @param function the function
      */
-    public final void registerFunction(FunctionTag tag, FunctionHandlerConditional<C> function) {
-        map.put(tag, InputMap.toFunctionHandler(function));
+    public final void registerFunction(FunctionTag tag, FunctionHandler function) {
+        map.put(tag, function);
     }
 
     /**
@@ -211,7 +211,7 @@ public class SkinInputMap<C extends Skinnable> {
      * @param k the key binding
      * @param func the function
      */
-    public void register(FunctionTag tag, KeyBinding k, FunctionHandler<C> func) {
+    public void register(FunctionTag tag, KeyBinding k, Runnable func) {
         registerFunction(tag, func);
         registerKey(k, tag);
     }
@@ -223,7 +223,7 @@ public class SkinInputMap<C extends Skinnable> {
      * @param code the key code
      * @param func the function
      */
-    public void register(FunctionTag tag, KeyCode code, FunctionHandler<C> func) {
+    public void register(FunctionTag tag, KeyCode code, Runnable func) {
         registerFunction(tag, func);
         registerKey(KeyBinding.of(code), tag);
     }
@@ -277,12 +277,15 @@ public class SkinInputMap<C extends Skinnable> {
         }
     }
 
-    final FunctionHandler<C> getFunction(FunctionTag tag) {
+    final boolean execute(Object source, FunctionTag tag) {
         Object x = map.get(tag);
-        if (x instanceof FunctionHandler f) {
-            return f;
+        if (x instanceof Runnable r) {
+            r.run();
+            return true;
+        } else if (x instanceof FunctionHandler f) {
+            return f.execute();
         }
-        return null;
+        return false;
     }
 
     void unbind(FunctionTag tag) {

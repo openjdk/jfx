@@ -54,12 +54,12 @@ import javafx.scene.AccessibleRole;
 import javafx.scene.control.Control;
 import javafx.scene.input.DataFormat;
 import javafx.util.Duration;
+import com.sun.jfx.incubator.scene.control.input.InputMapHelper;
 import com.sun.jfx.incubator.scene.control.rich.CssStyles;
 import com.sun.jfx.incubator.scene.control.rich.Params;
 import com.sun.jfx.incubator.scene.control.rich.RichTextAreaSkinHelper;
 import com.sun.jfx.incubator.scene.control.rich.VFlow;
 import com.sun.jfx.incubator.scene.control.rich.util.RichUtils;
-import jfx.incubator.scene.control.input.FunctionHandler;
 import jfx.incubator.scene.control.input.FunctionTag;
 import jfx.incubator.scene.control.input.InputMap;
 import jfx.incubator.scene.control.rich.model.EditableRichTextModel;
@@ -290,7 +290,7 @@ public class RichTextArea extends Control {
     private StyleableBooleanProperty useContentHeight;
     private StyleableBooleanProperty useContentWidth;
     private StyleableBooleanProperty wrapText;
-    // TODO to be moved to Control JDK-8314968
+    // will be moved to Control JDK-8314968
     private final InputMap inputMap = new InputMap(this);
 
     /** The style handler registry instance, made available for use by subclasses to add support for new style attributes. */
@@ -1931,15 +1931,25 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Executes the function tag, if any.
-     * @param tag the function tag.
+     * Executes a function mapped to the specified function tag.
+     * This method does nothing if no function is mapped to the tag, or the function has been unbound.
+     *
+     * @param tag the function tag
      */
     // TODO to be moved to Control JDK-8314968
-    protected final void execute(FunctionTag tag) {
-        FunctionHandler<RichTextArea> f = getInputMap().getFunction(tag);
-        if (f != null) {
-            f.handle(this);
-        }
+    public final void execute(FunctionTag tag) {
+        InputMapHelper.execute(this, getInputMap(), tag);
+    }
+
+    /**
+     * Executes the default function mapped to the specified tag.
+     * This method does nothing if no default mapping exists.
+     *
+     * @param tag the function tag
+     */
+    // TODO to be moved to Control JDK-8314968
+    public final void executeDefault(FunctionTag tag) {
+        InputMapHelper.executeDefault(this, getInputMap(), tag);
     }
 
     private static StyleHandlerRegistry initStyleHandlerRegistry() {
