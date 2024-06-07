@@ -63,8 +63,8 @@ public class SRGBTest extends VisualTestBase {
     static final float MID = 0.50f;
     static final float HIGH = 0.75f;
 
-    // The component tolerance is chosen to allow one bit of rounding variance
-    // when writing a color out and another bit when reading it back in.
+    // The component tolerance allows one bit of rounding when writing a color
+    // out and another bit when reading it back in.
     static final double COMPONENT_TOLERANCE = 2.0 / 255.0;
 
     private enum TestColor {
@@ -95,8 +95,8 @@ public class SRGBTest extends VisualTestBase {
         return new Point2D(centerX, centerY);
     }
 
-    // We use an AWT Robot since it is colorspace-aware and will correctly convert
-    // from the screeen's colorspace to sRGB.
+    // We use an AWT Robot since it is color space aware and will correctly convert
+    // from the screeen's color space to sRGB.
     private Color getSRGBColorAtScreenCenter() throws Exception {
         float[] sRGB = {1.0f, 1,0f, 1.0f};
         SwingUtilities.invokeAndWait(() -> {
@@ -169,7 +169,7 @@ public class SRGBTest extends VisualTestBase {
 
     // Tests that a color can be written out and then retrieved using a JavaFX
     // Robot's getPixelColor call. This can fail if the drawing code and the
-    // Robot have mismatched policies for handling colorspace conversions.
+    // Robot have mismatched policies for handling color space conversions.
     @Test
     public void singlePixelTest() {
         Rectangle swatch = prepareStage();
@@ -188,7 +188,7 @@ public class SRGBTest extends VisualTestBase {
 
     // Tests that a color can be written out and then retrieved using a JavaFX
     // Robot's getScreenCapture call. This can fail if the drawing code and
-    // the Robot have mismatched policies for handling colorspace
+    // the Robot have mismatched policies for handling color space
     // conversions.
     @Test
     public void screenCaptureTest() {
@@ -209,7 +209,7 @@ public class SRGBTest extends VisualTestBase {
     }
 
     // Tests that pixels are correctly written out as sRGB using an AWT Robot
-    // that is colorspace-aware. The singlePixel and screenCapture tests only
+    // that is color space aware. The singlePixel and screenCapture tests only
     // verify that colors can be round-tripped, not that they are actually
     // producing sRGB onscreen.
     @Test
