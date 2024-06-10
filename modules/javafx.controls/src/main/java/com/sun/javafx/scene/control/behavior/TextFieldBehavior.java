@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -184,7 +184,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     }
 
     @Override
-    protected void deleteChar(TextField c, boolean previous) {
+    protected void deleteChar(boolean previous) {
         skin.deleteChar(previous);
     }
 
@@ -194,7 +194,8 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     }
 
     @Override
-    protected void deleteFromLineStart(TextField c) {
+    protected void deleteFromLineStart() {
+        TextField c = getControl();
         int end = c.getCaretPosition();
         if (end > 0) {
             replaceText(0, end, "");

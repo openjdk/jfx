@@ -32,7 +32,7 @@ import java.util.Set;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
-import javafx.scene.control.Skinnable;
+import javafx.scene.control.Control;
 import javafx.scene.input.KeyCode;
 import com.sun.javafx.scene.control.input.EventHandlerPriority;
 import com.sun.javafx.scene.control.input.KeyEventMapper;
@@ -40,15 +40,21 @@ import com.sun.javafx.scene.control.input.PHList;
 
 /**
  * The Input Map for use by the Skin.
+ * <p>
+ * Skins whose behavior encapsulates state information must use a Stateful variant obtained with
+ * the {@link #create()} factory method.
+ * <p>
+ * Skins whose behavior requires no state, or when state is fully encapsulated by the Control itself,
+ * could use a Stateless variant obtained with the {@link #createStateless()} method.
  *
- * @param <C> the control type
  * @since 999 TODO
  */
-public class SkinInputMap<C extends Skinnable> {
-    // KeyBinding -> FunctionTag
-    // FunctionTag -> FunctionHandler
-    // ON_KEY_ENTER/ON_KEY_EXIT -> Runnable
-    // EventType -> PHList
+public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInputMap.Stateless {
+    /**
+     * <pre> KeyBinding -> FunctionTag
+     * FunctionTag -> Runnable or FunctionHandler
+     * EventType -> PHList</pre>
+     */
     final HashMap<Object, Object> map = new HashMap<>();
     final KeyEventMapper kmapper = new KeyEventMapper();
 
@@ -66,7 +72,7 @@ public class SkinInputMap<C extends Skinnable> {
      * @param consume determines whether the matching event is consumed or not
      * @param handler the event handler
      */
-    public <T extends Event> void addHandler(EventType<T> type, boolean consume, EventHandler<T> handler) {
+    public final <T extends Event> void addHandler(EventType<T> type, boolean consume, EventHandler<T> handler) {
         addHandler(type, consume, EventHandlerPriority.SKIN_HIGH, handler);
     }
 
@@ -79,7 +85,7 @@ public class SkinInputMap<C extends Skinnable> {
      * @param consume determines whether the matching event is consumed or not
      * @param handler the event handler
      */
-    public <T extends Event> void addHandlerLast(EventType<T> type, boolean consume, EventHandler<T> handler) {
+    public final <T extends Event> void addHandlerLast(EventType<T> type, boolean consume, EventHandler<T> handler) {
         addHandler(type, consume, EventHandlerPriority.SKIN_LOW, handler);
     }
 
@@ -92,7 +98,7 @@ public class SkinInputMap<C extends Skinnable> {
      * @param consume determines whether the matching event is consumed or not
      * @param handler the event handler
      */
-    public <T extends Event> void addHandler(EventCriteria<T> criteria, boolean consume, EventHandler<T> handler) {
+    public final <T extends Event> void addHandler(EventCriteria<T> criteria, boolean consume, EventHandler<T> handler) {
         addHandler(criteria, consume, EventHandlerPriority.SKIN_HIGH, handler);
     }
 
@@ -105,7 +111,7 @@ public class SkinInputMap<C extends Skinnable> {
      * @param consume determines whether the matching event is consumed or not
      * @param h the event handler
      */
-    public <T extends Event> void addHandlerLast(EventCriteria<T> criteria, boolean consume, EventHandler<T> h) {
+    public final <T extends Event> void addHandlerLast(EventCriteria<T> criteria, boolean consume, EventHandler<T> h) {
         addHandler(criteria, consume, EventHandlerPriority.SKIN_LOW, h);
     }
 
@@ -168,7 +174,7 @@ public class SkinInputMap<C extends Skinnable> {
      * @param k the key binding
      * @param tag the function tag
      */
-    public void registerKey(KeyBinding k, FunctionTag tag) {
+    public final void registerKey(KeyBinding k, FunctionTag tag) {
         map.put(k, tag);
         kmapper.addType(k);
     }
@@ -179,52 +185,7 @@ public class SkinInputMap<C extends Skinnable> {
      * @param code the key code to construct a {@link KeyBinding}
      * @param tag the function tag
      */
-    public void registerKey(KeyCode code, FunctionTag tag) {
-        registerKey(KeyBinding.of(code), tag);
-    }
-
-    /**
-     * Maps a function to the specified function tag.
-     *
-     * @param tag the function tag
-     * @param function the function
-     */
-    public final void registerFunction(FunctionTag tag, FunctionHandler<C> function) {
-        map.put(tag, function);
-    }
-
-    /**
-     * Maps a function to the specified function tag.
-     * This method allows for controlling whether the matching event will be consumed or not.
-     *
-     * @param tag the function tag
-     * @param function the function
-     */
-    public final void registerFunction(FunctionTag tag, FunctionHandlerConditional<C> function) {
-        map.put(tag, InputMap.toFunctionHandler(function));
-    }
-
-    /**
-     * This convenience method maps the function tag to the specified function, and at the same time
-     * maps the specified key binding to that function tag.
-     * @param tag the function tag
-     * @param k the key binding
-     * @param func the function
-     */
-    public void register(FunctionTag tag, KeyBinding k, FunctionHandler<C> func) {
-        registerFunction(tag, func);
-        registerKey(k, tag);
-    }
-
-    /**
-     * This convenience method maps the function tag to the specified function, and at the same time
-     * maps the specified key binding to that function tag.
-     * @param tag the function tag
-     * @param code the key code
-     * @param func the function
-     */
-    public void register(FunctionTag tag, KeyCode code, FunctionHandler<C> func) {
-        registerFunction(tag, func);
+    public final void registerKey(KeyCode code, FunctionTag tag) {
         registerKey(KeyBinding.of(code), tag);
     }
 
@@ -237,7 +198,7 @@ public class SkinInputMap<C extends Skinnable> {
      *
      * @return a Set of key bindings
      */
-    public Set<KeyBinding> getKeyBindings() {
+    public final Set<KeyBinding> getKeyBindings() {
         return collectKeyBindings(null, null);
     }
 
@@ -246,7 +207,7 @@ public class SkinInputMap<C extends Skinnable> {
      * @param tag the function tag
      * @return the set of KeyBindings
      */
-    public Set<KeyBinding> getKeyBindingsFor(FunctionTag tag) {
+    public final Set<KeyBinding> getKeyBindingsFor(FunctionTag tag) {
         return collectKeyBindings(null, tag);
     }
 
@@ -270,19 +231,22 @@ public class SkinInputMap<C extends Skinnable> {
      * @param existing the existing key binding
      * @param newk the new key binding
      */
-    public void duplicateMapping(KeyBinding existing, KeyBinding newk) {
+    public final void duplicateMapping(KeyBinding existing, KeyBinding newk) {
         Object x = map.get(existing);
         if (x != null) {
             map.put(newk, x);
         }
     }
 
-    final FunctionHandler<C> getFunction(FunctionTag tag) {
+    final boolean execute(Object source, FunctionTag tag) {
         Object x = map.get(tag);
-        if (x instanceof FunctionHandler f) {
-            return f;
+        if (x instanceof Runnable r) {
+            r.run();
+            return true;
+        } else if (x instanceof FunctionHandler f) {
+            return f.execute();
         }
-        return null;
+        return false;
     }
 
     void unbind(FunctionTag tag) {
@@ -311,5 +275,159 @@ public class SkinInputMap<C extends Skinnable> {
     @FunctionalInterface
     static interface TriConsumer<T extends Event> {
         public void accept(EventType<T> type, EventHandlerPriority pri, EventHandler<T> h);
+    }
+
+    /**
+     * Creates the stateful SkinInputMap.
+     * @return the stateful SkinInputMap
+     */
+    public static SkinInputMap.Stateful create() {
+        return new Stateful();
+    }
+
+    /**
+     * Creates the stateless SkinInputMap.
+     * @param <C> the type of Control
+     * @return the stateless SkinInputMap
+     */
+    public static <C extends Control> SkinInputMap.Stateless<C> createStateless() {
+        return new Stateless<C>();
+    }
+
+    /** SkinInputMap for skins that maintain stateful behaviors */
+    public static final class Stateful extends SkinInputMap {
+        Stateful() {
+        }
+
+        /**
+         * Maps a function to the specified function tag.
+         *
+         * @param tag the function tag
+         * @param function the function
+         */
+        public final void registerFunction(FunctionTag tag, Runnable function) {
+            map.put(tag, function);
+        }
+
+        /**
+         * Maps a function to the specified function tag.
+         * This method allows for controlling whether the matching event will be consumed or not.
+         *
+         * @param tag the function tag
+         * @param function the function
+         */
+        public final void registerFunction(FunctionTag tag, FunctionHandler function) {
+            map.put(tag, function);
+        }
+
+        /**
+         * This convenience method maps the function tag to the specified function, and at the same time
+         * maps the specified key binding to that function tag.
+         * @param tag the function tag
+         * @param k the key binding
+         * @param func the function
+         */
+        public final void register(FunctionTag tag, KeyBinding k, Runnable func) {
+            registerFunction(tag, func);
+            registerKey(k, tag);
+        }
+
+        /**
+         * This convenience method maps the function tag to the specified function, and at the same time
+         * maps the specified key binding to that function tag.
+         * @param tag the function tag
+         * @param code the key code
+         * @param func the function
+         */
+        public final void register(FunctionTag tag, KeyCode code, Runnable func) {
+            registerFunction(tag, func);
+            registerKey(KeyBinding.of(code), tag);
+        }
+    }
+
+    /**
+     * SkinInputMap for skins that either encapsulate the state fully in their Controls,
+     * or don't require a state at all.
+     *
+     * @param <C> the type of Control
+     */
+    // NOTE: The stateless skin input map adds significant complexity to the API surface while providing 
+    // limited (some say non-existent) savings in terms of memory.  There aren't many Controls that
+    // have a stateless behavior, which further reduces the usefulness of this class.
+    // I'd rather remove this feature altogether.
+    public static final class Stateless<C extends Control> extends SkinInputMap {
+        /**
+         * The function handler that always consumes the corresponding event.
+         * @param <C> the type of Control
+         */
+        public interface FHandler<C> {
+            /**
+             * The function mapped to a key binding.
+             * @param control the instance of Control
+             */
+            public void handleFunction(C control);
+        }
+
+        /**
+         * The function handler that allows to control whether the corresponding event will get consumed.
+         * @param <C> the type of Control
+         */
+        public interface FHandlerConditional<C> {
+            /**
+             * The function mapped to a key binding.  The return value instructs the owning InputMap
+             * to consume the triggering event or not.
+             * @param control the instance of Control
+             * @return true to consume the event, false otherwise
+             */
+            public boolean handleFunction(C control);
+        }
+
+        Stateless() {
+        }
+
+        /**
+         * Maps a function to the specified function tag.
+         *
+         * @param tag the function tag
+         * @param function the function
+         */
+        public final void registerFunction(FunctionTag tag, FHandler<C> function) {
+            map.put(tag, function);
+        }
+
+        /**
+         * Maps a function to the specified function tag.
+         * This method allows for controlling whether the matching event will be consumed or not.
+         *
+         * @param tag the function tag
+         * @param function the function
+         */
+        public final void registerFunction(FunctionTag tag, FHandlerConditional<C> function) {
+            map.put(tag, function);
+        }
+
+        /**
+         * This convenience method maps the function tag to the specified function, and at the same time
+         * maps the specified key binding to that function tag.
+         * @param tag the function tag
+         * @param k the key binding
+         * @param func the function
+         */
+        public final void register(FunctionTag tag, KeyBinding k, FHandler<C> func) {
+            registerFunction(tag, func);
+            registerKey(k, tag);
+        }
+
+        /**
+         * This convenience method maps the function tag to the specified function, and at the same time
+         * maps the specified key binding to that function tag.
+         * @param tag the function tag
+         * @param code the key code
+         * @param func the function
+         */
+        public final void register(FunctionTag tag, KeyCode code, FHandler<C> func) {
+            registerFunction(tag, func);
+            registerKey(KeyBinding.of(code), tag);
+        }
     }
 }

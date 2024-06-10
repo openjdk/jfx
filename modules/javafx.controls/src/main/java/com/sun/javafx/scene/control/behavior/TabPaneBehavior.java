@@ -45,13 +45,13 @@ import javafx.scene.input.MouseEvent;
 // now we have to manually drag the control instance everywhere.
 // I don't think this is worth it.
 public class TabPaneBehavior {
-    private static final SkinInputMap<TabPane> inputMap = createInputMap();
+    private static final SkinInputMap.Stateless<TabPane> inputMap = createInputMap();
 
     // stateless behavior: one SkinInputMap for all TabPanes
     private TabPaneBehavior() { }
 
-    private static SkinInputMap<TabPane> createInputMap() {
-        SkinInputMap<TabPane> m = new SkinInputMap<>();
+    private static SkinInputMap.Stateless<TabPane> createInputMap() {
+        SkinInputMap.Stateless<TabPane> m = SkinInputMap.createStateless();
 
         m.registerFunction(TabPane.Tag.SELECT_FIRST_TAB, TabPaneBehavior::selectFirstTab);
         m.registerFunction(TabPane.Tag.SELECT_LAST_TAB, TabPaneBehavior::selectLastTab);

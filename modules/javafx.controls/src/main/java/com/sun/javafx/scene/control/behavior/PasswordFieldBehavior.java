@@ -42,32 +42,32 @@ public class PasswordFieldBehavior extends TextFieldBehavior {
     // RT-18711 & RT-18854: Stub out word based navigation and editing
     // for security reasons.
     @Override
-    protected void deletePreviousWord(TextField c) {
+    protected void deletePreviousWord() {
     }
 
     @Override
-    protected void deleteNextWord(TextField c) {
+    protected void deleteNextWord() {
     }
 
     @Override
-    protected void selectPreviousWord(TextField c) {
+    protected void selectPreviousWord() {
     }
 
     @Override
-    public void selectNextWord(TextField c) {
+    public void selectNextWord() {
     }
 
     @Override
-    protected void previousWord(TextField c) {
+    protected void previousWord() {
     }
 
     @Override
-    protected void nextWord(TextField c) {
+    protected void nextWord() {
     }
 
     @Override
-    protected void selectWord(TextField c) {
-        selectAll(c);
+    protected void selectWord() {
+        selectAll();
     }
 
     @Override

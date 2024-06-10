@@ -295,11 +295,11 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         }
     }
 
-    private void togglePopup(ComboBoxBase<T> c) {
+    private void togglePopup() {
         // If popup is shown, KeyEvent causes popup to close
         showPopupOnMouseRelease = true;
 
-        if (c.isShowing()) {
+        if (getControl().isShowing()) {
             hide();
         } else {
             show();

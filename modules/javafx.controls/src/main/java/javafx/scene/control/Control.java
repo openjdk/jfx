@@ -48,7 +48,6 @@ import javafx.event.EventHandler;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
-import javafx.scene.control.input.FunctionHandler;
 import javafx.scene.control.input.FunctionTag;
 import javafx.scene.control.input.InputMap;
 import javafx.scene.input.ContextMenuEvent;
@@ -61,6 +60,7 @@ import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.ControlAcceleratorSupport;
 import com.sun.javafx.scene.control.ControlHelper;
 import com.sun.javafx.scene.control.Logging;
+import com.sun.javafx.scene.control.input.InputMapHelper;
 
 
 /**
@@ -485,10 +485,18 @@ public abstract class Control extends Region implements Skinnable {
      * @param tag the function tag
      */
     protected final void execute(FunctionTag tag) {
-        FunctionHandler<Control> f = getInputMap().getFunction(tag);
-        if (f != null) {
-            f.handle(this);
-        }
+        InputMapHelper.execute(this, getInputMap(), tag);
+    }
+
+    /**
+     * Executes the default function mapped to the specified tag.
+     * This method does nothing if no default mapping exists.
+     *
+     * @since 999 TODO
+     * @param tag the function tag
+     */
+    public final void executeDefault(FunctionTag tag) {
+        InputMapHelper.executeDefault(this, getInputMap(), tag);
     }
 
     /**

@@ -108,11 +108,11 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         registerFunction(TextInputControl.DESELECT, this::deselect);
         registerFunction(TextInputControl.DOCUMENT_START, this::home);
         registerFunction(TextInputControl.DOCUMENT_END, this::end);
-        registerFunction(TextInputControl.LEFT, (c) -> nextCharacterVisually(c, false));
+        registerFunction(TextInputControl.LEFT, () -> nextCharacterVisually(false));
         registerFunction(TextInputControl.LEFT_WORD, this::leftWord);
         registerFunction(TextInputControl.PASTE, this::paste);
         registerFunction(TextInputControl.REDO, this::redo);
-        registerFunction(TextInputControl.RIGHT, (c) -> nextCharacterVisually(c, true));
+        registerFunction(TextInputControl.RIGHT, () -> nextCharacterVisually(true));
         registerFunction(TextInputControl.RIGHT_WORD, this::rightWord);
         registerFunction(TextInputControl.SELECT_ALL, this::selectAll);
         registerFunction(TextInputControl.SELECT_END, this::selectEnd);
@@ -123,8 +123,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         registerFunction(TextInputControl.SELECT_LEFT_WORD, this::selectLeftWord);
         registerFunction(TextInputControl.SELECT_RIGHT, this::selectRight);
         registerFunction(TextInputControl.SELECT_RIGHT_WORD, this::selectRightWord);
-        registerFunction(TextInputControl.TRAVERSE_NEXT, (c) -> FocusTraversalInputMap.traverseNext(c));
-        registerFunction(TextInputControl.TRAVERSE_PREVIOUS, (c) -> FocusTraversalInputMap.traversePrevious(c));
+        registerFunction(TextInputControl.TRAVERSE_NEXT, this::traverseNext);
+        registerFunction(TextInputControl.TRAVERSE_PREVIOUS, this::traversePrevious);
         registerFunction(TextInputControl.UNDO, this::undo);
 
         // common key bindings
@@ -305,10 +305,10 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
      * Abstract methods                                                       *
      *************************************************************************/
 
-    protected abstract void deleteChar(T c, boolean previous);
+    protected abstract void deleteChar(boolean previous);
     protected abstract void replaceText(int start, int end, String txt);
     protected abstract void setCaretAnimating(boolean play);
-    protected abstract void deleteFromLineStart(T c);
+    protected abstract void deleteFromLineStart();
 
     protected abstract void mousePressed(MouseEvent e);
     protected abstract void mouseDragged(MouseEvent e);
@@ -401,9 +401,9 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         return rtlText;
     }
 
-    private void nextCharacterVisually(TextInputControl c, boolean moveRight) {
+    private void nextCharacterVisually(boolean moveRight) {
         if (isMixed()) {
-            TextInputControlSkin<?> skin = (TextInputControlSkin<?>)c.getSkin();
+            TextInputControlSkin<?> skin = (TextInputControlSkin<?>)getControl().getSkin();
             skin.moveCaret(TextUnit.CHARACTER, moveRight ? Direction.RIGHT : Direction.LEFT, false);
         } else if (moveRight != isRTLText()) {
             getControl().forward();
@@ -412,7 +412,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         }
     }
 
-    private void selectLeft(T c) {
+    private void selectLeft() {
+        T c = getControl();
         if (isRTLText()) {
             c.selectForward(); // TODO move impl here
         } else {
@@ -420,7 +421,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         }
     }
 
-    private void selectRight(T c) {
+    private void selectRight() {
+        T c = getControl();
         if (isRTLText()) {
             c.selectBackward(); // TODO move impl here
         } else {
@@ -432,23 +434,24 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         return getControl().isEditable();
     }
 
-    private void deletePreviousChar(T c) {
+    private void deletePreviousChar() {
         if (isEditable()) {
             setEditing(true);
-            deleteChar(c, true);
+            deleteChar(true);
             setEditing(false);
         }
     }
 
-    private void deleteNextChar(T c) {
+    private void deleteNextChar() {
         if (isEditable()) {
             setEditing(true);
-            deleteChar(c, false);
+            deleteChar(false);
             setEditing(false);
         }
     }
 
-    protected void deletePreviousWord(T c) {
+    protected void deletePreviousWord() {
+        T c = getControl();
         setEditing(true);
         int end = c.getCaretPosition();
         if (end > 0) {
@@ -459,75 +462,79 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         setEditing(false);
     }
 
-    protected void deleteNextWord(T c) {
+    protected void deleteNextWord() {
+        T c = getControl();
         setEditing(true);
         int start = c.getCaretPosition();
         if (start < c.getLength()) {
-            nextWord(c);
+            nextWord();
             int end = c.getCaretPosition();
             replaceText(start, end, "");
         }
         setEditing(false);
     }
 
-    public void deleteSelection(T c) {
+    public void deleteSelection() {
+        T c = getControl();
         setEditing(true);
         IndexRange selection = c.getSelection();
         if (selection.getLength() > 0) {
-            deleteChar(c, false);
+            deleteChar(false);
         }
         setEditing(false);
     }
 
-    public void copy(T c) {
-        c.copy(); // TODO move implementation here
+    public void copy() {
+        getControl().copy(); // TODO move implementation here
     }
 
-    public void deselect(T c) {
-        c.deselect(); // TODO move implementation here
+    public void deselect() {
+        getControl().deselect(); // TODO move implementation here
     }
 
-    public void home(T c) {
-        c.home(); // TODO move implementation here
+    public void home() {
+        getControl().home(); // TODO move implementation here
     }
 
-    public void end(T c) {
-        c.end(); // TODO move implementation here
+    public void end() {
+        getControl().end(); // TODO move implementation here
     }
 
-    public void cut(T c) {
+    public void cut() {
         if (isEditable()) {
             setEditing(true);
-            c.cut();
+            getControl().cut();
             setEditing(false);
         }
     }
 
-    public void paste(T c) {
+    public void paste() {
         if (isEditable()) {
             setEditing(true);
-            c.paste();
+            getControl().paste();
             setEditing(false);
         }
     }
 
-    public void undo(T c) {
+    public void undo() {
         setEditing(true);
-        c.undo();
+        getControl().undo();
         setEditing(false);
     }
 
-    public void redo(T c) {
+    public void redo() {
         setEditing(true);
-        c.redo();
+        getControl().redo();
         setEditing(false);
     }
 
-    protected void selectPreviousWord(T c) {
+    protected void selectPreviousWord() {
+        T c = getControl();
         c.selectPreviousWord(); // TODO move impl here
     }
 
-    public void selectNextWord(T c) {
+    public void selectNextWord() {
+        T c = getControl();
         if (isMac() || isLinux()) {
             c.selectEndOfNextWord(); // TODO move impl here
         } else {
@@ -535,23 +542,24 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         }
     }
 
-    private void selectLeftWord(T c) {
+    private void selectLeftWord() {
         if (isRTLText()) {
-            selectNextWord(c);
+            selectNextWord();
         } else {
-            selectPreviousWord(c);
+            selectPreviousWord();
         }
     }
 
-    private void selectRightWord(T c) {
+    private void selectRightWord() {
         if (isRTLText()) {
-            selectPreviousWord(c);
+            selectPreviousWord();
         } else {
-            selectNextWord(c);
+            selectNextWord();
         }
     }
 
-    protected void selectWord(T c) {
+    protected void selectWord() {
+        T c = getControl();
         c.previousWord(); // TODO move implementation here
         if (isWindows()) {
             c.selectNextWord(); // TODO move implementation here
@@ -563,18 +571,19 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         }
     }
 
-    protected void selectAll(T c) {
-        c.selectAll(); // TODO move implementation here
+    protected void selectAll() {
+        getControl().selectAll(); // TODO move implementation here
         if (SHOW_HANDLES && contextMenu.isShowing()) {
             populateContextMenu();
         }
     }
 
-    protected void previousWord(T c) {
-        c.previousWord(); // TODO move implementation here
+    protected void previousWord() {
+        getControl().previousWord(); // TODO move implementation here
     }
 
-    protected void nextWord(T c) {
+    protected void nextWord() {
+        T c = getControl();
         if (isMac() || isLinux()) {
             c.endOfNextWord(); // TODO move implementation here
         } else {
@@ -582,35 +591,39 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         }
     }
 
-    private void leftWord(T c) {
+    private void leftWord() {
         if (isRTLText()) {
-            nextWord(c);
+            nextWord();
         } else {
-            previousWord(c);
+            previousWord();
         }
     }
 
-    private void rightWord(T c) {
+    private void rightWord() {
         if (isRTLText()) {
-            previousWord(c);
+            previousWord();
         } else {
-            nextWord(c);
+            nextWord();
         }
     }
 
-    protected void selectHome(T c) {
+    protected void selectHome() {
+        T c = getControl();
         c.selectHome(); // TODO move implementation here
     }
 
-    protected void selectEnd(T c) {
+    protected void selectEnd() {
+        T c = getControl();
         c.selectEnd(); // TODO move implementation here
     }
 
-    protected void selectHomeExtend(T c) {
+    protected void selectHomeExtend() {
+        T c = getControl();
         c.extendSelection(0);
     }
 
-    protected void selectEndExtend(T c) {
+    protected void selectEndExtend() {
+        T c = getControl();
         int len = c.getLength();
         c.extendSelection(len);
     }
@@ -674,13 +687,13 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         }
     }
 
-    private final MenuItem undoMI   = new ContextMenuItem("Undo", e -> undo(getControl()));
-    private final MenuItem redoMI   = new ContextMenuItem("Redo", e -> redo(getControl()));
-    private final MenuItem cutMI    = new ContextMenuItem("Cut", e -> cut(getControl()));
-    private final MenuItem copyMI   = new ContextMenuItem("Copy", e -> copy(getControl()));
-    private final MenuItem pasteMI  = new ContextMenuItem("Paste", e -> paste(getControl()));
-    private final MenuItem deleteMI = new ContextMenuItem("DeleteSelection", e -> deleteSelection(getControl()));
-    private final MenuItem selectWordMI = new ContextMenuItem("SelectWord", e -> selectWord(getControl()));
-    private final MenuItem selectAllMI = new ContextMenuItem("SelectAll", e -> selectAll(getControl()));
+    private final MenuItem undoMI   = new ContextMenuItem("Undo", e -> undo());
+    private final MenuItem redoMI   = new ContextMenuItem("Redo", e -> redo());
+    private final MenuItem cutMI    = new ContextMenuItem("Cut", e -> cut());
+    private final MenuItem copyMI   = new ContextMenuItem("Copy", e -> copy());
+    private final MenuItem pasteMI  = new ContextMenuItem("Paste", e -> paste());
+    private final MenuItem deleteMI = new ContextMenuItem("DeleteSelection", e -> deleteSelection());
+    private final MenuItem selectWordMI = new ContextMenuItem("SelectWord", e -> selectWord());
+    private final MenuItem selectAllMI = new ContextMenuItem("SelectAll", e -> selectAll());
     private final MenuItem separatorMI = new SeparatorMenuItem();
 }

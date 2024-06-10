@@ -28,7 +28,6 @@ package javafx.scene.control;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
-
 import javafx.beans.Observable;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener.Change;
@@ -46,7 +45,6 @@ import javafx.scene.Node;
 import javafx.scene.control.input.SkinInputMap;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
-
 import com.sun.javafx.scene.control.LambdaMultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.ListenerHelper;
 
@@ -184,7 +182,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      *
      * @param map the skin input map
      */
-    protected final void setSkinInputMap(SkinInputMap<C> map) {
+    protected final void setSkinInputMap(SkinInputMap map) {
         if (control != null) {
             control.getInputMap().setSkinInputMap(map);
         }

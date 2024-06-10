@@ -66,15 +66,13 @@ public class ComboBoxListViewBehavior<T> extends ComboBoxBaseBehavior<T> {
         return (ComboBox<T>) getControl();
     }
 
-    private void selectPrevious(ComboBoxBase<T> c) {
-        // NOTE: ComboBoxBase<T> does not have getSelectionModel().  design problem?
+    private void selectPrevious() {
         SelectionModel<T> sm = getComboBox().getSelectionModel();
         if (sm == null) return;
         sm.selectPrevious();
     }
 
-    private void selectNext(ComboBoxBase<T> c) {
-        // NOTE: ComboBoxBase<T> does not have getSelectionModel().  design problem?
+    private void selectNext() {
         SelectionModel<T> sm = getComboBox().getSelectionModel();
         if (sm == null) return;
         sm.selectNext();
