@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,10 +30,19 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.scene.control.behavior.MnemonicInfo;
-import com.sun.javafx.scene.text.TextLayout;
-import com.sun.javafx.tk.Toolkit;
+import static javafx.scene.control.OverrunStyle.CENTER_ELLIPSIS;
+import static javafx.scene.control.OverrunStyle.CENTER_WORD_ELLIPSIS;
+import static javafx.scene.control.OverrunStyle.CLIP;
+import static javafx.scene.control.OverrunStyle.ELLIPSIS;
+import static javafx.scene.control.OverrunStyle.LEADING_ELLIPSIS;
+import static javafx.scene.control.OverrunStyle.LEADING_WORD_ELLIPSIS;
+import static javafx.scene.control.OverrunStyle.WORD_ELLIPSIS;
+import java.net.URL;
+import java.text.Bidi;
+import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
@@ -48,28 +57,18 @@ import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.OverrunStyle;
-import com.sun.javafx.scene.control.ContextMenuContent;
-import com.sun.javafx.scene.text.FontHelper;
-import java.net.URL;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.Mnemonic;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextBoundsType;
-
-import java.text.Bidi;
-import java.util.List;
-import java.util.Locale;
-import java.util.function.Consumer;
-
-import static javafx.scene.control.OverrunStyle.CENTER_ELLIPSIS;
-import static javafx.scene.control.OverrunStyle.CENTER_WORD_ELLIPSIS;
-import static javafx.scene.control.OverrunStyle.CLIP;
-import static javafx.scene.control.OverrunStyle.ELLIPSIS;
-import static javafx.scene.control.OverrunStyle.LEADING_ELLIPSIS;
-import static javafx.scene.control.OverrunStyle.LEADING_WORD_ELLIPSIS;
-import static javafx.scene.control.OverrunStyle.WORD_ELLIPSIS;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.control.ContextMenuContent;
+import com.sun.javafx.scene.control.behavior.MnemonicInfo;
+import com.sun.javafx.scene.text.FontHelper;
+import com.sun.javafx.scene.text.TextLayout;
+import com.sun.javafx.tk.Toolkit;
 
 /**
  * BE REALLY CAREFUL WITH RESTORING OR RESETTING STATE OF helper NODE AS LEFTOVER
@@ -213,8 +212,29 @@ public class Utils {
         return index;
     }
 
-    public static String computeClippedText(Font font, String text, double width,
-                                     OverrunStyle type, String ellipsisString) {
+    /**
+     * Computes the actual text to be shown in the Labeled with the text wrapping disabled:
+     * unmodified if it fits into available area,
+     * or with the {@code ellipsisString} inserted into strategic place(s) if it does not.
+     * The latter case will cause {@code textTruncated} reference set to {@code true} (the caller is expected
+     * to set the flag to {@code false} before invoking this method).
+     *
+     * @param font the font
+     * @param text the original text
+     * @param width the available width
+     * @param type the truncation style
+     * @param ellipsisString the ellipsis string
+     * @param textTruncated the reference to a flag indicating the truncation
+     * @return the actual text to be shown, with the ellipsis string inserted when needed
+     */
+    public static String computeClippedText(
+        Font font,
+        String text,
+        double width,
+        OverrunStyle type,
+        String ellipsisString,
+        AtomicBoolean textTruncated
+    ) {
         if (font == null) {
             throw new IllegalArgumentException("Must specify a font");
         }
@@ -242,6 +262,7 @@ public class Utils {
 
         if (width < ellipsisWidth) {
             // The ellipsis doesn't fit.
+            textTruncated.set(true);
             return "";
         }
 
@@ -282,6 +303,7 @@ public class Utils {
                     if (hit < 0 || hit >= text.length()) {
                         return text;
                     } else {
+                        textTruncated.set(true);
                         return text.substring(0, hit) + ellipsis;
                     }
                 }
@@ -320,6 +342,7 @@ public class Utils {
                         (text.substring((fullTrim ? index : whitespaceIndex) + 1));
                 assert(!text.equals(substring));
             }
+            textTruncated.set(true);
             if (style == ELLIPSIS || style == WORD_ELLIPSIS) {
                  return substring + ellipsis;
             } else {
@@ -390,14 +413,17 @@ public class Utils {
                 }
             }
             if (leadingIndex < 0) {
+                textTruncated.set(true);
                 return ellipsis;
             }
             if (style == CENTER_ELLIPSIS) {
+                textTruncated.set(true);
                 if (trailingIndex < 0) {
                     return text.substring(0, leadingIndex + 1) + ellipsis;
                 }
                 return text.substring(0, leadingIndex + 1) + ellipsis + text.substring(trailingIndex);
             } else {
+                textTruncated.set(true);
                 boolean leadingIndexIsLastLetterInWord =
                     Character.isWhitespace(text.charAt(leadingIndex + 1));
                 int index = (leadingWhitespace == -1 || leadingIndexIsLastLetterInWord) ? (leadingIndex + 1) : (leadingWhitespace);
@@ -414,9 +440,35 @@ public class Utils {
         }
     }
 
-    public static String computeClippedWrappedText(Font font, String text, double width,
-                                            double height, double lineSpacing, OverrunStyle truncationStyle,
-                                            String ellipsisString, TextBoundsType boundsType) {
+    /**
+     * Computes the actual text to be shown in the Labeled with the text wrapping enabled:
+     * unmodified if it fits into available area,
+     * or with the {@code ellipsisString} inserted into strategic place(s) if it does not.
+     * The latter case will cause {@code textTruncated} reference set to {@code true} (the caller is expected
+     * to set the flag to {@code false} before invoking this method).
+     *
+     * @param font the font
+     * @param text the original text
+     * @param width the available width
+     * @param height the available height
+     * @param lineSpacing the line spacing
+     * @param truncationStyle the truncation style
+     * @param ellipsisString the ellipsis string
+     * @param textTruncated the reference to a flag indicating the truncation
+     * @param boundsType the bounds type
+     * @return the actual text to be shown, with the ellipsis string inserted when needed
+     */
+    public static String computeClippedWrappedText(
+        Font font,
+        String text,
+        double width,
+        double height,
+        double lineSpacing,
+        OverrunStyle truncationStyle,
+        String ellipsisString,
+        AtomicBoolean textTruncated,
+        TextBoundsType boundsType
+    ) {
         if (font == null) {
             throw new IllegalArgumentException("Must specify a font");
         }
@@ -439,7 +491,8 @@ public class Utils {
 
         if (width < eWidth || height < eHeight) {
             // The ellipsis doesn't fit.
-            return text; // RT-30868 - return text, not empty string.
+            textTruncated.set(true);
+            return text; // JDK-8092895 (RT-30868) - return text, not empty string.
         }
 
         helper.setText(text);
@@ -458,6 +511,7 @@ public class Utils {
                             truncationStyle == CENTER_WORD_ELLIPSIS);
 
         String result = text;
+        boolean truncated = false;
         int len = (result != null) ? result.length() : 0;
         int centerLen = -1;
 
@@ -501,6 +555,7 @@ public class Utils {
                     centerLen = ind + eLen;
                 } // else: text node wraps at words, so wordTrim is not needed here.
                 result = result.substring(0, ind) + ellipsis;
+                truncated = true;
             }
 
             if (leading || center) {
@@ -531,6 +586,7 @@ public class Utils {
                     result = result + text.substring(ind);
                 } else {
                     result = ellipsis + text.substring(ind);
+                    truncated = true;
                 }
             }
 
@@ -545,7 +601,9 @@ public class Utils {
                     if (hit2 > 0 && result.charAt(hit2-1) == '\n') {
                         hit2--;
                     }
+                    // should have used StringBuilder
                     result = text.substring(0, hit2) + ellipsis;
+                    truncated = true;
                     break;
                 } else if (hit2 > 0 && hit2 < result.length()) {
                     if (leading) {
@@ -557,6 +615,7 @@ public class Utils {
                             }
                         }
                         result = ellipsis + result.substring(ind);
+                        truncated = true;
                     } else if (center) {
                         int ind = centerLen + 1; // Past ellipsis and first char.
                         if (wordTrim) {
@@ -575,6 +634,7 @@ public class Utils {
                             }
                         }
                         result = result.substring(0, ind) + ellipsis;
+                        truncated = true;
                     }
                 } else {
                     break;
@@ -586,6 +646,7 @@ public class Utils {
         helper.setLineSpacing(DEFAULT_LINE_SPACING);
         helper.setText(DEFAULT_TEXT);
         helper.setBoundsType(DEFAULT_BOUNDS_TYPE);
+        textTruncated.set(truncated);
         return result;
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,6 +42,7 @@ import javafx.scene.paint.Stop;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.Window;
+import java.math.BigDecimal;
 import java.util.List;
 import com.sun.javafx.PlatformUtil;
 import java.security.AccessController;
@@ -99,6 +100,16 @@ public class Utils {
     public static long clamp(long min, long value, long max) {
         if (value < min) return min;
         if (value > max) return max;
+        return value;
+    }
+
+    /**
+     * Simple utility function which clamps the given value to be strictly
+     * between the min and max values.
+     */
+    public static BigDecimal clamp(BigDecimal min, BigDecimal value, BigDecimal max) {
+        if (value.compareTo(min) < 0) return min;
+        if (value.compareTo(max) > 0) return max;
         return value;
     }
 
@@ -554,7 +565,7 @@ public class Utils {
         // --- after all the moving around, we do one last check / rearrange.
         // Unlike the check above, this time we are just fully committed to keeping
         // the item on screen at all costs, regardless of whether or not that results
-        /// in overlapping the parent object.
+        // in overlapping the parent object.
         if ((finalScreenX + width) > screenBounds.getMaxX()) {
             finalScreenX -= (finalScreenX + width - screenBounds.getMaxX());
         }

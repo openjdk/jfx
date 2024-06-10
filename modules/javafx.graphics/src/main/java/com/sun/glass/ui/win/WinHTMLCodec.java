@@ -231,7 +231,7 @@ class HTMLCodec extends InputStream {
         return retval;
     }
 
-    ////////////////////////////////////
+    //----------------------------------
     //decoder instance data and methods:
 
     private final BufferedInputStream bufferedStream;

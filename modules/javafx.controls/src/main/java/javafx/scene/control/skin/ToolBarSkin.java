@@ -36,12 +36,14 @@ import com.sun.javafx.scene.traversal.Algorithm;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import com.sun.javafx.scene.traversal.TraversalContext;
 
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.value.WritableValue;
-import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.SetChangeListener;
+import javafx.css.PseudoClass;
 import javafx.geometry.HPos;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -76,6 +78,7 @@ import com.sun.javafx.scene.control.behavior.ToolBarBehavior;
 import com.sun.javafx.scene.traversal.Direction;
 
 import javafx.css.Styleable;
+import javafx.stage.WindowEvent;
 
 import static com.sun.javafx.scene.control.skin.resources.ControlResources.getString;
 
@@ -94,13 +97,19 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
      **************************************************************************/
 
     private Pane box;
+    /**
+     * The overflow logic needs properly calculated prefWidth(..)/prefHeight(..) values.
+     * These values are valid if the elements have been added to the scene and the CSS has been applied properly.
+     * To ensure this, we add the overflow items to this pane if they are not currently visible in the overflow menu.
+     */
+    private Pane overflowBox;
     private ToolBarOverflowMenu overflowMenu;
     private boolean overflow = false;
+    private int overflowNodeIndex = Integer.MAX_VALUE;
     private double previousWidth = 0;
     private double previousHeight = 0;
     private double savedPrefWidth = 0;
     private double savedPrefHeight = 0;
-    private ObservableList<MenuItem> overflowMenuItems;
     private boolean needsUpdate = false;
     private final ParentTraversalEngine engine;
     private final BehaviorBase<ToolBar> behavior;
@@ -127,7 +136,6 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
         behavior = new ToolBarBehavior(control);
 //        control.setInputMap(behavior.getInputMap());
 
-        overflowMenuItems = FXCollections.observableArrayList();
         initialize();
         registerChangeListener(control.orientationProperty(), e -> initialize());
 
@@ -245,6 +253,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
             while (c.next()) {
                 for (Node n: c.getRemoved()) {
                     box.getChildren().remove(n);
+                    overflowBox.getChildren().remove(n);
                 }
                 box.getChildren().addAll(c.getAddedSubList());
             }
@@ -467,7 +476,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
                 previousHeight = snapSizeY(toolbar.getHeight());
                 addNodesToToolBar();
             } else {
-                correctOverflow(toolbarLength);
+                organizeOverflow(toolbarLength);
             }
         } else {
             if (snapSizeX(toolbar.getWidth()) != previousWidth || needsUpdate) {
@@ -476,7 +485,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
                 previousWidth = snapSizeX(toolbar.getWidth());
                 addNodesToToolBar();
             } else {
-                correctOverflow(toolbarLength);
+                organizeOverflow(toolbarLength);
             }
         }
 
@@ -552,17 +561,33 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
     private void initialize() {
         if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
             box = new VBox();
+            overflowBox = new VBox();
         } else {
             box = new HBox();
+            overflowBox = new HBox();
         }
         box.getStyleClass().add("container");
         box.getChildren().addAll(getSkinnable().getItems());
-        overflowMenu = new ToolBarOverflowMenu(overflowMenuItems);
+        // The overflowBox must have the same style classes, otherwise the overflow items may get wrong values.
+        overflowBox.idProperty().bind(box.idProperty());
+        Bindings.bindContent(overflowBox.getStyleClass(), box.getStyleClass());
+        Bindings.bindContent(overflowBox.getStylesheets(), box.getStylesheets());
+        box.getPseudoClassStates().addListener((SetChangeListener<? super PseudoClass>) change -> {
+            if (change.wasAdded()) {
+                overflowBox.pseudoClassStateChanged(change.getElementAdded(), true);
+            } else if (change.wasRemoved()) {
+                overflowBox.pseudoClassStateChanged(change.getElementRemoved(), false);
+            }
+        });
+        overflowBox.setManaged(false);
+        overflowBox.setVisible(false);
+        overflowMenu = new ToolBarOverflowMenu(overflowBox.getChildren());
         overflowMenu.setVisible(false);
         overflowMenu.setManaged(false);
 
         getChildren().clear();
         getChildren().add(box);
+        getChildren().add(overflowBox);
         getChildren().add(overflowMenu);
 
         previousWidth = 0;
@@ -573,43 +598,42 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
         getSkinnable().requestLayout();
     }
 
-    private void correctOverflow(double length) {
-        boolean overflowed = isOverflowed(length);
-        if (overflowed != overflow) {
-            organizeOverflow(length, overflow);
-        }
-    }
+    private void organizeOverflow(double length) {
+        // Determine the index of the first node to be moved to the overflow menu
+        int newOverflowNodeIndex = getOverflowNodeIndex(length);
 
-    private void organizeOverflow(double length, boolean hasOverflow) {
-        if (hasOverflow) {
+        // If the overflow button is displayed, the length must be corrected
+        // and the overflow index recalculated.
+        if (newOverflowNodeIndex < getSkinnable().getItems().size()) {
             if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
                 length -= snapSizeY(overflowMenu.prefHeight(-1));
             } else {
                 length -= snapSizeX(overflowMenu.prefWidth(-1));
             }
             length -= getSpacing();
+            newOverflowNodeIndex = getOverflowNodeIndex(length);
+        }
+
+        // Optimization: Skip moving nodes if the node list has not been changed
+        // and the overflow index has remained the same.
+        if (!needsUpdate && newOverflowNodeIndex == overflowNodeIndex) {
+            return;
         }
 
         // Determine which node goes to the toolbar and which goes to the overflow.
+        ObservableList<Node> nodes = getSkinnable().getItems();
 
-        double x = 0;
-        overflowMenuItems.clear();
         box.getChildren().clear();
-        for (Node node : getSkinnable().getItems()) {
+        overflowBox.getChildren().clear();
+        for (int i = 0; i < nodes.size(); i++) {
+            Node node = nodes.get(i);
             node.getStyleClass().remove("menu-item");
             node.getStyleClass().remove("custom-menu-item");
 
-            if (node.isManaged()) {
-                if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
-                    x += snapSizeY(node.prefHeight(-1)) + getSpacing();
-                } else {
-                    x += snapSizeX(node.prefWidth(-1)) + getSpacing();
-                }
-            }
-
-            if (x <= length) {
+            if (i < newOverflowNodeIndex) {
                 box.getChildren().add(node);
             } else {
+                overflowBox.getChildren().add(node);
                 if (node.isFocused()) {
                     if (!box.getChildren().isEmpty()) {
                         Node last = engine.selectLast();
@@ -620,12 +644,154 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
                         overflowMenu.requestFocus();
                     }
                 }
+            }
+        }
+
+        // Check if we overflowed.
+        overflow = !overflowBox.getChildren().isEmpty();
+        overflowNodeIndex = newOverflowNodeIndex;
+        if (!overflow && overflowMenu.isFocused()) {
+            Node last = engine.selectLast();
+            if (last != null) {
+                last.requestFocus();
+            }
+        }
+        overflowMenu.setVisible(overflow);
+        overflowMenu.setManaged(overflow);
+    }
+
+    private void addNodesToToolBar() {
+        final ToolBar toolbar = getSkinnable();
+        double toolbarLength = getToolbarLength(toolbar);
+
+        // Reset overflowNodeIndex. This causes the overflow menu to be reorganized.
+        overflowNodeIndex = Integer.MAX_VALUE;
+        organizeOverflow(toolbarLength);
+    }
+
+    private double getToolbarLength(ToolBar toolbar) {
+        double length;
+        if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
+            length = snapSizeY(toolbar.getHeight()) - snappedTopInset() - snappedBottomInset() + getSpacing();
+        } else {
+            length = snapSizeX(toolbar.getWidth()) - snappedLeftInset() - snappedRightInset() + getSpacing();
+        }
+        return length;
+    }
+
+    /**
+     * Calculate the index of the node that does not fit in the toolbar and must be moved to the overflow menu.
+     *
+     * @param length the length of the toolbar
+     * @return the index of the first node that does not fit in the toolbar, or the size of the items list else
+     */
+    private int getOverflowNodeIndex(double length) {
+        ObservableList<Node> items = getSkinnable().getItems();
+        int overflowIndex = items.size();
+        double x = 0;
+        for (int i = 0; i < items.size(); i++) {
+            Node node = items.get(i);
+
+            if (node.isManaged()) {
+                if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
+                    x += snapSizeY(node.prefHeight(-1)) + getSpacing();
+                } else {
+                    x += snapSizeX(node.prefWidth(-1)) + getSpacing();
+                }
+            }
+
+            if (x > length) {
+                overflowIndex = i;
+                break;
+            }
+        }
+        return overflowIndex;
+    }
+
+    /* *************************************************************************
+     *                                                                         *
+     * Support classes                                                         *
+     *                                                                         *
+     **************************************************************************/
+
+    class ToolBarOverflowMenu extends StackPane {
+        private StackPane downArrow;
+        private ContextMenu popup;
+        private ObservableList<Node> overflowItems;
+
+        public ToolBarOverflowMenu(ObservableList<Node> items) {
+            getStyleClass().setAll("tool-bar-overflow-button");
+            setAccessibleRole(AccessibleRole.BUTTON);
+            setAccessibleText(getString("Accessibility.title.ToolBar.OverflowButton"));
+            setFocusTraversable(true);
+            this.overflowItems = items;
+            downArrow = new StackPane();
+            downArrow.getStyleClass().setAll("arrow");
+            downArrow.setOnMousePressed(me -> {
+                fire();
+            });
+
+            setOnKeyPressed(ke -> {
+                if (KeyCode.SPACE.equals(ke.getCode())) {
+                    if (!popup.isShowing()) {
+                        popup.getItems().clear();
+                        popup.getItems().addAll(createMenuItems());
+                        popup.show(downArrow, Side.BOTTOM, 0, 0);
+                    }
+                    ke.consume();
+                } else if (KeyCode.ESCAPE.equals(ke.getCode())) {
+                    if (popup.isShowing()) {
+                        popup.hide();
+                    }
+                    ke.consume();
+                } else if (KeyCode.ENTER.equals(ke.getCode())) {
+                    fire();
+                    ke.consume();
+                }
+            });
+
+            visibleProperty().addListener((observable, oldValue, newValue) -> {
+                    if (newValue) {
+                        if (box.getChildren().isEmpty()) {
+                            setFocusTraversable(true);
+                        }
+                    }
+            });
+            popup = new ContextMenu();
+            popup.addEventHandler(WindowEvent.WINDOW_HIDDEN, e -> {
+                // Put the overflowed items back to the list,
+                // otherwise subsequent prefWidth(..)/prefHeight(..) may return wrong values.
+                overflowItems.clear();
+                for (Node item : getSkinnable().getItems()) {
+                    if (!box.getChildren().contains(item)) {
+                        overflowItems.add(item);
+                    }
+                }
+            });
+            setVisible(false);
+            setManaged(false);
+            getChildren().add(downArrow);
+        }
+
+        private void fire() {
+            if (popup.isShowing()) {
+                popup.hide();
+            } else {
+                popup.getItems().clear();
+                popup.getItems().addAll(createMenuItems());
+                popup.show(downArrow, Side.BOTTOM, 0, 0);
+            }
+        }
+
+        private List<MenuItem> createMenuItems() {
+            List<MenuItem> menuItems = new ArrayList<>();
+            for (Node node : overflowItems) {
                 if (node instanceof Separator) {
-                    overflowMenuItems.add(new SeparatorMenuItem());
+                    menuItems.add(new SeparatorMenuItem());
                 } else {
                     CustomMenuItem customMenuItem = new CustomMenuItem(node);
 
-                    // RT-36455:
+                    // RT-36455 (JDK-8096292):
                     // We can't be totally certain of all nodes, but for the
                     // most common nodes we can check to see whether we should
                     // hide the menu when the node is clicked on. The common
@@ -663,124 +829,11 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
                             break;
                     }
 
-                    overflowMenuItems.add(customMenuItem);
+                    menuItems.add(customMenuItem);
                 }
+
             }
-        }
-
-        // Check if we overflowed.
-        overflow = overflowMenuItems.size() > 0;
-        if (!overflow && overflowMenu.isFocused()) {
-            Node last = engine.selectLast();
-            if (last != null) {
-                last.requestFocus();
-            }
-        }
-        overflowMenu.setVisible(overflow);
-        overflowMenu.setManaged(overflow);
-    }
-
-    private void addNodesToToolBar() {
-        final ToolBar toolbar = getSkinnable();
-        double toolbarLength = getToolbarLength(toolbar);
-
-        // Is there overflow ?
-        boolean hasOverflow = isOverflowed(toolbarLength);
-
-        organizeOverflow(toolbarLength, hasOverflow);
-    }
-
-    private double getToolbarLength(ToolBar toolbar) {
-        double length;
-        if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
-            length = snapSizeY(toolbar.getHeight()) - snappedTopInset() - snappedBottomInset() + getSpacing();
-        } else {
-            length = snapSizeX(toolbar.getWidth()) - snappedLeftInset() - snappedRightInset() + getSpacing();
-        }
-        return length;
-    }
-
-    private boolean isOverflowed(double length) {
-        double x = 0;
-        boolean hasOverflow = false;
-        for (Node node : getSkinnable().getItems()) {
-            if (!node.isManaged()) continue;
-            if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
-                x += snapSizeY(node.prefHeight(-1)) + getSpacing();
-            } else {
-                x += snapSizeX(node.prefWidth(-1)) + getSpacing();
-            }
-            if (x > length) {
-                hasOverflow = true;
-                break;
-            }
-        }
-        return hasOverflow;
-    }
-
-    /* *************************************************************************
-     *                                                                         *
-     * Support classes                                                         *
-     *                                                                         *
-     **************************************************************************/
-
-    class ToolBarOverflowMenu extends StackPane {
-        private StackPane downArrow;
-        private ContextMenu popup;
-        private ObservableList<MenuItem> menuItems;
-
-        public ToolBarOverflowMenu(ObservableList<MenuItem> items) {
-            getStyleClass().setAll("tool-bar-overflow-button");
-            setAccessibleRole(AccessibleRole.BUTTON);
-            setAccessibleText(getString("Accessibility.title.ToolBar.OverflowButton"));
-            setFocusTraversable(true);
-            this.menuItems = items;
-            downArrow = new StackPane();
-            downArrow.getStyleClass().setAll("arrow");
-            downArrow.setOnMousePressed(me -> {
-                fire();
-            });
-
-            setOnKeyPressed(ke -> {
-                if (KeyCode.SPACE.equals(ke.getCode())) {
-                    if (!popup.isShowing()) {
-                        popup.getItems().clear();
-                        popup.getItems().addAll(menuItems);
-                        popup.show(downArrow, Side.BOTTOM, 0, 0);
-                    }
-                    ke.consume();
-                } else if (KeyCode.ESCAPE.equals(ke.getCode())) {
-                    if (popup.isShowing()) {
-                        popup.hide();
-                    }
-                    ke.consume();
-                } else if (KeyCode.ENTER.equals(ke.getCode())) {
-                    fire();
-                    ke.consume();
-                }
-            });
-
-            visibleProperty().addListener((observable, oldValue, newValue) -> {
-                    if (newValue) {
-                        if (box.getChildren().isEmpty()) {
-                            setFocusTraversable(true);
-                        }
-                    }
-            });
-            popup = new ContextMenu();
-            setVisible(false);
-            setManaged(false);
-            getChildren().add(downArrow);
-        }
-
-        private void fire() {
-            if (popup.isShowing()) {
-                popup.hide();
-            } else {
-                popup.getItems().clear();
-                popup.getItems().addAll(menuItems);
-                popup.show(downArrow, Side.BOTTOM, 0, 0);
-            }
+            return menuItems;
         }
 
         @Override protected double computePrefWidth(double height) {

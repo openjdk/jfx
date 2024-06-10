@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -272,7 +272,7 @@ D3DResourceManager::CreatePixelShader(DWORD *buf,
 
     TraceLn(NWT_TRACE_INFO, "D3DRM::CreatePixelShader");
 
-    IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();
+    IDirect3DDevice9Ex *pd3dDevice = pCtx->Get3DDevice();
     if (pd3dDevice == NULL) {
         return E_FAIL;
     }
@@ -297,7 +297,7 @@ D3DResourceManager::CreateVertexBuffer(D3DVertexBufferResource** ppVBRes)
 
     TraceLn(NWT_TRACE_INFO, "D3DRM::CreateVertexBuffer");
 
-    IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();
+    IDirect3DDevice9Ex *pd3dDevice = pCtx->Get3DDevice();
     if (pd3dDevice == NULL) {
         return E_FAIL;
     }
@@ -330,7 +330,7 @@ D3DResourceManager::CreateTexture(UINT width, UINT height,
     TraceLn4(NWT_TRACE_VERBOSE, "  w=%d h=%d isRTT=%d isOpaque=%d",
                 width, height, isRTT, isOpaque);
 
-    IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();
+    IDirect3DDevice9Ex *pd3dDevice = pCtx->Get3DDevice();
 
     if (pd3dDevice == NULL) {
         return E_FAIL;
@@ -411,7 +411,7 @@ HRESULT D3DResourceManager::CreateRenderTarget(UINT width, UINT height,
 {
     TraceLn(NWT_TRACE_INFO, "D3DRM::CreateRenderTarget");
 
-    IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();
+    IDirect3DDevice9Ex *pd3dDevice = pCtx->Get3DDevice();
 
     if (pd3dDevice == NULL) {
         return E_FAIL;
@@ -429,7 +429,7 @@ HRESULT D3DResourceManager::CreateRenderTarget(UINT width, UINT height,
     }
 
     DWORD totalSamples = 0;
-    IDirect3D9 *pd3dObject = pCtx->Get3DObject();
+    IDirect3D9Ex *pd3dObject = pCtx->Get3DObject();
     HRESULT res;
     if(FAILED(res = pd3dObject->CheckDeviceMultiSampleType(D3DADAPTER_DEFAULT,
                                     D3DDEVTYPE_HAL, format, false,
@@ -501,7 +501,7 @@ HRESULT D3DResourceManager::CreateOSPSurface(UINT width, UINT height,
     TraceLn(NWT_TRACE_INFO, "D3DRM::CreateOSPSurface");
     TraceLn2(NWT_TRACE_VERBOSE, "  w=%d h=%d", width, height);
 
-    IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();
+    IDirect3DDevice9Ex *pd3dDevice = pCtx->Get3DDevice();
     if (pd3dDevice == NULL) {
         return E_FAIL;
     }
@@ -544,7 +544,7 @@ D3DResourceManager::CreateSwapChain(HWND hWnd, UINT numBuffers,
     TraceLn4(NWT_TRACE_VERBOSE, "  w=%d h=%d hwnd=%x numBuffers=%d",
                 width, height, hWnd, numBuffers);
 
-    IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();
+    IDirect3DDevice9Ex *pd3dDevice = pCtx->Get3DDevice();
     if (pd3dDevice == NULL) {
         return E_FAIL;
     }

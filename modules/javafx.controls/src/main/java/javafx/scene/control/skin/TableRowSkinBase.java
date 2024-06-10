@@ -255,9 +255,9 @@ public abstract class TableRowSkinBase<T,
 
         C control = getSkinnable();
 
-        ///////////////////////////////////////////
+        //-----------------------------------------
         // indentation code starts here
-        ///////////////////////////////////////////
+        //-----------------------------------------
         double leftMargin = 0;
         double disclosureWidth = 0;
         double graphicWidth = 0;
@@ -308,9 +308,9 @@ public abstract class TableRowSkinBase<T,
                 }
             }
         }
-        ///////////////////////////////////////////
+        //-----------------------------------------
         // indentation code ends here
-        ///////////////////////////////////////////
+        //-----------------------------------------
 
         // layout the individual column cells
         double width;
@@ -375,9 +375,9 @@ public abstract class TableRowSkinBase<T,
                 }
                 // --- end of RT-32700 fix
 
-                ///////////////////////////////////////////
+                //-----------------------------------------
                 // further indentation code starts here
-                ///////////////////////////////////////////
+                //-----------------------------------------
                 if (indentationRequired && column == indentationColumnIndex) {
                     if (disclosureVisible) {
                         double ph = disclosureNode.prefHeight(disclosureWidth);
@@ -417,9 +417,9 @@ public abstract class TableRowSkinBase<T,
                         }
                     }
                 }
-                ///////////////////////////////////////////
+                //-----------------------------------------
                 // further indentation code ends here
-                ///////////////////////////////////////////
+                //-----------------------------------------
                 tableCell.resize(width, height);
                 tableCell.relocate(x, y);
 

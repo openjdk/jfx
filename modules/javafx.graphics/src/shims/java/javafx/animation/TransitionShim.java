@@ -86,7 +86,7 @@ public abstract class TransitionShim extends Transition {
         return super.getCachedInterpolator();
     }
 
-    ///// statics
+    //--- statics
 
     public static void interpolate(Transition t, double frac) {
         t.interpolate(frac);
