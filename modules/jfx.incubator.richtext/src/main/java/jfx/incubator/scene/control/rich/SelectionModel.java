@@ -31,14 +31,12 @@ import javafx.beans.property.ReadOnlyProperty;
 
 /**
  * A Selection model that maintains a single {@link SelectionSegment}.
- * <pre>
- * TODO perhaps we should support, at least theoretically, the concept of multiple selection
- * and multiple carets.  The impacted areas:
- * - this interface
- * - changes in VFlow to handle multiple carets and decorations
- * - changes in RichTextAreaBehavior to handle selection and keyboard navigation
- * </pre>
  */
+// TODO perhaps we should support, at least theoretically, the concept of multiple selection
+// and multiple carets.  The impacted areas:
+// this interface
+// changes in VFlow to handle multiple carets and decorations
+// changes in RichTextAreaBehavior to handle selection and keyboard navigation
 public interface SelectionModel {
     /**
      * Clears the selection.
