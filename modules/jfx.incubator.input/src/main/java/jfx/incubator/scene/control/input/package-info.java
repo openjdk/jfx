@@ -28,7 +28,7 @@
  * to the handling of the input events by the Control: input maps, key bindings, and related classes.
  * </p>
  * See
- * <a href="https://github.com/andy-goryachev-oracle/Test/blob/main/doc/InputMap/InputMapV2.md">Public InputMap Proposal</a>
+ * <a href="https://github.com/andy-goryachev-oracle/Test/blob/main/doc/InputMap/InputMapV3.md">Public InputMap Proposal</a>
  * for more info.
  * <p>
  * <BR><b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>

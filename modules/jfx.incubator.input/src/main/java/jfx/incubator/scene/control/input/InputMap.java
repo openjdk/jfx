@@ -183,7 +183,7 @@ public final class InputMap {
         if (x instanceof FunctionTag tag) {
             return execute(source, tag);
         } else if (x instanceof FunctionHandler h) {
-            return h.execute();
+            return h.handleFunction();
         } else if (x instanceof Runnable r) {
             r.run();
             return true;
@@ -191,6 +191,7 @@ public final class InputMap {
         return false;
     }
 
+    // package protected to prevent unauthorized code to supply wrong instance of control (source)
     boolean execute(Object source, FunctionTag tag) {
         Object x = map.get(tag);
         if (x instanceof Runnable r) {
@@ -201,6 +202,7 @@ public final class InputMap {
         return executeDefault(source, tag);
     }
 
+    // package protected to prevent unauthorized code to supply wrong instance of control (source)
     boolean executeDefault(Object source, FunctionTag tag) {
         if (skinInputMap != null) {
             return skinInputMap.execute(source, tag);
@@ -218,52 +220,6 @@ public final class InputMap {
         }
         return null;
     }
-
-    /**
-     * Returns a {@code Runnable} mapped to the specified function tag, or null if no such mapping exists.
-     *
-     * @param tag the function tag
-     * @return the function, or null
-     */
-//    public Runnable getFunction(FunctionTag tag) {
-//        Object x = map.get(tag);
-//        if (x instanceof Runnable r) {
-//            return r;
-//        } else if (skinInputMap != null) {
-//            return skinInputMap.getFunction(tag);
-//        }
-//        return null;
-//    }
-
-    /**
-     * Returns a default {@code Runnable} mapped to the specified function tag, or null if no such mapping exists.
-     *
-     * @implNote the return value might be a lambda, i.e. it will return a new instance each time this method is called.
-     *
-     * @param tag the function tag
-     * @return the function, or null
-     */
-//    public Runnable getDefaultFunction(FunctionTag tag) {
-//        if (skinInputMap != null) {
-//            return skinInputMap.getFunction(tag);
-//        }
-//        return null;
-//    }
-
-    /**
-     * Returns a {@code Runnable} mapped to the specified {@link KeyBinding},
-     * or null if no such mapping exists.
-     *
-     * @param k the key binding
-     * @return the function, or null
-     */
-//    public Runnable getFunction(KeyBinding k) {
-//        Object x = resolve(k);
-//        if (x instanceof FunctionTag tag) {
-//            return getFunction(tag);
-//        }
-//        return null;
-//    }
 
     /**
      * Registers a function for the given key binding.  This mapping will  take precedence

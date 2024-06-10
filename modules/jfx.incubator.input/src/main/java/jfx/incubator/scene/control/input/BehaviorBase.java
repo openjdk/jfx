@@ -63,7 +63,7 @@ import com.sun.javafx.scene.traversal.TraversalMethod;
  */
 public abstract class BehaviorBase<C extends Control> {
     private final C control;
-    private SkinInputMap skinInputMap;
+    private SkinInputMap.Stateful skinInputMap;
 
     /**
      * The constructor.
@@ -94,9 +94,9 @@ public abstract class BehaviorBase<C extends Control> {
      * Returns the skin input map associated with this behavior.
      * @return the input map
      */
-    public final SkinInputMap getSkinInputMap() {
+    public final SkinInputMap.Stateful getSkinInputMap() {
         if (skinInputMap == null) {
-            this.skinInputMap = new SkinInputMap();
+            this.skinInputMap = SkinInputMap.create();
             populateSkinInputMap();
         }
         return skinInputMap;
