@@ -244,7 +244,12 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
             r.run();
             return true;
         } else if (x instanceof FunctionHandler f) {
-            return f.execute();
+            return f.handleFunction();
+        } else if (x instanceof Stateless.FHandler h) {
+            h.handleFunction(source);
+            return true;
+        } else if (x instanceof Stateless.FHandlerConditional h) {
+            return h.handleFunction(source);
         }
         return false;
     }

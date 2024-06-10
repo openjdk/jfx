@@ -37,5 +37,5 @@ public interface FunctionHandler {
      * Handles the event associated with a function tag or a key binding.
      * @return true to consume the key event, false otherwise
      */
-    public boolean execute();
+    public boolean handleFunction();
 }

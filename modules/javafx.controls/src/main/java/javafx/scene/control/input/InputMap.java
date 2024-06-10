@@ -180,7 +180,7 @@ public final class InputMap {
         if (x instanceof FunctionTag tag) {
             return execute(source, tag);
         } else if (x instanceof FunctionHandler h) {
-            return h.execute();
+            return h.handleFunction();
         } else if (x instanceof Runnable r) {
             r.run();
             return true;
