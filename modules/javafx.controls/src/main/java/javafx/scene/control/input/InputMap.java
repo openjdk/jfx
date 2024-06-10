@@ -218,53 +218,6 @@ public final class InputMap {
         return null;
     }
 
-    // TODO remove
-    /**
-     * Returns a {@code Runnable} mapped to the specified function tag, or null if no such mapping exists.
-     *
-     * @param tag the function tag
-     * @return the function, or null
-     */
-//    public Runnable getFunction(FunctionTag tag) {
-//        Object x = map.get(tag);
-//        if (x instanceof Runnable r) {
-//            return r;
-//        } else if (skinInputMap != null) {
-//            return skinInputMap.getFunction(tag);
-//        }
-//        return null;
-//    }
-
-    /**
-     * Returns a default {@code Runnable} mapped to the specified function tag, or null if no such mapping exists.
-     *
-     * @implNote the return value might be a lambda, i.e. it will return a new instance each time this method is called.
-     *
-     * @param tag the function tag
-     * @return the function, or null
-     */
-//    public Runnable getDefaultFunction(FunctionTag tag) {
-//        if (skinInputMap != null) {
-//            return skinInputMap.getFunction(tag);
-//        }
-//        return null;
-//    }
-
-    /**
-     * Returns a {@code Runnable} mapped to the specified {@link KeyBinding},
-     * or null if no such mapping exists.
-     *
-     * @param k the key binding
-     * @return the function, or null
-     */
-//    public Runnable getFunction(KeyBinding k) {
-//        Object x = resolve(k);
-//        if (x instanceof FunctionTag tag) {
-//            return getFunction(tag);
-//        }
-//        return null;
-//    }
-
     /**
      * Registers a function for the given key binding.  This mapping will  take precedence
      * over any such mapping set by the skin.
