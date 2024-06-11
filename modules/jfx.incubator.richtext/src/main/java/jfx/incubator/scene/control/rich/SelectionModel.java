@@ -28,6 +28,7 @@
 package jfx.incubator.scene.control.rich;
 
 import javafx.beans.property.ReadOnlyProperty;
+import jfx.incubator.scene.control.rich.model.StyledTextModel;
 
 /**
  * A Selection model that maintains a single {@link SelectionSegment}.
@@ -39,22 +40,26 @@ import javafx.beans.property.ReadOnlyProperty;
 // changes in RichTextAreaBehavior to handle selection and keyboard navigation
 public interface SelectionModel {
     /**
-     * Clears the selection.
+     * Clears the selection.  This sets {@code selectionProperty},
+     * {@code anchorPositionProperty}, and {@code caretPositionProperty} to null.
      */
     public void clear();
 
     /**
      * Replaced existing selection, if any, with the new one.
-     * @param anchor anchor position
-     * @param caret caret position
+     * @param model the model, must be non-null
+     * @param anchor the anchor position, must be non-null
+     * @param caret the caret position, must be non-null
      */
-    public void setSelection(Marker anchor, Marker caret);
+    public void setSelection(StyledTextModel model, TextPos anchor, TextPos caret);
 
     /**
-     * Extends selection to the specified position.
-     * @param pos the new caret position
+     * Extends selection to the specified position.  This method will issue a {@code setSelection(model, pos, pos)}
+     * call if the model instance is different from that passed before.
+     * @param model the model. must be non-null
+     * @param pos the new caret position, must be non-null
      */
-    public void extendSelection(Marker pos);
+    public void extendSelection(StyledTextModel model, TextPos pos);
 
     /**
      * Caret position property.  The value can be null.

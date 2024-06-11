@@ -30,47 +30,56 @@ package jfx.incubator.scene.control.rich;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
+import jfx.incubator.scene.control.rich.model.StyledTextModel;
 
 /**
  * This {@link SelectionModel} supports a single selection segment.
  */
-public class SingleSelectionModel implements SelectionModel {
+public final class SingleSelectionModel implements SelectionModel {
     private final ReadOnlyObjectWrapper<SelectionSegment> segment = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<TextPos> anchorPosition = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<TextPos> caretPosition = new ReadOnlyObjectWrapper<>();
-    private final ChangeListener<TextPos> listener;
+    private final ChangeListener<TextPos> anchorListener;
+    private final ChangeListener<TextPos> caretListener;
+    private Marker anchorMarker;
+    private Marker caretMarker;
+    private StyledTextModel model;
 
     /** The constructor. */
     public SingleSelectionModel() {
-        this.listener = (src, old, val) -> {
-            if (isAnchor(src)) {
-                anchorPosition.set(val);
-            } else {
-                caretPosition.set(val);
-            }
+        anchorListener = (src, old, pos) -> {
+            anchorPosition.set(pos);
+        };
+        caretListener = (src, old, pos) -> {
+            caretPosition.set(pos);
         };
     }
 
     @Override
     public void clear() {
-        setSelectionSegment(null);
+        setSelectionSegment(null, null);
     }
 
     @Override
-    public void setSelection(Marker anchor, Marker caret) {
-        // TODO clamp selection to document start/end?
-        SelectionSegment seg = new SelectionSegment(anchor, caret);
-        setSelectionSegment(seg);
+    public void setSelection(StyledTextModel model, TextPos anchor, TextPos caret) {
+        // TODO clamp selection to document start/end? here or by the caller?
+        SelectionSegment sel = new SelectionSegment(anchor, caret);
+        setSelectionSegment(model, sel);
     }
 
     @Override
-    public void extendSelection(Marker pos) {
-        Marker a = anchor();
+    public void extendSelection(StyledTextModel model, TextPos pos) {
+        if (isFlippingModel(model)) {
+            setSelection(model, pos, pos);
+            return;
+        }
+
+        // TODO reset selection if model is different
+        SelectionSegment sel = getSelection();
+        TextPos a = sel == null ? null : sel.getAnchor();
         if (a == null) {
             a = pos;
         } else {
-            SelectionSegment sel = getSelection();
             if(pos.compareTo(sel.getMin()) < 0) {
                 // extend before
                 a = sel.getMax();
@@ -82,7 +91,16 @@ public class SingleSelectionModel implements SelectionModel {
                 a = sel.getAnchor();
             }
         }
-        setSelection(a, pos);
+        setSelection(model, a, pos);
+    }
+
+    private boolean isFlippingModel(StyledTextModel m) {
+        if (model == null) {
+            return false;
+        } else if (m == null) {
+            return false;
+        }
+        return m != model;
     }
 
     @Override
@@ -95,61 +113,39 @@ public class SingleSelectionModel implements SelectionModel {
         return caretPosition;
     }
 
-    private void setSelectionSegment(SelectionSegment seg) {
-        Marker m = anchor();
-        if (m != null) {
-            m.textPosProperty().removeListener(listener);
+    private void setSelectionSegment(StyledTextModel model, SelectionSegment sel) {
+        this.model = model;
+
+        if (anchorMarker != null) {
+            anchorMarker.textPosProperty().removeListener(anchorListener);
+            anchorMarker = null;
         }
 
-        m = caret();
-        if (m != null) {
-            m.textPosProperty().removeListener(listener);
+        if (caretMarker != null) {
+            caretMarker.textPosProperty().removeListener(caretListener);
+            caretMarker = null;
         }
 
         // due to the fact that caretPosition and anchorPosition are two different properties,
         // there is a possibility that one is null and another is not (for example, in a listener).
         // to combat this issue, the caretPosition is updated last, so any listener monitoring this
         // property would see the right value for anchor.
-        if (seg == null) {
+        if (sel == null) {
             anchorPosition.set(null);
             caretPosition.set(null);
         } else {
-            seg.getAnchor().textPosProperty().addListener(listener);
-            seg.getCaret().textPosProperty().addListener(listener);
-            anchorPosition.set(seg.getAnchor().getTextPos());
-            caretPosition.set(seg.getCaret().getTextPos());
+            TextPos p = sel.getAnchor();
+            anchorMarker = model.getMarker(p);
+            anchorPosition.set(p);
+            anchorMarker.textPosProperty().addListener(anchorListener);
+
+            p = sel.getCaret();
+            caretMarker = model.getMarker(p);
+            caretPosition.set(p);
+            caretMarker.textPosProperty().addListener(caretListener);
         }
 
-        segment.set(seg);
-    }
-
-    private Marker anchor() {
-        SelectionSegment seg = getSelection();
-        if (seg == null) {
-            return null;
-        }
-        return seg.getAnchor();
-    }
-
-    private Marker caret() {
-        SelectionSegment seg = getSelection();
-        if (seg == null) {
-            return null;
-        }
-        return seg.getCaret();
-    }
-
-    private boolean isAnchor(ObservableValue<? extends TextPos> src) {
-        Marker an = anchor();
-        if (an != null) {
-            return an.textPosProperty() == src;
-        } else {
-            Marker ca = caret();
-            if (ca != null) {
-                return ca.textPosProperty() != src;
-            }
-        }
-        return false;
+        segment.set(sel);
     }
 
     @Override

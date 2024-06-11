@@ -30,20 +30,20 @@ package jfx.incubator.scene.control.rich;
 import java.util.Objects;
 
 /**
- * Text selection segment, comprised of selection anchor and caret markers.
+ * Text selection segment, comprised of selection anchor and caret positions.
  * The main purpose of this class is to enable atomic selection changes.
  */
 public class SelectionSegment {
-    private final Marker min;
-    private final Marker max;
+    private final TextPos min;
+    private final TextPos max;
     private final boolean caretAtMin;
 
     /**
      * Creates a new selection segment.
-     * @param anchor anchor marker
-     * @param caret caret marker
+     * @param anchor the anchor position
+     * @param caret the caret position
      */
-    public SelectionSegment(Marker anchor, Marker caret) {
+    public SelectionSegment(TextPos anchor, TextPos caret) {
         Objects.requireNonNull(anchor, "anchor cannot be null");
         Objects.requireNonNull(caret, "caret cannot be null");
 
@@ -62,7 +62,7 @@ public class SelectionSegment {
      * Returns the selection anchor.
      * @return the anchor position
      */
-    public Marker getAnchor() {
+    public final TextPos getAnchor() {
         return caretAtMin ? max : min;
     }
 
@@ -70,23 +70,23 @@ public class SelectionSegment {
      * Returns the caret position.
      * @return the caret position
      */
-    public Marker getCaret() {
+    public final TextPos getCaret() {
         return caretAtMin ? min : max;
     }
 
     /**
-     * Returns the marker which is closer to the start of the document.
+     * Returns the position which is closer to the start of the document.
      * @return the text position
      */
-    public Marker getMin() {
+    public final TextPos getMin() {
         return min;
     }
 
     /**
-     * Returns the marker which is closer to the end of the document.
+     * Returns the position which is closer to the end of the document.
      * @return the text position
      */
-    public Marker getMax() {
+    public TextPos getMax() {
         return max;
     }
 

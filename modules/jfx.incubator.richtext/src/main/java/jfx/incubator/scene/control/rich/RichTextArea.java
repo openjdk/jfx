@@ -581,6 +581,8 @@ public class RichTextArea extends Control {
                             redoable.bind(m.redoableProperty());
                         }
                     }
+
+                    selectionModel.clear();
                 }
             };
         }
@@ -1123,13 +1125,14 @@ public class RichTextArea extends Control {
 
     /**
      * Extends selection to the specified position.
+     * This method does nothing if the model is null.
      * @param pos the text position
      */
     public final void extendSelection(TextPos pos) {
-        StyledTextModel model = getModel();
-        if (model != null) {
-            Marker m = model.getMarker(pos);
-            selectionModel.extendSelection(m);
+        // TODO clip to document boundaries?
+        StyledTextModel m = getModel();
+        if (m != null) {
+            selectionModel.extendSelection(m, pos);
         }
     }
 
@@ -1587,27 +1590,24 @@ public class RichTextArea extends Control {
 
     /**
      * Moves both the caret and the anchor to the specified position, clearing any existing selection.
+     * This method is equivalent to {@code select(pos, pos)}.
      * @param pos the text position
      */
     public final void select(TextPos pos) {
-        StyledTextModel model = getModel();
-        if (model != null) {
-            Marker m = model.getMarker(pos);
-            selectionModel.setSelection(m, m);
-        }
+        select(pos, pos);
     }
 
     /**
      * Selects the specified range and places the caret at the new position.
+     * This method does nothing if the model is null.
      * @param anchor the new selection anchor position
      * @param caret the new caret position
      */
     public final void select(TextPos anchor, TextPos caret) {
-        StyledTextModel model = getModel();
-        if (model != null) {
-            Marker ma = model.getMarker(anchor);
-            Marker mc = model.getMarker(caret);
-            selectionModel.setSelection(ma, mc);
+        // TODO clip to document boundaries?
+        StyledTextModel m = getModel();
+        if (m != null) {
+            selectionModel.setSelection(m, anchor, caret);
         }
     }
 

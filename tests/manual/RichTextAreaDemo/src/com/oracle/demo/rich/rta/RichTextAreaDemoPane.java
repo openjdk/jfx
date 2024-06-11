@@ -244,18 +244,28 @@ public class RichTextAreaDemoPane extends BorderPane {
         FX.name(trackHeight, "trackHeight");
         trackHeight.selectedProperty().bindBidirectional(control.useContentHeightProperty());
 
-        Button test = new Button("Append Text");
-        test.setOnAction((ev) -> {
+        Button appendButton = new Button("Append");
+        FX.tooltip(appendButton, "appends text to the end of the document");
+        appendButton.setOnAction((ev) -> {
             StyleAttrs heading = StyleAttrs.builder().setBold(true).setFontSize(24).build();
             StyleAttrs plain = StyleAttrs.builder().setFontFamily("Monospaced").build();
             control.appendText("Heading\n", heading);
             control.appendText("Plain monospaced text.\n", plain);
         });
 
+        Button insertButton = new Button("Insert");
+        FX.tooltip(insertButton, "inserts text to the start of the document");
+        insertButton.setOnAction((ev) -> {
+            StyleAttrs heading = StyleAttrs.builder().setBold(true).setFontSize(24).build();
+            StyleAttrs plain = StyleAttrs.builder().setFontFamily("Monospaced").build();
+            control.insertText(TextPos.ZERO, "Plain monospaced text.\n", plain);
+            control.insertText(TextPos.ZERO, "Heading\n", heading);
+        });
+
         op = new ROptionPane();
         op.label("Model:");
         op.option(modelField);
-        op.option(test);
+        op.option(new HBox(insertButton, appendButton));
         op.option(editable);
         op.option(reloadModelButton);
         op.option(wrapText);
