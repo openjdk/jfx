@@ -90,7 +90,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
     }
 
     @Override
-    public void populateSkinInputMap() {
+    protected void populateSkinInputMap() {
         vflow = RichTextAreaSkinHelper.getVFlow(getControl());
 
         // functions

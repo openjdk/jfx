@@ -194,7 +194,6 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
 
     @Override
     public void install() {
-        behavior.populateSkinInputMap();
         getSkinnable().getInputMap().setSkinInputMap(behavior.getSkinInputMap());
     }
 
