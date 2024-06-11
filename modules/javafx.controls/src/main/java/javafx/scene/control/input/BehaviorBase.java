@@ -108,7 +108,7 @@ public abstract class BehaviorBase<C extends Control> {
      * @param tag the function tag
      * @param function the function
      */
-    protected void registerFunction(FunctionTag tag, Runnable function) {
+    protected final void registerFunction(FunctionTag tag, Runnable function) {
         getSkinInputMap().registerFunction(tag, function);
     }
 
@@ -120,7 +120,7 @@ public abstract class BehaviorBase<C extends Control> {
      * @param k the key binding
      * @param tag the function tag
      */
-    protected void registerKey(KeyBinding k, FunctionTag tag) {
+    protected final void registerKey(KeyBinding k, FunctionTag tag) {
         getSkinInputMap().registerKey(k, tag);
     }
 
@@ -131,7 +131,7 @@ public abstract class BehaviorBase<C extends Control> {
      * @param code the key code to construct a {@link KeyBinding}
      * @param tag the function tag
      */
-    protected void registerKey(KeyCode code, FunctionTag tag) {
+    protected final void registerKey(KeyCode code, FunctionTag tag) {
         getSkinInputMap().registerKey(code, tag);
     }
 
@@ -142,7 +142,7 @@ public abstract class BehaviorBase<C extends Control> {
      * @param k the key binding
      * @param func the function
      */
-    protected void register(FunctionTag tag, KeyBinding k, Runnable func) {
+    protected final void register(FunctionTag tag, KeyBinding k, Runnable func) {
         getSkinInputMap().registerFunction(tag, func);
         getSkinInputMap().registerKey(k, tag);
     }
@@ -154,7 +154,7 @@ public abstract class BehaviorBase<C extends Control> {
      * @param code the key code
      * @param func the function
      */
-    protected void register(FunctionTag tag, KeyCode code, Runnable func) {
+    protected final void register(FunctionTag tag, KeyCode code, Runnable func) {
         getSkinInputMap().registerFunction(tag, func);
         getSkinInputMap().registerKey(KeyBinding.of(code), tag);
     }
@@ -165,7 +165,7 @@ public abstract class BehaviorBase<C extends Control> {
      * @param existing the existing key binding
      * @param newk the new key binding
      */
-    protected void duplicateMapping(KeyBinding existing, KeyBinding newk) {
+    protected final void duplicateMapping(KeyBinding existing, KeyBinding newk) {
         getSkinInputMap().duplicateMapping(existing, newk);
     }
 
@@ -177,7 +177,7 @@ public abstract class BehaviorBase<C extends Control> {
      * @param consume determines whether the matching event is consumed or not
      * @param handler the event handler
      */
-    protected <T extends Event> void addHandler(EventType<T> type, boolean consume, EventHandler<T> handler) {
+    protected final <T extends Event> void addHandler(EventType<T> type, boolean consume, EventHandler<T> handler) {
         getSkinInputMap().addHandler(type, consume, handler);
     }
 
@@ -190,7 +190,7 @@ public abstract class BehaviorBase<C extends Control> {
      * @param consume determines whether the matching event is consumed or not
      * @param handler the event handler
      */
-    protected <T extends Event> void addHandlerLast(EventType<T> type, boolean consume, EventHandler<T> handler) {
+    protected final <T extends Event> void addHandlerLast(EventType<T> type, boolean consume, EventHandler<T> handler) {
         getSkinInputMap().addHandler(type, consume, handler);
     }
 
@@ -203,7 +203,7 @@ public abstract class BehaviorBase<C extends Control> {
      * @param consume determines whether the matching event is consumed or not
      * @param handler the event handler
      */
-    protected <T extends Event> void addHandler(EventCriteria<T> criteria, boolean consume, EventHandler<T> handler) {
+    protected final <T extends Event> void addHandler(EventCriteria<T> criteria, boolean consume, EventHandler<T> handler) {
         getSkinInputMap().addHandler(criteria, consume, handler);
     }
 
@@ -216,7 +216,7 @@ public abstract class BehaviorBase<C extends Control> {
      * @param consume determines whether the matching event is consumed or not
      * @param h the event handler
      */
-    protected <T extends Event> void addHandlerLast(EventCriteria<T> criteria, boolean consume, EventHandler<T> h) {
+    protected final <T extends Event> void addHandlerLast(EventCriteria<T> criteria, boolean consume, EventHandler<T> h) {
         getSkinInputMap().addHandler(criteria, consume, h);
     }
 
@@ -224,7 +224,7 @@ public abstract class BehaviorBase<C extends Control> {
      * Returns true if this method is invoked on a Linux platform.
      * @return true on a Linux platform
      */
-    protected boolean isLinux() {
+    protected final boolean isLinux() {
         return PlatformUtil.isLinux();
     }
 
@@ -232,7 +232,7 @@ public abstract class BehaviorBase<C extends Control> {
      * Returns true if this method is invoked on a Mac OS platform.
      * @return true on a Mac OS platform
      */
-    protected boolean isMac() {
+    protected final boolean isMac() {
         return PlatformUtil.isMac();
     }
 
@@ -240,7 +240,7 @@ public abstract class BehaviorBase<C extends Control> {
      * Returns true if this method is invoked on a Windows platform.
      * @return true on a Windows platform
      */
-    protected boolean isWindows() {
+    protected final boolean isWindows() {
         return PlatformUtil.isWindows();
     }
 
