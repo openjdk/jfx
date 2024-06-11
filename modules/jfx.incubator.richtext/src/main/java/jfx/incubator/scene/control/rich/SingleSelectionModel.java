@@ -49,9 +49,11 @@ public final class SingleSelectionModel implements SelectionModel {
     public SingleSelectionModel() {
         anchorListener = (src, old, pos) -> {
             anchorPosition.set(pos);
+            segment.set(new SelectionSegment(pos, caretPosition.get()));
         };
         caretListener = (src, old, pos) -> {
             caretPosition.set(pos);
+            segment.set(new SelectionSegment(anchorPosition.get(), pos));
         };
     }
 
@@ -62,19 +64,21 @@ public final class SingleSelectionModel implements SelectionModel {
 
     @Override
     public void setSelection(StyledTextModel model, TextPos anchor, TextPos caret) {
-        // TODO clamp selection to document start/end? here or by the caller?
+        anchor = model.clamp(anchor);
+        caret = model.clamp(caret);
         SelectionSegment sel = new SelectionSegment(anchor, caret);
         setSelectionSegment(model, sel);
     }
 
     @Override
     public void extendSelection(StyledTextModel model, TextPos pos) {
+        // reset selection if model is different
         if (isFlippingModel(model)) {
             setSelection(model, pos, pos);
             return;
         }
 
-        // TODO reset selection if model is different
+        pos = model.clamp(pos);
         SelectionSegment sel = getSelection();
         TextPos a = sel == null ? null : sel.getAnchor();
         if (a == null) {
@@ -128,8 +132,8 @@ public final class SingleSelectionModel implements SelectionModel {
 
         // due to the fact that caretPosition and anchorPosition are two different properties,
         // there is a possibility that one is null and another is not (for example, in a listener).
-        // to combat this issue, the caretPosition is updated last, so any listener monitoring this
-        // property would see the right value for anchor.
+        // this code guarantees that the caretPosition is updated last, so any listener monitoring this
+        // property would see the correct anchor value.
         if (sel == null) {
             anchorPosition.set(null);
             caretPosition.set(null);

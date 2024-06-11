@@ -468,6 +468,7 @@ public abstract class StyledTextModel {
 
     /**
      * Returns a {@link Marker} at the specified position.
+     * The actual text position tracked by the marker will always be within the document boundaries.
      *
      * @param pos text position
      * @return Marker instance

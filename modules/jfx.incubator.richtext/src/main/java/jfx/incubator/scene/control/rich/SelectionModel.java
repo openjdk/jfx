@@ -47,6 +47,8 @@ public interface SelectionModel {
 
     /**
      * Replaced existing selection, if any, with the new one.
+     * The implementation must clamp both positions to be within the document boundaries.
+     * 
      * @param model the model, must be non-null
      * @param anchor the anchor position, must be non-null
      * @param caret the caret position, must be non-null
@@ -54,9 +56,11 @@ public interface SelectionModel {
     public void setSelection(StyledTextModel model, TextPos anchor, TextPos caret);
 
     /**
-     * Extends selection to the specified position.  This method will issue a {@code setSelection(model, pos, pos)}
+     * Extends selection to the specified position.
+     * Internally, the position will be normalized to be within the document boundaries.
+     * This method will issue a {@code setSelection(model, pos, pos)}
      * call if the model instance is different from that passed before.
-     * @param model the model. must be non-null
+     * @param model the model, must be non-null
      * @param pos the new caret position, must be non-null
      */
     public void extendSelection(StyledTextModel model, TextPos pos);
@@ -64,11 +68,10 @@ public interface SelectionModel {
     /**
      * Caret position property.  The value can be null.
      * <p>
-     * Important note: setting a {@link SelectionSegment} causes an update to both anchor and caret properties.
-     * Typically, they both should be either null (corresponding to a null selection segment) or non-null.
-     * However, it is possible to read one null value and one non-null value in a listener.  To lessen the impact,
-     * the caretProperty is updated last, so any listener monitoring the caret property would read the right anchor
-     * value.  A listener monitoring the anchorProperty might see erroneous value for the caret, so keep that in mind.
+     * Note:
+     * {@link #selectionProperty()}, {@link #anchorPositionProperty()}, and {@link #caretPositionProperty()}
+     * are logically connected.  When a change occurs, the anchor position is updated first, followed by
+     * the caret position, followed by the selection segment.
      *
      * @return the caret position property
      * @defaultValue null
@@ -78,11 +81,10 @@ public interface SelectionModel {
     /**
      * Anchor position property.  The value can be null.
      * <p>
-     * Important note: setting a {@link SelectionSegment} causes an update to both anchor and caret properties.
-     * Typically, they both should be either null (corresponding to a null selection segment) or non-null.
-     * However, it is possible to read one null value and one non-null value in a listener.  To lessen the impact,
-     * the caretProperty is updated last, so any listener monitoring the caret property would read the right anchor
-     * value.  A listener monitoring the anchorProperty might see erroneous value for the caret, so keep that in mind.
+     * Note:
+     * {@link #selectionProperty()}, {@link #anchorPositionProperty()}, and {@link #caretPositionProperty()}
+     * are logically connected.  When a change occurs, the anchor position is updated first, followed by
+     * the caret position, followed by the selection segment.
      *
      * @return the anchor position property
      * @defaultValue null

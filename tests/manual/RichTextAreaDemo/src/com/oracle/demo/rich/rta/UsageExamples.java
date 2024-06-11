@@ -151,6 +151,7 @@ public class UsageExamples {
 
     public static class App extends Application {
         public App() {
+            System.out.println("test app: F1 appends at the end, F2 inserts at the start, F3 clears selection.");
         }
 
         @Override
@@ -168,6 +169,12 @@ public class UsageExamples {
             });
             t.getInputMap().register(KeyBinding.of(KeyCode.F1), () -> {
                 t.insertText(TextPos.ZERO, "F1", StyleAttrs.EMPTY);
+            });
+            t.getInputMap().register(KeyBinding.of(KeyCode.F2), () -> {
+                t.insertText(TextPos.ZERO, "\n", StyleAttrs.EMPTY);
+            });
+            t.getInputMap().register(KeyBinding.of(KeyCode.F3), () -> {
+                t.clearSelection();
             });
             stage.show();
         }

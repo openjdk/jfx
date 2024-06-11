@@ -324,10 +324,10 @@ public class RichTextArea extends Control {
      * A null selection segment results in both positions to become null, a non-null selection segment sets both to
      * non-null values.
      * <p>
-     * It is possible to read one null value and one non-null value in a listener,
-     * when the derived values are being updated.  The anchor position property is updated first, followed by the
-     * caret position property.  The {@link #selectionProperty()} should be monitored when both the anchor and
-     * the caret positions are required.
+     * Note:
+     * {@code StyledTextModel.selectionProperty()}, {@link #anchorPositionProperty()}, and {@link #caretPositionProperty()}
+     * are logically connected.  When a change occurs, the anchor position is updated first, followed by
+     * the caret position, followed by the selection segment.
      *
      * @return the anchor position property
      * @see selectionProperty
@@ -388,10 +388,10 @@ public class RichTextArea extends Control {
      * A null selection segment results in both positions to become null, a non-null selection segment sets both to
      * non-null values.
      * <p>
-     * It is possible to read one null value and one non-null value in a listener,
-     * when the derived values are being updated.  The anchor position property is updated first, followed by the
-     * caret position property.  The {@link #selectionProperty()} should be monitored when both the anchor and
-     * the caret positions are required.
+     * Note:
+     * {@code StyledTextModel.selectionProperty()}, {@link #anchorPositionProperty()}, and {@link #caretPositionProperty()}
+     * are logically connected.  When a change occurs, the anchor position is updated first, followed by
+     * the caret position, followed by the selection segment.
      *
      * @return the caret position property
      * @see selectionProperty
@@ -1124,7 +1124,9 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Extends selection to the specified position.
+     * Extends selection to the specified position.  Internally, this method will normalized the position
+     * to be within the document boundaries.
+     * Calling method will produce the same result as {@code select(pos, pos)} if no prior selection exists.
      * This method does nothing if the model is null.
      * @param pos the text position
      */
@@ -1599,12 +1601,12 @@ public class RichTextArea extends Control {
 
     /**
      * Selects the specified range and places the caret at the new position.
+     * Both positions will be internally clamped to be within the document boundaries.
      * This method does nothing if the model is null.
      * @param anchor the new selection anchor position
      * @param caret the new caret position
      */
     public final void select(TextPos anchor, TextPos caret) {
-        // TODO clip to document boundaries?
         StyledTextModel m = getModel();
         if (m != null) {
             selectionModel.setSelection(m, anchor, caret);
