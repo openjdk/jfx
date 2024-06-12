@@ -276,7 +276,7 @@ public class CellPane extends GridPane {
             insert(ed, TextPos.ZERO, p, cell1.getSourceEditor(), TextPos.ZERO);
 
             CellPane cell2 = new CellPane(new CellInfo(t));
-            insert(ed, p, ed.getEndTextPos(), cell2.getSourceEditor(), TextPos.ZERO);
+            insert(ed, p, ed.getDocumentEnd(), cell2.getSourceEditor(), TextPos.ZERO);
 
             return List.of(cell1, cell2);
         } catch (IOException e) {

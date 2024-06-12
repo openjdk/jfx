@@ -576,13 +576,13 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
 
     private TextPos paragraphDown(RichTextArea control, TextPos caret) {
         int ix = caret.index();
-        TextPos end = control.getEndOfParagraph(ix);
+        TextPos end = control.getParagraphEnd(ix);
         if (caret.isSameInsertionIndex(end)) {
             ix++;
             if (ix >= control.getParagraphCount()) {
                 return null;
             }
-            return control.getEndOfParagraph(ix);
+            return control.getParagraphEnd(ix);
         }
         return end;
     }
@@ -602,7 +602,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
 
     private TextPos paragraphEnd(RichTextArea control, TextPos caret) {
         int ix = caret.index();
-        return control.getEndOfParagraph(ix);
+        return control.getParagraphEnd(ix);
     }
 
     private void moveCaret(boolean extSelection, BiFunction<RichTextArea, TextPos, TextPos> h) {
@@ -642,7 +642,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
      */
     public void moveDocumentEnd() {
         RichTextArea control = getControl();
-        TextPos pos = control.getEndTextPos();
+        TextPos pos = control.getDocumentEnd();
         control.select(pos);
     }
 
@@ -725,7 +725,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 int ix = cell.getIndex() - 1;
                 if (ix >= 0) {
                     // end of prev line
-                    return control.getEndOfParagraph(ix);
+                    return control.getParagraphEnd(ix);
                 }
                 return null;
             }
@@ -781,7 +781,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
 
     public void selectAll() {
         RichTextArea control = getControl();
-        TextPos end = control.getEndTextPos();
+        TextPos end = control.getDocumentEnd();
         control.select(TextPos.ZERO, end);
         clearPhantomX();
     }
@@ -794,7 +794,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
     /** selects from the anchor position to the document end */
     public void selectDocumentEnd() {
         RichTextArea control = getControl();
-        TextPos pos = control.getEndTextPos();
+        TextPos pos = control.getDocumentEnd();
         control.extendSelection(pos);
     }
 
@@ -844,45 +844,43 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         if (p != null) {
             int ix = p.index();
             TextPos an = new TextPos(ix, 0);
-            TextPos ca = control.getEndOfParagraph(ix);
+            TextPos ca = control.getParagraphEnd(ix);
             control.select(an, ca);
         }
     }
 
     public void backspace() {
-        if (!canEdit()) {
-            return;
-        }
-
-        RichTextArea control = getControl();
-        if (control.hasNonEmptySelection()) {
-            deleteSelection(control);
-        } else {
-            TextPos p = control.getCaretPosition();
-            if (p == null) {
-                return;
-            }
-
-            int ix = p.index();
-
-            TextPos start;
-            if (p.offset() == 0) {
-                if (ix == 0) {
+        if (canEdit()) {
+            RichTextArea control = getControl();
+            if (control.hasNonEmptySelection()) {
+                deleteSelection();
+            } else {
+                TextPos p = control.getCaretPosition();
+                if (p == null) {
                     return;
                 }
-                int off = getPlainText(ix - 1).length();
-                start = new TextPos(ix - 1, off);
-            } else {
-                String text = getPlainText(p.index());
-                // Do not use charIterator here, because we do want to
-                // break up clusters when deleting backwards.
-                int off = Character.offsetByCodePoints(text, p.offset(), -1);
-                start = new TextPos(ix, off);
-            }
 
-            control.getModel().replace(vflow, start, p, StyledInput.EMPTY, true);
-            control.moveCaret(start, false);
-            clearPhantomX();
+                int ix = p.index();
+
+                TextPos start;
+                if (p.offset() == 0) {
+                    if (ix == 0) {
+                        return;
+                    }
+                    int off = getPlainText(ix - 1).length();
+                    start = new TextPos(ix - 1, off);
+                } else {
+                    String text = getPlainText(p.index());
+                    // Do not use charIterator here, because we do want to
+                    // break up clusters when deleting backwards.
+                    int off = Character.offsetByCodePoints(text, p.offset(), -1);
+                    start = new TextPos(ix, off);
+                }
+
+                control.getModel().replace(vflow, start, p, StyledInput.EMPTY, true);
+                control.moveCaret(start, false);
+                clearPhantomX();
+            }
         }
     }
 
@@ -890,7 +888,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         if (canEdit()) {
             RichTextArea control = getControl();
             if (control.hasNonEmptySelection()) {
-                deleteSelection(control);
+                deleteSelection();
             } else {
                 TextPos start = control.getCaretPosition();
                 TextPos end = nextCharacterVisually(start, true);
@@ -932,11 +930,12 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         deleteIgnoreSelection(this::paragraphStart);
     }
 
-    protected void deleteSelection(RichTextArea control) {
+    protected void deleteSelection() {
         SelInfo sel = sel();
         if (sel != null) {
             TextPos start = sel.getMin();
             TextPos end = sel.getMax();
+            RichTextArea control = getControl();
             control.getModel().replace(vflow, start, end, StyledInput.EMPTY, true);
             clearPhantomX();
             control.moveCaret(start, false);
@@ -1156,7 +1155,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                     Clipboard.getSystemClipboard().setContent(c);
 
                     if (canEdit() && cut) {
-                        deleteSelection(control);
+                        deleteSelection();
                     }
                 } catch(Exception | OutOfMemoryError e) {
                     RichUtils.provideErrorFeedback(control, e);
@@ -1340,7 +1339,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         boolean skipEmpty = true;
 
         for (;;) {
-            TextPos end = control.getEndTextPos();
+            TextPos end = control.getDocumentEnd();
             // this could be a isSameOrAfter(index, off) method in TextPos
             if ((index == end.index()) && (offset >= end.offset())) {
                 return end;
@@ -1390,7 +1389,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         boolean skipEmpty = true;
 
         for (;;) {
-            TextPos end = control.getEndTextPos();
+            TextPos end = control.getDocumentEnd();
             // this could be a isSameOrAfter(index, off) method in TextPos
             if ((index == end.index()) && (offset >= end.offset())) {
                 return end;
@@ -1506,14 +1505,16 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
 
     private void deleteIgnoreSelection(BiFunction<RichTextArea, TextPos, TextPos> getter) {
         RichTextArea control = getControl();
-        TextPos caret = control.getCaretPosition();
-        if (caret != null) {
-            TextPos p = getter.apply(control, caret);
-            if (p != null) {
-                control.clearSelection();
-                clearPhantomX();
-                p = control.replaceText(caret, p, "", true);
-                control.select(p);
+        if (control.canEdit()) {
+            TextPos caret = control.getCaretPosition();
+            if (caret != null) {
+                TextPos p = getter.apply(control, caret);
+                if (p != null) {
+                    control.clearSelection();
+                    clearPhantomX();
+                    p = control.replaceText(caret, p, "", true);
+                    control.select(p);
+                }
             }
         }
     }

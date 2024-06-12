@@ -128,7 +128,7 @@ import jfx.incubator.scene.control.rich.skin.RichTextAreaSkin;
  * <tr><td><pre>{@link StyledTextModel}</pre></td><td>Base class (abstract)</td></tr>
  * <tr><td><pre> ├─ {@link EditableRichTextModel}</pre></td><td>Default model for RichTextArea</td></tr>
  * <tr><td><pre> ├─ {@link jfx.incubator.scene.control.rich.model.PlainTextModel PlainTextModel}</pre></td><td>Unstyled plain text model</td></tr>
- * <tr><td><pre> │   └─ {@link CodeTextModel}</pre></td><td>Default model for CodeArea</td></tr>
+ * <tr><td><pre> │   └─ {@link jfx.incubator.scene.control.rich.model.CodeTextModel CodeTextModel}</pre></td><td>Default model for CodeArea</td></tr>
  * <tr><td><pre> └─ {@link jfx.incubator.scene.control.rich.model.StyledTextModelViewOnlyBase StyledTextModelViewOnlyBase}</pre></td><td>Base class for a view-only model (abstract)</td></tr>
  * <tr><td><pre>     └─ {@link jfx.incubator.scene.control.rich.model.SimpleViewOnlyStyledModel SimpleViewOnlyStyledModel}</pre></td><td>In-memory view-only styled model</td></tr>
  * </table>
@@ -346,7 +346,7 @@ public class RichTextArea extends Control {
      * Determines the caret blink period.  This property cannot be set to {@code null}.
      *
      * @return the caret blink period property
-     * @defaultValue 1000 ms.
+     * @defaultValue 1000 ms
      */
     public final ObjectProperty<Duration> caretBlinkPeriodProperty() {
         if (caretBlinkPeriod == null) {
@@ -472,6 +472,7 @@ public class RichTextArea extends Control {
     /**
      * Indicates whether this RichTextArea can be edited by the user, provided the model is also editable.
      * Changing the value of this property with a view-only model or a null model has no effect.
+     *
      * @return the editable property
      * @see canEdit() method
      * @defaultValue true
@@ -496,6 +497,7 @@ public class RichTextArea extends Control {
 
     /**
      * Indicates whether the current paragraph will be visually highlighted.
+     *
      * @return the highlight current paragraph property
      * @defaultValue false
      */
@@ -532,6 +534,7 @@ public class RichTextArea extends Control {
     /**
      * Specifies the left-side paragraph decorator.
      * The value can be null.
+     *
      * @return the left decorator property
      * @defaultValue null
      */
@@ -558,6 +561,7 @@ public class RichTextArea extends Control {
      * The model can be null, which results in an empty, uneditable control.
      * <p>
      * Note: Subclasses may impose additional restrictions on the type of the model they require.
+     *
      * @return the model property
      * @defaultValue an instance of {@link EditableRichTextModel}
      */
@@ -599,6 +603,7 @@ public class RichTextArea extends Control {
 
     /**
      * The property describes if it's currently possible to redo the latest change of the content that was undone.
+     *
      * @return the read-only property
      * @defaultValue false
      */
@@ -620,6 +625,7 @@ public class RichTextArea extends Control {
     /**
      * Specifies the right-side paragraph decorator.
      * The value can be null.
+     *
      * @return the right decorator property
      * @defaultValue null
      */
@@ -667,6 +673,7 @@ public class RichTextArea extends Control {
 
     /**
      * The property describes if it's currently possible to undo the latest change of the content that was done.
+     *
      * @return the read-only property
      * @defaultValue false
      */
@@ -765,6 +772,7 @@ public class RichTextArea extends Control {
      * then this variable indicates whether the text should wrap onto
      * another line.
      * Setting this property to {@code true} hides the horizontal scroll bar.
+     *
      * @return the wrap text property
      * @defaultValue false
      */
@@ -941,7 +949,7 @@ public class RichTextArea extends Control {
      * @return the text position at the end of the appended text, or null if editing is disabled
      */
     public final TextPos appendText(String text, StyleAttrs attrs) {
-        TextPos p = getEndTextPos();
+        TextPos p = getDocumentEnd();
         return insertText(p, text, attrs);
     }
 
@@ -954,7 +962,7 @@ public class RichTextArea extends Control {
      * @return the text position at the end of the appended text, or null if editing is disabled
      */
     public final TextPos appendText(StyledInput in) {
-        TextPos p = getEndTextPos();
+        TextPos p = getDocumentEnd();
         return insertText(p, in);
     }
 
@@ -963,6 +971,7 @@ public class RichTextArea extends Control {
      * the existing ones.
      * When applying paragraph attributes, the affected range might extend beyond {@code start} and {@code end}
      * to include whole paragraphs.
+     *
      * @param start the start of text range
      * @param end the end of text range
      * @param attrs the style attributes to apply
@@ -975,9 +984,12 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * When selection exists, deletes selected text.  Otherwise, deletes the symbol before the caret.
+     * When selection exists, deletes selected text.  Otherwise, deletes the character preceding the caret,
+     * possibly breaking up the grapheme clusters.
+     * This method does nothing if {@link #canEdit()} returns false.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
+     *
      * @see RichTextArea.Tags#BACKSPACE
      */
     public void backspace() {
@@ -985,9 +997,14 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * This convenience method returns true if this control's {@link #isEditable()} returns true and the model's
-     * {@link StyledTextModel#isUserEditable()} also returns true.
-     * @return true if model is not null and is editable
+     * This convenience method returns true if all the following conditions are true:
+     * <ul>
+     * <li>this control's {@link #isEditable()} returns true</li>
+     * <li>the model is not {@code null}</li>
+     * <li>the model's {@link StyledTextModel#isUserEditable()} returns true</li>
+     * </ul>
+     *
+     * @return true if the editing is allowed
      */
     public final boolean canEdit() {
         if (isEditable()) {
@@ -1000,18 +1017,16 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Clears the text.
-     * This method delegates to {@link #replaceText(TextPos, TextPos, StyledInput, boolean)} and creates
-     * a redo entry.
-     * This method is no-op if either the control or the model is not editable.
+     * Clears the document, creating an undo entry.
+     * This method does nothing if {@link #canEdit()} returns false.
      */
     public final void clear() {
-        TextPos end = getEndTextPos();
+        TextPos end = getDocumentEnd();
         replaceText(TextPos.ZERO, end, StyledInput.EMPTY, true);
     }
 
     /**
-     * Clears existing selection, if any.
+     * Clears existing selection, if any.  This method is an alias for {@code getSelectionModel().clear()}.
      */
     public final void clearSelection() {
         selectionModel.clear();
@@ -1029,7 +1044,7 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * When selection exists, copies the selected rich text to the clipboard in all formats supported
+     * When selection exists, copies the selected rich text to the clipboard in all the formats supported
      * by the model.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
@@ -1040,8 +1055,9 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Copies the text in the specified format when selection exists and when the export in this format
-     * is supported by the model, and the skin must be installed; otherwise, this method is a no-op.
+     * Copies the selected text in the specified format to the clipboard.
+     * This method does nothing if no selection exists or when the data format is not supported by the model.
+     *
      * @param format the data format to use
      */
     public final void copy(DataFormat format) {
@@ -1052,8 +1068,10 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * When selection exists, removes the selected content, placing it into the clipboard.
-     * Selection is cleared afterward.
+     * Transfers the currently selected text to the clipboard,
+     * removing the current selection.
+     * <p>
+     * This method does nothing if {@link #canEdit()} returns false.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#CUT
@@ -1064,6 +1082,9 @@ public class RichTextArea extends Control {
 
     /**
      * When selection exists, deletes selected text.  Otherwise, deletes the symbol at the caret.
+     * When the symbol at the caret is a grapheme cluster, deletes the whole cluster.
+     * <p>
+     * This method does nothing if {@link #canEdit()} returns false.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#DELETE
@@ -1075,6 +1096,8 @@ public class RichTextArea extends Control {
     /**
      * When selection exists, deletes selected paragraphs.  Otherwise, deletes the paragraph at the caret.
      * <p>
+     * This method does nothing if {@link #canEdit()} returns false.
+     * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#DELETE_PARAGRAPH
      */
@@ -1083,7 +1106,9 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Deletes text from the caret to paragraph start, ignoring selection.
+     * Deletes text from the caret position to the start of the paragraph, ignoring existing selection.
+     * <p>
+     * This method does nothing if {@link #canEdit()} returns false.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#DELETE_PARAGRAPH_START
@@ -1093,7 +1118,10 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Deletes empty paragraph or text to the end of the next word.
+     * Deletes from the caret positon to the end of next word, ignoring existing selection.
+     * When the caret is in an empty paragraph, deletes the paragraph.
+     * <p>
+     * This method does nothing if {@link #canEdit()} returns false.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#DELETE_WORD_NEXT_END
@@ -1103,7 +1131,10 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Deletes empty paragraph or text to the start of the next word.
+     * Deletes from the caret positon to the start of next word, ignoring existing selection.
+     * When the caret is in an empty paragraph, deletes the paragraph.
+     * <p>
+     * This method does nothing if {@link #canEdit()} returns false.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#DELETE_WORD_NEXT_START
@@ -1113,8 +1144,10 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Deletes (multiple) empty paragraphs or text to the beginning of the previous word.
-     * This method has a side effect of clearing an existing selection prior to the delete operation.
+     * Deletes (multiple) empty paragraphs or text from the caret position to the start of the previous word,
+     * ignoring existing selection.
+     * <p>
+     * This method does nothing if {@link #canEdit()} returns false.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#DELETE_WORD_PREVIOUS
@@ -1136,12 +1169,12 @@ public class RichTextArea extends Control {
     /**
      * Extends selection to the specified position.  Internally, this method will normalized the position
      * to be within the document boundaries.
-     * Calling method will produce the same result as {@code select(pos, pos)} if no prior selection exists.
+     * Calling this method produces the same result as {@code select(pos, pos)} if no prior selection exists.
      * This method does nothing if the model is null.
+     *
      * @param pos the text position
      */
     public final void extendSelection(TextPos pos) {
-        // TODO clip to document boundaries?
         StyledTextModel m = getModel();
         if (m != null) {
             selectionModel.extendSelection(m, pos);
@@ -1150,13 +1183,13 @@ public class RichTextArea extends Control {
 
     /**
      * Returns {@code StyleAttrs} which contains character and paragraph attributes.
-     * <br>
+     * <p>
      * When selection exists, returns the attributes at the first selected character.
-     * <br>
+     * <p>
      * When no selection exists, returns the attributes at the character which immediately precedes the caret.
      * When at the beginning of the document, returns the attributes of the first character.
      * If the model uses CSS styles, this method resolves individual attributes (bold, font size, etc.)
-     * according to the stylesheet for this instance of {@code RichTextArea}.
+     * for this instance of {@code RichTextArea}.
      *
      * @return the non-null {@code StyleAttrs} instance
      */
@@ -1166,22 +1199,12 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Returns a TextPos corresponding to the end of paragraph.
-     *
-     * @param index paragraph index
-     * @return text position
-     */
-    public final TextPos getEndOfParagraph(int index) {
-        StyledTextModel m = getModel();
-        return (m == null) ? TextPos.ZERO : m.getEndOfParagraphTextPos(index);
-    }
-
-    /**
      * Returns a TextPos corresponding to the end of the document.
+     * When the model is null, returns {@link TextPos#ZERO}.
      *
      * @return the text position
      */
-    public final TextPos getEndTextPos() {
+    public final TextPos getDocumentEnd() {
         StyledTextModel m = getModel();
         return (m == null) ? TextPos.ZERO : m.getDocumentEnd();
     }
@@ -1205,8 +1228,21 @@ public class RichTextArea extends Control {
     }
 
     /**
+     * Returns a TextPos corresponding to the end of paragraph.
+     * When the model is null, returns {@link TextPos#ZERO}.
+     *
+     * @param index paragraph index
+     * @return text position
+     */
+    public final TextPos getParagraphEnd(int index) {
+        StyledTextModel m = getModel();
+        return (m == null) ? TextPos.ZERO : m.getEndOfParagraphTextPos(index);
+    }
+
+    /**
      * Returns the plain text at the specified paragraph index.  The value of {@code index} must be between
      * 0 (inclusive) and the value returned by {@link #getParagraphCount()} (exclusive).
+     *
      * @param index the paragraph index
      * @return the non-null plain text string
      * @throws IndexOutOfBoundsException if the index is outside of the range supported by the model
@@ -1220,6 +1256,9 @@ public class RichTextArea extends Control {
 
     /**
      * Returns the style handler registry for this control.
+     * Applications should not normally call this method as it is intended for use by the skin
+     * subclasses.
+     *
      * @return the style handler registry
      */
     public StyleHandlerRegistry getStyleHandlerRegistry() {
@@ -1232,7 +1271,7 @@ public class RichTextArea extends Control {
      *
      * @param screenX the screen x coordinate
      * @param screenY the screen y coordinate
-     * @return the TextPosition, or null
+     * @return the text position, or null
      */
     public final TextPos getTextPosition(double screenX, double screenY) {
         Point2D local = vflow().getContentPane().screenToLocal(screenX, screenY);
@@ -1241,6 +1280,7 @@ public class RichTextArea extends Control {
 
     /**
      * This convenience method returns true when a non-empty selection exists.
+     *
      * @return true when an non-empty selection exists
      */
     public final boolean hasNonEmptySelection() {
@@ -1257,6 +1297,8 @@ public class RichTextArea extends Control {
     /**
      * Inserts a line break at the caret.  If selection exists, first deletes the selected text.
      * <p>
+     * This method does nothing if {@link #canEdit()} returns false.
+     * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#INSERT_LINE_BREAK
      */
@@ -1266,6 +1308,8 @@ public class RichTextArea extends Control {
 
     /**
      * Inserts a tab symbol at the caret.  If selection exists, first deletes the selected text.
+     * <p>
+     * This method does nothing if {@link #canEdit()} returns false.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#INSERT_TAB
@@ -1277,7 +1321,8 @@ public class RichTextArea extends Control {
     /**
      * Inserts the styled text at the specified position.  Any embedded {@code "\n"} or {@code "\r\n"}
      * sequences result in a new paragraph being added.
-     * This method is no-op if either the control or the model is not editable.
+     * <p>
+     * This method does nothing if {@link #canEdit()} returns false.
      *
      * @param pos the insert position
      * @param text the text to inser
@@ -1290,8 +1335,9 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Inserts the content at the specified position.
-     * This method is no-op if either the control or the model is not editable.
+     * Inserts the styled content at the specified position.
+     * <p>
+     * This method does nothing if {@link #canEdit()} returns false.
      *
      * @param pos the insert position
      * @param in the input stream

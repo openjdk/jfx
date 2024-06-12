@@ -32,7 +32,8 @@ import jfx.incubator.scene.control.rich.SyntaxDecorator;
 import jfx.incubator.scene.control.rich.TextPos;
 
 /**
- * Editable plain text model with syntax highlighting for the {@link CodeArea} control.
+ * Editable plain text model with syntax highlighting for the
+ * {@link jfx.incubator.scene.control.rich.CodeArea CodeArea} control.
  */
 public class CodeTextModel extends PlainTextModel {
     private SimpleObjectProperty<SyntaxDecorator> decorator;

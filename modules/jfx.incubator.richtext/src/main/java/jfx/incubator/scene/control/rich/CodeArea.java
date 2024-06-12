@@ -414,7 +414,7 @@ public class CodeArea extends RichTextArea {
      * @param text the text string
      */
     public final void setText(String text) {
-        TextPos end = getEndTextPos();
+        TextPos end = getDocumentEnd();
         getModel().replace(null, TextPos.ZERO, end, text, true);
     }
 
