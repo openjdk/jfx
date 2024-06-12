@@ -49,9 +49,9 @@ import com.oracle.demo.rich.rta.FontOption;
 import com.oracle.demo.rich.rta.ROptionPane;
 import com.oracle.demo.rich.util.FX;
 import jfx.incubator.scene.control.rich.CodeArea;
-import jfx.incubator.scene.control.rich.CodeTextModel;
 import jfx.incubator.scene.control.rich.SyntaxDecorator;
 import jfx.incubator.scene.control.rich.TextPos;
+import jfx.incubator.scene.control.rich.model.CodeTextModel;
 import jfx.incubator.scene.control.rich.model.StyleAttribute;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
 

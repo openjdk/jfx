@@ -25,6 +25,7 @@
 
 package jfx.incubator.scene.control.rich;
 
+import jfx.incubator.scene.control.rich.model.CodeTextModel;
 import jfx.incubator.scene.control.rich.model.RichParagraph;
 
 /**

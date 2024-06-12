@@ -50,9 +50,9 @@ import com.oracle.demo.rich.codearea.JavaSyntaxDecorator;
 import com.oracle.demo.rich.notebook.data.CellInfo;
 import com.oracle.demo.rich.util.FX;
 import jfx.incubator.scene.control.rich.CodeArea;
-import jfx.incubator.scene.control.rich.CodeTextModel;
 import jfx.incubator.scene.control.rich.RichTextArea;
 import jfx.incubator.scene.control.rich.TextPos;
+import jfx.incubator.scene.control.rich.model.CodeTextModel;
 import jfx.incubator.scene.control.rich.model.SegmentBuffer;
 
 /**

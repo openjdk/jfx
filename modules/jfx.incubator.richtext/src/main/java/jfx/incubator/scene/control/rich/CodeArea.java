@@ -46,6 +46,7 @@ import javafx.scene.control.Labeled;
 import javafx.scene.text.Font;
 import com.sun.jfx.incubator.scene.control.rich.Params;
 import com.sun.jfx.incubator.scene.control.rich.util.RichUtils;
+import jfx.incubator.scene.control.rich.model.CodeTextModel;
 import jfx.incubator.scene.control.rich.model.StyledTextModel;
 import jfx.incubator.scene.control.rich.skin.CodeAreaSkin;
 import jfx.incubator.scene.control.rich.skin.RichTextAreaSkin;

@@ -34,10 +34,13 @@ import jfx.incubator.scene.control.rich.StyleResolver;
 import jfx.incubator.scene.control.rich.TextPos;
 
 /**
- * A simple, editable, in-memory StyledTextModel which manages plain text paragraphs.
+ * A StyledTextModel based on plain text paragraphs.
  * <p>
  * This class provides no styling.  Subclasses might override {@link #getParagraph(int)} to provide
  * syntax highlighting based on the model content.
+ * <p>
+ * This model supports custom content storage mechanism via {@link PlainTextModel.Content}.  By default,
+ * the model provides an in-memory storage via its {@link PlainTextModel.InMemoryContent} implementation.
  */
 public class PlainTextModel extends StyledTextModel {
     /**
@@ -45,7 +48,7 @@ public class PlainTextModel extends StyledTextModel {
      */
     public interface Content {
         /**
-         * Returns the number of text lines in this content.
+         * Returns the number of paragraphs in this content.
          * @return number of text lines
          */
         public int size();
@@ -151,6 +154,7 @@ public class PlainTextModel extends StyledTextModel {
     /**
      * Determines whether the model is editable.
      * @return the editable property
+     * @defaultValue true
      */
     public final BooleanProperty editableProperty() {
         return editable;

@@ -23,15 +23,13 @@
  * questions.
  */
 
-package jfx.incubator.scene.control.rich;
+package jfx.incubator.scene.control.rich.model;
 
 import java.util.Set;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import jfx.incubator.scene.control.rich.model.PlainTextModel;
-import jfx.incubator.scene.control.rich.model.RichParagraph;
-import jfx.incubator.scene.control.rich.model.StyleAttribute;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.SyntaxDecorator;
+import jfx.incubator.scene.control.rich.TextPos;
 
 /**
  * Editable plain text model with syntax highlighting for the {@link CodeArea} control.
