@@ -76,7 +76,7 @@ public class CodeArea extends RichTextArea {
     private String fontStyle;
 
     /**
-     * The constructor.
+     * This constructor creates the CodeArea with the specified {@link CodeTextModel}.
      * @param model the instance of {@link CodeTextModel} to use
      */
     public CodeArea(CodeTextModel model) {
@@ -97,7 +97,7 @@ public class CodeArea extends RichTextArea {
     }
 
     /**
-     * This constructor creates a CodeArea with the default {@link CodeTextModel}.
+     * This constructor creates the CodeArea with the default {@link CodeTextModel}.
      */
     public CodeArea() {
         this(new CodeTextModel());
@@ -109,7 +109,8 @@ public class CodeArea extends RichTextArea {
     }
 
     /**
-     * This convenience method sets the decorator property in the model.
+     * This convenience method sets the decorator property in the {@link CodeTextModel}.
+     * Nothing is done if the model is null.
      *
      * @param d the syntax decorator
      * @see CodeTextModel#setDecorator(SyntaxDecorator)
@@ -122,8 +123,8 @@ public class CodeArea extends RichTextArea {
     }
 
     /**
-     * This convenience method returns the syntax decorator value in the model,
-     * or null if the said model is null.
+     * This convenience method returns the syntax decorator value in the {@link CodeTextModel},
+     * or null if the model is null.
      * @return the syntax decorator value, or null
      */
     public final SyntaxDecorator getSyntaxDecorator() {
@@ -134,6 +135,7 @@ public class CodeArea extends RichTextArea {
     /**
      * Determines whether to show line numbers.
      * @return the line numbers enabled property
+     * @defaultValue false
      */
     // TODO should there be a way to customize the line number component? createLineNumberDecorator() ?
     // TODO should this be a styleable property?
@@ -273,7 +275,7 @@ public class CodeArea extends RichTextArea {
         return font == null ? defaultFont() : font.getValue();
     }
 
-    private Font defaultFont() {
+    private static Font defaultFont() {
         return Font.font("Monospaced", 12.0);
     }
 
@@ -338,7 +340,7 @@ public class CodeArea extends RichTextArea {
         };
 
         private static final FontCssMetaData<CodeArea> FONT =
-            new FontCssMetaData<>("-fx-font", Font.getDefault())
+            new FontCssMetaData<>("-fx-font", defaultFont())
         {
             @Override
             public boolean isSettable(CodeArea n) {
