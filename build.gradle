@@ -576,6 +576,15 @@ def defaultTestLintOptions = ""
 defineProperty("TEST_LINT", defaultTestLintOptions)
 ext.IS_TEST_LINT = TEST_LINT != ""
 
+defineProperty("JAVAC_WERROR", "true")
+ext.IS_JAVAC_WERROR = Boolean.parseBoolean(JAVAC_WERROR)
+
+defineProperty("TOOL_JAVAC_WERROR", "false")
+ext.IS_TOOL_JAVAC_WERROR = Boolean.parseBoolean(TOOL_JAVAC_WERROR)
+
+defineProperty("TEST_JAVAC_WERROR", "false")
+ext.IS_TEST_JAVAC_WERROR = Boolean.parseBoolean(TEST_JAVAC_WERROR)
+
 // Doclint options (all enabled by default)
 defineProperty("DOC_LINT", "all")
 ext.IS_DOC_LINT = DOC_LINT != ""
@@ -2258,6 +2267,10 @@ project(":graphics") {
     project.ext.moduleRuntime = true
     project.ext.moduleName = "javafx.graphics"
 
+    // FIXME: Remove this setting when JDK-8334137 is fixed
+    // Disable javac -Werror until we stop using sun.misc.Unsafe
+    project.ext.disableJavacWerror = true
+
     getConfigurations().create("antlr");
 
     sourceSets {
@@ -2789,6 +2802,11 @@ project(":swing") {
     // excluded by "--release NN". This will fall back to using
     // "-source NN -target NN" for this module.
     project.ext.skipJavaCompilerOptionRelease = true
+
+    // We also need to disable the implicitly-enabled lint warning that
+    // results from the above
+    project.ext.extraLintOptions =
+        "-options"
 
     tasks.all {
         if (!COMPILE_SWING) it.enabled = false
@@ -4121,6 +4139,10 @@ allprojects {
         // we use a custom javadoc command
         project.javadoc.enabled = false
 
+        def disableJavacWerror =
+                project.hasProperty('disableJavacWerror') &&
+                project.ext.disableJavacWerror
+
         if (compile.name == "compileJava" ||
             compile.name == "compileFullJava" ||
             compile.name.startsWith("compileJavaDOMBinding")) {
@@ -4132,8 +4154,9 @@ allprojects {
                                     project.ext.extraLintOptions : ""
                 setupLintOptions(compile, LINT, extraLintOpts);
 
-                // TODO: enable the following once we are lint clean
-                //compile.options.compilerArgs += "-Werror"
+                if (IS_JAVAC_WERROR && !disableJavacWerror) {
+                    compile.options.compilerArgs += "-Werror"
+                }
             }
         } else if (compile.name == "compileJslcJava" ||
             compile.name == "compileDecoraCompilers" ||
@@ -4146,6 +4169,10 @@ allprojects {
                 def extraLintOpts = project.hasProperty("extraToolLintOptions") ?
                                     project.ext.extraToolLintOptions : ""
                 setupLintOptions(compile, TOOL_LINT, extraLintOpts);
+
+                if (IS_TOOL_JAVAC_WERROR && !disableJavacWerror) {
+                    compile.options.compilerArgs += "-Werror"
+                }
             }
         } else if (compile.name == "compileShimsJava" ||
             compile.name.startsWith("compileTest")) {
@@ -4156,6 +4183,10 @@ allprojects {
                 def extraLintOpts = project.hasProperty("extraTestLintOptions") ?
                                     project.ext.extraTestLintOptions : ""
                 setupLintOptions(compile, TEST_LINT, extraLintOpts);
+
+                if (IS_TEST_JAVAC_WERROR && !disableJavacWerror) {
+                    compile.options.compilerArgs += "-Werror"
+                }
             }
         } else {
             logger.info("Unknown compilation task: ${project}:${compile.name}")
