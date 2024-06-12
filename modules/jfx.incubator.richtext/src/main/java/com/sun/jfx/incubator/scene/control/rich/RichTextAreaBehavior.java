@@ -277,7 +277,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         }
     }
 
-    private boolean handleTypedChar(String typed) {
+    protected boolean handleTypedChar(String typed) {
         if (canEdit()) {
             RichTextArea control = getControl();
             StyledTextModel m = control.getModel();
@@ -289,7 +289,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 }
 
                 TextPos p = m.replace(vflow, start, end, typed, true);
-                control.moveCaret(p, false);
+                moveCaret(p, false);
 
                 clearPhantomX();
                 return true;
@@ -355,7 +355,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             }
 
             TextPos pos = m.replace(vflow, start, end, StyledInput.of("\n"), true);
-            control.moveCaret(pos, false);
+            moveCaret(pos, false);
             clearPhantomX();
         }
     }
@@ -612,7 +612,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             TextPos p = h.apply(control, caret);
             if (p != null) {
                 clearPhantomX();
-                control.moveCaret(p, extSelection);
+                moveCaret(p, extSelection);
             }
         }
     }
@@ -664,7 +664,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
 
         TextPos p = vflow.getTextPosLocal(x + vflow.leftPadding(), y);
         if (p != null) {
-            getControl().moveCaret(p, extendSelection);
+            moveCaret(p, extendSelection);
         }
     }
 
@@ -684,17 +684,17 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             int d = ca.compareTo(an);
             // jump over selection if it exists
             if (d < 0) {
-                control.moveCaret(moveRight ? an : ca, extendSelection);
+                moveCaret(moveRight ? an : ca, extendSelection);
                 return;
             } else if (d > 0) {
-                control.moveCaret(moveRight ? ca : an, extendSelection);
+                moveCaret(moveRight ? ca : an, extendSelection);
                 return;
             }
         }
 
         TextPos p = nextCharacterVisually(caret, moveRight);
         if (p != null) {
-            control.moveCaret(p, extendSelection);
+            moveCaret(p, extendSelection);
         }
     }
 
@@ -748,6 +748,21 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             System.err.println("offset=" + off + " text=[" + text + "]"); // FIX
             e.printStackTrace();
             return null;
+        }
+    }
+
+    /**
+     * Moves the caret and anchor to the new position, unless {@code extendSelection} is true, in which case
+     * extend selection from the existing anchor to the newly set caret position.
+     * @param p text position
+     * @param extendSelection specifies whether to clear (false) or extend (true) any existing selection
+     */
+    protected void moveCaret(TextPos p, boolean extendSelection) {
+        RichTextArea control = getControl();
+        if (extendSelection) {
+            control.extendSelection(p);
+        } else {
+            control.select(p, p);
         }
     }
 
@@ -878,7 +893,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 }
 
                 control.getModel().replace(vflow, start, p, StyledInput.EMPTY, true);
-                control.moveCaret(start, false);
+                moveCaret(start, false);
                 clearPhantomX();
             }
         }
@@ -894,7 +909,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 TextPos end = nextCharacterVisually(start, true);
                 if (end != null) {
                     control.getModel().replace(vflow, start, end, StyledInput.EMPTY, true);
-                    control.moveCaret(start, false);
+                    moveCaret(start, false);
                     clearPhantomX();
                 }
             }
@@ -921,7 +936,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 RichTextArea control = getControl();
                 control.getModel().replace(vflow, p0, p1, StyledInput.EMPTY, true);
                 clearPhantomX();
-                control.moveCaret(p0, false);
+                moveCaret(p0, false);
             }
         }
     }
@@ -938,7 +953,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             RichTextArea control = getControl();
             control.getModel().replace(vflow, start, end, StyledInput.EMPTY, true);
             clearPhantomX();
-            control.moveCaret(start, false);
+            moveCaret(start, false);
         }
     }
 
@@ -947,7 +962,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         TextPos p = control.getCaretPosition();
         if (p != null) {
             clearPhantomX();
-            control.moveCaret(p, false);
+            moveCaret(p, false);
         }
     }
 
@@ -1122,7 +1137,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             StyleAttrs a = control.getActiveStyleAttrs();
             try (StyledInput in = h.createStyledInput(text, a)) {
                 TextPos p = m.replace(vflow, start, end, in, true);
-                control.moveCaret(p, false);
+                moveCaret(p, false);
             } catch (IOException e) {
                 RichUtils.provideErrorFeedback(control, e);
             }

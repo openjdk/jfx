@@ -1348,20 +1348,6 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Moves the caret and anchor to the new position, unless {@code extendSelection} is true, in which case
-     * extend selection from the existing anchor to the newly set caret position.
-     * @param p text position
-     * @param extendSelection specifies whether to clear (false) or extend (true) any existing selection
-     */
-    public final void moveCaret(TextPos p, boolean extendSelection) {
-        if (extendSelection) {
-            extendSelection(p);
-        } else {
-            select(p, p);
-        }
-    }
-
-    /**
      * Moves the caret to after the last character of the text, clearing an existing selection.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
