@@ -642,9 +642,19 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Tracks the current selection.
-     * The value can be null.
+     * Tracks the current selection.  The {@link SelectionSegment} consists of two values - the caret and the anchor
+     * positions which may get changed independently.  This property allows for tracking the selection as an single
+     * entity.  A null value for the selection segment causes both the caret and the anchor positions to become
+     * null.
+     * <p>
+     * Note:
+     * {@code StyledTextModel.selectionProperty()}, {@link #anchorPositionProperty()}, and {@link #caretPositionProperty()}
+     * are logically connected.  When a change occurs, the anchor position is updated first, followed by
+     * the caret position, followed by the selection segment.
+     *
      * @return the selection property
+     * @see anchorPositionProperty
+     * @see caretPositionProperty
      * @defaultValue null
      */
     public final ReadOnlyProperty<SelectionSegment> selectionProperty() {

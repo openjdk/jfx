@@ -30,8 +30,8 @@ package jfx.incubator.scene.control.rich;
 import java.util.Objects;
 
 /**
- * Text selection segment, comprised of selection anchor and caret positions.
- * The main purpose of this class is to enable atomic selection changes.
+ * Text selection segment, comprised of the selection anchor and the caret positions.
+ * The main purpose of this class is to enable tracking of selection changes as a single entity.
  */
 public class SelectionSegment {
     private final TextPos min;
@@ -39,7 +39,7 @@ public class SelectionSegment {
     private final boolean caretAtMin;
 
     /**
-     * Creates a new selection segment.
+     * Constructs the selection segment.
      * @param anchor the anchor position
      * @param caret the caret position
      */
@@ -59,7 +59,7 @@ public class SelectionSegment {
     }
 
     /**
-     * Returns the selection anchor.
+     * Returns the selection anchor position.
      * @return the anchor position
      */
     public final TextPos getAnchor() {
