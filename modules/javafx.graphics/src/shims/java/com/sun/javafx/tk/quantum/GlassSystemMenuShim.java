@@ -34,7 +34,7 @@ import java.util.List;
 public class GlassSystemMenuShim extends GlassSystemMenu {
 
     private GlassSystemMenu gsm;
-    final ArrayList<WeakReference<Menu>> uncollectedMenus = new ArrayList<>();
+    private final ArrayList<WeakReference<Menu>> uncollectedMenus = new ArrayList<>();
 
     public GlassSystemMenuShim() {
         super();

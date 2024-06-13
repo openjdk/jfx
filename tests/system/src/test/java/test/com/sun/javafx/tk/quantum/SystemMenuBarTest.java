@@ -286,7 +286,7 @@ public class SystemMenuBarTest {
     @Test
     public void testJDK8309935() {
         MenuBar menuBar = new MenuBar();
-        AtomicReference<Throwable> throwableRef = new AtomicReference();
+        AtomicReference<Throwable> throwableRef = new AtomicReference<>();
         Util.runAndWait(() -> {
             Thread.currentThread().setUncaughtExceptionHandler((t, e) -> {
                 e.printStackTrace();
