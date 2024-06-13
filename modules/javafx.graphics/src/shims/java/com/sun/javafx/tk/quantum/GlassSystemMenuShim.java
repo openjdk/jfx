@@ -51,7 +51,7 @@ public class GlassSystemMenuShim extends GlassSystemMenu {
     @Override
     protected void setMenuBindings(final Menu glassMenu, final MenuBase mb) {
         super.setMenuBindings(glassMenu, mb);
-        uncollectedMenus.add(new WeakReference(glassMenu));
+        uncollectedMenus.add(new WeakReference<>(glassMenu));
     }
 
     public List<WeakReference<Menu>> getWeakMenuReferences() {
