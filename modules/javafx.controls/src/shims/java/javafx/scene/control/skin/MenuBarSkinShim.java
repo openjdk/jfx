@@ -37,7 +37,7 @@ public class MenuBarSkinShim {
 
     // can only access the getNodeForMenu method in MenuBarSkin from this package.
     public static MenuButton getNodeForMenu(MenuBarSkin skin, int i) {
-        return skin.getNodeForMenu(i);
+        return skin.menuBarButtonAt(i);
     }
 
     public static Skin getPopupSkin(MenuButton mb) {

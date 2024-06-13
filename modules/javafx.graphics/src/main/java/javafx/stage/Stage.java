@@ -279,7 +279,7 @@ public class Stage extends Window {
 
     private boolean primary = false;
 
-    ////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------
 
     // Flag indicating that this stage is being used to show a security dialog
     private boolean securityDialog = false;
