@@ -1747,7 +1747,7 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
                     afterEvaluate {
                         artifact project.tasks."moduleEmptyPublicationJar$t.capital"
                         artifact project.tasks."modularPublicationJar$t.capital" {
-                            classifier "$t.name"
+                            archiveClassifier.set("$t.name")
                         }
                     }
 

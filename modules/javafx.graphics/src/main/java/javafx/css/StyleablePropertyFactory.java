@@ -194,11 +194,11 @@ public class StyleablePropertyFactory<S extends Styleable> {
         return unmodifiableMetaDataList;
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
     //
     // StyleableProperty<Boolean>
     //
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
 
     /**
      * Create a StyleableProperty&lt;Boolean&gt; with initial value and inherit flag.
@@ -279,11 +279,11 @@ public class StyleablePropertyFactory<S extends Styleable> {
         return new SimpleStyleableBooleanProperty(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
     //
     // create StyleableProperty<Color>
     //
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
 
     /**
      * Create a StyleableProperty&lt;Color&gt; with initial value and inherit flag.
@@ -365,11 +365,11 @@ public class StyleablePropertyFactory<S extends Styleable> {
         return new SimpleStyleableObjectProperty<>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
     //
     // create StyleableProperty<Duration>
     //
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
 
     /**
      * Create a StyleableProperty&lt;Duration&gt; with initial value and inherit flag.
@@ -451,11 +451,11 @@ public class StyleablePropertyFactory<S extends Styleable> {
         return new SimpleStyleableObjectProperty<>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
     //
     // create StyleableProperty<Effect>
     //
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
 
     /**
      * Create a StyleableProperty&lt;Effect&gt; with initial value and inherit flag.
@@ -539,11 +539,11 @@ public class StyleablePropertyFactory<S extends Styleable> {
         return new SimpleStyleableObjectProperty<>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
     //
     // create StyleableProperty<? extends Enum<?>>
     //
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
 
     /**
      * Create a StyleableProperty&lt;E extends Enum&lt;E&gt;&gt; with initial value and inherit flag.
@@ -678,11 +678,11 @@ public class StyleablePropertyFactory<S extends Styleable> {
         return new SimpleStyleableObjectProperty<>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
     //
     // create StyleableProperty<Font>
     //
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
 
     /**
      * Create a StyleableProperty&lt;Font&gt; with initial value and inherit flag.
@@ -764,11 +764,11 @@ public class StyleablePropertyFactory<S extends Styleable> {
         return new SimpleStyleableObjectProperty<>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
     //
     // create StyleableProperty<Insets>
     //
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
 
     /**
      * Create a StyleableProperty&lt;Inset&gt; with initial value and inherit flag.
@@ -849,11 +849,11 @@ public class StyleablePropertyFactory<S extends Styleable> {
         return new SimpleStyleableObjectProperty<>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
     //
     // create StyleableProperty<Paint>
     //
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
 
     /**
      * Create a StyleableProperty&lt;Paint&gt; with initial value and inherit flag.
@@ -934,11 +934,11 @@ public class StyleablePropertyFactory<S extends Styleable> {
         return new SimpleStyleableObjectProperty<>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
     //
     // create StyleableProperty<Number>
     //
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
 
     /**
      * Create a StyleableProperty&lt;Number&gt; with initial value and inherit flag.
@@ -1019,11 +1019,11 @@ public class StyleablePropertyFactory<S extends Styleable> {
         return new SimpleStyleableObjectProperty<>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
     //
     // create StyleableProperty<String>
     //
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
 
     /**
      * Create a StyleableProperty&lt;String&gt; with initial value and inherit flag.
@@ -1104,11 +1104,11 @@ public class StyleablePropertyFactory<S extends Styleable> {
         return new SimpleStyleableStringProperty(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
     //
     // create StyleableProperty<String> where String is a URL
     //
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
 
     /**
      * Create a StyleableProperty&lt;String&gt; with initial value and inherit flag. Here, the String value represents
@@ -1194,11 +1194,11 @@ public class StyleablePropertyFactory<S extends Styleable> {
         return new SimpleStyleableStringProperty(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
     //                                                                                                              //
     // create CssMetaData<S, Boolean>                                                                               //
     //                                                                                                              //
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
 
     /**
      * Create a CssMetaData&lt;S, Boolean&gt; with initial value, and inherit flag.
@@ -1256,11 +1256,11 @@ public class StyleablePropertyFactory<S extends Styleable> {
         return createBooleanCssMetaData(property, function, false, false);
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
     //                                                                                                              //
     // create CssMetaData<S, Color>                                                                                 //
     //                                                                                                              //
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
 
     /**
      * Create a CssMetaData&lt;S, Color&gt; with initial value, and inherit flag.
@@ -1318,11 +1318,11 @@ public class StyleablePropertyFactory<S extends Styleable> {
         return createColorCssMetaData(property, function, Color.BLACK, false);
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
     //                                                                                                              //
     // create CssMetaData<S, Duration>                                                                                 //
     //                                                                                                              //
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
 
     /**
      * Create a CssMetaData&lt;S, Duration&gt; with initial value, and inherit flag.
@@ -1380,11 +1380,11 @@ public class StyleablePropertyFactory<S extends Styleable> {
         return createDurationCssMetaData(property, function, Duration.UNKNOWN, false);
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
     //                                                                                                              //
     // create CssMetaData<S, Effect>                                                                                 //
     //                                                                                                              //
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
 
     /**
      * Create a CssMetaData&lt;S, Effect&gt; with initial value, and inherit flag.
@@ -1443,11 +1443,11 @@ public class StyleablePropertyFactory<S extends Styleable> {
         return createEffectCssMetaData(property, function, null, false);
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
     //                                                                                                              //
     // create CssMetaData<S, Enum>                                                                                 //
     //                                                                                                              //
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
 
     /**
      * Create a CssMetaData&lt;S, Enum&gt; with initial value, and inherit flag.
@@ -1509,11 +1509,11 @@ public class StyleablePropertyFactory<S extends Styleable> {
         return createEnumCssMetaData(enumClass, property, function, null, false);
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
     //                                                                                                              //
     // create CssMetaData<S, Font>                                                                                 //
     //                                                                                                              //
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
 
     /**
      * Create a CssMetaData&lt;S, Font&gt; with initial value, and inherit flag.
@@ -1569,11 +1569,11 @@ public class StyleablePropertyFactory<S extends Styleable> {
         return createFontCssMetaData(property, function, Font.getDefault(), true);
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
     //                                                                                                              //
     // create CssMetaData<S, Insets>                                                                                 //
     //                                                                                                              //
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
 
     /**
      * Create a CssMetaData&lt;S, Insets&gt; with initial value, and inherit flag.
@@ -1631,11 +1631,11 @@ public class StyleablePropertyFactory<S extends Styleable> {
         return createInsetsCssMetaData(property, function, Insets.EMPTY, false);
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
     //                                                                                                              //
     // create CssMetaData<S, Paint>                                                                                 //
     //                                                                                                              //
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
 
     /**
      * Create a CssMetaData&lt;S, Paint&gt; with initial value, and inherit flag.
@@ -1691,11 +1691,11 @@ public class StyleablePropertyFactory<S extends Styleable> {
         return createPaintCssMetaData(property, function, Color.BLACK, false);
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
     //                                                                                                              //
     // create CssMetaData<S, Number>                                                                                 //
     //                                                                                                              //
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
 
     /**
      * Create a CssMetaData&lt;S, Number&gt; with initial value, and inherit flag.
@@ -1751,11 +1751,11 @@ public class StyleablePropertyFactory<S extends Styleable> {
         return createSizeCssMetaData(property, function, 0d, false);
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
     //                                                                                                              //
     // create CssMetaData<S, String>                                                                                 //
     //                                                                                                              //
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
 
     /**
      * Create a CssMetaData&lt;S, String&gt; with initial value, and inherit flag.
@@ -1811,11 +1811,11 @@ public class StyleablePropertyFactory<S extends Styleable> {
         return createStringCssMetaData(property, function, null, false);
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
     //                                                                                                              //
     // create CssMetaData<S, String>                                                                                 //
     //                                                                                                              //
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
 
     /**
      * Create a CssMetaData&lt;S, String&gt; with initial value, and inherit flag.
@@ -1877,13 +1877,13 @@ public class StyleablePropertyFactory<S extends Styleable> {
         return createUrlCssMetaData(property, function, null, false);
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
     //                                                                                                              //
     // SimpleCssMetaData is an implementation of CssMetaData that uses a Function<S, StyleableProperty<V>>          //
     // to get the StyleableProperty from the Styleable. This is the function that is passed in on the
     // various create methods.
     //                                                                                                              //
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //----------------------------------------------------------------------------------------------------------------
     private static class SimpleCssMetaData<S extends Styleable,V> extends CssMetaData<S,V> {
 
         SimpleCssMetaData(
