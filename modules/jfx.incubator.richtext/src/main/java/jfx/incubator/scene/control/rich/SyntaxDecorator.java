@@ -33,7 +33,8 @@ import jfx.incubator.scene.control.rich.model.RichParagraph;
  */
 public interface SyntaxDecorator {
     /**
-     * Converts plain text into a rich text paragraph.
+     * Creates a {@link RichParagraph} from the paragraph plain text.
+     * The text string is guaranteed to contain neither newline nor carriage return symbols.
      *
      * @param model the model
      * @param index the paragraph index
@@ -42,7 +43,13 @@ public interface SyntaxDecorator {
     public RichParagraph createRichParagraph(CodeTextModel model, int index);
 
     /**
-     * Receives the updates from the model, before other event handlers are notified.
+     * Receives the updates from the model, before any of the model's
+     * {@link jfx.incubator.scene.control.rich.model.StyledTextModel.Listener StyledTextModel.Listener}s
+     * are notified.
+     * <p>
+     * The implementation might do nothing if the syntax can be determined based on the text of a single
+     * paragraph.  Other implementations, which handle more complex syntax might want to re-build the syntax model
+     * any time the plain text document changes, should use this method to trigger the refresh.
      *
      * @param m the model
      * @param start start of the affected range

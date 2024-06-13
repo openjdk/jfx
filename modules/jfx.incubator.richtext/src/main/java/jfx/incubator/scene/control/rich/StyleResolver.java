@@ -34,19 +34,24 @@ import jfx.incubator.scene.control.rich.model.StyleAttrs;
  * <p>
  * Whenever the {@code StyledTextModel} contains logical class names instead of actual attributes,
  * a separate CSS style resolution step is required.  The resulting attributes might depend on the view that
- * originated an operation (example: export or copy).
+ * originated an operation such as exporting or coping.
+ * <p>
+ * This interface is a part of API layer between the model and the view, and only comes to play when the
+ * model refers to CSS styles.
+ * Applications should not normally use this interface.
  */
 public interface StyleResolver {
     /**
      * Resolves CSS styles (when present) to the individual attributes declared in {@link StyleAttrs}.
+     *
      * @param attrs the style attributes
      * @return the resolved style attributes
      */
-    // TODO this can take CssStyles argument instead
     public StyleAttrs resolveStyles(StyleAttrs attrs);
 
     /**
-     * Creates a snapshot of the specified Node.
+     * Creates a snapshot of the specified Node to be exported or copied as an image.
+     *
      * @param node the {@link Node} to make a snapshot of
      * @return snapshot the generated {@link WritableImage}
      */

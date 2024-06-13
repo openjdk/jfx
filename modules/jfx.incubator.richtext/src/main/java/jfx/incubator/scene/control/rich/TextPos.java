@@ -26,7 +26,7 @@
 package jfx.incubator.scene.control.rich;
 
 /**
- * An immutable text position.
+ * An immutable position within the text.
  * <p>
  * Because it is immutable, it cannot track locations in the document which is being edited.
  * For that, use {@link Marker}.
