@@ -1167,6 +1167,28 @@ public class RichTextArea extends Control {
     }
 
     /**
+     * Executes a function mapped to the specified function tag.
+     * This method does nothing if no function is mapped to the tag, or the function has been unbound.
+     *
+     * @param tag the function tag
+     */
+    // TODO to be moved to Control JDK-8314968
+    public final void execute(FunctionTag tag) {
+        InputMapHelper.execute(this, getInputMap(), tag);
+    }
+
+    /**
+     * Executes the default function mapped to the specified tag.
+     * This method does nothing if no default mapping exists.
+     *
+     * @param tag the function tag
+     */
+    // TODO to be moved to Control JDK-8314968
+    public final void executeDefault(FunctionTag tag) {
+        InputMapHelper.executeDefault(this, getInputMap(), tag);
+    }
+
+    /**
      * Extends selection to the specified position.  Internally, this method will normalized the position
      * to be within the document boundaries.
      * Calling this method produces the same result as {@code select(pos, pos)} if no prior selection exists.
@@ -1522,7 +1544,9 @@ public class RichTextArea extends Control {
     /**
      * Pastes the clipboard content at the caret, or, if selection exists, replacing the selected text.
      * This method clears the selection afterward.
-     * The model decides the best format to use.
+     * It is up to the model to pick the best data format to paste.
+     * <p>
+     * This method does nothing if {@link #canEdit()} returns false.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#PASTE
@@ -1533,8 +1557,10 @@ public class RichTextArea extends Control {
 
     /**
      * Pastes the clipboard content at the caret, or, if selection exists, replacing the selected text.
-     * The format must be supported by the model, and the skin must be installed,
-     * otherwise this method has no effect.
+     * <p>
+     * This method does nothing if {@link #canEdit()} returns false, of if the specified format is
+     * not supported by the model.
+     *
      * @param format the data format to use
      */
     public void paste(DataFormat format) {
@@ -1547,6 +1573,8 @@ public class RichTextArea extends Control {
     /**
      * Pastes the plain text clipboard content at the caret, or, if selection exists, replacing the selected text.
      * <p>
+     * This method does nothing if {@link #canEdit()} returns false.
+     * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#PASTE_PLAIN_TEXT
      */
@@ -1555,9 +1583,12 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Reads the content using the specified {@code DataFormat}.
+     * Calls the model to replace the current document with the content read from the stream using
+     * the specified {@code DataFormat}.
      * Any existing content is discarded and undo/redo buffer is cleared.
-     * This method does not close the input stream.
+     * <p>
+     * This method does not close the input stream.  This method does nothing if the model is {@code null}.
+     *
      * @param f the data format
      * @param in the input stream
      * @throws IOException if an I/O error occurs
@@ -1573,9 +1604,12 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Reads the content using the model's highest priority {@code DataFormat}.
+     * Calls the model to replace the current document with the content read from the input stream.
+     * The model picks the best {@code DataFormat} to use based on priority.
      * Any existing content is discarded and undo/redo buffer is cleared.
-     * This method does not close the input stream.
+     * <p>
+     * This method does not close the input stream.  This method does nothing if the model is {@code null}.
+     *
      * @param in the input stream
      * @throws IOException if an I/O error occurs
      * @throws UnsupportedOperationException when the data format is not supported by the model
@@ -1617,6 +1651,8 @@ public class RichTextArea extends Control {
 
     /**
      * Replaces the specified range with the new input.
+     * <p>
+     * This method does nothing if the model is null.
      *
      * @param start the start text position
      * @param end the end text position
@@ -1625,8 +1661,8 @@ public class RichTextArea extends Control {
      * @return the new caret position at the end of inserted text, or null if the change cannot be made
      */
     public final TextPos replaceText(TextPos start, TextPos end, StyledInput in, boolean createUndo) {
-        if (canEdit()) {
-            StyledTextModel m = getModel();
+        StyledTextModel m = getModel();
+        if (m != null) {
             return m.replace(vflow(), start, end, in, createUndo);
         }
         return null;
@@ -1635,6 +1671,7 @@ public class RichTextArea extends Control {
     /**
      * Moves both the caret and the anchor to the specified position, clearing any existing selection.
      * This method is equivalent to {@code select(pos, pos)}.
+     *
      * @param pos the text position
      */
     public final void select(TextPos pos) {
@@ -1645,6 +1682,7 @@ public class RichTextArea extends Control {
      * Selects the specified range and places the caret at the new position.
      * Both positions will be internally clamped to be within the document boundaries.
      * This method does nothing if the model is null.
+     *
      * @param anchor the new selection anchor position
      * @param caret the new caret position
      */
@@ -1717,7 +1755,8 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Extends selection to the end of the current paragraph, or, if already there, to the end of the next paragraph.
+     * Extends selection to the end of the current paragraph, or, if already at the end,
+     * to the end of the next paragraph.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#SELECT_PARAGRAPH_DOWN
@@ -1747,7 +1786,8 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Extends selection to the start of the current paragraph, or, if already there, to the start of the previous paragraph.
+     * Extends selection to the start of the current paragraph, or, if already at the start,
+     * to the start of the previous paragraph.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#SELECT_PARAGRAPH_UP
@@ -1757,7 +1797,7 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Extends selection one symbol to the right.
+     * Extends selection one symbol (or grapheme cluster) to the right.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#SELECT_RIGHT
@@ -1873,6 +1913,9 @@ public class RichTextArea extends Control {
      * All the existing attributes in the selected range will be cleared.
      * When setting the paragraph attributes, the affected range
      * might be wider than one specified.
+     * <p>
+     * This method does nothing if {@link #canEdit()} returns false.
+     *
      * @param start the start of text range
      * @param end the end of text range
      * @param attrs the style attributes to set
@@ -1888,6 +1931,8 @@ public class RichTextArea extends Control {
      * If possible, undoes the last modification. If {@link #isUndoable()} returns
      * false, then calling this method has no effect.
      * <p>
+     * This method does nothing if {@link #canEdit()} returns false.
+     *
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#UNDO
      */
@@ -1896,8 +1941,10 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Writes the content the output stream using the specified {@code DataFormat}.
-     * This method does not close the output stream.
+     * Calls the model to writes the current document to the output stream using the specified {@code DataFormat}.
+     * <p>
+     * This method does not close the output stream.  This method does nothing if the model is {@code null}.
+     *
      * @param f the data format
      * @param out the output stream
      * @throws IOException if an I/O error occurs
@@ -1912,18 +1959,22 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Writes the content the output stream using the model's highest priority {@code DataFormat}.
-     * This method does not close the output stream.
+     * Calls the model to write the current document to the output stream, using the highest priority {@code DataFormat}
+     * as determined by the model.
+     * <p>
+     * This method does not close the output stream.  This method does nothing if the model is {@code null}.
      * @param out the output stream
      * @throws IOException if an I/O error occurs
      * @throws UnsupportedOperationException when no suitable data format can be found
      */
     public final void write(OutputStream out) throws IOException {
-        DataFormat f = bestDataFormat(true);
-        if (f == null) {
-            throw new UnsupportedOperationException("no suitable format can be found");
+        if (getModel() != null) {
+            DataFormat f = bestDataFormat(true);
+            if (f == null) {
+                throw new UnsupportedOperationException("no suitable format can be found");
+            }
+            write(f, out);
         }
-        write(f, out);
     }
 
     // Non-public Methods
@@ -1972,28 +2023,6 @@ public class RichTextArea extends Control {
             }
         }
         return StyleAttrs.EMPTY;
-    }
-
-    /**
-     * Executes a function mapped to the specified function tag.
-     * This method does nothing if no function is mapped to the tag, or the function has been unbound.
-     *
-     * @param tag the function tag
-     */
-    // TODO to be moved to Control JDK-8314968
-    public final void execute(FunctionTag tag) {
-        InputMapHelper.execute(this, getInputMap(), tag);
-    }
-
-    /**
-     * Executes the default function mapped to the specified tag.
-     * This method does nothing if no default mapping exists.
-     *
-     * @param tag the function tag
-     */
-    // TODO to be moved to Control JDK-8314968
-    public final void executeDefault(FunctionTag tag) {
-        InputMapHelper.executeDefault(this, getInputMap(), tag);
     }
 
     private static StyleHandlerRegistry initStyleHandlerRegistry() {

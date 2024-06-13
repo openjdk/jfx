@@ -885,7 +885,8 @@ public abstract class StyledTextModel {
 
     /**
      * Replaces the content of the model with the data read from the input stream,
-     * using the specified {@code DataFormat}.
+     * using the specified {@code DataFormat}.  This operation clears the undo/redo stack.
+     *
      * @param r the style resolver
      * @param f the data format
      * @param input the input stream
