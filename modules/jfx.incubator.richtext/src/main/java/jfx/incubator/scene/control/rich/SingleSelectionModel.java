@@ -64,6 +64,7 @@ public final class SingleSelectionModel implements SelectionModel {
 
     @Override
     public void setSelection(StyledTextModel model, TextPos anchor, TextPos caret) {
+        // non-null values are enforced by clamp()
         anchor = model.clamp(anchor);
         caret = model.clamp(caret);
         SelectionSegment sel = new SelectionSegment(anchor, caret);
@@ -130,10 +131,12 @@ public final class SingleSelectionModel implements SelectionModel {
             caretMarker = null;
         }
 
-        // due to the fact that caretPosition and anchorPosition are two different properties,
+        // since caretPosition, anchorPosition, and selectionSegment are separate properties,
         // there is a possibility that one is null and another is not (for example, in a listener).
-        // this code guarantees that the caretPosition is updated last, so any listener monitoring this
-        // property would see the correct anchor value.
+        // this code guarantees a specific order of updates:
+        // 1. anchor
+        // 2. caret
+        // 3. selection segment
         if (sel == null) {
             anchorPosition.set(null);
             caretPosition.set(null);

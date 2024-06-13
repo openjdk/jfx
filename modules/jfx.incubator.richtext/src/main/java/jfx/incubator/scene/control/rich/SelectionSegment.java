@@ -33,15 +33,16 @@ import java.util.Objects;
  * Text selection segment, comprised of the selection anchor and the caret positions.
  * The main purpose of this class is to enable tracking of selection changes as a single entity.
  */
-public class SelectionSegment {
+public final class SelectionSegment {
     private final TextPos min;
     private final TextPos max;
     private final boolean caretAtMin;
 
     /**
      * Constructs the selection segment.
-     * @param anchor the anchor position
-     * @param caret the caret position
+     *
+     * @param anchor the anchor position, must not be null
+     * @param caret the caret position, must not be null
      */
     public SelectionSegment(TextPos anchor, TextPos caret) {
         Objects.requireNonNull(anchor, "anchor cannot be null");

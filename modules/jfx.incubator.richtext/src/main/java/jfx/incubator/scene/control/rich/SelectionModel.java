@@ -46,9 +46,11 @@ public interface SelectionModel {
     public void clear();
 
     /**
-     * Replaced existing selection, if any, with the new one.
-     * The implementation must clamp both positions to be within the document boundaries.
-     * 
+     * Replaced existing selection, if any, with the new one.  While this method will accept the text positions
+     * outside of the document range, the actual values of
+     * {@code anchorPositionProperty}, and {@code caretPositionProperty} must always remain within
+     * the valid range for the document.
+     *
      * @param model the model, must be non-null
      * @param anchor the anchor position, must be non-null
      * @param caret the caret position, must be non-null
@@ -60,13 +62,20 @@ public interface SelectionModel {
      * Internally, the position will be normalized to be within the document boundaries.
      * This method will issue a {@code setSelection(model, pos, pos)}
      * call if the model instance is different from that passed before.
+     * <p>
+     * While this method will accept the text position
+     * outside of the document range, the actual values of
+     * {@code anchorPositionProperty}, and {@code caretPositionProperty} must always remain within
+     * the valid range for the document.
+     *
      * @param model the model, must be non-null
      * @param pos the new caret position, must be non-null
      */
     public void extendSelection(StyledTextModel model, TextPos pos);
 
     /**
-     * Caret position property.  The value can be null.
+     * Caret position property.  The value can be null, indicating no selection.  When the caret position
+     * is {@code null}, the {@code selectionProperty} and the {@code anchorPositionProperty} are also {@code null}.
      * <p>
      * Note:
      * {@link #selectionProperty()}, {@link #anchorPositionProperty()}, and {@link #caretPositionProperty()}
@@ -79,7 +88,8 @@ public interface SelectionModel {
     public ReadOnlyProperty<TextPos> caretPositionProperty();
 
     /**
-     * Anchor position property.  The value can be null.
+     * Anchor position property.  The value can be null, indicating no selection.  When the anchor position
+     * is {@code null}, the {@code selectionProperty} and the {@code caretPositionProperty} are also {@code null}.
      * <p>
      * Note:
      * {@link #selectionProperty()}, {@link #anchorPositionProperty()}, and {@link #caretPositionProperty()}
@@ -92,14 +102,18 @@ public interface SelectionModel {
     public ReadOnlyProperty<TextPos> anchorPositionProperty();
 
     /**
-     * Selection property.  The value can be null.
+     * Selection property.  The value can be null, indicating no selection.  When the selection segment
+     * is {@code null}, the {@code anchorPositionProperty} and the {@code caretPositionProperty} are also {@code null}.
+     *
      * @return the selection property
      * @defaultValue null
      */
     public ReadOnlyProperty<SelectionSegment> selectionProperty();
 
     /**
-     * Returns the current selection, or null.
+     * Returns the current selection.  The value can be null, indicating no selection.  When the selection segment
+     * is {@code null}, the {@code anchorPositionProperty} and the {@code caretPositionProperty} are also {@code null}.
+     *
      * @return current selection, or null
      */
     public SelectionSegment getSelection();
