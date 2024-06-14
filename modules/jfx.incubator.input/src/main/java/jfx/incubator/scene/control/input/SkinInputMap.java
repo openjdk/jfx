@@ -356,7 +356,7 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
      *
      * @param <C> the type of Control
      */
-    // NOTE: The stateless skin input map adds significant complexity to the API surface while providing 
+    // NOTE: The stateless skin input map adds significant complexity to the API surface while providing
     // limited (some say non-existent) savings in terms of memory.  There aren't many Controls that
     // have a stateless behavior, which further reduces the usefulness of this class.
     // I'd rather remove this feature altogether.
