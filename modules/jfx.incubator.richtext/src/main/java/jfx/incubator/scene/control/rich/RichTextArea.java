@@ -305,6 +305,9 @@ public class RichTextArea extends Control {
 
     /**
      * Creates the instance using the specified model.
+     * <p>
+     * Multiple RichTextArea instances can work off a single model.
+     *
      * @param model the model
      */
     public RichTextArea(StyledTextModel model) {

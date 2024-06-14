@@ -56,6 +56,7 @@ public class CodeTextModel extends PlainTextModel {
         super(c);
     }
 
+    // only a subset of attributes are supported
     private static Set<StyleAttribute<?>> initSupportedAttributes() {
         return Set.of(
             StyleAttrs.BOLD,

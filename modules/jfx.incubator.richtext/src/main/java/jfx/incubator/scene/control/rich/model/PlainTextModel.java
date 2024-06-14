@@ -142,15 +142,6 @@ public class PlainTextModel extends StyledTextModel {
             build();
     }
 
-    @Override
-    public final boolean isUserEditable() {
-        return editable.get();
-    }
-
-    public final void setEditable(boolean on) {
-        editable.set(on);
-    }
-
     /**
      * Determines whether the model is editable.
      * @return the editable property
@@ -158,6 +149,15 @@ public class PlainTextModel extends StyledTextModel {
      */
     public final BooleanProperty editableProperty() {
         return editable;
+    }
+
+    @Override
+    public final boolean isUserEditable() {
+        return editable.get();
+    }
+
+    public final void setEditable(boolean on) {
+        editable.set(on);
     }
 
     @Override

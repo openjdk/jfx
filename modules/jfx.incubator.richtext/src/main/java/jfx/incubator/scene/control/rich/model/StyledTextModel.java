@@ -143,7 +143,7 @@ public abstract class StyledTextModel {
     protected abstract void removeRange(TextPos start, TextPos end);
 
     /**
-     * This method is called to insert a single text segment at the given position.
+     * This method is called to insert a single styled text segment at the given position.
      *
      * @param index the paragraph index
      * @param offset the insertion offset within the paragraph
@@ -154,7 +154,7 @@ public abstract class StyledTextModel {
     protected abstract int insertTextSegment(int index, int offset, String text, StyleAttrs attrs);
 
     /**
-     * Inserts a line break.
+     * Inserts a line break at the specified position.
      *
      * @param index the model index
      * @param offset the text offset
@@ -162,7 +162,16 @@ public abstract class StyledTextModel {
     protected abstract void insertLineBreak(int index, int offset);
 
     /**
-     * Inserts a paragraph that contains a single {@link javafx.scene.Node}.
+     * Inserts a paragraph that contains a single {@link Region}.
+     * <p>
+     * The model should not cache or otherwise retain references to the created {@code Region}s,
+     * as they might be requested multiple times during the lifetime of the model, or by different views.
+     * <p>
+     * This method allows for embedding {@link javafx.scene.control.Control Control}s that handle user input.
+     * In this case, the model should declare necessary properties and provide bidirectional bindings between
+     * the properties in the model and the corresponding properties in the control, as well as handle copy, paste,
+     * writing to and reading from I/O streams.
+     *
      * @param index model index
      * @param generator code that will be used to create a Node instance
      */
@@ -201,7 +210,7 @@ public abstract class StyledTextModel {
     public abstract StyleAttrs getStyleAttrs(StyleResolver resolver, TextPos pos);
 
     /**
-     * Returns a set of supported attributes to be used for filtering in
+     * Returns the set of supported attributes to be used for filtering in
      * {@link #applyStyle(TextPos, TextPos, StyleAttrs, boolean)},
      * {@link #replace(StyleResolver, TextPos, TextPos, StyledInput, boolean)}, and
      * {@link #replace(StyleResolver, TextPos, TextPos, String, boolean)}.
@@ -210,7 +219,9 @@ public abstract class StyledTextModel {
      *
      * @return the supported attributes, or null
      */
-    protected Set<StyleAttribute<?>> getSupportedAttributes() { return null; }
+    protected Set<StyleAttribute<?>> getSupportedAttributes() {
+        return null;
+    }
 
     /** stores the handler and its priority */
     private static record FHPriority(DataFormatHandler handler, int priority) implements Comparable<FHPriority>{
@@ -240,7 +251,11 @@ public abstract class StyledTextModel {
     private final ReadOnlyBooleanWrapper redoable = new ReadOnlyBooleanWrapper(this, "redoable", false);
     private UndoableChange undo = head;
 
-    /** The constructor. */
+    /**
+     * Constructs the instance of the model.
+     * <p>
+     * This constructor registers data handlers for RTF, HTML (export only), and plain text.
+     */
     public StyledTextModel() {
         registerDataFormatHandler(new RtfFormatHandler(), true, false, 1000);
         registerDataFormatHandler(new HtmlExportFormatHandler(), true, false, 100);
@@ -249,6 +264,7 @@ public abstract class StyledTextModel {
 
     /**
      * Adds a {@link Listener} to this model.
+     *
      * @param listener a non-null listener
      */
     public void addChangeListener(StyledTextModel.Listener listener) {
@@ -257,7 +273,9 @@ public abstract class StyledTextModel {
 
     /**
      * Removes a {@link Listener} from this model.
+     * <p>
      * This method does nothing if this listener has never been added.
+     *
      * @param listener a non-null listener
      */
     public void removeChangeListener(StyledTextModel.Listener listener) {
@@ -328,6 +346,7 @@ public abstract class StyledTextModel {
     /**
      * Returns a {@link DataFormatHandler} instance corresponding to the given {@link DataFormat}.
      * This method will return {@code null} if the data format is not supported.
+     *
      * @param format data format
      * @param forExport for export (true) or for input (false)
      * @return DataFormatHandler or null
@@ -340,6 +359,7 @@ public abstract class StyledTextModel {
 
     /**
      * Fires a text modification event for the given range.
+     *
      * @param start start of the affected range
      * @param end end of the affected range
      * @param charsTop number of characters added before any added paragraphs
@@ -357,8 +377,9 @@ public abstract class StyledTextModel {
     /**
      * Fires a style change event for the given range.
      * This event indicates that only the styling has changed, with no  changes to any text positions.
-     * @param start start position
-     * @param end end position, must be greater than the start position
+     *
+     * @param start the start position
+     * @param end the end position, must be greater than the start position
      */
     protected void fireStyleChangeEvent(TextPos start, TextPos end) {
         ContentChange ch = ContentChange.ofStyleChange(start, end);
@@ -378,6 +399,7 @@ public abstract class StyledTextModel {
 
     /**
      * Returns the length of text in a paragraph at the specified index.
+     *
      * @param ix the paragraph index in the model
      * @return the length
      */
@@ -389,6 +411,7 @@ public abstract class StyledTextModel {
     /**
      * Exports the stream of {@code StyledSegment}s in the given range to the specified
      * {@code StyledOutput}.
+     *
      * @param start start of the range
      * @param end end of the range
      * @param out {@link StyledOutput} to receive the stream
@@ -467,7 +490,7 @@ public abstract class StyledTextModel {
     }
 
     /**
-     * Returns a {@link Marker} at the specified position.
+     * Returns the {@link Marker} at the specified position.
      * The actual text position tracked by the marker will always be within the document boundaries.
      *
      * @param pos text position
@@ -479,7 +502,8 @@ public abstract class StyledTextModel {
     }
 
     /**
-     * Returns a text position guaranteed to be within the document and paragraph limits.
+     * Returns the text position guaranteed to be within the document and paragraph limits.
+     *
      * @param p text position, cannot be null
      * @return text position
      */
@@ -508,7 +532,8 @@ public abstract class StyledTextModel {
     }
 
     /**
-     * Returns a TextPos corresponding to the end of the document.
+     * Returns the text position corresponding to the end of the document.
+     *
      * @return the text position
      */
     public TextPos getDocumentEnd() {
@@ -522,6 +547,7 @@ public abstract class StyledTextModel {
 
     /**
      * Returns a TextPos corresponding to the end of paragraph at the given index.
+     *
      * @param index the paragraph index
      * @return the text position
      */
@@ -561,14 +587,12 @@ public abstract class StyledTextModel {
     }
 
     /**
-     * <p>
      * Replaces the given range with the provided styled text input.
      * When inserting plain text, the style is taken from the preceding text segment, or, if the text is being
      * inserted in the beginning of the document, the style is taken from the following text segment.
-     * </p>
      * <p>
-     * After the model applies the requested changes, an event is sent to all the registered ChangeListeners.
-     * </p>
+     * After the model applies the requested changes, an event is sent to all the registered listeners.
+     *
      * @param resolver the StyleResolver to use, can be null
      * @param start the start text position
      * @param end the end text position
@@ -725,6 +749,7 @@ public abstract class StyledTextModel {
 
     /**
      * Removes unsupported attributes per {@link #getSupportedAttributes()}.
+     *
      * @param attrs the input attributes
      * @return the attributes that exclude unsupported ones
      */
@@ -753,6 +778,7 @@ public abstract class StyledTextModel {
 
     /**
      * Adds an {@code UndoableChange} to the undo/redo buffer.
+     *
      * @param ch the change
      * @param end the caret position after the change
      */
@@ -774,6 +800,7 @@ public abstract class StyledTextModel {
      * Undoes the recent change, if possible, returning an array comprising [start, end] text positions
      * prior to the change.
      * Returns null when the undo operation is not possible.
+     *
      * @param resolver the StyleResolver to use
      * @return the [start, end] text positions prior to the change
      */
@@ -907,6 +934,7 @@ public abstract class StyledTextModel {
 
     /**
      * Writes the model content to the output stream using the specified {@code DataFormat}.
+     *
      * @param r the style resolver
      * @param f the data format
      * @param out the output stream
