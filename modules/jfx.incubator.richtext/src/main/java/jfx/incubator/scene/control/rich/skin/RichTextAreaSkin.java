@@ -217,8 +217,10 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     }
 
     /**
-     * Creates the vertical scroll bar.  The subclasses may override this method to provide a custom
-     * ScrollBar implementation.
+     * Creates the vertical scroll bar.
+     * <p>
+     * The subclasses may override this method to provide custom ScrollBar implementation.
+     *
      * @return the vertical scroll bar
      */
     protected ScrollBar createVScrollBar() {
@@ -226,8 +228,10 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     }
 
     /**
-     * Creates the horizontal scroll bar.  The subclasses may override this method to provide a custom
-     * ScrollBar implementation.
+     * Creates the horizontal scroll bar.
+     * <p>
+     * The subclasses may override this method to provide custom ScrollBar implementation.
+     *
      * @return the horizontal scroll bar
      */
     protected ScrollBar createHScrollBar() {
@@ -249,6 +253,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     /**
      * Copies the text in the specified format when selection exists and when the export in this format
      * is supported by the model, and the skin must be installed; otherwise, this method is a no-op.
+     *
      * @param format data format
      */
     public void copy(DataFormat format) {
@@ -259,6 +264,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
      * Pastes the clipboard content at the caret, or, if selection exists, replacing the selected text.
      * The format must be supported by the model, and the skin must be installed,
      * otherwise this method has no effect.
+     *
      * @param format data format
      */
     public void paste(DataFormat format) {

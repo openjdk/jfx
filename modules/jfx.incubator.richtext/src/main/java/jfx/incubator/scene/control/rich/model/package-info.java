@@ -26,7 +26,7 @@
 /**
  * Provides common models for {@code RichTextArea} and support classes.
  * <p>
- * <BR><b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
+ * <b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
  * Will be removed in a future release.</b>
  *
  * @since 999 TODO

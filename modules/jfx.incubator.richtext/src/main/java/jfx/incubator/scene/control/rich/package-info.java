@@ -24,7 +24,8 @@
  */
 
 /**
-<p>Provides classes that represent {@code RichTextArea} Control.</p>
+ * Provides classes that represent {@code RichTextArea} Control.
+ *
 <h2>Examples</h2>
 <p>Creating a RichTextArea with a simple editable rich text model:</p>
 <pre>
@@ -33,8 +34,7 @@
 </code>
 </pre>
 <p>Creating a read-only RichTextArea with rich text content:</p>
-<pre>
-<code>
+<pre><code>
     SimpleReadOnlyStyledModel m = new SimpleReadOnlyStyledModel();
     // add text segment using CSS style name (requires a style sheet)
     m.addSegment("RichTextArea ", null, "HEADER");
@@ -46,8 +46,9 @@
     RichTextArea t = new RichTextArea(m);
 </code>
 </pre>
- * <BR><b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
+ * <b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
  * Will be removed in a future release.</b>
+ *
  * @since 999 TODO
  */
 package jfx.incubator.scene.control.rich;
