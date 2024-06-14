@@ -100,6 +100,8 @@ import jfx.incubator.scene.control.rich.TextPos;
 public class RichTextFormatHandler extends DataFormatHandler {
     static { initAccessor(); }
 
+    private static final boolean DEBUG = false;
+
     /** The data format identifier */
     public static final DataFormat DATA_FORMAT = new DataFormat("application/x-com-oracle-editable-rich-text");
 
@@ -249,7 +251,9 @@ public class RichTextFormatHandler extends DataFormatHandler {
     }
 
     private static void log(Object x) {
-        System.err.println(x); // TODO use platform logger or remove
+        if (DEBUG) {
+            System.err.println(x);
+        }
     }
 
     /** exporter */
@@ -265,7 +269,6 @@ public class RichTextFormatHandler extends DataFormatHandler {
 
         @Override
         public void append(StyledSegment seg) throws IOException {
-            //System.out.println(seg); // FIX
             switch (seg.getType()) {
             case INLINE_NODE:
                 // TODO
@@ -426,7 +429,6 @@ public class RichTextFormatHandler extends DataFormatHandler {
         private int line = 1;
 
         public RichStyledInput(String text) {
-            // TODO buffered input and line-by-line
             this.text = text;
         }
 

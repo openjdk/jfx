@@ -111,7 +111,7 @@ public class JsonContentWithAsyncUpdate implements PlainTextModel.Content {
     }
 
     @Override
-    public void removeRegion(TextPos start, TextPos end) {
+    public void removeRange(TextPos start, TextPos end) {
         throw new UnsupportedOperationException();
     }
 

@@ -30,9 +30,9 @@ import javafx.scene.layout.Region;
 import jfx.incubator.scene.control.rich.TextPos;
 
 /**
- * A base class for view-only {@link StyledTextModel}s.
+ * The base class for view-only {@link StyledTextModel}s.
  * <p>
- * Models extending this class will not be editable by the user.
+ * Models extending this class will not be user editable.
  */
 public abstract class StyledTextModelViewOnlyBase extends StyledTextModel {
     /** The constructor. */

@@ -116,7 +116,8 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
 
     /**
      * Appends a text segment styled with the specified style attributes.
-     * @param text the text to append, must not contain \n
+     * @param text the text to append, must not contain control symbols other than
+     * TAB.
      *
      * @param a the style attributes
      * @return this model instance
@@ -185,9 +186,13 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
     }
 
     /**
-     * Adds a paragraph containing a {@code Region}.  The model might request the Region multiple times,
-     * it is a responsibility of the generator to either cache the instance, or serve a new instance each time,
-     * making sure to bind all the relevant properties if serving a {@code Control}.
+     * Adds a paragraph containing a {@code Region}.
+     * <p>
+     * The supplied generator must not cache or keep reference to the created {@code Region},
+     * but the created {@code Region} can keep a reference to the model or a property therein.
+     * <p>
+     * For example, a bidirectional binding between an inline control and some property in the model
+     * would synchronize the model with all the views that use it.
      *
      * @param generator the supplier of the paragraph content
      * @return this model instance
@@ -201,7 +206,14 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
     }
 
     /**
-     * Adds an inline Node to the laste paragraph.
+     * Adds an inline Node to the last paragraph.
+     * <p>
+     * The supplied generator must not cache or keep reference to the created {@code Node},
+     * but the created {@code Node} can keep a reference to the model or a property therein.
+     * <p>
+     * For example, a bidirectional binding between an inline control and some property in the model
+     * would synchronize the model with all the views that use it.
+     *
      * @param generator the supplier of the embedded Node
      * @return this model instance
      */
@@ -222,6 +234,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
 
     /**
      * Adds {@code n} new paragraphs (as if inserting a newline symbol into the text {@code n} times).
+     *
      * @param count the number of paragraphs to append
      * @return this model instance
      */
@@ -251,7 +264,8 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
     }
 
     /**
-     * Sets the last paragraph attributes.
+     * Sets the last paragraph's attributes.
+     *
      * @param a the paragraph attributes
      * @return this model instance
      */
@@ -261,6 +275,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
         return this;
     }
 
+    /** Encapsulates a paragraph */
     static class Paragraph {
         private ArrayList<StyledSegment> segments;
         private ArrayList<Consumer<TextCell>> highlights;

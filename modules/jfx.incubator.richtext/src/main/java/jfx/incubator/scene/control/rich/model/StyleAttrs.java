@@ -40,63 +40,63 @@ import com.sun.jfx.incubator.scene.control.rich.CssStyles;
 import com.sun.jfx.incubator.scene.control.rich.util.RichUtils;
 
 /**
- * An immutable object containing style attributes.
+ * This immutable object contains {@link StyleAttribute}s.
  */
-// TODO name: StyleSet? (though it's not a set)
+// TODO name: StyleSet? (though it's not a set)  SAttributes? (too long)
 public final class StyleAttrs {
 
-    /** Paragraph background color attribute */
+    /** Paragraph background color attribute. */
     public static final StyleAttribute<Color> BACKGROUND = new StyleAttribute<>("BACKGROUND", Color.class, true);
 
-    /** Bullet point paragraph attribute */
+    /** Bullet point paragraph attribute. */
     public static final StyleAttribute<String> BULLET = new StyleAttribute<>("BULLET", String.class, true);
 
-    /** Bold typeface text attribute */
+    /** Bold typeface text attribute. */
     public static final StyleAttribute<Boolean> BOLD = new StyleAttribute<>("BOLD", Boolean.class, false);
 
     /** First line indent paragraph attribute, in pixels. */
     public static final StyleAttribute<Double> FIRST_LINE_INDENT = new StyleAttribute<>("FIRST_LINE_INDENT", Double.class, true);
 
-    /** Font family text attribute */
+    /** Font family text attribute. */
     public static final StyleAttribute<String> FONT_FAMILY = new StyleAttribute<>("FONT_FAMILY", String.class, false);
 
     /** Font size text attribute, in pixels. */
     public static final StyleAttribute<Double> FONT_SIZE = new StyleAttribute<>("FONT_SIZE", Double.class, false);
 
-    /** Italic type face text attribute */
+    /** Italic type face text attribute. */
     public static final StyleAttribute<Boolean> ITALIC = new StyleAttribute<>("ITALIC", Boolean.class, false);
 
-    /** Line spacing paragraph attribute */
+    /** Line spacing paragraph attribute. */
     public static final StyleAttribute<Double> LINE_SPACING = new StyleAttribute<>("LINE_SPACING", Double.class, true);
 
     /** Paragraph direction attribute.  This attribute is considered only when text wrapping is enabled. */
     public static final StyleAttribute<ParagraphDirection> PARAGRAPH_DIRECTION = new StyleAttribute<>("PARAGRAPH_DIRECTION", ParagraphDirection.class, true);
 
-    /** Space above (top padding) paragraph attribute */
+    /** Space above (top padding) paragraph attribute. */
     public static final StyleAttribute<Double> SPACE_ABOVE = new StyleAttribute<>("SPACE_ABOVE", Double.class, true);
 
-    /** Space below (bottom padding) paragraph attribute */
+    /** Space below (bottom padding) paragraph attribute. */
     public static final StyleAttribute<Double> SPACE_BELOW = new StyleAttribute<>("SPACE_BELOW", Double.class, true);
 
-    /** Space to the left (left padding) paragraph attribute */
+    /** Space to the left (left padding) paragraph attribute. */
     public static final StyleAttribute<Double> SPACE_LEFT = new StyleAttribute<>("SPACE_LEFT", Double.class, true);
 
-    /** Space to the right (right padding) paragraph attribute */
+    /** Space to the right (right padding) paragraph attribute. */
     public static final StyleAttribute<Double> SPACE_RIGHT = new StyleAttribute<>("SPACE_RIGHT", Double.class, true);
 
-    /** Strike-through text attribute */
+    /** Strike-through text attribute. */
     public static final StyleAttribute<Boolean> STRIKE_THROUGH = new StyleAttribute<>("STRIKE_THROUGH", Boolean.class, false);
 
-    /** Text alignment paragraph attribute */
+    /** Text alignment paragraph attribute. */
     public static final StyleAttribute<TextAlignment> TEXT_ALIGNMENT = new StyleAttribute<>("TEXT_ALIGNMENT", TextAlignment.class, true);
 
-    /** Text color attrbute */
+    /** Text color attrbute. */
     public static final StyleAttribute<Color> TEXT_COLOR = new StyleAttribute<>("TEXT_COLOR", Color.class, false);
 
-    /** Underline text attribute */
+    /** Underline text attribute. */
     public static final StyleAttribute<Boolean> UNDERLINE = new StyleAttribute<>("UNDERLINE", Boolean.class, false);
 
-    /** Empty attribute set */
+    /** Empty attribute set. */
     public static final StyleAttrs EMPTY = new StyleAttrs(Collections.emptyMap());
 
     private final HashMap<StyleAttribute<?>,Object> attributes;
@@ -107,7 +107,8 @@ public final class StyleAttrs {
     }
 
     /**
-     * Convenience method creates an instance with a single attribute.
+     * Convenience method creates the instance with a single attribute.
+     *
      * @param <V> the attribute value type
      * @param attribute the attribute
      * @param value the attribute value
@@ -120,6 +121,7 @@ public final class StyleAttrs {
     /**
      * This convenience method creates an instance from an inline style and a number of
      * CSS style names.
+     *
      * @param style the inline style, will not be applied when null
      * @param names style names
      * @return the new instance
@@ -159,6 +161,7 @@ public final class StyleAttrs {
 
     /**
      * Returns the attribute value, or null if no such attribute is present.
+     *
      * @param <V> the attribute value type
      * @param a attribute
      * @return attribute value or null
@@ -168,7 +171,7 @@ public final class StyleAttrs {
     }
 
     /**
-     * Returns the set of attributes.
+     * Returns the set of {@link StyleAttribute}s.
      * @return attribute set
      */
     public Set<StyleAttribute<?>> getAttributes() {
@@ -177,6 +180,7 @@ public final class StyleAttrs {
 
     /**
      * Returns true if the attribute is present; false otherwise.
+     *
      * @param a the attribute
      * @return true if the attribute is present
      */
@@ -187,6 +191,7 @@ public final class StyleAttrs {
     /**
      * Creates a new StyleAttrs instance by first copying attributes from this instance,
      * then adding (and/or overwriting) the attributes from the specified instance.
+     *
      * @param attrs the attributes to combine
      * @return the new instance combining the attributes
      */
@@ -422,8 +427,8 @@ public final class StyleAttrs {
     }
 
     /**
-     * Creates an instance of StyleAttrs which contains character attributes found in the Text node.
-     * The following attributes might be set:
+     * Creates an instance of StyleAttrs which contains character attributes found in the specified {@link Text} node.
+     * The following attributes will be set:
      * <ul>
      * <li>{@link #BOLD}
      * <li>{@link #FONT_FAMILY}
@@ -433,6 +438,7 @@ public final class StyleAttrs {
      * <li>{@link #TEXT_COLOR}
      * <li>{@link #UNDERLINE}
      * </ul>
+     *
      * @param textNode the text node
      * @return the StyleAttrs instance
      */

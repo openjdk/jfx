@@ -31,7 +31,7 @@ import com.sun.jfx.incubator.scene.control.rich.StringStyledInput;
 
 /**
  * This interface represents a source of styled text segments for the purposes of
- * pasting, importing, or loading from a file.
+ * pasting, importing, or loading from an input stream.
  */
 public interface StyledInput extends Closeable {
     /**
@@ -54,6 +54,7 @@ public interface StyledInput extends Closeable {
 
     /**
      * Creates a plain text styled input with the specified style.
+     *
      * @param text the source text
      * @param attrs the source style attributes
      * @return the StyledInput instance
@@ -63,7 +64,8 @@ public interface StyledInput extends Closeable {
     }
 
     /**
-     * Creates a plain text styled input with no set style.
+     * Creates a plain text styled input with {@link StyleAttrs#EMPTY}.
+     *
      * @param text the source text
      * @return the StyledInput instance
      */

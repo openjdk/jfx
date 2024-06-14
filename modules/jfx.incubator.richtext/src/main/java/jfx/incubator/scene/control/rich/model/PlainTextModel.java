@@ -89,7 +89,7 @@ public class PlainTextModel extends StyledTextModel {
          * @param start the start of the region to be removed
          * @param end the end of the region to be removed, expected to be greater than the start position
          */
-        public void removeRegion(TextPos start, TextPos end);
+        public void removeRange(TextPos start, TextPos end);
 
         /**
          * Determines whether this content supports modification by the user.
@@ -168,7 +168,7 @@ public class PlainTextModel extends StyledTextModel {
 
     @Override
     protected void removeRange(TextPos start, TextPos end) {
-        content.removeRegion(start, end);
+        content.removeRange(start, end);
     }
 
     @Override
@@ -248,7 +248,7 @@ public class PlainTextModel extends StyledTextModel {
         }
 
         @Override
-        public void removeRegion(TextPos start, TextPos end) {
+        public void removeRange(TextPos start, TextPos end) {
             int ix = start.index();
             String text = getText(ix);
             String newText;
