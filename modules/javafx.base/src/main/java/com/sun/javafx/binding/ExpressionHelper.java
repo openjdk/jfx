@@ -54,7 +54,7 @@ import java.util.Arrays;
  */
 public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------------------------------------------
     // Static methods
 
     public static <T> ExpressionHelper<T> addListener(ExpressionHelper<T> helper, ObservableValue<T> observable, InvalidationListener listener) {
@@ -92,7 +92,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------------------------------------------
     // Common implementations
 
     protected final ObservableValue<T> observable;
@@ -109,7 +109,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
     protected abstract void fireValueChangedEvent();
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------------------------------------------
     // Implementations
 
     private static class SingleInvalidation<T> extends ExpressionHelper<T> {

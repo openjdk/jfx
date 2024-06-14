@@ -349,7 +349,7 @@ public class Locator {
             if (firstSlash != -1 && uriString.charAt(firstSlash + 1) != '/') {
                 // Only one '/' after the ':'.
                 if (protocol.equals("file")) {
-                    // Map file:/somepath to file:///somepath
+                    // Map "file:/somepath" to "file:///somepath"
                     uriString = uriString.replaceFirst("/", "///");
                 } else if (protocol.equals("http") || protocol.equals("https")) {
                     // Map http:/somepath to http://somepath

@@ -31,6 +31,7 @@ import javafx.scene.input.KeyCode;
 import javafx.stage.Stage;
 import jfx.incubator.scene.control.input.FunctionTag;
 import jfx.incubator.scene.control.input.KeyBinding;
+import jfx.incubator.scene.control.rich.CodeArea;
 import jfx.incubator.scene.control.rich.LineNumberDecorator;
 import jfx.incubator.scene.control.rich.RichTextArea;
 import jfx.incubator.scene.control.rich.TextPos;
@@ -66,11 +67,19 @@ public class UsageExamples {
         return textArea;
     }
 
-    void usageExample() {
+    void richTextAreaExample() {
         RichTextArea textArea = new RichTextArea();
         // insert two paragraphs "A" and "B"
         StyleAttrs bold = StyleAttrs.builder().setBold(true).build();
         textArea.appendText("A\nB", bold);
+    }
+
+    private static CodeArea codeAreaExample() {
+        CodeArea codeArea = new CodeArea();
+        codeArea.setWrapText(true);
+        codeArea.setLineNumbersEnabled(true);
+        codeArea.setText("Lorem\nIpsum");
+        return codeArea;
     }
 
     private static final FunctionTag PRINT_TO_CONSOLE = new FunctionTag();
@@ -79,7 +88,7 @@ public class UsageExamples {
         RichTextArea richTextArea = new RichTextArea();
 
         // creates a new key binding mapped to an external function
-        richTextArea.getInputMap().register(KeyBinding.shortcut(KeyCode.W), (c) -> {
+        richTextArea.getInputMap().register(KeyBinding.shortcut(KeyCode.W), () -> {
             System.out.println("console!");
         });
 
@@ -92,7 +101,7 @@ public class UsageExamples {
         richTextArea.getInputMap().registerKey(KeyBinding.shortcut(KeyCode.W), RichTextArea.Tags.PASTE_PLAIN_TEXT);
 
         // redefine a function
-        richTextArea.getInputMap().registerFunction(RichTextArea.Tags.PASTE_PLAIN_TEXT, (c) -> { });
+        richTextArea.getInputMap().registerFunction(RichTextArea.Tags.PASTE_PLAIN_TEXT, () -> { });
         richTextArea.pastePlainText(); // becomes a no-op
         // revert back to the default behavior
         richTextArea.getInputMap().restoreDefaultFunction(RichTextArea.Tags.PASTE_PLAIN_TEXT);
@@ -100,16 +109,23 @@ public class UsageExamples {
         // sets a side decorator
         richTextArea.setLeftDecorator(new LineNumberDecorator());
 
-        richTextArea.getInputMap().registerFunction(PRINT_TO_CONSOLE, (c) -> {
+        richTextArea.getInputMap().registerFunction(PRINT_TO_CONSOLE, () -> {
             // new functionality
             System.out.println("PRINT_TO_CONSOLE executed");
         });
 
         // change the functionality of an existing key binding
-        richTextArea.getInputMap().registerFunction(RichTextArea.Tags.MOVE_WORD_NEXT, (c) -> {
+        richTextArea.getInputMap().registerFunction(RichTextArea.Tags.MOVE_WORD_NEXT_START, () -> {
             // refers to custom logic
             TextPos p = getCustomNextWordPosition(richTextArea);
             richTextArea.select(p);
+        });
+    }
+
+    void testGeneric() {
+        MyControl c = new MyControl();
+        c.getInputMap().registerFunction(MyControl.MY_TAG, () -> {
+            c.newFunctionImpl();
         });
     }
 
@@ -128,20 +144,38 @@ public class UsageExamples {
             getInputMap().registerKey(KeyBinding.shortcut(KeyCode.W), MY_TAG);
         }
 
-        private void newFunctionImpl(MyControl c) {
+        public void newFunctionImpl() {
             // custom functionality
         }
     }
 
     public static class App extends Application {
         public App() {
+            System.out.println("test app: F1 appends at the end, F2 inserts at the start, F3 clears selection.");
         }
 
         @Override
         public void start(Stage stage) throws Exception {
-            RichTextArea textArea = appendStyledText();
-            stage.setScene(new Scene(textArea));
-            //stage.setTitle("RichTextArea");
+            RichTextArea t = true ? appendStyledText() : codeAreaExample();
+            stage.setScene(new Scene(t));
+            t.selectionProperty().addListener((s,p,c) -> {
+                System.out.println("selection: " + c);
+            });
+            t.anchorPositionProperty().addListener((s,p,c) -> {
+                System.out.println("anchor: " + c);
+            });
+            t.caretPositionProperty().addListener((s,p,c) -> {
+                System.out.println("caret: " + c);
+            });
+            t.getInputMap().register(KeyBinding.of(KeyCode.F1), () -> {
+                t.insertText(TextPos.ZERO, "F1", StyleAttrs.EMPTY);
+            });
+            t.getInputMap().register(KeyBinding.of(KeyCode.F2), () -> {
+                t.insertText(TextPos.ZERO, "\n", StyleAttrs.EMPTY);
+            });
+            t.getInputMap().register(KeyBinding.of(KeyCode.F3), () -> {
+                t.clearSelection();
+            });
             stage.show();
         }
     }

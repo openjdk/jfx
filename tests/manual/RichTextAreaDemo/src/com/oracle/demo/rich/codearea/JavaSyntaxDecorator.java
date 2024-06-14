@@ -28,9 +28,9 @@ package com.oracle.demo.rich.codearea;
 import java.util.ArrayList;
 import java.util.List;
 import javafx.scene.paint.Color;
-import jfx.incubator.scene.control.rich.CodeTextModel;
 import jfx.incubator.scene.control.rich.SyntaxDecorator;
 import jfx.incubator.scene.control.rich.TextPos;
+import jfx.incubator.scene.control.rich.model.CodeTextModel;
 import jfx.incubator.scene.control.rich.model.RichParagraph;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
 

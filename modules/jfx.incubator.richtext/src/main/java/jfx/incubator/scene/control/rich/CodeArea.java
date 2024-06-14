@@ -40,10 +40,13 @@ import javafx.css.StyleableIntegerProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.converter.SizeConverter;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.Labeled;
 import javafx.scene.text.Font;
+import com.sun.jfx.incubator.scene.control.rich.Params;
 import com.sun.jfx.incubator.scene.control.rich.util.RichUtils;
+import jfx.incubator.scene.control.rich.model.CodeTextModel;
 import jfx.incubator.scene.control.rich.model.StyledTextModel;
 import jfx.incubator.scene.control.rich.skin.CodeAreaSkin;
 import jfx.incubator.scene.control.rich.skin.RichTextAreaSkin;
@@ -53,9 +56,20 @@ import jfx.incubator.scene.control.rich.skin.RichTextAreaSkin;
  * <p>
  * Unlike its base class {@link RichTextArea}, the {@code CodeArea} requires a special kind of model to be used,
  * a {@link CodeTextModel}.
+ * <h2>Creating a CodeArea</h2>
+ * <p>
+ * The following example creates an editable control with the default {@link CodeArea}:
+ * <pre>{@code    CodeArea codeArea = new CodeArea();
+ *   codeArea.setWrapText(true);
+ *   codeArea.setLineNumbersEnabled(true);
+ *   codeArea.setText("Lorem\nIpsum");
+ * }</pre>
+ * Which results in the following visual representation:
+ * <p>
+ * <img src="doc-files/CodeArea.png" alt="Image of the CodeArea control">
+ * </p>
  */
 public class CodeArea extends RichTextArea {
-    private static final int DEFAULT_TAB_SIZE = 8;
     private BooleanProperty lineNumbers;
     private StyleableIntegerProperty tabSize;
     private StyleableObjectProperty<Font> font;
@@ -63,11 +77,13 @@ public class CodeArea extends RichTextArea {
     private String fontStyle;
 
     /**
-     * The constructor.
+     * This constructor creates the CodeArea with the specified {@link CodeTextModel}.
      * @param model the instance of {@link CodeTextModel} to use
      */
     public CodeArea(CodeTextModel model) {
         super(model);
+
+        getStyleClass().add("code-area");
 
         modelProperty().addListener((s, prev, newValue) -> {
             // TODO is there a better way?
@@ -79,14 +95,10 @@ public class CodeArea extends RichTextArea {
                 }
             }
         });
-
-        // set default font
-        Font f = Font.getDefault();
-        setFont(Font.font("monospace", f.getSize()));
     }
 
     /**
-     * This constructor creates a CodeArea with the default {@link CodeTextModel}.
+     * This constructor creates the CodeArea with the default {@link CodeTextModel}.
      */
     public CodeArea() {
         this(new CodeTextModel());
@@ -98,7 +110,8 @@ public class CodeArea extends RichTextArea {
     }
 
     /**
-     * This convenience method sets the decorator property in the model.
+     * This convenience method sets the decorator property in the {@link CodeTextModel}.
+     * Nothing is done if the model is null.
      *
      * @param d the syntax decorator
      * @see CodeTextModel#setDecorator(SyntaxDecorator)
@@ -111,9 +124,9 @@ public class CodeArea extends RichTextArea {
     }
 
     /**
-     * This convenience method returns the syntax decorator value in the model,
-     * or null if the said model is null.
-     * @return the syntax devocrator value, or null
+     * This convenience method returns the syntax decorator value in the {@link CodeTextModel},
+     * or null if the model is null.
+     * @return the syntax decorator value, or null
      */
     public final SyntaxDecorator getSyntaxDecorator() {
         CodeTextModel m = codeModel();
@@ -123,6 +136,7 @@ public class CodeArea extends RichTextArea {
     /**
      * Determines whether to show line numbers.
      * @return the line numbers enabled property
+     * @defaultValue false
      */
     // TODO should there be a way to customize the line number component? createLineNumberDecorator() ?
     // TODO should this be a styleable property?
@@ -170,7 +184,7 @@ public class CodeArea extends RichTextArea {
      */
     public final IntegerProperty tabSizeProperty() {
         if (tabSize == null) {
-            tabSize = new StyleableIntegerProperty(DEFAULT_TAB_SIZE) {
+            tabSize = new StyleableIntegerProperty(Params.DEFAULT_TAB_SIZE) {
                 @Override
                 public Object getBean() {
                     return CodeArea.this;
@@ -191,7 +205,7 @@ public class CodeArea extends RichTextArea {
     }
 
     public final int getTabSize() {
-        return tabSize == null ? DEFAULT_TAB_SIZE : tabSize.get();
+        return tabSize == null ? Params.DEFAULT_TAB_SIZE : tabSize.get();
     }
 
     public final void setTabSize(int spaces) {
@@ -199,13 +213,13 @@ public class CodeArea extends RichTextArea {
     }
 
     /**
-     * The default font to use for text in the {@code CodeArea}.
+     * The font to use for text in the {@code CodeArea}.
      * @return the font property
-     * @defaultValue the value supplied by {@link Font#getDefault()}
+     * @defaultValue the Monospaced font with size 12.0 px
      */
     public final ObjectProperty<Font> fontProperty() {
         if (font == null) {
-            font = new StyleableObjectProperty<Font>(Font.getDefault())
+            font = new StyleableObjectProperty<Font>(defaultFont())
             {
                 private boolean fontSetByCss;
 
@@ -259,7 +273,11 @@ public class CodeArea extends RichTextArea {
     }
 
     public final Font getFont() {
-        return font == null ? Font.getDefault() : font.getValue();
+        return font == null ? defaultFont() : font.getValue();
+    }
+
+    private static Font defaultFont() {
+        return Font.font("Monospaced", 12.0);
     }
 
     /**
@@ -298,6 +316,16 @@ public class CodeArea extends RichTextArea {
         return lineSpacing == null ? 0 : lineSpacing.get();
     }
 
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+        case FONT:
+            return getFont();
+        default:
+            return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
+
     /** styleable properties */
     private static class StyleableProperties {
         private static final CssMetaData<CodeArea,Number> LINE_SPACING =
@@ -313,7 +341,7 @@ public class CodeArea extends RichTextArea {
         };
 
         private static final FontCssMetaData<CodeArea> FONT =
-            new FontCssMetaData<>("-fx-font", Font.getDefault())
+            new FontCssMetaData<>("-fx-font", defaultFont())
         {
             @Override
             public boolean isSettable(CodeArea n) {
@@ -327,7 +355,7 @@ public class CodeArea extends RichTextArea {
         };
 
         private static final CssMetaData<CodeArea, Number> TAB_SIZE =
-            new CssMetaData<>("-fx-tab-size", SizeConverter.getInstance(), DEFAULT_TAB_SIZE)
+            new CssMetaData<>("-fx-tab-size", SizeConverter.getInstance(), Params.DEFAULT_TAB_SIZE)
         {
             @Override
             public boolean isSettable(CodeArea n) {
@@ -386,7 +414,7 @@ public class CodeArea extends RichTextArea {
      * @param text the text string
      */
     public final void setText(String text) {
-        TextPos end = getEndTextPos();
+        TextPos end = getDocumentEnd();
         getModel().replace(null, TextPos.ZERO, end, text, true);
     }
 

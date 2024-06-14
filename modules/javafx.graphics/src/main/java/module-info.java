@@ -139,6 +139,7 @@ module javafx.graphics {
     exports com.sun.javafx.util to
         javafx.controls,
         javafx.fxml,
+        jfx.incubator.input,
         jfx.incubator.richtext,
         javafx.media,
         javafx.swing,

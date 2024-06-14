@@ -37,7 +37,7 @@ import javafx.util.Duration;
 /**
  * This {@code Transition} creates a rotation animation that spans its
  * {@code duration}. This is done by updating the {@code rotate} variable of the
- * {@code node} at regular interval. The angle value is specified in degrees.
+ * {@code node} at regular intervals. The angle value is specified in degrees.
  * <p>
  * It starts from the {@code fromAngle} if provided else uses the {@code node}'s
  * {@code rotate} value.

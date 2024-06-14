@@ -110,9 +110,9 @@ public final class Renderer implements MarlinRenderer, MarlinConst {
     public static final double QUAD_DEC_BND
         = 8.0d * QUAD_DEC_ERR_SUBPIX;
 
-//////////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------------
 //  SCAN LINE
-//////////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------------
     // crossings ie subpixel edge x coordinates
     private int[] crossings;
     // auxiliary storage for crossings (merge sort)
@@ -139,9 +139,9 @@ public final class Renderer implements MarlinRenderer, MarlinConst {
     // aux_edgePtrs ref (dirty)
     private final ArrayCacheInt.Reference aux_edgePtrs_ref;
 
-//////////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------------
 //  EDGE LIST
-//////////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------------
     private int edgeMinY = Integer.MAX_VALUE;
     private int edgeMaxY = Integer.MIN_VALUE;
     private double edgeMinX = Double.POSITIVE_INFINITY;
@@ -473,7 +473,7 @@ public final class Renderer implements MarlinRenderer, MarlinConst {
     }
 
 // END EDGE LIST
-//////////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------------
 
     // Bounds of the drawing region, at subpixel precision.
     private int boundsMinX, boundsMinY, boundsMaxX, boundsMaxY;

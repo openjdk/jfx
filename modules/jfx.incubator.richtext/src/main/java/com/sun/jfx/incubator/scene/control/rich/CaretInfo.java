@@ -23,7 +23,7 @@
  * questions.
  */
 
-package jfx.incubator.scene.control.rich;
+package com.sun.jfx.incubator.scene.control.rich;
 
 import java.util.Objects;
 import javafx.scene.shape.LineTo;

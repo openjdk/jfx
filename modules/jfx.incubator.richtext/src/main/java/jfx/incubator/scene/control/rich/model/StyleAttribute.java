@@ -35,7 +35,8 @@ public final class StyleAttribute<T> {
     private final boolean isParagraph;
 
     /**
-     * Constructs a style attribute.
+     * Constructs the style attribute.
+     *
      * @param name the attribute name
      * @param type the attribute type
      * @param isParagraph specifies a paragraph attribute (true), or a character attribute (false)
@@ -48,6 +49,7 @@ public final class StyleAttribute<T> {
 
     /**
      * Attribute name.
+     *
      * @return attribute name
      */
     public String getName() {
@@ -57,6 +59,7 @@ public final class StyleAttribute<T> {
     /**
      * Returns the class corresponding to the attribute value.
      * The value must be Serializable.
+     *
      * @return attribute type
      */
     public final Class<T> getType() {
@@ -65,8 +68,6 @@ public final class StyleAttribute<T> {
 
     /**
      * Returns true for a paragraph attribute, false for a character attribute.
-     * <p>
-     * Paragraph attributes are treated differently when copying/pasting.
      *
      * @return true for a paragraph attribute, false for a character attribute
      */
@@ -78,22 +79,4 @@ public final class StyleAttribute<T> {
     public String toString() {
         return name;
     }
-
-//    @Override
-//    public int hashCode() {
-//        int h = StyleAttribute.class.hashCode();
-//        h = 31 * h + name.hashCode();
-//        h = 31 * h + type.hashCode();
-//        return h;
-//    }
-//
-//    @Override
-//    public boolean equals(Object x) {
-//        if (x == this) {
-//            return true;
-//        } else if (x instanceof StyleAttribute a) {
-//            return (type == a.type) && (name.equals(a.name));
-//        }
-//        return false;
-//    }
 }

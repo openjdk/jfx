@@ -31,12 +31,14 @@ import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.Skin;
 import javafx.scene.control.SkinBase;
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
+import javafx.scene.text.Text;
 import com.sun.jfx.incubator.scene.control.rich.Params;
 import com.sun.jfx.incubator.scene.control.rich.RichTextAreaBehavior;
 import com.sun.jfx.incubator.scene.control.rich.RichTextAreaSkinHelper;
@@ -46,6 +48,7 @@ import jfx.incubator.scene.control.rich.CellContext;
 import jfx.incubator.scene.control.rich.RichTextArea;
 import jfx.incubator.scene.control.rich.StyleHandlerRegistry;
 import jfx.incubator.scene.control.rich.StyleResolver;
+import jfx.incubator.scene.control.rich.TextPos;
 import jfx.incubator.scene.control.rich.model.StyleAttribute;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
 import jfx.incubator.scene.control.rich.model.StyledTextModel;
@@ -118,7 +121,6 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                     if (hscroll.isVisible()) {
                         h += hscroll.prefHeight(width);
                     }
-                    h += (Params.LAYOUT_FOCUS_BORDER * 2);
                     Insets m = getInsets();
                     return h + m.getTop() + m.getBottom();
                 }
@@ -192,7 +194,6 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
 
     @Override
     public void install() {
-        behavior.populateSkinInputMap();
         getSkinnable().getInputMap().setSkinInputMap(behavior.getSkinInputMap());
     }
 
@@ -216,8 +217,10 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     }
 
     /**
-     * Creates the vertical scroll bar.  The subclasses may override this method to provide a custom
-     * ScrollBar implementation.
+     * Creates the vertical scroll bar.
+     * <p>
+     * The subclasses may override this method to provide custom ScrollBar implementation.
+     *
      * @return the vertical scroll bar
      */
     protected ScrollBar createVScrollBar() {
@@ -225,8 +228,10 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     }
 
     /**
-     * Creates the horizontal scroll bar.  The subclasses may override this method to provide a custom
-     * ScrollBar implementation.
+     * Creates the horizontal scroll bar.
+     * <p>
+     * The subclasses may override this method to provide custom ScrollBar implementation.
+     *
      * @return the horizontal scroll bar
      */
     protected ScrollBar createHScrollBar() {
@@ -248,6 +253,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     /**
      * Copies the text in the specified format when selection exists and when the export in this format
      * is supported by the model, and the skin must be installed; otherwise, this method is a no-op.
+     *
      * @param format data format
      */
     public void copy(DataFormat format) {
@@ -258,6 +264,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
      * Pastes the clipboard content at the caret, or, if selection exists, replacing the selected text.
      * The format must be supported by the model, and the skin must be installed,
      * otherwise this method has no effect.
+     *
      * @param format data format
      */
     public void paste(DataFormat format) {
@@ -320,5 +327,28 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     @Override
     protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return Params.MIN_WIDTH;
+    }
+
+    @Override
+    protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+        // TextAreaSkin delegates to its Text
+//        case LINE_FOR_OFFSET:
+        case LINE_START:
+            return 0;
+        case LINE_END:
+            TextPos p = getSkinnable().getCaretPosition();
+            if (p != null) {
+                String s = getSkinnable().getPlainText(p.index());
+                return s.length();
+            }
+            return null;
+//        case BOUNDS_FOR_RANGE:
+//        case OFFSET_AT_POINT:
+//            Text text = getTextNode();
+//            return text.queryAccessibleAttribute(attribute, parameters);
+        default:
+            return super.queryAccessibleAttribute(attribute, parameters);
+        }
     }
 }

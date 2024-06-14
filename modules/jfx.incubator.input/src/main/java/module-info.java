@@ -38,4 +38,7 @@ module jfx.incubator.input {
     requires transitive javafx.controls;
 
     exports jfx.incubator.scene.control.input;
+
+    // becomes unnecessary once InputMap is moved to Control moved to Control JDK-8314968
+    exports com.sun.jfx.incubator.scene.control.input to jfx.incubator.richtext;
 }

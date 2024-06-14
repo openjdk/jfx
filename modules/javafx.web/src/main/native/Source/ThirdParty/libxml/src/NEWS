@@ -1,5 +1,17 @@
 NEWS file for libxml2
 
+v2.12.7: May 13 2024
+
+### Security
+
+- [CVE-2024-34459] Fix buffer overread with `xmllint --htmlout`
+
+### Regressions
+
+- xmllint: Fix --pedantic option
+- save: Handle invalid parent pointers in xhtmlNodeDumpOutput
+
+
 v2.12.6: Mar 15 2024
 
 ### Regressions

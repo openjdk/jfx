@@ -38,7 +38,7 @@ import java.util.Map;
 */
 public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------------------------------------------
     // Static methods
 
     public static <K, V> MapExpressionHelper<K, V> addListener(MapExpressionHelper<K, V> helper, ObservableMapValue<K, V> observable, InvalidationListener listener) {
@@ -96,7 +96,7 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------------------------------------------
     // Common implementations
 
     protected final ObservableMapValue<K, V> observable;
@@ -117,7 +117,7 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
     protected abstract void fireValueChangedEvent();
     protected abstract void fireValueChangedEvent(MapChangeListener.Change<? extends K, ? extends V> change);
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------------------------------------------
     // Implementations
 
     private static class SingleInvalidation<K, V> extends MapExpressionHelper<K, V> {

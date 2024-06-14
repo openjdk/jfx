@@ -126,8 +126,8 @@ public class UtilsTest {
         //assertEquals("\\", r);
 
         //Error case - no length
-        ///*String*/ s = "hi\\u";
-        ///*String*/ r = Utils.convertUnicode(s);
+        //*String*/ s = "hi\\u";
+        //*String*/ r = Utils.convertUnicode(s);
         //assertEquals("hi\\u", r);
     }
 

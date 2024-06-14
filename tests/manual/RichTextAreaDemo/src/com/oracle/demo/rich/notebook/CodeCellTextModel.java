@@ -26,8 +26,8 @@
 package com.oracle.demo.rich.notebook;
 
 import java.io.IOException;
-import jfx.incubator.scene.control.rich.CodeTextModel;
 import jfx.incubator.scene.control.rich.TextPos;
+import jfx.incubator.scene.control.rich.model.CodeTextModel;
 import jfx.incubator.scene.control.rich.model.ContentChange;
 import jfx.incubator.scene.control.rich.model.StyledOutput;
 

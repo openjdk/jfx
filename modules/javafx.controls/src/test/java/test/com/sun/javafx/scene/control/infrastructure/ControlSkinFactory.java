@@ -251,7 +251,7 @@ public class ControlSkinFactory {
             SplitPane.class
             );
 
-///---------------- misc
+//---------------- misc
 
     /**
      * Tries to let the weakRef be gc'ed.

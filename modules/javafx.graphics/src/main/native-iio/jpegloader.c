@@ -657,8 +657,6 @@ static void imageio_set_stream(JNIEnv *env,
 static void imageio_dispose(j_common_ptr info) {
 
     if (info != NULL) {
-        free(info->err);
-        info->err = NULL;
         if (info->is_decompressor) {
             j_decompress_ptr dinfo = (j_decompress_ptr) info;
             free(dinfo->src);
@@ -669,6 +667,8 @@ static void imageio_dispose(j_common_ptr info) {
             cinfo->dest = NULL;
         }
         jpeg_destroy(info);
+        free(info->err);
+        info->err = NULL;
         free(info);
     }
 }

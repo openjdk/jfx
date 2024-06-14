@@ -150,7 +150,7 @@ public final class JobSettings {
         this.printer = printer;
         this.printerCaps = printer.getPrinterAttributes();
 
-        ////////////////////////////////////////////////
+        //----------------------------------------------
 
         /*
          * The algorithm for how we update is tricky in order to get
@@ -168,7 +168,7 @@ public final class JobSettings {
          * that supports it, it gets resurrected.
          */
 
-        //////////// COPIES ////////////
+        //---------- COPIES ------------
 
         if (defaultCopies) {
             if (getCopies() != printerCaps.getDefaultCopies()) {
@@ -190,7 +190,7 @@ public final class JobSettings {
         }
 
 
-        ////////////////////////////////////////////////
+        //----------------------------------------------
 
         PrintSides currSides = getPrintSides();
         PrintSides defSides = printerCaps.getDefaultPrintSides();
@@ -221,7 +221,7 @@ public final class JobSettings {
             }
         }
 
-        ////////////////////////////////////////////////
+        //----------------------------------------------
 
         Collation currColl = getCollation();
         Collation defColl = printerCaps.getDefaultCollation();
@@ -248,7 +248,7 @@ public final class JobSettings {
         }
 
 
-        ////////////////////////////////////////////////
+        //----------------------------------------------
 
         PrintColor currColor = getPrintColor();
         PrintColor defColor = printerCaps.getDefaultPrintColor();
@@ -274,7 +274,7 @@ public final class JobSettings {
             }
         }
 
-        ////////////////////////////////////////////////
+        //----------------------------------------------
 
         PrintQuality currQuality = getPrintQuality();
         PrintQuality defQuality = printerCaps.getDefaultPrintQuality();
@@ -300,7 +300,7 @@ public final class JobSettings {
             }
         }
 
-        ////////////////////////////////////////////////
+        //----------------------------------------------
 
        PrintResolution currRes = getPrintResolution();
        PrintResolution defResolution = printerCaps.getDefaultPrintResolution();
@@ -327,7 +327,7 @@ public final class JobSettings {
             }
         }
 
-       ////////////////////////////////////////////////
+       //----------------------------------------------
 
 
        PaperSource currSource = getPaperSource();
@@ -354,7 +354,7 @@ public final class JobSettings {
             }
         }
 
-       ///////////////////////////////////////////////////
+       //-------------------------------------------------
 
        // Paper size is an important component of PageLayout
        // and the selected paper input tray may affect the paper sizes
@@ -400,7 +400,7 @@ public final class JobSettings {
         }
     }
 
-    ///////////////////////  START JOBNAME /////////////////////
+    //---------------------  START JOBNAME ---------------------
 
     private static final String DEFAULT_JOBNAME = "JavaFX Print Job";
     private SimpleStringProperty jobName;
@@ -454,9 +454,9 @@ public final class JobSettings {
     public final void setJobName(String name) {
         jobNameProperty().set(name);
     }
-    ///////////////////////  END JOBNAME /////////////////////
+    //---------------------  END JOBNAME ---------------------
 
-    ///////////////////////  START OUTPUTFILE /////////////////////
+    //---------------------  START OUTPUTFILE ---------------------
 
     private SimpleStringProperty outputFile;
 
@@ -545,9 +545,9 @@ public final class JobSettings {
     public final void setOutputFile(String filePath) {
         outputFileProperty().set(filePath);
     }
-    ///////////////////////  END OUTPUTFILE /////////////////////
+    //---------------------  END OUTPUTFILE ---------------------
 
-    //////////////////////// START COPIES ////////////////////////
+    //---------------------- START COPIES ------------------------
 
     private IntegerProperty copies;
 
@@ -610,10 +610,10 @@ public final class JobSettings {
         copiesProperty().set(nCopies);
     }
 
-    //////////////////////// END COPIES ////////////////////////
+    //---------------------- END COPIES ------------------------
 
 
-    ///////////////////////  START PAGE RANGES /////////////////////
+    //---------------------  START PAGE RANGES ---------------------
     private ObjectProperty<PageRange[]> pageRanges = null;
 
     /**
@@ -725,10 +725,10 @@ public final class JobSettings {
         pageRangesProperty().set(pages);
     }
 
-    ///////////////////////  END PAGE RANGES /////////////////////
+    //---------------------  END PAGE RANGES ---------------------
 
 
-    ///////////////////////  START SIDES  /////////////////////
+    //---------------------  START SIDES  ---------------------
 
     private ObjectProperty<PrintSides> sides = null;
 
@@ -793,10 +793,10 @@ public final class JobSettings {
         }
         printSidesProperty().set(sides);
     }
-    ///////////////////////  END SIDES  /////////////////////
+    //---------------------  END SIDES  ---------------------
 
 
-    ///////////////////////  START COLLATION /////////////////////
+    //---------------------  START COLLATION ---------------------
 
     private ObjectProperty<Collation> collation = null;
 
@@ -876,9 +876,9 @@ public final class JobSettings {
         collationProperty().set(collation);
     }
 
-    ///////////////////////  END COLLATION /////////////////////
+    //---------------------  END COLLATION ---------------------
 
-    ///////////////////////  START COLOUR /////////////////////
+    //---------------------  START COLOUR ---------------------
 
     private ObjectProperty<PrintColor> color = null;
 
@@ -946,9 +946,9 @@ public final class JobSettings {
         printColorProperty().set(color);
     }
 
-    ///////////////////////  END COLOUR /////////////////////
+    //---------------------  END COLOUR ---------------------
 
-    ///////////////////////  START QUALITY /////////////////////
+    //---------------------  START QUALITY ---------------------
 
     private ObjectProperty<PrintQuality> quality = null;
 
@@ -1024,9 +1024,9 @@ public final class JobSettings {
         printQualityProperty().set(quality);
     }
 
-    ///////////////////////  END QUALITY /////////////////////
+    //---------------------  END QUALITY ---------------------
 
-    ///////////////////////  START RESOLUTION /////////////////////
+    //---------------------  START RESOLUTION ---------------------
 
 
     private ObjectProperty<PrintResolution> resolution = null;
@@ -1106,9 +1106,9 @@ public final class JobSettings {
         printResolutionProperty().set(resolution);
     }
 
-    ///////////////////////  END RESOLUTION /////////////////////
+    //---------------------  END RESOLUTION ---------------------
 
-    //////////////// START PAPERSOURCE /////////////////
+    //-------------- START PAPERSOURCE -----------------
 
     private ObjectProperty<PaperSource> paperSource = null;
 
@@ -1175,9 +1175,9 @@ public final class JobSettings {
         paperSourceProperty().set(value);
     }
 
-    //////////////// END PAPERSOURCE /////////////////
+    //-------------- END PAPERSOURCE -----------------
 
-    //////////////// START PAGELAYOUT /////////////////
+    //-------------- START PAGELAYOUT -----------------
 
     /*
      * Default page needs to originate from the printer, be the
@@ -1244,7 +1244,7 @@ public final class JobSettings {
         pageLayoutProperty().set(pageLayout);
     }
 
-    //////////////// END PAGELAYOUT /////////////////
+    //-------------- END PAGELAYOUT -----------------
 
     @Override
     public String toString() {

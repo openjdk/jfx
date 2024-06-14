@@ -31,13 +31,13 @@ import javafx.scene.Node;
 import javafx.scene.control.Label;
 
 /**
- * Side decorator that shows model 1-based line (paragraph) numbers.
+ * Side decorator that shows model 1-based paragraph numbers.
  */
 public class LineNumberDecorator implements SideDecorator {
     private final DecimalFormat format;
 
     /**
-     * Creates an instance using Western-style group separator.
+     * Creates an instance using Western-style group separator (comma).
      */
     public LineNumberDecorator() {
         this("#,##0");
@@ -65,7 +65,7 @@ public class LineNumberDecorator implements SideDecorator {
         }
 
         String s = format.format(ix + 1);
-        if(forMeasurement) {
+        if (forMeasurement) {
             // account for some variability with proportional font
             s += " ";
         }
@@ -78,7 +78,7 @@ public class LineNumberDecorator implements SideDecorator {
         t.setMinHeight(1);
         t.setPrefHeight(1);
         // numbers should be right aligned
-        t.setAlignment(Pos.TOP_RIGHT);
+        t.setAlignment(Pos.CENTER_RIGHT);
         t.setOpacity(1.0);
         return t;
     }

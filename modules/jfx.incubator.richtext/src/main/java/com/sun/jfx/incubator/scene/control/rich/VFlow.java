@@ -62,7 +62,6 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.util.Duration;
-import jfx.incubator.scene.control.rich.CaretInfo;
 import jfx.incubator.scene.control.rich.RichTextArea;
 import jfx.incubator.scene.control.rich.SideDecorator;
 import jfx.incubator.scene.control.rich.StyleResolver;
@@ -625,9 +624,6 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
 
     public final void updateRateRestartBlink() {
         Duration t2 = control.getCaretBlinkPeriod();
-        if (t2 == null) {
-            t2 = Duration.millis(Params.DEFAULT_CARET_BLINK_PERIOD);
-        }
         Duration t1 = t2.divide(2.0);
 
         caretAnimation.stop();

@@ -31,7 +31,7 @@ import com.sun.jfx.incubator.scene.control.rich.StringBuilderStyledOutput;
 
 /**
  * Class represents a consumer of styled text segments for the purposes of
- * exporting, copying, or saving to a file.
+ * exporting, copying, or saving to an output stream.
  */
 public interface StyledOutput extends Closeable {
     /**

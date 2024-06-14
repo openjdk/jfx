@@ -565,7 +565,7 @@ public class Utils {
         // --- after all the moving around, we do one last check / rearrange.
         // Unlike the check above, this time we are just fully committed to keeping
         // the item on screen at all costs, regardless of whether or not that results
-        /// in overlapping the parent object.
+        // in overlapping the parent object.
         if ((finalScreenX + width) > screenBounds.getMaxX()) {
             finalScreenX -= (finalScreenX + width - screenBounds.getMaxX());
         }

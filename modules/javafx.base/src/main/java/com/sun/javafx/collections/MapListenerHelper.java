@@ -34,7 +34,7 @@ import java.util.Arrays;
  */
 public abstract class MapListenerHelper<K, V> extends ExpressionHelperBase {
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------------------------------------------
     // Static methods
 
     public static <K, V> MapListenerHelper<K, V> addListener(MapListenerHelper<K, V> helper, InvalidationListener listener) {
@@ -75,7 +75,7 @@ public abstract class MapListenerHelper<K, V> extends ExpressionHelperBase {
         return helper != null;
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------------------------------------------
     // Common implementations
 
     protected abstract MapListenerHelper<K, V> addListener(InvalidationListener listener);
@@ -86,7 +86,7 @@ public abstract class MapListenerHelper<K, V> extends ExpressionHelperBase {
 
     protected abstract void fireValueChangedEvent(MapChangeListener.Change<? extends K, ? extends V> change);
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------------------------------------------
     // Implementations
 
     private static class SingleInvalidation<K, V> extends MapListenerHelper<K, V> {

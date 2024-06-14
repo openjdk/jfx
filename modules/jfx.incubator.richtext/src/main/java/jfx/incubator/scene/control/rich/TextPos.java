@@ -26,13 +26,14 @@
 package jfx.incubator.scene.control.rich;
 
 /**
- * An immutable text position.
+ * An immutable position within the text.
  * <p>
  * Because it is immutable, it cannot track locations in the document which is being edited.
  * For that, use {@link Marker}.
  */
 public final class TextPos implements Comparable<TextPos> {
     /** A text position at the start of the document. */
+    // TODO should it be called START?
     public static final TextPos ZERO = new TextPos(0, 0, 0, true);
     private final int index;
     private final int offset;

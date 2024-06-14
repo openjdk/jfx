@@ -112,7 +112,8 @@ public abstract class ContentChange {
     }
 
     /**
-     * Creates a change which represents an edit.
+     * Creates the content change event which represents an edit.
+     *
      * @param start the start position
      * @param end the end position
      * @param charsAddedTop the number of characters appended to the paragraph containing the start position
@@ -140,7 +141,8 @@ public abstract class ContentChange {
     }
 
     /**
-     * Creates a change which represents a styling update.
+     * Creates the content change event which represents a styling update.
+     *
      * @param start the start position
      * @param end the end position
      * @return the change instance

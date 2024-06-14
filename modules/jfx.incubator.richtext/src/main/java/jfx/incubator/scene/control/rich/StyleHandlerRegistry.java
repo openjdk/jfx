@@ -31,6 +31,9 @@ import jfx.incubator.scene.control.rich.model.StyleAttribute;
 /**
  * Style Handler Registry keeps track of the {@code StyleAttributeHandler} for supported
  * {@code StyleAttribute}s.  The registry, once created using its {@code Builder}, is immutable.
+ *
+ * This class is needed when extending the RichTextArea with support for other style attributes.
+ * Applications should not normally use this interface.
  */
 public class StyleHandlerRegistry {
     private final HashMap<StyleAttribute,StyleAttributeHandler> parStyleHandlerMap;

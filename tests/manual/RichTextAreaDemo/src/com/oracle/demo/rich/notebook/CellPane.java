@@ -50,9 +50,9 @@ import com.oracle.demo.rich.codearea.JavaSyntaxDecorator;
 import com.oracle.demo.rich.notebook.data.CellInfo;
 import com.oracle.demo.rich.util.FX;
 import jfx.incubator.scene.control.rich.CodeArea;
-import jfx.incubator.scene.control.rich.CodeTextModel;
 import jfx.incubator.scene.control.rich.RichTextArea;
 import jfx.incubator.scene.control.rich.TextPos;
+import jfx.incubator.scene.control.rich.model.CodeTextModel;
 import jfx.incubator.scene.control.rich.model.SegmentBuffer;
 
 /**
@@ -276,7 +276,7 @@ public class CellPane extends GridPane {
             insert(ed, TextPos.ZERO, p, cell1.getSourceEditor(), TextPos.ZERO);
 
             CellPane cell2 = new CellPane(new CellInfo(t));
-            insert(ed, p, ed.getEndTextPos(), cell2.getSourceEditor(), TextPos.ZERO);
+            insert(ed, p, ed.getDocumentEnd(), cell2.getSourceEditor(), TextPos.ZERO);
 
             return List.of(cell1, cell2);
         } catch (IOException e) {

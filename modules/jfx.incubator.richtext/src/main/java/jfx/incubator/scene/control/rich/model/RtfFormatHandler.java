@@ -40,6 +40,7 @@ import jfx.incubator.scene.control.rich.TextPos;
 /**
  * This {@link DataFormatHandler} provides export/import support for RTF format.
  */
+// TODO import is not yet working...
 public class RtfFormatHandler extends DataFormatHandler {
     /** The constructor */
     public RtfFormatHandler() {

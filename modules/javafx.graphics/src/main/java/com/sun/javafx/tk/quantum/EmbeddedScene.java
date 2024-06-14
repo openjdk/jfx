@@ -32,6 +32,7 @@ import javafx.event.EventType;
 import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodRequests;
 import javafx.scene.input.InputMethodTextRun;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.image.PixelFormat;
 import java.nio.IntBuffer;
@@ -368,10 +369,13 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
 
                     String str = new String(ch);
                     String text = str; // TODO: this must be a text like "HOME", "F1", or "A"
+                    KeyCode code = KeyCodeMap.valueOf(key);
+                    if (code == null) {
+                        code = KeyCode.UNDEFINED;
+                    }
                     javafx.scene.input.KeyEvent keyEvent = new javafx.scene.input.KeyEvent(
                             AbstractEvents.keyIDToFXEventType(type),
-                            str, text,
-                            KeyCodeMap.valueOf(key),
+                            str, text, code,
                             shiftDown, controlDown, altDown, metaDown);
                     sceneListener.keyEvent(keyEvent);
                 }

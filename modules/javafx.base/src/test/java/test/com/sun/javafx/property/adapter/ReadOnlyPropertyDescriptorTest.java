@@ -38,7 +38,7 @@ package test.com.sun.javafx.property.adapter;//package com.sun.javafx.property.a
 //import static org.junit.Assert.assertEquals;
 //import static org.junit.Assert.fail;
 //
-///**
+//**
 //*/
 //public class PropertyDescriptorTest {
 //
@@ -156,25 +156,25 @@ package test.com.sun.javafx.property.adapter;//package com.sun.javafx.property.a
 //        helperPOJOBeanWithNonStandardNames.getDescriptor();
 //    }
 //
-////    @Test
-////    public void testSetup_WithNonStandardAccessors() {
-////        JavaBeanPropertyBuilder builder = null;
-////        try {
-////            final Method getter = POJOBeanWithNonStandardNames.class.getMethod("readX");
-////            final Method setter = POJOBeanWithNonStandardNames.class.getMethod("writeX", Object.class);
-////            builder = new JavaBeanPropertyBuilder("x", POJOBeanWithNonStandardNames.class, getter, setter);
-////        } catch (NoSuchMethodException e) {
-////            fail("Error in test code. Should not happen.");
-////        }
-////        final Object initialValue = new Object();
-////        final Object secondValue = new Object();
-////        final POJOBeanWithNonStandardNames bean = new POJOBeanWithNonStandardNames(initialValue);
-////        final ObjectProperty<Object> property = builder.createObjectProperty(bean);
-////        assertEquals(initialValue, property.get());
-////        property.set(secondValue);
-////        assertEquals(secondValue, bean.readX());
-////        assertEquals(secondValue, property.get());
-////    }
+//--    @Test
+//--    public void testSetup_WithNonStandardAccessors() {
+//--        JavaBeanPropertyBuilder builder = null;
+//--        try {
+//--            final Method getter = POJOBeanWithNonStandardNames.class.getMethod("readX");
+//--            final Method setter = POJOBeanWithNonStandardNames.class.getMethod("writeX", Object.class);
+//--            builder = new JavaBeanPropertyBuilder("x", POJOBeanWithNonStandardNames.class, getter, setter);
+//--        } catch (NoSuchMethodException e) {
+//--            fail("Error in test code. Should not happen.");
+//--        }
+//--        final Object initialValue = new Object();
+//--        final Object secondValue = new Object();
+//--        final POJOBeanWithNonStandardNames bean = new POJOBeanWithNonStandardNames(initialValue);
+//--        final ObjectProperty<Object> property = builder.createObjectProperty(bean);
+//--        assertEquals(initialValue, property.get());
+//--        property.set(secondValue);
+//--        assertEquals(secondValue, bean.readX());
+//--        assertEquals(secondValue, property.get());
+//--    }
 //
 //    @Test(expected = NullPointerException.class)
 //    public void testSetup_WithNonStandardAccessors_WithNameIsNull() throws NoSuchMethodException {
@@ -240,392 +240,392 @@ package test.com.sun.javafx.property.adapter;//package com.sun.javafx.property.a
 //        helperPOJOBeanWithNonStandardNames.getDescriptor();
 //    }
 //
-////    @Test(expected = IllegalArgumentException.class)
-////    public void testCreatePropertyWithWrongType_Boolean() {
-////        final POJOBean bean = new POJOBean(new Object());
-////        JavaBeanPropertyBuilder builder = null;
-////        try {
-////            builder = new JavaBeanPropertyBuilder("x", POJOBean.class);
-////        } catch (NoSuchMethodException e) {
-////            e.printStackTrace();
-////            fail();
-////        }
-////        builder.createBooleanProperty(bean);
-////    }
-////
-////    @Test
-////    public void testDisposal_GeneralAddRemove() {
-////        JavaBeanPropertyBuilder builder = null;
-////        try {
-////            builder = new JavaBeanPropertyBuilder("x", BeanWithGeneralAddRemove.class);
-////        } catch (NoSuchMethodException e) {
-////            e.printStackTrace();
-////            fail();
-////        }
-////        final Object value0 = new Object();
-////        final Object value1 = new Object();
-////        final BeanWithGeneralAddRemove bean = new BeanWithGeneralAddRemove(value0);
-////        JavaBeanObjectProperty<Object> property = builder.createObjectProperty(bean);
-////
-////        // initial state
-////        assertEquals(value0, property.get());
-////        assertTrue(bean.hasChangeListeners());
-////        assertTrue(bean.hasVetoListeners());
-////
-////        // dispose
-////        property.dispose();
-////        try {
-////            bean.setX(value1);
-////        } catch (PropertyVetoException e) {
-////            e.printStackTrace();
-////            fail();
-////        }
-////        assertFalse(bean.hasChangeListeners());
-////        assertFalse(bean.hasVetoListeners());
-////    }
-////
-////    @Test
-////    public void testDisposal_ParameterizedAddRemove() {
-////        JavaBeanPropertyBuilder builder = null;
-////        try {
-////            builder = new JavaBeanPropertyBuilder("x", BeanWithParameterizedAddRemove.class);
-////        } catch (NoSuchMethodException e) {
-////            e.printStackTrace();
-////            fail();
-////        }
-////        final Object value0 = new Object();
-////        final Object value1 = new Object();
-////        final BeanWithParameterizedAddRemove bean = new BeanWithParameterizedAddRemove(value0);
-////        JavaBeanObjectProperty<Object> property = builder.createObjectProperty(bean);
-////
-////        // initial state
-////        assertEquals(value0, property.get());
-////        assertTrue(bean.hasChangeListeners());
-////        assertTrue(bean.hasVetoListeners());
-////
-////        // dispose
-////        property.dispose();
-////        try {
-////            bean.setX(value1);
-////        } catch (PropertyVetoException e) {
-////            e.printStackTrace();
-////            fail();
-////        }
-////        assertFalse(bean.hasChangeListeners());
-////        assertFalse(bean.hasVetoListeners());
-////    }
-////
-////    @Test
-////    public void testDisposal_NamedAddRemove() {
-////        JavaBeanPropertyBuilder builder = null;
-////        try {
-////            builder = new JavaBeanPropertyBuilder("x", BeanWithNamedAddRemove.class);
-////        } catch (NoSuchMethodException e) {
-////            e.printStackTrace();
-////            fail();
-////        }
-////        final Object value0 = new Object();
-////        final Object value1 = new Object();
-////        final BeanWithNamedAddRemove bean = new BeanWithNamedAddRemove(value0);
-////        JavaBeanObjectProperty<Object> property = builder.createObjectProperty(bean);
-////
-////        // initial state
-////        assertEquals(value0, property.get());
-////        assertTrue(bean.hasChangeListeners());
-////        assertTrue(bean.hasVetoListeners());
-////
-////        // dispose
-////        property.dispose();
-////        try {
-////            bean.setX(value1);
-////        } catch (PropertyVetoException e) {
-////            e.printStackTrace();
-////            fail();
-////        }
-////        assertFalse(bean.hasChangeListeners());
-////        assertFalse(bean.hasVetoListeners());
-////    }
-////
-////    @Test
-////    public void testDisposal_Bound() {
-////        JavaBeanPropertyBuilder builder = null;
-////        try {
-////            builder = new JavaBeanPropertyBuilder("x", BeanWithGeneralAddRemove.class);
-////        } catch (NoSuchMethodException e) {
-////            e.printStackTrace();
-////            fail();
-////        }
-////        final Object value0 = new Object();
-////        final Object value1 = new Object();
-////        final BeanWithGeneralAddRemove bean = new BeanWithGeneralAddRemove(value0);
-////        JavaBeanObjectProperty<Object> property = builder.createObjectProperty(bean);
-////        final ObjectProperty<Object> observable = new SimpleObjectProperty<Object>(value1);
-////        property.bind(observable);
-////
-////        // initial state
-////        assertEquals(value1, property.get());
-////        assertTrue(bean.hasChangeListeners());
-////        assertTrue(bean.hasVetoListeners());
-////
-////        // dispose
-////        property.dispose();
-////        observable.set(value0);
-////        assertFalse(bean.hasChangeListeners());
-////        assertFalse(bean.hasVetoListeners());
-////    }
-////
-////    @Test
-////    public void testInvalidationListener_GeneralAddRemove() {
-////        JavaBeanPropertyBuilder builder = null;
-////        try {
-////            builder = new JavaBeanPropertyBuilder("x", BeanWithGeneralAddRemove.class);
-////        } catch (NoSuchMethodException e) {
-////            e.printStackTrace();
-////            fail();
-////        }
-////        final BooleanProperty fired = new SimpleBooleanProperty(false);
-////        final InvalidationListener listener = new InvalidationListener() {
-////            @Override
-////            public void invalidated(Observable observable) {
-////                fired.set(true);
-////            }
-////        };
-////        final Object value0 = new Object();
-////        final Object value1 = new Object();
-////        final BeanWithGeneralAddRemove bean = new BeanWithGeneralAddRemove(value0);
-////        final ObjectProperty<Object> property = builder.createObjectProperty(bean);
-////
-////        property.addListener(listener);
-////        fired.set(false);
-////        property.setValue(value1);
-////        assertTrue(fired.get());
-////
-////        property.removeListener(listener);
-////        fired.set(false);
-////        property.setValue(value0);
-////        assertFalse(fired.get());
-////    }
-////
-////    @Test
-////    public void testChangeListener_GeneralAddRemove() {
-////        JavaBeanPropertyBuilder builder = null;
-////        try {
-////            builder = new JavaBeanPropertyBuilder("x", BeanWithGeneralAddRemove.class);
-////        } catch (NoSuchMethodException e) {
-////            e.printStackTrace();
-////            fail();
-////        }
-////        final BooleanProperty fired = new SimpleBooleanProperty(false);
-////        final ChangeListener<Object> listener = new ChangeListener<Object>() {
-////            @Override
-////            public void changed(ObservableValue<?> observable, Object oldValue, Object newValue) {
-////                fired.set(true);
-////            }
-////        };
-////        final Object value0 = new Object();
-////        final Object value1 = new Object();
-////        final BeanWithGeneralAddRemove bean = new BeanWithGeneralAddRemove(value0);
-////        final ObjectProperty<Object> property = builder.createObjectProperty(bean);
-////
-////        property.addListener(listener);
-////        fired.set(false);
-////        property.setValue(value1);
-////        assertTrue(fired.get());
-////
-////        property.removeListener(listener);
-////        fired.set(false);
-////        property.setValue(value0);
-////        assertFalse(fired.get());
-////    }
-////
-////    @Test
-////    public void testInvalidationListener_ParameterizedAddRemove() {
-////        JavaBeanPropertyBuilder builder = null;
-////        try {
-////            builder = new JavaBeanPropertyBuilder("x", BeanWithParameterizedAddRemove.class);
-////        } catch (NoSuchMethodException e) {
-////            e.printStackTrace();
-////            fail();
-////        }
-////        final BooleanProperty fired = new SimpleBooleanProperty(false);
-////        final InvalidationListener listener = new InvalidationListener() {
-////            @Override
-////            public void invalidated(Observable observable) {
-////                fired.set(true);
-////            }
-////        };
-////        final Object value0 = new Object();
-////        final Object value1 = new Object();
-////        final BeanWithParameterizedAddRemove bean = new BeanWithParameterizedAddRemove(value0);
-////        final ObjectProperty<Object> property = builder.createObjectProperty(bean);
-////
-////        property.addListener(listener);
-////        fired.set(false);
-////        property.setValue(value1);
-////        assertTrue(fired.get());
-////
-////        property.removeListener(listener);
-////        fired.set(false);
-////        property.setValue(value0);
-////        assertFalse(fired.get());
-////    }
-////
-////    @Test
-////    public void testChangeListener_ParameterizedAddRemove() {
-////        JavaBeanPropertyBuilder builder = null;
-////        try {
-////            builder = new JavaBeanPropertyBuilder("x", BeanWithParameterizedAddRemove.class);
-////        } catch (NoSuchMethodException e) {
-////            e.printStackTrace();
-////            fail();
-////        }
-////        final BooleanProperty fired = new SimpleBooleanProperty(false);
-////        final ChangeListener<Object> listener = new ChangeListener<Object>() {
-////            @Override
-////            public void changed(ObservableValue<?> observable, Object oldValue, Object newValue) {
-////                fired.set(true);
-////            }
-////        };
-////        final Object value0 = new Object();
-////        final Object value1 = new Object();
-////        final BeanWithParameterizedAddRemove bean = new BeanWithParameterizedAddRemove(value0);
-////        final ObjectProperty<Object> property = builder.createObjectProperty(bean);
-////
-////        property.addListener(listener);
-////        fired.set(false);
-////        property.setValue(value1);
-////        assertTrue(fired.get());
-////
-////        property.removeListener(listener);
-////        fired.set(false);
-////        property.setValue(value0);
-////        assertFalse(fired.get());
-////    }
-////
-////    @Test
-////    public void testInvalidationListener_NamedAddRemove() {
-////        JavaBeanPropertyBuilder builder = null;
-////        try {
-////            builder = new JavaBeanPropertyBuilder("x", BeanWithNamedAddRemove.class);
-////        } catch (NoSuchMethodException e) {
-////            e.printStackTrace();
-////            fail();
-////        }
-////        final BooleanProperty fired = new SimpleBooleanProperty(false);
-////        final InvalidationListener listener = new InvalidationListener() {
-////            @Override
-////            public void invalidated(Observable observable) {
-////                fired.set(true);
-////            }
-////        };
-////        final Object value0 = new Object();
-////        final Object value1 = new Object();
-////        final BeanWithNamedAddRemove bean = new BeanWithNamedAddRemove(value0);
-////        final ObjectProperty<Object> property = builder.createObjectProperty(bean);
-////
-////        property.addListener(listener);
-////        fired.set(false);
-////        property.setValue(value1);
-////        assertTrue(fired.get());
-////
-////        property.removeListener(listener);
-////        fired.set(false);
-////        property.setValue(value0);
-////        assertFalse(fired.get());
-////    }
-////
-////    @Test
-////    public void testChangeListener_NamedAddRemove() {
-////        JavaBeanPropertyBuilder builder = null;
-////        try {
-////            builder = new JavaBeanPropertyBuilder("x", BeanWithNamedAddRemove.class);
-////        } catch (NoSuchMethodException e) {
-////            e.printStackTrace();
-////            fail();
-////        }
-////        final BooleanProperty fired = new SimpleBooleanProperty(false);
-////        final ChangeListener<Object> listener = new ChangeListener<Object>() {
-////            @Override
-////            public void changed(ObservableValue<?> observable, Object oldValue, Object newValue) {
-////                fired.set(true);
-////            }
-////        };
-////        final Object value0 = new Object();
-////        final Object value1 = new Object();
-////        final BeanWithNamedAddRemove bean = new BeanWithNamedAddRemove(value0);
-////        final ObjectProperty<Object> property = builder.createObjectProperty(bean);
-////
-////        property.addListener(listener);
-////        fired.set(false);
-////        property.setValue(value1);
-////        assertTrue(fired.get());
-////
-////        property.removeListener(listener);
-////        fired.set(false);
-////        property.setValue(value0);
-////        assertFalse(fired.get());
-////    }
-////
-////    @Test
-////    public void testSet_Bound() {
-////        JavaBeanPropertyBuilder builder = null;
-////        try {
-////            builder = new JavaBeanPropertyBuilder("x", BeanWithGeneralAddRemove.class);
-////        } catch (NoSuchMethodException e) {
-////            e.printStackTrace();
-////            fail();
-////        }
-////        final Object value0 = new Object();
-////        final Object value1 = new Object();
-////        final BeanWithGeneralAddRemove bean = new BeanWithGeneralAddRemove(value0);
-////        final ObjectProperty<Object> property = builder.createObjectProperty(bean);
-////        final Property<Object> observable = new SimpleObjectProperty<Object>();
-////        property.bind(observable);
-////
-////        try {
-////            bean.setX(value1);
-////            fail();
-////        } catch (PropertyVetoException e) {
-////            final PropertyChangeEvent event = e.getPropertyChangeEvent();
-////            assertEquals("x", event.getPropertyName());
-////            assertEquals(bean, event.getSource());
-////        }
-////    }
-////
-////    @Test
-////    public void testListenerWithOtherParameters() {
-////        JavaBeanPropertyBuilder builder = null;
-////        try {
-////            builder = new JavaBeanPropertyBuilder("x", BeanWithRawListenerSupport.class);
-////        } catch (NoSuchMethodException e) {
-////            e.printStackTrace();
-////            fail();
-////        }
-////        final Object value0 = new Object();
-////        final Object value1 = new Object();
-////        final BeanWithRawListenerSupport bean = new BeanWithRawListenerSupport(value0);
-////        final ObjectProperty<Object> property = builder.createObjectProperty(bean);
-////        final Property<Object> observable = new SimpleObjectProperty<Object>(value1);
-////        property.bind(observable);
-////
-////        try {
-////            bean.fireVetoableChange(new PropertyChangeEvent(new Object(), "x", value1, value0));
-////            assertEquals(value1, property.get());
-////            assertEquals(value1, bean.getX());
-////            bean.fireVetoableChange(new PropertyChangeEvent(bean, "y", value1, value0));
-////            assertEquals(value1, property.get());
-////            assertEquals(value1, bean.getX());
-////        } catch (PropertyVetoException e) {
-////            fail();
-////        }
-////
-////        bean.firePropertyChange(new PropertyChangeEvent(new Object(), "x", value1, value0));
-////        assertEquals(value1, property.get());
-////        assertEquals(value1, bean.getX());
-////        bean.firePropertyChange(new PropertyChangeEvent(bean, "y", value1, value0));
-////        assertEquals(value1, property.get());
-////        assertEquals(value1, bean.getX());
-////    }
+//--    @Test(expected = IllegalArgumentException.class)
+//--    public void testCreatePropertyWithWrongType_Boolean() {
+//--        final POJOBean bean = new POJOBean(new Object());
+//--        JavaBeanPropertyBuilder builder = null;
+//--        try {
+//--            builder = new JavaBeanPropertyBuilder("x", POJOBean.class);
+//--        } catch (NoSuchMethodException e) {
+//--            e.printStackTrace();
+//--            fail();
+//--        }
+//--        builder.createBooleanProperty(bean);
+//--    }
+//--
+//--    @Test
+//--    public void testDisposal_GeneralAddRemove() {
+//--        JavaBeanPropertyBuilder builder = null;
+//--        try {
+//--            builder = new JavaBeanPropertyBuilder("x", BeanWithGeneralAddRemove.class);
+//--        } catch (NoSuchMethodException e) {
+//--            e.printStackTrace();
+//--            fail();
+//--        }
+//--        final Object value0 = new Object();
+//--        final Object value1 = new Object();
+//--        final BeanWithGeneralAddRemove bean = new BeanWithGeneralAddRemove(value0);
+//--        JavaBeanObjectProperty<Object> property = builder.createObjectProperty(bean);
+//--
+//--        // initial state
+//--        assertEquals(value0, property.get());
+//--        assertTrue(bean.hasChangeListeners());
+//--        assertTrue(bean.hasVetoListeners());
+//--
+//--        // dispose
+//--        property.dispose();
+//--        try {
+//--            bean.setX(value1);
+//--        } catch (PropertyVetoException e) {
+//--            e.printStackTrace();
+//--            fail();
+//--        }
+//--        assertFalse(bean.hasChangeListeners());
+//--        assertFalse(bean.hasVetoListeners());
+//--    }
+//--
+//--    @Test
+//--    public void testDisposal_ParameterizedAddRemove() {
+//--        JavaBeanPropertyBuilder builder = null;
+//--        try {
+//--            builder = new JavaBeanPropertyBuilder("x", BeanWithParameterizedAddRemove.class);
+//--        } catch (NoSuchMethodException e) {
+//--            e.printStackTrace();
+//--            fail();
+//--        }
+//--        final Object value0 = new Object();
+//--        final Object value1 = new Object();
+//--        final BeanWithParameterizedAddRemove bean = new BeanWithParameterizedAddRemove(value0);
+//--        JavaBeanObjectProperty<Object> property = builder.createObjectProperty(bean);
+//--
+//--        // initial state
+//--        assertEquals(value0, property.get());
+//--        assertTrue(bean.hasChangeListeners());
+//--        assertTrue(bean.hasVetoListeners());
+//--
+//--        // dispose
+//--        property.dispose();
+//--        try {
+//--            bean.setX(value1);
+//--        } catch (PropertyVetoException e) {
+//--            e.printStackTrace();
+//--            fail();
+//--        }
+//--        assertFalse(bean.hasChangeListeners());
+//--        assertFalse(bean.hasVetoListeners());
+//--    }
+//--
+//--    @Test
+//--    public void testDisposal_NamedAddRemove() {
+//--        JavaBeanPropertyBuilder builder = null;
+//--        try {
+//--            builder = new JavaBeanPropertyBuilder("x", BeanWithNamedAddRemove.class);
+//--        } catch (NoSuchMethodException e) {
+//--            e.printStackTrace();
+//--            fail();
+//--        }
+//--        final Object value0 = new Object();
+//--        final Object value1 = new Object();
+//--        final BeanWithNamedAddRemove bean = new BeanWithNamedAddRemove(value0);
+//--        JavaBeanObjectProperty<Object> property = builder.createObjectProperty(bean);
+//--
+//--        // initial state
+//--        assertEquals(value0, property.get());
+//--        assertTrue(bean.hasChangeListeners());
+//--        assertTrue(bean.hasVetoListeners());
+//--
+//--        // dispose
+//--        property.dispose();
+//--        try {
+//--            bean.setX(value1);
+//--        } catch (PropertyVetoException e) {
+//--            e.printStackTrace();
+//--            fail();
+//--        }
+//--        assertFalse(bean.hasChangeListeners());
+//--        assertFalse(bean.hasVetoListeners());
+//--    }
+//--
+//--    @Test
+//--    public void testDisposal_Bound() {
+//--        JavaBeanPropertyBuilder builder = null;
+//--        try {
+//--            builder = new JavaBeanPropertyBuilder("x", BeanWithGeneralAddRemove.class);
+//--        } catch (NoSuchMethodException e) {
+//--            e.printStackTrace();
+//--            fail();
+//--        }
+//--        final Object value0 = new Object();
+//--        final Object value1 = new Object();
+//--        final BeanWithGeneralAddRemove bean = new BeanWithGeneralAddRemove(value0);
+//--        JavaBeanObjectProperty<Object> property = builder.createObjectProperty(bean);
+//--        final ObjectProperty<Object> observable = new SimpleObjectProperty<Object>(value1);
+//--        property.bind(observable);
+//--
+//--        // initial state
+//--        assertEquals(value1, property.get());
+//--        assertTrue(bean.hasChangeListeners());
+//--        assertTrue(bean.hasVetoListeners());
+//--
+//--        // dispose
+//--        property.dispose();
+//--        observable.set(value0);
+//--        assertFalse(bean.hasChangeListeners());
+//--        assertFalse(bean.hasVetoListeners());
+//--    }
+//--
+//--    @Test
+//--    public void testInvalidationListener_GeneralAddRemove() {
+//--        JavaBeanPropertyBuilder builder = null;
+//--        try {
+//--            builder = new JavaBeanPropertyBuilder("x", BeanWithGeneralAddRemove.class);
+//--        } catch (NoSuchMethodException e) {
+//--            e.printStackTrace();
+//--            fail();
+//--        }
+//--        final BooleanProperty fired = new SimpleBooleanProperty(false);
+//--        final InvalidationListener listener = new InvalidationListener() {
+//--            @Override
+//--            public void invalidated(Observable observable) {
+//--                fired.set(true);
+//--            }
+//--        };
+//--        final Object value0 = new Object();
+//--        final Object value1 = new Object();
+//--        final BeanWithGeneralAddRemove bean = new BeanWithGeneralAddRemove(value0);
+//--        final ObjectProperty<Object> property = builder.createObjectProperty(bean);
+//--
+//--        property.addListener(listener);
+//--        fired.set(false);
+//--        property.setValue(value1);
+//--        assertTrue(fired.get());
+//--
+//--        property.removeListener(listener);
+//--        fired.set(false);
+//--        property.setValue(value0);
+//--        assertFalse(fired.get());
+//--    }
+//--
+//--    @Test
+//--    public void testChangeListener_GeneralAddRemove() {
+//--        JavaBeanPropertyBuilder builder = null;
+//--        try {
+//--            builder = new JavaBeanPropertyBuilder("x", BeanWithGeneralAddRemove.class);
+//--        } catch (NoSuchMethodException e) {
+//--            e.printStackTrace();
+//--            fail();
+//--        }
+//--        final BooleanProperty fired = new SimpleBooleanProperty(false);
+//--        final ChangeListener<Object> listener = new ChangeListener<Object>() {
+//--            @Override
+//--            public void changed(ObservableValue<?> observable, Object oldValue, Object newValue) {
+//--                fired.set(true);
+//--            }
+//--        };
+//--        final Object value0 = new Object();
+//--        final Object value1 = new Object();
+//--        final BeanWithGeneralAddRemove bean = new BeanWithGeneralAddRemove(value0);
+//--        final ObjectProperty<Object> property = builder.createObjectProperty(bean);
+//--
+//--        property.addListener(listener);
+//--        fired.set(false);
+//--        property.setValue(value1);
+//--        assertTrue(fired.get());
+//--
+//--        property.removeListener(listener);
+//--        fired.set(false);
+//--        property.setValue(value0);
+//--        assertFalse(fired.get());
+//--    }
+//--
+//--    @Test
+//--    public void testInvalidationListener_ParameterizedAddRemove() {
+//--        JavaBeanPropertyBuilder builder = null;
+//--        try {
+//--            builder = new JavaBeanPropertyBuilder("x", BeanWithParameterizedAddRemove.class);
+//--        } catch (NoSuchMethodException e) {
+//--            e.printStackTrace();
+//--            fail();
+//--        }
+//--        final BooleanProperty fired = new SimpleBooleanProperty(false);
+//--        final InvalidationListener listener = new InvalidationListener() {
+//--            @Override
+//--            public void invalidated(Observable observable) {
+//--                fired.set(true);
+//--            }
+//--        };
+//--        final Object value0 = new Object();
+//--        final Object value1 = new Object();
+//--        final BeanWithParameterizedAddRemove bean = new BeanWithParameterizedAddRemove(value0);
+//--        final ObjectProperty<Object> property = builder.createObjectProperty(bean);
+//--
+//--        property.addListener(listener);
+//--        fired.set(false);
+//--        property.setValue(value1);
+//--        assertTrue(fired.get());
+//--
+//--        property.removeListener(listener);
+//--        fired.set(false);
+//--        property.setValue(value0);
+//--        assertFalse(fired.get());
+//--    }
+//--
+//--    @Test
+//--    public void testChangeListener_ParameterizedAddRemove() {
+//--        JavaBeanPropertyBuilder builder = null;
+//--        try {
+//--            builder = new JavaBeanPropertyBuilder("x", BeanWithParameterizedAddRemove.class);
+//--        } catch (NoSuchMethodException e) {
+//--            e.printStackTrace();
+//--            fail();
+//--        }
+//--        final BooleanProperty fired = new SimpleBooleanProperty(false);
+//--        final ChangeListener<Object> listener = new ChangeListener<Object>() {
+//--            @Override
+//--            public void changed(ObservableValue<?> observable, Object oldValue, Object newValue) {
+//--                fired.set(true);
+//--            }
+//--        };
+//--        final Object value0 = new Object();
+//--        final Object value1 = new Object();
+//--        final BeanWithParameterizedAddRemove bean = new BeanWithParameterizedAddRemove(value0);
+//--        final ObjectProperty<Object> property = builder.createObjectProperty(bean);
+//--
+//--        property.addListener(listener);
+//--        fired.set(false);
+//--        property.setValue(value1);
+//--        assertTrue(fired.get());
+//--
+//--        property.removeListener(listener);
+//--        fired.set(false);
+//--        property.setValue(value0);
+//--        assertFalse(fired.get());
+//--    }
+//--
+//--    @Test
+//--    public void testInvalidationListener_NamedAddRemove() {
+//--        JavaBeanPropertyBuilder builder = null;
+//--        try {
+//--            builder = new JavaBeanPropertyBuilder("x", BeanWithNamedAddRemove.class);
+//--        } catch (NoSuchMethodException e) {
+//--            e.printStackTrace();
+//--            fail();
+//--        }
+//--        final BooleanProperty fired = new SimpleBooleanProperty(false);
+//--        final InvalidationListener listener = new InvalidationListener() {
+//--            @Override
+//--            public void invalidated(Observable observable) {
+//--                fired.set(true);
+//--            }
+//--        };
+//--        final Object value0 = new Object();
+//--        final Object value1 = new Object();
+//--        final BeanWithNamedAddRemove bean = new BeanWithNamedAddRemove(value0);
+//--        final ObjectProperty<Object> property = builder.createObjectProperty(bean);
+//--
+//--        property.addListener(listener);
+//--        fired.set(false);
+//--        property.setValue(value1);
+//--        assertTrue(fired.get());
+//--
+//--        property.removeListener(listener);
+//--        fired.set(false);
+//--        property.setValue(value0);
+//--        assertFalse(fired.get());
+//--    }
+//--
+//--    @Test
+//--    public void testChangeListener_NamedAddRemove() {
+//--        JavaBeanPropertyBuilder builder = null;
+//--        try {
+//--            builder = new JavaBeanPropertyBuilder("x", BeanWithNamedAddRemove.class);
+//--        } catch (NoSuchMethodException e) {
+//--            e.printStackTrace();
+//--            fail();
+//--        }
+//--        final BooleanProperty fired = new SimpleBooleanProperty(false);
+//--        final ChangeListener<Object> listener = new ChangeListener<Object>() {
+//--            @Override
+//--            public void changed(ObservableValue<?> observable, Object oldValue, Object newValue) {
+//--                fired.set(true);
+//--            }
+//--        };
+//--        final Object value0 = new Object();
+//--        final Object value1 = new Object();
+//--        final BeanWithNamedAddRemove bean = new BeanWithNamedAddRemove(value0);
+//--        final ObjectProperty<Object> property = builder.createObjectProperty(bean);
+//--
+//--        property.addListener(listener);
+//--        fired.set(false);
+//--        property.setValue(value1);
+//--        assertTrue(fired.get());
+//--
+//--        property.removeListener(listener);
+//--        fired.set(false);
+//--        property.setValue(value0);
+//--        assertFalse(fired.get());
+//--    }
+//--
+//--    @Test
+//--    public void testSet_Bound() {
+//--        JavaBeanPropertyBuilder builder = null;
+//--        try {
+//--            builder = new JavaBeanPropertyBuilder("x", BeanWithGeneralAddRemove.class);
+//--        } catch (NoSuchMethodException e) {
+//--            e.printStackTrace();
+//--            fail();
+//--        }
+//--        final Object value0 = new Object();
+//--        final Object value1 = new Object();
+//--        final BeanWithGeneralAddRemove bean = new BeanWithGeneralAddRemove(value0);
+//--        final ObjectProperty<Object> property = builder.createObjectProperty(bean);
+//--        final Property<Object> observable = new SimpleObjectProperty<Object>();
+//--        property.bind(observable);
+//--
+//--        try {
+//--            bean.setX(value1);
+//--            fail();
+//--        } catch (PropertyVetoException e) {
+//--            final PropertyChangeEvent event = e.getPropertyChangeEvent();
+//--            assertEquals("x", event.getPropertyName());
+//--            assertEquals(bean, event.getSource());
+//--        }
+//--    }
+//--
+//--    @Test
+//--    public void testListenerWithOtherParameters() {
+//--        JavaBeanPropertyBuilder builder = null;
+//--        try {
+//--            builder = new JavaBeanPropertyBuilder("x", BeanWithRawListenerSupport.class);
+//--        } catch (NoSuchMethodException e) {
+//--            e.printStackTrace();
+//--            fail();
+//--        }
+//--        final Object value0 = new Object();
+//--        final Object value1 = new Object();
+//--        final BeanWithRawListenerSupport bean = new BeanWithRawListenerSupport(value0);
+//--        final ObjectProperty<Object> property = builder.createObjectProperty(bean);
+//--        final Property<Object> observable = new SimpleObjectProperty<Object>(value1);
+//--        property.bind(observable);
+//--
+//--        try {
+//--            bean.fireVetoableChange(new PropertyChangeEvent(new Object(), "x", value1, value0));
+//--            assertEquals(value1, property.get());
+//--            assertEquals(value1, bean.getX());
+//--            bean.fireVetoableChange(new PropertyChangeEvent(bean, "y", value1, value0));
+//--            assertEquals(value1, property.get());
+//--            assertEquals(value1, bean.getX());
+//--        } catch (PropertyVetoException e) {
+//--            fail();
+//--        }
+//--
+//--        bean.firePropertyChange(new PropertyChangeEvent(new Object(), "x", value1, value0));
+//--        assertEquals(value1, property.get());
+//--        assertEquals(value1, bean.getX());
+//--        bean.firePropertyChange(new PropertyChangeEvent(bean, "y", value1, value0));
+//--        assertEquals(value1, property.get());
+//--        assertEquals(value1, bean.getX());
+//--    }
 //
 //    public static class POJOBean {
 //        private Object x;

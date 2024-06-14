@@ -23,18 +23,20 @@
  * questions.
  */
 
-package jfx.incubator.scene.control.rich;
+package jfx.incubator.scene.control.rich.model;
 
 import java.util.Set;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import jfx.incubator.scene.control.rich.model.PlainTextModel;
-import jfx.incubator.scene.control.rich.model.RichParagraph;
-import jfx.incubator.scene.control.rich.model.StyleAttribute;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.SyntaxDecorator;
+import jfx.incubator.scene.control.rich.TextPos;
 
 /**
- * Editable plain text model with syntax highlighting for the {@link CodeArea} control.
+ * Editable plain text model with optional syntax highlighting for use with the
+ * {@link jfx.incubator.scene.control.rich.CodeArea CodeArea} control.
+ * <p>
+ * This model supports custom content storage mechanism via {@link PlainTextModel.Content}.  By default,
+ * the model provides an in-memory storage via its {@link PlainTextModel.InMemoryContent} implementation.
  */
 public class CodeTextModel extends PlainTextModel {
     private SimpleObjectProperty<SyntaxDecorator> decorator;
@@ -54,6 +56,7 @@ public class CodeTextModel extends PlainTextModel {
         super(c);
     }
 
+    // only a subset of attributes are supported
     private static Set<StyleAttribute<?>> initSupportedAttributes() {
         return Set.of(
             StyleAttrs.BOLD,

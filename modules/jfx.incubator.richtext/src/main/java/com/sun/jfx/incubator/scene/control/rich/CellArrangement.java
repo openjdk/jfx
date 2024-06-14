@@ -38,7 +38,6 @@ import javafx.scene.shape.PathElement;
 import javafx.scene.text.HitInfo;
 import javafx.scene.text.TextFlow;
 import com.sun.jfx.incubator.scene.control.rich.util.RichUtils;
-import jfx.incubator.scene.control.rich.CaretInfo;
 import jfx.incubator.scene.control.rich.TextPos;
 
 /**

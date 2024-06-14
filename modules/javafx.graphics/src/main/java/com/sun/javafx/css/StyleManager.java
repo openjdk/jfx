@@ -258,11 +258,11 @@ final public class StyleManager {
     // public for testing
     public boolean hasDefaultUserAgentStylesheet = false;
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     // stylesheet handling
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
     /*
      * A container for stylesheets and the Parents or Scenes that use them.
@@ -749,11 +749,11 @@ final public class StyleManager {
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     // Image caching
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
     private final static class ImageCache {
         private Map<String, SoftReference<Image>> imageCache = new HashMap<>();
@@ -846,11 +846,11 @@ final public class StyleManager {
         return imageCache.getCachedImage(url);
     }
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     // Stylesheet loading
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
 
     private static final String skinPrefix = "com/sun/javafx/scene/control/skin/";
@@ -1241,11 +1241,11 @@ final public class StyleManager {
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     // User Agent stylesheet handling
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
 
     /**
@@ -1768,22 +1768,19 @@ final public class StyleManager {
 
             key.className = cname;
             key.id = id;
+            key.styleClasses = FixedCapacitySet.of(styleClasses.size());
             for(int n=0, nMax=styleClasses.size(); n<nMax; n++) {
 
                 final String styleClass = styleClasses.get(n);
                 if (styleClass == null || styleClass.isEmpty()) continue;
 
-                key.styleClasses.add(StyleClassSet.getStyleClass(styleClass));
+                key.styleClasses.add(styleClass);
             }
 
             Map<Key, Cache> cacheMap = cacheContainer.getCacheMap(parentStylesheets,regionUserAgentStylesheet);
             Cache cache = cacheMap.get(key);
 
-            if (cache != null) {
-                // key will be reused, so clear the styleClasses for next use
-                key.styleClasses.clear();
-
-            } else {
+            if (cache == null) {
 
                 // If the cache is null, then we need to create a new Cache and
                 // add it to the cache map
@@ -1914,11 +1911,11 @@ final public class StyleManager {
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     // CssError reporting
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
     private static ObservableList<CssParser.ParseError> errors = null;
     /**
@@ -1951,11 +1948,11 @@ final public class StyleManager {
         return errors;
     }
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     // Classes and routines for mapping styles to a Node
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
     private static List<String> cacheMapKey;
 
@@ -2307,11 +2304,7 @@ final public class StyleManager {
         // necessary.
         String className;
         String id;
-        final StyleClassSet styleClasses;
-
-        private Key() {
-            styleClasses = new StyleClassSet();
-        }
+        Set<String> styleClasses;
 
         @Override
         public boolean equals(Object o) {

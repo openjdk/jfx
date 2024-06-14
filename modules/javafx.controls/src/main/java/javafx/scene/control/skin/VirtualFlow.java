@@ -1901,7 +1901,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * The length of the viewport portion of the VirtualFlow as computed
      * during the layout pass. In a vertical flow this would be the same as the
      * clip view height. In a horizontal flow this is the clip view width.
-     * The access on this variable is package ONLY FOR TESTING.
      */
     private double viewportLength;
     void setViewportLength(double value) {
@@ -1912,7 +1911,15 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         this.absoluteOffset = getPosition() * (estimatedSize - viewportLength);
         recalculateEstimatedSize();
     }
-    double getViewportLength() {
+
+    /**
+     * Returns the length of the viewport portion of the {@code VirtualFlow} as computed during the layout pass.
+     * For a vertical flow this is based on the height and for a horizontal flow on the width of the clip view.
+     *
+     * @return the viewport length in pixels
+     * @since 23
+     */
+    public double getViewportLength() {
         return viewportLength;
     }
 

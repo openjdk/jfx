@@ -765,16 +765,16 @@ public class ImageTools {
 //            case BYTE_RGBA_PRE: {
 //                image = new java.awt.image.BufferedImage(width, height,
 //                        java.awt.image.BufferedImage.TYPE_4BYTE_ABGR_PRE);
-////                for (int y = 0; y < height; y++) {
-////                    int off = y * scanlineStride;
-////                    for (int x = 0; x < width; x++) {
-////                        int rgb = ((pixels[off++] & 0xff) << 16) |
-////                                ((pixels[off++] & 0xff) << 8) |
-////                                (pixels[off++] & 0xff) |
-////                                ((pixels[off++] & 0xff) << 24);
-////                        image.setRGB(x, y, rgb);
-////                    }
-////                }
+//--                for (int y = 0; y < height; y++) {
+//--                    int off = y * scanlineStride;
+//--                    for (int x = 0; x < width; x++) {
+//--                        int rgb = ((pixels[off++] & 0xff) << 16) |
+//--                                ((pixels[off++] & 0xff) << 8) |
+//--                                (pixels[off++] & 0xff) |
+//--                                ((pixels[off++] & 0xff) << 24);
+//--                        image.setRGB(x, y, rgb);
+//--                    }
+//--                }
 //                java.awt.image.DataBufferByte db =
 //                        (java.awt.image.DataBufferByte) image.getRaster().getDataBuffer();
 //                byte[] data = db.getData();

@@ -26,6 +26,7 @@
 package com.sun.jfx.incubator.scene.control.rich;
 
 import javafx.geometry.Insets;
+import javafx.util.Duration;
 
 /**
  * Various constants.
@@ -46,8 +47,8 @@ public class Params {
     /** cell cache size. */
     public static final int CELL_CACHE_SIZE = 512;
 
-    /** default caret blink period, in milliseconds. */
-    public static final int DEFAULT_CARET_BLINK_PERIOD = 1000;
+    /** default caret blink period. */
+    public static final Duration DEFAULT_CARET_BLINK_PERIOD = Duration.millis(1000);
 
     /** default content padding. */
     public static final Insets DEFAULT_CONTENT_PADDING = null;
@@ -60,6 +61,9 @@ public class Params {
 
     /** default value for {@code useContentHeight} property */
     public static final boolean DEFAULT_USE_CONTENT_HEIGHT = false;
+
+    /** default tab size in the CodeArea */
+    public static final int DEFAULT_TAB_SIZE = 8;
 
     /** default value for {@code useContentWidth} property */
     public static final boolean DEFAULT_USE_CONTENT_WIDTH = false;

@@ -28,7 +28,6 @@ package com.sun.javafx.css;
 import javafx.css.CompoundSelector;
 import javafx.css.Selector;
 import javafx.css.SimpleSelector;
-import javafx.css.StyleClass;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -254,7 +253,7 @@ public final class SelectorPartitioning {
                 ? new PartitionKey(selectorType)
                 : null;
 
-        final Set<StyleClass> selectorStyleClass = simpleSelector.getStyleClassSet();
+        final Set<String> selectorStyleClass = simpleSelector.getStyleClassNames();
         final boolean hasStyleClass =
             (selectorStyleClass != null && selectorStyleClass.size() > 0);
         final PartitionKey styleClassKey = hasStyleClass
@@ -304,7 +303,7 @@ public final class SelectorPartitioning {
     }
 
     /** Get the list of selectors that match this selector. Package accessible */
-    public List<Selector> match(String selectorId, String selectorType, Set<StyleClass> selectorStyleClass) {
+    public List<Selector> match(String selectorId, String selectorType, Set<String> selectorStyleClass) {
 
         final boolean hasId =
             (selectorId != null && selectorId.isEmpty() == false);
@@ -354,10 +353,10 @@ public final class SelectorPartitioning {
                                     selectors.addAll(slot.selectors);
                                 }
                                 if ((c & STYLECLASS_BIT) == STYLECLASS_BIT) {
-                                    Set<StyleClass> key = (Set<StyleClass>)styleClassKey.key;
+                                    Set<String> key = (Set<String>)styleClassKey.key;
                                     for (Slot s : slot.referents.values()) {
                                         if (s.selectors == null || s.selectors.isEmpty()) continue;
-                                        Set<StyleClass> other = (Set<StyleClass>)s.partition.key.key;
+                                        Set<String> other = (Set<String>)s.partition.key.key;
                                         if (key.containsAll(other)) {
                                             selectors.addAll(s.selectors);
                                         }
@@ -396,10 +395,10 @@ public final class SelectorPartitioning {
                                 selectors.addAll(partition.selectors);
                             }
                             if ((c & STYLECLASS_BIT) == STYLECLASS_BIT) {
-                                Set<StyleClass> key = (Set<StyleClass>)styleClassKey.key;
+                                Set<String> key = (Set<String>)styleClassKey.key;
                                 for (Slot s : partition.slots.values()) {
                                     if (s.selectors == null || s.selectors.isEmpty()) continue;
-                                    Set<StyleClass> other = (Set<StyleClass>)s.partition.key.key;
+                                    Set<String> other = (Set<String>)s.partition.key.key;
                                     if (key.containsAll(other)) {
                                         selectors.addAll(s.selectors);
                                     }

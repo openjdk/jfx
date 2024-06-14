@@ -34,10 +34,13 @@ import jfx.incubator.scene.control.rich.StyleResolver;
 import jfx.incubator.scene.control.rich.TextPos;
 
 /**
- * A simple, editable, in-memory StyledTextModel which manages plain text paragraphs.
+ * A StyledTextModel based on plain text paragraphs.
  * <p>
  * This class provides no styling.  Subclasses might override {@link #getParagraph(int)} to provide
  * syntax highlighting based on the model content.
+ * <p>
+ * This model supports custom content storage mechanism via {@link PlainTextModel.Content}.  By default,
+ * the model provides an in-memory storage via its {@link PlainTextModel.InMemoryContent} implementation.
  */
 public class PlainTextModel extends StyledTextModel {
     /**
@@ -45,7 +48,7 @@ public class PlainTextModel extends StyledTextModel {
      */
     public interface Content {
         /**
-         * Returns the number of text lines in this content.
+         * Returns the number of paragraphs in this content.
          * @return number of text lines
          */
         public int size();
@@ -86,14 +89,16 @@ public class PlainTextModel extends StyledTextModel {
          * @param start the start of the region to be removed
          * @param end the end of the region to be removed, expected to be greater than the start position
          */
-        public void removeRegion(TextPos start, TextPos end);
+        public void removeRange(TextPos start, TextPos end);
 
-        // TODO this may need isEditable() method.
+        /**
+         * Determines whether this content supports modification by the user.
+         * @return true if editable
+         */
+        public boolean isUserEditable();
     }
 
     private final Content content;
-    // TODO a property or delegate to Content?
-    private final SimpleBooleanProperty editable = new SimpleBooleanProperty(true);
 
     /**
      * Constructs an empty model with the specified {@code Content}.
@@ -139,21 +144,16 @@ public class PlainTextModel extends StyledTextModel {
             build();
     }
 
+    /**
+     * Determines whether the model is user-editable.
+     * <p>
+     * This method calls {@link PlainTextModel.Content#isUserEditable()}.
+     *
+     * @return true if the model is user-editable
+     */
     @Override
     public final boolean isUserEditable() {
-        return editable.get();
-    }
-
-    public final void setEditable(boolean on) {
-        editable.set(on);
-    }
-
-    /**
-     * Determines whether the model is editable.
-     * @return the editable property
-     */
-    public final BooleanProperty editableProperty() {
-        return editable;
+        return content.isUserEditable();
     }
 
     @Override
@@ -168,7 +168,7 @@ public class PlainTextModel extends StyledTextModel {
 
     @Override
     protected void removeRange(TextPos start, TextPos end) {
-        content.removeRegion(start, end);
+        content.removeRange(start, end);
     }
 
     @Override
@@ -248,7 +248,7 @@ public class PlainTextModel extends StyledTextModel {
         }
 
         @Override
-        public void removeRegion(TextPos start, TextPos end) {
+        public void removeRange(TextPos start, TextPos end) {
             int ix = start.index();
             String text = getText(ix);
             String newText;
@@ -280,6 +280,11 @@ public class PlainTextModel extends StyledTextModel {
                 // due to emulated empty paragraph in an empty model
                 paragraphs.add(text);
             }
+        }
+
+        @Override
+        public boolean isUserEditable() {
+            return true;
         }
     }
 }

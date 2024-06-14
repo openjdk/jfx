@@ -289,15 +289,15 @@ public class InputMapTest {
 //    }
 //
 //    // TODO [1], [2]
-////    @Test public void testLookup_mouseMapping_mappingThatIsInstalled_usingAnyEventType() {
-////        InputMap<?> map = createDummyInputMap();
-////        InputMap.MouseMapping mapping = new InputMap.MouseMapping(MouseEvent.MOUSE_PRESSED, e -> { });
-////        map.getMappings().add(mapping);
-////
-////        Optional<InputMap.Mapping<?>> returnedMapping = map.lookupMapping(MouseEvent.ANY);
-////        assertNotNull(returnedMapping);
-////        assertTrue(returnedMapping.isPresent());
-////    }
+//--    @Test public void testLookup_mouseMapping_mappingThatIsInstalled_usingAnyEventType() {
+//--        InputMap<?> map = createDummyInputMap();
+//--        InputMap.MouseMapping mapping = new InputMap.MouseMapping(MouseEvent.MOUSE_PRESSED, e -> { });
+//--        map.getMappings().add(mapping);
+//--
+//--        Optional<InputMap.Mapping<?>> returnedMapping = map.lookupMapping(MouseEvent.ANY);
+//--        assertNotNull(returnedMapping);
+//--        assertTrue(returnedMapping.isPresent());
+//--    }
 //
 //    @Test public void testLookup_keyMapping_mappingThatIsInstalledOnChildMap() {
 //        Rectangle dummy = new Rectangle();

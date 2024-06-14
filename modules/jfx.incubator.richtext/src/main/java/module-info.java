@@ -25,8 +25,8 @@
 
 /**
  * RichTextArea Control (Incubator)
- *
- * <BR><b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
+ * <p>
+ * <b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
  * Will be removed in a future release.</b>
  *
  * @moduleGraph

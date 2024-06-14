@@ -53,8 +53,8 @@ public class RichEditorDemoPane extends BorderPane {
 
         control = new RichTextArea();
         // custom function
-        control.getInputMap().register(KeyBinding.shortcut(KeyCode.W), (c) -> {
-            System.out.println("console!");
+        control.getInputMap().register(KeyBinding.shortcut(KeyCode.W), () -> {
+            System.out.println("Custom function: W key is pressed");
         });
 
         actions = new Actions(control);

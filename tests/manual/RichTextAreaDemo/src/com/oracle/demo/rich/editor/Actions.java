@@ -194,7 +194,7 @@ public class Actions {
             // apply to the whole paragraph
             int ix = start.index();
             start = new TextPos(ix, 0);
-            end = control.getEndOfParagraph(ix);
+            end = control.getParagraphEnd(ix);
         }
 
         StyleAttrs a = control.getActiveStyleAttrs();
@@ -212,7 +212,7 @@ public class Actions {
             // apply to the whole paragraph
             int ix = start.index();
             start = new TextPos(ix, 0);
-            end = control.getEndOfParagraph(ix);
+            end = control.getParagraphEnd(ix);
         }
 
         StyleAttrs a = control.getActiveStyleAttrs();
@@ -399,7 +399,7 @@ public class Actions {
             // apply to the whole paragraph
             int ix = start.index();
             start = new TextPos(ix, 0);
-            end = control.getEndOfParagraph(ix);
+            end = control.getParagraphEnd(ix);
         }
 
         StyleAttrs a = control.getActiveStyleAttrs();
@@ -422,7 +422,7 @@ public class Actions {
             // apply to the whole paragraph
             int ix = start.index();
             start = new TextPos(ix, 0);
-            end = control.getEndOfParagraph(ix);
+            end = control.getParagraphEnd(ix);
         }
 
         StyleAttrs a = Styles.getStyleAttrs(st);

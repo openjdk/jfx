@@ -60,10 +60,11 @@ public abstract class RichParagraph {
      * when the text wrap mode is on, might get resized to fit the available width.
      * <p>
      * The supplied generator must not cache or keep reference to the created Node,
-     * but the created Node can keep a reference to the model or some property therein.
+     * but the created Node can keep a reference to the model or a property therein.
      * <p>
      * For example, a bidirectional binding between an inline control and some property in the model
      * would synchronize the model with all the views that use it.
+     *
      * @param paragraphGenerator the content generator
      * @return the RichParagraph instance
      */
@@ -95,6 +96,7 @@ public abstract class RichParagraph {
     /**
      * Returns the generator for this paragraph {@code Region} representation.
      * This method returns a non-null value when the paragraph is represented by a single {@code Region}.
+     *
      * @return the generator, or null
      */
     public Supplier<Region> getParagraphRegion() {
@@ -107,10 +109,6 @@ public abstract class RichParagraph {
      */
     public abstract String getPlainText();
 
-    List<Consumer<TextCell>> getHighlights() {
-        return null;
-    }
-
     // this method could be made public, as long as the returned list is made immutable
     abstract List<StyledSegment> getSegments();
 
@@ -119,6 +117,10 @@ public abstract class RichParagraph {
      * @return the paragraph attributes, can be null
      */
     public StyleAttrs getParagraphAttributes() {
+        return null;
+    }
+
+    List<Consumer<TextCell>> getHighlights() {
         return null;
     }
 
@@ -339,7 +341,6 @@ public abstract class RichParagraph {
 
                 @Override
                 List<StyledSegment> getSegments() {
-                    // TODO immutable list?
                     return segments;
                 }
 

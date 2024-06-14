@@ -31,13 +31,13 @@ import javafx.scene.Node;
  * Provides a way to add side decorations to each paragraph
  * in a {@link RichTextArea}.
  * <p>
- * The side decorations Nodes are added to either left or right side, of each paragraph.  Each side node will be
- * resized to the height of the corresponding paragraph.  The width, in order to avoid complicated
+ * The side decorations Nodes are added to either left or right side of each paragraph.  Each side node will be
+ * resized to the height of the corresponding paragraph.  The width of all the side nodes, in order to avoid complicated
  * layout process, would be determined by the following process:
  * <ul>
- * <li>if {@link #getPrefWidth} method returns a positive value, that will be the width of all the side nodes.
- * <li>otherwise, the {@link #getNode(int, boolean)} method is called with {@code forMeasurement} argument set to true.
- * Preferred width of this Node will be used to size all other Nodes.
+ * <li>if {@link #getPrefWidth} method returns a value greater than 0, that will be the width of all the side nodes.
+ * <li>otherwise, the {@link #getNode(int, boolean)} method is called with {@code forMeasurement} argument set to
+ * {@code true}.  The value returned will be used to size all other nodes for that side.
  * </ul>
  */
 public interface SideDecorator {
@@ -54,10 +54,10 @@ public interface SideDecorator {
      * <p>
      * When {@code forMeasurement} is true, this method is expected to create a special non-null
      * measurement Node, whose preferred width will be used to size all the side Nodes (and must, therefore,
-     * to be wider than any side node in the view).  The {@code modelIndex} is this case is the index of
+     * be wider than any side node in the view).  The {@code modelIndex} is this case is the index of
      * the first paragraph in the view.
      * <p>
-     * The measurement node will not be displayed.
+     * The measurement node will not be displayed and will be discarded.
      *
      * @param modelIndex model index
      * @param forMeasurement when true, specifies that a measurement Node must be created

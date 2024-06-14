@@ -1391,13 +1391,14 @@ xhtmlAttrListDumpOutput(xmlSaveCtxtPtr ctxt, xmlAttrPtr cur) {
 static void
 xhtmlNodeDumpOutput(xmlSaveCtxtPtr ctxt, xmlNodePtr cur) {
     int format = ctxt->format, addmeta;
-    xmlNodePtr tmp, root, unformattedNode = NULL;
+    xmlNodePtr tmp, root, unformattedNode = NULL, parent;
     xmlChar *start, *end;
     xmlOutputBufferPtr buf = ctxt->buf;
 
     if (cur == NULL) return;
 
     root = cur;
+    parent = cur->parent;
     while (1) {
         switch (cur->type) {
         case XML_DOCUMENT_NODE:
@@ -1414,7 +1415,9 @@ xhtmlNodeDumpOutput(xmlSaveCtxtPtr ctxt, xmlNodePtr cur) {
             break;
 
         case XML_DOCUMENT_FRAG_NODE:
-            if (cur->children) {
+            /* Always validate cur->parent when descending. */
+            if ((cur->parent == parent) && (cur->children != NULL)) {
+                parent = cur;
                 cur = cur->children;
                 continue;
             }
@@ -1441,6 +1444,16 @@ xhtmlNodeDumpOutput(xmlSaveCtxtPtr ctxt, xmlNodePtr cur) {
                                       ctxt->indent_nr : ctxt->level),
                                      ctxt->indent);
 
+            /*
+             * Some users like lxml are known to pass nodes with a corrupted
+             * tree structure. Fall back to a recursive call to handle this
+             * case.
+             */
+            if ((cur->parent != parent) && (cur->children != NULL)) {
+                xhtmlNodeDumpOutput(ctxt, cur);
+                break;
+            }
+
             xmlOutputBufferWrite(buf, 1, "<");
             if ((cur->ns != NULL) && (cur->ns->prefix != NULL)) {
                 xmlOutputBufferWriteString(buf, (const char *)cur->ns->prefix);
@@ -1461,10 +1474,10 @@ xhtmlNodeDumpOutput(xmlSaveCtxtPtr ctxt, xmlNodePtr cur) {
             if (cur->properties != NULL)
                 xhtmlAttrListDumpOutput(ctxt, cur->properties);
 
-            if ((cur->parent != NULL) &&
-                (cur->parent->parent == (xmlNodePtr) cur->doc) &&
+            if ((parent != NULL) &&
+                (parent->parent == (xmlNodePtr) cur->doc) &&
                 xmlStrEqual(cur->name, BAD_CAST"head") &&
-                xmlStrEqual(cur->parent->name, BAD_CAST"html")) {
+                xmlStrEqual(parent->name, BAD_CAST"html")) {
 
                 tmp = cur->children;
                 while (tmp != NULL) {
@@ -1570,6 +1583,7 @@ xhtmlNodeDumpOutput(xmlSaveCtxtPtr ctxt, xmlNodePtr cur) {
 
                 if (ctxt->format == 1) xmlOutputBufferWrite(buf, 1, "\n");
                 if (ctxt->level >= 0) ctxt->level++;
+                parent = cur;
                 cur = cur->children;
                 continue;
             }
@@ -1664,13 +1678,9 @@ xhtmlNodeDumpOutput(xmlSaveCtxtPtr ctxt, xmlNodePtr cur) {
                 break;
             }
 
-            /*
-             * The parent should never be NULL here but we want to handle
-             * corrupted documents gracefully.
-             */
-            if (cur->parent == NULL)
-                return;
-            cur = cur->parent;
+            cur = parent;
+            /* cur->parent was validated when descending. */
+            parent = cur->parent;
 
             if (cur->type == XML_ELEMENT_NODE) {
                 if (ctxt->level > 0) ctxt->level--;

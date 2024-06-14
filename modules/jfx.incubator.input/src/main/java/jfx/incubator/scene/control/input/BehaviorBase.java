@@ -27,7 +27,6 @@ package jfx.incubator.scene.control.input;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
-import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.input.KeyCode;
 import com.sun.javafx.PlatformUtil;
@@ -43,7 +42,7 @@ import com.sun.javafx.scene.traversal.TraversalMethod;
  * <li> provide default behavior methods (one for each function tag)
  * <li> implement {@link #populateSkinInputMap()} method, in which map control's function tags to
  *      the behavior methods, map key bindings to the function tags, add additional event handlers, using
- *      {@link #registerFunction(FunctionTag, FunctionHandler)},
+ *      {@link #registerFunction(FunctionTag, Runnable)},
  *      {@link #registerKey(KeyBinding, FunctionTag)},
  *      {@link #registerKey(KeyCode, FunctionTag)},
  *      and
@@ -64,7 +63,7 @@ import com.sun.javafx.scene.traversal.TraversalMethod;
  */
 public abstract class BehaviorBase<C extends Control> {
     private final C control;
-    private SkinInputMap<C> skinInputMap;
+    private SkinInputMap.Stateful skinInputMap;
 
     /**
      * The constructor.
@@ -95,9 +94,9 @@ public abstract class BehaviorBase<C extends Control> {
      * Returns the skin input map associated with this behavior.
      * @return the input map
      */
-    public final SkinInputMap<C> getSkinInputMap() {
+    public final SkinInputMap.Stateful getSkinInputMap() {
         if (skinInputMap == null) {
-            this.skinInputMap = new SkinInputMap<>();
+            this.skinInputMap = SkinInputMap.create();
             populateSkinInputMap();
         }
         return skinInputMap;
@@ -105,13 +104,11 @@ public abstract class BehaviorBase<C extends Control> {
 
     /**
      * Maps a function to the specified function tag.
-     * This method will not override any previous mapping added by
-     * {@link #registerFunction(FunctionTag, FunctionHandler)}.
      *
      * @param tag the function tag
      * @param function the function
      */
-    protected void registerFunction(FunctionTag tag, FunctionHandler<C> function) {
+    protected final void registerFunction(FunctionTag tag, Runnable function) {
         getSkinInputMap().registerFunction(tag, function);
     }
 
@@ -123,7 +120,7 @@ public abstract class BehaviorBase<C extends Control> {
      * @param k the key binding
      * @param tag the function tag
      */
-    protected void registerKey(KeyBinding k, FunctionTag tag) {
+    protected final void registerKey(KeyBinding k, FunctionTag tag) {
         getSkinInputMap().registerKey(k, tag);
     }
 
@@ -134,7 +131,7 @@ public abstract class BehaviorBase<C extends Control> {
      * @param code the key code to construct a {@link KeyBinding}
      * @param tag the function tag
      */
-    protected void registerKey(KeyCode code, FunctionTag tag) {
+    protected final void registerKey(KeyCode code, FunctionTag tag) {
         getSkinInputMap().registerKey(code, tag);
     }
 
@@ -145,7 +142,7 @@ public abstract class BehaviorBase<C extends Control> {
      * @param k the key binding
      * @param func the function
      */
-    protected void register(FunctionTag tag, KeyBinding k, FunctionHandler<C> func) {
+    protected final void register(FunctionTag tag, KeyBinding k, Runnable func) {
         getSkinInputMap().registerFunction(tag, func);
         getSkinInputMap().registerKey(k, tag);
     }
@@ -157,7 +154,7 @@ public abstract class BehaviorBase<C extends Control> {
      * @param code the key code
      * @param func the function
      */
-    protected void register(FunctionTag tag, KeyCode code, FunctionHandler<C> func) {
+    protected final void register(FunctionTag tag, KeyCode code, Runnable func) {
         getSkinInputMap().registerFunction(tag, func);
         getSkinInputMap().registerKey(KeyBinding.of(code), tag);
     }
@@ -168,7 +165,7 @@ public abstract class BehaviorBase<C extends Control> {
      * @param existing the existing key binding
      * @param newk the new key binding
      */
-    protected void duplicateMapping(KeyBinding existing, KeyBinding newk) {
+    protected final void duplicateMapping(KeyBinding existing, KeyBinding newk) {
         getSkinInputMap().duplicateMapping(existing, newk);
     }
 
@@ -180,7 +177,7 @@ public abstract class BehaviorBase<C extends Control> {
      * @param consume determines whether the matching event is consumed or not
      * @param handler the event handler
      */
-    protected <T extends Event> void addHandler(EventType<T> type, boolean consume, EventHandler<T> handler) {
+    protected final <T extends Event> void addHandler(EventType<T> type, boolean consume, EventHandler<T> handler) {
         getSkinInputMap().addHandler(type, consume, handler);
     }
 
@@ -193,7 +190,7 @@ public abstract class BehaviorBase<C extends Control> {
      * @param consume determines whether the matching event is consumed or not
      * @param handler the event handler
      */
-    protected <T extends Event> void addHandlerLast(EventType<T> type, boolean consume, EventHandler<T> handler) {
+    protected final <T extends Event> void addHandlerLast(EventType<T> type, boolean consume, EventHandler<T> handler) {
         getSkinInputMap().addHandler(type, consume, handler);
     }
 
@@ -206,7 +203,7 @@ public abstract class BehaviorBase<C extends Control> {
      * @param consume determines whether the matching event is consumed or not
      * @param handler the event handler
      */
-    protected <T extends Event> void addHandler(EventCriteria<T> criteria, boolean consume, EventHandler<T> handler) {
+    protected final <T extends Event> void addHandler(EventCriteria<T> criteria, boolean consume, EventHandler<T> handler) {
         getSkinInputMap().addHandler(criteria, consume, handler);
     }
 
@@ -219,7 +216,7 @@ public abstract class BehaviorBase<C extends Control> {
      * @param consume determines whether the matching event is consumed or not
      * @param h the event handler
      */
-    protected <T extends Event> void addHandlerLast(EventCriteria<T> criteria, boolean consume, EventHandler<T> h) {
+    protected final <T extends Event> void addHandlerLast(EventCriteria<T> criteria, boolean consume, EventHandler<T> h) {
         getSkinInputMap().addHandler(criteria, consume, h);
     }
 
@@ -227,7 +224,7 @@ public abstract class BehaviorBase<C extends Control> {
      * Returns true if this method is invoked on a Linux platform.
      * @return true on a Linux platform
      */
-    protected boolean isLinux() {
+    protected final boolean isLinux() {
         return PlatformUtil.isLinux();
     }
 
@@ -235,7 +232,7 @@ public abstract class BehaviorBase<C extends Control> {
      * Returns true if this method is invoked on a Mac OS platform.
      * @return true on a Mac OS platform
      */
-    protected boolean isMac() {
+    protected final boolean isMac() {
         return PlatformUtil.isMac();
     }
 
@@ -243,7 +240,7 @@ public abstract class BehaviorBase<C extends Control> {
      * Returns true if this method is invoked on a Windows platform.
      * @return true on a Windows platform
      */
-    protected boolean isWindows() {
+    protected final boolean isWindows() {
         return PlatformUtil.isWindows();
     }
 
@@ -253,68 +250,58 @@ public abstract class BehaviorBase<C extends Control> {
      * traverse on the given node, passing the given direction. A
      * subclass may override this method.
      *
-     * @param node The node to traverse on
      * @param dir The direction to traverse
      */
     // NOTE: there should be a proper public focus management API
-    private static void traverse(Node node, Direction dir) {
-        if (node == null) {
-            throw new IllegalArgumentException("Attempting to traverse on a null Node.");
-        }
-        NodeHelper.traverse(node, dir, TraversalMethod.KEY);
+    private void traverse(Direction dir) {
+        NodeHelper.traverse(control, dir, TraversalMethod.KEY);
     }
 
     /**
      * Calls the focus traversal engine and indicates that traversal should
      * go the next focusTraversable Node above the current one.
-     * @param n the node to traverse from
      */
-    protected final void traverseUp(Node n) {
-        traverse(n, Direction.UP);
+    protected final void traverseUp() {
+        traverse(Direction.UP);
     }
 
     /**
      * Calls the focus traversal engine and indicates that traversal should
      * go the next focusTraversable Node below the current one.
-     * @param n the node to traverse from
      */
-    protected final void traverseDown(Node n) {
-        traverse(n, Direction.DOWN);
+    protected final void traverseDown() {
+        traverse(Direction.DOWN);
     }
 
     /**
      * Calls the focus traversal engine and indicates that traversal should
      * go the next focusTraversable Node left of the current one.
-     * @param n the node to traverse from
      */
-    protected final void traverseLeft(Node n) {
-        traverse(n, Direction.LEFT);
+    protected final void traverseLeft() {
+        traverse(Direction.LEFT);
     }
 
     /**
      * Calls the focus traversal engine and indicates that traversal should
      * go the next focusTraversable Node right of the current one.
-     * @param n the node to traverse from
      */
-    protected final void traverseRight(Node n) {
-        traverse(n, Direction.RIGHT);
+    protected final void traverseRight() {
+        traverse(Direction.RIGHT);
     }
 
     /**
      * Calls the focus traversal engine and indicates that traversal should
      * go the next focusTraversable Node in the focus traversal cycle.
-     * @param n the node to traverse from
      */
-    protected final void traverseNext(Node n) {
-        traverse(n, Direction.NEXT);
+    protected final void traverseNext() {
+        traverse(Direction.NEXT);
     }
 
     /**
      * Calls the focus traversal engine and indicates that traversal should
      * go the previous focusTraversable Node in the focus traversal cycle.
-     * @param n the node to traverse from
      */
-    protected final void traversePrevious(Node n) {
-        traverse(n, Direction.PREVIOUS);
+    protected final void traversePrevious() {
+        traverse(Direction.PREVIOUS);
     }
 }

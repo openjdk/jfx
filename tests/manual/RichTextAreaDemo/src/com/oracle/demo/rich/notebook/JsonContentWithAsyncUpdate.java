@@ -55,6 +55,11 @@ public class JsonContentWithAsyncUpdate implements PlainTextModel.Content {
     }
 
     @Override
+    public boolean isUserEditable() {
+        return true;
+    }
+
+    @Override
     public int size() {
         return size;
     }
@@ -106,7 +111,7 @@ public class JsonContentWithAsyncUpdate implements PlainTextModel.Content {
     }
 
     @Override
-    public void removeRegion(TextPos start, TextPos end) {
+    public void removeRange(TextPos start, TextPos end) {
         throw new UnsupportedOperationException();
     }
 

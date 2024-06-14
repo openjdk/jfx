@@ -41,12 +41,11 @@ import jfx.incubator.scene.control.rich.TextPos;
  * nor storage of incremental changes.
  */
 public class EditableRichTextModel extends StyledTextModel {
-    /** Internal data format */
     private final ArrayList<RParagraph> paragraphs = new ArrayList<>();
     private final HashMap<StyleAttrs,StyleAttrs> styleCache = new HashMap<>();
 
     /**
-     * Creates an empty model.
+     * Constructs the empty model.
      */
     public EditableRichTextModel() {
         registerDataFormatHandler(new RichTextFormatHandler(), true, true, 2000);

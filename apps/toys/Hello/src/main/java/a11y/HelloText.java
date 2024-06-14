@@ -80,7 +80,7 @@ public class HelloText extends Application {
 //                }
 //                text.setSelectionStart(start);
 //                text.setSelectionEnd(end);
-////                System.out.println(start + " " + end);
+//--                System.out.println(start + " " + end);
 //            }
 //        });
         stage.setScene(scene);

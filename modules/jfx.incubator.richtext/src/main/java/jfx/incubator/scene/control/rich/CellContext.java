@@ -30,11 +30,12 @@ import jfx.incubator.scene.control.rich.model.StyleAttrs;
 
 /**
  * Text cell accessor valid during the layout pass.
- * This class enables extending RichTextArea by allowing custom classes to support additional {@code StyleAttribute}s.
+ * This class enables extending RichTextArea by allowing for additional {@code StyleAttribute}s.
  */
 public interface CellContext {
     /**
-     * Adds a direct style.<p>
+     * Adds a direct style.
+     * <p>
      * The direct style must be a valid CSS style string, for example {@code "-fx-font-size:15px;"}.
      * This string might contain multiple CSS properties.
      *
@@ -43,7 +44,8 @@ public interface CellContext {
     public void addStyle(String fxStyle);
 
     /**
-     * Returns the node being styled.<p>
+     * Returns the node being styled.
+     * <p>
      * This might be a TextFlow (for the paragraph cell context) or Text (for the text segment cell context).
      * @return the node being styled.
      */

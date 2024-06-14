@@ -32,15 +32,16 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.sun.javafx.css.FixedCapacitySet;
 import com.sun.javafx.css.ImmutablePseudoClassSetsCache;
 import com.sun.javafx.css.PseudoClassState;
-import com.sun.javafx.css.StyleClassSet;
 
 import static javafx.geometry.NodeOrientation.INHERIT;
 import static javafx.geometry.NodeOrientation.LEFT_TO_RIGHT;
@@ -78,15 +79,7 @@ final public class SimpleSelector extends Selector {
      * @return an immutable list of style-classes of the {@code Selector}
      */
     public List<String> getStyleClasses() {
-
-        final List<String> names = new ArrayList<>();
-
-        Iterator<StyleClass> iter = styleClassSet.iterator();
-        while (iter.hasNext()) {
-            names.add(iter.next().getStyleClassName());
-        }
-
-        return Collections.unmodifiableList(names);
+        return List.copyOf(selectorStyleClassNames);
     }
 
     /**
@@ -94,14 +87,57 @@ final public class SimpleSelector extends Selector {
      * @return the {@code Set} of {@code StyleClass}es
      */
     public Set<StyleClass> getStyleClassSet() {
-        return styleClassSet;
+        if (cachedStyleClasses == null) {
+            cachedStyleClasses = getStyleClassNames().stream().map(SimpleSelector::getStyleClass).collect(Collectors.toUnmodifiableSet());
+        }
+
+        return cachedStyleClasses;
+    }
+
+    /*
+     * Copied from removed StyleClassSet to give StyleClasses a fixed index when
+     * first encountered. No longer needed once StyleClass is removed.
+     */
+
+    private static final Map<String, Integer> styleClassMap = new HashMap<>(64);
+    private static final List<StyleClass> styleClasses = new ArrayList<>();
+
+    private static StyleClass getStyleClass(String styleClass) {
+
+        if (styleClass == null || styleClass.trim().isEmpty()) {
+            throw new IllegalArgumentException("styleClass cannot be null or empty String");
+        }
+
+        StyleClass instance = null;
+
+        final Integer value = styleClassMap.get(styleClass);
+        final int index = value != null ? value.intValue() : -1;
+
+        final int size = styleClasses.size();
+        assert index < size;
+
+        if (index != -1 && index < size) {
+            instance = styleClasses.get(index);
+        }
+
+        if (instance == null) {
+            instance = new StyleClass(styleClass, size);
+            styleClasses.add(instance);
+            styleClassMap.put(styleClass, Integer.valueOf(size));
+        }
+
+        return instance;
     }
 
     /**
-     * styleClasses converted to a set of bit masks
+     * Style class names (immutable).
      */
-    private final Set<StyleClass> styleClassSet;
-    private final Set<StyleClass> unwrappedStyleClassSet;
+    private final FixedCapacitySet<String> selectorStyleClassNames;
+
+    /**
+     * Cache to avoid having to recreate this set on each call.
+     */
+    private transient Set<StyleClass> cachedStyleClasses;
 
     private final String id;
 
@@ -152,20 +188,10 @@ final public class SimpleSelector extends Selector {
         // then match needs to check name
         this.matchOnName = (name != null && !("".equals(name)) && !("*".equals(name)));
 
-        this.unwrappedStyleClassSet = new StyleClassSet();
+        this.selectorStyleClassNames = styleClasses == null ? FixedCapacitySet.of(0) : convertStyleClassNamesToSet(styleClasses);
+        this.selectorStyleClassNames.freeze();  // turns it read only without having to wrap it
 
-        if (styleClasses != null) {
-            for (int n = 0; n < styleClasses.size(); n++) {
-
-                final String styleClassName = styleClasses.get(n);
-                if (styleClassName == null || styleClassName.isEmpty()) continue;
-
-                unwrappedStyleClassSet.add(StyleClassSet.getStyleClass(styleClassName));
-            }
-        }
-
-        this.styleClassSet = Collections.unmodifiableSet(unwrappedStyleClassSet);
-        this.matchOnStyleClass = (this.styleClassSet.size() > 0);
+        this.matchOnStyleClass = (this.selectorStyleClassNames.size() > 0);
 
         PseudoClassState pcs = new PseudoClassState();
         NodeOrientation dir = NodeOrientation.INHERIT;
@@ -197,14 +223,28 @@ final public class SimpleSelector extends Selector {
 
     @Override
     public Set<String> getStyleClassNames() {
-        return styleClassSet.stream()
-            .map(StyleClass::getStyleClassName)
-            .collect(Collectors.toUnmodifiableSet());
+        return selectorStyleClassNames;
+    }
+
+    private FixedCapacitySet<String> convertStyleClassNamesToSet(List<String> styleClasses) {
+        FixedCapacitySet<String> scs = FixedCapacitySet.of(styleClasses.size());
+
+        for (int n = 0, nMax = styleClasses.size(); n < nMax; n++) {
+            String styleClassName = styleClasses.get(n);
+
+            if (styleClassName == null || styleClassName.isEmpty()) {
+                continue;
+            }
+
+            scs.add(styleClassName);
+        }
+
+        return scs;
     }
 
     @Override public Match createMatch() {
         final int idCount = (matchOnId) ? 1 : 0;
-        int styleClassCount = styleClassSet.size();
+        int styleClassCount = selectorStyleClassNames.size();
         return new Match(this, pseudoClassState, idCount, styleClassCount);
     }
 
@@ -243,20 +283,9 @@ final public class SimpleSelector extends Selector {
         }
 
         if (matchOnStyleClass) {
-
-            final StyleClassSet otherStyleClassSet = new StyleClassSet();
-            final List<String> styleClasses = styleable.getStyleClass();
-            for(int n=0, nMax = styleClasses.size(); n<nMax; n++) {
-
-                final String styleClassName = styleClasses.get(n);
-                if (styleClassName == null || styleClassName.isEmpty()) continue;
-
-                final StyleClass styleClass = StyleClassSet.getStyleClass(styleClassName);
-                otherStyleClassSet.add(styleClass);
+            if (!matchesStyleClasses(styleable.getStyleClass())) {
+                return false;
             }
-
-            boolean styleClassMatch = matchStyleClasses(otherStyleClassSet);
-            if (!styleClassMatch) return false;
         }
 
         return true;
@@ -299,9 +328,18 @@ final public class SimpleSelector extends Selector {
     //
     // This selector matches when class="pastoral blue aqua marine" but does not
     // match for class="pastoral blue".
-    private boolean matchStyleClasses(StyleClassSet otherStyleClasses) {
-        // checks against unwrapped version so BitSet can do its special casing for performance
-        return otherStyleClasses.containsAll(unwrappedStyleClassSet);
+    private boolean matchesStyleClasses(List<String> styleClassNames) {
+
+        /*
+         * Exit early if the input list is too small to possibly match all the styles
+         * of this selector:
+         */
+
+        if (styleClassNames.size() < selectorStyleClassNames.size()) {
+            return false;
+        }
+
+        return selectorStyleClassNames.isSuperSetOf(styleClassNames);
     }
 
     @Override public boolean equals(Object obj) {
@@ -318,7 +356,7 @@ final public class SimpleSelector extends Selector {
         if ((this.id == null) ? (other.id != null) : !this.id.equals(other.id)) {
             return false;
         }
-        if (this.styleClassSet.equals(other.styleClassSet) == false) {
+        if (this.selectorStyleClassNames.equals(other.selectorStyleClassNames) == false) {
             return false;
         }
         if (this.pseudoClassState.equals(other.pseudoClassState) == false) {
@@ -333,8 +371,8 @@ final public class SimpleSelector extends Selector {
     @Override public int hashCode() {
         int hash = 7;
         hash = 31 * (hash + name.hashCode());
-        hash = 31 * (hash + styleClassSet.hashCode());
-        hash = 31 * (hash + styleClassSet.hashCode());
+        hash = 31 * (hash + selectorStyleClassNames.hashCode());
+        hash = 31 * (hash + selectorStyleClassNames.hashCode());
         hash = (id != null) ? 31 * (hash + id.hashCode()) : 0;
         hash = 31 * (hash + pseudoClassState.hashCode());
         return hash;
@@ -346,10 +384,10 @@ final public class SimpleSelector extends Selector {
         StringBuilder sbuf = new StringBuilder();
         if (name != null && name.isEmpty() == false) sbuf.append(name);
         else sbuf.append("*");
-        Iterator<StyleClass> iter1 = styleClassSet.iterator();
+        Iterator<String> iter1 = selectorStyleClassNames.iterator();
         while(iter1.hasNext()) {
-            final StyleClass styleClass = iter1.next();
-            sbuf.append('.').append(styleClass.getStyleClassName());
+            final String styleClass = iter1.next();
+            sbuf.append('.').append(styleClass);
         }
         if (id != null && id.isEmpty() == false) {
             sbuf.append('#');
@@ -369,11 +407,11 @@ final public class SimpleSelector extends Selector {
     {
         super.writeBinary(os, stringStore);
         os.writeShort(stringStore.addString(name));
-        os.writeShort(styleClassSet.size());
-        Iterator<StyleClass> iter1 = styleClassSet.iterator();
+        os.writeShort(selectorStyleClassNames.size());
+        Iterator<String> iter1 = selectorStyleClassNames.iterator();
         while(iter1.hasNext()) {
-            final StyleClass sc = iter1.next();
-            os.writeShort(stringStore.addString(sc.getStyleClassName()));
+            final String sc = iter1.next();
+            os.writeShort(stringStore.addString(sc));
         }
         os.writeShort(stringStore.addString(id));
         int pclassSize = pseudoClassState.size()

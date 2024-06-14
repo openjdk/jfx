@@ -34,7 +34,7 @@ import javafx.collections.ObservableArray;
  */
 public abstract class ArrayListenerHelper<T extends ObservableArray<T>> extends ExpressionHelperBase {
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------------------------------------------
     // Static methods
 
     public static <T extends ObservableArray<T>> ArrayListenerHelper<T> addListener(ArrayListenerHelper<T> helper, T observable, InvalidationListener listener) {
@@ -75,7 +75,7 @@ public abstract class ArrayListenerHelper<T extends ObservableArray<T>> extends 
         return helper != null;
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------------------------------------------
     // Common implementations
 
     protected final T observable;
@@ -92,7 +92,7 @@ public abstract class ArrayListenerHelper<T extends ObservableArray<T>> extends 
 
     protected abstract void fireValueChangedEvent(boolean sizeChanged, int from, int to);
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------------------------------------------
     // Implementations
 
     private static class SingleInvalidation<T extends ObservableArray<T>> extends ArrayListenerHelper<T> {

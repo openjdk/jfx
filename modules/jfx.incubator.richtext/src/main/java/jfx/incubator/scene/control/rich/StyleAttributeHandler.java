@@ -27,8 +27,13 @@ package jfx.incubator.scene.control.rich;
 
 /**
  * This functional interface defines a style attribute handler.
+ * <p>
+ * This interface is needed when extending the RichTextArea with support for other style attributes.
+ * Applications should not normally use this interface.
+ * <p>
  * The purpose of this handler is to apply changes to the {@code CellContext} based on the value
- * of the related attribute.
+ * of the corresponding attribute.
+ *
  * @param <C> the actual type of RichTextArea control
  * @param <T> the attribute value type
  */

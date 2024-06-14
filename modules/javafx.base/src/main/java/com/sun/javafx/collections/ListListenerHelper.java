@@ -34,7 +34,7 @@ import java.util.Arrays;
  */
 public abstract class ListListenerHelper<E> extends ExpressionHelperBase {
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------------------------------------------
     // Static methods
 
     public static <E> ListListenerHelper<E> addListener(ListListenerHelper<E> helper, InvalidationListener listener) {
@@ -76,7 +76,7 @@ public abstract class ListListenerHelper<E> extends ExpressionHelperBase {
         return helper != null;
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------------------------------------------
     // Common implementations
 
     protected abstract ListListenerHelper<E> addListener(InvalidationListener listener);
@@ -87,7 +87,7 @@ public abstract class ListListenerHelper<E> extends ExpressionHelperBase {
 
     protected abstract void fireValueChangedEvent(ListChangeListener.Change<? extends E> change);
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------------------------------------------
     // Implementations
 
     private static class SingleInvalidation<E> extends ListListenerHelper<E> {
