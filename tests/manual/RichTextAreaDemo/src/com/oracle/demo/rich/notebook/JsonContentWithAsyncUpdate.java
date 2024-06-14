@@ -55,6 +55,11 @@ public class JsonContentWithAsyncUpdate implements PlainTextModel.Content {
     }
 
     @Override
+    public boolean isUserEditable() {
+        return true;
+    }
+
+    @Override
     public int size() {
         return size;
     }

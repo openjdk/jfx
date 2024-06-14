@@ -91,12 +91,14 @@ public class PlainTextModel extends StyledTextModel {
          */
         public void removeRegion(TextPos start, TextPos end);
 
-        // TODO this may need isEditable() method.
+        /**
+         * Determines whether this content supports modification by the user.
+         * @return true if editable
+         */
+        public boolean isUserEditable();
     }
 
     private final Content content;
-    // TODO a property or delegate to Content?
-    private final SimpleBooleanProperty editable = new SimpleBooleanProperty(true);
 
     /**
      * Constructs an empty model with the specified {@code Content}.
@@ -143,21 +145,15 @@ public class PlainTextModel extends StyledTextModel {
     }
 
     /**
-     * Determines whether the model is editable.
-     * @return the editable property
-     * @defaultValue true
+     * Determines whether the model is user-editable.
+     * <p>
+     * This method calls {@link PlainTextModel.Content#isUserEditable()}.
+     *
+     * @return true if the model is user-editable
      */
-    public final BooleanProperty editableProperty() {
-        return editable;
-    }
-
     @Override
     public final boolean isUserEditable() {
-        return editable.get();
-    }
-
-    public final void setEditable(boolean on) {
-        editable.set(on);
+        return content.isUserEditable();
     }
 
     @Override
@@ -284,6 +280,11 @@ public class PlainTextModel extends StyledTextModel {
                 // due to emulated empty paragraph in an empty model
                 paragraphs.add(text);
             }
+        }
+
+        @Override
+        public boolean isUserEditable() {
+            return true;
         }
     }
 }
