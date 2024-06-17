@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,38 +23,29 @@
  * questions.
  */
 
-package javafx.scene.control.skin;
+package com.sun.javafx.animation;
 
-import com.sun.javafx.scene.control.ContextMenuContent;
-import javafx.scene.control.MenuButton;
-import javafx.scene.control.Skin;
+import com.sun.javafx.util.Utils;
+import com.sun.scenario.animation.AbstractPrimaryTimer;
+import javafx.animation.AnimationTimer;
 
+public final class AnimationTimerHelper {
 
-/**
- *
- */
-public class MenuBarSkinShim {
-
-    // can only access the getNodeForMenu method in MenuBarSkin from this package.
-    public static MenuButton getNodeForMenu(MenuBarSkin skin, int i) {
-        return skin.menuBarButtonAt(i);
+    static {
+        Utils.forceInit(AnimationTimer.class);
     }
 
-    public static Skin getPopupSkin(MenuButton mb) {
-        return ((MenuButtonSkinBase)mb.getSkin()).popup.getSkin();
+    private static Accessor accessor;
+
+    public static void setAccessor(Accessor accessor) {
+        AnimationTimerHelper.accessor = accessor;
     }
 
-    public static ContextMenuContent getMenuContent(MenuButton mb) {
-        ContextMenuContent cmc = (ContextMenuContent)getPopupSkin(mb).getNode();
-        return cmc;
+    public static AbstractPrimaryTimer getPrimaryTimer(AnimationTimer timer) {
+        return accessor.getPrimaryTimer(timer);
     }
 
-    public static int getFocusedMenuIndex(MenuBarSkin skin) {
-        return skin.getFocusedMenuIndex();
+    public interface Accessor {
+        AbstractPrimaryTimer getPrimaryTimer(AnimationTimer timer);
     }
-
-    public static void setFocusedMenuIndex(MenuBarSkin skin, int index) {
-        skin.setFocusedMenuIndex(index);
-    }
-
 }

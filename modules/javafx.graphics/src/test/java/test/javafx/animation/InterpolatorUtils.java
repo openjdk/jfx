@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,38 +23,35 @@
  * questions.
  */
 
-package javafx.scene.control.skin;
+package test.javafx.animation;
 
-import com.sun.javafx.scene.control.ContextMenuContent;
-import javafx.scene.control.MenuButton;
-import javafx.scene.control.Skin;
+import org.junit.jupiter.api.Assertions;
+import javafx.animation.Interpolator;
 
+public class InterpolatorUtils {
 
-/**
- *
- */
-public class MenuBarSkinShim {
-
-    // can only access the getNodeForMenu method in MenuBarSkin from this package.
-    public static MenuButton getNodeForMenu(MenuBarSkin skin, int i) {
-        return skin.menuBarButtonAt(i);
+    /**
+     * Asserts that both interpolators are equal by sampling their outputs.
+     */
+    public static void assertInterpolatorEquals(Interpolator expected, Interpolator actual) {
+        Assertions.assertTrue(equals(expected, actual), "Interpolators do not produce equal outputs");
     }
 
-    public static Skin getPopupSkin(MenuButton mb) {
-        return ((MenuButtonSkinBase)mb.getSkin()).popup.getSkin();
-    }
+    /**
+     * Determines whether two interpolators are equal by sampling their outputs.
+     */
+    public static boolean equals(Interpolator int1, Interpolator int2) {
+        final int numSamples = 16;
 
-    public static ContextMenuContent getMenuContent(MenuButton mb) {
-        ContextMenuContent cmc = (ContextMenuContent)getPopupSkin(mb).getNode();
-        return cmc;
-    }
+        for (int i = 0; i < numSamples; ++i) {
+            double d1 = int1.interpolate(0D, 1D, (double)i / numSamples);
+            double d2 = int2.interpolate(0D, 1D, (double)i / numSamples);
+            if (Math.abs(d2 - d1) > 0.001) {
+                return false;
+            }
+        }
 
-    public static int getFocusedMenuIndex(MenuBarSkin skin) {
-        return skin.getFocusedMenuIndex();
-    }
-
-    public static void setFocusedMenuIndex(MenuBarSkin skin, int index) {
-        skin.setFocusedMenuIndex(index);
+        return true;
     }
 
 }
