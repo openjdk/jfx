@@ -90,7 +90,7 @@ public final class StyleAttrs {
     /** Text alignment paragraph attribute. */
     public static final StyleAttribute<TextAlignment> TEXT_ALIGNMENT = new StyleAttribute<>("TEXT_ALIGNMENT", TextAlignment.class, true);
 
-    /** Text color attrbute. */
+    /** Text color attribute. */
     public static final StyleAttribute<Color> TEXT_COLOR = new StyleAttribute<>("TEXT_COLOR", Color.class, false);
 
     /** Underline text attribute. */

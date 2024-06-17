@@ -1068,7 +1068,7 @@ public class RichTextArea extends Control {
     public final void copy(DataFormat format) {
         RichTextAreaSkin skin = richTextAreaSkin();
         if (skin != null) {
-            skin.copy(format);
+            skin.copyText(format);
         }
     }
 
@@ -1601,7 +1601,7 @@ public class RichTextArea extends Control {
     public void paste(DataFormat format) {
         RichTextAreaSkin skin = richTextAreaSkin();
         if (skin != null) {
-            skin.paste(format);
+            skin.pasteText(format);
         }
     }
 

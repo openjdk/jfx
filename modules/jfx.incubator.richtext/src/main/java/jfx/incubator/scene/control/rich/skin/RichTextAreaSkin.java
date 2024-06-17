@@ -256,7 +256,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
      *
      * @param format data format
      */
-    public void copy(DataFormat format) {
+    public void copyText(DataFormat format) {
         behavior.copy(format);
     }
 
@@ -267,7 +267,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
      *
      * @param format data format
      */
-    public void paste(DataFormat format) {
+    public void pasteText(DataFormat format) {
         behavior.paste(format);
     }
 
@@ -295,7 +295,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
 
     /**
      * Discards any cached layout information and calls
-     * {@code requestLayout()}.
+     * {@link javafx.scene.Parent#requestLayout() requestLayout()}.
      */
     // TODO alternative: simply override requestLayout() ?
     public void refreshLayout() {
