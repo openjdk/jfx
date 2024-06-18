@@ -323,31 +323,10 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
 
     @Override protected void seriesAdded(Series<X,Y> series, int seriesIndex) {
         // handle any data already in series
-        // create entry in the map
-        Map<String, Data<X,Y>> categoryMap = new HashMap<>();
         for (int j=0; j<series.getData().size(); j++) {
             Data<X,Y> item = series.getData().get(j);
-            Node bar = createBar(series, seriesIndex, item, j);
-            String category;
-            if (orientation == Orientation.VERTICAL) {
-                category = (String)item.getXValue();
-            } else {
-                category = (String)item.getYValue();
-            }
-            categoryMap.put(category, item);
-            if (shouldAnimate()) {
-                animateDataAdd(item, bar);
-            } else {
-                // RT-21164 check if bar value is negative to add NEGATIVE_STYLE style class
-                double barVal = (orientation == Orientation.VERTICAL) ? ((Number)item.getYValue()).doubleValue() :
-                        ((Number)item.getXValue()).doubleValue();
-                if (barVal < 0) {
-                    bar.getStyleClass().add(NEGATIVE_STYLE);
-                }
-                getPlotChildren().add(bar);
-            }
+            dataItemAdded(series, j, item);
         }
-        if (categoryMap.size() > 0) seriesCategoryMap.put(series, categoryMap);
     }
 
     @Override protected void seriesRemoved(final Series<X,Y> series) {
