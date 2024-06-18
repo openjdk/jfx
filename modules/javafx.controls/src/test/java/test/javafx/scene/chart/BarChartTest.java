@@ -271,4 +271,14 @@ public class BarChartTest extends XYChartTestBase {
         assertEquals("5", categories.get(3));
         assertEquals("4", categories.get(4));
     }
+
+    @Test
+    public void testNegativeStyleIsAddedToNewData() {
+        startApp();
+        Series<String, Number> series = bc.getData().getFirst();
+        series.getData().addFirst(new XYChart.Data<>("1", -1));
+        pulse();
+        Node bar = series.getData().getFirst().getNode();
+        checkStyleClass(bar, "negative");
+    }
 }

@@ -255,6 +255,12 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         if (shouldAnimate()) {
             animateDataAdd(item, bar);
         } else {
+            double barVal = (orientation == Orientation.VERTICAL) ? ((Number)item.getYValue()).doubleValue() :
+                    ((Number)item.getXValue()).doubleValue();
+            if (barVal < 0) {
+                bar.getStyleClass().add(NEGATIVE_STYLE);
+            }
+
             getPlotChildren().add(bar);
         }
     }
