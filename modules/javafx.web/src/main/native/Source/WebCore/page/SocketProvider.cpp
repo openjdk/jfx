@@ -23,39 +23,32 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "config.h"
+#if PLATFORM(JAVA)
+#include "SocketProvider.h"
 
-#include "WebSocketIdentifier.h"
-#include <pal/SessionID.h>
-#include <wtf/ThreadSafeRefCounted.h>
-#include <wtf/text/WTFString.h>
+#include "SocketStreamHandleImpl.h"
+#include "ThreadableWebSocketChannel.h"
 
 namespace WebCore {
 
-class Document;
-class ThreadableWebSocketChannel;
-class ScriptExecutionContext;
-class StorageSessionProvider;
-class ScriptExecutionContext;
-class SocketStreamHandle;
-class SocketStreamHandleClient;
-class Page;
-class WebSocketChannelClient;
-
-class WEBCORE_EXPORT SocketProvider : public ThreadSafeRefCounted<SocketProvider> {
-public:
-#if !PLATFORM(JAVA)
-    virtual RefPtr<ThreadableWebSocketChannel> createWebSocketChannel(Document&, WebSocketChannelClient&) = 0;
-#endif
-    static Ref<SocketProvider> create() { return adoptRef(*new SocketProvider); }
 #if PLATFORM(JAVA)
-    virtual Ref<SocketStreamHandle> createSocketStreamHandle(const URL&, SocketStreamHandleClient&, WebSocketIdentifier, PAL::SessionID, Page*, const String& credentialPartition, const StorageSessionProvider*);
+Ref<SocketStreamHandle> SocketProvider::createSocketStreamHandle(const URL& url, SocketStreamHandleClient& client, WebSocketIdentifier, PAL::SessionID sessionID, Page* page, const String& credentialPartition, const StorageSessionProvider* provider)
+{
+    return SocketStreamHandleImpl::create(url, client, sessionID, page, credentialPartition, { }, provider);
+}
 #else
-    virtual Ref<SocketStreamHandle> createSocketStreamHandle(const URL&, SocketStreamHandleClient&, WebSocketIdentifier, PAL::SessionID, const String& credentialPartition, const StorageSessionProvider*);
+Ref<SocketStreamHandle> SocketProvider::createSocketStreamHandle(const URL& url, SocketStreamHandleClient& client, WebSocketIdentifier, PAL::SessionID sessionID, const String& credentialPartition, const StorageSessionProvider* provider)
+{
+    static const auto shouldAcceptInsecureCertificates = false;
+    return SocketStreamHandleImpl::create(url, client, sessionID, credentialPartition, { }, provider, shouldAcceptInsecureCertificates);
+}
 #endif
-    virtual RefPtr<ThreadableWebSocketChannel> createWebSocketChannel(Document&, WebSocketChannelClient&);
 
-    virtual ~SocketProvider() { };
-};
+RefPtr<ThreadableWebSocketChannel> SocketProvider::createWebSocketChannel(Document&, WebSocketChannelClient&)
+{
+    return nullptr;
+}
 
 }
+#endif
