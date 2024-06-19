@@ -178,4 +178,17 @@ public class BarChartTest extends XYChartTestBase {
         int nodesPerSeries = 3; // 3 bars
         checkSeriesRemoveAnimatedStyleClasses(bc, nodesPerSeries, 700);
     }
+
+    @Test
+    public void testAddingDuplicateCategory() {
+        startApp();
+        ObservableList<XYChart.Data<String, Number>> list = FXCollections.observableArrayList();
+        list.add(new XYChart.Data<>("1", 1));
+        list.add(new XYChart.Data<>("1", 2));
+        list.add(new XYChart.Data<>("2", 3));
+        BarChart<String, Number> bc = new BarChart<>(new CategoryAxis(), new NumberAxis());
+        bc.getData().add(new Series<>());
+        bc.getData().getFirst().setData(list);
+        assertEquals(2, XYChartShim.Series_getDataSize(bc.getData().getFirst()));
+    }
 }

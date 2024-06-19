@@ -61,6 +61,8 @@ import javafx.css.StyleableProperty;
  * A chart that plots bars indicating data values for a category. The bars can be vertical or horizontal depending on
  * which axis is a category axis.
  *
+ * Adding data with multiple occurences of a category to a series shows the last occurence.
+ *
  * @param <X> the category axis value type
  * @param <Y> the data value type
  * @since JavaFX 2.0
@@ -209,8 +211,11 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         }
         // check if category is already present
         if (!categoryAxis.getCategories().contains(category)) {
+            // find category index in case data contains duplicate categories
+            int i = series.getData().size() != categoryAxis.getCategories().size() ? series.getItemIndex(item) :
+                    itemIndex;
             // note: cat axis categories can be updated only when autoranging is true.
-            categoryAxis.getCategories().add(itemIndex, category);
+            categoryAxis.getCategories().add(i, category);
         } else if (categoryMap.containsKey(category)){
             // RT-21162 : replacing the previous data, first remove the node from scenegraph.
             Data<X,Y> data = categoryMap.get(category);
