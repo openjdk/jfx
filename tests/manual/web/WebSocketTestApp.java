@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,51 +24,60 @@
  */
 
 import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.geometry.Insets;
+import java.net.URL;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.TextField;
-import javafx.scene.layout.BorderPane;
+import javafx.scene.control.Label;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
 
-import java.net.URL;
-
-/* WebSocketTestApp is an test app for Websocket ,
-It simply test websocket channel , sending connection request
-to wss://echo.websocket.org, once connection established  socket.onmessage
-callback should invoked
- */
 public class WebSocketTestApp extends Application {
 
     @Override
-    public void start(Stage primaryStage) {
+    public void start(Stage primaryStage) throws Exception {
+
+        VBox instructions =  new VBox(
+                new Label(" This test is for manual websocket callback test , please follow below steps"),
+                new Label(" "),
+                new Label(" STEPS:"),
+                new Label("  1. Click on RunTest button"),
+                new Label(" "),
+                new Label("  2. Expected behaviour: Data received from server meesgae should appear on webview"));
+
+        Button loadButton = new Button("RunTest");
+
+        Button passButton = new Button("Pass");
+        passButton.setOnAction(e -> {
+            Platform.exit();
+        });
+
+        Button failButton = new Button("Fail");
+        failButton.setOnAction(e -> {
+            Platform.exit();
+            throw new AssertionError("on paste the Data Nodes count is wrong.");
+        });
+
         WebView webView = new WebView();
-
-        Button loadButton = new Button("RunWebSocketTest");
-
-        TextField messageField = new TextField();
-        messageField.setEditable(false);
-        messageField.setText("Click RunWebSocketTest button to test WebSocket");
+        WebEngine webEngine = webView.getEngine();
 
         loadButton.setOnAction(e -> {
             URL url = this.getClass().getResource("websocket.html");
             System.out.println(url);
             webView.getEngine().load(url.toString());
-
-            messageField.setText(" if There is message like Data received from server! on WebView, Test Pass");
         });
 
-        // Create a VBox to hold the button and text field
-        VBox vbox = new VBox(10, loadButton, messageField);
-        vbox.setSpacing(10);
-
-        BorderPane layout = new BorderPane();
-        layout.setCenter(vbox);
-        layout.setBottom(webView);
-
-        Scene scene = new Scene(layout, 800, 600);
-        primaryStage.setTitle("JavaFX WebView WebSocket Test");
+        HBox buttons = new HBox(20, passButton, failButton);
+        HBox run_test = new HBox(20, loadButton);
+        buttons.setPadding(new Insets(10));
+        VBox rootNode = new VBox(20, new HBox(instructions), webView, buttons);
+        instructions.getChildren().add(run_test);
+        rootNode.setPadding(new Insets(10));
+        Scene scene = new Scene(rootNode, 1000, 600);
         primaryStage.setScene(scene);
         primaryStage.show();
     }
