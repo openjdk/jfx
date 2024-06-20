@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,7 +59,7 @@ public class WebSocketTestApp extends Application {
         Button failButton = new Button("Fail");
         failButton.setOnAction(e -> {
             Platform.exit();
-            throw new AssertionError("on paste the Data Nodes count is wrong.");
+            throw new AssertionError("!Unable to received meesgae data from server, something is wrong");
         });
 
         WebView webView = new WebView();
