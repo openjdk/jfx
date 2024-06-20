@@ -60,7 +60,7 @@ import javafx.css.StyleableProperty;
 /**
  * A chart that plots bars indicating data values for a category. The bars can be vertical or horizontal depending on
  * which axis is a category axis.
- *
+ * <p>
  * Adding data with multiple occurences of a category to a series shows the last occurence.
  *
  * @param <X> the category axis value type
