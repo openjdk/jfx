@@ -59,7 +59,7 @@ public class WebSocketTestApp extends Application {
         Button failButton = new Button("Fail");
         failButton.setOnAction(e -> {
             Platform.exit();
-            throw new AssertionError("!Unable to received meesgae data from server, something is wrong");
+            throw new AssertionError("!Unable to receive meesgae data from server, something is wrong");
         });
 
         WebView webView = new WebView();
