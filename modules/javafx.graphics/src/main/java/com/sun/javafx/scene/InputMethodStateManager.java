@@ -1,0 +1,163 @@
+/*
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+package com.sun.javafx.scene;
+
+import com.sun.javafx.scene.SceneHelper;
+import java.lang.ref.WeakReference;
+import java.util.LinkedList;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.WeakChangeListener;
+import javafx.event.EventHandler;
+import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.input.InputMethodEvent;
+import javafx.scene.input.InputMethodRequests;
+
+/**
+ * Used to manage a collection of scenes which must coordinate on enabling input
+ * method events and retrieving InputMethodRequests. This occurs when a stack of
+ * PopupWindows are present; the PopupWindows do not have the OS focus and rely
+ * on events first being posted to the root (non-popup) window.
+ */
+public class InputMethodStateManager {
+    /**
+     * The root non-popup scene which the OS sends input method
+     * events to.
+     */
+    private final WeakReference<Scene> rootScene;
+
+    /**
+     * The scene for which we enabled input method events and which
+     * is presumably processing them.
+     */
+    private Scene currentEventScene;
+
+    /**
+     * The scene stack including the root.
+     */
+    private final LinkedList<Scene> scenes = new LinkedList<Scene>();
+
+    private final ChangeListener<InputMethodRequests> inputMethodRequestsChangedListener =
+        (obs, old, current) -> updateInputMethodEventEnableState();
+    private final ChangeListener<EventHandler<? super InputMethodEvent>> onInputMethodTextChangedListener =
+        (obs, old, current) -> updateInputMethodEventEnableState();
+
+    private final WeakChangeListener<InputMethodRequests> weakInputMethodRequestsChangedListener =
+        new WeakChangeListener(inputMethodRequestsChangedListener);
+    private final WeakChangeListener<EventHandler<? super InputMethodEvent>> weakOnInputMethodTextChangedListener =
+        new WeakChangeListener(onInputMethodTextChangedListener);
+
+    /**
+     * Constructs a new instance.
+     *
+     * @param scene the root {@link Scene} for which input methods should be enabled and disabled
+     */
+    public InputMethodStateManager(Scene scene) {
+        this.rootScene = new WeakReference<>(scene);
+        this.scenes.add(scene);
+        this.currentEventScene = scene;
+    }
+
+    /**
+     * Add a new Scene to the stack. It is assumed that Scenes form a stack
+     * and leave in LIFO order.
+     */
+    public void addScene(Scene scene) {
+        if (scenes.contains(scene)) {
+            System.err.println("Popup scene already present");
+        }
+        scenes.addFirst(scene);
+        updateInputMethodEventEnableState();
+    }
+
+    public void removeScene(Scene scene) {
+        if (scene != scenes.peekFirst()) {
+            System.err.println("Popup scene removed out of order");
+        }
+
+        /**
+         * If this scene is going away we should cleanup any composition
+         * state. This is not normally done when a window is hidden.
+         */
+        SceneHelper.finishInputMethodComposition(rootScene.get());
+
+        Node focusOwner = scene.getFocusOwner();
+        if (focusOwner != null) {
+            focusOwner.inputMethodRequestsProperty().removeListener(weakInputMethodRequestsChangedListener);
+            focusOwner.onInputMethodTextChangedProperty().removeListener(weakOnInputMethodTextChangedListener);
+        }
+
+        scenes.remove(scene);
+        updateInputMethodEventEnableState();
+    }
+
+    /**
+     * Every Scene is expected to call this when the focusOwner changes. At this
+     */
+    public void focusOwnerChanged(Node oldFocusOwner, Node newFocusOwner) {
+        if (oldFocusOwner != null) {
+            oldFocusOwner.inputMethodRequestsProperty().removeListener(weakInputMethodRequestsChangedListener);
+            oldFocusOwner.onInputMethodTextChangedProperty().removeListener(weakOnInputMethodTextChangedListener);
+        }
+        if (newFocusOwner != null) {
+            newFocusOwner.inputMethodRequestsProperty().addListener(weakInputMethodRequestsChangedListener);
+            newFocusOwner.onInputMethodTextChangedProperty().addListener(weakOnInputMethodTextChangedListener);
+        }
+        updateInputMethodEventEnableState();
+    }
+
+    public Scene getRootScene() {
+        return rootScene.get();
+    }
+
+    private void updateInputMethodEventEnableState() {
+        currentEventScene = null;
+        // Visit Scenes in order from top to bottom.
+        for (Scene scene : scenes) {
+            Node focusOwner = scene.getFocusOwner();
+            if ((focusOwner != null) &&
+                (focusOwner.getInputMethodRequests() != null) &&
+                (focusOwner.getOnInputMethodTextChanged() != null)) {
+                currentEventScene = scene;
+                break;
+            }
+        }
+        Scene root = rootScene.get();
+        if (root != null) {
+            SceneHelper.enableInputMethodEvents(root, currentEventScene != null);
+        }
+    }
+
+    public InputMethodRequests getInputMethodRequests() {
+        if (currentEventScene != null) {
+            Node focusOwner = currentEventScene.getFocusOwner();
+            if (focusOwner != null) {
+                return focusOwner.getInputMethodRequests();
+            }
+        }
+        return null;
+    }
+}

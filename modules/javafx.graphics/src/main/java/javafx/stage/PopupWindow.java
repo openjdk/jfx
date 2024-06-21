@@ -74,6 +74,7 @@ import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Background;
@@ -539,6 +540,8 @@ public abstract class PopupWindow extends Window {
             rootWindow = getRootWindow(ownerWindowValue);
 
             startMonitorOwnerEvents(ownerWindowValue);
+            Scene scene = getScene();
+            SceneHelper.getInputMethodStateManager(scene).addScene(scene);
             // currently we consider popup window to be focused when it is
             // visible and its owner window is focused (we need to track
             // that through listener on owner window focused property)
@@ -549,6 +552,10 @@ public abstract class PopupWindow extends Window {
             handleAutofixActivation(true, isAutoFix());
             handleAutohideActivation(true, isAutoHide());
         } else {
+            // This may generate events so it must be done while we're
+            // still monitoring owner events.
+            Scene scene = getScene();
+            SceneHelper.getInputMethodStateManager(scene).removeScene(scene);
             stopMonitorOwnerEvents(ownerWindowValue);
             unbindOwnerFocusedProperty(ownerWindowValue);
             WindowHelper.setFocused(this, false);
@@ -984,6 +991,9 @@ public abstract class PopupWindow extends Window {
                 handleKeyEvent((KeyEvent) event);
                 return;
             }
+            else if (event instanceof InputMethodEvent) {
+                handleInputMethodEvent((InputMethodEvent) event);
+            }
 
             final EventType<?> eventType = event.getEventType();
 
@@ -1019,6 +1029,24 @@ public abstract class PopupWindow extends Window {
             if ((event.getEventType() == KeyEvent.KEY_PRESSED)
                     && ESCAPE_KEY_COMBINATION.match(event)) {
                 handleEscapeKeyPressedEvent(event);
+            }
+        }
+
+        private void handleInputMethodEvent(final InputMethodEvent event) {
+            if (event.isConsumed()) {
+                return;
+            }
+
+            final Scene scene = popupWindow.getScene();
+            if (scene != null) {
+                final Node sceneFocusOwner = scene.getFocusOwner();
+                final EventTarget eventTarget =
+                        (sceneFocusOwner != null) ? sceneFocusOwner : scene;
+                if (EventUtil.fireEvent(eventTarget, new DirectEvent(event.copyFor(popupWindow, eventTarget)))
+                        == null) {
+                    event.consume();
+                    return;
+                }
             }
         }
 
