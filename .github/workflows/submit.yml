@@ -25,13 +25,15 @@
 
 #
 # This GitHub actions YAML file runs a build and test on each of the three primary platforms:
-# Linux, macOS, Windows. The jobs are run using the default (latest) OS platform for each OS.
+# Linux, macOS (both x64 and aarch64), Windows. The jobs are run using the default (latest) OS platform for each OS.
 # We download a specific version the boot JDK and gradle. We use the default versions
 # of all other build tools (e.g., compilers and ant) that are available on each platform.
 #
 # The build step is run in the default mode without building the native media or webkit libraries.
 # The test is run with web tests excluded. As a follow-up enhancement, we might consider optionally
 # building the media and webkit libraries.
+#
+# NOTE: much of the build logic is duplicated for each platform. Keep this in mind when making changes.
 #
 
 name: JavaFX pre-submit tests
