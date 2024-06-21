@@ -211,11 +211,32 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         }
         // check if category is already present
         if (!categoryAxis.getCategories().contains(category)) {
-            // find category index in case data contains duplicate categories
-            int i = series.getData().size() != categoryAxis.getCategories().size() ? series.getItemIndex(item) :
-                    itemIndex;
+            int seriesCount = getDataSize();
+            int categoryCount = categoryAxis.getCategories().size();
+
+            int categoryIndex;
+            if (seriesCount == 1 && itemIndex == categoryCount) {
+                // shortcut if there is only one series and data contains no duplicates
+                categoryIndex = categoryCount;
+            } else {
+                // There may be data items with duplicate categories. Find category insertion index on the axis
+                // by looking at the concatenation of the data of all series, skipping duplicate categories.
+                categoryIndex = 0;
+                var uniqueCategories = new HashSet<String>();
+                for (Map<String, Data<X,Y>> catMap : seriesCategoryMap.values()) {
+                    for (String cat : catMap.keySet()) {
+                        if (cat == category) {
+                            break;
+                        }
+                        if (uniqueCategories.add(cat)) {
+                            categoryIndex++;
+                        }
+                    }
+                }
+            }
+
             // note: cat axis categories can be updated only when autoranging is true.
-            categoryAxis.getCategories().add(i, category);
+            categoryAxis.getCategories().add(categoryIndex, category);
         } else if (categoryMap.containsKey(category)){
             // RT-21162 : replacing the previous data, first remove the node from scenegraph.
             Data<X,Y> data = categoryMap.get(category);
