@@ -223,14 +223,18 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
                 // by looking at the concatenation of the data of all series, skipping duplicate categories.
                 categoryIndex = 0;
                 var uniqueCategories = new HashSet<String>();
-                for (Map<String, Data<X,Y>> catMap : seriesCategoryMap.values()) {
+                for (var entry : seriesCategoryMap.entrySet()) {
+                    Series s = entry.getKey();
+                    Map<String, Data<X,Y>> catMap = entry.getValue();
+                    int i = 0;
                     for (String cat : catMap.keySet()) {
-                        if (cat == category) {
+                        if (s == series && i >= itemIndex) {
                             break;
                         }
                         if (uniqueCategories.add(cat)) {
                             categoryIndex++;
                         }
+                        i++;
                     }
                 }
             }
