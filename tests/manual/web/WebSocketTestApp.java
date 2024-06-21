@@ -47,7 +47,7 @@ public class WebSocketTestApp extends Application {
                 new Label(" STEPS:"),
                 new Label("  1. Click on RunTest button"),
                 new Label(" "),
-                new Label("  2. Expected behaviour: Data received from server meesgae should appear on webview"));
+                new Label("  2. Expected behaviour: Data received from server message should appear on webview"));
 
         Button loadButton = new Button("RunTest");
 
@@ -59,7 +59,7 @@ public class WebSocketTestApp extends Application {
         Button failButton = new Button("Fail");
         failButton.setOnAction(e -> {
             Platform.exit();
-            throw new AssertionError("!Unable to receive meesgae data from server, something is wrong");
+            throw new AssertionError("!Unable to receive message data from server, something is wrong");
         });
 
         WebView webView = new WebView();
