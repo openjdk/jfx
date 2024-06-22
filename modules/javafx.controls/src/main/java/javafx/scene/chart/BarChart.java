@@ -221,6 +221,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             } else {
                 // There may be data items with duplicate categories. Find category insertion index on the axis
                 // by looking at the concatenation of the data of all series, skipping duplicate categories.
+                // The category insertion index is found when the new data's index is reached within its series.
                 categoryIndex = 0;
                 var uniqueCategories = new HashSet<String>();
                 for (var entry : seriesCategoryMap.entrySet()) {
