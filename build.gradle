@@ -4136,7 +4136,9 @@ allprojects {
                 //compile.options.compilerArgs += "-Werror"
             }
         } else if (compile.name == "compileJslcJava" ||
-            compile.name == "compileToolJava") {
+            compile.name == "compileDecoraCompilers" ||
+            compile.name == "compilePrismCompilers" ||
+            compile.name == "compileToolsJava") {
 
             // Add in the -Xlint options
             compile.options.warnings = IS_TOOL_LINT
@@ -4156,7 +4158,7 @@ allprojects {
                 setupLintOptions(compile, TEST_LINT, extraLintOpts);
             }
         } else {
-            logger.warn("Unknown compilation task: ${compile.name}")
+            logger.info("Unknown compilation task: ${project}:${compile.name}")
             compile.options.warnings = false
         }
     } // tasks with javaCompile
