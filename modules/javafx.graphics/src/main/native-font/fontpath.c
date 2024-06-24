@@ -656,7 +656,7 @@ static void populateFontFileNameFromRegistryKey(HKEY regKey,
     for (nval = 0; nval < dwNumValues; nval++ ) {
         DWORD dwNameSize = dwMaxValueNameLen;
         DWORD dwDataValueSize = dwMaxValueDataLen;
-        ret = RegEnumValueW(hkeyFonts, nval, (LPWSTR)wname, &dwNameSize,
+        ret = RegEnumValueW(hkeyFonts, nval, wname, &dwNameSize,
                             NULL, &type, (LPBYTE)data, &dwDataValueSize);
 
         if (ret != ERROR_SUCCESS) {
