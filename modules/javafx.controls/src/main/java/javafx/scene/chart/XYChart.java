@@ -182,7 +182,7 @@ public abstract class XYChart<X,Y> extends Chart {
     private ReadOnlyObjectProperty<Axis<X>> xAxisProperty = new ReadOnlyObjectPropertyBase<Axis<X>>() {
         @Override
         public Object getBean() {
-            return this;
+            return XYChart.this;
         }
 
         @Override
@@ -211,7 +211,7 @@ public abstract class XYChart<X,Y> extends Chart {
     private ReadOnlyObjectProperty<Axis<Y>> yAxisProperty = new ReadOnlyObjectPropertyBase<Axis<Y>>() {
         @Override
         public Object getBean() {
-            return this;
+            return XYChart.this;
         }
 
         @Override
