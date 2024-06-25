@@ -150,6 +150,7 @@ public class XYNumberLineChartsTest extends XYNumberChartsTestBase {
         // increase ranges, starting axis animation
         chart.getData().getFirst().getData().add(new XYChart.Data<>(100, 100));
         pulse();
+        // forward time until after animation is finished
         toolkit.setAnimationTime(1000);
         NumberAxis yAxis = (NumberAxis)chart.getYAxis();
 
