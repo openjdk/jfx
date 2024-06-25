@@ -1244,27 +1244,48 @@ public class TabPaneTest {
     }
 
     @Test
-    public void testVerticalScroll() {
-        scrollTabPane(0, -100);
+    public void testVerticalScrollTopSide() {
+        scrollTabPane(Side.TOP, 0, -100);
     }
 
     @Test
-    public void testVerticalScrollWithSmallHorizontalAmount() {
-        scrollTabPane(10, -100);
+    public void testVerticalScrollRightSide() {
+        scrollTabPane(Side.RIGHT, 0, 100);
     }
 
     @Test
-    public void testHorizontalScroll() {
-        scrollTabPane(-100, 0);
+    public void testVerticalScrollBottomSide() {
+        scrollTabPane(Side.BOTTOM, 0, -100);
     }
 
     @Test
-    public void testHorizontalScrollWithSmallVerticalAmount() {
-        scrollTabPane(-100, 10);
+    public void testVerticalScrollLeftSide() {
+        scrollTabPane(Side.LEFT, 0, 100);
     }
 
-    private void scrollTabPane(double deltaX, double deltaY) {
+    @Test
+    public void testHorizontalScrollTopSide() {
+        scrollTabPane(Side.TOP, -100, 0);
+    }
+
+    @Test
+    public void testHorizontalScrollRightSide() {
+        scrollTabPane(Side.RIGHT, 100, 0);
+    }
+
+    @Test
+    public void testHorizontalScrollBottomSide() {
+        scrollTabPane(Side.BOTTOM, -100, 0);
+    }
+
+    @Test
+    public void testHorizontalScrollLeftSide() {
+        scrollTabPane(Side.LEFT, 100, 0);
+    }
+
+    private void scrollTabPane(Side side, double deltaX, double deltaY) {
         tabPane.setMaxSize(400, 100);
+        tabPane.setSide(side);
         for (int i = 0; i < 40; i++) {
             Tab tab = new Tab("Tab " + (1000 + i));
             tabPane.getTabs().add(tab);
@@ -1272,19 +1293,16 @@ public class TabPaneTest {
         root.getChildren().add(tabPane);
         stage.show();
 
-        root.applyCss();
-        root.layout();
-
-        double minXFirstTab = tabPane.lookupAll(".tab-label")
+        Bounds firstTabBounds = tabPane.lookupAll(".tab-label")
                 .stream()
                 .findFirst()
-                .map(n -> n.localToScene(n.getLayoutBounds()).getMinX())
-                .orElse(-1d);
+                .map(n -> n.localToScene(n.getLayoutBounds()))
+                .orElse(null);
+        assertNotNull(firstTabBounds);
 
         Bounds layoutBounds = tabPane.getLayoutBounds();
         double minX = tabPane.localToScene(layoutBounds).getMinX();
         double minY = tabPane.localToScene(layoutBounds).getMinY();
-
         double minScrX = tabPane.localToScreen(layoutBounds).getMinX();
         double minScrY = tabPane.localToScreen(layoutBounds).getMinY();
         double x = 50;
@@ -1295,6 +1313,8 @@ public class TabPaneTest {
         tk.firePulse();
 
         StackPane tabHeaderArea = (StackPane) tabPane.lookup(".tab-header-area");
+        assertNotNull(tabHeaderArea);
+
         Event.fireEvent(tabHeaderArea, new ScrollEvent(
                 ScrollEvent.SCROLL,
                 minX + x, minY + y,
@@ -1304,17 +1324,23 @@ public class TabPaneTest {
                 ScrollEvent.HorizontalTextScrollUnits.NONE, 0.0,
                 ScrollEvent.VerticalTextScrollUnits.NONE, 0.0,
                 0, null));
-
         tk.firePulse();
 
-        double newMinXFirstTab = tabPane.lookupAll(".tab-label")
+        Bounds newFirstTabBounds = tabPane.lookupAll(".tab-label")
                 .stream()
                 .findFirst()
-                .map(n -> n.localToScene(n.getLayoutBounds()).getMinX())
-                .orElse(-1d);
+                .map(n -> n.localToScene(n.getLayoutBounds()))
+                .orElse(null);
+        assertNotNull(newFirstTabBounds);
 
-        double delta = Math.abs(deltaY) > Math.abs(deltaX) ? deltaY : deltaX;
-        assertEquals(minXFirstTab + delta, newMinXFirstTab, 0);
+        if (side.equals(Side.TOP) || side.equals(Side.BOTTOM)) {
+            double delta = Math.abs(deltaY) > Math.abs(deltaX) ? deltaY : deltaX;
+            assertEquals(firstTabBounds.getMinX() + delta, newFirstTabBounds.getMinX(), 0);
+            assertEquals(firstTabBounds.getMinY(), newFirstTabBounds.getMinY(), 0);
+        } else {
+            assertEquals(firstTabBounds.getMinX(), newFirstTabBounds.getMinX(), 0);
+            assertEquals(firstTabBounds.getMinY() - deltaY, newFirstTabBounds.getMinY(), 0);
+        }
     }
 
 }
