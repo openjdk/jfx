@@ -292,9 +292,9 @@ public class Window implements EventTarget {
     /**
      * Set the width and height of this Window to match the size of the content
      * of this Window's Scene.
-     * This request might be ignored if the Window is not allowed to do so, e.g. a {@link Stage}
+     * <p>This request might be ignored if the Window is not allowed to do so, for example a {@link Stage}
      * may be {@code maximized} or in {@code fullScreen} and therefore does not allow this request.
-     * If that is the case, this request is remembered and reapplied later when allowed.
+     * If that is the case, this request is remembered and reapplied later when allowed.</p>
      */
     public void sizeToScene() {
         if (isSizeToSceneAllowed() && getScene() != null && peer != null) {

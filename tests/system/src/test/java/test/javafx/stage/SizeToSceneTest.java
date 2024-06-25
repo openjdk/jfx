@@ -61,7 +61,11 @@ class SizeToSceneTest {
 
     @AfterEach
     void afterEach() {
-        Util.runAndWait(() -> mainStage.hide());
+        Util.runAndWait(() -> {
+            if (mainStage != null) {
+                mainStage.hide();
+            }
+        });
     }
 
     private static void assertStageScreenBounds() {
@@ -99,6 +103,7 @@ class SizeToSceneTest {
         });
 
         Util.waitForLatch(shownLatch, 5, "Stage failed to setup and show");
+        Util.sleep(500);
     }
 
     @Test
