@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,6 +38,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import javafx.scene.control.SelectionModel;
+import javafx.scene.input.ScrollEvent;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
@@ -1241,4 +1242,79 @@ public class TabPaneTest {
         attemptGC(10, weakSMRef);
         assertNull(weakSMRef.get());
     }
+
+    @Test
+    public void testVerticalScroll() {
+        scrollTabPane(0, -100);
+    }
+
+    @Test
+    public void testVerticalScrollWithSmallHorizontalAmount() {
+        scrollTabPane(10, -100);
+    }
+
+    @Test
+    public void testHorizontalScroll() {
+        scrollTabPane(-100, 0);
+    }
+
+    @Test
+    public void testHorizontalScrollWithSmallVerticalAmount() {
+        scrollTabPane(-100, 10);
+    }
+
+    private void scrollTabPane(double deltaX, double deltaY) {
+        tabPane.setMaxSize(400, 100);
+        for (int i = 0; i < 40; i++) {
+            Tab tab = new Tab("Tab " + (1000 + i));
+            tabPane.getTabs().add(tab);
+        }
+        root.getChildren().add(tabPane);
+        stage.show();
+
+        root.applyCss();
+        root.layout();
+
+        double minXFirstTab = tabPane.lookupAll(".tab-label")
+                .stream()
+                .findFirst()
+                .map(n -> n.localToScene(n.getLayoutBounds()).getMinX())
+                .orElse(-1d);
+
+        Bounds layoutBounds = tabPane.getLayoutBounds();
+        double minX = tabPane.localToScene(layoutBounds).getMinX();
+        double minY = tabPane.localToScene(layoutBounds).getMinY();
+
+        double minScrX = tabPane.localToScreen(layoutBounds).getMinX();
+        double minScrY = tabPane.localToScreen(layoutBounds).getMinY();
+        double x = 50;
+        double y = 10;
+
+        SceneHelper.processMouseEvent(scene,
+                MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, minX + x, minY + y));
+        tk.firePulse();
+
+        StackPane tabHeaderArea = (StackPane) tabPane.lookup(".tab-header-area");
+        Event.fireEvent(tabHeaderArea, new ScrollEvent(
+                ScrollEvent.SCROLL,
+                minX + x, minY + y,
+                minScrX + x, minScrY + y,
+                false, false, false, false, true, false,
+                deltaX, deltaY, deltaX, deltaY,
+                ScrollEvent.HorizontalTextScrollUnits.NONE, 0.0,
+                ScrollEvent.VerticalTextScrollUnits.NONE, 0.0,
+                0, null));
+
+        tk.firePulse();
+
+        double newMinXFirstTab = tabPane.lookupAll(".tab-label")
+                .stream()
+                .findFirst()
+                .map(n -> n.localToScene(n.getLayoutBounds()).getMinX())
+                .orElse(-1d);
+
+        double delta = Math.abs(deltaY) > Math.abs(deltaX) ? deltaY : deltaX;
+        assertEquals(minXFirstTab + delta, newMinXFirstTab, 0);
+    }
+
 }
