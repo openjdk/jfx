@@ -34,8 +34,6 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.stream.Collectors;
-
 import javafx.scene.chart.AreaChart;
 import javafx.scene.chart.Axis;
 import javafx.scene.chart.Chart;
