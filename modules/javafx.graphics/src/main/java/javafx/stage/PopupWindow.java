@@ -457,7 +457,7 @@ public abstract class PopupWindow extends Window {
         final Scene sceneValue = getScene();
         SceneHelper.parentEffectiveOrientationInvalidated(sceneValue);
 
-        // RT-28447
+        // JDK-8116444
         applyStylesheetFromOwner(owner);
 
         final Scene ownerScene = getRootWindow(owner).getScene();

@@ -995,8 +995,9 @@ public class Tooltip extends PopupControl {
                         }
                         hideTimer.playFromStart();
                     } else {
+                        // We need to copy the stylesheet from the owner so that we get all the defined tooltip
                         // styles. Note that this is normally done when showing the tooltip,
-                        // which is too late for some properties,
+                        // which is too late for some properties.
                         t.applyStylesheetFromOwner(owner);
                         // Force the CSS to be processed for the tooltip so that it uses the
                         // appropriate timings for showDelay, showDuration, and hideDelay.
