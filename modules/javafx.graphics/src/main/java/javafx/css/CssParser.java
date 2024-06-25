@@ -4536,6 +4536,7 @@ final public class CssParser {
         return selectors;
     }
 
+    @SuppressWarnings("removal")
     private Selector selector(CssLexer lexer) {
 
         List<Combinator> combinators = null;
@@ -4579,6 +4580,7 @@ final public class CssParser {
 
     }
 
+    @SuppressWarnings("removal")
     private SimpleSelector simpleSelector(CssLexer lexer) {
 
         String esel = "*"; // element selector. default to universal
