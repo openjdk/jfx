@@ -31,6 +31,7 @@ tags=(jdk-){0,1}([1-9]([0-9]*)(\.(0|[1-9][0-9]*)){0,3})(\+(([0-9]+))|(-ga))|[1-9
 
 [checks]
 error=author,reviewers,merge,message,issues,whitespace,executable
+warning=issuestitle,binary
 
 [census]
 version=0
