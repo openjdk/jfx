@@ -48,7 +48,7 @@ void errHandle(
                 error->domain, error->code, error->message);
     }
     if (error) {
-        gtk->g_error_free(error);
+        g_error_free(error);
     }
     error = NULL;
 }
@@ -58,7 +58,7 @@ gboolean validateToken(const gchar *token) {
         return FALSE;
     }
 
-    gboolean isValid = gtk->g_uuid_string_is_valid(token);
+    gboolean isValid = g_uuid_string_is_valid(token);
     if (!isValid) {
         DEBUG_SCREENCAST("!!! restore token "
                          "is not a valid UUID string:\n\"%s\"\n",
@@ -78,7 +78,7 @@ gboolean rebuildScreenData(GVariantIter *iterStreams, gboolean isTheOnlyMon) {
 
     gboolean hasFailures = FALSE;
 
-    while (gtk->g_variant_iter_loop(
+    while (g_variant_iter_loop(
             iterStreams,
             "(u@a{sv})",
             &nodeID,
@@ -105,7 +105,7 @@ gboolean rebuildScreenData(GVariantIter *iterStreams, gboolean isTheOnlyMon) {
         screen->id = nodeID;
 
         if (
-                !gtk->g_variant_lookup(
+                !g_variant_lookup(
                         prop,
                         "size",
                         "(ii)",
@@ -113,7 +113,7 @@ gboolean rebuildScreenData(GVariantIter *iterStreams, gboolean isTheOnlyMon) {
                         &screen->bounds.height
                 )
                 || (
-                        !gtk->g_variant_lookup(
+                        !g_variant_lookup(
                                 prop,
                                 "position",
                                 "(ii)",
@@ -133,7 +133,7 @@ gboolean rebuildScreenData(GVariantIter *iterStreams, gboolean isTheOnlyMon) {
         DEBUG_SCREEN(screen);
         DEBUG_SCREENCAST("#---------------------#\n\n", NULL);
 
-        gtk->g_variant_unref(prop);
+        g_variant_unref(prop);
         screenIndex++;
     };
 
@@ -152,10 +152,10 @@ gboolean checkVersion() {
     static guint32 version = 0;
     if (version == 0) {
         GError *error = NULL;
-        GVariant *retVersion = gtk->g_dbus_proxy_call_sync(
+        GVariant *retVersion = g_dbus_proxy_call_sync(
                 portal->screenCastProxy,
                 "org.freedesktop.DBus.Properties.Get",
-                gtk->g_variant_new("(ss)",
+                g_variant_new("(ss)",
                                    "org.freedesktop.portal.ScreenCast",
                                    "version"),
                 G_DBUS_CALL_FLAGS_NONE,
@@ -171,19 +171,19 @@ gboolean checkVersion() {
         ERR_HANDLE(error);
 
         GVariant *varVersion = NULL;
-        gtk->g_variant_get(retVersion, "(v)", &varVersion);
+        g_variant_get(retVersion, "(v)", &varVersion);
 
         if (!varVersion){
-            gtk->g_variant_unref(retVersion);
+            g_variant_unref(retVersion);
             DEBUG_SCREENCAST("!!! could not get the screencast version\n",
                              NULL);
             return FALSE;
         }
 
-        version = gtk->g_variant_get_uint32(varVersion);
+        version = g_variant_get_uint32(varVersion);
 
-        gtk->g_variant_unref(varVersion);
-        gtk->g_variant_unref(retVersion);
+        g_variant_unref(varVersion);
+        g_variant_unref(retVersion);
 
     }
 
@@ -212,7 +212,7 @@ gboolean initXdgDesktopPortal() {
 
     GError* err = NULL;
 
-    portal->connection = gtk->g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &err);
+    portal->connection = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &err);
 
     if (err) {
         ERR_HANDLE(err);
@@ -226,18 +226,18 @@ gboolean initXdgDesktopPortal() {
         return FALSE;
     }
 
-    GString * nameStr = gtk->g_string_new(name);
-    gtk->g_string_erase(nameStr, 0, 1); //remove leading colon ":"
-    gtk->g_string_replace(nameStr, ".", "_", 0);
+    GString * nameStr = g_string_new(name);
+    g_string_erase(nameStr, 0, 1); //remove leading colon ":"
+    g_string_replace(nameStr, ".", "_", 0);
     portal->senderName = nameStr->str;
 
-    gtk->g_string_free(nameStr, FALSE);
+    g_string_free(nameStr, FALSE);
 
     DEBUG_SCREENCAST("connection/sender name %s / %s\n",
                      name,
                      portal->senderName);
 
-    portal->screenCastProxy = gtk->g_dbus_proxy_new_sync(
+    portal->screenCastProxy = g_dbus_proxy_new_sync(
             portal->connection,
             G_DBUS_PROXY_FLAGS_NONE,
             NULL,
@@ -264,19 +264,19 @@ static void updateRequestPath(
     static uint64_t counter = 0;
     ++counter;
 
-    GString *tokenStr = gtk->g_string_new(NULL);
-    gtk->g_string_printf(
+    GString *tokenStr = g_string_new(NULL);
+    g_string_printf(
             tokenStr,
             PORTAL_TOKEN_TEMPLATE,
             counter
     );
 
     *token = tokenStr->str;
-    gtk->g_string_free(tokenStr, FALSE);
+    g_string_free(tokenStr, FALSE);
 
-    GString *pathStr = gtk->g_string_new(NULL);
+    GString *pathStr = g_string_new(NULL);
 
-    gtk->g_string_printf(
+    g_string_printf(
             pathStr,
             PORTAL_REQUEST_TEMPLATE,
             portal->senderName,
@@ -284,7 +284,7 @@ static void updateRequestPath(
     );
 
     *path = pathStr->str;
-    gtk->g_string_free(pathStr, FALSE);
+    g_string_free(pathStr, FALSE);
 }
 
 static void updateSessionToken(
@@ -293,16 +293,16 @@ static void updateSessionToken(
     static uint64_t counter = 0;
     counter++;
 
-    GString *tokenStr = gtk->g_string_new(NULL);
+    GString *tokenStr = g_string_new(NULL);
 
-    gtk->g_string_printf(
+    g_string_printf(
             tokenStr,
             PORTAL_TOKEN_TEMPLATE,
             counter
     );
 
     *token = tokenStr->str;
-    gtk->g_string_free(tokenStr, FALSE);
+    g_string_free(tokenStr, FALSE);
 }
 
 static void registerScreenCastCallback(
@@ -310,7 +310,7 @@ static void registerScreenCastCallback(
         struct DBusCallbackHelper *helper,
         GDBusSignalCallback callback
 ) {
-    helper->id = gtk->g_dbus_connection_signal_subscribe(
+    helper->id = g_dbus_connection_signal_subscribe(
             portal->connection,
             "org.freedesktop.portal.Desktop",
             "org.freedesktop.portal.Request",
@@ -328,7 +328,7 @@ static void unregisterScreenCastCallback(
         struct DBusCallbackHelper *helper
 ) {
     if (helper->id) {
-        gtk->g_dbus_connection_signal_unsubscribe(
+        g_dbus_connection_signal_unsubscribe(
                 portal->connection,
                 helper->id
         );
@@ -348,7 +348,7 @@ static void callbackScreenCastCreateSession(
     uint32_t status;
     GVariant *result = NULL;
 
-    gtk->g_variant_get(
+    g_variant_get(
             parameters,
             "(u@a{sv})",
             &status,
@@ -358,7 +358,7 @@ static void callbackScreenCastCreateSession(
     if (status != 0) {
         DEBUG_SCREENCAST("Failed to create ScreenCast: %u\n", status);
     } else {
-        gtk->g_variant_lookup(result, "session_handle", "s", helper->data);
+        g_variant_lookup(result, "session_handle", "s", helper->data);
     }
 
     helper->isDone = TRUE;
@@ -392,29 +392,29 @@ gboolean portalScreenCastCreateSession() {
 
     GVariantBuilder builder;
 
-    gtk->g_variant_builder_init(
+    g_variant_builder_init(
             &builder,
             G_VARIANT_TYPE_VARDICT
     );
 
-    gtk->g_variant_builder_add(
+    g_variant_builder_add(
             &builder,
             "{sv}",
             "handle_token",
-            gtk->g_variant_new_string(requestToken)
+            g_variant_new_string(requestToken)
     );
 
-    gtk->g_variant_builder_add(
+    g_variant_builder_add(
             &builder,
             "{sv}",
             "session_handle_token",
-            gtk->g_variant_new_string(sessionToken)
+            g_variant_new_string(sessionToken)
     );
 
-    GVariant *response = gtk->g_dbus_proxy_call_sync(
+    GVariant *response = g_dbus_proxy_call_sync(
             portal->screenCastProxy,
             "CreateSession",
-            gtk->g_variant_new("(a{sv})", &builder),
+            g_variant_new("(a{sv})", &builder),
             G_DBUS_CALL_FLAGS_NONE,
             -1,
             NULL,
@@ -427,13 +427,13 @@ gboolean portalScreenCastCreateSession() {
         ERR_HANDLE(err);
     } else {
         while (!helper.isDone) {
-            gtk->g_main_context_iteration(NULL, TRUE);
+            g_main_context_iteration(NULL, TRUE);
         }
     }
 
     unregisterScreenCastCallback(&helper);
     if (response) {
-        gtk->g_variant_unref(response);
+        g_variant_unref(response);
     }
 
     free(sessionToken);
@@ -459,7 +459,7 @@ static void callbackScreenCastSelectSources(
     uint32_t status;
     GVariant* result = NULL;
 
-    gtk->g_variant_get(parameters, "(u@a{sv})", &status, &result);
+    g_variant_get(parameters, "(u@a{sv})", &status, &result);
 
     if (status != 0) {
         DEBUG_SCREENCAST("Failed select sources: %u\n", status);
@@ -470,7 +470,7 @@ static void callbackScreenCastSelectSources(
     helper->isDone = TRUE;
 
     if (result) {
-        gtk->g_variant_unref(result);
+        g_variant_unref(result);
     }
 }
 
@@ -495,53 +495,53 @@ gboolean portalScreenCastSelectSources(const gchar *token) {
 
     GVariantBuilder builder;
 
-    gtk->g_variant_builder_init(
+    g_variant_builder_init(
             &builder,
             G_VARIANT_TYPE_VARDICT
     );
 
-    gtk->g_variant_builder_add(
+    g_variant_builder_add(
             &builder,
             "{sv}", "handle_token",
-            gtk->g_variant_new_string(requestToken)
+            g_variant_new_string(requestToken)
     );
 
-    gtk->g_variant_builder_add(
+    g_variant_builder_add(
             &builder,
             "{sv}", "multiple",
-            gtk->g_variant_new_boolean(TRUE));
+            g_variant_new_boolean(TRUE));
 
     // 1: MONITOR
     // 2: WINDOW
     // 4: VIRTUAL
-    gtk->g_variant_builder_add(
+    g_variant_builder_add(
             &builder, "{sv}", "types",
-            gtk->g_variant_new_uint32(1)
+            g_variant_new_uint32(1)
     );
 
     // 0: Do not persist (default)
     // 1: Permissions persist as long as the application is running
     // 2: Permissions persist until explicitly revoked
-    gtk->g_variant_builder_add(
+    g_variant_builder_add(
             &builder,
             "{sv}",
             "persist_mode",
-            gtk->g_variant_new_uint32(2)
+            g_variant_new_uint32(2)
     );
 
     if (validateToken(token)) {
-        gtk->g_variant_builder_add(
+        g_variant_builder_add(
                 &builder,
                 "{sv}",
                 "restore_token",
-                gtk->g_variant_new_string(token)
+                g_variant_new_string(token)
         );
     }
 
-    GVariant *response = gtk->g_dbus_proxy_call_sync(
+    GVariant *response = g_dbus_proxy_call_sync(
             portal->screenCastProxy,
             "SelectSources",
-            gtk->g_variant_new("(oa{sv})", portal->screenCastSessionHandle, &builder),
+            g_variant_new("(oa{sv})", portal->screenCastSessionHandle, &builder),
             G_DBUS_CALL_FLAGS_NONE,
             -1,
             NULL,
@@ -553,13 +553,13 @@ gboolean portalScreenCastSelectSources(const gchar *token) {
         ERR_HANDLE(err);
     } else {
         while (!helper.isDone) {
-            gtk->g_main_context_iteration(NULL, TRUE);
+            g_main_context_iteration(NULL, TRUE);
         }
     }
 
     unregisterScreenCastCallback(&helper);
     if (response) {
-        gtk->g_variant_unref(response);
+        g_variant_unref(response);
     }
 
     free(requestPath);
@@ -584,7 +584,7 @@ static void callbackScreenCastStart(
     GVariant* result = NULL;
     const gchar *oldToken = startHelper->token;
 
-    gtk->g_variant_get(parameters, "(u@a{sv})", &status, &result);
+    g_variant_get(parameters, "(u@a{sv})", &status, &result);
 
     if (status != 0) {
         // Cancel pressed on the system dialog
@@ -594,19 +594,19 @@ static void callbackScreenCastStart(
         return;
     }
 
-    GVariant *streams = gtk->g_variant_lookup_value(
+    GVariant *streams = g_variant_lookup_value(
             result,
             "streams",
             G_VARIANT_TYPE_ARRAY
     );
 
     GVariantIter iter;
-    gtk->g_variant_iter_init(
+    g_variant_iter_init(
             &iter,
             streams
     );
 
-    size_t count = gtk->g_variant_iter_n_children(&iter);
+    size_t count = g_variant_iter_n_children(&iter);
 
     DEBUG_SCREENCAST("available screen count %i\n", count);
 
@@ -617,7 +617,7 @@ static void callbackScreenCastStart(
     DEBUG_SCREENCAST("rebuildScreenData result |%i|\n", startHelper->result);
 
     if (startHelper->result == RESULT_OK) {
-        GVariant *restoreTokenVar = gtk->g_variant_lookup_value(
+        GVariant *restoreTokenVar = g_variant_lookup_value(
                 result,
                 "restore_token",
                 G_VARIANT_TYPE_STRING
@@ -625,20 +625,20 @@ static void callbackScreenCastStart(
 
         if (restoreTokenVar) {
             gsize len;
-            const gchar *newToken = gtk->
+            const gchar *newToken = 
                     g_variant_get_string(restoreTokenVar, &len);
             DEBUG_SCREENCAST("restore_token |%s|\n", newToken);
 
             storeRestoreToken(oldToken, newToken);
 
-            gtk->g_variant_unref(restoreTokenVar);
+            g_variant_unref(restoreTokenVar);
         }
     }
 
     helper->isDone = TRUE;
 
     if (streams) {
-        gtk->g_variant_unref(streams);
+        g_variant_unref(streams);
     }
 }
 
@@ -667,22 +667,22 @@ ScreenCastResult portalScreenCastStart(const gchar *token) {
 
     GVariantBuilder builder;
 
-    gtk->g_variant_builder_init(
+    g_variant_builder_init(
             &builder,
             G_VARIANT_TYPE_VARDICT
     );
 
-    gtk->g_variant_builder_add(
+    g_variant_builder_add(
             &builder,
             "{sv}",
             "handle_token",
-            gtk->g_variant_new_string(requestToken)
+            g_variant_new_string(requestToken)
     );
 
-    GVariant *response = gtk->g_dbus_proxy_call_sync(
+    GVariant *response = g_dbus_proxy_call_sync(
             portal->screenCastProxy,
             "Start",
-            gtk->g_variant_new("(osa{sv})", portal->screenCastSessionHandle, "", &builder),
+            g_variant_new("(osa{sv})", portal->screenCastSessionHandle, "", &builder),
             G_DBUS_CALL_FLAGS_NONE,
             -1,
             NULL,
@@ -694,13 +694,13 @@ ScreenCastResult portalScreenCastStart(const gchar *token) {
         ERR_HANDLE(err);
     } else {
         while (!helper.isDone) {
-            gtk->g_main_context_iteration(NULL, TRUE);
+            g_main_context_iteration(NULL, TRUE);
         }
     }
 
     unregisterScreenCastCallback(&helper);
     if (response) {
-        gtk->g_variant_unref(response);
+        g_variant_unref(response);
     }
 
     free(requestPath);
@@ -717,14 +717,14 @@ int portalScreenCastOpenPipewireRemote() {
 
     GVariantBuilder builder;
 
-    gtk->g_variant_builder_init(
+    g_variant_builder_init(
             &builder, G_VARIANT_TYPE_VARDICT
     );
 
-    GVariant *response = gtk->g_dbus_proxy_call_with_unix_fd_list_sync(
+    GVariant *response = g_dbus_proxy_call_with_unix_fd_list_sync(
             portal->screenCastProxy,
             "OpenPipeWireRemote",
-            gtk->g_variant_new("(oa{sv})", portal->screenCastSessionHandle, &builder),
+            g_variant_new("(oa{sv})", portal->screenCastSessionHandle, &builder),
             G_DBUS_CALL_FLAGS_NONE,
             -1,
             NULL,
@@ -741,14 +741,14 @@ int portalScreenCastOpenPipewireRemote() {
     }
 
     gint32 index;
-    gtk->g_variant_get(
+    g_variant_get(
             response,
             "(h)",
             &index,
             &err
     );
 
-    gtk->g_variant_unref(response);
+    g_variant_unref(response);
 
     if (err) {
         DEBUG_SCREENCAST("Failed to get pipewire fd index: %s\n",
@@ -757,14 +757,14 @@ int portalScreenCastOpenPipewireRemote() {
         return RESULT_ERROR;
     }
 
-    int fd = gtk->g_unix_fd_list_get(
+    int fd = g_unix_fd_list_get(
             fdList,
             index,
             &err
     );
 
     if (fdList) {
-        gtk->g_object_unref(fdList);
+        g_object_unref(fdList);
     }
 
     if (err) {
@@ -782,7 +782,7 @@ void portalScreenCastCleanup() {
     }
 
     if (portal->screenCastSessionHandle) {
-        gtk->g_dbus_connection_call_sync(
+        g_dbus_connection_call_sync(
                 portal->connection,
                 "org.freedesktop.portal.Desktop",
                 portal->screenCastSessionHandle,
@@ -796,17 +796,17 @@ void portalScreenCastCleanup() {
                 NULL
         );
 
-        gtk->g_free(portal->screenCastSessionHandle);
+        g_free(portal->screenCastSessionHandle);
         portal->screenCastSessionHandle = NULL;
     }
 
     if (portal->connection) {
-        gtk->g_object_unref(portal->connection);
+        g_object_unref(portal->connection);
         portal->connection = NULL;
     }
 
     if (portal->screenCastProxy) {
-        gtk->g_object_unref(portal->screenCastProxy);
+        g_object_unref(portal->screenCastProxy);
         portal->screenCastProxy = NULL;
     }
 

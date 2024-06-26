@@ -136,7 +136,7 @@ static void doCleanup() {
         fp_pw_deinit();
     }
 
-    gtk->g_string_set_size(activeSessionToken, 0);
+    g_string_set_size(activeSessionToken, 0);
     sessionClosed = TRUE;
 }
 
@@ -177,7 +177,7 @@ static gboolean initScreencast(const gchar *token,
         return FALSE;
     }
 
-    gtk->g_string_printf(activeSessionToken, "%s", token);
+    g_string_printf(activeSessionToken, "%s", token);
     hasPipewireFailed = FALSE;
     sessionClosed = FALSE;
     return TRUE;
@@ -286,7 +286,7 @@ static void onStreamProcess(void *userdata) {
     GdkRectangle captureArea = screen->captureArea;
     GdkRectangle screenBounds = screen->bounds;
 
-    GdkPixbuf *pixbuf = gtk->gdk_pixbuf_new_from_data(spaData.data,
+    GdkPixbuf *pixbuf = gdk_pixbuf_new_from_data(spaData.data,
                                                       GDK_COLORSPACE_RGB,
                                                       TRUE,
                                                       8,
@@ -304,12 +304,12 @@ static void onStreamProcess(void *userdata) {
                          screen->bounds.width, screen->bounds.height
         );
 
-        GdkPixbuf *scaled = gtk->gdk_pixbuf_scale_simple(pixbuf,
+        GdkPixbuf *scaled = gdk_pixbuf_scale_simple(pixbuf,
                                                          screen->bounds.width,
                                                          screen->bounds.height,
                                                          GDK_INTERP_BILINEAR);
 
-        gtk->g_object_unref(pixbuf);
+        g_object_unref(pixbuf);
         pixbuf = scaled;
     }
 
@@ -317,13 +317,13 @@ static void onStreamProcess(void *userdata) {
     if (captureArea.width != screenBounds.width
         || captureArea.height != screenBounds.height) {
 
-        cropped = gtk->gdk_pixbuf_new(GDK_COLORSPACE_RGB,
+        cropped = gdk_pixbuf_new(GDK_COLORSPACE_RGB,
                                       TRUE,
                                       8,
                                       captureArea.width,
                                       captureArea.height);
         if (cropped) {
-            gtk->gdk_pixbuf_copy_area(pixbuf,
+            gdk_pixbuf_copy_area(pixbuf,
                                       captureArea.x,
                                       captureArea.y,
                                       captureArea.width,
@@ -334,7 +334,7 @@ static void onStreamProcess(void *userdata) {
             ERR("Cannot create a new pixbuf.\n");
         }
 
-        gtk->g_object_unref(pixbuf);
+        g_object_unref(pixbuf);
         pixbuf = NULL;
 
         data->screenProps->captureDataPixbuf = cropped;
@@ -829,7 +829,7 @@ JNIEXPORT jboolean JNICALL Java_sun_awt_screencast_ScreencastHelper_loadPipewire
         return JNI_FALSE;
     }
 
-    activeSessionToken = gtk->g_string_new("");
+    activeSessionToken = g_string_new("");
 
     gboolean usable = initXdgDesktopPortal();
     portalScreenCastCleanup();
@@ -1011,7 +1011,7 @@ JNIEXPORT jint JNICALL Java_sun_awt_screencast_ScreencastHelper_getRGBPixelsImpl
                     (*env)->SetIntArrayRegion(
                             env, pixelArray,
                             start, len,
-                            ((jint *) gtk->gdk_pixbuf_get_pixels(
+                            ((jint *) gdk_pixbuf_get_pixels(
                                     screenProps->captureDataPixbuf
                             ))
                             + (captureArea.width * y)
@@ -1020,7 +1020,7 @@ JNIEXPORT jint JNICALL Java_sun_awt_screencast_ScreencastHelper_getRGBPixelsImpl
             }
 
             if (screenProps->captureDataPixbuf) {
-                gtk->g_object_unref(screenProps->captureDataPixbuf);
+                g_object_unref(screenProps->captureDataPixbuf);
                 screenProps->captureDataPixbuf = NULL;
             }
             screenProps->shouldCapture = FALSE;
