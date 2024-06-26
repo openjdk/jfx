@@ -29,6 +29,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import javafx.collections.FXCollections;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import javafx.collections.*;
@@ -270,5 +272,58 @@ public class BarChartTest extends XYChartTestBase {
         assertEquals("3", categories.get(2));
         assertEquals("5", categories.get(3));
         assertEquals("4", categories.get(4));
+    }
+
+    @Test
+    public void testBarPositionsWithMultipleIncompleteSeries() {
+        startApp();
+
+        CategoryAxis xAxis = new CategoryAxis();
+        NumberAxis yAxis = new NumberAxis();
+        BarChart<String, Number> chart = new BarChart<>(xAxis, yAxis);
+        chart.setAnimated(false);
+        chart.setBarGap(0.0);
+        chart.setCategoryGap(0.0);
+
+        Stage primaryStage = new Stage();
+        primaryStage.setScene(new Scene(chart));
+        primaryStage.show();
+
+        XYChart.Series<String, Number> series1 = new XYChart.Series<>();
+        series1.setName("S1");
+        chart.getData().setAll(List.of(series1));
+        series1.getData().add(new XYChart.Data<>("1", 1));
+        series1.getData().add(new XYChart.Data<>("2", 2));
+
+        XYChart.Series<String, Number> series2 = new XYChart.Series<>();
+        series2.setName("S2");
+        series2.getData().add(new XYChart.Data<>("2", 3)); // duplicate category with series1
+        series2.getData().add(new XYChart.Data<>("3", 4)); // new category
+        chart.getData().add(series2);
+
+        pulse();
+
+        // check bar layout
+        List<Node> s1bars = series1.getData().stream().map(XYChart.Data::getNode).toList();
+        List<Node> s2bars = series2.getData().stream().map(XYChart.Data::getNode).toList();
+
+        double x0 = s1bars.getFirst().getLayoutX();
+        double barWidth = s1bars.getFirst().getBoundsInLocal().getWidth();
+
+        // normalize bar positions with respect to the first bar position and width
+        List<Double> normalized1 = s1bars.stream()
+                .map(node -> (node.getLayoutX() - x0) / barWidth)
+                .toList();
+
+        List<Double> normalized2 = s2bars.stream()
+                .map(node -> (node.getLayoutX() - x0) / barWidth)
+                .toList();
+
+        // expect even integers for series1 and odd integers for series2
+        double delta = 0.001;
+        assertEquals(0, normalized1.get(0), delta);
+        assertEquals(2, normalized1.get(1), delta);
+        assertEquals(3, normalized2.get(0), delta);
+        assertEquals(5, normalized2.get(1), delta);
     }
 }
