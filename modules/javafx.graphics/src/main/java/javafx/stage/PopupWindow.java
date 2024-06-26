@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -115,6 +115,11 @@ public abstract class PopupWindow extends Window {
             @Override
             public ObservableList<Node> getContent(PopupWindow popupWindow) {
                 return popupWindow.getContent();
+            }
+
+            @Override
+            public void applyStylesheetFromOwner(PopupWindow popupWindow, Window owner) {
+                popupWindow.applyStylesheetFromOwner(owner);
             }
         });
     }
@@ -483,7 +488,7 @@ public abstract class PopupWindow extends Window {
      *
      * @param owner the owner {@link Window}
      */
-    protected void applyStylesheetFromOwner(Window owner) {
+    void applyStylesheetFromOwner(Window owner) {
         Scene scene = getScene();
         final Scene ownerScene = getRootWindow(owner).getScene();
         if (ownerScene != null) {
