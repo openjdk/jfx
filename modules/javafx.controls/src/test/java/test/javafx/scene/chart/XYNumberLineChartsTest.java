@@ -27,7 +27,6 @@ package test.javafx.scene.chart;
 
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
-import org.junit.jupiter.api.Assertions;
 import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -170,8 +169,8 @@ public class XYNumberLineChartsTest extends XYNumberChartsTestBase {
         double minorTickSpacing = minorTickYValues.get(1) - minorTickYValues.get(0);
 
         double delta = 0.001;
-        Assertions.assertEquals(5, yAxis.getMinorTickCount());
-        Assertions.assertEquals(5, majorTickSpacing / minorTickSpacing, delta);
+        assertEquals(5, yAxis.getMinorTickCount());
+        assertEquals(5, majorTickSpacing / minorTickSpacing, delta);
     }
 
     @Override
