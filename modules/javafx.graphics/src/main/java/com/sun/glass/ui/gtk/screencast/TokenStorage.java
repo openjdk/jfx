@@ -23,7 +23,7 @@
  * questions.
  */
 
-package sun.awt.screencast;
+package com.sun.glass.ui.gtk.screencast;
 
 import java.awt.Dimension;
 import java.awt.Rectangle;
@@ -51,7 +51,7 @@ import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
 import static java.nio.file.StandardWatchEventKinds.OVERFLOW;
-import static sun.awt.screencast.ScreencastHelper.SCREENCAST_DEBUG;
+import static com.sun.glass.ui.gtk.screencast.ScreencastHelper.SCREENCAST_DEBUG;
 
 /**
  * Helper class for persistent storage of ScreenCast restore tokens
@@ -66,7 +66,7 @@ final class TokenStorage {
     private TokenStorage() {}
 
     private static final String REL_NAME =
-            ".awt/robot/screencast-tokens.properties";
+            ".fx/robot/screencast-tokens.properties";
 
     private static final Properties PROPS = new Properties();
     private static final Path PROPS_PATH;

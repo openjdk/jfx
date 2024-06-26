@@ -23,7 +23,7 @@
  * questions.
  */
 
-package sun.awt.screencast;
+package com.sun.glass.ui.gtk.screencast;
 
 import java.awt.Dimension;
 import java.awt.Rectangle;
@@ -33,7 +33,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static sun.awt.screencast.ScreencastHelper.SCREENCAST_DEBUG;
+import static com.sun.glass.ui.gtk.screencast.ScreencastHelper.SCREENCAST_DEBUG;
+
 
 /**
  * Helper class used by {@link TokenStorage} as restore token record

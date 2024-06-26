@@ -30,11 +30,14 @@
 #ifndef _SCREENCAST_PORTAL_H
 #define _SCREENCAST_PORTAL_H
 
-#include "gtk_interface.h"
+#include <gdk/gdk.h>
+#include <gdk/gdkx.h>
+#include <gtk/gtk.h>
+#include <gio/gunixfdlist.h>
 
-#define PORTAL_TOKEN_TEMPLATE "awtPipewire%lu"
+#define PORTAL_TOKEN_TEMPLATE "fxPipewire%lu"
 #define PORTAL_REQUEST_TEMPLATE "/org/freedesktop/portal/desktop/" \
-                                "request/%s/awtPipewire%lu"
+                                "request/%s/fxPipewire%lu"
 
 void debug_screencast(const char *__restrict fmt, ...);
 

@@ -31,6 +31,8 @@
 #ifndef _SCREENCAST_PIPEWIRE_H
 #define _SCREENCAST_PIPEWIRE_H
 
+#include <jni.h>
+
 #include "screencast_portal.h"
 
 #include <pipewire/stream.h>

@@ -219,16 +219,19 @@ gboolean initXdgDesktopPortal() {
         return FALSE;
     }
 
-    const gchar *name = gtk
-            ->g_dbus_connection_get_unique_name(portal->connection);
+    const gchar *name = g_dbus_connection_get_unique_name(portal->connection);
     if (!name) {
         ERR("Failed to get unique connection name\n");
         return FALSE;
     }
 
     GString * nameStr = g_string_new(name);
-    g_string_erase(nameStr, 0, 1); //remove leading colon ":"
-    g_string_replace(nameStr, ".", "_", 0);
+    g_string_erase(nameStr, 0, 1); // remove leading colon ":"
+    for (gsize i = 0; i < nameStr->len; ++i) {    // replace '.' with '_'
+        if (nameStr->str[i] == '.') {
+            nameStr->str[i] = '_';
+        }
+    }
     portal->senderName = nameStr->str;
 
     g_string_free(nameStr, FALSE);
@@ -362,6 +365,7 @@ static void callbackScreenCastCreateSession(
     }
 
     helper->isDone = TRUE;
+    gtk_main_quit();
 }
 
 gboolean portalScreenCastCreateSession() {
@@ -426,9 +430,7 @@ gboolean portalScreenCastCreateSession() {
                          err->message);
         ERR_HANDLE(err);
     } else {
-        while (!helper.isDone) {
-            g_main_context_iteration(NULL, TRUE);
-        }
+        gtk_main();
     }
 
     unregisterScreenCastCallback(&helper);
@@ -472,6 +474,7 @@ static void callbackScreenCastSelectSources(
     if (result) {
         g_variant_unref(result);
     }
+    gtk_main_quit();
 }
 
 gboolean portalScreenCastSelectSources(const gchar *token) {
@@ -552,9 +555,7 @@ gboolean portalScreenCastSelectSources(const gchar *token) {
         DEBUG_SCREENCAST("Failed to call SelectSources: %s\n", err->message);
         ERR_HANDLE(err);
     } else {
-        while (!helper.isDone) {
-            g_main_context_iteration(NULL, TRUE);
-        }
+        gtk_main();
     }
 
     unregisterScreenCastCallback(&helper);
@@ -625,8 +626,7 @@ static void callbackScreenCastStart(
 
         if (restoreTokenVar) {
             gsize len;
-            const gchar *newToken = 
-                    g_variant_get_string(restoreTokenVar, &len);
+            const gchar *newToken = g_variant_get_string(restoreTokenVar, &len);
             DEBUG_SCREENCAST("restore_token |%s|\n", newToken);
 
             storeRestoreToken(oldToken, newToken);
@@ -640,6 +640,8 @@ static void callbackScreenCastStart(
     if (streams) {
         g_variant_unref(streams);
     }
+
+    gtk_main_quit();
 }
 
 ScreenCastResult portalScreenCastStart(const gchar *token) {
@@ -693,9 +695,7 @@ ScreenCastResult portalScreenCastStart(const gchar *token) {
         DEBUG_SCREENCAST("Failed to start session: %s\n", err->message);
         ERR_HANDLE(err);
     } else {
-        while (!helper.isDone) {
-            g_main_context_iteration(NULL, TRUE);
-        }
+        gtk_main();
     }
 
     unregisterScreenCastCallback(&helper);

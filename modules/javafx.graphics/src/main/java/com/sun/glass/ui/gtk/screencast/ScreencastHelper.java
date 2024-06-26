@@ -23,19 +23,13 @@
  * questions.
  */
 
-package sun.awt.screencast;
+package com.sun.glass.ui.gtk.screencast;
 
-import sun.awt.UNIXToolkit;
-import sun.java2d.pipe.Region;
-import sun.security.action.GetPropertyAction;
+import com.sun.glass.ui.Screen;
 
-import java.awt.GraphicsConfiguration;
-import java.awt.GraphicsEnvironment;
 import java.awt.Rectangle;
-import java.awt.Toolkit;
-import java.awt.geom.AffineTransform;
 import java.security.AccessController;
-import java.util.Arrays;
+import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.Set;
 import java.util.Timer;
@@ -70,28 +64,14 @@ public class ScreencastHelper {
     }
 
     static {
-        SCREENCAST_DEBUG = Boolean.parseBoolean(
-                               AccessController.doPrivileged(
-                                       new GetPropertyAction(
-                                               "awt.robot.screenshotDebug",
-                                               "false"
-                                       )
-                               ));
+        SCREENCAST_DEBUG =
+                AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+                    final String str =
+                            System.getProperty("fx.robot.screenshotDebug", "false");
+                    return "true".equalsIgnoreCase(str);
+                });
 
-        boolean loadFailed = false;
-
-        if (!(Toolkit.getDefaultToolkit() instanceof UNIXToolkit tk
-              && tk.loadGTK())
-              || !loadPipewire(SCREENCAST_DEBUG)) {
-
-            System.err.println(
-                    "Could not load native libraries for ScreencastHelper"
-            );
-
-            loadFailed = true;
-        }
-
-        IS_NATIVE_LOADED = !loadFailed;
+        IS_NATIVE_LOADED = loadPipewire(SCREENCAST_DEBUG);
     }
 
     public static boolean isAvailable() {
@@ -107,24 +87,28 @@ public class ScreencastHelper {
             String token
     );
 
-    private static List<Rectangle> getSystemScreensBounds() {
-        return Arrays
-                .stream(GraphicsEnvironment
-                        .getLocalGraphicsEnvironment()
-                        .getScreenDevices())
-                .map(graphicsDevice -> {
-                    GraphicsConfiguration gc =
-                            graphicsDevice.getDefaultConfiguration();
-                    Rectangle screen = gc.getBounds();
-                    AffineTransform tx = gc.getDefaultTransform();
+    //TODO copy from sun.java2d.pipe.Region.clipRound
+    public static int clipRound(final double coordinate) {
+        final double newv = coordinate - 0.5;
+        if (newv < Integer.MIN_VALUE) {
+            return Integer.MIN_VALUE;
+        }
+        if (newv > Integer.MAX_VALUE) {
+            return Integer.MAX_VALUE;
+        }
+        return (int) Math.ceil(newv);
+    }
 
-                    return new Rectangle(
-                            Region.clipRound(screen.x * tx.getScaleX()),
-                            Region.clipRound(screen.y * tx.getScaleY()),
-                            Region.clipRound(screen.width * tx.getScaleX()),
-                            Region.clipRound(screen.height * tx.getScaleY())
-                    );
-                })
+    private static List<Rectangle> getSystemScreensBounds() {
+        return Screen
+                .getScreens()
+                .stream()
+                .map(screen -> new Rectangle( //TODO should we get rid of AWT Rectangle?
+                        clipRound(screen.getPlatformX() * screen.getPlatformScaleX()),
+                        clipRound(screen.getPlatformY() * screen.getPlatformScaleY()),
+                        clipRound(screen.getPlatformWidth() * screen.getPlatformScaleX()),
+                        clipRound(screen.getPlatformHeight() * screen.getPlatformScaleY())
+                ))
                 .toList();
     }
 

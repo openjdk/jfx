@@ -28,14 +28,11 @@
 #endif
 
 #include <dlfcn.h>
-#include "jni_util.h"
-#include "awt.h"
 #include "screencast_pipewire.h"
 #include "fp_pipewire.h"
 #include <stdio.h>
 
-#include "gtk_interface.h"
-#include "gtk3_interface.h"
+extern JNIEnv* mainEnv;
 
 int DEBUG_SCREENCAST_ENABLED = FALSE;
 
@@ -675,7 +672,6 @@ static gboolean isAllDataReady() {
 
 
 static void *pipewire_libhandle = NULL;
-//glib_version_2_68 false for gtk2, as it comes from gtk3_interface.c
 
 extern gboolean glib_version_2_68;
 
@@ -689,13 +685,7 @@ extern gboolean glib_version_2_68;
 } while(0);
 
 static gboolean loadSymbols() {
-    if (!glib_version_2_68) {
-        DEBUG_SCREENCAST("glib version 2.68+ required\n", NULL);
-        return FALSE;
-    }
-
-    pipewire_libhandle = dlopen(VERSIONED_JNI_LIB_NAME("pipewire-0.3", "0"),
-            RTLD_LAZY | RTLD_LOCAL);
+    pipewire_libhandle = dlopen("libpipewire-0.3.so.0", RTLD_LAZY | RTLD_LOCAL);
 
     if (!pipewire_libhandle) {
         DEBUG_SCREENCAST("could not load pipewire library\n", NULL);
@@ -738,7 +728,8 @@ static gboolean loadSymbols() {
 
 void storeRestoreToken(const gchar* oldToken, const gchar* newToken) {
 
-    JNIEnv* env = (JNIEnv *) JNU_GetEnv(jvm, JNI_VERSION_1_2);
+    JNIEnv* env = mainEnv;
+
     DEBUG_SCREENCAST("saving token, old: |%s| > new: |%s|\n", oldToken, newToken);
     if (env) {
         jstring jOldToken = NULL;
@@ -793,11 +784,11 @@ void storeRestoreToken(const gchar* oldToken, const gchar* newToken) {
 }
 
 /*
- * Class:     sun_awt_UNIXToolkit
- * Method:    load_gtk
- * Signature: (IZ)Z
+ * Class:     com_sun_glass_ui_gtk_screencast_ScreencastHelper
+ * Method:    loadPipewire
+ * Signature: (Z)Z
  */
-JNIEXPORT jboolean JNICALL Java_sun_awt_screencast_ScreencastHelper_loadPipewire(
+JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper_loadPipewire(
         JNIEnv *env, jclass cls, jboolean screencastDebug
 ) {
     DEBUG_SCREENCAST_ENABLED = screencastDebug;
@@ -806,7 +797,7 @@ JNIEXPORT jboolean JNICALL Java_sun_awt_screencast_ScreencastHelper_loadPipewire
         return JNI_FALSE;
     }
 
-    tokenStorageClass = (*env)->FindClass(env, "sun/awt/screencast/TokenStorage");
+    tokenStorageClass = (*env)->FindClass(env, "com/sun/glass/ui/gtk/screencast/TokenStorage");
     if (!tokenStorageClass) {
         return JNI_FALSE;
     }
@@ -896,22 +887,21 @@ static int makeScreencast(
 }
 
 /*
- * Class:     sun_awt_screencast_ScreencastHelper
+ * Class:     com_sun_glass_ui_gtk_screencast_ScreencastHelper
  * Method:    closeSession
  * Signature: ()V
  */
-JNIEXPORT void JNICALL
-Java_sun_awt_screencast_ScreencastHelper_closeSession(JNIEnv *env, jclass cls) {
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper_closeSession(JNIEnv *env, jclass cls) {
     DEBUG_SCREENCAST("closing screencast session\n\n", NULL);
     doCleanup();
 }
 
 /*
- * Class:     sun_awt_screencast_ScreencastHelper
+ * Class:     com_sun_glass_ui_gtk_screencast_ScreencastHelper
  * Method:    getRGBPixelsImpl
  * Signature: (IIII[I[ILjava/lang/String;)I
  */
-JNIEXPORT jint JNICALL Java_sun_awt_screencast_ScreencastHelper_getRGBPixelsImpl(
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper_getRGBPixelsImpl(
         JNIEnv *env,
         jclass cls,
         jint jx,
