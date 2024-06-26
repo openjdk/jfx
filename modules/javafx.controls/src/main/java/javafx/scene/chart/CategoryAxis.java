@@ -68,8 +68,17 @@ public final class CategoryAxis extends Axis<String> {
     // -------------- PRIVATE FIELDS -------------------------------------------
     private List<String> allDataCategories = new ArrayList<>();
     private boolean changeIsLocal = false;
-    /** This is the gap between one category and the next along this axis */
-    private final DoubleProperty firstCategoryPos = new SimpleDoubleProperty(this, "firstCategoryPos", 0);
+
+    /** This is the position of the first category along this axis */
+    private final DoubleProperty firstCategoryPos =
+            new SimpleDoubleProperty(this, "firstCategoryPos", 0) {
+                @Override
+                protected void invalidated() {
+                    requestAxisLayout();
+                    measureInvalid = true;
+                }
+            };
+
     private Object currentAnimationID;
     private final ChartLayoutAnimator animator = new ChartLayoutAnimator(this);
     private ListChangeListener<String> itemsListener = c -> {
@@ -239,7 +248,15 @@ public final class CategoryAxis extends Axis<String> {
     }
 
     /** This is the gap between one category and the next along this axis */
-    private final ReadOnlyDoubleWrapper categorySpacing = new ReadOnlyDoubleWrapper(this, "categorySpacing", 1);
+    private final ReadOnlyDoubleWrapper categorySpacing =
+            new ReadOnlyDoubleWrapper(this, "categorySpacing", 1) {
+                @Override
+                protected void invalidated() {
+                    requestAxisLayout();
+                    measureInvalid = true;
+                }
+            };
+
     public final double getCategorySpacing() {
         return categorySpacing.get();
     }
