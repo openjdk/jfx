@@ -423,9 +423,9 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
                         bar.resizeRelocate( bottom, categoryPos + barOffset + (barWidth + getBarGap()) * index,
                                             top-bottom, barWidth);
                     }
-
-                    index++;
                 }
+
+                index++;
             }
             catIndex++;
         }
