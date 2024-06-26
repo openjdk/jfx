@@ -65,6 +65,7 @@ import java.util.stream.Collectors;
  * @deprecated This class was exposed erroneously and will be removed in a future version
  */
 @Deprecated(since = "23", forRemoval = true)
+@SuppressWarnings("removal")
 final public class CompoundSelector extends Selector {
 
     private final List<SimpleSelector> selectors;

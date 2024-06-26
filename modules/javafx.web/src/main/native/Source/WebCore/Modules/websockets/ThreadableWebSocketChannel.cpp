@@ -42,6 +42,9 @@
 #include "SocketProvider.h"
 #include "ThreadableWebSocketChannelClientWrapper.h"
 #include "UserContentProvider.h"
+#if PLATFORM(JAVA)
+#include "WebSocketChannel.h"
+#endif
 #include "WebSocketChannelClient.h"
 #include "WorkerGlobalScope.h"
 #include "WorkerRunLoop.h"
@@ -52,7 +55,10 @@ namespace WebCore {
 
 RefPtr<ThreadableWebSocketChannel> ThreadableWebSocketChannel::create(Document& document, WebSocketChannelClient& client, SocketProvider& provider)
 {
+#if !PLATFORM(JAVA)
     return provider.createWebSocketChannel(document, client);
+#endif
+    return WebSocketChannel::create(document, client, provider);
 }
 
 RefPtr<ThreadableWebSocketChannel> ThreadableWebSocketChannel::create(ScriptExecutionContext& context, WebSocketChannelClient& client, SocketProvider& provider)
