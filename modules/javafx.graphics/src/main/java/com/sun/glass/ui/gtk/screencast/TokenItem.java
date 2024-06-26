@@ -25,8 +25,8 @@
 
 package com.sun.glass.ui.gtk.screencast;
 
-import java.awt.Dimension;
-import java.awt.Rectangle;
+import com.sun.javafx.geom.Dimension;
+import com.sun.javafx.geom.Rectangle;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;

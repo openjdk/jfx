@@ -27,7 +27,7 @@ package com.sun.glass.ui.gtk.screencast;
 
 import com.sun.glass.ui.Screen;
 
-import java.awt.Rectangle;
+import com.sun.javafx.geom.Rectangle;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.List;
@@ -103,7 +103,7 @@ public class ScreencastHelper {
         return Screen
                 .getScreens()
                 .stream()
-                .map(screen -> new Rectangle( //TODO should we get rid of AWT Rectangle?
+                .map(screen -> new Rectangle(
                         clipRound(screen.getPlatformX() * screen.getPlatformScaleX()),
                         clipRound(screen.getPlatformY() * screen.getPlatformScaleY()),
                         clipRound(screen.getPlatformWidth() * screen.getPlatformScaleX()),
@@ -140,7 +140,7 @@ public class ScreencastHelper {
 
         List<Rectangle> affectedScreenBounds = getSystemScreensBounds()
                 .stream()
-                .filter(captureArea::intersects)
+                .filter(r -> !captureArea.intersection(r).isEmpty())
                 .toList();
 
         if (SCREENCAST_DEBUG) {
@@ -162,7 +162,7 @@ public class ScreencastHelper {
 
         int[] affectedScreenBoundsArray = affectedScreenBounds
                 .stream()
-                .filter(captureArea::intersects)
+                .filter(r -> !captureArea.intersection(r).isEmpty())
                 .flatMapToInt(bounds -> IntStream.of(
                         bounds.x, bounds.y,
                         bounds.width, bounds.height
