@@ -234,7 +234,10 @@ gboolean initXdgDesktopPortal() {
     }
     portal->senderName = nameStr->str;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
     g_string_free(nameStr, FALSE);
+#pragma GCC diagnostic pop
 
     DEBUG_SCREENCAST("connection/sender name %s / %s\n",
                      name,
@@ -275,7 +278,10 @@ static void updateRequestPath(
     );
 
     *token = tokenStr->str;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
     g_string_free(tokenStr, FALSE);
+#pragma GCC diagnostic pop
 
     GString *pathStr = g_string_new(NULL);
 
@@ -287,7 +293,10 @@ static void updateRequestPath(
     );
 
     *path = pathStr->str;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
     g_string_free(pathStr, FALSE);
+#pragma GCC diagnostic pop
 }
 
 static void updateSessionToken(
@@ -305,7 +314,10 @@ static void updateSessionToken(
     );
 
     *token = tokenStr->str;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
     g_string_free(tokenStr, FALSE);
+#pragma GCC diagnostic pop
 }
 
 static void registerScreenCastCallback(
