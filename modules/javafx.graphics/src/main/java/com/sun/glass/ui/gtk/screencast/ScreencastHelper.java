@@ -87,7 +87,6 @@ public class ScreencastHelper {
             String token
     );
 
-    //TODO copy from sun.java2d.pipe.Region.clipRound
     public static int clipRound(final double coordinate) {
         final double newv = coordinate - 0.5;
         if (newv < Integer.MIN_VALUE) {
