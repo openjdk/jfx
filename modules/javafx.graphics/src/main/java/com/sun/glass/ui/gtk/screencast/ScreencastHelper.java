@@ -67,7 +67,7 @@ public class ScreencastHelper {
         SCREENCAST_DEBUG =
                 AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
                     final String str =
-                            System.getProperty("jfx.robot.screenshotDebug", "false");
+                            System.getProperty("javafx.robot.screenshotDebug", "false");
                     return "true".equalsIgnoreCase(str);
                 });
 
