@@ -66,7 +66,9 @@ final class TokenStorage {
     private TokenStorage() {}
 
     private static final String REL_NAME =
-            ".fx/robot/screencast-tokens.properties";
+            ".java/.robot/screencast-tokens.properties";
+    private static final String REL_NAME_SECONDARY =
+            ".awt/robot/screencast-tokens.properties";
 
     private static final Properties PROPS = new Properties();
     private static final Path PROPS_PATH;
@@ -109,26 +111,33 @@ final class TokenStorage {
             return null;
         }
 
-        Path path = Path.of(userHome, REL_NAME);
+        Path secondaryPath = Path.of(userHome, REL_NAME_SECONDARY);
+
+        // use secondary path only if it already exists and writable
+        Path path = Files.isWritable(secondaryPath)
+                ? secondaryPath
+                : Path.of(userHome, REL_NAME);
         Path workdir = path.getParent();
 
-        if (!Files.exists(workdir)) {
-            try {
-                Files.createDirectories(workdir);
-            } catch (Exception e) {
+        if (!Files.isWritable(path)) {
+            if (!Files.exists(workdir)) {
+                try {
+                    Files.createDirectories(workdir);
+                } catch (Exception e) {
+                    if (SCREENCAST_DEBUG) {
+                        System.err.printf("Token storage: cannot create" +
+                                " directory %s %s\n", workdir, e);
+                    }
+                    return null;
+                }
+            }
+
+            if (!Files.isWritable(workdir)) {
                 if (SCREENCAST_DEBUG) {
-                    System.err.printf("Token storage: cannot create" +
-                                    " directory %s %s\n", workdir, e);
+                    System.err.printf("Token storage: %s is not writable\n", workdir);
                 }
                 return null;
             }
-        }
-
-        if (!Files.isWritable(workdir)) {
-            if (SCREENCAST_DEBUG) {
-                System.err.printf("Token storage: %s is not writable\n", workdir);
-            }
-            return null;
         }
 
         try {
