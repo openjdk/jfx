@@ -63,7 +63,7 @@ struct ScreenSpace {
     int allocated;
 };
 
-#define DEBUG_SCREENCAST(FORMAT, ...) debug_screencast("%s:%i " FORMAT, \
+#define DEBUG_SCREENCAST(FORMAT, ...) debug_screencast("JFX: %s:%i " FORMAT, \
                                         __func__, __LINE__, __VA_ARGS__);
 
 #define DEBUG_SCREEN(SCREEN)                                            \
@@ -82,7 +82,7 @@ struct ScreenSpace {
     (SCREEN)->id, (SCREEN)->bounds.x, (SCREEN)->bounds.y,               \
     (SCREEN)->bounds.width, (SCREEN)->bounds.height, __VA_ARGS__);
 
-#define ERR(MSG) fprintf(stderr, "%s:%i " MSG, __func__, __LINE__);
+#define ERR(MSG) fprintf(stderr, "JFX: %s:%i " MSG, __func__, __LINE__);
 #define ERR_HANDLE(ERROR) errHandle((ERROR), __func__, __LINE__);
 
 struct PwLoopData {
