@@ -39,11 +39,13 @@ import test.util.Util;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SizeToSceneTest {
 
     private static final int ROOT_SIZE = 360;
+    private static final int BOUNDS_DELTA = 50;
 
     static CountDownLatch startupLatch = new CountDownLatch(1);
     static Stage mainStage;
@@ -71,9 +73,9 @@ class SizeToSceneTest {
     private static void assertStageScreenBounds() {
         Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
 
-        // There might be small inconsistencies because of decoration, so we expect the bounds to be equal or bigger.
-        assertTrue(mainStage.getWidth() >= bounds.getWidth(), mainStage.getWidth() + " >= " + bounds.getWidth());
-        assertTrue(mainStage.getHeight() >= bounds.getHeight(), mainStage.getHeight() + " >= " + bounds.getHeight());
+        // There might be small inconsistencies because of decoration, so we expect the bounds to be in the range.
+        assertEquals(mainStage.getWidth(), bounds.getWidth(), BOUNDS_DELTA);
+        assertEquals(mainStage.getHeight(), bounds.getHeight(), BOUNDS_DELTA);
     }
 
     private static void assertStageSceneBounds() {
@@ -82,7 +84,7 @@ class SizeToSceneTest {
         assertTrue(mainStage.getWidth() >= ROOT_SIZE, mainStage.getWidth() + " >= " + ROOT_SIZE);
         assertTrue(mainStage.getHeight() >= ROOT_SIZE, mainStage.getHeight() + " >= " + ROOT_SIZE);
 
-        int maxThreshold = ROOT_SIZE + 50;
+        int maxThreshold = ROOT_SIZE + BOUNDS_DELTA;
         assertTrue(mainStage.getWidth() <= maxThreshold, mainStage.getWidth() + " <= " + maxThreshold);
         assertTrue(mainStage.getHeight() <= maxThreshold, mainStage.getHeight() + " <= " + maxThreshold);
     }
