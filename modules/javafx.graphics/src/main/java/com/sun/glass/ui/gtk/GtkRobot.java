@@ -49,8 +49,12 @@ final class GtkRobot extends GlassRobot {
             return waylandDisplay != null && !waylandDisplay.isBlank();
         });
 
-        screenshotMethod = AccessController.doPrivileged((PrivilegedAction<String>) () ->
-                System.getProperty("fx.robot.screenshotMethod", isOnWayland ? METHOD_SCREENCAST : METHOD_GTK));
+        screenshotMethod = AccessController
+                .doPrivileged((PrivilegedAction<String>) () ->
+                        System.getProperty(
+                                "jfx.robot.screenshotMethod",
+                                isOnWayland ? METHOD_SCREENCAST : METHOD_GTK
+                        ));
     }
 
     @Override
