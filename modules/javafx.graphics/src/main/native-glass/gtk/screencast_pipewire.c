@@ -452,7 +452,7 @@ static gboolean connectStream(int index) {
 
     data->stream = fp_pw_stream_new(
             pw.core,
-            "AWT Screen Stream",
+            "JFX Screen Stream",
             fp_pw_properties_new(
                     PW_KEY_MEDIA_TYPE, "Video",
                     PW_KEY_MEDIA_CATEGORY, "Capture",
@@ -576,7 +576,7 @@ static const struct pw_core_events coreEvents = {
 static gboolean doLoop(GdkRectangle requestedArea) {
     gboolean isLoopLockTaken = FALSE;
     if (!pw.loop && !sessionClosed) {
-        pw.loop = fp_pw_thread_loop_new("AWT Pipewire Thread", NULL);
+        pw.loop = fp_pw_thread_loop_new("JFX Pipewire Thread", NULL);
 
         if (!pw.loop) {
             DEBUG_SCREENCAST("!!! Could not create a loop\n", NULL);
