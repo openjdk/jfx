@@ -30,6 +30,8 @@ import java.util.List;
 
 import javafx.collections.FXCollections;
 import javafx.scene.Scene;
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.Path;
 import javafx.stage.Stage;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
@@ -275,19 +277,55 @@ public class BarChartTest extends XYChartTestBase {
     }
 
     @Test
+    public void testTickMarksMatchBarPositionsAfterAnimation() {
+        startApp();
+        CategoryAxis xAxis = new CategoryAxis();
+        NumberAxis yAxis = new NumberAxis();
+        BarChart<String, Number> chart = new BarChart<>(xAxis, yAxis);
+        Series<String, Number> series = new Series<>();
+        chart.getData().add(series);
+        chart.setAnimated(true);
+        getTestScene().setRoot(chart);
+
+        // add some categories, starting axis animation
+        series.getData().add(new XYChart.Data<>("1", 1));
+        series.getData().add(new XYChart.Data<>("2", 2));
+        series.getData().add(new XYChart.Data<>("3", 3));
+        pulse();
+        // forward time until after animation is finished
+        toolkit.setAnimationTime(1000);
+
+        List<Node> bars = series.getData().stream().map(XYChart.Data::getNode).toList();
+
+        List<Double> barCenterXValues = series.getData().stream()
+                .map(XYChart.Data::getNode)
+                .map(bar -> bar.getLayoutX() + bar.getLayoutBounds().getCenterX())
+                .toList();
+
+        List<Double> tickXValues = xAxis.getChildrenUnmodifiable().stream()
+                .filter(obj -> obj instanceof Path && obj.getStyleClass().contains("axis-tick-mark"))
+                .flatMap(obj -> ((Path) obj).getElements().stream())
+                .filter(path -> path instanceof MoveTo)
+                .map(moveTo -> ((MoveTo) moveTo).getX())
+                .toList();
+
+        double delta = 0.001;
+        assertEquals(barCenterXValues.size(), tickXValues.size());
+        for (int i = 0; i < barCenterXValues.size(); i++) {
+            assertEquals(barCenterXValues.get(i), tickXValues.get(i), delta);
+        }
+    }
+
+    @Test
     public void testBarPositionsWithMultipleIncompleteSeries() {
         startApp();
-
         CategoryAxis xAxis = new CategoryAxis();
         NumberAxis yAxis = new NumberAxis();
         BarChart<String, Number> chart = new BarChart<>(xAxis, yAxis);
         chart.setAnimated(false);
         chart.setBarGap(0.0);
         chart.setCategoryGap(0.0);
-
-        Stage primaryStage = new Stage();
-        primaryStage.setScene(new Scene(chart));
-        primaryStage.show();
+        getTestScene().setRoot(chart);
 
         XYChart.Series<String, Number> series1 = new XYChart.Series<>();
         series1.setName("S1");
@@ -326,4 +364,5 @@ public class BarChartTest extends XYChartTestBase {
         assertEquals(3, normalized2.get(0), delta);
         assertEquals(5, normalized2.get(1), delta);
     }
+
 }
