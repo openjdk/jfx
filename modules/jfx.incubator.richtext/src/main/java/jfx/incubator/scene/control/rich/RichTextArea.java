@@ -347,6 +347,12 @@ public class RichTextArea extends Control {
 
     /**
      * Determines the caret blink period.  This property cannot be set to {@code null}.
+     * <p>
+     * This is a {@link StyleableProperty} with the name {@code -fx-caret-blink-period}.
+     * <p>
+     * alternative:<br>
+     * This property can be styled with CSS using {@code -fx-caret-blink-period} name.
+     * @implNote The property object implements {@link StyleableProperty} interface.
      *
      * @return the caret blink period property
      * @defaultValue 1000 ms
@@ -412,6 +418,9 @@ public class RichTextArea extends Control {
     /**
      * Specifies the padding for the RichTextArea content.
      * The content padding value can be null, which is treated as no padding.
+     * <p>
+     * This property can be styled with CSS using {@code -fx-content-padding} name.
+     * @implNote The property object implements {@link StyleableProperty} interface.
      *
      * @return the content padding property
      * @defaultValue 4 pixels vertical padding, 8 pixels horizontal padding
@@ -438,6 +447,9 @@ public class RichTextArea extends Control {
 
     /**
      * This property controls whether caret will be displayed or not.
+     * <p>
+     * This property can be styled with CSS using {@code -fx-display-caret} name.
+     * @implNote The property object implements {@link StyleableProperty} interface.
      *
      * @return the display caret property
      * @defaultValue true
@@ -500,6 +512,9 @@ public class RichTextArea extends Control {
 
     /**
      * Indicates whether the current paragraph will be visually highlighted.
+     * <p>
+     * This property can be styled with CSS using {@code -fx-highlight-current-paragraph} name.
+     * @implNote The property object implements {@link StyleableProperty} interface.
      *
      * @return the highlight current paragraph property
      * @defaultValue false
@@ -698,6 +713,9 @@ public class RichTextArea extends Control {
     /**
      * Determines whether the preferred height is the same as the content height.
      * When set to true, the vertical scroll bar is disabled.
+     * <p>
+     * This property can be styled with CSS using {@code -fx-use-content-height} name.
+     * @implNote The property object implements {@link StyleableProperty} interface.
      *
      * @return the use content height property
      * @defaultValue false
@@ -735,6 +753,9 @@ public class RichTextArea extends Control {
     /**
      * Determines whether the preferred width is the same as the content width.
      * When set to true, the horizontal scroll bar is disabled.
+     * <p>
+     * This property can be styled with CSS using {@code -fx-use-content-width} name.
+     * @implNote The property object implements {@link StyleableProperty} interface.
      *
      * @return the use content width property
      * @defaultValue false
@@ -775,6 +796,9 @@ public class RichTextArea extends Control {
      * then this variable indicates whether the text should wrap onto
      * another line.
      * Setting this property to {@code true} hides the horizontal scroll bar.
+     * <p>
+     * This property can be styled with CSS using {@code -fx-wrap-text} name.
+     * @implNote The property object implements {@link StyleableProperty} interface.
      *
      * @return the wrap text property
      * @defaultValue false
