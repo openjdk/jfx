@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2015 Google Inc. All rights reserved.
  * Copyright (C) 2005 Alexey Proskuryakov.
  *
@@ -34,7 +34,6 @@
 #include "ElementInlines.h"
 #include "ElementRareData.h"
 #include "FontCascade.h"
-#include "Frame.h"
 #include "HTMLBodyElement.h"
 #include "HTMLElement.h"
 #include "HTMLFrameOwnerElement.h"
@@ -48,8 +47,10 @@
 #include "HTMLTextAreaElement.h"
 #include "HTMLTextFormControlElement.h"
 #include "ImageOverlay.h"
+#include "LocalFrame.h"
 #include "NodeTraversal.h"
 #include "Range.h"
+#include "RenderBoxInlines.h"
 #include "RenderImage.h"
 #include "RenderIterator.h"
 #include "RenderTableCell.h"
@@ -479,7 +480,7 @@ void TextIterator::advance()
             if (!isRendererVisible(renderer, m_behaviors)) {
                 m_handledNode = true;
                 m_handledChildren = !hasDisplayContents(*m_node) && !renderer;
-            } else if (is<Element>(m_node) && renderer->shouldSkipContent()) {
+            } else if (is<Element>(m_node) && renderer->isSkippedContentRoot()) {
                 m_handledChildren = true;
             } else {
                 // handle current node according to its type
@@ -941,8 +942,8 @@ static bool shouldEmitExtraNewlineForNode(Node& node)
     if (!renderBox.height())
         return false;
 
-    int bottomMargin = renderBox.collapsedMarginAfter();
-    int fontSize = renderBox.style().fontDescription().computedPixelSize();
+    auto bottomMargin = renderBox.collapsedMarginAfter();
+    auto fontSize = renderBox.style().fontDescription().computedSize();
     return bottomMargin * 2 >= fontSize;
 }
 
@@ -1589,7 +1590,7 @@ void WordAwareIterator::advance()
 
     while (1) {
         // If this chunk ends in whitespace we can just use it as our chunk.
-        if (isSpaceOrNewline(m_underlyingIterator.text()[m_underlyingIterator.text().length() - 1]))
+        if (deprecatedIsSpaceOrNewline(m_underlyingIterator.text()[m_underlyingIterator.text().length() - 1]))
             return;
 
         // If this is the first chunk that failed, save it in previousText before look ahead
@@ -1598,7 +1599,7 @@ void WordAwareIterator::advance()
 
         // Look ahead to next chunk. If it is whitespace or a break, we can use the previous stuff
         m_underlyingIterator.advance();
-        if (m_underlyingIterator.atEnd() || !m_underlyingIterator.text().length() || isSpaceOrNewline(m_underlyingIterator.text()[0])) {
+        if (m_underlyingIterator.atEnd() || !m_underlyingIterator.text().length() || deprecatedIsSpaceOrNewline(m_underlyingIterator.text()[0])) {
             m_didLookAhead = true;
             return;
         }

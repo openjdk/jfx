@@ -37,7 +37,7 @@ class Structure;
 #if CPU(ADDRESS64)
 
 // We would like to define this value in PlatformEnable.h, but it is not possible since the following is relying on MACH_VM_MAX_ADDRESS.
-#if CPU(ARM64) && OS(DARWIN)
+#if CPU(ARM64) && OS(DARWIN) && !PLATFORM(IOS_FAMILY_SIMULATOR)
 #if MACH_VM_MAX_ADDRESS_RAW < (1ULL << 36)
 #define ENABLE_STRUCTURE_ID_WITH_SHIFT 1
 static_assert(MACH_VM_MAX_ADDRESS_RAW == MACH_VM_MAX_ADDRESS);
@@ -47,6 +47,8 @@ static_assert(MACH_VM_MAX_ADDRESS_RAW == MACH_VM_MAX_ADDRESS);
 #if !ENABLE(STRUCTURE_ID_WITH_SHIFT)
 #if defined(STRUCTURE_HEAP_ADDRESS_SIZE_IN_MB) && STRUCTURE_HEAP_ADDRESS_SIZE_IN_MB > 0
 constexpr uintptr_t structureHeapAddressSize = STRUCTURE_HEAP_ADDRESS_SIZE_IN_MB * MB;
+#elif PLATFORM(PLAYSTATION)
+constexpr uintptr_t structureHeapAddressSize = 128 * MB;
 #elif PLATFORM(IOS_FAMILY) && CPU(ARM64) && !CPU(ARM64E)
 constexpr uintptr_t structureHeapAddressSize = 512 * MB;
 #else
@@ -84,7 +86,6 @@ public:
 
     explicit operator bool() const { return !!m_bits; }
     bool operator==(StructureID const& other) const  { return m_bits == other.m_bits; }
-    bool operator!=(StructureID const& other) const  { return m_bits != other.m_bits; }
     constexpr uint32_t bits() const { return m_bits; }
 
     StructureID(WTF::HashTableDeletedValueType) : m_bits(nukedStructureIDBit) { }
@@ -128,7 +129,7 @@ ALWAYS_INLINE Structure* StructureID::decode() const
 {
     // Take care to only use the bits from m_bits in the structure's address reservation.
     ASSERT(decontaminate());
-    return reinterpret_cast<Structure*>((static_cast<uintptr_t>(decontaminate().m_bits) & structureIDMask) + g_jscConfig.startOfStructureHeap);
+    return reinterpret_cast<Structure*>((static_cast<uintptr_t>(decontaminate().m_bits) & structureIDMask) + startOfStructureHeap());
 }
 
 ALWAYS_INLINE Structure* StructureID::tryDecode() const
@@ -137,13 +138,13 @@ ALWAYS_INLINE Structure* StructureID::tryDecode() const
     uintptr_t offset = static_cast<uintptr_t>(decontaminate().m_bits);
     if (offset < MarkedBlock::blockSize || offset >= g_jscConfig.sizeOfStructureHeap)
         return nullptr;
-    return reinterpret_cast<Structure*>((offset & structureIDMask) + g_jscConfig.startOfStructureHeap);
+    return reinterpret_cast<Structure*>((offset & structureIDMask) + startOfStructureHeap());
 }
 
 ALWAYS_INLINE StructureID StructureID::encode(const Structure* structure)
 {
     ASSERT(structure);
-    ASSERT(g_jscConfig.startOfStructureHeap <= reinterpret_cast<uintptr_t>(structure) && reinterpret_cast<uintptr_t>(structure) < g_jscConfig.startOfStructureHeap + structureHeapAddressSize);
+    ASSERT(g_jscConfig.startOfStructureHeap <= reinterpret_cast<uintptr_t>(structure) && reinterpret_cast<uintptr_t>(structure) < startOfStructureHeap() + structureHeapAddressSize);
     auto result = StructureID(reinterpret_cast<uintptr_t>(structure) & structureIDMask);
     ASSERT(result.decode() == structure);
     return result;

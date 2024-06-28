@@ -20,7 +20,7 @@
 #pragma once
 
 #include "Document.h"
-#include "Frame.h"
+#include "LocalFrame.h"
 #include "NetworkingContext.h"
 #include "ReferrerPolicy.h"
 
@@ -42,18 +42,23 @@ public:
         return m_frame->document()->referrerPolicy() == ReferrerPolicy::NoReferrerWhenDowngrade;
     }
 
-    Frame* frame() const { return m_frame.get(); }
+ #if PLATFORM(JAVA)
+     LocalFrame* frame() const { return m_frame.get(); }
+ #endif
 
 protected:
-    explicit FrameNetworkingContext(Frame* frame)
+    explicit FrameNetworkingContext(LocalFrame* frame)
         : m_frame(frame)
     {
     }
+#if !PLATFORM(JAVA)
+    LocalFrame* frame() const { return m_frame.get(); }
+#endif
 
 private:
     bool isValid() const override { return !!m_frame; }
 
-    WeakPtr<Frame> m_frame;
+    WeakPtr<LocalFrame> m_frame;
 };
 
 }

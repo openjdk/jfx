@@ -26,7 +26,7 @@
 #include "config.h"
 #include "SocketStreamHandleImpl.h"
 
-#if !USE(SOUP)
+#if PLATFORM(JAVA)
 
 #include "CookieRequestHeaderFieldProxy.h"
 #include "NetworkStorageSession.h"
@@ -188,4 +188,4 @@ size_t SocketStreamHandleImpl::bufferedAmount()
 
 } // namespace WebCore
 
-#endif // !USE(SOUP)
+#endif // #if PLATFORM(JAVA)

@@ -2,7 +2,7 @@
  * jdsample.c
  *
  * Copyright (C) 1991-1996, Thomas G. Lane.
- * Modified 2002-2015 by Guido Vollbeding.
+ * Modified 2002-2020 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -102,6 +102,7 @@ sep_upsample (j_decompress_ptr cinfo,
   if (upsample->next_row_out >= cinfo->max_v_samp_factor) {
     for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
      ci++, compptr++) {
+      /* Don't bother to upsample an uninteresting component. */
       if (! compptr->component_needed)
     continue;
       /* Invoke per-component upsample method.  Notice we pass a POINTER
@@ -161,13 +162,6 @@ fullsize_upsample (j_decompress_ptr cinfo, jpeg_component_info * compptr,
            JSAMPARRAY input_data, JSAMPIMAGE output_data_ptr)
 {
   *output_data_ptr = input_data;
-
-
-/*
- * This is a no-op version used for "uninteresting" components.
- * These components will not be referenced by color conversion.
- */
-
 }
 
 
@@ -305,6 +299,7 @@ jinit_upsampler (j_decompress_ptr cinfo)
    */
   for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
        ci++, compptr++) {
+    /* Don't bother to upsample an uninteresting component. */
     if (! compptr->component_needed)
       continue;
     /* Compute size of an "input group" after IDCT scaling.  This many samples
@@ -317,7 +312,6 @@ jinit_upsampler (j_decompress_ptr cinfo)
     h_out_group = cinfo->max_h_samp_factor;
     v_out_group = cinfo->max_v_samp_factor;
     upsample->rowgroup_height[ci] = v_in_group; /* save for use later */
-      /* Don't bother to upsample an uninteresting component. */
     if (h_in_group == h_out_group && v_in_group == v_out_group) {
       /* Fullsize components can be processed without any work. */
       upsample->methods[ci] = fullsize_upsample;

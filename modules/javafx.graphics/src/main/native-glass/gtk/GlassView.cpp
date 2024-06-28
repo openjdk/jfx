@@ -185,6 +185,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1uploadPixelsDirect
 {
     (void)jView;
 
+    if (!ptr) return;
+    if (!buffer) return;
+
     GlassView* view = JLONG_TO_GLASSVIEW(ptr);
     if (view->current_window) {
         void *data = env->GetDirectBufferAddress(buffer);
@@ -203,10 +206,24 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1uploadPixelsIntArray
 {
     (void)obj;
 
+    if (!ptr) return;
+    if (!array) return;
+    if (offset < 0) return;
+    if (width <= 0 || height <= 0) return;
+
+    if (width > ((INT_MAX - offset) / height))
+    {
+        return;
+    }
+
+    if ((width * height + offset) > env->GetArrayLength(array))
+    {
+        return;
+    }
+
     GlassView* view = JLONG_TO_GLASSVIEW(ptr);
     if (view->current_window) {
         int *data = NULL;
-        assert((width*height + offset) == env->GetArrayLength(array));
         data = (int*)env->GetPrimitiveArrayCritical(array, 0);
 
         view->current_window->paint(data + offset, width, height);
@@ -225,11 +242,25 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1uploadPixelsByteArray
 {
     (void)obj;
 
+    if (!ptr) return;
+    if (!array) return;
+    if (offset < 0) return;
+    if (width <= 0 || height <= 0) return;
+
+    if (width > (((INT_MAX - offset) / 4) / height))
+    {
+        return;
+    }
+
+    if ((4 * width * height + offset) > env->GetArrayLength(array))
+    {
+        return;
+    }
+
     GlassView* view = JLONG_TO_GLASSVIEW(ptr);
     if (view->current_window) {
         unsigned char *data = NULL;
 
-        assert((4*width*height + offset) == env->GetArrayLength(array));
         data = (unsigned char*)env->GetPrimitiveArrayCritical(array, 0);
 
         view->current_window->paint(data + offset, width, height);

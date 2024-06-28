@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,6 @@ package test.javafx.scene.control;
 
 import java.lang.ref.WeakReference;
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -35,12 +34,9 @@ import javafx.scene.control.Accordion;
 import javafx.scene.control.TitledPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
-
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
 import test.util.Util;
 import test.util.memory.JMemoryBuddy;
 
@@ -75,7 +71,7 @@ public class AccordionTitlePaneLeakTest {
 
     @AfterClass
     public static void teardownOnce() {
-        Util.shutdown(stage);
+        Util.shutdown();
     }
 
     @Test

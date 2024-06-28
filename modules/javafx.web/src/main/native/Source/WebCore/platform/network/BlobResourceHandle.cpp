@@ -56,14 +56,8 @@ static const unsigned bufferSize = 512 * 1024;
 
 static const int httpOK = 200;
 static const int httpPartialContent = 206;
-static const int httpNotAllowed = 403;
-static const int httpRequestedRangeNotSatisfiable = 416;
-static const int httpInternalError = 500;
 static constexpr auto httpOKText = "OK"_s;
 static constexpr auto httpPartialContentText = "Partial Content"_s;
-static constexpr auto httpNotAllowedText = "Not Allowed"_s;
-static constexpr auto httpRequestedRangeNotSatisfiableText = "Requested Range Not Satisfiable"_s;
-static constexpr auto httpInternalErrorText = "Internal Server Error"_s;
 
 static constexpr auto webKitBlobResourceDomain = "WebKitBlobResource"_s;
 
@@ -193,6 +187,7 @@ void BlobResourceHandle::start()
 void BlobResourceHandle::doStart()
 {
     ASSERT(isMainThread());
+    Ref protectedThis { *this };
 
     // Do not continue if the request is aborted or an error occurs.
     if (erroredOrAborted())
@@ -211,9 +206,9 @@ void BlobResourceHandle::doStart()
 
     // Parse the "Range" header we care about.
     String range = firstRequest().httpHeaderField(HTTPHeaderName::Range);
-    if (!range.isEmpty() && !parseRange(range, m_rangeOffset, m_rangeEnd, m_rangeSuffixLength)) {
-        m_errorCode = Error::RangeError;
-        notifyResponse();
+    m_isRangeRequest = !range.isNull();
+    if (m_isRangeRequest && !parseRange(range, RangeAllowWhitespace::Yes, m_rangeStart, m_rangeEnd)) {
+        notifyFail(Error::RangeError);
         return;
     }
 
@@ -233,13 +228,14 @@ void BlobResourceHandle::getSizeForNext()
 
     // Do we finish validating and counting size for all items?
     if (m_sizeItemCount >= m_blobData->items().size()) {
-        seek();
+        if (auto error = seek()) {
+            notifyFail(*error);
+            return;
+        }
 
         // Start reading if in asynchronous mode.
-        if (m_async) {
-            Ref<BlobResourceHandle> protectedThis(*this);
+        if (m_async)
             notifyResponse();
-        }
         return;
     }
 
@@ -263,6 +259,7 @@ void BlobResourceHandle::getSizeForNext()
 void BlobResourceHandle::didGetSize(long long size)
 {
     ASSERT(isMainThread());
+    Ref protectedThis { *this };
 
     // Do not continue if the request is aborted or an error occurs.
     if (erroredOrAborted())
@@ -290,22 +287,27 @@ void BlobResourceHandle::didGetSize(long long size)
     getSizeForNext();
 }
 
-void BlobResourceHandle::seek()
+auto BlobResourceHandle::seek() -> std::optional<Error>
 {
     ASSERT(isMainThread());
 
-    // Convert from the suffix length to the range.
-    if (m_rangeSuffixLength != kPositionNotSpecified) {
-        m_rangeOffset = m_totalRemainingSize - m_rangeSuffixLength;
-        m_rangeEnd = m_rangeOffset + m_rangeSuffixLength - 1;
+    // Bail out if the range is not provided.
+    if (!m_isRangeRequest)
+        return std::nullopt;
+
+    // Adjust m_rangeStart / m_rangeEnd
+    if (m_rangeStart == kPositionNotSpecified) {
+        m_rangeStart = m_totalSize - m_rangeEnd;
+        m_rangeEnd = m_rangeStart + m_rangeEnd - 1;
+    } else {
+        if (m_rangeStart >= m_totalSize)
+            return Error::RangeError;
+        if (m_rangeEnd == kPositionNotSpecified || m_rangeEnd >= m_totalSize)
+            m_rangeEnd = m_totalSize - 1;
     }
 
-    // Bail out if the range is not provided.
-    if (m_rangeOffset == kPositionNotSpecified)
-        return;
-
     // Skip the initial items that are not in the range.
-    long long offset = m_rangeOffset;
+    long long offset = m_rangeStart;
     for (m_readItemCount = 0; m_readItemCount < m_blobData->items().size() && offset >= m_itemLengthList[m_readItemCount]; ++m_readItemCount)
         offset -= m_itemLengthList[m_readItemCount];
 
@@ -313,12 +315,10 @@ void BlobResourceHandle::seek()
     m_currentItemReadSize = offset;
 
     // Adjust the total remaining size in order not to go beyond the range.
-    if (m_rangeEnd != kPositionNotSpecified) {
-        long long rangeSize = m_rangeEnd - m_rangeOffset + 1;
+    long long rangeSize = m_rangeEnd - m_rangeStart + 1;
         if (m_totalRemainingSize > rangeSize)
             m_totalRemainingSize = rangeSize;
-    } else
-        m_totalRemainingSize -= m_rangeOffset;
+    return std::nullopt;
 }
 
 int BlobResourceHandle::readSync(uint8_t* buf, int length)
@@ -558,10 +558,10 @@ void BlobResourceHandle::notifyResponse()
         return;
 
     if (m_errorCode != Error::NoError) {
-        Ref<BlobResourceHandle> protectedThis(*this);
-        notifyResponseOnError();
-        notifyFinish();
-    } else
+        notifyFail(m_errorCode);
+        return;
+    }
+
         notifyResponseOnSuccess();
 }
 
@@ -569,52 +569,21 @@ void BlobResourceHandle::notifyResponseOnSuccess()
 {
     ASSERT(isMainThread());
 
-    bool isRangeRequest = m_rangeOffset != kPositionNotSpecified;
     ResourceResponse response(firstRequest().url(), extractMIMETypeFromMediaType(m_blobData->contentType()), m_totalRemainingSize, String());
-    response.setHTTPStatusCode(isRangeRequest ? httpPartialContent : httpOK);
-    response.setHTTPStatusText(isRangeRequest ? httpPartialContentText : httpOKText);
+    response.setHTTPStatusCode(m_isRangeRequest ? httpPartialContent : httpOK);
+    response.setHTTPStatusText(m_isRangeRequest ? httpPartialContentText : httpOKText);
 
     response.setHTTPHeaderField(HTTPHeaderName::ContentType, m_blobData->contentType());
     response.setTextEncodingName(extractCharsetFromMediaType(m_blobData->contentType()).toAtomString());
     response.setHTTPHeaderField(HTTPHeaderName::ContentLength, String::number(m_totalRemainingSize));
     addPolicyContainerHeaders(response, m_blobData->policyContainer());
 
-    if (isRangeRequest) {
-        auto rangeEnd = m_rangeEnd;
-        if (rangeEnd == kPositionNotSpecified)
-            rangeEnd = m_totalSize - 1;
+    if (m_isRangeRequest)
+        response.setHTTPHeaderField(HTTPHeaderName::ContentRange, ParsedContentRange(m_rangeStart, m_rangeEnd, m_totalSize).headerValue());
 
-        response.setHTTPHeaderField(HTTPHeaderName::ContentRange, ParsedContentRange(m_rangeOffset, rangeEnd, m_totalSize).headerValue());
-    }
     // FIXME: If a resource identified with a blob: URL is a File object, user agents must use that file's name attribute,
     // as if the response had a Content-Disposition header with the filename parameter set to the File's name attribute.
     // Notably, this will affect a name suggested in "File Save As".
-
-    client()->didReceiveResponseAsync(this, WTFMove(response), [this, protectedThis = Ref { *this }] {
-        m_buffer.resize(bufferSize);
-        readAsync();
-    });
-}
-
-void BlobResourceHandle::notifyResponseOnError()
-{
-    ASSERT(m_errorCode != Error::NoError);
-
-    ResourceResponse response(firstRequest().url(), "text/plain"_s, 0, String());
-    switch (m_errorCode) {
-    case Error::RangeError:
-        response.setHTTPStatusCode(httpRequestedRangeNotSatisfiable);
-        response.setHTTPStatusText(httpRequestedRangeNotSatisfiableText);
-        break;
-    case Error::SecurityError:
-        response.setHTTPStatusCode(httpNotAllowed);
-        response.setHTTPStatusText(httpNotAllowedText);
-        break;
-    default:
-        response.setHTTPStatusCode(httpInternalError);
-        response.setHTTPStatusText(httpInternalErrorText);
-        break;
-    }
 
     client()->didReceiveResponseAsync(this, WTFMove(response), [this, protectedThis = Ref { *this }] {
         m_buffer.resize(bufferSize);

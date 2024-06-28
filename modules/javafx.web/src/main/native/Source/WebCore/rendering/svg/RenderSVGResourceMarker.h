@@ -35,7 +35,7 @@ public:
 
     inline SVGMarkerElement& markerElement() const;
 
-    void removeAllClientsFromCache(bool markForInvalidation = true) override;
+    void removeAllClientsFromCacheIfNeeded(bool markForInvalidation, WeakHashSet<RenderObject>* visitedRenderers) override;
     void removeClientFromCache(RenderElement&, bool markForInvalidation = true) override;
 
     void draw(PaintInfo&, const AffineTransform&);
@@ -54,7 +54,7 @@ public:
     FloatRect resourceBoundingBox(const RenderObject&) override { return FloatRect(); }
 
     FloatPoint referencePoint() const;
-    float angle() const;
+    std::optional<float> angle() const;
     inline SVGMarkerUnitsType markerUnits() const;
 
     RenderSVGResourceType resourceType() const override { return MarkerResourceType; }

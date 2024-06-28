@@ -41,6 +41,7 @@
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
 #include "ScriptExecutionContext.h"
+#include "SecurityOrigin.h"
 #include "SharedBuffer.h"
 #include "TextResourceDecoder.h"
 #include "ThreadableBlobRegistry.h"
@@ -69,9 +70,6 @@ FileReaderLoader::FileReaderLoader(ReadType readType, FileReaderLoaderClient* cl
 FileReaderLoader::~FileReaderLoader()
 {
     cancel();
-
-    if (!m_urlForReading.isEmpty())
-        ThreadableBlobRegistry::unregisterBlobURL(m_urlForReading);
 }
 
 void FileReaderLoader::start(ScriptExecutionContext* scriptExecutionContext, Blob& blob)
@@ -84,7 +82,7 @@ void FileReaderLoader::start(ScriptExecutionContext* scriptExecutionContext, con
     ASSERT(scriptExecutionContext);
 
     // The blob is read by routing through the request handling layer given a temporary public url.
-    m_urlForReading = BlobURL::createPublicURL(scriptExecutionContext->securityOrigin());
+    m_urlForReading = { BlobURL::createPublicURL(scriptExecutionContext->securityOrigin()), scriptExecutionContext->topOrigin().data() };
     if (m_urlForReading.isEmpty()) {
         failed(SecurityError);
         return;
@@ -349,12 +347,7 @@ void FileReaderLoader::convertToText()
 
 void FileReaderLoader::convertToDataURL()
 {
-    if (!m_bytesLoaded) {
-        m_stringResult = "data:"_s;
-        return;
-    }
-
-    m_stringResult = makeString("data:", m_dataType.isEmpty() ? "application/octet-stream"_s : m_dataType, ";base64,", base64Encoded(m_rawData->data(), m_bytesLoaded));
+    m_stringResult = makeString("data:", m_dataType.isEmpty() ? "application/octet-stream"_s : m_dataType, ";base64,", base64Encoded(m_rawData ? m_rawData->data() : nullptr, m_bytesLoaded));
 }
 
 bool FileReaderLoader::isCompleted() const

@@ -30,23 +30,25 @@
 #include "DOMRect.h"
 #include "DOMRectList.h"
 #include "DocumentFragment.h"
+#include "DocumentType.h"
 #include "ElementInlines.h"
 #include "Event.h"
-#include "Frame.h"
 #include "FrameSelection.h"
-#include "FrameView.h"
 #include "GeometryUtilities.h"
 #include "HTMLBodyElement.h"
 #include "HTMLHtmlElement.h"
 #include "HTMLNames.h"
-#include "JSNode.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "NodeTraversal.h"
 #include "NodeWithIndex.h"
 #include "ProcessingInstruction.h"
 #include "ScopedEventQueue.h"
+#include "ShadowRoot.h"
 #include "TextIterator.h"
-#include "TypedElementDescendantIterator.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include "VisibleUnits.h"
+#include "WebCoreOpaqueRootInlines.h"
 #include "markup.h"
 #include <stdio.h>
 #include <wtf/IsoMallocInlines.h>
@@ -88,7 +90,6 @@ Ref<Range> Range::create(Document& ownerDocument)
 Range::~Range()
 {
     ASSERT(!m_isAssociatedWithSelection);
-
     m_ownerDocument->detachRange(*this);
 
 #ifndef NDEBUG
@@ -129,6 +130,7 @@ ExceptionOr<void> Range::setStart(Ref<Node>&& container, unsigned offset)
         m_end = m_start;
     updateAssociatedSelection();
     updateDocument();
+    m_didChangeHighlight = true;
     return { };
 }
 
@@ -143,6 +145,7 @@ ExceptionOr<void> Range::setEnd(Ref<Node>&& container, unsigned offset)
         m_start = m_end;
     updateAssociatedSelection();
     updateDocument();
+    m_didChangeHighlight = true;
     return { };
 }
 
@@ -179,7 +182,7 @@ ExceptionOr<short> Range::comparePoint(Node& container, unsigned offset) const
     auto ordering = treeOrder({ container, offset }, makeSimpleRange(*this));
     if (is_lt(ordering))
         return -1;
-    if (is_eq(ordering))
+    if (WebCore::is_eq(ordering))
         return 0;
     if (is_gt(ordering))
         return 1;
@@ -247,7 +250,7 @@ ExceptionOr<short> Range::compareBoundaryPoints(unsigned short how, const Range&
     auto ordering = treeOrder(makeBoundaryPoint(*thisPoint), makeBoundaryPoint(*otherPoint));
     if (is_lt(ordering))
         return -1;
-    if (is_eq(ordering))
+    if (WebCore::is_eq(ordering))
         return 0;
     if (is_gt(ordering))
         return 1;
@@ -311,6 +314,13 @@ ExceptionOr<RefPtr<DocumentFragment>> Range::processContents(ActionType action)
 
     RefPtr<Node> commonRoot = commonAncestorContainer();
     ASSERT(commonRoot);
+
+    if (action == Extract) {
+        auto& commonRootDocument = commonRoot->document();
+        RefPtr doctype = commonRootDocument.doctype();
+        if (doctype && contains(makeSimpleRange(*this), { *doctype, 0 }))
+            return Exception { HierarchyRequestError };
+    }
 
     if (&startContainer() == &endContainer()) {
         auto result = processContentsBetweenOffsets(action, fragment, &startContainer(), m_start.offset(), m_end.offset());
@@ -568,6 +578,10 @@ ExceptionOr<RefPtr<Node>> processAncestorsAndTheirSiblings(Range::ActionType act
     RefPtr<Node> firstChildInAncestorToProcess = direction == ProcessContentsForward ? container->nextSibling() : container->previousSibling();
     for (auto& ancestor : ancestors) {
         if (action == Range::Extract || action == Range::Clone) {
+            if (auto shadowRoot = dynamicDowncast<ShadowRoot>(ancestor.get())) {
+                if (!shadowRoot->isCloneable())
+                    continue;
+            }
             auto clonedAncestor = ancestor->cloneNode(false); // Might have been removed already during mutation event.
             if (clonedContainer) {
                 auto result = clonedAncestor->appendChild(*clonedContainer);
@@ -885,6 +899,7 @@ void Range::nodeChildrenChanged(ContainerNode& container)
     ASSERT(&container.document() == m_ownerDocument.ptr());
     boundaryNodeChildrenChanged(m_start, container);
     boundaryNodeChildrenChanged(m_end, container);
+    m_didChangeHighlight = true;
 }
 
 static inline void boundaryNodeChildrenWillBeRemoved(RangeBoundaryPoint& boundary, ContainerNode& containerOfNodesToBeRemoved)
@@ -898,6 +913,7 @@ void Range::nodeChildrenWillBeRemoved(ContainerNode& container)
     ASSERT(&container.document() == m_ownerDocument.ptr());
     boundaryNodeChildrenWillBeRemoved(m_start, container);
     boundaryNodeChildrenWillBeRemoved(m_end, container);
+    m_didChangeHighlight = true;
 }
 
 static inline void boundaryNodeWillBeRemoved(RangeBoundaryPoint& boundary, Node& nodeToBeRemoved)
@@ -915,6 +931,7 @@ void Range::nodeWillBeRemoved(Node& node)
     ASSERT(node.parentNode());
     boundaryNodeWillBeRemoved(m_start, node);
     boundaryNodeWillBeRemoved(m_end, node);
+    m_didChangeHighlight = true;
 }
 
 bool Range::parentlessNodeMovedToNewDocumentAffectsRange(Node& node)
@@ -944,6 +961,7 @@ void Range::textInserted(Node& text, unsigned offset, unsigned length)
     ASSERT(&text.document() == m_ownerDocument.ptr());
     boundaryTextInserted(m_start, text, offset, length);
     boundaryTextInserted(m_end, text, offset, length);
+    m_didChangeHighlight = true;
 }
 
 static inline void boundaryTextRemoved(RangeBoundaryPoint& boundary, Node& text, unsigned offset, unsigned length)
@@ -964,6 +982,7 @@ void Range::textRemoved(Node& text, unsigned offset, unsigned length)
     ASSERT(&text.document() == m_ownerDocument.ptr());
     boundaryTextRemoved(m_start, text, offset, length);
     boundaryTextRemoved(m_end, text, offset, length);
+    m_didChangeHighlight = true;
 }
 
 static inline void boundaryTextNodesMerged(RangeBoundaryPoint& boundary, NodeWithIndex& oldNode, unsigned offset)
@@ -984,6 +1003,7 @@ void Range::textNodesMerged(NodeWithIndex& oldNode, unsigned offset)
     ASSERT(oldNode.node()->previousSibling()->isTextNode());
     boundaryTextNodesMerged(m_start, oldNode, offset);
     boundaryTextNodesMerged(m_end, oldNode, offset);
+    m_didChangeHighlight = true;
 }
 
 static inline void boundaryTextNodesSplit(RangeBoundaryPoint& boundary, Text& oldNode)
@@ -1016,6 +1036,7 @@ void Range::textNodeSplit(Text& oldNode)
     ASSERT(!oldNode.parentNode() || oldNode.nextSibling()->isTextNode());
     boundaryTextNodesSplit(m_start, oldNode);
     boundaryTextNodesSplit(m_end, oldNode);
+    m_didChangeHighlight = true;
 }
 
 ExceptionOr<void> Range::expand(const String& unit)
@@ -1077,7 +1098,7 @@ void Range::updateFromSelection(const SimpleRange& value)
     m_isAssociatedWithSelection = true;
 }
 
-DOMWindow* Range::window() const
+LocalDOMWindow* Range::window() const
 {
     return m_isAssociatedWithSelection ? m_ownerDocument->domWindow() : nullptr;
 }

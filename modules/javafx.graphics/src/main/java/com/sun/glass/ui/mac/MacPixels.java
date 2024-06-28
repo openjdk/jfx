@@ -24,7 +24,6 @@
  */
 package com.sun.glass.ui.mac;
 
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
@@ -66,29 +65,21 @@ final class MacPixels extends Pixels {
     protected void _fillDirectByteBuffer(ByteBuffer bb) {
         if (this.bytes != null) {
             this.bytes.rewind();
-            if (this.bytes.isDirect() == true) {
-                _copyPixels(bb, this.bytes, getWidth()*getHeight());
-            } else {
-                bb.put(this.bytes);
-            }
+            bb.put(this.bytes);
             this.bytes.rewind();
         } else {
             this.ints.rewind();
-            if (this.ints.isDirect() == true) {
-                _copyPixels(bb, this.ints, getWidth()*getHeight());
-            } else {
-                for (int i=0; i<this.ints.capacity(); i++) {
-                    int data = this.ints.get();
-                    bb.put((byte)((data>>0)&0xff));
-                    bb.put((byte)((data>>8)&0xff));
-                    bb.put((byte)((data>>16)&0xff));
-                    bb.put((byte)((data>>24)&0xff));
-                }
+            for (int i=0; i<this.ints.capacity(); i++) {
+                int data = this.ints.get();
+                bb.put((byte)((data>>0)&0xff));
+                bb.put((byte)((data>>8)&0xff));
+                bb.put((byte)((data>>16)&0xff));
+                bb.put((byte)((data>>24)&0xff));
             }
             this.ints.rewind();
         }
     }
-    native protected void _copyPixels(Buffer src, Buffer dst, int size);
+
     @Override native protected void _attachInt(long ptr, int w, int h, IntBuffer ints, int[] array, int offset);
     @Override native protected void _attachByte(long ptr, int w, int h, ByteBuffer bytes, byte[] array, int offset);
 

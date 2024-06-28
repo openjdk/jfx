@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,11 +42,14 @@
 #include <wtf/DataLog.h>
 #include <wtf/Gigacage.h>
 #include <wtf/NumberOfCores.h>
-#include <wtf/OSLogPrintStream.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TranslatedProcess.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/threads/Signals.h>
+
+#if OS(DARWIN)
+#include <wtf/darwin/OSLogPrintStream.h>
+#endif
 
 #if PLATFORM(COCOA)
 #include <crt_externs.h>
@@ -199,7 +202,9 @@ static void initializeDatafileToUseOSLog()
 {
     static bool alreadyInitialized = false;
     RELEASE_ASSERT(!alreadyInitialized);
+#if !PLATFORM(JAVA)  // OSLogPrintStream.cpp is removed
     WTF::setDataFile(OSLogPrintStream::open("com.apple.JavaScriptCore", "DataLog", asDarwinOSLogType(Options::useOSLog())));
+#endif
     alreadyInitialized = true;
     // Make sure no one jumped here for nefarious reasons...
     RELEASE_ASSERT(Options::useOSLog() != OSLogType::None);
@@ -235,10 +240,6 @@ bool Options::isAvailable(Options::ID id, Options::Availability availability)
     UNUSED_PARAM(id);
 #if !defined(NDEBUG)
     if (id == maxSingleAllocationSizeID)
-        return true;
-#endif
-#if OS(DARWIN)
-    if (id == useSigillCrashAnalyzerID)
         return true;
 #endif
 #if ENABLE(ASSEMBLER) && OS(LINUX)
@@ -456,10 +457,6 @@ static void overrideDefaults()
     Options::mediumHeapRAMFraction() = 0.9;
 #endif
 
-#if ENABLE(SIGILL_CRASH_ANALYZER)
-    Options::useSigillCrashAnalyzer() = true;
-#endif
-
 #if !ENABLE(SIGNAL_BASED_VM_TRAPS)
     Options::usePollingTraps() = true;
 #endif
@@ -492,7 +489,6 @@ static inline void disableAllJITOptions()
     Options::useRegExpJIT() = false;
     Options::useJITCage() = false;
     Options::useConcurrentJIT() = false;
-    Options::useSigillCrashAnalyzer() = false;
 
     Options::useWebAssembly() = false;
 
@@ -579,6 +575,7 @@ void Options::notifyOptionsChanged()
     Options::useConcurrentGC() = false;
     Options::forceUnlinkedDFG() = false;
     Options::useWebAssemblySIMD() = false;
+    Options::useSinglePassBBQJIT() = false;
 #endif
 
     if (!Options::allowDoubleShape())
@@ -673,6 +670,14 @@ void Options::notifyOptionsChanged()
             // The LLInt is responsible for discovering if functions use SIMD.
             // If we can't run using it, then we should be conservative.
             Options::forceAllFunctionsToUseSIMD() = true;
+        }
+
+        if (Options::useWebAssemblyTailCalls()) {
+            // The single-pass BBQ JIT doesn't support these features currently, so we should use a different
+            // BBQ backend if any of them are enabled. We should remove these limitations as support for each
+            // is added.
+            // FIXME: Add WASM tail calls support to single-pass BBQ JIT. https://bugs.webkit.org/show_bug.cgi?id=253192
+            Options::useSinglePassBBQJIT() = false;
         }
     }
 
@@ -876,7 +881,7 @@ void Options::finalize()
 
 static bool isSeparator(char c)
 {
-    return isASCIISpace(c) || (c == ',');
+    return isUnicodeCompatibleASCIIWhitespace(c) || (c == ',');
 }
 
 bool Options::setOptions(const char* optionsStr)
@@ -1024,7 +1029,7 @@ bool Options::setAliasedOption(const char* arg, bool verify)
             auto* invertedValueStr = invertBoolOptionValue(equalStr + 1); \
             if (!invertedValueStr)                                      \
                 return false;                                           \
-            unaliasedOption = unaliasedOption + "=" + invertedValueStr; \
+            unaliasedOption = makeString(unaliasedOption, '=', invertedValueStr); \
         }                                                               \
         return setOptionWithoutAlias(unaliasedOption.utf8().data(), verify);    \
     }
@@ -1080,8 +1085,7 @@ struct OptionReader {
     public:
         void dump(StringBuilder&) const;
 
-        bool operator==(const Option& other) const;
-        bool operator!=(const Option& other) const { return !(*this == other); }
+        bool operator==(const Option&) const;
 
         const char* name() const { return Options::s_constMetaData[m_id].name; }
         const char* description() const { return Options::s_constMetaData[m_id].description; }

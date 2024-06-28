@@ -133,9 +133,9 @@ MockSourceBufferPrivate::MockSourceBufferPrivate(MockMediaSourcePrivate* parent)
 
 MockSourceBufferPrivate::~MockSourceBufferPrivate() = default;
 
-void MockSourceBufferPrivate::append(Vector<uint8_t>&& data)
+void MockSourceBufferPrivate::appendInternal(Ref<SharedBuffer>&& data)
 {
-    m_inputBuffer.appendVector(WTFMove(data));
+    m_inputBuffer.appendVector(data->extractData());
     bool parsingSucceeded = true;
 
     while (m_inputBuffer.size() && parsingSucceeded) {
@@ -187,7 +187,10 @@ void MockSourceBufferPrivate::didReceiveInitializationSegment(const MockInitiali
         }
     }
 
-    SourceBufferPrivate::didReceiveInitializationSegment(WTFMove(segment), [](SourceBufferPrivateClient::ReceiveResult) { });
+    SourceBufferPrivate::didReceiveInitializationSegment(
+        WTFMove(segment),
+        [] (auto&) { return true; },
+        [] (auto) { });
 }
 
 void MockSourceBufferPrivate::didReceiveSample(const MockSampleBox& sampleBox)
@@ -198,11 +201,7 @@ void MockSourceBufferPrivate::didReceiveSample(const MockSampleBox& sampleBox)
     SourceBufferPrivate::didReceiveSample(MockMediaSample::create(sampleBox));
 }
 
-void MockSourceBufferPrivate::abort()
-{
-}
-
-void MockSourceBufferPrivate::resetParserState()
+void MockSourceBufferPrivate::resetParserStateInternal()
 {
 }
 
@@ -214,13 +213,13 @@ void MockSourceBufferPrivate::removedFromMediaSource()
 
 MediaPlayer::ReadyState MockSourceBufferPrivate::readyState() const
 {
-    return m_mediaSource ? m_mediaSource->player().readyState() : MediaPlayer::ReadyState::HaveNothing;
+    return m_mediaSource && m_mediaSource->player() ? m_mediaSource->player()->readyState() : MediaPlayer::ReadyState::HaveNothing;
 }
 
 void MockSourceBufferPrivate::setReadyState(MediaPlayer::ReadyState readyState)
 {
-    if (m_mediaSource)
-        m_mediaSource->player().setReadyState(readyState);
+    if (m_mediaSource && m_mediaSource->player())
+        m_mediaSource->player()->setReadyState(readyState);
 }
 
 void MockSourceBufferPrivate::setActive(bool isActive)

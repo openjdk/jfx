@@ -24,6 +24,7 @@
  */
 
 #include "config.h"
+#if PLATFORM(JAVA)
 #include "SocketProvider.h"
 
 #include "SocketStreamHandleImpl.h"
@@ -50,3 +51,4 @@ RefPtr<ThreadableWebSocketChannel> SocketProvider::createWebSocketChannel(Docume
 }
 
 }
+#endif

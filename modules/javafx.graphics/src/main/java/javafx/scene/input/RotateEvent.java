@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -161,6 +161,7 @@ public final class RotateEvent extends GestureEvent {
                 altDown, metaDown, direct, inertia, angle, totalAngle, pickResult);
     }
 
+    @SuppressWarnings("doclint:missing")
     private final double angle;
 
     /**
@@ -173,6 +174,7 @@ public final class RotateEvent extends GestureEvent {
         return angle;
     }
 
+    @SuppressWarnings("doclint:missing")
     private final double totalAngle;
 
     /**

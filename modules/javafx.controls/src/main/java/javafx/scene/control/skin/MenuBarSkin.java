@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -121,16 +121,14 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
      *                                                                         *
      **************************************************************************/
 
+    /** contains MenuBarButton's children only */
     private final HBox container;
+    /** index of *focused* MenuBarButton */
+    private int focusedMenuIndex = -1;
 
     // represents the currently _open_ menu
     private Menu openMenu;
     private MenuBarButton openMenuButton;
-
-    // represents the currently _focused_ menu. If openMenu is non-null, this should equal
-    // openMenu. If openMenu is null, this can be any menu in the menu bar.
-    private Menu focusedMenu;
-    private int focusedMenuIndex = -1;
 
     private static WeakHashMap<Stage, Reference<MenuBarSkin>> systemMenuMap;
     private static List<MenuBase> wrappedDefaultMenus = new ArrayList<>();
@@ -295,7 +293,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                 // Key navigation
                 sceneListenerHelper.addEventFilter(scene, KeyEvent.KEY_PRESSED, (ev) -> {
                     // process right left and may be tab key events
-                    if (focusedMenu != null) {
+                    if (focusedMenuIndex >= 0) {
                         switch (ev.getCode()) {
                         case LEFT: {
                             boolean isRTL = control.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
@@ -369,7 +367,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                     }
                 });
 
-                // When the parent window looses focus - menu selection should be cleared
+                // When the parent window loses focus - menu selection should be cleared
                 sceneListenerHelper.addChangeListener(scene.windowProperty(), true, (w) -> {
                     if (windowFocusHelper != null) {
                         windowFocusHelper.disconnect();
@@ -429,7 +427,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         if (!menu.isShowing() && !isMenuEmpty(menu)) {
             if (selectFirstItem) {
                 // put selection / focus on first item in menu
-                MenuButton menuButton = getNodeForMenu(focusedMenuIndex);
+                MenuButton menuButton = menuBarButtonAt(focusedMenuIndex);
                 Skin<?> skin = menuButton.getSkin();
                 if (skin instanceof MenuButtonSkinBase) {
                     ((MenuButtonSkinBase)skin).requestFocusOnFirstMenuItem();
@@ -445,7 +443,6 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
      */
     void setFocusedMenuIndex(int index) {
         focusedMenuIndex = (index >= -1 && index < getSkinnable().getMenus().size()) ? index : -1;
-        focusedMenu = (focusedMenuIndex != -1) ? getSkinnable().getMenus().get(index) : null;
 
         if (focusedMenuIndex != -1) {
             openMenuButton = (MenuBarButton)container.getChildren().get(focusedMenuIndex);
@@ -733,12 +730,9 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
      *                                                                         *
      **************************************************************************/
 
-    // For testing purpose only.
-    MenuButton getNodeForMenu(int i) {
-        if (i < container.getChildren().size()) {
-            return (MenuBarButton)container.getChildren().get(i);
-        }
-        return null;
+    // package protected for testing purposes
+    MenuBarButton menuBarButtonAt(int i) {
+        return (MenuBarButton)container.getChildren().get(i);
     }
 
     int getFocusedMenuIndex() {
@@ -1083,6 +1077,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
     }
 
     private void moveToMenu(Direction dir, boolean doShow) {
+        Menu focusedMenu = menuBarButtonAt(focusedMenuIndex).menu;
         boolean showNextMenu = doShow && focusedMenu.isShowing();
         findSibling(dir, focusedMenuIndex).ifPresent(p -> {
             setFocusedMenuIndex(p.getValue());

@@ -55,19 +55,21 @@ public:
     IntSize backendSize() const override;
 
 
-    RefPtr<NativeImage> copyNativeImage(BackingStoreCopy = CopyBackingStore) const override;
+    RefPtr<NativeImage> copyNativeImage(BackingStoreCopy = CopyBackingStore) override;
+    RefPtr<NativeImage> copyNativeImageForDrawing(GraphicsContext& destination) override;
 
 
+    String debugDescription() const override;
 
+    void getPixelBuffer(const IntRect& srcRect, PixelBuffer& destination) override ;
+    void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) override;
 
 protected:
     ImageBufferJavaBackend(const Parameters&, PlatformImagePtr, std::unique_ptr<GraphicsContext>&&, IntSize);
 
+    void getPixelBuffer(const IntRect& srcRect, void* data, PixelBuffer& destination);
+    void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat, void* destination);
 
-    RefPtr<PixelBuffer> getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, const ImageBufferAllocator& =ImageBufferAllocator()) const override;
-    RefPtr<PixelBuffer> getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, void* data, const ImageBufferAllocator& =ImageBufferAllocator()) const;
-    void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) override;
-    void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat, void* data);
 
     unsigned bytesPerRow() const override;
 

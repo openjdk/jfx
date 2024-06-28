@@ -71,14 +71,18 @@ public:
     virtual ~TransformOperation() = default;
 
     virtual Ref<TransformOperation> clone() const = 0;
+    virtual Ref<TransformOperation> selfOrCopyWithResolvedCalculatedValues(const FloatSize&) { return *this; }
 
     virtual bool operator==(const TransformOperation&) const = 0;
-    bool operator!=(const TransformOperation& o) const { return !(*this == o); }
 
     virtual bool isIdentity() const = 0;
 
     // Return true if the borderBoxSize was used in the computation, false otherwise.
     virtual bool apply(TransformationMatrix&, const FloatSize& borderBoxSize) const = 0;
+    virtual bool applyUnrounded(TransformationMatrix& transform, const FloatSize& borderBoxSize) const
+    {
+        return apply(transform, borderBoxSize);
+    }
 
     virtual Ref<TransformOperation> blend(const TransformOperation* from, const BlendingContext&, bool blendToIdentity = false) = 0;
 

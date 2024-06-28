@@ -34,6 +34,9 @@ import sun.misc.Unsafe;
 /**
  *
  */
+// FIXME: We must replace the terminally deprecated sun.misc.Unsafe
+// memory access methods; see JDK-8334137
+@SuppressWarnings("removal")
 final class OffHeapArray  {
 
     // unsafe reference

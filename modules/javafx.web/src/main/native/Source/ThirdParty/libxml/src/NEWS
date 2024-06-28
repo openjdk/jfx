@@ -1,5 +1,706 @@
 NEWS file for libxml2
 
+v2.12.7: May 13 2024
+
+### Security
+
+- [CVE-2024-34459] Fix buffer overread with `xmllint --htmlout`
+
+### Regressions
+
+- xmllint: Fix --pedantic option
+- save: Handle invalid parent pointers in xhtmlNodeDumpOutput
+
+
+v2.12.6: Mar 15 2024
+
+### Regressions
+
+- parser: Fix detection of duplicate attributes in XML namespace
+- xmlreader: Fix xmlTextReaderConstEncoding
+- html: Fix htmlCreatePushParserCtxt with encoding
+- xmllint: Return error code if XPath returns empty nodeset
+
+
+v2.12.5: Feb 4 2024
+
+### Security
+
+- [CVE-2024-25062] xmlreader: Don't expand XIncludes when backtracking
+
+### Regressions
+
+- parser: Fix crash in xmlParseInNodeContext with HTML documents
+
+
+v2.12.4: Jan 15 2024
+
+### Regressions
+
+- parser: Fix regression parsing standalone declarations
+- autotools: Readd --with-xptr-locs configuration option
+- parser: Fix build --without-output
+- parser: Don't grow or shrink pull parser memory buffers
+- io: Fix memory lifetime issue with input buffers
+
+
+v2.12.3: Dec 12 2023
+
+### Regressions
+
+- parser: Fix namespaces redefined from default attributes
+
+### Build fixes
+
+- include: Rename XML_EMPTY helper macro
+- include: Move declaration of xmlInitGlobals
+- include: Add missing includes
+- include: Move globals from xmlsave.h to parser.h
+- include: Readd circular dependency between tree.h and parser.h
+
+
+v2.12.2: Dec 5 2023
+
+### Regressions
+
+- parser: Fix invalid free in xmlParseBalancedChunkMemoryRecover
+- globals: Disable TLS in static Windows builds
+- html: Reenable buggy detection of XML declarations
+- tree: Fix regression when copying DTDs
+- parser: Make CRLF increment line number
+
+### Build fixes
+
+- build: Disable compiler TLS by default
+- cmake: Update config.h.cmake.in
+- tests: Fix tests --with-valid --without-xinclude
+
+
+v2.12.1: Nov 23 2023
+
+### Regressions
+
+- hash: Fix deletion of entries during scan
+- parser: Only enable SAX2 if there are SAX2 element handlers
+
+### Build fixes
+
+- autotools: Stop checking for snprintf
+- dict: Fix '__thread' before 'static'
+- fix: pthread weak references in globals.c (Mike Dalessio)
+- tests: Fix build with older MSVC
+
+
+v2.12.0: Nov 16 2023
+
+### Major changes
+
+Most of the known issues leading to quadratic behavior in the XML parser
+were fixed. Internal hash tables were rewritten to reduce memory
+consumption.
+
+Starting with this release, it should be enough to add the --with-legacy
+configuration option to provide maximum ABI compatibility. For example,
+if a code module was removed from the default configuration, the option
+will add stubs for the removed symbols.
+
+libxml2 will now store global variables in thread-local storage if supported
+by the compiler. This avoids allocating the data lazily which can result in
+a fatal error condition. A new API function xmlCheckThreadLocalStorage
+was added so the allocation can be checked earlier if compiler TLS is not
+supported. To prepare for future improvements, some API functions now expect
+or return a const xmlError struct.
+
+Several cyclic dependencies in public header files were fixed. As a result,
+certain headers won't include other headers as before.
+
+Refactoring of the encoding code has been mostly completed. Calling
+xmlSwitchEncoding from client code is now fully supported, for example to
+override the encoding for the push parser.
+
+When parsing data from memory, libxml2 will now stream data chunk by chunk
+instead of copying the whole buffer (possibly twice with encodings),
+reducing peak memory consumption considerably.
+
+A new API function xmlCtxtSetMaxAmplification was added to allow parsing
+of files that would otherwise trigger the billion laughs protection.
+
+Several bugs in the regex determinism checks were fixed. Invalid XML
+Schemas which previous versions erroneously accepted will now be
+rejected.
+
+### Deprecations
+
+- globals: Deprecate xmlLastError
+- parser: Deprecate global parser options
+- win32: Deprecate old Windows build system
+
+### Bug fixes
+
+- parser: Stop switching to ISO-8859-1 on encoding errors
+- parser: Support encoded external PEs in entity values
+- string: Fix UTF-8 validation in xmlGetUTF8Char
+- SAX2: Allow multiple top-level elements
+- parser: Update line number after coalescing text nodes
+- parser: Check for truncated multi-byte sequences
+
+### Improvements
+
+- error: Make more xmlError structs constant
+- parser: Remove redundant IS_CHAR check in xmlCurrentChar
+- parser: Fix stack handling in xmlParseTryOrFinish
+- parser: Protect against quadratic default attribute expansion
+- parser: Missing checks for disableSAX
+- entities: Make xmlFreeEntity public
+- examples: Don't use sprintf
+- encoding: Suppress -Wcast-align warnings
+- parser: Use hash tables to avoid quadratic behavior
+- parser: Don't skip CR in xmlCurrentChar
+- dict: Rewrite dictionary hash table code
+- hash: Rewrite hash table code
+- malloc-fail: Report malloc failure in xmlFARegExec
+- malloc-fail: Report malloc failure in xmlRegEpxFromParse
+- parser: Simplify xmlStringCurrentChar
+- regexp: Fix status codes and handle invalid UTF-8
+- error: Make xmlGetLastError return a const error
+- html: Fix logic in htmlAutoClose
+- globals: Move globals back to correct header files
+- globals: Use thread-local storage if available
+- globals: Rework global state destruction on Windows
+- globals: Define globals using macros
+- globals: Introduce xmlCheckThreadLocalStorage
+- globals: Make xmlGlobalState private
+- threads: Move library initialization code to threads.c
+- debug: Remove debugging code
+- globals: Move code from threads.c to globals.c
+- parser: Avoid undefined behavior in xmlParseStartTag2
+- schemas: Fix memory leak of annotations in notations
+- dict: Update hash function
+- dict: Use thread-local storage for PRNG state
+- dict: Use xoroshiro64** as PRNG
+- xmllint: Fix error messages
+- parser: Fix detection of null bytes
+- parser: Improve error handling in push parser
+- parser: Don't check inputNr in xmlParseTryOrFinish
+- parser: Remove push parser debugging code
+- tree: Fix copying of DTDs
+- legacy: Add stubs for disabled modules
+- parser: Allow to set maximum amplification factor
+- entities: Don't change doc when encoding entities
+- parser: Never use UTF-8 encoding handler
+- encoding: Remove debugging code
+- malloc-fail: Fix unsigned integer overflow in xmlTextReaderPushData
+- html: Remove encoding hack in htmlCreateFileParserCtxt
+- parser: Decode all data in xmlCharEncInput
+- parser: Stream data when reading from memory
+- parser: Optimize xmlLoadEntityContent
+- parser: Don't overwrite EOF parser state
+- parser: Simplify input pointer updates
+- parser: Don't reinitialize parser input members
+- encoding: Move rawconsumed accounting to xmlCharEncInput
+- parser: Rework encoding detection
+- parser: Always create UTF-8 in xmlParseReference
+- html: Remove some debugging code in htmlParseTryOrFinish
+- malloc-fail: Fix memory leak in xmlCompileAttributeTest
+- parser: Recover more input from encoding errors
+- malloc-fail: Handle malloc failures in xmlAddEncodingAlias
+- malloc-fail: Fix null-deref with xmllint --copy
+- xpath: Ignore entity ref nodes when computing node hash
+- malloc-fail: Fix null deref after xmlXIncludeNewRef
+- SAX: Always validate xml:ids
+- Stop using sprintf
+- Fix compiler warning on GCC < 8
+- regexp: Fix determinism checks
+- regexp: Fix checks for eliminated transitions
+- regexp: Simplify xmlFAReduceEpsilonTransitions
+- regexp: Fix cycle check in xmlFAReduceEpsilonTransitions
+- schemas: Fix filename in xmlSchemaValidateFile
+- schemas: Fix line numbers in streaming validation
+- writer: Add error check in xmlTextWriterEndDocument
+- encoding: Stop calling xmlEncodingErr
+- xmlIO: Remove some calls to xmlIOErr
+- parser: Improve handling of encoding and IO errors
+- parser: Move xmlFatalErr to parserInternals.c
+- encoding: Rework error codes
+- .gitignore: Split up and rearrange .gitignore files
+- .gitignore: Add runsuite.log
+- Stop calling xmlMemoryDump
+- examples: Don't call xmlCleanupParser and xmlMemoryDump
+- xpath: Remove remaining references to valueFrame
+
+### Portability
+
+- python: Make it compatible with python3.12 (Daniel Garcia Moreno)
+
+### Build systems
+
+- cmake: Check whether static linking dependencies found in config files
+  (James Le Cuirot)
+- autotools: Make --with-minimum disable lzma support
+- build: Remove some GCC warnings
+- Handle NOCONFIG case when setting locations from CMake target properties
+  (Markus Rickert)
+- cmake: Generate better pkg-config file for SYSROOT builds under CMake
+  (James Le Cuirot)
+- autoconf: Include non-pkg-config dependency flags in the pkg-config file
+  (James Le Cuirot)
+- autoconf: Don't bake build time CFLAGS into pkg-config file (James Le Cuirot)
+- build: Generate better pkg-config files for static-only builds (James
+  Le Cuirot)
+- build: Generate better pkg-config file for SYSROOT builds (James Le Cuirot)
+- autoconf: Allow custom --with-icu configure option
+
+### Tests
+
+- tests: Also test xmlNextChar in testchar.c
+- tests: Start with testparser.c for extra tests
+- fuzz: Raise rss_limit_mb
+- fuzz: Test xmlTextReaderRead after EOF or failure
+- fuzz: Test XML_PARSE_XINCLUDE | XML_PARSE_VALID
+- tests: Handle entities in SAX tests
+- fuzz: Disable XML_PARSE_SAX1 option in xml fuzzer
+- tests: Add more tests for redefined attributes
+- hash: Add hash table tests
+- tests: Add ATTRIBUTE_NO_SANITIZE_INTEGER macro
+- fuzz: Allow to fuzz without push, reader or output modules
+- gitlab-ci: Add a "medium" config build
+- python: Fix tests on MinGW
+- test: Add push parser test with overridden encoding
+- testapi: test_xmlSAXDefaultVersion() leaves xmlSAX2DefaultVersionValue set
+  to 1 with LIBXML_SAX1_ENABLED (David Kilzer)
+- gitlab-ci: Lower _XOPEN_SOURCE value
+- testapi: Don't set http_proxy environment variable
+- test: Add push parser tests for split UTF-8 sequences
+- xinclude: Lower initial table size when fuzzing
+- tests: Test streaming schema validation
+- runtest: Skip element name in schema error messages
+
+### Documentation
+
+- doc: Add notes about runtest to MAINTAINERS.md
+- doc: Don't document internal macros in xmlversion.h
+- doc: Allow 'unsigned' without 'int'
+- doc: Improve documentation of configuration options
+
+
+v2.11.6: Nov 16 2023
+
+### Regressions
+
+- threads: Fix --with-thread-alloc
+- xinclude: Fix 'last' pointer in xmlXIncludeCopyNode
+
+### Bug fixes
+
+- parser: Fix potential use-after-free in xmlParseCharDataInternal
+
+
+v2.11.5: Aug 9 2023
+
+### Regressions
+
+- parser: Make xmlSwitchEncoding always skip the BOM
+- autotools: Improve iconv check
+
+### Bug fixes
+
+- valid: Fix c1->parent pointer in xmlCopyDocElementContent
+- encoding: Always call ucnv_convertEx with flush set to false
+
+### Portability
+
+- autotools: fix Python module file ext for cygwin/msys2 (Christoph Reiter)
+
+### Tests
+
+- runtest: Fix compilation without LIBXML_HTML_ENABLED
+
+
+v2.11.4: May 18 2023
+
+Fixes a serious regression.
+
+- parser: Fix regression when push parsing UTF-8 sequences
+
+
+v2.11.3: May 11 2023
+
+Fixes more regressions.
+
+- xinclude: Fix false positives in inclusion loop detection
+- autotools: Fix ICU detection
+- parser: Fix "huge input lookup" error with push parser
+- xpath: Fix build without LIBXML_XPATH_ENABLED
+- hash: Fix possible startup crash with old libxslt versions
+- autoconf: fix iconv library paths (Mike Dalessio)
+
+
+v2.11.2: May 5 2023
+
+Fix regressions.
+
+- threads: Fix startup crash with weak symbol hack
+- win32: Don't depend on removed .def file
+- schemas: Fix memory leak in xmlSchemaValidateStream
+
+
+v2.11.1: Apr 30 2023
+
+Fixes build and ABI issues.
+
+- cmake: Fix va_copy detection (Luca Niccoli)
+- libxml.m4: Fix quoting
+- Link with --undefined-version
+- libxml2.syms: Revert removal of version information
+
+
+v2.11.0: Apr 28 2023
+
+### Major changes
+
+Protection against entity expansion attacks, also known as "billion laughs"
+has been greatly improved. Malicious files should be detected reliably now
+and false positives should be reduced. It is possible though that large
+documents which make heavy use of entities are rejected now.
+
+This release finally fixes symbol visibility on UNIX systems. Internal
+symbols will now be hidden. While these symbols were never declared in public
+headers, it was still possible to declare them manually. Now this won't work.
+
+All symbol information has been removed from the ELF version script to fix
+link errors with --no-undefined-version. The version nodes are kept so it
+should still be possible to run binaries linked against older versions.
+
+About 90 memory errors in code paths handling malloc failures have been fixed.
+While these issues shouldn't impact security, this improves robustness under
+memory pressure.
+
+The XInclude engine has been reworked to properly support nested includes.
+
+Several cases of quadratic behavior in the XML push parser have been fixed.
+
+Refactoring has begun on some buffering and encoding code with the goal of
+simplifying this part of the code base and improving error reporting.
+
+Other highlights:
+
+- Consolidated private header files.
+- Major rework of the autoconf build.
+- Deprecated several outdated and internal functions.
+
+Special thanks to Google's Open Source Security Subsidies program for
+sponsoring much of the work on this release!
+
+Ongoing work on libxml2 relies on funding. For a list of important open
+issues see <https://gitlab.gnome.org/GNOME/libxml2/-/issues/507>
+
+### Security
+
+- Fix use-after-free in xmlParseContentInternal() (David Kilzer)
+- xmllint: Fix use-after-free with --maxmem
+- parser: Fix OOB read when formatting error message
+- entities: Rework entity amplification checks
+
+### Regressions
+
+- parser: Fix regression in xmlParserNodeInfo accounting
+
+### Bug fixes
+
+- Fix memory errors in code handling malloc failures
+- encoding: Fix error code in asciiToUTF8
+- xpath: number('-') should return NaN
+- xmlParseStartTag2() contains typo when checking for default definitions for
+  an attribute in a namespace (David Kilzer)
+- uri: Fix handling of port numbers
+- error: Make sure that error messages are valid UTF-8
+- xinclude: Fix nested includes
+
+### Improvements
+
+- xmllint: Validate --maxmem integer option
+- xmlValidatePopElement() can return invalid value (-1) (David Kilzer)
+- parser: Rework EBCDIC code page detection
+- parser: Limit name length in xmlParseEncName
+- parser: Rework shrinking of input buffers
+- html: Rely on CUR_CHAR to grow the input buffer
+- parser: Rely on CUR_CHAR/NEXT to grow the input buffer
+- valid: Make xmlValidateElement non-recursive
+- html: Fix quadratic behavior in htmlParseTryOrFinish
+- xmllint: Fix memory leak with --pattern --stream
+- parser: Stop calling xmlParserInputShrink
+- html: Impose some length limits
+- valid: Allow xmlFreeValidCtxt(NULL)
+- parser: Stop calling xmlParserInputGrow
+- xinclude: Fix quadratic behavior in xmlXIncludeLoadTxt
+- xinclude: Abort immediately if max depth was exceeded
+- xpath: Only report the first error
+- error: Don't move past current position
+- error: Limit number of parser errors
+- parser: Lower entity nesting limit with XML_PARSE_HUGE
+- parser: Don't increase depth twice when parsing internal entities
+- parser: Improve detection of entity loops
+- parser: Only report a single entity error
+- libxml.h: Remove dubious definition of LIBXML_STATIC
+- html: Improve parsing of nested lists
+- memory: Don't use locks in xmlMemUsed
+- encoding: Remove unused variable xmlDefaultCharEncodingHandler
+- Rework initialization code
+- Add .editorconfig
+- parser: Merge misc, prolog and epilog cases in push parser
+- parser: Fix 'consumed' accounting when switching encodings
+- html: Fix check for end of comment in push parser
+- parser: Fix push parser with 1-3 byte initial chunk
+- parser: Rewrite push parser boundary checks
+- reader: Switch to xmlParserInputBufferCreateMem
+- html: Don't escape ASCII chars in href attributes
+- io: Don't shrink memory input buffers
+- parser: Don't call xmlSHRINK from push parser
+- parser: Ignore cdata argument in xmlParseCharData
+- parser: Rework push parser parser progress checks
+- io: Fix a few integer overflows in I/O statistics
+- io: Rework xmlParserInputBufferGrow with encodings
+- io: Remove xmlInputReadCallbackNop
+- io: Check for memory buffer early in xmlParserInputGrow
+- parser: Fix error message in xmlParseCommentComplex
+- Bypass proxy in nanoHTTP for hosts in "no_proxy" (Markus Jörg)
+- schemas: Fix infinite loop in xmlSchemaCheckElemSubstGroup
+- threads: Remove check for pthread_equal
+- xinclude: Rework XInclude cache
+- xinclude: Remove inefficient refcounting scheme
+- xmllint: Improve handling of empty XPath node sets
+- parser: Fix potential memory leak in xmlParseAttValueInternal
+- error: Don't use initGenericErrorDefaultFunc
+- xpath: Lower XPath recursion limit on Windows
+- Stop including sys/types.h
+- Don't define WIN32 macro
+- Make xmlNewSAXParserCtx take a const sax handler
+- Consolidate private header files
+- Remove internal macros from parserInternals.h
+- Move some HTML functions to correct header file
+- xmllint: Stop calling xmlSAXDefaultVersion
+- Introduce xmlNewSAXParserCtxt and htmlNewSAXParserCtxt
+- Don't mess with parser options in htmlParseDocument
+- Remove useless call to htmlDefaultSAXHandlerInit
+- Remove htmlDefaultSAXHandler from non-SAX1 build
+- Don't initialize SAX handler in htmlReadMemory
+- Fix htmlReadMemory mixing up XML and HTML functions
+- Don't use default SAX handler to report unrelated errors
+- Create stream with buffer in xmlNewStringInputStream
+- xmlcatalog: Fix memory leaks
+
+### Code quality
+
+- xzlib: Fix implicit sign change in xz_open
+- parser: Simplify calculation of available buffer space
+- parser: Use size_t when subtracting input buffer pointers
+- parser: Check for integer overflow when updating checkIndex
+- xpath: Fix harmless integer overflow in xmlXPathTranslateFunction
+- schematron: Use logical and
+- relaxng: Remove useless if statement
+- schemas: Remove useless if statement
+- pattern: Merge identical branches
+- regexp: Add sanity check in xmlRegCalloc2
+- regexp: Simplify xmlRegAtomPush
+- encoding: Cast toupper argument to unsigned char
+- uri: Add explicit cast in xmlSaveUri
+- buf: Fix return value of xmlBufGetInputBase
+- parser: Fix integer overflow of input ID
+- parser: Remove useless ent->etype test in xmlParseReference
+- parser: Remove useless ent->children tests in xmlParseReference
+- xmlmemory.c: Remove xmlMemContentShow
+- libxml.h: Add comments and indentation
+- libxml.h: Don't include stdio.h
+- xmlexports.h: Disable docs for internal macro XMLPUBLIC
+- parser: Simplify xmlParseConditionalSections
+- io: Rearrange code in xmlSwitchInputEncodingInt
+- warnings: Fix -Wstrict-prototypes warning
+- warnings: Remove set-but-unused variables
+- Fix compiler warnings in SAX2.c
+- Fix unused variable warning in python/types.c
+- Fix compiler warning in examples
+- Fix compiler warnings in fuzzing code
+- Remove unused code in nanohttp.c
+- Remove or annotate char casts
+- Don't use sizeof(xmlChar) or sizeof(char)
+- Remove explicit integer casts
+
+### Deprecations
+
+- parser: Deprecate more internal functions
+- parser: Deprecate some parser input functions
+- parser: Deprecate xmlString*DecodeEntities
+- threads: Deprecate some internal functions
+- buf: Deprecate static/immutable buffers
+- Deprecate internal parser functions
+- Deprecate old HTML SAX API
+- Generate deprecation warnings for old SAX API
+- Mark more functions setting globals as deprecated
+- Mark more parser functions as deprecated
+- Mark most SAX1 functions as deprecated
+- Deprecate some global variables
+
+### Portability
+
+- autoconf: Warn about outdated C compilers
+- win32: Remove broken libxml2.def.src
+- Remove symbols from version script
+- catalog.c: Silence a cast warning on VS 2022 (Lukáš Tyrychtr)
+- libxml.h: Remove ancient LynxOS setup
+- Use python3 not python (Ross Burton)
+- xstc/fixup-tests.py: port to Python 3 (Ross Burton)
+- xstc/fixup-tests.py: unify whitespace (Ross Burton)
+- Remove hacky heuristic from b2dc5675 (Alex Richardson)
+- Avoid creating an out-of-bounds pointer by rewriting a check
+  (Alex Richardson)
+- Hide internal functions
+- Correctly relocate internal pointers after realloc() (Alex Richardson)
+- Visual Studio builds: Allow silencing deprecation warnings (Chun-wei Fan)
+- Visual Studio: Define XML_DEPRECATED (Chun-wei Fan)
+- xmllint: Include <io.h> on Windows
+- warnings: Work around MSVC bug
+- sources: Silence C4013 warnings on Visual Studio (Chun-wei Fan)
+- python/setup.py.in: Improve Windows import patching (Chun-wei Fan)
+- python: Create .pyd on Windows
+- Fix Python build on Windows
+- Fix Windows compiler warnings in python/types.c
+- Fix libxml_PyFileGet
+- Remove BeOS support
+- Fix libxml_PyFileGet with stdout on macOS
+- Migrate from PyEval_ to PyObject_
+- Port build_glob.py to Python 3
+- Port genChRanges.py to Python 3
+- xmlexports.h: Remove LIBXML_FASTCALL optimization
+- Remove XMLCALL and XMLCDECL macros from public headers
+- Remove XMLDECL macro from .c files
+
+### Build systems
+
+- cmake: Link against `dl` and `dld` only when `LIBXML2_WITH_MODULES` is
+  enabled (Alexander Kutelev)
+- autotools: Fix make distcheck
+- Remove RPM build, Makefile.tests, README.tests
+- libxml.m4: deprecate AM_PATH_XML2, wrap PKG_CHECK_MODULES instead
+  (Ross Burton)
+- libxml.m4: fix -Wstrict-prototypes (Sam James)
+- cmake: Build static library with -DLIBXML_STATIC
+- autotools: Don't use version script on Windows
+- autotools: Fix winsock detection
+- autotools: Only add network libraries if HTTP/FTP enabled
+- autotools: Disable parallel Python build
+- python: Don't output missing generators during build
+- build: Remove check for broken ss_family
+- http: Simplify IPv6 checks
+- autotools: Fix network checks on Windows
+- Fix detection of GNU libiconv
+- cmake: Fix Python installation
+- cmake: Don't check for Python 2
+- configure.ac: Also check for MSYS host
+- Improve network library detection
+- Detect ws2_32 with AC_SEARCH_LIBS
+- Rework network configure checks
+- Remove arg cast configure checks
+- Fix dlopen check
+- Remove HAVE_WIN32_THREADS configuration flag
+- Rework dlopen and pthread detection
+- Fix test in configure.ac
+- cmake: Enable GCC compiler warnings
+- Always link with -no-undefined
+- Use AM_CFLAGS and AM_LDFLAGS consistently
+- Remove -Wredundant-decls
+- Call AC_CHECK_* with multiple arguments
+- configure.ac: Remove checks for unused programs
+- Rework library detection in configure.ac
+- Rearrange configure.ac
+- Consolidate zlib and lzma detection
+- Remove "runtime debugging"
+- Consolidate simple API modules in configure.ac
+- Fix dependency resolution in configure.ac
+- Fix --with-valid --without-regexps build
+- Fix --with-schemas --without-xpath build
+- Don't build unneeded .c source files
+- Move xmlIsXHTML to tree.c
+- Cleanup distribution settings in Makefile.am
+- Also clean *.pyc files for Python 2
+- Don't distribute libxml2.spec
+
+### Tests
+
+- testchar: Add test for memory pull parser with encoding
+- fuzz: Also test init function of URI fuzzer
+- fuzz: Separate fuzzer for DTD validation
+- gitlab-ci: Enable all "integer" sanitizers
+- fuzz: Inject random malloc failures
+- fuzz: Support variable integer sizes in fuzz data
+- fuzz: Fix duplicate detection in fuzzEntityRecorder
+- fuzz: Set filename in xmlFuzzEntityLoader
+- fuzz: Allow xmlFuzzReadString(NULL)
+- fuzz: Fix Makefile dependencies
+- fuzz: Add test/recurse to seed corpus
+- fuzz: Add separate XInclude fuzzer
+- runsuite: Some errors are expected
+- testrecurse: Test entity expansion stats
+- testapi.c: Initialize catalog early
+- gentest.py: Fix memory leak in API tests
+- tests: Enable "runsuite" test
+- python/tests/reader2: use absolute paths everywhere (Ross Burton)
+- python/tests/reader2: always exit(1) if a test fails (Ross Burton)
+- testModule: exit if the module can't be opened (Ross Burton)
+- CI: disable modules in gcc:static build (Ross Burton)
+- CI: fix CI on MinGW builds (Ross Burton)
+- python: Fix memory leak checks
+- tests: Check that xmlInitParser doesn't allocate memory
+- tests: Fix use-after-free in Python tests
+- tests: Remove unneeded #includes
+- gitlab-ci: Make Test-Msvc exit if ctest fails
+- gitlab-ci: Treat compiler warnings as errors on MSVC
+- test: Add test for push parser boundaries
+- gitlab-ci: Upgrade image to Ubuntu 22.10, reenable MSan
+- gitlab-ci: Reenable LeakSanitizer
+- gitlab-ci: Fix llvm-symbolizer
+- xinclude: Don't create result doc for test with errors
+- xinclude: Also test error messages
+- gitlab-ci: Allow cast-align warnings from clang
+- gitlab-ci: Fix tar invocation
+- gitlab-ci: Move MSVC test to separate script
+- gitlab-ci: Fix SUFFIX, remove MINGW_PATH
+- gitlab-ci: Consolidate CMake test scripts
+- gitlab-ci: Only install MinGW autotools if needed
+- gitlab-ci: Only install cmake MinGW package if needed
+- gitlab-ci: Install 7-Zip using the .msi
+- Use $MSYSTEM and 'bash -lc' in MinGW CI
+- Add CI job for MinGW/Autotools
+- Consolidate CI scripts
+- Allow empty MINGW_PACKAGE_PREFIX
+- Move Dockerfile to .gitlab-ci directory
+- testapi: Disable on Windows for now
+- Disable fuzzer tests if glob.h wasn't found
+- Move automata test to runtest.c
+- Fix testapi when building --without-sax1
+
+# Documentation
+
+- doc: Remove ancient files
+- Remove ancient TODOs
+- html: Fix htmlInitAutoClose documentation
+- doc: Mention new location of XML catalog as breaking change
+- doc: Mention potentially breaking changes in NEWS
+- doc: Remove xmlDllMain from documentation and version script
+- doc: Mention ${sysconfdir} in man pages
+- doc: Document xmlcatalog --convert
+- doc: Document xmllint --nodict and --pedantic
+- doc: Fix indentation in source XML files
+- xmllint: Document --quiet option
+- Improve cross-references in API docs
+- Improve documentation of globals
+- Fix documentation parser
+- Support comments for global variables in documentation
+- Fix update call in apibuild.py
+- Don't index anything in DOC_DISABLE sections
+- Fix warnings from apibuild.py
+- Start with documentation for maintainers
+
+
 v2.10.4: Apr 11 2023
 
 ### Security

@@ -29,6 +29,9 @@
 #import "HardwareCapabilities.h"
 #import <IOSurface/IOSurfaceRef.h>
 #import "Queue.h"
+#import <CoreVideo/CVMetalTextureCache.h>
+#import <CoreVideo/CoreVideo.h>
+#import <simd/matrix_types.h>
 #import <wtf/CompletionHandler.h>
 #import <wtf/FastMalloc.h>
 #import <wtf/Function.h>
@@ -41,6 +44,10 @@
 struct WGPUDeviceImpl {
 };
 
+namespace WGSL {
+struct PipelineLayout;
+}
+
 namespace WebGPU {
 
 class BindGroup;
@@ -48,6 +55,7 @@ class BindGroupLayout;
 class Buffer;
 class CommandEncoder;
 class ComputePipeline;
+class ExternalTexture;
 class Instance;
 class PipelineLayout;
 class PresentationContext;
@@ -76,9 +84,12 @@ public:
     Ref<CommandEncoder> createCommandEncoder(const WGPUCommandEncoderDescriptor&);
     Ref<ComputePipeline> createComputePipeline(const WGPUComputePipelineDescriptor&);
     void createComputePipelineAsync(const WGPUComputePipelineDescriptor&, CompletionHandler<void(WGPUCreatePipelineAsyncStatus, Ref<ComputePipeline>&&, String&& message)>&& callback);
+    Ref<ExternalTexture> createExternalTexture(const WGPUExternalTextureDescriptor&);
     Ref<PipelineLayout> createPipelineLayout(const WGPUPipelineLayoutDescriptor&);
     Ref<QuerySet> createQuerySet(const WGPUQuerySetDescriptor&);
     Ref<RenderBundleEncoder> createRenderBundleEncoder(const WGPURenderBundleEncoderDescriptor&);
+    Ref<PipelineLayout> extracted(const Vector<Vector<WGPUBindGroupLayoutEntry>> &bindGroupEntries);
+
     Ref<RenderPipeline> createRenderPipeline(const WGPURenderPipelineDescriptor&);
     void createRenderPipelineAsync(const WGPURenderPipelineDescriptor&, CompletionHandler<void(WGPUCreatePipelineAsyncStatus, Ref<RenderPipeline>&&, String&& message)>&& callback);
     Ref<Sampler> createSampler(const WGPUSamplerDescriptor&);
@@ -92,7 +103,6 @@ public:
     bool hasFeature(WGPUFeatureName);
     bool popErrorScope(CompletionHandler<void(WGPUErrorType, String&&)>&& callback);
     void pushErrorScope(WGPUErrorFilter);
-    void setDeviceLostCallback(Function<void(WGPUDeviceLostReason, String&&)>&&);
     void setUncapturedErrorCallback(Function<void(WGPUErrorType, String&&)>&&);
     void setLabel(String&&);
 
@@ -105,6 +115,8 @@ public:
     id<MTLDevice> device() const { return m_device; }
 
     void generateAValidationError(String&& message);
+    void generateAnOutOfMemoryError(String&& message);
+    void generateAnInternalError(String&& message);
 
     Instance& instance() const { return m_adapter->instance(); }
     bool hasUnifiedMemory() const { return m_device.hasUnifiedMemory; }
@@ -126,17 +138,18 @@ private:
     bool validateRenderPipeline(const WGPURenderPipelineDescriptor&);
 
     void makeInvalid() { m_device = nil; }
+    void addPipelineLayouts(Vector<Vector<WGPUBindGroupLayoutEntry>>&, const std::optional<WGSL::PipelineLayout>&);
+    Ref<PipelineLayout> generatePipelineLayout(const Vector<Vector<WGPUBindGroupLayoutEntry>> &bindGroupEntries);
 
     void loseTheDevice(WGPUDeviceLostReason);
     void captureFrameIfNeeded() const;
-    auto buildKeyValueReplacements(const auto& stage) const
-    {
-        HashMap<String, decltype(WGPUConstantEntry::value)> keyValueReplacements;
-        for (auto* kvp = stage.constants, *endKvp = kvp + stage.constantCount; kvp != endKvp; ++kvp)
-            keyValueReplacements.set(String::fromUTF8(kvp->key), kvp->value);
-
-        return keyValueReplacements;
-    }
+    struct ExternalTextureData {
+        id<MTLTexture> texture0 { nil };
+        id<MTLTexture> texture1 { nil };
+        simd::float3x2 uvRemappingMatrix;
+        simd::float4x3 colorSpaceConversionMatrix;
+    };
+    ExternalTextureData createExternalTextureFromPixelBuffer(CVPixelBufferRef, WGPUColorSpace) const;
 
     struct Error {
         WGPUErrorType type;
@@ -160,6 +173,9 @@ private:
     HardwareCapabilities m_capabilities { };
 
     const Ref<Adapter> m_adapter;
+#if HAVE(COREVIDEO_METAL_SUPPORT)
+    RetainPtr<CVMetalTextureCacheRef> m_coreVideoTextureCache;
+#endif
 };
 
 } // namespace WebGPU

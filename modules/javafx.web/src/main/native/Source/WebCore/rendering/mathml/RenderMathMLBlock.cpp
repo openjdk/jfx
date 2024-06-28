@@ -35,6 +35,8 @@
 #include "MathMLElement.h"
 #include "MathMLNames.h"
 #include "MathMLPresentationElement.h"
+#include "RenderBoxInlines.h"
+#include "RenderTableInlines.h"
 #include "RenderView.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -199,6 +201,7 @@ void RenderMathMLBlock::layoutItems(bool relayoutChildren)
 
     LayoutUnit currentHorizontalExtent = contentLogicalWidth();
     for (auto* child = firstChildBox(); child; child = child->nextSiblingBox()) {
+        auto everHadLayout = child->everHadLayout();
         LayoutUnit childSize = child->maxPreferredLogicalWidth() - child->horizontalBorderAndPaddingExtent();
 
         if (preferredHorizontalExtent > currentHorizontalExtent)
@@ -225,6 +228,8 @@ void RenderMathMLBlock::layoutItems(bool relayoutChildren)
 
         child->setLocation(childLocation);
         horizontalOffset += childHorizontalExtent + child->marginEnd();
+        if (!everHadLayout && child->checkForRepaintDuringLayout())
+            child->repaint();
     }
 }
 
@@ -260,8 +265,13 @@ void RenderMathMLBlock::layoutInvalidMarkup(bool relayoutChildren)
     // Invalid MathML subtrees are just renderered as empty boxes.
     // FIXME: https://webkit.org/b/135460 - Should we display some "invalid" markup message instead?
     ASSERT(needsLayout());
-    for (auto child = firstChildBox(); child; child = child->nextSiblingBox())
+    for (auto* child = firstChildBox(); child; child = child->nextSiblingBox()) {
+        if (child->isOutOfFlowPositioned()) {
+            child->containingBlock()->insertPositionedObject(*child);
+            continue;
+        }
         child->layoutIfNeeded();
+    }
     setLogicalWidth(0);
     setLogicalHeight(0);
     layoutPositionedObjects(relayoutChildren);

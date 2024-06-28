@@ -52,9 +52,9 @@ public:
     bool hasVideo() const;
 
     MediaTime duration();
-    std::unique_ptr<PlatformTimeRanges> buffered();
+    const PlatformTimeRanges& buffered();
 
-    MockMediaPlayerMediaSource& player() const { return m_player; }
+    WeakPtr<MockMediaPlayerMediaSource> player() const { return m_player; }
 
     void seekToTime(const MediaTime&);
     MediaTime seekToTime(const MediaTime&, const MediaTime& negativeThreshold, const MediaTime& positiveThreshold);
@@ -95,7 +95,7 @@ private:
 
     friend class MockSourceBufferPrivate;
 
-    MockMediaPlayerMediaSource& m_player;
+    WeakPtr<MockMediaPlayerMediaSource> m_player;
     WeakPtr<MediaSourcePrivateClient> m_client;
     Vector<RefPtr<MockSourceBufferPrivate>> m_sourceBuffers;
     Vector<MockSourceBufferPrivate*> m_activeSourceBuffers;

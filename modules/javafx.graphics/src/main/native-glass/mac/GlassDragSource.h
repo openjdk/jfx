@@ -29,7 +29,7 @@
 @protocol GlassDragSourceDelegate <NSObject>
 
 - (void)startDrag:(NSDragOperation)operation withItems:(NSArray<NSDraggingItem*>*)items;
-- (void)draggingEnded;
+- (void)draggingEnded:(NSDragOperation)operation;
 
 @end
 
@@ -41,7 +41,7 @@
 
 + (NSDragOperation)mapJavaMaskToNsOperation:(jint)mask;
 + (jint)mapNsOperationToJavaMaskExternal:(NSDragOperation)operation;
-+ (jint)mapNSOperationToJavaMaskInternal:(NSDragOperation)operation;
++ (jint)mapNsOperationToJavaMaskInternal:(NSDragOperation)operation;
 + (jint)getRecommendedActionForMaskExternal:(NSDragOperation)operation;
 + (jint)getRecommendedActionForMaskInternal:(NSDragOperation)operation;
 

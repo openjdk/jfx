@@ -44,13 +44,15 @@ class WebSocketChannelClient;
 
 class WEBCORE_EXPORT SocketProvider : public ThreadSafeRefCounted<SocketProvider> {
 public:
+#if !PLATFORM(JAVA)
+    virtual RefPtr<ThreadableWebSocketChannel> createWebSocketChannel(Document&, WebSocketChannelClient&) = 0;
+#endif
     static Ref<SocketProvider> create() { return adoptRef(*new SocketProvider); }
 #if PLATFORM(JAVA)
     virtual Ref<SocketStreamHandle> createSocketStreamHandle(const URL&, SocketStreamHandleClient&, WebSocketIdentifier, PAL::SessionID, Page*, const String& credentialPartition, const StorageSessionProvider*);
 #else
     virtual Ref<SocketStreamHandle> createSocketStreamHandle(const URL&, SocketStreamHandleClient&, WebSocketIdentifier, PAL::SessionID, const String& credentialPartition, const StorageSessionProvider*);
 #endif
-
     virtual RefPtr<ThreadableWebSocketChannel> createWebSocketChannel(Document&, WebSocketChannelClient&);
 
     virtual ~SocketProvider() { };

@@ -39,7 +39,9 @@ BaseWnd::BaseWnd(HWND ancestor) :
     m_ancestor(ancestor),
     m_wndClassAtom(0),
     m_isCommonDialogOwner(false),
-    m_hCursor(NULL)
+    m_hCursor(NULL),
+    m_messageCount(0),
+    m_isDead(false)
 {
 
 }
@@ -159,14 +161,32 @@ LRESULT CALLBACK BaseWnd::StaticWindowProc(HWND hWnd, UINT msg, WPARAM wParam, L
         pThis = (BaseWnd *)::GetProp(hWnd, szBaseWndProp);
     }
     if (pThis != NULL) {
+        pThis->BeginMessageProcessing(msg);
         LRESULT result = pThis->WindowProc(msg, wParam, lParam);
-        if (msg == WM_NCDESTROY) {
+        if (pThis->EndMessageProcessing()) {
             ::RemoveProp(hWnd, szBaseWndProp);
             delete pThis;
         }
         return result;
     }
     return ::DefWindowProc(hWnd, msg, wParam, lParam);
+}
+
+/*non-static*/
+void BaseWnd::BeginMessageProcessing(UINT msg)
+{
+    if (msg == WM_NCDESTROY) {
+        m_isDead = true;
+    }
+    m_messageCount += 1;
+}
+
+bool BaseWnd::EndMessageProcessing()
+{
+    if (m_messageCount > 0) {
+        m_messageCount -= 1;
+    }
+    return m_isDead && (m_messageCount == 0);
 }
 
 /*virtual*/

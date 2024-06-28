@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1184,8 +1184,11 @@ public class ListView<T> extends Control {
      * @since JavaFX 2.0
      */
     public static class EditEvent<T> extends Event {
+        @SuppressWarnings("doclint:missing")
         private final T newValue;
+        @SuppressWarnings("doclint:missing")
         private final int editIndex;
+        @SuppressWarnings("doclint:missing")
         private final ListView<T> source;
 
         private static final long serialVersionUID = 20130724L;

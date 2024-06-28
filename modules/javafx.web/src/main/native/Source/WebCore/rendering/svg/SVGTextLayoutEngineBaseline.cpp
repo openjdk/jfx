@@ -40,7 +40,7 @@ float SVGTextLayoutEngineBaseline::calculateBaselineShift(const SVGRenderStyle& 
     if (style.baselineShift() == BaselineShift::Length) {
         auto baselineShiftValueLength = style.baselineShiftValue();
         if (baselineShiftValueLength.lengthType() == SVGLengthType::Percentage)
-            return baselineShiftValueLength.valueAsPercentage() * m_font.pixelSize();
+            return baselineShiftValueLength.valueAsPercentage() * m_font.size();
 
         SVGLengthContext lengthContext(context);
         return baselineShiftValueLength.value(lengthContext);
@@ -182,7 +182,7 @@ float SVGTextLayoutEngineBaseline::calculateGlyphOrientationAngle(bool isVertica
 
 static inline bool glyphOrientationIsMultiplyOf180Degrees(float orientationAngle)
 {
-    return !fabsf(fmodf(orientationAngle, 180));
+    return !(fmodf(orientationAngle, 180));
 }
 
 float SVGTextLayoutEngineBaseline::calculateGlyphAdvanceAndOrientation(bool isVerticalText, SVGTextMetrics& metrics, float angle, float& xOrientationShift, float& yOrientationShift) const

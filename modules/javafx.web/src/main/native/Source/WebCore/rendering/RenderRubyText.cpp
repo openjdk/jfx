@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Google Inc. All rights reserved.
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,9 +30,11 @@
  */
 
 #include "config.h"
-
 #include "RenderRubyText.h"
+
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderRubyRun.h"
+#include "RenderStyleInlines.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -59,9 +61,8 @@ bool RenderRubyText::isChildAllowed(const RenderObject& child, const RenderStyle
 
 std::optional<TextAlignMode> RenderRubyText::overrideTextAlignmentForLine(bool) const
 {
-    TextAlignMode textAlign = style().textAlign();
     // FIXME: This check is bogus since user can set the initial value.
-    if (textAlign != RenderStyle::initialTextAlign())
+    if (style().textAlign() != TextAlignMode::Start)
         return { };
 
     // The default behavior is to allow ruby text to expand if it is shorter than the ruby base.
@@ -70,9 +71,8 @@ std::optional<TextAlignMode> RenderRubyText::overrideTextAlignmentForLine(bool) 
 
 void RenderRubyText::adjustInlineDirectionLineBounds(int expansionOpportunityCount, float& logicalLeft, float& logicalWidth) const
 {
-    TextAlignMode textAlign = style().textAlign();
     // FIXME: This check is bogus since user can set the initial value.
-    if (textAlign != RenderStyle::initialTextAlign())
+    if (style().textAlign() != TextAlignMode::Start)
         return RenderBlockFlow::adjustInlineDirectionLineBounds(expansionOpportunityCount, logicalLeft, logicalWidth);
 
     auto maxPreferredLogicalWidth = this->maxPreferredLogicalWidth();
@@ -83,7 +83,7 @@ void RenderRubyText::adjustInlineDirectionLineBounds(int expansionOpportunityCou
     // ruby character on each side.
     float inset = (logicalWidth - maxPreferredLogicalWidth) / (expansionOpportunityCount + 1);
     if (expansionOpportunityCount)
-        inset = std::min<float>(2 * style().computedFontPixelSize(), inset);
+        inset = std::min(2 * style().computedFontSize(), inset);
 
     logicalLeft += inset / 2;
     logicalWidth -= inset;
@@ -94,14 +94,14 @@ bool RenderRubyText::avoidsFloats() const
     return true;
 }
 
-bool RenderRubyText::canBreakBefore(const LazyLineBreakIterator& iterator) const
+bool RenderRubyText::canBreakBefore(const CachedLineBreakIteratorFactory& lineBreakIteratorFactory) const
 {
     // FIXME: It would be nice to improve this so that it isn't just hard-coded, but lookahead in this
     // case is particularly problematic.
 
-    if (!iterator.priorContextLength())
+    if (!lineBreakIteratorFactory.priorContext().length())
         return true;
-    UChar ch = iterator.lastCharacter();
+    UChar ch = lineBreakIteratorFactory.priorContext().lastCharacter();
     ULineBreak lineBreak = (ULineBreak)u_getIntPropertyValue(ch, UCHAR_LINE_BREAK);
     // UNICODE LINE BREAKING ALGORITHM
     // http://www.unicode.org/reports/tr14/

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -451,7 +451,7 @@ public class ImageTools {
         return output;
     }
 
-    public static String getScaledImageName(String path) {
+    public static String getScaledImageName(String path, int scaleFactor) {
         StringBuilder result = new StringBuilder();
         int slash = path.lastIndexOf('/');
         String name = (slash < 0) ? path : path.substring(slash + 1);
@@ -463,7 +463,9 @@ public class ImageTools {
             result.append(path.substring(0, slash + 1));
         }
         result.append(name.substring(0, dot));
-        result.append("@2x");
+        result.append("@");
+        result.append(scaleFactor);
+        result.append("x");
         result.append(name.substring(dot));
         return result.toString();
     }
@@ -763,16 +765,16 @@ public class ImageTools {
 //            case BYTE_RGBA_PRE: {
 //                image = new java.awt.image.BufferedImage(width, height,
 //                        java.awt.image.BufferedImage.TYPE_4BYTE_ABGR_PRE);
-////                for (int y = 0; y < height; y++) {
-////                    int off = y * scanlineStride;
-////                    for (int x = 0; x < width; x++) {
-////                        int rgb = ((pixels[off++] & 0xff) << 16) |
-////                                ((pixels[off++] & 0xff) << 8) |
-////                                (pixels[off++] & 0xff) |
-////                                ((pixels[off++] & 0xff) << 24);
-////                        image.setRGB(x, y, rgb);
-////                    }
-////                }
+//--                for (int y = 0; y < height; y++) {
+//--                    int off = y * scanlineStride;
+//--                    for (int x = 0; x < width; x++) {
+//--                        int rgb = ((pixels[off++] & 0xff) << 16) |
+//--                                ((pixels[off++] & 0xff) << 8) |
+//--                                (pixels[off++] & 0xff) |
+//--                                ((pixels[off++] & 0xff) << 24);
+//--                        image.setRGB(x, y, rgb);
+//--                    }
+//--                }
 //                java.awt.image.DataBufferByte db =
 //                        (java.awt.image.DataBufferByte) image.getRaster().getDataBuffer();
 //                byte[] data = db.getData();
