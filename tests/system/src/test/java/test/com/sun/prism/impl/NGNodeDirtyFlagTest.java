@@ -5,6 +5,8 @@ import javafx.geometry.Bounds;
 import javafx.scene.image.WritableImage;
 import javafx.scene.robot.Robot;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -63,16 +65,15 @@ public class NGNodeDirtyFlagTest {
         public void start(Stage primaryStage) throws Exception {
             root = new StackPane();
             primaryStage.setScene(new Scene(root, 500, 400));
-            primaryStage.show();
 
-            launchLatch.countDown();
+            primaryStage.setOnShown(e -> Platform.runLater(launchLatch::countDown));
+            primaryStage.show();
         }
     }
 
     @BeforeClass
     public static void setupOnce() {
         Util.launch(launchLatch, MyApp.class);
-        assertEquals(0, launchLatch.getCount());
     }
 
     @AfterClass
@@ -87,7 +88,7 @@ public class NGNodeDirtyFlagTest {
 
         StackPane root = myApp.root;
 
-        runAndWait(() -> {
+        Util.runAndWait(() -> {
             var contents = new HBox();
             contents.setSpacing(10);
             contents.setPadding(new Insets(10));
@@ -100,20 +101,20 @@ public class NGNodeDirtyFlagTest {
             root.getChildren().add(sideArea);
         });
 
-        Thread.sleep(500);
+        Util.waitForIdle(root.getScene());
 
         for (int i = 0; i < 5; i++) {
-            Platform.runLater(() -> lineColor.set(Color.LIGHTGREEN));
-            Thread.sleep(300);
-            Platform.runLater(() -> circleColor.set(Color.LIGHTGREEN));
-            Thread.sleep(300);
+            Util.runAndWait(() -> lineColor.set(Color.LIGHTGREEN));
+            Util.waitForIdle(root.getScene());
+            Util.runAndWait(() -> circleColor.set(Color.LIGHTGREEN));
+            Util.waitForIdle(root.getScene());
 
             checkLineColor(root, lineColor.get());
 
-            Platform.runLater(() -> lineColor.set(Color.DARKGREEN));
-            Thread.sleep(300);
-            Platform.runLater(() -> circleColor.set(Color.DARKGREEN));
-            Thread.sleep(300);
+            Util.runAndWait(() -> lineColor.set(Color.DARKGREEN));
+            Util.waitForIdle(root.getScene());
+            Util.runAndWait(() -> circleColor.set(Color.DARKGREEN));
+            Util.waitForIdle(root.getScene());
 
             checkLineColor(root, lineColor.get());
         }
@@ -121,7 +122,7 @@ public class NGNodeDirtyFlagTest {
     }
 
     private void checkLineColor(StackPane root, Color expected) {
-        runAndWait(() -> {
+        Util.runAndWait(() -> {
             checkColor(root.lookup("#Line-L"), expected);
             checkColor(root.lookup("#Line-R"), expected);
         });
@@ -131,21 +132,22 @@ public class NGNodeDirtyFlagTest {
         Robot robot = new Robot();
         Bounds screenBounds = node.localToScreen(node.getBoundsInLocal());
         WritableImage image = robot.getScreenCapture(null, screenBounds.getMinX(), screenBounds.getMinY(), 100, 100);
-        Assert.assertEquals("A node was not rendered properly. Wrong color found", expected, image.getPixelReader().getColor(1, 1));
+        Assert.assertEquals("A node was not rendered properly. Wrong color found", name(expected), name(image.getPixelReader().getColor(1, 1)));
     }
 
-    private void runAndWait(Runnable action) {
-        try {
-            CompletableFuture.runAsync(action, Platform::runLater).get(5000, TimeUnit.MILLISECONDS);
-        } catch (ExecutionException e) {
-            if (e.getCause() instanceof AssertionError error) {
-                throw error;
-            } else {
-                throw new RuntimeException(e);
+    private String name(Color color) {
+        for (Field field : Color.class.getFields()) {
+            if (field.getType().isAssignableFrom(Color.class) && (field.getModifiers() & Modifier.STATIC) != 0) {
+                try {
+                    Color c = (Color) field.get(null);
+                    if (c.getRed() == color.getRed() && c.getGreen() == color.getGreen() && c.getBlue() == color.getBlue() && c.getOpacity() == color.getOpacity()) {
+                        return field.getName();
+                    }
+                } catch (IllegalAccessException e) {
+                }
             }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
         }
+        return color.toString();
     }
 
     private Pane contentElement(String id, ObjectProperty<Color> lineColor, ObjectProperty<Color> circleColor) {
