@@ -60,7 +60,6 @@ import static com.sun.glass.ui.gtk.screencast.ScreencastHelper.SCREENCAST_DEBUG;
  * The restore token allows the ScreenCast session to be restored
  * with previously granted screen access permissions.
  */
-@SuppressWarnings("removal")
 final class TokenStorage {
 
     private TokenStorage() {}
@@ -74,6 +73,7 @@ final class TokenStorage {
     private static final Path PROPS_PATH;
     private static final Path PROP_FILENAME;
 
+    @SuppressWarnings("removal")
     private static void doPrivilegedRunnable(Runnable runnable) {
         AccessController.doPrivileged(new PrivilegedAction<Void>() {
             @Override
@@ -85,12 +85,15 @@ final class TokenStorage {
     }
 
     static {
-        PROPS_PATH = AccessController.doPrivileged(new PrivilegedAction<Path>() {
+         @SuppressWarnings("removal")
+         Path propsPath = AccessController.doPrivileged(new PrivilegedAction<Path>() {
             @Override
             public Path run() {
                 return setupPath();
             }
         });
+
+        PROPS_PATH = propsPath;
 
         if (PROPS_PATH != null) {
             PROP_FILENAME = PROPS_PATH.getFileName();

@@ -42,7 +42,6 @@ import java.util.stream.IntStream;
  * org.freedesktop.portal.ScreenCast API</a>
  */
 
-@SuppressWarnings("removal")
 public class ScreencastHelper {
 
     static final boolean SCREENCAST_DEBUG;
@@ -64,12 +63,14 @@ public class ScreencastHelper {
     }
 
     static {
-        SCREENCAST_DEBUG =
+        @SuppressWarnings("removal")
+        boolean isDebugEnabled =
                 AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
                     final String str =
                             System.getProperty("javafx.robot.screenshotDebug", "false");
                     return "true".equalsIgnoreCase(str);
                 });
+        SCREENCAST_DEBUG = isDebugEnabled;
 
         IS_NATIVE_LOADED = loadPipewire(SCREENCAST_DEBUG);
     }
