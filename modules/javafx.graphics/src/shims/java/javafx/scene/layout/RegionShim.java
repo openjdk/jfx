@@ -158,6 +158,14 @@ public class RegionShim extends Region {
         return r.snapPortionY(value);
     }
 
+    public static void setWidth(Region r, double width) {
+        r.setWidth(width);
+    }
+
+    public static void setHeight(Region r, double height) {
+        r.setHeight(height);
+    }
+
     //----------------------------------------------------------
 
         @Override public void addImageListener(Image image) {

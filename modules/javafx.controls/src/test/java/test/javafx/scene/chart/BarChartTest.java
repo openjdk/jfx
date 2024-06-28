@@ -26,6 +26,8 @@
 package test.javafx.scene.chart;
 
 import java.util.Arrays;
+import java.util.List;
+
 import javafx.collections.FXCollections;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
@@ -177,5 +179,96 @@ public class BarChartTest extends XYChartTestBase {
         pulse();
         int nodesPerSeries = 3; // 3 bars
         checkSeriesRemoveAnimatedStyleClasses(bc, nodesPerSeries, 700);
+    }
+
+    @Test
+    public void testAddingNonEmptySeries() {
+        startApp();
+        ObservableList<XYChart.Data<String, Number>> list = FXCollections.observableArrayList();
+        list.add(new XYChart.Data<>("1", 1));
+        list.add(new XYChart.Data<>("2", 2));
+        list.add(new XYChart.Data<>("3", 3));
+        BarChart<String, Number> bc = new BarChart<>(new CategoryAxis(), new NumberAxis());
+        bc.getData().add(new Series<>());
+        bc.getData().getFirst().setData(list);
+        assertEquals(3, XYChartShim.Series_getDataSize(bc.getData().getFirst()));
+    }
+
+    @Test
+    public void testAddingDuplicateCategory() {
+        startApp();
+        ObservableList<XYChart.Data<String, Number>> list = FXCollections.observableArrayList();
+        list.add(new XYChart.Data<>("1", 1));
+        list.add(new XYChart.Data<>("1", 2));
+        list.add(new XYChart.Data<>("2", 3));
+        BarChart<String, Number> bc = new BarChart<>(new CategoryAxis(), new NumberAxis());
+        bc.getData().add(new Series<>());
+        bc.getData().getFirst().setData(list);
+        assertEquals(2, XYChartShim.Series_getDataSize(bc.getData().getFirst()));
+    }
+
+    @Test
+    public void testAddingDataAtIndex() {
+        startApp();
+        ObservableList<XYChart.Data<String, Number>> list = FXCollections.observableArrayList();
+        list.add(new XYChart.Data<>("1", 1));
+        list.add(new XYChart.Data<>("2", 2));
+        list.add(new XYChart.Data<>("3", 3));
+        BarChart<String, Number> bc = new BarChart<>(new CategoryAxis(), new NumberAxis());
+        bc.getData().add(new Series<>());
+        bc.getData().getFirst().setData(list);
+        assertEquals(3, XYChartShim.Series_getDataSize(bc.getData().getFirst()));
+
+        // insert new data before data item "3":
+        bc.getData().getFirst().getData().add(2, new XYChart.Data<>("4", 4));
+
+        var categories = ((CategoryAxis)bc.getXAxis()).getCategories();
+        assertEquals(4, categories.size());
+        assertEquals("1", categories.get(0));
+        assertEquals("2", categories.get(1));
+        assertEquals("4", categories.get(2));
+        assertEquals("3", categories.get(3));
+    }
+
+    @Test
+    public void testAddingMultipleSeriesWithDuplicateCategories() {
+        startApp();
+        var series1 = new Series<String, Number>();
+        var series2 = new Series<String, Number>();
+        BarChart<String, Number> bc = new BarChart<>(new CategoryAxis(), new NumberAxis());
+        bc.getData().add(series1);
+        bc.getData().add(series2);
+
+        series1.getData().addAll(List.of(
+            new XYChart.Data<>("1", 1),
+            new XYChart.Data<>("1", 2), // duplicate category
+            new XYChart.Data<>("2", 3)
+        ));
+
+        series2.getData().addAll(List.of(
+            new XYChart.Data<>("3", 4),
+            new XYChart.Data<>("2", 5), // duplicate category with series1
+            new XYChart.Data<>("4", 6)
+        ));
+
+        assertEquals(2, XYChartShim.Series_getDataSize(series1));
+        assertEquals(3, XYChartShim.Series_getDataSize(series2));
+        assertEquals(5, XYChartShim.getPlotChildren(bc).size());
+
+        var categories = ((CategoryAxis)bc.getXAxis()).getCategories();
+        assertEquals(4, categories.size());
+        assertEquals("1", categories.get(0));
+        assertEquals("2", categories.get(1));
+        assertEquals("3", categories.get(2));
+        assertEquals("4", categories.get(3));
+
+        // insert new data before data item "4" in series2:
+        series2.getData().add(2, new XYChart.Data<>("5", 7));
+
+        assertEquals("1", categories.get(0));
+        assertEquals("2", categories.get(1));
+        assertEquals("3", categories.get(2));
+        assertEquals("5", categories.get(3));
+        assertEquals("4", categories.get(4));
     }
 }

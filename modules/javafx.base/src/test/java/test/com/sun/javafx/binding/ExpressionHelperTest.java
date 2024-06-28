@@ -682,7 +682,7 @@ public class ExpressionHelperTest {
         StringProperty p = new SimpleStringProperty("a") {
             @Override
             protected void invalidated() {
-                removeListener(invalidationListener);
+                removeListener(invalidationListener);  // this removal occurs before notification
             }
         };
 
@@ -693,6 +693,56 @@ public class ExpressionHelperTest {
 
         assertFalse(invalidated.get());  // false because the invalidation listener was removed before called
         assertEquals("b", currentValue.get());
+
+        p.set("a");  // if current value wasn't copied correctly (it is still "a") then this wouldn't trigger a change
+
+        assertEquals("a", currentValue.get());
+    }
+
+    @Test
+    public void shouldNotForgetCurrentValueWhenMovingFromChangeListenerAndInvalidationListenerToSingleChangeListener() {
+        AtomicReference<String> currentValue = new AtomicReference<>();
+        StringProperty p = new SimpleStringProperty("a");
+        InvalidationListener invalidationListener = new InvalidationListener() {
+            @Override
+            public void invalidated(Observable obs) {
+                p.removeListener(this);  // this removal occurs during notification
+            }
+        };
+
+        p.addListener(invalidationListener);
+        p.addListener((obs, old, current) -> currentValue.set(current));
+
+        p.set("b");
+
+        assertEquals("b", currentValue.get());
+
+        p.set("a");  // if current value wasn't copied correctly (it is still "a") then this wouldn't trigger a change
+
+        assertEquals("a", currentValue.get());
+    }
+
+    @Test
+    public void shouldNotForgetCurrentValueWhenMovingFromTwoChangeListenersToSingleChangeListener() {
+        AtomicReference<String> currentValue = new AtomicReference<>();
+        StringProperty p = new SimpleStringProperty("a");
+        ChangeListener<String> changeListener = new ChangeListener<>() {
+            @Override
+            public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+                p.removeListener(this);
+            }
+        };
+
+        p.addListener(changeListener);
+        p.addListener((obs, old, current) -> currentValue.set(current));
+
+        p.set("b");
+
+        assertEquals("b", currentValue.get());
+
+        p.set("a");  // if current value wasn't copied correctly (it is still "a") then this wouldn't trigger a change
+
+        assertEquals("a", currentValue.get());
     }
 
     @Test

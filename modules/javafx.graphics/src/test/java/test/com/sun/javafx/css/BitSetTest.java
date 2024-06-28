@@ -36,13 +36,10 @@ import org.junit.jupiter.api.Test;
 
 import com.sun.javafx.css.BitSetShim;
 import com.sun.javafx.css.PseudoClassState;
-import com.sun.javafx.css.PseudoClassStateShim;
-import com.sun.javafx.css.StyleClassSet;
 
 import javafx.beans.InvalidationListener;
 import javafx.collections.SetChangeListener;
 import javafx.css.PseudoClass;
-import javafx.css.StyleClass;
 
 public class BitSetTest {
     private final BitSetShim<PseudoClass> set = BitSetShim.getPseudoClassInstance();
@@ -142,44 +139,24 @@ public class BitSetTest {
     }
 
     @Test
-    void twoNonEmptyBitSetsWithSamePatternAndSizeShouldNotBeConsideredEqualsWhenElementTypesAreDifferent() {
-        StyleClassSet set1 = new StyleClassSet();
+    void shouldBeEqualAfterGrowAndShrink() {
+        PseudoClassState set1 = new PseudoClassState();
         PseudoClassState set2 = new PseudoClassState();
 
-        PseudoClass pseudoClass = PseudoClass.getPseudoClass("abc");
-
-        int index = PseudoClassStateShim.pseudoClassMap.get(pseudoClass.getPseudoClassName());
-
-        set1.add(new StyleClass("xyz", index));  // no idea why this is public API, but I'll take it
-        set2.add(pseudoClass);
-
-        /*
-         * The two sets above contain elements of different types (PseudoClass and StyleClass)
-         * and therefore should never be equal, despite their bit pattern being the same:
-         */
-
-        assertNotEquals(set1, set2);
-    }
-
-    @Test
-    void shouldBeEqualAfterGrowAndShrink() {
-        StyleClassSet set1 = new StyleClassSet();
-        StyleClassSet set2 = new StyleClassSet();
-
-        set1.add(StyleClassSet.getStyleClass("abc"));
-        set2.add(StyleClassSet.getStyleClass("abc"));
+        set1.add(PseudoClassState.getPseudoClass("abc"));
+        set2.add(PseudoClassState.getPseudoClass("abc"));
 
         assertEquals(set1, set2);
 
         for (int i = 0; i < 1000; i++) {
             // grow internal bit set array:
-            set1.add(StyleClassSet.getStyleClass("" + i));
+            set1.add(PseudoClassState.getPseudoClass("" + i));
 
             assertNotEquals(set1, set2);
         }
 
         for (int i = 0; i < 1000; i++) {
-            set1.remove(StyleClassSet.getStyleClass("" + i));
+            set1.remove(PseudoClassState.getPseudoClass("" + i));
         }
 
         // still equal despite internal array sizes being different size:
@@ -193,11 +170,7 @@ public class BitSetTest {
          * Per Set contract, the empty set is equal to any other empty set.
          */
 
-        assertEquals(new StyleClassSet(), new PseudoClassState());
-        assertEquals(new PseudoClassState(), new StyleClassSet());
         assertEquals(Set.of(), new PseudoClassState());
         assertEquals(new PseudoClassState(), Set.of());
-        assertEquals(Set.of(), new StyleClassSet());
-        assertEquals(new StyleClassSet(), Set.of());
     }
 }
