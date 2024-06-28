@@ -5,6 +5,8 @@ import javafx.geometry.Bounds;
 import javafx.scene.image.WritableImage;
 import javafx.scene.robot.Robot;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -130,9 +132,23 @@ public class NGNodeDirtyFlagTest {
         Robot robot = new Robot();
         Bounds screenBounds = node.localToScreen(node.getBoundsInLocal());
         WritableImage image = robot.getScreenCapture(null, screenBounds.getMinX(), screenBounds.getMinY(), 100, 100);
-        Assert.assertEquals("A node was not rendered properly. Wrong color found", expected, image.getPixelReader().getColor(1, 1));
+        Assert.assertEquals("A node was not rendered properly. Wrong color found", name(expected), name(image.getPixelReader().getColor(1, 1)));
     }
 
+    private String name(Color color) {
+        for (Field field : Color.class.getFields()) {
+            if (field.getType().isAssignableFrom(Color.class) && (field.getModifiers() & Modifier.STATIC) != 0) {
+                try {
+                    Color c = (Color) field.get(null);
+                    if (c.getRed() == color.getRed() && c.getGreen() == color.getGreen() && c.getBlue() == color.getBlue() && c.getOpacity() == color.getOpacity()) {
+                        return field.getName();
+                    }
+                } catch (IllegalAccessException e) {
+                }
+            }
+        }
+        return color.toString();
+    }
 
     private Pane contentElement(String id, ObjectProperty<Color> lineColor, ObjectProperty<Color> circleColor) {
         var group = new Group();
