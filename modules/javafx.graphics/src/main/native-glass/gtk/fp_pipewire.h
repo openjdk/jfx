@@ -23,9 +23,6 @@
  * questions.
  */
 
-#ifdef HEADLESS
-#error This file should not be included in headless library
-#endif
 #ifndef _FP_PIPEWIRE_H
 #define _FP_PIPEWIRE_H
 
