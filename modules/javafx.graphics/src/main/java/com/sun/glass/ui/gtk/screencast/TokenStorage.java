@@ -114,12 +114,12 @@ final class TokenStorage {
             return null;
         }
 
+        Path primaryPath = Path.of(userHome, REL_NAME);
         Path secondaryPath = Path.of(userHome, REL_NAME_SECONDARY);
 
-        // use secondary path only if it already exists and writable
-        Path path = Files.isWritable(secondaryPath)
+        Path path = Files.isWritable(secondaryPath) && !Files.isWritable(primaryPath)
                 ? secondaryPath
-                : Path.of(userHome, REL_NAME);
+                : primaryPath;
         Path workdir = path.getParent();
 
         if (!Files.isWritable(path)) {
