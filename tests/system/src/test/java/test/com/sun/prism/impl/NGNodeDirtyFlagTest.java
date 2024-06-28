@@ -72,7 +72,6 @@ public class NGNodeDirtyFlagTest {
     @BeforeClass
     public static void setupOnce() {
         Util.launch(launchLatch, MyApp.class);
-        assertEquals(0, launchLatch.getCount());
     }
 
     @AfterClass
@@ -87,7 +86,7 @@ public class NGNodeDirtyFlagTest {
 
         StackPane root = myApp.root;
 
-        runAndWait(() -> {
+        Util.runAndWait(() -> {
             var contents = new HBox();
             contents.setSpacing(10);
             contents.setPadding(new Insets(10));
@@ -100,20 +99,20 @@ public class NGNodeDirtyFlagTest {
             root.getChildren().add(sideArea);
         });
 
-        Thread.sleep(500);
+        Util.waitForIdle(root.getScene());
 
         for (int i = 0; i < 5; i++) {
-            Platform.runLater(() -> lineColor.set(Color.LIGHTGREEN));
-            Thread.sleep(300);
-            Platform.runLater(() -> circleColor.set(Color.LIGHTGREEN));
-            Thread.sleep(300);
+            Util.runAndWait(() -> lineColor.set(Color.LIGHTGREEN));
+            Util.waitForIdle(root.getScene());
+            Util.runAndWait(() -> circleColor.set(Color.LIGHTGREEN));
+            Util.waitForIdle(root.getScene());
 
             checkLineColor(root, lineColor.get());
 
-            Platform.runLater(() -> lineColor.set(Color.DARKGREEN));
-            Thread.sleep(300);
-            Platform.runLater(() -> circleColor.set(Color.DARKGREEN));
-            Thread.sleep(300);
+            Util.runAndWait(() -> lineColor.set(Color.DARKGREEN));
+            Util.waitForIdle(root.getScene());
+            Util.runAndWait(() -> circleColor.set(Color.DARKGREEN));
+            Util.waitForIdle(root.getScene());
 
             checkLineColor(root, lineColor.get());
         }
@@ -121,7 +120,7 @@ public class NGNodeDirtyFlagTest {
     }
 
     private void checkLineColor(StackPane root, Color expected) {
-        runAndWait(() -> {
+        Util.runAndWait(() -> {
             checkColor(root.lookup("#Line-L"), expected);
             checkColor(root.lookup("#Line-R"), expected);
         });
@@ -134,19 +133,6 @@ public class NGNodeDirtyFlagTest {
         Assert.assertEquals("A node was not rendered properly. Wrong color found", expected, image.getPixelReader().getColor(1, 1));
     }
 
-    private void runAndWait(Runnable action) {
-        try {
-            CompletableFuture.runAsync(action, Platform::runLater).get(5000, TimeUnit.MILLISECONDS);
-        } catch (ExecutionException e) {
-            if (e.getCause() instanceof AssertionError error) {
-                throw error;
-            } else {
-                throw new RuntimeException(e);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
 
     private Pane contentElement(String id, ObjectProperty<Color> lineColor, ObjectProperty<Color> circleColor) {
         var group = new Group();
