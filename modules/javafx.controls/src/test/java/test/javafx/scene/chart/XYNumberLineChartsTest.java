@@ -25,11 +25,14 @@
 
 package test.javafx.scene.chart;
 
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.Path;
 import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import javafx.scene.chart.AreaChart;
 import javafx.scene.chart.Axis;
 import javafx.scene.chart.Chart;
@@ -135,6 +138,39 @@ public class XYNumberLineChartsTest extends XYNumberChartsTestBase {
         toolkit.setAnimationTime(dataFadeOutTime);
         // removed instantly
         assertEquals(0, XYChartShim.Series_getDataSize(series));
+    }
+
+    @Test
+    public void testMinorTicksMatchMajorTicksAfterAnimation() {
+        startAppWithSeries();
+        chart.setAnimated(true);
+        // increase ranges, starting axis animation
+        chart.getData().getFirst().getData().add(new XYChart.Data<>(100, 100));
+        pulse();
+        // forward time until after animation is finished
+        toolkit.setAnimationTime(1000);
+        NumberAxis yAxis = (NumberAxis)chart.getYAxis();
+
+        List<Double> majorTickYValues = yAxis.getChildrenUnmodifiable().stream()
+                .filter(obj -> obj instanceof Path && obj.getStyleClass().contains("axis-tick-mark"))
+                .flatMap(obj -> ((Path) obj).getElements().stream())
+                .filter(path -> path instanceof MoveTo)
+                .map(moveTo -> ((MoveTo) moveTo).getY())
+                .toList();
+
+        List<Double> minorTickYValues = yAxis.getChildrenUnmodifiable().stream()
+                .filter(obj -> obj instanceof Path && obj.getStyleClass().contains("axis-minor-tick-mark"))
+                .flatMap(obj -> ((Path) obj).getElements().stream())
+                .filter(path -> path instanceof MoveTo)
+                .map(moveTo -> ((MoveTo) moveTo).getY())
+                .toList();
+
+        double majorTickSpacing = majorTickYValues.get(1) - majorTickYValues.get(0);
+        double minorTickSpacing = minorTickYValues.get(1) - minorTickYValues.get(0);
+
+        double delta = 0.001;
+        assertEquals(5, yAxis.getMinorTickCount());
+        assertEquals(5, majorTickSpacing / minorTickSpacing, delta);
     }
 
     @Override
