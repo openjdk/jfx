@@ -177,9 +177,11 @@ public class ScreencastHelper {
                     tokenItem.token
             );
 
-            if (retVal >= 0) { // we have received a screen data
-                return;
-            } else if (!checkReturnValue(retVal)) {
+            debugReturnValue(retVal);
+
+            if (retVal >= 0  // we have received a screen data
+                || retVal == ERROR
+                || retVal == DENIED) {
                 return;
             } // else, try other tokens
         }
@@ -193,15 +195,15 @@ public class ScreencastHelper {
                 null
         );
 
-        checkReturnValue(retVal);
+        debugReturnValue(retVal);
     }
 
-    private static boolean checkReturnValue(int retVal) {
+    private static void debugReturnValue(int retVal) {
         if (retVal == DENIED) {
             // user explicitly denied the capture, no more tries.
-            throw new SecurityException(
-                    "Screen Capture in the selected area was not allowed"
-            );
+            if (SCREENCAST_DEBUG) {
+                System.err.println("Screen Capture in the selected area was not allowed");
+            }
         } else if (retVal == ERROR) {
             if (SCREENCAST_DEBUG) {
                 System.err.println("Screen capture failed.");
@@ -212,6 +214,5 @@ public class ScreencastHelper {
                         "Token does not provide access to requested area.");
             }
         }
-        return retVal != ERROR;
     }
 }

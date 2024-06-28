@@ -608,6 +608,7 @@ static void callbackScreenCastStart(
         DEBUG_SCREENCAST("Failed to start screencast: %u\n", status);
         startHelper->result = RESULT_DENIED;
         helper->isDone = TRUE;
+        gtk_main_quit();
         return;
     }
 
