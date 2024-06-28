@@ -71,13 +71,13 @@ public final class CategoryAxis extends Axis<String> {
 
     /** This is the position of the first category along this axis */
     private final DoubleProperty firstCategoryPos =
-            new SimpleDoubleProperty(this, "firstCategoryPos", 0) {
-                @Override
-                protected void invalidated() {
-                    requestAxisLayout();
-                    measureInvalid = true;
-                }
-            };
+        new SimpleDoubleProperty(this, "firstCategoryPos", 0) {
+            @Override
+            protected void invalidated() {
+                requestAxisLayout();
+                measureInvalid = true;
+            }
+        };
 
     private Object currentAnimationID;
     private final ChartLayoutAnimator animator = new ChartLayoutAnimator(this);
@@ -249,13 +249,13 @@ public final class CategoryAxis extends Axis<String> {
 
     /** This is the gap between one category and the next along this axis */
     private final ReadOnlyDoubleWrapper categorySpacing =
-            new ReadOnlyDoubleWrapper(this, "categorySpacing", 1) {
-                @Override
-                protected void invalidated() {
-                    requestAxisLayout();
-                    measureInvalid = true;
-                }
-            };
+        new ReadOnlyDoubleWrapper(this, "categorySpacing", 1) {
+            @Override
+            protected void invalidated() {
+                requestAxisLayout();
+                measureInvalid = true;
+            }
+        };
 
     public final double getCategorySpacing() {
         return categorySpacing.get();
