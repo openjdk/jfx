@@ -65,9 +65,9 @@ public class NGNodeDirtyFlagTest {
         public void start(Stage primaryStage) throws Exception {
             root = new StackPane();
             primaryStage.setScene(new Scene(root, 500, 400));
-            primaryStage.show();
 
-            launchLatch.countDown();
+            primaryStage.setOnShown(e -> Platform.runLater(launchLatch::countDown));
+            primaryStage.show();
         }
     }
 
