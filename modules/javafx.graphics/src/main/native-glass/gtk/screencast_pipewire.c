@@ -23,6 +23,10 @@
  * questions.
  */
 
+#ifdef HEADLESS
+#error This file should not be included in headless library
+#endif
+
 #include <dlfcn.h>
 #include "screencast_pipewire.h"
 #include "fp_pipewire.h"

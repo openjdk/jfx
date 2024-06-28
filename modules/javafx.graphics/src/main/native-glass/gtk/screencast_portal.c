@@ -23,6 +23,10 @@
  * questions.
  */
 
+#ifdef HEADLESS
+#error This file should not be included in headless library
+#endif
+
 #include "stdlib.h"
 #include <sys/stat.h>
 #include <fcntl.h>

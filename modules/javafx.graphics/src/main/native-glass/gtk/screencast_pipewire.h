@@ -23,6 +23,10 @@
  * questions.
  */
 
+#ifdef HEADLESS
+#error This file should not be included in headless library
+#endif
+
 #ifndef _SCREENCAST_PIPEWIRE_H
 #define _SCREENCAST_PIPEWIRE_H
 
