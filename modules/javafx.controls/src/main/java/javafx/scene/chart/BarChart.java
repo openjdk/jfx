@@ -384,7 +384,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
     @Override protected void layoutPlotChildren() {
         double catSpace = categoryAxis.getCategorySpacing();
         // calculate bar spacing
-        final double availableBarSpace = catSpace - (getCategoryGap() + getBarGap());
+        final double availableBarSpace = catSpace - getCategoryGap() + getBarGap();
         double barWidth = (availableBarSpace / getSeriesSize()) - getBarGap();
         final double barOffset = -((catSpace - getCategoryGap()) / 2);
         final double zeroPos = (valueAxis.getLowerBound() > 0) ?
@@ -423,9 +423,9 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
                         bar.resizeRelocate( bottom, categoryPos + barOffset + (barWidth + getBarGap()) * index,
                                             top-bottom, barWidth);
                     }
-
-                    index++;
                 }
+
+                index++;
             }
             catIndex++;
         }
