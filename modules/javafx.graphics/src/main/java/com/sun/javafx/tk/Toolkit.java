@@ -59,11 +59,13 @@ import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
@@ -89,7 +91,6 @@ import com.sun.scenario.effect.AbstractShadow.ShadowMode;
 import com.sun.scenario.effect.Color4f;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
-import java.util.Optional;
 
 
 public abstract class Toolkit {
@@ -384,6 +385,8 @@ public abstract class Toolkit {
     @SuppressWarnings("removal")
     private final Map<TKPulseListener,AccessControlContext> postScenePulseListeners = new WeakHashMap<>();
     @SuppressWarnings("removal")
+    private final HashMap<TKPulseListener,AccessControlContext> cleanupListeners = new HashMap<>();
+    @SuppressWarnings("removal")
     private final Map<TKListener,AccessControlContext> toolkitListeners = new WeakHashMap<>();
 
     // The set of shutdown hooks is strongly held to avoid premature GC.
@@ -417,11 +420,15 @@ public abstract class Toolkit {
         @SuppressWarnings("removal")
         final Map<TKPulseListener,AccessControlContext> postScenePulseList =
                 new WeakHashMap<>();
+        final Map<TKPulseListener,AccessControlContext> cleanupList =
+                new HashMap<>();
 
         synchronized (this) {
             stagePulseList.putAll(stagePulseListeners);
             scenePulseList.putAll(scenePulseListeners);
             postScenePulseList.putAll(postScenePulseListeners);
+            cleanupList.putAll(cleanupListeners);
+            cleanupListeners.clear();
         }
         for (@SuppressWarnings("removal") Map.Entry<TKPulseListener,AccessControlContext> entry : stagePulseList.entrySet()) {
             runPulse(entry.getKey(), entry.getValue());
@@ -430,6 +437,9 @@ public abstract class Toolkit {
             runPulse(entry.getKey(), entry.getValue());
         }
         for (@SuppressWarnings("removal") Map.Entry<TKPulseListener,AccessControlContext> entry : postScenePulseList.entrySet()) {
+            runPulse(entry.getKey(), entry.getValue());
+        }
+        for (@SuppressWarnings("removal") Map.Entry<TKPulseListener,AccessControlContext> entry : cleanupList.entrySet()) {
             runPulse(entry.getKey(), entry.getValue());
         }
 
@@ -483,13 +493,25 @@ public abstract class Toolkit {
         }
     }
 
+    /*
+     * The provided listener is called only ones. It works similar to runLater.
+     */
+    public void addCleanupTask(TKPulseListener listener) {
+        synchronized (this) {
+            AccessControlContext acc = AccessController.getContext();
+            cleanupListeners.put(listener,acc);
+        }
+    }
+
     public void addTkListener(TKListener listener) {
         if (listener == null) {
             return;
         }
-        @SuppressWarnings("removal")
-        AccessControlContext acc = AccessController.getContext();
-        toolkitListeners.put(listener, acc);
+        synchronized (this) {
+            @SuppressWarnings("removal")
+            AccessControlContext acc = AccessController.getContext();
+            toolkitListeners.put(listener, acc);
+        }
     }
 
     public void removeTkListener(TKListener listener) {
