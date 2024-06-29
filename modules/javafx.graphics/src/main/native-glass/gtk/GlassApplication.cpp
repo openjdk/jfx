@@ -482,7 +482,7 @@ static void process_events(GdkEvent* event, gpointer data)
 
     EventsCounterHelper helper(ctx);
 
-    if (ctx != NULL && ctx->hasIME() && ctx->filterIME(event)) {
+    if ((event->type == GDK_KEY_PRESS || event->type == GDK_KEY_RELEASE) && ctx != NULL && ctx->filterIME(event)) {
         return;
     }
 
