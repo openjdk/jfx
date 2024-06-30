@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,14 +31,14 @@
 #include <math.h>
 
 #include "../PrismES2Defs.h"
-#include "com_sun_prism_es2_X11GLContext.h"
+#include "com_sun_prism_es2_LinuxGLContext.h"
 
 /*
- * Class:     com_sun_prism_es2_X11GLContext
+ * Class:     com_sun_prism_es2_LinuxGLContext
  * Method:    nInitialize
  * Signature: (JJZ)J
  */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLContext_nInitialize
+JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_LinuxGLContext_nInitialize
 (JNIEnv *env, jclass class, jlong nativeDInfo, jlong nativePFInfo,
         jboolean vSyncRequested) {
     const char *glVersion;
@@ -298,11 +298,11 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLContext_nInitialize
 }
 
 /*
- * Class:     com_sun_prism_es2_X11GLContext
+ * Class:     com_sun_prism_es2_LinuxGLContext
  * Method:    nGetNativeHandle
  * Signature: (J)J
  */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLContext_nGetNativeHandle
+JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_LinuxGLContext_nGetNativeHandle
 (JNIEnv *env, jclass class, jlong nativeCtxInfo) {
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
     if (ctxInfo == NULL) {
@@ -312,11 +312,11 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLContext_nGetNativeHandle
 }
 
 /*
- * Class:     com_sun_prism_es2_X11GLContext
+ * Class:     com_sun_prism_es2_LinuxGLContext
  * Method:    nMakeCurrent
  * Signature: (JJ)V
  */
-JNIEXPORT void JNICALL Java_com_sun_prism_es2_X11GLContext_nMakeCurrent
+JNIEXPORT void JNICALL Java_com_sun_prism_es2_LinuxGLContext_nMakeCurrent
 (JNIEnv *env, jclass class, jlong nativeCtxInfo, jlong nativeDInfo) {
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
     DrawableInfo *dInfo = (DrawableInfo *) jlong_to_ptr(nativeDInfo);

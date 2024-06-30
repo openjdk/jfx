@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,7 @@
 #include <math.h>
 
 #include "../PrismES2Defs.h"
-#include "com_sun_prism_es2_X11GLPixelFormat.h"
+#include "com_sun_prism_es2_LinuxGLPixelFormat.h"
 
 extern void setGLXAttrs(jint *attrs, int *glxAttrs);
 extern void printAndReleaseResources(Display *display, GLXFBConfig *fbConfigList,
@@ -39,13 +39,13 @@ extern void printAndReleaseResources(Display *display, GLXFBConfig *fbConfigList
         const char *message);
 
 /*
- * Class:     com_sun_prism_es2_X11GLPixelFormat
+ * Class:     com_sun_prism_es2_LinuxGLPixelFormat
  * Method:    nCreatePixelFormat
  * Signature: (J[I)J
  */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLPixelFormat_nCreatePixelFormat
+JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_LinuxGLPixelFormat_nCreatePixelFormat
 (JNIEnv *env, jclass class, jlong nativeScreen, jintArray attrArr) {
-    int glxAttrs[MAX_GLX_ATTRS_LENGTH]; /* value, attr pair plus a None */
+    int glxAttrs[MAX_GL_ATTRS_LENGTH]; /* value, attr pair plus a None */
     jint *attrs;
     PixelFormatInfo *pfInfo = NULL;
 

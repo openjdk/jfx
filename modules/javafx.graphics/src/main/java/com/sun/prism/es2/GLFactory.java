@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,12 @@
 
 package com.sun.prism.es2;
 
+import com.sun.glass.utils.NativeLibLoader;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.javafx.PlatformUtil;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Arrays;
 import java.util.HashMap;
 
 abstract class GLFactory {
@@ -60,54 +62,81 @@ abstract class GLFactory {
      * Instantiate singleton factories if available, the OS native ones.
      */
     static {
-
-        final String factoryClassName;
+        final FactoryLoader loader;
         if (PlatformUtil.isUnix()) {
-            if ("monocle".equals(PlatformUtil.getEmbeddedType()))
-                factoryClassName = "com.sun.prism.es2.MonocleGLFactory";
-            else
-                factoryClassName = "com.sun.prism.es2.X11GLFactory";
+            if ("monocle".equals(PlatformUtil.getEmbeddedType())) {
+                loader = new FactoryLoader("com.sun.prism.es2.MonocleGLFactory");
+            } else {
+                if (System.getProperty("prism.es2.forceGLX", "false").equals("true")) {
+                    loader = new FactoryLoader("com.sun.prism.es2.LinuxGLXFactory");
+                } else {
+                    loader = new FactoryLoader("com.sun.prism.es2.LinuxEGLFactory",
+                            "com.sun.prism.es2.LinuxGLXFactory");
+                }
+            }
         } else if (PlatformUtil.isWindows()) {
-            factoryClassName = "com.sun.prism.es2.WinGLFactory";
+            loader = new FactoryLoader("com.sun.prism.es2.WinGLFactory");
         } else if (PlatformUtil.isMac()) {
-            factoryClassName = "com.sun.prism.es2.MacGLFactory";
+            loader = new FactoryLoader("com.sun.prism.es2.MacGLFactory");
         } else if (PlatformUtil.isIOS()) {
-            factoryClassName = "com.sun.prism.es2.IOSGLFactory";
+            loader = new FactoryLoader("com.sun.prism.es2.IOSGLFactory");
         } else if (PlatformUtil.isAndroid()) {
-            factoryClassName = "com.sun.prism.es2.MonocleGLFactory";
+            loader = new FactoryLoader("com.sun.prism.es2.MonocleGLFactory");
         } else {
-            factoryClassName = null;
+            loader = null;
             System.err.println("GLFactory.static - No Platform Factory for: " + System.getProperty("os.name"));
         }
+
         if (PrismSettings.verbose) {
-            System.out.println("GLFactory using " + factoryClassName);
+            System.out.println("GLFactory using " + loader);
         }
+
         @SuppressWarnings("removal")
-        GLFactory tmp = factoryClassName == null ? null :
-            AccessController.doPrivileged(new FactoryLoader(factoryClassName));
+        GLFactory tmp = loader == null ? null : AccessController.doPrivileged(loader);
         platformFactory = tmp;
     }
 
     private static class FactoryLoader implements PrivilegedAction<GLFactory> {
-        private final String factoryClassName;
-        FactoryLoader(String factoryClassName) {
-            this.factoryClassName = factoryClassName;
+        private final String[] factoryClassNames;
+        FactoryLoader(String... factoryClassNames) {
+            this.factoryClassNames = factoryClassNames;
         }
 
         @Override
         public GLFactory run() {
-            GLFactory factory = null;
-            try {
-                factory = (GLFactory) Class.forName(factoryClassName).getDeclaredConstructor().newInstance();
-            } catch (Throwable t) {
-                System.err.println("GLFactory.static - Platform: "
-                        + System.getProperty("os.name")
-                        + " - not available: "
-                        + factoryClassName);
-                t.printStackTrace();
+            for (String factoryClassName : factoryClassNames) {
+                try {
+                    return (GLFactory) Class.forName(factoryClassName).getDeclaredConstructor().newInstance();
+                } catch (Throwable t) {
+                    System.err.println("GLFactory.static - Platform: "
+                            + System.getProperty("os.name")
+                            + " - not available: "
+                            + factoryClassName);
+                    t.printStackTrace();
+                }
             }
-            return factory;
+
+            return null;
         }
+
+        @Override
+        public String toString() {
+            return "{" + Arrays.toString(factoryClassNames) + "}";
+        }
+    }
+
+    static void loadNativeLib(String libName) {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            if (PrismSettings.verbose) {
+                System.out.println("Loading ES2 native library ... " + libName);
+            }
+            NativeLibLoader.loadLibrary(libName);
+            if (PrismSettings.verbose) {
+                System.out.println("\tsucceeded.");
+            }
+            return null;
+        });
     }
 
     /**

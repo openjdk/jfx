@@ -23,49 +23,31 @@
  * questions.
  */
 
-#include <jni.h>
-#include <stdlib.h>
-#include <assert.h>
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
+package com.sun.prism.es2;
 
-#include "PrismES2Defs.h"
 
-void initializePixelFormatInfo(PixelFormatInfo *pfInfo) {
-    if (pfInfo == NULL) {
-        return;
+abstract class LinuxGLDrawable extends GLDrawable {
+
+    private static native long nCreateDrawable(long nativeWindow, long nativeCtxInfo);
+    private static native long nGetDummyDrawable(long nativeCtxInfo);
+    private static native boolean nSwapBuffers(long nativeDInfo);
+
+    LinuxGLDrawable(GLPixelFormat pixelFormat) {
+        super(0L, pixelFormat);
+
+        long nDInfo = nGetDummyDrawable(pixelFormat.getNativePFInfo());
+        setNativeDrawableInfo(nDInfo);
     }
-    // Initialize structure to all zeros
-    memset(pfInfo, 0, sizeof (PixelFormatInfo));
-}
 
-void deletePixelFormatInfo(PixelFormatInfo *pfInfo) {
-    if (pfInfo == NULL) {
-        return;
-    }
-#ifdef WIN32 /* WIN32 */
-    if ((pfInfo->dummyHdc != NULL) && (pfInfo->dummyHwnd != NULL)) {
-        ReleaseDC(pfInfo->dummyHwnd, pfInfo->dummyHdc);
-    }
-    if (pfInfo->dummyHwnd != NULL) {
-        DestroyWindow(pfInfo->dummyHwnd);
-        UnregisterClass(pfInfo->dummySzAppName, (HINSTANCE) NULL);
-    }
-#endif
+    LinuxGLDrawable(long nativeWindow, GLPixelFormat pixelFormat) {
+        super(nativeWindow, pixelFormat);
 
-#if defined(IS_LINUX_GLX) || defined(IS_LINUX_EGL)
-    if (pfInfo->display != NULL) {
-        if (pfInfo->dummyWin != None) {
-            XDestroyWindow(pfInfo->display, pfInfo->dummyWin);
-        }
+        long nDInfo = nCreateDrawable(nativeWindow, pixelFormat.getNativePFInfo());
+        setNativeDrawableInfo(nDInfo);
     }
-#endif
 
-#ifdef IS_LINUX_EGL
-    eglTerminate(pfInfo->eglDisplay);
-#endif
-
-    // Initialize structure to all zeros
-    memset(pfInfo, 0, sizeof (PixelFormatInfo));
+    @Override
+    boolean swapBuffers(GLContext glCtx) {
+        return nSwapBuffers(getNativeDrawableInfo());
+    }
 }
