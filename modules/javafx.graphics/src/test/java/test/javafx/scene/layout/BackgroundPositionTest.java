@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,14 +27,16 @@ package test.javafx.scene.layout;
 
 import javafx.geometry.Side;
 import javafx.scene.layout.BackgroundPosition;
-import org.junit.Test;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  */
 public class BackgroundPositionTest {
-    @Test public void valuesAreCorrectAfterConstruction() {
+    @Test
+    public void valuesAreCorrectAfterConstruction() {
         BackgroundPosition pos = new BackgroundPosition(Side.LEFT, 10, false, Side.TOP, 20, false);
 
         assertEquals(Side.LEFT, pos.getHorizontalSide());
@@ -61,14 +63,18 @@ public class BackgroundPositionTest {
         assertEquals(Side.LEFT, pos.getHorizontalSide());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void TOPHorizontalSideFails() {
-        new BackgroundPosition(Side.TOP, 10, true, Side.BOTTOM, 20, true);
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> new BackgroundPosition(Side.TOP, 10, true, Side.BOTTOM, 20, true));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void BOTTOMHorizontalSideFails() {
-        new BackgroundPosition(Side.BOTTOM, 10, true, Side.BOTTOM, 20, true);
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> new BackgroundPosition(Side.BOTTOM, 10, true, Side.BOTTOM, 20, true));
     }
 
     @Test public void negativeHorizontalPositionOK() {
@@ -81,14 +87,18 @@ public class BackgroundPositionTest {
         assertEquals(Side.TOP, pos.getVerticalSide());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void LEFTVerticalSideFails() {
-        new BackgroundPosition(Side.LEFT, 10, true, Side.LEFT, 20, true);
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> new BackgroundPosition(Side.LEFT, 10, true, Side.LEFT, 20, true));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void RIGHTVerticalSideFails() {
-        new BackgroundPosition(Side.LEFT, 10, true, Side.RIGHT, 20, true);
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> new BackgroundPosition(Side.LEFT, 10, true, Side.RIGHT, 20, true));
     }
 
     @Test public void negativeVerticalPositionOK() {
@@ -166,5 +176,60 @@ public class BackgroundPositionTest {
         assertEquals(Side.TOP, BackgroundPosition.CENTER.getVerticalSide());
         assertEquals(.5, BackgroundPosition.CENTER.getVerticalPosition(), 0);
         assertTrue(BackgroundPosition.CENTER.isVerticalAsPercentage());
+    }
+
+    @Nested
+    class InterpolationTests {
+        @Test
+        public void interpolateBetweenDifferentValuesReturnsNewInstance() {
+            var a = new BackgroundPosition(Side.LEFT, 0, false, Side.TOP, 0, false);
+            var b = new BackgroundPosition(Side.LEFT, 10, false, Side.TOP, 20, false);
+            var expected = new BackgroundPosition(Side.LEFT, 5, false, Side.TOP, 10, false);
+            assertEquals(expected, a.interpolate(b, 0.5));
+        }
+
+        @Test
+        public void interpolateBetweenEqualValuesReturnsStartInstance() {
+            var a = new BackgroundPosition(Side.LEFT, 10, false, Side.TOP, 20, false);
+            var b = new BackgroundPosition(Side.LEFT, 10, false, Side.TOP, 20, false);
+            assertSame(a, a.interpolate(b, 0.5));
+        }
+
+        @Test
+        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+            var a = new BackgroundPosition(Side.LEFT, 0, false, Side.TOP, 0, false);
+            var b = new BackgroundPosition(Side.LEFT, 10, false, Side.TOP, 20, false);
+            assertSame(a, a.interpolate(b, 0));
+            assertSame(a, a.interpolate(b, -0.5));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+            var a = new BackgroundPosition(Side.LEFT, 0, false, Side.TOP, 0, false);
+            var b = new BackgroundPosition(Side.LEFT, 10, false, Side.TOP, 20, false);
+            assertSame(b, a.interpolate(b, 1));
+            assertSame(b, a.interpolate(b, 1.5));
+        }
+
+        @Test
+        public void percentageAndAbsolutePositionsCannotBeInterpolated() {
+            var a = new BackgroundPosition(Side.LEFT, 0, false, Side.TOP, 0, false);
+            var b = new BackgroundPosition(Side.LEFT, 10, true, Side.TOP, 20, true);
+            assertEquals(a, a.interpolate(b, 0)); // equal to 'a' for t == 0
+            assertEquals(b, a.interpolate(b, 0.1)); // equal to 'b' otherwise
+        }
+
+        @Test
+        public void differentSidesCannotBeInterpolated() {
+            var a = new BackgroundPosition(Side.LEFT, 0, false, Side.TOP, 0, false);
+            var b = new BackgroundPosition(Side.RIGHT, 10, false, Side.TOP, 20, false);
+            var expect = new BackgroundPosition(Side.RIGHT, 10, false, Side.TOP, 10, false);
+            assertEquals(expect, a.interpolate(b, 0.5));
+
+            a = new BackgroundPosition(Side.LEFT, 0, false, Side.TOP, 0, false);
+            b = new BackgroundPosition(Side.LEFT, 10, false, Side.BOTTOM, 20, false);
+            expect = new BackgroundPosition(Side.LEFT, 5, false, Side.BOTTOM, 20, false);
+            assertEquals(expect, a.interpolate(b, 0.5));
+        }
     }
 }

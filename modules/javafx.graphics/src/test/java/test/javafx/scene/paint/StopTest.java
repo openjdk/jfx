@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,12 +27,11 @@ package test.javafx.scene.paint;
 
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Stop;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
-import org.junit.Test;
+import static javafx.scene.paint.Color.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class StopTest {
 
@@ -48,6 +47,11 @@ public class StopTest {
     }
 
     @Test
+    public void testNullColor() {
+        assertThrows(NullPointerException.class, () -> new Stop(0.2f, null));
+    }
+
+    @Test
     public void testEquals() {
         Color color1 = Color.rgb(0xAA, 0xBB, 0xCC);
         Color color2 = Color.rgb(0, 0, 0);
@@ -56,8 +60,6 @@ public class StopTest {
         Stop equal = new Stop(0.2f, color1);
         Stop diffColor = new Stop(0.2f, color2);
         Stop diffOffset = new Stop(0.4f, color1);
-        Stop nullColor = new Stop(0.2f, null);
-        Stop nullColor2 = new Stop(0.2f, null);
 
         assertFalse(basic.equals(null));
         assertFalse(basic.equals(new Object()));
@@ -65,8 +67,6 @@ public class StopTest {
         assertTrue(basic.equals(equal));
         assertFalse(basic.equals(diffColor));
         assertFalse(basic.equals(diffOffset));
-        assertTrue(nullColor.equals(nullColor2));
-        assertFalse(nullColor.equals(basic));
     }
 
     @Test
@@ -100,5 +100,38 @@ public class StopTest {
         s = nonempty.toString();
         assertNotNull(s);
         assertFalse(s.isEmpty());
+    }
+
+    @Nested
+    class InterpolationTest {
+        @Test
+        public void interpolateBetweenTwoDifferentValuesReturnsNewInstance() {
+            var a = new Stop(0, RED);
+            var b = new Stop(1, GREEN);
+            assertEquals(new Stop(0.5, RED.interpolate(GREEN, 0.5)), a.interpolate(b, 0.5));
+        }
+
+        @Test
+        public void interpolateBetweenTwoEqualValuesReturnsSameInstance() {
+            var a = new Stop(0.25, RED);
+            var b = new Stop(0.25, RED);
+            assertSame(a, a.interpolate(b, 0.5));
+        }
+
+        @Test
+        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+            var a = new Stop(0.25, RED);
+            var b = new Stop(0.75, GREEN);
+            assertSame(a, a.interpolate(b, 0));
+            assertSame(a, a.interpolate(b, -1));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+            var a = new Stop(0.25, RED);
+            var b = new Stop(0.75, GREEN);
+            assertSame(b, a.interpolate(b, 1));
+            assertSame(b, a.interpolate(b, 1.5));
+        }
     }
 }

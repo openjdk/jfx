@@ -26,9 +26,9 @@
 package javafx.animation;
 
 /**
- * A value that can be interpolated. It defines single
- * {@link #interpolate(Object, double)} method, which returns interpolated value
- * of given fraction.
+ * A value that can be interpolated. It defines a single {@link #interpolate(Object, double)}
+ * method, which returns an intermediate value between the value of this {@code Interpolatable}
+ * and the specified target value.
  *
  * @param <T> the interpolatable value type
  * @since JavaFX 2.0
@@ -37,15 +37,23 @@ package javafx.animation;
 public interface Interpolatable<T> {
 
     /**
-     * The function calculates an interpolated value along the fraction
-     * {@code t} between {@code 0.0} and {@code 1.0}. When {@code t} = 1.0,
-     * {@code endVal} is returned.
+     * Returns an intermediate value between the value of this {@code Interpolatable} and the specified
+     * {@code endValue} using the linear interpolation factor {@code t}, ranging from 0 (inclusive)
+     * to 1 (inclusive).
+     * <p>
+     * The returned value may not be a new instance; an implementation might also return one of the
+     * two existing instances if the intermediate value would be equal to one of the existing values.
+     * However, this is an optimization and applications should not assume any particular identity
+     * of the returned value.
+     * <p>
+     * An implementation is not required to reject interpolation factors less than 0 or larger than 1,
+     * but this specification gives no meaning to values returned outside of this range. For example,
+     * an implementation might clamp the interpolation factor to [0..1], or it might continue the linear
+     * interpolation outside of this range.
      *
-     * @param endValue
-     *            target value
-     * @param t
-     *            fraction between {@code 0.0} and {@code 1.0}
-     * @return interpolated value
+     * @param endValue the target value
+     * @param t the interpolation factor
+     * @return the intermediate value
      */
-    public T interpolate(T endValue, double t);
+    T interpolate(T endValue, double t);
 }
