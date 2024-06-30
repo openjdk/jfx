@@ -1404,7 +1404,30 @@ public abstract class Node implements EventTarget, Styleable {
     public final BooleanProperty visibleProperty() {
         if (visible == null) {
             visible = new StyleableBooleanProperty(true) {
+                static final CssMetaData<Node, Boolean> METADATA = new CssMetaData<>(
+                        "visibility",
+                        new StyleConverter<String, Boolean>() {
+                            @Override
+                            // [ visible | hidden | collapse | inherit ]
+                            public Boolean convert(ParsedValue<String, Boolean> value, Font font) {
+                                final String sval = value != null ? value.getValue() : null;
+                                return "visible".equalsIgnoreCase(sval);
+                            }
+                        },
+                        Boolean.TRUE) {
+                    @Override
+                    public boolean isSettable(Node node) {
+                        return node.visible == null || !node.visible.isBound();
+                    }
+
+                    @Override
+                    public StyleableProperty<Boolean> getStyleableProperty(Node node) {
+                        return (StyleableProperty<Boolean>)node.visibleProperty();
+                    }
+                };
+
                 boolean oldValue = true;
+
                 @Override
                 protected void invalidated() {
                     if (oldValue != get()) {
@@ -1423,7 +1446,7 @@ public abstract class Node implements EventTarget, Styleable {
 
                 @Override
                 public CssMetaData getCssMetaData() {
-                    return StyleableProperties.VISIBILITY;
+                    return METADATA;
                 }
 
                 @Override
@@ -1503,6 +1526,18 @@ public abstract class Node implements EventTarget, Styleable {
     public final DoubleProperty opacityProperty() {
         if (opacity == null) {
             opacity = new StyleableDoubleProperty(1) {
+                static final CssMetaData<Node,Number> METADATA = new CssMetaData<>(
+                        "-fx-opacity", SizeConverter.getInstance(), 1.0) {
+                    @Override
+                    public boolean isSettable(Node node) {
+                        return node.opacity == null || !node.opacity.isBound();
+                    }
+
+                    @Override
+                    public StyleableProperty<Number> getStyleableProperty(Node node) {
+                        return (StyleableProperty<Number>)node.opacityProperty();
+                    }
+                };
 
                 @Override
                 public void invalidated() {
@@ -1511,7 +1546,7 @@ public abstract class Node implements EventTarget, Styleable {
 
                 @Override
                 public CssMetaData getCssMetaData() {
-                    return StyleableProperties.OPACITY;
+                    return METADATA;
                 }
 
                 @Override
@@ -1552,13 +1587,26 @@ public abstract class Node implements EventTarget, Styleable {
     public final ObjectProperty<BlendMode> blendModeProperty() {
         if (blendMode == null) {
             blendMode = new StyleableObjectProperty<BlendMode>(null) {
+                static final CssMetaData<Node, BlendMode> METADATA = new CssMetaData<>(
+                        "-fx-blend-mode", new EnumConverter<>(BlendMode.class)) {
+                    @Override
+                    public boolean isSettable(Node node) {
+                        return node.blendMode == null || !node.blendMode.isBound();
+                    }
+
+                    @Override
+                    public StyleableProperty<BlendMode> getStyleableProperty(Node node) {
+                        return (StyleableProperty<BlendMode>)node.blendModeProperty();
+                    }
+                };
+
                 @Override public void invalidated() {
                     NodeHelper.markDirty(Node.this, DirtyBits.NODE_BLENDMODE);
                 }
 
                 @Override
                 public CssMetaData getCssMetaData() {
-                    return StyleableProperties.BLEND_MODE;
+                    return METADATA;
                 }
 
                 @Override
@@ -2710,6 +2758,18 @@ public abstract class Node implements EventTarget, Styleable {
     public final BooleanProperty managedProperty() {
         if (managed == null) {
             managed = new StyleableBooleanProperty(true) {
+                static final CssMetaData<Node, Boolean> METADATA = new CssMetaData<>(
+                        "-fx-managed", BooleanConverter.getInstance(), Boolean.TRUE) {
+                    @Override
+                    public boolean isSettable(Node node) {
+                        return node.managed == null || !node.managed.isBound();
+                    }
+
+                    @Override
+                    public StyleableProperty<Boolean> getStyleableProperty(Node node) {
+                        return (StyleableProperty<Boolean>)node.managedProperty();
+                    }
+                };
 
                 @Override
                 protected void invalidated() {
@@ -2722,7 +2782,7 @@ public abstract class Node implements EventTarget, Styleable {
 
                 @Override
                 public CssMetaData<Node, Boolean> getCssMetaData() {
-                    return StyleableProperties.MANAGED;
+                    return METADATA;
                 }
 
                 @Override
@@ -6134,6 +6194,21 @@ public abstract class Node implements EventTarget, Styleable {
         public final DoubleProperty translateXProperty() {
             if (translateX == null) {
                 translateX = new StyleableDoubleProperty(DEFAULT_TRANSLATE_X) {
+                    static final CssMetaData<Node, Number> METADATA = new CssMetaData<>(
+                            "-fx-translate-x", SizeConverter.getInstance(), 0.0) {
+                        @Override
+                        public boolean isSettable(Node node) {
+                            return node.nodeTransformation == null
+                                || node.nodeTransformation.translateX == null
+                                || node.nodeTransformation.canSetTranslateX();
+                        }
+
+                        @Override
+                        public StyleableProperty<Number> getStyleableProperty(Node node) {
+                            return (StyleableProperty<Number>)node.translateXProperty();
+                        }
+                    };
+
                     @Override
                     public void invalidated() {
                         NodeHelper.transformsChanged(Node.this);
@@ -6141,7 +6216,7 @@ public abstract class Node implements EventTarget, Styleable {
 
                     @Override
                     public CssMetaData getCssMetaData() {
-                        return StyleableProperties.TRANSLATE_X;
+                        return METADATA;
                     }
 
                     @Override
@@ -6165,6 +6240,21 @@ public abstract class Node implements EventTarget, Styleable {
         public final DoubleProperty translateYProperty() {
             if (translateY == null) {
                 translateY = new StyleableDoubleProperty(DEFAULT_TRANSLATE_Y) {
+                    static final CssMetaData<Node, Number> METADATA = new CssMetaData<>(
+                            "-fx-translate-y", SizeConverter.getInstance(), 0.0) {
+                        @Override
+                        public boolean isSettable(Node node) {
+                            return node.nodeTransformation == null
+                                || node.nodeTransformation.translateY == null
+                                || node.nodeTransformation.canSetTranslateY();
+                        }
+
+                        @Override
+                        public StyleableProperty<Number> getStyleableProperty(Node node) {
+                            return (StyleableProperty<Number>)node.translateYProperty();
+                        }
+                    };
+
                     @Override
                     public void invalidated() {
                         NodeHelper.transformsChanged(Node.this);
@@ -6172,7 +6262,7 @@ public abstract class Node implements EventTarget, Styleable {
 
                     @Override
                     public CssMetaData getCssMetaData() {
-                        return StyleableProperties.TRANSLATE_Y;
+                        return METADATA;
                     }
 
                     @Override
@@ -6196,6 +6286,21 @@ public abstract class Node implements EventTarget, Styleable {
         public final DoubleProperty translateZProperty() {
             if (translateZ == null) {
                 translateZ = new StyleableDoubleProperty(DEFAULT_TRANSLATE_Z) {
+                    static final CssMetaData<Node, Number> METADATA = new CssMetaData<>(
+                            "-fx-translate-z", SizeConverter.getInstance(), 0.0) {
+                        @Override
+                        public boolean isSettable(Node node) {
+                            return node.nodeTransformation == null
+                                || node.nodeTransformation.translateZ == null
+                                || node.nodeTransformation.canSetTranslateZ();
+                        }
+
+                        @Override
+                        public StyleableProperty<Number> getStyleableProperty(Node node) {
+                            return (StyleableProperty<Number>)node.translateZProperty();
+                        }
+                    };
+
                     @Override
                     public void invalidated() {
                         NodeHelper.transformsChanged(Node.this);
@@ -6203,7 +6308,7 @@ public abstract class Node implements EventTarget, Styleable {
 
                     @Override
                     public CssMetaData getCssMetaData() {
-                        return StyleableProperties.TRANSLATE_Z;
+                        return METADATA;
                     }
 
                     @Override
@@ -6227,14 +6332,29 @@ public abstract class Node implements EventTarget, Styleable {
         public final DoubleProperty scaleXProperty() {
             if (scaleX == null) {
                 scaleX = new StyleableDoubleProperty(DEFAULT_SCALE_X) {
+                    static final CssMetaData<Node, Number> METADATA = new CssMetaData<Node, Number>(
+                            "-fx-scale-x", SizeConverter.getInstance(), 1.0) {
+                        @Override
+                        public boolean isSettable(Node node) {
+                            return node.nodeTransformation == null
+                                || node.nodeTransformation.scaleX == null
+                                || node.nodeTransformation.canSetScaleX();
+                        }
+
+                        @Override
+                        public StyleableProperty<Number> getStyleableProperty(Node node) {
+                            return (StyleableProperty<Number>)node.scaleXProperty();
+                        }
+                    };
+
                     @Override
                     public void invalidated() {
                         NodeHelper.transformsChanged(Node.this);
                     }
 
                     @Override
-                    public CssMetaData getCssMetaData() {
-                        return StyleableProperties.SCALE_X;
+                    public CssMetaData<Node, Number> getCssMetaData() {
+                        return METADATA;
                     }
 
                     @Override
@@ -6258,6 +6378,21 @@ public abstract class Node implements EventTarget, Styleable {
         public final DoubleProperty scaleYProperty() {
             if (scaleY == null) {
                 scaleY = new StyleableDoubleProperty(DEFAULT_SCALE_Y) {
+                    static final CssMetaData<Node, Number> METADATA = new CssMetaData<>(
+                            "-fx-scale-y", SizeConverter.getInstance(), 1.0) {
+                        @Override
+                        public boolean isSettable(Node node) {
+                            return node.nodeTransformation == null
+                                || node.nodeTransformation.scaleY == null
+                                || node.nodeTransformation.canSetScaleY();
+                        }
+
+                        @Override
+                        public StyleableProperty<Number> getStyleableProperty(Node node) {
+                            return (StyleableProperty<Number>)node.scaleYProperty();
+                        }
+                    };
+
                     @Override
                     public void invalidated() {
                         NodeHelper.transformsChanged(Node.this);
@@ -6265,7 +6400,7 @@ public abstract class Node implements EventTarget, Styleable {
 
                     @Override
                     public CssMetaData getCssMetaData() {
-                        return StyleableProperties.SCALE_Y;
+                        return METADATA;
                     }
 
                     @Override
@@ -6289,6 +6424,21 @@ public abstract class Node implements EventTarget, Styleable {
         public final DoubleProperty scaleZProperty() {
             if (scaleZ == null) {
                 scaleZ = new StyleableDoubleProperty(DEFAULT_SCALE_Z) {
+                    static final CssMetaData<Node, Number> METADATA = new CssMetaData<>(
+                            "-fx-scale-z", SizeConverter.getInstance(), 1.0) {
+                        @Override
+                        public boolean isSettable(Node node) {
+                            return node.nodeTransformation == null
+                                || node.nodeTransformation.scaleZ == null
+                                || node.nodeTransformation.canSetScaleZ();
+                        }
+
+                        @Override
+                        public StyleableProperty<Number> getStyleableProperty(Node node) {
+                            return (StyleableProperty<Number>)node.scaleZProperty();
+                        }
+                    };
+
                     @Override
                     public void invalidated() {
                         NodeHelper.transformsChanged(Node.this);
@@ -6296,7 +6446,7 @@ public abstract class Node implements EventTarget, Styleable {
 
                     @Override
                     public CssMetaData getCssMetaData() {
-                        return StyleableProperties.SCALE_Z;
+                        return METADATA;
                     }
 
                     @Override
@@ -6320,6 +6470,21 @@ public abstract class Node implements EventTarget, Styleable {
         public final DoubleProperty rotateProperty() {
             if (rotate == null) {
                 rotate = new StyleableDoubleProperty(DEFAULT_ROTATE) {
+                    static final CssMetaData<Node, Number> METADATA = new CssMetaData<>(
+                            "-fx-rotate", SizeConverter.getInstance(), 0.0) {
+                        @Override
+                        public boolean isSettable(Node node) {
+                            return node.nodeTransformation == null
+                                || node.nodeTransformation.rotate == null
+                                || node.nodeTransformation.canSetRotate();
+                        }
+
+                        @Override
+                        public StyleableProperty<Number> getStyleableProperty(Node node) {
+                            return (StyleableProperty<Number>)node.rotateProperty();
+                        }
+                    };
+
                     @Override
                     public void invalidated() {
                         NodeHelper.transformsChanged(Node.this);
@@ -6327,7 +6492,7 @@ public abstract class Node implements EventTarget, Styleable {
 
                     @Override
                     public CssMetaData getCssMetaData() {
-                        return StyleableProperties.ROTATE;
+                        return METADATA;
                     }
 
                     @Override
@@ -6506,7 +6671,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     public final ObjectProperty<NodeOrientation> nodeOrientationProperty() {
         if (nodeOrientation == null) {
-            nodeOrientation = new StyleableObjectProperty<NodeOrientation>(NodeOrientation.INHERIT) {
+            nodeOrientation = new ObjectPropertyBase<NodeOrientation>(NodeOrientation.INHERIT) {
                 @Override
                 protected void invalidated() {
                     nodeResolvedOrientationInvalidated();
@@ -6522,11 +6687,11 @@ public abstract class Node implements EventTarget, Styleable {
                     return "nodeOrientation";
                 }
 
-                @Override
-                public CssMetaData getCssMetaData() {
-                    //TODO - not supported
-                    throw new UnsupportedOperationException("Not supported yet.");
-                }
+//                @Override
+//                public CssMetaData getCssMetaData() {
+//                    //TODO - not supported
+//                    throw new UnsupportedOperationException("Not supported yet.");
+//                }
 
             };
         }
@@ -6792,6 +6957,21 @@ public abstract class Node implements EventTarget, Styleable {
         public final DoubleProperty viewOrderProperty() {
             if (viewOrder == null) {
                 viewOrder = new StyleableDoubleProperty(DEFAULT_VIEW_ORDER) {
+                    static final CssMetaData<Node, Number> METADATA = new CssMetaData<>(
+                            "-fx-view-order", SizeConverter.getInstance(), 0.0) {
+                        @Override
+                        public boolean isSettable(Node node) {
+                            return node.miscProperties == null
+                                || node.miscProperties.viewOrder == null
+                                || !node.miscProperties.viewOrder.isBound();
+                        }
+
+                        @Override
+                        public StyleableProperty<Number> getStyleableProperty(Node node) {
+                            return (StyleableProperty<Number>) node.viewOrderProperty();
+                        }
+                    };
+
                     @Override
                     public void invalidated() {
                         Parent p = getParent();
@@ -6804,7 +6984,7 @@ public abstract class Node implements EventTarget, Styleable {
 
                     @Override
                     public CssMetaData getCssMetaData() {
-                        return StyleableProperties.VIEW_ORDER;
+                        return METADATA;
                     }
 
                     @Override
@@ -7056,6 +7236,25 @@ public abstract class Node implements EventTarget, Styleable {
         public final ObjectProperty<Cursor> cursorProperty() {
             if (cursor == null) {
                 cursor = new StyleableObjectProperty<Cursor>(DEFAULT_CURSOR) {
+                    static final CssMetaData<Node, Cursor> METADATA = new CssMetaData<>(
+                            "-fx-cursor", CursorConverter.getInstance()) {
+                        @Override
+                        public boolean isSettable(Node node) {
+                            return node.miscProperties == null || node.miscProperties.canSetCursor();
+                        }
+
+                        @Override
+                        public StyleableProperty<Cursor> getStyleableProperty(Node node) {
+                            return (StyleableProperty<Cursor>)node.cursorProperty();
+                        }
+
+                        @Override
+                        public Cursor getInitialValue(Node node) {
+                            // Most controls default focusTraversable to true.
+                            // Give a way to have them return the correct default value.
+                            return node.getInitialCursor();
+                        }
+                    };
 
                     @Override
                     protected void invalidated() {
@@ -7067,7 +7266,7 @@ public abstract class Node implements EventTarget, Styleable {
 
                     @Override
                     public CssMetaData getCssMetaData() {
-                        return StyleableProperties.CURSOR;
+                        return METADATA;
                     }
 
                     @Override
@@ -7144,6 +7343,19 @@ public abstract class Node implements EventTarget, Styleable {
         public final ObjectProperty<Effect> effectProperty() {
             if (effect == null) {
                 effect = new StyleableObjectProperty<Effect>(DEFAULT_EFFECT) {
+                    static final CssMetaData<Node, Effect> METADATA = new CssMetaData<>(
+                            "-fx-effect", EffectConverter.getInstance()) {
+                        @Override
+                        public boolean isSettable(Node node) {
+                            return node.miscProperties == null || node.miscProperties.canSetEffect();
+                        }
+
+                        @Override
+                        public StyleableProperty<Effect> getStyleableProperty(Node node) {
+                            return (StyleableProperty<Effect>)node.effectProperty();
+                        }
+                    };
+
                     private Effect oldEffect = null;
                     private int oldBits;
 
@@ -7197,7 +7409,7 @@ public abstract class Node implements EventTarget, Styleable {
 
                     @Override
                     public CssMetaData getCssMetaData() {
-                        return StyleableProperties.EFFECT;
+                        return METADATA;
                     }
 
                     @Override
@@ -8430,6 +8642,25 @@ public abstract class Node implements EventTarget, Styleable {
     public final BooleanProperty focusTraversableProperty() {
         if (focusTraversable == null) {
             focusTraversable = new StyleableBooleanProperty(false) {
+                static final CssMetaData<Node, Boolean> METADATA = new CssMetaData<>(
+                        "-fx-focus-traversable", BooleanConverter.getInstance(), Boolean.FALSE) {
+                    @Override
+                    public boolean isSettable(Node node) {
+                        return node.focusTraversable == null || !node.focusTraversable.isBound();
+                    }
+
+                    @Override
+                    public StyleableProperty<Boolean> getStyleableProperty(Node node) {
+                        return (StyleableProperty<Boolean>)node.focusTraversableProperty();
+                    }
+
+                    @Override
+                    public Boolean getInitialValue(Node node) {
+                        // Most controls default focusTraversable to true.
+                        // Give a way to have them return the correct default value.
+                        return node.getInitialFocusTraversable();
+                    }
+                };
 
                 @Override
                 public void invalidated() {
@@ -8444,7 +8675,7 @@ public abstract class Node implements EventTarget, Styleable {
 
                 @Override
                 public CssMetaData getCssMetaData() {
-                    return StyleableProperties.FOCUS_TRAVERSABLE;
+                    return METADATA;
                 }
 
                 @Override
@@ -9215,287 +9446,6 @@ public abstract class Node implements EventTarget, Styleable {
         return null;
     }
 
-     /**
-      * Super-lazy instantiation pattern from Bill Pugh.
-      */
-     private static class StyleableProperties {
-
-        private static final CssMetaData<Node,Cursor> CURSOR =
-            new CssMetaData<>("-fx-cursor", CursorConverter.getInstance()) {
-
-                @Override
-                public boolean isSettable(Node node) {
-                    return node.miscProperties == null || node.miscProperties.canSetCursor();
-                }
-
-                @Override
-                public StyleableProperty<Cursor> getStyleableProperty(Node node) {
-                    return (StyleableProperty<Cursor>)node.cursorProperty();
-                }
-
-                @Override
-                public Cursor getInitialValue(Node node) {
-                    // Most controls default focusTraversable to true.
-                    // Give a way to have them return the correct default value.
-                    return node.getInitialCursor();
-                }
-
-            };
-        private static final CssMetaData<Node,Effect> EFFECT =
-            new CssMetaData<>("-fx-effect", EffectConverter.getInstance()) {
-
-                @Override
-                public boolean isSettable(Node node) {
-                    return node.miscProperties == null || node.miscProperties.canSetEffect();
-                }
-
-                @Override
-                public StyleableProperty<Effect> getStyleableProperty(Node node) {
-                    return (StyleableProperty<Effect>)node.effectProperty();
-                }
-            };
-        private static final CssMetaData<Node,Boolean> FOCUS_TRAVERSABLE =
-            new CssMetaData<>("-fx-focus-traversable",
-                BooleanConverter.getInstance(), Boolean.FALSE) {
-
-                @Override
-                public boolean isSettable(Node node) {
-                    return node.focusTraversable == null || !node.focusTraversable.isBound();
-                }
-
-                @Override
-                public StyleableProperty<Boolean> getStyleableProperty(Node node) {
-                    return (StyleableProperty<Boolean>)node.focusTraversableProperty();
-                }
-
-                @Override
-                public Boolean getInitialValue(Node node) {
-                    // Most controls default focusTraversable to true.
-                    // Give a way to have them return the correct default value.
-                    return node.getInitialFocusTraversable();
-                }
-
-            };
-        private static final CssMetaData<Node,Number> OPACITY =
-            new CssMetaData<>("-fx-opacity",
-                SizeConverter.getInstance(), 1.0) {
-
-                @Override
-                public boolean isSettable(Node node) {
-                    return node.opacity == null || !node.opacity.isBound();
-                }
-
-                @Override
-                public StyleableProperty<Number> getStyleableProperty(Node node) {
-                    return (StyleableProperty<Number>)node.opacityProperty();
-                }
-            };
-        private static final CssMetaData<Node,BlendMode> BLEND_MODE =
-            new CssMetaData<>("-fx-blend-mode", new EnumConverter<>(BlendMode.class)) {
-
-                @Override
-                public boolean isSettable(Node node) {
-                    return node.blendMode == null || !node.blendMode.isBound();
-                }
-
-                @Override
-                public StyleableProperty<BlendMode> getStyleableProperty(Node node) {
-                    return (StyleableProperty<BlendMode>)node.blendModeProperty();
-                }
-            };
-        private static final CssMetaData<Node,Number> ROTATE =
-            new CssMetaData<>("-fx-rotate",
-                SizeConverter.getInstance(), 0.0) {
-
-                @Override
-                public boolean isSettable(Node node) {
-                    return node.nodeTransformation == null
-                        || node.nodeTransformation.rotate == null
-                        || node.nodeTransformation.canSetRotate();
-                }
-
-                @Override
-                public StyleableProperty<Number> getStyleableProperty(Node node) {
-                    return (StyleableProperty<Number>)node.rotateProperty();
-                }
-            };
-        private static final CssMetaData<Node,Number> SCALE_X =
-            new CssMetaData<>("-fx-scale-x",
-                SizeConverter.getInstance(), 1.0) {
-
-                @Override
-                public boolean isSettable(Node node) {
-                    return node.nodeTransformation == null
-                        || node.nodeTransformation.scaleX == null
-                        || node.nodeTransformation.canSetScaleX();
-                }
-
-                @Override
-                public StyleableProperty<Number> getStyleableProperty(Node node) {
-                    return (StyleableProperty<Number>)node.scaleXProperty();
-                }
-            };
-        private static final CssMetaData<Node,Number> SCALE_Y =
-            new CssMetaData<>("-fx-scale-y",
-                SizeConverter.getInstance(), 1.0) {
-
-                @Override
-                public boolean isSettable(Node node) {
-                    return node.nodeTransformation == null
-                        || node.nodeTransformation.scaleY == null
-                        || node.nodeTransformation.canSetScaleY();
-                }
-
-                @Override
-                public StyleableProperty<Number> getStyleableProperty(Node node) {
-                    return (StyleableProperty<Number>)node.scaleYProperty();
-                }
-            };
-        private static final CssMetaData<Node,Number> SCALE_Z =
-            new CssMetaData<>("-fx-scale-z",
-                SizeConverter.getInstance(), 1.0) {
-
-                @Override
-                public boolean isSettable(Node node) {
-                    return node.nodeTransformation == null
-                        || node.nodeTransformation.scaleZ == null
-                        || node.nodeTransformation.canSetScaleZ();
-                }
-
-                @Override
-                public StyleableProperty<Number> getStyleableProperty(Node node) {
-                    return (StyleableProperty<Number>)node.scaleZProperty();
-                }
-            };
-        private static final CssMetaData<Node,Number> TRANSLATE_X =
-            new CssMetaData<>("-fx-translate-x",
-                SizeConverter.getInstance(), 0.0) {
-
-                @Override
-                public boolean isSettable(Node node) {
-                    return node.nodeTransformation == null
-                        || node.nodeTransformation.translateX == null
-                        || node.nodeTransformation.canSetTranslateX();
-                }
-
-                @Override
-                public StyleableProperty<Number> getStyleableProperty(Node node) {
-                    return (StyleableProperty<Number>)node.translateXProperty();
-                }
-            };
-        private static final CssMetaData<Node,Number> TRANSLATE_Y =
-            new CssMetaData<>("-fx-translate-y",
-                SizeConverter.getInstance(), 0.0) {
-
-                @Override
-                public boolean isSettable(Node node) {
-                    return node.nodeTransformation == null
-                        || node.nodeTransformation.translateY == null
-                        || node.nodeTransformation.canSetTranslateY();
-                }
-
-                @Override
-                public StyleableProperty<Number> getStyleableProperty(Node node) {
-                    return (StyleableProperty<Number>)node.translateYProperty();
-                }
-            };
-        private static final CssMetaData<Node,Number> TRANSLATE_Z =
-            new CssMetaData<>("-fx-translate-z",
-                SizeConverter.getInstance(), 0.0) {
-
-                @Override
-                public boolean isSettable(Node node) {
-                    return node.nodeTransformation == null
-                        || node.nodeTransformation.translateZ == null
-                        || node.nodeTransformation.canSetTranslateZ();
-                }
-
-                @Override
-                public StyleableProperty<Number> getStyleableProperty(Node node) {
-                    return (StyleableProperty<Number>)node.translateZProperty();
-                }
-            };
-         private static final CssMetaData<Node, Number> VIEW_ORDER
-                 = new CssMetaData<>("-fx-view-order",
-                         SizeConverter.getInstance(), 0.0) {
-
-                     @Override
-                     public boolean isSettable(Node node) {
-                         return node.miscProperties == null
-                         || node.miscProperties.viewOrder == null
-                         || !node.miscProperties.viewOrder.isBound();
-                     }
-
-                     @Override
-                     public StyleableProperty<Number> getStyleableProperty(Node node) {
-                         return (StyleableProperty<Number>) node.viewOrderProperty();
-                     }
-                 };
-        private static final CssMetaData<Node,Boolean> VISIBILITY =
-            new CssMetaData<>("visibility",
-                new StyleConverter<String,Boolean>() {
-
-                    @Override
-                    // [ visible | hidden | collapse | inherit ]
-                    public Boolean convert(ParsedValue<String, Boolean> value, Font font) {
-                        final String sval = value != null ? value.getValue() : null;
-                        return "visible".equalsIgnoreCase(sval);
-                    }
-
-                },
-                Boolean.TRUE) {
-
-                @Override
-                public boolean isSettable(Node node) {
-                    return node.visible == null || !node.visible.isBound();
-                }
-
-                @Override
-                public StyleableProperty<Boolean> getStyleableProperty(Node node) {
-                    return (StyleableProperty<Boolean>)node.visibleProperty();
-                }
-            };
-        private static final CssMetaData<Node,Boolean> MANAGED =
-            new CssMetaData<>("-fx-managed",
-                    BooleanConverter.getInstance(), Boolean.TRUE) {
-
-                @Override
-                public boolean isSettable(Node node) {
-                    return node.managed == null || !node.managed.isBound();
-                }
-
-                @Override
-                public StyleableProperty<Boolean> getStyleableProperty(Node node) {
-                    return (StyleableProperty<Boolean>)node.managedProperty();
-                }
-            };
-
-         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
-
-         static {
-
-             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                     new ArrayList<>();
-             styleables.add(CURSOR);
-             styleables.add(EFFECT);
-             styleables.add(FOCUS_TRAVERSABLE);
-             styleables.add(OPACITY);
-             styleables.add(BLEND_MODE);
-             styleables.add(ROTATE);
-             styleables.add(SCALE_X);
-             styleables.add(SCALE_Y);
-             styleables.add(SCALE_Z);
-             styleables.add(VIEW_ORDER);
-             styleables.add(TRANSLATE_X);
-             styleables.add(TRANSLATE_Y);
-             styleables.add(TRANSLATE_Z);
-             styleables.add(VISIBILITY);
-             styleables.add(MANAGED);
-             STYLEABLES = Collections.unmodifiableList(styleables);
-
-         }
-    }
-
     /**
      * Gets the {@code CssMetaData} associated with this class, which may include the
      * {@code CssMetaData} of its superclasses.
@@ -9503,15 +9453,10 @@ public abstract class Node implements EventTarget, Styleable {
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
-        //
-        // Super-lazy instantiation pattern from Bill Pugh. StyleableProperties
-        // is referenced no earlier (and therefore loaded no earlier by the
-        // class loader) than the moment that  getClassCssMetaData() is called.
-        // This avoids loading the CssMetaData instances until the point at
-        // which CSS needs the data.
-        //
-        return StyleableProperties.STYLEABLES;
+        return classCssMetaData;
     }
+
+    private static final List<CssMetaData<? extends Styleable, ?>> classCssMetaData = CssMetaData.of(new Node() {});
 
     /**
      * This method should delegate to {@link Node#getClassCssMetaData()} so that
@@ -9524,8 +9469,14 @@ public abstract class Node implements EventTarget, Styleable {
 
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
-        return getClassCssMetaData();
+        if (cssMetaData == null) {
+            cssMetaData = CssMetaData.of(this);
+        }
+
+        return cssMetaData;
     }
+
+    private List<CssMetaData<? extends Styleable, ?>> cssMetaData;
 
     /*
      * @return  The Styles that match this CSS property for the given Node. The

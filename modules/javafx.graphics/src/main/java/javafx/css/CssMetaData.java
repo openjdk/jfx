@@ -27,6 +27,8 @@ package javafx.css;
 
 import java.util.Collections;
 import java.util.List;
+
+import com.sun.javafx.css.CssMetaDataCache;
 import javafx.scene.Node;
 
 /**
@@ -111,6 +113,10 @@ import javafx.scene.Node;
  * @see javafx.css.StyleablePropertyFactory
  */
 public abstract class CssMetaData<S extends Styleable, V> {
+
+    public static List<CssMetaData<? extends Styleable, ?>> of(Styleable styleable) {
+        return CssMetaDataCache.getCssMetaData(styleable);
+    }
 
     /**
      * Sets the value of the corresponding property on the given Node.
