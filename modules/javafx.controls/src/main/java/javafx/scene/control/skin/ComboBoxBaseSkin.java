@@ -260,9 +260,7 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>> {
      *                                                                         *
      **************************************************************************/
 
-    ComboBoxBaseBehavior getBehavior() {
-        return null;
-    }
+    abstract ComboBoxBaseBehavior getBehavior();
 
     void focusLost() {
         getSkinnable().hide();
