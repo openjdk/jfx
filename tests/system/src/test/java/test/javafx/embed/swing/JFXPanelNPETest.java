@@ -27,8 +27,6 @@ package test.javafx.embed.swing;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
 
@@ -52,6 +50,7 @@ public class JFXPanelNPETest implements Thread.UncaughtExceptionHandler {
     private static final CountDownLatch launchLatch = new CountDownLatch(1);
     private static CountDownLatch latch = new CountDownLatch(1);
     private static Throwable th;
+    private static JFrame frame;
 
     JFrame jframe;
 
@@ -81,15 +80,15 @@ public class JFXPanelNPETest implements Thread.UncaughtExceptionHandler {
 
     @After
     public void doCleanup() {
-        if (jframe != null) {
-            SwingUtilities.invokeLater(() -> jframe.dispose());
+        if (frame != null) {
+            SwingUtilities.invokeLater(() -> frame.dispose());
         }
     }
 
     @Test
     public void testRemoveAddJFXPanel() throws Throwable {
 
-        JFrame frame = new JFrame("FX");
+        frame = new JFrame("FX");
         final JFXPanel fxPanel = new JFXPanel();
         // fxPanel added to frame for the first time
         frame.add(fxPanel);
