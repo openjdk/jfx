@@ -228,6 +228,7 @@ public final class SelectorPartitioning {
     private static final PartitionKey WILDCARD = new PartitionKey<>("*");
 
     /* Place this selector into the partitioning map. Package accessible */
+    @SuppressWarnings("removal")
     public void partition(Selector selector) {
 
         SimpleSelector simpleSelector = null;
