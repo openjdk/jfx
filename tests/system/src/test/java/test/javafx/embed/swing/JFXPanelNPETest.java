@@ -99,12 +99,12 @@ public class JFXPanelNPETest implements Thread.UncaughtExceptionHandler {
         Platform.runLater(() -> {
             Scene scene = new Scene(new Button("Testbutton"));
             fxPanel.setScene(scene);
-                Thread.currentThread().setUncaughtExceptionHandler(this);
-                SwingUtilities.invokeLater(() -> {
-		    // fxPanel removed from frame
-		    frame.remove(fxPanel);
-		    // fxPanel added to frame again
-		    frame.add(fxPanel); // <-- leads to NullPointerException
+            Thread.currentThread().setUncaughtExceptionHandler(this);
+            SwingUtilities.invokeLater(() -> {
+                // fxPanel removed from frame
+                frame.remove(fxPanel);
+                // fxPanel added to frame again
+                frame.add(fxPanel); // <-- leads to NullPointerException
             });
         });
         latch.await(5, TimeUnit.SECONDS);
