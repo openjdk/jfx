@@ -396,6 +396,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getPixelColor
     LOG("Java_com_sun_glass_ui_mac_MacRobot__1getPixelColor");
 
     jint color = 0;
+    CGColorRef origColor = NULL;
 
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
@@ -415,12 +416,31 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getPixelColor
                     if (pixels != NULL)
                     {
                         color = *pixels;
+                        CGFloat components[4];
+                        components[0] = (CGFloat)((color & 0x00FF0000) >> 16) / 255.0;
+                        components[1] = (CGFloat)((color & 0x0000FF00) >> 8) / 255.0;
+                        components[2] = (CGFloat)((color & 0x000000FF)) / 255.0;
+                        components[3] = (CGFloat)((color & 0xFF000000) >> 24) / 255.0;
+                        origColor = CGColorCreate(CGImageGetColorSpace(screenImage), components);
                     }
                 }
                 CFRelease(data);
             }
             CGImageRelease(screenImage);
         }
+    }
+
+    if (origColor != NULL) {
+        CGColorSpaceRef sRGBSpace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+        CGColorRef correctedColor = CGColorCreateCopyByMatchingToColorSpace(sRGBSpace, kCGRenderingIntentAbsoluteColorimetric, origColor, NULL);
+        const CGFloat* components = CGColorGetComponents(correctedColor);
+        color  = ((jint)(round(components[3] * 255)) & 0xFF) << 24;
+        color |= ((jint)(round(components[0] * 255)) & 0xFF) << 16;
+        color |= ((jint)(round(components[1] * 255)) & 0xFF) << 8;
+        color |= ((jint)(round(components[2] * 255)) & 0xFF);
+        CGColorSpaceRelease(sRGBSpace);
+        CGColorRelease(correctedColor);
+        CGColorRelease(origColor);
     }
     GLASS_POOL_EXIT;
 
@@ -476,7 +496,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getScreenCapture
                 {
                     // create a graphics context around the Java int array
                     CGColorSpaceRef picColorSpace = CGColorSpaceCreateWithName(
-                            kCGColorSpaceGenericRGB);
+                            kCGColorSpaceSRGB);
                     CGContextRef jPicContextRef = CGBitmapContextCreate(
                             javaPixels,
                             pixWidth, pixHeight,
