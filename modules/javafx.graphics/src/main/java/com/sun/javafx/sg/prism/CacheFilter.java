@@ -221,7 +221,6 @@ public class CacheFilter {
         if (lastXDelta != 0 || lastYDelta != 0) {
             if (Math.abs(lastXDelta) >= cacheBounds.width || Math.abs(lastYDelta) >= cacheBounds.height ||
                     Math.rint(lastXDelta) != lastXDelta || Math.rint(lastYDelta) != lastYDelta) {
-                node.clearDirtyTree(); // Need to clear dirty (by translation) flags in the children
                 lastXDelta = lastYDelta = 0;
                 return true;
             }

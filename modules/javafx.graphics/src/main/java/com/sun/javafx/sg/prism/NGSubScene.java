@@ -106,6 +106,14 @@ public class NGSubScene extends NGNode {
     }
 
     @Override
+    public void clearDirty() {
+        super.clearDirty();
+        if (root != null) {
+            root.clearDirty();
+        }
+    }
+
+    @Override
     protected void visualsChanged() {
         renderSG = true;
         super.visualsChanged();
@@ -220,7 +228,6 @@ public class NGSubScene extends NGNode {
             applyBackgroundFillPaint(rttGraphics);
 
             root.render(rttGraphics);
-            root.clearDirtyTree();
             renderSG = false;
         }
         if (msaa) {

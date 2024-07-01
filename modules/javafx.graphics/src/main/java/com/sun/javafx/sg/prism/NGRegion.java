@@ -439,13 +439,13 @@ public class NGRegion extends NGGroup {
     }
 
     /**
-     * When cleaning the dirty tree, we also have to keep in mind
+     * When cleaning the dirty flag, we also have to keep in mind
      * the NGShape used by the NGRegion
      */
-    @Override public void clearDirtyTree() {
-        super.clearDirtyTree();
+    @Override public void clearDirty() {
+        super.clearDirty();
         if (ngShape != null) {
-            ngShape.clearDirtyTree();
+            ngShape.clearDirty();
         }
     }
 

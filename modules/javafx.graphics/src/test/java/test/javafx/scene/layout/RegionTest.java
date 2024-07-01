@@ -1241,7 +1241,7 @@ public class RegionTest {
 
         NGRegion peer = NodeHelper.getPeer(r);
         assertFalse(peer.isClean());
-        peer.clearDirtyTree();
+        peer.clearDirty();
         assertTrue(peer.isClean());
 
         lineTo.setX(200);
