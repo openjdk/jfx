@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,6 +63,10 @@ public class PopupWindowHelper extends WindowHelper {
         popupWindowAccessor.doVisibleChanged(window, visible);
     }
 
+    public static void applyStylesheetFromOwner(PopupWindow popupWindow, Window owner) {
+        popupWindowAccessor.applyStylesheetFromOwner(popupWindow, owner);
+    }
+
     public static ObservableList<Node> getContent(PopupWindow popupWindow) {
         return popupWindowAccessor.getContent(popupWindow);
     }
@@ -79,5 +83,6 @@ public class PopupWindowHelper extends WindowHelper {
         ObservableList<Node> getContent(PopupWindow popupWindow);
         void doVisibleChanging(Window window, boolean visible);
         void doVisibleChanged(Window window, boolean visible);
+        void applyStylesheetFromOwner(PopupWindow popupWindow, Window owner);
     }
 }
