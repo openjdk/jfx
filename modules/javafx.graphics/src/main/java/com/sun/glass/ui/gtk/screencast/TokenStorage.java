@@ -65,7 +65,7 @@ final class TokenStorage {
     private TokenStorage() {}
 
     private static final String REL_NAME =
-            ".java/.robot/screencast-tokens.properties";
+            ".java/robot/screencast-tokens.properties";
     private static final String REL_NAME_SECONDARY =
             ".awt/robot/screencast-tokens.properties";
 
