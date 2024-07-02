@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -104,8 +104,7 @@ public final class EventLoop {
         state = State.ACTIVE;
         stack.push(this);
         try {
-            Object ret = Application.enterNestedEventLoop();
-            assert ret == this : "Internal inconsistency - wrong EventLoop";
+            Application.enterNestedEventLoop();
             assert stack.peek() == this : "Internal inconsistency - corrupted event loops stack";
             assert state.equals(State.LEAVING) : "The event loop isn't leaving";
 
@@ -115,14 +114,13 @@ public final class EventLoop {
             state = State.IDLE;
             stack.pop();
 
-            if (!stack.isEmpty() && stack.peek().state.equals(State.LEAVING)) {
-                Application.invokeLater(() -> {
-                    EventLoop loop = stack.peek();
-                    // we might have already entered another loop, so check again
-                    if (loop != null && loop.state.equals(State.LEAVING)) {
-                        Application.leaveNestedEventLoop(loop);
-                    }
-                });
+            if (!stack.isEmpty()) {
+                EventLoop loop = stack.peek();
+                // If the next (outer) EventLoop was put into the leaving state before,
+                // we need to make sure to leave it as well.
+                if (loop != null && loop.state.equals(State.LEAVING)) {
+                    Application.leaveNestedEventLoop();
+                }
             }
         }
     }
@@ -135,7 +133,7 @@ public final class EventLoop {
      * LEAVING}.
      *
      * After calling this method and returning from the current event handler,
-     * the execusion returns to the point where the {@link #enter()} method
+     * the execution returns to the point where the {@link #enter()} method
      * was called previously. You may specify a return value for the
      * enter() method by passing the argument {@code retValue} to
      * the leave().
@@ -150,6 +148,10 @@ public final class EventLoop {
      * Note that this method must only be invoked on the main (event handling)
      * thread.
      *
+     * <p></p><b>Note:</b> The event loop is not left immediately, but in the next event cycle.
+     * When entering a new event loop right after calling this method, this event loop will wait
+     * until the new inner event loop is left as well (see also {@link #enter()}.
+     *
      * @throws RuntimeException if the current thread is not the main thread
      * @throws IllegalStateException if the nested event loop isn't ACTIVE
      */
@@ -163,8 +165,7 @@ public final class EventLoop {
         returnValue = ret;
 
         if (stack.peek() == this) {
-            Application.leaveNestedEventLoop(this);
+            Application.leaveNestedEventLoop();
         }
     }
 }
-

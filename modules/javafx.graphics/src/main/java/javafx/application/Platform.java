@@ -319,6 +319,9 @@ public final class Platform {
      * return control to the caller. If the specified nested event loop is not
      * the inner-most loop then it will not return until all other inner loops
      * also exit.
+     * <p><b>Note:</b> The nested event loop is not left immediately, but in the next event cycle.
+     * When entering a new nested event loop right after calling this method, this nested event loop will wait
+     * until the new inner nested event loop is left as well.</p>
      *
      * @param key the Object that identifies the nested event loop, which
      * must not be null

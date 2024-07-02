@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -141,13 +141,13 @@ public final class MonocleApplication extends Application {
     }
 
     @Override
-    protected Object _enterNestedEventLoop() {
-        return runnableProcessor.enterNestedEventLoop();
+    protected void _enterNestedEventLoop() {
+        runnableProcessor.enterNestedEventLoop();
     }
 
     @Override
-    protected void _leaveNestedEventLoop(Object retValue) {
-        runnableProcessor.leaveNestedEventLoop(retValue);
+    protected void _leaveNestedEventLoop() {
+        runnableProcessor.leaveNestedEventLoop();
     }
 
     @Override
@@ -350,7 +350,7 @@ public final class MonocleApplication extends Application {
     }
 
     void leaveDndEventLoop() {
-        _leaveNestedEventLoop(null);
+        _leaveNestedEventLoop();
     }
 
     @Override

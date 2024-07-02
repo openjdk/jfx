@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -319,22 +319,17 @@ final class GtkApplication extends Application implements
         }
     }
 
-    private Object eventLoopExitEnterPassValue;
-
     private native void enterNestedEventLoopImpl();
 
     private native void leaveNestedEventLoopImpl();
 
     @Override
-    protected Object _enterNestedEventLoop() {
+    protected void _enterNestedEventLoop() {
         if (invokeLaterDispatcher != null) {
             invokeLaterDispatcher.notifyEnteringNestedEventLoop();
         }
         try {
             enterNestedEventLoopImpl();
-            final Object retValue = eventLoopExitEnterPassValue;
-            eventLoopExitEnterPassValue = null;
-            return retValue;
         } finally {
             if (invokeLaterDispatcher != null) {
                 invokeLaterDispatcher.notifyLeftNestedEventLoop();
@@ -343,11 +338,10 @@ final class GtkApplication extends Application implements
     }
 
     @Override
-    protected void _leaveNestedEventLoop(Object retValue) {
+    protected void _leaveNestedEventLoop() {
         if (invokeLaterDispatcher != null) {
             invokeLaterDispatcher.notifyLeavingNestedEventLoop();
         }
-        eventLoopExitEnterPassValue = retValue;
         leaveNestedEventLoopImpl();
     }
 
