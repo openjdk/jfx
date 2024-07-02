@@ -34,7 +34,7 @@ import java.util.concurrent.CountDownLatch;
 
 public class SwingNodeJDialogTest extends SwingNodeBase {
 
-    @Test
+    @Test(timeout = 15000)
     public void testJDialogAbove() throws InterruptedException, InvocationTargetException {
         myApp.createStageAndDialog();
         myApp.showDialog();
@@ -44,7 +44,7 @@ public class SwingNodeJDialogTest extends SwingNodeBase {
         myApp.closeStageAndDialog();
     }
 
-    @Test
+    @Test(timeout = 15000)
     public void testNodeRemovalAfterShow() throws InterruptedException, InvocationTargetException {
         myApp.createStageAndDialog();
         myApp.showDialog();
@@ -58,7 +58,7 @@ public class SwingNodeJDialogTest extends SwingNodeBase {
         myApp.attachSwingNode();
     }
 
-    @Test
+    @Test(timeout = 15000)
     public void testNodeRemovalBeforeShow() throws InterruptedException, InvocationTargetException {
         myApp.createStageAndDialog();
         myApp.detachSwingNode();
@@ -70,7 +70,7 @@ public class SwingNodeJDialogTest extends SwingNodeBase {
         myApp.attachSwingNode();
     }
 
-    @Test
+    @Test(timeout = 15000)
     public void testStageCloseAfterShow() throws InvocationTargetException, InterruptedException {
         myApp.createStageAndDialog();
         myApp.showDialog();
@@ -79,7 +79,7 @@ public class SwingNodeJDialogTest extends SwingNodeBase {
         myApp.disposeDialog();
     }
 
-    @Test
+    @Test(timeout = 15000)
     public void testStageCloseBeforeShow() throws InvocationTargetException, InterruptedException {
         myApp.createStageAndDialog();
         myApp.closeStage();
@@ -89,7 +89,7 @@ public class SwingNodeJDialogTest extends SwingNodeBase {
     }
 
 
-    @Test
+    @Test(timeout = 15000)
     public void testNodeRemovalBeforeShowHoldEDT() throws InterruptedException, InvocationTargetException {
         myApp.createAndShowStage();
         CountDownLatch latch = new CountDownLatch(1);
@@ -106,7 +106,7 @@ public class SwingNodeJDialogTest extends SwingNodeBase {
         myApp.attachSwingNode();
     }
 
-    @Test
+    @Test(timeout = 15000)
     public void testStageCloseBeforeShowHoldEDT() throws InvocationTargetException, InterruptedException {
         myApp.createAndShowStage();
         CountDownLatch latch = new CountDownLatch(1);
