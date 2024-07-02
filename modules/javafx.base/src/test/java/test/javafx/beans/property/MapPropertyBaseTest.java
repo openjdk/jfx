@@ -34,11 +34,14 @@ import javafx.collections.ObservableMap;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.lang.ref.WeakReference;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.Collections;
 import java.util.HashMap;
 import javafx.beans.property.MapProperty;
 import javafx.beans.property.MapPropertyBase;
 import javafx.beans.property.SimpleMapProperty;
+import test.util.memory.JMemoryBuddy;
 
 import static test.javafx.collections.MockMapObserver.Call;
 import static org.junit.Assert.*;
@@ -783,6 +786,55 @@ public class MapPropertyBaseTest {
         v1.set(value0);
         assertEquals("MapProperty [bean: " + bean.toString() + ", name: My name, value: " + value0 + "]", v1.toString());
         assertEquals("MapProperty [name: My name, value: " + value1 + "]", v4.toString());
+    }
+
+    @Test
+    public void testBindingLeak() {
+        JMemoryBuddy.memoryTest(checker -> {
+            // given
+            MapProperty<Object, Object> listA = new SimpleMapProperty<>(FXCollections.observableHashMap());
+            MapProperty<Object, Object> listB = new SimpleMapProperty<>(FXCollections.observableHashMap());
+
+            listB.bind(listA);
+
+            // when
+            listB.unbind();
+
+            // then
+            checker.setAsReferenced(listB);
+            checker.assertCollectable(listA);
+        });
+    }
+
+    @Test
+    public void testMapPropertyLeak() {
+        JMemoryBuddy.memoryTest(checker -> {
+            ObservableMap<Object,Object> map = FXCollections.observableMap(new HashMap<Object,Object>());
+            MapProperty<Object, Object> mapProperty = new SimpleMapProperty<>(map);
+
+            checker.setAsReferenced(map);
+            checker.assertCollectable(mapProperty);
+        });
+    }
+
+
+    @Test
+    public void testMapBindingPrematureCollection() {
+        MapProperty<Object, Object> mapB = new SimpleMapProperty<>(FXCollections.observableMap(new HashMap<Object,Object>()));
+        AtomicReference<WeakReference<MapProperty<Object, Object>>> mapAW = new AtomicReference<>(null);
+
+        JMemoryBuddy.memoryTest( checker -> {
+            MapProperty<Object, Object> mapA = new SimpleMapProperty<>(FXCollections.observableMap(new HashMap<Object,Object>()));
+            mapAW.set(new WeakReference<>(mapA));
+            mapB.bind(mapA);
+            // Ensure that the map we are binding to still remains
+            checker.setAsReferenced(mapB);
+            checker.assertNotCollectable(mapA);
+        });
+
+        // ensure that the Binding still works after GC triggered by JMemoryBuddy
+        mapAW.get().get().put(1,1);
+        assertEquals("Binding stopped working after GC", 1, mapB.getValue().get(1));
     }
 
     private static class MapPropertyMock extends MapPropertyBase<Object, Object> {

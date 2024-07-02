@@ -51,15 +51,10 @@ import javafx.collections.ObservableList;
  */
 public abstract class ListPropertyBase<E> extends ListProperty<E> {
 
-    private final ListChangeListener<E> listChangeListener = change -> {
-        invalidateProperties();
-        invalidated();
-        fireValueChangedEvent(change);
-    };
+    private final Listener<E> listener = new Listener<>(this);
 
     private ObservableList<E> value;
     private ObservableValue<? extends ObservableList<E>> observable = null;
-    private InvalidationListener listener = null;
     private boolean valid = true;
     private ListExpressionHelper<E> helper = null;
 
@@ -80,7 +75,7 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
     public ListPropertyBase(ObservableList<E> initialValue) {
         this.value = initialValue;
         if (initialValue != null) {
-            initialValue.addListener(listChangeListener);
+            initialValue.addListener((ListChangeListener) listener);
         }
     }
 
@@ -215,7 +210,7 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
     private void markInvalid(ObservableList<E> oldValue) {
         if (valid) {
             if (oldValue != null) {
-                oldValue.removeListener(listChangeListener);
+                oldValue.removeListener((ListChangeListener) listener);
             }
             valid = false;
             invalidateProperties();
@@ -242,7 +237,7 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
             value = observable == null ? value : observable.getValue();
             valid = true;
             if (value != null) {
-                value.addListener(listChangeListener);
+                value.addListener((ListChangeListener) listener);
             }
         }
         return value;
@@ -275,10 +270,7 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
         if (newObservable != observable) {
             unbind();
             observable = newObservable;
-            if (listener == null) {
-                listener = new Listener<>(this);
-            }
-            observable.addListener(listener);
+            observable.addListener((InvalidationListener) listener);
             markInvalid(value);
         }
     }
@@ -321,17 +313,20 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
         return result.toString();
     }
 
-    private static class Listener<E> implements InvalidationListener, WeakListener {
+    private static class Listener<E> extends WeakReference<ListPropertyBase<E>> implements InvalidationListener, ListChangeListener<E>, WeakListener {
 
-        private final WeakReference<ListPropertyBase<E>> wref;
+        Listener(ListPropertyBase<E> ref) {
+            super(ref);
+        }
 
-        public Listener(ListPropertyBase<E> ref) {
-            this.wref = new WeakReference<>(ref);
+        @Override
+        public boolean wasGarbageCollected() {
+            return get() == null;
         }
 
         @Override
         public void invalidated(Observable observable) {
-            ListPropertyBase<E> ref = wref.get();
+            ListPropertyBase<E> ref = get();
             if (ref == null) {
                 observable.removeListener(this);
             } else {
@@ -340,8 +335,13 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
         }
 
         @Override
-        public boolean wasGarbageCollected() {
-            return wref.get() == null;
+        public void onChanged(Change<? extends E> change) {
+            ListPropertyBase<E> ref = get();
+            if (ref != null) {
+                ref.invalidateProperties();
+                ref.invalidated();
+                ref.fireValueChangedEvent(change);
+            }
         }
     }
 }

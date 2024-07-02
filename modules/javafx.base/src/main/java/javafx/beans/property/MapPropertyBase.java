@@ -51,15 +51,10 @@ import javafx.collections.*;
  */
 public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
 
-    private final MapChangeListener<K, V> mapChangeListener = change -> {
-        invalidateProperties();
-        invalidated();
-        fireValueChangedEvent(change);
-    };
+    private final Listener<K, V> listener = new Listener<>(this);
 
     private ObservableMap<K, V> value;
     private ObservableValue<? extends ObservableMap<K, V>> observable = null;
-    private InvalidationListener listener = null;
     private boolean valid = true;
     private MapExpressionHelper<K, V> helper = null;
 
@@ -80,7 +75,7 @@ public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
     public MapPropertyBase(ObservableMap<K, V> initialValue) {
         this.value = initialValue;
         if (initialValue != null) {
-            initialValue.addListener(mapChangeListener);
+            initialValue.addListener((MapChangeListener) listener);
         }
     }
 
@@ -215,7 +210,7 @@ public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
     private void markInvalid(ObservableMap<K, V> oldValue) {
         if (valid) {
             if (oldValue != null) {
-                oldValue.removeListener(mapChangeListener);
+                oldValue.removeListener((MapChangeListener) listener);
             }
             valid = false;
             invalidateProperties();
@@ -242,7 +237,7 @@ public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
             value = observable == null ? value : observable.getValue();
             valid = true;
             if (value != null) {
-                value.addListener(mapChangeListener);
+                value.addListener((MapChangeListener) listener);
             }
         }
         return value;
@@ -274,10 +269,7 @@ public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
         if (newObservable != observable) {
             unbind();
             observable = newObservable;
-            if (listener == null) {
-                listener = new Listener<>(this);
-            }
-            observable.addListener(listener);
+            observable.addListener((InvalidationListener) listener);
             markInvalid(value);
         }
     }
@@ -320,17 +312,20 @@ public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
         return result.toString();
     }
 
-    private static class Listener<K,V> implements InvalidationListener, WeakListener {
+    private static class Listener<K,V> extends WeakReference<MapPropertyBase<K,V>> implements InvalidationListener, MapChangeListener<K,V>, WeakListener {
 
-        private final WeakReference<MapPropertyBase<K,V>> wref;
+        Listener(MapPropertyBase<K,V> ref) {
+            super(ref);
+        }
 
-        public Listener(MapPropertyBase<K,V> ref) {
-            this.wref = new WeakReference<>(ref);
+        @Override
+        public boolean wasGarbageCollected() {
+            return get() == null;
         }
 
         @Override
         public void invalidated(Observable observable) {
-            MapPropertyBase<K,V> ref = wref.get();
+            MapPropertyBase<K,V> ref = get();
             if (ref == null) {
                 observable.removeListener(this);
             } else {
@@ -339,8 +334,13 @@ public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
         }
 
         @Override
-        public boolean wasGarbageCollected() {
-            return wref.get() == null;
+        public void onChanged(Change<? extends K, ? extends V> change) {
+            MapPropertyBase<K,V> ref = get();
+            if (ref != null) {
+                ref.invalidateProperties();
+                ref.invalidated();
+                ref.fireValueChangedEvent(change);
+            }
         }
     }
 }

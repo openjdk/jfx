@@ -42,6 +42,9 @@ import javafx.beans.property.ListProperty;
 import javafx.beans.property.ListPropertyBase;
 import javafx.beans.property.SimpleListProperty;
 import test.javafx.collections.Person;
+import test.util.memory.JMemoryBuddy;
+import java.lang.ref.WeakReference;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
 
@@ -813,6 +816,55 @@ public class ListPropertyBaseTest {
         assertEquals("ListProperty [bean: " + bean.toString() + ", name: My name, value: " + value0 + "]", v1.toString());
         assertEquals("ListProperty [name: My name, value: " + value1 + "]", v4.toString());
     }
+
+    @Test
+    public void testBindingLeak() {
+        JMemoryBuddy.memoryTest(checker -> {
+            // given
+            ListProperty<Object> listA = new SimpleListProperty<>(FXCollections.observableArrayList());
+            ListProperty<Object> listB = new SimpleListProperty<>(FXCollections.observableArrayList());
+
+            listB.bind(listA);
+
+            // when
+            listB.unbind();
+
+            // then
+            checker.setAsReferenced(listB);
+            checker.assertCollectable(listA);
+        });
+    }
+
+    @Test
+    public void testListPropertyLeak() {
+        JMemoryBuddy.memoryTest(checker -> {
+            ObservableList<Object> list = FXCollections.observableArrayList();
+            ListProperty<Object> listProperty = new SimpleListProperty<>(list);
+
+            checker.setAsReferenced(list);
+            checker.assertCollectable(listProperty);
+        });
+    }
+
+    @Test
+    public void testListBindingPrematureCollection() {
+        ListProperty<Object> listB = new SimpleListProperty<>(FXCollections.observableArrayList());
+        AtomicReference<WeakReference<ListProperty<Object>>> listAW = new AtomicReference<>(null);
+
+        JMemoryBuddy.memoryTest( checker -> {
+            ListProperty<Object> listA = new SimpleListProperty<>(FXCollections.observableArrayList());
+            listAW.set(new WeakReference<>(listA));
+            listB.bind(listA);
+            // Ensure that the list we are binding to still remains
+            checker.setAsReferenced(listB);
+            checker.assertNotCollectable(listA);
+        });
+
+        // ensure that the Binding still works after GC triggered by JMemoryBuddy
+        listAW.get().get().setAll(1);
+        assertEquals("Binding stopped working after GC", 1, listB.getValue().get(0));
+    }
+
 
     private static class ListPropertyMock extends ListPropertyBase<Object> {
 

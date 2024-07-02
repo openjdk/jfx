@@ -26,6 +26,9 @@
 package test.javafx.beans.property;
 
 import test.javafx.collections.MockSetObserver;
+import java.lang.ref.WeakReference;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.HashSet;
 import javafx.beans.property.SetProperty;
 import javafx.beans.property.SetPropertyBase;
 import javafx.beans.property.SimpleSetProperty;
@@ -38,6 +41,8 @@ import org.junit.Test;
 
 import static test.javafx.collections.MockSetObserver.Call;
 import test.javafx.collections.MockSetObserver.Tuple;
+import test.util.memory.JMemoryBuddy;
+
 import static org.junit.Assert.*;
 
 public class SetPropertyBaseTest {
@@ -717,6 +722,55 @@ public class SetPropertyBaseTest {
         v1.set(value0);
         assertEquals("SetProperty [bean: " + bean.toString() + ", name: My name, value: " + value0 + "]", v1.toString());
         assertEquals("SetProperty [name: My name, value: " + value1 + "]", v4.toString());
+    }
+
+    @Test
+    public void testBindingLeak() {
+        JMemoryBuddy.memoryTest(checker -> {
+            // given
+            SetProperty<Object> listA = new SimpleSetProperty<>(FXCollections.observableSet(new HashSet()));
+            SetProperty<Object> listB = new SimpleSetProperty<>(FXCollections.observableSet(new HashSet()));
+
+            listB.bind(listA);
+
+            // when
+            listB.unbind();
+
+            // then
+            checker.setAsReferenced(listB);
+            checker.assertCollectable(listA);
+        });
+    }
+
+    @Test
+    public void testSetPropertyLeak() {
+        JMemoryBuddy.memoryTest(checker -> {
+            ObservableSet<Object> set = FXCollections.observableSet();
+            SetProperty<Object> setProperty = new SimpleSetProperty<>(set);
+
+            checker.setAsReferenced(set);
+            checker.assertCollectable(setProperty);
+        });
+    }
+
+
+    @Test
+    public void testSetBindingPrematureCollection() {
+        SetProperty<Object> setB = new SimpleSetProperty<>(FXCollections.observableSet());
+        AtomicReference<WeakReference<SetProperty<Object>>> setAW = new AtomicReference<>(null);
+
+        JMemoryBuddy.memoryTest( checker -> {
+            SetProperty<Object> setA = new SimpleSetProperty<>(FXCollections.observableSet());
+            setAW.set(new WeakReference<>(setA));
+            setB.bind(setA);
+            // Ensure that the set we are binding to still remains
+            checker.setAsReferenced(setB);
+            checker.assertNotCollectable(setA);
+        });
+
+        // ensure that the Binding still works after GC triggered by JMemoryBuddy
+        setAW.get().get().add(1);
+        assertTrue("Binding stopped working after GC", setB.contains(1));
     }
 
     private static class SetPropertyMock extends SetPropertyBase<Object> {
