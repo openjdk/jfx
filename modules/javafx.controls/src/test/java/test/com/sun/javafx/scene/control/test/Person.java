@@ -40,6 +40,10 @@ public class Person {
     private final SimpleStringProperty email;
     private final ReadOnlyIntegerWrapper age;
 
+    public Person(String fName) {
+        this(fName, 0);
+    }
+
     public Person(String fName, int age) {
         this(fName, null, null, age);
     }

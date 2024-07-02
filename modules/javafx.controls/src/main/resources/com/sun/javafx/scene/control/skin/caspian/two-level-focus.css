@@ -96,10 +96,10 @@
  * ListView, TableView                                                         *
  *                                                                             *
  ******************************************************************************/
-.list-view:focused:external-focus > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected,
-.table-view:focused:external-focus > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected,
-.table-view:focused:external-focus > .virtual-flow > .clipped-container > .sheet > .table-row-cell > .table-cell:selected,
-.table-view:row-selection:focused:external-focus > .virtual-flow > .clipped-container > .sheet > .table-row-cell:selected:filled {
+.list-view:focused:external-focus > .virtual-flow > .viewport > .clipped-container > .sheet > .list-cell:filled:selected,
+.table-view:focused:external-focus > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell:filled:selected,
+.table-view:focused:external-focus > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell > .table-cell:selected,
+.table-view:row-selection:focused:external-focus > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell:selected:filled {
     -fx-background-color: lightgray;
     -fx-background: -fx-control-inner-background;
     -fx-text-fill: -fx-text-inner-color;

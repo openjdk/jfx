@@ -45,6 +45,7 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.shape.Circle;
 
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.javafx.scene.control.SkinStub;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.HBox;
@@ -1971,6 +1972,44 @@ assertEquals(0, firstCell.getIndex());
         flow.scrollPixels(0.01);
 
         assertEquals(0.0, cell1.getLayoutY(), 0);
+    }
+
+    @Test
+    public void testScrollingXIsSnapped() {
+        StageLoader loader = new StageLoader(flow);
+        flow.resize(50, flow.getHeight());
+
+        pulse();
+
+        double newValue = 25.125476811;
+        double snappedNewValue = flow.snapPositionX(newValue);
+        flow.shim_getHbar().setValue(newValue);
+
+        double layoutX = flow.get_clipView().getLayoutX();
+
+        assertEquals(-snappedNewValue, layoutX, 0.0);
+
+        loader.dispose();
+    }
+
+    @Test
+    public void testScrollingYIsSnapped() {
+        flow.setVertical(false);
+
+        StageLoader loader = new StageLoader(flow);
+        flow.resize(50, flow.getHeight());
+
+        pulse();
+
+        double newValue = 25.125476811;
+        double snappedNewValue = flow.snapPositionY(newValue);
+        flow.shim_getVbar().setValue(newValue);
+
+        double layoutY = flow.get_clipView().getLayoutY();
+
+        assertEquals(-snappedNewValue, layoutY, 0.0);
+
+        loader.dispose();
     }
 
 }

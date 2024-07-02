@@ -31,6 +31,7 @@ import javafx.scene.Node;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.Skin;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 
 public class VirtualFlowShim<T extends IndexedCell> extends VirtualFlow<T> {
@@ -84,7 +85,7 @@ public class VirtualFlowShim<T extends IndexedCell> extends VirtualFlow<T> {
         return super.computeCurrentIndex();
     }
 
-    public ClippedContainer get_clipView() {
+    public Region get_clipView() {
         return super.clipView;
     }
 
