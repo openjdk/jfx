@@ -28,7 +28,7 @@ package javafx.beans.property;
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 
-import com.sun.javafx.binding.ExpressionHelper;
+import com.sun.javafx.binding.OldValueCachingListenerManager;
 
 /**
  * Base class for all readonly properties wrapping an {@code int}. This class provides a default
@@ -38,8 +38,20 @@ import com.sun.javafx.binding.ExpressionHelper;
  * @since JavaFX 2.0
  */
 public abstract class ReadOnlyIntegerPropertyBase extends ReadOnlyIntegerProperty {
+    private static final OldValueCachingListenerManager<Number, ReadOnlyIntegerPropertyBase> LISTENER_MANAGER =
+        new OldValueCachingListenerManager<>() {
+            @Override
+            protected Object getData(ReadOnlyIntegerPropertyBase instance) {
+                return instance.listenerData;
+            }
 
-    ExpressionHelper<Number> helper;
+            @Override
+            protected void setData(ReadOnlyIntegerPropertyBase instance, Object data) {
+                instance.listenerData = data;
+            }
+        };
+
+    Object listenerData;
 
     /**
      * Creates a default {@code ReadOnlyIntegerPropertyBase}.
@@ -49,22 +61,22 @@ public abstract class ReadOnlyIntegerPropertyBase extends ReadOnlyIntegerPropert
 
     @Override
     public void addListener(InvalidationListener listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        LISTENER_MANAGER.addListener(this, listener);
     }
 
     @Override
     public void removeListener(InvalidationListener listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     @Override
     public void addListener(ChangeListener<? super Number> listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        LISTENER_MANAGER.addListener(this, listener);
     }
 
     @Override
     public void removeListener(ChangeListener<? super Number> listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     /**
@@ -75,7 +87,7 @@ public abstract class ReadOnlyIntegerPropertyBase extends ReadOnlyIntegerPropert
      * This method needs to be called, if the value of this property changes.
      */
     protected void fireValueChangedEvent() {
-        ExpressionHelper.fireValueChangedEvent(helper);
+        LISTENER_MANAGER.fireValueChanged(this);
     }
 
 }

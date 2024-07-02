@@ -32,7 +32,8 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.ObservableValue;
 
-import com.sun.javafx.binding.ExpressionHelper;
+import com.sun.javafx.binding.OldValueCachingListenerManager;
+
 import java.lang.ref.WeakReference;
 import javafx.beans.WeakListener;
 
@@ -49,11 +50,23 @@ import javafx.beans.WeakListener;
  */
 public abstract class BooleanPropertyBase extends BooleanProperty {
 
+    private static final OldValueCachingListenerManager<Boolean, BooleanPropertyBase> LISTENER_MANAGER = new OldValueCachingListenerManager<>() {
+        @Override
+        protected Object getData(BooleanPropertyBase instance) {
+            return instance.listenerData;
+        }
+
+        @Override
+        protected void setData(BooleanPropertyBase instance, Object data) {
+            instance.listenerData = data;
+        }
+    };
+
     private boolean value;
     private ObservableBooleanValue observable = null;
     private InvalidationListener listener = null;
     private boolean valid = true;
-    private ExpressionHelper<Boolean> helper = null;
+    private Object listenerData;
 
     /**
      * The constructor of the {@code BooleanPropertyBase}.
@@ -73,22 +86,22 @@ public abstract class BooleanPropertyBase extends BooleanProperty {
 
     @Override
     public void addListener(InvalidationListener listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        LISTENER_MANAGER.addListener(this, listener);
     }
 
     @Override
     public void removeListener(InvalidationListener listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     @Override
     public void addListener(ChangeListener<? super Boolean> listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        LISTENER_MANAGER.addListener(this, listener);
     }
 
     @Override
     public void removeListener(ChangeListener<? super Boolean> listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     /**
@@ -101,7 +114,7 @@ public abstract class BooleanPropertyBase extends BooleanProperty {
      * binding becomes invalid.
      */
     protected void fireValueChangedEvent() {
-        ExpressionHelper.fireValueChangedEvent(helper);
+        LISTENER_MANAGER.fireValueChanged(this);
     }
 
     private void markInvalid() {
