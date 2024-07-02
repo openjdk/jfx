@@ -125,6 +125,11 @@ final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
     }
 
     @Override
+    public void setTitleBarHeight(int height) {
+        // This is a no-op for embedded stages
+    }
+
+    @Override
     protected void setPlatformEnabled(boolean enabled) {
         super.setPlatformEnabled(enabled);
         host.setEnabled(enabled);

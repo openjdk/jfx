@@ -32,7 +32,7 @@
 
 class GlassWindow : public BaseWnd, public ViewContainer {
 public:
-    GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated, bool isUnified, HWND parentOrOwner);
+    GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated, bool isUnified, bool isCombined, HWND parentOrOwner);
     virtual ~GlassWindow();
 
     static GlassWindow* FromHandle(HWND hWnd) {
@@ -46,6 +46,9 @@ public:
     void setMaxSize(long width, long height);
     POINT getMinSize() { return m_minSize; }
     POINT getMaxSize() { return m_maxSize; }
+
+    void SetTitleBarHeight(long height);
+    void UpdateTitleBarInsets();
 
     HMONITOR GetMonitor();
     void SetMonitor(HMONITOR hMonitor);
@@ -129,6 +132,8 @@ private:
     POINT m_minSize;
     POINT m_maxSize;
 
+    LONG  m_titleBarHeight;
+
     HMONITOR m_hMonitor;
 
     bool m_isFocusable;
@@ -144,6 +149,7 @@ private:
     const bool m_isTransparent;
     const bool m_isDecorated;
     const bool m_isUnified;
+    const bool m_isCombined;
 
     bool m_isResizable;
 

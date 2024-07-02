@@ -1238,6 +1238,8 @@ public final class QuantumToolkit extends Toolkit {
                 return Application.GetApplication().supportsTransparentWindows();
             case UNIFIED_WINDOW:
                 return Application.GetApplication().supportsUnifiedWindows();
+            case COMBINED_WINDOW:
+                return Application.GetApplication().supportsCombinedWindows();
             case TWO_LEVEL_FOCUS:
                 return Application.GetApplication().hasTwoLevelFocus();
             case VIRTUAL_KEYBOARD:

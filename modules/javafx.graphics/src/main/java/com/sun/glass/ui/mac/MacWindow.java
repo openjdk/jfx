@@ -90,6 +90,7 @@ final class MacWindow extends Window {
     @Override native protected void _setEnabled(long ptr, boolean enabled);
     @Override native protected boolean _setMinimumSize(long ptr, int width, int height);
     @Override native protected boolean _setMaximumSize(long ptr, int width, int height);
+    @Override native protected boolean _setTitleBarHeight(long ptr, int height);
 
     private ByteBuffer iconBuffer;
 
@@ -131,6 +132,13 @@ final class MacWindow extends Window {
                             : WindowEvent.RESTORE);
         }
         notifyMove(x, y);
+    }
+
+    @Override
+    protected void notifyTitleBarInsetsChanged(int left, int right) {
+        left  = Math.round( left * getPlatformScaleX());
+        right = Math.round(right * getPlatformScaleY());
+        super.notifyTitleBarInsetsChanged(left, right);
     }
 
     @Override

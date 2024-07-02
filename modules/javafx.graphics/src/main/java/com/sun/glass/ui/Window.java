@@ -74,6 +74,12 @@ public abstract class Window {
          */
         public void handleLevelEvent(int level) {
         }
+
+        /**
+         * Notifies the listener that the title bar insets have changed.
+         */
+        public void handleTitleBarInsetsChangedEvent(int left, int right) {
+        }
     }
 
     // Native object handle (HWND, or NSWindow*, etc.)
@@ -164,6 +170,13 @@ public abstract class Window {
      */
     @Native public static final int MODAL = 1 << 9;
 
+      /**
+     * Indicates that a window will have a client area that is combined with the title area.
+     * This is not supported on all platforms, the client should check if the feature is supported by using
+     * {@link com.sun.glass.ui.Application#supportsCombinedWindows()}
+     */
+    @Native public static final int COMBINED = 1 << 10;
+
     final static public class State {
         @Native public static final int NORMAL = 1;
         @Native public static final int MINIMIZED = 2;
@@ -231,6 +244,9 @@ public abstract class Window {
 
     private int minimumWidth = 0, minimumHeight = 0;
     private int maximumWidth = Integer.MAX_VALUE, maximumHeight = Integer.MAX_VALUE;
+    private int titleBarHeight = 0;
+    private int leftTitleBarInset = 0;
+    private int rightTitleBarInset = 0;
 
     private EventHandler eventHandler;
 
@@ -259,11 +275,15 @@ public abstract class Window {
            styleMask &= ~UNIFIED;
         }
 
+        if (((styleMask & COMBINED) != 0)
+                && !Application.GetApplication().supportsCombinedWindows()) {
+           styleMask &= ~COMBINED;
+        }
+
         if (((styleMask & TRANSPARENT) != 0)
                 && !Application.GetApplication().supportsTransparentWindows()) {
             styleMask &= ~TRANSPARENT;
         }
-
 
         this.owner = owner;
         this.styleMask = styleMask;
@@ -674,6 +694,11 @@ public abstract class Window {
         return (this.styleMask & Window.UNIFIED) != 0;
     }
 
+    public boolean isCombinedWindow() {
+        //The COMBINED flag is set only if it is supported
+        return (this.styleMask & Window.COMBINED) != 0;
+    }
+
     public boolean isTransparentWindow() {
         //The TRANSPARENT flag is set only if it is supported
         return (this.styleMask & Window.TRANSPARENT) != 0;
@@ -1048,6 +1073,32 @@ public abstract class Window {
         }
     }
 
+    protected boolean _setTitleBarHeight(long ptr, int height) {
+        return false;
+    }
+
+    /**
+     * Sets the height of the title bar for this window.
+     *
+     * @throws IllegalArgumentException if height < 0
+     */
+    public void setTitleBarHeight(final int height) {
+        Application.checkEventThread();
+        if (height < 0) {
+            throw new IllegalArgumentException("The title bar height must be >= 0. Got: height=" + height);
+        }
+        checkNotClosed();
+        if (this.titleBarHeight != height) {
+            if (_setTitleBarHeight(this.ptr, height)) {
+                this.titleBarHeight = height;
+            }
+        }
+    }
+
+    public int getTitleBarHeight() {
+        Application.checkEventThread();
+        return this.titleBarHeight;
+    }
 
     protected abstract void _setIcon(long ptr, Pixels pixels);
 
@@ -1388,6 +1439,14 @@ public abstract class Window {
         this.level = level;
         if (this.eventHandler != null) {
             this.eventHandler.handleLevelEvent(level);
+        }
+    }
+
+    protected void notifyTitleBarInsetsChanged(int left, int right) {
+        this.leftTitleBarInset = left;
+        this.rightTitleBarInset = right;
+        if (this.eventHandler != null) {
+            this.eventHandler.handleTitleBarInsetsChangedEvent(left, right);
         }
     }
 

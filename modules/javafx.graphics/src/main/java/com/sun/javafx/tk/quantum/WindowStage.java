@@ -156,8 +156,12 @@ public class WindowStage extends GlassStage {
             } else {
                 switch (style) {
                     case UNIFIED:
-                        if (app.supportsUnifiedWindows()) {
+                    case COMBINED:
+                        if (style == StageStyle.UNIFIED && app.supportsUnifiedWindows()) {
                             windowMask |= Window.UNIFIED;
+                        }
+                        if (style == StageStyle.COMBINED && app.supportsCombinedWindows()) {
+                            windowMask |= Window.COMBINED;
                         }
                         // fall through
                     case DECORATED:
@@ -350,6 +354,11 @@ public class WindowStage extends GlassStage {
         maxWidth  = (int) Math.ceil(maxWidth  * getPlatformScaleX());
         maxHeight = (int) Math.ceil(maxHeight * getPlatformScaleY());
         platformWindow.setMaximumSize(maxWidth, maxHeight);
+    }
+
+    @Override public void setTitleBarHeight(int height) {
+        height = (int) Math.ceil(height * getPlatformScaleY());
+        platformWindow.setTitleBarHeight(height);
     }
 
     static Image findBestImage(java.util.List icons, int width, int height) {

@@ -175,6 +175,10 @@ public class StubStage implements TKStage {
     }
 
     @Override
+    public void setTitleBarHeight(int height) {
+    }
+
+    @Override
     public void setVisible(boolean visible) {
         this.visible = visible;
 
@@ -370,6 +374,10 @@ public class StubStage implements TKStage {
             process(listener1 -> listener1.changedAlwaysOnTop(alwaysOnTop));
         }
 
+        @Override
+        public void changedTitleBarInsets(float left, float right) {
+            process(listener1 -> listener1.changedTitleBarInsets(left, right));
+        }
 
         @Override
         public void changedResizable(final boolean resizable) {

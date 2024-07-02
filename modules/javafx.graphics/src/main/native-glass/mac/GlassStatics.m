@@ -59,12 +59,14 @@ jmethodID jWindowNotifyFocusUngrab = NULL;
 jmethodID jWindowNotifyFocusDisabled = NULL;
 jmethodID jWindowNotifyDestroy = NULL;
 jmethodID jWindowNotifyDelegatePtr = NULL;
+jmethodID jWindowNotifyTitleBarInsetsChangedPtr = NULL;
 
 jmethodID jViewNotifyEvent = NULL;
 jmethodID jViewNotifyRepaint = NULL;
 jmethodID jViewNotifyResize = NULL;
 jmethodID jViewNotifyKey = NULL;
 jmethodID jViewNotifyMouse = NULL;
+jmethodID jViewHitTest = NULL;
 jmethodID jViewNotifyMenu = NULL;
 jmethodID jViewNotifyInputMethod = NULL;
 jmethodID jViewNotifyInputMethodMac = NULL;
