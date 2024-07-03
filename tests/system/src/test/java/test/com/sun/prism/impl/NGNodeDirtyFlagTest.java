@@ -7,7 +7,6 @@ import javafx.scene.robot.Robot;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -34,6 +33,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import test.util.Util;
 
 import static org.junit.Assert.assertEquals;
@@ -45,8 +45,6 @@ public class NGNodeDirtyFlagTest {
 
     // Singleton Application instance
     static MyApp myApp;
-
-    private CountDownLatch latch = new CountDownLatch(1);
 
     public static class MyApp extends Application {
 
@@ -65,6 +63,8 @@ public class NGNodeDirtyFlagTest {
         public void start(Stage primaryStage) throws Exception {
             root = new StackPane();
             primaryStage.setScene(new Scene(root, 500, 400));
+            primaryStage.setAlwaysOnTop(true);
+            primaryStage.initStyle(StageStyle.UNDECORATED);
 
             primaryStage.setOnShown(e -> Platform.runLater(launchLatch::countDown));
             primaryStage.show();
@@ -118,7 +118,6 @@ public class NGNodeDirtyFlagTest {
 
             checkLineColor(root, lineColor.get());
         }
-
     }
 
     private void checkLineColor(StackPane root, Color expected) {
