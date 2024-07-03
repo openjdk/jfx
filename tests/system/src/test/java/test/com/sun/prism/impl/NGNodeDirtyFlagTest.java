@@ -8,9 +8,8 @@ import javafx.scene.robot.Robot;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-
+import com.sun.javafx.tk.RenderJob;
+import com.sun.javafx.tk.Toolkit;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -109,6 +108,7 @@ public class NGNodeDirtyFlagTest {
             Util.runAndWait(() -> circleColor.set(Color.LIGHTGREEN));
             Util.waitForIdle(root.getScene());
 
+            waitForRenderer();
             checkLineColor(root, lineColor.get());
 
             Util.runAndWait(() -> lineColor.set(Color.DARKGREEN));
@@ -116,8 +116,15 @@ public class NGNodeDirtyFlagTest {
             Util.runAndWait(() -> circleColor.set(Color.DARKGREEN));
             Util.waitForIdle(root.getScene());
 
+            waitForRenderer();
             checkLineColor(root, lineColor.get());
         }
+    }
+
+    private  void waitForRenderer() {
+        CountDownLatch latch = new CountDownLatch(1);
+        Platform.runLater(() -> Toolkit.getToolkit().addRenderJob(new RenderJob(latch::countDown)));
+        Util.await(latch);
     }
 
     private void checkLineColor(StackPane root, Color expected) {
