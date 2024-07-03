@@ -23,94 +23,51 @@
  * questions.
  */
 
-package test.com.sun.prism.impl;
+package test.robot.com.sun.prism;
 
-import javafx.application.Application;
-import javafx.geometry.Bounds;
-import javafx.scene.image.WritableImage;
-import javafx.scene.robot.Robot;
-
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-import java.util.concurrent.CountDownLatch;
 import com.sun.javafx.tk.RenderJob;
 import com.sun.javafx.tk.Toolkit;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import java.util.concurrent.CountDownLatch;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
+import javafx.scene.image.WritableImage;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.robot.Robot;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import javafx.stage.Stage;
-import javafx.stage.StageStyle;
+import org.junit.Test;
+import test.robot.testharness.VisualTestBase;
 import test.util.Util;
 
-import static org.junit.Assert.assertEquals;
+public class NGNodeDirtyFlagTest extends VisualTestBase {
 
-public class NGNodeDirtyFlagTest {
-
-    // Used to launch the application before running any test
-    private static final CountDownLatch launchLatch = new CountDownLatch(1);
-
-    // Singleton Application instance
-    static MyApp myApp;
-
-    public static class MyApp extends Application {
-
-        private StackPane root;
-
-        public MyApp() {
-            super();
-        }
-
-        @Override
-        public void init() {
-            myApp = this;
-        }
-
-        @Override
-        public void start(Stage primaryStage) throws Exception {
-            root = new StackPane();
-            primaryStage.setScene(new Scene(root, 500, 400));
-            primaryStage.setAlwaysOnTop(true);
-            primaryStage.initStyle(StageStyle.UNDECORATED);
-
-            primaryStage.setOnShown(e -> Platform.runLater(launchLatch::countDown));
-            primaryStage.show();
-        }
-    }
-
-    @BeforeClass
-    public static void setupOnce() {
-        Util.launch(launchLatch, MyApp.class);
-    }
-
-    @AfterClass
-    public static void teardownOnce() {
-        Util.shutdown();
-    }
+    private static final double TOLERANCE = 0.07;
 
     @Test
     public void testNGNodesNotDirty() throws InterruptedException {
+        StackPane root = new StackPane();
+
+        Util.runAndWait(() -> {
+            Stage stage = getStage();
+            stage.setScene(new Scene(root, 500, 400));
+            stage.show();
+        });
+
         ObjectProperty<Color> lineColor = new SimpleObjectProperty<>(Color.DARKGREEN);
         ObjectProperty<Color> circleColor = new SimpleObjectProperty<>(Color.DARKGREEN);
-
-        StackPane root = myApp.root;
 
         Util.runAndWait(() -> {
             var contents = new HBox();
@@ -146,7 +103,7 @@ public class NGNodeDirtyFlagTest {
         }
     }
 
-    private  void waitForRenderer() {
+    private void waitForRenderer() {
         CountDownLatch latch = new CountDownLatch(1);
         Platform.runLater(() -> Toolkit.getToolkit().addRenderJob(new RenderJob(latch::countDown)));
         Util.await(latch);
@@ -163,22 +120,7 @@ public class NGNodeDirtyFlagTest {
         Robot robot = new Robot();
         Bounds screenBounds = node.localToScreen(node.getBoundsInLocal());
         WritableImage image = robot.getScreenCapture(null, screenBounds.getMinX(), screenBounds.getMinY(), 100, 100);
-        Assert.assertEquals("A node was not rendered properly. Wrong color found", name(expected), name(image.getPixelReader().getColor(1, 1)));
-    }
-
-    private String name(Color color) {
-        for (Field field : Color.class.getFields()) {
-            if (field.getType().isAssignableFrom(Color.class) && (field.getModifiers() & Modifier.STATIC) != 0) {
-                try {
-                    Color c = (Color) field.get(null);
-                    if (c.getRed() == color.getRed() && c.getGreen() == color.getGreen() && c.getBlue() == color.getBlue() && c.getOpacity() == color.getOpacity()) {
-                        return field.getName();
-                    }
-                } catch (IllegalAccessException e) {
-                }
-            }
-        }
-        return color.toString();
+        assertColorEquals(expected, image.getPixelReader().getColor(1, 1), TOLERANCE);
     }
 
     private Pane contentElement(String id, ObjectProperty<Color> lineColor, ObjectProperty<Color> circleColor) {
