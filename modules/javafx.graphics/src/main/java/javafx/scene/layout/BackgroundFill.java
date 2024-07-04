@@ -30,7 +30,10 @@ import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 import javafx.geometry.Insets;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Paint;
+import javafx.scene.paint.RadialGradient;
+
 import java.util.Objects;
 
 /**
@@ -42,6 +45,16 @@ import java.util.Objects;
  * All BackgroundFills are drawn in order.
  * <p>
  * When applied to a Region with a defined shape, the corner radii are ignored.
+ * <p>
+ * {@code BackgroundFill} supports interpolation between the following heterogeneous paint combinations:
+ * <ul>
+ *     <li>{@link Color} ↔ {@link LinearGradient}
+ *     <li>{@link Color} ↔ {@link RadialGradient}
+ * </ul>
+ * Heterogeneous paint interpolation converts the {@code Color} to a visually identical gradient paint,
+ * and then performs a gradient paint interpolation. If heterogeneous paints cannot be interpolated as
+ * described, the paints are interpolated <a href="../../animation/Interpolatable.html#discrete">discretely</a>.
+ *
  * @since JavaFX 8.0
  */
 public final class BackgroundFill implements Interpolatable<BackgroundFill> {
@@ -50,7 +63,7 @@ public final class BackgroundFill implements Interpolatable<BackgroundFill> {
      * This value will never be null.
      *
      * @return the Paint to use for filling the background of the {@link Region}
-     * @interpolationType see {@link Paint}
+     * @interpolationType see {@link BackgroundFill}
      */
     public final Paint getFill() { return fill; }
     final Paint fill;

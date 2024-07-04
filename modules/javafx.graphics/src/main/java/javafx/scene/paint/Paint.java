@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,23 +27,10 @@ package javafx.scene.paint;
 
 import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.tk.Toolkit;
-import javafx.scene.layout.BackgroundFill;
-import javafx.scene.layout.BorderStroke;
 
 /**
  * Base class for a color or gradients used to fill shapes and backgrounds when
  * rendering the scene graph.
- * <p>
- * While {@code Paint} is not {@linkplain javafx.animation.Interpolatable interpolatable} in general, its
- * subclasses are interpolatable. Additionally, the following heterogeneous paint combinations are also
- * interpolatable when used in a {@link BorderStroke} or {@link BackgroundFill}:
- * <ul>
- *     <li>{@link Color} ↔ {@link LinearGradient}
- *     <li>{@link Color} ↔ {@link RadialGradient}
- * </ul>
- * Heterogeneous paint interpolation converts the {@code Color} to a visually identical gradient paint,
- * and then performs a gradient paint interpolation.
- *
  * @since JavaFX 2.0
  */
 public abstract class Paint {

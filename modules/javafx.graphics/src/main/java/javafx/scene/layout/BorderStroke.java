@@ -30,7 +30,9 @@ import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 import javafx.geometry.Insets;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Paint;
+import javafx.scene.paint.RadialGradient;
 import javafx.scene.shape.StrokeType;
 import java.util.Objects;
 
@@ -45,6 +47,15 @@ import java.util.Objects;
  * When applied to a {@code Region} with a defined shape, the border width
  * and stroking information for the {@code top} is used, while the other
  * attributes are ignored.
+ * <p>
+ * {@code BorderStroke} supports interpolation between the following heterogeneous paint combinations:
+ * <ul>
+ *     <li>{@link Color} ↔ {@link LinearGradient}
+ *     <li>{@link Color} ↔ {@link RadialGradient}
+ * </ul>
+ * Heterogeneous paint interpolation converts the {@code Color} to a visually identical gradient paint,
+ * and then performs a gradient paint interpolation. If heterogeneous paints cannot be interpolated as
+ * described, the paints are interpolated <a href="../../animation/Interpolatable.html#discrete">discretely</a>.
  *
  * @since JavaFX 8.0
  */
@@ -75,7 +86,7 @@ public class BorderStroke implements Interpolatable<BorderStroke> {
      *
      * @return the fill of top side of this border
      * @defaultValue {@code Color.BLACK}
-     * @interpolationType see {@link Paint}
+     * @interpolationType see {@link BorderStroke}
      */
     public final Paint getTopStroke() { return topStroke; }
     final Paint topStroke;
@@ -89,7 +100,7 @@ public class BorderStroke implements Interpolatable<BorderStroke> {
      *
      * @return the fill of right side of this border
      * @defaultValue {@code null} (same as {@code topFill})
-     * @interpolationType see {@link Paint}
+     * @interpolationType see {@link BorderStroke}
      */
     public final Paint getRightStroke() { return rightStroke; }
     final Paint rightStroke;
@@ -100,7 +111,7 @@ public class BorderStroke implements Interpolatable<BorderStroke> {
      *
      * @return the fill of bottom side of this border
      * @defaultValue {@code null} (same as {@code topFill})
-     * @interpolationType see {@link Paint}
+     * @interpolationType see {@link BorderStroke}
      */
     public final Paint getBottomStroke() { return bottomStroke; }
     final Paint bottomStroke;
@@ -111,7 +122,7 @@ public class BorderStroke implements Interpolatable<BorderStroke> {
      *
      * @return the fill of left side of this border
      * @defaultValue {@code null} (same as {@code rightFill})
-     * @interpolationType see {@link Paint}
+     * @interpolationType see {@link BorderStroke}
      */
     public final Paint getLeftStroke() { return leftStroke; }
     final Paint leftStroke;
