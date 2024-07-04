@@ -164,7 +164,9 @@ public final class Background implements Interpolatable<Background> {
      * the distance from the edge of the Region outward. Any BackgroundImages
      * which would extend beyond the outsets will be clipped. Only the
      * BackgroundFills contribute to the outsets.
+     *
      * @return the outsets
+     * @interpolationType the intermediate value is derived from {@link #getFills() fills}
      */
     public final Insets getOutsets() { return outsets; }
     final Insets outsets;
