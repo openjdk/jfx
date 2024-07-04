@@ -25,10 +25,6 @@
 
 package test.robot.com.sun.prism;
 
-import com.sun.javafx.tk.RenderJob;
-import com.sun.javafx.tk.Toolkit;
-import java.util.concurrent.CountDownLatch;
-import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Bounds;
@@ -88,7 +84,6 @@ public class NGNodeDirtyFlagTest extends VisualTestBase {
             Util.runAndWait(() -> circleColor.set(Color.LIGHTGREEN));
             Util.waitForIdle(root.getScene());
 
-            waitForRenderer();
             checkLineColor(root, lineColor.get());
 
             Util.runAndWait(() -> lineColor.set(Color.DARKGREEN));
@@ -96,15 +91,8 @@ public class NGNodeDirtyFlagTest extends VisualTestBase {
             Util.runAndWait(() -> circleColor.set(Color.DARKGREEN));
             Util.waitForIdle(root.getScene());
 
-            waitForRenderer();
             checkLineColor(root, lineColor.get());
         }
-    }
-
-    private void waitForRenderer() {
-        CountDownLatch latch = new CountDownLatch(1);
-        Platform.runLater(() -> Toolkit.getToolkit().addRenderJob(new RenderJob(latch::countDown)));
-        Util.await(latch);
     }
 
     private void checkLineColor(StackPane root, Color expected) {
