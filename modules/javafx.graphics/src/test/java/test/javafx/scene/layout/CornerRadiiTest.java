@@ -158,59 +158,141 @@ public class CornerRadiiTest {
     @Nested
     class InterpolationTests {
         @Test
-        public void interpolateBetweenDifferentValuesReturnsNewInstance() {
+        public void interpolateComponentWithAbsoluteAndPercentageMismatch() {
+            record TestCase(CornerRadii endValue, CornerRadii expected) {}
+
+            final double v0 = 10, v25 = 12.5, v50 = 15, v100 = 20;
+            final var startValue = new CornerRadii(
+                v0, v0, v0, v0, v0, v0, v0, v0, false, false, false, false, false, false, false, false);
+
+            // For each component: interpolation with t=0.25 returns start value on absolute/percentage mismatch.
+            for (var testCase : new TestCase[] {
+                new TestCase(
+                    new CornerRadii(v100, v100, v100, v100, v100, v100, v100, v100, false, false, false, false, false, false, false, false),
+                    new CornerRadii(v25, v25, v25, v25, v25, v25, v25, v25, false, false, false, false, false, false, false, false)),
+                new TestCase(
+                    new CornerRadii(v100, v100, v100, v100, v100, v100, v100, v100, true, false, false, false, false, false, false, false),
+                    new CornerRadii(v0, v25, v25, v25, v25, v25, v25, v25, false, false, false, false, false, false, false, false)),
+                new TestCase(
+                    new CornerRadii(v100, v100, v100, v100, v100, v100, v100, v100, false, true, false, false, false, false, false, false),
+                    new CornerRadii(v25, v0, v25, v25, v25, v25, v25, v25, false, false, false, false, false, false, false, false)),
+                new TestCase(
+                    new CornerRadii(v100, v100, v100, v100, v100, v100, v100, v100, false, false, true, false, false, false, false, false),
+                    new CornerRadii(v25, v25, v0, v25, v25, v25, v25, v25, false, false, false, false, false, false, false, false)),
+                new TestCase(
+                    new CornerRadii(v100, v100, v100, v100, v100, v100, v100, v100, false, false, false, true, false, false, false, false),
+                    new CornerRadii(v25, v25, v25, v0, v25, v25, v25, v25, false, false, false, false, false, false, false, false)),
+                new TestCase(
+                    new CornerRadii(v100, v100, v100, v100, v100, v100, v100, v100, false, false, false, false, true, false, false, false),
+                    new CornerRadii(v25, v25, v25, v25, v0, v25, v25, v25, false, false, false, false, false, false, false, false)),
+                new TestCase(
+                    new CornerRadii(v100, v100, v100, v100, v100, v100, v100, v100, false, false, false, false, false, true, false, false),
+                    new CornerRadii(v25, v25, v25, v25, v25, v0, v25, v25, false, false, false, false, false, false, false, false)),
+                new TestCase(
+                    new CornerRadii(v100, v100, v100, v100, v100, v100, v100, v100, false, false, false, false, false, false, true, false),
+                    new CornerRadii(v25, v25, v25, v25, v25, v25, v0, v25, false, false, false, false, false, false, false, false)),
+                new TestCase(
+                    new CornerRadii(v100, v100, v100, v100, v100, v100, v100, v100, false, false, false, false, false, false, false, true),
+                    new CornerRadii(v25, v25, v25, v25, v25, v25, v25, v0, false, false, false, false, false, false, false, false)),
+            }) {
+                assertEquals(testCase.expected, startValue.interpolate(testCase.endValue, 0.25));
+            }
+
+            // For each component: interpolation with t=0.5 returns end value on absolute/percentage mismatch
+            for (var testCase : new TestCase[] {
+                new TestCase(
+                    new CornerRadii(v100, v100, v100, v100, v100, v100, v100, v100, false, false, false, false, false, false, false, false),
+                    new CornerRadii(v50, v50, v50, v50, v50, v50, v50, v50, false, false, false, false, false, false, false, false)),
+                new TestCase(
+                    new CornerRadii(v100, v100, v100, v100, v100, v100, v100, v100, true, false, false, false, false, false, false, false),
+                    new CornerRadii(v100, v50, v50, v50, v50, v50, v50, v50, true, false, false, false, false, false, false, false)),
+                new TestCase(
+                    new CornerRadii(v100, v100, v100, v100, v100, v100, v100, v100, false, true, false, false, false, false, false, false),
+                    new CornerRadii(v50, v100, v50, v50, v50, v50, v50, v50, false, true, false, false, false, false, false, false)),
+                new TestCase(
+                    new CornerRadii(v100, v100, v100, v100, v100, v100, v100, v100, false, false, true, false, false, false, false, false),
+                    new CornerRadii(v50, v50, v100, v50, v50, v50, v50, v50, false, false, true, false, false, false, false, false)),
+                new TestCase(
+                    new CornerRadii(v100, v100, v100, v100, v100, v100, v100, v100, false, false, false, true, false, false, false, false),
+                    new CornerRadii(v50, v50, v50, v100, v50, v50, v50, v50, false, false, false, true, false, false, false, false)),
+                new TestCase(
+                    new CornerRadii(v100, v100, v100, v100, v100, v100, v100, v100, false, false, false, false, true, false, false, false),
+                    new CornerRadii(v50, v50, v50, v50, v100, v50, v50, v50, false, false, false, false, true, false, false, false)),
+                new TestCase(
+                    new CornerRadii(v100, v100, v100, v100, v100, v100, v100, v100, false, false, false, false, false, true, false, false),
+                    new CornerRadii(v50, v50, v50, v50, v50, v100, v50, v50, false, false, false, false, false, true, false, false)),
+                new TestCase(
+                    new CornerRadii(v100, v100, v100, v100, v100, v100, v100, v100, false, false, false, false, false, false, true, false),
+                    new CornerRadii(v50, v50, v50, v50, v50, v50, v100, v50, false, false, false, false, false, false, true, false)),
+                new TestCase(
+                    new CornerRadii(v100, v100, v100, v100, v100, v100, v100, v100, false, false, false, false, false, false, false, true),
+                    new CornerRadii(v50, v50, v50, v50, v50, v50, v50, v100, false, false, false, false, false, false, false, true)),
+            }) {
+                assertEquals(testCase.expected, startValue.interpolate(testCase.endValue, 0.5));
+            }
+        }
+
+        @Test
+        public void interpolateReturnsStartOrEndInstanceWhenResultIsEqual() {
             // non-uniform values
-            var a = new CornerRadii(10, 20, 30, 40, false);
-            var b = new CornerRadii(20, 40, 60, 80, false);
-            var expect = new CornerRadii(15, 30, 45, 60, false);
-            assertEquals(expect, a.interpolate(b, 0.5));
+            var startValue = new CornerRadii(10, 20, 30, 40, true);
+            var endValue = new CornerRadii(20, 40, 60, 80, false);
+            assertSame(startValue, startValue.interpolate(endValue, 0.25));
+            assertSame(endValue, startValue.interpolate(endValue, 0.5));
 
             // uniform values
-            a = new CornerRadii(10, 10, 10, 10, false);
-            b = new CornerRadii(20, 20, 20, 20, false);
+            startValue = new CornerRadii(10, true);
+            endValue = new CornerRadii(20, false);
+            assertSame(startValue, startValue.interpolate(endValue, 0.25));
+            assertSame(endValue, startValue.interpolate(endValue, 0.5));
+        }
+
+        @Test
+        public void interpolateBetweenDifferentValuesReturnsNewInstance() {
+            // non-uniform values
+            var startValue = new CornerRadii(10, 20, 30, 40, false);
+            var endValue = new CornerRadii(20, 40, 60, 80, false);
+            var expect = new CornerRadii(15, 30, 45, 60, false);
+            assertEquals(expect, startValue.interpolate(endValue, 0.5));
+
+            // uniform values
+            startValue = new CornerRadii(10, 10, 10, 10, false);
+            endValue = new CornerRadii(20, 20, 20, 20, false);
             expect = new CornerRadii(15, 15, 15, 15, false);
-            assertEquals(expect, a.interpolate(b, 0.5));
+            assertEquals(expect, startValue.interpolate(endValue, 0.5));
         }
 
         @Test
         public void interpolateBetweenEqualValuesReturnsStartInstance() {
             // non-uniform values
-            var a = new CornerRadii(10, 20, 30, 40, false);
-            var b = new CornerRadii(10, 20, 30, 40, false);
-            assertSame(a, a.interpolate(b, 0.5));
+            var startValue = new CornerRadii(10, 20, 30, 40, false);
+            var endValue = new CornerRadii(10, 20, 30, 40, false);
+            assertSame(startValue, startValue.interpolate(endValue, 0.25));
+            assertSame(startValue, startValue.interpolate(endValue, 0.5));
+            assertSame(startValue, startValue.interpolate(endValue, 0.75));
 
             // uniform values
-            a = new CornerRadii(10, 10, 10, 10, false);
-            b = new CornerRadii(10, 10, 10, 10, false);
-            assertSame(a, a.interpolate(b, 0.5));
-        }
-
-        @Test
-        public void interpolateBetweenAbsoluteAndRelativeValuesReturnsStartInstanceOrNewInstanceEqualToEndValue() {
-            var a = new CornerRadii(10, 20, 30, 40, false);
-            var b = new CornerRadii(0.5, 0.6, 0.7, 0.8, true);
-            assertSame(a, a.interpolate(b, 0)); // start value for t == 0
-
-            var v = a.interpolate(b, 0.5); // new instance for t > 0
-            assertEquals(b, v);
-            assertNotSame(a, v);
-            assertNotSame(b, v);
+            startValue = new CornerRadii(10, 10, 10, 10, false);
+            endValue = new CornerRadii(10, 10, 10, 10, false);
+            assertSame(startValue, startValue.interpolate(endValue, 0.25));
+            assertSame(startValue, startValue.interpolate(endValue, 0.5));
+            assertSame(startValue, startValue.interpolate(endValue, 0.75));
         }
 
         @Test
         public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
-            var a = new CornerRadii(10, 20, 30, 40, false);
-            var b = new CornerRadii(20, 30, 40, 50, false);
-            assertSame(a, a.interpolate(b, 0));
-            assertSame(a, a.interpolate(b, -1));
+            var startValue = new CornerRadii(10, 20, 30, 40, false);
+            var endValue = new CornerRadii(20, 30, 40, 50, false);
+            assertSame(startValue, startValue.interpolate(endValue, 0));
+            assertSame(startValue, startValue.interpolate(endValue, -1));
         }
 
         @Test
         public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
-            var a = new CornerRadii(10, 20, 30, 40, false);
-            var b = new CornerRadii(20, 30, 40, 50, false);
-            assertSame(b, a.interpolate(b, 1));
-            assertSame(b, a.interpolate(b, 1.5));
+            var startValue = new CornerRadii(10, 20, 30, 40, false);
+            var endValue = new CornerRadii(20, 30, 40, 50, false);
+            assertSame(endValue, startValue.interpolate(endValue, 1));
+            assertSame(endValue, startValue.interpolate(endValue, 1.5));
         }
     }
 }

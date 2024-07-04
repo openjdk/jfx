@@ -739,14 +739,14 @@ public class BackgroundTest {
     class InterpolationTest {
         @Test
         public void interpolateBetweenDifferentValuesReturnsNewInstance() {
-            var a = new Background(
+            var startValue = new Background(
                 List.of(new BackgroundFill(Color.RED, new CornerRadii(10), new Insets(10)),
                         new BackgroundFill(Color.BLUE, new CornerRadii(2), new Insets(2))),
                 List.of(new BackgroundImage(IMAGE_1, REPEAT, REPEAT,
                                             new BackgroundPosition(Side.LEFT, 10, false, Side.TOP, 5, false),
                                             new BackgroundSize(10, 10, false, false, false, false))));
 
-            var b = new Background(
+            var endValue = new Background(
                 List.of(new BackgroundFill(Color.GREEN, new CornerRadii(20), new Insets(20)),
                         new BackgroundFill(Color.YELLOW, new CornerRadii(6), new Insets(6))),
                 List.of(new BackgroundImage(IMAGE_1, REPEAT, REPEAT,
@@ -760,7 +760,7 @@ public class BackgroundTest {
                                             new BackgroundPosition(Side.LEFT, 15, false, Side.TOP, 10, false),
                                             new BackgroundSize(15, 20, false, false, false, false))));
 
-            var actual = a.interpolate(b, 0.5);
+            var actual = startValue.interpolate(endValue, 0.5);
 
             assertEquals(expect, actual);
             assertNotSame(expect, actual);
@@ -768,13 +768,13 @@ public class BackgroundTest {
 
         @Test
         public void interpolateBetweenDifferentNumberOfFillsAndImages() {
-            var a = new Background(
+            var startValue = new Background(
                 List.of(new BackgroundFill(Color.RED, new CornerRadii(10), new Insets(10))),
                 List.of(new BackgroundImage(IMAGE_1, REPEAT, REPEAT,
                                             new BackgroundPosition(Side.LEFT, 10, false, Side.TOP, 5, false),
                                             new BackgroundSize(10, 10, false, false, false, false))));
 
-            var b = new Background(
+            var endValue = new Background(
                 List.of(new BackgroundFill(Color.GREEN, new CornerRadii(20), new Insets(20)),
                         new BackgroundFill(Color.BLUE, new CornerRadii(2), new Insets(2))),
                 List.of(new BackgroundImage(IMAGE_1, REPEAT, REPEAT,
@@ -794,30 +794,30 @@ public class BackgroundTest {
                                             new BackgroundPosition(Side.LEFT, 30, false, Side.TOP, 40, false),
                                             new BackgroundSize(50, 60, false, false, false, false))));
 
-            assertEquals(expect, a.interpolate(b, 0.5));
+            assertEquals(expect, startValue.interpolate(endValue, 0.5));
         }
 
         @Test
         public void interpolateBetweenEqualValuesReturnsStartInstance() {
-            var a = new Background(new BackgroundFill(Color.RED, new CornerRadii(10), new Insets(10)));
-            var b = new Background(new BackgroundFill(Color.RED, new CornerRadii(10), new Insets(10)));
-            assertSame(a, a.interpolate(b, 0.5));
+            var startValue = new Background(new BackgroundFill(Color.RED, new CornerRadii(10), new Insets(10)));
+            var endValue = new Background(new BackgroundFill(Color.RED, new CornerRadii(10), new Insets(10)));
+            assertSame(startValue, startValue.interpolate(endValue, 0.5));
         }
 
         @Test
         public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
-            var a = new Background(new BackgroundFill(Color.RED, new CornerRadii(10), new Insets(10)));
-            var b = new Background(new BackgroundFill(Color.GREEN, new CornerRadii(15), new Insets(20)));
-            assertSame(a, a.interpolate(b, 0));
-            assertSame(a, a.interpolate(b, -0.5));
+            var startValue = new Background(new BackgroundFill(Color.RED, new CornerRadii(10), new Insets(10)));
+            var endValue = new Background(new BackgroundFill(Color.GREEN, new CornerRadii(15), new Insets(20)));
+            assertSame(startValue, startValue.interpolate(endValue, 0));
+            assertSame(startValue, startValue.interpolate(endValue, -0.5));
         }
 
         @Test
         public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
-            var a = new Background(new BackgroundFill(Color.RED, new CornerRadii(10), new Insets(10)));
-            var b = new Background(new BackgroundFill(Color.GREEN, new CornerRadii(15), new Insets(20)));
-            assertSame(b, a.interpolate(b, 1));
-            assertSame(b, a.interpolate(b, 1.5));
+            var startValue = new Background(new BackgroundFill(Color.RED, new CornerRadii(10), new Insets(10)));
+            var endValue = new Background(new BackgroundFill(Color.GREEN, new CornerRadii(15), new Insets(20)));
+            assertSame(endValue, startValue.interpolate(endValue, 1));
+            assertSame(endValue, startValue.interpolate(endValue, 1.5));
         }
     }
 

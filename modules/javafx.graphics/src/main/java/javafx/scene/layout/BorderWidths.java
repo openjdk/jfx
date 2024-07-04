@@ -28,6 +28,7 @@ package javafx.scene.layout;
 import com.sun.javafx.util.Utils;
 import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
+import java.util.Objects;
 
 /**
  * Defines widths for four components (top, right, bottom, and left).
@@ -73,7 +74,12 @@ public final class BorderWidths implements Interpolatable<BorderWidths> {
      * thickness on the top of the border. This value can be a literal value, or can be
      * treated as a percentage, based on the value of the
      * {@link #isTopAsPercentage() topAsPercentage} property.
+     *
      * @return the border thickness on the top of the border
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a> if both values are
+     *                    absolute or both values are {@link #isTopAsPercentage() percentages}, and both
+     *                    values are not the special value {@link #AUTO};
+     *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getTop() { return top; }
     final double top;
@@ -83,7 +89,12 @@ public final class BorderWidths implements Interpolatable<BorderWidths> {
      * thickness on the right of the border. This value can be a literal value, or can be
      * treated as a percentage, based on the value of the
      * {@link #isRightAsPercentage() rightAsPercentage} property.
+     *
      * @return the border thickness on the right of the border
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a> if both values are
+     *                    absolute or both values are {@link #isRightAsPercentage() percentages}, and both
+     *                    values are not the special value {@link #AUTO};
+     *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getRight() { return right; }
     final double right;
@@ -93,7 +104,12 @@ public final class BorderWidths implements Interpolatable<BorderWidths> {
      * thickness on the bottom of the border. This value can be a literal value, or can be
      * treated as a percentage, based on the value of the
      * {@link #isBottomAsPercentage() bottomAsPercentage} property.
+     *
      * @return the border thickness on the bottom of the border
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a> if both values are
+     *                    absolute or both values are {@link #isBottomAsPercentage() percentages}, and both
+     *                    values are not the special value {@link #AUTO};
+     *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getBottom() { return bottom; }
     final double bottom;
@@ -103,7 +119,12 @@ public final class BorderWidths implements Interpolatable<BorderWidths> {
      * thickness on the left of the border. This value can be an literal value, or can be
      * treated as a percentage, based on the value of the
      * {@link #isLeftAsPercentage() leftAsPercentage} property.
+     *
      * @return the border thickness on the left of the border
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a> if both values are
+     *                    absolute or both values are {@link #isLeftAsPercentage() percentages}, and both
+     *                    values are not the special value {@link #AUTO};
+     *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getLeft() { return left; }
     final double left;
@@ -111,7 +132,9 @@ public final class BorderWidths implements Interpolatable<BorderWidths> {
     /**
      * Specifies whether the {@link #getTop() top} property should be interpreted as a percentage ({@code true})
      * of the region height or not ({@code false}).
+     *
      * @return true if top should be interpreted as a percentage of the region height, otherwise false
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isTopAsPercentage() { return topAsPercentage; }
     final boolean topAsPercentage;
@@ -119,7 +142,9 @@ public final class BorderWidths implements Interpolatable<BorderWidths> {
     /**
      * Specifies whether the {@link #getRight() right} property should be interpreted as a percentage ({@code true})
      * of the region width or not ({@code false}).
+     *
      * @return true if right should be interpreted as a percentage of the region width, otherwise false
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isRightAsPercentage() { return rightAsPercentage; }
     final boolean rightAsPercentage;
@@ -127,7 +152,9 @@ public final class BorderWidths implements Interpolatable<BorderWidths> {
     /**
      * Specifies whether the {@link #getBottom() bottom} property should be interpreted as a percentage ({@code true})
      * of the region height or not ({@code false}).
+     *
      * @return true if bottom should be interpreted as a percentage of the region height, otherwise false
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isBottomAsPercentage() { return bottomAsPercentage; }
     final boolean bottomAsPercentage;
@@ -135,7 +162,9 @@ public final class BorderWidths implements Interpolatable<BorderWidths> {
     /**
      * Specifies whether the {@link #getLeft() left} property should be interpreted as a percentage ({@code true})
      * of the region width or not ({@code false}).
+     *
      * @return true if left should be interpreted as a percentage of the region width, otherwise false
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isLeftAsPercentage() { return leftAsPercentage; }
     final boolean leftAsPercentage;
@@ -227,10 +256,13 @@ public final class BorderWidths implements Interpolatable<BorderWidths> {
     /**
      * {@inheritDoc}
      *
+     * @throws NullPointerException {@inheritDoc}
      * @since 23
      */
     @Override
     public BorderWidths interpolate(BorderWidths endValue, double t) {
+        Objects.requireNonNull(endValue, "endValue cannot be null");
+
         if (t <= 0 || equals(endValue)) {
             return this;
         }
@@ -239,13 +271,87 @@ public final class BorderWidths implements Interpolatable<BorderWidths> {
             return endValue;
         }
 
-        double top = Utils.interpolate(this.top, endValue.top, this.topAsPercentage, endValue.topAsPercentage, t);
-        double right = Utils.interpolate(this.right, endValue.right, this.rightAsPercentage, endValue.rightAsPercentage, t);
-        double bottom = Utils.interpolate(this.bottom, endValue.bottom, this.bottomAsPercentage, endValue.bottomAsPercentage, t);
-        double left = Utils.interpolate(this.left, endValue.left, this.leftAsPercentage, endValue.leftAsPercentage, t);
+        double newTop, newRight, newBottom, newLeft;
+        boolean newTopAsPercentage, newRightAsPercentage, newBottomAsPercentage, newLeftAsPercentage;
 
-        return new BorderWidths(top, right, bottom, left, endValue.topAsPercentage, endValue.rightAsPercentage,
-                                endValue.bottomAsPercentage, endValue.leftAsPercentage);
+        if (this.topAsPercentage == endValue.topAsPercentage) {
+            newTop = interpolate(this.top, endValue.top, t);
+            newTopAsPercentage = this.topAsPercentage;
+        } else if (t < 0.5) {
+            newTop = this.top;
+            newTopAsPercentage = this.topAsPercentage;
+        } else {
+            newTop = endValue.top;
+            newTopAsPercentage = endValue.topAsPercentage;
+        }
+
+        if (this.rightAsPercentage == endValue.rightAsPercentage) {
+            newRight = interpolate(this.right, endValue.right, t);
+            newRightAsPercentage = this.rightAsPercentage;
+        } else if (t < 0.5) {
+            newRight = this.right;
+            newRightAsPercentage = this.rightAsPercentage;
+        } else {
+            newRight = endValue.right;
+            newRightAsPercentage = endValue.rightAsPercentage;
+        }
+
+        if (this.bottomAsPercentage == endValue.bottomAsPercentage) {
+            newBottom = interpolate(this.bottom, endValue.bottom, t);
+            newBottomAsPercentage = this.bottomAsPercentage;
+        } else if (t < 0.5) {
+            newBottom = this.bottom;
+            newBottomAsPercentage = this.bottomAsPercentage;
+        } else {
+            newBottom = endValue.bottom;
+            newBottomAsPercentage = endValue.bottomAsPercentage;
+        }
+
+        if (this.leftAsPercentage == endValue.leftAsPercentage) {
+            newLeft = interpolate(this.left, endValue.left, t);
+            newLeftAsPercentage = this.leftAsPercentage;
+        } else if (t < 0.5) {
+            newLeft = this.left;
+            newLeftAsPercentage = this.leftAsPercentage;
+        } else {
+            newLeft = endValue.left;
+            newLeftAsPercentage = endValue.leftAsPercentage;
+        }
+
+        if (isSame(newTop, newRight, newBottom, newLeft,
+                   newTopAsPercentage, newRightAsPercentage,
+                   newBottomAsPercentage, newLeftAsPercentage)) {
+            return this;
+        }
+
+        if (endValue.isSame(newTop, newRight, newBottom, newLeft,
+                            newTopAsPercentage, newRightAsPercentage,
+                            newBottomAsPercentage, newLeftAsPercentage)) {
+            return endValue;
+        }
+
+        return new BorderWidths(
+            newTop, newRight, newBottom, newLeft,
+            newTopAsPercentage, newRightAsPercentage, newBottomAsPercentage, newLeftAsPercentage);
+    }
+
+    private static double interpolate(double start, double end, double t) {
+        return start != AUTO && end != AUTO ?
+            Utils.interpolate(start, end, t) :
+            Utils.interpolateDiscrete(start, end, t);
+    }
+
+    private boolean isSame(double top, double right, double bottom, double left,
+                           boolean topAsPercentage, boolean rightAsPercentage,
+                           boolean bottomAsPercentage, boolean leftAsPercentage) {
+        return this.top == top
+            && this.right == right
+            && this.bottom == bottom
+            && this.left == left
+            && this.topAsPercentage == topAsPercentage
+            && this.rightAsPercentage == rightAsPercentage
+            && this.bottomAsPercentage == bottomAsPercentage
+            && this.leftAsPercentage == leftAsPercentage;
     }
 
     /**

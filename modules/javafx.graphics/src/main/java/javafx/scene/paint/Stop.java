@@ -140,13 +140,14 @@ public final class Stop implements Interpolatable<Stop> {
      *
      * @param firstList the first list, not {@code null}
      * @param secondList the second list, not {@code null}
-     * @return a new unmodifiable list, or {@code firstList} when {@code t <= 0} or both lists are equal
+     * @return the interpolated list, which may also be {@code firstList} or {@code secondList};
+     *         if a new list is returned, it is unmodifiable
      */
     static List<Stop> interpolateLists(List<Stop> firstList, List<Stop> secondList, double t) {
         Objects.requireNonNull(firstList, "firstList cannot be null");
         Objects.requireNonNull(secondList, "secondList cannot be null");
 
-        if (t <= 0 || firstList.equals(secondList)) {
+        if (t <= 0) {
             return firstList;
         }
 
@@ -173,7 +174,7 @@ public final class Stop implements Interpolatable<Stop> {
             } else if (first.offset < second.offset) {
                 stops[size] = j == 0 ?
                     new Stop(first.offset, second.color) :
-                    interpolateVirtualStop(first, second, secondList.get(j - 1), t);
+                    interpolateVirtualStop(first, second, secondList.get(j - 1), 1 - t);
                 ++i;
             } else {
                 stops[size] = i == 0 ?
@@ -199,12 +200,12 @@ public final class Stop implements Interpolatable<Stop> {
      * }</pre>
      *
      * Given the stops A{1,2,3} and B{1,2} in the diagram above, this method computes a new virtual
-     * stop X that matches the offset of A2, and then interpolates between A2 and X.
+     * stop X that matches the offset of A2, and then interpolates between X and A2.
      */
     private static Stop interpolateVirtualStop(Stop A2, Stop B2, Stop B1, double t) {
         double u = (A2.offset - B1.offset) / (B2.offset - B1.offset);
         Color colorX = B1.color.interpolate(B2.color, u);
-        Color colorR = A2.color.interpolate(colorX, t);
+        Color colorR = colorX.interpolate(A2.color, t);
         return colorR.equals(A2.color) ? A2 : new Stop(A2.offset, colorR);
     }
 
@@ -217,7 +218,7 @@ public final class Stop implements Interpolatable<Stop> {
      *
      * @defaultValue 0.0
      */
-    private final double offset;
+    private double offset;
 
     /**
      * Gets a number ranging from {@code 0} to {@code 1}
@@ -226,8 +227,8 @@ public final class Stop implements Interpolatable<Stop> {
      * For radial gradients, it represents a percentage distance from
      * the focus point to the edge of the outermost/largest circle.
      *
-     * @return position of the Stop within the gradient
-     *         (ranging from {@code 0} to {@code 1})
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a>
+     * @return position of the Stop within the gradient (ranging from {@code 0} to {@code 1})
      */
     public final double getOffset() {
         return offset;
@@ -238,10 +239,12 @@ public final class Stop implements Interpolatable<Stop> {
      *
      * @defaultValue Color.BLACK
      */
-    private final Color color;
+    private Color color;
 
     /**
      * Gets the color of the gradient at this offset.
+     *
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a>
      * @return the color of the gradient at this offset
      */
     public final Color getColor() {
@@ -258,20 +261,22 @@ public final class Stop implements Interpolatable<Stop> {
      * Creates a new instance of Stop.
      * @param offset Stop's position (ranging from {@code 0} to {@code 1}
      * @param color Stop's color
-     * @throws NullPointerException if {@code color} is null
      */
     public Stop(@NamedArg("offset") double offset, @NamedArg(value="color", defaultValue="BLACK") Color color) {
         this.offset = offset;
-        this.color = Objects.requireNonNull(color, "color cannot be null");
+        this.color = Objects.requireNonNullElse(color, Color.TRANSPARENT);
     }
 
     /**
      * {@inheritDoc}
      *
+     * @throws NullPointerException {@inheritDoc}
      * @since 23
      */
     @Override
     public Stop interpolate(Stop endValue, double t) {
+        Objects.requireNonNull(endValue, "endValue cannot be null");
+
         // We don't check equals(endValue) here to prevent unnecessary equality checks,
         // and only check for equality with 'this' or 'endValue' after interpolation.
         if (t <= 0.0) {
@@ -282,12 +287,11 @@ public final class Stop implements Interpolatable<Stop> {
             return endValue;
         }
 
-        double offset = Utils.interpolate(this.offset, endValue.offset, t);
-
         // Color is implemented such that interpolate() always returns the existing instance if the
         // intermediate value is equal to the start value or the end value, which allows us to use an
         // identity comparison in place of a value comparison to determine equality.
         Color color = this.color.interpolate(endValue.color, t);
+        double offset = Utils.interpolate(this.offset, endValue.offset, t);
 
         if (offset == this.offset && color == this.color) {
             return this;

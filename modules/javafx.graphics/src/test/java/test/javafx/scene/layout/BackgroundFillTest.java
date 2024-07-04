@@ -110,107 +110,116 @@ public class BackgroundFillTest {
     class InterpolationTests {
         @Test
         public void twoColorFills() {
-            BackgroundFill a = new BackgroundFill(Color.ORANGE, new CornerRadii(2), new Insets(2));
-            BackgroundFill b = new BackgroundFill(Color.RED, new CornerRadii(4), new Insets(6));
-            BackgroundFill r = a.interpolate(b, 0.5);
-            assertEquals(Color.ORANGE.interpolate(Color.RED, 0.5), r.getFill());
-            assertEquals(new CornerRadii(3), r.getRadii());
-            assertEquals(new Insets(4), r.getInsets());
+            BackgroundFill startValue = new BackgroundFill(Color.ORANGE, new CornerRadii(2), new Insets(2));
+            BackgroundFill endValue = new BackgroundFill(Color.RED, new CornerRadii(4), new Insets(6));
+            BackgroundFill actual = startValue.interpolate(endValue, 0.5);
+            assertEquals(Color.ORANGE.interpolate(Color.RED, 0.5), actual.getFill());
+            assertEquals(new CornerRadii(3), actual.getRadii());
+            assertEquals(new Insets(4), actual.getInsets());
         }
 
         @Test
         public void twoLinearGradientFills() {
             var gradient1 = LinearGradient.valueOf("linear-gradient(to left top, red, blue)");
             var gradient2 = LinearGradient.valueOf("linear-gradient(to left top, yellow, white)");
-            BackgroundFill a = new BackgroundFill(gradient1, new CornerRadii(2), new Insets(2));
-            BackgroundFill b = new BackgroundFill(gradient2, new CornerRadii(4), new Insets(6));
-            BackgroundFill r = a.interpolate(b, 0.5);
-            assertEquals(gradient1.interpolate(gradient2, 0.5), r.getFill());
-            assertEquals(new CornerRadii(3), r.getRadii());
-            assertEquals(new Insets(4), r.getInsets());
+            BackgroundFill startValue = new BackgroundFill(gradient1, new CornerRadii(2), new Insets(2));
+            BackgroundFill endValue = new BackgroundFill(gradient2, new CornerRadii(4), new Insets(6));
+            BackgroundFill actual = startValue.interpolate(endValue, 0.5);
+            assertEquals(gradient1.interpolate(gradient2, 0.5), actual.getFill());
+            assertEquals(new CornerRadii(3), actual.getRadii());
+            assertEquals(new Insets(4), actual.getInsets());
         }
 
         @Test
         public void linearGradientAndColorFills() {
             var gradient = LinearGradient.valueOf("linear-gradient(to left top, red, blue)");
-            BackgroundFill a = new BackgroundFill(gradient, new CornerRadii(2), new Insets(2));
-            BackgroundFill b = new BackgroundFill(Color.ORANGE, new CornerRadii(4), new Insets(6));
+            BackgroundFill startValue = new BackgroundFill(gradient, new CornerRadii(2), new Insets(2));
+            BackgroundFill endValue = new BackgroundFill(Color.ORANGE, new CornerRadii(4), new Insets(6));
 
-            BackgroundFill r = a.interpolate(b, 0.5);
-            assertEquals(gradient.interpolate(PaintUtils.newSolidGradient(gradient, Color.ORANGE), 0.5), r.getFill());
-            assertEquals(new CornerRadii(3), r.getRadii());
-            assertEquals(new Insets(4), r.getInsets());
+            BackgroundFill actual = startValue.interpolate(endValue, 0.5);
+            assertEquals(gradient.interpolate(PaintUtils.newSolidGradient(gradient, Color.ORANGE), 0.5), actual.getFill());
+            assertEquals(new CornerRadii(3), actual.getRadii());
+            assertEquals(new Insets(4), actual.getInsets());
 
-            r = b.interpolate(a, 0.5);
-            assertEquals(PaintUtils.newSolidGradient(gradient, Color.ORANGE).interpolate(gradient, 0.5), r.getFill());
-            assertEquals(new CornerRadii(3), r.getRadii());
-            assertEquals(new Insets(4), r.getInsets());
+            actual = endValue.interpolate(startValue, 0.5);
+            assertEquals(PaintUtils.newSolidGradient(gradient, Color.ORANGE).interpolate(gradient, 0.5), actual.getFill());
+            assertEquals(new CornerRadii(3), actual.getRadii());
+            assertEquals(new Insets(4), actual.getInsets());
         }
 
         @Test
         public void twoRadialGradientFills() {
             var gradient1 = RadialGradient.valueOf("radial-gradient(radius 100%, red, blue)");
             var gradient2 = RadialGradient.valueOf("radial-gradient(radius 50%, yellow, white)");
-            BackgroundFill a = new BackgroundFill(gradient1, new CornerRadii(2), new Insets(2));
-            BackgroundFill b = new BackgroundFill(gradient2, new CornerRadii(4), new Insets(6));
-            BackgroundFill r = a.interpolate(b, 0.5);
-            assertEquals(gradient1.interpolate(gradient2, 0.5), r.getFill());
-            assertEquals(new CornerRadii(3), r.getRadii());
-            assertEquals(new Insets(4), r.getInsets());
+            BackgroundFill startValue = new BackgroundFill(gradient1, new CornerRadii(2), new Insets(2));
+            BackgroundFill endValue = new BackgroundFill(gradient2, new CornerRadii(4), new Insets(6));
+            BackgroundFill actual = startValue.interpolate(endValue, 0.5);
+            assertEquals(gradient1.interpolate(gradient2, 0.5), actual.getFill());
+            assertEquals(new CornerRadii(3), actual.getRadii());
+            assertEquals(new Insets(4), actual.getInsets());
         }
 
         @Test
         public void radialGradientAndColorFills() {
             var gradient = RadialGradient.valueOf("radial-gradient(radius 100%, red, blue)");
-            BackgroundFill a = new BackgroundFill(gradient, new CornerRadii(2), new Insets(2));
-            BackgroundFill b = new BackgroundFill(Color.ORANGE, new CornerRadii(4), new Insets(6));
+            BackgroundFill startValue = new BackgroundFill(gradient, new CornerRadii(2), new Insets(2));
+            BackgroundFill endValue = new BackgroundFill(Color.ORANGE, new CornerRadii(4), new Insets(6));
 
-            BackgroundFill r = a.interpolate(b, 0.5);
-            assertEquals(gradient.interpolate(PaintUtils.newSolidGradient(gradient, Color.ORANGE), 0.5), r.getFill());
-            assertEquals(new CornerRadii(3), r.getRadii());
-            assertEquals(new Insets(4), r.getInsets());
+            BackgroundFill actual = startValue.interpolate(endValue, 0.5);
+            assertEquals(gradient.interpolate(PaintUtils.newSolidGradient(gradient, Color.ORANGE), 0.5), actual.getFill());
+            assertEquals(new CornerRadii(3), actual.getRadii());
+            assertEquals(new Insets(4), actual.getInsets());
 
-            r = b.interpolate(a, 0.5);
-            assertEquals(PaintUtils.newSolidGradient(gradient, Color.ORANGE).interpolate(gradient, 0.5), r.getFill());
-            assertEquals(new CornerRadii(3), r.getRadii());
-            assertEquals(new Insets(4), r.getInsets());
+            actual = endValue.interpolate(startValue, 0.5);
+            assertEquals(PaintUtils.newSolidGradient(gradient, Color.ORANGE).interpolate(gradient, 0.5), actual.getFill());
+            assertEquals(new CornerRadii(3), actual.getRadii());
+            assertEquals(new Insets(4), actual.getInsets());
         }
 
         @Test
-        public void incompatibleFillsReturnsEndFillWhenInterpolationFactorIsLargerThanZero() {
-            var pattern = new ImagePattern(new Image(new ByteArrayInputStream(new byte[] {})));
-            BackgroundFill a = new BackgroundFill(pattern, new CornerRadii(2), new Insets(2));
-            BackgroundFill b = new BackgroundFill(Color.RED, new CornerRadii(4), new Insets(6));
-            BackgroundFill c = a.interpolate(b, 0);
-            assertSame(a, c);
+        public void incompatibleFillsReturnsStartFillOrEndFill() {
+            var imagePattern = new ImagePattern(new Image(new ByteArrayInputStream(new byte[] {})));
+            BackgroundFill startValue = new BackgroundFill(imagePattern, new CornerRadii(2), new Insets(2));
+            BackgroundFill endValue = new BackgroundFill(Color.RED, new CornerRadii(4), new Insets(6));
+            BackgroundFill actual;
 
-            c = a.interpolate(b, 0.5);
-            assertEquals(b.getFill(), c.getFill());
-            assertEquals(new CornerRadii(3), c.getRadii());
-            assertEquals(new Insets(4), c.getInsets());
+            actual = startValue.interpolate(endValue, 0.25);
+            assertEquals(startValue.getFill(), actual.getFill());
+            assertEquals(new CornerRadii(2.5), actual.getRadii());
+            assertEquals(new Insets(3), actual.getInsets());
+
+            actual = startValue.interpolate(endValue, 0.5);
+            assertEquals(endValue.getFill(), actual.getFill());
+            assertEquals(new CornerRadii(3), actual.getRadii());
+            assertEquals(new Insets(4), actual.getInsets());
+
+            actual = startValue.interpolate(endValue, 0.75);
+            assertEquals(endValue.getFill(), actual.getFill());
+            assertEquals(new CornerRadii(3.5), actual.getRadii());
+            assertEquals(new Insets(5), actual.getInsets());
         }
 
         @Test
         public void twoEqualFillsReturnsExistingInstance() {
-            BackgroundFill a = new BackgroundFill(Color.ORANGE, new CornerRadii(2), new Insets(2));
-            BackgroundFill b = new BackgroundFill(Color.ORANGE, new CornerRadii(2), new Insets(2));
-            assertSame(a, a.interpolate(b, 0.5));
+            BackgroundFill startValue = new BackgroundFill(Color.ORANGE, new CornerRadii(2), new Insets(2));
+            BackgroundFill endValue = new BackgroundFill(Color.ORANGE, new CornerRadii(2), new Insets(2));
+            assertSame(startValue, startValue.interpolate(endValue, 0.5));
         }
 
         @Test
         public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
-            BackgroundFill a = new BackgroundFill(Color.ORANGE, new CornerRadii(2), new Insets(2));
-            BackgroundFill b = new BackgroundFill(Color.RED, new CornerRadii(4), new Insets(6));
-            assertSame(a, a.interpolate(b, 0));
-            assertSame(a, a.interpolate(b, -1));
+            BackgroundFill startValue = new BackgroundFill(Color.ORANGE, new CornerRadii(2), new Insets(2));
+            BackgroundFill endValue = new BackgroundFill(Color.RED, new CornerRadii(4), new Insets(6));
+            assertSame(startValue, startValue.interpolate(endValue, 0));
+            assertSame(startValue, startValue.interpolate(endValue, -1));
         }
 
         @Test
         public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
-            BackgroundFill a = new BackgroundFill(Color.ORANGE, new CornerRadii(2), new Insets(2));
-            BackgroundFill b = new BackgroundFill(Color.RED, new CornerRadii(4), new Insets(6));
-            assertSame(b, a.interpolate(b, 1));
-            assertSame(b, a.interpolate(b, 1.5));
+            BackgroundFill startValue = new BackgroundFill(Color.ORANGE, new CornerRadii(2), new Insets(2));
+            BackgroundFill endValue = new BackgroundFill(Color.RED, new CornerRadii(4), new Insets(6));
+            assertSame(endValue, startValue.interpolate(endValue, 1));
+            assertSame(endValue, startValue.interpolate(endValue, 1.5));
         }
     }
 }

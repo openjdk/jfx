@@ -47,8 +47,9 @@ public class StopTest {
     }
 
     @Test
-    public void testNullColor() {
-        assertThrows(NullPointerException.class, () -> new Stop(0.2f, null));
+    public void testNullColorIsTransparent() {
+        var stop = new Stop(0.2f, null);
+        assertEquals(TRANSPARENT, stop.getColor());
     }
 
     @Test
@@ -106,32 +107,32 @@ public class StopTest {
     class InterpolationTest {
         @Test
         public void interpolateBetweenTwoDifferentValuesReturnsNewInstance() {
-            var a = new Stop(0, RED);
-            var b = new Stop(1, GREEN);
-            assertEquals(new Stop(0.5, RED.interpolate(GREEN, 0.5)), a.interpolate(b, 0.5));
+            var startValue = new Stop(0, RED);
+            var endValue = new Stop(1, GREEN);
+            assertEquals(new Stop(0.5, RED.interpolate(GREEN, 0.5)), startValue.interpolate(endValue, 0.5));
         }
 
         @Test
         public void interpolateBetweenTwoEqualValuesReturnsSameInstance() {
-            var a = new Stop(0.25, RED);
-            var b = new Stop(0.25, RED);
-            assertSame(a, a.interpolate(b, 0.5));
+            var startValue = new Stop(0.25, RED);
+            var endValue = new Stop(0.25, RED);
+            assertSame(startValue, startValue.interpolate(endValue, 0.5));
         }
 
         @Test
         public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
-            var a = new Stop(0.25, RED);
-            var b = new Stop(0.75, GREEN);
-            assertSame(a, a.interpolate(b, 0));
-            assertSame(a, a.interpolate(b, -1));
+            var startValue = new Stop(0.25, RED);
+            var endValue = new Stop(0.75, GREEN);
+            assertSame(startValue, startValue.interpolate(endValue, 0));
+            assertSame(startValue, startValue.interpolate(endValue, -1));
         }
 
         @Test
         public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
-            var a = new Stop(0.25, RED);
-            var b = new Stop(0.75, GREEN);
-            assertSame(b, a.interpolate(b, 1));
-            assertSame(b, a.interpolate(b, 1.5));
+            var startValue = new Stop(0.25, RED);
+            var endValue = new Stop(0.75, GREEN);
+            assertSame(endValue, startValue.interpolate(endValue, 1));
+            assertSame(endValue, startValue.interpolate(endValue, 1.5));
         }
     }
 }

@@ -273,62 +273,105 @@ public class BackgroundSizeTest {
     @Nested
     class InterpolationTests {
         @Test
+        public void interpolateComponentWithAbsoluteAndPercentageMismatch() {
+            record TestCase(BackgroundSize endValue, BackgroundSize expected) {}
+
+            final double v0 = 0, v25 = 10, v50 = 20, v100 = 40;
+            final var startValue = new BackgroundSize(v0, v0, false, false, false, false);
+
+            // For each component: interpolation with t=0.25 returns start value on absolute/percentage mismatch.
+            for (var testCase : new TestCase[] {
+                new TestCase(
+                    new BackgroundSize(v100, v100, false, false, false, false),
+                    new BackgroundSize(v25, v25, false, false, false, false)),
+                new TestCase(
+                    new BackgroundSize(v100, v100, true, false, false, false),
+                    new BackgroundSize(v0, v25, false, false, false, false)),
+                new TestCase(
+                    new BackgroundSize(v100, v100, false, true, false, false),
+                    new BackgroundSize(v25, v0, false, false, false, false))
+            }) {
+                assertEquals(testCase.expected, startValue.interpolate(testCase.endValue, 0.25));
+            }
+
+            // For each component: interpolation with t=0.5 returns end value on absolute/percentage mismatch.
+            for (var testCase : new TestCase[] {
+                new TestCase(
+                    new BackgroundSize(v100, v100, false, false, false, false),
+                    new BackgroundSize(v50, v50, false, false, false, false)),
+                new TestCase(
+                    new BackgroundSize(v100, v100, true, false, false, false),
+                    new BackgroundSize(v100, v50, true, false, false, false)),
+                new TestCase(
+                    new BackgroundSize(v100, v100, false, true, false, false),
+                    new BackgroundSize(v50, v100, false, true, false, false))
+            }) {
+                assertEquals(testCase.expected, startValue.interpolate(testCase.endValue, 0.5));
+            }
+        }
+
+        @Test
         public void interpolateBetweenDifferentValuesReturnsNewInstance() {
-            var a = new BackgroundSize(10, 20, false, false, false, false);
-            var b = new BackgroundSize(20, 40, false, false, false, false);
+            var startValue = new BackgroundSize(10, 20, false, false, false, false);
+            var endValue = new BackgroundSize(20, 40, false, false, false, false);
             var expect = new BackgroundSize(15, 30, false, false, false, false);
-            assertEquals(expect, a.interpolate(b, 0.5));
+            assertEquals(expect, startValue.interpolate(endValue, 0.5));
         }
 
         @Test
         public void interpolateBetweenEqualValuesReturnsStartInstance() {
-            var a = new BackgroundSize(10, 20, false, false, false, false);
-            var b = new BackgroundSize(10, 20, false, false, false, false);
-            assertSame(a, a.interpolate(b, 0.5));
+            var startValue = new BackgroundSize(10, 20, false, false, false, false);
+            var endValue = new BackgroundSize(10, 20, false, false, false, false);
+            assertSame(startValue, startValue.interpolate(endValue, 0.25));
+            assertSame(startValue, startValue.interpolate(endValue, 0.5));
+            assertSame(startValue, startValue.interpolate(endValue, 0.75));
         }
 
         @Test
         public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
-            var a = new BackgroundSize(10, 20, false, false, false, false);
-            var b = new BackgroundSize(20, 40, false, false, false, false);
-            assertSame(a, a.interpolate(b, 0));
-            assertSame(a, a.interpolate(b, -0.5));
+            var startValue = new BackgroundSize(10, 20, false, false, false, false);
+            var endValue = new BackgroundSize(20, 40, false, false, false, false);
+            assertSame(startValue, startValue.interpolate(endValue, 0));
+            assertSame(startValue, startValue.interpolate(endValue, -0.5));
         }
 
         @Test
         public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
-            var a = new BackgroundSize(10, 20, false, false, false, false);
-            var b = new BackgroundSize(20, 40, false, false, false, false);
-            assertSame(b, a.interpolate(b, 1));
-            assertSame(b, a.interpolate(b, 1.5));
+            var startValue = new BackgroundSize(10, 20, false, false, false, false);
+            var endValue = new BackgroundSize(20, 40, false, false, false, false);
+            assertSame(endValue, startValue.interpolate(endValue, 1));
+            assertSame(endValue, startValue.interpolate(endValue, 1.5));
         }
 
         @Test
         public void widthOrHeightLessThanZeroCannotBeInterpolated() {
-            var a = new BackgroundSize(10, 20, false, false, false, false);
-            var b = new BackgroundSize(AUTO, 40, false, false, false, false);
+            var startValue = new BackgroundSize(10, 20, false, false, false, false);
+            var endValue = new BackgroundSize(AUTO, 40, false, false, false, false);
             var expect = new BackgroundSize(AUTO, 30, false, false, false, false);
-            assertEquals(expect, a.interpolate(b, 0.5));
+            assertEquals(expect, startValue.interpolate(endValue, 0.5));
 
-            a = new BackgroundSize(20, 10, false, false, false, false);
-            b = new BackgroundSize(40, AUTO, false, false, false, false);
+            startValue = new BackgroundSize(20, 10, false, false, false, false);
+            endValue = new BackgroundSize(40, AUTO, false, false, false, false);
             expect = new BackgroundSize(30, AUTO, false, false, false, false);
-            assertEquals(expect, a.interpolate(b, 0.5));
+            assertEquals(expect, startValue.interpolate(endValue, 0.5));
         }
 
         @Test
-        public void notInterpolatableReturnsEndInstance() {
-            var a = new BackgroundSize(10, 10, false, false, false, true);
-            var b = new BackgroundSize(20, 20, false, false, false, false);
-            assertSame(b, a.interpolate(b, 0.5));
+        public void notInterpolatableReturnsStartOrEndInstance() {
+            var startValue = new BackgroundSize(10, 10, false, false, false, true);
+            var endValue = new BackgroundSize(20, 20, false, false, false, false);
+            assertSame(startValue, startValue.interpolate(endValue, 0.25));
+            assertSame(endValue, startValue.interpolate(endValue, 0.5));
 
-            a = new BackgroundSize(10, 10, false, false, false, false);
-            b = new BackgroundSize(20, 20, false, false, true, false);
-            assertSame(b, a.interpolate(b, 0.5));
+            startValue = new BackgroundSize(10, 10, false, false, false, false);
+            endValue = new BackgroundSize(20, 20, false, false, true, false);
+            assertSame(startValue, startValue.interpolate(endValue, 0.25));
+            assertSame(endValue, startValue.interpolate(endValue, 0.5));
 
-            a = new BackgroundSize(AUTO, AUTO, false, false, false, false);
-            b = new BackgroundSize(20, 20, false, false, false, false);
-            assertSame(b, a.interpolate(b, 0.5));
+            startValue = new BackgroundSize(AUTO, AUTO, false, false, false, false);
+            endValue = new BackgroundSize(20, 20, false, false, false, false);
+            assertSame(startValue, startValue.interpolate(endValue, 0.25));
+            assertSame(endValue, startValue.interpolate(endValue, 0.5));
         }
     }
 }

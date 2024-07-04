@@ -28,6 +28,7 @@
  import com.sun.javafx.util.Utils;
  import javafx.animation.Interpolatable;
  import javafx.beans.NamedArg;
+ import java.util.Objects;
 
 /**
  * A set of inside offsets for the 4 side of a rectangular area
@@ -40,29 +41,37 @@ public class Insets implements Interpolatable<Insets> {
     public static final Insets EMPTY = new Insets(0, 0, 0, 0);
 
     /**
-     * The inset on the top side
+     * The inset on the top side.
+     *
      * @return the inset on the top side
+     * @interpolationType <a href="../animation/Interpolatable.html#linear">linear</a>
      */
     public final double getTop() { return top; }
     private double top;
 
     /**
-     * The inset on the right side
+     * The inset on the right side.
+     *
      * @return the inset on the right side
+     * @interpolationType <a href="../animation/Interpolatable.html#linear">linear</a>
      */
     public final double getRight() { return right; }
     private double right;
 
     /**
-     * The inset on the bottom side
+     * The inset on the bottom side.
+     *
      * @return the inset on the bottom side
+     * @interpolationType <a href="../animation/Interpolatable.html#linear">linear</a>
      */
     public final double getBottom() { return bottom; }
     private double bottom;
 
     /**
-     * The inset on the left side
+     * The inset on the left side.
+     *
      * @return the inset on the left side
+     * @interpolationType <a href="../animation/Interpolatable.html#linear">linear</a>
      */
     public final double getLeft() { return left; }
     private double left;
@@ -104,10 +113,13 @@ public class Insets implements Interpolatable<Insets> {
     /**
      * {@inheritDoc}
      *
+     * @throws NullPointerException {@inheritDoc}
      * @since 23
      */
     @Override
     public Insets interpolate(Insets endValue, double t) {
+        Objects.requireNonNull(endValue, "endValue cannot be null");
+
         if (t <= 0 || equals(endValue)) {
             return this;
         }

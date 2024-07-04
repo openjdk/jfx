@@ -951,32 +951,32 @@ public class ColorTest {
     class InterpolationTest {
         @Test
         public void interpolateBetweenTwoDifferentValuesReturnsNewInstance() {
-            var a = new Color(0.2, 0.4, 0.6, 0.8);
-            var b = new Color(0.3, 0.5, 0.7, 0.9);
-            assertEquals(new Color(0.25, 0.45, 0.65, 0.85), a.interpolate(b, 0.5));
+            var startValue = new Color(0.2, 0.4, 0.6, 0.8);
+            var endValue = new Color(0.3, 0.5, 0.7, 0.9);
+            assertEquals(new Color(0.25, 0.45, 0.65, 0.85), startValue.interpolate(endValue, 0.5));
         }
 
         @Test
         public void interpolateBetweenTwoEqualValuesReturnsSameInstance() {
-            var a = new Color(0.2, 0.4, 0.6, 0.8);
-            var b = new Color(0.2, 0.4, 0.6, 0.8);
-            assertSame(a, a.interpolate(b, 0.5));
+            var startValue = new Color(0.2, 0.4, 0.6, 0.8);
+            var endValue = new Color(0.2, 0.4, 0.6, 0.8);
+            assertSame(startValue, startValue.interpolate(endValue, 0.5));
         }
 
         @Test
         public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
-            var a = new Color(0.2, 0.4, 0.6, 0.8);
-            var b = new Color(0.3, 0.5, 0.7, 0.9);
-            assertSame(a, a.interpolate(b, 0));
-            assertSame(a, a.interpolate(b, -1));
+            var startValue = new Color(0.2, 0.4, 0.6, 0.8);
+            var endValue = new Color(0.3, 0.5, 0.7, 0.9);
+            assertSame(startValue, startValue.interpolate(endValue, 0));
+            assertSame(startValue, startValue.interpolate(endValue, -1));
         }
 
         @Test
         public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
-            var a = new Color(0.2, 0.4, 0.6, 0.8);
-            var b = new Color(0.3, 0.5, 0.7, 0.9);
-            assertSame(b, a.interpolate(b, 1));
-            assertSame(b, a.interpolate(b, 1.5));
+            var startValue = new Color(0.2, 0.4, 0.6, 0.8);
+            var endValue = new Color(0.3, 0.5, 0.7, 0.9);
+            assertSame(endValue, startValue.interpolate(endValue, 1));
+            assertSame(endValue, startValue.interpolate(endValue, 1.5));
         }
     }
 

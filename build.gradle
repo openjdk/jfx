@@ -4363,6 +4363,7 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     options.tags("apiNote:a:API Note:")
     options.tags("implSpec:a:Implementation Requirements:")
     options.tags("implNote:a:Implementation Note:")
+    options.tags("interpolationType:a:Interpolation type:")
     options.tags("param")
     options.tags("return")
     options.tags("throws")

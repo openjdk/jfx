@@ -29,6 +29,7 @@ import com.sun.javafx.util.Utils;
 import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 import javafx.geometry.Side;
+import java.util.Objects;
 
 /**
  * Represents the position of a {@link BackgroundImage} within the
@@ -70,8 +71,9 @@ public final class BackgroundPosition implements Interpolatable<BackgroundPositi
     /**
      * The side along the horizontal axis to which the BackgroundImage is
      * anchored. This will only be LEFT or RIGHT and never null.
-     * @return the Side along the horizontal axis to which the BackgroundImage is
-     * anchored
+     *
+     * @return the Side along the horizontal axis to which the BackgroundImage is anchored
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final Side getHorizontalSide() { return horizontalSide; }
     final Side horizontalSide;
@@ -79,8 +81,8 @@ public final class BackgroundPosition implements Interpolatable<BackgroundPositi
     /**
      * The side along the vertical axis to which the BackgroundImage is
      * anchored. This will only be TOP or BOTTOM and never null.
-     * @return the Side along the vertical axis to which the BackgroundImage is
-     * anchored
+     * @return the Side along the vertical axis to which the BackgroundImage is anchored
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final Side getVerticalSide() { return verticalSide; }
     final Side verticalSide;
@@ -92,7 +94,12 @@ public final class BackgroundPosition implements Interpolatable<BackgroundPositi
      * is either a literal or a percentage, depending on the
      * {@link #isHorizontalAsPercentage() horizontalAsPercentage} property.
      * Negative values are acceptable.
+     *
      * @return the horizontal position of the BackgroundImage
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a> if one
+     *                    value is absolute and the other is a {@link #isHorizontalAsPercentage() percentage},
+     *                    or if the background is anchored at different {@link #getHorizontalSide() sides};
+     *                    otherwise <a href="../../animation/Interpolatable.html#linear">linear</a>
      */
     public final double getHorizontalPosition() { return horizontalPosition; }
     final double horizontalPosition;
@@ -103,7 +110,12 @@ public final class BackgroundPosition implements Interpolatable<BackgroundPositi
      * property. This value is either a literal or a percentage, depending on the
      * {@link #isVerticalAsPercentage() verticalAsPercentage} property. Negative
      * values are acceptable.
+     *
      * @return the vertical position of the BackgroundImage
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a> if one
+     *                    value is absolute and the other is a {@link #isVerticalAsPercentage() percentage},
+     *                    or if the background is anchored at different {@link #getVerticalSide() sides};
+     *                    otherwise <a href="../../animation/Interpolatable.html#linear">linear</a>
      */
     public final double getVerticalPosition() { return verticalPosition; }
     final double verticalPosition;
@@ -111,7 +123,9 @@ public final class BackgroundPosition implements Interpolatable<BackgroundPositi
     /**
      * Specifies whether the {@link #getHorizontalPosition() horizontalPosition} should
      * be interpreted as a literal number or as a percentage.
+     *
      * @return true if horizontalPosition should be interpreted as a percentage
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isHorizontalAsPercentage() { return horizontalAsPercentage; }
     final boolean horizontalAsPercentage;
@@ -119,7 +133,9 @@ public final class BackgroundPosition implements Interpolatable<BackgroundPositi
     /**
      * Specifies whether the {@link #getVerticalPosition() verticalPosition} should
      * be interpreted as a literal number or as a percentage.
+     *
      * @return true if verticalPosition should be interpreted as a percentage
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isVerticalAsPercentage() { return verticalAsPercentage; }
     final boolean verticalAsPercentage;
@@ -180,11 +196,14 @@ public final class BackgroundPosition implements Interpolatable<BackgroundPositi
     /**
      * {@inheritDoc}
      *
+     * @throws NullPointerException {@inheritDoc}
      * @since 23
      */
     @Override
     public BackgroundPosition interpolate(BackgroundPosition endValue, double t) {
-        if (t <= 0 || equals(endValue)) {
+        Objects.requireNonNull(endValue, "endValue cannot be null");
+
+        if (t <= 0) {
             return this;
         }
 
@@ -192,21 +211,63 @@ public final class BackgroundPosition implements Interpolatable<BackgroundPositi
             return endValue;
         }
 
-        double horizontalPosition = horizontalSide == endValue.horizontalSide ?
-            Utils.interpolate(
-                this.horizontalPosition, endValue.horizontalPosition,
-                this.horizontalAsPercentage, endValue.horizontalAsPercentage, t) :
-            endValue.horizontalPosition;
+        double newHorizontalPosition, newVerticalPosition;
+        boolean newHorizontalAsPercentage, newVerticalAsPercentage;
+        Side newHorizontalSide, newVerticalSide;
 
-        double verticalPosition = verticalSide == endValue.verticalSide ?
-            Utils.interpolate(
-                this.verticalPosition, endValue.verticalPosition,
-                this.verticalAsPercentage, endValue.verticalAsPercentage, t) :
-            endValue.verticalPosition;
+        if (this.horizontalSide == endValue.horizontalSide
+                && this.horizontalAsPercentage == endValue.horizontalAsPercentage) {
+            newHorizontalPosition = Utils.interpolate(this.horizontalPosition, endValue.horizontalPosition, t);
+            newHorizontalAsPercentage = this.horizontalAsPercentage;
+            newHorizontalSide = this.horizontalSide;
+        } else if (t < 0.5) {
+            newHorizontalPosition = this.horizontalPosition;
+            newHorizontalAsPercentage = this.horizontalAsPercentage;
+            newHorizontalSide = this.horizontalSide;
+        } else {
+            newHorizontalPosition = endValue.horizontalPosition;
+            newHorizontalAsPercentage = endValue.horizontalAsPercentage;
+            newHorizontalSide = endValue.horizontalSide;
+        }
+
+        if (this.verticalSide == endValue.verticalSide
+                && this.verticalAsPercentage == endValue.verticalAsPercentage) {
+            newVerticalPosition = Utils.interpolate(this.verticalPosition, endValue.verticalPosition, t);
+            newVerticalAsPercentage = this.verticalAsPercentage;
+            newVerticalSide = this.verticalSide;
+        } else if (t < 0.5) {
+            newVerticalPosition = this.verticalPosition;
+            newVerticalAsPercentage = this.verticalAsPercentage;
+            newVerticalSide = this.verticalSide;
+        } else {
+            newVerticalPosition = endValue.verticalPosition;
+            newVerticalAsPercentage = endValue.verticalAsPercentage;
+            newVerticalSide = endValue.verticalSide;
+        }
+
+        if (isSame(newHorizontalSide, newHorizontalPosition, newHorizontalAsPercentage,
+                   newVerticalSide, newVerticalPosition, newVerticalAsPercentage)) {
+            return this;
+        }
+
+        if (endValue.isSame(newHorizontalSide, newHorizontalPosition, newHorizontalAsPercentage,
+                            newVerticalSide, newVerticalPosition, newVerticalAsPercentage)) {
+            return endValue;
+        }
 
         return new BackgroundPosition(
-            endValue.horizontalSide, horizontalPosition, endValue.horizontalAsPercentage,
-            endValue.verticalSide, verticalPosition, endValue.verticalAsPercentage);
+            newHorizontalSide, newHorizontalPosition, newHorizontalAsPercentage,
+            newVerticalSide, newVerticalPosition, newVerticalAsPercentage);
+    }
+
+    private boolean isSame(Side horizontalSide, double horizontalPosition, boolean horizontalAsPercentage,
+                           Side verticalSide, double verticalPosition, boolean verticalAsPercentage) {
+        return this.horizontalSide == horizontalSide
+            && this.horizontalPosition == horizontalPosition
+            && this.horizontalAsPercentage == horizontalAsPercentage
+            && this.verticalSide == verticalSide
+            && this.verticalPosition == verticalPosition
+            && this.verticalAsPercentage == verticalAsPercentage;
     }
 
     /**

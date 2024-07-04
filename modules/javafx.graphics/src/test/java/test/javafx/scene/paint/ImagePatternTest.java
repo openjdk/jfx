@@ -91,45 +91,45 @@ public class ImagePatternTest {
         @Test
         public void interpolateBetweenDifferentValuesReturnsNewInstance() {
             var image = createImage();
-            var a = new ImagePattern(image, 10, 20, 30, 40, false);
-            var b = new ImagePattern(image, 20, 30, 40, 50, false);
+            var startValue = new ImagePattern(image, 10, 20, 30, 40, false);
+            var endValue = new ImagePattern(image, 20, 30, 40, 50, false);
             var expected = new ImagePattern(image, 15, 25, 35, 45, false);
-            assertEquals(expected, a.interpolate(b, 0.5));
+            assertEquals(expected, startValue.interpolate(endValue, 0.5));
         }
 
         @Test
         public void interpolateBetweenProportionalAndNonProportionalReturnsStartInstanceOrEndInstance() {
             var image = createImage();
-            var a = new ImagePattern(image, 10, 20, 30, 40, false);
-            var b = new ImagePattern(image, 20, 30, 40, 50, true);
-            assertSame(a, a.interpolate(b, 0));
-            assertSame(b, a.interpolate(b, 0.5));
+            var startValue = new ImagePattern(image, 10, 20, 30, 40, false);
+            var endValue = new ImagePattern(image, 20, 30, 40, 50, true);
+            assertSame(startValue, startValue.interpolate(endValue, 0));
+            assertSame(endValue, startValue.interpolate(endValue, 0.5));
         }
 
         @Test
         public void interpolateBetweenTwoEqualValuesReturnsStartInstance() {
             var image = createImage();
-            var a = new ImagePattern(image, 10, 20, 30, 40, false);
-            var b = new ImagePattern(image, 10, 20, 30, 40, false);
-            assertSame(a, a.interpolate(b, 0.5));
+            var startValue = new ImagePattern(image, 10, 20, 30, 40, false);
+            var endValue = new ImagePattern(image, 10, 20, 30, 40, false);
+            assertSame(startValue, startValue.interpolate(endValue, 0.5));
         }
 
         @Test
         public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
             var image = createImage();
-            var a = new ImagePattern(image, 10, 20, 30, 40, false);
-            var b = new ImagePattern(image, 20, 30, 40, 50, false);
-            assertSame(a, a.interpolate(b, 0));
-            assertSame(a, a.interpolate(b, -0.5));
+            var startValue = new ImagePattern(image, 10, 20, 30, 40, false);
+            var endValue = new ImagePattern(image, 20, 30, 40, 50, false);
+            assertSame(startValue, startValue.interpolate(endValue, 0));
+            assertSame(startValue, startValue.interpolate(endValue, -0.5));
         }
 
         @Test
         public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
             var image = createImage();
-            var a = new ImagePattern(image, 10, 20, 30, 40, false);
-            var b = new ImagePattern(image, 20, 30, 40, 50, false);
-            assertSame(b, a.interpolate(b, 1));
-            assertSame(b, a.interpolate(b, 1.5));
+            var startValue = new ImagePattern(image, 10, 20, 30, 40, false);
+            var endValue = new ImagePattern(image, 20, 30, 40, 50, false);
+            assertSame(endValue, startValue.interpolate(endValue, 1));
+            assertSame(endValue, startValue.interpolate(endValue, 1.5));
         }
     }
 }

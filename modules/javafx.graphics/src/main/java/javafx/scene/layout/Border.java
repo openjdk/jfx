@@ -167,8 +167,9 @@ public final class Border implements Interpolatable<Border> {
      * The list of BorderStrokes which together define the stroked portion
      * of this Border. This List is unmodifiable and immutable. It
      * will never be null. It will never contain any null elements.
-     * @return the list of BorderStrokes which together define the stroked
-     * portion of this Border
+     *
+     * @return the list of BorderStrokes which together define the stroked portion of this Border
+     * @interpolationType <a href="../../animation/Interpolatable.html#pairwise">pairwise</a>
      */
     public final List<BorderStroke> getStrokes() { return strokes; }
     final List<BorderStroke> strokes;
@@ -182,8 +183,10 @@ public final class Border implements Interpolatable<Border> {
      * <p>
      * This List is unmodifiable and immutable. It will never be null.
      * It will never contain any null elements.
+     *
      * @return the list of BorderImages which together define the images to use
-     * instead of stroke for this Border
+     *         instead of stroke for this Border
+     * @interpolationType <a href="../../animation/Interpolatable.html#pairwise">pairwise</a>
      */
     public final List<BorderImage> getImages() { return images; }
     final List<BorderImage> images;
@@ -412,10 +415,13 @@ public final class Border implements Interpolatable<Border> {
     /**
      * {@inheritDoc}
      *
+     * @throws NullPointerException {@inheritDoc}
      * @since 23
      */
     @Override
     public Border interpolate(Border endValue, double t) {
+        Objects.requireNonNull(endValue, "endValue cannot be null");
+
         if (t <= 0) {
             return this;
         }
@@ -424,8 +430,11 @@ public final class Border implements Interpolatable<Border> {
             return endValue;
         }
 
-        List<BorderImage> newImages = Utils.interpolateListsPairwise(images, endValue.images, t);
-        List<BorderStroke> newStrokes = Utils.interpolateListsPairwise(strokes, endValue.strokes, t);
+        List<BorderImage> newImages = images == endValue.images ?
+            images : Utils.interpolateListsPairwise(images, endValue.images, t);
+
+        List<BorderStroke> newStrokes = strokes == endValue.strokes ?
+            strokes : Utils.interpolateListsPairwise(strokes, endValue.strokes, t);
 
         if (images == newImages && strokes == newStrokes) {
             return this;

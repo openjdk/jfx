@@ -31,6 +31,7 @@ import javafx.beans.NamedArg;
 import javafx.scene.image.Image;
 import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.tk.Toolkit;
+import java.util.Objects;
 
 /**
  * <p>The {@code ImagePattern} class fills a shape with an image pattern. The
@@ -152,6 +153,9 @@ public final class ImagePattern extends Paint implements Interpolatable<ImagePat
      * Gets the x origin of the anchor rectangle.
      *
      * @defaultValue 0.0
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a>
+     *                    if both values are absolute or both values are {@link #isProportional() proportional},
+     *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      * @return The x origin of the anchor rectangle.
      */
     public final double getX() {
@@ -164,6 +168,9 @@ public final class ImagePattern extends Paint implements Interpolatable<ImagePat
      * Gets the y origin of the anchor rectangle.
      *
      * @defaultValue 0.0
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a>
+     *                    if both values are absolute or both values are {@link #isProportional() proportional},
+     *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      * @return The y origin of the anchor rectangle.
      */
     public final double getY() {
@@ -177,6 +184,9 @@ public final class ImagePattern extends Paint implements Interpolatable<ImagePat
      * Gets the width of the anchor rectangle.
      *
      * @defaultValue 1.0
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a>
+     *                    if both values are absolute or both values are {@link #isProportional() proportional},
+     *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      * @return The width of the anchor rectangle.
      */
     public final double getWidth() {
@@ -190,6 +200,9 @@ public final class ImagePattern extends Paint implements Interpolatable<ImagePat
      * Gets the height of the anchor rectangle.
      *
      * @defaultValue 1.0
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a>
+     *                    if both values are absolute or both values are {@link #isProportional() proportional},
+     *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      * @return The height of the anchor rectangle.
      */
     public final double getHeight() {
@@ -208,6 +221,7 @@ public final class ImagePattern extends Paint implements Interpolatable<ImagePat
      * in the local coordinate system of the node.
      *
      * @defaultValue true
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      * @return boolean that is true if this paint is proportional.
      */
     public final boolean isProportional() {
@@ -223,6 +237,7 @@ public final class ImagePattern extends Paint implements Interpolatable<ImagePat
     }
 
     private Object platformPaint;
+    private int hash;
 
     /**
      * Creates a new instance of ImagePattern from the specified image. Default
@@ -275,25 +290,32 @@ public final class ImagePattern extends Paint implements Interpolatable<ImagePat
     /**
      * {@inheritDoc}
      *
+     * @throws NullPointerException {@inheritDoc}
      * @since 23
      */
     @Override
     public ImagePattern interpolate(ImagePattern endValue, double t) {
+        Objects.requireNonNull(endValue, "endValue cannot be null");
+
         if (t <= 0 || equals(endValue)) {
             return this;
         }
 
-        if (t >= 1 || proportional != endValue.proportional) {
+        if (t >= 1) {
             return endValue;
         }
 
+        if (proportional != endValue.proportional) {
+            return Utils.interpolateDiscrete(this, endValue, t);
+        }
+
         return new ImagePattern(
-            endValue.image,
+            Utils.interpolateDiscrete(image, endValue.image, t),
             Utils.interpolate(x, endValue.x, t),
             Utils.interpolate(y, endValue.y, t),
             Utils.interpolate(width, endValue.width, t),
             Utils.interpolate(height, endValue.height, t),
-            endValue.proportional);
+            proportional);
     }
 
     @Override
@@ -308,6 +330,22 @@ public final class ImagePattern extends Paint implements Interpolatable<ImagePat
         }
 
         return false;
+    }
+
+    @Override
+    public int hashCode() {
+        if (hash == 0) {
+            long bits = 17L;
+            bits = 37L * bits + Double.doubleToLongBits(x);
+            bits = 37L * bits + Double.doubleToLongBits(y);
+            bits = 37L * bits + Double.doubleToLongBits(width);
+            bits = 37L * bits + Double.doubleToLongBits(height);
+            bits = 37L * bits + ((proportional) ? 1231L : 1237L);
+            bits = 37L * bits + image.hashCode();
+            hash = (int) (bits ^ (bits >> 32));
+        }
+
+        return hash;
     }
 
     @Override

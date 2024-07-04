@@ -28,6 +28,7 @@ package javafx.scene.layout;
 import com.sun.javafx.util.Utils;
 import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
+import java.util.Objects;
 
 
 /**
@@ -84,8 +85,14 @@ public final class BackgroundSize implements Interpolatable<BackgroundSize> {
      * render. If set to AUTO, then {@code widthAsPercentage} is ignored. This value has
      * no meaning if either {@code contain} or {@code cover} are specified. This value
      * cannot be negative, except when set to the value of AUTO.
+     *
      * @return the width of the area within the Region where the associated
-     * BackgroundImage should render
+     *         BackgroundImage should render
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
+     *                    if {@link #isCover() cover} or {@link #isContain() contain} is set, if one value
+     *                    is absolute and the other value is a {@link #isWidthAsPercentage() percentage},
+     *                    or if the width is {@link #AUTO}; otherwise
+     *                    <a href="../../animation/Interpolatable.html#linear">linear</a>
      */
     public final double getWidth() { return width; }
     final double width;
@@ -95,8 +102,14 @@ public final class BackgroundSize implements Interpolatable<BackgroundSize> {
      * render. If set to AUTO, then {@code heightAsPercentage} is ignored. This value has
      * no meaning if either {@code contain} or {@code cover} are specified. This value
      * cannot be negative, except when set to the value of AUTO.
+     *
      * @return the height of the area within the Region where the associated
-     * BackgroundImage should render
+     *         BackgroundImage should render
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
+     *                    if {@link #isCover() cover} or {@link #isContain() contain} is set, if one value
+     *                    is absolute and the other value is a {@link #isHeightAsPercentage() percentage},
+     *                    or if the height is {@link #AUTO}; otherwise
+     *                    <a href="../../animation/Interpolatable.html#linear">linear</a>
      */
     public final double getHeight() { return height; }
     final double height;
@@ -104,7 +117,9 @@ public final class BackgroundSize implements Interpolatable<BackgroundSize> {
     /**
      * Specifies whether the value contained in {@code width} should be interpreted
      * as a percentage or as a normal value.
+     *
      * @return true if width should be interpreted as a percentage
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isWidthAsPercentage() { return widthAsPercentage; }
     final boolean widthAsPercentage;
@@ -112,7 +127,9 @@ public final class BackgroundSize implements Interpolatable<BackgroundSize> {
     /**
      * Specifies whether the value contained in {@code height} should be interpreted
      * as a percentage or as a normal value.
+     *
      * @return true if height should be interpreted as a percentage
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isHeightAsPercentage() { return heightAsPercentage; }
     final boolean heightAsPercentage;
@@ -121,7 +138,9 @@ public final class BackgroundSize implements Interpolatable<BackgroundSize> {
      * If true, scale the image, while preserving its intrinsic aspect ratio (if any), to the
      * largest size such that both its width and its height can fit inside the background
      * positioning area.
+     *
      * @return true if the image can fit inside the background positioning area
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isContain() { return contain; }
     final boolean contain;
@@ -130,7 +149,9 @@ public final class BackgroundSize implements Interpolatable<BackgroundSize> {
      * If true, scale the image, while preserving its intrinsic aspect ratio (if any), to the
      * smallest size such that both its width and its height can completely cover the background
      * positioning area.
+     *
      * @return true if image can completely cover the background positioning area
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isCover() { return cover; }
     final boolean cover;
@@ -185,33 +206,65 @@ public final class BackgroundSize implements Interpolatable<BackgroundSize> {
     /**
      * {@inheritDoc}
      *
+     * @throws NullPointerException {@inheritDoc}
      * @since 23
      */
     @Override
     public BackgroundSize interpolate(BackgroundSize endValue, double t) {
-        if (t <= 0 || equals(endValue)) {
+        Objects.requireNonNull(endValue, "endValue cannot be null");
+
+        if (t <= 0) {
             return this;
         }
 
-        if (t >= 1 || !isInterpolatable() || !endValue.isInterpolatable()) {
+        if (t >= 1) {
             return endValue;
         }
 
-        double width = this.width != AUTO && endValue.width != AUTO ?
-            Utils.interpolate(this.width, endValue.width, this.widthAsPercentage, endValue.widthAsPercentage, t) :
-            endValue.width;
+        if (cover || contain || endValue.cover || endValue.contain) {
+            return t < 0.5 ? this : endValue;
+        }
 
-        double height = this.height != AUTO && endValue.height != AUTO ?
-            Utils.interpolate(this.height, endValue.height, this.heightAsPercentage, endValue.heightAsPercentage, t) :
-            endValue.height;
+        double newWidth = interpolate(
+            this.width, endValue.width, this.widthAsPercentage, endValue.widthAsPercentage, t);
 
-        return new BackgroundSize(width, height,
-                                  endValue.widthAsPercentage, endValue.heightAsPercentage,
-                                  endValue.contain, endValue.cover);
+        double newHeight = interpolate(
+            this.height, endValue.height, this.heightAsPercentage, endValue.heightAsPercentage, t);
+
+        boolean newWidthAsPercentage, newHeightAsPercentage;
+
+        if (t < 0.5) {
+            newWidthAsPercentage = this.widthAsPercentage;
+            newHeightAsPercentage = this.heightAsPercentage;
+        } else {
+            newWidthAsPercentage = endValue.widthAsPercentage;
+            newHeightAsPercentage = endValue.heightAsPercentage;
+        }
+
+        if (isSame(newWidth, newHeight, newWidthAsPercentage, newHeightAsPercentage)) {
+            return this;
+        }
+
+        if (endValue.isSame(newWidth, newHeight, newWidthAsPercentage, newHeightAsPercentage)) {
+            return endValue;
+        }
+
+        return new BackgroundSize(newWidth, newHeight, newWidthAsPercentage, newHeightAsPercentage, false, false);
     }
 
-    private boolean isInterpolatable() {
-        return !cover && !contain && (width != AUTO || height != AUTO);
+    private boolean isSame(double width, double height, boolean widthAsPercentage, boolean heightAsPercentage) {
+        return this.width == width
+            && this.height == height
+            && this.widthAsPercentage == widthAsPercentage
+            && this.heightAsPercentage == heightAsPercentage;
+    }
+
+    private static double interpolate(double start, double end,
+                                      boolean startIsPercentage, boolean endIsPercentage,
+                                      double t) {
+        return startIsPercentage == endIsPercentage && start != AUTO && end != AUTO ?
+            Utils.interpolate(start, end, t) :
+            Utils.interpolateDiscrete(start, end, t);
     }
 
     /**

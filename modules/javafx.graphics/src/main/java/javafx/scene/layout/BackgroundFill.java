@@ -31,6 +31,7 @@ import javafx.beans.NamedArg;
 import javafx.geometry.Insets;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
+import java.util.Objects;
 
 /**
  * The fill and associated properties that direct how to fill the background of a
@@ -47,7 +48,9 @@ public final class BackgroundFill implements Interpolatable<BackgroundFill> {
     /**
      * The Paint to use for filling the background of the {@link Region}.
      * This value will never be null.
+     *
      * @return the Paint to use for filling the background of the {@link Region}
+     * @interpolationType see {@link Paint}
      */
     public final Paint getFill() { return fill; }
     final Paint fill;
@@ -57,7 +60,9 @@ public final class BackgroundFill implements Interpolatable<BackgroundFill> {
      * BackgroundFill. Each corner can therefore be independently
      * specified. This will never be null. The radii values will
      * never be negative.
+     *
      * @return the Radii to use for representing the four radii of the BackgroundFill
+     * @interpolationType <a href="../../animation/Interpolatable.html#default">default</a>
      */
     public final CornerRadii getRadii() { return radii; }
     final CornerRadii radii;
@@ -68,7 +73,9 @@ public final class BackgroundFill implements Interpolatable<BackgroundFill> {
      * The insets will never be null, but the values may be negative
      * in order to position the border beyond the natural bounds
      * (that is, (0, 0, width, height)) of the Region.
+     *
      * @return the Insets to use for this fill
+     * @interpolationType <a href="../../animation/Interpolatable.html#default">default</a>
      */
     public final Insets getInsets() { return insets; }
     final Insets insets;
@@ -108,10 +115,13 @@ public final class BackgroundFill implements Interpolatable<BackgroundFill> {
     /**
      * {@inheritDoc}
      *
+     * @throws NullPointerException {@inheritDoc}
      * @since 23
      */
     @Override
     public BackgroundFill interpolate(BackgroundFill endValue, double t) {
+        Objects.requireNonNull(endValue, "endValue cannot be null");
+
         // We don't check equals(endValue) here to prevent unnecessary equality checks,
         // and only check for equality with 'this' or 'endValue' after interpolation.
         if (t <= 0) {
@@ -130,15 +140,21 @@ public final class BackgroundFill implements Interpolatable<BackgroundFill> {
         Insets newInsets = insets.interpolate(endValue.insets, t);
         Paint newFill = PaintUtils.interpolate(fill, endValue.fill, t);
 
-        if (newFill == fill && newRadii == radii && newInsets == insets) {
+        if (isSame(newFill, newRadii, newInsets)) {
             return this;
         }
 
-        if (newFill == endValue.fill && newRadii == endValue.radii && newInsets == endValue.insets) {
+        if (endValue.isSame(newFill, newRadii, newInsets)) {
             return endValue;
         }
 
         return new BackgroundFill(newFill, newRadii, newInsets);
+    }
+
+    private boolean isSame(Paint fill, CornerRadii radii, Insets insets) {
+        return this.fill == fill
+            && this.radii == radii
+            && this.insets == insets;
     }
 
     /**

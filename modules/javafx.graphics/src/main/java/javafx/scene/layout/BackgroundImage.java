@@ -28,6 +28,7 @@ package javafx.scene.layout;
 import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 import javafx.scene.image.Image;
+import java.util.Objects;
 
 /**
  * Defines properties describing how to render an image as the background to
@@ -53,7 +54,9 @@ public final class BackgroundImage implements Interpolatable<BackgroundImage> {
      * The image to be used. This will never be null. If this
      * image fails to load, then the entire BackgroundImage will
      * be skipped at rendering time.
+     *
      * @return the image to be used
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final Image getImage() { return image; }
     final Image image;
@@ -62,8 +65,10 @@ public final class BackgroundImage implements Interpolatable<BackgroundImage> {
      * Indicates in what manner (if at all) the background image
      * is to be repeated along the x-axis of the region. This
      * will never be null.
+     *
      * @return the BackgroundRepeat that indicates if the background image
-     * is to be repeated along the x-axis of the region
+     *         is to be repeated along the x-axis of the region
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final BackgroundRepeat getRepeatX() { return repeatX; }
     final BackgroundRepeat repeatX;
@@ -72,8 +77,10 @@ public final class BackgroundImage implements Interpolatable<BackgroundImage> {
      * Indicates in what manner (if at all) the background image
      * is to be repeated along the y-axis of the region. This will
      * never be null.
+     *
      * @return the BackgroundRepeat that indicates if the background image
-     * is to be repeated along the y-axis of the region
+     *         is to be repeated along the y-axis of the region
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final BackgroundRepeat getRepeatY() { return repeatY; }
     final BackgroundRepeat repeatY;
@@ -81,14 +88,18 @@ public final class BackgroundImage implements Interpolatable<BackgroundImage> {
     /**
      * The position of this BackgroundImage relative to the Region. Note that any
      * position outside the background area of the region will be clipped.
+     *
      * @return the position of this BackgroundImage relative to the Region
+     * @interpolationType <a href="../../animation/Interpolatable.html#default">default</a>
      */
     public final BackgroundPosition getPosition() { return position; }
     final BackgroundPosition position;
 
     /**
      * The size of this image relative to the Region.
+     *
      * @return the size of this image relative to the Region
+     * @interpolationType <a href="../../animation/Interpolatable.html#default">default</a>
      */
     public final BackgroundSize getSize() { return size; }
     final BackgroundSize size;
@@ -142,10 +153,13 @@ public final class BackgroundImage implements Interpolatable<BackgroundImage> {
     /**
      * {@inheritDoc}
      *
+     * @throws NullPointerException {@inheritDoc}
      * @since 23
      */
     @Override
     public BackgroundImage interpolate(BackgroundImage endValue, double t) {
+        Objects.requireNonNull(endValue, "endValue cannot be null");
+
         // We don't check equals(endValue) here to prevent unnecessary equality checks,
         // and only check for equality with 'this' or 'endValue' after interpolation.
         if (t <= 0) {
@@ -162,20 +176,40 @@ public final class BackgroundImage implements Interpolatable<BackgroundImage> {
         // equality.
         BackgroundPosition newPosition = this.position.interpolate(endValue.position, t);
         BackgroundSize newSize = this.size.interpolate(endValue.size, t);
+        BackgroundRepeat newRepeatX, newRepeatY;
+        Image newImage;
 
-        if (image == endValue.image
-                && repeatX == endValue.repeatX
-                && repeatY == endValue.repeatY
-                && position == newPosition
-                && size == newSize) {
+        if (t < 0.5) {
+            newRepeatX = this.repeatX;
+            newRepeatY = this.repeatY;
+            newImage = this.image;
+        } else {
+            newRepeatX = endValue.repeatX;
+            newRepeatY = endValue.repeatY;
+            newImage = endValue.image;
+        }
+
+        if (isSame(newImage, newRepeatX, newRepeatY, newPosition, newSize)) {
             return this;
         }
 
-        if (endValue.position == newPosition && endValue.size == newSize) {
+        if (endValue.isSame(newImage, newRepeatX, newRepeatY, newPosition, newSize)) {
             return endValue;
         }
 
-        return new BackgroundImage(endValue.image, endValue.repeatX, endValue.repeatY, newPosition, newSize);
+        return new BackgroundImage(newImage, newRepeatX, newRepeatY, newPosition, newSize);
+    }
+
+    private boolean isSame(Image image,
+                           BackgroundRepeat repeatX,
+                           BackgroundRepeat repeatY,
+                           BackgroundPosition position,
+                           BackgroundSize size) {
+        return this.image == image
+            && this.repeatX == repeatX
+            && this.repeatY == repeatY
+            && this.position == position
+            && this.size == size;
     }
 
     /**

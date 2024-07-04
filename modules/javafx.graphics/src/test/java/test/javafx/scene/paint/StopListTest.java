@@ -76,7 +76,7 @@ public class StopListTest {
 
         assertEquals(zeroOneList, normalize((Stop[]) null));
         assertEquals(zeroOneList, normalize((List<Stop>) null));
-        assertThrows(NullPointerException.class, () -> normalize(new Stop(0.5, null)));
+        assertEquals(zeroOneList, normalize(new Stop(0.5, null)));
         assertEquals(zeroOneList, normalize(new Stop[0]));
         assertEquals(zeroOneList, normalize(new Stop[] { null }));
         assertEquals(zeroOneList, normalize(new Stop[] { null, null, null }));
@@ -208,14 +208,45 @@ public class StopListTest {
         }
 
         @Test
-        public void differentSize_sameFirstAndLastOffset() {
+        public void firstListLargerThanSecondList_sameFirstAndLastOffset() {
             var firstList = normalize(List.of(new Stop(0, color1), new Stop(0.5, color3), new Stop(1, color1)));
             var secondList = normalize(List.of(new Stop(0, color1), new Stop(1, color3)));
+
             var expected = List.of(
                 new Stop(0, color1),
                 new Stop(0.5, color2.interpolate(color3, 0.5)),
                 new Stop(1, color2));
             assertEquals(expected, StopShim.interpolateLists(firstList, secondList, 0.5));
+
+            // An interpolation factor close to zero should yield a stop list very similar to the first list
+            expected = firstList;
+            assertSimilar(expected, StopShim.interpolateLists(firstList, secondList, 0.001));
+
+            // An interpolation factor close to one should yield a stop list very similar to the second list,
+            // but with a different number of stops (3 instead of 2).
+            expected = List.of(new Stop(0, color1), new Stop(0.5, color2), new Stop(1, color3));
+            assertSimilar(expected, StopShim.interpolateLists(firstList, secondList, 0.999));
+        }
+
+        @Test
+        public void firstListSmallerThanSecondList_sameFirstAndLastOffset() {
+            var firstList = normalize(List.of(new Stop(0, color1), new Stop(1, color3)));
+            var secondList = normalize(List.of(new Stop(0, color1), new Stop(0.5, color3), new Stop(1, color1)));
+
+            var expected = List.of(
+                new Stop(0, color1),
+                new Stop(0.5, color2.interpolate(color3, 0.5)),
+                new Stop(1, color2));
+            assertEquals(expected, StopShim.interpolateLists(firstList, secondList, 0.5));
+
+            // An interpolation factor close to zero should yield a stop list very similar to the first list,
+            // but with a different number of stops (3 instead of 2).
+            expected = List.of( new Stop(0, color1), new Stop(0.5, color2), new Stop(1, color3));
+            assertSimilar(expected, StopShim.interpolateLists(firstList, secondList, 0.001));
+
+            // An interpolation factor close to one should yield a stop list very similar to the second list.
+            expected = secondList;
+            assertSimilar(expected, StopShim.interpolateLists(firstList, secondList, 0.999));
         }
 
         @Test
@@ -230,6 +261,25 @@ public class StopListTest {
                 new Stop(0.75, color1.interpolate(color3, 0.75).interpolate(color1, t)),
                 new Stop(1, color2)),
             res);
+        }
+
+        private void assertSimilar(List<Stop> a, List<Stop> b) {
+            assertEquals(a.size(), b.size());
+            for (int i = 0; i < a.size(); ++i) {
+                assertSimilar(a.get(i), b.get(i));
+            }
+        }
+
+        private void assertSimilar(Stop a, Stop b) {
+            assertSimilar(a.getColor(), b.getColor());
+            assertTrue(Math.abs(a.getOffset() - b.getOffset()) < 0.1);
+        }
+
+        private void assertSimilar(Color a, Color b) {
+            assertTrue(Math.abs(a.getRed() - b.getRed()) < 0.01);
+            assertTrue(Math.abs(a.getGreen() - b.getGreen()) < 0.01);
+            assertTrue(Math.abs(a.getBlue() - b.getBlue()) < 0.01);
+            assertTrue(Math.abs(a.getOpacity() - b.getOpacity()) < 0.01);
         }
     }
 }

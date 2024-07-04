@@ -247,17 +247,17 @@ public class BackgroundImageTest {
 
         @Test
         public void interpolateBetweenEqualValuesReturnsStartInstance() {
-            var a = new BackgroundImage(
+            var startValue = new BackgroundImage(
                 IMAGE_1, NO_REPEAT, NO_REPEAT,
                 new BackgroundPosition(Side.LEFT, 0, false, Side.TOP, 0, false),
                 new BackgroundSize(50, 100, false, false, false, false));
 
-            var b = new BackgroundImage(
+            var endValue = new BackgroundImage(
                 IMAGE_1, NO_REPEAT, NO_REPEAT,
                 new BackgroundPosition(Side.LEFT, 0, false, Side.TOP, 0, false),
                 new BackgroundSize(50, 100, false, false, false, false));
 
-            assertSame(a, a.interpolate(b, 0.5));
+            assertSame(startValue, startValue.interpolate(endValue, 0.5));
         }
 
         @Test

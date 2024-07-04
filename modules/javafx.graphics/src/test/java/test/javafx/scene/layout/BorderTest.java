@@ -585,12 +585,12 @@ public class BorderTest {
     class InterpolationTest {
         @Test
         public void interpolateBetweenDifferentValuesReturnsNewInstance() {
-            var a = new Border(
+            var startValue = new Border(
                 List.of(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10)),
                         new BorderStroke(Color.BLUE, BorderStrokeStyle.SOLID, new CornerRadii(20), new BorderWidths(20))),
                 List.of(new BorderImage(IMAGE_1, new BorderWidths(10), new Insets(5), new BorderWidths(10), false, REPEAT, REPEAT)));
 
-            var b = new Border(
+            var endValue = new Border(
                 List.of(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, new CornerRadii(20), new BorderWidths(20)),
                         new BorderStroke(Color.YELLOW, BorderStrokeStyle.SOLID, new CornerRadii(40), new BorderWidths(40))),
                 List.of(new BorderImage(IMAGE_2, new BorderWidths(30), new Insets(15), new BorderWidths(30), false, REPEAT, REPEAT)));
@@ -600,16 +600,16 @@ public class BorderTest {
                         new BorderStroke(Color.BLUE.interpolate(Color.YELLOW, 0.5), BorderStrokeStyle.SOLID, new CornerRadii(30), new BorderWidths(30))),
                 List.of(new BorderImage(IMAGE_2, new BorderWidths(20), new Insets(10), new BorderWidths(20), false, REPEAT, REPEAT)));
 
-            assertEquals(expect, a.interpolate(b, 0.5));
+            assertEquals(expect, startValue.interpolate(endValue, 0.5));
         }
 
         @Test
         public void interpolateBetweenDifferentNumberOfStrokesAndImages() {
-            var a = new Border(
+            var startValue = new Border(
                 List.of(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10))),
                 List.of(new BorderImage(IMAGE_1, new BorderWidths(10), new Insets(5), new BorderWidths(10), false, REPEAT, REPEAT)));
 
-            var b = new Border(
+            var endValue = new Border(
                 List.of(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, new CornerRadii(20), new BorderWidths(20)),
                         new BorderStroke(Color.YELLOW, BorderStrokeStyle.SOLID, new CornerRadii(40), new BorderWidths(40))),
                 List.of(new BorderImage(IMAGE_1, new BorderWidths(30), new Insets(15), new BorderWidths(30), false, REPEAT, REPEAT),
@@ -621,7 +621,7 @@ public class BorderTest {
                 List.of(new BorderImage(IMAGE_1, new BorderWidths(20), new Insets(10), new BorderWidths(20), false, REPEAT, REPEAT),
                         new BorderImage(IMAGE_2, new BorderWidths(30), new Insets(15), new BorderWidths(30), false, REPEAT, REPEAT)));
 
-            var actual = a.interpolate(b, 0.5);
+            var actual = startValue.interpolate(endValue, 0.5);
 
             assertEquals(expect, actual);
             assertNotSame(expect, actual);
@@ -629,25 +629,25 @@ public class BorderTest {
 
         @Test
         public void interpolateBetweenEqualValuesReturnsStartInstance() {
-            var a = new Border(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10)));
-            var b = new Border(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10)));
-            assertSame(a, a.interpolate(b, 0.5));
+            var startValue = new Border(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10)));
+            var endValue = new Border(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10)));
+            assertSame(startValue, startValue.interpolate(endValue, 0.5));
         }
 
         @Test
         public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
-            var a = new Border(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10)));
-            var b = new Border(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, new CornerRadii(20), new BorderWidths(20)));
-            assertSame(a, a.interpolate(b, 0));
-            assertSame(a, a.interpolate(b, -0.5));
+            var startValue = new Border(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10)));
+            var endValue = new Border(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, new CornerRadii(20), new BorderWidths(20)));
+            assertSame(startValue, startValue.interpolate(endValue, 0));
+            assertSame(startValue, startValue.interpolate(endValue, -0.5));
         }
 
         @Test
         public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
-            var a = new Border(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10)));
-            var b = new Border(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, new CornerRadii(20), new BorderWidths(20)));
-            assertSame(b, a.interpolate(b, 1));
-            assertSame(b, a.interpolate(b, 1.5));
+            var startValue = new Border(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10)));
+            var endValue = new Border(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, new CornerRadii(20), new BorderWidths(20)));
+            assertSame(endValue, startValue.interpolate(endValue, 1));
+            assertSame(endValue, startValue.interpolate(endValue, 1.5));
         }
     }
 }

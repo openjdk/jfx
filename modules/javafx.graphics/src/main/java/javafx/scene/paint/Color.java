@@ -28,6 +28,7 @@ package javafx.scene.paint;
 import javafx.animation.Interpolatable;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import com.sun.javafx.util.Utils;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.NamedArg;
@@ -1841,6 +1842,7 @@ public final class Color extends Paint implements Interpolatable<Color> {
      *
      * @return the red component of the {@code Color}, in the range {@code 0.0-1.0}
      * @defaultValue 0.0
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a>
      */
     public final double getRed() { return red; }
     private final float red;
@@ -1850,6 +1852,7 @@ public final class Color extends Paint implements Interpolatable<Color> {
      *
      * @return the green component of the {@code Color}, in the range {@code 0.0-1.0}
      * @defaultValue 0.0
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a>
      */
     public final double getGreen() { return green; }
     private final float green;
@@ -1859,6 +1862,7 @@ public final class Color extends Paint implements Interpolatable<Color> {
      *
      * @return the blue component of the {@code Color}, in the range {@code 0.0-1.0}
      * @defaultValue 0.0
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a>
      */
     public final double getBlue() { return blue; }
     private final float blue;
@@ -1868,6 +1872,7 @@ public final class Color extends Paint implements Interpolatable<Color> {
      *
      * @return the opacity of the {@code Color}, in the range {@code 0.0-1.0}
      * @defaultValue 1.0
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a>
      */
     public final double getOpacity() { return opacity; }
     private final float opacity;
@@ -1936,8 +1941,14 @@ public final class Color extends Paint implements Interpolatable<Color> {
 
     /**
      * {@inheritDoc}
+     *
+     * @throws NullPointerException {@inheritDoc}
+     * @since 23
      */
-    @Override public Color interpolate(Color endValue, double t) {
+    @Override
+    public Color interpolate(Color endValue, double t) {
+        Objects.requireNonNull(endValue, "endValue cannot be null");
+
         // If both instances are equal, return this instance to prevent the creation of numerous small objects.
         if (t <= 0.0 || equals(endValue)) return this;
         if (t >= 1.0) return endValue;

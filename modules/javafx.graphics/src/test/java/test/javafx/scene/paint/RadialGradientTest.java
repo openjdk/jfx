@@ -490,12 +490,12 @@ public class RadialGradientTest {
     class InterpolationTest {
         @Test
         public void interpolateBetweenDifferentValuesReturnsNewInstance() {
-            var a = new RadialGradient(
+            var startValue = new RadialGradient(
                 10, 20, 30, 40, 50,
                 true, CycleMethod.NO_CYCLE,
                 List.of(new Stop(0, Color.BLACK), new Stop(1, Color.WHITE)));
 
-            var b = new RadialGradient(
+            var endValue = new RadialGradient(
                 20, 40, 60, 80, 100,
                 true, CycleMethod.NO_CYCLE,
                 List.of(new Stop(0, Color.WHITE), new Stop(1, Color.BLACK)));
@@ -505,70 +505,71 @@ public class RadialGradientTest {
                 true, CycleMethod.NO_CYCLE,
                 List.of(new Stop(0, Color.gray(0.5)), new Stop(1, Color.gray(0.5))));
 
-            assertEquals(expected, a.interpolate(b, 0.5));
+            assertEquals(expected, startValue.interpolate(endValue, 0.5));
         }
 
         @Test
         public void interpolateBetweenProportionalAndNonProportionalReturnsStartInstanceOrEndInstance() {
-            var a = new RadialGradient(
+            var startValue = new RadialGradient(
                 10, 20, 30, 40, 50,
                 true, CycleMethod.NO_CYCLE,
                 List.of(new Stop(0, Color.BLUE)));
 
-            var b = new RadialGradient(
+            var endValue = new RadialGradient(
                 10, 20, 30, 40, 50,
                 false, CycleMethod.NO_CYCLE,
                 List.of(new Stop(0, Color.BLUE)));
 
-            assertSame(a, a.interpolate(b, 0));
-            assertSame(b, a.interpolate(b, 0.5));
+            assertSame(startValue, startValue.interpolate(endValue, 0.25));
+            assertSame(endValue, startValue.interpolate(endValue, 0.5));
+            assertSame(endValue, startValue.interpolate(endValue, 0.75));
         }
 
         @Test
         public void interpolateBetweenTwoEqualValuesReturnsStartInstance() {
-            var a = new RadialGradient(
+            var startValue = new RadialGradient(
                 10, 20, 30, 40, 50,
                 true, CycleMethod.NO_CYCLE,
                 List.of(new Stop(0, Color.BLUE)));
 
-            var b = new RadialGradient(
+            var endValue = new RadialGradient(
                 10, 20, 30, 40, 50,
                 true, CycleMethod.NO_CYCLE,
                 List.of(new Stop(0, Color.BLUE)));
 
-            assertSame(a, a.interpolate(b, 0.5));
+            assertSame(startValue, startValue.interpolate(endValue, 0.5));
         }
 
         @Test
         public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
-            var a = new RadialGradient(
+            var startValue = new RadialGradient(
                 10, 20, 30, 40, 50,
                 true, CycleMethod.NO_CYCLE,
                 List.of(new Stop(0, Color.BLUE)));
 
-            var b = new RadialGradient(
+            var endValue = new RadialGradient(
                 10, 20, 30, 40, 50,
                 true, CycleMethod.NO_CYCLE,
                 List.of(new Stop(0, Color.RED)));
 
-            assertSame(a, a.interpolate(b, 0));
-            assertSame(a, a.interpolate(b, -1));
+            assertSame(startValue, startValue.interpolate(endValue, 0));
+            assertSame(startValue, startValue.interpolate(endValue, -1));
         }
 
         @Test
         public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
-            var a = new RadialGradient(
+            var startValue = new RadialGradient(
                 10, 20, 30, 40, 50,
                 true, CycleMethod.NO_CYCLE,
                 List.of(new Stop(0, Color.BLUE)));
 
-            var b = new RadialGradient(
+            var endValue = new RadialGradient(
                 10, 20, 30, 40, 50,
                 true, CycleMethod.NO_CYCLE,
                 List.of(new Stop(0, Color.RED)));
 
-            assertSame(b, a.interpolate(b, 1));
-            assertSame(b, a.interpolate(b, 1.5));
+            assertSame(endValue, startValue.interpolate(endValue, 1));
+            assertSame(endValue, startValue.interpolate(endValue, 1.5));
         }
     }
 }

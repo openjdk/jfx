@@ -32,6 +32,7 @@ import javafx.geometry.Insets;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.StrokeType;
+import java.util.Objects;
 
 /**
  * Defines the stroke to use on a {@link Border} for styling a {@code Region}.
@@ -74,6 +75,7 @@ public final class BorderStroke implements Interpolatable<BorderStroke> {
      *
      * @return the fill of top side of this border
      * @defaultValue {@code Color.BLACK}
+     * @interpolationType see {@link Paint}
      */
     public final Paint getTopStroke() { return topStroke; }
     final Paint topStroke;
@@ -87,6 +89,7 @@ public final class BorderStroke implements Interpolatable<BorderStroke> {
      *
      * @return the fill of right side of this border
      * @defaultValue {@code null} (same as {@code topFill})
+     * @interpolationType see {@link Paint}
      */
     public final Paint getRightStroke() { return rightStroke; }
     final Paint rightStroke;
@@ -97,6 +100,7 @@ public final class BorderStroke implements Interpolatable<BorderStroke> {
      *
      * @return the fill of bottom side of this border
      * @defaultValue {@code null} (same as {@code topFill})
+     * @interpolationType see {@link Paint}
      */
     public final Paint getBottomStroke() { return bottomStroke; }
     final Paint bottomStroke;
@@ -107,6 +111,7 @@ public final class BorderStroke implements Interpolatable<BorderStroke> {
      *
      * @return the fill of left side of this border
      * @defaultValue {@code null} (same as {@code rightFill})
+     * @interpolationType see {@link Paint}
      */
     public final Paint getLeftStroke() { return leftStroke; }
     final Paint leftStroke;
@@ -116,6 +121,7 @@ public final class BorderStroke implements Interpolatable<BorderStroke> {
      *
      * @return the style of top side of this border
      * @defaultValue {@code BorderStrokeStyle.NONE}
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final BorderStrokeStyle getTopStyle() { return topStyle; }
     final BorderStrokeStyle topStyle;
@@ -126,6 +132,7 @@ public final class BorderStroke implements Interpolatable<BorderStroke> {
      *
      * @return the style of right side of this border
      * @defaultValue {@code null} (same as {@code topStyle})
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final BorderStrokeStyle getRightStyle() { return rightStyle; }
     final BorderStrokeStyle rightStyle;
@@ -137,6 +144,7 @@ public final class BorderStroke implements Interpolatable<BorderStroke> {
      *
      * @return the style of bottom side of this border
      * @defaultValue {@code null} (same as {@code topStyle})
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final BorderStrokeStyle getBottomStyle() { return bottomStyle; }
     final BorderStrokeStyle bottomStyle;
@@ -148,6 +156,7 @@ public final class BorderStroke implements Interpolatable<BorderStroke> {
      *
      * @return the style of left side of this border
      * @defaultValue {@code null} (same as {@code rightStyle})
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final BorderStrokeStyle getLeftStyle() { return leftStyle; }
     final BorderStrokeStyle leftStyle;
@@ -155,7 +164,9 @@ public final class BorderStroke implements Interpolatable<BorderStroke> {
     /**
      * Defines the thickness of each side of the {@code BorderStroke}. This will never
      * be {@code null}, and defaults to {@code DEFAULT_WIDTHS}.
+     *
      * @return the thickness of each side of the {@code BorderStroke}
+     * @interpolationType <a href="../../animation/Interpolatable.html#default">default</a>
      */
     public final BorderWidths getWidths() { return widths; }
     final BorderWidths widths;
@@ -163,7 +174,9 @@ public final class BorderStroke implements Interpolatable<BorderStroke> {
     /**
      * Defines the insets of each side of the {@code BorderStroke}. This will never
      * be {@code null}, and defaults to {@code Insets.EMPTY}.
+     *
      * @return the insets of each side of the {@code BorderStroke}
+     * @interpolationType <a href="../../animation/Interpolatable.html#default">default</a>
      */
     public final Insets getInsets() { return insets; }
     final Insets insets;
@@ -175,7 +188,9 @@ public final class BorderStroke implements Interpolatable<BorderStroke> {
     /**
      * Defines the radii for each corner of this {@code BorderStroke}. This will never
      * be {@code null}, and defaults to {@code CornerRadii.EMPTY}.
+     *
      * @return the radii for each corner of this {@code BorderStroke}
+     * @interpolationType <a href="../../animation/Interpolatable.html#default">default</a>
      */
     public final CornerRadii getRadii() { return radii; }
      /* TODO I should change CornerRadii to be 4 properties, one for each corner,
@@ -363,10 +378,13 @@ public final class BorderStroke implements Interpolatable<BorderStroke> {
     /**
      * {@inheritDoc}
      *
+     * @throws NullPointerException {@inheritDoc}
      * @since 23
      */
     @Override
     public BorderStroke interpolate(BorderStroke endValue, double t) {
+        Objects.requireNonNull(endValue, "endValue cannot be null");
+
         // We don't check equals(endValue) here to prevent unnecessary equality checks,
         // and only check for equality with 'this' or 'endValue' after interpolation.
         if (t <= 0) {
@@ -387,32 +405,49 @@ public final class BorderStroke implements Interpolatable<BorderStroke> {
         Paint newRightStroke = PaintUtils.interpolate(this.rightStroke, endValue.rightStroke, t);
         Paint newBottomStroke = PaintUtils.interpolate(this.bottomStroke, endValue.bottomStroke, t);
         Paint newLeftStroke = PaintUtils.interpolate(this.leftStroke, endValue.leftStroke, t);
+        BorderStrokeStyle newTopStyle, newRightStyle, newBottomStyle, newLeftStyle;
 
-        if (topStyle == endValue.topStyle
-                && rightStyle == endValue.rightStyle
-                && bottomStyle == endValue.bottomStyle
-                && leftStyle == endValue.leftStyle
-                && isSame(newTopStroke, newRightStroke, newBottomStroke, newLeftStroke,
-                          newRadii, newWidths, newInsets)) {
+        if (t < 0.5) {
+            newTopStyle = this.topStyle;
+            newRightStyle = this.rightStyle;
+            newBottomStyle = this.bottomStyle;
+            newLeftStyle = this.leftStyle;
+        } else {
+            newTopStyle = endValue.topStyle;
+            newRightStyle = endValue.rightStyle;
+            newBottomStyle = endValue.bottomStyle;
+            newLeftStyle = endValue.leftStyle;
+        }
+
+        if (isSame(newTopStroke, newRightStroke, newBottomStroke, newLeftStroke,
+                   newTopStyle, newRightStyle, newBottomStyle, newLeftStyle,
+                   newRadii, newWidths, newInsets)) {
             return this;
         }
 
         if (endValue.isSame(newTopStroke, newRightStroke, newBottomStroke, newLeftStroke,
+                            newTopStyle, newRightStyle, newBottomStyle, newLeftStyle,
                             newRadii, newWidths, newInsets)) {
             return endValue;
         }
 
         return new BorderStroke(newTopStroke, newRightStroke, newBottomStroke, newLeftStroke,
-                                endValue.topStyle, endValue.rightStyle, endValue.bottomStyle, endValue.leftStyle,
+                                newTopStyle, newRightStyle, newBottomStyle, newLeftStyle,
                                 newRadii, newWidths, newInsets);
     }
 
     private boolean isSame(Paint topStroke, Paint rightStroke, Paint bottomStroke, Paint leftStroke,
+                           BorderStrokeStyle topStyle, BorderStrokeStyle rightStyle,
+                           BorderStrokeStyle bottomStyle, BorderStrokeStyle leftStyle,
                            CornerRadii radii, BorderWidths widths, Insets insets) {
         return this.topStroke == topStroke
             && this.rightStroke == rightStroke
             && this.bottomStroke == bottomStroke
             && this.leftStroke == leftStroke
+            && this.topStyle == topStyle
+            && this.rightStyle == rightStyle
+            && this.bottomStyle == bottomStyle
+            && this.leftStyle == leftStyle
             && this.radii == radii
             && this.widths == widths
             && this.insets == insets;

@@ -47,33 +47,33 @@ public class BorderStrokeTest {
     class InterpolationTests {
         @Test
         public void interpolateBetweenDifferentValuesReturnsNewInstance() {
-            var a = new BorderStroke(RED, SOLID, new CornerRadii(10), new BorderWidths(5), new Insets(2));
-            var b = new BorderStroke(GREEN, DOTTED, new CornerRadii(20), new BorderWidths(15), new Insets(6));
+            var startValue = new BorderStroke(RED, SOLID, new CornerRadii(10), new BorderWidths(5), new Insets(2));
+            var endValue = new BorderStroke(GREEN, DOTTED, new CornerRadii(20), new BorderWidths(15), new Insets(6));
             var expect = new BorderStroke(RED.interpolate(GREEN, 0.5), DOTTED, new CornerRadii(15), new BorderWidths(10), new Insets(4));
-            assertEquals(expect, a.interpolate(b, 0.5));
+            assertEquals(expect, startValue.interpolate(endValue, 0.5));
         }
 
         @Test
         public void interpolateBetweenEqualValuesReturnsStartInstance() {
-            var a = new BorderStroke(RED, SOLID, new CornerRadii(10), new BorderWidths(5), new Insets(2));
-            var b = new BorderStroke(RED, SOLID, new CornerRadii(10), new BorderWidths(5), new Insets(2));
-            assertSame(a, a.interpolate(b, 0.5));
+            var startValue = new BorderStroke(RED, SOLID, new CornerRadii(10), new BorderWidths(5), new Insets(2));
+            var endValue = new BorderStroke(RED, SOLID, new CornerRadii(10), new BorderWidths(5), new Insets(2));
+            assertSame(startValue, startValue.interpolate(endValue, 0.5));
         }
 
         @Test
         public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
-            var a = new BorderStroke(RED, SOLID, new CornerRadii(10), new BorderWidths(5), new Insets(2));
-            var b = new BorderStroke(GREEN, SOLID, new CornerRadii(20), new BorderWidths(15), new Insets(6));
-            assertSame(a, a.interpolate(b, 0));
-            assertSame(a, a.interpolate(b, -0.5));
+            var startValue = new BorderStroke(RED, SOLID, new CornerRadii(10), new BorderWidths(5), new Insets(2));
+            var endValue = new BorderStroke(GREEN, SOLID, new CornerRadii(20), new BorderWidths(15), new Insets(6));
+            assertSame(startValue, startValue.interpolate(endValue, 0));
+            assertSame(startValue, startValue.interpolate(endValue, -0.5));
         }
 
         @Test
         public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
-            var a = new BorderStroke(RED, SOLID, new CornerRadii(10), new BorderWidths(5), new Insets(2));
-            var b = new BorderStroke(GREEN, SOLID, new CornerRadii(20), new BorderWidths(15), new Insets(6));
-            assertSame(b, a.interpolate(b, 1));
-            assertSame(b, a.interpolate(b, 1.5));
+            var startValue = new BorderStroke(RED, SOLID, new CornerRadii(10), new BorderWidths(5), new Insets(2));
+            var endValue = new BorderStroke(GREEN, SOLID, new CornerRadii(20), new BorderWidths(15), new Insets(6));
+            assertSame(endValue, startValue.interpolate(endValue, 1));
+            assertSame(endValue, startValue.interpolate(endValue, 1.5));
         }
     }
 }

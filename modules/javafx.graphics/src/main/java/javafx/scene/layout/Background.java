@@ -139,7 +139,9 @@ public final class Background implements Interpolatable<Background> {
      * The list of BackgroundFills which together define the filled portion
      * of this Background. This List is unmodifiable and immutable. It
      * will never be null. The elements of this list will also never be null.
+     *
      * @return the list of BackgroundFills
+     * @interpolationType <a href="../../animation/Interpolatable.html#pairwise">pairwise</a>
      */
     public final List<BackgroundFill> getFills() { return fills; }
     final List<BackgroundFill> fills;
@@ -148,7 +150,9 @@ public final class Background implements Interpolatable<Background> {
      * The list of BackgroundImages which together define the image portion
      * of this Background. This List is unmodifiable and immutable. It
      * will never be null. The elements of this list will also never be null.
+     *
      * @return the list of BackgroundImages
+     * @interpolationType <a href="../../animation/Interpolatable.html#pairwise">pairwise</a>
      */
     public final List<BackgroundImage> getImages() { return images; }
     final List<BackgroundImage> images;
@@ -636,10 +640,13 @@ public final class Background implements Interpolatable<Background> {
     /**
      * {@inheritDoc}
      *
+     * @throws NullPointerException {@inheritDoc}
      * @since 23
      */
     @Override
     public Background interpolate(Background endValue, double t) {
+        Objects.requireNonNull(endValue, "endValue cannot be null");
+
         if (t <= 0) {
             return this;
         }
@@ -648,10 +655,13 @@ public final class Background implements Interpolatable<Background> {
             return endValue;
         }
 
-        List<BackgroundFill> newFills = Utils.interpolateListsPairwise(fills, endValue.fills, t);
-        List<BackgroundImage> newImages = Utils.interpolateListsPairwise(images, endValue.images, t);
+        List<BackgroundFill> newFills = fills == endValue.fills ?
+            fills : Utils.interpolateListsPairwise(fills, endValue.fills, t);
 
-        if (newFills == this.fills && newImages == this.images) {
+        List<BackgroundImage> newImages = images == endValue.images ?
+            images : Utils.interpolateListsPairwise(images, endValue.images, t);
+
+        if (newFills == fills && newImages == images) {
             return this;
         }
 

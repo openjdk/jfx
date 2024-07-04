@@ -154,19 +154,19 @@ public class Utils {
     }
 
     /**
-     * Utility function that interpolates between two double values, taking into account whether
-     * the values are absolute or percentage-based. If one value is absolute and the other is a
-     * percentage, then {@code from} is returned when {@code t == 0}, and {@code to} is returned
-     * otherwise.
+     * Utility function that interpolates between two discrete values, returning {@code from}
+     * when {@code t < 0.5}, and {@code to} otherwise.
      */
-    public static double interpolate(double from, double to,
-                                     boolean fromIsPercentage, boolean toIsPercentage,
-                                     double t) {
-        if (fromIsPercentage == toIsPercentage) {
-            return interpolate(from, to, t);
-        }
+    public static <T> T interpolateDiscrete(T from, T to, double t) {
+        return t < 0.5 ? from : to;
+    }
 
-        return t > 0 ? to : from;
+    /**
+     * Utility function that interpolates between two discrete values, returning {@code from}
+     * when {@code t < 0.5}, and {@code to} otherwise.
+     */
+    public static double interpolateDiscrete(double from, double to, double t) {
+        return t < 0.5 ? from : to;
     }
 
     /**

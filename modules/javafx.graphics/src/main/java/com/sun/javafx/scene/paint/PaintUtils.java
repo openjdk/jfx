@@ -46,7 +46,7 @@ public final class PaintUtils {
      *     <li>Color ↔ LinearGradient
      *     <li>Color ↔ RadialGradient
      * </ul>
-     * If a paint is not interpolatable, {@code startValue} is returned for {@code t == 0},
+     * If a paint is not interpolatable, {@code startValue} is returned for {@code t < 0.5},
      * and {@code endValue} is returned otherwise.
      */
     @SuppressWarnings({"rawtypes", "unchecked"})
@@ -91,7 +91,7 @@ public final class PaintUtils {
             return (Paint)start.interpolate(end, t);
         }
 
-        return t > 0 ? endValue : startValue;
+        return t < 0.5 ? startValue : endValue;
     }
 
     /**

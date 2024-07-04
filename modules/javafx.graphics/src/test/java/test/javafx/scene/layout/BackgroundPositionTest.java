@@ -181,55 +181,95 @@ public class BackgroundPositionTest {
     @Nested
     class InterpolationTests {
         @Test
+        public void interpolateComponentWithAbsoluteAndPercentageMismatch() {
+            record TestCase(BackgroundPosition endValue, BackgroundPosition expected) {}
+
+            final double v0 = 0, v25 = 10, v50 = 20, v100 = 40;
+            final var startValue = new BackgroundPosition(Side.LEFT, v0, false, Side.TOP, v0, false);
+
+            // For each component: interpolation with t=0.25 returns start value on absolute/percentage mismatch.
+            for (var testCase : new TestCase[] {
+                new TestCase(
+                    new BackgroundPosition(Side.LEFT, v100, false, Side.TOP, v100, false),
+                    new BackgroundPosition(Side.LEFT, v25, false, Side.TOP, v25, false)),
+                new TestCase(
+                    new BackgroundPosition(Side.LEFT, v100, true, Side.TOP, v100, false),
+                    new BackgroundPosition(Side.LEFT, v0, false, Side.TOP, v25, false)),
+                new TestCase(
+                    new BackgroundPosition(Side.LEFT, v100, false, Side.TOP, v100, true),
+                    new BackgroundPosition(Side.LEFT, v25, false, Side.TOP, v0, false))
+            }) {
+                assertEquals(testCase.expected, startValue.interpolate(testCase.endValue, 0.25));
+            }
+
+            // For each component: interpolation with t=0.5 returns end value on absolute/percentage mismatch.
+            for (var testCase : new TestCase[] {
+                new TestCase(
+                    new BackgroundPosition(Side.LEFT, v100, false, Side.TOP, v100, false),
+                    new BackgroundPosition(Side.LEFT, v50, false, Side.TOP, v50, false)),
+                new TestCase(
+                    new BackgroundPosition(Side.LEFT, v100, true, Side.TOP, v100, false),
+                    new BackgroundPosition(Side.LEFT, v100, true, Side.TOP, v50, false)),
+                new TestCase(
+                    new BackgroundPosition(Side.LEFT, v100, false, Side.TOP, v100, true),
+                    new BackgroundPosition(Side.LEFT, v50, false, Side.TOP, v100, true))
+            }) {
+                assertEquals(testCase.expected, startValue.interpolate(testCase.endValue, 0.5));
+            }
+        }
+
+        @Test
         public void interpolateBetweenDifferentValuesReturnsNewInstance() {
-            var a = new BackgroundPosition(Side.LEFT, 0, false, Side.TOP, 0, false);
-            var b = new BackgroundPosition(Side.LEFT, 10, false, Side.TOP, 20, false);
+            var startValue = new BackgroundPosition(Side.LEFT, 0, false, Side.TOP, 0, false);
+            var endValue = new BackgroundPosition(Side.LEFT, 10, false, Side.TOP, 20, false);
             var expected = new BackgroundPosition(Side.LEFT, 5, false, Side.TOP, 10, false);
-            assertEquals(expected, a.interpolate(b, 0.5));
+            assertEquals(expected, startValue.interpolate(endValue, 0.5));
         }
 
         @Test
         public void interpolateBetweenEqualValuesReturnsStartInstance() {
-            var a = new BackgroundPosition(Side.LEFT, 10, false, Side.TOP, 20, false);
-            var b = new BackgroundPosition(Side.LEFT, 10, false, Side.TOP, 20, false);
-            assertSame(a, a.interpolate(b, 0.5));
+            var startValue = new BackgroundPosition(Side.LEFT, 10, false, Side.TOP, 20, false);
+            var endValue = new BackgroundPosition(Side.LEFT, 10, false, Side.TOP, 20, false);
+            assertSame(startValue, startValue.interpolate(endValue, 0.25));
+            assertSame(startValue, startValue.interpolate(endValue, 0.5));
+            assertSame(startValue, startValue.interpolate(endValue, 0.75));
         }
 
         @Test
         public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
-            var a = new BackgroundPosition(Side.LEFT, 0, false, Side.TOP, 0, false);
-            var b = new BackgroundPosition(Side.LEFT, 10, false, Side.TOP, 20, false);
-            assertSame(a, a.interpolate(b, 0));
-            assertSame(a, a.interpolate(b, -0.5));
+            var startValue = new BackgroundPosition(Side.LEFT, 0, false, Side.TOP, 0, false);
+            var endValue = new BackgroundPosition(Side.LEFT, 10, false, Side.TOP, 20, false);
+            assertSame(startValue, startValue.interpolate(endValue, 0));
+            assertSame(startValue, startValue.interpolate(endValue, -0.5));
         }
 
         @Test
         public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
-            var a = new BackgroundPosition(Side.LEFT, 0, false, Side.TOP, 0, false);
-            var b = new BackgroundPosition(Side.LEFT, 10, false, Side.TOP, 20, false);
-            assertSame(b, a.interpolate(b, 1));
-            assertSame(b, a.interpolate(b, 1.5));
+            var startValue = new BackgroundPosition(Side.LEFT, 0, false, Side.TOP, 0, false);
+            var endValue = new BackgroundPosition(Side.LEFT, 10, false, Side.TOP, 20, false);
+            assertSame(endValue, startValue.interpolate(endValue, 1));
+            assertSame(endValue, startValue.interpolate(endValue, 1.5));
         }
 
         @Test
         public void percentageAndAbsolutePositionsCannotBeInterpolated() {
-            var a = new BackgroundPosition(Side.LEFT, 0, false, Side.TOP, 0, false);
-            var b = new BackgroundPosition(Side.LEFT, 10, true, Side.TOP, 20, true);
-            assertEquals(a, a.interpolate(b, 0)); // equal to 'a' for t == 0
-            assertEquals(b, a.interpolate(b, 0.1)); // equal to 'b' otherwise
+            var startValue = new BackgroundPosition(Side.LEFT, 0, false, Side.TOP, 0, false);
+            var endValue = new BackgroundPosition(Side.LEFT, 10, true, Side.TOP, 20, true);
+            assertEquals(startValue, startValue.interpolate(endValue, 0.25)); // equal to 'startValue' for t < 0.5
+            assertEquals(endValue, startValue.interpolate(endValue, 0.5)); // equal to 'endValue' otherwise
         }
 
         @Test
         public void differentSidesCannotBeInterpolated() {
-            var a = new BackgroundPosition(Side.LEFT, 0, false, Side.TOP, 0, false);
-            var b = new BackgroundPosition(Side.RIGHT, 10, false, Side.TOP, 20, false);
+            var startValue = new BackgroundPosition(Side.LEFT, 0, false, Side.TOP, 0, false);
+            var endValue = new BackgroundPosition(Side.RIGHT, 10, false, Side.TOP, 20, false);
             var expect = new BackgroundPosition(Side.RIGHT, 10, false, Side.TOP, 10, false);
-            assertEquals(expect, a.interpolate(b, 0.5));
+            assertEquals(expect, startValue.interpolate(endValue, 0.5));
 
-            a = new BackgroundPosition(Side.LEFT, 0, false, Side.TOP, 0, false);
-            b = new BackgroundPosition(Side.LEFT, 10, false, Side.BOTTOM, 20, false);
+            startValue = new BackgroundPosition(Side.LEFT, 0, false, Side.TOP, 0, false);
+            endValue = new BackgroundPosition(Side.LEFT, 10, false, Side.BOTTOM, 20, false);
             expect = new BackgroundPosition(Side.LEFT, 5, false, Side.BOTTOM, 20, false);
-            assertEquals(expect, a.interpolate(b, 0.5));
+            assertEquals(expect, startValue.interpolate(endValue, 0.5));
         }
     }
 }
