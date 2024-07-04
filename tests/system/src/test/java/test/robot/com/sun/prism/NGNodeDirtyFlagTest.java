@@ -38,13 +38,11 @@ import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
-import javafx.scene.image.WritableImage;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.robot.Robot;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import javafx.stage.Stage;
@@ -117,10 +115,8 @@ public class NGNodeDirtyFlagTest extends VisualTestBase {
     }
 
     private void checkColor(Node node, Color expected) {
-        Robot robot = new Robot();
         Bounds screenBounds = node.localToScreen(node.getBoundsInLocal());
-        WritableImage image = robot.getScreenCapture(null, screenBounds.getMinX(), screenBounds.getMinY(), 100, 100);
-        assertColorEquals(expected, image.getPixelReader().getColor(1, 1), TOLERANCE);
+        assertColorEquals(expected, getColor((int) (screenBounds.getMinX() + 1), (int) (screenBounds.getMinY() + 1)), TOLERANCE);
     }
 
     private Pane contentElement(String id, ObjectProperty<Color> lineColor, ObjectProperty<Color> circleColor) {
