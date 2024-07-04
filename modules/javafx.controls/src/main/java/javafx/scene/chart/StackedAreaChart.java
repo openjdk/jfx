@@ -107,7 +107,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
 
         @Override
         public Object getBean() {
-            return this;
+            return StackedAreaChart.this;
         }
 
         @Override

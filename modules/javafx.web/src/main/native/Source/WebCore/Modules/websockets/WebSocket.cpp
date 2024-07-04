@@ -278,14 +278,7 @@ ExceptionOr<void> WebSocket::connect(const String& url, const Vector<String>& pr
 
     if (auto* provider = context.socketProvider())
         m_channel = ThreadableWebSocketChannel::create(*scriptExecutionContext(), *this, *provider);
-#if PLATFORM(JAVA)
-    if (!m_channel) {
-        String message;
-        message = "WebSocket connection error invalid WebSocketChannel"_s;
-        context.addConsoleMessage(MessageSource::JS, MessageLevel::Error, message);
-        return {};
-    }
-#endif
+
     // Every ScriptExecutionContext should have a SocketProvider.
     RELEASE_ASSERT(m_channel);
 

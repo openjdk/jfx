@@ -52,6 +52,7 @@ public final class Match implements Comparable<Match> {
     // then pseudoclass count, and finally matching types (i.e., java name count)
     final int specificity;
 
+    @SuppressWarnings("removal")
     Match(final Selector selector, Set<PseudoClass> pseudoClasses, int idCount, int styleClassCount) {
         Objects.requireNonNull(selector);
         Objects.requireNonNull(pseudoClasses);
