@@ -26,9 +26,11 @@
 package test.javafx.scene.control;
 
 import javafx.css.CssMetaData;
+
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 
 import javafx.scene.input.MouseEvent;
+import javafx.util.Duration;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.BooleanProperty;
@@ -48,10 +50,11 @@ import javafx.scene.control.TooltipShim;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
+
 import static org.junit.Assert.*;
 
-
 import org.junit.Before;
+import org.junit.After;
 import org.junit.Ignore;
 import org.junit.Test;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
@@ -61,14 +64,24 @@ public class TooltipTest {
     private TooltipShim toolTip;//Empty string
     private TooltipShim dummyToolTip;//Empty string
 
-    @Before public void setup() {
-        assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
+    private StageLoader stageLoader;
+    private StubToolkit toolkit;
 
+    @Before
+    public void setup() {
         toolTip = new TooltipShim();
         dummyToolTip = new TooltipShim("dummy");
+
+        toolkit = (StubToolkit) Toolkit.getToolkit();
+        toolkit.setAnimationTime(0);
     }
 
-
+    @After
+    public void tearDown() {
+        if (stageLoader != null) {
+            stageLoader.dispose();
+        }
+    }
 
     /*********************************************************************
      * Tests for the constructors                                        *
@@ -542,16 +555,155 @@ public class TooltipTest {
     @Test
     public void testTooltipShouldNotBeShownBeforeDelayIsUp() {
         toolTip.showingProperty().addListener(inv -> fail());
-        Rectangle rect1 = new Rectangle(0, 0, 100, 100);
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
 
-        StageLoader stageLoader = new StageLoader(rect1);
+        stageLoader = new StageLoader(rect);
 
-        Tooltip.install(rect1, toolTip);
+        Tooltip.install(rect, toolTip);
 
         MouseEvent mouseEvent = MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 1, 1);
-        rect1.fireEvent(mouseEvent);
+        rect.fireEvent(mouseEvent);
+    }
 
-        stageLoader.dispose();
+    @Test
+    public void testTooltipShouldNotBeShownBeforeDefaultDelay() {
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+
+        stageLoader = new StageLoader(rect);
+
+        Tooltip.install(rect, toolTip);
+
+        MouseEvent mouseEvent = MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 1, 1);
+        rect.fireEvent(mouseEvent);
+
+        assertFalse(toolTip.isShowing());
+
+        toolkit.setAnimationTime(999);
+
+        assertFalse(toolTip.isShowing());
+    }
+
+    @Test
+    public void testTooltipShouldBeShownAfterDefaultDelay() {
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+
+        stageLoader = new StageLoader(rect);
+
+        Tooltip.install(rect, toolTip);
+
+        assertFalse(toolTip.isShowing());
+
+        assertTooltipShownAfter(rect, 1000);
+        assertTooltipHiddenAfter(rect, 200);
+    }
+
+    @Test
+    public void testTooltipShouldBeHiddenAfterHideDelay() {
+        int delay = 50;
+        toolTip.setHideDelay(Duration.millis(delay));
+
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+
+        stageLoader = new StageLoader(rect);
+
+        Tooltip.install(rect, toolTip);
+
+        assertFalse(toolTip.isShowing());
+
+        assertTooltipShownAfter(rect, 1000);
+        assertTooltipHiddenAfter(rect, delay);
+    }
+
+    @Test
+    public void testTooltipShouldBeShownAfterSetShowDelay() {
+        int delay = 200;
+        toolTip.setShowDelay(Duration.millis(delay));
+
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+
+        stageLoader = new StageLoader(rect);
+
+        Tooltip.install(rect, toolTip);
+
+        assertFalse(toolTip.isShowing());
+
+        assertTooltipShownAfter(rect, delay);
+        assertTooltipHiddenAfter(rect, 200);
+    }
+
+    @Test
+    public void testTooltipShouldBeShownAfterSetStyleShowDelay() {
+        toolTip.setStyle("-fx-show-delay: 200ms;");
+
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+
+        stageLoader = new StageLoader(rect);
+
+        Tooltip.install(rect, toolTip);
+
+        assertFalse(toolTip.isShowing());
+
+        assertTooltipShownAfter(rect, 200);
+        assertTooltipHiddenAfter(rect, 200);
+    }
+
+    @Test
+    public void testTooltipShouldBeShownAfterSetCssShowDelay() {
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+
+        stageLoader = new StageLoader(rect);
+        // Style: .tooltip { -fx-show-delay: 200ms; }
+        stageLoader.getStage().getScene().getStylesheets()
+                .add("data:base64,LnRvb2x0aXAgeyAtZngtc2hvdy1kZWxheTogMjAwbXM7IH0=");
+
+        Tooltip.install(rect, toolTip);
+
+        assertFalse(toolTip.isShowing());
+
+        assertTooltipShownAfter(rect, 200);
+        assertTooltipHiddenAfter(rect, 200);
+    }
+
+    @Test
+    public void testTooltipChangeShowDelayCss() {
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+
+        stageLoader = new StageLoader(rect);
+        // Style: .tooltip { -fx-show-delay: 200ms; }
+        stageLoader.getStage().getScene().getStylesheets()
+                .add("data:base64,LnRvb2x0aXAgeyAtZngtc2hvdy1kZWxheTogMjAwbXM7IH0=");
+
+        Tooltip.install(rect, toolTip);
+
+        assertFalse(toolTip.isShowing());
+
+        assertTooltipShownAfter(rect, 200);
+        assertTooltipHiddenAfter(rect, 200);
+
+        // .tooltip { -fx-show-delay: 450ms; }
+        stageLoader.getStage().getScene().getStylesheets()
+                .setAll("data:base64,LnRvb2x0aXAgeyAtZngtc2hvdy1kZWxheTogNDUwbXM7IH0=");
+
+        assertTooltipShownAfter(rect, 450);
+        assertTooltipHiddenAfter(rect, 200);
+    }
+
+    private void assertTooltipShownAfter(Rectangle rect, int millis) {
+        MouseEvent mouseEvent = MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 1, 1);
+        rect.fireEvent(mouseEvent);
+
+        toolkit.setAnimationTime(toolkit.getCurrentTime() + millis);
+
+        assertTrue(toolTip.isShowing());
+    }
+
+    private void assertTooltipHiddenAfter(Rectangle rect, int millis) {
+        MouseEvent mouseEvent = MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_EXITED, -1, -1);
+        rect.fireEvent(mouseEvent);
+
+        toolkit.setAnimationTime(toolkit.getCurrentTime() + millis);
+
+        assertFalse(toolTip.isShowing());
     }
 
 }

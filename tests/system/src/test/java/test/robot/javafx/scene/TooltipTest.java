@@ -73,12 +73,12 @@ class TooltipTest {
     }
 
     @BeforeAll
-    public static void initFX() {
+    static void initFX() {
         Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterAll
-    public static void exit() {
+    static void exit() {
         Util.shutdown();
     }
 
