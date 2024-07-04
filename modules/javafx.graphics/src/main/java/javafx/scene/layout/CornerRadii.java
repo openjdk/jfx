@@ -39,7 +39,7 @@ import java.util.Objects;
  *
  * @since JavaFX 8.0
  */
-public final class CornerRadii implements Interpolatable<CornerRadii> {
+public class CornerRadii implements Interpolatable<CornerRadii> {
     /**
      * A CornerRadii which is entirely empty, indicating squared corners.
      * This is the default value for a BorderStroke's radii.

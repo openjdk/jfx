@@ -48,7 +48,7 @@ import java.util.Objects;
  *
  * @since JavaFX 8.0
  */
-public final class BorderStroke implements Interpolatable<BorderStroke> {
+public class BorderStroke implements Interpolatable<BorderStroke> {
     /**
      * The default insets when "thin" is specified.
      */

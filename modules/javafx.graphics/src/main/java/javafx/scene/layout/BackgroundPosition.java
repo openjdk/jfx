@@ -52,7 +52,7 @@ import java.util.Objects;
  * the Region's right edge.
  * @since JavaFX 8.0
  */
-public final class BackgroundPosition implements Interpolatable<BackgroundPosition> {
+public class BackgroundPosition implements Interpolatable<BackgroundPosition> {
     /**
      * The default BackgroundPosition for any BackgroundImage. The default
      * is to have no insets and to be defined as 0% and 0%. That is, the
