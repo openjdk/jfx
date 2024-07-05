@@ -36,6 +36,7 @@ public class Dimension {
         this.height = height;
     }
 
+    @Override
     public boolean equals(Object obj) {
         if (obj instanceof Dimension) {
             Dimension d = (Dimension) obj;
@@ -44,6 +45,7 @@ public class Dimension {
         return false;
     }
 
+    @Override
     public int hashCode() {
         return Objects.hash(width, height);
     }
