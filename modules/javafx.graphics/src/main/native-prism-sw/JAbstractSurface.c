@@ -85,7 +85,7 @@ Java_com_sun_pisces_AbstractSurface_getRGBImpl(JNIEnv* env, jobject objectHandle
         y < 0 || y >= surfaceHeight ||
         width  < 0 || width  > (surfaceWidth  - x) ||
         height < 0 || height > (surfaceHeight - y) ||
-        scanLength < width) {
+        scanLength < width || offset < 0) {
         JNI_ThrowNew(env, "java/lang/IllegalArgumentException", "Illegal arguments");
         return;
     }
@@ -162,7 +162,7 @@ Java_com_sun_pisces_AbstractSurface_setRGBImpl(JNIEnv* env, jobject objectHandle
         y < 0 || y >= surfaceHeight ||
         width  < 0 || width  > (surfaceWidth  - x) ||
         height < 0 || height > (surfaceHeight - y) ||
-        scanLength < width) {
+        scanLength < width || offset < 0) {
         JNI_ThrowNew(env, "java/lang/IllegalArgumentException", "Illegal arguments");
         return;
     }
