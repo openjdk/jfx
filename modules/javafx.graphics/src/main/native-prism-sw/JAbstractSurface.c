@@ -66,8 +66,8 @@ JNIEXPORT void JNICALL
 Java_com_sun_pisces_AbstractSurface_getRGBImpl(JNIEnv* env, jobject objectHandle,
         jintArray arrayHandle, jint offset, jint scanLength,
         jint x, jint y, jint width, jint height) {
-    jint dstX = 0;
-    jint dstY = 0;
+    const jint dstX = 0;
+    const jint dstY = 0;
 
     Surface* surface;
 
@@ -144,8 +144,8 @@ JNIEXPORT void JNICALL
 Java_com_sun_pisces_AbstractSurface_setRGBImpl(JNIEnv* env, jobject objectHandle,
         jintArray arrayHandle, jint offset, jint scanLength,
         jint x, jint y, jint width, jint height) {
-    jint srcX = 0;
-    jint srcY = 0;
+    const jint srcX = 0;
+    const jint srcY = 0;
 
     Surface* surface;
     surface = (Surface*)JLongToPointer(
