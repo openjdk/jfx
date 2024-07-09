@@ -46,15 +46,14 @@ import java.util.Set;
 public abstract sealed class Selector permits SimpleSelector, CompoundSelector {
 
     /**
-     * Explicit constructor for subtype use.
+     * Constructor for subclasses to call.
      *
-     * @since 23
+     * @since 24
      */
     protected Selector() {
     }
 
     private static class UniversalSelector {
-        @SuppressWarnings("removal")
         private static final Selector INSTANCE =
             new SimpleSelector("*", null, null, null);
     }
@@ -177,7 +176,6 @@ public abstract sealed class Selector permits SimpleSelector, CompoundSelector {
      * @param stringStore unused
      * @throws IOException if writing to {@code DataOutputStream} fails
      */
-    @SuppressWarnings("removal")
     protected void writeBinary(DataOutputStream os, StyleConverter.StringStore stringStore)
         throws IOException {
         if (this instanceof SimpleSelector) {
@@ -194,9 +192,8 @@ public abstract sealed class Selector permits SimpleSelector, CompoundSelector {
      * @param strings string array containing selector details
      * @return a selector, never {@code null}
      * @throws IOException if reading from {@code DataInputStream} fails
-     * @since 23
+     * @since 24
      */
-    @SuppressWarnings("removal")
     protected static Selector readBinary(int bssVersion, DataInputStream is, String[] strings)
         throws IOException {
         final int type = is.readByte();
@@ -211,7 +208,6 @@ public abstract sealed class Selector permits SimpleSelector, CompoundSelector {
      * @param cssSelector CSS selector string
      * @return a {@code Selector}
      */
-    @SuppressWarnings("removal")
     public static Selector createSelector(final String cssSelector) {
         if (cssSelector == null || cssSelector.length() == 0) {
             return null; // actually return a default no-match selector
