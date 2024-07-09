@@ -34,6 +34,7 @@ import test.util.memory.JMemoryBuddy;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -283,8 +284,8 @@ public class SystemMenuBarTest {
         });
     }
 
-    @Test
-    public void testJDK8309935() { // adding/removing/changing items should not throw an Exception
+    @Test // adding/removing/changing items should not throw an Exception
+    public void testJDK8309935() throws InterruptedException {
         MenuBar menuBar = new MenuBar();
         AtomicReference<Throwable> throwableRef = new AtomicReference<>();
         Util.runAndWait(() -> {
@@ -330,6 +331,7 @@ public class SystemMenuBarTest {
                 menu.setVisible(true);
             });
         });
+        CountDownLatch cdl = new CountDownLatch(1);
         Util.runAndWait(() -> {
             Menu test3 = new Menu("test 3");
             test3.getItems().add(new MenuItem("item 1"));
@@ -338,12 +340,10 @@ public class SystemMenuBarTest {
             test4.getItems().add(new MenuItem("item 1"));
             test4.getItems().add(new MenuItem("item 2"));
             menuBar.getMenus().get(1).getItems().addAll(test3, test4);
+            Platform.runLater(() -> cdl.countDown());
         });
-        // Some waiting is necessary. runAndWait twice makes it reliable.
-        Util.runAndWait(() -> {
-        });
-        Util.runAndWait(() -> {
-        });
+        boolean success = cdl.await(10, TimeUnit.SECONDS);
+        assertTrue(success);
         if (throwableRef.get() != null) {
             fail(throwableRef.get());
         }
