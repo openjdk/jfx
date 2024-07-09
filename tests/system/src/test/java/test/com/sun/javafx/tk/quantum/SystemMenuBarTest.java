@@ -23,26 +23,41 @@
  * questions.
  */
 
-package test.javafx.stage;
+package test.com.sun.javafx.tk.quantum;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import java.lang.ref.WeakReference;
-import java.util.ArrayList;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicBoolean;
-import javafx.application.Platform;
-import javafx.scene.Scene;
-import javafx.scene.control.Menu;
-import javafx.scene.control.MenuBar;
-import javafx.scene.control.MenuItem;
-import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
+import com.sun.javafx.menu.MenuBase;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import test.util.Util;
 import test.util.memory.JMemoryBuddy;
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import com.sun.javafx.tk.quantum.GlassSystemMenuShim;
+import com.sun.javafx.scene.control.GlobalMenuAdapter;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
+import javafx.application.Platform;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
+
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class SystemMenuBarTest {
     @BeforeClass
@@ -62,6 +77,7 @@ public class SystemMenuBarTest {
 
     CountDownLatch menubarLatch = new CountDownLatch(1);
     CountDownLatch memoryLatch = new CountDownLatch(1);
+    CountDownLatch memoryFocusLatch = new CountDownLatch(1);
     AtomicBoolean failed = new AtomicBoolean(false);
 
     @Test
@@ -169,4 +185,167 @@ public class SystemMenuBarTest {
         t.start();
     }
 
+    @Test
+    public void testFocusMemoryLeak() throws InterruptedException {
+        Util.runAndWait(() -> {
+            Thread.currentThread().setUncaughtExceptionHandler((t,e) -> {
+                e.printStackTrace();
+                failed.set(true);
+                memoryFocusLatch.countDown();
+            });
+            createAndRefocusMenuBarStage();
+        });
+        memoryFocusLatch.await();
+        assertFalse(failed.get());
+    }
+
+    public void createAndRefocusMenuBarStage() {
+        Stage stage = new Stage();
+        VBox root = new VBox();
+
+        final MenuBar menuBar = new MenuBar();
+        final Menu menu = new Menu("MyMenu");
+        menuBar.getMenus().add(menu);
+        menuBar.setUseSystemMenuBar(true);
+        root.getChildren().add(menuBar);
+
+        Scene scene = new Scene(root);
+        stage.setScene(scene);
+        stage.show();
+        final ArrayList<WeakReference<MenuBase>> uncollectedMenus = new ArrayList<>();
+        GlassSystemMenuShim gsmh = new GlassSystemMenuShim();
+        assumeTrue("SystemMenu only supported on MacOS", gsmh.isSupported());
+        Menu m1 = new Menu("Menu");
+
+        MenuBase menuBase = GlobalMenuAdapter.adapt(m1);
+        ArrayList<MenuBase> menus = new ArrayList<>();
+        gsmh.createMenuBar();
+        for (int i = 0; i < 100; i++) {
+            Platform.runLater(() -> {
+                gsmh.setMenus(List.of(menuBase));
+            });
+        }
+        Platform.runLater(() -> {
+            int strongCount = 0;
+            final List<WeakReference<com.sun.glass.ui.Menu>> u2 = gsmh.getWeakMenuReferences();
+            for (WeakReference<com.sun.glass.ui.Menu> wr : u2) {
+                if (!JMemoryBuddy.checkCollectable(wr)) {
+                    strongCount++;
+                    assertTrue("Too many references", strongCount < 2);
+                }
+            }
+            assertEquals(1, strongCount, "Exactly one reference should be reachable");
+            memoryFocusLatch.countDown();
+        });
+    }
+
+    CountDownLatch removeMenuLatch = new CountDownLatch(1);
+
+    @Test
+    public void testRemoveMenu() throws InterruptedException {
+        failed.set(false);
+        Util.runAndWait(() -> {
+            Thread.currentThread().setUncaughtExceptionHandler((t,e) -> {
+                e.printStackTrace();
+                failed.set(true);
+                removeMenuLatch.countDown();
+            });
+            createRemoveMenuStage();
+        });
+        removeMenuLatch.await();
+        assertFalse(failed.get());
+    }
+
+    public void createRemoveMenuStage() {
+        Stage stage = new Stage();
+        VBox root = new VBox();
+
+        final MenuBar menuBar = new MenuBar();
+
+        Menu mainMenu = new Menu("MainMenu");
+        Menu subMenu = new Menu("SubMenu");
+        subMenu.getItems().addAll(new MenuItem("submenuitem1"), new MenuItem("submenuitem2"));
+        mainMenu.getItems().add(subMenu);
+        menuBar.getMenus().add(mainMenu);
+
+        menuBar.setUseSystemMenuBar(true);
+        root.getChildren().add(menuBar);
+
+        Scene scene = new Scene(root);
+        stage.setScene(scene);
+        stage.show();
+
+        Platform.runLater(() -> {
+            mainMenu.getItems().clear();
+            mainMenu.getItems().add(subMenu);
+            subMenu.getItems().addAll(new MenuItem("new item 1"), new MenuItem("new item 2"));
+            removeMenuLatch.countDown();
+        });
+    }
+
+    @Test
+    public void testJDK8309935() { // adding/removing/changing items should not throw an Exception
+        MenuBar menuBar = new MenuBar();
+        AtomicReference<Throwable> throwableRef = new AtomicReference<>();
+        Util.runAndWait(() -> {
+            Thread.currentThread().setUncaughtExceptionHandler((t, e) -> {
+                e.printStackTrace();
+                throwableRef.set(e);
+            });
+            menuBar.setUseSystemMenuBar(true);
+            Menu menu1 = new Menu("menu 1");
+            menu1.getItems().add(new MenuItem("item 1"));
+            menu1.getItems().add(new MenuItem("item 2"));
+            menuBar.getMenus().add(menu1);
+            Menu menu2 = new Menu(" menu 2");
+            menu2.getItems().add(new MenuItem("item 1"));
+            menu2.getItems().add(new MenuItem("item 2"));
+            menu2.getItems().add(new SeparatorMenuItem());
+            menuBar.getMenus().add(menu2);
+            Menu test1 = new Menu("test 1");
+            test1.getItems().add(new MenuItem("item 1"));
+            test1.getItems().add(new MenuItem("item 2"));
+            Menu test2 = new Menu("test 2");
+            test2.getItems().add(new MenuItem("item 1"));
+            test2.getItems().add(new MenuItem("item 2"));
+            menu2.addEventFilter(Menu.ON_SHOWING, e -> {
+                menu2.getItems().removeIf(o -> Objects.equals(o.getText(), test1.getText()));
+                menu2.getItems().add(test1);
+                menu2.getItems().removeIf(o -> Objects.equals(o.getText(), test2.getText()));
+                menu2.getItems().add(test2);
+            });
+            BorderPane root = new BorderPane();
+            root.setTop(menuBar);
+            Stage stage = new Stage();
+            stage.setScene(new Scene(root));
+            stage.show();
+        });
+        Util.runAndWait(() -> {
+            menuBar.getMenus().forEach(menu -> {
+                menu.setVisible(false);
+            });
+        });
+        Util.runAndWait(() -> {
+            menuBar.getMenus().forEach(menu -> {
+                menu.setVisible(true);
+            });
+        });
+        Util.runAndWait(() -> {
+            Menu test3 = new Menu("test 3");
+            test3.getItems().add(new MenuItem("item 1"));
+            test3.getItems().add(new MenuItem("item 2"));
+            Menu test4 = new Menu("test 4");
+            test4.getItems().add(new MenuItem("item 1"));
+            test4.getItems().add(new MenuItem("item 2"));
+            menuBar.getMenus().get(1).getItems().addAll(test3, test4);
+        });
+        // Some waiting is necessary. runAndWait twice makes it reliable.
+        Util.runAndWait(() -> {
+        });
+        Util.runAndWait(() -> {
+        });
+        if (throwableRef.get() != null) {
+            fail(throwableRef.get());
+        }
+    }
 }
