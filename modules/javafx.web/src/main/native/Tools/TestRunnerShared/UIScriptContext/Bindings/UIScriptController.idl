@@ -85,6 +85,7 @@ interface UIScriptController {
     undefined setContinuousSpellCheckingEnabled(boolean enabled);
     undefined setSpellCheckerResults(object results);
 
+    readonly attribute unsigned long keyboardWillHideCount;
     readonly attribute boolean keyboardIsAutomaticallyShifted;
 
     undefined rawKeyDown(DOMString key);
@@ -319,14 +320,14 @@ interface UIScriptController {
     // When false, content rect updates to the web process have inStableState=false, as if a scroll or zoom were in progress.
     attribute boolean? stableStateOverride;
 
-    readonly attribute object contentVisibleRect; // Returned object has 'left', 'top', 'width', 'height' properties.
-
-    readonly attribute object textSelectionRangeRects; // An array of objects with 'left', 'top', 'width', and 'height' properties.
-    readonly attribute object textSelectionCaretRect; // An object with 'left', 'top', 'width', 'height' properties.
+    // The attributes below return an array of objects with 'left', 'top', 'width', and 'height' properties.
+    readonly attribute object contentVisibleRect;
     readonly attribute object selectionStartGrabberViewRect;
     readonly attribute object selectionEndGrabberViewRect;
     readonly attribute object selectionCaretViewRect;
+    readonly attribute object selectionCaretViewRectInGlobalCoordinates;
     readonly attribute object selectionRangeViewRects;
+
     readonly attribute object calendarType;
     undefined setDefaultCalendarType(DOMString calendarIdentifier, DOMString localeIdentifier);
     readonly attribute object inputViewBounds;
@@ -342,6 +343,8 @@ interface UIScriptController {
     boolean mayContainEditableElementsInRect(unsigned long x, unsigned long y, unsigned long width, unsigned long height);
 
     object propertiesOfLayerWithID(unsigned long long layerID);
+
+    DOMString scrollbarStateForScrollingNodeID(unsigned long long scrollingNodeID, boolean isVertical);
 
     undefined retrieveSpeakSelectionContent(object callback);
     readonly attribute DOMString accessibilitySpeakSelectionContent;
@@ -383,4 +386,8 @@ interface UIScriptController {
 
     readonly attribute DOMString lastUndoLabel;
     readonly attribute DOMString firstRedoLabel;
+    
+    readonly attribute unsigned long countOfUpdatesWithLayerChanges;
+
+    readonly attribute unsigned long long currentImageAnalysisRequestID;
 };

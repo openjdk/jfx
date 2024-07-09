@@ -32,9 +32,9 @@ class Debugger;
 
 namespace WebCore {
 
-class AbstractDOMWindow;
-class AbstractFrame;
+class DOMWindow;
 class DOMWrapperWorld;
+class Frame;
 class JSDOMGlobalObject;
 class JSWindowProxy;
 
@@ -43,15 +43,16 @@ class WindowProxy : public RefCounted<WindowProxy> {
 public:
     using ProxyMap = HashMap<RefPtr<DOMWrapperWorld>, JSC::Strong<JSWindowProxy>>;
 
-    static Ref<WindowProxy> create(AbstractFrame& frame)
+    static Ref<WindowProxy> create(Frame& frame)
     {
         return adoptRef(*new WindowProxy(frame));
     }
 
     WEBCORE_EXPORT ~WindowProxy();
 
-    WEBCORE_EXPORT AbstractFrame* frame() const;
+    WEBCORE_EXPORT Frame* frame() const;
     void detachFromFrame();
+    void replaceFrame(Frame&);
 
     void destroyJSWindowProxy(DOMWrapperWorld&);
 
@@ -86,17 +87,17 @@ public:
 
     WEBCORE_EXPORT JSDOMGlobalObject* globalObject(DOMWrapperWorld&);
 
-    void clearJSWindowProxiesNotMatchingDOMWindow(AbstractDOMWindow*, bool goingIntoBackForwardCache);
+    void clearJSWindowProxiesNotMatchingDOMWindow(DOMWindow*, bool goingIntoBackForwardCache);
 
-    WEBCORE_EXPORT void setDOMWindow(AbstractDOMWindow*);
+    WEBCORE_EXPORT void setDOMWindow(DOMWindow*);
 
     // Debugger can be nullptr to detach any existing Debugger.
     void attachDebugger(JSC::Debugger*); // Attaches/detaches in all worlds/window proxies.
 
-    WEBCORE_EXPORT AbstractDOMWindow* window() const;
+    WEBCORE_EXPORT DOMWindow* window() const;
 
 private:
-    explicit WindowProxy(AbstractFrame&);
+    explicit WindowProxy(Frame&);
 
     JSWindowProxy& createJSWindowProxy(DOMWrapperWorld&);
     WEBCORE_EXPORT JSWindowProxy& createJSWindowProxyWithInitializedScript(DOMWrapperWorld&);
@@ -104,7 +105,7 @@ private:
     void set_existing_window_proxy(bool existingWindowProxy_, DOMWrapperWorld& world);
 #endif
 
-    WeakPtr<AbstractFrame> m_frame;
+    WeakPtr<Frame> m_frame;
     UniqueRef<ProxyMap> m_jsWindowProxies;
 };
 

@@ -110,7 +110,7 @@ public class J2DPrinter implements PrinterImpl {
         return PrintHelper.createJobSettings(fxPrinter);
     }
 
-    //////////////// BEGIN COPIES ////////////////////
+    //-------------- BEGIN COPIES --------------------
 
     private int defaultCopies = 0;
     @Override
@@ -155,9 +155,9 @@ public class J2DPrinter implements PrinterImpl {
         return maxCopies;
     }
 
-    //////////////// END COPIES ////////////////////
+    //-------------- END COPIES --------------------
 
-    //////////////// BEGIN PAGERANGE ////////////////////
+    //-------------- BEGIN PAGERANGE --------------------
 
     @Override
     public PageRange defaultPageRange() {
@@ -184,7 +184,7 @@ public class J2DPrinter implements PrinterImpl {
         return true;
     }
 
-    //////////////// BEGIN COLLATION ////////////////////
+    //-------------- BEGIN COLLATION --------------------
 
     SheetCollate getDefaultSheetCollate() {
         SheetCollate collate = null;
@@ -236,9 +236,9 @@ public class J2DPrinter implements PrinterImpl {
         }
         return collateSet;
     }
-    //////////////// END COLLATION ////////////////////
+    //-------------- END COLLATION --------------------
 
-    //////////////// BEGIN COLOR ////////////////////
+    //-------------- BEGIN COLOR --------------------
 
     Chromaticity getDefaultChromaticity() {
         Chromaticity color = null;
@@ -291,9 +291,9 @@ public class J2DPrinter implements PrinterImpl {
         return colorSet;
     }
 
-    //////////////// END COLOR ////////////////////
+    //-------------- END COLOR --------------------
 
-    //////////////// BEGIN SIDES ////////////////////
+    //-------------- BEGIN SIDES --------------------
 
     private PrintSides defSides;
     @Override
@@ -341,9 +341,9 @@ public class J2DPrinter implements PrinterImpl {
         }
         return sidesSet;
     }
-    //////////////// END SIDES ////////////////////
+    //-------------- END SIDES --------------------
 
-    //////////////// BEGIN ORIENTATION ////////////////////
+    //-------------- BEGIN ORIENTATION --------------------
 
     static int getOrientID(PageOrientation o) {
         if (o == PageOrientation.LANDSCAPE) {
@@ -424,9 +424,9 @@ public class J2DPrinter implements PrinterImpl {
         return orientSet;
     }
 
-    //////////////// END ORIENTATION ////////////////////
+    //-------------- END ORIENTATION --------------------
 
-    //////////////// BEGIN RESOLUTIONS ////////////////////
+    //-------------- BEGIN RESOLUTIONS --------------------
 
     PrinterResolution getDefaultPrinterResolution() {
         PrinterResolution res = (PrinterResolution)
@@ -512,9 +512,9 @@ public class J2DPrinter implements PrinterImpl {
         resSet = Collections.unmodifiableSet(rSet);
         return resSet;
     }
-    //////////////// END RESOLUTIONS ////////////////////
+    //-------------- END RESOLUTIONS --------------------
 
-    //////////////// BEGIN PRINTQUALITY ////////////////////
+    //-------------- BEGIN PRINTQUALITY --------------------
 
     javax.print.attribute.standard.PrintQuality getDefaultPrintQuality() {
 
@@ -588,9 +588,9 @@ public class J2DPrinter implements PrinterImpl {
         }
         return qualitySet;
     }
-    //////////////// END PRINTQUALITY ////////////////////
+    //-------------- END PRINTQUALITY --------------------
 
-    //////////////// START PAPERS ////////////////////
+    //-------------- START PAPERS --------------------
 
     private static class PaperComparator implements Comparator<Paper> {
 
@@ -919,7 +919,7 @@ public class J2DPrinter implements PrinterImpl {
         }
         return defaultLayout;
     }
-    //////////////// END PAPERS ////////////////////
+    //-------------- END PAPERS --------------------
 
 
 }

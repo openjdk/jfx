@@ -36,11 +36,14 @@ class EventPath : public CanMakeCheckedPtr {
 public:
     EventPath(Node& origin, Event&);
     explicit EventPath(const Vector<EventTarget*>&);
+    explicit EventPath(EventTarget&);
 
     bool isEmpty() const { return m_path.isEmpty(); }
     size_t size() const { return m_path.size(); }
     const EventContext& contextAt(size_t i) const { return m_path[i]; }
     EventContext& contextAt(size_t i) { return m_path[i]; }
+
+    void adjustForDisabledFormControl();
 
     Vector<Ref<EventTarget>> computePathUnclosedToTarget(const EventTarget&) const;
 

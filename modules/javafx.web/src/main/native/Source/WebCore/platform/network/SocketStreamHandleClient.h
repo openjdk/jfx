@@ -31,7 +31,7 @@
 
 #pragma once
 
-
+#if PLATFORM(JAVA)
 namespace WebCore {
 
 class SocketStreamError;
@@ -50,3 +50,4 @@ public:
 };
 
 } // namespace WebCore
+#endif

@@ -554,8 +554,8 @@ void WorkerOrWorkletScriptController::initScriptWithSubclass()
     Structure* contextPrototypeStructure = JSGlobalScopePrototype::createStructure(*m_vm, nullptr, jsNull());
     auto* contextPrototype = JSGlobalScopePrototype::create(*m_vm, nullptr, contextPrototypeStructure);
     Structure* structure = JSGlobalScope::createStructure(*m_vm, nullptr, contextPrototype);
-    auto* proxyStructure = JSProxy::createStructure(*m_vm, nullptr, jsNull());
-    auto* proxy = JSProxy::create(*m_vm, proxyStructure);
+    auto* proxyStructure = JSGlobalProxy::createStructure(*m_vm, nullptr, jsNull());
+    auto* proxy = JSGlobalProxy::create(*m_vm, proxyStructure);
 
     m_globalScopeWrapper.set(*m_vm, JSGlobalScope::create(*m_vm, structure, static_cast<GlobalScope&>(*m_globalScope), proxy));
     contextPrototypeStructure->setGlobalObject(*m_vm, m_globalScopeWrapper.get());
@@ -563,7 +563,7 @@ void WorkerOrWorkletScriptController::initScriptWithSubclass()
     ASSERT(m_globalScopeWrapper->structure()->globalObject() == m_globalScopeWrapper);
     contextPrototype->structure()->setGlobalObject(*m_vm, m_globalScopeWrapper.get());
     auto* globalScopePrototype = JSGlobalScope::prototype(*m_vm, *m_globalScopeWrapper.get());
-    globalScopePrototype->didBecomePrototype();
+    globalScopePrototype->didBecomePrototype(*m_vm);
     contextPrototype->structure()->setPrototypeWithoutTransition(*m_vm, globalScopePrototype);
 
     proxy->setTarget(*m_vm, m_globalScopeWrapper.get());

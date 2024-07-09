@@ -43,6 +43,7 @@
 #include "GraphicsContextJava.h"
 #include "Gradient.h"
 #include "IntRect.h"
+#include "ImageBuffer.h"
 #include "PlatformJavaClasses.h"
 #include "Logging.h"
 #include "NotImplemented.h"
@@ -140,7 +141,7 @@ GraphicsContextJava::GraphicsContextJava(PlatformGraphicsContext* context) // TO
     m_platformContext = context;
 }
 
-PlatformGraphicsContext* GraphicsContextJava::platformContext() const
+PlatformGraphicsContext* GraphicsContextJava::platformContext()
 {
     return m_platformContext;
 }
@@ -267,6 +268,11 @@ void GraphicsContextJava::fillRect(const FloatRect& rect)
     }
 }
 
+void GraphicsContextJava::resetClip()
+{
+    notImplemented();
+}
+
 void GraphicsContextJava::clip(const FloatRect& rect)
 {
     if (paintingDisabled())
@@ -286,6 +292,11 @@ IntRect GraphicsContextJava::clipBounds() const
                                 .inverse()
                                 .value_or(AffineTransform())
                                 .mapRect(m_state.clipBounds));
+}
+
+void GraphicsContextJava::clipToImageBuffer(ImageBuffer&, const FloatRect&)
+{
+
 }
 
 void GraphicsContextJava::drawFocusRing(const Path&, float, const Color&)
@@ -994,10 +1005,6 @@ void GraphicsContextJava::didUpdateState(GraphicsContextState& state)
         setPlatformTextDrawingMode(textDrawingMode());
     }
 
-    if (state.changes() & GraphicsContextState::Change::DropShadow) {
-        setPlatformShadow(shadowOffset(),shadowBlur(), shadowColor());
-    }
-
     if (state.changes() & GraphicsContextState::Change::CompositeMode) {
         setPlatformCompositeOperation(compositeOperation(), blendMode());
     }
@@ -1008,6 +1015,12 @@ void GraphicsContextJava::didUpdateState(GraphicsContextState& state)
 
     if (state.changes() & GraphicsContextState::Change::Alpha) {
         setPlatformAlpha(alpha());
+    }
+
+    if (state.changes().contains(GraphicsContextState::Change::Style)) {
+        auto dropShadow = state.dropShadow();
+        if (dropShadow)
+            setPlatformShadow(dropShadow->offset,dropShadow->radius, dropShadow->color);
     }
 
     if (state.changes() & GraphicsContextState::Change::FillBrush) {

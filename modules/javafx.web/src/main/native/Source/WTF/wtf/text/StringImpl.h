@@ -42,10 +42,6 @@
 #include <wtf/text/UTF8ConversionError.h>
 #include <wtf/unicode/UTF8Conversion.h>
 
-#if CPU(ARM64)
-#include <arm_neon.h>
-#endif
-
 #if USE(CF)
 typedef const struct __CFString * CFStringRef;
 #endif
@@ -86,7 +82,7 @@ template<typename> struct HashAndCharactersTranslator;
 // Define STRING_STATS to 1 turn on runtime statistics of string sizes and memory usage.
 #define STRING_STATS 0
 
-template<bool isSpecialCharacter(UChar), typename CharacterType> bool isAllSpecialCharacters(const CharacterType*, size_t length);
+template<bool isSpecialCharacter(UChar), typename CharacterType> bool containsOnly(const CharacterType*, size_t length);
 
 #if STRING_STATS
 
@@ -330,12 +326,12 @@ public:
     static WTF_EXPORT_PRIVATE Expected<size_t, UTF8ConversionError> utf8ForCharactersIntoBuffer(const UChar* characters, unsigned length, ConversionMode, Vector<char, 1024>&);
 
     template<typename Func>
-    static Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionError> tryGetUTF8ForCharacters(const Func&, const LChar* characters, unsigned length);
+    static Expected<std::invoke_result_t<Func, std::span<const char>>, UTF8ConversionError> tryGetUTF8ForCharacters(const Func&, const LChar* characters, unsigned length);
     template<typename Func>
-    static Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionError> tryGetUTF8ForCharacters(const Func&, const UChar* characters, unsigned length, ConversionMode = LenientConversion);
+    static Expected<std::invoke_result_t<Func, std::span<const char>>, UTF8ConversionError> tryGetUTF8ForCharacters(const Func&, const UChar* characters, unsigned length, ConversionMode = LenientConversion);
 
     template<typename Func>
-    Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionError> tryGetUTF8(const Func&, ConversionMode = LenientConversion) const;
+    Expected<std::invoke_result_t<Func, std::span<const char>>, UTF8ConversionError> tryGetUTF8(const Func&, ConversionMode = LenientConversion) const;
     WTF_EXPORT_PRIVATE Expected<CString, UTF8ConversionError> tryGetUTF8(ConversionMode = LenientConversion) const;
     WTF_EXPORT_PRIVATE CString utf8(ConversionMode = LenientConversion) const;
 
@@ -406,9 +402,29 @@ public:
     ALWAYS_INLINE static StringImpl* empty() { return reinterpret_cast<StringImpl*>(&s_emptyAtomString); }
 
     // FIXME: Do these functions really belong in StringImpl?
-    template<typename CharacterType> static void copyCharacters(CharacterType* destination, const CharacterType* source, unsigned length);
-    static void copyCharacters(UChar* destination, const LChar* source, unsigned length);
-    static void copyCharacters(LChar* destination, const UChar* source, unsigned length);
+    template<typename CharacterType>
+    ALWAYS_INLINE static void copyCharacters(CharacterType* destination, const CharacterType* source, unsigned length)
+    {
+        return copyElements(destination, source, length);
+    }
+
+    ALWAYS_INLINE static void copyCharacters(UChar* destination, const LChar* source, unsigned length)
+    {
+        static_assert(sizeof(UChar) == sizeof(uint16_t));
+        static_assert(sizeof(LChar) == sizeof(uint8_t));
+        return copyElements(bitwise_cast<uint16_t*>(destination), bitwise_cast<const uint8_t*>(source), length);
+    }
+
+    ALWAYS_INLINE static void copyCharacters(LChar* destination, const UChar* source, unsigned length)
+    {
+        static_assert(sizeof(UChar) == sizeof(uint16_t));
+        static_assert(sizeof(LChar) == sizeof(uint8_t));
+#if ASSERT_ENABLED
+        for (unsigned i = 0; i < length; ++i)
+            ASSERT(isLatin1(source[i]));
+#endif
+        return copyElements(bitwise_cast<uint8_t*>(destination), bitwise_cast<const uint16_t*>(source), length);
+    }
 
     // Some string features, like reference counting and the atomicity flag, are not
     // thread-safe. We achieve thread safety by isolation, giving each thread
@@ -437,16 +453,14 @@ public:
 
     Ref<StringImpl> foldCase();
 
-    WTF_EXPORT_PRIVATE Ref<StringImpl> stripWhiteSpace();
-    WTF_EXPORT_PRIVATE Ref<StringImpl> simplifyWhiteSpace();
-    Ref<StringImpl> simplifyWhiteSpace(CodeUnitMatchFunction);
+    WTF_EXPORT_PRIVATE Ref<StringImpl> simplifyWhiteSpace(CodeUnitMatchFunction);
 
-    Ref<StringImpl> stripLeadingAndTrailingCharacters(CodeUnitMatchFunction);
+    WTF_EXPORT_PRIVATE Ref<StringImpl> trim(CodeUnitMatchFunction);
     template<typename Predicate> Ref<StringImpl> removeCharacters(const Predicate&);
 
-    bool isAllASCII() const;
-    bool isAllLatin1() const;
-    template<bool isSpecialCharacter(UChar)> bool isAllSpecialCharacters() const;
+    bool containsOnlyASCII() const;
+    bool containsOnlyLatin1() const;
+    template<bool isSpecialCharacter(UChar)> bool containsOnly() const;
 
     size_t find(LChar character, unsigned start = 0);
     size_t find(char character, unsigned start = 0);
@@ -532,7 +546,7 @@ private:
     WTF_EXPORT_PRIVATE static Ref<StringImpl> createWithoutCopyingNonEmpty(const LChar*, unsigned length);
     WTF_EXPORT_PRIVATE static Ref<StringImpl> createWithoutCopyingNonEmpty(const UChar*, unsigned length);
 
-    template<class CodeUnitPredicate> Ref<StringImpl> stripMatchedCharacters(CodeUnitPredicate);
+    template<class CodeUnitPredicate> Ref<StringImpl> trimMatchedCharacters(CodeUnitPredicate);
     template<typename CharacterType, typename Predicate> ALWAYS_INLINE Ref<StringImpl> removeCharactersImpl(const CharacterType* characters, const Predicate&);
     template<typename CharacterType, class CodeUnitPredicate> Ref<StringImpl> simplifyMatchedCharactersToSpace(CodeUnitPredicate);
     template<typename CharacterType> static Ref<StringImpl> constructInternal(StringImpl&, unsigned);
@@ -627,12 +641,14 @@ template<size_t inlineCapacity> bool equalIgnoringNullity(const Vector<UChar, in
 template<typename CharacterType1, typename CharacterType2> int codePointCompare(const CharacterType1*, unsigned length1, const CharacterType2*, unsigned length2);
 int codePointCompare(const StringImpl*, const StringImpl*);
 
-// FIXME: Should rename this to make clear it uses the Unicode definition of whitespace.
-// Most WebKit callers don't want that would use isASCIISpace or isHTMLSpace instead.
-bool isSpaceOrNewline(UChar32);
-bool isNotSpaceOrNewline(UChar32);
-// FIXME: rdar://99002825 (Investigate if isSpaceOrNewline should be including 0xA0 non-breaking space in check.)
-bool isUnicodeWhitespace(UChar32);
+bool isUnicodeWhitespace(UChar);
+
+// Deprecated as this excludes U+0085 and U+00A0 which are part of Unicode's White_Space definition:
+// https://www.unicode.org/Public/UCD/latest/ucd/PropList.txt
+bool deprecatedIsSpaceOrNewline(UChar);
+
+// Inverse of deprecatedIsSpaceOrNewline for predicates
+bool deprecatedIsNotSpaceOrNewline(UChar);
 
 // StringHash is the default hash for StringImpl* and RefPtr<StringImpl>
 template<typename> struct DefaultHash;
@@ -788,21 +804,22 @@ inline int codePointCompare(const StringImpl* string1, const StringImpl* string2
     return codePointCompare(string1->characters16(), string1->length(), string2->characters16(), string2->length());
 }
 
-inline bool isSpaceOrNewline(UChar32 character)
+// FIXME: For LChar, isUnicodeCompatibleASCIIWhitespace(character) || character == 0x0085 || character == noBreakSpace would be enough
+inline bool isUnicodeWhitespace(UChar character)
 {
-    // Use isASCIISpace() for all Latin-1 characters. This will include newlines, which aren't included in Unicode DirWS.
-    return isLatin1(character) ? isASCIISpace(character) : u_charDirection(character) == U_WHITE_SPACE_NEUTRAL;
+    return isASCII(character) ? isUnicodeCompatibleASCIIWhitespace(character) : u_isUWhiteSpace(character);
 }
 
-inline bool isNotSpaceOrNewline(UChar32 character)
+inline bool deprecatedIsSpaceOrNewline(UChar character)
 {
-    return !isSpaceOrNewline(character);
+    // Use isUnicodeCompatibleASCIIWhitespace() for all Latin-1 characters, which is incorrect as it
+    // excludes U+0085 and U+00A0.
+    return isLatin1(character) ? isUnicodeCompatibleASCIIWhitespace(character) : u_charDirection(character) == U_WHITE_SPACE_NEUTRAL;
 }
 
-// FIXME: For LChar, isASCIISpace(character) || character == noBreakSpace would be enough
-inline bool isUnicodeWhitespace(UChar32 character)
+inline bool deprecatedIsNotSpaceOrNewline(UChar character)
 {
-    return isASCII(character) ? isASCIISpace(character) : u_isUWhiteSpace(character);
+    return !deprecatedIsSpaceOrNewline(character);
 }
 
 inline StringImplShape::StringImplShape(unsigned refCount, unsigned length, const LChar* data8, unsigned hashAndFlags)
@@ -850,14 +867,14 @@ inline Ref<StringImpl> StringImpl::isolatedCopy() const
     return create(m_data16, m_length);
 }
 
-inline bool StringImpl::isAllASCII() const
+inline bool StringImpl::containsOnlyASCII() const
 {
     if (is8Bit())
         return charactersAreAllASCII(characters8(), length());
     return charactersAreAllASCII(characters16(), length());
 }
 
-inline bool StringImpl::isAllLatin1() const
+inline bool StringImpl::containsOnlyLatin1() const
 {
     if (is8Bit())
         return true;
@@ -868,7 +885,7 @@ inline bool StringImpl::isAllLatin1() const
     return isLatin1(mergedCharacterBits);
 }
 
-template<bool isSpecialCharacter(UChar), typename CharacterType> inline bool isAllSpecialCharacters(const CharacterType* characters, size_t length)
+template<bool isSpecialCharacter(UChar), typename CharacterType> inline bool containsOnly(const CharacterType* characters, size_t length)
 {
     for (size_t i = 0; i < length; ++i) {
         if (!isSpecialCharacter(characters[i]))
@@ -877,11 +894,11 @@ template<bool isSpecialCharacter(UChar), typename CharacterType> inline bool isA
     return true;
 }
 
-template<bool isSpecialCharacter(UChar)> inline bool StringImpl::isAllSpecialCharacters() const
+template<bool isSpecialCharacter(UChar)> inline bool StringImpl::containsOnly() const
 {
     if (is8Bit())
-        return WTF::isAllSpecialCharacters<isSpecialCharacter>(characters8(), length());
-    return WTF::isAllSpecialCharacters<isSpecialCharacter>(characters16(), length());
+        return WTF::containsOnly<isSpecialCharacter>(characters8(), length());
+    return WTF::containsOnly<isSpecialCharacter>(characters16(), length());
 }
 
 inline StringImpl::StringImpl(unsigned length, Force8Bit)
@@ -1142,128 +1159,6 @@ inline void StringImpl::deref()
     m_refCount = tempRefCount;
 }
 
-template<typename CharacterType> inline void StringImpl::copyCharacters(CharacterType* destination, const CharacterType* source, unsigned length)
-{
-    if (length == 1)
-            *destination = *source;
-    else if (length)
-        std::memcpy(destination, source, length * sizeof(CharacterType));
-}
-
-inline void StringImpl::copyCharacters(UChar* destination, const LChar* source, unsigned length)
-{
-#if CPU(ARM64)
-    // SIMD Upconvert.
-    const auto* end = destination + length;
-    constexpr uintptr_t memoryAccessSize = 64;
-
-    if (length >= memoryAccessSize) {
-        constexpr uintptr_t memoryAccessMask = memoryAccessSize - 1;
-        const auto* simdEnd = destination + (length & ~memoryAccessMask);
-        uint8x16_t zeros = vdupq_n_u8(0);
-        do {
-            uint8x16x4_t bytes = vld1q_u8_x4(bitwise_cast<const uint8_t*>(source));
-            source += memoryAccessSize;
-
-            vst2q_u8(bitwise_cast<uint8_t*>(destination), (uint8x16x2_t { bytes.val[0], zeros }));
-            destination += memoryAccessSize / 4;
-            vst2q_u8(bitwise_cast<uint8_t*>(destination), (uint8x16x2_t { bytes.val[1], zeros }));
-            destination += memoryAccessSize / 4;
-            vst2q_u8(bitwise_cast<uint8_t*>(destination), (uint8x16x2_t { bytes.val[2], zeros }));
-            destination += memoryAccessSize / 4;
-            vst2q_u8(bitwise_cast<uint8_t*>(destination), (uint8x16x2_t { bytes.val[3], zeros }));
-            destination += memoryAccessSize / 4;
-        } while (destination != simdEnd);
-        }
-
-    while (destination != end)
-        *destination++ = *source++;
-#else
-    for (unsigned i = 0; i < length; ++i)
-        destination[i] = source[i];
-#endif
-}
-
-inline void StringImpl::copyCharacters(LChar* destination, const UChar* source, unsigned length)
-{
-#if ASSERT_ENABLED
-    for (unsigned i = 0; i < length; ++i)
-        ASSERT(isLatin1(source[i]));
-#endif
-
-#if CPU(X86_SSE2)
-    const uintptr_t memoryAccessSize = 16; // Memory accesses on 16 byte (128 bit) alignment
-    const uintptr_t memoryAccessMask = memoryAccessSize - 1;
-
-    unsigned i = 0;
-    for (; i < length && !isAlignedTo<memoryAccessMask>(&source[i]); ++i)
-            destination[i] = source[i];
-
-    const uintptr_t sourceLoadSize = 32; // Process 32 bytes (16 UChars) each iteration
-    const unsigned ucharsPerLoop = sourceLoadSize / sizeof(UChar);
-    if (length > ucharsPerLoop) {
-        const unsigned endLength = length - ucharsPerLoop + 1;
-        for (; i < endLength; i += ucharsPerLoop) {
-            __m128i first8UChars = _mm_load_si128(reinterpret_cast<const __m128i*>(&source[i]));
-            __m128i second8UChars = _mm_load_si128(reinterpret_cast<const __m128i*>(&source[i+8]));
-            __m128i packedChars = _mm_packus_epi16(first8UChars, second8UChars);
-            _mm_storeu_si128(reinterpret_cast<__m128i*>(&destination[i]), packedChars);
-        }
-    }
-
-    for (; i < length; ++i)
-        destination[i] = source[i];
-#elif COMPILER(GCC_COMPATIBLE) && CPU(ARM64) && !defined(__ILP32__) && defined(NDEBUG)
-    const LChar* const end = destination + length;
-    const uintptr_t memoryAccessSize = 16;
-
-    if (length >= memoryAccessSize) {
-        const uintptr_t memoryAccessMask = memoryAccessSize - 1;
-
-        // Vector interleaved unpack, we only store the lower 8 bits.
-        const uintptr_t lengthLeft = end - destination;
-        const LChar* const simdEnd = destination + (lengthLeft & ~memoryAccessMask);
-        do {
-            asm("ld2   { v0.16B, v1.16B }, [%[SOURCE]], #32\n\t"
-                "st1   { v0.16B }, [%[DESTINATION]], #16\n\t"
-                : [SOURCE]"+r" (source), [DESTINATION]"+r" (destination)
-                :
-                : "memory", "v0", "v1");
-        } while (destination != simdEnd);
-    }
-
-    while (destination != end)
-        *destination++ = static_cast<LChar>(*source++);
-#elif COMPILER(GCC_COMPATIBLE) && CPU(ARM_NEON) && !(CPU(BIG_ENDIAN) || CPU(MIDDLE_ENDIAN)) && defined(NDEBUG)
-    const LChar* const end = destination + length;
-    const uintptr_t memoryAccessSize = 8;
-
-    if (length >= (2 * memoryAccessSize) - 1) {
-        // Prefix: align dst on 64 bits.
-        const uintptr_t memoryAccessMask = memoryAccessSize - 1;
-        while (!isAlignedTo<memoryAccessMask>(destination))
-            *destination++ = static_cast<LChar>(*source++);
-
-        // Vector interleaved unpack, we only store the lower 8 bits.
-        const uintptr_t lengthLeft = end - destination;
-        const LChar* const simdEnd = end - (lengthLeft % memoryAccessSize);
-        do {
-            asm("vld2.8   { d0-d1 }, [%[SOURCE]] !\n\t"
-                "vst1.8   { d0 }, [%[DESTINATION],:64] !\n\t"
-                : [SOURCE]"+r" (source), [DESTINATION]"+r" (destination)
-                :
-                : "memory", "d0", "d1");
-        } while (destination != simdEnd);
-    }
-
-    while (destination != end)
-        *destination++ = static_cast<LChar>(*source++);
-#else
-    for (unsigned i = 0; i < length; ++i)
-        destination[i] = static_cast<LChar>(source[i]);
-#endif
-}
-
 inline UChar StringImpl::at(unsigned i) const
 {
     ASSERT_WITH_SECURITY_IMPLICATION(i < m_length);
@@ -1434,6 +1329,7 @@ template<typename CharacterType, typename Predicate> ALWAYS_INLINE Ref<StringImp
 template<typename Predicate>
 inline Ref<StringImpl> StringImpl::removeCharacters(const Predicate& findMatch)
 {
+    static_assert(!std::is_function_v<Predicate>, "Passing a lambda instead of a function pointer helps the compiler with inlining");
     if (is8Bit())
         return removeCharactersImpl(characters8(), findMatch);
     return removeCharactersImpl(characters16(), findMatch);
@@ -1478,7 +1374,7 @@ inline Ref<StringImpl> StringImpl::createByReplacingInCharacters(const UChar* ch
 }
 
 template<typename Func>
-inline Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionError> StringImpl::tryGetUTF8(const Func& function, ConversionMode mode) const
+inline Expected<std::invoke_result_t<Func, std::span<const char>>, UTF8ConversionError> StringImpl::tryGetUTF8(const Func& function, ConversionMode mode) const
 {
     if (is8Bit())
         return tryGetUTF8ForCharacters(function, characters8(), length());
@@ -1486,11 +1382,11 @@ inline Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionErro
 }
 
 template<typename Func>
-inline Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionError> StringImpl::tryGetUTF8ForCharacters(const Func& function, const LChar* characters, unsigned length)
+inline Expected<std::invoke_result_t<Func, std::span<const char>>, UTF8ConversionError> StringImpl::tryGetUTF8ForCharacters(const Func& function, const LChar* characters, unsigned length)
 {
     if (!length) {
         constexpr const char* emptyString = "";
-        return function(Span { emptyString, emptyString });
+        return function(std::span(emptyString, emptyString));
     }
 
     // Allocate a buffer big enough to hold all the characters
@@ -1518,26 +1414,26 @@ inline Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionErro
             buffer += prefixLength;
 
             auto success = Unicode::convertLatin1ToUTF8(&nonASCII, characters + length, &buffer, buffer + (bufferVector.size() - prefixLength));
-            ASSERT_UNUSED(success, success); // (length * 3) should be sufficient for any conversion
-        return function(Span { bufferVector.data(), buffer });
+        ASSERT_UNUSED(success, success); // (length * 2) should be sufficient for any conversion from Latin1
+        return function(std::span(bufferVector.data(), buffer));
     }
-    return function(Span { bitwise_cast<const char*>(characters), bitwise_cast<const char*>(characters + length) });
+    return function(std::span(bitwise_cast<const char*>(characters), bitwise_cast<const char*>(characters + length)));
 #else
     Vector<char, 1024> bufferVector(length * 2);
         char* buffer = bufferVector.data();
     const LChar* source = characters;
     bool success = Unicode::convertLatin1ToUTF8(&source, source + length, &buffer, buffer + bufferVector.size());
     ASSERT_UNUSED(success, success); // (length * 2) should be sufficient for any conversion from Latin1
-    return function(Span { bufferVector.data(), buffer });
+    return function(std::span(bufferVector.data(), buffer));
 #endif
 }
 
 template<typename Func>
-inline Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionError> StringImpl::tryGetUTF8ForCharacters(const Func& function, const UChar* characters, unsigned length, ConversionMode mode)
+inline Expected<std::invoke_result_t<Func, std::span<const char>>, UTF8ConversionError> StringImpl::tryGetUTF8ForCharacters(const Func& function, const UChar* characters, unsigned length, ConversionMode mode)
 {
     if (!length) {
         constexpr const char* emptyString = "";
-        return function(Span { emptyString, emptyString });
+        return function(std::span(emptyString, emptyString));
     }
     if (length > MaxLength / 3)
         return makeUnexpected(UTF8ConversionError::OutOfMemory);
@@ -1547,7 +1443,7 @@ inline Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionErro
     auto convertedSize = utf8ForCharactersIntoBuffer(characters, length, mode, bufferVector);
     if (!convertedSize)
         return makeUnexpected(convertedSize.error());
-    return function(Span { bufferVector.data(), *convertedSize });
+    return function(std::span(bufferVector.data(), *convertedSize));
 }
 
 } // namespace WTF
@@ -1555,6 +1451,6 @@ inline Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionErro
 using WTF::StaticStringImpl;
 using WTF::StringImpl;
 using WTF::equal;
-using WTF::isNotSpaceOrNewline;
-using WTF::isSpaceOrNewline;
 using WTF::isUnicodeWhitespace;
+using WTF::deprecatedIsSpaceOrNewline;
+using WTF::deprecatedIsNotSpaceOrNewline;

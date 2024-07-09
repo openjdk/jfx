@@ -35,6 +35,7 @@
 #include "EventNames.h"
 #include "KeyframeEffect.h"
 #include "Logging.h"
+#include "RenderStyle.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
@@ -68,7 +69,7 @@ void DeclarativeAnimation::tick()
     bool wasRelevant = isRelevant();
 
     WebAnimation::tick();
-    invalidateDOMEvents();
+    invalidateDOMEvents(shouldFireDOMEvents());
 
     // If a declarative animation transitions from a non-idle state to an idle state, it means it was
     // canceled using the Web Animations API and it should be disassociated from its owner element.
@@ -204,14 +205,18 @@ void DeclarativeAnimation::setTimeline(RefPtr<AnimationTimeline>&& newTimeline)
 void DeclarativeAnimation::cancel()
 {
     auto cancelationTime = 0_s;
+
+    auto shouldFireEvents = shouldFireDOMEvents();
+    if (shouldFireEvents != ShouldFireEvents::No) {
     if (auto* animationEffect = effect()) {
         if (auto activeTime = animationEffect->getBasicTiming().activeTime)
             cancelationTime = *activeTime;
     }
+    }
 
     WebAnimation::cancel();
 
-    invalidateDOMEvents(cancelationTime);
+    invalidateDOMEvents(shouldFireEvents, cancelationTime);
 }
 
 void DeclarativeAnimation::cancelFromStyle()
@@ -254,7 +259,24 @@ Seconds DeclarativeAnimation::effectTimeAtEnd() const
     return 0_s;
 }
 
-void DeclarativeAnimation::invalidateDOMEvents(Seconds elapsedTime)
+auto DeclarativeAnimation::shouldFireDOMEvents() const -> ShouldFireEvents
+{
+    if (!m_owningElement)
+        return ShouldFireEvents::No;
+
+    auto& document = m_owningElement->document();
+    if (is<CSSAnimation>(*this)) {
+        if (document.hasListenerType(Document::ListenerType::CSSAnimation))
+            return ShouldFireEvents::YesForCSSAnimation;
+        return ShouldFireEvents::No;
+    }
+    ASSERT(is<CSSTransition>(*this));
+    if (document.hasListenerType(Document::ListenerType::CSSTransition))
+        return ShouldFireEvents::YesForCSSTransition;
+    return ShouldFireEvents::No;
+}
+
+void DeclarativeAnimation::invalidateDOMEvents(ShouldFireEvents shouldFireEvents, Seconds elapsedTime)
 {
     if (!m_owningElement)
         return;
@@ -293,7 +315,8 @@ void DeclarativeAnimation::invalidateDOMEvents(Seconds elapsedTime)
     bool isBefore = currentPhase == AnimationEffectPhase::Before;
     bool isIdle = currentPhase == AnimationEffectPhase::Idle;
 
-    if (is<CSSAnimation>(this)) {
+    switch (shouldFireEvents) {
+    case ShouldFireEvents::YesForCSSAnimation:
         // https://drafts.csswg.org/css-animations-2/#events
         if ((wasIdle || wasBefore) && isActive)
             enqueueDOMEvent(eventNames().animationstartEvent, intervalStart, effectTimeAtStart());
@@ -317,7 +340,8 @@ void DeclarativeAnimation::invalidateDOMEvents(Seconds elapsedTime)
             enqueueDOMEvent(eventNames().animationendEvent, intervalStart, effectTimeAtEnd());
         } else if ((!wasIdle && !wasAfter) && isIdle)
             enqueueDOMEvent(eventNames().animationcancelEvent, elapsedTime, elapsedTime);
-    } else if (is<CSSTransition>(this)) {
+        break;
+    case ShouldFireEvents::YesForCSSTransition:
         // https://drafts.csswg.org/css-transitions-2/#transition-events
         if (wasIdle && (isPending || isBefore))
             enqueueDOMEvent(eventNames().transitionrunEvent, intervalStart, effectTimeAtStart());
@@ -345,6 +369,9 @@ void DeclarativeAnimation::invalidateDOMEvents(Seconds elapsedTime)
             enqueueDOMEvent(eventNames().transitionendEvent, intervalStart, effectTimeAtEnd());
         } else if ((!wasIdle && !wasAfter) && isIdle)
             enqueueDOMEvent(eventNames().transitioncancelEvent, elapsedTime, elapsedTime);
+        break;
+    case ShouldFireEvents::No:
+        break;
     }
 
     m_wasPending = isPending;

@@ -30,7 +30,6 @@
 #include "ContextDestructionObserver.h"
 #include "EventTarget.h"
 #include "PlatformSpeechSynthesisUtterance.h"
-#include "ScriptExecutionContext.h"
 #include "SpeechSynthesisErrorCode.h"
 #include "SpeechSynthesisVoice.h"
 #include <wtf/RefCounted.h>

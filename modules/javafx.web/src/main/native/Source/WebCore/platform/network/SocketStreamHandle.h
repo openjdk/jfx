@@ -30,7 +30,7 @@
  */
 
 #pragma once
-
+#if PLATFORM(JAVA)
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/URL.h>
 
@@ -72,3 +72,4 @@ protected:
 };
 
 } // namespace WebCore
+#endif

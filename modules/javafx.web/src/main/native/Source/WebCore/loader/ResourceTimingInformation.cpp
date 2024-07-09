@@ -27,12 +27,12 @@
 #include "ResourceTimingInformation.h"
 
 #include "CachedResource.h"
-#include "DOMWindow.h"
 #include "Document.h"
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "HTMLFrameOwnerElement.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrame.h"
 #include "Performance.h"
 #include "ResourceTiming.h"
 
@@ -50,7 +50,7 @@ void ResourceTimingInformation::addResourceTiming(CachedResource& resource, Docu
     if (!ResourceTimingInformation::shouldAddResourceTiming(resource))
         return;
 
-    auto iterator = m_initiatorMap.find(&resource);
+    auto iterator = m_initiatorMap.find(resource);
     if (iterator == m_initiatorMap.end())
         return;
 
@@ -80,10 +80,10 @@ void ResourceTimingInformation::addResourceTiming(CachedResource& resource, Docu
 
 void ResourceTimingInformation::removeResourceTiming(CachedResource& resource)
 {
-    m_initiatorMap.remove(&resource);
+    m_initiatorMap.remove(resource);
 }
 
-void ResourceTimingInformation::storeResourceTimingInitiatorInformation(const CachedResourceHandle<CachedResource>& resource, const AtomString& initiatorType, Frame* frame)
+void ResourceTimingInformation::storeResourceTimingInitiatorInformation(const CachedResourceHandle<CachedResource>& resource, const AtomString& initiatorType, LocalFrame* frame)
 {
     ASSERT(resource.get());
 
@@ -92,11 +92,11 @@ void ResourceTimingInformation::storeResourceTimingInitiatorInformation(const Ca
         ASSERT(frame);
         if (frame->ownerElement()) {
             InitiatorInfo info = { frame->ownerElement()->localName(), NotYetAdded };
-            m_initiatorMap.add(resource.get(), info);
+            m_initiatorMap.add(*resource, info);
         }
     } else {
         InitiatorInfo info = { initiatorType, NotYetAdded };
-        m_initiatorMap.add(resource.get(), info);
+        m_initiatorMap.add(*resource, info);
     }
 }
 

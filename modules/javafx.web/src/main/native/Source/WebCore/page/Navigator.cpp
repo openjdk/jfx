@@ -32,13 +32,13 @@
 #include "DOMPluginArray.h"
 #include "Document.h"
 #include "FeaturePolicy.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "GPU.h"
 #include "Geolocation.h"
 #include "JSDOMPromiseDeferred.h"
 #include "LoaderStrategy.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "LocalizedStrings.h"
 #include "Page.h"
 #include "PlatformStrategies.h"
@@ -61,9 +61,9 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(Navigator);
 
-Navigator::Navigator(ScriptExecutionContext* context, DOMWindow& window)
+Navigator::Navigator(ScriptExecutionContext* context, LocalDOMWindow& window)
     : NavigatorBase(context)
-    , DOMWindowProperty(&window)
+    , LocalDOMWindowProperty(&window)
 {
 }
 
@@ -284,9 +284,12 @@ void Navigator::initializePluginAndMimeTypeArrays()
 
     // https://html.spec.whatwg.org/multipage/system-state.html#pdf-viewing-support
     // Section 8.9.1.6 states that if pdfViewerEnabled is true, we must return a list
-    // of exactly five PDF view plugins, in a particular order.
+    // of exactly five PDF view plugins, in a particular order. They also must return
+    // a specific plain English string for 'Navigator.plugins[x].description':
+    constexpr auto navigatorPDFDescription = "Portable Document Format"_s;
     for (auto& currentDummyName : dummyPDFPluginNames()) {
         pdfPluginInfo.name = currentDummyName;
+        pdfPluginInfo.desc = navigatorPDFDescription;
         domPlugins.append(DOMPlugin::create(*this, pdfPluginInfo));
 
         // Register the copy of the PluginInfo using the generic 'PDF Viewer' name
@@ -347,7 +350,7 @@ bool Navigator::cookieEnabled() const
     return page->cookieJar().cookiesEnabled(*document);
 }
 
-#if PLATFORM(IOS_FAMILY)
+#if ENABLE(NAVIGATOR_STANDALONE)
 
 bool Navigator::standalone() const
 {
@@ -362,6 +365,8 @@ GPU* Navigator::gpu()
     if (!m_gpuForWebGPU) {
         auto* frame = this->frame();
         if (!frame)
+            return nullptr;
+        if (!frame->settings().webGPUEnabled())
             return nullptr;
         auto* page = frame->page();
         if (!page)
@@ -388,13 +393,19 @@ void Navigator::setAppBadge(std::optional<unsigned long long> badge, Ref<Deferre
 {
     auto* frame = this->frame();
     if (!frame) {
-        promise->reject();
+        promise->reject(InvalidStateError);
         return;
     }
 
     auto* page = frame->page();
     if (!page) {
-        promise->reject();
+        promise->reject(InvalidStateError);
+        return;
+    }
+
+    auto* document = frame->document();
+    if (document && !document->isFullyActive()) {
+        promise->reject(InvalidStateError);
         return;
     }
 

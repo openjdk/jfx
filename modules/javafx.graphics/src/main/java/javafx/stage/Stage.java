@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -279,7 +279,7 @@ public class Stage extends Window {
 
     private boolean primary = false;
 
-    ////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------
 
     // Flag indicating that this stage is being used to show a security dialog
     private boolean securityDialog = false;
@@ -823,6 +823,16 @@ public class Stage extends Window {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * If this Stage is {@code maximized} or in {@code fullScreen}, size to scene is not allowed.
+     */
+    @Override
+    boolean isSizeToSceneAllowed() {
+        return !isMaximized() && !isFullScreen();
+    }
+
     public final boolean isMaximized() {
         return maximized == null ? false : maximized.get();
     }
@@ -887,7 +897,7 @@ public class Stage extends Window {
 
     /**
      * Defines whether the {@code Stage} is resizable or not by the user.
-     * Programatically you may still change the size of the Stage. This is
+     * Programmatically you may still change the size of the Stage. This is
      * a hint which allows the implementation to optionally make the Stage
      * resizable by the user.
      * <p>

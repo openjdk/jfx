@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -725,10 +725,6 @@ public class RobotTest {
 
     @Test
     public void testScreenCapture() throws Exception {
-        if (PlatformUtil.isWindows() && Screen.getPrimary().getOutputScaleX() > 1) {
-            // Mark this test as unstable on Windows when HiDPI scale is more than 100%
-            Assume.assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8207379
-        }
         CountDownLatch setSceneLatch = new CountDownLatch(1);
         Pane pane = new StackPane();
         InvalidationListener invalidationListener = observable -> setSceneLatch.countDown();
@@ -757,10 +753,24 @@ public class RobotTest {
         // Should be scaled to the primary screen x and y scales. Note that screenCaptureScaledToFit and
         // screenCaptureNotScaledToFit will be the same if screenScaleX = screenScaleY = 1.0 and in that case
         // this is redundant.
-        Assert.assertEquals((double) WIDTH * screenScaleX, screenCaptureNotScaledToFit.get().getWidth(), 0.0001);
-        Assert.assertEquals((double) HEIGHT * screenScaleY, screenCaptureNotScaledToFit.get().getHeight(), 0.0001);
-        for (int x = 0; x < WIDTH * screenScaleX; x++) {
-            for (int y = 0; y < HEIGHT * screenScaleY; y++) {
+        // Below calculations follow how getScreenCapture should calculate screen capture dimensions. This
+        // is to make this code consistent and stable on HiDPI systems.
+        int stageX = (int) stage.getX();
+        int stageY = (int) stage.getY();
+        int shouldBeMinX = (int) Math.floor(stageX * screenScaleX);
+        int shouldBeMinY = (int) Math.floor(stageY * screenScaleY);
+        int shouldBeMaxX = (int) Math.ceil((stageX + WIDTH) * screenScaleX);
+        int shouldBeMaxY = (int) Math.ceil((stageY + HEIGHT) * screenScaleY);
+        int shouldBeWidth = shouldBeMaxX - shouldBeMinX;
+        int shouldBeHeight = shouldBeMaxY - shouldBeMinY;
+        Assert.assertEquals((double) shouldBeWidth, screenCaptureNotScaledToFit.get().getWidth(), 0.0001);
+        Assert.assertEquals((double) shouldBeHeight, screenCaptureNotScaledToFit.get().getHeight(), 0.0001);
+
+        // To verify the color we're going to skip the "1-pixel outside border" of the capture. On HiDPI systems
+        // (especially on Windows) stage's position might have fractional element, which will mean the capture will
+        // average those values with whatever is behind the stage. This will make their values invalid.
+        for (int x = 1; x < shouldBeWidth - 1; x++) {
+            for (int y = 1; y < shouldBeHeight - 1; y++) {
                 assertColorEquals(MAGENTA, screenCaptureNotScaledToFit.get().getPixelReader().getColor(x, y), TOLERANCE);
             }
         }
@@ -768,8 +778,9 @@ public class RobotTest {
         // Should have been shrunk to fit the requested size, but still contain the same thing (all magenta pixels).
         Assert.assertEquals((double) WIDTH, screenCaptureScaledToFit.get().getWidth(), 0.0001);
         Assert.assertEquals((double) HEIGHT, screenCaptureScaledToFit.get().getHeight(), 0.0001);
-        for (int x = 0; x < WIDTH; x++) {
-            for (int y = 0; y < HEIGHT; y++) {
+        // Because of scaling, similar estimate has to be done like above.
+        for (int x = 1; x < WIDTH - 1; x++) {
+            for (int y = 1; y < HEIGHT - 1; y++) {
                 assertColorEquals(MAGENTA, screenCaptureScaledToFit.get().getPixelReader().getColor(x, y), TOLERANCE);
             }
         }
@@ -817,7 +828,7 @@ public class RobotTest {
 
     @AfterClass
     public static void exit() {
-        Util.shutdown(stage);
+        Util.shutdown();
     }
 
     @After

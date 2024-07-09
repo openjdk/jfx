@@ -33,7 +33,7 @@
 #include "ExceptionOr.h"
 #include "JSValueInWrappedObject.h"
 #include <JavaScriptCore/Forward.h>
-#include <JavaScriptCore/GenericTypedArrayView.h>
+#include <JavaScriptCore/TypedArrayAdaptersForwardDeclarations.h>
 #include <wtf/Lock.h>
 #include <wtf/Vector.h>
 
@@ -95,6 +95,8 @@ private:
     void invalidate();
 
     bool hasDetachedChannelBuffer() const;
+
+    void applyNoiseIfNeeded();
 
     // We do not currently support having the Float32Arrays in m_channels being more than 2GB,
     // and we have tests that we return an error promptly on trying to create such a huge AudioBuffer.

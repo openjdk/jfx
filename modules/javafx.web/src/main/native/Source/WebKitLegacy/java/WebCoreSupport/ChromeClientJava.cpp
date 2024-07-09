@@ -213,7 +213,6 @@ ChromeClientJava::ChromeClientJava(const JLObject &webPage)
 
 void ChromeClientJava::chromeDestroyed()
 {
-    delete this;
 }
 
 #if ENABLE(INPUT_TYPE_COLOR)
@@ -223,7 +222,7 @@ std::unique_ptr<ColorChooser> ChromeClientJava::createColorChooser(ColorChooserC
 }
 #endif
 
-FloatRect ChromeClientJava::windowRect()
+FloatRect ChromeClientJava::windowRect() const
 {
     using namespace ChromeClientJavaInternal;
     JNIEnv* env = WTF::GetJavaEnv();
@@ -254,7 +253,7 @@ void ChromeClientJava::setWindowRect(const FloatRect &r)
     WTF::CheckAndClearException(env);
 }
 
-FloatRect ChromeClientJava::pageRect()
+FloatRect ChromeClientJava::pageRect() const
 {
     using namespace ChromeClientJavaInternal;
     JNIEnv* env = WTF::GetJavaEnv();
@@ -300,7 +299,7 @@ void ChromeClientJava::unfocus()
     WTF::CheckAndClearException(env);
 }
 
-bool ChromeClientJava::canTakeFocus(FocusDirection)
+bool ChromeClientJava::canTakeFocus(FocusDirection) const
 {
     return true;
 }
@@ -322,13 +321,13 @@ void ChromeClientJava::focusedElementChanged(Element*)
     notImplemented();
 }
 
-void ChromeClientJava::focusedFrameChanged(Frame*)
+void ChromeClientJava::focusedFrameChanged(LocalFrame*)
 {
     notImplemented();
 }
 
 Page* ChromeClientJava::createWindow(
-    Frame&,
+    LocalFrame& frame,
     const WindowFeatures& features,
     const NavigationAction& na)
 {
@@ -350,7 +349,8 @@ Page* ChromeClientJava::createWindow(
     }
 
     Page* p = WebPage::pageFromJObject(newWebPage);
-    p->mainFrame().loader().load(FrameLoadRequest(p->mainFrame(), ResourceRequest(na.url())));
+    auto localFrame =  dynamicDowncast<LocalFrame>(p->mainFrame());
+    localFrame->loader().load(FrameLoadRequest(*localFrame, ResourceRequest(na.url())));
     return p;
 }
 
@@ -374,7 +374,7 @@ void ChromeClientJava::show()
     WTF::CheckAndClearException(env);
 }
 
-bool ChromeClientJava::canRunModal()
+bool ChromeClientJava::canRunModal() const
 {
     notImplemented();
     return false;
@@ -395,7 +395,7 @@ void ChromeClientJava::setToolbarsVisible(bool)
     notImplemented();
 }
 
-bool ChromeClientJava::toolbarsVisible()
+bool ChromeClientJava::toolbarsVisible() const
 {
     notImplemented();
     return false;
@@ -406,7 +406,7 @@ void ChromeClientJava::setStatusbarVisible(bool)
     notImplemented();
 }
 
-bool ChromeClientJava::statusbarVisible()
+bool ChromeClientJava::statusbarVisible() const
 {
     notImplemented();
     return false;
@@ -422,7 +422,7 @@ void ChromeClientJava::setScrollbarsVisible(bool v)
     WTF::CheckAndClearException(env);
 }
 
-bool ChromeClientJava::scrollbarsVisible()
+bool ChromeClientJava::scrollbarsVisible() const
 {
     notImplemented();
     return false;
@@ -433,7 +433,7 @@ void ChromeClientJava::setMenubarVisible(bool)
     notImplemented();
 }
 
-bool ChromeClientJava::menubarVisible()
+bool ChromeClientJava::menubarVisible() const
 {
     notImplemented();
     return false;
@@ -466,7 +466,7 @@ void ChromeClientJava::setCursorHiddenUntilMouseMoves(bool)
     notImplemented();
 }
 
-void ChromeClientJava::runJavaScriptAlert(Frame&, const String& text)
+void ChromeClientJava::runJavaScriptAlert(LocalFrame&, const String& text)
 {
     using namespace ChromeClientJavaInternal;
     JNIEnv* env = WTF::GetJavaEnv();
@@ -476,7 +476,7 @@ void ChromeClientJava::runJavaScriptAlert(Frame&, const String& text)
     WTF::CheckAndClearException(env);
 }
 
-bool ChromeClientJava::runJavaScriptConfirm(Frame&, const String& text)
+bool ChromeClientJava::runJavaScriptConfirm(LocalFrame&, const String& text)
 {
     using namespace ChromeClientJavaInternal;
     JNIEnv* env = WTF::GetJavaEnv();
@@ -488,7 +488,7 @@ bool ChromeClientJava::runJavaScriptConfirm(Frame&, const String& text)
     return jbool_to_bool(res);
 }
 
-bool ChromeClientJava::runJavaScriptPrompt(Frame&, const String& text,
+bool ChromeClientJava::runJavaScriptPrompt(LocalFrame&, const String& text,
                                            const String& defaultValue, String& result)
 {
     using namespace ChromeClientJavaInternal;
@@ -511,7 +511,7 @@ bool ChromeClientJava::runJavaScriptPrompt(Frame&, const String& text,
     return resb;
 }
 
-void ChromeClientJava::runOpenPanel(Frame&, FileChooser& fileChooser)
+void ChromeClientJava::runOpenPanel(LocalFrame&, FileChooser& fileChooser)
 {
     using namespace ChromeClientJavaInternal;
     JNIEnv* env = WTF::GetJavaEnv();
@@ -565,7 +565,7 @@ bool ChromeClientJava::canRunBeforeUnloadConfirmPanel()
     return result;
 }
 
-bool ChromeClientJava::runBeforeUnloadConfirmPanel(const String& message, Frame&)
+bool ChromeClientJava::runBeforeUnloadConfirmPanel(const String& message, LocalFrame&)
 {
     using namespace ChromeClientJavaInternal;
     JNIEnv* env = WTF::GetJavaEnv();
@@ -595,9 +595,9 @@ KeyboardUIMode ChromeClientJava::keyboardUIMode()
     return KeyboardAccessTabsToLinks;
 }
 
-void ChromeClientJava::mouseDidMoveOverElement(const HitTestResult& htr, unsigned, const String& toolTip, TextDirection)
+void ChromeClientJava::mouseDidMoveOverElement(const HitTestResult&, OptionSet<PlatformEventModifier>, const String& toolTip, TextDirection)
 {
-    static Node* mouseOverNode = 0;
+    /*static Node* mouseOverNode = 0;
     Element* urlElement = htr.URLElement();
     if (urlElement && isDraggableLink(*urlElement)) {
         Node* overNode = htr.innerNode();
@@ -611,7 +611,7 @@ void ChromeClientJava::mouseDidMoveOverElement(const HitTestResult& htr, unsigne
             setStatusbarText(""_s);
             mouseOverNode = 0;
         }
-    }
+    }*/ //REVISIT
     setToolTip(toolTip);
 }
 
@@ -629,7 +629,7 @@ void ChromeClientJava::setToolTip(const String& toolTip)
     WTF::CheckAndClearException(env);
 }
 
-void ChromeClientJava::print(Frame&, const StringWithDirection&)
+void ChromeClientJava::print(LocalFrame&, const StringWithDirection&)
 {
     using namespace ChromeClientJavaInternal;
     JNIEnv* env = WTF::GetJavaEnv();
@@ -645,7 +645,7 @@ void ChromeClientJava::print(Frame&, const StringWithDirection&)
     WTF::CheckAndClearException(env);
 }
 
-void ChromeClientJava::exceededDatabaseQuota(Frame&, const String&, DatabaseDetails) {
+void ChromeClientJava::exceededDatabaseQuota(LocalFrame&, const String&, DatabaseDetails) {
     notImplemented();
 }
 
@@ -660,7 +660,7 @@ void ChromeClientJava::reachedApplicationCacheOriginQuota(SecurityOrigin&, int64
     notImplemented();
 }
 
-void ChromeClientJava::attachRootGraphicsLayer(Frame&, GraphicsLayer* layer)
+void ChromeClientJava::attachRootGraphicsLayer(LocalFrame&, GraphicsLayer* layer)
 {
     WebPage::webPageFromJObject(m_webPage)->setRootChildLayer(layer);
 }
@@ -767,7 +767,7 @@ PlatformPageClient ChromeClientJava::platformPageClient() const
     return hostWindow;
 }
 
-void ChromeClientJava::contentsSizeChanged(Frame&, const IntSize&) const
+void ChromeClientJava::contentsSizeChanged(LocalFrame&, const IntSize&) const
 {
     notImplemented();
 }
@@ -822,14 +822,6 @@ RefPtr<Icon> ChromeClientJava::createIconForFiles(const Vector<String>& filename
 }
 
 void ChromeClientJava::requestCookieConsent(CompletionHandler<void(CookieConsentDecisionResult)>&&)
-{
-}
-
-void ChromeClientJava::classifyModalContainerControls(Vector<String>&& texts, CompletionHandler<void(Vector<ModalContainerControlType>&&)>&&)
-{
-}
-
-void ChromeClientJava::decidePolicyForModalContainer(OptionSet<ModalContainerControlType>, CompletionHandler<void(ModalContainerDecision)>&&)
 {
 }
 

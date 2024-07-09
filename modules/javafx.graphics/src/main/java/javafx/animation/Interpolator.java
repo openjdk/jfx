@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,9 +26,10 @@
 package javafx.animation;
 
 import javafx.util.Duration;
-
+import com.sun.javafx.animation.InterpolatorHelper;
 import com.sun.scenario.animation.NumberTangentInterpolator;
 import com.sun.scenario.animation.SplineInterpolator;
+import com.sun.scenario.animation.StepInterpolator;
 
 /**
  * The abstract class defines several {@code interpolate} methods, which are
@@ -43,6 +44,15 @@ import com.sun.scenario.animation.SplineInterpolator;
 public abstract class Interpolator {
 
     private static final double EPSILON = 1e-12;
+
+    static {
+        InterpolatorHelper.setAccessor(new InterpolatorHelper.Accessor() {
+            @Override
+            public double curve(Interpolator interpolator, double t) {
+                return interpolator.curve(t);
+            }
+        });
+    }
 
     /**
      * The constructor of {@code Interpolator}.
@@ -254,6 +264,77 @@ public abstract class Interpolator {
      */
     public static Interpolator TANGENT(Duration t, double v) {
         return new NumberTangentInterpolator(t, v);
+    }
+
+    /**
+     * Specifies the step position of a step interpolator.
+     * <p>
+     * The step position determines the location of rise points in the input progress interval, which are the
+     * locations on the input progress axis where the output progress value jumps from one step to the next.
+     *
+     * @since 23
+     */
+    public enum StepPosition {
+        /**
+         * The interval starts with a rise point when the input progress value is 0.
+         * <p>
+         * <img width="200" src="../scene/doc-files/easing-stepstart.svg" alt="START"/>
+         */
+        START,
+
+        /**
+         * The interval ends with a rise point when the input progress value is 1.
+         * <p>
+         * <img width="200" src="../scene/doc-files/easing-stepend.svg" alt="END"/>
+         */
+        END,
+
+        /**
+         * The interval starts with a rise point when the input progress value is 0,
+         * and ends with a rise point when the input progress value is 1.
+         * <p>
+         * <img width="200" src="../scene/doc-files/easing-stepboth.svg" alt="BOTH"/>
+         */
+        BOTH,
+
+        /**
+         * All rise points are within the open interval (0..1).
+         * <p>
+         * <img width="200" src="../scene/doc-files/easing-stepnone.svg" alt="NONE"/>
+         */
+        NONE
+    }
+
+    /**
+     * Built-in interpolator instance that is equivalent to {@code STEPS(1, StepPosition.START)}.
+     *
+     * @since 23
+     */
+    public static final Interpolator STEP_START = STEPS(1, StepPosition.START);
+
+    /**
+     * Built-in interpolator instance that is equivalent to {@code STEPS(1, StepPosition.END)}.
+     *
+     * @since 23
+     */
+    public static final Interpolator STEP_END = STEPS(1, StepPosition.END);
+
+    /**
+     * Creates a step interpolator that divides the input time into a series of intervals, each
+     * interval being equal in length, where each interval maps to a constant output time value.
+     * The output time value is determined by the {@link StepPosition}.
+     *
+     * @param intervalCount the number of intervals in the step interpolator
+     * @param position the {@code StepPosition} of the step interpolator
+     * @throws IllegalArgumentException if {@code intervals} is less than 1, or if {@code intervals} is
+     *                                  less than 2 when {@code position} is {@link StepPosition#NONE}
+     * @throws NullPointerException if {@code position} is {@code null}
+     * @return a new step interpolator
+     *
+     * @since 23
+     */
+    public static Interpolator STEPS(int intervalCount, StepPosition position) {
+        return new StepInterpolator(intervalCount, position);
     }
 
     /**

@@ -93,7 +93,6 @@ public:
     {
         return m_value != other.m_value;
     }
-
     constexpr bool operator<(const GenericTimeMixin& other) const
     {
         return m_value < other.m_value;
@@ -119,9 +118,16 @@ public:
         return *static_cast<const DerivedTime*>(this);
     }
 
-#if PLATFORM(JAVA)
-    double get_time_value() { return m_value;}
-#endif
+    static constexpr DerivedTime timePointFromNow(Seconds relativeTimeFromNow)
+    {
+        if (std::isinf(relativeTimeFromNow))
+            return DerivedTime::fromRawSeconds(relativeTimeFromNow.value());
+        return DerivedTime::now() + relativeTimeFromNow;
+    }
+
+ #if PLATFORM(JAVA)
+     double get_time_value() { return m_value;}
+ #endif
 
 protected:
     // This is the epoch. So, x.secondsSinceEpoch() should be the same as x - DerivedTime().

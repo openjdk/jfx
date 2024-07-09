@@ -32,13 +32,14 @@
 #include "EventLoop.h"
 #include "EventNames.h"
 #include "ExtendableEvent.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "JSDOMPromiseDeferred.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "NotificationEvent.h"
 #include "PushEvent.h"
 #include "SWContextManager.h"
+#include "SWServer.h"
 #include "ServiceWorker.h"
 #include "ServiceWorkerClient.h"
 #include "ServiceWorkerClients.h"
@@ -87,6 +88,7 @@ void ServiceWorkerGlobalScope::dispatchPushEvent(PushEvent& pushEvent)
 {
     ASSERT(!m_pushEvent);
     m_pushEvent = &pushEvent;
+    m_lastPushEventTime = MonotonicTime::now();
     dispatchEvent(pushEvent);
     m_pushEvent = nullptr;
 }
@@ -100,10 +102,11 @@ void ServiceWorkerGlobalScope::notifyServiceWorkerPageOfCreationIfNecessary()
     ASSERT(isMainThread());
     serviceWorkerPage->setServiceWorkerGlobalScope(*this);
 
-    Vector<Ref<DOMWrapperWorld>> worlds;
-    static_cast<JSVMClientData*>(vm().clientData)->getAllWorlds(worlds);
-    for (auto& world : worlds)
-        serviceWorkerPage->mainFrame().loader().client().dispatchServiceWorkerGlobalObjectAvailable(world);
+    if (auto* localMainFrame = dynamicDowncast<LocalFrame>(serviceWorkerPage->mainFrame())) {
+        // FIXME: We currently do not support non-normal worlds in service workers.
+        Ref normalWorld = static_cast<JSVMClientData*>(vm().clientData)->normalWorld();
+        localMainFrame->loader().client().dispatchServiceWorkerGlobalObjectAvailable(normalWorld);
+    }
 }
 
 Page* ServiceWorkerGlobalScope::serviceWorkerPage()
@@ -144,6 +147,15 @@ EventTargetInterface ServiceWorkerGlobalScope::eventTargetInterface() const
 ServiceWorkerThread& ServiceWorkerGlobalScope::thread()
 {
     return static_cast<ServiceWorkerThread&>(WorkerGlobalScope::thread());
+}
+
+void ServiceWorkerGlobalScope::prepareForDestruction()
+{
+    // Make sure we destroy fetch events objects before the VM goes away, since their
+    // destructor may access the VM.
+    m_extendedEvents.clear();
+
+    WorkerGlobalScope::prepareForDestruction();
 }
 
 // https://w3c.github.io/ServiceWorker/#update-service-worker-extended-events-set-algorithm
@@ -214,6 +226,22 @@ void ServiceWorkerGlobalScope::recordUserGesture()
 {
     m_isProcessingUserGesture = true;
     m_userGestureTimer.startOneShot(userGestureLifetime);
+}
+
+bool ServiceWorkerGlobalScope::didFirePushEventRecently() const
+{
+    return MonotonicTime::now() <= m_lastPushEventTime + SWServer::defaultTerminationDelay;
+}
+
+void ServiceWorkerGlobalScope::addConsoleMessage(MessageSource source, MessageLevel level, const String& message, unsigned long requestIdentifier)
+{
+    if (m_consoleMessageReportingEnabled) {
+        callOnMainThread([threadIdentifier = thread().identifier(), source, level, message = message.isolatedCopy(), requestIdentifier] {
+            if (auto* connection = SWContextManager::singleton().connection())
+                connection->reportConsoleMessage(threadIdentifier, source, level, message, requestIdentifier);
+        });
+    }
+    WorkerGlobalScope::addConsoleMessage(source, level, message, requestIdentifier);
 }
 
 } // namespace WebCore

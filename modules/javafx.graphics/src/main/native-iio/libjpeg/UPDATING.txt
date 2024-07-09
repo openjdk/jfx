@@ -9,7 +9,8 @@ section from README.
 
 3) OpenJFX imports only the JPEG library source with some exceptions.
 OpenJFX does not need any other applications or tools provided by IJG libjpeg.
-Copy only the same 41 .c and 9 .h files as are already there.
+Copy only the same 41 .c and 8 .h files as are already there. jconfig.h file
+is not present in IJG code, so keep it as it is.
 
 4) The following files contain local modifications of libjpeg for JavaFX:
 * jchuff.c

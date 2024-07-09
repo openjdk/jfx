@@ -24,14 +24,13 @@
 
 #include "CachedImage.h"
 #include "CommonVM.h"
-#include "DOMWindow.h"
 #include "Element.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "HTMLNames.h"
 #include "HTMLObjectElement.h"
-#include "HTMLParserIdioms.h"
 #include "HTMLVideoElement.h"
+#include "LocalDOMWindow.h"
 #include "Settings.h"
 
 #include "JSDOMWindowBase.h"
@@ -55,6 +54,18 @@ void HTMLImageLoader::dispatchLoadEvent()
         return;
 #endif
 
+#if PLATFORM(IOS_FAMILY)
+    // iOS loads PDF inside <object> elements as images since we don't support loading them
+    // as plugins (see logic in WebFrameLoaderClient::objectContentType()). However, WebKit
+    // doesn't normally fire load/error events when loading <object> as plugins. Therefore,
+    // firing such events for PDF loads on iOS can cause confusion on some sites.
+    // See rdar://107795151.
+    if (auto* objectElement = dynamicDowncast<HTMLObjectElement>(element())) {
+        if (MIMETypeRegistry::isPDFOrPostScriptMIMEType(objectElement->serviceType()))
+            return;
+    }
+#endif
+
     bool errorOccurred = image()->errorOccurred();
     if (!errorOccurred && image()->response().httpStatusCode() >= 400)
         errorOccurred = is<HTMLObjectElement>(element()); // An <object> considers a 404 to be an error and should fire onerror.
@@ -63,7 +74,8 @@ void HTMLImageLoader::dispatchLoadEvent()
 
 String HTMLImageLoader::sourceURI(const AtomString& attr) const
 {
-    return stripLeadingAndTrailingHTMLSpaces(attr);
+    // FIXME: trimming whitespace is probably redundant with the URL parser
+    return attr.string().trim(isASCIIWhitespace);
 }
 
 void HTMLImageLoader::notifyFinished(CachedResource&, const NetworkLoadMetrics& metrics)

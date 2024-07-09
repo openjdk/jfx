@@ -29,6 +29,7 @@
  */
 
 #include "config.h"
+#if PLATFORM(JAVA)
 #include "SocketStreamHandle.h"
 
 #include "CookieRequestHeaderFieldProxy.h"
@@ -83,3 +84,4 @@ void SocketStreamHandle::disconnect()
 }
 
 } // namespace WebCore
+#endif

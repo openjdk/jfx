@@ -710,7 +710,11 @@ void VisiblePosition::showTreeForThis() const
     m_deepPosition.showTreeForThis();
 }
 
-#endif
+String VisiblePositionRange::debugDescription() const
+{
+    return makeString("start: ", start.debugDescription(), ", end: ", end.debugDescription());
+}
+#endif // ENABLE(TREE_DEBUGGING)
 
 // FIXME: Maybe this should be deprecated too, like the underlying function?
 Element* enclosingBlockFlowElement(const VisiblePosition& visiblePosition)
@@ -801,7 +805,7 @@ VisiblePositionRange makeVisiblePositionRange(const std::optional<SimpleRange>& 
     return { makeContainerOffsetPosition(range->start), makeContainerOffsetPosition(range->end) };
 }
 
-PartialOrdering documentOrder(const VisiblePosition& a, const VisiblePosition& b)
+std::partial_ordering documentOrder(const VisiblePosition& a, const VisiblePosition& b)
 {
     // FIXME: Should two positions with different affinity be considered equivalent or not?
     return treeOrder<ComposedTree>(a.deepEquivalent(), b.deepEquivalent());

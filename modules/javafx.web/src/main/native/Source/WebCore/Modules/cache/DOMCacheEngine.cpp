@@ -97,7 +97,7 @@ bool queryCacheMatch(const ResourceRequest& request, const ResourceRequest& cach
     varyValue.split(',', [&](StringView view) {
         if (isVarying)
             return;
-        auto nameView = stripLeadingAndTrailingHTTPSpaces(view);
+        auto nameView = view.trim(isASCIIWhitespaceWithoutFF<UChar>);
         if (nameView == "*"_s) {
             isVarying = true;
             return;
@@ -151,6 +151,54 @@ ResponseBody copyResponseBody(const ResponseBody& body)
 Record Record::copy() const
 {
     return Record { identifier, updateResponseCounter, requestHeadersGuard, request, options, referrer, responseHeadersGuard, response, copyResponseBody(responseBody), responseBodySize };
+}
+
+CrossThreadRecord toCrossThreadRecord(Record&& record)
+{
+    return CrossThreadRecord {
+        record.identifier,
+        record.updateResponseCounter,
+        record.requestHeadersGuard,
+        WTFMove(record.request).isolatedCopy(),
+        WTFMove(record.options).isolatedCopy(),
+        WTFMove(record.referrer).isolatedCopy(),
+        record.responseHeadersGuard,
+        record.response.crossThreadData(),
+        isolatedResponseBody(record.responseBody),
+        record.responseBodySize
+    };
+}
+
+Record fromCrossThreadRecord(CrossThreadRecord&& record)
+{
+    return Record {
+        record.identifier,
+        record.updateResponseCounter,
+        record.requestHeadersGuard,
+        WTFMove(record.request),
+        WTFMove(record.options),
+        WTFMove(record.referrer),
+        record.responseHeadersGuard,
+        ResourceResponse::fromCrossThreadData(WTFMove(record.response)),
+        WTFMove(record.responseBody),
+        record.responseBodySize
+    };
+}
+
+CrossThreadRecord CrossThreadRecord::isolatedCopy() &&
+{
+    return CrossThreadRecord {
+        identifier,
+        updateResponseCounter,
+        requestHeadersGuard,
+        WTFMove(request).isolatedCopy(),
+        WTFMove(options).isolatedCopy(),
+        WTFMove(referrer).isolatedCopy(),
+        responseHeadersGuard,
+        WTFMove(response).isolatedCopy(),
+        isolatedResponseBody(responseBody),
+        responseBodySize
+    };
 }
 
 } // namespace DOMCacheEngine

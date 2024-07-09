@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,9 @@
 
 package javafx.animation;
 
+import com.sun.javafx.animation.AnimationTimerHelper;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.Utils;
 import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.animation.shared.TimerReceiver;
 import java.security.AccessControlContext;
@@ -47,6 +49,15 @@ import java.security.PrivilegedAction;
  * @since JavaFX 2.0
  */
 public abstract class AnimationTimer {
+
+    static {
+        AnimationTimerHelper.setAccessor(new AnimationTimerHelper.Accessor() {
+            @Override
+            public AbstractPrimaryTimer getPrimaryTimer(AnimationTimer timer) {
+                return timer.timer;
+            }
+        });
+    }
 
     private class AnimationTimerReceiver implements TimerReceiver {
         @SuppressWarnings("removal")
@@ -100,14 +111,20 @@ public abstract class AnimationTimer {
      * <p>
      * The {@code AnimationTimer} can be stopped by calling {@link #stop()}.
      * <p>
-     * This method must be called on the JavaFX Application thread.
+     * Note: if this method is not called on the JavaFX Application Thread, it is delegated to it automatically.
+     * In this case, the call is asynchronous and may not happen immediately.
+     */
+    public void start() {
+        Utils.runOnFxThread(this::startImpl);
+    }
+
+    /**
+     * This method must be run on the JavaFX Application Thread.
      *
-     * @throws IllegalStateException if this method is called on a thread
-     *                  other than the JavaFX Application Thread.
+     * @see #start()
      */
     @SuppressWarnings("removal")
-    public void start() {
-        Toolkit.getToolkit().checkFxUserThread();
+    private void startImpl() {
         if (!active) {
             // Capture the Access Control Context to be used during the animation pulse
             accessCtrlCtx = AccessController.getContext();
@@ -120,13 +137,19 @@ public abstract class AnimationTimer {
      * Stops the {@code AnimationTimer}. It can be activated again by calling
      * {@link #start()}.
      * <p>
-     * This method must be called on the JavaFX Application thread.
-     *
-     * @throws IllegalStateException if this method is called on a thread
-     *                  other than the JavaFX Application Thread.
+     * Note: if this method is not called on the JavaFX Application Thread, it is delegated to it automatically.
+     * In this case, the call is asynchronous and may not happen immediately.
      */
     public void stop() {
-        Toolkit.getToolkit().checkFxUserThread();
+        Utils.runOnFxThread(this::stopImpl);
+    }
+
+    /**
+     * This method must be run on the JavaFX Application Thread.
+     *
+     * @see #stop()
+     */
+    private void stopImpl() {
         if (active) {
             timer.removeAnimationTimer(timerReceiver);
             active = false;

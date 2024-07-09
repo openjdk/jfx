@@ -961,7 +961,10 @@ void WindowContextTop::process_state(GdkEventWindowState* event) {
 
 void WindowContextTop::process_realize() {
     gdk_window = gtk_widget_get_window(gtk_widget);
-    request_frame_extents();
+    if (frame_type == TITLED) {
+        request_frame_extents();
+    }
+
     gdk_window_set_events(gdk_window, GDK_FILTERED_EVENTS_MASK);
     g_object_set_data_full(G_OBJECT(gdk_window), GDK_WINDOW_DATA_CONTEXT, this, NULL);
     gdk_window_register_dnd(gdk_window);

@@ -29,9 +29,7 @@
 #include "ContentfulPaintChecker.h"
 #include "Document.h"
 #include "Element.h"
-#include "Frame.h"
 #include "FrameSnapshotting.h"
-#include "FrameView.h"
 #include "HTMLCanvasElement.h"
 #include "HTMLIFrameElement.h"
 #include "HitTestRequest.h"
@@ -40,6 +38,8 @@
 #include "IntPoint.h"
 #include "IntRect.h"
 #include "IntSize.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "Logging.h"
 #include "Node.h"
 #include "Page.h"
@@ -47,7 +47,7 @@
 #include "RegistrableDomain.h"
 #include "RenderImage.h"
 #include "RenderObject.h"
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 #include "Settings.h"
 #include "Styleable.h"
 #include "WebAnimation.h"
@@ -147,7 +147,7 @@ static double colorDifference(const Lab<float>& lhs, const Lab<float>& rhs)
     return sqrt(pow(resolvedRightHandSide.lightness - resolvedLeftHandSide.lightness, 2) + pow(resolvedRightHandSide.a - resolvedLeftHandSide.a, 2) + pow(resolvedRightHandSide.b - resolvedLeftHandSide.b, 2));
 }
 
-static Lab<float> averageColor(Span<Lab<float>> colors)
+static Lab<float> averageColor(std::span<Lab<float>> colors)
 {
     ColorComponents<float, 3> totals { };
     for (auto color : colors)
@@ -169,11 +169,15 @@ std::optional<Color> PageColorSampler::sampleTop(Page& page)
         return Color();
     }
 
-    RefPtr mainDocument = page.mainFrame().document();
+    auto* localMainFrame = dynamicDowncast<LocalFrame>(page.mainFrame());
+    if (!localMainFrame)
+        return std::nullopt;
+
+    RefPtr mainDocument = localMainFrame->document();
     if (!mainDocument)
         return std::nullopt;
 
-    RefPtr frameView = page.mainFrame().view();
+    RefPtr frameView = localMainFrame->view();
     if (!frameView)
         return std::nullopt;
 
@@ -267,11 +271,11 @@ std::optional<Color> PageColorSampler::sampleTop(Page& page)
     }
 
     if (!nonMatchingColorIndex)
-        return averageColor(Span { samples }.subspan<1, numSamples - 1>());
+        return averageColor(std::span(samples).subspan<1, numSamples - 1>());
     else if (nonMatchingColorIndex == numSamples - 1)
-        return averageColor(Span { samples }.subspan<0, numSamples - 1>());
+        return averageColor(std::span(samples).subspan<0, numSamples - 1>());
     else
-        return averageColor(Span { samples });
+        return averageColor(std::span(samples));
 }
 
 } // namespace WebCore

@@ -41,10 +41,10 @@ struct NavigationRequester {
     Ref<SecurityOrigin> securityOrigin;
     Ref<SecurityOrigin> topOrigin;
     PolicyContainer policyContainer;
+    std::optional<FrameIdentifier> frameID;
+    std::optional<PageIdentifier> pageID;
     ScriptExecutionContextIdentifier documentIdentifier;
-    std::optional<GlobalFrameIdentifier> globalFrameIdentifier;
     SandboxFlags sandboxFlags;
-
 };
 
 } // namespace WebCore

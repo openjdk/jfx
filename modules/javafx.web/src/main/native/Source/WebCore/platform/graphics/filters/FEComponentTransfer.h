@@ -47,16 +47,34 @@ struct ComponentTransferFunction {
     float offset { 0 };
 
     Vector<float> tableValues;
+
+    bool operator==(const ComponentTransferFunction&) const = default;
 };
 
 enum class ComponentTransferChannel : uint8_t { Red, Green, Blue, Alpha };
 
-using ComponentTransferFunctions = EnumeratedArray<ComponentTransferChannel, ComponentTransferFunction, ComponentTransferChannel::Alpha>;
+} // namespace WebCore
+
+namespace WTF {
+template<> struct EnumTraits<WebCore::ComponentTransferChannel> {
+    using values = EnumValues<WebCore::ComponentTransferChannel,
+        WebCore::ComponentTransferChannel::Red,
+        WebCore::ComponentTransferChannel::Green,
+        WebCore::ComponentTransferChannel::Blue,
+        WebCore::ComponentTransferChannel::Alpha>;
+};
+}
+
+namespace WebCore {
+
+using ComponentTransferFunctions = EnumeratedArray<ComponentTransferChannel, ComponentTransferFunction>;
 
 class FEComponentTransfer : public FilterEffect {
 public:
     WEBCORE_EXPORT static Ref<FEComponentTransfer> create(const ComponentTransferFunction& redFunc, const ComponentTransferFunction& greenFunc, const ComponentTransferFunction& blueFunc, const ComponentTransferFunction& alphaFunc);
     static Ref<FEComponentTransfer> create(ComponentTransferFunctions&&);
+
+    bool operator==(const FEComponentTransfer&) const;
 
     ComponentTransferFunction redFunction() const { return m_functions[ComponentTransferChannel::Red]; }
     ComponentTransferFunction greenFunction() const { return m_functions[ComponentTransferChannel::Green]; }
@@ -77,6 +95,8 @@ public:
 private:
     FEComponentTransfer(const ComponentTransferFunction& redFunc, const ComponentTransferFunction& greenFunc, const ComponentTransferFunction& blueFunc, const ComponentTransferFunction& alphaFunc);
     FEComponentTransfer(ComponentTransferFunctions&&);
+
+    bool operator==(const FilterEffect& other) const override { return areEqual<FEComponentTransfer>(*this, other); }
 
     OptionSet<FilterRenderingMode> supportedFilterRenderingModes() const override;
     std::unique_ptr<FilterEffectApplier> createAcceleratedApplier() const override;

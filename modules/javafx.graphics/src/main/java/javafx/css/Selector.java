@@ -54,6 +54,7 @@ public abstract sealed class Selector permits SimpleSelector, CompoundSelector {
     }
 
     private static class UniversalSelector {
+        @SuppressWarnings("removal")
         private static final Selector INSTANCE =
             new SimpleSelector("*", null, null, null);
     }
@@ -95,6 +96,15 @@ public abstract sealed class Selector permits SimpleSelector, CompoundSelector {
     public int getOrdinal() {
         return ordinal;
     }
+
+    /**
+     * Gets the immutable set of style class names of this Selector.
+     *
+     * @return an immutable set with style class names, never {@code null},
+     *     or contains {@code null}s, but can be empty
+     * @since 23
+     */
+    public abstract Set<String> getStyleClassNames();
 
     /**
      * Creates a {@code Match}.
@@ -167,6 +177,7 @@ public abstract sealed class Selector permits SimpleSelector, CompoundSelector {
      * @param stringStore unused
      * @throws IOException if writing to {@code DataOutputStream} fails
      */
+    @SuppressWarnings("removal")
     protected void writeBinary(DataOutputStream os, StyleConverter.StringStore stringStore)
         throws IOException {
         if (this instanceof SimpleSelector) {
@@ -185,6 +196,7 @@ public abstract sealed class Selector permits SimpleSelector, CompoundSelector {
      * @throws IOException if reading from {@code DataInputStream} fails
      * @since 23
      */
+    @SuppressWarnings("removal")
     protected static Selector readBinary(int bssVersion, DataInputStream is, String[] strings)
         throws IOException {
         final int type = is.readByte();
@@ -199,6 +211,7 @@ public abstract sealed class Selector permits SimpleSelector, CompoundSelector {
      * @param cssSelector CSS selector string
      * @return a {@code Selector}
      */
+    @SuppressWarnings("removal")
     public static Selector createSelector(final String cssSelector) {
         if (cssSelector == null || cssSelector.length() == 0) {
             return null; // actually return a default no-match selector

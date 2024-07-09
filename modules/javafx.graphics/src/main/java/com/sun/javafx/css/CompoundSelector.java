@@ -29,9 +29,11 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import javafx.css.PseudoClass;
 import javafx.css.Selector;
@@ -60,8 +62,6 @@ import javafx.css.Styleable;
  * between selector1 and selector2 specifies a direct CHILD, whereas the
  * whitespace between selector2 and selector3 corresponds to
  * <code>Combinator.DESCENDANT</code>.
- *
- * @since 9
  */
 final public class CompoundSelector extends Selector {
 
@@ -97,6 +97,14 @@ final public class CompoundSelector extends Selector {
             (relationships != null)
                 ? Collections.unmodifiableList(relationships)
                 : Collections.EMPTY_LIST;
+    }
+
+    @Override
+    public Set<String> getStyleClassNames() {
+        return selectors.stream()
+            .map(Selector::getStyleClassNames)
+            .flatMap(Collection::stream)
+            .collect(Collectors.toUnmodifiableSet());
     }
 
     @Override public boolean applies(final Styleable styleable) {

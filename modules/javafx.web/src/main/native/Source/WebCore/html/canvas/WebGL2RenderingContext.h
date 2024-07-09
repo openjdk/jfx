@@ -45,7 +45,6 @@ class WebGLVertexArrayObject;
 class WebGL2RenderingContext final : public WebGLRenderingContextBase {
     WTF_MAKE_ISO_ALLOCATED(WebGL2RenderingContext);
 public:
-    static std::unique_ptr<WebGL2RenderingContext> create(CanvasBase&, GraphicsContextGLAttributes);
     static std::unique_ptr<WebGL2RenderingContext> create(CanvasBase&, Ref<GraphicsContextGL>&&, GraphicsContextGLAttributes);
 
     ~WebGL2RenderingContext();
@@ -83,6 +82,9 @@ public:
     using TexImageSource = std::variant<RefPtr<ImageBitmap>, RefPtr<ImageData>, RefPtr<HTMLImageElement>, RefPtr<HTMLCanvasElement>
 #if ENABLE(VIDEO)
         , RefPtr<HTMLVideoElement>
+#endif
+#if ENABLE(OFFSCREEN_CANVAS)
+        , RefPtr<OffscreenCanvas>
 #endif
 #if ENABLE(WEB_CODECS)
         , RefPtr<WebCodecsVideoFrame>
@@ -263,9 +265,6 @@ public:
 
     GCGLuint maxTransformFeedbackSeparateAttribs() const;
 
-    PixelStoreParams getPackPixelStoreParams() const override;
-    PixelStoreParams getUnpackPixelStoreParams(TexImageDimension) const override;
-
     bool checkAndTranslateAttachments(const char* functionName, GCGLenum, Vector<GCGLenum>&);
 
     void addMembersToOpaqueRoots(JSC::AbstractSlotVisitor&) override;
@@ -273,17 +272,11 @@ public:
     bool isTransformFeedbackActiveAndNotPaused();
 
 private:
-    WebGL2RenderingContext(CanvasBase&, GraphicsContextGLAttributes);
     WebGL2RenderingContext(CanvasBase&, Ref<GraphicsContextGL>&&, GraphicsContextGLAttributes);
 
     bool isWebGL2() const final { return true; }
 
     void initializeNewContext() final;
-
-    // Set all ES 3.0 unpack parameters to their default value.
-    void resetUnpackParameters() final;
-    // Restore the client's ES 3.0 unpack parameters.
-    void restoreUnpackParameters() final;
 
     RefPtr<ArrayBufferView> arrayBufferViewSliceFactory(const char* const functionName, const ArrayBufferView& data, unsigned startByte, unsigned bytelength);
     RefPtr<ArrayBufferView> sliceArrayBufferView(const char* const functionName, const ArrayBufferView& data, GCGLuint srcOffset, GCGLuint length);
@@ -302,7 +295,7 @@ private:
     bool validateBlendEquation(const char* functionName, GCGLenum mode) final;
     bool validateCapability(const char* functionName, GCGLenum cap) final;
     template<typename T, typename TypedArrayType>
-    std::optional<GCGLSpan<const T>> validateClearBuffer(const char* functionName, GCGLenum buffer, TypedList<TypedArrayType, T>& values, GCGLuint srcOffset);
+    std::optional<std::span<const T>> validateClearBuffer(const char* functionName, GCGLenum buffer, TypedList<TypedArrayType, T>& values, GCGLuint srcOffset);
     bool validateFramebufferTarget(GCGLenum target) final;
     WebGLFramebuffer* getFramebufferBinding(GCGLenum target) final;
     WebGLFramebuffer* getReadFramebufferBinding() final;
@@ -317,7 +310,7 @@ private:
 
     IntRect getTextureSourceSubRectangle(GCGLsizei width, GCGLsizei height);
 
-    RefPtr<WebGLTexture> validateTexImageBinding(const char*, TexImageFunctionID, GCGLenum) final;
+    RefPtr<WebGLTexture> validateTexImageBinding(TexImageFunctionID, GCGLenum) final;
 
     // Helper function to check texture 3D target and texture bound to the target.
     // Generate GL errors and return 0 if target is invalid or texture bound is
@@ -358,14 +351,6 @@ private:
 
     Vector<RefPtr<WebGLSampler>> m_boundSamplers;
 
-    GCGLint m_packRowLength { 0 };
-    GCGLint m_packSkipPixels { 0 };
-    GCGLint m_packSkipRows { 0 };
-    GCGLint m_unpackSkipPixels { 0 };
-    GCGLint m_unpackSkipRows { 0 };
-    GCGLint m_unpackRowLength { 0 };
-    GCGLint m_unpackImageHeight { 0 };
-    GCGLint m_unpackSkipImages { 0 };
     GCGLint m_uniformBufferOffsetAlignment { 0 };
     GCGLuint m_maxTransformFeedbackSeparateAttribs { 0 };
     GCGLint m_max3DTextureSize { 0 };

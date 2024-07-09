@@ -83,6 +83,8 @@ public:
     ForcedAccessibilityValue forcedSupportsHighDynamicRangeValue() const;
     void setForcedSupportsHighDynamicRangeValue(ForcedAccessibilityValue);
 
+    ExceptionOr<void> setAllowAnimationControlsOverride(bool);
+
     // DeprecatedGlobalSettings.
     ExceptionOr<void> setFetchAPIKeepAliveEnabled(bool);
     ExceptionOr<void> setCustomPasteboardDataEnabled(bool);
@@ -165,7 +167,7 @@ private:
         bool m_shouldDeactivateAudioSession;
     };
 
-    Page* m_page;
+    WeakPtr<Page> m_page;
     Backup m_backup;
 };
 

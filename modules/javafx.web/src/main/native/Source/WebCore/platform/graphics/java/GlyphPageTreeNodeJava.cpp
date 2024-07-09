@@ -75,9 +75,9 @@ bool GlyphPage::fill(UChar* buffer, unsigned bufferLength)
         Glyph glyph = glyphs[i * step];
         if (glyph) {
             haveGlyphs = true;
-            setGlyphForIndex(i, glyph);
+            setGlyphForIndex(i, glyph,ColorGlyphType::Outline);
         } else
-            setGlyphForIndex(i, 0);
+            setGlyphForIndex(i, 0, this->font().colorGlyphType(glyph));
     }
     env->ReleasePrimitiveArrayCritical(jglyphs, glyphs, JNI_ABORT);
 
