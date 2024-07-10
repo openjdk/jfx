@@ -60,6 +60,9 @@ import org.junit.Test;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+
 public class TooltipTest {
     private TooltipShim toolTip;//Empty string
     private TooltipShim dummyToolTip;//Empty string
@@ -652,9 +655,8 @@ public class TooltipTest {
         Rectangle rect = new Rectangle(0, 0, 100, 100);
 
         stageLoader = new StageLoader(rect);
-        // Style: .tooltip { -fx-show-delay: 200ms; }
         stageLoader.getStage().getScene().getStylesheets()
-                .add("data:base64,LnRvb2x0aXAgeyAtZngtc2hvdy1kZWxheTogMjAwbXM7IH0=");
+                .setAll("data:base64," + toBase64(".tooltip { -fx-show-delay: 200ms; }"));
 
         Tooltip.install(rect, toolTip);
 
@@ -669,9 +671,8 @@ public class TooltipTest {
         Rectangle rect = new Rectangle(0, 0, 100, 100);
 
         stageLoader = new StageLoader(rect);
-        // Style: .tooltip { -fx-show-delay: 200ms; }
         stageLoader.getStage().getScene().getStylesheets()
-                .add("data:base64,LnRvb2x0aXAgeyAtZngtc2hvdy1kZWxheTogMjAwbXM7IH0=");
+                .setAll("data:base64," + toBase64(".tooltip { -fx-show-delay: 200ms; }"));
 
         Tooltip.install(rect, toolTip);
 
@@ -680,9 +681,8 @@ public class TooltipTest {
         assertTooltipShownAfter(rect, 200);
         assertTooltipHiddenAfter(rect, 200);
 
-        // .tooltip { -fx-show-delay: 450ms; }
         stageLoader.getStage().getScene().getStylesheets()
-                .setAll("data:base64,LnRvb2x0aXAgeyAtZngtc2hvdy1kZWxheTogNDUwbXM7IH0=");
+                .setAll("data:base64," + toBase64(".tooltip { -fx-show-delay: 450ms; }"));
 
         assertTooltipShownAfter(rect, 450);
         assertTooltipHiddenAfter(rect, 200);
@@ -704,6 +704,10 @@ public class TooltipTest {
         toolkit.setAnimationTime(toolkit.getCurrentTime() + millis);
 
         assertFalse(toolTip.isShowing());
+    }
+
+    private String toBase64(String css) {
+        return Base64.getUrlEncoder().encodeToString(css.getBytes(StandardCharsets.UTF_8));
     }
 
 }
