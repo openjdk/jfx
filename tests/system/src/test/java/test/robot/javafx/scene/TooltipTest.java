@@ -45,7 +45,6 @@ import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -53,6 +52,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TooltipTest {
     static CountDownLatch startupLatch = new CountDownLatch(1);
     static CountDownLatch tooltipShownLatch;
+    static volatile long tooltipStartTime;
+    static volatile long tooltipShownTime;
     static Robot robot;
     static Button button;
     static Tooltip tooltip;
@@ -61,12 +62,8 @@ class TooltipTest {
     static volatile Scene scene;
 
     private static void assertTooltipShowDelay(long tooltipShowTime, long expectedTime) {
-        assertTooltipShowDelay(tooltipShowTime, expectedTime, 50);
-    }
-
-    private static void assertTooltipShowDelay(long tooltipShowTime, long expectedTime, long maximumDifference) {
         // To avoid any small timing error we rather check if the value is between.
-        long maximumTime = expectedTime + maximumDifference;
+        long maximumTime = expectedTime + 80;
 
         assertTrue(tooltipShowTime >= expectedTime, tooltipShowTime + " >= " + expectedTime);
         assertTrue(tooltipShowTime <= maximumTime, tooltipShowTime + " <= " + maximumTime);
@@ -102,11 +99,7 @@ class TooltipTest {
 
         assertTrue(tooltip.isShowing());
 
-        // Since the stylesheet needs to be processed we need a bigger timeout here.
-        long expectedTime = 30;
-        long maximumTime = expectedTime + 100;
-
-        assertTooltipShowDelay(tooltipShowTime, expectedTime, maximumTime);
+        assertTooltipShowDelay(tooltipShowTime, 30);
     }
 
     @Test
@@ -119,7 +112,7 @@ class TooltipTest {
 
         assertTrue(tooltip.isShowing());
 
-        assertTooltipShowDelay(tooltipShowTime, 30, 100);
+        assertTooltipShowDelay(tooltipShowTime, 30);
 
         scene.getStylesheets().setAll(getClass().getResource("tooltip2.css").toExternalForm());
         tooltipShownLatch = new CountDownLatch(1);
@@ -127,7 +120,7 @@ class TooltipTest {
 
         assertTrue(tooltip.isShowing());
 
-        assertTooltipShowDelay(tooltipShowTime, 200, 100);
+        assertTooltipShowDelay(tooltipShowTime, 200);
     }
 
     @Test
@@ -232,18 +225,17 @@ class TooltipTest {
 
         assertFalse(tooltip.isShowing());
 
-        AtomicLong time = new AtomicLong();
         Util.runAndWait(() -> {
             Window window = scene.getWindow();
             robot.mouseMove(
                     window.getX() + scene.getX() + button.getLayoutX() + button.getLayoutBounds().getWidth() / 2,
                     window.getY() + scene.getY() + button.getLayoutY() + button.getLayoutBounds().getHeight() / 2);
-            time.set(System.currentTimeMillis());
+            tooltipStartTime = System.currentTimeMillis();
         });
 
         Util.waitForLatch(tooltipShownLatch, 5, "Timeout waiting for tooltip to display");
 
-        long finalTime = System.currentTimeMillis() - time.get();
+        long finalTime = tooltipShownTime - tooltipStartTime;
 
         Util.sleep(250);
 
@@ -268,6 +260,7 @@ class TooltipTest {
             tooltip = new Tooltip("tooltip");
             tooltip.showingProperty().addListener((obs, oldV, isShowing) -> {
                 if (isShowing) {
+                    tooltipShownTime = System.currentTimeMillis();
                     tooltipShownLatch.countDown();
                 }
             });
