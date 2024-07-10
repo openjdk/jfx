@@ -90,6 +90,7 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
         // clean them all up so that when we perform the test, it is from the
         // starting point of a completely cleaned tree
         root.render(TestGraphics.TEST_GRAPHICS);
+        root.clearDirty();
     }
 
     @Test public void sanityCheck() {

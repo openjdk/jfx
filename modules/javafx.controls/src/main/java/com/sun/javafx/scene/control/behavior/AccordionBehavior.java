@@ -148,13 +148,13 @@ public class AccordionBehavior extends BehaviorBase<Accordion> {
 //                }
 //            }
 //        } else if (CTRL_TAB.equals(name) || CTRL_PAGE_DOWN.equals(name)) {
-////            moveForward();
+//--            moveForward();
 //        } else if (CTRL_SHIFT_TAB.equals(name) || CTRL_PAGE_UP.equals(name)) {
-////            moveBackward();
+//--            moveBackward();
 //        } else if (HOME.equals(name)) {
-////            home();
+//--            home();
 //        } else if (END.equals(name)) {
-////            end();
+//--            end();
 //        } else {
 //            super.callAction(name);
 //        }

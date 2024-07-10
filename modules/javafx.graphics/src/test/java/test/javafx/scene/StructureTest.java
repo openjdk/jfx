@@ -76,13 +76,13 @@ public class StructureTest {
     //  - various nasty observableArrayList updates to Group.content and Scene.content.
     //  - various bind expressions.
 
-    /////////////////////////
+    //-----------------------
     // Setup and teardown. //
-    /////////////////////////
+    //-----------------------
 
-    //////////////////////
+    //--------------------
     // Helper Functions //
-    //////////////////////
+    //--------------------
 
     int occurs(Node child, ObservableList<Node> content) {
         int count = 0;
@@ -146,9 +146,9 @@ public class StructureTest {
         return root != scene.getRoot();
     }
 
-    /////////////////////////////////////
+    //-----------------------------------
     // Simple Structural Relationships //
-    /////////////////////////////////////
+    //-----------------------------------
 
     @Test
     public void testOrphan() {
@@ -237,9 +237,9 @@ public class StructureTest {
         assertNull("child.parent is null", child.getParent());
     }
 
-    ////////////////////////////////////
+    //----------------------------------
     // Illegal Structure Change Tests //
-    ////////////////////////////////////
+    //----------------------------------
 
     // Test attempts to switch from one part of the scene graph to another.
     // This is the cross product: {CL,CU,G,S}x{CL,CU,G,S} so there
@@ -504,9 +504,9 @@ public class StructureTest {
         assertSame("g.content[2] is n2", n2, ParentShim.getChildren(g).get(2));
     }
 
-    ///////////////////////
+    //---------------------
     // Circularity Tests //
-    ///////////////////////
+    //---------------------
 
     // General form is: given an existing relationship of one kind, add
     // another relationship of some kind that would cause a circularity.
@@ -618,9 +618,9 @@ public class StructureTest {
         assertNull("node1.parent is null", node1.getParent());
     }
 
-    //////////////////////////
+    //------------------------
     // Bound Variable Tests //
-    //////////////////////////
+    //------------------------
 
     // Test various cases where a structure variable (Node.clip,
     // Group.content, Scene.content) is initialized to a bind-expression.
@@ -646,9 +646,9 @@ public class StructureTest {
 //        println("c.clipParent = {c.getClipParent()}");
 //    }
 
-    ////////////////////
+    //------------------
     // Helper Classes //
-    ////////////////////
+    //------------------
 
     //
     // * A stub node that contains as little functionality as possible.

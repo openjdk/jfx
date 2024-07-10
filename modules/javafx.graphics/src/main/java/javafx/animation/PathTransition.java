@@ -42,7 +42,7 @@ import java.util.ArrayList;
  * {@link #durationProperty() duration}. The translation along the path is done by updating the
  * {@code translateX} and {@code translateY} variables of the {@code node}, and
  * the {@code rotate} variable will get updated if {@code orientation} is set to
- * {@code OrientationType.ORTHOGONAL_TO_TANGENT}, at regular interval.
+ * {@code OrientationType.ORTHOGONAL_TO_TANGENT}, at regular intervals.
  * <p>
  * The animated path is defined by the outline of a shape.
  *

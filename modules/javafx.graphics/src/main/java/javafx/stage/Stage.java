@@ -279,7 +279,7 @@ public class Stage extends Window {
 
     private boolean primary = false;
 
-    ////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------
 
     // Flag indicating that this stage is being used to show a security dialog
     private boolean securityDialog = false;
@@ -821,6 +821,16 @@ public class Stage extends Window {
         if (getPeer() != null) {
             getPeer().setMaximized(value);
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * If this Stage is {@code maximized} or in {@code fullScreen}, size to scene is not allowed.
+     */
+    @Override
+    boolean isSizeToSceneAllowed() {
+        return !isMaximized() && !isFullScreen();
     }
 
     public final boolean isMaximized() {
