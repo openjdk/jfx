@@ -655,8 +655,7 @@ public class TooltipTest {
         Rectangle rect = new Rectangle(0, 0, 100, 100);
 
         stageLoader = new StageLoader(rect);
-        stageLoader.getStage().getScene().getStylesheets()
-                .setAll("data:base64," + toBase64(".tooltip { -fx-show-delay: 200ms; }"));
+        stageLoader.getStage().getScene().getStylesheets().setAll(toBase64(".tooltip { -fx-show-delay: 200ms; }"));
 
         Tooltip.install(rect, toolTip);
 
@@ -671,8 +670,7 @@ public class TooltipTest {
         Rectangle rect = new Rectangle(0, 0, 100, 100);
 
         stageLoader = new StageLoader(rect);
-        stageLoader.getStage().getScene().getStylesheets()
-                .setAll("data:base64," + toBase64(".tooltip { -fx-show-delay: 200ms; }"));
+        stageLoader.getStage().getScene().getStylesheets().setAll(toBase64(".tooltip { -fx-show-delay: 200ms; }"));
 
         Tooltip.install(rect, toolTip);
 
@@ -681,8 +679,7 @@ public class TooltipTest {
         assertTooltipShownAfter(rect, 200);
         assertTooltipHiddenAfter(rect, 200);
 
-        stageLoader.getStage().getScene().getStylesheets()
-                .setAll("data:base64," + toBase64(".tooltip { -fx-show-delay: 450ms; }"));
+        stageLoader.getStage().getScene().getStylesheets().setAll(toBase64(".tooltip { -fx-show-delay: 450ms; }"));
 
         assertTooltipShownAfter(rect, 450);
         assertTooltipHiddenAfter(rect, 200);
@@ -707,7 +704,7 @@ public class TooltipTest {
     }
 
     private String toBase64(String css) {
-        return Base64.getUrlEncoder().encodeToString(css.getBytes(StandardCharsets.UTF_8));
+        return "data:base64," + Base64.getUrlEncoder().encodeToString(css.getBytes(StandardCharsets.UTF_8));
     }
 
 }
