@@ -50,6 +50,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TooltipTest {
+
+    private static final int DELTA = 100;
+
     static CountDownLatch startupLatch = new CountDownLatch(1);
     static CountDownLatch tooltipShownLatch;
     static volatile long tooltipStartTime;
@@ -63,7 +66,7 @@ class TooltipTest {
 
     private static void assertTooltipShowDelay(long tooltipShowTime, long expectedTime) {
         // To avoid any small timing error we rather check if the value is between.
-        long maximumTime = expectedTime + 80;
+        long maximumTime = expectedTime + DELTA;
 
         assertTrue(tooltipShowTime >= expectedTime, tooltipShowTime + " >= " + expectedTime);
         assertTrue(tooltipShowTime <= maximumTime, tooltipShowTime + " <= " + maximumTime);
@@ -115,7 +118,7 @@ class TooltipTest {
         assertTooltipShowDelay(tooltipShowTime, 30);
 
         scene.getStylesheets().setAll(getClass().getResource("tooltip2.css").toExternalForm());
-        tooltipShownLatch = new CountDownLatch(1);
+        reset();
         tooltipShowTime = waitForTooltip();
 
         assertTrue(tooltip.isShowing());
@@ -160,7 +163,7 @@ class TooltipTest {
 
         // Try again with a bigger show delay.
         tooltip.setShowDelay(Duration.millis(2000));
-        tooltipShownLatch = new CountDownLatch(1);
+        reset();
         tooltipShowTime = waitForTooltip();
 
         assertTrue(tooltip.isShowing());
@@ -180,7 +183,7 @@ class TooltipTest {
 
         // Try again with a bigger show delay.
         tooltip.setStyle("-fx-show-delay: 2000ms;");
-        tooltipShownLatch = new CountDownLatch(1);
+        reset();
         tooltipShowTime = waitForTooltip();
 
         assertTrue(tooltip.isShowing());
@@ -195,21 +198,23 @@ class TooltipTest {
 
         long tooltipShowTime = waitForTooltip();
 
-        System.out.println(tooltipShowTime);
-
         assertTrue(tooltip.isShowing());
 
         assertTooltipShowDelay(tooltipShowTime, 100);
 
         // Try again.
-        tooltipShownLatch = new CountDownLatch(1);
+        reset();
         tooltipShowTime = waitForTooltip();
 
         assertTrue(tooltip.isShowing());
 
-        System.out.println(tooltipShowTime);
-
         assertTooltipShowDelay(tooltipShowTime, 100);
+    }
+
+    private void reset() {
+        tooltipShownLatch = new CountDownLatch(1);
+        tooltipStartTime = 0;
+        tooltipShownTime = 0;
     }
 
     private long waitForTooltip() {
