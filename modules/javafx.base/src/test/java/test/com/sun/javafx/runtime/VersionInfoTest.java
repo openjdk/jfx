@@ -38,7 +38,7 @@ import static org.junit.Assert.*;
 public class VersionInfoTest {
 
     // Increment this feature-release counter for every major release.
-    private static final String FEATURE = "23";
+    private static final String FEATURE = "24";
 
     // The working directory at runtime is 'modules/javafx.base'.
     private static final String PROPERTIES_FILE = "build/module-lib/javafx.properties";
