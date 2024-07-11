@@ -56,6 +56,9 @@ import org.junit.Test;
 
 
 import java.util.List;
+import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
+
 import javafx.scene.control.IndexedCellShim;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.skin.VirtualFlowShim;
@@ -231,11 +234,11 @@ public class VirtualFlowTest {
      *                                                                         *
      **************************************************************************/
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     //  General Layout
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
     /**
      * In this test there are no cells. The VirtualFlow should be laid out such
@@ -626,11 +629,11 @@ public class VirtualFlowTest {
     // at the same time that the "virtual" property of the scroll bars is
     // changed
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     //  Cell Layout
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
     /**
      * Test to make sure that we are virtual -- that all cells are not being
@@ -839,11 +842,11 @@ public class VirtualFlowTest {
 
     }
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     //  Cell Life Cycle
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
     @Test public void testCellLifeCycle_CellsAreCreatedOnLayout() {
         // when the flow was first created in setUp we do a layout()
@@ -851,23 +854,23 @@ public class VirtualFlowTest {
     }
 
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     //  Position
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     //  Pixel Scrolling
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     //  Cell Count Changes
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
     // want to test that the view remains stable when the cell count changes
 
@@ -888,13 +891,13 @@ public class VirtualFlowTest {
 //
 //    }
 //
-////    @Test public void testCellCountChanges_SelectedRowRemoved() {
-////
-////    }
-////
-////    @Test public void testCellCountChanges_NonSelectedRowRemoved() {
-////
-////    }
+//--    @Test public void testCellCountChanges_SelectedRowRemoved() {
+//--
+//--    }
+//--
+//--    @Test public void testCellCountChanges_NonSelectedRowRemoved() {
+//--
+//--    }
 //
 //    @Test public void testCellCountChanges_FirstRowIsAdded() {
 //
@@ -908,19 +911,19 @@ public class VirtualFlowTest {
 //
 //    }
 //
-////    @Test public void testCellCountChanges_RowIsAddedBeforeSelectedRow() {
-////
-////    }
-////
-////    @Test public void testCellCountChanges_RowIsAddedAfterSelectedRow() {
-////
-////    }
+//--    @Test public void testCellCountChanges_RowIsAddedBeforeSelectedRow() {
+//--
+//--    }
+//--
+//--    @Test public void testCellCountChanges_RowIsAddedAfterSelectedRow() {
+//--
+//--    }
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     //  VirtualFlow State Changes
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
     /**
      * Tests that when the createCell method changes, it results in layout
@@ -935,11 +938,11 @@ public class VirtualFlowTest {
     }
 
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     //  Tests on specific functions
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
     @Test public void test_getCellLength() {
         assertEquals(100, flow.getCellCount());
@@ -1837,6 +1840,76 @@ assertEquals(0, firstCell.getIndex());
         pulse();
 
         assertEquals(3, flow.getFirstVisibleCell().getIndex());
+    }
+
+    @Test
+    public void testScrollBarValueAdjustmentMovementUp() {
+        testScrollBarValueAdjustment(1, 1.0, 0.2, () -> -flow.getViewportLength());
+        testScrollBarValueAdjustment(3, 1.0, 0.2, () -> -flow.getViewportLength());
+        testScrollBarValueAdjustment(1, 0.5, 0.2, () -> -flow.getViewportLength());
+        testScrollBarValueAdjustment(3, 0.5, 0.2, () -> -flow.getViewportLength());
+    }
+
+    @Test
+    public void testScrollBarValueAdjustmentMovementDown() {
+        testScrollBarValueAdjustment(1, 0.0, 0.8, () -> flow.getViewportLength());
+        testScrollBarValueAdjustment(3, 0.0, 0.8, () -> flow.getViewportLength());
+        testScrollBarValueAdjustment(1, 0.5, 0.8, () -> flow.getViewportLength());
+        testScrollBarValueAdjustment(3, 0.5, 0.8, () -> flow.getViewportLength());
+    }
+
+    public void testScrollBarValueAdjustment(int cellCount, double position, double adjust, DoubleSupplier targetMovement) {
+        flow = new VirtualFlowShim<>();
+        class C extends CellStub {
+            public C(VirtualFlowShim flow) {
+                super(flow);
+            }
+
+            @Override
+            protected double computePrefHeight(double width) {
+                return getIndex() == 0 ? 1000 : 100;
+            }
+
+            @Override
+            protected double computeMinHeight(double width) {
+                return computePrefHeight(width);
+            }
+
+            @Override
+            protected double computeMaxHeight(double width) {
+                return computePrefHeight(width);
+            }
+        }
+        flow.setCellFactory(fw -> new C(flow));
+        flow.setCellCount(cellCount);
+        flow.resize(256, 200);
+
+        flow.setPosition(position);
+        pulse();
+
+        Supplier<double[]> cellPositionsCalculater = () -> {
+            double[] positions = new double[cellCount];
+            IndexedCell<?> cell = flow.getFirstVisibleCell();
+            positions[cell.getIndex()] = flow.getCellPosition(cell);
+            for (int i = cell.getIndex() + 1; i < cellCount; i++) {
+                positions[i] = positions[i - 1] + flow.getCellSize(i - 1);
+            }
+            for (int i = cell.getIndex() - 1; i >= 0; i--) {
+                positions[i] = positions[i + 1] - flow.getCellSize(i);
+            }
+            return positions;
+        };
+
+        double[] positionsBefore = cellPositionsCalculater.get();
+
+        flow.shim_getVbar().adjustValue(adjust);
+        pulse();
+
+        double[] positionsAfter = cellPositionsCalculater.get();
+
+        for (int i = 0; i < positionsBefore.length; i++) {
+            assertEquals(targetMovement.getAsDouble(), positionsBefore[i] - positionsAfter[i], 0.1);
+        }
     }
 
     /**

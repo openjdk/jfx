@@ -60,6 +60,8 @@ import javafx.css.StyleableProperty;
 /**
  * A chart that plots bars indicating data values for a category. The bars can be vertical or horizontal depending on
  * which axis is a category axis.
+ * <p>
+ * Adding data with multiple occurences of a category to a series shows the last occurence.
  *
  * @param <X> the category axis value type
  * @param <Y> the data value type
@@ -209,8 +211,37 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         }
         // check if category is already present
         if (!categoryAxis.getCategories().contains(category)) {
+            int seriesCount = getDataSize();
+            int categoryCount = categoryAxis.getCategories().size();
+
+            int categoryIndex;
+            if (seriesCount == 1 && itemIndex == categoryCount) {
+                // shortcut if there is only one series and data contains no duplicates
+                categoryIndex = categoryCount;
+            } else {
+                // There may be data items with duplicate categories. Find category insertion index on the axis
+                // by looking at the concatenation of the data of all series, skipping duplicate categories.
+                // The category insertion index is found when the new data's index is reached within its series.
+                categoryIndex = 0;
+                var uniqueCategories = new HashSet<String>();
+                for (var entry : seriesCategoryMap.entrySet()) {
+                    Series s = entry.getKey();
+                    Map<String, Data<X,Y>> catMap = entry.getValue();
+                    int i = 0;
+                    for (String cat : catMap.keySet()) {
+                        if (s == series && i >= itemIndex) {
+                            break;
+                        }
+                        if (uniqueCategories.add(cat)) {
+                            categoryIndex++;
+                        }
+                        i++;
+                    }
+                }
+            }
+
             // note: cat axis categories can be updated only when autoranging is true.
-            categoryAxis.getCategories().add(itemIndex, category);
+            categoryAxis.getCategories().add(categoryIndex, category);
         } else if (categoryMap.containsKey(category)){
             // RT-21162 : replacing the previous data, first remove the node from scenegraph.
             Data<X,Y> data = categoryMap.get(category);
@@ -353,7 +384,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
     @Override protected void layoutPlotChildren() {
         double catSpace = categoryAxis.getCategorySpacing();
         // calculate bar spacing
-        final double availableBarSpace = catSpace - (getCategoryGap() + getBarGap());
+        final double availableBarSpace = catSpace - getCategoryGap() + getBarGap();
         double barWidth = (availableBarSpace / getSeriesSize()) - getBarGap();
         final double barOffset = -((catSpace - getCategoryGap()) / 2);
         final double zeroPos = (valueAxis.getLowerBound() > 0) ?
@@ -392,9 +423,9 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
                         bar.resizeRelocate( bottom, categoryPos + barOffset + (barWidth + getBarGap()) * index,
                                             top-bottom, barWidth);
                     }
-
-                    index++;
                 }
+
+                index++;
             }
             catIndex++;
         }

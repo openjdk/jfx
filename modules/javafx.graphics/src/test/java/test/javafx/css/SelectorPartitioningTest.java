@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -212,7 +212,7 @@ public class SelectorPartitioningTest {
 
         SimpleSelector simple = simpleData.selector;
 
-        List<Selector> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassSet());
+        List<Selector> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassNames());
 
         assertEquals(1,matched.size());
         Selector selector = matched.get(0);
@@ -236,7 +236,7 @@ public class SelectorPartitioningTest {
 
         SimpleSelector simple = complexData.selector;
 
-        List<Selector> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassSet());
+        List<Selector> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassNames());
         assertEquals(complexData.matches, matched.size());
 
         for(Selector s1 : matched) {
