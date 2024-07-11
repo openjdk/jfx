@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -277,7 +277,7 @@ class SWTEvents {
 //    {KeyEvent.VK_SUBTRACT,    SWT.KEYPAD_SUBTRACT},
 //    {KeyEvent.VK_DECIMAL,     SWT.KEYPAD_DECIMAL},
 //    {KeyEvent.VK_DIVIDE,      SWT.KEYPAD_DIVIDE},
-////  {KeyEvent.VK_????,        SWT.KEYPAD_EQUAL},
+//--  {KeyEvent.VK_????,        SWT.KEYPAD_EQUAL},
 
     static int keyCodeToEmbedKeyCode(int keyCode) {
         for (int i=0; i<KeyTable.length; i++) {
