@@ -668,8 +668,22 @@ public class StubToolkit extends Toolkit {
                                           .contains((int) x, (int) y);
     }
 
+    /**
+     * Sets the current time of the {@link StubPrimaryTimer}.
+     *
+     * @param millis the time in milliseconds
+     */
     public void setCurrentTime(long millis) {
         primaryTimer.setCurrentTime(millis);
+    }
+
+    /**
+     * Returns the current time of the {@link StubPrimaryTimer}.
+     *
+     * @return the time in milliseconds
+     */
+    public long getCurrentTime() {
+        return primaryTimer.getCurrentTime();
     }
 
     public void handleAnimation() {
@@ -686,6 +700,12 @@ public class StubToolkit extends Toolkit {
         return imageLoaderFactory;
     }
 
+    /**
+     * Sets the current time of the {@link StubPrimaryTimer} and handles all pending animations.
+     * Useful for unit-testing things that involves animations (e.g. Timeline).
+     *
+     * @param millis the time in milliseconds
+     */
     public void setAnimationTime(final long millis) {
         setCurrentTime(millis);
         handleAnimation();
