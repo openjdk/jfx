@@ -194,9 +194,9 @@ public:
     void prefetchDNS(const String&) override;
     void sendH2Ping(const URL&, CompletionHandler<void(Expected<Seconds, ResourceError>&&)>&&) override;
     void broadcastFrameRemovalToOtherProcesses() override;
-	ResourceError httpNavigationWithHTTPSOnlyError(const ResourceRequest&) const override;
-	void broadcastMainFrameURLChangeToOtherProcesses(const URL&) override;
-	void dispatchLoadEventToOwnerElementInAnotherProcess() override;
+        ResourceError httpNavigationWithHTTPSOnlyError(const ResourceRequest&) const override;
+        void broadcastMainFrameURLChangeToOtherProcesses(const URL&) override;
+        void dispatchLoadEventToOwnerElementInAnotherProcess() override;
 private:
     Page* m_page;
     Frame* m_frame;

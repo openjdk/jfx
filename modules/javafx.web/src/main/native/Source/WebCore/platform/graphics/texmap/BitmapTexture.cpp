@@ -49,7 +49,7 @@ void BitmapTexture::updateContents(GraphicsLayer* sourceLayer, const IntRect& ta
 
     sourceLayer->paintGraphicsLayerContents(context, sourceRect);
 
-	auto image = ImageBuffer::sinkIntoNativeImage(WTFMove(imageBuffer));
+        auto image = ImageBuffer::sinkIntoNativeImage(WTFMove(imageBuffer));
     if (!image)
         return;
 

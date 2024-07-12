@@ -442,7 +442,7 @@ void FrameLoaderClientJava::dispatchDecidePolicyForNavigationAction(const Naviga
                                                                     bool,
                                                                     SandboxFlags,
                                                                     PolicyDecisionMode,
-																	FramePolicyFunction&& policyFunction)
+                                                                                                                                        FramePolicyFunction&& policyFunction)
 {
     using namespace FrameLoaderClientJavaInternal;
     JNIEnv* env = WTF::GetJavaEnv();

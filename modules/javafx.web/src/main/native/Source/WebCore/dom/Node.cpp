@@ -2423,7 +2423,7 @@ static inline bool tryAddEventListener(Node* targetNode, const AtomString& event
            static_cast<JavaEventListener *> (&listener.copyRef().get()));
 #endif
     Ref document = targetNode->document();
-	document->didAddEventListenersOfType(eventType);
+        document->didAddEventListenersOfType(eventType);
 
     auto& eventNames = WebCore::eventNames();
     auto typeInfo = eventNames.typeInfoForEvent(eventType);

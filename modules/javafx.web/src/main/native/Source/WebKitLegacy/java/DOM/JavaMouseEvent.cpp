@@ -98,7 +98,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getMetaKeyImpl
 JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getButtonImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-	int16_t button = enumToUnderlyingType(IMPL->button());
+        int16_t button = enumToUnderlyingType(IMPL->button());
     return button;
 }
 

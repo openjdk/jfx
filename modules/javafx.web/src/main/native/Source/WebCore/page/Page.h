@@ -1086,7 +1086,7 @@ public:
     std::optional<std::pair<uint16_t, uint16_t>> portsForUpgradingInsecureSchemeForTesting() const;
     WEBCORE_EXPORT void setPortsForUpgradingInsecureSchemeForTesting(uint16_t upgradeFromInsecurePort, uint16_t upgradeToSecurePort);
 #if PLATFORM(JAVA)
-	explicit Page(PageConfiguration&&);
+        explicit Page(PageConfiguration&&);
 #endif
 private:
 #if !PLATFORM(JAVA)
