@@ -61,8 +61,7 @@ jclass getJScrollBarThemeClass()
 
 JLObject getJScrollBarTheme(Scrollbar& sb)
 {
-     //REVISIT
-    LocalFrameView* fv = sb.enabled() ? sb.root() : nullptr;
+    FrameView* fv = sb.enabled() ? sb.root() : nullptr;
     if (!fv) {
         // the scrollbar has been detached
         return 0;
@@ -218,7 +217,7 @@ IntRect ScrollbarThemeJava::forwardButtonRect(Scrollbar& scrollbar, ScrollbarPar
 IntRect ScrollbarThemeJava::trackRect(Scrollbar& scrollbar, bool) {
     return getPartRect(scrollbar, TrackBGPart);
 }
-    // REVISIT
+
 int ScrollbarThemeJava::scrollbarThickness(ScrollbarWidth, ScrollbarExpansionState)
 {
     JNIEnv* env = WTF::GetJavaEnv();

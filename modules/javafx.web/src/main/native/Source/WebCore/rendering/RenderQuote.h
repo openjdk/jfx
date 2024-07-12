@@ -36,7 +36,6 @@ public:
 
 private:
     ASCIILiteral renderName() const override { return "RenderQuote"_s; }
-    bool isQuote() const override { return true; }
     bool isOpen() const;
     void styleDidChange(StyleDifference, const RenderStyle*) override;
     void insertedIntoTree(IsInternalMove) override;
@@ -54,4 +53,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderQuote, isQuote())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderQuote, isRenderQuote())

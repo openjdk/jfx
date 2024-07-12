@@ -27,6 +27,7 @@
 #if ENABLE(PDFJS)
 
 #include "HTMLDocument.h"
+#include "HTMLScriptElement.h"
 
 namespace WebCore {
 
@@ -48,7 +49,7 @@ public:
     void injectStyleAndContentScript();
 
     void postMessageToIframe(const String& name, JSC::JSObject* data);
-    void sendPDFArrayBuffer();
+    void finishLoadingPDF();
 
     bool isFinishedParsing() const { return m_isFinishedParsing; }
     void setContentScriptLoaded(bool loaded) { m_isContentScriptLoaded = loaded; }
@@ -59,9 +60,12 @@ private:
     Ref<DocumentParser> createParser() override;
 
     void createDocumentStructure();
+    void sendPDFArrayBuffer();
+    bool m_injectedStyleAndScript { false };
     bool m_isFinishedParsing { false };
     bool m_isContentScriptLoaded { false };
     RefPtr<HTMLIFrameElement> m_iframe;
+    RefPtr<HTMLScriptElement> m_script;
     RefPtr<PDFDocumentEventListener> m_listener;
 };
 
@@ -69,7 +73,11 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::PDFDocument)
     static bool isType(const WebCore::Document& document) { return document.isPDFDocument(); }
-    static bool isType(const WebCore::Node& node) { return is<WebCore::Document>(node) && isType(downcast<WebCore::Document>(node)); }
+    static bool isType(const WebCore::Node& node)
+    {
+        auto* document = dynamicDowncast<WebCore::Document>(node);
+        return document && isType(*document);
+    }
 SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(PDFJS)

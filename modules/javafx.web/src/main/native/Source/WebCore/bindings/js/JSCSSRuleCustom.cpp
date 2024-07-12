@@ -40,6 +40,8 @@
 #include "CSSNamespaceRule.h"
 #include "CSSPageRule.h"
 #include "CSSPropertyRule.h"
+#include "CSSScopeRule.h"
+#include "CSSStartingStyleRule.h"
 #include "CSSStyleRule.h"
 #include "CSSSupportsRule.h"
 #include "JSCSSContainerRule.h"
@@ -56,6 +58,8 @@
 #include "JSCSSNamespaceRule.h"
 #include "JSCSSPageRule.h"
 #include "JSCSSPropertyRule.h"
+#include "JSCSSScopeRule.h"
+#include "JSCSSStartingStyleRule.h"
 #include "JSCSSStyleRule.h"
 #include "JSCSSSupportsRule.h"
 #include "JSNode.h"
@@ -111,6 +115,10 @@ JSValue toJSNewlyCreated(JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<C
         return createWrapper<CSSContainerRule>(globalObject, WTFMove(rule));
     case StyleRuleType::Property:
         return createWrapper<CSSPropertyRule>(globalObject, WTFMove(rule));
+    case StyleRuleType::Scope:
+        return createWrapper<CSSScopeRule>(globalObject, WTFMove(rule));
+    case StyleRuleType::StartingStyle:
+        return createWrapper<CSSStartingStyleRule>(globalObject, WTFMove(rule));
     case StyleRuleType::Unknown:
     case StyleRuleType::Charset:
     case StyleRuleType::Margin:

@@ -68,7 +68,7 @@ OptionSet<DragSourceAction> DragClientJava::dragSourceActionMaskForPoint(const I
     return WebCore::anyDragSourceAction();
 }
 
-void DragClientJava::startDrag(DragItem item, DataTransfer& dataTransfer, LocalFrame& localFrame)
+void DragClientJava::startDrag(DragItem item, DataTransfer& dataTransfer, Frame& localFrame)
 {
     auto& dragImage = item.image;
     auto dragImageOrigin = item.dragLocationInContentCoordinates;

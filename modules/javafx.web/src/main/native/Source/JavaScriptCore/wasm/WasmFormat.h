@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 #include "Identifier.h"
 #include "JSString.h"
 #include "MacroAssemblerCodeRef.h"
+#include "MathCommon.h"
 #include "PageCount.h"
 #include "RegisterAtOffsetList.h"
 #include "WasmMemoryInformation.h"
@@ -43,6 +44,7 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
@@ -55,7 +57,7 @@ struct CompilationContext;
 struct ModuleInformation;
 struct UnlinkedHandlerInfo;
 
-using BlockSignature = const TypeDefinition*;
+using BlockSignature = const FunctionSignature*;
 
 enum class TableElementType : uint8_t {
     Externref,
@@ -72,12 +74,13 @@ inline bool isValueType(Type type)
     case TypeKind::I64:
     case TypeKind::F32:
     case TypeKind::F64:
+        return true;
     case TypeKind::Externref:
     case TypeKind::Funcref:
-        return true;
+        return !Options::useWebAssemblyTypedFunctionReferences();
     case TypeKind::Ref:
     case TypeKind::RefNull:
-        return Options::useWebAssemblyTypedFunctionReferences();
+        return Options::useWebAssemblyTypedFunctionReferences() && type.index != TypeDefinition::invalidIndex;
     case TypeKind::V128:
         return Options::useWebAssemblySIMD();
     default:
@@ -151,9 +154,23 @@ inline bool isNullref(Type type)
     return isRefType(type) && type.index == static_cast<TypeIndex>(TypeKind::Nullref);
 }
 
+inline bool isNullfuncref(Type type)
+{
+    if (!Options::useWebAssemblyGC())
+        return false;
+    return isRefType(type) && type.index == static_cast<TypeIndex>(TypeKind::Nullfuncref);
+}
+
+inline bool isNullexternref(Type type)
+{
+    if (!Options::useWebAssemblyGC())
+        return false;
+    return isRefType(type) && type.index == static_cast<TypeIndex>(TypeKind::Nullexternref);
+}
+
 inline bool isInternalref(Type type)
 {
-    if (!Options::useWebAssemblyGC() || !isRefType(type) || !typeIndexIsType(type.index))
+    if (!Options::useWebAssemblyGC() || !isRefType(type))
         return false;
     if (typeIndexIsType(type.index)) {
         switch (static_cast<TypeKind>(type.index)) {
@@ -219,12 +236,12 @@ inline Type anyrefType(bool isNullable = true)
     return Wasm::Type { isNullable ? Wasm::TypeKind::RefNull : Wasm::TypeKind::Ref, static_cast<Wasm::TypeIndex>(Wasm::TypeKind::Anyref) };
 }
 
-inline Type arrayrefType()
+inline Type arrayrefType(bool isNullable = true)
 {
     ASSERT(Options::useWebAssemblyGC());
     // Returns a non-null ref type, since this is used for the return types of array operations
     // that are guaranteed to return a non-null array reference
-    return Wasm::Type { Wasm::TypeKind::Ref, static_cast<Wasm::TypeIndex>(Wasm::TypeKind::Arrayref) };
+    return Wasm::Type { isNullable ? Wasm::TypeKind::RefNull : Wasm::TypeKind::Ref, static_cast<Wasm::TypeIndex>(Wasm::TypeKind::Arrayref) };
 }
 
 inline bool isRefWithTypeIndex(Type type)
@@ -272,6 +289,10 @@ inline bool isSubtypeIndex(TypeIndex sub, TypeIndex parent)
     if (sub == parent)
         return true;
 
+    // When Wasm GC is off, RTTs are not registered and there is no subtyping on typedefs.
+    if (!Options::useWebAssemblyGC())
+        return false;
+
     auto subRTT = TypeInformation::tryGetCanonicalRTT(sub);
     auto parentRTT = TypeInformation::tryGetCanonicalRTT(parent);
     ASSERT(subRTT.has_value() && parentRTT.has_value());
@@ -281,6 +302,10 @@ inline bool isSubtypeIndex(TypeIndex sub, TypeIndex parent)
 
 inline bool isSubtype(Type sub, Type parent)
 {
+    // Before the typed funcref proposal there is no non-trivial subtyping.
+    if (!Options::useWebAssemblyTypedFunctionReferences())
+        return sub == parent;
+
     if (sub.isNullable() && !parent.isNullable())
         return false;
 
@@ -301,11 +326,20 @@ inline bool isSubtype(Type sub, Type parent)
             return TypeInformation::get(sub.index).expand().is<FunctionSignature>();
     }
 
-    if ((isAnyref(parent) || isEqref(parent)) && (isI31ref(sub) || isStructref(sub) || isArrayref(sub)))
+    if ((isI31ref(sub) || isStructref(sub) || isArrayref(sub)) && (isAnyref(parent) || isEqref(parent)))
+        return true;
+
+    if (isEqref(sub) && isAnyref(parent))
         return true;
 
     if (isNullref(sub))
         return isInternalref(parent);
+
+    if (isNullfuncref(sub))
+        return isSubtype(parent, funcrefType());
+
+    if (isNullexternref(sub) && isExternref(parent))
+        return true;
 
     if (sub.isRef() && parent.isRefNull())
         return sub.index == parent.index;
@@ -334,11 +368,44 @@ inline bool isValidHeapTypeKind(TypeKind kind)
     case TypeKind::Eqref:
     case TypeKind::Anyref:
     case TypeKind::Nullref:
+    case TypeKind::Nullfuncref:
+    case TypeKind::Nullexternref:
         return Options::useWebAssemblyGC();
     default:
         break;
     }
     return false;
+}
+
+// FIXME: separating out heap types in wasm.json could be cleaner in the long term.
+inline const char* heapTypeKindAsString(TypeKind kind)
+{
+    ASSERT(isValidHeapTypeKind(kind));
+    switch (kind) {
+    case TypeKind::Funcref:
+        return "func";
+    case TypeKind::Externref:
+        return "extern";
+    case TypeKind::I31ref:
+        return "i31";
+    case TypeKind::Arrayref:
+        return "array";
+    case TypeKind::Structref:
+        return "struct";
+    case TypeKind::Eqref:
+        return "eq";
+    case TypeKind::Anyref:
+        return "any";
+    case TypeKind::Nullref:
+        return "none";
+    case TypeKind::Nullfuncref:
+        return "nofunc";
+    case TypeKind::Nullexternref:
+        return "noextern";
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+        return "";
+    }
 }
 
 inline bool isDefaultableType(Type type)
@@ -433,6 +500,7 @@ struct GlobalInformation {
         FromRefFunc,
         FromExpression,
         FromVector,
+        FromExtendedExpression,
     };
 
     enum class BindingMode : uint8_t {
@@ -462,10 +530,11 @@ struct FunctionData {
 };
 
 class I32InitExpr {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(I32InitExpr);
     enum Type : uint8_t {
         Global,
-        Const
+        Const,
+        ExtendedExpression
     };
 
     I32InitExpr(Type type, uint32_t bits)
@@ -478,9 +547,11 @@ public:
 
     static I32InitExpr globalImport(uint32_t globalImportNumber) { return I32InitExpr(Global, globalImportNumber); }
     static I32InitExpr constValue(uint32_t constValue) { return I32InitExpr(Const, constValue); }
+    static I32InitExpr extendedExpression(uint32_t constantExpressionNumber) { return I32InitExpr(ExtendedExpression, constantExpressionNumber); }
 
     bool isConst() const { return m_type == Const; }
     bool isGlobalImport() const { return m_type == Global; }
+    bool isExtendedExpression() const { return m_type == ExtendedExpression; }
     uint32_t constValue() const
     {
         RELEASE_ASSERT(isConst());
@@ -489,6 +560,11 @@ public:
     uint32_t globalImportIndex() const
     {
         RELEASE_ASSERT(isGlobalImport());
+        return m_bits;
+    }
+    uint32_t constantExpressionIndex() const
+    {
+        RELEASE_ASSERT(isExtendedExpression());
         return m_bits;
     }
 
@@ -526,57 +602,69 @@ struct Segment {
 struct Element {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
 
-    // nullFuncIndex represents the case when an element segment contains a null element.
-    constexpr static uint32_t nullFuncIndex = UINT32_MAX;
-
     enum class Kind : uint8_t {
         Active,
         Passive,
         Declared,
     };
 
-    Element(Element::Kind kind, TableElementType elementType, std::optional<uint32_t> tableIndex, std::optional<I32InitExpr> initExpr)
+    enum InitializationType : uint8_t {
+        FromGlobal,
+        FromRefFunc,
+        FromRefNull,
+        FromExtendedExpression,
+    };
+
+    Element(Element::Kind kind, Type elementType, std::optional<uint32_t> tableIndex, std::optional<I32InitExpr> initExpr)
         : kind(kind)
         , elementType(elementType)
         , tableIndexIfActive(WTFMove(tableIndex))
         , offsetIfActive(WTFMove(initExpr))
     { }
 
-    Element(Element::Kind kind, TableElementType elemType)
+    Element(Element::Kind kind, Type elemType)
         : Element(kind, elemType, std::nullopt, std::nullopt)
     { }
 
-    uint32_t length() const { return functionIndices.size(); }
+    uint32_t length() const { return initTypes.size(); }
 
     bool isActive() const { return kind == Kind::Active; }
     bool isPassive() const { return kind == Kind::Passive; }
 
-    static bool isNullFuncIndex(uint32_t idx) { return idx == nullFuncIndex; }
-
     Kind kind;
-    TableElementType elementType;
+    Type elementType;
     std::optional<uint32_t> tableIndexIfActive;
     std::optional<I32InitExpr> offsetIfActive;
 
-    // Index may be nullFuncIndex.
-    Vector<uint32_t> functionIndices;
+    Vector<InitializationType> initTypes;
+    Vector<uint64_t> initialBitsOrIndices;
 };
 
 class TableInformation {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(TableInformation);
 public:
+    enum InitializationType : uint8_t {
+        Default,
+        FromGlobalImport,
+        FromRefFunc,
+        FromRefNull,
+        FromExtendedExpression,
+    };
+
     TableInformation()
     {
         ASSERT(!*this);
     }
 
-    TableInformation(uint32_t initial, std::optional<uint32_t> maximum, bool isImport, TableElementType type, Type wasmType)
+    TableInformation(uint32_t initial, std::optional<uint32_t> maximum, bool isImport, TableElementType type, Type wasmType, InitializationType initType, uint64_t initialBitsOrImportNumber)
         : m_initial(initial)
         , m_maximum(maximum)
         , m_isImport(isImport)
         , m_isValid(true)
         , m_type(type)
         , m_wasmType(wasmType)
+        , m_initType(initType)
+        , m_initialBitsOrImportNumber(initialBitsOrImportNumber)
     {
         ASSERT(*this);
     }
@@ -587,6 +675,8 @@ public:
     std::optional<uint32_t> maximum() const { return m_maximum; }
     TableElementType type() const { return m_type; }
     Type wasmType() const { return m_wasmType; }
+    InitializationType initType() const { return m_initType; }
+    uint64_t initialBitsOrImportNumber() const { return m_initialBitsOrImportNumber; }
 
 private:
     uint32_t m_initial;
@@ -595,6 +685,8 @@ private:
     bool m_isValid { false };
     TableElementType m_type;
     Type m_wasmType;
+    InitializationType m_initType { Default };
+    uint64_t m_initialBitsOrImportNumber;
 };
 
 struct CustomSection {
@@ -625,25 +717,33 @@ struct UnlinkedWasmToWasmCall {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
     CodeLocationNearCall<WasmEntryPtrTag> callLocation;
     size_t functionIndexSpace;
+    CodeLocationDataLabelPtr<WasmEntryPtrTag> calleeLocation;
+
 };
 
+#if ENABLE(JIT)
 struct Entrypoint {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
     std::unique_ptr<Compilation> compilation;
     RegisterAtOffsetList calleeSaveRegisters;
 };
+#endif
 
 struct InternalFunction {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
-#if ENABLE(WEBASSEMBLY_B3JIT)
+#if ENABLE(WEBASSEMBLY_OMGJIT) || ENABLE(WEBASSEMBLY_BBQJIT)
     StackMaps stackmaps;
 #endif
     Vector<UnlinkedHandlerInfo> exceptionHandlers;
+#if ENABLE(JIT)
     Vector<CCallHelpers::Label> bbqLoopEntrypoints;
     std::optional<CCallHelpers::Label> bbqSharedLoopEntrypoint;
     Entrypoint entrypoint;
+#endif
     unsigned osrEntryScratchBufferSize { 0 };
 };
+
+static constexpr uintptr_t NullWasmCallee = 0;
 
 // WebAssembly direct calls and call_indirect use indices into "function index space". This space starts
 // with all imports, and then all internal functions. WasmToWasmImportableFunction and FunctionIndexSpace are only
@@ -653,10 +753,12 @@ struct WasmToWasmImportableFunction {
     using LoadLocation = CodePtr<WasmEntryPtrTag>*;
     static ptrdiff_t offsetOfSignatureIndex() { return OBJECT_OFFSETOF(WasmToWasmImportableFunction, typeIndex); }
     static ptrdiff_t offsetOfEntrypointLoadLocation() { return OBJECT_OFFSETOF(WasmToWasmImportableFunction, entrypointLoadLocation); }
+    static ptrdiff_t offsetOfBoxedWasmCalleeLoadLocation() { return OBJECT_OFFSETOF(WasmToWasmImportableFunction, boxedWasmCalleeLoadLocation); }
 
     // FIXME: Pack type index and code pointer into one 64-bit value. See <https://bugs.webkit.org/show_bug.cgi?id=165511>.
     TypeIndex typeIndex { TypeDefinition::invalidIndex };
     LoadLocation entrypointLoadLocation { };
+    const uintptr_t* boxedWasmCalleeLoadLocation { &NullWasmCallee };
 };
 using FunctionIndexSpace = Vector<WasmToWasmImportableFunction>;
 

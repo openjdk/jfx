@@ -48,14 +48,10 @@ public:
         ASSERT(end.m_begin >= begin.m_begin);
     }
 
-    ALWAYS_INLINE UChar32 operator*() const;
+    ALWAYS_INLINE char32_t operator*() const;
     ALWAYS_INLINE CodePointIterator& operator++();
 
-    ALWAYS_INLINE bool operator==(const CodePointIterator& other) const
-    {
-        return m_begin == other.m_begin
-            && m_end == other.m_end;
-    }
+    ALWAYS_INLINE friend bool operator==(const CodePointIterator&, const CodePointIterator&) = default;
 
     ALWAYS_INLINE bool atEnd() const
     {
@@ -80,7 +76,7 @@ private:
 };
 
 template<>
-ALWAYS_INLINE UChar32 CodePointIterator<LChar>::operator*() const
+ALWAYS_INLINE char32_t CodePointIterator<LChar>::operator*() const
 {
     ASSERT(!atEnd());
     return *m_begin;
@@ -94,10 +90,10 @@ ALWAYS_INLINE auto CodePointIterator<LChar>::operator++() -> CodePointIterator&
 }
 
 template<>
-ALWAYS_INLINE UChar32 CodePointIterator<UChar>::operator*() const
+ALWAYS_INLINE char32_t CodePointIterator<UChar>::operator*() const
 {
     ASSERT(!atEnd());
-    UChar32 c;
+    char32_t c;
     U16_GET(m_begin, 0, 0, m_end - m_begin, c);
     return c;
 }

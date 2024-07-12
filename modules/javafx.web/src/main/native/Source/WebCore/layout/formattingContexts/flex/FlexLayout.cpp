@@ -27,7 +27,7 @@
 #include "FlexLayout.h"
 
 #include "FlexFormattingContext.h"
-#include "FlexFormattingGeometry.h"
+#include "FlexFormattingUtils.h"
 #include "FlexRect.h"
 #include "InlineFormattingContext.h"
 #include "RenderStyleSetters.h"
@@ -52,7 +52,7 @@ struct PositionAndMargins {
     LayoutUnit marginEnd;
 };
 
-FlexLayout::FlexLayout(const FlexFormattingContext& flexFormattingContext)
+FlexLayout::FlexLayout(FlexFormattingContext& flexFormattingContext)
     : m_flexFormattingContext(flexFormattingContext)
 {
 }
@@ -126,7 +126,7 @@ FlexLayout::LogicalFlexItemRects FlexLayout::layout(const LogicalConstraints& lo
                 auto flexItemCrossPosition = linesCrossPositionList[lineIndex] + crossPositionAndMargins[lineIndex].position;
                 flexRects[flexItemIndex] = {
                     { flexItemMainPosition, flexItemCrossPosition, flexItemsMainSizeList[flexItemIndex], flexItemsCrossSizeList[flexItemIndex] },
-                    { { mainPositionAndMargins[flexItemIndex].marginStart, mainPositionAndMargins[flexItemIndex].marginEnd }, { crossPositionAndMargins[flexItemIndex].marginStart, crossPositionAndMargins[flexItemIndex].marginEnd } }
+                    { mainPositionAndMargins[flexItemIndex].marginStart, mainPositionAndMargins[flexItemIndex].marginEnd }, { crossPositionAndMargins[flexItemIndex].marginStart, crossPositionAndMargins[flexItemIndex].marginEnd }
         };
     }
     }
@@ -153,7 +153,7 @@ void FlexLayout::computeAvailableMainAndCrossSpace(const LogicalConstraints& log
     m_availableCrossSpace = computedFinalSize(logicalConstraints.crossAxis);
 }
 
-LayoutUnit FlexLayout::maxContentForFlexItem(const LogicalFlexItem& flexItem) const
+LayoutUnit FlexLayout::maxContentForFlexItem(const LogicalFlexItem& flexItem)
 {
     // 9.2.3 E Otherwise, size the item into the available space using its used flex basis in place of its main size,
     // treating a value of content as max-content. If a cross size is needed to determine the main size (e.g. when the flex item’s main size
@@ -169,11 +169,12 @@ LayoutUnit FlexLayout::maxContentForFlexItem(const LogicalFlexItem& flexItem) co
         ASSERT_NOT_IMPLEMENTED_YET();
         return { };
     }
-    auto& inlineFormattingState = flexFormattingContext().layoutState().ensureInlineFormattingState(flexItemBox);
-    return InlineFormattingContext { flexItemBox, inlineFormattingState, { } }.maximumContentSize();
+    auto placedFloats = PlacedFloats { flexItemBox };
+    auto blockLayoutState = BlockLayoutState { placedFloats };
+    return InlineFormattingContext { flexItemBox, flexFormattingContext().layoutState(), blockLayoutState }.maximumContentSize();
 }
 
-FlexLayout::FlexBaseAndHypotheticalMainSizeList FlexLayout::flexBaseAndHypotheticalMainSizeForFlexItems(const LogicalConstraints::AxisGeometry& mainAxis, const LogicalFlexItems& flexItems) const
+FlexLayout::FlexBaseAndHypotheticalMainSizeList FlexLayout::flexBaseAndHypotheticalMainSizeForFlexItems(const LogicalConstraints::AxisGeometry& mainAxis, const LogicalFlexItems& flexItems)
 {
     auto flexBaseAndHypotheticalMainSizeList = FlexBaseAndHypotheticalMainSizeList { };
     for (auto& flexItem : flexItems) {
@@ -386,8 +387,8 @@ FlexLayout::SizeList FlexLayout::computeMainSizeForFlexItems(const LogicalFlexIt
             //    its content-box size at zero. If the item's target main size was made smaller by this, it's a max violation.
             //    If the item's target main size was made larger by this, it's a min violation.
             auto totalViolation = LayoutUnit { };
-            minimumViolationList.resize(0);
-            maximumViolationList.resize(0);
+            minimumViolationList.shrink(0);
+            maximumViolationList.shrink(0);
             for (auto nonFrozenIndex : nonFrozenSet) {
                 auto unclampedMainSize = mainSizeList[nonFrozenIndex];
                 auto& flexItem = flexItems[nonFrozenIndex];
@@ -420,7 +421,7 @@ FlexLayout::SizeList FlexLayout::computeMainSizeForFlexItems(const LogicalFlexIt
     return mainSizeList;
 }
 
-FlexLayout::SizeList FlexLayout::hypotheticalCrossSizeForFlexItems(const LogicalFlexItems& flexItems, const SizeList& flexItemsMainSizeList) const
+FlexLayout::SizeList FlexLayout::hypotheticalCrossSizeForFlexItems(const LogicalFlexItems& flexItems, const SizeList& flexItemsMainSizeList)
 {
     UNUSED_PARAM(flexItemsMainSizeList);
     // FIXME: This is where layout is called on flex items.
@@ -439,13 +440,11 @@ FlexLayout::SizeList FlexLayout::hypotheticalCrossSizeForFlexItems(const Logical
                 return { };
         }
             // FIXME: Let it run through integration codepath.
-            auto floatingState = FloatingState { flexItemBox };
-            auto parentBlockLayoutState = BlockLayoutState { floatingState };
-            auto inlineLayoutState = InlineLayoutState { parentBlockLayoutState, { } };
-            auto& inlineFormattingState = flexFormattingContext().layoutState().ensureInlineFormattingState(flexItemBox);
-            auto inlineFormattingContext = InlineFormattingContext { flexItemBox, inlineFormattingState, { } };
+            auto placedFloats = PlacedFloats { flexItemBox };
+            auto blockLayoutState = BlockLayoutState { placedFloats };
+            auto inlineFormattingContext = InlineFormattingContext { flexItemBox, flexFormattingContext().layoutState(), blockLayoutState };
             auto constraintsForInFlowContent = ConstraintsForInFlowContent { HorizontalConstraints { { }, flexItemsMainSizeList[flexItemIndex] }, { } };
-            auto layoutResult = inlineFormattingContext.layoutInFlowAndFloatContent({ constraintsForInFlowContent, { } }, inlineLayoutState);
+            auto layoutResult = inlineFormattingContext.layout({ constraintsForInFlowContent, { } });
             return LayoutUnit { layoutResult.displayContent.lines.last().lineBoxLogicalRect().maxY() };
         };
         auto usedCrossSize = crossSizeAfterPerformingLayout();
@@ -635,7 +634,7 @@ FlexLayout::PositionAndMarginsList FlexLayout::handleMainAxisAlignment(LayoutUni
 
         auto positionalAlignment = [&] {
                     auto positionalAlignmentValue = justifyContentValue.position();
-                    if (!FlexFormattingGeometry::isMainAxisParallelWithInlineAxis(flexContainer()) && (positionalAlignmentValue == ContentPosition::Left || positionalAlignmentValue == ContentPosition::Right))
+                    if (!FlexFormattingUtils::isMainAxisParallelWithInlineAxis(flexContainer()) && (positionalAlignmentValue == ContentPosition::Left || positionalAlignmentValue == ContentPosition::Right))
                 positionalAlignmentValue = ContentPosition::Start;
             return positionalAlignmentValue;
         };
@@ -652,12 +651,12 @@ FlexLayout::PositionAndMarginsList FlexLayout::handleMainAxisAlignment(LayoutUni
         // non-logical alignments
         case ContentPosition::Left:
         case ContentPosition::Start:
-                    if (FlexFormattingGeometry::isReversedToContentDirection(flexContainer()))
+                    if (FlexFormattingUtils::isReversedToContentDirection(flexContainer()))
                         return availableMainSpace - lineContentOuterMainSize;
             return LayoutUnit { };
         case ContentPosition::Right:
         case ContentPosition::End:
-                    if (FlexFormattingGeometry::isReversedToContentDirection(flexContainer()))
+                    if (FlexFormattingUtils::isReversedToContentDirection(flexContainer()))
                 return LayoutUnit { };
                     return availableMainSpace - lineContentOuterMainSize;
         default:
@@ -866,10 +865,10 @@ FlexLayout::LinesCrossPositionList FlexLayout::handleCrossAxisAlignmentForFlexLi
 
 const ElementBox& FlexLayout::flexContainer() const
 {
-    return flexFormattingContext().root();
+    return m_flexFormattingContext.root();
 }
 
-const FlexFormattingContext& FlexLayout::flexFormattingContext() const
+FlexFormattingContext& FlexLayout::flexFormattingContext()
 {
     return m_flexFormattingContext;
 }

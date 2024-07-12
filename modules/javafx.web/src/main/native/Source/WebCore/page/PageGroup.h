@@ -36,7 +36,7 @@ class Page;
 class CaptionUserPreferences;
 #endif
 
-class PageGroup {
+class PageGroup : public CanMakeWeakPtr<PageGroup> {
     WTF_MAKE_NONCOPYABLE(PageGroup); WTF_MAKE_FAST_ALLOCATED;
 public:
     WEBCORE_EXPORT explicit PageGroup(const String& name);
@@ -45,7 +45,7 @@ public:
 
     WEBCORE_EXPORT static PageGroup* pageGroup(const String& groupName);
 
-    const WeakHashSet<Page>& pages() const { return m_pages; }
+    const SingleThreadWeakHashSet<Page>& pages() const { return m_pages; }
 
     void addPage(Page&);
     void removePage(Page&);
@@ -61,7 +61,7 @@ public:
 
 private:
     String m_name;
-    WeakHashSet<Page> m_pages;
+    SingleThreadWeakHashSet<Page> m_pages;
 
     unsigned m_identifier;
 

@@ -30,7 +30,6 @@
     ActiveDOMObject,
     SecureContext,
     Exposed=(Window,Worker),
-    Conditional=SERVICE_WORKER,
     EnabledBySetting=ServiceWorkersEnabled,
     GenerateIsReachable=Impl,
 ] interface ServiceWorkerRegistration : EventTarget {
@@ -41,6 +40,8 @@
 
     readonly attribute USVString scope;
     readonly attribute ServiceWorkerUpdateViaCache updateViaCache;
+
+    [EnabledBySetting=CookieStoreAPIEnabled&CookieStoreAPIServiceWorkerEnabled] readonly attribute CookieStoreManager cookies;
 
     [NewObject] Promise<undefined> update();
     [NewObject] Promise<boolean> unregister();

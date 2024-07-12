@@ -92,17 +92,17 @@ ScopedArgumentsTable* ScopedArgumentsTable::trySetLength(VM& vm, uint32_t newLen
         if (UNLIKELY(!newArguments))
             return nullptr;
         for (unsigned i = std::min(m_length, newLength); i--;)
-            newArguments.at(i, newLength) = this->at(i);
+            newArguments.at(i) = this->at(i);
         m_length = newLength;
         m_arguments = WTFMove(newArguments);
         m_watchpointSets.resize(newLength);
-        m_watchpointSets.fill(nullptr, newLength);
         return this;
     }
 
     ScopedArgumentsTable* result = tryCreate(vm, newLength);
     if (UNLIKELY(!result))
         return nullptr;
+    m_watchpointSets.resize(newLength);
     for (unsigned i = std::min(m_length, newLength); i--;) {
         result->at(i) = this->at(i);
         result->m_watchpointSets[i] = this->m_watchpointSets[i];
@@ -127,7 +127,9 @@ ScopedArgumentsTable* ScopedArgumentsTable::trySet(VM& vm, uint32_t i, ScopeOffs
 
 void ScopedArgumentsTable::trySetWatchpointSet(uint32_t i, WatchpointSet* watchpoints)
 {
-    ASSERT(watchpoints);
+    if (!watchpoints)
+        return;
+
     if (i >= m_watchpointSets.size())
         return;
 
