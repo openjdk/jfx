@@ -698,8 +698,6 @@ public abstract class Axis<T> extends Region {
                 }
             }
 
-            // call tick marks updated to inform subclasses that we have updated tick marks
-            tickMarksUpdated();
             // mark all done
             oldLength = length;
             rangeValid = true;
@@ -750,6 +748,9 @@ public abstract class Axis<T> extends Region {
                 }
             }
             updateTickMarks(side, length);
+
+            // call tick marks updated to inform subclasses that we have updated tick marks
+            tickMarksUpdated();
         }
     }
 

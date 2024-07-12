@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,9 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import sun.misc.Unsafe;
 
+// FIXME: We must replace the terminally deprecated sun.misc.Unsafe
+// memory access methods; see JDK-8334137
+@SuppressWarnings("removal")
 public final class MaskMarlinAlphaConsumer implements MarlinAlphaConsumer {
     int x, y, width, height;
     final byte alphas[];
