@@ -255,12 +255,6 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         if (shouldAnimate()) {
             animateDataAdd(item, bar);
         } else {
-            double barVal = (orientation == Orientation.VERTICAL) ? ((Number)item.getYValue()).doubleValue() :
-                    ((Number)item.getXValue()).doubleValue();
-            if (barVal < 0) {
-                bar.getStyleClass().add(NEGATIVE_STYLE);
-            }
-
             getPlotChildren().add(bar);
         }
     }
@@ -317,6 +311,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
                 Data<X,Y> item = series.getData().get(j);
                 Node bar = item.getNode();
                 bar.getStyleClass().setAll("chart-bar", "series" + i, "data" + j, series.defaultColorStyleClass);
+                applyNegativeStyleClass(item);
             }
         }
     }
@@ -447,9 +442,6 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         double barVal;
         if (orientation == Orientation.VERTICAL) {
             barVal = ((Number)item.getYValue()).doubleValue();
-            if (barVal < 0) {
-                bar.getStyleClass().add(NEGATIVE_STYLE);
-            }
             item.setCurrentY(getYAxis().toRealValue((barVal < 0) ? -bottomPos : bottomPos));
             getPlotChildren().add(bar);
             item.setYValue(getYAxis().toRealValue(barVal));
@@ -463,9 +455,6 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             );
         } else {
             barVal = ((Number)item.getXValue()).doubleValue();
-            if (barVal < 0) {
-                bar.getStyleClass().add(NEGATIVE_STYLE);
-            }
             item.setCurrentX(getXAxis().toRealValue((barVal < 0) ? -bottomPos : bottomPos));
             getPlotChildren().add(bar);
             item.setXValue(getXAxis().toRealValue(barVal));
@@ -574,7 +563,17 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             item.setNode(bar);
         }
         bar.getStyleClass().setAll("chart-bar", "series" + seriesIndex, "data" + itemIndex, series.defaultColorStyleClass);
+        applyNegativeStyleClass(item);
         return bar;
+    }
+
+    private void applyNegativeStyleClass(Data<X,Y> item) {
+        double barVal = (orientation == Orientation.VERTICAL) ? ((Number)item.getYValue()).doubleValue() :
+            ((Number)item.getXValue()).doubleValue();
+        if (barVal < 0) {
+            var bar = item.getNode();
+            bar.getStyleClass().add(NEGATIVE_STYLE);
+        }
     }
 
     private Data<X,Y> getDataItem(Series<X,Y> series, int seriesIndex, int itemIndex, String category) {

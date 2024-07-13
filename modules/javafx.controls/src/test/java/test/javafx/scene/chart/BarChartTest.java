@@ -286,6 +286,17 @@ public class BarChartTest extends XYChartTestBase {
     }
 
     @Test
+    public void testNegativeStyleIsAddedToDataOfNewSeries() {
+        startApp();
+        Series<String, Number> series = new Series<>();
+        series.getData().addFirst(new XYChart.Data<>("1", -1));
+        bc.getData().add(series);
+        pulse();
+        Node bar = series.getData().getFirst().getNode();
+        checkStyleClass(bar, "negative");
+    }
+
+    @Test
     public void testAddingDataToEmptySeries() {
         Thread.currentThread().setUncaughtExceptionHandler((t, e) -> Assert.fail("Exception: " + e));
         startApp();
