@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,7 +38,7 @@ static NSMutableDictionary * rolesMap;
     /*
      * Here we should keep all the mapping between the accessibility roles and implementing classes
      */
-    rolesMap = [[NSMutableDictionary alloc] initWithCapacity:8];
+    rolesMap = [[NSMutableDictionary alloc] initWithCapacity:9];
 
     [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"BUTTON"];
     [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"DECREMENT_BUTTON"];
@@ -50,6 +50,7 @@ static NSMutableDictionary * rolesMap;
     [rolesMap setObject:@"JFXRadiobuttonAccessibility" forKey:@"PAGE_ITEM"];
     [rolesMap setObject:@"JFXCheckboxAccessibility" forKey:@"CHECK_BOX"];
     [rolesMap setObject:@"JFXCheckboxAccessibility" forKey:@"TOGGLE_BUTTON"];
+    [rolesMap setObject:@"JFXStaticTextAccessibility" forKey:@"TEXT"];
 
 }
 
