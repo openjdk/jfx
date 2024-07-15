@@ -1254,9 +1254,6 @@ public abstract class Window {
     private boolean shouldHandleEvent() {
         // Don't send any more events if the application has shutdown
         if (Application.GetApplication() == null) {
-            // FIXME: KCR -- DEBUG
-            System.err.println("KCR: *** Window::shouldHandleEvent: Application is null, ignoring event");
-
             return false;
         }
 
