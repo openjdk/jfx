@@ -97,6 +97,11 @@
     if (env != NULL) {
         (*env)->CallVoidMethod(env, self->jWindow, jWindowNotifyFocus, com_sun_glass_events_WindowEvent_FOCUS_LOST);
     }
+
+    // FIXME: KCR -- DEBUG
+    if (!env) {
+        NSLog(@"KCR: *** windowDidResignKey: Java has been detached -- we just saved a crash!!!");
+    }
 }
 
 - (void)windowWillClose:(NSNotification *)notification
@@ -236,6 +241,11 @@
         GET_MAIN_JENV_NOWARN;
         if (env != NULL) {
             (*env)->CallVoidMethod(env, jWindow, jWindowNotifyClose);
+        }
+
+        // FIXME: KCR -- DEBUG
+        if (!env) {
+            NSLog(@"KCR: *** windowShouldClose: Java has been detached -- we just saved a crash!!!");
         }
     }
 
