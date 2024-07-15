@@ -661,17 +661,20 @@ public class CssStyleHelperTest {
 
     @Test
     public void shouldDetectSimpleInfiniteLoop() throws IOException {
-        Stylesheet stylesheet = new CssParser().parse("userAgentStylSheet", """
-            .root {
-                -fx-base-fill: -fx-base;
-                -fx-base: -fx-base-color;
-                -fx-base-color: -fx-base-fill;
-            }
+        Stylesheet stylesheet = new CssParser().parse(
+            "userAgentStyleSheet",
+            """
+                .root {
+                    -fx-base-fill: -fx-base;
+                    -fx-base: -fx-base-color;
+                    -fx-base-color: -fx-base-fill;
+                }
 
-            .pane {
-                -fx-background-color: -fx-base;
-            }
-        """);
+                .pane {
+                    -fx-background-color: -fx-base;
+                }
+            """
+        );
 
         StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
         Pane a = new Pane();
@@ -685,16 +688,19 @@ public class CssStyleHelperTest {
 
     @Test
     public void shouldDetectNestedInfiniteLoop() throws IOException {
-        Stylesheet stylesheet = new CssParser().parse("userAgentStylSheet", """
-            .root {
-                -fx-base-fill: ladder(-fx-base, white 49%, black 50%);
-                -fx-base: ladder(-fx-base-fill, white 49%, black 50%);
-            }
+        Stylesheet stylesheet = new CssParser().parse(
+            "userAgentStyleSheet",
+            """
+                .root {
+                    -fx-base-fill: ladder(-fx-base, white 49%, black 50%);
+                    -fx-base: ladder(-fx-base-fill, white 49%, black 50%);
+                }
 
-            .pane {
-                -fx-background-color: -fx-base;
-            }
-        """);
+                .pane {
+                    -fx-background-color: -fx-base;
+                }
+            """
+        );
 
         StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
         Pane a = new Pane();
