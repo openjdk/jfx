@@ -227,6 +227,7 @@ public final class TextCell extends BorderPane {
 
     /**
      * Highlights the specified text range.
+     *
      * @param start start offset for the range
      * @param end end offset for the range
      * @param color highlight color
@@ -237,6 +238,7 @@ public final class TextCell extends BorderPane {
 
     /**
      * Highlights the specified text range, using style names.
+     *
      * @param start start offset for the range
      * @param end end offset for the range
      * @param styles CSS style names
@@ -247,6 +249,7 @@ public final class TextCell extends BorderPane {
 
     /**
      * Underlines the specified text range using squiggly line (as typically used by a spell checker).
+     *
      * @param start start offset for the range
      * @param end end offset for the range
      * @param color highlight color
@@ -258,6 +261,7 @@ public final class TextCell extends BorderPane {
     /**
      * Underlines the specified text range using squiggly line (as typically used by a spell checker),
      * using style names.
+     *
      * @param start start offset for the range
      * @param end end offset for the range
      * @param styles CSS style names
@@ -268,6 +272,7 @@ public final class TextCell extends BorderPane {
 
     /**
      * Sets the bullet decoration by adding a Label with the specified character.
+     *
      * @param bullet
      */
     public void setBullet(String bullet) {
@@ -279,6 +284,7 @@ public final class TextCell extends BorderPane {
 
     /**
      * Returns line spacing if the content is a {@code TextFlow}, 0.0 otherwise.
+     *
      * @return the line spacing
      */
     public double getLineSpacing() {
@@ -286,5 +292,44 @@ public final class TextCell extends BorderPane {
             return f.getLineSpacing();
         }
         return 0.0;
+    }
+
+    /**
+     * Returns the line index of the given character offset.
+     *
+     * @param offset the character offset
+     * @return the line index
+     */
+    public Integer lineForOffset(int offset) {
+        if (content instanceof TextFlow f) {
+            return RichUtils.lineForOffset(f, offset);
+        }
+        return null;
+    }
+
+    /**
+     * Returns the line start offset of the given line index.
+     *
+     * @param line the line index
+     * @return the line start offset
+     */
+    public Integer lineStart(int line) {
+        if (content instanceof TextFlow f) {
+            return RichUtils.lineStart(f, line);
+        }
+        return null;
+    }
+
+    /**
+     * Returns the line end offset of the given line index.
+     *
+     * @param line the line index
+     * @return the line offset
+     */
+    public Integer lineEnd(int line) {
+        if (content instanceof TextFlow f) {
+            return RichUtils.lineEnd(f, line);
+        }
+        return null;
     }
 }

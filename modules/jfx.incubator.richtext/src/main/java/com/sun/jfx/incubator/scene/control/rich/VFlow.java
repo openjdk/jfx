@@ -589,8 +589,8 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         };
     }
 
-    /** returns the shape if both ends are at the same line */
-    protected PathElement[] getRangeShape(int line, int startOffset, int endOffset) {
+    /** returns the shape if both ends are at the same line, in VFlow coordinates */
+    public PathElement[] getRangeShape(int line, int startOffset, int endOffset) {
         TextCell cell = arrangement().getVisibleCell(line);
         if (cell == null) {
             return null;

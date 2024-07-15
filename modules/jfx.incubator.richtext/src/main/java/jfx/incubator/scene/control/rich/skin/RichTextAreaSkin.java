@@ -30,7 +30,9 @@ package jfx.incubator.scene.control.rich.skin;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
+import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
+import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.Skin;
@@ -38,12 +40,15 @@ import javafx.scene.control.SkinBase;
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
-import javafx.scene.text.Text;
+import javafx.scene.shape.PathElement;
+import javafx.scene.text.Font;
 import com.sun.jfx.incubator.scene.control.rich.Params;
 import com.sun.jfx.incubator.scene.control.rich.RichTextAreaBehavior;
 import com.sun.jfx.incubator.scene.control.rich.RichTextAreaSkinHelper;
+import com.sun.jfx.incubator.scene.control.rich.TextCell;
 import com.sun.jfx.incubator.scene.control.rich.VFlow;
 import com.sun.jfx.incubator.scene.control.rich.util.ListenerHelper;
+import com.sun.jfx.incubator.scene.control.rich.util.RichUtils;
 import jfx.incubator.scene.control.rich.CellContext;
 import jfx.incubator.scene.control.rich.RichTextArea;
 import jfx.incubator.scene.control.rich.StyleHandlerRegistry;
@@ -330,23 +335,93 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     }
 
     @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        switch(action) {
+        case SHOW_TEXT_RANGE:
+            {
+                Integer start = (Integer)parameters[0];
+                Integer end = (Integer)parameters[1];
+                if (start != null && end != null) {
+                    // TODO
+//                    scrollCharacterToVisible(end);
+//                    scrollCharacterToVisible(start);
+//                    scrollCharacterToVisible(end);
+                }
+                break;
+            }
+        }
+        super.executeAccessibleAction(action, parameters);
+    }
+
+    @Override
     protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
-        // TextAreaSkin delegates to its Text
-//        case LINE_FOR_OFFSET:
-        case LINE_START:
-            return 0;
-        case LINE_END:
-            TextPos p = getSkinnable().getCaretPosition();
-            if (p != null) {
-                String s = getSkinnable().getPlainText(p.index());
-                return s.length();
+        case BOUNDS_FOR_RANGE:
+            // TODO mention in javadoc that returns screen coordinates!
+            {
+                TextPos p = getSkinnable().getCaretPosition();
+                if (p == null) {
+                    return null;
+                }
+                int start = (Integer)parameters[0];
+                int end = (Integer)parameters[1];
+                PathElement[] elements = getVFlow().getRangeShape(p.index(), start, end + 1);
+                return RichUtils.pathToBoundsArray(getVFlow(), elements);
             }
-            return null;
-//        case BOUNDS_FOR_RANGE:
-//        case OFFSET_AT_POINT:
-//            Text text = getTextNode();
-//            return text.queryAccessibleAttribute(attribute, parameters);
+            case FONT: 
+            {
+                StyleAttrs a = getSkinnable().getActiveStyleAttrs();
+                if (a != null) {
+                    String family = a.getFontFamily();
+                    Double size = a.getFontSize();
+                    if ((family != null) && (size != null)) {
+                        return Font.font(family, size);
+                    }
+                }
+                return null;
+            }
+        case LINE_FOR_OFFSET:
+            {
+                TextPos p = getSkinnable().getCaretPosition();
+                if (p != null) {
+                    TextCell cell = getVFlow().getCell(p.index());
+                    if (cell != null) {
+                        int offset = (Integer)parameters[0];
+                        return cell.lineForOffset(offset);
+                    }
+                }
+                return null;
+            }
+        case LINE_START:
+            {
+                TextPos p = getSkinnable().getCaretPosition();
+                if (p != null) {
+                    TextCell cell = getVFlow().getCell(p.index());
+                    if (cell != null) {
+                        int lineIndex = (Integer)parameters[0];
+                        return cell.lineStart(lineIndex);
+                    }
+                }
+                return null;
+            }
+        case LINE_END:
+            {
+                TextPos p = getSkinnable().getCaretPosition();
+                if (p != null) {
+                    TextCell cell = getVFlow().getCell(p.index());
+                    if (cell != null) {
+                        int lineIndex = (Integer)parameters[0];
+                        return cell.lineEnd(lineIndex);
+                    }
+                }
+                return null;
+            }
+        case OFFSET_AT_POINT: 
+            {
+                Point2D screenPoint = (Point2D)parameters[0];
+                TextPos p = getSkinnable().getTextPosition(screenPoint.getX(), screenPoint.getY());
+                return p == null ? null : p.charIndex();
+            }
         default:
             return super.queryAccessibleAttribute(attribute, parameters);
         }

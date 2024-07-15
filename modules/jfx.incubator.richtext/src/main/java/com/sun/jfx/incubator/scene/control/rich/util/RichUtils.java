@@ -38,7 +38,10 @@ import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
+import javafx.geometry.BoundingBox;
+import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Region;
@@ -49,6 +52,10 @@ import javafx.scene.shape.PathElement;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.scene.text.TextFlow;
+import com.sun.javafx.scene.text.GlyphList;
+import com.sun.javafx.scene.text.TextFlowHelper;
+import com.sun.javafx.scene.text.TextLayout;
+import com.sun.javafx.scene.text.TextLine;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
 
 /**
@@ -509,5 +516,94 @@ public final class RichUtils {
             return offset;
         }
         return len;
+    }
+
+    /**
+     * Converts PathElement[] in the owner's coordinates to a Bounds[] in screen coordinates.
+     * It assumes the input array is a sequence of <pre>
+     * MoveTo (top-left)
+     * LineTo (to top-right)
+     * LineTo (bottom-right)
+     * LineTo (bottom-left)
+     * LineTo (back to top-left)
+     * </pre>
+     * This method will break if the input sequence is different.
+     */
+    public static Bounds[] pathToBoundsArray(Node owner, PathElement[] elements) {
+        Bounds[] bounds = new Bounds[elements.length / 5];
+        int index = 0;
+        for (int i = 0; i < bounds.length; i++) {
+            MoveTo topLeft = (MoveTo)elements[index];
+            LineTo topRight = (LineTo)elements[index + 1];
+            LineTo bottomRight = (LineTo)elements[index + 2];
+            BoundingBox b = new BoundingBox(
+                topLeft.getX(),
+                topLeft.getY(),
+                topRight.getX() - topLeft.getX(),
+                bottomRight.getY() - topRight.getY()
+            );
+            bounds[i] = owner.localToScreen(b);
+            index += 5;
+        }
+        return bounds;
+    }
+
+    private static int parseInt(Object x) {
+        if (x instanceof Integer n) {
+            return n.intValue();
+        }
+        return 0;
+    }
+
+    /**
+     * Returns the line index of the given character offset.
+     *
+     * @param offset the character offset
+     * @return the line index
+     */
+    public static int lineForOffset(TextFlow f, int offset) {
+        TextLayout la = TextFlowHelper.getTextLayout(f);
+        TextLine[] lines = la.getLines();
+        int line = 0;
+        for (int i = 1; i < lines.length; i++) {
+            TextLine t = lines[i];
+            if (t.getStart() > offset) {
+                return line;
+            }
+            line++;
+        }
+        return line;
+    }
+
+    /**
+     * Returns the line start offset of the given line index.
+     *
+     * @param line the line index
+     * @return the line start offset
+     */
+    public static Integer lineStart(TextFlow f, int line) {
+        TextLayout la = TextFlowHelper.getTextLayout(f);
+        TextLine[] lines = la.getLines();
+        if (0 <= line && line < lines.length) {
+            TextLine t = lines[line];
+            return t.getStart();
+        }
+        return null;
+    }
+
+    /**
+     * Returns the line end offset of the given line index.
+     *
+     * @param line the line index
+     * @return the line offset
+     */
+    public static Integer lineEnd(TextFlow f, int line) {
+        TextLayout la = TextFlowHelper.getTextLayout(f);
+        TextLine[] lines = la.getLines();
+        if (0 <= line && line < lines.length) {
+            TextLine t = lines[line];
+            return t.getStart() + t.getLength();
+        }
+        return null;
     }
 }

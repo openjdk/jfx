@@ -116,6 +116,7 @@ module javafx.graphics {
         javafx.web;
     exports com.sun.javafx.scene.text to
         javafx.controls,
+        jfx.incubator.richtext,
         javafx.web;
     exports com.sun.javafx.scene.traversal to
         javafx.controls,

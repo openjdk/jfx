@@ -84,6 +84,7 @@ public class CodeArea extends RichTextArea {
         super(model);
 
         getStyleClass().add("code-area");
+        setAccessibleRoleDescription("Code Area");
 
         modelProperty().addListener((s, prev, newValue) -> {
             // TODO is there a better way?

@@ -92,6 +92,7 @@ public abstract class StyledTextModel {
     /**
      * Receives information about modifications of the model.
      */
+    @FunctionalInterface
     public interface Listener {
         /**
          * Informs the listener that the model content has changed.

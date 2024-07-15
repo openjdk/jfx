@@ -314,7 +314,25 @@ public class RichTextArea extends Control {
         setFocusTraversable(true);
         getStyleClass().add("rich-text-area");
         setAccessibleRole(AccessibleRole.TEXT_AREA);
+        setAccessibleRoleDescription("Rich Text Area");
+
+        selectionModel.selectionProperty().addListener((s, p, c) -> {
+            int c0 = p == null ? -1 : p.getCaret().index();
+            int c1 = c == null ? -1 : c.getCaret().index();
+            if (c0 != c1) {
+                // changing paragraph means we must update a11y TEXT
+                nas(AccessibleAttribute.TEXT);
+            }
+            nas(AccessibleAttribute.SELECTION_START);
+        });
+
         setModel(model);
+    }
+
+    // FIX replace with direct call
+    private void nas(AccessibleAttribute a) {
+        // System.out.println("notify: " + a); // FIX
+        notifyAccessibleAttributeChanged(a);
     }
 
     // Properties
@@ -586,6 +604,14 @@ public class RichTextArea extends Control {
     public final ObjectProperty<StyledTextModel> modelProperty() {
         if (model == null) {
             model = new SimpleObjectProperty<>(this, "model") {
+                // TODO does this create a memory leak?
+                private final StyledTextModel.Listener li = (ch) -> {
+                    if (ch.isEdit()) {
+                        nas(AccessibleAttribute.TEXT);
+                    }
+                };
+                private StyledTextModel old;
+
                 @Override
                 protected void invalidated() {
                     if (undoable != null) {
@@ -604,6 +630,16 @@ public class RichTextArea extends Control {
                         }
                     }
 
+                    if (old != null) {
+                        old.removeChangeListener(li);
+                    }
+                    StyledTextModel m = get();
+                    if (m != null) {
+                        m.addChangeListener(li);
+                    }
+                    old = m;
+
+                    nas(AccessibleAttribute.TEXT);
                     selectionModel.clear();
                 }
             };
@@ -2230,53 +2266,36 @@ public class RichTextArea extends Control {
 
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
-        Object rv = queryAccessibleAttribute2(attribute, parameters);
-        // FIX System.out.println(attribute + ":" + rv);
-        return rv;
-    }
-    private Object queryAccessibleAttribute2(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
-//        case BOUNDS_FOR_RANGE:
-//            {
-//                int start = (Integer)parameters[0];
-//                int end = (Integer)parameters[1];
-//                PathElement[] elements = rangeShape(start, end + 1);
-//                /* Each bounds is defined by a MoveTo (top-left) followed by
-//                 * 4 LineTo (to top-right, bottom-right, bottom-left, back to top-left).
-//                 */
-//                Bounds[] bounds = new Bounds[elements.length / 5];
-//                int index = 0;
-//                for (int i = 0; i < bounds.length; i++) {
-//                    MoveTo topLeft = (MoveTo)elements[index];
-//                    LineTo topRight = (LineTo)elements[index+1];
-//                    LineTo bottomRight = (LineTo)elements[index+2];
-//                    BoundingBox b = new BoundingBox(topLeft.getX(), topLeft.getY(),
-//                                                    topRight.getX() - topLeft.getX(),
-//                                                    bottomRight.getY() - topRight.getY());
-//                    bounds[i] = localToScreen(b);
-//                    index += 5;
-//                }
-//                return bounds;
-//            }
         case EDITABLE:
             return isEditable();
         case TEXT:
-            String accText = getAccessibleText();
-            if (accText != null && !accText.isEmpty()) {
-                return accText;
+            {
+                String accText = getAccessibleText();
+                if (accText != null && !accText.isEmpty()) {
+                    return accText;
+                }
+                // report paragraph text since unlike TextArea, we cannot report the whole text as it might be large
+                TextPos p = getCaretPosition();
+                return p == null ? null : getPlainText(p.index());
             }
-            // unlike TextArea, we cannot report the whole text as it might be too large.
-            // there are two choices here:
-            // either report the visible text, or the current paragraph text
-            TextPos p = getCaretPosition();
-            return p == null ? null : getPlainText(p.index());
-
-//        case SELECTION_START:
-//            return getSelection().getStart();
-//        case SELECTION_END:
-//            return getSelection().getEnd();
-//        case CARET_OFFSET:
-//            return getCaretPosition();
+        case SELECTION_START:
+            {
+                SelectionSegment ss = getSelection();
+                // TODO or min/max
+                return ss == null ? null : ss.getCaret().offset();
+            }
+        case SELECTION_END:
+            {
+                SelectionSegment ss = getSelection();
+                // TODO or min/max
+                return ss == null ? null : ss.getAnchor().offset();
+            }
+        case CARET_OFFSET:
+            {
+                SelectionSegment ss = getSelection();
+                return ss == null ? null : ss.getCaret().offset();
+            }
         default:
             return super.queryAccessibleAttribute(attribute, parameters);
         }

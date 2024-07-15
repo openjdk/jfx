@@ -33,6 +33,7 @@ import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
@@ -114,9 +115,18 @@ public class RichTextAreaDemoPane extends BorderPane {
         control.setUseContentHeight(useContentSize);
         control.setUseContentWidth(useContentSize);
         control.setHighlightCurrentParagraph(true);
-        // custom function
+
+        // custom functions
+        System.out.println(
+            """
+            F2: dump model
+            F3: dump accessibility attributes at cursor
+            """);
         control.getInputMap().register(KeyBinding.of(KeyCode.F2), () -> {
             EditableRichTextModel.dump(control.getModel(), System.out);
+        });
+        control.getInputMap().register(KeyBinding.of(KeyCode.F3), () -> {
+            dumpAccessibilityAttributes();
         });
 
         Node contentNode;
@@ -672,6 +682,19 @@ public class RichTextAreaDemoPane extends BorderPane {
         TextPos an = control.getAnchorPosition();
         StyleAttrs m = StyleAttrs.of(a, val);
         control.applyStyle(ca, an, m);
+    }
+
+    void dumpAccessibilityAttributes() {
+        TextPos caret = control.getCaretPosition();
+        if (caret == null) {
+            return;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        Object x;
+        x = control.queryAccessibleAttribute(AccessibleAttribute.LINE_FOR_OFFSET, caret.charIndex());
+        sb.append(x).append("\n");
+        System.out.println(sb.toString());
     }
 
     /** Tool Bar */
