@@ -51,7 +51,7 @@ RefPtr<MediaRecorderPrivateGStreamer> MediaRecorderPrivateGStreamer::create(Medi
     if (!recorder->preparePipeline())
         return nullptr;
 
-    return adoptRef(*new MediaRecorderPrivateGStreamer(recorder.releaseNonNull()));
+    return makeUnique<MediaRecorderPrivateGStreamer>(recorder.releaseNonNull());
 }
 
 MediaRecorderPrivateGStreamer::MediaRecorderPrivateGStreamer(Ref<MediaRecorderPrivateBackend>&& recorder)
@@ -117,6 +117,7 @@ MediaRecorderPrivateBackend::~MediaRecorderPrivateBackend()
     if (m_src)
         webkitMediaStreamSrcSignalEndOfStream(WEBKIT_MEDIA_STREAM_SRC(m_src.get()));
     if (m_transcoder) {
+        unregisterPipeline(m_pipeline);
         m_pipeline.clear();
         m_transcoder.clear();
     }
@@ -153,8 +154,8 @@ void MediaRecorderPrivateBackend::stopRecording(CompletionHandler<void()>&& comp
     while (!isEOS) {
         LockHolder lock(m_eosLock);
         m_eosCondition.waitFor(m_eosLock, 200_ms, [weakThis = ThreadSafeWeakPtr { *this }]() -> bool {
-            if (auto strongThis = weakThis.get())
-                return strongThis->m_eos;
+            if (auto protectedThis = weakThis.get())
+                return protectedThis->m_eos;
             return true;
         });
         isEOS = m_eos;
@@ -164,8 +165,8 @@ void MediaRecorderPrivateBackend::stopRecording(CompletionHandler<void()>&& comp
 void MediaRecorderPrivateBackend::fetchData(MediaRecorderPrivate::FetchDataCallback&& completionHandler)
 {
     callOnMainThread([this, weakThis = ThreadSafeWeakPtr { *this }, completionHandler = WTFMove(completionHandler)]() mutable {
-        auto strongThis = weakThis.get();
-        if (!strongThis) {
+        auto protectedThis = weakThis.get();
+        if (!protectedThis) {
             completionHandler(nullptr, mimeType(), 0);
             return;
         }
@@ -364,6 +365,7 @@ bool MediaRecorderPrivateBackend::preparePipeline()
     m_transcoder = adoptGRef(gst_transcoder_new_full("mediastream://", "appsink://", GST_ENCODING_PROFILE(profile.get())));
     gst_transcoder_set_avoid_reencoding(m_transcoder.get(), true);
     m_pipeline = gst_transcoder_get_pipeline(m_transcoder.get());
+    registerActivePipeline(m_pipeline);
 
     g_signal_connect_swapped(m_pipeline.get(), "source-setup", G_CALLBACK(+[](MediaRecorderPrivateBackend* recorder, GstElement* sourceElement) {
         recorder->setSource(sourceElement);

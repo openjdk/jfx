@@ -26,6 +26,7 @@
 #pragma once
 
 #include "LocalDOMWindow.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/WeakPtr.h>

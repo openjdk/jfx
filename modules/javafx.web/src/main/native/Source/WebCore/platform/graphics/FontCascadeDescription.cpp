@@ -48,6 +48,8 @@ struct SameSizeAsFontCascadeDescription {
     AtomString string2;
     int16_t fontSelectionRequest[3];
     float size;
+    TextSpacingTrim textSpacingTrim;
+    TextAutospace textAutospace;
     unsigned bitfields1;
     unsigned bitfields2 : 22;
     void* array;
@@ -59,9 +61,9 @@ static_assert(sizeof(FontCascadeDescription) == sizeof(SameSizeAsFontCascadeDesc
 FontCascadeDescription::FontCascadeDescription()
     : m_families(RefCountedFixedVector<AtomString>::create(1))
     , m_isAbsoluteSize(false)
-    , m_kerning(static_cast<unsigned>(Kerning::Auto))
+    , m_kerning(enumToUnderlyingType(Kerning::Auto))
     , m_keywordSize(0)
-    , m_fontSmoothing(static_cast<unsigned>(FontSmoothingMode::AutoSmoothing))
+    , m_fontSmoothing(enumToUnderlyingType(FontSmoothingMode::AutoSmoothing))
     , m_isSpecifiedFont(false)
 {
 }

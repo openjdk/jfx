@@ -210,7 +210,7 @@ static RefPtr<IDBKey> createIDBKeyFromValue(JSGlobalObject& lexicalGlobalObject,
     if (value.inherits<DateInstance>()) {
         auto dateValue = valueToDate(lexicalGlobalObject, value);
         RETURN_IF_EXCEPTION(scope, { });
-        if (!std::isnan(dateValue))
+        if (!dateValue.isNaN())
             return IDBKey::createDate(dateValue.secondsSinceEpoch().milliseconds());
     }
 
@@ -360,14 +360,15 @@ RefPtr<IDBKey> maybeCreateIDBKeyFromScriptValueAndKeyPath(JSGlobalObject& lexica
 {
     if (std::holds_alternative<Vector<String>>(keyPath)) {
         auto& array = std::get<Vector<String>>(keyPath);
-        Vector<RefPtr<IDBKey>> result;
-        result.reserveInitialCapacity(array.size());
-        for (auto& string : array) {
-            RefPtr<IDBKey> key = internalCreateIDBKeyFromScriptValueAndKeyPath(lexicalGlobalObject, value, string);
+        bool hasNullKey = false;
+        auto result = WTF::map(array, [&](auto& string) -> RefPtr<IDBKey> {
+            auto key = internalCreateIDBKeyFromScriptValueAndKeyPath(lexicalGlobalObject, value, string);
             if (!key)
+                hasNullKey = true;
+            return key;
+        });
+        if (hasNullKey)
                 return nullptr;
-            result.uncheckedAppend(WTFMove(key));
-        }
         return IDBKey::createArray(WTFMove(result));
     }
 
@@ -518,7 +519,7 @@ std::optional<JSC::JSValue> deserializeIDBValueWithKeyInjection(JSGlobalObject& 
     JSLockHolder locker(lexicalGlobalObject.vm());
     if (!injectIDBKeyIntoScriptValue(lexicalGlobalObject, key, jsValue, keyPath.value())) {
         auto throwScope = DECLARE_THROW_SCOPE(lexicalGlobalObject.vm());
-        propagateException(lexicalGlobalObject, throwScope, Exception(UnknownError, "Cannot inject key into script value"_s));
+        propagateException(lexicalGlobalObject, throwScope, Exception(ExceptionCode::UnknownError, "Cannot inject key into script value"_s));
         return std::nullopt;
     }
 

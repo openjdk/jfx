@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile, Inc.
  * Copyright (C) 2010, 2011 Research In Motion Limited. All rights reserved.
  *
@@ -263,11 +263,6 @@
 #define USE_CFNETWORK_CONTENT_ENCODING_SNIFFING_OVERRIDE 1
 #endif
 
-#if PLATFORM(MAC) || PLATFORM(WPE) || PLATFORM(GTK) || PLATFORM(WIN)
-/* FIXME: This really needs a descriptive name, this "new theme" was added in 2008. */
-#define USE_NEW_THEME 1
-#endif
-
 #if PLATFORM(IOS) || PLATFORM(MACCATALYST) || PLATFORM(VISION)
 #define USE_UICONTEXTMENU 1
 #endif
@@ -310,11 +305,17 @@
 #if PLATFORM(COCOA)
 #define USE_FONT_VARIANT_VIA_FEATURES 1
 #define USE_OPENXR 0
-#define USE_IOSURFACE_FOR_XR_LAYER_DATA 1
-#define USE_MTLSHAREDEVENT_FOR_XR_FRAME_COMPLETION 0
 #if !defined(HAVE_WEBXR_INTERNALS) && !HAVE(WEBXR_INTERNALS)
+#if PLATFORM(IOS) && HAVE(ARKIT)
+#define USE_ARKITXR_IOS 1
+#else
 #define USE_EMPTYXR 1
 #endif
+#endif
+#endif
+
+#if PLATFORM(COCOA)
+#define USE_CG_CONTEXT_STROKE_LINE_SEGMENTS_WHEN_STROKING_PATH 1
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -324,6 +325,16 @@
 
 #if !defined(USE_ISO_MALLOC)
 #define USE_ISO_MALLOC 1
+#endif
+
+#if !defined(USE_TZONE_MALLOC)
+#if CPU(ARM64)
+// Only MacroAssemblerARM64 is known to build.
+// Building with TZONE_MALLOC currently disabled for all platforms.
+#define USE_TZONE_MALLOC 0
+#else
+#define USE_TZONE_MALLOC 0
+#endif
 #endif
 
 #if !PLATFORM(WATCHOS)
@@ -404,4 +415,23 @@
     || (PLATFORM(APPLETV) && __TV_OS_VERSION_MAX_ALLOWED < 170000) \
     || (PLATFORM(WATCHOS) && __WATCH_OS_VERSION_MAX_ALLOWED < 100000)
 #define USE_CORE_TEXT_VARIATIONS_CLAMPING_WORKAROUND 1
+#endif
+
+// FIXME: Once this is forwarded to 18+, we should remove the max check.
+#if PLATFORM(IOS) && !PLATFORM(IOS_FAMILY_SIMULATOR) \
+    && __IPHONE_OS_VERSION_MAX_ALLOWED >= 170400 \
+    && __IPHONE_OS_VERSION_MAX_ALLOWED < 180000
+#define USE_INLINE_JIT_PERMISSIONS_API 0 // TODO
+#endif
+
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 140000) \
+    || ((PLATFORM(IOS) || PLATFORM(MACCATALYST)) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 170000) \
+    || (PLATFORM(WATCHOS) && __WATCH_OS_VERSION_MIN_REQUIRED >= 100000) \
+    || (PLATFORM(APPLETV) && __TV_OS_VERSION_MIN_REQUIRED >= 170000) \
+    || PLATFORM(VISION)
+#define USE_SANDBOX_VERSION_3 1
+#endif
+
+#if !defined(USE_BROWSERENGINEKIT) && PLATFORM(IOS) && __has_include(<BrowserEngineKit/BETextInput.h>)
+#define USE_BROWSERENGINEKIT 1
 #endif

@@ -38,6 +38,7 @@
 #include "CSSValueList.h"
 #include "CachedResourceLoader.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "Font.h"
 #include "FontCache.h"
 #include "FontCascadeDescription.h"
@@ -80,11 +81,11 @@ CSSFontSelector::CSSFontSelector(ScriptExecutionContext& context)
     if (is<Document>(context)) {
         m_fontFamilyNames.reserveInitialCapacity(familyNames->size());
         for (auto& familyName : familyNames.get())
-            m_fontFamilyNames.uncheckedConstructAndAppend(familyName);
+            m_fontFamilyNames.constructAndAppend(familyName);
     } else {
-        m_fontFamilyNames.reserveInitialCapacity(familyNamesData->size());
-        for (auto& familyName : familyNamesData.get())
-            m_fontFamilyNames.uncheckedAppend(familyName);
+        m_fontFamilyNames.appendContainerWithMapping(familyNamesData.get(), [](auto& familyName) {
+            return familyName;
+        });
     }
 
     FontCache::forCurrentThread().addClient(*this);
@@ -176,32 +177,29 @@ void CSSFontSelector::addFontFaceRule(StyleRuleFontFace& fontFaceRule, bool isIn
     }
 
     const StyleProperties& style = fontFaceRule.properties();
-    RefPtr<CSSValue> fontFamily = style.getPropertyCSSValue(CSSPropertyFontFamily);
-    RefPtr<CSSValue> fontStyle = style.getPropertyCSSValue(CSSPropertyFontStyle);
-    RefPtr<CSSValue> fontWeight = style.getPropertyCSSValue(CSSPropertyFontWeight);
-    RefPtr<CSSValue> fontStretch = style.getPropertyCSSValue(CSSPropertyFontStretch);
-    RefPtr<CSSValue> src = style.getPropertyCSSValue(CSSPropertySrc);
-    RefPtr<CSSValue> unicodeRange = style.getPropertyCSSValue(CSSPropertyUnicodeRange);
-    RefPtr<CSSValue> featureSettings = style.getPropertyCSSValue(CSSPropertyFontFeatureSettings);
-    RefPtr<CSSValue> display = style.getPropertyCSSValue(CSSPropertyFontDisplay);
-    RefPtr<CSSValue> sizeAdjust = style.getPropertyCSSValue(CSSPropertySizeAdjust);
-    if (!is<CSSValueList>(fontFamily) || !is<CSSValueList>(src) || (unicodeRange && !is<CSSValueList>(*unicodeRange)))
-        return;
-
-    CSSValueList& familyList = downcast<CSSValueList>(*fontFamily);
-    if (!familyList.length())
-        return;
-
+    RefPtr familyList = dynamicDowncast<CSSValueList>(style.getPropertyCSSValue(CSSPropertyFontFamily));
+    RefPtr fontStyle = style.getPropertyCSSValue(CSSPropertyFontStyle);
+    RefPtr fontWeight = style.getPropertyCSSValue(CSSPropertyFontWeight);
+    RefPtr fontStretch = style.getPropertyCSSValue(CSSPropertyFontStretch);
+    RefPtr srcList = dynamicDowncast<CSSValueList>(style.getPropertyCSSValue(CSSPropertySrc));
+    RefPtr unicodeRange = style.getPropertyCSSValue(CSSPropertyUnicodeRange);
     CSSValueList* rangeList = downcast<CSSValueList>(unicodeRange.get());
+    RefPtr featureSettings = style.getPropertyCSSValue(CSSPropertyFontFeatureSettings);
+    RefPtr display = style.getPropertyCSSValue(CSSPropertyFontDisplay);
+    RefPtr sizeAdjust = style.getPropertyCSSValue(CSSPropertySizeAdjust);
+    if (!familyList || !srcList || (unicodeRange && !rangeList))
+        return;
 
-    CSSValueList& srcList = downcast<CSSValueList>(*src);
-    if (!srcList.length())
+    if (!familyList->length())
+        return;
+
+    if (!srcList->length())
         return;
 
     SetForScope creatingFont(m_creatingFont, true);
     auto fontFace = CSSFontFace::create(*this, &fontFaceRule);
 
-    fontFace->setFamilies(familyList);
+    fontFace->setFamilies(*familyList);
     if (fontStyle)
         fontFace->setStyle(*fontStyle);
     if (fontWeight)
@@ -217,7 +215,7 @@ void CSSFontSelector::addFontFaceRule(StyleRuleFontFace& fontFaceRule, bool isIn
     if (sizeAdjust)
         fontFace->setSizeAdjust(*sizeAdjust);
 
-    CSSFontFace::appendSources(fontFace, srcList, m_context.get(), isInitiatingElementInUserAgentShadowTree);
+    CSSFontFace::appendSources(fontFace, *srcList, m_context.get(), isInitiatingElementInUserAgentShadowTree);
 
     if (RefPtr<CSSFontFace> existingFace = m_cssFontFaceSet->lookUpByCSSConnection(fontFaceRule)) {
         // This adoption is fairly subtle. Script can trigger a purge of m_cssFontFaceSet at any time,
@@ -245,10 +243,11 @@ void CSSFontSelector::addFontPaletteValuesRule(const StyleRuleFontPaletteValues&
     auto& name = fontPaletteValuesRule.name();
     ASSERT(!name.isNull());
 
-    auto& fontFamily = fontPaletteValuesRule.fontFamily();
-    if (fontFamily.isNull())
+    auto& fontFamilies = fontPaletteValuesRule.fontFamilies();
+    if (fontFamilies.isEmpty())
         return;
 
+    for (auto& fontFamily : fontFamilies)
     m_paletteMap.set(std::make_pair(fontFamily, name), fontPaletteValuesRule.fontPaletteValues());
 
     ++m_version;
@@ -285,8 +284,10 @@ void CSSFontSelector::dispatchInvalidationCallbacks()
 {
     ++m_version;
 
-    for (auto& client : copyToVector(m_clients))
+    for (auto& client : copyToVector(m_clients)) {
+        if (m_clients.contains(client))
         client->fontsNeedUpdate(*this);
+    }
 }
 
 void CSSFontSelector::opportunisticallyStartFontDataURLLoading(const FontCascadeDescription& description, const AtomString& familyName)
@@ -311,8 +312,8 @@ void CSSFontSelector::fontModified()
 
 void CSSFontSelector::updateStyleIfNeeded()
 {
-    if (is<Document>(m_context))
-        downcast<Document>(*m_context).updateStyleIfNeeded();
+    if (RefPtr document = dynamicDowncast<Document>(m_context.get()))
+        document->updateStyleIfNeeded();
 }
 
 void CSSFontSelector::updateStyleIfNeeded(CSSFontFace&)
@@ -438,8 +439,8 @@ RefPtr<Font> CSSFontSelector::fallbackFontAt(const FontDescription& fontDescript
         return nullptr;
     auto& pictographFontFamily = m_context->settingsValues().fontGenericFamilies.pictographFontFamily();
     auto font = FontCache::forCurrentThread().fontForFamily(fontDescription, pictographFontFamily);
-    if (is<Document>(m_context) && m_context->settingsValues().webAPIStatisticsEnabled)
-        ResourceLoadObserver::shared().logFontLoad(downcast<Document>(*m_context), pictographFontFamily, !!font);
+    if (auto* document = dynamicDowncast<Document>(m_context.get()); document && document->settingsValues().webAPIStatisticsEnabled)
+        ResourceLoadObserver::shared().logFontLoad(*document, pictographFontFamily, !!font);
 
     return font;
 }

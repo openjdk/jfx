@@ -34,7 +34,7 @@ namespace WebCore {
 template <>
 class ProcessQualified<WTF::UUID> {
 public:
-    static ProcessQualified generate() { return { WTF::UUID::createVersion4(), Process::identifier() }; }
+    static ProcessQualified generate() { return { WTF::UUID::createVersion4Weak(), Process::identifier() }; }
 
     ProcessQualified()
         : m_object(WTF::UUID::emptyValue)
@@ -60,7 +60,7 @@ public:
 
     bool isHashTableDeletedValue() const { return m_processIdentifier.isHashTableDeletedValue(); }
 
-    bool operator==(const ProcessQualified& other) const { return m_object == other.m_object && m_processIdentifier == other.m_processIdentifier; }
+    friend bool operator==(const ProcessQualified&, const ProcessQualified&) = default;
 
     String toString() const { return m_object.toString(); }
 
