@@ -52,8 +52,8 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(MathMLElement);
 
 using namespace MathMLNames;
 
-MathMLElement::MathMLElement(const QualifiedName& tagName, Document& document, ConstructionType constructionType)
-    : StyledElement(tagName, document, constructionType)
+MathMLElement::MathMLElement(const QualifiedName& tagName, Document& document, OptionSet<TypeFlag> typeFlags)
+    : StyledElement(tagName, document, typeFlags | TypeFlag::IsMathMLElement)
 {
 }
 
@@ -82,13 +82,9 @@ unsigned MathMLElement::rowSpan() const
 void MathMLElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     switch (name.nodeName()) {
-    case AttributeNames::hrefAttr: {
-        bool wasLink = isLink();
+    case AttributeNames::hrefAttr:
         setIsLink(!newValue.isNull() && !shouldProhibitLinks(this));
-        if (wasLink != isLink())
-            invalidateStyleForSubtree();
         break;
-    }
     case AttributeNames::columnspanAttr:
     case AttributeNames::rowspanAttr:
         if (is<RenderTableCell>(renderer()) && hasTagName(mtdTag))

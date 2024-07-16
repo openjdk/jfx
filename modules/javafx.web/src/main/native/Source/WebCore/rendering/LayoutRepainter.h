@@ -25,20 +25,16 @@
 
 #pragma once
 
-#include "LayoutRect.h"
+#include "RenderElement.h"
 
 namespace WebCore {
 
 class RenderElement;
 class RenderLayerModelObject;
 
-enum class RepaintOutlineBounds : bool { No, Yes };
-
 class LayoutRepainter {
 public:
     LayoutRepainter(RenderElement&, bool checkForRepaint, RepaintOutlineBounds = RepaintOutlineBounds::Yes);
-
-    bool checkForRepaint() const { return m_checkForRepaint; }
 
     // Return true if it repainted.
     bool repaintAfterLayout();
@@ -47,10 +43,9 @@ private:
     RenderElement& m_renderer;
     const RenderLayerModelObject* m_repaintContainer { nullptr };
     // We store these values as LayoutRects, but the final invalidations will be pixel snapped
-    LayoutRect m_oldBounds;
-    LayoutRect m_oldOutlineBounds;
+    RenderObject::RepaintRects m_oldRects;
     bool m_checkForRepaint;
-    bool m_repaintOutlineBounds;
+    RepaintOutlineBounds m_repaintOutlineBounds;
 };
 
 } // namespace WebCore

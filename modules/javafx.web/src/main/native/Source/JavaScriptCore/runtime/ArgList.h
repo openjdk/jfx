@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -26,6 +26,7 @@
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/ForbidHeapAllocation.h>
 #include <wtf/HashSet.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
@@ -83,7 +84,7 @@ protected:
 
     Status expandCapacity();
     Status expandCapacity(int newCapacity);
-    Status slowEnsureCapacity(size_t requestedCapacity);
+    JS_EXPORT_PRIVATE Status slowEnsureCapacity(size_t requestedCapacity);
 
     void addMarkSet(JSValue);
 
@@ -214,18 +215,31 @@ public:
         ensureCapacity(count);
         if (OverflowHandler::hasOverflowed())
             return;
+        if (!isUsingInlineBuffer()) {
         if (LIKELY(!m_markSet)) {
             m_markSet = &vm.heap.markListSet();
             m_markSet->add(this);
         }
+        }
         m_size = count;
         auto* buffer = reinterpret_cast<JSValue*>(&slotFor(0));
+
+        // This clearing does not need to consider about concurrent marking from GC since MarkedVector
+        // gets marked only while mutator is stopping. So, while clearing in the mutator, concurrent
+        // marker will not see the buffer.
+#if USE(JSVALUE64)
+        memset(bitwise_cast<void*>(buffer), 0, sizeof(JSValue) * count);
+#else
         for (unsigned i = 0; i < count; ++i)
             buffer[i] = JSValue();
+#endif
+
         func(buffer);
     }
 
 private:
+    bool isUsingInlineBuffer() const { return m_buffer == m_inlineBuffer; }
+
     EncodedJSValue m_inlineBuffer[inlineCapacity] { };
 };
 
@@ -236,7 +250,7 @@ class MarkedArgumentBufferWithSize : public MarkedVector<JSValue, passedInlineCa
 using MarkedArgumentBuffer = MarkedVector<JSValue, 8, RecordOverflow>;
 
 class ArgList {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ArgList);
     friend class Interpreter;
     friend class JIT;
 public:

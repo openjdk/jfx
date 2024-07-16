@@ -528,6 +528,11 @@ bool fileIDsAreEqual(std::optional<PlatformFileID> a, std::optional<PlatformFile
     return true;
 }
 
+int overwriteEntireFile(const String& path, std::span<uint8_t> span)
+{
+    return 0;
+}
+
 } // namespace FileSystemImpl
 
 } // namespace WTF

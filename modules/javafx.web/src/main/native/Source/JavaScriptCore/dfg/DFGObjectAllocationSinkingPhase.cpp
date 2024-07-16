@@ -268,14 +268,7 @@ public:
         return m_kind == Kind::RegExpObject;
     }
 
-    bool operator==(const Allocation& other) const
-    {
-        return m_identifier == other.m_identifier
-            && m_kind == other.m_kind
-            && m_fields == other.m_fields
-            && m_structures == other.m_structures
-            && m_structuresForMaterialization == other.m_structuresForMaterialization;
-    }
+    friend bool operator==(const Allocation&, const Allocation&) = default;
 
     void dump(PrintStream& out) const
     {
@@ -1569,8 +1562,7 @@ private:
         // Nodes without remaining unmaterialized fields will be
         // materialized first - amongst the remaining unmaterialized
         // nodes
-        Vector<Allocation> toMaterialize;
-        toMaterialize.resize(escapees.size());
+        Vector<Allocation> toMaterialize(escapees.size());
         size_t firstIndex = 0;
         size_t lastIndex = toMaterialize.size();
         auto materializeFirst = [&] (Allocation&& allocation) {

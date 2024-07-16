@@ -41,7 +41,7 @@ public:
     void didReset() override;
     bool isValid() const override { return m_image.get(); }
     inline GraphicsContext* graphicsContext() { return m_image ? &(m_image->context()) : nullptr; }
-    void updateContents(Image*, const IntRect&, const IntPoint&) override;
+    void updateContents(NativeImage*, const IntRect&, const IntPoint&) override;
     void updateContents(const void*, const IntRect& target, const IntPoint& sourceOffset, int bytesPerLine) override;
     RefPtr<BitmapTexture> applyFilters(TextureMapper&, const FilterOperations&, bool) override;
     ImageBuffer* image() const { return m_image.get(); }

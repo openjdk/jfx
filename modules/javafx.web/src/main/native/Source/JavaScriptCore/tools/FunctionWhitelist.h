@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,22 +25,50 @@
 
 #pragma once
 
-#include <wtf/HashSet.h>
-#include <wtf/text/WTFString.h>
+#define ARCH_AARCH64 0
+#if defined(__arm64__) || defined(__aarch64__)
+#undef ARCH_AARCH64
+#define ARCH_AARCH64 1
+#endif
 
-namespace JSC {
+#define ARCH_ARM 0
+#if defined(arm) || defined(__arm__) || defined(ARM) || defined(_ARM_)
+#undef ARCH_ARM
+#define ARCH_ARM 1
+#endif
 
-class CodeBlock;
+#define ARCH_PPC64LE 0
 
-class FunctionWhitelist {
-public:
-    explicit FunctionWhitelist(const char*);
+#define ARCH_X86 0
 
-    bool contains(CodeBlock*) const;
+#define ARCH_X86_32 0
+#if defined(__i386__) || defined(i386) || defined(_M_IX86) || defined(_X86_) || defined(__THW_INTEL)
+#undef ARCH_X86_32
+#define ARCH_X86_32 1
+#undef ARCH_X86
+#define ARCH_X86 1
+#endif
 
-private:
-    HashSet<String> m_entries;
-    bool m_hasActiveWhitelist { false };
-};
+#define ARCH_X86_64 0
+#if defined(__x86_64__) || defined(_M_X64)
+#undef ARCH_X86_64
+#define ARCH_X86_64 1
+#undef ARCH_X86
+#define ARCH_X86 1
+#endif
 
-} // namespace JSC
+#define CONFIG_16BPC 1
+
+#define CONFIG_8BPC 1
+
+#define CONFIG_LOG 0
+
+#define ENDIANNESS_BIG 0
+
+#define HAVE_ASM 0
+
+#define HAVE_CLOCK_GETTIME 1
+
+#define HAVE_POSIX_MEMALIGN 1
+
+#define HAVE_UNISTD_H 1

@@ -35,6 +35,7 @@ enum class TaskSource : uint8_t {
     Gamepad,
     Geolocation,
     IdleTask,
+    ImageCapture,
     IndexedDB,
     MediaElement,
     Microtask,
@@ -46,8 +47,10 @@ enum class TaskSource : uint8_t {
     Reporting,
     ScreenWakelock,
     Speech,
+    Timer,
     UserInteraction,
     WebGL,
+    WebGPU,
     WebXR,
     WebSocket,
 

@@ -32,6 +32,7 @@
 #include <JavaScriptCore/CatchScope.h>
 #include <JavaScriptCore/FunctionConstructor.h>
 #include <JavaScriptCore/IdentifierInlines.h>
+#include <JavaScriptCore/SourceProvider.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RefCountedLeakCounter.h>
 #include <wtf/StdLibExtras.h>
@@ -51,10 +52,10 @@ struct JSLazyEventListener::CreationArguments {
     bool shouldUseSVGEventName;
 };
 
-static const String& eventParameterName(bool shouldUseSVGEventName)
+static const String& functionParameters(bool shouldUseSVGEventName)
 {
-    static NeverDestroyed<const String> eventString(MAKE_STATIC_STRING_IMPL("event"));
-    static NeverDestroyed<const String> evtString(MAKE_STATIC_STRING_IMPL("evt"));
+    static NeverDestroyed<const String> eventString(MAKE_STATIC_STRING_IMPL("(event)"));
+    static NeverDestroyed<const String> evtString(MAKE_STATIC_STRING_IMPL("(evt)"));
     return shouldUseSVGEventName ? evtString : eventString;
 }
 
@@ -70,11 +71,12 @@ static TextPosition convertZeroToOne(const TextPosition& position)
 JSLazyEventListener::JSLazyEventListener(CreationArguments&& arguments, const URL& sourceURL, const TextPosition& sourcePosition)
     : JSEventListener(nullptr, arguments.wrapper, true, CreatedFromMarkup::Yes, mainThreadNormalWorld())
     , m_functionName(arguments.attributeName.localName().string())
-    , m_eventParameterName(eventParameterName(arguments.shouldUseSVGEventName))
+    , m_functionParameters(functionParameters(arguments.shouldUseSVGEventName))
     , m_code(arguments.attributeValue)
     , m_sourceURL(sourceURL)
     , m_sourcePosition(convertZeroToOne(sourcePosition))
     , m_originalNode(WTFMove(arguments.node))
+    , m_sourceTaintedOrigin(JSC::computeNewSourceTaintedOriginFromStack(arguments.document.vm(), arguments.document.vm().topCallFrame))
 {
 #ifndef NDEBUG
     eventListenerCounter.increment();
@@ -112,38 +114,37 @@ JSLazyEventListener::~JSLazyEventListener()
 
 JSObject* JSLazyEventListener::initializeJSFunction(ScriptExecutionContext& executionContext) const
 {
-    ASSERT(is<Document>(executionContext));
-
-    auto& executionContextDocument = downcast<Document>(executionContext);
+    Ref executionContextDocument = downcast<Document>(executionContext);
 
     // As per the HTML specification [1], if this is an element's event handler, then document should be the
     // element's document. The script execution context may be different from the node's document if the
     // node's document was created by JavaScript.
     // [1] https://html.spec.whatwg.org/multipage/webappapis.html#getting-the-current-value-of-the-event-handler
-    auto& document = m_originalNode ? m_originalNode->document() : executionContextDocument;
-    if (!document.frame())
+    Ref document = m_originalNode ? m_originalNode->document() : executionContextDocument.get();
+    if (!document->frame())
         return nullptr;
 
-    auto* element =  dynamicDowncast<Element>(m_originalNode.get());
-    if (!document.contentSecurityPolicy()->allowInlineEventHandlers(m_sourceURL.string(), m_sourcePosition.m_line, m_code, element))
+    RefPtr element =  dynamicDowncast<Element>(m_originalNode.get());
+    if (!document->checkedContentSecurityPolicy()->allowInlineEventHandlers(m_sourceURL.string(), m_sourcePosition.m_line, m_code, element.get()))
         return nullptr;
 
-    auto& script = document.frame()->script();
-    if (!script.canExecuteScripts(ReasonForCallingCanExecuteScripts::AboutToCreateEventListener) || script.isPaused())
+    RefPtr frame = document->frame();
+    CheckedRef script = frame->script();
+    if (!script->canExecuteScripts(ReasonForCallingCanExecuteScripts::AboutToCreateEventListener) || script->isPaused())
         return nullptr;
 
-    ASSERT_WITH_MESSAGE(document.settings().scriptMarkupEnabled(), "Scripting element attributes should have been stripped during parsing");
-    if (UNLIKELY(!document.settings().scriptMarkupEnabled()))
+    ASSERT_WITH_MESSAGE(document->settings().scriptMarkupEnabled(), "Scripting element attributes should have been stripped during parsing");
+    if (UNLIKELY(!document->settings().scriptMarkupEnabled()))
         return nullptr;
 
-    if (!executionContextDocument.frame())
+    if (!executionContextDocument->frame())
         return nullptr;
 
-    auto* isolatedWorld = this->isolatedWorld();
+    RefPtr isolatedWorld = this->isolatedWorld();
     if (UNLIKELY(!isolatedWorld))
         return nullptr;
 
-    auto* globalObject = toJSLocalDOMWindow(*executionContextDocument.frame(), *isolatedWorld);
+    auto* globalObject = toJSLocalDOMWindow(*executionContextDocument->protectedFrame(), *isolatedWorld);
     if (!globalObject)
         return nullptr;
 
@@ -152,19 +153,18 @@ JSObject* JSLazyEventListener::initializeJSFunction(ScriptExecutionContext& exec
     auto scope = DECLARE_CATCH_SCOPE(vm);
     JSGlobalObject* lexicalGlobalObject = globalObject;
 
-    MarkedArgumentBuffer args;
-    args.append(jsNontrivialString(vm, m_eventParameterName));
-    args.append(jsStringWithCache(vm, m_code));
-    ASSERT(!args.hasOverflowed());
+    static NeverDestroyed<const String> functionPrefix(MAKE_STATIC_STRING_IMPL("function "));
+    int functionConstructorParametersEndPosition = functionPrefix->length() + m_functionName.length() + m_functionParameters.length();
+    String code = makeString(functionPrefix.get(), m_functionName, m_functionParameters, " {\n"_s, m_code, "\n}"_s);
 
     // We want all errors to refer back to the line on which our attribute was
     // declared, regardless of any newlines in our JavaScript source text.
     int overrideLineNumber = m_sourcePosition.m_line.oneBasedInt();
 
     JSObject* jsFunction = constructFunctionSkippingEvalEnabledCheck(
-        lexicalGlobalObject, args, Identifier::fromString(vm, m_functionName),
-        SourceOrigin { m_sourceURL, CachedScriptFetcher::create(document.charset()) },
-        m_sourceURL.string(), m_sourcePosition, overrideLineNumber);
+        lexicalGlobalObject, WTFMove(code), Identifier::fromString(vm, m_functionName),
+        SourceOrigin { m_sourceURL, CachedScriptFetcher::create(document->charset()) },
+        m_sourceURL.string(), m_sourceTaintedOrigin, m_sourcePosition, overrideLineNumber, functionConstructorParametersEndPosition);
     if (UNLIKELY(scope.exception())) {
         reportCurrentException(lexicalGlobalObject);
         scope.clearException();

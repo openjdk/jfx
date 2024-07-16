@@ -64,17 +64,17 @@ ExceptionOr<void> PointerCaptureController::setPointerCapture(Element* capturing
     // 1. If the pointerId provided as the method's argument does not match any of the active pointers, then throw a DOMException with the name NotFoundError.
     RefPtr capturingData = m_activePointerIdsToCapturingData.get(pointerId);
     if (!capturingData)
-        return Exception { NotFoundError };
+        return Exception { ExceptionCode::NotFoundError };
 
     // 2. If the Element on which this method is invoked is not connected, throw an exception with the name InvalidStateError.
     if (!capturingTarget->isConnected())
-        return Exception { InvalidStateError };
+        return Exception { ExceptionCode::InvalidStateError };
 
 #if ENABLE(POINTER_LOCK)
     // 3. If this method is invoked while the document has a locked element, throw an exception with the name InvalidStateError.
     if (auto* page = capturingTarget->document().page()) {
         if (page->pointerLockController().isLocked())
-            return Exception { InvalidStateError };
+            return Exception { ExceptionCode::InvalidStateError };
     }
 #endif
 
@@ -98,7 +98,7 @@ ExceptionOr<void> PointerCaptureController::releasePointerCapture(Element* captu
     // being invoked as a result of the implicit release of pointer capture, then throw a DOMException with the name NotFoundError.
     RefPtr capturingData = m_activePointerIdsToCapturingData.get(pointerId);
     if (!capturingData)
-        return Exception { NotFoundError };
+        return Exception { ExceptionCode::NotFoundError };
 
     // 2. If hasPointerCapture is false for the Element with the specified pointerId, then terminate these steps.
     if (!hasPointerCapture(capturingTarget, pointerId))
@@ -312,6 +312,27 @@ void PointerCaptureController::dispatchEventForTouchAtIndex(EventTarget& target,
 }
 #endif
 
+static AtomString pointerEventType(const AtomString& mouseEventType)
+{
+    auto& names = eventNames();
+    if (mouseEventType == names.mousedownEvent)
+        return names.pointerdownEvent;
+    if (mouseEventType == names.mouseoverEvent)
+        return names.pointeroverEvent;
+    if (mouseEventType == names.mouseenterEvent)
+        return names.pointerenterEvent;
+    if (mouseEventType == names.mousemoveEvent)
+        return names.pointermoveEvent;
+    if (mouseEventType == names.mouseleaveEvent)
+        return names.pointerleaveEvent;
+    if (mouseEventType == names.mouseoutEvent)
+        return names.pointeroutEvent;
+    if (mouseEventType == names.mouseupEvent)
+        return names.pointerupEvent;
+
+    return nullAtom();
+}
+
 RefPtr<PointerEvent> PointerCaptureController::pointerEventForMouseEvent(const MouseEvent& mouseEvent, PointerID pointerId, const String& pointerType)
 {
     // If we already have known touches then we cannot dispatch a mouse event,
@@ -327,9 +348,15 @@ RefPtr<PointerEvent> PointerCaptureController::pointerEventForMouseEvent(const M
     RefPtr capturingData = m_activePointerIdsToCapturingData.get(pointerId);
     bool pointerIsPressed = capturingData ? capturingData->pointerIsPressed : false;
 
-    short newButton = mouseEvent.button();
-    short previousMouseButton = capturingData ? capturingData->previousMouseButton : -1;
-    short button = (type == names.mousemoveEvent && newButton == previousMouseButton) ? -1 : newButton;
+    MouseButton newButton = mouseEvent.button();
+    MouseButton previousMouseButton = capturingData ? capturingData->previousMouseButton : MouseButton::PointerHasNotChanged;
+    MouseButton button = [&] {
+        if (!PointerEvent::typeIsUpOrDown(pointerEventType(type))) {
+            if (newButton == previousMouseButton || !pointerIsPressed)
+                return MouseButton::PointerHasNotChanged;
+        }
+        return newButton;
+    }();
 
     // https://w3c.github.io/pointerevents/#chorded-button-interactions
     // Some pointer devices, such as mouse or pen, support multiple buttons. In the Mouse Event model, each button

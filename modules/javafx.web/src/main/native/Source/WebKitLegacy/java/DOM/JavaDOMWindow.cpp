@@ -184,13 +184,13 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_setStatusImpl(JNIEn
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_getDefaultStatusImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->defaultStatus());
+    return JavaReturn<String>(env, IMPL->status());
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_setDefaultStatusImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setDefaultStatus(AtomString{String(env, value)});
+    IMPL->setStatus(AtomString{String(env, value)});
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_getSelfImpl(JNIEnv* env, jclass, jlong peer)

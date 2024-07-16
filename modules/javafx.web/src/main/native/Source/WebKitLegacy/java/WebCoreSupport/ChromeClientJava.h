@@ -48,7 +48,9 @@ public:
     void takeFocus(FocusDirection) override;
 
     void focusedElementChanged(Element*) override;
-    void focusedFrameChanged(LocalFrame*) override;
+    void focusedFrameChanged(Frame*) override;
+        void rootFrameAdded(const LocalFrame&) override;
+        void rootFrameRemoved(const LocalFrame&) override;
 
     // The Frame pointer provides the ChromeClient with context about which
     // Frame wants to create the new Page. Also, the newly created window
