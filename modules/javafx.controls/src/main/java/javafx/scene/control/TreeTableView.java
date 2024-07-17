@@ -186,8 +186,8 @@ import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
  * create a two-column TreeTableView to show the file name and size
  * properties, we write:
  *
- * <pre> {@code TreeTableColumns<File, String> fileNameCol = new TreeTableColumn<>("Filename");
- * TreeTableColumns<File, Long> sizeCol = new TreeTableColumn<>("Size");
+ * <pre> {@code TreeTableColumn<File, String> fileNameCol = new TreeTableColumn<>("Filename");
+ * TreeTableColumn<File, Long> sizeCol = new TreeTableColumn<>("Size");
  *
  * treeTable.getColumns().setAll(fileNameCol, sizeCol);}</pre>
  *
