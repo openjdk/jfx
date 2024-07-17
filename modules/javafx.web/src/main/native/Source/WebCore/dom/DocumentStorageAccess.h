@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(TRACKING_PREVENTION)
-
 #include "RegistrableDomain.h"
 #include "Supplementable.h"
 #include <wtf/WeakPtr.h>
@@ -36,6 +34,7 @@ namespace WebCore {
 class DeferredPromise;
 class Document;
 class UserGestureIndicator;
+class WeakPtrImplWithEventTargetData;
 
 enum class StorageAccessWasGranted : bool { No, Yes };
 
@@ -86,16 +85,18 @@ private:
     void requestStorageAccessQuirk(RegistrableDomain&& requestingDomain, CompletionHandler<void(StorageAccessWasGranted)>&&);
 
     static DocumentStorageAccess* from(Document&);
-    static const char* supplementName();
+    static ASCIILiteral supplementName();
     bool hasFrameSpecificStorageAccess() const;
     void setWasExplicitlyDeniedFrameSpecificStorageAccess() { ++m_numberOfTimesExplicitlyDeniedFrameSpecificStorageAccess; };
     bool isAllowedToRequestStorageAccess() { return m_numberOfTimesExplicitlyDeniedFrameSpecificStorageAccess < maxNumberOfTimesExplicitlyDeniedStorageAccess; };
     void enableTemporaryTimeUserGesture();
     void consumeTemporaryTimeUserGesture();
 
+    Ref<Document> protectedDocument() const;
+
     std::unique_ptr<UserGestureIndicator> m_temporaryUserGesture;
 
-    Document& m_document;
+    WeakRef<Document, WeakPtrImplWithEventTargetData> m_document;
 
     uint8_t m_numberOfTimesExplicitlyDeniedFrameSpecificStorageAccess = 0;
 
@@ -103,5 +104,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(TRACKING_PREVENTION)

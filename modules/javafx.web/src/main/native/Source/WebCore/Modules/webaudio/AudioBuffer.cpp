@@ -58,20 +58,20 @@ RefPtr<AudioBuffer> AudioBuffer::create(unsigned numberOfChannels, size_t number
 ExceptionOr<Ref<AudioBuffer>> AudioBuffer::create(const AudioBufferOptions& options)
 {
     if (!options.numberOfChannels)
-        return Exception { NotSupportedError, "Number of channels cannot be 0."_s };
+        return Exception { ExceptionCode::NotSupportedError, "Number of channels cannot be 0."_s };
 
     if (options.numberOfChannels > AudioContext::maxNumberOfChannels)
-        return Exception { NotSupportedError, "Number of channels cannot be more than max supported."_s };
+        return Exception { ExceptionCode::NotSupportedError, "Number of channels cannot be more than max supported."_s };
 
     if (!options.length)
-        return Exception { NotSupportedError, "Length must be at least 1."_s };
+        return Exception { ExceptionCode::NotSupportedError, "Length must be at least 1."_s };
 
     if (!BaseAudioContext::isSupportedSampleRate(options.sampleRate))
-        return Exception { NotSupportedError, "Sample rate is not in the supported range."_s };
+        return Exception { ExceptionCode::NotSupportedError, "Sample rate is not in the supported range."_s };
 
     auto buffer = adoptRef(*new AudioBuffer(options.numberOfChannels, options.length, options.sampleRate));
     if (!buffer->originalLength())
-        return Exception { NotSupportedError, "Channel was not able to be created."_s };
+        return Exception { ExceptionCode::NotSupportedError, "Channel was not able to be created."_s };
 
     return buffer;
 }
@@ -108,7 +108,7 @@ AudioBuffer::AudioBuffer(unsigned numberOfChannels, size_t length, float sampleR
         if (preventDetaching == LegacyPreventDetaching::Yes)
             channelDataArray->setDetachable(false);
 
-        channels.uncheckedAppend(WTFMove(channelDataArray));
+        channels.append(WTFMove(channelDataArray));
     }
 
     m_channels = WTFMove(channels);
@@ -137,7 +137,7 @@ AudioBuffer::AudioBuffer(AudioBus& bus)
         }
 
         channelDataArray->setRange(bus.channel(i)->data(), m_originalLength, 0);
-        channels.uncheckedAppend(WTFMove(channelDataArray));
+        channels.append(WTFMove(channelDataArray));
     }
 
     m_channels = WTFMove(channels);
@@ -155,14 +155,14 @@ void AudioBuffer::releaseMemory()
     Locker locker { m_channelsLock };
     m_channels = { };
     m_channelWrappers = { };
-    m_needsAdditionalNoise = false;
+    m_noiseInjectionMultiplier = 0;
 }
 
 ExceptionOr<JSC::JSValue> AudioBuffer::getChannelData(JSDOMGlobalObject& globalObject, unsigned channelIndex)
 {
     ASSERT(m_channelWrappers.size() == m_channels.size());
     if (channelIndex >= m_channelWrappers.size())
-        return Exception { IndexSizeError, "Index must be less than number of channels."_s };
+        return Exception { ExceptionCode::IndexSizeError, "Index must be less than number of channels."_s };
 
     applyNoiseIfNeeded();
 
@@ -212,10 +212,10 @@ float* AudioBuffer::rawChannelData(unsigned channelIndex)
 ExceptionOr<void> AudioBuffer::copyFromChannel(Ref<Float32Array>&& destination, unsigned channelNumber, unsigned bufferOffset)
 {
     if (destination->isShared())
-        return Exception { TypeError, "Destination may not be a shared buffer."_s };
+        return Exception { ExceptionCode::TypeError, "Destination may not be a shared buffer."_s };
 
     if (channelNumber >= m_channels.size())
-        return Exception { IndexSizeError, "Not a valid channelNumber."_s };
+        return Exception { ExceptionCode::IndexSizeError, "Not a valid channelNumber."_s };
 
     Float32Array* channelData = m_channels[channelNumber].get();
 
@@ -242,10 +242,10 @@ ExceptionOr<void> AudioBuffer::copyFromChannel(Ref<Float32Array>&& destination, 
 ExceptionOr<void> AudioBuffer::copyToChannel(Ref<Float32Array>&& source, unsigned channelNumber, unsigned bufferOffset)
 {
     if (source->isShared())
-        return Exception { TypeError, "Source may not be a shared buffer."_s };
+        return Exception { ExceptionCode::TypeError, "Source may not be a shared buffer."_s };
 
     if (channelNumber >= m_channels.size())
-        return Exception { IndexSizeError, "Not a valid channelNumber."_s };
+        return Exception { ExceptionCode::IndexSizeError, "Not a valid channelNumber."_s };
 
     Float32Array* channelData = m_channels[channelNumber].get();
 
@@ -264,7 +264,7 @@ ExceptionOr<void> AudioBuffer::copyToChannel(Ref<Float32Array>&& source, unsigne
     ASSERT(dst);
 
     memmove(dst + bufferOffset, src, count * sizeof(*dst));
-    m_needsAdditionalNoise = false;
+    m_noiseInjectionMultiplier = 0;
     return { };
 }
 
@@ -273,7 +273,7 @@ void AudioBuffer::zero()
     for (auto& channel : m_channels)
         channel->zeroFill();
 
-    m_needsAdditionalNoise = false;
+    m_noiseInjectionMultiplier = 0;
 }
 
 size_t AudioBuffer::memoryCost() const
@@ -315,7 +315,7 @@ bool AudioBuffer::copyTo(AudioBuffer& other) const
     for (unsigned channelIndex = 0; channelIndex < numberOfChannels(); ++channelIndex)
         memcpy(other.rawChannelData(channelIndex), m_channels[channelIndex]->data(), length() * sizeof(float));
 
-    other.m_needsAdditionalNoise = m_needsAdditionalNoise;
+    other.m_noiseInjectionMultiplier = m_noiseInjectionMultiplier;
     return true;
 }
 
@@ -335,13 +335,13 @@ WebCoreOpaqueRoot root(AudioBuffer* buffer)
 
 void AudioBuffer::applyNoiseIfNeeded()
 {
-    if (!m_needsAdditionalNoise)
+    if (!m_noiseInjectionMultiplier)
         return;
 
     for (auto& channel : m_channels)
-        AudioUtilities::applyNoise(channel->data(), channel->length(), 0.001);
+        AudioUtilities::applyNoise(channel->data(), channel->length(), m_noiseInjectionMultiplier);
 
-    m_needsAdditionalNoise = false;
+    m_noiseInjectionMultiplier = 0;
 }
 
 } // namespace WebCore

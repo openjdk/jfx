@@ -61,7 +61,7 @@ private:
     bool canRender(const RenderElement*, float multiplier) const final;
     bool isPending() const final;
     void load(CachedResourceLoader&, const ResourceLoaderOptions&) final;
-    bool isLoaded() const final;
+    bool isLoaded(const RenderElement*) const final;
     bool errorOccurred() const final;
     FloatSize imageSize(const RenderElement*, float multiplier) const final;
     bool imageHasRelativeWidth() const final;
@@ -72,7 +72,7 @@ private:
     void addClient(RenderElement&) final;
     void removeClient(RenderElement&) final;
     bool hasClient(RenderElement&) const final;
-    RefPtr<Image> image(const RenderElement*, const FloatSize&) const final;
+    RefPtr<Image> image(const RenderElement*, const FloatSize&, bool isForFirstLine) const final;
     float imageScaleFactor() const final;
     bool knownToBeOpaque(const RenderElement&) const final;
     const StyleImage* selectedImage() const final { return m_selectedImage.get(); }

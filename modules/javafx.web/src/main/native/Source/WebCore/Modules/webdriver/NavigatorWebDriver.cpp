@@ -37,14 +37,14 @@ NavigatorWebDriver::NavigatorWebDriver() = default;
 
 NavigatorWebDriver::~NavigatorWebDriver() = default;
 
-const char* NavigatorWebDriver::supplementName()
+ASCIILiteral NavigatorWebDriver::supplementName()
 {
-    return "NavigatorWebDriver";
+    return "NavigatorWebDriver"_s;
 }
 
 bool NavigatorWebDriver::isControlledByAutomation(const Navigator& navigator)
 {
-    auto* frame = navigator.frame();
+    RefPtr frame = navigator.frame();
     if (!frame || !frame->page())
         return false;
 

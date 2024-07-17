@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -526,6 +526,11 @@ bool fileIDsAreEqual(std::optional<PlatformFileID> a, std::optional<PlatformFile
     UNUSED_PARAM(a);
     UNUSED_PARAM(b);
     return true;
+}
+
+int overwriteEntireFile(const String& path, std::span<uint8_t> span)
+{
+    return 0;
 }
 
 } // namespace FileSystemImpl
