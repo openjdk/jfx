@@ -49,6 +49,7 @@ import javafx.css.converter.InsetsConverter;
 import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
+import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.control.Control;
@@ -323,6 +324,9 @@ public class RichTextArea extends Control {
                 // changing paragraph means we must update a11y TEXT
                 nas(AccessibleAttribute.TEXT);
             }
+            // TODO should we actually check whether caret/anchor positions changed?
+            // TODO what is the correspondence between start/end and caret/anchor? 
+            //nas(AccessibleAttribute.SELECTION_END);
             nas(AccessibleAttribute.SELECTION_START);
         });
 
@@ -604,9 +608,12 @@ public class RichTextArea extends Control {
     public final ObjectProperty<StyledTextModel> modelProperty() {
         if (model == null) {
             model = new SimpleObjectProperty<>(this, "model") {
-                // TODO does this create a memory leak?
+                // TODO does this create a memory leak?  should we bind or weak listen?
                 private final StyledTextModel.Listener li = (ch) -> {
                     if (ch.isEdit()) {
+                        // TODO this may not be correct: notify only when the current paragraph is getting changed
+                        // and only as a result of background change and not the user typing
+                        // (we may need to add a boolean to the event)
                         nas(AccessibleAttribute.TEXT);
                     }
                 };
@@ -2262,6 +2269,34 @@ public class RichTextArea extends Control {
             }
         }
         return null;
+    }
+
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        System.out.println("execute: " + action); // FIX
+        switch (action) {
+        case SET_TEXT:
+            {
+                String value = (String) parameters[0];
+                if (value != null) {
+                    // TODO
+                    // setText(value);
+                }
+                break;
+            }
+        case SET_TEXT_SELECTION:
+            {
+                Integer start = (Integer) parameters[0];
+                Integer end = (Integer) parameters[1];
+                if (start != null && end != null) {
+                    // TODO
+                    // selectRange(start,  end);
+                }
+                break;
+            }
+        default:
+            super.executeAccessibleAction(action, parameters);
+        }
     }
 
     @Override

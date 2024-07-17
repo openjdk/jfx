@@ -349,33 +349,35 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                 }
                 break;
             }
+        default:
+            super.executeAccessibleAction(action, parameters);
         }
-        super.executeAccessibleAction(action, parameters);
     }
 
     @Override
     protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
         case BOUNDS_FOR_RANGE:
-            // TODO mention in javadoc that returns screen coordinates!
             {
                 TextPos p = getSkinnable().getCaretPosition();
-                if (p == null) {
-                    return null;
+                if (p != null) {
+                    int start = (Integer)parameters[0];
+                    int end = (Integer)parameters[1];
+                    PathElement[] elements = getVFlow().getRangeShape(p.index(), start, end + 1);
+                    return RichUtils.pathToBoundsArray(getVFlow(), elements);
                 }
-                int start = (Integer)parameters[0];
-                int end = (Integer)parameters[1];
-                PathElement[] elements = getVFlow().getRangeShape(p.index(), start, end + 1);
-                return RichUtils.pathToBoundsArray(getVFlow(), elements);
+                return null;
             }
             case FONT: 
             {
                 StyleAttrs a = getSkinnable().getActiveStyleAttrs();
                 if (a != null) {
                     String family = a.getFontFamily();
-                    Double size = a.getFontSize();
-                    if ((family != null) && (size != null)) {
-                        return Font.font(family, size);
+                    if (family != null) {
+                        Double size = a.getFontSize();
+                        if (size != null) {
+                            return Font.font(family, size);
+                        }
                     }
                 }
                 return null;
