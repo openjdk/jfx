@@ -36,7 +36,9 @@ static NSMutableDictionary * rolesMap;
 
 + (void) initializeRolesMap {
     /*
-     * Here we should keep all the mapping between the accessibility roles and implementing classes
+     * Here we should keep all the mapping between the accessibility roles and implementing classes.
+     * All JavaFX roles and corresponding available properties are defined in
+     * enum javafx.scene.AccessibleRole
      */
     rolesMap = [[NSMutableDictionary alloc] initWithCapacity:9];
 
