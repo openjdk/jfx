@@ -2282,7 +2282,7 @@ public class RichTextArea extends Control {
                     // TODO
                     // setText(value);
                 }
-                break;
+                return;
             }
         case SET_TEXT_SELECTION:
             {
@@ -2292,8 +2292,11 @@ public class RichTextArea extends Control {
                     // TODO
                     // selectRange(start,  end);
                 }
-                break;
+                return;
             }
+        case SHOW_TEXT_RANGE:
+            // TODO
+            return;
         default:
             super.executeAccessibleAction(action, parameters);
         }

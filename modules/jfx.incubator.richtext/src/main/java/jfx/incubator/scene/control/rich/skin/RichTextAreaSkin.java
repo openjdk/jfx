@@ -368,7 +368,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                 }
                 return null;
             }
-            case FONT: 
+        case FONT: 
             {
                 StyleAttrs a = getSkinnable().getActiveStyleAttrs();
                 if (a != null) {
@@ -382,6 +382,8 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                 }
                 return null;
             }
+        case HORIZONTAL_SCROLLBAR:
+            return hscroll;
         case LINE_FOR_OFFSET:
             {
                 TextPos p = getSkinnable().getCaretPosition();
@@ -424,6 +426,8 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                 TextPos p = getSkinnable().getTextPosition(screenPoint.getX(), screenPoint.getY());
                 return p == null ? null : p.charIndex();
             }
+        case VERTICAL_SCROLLBAR:
+            return vscroll;
         default:
             return super.queryAccessibleAttribute(attribute, parameters);
         }
