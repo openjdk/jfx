@@ -72,7 +72,7 @@ public class RtfStyledOutput implements StyledOutput {
     public StyledOutput firstPassBuilder() {
         return new StyledOutput() {
             @Override
-            public void append(StyledSegment seg) throws IOException {
+            public void consume(StyledSegment seg) throws IOException {
                 switch (seg.getType()) {
                 case PARAGRAPH_ATTRIBUTES:
                     // TODO
@@ -178,7 +178,7 @@ public class RtfStyledOutput implements StyledOutput {
     }
 
     @Override
-    public void append(StyledSegment seg) throws IOException {
+    public void consume(StyledSegment seg) throws IOException {
         switch (seg.getType()) {
         case LINE_BREAK:
             writeEndOfLine();

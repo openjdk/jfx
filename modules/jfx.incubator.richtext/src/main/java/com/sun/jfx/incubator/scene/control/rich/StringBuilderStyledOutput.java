@@ -46,7 +46,7 @@ public class StringBuilderStyledOutput implements StyledOutput {
     }
 
     @Override
-    public void append(StyledSegment seg) {
+    public void consume(StyledSegment seg) {
         switch (seg.getType()) {
         case LINE_BREAK:
             sb.append(newline);

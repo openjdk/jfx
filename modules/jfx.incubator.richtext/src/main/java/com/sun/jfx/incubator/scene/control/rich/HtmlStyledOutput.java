@@ -61,7 +61,7 @@ public class HtmlStyledOutput implements StyledOutput {
     }
 
     @Override
-    public void append(StyledSegment seg) throws IOException {
+    public void consume(StyledSegment seg) throws IOException {
         switch (seg.getType()) {
         case INLINE_NODE:
             Node n = seg.getInlineNodeGenerator().get();
@@ -269,7 +269,7 @@ public class HtmlStyledOutput implements StyledOutput {
     public StyledOutput firstPassBuilder() {
         return new StyledOutput() {
             @Override
-            public void append(StyledSegment seg) throws IOException {
+            public void consume(StyledSegment seg) throws IOException {
                 switch (seg.getType()) {
                 case TEXT:
                     StyleAttrs attrs = seg.getStyleAttrs(resolver);

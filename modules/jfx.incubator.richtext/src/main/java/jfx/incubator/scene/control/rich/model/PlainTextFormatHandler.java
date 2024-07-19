@@ -61,7 +61,7 @@ public class PlainTextFormatHandler extends DataFormatHandler {
 
         StyledOutput so = new StyledOutput() {
             @Override
-            public void append(StyledSegment seg) throws IOException {
+            public void consume(StyledSegment seg) throws IOException {
                 switch (seg.getType()) {
                 case LINE_BREAK:
                     out.write(newline);

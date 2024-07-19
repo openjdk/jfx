@@ -268,7 +268,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
         }
 
         @Override
-        public void append(StyledSegment seg) throws IOException {
+        public void consume(StyledSegment seg) throws IOException {
             switch (seg.getType()) {
             case INLINE_NODE:
                 // TODO

@@ -41,7 +41,7 @@ public class SegmentStyledOutput implements StyledOutput {
     }
 
     @Override
-    public void append(StyledSegment s) throws IOException {
+    public void consume(StyledSegment s) throws IOException {
         segments.add(s);
     }
 

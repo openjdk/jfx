@@ -104,7 +104,7 @@ public class TestRichTextFormatHandler {
         StringWriter wr = new StringWriter();
         StyledOutput out = RichTextFormatHandlerHelper.createStyledOutput(new RichTextFormatHandler(), null, wr);
         for (StyledSegment s : input) {
-            out.append(s);
+            out.consume(s);
         }
         out.flush();
         String s = wr.toString();
@@ -116,7 +116,7 @@ public class TestRichTextFormatHandler {
     public void testEscapes() throws IOException {
         StringWriter wr = new StringWriter();
         StyledOutput out = RichTextFormatHandlerHelper.createStyledOutput(new RichTextFormatHandler(), null, wr);
-        out.append(StyledSegment.of("{|%}"));
+        out.consume(StyledSegment.of("{|%}"));
         out.flush();
         String s = wr.toString();
         String expected = "%7B%7C%25%7D";
@@ -180,7 +180,7 @@ public class TestRichTextFormatHandler {
             if (DEBUG) {
                 System.out.println(s);
             }
-            out.append(s);
+            out.consume(s);
             ct++;
         }
         out.flush();
@@ -214,7 +214,7 @@ public class TestRichTextFormatHandler {
         wr = new StringWriter();
         out = RichTextFormatHandlerHelper.createStyledOutput(handler, null, wr);
         for (StyledSegment s : segments) {
-            out.append(s);
+            out.consume(s);
         }
         out.flush();
         String result = wr.toString();
@@ -241,7 +241,7 @@ public class TestRichTextFormatHandler {
         StringWriter wr = new StringWriter();
         StyledOutput out = RichTextFormatHandlerHelper.createStyledOutput(handler, null, wr);
         for (StyledSegment s : segments) {
-            out.append(s);
+            out.consume(s);
         }
         out.flush();
 

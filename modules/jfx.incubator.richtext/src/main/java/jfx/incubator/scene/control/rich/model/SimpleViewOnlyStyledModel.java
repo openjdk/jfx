@@ -299,7 +299,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
                 @Override
                 public void export(int start, int end, StyledOutput out) throws IOException {
                     StyledSegment seg = StyledSegment.ofRegion(paragraphGenerator);
-                    out.append(seg);
+                    out.consume(seg);
                 }
             };
         }
@@ -431,7 +431,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
         // for use by StyledTextModel
         void export(int start, int end, StyledOutput out) throws IOException {
             if (segments == null) {
-                out.append(StyledSegment.of(""));
+                out.consume(StyledSegment.of(""));
             } else {
                 int off = 0;
                 int sz = size();
@@ -444,7 +444,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
                         int ix1 = Math.min(len, end - off);
                         if (ix1 > ix0) {
                             StyledSegment ss = seg.subSegment(ix0, ix1);
-                            out.append(ss);
+                            out.consume(ss);
                         }
                     }
                     off += len;

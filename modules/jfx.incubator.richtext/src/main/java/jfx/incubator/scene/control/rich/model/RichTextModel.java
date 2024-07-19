@@ -72,7 +72,7 @@ public class RichTextModel extends StyledTextModel {
     }
 
     @Override
-    public int getTextLength(int index) {
+    public int getParagraphLength(int index) {
         return paragraphs.get(index).getTextLength();
     }
 
@@ -144,13 +144,13 @@ public class RichTextModel extends StyledTextModel {
     }
 
     @Override
-    protected void setParagraphStyle(int ix, StyleAttrs attrs) {
-        paragraphs.get(ix).setParagraphAttributes(attrs);
+    protected void setParagraphStyle(int index, StyleAttrs attrs) {
+        paragraphs.get(index).setParagraphAttributes(attrs);
     }
 
     @Override
-    protected void applyStyle(int ix, int start, int end, StyleAttrs attrs, boolean merge) {
-        paragraphs.get(ix).applyStyle(start, end, attrs, merge, this::dedup);
+    protected void applyStyle(int index, int start, int end, StyleAttrs attrs, boolean merge) {
+        paragraphs.get(index).applyStyle(start, end, attrs, merge, this::dedup);
     }
 
     @Override

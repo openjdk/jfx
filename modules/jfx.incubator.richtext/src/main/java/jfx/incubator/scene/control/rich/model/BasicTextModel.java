@@ -182,12 +182,12 @@ public class BasicTextModel extends StyledTextModel {
     }
 
     @Override
-    protected final void setParagraphStyle(int ix, StyleAttrs a) {
+    protected final void setParagraphStyle(int index, StyleAttrs a) {
         // no-op
     }
 
     @Override
-    protected final void applyStyle(int ix, int start, int end, StyleAttrs a, boolean merge) {
+    protected final void applyStyle(int index, int start, int end, StyleAttrs a, boolean merge) {
         // no-op
     }
 
