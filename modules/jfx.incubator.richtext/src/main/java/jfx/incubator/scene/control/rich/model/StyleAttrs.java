@@ -40,11 +40,11 @@ import com.sun.jfx.incubator.scene.control.rich.CssStyles;
 import com.sun.jfx.incubator.scene.control.rich.util.RichUtils;
 
 /**
- * This immutable object contains {@link StyleAttribute}s.
+ * This immutable object contains a map of {@link StyleAttribute}s.
  */
-// TODO name: StyleSet? (though it's not a set)  SAttributes? (too long)
+// TODO name: AttributeMap (used in java.text.AttributedString), StyleAttributeMap (long!), StyleMap (used in com.sun)
+// or Attributes? (many other classes use that name), StyleAttributes (unique, but too similar to StyleAttribute)
 public final class StyleAttrs {
-
     /** Paragraph background color attribute. */
     public static final StyleAttribute<Color> BACKGROUND = new StyleAttribute<>("BACKGROUND", Color.class, true);
 
@@ -203,8 +203,8 @@ public final class StyleAttrs {
     }
 
     /**
-     * Returns true if the specified attribute has a boolean value of {@code Boolean.TRUE},
-     * false otherwise.
+     * Returns true if the specified attribute contains {@code Boolean.TRUE},
+     * false in any other case.
      *
      * @param a the attribute
      * @return true if the attribute value is {@code Boolean.TRUE}
@@ -216,7 +216,7 @@ public final class StyleAttrs {
 
     /**
      * Returns the value of the specified attribute, or defaultValue if the specified attribute
-     * is not present.
+     * is not present or is not a {@link Number}.
      *
      * @param a the attribute
      * @param defaultValue the default value

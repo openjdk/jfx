@@ -53,7 +53,6 @@ import jfx.incubator.scene.control.rich.CodeArea;
 import jfx.incubator.scene.control.rich.RichTextArea;
 import jfx.incubator.scene.control.rich.TextPos;
 import jfx.incubator.scene.control.rich.model.CodeTextModel;
-import jfx.incubator.scene.control.rich.model.SegmentBuffer;
 
 /**
  * Pane holds the visuals for the cell: source editor, output pane, execution label, current cell highlight.

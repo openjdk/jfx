@@ -23,10 +23,13 @@
  * questions.
  */
 
-package jfx.incubator.scene.control.rich.model;
+package com.oracle.demo.rich.notebook;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import jfx.incubator.scene.control.rich.model.StyledInput;
+import jfx.incubator.scene.control.rich.model.StyledOutput;
+import jfx.incubator.scene.control.rich.model.StyledSegment;
 
 /**
  * In-memory buffer which stored {@code StyledSegment}s with associated output and input streams,

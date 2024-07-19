@@ -23,7 +23,7 @@
  * questions.
  */
 
-package jfx.incubator.scene.control.rich.model;
+package com.sun.jfx.incubator.scene.control.rich;
 
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
