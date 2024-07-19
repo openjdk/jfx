@@ -26,7 +26,7 @@
 package com.sun.jfx.incubator.scene.control.rich;
 
 import javafx.scene.Node;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 import jfx.incubator.scene.control.rich.skin.CellContext;
 
 /**
@@ -34,7 +34,7 @@ import jfx.incubator.scene.control.rich.skin.CellContext;
  */
 class VFlowCellContext implements CellContext {
     private Node node;
-    private StyleAttrs attrs;
+    private StyleAttributeMap attrs;
     private final StringBuilder style = new StringBuilder();
 
     public VFlowCellContext() {
@@ -46,7 +46,7 @@ class VFlowCellContext implements CellContext {
     }
 
     @Override
-    public StyleAttrs getAttributes() {
+    public StyleAttributeMap getAttributes() {
         return attrs;
     }
 
@@ -55,7 +55,7 @@ class VFlowCellContext implements CellContext {
         return node;
     }
 
-    void reset(Node n, StyleAttrs a) {
+    void reset(Node n, StyleAttributeMap a) {
         this.node = n;
         this.attrs = a;
         style.setLength(0);

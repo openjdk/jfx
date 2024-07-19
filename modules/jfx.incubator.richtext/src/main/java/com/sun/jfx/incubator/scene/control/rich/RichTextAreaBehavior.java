@@ -59,7 +59,7 @@ import jfx.incubator.scene.control.input.KeyBinding;
 import jfx.incubator.scene.control.rich.RichTextArea;
 import jfx.incubator.scene.control.rich.TextPos;
 import jfx.incubator.scene.control.rich.model.DataFormatHandler;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 import jfx.incubator.scene.control.rich.model.StyledInput;
 import jfx.incubator.scene.control.rich.model.StyledTextModel;
 
@@ -1134,7 +1134,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 return;
             }
 
-            StyleAttrs a = control.getActiveStyleAttrs();
+            StyleAttributeMap a = control.getActiveStyleAttributeMap();
             try (StyledInput in = h.createStyledInput(text, a)) {
                 TextPos p = m.replace(vflow, start, end, in, true);
                 moveCaret(p, false);

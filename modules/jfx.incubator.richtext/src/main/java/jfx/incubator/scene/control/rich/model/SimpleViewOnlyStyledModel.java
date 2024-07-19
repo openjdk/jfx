@@ -97,7 +97,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
      * @return this model instance
      */
     public SimpleViewOnlyStyledModel addSegment(String text) {
-        return addSegment(text, StyleAttrs.EMPTY);
+        return addSegment(text, StyleAttributeMap.EMPTY);
     }
 
     /**
@@ -123,7 +123,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
      * @param a the style attributes
      * @return this model instance
      */
-    public SimpleViewOnlyStyledModel addSegment(String text, StyleAttrs a) {
+    public SimpleViewOnlyStyledModel addSegment(String text, StyleAttributeMap a) {
         // TODO split into paragraphs if \n is found, or check for \n ?
         Objects.requireNonNull(a);
         Paragraph p = lastParagraph();
@@ -248,20 +248,20 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
     }
 
     @Override
-    public StyleAttrs getStyleAttrs(StyleResolver r, TextPos pos) {
+    public StyleAttributeMap getStyleAttributeMap(StyleResolver r, TextPos pos) {
         int index = pos.index();
         if (index < paragraphs.size()) {
             int off = pos.offset();
             Paragraph par = paragraphs.get(index);
-            StyleAttrs pa = par.getParagraphAttributes();
-            StyleAttrs a = par.getStyleAttrs(r, off);
+            StyleAttributeMap pa = par.getParagraphAttributes();
+            StyleAttributeMap a = par.getStyleAttrs(r, off);
             if (pa == null) {
                 return a;
             } else {
                 return pa.combine(a);
             }
         }
-        return StyleAttrs.EMPTY;
+        return StyleAttributeMap.EMPTY;
     }
 
     /**
@@ -270,7 +270,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
      * @param a the paragraph attributes
      * @return this model instance
      */
-    public SimpleViewOnlyStyledModel setParagraphAttributes(StyleAttrs a) {
+    public SimpleViewOnlyStyledModel setParagraphAttributes(StyleAttributeMap a) {
         Paragraph p = lastParagraph();
         p.setParagraphAttributes(a);
         return this;
@@ -280,7 +280,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
     static class Paragraph {
         private ArrayList<StyledSegment> segments;
         private ArrayList<Consumer<TextCell>> highlights;
-        private StyleAttrs paragraphAttributes;
+        private StyleAttributeMap paragraphAttributes;
 
         public Paragraph() {
         }
@@ -339,7 +339,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
          * @param css array of style names, or null
          */
         void addSegment(String text, String style, String[] css) {
-            StyleAttrs a = StyleAttrs.fromStyles(style, css);
+            StyleAttributeMap a = StyleAttributeMap.fromStyles(style, css);
             addSegment(text, a);
         }
 
@@ -348,7 +348,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
          * @param text the non-null text string
          * @param attrs the styled attributes
          */
-        void addSegment(String text, StyleAttrs attrs) {
+        void addSegment(String text, StyleAttributeMap attrs) {
             StyledSegment seg = StyledSegment.of(text, attrs);
             segments().add(seg);
         }
@@ -360,7 +360,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
          * @param end the end offset of the input string
          * @param attrs the styled attributes
          */
-        void addSegment(String text, int start, int end, StyleAttrs attrs) {
+        void addSegment(String text, int start, int end, StyleAttributeMap attrs) {
             String s = text.substring(start, end);
             addSegment(s, attrs);
         }
@@ -460,7 +460,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
          * Sets the paragraph attributes.
          * @param a the paragraph attributes
          */
-        void setParagraphAttributes(StyleAttrs a) {
+        void setParagraphAttributes(StyleAttributeMap a) {
             paragraphAttributes = a;
         }
 
@@ -468,23 +468,23 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
          * Returns the paragraph attributes.
          * @return the paragraph attributes, can be null
          */
-        StyleAttrs getParagraphAttributes() {
+        StyleAttributeMap getParagraphAttributes() {
             return paragraphAttributes;
         }
 
         // for use by SimpleReadOnlyStyledModel
-        StyleAttrs getStyleAttrs(StyleResolver resolver, int offset) {
+        StyleAttributeMap getStyleAttrs(StyleResolver resolver, int offset) {
             int off = 0;
             int ct = size();
             for (int i = 0; i < ct; i++) {
                 StyledSegment seg = segments.get(i);
                 int len = seg.getTextLength();
                 if (offset < (off + len) || (i == ct - 1)) {
-                    return seg.getStyleAttrs(resolver);
+                    return seg.getStyleAttributeMap(resolver);
                 }
                 off += len;
             }
-            return StyleAttrs.EMPTY;
+            return StyleAttributeMap.EMPTY;
         }
 
         public RichParagraph toRichParagraph() {
@@ -495,7 +495,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
                 }
 
                 @Override
-                public final StyleAttrs getParagraphAttributes() {
+                public final StyleAttributeMap getParagraphAttributes() {
                     return paragraphAttributes;
                 }
 

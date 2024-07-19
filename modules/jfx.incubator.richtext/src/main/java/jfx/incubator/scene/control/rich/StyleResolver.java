@@ -27,7 +27,7 @@ package jfx.incubator.scene.control.rich;
 
 import javafx.scene.Node;
 import javafx.scene.image.WritableImage;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 
 /**
  * Enables conversion of CSS styles to {@code StyleAttribute}s.
@@ -42,12 +42,12 @@ import jfx.incubator.scene.control.rich.model.StyleAttrs;
  */
 public interface StyleResolver {
     /**
-     * Resolves CSS styles (when present) to the individual attributes declared in {@link StyleAttrs}.
+     * Resolves CSS styles (when present) to the individual attributes declared in {@link StyleAttributeMap}.
      *
      * @param attrs the style attributes
      * @return the resolved style attributes
      */
-    public StyleAttrs resolveStyles(StyleAttrs attrs);
+    public StyleAttributeMap resolveStyles(StyleAttributeMap attrs);
 
     /**
      * Creates a snapshot of the specified Node to be exported or copied as an image.

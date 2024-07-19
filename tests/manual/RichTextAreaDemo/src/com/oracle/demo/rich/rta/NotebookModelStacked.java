@@ -34,7 +34,7 @@ import jfx.incubator.scene.control.rich.StyleResolver;
 import jfx.incubator.scene.control.rich.TextPos;
 import jfx.incubator.scene.control.rich.model.BasicTextModel;
 import jfx.incubator.scene.control.rich.model.RichParagraph;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 import jfx.incubator.scene.control.rich.model.StyledTextModel;
 
 public class NotebookModelStacked extends StyledTextModel {
@@ -138,7 +138,7 @@ public class NotebookModelStacked extends StyledTextModel {
     }
 
     @Override
-    protected int insertTextSegment(int index, int offset, String text, StyleAttrs attrs) {
+    protected int insertTextSegment(int index, int offset, String text, StyleAttributeMap attrs) {
         return 0;
     }
 
@@ -151,15 +151,15 @@ public class NotebookModelStacked extends StyledTextModel {
     }
 
     @Override
-    public StyleAttrs getStyleAttrs(StyleResolver r, TextPos pos) {
-        return StyleAttrs.EMPTY;
+    public StyleAttributeMap getStyleAttributeMap(StyleResolver r, TextPos pos) {
+        return StyleAttributeMap.EMPTY;
     }
 
     @Override
-    protected void setParagraphStyle(int ix, StyleAttrs paragraphAttrs) {
+    protected void setParagraphStyle(int ix, StyleAttributeMap paragraphAttrs) {
     }
 
     @Override
-    protected void applyStyle(int ix, int start, int end, StyleAttrs a, boolean merge) {
+    protected void applyStyle(int ix, int start, int end, StyleAttributeMap a, boolean merge) {
     }
 }

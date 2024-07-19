@@ -27,14 +27,14 @@ package com.sun.jfx.incubator.scene.control.rich.rtf;
 
 import java.util.HashMap;
 import jfx.incubator.scene.control.rich.model.StyleAttribute;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 
 class RTFAttributes {
     private static final RTFAttribute[] attributes = {
-        new BooleanAttribute(RTFAttribute.D_CHARACTER, StyleAttrs.ITALIC, "i"),
-        new BooleanAttribute(RTFAttribute.D_CHARACTER, StyleAttrs.BOLD, "b"),
-        new BooleanAttribute(RTFAttribute.D_CHARACTER, StyleAttrs.UNDERLINE, "ul"),
-        new BooleanAttribute(RTFAttribute.D_CHARACTER, StyleAttrs.STRIKE_THROUGH, "strike")
+        new BooleanAttribute(RTFAttribute.D_CHARACTER, StyleAttributeMap.ITALIC, "i"),
+        new BooleanAttribute(RTFAttribute.D_CHARACTER, StyleAttributeMap.BOLD, "b"),
+        new BooleanAttribute(RTFAttribute.D_CHARACTER, StyleAttributeMap.UNDERLINE, "ul"),
+        new BooleanAttribute(RTFAttribute.D_CHARACTER, StyleAttributeMap.STRIKE_THROUGH, "strike")
     };
 
     public static HashMap<String, RTFAttribute> attributesByKeyword() {

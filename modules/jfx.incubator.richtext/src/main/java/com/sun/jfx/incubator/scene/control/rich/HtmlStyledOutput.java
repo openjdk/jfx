@@ -36,7 +36,7 @@ import javafx.scene.paint.Color;
 import com.sun.jfx.incubator.scene.control.rich.util.RichUtils;
 import jfx.incubator.scene.control.rich.StyleResolver;
 import jfx.incubator.scene.control.rich.model.StyleAttribute;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 import jfx.incubator.scene.control.rich.model.StyledOutput;
 import jfx.incubator.scene.control.rich.model.StyledSegment;
 
@@ -72,7 +72,7 @@ public class HtmlStyledOutput implements StyledOutput {
             wr.write("<p/>\n");
             break;
         case TEXT:
-            StyleAttrs a = seg.getStyleAttrs(resolver);
+            StyleAttributeMap a = seg.getStyleAttributeMap(resolver);
             boolean div = ((a != null) && (!a.isEmpty()));
             if (div) {
                 wr.write("<span style='");
@@ -93,7 +93,7 @@ public class HtmlStyledOutput implements StyledOutput {
         }
     }
 
-    private void writeAttributes(StyleAttrs attrs) throws IOException {
+    private void writeAttributes(StyleAttributeMap attrs) throws IOException {
         boolean sp = false;
         for (StyleAttribute a : attrs.getAttributes()) {
             Object v = attrs.get(a);
@@ -122,12 +122,12 @@ public class HtmlStyledOutput implements StyledOutput {
      * the same text-decoration CSS property.
      * @returns the new key or null if this attribute must be skipped.
      */
-    private static Key createKey(StyleAttrs attrs, StyleAttribute a, Object v) {
-        if (a == StyleAttrs.STRIKE_THROUGH) {
+    private static Key createKey(StyleAttributeMap attrs, StyleAttribute a, Object v) {
+        if (a == StyleAttributeMap.STRIKE_THROUGH) {
             if (attrs.isStrikeThrough() && attrs.isUnderline()) {
                 a = SS_AND_UNDERLINE;
             }
-        } else if (a == StyleAttrs.UNDERLINE) {
+        } else if (a == StyleAttributeMap.UNDERLINE) {
             if (attrs.isStrikeThrough() && attrs.isUnderline()) {
                 return null;
             }
@@ -272,7 +272,7 @@ public class HtmlStyledOutput implements StyledOutput {
             public void consume(StyledSegment seg) throws IOException {
                 switch (seg.getType()) {
                 case TEXT:
-                    StyleAttrs attrs = seg.getStyleAttrs(resolver);
+                    StyleAttributeMap attrs = seg.getStyleAttributeMap(resolver);
                     if ((attrs != null) && (!attrs.isEmpty())) {
                         for (StyleAttribute a : attrs.getAttributes()) {
                             Object v = attrs.get(a);
@@ -309,19 +309,19 @@ public class HtmlStyledOutput implements StyledOutput {
     }
 
     private static String createCss(StyleAttribute a, Object v) {
-        if (a == StyleAttrs.BOLD) {
+        if (a == StyleAttributeMap.BOLD) {
             return "font-weight: bold;";
-        } else if (a == StyleAttrs.FONT_FAMILY) {
+        } else if (a == StyleAttributeMap.FONT_FAMILY) {
             return "font-family: \"" + encodeFontFamily(v.toString()) + "\";";
-        } else if (a == StyleAttrs.FONT_SIZE) {
+        } else if (a == StyleAttributeMap.FONT_SIZE) {
             return "font-size: " + v + "pt;";
-        } else if (a == StyleAttrs.ITALIC) {
+        } else if (a == StyleAttributeMap.ITALIC) {
             return "font-style: italic;";
-        } else if (a == StyleAttrs.STRIKE_THROUGH) {
+        } else if (a == StyleAttributeMap.STRIKE_THROUGH) {
             return "text-decoration: line-through;";
-        } else if (a == StyleAttrs.TEXT_COLOR) {
+        } else if (a == StyleAttributeMap.TEXT_COLOR) {
             return "color: " + RichUtils.toWebColor((Color)v) + ";";
-        } else if (a == StyleAttrs.UNDERLINE) {
+        } else if (a == StyleAttributeMap.UNDERLINE) {
             return "text-decoration: underline;";
         } else if (a == SS_AND_UNDERLINE) {
             return "text-decoration: line-through underline;";

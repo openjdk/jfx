@@ -55,7 +55,7 @@ import jfx.incubator.scene.control.rich.model.ContentChange;
 import jfx.incubator.scene.control.rich.model.RichTextModel;
 import jfx.incubator.scene.control.rich.model.RichTextFormatHandler;
 import jfx.incubator.scene.control.rich.model.StyleAttribute;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 import jfx.incubator.scene.control.rich.model.StyledTextModel;
 
 /**
@@ -91,7 +91,7 @@ public class Actions {
     private final RichTextArea control;
     private final ReadOnlyBooleanWrapper modified = new ReadOnlyBooleanWrapper();
     private final ReadOnlyObjectWrapper<File> file = new ReadOnlyObjectWrapper<>();
-    private final SimpleObjectProperty<StyleAttrs> styles = new SimpleObjectProperty<>();
+    private final SimpleObjectProperty<StyleAttributeMap> styles = new SimpleObjectProperty<>();
     private final SimpleObjectProperty<TextStyle> textStyle = new SimpleObjectProperty<>();
 
     public Actions(RichTextArea control) {
@@ -127,10 +127,10 @@ public class Actions {
         });
 
         styles.addListener((s,p,a) -> {
-            bold.setSelected(hasStyle(a, StyleAttrs.BOLD), false);
-            italic.setSelected(hasStyle(a, StyleAttrs.ITALIC), false);
-            strikeThrough.setSelected(hasStyle(a, StyleAttrs.STRIKE_THROUGH), false);
-            underline.setSelected(hasStyle(a, StyleAttrs.UNDERLINE), false);
+            bold.setSelected(hasStyle(a, StyleAttributeMap.BOLD), false);
+            italic.setSelected(hasStyle(a, StyleAttributeMap.ITALIC), false);
+            strikeThrough.setSelected(hasStyle(a, StyleAttributeMap.STRIKE_THROUGH), false);
+            underline.setSelected(hasStyle(a, StyleAttributeMap.UNDERLINE), false);
         });
 
         updateSourceStyles();
@@ -140,7 +140,7 @@ public class Actions {
         setModified(false);
     }
 
-    private boolean hasStyle(StyleAttrs attrs, StyleAttribute<Boolean> a) {
+    private boolean hasStyle(StyleAttributeMap attrs, StyleAttribute<Boolean> a) {
         return attrs == null ? false : Boolean.TRUE.equals(attrs.get(a));
     }
 
@@ -174,15 +174,15 @@ public class Actions {
 
     private void handleCaret() {
         boolean sel = control.hasNonEmptySelection();
-        StyleAttrs a = control.getActiveStyleAttrs();
+        StyleAttributeMap a = control.getActiveStyleAttributeMap();
 
         cut.setEnabled(sel);
         copy.setEnabled(sel);
 
-        bold.setSelected(a.getBoolean(StyleAttrs.BOLD), false);
-        italic.setSelected(a.getBoolean(StyleAttrs.ITALIC), false);
-        underline.setSelected(a.getBoolean(StyleAttrs.UNDERLINE), false);
-        strikeThrough.setSelected(a.getBoolean(StyleAttrs.STRIKE_THROUGH), false);
+        bold.setSelected(a.getBoolean(StyleAttributeMap.BOLD), false);
+        italic.setSelected(a.getBoolean(StyleAttributeMap.ITALIC), false);
+        underline.setSelected(a.getBoolean(StyleAttributeMap.UNDERLINE), false);
+        strikeThrough.setSelected(a.getBoolean(StyleAttributeMap.STRIKE_THROUGH), false);
     }
 
     private void toggle(StyleAttribute<Boolean> attr) {
@@ -197,9 +197,9 @@ public class Actions {
             end = control.getParagraphEnd(ix);
         }
 
-        StyleAttrs a = control.getActiveStyleAttrs();
+        StyleAttributeMap a = control.getActiveStyleAttributeMap();
         boolean on = !a.getBoolean(attr);
-        a = StyleAttrs.builder().set(attr, on).build();
+        a = StyleAttributeMap.builder().set(attr, on).build();
         control.applyStyle(start, end, a);
     }
 
@@ -215,23 +215,23 @@ public class Actions {
             end = control.getParagraphEnd(ix);
         }
 
-        StyleAttrs a = control.getActiveStyleAttrs();
-        a = StyleAttrs.builder().set(attr, value).build();
+        StyleAttributeMap a = control.getActiveStyleAttributeMap();
+        a = StyleAttributeMap.builder().set(attr, value).build();
         control.applyStyle(start, end, a);
     }
 
     // TODO need to bind selected item in the combo
     public void setFontSize(Integer size) {
-        apply(StyleAttrs.FONT_SIZE, size.doubleValue());
+        apply(StyleAttributeMap.FONT_SIZE, size.doubleValue());
     }
 
     // TODO need to bind selected item in the combo
     public void setFontName(String name) {
-        apply(StyleAttrs.FONT_FAMILY, name);
+        apply(StyleAttributeMap.FONT_FAMILY, name);
     }
 
     public void setTextColor(Color color) {
-        apply(StyleAttrs.TEXT_COLOR, color);
+        apply(StyleAttributeMap.TEXT_COLOR, color);
     }
 
     private void newDocument() {
@@ -375,19 +375,19 @@ public class Actions {
     }
 
     public void bold() {
-        toggleStyle(StyleAttrs.BOLD);
+        toggleStyle(StyleAttributeMap.BOLD);
     }
 
     public void italic() {
-        toggleStyle(StyleAttrs.ITALIC);
+        toggleStyle(StyleAttributeMap.ITALIC);
     }
 
     public void strikeThrough() {
-        toggleStyle(StyleAttrs.STRIKE_THROUGH);
+        toggleStyle(StyleAttributeMap.STRIKE_THROUGH);
     }
 
     public void underline() {
-        toggleStyle(StyleAttrs.UNDERLINE);
+        toggleStyle(StyleAttributeMap.UNDERLINE);
     }
 
     private void toggleStyle(StyleAttribute<Boolean> attr) {
@@ -402,9 +402,9 @@ public class Actions {
             end = control.getParagraphEnd(ix);
         }
 
-        StyleAttrs a = control.getActiveStyleAttrs();
+        StyleAttributeMap a = control.getActiveStyleAttributeMap();
         boolean on = !a.getBoolean(attr);
-        a = StyleAttrs.builder().set(attr, on).build();
+        a = StyleAttributeMap.builder().set(attr, on).build();
         control.applyStyle(start, end, a);
         updateSourceStyles();
     }
@@ -415,7 +415,7 @@ public class Actions {
         if (start == null) {
             return;
         } else if (start.equals(end)) {
-            TextStyle cur = Styles.guessTextStyle(control.getActiveStyleAttrs());
+            TextStyle cur = Styles.guessTextStyle(control.getActiveStyleAttributeMap());
             if (cur == st) {
                 return;
             }
@@ -425,13 +425,13 @@ public class Actions {
             end = control.getParagraphEnd(ix);
         }
 
-        StyleAttrs a = Styles.getStyleAttrs(st);
+        StyleAttributeMap a = Styles.getStyleAttributeMap(st);
         control.applyStyle(start, end, a);
         updateSourceStyles();
     }
 
     private void updateSourceStyles() {
-        StyleAttrs a = getSourceStyleAttrs();
+        StyleAttributeMap a = getSourceStyleAttrs();
         if (a != null) {
             styles.set(a);
 
@@ -440,11 +440,11 @@ public class Actions {
         }
     }
 
-    private StyleAttrs getSourceStyleAttrs() {
+    private StyleAttributeMap getSourceStyleAttrs() {
         SelectionSegment sel = control.getSelection();
         if ((sel == null) || (!sel.isCollapsed())) {
             return null;
         }
-        return control.getActiveStyleAttrs();
+        return control.getActiveStyleAttributeMap();
     }
 }

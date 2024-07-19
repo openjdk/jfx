@@ -31,7 +31,7 @@ import jfx.incubator.scene.control.rich.model.RichTextModel;
 import jfx.incubator.scene.control.rich.model.BasicTextModel;
 import jfx.incubator.scene.control.rich.model.RichParagraph;
 import jfx.incubator.scene.control.rich.model.SimpleViewOnlyStyledModel;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 import jfx.incubator.scene.control.rich.model.StyledInput;
 import jfx.incubator.scene.control.rich.model.StyledTextModel;
 
@@ -189,12 +189,12 @@ public enum ModelChoice {
     }
 
     private static StyledTextModel writingSystems() {
-        StyleAttrs name = StyleAttrs.builder().
+        StyleAttributeMap name = StyleAttributeMap.builder().
             setFontSize(24).
             setTextColor(Color.gray(0.5)).
             build();
 
-        StyleAttrs value = StyleAttrs.builder().
+        StyleAttributeMap value = StyleAttributeMap.builder().
             setFontSize(24).
             build();
 
@@ -213,7 +213,7 @@ public enum ModelChoice {
     }
 
     // TODO add to StyledModel?
-    private static void append(StyledTextModel m, String text, StyleAttrs style) {
+    private static void append(StyledTextModel m, String text, StyleAttributeMap style) {
         TextPos p = m.getDocumentEnd();
         m.replace(null, p, p, StyledInput.of(text, style), false);
     }

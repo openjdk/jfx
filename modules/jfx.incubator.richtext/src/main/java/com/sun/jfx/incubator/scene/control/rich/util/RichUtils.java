@@ -56,7 +56,7 @@ import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.scene.text.TextFlowHelper;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLine;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 
 /**
  * RichTextArea specific utility methods.
@@ -378,12 +378,12 @@ public final class RichUtils {
      * @param hiPri the high priority attributes
      * @return the combined attributes, or null
      */
-    public static StyleAttrs combine(StyleAttrs lowPri, StyleAttrs hiPri) {
+    public static StyleAttributeMap combine(StyleAttributeMap lowPri, StyleAttributeMap hiPri) {
         if ((lowPri != null) && (!lowPri.isEmpty())) {
             if (hiPri == null) {
                 return lowPri;
             } else {
-                return StyleAttrs.builder().merge(lowPri).merge(hiPri).build();
+                return StyleAttributeMap.builder().merge(lowPri).merge(hiPri).build();
             }
         }
         return hiPri;

@@ -32,7 +32,7 @@ import jfx.incubator.scene.control.rich.SyntaxDecorator;
 import jfx.incubator.scene.control.rich.TextPos;
 import jfx.incubator.scene.control.rich.model.CodeTextModel;
 import jfx.incubator.scene.control.rich.model.RichParagraph;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 
 /**
  * A simple {@code SyntaxDecorator} for Java source files.
@@ -41,12 +41,12 @@ import jfx.incubator.scene.control.rich.model.StyleAttrs;
  * and does not take into account version-specific language features.
  */
 public class JavaSyntaxDecorator implements SyntaxDecorator {
-    private static final StyleAttrs CHARACTER = mkStyle(Color.BLUE);
-    private static final StyleAttrs COMMENT = mkStyle(Color.RED);
-    private static final StyleAttrs KEYWORD = mkStyle(Color.GREEN);
-    private static final StyleAttrs NUMBER = mkStyle(Color.MAGENTA);
-    private static final StyleAttrs OTHER = mkStyle(Color.BLACK);
-    private static final StyleAttrs STRING = mkStyle(Color.BLUE);
+    private static final StyleAttributeMap CHARACTER = mkStyle(Color.BLUE);
+    private static final StyleAttributeMap COMMENT = mkStyle(Color.RED);
+    private static final StyleAttributeMap KEYWORD = mkStyle(Color.GREEN);
+    private static final StyleAttributeMap NUMBER = mkStyle(Color.MAGENTA);
+    private static final StyleAttributeMap OTHER = mkStyle(Color.BLACK);
+    private static final StyleAttributeMap STRING = mkStyle(Color.BLUE);
     private ArrayList<RichParagraph> paragraphs;
 
     public JavaSyntaxDecorator() {
@@ -73,8 +73,8 @@ public class JavaSyntaxDecorator implements SyntaxDecorator {
         return paragraphs.get(index);
     }
 
-    private static StyleAttrs mkStyle(Color c) {
-        return StyleAttrs.builder().setTextColor(c).build();
+    private static StyleAttributeMap mkStyle(Color c) {
+        return StyleAttributeMap.builder().setTextColor(c).build();
     }
 
     private void reload(CodeTextModel model) {
@@ -116,13 +116,13 @@ public class JavaSyntaxDecorator implements SyntaxDecorator {
         for (JavaSyntaxAnalyzer.Segment seg : line.getSegments()) {
             JavaSyntaxAnalyzer.Type t = seg.getType();
             String text = seg.getText();
-            StyleAttrs a = getStyleAttrs(t);
+            StyleAttributeMap a = getStyleAttrs(t);
             b.addSegment(text, a);
         }
         return b.build();
     }
 
-    private StyleAttrs getStyleAttrs(JavaSyntaxAnalyzer.Type t) {
+    private StyleAttributeMap getStyleAttrs(JavaSyntaxAnalyzer.Type t) {
         switch(t) {
         case CHARACTER:
             return CHARACTER;

@@ -31,7 +31,7 @@ import java.util.Set;
 import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
 import jfx.incubator.scene.control.rich.model.StyleAttribute;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 
 /**
  * Attribute Container
@@ -83,13 +83,13 @@ public class AttrSet {
         this.parent = parent;
     }
 
-    public StyleAttrs getStyleAttrs() {
-        return StyleAttrs.builder().
-            setBold(getBoolean(StyleAttrs.BOLD)).
-            setFontFamily(getString(StyleAttrs.FONT_FAMILY)).
-            setItalic(getBoolean(StyleAttrs.ITALIC)).
-            setTextColor(getColor(StyleAttrs.TEXT_COLOR)).
-            setUnderline(getBoolean(StyleAttrs.UNDERLINE)).
+    public StyleAttributeMap getStyleAttributeMap() {
+        return StyleAttributeMap.builder().
+            setBold(getBoolean(StyleAttributeMap.BOLD)).
+            setFontFamily(getString(StyleAttributeMap.FONT_FAMILY)).
+            setItalic(getBoolean(StyleAttributeMap.ITALIC)).
+            setTextColor(getColor(StyleAttributeMap.TEXT_COLOR)).
+            setUnderline(getBoolean(StyleAttributeMap.UNDERLINE)).
             build();
     }
 
@@ -114,19 +114,19 @@ public class AttrSet {
     }
 
     public void setItalic(boolean on) {
-        attrs.put(StyleAttrs.ITALIC, on);
+        attrs.put(StyleAttributeMap.ITALIC, on);
     }
 
     public void setBold(boolean on) {
-        attrs.put(StyleAttrs.BOLD, on);
+        attrs.put(StyleAttributeMap.BOLD, on);
     }
 
     public void setUnderline(boolean on) {
-        attrs.put(StyleAttrs.UNDERLINE, on);
+        attrs.put(StyleAttributeMap.UNDERLINE, on);
     }
 
     public void setForeground(Color c) {
-        attrs.put(StyleAttrs.TEXT_COLOR, c);
+        attrs.put(StyleAttributeMap.TEXT_COLOR, c);
     }
 
     public void setLeftIndent(double d) {
@@ -142,7 +142,7 @@ public class AttrSet {
     }
 
     public void setFontFamily(String fontFamily) {
-        attrs.put(StyleAttrs.FONT_FAMILY, fontFamily);
+        attrs.put(StyleAttributeMap.FONT_FAMILY, fontFamily);
     }
 
     public void setBackground(Color bg) {

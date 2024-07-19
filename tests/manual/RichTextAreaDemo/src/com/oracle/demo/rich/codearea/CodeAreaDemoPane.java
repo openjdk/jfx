@@ -53,7 +53,7 @@ import jfx.incubator.scene.control.rich.SyntaxDecorator;
 import jfx.incubator.scene.control.rich.TextPos;
 import jfx.incubator.scene.control.rich.model.CodeTextModel;
 import jfx.incubator.scene.control.rich.model.StyleAttribute;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 
 /**
  * Main Panel contains CodeArea, split panes for quick size adjustment, and an option pane.
@@ -317,7 +317,7 @@ public class CodeAreaDemoPane extends BorderPane {
     protected <V> void apply(StyleAttribute<V> attr, V val) {
         TextPos ca = control.getCaretPosition();
         TextPos an = control.getAnchorPosition();
-        StyleAttrs a = StyleAttrs.builder().set(attr, val).build();
+        StyleAttributeMap a = StyleAttributeMap.builder().set(attr, val).build();
         control.applyStyle(ca, an, a);
     }
 
@@ -328,7 +328,7 @@ public class CodeAreaDemoPane extends BorderPane {
     private <V> void applyStyle(StyleAttribute<V> a, V val) {
         TextPos ca = control.getCaretPosition();
         TextPos an = control.getAnchorPosition();
-        StyleAttrs m = StyleAttrs.of(a, val);
+        StyleAttributeMap m = StyleAttributeMap.of(a, val);
         control.applyStyle(ca, an, m);
     }
 

@@ -45,7 +45,7 @@ public abstract class DataFormatHandler {
      * @return the StyledInput
      * @throws IOException when operation is not supported or an I/O error occurs
      */
-    public abstract StyledInput createStyledInput(String input, StyleAttrs attr) throws IOException;
+    public abstract StyledInput createStyledInput(String input, StyleAttributeMap attr) throws IOException;
 
     /**
      * Creates an object to be put into the Clipboard for the given text range.

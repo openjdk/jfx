@@ -59,17 +59,17 @@ public interface StyledInput extends Closeable {
      * @param attrs the source style attributes
      * @return the StyledInput instance
      */
-    public static StyledInput of(String text, StyleAttrs attrs) {
+    public static StyledInput of(String text, StyleAttributeMap attrs) {
         return new StringStyledInput(text, attrs);
     }
 
     /**
-     * Creates a plain text styled input with {@link StyleAttrs#EMPTY}.
+     * Creates a plain text styled input with {@link StyleAttributeMap#EMPTY}.
      *
      * @param text the source text
      * @return the StyledInput instance
      */
     public static StyledInput of(String text) {
-        return new StringStyledInput(text, StyleAttrs.EMPTY);
+        return new StringStyledInput(text, StyleAttributeMap.EMPTY);
     }
 }

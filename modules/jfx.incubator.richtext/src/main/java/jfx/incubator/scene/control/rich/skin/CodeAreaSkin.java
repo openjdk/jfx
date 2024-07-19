@@ -31,7 +31,7 @@ import com.sun.jfx.incubator.scene.control.rich.RichTextAreaSkinHelper;
 import com.sun.jfx.incubator.scene.control.rich.util.ListenerHelper;
 import com.sun.jfx.incubator.scene.control.rich.util.RichUtils;
 import jfx.incubator.scene.control.rich.CodeArea;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 
 /**
  * The skin for {@link CodeArea}.
@@ -54,7 +54,7 @@ public class CodeAreaSkin extends RichTextAreaSkin {
     }
 
     @Override
-    public void applyStyles(CellContext cx, StyleAttrs attrs, boolean forParagraph) {
+    public void applyStyles(CellContext cx, StyleAttributeMap attrs, boolean forParagraph) {
         super.applyStyles(cx, attrs, forParagraph);
 
         if (forParagraph) {

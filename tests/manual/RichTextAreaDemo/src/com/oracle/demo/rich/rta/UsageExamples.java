@@ -36,7 +36,7 @@ import jfx.incubator.scene.control.rich.LineNumberDecorator;
 import jfx.incubator.scene.control.rich.RichTextArea;
 import jfx.incubator.scene.control.rich.TextPos;
 import jfx.incubator.scene.control.rich.model.SimpleViewOnlyStyledModel;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 
 /**
  * The usage examples used in the documentation.
@@ -56,13 +56,13 @@ public class UsageExamples {
 
     static RichTextArea appendStyledText() {
         // create styles
-        StyleAttrs heading = StyleAttrs.builder().setBold(true).setUnderline(true).setFontSize(18).build();
-        StyleAttrs mono = StyleAttrs.builder().setFontFamily("Monospaced").build();
+        StyleAttributeMap heading = StyleAttributeMap.builder().setBold(true).setUnderline(true).setFontSize(18).build();
+        StyleAttributeMap mono = StyleAttributeMap.builder().setFontFamily("Monospaced").build();
 
         RichTextArea textArea = new RichTextArea();
         // build the content
         textArea.appendText("RichTextArea\n", heading);
-        textArea.appendText("Example:\nText is ", StyleAttrs.EMPTY);
+        textArea.appendText("Example:\nText is ", StyleAttributeMap.EMPTY);
         textArea.appendText("monospaced.\n", mono);
         return textArea;
     }
@@ -70,7 +70,7 @@ public class UsageExamples {
     void richTextAreaExample() {
         RichTextArea textArea = new RichTextArea();
         // insert two paragraphs "A" and "B"
-        StyleAttrs bold = StyleAttrs.builder().setBold(true).build();
+        StyleAttributeMap bold = StyleAttributeMap.builder().setBold(true).build();
         textArea.appendText("A\nB", bold);
     }
 
@@ -168,10 +168,10 @@ public class UsageExamples {
                 System.out.println("caret: " + c);
             });
             t.getInputMap().register(KeyBinding.of(KeyCode.F1), () -> {
-                t.insertText(TextPos.ZERO, "F1", StyleAttrs.EMPTY);
+                t.insertText(TextPos.ZERO, "F1", StyleAttributeMap.EMPTY);
             });
             t.getInputMap().register(KeyBinding.of(KeyCode.F2), () -> {
-                t.insertText(TextPos.ZERO, "\n", StyleAttrs.EMPTY);
+                t.insertText(TextPos.ZERO, "\n", StyleAttributeMap.EMPTY);
             });
             t.getInputMap().register(KeyBinding.of(KeyCode.F3), () -> {
                 t.clearSelection();

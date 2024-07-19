@@ -129,23 +129,23 @@ public class RichTextFormatHandler extends DataFormatHandler {
     public RichTextFormatHandler(DataFormat format) {
         super(format);
 
-        addHandlerBoolean(StyleAttrs.BOLD, "b");
-        addHandler(StyleAttrs.BACKGROUND, "bg", COLOR_CONVERTER);
-        addHandlerString(StyleAttrs.BULLET, "bullet");
-        addHandlerString(StyleAttrs.FONT_FAMILY, "ff");
-        addHandler(StyleAttrs.FIRST_LINE_INDENT, "firstIndent", DOUBLE_CONVERTER);
-        addHandler(StyleAttrs.FONT_SIZE, "fs", DOUBLE_CONVERTER);
-        addHandlerBoolean(StyleAttrs.ITALIC, "i");
-        addHandler(StyleAttrs.LINE_SPACING, "lineSpacing", DOUBLE_CONVERTER);
-        addHandler(StyleAttrs.PARAGRAPH_DIRECTION, "dir", DIRECTION_CONVERTER);
-        addHandler(StyleAttrs.SPACE_ABOVE, "spaceAbove", DOUBLE_CONVERTER);
-        addHandler(StyleAttrs.SPACE_BELOW, "spaceBelow", DOUBLE_CONVERTER);
-        addHandler(StyleAttrs.SPACE_LEFT, "spaceLeft", DOUBLE_CONVERTER);
-        addHandler(StyleAttrs.SPACE_RIGHT, "spaceRight", DOUBLE_CONVERTER);
-        addHandlerBoolean(StyleAttrs.STRIKE_THROUGH, "ss");
-        addHandler(StyleAttrs.TEXT_ALIGNMENT, "alignment", TEXT_ALIGNMENT_CONVERTER);
-        addHandler(StyleAttrs.TEXT_COLOR, "tc", COLOR_CONVERTER);
-        addHandlerBoolean(StyleAttrs.UNDERLINE, "u");
+        addHandlerBoolean(StyleAttributeMap.BOLD, "b");
+        addHandler(StyleAttributeMap.BACKGROUND, "bg", COLOR_CONVERTER);
+        addHandlerString(StyleAttributeMap.BULLET, "bullet");
+        addHandlerString(StyleAttributeMap.FONT_FAMILY, "ff");
+        addHandler(StyleAttributeMap.FIRST_LINE_INDENT, "firstIndent", DOUBLE_CONVERTER);
+        addHandler(StyleAttributeMap.FONT_SIZE, "fs", DOUBLE_CONVERTER);
+        addHandlerBoolean(StyleAttributeMap.ITALIC, "i");
+        addHandler(StyleAttributeMap.LINE_SPACING, "lineSpacing", DOUBLE_CONVERTER);
+        addHandler(StyleAttributeMap.PARAGRAPH_DIRECTION, "dir", DIRECTION_CONVERTER);
+        addHandler(StyleAttributeMap.SPACE_ABOVE, "spaceAbove", DOUBLE_CONVERTER);
+        addHandler(StyleAttributeMap.SPACE_BELOW, "spaceBelow", DOUBLE_CONVERTER);
+        addHandler(StyleAttributeMap.SPACE_LEFT, "spaceLeft", DOUBLE_CONVERTER);
+        addHandler(StyleAttributeMap.SPACE_RIGHT, "spaceRight", DOUBLE_CONVERTER);
+        addHandlerBoolean(StyleAttributeMap.STRIKE_THROUGH, "ss");
+        addHandler(StyleAttributeMap.TEXT_ALIGNMENT, "alignment", TEXT_ALIGNMENT_CONVERTER);
+        addHandler(StyleAttributeMap.TEXT_COLOR, "tc", COLOR_CONVERTER);
+        addHandlerBoolean(StyleAttributeMap.UNDERLINE, "u");
     }
 
     private static void initAccessor() {
@@ -158,7 +158,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
     }
 
     @Override
-    public StyledInput createStyledInput(String input, StyleAttrs attr) {
+    public StyledInput createStyledInput(String input, StyleAttributeMap attr) {
         return new RichStyledInput(input);
     }
 
@@ -260,7 +260,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
     private class RichStyledOutput implements StyledOutput {
         private final StyleResolver resolver;
         private final Writer wr;
-        private HashMap<StyleAttrs, Integer> styles = new HashMap<>();
+        private HashMap<StyleAttributeMap, Integer> styles = new HashMap<>();
 
         public RichStyledOutput(StyleResolver r, Writer wr) {
             this.resolver = r;
@@ -279,7 +279,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
                 break;
             case PARAGRAPH_ATTRIBUTES:
                 {
-                    StyleAttrs attrs = seg.getStyleAttrs(resolver);
+                    StyleAttributeMap attrs = seg.getStyleAttributeMap(resolver);
                     emitAttributes(attrs, true);
                 }
                 break;
@@ -288,7 +288,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
                 break;
             case TEXT:
                 {
-                    StyleAttrs attrs = seg.getStyleAttrs(resolver);
+                    StyleAttributeMap attrs = seg.getStyleAttributeMap(resolver);
                     emitAttributes(attrs, false);
 
                     String text = seg.getText();
@@ -299,7 +299,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
             }
         }
 
-        private void emitAttributes(StyleAttrs attrs, boolean forParagraph) throws IOException {
+        private void emitAttributes(StyleAttributeMap attrs, boolean forParagraph) throws IOException {
             if ((attrs != null) && (!attrs.isEmpty())) {
                 Integer num = styles.get(attrs);
                 if (num == null) {
@@ -425,7 +425,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
         private final String text;
         private int index;
         private StringBuilder sb;
-        private final ArrayList<StyleAttrs> styles = new ArrayList<>();
+        private final ArrayList<StyleAttributeMap> styles = new ArrayList<>();
         private int line = 1;
 
         public RichStyledInput(String text) {
@@ -444,7 +444,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
                     line++;
                     return StyledSegment.LINE_BREAK;
                 case '{':
-                    StyleAttrs a = parseAttributes(true);
+                    StyleAttributeMap a = parseAttributes(true);
                     if (a != null) {
                         if (a.isEmpty()) {
                             a = null;
@@ -468,8 +468,8 @@ public class RichTextFormatHandler extends DataFormatHandler {
         public void close() throws IOException {
         }
 
-        private StyleAttrs parseAttributes(boolean forParagraph) throws IOException {
-            StyleAttrs.Builder b = null;
+        private StyleAttributeMap parseAttributes(boolean forParagraph) throws IOException {
+            StyleAttributeMap.Builder b = null;
             for (;;) {
                 int c = charAt(0);
                 if (c != '{') {
@@ -498,7 +498,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
                     if (forParagraph) {
                         index = ix + 1;
                         // special token clears paragraph attributes
-                        return StyleAttrs.EMPTY;
+                        return StyleAttributeMap.EMPTY;
                     } else {
                         throw err("empty attribute name");
                     }
@@ -528,7 +528,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
                             throw err("paragraph type mismatch");
                         }
                         if (b == null) {
-                            b = StyleAttrs.builder();
+                            b = StyleAttributeMap.builder();
                         }
                         b.set(a, v);
                     }
@@ -542,7 +542,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
             if (b == null) {
                 return null;
             }
-            StyleAttrs attrs = b.build();
+            StyleAttributeMap attrs = b.build();
             styles.add(attrs);
             return attrs;
         }

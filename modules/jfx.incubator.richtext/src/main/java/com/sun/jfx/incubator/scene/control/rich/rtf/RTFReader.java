@@ -40,7 +40,7 @@ import java.util.Set;
 import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
 import com.sun.jfx.incubator.scene.control.rich.SegmentStyledInput;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 import jfx.incubator.scene.control.rich.model.StyledInput;
 import jfx.incubator.scene.control.rich.model.StyledSegment;
 
@@ -1167,7 +1167,7 @@ public class RTFReader extends RTFParser {
 
             switch (keyword) {
             case "fs":
-                characterAttributes.addAttribute(StyleAttrs.FONT_SIZE, (parameter / 2));
+                characterAttributes.addAttribute(StyleAttributeMap.FONT_SIZE, (parameter / 2));
                 return true;
             }
 
@@ -1385,7 +1385,7 @@ public class RTFReader extends RTFParser {
         }
 
         public void deliverText(String text, AttrSet characterAttributes) {
-            StyleAttrs a = characterAttributes.getStyleAttrs();
+            StyleAttributeMap a = characterAttributes.getStyleAttributeMap();
             StyledSegment seg = StyledSegment.of(text, a);
             segments.add(seg);
         }

@@ -67,7 +67,7 @@ import jfx.incubator.scene.control.rich.TextPos;
  * Three methods participate in modification of the content:
  * {@link #replace(StyleResolver, TextPos, TextPos, String, boolean)},
  * {@link #replace(StyleResolver, TextPos, TextPos, StyledInput, boolean)},
- * {@link #applyStyle(TextPos, TextPos, StyleAttrs, boolean)}.
+ * {@link #applyStyle(TextPos, TextPos, StyleAttributeMap, boolean)}.
  * These methods decompose the main modification into operations with individual paragraphs
  * and delegate these to subclasses.
  * <p>
@@ -76,7 +76,7 @@ import jfx.incubator.scene.control.rich.TextPos;
  *
  * <h2>Creating a Paragraph</h2>
  * The model presents its content to the view(s) via immutable {@link RichParagraph}.
- * There are three ways of styling: using inline {@link StyleAttrs attributes}, relying on
+ * There are three ways of styling: using inline {@link StyleAttributeMap attributes}, relying on
  * style names in the application style sheet, or using direct styles.
  *
  * <h2>Extending the Model</h2>
@@ -153,7 +153,7 @@ public abstract class StyledTextModel {
      * @param attrs the style attributes
      * @return the number of characters inserted
      */
-    protected abstract int insertTextSegment(int index, int offset, String text, StyleAttrs attrs);
+    protected abstract int insertTextSegment(int index, int offset, String text, StyleAttributeMap attrs);
 
     /**
      * Inserts a line break at the specified position.
@@ -185,7 +185,7 @@ public abstract class StyledTextModel {
      * @param index the paragraph index
      * @param paragraphAttrs the paragraph attributes
      */
-    protected abstract void setParagraphStyle(int index, StyleAttrs paragraphAttrs);
+    protected abstract void setParagraphStyle(int index, StyleAttributeMap paragraphAttrs);
 
     /**
      * Applies style to the specified text range within a single paragraph.
@@ -199,21 +199,21 @@ public abstract class StyledTextModel {
      * @param a the character attributes
      * @param merge determines whether to merge with or overwrite the existing attributes
      */
-    protected abstract void applyStyle(int index, int start, int end, StyleAttrs a, boolean merge);
+    protected abstract void applyStyle(int index, int start, int end, StyleAttributeMap a, boolean merge);
 
     /**
-     * Returns the {@link StyleAttrs} of the first character at the specified position.
+     * Returns the {@link StyleAttributeMap} of the first character at the specified position.
      * When at the end of the document, returns the attributes of the last character.
      *
      * @param resolver the style resolver
      * @param pos the text position
      * @return the style attributes, non-null
      */
-    public abstract StyleAttrs getStyleAttrs(StyleResolver resolver, TextPos pos);
+    public abstract StyleAttributeMap getStyleAttributeMap(StyleResolver resolver, TextPos pos);
 
     /**
      * Returns the set of supported attributes to be used for filtering in
-     * {@link #applyStyle(TextPos, TextPos, StyleAttrs, boolean)},
+     * {@link #applyStyle(TextPos, TextPos, StyleAttributeMap, boolean)},
      * {@link #replace(StyleResolver, TextPos, TextPos, StyledInput, boolean)}, and
      * {@link #replace(StyleResolver, TextPos, TextPos, String, boolean)}.
      * <p>
@@ -477,7 +477,7 @@ public abstract class StyledTextModel {
         par.export(start, end, out);
         if (withParAttrs) {
             // sent last after the paragraph has been created
-            StyleAttrs pa = par.getParagraphAttributes();
+            StyleAttributeMap pa = par.getParagraphAttributes();
             out.consume(StyledSegment.ofParagraphAttributes(pa));
         }
     }
@@ -561,7 +561,7 @@ public abstract class StyledTextModel {
      * <p>
      * This is a convenience method which eventually calls
      * {@link #replace(StyleResolver, TextPos, TextPos, StyledInput, boolean)}
-     * with the attributes provided by {@link #getStyleAttrs(StyleResolver, TextPos)} at the
+     * with the attributes provided by {@link #getStyleAttributeMap(StyleResolver, TextPos)} at the
      * {@code start} position.
      *
      * @param resolver the StyleResolver to use
@@ -574,7 +574,7 @@ public abstract class StyledTextModel {
     public TextPos replace(StyleResolver resolver, TextPos start, TextPos end, String text, boolean allowUndo) {
         if (isUserEditable()) {
             // TODO pick the lowest from start,end.  Possibly add (end) argument to getStyleAttributes?
-            StyleAttrs a = getStyleAttrs(resolver, start);
+            StyleAttributeMap a = getStyleAttributeMap(resolver, start);
             StyledInput in = StyledInput.of(text, a);
             return replace(resolver, start, end, in, allowUndo);
         }
@@ -626,7 +626,7 @@ public abstract class StyledTextModel {
                     btm = 0;
                     break;
                 case PARAGRAPH_ATTRIBUTES:
-                    StyleAttrs pa = seg.getStyleAttrs(resolver);
+                    StyleAttributeMap pa = seg.getStyleAttributeMap(resolver);
                     setParagraphStyle(index, pa);
                     break;
                 case REGION:
@@ -638,9 +638,9 @@ public abstract class StyledTextModel {
                     break;
                 case TEXT:
                     String text = seg.getText();
-                    StyleAttrs a = seg.getStyleAttrs(resolver);
+                    StyleAttributeMap a = seg.getStyleAttributeMap(resolver);
                     if (a == null) {
-                        a = StyleAttrs.EMPTY;
+                        a = StyleAttributeMap.EMPTY;
                     } else {
                         a = filterUnsupportedAttributes(a);
                     }
@@ -683,7 +683,7 @@ public abstract class StyledTextModel {
      * @param attrs the style attributes to set
      * @param mergeAttributes whether to merge or replace the attributes
      */
-    public final void applyStyle(TextPos start, TextPos end, StyleAttrs attrs, boolean mergeAttributes) {
+    public final void applyStyle(TextPos start, TextPos end, StyleAttributeMap attrs, boolean mergeAttributes) {
         if (isUserEditable()) {
             if (start.compareTo(end) > 0) {
                 TextPos p = start;
@@ -697,7 +697,7 @@ public abstract class StyledTextModel {
             TextPos evEnd;
             boolean changed;
 
-            StyleAttrs pa = attrs.getParagraphAttrs();
+            StyleAttributeMap pa = attrs.getParagraphAttrs();
             if (pa == null) {
                 evStart = start;
                 evEnd = end;
@@ -718,7 +718,7 @@ public abstract class StyledTextModel {
             }
 
             // apply character styles
-            StyleAttrs ca = attrs.getCharacterAttrs();
+            StyleAttributeMap ca = attrs.getCharacterAttrs();
             if (ca != null) {
                 int ix = start.index();
                 if (ix == end.index()) {
@@ -748,13 +748,13 @@ public abstract class StyledTextModel {
      * @param attrs the input attributes
      * @return the attributes that exclude unsupported ones
      */
-    private StyleAttrs filterUnsupportedAttributes(StyleAttrs attrs) {
+    private StyleAttributeMap filterUnsupportedAttributes(StyleAttributeMap attrs) {
         Set<StyleAttribute<?>> supported = getSupportedAttributes();
         if (supported == null) {
             return attrs;
         }
 
-        StyleAttrs.Builder b = StyleAttrs.builder();
+        StyleAttributeMap.Builder b = StyleAttributeMap.builder();
         for (StyleAttribute a : attrs.getAttributes()) {
             if (supported.contains(a)) {
                 b.set(a, attrs.get(a));

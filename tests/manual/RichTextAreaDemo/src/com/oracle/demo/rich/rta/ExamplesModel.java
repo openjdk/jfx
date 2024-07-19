@@ -29,7 +29,7 @@ import javafx.beans.property.SimpleStringProperty;
 import jfx.incubator.scene.control.rich.StyleResolver;
 import jfx.incubator.scene.control.rich.TextPos;
 import jfx.incubator.scene.control.rich.model.RichParagraph;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 import jfx.incubator.scene.control.rich.model.StyledTextModelViewOnlyBase;
 import javafx.scene.control.TextField;
 import javafx.scene.paint.Color;
@@ -53,7 +53,7 @@ public class ExamplesModel extends StyledTextModelViewOnlyBase {
     }
 
     @Override
-    public StyleAttrs getStyleAttrs(StyleResolver resolver, TextPos pos) {
+    public StyleAttributeMap getStyleAttributeMap(StyleResolver resolver, TextPos pos) {
         return null;
     }
 
@@ -62,7 +62,7 @@ public class ExamplesModel extends StyledTextModelViewOnlyBase {
         switch(index) {
         case 0:
             {
-                StyleAttrs a1 = StyleAttrs.builder().setBold(true).build();
+                StyleAttributeMap a1 = StyleAttributeMap.builder().setBold(true).build();
                 RichParagraph.Builder b = RichParagraph.builder();
                 b.addSegment("Example: ", a1);
                 b.addSegment("spelling, highlights");

@@ -36,7 +36,7 @@ import jfx.incubator.scene.control.rich.model.RichTextModel;
 import jfx.incubator.scene.control.rich.model.RichTextModelShim;
 import jfx.incubator.scene.control.rich.model.RichParagraph;
 import jfx.incubator.scene.control.rich.model.StyleAttribute;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 import jfx.incubator.scene.control.rich.model.StyledInput;
 import jfx.incubator.scene.control.rich.model.StyledSegment;
 import jfx.incubator.scene.control.rich.model.StyledTextModel;
@@ -45,8 +45,8 @@ import jfx.incubator.scene.control.rich.model.StyledTextModel;
  * Tests RichTextModel.
  */
 public class TestRichTextModel {
-    private static final StyleAttrs BOLD = StyleAttrs.builder().setBold(true).build();
-    private static final StyleAttrs ITALIC = StyleAttrs.builder().setItalic(true).build();
+    private static final StyleAttributeMap BOLD = StyleAttributeMap.builder().setBold(true).build();
+    private static final StyleAttributeMap ITALIC = StyleAttributeMap.builder().setItalic(true).build();
 
     @Test
     public void insertLineBreak() {
@@ -118,19 +118,19 @@ public class TestRichTextModel {
         return RichParagraph.builder().build();
     }
 
-    private static RichParagraph p(String text, StyleAttrs a) {
+    private static RichParagraph p(String text, StyleAttributeMap a) {
         return RichParagraph.builder().addSegment(text, a).build();
     }
 
     private static RichParagraph p(StyledSegment... segments) {
         RichParagraph.Builder b = RichParagraph.builder();
         for (StyledSegment s : segments) {
-            b.addSegment(s.getText(), s.getStyleAttrs(null));
+            b.addSegment(s.getText(), s.getStyleAttributeMap(null));
         }
         return b.build();
     }
 
-    private static StyledSegment s(String text, StyleAttrs a) {
+    private static StyledSegment s(String text, StyleAttributeMap a) {
         return StyledSegment.of(text, a);
     }
 
@@ -203,7 +203,7 @@ public class TestRichTextModel {
             sb.append("\n");
             for(StyledSegment s: ss) {
                 sb.append("    {text=\"").append(s.getText());
-                sb.append("\", a=").append(s.getStyleAttrs(null)).append("\n");
+                sb.append("\", a=").append(s.getStyleAttributeMap(null)).append("\n");
             }
         }
     }
@@ -244,7 +244,7 @@ public class TestRichTextModel {
                     if (!eq(a.getText(), b.getText())) {
                         return "segment text[" + j + "] at ix=" + i;
                     }
-                    if (!eq(a.getStyleAttrs(null), b.getStyleAttrs(null))) {
+                    if (!eq(a.getStyleAttributeMap(null), b.getStyleAttributeMap(null))) {
                         return "segment attrs[" + j + "] at ix=" + i;
                     }
                 }

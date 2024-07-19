@@ -26,7 +26,7 @@ package com.oracle.demo.rich.rta;
 
 import jfx.incubator.scene.control.rich.model.SimpleViewOnlyStyledModel;
 import jfx.incubator.scene.control.rich.model.StyleAttribute;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 
 public class NotebookModel extends SimpleViewOnlyStyledModel {
 
@@ -54,7 +54,7 @@ public class NotebookModel extends SimpleViewOnlyStyledModel {
         addSegment("(1 - x", EQ);
         addSegment("n", EQ, SUB);
         addSegment(")", null, EQ);
-        setParagraphAttributes(StyleAttrs.of(OUTLINE, Boolean.TRUE));
+        setParagraphAttributes(StyleAttributeMap.of(OUTLINE, Boolean.TRUE));
         nl(2);
         addSegment("The bifurcation parameter λ is shown on the horizontal axis of the plot and the vertical axis shows the set of values of the logistic function visited asymptotically from almost all initial conditions.", null, GRAY);
         nl(2);

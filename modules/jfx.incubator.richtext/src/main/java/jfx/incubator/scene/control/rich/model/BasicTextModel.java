@@ -72,7 +72,7 @@ public class BasicTextModel extends StyledTextModel {
          * @param attrs the style attributes
          * @return the number of characters inserted
          */
-        public int insertTextSegment(int index, int offset, String text, StyleAttrs attrs);
+        public int insertTextSegment(int index, int offset, String text, StyleAttributeMap attrs);
 
         /**
          * Inserts a line break.
@@ -157,7 +157,7 @@ public class BasicTextModel extends StyledTextModel {
     }
 
     @Override
-    protected int insertTextSegment(int index, int offset, String text, StyleAttrs attrs) {
+    protected int insertTextSegment(int index, int offset, String text, StyleAttributeMap attrs) {
         return content.insertTextSegment(index, offset, text, attrs);
     }
 
@@ -177,17 +177,17 @@ public class BasicTextModel extends StyledTextModel {
     }
 
     @Override
-    public StyleAttrs getStyleAttrs(StyleResolver resolver, TextPos pos) {
-        return StyleAttrs.EMPTY;
+    public StyleAttributeMap getStyleAttributeMap(StyleResolver resolver, TextPos pos) {
+        return StyleAttributeMap.EMPTY;
     }
 
     @Override
-    protected final void setParagraphStyle(int index, StyleAttrs a) {
+    protected final void setParagraphStyle(int index, StyleAttributeMap a) {
         // no-op
     }
 
     @Override
-    protected final void applyStyle(int index, int start, int end, StyleAttrs a, boolean merge) {
+    protected final void applyStyle(int index, int start, int end, StyleAttributeMap a, boolean merge) {
         // no-op
     }
 
@@ -217,7 +217,7 @@ public class BasicTextModel extends StyledTextModel {
         }
 
         @Override
-        public int insertTextSegment(int index, int offset, String text, StyleAttrs attrs) {
+        public int insertTextSegment(int index, int offset, String text, StyleAttributeMap attrs) {
             String s = getText(index);
             String s2 = insertText(s, offset, text);
             setText(index, s2);

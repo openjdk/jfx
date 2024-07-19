@@ -116,7 +116,7 @@ public abstract class RichParagraph {
      * Returns the paragraph attributes.
      * @return the paragraph attributes, can be null
      */
-    public StyleAttrs getParagraphAttributes() {
+    public StyleAttributeMap getParagraphAttributes() {
         return null;
     }
 
@@ -153,7 +153,7 @@ public abstract class RichParagraph {
     }
 
     // for use by SimpleReadOnlyStyledModel
-    StyleAttrs getStyleAttrs(StyleResolver resolver, int offset) {
+    StyleAttributeMap getStyleAttributeMap(StyleResolver resolver, int offset) {
         int off = 0;
         List<StyledSegment> segments = getSegments();
         if (segments != null) {
@@ -162,12 +162,12 @@ public abstract class RichParagraph {
                 StyledSegment seg = segments.get(i);
                 int len = seg.getTextLength();
                 if (offset < (off + len) || (i == sz - 1)) {
-                    return seg.getStyleAttrs(resolver);
+                    return seg.getStyleAttributeMap(resolver);
                 }
                 off += len;
             }
         }
-        return StyleAttrs.EMPTY;
+        return StyleAttributeMap.EMPTY;
     }
 
     private static void initAccessor() {
@@ -198,7 +198,7 @@ public abstract class RichParagraph {
     public static class Builder {
         private ArrayList<StyledSegment> segments;
         private ArrayList<Consumer<TextCell>> highlights;
-        private StyleAttrs paragraphAttributes;
+        private StyleAttributeMap paragraphAttributes;
 
         Builder() {
         }
@@ -246,7 +246,7 @@ public abstract class RichParagraph {
          * @return this {@code Builder} instance
          */
         public Builder addSegment(String text, String style, String[] css) {
-            StyleAttrs a = StyleAttrs.fromStyles(style, css);
+            StyleAttributeMap a = StyleAttributeMap.fromStyles(style, css);
             addSegment(text, a);
             return this;
         }
@@ -257,7 +257,7 @@ public abstract class RichParagraph {
          * @param attrs the styled attributes
          * @return this {@code Builder} instance
          */
-        public Builder addSegment(String text, StyleAttrs attrs) {
+        public Builder addSegment(String text, StyleAttributeMap attrs) {
             StyledSegment seg = StyledSegment.of(text, attrs);
             segments().add(seg);
             return this;
@@ -271,7 +271,7 @@ public abstract class RichParagraph {
          * @param attrs the styled attributes
          * @return this {@code Builder} instance
          */
-        public Builder addSegment(String text, int start, int end, StyleAttrs attrs) {
+        public Builder addSegment(String text, int start, int end, StyleAttributeMap attrs) {
             String s = text.substring(start, end);
             addSegment(s, attrs);
             return this;
@@ -322,7 +322,7 @@ public abstract class RichParagraph {
          * @param a the paragraph attributes
          * @return this {@code Builder} instance
          */
-        public Builder setParagraphAttributes(StyleAttrs a) {
+        public Builder setParagraphAttributes(StyleAttributeMap a) {
             paragraphAttributes = a;
             return this;
         }
@@ -335,7 +335,7 @@ public abstract class RichParagraph {
         public RichParagraph build() {
             return new RichParagraph() {
                 @Override
-                public StyleAttrs getParagraphAttributes() {
+                public StyleAttributeMap getParagraphAttributes() {
                     return paragraphAttributes;
                 }
 

@@ -38,7 +38,7 @@ import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 import com.sun.jfx.incubator.scene.control.rich.util.RichUtils;
 import jfx.incubator.scene.control.rich.StyleResolver;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 import jfx.incubator.scene.control.rich.model.StyledOutput;
 import jfx.incubator.scene.control.rich.model.StyledSegment;
 
@@ -54,7 +54,7 @@ public class RtfStyledOutput implements StyledOutput {
     private final StyleResolver resolver;
     private final Writer writer;
     private boolean startOfLine = true;
-    private StyleAttrs prevStyle;
+    private StyleAttributeMap prevStyle;
     private Color color;
     private Color background;
     private boolean bold;
@@ -78,7 +78,7 @@ public class RtfStyledOutput implements StyledOutput {
                     // TODO
                     break;
                 case TEXT:
-                    StyleAttrs a = seg.getStyleAttrs(resolver);
+                    StyleAttributeMap a = seg.getStyleAttributeMap(resolver);
                     if (a != null) {
                         // colors
                         Color c = getTextColor(a);
@@ -252,7 +252,7 @@ public class RtfStyledOutput implements StyledOutput {
             startOfLine = false;
         }
 
-        StyleAttrs a = seg.getStyleAttrs(resolver);
+        StyleAttributeMap a = seg.getStyleAttributeMap(resolver);
 
         if (RichUtils.notEquals(a, prevStyle) || RichUtils.notEquals(getTextColor(a), getTextColor(prevStyle))) {
             Color col;
@@ -516,7 +516,7 @@ public class RtfStyledOutput implements StyledOutput {
         writer.close();
     }
 
-    private static Color getTextColor(StyleAttrs a) {
+    private static Color getTextColor(StyleAttributeMap a) {
         Color c = a.getTextColor();
         return c == null ? Color.BLACK : c;
     }

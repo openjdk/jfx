@@ -27,7 +27,7 @@ package com.oracle.demo.rich.rta;
 
 import jfx.incubator.scene.control.rich.model.RtfFormatHandler;
 import jfx.incubator.scene.control.rich.model.SimpleViewOnlyStyledModel;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
 import com.oracle.demo.rich.util.FX;
@@ -36,15 +36,15 @@ import com.oracle.demo.rich.util.FX;
  * This simple, read-only StyledModel demonstrates various paragraph attributes.
  */
 public class ParagraphAttributesDemoModel extends SimpleViewOnlyStyledModel {
-    private final static StyleAttrs TITLE = StyleAttrs.builder().
+    private final static StyleAttributeMap TITLE = StyleAttributeMap.builder().
         setFontSize(24).
         setUnderline(true).
         build();
-    private final static StyleAttrs BULLET = StyleAttrs.builder().
+    private final static StyleAttributeMap BULLET = StyleAttributeMap.builder().
         setSpaceLeft(20).
         setBullet("•").
         build();
-    private final static StyleAttrs FIRST_LINE_INDENT = StyleAttrs.builder().
+    private final static StyleAttributeMap FIRST_LINE_INDENT = StyleAttributeMap.builder().
         setFirstLineIndent(100).
         build();
 
@@ -86,13 +86,13 @@ public class ParagraphAttributesDemoModel extends SimpleViewOnlyStyledModel {
         m.nl(2);
 
         m.addSegment("✓ Opaque Background Color");
-        m.setParagraphAttributes(StyleAttrs.builder().
+        m.setParagraphAttributes(StyleAttributeMap.builder().
             setBackground(Color.LIGHTGREEN).
             build());
         m.nl();
 
         m.addSegment("✓ Translucent Background Color");
-        m.setParagraphAttributes(StyleAttrs.builder().
+        m.setParagraphAttributes(StyleAttributeMap.builder().
             setBackground(FX.alpha(Color.LIGHTGREEN, 0.5)).
             build());
         m.nl();
@@ -100,7 +100,7 @@ public class ParagraphAttributesDemoModel extends SimpleViewOnlyStyledModel {
         // space
 
         m.addSegment("✓ Space Above");
-        m.setParagraphAttributes(StyleAttrs.builder().
+        m.setParagraphAttributes(StyleAttributeMap.builder().
             setSpaceAbove(20).
             setBackground(Color.gray(0.95, 0.5)).
             setBullet("•").
@@ -108,7 +108,7 @@ public class ParagraphAttributesDemoModel extends SimpleViewOnlyStyledModel {
         m.nl();
 
         m.addSegment("✓ Space Below");
-        m.setParagraphAttributes(StyleAttrs.builder().
+        m.setParagraphAttributes(StyleAttributeMap.builder().
             setSpaceBelow(20).
             setBackground(Color.gray(0.9, 0.5)).
             setBullet("◦").
@@ -116,7 +116,7 @@ public class ParagraphAttributesDemoModel extends SimpleViewOnlyStyledModel {
         m.nl();
 
         m.addSegment("✓ Space Left " + words(50));
-        m.setParagraphAttributes(StyleAttrs.builder().
+        m.setParagraphAttributes(StyleAttributeMap.builder().
             setSpaceLeft(20).
             setBackground(Color.gray(0.85, 0.5)).
             setBullet("∙").
@@ -124,7 +124,7 @@ public class ParagraphAttributesDemoModel extends SimpleViewOnlyStyledModel {
         m.nl();
 
         m.addSegment("✓ Space Right " + words(10));
-        m.setParagraphAttributes(StyleAttrs.builder().
+        m.setParagraphAttributes(StyleAttributeMap.builder().
             setSpaceRight(20).
             setBackground(Color.gray(0.8, 0.5)).
             setBullet("‣").
@@ -134,28 +134,28 @@ public class ParagraphAttributesDemoModel extends SimpleViewOnlyStyledModel {
         // text alignment
 
         m.addSegment("✓ Text Alignment Left " + words(20));
-        m.setParagraphAttributes(StyleAttrs.builder().
+        m.setParagraphAttributes(StyleAttributeMap.builder().
             setBackground(Color.gray(0.95, 0.5)).
             setTextAlignment(TextAlignment.LEFT).
             build());
         m.nl();
 
         m.addSegment("✓ Text Alignment Right " + words(20));
-        m.setParagraphAttributes(StyleAttrs.builder().
+        m.setParagraphAttributes(StyleAttributeMap.builder().
             setBackground(Color.gray(0.9, 0.5)).
             setTextAlignment(TextAlignment.RIGHT).
             build());
         m.nl();
 
         m.addSegment("✓ Text Alignment Center " + words(20));
-        m.setParagraphAttributes(StyleAttrs.builder().
+        m.setParagraphAttributes(StyleAttributeMap.builder().
             setBackground(Color.gray(0.85, 0.5)).
             setTextAlignment(TextAlignment.CENTER).
             build());
         m.nl();
 
         m.addSegment("✓ Text Alignment Justify " + words(20));
-        m.setParagraphAttributes(StyleAttrs.builder().
+        m.setParagraphAttributes(StyleAttributeMap.builder().
             setBackground(Color.gray(0.8, 0.5)).
             setTextAlignment(TextAlignment.JUSTIFY).
             build());
@@ -165,7 +165,7 @@ public class ParagraphAttributesDemoModel extends SimpleViewOnlyStyledModel {
 
         m.addSegment("✓ Line Spacing 0 " + words(200));
         m.highlight(50, 100, FX.alpha(Color.RED, 0.4));
-        m.setParagraphAttributes(StyleAttrs.builder().
+        m.setParagraphAttributes(StyleAttributeMap.builder().
             setBackground(Color.gray(0.95, 0.5)).
             setLineSpacing(0).
             build());
@@ -173,7 +173,7 @@ public class ParagraphAttributesDemoModel extends SimpleViewOnlyStyledModel {
 
         m.addSegment("✓ Line Spacing 20 " + words(200));
         m.highlight(50, 100, FX.alpha(Color.RED, 0.4));
-        m.setParagraphAttributes(StyleAttrs.builder().
+        m.setParagraphAttributes(StyleAttributeMap.builder().
             setBackground(Color.gray(0.9, 0.5)).
             setLineSpacing(20).
             build());
@@ -181,7 +181,7 @@ public class ParagraphAttributesDemoModel extends SimpleViewOnlyStyledModel {
 
         m.addSegment("✓ Line Spacing 40 " + words(200));
         m.highlight(50, 100, FX.alpha(Color.RED, 0.4));
-        m.setParagraphAttributes(StyleAttrs.builder().
+        m.setParagraphAttributes(StyleAttributeMap.builder().
             setBackground(Color.gray(0.9, 0.5)).
             setLineSpacing(40).
             build());

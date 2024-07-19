@@ -26,23 +26,23 @@
 package jfx.incubator.scene.control.rich.skin;
 
 import javafx.scene.Node;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 
 /**
  * This interface provides a mechanism for the Skin to support custom {@code StyleAttribute}s.
  * During the layout pass, the cell context is passed to the Skin so the latter can add inline style(s)
  * to either the paragraph Node (typically {@code TextFlow}) or the text segment Node ({@code Text}).
  *
- * @see RichTextAreaSkin#applyStyles(CellContext, StyleAttrs, boolean)
+ * @see RichTextAreaSkin#applyStyles(CellContext, StyleAttributeMap, boolean)
  */
 public interface CellContext {
     /**
-     * Adds a direct style.
+     * Adds an inline style.
      * <p>
-     * The direct style must be a valid CSS style string, for example {@code "-fx-font-size:15px;"}.
+     * The inline style must be a valid CSS style string, for example {@code "-fx-font-size:15px;"}.
      * This string might contain multiple CSS properties.
      *
-     * @param fxStyle the direct style string
+     * @param fxStyle the inline style string
      */
     public void addStyle(String fxStyle);
 
@@ -58,5 +58,5 @@ public interface CellContext {
      * Returns the current attributes.
      * @return the current attributes.
      */
-    public StyleAttrs getAttributes();
+    public StyleAttributeMap getAttributes();
 }

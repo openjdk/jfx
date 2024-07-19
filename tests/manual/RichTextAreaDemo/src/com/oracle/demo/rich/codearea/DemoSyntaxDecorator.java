@@ -31,15 +31,15 @@ import jfx.incubator.scene.control.rich.SyntaxDecorator;
 import jfx.incubator.scene.control.rich.TextPos;
 import jfx.incubator.scene.control.rich.model.CodeTextModel;
 import jfx.incubator.scene.control.rich.model.RichParagraph;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 
 /**
  * Simple {@code SyntaxDecorator} which emphasizes digits and java keywords.
  * This is just a demo.
  */
 public class DemoSyntaxDecorator implements SyntaxDecorator {
-    private static final StyleAttrs DIGITS = StyleAttrs.builder().setTextColor(Color.MAGENTA).build();
-    private static final StyleAttrs KEYWORDS = StyleAttrs.builder().setTextColor(Color.GREEN).build();
+    private static final StyleAttributeMap DIGITS = StyleAttributeMap.builder().setTextColor(Color.MAGENTA).build();
+    private static final StyleAttributeMap KEYWORDS = StyleAttributeMap.builder().setTextColor(Color.GREEN).build();
     private static Pattern PATTERN = initPattern();
 
     public DemoSyntaxDecorator() {

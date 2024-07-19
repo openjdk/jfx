@@ -35,7 +35,7 @@ import javafx.animation.Timeline;
 import javafx.util.Duration;
 import jfx.incubator.scene.control.rich.TextPos;
 import jfx.incubator.scene.control.rich.model.BasicTextModel;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 
 /**
  * Mock content which simulates non-instantaneous retrieval of the underlying data,
@@ -101,7 +101,7 @@ public class JsonContentWithAsyncUpdate implements BasicTextModel.Content {
     }
 
     @Override
-    public int insertTextSegment(int index, int offset, String text, StyleAttrs attrs) {
+    public int insertTextSegment(int index, int offset, String text, StyleAttributeMap attrs) {
         throw new UnsupportedOperationException();
     }
 

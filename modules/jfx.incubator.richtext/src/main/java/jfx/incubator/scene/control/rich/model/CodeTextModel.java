@@ -59,11 +59,11 @@ public class CodeTextModel extends BasicTextModel {
     // only a subset of attributes are supported
     private static Set<StyleAttribute<?>> initSupportedAttributes() {
         return Set.of(
-            StyleAttrs.BOLD,
-            StyleAttrs.ITALIC,
-            StyleAttrs.STRIKE_THROUGH,
-            StyleAttrs.TEXT_COLOR,
-            StyleAttrs.UNDERLINE
+            StyleAttributeMap.BOLD,
+            StyleAttributeMap.ITALIC,
+            StyleAttributeMap.STRIKE_THROUGH,
+            StyleAttributeMap.TEXT_COLOR,
+            StyleAttributeMap.UNDERLINE
         );
     }
 

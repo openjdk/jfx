@@ -26,17 +26,17 @@
 package com.sun.jfx.incubator.scene.control.rich;
 
 import java.io.IOException;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 import jfx.incubator.scene.control.rich.model.StyledInput;
 import jfx.incubator.scene.control.rich.model.StyledSegment;
 
 public class StringStyledInput implements StyledInput {
     private final String text;
-    private final StyleAttrs attrs;
+    private final StyleAttributeMap attrs;
     private int offset;
 
     // TODO check for illegal chars (<0x20 except for \r \n \t)
-    public StringStyledInput(String text, StyleAttrs a) {
+    public StringStyledInput(String text, StyleAttributeMap a) {
         this.text = (text == null ? "" : text);
         this.attrs = a;
     }

@@ -49,7 +49,7 @@ public class HtmlExportFormatHandler extends DataFormatHandler {
     }
 
     @Override
-    public StyledInput createStyledInput(String input, StyleAttrs attr) {
+    public StyledInput createStyledInput(String input, StyleAttributeMap attr) {
         throw new UnsupportedOperationException("import from HTML is not supported by this DataFormatHandler");
     }
 

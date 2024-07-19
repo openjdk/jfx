@@ -34,16 +34,16 @@ import jfx.incubator.scene.control.rich.SyntaxDecorator;
 import jfx.incubator.scene.control.rich.TextPos;
 import jfx.incubator.scene.control.rich.model.CodeTextModel;
 import jfx.incubator.scene.control.rich.model.RichParagraph;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 
 /**
  * Super simple (and therefore not always correct) syntax decorator for JSON
  * which works one line at a time.
  */
 public class SimpleJsonDecorator implements SyntaxDecorator {
-    private static final StyleAttrs NORMAL = mkStyle(Color.BLACK);
-    private static final StyleAttrs NUMBER = mkStyle(Color.MAGENTA);
-    private static final StyleAttrs STRING = mkStyle(Color.BLUE);
+    private static final StyleAttributeMap NORMAL = mkStyle(Color.BLACK);
+    private static final StyleAttributeMap NUMBER = mkStyle(Color.MAGENTA);
+    private static final StyleAttributeMap STRING = mkStyle(Color.BLUE);
 
     public SimpleJsonDecorator() {
     }
@@ -63,11 +63,11 @@ public class SimpleJsonDecorator implements SyntaxDecorator {
         return b.build();
     }
 
-    private static StyleAttrs mkStyle(Color c) {
-        return StyleAttrs.builder().setTextColor(c).build();
+    private static StyleAttributeMap mkStyle(Color c) {
+        return StyleAttributeMap.builder().setTextColor(c).build();
     }
 
-    private static record Seg(StyleAttrs style, String text) {
+    private static record Seg(StyleAttributeMap style, String text) {
     }
 
     private enum State {
@@ -98,11 +98,11 @@ public class SimpleJsonDecorator implements SyntaxDecorator {
         }
 
         private void addSegment() {
-            StyleAttrs type = toStyleAttrs(state);
+            StyleAttributeMap type = toStyleAttrs(state);
             addSegment(type);
         }
 
-        private StyleAttrs toStyleAttrs(State s) {
+        private StyleAttributeMap toStyleAttrs(State s) {
             switch (s) {
             case STRING:
                 return STRING;
@@ -114,7 +114,7 @@ public class SimpleJsonDecorator implements SyntaxDecorator {
             }
         }
 
-        private void addSegment(StyleAttrs style) {
+        private void addSegment(StyleAttributeMap style) {
             if (pos > start) {
                 String s = text.substring(start, pos);
                 segments.add(new Seg(style, s));

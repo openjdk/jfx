@@ -64,7 +64,7 @@ import com.sun.jfx.incubator.scene.control.rich.util.RichUtils;
 import jfx.incubator.scene.control.input.FunctionTag;
 import jfx.incubator.scene.control.input.InputMap;
 import jfx.incubator.scene.control.rich.model.RichTextModel;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 import jfx.incubator.scene.control.rich.model.StyledInput;
 import jfx.incubator.scene.control.rich.model.StyledTextModel;
 import jfx.incubator.scene.control.rich.skin.RichTextAreaSkin;
@@ -76,7 +76,7 @@ import jfx.incubator.scene.control.rich.skin.RichTextAreaSkin;
  * <ul>
  * <li> {@link StyledTextModel paragraph-oriented model}, up to ~2 billion rows
  * <li> virtualized text cell flow
- * <li> support for text styling with an application stylesheet or {@link StyleAttrs inline attributes}
+ * <li> support for text styling with an application stylesheet or {@link StyleAttributeMap inline attributes}
  * <li> supports for multiple views connected to the same model
  * <li> {@link SelectionModel single selection}
  * <li> {@link InputMap input map} which allows for easy behavior customization and extension
@@ -91,13 +91,13 @@ import jfx.incubator.scene.control.rich.skin.RichTextAreaSkin;
  * {@code appendText()}, {@code insertText()}, {@code replaceText()}, {@code applyStyle()},
  * {@code setStyle()}, or {@code clear()} can be used to modify text programmatically:
  * <pre>{@code    // create styles
- *   StyleAttrs heading = StyleAttrs.builder().setBold(true).setUnderline(true).setFontSize(18).build();
- *   StyleAttrs mono = StyleAttrs.builder().setFontFamily("Monospaced").build();
+ *   StyleAttributeMap heading = StyleAttributeMap.builder().setBold(true).setUnderline(true).setFontSize(18).build();
+ *   StyleAttributeMap mono = StyleAttributeMap.builder().setFontFamily("Monospaced").build();
  *
  *   RichTextArea textArea = new RichTextArea();
  *   // build the content
  *   textArea.appendText("RichTextArea\n", heading);
- *   textArea.appendText("Example:\nText is ", StyleAttrs.EMPTY);
+ *   textArea.appendText("Example:\nText is ", StyleAttributeMap.EMPTY);
  *   textArea.appendText("monospaced.\n", mono);
  * }</pre>
  * Which results in the following visual representation:
@@ -1018,7 +1018,7 @@ public class RichTextArea extends Control {
      * @param attrs the style attributes
      * @return the text position at the end of the appended text, or null if editing is disabled
      */
-    public final TextPos appendText(String text, StyleAttrs attrs) {
+    public final TextPos appendText(String text, StyleAttributeMap attrs) {
         TextPos p = getDocumentEnd();
         return insertText(p, text, attrs);
     }
@@ -1046,7 +1046,7 @@ public class RichTextArea extends Control {
      * @param end the end of text range
      * @param attrs the style attributes to apply
      */
-    public void applyStyle(TextPos start, TextPos end, StyleAttrs attrs) {
+    public void applyStyle(TextPos start, TextPos end, StyleAttributeMap attrs) {
         if (canEdit()) {
             StyledTextModel m = getModel();
             m.applyStyle(start, end, attrs, true);
@@ -1276,7 +1276,7 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Returns {@code StyleAttrs} which contains character and paragraph attributes.
+     * Returns {@code StyleAttributeMap} which contains character and paragraph attributes.
      * <p>
      * When selection exists, returns the attributes at the first selected character.
      * <p>
@@ -1285,9 +1285,9 @@ public class RichTextArea extends Control {
      * If the model uses CSS styles, this method resolves individual attributes (bold, font size, etc.)
      * for this instance of {@code RichTextArea}.
      *
-     * @return the non-null {@code StyleAttrs} instance
+     * @return the non-null {@code StyleAttributeMap} instance
      */
-    public final StyleAttrs getActiveStyleAttrs() {
+    public final StyleAttributeMap getActiveStyleAttributeMap() {
         StyleResolver r = resolver();
         return getModelStyleAttrs(r);
     }
@@ -1423,7 +1423,7 @@ public class RichTextArea extends Control {
      * @param attrs the style attributes
      * @return the text position at the end of the appended text, or null if editing is disabled
      */
-    public final TextPos insertText(TextPos pos, String text, StyleAttrs attrs) {
+    public final TextPos insertText(TextPos pos, String text, StyleAttributeMap attrs) {
         StyledInput in = StyledInput.of(text, attrs);
         return replaceText(pos, pos, in, true);
     }
@@ -2058,7 +2058,7 @@ public class RichTextArea extends Control {
      * @param end the end of text range
      * @param attrs the style attributes to set
      */
-    public final void setStyle(TextPos start, TextPos end, StyleAttrs attrs) {
+    public final void setStyle(TextPos start, TextPos end, StyleAttributeMap attrs) {
         if (canEdit()) {
             StyledTextModel m = getModel();
             m.applyStyle(start, end, attrs, false);
@@ -2139,7 +2139,7 @@ public class RichTextArea extends Control {
         return null;
     }
 
-    private StyleAttrs getModelStyleAttrs(StyleResolver r) {
+    private StyleAttributeMap getModelStyleAttrs(StyleResolver r) {
         StyledTextModel m = getModel();
         if (m != null) {
             TextPos pos = getCaretPosition();
@@ -2157,21 +2157,21 @@ public class RichTextArea extends Control {
                     }
                     pos = new TextPos(pos.index(), ix);
                 }
-                return m.getStyleAttrs(r, pos);
+                return m.getStyleAttributeMap(r, pos);
             }
         }
-        return StyleAttrs.EMPTY;
+        return StyleAttributeMap.EMPTY;
     }
 
     private static StyleHandlerRegistry initStyleHandlerRegistry() {
         StyleHandlerRegistry.Builder b = StyleHandlerRegistry.builder(null);
 
-        b.setParHandler(StyleAttrs.BACKGROUND, (c, cx, v) -> {
+        b.setParHandler(StyleAttributeMap.BACKGROUND, (c, cx, v) -> {
             String color = RichUtils.toCssColor(v);
             cx.addStyle("-fx-background-color:" + color + ";");
         });
 
-        b.setSegHandler(StyleAttrs.BOLD, (c, cx, v) -> {
+        b.setSegHandler(StyleAttributeMap.BOLD, (c, cx, v) -> {
             cx.addStyle(v ? "-fx-font-weight:bold;" : "-fx-font-weight:normal;");
         });
 
@@ -2186,25 +2186,25 @@ public class RichTextArea extends Control {
             }
         });
 
-        b.setSegHandler(StyleAttrs.FONT_FAMILY, (c, cx, v) -> {
+        b.setSegHandler(StyleAttributeMap.FONT_FAMILY, (c, cx, v) -> {
             cx.addStyle("-fx-font-family:'" + v + "';");
         });
 
-        b.setSegHandler(StyleAttrs.FONT_SIZE, (c, cx, v) -> {
+        b.setSegHandler(StyleAttributeMap.FONT_SIZE, (c, cx, v) -> {
             cx.addStyle("-fx-font-size:" + v + ";");
         });
 
-        b.setSegHandler(StyleAttrs.ITALIC, (c, cx, v) -> {
+        b.setSegHandler(StyleAttributeMap.ITALIC, (c, cx, v) -> {
             if (v) {
                 cx.addStyle("-fx-font-style:italic;");
             }
         });
 
-        b.setParHandler(StyleAttrs.LINE_SPACING, (c, cx, v) -> {
+        b.setParHandler(StyleAttributeMap.LINE_SPACING, (c, cx, v) -> {
             cx.addStyle("-fx-line-spacing:" + v + ";");
         });
 
-        b.setParHandler(StyleAttrs.PARAGRAPH_DIRECTION, (ctrl, cx, v) -> {
+        b.setParHandler(StyleAttributeMap.PARAGRAPH_DIRECTION, (ctrl, cx, v) -> {
             if (ctrl.isWrapText()) {
                 // node orientation property is not styleable (yet?)
                 switch (v) {
@@ -2221,37 +2221,37 @@ public class RichTextArea extends Control {
         // this is a special case: 4 attributes merged into one -fx style
         // unfortunately, this might create multiple copies of the same style string
         StyleAttributeHandler<RichTextArea, Double> spaceHandler = (c, cx, v) -> {
-            StyleAttrs a = cx.getAttributes();
-            double top = a.getDouble(StyleAttrs.SPACE_ABOVE, 0);
-            double right = a.getDouble(StyleAttrs.SPACE_RIGHT, 0);
-            double bottom = a.getDouble(StyleAttrs.SPACE_BELOW, 0);
-            double left = a.getDouble(StyleAttrs.SPACE_LEFT, 0);
+            StyleAttributeMap a = cx.getAttributes();
+            double top = a.getDouble(StyleAttributeMap.SPACE_ABOVE, 0);
+            double right = a.getDouble(StyleAttributeMap.SPACE_RIGHT, 0);
+            double bottom = a.getDouble(StyleAttributeMap.SPACE_BELOW, 0);
+            double left = a.getDouble(StyleAttributeMap.SPACE_LEFT, 0);
             cx.addStyle("-fx-padding:" + top + ' ' + right + ' ' + bottom + ' ' + left + ";");
         };
-        b.setParHandler(StyleAttrs.SPACE_ABOVE, spaceHandler);
-        b.setParHandler(StyleAttrs.SPACE_RIGHT, spaceHandler);
-        b.setParHandler(StyleAttrs.SPACE_BELOW, spaceHandler);
-        b.setParHandler(StyleAttrs.SPACE_LEFT, spaceHandler);
+        b.setParHandler(StyleAttributeMap.SPACE_ABOVE, spaceHandler);
+        b.setParHandler(StyleAttributeMap.SPACE_RIGHT, spaceHandler);
+        b.setParHandler(StyleAttributeMap.SPACE_BELOW, spaceHandler);
+        b.setParHandler(StyleAttributeMap.SPACE_LEFT, spaceHandler);
 
-        b.setSegHandler(StyleAttrs.STRIKE_THROUGH, (c, cx, v) -> {
+        b.setSegHandler(StyleAttributeMap.STRIKE_THROUGH, (c, cx, v) -> {
             if (v) {
                 cx.addStyle("-fx-strikethrough:true;");
             }
         });
 
-        b.setParHandler(StyleAttrs.TEXT_ALIGNMENT, (c, cx, v) -> {
+        b.setParHandler(StyleAttributeMap.TEXT_ALIGNMENT, (c, cx, v) -> {
             if (c.isWrapText()) {
                 String alignment = RichUtils.toCss(v);
                 cx.addStyle("-fx-text-alignment:" + alignment + ";");
             }
         });
 
-        b.setSegHandler(StyleAttrs.TEXT_COLOR, (c, cx, v) -> {
+        b.setSegHandler(StyleAttributeMap.TEXT_COLOR, (c, cx, v) -> {
             String color = RichUtils.toCssColor(v);
             cx.addStyle("-fx-fill:" + color + ";");
         });
 
-        b.setSegHandler(StyleAttrs.UNDERLINE, (cc, cx, v) -> {
+        b.setSegHandler(StyleAttributeMap.UNDERLINE, (cc, cx, v) -> {
             if (v) {
                 cx.addStyle("-fx-underline:true;");
             }

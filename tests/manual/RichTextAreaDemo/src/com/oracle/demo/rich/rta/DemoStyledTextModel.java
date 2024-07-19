@@ -28,7 +28,7 @@ import java.text.DecimalFormat;
 import jfx.incubator.scene.control.rich.StyleResolver;
 import jfx.incubator.scene.control.rich.TextPos;
 import jfx.incubator.scene.control.rich.model.RichParagraph;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 import jfx.incubator.scene.control.rich.model.StyledTextModelViewOnlyBase;
 import javafx.scene.Node;
 import javafx.scene.text.Text;
@@ -54,8 +54,8 @@ public class DemoStyledTextModel extends StyledTextModelViewOnlyBase {
     }
 
     @Override
-    public StyleAttrs getStyleAttrs(StyleResolver resolver, TextPos pos) {
-        return StyleAttrs.EMPTY;
+    public StyleAttributeMap getStyleAttributeMap(StyleResolver resolver, TextPos pos) {
+        return StyleAttributeMap.EMPTY;
     }
 
     @Override

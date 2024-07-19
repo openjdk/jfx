@@ -26,26 +26,26 @@
 package com.oracle.demo.rich.common;
 
 import jfx.incubator.scene.control.rich.model.StyleAttribute;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 
 public class Styles {
     // TODO perhaps we should specifically set fonts to be used,
     // and couple that with the app stylesheet
-    public static final StyleAttrs TITLE = s("System", 24, true);
-    public static final StyleAttrs HEADING = s("System", 18, true);
-    public static final StyleAttrs SUBHEADING = s("System", 14, true);
-    public static final StyleAttrs BODY = s("System", 12, false);
-    public static final StyleAttrs MONOSPACED = s("Monospace", 12, false);
+    public static final StyleAttributeMap TITLE = s("System", 24, true);
+    public static final StyleAttributeMap HEADING = s("System", 18, true);
+    public static final StyleAttributeMap SUBHEADING = s("System", 14, true);
+    public static final StyleAttributeMap BODY = s("System", 12, false);
+    public static final StyleAttributeMap MONOSPACED = s("Monospace", 12, false);
 
-    private static StyleAttrs s(String font, double size, boolean bold) {
-        return StyleAttrs.builder().
+    private static StyleAttributeMap s(String font, double size, boolean bold) {
+        return StyleAttributeMap.builder().
             setFontFamily(font).
             setFontSize(size).
             setBold(bold).
             build();
     }
 
-    public static StyleAttrs getStyleAttrs(TextStyle st) {
+    public static StyleAttributeMap getStyleAttributeMap(TextStyle st) {
         switch (st) {
         case BODY:
             return BODY;
@@ -62,18 +62,18 @@ public class Styles {
         }
     }
 
-    public static TextStyle guessTextStyle(StyleAttrs attrs) {
+    public static TextStyle guessTextStyle(StyleAttributeMap attrs) {
         if (attrs != null) {
             if (attrs.isEmpty()) {
                 return TextStyle.BODY;
             }
             StyleAttribute<?>[] keys = {
-                StyleAttrs.BOLD,
-                StyleAttrs.FONT_FAMILY,
-                StyleAttrs.FONT_SIZE
+                StyleAttributeMap.BOLD,
+                StyleAttributeMap.FONT_FAMILY,
+                StyleAttributeMap.FONT_SIZE
             };
             for (TextStyle st : TextStyle.values()) {
-                StyleAttrs a = getStyleAttrs(st);
+                StyleAttributeMap a = getStyleAttributeMap(st);
                 if (match(attrs, a, keys)) {
                     return st;
                 }
@@ -82,7 +82,7 @@ public class Styles {
         return null;
     }
 
-    private static boolean match(StyleAttrs attrs, StyleAttrs builtin, StyleAttribute<?>[] keys) {
+    private static boolean match(StyleAttributeMap attrs, StyleAttributeMap builtin, StyleAttribute<?>[] keys) {
         for (StyleAttribute<?> k : keys) {
             Object v1 = attrs.get(k);
             Object v2 = builtin.get(k);

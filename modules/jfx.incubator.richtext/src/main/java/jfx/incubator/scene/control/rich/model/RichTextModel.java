@@ -42,7 +42,7 @@ import jfx.incubator.scene.control.rich.TextPos;
  */
 public class RichTextModel extends StyledTextModel {
     private final ArrayList<RParagraph> paragraphs = new ArrayList<>();
-    private final HashMap<StyleAttrs,StyleAttrs> styleCache = new HashMap<>();
+    private final HashMap<StyleAttributeMap,StyleAttributeMap> styleCache = new HashMap<>();
 
     /**
      * Constructs the empty model.
@@ -83,7 +83,7 @@ public class RichTextModel extends StyledTextModel {
     }
 
     @Override
-    protected int insertTextSegment(int index, int offset, String text, StyleAttrs attrs) {
+    protected int insertTextSegment(int index, int offset, String text, StyleAttributeMap attrs) {
         attrs = dedup(attrs);
         RParagraph par = paragraphs.get(index);
         par.insertText(offset, text, attrs);
@@ -131,11 +131,11 @@ public class RichTextModel extends StyledTextModel {
     }
 
     /** deduplicates style attributes. */
-    private StyleAttrs dedup(StyleAttrs a) {
+    private StyleAttributeMap dedup(StyleAttributeMap a) {
         // the expectation is that the number of different style combinations is relatively low
         // but the number of instances can be large
         // the drawback is that there is no way to clear the cache
-        StyleAttrs cached = styleCache.get(a);
+        StyleAttributeMap cached = styleCache.get(a);
         if (cached != null) {
             return cached;
         }
@@ -144,30 +144,30 @@ public class RichTextModel extends StyledTextModel {
     }
 
     @Override
-    protected void setParagraphStyle(int index, StyleAttrs attrs) {
+    protected void setParagraphStyle(int index, StyleAttributeMap attrs) {
         paragraphs.get(index).setParagraphAttributes(attrs);
     }
 
     @Override
-    protected void applyStyle(int index, int start, int end, StyleAttrs attrs, boolean merge) {
+    protected void applyStyle(int index, int start, int end, StyleAttributeMap attrs, boolean merge) {
         paragraphs.get(index).applyStyle(start, end, attrs, merge, this::dedup);
     }
 
     @Override
-    public StyleAttrs getStyleAttrs(StyleResolver resolver, TextPos pos) {
+    public StyleAttributeMap getStyleAttributeMap(StyleResolver resolver, TextPos pos) {
         int index = pos.index();
         if (index < paragraphs.size()) {
             int off = pos.offset();
             RParagraph par = paragraphs.get(index);
-            StyleAttrs pa = par.getParagraphAttributes();
-            StyleAttrs a = par.getStyleAttrs(off);
+            StyleAttributeMap pa = par.getParagraphAttributes();
+            StyleAttributeMap a = par.getStyleAttrs(off);
             if (pa == null) {
                 return a;
             } else {
                 return pa.combine(a);
             }
         }
-        return StyleAttrs.EMPTY;
+        return StyleAttributeMap.EMPTY;
     }
 
     /**
@@ -204,9 +204,9 @@ public class RichTextModel extends StyledTextModel {
      */
     private static class RSegment {
         private String text;
-        private StyleAttrs attrs;
+        private StyleAttributeMap attrs;
 
-        public RSegment(String text, StyleAttrs attrs) {
+        public RSegment(String text, StyleAttributeMap attrs) {
             this.text = text;
             this.attrs = attrs;
         }
@@ -215,15 +215,15 @@ public class RichTextModel extends StyledTextModel {
             return text;
         }
 
-        public StyleAttrs attrs() {
+        public StyleAttributeMap attrs() {
             return attrs;
         }
 
-        public void setAttrs(StyleAttrs a) {
+        public void setAttrs(StyleAttributeMap a) {
             attrs = a;
         }
 
-        public StyleAttrs getStyleAttrs() {
+        public StyleAttributeMap getStyleAttrs() {
             return attrs;
         }
 
@@ -270,17 +270,17 @@ public class RichTextModel extends StyledTextModel {
      */
     static class RParagraph extends ArrayList<RSegment> {
 
-        private StyleAttrs paragraphAttrs;
+        private StyleAttributeMap paragraphAttrs;
 
         /** Creates an instance */
         public RParagraph() {
         }
 
-        public StyleAttrs getParagraphAttributes() {
+        public StyleAttributeMap getParagraphAttributes() {
             return paragraphAttrs;
         }
 
-        public void setParagraphAttributes(StyleAttrs a) {
+        public void setParagraphAttributes(StyleAttributeMap a) {
             paragraphAttrs = a;
         }
 
@@ -305,7 +305,7 @@ public class RichTextModel extends StyledTextModel {
          * @param offset the offset
          * @return the style info
          */
-        public StyleAttrs getStyleAttrs(int offset) {
+        public StyleAttributeMap getStyleAttrs(int offset) {
             int off = 0;
             int ct = size();
             for (int i = 0; i < ct; i++) {
@@ -316,7 +316,7 @@ public class RichTextModel extends StyledTextModel {
                 }
                 off += len;
             }
-            return StyleAttrs.EMPTY;
+            return StyleAttributeMap.EMPTY;
         }
 
         /**
@@ -325,7 +325,7 @@ public class RichTextModel extends StyledTextModel {
          * @param text the plain text
          * @param attrs the style attributes
          */
-        public void insertText(int offset, String text, StyleAttrs attrs) {
+        public void insertText(int offset, String text, StyleAttributeMap attrs) {
             int off = 0;
             int ct = size();
             for (int i = 0; i < ct; i++) {
@@ -338,7 +338,7 @@ public class RichTextModel extends StyledTextModel {
                     int len = seg.getTextLength();
                     if ((offset > off) && (offset <= off + len)) {
                         // split segment
-                        StyleAttrs a = seg.attrs();
+                        StyleAttributeMap a = seg.attrs();
                         String toSplit = seg.text();
                         int ix = offset - off;
 
@@ -370,7 +370,7 @@ public class RichTextModel extends StyledTextModel {
          * @param a the style attributes
          * @return true if a segment has been added.
          */
-        private boolean insertSegment2(int ix, String text, StyleAttrs a) {
+        private boolean insertSegment2(int ix, String text, StyleAttributeMap a) {
             if (ix == 0) {
                 // FIX aaaa combine with insertSegment
                 if (ix < size()) {
@@ -411,7 +411,7 @@ public class RichTextModel extends StyledTextModel {
          */
         // TODO should it also merge with the next segment if the styles are the same?
         // in this case it's better to return an int which is the amount of segments added/removed
-        private boolean insertSegment(int ix, String text, StyleAttrs a) {
+        private boolean insertSegment(int ix, String text, StyleAttributeMap a) {
             // TODO deal with zero width segment
             // FIX aaaa combine with insertSegment2
             if (ix > 0) {
@@ -449,7 +449,7 @@ public class RichTextModel extends StyledTextModel {
                 if (offset < (off + len)) {
                     if (offset != off) {
                         // split segment
-                        StyleAttrs a = seg.attrs();
+                        StyleAttributeMap a = seg.attrs();
                         String toSplit = seg.text();
                         int ix = offset - off;
                         String s1 = toSplit.substring(0, ix);
@@ -473,13 +473,13 @@ public class RichTextModel extends StyledTextModel {
             // preserve attributes using zero width segment
             if (size() == 0) {
                 if (next.size() > 0) {
-                    StyleAttrs a = next.get(0).getStyleAttrs();
+                    StyleAttributeMap a = next.get(0).getStyleAttrs();
                     add(new RSegment("", a));
                 }
             }
             if (next.size() == 0) {
                 if (size() > 0) {
-                    StyleAttrs a = get(size() - 1).getStyleAttrs();
+                    StyleAttributeMap a = get(size() - 1).getStyleAttrs();
                     next.add(new RSegment("", a));
                 }
             }
@@ -615,7 +615,7 @@ public class RichTextModel extends StyledTextModel {
             }
         }
 
-        public void applyStyle(int start, int end, StyleAttrs attrs, boolean merge, Function<StyleAttrs,StyleAttrs> dedup) {
+        public void applyStyle(int start, int end, StyleAttributeMap attrs, boolean merge, Function<StyleAttributeMap,StyleAttributeMap> dedup) {
             int off = 0;
             int i = 0;
             for ( ; i < size(); i++) {
@@ -639,8 +639,8 @@ public class RichTextModel extends StyledTextModel {
                 case 8:
                     // split
                     {
-                        StyleAttrs a = seg.attrs();
-                        StyleAttrs newAttrs = dedup.apply(merge ? a.combine(attrs) : attrs);
+                        StyleAttributeMap a = seg.attrs();
+                        StyleAttributeMap newAttrs = dedup.apply(merge ? a.combine(attrs) : attrs);
                         int ix = end - off;
                         String s1 = seg.text().substring(0, ix);
                         String s2 = seg.text().substring(ix);
@@ -657,8 +657,8 @@ public class RichTextModel extends StyledTextModel {
                 case 6:
                     // split
                     {
-                        StyleAttrs a = seg.attrs();
-                        StyleAttrs newAttrs = dedup.apply(merge ? a.combine(attrs) : attrs);
+                        StyleAttributeMap a = seg.attrs();
+                        StyleAttributeMap newAttrs = dedup.apply(merge ? a.combine(attrs) : attrs);
                         int ix = start - off;
                         String s1 = seg.text().substring(0, ix);
                         String s2 = seg.text().substring(ix);
@@ -676,8 +676,8 @@ public class RichTextModel extends StyledTextModel {
                     break;
                 case 7:
                     {
-                        StyleAttrs a = seg.attrs();
-                        StyleAttrs newAttrs = dedup.apply(merge ? a.combine(attrs) : attrs);
+                        StyleAttributeMap a = seg.attrs();
+                        StyleAttributeMap newAttrs = dedup.apply(merge ? a.combine(attrs) : attrs);
                         String text = seg.text();
                         int ix0 = start - off;
                         int ix1 = end - off;
@@ -715,8 +715,8 @@ public class RichTextModel extends StyledTextModel {
          * @param dedup the deduplicator
          * @return true if this segment has been merged with the previous segment
          */
-        private boolean applyStyle(int ix, RSegment seg, StyleAttrs a, boolean merge, Function<StyleAttrs,StyleAttrs> dedup) {
-            StyleAttrs newAttrs = dedup.apply(merge ? seg.attrs().combine(a) : a);
+        private boolean applyStyle(int ix, RSegment seg, StyleAttributeMap a, boolean merge, Function<StyleAttributeMap,StyleAttributeMap> dedup) {
+            StyleAttributeMap newAttrs = dedup.apply(merge ? seg.attrs().combine(a) : a);
             if (ix > 0) {
                 RSegment prev = get(ix - 1);
                 if (prev.attrs().equals(newAttrs)) {
@@ -780,7 +780,7 @@ public class RichTextModel extends StyledTextModel {
             RichParagraph.Builder b = RichParagraph.builder();
             for (RSegment seg : this) {
                 String text = seg.text();
-                StyleAttrs a = seg.attrs();
+                StyleAttributeMap a = seg.attrs();
                 b.addSegment(text, a);
             }
             b.setParagraphAttributes(paragraphAttrs);

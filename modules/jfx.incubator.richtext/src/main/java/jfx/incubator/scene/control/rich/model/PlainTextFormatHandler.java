@@ -43,7 +43,7 @@ public class PlainTextFormatHandler extends DataFormatHandler {
     }
 
     @Override
-    public StyledInput createStyledInput(String text, StyleAttrs attr) {
+    public StyledInput createStyledInput(String text, StyleAttributeMap attr) {
         return StyledInput.of(text, attr);
     }
 

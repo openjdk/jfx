@@ -94,7 +94,7 @@ public abstract class StyledSegment {
     public Supplier<Region> getParagraphNodeGenerator() { return null; }
 
     /**
-     * This method returns StyleAttrs (or null) for this segment.
+     * This method returns StyleAttributeMap (or null) for this segment.
      * When the model manages style names (instead of actual attributes), an instance of {@link StyleResolver}
      * may be used to convert the style names to individual attributes.
      * Keep in mind that different views might have different stylesheet applied and
@@ -102,7 +102,7 @@ public abstract class StyledSegment {
      * @param resolver the style resolver to use
      * @return style attributes
      */
-    public StyleAttrs getStyleAttrs(StyleResolver resolver) { return null; }
+    public StyleAttributeMap getStyleAttributeMap(StyleResolver resolver) { return null; }
 
     /**
      * Creates a sub-segment of this segment.
@@ -141,7 +141,7 @@ public abstract class StyledSegment {
      */
     // TODO guarded of() ?
     public static StyledSegment of(String text) {
-        return of(text, StyleAttrs.EMPTY);
+        return of(text, StyleAttributeMap.EMPTY);
     }
 
     /**
@@ -154,7 +154,7 @@ public abstract class StyledSegment {
      */
     // TODO guarded of() ?
     // TODO check for null text?
-    public static StyledSegment of(String text, StyleAttrs attrs) {
+    public static StyledSegment of(String text, StyleAttributeMap attrs) {
         return new StyledSegment() {
             @Override
             public Type getType() {
@@ -172,7 +172,7 @@ public abstract class StyledSegment {
             }
 
             @Override
-            public StyleAttrs getStyleAttrs(StyleResolver resolver) {
+            public StyleAttributeMap getStyleAttributeMap(StyleResolver resolver) {
                 if ((resolver != null) && (attrs != null)) {
                     return resolver.resolveStyles(attrs);
                 }
@@ -257,7 +257,7 @@ public abstract class StyledSegment {
      * @param attrs the paragraph attributes
      * @return the StyledSegment instance
      */
-    public static StyledSegment ofParagraphAttributes(StyleAttrs attrs) {
+    public static StyledSegment ofParagraphAttributes(StyleAttributeMap attrs) {
         return new StyledSegment() {
             @Override
             public Type getType() {
@@ -265,7 +265,7 @@ public abstract class StyledSegment {
             }
 
             @Override
-            public StyleAttrs getStyleAttrs(StyleResolver resolver) {
+            public StyleAttributeMap getStyleAttributeMap(StyleResolver resolver) {
                 if (resolver != null) {
                     return resolver.resolveStyles(attrs);
                 }

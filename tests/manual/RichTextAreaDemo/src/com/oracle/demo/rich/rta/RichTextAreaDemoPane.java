@@ -70,7 +70,7 @@ import jfx.incubator.scene.control.rich.TextPos;
 import jfx.incubator.scene.control.rich.model.RichTextModel;
 import jfx.incubator.scene.control.rich.model.ParagraphDirection;
 import jfx.incubator.scene.control.rich.model.StyleAttribute;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 import jfx.incubator.scene.control.rich.model.StyledTextModel;
 
 /**
@@ -257,8 +257,8 @@ public class RichTextAreaDemoPane extends BorderPane {
         Button appendButton = new Button("Append");
         FX.tooltip(appendButton, "appends text to the end of the document");
         appendButton.setOnAction((ev) -> {
-            StyleAttrs heading = StyleAttrs.builder().setBold(true).setFontSize(24).build();
-            StyleAttrs plain = StyleAttrs.builder().setFontFamily("Monospaced").build();
+            StyleAttributeMap heading = StyleAttributeMap.builder().setBold(true).setFontSize(24).build();
+            StyleAttributeMap plain = StyleAttributeMap.builder().setFontFamily("Monospaced").build();
             control.appendText("Heading\n", heading);
             control.appendText("Plain monospaced text.\n", plain);
         });
@@ -266,8 +266,8 @@ public class RichTextAreaDemoPane extends BorderPane {
         Button insertButton = new Button("Insert");
         FX.tooltip(insertButton, "inserts text to the start of the document");
         insertButton.setOnAction((ev) -> {
-            StyleAttrs heading = StyleAttrs.builder().setBold(true).setFontSize(24).build();
-            StyleAttrs plain = StyleAttrs.builder().setFontFamily("Monospaced").build();
+            StyleAttributeMap heading = StyleAttributeMap.builder().setBold(true).setFontSize(24).build();
+            StyleAttributeMap plain = StyleAttributeMap.builder().setFontFamily("Monospaced").build();
             control.insertText(TextPos.ZERO, "Plain monospaced text.\n", plain);
             control.insertText(TextPos.ZERO, "Heading\n", heading);
         });
@@ -465,23 +465,23 @@ public class RichTextAreaDemoPane extends BorderPane {
         m.setDisable(!paste);
 
         if (styled) {
-            StyleAttrs a = control.getActiveStyleAttrs();
+            StyleAttributeMap a = control.getActiveStyleAttributeMap();
             items.add(new SeparatorMenuItem());
 
             items.add(m = new MenuItem("Bold"));
-            m.setOnAction((ev) -> applyStyle(StyleAttrs.BOLD, !a.getBoolean(StyleAttrs.BOLD)));
+            m.setOnAction((ev) -> applyStyle(StyleAttributeMap.BOLD, !a.getBoolean(StyleAttributeMap.BOLD)));
             m.setDisable(!sel);
 
             items.add(m = new MenuItem("Italic"));
-            m.setOnAction((ev) -> applyStyle(StyleAttrs.ITALIC, !a.getBoolean(StyleAttrs.ITALIC)));
+            m.setOnAction((ev) -> applyStyle(StyleAttributeMap.ITALIC, !a.getBoolean(StyleAttributeMap.ITALIC)));
             m.setDisable(!sel);
 
             items.add(m = new MenuItem("Strike Through"));
-            m.setOnAction((ev) -> applyStyle(StyleAttrs.STRIKE_THROUGH, !a.getBoolean(StyleAttrs.STRIKE_THROUGH)));
+            m.setOnAction((ev) -> applyStyle(StyleAttributeMap.STRIKE_THROUGH, !a.getBoolean(StyleAttributeMap.STRIKE_THROUGH)));
             m.setDisable(!sel);
 
             items.add(m = new MenuItem("Underline"));
-            m.setOnAction((ev) -> applyStyle(StyleAttrs.UNDERLINE, !a.getBoolean(StyleAttrs.UNDERLINE)));
+            m.setOnAction((ev) -> applyStyle(StyleAttributeMap.UNDERLINE, !a.getBoolean(StyleAttributeMap.UNDERLINE)));
             m.setDisable(!sel);
 
             items.add(m2 = new Menu("Text Color"));
@@ -524,7 +524,7 @@ public class RichTextAreaDemoPane extends BorderPane {
         }
 
         if (styled) {
-            StyleAttrs a = control.getActiveStyleAttrs();
+            StyleAttributeMap a = control.getActiveStyleAttributeMap();
             items.add(new SeparatorMenuItem());
 
             items.add(m2 = new Menu("Alignment"));
@@ -580,16 +580,16 @@ public class RichTextAreaDemoPane extends BorderPane {
         m.setOnAction((ev) -> control.selectAll());
     }
 
-    private void bulletMenu(Menu menu, StyleAttrs a, String name, String bullet) {
+    private void bulletMenu(Menu menu, StyleAttributeMap a, String name, String bullet) {
         CheckMenuItem m = new CheckMenuItem(name);
         menu.getItems().add(m);
         m.setSelected(Objects.equals(bullet, a.getBullet()));
         m.setOnAction((ev) -> {
-            applyStyle(StyleAttrs.BULLET, bullet);
+            applyStyle(StyleAttributeMap.BULLET, bullet);
         });
     }
 
-    private void firstLineIndentMenu(Menu menu, StyleAttrs a, int value) {
+    private void firstLineIndentMenu(Menu menu, StyleAttributeMap a, int value) {
         CheckMenuItem m = new CheckMenuItem(String.valueOf(value));
         menu.getItems().add(m);
         Double v = a.getFirstLineIndent();
@@ -597,7 +597,7 @@ public class RichTextAreaDemoPane extends BorderPane {
             m.setSelected(Objects.equals(value, v.intValue()));
         }
         m.setOnAction((ev) -> {
-            applyStyle(StyleAttrs.FIRST_LINE_INDENT, (double)value);
+            applyStyle(StyleAttributeMap.FIRST_LINE_INDENT, (double)value);
         });
     }
 
@@ -605,7 +605,7 @@ public class RichTextAreaDemoPane extends BorderPane {
         MenuItem m = new MenuItem(name);
         menu.getItems().add(m);
         m.setOnAction((ev) -> {
-            applyStyle(StyleAttrs.TEXT_ALIGNMENT, a);
+            applyStyle(StyleAttributeMap.TEXT_ALIGNMENT, a);
         });
     }
 
@@ -613,7 +613,7 @@ public class RichTextAreaDemoPane extends BorderPane {
         MenuItem m = new MenuItem(String.valueOf(value));
         menu.getItems().add(m);
         m.setOnAction((ev) -> {
-            applyStyle(StyleAttrs.LINE_SPACING, value);
+            applyStyle(StyleAttributeMap.LINE_SPACING, value);
         });
     }
 
@@ -621,7 +621,7 @@ public class RichTextAreaDemoPane extends BorderPane {
         MenuItem m = new MenuItem(text);
         menu.getItems().add(m);
         m.setOnAction((ev) -> {
-            applyStyle(StyleAttrs.PARAGRAPH_DIRECTION, d);
+            applyStyle(StyleAttributeMap.PARAGRAPH_DIRECTION, d);
         });
     }
 
@@ -629,10 +629,10 @@ public class RichTextAreaDemoPane extends BorderPane {
         MenuItem m = new MenuItem(name);
         menu.getItems().add(m);
         m.setOnAction((ev) -> {
-            applyStyle(StyleAttrs.SPACE_ABOVE, top);
-            applyStyle(StyleAttrs.SPACE_BELOW, bottom);
-            applyStyle(StyleAttrs.SPACE_LEFT, left);
-            applyStyle(StyleAttrs.SPACE_RIGHT, right);
+            applyStyle(StyleAttributeMap.SPACE_ABOVE, top);
+            applyStyle(StyleAttributeMap.SPACE_BELOW, bottom);
+            applyStyle(StyleAttributeMap.SPACE_LEFT, left);
+            applyStyle(StyleAttributeMap.SPACE_RIGHT, right);
         });
     }
 
@@ -641,21 +641,21 @@ public class RichTextAreaDemoPane extends BorderPane {
         MenuItem m = new MenuItem(name);
         menu.getItems().add(m);
         m.setOnAction((ev) -> {
-            applyStyle(StyleAttrs.BACKGROUND, c);
+            applyStyle(StyleAttributeMap.BACKGROUND, c);
         });
     }
 
     private void fontMenu(Menu menu, boolean selected, String family) {
         MenuItem m = new MenuItem(family);
         m.setDisable(!selected);
-        m.setOnAction((ev) -> applyStyle(StyleAttrs.FONT_FAMILY, family));
+        m.setOnAction((ev) -> applyStyle(StyleAttributeMap.FONT_FAMILY, family));
         menu.getItems().add(m);
     }
 
     private void sizeMenu(Menu menu, boolean selected, double size) {
         MenuItem m = new MenuItem(String.valueOf(size));
         m.setDisable(!selected);
-        m.setOnAction((ev) -> applyStyle(StyleAttrs.FONT_SIZE, size));
+        m.setOnAction((ev) -> applyStyle(StyleAttributeMap.FONT_SIZE, size));
         menu.getItems().add(m);
     }
 
@@ -673,14 +673,14 @@ public class RichTextAreaDemoPane extends BorderPane {
 
         MenuItem m = new MenuItem(null, c);
         m.setDisable(!selected);
-        m.setOnAction((ev) -> applyStyle(StyleAttrs.TEXT_COLOR, color));
+        m.setOnAction((ev) -> applyStyle(StyleAttributeMap.TEXT_COLOR, color));
         menu.getItems().add(m);
     }
 
     private <T> void applyStyle(StyleAttribute<T> a, T val) {
         TextPos ca = control.getCaretPosition();
         TextPos an = control.getAnchorPosition();
-        StyleAttrs m = StyleAttrs.of(a, val);
+        StyleAttributeMap m = StyleAttributeMap.of(a, val);
         control.applyStyle(ca, an, m);
     }
 

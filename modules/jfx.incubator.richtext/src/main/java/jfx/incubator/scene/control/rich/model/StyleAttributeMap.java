@@ -41,9 +41,7 @@ import com.sun.jfx.incubator.scene.control.rich.util.RichUtils;
 /**
  * This immutable object contains a map of {@link StyleAttribute}s.
  */
-// TODO name: AttributeMap (used in java.text.AttributedString), StyleAttributeMap (long!), StyleMap (used in com.sun)
-// or Attributes? (many other classes use that name), StyleAttributes (unique, but too similar to StyleAttribute)
-public final class StyleAttrs {
+public final class StyleAttributeMap {
     /** Paragraph background color attribute. */
     public static final StyleAttribute<Color> BACKGROUND = new StyleAttribute<>("BACKGROUND", Color.class, true);
 
@@ -96,11 +94,11 @@ public final class StyleAttrs {
     public static final StyleAttribute<Boolean> UNDERLINE = new StyleAttribute<>("UNDERLINE", Boolean.class, false);
 
     /** Empty attribute set. */
-    public static final StyleAttrs EMPTY = new StyleAttrs(Collections.emptyMap());
+    public static final StyleAttributeMap EMPTY = new StyleAttributeMap(Collections.emptyMap());
 
     private final Map<StyleAttribute<?>,Object> attributes;
 
-    private StyleAttrs(Map<StyleAttribute<?>,Object> a) {
+    private StyleAttributeMap(Map<StyleAttribute<?>,Object> a) {
         this.attributes = Collections.unmodifiableMap(a);
     }
 
@@ -112,7 +110,7 @@ public final class StyleAttrs {
      * @param value the attribute value
      * @return the new instance
      */
-    public static <V> StyleAttrs of(StyleAttribute<V> attribute, V value) {
+    public static <V> StyleAttributeMap of(StyleAttribute<V> attribute, V value) {
         return new Builder().set(attribute, value).build();
     }
 
@@ -124,9 +122,9 @@ public final class StyleAttrs {
      * @param names style names
      * @return the new instance
      */
-    public static StyleAttrs fromStyles(String style, String... names) {
+    public static StyleAttributeMap fromStyles(String style, String... names) {
         if ((style == null) && (names == null)) {
-            return StyleAttrs.EMPTY;
+            return StyleAttributeMap.EMPTY;
         } else if (names == null) {
             names = new String[0];
         }
@@ -137,7 +135,7 @@ public final class StyleAttrs {
     public boolean equals(Object x) {
         if (x == this) {
             return true;
-        } else if (x instanceof StyleAttrs s) {
+        } else if (x instanceof StyleAttributeMap s) {
             return attributes.equals(s.attributes);
         } else {
             return false;
@@ -146,7 +144,7 @@ public final class StyleAttrs {
 
     @Override
     public int hashCode() {
-        return attributes.hashCode() + (31 * StyleAttrs.class.hashCode());
+        return attributes.hashCode() + (31 * StyleAttributeMap.class.hashCode());
     }
 
     /**
@@ -195,13 +193,13 @@ public final class StyleAttrs {
     }
 
     /**
-     * Creates a new StyleAttrs instance by first copying attributes from this instance,
+     * Creates a new StyleAttributeMap instance by first copying attributes from this instance,
      * then adding (and/or overwriting) the attributes from the specified instance.
      *
      * @param attrs the attributes to combine
      * @return the new instance combining the attributes
      */
-    public StyleAttrs combine(StyleAttrs attrs) {
+    public StyleAttributeMap combine(StyleAttributeMap attrs) {
         return new Builder().
             merge(this).
             merge(attrs).
@@ -399,31 +397,31 @@ public final class StyleAttrs {
     }
 
     /**
-     * Returns a new StyleAttrs instance which contains only character attributes,
+     * Returns a new StyleAttributeMap instance which contains only character attributes,
      * or null if no character attributes found.
      * @return the instance
      */
-    public StyleAttrs getCharacterAttrs() {
+    public StyleAttributeMap getCharacterAttrs() {
         return filterAttributes(false);
     }
 
     /**
-     * Returns a new StyleAttrs instance which contains only paragraph attributes,
+     * Returns a new StyleAttributeMap instance which contains only paragraph attributes,
      * or null if no paragraph attributes found.
      * @return the instance
      */
-    public StyleAttrs getParagraphAttrs() {
+    public StyleAttributeMap getParagraphAttrs() {
         return filterAttributes(true);
     }
 
     // this is questionable.  perhaps it's better to treat the attributes equally,
     // and have the paragraph/segment logic handled by VFlow.applyStyles()
-    private StyleAttrs filterAttributes(boolean isParagraph) {
+    private StyleAttributeMap filterAttributes(boolean isParagraph) {
         Builder b = null;
         for (StyleAttribute<?> a : attributes.keySet()) {
             if (a.isParagraphAttribute() == isParagraph) {
                 if (b == null) {
-                    b = StyleAttrs.builder();
+                    b = StyleAttributeMap.builder();
                 }
                 Object v = attributes.get(a);
                 b.setUnguarded(a, v);
@@ -433,7 +431,7 @@ public final class StyleAttrs {
     }
 
     /**
-     * Creates an instance of StyleAttrs which contains character attributes found in the specified {@link Text} node.
+     * Creates an instance of StyleAttributeMap which contains character attributes found in the specified {@link Text} node.
      * The following attributes will be set:
      * <ul>
      * <li>{@link #BOLD}
@@ -446,10 +444,10 @@ public final class StyleAttrs {
      * </ul>
      *
      * @param textNode the text node
-     * @return the StyleAttrs instance
+     * @return the StyleAttributeMap instance
      */
-    public static StyleAttrs fromTextNode(Text textNode) {
-        StyleAttrs.Builder b = StyleAttrs.builder();
+    public static StyleAttributeMap fromTextNode(Text textNode) {
+        StyleAttributeMap.Builder b = StyleAttributeMap.builder();
         Font f = textNode.getFont();
         String st = f.getStyle().toLowerCase(Locale.US);
         boolean bold = RichUtils.isBold(st);
@@ -496,7 +494,7 @@ public final class StyleAttrs {
         return new Builder();
     }
 
-    /** StyleAttrs are immutable, so a Builder is required to create a new instance */
+    /** StyleAttributeMap are immutable, so a Builder is required to create a new instance */
     public static class Builder {
         private final HashMap<StyleAttribute<?>,Object> attributes = new HashMap<>(4);
 
@@ -504,11 +502,11 @@ public final class StyleAttrs {
         }
 
         /**
-         * Creates an immutable instance of {@link StyleAttrs} with the attributes set by this Builder.
+         * Creates an immutable instance of {@link StyleAttributeMap} with the attributes set by this Builder.
          * @return the new instance
          */
-        public StyleAttrs build() {
-            return new StyleAttrs(attributes);
+        public StyleAttributeMap build() {
+            return new StyleAttributeMap(attributes);
         }
 
         /**
@@ -543,7 +541,7 @@ public final class StyleAttrs {
          * @param attrs the attributes to merge, may be null
          * @return this Builder instance
          */
-        public Builder merge(StyleAttrs attrs) {
+        public Builder merge(StyleAttributeMap attrs) {
             if (attrs != null) {
                 for (StyleAttribute<?> a : attrs.attributes.keySet()) {
                     Object v = attrs.get(a);

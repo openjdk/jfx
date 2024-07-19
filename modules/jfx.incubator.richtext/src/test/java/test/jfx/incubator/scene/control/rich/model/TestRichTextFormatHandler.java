@@ -37,7 +37,7 @@ import com.sun.jfx.incubator.scene.control.rich.RichTextFormatHandlerHelper;
 import jfx.incubator.scene.control.rich.model.ParagraphDirection;
 import jfx.incubator.scene.control.rich.model.RichTextFormatHandler;
 import jfx.incubator.scene.control.rich.model.StyleAttribute;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 import jfx.incubator.scene.control.rich.model.StyledInput;
 import jfx.incubator.scene.control.rich.model.StyledOutput;
 import jfx.incubator.scene.control.rich.model.StyledSegment;
@@ -53,32 +53,32 @@ public class TestRichTextFormatHandler {
         Object[] ss = {
             List.of(
                 p(
-                    a(StyleAttrs.BACKGROUND, Color.RED),
-                    a(StyleAttrs.BULLET, "⌘"),
-                    a(StyleAttrs.FIRST_LINE_INDENT, 10.0),
-                    a(StyleAttrs.LINE_SPACING, 11.0),
-                    a(StyleAttrs.PARAGRAPH_DIRECTION, ParagraphDirection.RIGHT_TO_LEFT)
+                    a(StyleAttributeMap.BACKGROUND, Color.RED),
+                    a(StyleAttributeMap.BULLET, "⌘"),
+                    a(StyleAttributeMap.FIRST_LINE_INDENT, 10.0),
+                    a(StyleAttributeMap.LINE_SPACING, 11.0),
+                    a(StyleAttributeMap.PARAGRAPH_DIRECTION, ParagraphDirection.RIGHT_TO_LEFT)
                 ),
-                s("bold", StyleAttrs.BOLD),
-                s("font family", a(StyleAttrs.FONT_FAMILY, "Arial")),
-                s("font size", a(StyleAttrs.FONT_SIZE, 12.0)),
-                s("italic", StyleAttrs.ITALIC),
+                s("bold", StyleAttributeMap.BOLD),
+                s("font family", a(StyleAttributeMap.FONT_FAMILY, "Arial")),
+                s("font size", a(StyleAttributeMap.FONT_SIZE, 12.0)),
+                s("italic", StyleAttributeMap.ITALIC),
                 nl(),
 
                 p(
-                    a(StyleAttrs.SPACE_ABOVE, 13.0),
-                    a(StyleAttrs.SPACE_BELOW, 14.0),
-                    a(StyleAttrs.SPACE_LEFT, 15.0),
-                    a(StyleAttrs.SPACE_RIGHT, 16.0),
-                    a(StyleAttrs.TEXT_ALIGNMENT, TextAlignment.CENTER),
-                    a(StyleAttrs.PARAGRAPH_DIRECTION, ParagraphDirection.LEFT_TO_RIGHT)
+                    a(StyleAttributeMap.SPACE_ABOVE, 13.0),
+                    a(StyleAttributeMap.SPACE_BELOW, 14.0),
+                    a(StyleAttributeMap.SPACE_LEFT, 15.0),
+                    a(StyleAttributeMap.SPACE_RIGHT, 16.0),
+                    a(StyleAttributeMap.TEXT_ALIGNMENT, TextAlignment.CENTER),
+                    a(StyleAttributeMap.PARAGRAPH_DIRECTION, ParagraphDirection.LEFT_TO_RIGHT)
                 ),
-                s("strike through", StyleAttrs.STRIKE_THROUGH),
-                s("text color", a(StyleAttrs.TEXT_COLOR, Color.GREEN)),
-                s("underline", StyleAttrs.UNDERLINE),
+                s("strike through", StyleAttributeMap.STRIKE_THROUGH),
+                s("text color", a(StyleAttributeMap.TEXT_COLOR, Color.GREEN)),
+                s("underline", StyleAttributeMap.UNDERLINE),
                 nl(),
 
-                s("combined", StyleAttrs.ITALIC, a(StyleAttrs.TEXT_COLOR, Color.RED), StyleAttrs.UNDERLINE),
+                s("combined", StyleAttributeMap.ITALIC, a(StyleAttributeMap.TEXT_COLOR, Color.RED), StyleAttributeMap.UNDERLINE),
                 nl()
 
                 // TODO test escapes in text, attribute names, attribute values
@@ -95,10 +95,10 @@ public class TestRichTextFormatHandler {
     @Test
     public void testStyleDeduplication() throws IOException {
         StyledSegment[] input = {
-            s("0", StyleAttrs.BOLD),
-            s("1", StyleAttrs.ITALIC),
-            s("2", StyleAttrs.BOLD),
-            s("3", StyleAttrs.ITALIC)
+            s("0", StyleAttributeMap.BOLD),
+            s("1", StyleAttributeMap.ITALIC),
+            s("2", StyleAttributeMap.BOLD),
+            s("3", StyleAttributeMap.ITALIC)
         };
 
         StringWriter wr = new StringWriter();
@@ -125,46 +125,46 @@ public class TestRichTextFormatHandler {
 
     // creates a segment with paragraph attributes
     private static StyledSegment p(Object... items) {
-        StyleAttrs.Builder b = StyleAttrs.builder();
+        StyleAttributeMap.Builder b = StyleAttributeMap.builder();
         for (Object x : items) {
             if (x instanceof StyleAttribute a) {
                 b.set(a, Boolean.TRUE);
-            } else if (x instanceof StyleAttrs a) {
+            } else if (x instanceof StyleAttributeMap a) {
                 b.merge(a);
             } else {
                 throw new Error("?" + x);
             }
         }
-        StyleAttrs attrs = b.build();
+        StyleAttributeMap attrs = b.build();
         checkParagraphType(attrs, true);
         return StyledSegment.ofParagraphAttributes(attrs);
     }
 
     // creates a text segment
     private static StyledSegment s(String text, Object... items) {
-        StyleAttrs.Builder b = StyleAttrs.builder();
+        StyleAttributeMap.Builder b = StyleAttributeMap.builder();
         for (Object x : items) {
             if (x instanceof StyleAttribute a) {
                 b.set(a, Boolean.TRUE);
-            } else if (x instanceof StyleAttrs a) {
+            } else if (x instanceof StyleAttributeMap a) {
                 b.merge(a);
             } else {
                 throw new Error("?" + x);
             }
         }
-        StyleAttrs attrs = b.build();
+        StyleAttributeMap attrs = b.build();
         checkParagraphType(attrs, false);
         return StyledSegment.of(text, attrs);
     }
 
-    private static void checkParagraphType(StyleAttrs attrs, boolean forParagraph) {
+    private static void checkParagraphType(StyleAttributeMap attrs, boolean forParagraph) {
         for (StyleAttribute a : attrs.getAttributes()) {
             Assertions.assertEquals(forParagraph, a.isParagraphAttribute(), "wrong isParagraph: " + a);
         }
     }
 
-    private static <T> StyleAttrs a(StyleAttribute<T> a, T value) {
-        return StyleAttrs.builder().set(a, value).build();
+    private static <T> StyleAttributeMap a(StyleAttribute<T> a, T value) {
+        return StyleAttributeMap.builder().set(a, value).build();
     }
 
     private static StyledSegment nl() {
@@ -207,7 +207,7 @@ public class TestRichTextFormatHandler {
             StyledSegment rs = segments.get(i);
             Assertions.assertEquals(is.getType(), rs.getType());
             Assertions.assertEquals(is.getText(), rs.getText());
-            Assertions.assertEquals(is.getStyleAttrs(null), rs.getStyleAttrs(null));
+            Assertions.assertEquals(is.getStyleAttributeMap(null), rs.getStyleAttributeMap(null));
         }
 
         // export to a string again

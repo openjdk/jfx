@@ -54,7 +54,7 @@ import jfx.incubator.scene.control.rich.StyleHandlerRegistry;
 import jfx.incubator.scene.control.rich.StyleResolver;
 import jfx.incubator.scene.control.rich.TextPos;
 import jfx.incubator.scene.control.rich.model.StyleAttribute;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 import jfx.incubator.scene.control.rich.model.StyledTextModel;
 
 /**
@@ -284,7 +284,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
      * @param attrs the attributes
      * @param forParagraph determines whether the styles are applied to the paragraph (true), or text segment (false)
      */
-    public void applyStyles(CellContext context, StyleAttrs attrs, boolean forParagraph) {
+    public void applyStyles(CellContext context, StyleAttributeMap attrs, boolean forParagraph) {
         if (attrs != null) {
             RichTextArea c = getSkinnable();
             StyleHandlerRegistry r = c.getStyleHandlerRegistry();
@@ -369,7 +369,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
             }
         case FONT: 
             {
-                StyleAttrs a = getSkinnable().getActiveStyleAttrs();
+                StyleAttributeMap a = getSkinnable().getActiveStyleAttributeMap();
                 if (a != null) {
                     String family = a.getFontFamily();
                     if (family != null) {

@@ -69,7 +69,7 @@ import jfx.incubator.scene.control.rich.TextPos;
 import jfx.incubator.scene.control.rich.model.ContentChange;
 import jfx.incubator.scene.control.rich.model.ParagraphDirection;
 import jfx.incubator.scene.control.rich.model.RichParagraph;
-import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 import jfx.incubator.scene.control.rich.model.StyledSegment;
 import jfx.incubator.scene.control.rich.model.StyledTextModel;
 import jfx.incubator.scene.control.rich.skin.RichTextAreaSkin;
@@ -780,7 +780,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             return null;
         }
         TextCell cell;
-        StyleAttrs pa = par.getParagraphAttributes();
+        StyleAttributeMap pa = par.getParagraphAttributes();
         Supplier<Region> gen = par.getParagraphRegion();
         if (gen != null) {
             // it's a paragraph node
@@ -811,7 +811,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             if ((segments == null) || segments.isEmpty()) {
                 // a bit of a hack: avoid TextCells with an empty TextFlow,
                 // otherwise it makes the caret collapse to a single point
-                cell.add(createTextNode("", StyleAttrs.EMPTY));
+                cell.add(createTextNode("", StyleAttributeMap.EMPTY));
             } else {
                 for (StyledSegment seg : segments) {
                     switch (seg.getType()) {
@@ -821,7 +821,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
                         break;
                     case TEXT:
                         String text = seg.getText();
-                        StyleAttrs a = seg.getStyleAttrs(this);
+                        StyleAttributeMap a = seg.getStyleAttributeMap(this);
                         Text t = createTextNode(text, a);
                         cell.add(t);
                         break;
@@ -831,7 +831,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         }
 
         if (pa == null) {
-            pa = StyleAttrs.EMPTY;
+            pa = StyleAttributeMap.EMPTY;
         } else {
             // these two attributes operate on TextCell instead of its content
             String bullet = pa.getBullet();
@@ -861,7 +861,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         return cell;
     }
 
-    private Text createTextNode(String text, StyleAttrs attrs) {
+    private Text createTextNode(String text, StyleAttributeMap attrs) {
         Text t = new Text(text);
         context.reset(t, attrs);
         skin.applyStyles(context, attrs, false);
@@ -1450,7 +1450,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
     }
 
     @Override
-    public StyleAttrs resolveStyles(StyleAttrs attrs) {
+    public StyleAttributeMap resolveStyles(StyleAttributeMap attrs) {
         if (attrs == null) {
             return attrs;
         }
@@ -1472,7 +1472,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
                 measurer.getStyleClass().setAll(names);
             }
             measurer.applyCss();
-            return StyleAttrs.fromTextNode(measurer);
+            return StyleAttributeMap.fromTextNode(measurer);
         } finally {
             getChildren().remove(measurer);
         }

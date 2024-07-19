@@ -51,7 +51,7 @@ public abstract class StyledTextModelViewOnlyBase extends StyledTextModel {
     }
 
     @Override
-    protected int insertTextSegment(int index, int offset, String text, StyleAttrs attrs) {
+    protected int insertTextSegment(int index, int offset, String text, StyleAttributeMap attrs) {
         throw new UnsupportedOperationException();
     }
 
@@ -66,12 +66,12 @@ public abstract class StyledTextModelViewOnlyBase extends StyledTextModel {
     }
 
     @Override
-    protected final void setParagraphStyle(int ix, StyleAttrs a) {
+    protected final void setParagraphStyle(int ix, StyleAttributeMap a) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected final void applyStyle(int ix, int start, int end, StyleAttrs a, boolean merge) {
+    protected final void applyStyle(int ix, int start, int end, StyleAttributeMap a, boolean merge) {
         throw new UnsupportedOperationException();
     }
 }
