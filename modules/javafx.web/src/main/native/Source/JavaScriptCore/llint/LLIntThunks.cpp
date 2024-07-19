@@ -32,6 +32,7 @@
 #include "LLIntCLoop.h"
 #include "LLIntData.h"
 #include "LinkBuffer.h"
+#include "MaxFrameExtentForSlowPathCall.h"
 #include "VMEntryRecord.h"
 #include "WasmCallingConvention.h"
 #include "WasmContext.h"
@@ -220,6 +221,16 @@ MacroAssemblerCodeRef<JITThunkPtrTag> wasmFunctionEntryThunkSIMD()
     return codeRef;
 }
 
+
+ALWAYS_INLINE void* untaggedPtr(void* ptr)
+{
+#if COMPILER(MSVC)
+        return CodePtr<CFunctionPtrTag>::fromTaggedPtr(ptr).untaggedPtr();
+#else
+        return CodePtr<CFunctionPtrTag>::fromTaggedPtr(ptr).template untaggedPtr();
+#endif
+}
+
 MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterEntryThunk()
 {
     static LazyNeverDestroyed<MacroAssemblerCodeRef<JITThunkPtrTag>> codeRef;
@@ -227,7 +238,42 @@ MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterEntryThunk()
     std::call_once(onceKey, [&] {
         JSInterfaceJIT jit;
         void* ptr = reinterpret_cast<void*>(ipint_entry);
-        void* untagged = CodePtr<CFunctionPtrTag>::fromTaggedPtr(ptr).template untaggedPtr();
+        void* untagged = untaggedPtr(ptr);
+        void* retagged = nullptr;
+#if ENABLE(JIT_CAGE)
+        if (Options::useJITCage())
+#else
+        if (false)
+#endif
+            retagged = tagCodePtr<OperationPtrTag>(untagged);
+        else
+            retagged = WTF::tagNativeCodePtrImpl<OperationPtrTag>(untagged);
+
+        assertIsTaggedWith<OperationPtrTag>(retagged);
+
+#if ENABLE(WEBASSEMBLY)
+        CCallHelpers::RegisterID scratch = Wasm::wasmCallingConvention().prologueScratchGPRs[0];
+#else
+        CCallHelpers::RegisterID scratch = JSInterfaceJIT::regT0;
+#endif
+        jit.tagReturnAddress();
+        jit.move(JSInterfaceJIT::TrustedImmPtr(retagged), scratch);
+        jit.farJump(scratch, OperationPtrTag);
+
+        LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::LLIntThunk);
+        codeRef.construct(FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, "LLInt %s jump to prologue thunk", "function for wasm in place interpreter"));
+    });
+    return codeRef;
+}
+
+MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterEntryThunkSIMD()
+{
+    static LazyNeverDestroyed<MacroAssemblerCodeRef<JITThunkPtrTag>> codeRef;
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [&] {
+        JSInterfaceJIT jit;
+        void* ptr = reinterpret_cast<void*>(ipint_entry_simd);
+        void* untagged = untaggedPtr(ptr);
         void* retagged = nullptr;
 #if ENABLE(JIT_CAGE)
         if (Options::useJITCage())
@@ -255,6 +301,48 @@ MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterEntryThunk()
     return codeRef;
 }
 #endif // ENABLE(WEBASSEMBLY)
+
+MacroAssemblerCodeRef<JSEntryPtrTag> defaultCallThunk()
+{
+    static LazyNeverDestroyed<MacroAssemblerCodeRef<JSEntryPtrTag>> codeRef;
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [&] {
+        // The callee is in regT0 (for JSVALUE32_64, the tag is in regT1).
+        // The return address is on the stack, or in the link register. We will hence
+        // jump to the callee, or save the return address to the call frame while we
+        // make a C++ function call to the appropriate JIT operation.
+
+        // regT0 => callee
+        // regT1 => tag (32bit)
+        // regT2 => CallLinkInfo*
+
+        CCallHelpers jit;
+
+        jit.emitFunctionPrologue();
+        if (maxFrameExtentForSlowPathCall)
+            jit.addPtr(CCallHelpers::TrustedImm32(-static_cast<int32_t>(maxFrameExtentForSlowPathCall)), CCallHelpers::stackPointerRegister);
+        jit.setupArguments<decltype(operationDefaultCall)>(GPRInfo::regT2);
+        jit.move(CCallHelpers::TrustedImmPtr(tagCFunction<OperationPtrTag>(operationDefaultCall)), GPRInfo::nonArgGPR0);
+        jit.call(GPRInfo::nonArgGPR0, OperationPtrTag);
+        if (maxFrameExtentForSlowPathCall)
+            jit.addPtr(CCallHelpers::TrustedImm32(maxFrameExtentForSlowPathCall), CCallHelpers::stackPointerRegister);
+
+        // This slow call will return the address of one of the following:
+        // 1) Exception throwing thunk.
+        // 2) Host call return value returner thingy.
+        // 3) The function to call.
+        // The second return value GPR will hold a non-zero value for tail calls.
+
+        jit.emitFunctionEpilogue();
+        jit.untagReturnAddress();
+        jit.farJump(GPRInfo::returnValueGPR, JSEntryPtrTag);
+
+        LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::Thunk);
+        codeRef.construct(FINALIZE_CODE(patchBuffer, JSEntryPtrTag, "Default Call thunk"));
+        return;
+    });
+    return codeRef;
+}
 
 MacroAssemblerCodeRef<JSEntryPtrTag> getHostCallReturnValueThunk()
 {
@@ -478,8 +566,8 @@ MacroAssemblerCodeRef<NativeToJITGatePtrTag> createTailCallGate(PtrTag tag, bool
     CCallHelpers jit;
 
     if (untag) {
-        jit.untagPtr(GPRInfo::argumentGPR2, ARM64Registers::lr);
-        jit.validateUntaggedPtr(ARM64Registers::lr, GPRInfo::argumentGPR2);
+        jit.untagPtr(GPRInfo::argumentGPR6, ARM64Registers::lr);
+        jit.validateUntaggedPtr(ARM64Registers::lr, GPRInfo::argumentGPR6);
     }
     jit.farJump(GPRInfo::argumentGPR7, tag);
 
@@ -580,9 +668,22 @@ MacroAssemblerCodeRef<NativeToJITGatePtrTag> tagGateThunk(void* pointer)
 {
     CCallHelpers jit;
 
-    jit.addPtr(CCallHelpers::TrustedImm32(16), GPRInfo::callFrameRegister, GPRInfo::regT3);
-    jit.tagPtr(GPRInfo::regT3, ARM64Registers::lr);
-    jit.storePtr(ARM64Registers::lr, CCallHelpers::Address(GPRInfo::callFrameRegister, 8));
+    GPRReg signingTagReg = GPRInfo::regT3;
+    if (!Options::allowNonSPTagging()) {
+        JIT_COMMENT(jit, "lldb dynamic execution / posix signals could trash your stack"); // We don't have to worry about signals because they shouldn't fire in WebContent process in this window.
+        jit.move(MacroAssembler::stackPointerRegister, GPRInfo::regT3);
+        signingTagReg = MacroAssembler::stackPointerRegister;
+    }
+
+    jit.addPtr(CCallHelpers::TrustedImm32(sizeof(CallerFrameAndPC)), GPRInfo::callFrameRegister, signingTagReg);
+    jit.tagPtr(signingTagReg, ARM64Registers::lr);
+    jit.storePtr(ARM64Registers::lr, CCallHelpers::Address(GPRInfo::callFrameRegister, sizeof(CPURegister)));
+
+    if (!Options::allowNonSPTagging()) {
+        JIT_COMMENT(jit, "lldb dynamic execution / posix signals are ok again");
+        jit.move(GPRInfo::regT3, MacroAssembler::stackPointerRegister);
+    }
+
     jit.move(CCallHelpers::TrustedImmPtr(pointer), GPRInfo::regT3);
     jit.farJump(GPRInfo::regT3, OperationPtrTag);
 
@@ -594,8 +695,8 @@ MacroAssemblerCodeRef<NativeToJITGatePtrTag> untagGateThunk(void* pointer)
 {
     CCallHelpers jit;
 
-    jit.loadPtr(CCallHelpers::Address(GPRInfo::callFrameRegister, 8), ARM64Registers::lr);
-    jit.addPtr(CCallHelpers::TrustedImm32(16), GPRInfo::callFrameRegister, GPRInfo::regT3);
+    jit.loadPtr(CCallHelpers::Address(GPRInfo::callFrameRegister, sizeof(CPURegister)), ARM64Registers::lr);
+    jit.addPtr(CCallHelpers::TrustedImm32(sizeof(CallerFrameAndPC)), GPRInfo::callFrameRegister, GPRInfo::regT3);
     jit.untagPtr(GPRInfo::regT3, ARM64Registers::lr);
     jit.validateUntaggedPtr(ARM64Registers::lr, GPRInfo::regT3);
     jit.move(CCallHelpers::TrustedImmPtr(pointer), GPRInfo::regT3);
@@ -733,7 +834,7 @@ extern "C" VMEntryRecord* vmEntryRecord(EntryFrame* entryFrame)
     // The C Loop doesn't have any callee save registers, so the VMEntryRecord is allocated at the base of the frame.
     intptr_t stackAlignment = stackAlignmentBytes();
     intptr_t VMEntryTotalFrameSize = (sizeof(VMEntryRecord) + (stackAlignment - 1)) & ~(stackAlignment - 1);
-    return reinterpret_cast<VMEntryRecord*>(reinterpret_cast<char*>(entryFrame) - VMEntryTotalFrameSize);
+    return reinterpret_cast<VMEntryRecord*>(reinterpret_cast<intptr_t>(entryFrame) - VMEntryTotalFrameSize);
 }
 
 #endif // ENABLE(C_LOOP)

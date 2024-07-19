@@ -52,17 +52,14 @@ using InlineLayoutRect = LayoutRect;
 
 struct Position {
     operator LayoutUnit() const { return value; }
+    friend bool operator==(Position, Position) = default;
+
     LayoutUnit value;
 };
 
 inline bool operator<(const Position& a, const Position& b)
 {
     return a.value < b.value;
-}
-
-inline bool operator==(const Position& a, const Position& b)
-{
-    return a.value == b.value;
 }
 
 struct Point {
@@ -106,30 +103,6 @@ inline void Point::moveBy(LayoutPoint offset)
 {
     x += offset.x();
     y += offset.y();
-}
-
-// Margin, border, padding
-struct HorizontalEdges {
-    LayoutUnit left;
-    LayoutUnit right;
-};
-
-struct VerticalEdges {
-    LayoutUnit top;
-    LayoutUnit bottom;
-};
-
-struct Edges {
-    HorizontalEdges horizontal;
-    VerticalEdges vertical;
-
-    LayoutUnit width() const { return horizontal.left + horizontal.right; }
-    LayoutUnit height() const { return vertical.top + vertical.bottom; }
-};
-
-inline Edges operator/(const Edges& edge, size_t value)
-{
-    return { { edge.horizontal.left / value, edge.horizontal.right / value }, { edge.vertical.top / value, edge.vertical.bottom / value } };
 }
 
 struct ContentWidthAndMargin {
@@ -179,6 +152,11 @@ inline LayoutPoint toLayoutPoint(const InlineLayoutPoint& point)
     return LayoutPoint { point };
 }
 
+inline LayoutSize toLayoutSize(const InlineLayoutSize& size)
+{
+    return LayoutSize { size };
+}
+
 inline LayoutRect toLayoutRect(const InlineLayoutRect& rect)
 {
     return LayoutRect { rect };
@@ -197,6 +175,8 @@ struct SlotPosition {
     SlotPosition() = default;
     SlotPosition(size_t column, size_t row);
 
+    friend bool operator==(const SlotPosition&, const SlotPosition&) = default;
+
     size_t column { 0 };
     size_t row { 0 };
 };
@@ -205,11 +185,6 @@ inline SlotPosition::SlotPosition(size_t column, size_t row)
     : column(column)
     , row(row)
 {
-}
-
-inline bool operator==(const SlotPosition& a, const SlotPosition& b)
-{
-    return a.column == b.column && a.row == b.row;
 }
 
 struct CellSpan {

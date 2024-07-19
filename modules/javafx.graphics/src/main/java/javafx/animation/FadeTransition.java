@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,7 +36,7 @@ import javafx.util.Duration;
 /**
  * This {@code Transition} creates a fade effect animation that spans its
  * {@code duration}. This is done by updating the {@code opacity} variable of
- * the {@code node} at regular interval.
+ * the {@code node} at regular intervals.
  * <p>
  * It starts from the {@code fromValue} if provided else uses the {@code node}'s
  * {@code opacity} value.

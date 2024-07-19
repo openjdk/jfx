@@ -104,8 +104,6 @@ RegisterSet RegisterSetBuilder::macroClobberedGPRs()
     return RegisterSetBuilder(MacroAssembler::dataTempRegister, MacroAssembler::memoryTempRegister).buildAndValidate();
 #elif CPU(ARM_THUMB2)
     return RegisterSetBuilder(MacroAssembler::dataTempRegister, MacroAssembler::addressTempRegister).buildAndValidate();
-#elif CPU(MIPS)
-    return RegisterSetBuilder(MacroAssembler::immTempRegister, MacroAssembler::dataTempRegister, MacroAssembler::addrTempRegister, MacroAssembler::cmpTempRegister).buildAndValidate();
 #else
     return { };
 #endif
@@ -125,10 +123,6 @@ RegisterSet RegisterSetBuilder::macroClobberedFPRs()
     builder.add(MacroAssembler::fpTempRegister2, IgnoreVectors);
     return builder.buildAndValidate();
 #elif CPU(ARM_THUMB2)
-    RegisterSetBuilder builder;
-    builder.add(MacroAssembler::fpTempRegister, IgnoreVectors);
-    return builder.buildAndValidate();
-#elif CPU(MIPS)
     RegisterSetBuilder builder;
     builder.add(MacroAssembler::fpTempRegister, IgnoreVectors);
     return builder.buildAndValidate();
@@ -196,10 +190,6 @@ RegisterSet RegisterSetBuilder::vmCalleeSaveRegisters()
     result.add(FPRInfo::fpRegCS3, IgnoreVectors);
     result.add(FPRInfo::fpRegCS4, IgnoreVectors);
     result.add(FPRInfo::fpRegCS5, IgnoreVectors);
-    result.add(FPRInfo::fpRegCS6, IgnoreVectors);
-#elif CPU(MIPS)
-    result.add(GPRInfo::regCS0, IgnoreVectors);
-    result.add(GPRInfo::regCS1, IgnoreVectors);
 #elif CPU(RISCV64)
     result.add(GPRInfo::regCS0, IgnoreVectors);
     result.add(GPRInfo::regCS1, IgnoreVectors);
@@ -235,7 +225,7 @@ RegisterSet RegisterSetBuilder::llintBaselineCalleeSaveRegisters()
 #elif CPU(X86_64)
 #if !OS(WINDOWS)
     result.add(GPRInfo::regCS1, IgnoreVectors);
-    static_assert(GPRInfo::regCS2 == GPRInfo::constantsRegister);
+    static_assert(GPRInfo::regCS2 == GPRInfo::jitDataRegister);
     static_assert(GPRInfo::regCS3 == GPRInfo::numberTagRegister);
     static_assert(GPRInfo::regCS4 == GPRInfo::notCellMaskRegister);
     result.add(GPRInfo::regCS2, IgnoreVectors);
@@ -243,19 +233,19 @@ RegisterSet RegisterSetBuilder::llintBaselineCalleeSaveRegisters()
     result.add(GPRInfo::regCS4, IgnoreVectors);
 #else
     result.add(GPRInfo::regCS3, IgnoreVectors);
-    static_assert(GPRInfo::regCS4 == GPRInfo::constantsRegister);
+    static_assert(GPRInfo::regCS4 == GPRInfo::jitDataRegister);
     static_assert(GPRInfo::regCS5 == GPRInfo::numberTagRegister);
     static_assert(GPRInfo::regCS6 == GPRInfo::notCellMaskRegister);
     result.add(GPRInfo::regCS4, IgnoreVectors);
     result.add(GPRInfo::regCS5, IgnoreVectors);
     result.add(GPRInfo::regCS6, IgnoreVectors);
 #endif
-#elif CPU(ARM_THUMB2) || CPU(MIPS)
+#elif CPU(ARM_THUMB2)
     result.add(GPRInfo::regCS0, IgnoreVectors);
     result.add(GPRInfo::regCS1, IgnoreVectors);
 #elif CPU(ARM64) || CPU(RISCV64)
     result.add(GPRInfo::regCS6, IgnoreVectors);
-    static_assert(GPRInfo::regCS7 == GPRInfo::constantsRegister);
+    static_assert(GPRInfo::regCS7 == GPRInfo::jitDataRegister);
     static_assert(GPRInfo::regCS8 == GPRInfo::numberTagRegister);
     static_assert(GPRInfo::regCS9 == GPRInfo::notCellMaskRegister);
     result.add(GPRInfo::regCS7, IgnoreVectors);
@@ -275,7 +265,7 @@ RegisterSet RegisterSetBuilder::dfgCalleeSaveRegisters()
     result.add(GPRInfo::regCS0, IgnoreVectors);
     result.add(GPRInfo::regCS1, IgnoreVectors);
 #if !OS(WINDOWS)
-    static_assert(GPRInfo::regCS2 == GPRInfo::constantsRegister);
+    static_assert(GPRInfo::regCS2 == GPRInfo::jitDataRegister);
     static_assert(GPRInfo::regCS3 == GPRInfo::numberTagRegister);
     static_assert(GPRInfo::regCS4 == GPRInfo::notCellMaskRegister);
     result.add(GPRInfo::regCS2, IgnoreVectors);
@@ -284,18 +274,18 @@ RegisterSet RegisterSetBuilder::dfgCalleeSaveRegisters()
 #else
     result.add(GPRInfo::regCS2, IgnoreVectors);
     result.add(GPRInfo::regCS3, IgnoreVectors);
-    static_assert(GPRInfo::regCS4 == GPRInfo::constantsRegister);
+    static_assert(GPRInfo::regCS4 == GPRInfo::jitDataRegister);
     static_assert(GPRInfo::regCS5 == GPRInfo::numberTagRegister);
     static_assert(GPRInfo::regCS6 == GPRInfo::notCellMaskRegister);
     result.add(GPRInfo::regCS4, IgnoreVectors);
     result.add(GPRInfo::regCS5, IgnoreVectors);
     result.add(GPRInfo::regCS6, IgnoreVectors);
 #endif
-#elif CPU(ARM_THUMB2) || CPU(MIPS)
+#elif CPU(ARM_THUMB2)
     result.add(GPRInfo::regCS0, IgnoreVectors);
     result.add(GPRInfo::regCS1, IgnoreVectors);
 #elif CPU(ARM64) || CPU(RISCV64)
-    static_assert(GPRInfo::regCS7 == GPRInfo::constantsRegister);
+    static_assert(GPRInfo::regCS7 == GPRInfo::jitDataRegister);
     static_assert(GPRInfo::regCS8 == GPRInfo::numberTagRegister);
     static_assert(GPRInfo::regCS9 == GPRInfo::notCellMaskRegister);
     result.add(GPRInfo::regCS7, IgnoreVectors);
@@ -314,7 +304,7 @@ RegisterSet RegisterSetBuilder::ftlCalleeSaveRegisters()
 #if CPU(X86_64) && !OS(WINDOWS)
     result.add(GPRInfo::regCS0, IgnoreVectors);
     result.add(GPRInfo::regCS1, IgnoreVectors);
-    static_assert(GPRInfo::regCS2 == GPRInfo::constantsRegister);
+    static_assert(GPRInfo::regCS2 == GPRInfo::jitDataRegister);
     static_assert(GPRInfo::regCS3 == GPRInfo::numberTagRegister);
     static_assert(GPRInfo::regCS4 == GPRInfo::notCellMaskRegister);
     result.add(GPRInfo::regCS2, IgnoreVectors);
@@ -329,7 +319,7 @@ RegisterSet RegisterSetBuilder::ftlCalleeSaveRegisters()
     result.add(GPRInfo::regCS4, IgnoreVectors);
     result.add(GPRInfo::regCS5, IgnoreVectors);
     result.add(GPRInfo::regCS6, IgnoreVectors);
-    static_assert(GPRInfo::regCS7 == GPRInfo::constantsRegister);
+    static_assert(GPRInfo::regCS7 == GPRInfo::jitDataRegister);
     static_assert(GPRInfo::regCS8 == GPRInfo::numberTagRegister);
     static_assert(GPRInfo::regCS9 == GPRInfo::notCellMaskRegister);
     result.add(GPRInfo::regCS7, IgnoreVectors);
@@ -351,7 +341,7 @@ RegisterSet RegisterSetBuilder::ftlCalleeSaveRegisters()
     result.add(GPRInfo::regCS4, IgnoreVectors);
     result.add(GPRInfo::regCS5, IgnoreVectors);
     result.add(GPRInfo::regCS6, IgnoreVectors);
-    static_assert(GPRInfo::regCS7 == GPRInfo::constantsRegister);
+    static_assert(GPRInfo::regCS7 == GPRInfo::jitDataRegister);
     static_assert(GPRInfo::regCS8 == GPRInfo::numberTagRegister);
     static_assert(GPRInfo::regCS9 == GPRInfo::notCellMaskRegister);
     result.add(GPRInfo::regCS7, IgnoreVectors);
@@ -448,6 +438,9 @@ RegisterSet RegisterSetBuilder::wasmPinnedRegisters()
         result.add(GPRInfo::wasmContextInstancePointer, IgnoreVectors);
     if constexpr (GPRInfo::wasmBoundsCheckingSizeRegister != InvalidGPRReg)
         result.add(GPRInfo::wasmBoundsCheckingSizeRegister, IgnoreVectors);
+#if OS(WINDOWS)
+    result.add(GPRInfo::wasmScratchCSR0, IgnoreVectors);
+#endif
     return result;
 }
 #endif

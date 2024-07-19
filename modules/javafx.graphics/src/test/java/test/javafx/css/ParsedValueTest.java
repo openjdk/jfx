@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -70,7 +70,7 @@ public class ParsedValueTest {
      */
     @Test
     public void testConvert() {
-        ///System.out.println("convert");
+        //System.out.println("convert");
         Font font = Font.getDefault();
         Size size = new Size(1.0, SizeUnits.EM);
         ParsedValue<ParsedValue<?,Size>,Number> value =

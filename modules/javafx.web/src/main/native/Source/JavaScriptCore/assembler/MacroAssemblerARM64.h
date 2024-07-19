@@ -32,6 +32,7 @@
 #include "JITOperationValidation.h"
 #include <wtf/MathExtras.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
@@ -39,6 +40,7 @@ using Assembler = TARGET_ASSEMBLER;
 class Reg;
 
 class MacroAssemblerARM64 : public AbstractMacroAssembler<Assembler> {
+    WTF_MAKE_TZONE_ALLOCATED(MacroAssemblerARM64);
 public:
     static constexpr unsigned numGPRs = 32;
     static constexpr unsigned numFPRs = 32;
@@ -87,11 +89,10 @@ public:
 
     Vector<LinkRecord, 0, UnsafeVectorOverflow>& jumpsToLink() { return m_assembler.jumpsToLink(); }
     static bool canCompact(JumpType jumpType) { return Assembler::canCompact(jumpType); }
-    static JumpLinkType computeJumpType(JumpType jumpType, const uint8_t* from, const uint8_t* to) { return Assembler::computeJumpType(jumpType, from, to); }
     static JumpLinkType computeJumpType(LinkRecord& record, const uint8_t* from, const uint8_t* to) { return Assembler::computeJumpType(record, from, to); }
     static int jumpSizeDelta(JumpType jumpType, JumpLinkType jumpLinkType) { return Assembler::jumpSizeDelta(jumpType, jumpLinkType); }
 
-    template <Assembler::CopyFunction copy>
+    template<MachineCodeCopyMode copy>
     ALWAYS_INLINE static void link(LinkRecord& record, uint8_t* from, const uint8_t* fromInstruction, uint8_t* to) { return Assembler::link<copy>(record, from, fromInstruction, to); }
 
     static bool isCompactPtrAlignedAddressOffset(ptrdiff_t value)
@@ -114,6 +115,7 @@ public:
     };
 
     enum ResultCondition {
+        Carry = Assembler::ConditionCS,
         Overflow = Assembler::ConditionVS,
         Signed = Assembler::ConditionMI,
         PositiveOrZero = Assembler::ConditionPL,
@@ -904,6 +906,8 @@ public:
 
     void lshift64(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
+        if (UNLIKELY(!imm.m_value))
+            return move(src, dest);
         m_assembler.lsl<64>(dest, src, imm.m_value & 0x3f);
     }
 
@@ -1229,6 +1233,8 @@ public:
 
     void rotateRight64(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
+        if (UNLIKELY(!imm.m_value))
+            return move(src, dest);
         m_assembler.ror<64>(dest, src, imm.m_value & 63);
     }
 
@@ -1269,6 +1275,8 @@ public:
 
     void rshift64(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
+        if (UNLIKELY(!imm.m_value))
+            return move(src, dest);
         m_assembler.asr<64>(dest, src, imm.m_value & 0x3f);
     }
 
@@ -1431,6 +1439,8 @@ public:
 
     void urshift64(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
+        if (UNLIKELY(!imm.m_value))
+            return move(src, dest);
         m_assembler.lsr<64>(dest, src, imm.m_value & 0x3f);
     }
 
@@ -2116,6 +2126,23 @@ public:
     }
 
     void transferPtr(Address src, Address dest)
+    {
+        transfer64(src, dest);
+    }
+
+    void transfer32(BaseIndex src, BaseIndex dest)
+    {
+        load32(src, getCachedDataTempRegisterIDAndInvalidate());
+        store32(getCachedDataTempRegisterIDAndInvalidate(), dest);
+    }
+
+    void transfer64(BaseIndex src, BaseIndex dest)
+    {
+        load64(src, getCachedDataTempRegisterIDAndInvalidate());
+        store64(getCachedDataTempRegisterIDAndInvalidate(), dest);
+    }
+
+    void transferPtr(BaseIndex src, BaseIndex dest)
     {
         transfer64(src, dest);
     }
@@ -4074,6 +4101,11 @@ public:
         return branch32(cond, left, right);
     }
 
+    Jump branch32WithMemory16(RelationalCondition cond, Address left, RegisterID right)
+    {
+        MacroAssemblerHelpers::load16OnCondition(*this, cond, left, getCachedMemoryTempRegisterIDAndInvalidate());
+        return branch32(cond, memoryTempRegister, right);
+    }
 
     // Arithmetic control flow operations:
     //
@@ -4387,11 +4419,12 @@ public:
     ALWAYS_INLINE Call call(RegisterID target, RegisterID callTag) { return UNUSED_PARAM(callTag), call(target, NoPtrTag); }
     ALWAYS_INLINE Call call(Address address, RegisterID callTag) { return UNUSED_PARAM(callTag), call(address, NoPtrTag); }
 
-    ALWAYS_INLINE void callOperation(const CodePtr<OperationPtrTag> operation)
+    template<PtrTag tag>
+    ALWAYS_INLINE void callOperation(const CodePtr<tag> operation)
     {
         auto tmp = getCachedDataTempRegisterIDAndInvalidate();
         move(TrustedImmPtr(operation.taggedPtr()), tmp);
-        call(tmp, OperationPtrTag);
+        call(tmp, tag);
     }
 
     ALWAYS_INLINE Jump jump()
@@ -5932,6 +5965,12 @@ public:
     static void replaceWithJump(CodeLocationLabel<startTag> instructionStart, CodeLocationLabel<destTag> destination)
     {
         Assembler::replaceWithJump(instructionStart.dataLocation(), destination.dataLocation());
+    }
+
+    template<PtrTag startTag>
+    static void replaceWithNops(CodeLocationLabel<startTag> instructionStart, size_t memoryToFillWithNopsInBytes)
+    {
+        Assembler::replaceWithNops(instructionStart.dataLocation(), memoryToFillWithNopsInBytes);
     }
 
     static ptrdiff_t maxJumpReplacementSize()

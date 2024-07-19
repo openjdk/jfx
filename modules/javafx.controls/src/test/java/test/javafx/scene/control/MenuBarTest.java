@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -715,5 +715,69 @@ public class MenuBarTest {
         // check if focusedMenuIndex is 0 (menu1 is still in selected state).
         int focusedIndex = MenuBarSkinShim.getFocusedMenuIndex(skin);
         assertEquals(0, focusedIndex);
+    }
+
+    /** Tests keyboard navigation with invisible menu JDK-8330304 */
+    @Test
+    public void testKeyNavigationWithInvisibleMenuItem() {
+        Menu menu1 = mkMenu("1", 3);
+        Menu menu2 = mkMenu("2", 3);
+        Menu menu3 = mkMenu("3", 3);
+        Menu menu4 = mkMenu("4", 3);
+        menuBar.getMenus().setAll(menu1, menu2, menu3, menu4);
+
+        menu2.setVisible(false);
+
+        VBox root = new VBox(menuBar);
+        startApp(root);
+        tk.firePulse();
+
+        MenuBarSkin skin = (MenuBarSkin)menuBar.getSkin();
+        assertTrue(skin != null);
+
+        double x = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinX();
+        double y = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinY();
+
+        // show menu1 using mouse
+        MenuButton mb = MenuBarSkinShim.getNodeForMenu(skin, 0);
+        mb.getScene().getWindow().requestFocus();
+        SceneHelper.processMouseEvent(scene,
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, x+20, y+20));
+        SceneHelper.processMouseEvent(scene,
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, x+20, y+20));
+        assertTrue(menu1.isShowing());
+
+        // show menu3 with RIGHT key press, menu2 is hidden and should be skipped
+        KeyEventFirer keyboard = new KeyEventFirer(mb.getScene());
+        keyboard.doKeyPress(KeyCode.RIGHT);
+        tk.firePulse();
+
+        assertTrue(menu3.isShowing());
+
+        // show menu4
+        keyboard.doKeyPress(KeyCode.RIGHT);
+        tk.firePulse();
+
+        assertTrue(menu4.isShowing());
+
+        // show menu3
+        keyboard.doKeyPress(KeyCode.LEFT);
+        tk.firePulse();
+
+        assertTrue(menu3.isShowing());
+
+        // show menu1 (menu2 is hidden)
+        keyboard.doKeyPress(KeyCode.LEFT);
+        tk.firePulse();
+
+        assertTrue(menu1.isShowing());
+    }
+
+    private Menu mkMenu(String name, int itemCount) {
+        Menu m = new Menu("Menu" + name);
+        for (int i = 0; i < itemCount; i++) {
+            m.getItems().add(new MenuItem("Menu" + name + "Item" + i));
+        }
+        return m;
     }
 }

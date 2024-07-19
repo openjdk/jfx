@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -203,9 +203,9 @@ public class DataURLConnectionTest {
     @Test
     public void testImportantUrls() throws Exception {
 
-        ///////////////////////
+        //---------------------
         // RFC 2397 examples //
-        ///////////////////////
+        //---------------------
 
         execute(new TestCase(
                 "data:,A%20brief%20note",
@@ -270,9 +270,9 @@ public class DataURLConnectionTest {
                 "select_vcount,fcol_fieldtable/local".getBytes("US-ASCII")));
 
 
-        /////////////////////////////////
+        //-------------------------------
         // URLs used by the Acid2 test //
-        /////////////////////////////////
+        //-------------------------------
 
         execute(new TestCase(
                 "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAA" +
@@ -351,9 +351,9 @@ public class DataURLConnectionTest {
                 "application/x-unknown",
                 "ERROR".getBytes("US-ASCII")));
 
-        /////////////////////////////////
+        //-------------------------------
         // Acid3 tests                 //
-        /////////////////////////////////
+        //-------------------------------
 
         execute(new TestCase(
                 "data:text/javascript,d1%20%3D%20'one'%3B",
@@ -382,9 +382,9 @@ public class DataURLConnectionTest {
                 "text/javascript;charset=US-ASCII",
                 "d5 = 'five\\'s';".getBytes("US-ASCII")));
 
-        ///////////////////////////////////////////
+        //-----------------------------------------
         // URLs that have associated Jira issues //
-        ///////////////////////////////////////////
+        //-----------------------------------------
 
         // RT-14528
         execute(new TestCase(

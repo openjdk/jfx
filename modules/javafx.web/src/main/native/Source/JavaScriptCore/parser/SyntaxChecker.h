@@ -89,7 +89,7 @@ public:
         TemplateExpressionListResult, TemplateExpr,
         TaggedTemplateExpr, YieldExpr, AwaitExpr,
         ModuleNameResult, PrivateIdentifier,
-        ImportSpecifierResult, ImportSpecifierListResult, ImportAssertionListResult,
+        ImportSpecifierResult, ImportSpecifierListResult, ImportAttributesListResult,
         ExportSpecifierResult, ExportSpecifierListResult,
 
         NewTargetExpr = MetaPropertyBit | 0,
@@ -131,7 +131,7 @@ public:
     typedef int ModuleName;
     typedef int ImportSpecifier;
     typedef int ImportSpecifierList;
-    typedef int ImportAssertionList;
+    typedef int ImportAttributesList;
     typedef int ExportSpecifier;
     typedef int ExportSpecifierList;
     typedef int Statement;
@@ -172,7 +172,7 @@ public:
     ALWAYS_INLINE bool isMetaProperty(ExpressionType type) { return type & MetaPropertyBit; }
     ALWAYS_INLINE bool isNewTarget(ExpressionType type) { return type == NewTargetExpr; }
     ALWAYS_INLINE bool isImportMeta(ExpressionType type) { return type == ImportMetaExpr; }
-    ExpressionType createResolve(const JSTokenLocation&, const Identifier&, int, int) { return ResolveExpr; }
+    ExpressionType createResolve(const JSTokenLocation&, const Identifier&, int, int, const bool = true) { return ResolveExpr; }
     ExpressionType createPrivateIdentifierNode(const JSTokenLocation&, const Identifier&) { return PrivateIdentifier; }
     ExpressionType createObjectLiteral(const JSTokenLocation&) { return ObjectLiteralExpr; }
     ExpressionType createObjectLiteral(const JSTokenLocation&, int) { return ObjectLiteralExpr; }
@@ -188,7 +188,7 @@ public:
     ExpressionType createDotAccess(const JSTokenLocation&, ExpressionType, const Identifier*, DotType type, int, int, int) { return type == DotType::PrivateMember ? PrivateDotExpr : DotExpr; }
     ExpressionType createRegExp(const JSTokenLocation&, const Identifier& pattern, const Identifier& flags, int) { return Yarr::hasError(Yarr::checkSyntax(pattern.string(), flags.string())) ? 0 : RegExpExpr; }
     ExpressionType createNewExpr(const JSTokenLocation&, ExpressionType, int, int, int, int) { return NewExpr; }
-    ExpressionType createNewExpr(const JSTokenLocation&, ExpressionType, int, int) { return NewExpr; }
+    ExpressionType createNewExpr(const JSTokenLocation&, ExpressionType, int, int, int) { return NewExpr; }
     ExpressionType createOptionalChain(const JSTokenLocation&, ExpressionType, ExpressionType, bool) { return OptionalChain; }
     ExpressionType createConditionalExpr(const JSTokenLocation&, ExpressionType, ExpressionType, ExpressionType) { return ConditionalExpr; }
     ExpressionType createAssignResolve(const JSTokenLocation&, const Identifier&, ExpressionType, int, int, int, AssignmentContext) { return AssignmentExpr; }
@@ -257,14 +257,14 @@ public:
     int createClauseList(int) { return ClauseListResult; }
     int createClauseList(int, int) { return ClauseListResult; }
     int createFuncDeclStatement(const JSTokenLocation&, const ParserFunctionInfo<SyntaxChecker>&) { return StatementResult; }
-    int createDefineField(const JSTokenLocation&, const Identifier*, int, DefineFieldNode::Type) { return 0; }
+    int createDefineField(const JSTokenLocation&, const Identifier&, int, DefineFieldNode::Type) { return 0; }
     int createClassDeclStatement(const JSTokenLocation&, ClassExpression,
         const JSTextPosition&, const JSTextPosition&, int, int) { return StatementResult; }
     int createBlockStatement(const JSTokenLocation&, int, int, int, VariableEnvironment&&, DeclarationStacks::FunctionStack&&) { return StatementResult; }
     int createExprStatement(const JSTokenLocation&, int, int, int) { return StatementResult; }
     int createIfStatement(const JSTokenLocation&, int, int, int, int) { return StatementResult; }
     int createIfStatement(const JSTokenLocation&, int, int, int, int, int) { return StatementResult; }
-    int createForLoop(const JSTokenLocation&, int, int, int, int, int, int, VariableEnvironment&&) { return StatementResult; }
+    int createForLoop(const JSTokenLocation&, int, int, int, int, int, int, VariableEnvironment&&, bool) { return StatementResult; }
     int createForInLoop(const JSTokenLocation&, int, int, int, const JSTokenLocation&, int, int, int, int, int, VariableEnvironment&&) { return StatementResult; }
     int createForOfLoop(bool, const JSTokenLocation&, int, int, int, const JSTokenLocation&, int, int, int, int, int, VariableEnvironment&&) { return StatementResult; }
     int createEmptyStatement(const JSTokenLocation&) { return StatementResult; }
@@ -287,13 +287,13 @@ public:
     ImportSpecifier createImportSpecifier(const JSTokenLocation&, const Identifier&, const Identifier&) { return ImportSpecifierResult; }
     ImportSpecifierList createImportSpecifierList() { return ImportSpecifierListResult; }
     void appendImportSpecifier(ImportSpecifierList, ImportSpecifier) { }
-    ImportAssertionList createImportAssertionList() { return ImportAssertionListResult; }
-    void appendImportAssertion(ImportAssertionList, const Identifier&, const Identifier&) { }
-    int createImportDeclaration(const JSTokenLocation&, ImportSpecifierList, ModuleName, ImportAssertionList) { return StatementResult; }
-    int createExportAllDeclaration(const JSTokenLocation&, ModuleName, ImportAssertionList) { return StatementResult; }
+    ImportAttributesList createImportAttributesList() { return ImportAttributesListResult; }
+    void appendImportAssertion(ImportAttributesList, const Identifier&, const Identifier&) { }
+    int createImportDeclaration(const JSTokenLocation&, ImportSpecifierList, ModuleName, ImportAttributesList) { return StatementResult; }
+    int createExportAllDeclaration(const JSTokenLocation&, ModuleName, ImportAttributesList) { return StatementResult; }
     int createExportDefaultDeclaration(const JSTokenLocation&, int, const Identifier&) { return StatementResult; }
     int createExportLocalDeclaration(const JSTokenLocation&, int) { return StatementResult; }
-    int createExportNamedDeclaration(const JSTokenLocation&, ExportSpecifierList, ModuleName, ImportAssertionList) { return StatementResult; }
+    int createExportNamedDeclaration(const JSTokenLocation&, ExportSpecifierList, ModuleName, ImportAttributesList) { return StatementResult; }
     ExportSpecifier createExportSpecifier(const JSTokenLocation&, const Identifier&, const Identifier&) { return ExportSpecifierResult; }
     ExportSpecifierList createExportSpecifierList() { return ExportSpecifierListResult; }
     void appendExportSpecifier(ExportSpecifierList, ExportSpecifier) { }
@@ -384,6 +384,9 @@ public:
     void setContainsComputedProperty(ObjectPattern, bool)
     {
     }
+    void finishObjectPattern(ObjectPattern, const JSTextPosition&, const JSTextPosition&, const JSTextPosition&)
+    {
+    }
 
     DestructuringPattern createBindingLocation(const JSTokenLocation&, const Identifier&, const JSTextPosition&, const JSTextPosition&, AssignmentContext)
     {
@@ -447,6 +450,8 @@ public:
     JSTextPosition breakpointLocation(int) { return { }; }
 
     void propagateArgumentsUse() { }
+
+    bool hasArgumentsFeature() const { return true; }
 
 private:
     VM& m_vm;

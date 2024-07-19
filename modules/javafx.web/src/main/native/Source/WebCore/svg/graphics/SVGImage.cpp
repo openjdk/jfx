@@ -83,7 +83,7 @@ SVGImage::~SVGImage()
     }
 }
 
-inline RefPtr<SVGSVGElement> SVGImage::rootElement() const
+RefPtr<SVGSVGElement> SVGImage::rootElement() const
 {
     if (!m_page)
         return nullptr;
@@ -107,11 +107,11 @@ bool SVGImage::renderingTaintsOrigin() const
     for (auto& element : descendantsOfType<SVGElement>(*rootElement)) {
         if (is<SVGForeignObjectElement>(element))
             return true;
-        if (is<SVGImageElement>(element)) {
-            if (downcast<SVGImageElement>(element).renderingTaintsOrigin())
+        if (auto* svgImage = dynamicDowncast<SVGImageElement>(element)) {
+            if (svgImage->renderingTaintsOrigin())
                 return true;
-        } else if (is<SVGFEImageElement>(element)) {
-            if (downcast<SVGFEImageElement>(element).renderingTaintsOrigin())
+        } else if (auto* svgFEImage = dynamicDowncast<SVGFEImageElement>(element)) {
+            if (svgFEImage->renderingTaintsOrigin())
                 return true;
         }
     }
@@ -127,7 +127,7 @@ void SVGImage::setContainerSize(const FloatSize& size)
         return;
 
     auto rootElement = this->rootElement();
-    if (!rootElement || !rootElement->renderer() || !rootElement->renderer()->isSVGRootOrLegacySVGRoot())
+    if (!rootElement || !rootElement->renderer() || !rootElement->renderer()->isRenderOrLegacyRenderSVGRoot())
         return;
 
     RefPtr view = frameView();
@@ -149,7 +149,7 @@ void SVGImage::setContainerSize(const FloatSize& size)
 IntSize SVGImage::containerSize() const
 {
     auto rootElement = this->rootElement();
-    if (!rootElement || !rootElement->renderer() || !rootElement->renderer()->isSVGRootOrLegacySVGRoot())
+    if (!rootElement || !rootElement->renderer() || !rootElement->renderer()->isRenderOrLegacyRenderSVGRoot())
         return { };
 
     // If a container size is available it has precedence.
@@ -185,7 +185,7 @@ IntSize SVGImage::containerSize() const
     return IntSize(currentSize);
 }
 
-ImageDrawResult SVGImage::drawForContainer(GraphicsContext& context, const FloatSize containerSize, float containerZoom, const URL& initialFragmentURL, const FloatRect& dstRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
+ImageDrawResult SVGImage::drawForContainer(GraphicsContext& context, const FloatSize containerSize, float containerZoom, const URL& initialFragmentURL, const FloatRect& dstRect, const FloatRect& srcRect, ImagePaintingOptions options)
 {
     if (!m_page)
         return ImageDrawResult::DidNothing;
@@ -228,7 +228,7 @@ RefPtr<NativeImage> SVGImage::nativeImage(const DestinationColorSpace& colorSpac
     if (auto contentRenderer = embeddedContentBox())
         hostWindow = contentRenderer->hostWindow();
 
-    auto imageBuffer = ImageBuffer::create(size(), RenderingPurpose::DOM, 1, colorSpace, PixelFormat::BGRA8, bufferOptions, { hostWindow });
+    auto imageBuffer = ImageBuffer::create(size(), RenderingPurpose::DOM, 1, colorSpace, PixelFormat::BGRA8, bufferOptions, hostWindow);
     if (!imageBuffer)
         return nullptr;
 
@@ -243,7 +243,7 @@ RefPtr<NativeImage> SVGImage::nativeImage(const DestinationColorSpace& colorSpac
 }
 
 void SVGImage::drawPatternForContainer(GraphicsContext& context, const FloatSize& containerSize, float containerZoom, const URL& initialFragmentURL, const FloatRect& srcRect,
-    const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const FloatRect& dstRect, const ImagePaintingOptions& options)
+    const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const FloatRect& dstRect, ImagePaintingOptions options)
 {
     FloatRect zoomedContainerRect = FloatRect(FloatPoint(), containerSize);
     zoomedContainerRect.scale(containerZoom);
@@ -264,7 +264,7 @@ void SVGImage::drawPatternForContainer(GraphicsContext& context, const FloatSize
     if (context.drawLuminanceMask())
         buffer->convertToLuminanceMask();
 
-    RefPtr<Image> image = ImageBuffer::sinkIntoImage(WTFMove(buffer), PreserveResolution::Yes);
+    auto image = ImageBuffer::sinkIntoNativeImage(WTFMove(buffer));
     if (!image)
         return;
 
@@ -275,10 +275,10 @@ void SVGImage::drawPatternForContainer(GraphicsContext& context, const FloatSize
     unscaledPatternTransform.scale(1 / imageBufferScale.width(), 1 / imageBufferScale.height());
 
     context.setDrawLuminanceMask(false);
-    image->drawPattern(context, dstRect, scaledSrcRect, unscaledPatternTransform, phase, spacing, options);
+    context.drawPattern(*image, dstRect, scaledSrcRect, unscaledPatternTransform, phase, spacing, options);
 }
 
-ImageDrawResult SVGImage::draw(GraphicsContext& context, const FloatRect& dstRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
+ImageDrawResult SVGImage::draw(GraphicsContext& context, const FloatRect& dstRect, const FloatRect& srcRect, ImagePaintingOptions options)
 {
     if (!m_page)
         return ImageDrawResult::DidNothing;
@@ -471,7 +471,7 @@ EncodedDataStatus SVGImage::dataChanged(bool allDataReceived)
         // This will become an issue when SVGImage will be able to load other
         // SVGImage objects, but we're safe now, because SVGImage can only be
         // loaded by a top-level document.
-        m_page = makeUnique<Page>(WTFMove(pageConfiguration));
+        m_page = Page::create(WTFMove(pageConfiguration));
 #if ENABLE(VIDEO)
         m_page->settings().setMediaEnabled(false);
 #endif

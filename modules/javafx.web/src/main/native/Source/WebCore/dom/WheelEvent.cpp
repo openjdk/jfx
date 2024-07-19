@@ -26,6 +26,7 @@
 
 #include "DataTransfer.h"
 #include "EventNames.h"
+#include "Node.h"
 #include "PlatformMouseEvent.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/MathExtras.h>
@@ -61,7 +62,7 @@ inline WheelEvent::WheelEvent(const AtomString& type, const Init& initializer)
 
 inline WheelEvent::WheelEvent(const PlatformWheelEvent& event, RefPtr<WindowProxy>&& view, IsCancelable isCancelable)
     : MouseEvent(eventNames().wheelEvent, CanBubble::Yes, isCancelable, IsComposed::Yes, event.timestamp().approximateMonotonicTime(), WTFMove(view), 0,
-        event.globalPosition(), event.position() , 0, 0, event.modifiers(), 0, 0, nullptr, 0, SyntheticClickType::NoTap, IsSimulated::No, IsTrusted::Yes)
+        event.globalPosition(), event.position() , 0, 0, event.modifiers(), MouseButton::Left, 0, nullptr, 0, SyntheticClickType::NoTap, IsSimulated::No, IsTrusted::Yes)
     , m_wheelDelta(event.wheelTicksX() * TickMultiplier, event.wheelTicksY() * TickMultiplier)
     , m_deltaX(-event.deltaX())
     , m_deltaY(-event.deltaY())
@@ -83,23 +84,6 @@ Ref<WheelEvent> WheelEvent::createForBindings()
 Ref<WheelEvent> WheelEvent::create(const AtomString& type, const Init& initializer)
 {
     return adoptRef(*new WheelEvent(type, initializer));
-}
-
-void WheelEvent::initWebKitWheelEvent(int rawDeltaX, int rawDeltaY, RefPtr<WindowProxy>&& view, int screenX, int screenY, int pageX, int pageY, bool ctrlKey, bool altKey, bool shiftKey, bool metaKey)
-{
-    if (isBeingDispatched())
-        return;
-
-    initMouseEvent(eventNames().wheelEvent, true, true, WTFMove(view), 0, screenX, screenY, pageX, pageY, ctrlKey, altKey, shiftKey, metaKey, 0, nullptr);
-
-    // Normalize to 120 multiple for compatibility with IE.
-    m_wheelDelta = { rawDeltaX * TickMultiplier, rawDeltaY * TickMultiplier };
-    m_deltaX = wheelDeltaToDelta(rawDeltaX);
-    m_deltaY = wheelDeltaToDelta(rawDeltaY);
-
-    m_deltaMode = DOM_DELTA_PIXEL;
-
-    m_underlyingPlatformEvent = std::nullopt;
 }
 
 EventInterface WheelEvent::eventInterface() const

@@ -34,16 +34,19 @@
 
 namespace WebCore {
 
-class ReadableStreamSource : public RefCounted<ReadableStreamSource> {
+class ReadableStreamSource {
 public:
-    ReadableStreamSource();
-    virtual ~ReadableStreamSource();
+    WEBCORE_EXPORT ReadableStreamSource();
+    WEBCORE_EXPORT virtual ~ReadableStreamSource();
 
     void start(ReadableStreamDefaultController&&, DOMPromiseDeferred<void>&&);
     void pull(DOMPromiseDeferred<void>&&);
     void cancel(JSC::JSValue);
 
     bool isPulling() const { return !!m_promise; }
+
+    virtual void ref() = 0;
+    virtual void deref() = 0;
 
 protected:
     ReadableStreamDefaultController& controller() { return m_controller.value(); }
@@ -66,8 +69,16 @@ private:
     std::optional<ReadableStreamDefaultController> m_controller;
 };
 
-class SimpleReadableStreamSource
+class RefCountedReadableStreamSource
     : public ReadableStreamSource
+    , public RefCounted<RefCountedReadableStreamSource> {
+public:
+    void ref() final { RefCounted<RefCountedReadableStreamSource>::ref(); };
+    void deref() final { RefCounted<RefCountedReadableStreamSource>::deref(); };
+};
+
+class SimpleReadableStreamSource
+    : public RefCountedReadableStreamSource
     , public CanMakeWeakPtr<SimpleReadableStreamSource> {
 public:
     static Ref<SimpleReadableStreamSource> create() { return adoptRef(*new SimpleReadableStreamSource); }

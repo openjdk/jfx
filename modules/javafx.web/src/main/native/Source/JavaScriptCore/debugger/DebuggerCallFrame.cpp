@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,16 +46,15 @@ class LineAndColumnFunctor {
 public:
     IterationStatus operator()(StackVisitor& visitor) const
     {
-        visitor->computeLineAndColumn(m_line, m_column);
+        m_lineColumn = visitor->computeLineAndColumn();
         return IterationStatus::Done;
     }
 
-    unsigned line() const { return m_line; }
-    unsigned column() const { return m_column; }
+    unsigned line() const { return m_lineColumn.line; }
+    unsigned column() const { return m_lineColumn.column; }
 
 private:
-    mutable unsigned m_line { 0 };
-    mutable unsigned m_column { 0 };
+    mutable LineColumn m_lineColumn;
 };
 
 Ref<DebuggerCallFrame> DebuggerCallFrame::create(VM& vm, CallFrame* callFrame)
@@ -149,7 +148,7 @@ DebuggerScope* DebuggerCallFrame::scope(VM& vm)
 
     if (!m_scope) {
         JSScope* scope;
-        CodeBlock* codeBlock = m_validMachineFrame->isWasmFrame() ? nullptr : m_validMachineFrame->codeBlock();
+        CodeBlock* codeBlock = m_validMachineFrame->isNativeCalleeFrame() ? nullptr : m_validMachineFrame->codeBlock();
         if (isTailDeleted())
             scope = m_shadowChickenFrame.scope;
         else if (codeBlock && codeBlock->scopeRegister().isValid())
@@ -192,7 +191,7 @@ JSValue DebuggerCallFrame::thisValue(VM& vm) const
         codeBlock = m_shadowChickenFrame.codeBlock;
     } else {
         thisValue = m_validMachineFrame->thisValue();
-        codeBlock = m_validMachineFrame->isWasmFrame() ? nullptr : m_validMachineFrame->codeBlock();
+        codeBlock = m_validMachineFrame->isNativeCalleeFrame() ? nullptr : m_validMachineFrame->codeBlock();
     }
 
     if (!thisValue)
@@ -219,7 +218,7 @@ JSValue DebuggerCallFrame::evaluateWithScopeExtension(VM& vm, const String& scri
             if (debuggerCallFrame->isTailDeleted())
                 codeBlock = debuggerCallFrame->m_shadowChickenFrame.codeBlock;
             else
-                codeBlock = callFrame->isWasmFrame() ? nullptr : callFrame->codeBlock();
+                codeBlock = callFrame->isNativeCalleeFrame() ? nullptr : callFrame->codeBlock();
         }
 
         if (callFrame && codeBlock)
@@ -251,7 +250,7 @@ JSValue DebuggerCallFrame::evaluateWithScopeExtension(VM& vm, const String& scri
     JSScope::collectClosureVariablesUnderTDZ(scope(vm)->jsScope(), variablesUnderTDZ, privateNameEnvironment);
 
     ECMAMode ecmaMode = codeBlock->ownerExecutable()->isInStrictContext() ? ECMAMode::strict() : ECMAMode::sloppy();
-    auto* eval = DirectEvalExecutable::create(globalObject, makeSource(script, callFrame->callerSourceOrigin(vm)), codeBlock->unlinkedCodeBlock()->derivedContextType(), codeBlock->unlinkedCodeBlock()->needsClassFieldInitializer(), codeBlock->unlinkedCodeBlock()->privateBrandRequirement(), codeBlock->unlinkedCodeBlock()->isArrowFunction(), codeBlock->ownerExecutable()->isInsideOrdinaryFunction(), evalContextType, &variablesUnderTDZ, &privateNameEnvironment, ecmaMode);
+    auto* eval = DirectEvalExecutable::create(globalObject, makeSource(script, callFrame->callerSourceOrigin(vm), SourceTaintedOrigin::Untainted), codeBlock->unlinkedCodeBlock()->derivedContextType(), codeBlock->unlinkedCodeBlock()->needsClassFieldInitializer(), codeBlock->unlinkedCodeBlock()->privateBrandRequirement(), codeBlock->unlinkedCodeBlock()->isArrowFunction(), codeBlock->ownerExecutable()->isInsideOrdinaryFunction(), evalContextType, &variablesUnderTDZ, &privateNameEnvironment, ecmaMode);
     if (UNLIKELY(catchScope.exception())) {
         exception = catchScope.exception();
         catchScope.clearException();
@@ -297,8 +296,9 @@ TextPosition DebuggerCallFrame::currentPosition(VM& vm)
     if (isTailDeleted()) {
         CodeBlock* codeBlock = m_shadowChickenFrame.codeBlock;
         if (std::optional<BytecodeIndex> bytecodeIndex = codeBlock->bytecodeIndexFromCallSiteIndex(m_shadowChickenFrame.callSiteIndex)) {
-            return TextPosition(OrdinalNumber::fromOneBasedInt(codeBlock->lineNumberForBytecodeIndex(*bytecodeIndex)),
-                OrdinalNumber::fromOneBasedInt(codeBlock->columnNumberForBytecodeIndex(*bytecodeIndex)));
+            auto lineColumn = codeBlock->lineColumnForBytecodeIndex(*bytecodeIndex);
+            return TextPosition(OrdinalNumber::fromOneBasedInt(lineColumn.line),
+                OrdinalNumber::fromOneBasedInt(lineColumn.column));
         }
     }
 
@@ -318,7 +318,7 @@ SourceID DebuggerCallFrame::sourceIDForCallFrame(CallFrame* callFrame)
 {
     if (!callFrame)
         return noSourceID;
-    if (callFrame->isWasmFrame())
+    if (callFrame->isNativeCalleeFrame())
         return noSourceID;
     CodeBlock* codeBlock = callFrame->codeBlock();
     if (!codeBlock)

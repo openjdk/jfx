@@ -42,26 +42,26 @@ struct MatchedProperties {
     ScopeOrdinal styleScopeOrdinal { ScopeOrdinal::Element };
     FromStyleAttribute fromStyleAttribute { FromStyleAttribute::No };
     CascadeLayerPriority cascadeLayerPriority { RuleSet::cascadeLayerPriorityForUnlayered };
+    IsStartingStyle isStartingStyle { IsStartingStyle::No };
 };
 
 struct MatchResult {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    MatchResult(bool isForLink = false)
+        : isForLink(isForLink)
+    { }
 
+    bool isForLink { false };
     bool isCacheable { true };
+    bool hasStartingStyle { false };
     Vector<MatchedProperties> userAgentDeclarations;
     Vector<MatchedProperties> userDeclarations;
     Vector<MatchedProperties> authorDeclarations;
 
     bool isEmpty() const { return userAgentDeclarations.isEmpty() && userDeclarations.isEmpty() && authorDeclarations.isEmpty(); }
-};
 
-inline bool operator==(const MatchResult& a, const MatchResult& b)
-{
-    return a.isCacheable == b.isCacheable
-        && a.userAgentDeclarations == b.userAgentDeclarations
-        && a.userDeclarations == b.userDeclarations
-        && a.authorDeclarations == b.authorDeclarations;
-}
+    friend bool operator==(const MatchResult&, const MatchResult&) = default;
+};
 
 inline bool operator==(const MatchedProperties& a, const MatchedProperties& b)
 {
@@ -70,7 +70,8 @@ inline bool operator==(const MatchedProperties& a, const MatchedProperties& b)
         && a.allowlistType == b.allowlistType
         && a.styleScopeOrdinal == b.styleScopeOrdinal
         && a.fromStyleAttribute == b.fromStyleAttribute
-        && a.cascadeLayerPriority == b.cascadeLayerPriority;
+        && a.cascadeLayerPriority == b.cascadeLayerPriority
+        && a.isStartingStyle == b.isStartingStyle;
 }
 
 inline void add(Hasher& hasher, const MatchedProperties& matchedProperties)
@@ -81,13 +82,14 @@ inline void add(Hasher& hasher, const MatchedProperties& matchedProperties)
         matchedProperties.allowlistType,
         matchedProperties.styleScopeOrdinal,
         matchedProperties.fromStyleAttribute,
-        matchedProperties.cascadeLayerPriority
+        matchedProperties.cascadeLayerPriority,
+        matchedProperties.isStartingStyle
     );
 }
 
 inline void add(Hasher& hasher, const MatchResult& matchResult)
 {
-    add(hasher, matchResult.userAgentDeclarations, matchResult.userDeclarations, matchResult.authorDeclarations);
+    add(hasher, matchResult.isForLink, matchResult.userAgentDeclarations, matchResult.userDeclarations, matchResult.authorDeclarations);
 }
 
 }

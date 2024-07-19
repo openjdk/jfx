@@ -41,7 +41,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLLIElement);
 using namespace HTMLNames;
 
 HTMLLIElement::HTMLLIElement(const QualifiedName& tagName, Document& document)
-    : HTMLElement(tagName, document, CreateHTMLLIElement)
+    : HTMLElement(tagName, document, TypeFlag::HasCustomStyleResolveCallbacks)
 {
     ASSERT(hasTagName(liTag));
 }
@@ -58,7 +58,7 @@ Ref<HTMLLIElement> HTMLLIElement::create(const QualifiedName& tagName, Document&
 
 bool HTMLLIElement::hasPresentationalHintsForAttribute(const QualifiedName& name) const
 {
-    if (name == typeAttr)
+    if (name == typeAttr || name == valueAttr)
         return true;
     return HTMLElement::hasPresentationalHintsForAttribute(name);
 }
@@ -89,24 +89,18 @@ void HTMLLIElement::collectPresentationalHintsForAttribute(const QualifiedName& 
             else if (valueLowerCase == "none"_s)
                 addPropertyToPresentationalHintStyle(style, CSSPropertyListStyleType, CSSValueNone);
         }
+    } else if (name == valueAttr) {
+        if (auto parsedValue = parseHTMLInteger(value))
+            addPropertyToPresentationalHintStyle(style, CSSPropertyCounterSet, makeString("list-item "_s, *parsedValue));
     } else
         HTMLElement::collectPresentationalHintsForAttribute(name, value, style);
 }
 
-void HTMLLIElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
-{
-    if (name == valueAttr) {
-        if (renderer() && renderer()->isListItem())
-            parseValue(newValue);
-    } else
-        HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
-}
-
 void HTMLLIElement::didAttachRenderers()
 {
-    if (!is<RenderListItem>(renderer()))
+    CheckedPtr listItemRenderer = dynamicDowncast<RenderListItem>(*renderer());
+    if (!listItemRenderer)
         return;
-    auto& listItemRenderer = downcast<RenderListItem>(*renderer());
 
     // Check if there is an enclosing list.
     bool isInList = false;
@@ -120,18 +114,7 @@ void HTMLLIElement::didAttachRenderers()
     // If we are not in a list, tell the renderer so it can position us inside.
     // We don't want to change our style to say "inside" since that would affect nested nodes.
     if (!isInList)
-        listItemRenderer.setNotInList(true);
-
-    parseValue(attributeWithoutSynchronization(valueAttr));
-}
-
-inline void HTMLLIElement::parseValue(const AtomString& value)
-{
-    ASSERT(renderer());
-    std::optional<int> explicitValue;
-    if (auto parsedValue = parseHTMLInteger(value))
-        explicitValue = *parsedValue;
-    downcast<RenderListItem>(*renderer()).setExplicitValue(explicitValue);
+        listItemRenderer->setNotInList(true);
 }
 
 }

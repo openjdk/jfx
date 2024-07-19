@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package javafx.animation;
 
+import com.sun.javafx.animation.AnimationTimerHelper;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.util.Utils;
 import com.sun.scenario.animation.AbstractPrimaryTimer;
@@ -48,6 +49,15 @@ import java.security.PrivilegedAction;
  * @since JavaFX 2.0
  */
 public abstract class AnimationTimer {
+
+    static {
+        AnimationTimerHelper.setAccessor(new AnimationTimerHelper.Accessor() {
+            @Override
+            public AbstractPrimaryTimer getPrimaryTimer(AnimationTimer timer) {
+                return timer.timer;
+            }
+        });
+    }
 
     private class AnimationTimerReceiver implements TimerReceiver {
         @SuppressWarnings("removal")

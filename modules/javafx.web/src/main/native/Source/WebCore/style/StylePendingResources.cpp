@@ -31,7 +31,7 @@
 #include "ContentData.h"
 #include "CursorData.h"
 #include "CursorList.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "FillLayer.h"
 #include "RenderStyleInlines.h"
 #include "SVGURIReference.h"
@@ -79,8 +79,8 @@ void loadPendingResources(RenderStyle& style, Document& document, const Element*
         loadPendingImage(document, backgroundLayer->image(), element);
 
     for (auto* contentData = style.contentData(); contentData; contentData = contentData->next()) {
-        if (is<ImageContentData>(*contentData)) {
-            auto& styleImage = downcast<ImageContentData>(*contentData).image();
+        if (auto* imageContentData = dynamicDowncast<ImageContentData>(*contentData)) {
+            auto& styleImage = imageContentData->image();
             loadPendingImage(document, &styleImage, element);
         }
     }
@@ -92,7 +92,7 @@ void loadPendingResources(RenderStyle& style, Document& document, const Element*
 
     loadPendingImage(document, style.listStyleImage(), element);
     loadPendingImage(document, style.borderImageSource(), element);
-    loadPendingImage(document, style.maskBoxImageSource(), element);
+    loadPendingImage(document, style.maskBorderSource(), element);
 
     if (auto* reflection = style.boxReflect())
         loadPendingImage(document, reflection->mask().image(), element);

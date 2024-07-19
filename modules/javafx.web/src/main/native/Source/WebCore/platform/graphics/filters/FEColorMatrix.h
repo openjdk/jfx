@@ -27,7 +27,7 @@
 
 namespace WebCore {
 
-enum ColorMatrixType {
+enum class ColorMatrixType : uint8_t {
     FECOLORMATRIX_TYPE_UNKNOWN          = 0,
     FECOLORMATRIX_TYPE_MATRIX           = 1,
     FECOLORMATRIX_TYPE_SATURATE         = 2,
@@ -37,7 +37,7 @@ enum ColorMatrixType {
 
 class FEColorMatrix : public FilterEffect {
 public:
-    WEBCORE_EXPORT static Ref<FEColorMatrix> create(ColorMatrixType, Vector<float>&&);
+    WEBCORE_EXPORT static Ref<FEColorMatrix> create(ColorMatrixType, Vector<float>&&, DestinationColorSpace = DestinationColorSpace::SRGB());
 
     bool operator==(const FEColorMatrix&) const;
 
@@ -52,7 +52,7 @@ public:
     static Vector<float> normalizedFloats(const Vector<float>& values);
 
 private:
-    FEColorMatrix(ColorMatrixType, Vector<float>&&);
+    FEColorMatrix(ColorMatrixType, Vector<float>&&, DestinationColorSpace);
 
     bool operator==(const FilterEffect& other) const override { return areEqual<FEColorMatrix>(*this, other); }
 
@@ -72,20 +72,4 @@ private:
 
 } // namespace WebCore
 
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::ColorMatrixType> {
-    using values = EnumValues<
-        WebCore::ColorMatrixType,
-
-        WebCore::FECOLORMATRIX_TYPE_UNKNOWN,
-        WebCore::FECOLORMATRIX_TYPE_MATRIX,
-        WebCore::FECOLORMATRIX_TYPE_SATURATE,
-        WebCore::FECOLORMATRIX_TYPE_HUEROTATE,
-        WebCore::FECOLORMATRIX_TYPE_LUMINANCETOALPHA
-    >;
-};
-
-} // namespace WTF
-
-SPECIALIZE_TYPE_TRAITS_FILTER_EFFECT(FEColorMatrix)
+SPECIALIZE_TYPE_TRAITS_FILTER_FUNCTION(FEColorMatrix)

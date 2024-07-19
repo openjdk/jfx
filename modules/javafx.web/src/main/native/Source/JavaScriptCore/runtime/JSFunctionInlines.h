@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "ExecutableBaseInlines.h"
 #include "FunctionExecutable.h"
 #include "JSBoundFunction.h"
 #include "JSFunction.h"
@@ -32,6 +33,30 @@
 #include "NativeExecutable.h"
 
 namespace JSC {
+
+inline Structure* JSFunction::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
+{
+    ASSERT(globalObject);
+    return Structure::create(vm, globalObject, prototype, TypeInfo(JSFunctionType, StructureFlags), info());
+}
+
+inline Structure* JSStrictFunction::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
+{
+    ASSERT(globalObject);
+    return Structure::create(vm, globalObject, prototype, TypeInfo(JSFunctionType, StructureFlags), info());
+}
+
+inline Structure* JSSloppyFunction::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
+{
+    ASSERT(globalObject);
+    return Structure::create(vm, globalObject, prototype, TypeInfo(JSFunctionType, StructureFlags), info());
+}
+
+inline Structure* JSArrowFunction::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
+{
+    ASSERT(globalObject);
+    return Structure::create(vm, globalObject, prototype, TypeInfo(JSFunctionType, StructureFlags), info());
+}
 
 inline JSFunction* JSFunction::createWithInvalidatedReallocationWatchpoint(
     VM& vm, FunctionExecutable* executable, JSScope* scope)
@@ -57,6 +82,11 @@ inline bool JSFunction::isHostFunction() const
 {
     ASSERT(executable());
     return executable()->isHostFunction();
+}
+
+inline bool JSFunction::isNonBoundHostFunction() const
+{
+    return isHostFunction() && !inherits<JSBoundFunction>();
 }
 
 inline Intrinsic JSFunction::intrinsic() const
@@ -94,14 +124,6 @@ inline TaggedNativeFunction JSFunction::nativeConstructor()
 {
     ASSERT(isHostFunctionNonInline());
     return static_cast<NativeExecutable*>(executable())->constructor();
-}
-
-inline bool isHostFunction(JSValue value, TaggedNativeFunction nativeFunction)
-{
-    JSFunction* function = jsCast<JSFunction*>(getJSFunction(value));
-    if (!function || !function->isHostFunction())
-        return false;
-    return function->nativeFunction() == nativeFunction;
 }
 
 inline bool isRemoteFunction(JSValue value)
@@ -174,14 +196,6 @@ inline JSString* JSFunction::originalName(JSGlobalObject* globalObject)
     else
         name = ecmaName.string();
 
-    if (globalObject->needsSiteSpecificQuirks()) {
-        auto illegalCharMatcher = [] (UChar ch) -> bool {
-            return ch == ' ' || ch == '|';
-        };
-        if (name.find(illegalCharMatcher) != notFound)
-            name = String();
-    }
-
     if (jsExecutable()->isGetter()) {
         name = makeNameWithOutOfMemoryCheck(globalObject, scope, "Getter ", "get ", name);
         RETURN_IF_EXCEPTION(scope, { });
@@ -194,12 +208,10 @@ inline JSString* JSFunction::originalName(JSGlobalObject* globalObject)
 
 inline bool JSFunction::canAssumeNameAndLengthAreOriginal(VM&)
 {
-    if (isHostFunction()) {
         // Bound functions are not eagerly generating name and length.
         // Thus, we can use FunctionRareData's tracking. This is useful to optimize func.bind().bind() case.
-        if (!inherits<JSBoundFunction>())
+    if (isNonBoundHostFunction())
         return false;
-    }
     FunctionRareData* rareData = this->rareData();
     if (!rareData)
         return true;
@@ -215,7 +227,7 @@ inline bool JSFunction::mayHaveNonReifiedPrototype()
     return !isHostOrBuiltinFunction() && jsExecutable()->hasPrototypeProperty();
 }
 
-inline bool JSFunction::canUseAllocationProfile()
+inline bool JSFunction::canUseAllocationProfiles()
 {
     if (isHostOrBuiltinFunction()) {
         if (isHostFunction())
@@ -235,9 +247,9 @@ inline bool JSFunction::canUseAllocationProfile()
     return jsExecutable()->hasPrototypeProperty();
 }
 
-inline FunctionRareData* JSFunction::ensureRareDataAndAllocationProfile(JSGlobalObject* globalObject, unsigned inlineCapacity)
+inline FunctionRareData* JSFunction::ensureRareDataAndObjectAllocationProfile(JSGlobalObject* globalObject, unsigned inlineCapacity)
 {
-    ASSERT(canUseAllocationProfile());
+    ASSERT(canUseAllocationProfiles());
     FunctionRareData* rareData = this->rareData();
     if (!rareData)
         return allocateAndInitializeRareData(globalObject, inlineCapacity);

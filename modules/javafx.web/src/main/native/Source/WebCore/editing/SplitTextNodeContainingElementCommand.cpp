@@ -48,17 +48,19 @@ void SplitTextNodeContainingElementCommand::doApply()
 
     splitTextNode(m_text, m_offset);
 
-    Element* parent = m_text->parentElement();
+    RefPtr parent = m_text->parentElement();
     if (!parent || !parent->parentElement() || !parent->parentElement()->hasEditableStyle())
         return;
 
-    RenderElement* parentRenderer = parent->renderer();
+    {
+    CheckedPtr parentRenderer = parent->renderer();
     if (!parentRenderer || !parentRenderer->isInline()) {
         wrapContentsInDummySpan(*parent);
-        Node* firstChild = parent->firstChild();
-        if (!is<Element>(firstChild))
+        RefPtr firstChild = dynamicDowncast<Element>(parent->firstChild());
+        if (!firstChild)
             return;
-        parent = downcast<Element>(firstChild);
+        parent = WTFMove(firstChild);
+    }
     }
 
     splitElement(*parent, m_text);
