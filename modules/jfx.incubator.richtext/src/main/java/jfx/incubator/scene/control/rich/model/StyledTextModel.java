@@ -135,6 +135,7 @@ public abstract class StyledTextModel {
     public abstract RichParagraph getParagraph(int index);
 
     /**
+     * Removes the specified text range.
      * This method gets called only if the model is editable.
      * The caller guarantees that {@code start} precedes {@code end}.
      *
@@ -776,7 +777,7 @@ public abstract class StyledTextModel {
      * @param ch the change
      * @param end the caret position after the change
      */
-    protected void add(UndoableChange ch, TextPos end) {
+    private void add(UndoableChange ch, TextPos end) {
         if (ch == null) {
             // the undo-redo system is in inconsistent state, let's drop everything
             clearUndoRedo();

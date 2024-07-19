@@ -23,14 +23,17 @@
  * questions.
  */
 
-package jfx.incubator.scene.control.rich;
+package jfx.incubator.scene.control.rich.skin;
 
 import javafx.scene.Node;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
 
 /**
- * Text cell accessor valid during the layout pass.
- * This class enables extending RichTextArea by allowing for additional {@code StyleAttribute}s.
+ * This interface provides a mechanism for the Skin to support custom {@code StyleAttribute}s.
+ * During the layout pass, the cell context is passed to the Skin so the latter can add inline style(s)
+ * to either the paragraph Node (typically {@code TextFlow}) or the text segment Node ({@code Text}).
+ *
+ * @see RichTextAreaSkin#applyStyles(CellContext, StyleAttrs, boolean)
  */
 public interface CellContext {
     /**

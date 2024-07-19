@@ -26,8 +26,8 @@
 package com.sun.jfx.incubator.scene.control.rich;
 
 import javafx.scene.Node;
-import jfx.incubator.scene.control.rich.CellContext;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.skin.CellContext;
 
 /**
  * Assist in creating virtualized text cells.

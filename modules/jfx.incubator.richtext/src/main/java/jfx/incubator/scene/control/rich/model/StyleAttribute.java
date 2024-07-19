@@ -58,7 +58,6 @@ public final class StyleAttribute<T> {
 
     /**
      * Returns the class corresponding to the attribute value.
-     * The value must be Serializable.
      *
      * @return attribute type
      */

@@ -31,7 +31,8 @@ import javafx.scene.Node;
 import javafx.scene.control.Label;
 
 /**
- * Side decorator that shows model 1-based paragraph numbers.
+ * Side decorator which shows paragraph (line) numbers.
+ * The numbering starts at line 1.
  */
 public class LineNumberDecorator implements SideDecorator {
     private final DecimalFormat format;
@@ -44,8 +45,8 @@ public class LineNumberDecorator implements SideDecorator {
     }
 
     /**
-     * Creates an instance using specified pattern for {@link DecimalFormat}.
-     * @param pattern DecimalFormat pattern to use
+     * Creates an instance using the specified pattern for {@link DecimalFormat}.
+     * @param pattern the DecimalFormat pattern to use
      */
     public LineNumberDecorator(String pattern) {
         format = new DecimalFormat(pattern);

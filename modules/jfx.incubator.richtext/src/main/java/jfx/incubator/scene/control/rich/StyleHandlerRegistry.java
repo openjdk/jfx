@@ -27,6 +27,7 @@ package jfx.incubator.scene.control.rich;
 
 import java.util.HashMap;
 import jfx.incubator.scene.control.rich.model.StyleAttribute;
+import jfx.incubator.scene.control.rich.skin.CellContext;
 
 /**
  * Style Handler Registry keeps track of the {@code StyleAttributeHandler} for supported

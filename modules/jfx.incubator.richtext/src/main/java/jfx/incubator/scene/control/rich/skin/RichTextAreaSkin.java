@@ -49,7 +49,6 @@ import com.sun.jfx.incubator.scene.control.rich.TextCell;
 import com.sun.jfx.incubator.scene.control.rich.VFlow;
 import com.sun.jfx.incubator.scene.control.rich.util.ListenerHelper;
 import com.sun.jfx.incubator.scene.control.rich.util.RichUtils;
-import jfx.incubator.scene.control.rich.CellContext;
 import jfx.incubator.scene.control.rich.RichTextArea;
 import jfx.incubator.scene.control.rich.StyleHandlerRegistry;
 import jfx.incubator.scene.control.rich.StyleResolver;

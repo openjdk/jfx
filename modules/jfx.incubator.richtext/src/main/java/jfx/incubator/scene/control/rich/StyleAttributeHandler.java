@@ -25,6 +25,8 @@
 
 package jfx.incubator.scene.control.rich;
 
+import jfx.incubator.scene.control.rich.skin.CellContext;
+
 /**
  * This functional interface defines a style attribute handler.
  * <p>

@@ -30,7 +30,6 @@ import javafx.scene.text.Font;
 import com.sun.jfx.incubator.scene.control.rich.RichTextAreaSkinHelper;
 import com.sun.jfx.incubator.scene.control.rich.util.ListenerHelper;
 import com.sun.jfx.incubator.scene.control.rich.util.RichUtils;
-import jfx.incubator.scene.control.rich.CellContext;
 import jfx.incubator.scene.control.rich.CodeArea;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
 

@@ -27,7 +27,6 @@ package jfx.incubator.scene.control.rich.model;
 
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -99,11 +98,10 @@ public final class StyleAttrs {
     /** Empty attribute set. */
     public static final StyleAttrs EMPTY = new StyleAttrs(Collections.emptyMap());
 
-    private final HashMap<StyleAttribute<?>,Object> attributes;
-    private transient String style;
+    private final Map<StyleAttribute<?>,Object> attributes;
 
     private StyleAttrs(Map<StyleAttribute<?>,Object> a) {
-        this.attributes = new HashMap<>(a);
+        this.attributes = Collections.unmodifiableMap(a);
     }
 
     /**
@@ -175,7 +173,15 @@ public final class StyleAttrs {
      * @return attribute set
      */
     public Set<StyleAttribute<?>> getAttributes() {
-        return new HashSet<>(attributes.keySet());
+        return attributes.keySet();
+    }
+
+    /**
+     * Returns an immutable {@link Set} view of the mappings contained in this map.
+     * @return a set view of the mappings contained in this attribute map
+     */
+    public Set<Map.Entry<StyleAttribute<?>, Object>> getAttributeEntrySet() {
+        return attributes.entrySet();
     }
 
     /**
