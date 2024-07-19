@@ -52,7 +52,7 @@ import jfx.incubator.scene.control.rich.RichTextArea;
 import jfx.incubator.scene.control.rich.SelectionSegment;
 import jfx.incubator.scene.control.rich.TextPos;
 import jfx.incubator.scene.control.rich.model.ContentChange;
-import jfx.incubator.scene.control.rich.model.EditableRichTextModel;
+import jfx.incubator.scene.control.rich.model.RichTextModel;
 import jfx.incubator.scene.control.rich.model.RichTextFormatHandler;
 import jfx.incubator.scene.control.rich.model.StyleAttribute;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
@@ -238,7 +238,7 @@ public class Actions {
         if (askToSave()) {
             return;
         }
-        control.setModel(new EditableRichTextModel());
+        control.setModel(new RichTextModel());
         setModified(false);
     }
 

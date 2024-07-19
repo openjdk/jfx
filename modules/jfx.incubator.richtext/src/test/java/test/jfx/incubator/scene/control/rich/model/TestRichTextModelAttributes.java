@@ -32,17 +32,17 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import com.sun.jfx.incubator.scene.control.rich.RichTextFormatHandlerHelper;
 import jfx.incubator.scene.control.rich.TextPos;
-import jfx.incubator.scene.control.rich.model.EditableRichTextModel;
+import jfx.incubator.scene.control.rich.model.RichTextModel;
 import jfx.incubator.scene.control.rich.model.RichTextFormatHandler;
 import jfx.incubator.scene.control.rich.model.StyledInput;
 import jfx.incubator.scene.control.rich.model.StyledOutput;
 
 /**
- * Tests EditableRichTextModel handling of style attributes when editing.
+ * Tests RichTextModel handling of style attributes when editing.
  * The tests use RichTextFormatHandler presentation, which may or may not be the best idea,
  * but it's definitely the quickest.
  */
-public class TestEditableRichTextModel {
+public class TestRichTextModelAttributes {
     @Test
     public void testInsertLineBreak() {
         // empty model
@@ -117,9 +117,9 @@ public class TestEditableRichTextModel {
         return new TextPos(index, offset);
     }
 
-    private void t(String initial, Consumer<EditableRichTextModel> op, String expected) {
+    private void t(String initial, Consumer<RichTextModel> op, String expected) {
         try {
-            EditableRichTextModel m = new EditableRichTextModel();
+            RichTextModel m = new RichTextModel();
             RichTextFormatHandler h = new RichTextFormatHandler();
 
             // set initial text

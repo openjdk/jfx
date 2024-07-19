@@ -28,10 +28,10 @@ package com.oracle.demo.rich.notebook;
 import java.io.IOException;
 import jfx.incubator.scene.control.rich.TextPos;
 import jfx.incubator.scene.control.rich.model.ContentChange;
-import jfx.incubator.scene.control.rich.model.EditableRichTextModel;
+import jfx.incubator.scene.control.rich.model.RichTextModel;
 import jfx.incubator.scene.control.rich.model.StyledOutput;
 
-public class TextCellTextModel extends EditableRichTextModel {
+public class TextCellTextModel extends RichTextModel {
     private boolean modified;
 
     public TextCellTextModel() {

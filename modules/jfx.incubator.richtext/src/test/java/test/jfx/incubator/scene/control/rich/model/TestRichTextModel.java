@@ -32,8 +32,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import com.sun.jfx.incubator.scene.control.rich.SegmentStyledInput;
 import jfx.incubator.scene.control.rich.TextPos;
-import jfx.incubator.scene.control.rich.model.EditableRichTextModel;
-import jfx.incubator.scene.control.rich.model.EditableRichTextModelShim;
+import jfx.incubator.scene.control.rich.model.RichTextModel;
+import jfx.incubator.scene.control.rich.model.RichTextModelShim;
 import jfx.incubator.scene.control.rich.model.RichParagraph;
 import jfx.incubator.scene.control.rich.model.StyleAttribute;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
@@ -42,9 +42,9 @@ import jfx.incubator.scene.control.rich.model.StyledSegment;
 import jfx.incubator.scene.control.rich.model.StyledTextModel;
 
 /**
- * Tests EditableRichTextModel.
+ * Tests RichTextModel.
  */
-public class EditableRichTextModelTest {
+public class TestRichTextModel {
     private static final StyleAttrs BOLD = StyleAttrs.builder().setBold(true).build();
     private static final StyleAttrs ITALIC = StyleAttrs.builder().setItalic(true).build();
 
@@ -139,7 +139,7 @@ public class EditableRichTextModelTest {
     }
 
     protected void test(List<RichParagraph> initial, List<RichParagraph> expected, Consumer<StyledTextModel> op) {
-        EditableRichTextModel m = new EditableRichTextModel();
+        RichTextModel m = new RichTextModel();
 
         // initial state
         boolean newline = false;
@@ -151,7 +151,7 @@ public class EditableRichTextModelTest {
                 newline = true;
             }
 
-            List<StyledSegment> ss = EditableRichTextModelShim.getSegments(par);
+            List<StyledSegment> ss = RichTextModelShim.getSegments(par);
             if (ss == null) {
                 ss = List.of();
             }
@@ -196,7 +196,7 @@ public class EditableRichTextModelTest {
     private static void dump(StringBuilder sb, RichParagraph p) {
         sb.append("  {pa=").append(p.getParagraphAttributes());
         sb.append(", segments=");
-        List<StyledSegment> ss = EditableRichTextModelShim.getSegments(p);
+        List<StyledSegment> ss = RichTextModelShim.getSegments(p);
         if(ss == null) {
             sb.append("null");
         } else {
@@ -229,8 +229,8 @@ public class EditableRichTextModelTest {
                 return "paragraph attributes at ix=" + i;
             }
 
-            List<StyledSegment> lsa = EditableRichTextModelShim.getSegments(pa);
-            List<StyledSegment> lsb = EditableRichTextModelShim.getSegments(pb);
+            List<StyledSegment> lsa = RichTextModelShim.getSegments(pa);
+            List<StyledSegment> lsb = RichTextModelShim.getSegments(pb);
             if (!((lsa != null) && (lsb != null))) {
                 if ((lsa == null) && (lsb == null)) {
                     return null;

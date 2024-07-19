@@ -63,7 +63,7 @@ import com.sun.jfx.incubator.scene.control.rich.VFlow;
 import com.sun.jfx.incubator.scene.control.rich.util.RichUtils;
 import jfx.incubator.scene.control.input.FunctionTag;
 import jfx.incubator.scene.control.input.InputMap;
-import jfx.incubator.scene.control.rich.model.EditableRichTextModel;
+import jfx.incubator.scene.control.rich.model.RichTextModel;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
 import jfx.incubator.scene.control.rich.model.StyledInput;
 import jfx.incubator.scene.control.rich.model.StyledTextModel;
@@ -84,7 +84,7 @@ import jfx.incubator.scene.control.rich.skin.RichTextAreaSkin;
  *
  * <h2>Creating a RichTextArea</h2>
  * <p>
- * The following example creates an editable control with the default {@link EditableRichTextModel}:
+ * The following example creates an editable control with the default {@link RichTextModel}:
  * <pre>{@code    RichTextArea textArea = new RichTextArea();
  * }</pre>
  * The methods
@@ -127,7 +127,7 @@ import jfx.incubator.scene.control.rich.skin.RichTextAreaSkin;
  * <caption>Standard Models</caption>
  * <tr><th>Model Class</th><th>Description</th></tr>
  * <tr><td><pre>{@link StyledTextModel}</pre></td><td>Base class (abstract)</td></tr>
- * <tr><td><pre> ├─ {@link EditableRichTextModel}</pre></td><td>Default model for RichTextArea</td></tr>
+ * <tr><td><pre> ├─ {@link RichTextModel}</pre></td><td>Default model for RichTextArea</td></tr>
  * <tr><td><pre> ├─ {@link jfx.incubator.scene.control.rich.model.BasicTextModel BasicTextModel}</pre></td><td>Unstyled text model</td></tr>
  * <tr><td><pre> │   └─ {@link jfx.incubator.scene.control.rich.model.CodeTextModel CodeTextModel}</pre></td><td>Default model for CodeArea</td></tr>
  * <tr><td><pre> └─ {@link jfx.incubator.scene.control.rich.model.StyledTextModelViewOnlyBase StyledTextModelViewOnlyBase}</pre></td><td>Base class for a view-only model (abstract)</td></tr>
@@ -298,10 +298,10 @@ public class RichTextArea extends Control {
     protected static final StyleHandlerRegistry styleHandlerRegistry = initStyleHandlerRegistry();
 
     /**
-     * Creates the instance with the in-memory model {@link EditableRichTextModel}.
+     * Creates the instance with the in-memory model {@link RichTextModel}.
      */
     public RichTextArea() {
-        this(new EditableRichTextModel());
+        this(new RichTextModel());
     }
 
     /**
@@ -603,7 +603,7 @@ public class RichTextArea extends Control {
      * Note: Subclasses may impose additional restrictions on the type of the model they require.
      *
      * @return the model property
-     * @defaultValue an instance of {@link EditableRichTextModel}
+     * @defaultValue an instance of {@link RichTextModel}
      */
     public final ObjectProperty<StyledTextModel> modelProperty() {
         if (model == null) {

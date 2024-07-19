@@ -27,7 +27,7 @@ package jfx.incubator.scene.control.rich.model;
 
 import java.util.List;
 
-public class EditableRichTextModelShim {
+public class RichTextModelShim {
     public static List<StyledSegment> getSegments(RichParagraph par) {
         return par.getSegments();
     }

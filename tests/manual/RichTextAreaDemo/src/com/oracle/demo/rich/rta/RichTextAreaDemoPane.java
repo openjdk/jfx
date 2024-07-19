@@ -67,7 +67,7 @@ import jfx.incubator.scene.control.rich.RichTextArea;
 import jfx.incubator.scene.control.rich.SideDecorator;
 import jfx.incubator.scene.control.rich.StyleHandlerRegistry;
 import jfx.incubator.scene.control.rich.TextPos;
-import jfx.incubator.scene.control.rich.model.EditableRichTextModel;
+import jfx.incubator.scene.control.rich.model.RichTextModel;
 import jfx.incubator.scene.control.rich.model.ParagraphDirection;
 import jfx.incubator.scene.control.rich.model.StyleAttribute;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
@@ -123,7 +123,7 @@ public class RichTextAreaDemoPane extends BorderPane {
             F3: dump accessibility attributes at cursor
             """);
         control.getInputMap().register(KeyBinding.of(KeyCode.F2), () -> {
-            EditableRichTextModel.dump(control.getModel(), System.out);
+            RichTextModel.dump(control.getModel(), System.out);
         });
         control.getInputMap().register(KeyBinding.of(KeyCode.F3), () -> {
             dumpAccessibilityAttributes();
@@ -405,7 +405,7 @@ public class RichTextAreaDemoPane extends BorderPane {
     protected void populateCustomPopupMenu(ObservableList<MenuItem> items) {
         boolean sel = control.hasNonEmptySelection();
         boolean paste = true; // would be easier with Actions (findFormatForPaste() != null);
-        boolean styled = (control.getModel() instanceof EditableRichTextModel);
+        boolean styled = (control.getModel() instanceof RichTextModel);
 
         items.add(new MenuItem("★ Custom Context Menu"));
 

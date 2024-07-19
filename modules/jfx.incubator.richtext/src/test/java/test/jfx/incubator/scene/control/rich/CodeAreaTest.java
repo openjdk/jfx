@@ -31,7 +31,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import jfx.incubator.scene.control.rich.CodeArea;
 import jfx.incubator.scene.control.rich.model.CodeTextModel;
-import jfx.incubator.scene.control.rich.model.EditableRichTextModel;
+import jfx.incubator.scene.control.rich.model.RichTextModel;
 
 /**
  * Tests CodeArea.
@@ -75,7 +75,7 @@ public class CodeAreaTest {
     public void wrongModel() {
         CodeArea t = new CodeArea();
         Assertions.assertThrows(IllegalArgumentException.class, () -> {
-            t.setModel(new EditableRichTextModel());
+            t.setModel(new RichTextModel());
         });
     }
 }

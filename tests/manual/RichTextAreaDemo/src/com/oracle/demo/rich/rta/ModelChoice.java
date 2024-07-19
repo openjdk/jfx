@@ -27,7 +27,7 @@ package com.oracle.demo.rich.rta;
 import java.io.IOException;
 import javafx.scene.paint.Color;
 import jfx.incubator.scene.control.rich.TextPos;
-import jfx.incubator.scene.control.rich.model.EditableRichTextModel;
+import jfx.incubator.scene.control.rich.model.RichTextModel;
 import jfx.incubator.scene.control.rich.model.BasicTextModel;
 import jfx.incubator.scene.control.rich.model.RichParagraph;
 import jfx.incubator.scene.control.rich.model.SimpleViewOnlyStyledModel;
@@ -124,7 +124,7 @@ public enum ModelChoice {
                 return m;
             }
         case EDITABLE_STYLED:
-            return new EditableRichTextModel();
+            return new RichTextModel();
         case LARGE_TEXT:
             return new LargeTextModel(10);
         case LARGE_TEXT_LONG:
@@ -198,7 +198,7 @@ public enum ModelChoice {
             setFontSize(24).
             build();
 
-        EditableRichTextModel m = new EditableRichTextModel();
+        RichTextModel m = new RichTextModel();
         String[] ss = WritingSystemsDemo.PAIRS;
         for (int i = 0; i < ss.length;) {
             String s = ss[i++] + ":  ";

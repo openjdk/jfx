@@ -40,14 +40,14 @@ import jfx.incubator.scene.control.rich.TextPos;
  * This model is suitable for relatively small documents as it has neither disk storage backing
  * nor storage of incremental changes.
  */
-public class EditableRichTextModel extends StyledTextModel {
+public class RichTextModel extends StyledTextModel {
     private final ArrayList<RParagraph> paragraphs = new ArrayList<>();
     private final HashMap<StyleAttrs,StyleAttrs> styleCache = new HashMap<>();
 
     /**
      * Constructs the empty model.
      */
-    public EditableRichTextModel() {
+    public RichTextModel() {
         registerDataFormatHandler(new RichTextFormatHandler(), true, true, 2000);
         registerDataFormatHandler(new RtfFormatHandler(), true, true, 1000);
         registerDataFormatHandler(new HtmlExportFormatHandler(), true, false, 100);
@@ -178,7 +178,7 @@ public class EditableRichTextModel extends StyledTextModel {
     // TODO remove later
     @Deprecated
     public static void dump(StyledTextModel model, PrintStream out) {
-        if (model instanceof EditableRichTextModel m) {
+        if (model instanceof RichTextModel m) {
             m.dump(out);
         }
     }
