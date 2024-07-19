@@ -128,7 +128,7 @@ import jfx.incubator.scene.control.rich.skin.RichTextAreaSkin;
  * <tr><th>Model Class</th><th>Description</th></tr>
  * <tr><td><pre>{@link StyledTextModel}</pre></td><td>Base class (abstract)</td></tr>
  * <tr><td><pre> ├─ {@link EditableRichTextModel}</pre></td><td>Default model for RichTextArea</td></tr>
- * <tr><td><pre> ├─ {@link jfx.incubator.scene.control.rich.model.PlainTextModel PlainTextModel}</pre></td><td>Unstyled plain text model</td></tr>
+ * <tr><td><pre> ├─ {@link jfx.incubator.scene.control.rich.model.BasicTextModel BasicTextModel}</pre></td><td>Unstyled text model</td></tr>
  * <tr><td><pre> │   └─ {@link jfx.incubator.scene.control.rich.model.CodeTextModel CodeTextModel}</pre></td><td>Default model for CodeArea</td></tr>
  * <tr><td><pre> └─ {@link jfx.incubator.scene.control.rich.model.StyledTextModelViewOnlyBase StyledTextModelViewOnlyBase}</pre></td><td>Base class for a view-only model (abstract)</td></tr>
  * <tr><td><pre>     └─ {@link jfx.incubator.scene.control.rich.model.SimpleViewOnlyStyledModel SimpleViewOnlyStyledModel}</pre></td><td>In-memory view-only styled model</td></tr>

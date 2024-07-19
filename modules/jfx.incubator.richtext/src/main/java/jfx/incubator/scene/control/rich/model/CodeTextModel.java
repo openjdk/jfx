@@ -35,10 +35,10 @@ import jfx.incubator.scene.control.rich.TextPos;
  * Editable plain text model with optional syntax highlighting for use with the
  * {@link jfx.incubator.scene.control.rich.CodeArea CodeArea} control.
  * <p>
- * This model supports custom content storage mechanism via {@link PlainTextModel.Content}.  By default,
- * the model provides an in-memory storage via its {@link PlainTextModel.InMemoryContent} implementation.
+ * This model supports custom content storage mechanism via {@link BasicTextModel.Content}.  By default,
+ * the model provides an in-memory storage via its {@link BasicTextModel.InMemoryContent} implementation.
  */
-public class CodeTextModel extends PlainTextModel {
+public class CodeTextModel extends BasicTextModel {
     private SimpleObjectProperty<SyntaxDecorator> decorator;
     private static final Set<StyleAttribute<?>> SUPPORTED = initSupportedAttributes();
 
@@ -52,7 +52,7 @@ public class CodeTextModel extends PlainTextModel {
      * Constructs the CodeTextModel with the specified content.
      * @param c the content
      */
-    public CodeTextModel(PlainTextModel.Content c) {
+    public CodeTextModel(BasicTextModel.Content c) {
         super(c);
     }
 

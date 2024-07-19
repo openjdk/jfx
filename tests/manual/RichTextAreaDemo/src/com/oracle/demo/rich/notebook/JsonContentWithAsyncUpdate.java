@@ -34,14 +34,14 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.util.Duration;
 import jfx.incubator.scene.control.rich.TextPos;
-import jfx.incubator.scene.control.rich.model.PlainTextModel;
+import jfx.incubator.scene.control.rich.model.BasicTextModel;
 import jfx.incubator.scene.control.rich.model.StyleAttrs;
 
 /**
  * Mock content which simulates non-instantaneous retrieval of the underlying data,
  * as in database call or remote file system.
  */
-public class JsonContentWithAsyncUpdate implements PlainTextModel.Content {
+public class JsonContentWithAsyncUpdate implements BasicTextModel.Content {
     private final int size;
     private final HashMap<Integer,String> data;
     private final Random random = new Random();

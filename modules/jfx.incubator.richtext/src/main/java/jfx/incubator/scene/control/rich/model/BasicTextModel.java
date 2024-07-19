@@ -39,12 +39,12 @@ import jfx.incubator.scene.control.rich.TextPos;
  * This class provides no styling.  Subclasses might override {@link #getParagraph(int)} to provide
  * syntax highlighting based on the model content.
  * <p>
- * This model supports custom content storage mechanism via {@link PlainTextModel.Content}.  By default,
- * the model provides an in-memory storage via its {@link PlainTextModel.InMemoryContent} implementation.
+ * This model supports custom content storage mechanism via {@link BasicTextModel.Content}.  By default,
+ * the model provides an in-memory storage via its {@link BasicTextModel.InMemoryContent} implementation.
  */
-public class PlainTextModel extends StyledTextModel {
+public class BasicTextModel extends StyledTextModel {
     /**
-     * This interface describes the underlying storage mechanism for the PlainTextModel.
+     * This interface describes the underlying storage mechanism for the BasicTextModel.
      */
     public interface Content {
         /**
@@ -104,7 +104,7 @@ public class PlainTextModel extends StyledTextModel {
      * Constructs an empty model with the specified {@code Content}.
      * @param c the content to use
      */
-    public PlainTextModel(Content c) {
+    public BasicTextModel(Content c) {
         this.content = c;
         registerDataFormatHandler(new PlainTextFormatHandler(), true, true, 0);
     }
@@ -112,7 +112,7 @@ public class PlainTextModel extends StyledTextModel {
     /**
      * Constructs an empty model with the in-memory {@code Content}.
      */
-    public PlainTextModel() {
+    public BasicTextModel() {
         this(new InMemoryContent());
     }
 
@@ -147,7 +147,7 @@ public class PlainTextModel extends StyledTextModel {
     /**
      * Determines whether the model is user-editable.
      * <p>
-     * This method calls {@link PlainTextModel.Content#isUserEditable()}.
+     * This method calls {@link BasicTextModel.Content#isUserEditable()}.
      *
      * @return true if the model is user-editable
      */
