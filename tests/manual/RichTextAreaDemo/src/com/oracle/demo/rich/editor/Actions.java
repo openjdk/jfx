@@ -111,7 +111,7 @@ public class Actions {
 
         wrapText.selectedProperty().bindBidirectional(control.wrapTextProperty());
 
-        control.getModel().addChangeListener(new StyledTextModel.Listener() {
+        control.getModel().addListener(new StyledTextModel.Listener() {
             @Override
             public void onContentChange(ContentChange ch) {
                 handleEdit();

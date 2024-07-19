@@ -35,7 +35,7 @@ public class TextCellTextModel extends RichTextModel {
     private boolean modified;
 
     public TextCellTextModel() {
-        addChangeListener(new Listener() {
+        addListener(new Listener() {
             @Override
             public void onContentChange(ContentChange ch) {
                 setModified(true);

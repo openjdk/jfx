@@ -638,11 +638,11 @@ public class RichTextArea extends Control {
                     }
 
                     if (old != null) {
-                        old.removeChangeListener(li);
+                        old.removeListener(li);
                     }
                     StyledTextModel m = get();
                     if (m != null) {
-                        m.addChangeListener(li);
+                        m.addListener(li);
                     }
                     old = m;
 

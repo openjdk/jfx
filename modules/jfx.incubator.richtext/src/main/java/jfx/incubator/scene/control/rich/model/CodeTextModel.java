@@ -91,12 +91,12 @@ public class CodeTextModel extends BasicTextModel {
             decorator = new SimpleObjectProperty<>() {
                 @Override
                 protected void invalidated() {
+                    TextPos end = getDocumentEnd();
                     SyntaxDecorator d = get();
                     if (d != null) {
-                        TextPos end = getDocumentEnd();
                         d.handleChange(CodeTextModel.this, TextPos.ZERO, end, 0, 0, 0);
                     }
-                    fireStylingUpdate();
+                    fireStyleChangeEvent(TextPos.ZERO, end);
                 }
             };
         }

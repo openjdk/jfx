@@ -213,11 +213,11 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
 
     private void handleModelChange(Object src, StyledTextModel old, StyledTextModel m) {
         if (old != null) {
-            old.removeChangeListener(vflow);
+            old.removeListener(vflow);
         }
 
         if (m != null) {
-            m.addChangeListener(vflow);
+            m.addListener(vflow);
         }
     }
 

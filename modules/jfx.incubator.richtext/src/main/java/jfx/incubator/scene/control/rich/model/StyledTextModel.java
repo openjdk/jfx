@@ -83,7 +83,7 @@ import jfx.incubator.scene.control.rich.TextPos;
  * The subclasses are free to choose how the data is stored, the only limitation is that the model neither
  * stores nor caches any {@link javafx.scene.Node Node}s, since multiple skins might be attached to the same
  * model.  When required, the model may contain properties which can be bound to the Nodes created in
- * {@link #getParagraph(int)}.  It is the responsibility of the model to serialize and deserialize the value
+ * {@link #getParagraph(int)}.  It is the responsibility of the model to store and restore the values
  * of such properties.
  *
  * @since 999 TODO
@@ -268,7 +268,7 @@ public abstract class StyledTextModel {
      *
      * @param listener a non-null listener
      */
-    public void addChangeListener(StyledTextModel.Listener listener) {
+    public void addListener(StyledTextModel.Listener listener) {
         listeners.add(listener);
     }
 
@@ -279,7 +279,7 @@ public abstract class StyledTextModel {
      *
      * @param listener a non-null listener
      */
-    public void removeChangeListener(StyledTextModel.Listener listener) {
+    public void removeListener(StyledTextModel.Listener listener) {
         listeners.remove(listener);
     }
 
@@ -390,22 +390,13 @@ public abstract class StyledTextModel {
     }
 
     /**
-     * Fires a style change event for the entire document.
-     * This event indicates that only the styling has changed, with no  changes to any text positions.
-     */
-    protected void fireStylingUpdate() {
-        TextPos end = getDocumentEnd();
-        fireStyleChangeEvent(TextPos.ZERO, end);
-    }
-
-    /**
      * Returns the length of text in a paragraph at the specified index.
      *
      * @param ix the paragraph index in the model
      * @return the length
      */
-    public int getTextLength(int ix) {
-        String s = getPlainText(ix);
+    public int getTextLength(int index) {
+        String s = getPlainText(index);
         return (s == null) ? 0 : s.length();
     }
 

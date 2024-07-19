@@ -265,7 +265,7 @@ public class Actions {
         editor.addListener((src, old, ed) -> {
             if (old != null) {
                 if (isSourceEditor(old)) {
-                    old.getModel().removeChangeListener(changeListener);
+                    old.getModel().removeListener(changeListener);
                     old.selectionProperty().removeListener(selectionListener);
                 }
             }
@@ -277,7 +277,7 @@ public class Actions {
 
             if (ed != null) {
                 if (isSourceEditor(ed)) {
-                    ed.getModel().addChangeListener(changeListener);
+                    ed.getModel().addListener(changeListener);
                     ed.selectionProperty().addListener(selectionListener);
                     redoDisabled.bind(executing.or(ed.redoableProperty().not()));
                     undoDisabled.bind(executing.or(ed.undoableProperty().not()));

@@ -38,7 +38,7 @@ public class CodeCellTextModel extends CodeTextModel {
     private boolean modified;
 
     public CodeCellTextModel() {
-        addChangeListener(new Listener() {
+        addListener(new Listener() {
             @Override
             public void onContentChange(ContentChange ch) {
                 if (ch.isEdit()) {
