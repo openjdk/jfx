@@ -333,7 +333,7 @@ public class RichTextArea extends Control {
         setModel(model);
     }
 
-    // FIX replace with direct call
+    // FIX replace with direct call later
     private void nas(AccessibleAttribute a) {
         // System.out.println("notify: " + a); // FIX
         notifyAccessibleAttributeChanged(a);
@@ -2273,7 +2273,7 @@ public class RichTextArea extends Control {
 
     @Override
     public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
-        System.out.println("execute: " + action); // FIX
+        //System.out.println("execute: " + action); // FIX
         switch (action) {
         case SET_TEXT:
             {

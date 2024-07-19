@@ -125,7 +125,7 @@ public class RTFReader extends RTFParser {
      */
     public RTFReader(String text) {
         this.text = text;
-        System.err.println(text); // FIX
+        //System.err.println(text); // FIX
 
         parserState = new HashMap<>();
         fontTable = new HashMap<Integer, String>();
