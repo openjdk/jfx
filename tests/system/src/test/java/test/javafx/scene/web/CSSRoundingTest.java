@@ -25,32 +25,34 @@
 
 package test.javafx.scene.web;
 
-import static javafx.concurrent.Worker.State.SUCCEEDED;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import java.util.concurrent.CountDownLatch;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.concurrent.Worker;
 import javafx.scene.Scene;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
+import java.util.concurrent.CountDownLatch;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class CSSRoundingTest {
+
     private static final CountDownLatch launchLatch = new CountDownLatch(1);
 
     // Maintain one application instance
     static CSSRoundingTestApp cssRoundingTestApp;
-
-    private WebView webView;
+    public static Stage primaryStage;
+    public static WebView webView;
 
     public static class CSSRoundingTestApp extends Application {
-        Stage primaryStage = null;
 
         @Override
         public void init() {
@@ -59,52 +61,45 @@ public class CSSRoundingTest {
 
         @Override
         public void start(Stage primaryStage) throws Exception {
-            Platform.setImplicitExit(false);
-            this.primaryStage = primaryStage;
+            CSSRoundingTest.primaryStage = primaryStage;
+            webView = new WebView();
+            Scene scene = new Scene(webView, 150, 100);
+            primaryStage.setScene(scene);
+            primaryStage.show();
             launchLatch.countDown();
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupOnce() {
         Util.launch(launchLatch, CSSRoundingTestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDownOnce() {
         Util.shutdown();
     }
 
-    @Before
-    public void setupTestObjects() {
-        Platform.runLater(() -> {
-            webView = new WebView();
-            Scene scene = new Scene(webView, 150, 100);
-            cssRoundingTestApp.primaryStage.setScene(scene);
-            cssRoundingTestApp.primaryStage.show();
-        });
-    }
-
-    @Test public void testCSSroundingForLinearLayout() {
+    @Test
+    public void testCSSroundingForLinearLayout() {
 
         final CountDownLatch webViewStateLatch = new CountDownLatch(1);
 
         Util.runAndWait(() -> {
             assertNotNull(webView);
 
-            webView.getEngine().getLoadWorker().stateProperty().
-                    addListener((observable, oldValue, newValue) -> {
-                        if (newValue == SUCCEEDED) {
-                            webView.requestFocus();
-                        }
-                    });
+            webView.getEngine().getLoadWorker().stateProperty().addListener((observable, oldValue, newValue) -> {
+                if (newValue == Worker.State.SUCCEEDED) {
+                    webView.requestFocus();
+                }
+            });
 
-            webView.focusedProperty().
-                    addListener((observable, oldValue, newValue) -> {
-                        if (newValue) {
-                            webViewStateLatch.countDown();
-                        }
-                    });
+            webView.focusedProperty().addListener((observable, oldValue, newValue) -> {
+                if (newValue) {
+                    webViewStateLatch.countDown();
+                }
+            });
+
             String content = """
                 <html>
                 <head>
@@ -149,8 +144,8 @@ public class CSSRoundingTest {
             webView.getEngine().loadContent(content);
         });
 
-        assertTrue("Timeout when waiting for focus change ", Util.await(webViewStateLatch));
-        //introduce sleep , so that web contents would be loaded , then take snapshot for testing
+        assertTrue(Util.await(webViewStateLatch), "Timeout when waiting for focus change");
+        // Introduce sleep to ensure web contents are loaded
         Util.sleep(1000);
 
         Util.runAndWait(() -> {
@@ -167,7 +162,6 @@ public class CSSRoundingTest {
 
             assertEquals(31, topBottom);
             assertEquals(31, bottomTop);
-
         });
     }
 }
