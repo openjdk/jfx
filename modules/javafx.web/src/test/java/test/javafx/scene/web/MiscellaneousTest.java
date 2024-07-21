@@ -217,9 +217,15 @@ public class MiscellaneousTest extends TestBase {
         }
     }
 
-    @Ignore("JDK-8335548")
-    @Test public void testCookieEnabled() {
+
+    @Test public void testCookieEnabled() throws Exception {
         final WebEngine webEngine = createWebEngine();
+        String location = new File("src/test/resources/test/html/cookie.html")
+                .toURI().toASCIIString().replaceAll("^file:/", "file:///");
+        Platform.runLater(() -> {
+            webEngine.load(location);
+        });
+        Thread.sleep(1000);
         submit(() -> {
             final JSObject window = (JSObject) webEngine.executeScript("window");
             assertNotNull(window);
