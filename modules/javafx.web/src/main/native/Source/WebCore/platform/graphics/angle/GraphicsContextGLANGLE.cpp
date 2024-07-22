@@ -81,26 +81,79 @@ GraphicsContextGLANGLE::GraphicsContextGLANGLE(GraphicsContextGLAttributes attri
 
 bool GraphicsContextGLANGLE::initialize()
 {
-    if (contextAttributes().failPlatformContextCreationForTesting)
+    if (contextAttributes().failContextCreationForTesting == GraphicsContextGLAttributes::SimulatedCreationFailure::FailPlatformContextCreation)
         return false;
     if (!platformInitializeContext())
         return false;
+
     String extensionsString = String::fromLatin1(reinterpret_cast<const char*>(GL_GetString(GL_EXTENSIONS)));
     for (auto& extension : extensionsString.split(' '))
         m_availableExtensions.add(extension);
     extensionsString = String::fromLatin1(reinterpret_cast<const char*>(GL_GetString(GL_REQUESTABLE_EXTENSIONS_ANGLE)));
     for (auto& extension : extensionsString.split(' '))
         m_requestableExtensions.add(extension);
-    return platformInitialize();
-}
 
-bool GraphicsContextGLANGLE::platformInitializeContext()
-{
-    return true;
-}
+    validateAttributes();
+    auto attributes = contextAttributes(); // They may have changed during validation.
 
-bool GraphicsContextGLANGLE::platformInitialize()
-{
+    if (m_isForWebGL2) {
+        if (!enableExtension("GL_EXT_occlusion_query_boolean"_s))
+            return false;
+        if (!enableExtension("GL_ANGLE_framebuffer_multisample"_s))
+            return false;
+    }
+
+    if (!platformInitializeExtensions())
+        return false;
+
+    if (m_isForWebGL2)
+        GL_Enable(GraphicsContextGL::PRIMITIVE_RESTART_FIXED_INDEX);
+
+    // Create the texture that will be used for the framebuffer.
+    GLenum textureTarget = drawingBufferTextureTarget();
+
+    GL_GenTextures(1, &m_texture);
+    GL_BindTexture(textureTarget, m_texture);
+    GL_TexParameteri(textureTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    GL_TexParameteri(textureTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    GL_TexParameteri(textureTarget, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    GL_TexParameteri(textureTarget, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    GL_BindTexture(textureTarget, 0);
+
+    GL_GenFramebuffers(1, &m_fbo);
+    GL_BindFramebuffer(GL_FRAMEBUFFER, m_fbo);
+    m_state.boundDrawFBO = m_state.boundReadFBO = m_fbo;
+
+    if (!attributes.antialias && (attributes.stencil || attributes.depth))
+        GL_GenRenderbuffers(1, &m_depthStencilBuffer);
+
+    // If necessary, create another framebuffer for the multisample results.
+    if (attributes.antialias) {
+        GL_GenFramebuffers(1, &m_multisampleFBO);
+        GL_BindFramebuffer(GL_FRAMEBUFFER, m_multisampleFBO);
+        m_state.boundDrawFBO = m_state.boundReadFBO = m_multisampleFBO;
+        GL_GenRenderbuffers(1, &m_multisampleColorBuffer);
+        if (attributes.stencil || attributes.depth)
+            GL_GenRenderbuffers(1, &m_multisampleDepthStencilBuffer);
+    } else if (attributes.preserveDrawingBuffer) {
+        // If necessary, create another texture to handle preserveDrawingBuffer:true without
+        // antialiasing.
+        GL_GenTextures(1, &m_preserveDrawingBufferTexture);
+        GL_BindTexture(GL_TEXTURE_2D, m_preserveDrawingBufferTexture);
+        GL_TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        GL_TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        GL_TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        GL_TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        GL_BindTexture(GL_TEXTURE_2D, 0);
+        // Create an FBO with which to perform BlitFramebuffer from one texture to the other.
+        GL_GenFramebuffers(1, &m_preserveDrawingBufferFBO);
+    }
+
+    GL_ClearColor(0, 0, 0, 0);
+
+    if (!platformInitialize())
+        return false;
+
     // EGL resources are only ever released if we run in process mode where EGL is used on host app threads, e.g. WK1
     // mode.
     static bool tracksUsedDisplays = !(isInWebProcess() || isInGPUProcess());
@@ -109,6 +162,18 @@ bool GraphicsContextGLANGLE::platformInitialize()
         ASSERT(m_displayObj);
         usedDisplays().add(m_displayObj);
     }
+    ASSERT(GL_GetError() == NO_ERROR);
+
+    return true;
+}
+
+bool GraphicsContextGLANGLE::platformInitializeExtensions()
+{
+    return true;
+}
+
+bool GraphicsContextGLANGLE::platformInitialize()
+{
     return true;
 }
 
@@ -564,7 +629,6 @@ void GraphicsContextGLANGLE::prepareTexture()
     if (contextAttributes().antialias)
         resolveMultisamplingIfNecessary();
 
-#if PLATFORM(COCOA)
     if (m_preserveDrawingBufferTexture) {
         // Blit m_preserveDrawingBufferTexture into m_texture.
         ScopedGLCapability scopedScissor(GL_SCISSOR_TEST, GL_FALSE);
@@ -573,20 +637,12 @@ void GraphicsContextGLANGLE::prepareTexture()
         GL_BindFramebuffer(GL_READ_FRAMEBUFFER_ANGLE, m_fbo);
         GL_BlitFramebufferANGLE(0, 0, m_currentWidth, m_currentHeight, 0, 0, m_currentWidth, m_currentHeight, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
-        // Note: it's been observed that BlitFramebuffer may destroy the alpha channel of the
-        // destination texture if it's an RGB texture bound to an IOSurface. This wasn't observable
-        // through the WebGL conformance tests, but it may be necessary to save and restore the
-        // color mask and clear color, and use the color mask to clear the alpha channel of the
-        // destination texture to 1.0.
-
-        // Restore user's framebuffer bindings.
         if (m_isForWebGL2) {
             GL_BindFramebuffer(GL_DRAW_FRAMEBUFFER, m_state.boundDrawFBO);
             GL_BindFramebuffer(GL_READ_FRAMEBUFFER, m_state.boundReadFBO);
         } else
             GL_BindFramebuffer(GL_FRAMEBUFFER, m_state.boundDrawFBO);
     }
-#endif
 }
 
 RefPtr<PixelBuffer> GraphicsContextGLANGLE::readRenderingResults()
@@ -615,8 +671,6 @@ void GraphicsContextGLANGLE::reshape(int width, int height)
     // FIXME: these may call makeContextCurrent again, we need to do this before changing the size.
     updateErrors();
     validateAttributes();
-
-    markContextChanged();
 
     m_currentWidth = width;
     m_currentHeight = height;
@@ -1886,26 +1940,6 @@ GCGLint GraphicsContextGLANGLE::getProgrami(PlatformGLObject program, GCGLenum p
     return value;
 }
 
-String GraphicsContextGLANGLE::getUnmangledInfoLog(PlatformGLObject shaders[2], GCGLsizei count, const String& log)
-{
-    UNUSED_PARAM(shaders);
-    UNUSED_PARAM(count);
-    LOG(WebGL, "Original ShaderInfoLog:\n%s", log.utf8().data());
-
-    StringBuilder processedLog;
-
-    // ANGLE inserts a "#extension" line into the shader source that
-    // causes a warning in some compilers. There is no point showing
-    // this warning to the user since they didn't write the code that
-    // is causing it.
-    static constexpr auto angleWarning = "WARNING: 0:1: extension 'GL_ARB_gpu_shader5' is not supported\n"_s;
-    int startFrom = log.startsWith(angleWarning) ? angleWarning.length() : 0;
-    processedLog.append(StringView(log).substring(startFrom, log.length() - startFrom));
-
-    LOG(WebGL, "Unmangled ShaderInfoLog:\n%s", processedLog.toString().utf8().data());
-    return processedLog.toString();
-}
-
 String GraphicsContextGLANGLE::getProgramInfoLog(PlatformGLObject program)
 {
     ASSERT(program);
@@ -1921,12 +1955,7 @@ String GraphicsContextGLANGLE::getProgramInfoLog(PlatformGLObject program)
     GLsizei size = 0;
     Vector<GLchar> info(length);
     GL_GetProgramInfoLog(program, length, &size, info.data());
-
-    GCGLsizei count;
-    PlatformGLObject shaders[2];
-    getAttachedShaders(program, 2, &count, shaders);
-
-    return getUnmangledInfoLog(shaders, count, String(info.data(), size));
+    return { info.data(), static_cast<unsigned>(size) };
 }
 
 GCGLint GraphicsContextGLANGLE::getRenderbufferParameteri(GCGLenum target, GCGLenum pname)
@@ -1963,9 +1992,7 @@ String GraphicsContextGLANGLE::getShaderInfoLog(PlatformGLObject shader)
     GLsizei size = 0;
     Vector<GLchar> info(length);
     GL_GetShaderInfoLog(shader, length, &size, info.data());
-
-    PlatformGLObject shaders[2] = { shader, 0 };
-    return getUnmangledInfoLog(shaders, 1, String(info.data(), size));
+    return { info.data(), static_cast<unsigned>(size) };
 }
 
 String GraphicsContextGLANGLE::getShaderSource(PlatformGLObject)
@@ -2610,7 +2637,8 @@ void GraphicsContextGLANGLE::clearBufferiv(GCGLenum buffer, GCGLint drawbuffer, 
 {
     if (!makeContextCurrent())
         return;
-
+    if (!validateClearBufferv(buffer, values.size()))
+        return;
     GL_ClearBufferiv(buffer, drawbuffer, values.data());
     checkGPUStatus();
 }
@@ -2619,7 +2647,8 @@ void GraphicsContextGLANGLE::clearBufferuiv(GCGLenum buffer, GCGLint drawbuffer,
 {
     if (!makeContextCurrent())
         return;
-
+    if (!validateClearBufferv(buffer, values.size()))
+        return;
     GL_ClearBufferuiv(buffer, drawbuffer, values.data());
     checkGPUStatus();
 }
@@ -2628,7 +2657,8 @@ void GraphicsContextGLANGLE::clearBufferfv(GCGLenum buffer, GCGLint drawbuffer, 
 {
     if (!makeContextCurrent())
         return;
-
+    if (!validateClearBufferv(buffer, values.size()))
+        return;
     GL_ClearBufferfv(buffer, drawbuffer, values.data());
     checkGPUStatus();
 }
@@ -2919,13 +2949,7 @@ void GraphicsContextGLANGLE::ensureExtensionEnabled(const String& name)
     if (m_requestableExtensions.contains(name) && !m_enabledExtensions.contains(name)) {
         if (!makeContextCurrent())
             return;
-        GL_RequestExtensionANGLE(name.ascii().data());
-        m_enabledExtensions.add(name);
-
-        if (name == "GL_CHROMIUM_color_buffer_float_rgba"_s)
-            m_webglColorBufferFloatRGBA = true;
-        else if (name == "GL_CHROMIUM_color_buffer_float_rgb"_s)
-            m_webglColorBufferFloatRGB = true;
+        requestExtension(name);
     }
 }
 
@@ -3183,57 +3207,32 @@ void GraphicsContextGLANGLE::polygonOffsetClampEXT(GCGLfloat factor, GCGLfloat u
 
 void GraphicsContextGLANGLE::simulateEventForTesting(SimulatedEventForTesting event)
 {
-    if (event == SimulatedEventForTesting::ContextChange) {
-        dispatchContextChangedNotification();
-        return;
-    }
     if (event == SimulatedEventForTesting::GPUStatusFailure || event == SimulatedEventForTesting::DisplayBufferAllocationFailure) {
         m_failNextStatusCheck = true;
         return;
     }
 }
 
-void GraphicsContextGLANGLE::paintRenderingResultsToCanvas(ImageBuffer& imageBuffer)
+void GraphicsContextGLANGLE::drawSurfaceBufferToImageBuffer(SurfaceBuffer buffer, ImageBuffer& imageBuffer)
 {
-    withDrawingBufferAsNativeImage([&](NativeImage& image) {
+    withBufferAsNativeImage(buffer, [&](NativeImage& image) {
         paintToCanvas(image, imageBuffer.backendSize(), imageBuffer.context());
     });
 }
 
-void GraphicsContextGLANGLE::paintCompositedResultsToCanvas(ImageBuffer& imageBuffer)
-{
-    withDisplayBufferAsNativeImage([&](NativeImage& image) {
-        paintToCanvas(image, imageBuffer.backendSize(), imageBuffer.context());
-    });
-}
-
-void GraphicsContextGLANGLE::withDrawingBufferAsNativeImage(Function<void(NativeImage&)> func)
+void GraphicsContextGLANGLE::withBufferAsNativeImage(SurfaceBuffer source, Function<void(NativeImage&)> func)
 {
     if (!makeContextCurrent())
         return;
     if (getInternalFramebufferSize().isEmpty())
         return;
-    auto pixelBuffer = readRenderingResults();
+    RefPtr<PixelBuffer> pixelBuffer;
+    if (source == SurfaceBuffer::DrawingBuffer)
+        pixelBuffer = readRenderingResults();
+    else
+        pixelBuffer = readCompositedResults();
     if (!pixelBuffer)
         return;
-
-    auto drawingImage = createNativeImageFromPixelBuffer(contextAttributes(), pixelBuffer.releaseNonNull());
-    if (!drawingImage)
-        return;
-
-    func(*drawingImage);
-}
-
-void GraphicsContextGLANGLE::withDisplayBufferAsNativeImage(Function<void(NativeImage&)> func)
-{
-    if (!makeContextCurrent())
-        return;
-    if (getInternalFramebufferSize().isEmpty())
-        return;
-    auto pixelBuffer = readCompositedResults();
-    if (!pixelBuffer)
-        return;
-
     auto displayImage = createNativeImageFromPixelBuffer(contextAttributes(), pixelBuffer.releaseNonNull());
     if (!displayImage)
         return;
@@ -3241,7 +3240,7 @@ void GraphicsContextGLANGLE::withDisplayBufferAsNativeImage(Function<void(Native
     func(*displayImage);
 }
 
-RefPtr<PixelBuffer> GraphicsContextGLANGLE::paintRenderingResultsToPixelBuffer(FlipY flipY)
+RefPtr<PixelBuffer> GraphicsContextGLANGLE::drawingBufferToPixelBuffer(FlipY flipY)
 {
     // Reading premultiplied alpha would involve unpremultiplying, which is lossy.
     if (contextAttributes().premultipliedAlpha)
@@ -3307,6 +3306,46 @@ void GraphicsContextGLANGLE::setPackParameters(GCGLint alignment, GCGLint rowLen
     }
 }
 
+bool GraphicsContextGLANGLE::enableExtension(const String& name)
+{
+    if (m_availableExtensions.contains(name) || m_enabledExtensions.contains(name))
+        return true;
+    if (!m_requestableExtensions.contains(name))
+        return false;
+    requestExtension(name);
+    return true;
+}
+
+void GraphicsContextGLANGLE::requestExtension(const String& name)
+{
+    GL_RequestExtensionANGLE(name.ascii().data());
+    m_enabledExtensions.add(name);
+    if (name == "GL_CHROMIUM_color_buffer_float_rgba"_s)
+        m_webglColorBufferFloatRGBA = true;
+    else if (name == "GL_CHROMIUM_color_buffer_float_rgb"_s)
+        m_webglColorBufferFloatRGB = true;
+}
+
+bool GraphicsContextGLANGLE::validateClearBufferv(GCGLenum buffer, size_t valuesSize)
+{
+    // ClearBuffersfv, iv, uiv are missing ANGLE Robust* entry-point. Make the call act similar way as other
+    // calls that validate buffer sizes by validating it here.
+    switch (buffer) {
+    case GraphicsContextGL::COLOR:
+        if (valuesSize == 4)
+            return true;
+        break;
+    case GraphicsContextGL::DEPTH:
+    case GraphicsContextGL::STENCIL:
+        if (valuesSize == 1)
+            return true;
+        break;
+    default:
+        break;
+    }
+    addError(GCGLErrorCode::InvalidOperation);
+    return false;
+}
 }
 
 #endif // ENABLE(WEBGL)

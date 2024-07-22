@@ -52,10 +52,10 @@ public:
     FloatSize size(ImageOrientation = ImageOrientation::Orientation::FromImage) const override { return m_image->size(); }
 
     ImageDrawResult draw(GraphicsContext&, const FloatRect& dstRect,
-        const FloatRect& srcRect, const ImagePaintingOptions& = { }) final;
+        const FloatRect& srcRect, ImagePaintingOptions = { }) final;
 
     void drawPattern(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform& patternTransform,
-        const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { }) final;
+        const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions = { }) final;
 
     RefPtr<NativeImage> nativeImage(const DestinationColorSpace& = DestinationColorSpace::SRGB()) override;
 

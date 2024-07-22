@@ -46,10 +46,13 @@ private:
     void invalidateAfterChange();
     void checkForSiblingStyleChanges();
     using MatchingHasSelectors = HashSet<const CSSSelector*>;
-    void invalidateForChangedElement(Element&, MatchingHasSelectors&);
+    enum class ChangedElementRelation : uint8_t { SelfOrDescendant, Sibling };
+    void invalidateForChangedElement(Element&, MatchingHasSelectors&, ChangedElementRelation);
+    void invalidateForChangeOutsideHasScope();
 
     template<typename Function> void traverseRemovedElements(Function&&);
     template<typename Function> void traverseAddedElements(Function&&);
+    template<typename Function> void traverseRemainingExistingSiblings(Function&&);
 
     Element& parentElement() { return *m_parentElement; }
 
@@ -58,13 +61,15 @@ private:
 
     const bool m_isEnabled;
     const bool m_needsHasInvalidation;
+    const bool m_wasEmpty;
 };
 
 inline ChildChangeInvalidation::ChildChangeInvalidation(ContainerNode& container, const ContainerNode::ChildChange& childChange)
     : m_parentElement(dynamicDowncast<Element>(container))
     , m_childChange(childChange)
-    , m_isEnabled(m_parentElement ? m_parentElement->needsStyleInvalidation() : false)
+    , m_isEnabled(m_parentElement && m_parentElement->needsStyleInvalidation())
     , m_needsHasInvalidation(m_isEnabled && Scope::forNode(*m_parentElement).usesHasPseudoClass())
+    , m_wasEmpty(!container.firstChild())
 {
     if (!m_isEnabled)
         return;

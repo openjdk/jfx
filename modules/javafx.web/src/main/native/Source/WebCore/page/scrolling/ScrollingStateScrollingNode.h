@@ -42,11 +42,7 @@ struct ScrollbarHoverState {
     bool mouseIsOverHorizontalScrollbar { false };
     bool mouseIsOverVerticalScrollbar { false };
 
-    bool operator==(const ScrollbarHoverState& other) const
-    {
-        return mouseIsOverHorizontalScrollbar == other.mouseIsOverHorizontalScrollbar
-            && mouseIsOverVerticalScrollbar == other.mouseIsOverVerticalScrollbar;
-    }
+    friend bool operator==(const ScrollbarHoverState&, const ScrollbarHoverState&) = default;
 };
 
 struct MouseLocationState {
@@ -141,6 +137,36 @@ public:
     const MouseLocationState& mouseLocationState() const { return m_mouseLocationState; }
 
 protected:
+    ScrollingStateScrollingNode(
+        ScrollingNodeType,
+        ScrollingNodeID,
+        Vector<Ref<ScrollingStateNode>>&&,
+        OptionSet<ScrollingStateNodeProperty>,
+        std::optional<PlatformLayerIdentifier>,
+        FloatSize scrollableAreaSize,
+        FloatSize totalContentsSize,
+        FloatSize reachableContentsSize,
+        FloatPoint scrollPosition,
+        IntPoint scrollOrigin,
+        ScrollableAreaParameters&&,
+#if ENABLE(SCROLLING_THREAD)
+        OptionSet<SynchronousScrollingReason>,
+#endif
+        RequestedScrollData&&,
+        FloatScrollSnapOffsetsInfo&&,
+        std::optional<unsigned> currentHorizontalSnapPointIndex,
+        std::optional<unsigned> currentVerticalSnapPointIndex,
+        bool isMonitoringWheelEvents,
+        std::optional<PlatformLayerIdentifier> scrollContainerLayer,
+        std::optional<PlatformLayerIdentifier> scrolledContentsLayer,
+        std::optional<PlatformLayerIdentifier> horizontalScrollbarLayer,
+        std::optional<PlatformLayerIdentifier> verticalScrollbarLayer,
+        bool mouseIsOverContentArea,
+        MouseLocationState&&,
+        ScrollbarHoverState&&,
+        ScrollbarEnabledState&&,
+        RequestedKeyboardScrollData&&
+    );
     ScrollingStateScrollingNode(ScrollingStateTree&, ScrollingNodeType, ScrollingNodeID);
     ScrollingStateScrollingNode(const ScrollingStateScrollingNode&, ScrollingStateTree&);
 

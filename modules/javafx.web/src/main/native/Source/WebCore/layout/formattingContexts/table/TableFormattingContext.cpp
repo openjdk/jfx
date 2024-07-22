@@ -27,13 +27,12 @@
 #include "TableFormattingContext.h"
 
 #include "BlockFormattingState.h"
-#include "FloatingState.h"
-#include "InlineFormattingState.h"
 #include "LayoutBox.h"
 #include "LayoutBoxGeometry.h"
 #include "LayoutChildIterator.h"
 #include "LayoutContext.h"
 #include "LayoutInitialContainingBlock.h"
+#include "PlacedFloats.h"
 #include "RenderStyleInlines.h"
 #include "TableFormattingConstraints.h"
 #include "TableFormattingState.h"
@@ -45,8 +44,9 @@ namespace Layout {
 WTF_MAKE_ISO_ALLOCATED_IMPL(TableFormattingContext);
 
 // https://www.w3.org/TR/css-tables-3/#table-layout-algorithm
-TableFormattingContext::TableFormattingContext(const ElementBox& formattingContextRoot, TableFormattingState& formattingState)
-    : FormattingContext(formattingContextRoot, formattingState)
+TableFormattingContext::TableFormattingContext(const ElementBox& formattingContextRoot, TableFormattingState& tableFormattingState)
+    : FormattingContext(formattingContextRoot, tableFormattingState.layoutState())
+    , m_tableFormattingState(tableFormattingState)
     , m_tableFormattingGeometry(*this)
     , m_tableFormattingQuirks(*this)
 {
@@ -98,14 +98,14 @@ void TableFormattingContext::setUsedGeometryForCells(LayoutUnit availableHorizon
 
         cellBoxGeometry.setBorder(formattingGeometry.computedCellBorder(*cell));
         cellBoxGeometry.setPadding(formattingGeometry.computedPadding(cellBox, availableHorizontalSpace));
-        cellBoxGeometry.setLogicalTop(rowList[cell->startRow()].logicalTop() - sectionOffset);
-        cellBoxGeometry.setLogicalLeft(columnList[cell->startColumn()].usedLogicalLeft());
+        cellBoxGeometry.setTop(rowList[cell->startRow()].logicalTop() - sectionOffset);
+        cellBoxGeometry.setLeft(columnList[cell->startColumn()].usedLogicalLeft());
         cellBoxGeometry.setContentBoxWidth(formattingGeometry.horizontalSpaceForCellContent(*cell));
 
         if (cellBox.hasInFlowOrFloatingChild()) {
             // FIXME: This should probably be part of the invalidation state to indicate when we re-layout the cell multiple times as part of the multi-pass table algorithm.
-            auto& floatingStateForCellContent = layoutState().ensureBlockFormattingState(cellBox).floatingState();
-            floatingStateForCellContent.clear();
+            auto& placedFloatsForCellContent = layoutState().ensureBlockFormattingState(cellBox).placedFloats();
+            placedFloatsForCellContent.clear();
             LayoutContext::createFormattingContext(cellBox, layoutState())->layoutInFlowContent(formattingGeometry.constraintsForInFlowContent(cellBox));
         }
         cellBoxGeometry.setContentBoxHeight(formattingGeometry.verticalSpaceForCellContent(*cell, availableVerticalSpace));
@@ -122,8 +122,8 @@ void TableFormattingContext::setUsedGeometryForCells(LayoutUnit availableHorizon
 
             // FIXME: Find out if it is ok to use the regular padding here to align the content box inside a tall cell or we need to
             // use some kind of intrinsic padding similar to RenderTableCell.
-            auto paddingTop = valueOrDefault(cellBoxGeometry.paddingBefore());
-            auto paddingBottom = valueOrDefault(cellBoxGeometry.paddingAfter());
+            auto paddingTop = cellBoxGeometry.paddingBefore();
+            auto paddingBottom = cellBoxGeometry.paddingAfter();
             auto intrinsicPaddingTop = LayoutUnit { };
             auto intrinsicPaddingBottom = LayoutUnit { };
 
@@ -166,7 +166,7 @@ void TableFormattingContext::setUsedGeometryForCells(LayoutUnit availableHorizon
                 };
                 adjustCellContentWithInstrinsicPaddingBefore();
             }
-            cellBoxGeometry.setVerticalPadding({ paddingTop + intrinsicPaddingTop, paddingBottom + intrinsicPaddingBottom });
+            cellBoxGeometry.setVerticalPadding(BoxGeometry::VerticalEdges { paddingTop + intrinsicPaddingTop, paddingBottom + intrinsicPaddingBottom });
         };
         computeIntrinsicVerticalPaddingForCell();
     }
@@ -196,9 +196,9 @@ void TableFormattingContext::setUsedGeometryForRows(LayoutUnit availableHorizont
             // Border collapsing delegates borders to table/cells.
             border.horizontal = { };
             if (!rowIndex)
-                border.vertical.top = { };
+                border.vertical.before = { };
             if (rowIndex == rows.size() - 1)
-                border.vertical.bottom = { };
+                border.vertical.after = { };
             return border;
         }();
         if (computedRowBorder.height() > row.logicalHeight()) {
@@ -208,16 +208,16 @@ void TableFormattingContext::setUsedGeometryForRows(LayoutUnit availableHorizont
             // or with a wide frame box.
             // If it happens to cause issues in the display tree, we could also consider
             // a special frame box override, where padding box + border != frame box.
-            computedRowBorder.vertical.top = { };
-            computedRowBorder.vertical.bottom = { };
+            computedRowBorder.vertical.before = { };
+            computedRowBorder.vertical.after = { };
         }
         rowBoxGeometry.setContentBoxHeight(row.logicalHeight() - computedRowBorder.height());
 
         auto rowLogicalWidth = grid.columns().logicalWidth() + 2 * grid.horizontalSpacing();
         if (computedRowBorder.width() > rowLogicalWidth) {
             // See comment above.
-            computedRowBorder.horizontal.left = { };
-            computedRowBorder.horizontal.right = { };
+            computedRowBorder.horizontal.start = { };
+            computedRowBorder.horizontal.end = { };
         }
         rowBoxGeometry.setContentBoxWidth(rowLogicalWidth - computedRowBorder.width());
         rowBoxGeometry.setBorder(computedRowBorder);
@@ -226,8 +226,8 @@ void TableFormattingContext::setUsedGeometryForRows(LayoutUnit availableHorizont
             // This row is in a different section.
             rowLogicalTop = { };
         }
-        rowBoxGeometry.setLogicalTop(rowLogicalTop);
-        rowBoxGeometry.setLogicalLeft({ });
+        rowBoxGeometry.setTop(rowLogicalTop);
+        rowBoxGeometry.setLeft({ });
 
         rowLogicalTop += row.logicalHeight() + grid.verticalSpacing();
         previousRow = &rowBox;
@@ -265,7 +265,7 @@ void TableFormattingContext::setUsedGeometryForSections(const ConstraintsForInFl
         // Section borders are either collapsed or ignored.
         sectionBoxGeometry.setBorder({ });
         // Use fake vertical padding to space out the sections.
-        sectionBoxGeometry.setPadding(Edges { { }, { paddingBefore.value_or(0_lu), paddingAfter } });
+        sectionBoxGeometry.setPadding(BoxGeometry::Edges { { }, { paddingBefore.value_or(0_lu), paddingAfter } });
         paddingBefore = std::nullopt;
         // Internal table elements do not have margins.
         sectionBoxGeometry.setHorizontalMargin({ });
@@ -280,8 +280,8 @@ void TableFormattingContext::setUsedGeometryForSections(const ConstraintsForInFl
         }
         sectionContentHeight += verticalSpacing * (rowCount - 1);
         sectionBoxGeometry.setContentBoxHeight(sectionContentHeight);
-        sectionBoxGeometry.setLogicalLeft(constraints.horizontal().logicalLeft);
-        sectionBoxGeometry.setLogicalTop(logicalTop);
+        sectionBoxGeometry.setLeft(constraints.horizontal().logicalLeft);
+        sectionBoxGeometry.setTop(logicalTop);
 
         logicalTop += sectionBoxGeometry.borderBoxHeight();
     }

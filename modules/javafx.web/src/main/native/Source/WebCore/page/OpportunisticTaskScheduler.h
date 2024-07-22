@@ -26,27 +26,35 @@
 #pragma once
 
 #include "RunLoopObserver.h"
+#include <JavaScriptCore/EdenGCActivityCallback.h>
+#include <JavaScriptCore/FullGCActivityCallback.h>
+#include <JavaScriptCore/MarkedSpace.h>
+#include <wtf/CheckedPtr.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/RefCounted.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-class Page;
 class OpportunisticTaskScheduler;
+class Page;
 
-class OpportunisticTaskDeferralScope {
-    WTF_MAKE_NONCOPYABLE(OpportunisticTaskDeferralScope); WTF_MAKE_FAST_ALLOCATED;
+class ImminentlyScheduledWorkScope : public RefCounted<ImminentlyScheduledWorkScope> {
 public:
-    OpportunisticTaskDeferralScope(OpportunisticTaskScheduler&);
-    OpportunisticTaskDeferralScope(OpportunisticTaskDeferralScope&&);
-    ~OpportunisticTaskDeferralScope();
+    static Ref<ImminentlyScheduledWorkScope> create(OpportunisticTaskScheduler& scheduler)
+    {
+        return adoptRef(*new ImminentlyScheduledWorkScope(scheduler));
+    }
+
+    ~ImminentlyScheduledWorkScope();
 
 private:
+    ImminentlyScheduledWorkScope(OpportunisticTaskScheduler&);
+
     WeakPtr<OpportunisticTaskScheduler> m_scheduler;
 };
 
-class OpportunisticTaskScheduler : public RefCounted<OpportunisticTaskScheduler>, public CanMakeWeakPtr<OpportunisticTaskScheduler> {
+class OpportunisticTaskScheduler final : public RefCounted<OpportunisticTaskScheduler>, public CanMakeWeakPtr<OpportunisticTaskScheduler> {
 public:
     static Ref<OpportunisticTaskScheduler> create(Page& page)
     {
@@ -55,23 +63,69 @@ public:
 
     ~OpportunisticTaskScheduler();
 
-    void reschedule(MonotonicTime deadline);
+    void willQueueIdleCallback() { m_mayHavePendingIdleCallbacks = true; }
 
-    WARN_UNUSED_RETURN std::unique_ptr<OpportunisticTaskDeferralScope> makeDeferralScope();
+    void rescheduleIfNeeded(MonotonicTime deadline);
+    bool hasImminentlyScheduledWork() const { return m_imminentlyScheduledWorkCount; }
+
+    WARN_UNUSED_RETURN Ref<ImminentlyScheduledWorkScope> makeScheduledWorkScope();
+
+    class FullGCActivityCallback final : public JSC::FullGCActivityCallback {
+    public:
+        using Base = JSC::FullGCActivityCallback;
+
+        static Ref<FullGCActivityCallback> create(JSC::Heap& heap)
+        {
+            return adoptRef(*new FullGCActivityCallback(heap));
+        }
+
+        void doCollection(JSC::VM&) final;
+
+    private:
+        FullGCActivityCallback(JSC::Heap&);
+
+        JSC::VM& m_vm;
+        std::unique_ptr<RunLoopObserver> m_runLoopObserver;
+        JSC::HeapVersion m_version { 0 };
+        unsigned m_deferCount { 0 };
+    };
+
+    class EdenGCActivityCallback final : public JSC::EdenGCActivityCallback {
+    public:
+        using Base = JSC::EdenGCActivityCallback;
+
+        static Ref<EdenGCActivityCallback> create(JSC::Heap& heap)
+        {
+            return adoptRef(*new EdenGCActivityCallback(heap));
+        }
+
+        void doCollection(JSC::VM&) final;
+
+    private:
+        EdenGCActivityCallback(JSC::Heap&);
+
+        JSC::VM& m_vm;
+        std::unique_ptr<RunLoopObserver> m_runLoopObserver;
+        JSC::HeapVersion m_version { 0 };
+        unsigned m_deferCount { 0 };
+    };
 
 private:
-    friend class OpportunisticTaskDeferralScope;
+    friend class ImminentlyScheduledWorkScope;
 
     OpportunisticTaskScheduler(Page&);
     void runLoopObserverFired();
 
-    void incrementDeferralCount();
-    void decrementDeferralCount();
+    bool isPageInactiveOrLoading() const;
 
-    WeakPtr<Page> m_page;
-    uint64_t m_taskDeferralCount { 0 };
+    bool shouldAllowOpportunisticallyScheduledTasks() const;
+
+    SingleThreadWeakPtr<Page> m_page;
+    uint64_t m_imminentlyScheduledWorkCount { 0 };
+    uint64_t m_runloopCountAfterBeingScheduled { 0 };
     MonotonicTime m_currentDeadline;
     std::unique_ptr<RunLoopObserver> m_runLoopObserver;
+    bool m_mayHavePendingIdleCallbacks { false };
 };
 
 } // namespace WebCore

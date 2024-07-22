@@ -79,7 +79,7 @@ private:
     void configurationChanged(const PlatformAudioTrackConfiguration&) final;
 
     // TrackPrivateBaseClient
-    void idChanged(const AtomString&) final;
+    void idChanged(TrackID) final;
     void labelChanged(const AtomString&) final;
     void languageChanged(const AtomString&) final;
     void willRemove() final;

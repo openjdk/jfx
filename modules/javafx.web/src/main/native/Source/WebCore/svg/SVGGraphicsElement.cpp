@@ -23,12 +23,12 @@
 #include "SVGGraphicsElement.h"
 
 #include "LegacyRenderSVGPath.h"
+#include "LegacyRenderSVGResource.h"
 #include "RenderAncestorIterator.h"
 #include "RenderElementInlines.h"
 #include "RenderLayer.h"
 #include "RenderSVGHiddenContainer.h"
 #include "RenderSVGPath.h"
-#include "RenderSVGResource.h"
 #include "SVGMatrix.h"
 #include "SVGNames.h"
 #include "SVGPathData.h"
@@ -36,6 +36,7 @@
 #include "SVGRenderSupport.h"
 #include "SVGSVGElement.h"
 #include "SVGStringList.h"
+#include "TransformOperationData.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
 
@@ -43,8 +44,8 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGGraphicsElement);
 
-SVGGraphicsElement::SVGGraphicsElement(const QualifiedName& tagName, Document& document, UniqueRef<SVGPropertyRegistry>&& propertyRegistry)
-    : SVGElement(tagName, document, WTFMove(propertyRegistry))
+SVGGraphicsElement::SVGGraphicsElement(const QualifiedName& tagName, Document& document, UniqueRef<SVGPropertyRegistry>&& propertyRegistry, OptionSet<TypeFlag> typeFlags)
+    : SVGElement(tagName, document, WTFMove(propertyRegistry), typeFlags)
     , SVGTests(this)
     , m_shouldIsolateBlending(false)
 {
@@ -97,7 +98,7 @@ AffineTransform SVGGraphicsElement::animatedLocalTransform() const
         // Note: objectBoundingBox is an emptyRect for elements like pattern or clipPath.
         // See the "Object bounding box units" section of http://dev.w3.org/csswg/css3-transforms/
         TransformationMatrix transform;
-        style->applyTransform(transform, renderer()->transformReferenceBoxRect());
+        style->applyTransform(transform, TransformOperationData(renderer()->transformReferenceBoxRect(), renderer()));
 
         // Flatten any 3D transform.
         matrix = transform.toAffineTransform();
@@ -206,8 +207,11 @@ void SVGGraphicsElement::didAttachRenderers()
 
 Path SVGGraphicsElement::toClipPath()
 {
-    // FIXME: [LBSE] Stop mutating the path here and stop calling animatedLocalTransform().
-    Path path = pathFromGraphicsElement(this);
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    RELEASE_ASSERT(!document().settings().layerBasedSVGEngineEnabled());
+#endif
+
+    Path path = pathFromGraphicsElement(*this);
     // FIXME: How do we know the element has done a layout?
     path.transform(animatedLocalTransform());
     return path;

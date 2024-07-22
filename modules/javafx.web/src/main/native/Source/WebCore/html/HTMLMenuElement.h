@@ -31,16 +31,8 @@ class HTMLMenuElement final : public HTMLElement {
 public:
     static Ref<HTMLMenuElement> create(const QualifiedName&, Document&);
 
-    bool isTouchBarMenu() const { return m_isTouchBarMenu; }
-
 private:
     HTMLMenuElement(const QualifiedName&, Document&);
-
-    InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
-    void removedFromAncestor(RemovalType, ContainerNode&) final;
-    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
-
-    bool m_isTouchBarMenu;
 };
 
 } // namespace WebCore

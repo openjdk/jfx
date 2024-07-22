@@ -38,8 +38,9 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderMathMLSpace);
 
 RenderMathMLSpace::RenderMathMLSpace(MathMLSpaceElement& element, RenderStyle&& style)
-    : RenderMathMLBlock(element, WTFMove(style))
+    : RenderMathMLBlock(Type::MathMLSpace, element, WTFMove(style))
 {
+    ASSERT(isRenderMathMLSpace());
 }
 
 void RenderMathMLSpace::computePreferredLogicalWidths()

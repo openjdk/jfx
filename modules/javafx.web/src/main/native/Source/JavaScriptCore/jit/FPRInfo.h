@@ -118,6 +118,7 @@ public:
 
     // Temporary registers.
     // d8-d15 are callee saved, d15 is use by the MacroAssembler as fpTempRegister.
+    // d14 is reserved as an additional scratch for wasm JITs
     static constexpr FPRReg fpRegT0 = ARMRegisters::d0;
     static constexpr FPRReg fpRegT1 = ARMRegisters::d1;
     static constexpr FPRReg fpRegT2 = ARMRegisters::d2;
@@ -132,7 +133,6 @@ public:
     static constexpr FPRReg fpRegCS3 = ARMRegisters::d11;
     static constexpr FPRReg fpRegCS4 = ARMRegisters::d12;
     static constexpr FPRReg fpRegCS5 = ARMRegisters::d13;
-    static constexpr FPRReg fpRegCS6 = ARMRegisters::d14;
 
     // ARMv7 doesn't pass arguments in fp registers. The return
     // value is also actually in integer registers, for now
@@ -141,7 +141,7 @@ public:
     static constexpr FPRReg argumentFPR0 = ARMRegisters::d0; // fpRegT0
     static constexpr FPRReg argumentFPR1 = ARMRegisters::d1; // fpRegT1
 
-    static constexpr FPRReg nonPreservedNonArgumentFPR0 = ARMRegisters::d7;
+    static constexpr FPRReg nonPreservedNonArgumentFPR0 = ARMRegisters::d14;
 
     // FPRReg mapping is direct, the machine regsiter numbers can
     // be used directly as indices into the FPR RegisterBank.
@@ -274,74 +274,6 @@ public:
 };
 
 #endif // CPU(ARM64)
-
-#if CPU(MIPS)
-
-class FPRInfo {
-public:
-    typedef FPRReg RegisterType;
-    static constexpr unsigned numberOfRegisters = 7;
-    static constexpr unsigned numberOfArgumentRegisters = 2;
-
-    // Temporary registers.
-    static constexpr FPRReg fpRegT0 = MIPSRegisters::f0;
-    static constexpr FPRReg fpRegT1 = MIPSRegisters::f2;
-    static constexpr FPRReg fpRegT2 = MIPSRegisters::f4;
-    static constexpr FPRReg fpRegT3 = MIPSRegisters::f6;
-    static constexpr FPRReg fpRegT4 = MIPSRegisters::f8;
-    static constexpr FPRReg fpRegT5 = MIPSRegisters::f10;
-    static constexpr FPRReg fpRegT6 = MIPSRegisters::f18;
-
-    static constexpr FPRReg returnValueFPR = MIPSRegisters::f0;
-
-    static constexpr FPRReg argumentFPR0 = MIPSRegisters::f12;
-    static constexpr FPRReg argumentFPR1 = MIPSRegisters::f14;
-
-    static constexpr FPRReg nonPreservedNonArgumentFPR0 = MIPSRegisters::f2;
-
-    static FPRReg toRegister(unsigned index)
-    {
-        static const FPRReg registerForIndex[numberOfRegisters] = {
-            fpRegT0, fpRegT1, fpRegT2, fpRegT3, fpRegT4, fpRegT5, fpRegT6 };
-
-        ASSERT(index < numberOfRegisters);
-        return registerForIndex[index];
-    }
-
-    static FPRReg toArgumentRegister(unsigned index)
-    {
-        ASSERT(index < numberOfArgumentRegisters);
-        static const FPRReg indexForRegister[2] = {
-            argumentFPR0, argumentFPR1
-        };
-        return indexForRegister[index];
-    }
-
-    static unsigned toIndex(FPRReg reg)
-    {
-        ASSERT(reg != InvalidFPRReg);
-        ASSERT(reg < 20);
-        static const unsigned indexForRegister[20] = {
-            0, InvalidIndex, 1, InvalidIndex,
-            2, InvalidIndex, 3, InvalidIndex,
-            4, InvalidIndex, 5, InvalidIndex,
-            InvalidIndex, InvalidIndex, InvalidIndex, InvalidIndex,
-            InvalidIndex, InvalidIndex, 6, InvalidIndex,
-        };
-        unsigned result = indexForRegister[reg];
-        return result;
-    }
-
-    static const char* debugName(FPRReg reg)
-    {
-        ASSERT(reg != InvalidFPRReg);
-        return MacroAssembler::fprName(reg);
-    }
-
-    static constexpr unsigned InvalidIndex = 0xffffffff;
-};
-
-#endif // CPU(MIPS)
 
 #if CPU(RISCV64)
 

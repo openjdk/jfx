@@ -32,6 +32,7 @@
 namespace WebCore {
 
 class StyleRule;
+class StyleRuleScope;
 
 namespace Style {
 
@@ -47,17 +48,23 @@ enum class MatchElement : uint8_t {
     AnySibling,
     ParentSibling,
     AncestorSibling,
+    ParentAnySibling,
+    AncestorAnySibling,
     HasChild,
     HasDescendant,
     HasSibling,
     HasSiblingDescendant,
-    HasNonSubjectOrScopeBreaking, // FIXME: This is a catch-all for cases where :has() is in a non-subject position, or may break scope.
-    Host
+    HasAnySibling,
+    HasNonSubject, // FIXME: This is a catch-all for cases where :has() is in a non-subject position.
+    HasScopeBreaking, // FIXME: This is a catch-all for cases where :has() contains a scope breaking sub-selector like, like :has(:is(.x .y)).
+    Host,
+    HostChild
 };
-constexpr unsigned matchElementCount = static_cast<unsigned>(MatchElement::Host) + 1;
+constexpr unsigned matchElementCount = static_cast<unsigned>(MatchElement::HostChild) + 1;
 
 enum class IsNegation : bool { No, Yes };
-enum class CanBreakScope : bool { No, Yes }; // :is/not() inside scoped selector can be affected by things outside the scope.
+enum class CanBreakScope : bool { No, Yes }; // Are we inside a logical combination pseudo-class like :is() or :not(), which if we were inside a :has(), could break out of its scope?
+enum class DoesBreakScope : bool { No, Yes }; // Did we find a logical combination pseudo-class like :is() or :not() with selector combinators that do break out of a :has() scope?
 
 // For MSVC.
 #pragma pack(push, 4)
@@ -92,12 +99,12 @@ struct RuleFeatureSet {
     void add(const RuleFeatureSet&);
     void clear();
     void shrinkToFit();
-    void collectFeatures(const RuleData&);
+    void collectFeatures(const RuleData&, const Vector<Ref<const StyleRuleScope>>& scopeRules = { });
     void registerContentAttribute(const AtomString&);
 
     bool usesHasPseudoClass() const;
-    bool usesMatchElement(MatchElement matchElement) const  { return usedMatchElements[static_cast<uint8_t>(matchElement)]; }
-    void setUsesMatchElement(MatchElement matchElement) { usedMatchElements[static_cast<uint8_t>(matchElement)] = true; }
+    bool usesMatchElement(MatchElement matchElement) const { return usedMatchElements[enumToUnderlyingType(matchElement)]; }
+    void setUsesMatchElement(MatchElement matchElement) { usedMatchElements[enumToUnderlyingType(matchElement)] = true; }
 
     HashSet<AtomString> idsInRules;
     HashSet<AtomString> idsMatchingAncestorsInRules;
@@ -112,11 +119,12 @@ struct RuleFeatureSet {
     HashMap<AtomString, std::unique_ptr<Vector<RuleFeatureWithInvalidationSelector>>> attributeRules;
     HashMap<PseudoClassInvalidationKey, std::unique_ptr<RuleFeatureVector>> pseudoClassRules;
     HashMap<PseudoClassInvalidationKey, std::unique_ptr<Vector<RuleFeatureWithInvalidationSelector>>> hasPseudoClassRules;
+    Vector<RuleAndSelector> scopeBreakingHasPseudoClassRules;
 
     HashSet<AtomString> classesAffectingHost;
     HashSet<AtomString> attributesAffectingHost;
-    HashSet<CSSSelector::PseudoClassType, IntHash<CSSSelector::PseudoClassType>, WTF::StrongEnumHashTraits<CSSSelector::PseudoClassType>> pseudoClassesAffectingHost;
-    HashSet<CSSSelector::PseudoClassType, IntHash<CSSSelector::PseudoClassType>, WTF::StrongEnumHashTraits<CSSSelector::PseudoClassType>> pseudoClassTypes;
+    HashSet<CSSSelector::PseudoClass, IntHash<CSSSelector::PseudoClass>, WTF::StrongEnumHashTraits<CSSSelector::PseudoClass>> pseudoClassesAffectingHost;
+    HashSet<CSSSelector::PseudoClass, IntHash<CSSSelector::PseudoClass>, WTF::StrongEnumHashTraits<CSSSelector::PseudoClass>> pseudoClasses;
 
     std::array<bool, matchElementCount> usedMatchElements { };
 
@@ -128,21 +136,22 @@ private:
         bool hasSiblingSelector { false };
 
         using InvalidationFeature = std::tuple<const CSSSelector*, MatchElement, IsNegation>;
+        using HasInvalidationFeature = std::tuple<const CSSSelector*, MatchElement, IsNegation, DoesBreakScope>;
 
         Vector<InvalidationFeature> ids;
         Vector<InvalidationFeature> classes;
         Vector<InvalidationFeature> attributes;
         Vector<InvalidationFeature> pseudoClasses;
-        Vector<InvalidationFeature> hasPseudoClasses;
+        Vector<HasInvalidationFeature> hasPseudoClasses;
     };
-    void recursivelyCollectFeaturesFromSelector(SelectorFeatures&, const CSSSelector&, MatchElement = MatchElement::Subject, IsNegation = IsNegation::No, CanBreakScope = CanBreakScope::No);
+    DoesBreakScope recursivelyCollectFeaturesFromSelector(SelectorFeatures&, const CSSSelector&, MatchElement = MatchElement::Subject, IsNegation = IsNegation::No, CanBreakScope = CanBreakScope::No);
 };
 
 bool isHasPseudoClassMatchElement(MatchElement);
 MatchElement computeHasPseudoClassMatchElement(const CSSSelector&);
 
 enum class InvalidationKeyType : uint8_t { Universal = 1, Class, Id, Tag };
-PseudoClassInvalidationKey makePseudoClassInvalidationKey(CSSSelector::PseudoClassType, InvalidationKeyType, const AtomString& = starAtom());
+PseudoClassInvalidationKey makePseudoClassInvalidationKey(CSSSelector::PseudoClass, InvalidationKeyType, const AtomString& = starAtom());
 
 inline bool isUniversalInvalidation(const PseudoClassInvalidationKey& key)
 {
@@ -153,9 +162,11 @@ inline bool RuleFeatureSet::usesHasPseudoClass() const
 {
     return usesMatchElement(MatchElement::HasChild)
         || usesMatchElement(MatchElement::HasDescendant)
-        || usesMatchElement(MatchElement::HasSiblingDescendant)
         || usesMatchElement(MatchElement::HasSibling)
-        || usesMatchElement(MatchElement::HasNonSubjectOrScopeBreaking);
+        || usesMatchElement(MatchElement::HasSiblingDescendant)
+        || usesMatchElement(MatchElement::HasAnySibling)
+        || usesMatchElement(MatchElement::HasNonSubject)
+        || usesMatchElement(MatchElement::HasScopeBreaking);
 }
 
 } // namespace Style

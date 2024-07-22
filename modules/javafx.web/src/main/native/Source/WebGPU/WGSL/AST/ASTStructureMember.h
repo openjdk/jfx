@@ -27,25 +27,42 @@
 
 #include "ASTAttribute.h"
 #include "ASTBuilder.h"
+#include "ASTExpression.h"
 #include "ASTIdentifier.h"
-#include "ASTTypeName.h"
+#include "ASTInterpolateAttribute.h"
 #include <wtf/ReferenceWrapperVector.h>
 
-namespace WGSL::AST {
+namespace WGSL {
+
+class AttributeValidator;
+
+namespace AST {
 
 class StructureMember final : public Node {
     WGSL_AST_BUILDER_NODE(StructureMember);
+    friend AttributeValidator;
 
 public:
     using List = ReferenceWrapperVector<StructureMember>;
 
     NodeKind kind() const final;
     Identifier& name() { return m_name; }
-    TypeName& type() { return m_type; }
+    Expression& type() { return m_type; }
     Attribute::List& attributes() { return m_attributes; }
 
+    bool invariant() const { return m_invariant; }
+    std::optional<Builtin> builtin() const { return m_builtin; }
+    std::optional<unsigned> location() const { return m_location; }
+    std::optional<Interpolation> interpolation() const { return m_interpolation; }
+
+    unsigned offset() const { return m_offset; }
+    unsigned padding() const { return m_padding; }
+
+    unsigned alignment() const { return *m_alignment; }
+    unsigned size() const { return *m_size; }
+
 private:
-    StructureMember(SourceSpan span, Identifier&& name, TypeName::Ref&& type, Attribute::List&& attributes)
+    StructureMember(SourceSpan span, Identifier&& name, Expression::Ref&& type, Attribute::List&& attributes)
         : Node(span)
         , m_name(WTFMove(name))
         , m_attributes(WTFMove(attributes))
@@ -54,9 +71,22 @@ private:
 
     Identifier m_name;
     Attribute::List m_attributes;
-    TypeName::Ref m_type;
+    Expression::Ref m_type;
+
+    // Compute
+    unsigned m_offset { 0 };
+    unsigned m_padding { 0 };
+
+    // Attributes
+    bool m_invariant { false };
+    std::optional<unsigned> m_alignment;
+    std::optional<unsigned> m_size;
+    std::optional<Builtin> m_builtin;
+    std::optional<unsigned> m_location;
+    std::optional<Interpolation> m_interpolation;
 };
 
-} // namespace WGSL::AST
+} // namespace AST
+} // namespace WGSL
 
 SPECIALIZE_TYPE_TRAITS_WGSL_AST(StructureMember)
