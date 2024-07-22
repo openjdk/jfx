@@ -191,10 +191,15 @@ inline InlineLayoutUnit InlineLevelBox::preferredLineHeight() const
 {
     if (isPreferredLineHeightFontMetricsBased())
         return primarymetricsOfPrimaryFont().floatLineSpacing();
-
+#if !PLATFORM(JAVA)
     if (m_style.lineHeight.isPercentOrCalculated())
         return minimumValueForLength(m_style.lineHeight, fontSize());
     return m_style.lineHeight.value();
+#else // required to round a floating-point number down to the nearest integer value otherwise it will introduce 1px extra height
+    if (m_style.lineHeight.isPercentOrCalculated())
+        return floorf(minimumValueForLength(m_style.lineHeight, fontSize()));
+    return floorf(m_style.lineHeight.value());
+#endif
 }
 
 inline bool InlineLevelBox::hasLineBoxRelativeAlignment() const
