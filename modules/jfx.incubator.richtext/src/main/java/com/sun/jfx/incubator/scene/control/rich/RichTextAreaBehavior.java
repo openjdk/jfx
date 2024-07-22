@@ -255,7 +255,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
 
     protected String getPlainText(int modelIndex) {
         StyledTextModel m = getControl().getModel();
-        return (m == null) ? null : m.getPlainText(modelIndex);
+        return (m == null) ? "" : m.getPlainText(modelIndex);
     }
 
     protected void handleKeyTyped(KeyEvent ev) {
@@ -822,9 +822,6 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
 
         int index = caret.index();
         String text = getPlainText(index);
-        if (text == null) {
-            return;
-        }
 
         // using default locale, same as TextInputControl.backward() for example
         BreakIterator br = BreakIterator.getWordInstance();
@@ -1320,7 +1317,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             }
 
             String text = getPlainText(index);
-            if ((text == null) || (text.length() == 0)) {
+            if (text.length() == 0) {
                 index--;
                 offset = Integer.MAX_VALUE;
                 continue;
@@ -1363,7 +1360,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             }
 
             String text = getPlainText(index);
-            if ((text == null) || (text.length() == 0)) {
+            if (text.length() == 0) {
                 if (skipEmpty) {
                     index++;
                 }
@@ -1413,7 +1410,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             }
 
             String text = getPlainText(index);
-            if ((text == null) || (text.length() == 0)) {
+            if (text.length() == 0) {
                 if (skipEmpty) {
                     index++;
                 }

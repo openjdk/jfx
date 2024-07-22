@@ -54,24 +54,22 @@ public class DemoSyntaxDecorator implements SyntaxDecorator {
     public RichParagraph createRichParagraph(CodeTextModel model, int index) {
         String text = model.getPlainText(index);
         RichParagraph.Builder b = RichParagraph.builder();
-        if (text != null) {
-            int len = text.length();
-            if (len > 0) {
-                Matcher m = PATTERN.matcher(text);
-                int beg = 0;
-                while (m.find(beg)) {
-                    int start = m.start();
-                    if (start > beg) {
-                        b.addSegment(text, beg, start, null);
-                    }
-                    int end = m.end();
-                    boolean digit = (m.end(1) >= 0);
-                    b.addSegment(text, start, end, digit ? DIGITS : KEYWORDS);
-                    beg = end;
+        int len = text.length();
+        if (len > 0) {
+            Matcher m = PATTERN.matcher(text);
+            int beg = 0;
+            while (m.find(beg)) {
+                int start = m.start();
+                if (start > beg) {
+                    b.addSegment(text, beg, start, null);
                 }
-                if (beg < len) {
-                    b.addSegment(text, beg, len, null);
-                }
+                int end = m.end();
+                boolean digit = (m.end(1) >= 0);
+                b.addSegment(text, start, end, digit ? DIGITS : KEYWORDS);
+                beg = end;
+            }
+            if (beg < len) {
+                b.addSegment(text, beg, len, null);
             }
         }
         return b.build();

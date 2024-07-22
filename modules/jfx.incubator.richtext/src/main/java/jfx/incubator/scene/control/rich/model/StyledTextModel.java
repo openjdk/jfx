@@ -122,7 +122,7 @@ public abstract class StyledTextModel {
      * The caller should never attempt to ask for a paragraph outside of the valid range.
      *
      * @param index the paragraph index in the range (0...{@link #size()})
-     * @return the paragraph text string or null
+     * @return the non-null paragraph text string
      */
     public abstract String getPlainText(int index);
 
@@ -398,8 +398,7 @@ public abstract class StyledTextModel {
      * @return the length
      */
     public int getParagraphLength(int index) {
-        String s = getPlainText(index);
-        return (s == null) ? 0 : s.length();
+        return getPlainText(index).length();
     }
 
     /**

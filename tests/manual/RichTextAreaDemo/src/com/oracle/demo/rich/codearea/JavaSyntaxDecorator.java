@@ -95,9 +95,7 @@ public class JavaSyntaxDecorator implements SyntaxDecorator {
                 nl = true;
             }
             String s = model.getPlainText(i);
-            if (s != null) {
-                sb.append(s);
-            }
+            sb.append(s);
         }
         return sb.toString();
     }
