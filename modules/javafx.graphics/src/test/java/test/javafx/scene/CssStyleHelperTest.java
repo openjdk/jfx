@@ -672,36 +672,45 @@ public class CssStyleHelperTest {
     private static final String FX_BASE_GRAY_STYLESHEET = ".root {-fx-base: #808080}";
 
     /**
-     * All cases will lead to a neutral gray color #808080
+     * All cases will lead to a neutral gray color #808080.
+     *
+     * UA = USER_AGENT
      */
     enum OverrideCases {
         // User agent styles win when not overridden directly or indirectly:
-        USER_AGENT(GRAY_STYLESHEET, null, null, null),
-        INDIRECT_USER_AGENT(GRAY_INDIRECT_STYLESHEET, null, null, null),
+        UA(GRAY_STYLESHEET, null, null, null),
+        INDIRECT_UA(GRAY_INDIRECT_STYLESHEET, null, null, null),
 
         // Property wins when not directly overridden by author or inline style:
-        PROPERTY_OVERRIDES_USER_AGENT(RED_STYLESHEET, Color.web("#808080"), null, null),
-        PROPERTY_OVERRIDES_INDIRECT_USER_AGENT(RED_INDIRECT_STYLESHEET, Color.web("#808080"), null, null),
-        PROPERTY_OVERRIDES_USER_AGENT_VARIABLE_SET_IN_AUTHOR(RED_INDIRECT_STYLESHEET, Color.web("#808080"), FX_BASE_GREEN_STYLESHEET, null),
-        PROPERTY_OVERRIDES_USER_AGENT_VARIABLE_SET_INLINE(RED_INDIRECT_STYLESHEET, Color.web("#808080"), null, "-fx-base: yellow"),
+        PROPERTY(null, Color.web("#808080"), null, null),
+        PROPERTY_OVERRIDES_UA(RED_STYLESHEET, Color.web("#808080"), null, null),
+        PROPERTY_OVERRIDES_INDIRECT_UA(RED_INDIRECT_STYLESHEET, Color.web("#808080"), null, null),
+
+        // Property wins even if indirectly overridden by author or inline style (resolving of a lookup does not change priority of the user agent style)::
+        PROPERTY_OVERRIDES_UA_VARIABLE_SET_IN_AUTHOR(RED_INDIRECT_STYLESHEET, Color.web("#808080"), FX_BASE_GREEN_STYLESHEET, null),
+        PROPERTY_OVERRIDES_UA_VARIABLE_SET_INLINE(RED_INDIRECT_STYLESHEET, Color.web("#808080"), null, "-fx-base: yellow"),
 
         // Author style wins when not directly overridden by inline style:
-        AUTHOR_OVERRIDES_USER_AGENT(RED_STYLESHEET, null, GRAY_STYLESHEET, null),
-        AUTHOR_OVERRIDES_INDIRECT_USER_AGENT(RED_INDIRECT_STYLESHEET, null, GRAY_STYLESHEET, null),
-        AUTHOR_OVERRIDES_PROPERTY(RED_STYLESHEET, Color.BLUE, GRAY_STYLESHEET, null),
-        AUTHOR_OVERRIDES_USER_AGENT_VARIABLE_SET_INLINE(RED_INDIRECT_STYLESHEET, null, GRAY_STYLESHEET, "-fx-base: yellow"),
+        AUTHOR_OVERRIDES_UA(RED_STYLESHEET, null, GRAY_STYLESHEET, null),
+        AUTHOR_OVERRIDES_INDIRECT_UA(RED_INDIRECT_STYLESHEET, null, GRAY_STYLESHEET, null),
+        AUTHOR_OVERRIDES_PROPERTY(null, Color.BLUE, GRAY_STYLESHEET, null),
+
+        // Author style wins even if indirectly overridden by inline style (resolving of a lookup does not change priority of the user agent style):
+        AUTHOR_OVERRIDES_UA_VARIABLE_SET_INLINE(RED_INDIRECT_STYLESHEET, null, GRAY_STYLESHEET, "-fx-base: yellow"),
 
         // Indirect author styles win when property is not set directly, and there is no direct or indirect override in an inline style:
-        AUTHOR_VARIABLE_OVERRIDES_USER_AGENT_VARIABLE(RED_INDIRECT_STYLESHEET, null, FX_BASE_GRAY_STYLESHEET, null),
+        AUTHOR_VARIABLE_OVERRIDES_UA_VARIABLE(RED_INDIRECT_STYLESHEET, null, FX_BASE_GRAY_STYLESHEET, null),
 
-        // Direct inline styles always win:
-        INLINE_OVERRIDES_USER_AGENT(RED_STYLESHEET, null, null, "-fx-background-color: #808080"),
-        INLINE_OVERRIDES_PROPERTY(RED_STYLESHEET, Color.BLUE, null, "-fx-background-color: #808080"),
-        INLINE_OVERRIDES_AUTHOR(RED_STYLESHEET, null, RED_STYLESHEET, "-fx-background-color: #808080"),
+        // Direct inline styles always win over author styles:
+        INLINE_OVERRIDES_UA(RED_STYLESHEET, null, null, "-fx-background-color: #808080"),
+        INLINE_OVERRIDES_PROPERTY(null, Color.BLUE, null, "-fx-background-color: #808080"),
+        INLINE_OVERRIDES_AUTHOR(null, null, RED_STYLESHEET, "-fx-background-color: #808080"),
+        INLINE_OVERRIDES_ALL(RED_STYLESHEET, Color.BLUE, RED_STYLESHEET, "-fx-background-color: #808080"),
 
         // Indirect inline styles win when not directly overridden by author stylesheet or property:
-        INLINE_VARIABLE_OVERRIDES_USER_AGENT_VARIABLE(RED_INDIRECT_STYLESHEET, null, null, "-fx-base: #808080"),
-        INLINE_VARIABLE_OVERRIDES_AUTHOR_VARIABLE(RED_INDIRECT_STYLESHEET, null, FX_BASE_GREEN_STYLESHEET, "-fx-base: #808080");
+        INLINE_VARIABLE_OVERRIDES_UA_VARIABLE(RED_INDIRECT_STYLESHEET, null, null, "-fx-base: #808080"),
+        INLINE_VARIABLE_OVERRIDES_AUTHOR_VARIABLE(null, null, RED_INDIRECT_STYLESHEET, "-fx-base: #808080"),
+        INLINE_VARIABLE_OVERRIDES_ALL(RED_INDIRECT_STYLESHEET, null, FX_BASE_GREEN_STYLESHEET, "-fx-base: #808080");
 
         private final String userAgentStylesheet;
         private final Color property;
