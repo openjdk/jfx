@@ -277,6 +277,9 @@ private:
 
 #define LOG_EXCEPTION(env) check_and_clear_exception(env);
 
+    void glass_set_leave_nested_event_loop(bool v);
+    void glass_maybe_leave_nested_event_loop();
+
     gchar* get_application_name();
     void glass_throw_exception(JNIEnv * env,
             const char * exceptionClass,

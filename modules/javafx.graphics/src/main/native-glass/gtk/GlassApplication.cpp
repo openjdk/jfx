@@ -71,6 +71,8 @@ static gboolean call_runnable (gpointer data)
         javaVM->DetachCurrentThread();
     }
 
+    glass_maybe_leave_nested_event_loop();
+
     return FALSE;
 }
 
@@ -304,6 +306,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication_enterNestedEvent
     (void)env;
     (void)obj;
 
+    glass_set_leave_nested_event_loop(false);
     gtk_main();
 }
 
@@ -318,7 +321,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication_leaveNestedEvent
     (void)env;
     (void)obj;
 
-    gtk_main_quit();
+    glass_set_leave_nested_event_loop(true);
 }
 
 /*

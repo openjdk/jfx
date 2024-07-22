@@ -97,6 +97,8 @@ static gboolean call_runnable_in_timer
         if (envStatus == JNI_EDETACHED) {
             javaVM->DetachCurrentThread();
         }
+
+        glass_maybe_leave_nested_event_loop();
     }
     return TRUE;
 }
