@@ -686,7 +686,7 @@ public class CssStyleHelperTest {
         PROPERTY_OVERRIDES_UA(RED_STYLESHEET, Color.web("#808080"), null, null),
         PROPERTY_OVERRIDES_INDIRECT_UA(RED_INDIRECT_STYLESHEET, Color.web("#808080"), null, null),
 
-        // Property wins even if indirectly overridden by author or inline style (resolving of a lookup does not change priority of the user agent style)::
+        // Property wins even if indirectly overridden by author or inline style (resolving of a lookup does not change priority of the user agent style):
         PROPERTY_OVERRIDES_UA_VARIABLE_SET_IN_AUTHOR(RED_INDIRECT_STYLESHEET, Color.web("#808080"), FX_BASE_GREEN_STYLESHEET, null),
         PROPERTY_OVERRIDES_UA_VARIABLE_SET_INLINE(RED_INDIRECT_STYLESHEET, Color.web("#808080"), null, "-fx-base: yellow"),
 
@@ -701,7 +701,7 @@ public class CssStyleHelperTest {
         // Indirect author styles win when property is not set directly, and there is no direct or indirect override in an inline style:
         AUTHOR_VARIABLE_OVERRIDES_UA_VARIABLE(RED_INDIRECT_STYLESHEET, null, FX_BASE_GRAY_STYLESHEET, null),
 
-        // Direct inline styles always win over author styles:
+        // Direct inline styles always win over anything:
         INLINE_OVERRIDES_UA(RED_STYLESHEET, null, null, "-fx-background-color: #808080"),
         INLINE_OVERRIDES_PROPERTY(null, Color.BLUE, null, "-fx-background-color: #808080"),
         INLINE_OVERRIDES_AUTHOR(null, null, RED_STYLESHEET, "-fx-background-color: #808080"),
