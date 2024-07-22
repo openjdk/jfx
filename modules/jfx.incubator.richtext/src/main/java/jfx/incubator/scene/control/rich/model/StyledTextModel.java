@@ -409,6 +409,7 @@ public abstract class StyledTextModel {
      * @param end end of the range
      * @param out {@link StyledOutput} to receive the stream
      * @throws IOException when an I/O error occurs
+     * @see #replace(StyleResolver, TextPos, TextPos, StyledInput, boolean)
      */
     public void export(TextPos start, TextPos end, StyledOutput out) throws IOException {
         int cmp = start.compareTo(end);
