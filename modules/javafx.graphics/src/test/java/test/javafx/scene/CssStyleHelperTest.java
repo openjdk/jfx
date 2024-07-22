@@ -69,6 +69,9 @@ public class CssStyleHelperTest {
         stage = new Stage();
         stage.setScene(scene);
         resetStyleManager();
+
+        // Apparently, need to access this property first, or nothing will be appended at all.
+        CssParser.errorsProperty().clear();
     }
 
     @AfterAll
