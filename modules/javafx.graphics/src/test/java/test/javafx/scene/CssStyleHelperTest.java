@@ -37,13 +37,12 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class CssStyleHelperTest {
 
@@ -60,7 +59,7 @@ public class CssStyleHelperTest {
         sm.hasDefaultUserAgentStylesheet = false;
     }
 
-    @Before
+    @BeforeEach
     public void setup() {
         root = new StackPane();
         scene = new Scene(root);
@@ -69,7 +68,7 @@ public class CssStyleHelperTest {
         resetStyleManager();
     }
 
-    @AfterClass
+    @AfterAll
     public static void cleanupOnce() {
         resetStyleManager();
     }
