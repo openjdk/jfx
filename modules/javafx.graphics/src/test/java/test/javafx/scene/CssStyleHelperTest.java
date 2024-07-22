@@ -29,6 +29,8 @@ import javafx.stage.Stage;
 import com.sun.javafx.tk.Toolkit;
 import java.io.IOException;
 import javafx.css.CssParser;
+import javafx.css.CssParser.ParseError;
+import javafx.css.CssParser.ParseError.PropertySetError;
 import javafx.css.PseudoClass;
 import javafx.css.Stylesheet;
 import javafx.geometry.Insets;
@@ -684,6 +686,33 @@ public class CssStyleHelperTest {
         root.getChildren().addAll(a);
 
         assertDoesNotThrow(() -> stage.show());  // This should not result in a StackOverflowError
+        assertEquals(1, CssParser.errorsProperty().size());
+
+        ParseError error = CssParser.errorsProperty().getFirst();
+
+        assertEquals(PropertySetError.class, error.getClass());
+
+        // Note: on Windows, the message is using inconsistent line endings (sometimes Windows, sometimes Linux)
+        // so I've stripped it.
+        assertEquals(
+            """
+            Caught java.lang.IllegalArgumentException: Loop detected in *.root{
+            \t-fx-base-fill: <Value lookup="true">
+              <value>-fx-base</value>
+              <converter>null</converter>
+            </Value>
+            \t-fx-base: <Value lookup="true">
+              <value>-fx-base-color</value>
+              <converter>null</converter>
+            </Value>
+            \t-fx-base-color: <Value lookup="true">
+              <value>-fx-base-fill</value>
+              <converter>null</converter>
+            </Value>
+            } while resolving '-fx-base'' while calculating value for '-fx-background-color' from rule '*.pane' in stylesheet userAgentStyleSheet\
+            """,
+            error.getMessage().replace("\r", "")
+        );
     }
 
     @Test
@@ -710,5 +739,76 @@ public class CssStyleHelperTest {
         root.getChildren().addAll(a);
 
         assertDoesNotThrow(() -> stage.show());  // This should not result in a StackOverflowError
+        assertEquals(1, CssParser.errorsProperty().size());
+
+        ParseError error = CssParser.errorsProperty().getFirst();
+
+        assertEquals(PropertySetError.class, error.getClass());
+
+        // Note: on Windows, the message is using inconsistent line endings (sometimes Windows, sometimes Linux)
+        // so I've stripped it.
+        assertEquals(
+            """
+            Caught java.lang.IllegalArgumentException: Loop detected in *.root{
+            \t-fx-base-fill: <Value>
+              <value values="3">
+                <Value lookup="true">
+                  <value>-fx-base</value>
+                  <converter>null</converter>
+                </Value>    <Value>
+                  <value values="2">
+                    <Value>
+                      <value>49.0%</value>
+                      <converter>null</converter>
+                    </Value>        <Value>
+                      <value>0xffffffff</value>
+                      <converter>null</converter>
+                    </Value>      </value>
+                  <converter>StopConverter</converter>
+                </Value>    <Value>
+                  <value values="2">
+                    <Value>
+                      <value>50.0%</value>
+                      <converter>null</converter>
+                    </Value>        <Value>
+                      <value>0x000000ff</value>
+                      <converter>null</converter>
+                    </Value>      </value>
+                  <converter>StopConverter</converter>
+                </Value>  </value>
+              <converter>LadderConverter</converter>
+            </Value>
+            \t-fx-base: <Value>
+              <value values="3">
+                <Value lookup="true">
+                  <value>-fx-base-fill</value>
+                  <converter>null</converter>
+                </Value>    <Value>
+                  <value values="2">
+                    <Value>
+                      <value>49.0%</value>
+                      <converter>null</converter>
+                    </Value>        <Value>
+                      <value>0xffffffff</value>
+                      <converter>null</converter>
+                    </Value>      </value>
+                  <converter>StopConverter</converter>
+                </Value>    <Value>
+                  <value values="2">
+                    <Value>
+                      <value>50.0%</value>
+                      <converter>null</converter>
+                    </Value>        <Value>
+                      <value>0x000000ff</value>
+                      <converter>null</converter>
+                    </Value>      </value>
+                  <converter>StopConverter</converter>
+                </Value>  </value>
+              <converter>LadderConverter</converter>
+            </Value>
+            } while resolving '-fx-base'' while calculating value for '-fx-background-color' from rule '*.pane' in stylesheet userAgentStyleSheet\
+            """,
+            error.getMessage().replace("\r", "")
+        );
     }
 }
