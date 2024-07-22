@@ -43,6 +43,7 @@ import javafx.scene.input.DataFormat;
 import javafx.scene.layout.Region;
 import com.sun.javafx.ModuleUtil;
 import com.sun.jfx.incubator.scene.control.rich.Markers;
+import com.sun.jfx.incubator.scene.control.rich.StyleAttributeMapHelper;
 import com.sun.jfx.incubator.scene.control.rich.UndoableChange;
 import com.sun.jfx.incubator.scene.control.rich.util.RichUtils;
 import jfx.incubator.scene.control.rich.Marker;
@@ -697,7 +698,7 @@ public abstract class StyledTextModel {
             TextPos evEnd;
             boolean changed;
 
-            StyleAttributeMap pa = attrs.getParagraphAttrs();
+            StyleAttributeMap pa = StyleAttributeMapHelper.getParagraphAttrs(attrs);
             if (pa == null) {
                 evStart = start;
                 evEnd = end;
@@ -718,7 +719,7 @@ public abstract class StyledTextModel {
             }
 
             // apply character styles
-            StyleAttributeMap ca = attrs.getCharacterAttrs();
+            StyleAttributeMap ca = StyleAttributeMapHelper.getCharacterAttrs(attrs);
             if (ca != null) {
                 int ix = start.index();
                 if (ix == end.index()) {

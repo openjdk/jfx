@@ -36,6 +36,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import com.sun.jfx.incubator.scene.control.rich.CssStyles;
+import com.sun.jfx.incubator.scene.control.rich.StyleAttributeMapHelper;
 import com.sun.jfx.incubator.scene.control.rich.util.RichUtils;
 
 /**
@@ -97,6 +98,7 @@ public final class StyleAttributeMap {
     public static final StyleAttributeMap EMPTY = new StyleAttributeMap(Collections.emptyMap());
 
     private final Map<StyleAttribute<?>,Object> attributes;
+    static { initAccessor(); }
 
     private StyleAttributeMap(Map<StyleAttribute<?>,Object> a) {
         this.attributes = Collections.unmodifiableMap(a);
@@ -396,26 +398,6 @@ public final class StyleAttributeMap {
         return getBoolean(UNDERLINE);
     }
 
-    /**
-     * Returns a new StyleAttributeMap instance which contains only character attributes,
-     * or null if no character attributes found.
-     * @return the instance
-     */
-    public StyleAttributeMap getCharacterAttrs() {
-        return filterAttributes(false);
-    }
-
-    /**
-     * Returns a new StyleAttributeMap instance which contains only paragraph attributes,
-     * or null if no paragraph attributes found.
-     * @return the instance
-     */
-    public StyleAttributeMap getParagraphAttrs() {
-        return filterAttributes(true);
-    }
-
-    // this is questionable.  perhaps it's better to treat the attributes equally,
-    // and have the paragraph/segment logic handled by VFlow.applyStyles()
     private StyleAttributeMap filterAttributes(boolean isParagraph) {
         Builder b = null;
         for (StyleAttribute<?> a : attributes.keySet()) {
@@ -428,6 +410,15 @@ public final class StyleAttributeMap {
             }
         }
         return (b == null) ? null : b.build();
+    }
+
+    private static void initAccessor() {
+        StyleAttributeMapHelper.setAccessor(new StyleAttributeMapHelper.Accessor() {
+            @Override
+            public StyleAttributeMap filterAttributes(StyleAttributeMap ss, boolean isParagraph) {
+                return ss.filterAttributes(isParagraph);
+            }
+        });
     }
 
     /**

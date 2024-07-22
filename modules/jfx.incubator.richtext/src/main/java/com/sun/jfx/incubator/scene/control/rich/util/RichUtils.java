@@ -56,7 +56,9 @@ import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.scene.text.TextFlowHelper;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLine;
+import jfx.incubator.scene.control.rich.model.StyleAttribute;
 import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap.Builder;
 
 /**
  * RichTextArea specific utility methods.
