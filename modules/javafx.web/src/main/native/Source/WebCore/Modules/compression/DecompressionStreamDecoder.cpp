@@ -36,7 +36,7 @@ ExceptionOr<RefPtr<Uint8Array>> DecompressionStreamDecoder::decode(const BufferS
 {
     auto* data = input.data();
     if (!data)
-        return Exception { TypeError, "No data provided"_s };
+        return Exception { ExceptionCode::TypeError, "No data provided"_s };
 
     auto compressedDataCheck = decompress(data, input.length());
     if (compressedDataCheck.hasException())
@@ -91,7 +91,7 @@ ExceptionOr<bool> DecompressionStreamDecoder::initialize()
     }
 
     if (result != Z_OK)
-        return Exception { TypeError, "Initialization Failed."_s };
+        return Exception { ExceptionCode::TypeError, "Initialization Failed."_s };
 #endif
     return true;
 }
@@ -146,17 +146,17 @@ ExceptionOr<RefPtr<JSC::ArrayBuffer>> DecompressionStreamDecoder::decompressZlib
     }
 
     while (shouldDecompress) {
-        auto output = Vector<uint8_t>();
+        Vector<uint8_t> output;
         if (!output.tryReserveInitialCapacity(allocateSize)) {
             allocateSize /= 4;
 
             if (allocateSize < startingAllocationSize)
-                return Exception { OutOfMemoryError };
+                return Exception { ExceptionCode::OutOfMemoryError };
 
             continue;
         }
 
-        output.resize(allocateSize);
+        output.grow(allocateSize);
 
         m_zstream.next_out = output.data();
         m_zstream.avail_out = output.size();
@@ -164,14 +164,14 @@ ExceptionOr<RefPtr<JSC::ArrayBuffer>> DecompressionStreamDecoder::decompressZlib
         result = inflate(&m_zstream, m_didFinish ? Z_FINISH : Z_NO_FLUSH);
 
         if (didInflateFail(result))
-            return Exception { TypeError, "Failed to Decode Data."_s };
+            return Exception { ExceptionCode::TypeError, "Failed to Decode Data."_s };
 
         if (didInflateContainExtraBytes(result))
-            return Exception { TypeError, "Extra bytes past the end."_s };
+            return Exception { ExceptionCode::TypeError, "Extra bytes past the end."_s };
 
         if (didInflateFinish(result)) {
             shouldDecompress = false;
-            output.resize(allocateSize - m_zstream.avail_out);
+            output.shrink(allocateSize - m_zstream.avail_out);
         } else {
             if (allocateSize < maxAllocationSize)
                 allocateSize *= 2;
@@ -191,7 +191,7 @@ ExceptionOr<RefPtr<JSC::ArrayBuffer>> DecompressionStreamDecoder::decompressZlib
     auto storage = SharedBufferBuilder();
         auto decompressedData = storage.takeAsArrayBuffer();
     if (!decompressedData)
-        return Exception { OutOfMemoryError };
+        return Exception { ExceptionCode::OutOfMemoryError };
 
     return decompressedData;
 }
@@ -203,7 +203,7 @@ ExceptionOr<bool> DecompressionStreamDecoder::initializeAppleCompressionFramewor
 
     auto result = compression_stream_init(&m_stream, COMPRESSION_STREAM_DECODE, COMPRESSION_ZLIB);
     if (result != COMPRESSION_STATUS_OK)
-        return Exception { TypeError, "Initialization Failed."_s };
+        return Exception { ExceptionCode::TypeError, "Initialization Failed."_s };
 
     return true;
 }
@@ -226,17 +226,17 @@ ExceptionOr<RefPtr<JSC::ArrayBuffer>> DecompressionStreamDecoder::decompressAppl
     m_stream.src_size = inputLength;
 
     while (shouldDecompress) {
-        auto output = Vector<uint8_t>();
+        Vector<uint8_t> output;
         if (!output.tryReserveInitialCapacity(allocateSize)) {
             allocateSize /= 4;
 
             if (allocateSize < startingAllocationSize)
-                return Exception { OutOfMemoryError };
+                return Exception { ExceptionCode::OutOfMemoryError };
 
             continue;
         }
 
-        output.resize(allocateSize);
+        output.grow(allocateSize);
 
         m_stream.dst_ptr = output.data();
         m_stream.dst_size = output.size();
@@ -244,15 +244,15 @@ ExceptionOr<RefPtr<JSC::ArrayBuffer>> DecompressionStreamDecoder::decompressAppl
         result = compression_stream_process(&m_stream, m_didFinish ? COMPRESSION_STREAM_FINALIZE : 0);
 
         if (result == COMPRESSION_STATUS_ERROR)
-            return Exception { TypeError, "Failed to Decode Data."_s };
+            return Exception { ExceptionCode::TypeError, "Failed to Decode Data."_s };
 
         if ((result == COMPRESSION_STATUS_END && m_stream.src_size)
             || (m_didFinish && m_stream.src_size))
-            return Exception { TypeError, "Extra bytes past the end."_s };
+            return Exception { ExceptionCode::TypeError, "Extra bytes past the end."_s };
 
         if (!m_stream.src_size) {
             shouldDecompress = false;
-            output.resize(allocateSize - m_stream.dst_size);
+            output.shrink(allocateSize - m_stream.dst_size);
         } else {
             if (allocateSize < maxAllocationSize)
                 allocateSize *= 2;
@@ -263,7 +263,7 @@ ExceptionOr<RefPtr<JSC::ArrayBuffer>> DecompressionStreamDecoder::decompressAppl
 
     auto decompressedData = storage.takeAsArrayBuffer();
     if (!decompressedData)
-        return Exception { OutOfMemoryError };
+        return Exception { ExceptionCode::OutOfMemoryError };
 
     return decompressedData;
 }

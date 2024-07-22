@@ -79,7 +79,7 @@ WheelEventHandlingResult ThreadedScrollingCoordinator::handleWheelEventForScroll
 
     LOG_WITH_STREAM(Scrolling, stream << "ThreadedScrollingCoordinator::handleWheelEventForScrolling " << wheelEvent << " - sending event to scrolling thread, node " << targetNodeID << " gestureState " << gestureState);
 
-    auto deferrer = WheelEventTestMonitorCompletionDeferrer { m_page->wheelEventTestMonitor().get(), reinterpret_cast<WheelEventTestMonitor::ScrollableAreaIdentifier>(targetNodeID), WheelEventTestMonitor::PostMainThreadWheelEventHandling };
+    auto deferrer = WheelEventTestMonitorCompletionDeferrer { m_page->wheelEventTestMonitor().get(), reinterpret_cast<WheelEventTestMonitor::ScrollableAreaIdentifier>(targetNodeID), WheelEventTestMonitor::DeferReason::PostMainThreadWheelEventHandling };
 
     RefPtr<ThreadedScrollingTree> threadedScrollingTree = downcast<ThreadedScrollingTree>(scrollingTree());
     ScrollingThread::dispatch([threadedScrollingTree, wheelEvent, targetNodeID, gestureState, deferrer = WTFMove(deferrer)] {
@@ -109,6 +109,9 @@ void ThreadedScrollingCoordinator::didScheduleRenderingUpdate()
 
 void ThreadedScrollingCoordinator::willStartRenderingUpdate()
 {
+    ASSERT(isMainThread());
+    if (m_page)
+        m_page->layoutIfNeeded(LayoutOptions::UpdateCompositingLayers);
     RefPtr<ThreadedScrollingTree> threadedScrollingTree = downcast<ThreadedScrollingTree>(scrollingTree());
     threadedScrollingTree->willStartRenderingUpdate();
     commitTreeStateIfNeeded();

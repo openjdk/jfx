@@ -27,6 +27,7 @@
 #ifndef ThreadTimers_h
 #define ThreadTimers_h
 
+#include <wtf/IsoMalloc.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefCounted.h>
@@ -47,6 +48,9 @@ class ThreadTimers {
     WTF_MAKE_NONCOPYABLE(ThreadTimers); WTF_MAKE_FAST_ALLOCATED;
 public:
     ThreadTimers();
+
+    // Fire timers for this length of time, and then quit to let the run loop process user input events.
+    static constexpr auto maxDurationOfFiringTimers { 16_ms };
 
     // On a thread different then main, we should set the thread's instance of the SharedTimer.
     void setSharedTimer(SharedTimer*);
@@ -72,6 +76,9 @@ private:
 };
 
 struct ThreadTimerHeapItem : ThreadSafeRefCounted<ThreadTimerHeapItem> {
+    WTF_MAKE_ISO_ALLOCATED(ThreadTimerHeapItem);
+    WTF_ALLOW_STRUCT_COMPACT_POINTERS;
+
     static RefPtr<ThreadTimerHeapItem> create(TimerBase&, MonotonicTime, unsigned);
 
     bool hasTimer() const { return m_timer; }

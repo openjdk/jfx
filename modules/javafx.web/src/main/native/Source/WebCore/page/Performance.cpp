@@ -104,6 +104,11 @@ void Performance::allowHighPrecisionTime()
     timePrecision = highTimePrecision;
 }
 
+Seconds Performance::timeResolution()
+{
+    return timePrecision;
+}
+
 DOMHighResTimeStamp Performance::relativeTimeFromTimeOriginInReducedResolution(MonotonicTime timestamp) const
 {
     Seconds seconds = timestamp - m_timeOrigin;
@@ -254,7 +259,6 @@ void Performance::reportFirstContentfulPaint()
 
 void Performance::addNavigationTiming(DocumentLoader& documentLoader, Document& document, CachedResource& resource, const DocumentLoadTiming& timing, const NetworkLoadMetrics& metrics)
 {
-    ASSERT(document.settings().performanceNavigationTimingAPIEnabled());
     m_navigationTiming = PerformanceNavigationTiming::create(m_timeOrigin, resource, timing, metrics, document.eventTiming(), document.securityOrigin(), documentLoader.triggeringAction().type());
 }
 

@@ -17,8 +17,8 @@
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA 02110-1301 USA
  */
-
 #include "config.h"
+#if PLATFORM(JAVA)
 #include "TextureMapperGCGLPlatformLayer.h"
 
 #if ENABLE(WEBGL) && USE(TEXTURE_MAPPER) && !USE(NICOSIA)
@@ -55,3 +55,43 @@ void TextureMapperGCGLPlatformLayer::paintToTextureMapper(TextureMapper& texture
 } // namespace WebCore
 
 #endif // ENABLE(WEBGL) && USE(TEXTURE_MAPPER)
+#else
+#include "config.h"
+#include "TextureMapperGCGLPlatformLayer.h"
+
+#if ENABLE(WEBGL) && USE(TEXTURE_MAPPER) && !USE(NICOSIA)
+
+#include "ANGLEHeaders.h"
+#include "BitmapTexture.h"
+#include "GLContext.h"
+#include "TextureMapperFlags.h"
+#include "TextureMapperGLHeaders.h"
+#include "TextureMapperPlatformLayerBuffer.h"
+#include "TextureMapperPlatformLayerProxy.h"
+
+namespace WebCore {
+
+TextureMapperGCGLPlatformLayer::TextureMapperGCGLPlatformLayer(GraphicsContextGLTextureMapperANGLE& context)
+    : m_context(context)
+{
+}
+
+TextureMapperGCGLPlatformLayer::~TextureMapperGCGLPlatformLayer()
+{
+    if (client())
+        client()->platformLayerWillBeDestroyed();
+}
+
+void TextureMapperGCGLPlatformLayer::paintToTextureMapper(TextureMapper& textureMapper, const FloatRect& targetRect, const TransformationMatrix& matrix, float opacity)
+{
+    auto attrs = m_context.contextAttributes();
+    OptionSet<TextureMapperFlags> flags = TextureMapperFlags::ShouldFlipTexture;
+    if (attrs.alpha)
+        flags.add(TextureMapperFlags::ShouldBlend);
+    textureMapper.drawTexture(m_context.m_compositorTexture, flags, targetRect, matrix, opacity);
+}
+
+} // namespace WebCore
+
+#endif // ENABLE(WEBGL) && USE(TEXTURE_MAPPER)
+#endif

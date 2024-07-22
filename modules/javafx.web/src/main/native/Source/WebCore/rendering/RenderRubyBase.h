@@ -63,7 +63,6 @@ public:
     bool isEmptyOrHasInFlowContent() const;
 
 private:
-    bool isRubyBase() const override { return true; }
     bool isChildAllowed(const RenderObject&, const RenderStyle&) const override;
     std::optional<TextAlignMode> overrideTextAlignmentForLine(bool endsWithSoftBreak) const override;
     void adjustInlineDirectionLineBounds(int expansionOpportunityCount, float& logicalLeft, float& logicalWidth) const override;
@@ -74,4 +73,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderRubyBase, isRubyBase())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderRubyBase, isRenderRubyBase())

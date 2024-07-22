@@ -44,10 +44,7 @@ public:
     {
     }
 
-    bool operator==(const DecodingOptions& other) const
-    {
-        return m_decodingMode == other.m_decodingMode && m_sizeForDrawing == other.m_sizeForDrawing;
-    }
+    friend bool operator==(const DecodingOptions&, const DecodingOptions&) = default;
 
     DecodingMode decodingMode() const { return m_decodingMode; }
     bool isAuto() const { return m_decodingMode == DecodingMode::Auto; }
@@ -76,5 +73,7 @@ private:
     DecodingMode m_decodingMode;
     std::optional<IntSize> m_sizeForDrawing;
 };
+
+TextStream& operator<<(TextStream&, DecodingMode);
 
 } // namespace WebCore

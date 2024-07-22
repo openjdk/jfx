@@ -58,7 +58,7 @@ Ref<MathMLSelectElement> MathMLSelectElement::create(const QualifiedName& tagNam
 
 RenderPtr<RenderElement> MathMLSelectElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderMathMLRow>(*this, WTFMove(style));
+    return createRenderer<RenderMathMLRow>(RenderObject::Type::MathMLRow, *this, WTFMove(style));
 }
 
 //  We recognize the following values for the encoding attribute of the <semantics> element:
@@ -76,12 +76,12 @@ bool MathMLSelectElement::isMathMLEncoding(const AtomString& value)
 
 bool MathMLSelectElement::isSVGEncoding(const AtomString& value)
 {
-    return value == "image/svg+xml"_s || value == "SVG1.1"_s;
+    return value == imageSVGContentTypeAtom() || value == "SVG1.1"_s;
 }
 
 bool MathMLSelectElement::isHTMLEncoding(const AtomString& value)
 {
-    return value == "application/xhtml+xml"_s || value == "text/html"_s;
+    return value == applicationXHTMLContentTypeAtom() || value == textHTMLContentTypeAtom();
 }
 
 bool MathMLSelectElement::childShouldCreateRenderer(const Node& child) const

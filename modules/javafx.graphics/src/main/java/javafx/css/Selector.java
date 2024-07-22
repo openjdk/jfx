@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,6 +49,7 @@ abstract public class Selector {
     }
 
     private static class UniversalSelector {
+        @SuppressWarnings("removal")
         private static final Selector INSTANCE =
             new SimpleSelector("*", null, null, null);
     }
@@ -145,6 +146,7 @@ abstract public class Selector {
      * @param stringStore unused
      * @throws IOException if writing to {@code DataOutputStream} fails
      */
+    @SuppressWarnings("removal")
     protected void writeBinary(DataOutputStream os, StyleConverter.StringStore stringStore)
         throws IOException {
         if (this instanceof SimpleSelector) {
@@ -161,6 +163,7 @@ abstract public class Selector {
      * @param strings string array containing selector details
      * @throws IOException if reading from {@code DataInputStream} fails
      */
+    @SuppressWarnings("removal")
     static Selector readBinary(int bssVersion, DataInputStream is, String[] strings)
         throws IOException {
         final int type = is.readByte();
@@ -175,6 +178,7 @@ abstract public class Selector {
      * @param cssSelector CSS selector string
      * @return a {@code Selector}
      */
+    @SuppressWarnings("removal")
     public static Selector createSelector(final String cssSelector) {
         if (cssSelector == null || cssSelector.length() == 0) {
             return null; // actually return a default no-match selector

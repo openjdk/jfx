@@ -54,8 +54,8 @@ enum LineCount {
 class RenderBlockFlow : public RenderBlock {
     WTF_MAKE_ISO_ALLOCATED(RenderBlockFlow);
 public:
-    RenderBlockFlow(Element&, RenderStyle&&);
-    RenderBlockFlow(Document&, RenderStyle&&);
+    RenderBlockFlow(Type, Element&, RenderStyle&&, OptionSet<BlockFlowFlag> = { });
+    RenderBlockFlow(Type, Document&, RenderStyle&&, OptionSet<BlockFlowFlag> = { });
     virtual ~RenderBlockFlow();
 
     void layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight = 0_lu) override;
@@ -76,6 +76,7 @@ protected:
     void layoutInlineChildren(bool relayoutChildren, LayoutUnit& repaintLogicalTop, LayoutUnit& repaintLogicalBottom);
 
     void simplifiedNormalFlowLayout() override;
+    LayoutUnit shiftForAlignContent(LayoutUnit intrinsicLogicalHeight, LayoutUnit& repaintLogicalTop, LayoutUnit& repaintLogicalBottom);
 
     // RenderBlockFlows override these methods, since they are the only class that supports margin collapsing.
     LayoutUnit collapsedMarginBefore() const final { return maxPositiveMarginBefore() - maxNegativeMarginBefore(); }
@@ -148,9 +149,9 @@ public:
 
         MarginValues m_margins;
         int m_lineBreakToAvoidWidow;
-        std::unique_ptr<LegacyRootInlineBox> m_lineGridBox;
+        LayoutUnit m_alignContentShift; // Caches negative shifts for overflow calculation.
 
-        WeakPtr<RenderMultiColumnFlow> m_multiColumnFlow;
+        SingleThreadWeakPtr<RenderMultiColumnFlow> m_multiColumnFlow;
 
         bool m_didBreakAtLineToAvoidWidow : 1;
     };
@@ -228,8 +229,7 @@ public:
         LayoutUnit margin() const { return m_positiveMargin - m_negativeMargin; }
     };
 
-    void trimFloatBlockEndMargins(LayoutUnit blockFormattingContextInFlowContentHeight);
-    bool shouldChildInlineMarginContributeToContainerIntrinsicSize(MarginTrimType, const RenderElement&) const final;
+    bool shouldTrimChildMargin(MarginTrimType, const RenderBox&) const;
 
     void layoutBlockChild(RenderBox& child, MarginInfo&, LayoutUnit& previousFloatLogicalBottom, LayoutUnit& maxFloatLogicalBottom);
     void adjustPositionedBlock(RenderBox& child, const MarginInfo&);
@@ -260,13 +260,6 @@ public:
     void clearDidBreakAtLineToAvoidWidow();
     void setDidBreakAtLineToAvoidWidow();
     bool didBreakAtLineToAvoidWidow() const { return hasRareBlockFlowData() && rareBlockFlowData()->m_didBreakAtLineToAvoidWidow; }
-
-    LegacyRootInlineBox* lineGridBox() const { return hasRareBlockFlowData() ? rareBlockFlowData()->m_lineGridBox.get() : nullptr; }
-    void setLineGridBox(std::unique_ptr<LegacyRootInlineBox> box)
-    {
-        ensureRareBlockFlowData().m_lineGridBox = WTFMove(box);
-    }
-    void layoutLineGridBox();
 
     RenderMultiColumnFlow* multiColumnFlow() const { return hasRareBlockFlowData() ? multiColumnFlowSlowCase() : nullptr; }
     RenderMultiColumnFlow* multiColumnFlowSlowCase() const;
@@ -337,7 +330,6 @@ public:
         else
             floatingObject.setMarginOffset(LayoutSize(logicalBeforeMargin, logicalLeftMargin));
     }
-    void trimMarginForFloat(FloatingObject&, MarginTrimType, LayoutUnit trimAmount = 0);
 
     LayoutPoint flipFloatForWritingModeForChild(const FloatingObject&, const LayoutPoint&) const;
 
@@ -407,8 +399,6 @@ public:
 
     std::optional<LayoutUnit> lowestInitialLetterLogicalBottom() const;
 
-    LayoutUnit blockFormattingContextInFlowBlockLevelContentHeight() const;
-
 protected:
     bool isChildEligibleForMarginTrim(MarginTrimType, const RenderBox&) const final;
 
@@ -450,15 +440,12 @@ protected:
     std::optional<LayoutUnit> lastLineBaseline() const override;
     std::optional<LayoutUnit> inlineBlockBaseline(LineDirectionMode) const override;
 
-    bool isMultiColumnBlockFlow() const override { return multiColumnFlow(); }
-
     void setComputedColumnCountAndWidth(int, LayoutUnit);
 
     LayoutUnit computedColumnWidth() const;
     unsigned computedColumnCount() const;
 
-    bool isTopLayoutOverflowAllowed() const override;
-    bool isLeftLayoutOverflowAllowed() const override;
+    LayoutOptionalOutsets allowedLayoutOverflow() const override;
 
     virtual void computeColumnCountAndWidth();
 
@@ -536,6 +523,7 @@ private:
     bool hasModernLineLayout() const;
     void layoutModernLines(bool relayoutChildren, LayoutUnit& repaintLogicalTop, LayoutUnit& repaintLogicalBottom);
     bool tryComputePreferredWidthsUsingModernPath(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth);
+    void setStaticPositionsForSimpleOutOfFlowContent();
 
     void adjustIntrinsicLogicalWidthsForColumns(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const;
     void computeInlinePreferredLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const;
@@ -561,7 +549,7 @@ public:
         LayoutUnit strut { 0_lu };
         bool isFirstAfterPageBreak { false };
     };
-    LinePaginationAdjustment computeLineAdjustmentForPagination(const InlineIterator::LineBoxIterator&, LayoutUnit deltaOffset);
+    LinePaginationAdjustment computeLineAdjustmentForPagination(const InlineIterator::LineBoxIterator&, LayoutUnit deltaOffset, LayoutUnit floatMinimumBottom = { });
     bool relayoutForPagination();
 
     bool hasRareBlockFlowData() const { return m_rareBlockFlowData.get(); }

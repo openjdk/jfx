@@ -83,7 +83,7 @@ public:
     HTMLCanvasElement* canvas() const;
 
     // WebXRLayer
-    void startFrame(const PlatformXR::Device::FrameData&) final;
+    void startFrame(const PlatformXR::FrameData&) final;
     PlatformXR::Device::Layer endFrame() final;
 
 private:
@@ -93,7 +93,7 @@ private:
     static IntSize computeNativeWebGLFramebufferResolution();
     static IntSize computeRecommendedWebGLFramebufferResolution();
 
-    void canvasChanged(CanvasBase&, const std::optional<FloatRect>&) final { };
+    void canvasChanged(CanvasBase&, const FloatRect&) final { };
     void canvasResized(CanvasBase&) final;
     void canvasDestroyed(CanvasBase&) final { };
     Ref<WebXRSession> m_session;

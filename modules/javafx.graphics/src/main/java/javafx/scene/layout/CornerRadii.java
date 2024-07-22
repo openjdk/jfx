@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -312,18 +312,20 @@ public class CornerRadii {
                 topRightVerticalRadiusAsPercent || topRightHorizontalRadiusAsPercent ||
                 bottomRightHorizontalRadiusAsPercent || bottomRightVerticalRadiusAsPercent ||
                 bottomLeftVerticalRadiusAsPercent || bottomLeftHorizontalRadiusAsPercent;
-        uniform = topLeftHorizontalRadius == topRightHorizontalRadius &&
-                topLeftVerticalRadius == topRightVerticalRadius &&
+        uniform = topLeftHorizontalRadius == topLeftVerticalRadius &&
+                topLeftHorizontalRadius == topRightVerticalRadius &&
+                topLeftHorizontalRadius == topRightHorizontalRadius &&
                 topLeftHorizontalRadius == bottomRightHorizontalRadius &&
-                topLeftVerticalRadius == bottomRightVerticalRadius &&
+                topLeftHorizontalRadius == bottomRightVerticalRadius &&
+                topLeftHorizontalRadius == bottomLeftVerticalRadius &&
                 topLeftHorizontalRadius == bottomLeftHorizontalRadius &&
-                topLeftVerticalRadius == bottomLeftVerticalRadius &&
+                topLeftHorizontalRadiusAsPercent == topLeftVerticalRadiusAsPercent &&
+                topLeftHorizontalRadiusAsPercent == topRightVerticalRadiusAsPercent &&
                 topLeftHorizontalRadiusAsPercent == topRightHorizontalRadiusAsPercent &&
-                topLeftVerticalRadiusAsPercent == topRightVerticalRadiusAsPercent &&
                 topLeftHorizontalRadiusAsPercent == bottomRightHorizontalRadiusAsPercent &&
-                topLeftVerticalRadiusAsPercent == bottomRightVerticalRadiusAsPercent &&
-                topLeftHorizontalRadiusAsPercent == bottomLeftHorizontalRadiusAsPercent &&
-                topLeftVerticalRadiusAsPercent == bottomLeftVerticalRadiusAsPercent;
+                topLeftHorizontalRadiusAsPercent == bottomRightVerticalRadiusAsPercent &&
+                topLeftHorizontalRadiusAsPercent == bottomLeftVerticalRadiusAsPercent &&
+                topLeftHorizontalRadiusAsPercent == bottomLeftHorizontalRadiusAsPercent;
     }
 
     private int preComputeHash() {

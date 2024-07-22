@@ -881,18 +881,18 @@ namespace JSC {
     {
     }
 
-    inline ImportDeclarationNode::ImportDeclarationNode(const JSTokenLocation& location, ImportSpecifierListNode* importSpecifierList, ModuleNameNode* moduleName, ImportAssertionListNode* importAssertionList)
+    inline ImportDeclarationNode::ImportDeclarationNode(const JSTokenLocation& location, ImportSpecifierListNode* importSpecifierList, ModuleNameNode* moduleName, ImportAttributesListNode* importAttributesList)
         : ModuleDeclarationNode(location)
         , m_specifierList(importSpecifierList)
         , m_moduleName(moduleName)
-        , m_assertionList(importAssertionList)
+        , m_attributesList(importAttributesList)
     {
     }
 
-    inline ExportAllDeclarationNode::ExportAllDeclarationNode(const JSTokenLocation& location, ModuleNameNode* moduleName, ImportAssertionListNode* importAssertionList)
+    inline ExportAllDeclarationNode::ExportAllDeclarationNode(const JSTokenLocation& location, ModuleNameNode* moduleName, ImportAttributesListNode* importAttributesList)
         : ModuleDeclarationNode(location)
         , m_moduleName(moduleName)
-        , m_assertionList(importAssertionList)
+        , m_attributesList(importAttributesList)
     {
     }
 
@@ -909,11 +909,11 @@ namespace JSC {
     {
     }
 
-    inline ExportNamedDeclarationNode::ExportNamedDeclarationNode(const JSTokenLocation& location, ExportSpecifierListNode* exportSpecifierList, ModuleNameNode* moduleName, ImportAssertionListNode* importAssertionList)
+    inline ExportNamedDeclarationNode::ExportNamedDeclarationNode(const JSTokenLocation& location, ExportSpecifierListNode* exportSpecifierList, ModuleNameNode* moduleName, ImportAttributesListNode* importAttributesList)
         : ModuleDeclarationNode(location)
         , m_specifierList(exportSpecifierList)
         , m_moduleName(moduleName)
-        , m_assertionList(importAssertionList)
+        , m_attributesList(importAttributesList)
     {
     }
 
@@ -958,13 +958,14 @@ namespace JSC {
     {
     }
 
-    inline ForNode::ForNode(const JSTokenLocation& location, ExpressionNode* expr1, ExpressionNode* expr2, ExpressionNode* expr3, StatementNode* statement, VariableEnvironment&& lexicalVariables)
+    inline ForNode::ForNode(const JSTokenLocation& location, ExpressionNode* expr1, ExpressionNode* expr2, ExpressionNode* expr3, StatementNode* statement, VariableEnvironment&& lexicalVariables, bool initializerContainsClosure)
         : StatementNode(location)
         , VariableEnvironmentNode(WTFMove(lexicalVariables))
         , m_expr1(expr1)
         , m_expr2(expr2)
         , m_expr3(expr3)
         , m_statement(statement)
+        , m_initializerContainsClosure(initializerContainsClosure)
     {
         ASSERT(statement);
     }
@@ -1074,7 +1075,7 @@ namespace JSC {
     {
     }
 
-    inline DefineFieldNode::DefineFieldNode(const JSTokenLocation& location, const Identifier* ident, ExpressionNode* assign, Type type)
+    inline DefineFieldNode::DefineFieldNode(const JSTokenLocation& location, const Identifier& ident, ExpressionNode* assign, Type type)
         : StatementNode(location)
         , m_ident(ident)
         , m_assign(assign)

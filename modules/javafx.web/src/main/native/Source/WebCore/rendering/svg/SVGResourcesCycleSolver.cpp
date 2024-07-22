@@ -20,12 +20,11 @@
 #include "config.h"
 #include "SVGResourcesCycleSolver.h"
 
+#include "LegacyRenderSVGResourceFilter.h"
+#include "LegacyRenderSVGResourceMarker.h"
+#include "LegacyRenderSVGResourceMasker.h"
 #include "Logging.h"
 #include "RenderAncestorIterator.h"
-#include "RenderSVGResourceClipper.h"
-#include "RenderSVGResourceFilter.h"
-#include "RenderSVGResourceMarker.h"
-#include "RenderSVGResourceMasker.h"
 #include "SVGGradientElement.h"
 #include "SVGPatternElement.h"
 #include "SVGResources.h"
@@ -34,8 +33,8 @@
 
 namespace WebCore {
 
-bool SVGResourcesCycleSolver::resourceContainsCycles(RenderSVGResourceContainer& resource,
-    WeakHashSet<RenderSVGResourceContainer>& activeResources, WeakHashSet<RenderSVGResourceContainer>& acyclicResources)
+bool SVGResourcesCycleSolver::resourceContainsCycles(LegacyRenderSVGResourceContainer& resource,
+    SingleThreadWeakHashSet<LegacyRenderSVGResourceContainer>& activeResources, SingleThreadWeakHashSet<LegacyRenderSVGResourceContainer>& acyclicResources)
 {
     if (acyclicResources.contains(resource))
         return false;
@@ -47,13 +46,13 @@ bool SVGResourcesCycleSolver::resourceContainsCycles(RenderSVGResourceContainer&
 
     RenderObject* node = &resource;
     while (node) {
-        if (node != &resource && node->isSVGResourceContainer()) {
+        if (node != &resource && node->isLegacyRenderSVGResourceContainer()) {
             node = node->nextInPreOrderAfterChildren(&resource);
             continue;
         }
-        if (is<RenderElement>(*node)) {
-            if (auto* resources = SVGResourcesCache::cachedResourcesForRenderer(downcast<RenderElement>(*node))) {
-        WeakHashSet<RenderSVGResourceContainer> resourceSet;
+        if (auto* element = dynamicDowncast<RenderElement>(*node)) {
+            if (auto* resources = SVGResourcesCache::cachedResourcesForRenderer(*element)) {
+                SingleThreadWeakHashSet<LegacyRenderSVGResourceContainer> resourceSet;
         resources->buildSetOfResources(resourceSet);
 
         for (auto& resource : resourceSet) {
@@ -72,14 +71,20 @@ bool SVGResourcesCycleSolver::resourceContainsCycles(RenderSVGResourceContainer&
 
 void SVGResourcesCycleSolver::resolveCycles(RenderElement& renderer, SVGResources& resources)
 {
-    WeakHashSet<RenderSVGResourceContainer> localResources;
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    // Verify that LBSE does not make use of SVGResourcesCache.
+    if (renderer.document().settings().layerBasedSVGEngineEnabled())
+        RELEASE_ASSERT_NOT_REACHED();
+#endif
+
+    SingleThreadWeakHashSet<LegacyRenderSVGResourceContainer> localResources;
     resources.buildSetOfResources(localResources);
 
-    WeakHashSet<RenderSVGResourceContainer> activeResources;
-    WeakHashSet<RenderSVGResourceContainer> acyclicResources;
+    SingleThreadWeakHashSet<LegacyRenderSVGResourceContainer> activeResources;
+    SingleThreadWeakHashSet<LegacyRenderSVGResourceContainer> acyclicResources;
 
-    if (is<RenderSVGResourceContainer>(renderer))
-        activeResources.add(downcast<RenderSVGResourceContainer>(renderer));
+    if (auto* container = dynamicDowncast<LegacyRenderSVGResourceContainer>(renderer))
+        activeResources.add(*container);
 
     // The job of this function is to determine wheter any of the 'resources' associated with the given 'renderer'
     // references us (or whether any of its kids references us) -> that's a cycle, we need to find and break it.
@@ -89,7 +94,7 @@ void SVGResourcesCycleSolver::resolveCycles(RenderElement& renderer, SVGResource
         }
 }
 
-void SVGResourcesCycleSolver::breakCycle(RenderSVGResourceContainer& resourceLeadingToCycle, SVGResources& resources)
+void SVGResourcesCycleSolver::breakCycle(LegacyRenderSVGResourceContainer& resourceLeadingToCycle, SVGResources& resources)
 {
     if (&resourceLeadingToCycle == resources.linkedResource()) {
         resources.resetLinkedResource();

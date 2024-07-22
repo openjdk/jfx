@@ -168,7 +168,7 @@ bool RenderThemeJava::paintWidget(
     } else if (JNI_EXPAND(METER) == widgetIndex) {
         jfloat value = 0;
         jint region = 0;
-        if (object.isMeter()) {
+        if (object.isRenderMeter()) {
             HTMLMeterElement* meter = static_cast<HTMLMeterElement*>(object.node());
             value = meter->valueRatio();
             region = meter->gaugeRegion();
@@ -234,7 +234,7 @@ Seconds RenderThemeJava::animationRepeatIntervalForProgressBar(const RenderProgr
     return progressAnimationInterval;
 }
 
-Seconds RenderThemeJava::animationDurationForProgressBar(const RenderProgress&) const
+Seconds RenderThemeJava::animationDurationForProgressBar() const
 {
     return progressAnimationInterval * progressAnimationFrames;
 }
@@ -244,7 +244,7 @@ bool RenderThemeJava::paintProgressBar(const RenderObject&o, const PaintInfo& i,
     return paintWidget(JNI_EXPAND(PROGRESS_BAR), o, i, rect);
 }
 
-bool RenderThemeJava::supportsMeter(StyleAppearance part, const HTMLMeterElement&) const
+bool RenderThemeJava::supportsMeter(StyleAppearance part) const
 {
     if (part == StyleAppearance::ProgressBar) {
         return true;
@@ -261,37 +261,29 @@ void RenderThemeJava::setCheckboxSize(RenderStyle& style) const
 {
     setRadioSize(style);
 }
-
 bool RenderThemeJava::paintCheckbox(const RenderObject&o, const PaintInfo& i, const FloatRect& rect)
 {
+
     return paintWidget(JNI_EXPAND(CHECK_BOX), o, i, rect);
 }
 
 void RenderThemeJava::setRadioSize(RenderStyle& style) const
 {
-    // If the width and height are both specified, then we have nothing to do.
     if ((!style.width().isIntrinsicOrAuto() && !style.height().isAuto())) {
         return;
     }
-
     JNIEnv* env = WTF::GetJavaEnv();
-
     static jmethodID mid = env->GetMethodID(PG_GetRenderThemeClass(env), "getRadioButtonSize", "()I");
     ASSERT(mid);
-
-    // Get from default theme object.
     int radioRadius = env->CallIntMethod((jobject)PG_GetRenderThemeObjectFromPage(env, nullptr), mid);
     WTF::CheckAndClearException(env);
-
     if (style.width().isIntrinsicOrAuto()) {
         style.setWidth(Length(radioRadius, LengthType::Fixed));
     }
-
     if (style.height().isAuto()) {
         style.setHeight(Length(radioRadius, LengthType::Fixed));
     }
 }
-
 bool RenderThemeJava::paintRadio(const RenderObject&o, const PaintInfo& i, const FloatRect& rect)
 {
     return paintWidget(JNI_EXPAND(RADIO_BUTTON), o, i, rect);
@@ -317,6 +309,10 @@ void RenderThemeJava::adjustSearchFieldStyle(RenderStyle&, const Element*) const
     notImplemented();
 }
 
+void RenderThemeJava::adjustSwitchStyle(RenderStyle& style, const Element*) const
+{
+    notImplemented();
+}
 bool RenderThemeJava::paintSearchField(const RenderObject&o, const PaintInfo& i, const IntRect& rect)
 {
     return paintWidget(JNI_EXPAND(TEXT_FIELD), o, i, rect);
