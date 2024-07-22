@@ -73,11 +73,14 @@ void Image::drawImage(GraphicsContext& gc, const FloatRect &dstRect, const Float
         imageObserver()->didDraw(*this);
 }
 
-Ref<Image> Image::loadPlatformResource(const char *name)
+Ref<Image> ImageAdapter::loadPlatformResource(const char *name)
 {
     return BitmapImage::createFromName(name);
 }
 
+void ImageAdapter::invalidate()
+{
+}
 #if !USE(IMAGEIO)
 NativeImagePtr ImageFrame::asNewNativeImage() const
 {

@@ -26,15 +26,18 @@
 #pragma once
 
 #include <optional>
+#include <wtf/FileSystem.h>
 #include <wtf/Forward.h>
 
 namespace WebCore {
+class SecurityOriginData;
 struct ClientOrigin;
 
 namespace StorageUtilities {
 
 WEBCORE_EXPORT std::optional<ClientOrigin> readOriginFromFile(const String& path);
 WEBCORE_EXPORT bool writeOriginToFile(const String& path, const ClientOrigin&);
+WEBCORE_EXPORT String encodeSecurityOriginForFileName(FileSystem::Salt, const SecurityOriginData&);
 
 } // namespace StorageUtilities
 } // namespace WebCore

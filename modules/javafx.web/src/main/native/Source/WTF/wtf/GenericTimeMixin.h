@@ -43,6 +43,10 @@ public:
     static constexpr DerivedTime infinity() { return fromRawSeconds(std::numeric_limits<double>::infinity()); }
     static constexpr DerivedTime nan() { return fromRawSeconds(std::numeric_limits<double>::quiet_NaN()); }
 
+    bool isNaN() const { return std::isnan(m_value); }
+    bool isInfinity() const { return std::isinf(m_value); }
+    bool isFinite() const { return std::isfinite(m_value); }
+
     constexpr Seconds secondsSinceEpoch() const { return Seconds(m_value); }
 
     explicit constexpr operator bool() const { return !!m_value; }
@@ -84,10 +88,7 @@ public:
         return Seconds(m_value - other.m_value);
     }
 
-    constexpr bool operator==(const GenericTimeMixin& other) const
-    {
-        return m_value == other.m_value;
-    }
+    friend constexpr bool operator==(GenericTimeMixin, GenericTimeMixin) = default;
 
     constexpr bool operator!=(const GenericTimeMixin& other) const
     {
@@ -120,7 +121,7 @@ public:
 
     static constexpr DerivedTime timePointFromNow(Seconds relativeTimeFromNow)
     {
-        if (std::isinf(relativeTimeFromNow))
+        if (relativeTimeFromNow.isInfinity())
             return DerivedTime::fromRawSeconds(relativeTimeFromNow.value());
         return DerivedTime::now() + relativeTimeFromNow;
     }

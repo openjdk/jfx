@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,6 +52,7 @@ public final class Match implements Comparable<Match> {
     // then pseudoclass count, and finally matching types (i.e., java name count)
     final int specificity;
 
+    @SuppressWarnings("removal")
     Match(final Selector selector, Set<PseudoClass> pseudoClasses, int idCount, int styleClassCount) {
         Objects.requireNonNull(selector);
         Objects.requireNonNull(pseudoClasses);

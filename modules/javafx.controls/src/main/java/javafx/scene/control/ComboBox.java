@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -618,14 +618,11 @@ public class ComboBox<T> extends ComboBoxBase<T> {
                     T selectedItem = getSelectedItem();
                     for (int i = 0; i < comboBox.getItems().size(); i++) {
                         if (selectedItem.equals(comboBox.getItems().get(i))) {
-                            comboBox.setValue(null);
-                            setSelectedItem(null);
-                            setSelectedIndex(i);
+                            clearAndSelect(i);
                             break;
                         }
                     }
                 }
-
                 comboBox.previousItemCount = getItemCount();
             }
         };

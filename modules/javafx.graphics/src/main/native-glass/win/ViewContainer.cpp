@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1211,7 +1211,7 @@ void NotifyTouchInput(
 
     // Sets to 'true' if source device is a touch screen
     // and to 'false' if source device is a touch pad/pen.
-    const bool isDirect = IsTouchEvent();
+    const bool isDirect = (ti->dwFlags & TOUCHEVENTF_PEN) == 0;
 
     jint modifiers = GetModifiers();
     env->CallStaticObjectMethod(gestureSupportCls,

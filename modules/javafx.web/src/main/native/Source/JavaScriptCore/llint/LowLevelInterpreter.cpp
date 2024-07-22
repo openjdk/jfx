@@ -323,7 +323,7 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
     // 2. 32 bit result values will be in the low 32-bit of t0.
     // 3. 64 bit result values will be in t0.
 
-    CLoopRegister t0, t1, t2, t3, t5, sp, cfr, lr, pc;
+    CLoopRegister t0, t1, t2, t3, t5, t6, t7, sp, cfr, lr, pc;
 #if USE(JSVALUE64)
     CLoopRegister numberTag, notCellMask;
 #endif
@@ -336,6 +336,8 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
     UNUSED_VARIABLE(t2);
     UNUSED_VARIABLE(t3);
     UNUSED_VARIABLE(t5);
+    UNUSED_VARIABLE(t6);
+    UNUSED_VARIABLE(t7);
 
     struct StackPointerScope {
         StackPointerScope(CLoopStack& stack)
@@ -487,9 +489,6 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
 // Define the opcode dispatch mechanism when using an ASM loop:
 //
 
-// We're disabling this for now because of a suspected linker issue.
-#define OFFLINE_ASM_USE_ALT_ENTRY 0
-
 #if COMPILER(CLANG)
 
 // We need an OFFLINE_ASM_BEGIN_SPACER because we'll be declaring every OFFLINE_ASM_GLOBAL_LABEL
@@ -518,7 +517,7 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
 
 // These are for building an interpreter from generated assembly code:
 
-#if OFFLINE_ASM_USE_ALT_ENTRY
+#if ENABLE(OFFLINE_ASM_ALT_ENTRY)
 #define OFFLINE_ASM_BEGIN   asm ( \
     OFFLINE_ASM_GLOBAL_LABEL_IMPL(jsc_llint_begin, OFFLINE_ASM_NO_ALT_ENTRY_DIRECTIVE, OFFLINE_ASM_ALIGN4B) \
     OFFLINE_ASM_BEGIN_SPACER
@@ -552,9 +551,15 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
 #define OFFLINE_ASM_ALT_ENTRY_DIRECTIVE(label)
 #endif
 
+#if OS(DARWIN)
+#define OFFLINE_ASM_TEXT_SECTION ".section __TEXT,__jsc_int,regular,pure_instructions\n"
+#else
+#define OFFLINE_ASM_TEXT_SECTION ".text\n"
+#endif
+
 #if CPU(ARM_THUMB2)
 #define OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, ALT_ENTRY, ALIGNMENT) \
-    ".text\n"                                    \
+    OFFLINE_ASM_TEXT_SECTION                     \
     ALIGNMENT                                    \
     ALT_ENTRY(label)                             \
     ".globl " SYMBOL_STRING(label) "\n"          \
@@ -564,7 +569,7 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
     SYMBOL_STRING(label) ":\n"
 #elif CPU(ARM64)
 #define OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, ALT_ENTRY, ALIGNMENT) \
-    ".text\n"                                   \
+    OFFLINE_ASM_TEXT_SECTION                    \
     ALIGNMENT                                   \
     ALT_ENTRY(label)                            \
     ".globl " SYMBOL_STRING(label) "\n"         \
@@ -572,7 +577,7 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
     SYMBOL_STRING(label) ":\n"
 #else
 #define OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, ALT_ENTRY, ALIGNMENT) \
-    ".text\n"                                   \
+    OFFLINE_ASM_TEXT_SECTION                    \
     ALT_ENTRY(label)                            \
     ".globl " SYMBOL_STRING(label) "\n"         \
     HIDE_SYMBOL(label) "\n"                     \
@@ -582,7 +587,7 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
 #define OFFLINE_ASM_ALIGN4B ".balign 4\n"
 #define OFFLINE_ASM_NOALIGN ""
 
-#if OFFLINE_ASM_USE_ALT_ENTRY
+#if ENABLE(OFFLINE_ASM_ALT_ENTRY)
 #define OFFLINE_ASM_GLOBAL_LABEL(label) \
     OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, OFFLINE_ASM_ALT_ENTRY_DIRECTIVE, OFFLINE_ASM_ALIGN4B)
 #define OFFLINE_ASM_UNALIGNED_GLOBAL_LABEL(label) \
@@ -592,9 +597,9 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
     OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, OFFLINE_ASM_NO_ALT_ENTRY_DIRECTIVE, OFFLINE_ASM_ALIGN4B)
 #define OFFLINE_ASM_UNALIGNED_GLOBAL_LABEL(label) \
     OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, OFFLINE_ASM_NO_ALT_ENTRY_DIRECTIVE, OFFLINE_ASM_NOALIGN)
-#endif // USE_ALT_ENTRY
+#endif // ENABLE(OFFLINE_ASM_ALT_ENTRY)
 
-#if COMPILER(CLANG) && OFFLINE_ASM_USE_ALT_ENTRY
+#if COMPILER(CLANG) && ENABLE(OFFLINE_ASM_ALT_ENTRY)
 #define OFFLINE_ASM_ALT_GLOBAL_LABEL(label) OFFLINE_ASM_GLOBAL_LABEL(label)
 #else
 #define OFFLINE_ASM_ALT_GLOBAL_LABEL(label)
@@ -609,6 +614,8 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
 #else
 #define OFFLINE_ASM_OPCODE_DEBUG_LABEL(label)
 #endif
+
+#include "WasmCallee.h"
 
 // This works around a bug in GDB where, if the compilation unit
 // doesn't have any address range information, its line table won't

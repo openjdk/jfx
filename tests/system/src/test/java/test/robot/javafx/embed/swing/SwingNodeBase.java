@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -191,6 +191,11 @@ public class SwingNodeBase {
         }
     }
 
+    private static boolean isOnWayland() {
+        String waylandDisplay = System.getenv("WAYLAND_DISPLAY");
+        return waylandDisplay != null && !waylandDisplay.isEmpty();
+    }
+
     public void testAbove(boolean above) {
         int checkLoc = BASE_LOCATION + 3 * BASE_SIZE /4;
         int clickLoc = BASE_LOCATION + BASE_SIZE / 4;
@@ -199,6 +204,12 @@ public class SwingNodeBase {
             robot.mouseMove(clickLoc, clickLoc);
             robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
             robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+
+            // Emulating mouse clicks on XWayland with XTEST does not currently affect the Wayland compositor,
+            // so trying to click on the window title or window body will not bring the window to the front.
+            if (isOnWayland()) {
+                runWaitSleep(() -> myApp.stage.toFront());
+            }
         }
 
         if (above) {

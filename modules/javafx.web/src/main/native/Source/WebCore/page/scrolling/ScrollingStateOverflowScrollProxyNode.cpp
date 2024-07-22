@@ -34,9 +34,10 @@
 
 namespace WebCore {
 
-Ref<ScrollingStateOverflowScrollProxyNode> ScrollingStateOverflowScrollProxyNode::create(ScrollingStateTree& stateTree, ScrollingNodeID nodeID)
+ScrollingStateOverflowScrollProxyNode::ScrollingStateOverflowScrollProxyNode(ScrollingNodeID nodeID, Vector<Ref<ScrollingStateNode>>&& children, OptionSet<ScrollingStateNodeProperty> changedProperties, std::optional<PlatformLayerIdentifier> layerID, ScrollingNodeID overflowScrollingNode)
+    : ScrollingStateNode(ScrollingNodeType::OverflowProxy, nodeID, WTFMove(children), changedProperties, layerID)
+    , m_overflowScrollingNodeID(overflowScrollingNode)
 {
-    return adoptRef(*new ScrollingStateOverflowScrollProxyNode(stateTree, nodeID));
 }
 
 ScrollingStateOverflowScrollProxyNode::ScrollingStateOverflowScrollProxyNode(ScrollingStateTree& stateTree, ScrollingNodeID nodeID)
@@ -83,8 +84,8 @@ void ScrollingStateOverflowScrollProxyNode::dumpProperties(TextStream& ts, Optio
     ScrollingStateNode::dumpProperties(ts, behavior);
 
     if (auto relatedOverflowNode = scrollingStateTree().stateNodeForID(m_overflowScrollingNodeID)) {
-        auto scrollPosition = downcast<ScrollingStateOverflowScrollingNode>(*relatedOverflowNode).scrollPosition();
-        ts.dumpProperty("related overflow scrolling node scroll position", scrollPosition);
+        if (RefPtr overflowScrollingNode = dynamicDowncast<ScrollingStateOverflowScrollingNode>(relatedOverflowNode))
+            ts.dumpProperty("related overflow scrolling node scroll position", overflowScrollingNode->scrollPosition());
     }
 
     if (behavior & ScrollingStateTreeAsTextBehavior::IncludeNodeIDs)

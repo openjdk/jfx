@@ -28,11 +28,13 @@
 #include "Page.h"
 #include "ResourceLoaderIdentifier.h"
 #include "Timer.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefPtr.h>
 #include <wtf/UniqueRef.h>
+#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
@@ -41,16 +43,16 @@ class ResourceResponse;
 class ProgressTrackerClient;
 struct ProgressItem;
 
-class ProgressTracker {
+class ProgressTracker : public CanMakeCheckedPtr {
     WTF_MAKE_NONCOPYABLE(ProgressTracker);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
 public:
     explicit ProgressTracker(Page&, UniqueRef<ProgressTrackerClient>&&);
     ~ProgressTracker();
 
     ProgressTrackerClient& client() { return m_client.get(); }
 
-    WEBCORE_EXPORT double estimatedProgress() const;
+    double estimatedProgress() const { return m_progressValue; }
 
     void progressStarted(LocalFrame&);
     void progressCompleted(LocalFrame&);
@@ -70,8 +72,9 @@ private:
     void progressEstimateChanged(LocalFrame&);
 
     void progressHeartbeatTimerFired();
+    Ref<Page> protectedPage() const;
 
-    Page& m_page;
+    SingleThreadWeakRef<Page> m_page;
     UniqueRef<ProgressTrackerClient> m_client;
     RefPtr<LocalFrame> m_originatingProgressFrame;
     HashMap<ResourceLoaderIdentifier, std::unique_ptr<ProgressItem>> m_progressItems;

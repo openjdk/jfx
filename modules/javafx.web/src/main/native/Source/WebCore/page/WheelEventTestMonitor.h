@@ -40,14 +40,7 @@ namespace WebCore {
 
 class Page;
 
-class WheelEventTestMonitor : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<WheelEventTestMonitor> {
-public:
-    WheelEventTestMonitor(Page&);
-
-    WEBCORE_EXPORT void setTestCallbackAndStartMonitoring(bool expectWheelEndOrCancel, bool expectMomentumEnd, Function<void()>&&);
-    WEBCORE_EXPORT void clearAllTestDeferrals();
-
-    enum DeferReason {
+enum class WheelEventTestMonitorDeferReason : uint16_t {
         HandlingWheelEvent                  = 1 << 0,
         HandlingWheelEventOnMainThread      = 1 << 1,
         PostMainThreadWheelEventHandling    = 1 << 2,
@@ -57,12 +50,22 @@ public:
         ScrollingThreadSyncNeeded           = 1 << 6,
         ContentScrollInProgress             = 1 << 7,
         RequestedScrollPosition             = 1 << 8,
-    };
+    CommittingTransientZoom             = 1 << 9,
+};
+
+class WheelEventTestMonitor : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<WheelEventTestMonitor> {
+public:
+    WheelEventTestMonitor(Page&);
+
+    WEBCORE_EXPORT void setTestCallbackAndStartMonitoring(bool expectWheelEndOrCancel, bool expectMomentumEnd, Function<void()>&&);
+    WEBCORE_EXPORT void clearAllTestDeferrals();
+
+    using DeferReason = WheelEventTestMonitorDeferReason;
     typedef const void* ScrollableAreaIdentifier;
 
     WEBCORE_EXPORT void receivedWheelEventWithPhases(PlatformWheelEventPhase phase, PlatformWheelEventPhase momentumPhase);
-    WEBCORE_EXPORT void deferForReason(ScrollableAreaIdentifier, DeferReason);
-    WEBCORE_EXPORT void removeDeferralForReason(ScrollableAreaIdentifier, DeferReason);
+    WEBCORE_EXPORT void deferForReason(ScrollableAreaIdentifier, OptionSet<DeferReason>);
+    WEBCORE_EXPORT void removeDeferralForReason(ScrollableAreaIdentifier, OptionSet<DeferReason>);
 
     void checkShouldFireCallbacks();
 
@@ -117,22 +120,3 @@ WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, WheelEventTestMonit
 WTF::TextStream& operator<<(WTF::TextStream&, const WheelEventTestMonitor::ScrollableAreaReasonMap&);
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::WheelEventTestMonitor::DeferReason> {
-    using values = EnumValues<
-        WebCore::WheelEventTestMonitor::DeferReason,
-        WebCore::WheelEventTestMonitor::DeferReason::HandlingWheelEvent,
-        WebCore::WheelEventTestMonitor::DeferReason::HandlingWheelEventOnMainThread,
-        WebCore::WheelEventTestMonitor::DeferReason::PostMainThreadWheelEventHandling,
-        WebCore::WheelEventTestMonitor::DeferReason::RubberbandInProgress,
-        WebCore::WheelEventTestMonitor::DeferReason::ScrollSnapInProgress,
-        WebCore::WheelEventTestMonitor::DeferReason::ScrollAnimationInProgress,
-        WebCore::WheelEventTestMonitor::DeferReason::ScrollingThreadSyncNeeded,
-        WebCore::WheelEventTestMonitor::DeferReason::ContentScrollInProgress,
-        WebCore::WheelEventTestMonitor::DeferReason::RequestedScrollPosition
-    >;
-};
-
-} // namespace WTF

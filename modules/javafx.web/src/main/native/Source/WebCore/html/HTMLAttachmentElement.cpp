@@ -29,6 +29,7 @@
 #if ENABLE(ATTACHMENT_ELEMENT)
 
 #include "AddEventListenerOptions.h"
+#include "AttachmentAssociatedElement.h"
 #include "AttachmentElementClient.h"
 #include "CSSPropertyNames.h"
 #include "CSSUnits.h"
@@ -111,6 +112,12 @@ void HTMLAttachmentElement::didAddUserAgentShadowRoot(ShadowRoot& root)
 static const AtomString& attachmentContainerIdentifier()
 {
     static MainThreadNeverDestroyed<const AtomString> identifier("attachment-container"_s);
+    return identifier;
+}
+
+static const AtomString& attachmentBackgroundIdentifier()
+{
+    static MainThreadNeverDestroyed<const AtomString> identifier("attachment-background"_s);
     return identifier;
 }
 
@@ -255,7 +262,9 @@ void HTMLAttachmentElement::ensureWideLayoutShadowTree(ShadowRoot& root)
     m_containerElement->setInlineStyleCustomProperty(attachmentIconSizeProperty(), makeString(attachmentIconSize, "px"_s));
     root.appendChild(*m_containerElement);
 
-    auto previewArea = createContainedElement<HTMLDivElement>(*m_containerElement, attachmentPreviewAreaIdentifier());
+    auto background = createContainedElement<HTMLDivElement>(*m_containerElement, attachmentBackgroundIdentifier());
+
+    auto previewArea = createContainedElement<HTMLDivElement>(background, attachmentPreviewAreaIdentifier());
 
     m_imageElement = createContainedElement<HTMLImageElement>(previewArea, attachmentIconIdentifier());
     AttachmentImageEventsListener::addToImageForAttachment(*m_imageElement, *this);
@@ -267,7 +276,7 @@ void HTMLAttachmentElement::ensureWideLayoutShadowTree(ShadowRoot& root)
     m_progressElement = createContainedElement<HTMLDivElement>(previewArea, attachmentProgressIdentifier());
     updateProgress(attributeWithoutSynchronization(progressAttr));
 
-    auto informationArea = createContainedElement<HTMLDivElement>(*m_containerElement, attachmentInformationAreaIdentifier());
+    auto informationArea = createContainedElement<HTMLDivElement>(background, attachmentInformationAreaIdentifier());
 
     m_informationBlock = createContainedElement<HTMLDivElement>(informationArea, attachmentInformationBlockIdentifier());
 
@@ -366,7 +375,7 @@ DOMRectReadOnly* HTMLAttachmentElement::saveButtonClientRect() const
         return nullptr;
 
     bool unusedIsReplaced;
-    auto rect = m_saveButton->pixelSnappedRenderRect(&unusedIsReplaced);
+    auto rect = m_saveButton->pixelSnappedAbsoluteBoundingRect(&unusedIsReplaced);
     m_saveButtonClientRect = DOMRectReadOnly::create(rect.x(), rect.y(), rect.width(), rect.height());
     return m_saveButtonClientRect.get();
 }
@@ -389,17 +398,21 @@ void HTMLAttachmentElement::invalidateRendering()
     }
 }
 
-const String& HTMLAttachmentElement::getAttachmentIdentifier(HTMLImageElement& image)
+String HTMLAttachmentElement::getAttachmentIdentifier(HTMLElement& element)
 {
-    if (auto attachment = image.attachmentElement())
+    RefPtr attachmentAssociatedElement = element.asAttachmentAssociatedElement();
+    if (!attachmentAssociatedElement)
+        return nullString();
+
+    if (RefPtr attachment = attachmentAssociatedElement->attachmentElement())
         return attachment->uniqueIdentifier();
 
-    auto& document = image.document();
+    Ref document = element.document();
     auto attachment = create(HTMLNames::attachmentTag, document);
-    auto& identifier = attachment->ensureUniqueIdentifier();
+    auto identifier = attachment->ensureUniqueIdentifier();
 
-    document.registerAttachmentIdentifier(identifier, image);
-    image.setAttachmentElement(WTFMove(attachment));
+    document->registerAttachmentIdentifier(identifier, *attachmentAssociatedElement);
+    attachmentAssociatedElement->setAttachmentElement(WTFMove(attachment));
 
     return identifier;
 }
@@ -468,7 +481,7 @@ void HTMLAttachmentElement::removedFromAncestor(RemovalType type, ContainerNode&
         document().didRemoveAttachmentElement(*this);
 }
 
-const String& HTMLAttachmentElement::ensureUniqueIdentifier()
+String HTMLAttachmentElement::ensureUniqueIdentifier()
 {
     if (m_uniqueIdentifier.isEmpty())
         m_uniqueIdentifier = createVersion4UUIDString();
@@ -482,16 +495,23 @@ void HTMLAttachmentElement::setUniqueIdentifier(const String& uniqueIdentifier)
 
     m_uniqueIdentifier = uniqueIdentifier;
 
-    if (auto image = enclosingImageElement())
-        image->didUpdateAttachmentIdentifier();
+    if (auto associatedElement = this->associatedElement())
+        associatedElement->didUpdateAttachmentIdentifier();
 }
 
-RefPtr<HTMLImageElement> HTMLAttachmentElement::enclosingImageElement() const
+AttachmentAssociatedElement* HTMLAttachmentElement::associatedElement() const
 {
-    if (auto hostElement = shadowHost(); is<HTMLImageElement>(hostElement))
-        return downcast<HTMLImageElement>(hostElement);
+    if (RefPtr host = shadowHost())
+        return host->asAttachmentAssociatedElement();
+    return nullptr;
+}
 
-    return { };
+AttachmentAssociatedElementType HTMLAttachmentElement::associatedElementType() const
+{
+    if (RefPtr associatedElement = this->associatedElement())
+        return associatedElement->attachmentAssociatedElementType();
+
+    return AttachmentAssociatedElementType::None;
 }
 
 void HTMLAttachmentElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
@@ -617,12 +637,16 @@ String HTMLAttachmentElement::attachmentPath() const
 
 void HTMLAttachmentElement::updateAttributes(std::optional<uint64_t>&& newFileSize, const AtomString& newContentType, const AtomString& newFilename)
 {
+    RefPtr<HTMLImageElement> enclosingImage;
+    if (auto associatedElement = this->associatedElement())
+        enclosingImage = dynamicDowncast<HTMLImageElement>(associatedElement->asHTMLElement());
+
     if (!newFilename.isNull()) {
-        if (auto enclosingImage = enclosingImageElement())
+        if (enclosingImage)
             enclosingImage->setAttributeWithoutSynchronization(HTMLNames::altAttr, newFilename);
         setAttributeWithoutSynchronization(HTMLNames::titleAttr, newFilename);
     } else {
-        if (auto enclosingImage = enclosingImageElement())
+        if (enclosingImage)
             enclosingImage->removeAttribute(HTMLNames::altAttr);
         removeAttribute(HTMLNames::titleAttr);
     }
@@ -646,13 +670,13 @@ static bool mimeTypeIsSuitableForInlineImageAttachment(const String& mimeType)
     return MIMETypeRegistry::isSupportedImageMIMEType(mimeType) || MIMETypeRegistry::isPDFMIMEType(mimeType);
 }
 
-void HTMLAttachmentElement::updateEnclosingImageWithData(const String& contentType, Ref<FragmentedSharedBuffer>&& buffer)
+void HTMLAttachmentElement::updateAssociatedElementWithData(const String& contentType, Ref<FragmentedSharedBuffer>&& buffer)
 {
     if (buffer->isEmpty())
         return;
 
-    auto enclosingImage = enclosingImageElement();
-    if (!enclosingImage)
+    RefPtr associatedElement = this->associatedElement();
+    if (!associatedElement)
         return;
 
     String mimeType = contentType;
@@ -664,7 +688,8 @@ void HTMLAttachmentElement::updateEnclosingImageWithData(const String& contentTy
     if (!mimeTypeIsSuitableForInlineImageAttachment(mimeType))
         return;
 
-    enclosingImage->setAttributeWithoutSynchronization(HTMLNames::srcAttr, AtomString { DOMURL::createObjectURL(document(), Blob::create(&document(), buffer->extractData(), mimeType)) });
+    auto associatedElementType = associatedElement->attachmentAssociatedElementType();
+    associatedElement->asHTMLElement().setAttributeWithoutSynchronization((associatedElementType == AttachmentAssociatedElementType::Source) ? HTMLNames::srcsetAttr : HTMLNames::srcAttr, AtomString { DOMURL::createObjectURL(document(), Blob::create(&document(), buffer->extractData(), mimeType)) });
 }
 
 void HTMLAttachmentElement::updateImage()
@@ -705,11 +730,14 @@ void HTMLAttachmentElement::updateThumbnailForWideLayout(Vector<uint8_t>&& thumb
 void HTMLAttachmentElement::updateIconForNarrowLayout(const RefPtr<Image>& icon, const WebCore::FloatSize& iconSize)
 {
     ASSERT(!isWideLayout());
-    if (!icon)
+    if (!icon) {
+        dispatchEvent(Event::create(eventNames().loadingerrorEvent, Event::CanBubble::No, Event::IsCancelable::No));
         return;
+    }
     m_icon = icon;
     m_iconSize = iconSize;
     invalidateRendering();
+    dispatchEvent(Event::create(eventNames().loadEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
 void HTMLAttachmentElement::updateIconForWideLayout(Vector<uint8_t>&& iconSrcData)
@@ -745,12 +773,13 @@ void HTMLAttachmentElement::requestWideLayoutIconIfNeeded()
     document().page()->attachmentElementClient()->requestAttachmentIcon(uniqueIdentifier(), FloatSize(attachmentIconSize, attachmentIconSize));
 }
 
-void HTMLAttachmentElement::requestIconWithSize(const FloatSize& size) const
+void HTMLAttachmentElement::requestIconWithSize(const FloatSize& size)
 {
     ASSERT(!isWideLayout());
     if (!document().page() || !document().page()->attachmentElementClient())
         return;
 
+    queueTaskToDispatchEvent(TaskSource::InternalAsyncTask, Event::create(eventNames().beforeloadEvent, Event::CanBubble::No, Event::IsCancelable::No));
     document().page()->attachmentElementClient()->requestAttachmentIcon(uniqueIdentifier(), size);
 }
 

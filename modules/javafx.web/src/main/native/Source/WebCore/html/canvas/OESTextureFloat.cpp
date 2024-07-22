@@ -35,9 +35,9 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(OESTextureFloat);
 
 OESTextureFloat::OESTextureFloat(WebGLRenderingContextBase& context)
-    : WebGLExtension(context)
+    : WebGLExtension(context, WebGLExtensionName::OESTextureFloat)
 {
-    context.graphicsContextGL()->ensureExtensionEnabled("GL_OES_texture_float"_s);
+    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_OES_texture_float"_s);
 
     // Spec requires WEBGL_color_buffer_float to be turned on implicitly here.
     // Enable it both in the backend and in WebKit.
@@ -49,11 +49,6 @@ OESTextureFloat::OESTextureFloat(WebGLRenderingContextBase& context)
 }
 
 OESTextureFloat::~OESTextureFloat() = default;
-
-WebGLExtension::ExtensionName OESTextureFloat::getName() const
-{
-    return OESTextureFloatName;
-}
 
 bool OESTextureFloat::supported(GraphicsContextGL& context)
 {

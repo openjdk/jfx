@@ -35,6 +35,7 @@
 #if ENABLE(VIDEO)
 
 #include "CommonAtomStrings.h"
+#include "ScriptExecutionContext.h"
 #include "VideoTrackClient.h"
 #include "VideoTrackConfiguration.h"
 #include "VideoTrackList.h"
@@ -54,7 +55,7 @@ const AtomString& VideoTrack::signKeyword()
 }
 
 VideoTrack::VideoTrack(ScriptExecutionContext* context, VideoTrackPrivate& trackPrivate)
-    : MediaTrackBase(context, MediaTrackBase::VideoTrack, trackPrivate.id(), trackPrivate.label(), trackPrivate.language())
+    : MediaTrackBase(context, MediaTrackBase::VideoTrack, trackPrivate.trackUID(), trackPrivate.id(), trackPrivate.label(), trackPrivate.language())
     , m_private(trackPrivate)
     , m_configuration(VideoTrackConfiguration::create())
     , m_selected(trackPrivate.selected())
@@ -140,7 +141,7 @@ void VideoTrack::configurationChanged(const PlatformVideoTrackConfiguration& con
     m_configuration->setState(configuration);
 }
 
-void VideoTrack::idChanged(const AtomString& id)
+void VideoTrack::idChanged(TrackID id)
 {
     setId(id);
     m_clients.forEach([this] (auto& client) {
@@ -211,25 +212,25 @@ void VideoTrack::setLanguage(const AtomString& language)
 void VideoTrack::updateKindFromPrivate()
 {
     switch (m_private->kind()) {
-    case VideoTrackPrivate::Alternative:
+    case VideoTrackPrivate::Kind::Alternative:
         setKind(alternativeAtom());
         return;
-    case VideoTrackPrivate::Captions:
+    case VideoTrackPrivate::Kind::Captions:
         setKind(captionsAtom());
         return;
-    case VideoTrackPrivate::Main:
+    case VideoTrackPrivate::Kind::Main:
         setKind(mainAtom());
         return;
-    case VideoTrackPrivate::Sign:
+    case VideoTrackPrivate::Kind::Sign:
         setKind(VideoTrack::signKeyword());
         return;
-    case VideoTrackPrivate::Subtitles:
+    case VideoTrackPrivate::Kind::Subtitles:
         setKind(subtitlesAtom());
         return;
-    case VideoTrackPrivate::Commentary:
+    case VideoTrackPrivate::Kind::Commentary:
         setKind(commentaryAtom());
         return;
-    case VideoTrackPrivate::None:
+    case VideoTrackPrivate::Kind::None:
         setKind(emptyAtom());
         return;
     }

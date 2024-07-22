@@ -26,15 +26,18 @@
 #include "config.h"
 #include "WasmBBQDisassembler.h"
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
+#if ENABLE(WEBASSEMBLY_OMGJIT) || ENABLE(WEBASSEMBLY_BBQJIT)
 
 #include "Disassembler.h"
 #include "LinkBuffer.h"
 #include <wtf/HexNumber.h>
 #include <wtf/StringPrintStream.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
 namespace Wasm {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(BBQDisassembler);
 
 BBQDisassembler::BBQDisassembler() = default;
 
@@ -110,4 +113,4 @@ void BBQDisassembler::dumpDisassembly(PrintStream& out, LinkBuffer& linkBuffer, 
 } // namespace Wasm
 } // namespace JSC
 
-#endif // ENABLE(WEBASSEMBLY_B3JIT)
+#endif // ENABLE(WEBASSEMBLY_OMGJIT)

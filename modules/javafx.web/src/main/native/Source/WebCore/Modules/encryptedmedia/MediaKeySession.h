@@ -32,6 +32,7 @@
 
 #include "ActiveDOMObject.h"
 #include "CDMInstanceSession.h"
+#include "ContextDestructionObserverInlines.h"
 #include "EventTarget.h"
 #include "IDLTypes.h"
 #include "MediaKeyMessageType.h"
@@ -98,6 +99,7 @@ private:
     void updateExpiration(double);
     void sessionClosed();
     String mediaKeysStorageDirectory() const;
+    CDMKeyGroupingStrategy keyGroupingStrategy() const;
 
     // CDMInstanceSessionClient
     void updateKeyStatuses(CDMInstanceSessionClient::KeyStatusVector&&) override;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -128,6 +128,7 @@ public class DirtyRegionClipTest extends DirtyRegionTestBase {
         // clean them all up so that when we perform the test, it is from the
         // starting point of a completely cleaned tree
         root.render(TestGraphics.TEST_GRAPHICS);
+        root.clearDirty();
     }
 
     @Test public void sanityCheck() {

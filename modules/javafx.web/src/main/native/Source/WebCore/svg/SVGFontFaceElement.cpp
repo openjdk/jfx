@@ -32,6 +32,7 @@
 #include "CSSValueKeywords.h"
 #include "CSSValueList.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "ElementChildIteratorInlines.h"
 #include "FontCascade.h"
 #include "Logging.h"
@@ -269,17 +270,14 @@ void SVGFontFaceElement::rebuildFontFace()
     // we currently ignore all but the first src element, alternatively we could concat them
     auto srcElement = childrenOfType<SVGFontFaceSrcElement>(*this).first();
 
-    bool describesParentFont = is<SVGFontElement>(*parentNode());
-    RefPtr<CSSValueList> list;
+    m_fontElement = dynamicDowncast<SVGFontElement>(*parentNode());
+    bool describesParentFont = !!m_fontElement;
 
-    if (describesParentFont) {
-        m_fontElement = downcast<SVGFontElement>(parentNode());
+    RefPtr<CSSValueList> list;
+    if (m_fontElement)
         list = CSSValueList::createCommaSeparated(CSSFontFaceSrcLocalValue::create(AtomString { fontFamily() }));
-    } else {
-        m_fontElement = nullptr;
-        if (srcElement)
+    else if (srcElement)
             list = srcElement->createSrcValue();
-    }
 
     if (!list || !list->length())
         return;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -148,13 +148,13 @@ public class AccordionBehavior extends BehaviorBase<Accordion> {
 //                }
 //            }
 //        } else if (CTRL_TAB.equals(name) || CTRL_PAGE_DOWN.equals(name)) {
-////            moveForward();
+//--            moveForward();
 //        } else if (CTRL_SHIFT_TAB.equals(name) || CTRL_PAGE_UP.equals(name)) {
-////            moveBackward();
+//--            moveBackward();
 //        } else if (HOME.equals(name)) {
-////            home();
+//--            home();
 //        } else if (END.equals(name)) {
-////            end();
+//--            end();
 //        } else {
 //            super.callAction(name);
 //        }

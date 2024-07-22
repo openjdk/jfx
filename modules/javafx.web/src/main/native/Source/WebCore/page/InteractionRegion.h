@@ -26,7 +26,8 @@
 #pragma once
 
 #include "ElementIdentifier.h"
-#include "IntRect.h"
+#include "FloatRect.h"
+#include "Path.h"
 #include "Region.h"
 
 namespace IPC {
@@ -55,9 +56,10 @@ struct InteractionRegion {
 
     Type type;
     ElementIdentifier elementIdentifier;
-    IntRect rectInLayerCoordinates;
-    float borderRadius { 0 };
+    FloatRect rectInLayerCoordinates;
+    float cornerRadius { 0 };
     OptionSet<CornerMask> maskedCorners { };
+    std::optional<Path> clipPath { std::nullopt };
 
     WEBCORE_EXPORT ~InteractionRegion();
 };
@@ -67,11 +69,13 @@ inline bool operator==(const InteractionRegion& a, const InteractionRegion& b)
     return a.type == b.type
         && a.elementIdentifier == b.elementIdentifier
         && a.rectInLayerCoordinates == b.rectInLayerCoordinates
-        && a.borderRadius == b.borderRadius
-        && a.maskedCorners == b.maskedCorners;
+        && a.cornerRadius == b.cornerRadius
+        && a.maskedCorners == b.maskedCorners
+        && a.clipPath.has_value() == b.clipPath.has_value()
+        && (!a.clipPath || &a.clipPath.value() == &b.clipPath.value());
 }
 
-WEBCORE_EXPORT std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject&, const Region&);
+WEBCORE_EXPORT std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject&, const FloatRect&);
 WEBCORE_EXPORT bool elementMatchesHoverRules(Element&);
 
 WTF::TextStream& operator<<(WTF::TextStream&, const InteractionRegion&);

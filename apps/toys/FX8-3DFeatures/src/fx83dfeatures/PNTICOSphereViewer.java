@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -188,9 +188,9 @@ public class PNTICOSphereViewer extends Application {
             normals[normalIndex] = arrV[i].x;
             normals[normalIndex + 1] = arrV[i].y;
             normals[normalIndex + 2] = arrV[i].z;
-////            System.err.println("normal index = " + normalIndex);
-////            System.err.println("normal: [" + normals[normalIndex]
-////                    + ", " + normals[normalIndex + 1] + ", " + normals[i+2]);
+//--            System.err.println("normal index = " + normalIndex);
+//--            System.err.println("normal: [" + normals[normalIndex]
+//--                    + ", " + normals[normalIndex + 1] + ", " + normals[i+2]);
 
             int texCoordIndex = i * texCoordSize;
             texCoords[texCoordIndex] = 0f;

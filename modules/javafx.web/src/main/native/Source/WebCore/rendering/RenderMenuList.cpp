@@ -74,7 +74,8 @@ static size_t selectedOptionCount(const RenderMenuList& renderMenuList)
 
     size_t count = 0;
     for (size_t i = 0; i < numberOfItems; ++i) {
-        if (is<HTMLOptionElement>(*listItems[i]) && downcast<HTMLOptionElement>(*listItems[i]).selected())
+        auto* option = dynamicDowncast<HTMLOptionElement>(*listItems[i]);
+        if (option && option->selected())
             ++count;
     }
     return count;
@@ -82,13 +83,14 @@ static size_t selectedOptionCount(const RenderMenuList& renderMenuList)
 #endif
 
 RenderMenuList::RenderMenuList(HTMLSelectElement& element, RenderStyle&& style)
-    : RenderFlexibleBox(element, WTFMove(style))
+    : RenderFlexibleBox(Type::MenuList, element, WTFMove(style))
     , m_needsOptionsWidthUpdate(true)
     , m_optionsWidth(0)
 #if !PLATFORM(IOS_FAMILY)
     , m_popupIsVisible(false)
 #endif
 {
+    ASSERT(isRenderMenuList());
 }
 
 RenderMenuList::~RenderMenuList()
@@ -120,17 +122,22 @@ void RenderMenuList::adjustInnerStyle()
     innerStyle.setFlexGrow(1);
     innerStyle.setFlexShrink(1);
     // min-width: 0; is needed for correct shrinking.
-    innerStyle.setMinWidth(Length(0, LengthType::Fixed));
+    innerStyle.setLogicalMinWidth(Length(0, LengthType::Fixed));
     // Use margin:auto instead of align-items:center to get safe centering, i.e.
     // when the content overflows, treat it the same as align-items: flex-start.
     // But we only do that for the cases where html.css would otherwise use center.
     if (style().alignItems().position() == ItemPosition::Center) {
-        innerStyle.setMarginTop(Length());
-        innerStyle.setMarginBottom(Length());
+        innerStyle.setMarginBefore(Length());
+        innerStyle.setMarginAfter(Length());
+
         innerStyle.setAlignSelfPosition(ItemPosition::FlexStart);
     }
 
-    innerStyle.setPaddingBox(theme().popupInternalPaddingBox(style(), document().settings()));
+    auto paddingBox = theme().popupInternalPaddingBox(style());
+    if (!style().isHorizontalWritingMode())
+        paddingBox = LengthBox(paddingBox.left().value(), paddingBox.top().value(), paddingBox.right().value(), paddingBox.bottom().value());
+
+    innerStyle.setPaddingBox(WTFMove(paddingBox));
 
     if (document().page()->chrome().selectItemWritingDirectionIsNatural()) {
         // Items in the popup will not respect the CSS text-align and direction properties,
@@ -200,16 +207,16 @@ void RenderMenuList::updateOptionsWidth()
     int size = listItems.size();
 
     for (int i = 0; i < size; ++i) {
-        RefPtr element = listItems[i].get();
-        if (!is<HTMLOptionElement>(*element))
+        RefPtr option = dynamicDowncast<HTMLOptionElement>(listItems[i].get());
+        if (!option)
             continue;
 
-        String text = downcast<HTMLOptionElement>(*element).textIndentedToRespectGroupLabel();
+        String text = option->textIndentedToRespectGroupLabel();
         text = applyTextTransform(style(), text, ' ');
         if (theme().popupOptionSupportsTextIndent()) {
             // Add in the option's text indent.  We can't calculate percentage values for now.
             float optionWidth = 0;
-            if (auto* optionStyle = element->computedStyle())
+            if (auto* optionStyle = option->computedStyle())
                 optionWidth += minimumValueForLength(optionStyle->textIndent(), 0);
             if (!text.isEmpty()) {
                 const FontCascade& font = style().fontCascade();
@@ -256,10 +263,9 @@ void RenderMenuList::setTextFromOption(int optionIndex)
     int i = selectElement().optionToListIndex(optionIndex);
     String text = emptyString();
     if (i >= 0 && i < size) {
-        RefPtr element = listItems[i].get();
-        if (is<HTMLOptionElement>(*element)) {
-            text = downcast<HTMLOptionElement>(*element).textIndentedToRespectGroupLabel();
-            auto* style = element->computedStyle();
+        if (RefPtr option = dynamicDowncast<HTMLOptionElement>(*listItems[i])) {
+            text = option->textIndentedToRespectGroupLabel();
+            auto* style = option->computedStyle();
             m_optionStyle = style ? RenderStyle::clonePtr(*style) : nullptr;
         }
     }
@@ -284,7 +290,7 @@ void RenderMenuList::setText(const String& s)
         m_buttonText->setText(textToUse.impl(), true);
         m_buttonText->dirtyLineBoxes(false);
     } else {
-        auto newButtonText = createRenderer<RenderText>(document(), textToUse);
+        auto newButtonText = createRenderer<RenderText>(Type::Text, document(), textToUse);
         m_buttonText = *newButtonText;
         // FIXME: This mutation should go through the normal RenderTreeBuilder path.
         if (RenderTreeBuilder::current())
@@ -322,12 +328,12 @@ LayoutRect RenderMenuList::controlClipRect(const LayoutPoint& additionalOffset) 
 void RenderMenuList::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const
 {
     maxLogicalWidth = shouldApplySizeContainment() ? theme().minimumMenuListSize(style()) : std::max(m_optionsWidth, theme().minimumMenuListSize(style()));
-    maxLogicalWidth += m_innerBlock->paddingLeft() + m_innerBlock->paddingRight();
+    maxLogicalWidth += m_innerBlock->paddingStart() + m_innerBlock->paddingEnd();
     if (shouldApplySizeOrInlineSizeContainment()) {
-        if (auto width = explicitIntrinsicInnerLogicalWidth())
-            maxLogicalWidth = width.value();
+        if (auto logicalWidth = explicitIntrinsicInnerLogicalWidth())
+            maxLogicalWidth = logicalWidth.value();
     }
-    if (!style().width().isPercentOrCalculated())
+    if (!style().logicalWidth().isPercentOrCalculated())
         minLogicalWidth = maxLogicalWidth;
 }
 
@@ -336,12 +342,12 @@ void RenderMenuList::computePreferredLogicalWidths()
     m_minPreferredLogicalWidth = 0;
     m_maxPreferredLogicalWidth = 0;
 
-    if (style().width().isFixed() && style().width().value() > 0)
-        m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = adjustContentBoxLogicalWidthForBoxSizing(style().width());
+    if (style().logicalWidth().isFixed() && style().logicalWidth().value() > 0)
+        m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = adjustContentBoxLogicalWidthForBoxSizing(style().logicalWidth());
     else
         computeIntrinsicLogicalWidths(m_minPreferredLogicalWidth, m_maxPreferredLogicalWidth);
 
-    RenderBox::computePreferredLogicalWidths(style().minWidth(), style().maxWidth(), horizontalBorderAndPaddingExtent());
+    RenderBox::computePreferredLogicalWidths(style().logicalMinWidth(), style().logicalMaxWidth(), style().isHorizontalWritingMode() ? horizontalBorderAndPaddingExtent() : verticalBorderAndPaddingExtent());
 
     setPreferredLogicalWidthsDirty(false);
 }
@@ -368,7 +374,7 @@ void RenderMenuList::showPopup()
     FloatPoint absTopLeft = localToAbsolute(FloatPoint(), UseTransforms);
     IntRect absBounds = absoluteBoundingBoxRectIgnoringTransforms();
     absBounds.setLocation(roundedIntPoint(absTopLeft));
-    m_popup->show(absBounds, &view().frameView(), selectElement().optionToListIndex(selectElement().selectedIndex()));
+    m_popup->show(absBounds, &view().frameView(), selectElement().optionToListIndex(selectElement().selectedIndex())); // May destroy `this`.
 }
 #endif
 
@@ -423,8 +429,8 @@ void RenderMenuList::didUpdateActiveOption(int optionIndex)
         return;
 
     auto* axObject = axCache->get(this);
-    if (is<AccessibilityMenuList>(axObject))
-        downcast<AccessibilityMenuList>(*axObject).didUpdateActiveOption(optionIndex);
+    if (RefPtr menuList = dynamicDowncast<AccessibilityMenuList>(axObject))
+        menuList->didUpdateActiveOption(optionIndex);
 }
 
 String RenderMenuList::itemText(unsigned listIndex) const
@@ -435,10 +441,10 @@ String RenderMenuList::itemText(unsigned listIndex) const
 
     String itemString;
     auto& element = *listItems[listIndex];
-    if (is<HTMLOptGroupElement>(element))
-        itemString = downcast<HTMLOptGroupElement>(element).groupLabelText();
-    else if (is<HTMLOptionElement>(element))
-        itemString = downcast<HTMLOptionElement>(element).textIndentedToRespectGroupLabel();
+    if (auto* optGroup = dynamicDowncast<HTMLOptGroupElement>(element))
+        itemString = optGroup->groupLabelText();
+    else if (auto* option = dynamicDowncast<HTMLOptionElement>(element))
+        itemString = option->textIndentedToRespectGroupLabel();
 
     return applyTextTransform(style(), itemString, ' ');
 }
@@ -637,8 +643,8 @@ bool RenderMenuList::itemIsSelected(unsigned listIndex) const
     const auto& listItems = selectElement().listItems();
     if (listIndex >= listItems.size())
         return false;
-    HTMLElement* element = listItems[listIndex].get();
-    return is<HTMLOptionElement>(*element) && downcast<HTMLOptionElement>(*element).selected();
+    auto* option = dynamicDowncast<HTMLOptionElement>(listItems[listIndex].get());
+    return option && option->selected();
 }
 
 void RenderMenuList::setTextFromItem(unsigned listIndex)

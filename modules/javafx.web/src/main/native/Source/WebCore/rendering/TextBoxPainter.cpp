@@ -26,6 +26,7 @@
 #include "TextBoxPainter.h"
 
 #include "CompositionHighlight.h"
+#include "DocumentInlines.h"
 #include "DocumentMarkerController.h"
 #include "Editor.h"
 #include "EventRegion.h"
@@ -110,7 +111,7 @@ void TextBoxPainter<TextBoxPath>::paint()
     if (m_paintInfo.phase == PaintPhase::EventRegion) {
         constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::IgnoreCSSPointerEventsProperty };
         if (m_renderer.parent()->visibleToHitTesting(hitType))
-            m_paintInfo.eventRegionContext()->unite(enclosingIntRect(m_paintRect), const_cast<RenderText&>(m_renderer), m_style);
+            m_paintInfo.eventRegionContext()->unite(FloatRoundedRect(m_paintRect), const_cast<RenderText&>(m_renderer), m_style);
         return;
     }
 
@@ -136,7 +137,7 @@ void TextBoxPainter<TextBoxPath>::paint()
         if (m_useCustomUnderlines)
             paintCompositionUnderlines();
 
-        m_renderer.page().addRelevantRepaintedObject(const_cast<RenderText*>(&m_renderer), enclosingLayoutRect(m_paintRect));
+        m_renderer.page().addRelevantRepaintedObject(m_renderer, enclosingLayoutRect(m_paintRect));
     }
 
     if (shouldRotate)
@@ -167,7 +168,7 @@ void TextBoxPainter<TextBoxPath>::paintBackground()
 #endif
         if (shouldPaintCompositionBackground)
             return true;
-        if (m_document.markers().hasMarkers())
+        if (CheckedPtr markers = m_document.markersIfExists(); markers && markers->hasMarkers())
             return true;
         if (m_document.hasHighlight())
             return true;
@@ -254,16 +255,43 @@ void TextBoxPainter<TextBoxPath>::paintForegroundAndDecorations()
     auto shouldPaintSelectionForeground = m_haveSelection && !m_useCustomUnderlines;
     auto hasTextDecoration = !m_style.textDecorationsInEffect().isEmpty();
     auto hasHighlightDecoration = m_document.hasHighlight() && !MarkedText::collectForHighlights(m_renderer, m_selectableRange, MarkedText::PaintPhase::Decoration).isEmpty();
-    auto hasDecoration = hasTextDecoration || hasHighlightDecoration;
     auto hasMismatchingContentDirection = m_renderer.containingBlock()->style().direction() != textBox().direction();
     auto hasBackwardTrunctation = m_selectableRange.truncation && hasMismatchingContentDirection;
+
+    auto hasSpellingOrGrammarDecoration = [&] {
+        auto markedTexts = MarkedText::collectForDocumentMarkers(m_renderer, m_selectableRange, MarkedText::PaintPhase::Decoration);
+
+        auto hasSpellingError = markedTexts.containsIf([](auto&& markedText) {
+            return markedText.type == MarkedText::Type::SpellingError;
+        });
+
+        if (hasSpellingError) {
+            auto spellingErrorStyle = m_renderer.spellingErrorPseudoStyle();
+            if (spellingErrorStyle)
+                return !spellingErrorStyle->textDecorationsInEffect().isEmpty();
+        }
+
+        auto hasGrammarError = markedTexts.containsIf([](auto&& markedText) {
+            return markedText.type == MarkedText::Type::GrammarError;
+        });
+
+        if (hasGrammarError) {
+            auto grammarErrorStyle = m_renderer.grammarErrorPseudoStyle();
+            if (grammarErrorStyle)
+                return !grammarErrorStyle->textDecorationsInEffect().isEmpty();
+        }
+
+        return false;
+    };
+
+    auto hasDecoration = hasTextDecoration || hasHighlightDecoration || hasSpellingOrGrammarDecoration();
 
     auto contentMayNeedStyledMarkedText = [&] {
         if (hasDecoration)
             return true;
         if (shouldPaintSelectionForeground)
             return true;
-        if (m_document.markers().hasMarkers())
+        if (CheckedPtr markers = m_document.markersIfExists(); markers && markers->hasMarkers())
             return true;
         if (m_document.hasHighlight())
             return true;
@@ -633,7 +661,10 @@ void TextBoxPainter<TextBoxPath>::paintBackgroundDecorations(TextDecorationPaint
             auto overlineOffset = [&] {
                 if (!computedTextDecorationType.contains(TextDecorationLine::Overline))
                     return 0.f;
-                return autoTextDecorationThickness - textDecorationThickness - (decoratingBox.textDecorationStyles.overline.decorationStyle == TextDecorationStyle::Wavy ? wavyOffsetFromDecoration() : 0.f);
+                auto baseOffset = overlineOffsetForTextBoxPainting(*decoratingBox.inlineBox, decoratingBox.style);
+                baseOffset += (autoTextDecorationThickness - textDecorationThickness);
+                auto wavyOffset = decoratingBox.textDecorationStyles.overline.decorationStyle == TextDecorationStyle::Wavy ? wavyOffsetFromDecoration() : 0.f;
+                return baseOffset - wavyOffset;
             };
 
             return TextDecorationPainter::BackgroundDecorationGeometry {
@@ -974,6 +1005,21 @@ template<typename TextBoxPath>
 void TextBoxPainter<TextBoxPath>::paintPlatformDocumentMarkers()
 {
     auto markedTexts = MarkedText::collectForDocumentMarkers(m_renderer, m_selectableRange, MarkedText::PaintPhase::Decoration);
+
+    auto spellingErrorStyle = m_renderer.spellingErrorPseudoStyle();
+    if (spellingErrorStyle && !spellingErrorStyle->textDecorationsInEffect().isEmpty()) {
+        markedTexts.removeAllMatching([] (auto&& markedText) {
+            return markedText.type == MarkedText::Type::SpellingError;
+        });
+    }
+
+    auto grammarErrorStyle = m_renderer.grammarErrorPseudoStyle();
+    if (grammarErrorStyle && !grammarErrorStyle->textDecorationsInEffect().isEmpty()) {
+        markedTexts.removeAllMatching([] (auto&& markedText) {
+            return markedText.type == MarkedText::Type::GrammarError;
+        });
+    }
+
     for (auto& markedText : MarkedText::subdivide(markedTexts, MarkedText::OverlapStrategy::Frontmost))
         paintPlatformDocumentMarker(markedText);
 }
