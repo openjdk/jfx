@@ -24,9 +24,10 @@
  */
 
 /**
- * Incubates the InputMap extension for JavaFX controls.
- *
- * <BR><b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
+ * Incubates the mechanism for customization of JavaFX controls using the
+ * {@link jfx.incubator.scene.control.input.InputMap InputMap}.
+ * <p>
+ * <b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
  * Will be removed in a future release.</b>
  *
  * @moduleGraph

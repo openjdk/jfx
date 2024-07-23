@@ -24,7 +24,9 @@
  */
 
 /**
- * Provides common models for {@code RichTextArea} and support classes.
+ * Provides common models for
+ * {@link jfx.incubator.scene.control.rich.RichTextArea RichTextArea} and
+ * {@link jfx.incubator.scene.control.rich.CodeArea CodeArea} controls.
  * <p>
  * The {@link jfx.incubator.scene.control.rich.RichTextArea RichTextArea}
  * control separates data model from the view by providing the
