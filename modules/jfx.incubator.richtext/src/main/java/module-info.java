@@ -24,7 +24,7 @@
  */
 
 /**
- * RichTextArea Control (Incubator)
+ * Incubates the RichTextArea control and related classes.
  * <p>
  * <b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
  * Will be removed in a future release.</b>

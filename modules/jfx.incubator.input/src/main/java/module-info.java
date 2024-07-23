@@ -24,7 +24,7 @@
  */
 
 /**
- * InputMap (Incubator)
+ * Incubates the InputMap extension for JavaFX controls.
  *
  * <BR><b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
  * Will be removed in a future release.</b>
@@ -39,6 +39,6 @@ module jfx.incubator.input {
 
     exports jfx.incubator.scene.control.input;
 
-    // becomes unnecessary once InputMap is moved to Control moved to Control JDK-8314968
+    // becomes unnecessary once InputMap is moved to Control JDK-8314968
     exports com.sun.jfx.incubator.scene.control.input to jfx.incubator.richtext;
 }
