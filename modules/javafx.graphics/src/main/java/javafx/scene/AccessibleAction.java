@@ -119,7 +119,7 @@ public enum AccessibleAction {
 
     /**
      * Request the node to show a text range, scrolling if required.
-     * <p>Used by TextField and TextArea. </p>
+     * <p>Used by TextArea. </p>
      *
      * Parameters:
      * <ul>

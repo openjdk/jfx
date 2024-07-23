@@ -679,7 +679,7 @@ public enum AccessibleAttribute {
 
     /**
      * Returns the text selection end offset for the node.
-     * Selection end corresponds to the larger offset in the selection range.
+     * Selection end corresponds to the larger position in the selection range.
      * <ul>
      * <li>Used by: TextField and TextArea </li>
      * <li>Needs notify: yes </li>
@@ -691,7 +691,7 @@ public enum AccessibleAttribute {
 
     /**
      * Returns the text selection start offset for the node.
-     * Selection start corresponds to the smaller offset in the selection range.
+     * Selection start corresponds to the smaller position in the selection range.
      * <ul>
      * <li>Used by: TextField and TextArea </li>
      * <li>Needs notify: yes </li>
