@@ -30,6 +30,21 @@ import java.util.Map;
 
 /**
  * Set of key codes for {@link KeyEvent} objects.
+ *
+ * <p>
+ *
+ * Any given key will be assigned one {@code KeyCode} which is not affected by
+ * the modifier state in effect when the key is pressed. For keys that
+ * generate printable characters the code will generally be based on the
+ * character generated with no modifiers. The exception is {@code KeyCode.A}
+ * through {@code KeyCode.Z} which will be assigned to keys even on layouts
+ * which don't generate those letters (such as Greek) to ensure that common
+ * letter-based shortcuts are always available.
+ *
+ * <p>
+ *
+ * Keys that generate characters with accents or other diacritic marks are
+ * typically assigned a code of {@link KeyCode#UNDEFINED}.
  * @since JavaFX 2.0
  */
 public enum KeyCode {
@@ -115,22 +130,22 @@ public enum KeyCode {
     HOME(0x24, "Home", KeyCodeClass.NAVIGATION),
 
     /**
-     * Constant for the non-numpad <b>left</b> arrow key.
+     * Constant for the <b>left</b> arrow key.
      */
     LEFT(0x25, "Left", KeyCodeClass.ARROW | KeyCodeClass.NAVIGATION),
 
     /**
-     * Constant for the non-numpad <b>up</b> arrow key.
+     * Constant for the <b>up</b> arrow key.
      */
     UP(0x26, "Up", KeyCodeClass.ARROW | KeyCodeClass.NAVIGATION),
 
     /**
-     * Constant for the non-numpad <b>right</b> arrow key.
+     * Constant for the <b>right</b> arrow key.
      */
     RIGHT(0x27, "Right", KeyCodeClass.ARROW | KeyCodeClass.NAVIGATION),
 
     /**
-     * Constant for the non-numpad <b>down</b> arrow key.
+     * Constant for the <b>down</b> arrow key.
      */
     DOWN(0x28, "Down", KeyCodeClass.ARROW | KeyCodeClass.NAVIGATION),
 
@@ -605,23 +620,27 @@ public enum KeyCode {
     QUOTE(0xDE, "Quote"),
 
     /**
-     * Constant for the numeric keypad <b>up</b> arrow key.
+     * @deprecated Use {@link KeyCode#UP} instead.
      */
+    @Deprecated
     KP_UP(0xE0, "Numpad Up", KeyCodeClass.ARROW | KeyCodeClass.NAVIGATION | KeyCodeClass.KEYPAD),
 
     /**
-     * Constant for the numeric keypad <b>down</b> arrow key.
+     * @deprecated Use {@link KeyCode#DOWN} instead.
      */
+    @Deprecated
     KP_DOWN(0xE1, "Numpad Down", KeyCodeClass.ARROW | KeyCodeClass.NAVIGATION | KeyCodeClass.KEYPAD),
 
     /**
-     * Constant for the numeric keypad <b>left</b> arrow key.
+     * @deprecated Use {@link KeyCode#LEFT} instead.
      */
+    @Deprecated
     KP_LEFT(0xE2, "Numpad Left", KeyCodeClass.ARROW | KeyCodeClass.NAVIGATION | KeyCodeClass.KEYPAD),
 
     /**
-     * Constant for the numeric keypad <b>right</b> arrow key.
+     * @deprecated Use {@link KeyCode#RIGHT} instead.
      */
+    @Deprecated
     KP_RIGHT(0xE3, "Numpad Right", KeyCodeClass.ARROW | KeyCodeClass.NAVIGATION | KeyCodeClass.KEYPAD),
 
     /**

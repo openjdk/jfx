@@ -31,9 +31,25 @@ import javafx.beans.NamedArg;
 // PENDING_DOC_REVIEW
 /**
  * This class represents a key combination in which the main key is specified
- * by its character. Such key combination is dependent on the keyboard
- * functional layout configured by the user at the time of key combination
- * matching.
+ * by its character. This is the preferred way to specify a shortcut
+ * involving a symbol or punctuation.
+ *
+ * <p>
+ *
+ * The {@link KeyCode} of the key associated with a symbol can vary across
+ * layouts. For example, the '+' symbol is shifted on an English QWERTY
+ * layout ({@link KeyCode#EQUALS}), unshifted on a German layout
+ * ({@link KeyCode#PLUS}), and on the same key as '1' on a Swiss German
+ * layout ({@link KeyCode#DIGIT1}). A key character combination
+ * specifying '+' will match all of these keys. Note that on layouts
+ * where '+' is a shifted character a {@code KeyCharacterCombination} that
+ * specifies '+' will match even if the user doesn't hold down Shift when
+ * typing the key.
+ *
+ * <p>
+ *
+ * A key character combination can match more than one key e.g. a key on the
+ * numeric keypad in addition to one or more on the main keyboard.
  * @since JavaFX 2.0
  */
 public final class KeyCharacterCombination extends KeyCombination {
