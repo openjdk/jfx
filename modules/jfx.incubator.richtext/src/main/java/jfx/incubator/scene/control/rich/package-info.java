@@ -24,28 +24,13 @@
  */
 
 /**
- * Provides classes that represent {@code RichTextArea} Control.
- *
-<h2>Examples</h2>
-<p>Creating a RichTextArea with a simple editable rich text model:</p>
-<pre>
-<code>
-    RichTextArea textArea = new RichTextArea();
-</code>
-</pre>
-<p>Creating a read-only RichTextArea with rich text content:</p>
-<pre><code>
-    SimpleReadOnlyStyledModel m = new SimpleReadOnlyStyledModel();
-    // add text segment using CSS style name (requires a style sheet)
-    m.addSegment("RichTextArea ", null, "HEADER");
-    // add text segment using direct style
-    m.addSegment("Demo", "-fx-font-size:200%;", null);
-    // newline
-    m.nl();
-
-    RichTextArea t = new RichTextArea(m);
-</code>
-</pre>
+ * Provides two controls for displaying and editing large, virtualized, rich text documents:
+ * {@link jfx.incubator.scene.control.rich.RichTextArea RichTextArea} and
+ * {@link jfx.incubator.scene.control.rich.CodeArea CodeArea}.
+ * <p>
+ * While {@code RichTextArea} works with styled text and embedded Nodes,
+ * the {@code CodeArea} is optimized for plain text documents with syntax highlighting.
+ * <p>
  * <b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
  * Will be removed in a future release.</b>
  *
