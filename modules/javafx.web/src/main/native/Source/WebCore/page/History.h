@@ -41,7 +41,7 @@ class History final : public ScriptWrappable, public RefCounted<History>, public
 public:
     static Ref<History> create(LocalDOMWindow& window) { return adoptRef(*new History(window)); }
 
-    unsigned length() const;
+    ExceptionOr<unsigned> length() const;
 
     enum class ScrollRestoration {
         Auto,
@@ -51,28 +51,28 @@ public:
     ExceptionOr<ScrollRestoration> scrollRestoration() const;
     ExceptionOr<void> setScrollRestoration(ScrollRestoration);
 
-    SerializedScriptValue* state();
+    ExceptionOr<SerializedScriptValue*> state();
     JSValueInWrappedObject& cachedState();
     JSValueInWrappedObject& cachedStateForGC() { return m_cachedState; }
 
-    void back();
-    void forward();
-    void go(int);
+    ExceptionOr<void> back();
+    ExceptionOr<void> forward();
+    ExceptionOr<void> go(int);
 
-    void back(Document&);
-    void forward(Document&);
-    void go(Document&, int);
+    ExceptionOr<void> back(Document&);
+    ExceptionOr<void> forward(Document&);
+    ExceptionOr<void> go(Document&, int);
 
     bool isSameAsCurrentState(SerializedScriptValue*) const;
 
-    ExceptionOr<void> pushState(RefPtr<SerializedScriptValue>&& data, const String& title, const String& urlString);
-    ExceptionOr<void> replaceState(RefPtr<SerializedScriptValue>&& data, const String& title, const String& urlString);
+    ExceptionOr<void> pushState(RefPtr<SerializedScriptValue>&& data, const String&, const String& urlString);
+    ExceptionOr<void> replaceState(RefPtr<SerializedScriptValue>&& data, const String&, const String& urlString);
 
 private:
     explicit History(LocalDOMWindow&);
 
     enum class StateObjectType { Push, Replace };
-    ExceptionOr<void> stateObjectAdded(RefPtr<SerializedScriptValue>&&, const String& title, const String& url, StateObjectType);
+    ExceptionOr<void> stateObjectAdded(RefPtr<SerializedScriptValue>&&, const String& url, StateObjectType);
     bool stateChanged() const;
 
     URL urlForState(const String& url);
@@ -92,14 +92,14 @@ private:
     uint64_t m_mostRecentStateObjectUsage { 0 };
 };
 
-inline ExceptionOr<void> History::pushState(RefPtr<SerializedScriptValue>&& data, const String& title, const String& urlString)
+inline ExceptionOr<void> History::pushState(RefPtr<SerializedScriptValue>&& data, const String&, const String& urlString)
 {
-    return stateObjectAdded(WTFMove(data), title, urlString, StateObjectType::Push);
+    return stateObjectAdded(WTFMove(data), urlString, StateObjectType::Push);
 }
 
-inline ExceptionOr<void> History::replaceState(RefPtr<SerializedScriptValue>&& data, const String& title, const String& urlString)
+inline ExceptionOr<void> History::replaceState(RefPtr<SerializedScriptValue>&& data, const String&, const String& urlString)
 {
-    return stateObjectAdded(WTFMove(data), title, urlString, StateObjectType::Replace);
+    return stateObjectAdded(WTFMove(data), urlString, StateObjectType::Replace);
 }
 
 } // namespace WebCore

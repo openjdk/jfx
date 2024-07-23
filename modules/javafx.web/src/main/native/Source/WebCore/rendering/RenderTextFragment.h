@@ -59,8 +59,6 @@ public:
 private:
     void setTextInternal(const String&, bool force) override;
 
-    bool isTextFragment() const override { return true; }
-
     UChar previousCharacter() const override;
 
     unsigned m_start;
@@ -68,12 +66,16 @@ private:
     // Alternative description that can be used for accessibility instead of the native text.
     String m_altText;
     String m_contentString;
-    WeakPtr<RenderBoxModelObject> m_firstLetter;
+    SingleThreadWeakPtr<RenderBoxModelObject> m_firstLetter;
 };
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::RenderTextFragment)
-    static bool isType(const WebCore::RenderText& renderer) { return renderer.isTextFragment(); }
-    static bool isType(const WebCore::RenderObject& renderer) { return is<WebCore::RenderText>(renderer) && isType(downcast<WebCore::RenderText>(renderer)); }
+    static bool isType(const WebCore::RenderText& renderer) { return renderer.isRenderTextFragment(); }
+    static bool isType(const WebCore::RenderObject& renderer)
+    {
+        auto* text = dynamicDowncast<WebCore::RenderText>(renderer);
+        return text && isType(*text);
+    }
 SPECIALIZE_TYPE_TRAITS_END()

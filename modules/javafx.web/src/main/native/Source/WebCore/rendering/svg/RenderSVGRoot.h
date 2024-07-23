@@ -30,7 +30,6 @@
 
 namespace WebCore {
 
-class RenderSVGResourceContainer;
 class RenderSVGViewportContainer;
 class SVGSVGElement;
 
@@ -58,16 +57,12 @@ public:
 
     bool hasRelativeDimensions() const final;
 
-    // The flag is cleared at the beginning of each layout() pass. Elements then call this
-    // method during layout when they are invalidated by a filter.
-    static void addResourceForClientInvalidation(RenderSVGResourceContainer*);
-
     bool shouldApplyViewportClip() const;
 
     FloatRect objectBoundingBox() const final { return m_objectBoundingBox; }
     FloatRect objectBoundingBoxWithoutTransformations() const final { return m_objectBoundingBoxWithoutTransformations; }
-    FloatRect strokeBoundingBox() const final { return m_strokeBoundingBox; }
-    FloatRect repaintRectInLocalCoordinates() const final { return SVGBoundingBoxComputation::computeRepaintBoundingBox(*this); }
+    FloatRect strokeBoundingBox() const final;
+    FloatRect repaintRectInLocalCoordinates(RepaintRectCalculation = RepaintRectCalculation::Fast) const final { return SVGBoundingBoxComputation::computeRepaintBoundingBox(*this); }
 
     LayoutRect visualOverflowRectEquivalent() const { return SVGBoundingBoxComputation::computeVisualOverflowRect(*this); }
 
@@ -76,7 +71,6 @@ public:
 private:
     void element() const = delete;
 
-    bool isSVGRoot() const final { return true; }
     ASCIILiteral renderName() const final { return "RenderSVGRoot"_s; }
     bool requiresLayer() const final { return true; }
 
@@ -96,10 +90,6 @@ private:
 
     void willBeDestroyed() final;
 
-    void insertedIntoTree(IsInternalMove) final;
-    void willBeRemovedFromTree(IsInternalMove) final;
-
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
     void updateFromStyle() final;
     bool needsHasSVGTransformFlags() const final;
     void updateLayerTransform() final;
@@ -109,7 +99,6 @@ private:
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) final;
 
     LayoutRect overflowClipRect(const LayoutPoint& location, RenderFragmentContainer* = nullptr, OverlayScrollbarSizeRelevancy = IgnoreOverlayScrollbarSize, PaintPhase = PaintPhase::BlockBackground) const final;
-    LayoutRect clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const final;
 
     void mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const final;
 
@@ -126,12 +115,11 @@ private:
     IntSize m_containerSize;
     FloatRect m_objectBoundingBox;
     FloatRect m_objectBoundingBoxWithoutTransformations;
-    FloatRect m_strokeBoundingBox;
-    WeakHashSet<RenderSVGResourceContainer> m_resourcesNeedingToInvalidateClients;
+    mutable Markable<FloatRect, FloatRect::MarkableTraits> m_strokeBoundingBox;
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGRoot, isSVGRoot())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGRoot, isRenderSVGRoot())
 
 #endif // ENABLE(LAYER_BASED_SVG_ENGINE)

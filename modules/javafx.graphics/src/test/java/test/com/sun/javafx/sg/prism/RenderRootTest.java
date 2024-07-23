@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -138,7 +138,7 @@ public class RenderRootTest extends NGTestBase {
      */
     @Test
     public void dirtyRegionWithinOpaqueRegion_Clean() {
-        root.clearDirtyTree();
+        root.clearDirty();
         NodePath rootPath = getRenderRoot(root, 20, 20, 70, 70);
         assertRenderRoot(null, rootPath);
     }
@@ -159,7 +159,7 @@ public class RenderRootTest extends NGTestBase {
      */
     @Test
     public void dirtyRegionMatchesOpaqueRegion_Clean() {
-        root.clearDirtyTree();
+        root.clearDirty();
         NodePath rootPath = getRenderRoot(root, 10, 10, 90, 90);
         assertRenderRoot(null, rootPath);
     }
@@ -180,7 +180,7 @@ public class RenderRootTest extends NGTestBase {
      */
     @Test
     public void dirtyRegionWithinOpaqueRegionTouchesTop_Clean() {
-        root.clearDirtyTree();
+        root.clearDirty();
         NodePath rootPath = getRenderRoot(root, 20, 10, 70, 70);
         assertRenderRoot(null, rootPath);
     }
@@ -200,7 +200,7 @@ public class RenderRootTest extends NGTestBase {
      */
     @Test
     public void dirtyRegionWithinOpaqueRegionTouchesRight_Clean() {
-        root.clearDirtyTree();
+        root.clearDirty();
         NodePath rootPath = getRenderRoot(root, 20, 20, 80, 70);
         assertRenderRoot(null, rootPath);
     }
@@ -221,7 +221,7 @@ public class RenderRootTest extends NGTestBase {
      */
     @Test
     public void dirtyRegionWithinOpaqueRegionTouchesBottom_Clean() {
-        root.clearDirtyTree();
+        root.clearDirty();
         NodePath rootPath = getRenderRoot(root, 20, 20, 70, 80);
         assertRenderRoot(null, rootPath);
     }
@@ -242,7 +242,7 @@ public class RenderRootTest extends NGTestBase {
      */
     @Test
     public void dirtyRegionWithinOpaqueRegionTouchesLeft_Clean() {
-        root.clearDirtyTree();
+        root.clearDirty();
         NodePath rootPath = getRenderRoot(root, 10, 20, 70, 70);
         assertRenderRoot(null, rootPath);
     }
@@ -255,7 +255,7 @@ public class RenderRootTest extends NGTestBase {
 
     @Test
     public void opaqueRegionWithinDirtyRegion_Clean() {
-        root.clearDirtyTree();
+        root.clearDirty();
         NodePath rootPath = getRenderRoot(root, 0, 0, 110, 110);
         assertRenderRoot(root, rootPath);
     }
@@ -268,7 +268,7 @@ public class RenderRootTest extends NGTestBase {
 
     @Test
     public void dirtyRegionIntersectsOpaqueRegionTop_Clean() {
-        root.clearDirtyTree();
+        root.clearDirty();
         NodePath rootPath = getRenderRoot(root, 20, 0, 70, 30);
         assertRenderRoot(root, rootPath);
     }
@@ -281,7 +281,7 @@ public class RenderRootTest extends NGTestBase {
 
     @Test
     public void dirtyRegionIntersectsOpaqueRegionRight_Clean() {
-        root.clearDirtyTree();
+        root.clearDirty();
         NodePath rootPath = getRenderRoot(root, 90, 20, 30, 70);
         assertRenderRoot(root, rootPath);
     }
@@ -294,7 +294,7 @@ public class RenderRootTest extends NGTestBase {
 
     @Test
     public void dirtyRegionIntersectsOpaqueRegionBottom_Clean() {
-        root.clearDirtyTree();
+        root.clearDirty();
         NodePath rootPath = getRenderRoot(root, 20, 90, 70, 30);
         assertRenderRoot(root, rootPath);
     }
@@ -307,7 +307,7 @@ public class RenderRootTest extends NGTestBase {
 
     @Test
     public void dirtyRegionIntersectsOpaqueRegionLeft_Clean() {
-        root.clearDirtyTree();
+        root.clearDirty();
         NodePath rootPath = getRenderRoot(root, 0, 20, 30, 70);
         assertRenderRoot(root, rootPath);
     }
@@ -320,7 +320,7 @@ public class RenderRootTest extends NGTestBase {
 
     @Test
     public void dirtyRegionCompletelyOutsideOfOpaqueRegion_Clean() {
-        root.clearDirtyTree();
+        root.clearDirty();
         NodePath rootPath = getRenderRoot(root, 0, 0, 5, 5);
         assertRenderRoot(root, rootPath);
     }

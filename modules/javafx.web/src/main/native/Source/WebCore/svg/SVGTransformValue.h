@@ -1,7 +1,8 @@
 /*
  * Copyright (C) 2004, 2005, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005 Rob Buis <buis@kde.org>
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2014 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -188,7 +189,7 @@ public:
     String valueAsString() const
     {
         StringBuilder builder;
-        builder.append(prefixForTransfromType(m_type));
+        builder.append(prefixForTransformType(m_type));
         switch (m_type) {
         case SVG_TRANSFORM_UNKNOWN:
             break;
@@ -214,7 +215,7 @@ public:
         return builder.toString();
     }
 
-    static const char* prefixForTransfromType(SVGTransformType type)
+    static const char* prefixForTransformType(SVGTransformType type)
     {
         switch (type) {
         case SVG_TRANSFORM_UNKNOWN:
@@ -264,7 +265,7 @@ private:
 
     void appendScale(StringBuilder& builder) const
     {
-        appendFixedPrecisionNumbers(builder, m_matrix->value().xScale(), m_matrix->value().yScale());
+        appendFixedPrecisionNumbers(builder, m_matrix->a(), m_matrix->d());
     }
 
     void appendRotate(StringBuilder& builder) const

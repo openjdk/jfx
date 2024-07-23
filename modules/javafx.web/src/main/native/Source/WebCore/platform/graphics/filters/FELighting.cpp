@@ -29,13 +29,14 @@
 #include "config.h"
 #include "FELighting.h"
 
-#include "FELightingSoftwareApplier.h"
+#include "FELightingNeonParallelApplier.h"
+#include "FELightingSoftwareParallelApplier.h"
 #include "Filter.h"
 
 namespace WebCore {
 
-FELighting::FELighting(Type type, const Color& lightingColor, float surfaceScale, float diffuseConstant, float specularConstant, float specularExponent, float kernelUnitLengthX, float kernelUnitLengthY, Ref<LightSource>&& lightSource)
-    : FilterEffect(type)
+FELighting::FELighting(Type type, const Color& lightingColor, float surfaceScale, float diffuseConstant, float specularConstant, float specularExponent, float kernelUnitLengthX, float kernelUnitLengthY, Ref<LightSource>&& lightSource, DestinationColorSpace colorSpace)
+    : FilterEffect(type, colorSpace)
     , m_lightingColor(lightingColor)
     , m_surfaceScale(surfaceScale)
     , m_diffuseConstant(std::max(diffuseConstant, 0.0f))
@@ -103,7 +104,11 @@ FloatRect FELighting::calculateImageRect(const Filter& filter, std::span<const F
 
 std::unique_ptr<FilterEffectApplier> FELighting::createSoftwareApplier() const
 {
-    return FilterEffectApplier::create<FELightingSoftwareApplier>(*this);
+#if (CPU(ARM_NEON) && CPU(ARM_TRADITIONAL) && COMPILER(GCC_COMPATIBLE))
+    return FilterEffectApplier::create<FELightingNeonParallelApplier>(*this);
+#else
+    return FilterEffectApplier::create<FELightingSoftwareParallelApplier>(*this);
+#endif
 }
 
 } // namespace WebCore

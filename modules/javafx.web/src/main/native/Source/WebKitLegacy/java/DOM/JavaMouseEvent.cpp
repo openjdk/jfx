@@ -95,10 +95,11 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getMetaKeyImpl
     return IMPL->metaKey();
 }
 
-JNIEXPORT jshort JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getButtonImpl(JNIEnv*, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getButtonImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->button();
+        int16_t button = enumToUnderlyingType(IMPL->button());
+    return button;
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getRelatedTargetImpl(JNIEnv* env, jclass, jlong peer)
@@ -118,8 +119,8 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getOffsetYImpl(JNI
     WebCore::JSMainThreadNullState state;
     return IMPL->offsetY();
 }
-
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getXImpl(JNIEnv*, jclass, jlong peer)
+//This code has been commented as the corresponding apis have been removed
+/*JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getXImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->x();
@@ -129,7 +130,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getYImpl(JNIEnv*, 
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->y();
-}
+}*/
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getFromElementImpl(JNIEnv* env, jclass, jlong peer)
 {

@@ -36,9 +36,12 @@
 #include <wtf/StdLibExtras.h>
 
 namespace JSC { namespace Wasm {
+
+#if ENABLE(WEBASSEMBLY_OMGJIT) || ENABLE(WEBASSEMBLY_BBQJIT)
 namespace WasmCallsiteCollectionInternal {
 static constexpr bool verbose = false;
 }
+#endif
 
 void CallsiteCollection::addCallsites(const AbstractLocker& calleeGroupLocker, CalleeGroup& calleeGroup, const FixedVector<UnlinkedWasmToWasmCall>& callsites)
 {
@@ -69,7 +72,7 @@ void CallsiteCollection::addCalleeGroupCallsites(const AbstractLocker& calleeGro
     m_calleeGroupCallsites = WTFMove(callsitesList);
 }
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
+#if ENABLE(WEBASSEMBLY_OMGJIT) || ENABLE(WEBASSEMBLY_BBQJIT)
 void CallsiteCollection::updateCallsitesToCallUs(const AbstractLocker& calleeGroupLocker, CalleeGroup& calleeGroup, CodeLocationLabel<WasmEntryPtrTag> entrypoint, uint32_t functionIndex, uint32_t functionIndexSpace)
 {
     UNUSED_PARAM(calleeGroupLocker);
@@ -85,6 +88,7 @@ void CallsiteCollection::updateCallsitesToCallUs(const AbstractLocker& calleeGro
     WTF::storeStoreFence(); // This probably isn't necessary but it's good to be paranoid.
 
     calleeGroup.m_wasmIndirectCallEntryPoints[functionIndex] = entrypoint;
+    calleeGroup.m_wasmIndirectCallWasmCallees[functionIndex] = nullptr;
 
     for (auto& callsite : m_callsites[functionIndex]) {
         dataLogLnIf(WasmCallsiteCollectionInternal::verbose, "Repatching call at: ", RawPointer(callsite.m_callLocation.dataLocation()), " to ", RawPointer(entrypoint.taggedPtr()));

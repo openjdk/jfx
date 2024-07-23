@@ -26,6 +26,7 @@
 #pragma once
 
 #include "RenderStyleConstants.h"
+#include "TextDirection.h"
 
 namespace WTF {
 class TextStream;
@@ -40,24 +41,31 @@ public:
     // Style data for Content-Distribution properties: align-content, justify-content.
     // <content-distribution> || [ <overflow-position>? && <content-position> ]
     constexpr StyleContentAlignmentData(ContentPosition position, ContentDistribution distribution, OverflowAlignment overflow = OverflowAlignment::Default)
-        : m_position(static_cast<uint16_t>(position))
-        , m_distribution(static_cast<uint16_t>(distribution))
-        , m_overflow(static_cast<uint16_t>(overflow))
+        : m_position(enumToUnderlyingType(position))
+        , m_distribution(enumToUnderlyingType(distribution))
+        , m_overflow(enumToUnderlyingType(overflow))
     {
     }
 
-    void setPosition(ContentPosition position) { m_position = static_cast<uint16_t>(position); }
-    void setDistribution(ContentDistribution distribution) { m_distribution = static_cast<uint16_t>(distribution); }
-    void setOverflow(OverflowAlignment overflow) { m_overflow = static_cast<uint16_t>(overflow); }
+    void setPosition(ContentPosition position) { m_position = enumToUnderlyingType(position); }
+    void setDistribution(ContentDistribution distribution) { m_distribution = enumToUnderlyingType(distribution); }
+    void setOverflow(OverflowAlignment overflow) { m_overflow = enumToUnderlyingType(overflow); }
 
     ContentPosition position() const { return static_cast<ContentPosition>(m_position); }
     ContentDistribution distribution() const { return static_cast<ContentDistribution>(m_distribution); }
     OverflowAlignment overflow() const { return static_cast<OverflowAlignment>(m_overflow); }
-
-    bool operator==(const StyleContentAlignmentData& o) const
+    bool isNormal() const
     {
-        return m_position == o.m_position && m_distribution == o.m_distribution && m_overflow == o.m_overflow;
+        return ContentPosition::Normal == static_cast<ContentPosition>(m_position)
+        && ContentDistribution::Default == static_cast<ContentDistribution>(m_distribution);
     }
+    bool isStartward(std::optional<TextDirection> leftRightAxisDirection = std::nullopt, bool isFlexReverse = false) const;
+    bool isEndward(std::optional<TextDirection> leftRightAxisDirection = std::nullopt, bool isFlexReverse = false) const;
+    // leftRightAxisDirection is only needed for justify-content (invalid for align-content).
+    // Pass std::nullopt if neither the inline axis nor the physical left-right axis matches the justify-content axis (e.g. in flexbox).
+    bool isCentered() const;
+
+    friend bool operator==(const StyleContentAlignmentData&, const StyleContentAlignmentData&) = default;
 
 private:
     uint16_t m_position : 4 { 0 }; // ContentPosition

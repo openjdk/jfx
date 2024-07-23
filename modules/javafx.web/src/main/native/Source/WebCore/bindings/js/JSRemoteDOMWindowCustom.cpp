@@ -38,6 +38,10 @@ bool JSRemoteDOMWindow::getOwnPropertySlot(JSObject* object, JSGlobalObject* lex
     if (std::optional<unsigned> index = parseIndex(propertyName))
         return getOwnPropertySlotByIndex(object, lexicalGlobalObject, index.value(), slot);
 
+    // FIXME (rdar://115751655): This should be replaced with a same-origin check between the active and target document.
+    if (propertyName == "$vm"_s)
+        return true;
+
     auto* thisObject = jsCast<JSRemoteDOMWindow*>(object);
     return jsLocalDOMWindowGetOwnPropertySlotRestrictedAccess<DOMWindowType::Remote>(thisObject, thisObject->wrapped(), *lexicalGlobalObject, propertyName, slot, String());
 }
@@ -46,11 +50,24 @@ bool JSRemoteDOMWindow::getOwnPropertySlotByIndex(JSObject* object, JSGlobalObje
 {
     VM& vm = lexicalGlobalObject->vm();
     auto* thisObject = jsCast<JSRemoteDOMWindow*>(object);
+    auto& window = thisObject->wrapped();
+    auto* frame = window.frame();
 
     // Indexed getters take precendence over regular properties, so caching would be invalid.
     slot.disableCaching();
 
-    // FIXME: Add support for indexed properties.
+    // These are also allowed cross-origin, so come before the access check.
+    if (frame && index < frame->tree().childCount()) {
+        // FIXME: <rdar://118263337> This should work also if it's a RemoteFrame, it should just return a RemoteDOMWindow.
+        // JSLocalDOMWindow::getOwnPropertySlotByIndex uses scopedChild. Investigate the difference.
+        if (auto* child = dynamicDowncast<LocalFrame>(frame->tree().child(index))) {
+            slot.setValue(thisObject, enumToUnderlyingType(JSC::PropertyAttribute::ReadOnly), toJS(lexicalGlobalObject, child->document()->domWindow()));
+            return true;
+        }
+    }
+
+    // FIXME: <rdar://118263337> Make this more like JSLocalDOMWindow::getOwnPropertySlotByIndex and share code when possible.
+    // There is some missing functionality here, and it is likely important.
 
     return jsLocalDOMWindowGetOwnPropertySlotRestrictedAccess<DOMWindowType::Remote>(thisObject, thisObject->wrapped(), *lexicalGlobalObject, Identifier::from(vm, index), slot, String());
 }
@@ -118,6 +135,21 @@ bool JSRemoteDOMWindow::defineOwnProperty(JSC::JSObject*, JSC::JSGlobalObject* l
     return false;
 }
 
+JSValue JSRemoteDOMWindow::self(JSC::JSGlobalObject&) const
+{
+    return globalThis();
+}
+
+JSValue JSRemoteDOMWindow::window(JSC::JSGlobalObject&) const
+{
+    return globalThis();
+}
+
+JSValue JSRemoteDOMWindow::frames(JSC::JSGlobalObject&) const
+{
+    return globalThis();
+}
+
 JSValue JSRemoteDOMWindow::getPrototype(JSObject*, JSGlobalObject*)
 {
     return jsNull();
@@ -126,6 +158,11 @@ JSValue JSRemoteDOMWindow::getPrototype(JSObject*, JSGlobalObject*)
 bool JSRemoteDOMWindow::preventExtensions(JSObject*, JSGlobalObject*)
 {
     return false;
+}
+
+void JSRemoteDOMWindow::setOpener(JSC::JSGlobalObject&, JSC::JSValue)
+{
+    // FIXME: <rdar://118263373> Implement, probably like JSLocalDOMWindow::setOpener.
 }
 
 } // namepace WebCore

@@ -39,7 +39,7 @@ class RenderBox;
 class RenderGrid;
 class RenderStyle;
 
-enum GridTrackSizingDirection {
+enum class GridTrackSizingDirection : uint8_t {
     ForColumns,
     ForRows
 };
@@ -49,6 +49,9 @@ class NamedLineCollectionBase {
 public:
     NamedLineCollectionBase(const RenderGrid&, const String& name, GridPositionSide, bool nameIsAreaName);
 
+
+    bool hasNamedLines() const;
+    bool hasExplicitNamedLines() const;
     bool contains(unsigned line) const;
 protected:
 
@@ -73,15 +76,11 @@ class NamedLineCollection : public NamedLineCollectionBase {
 public:
     NamedLineCollection(const RenderGrid&, const String& name, GridPositionSide, bool nameIsAreaName = false);
 
-    bool hasNamedLines() const;
     int firstPosition() const;
-
-    bool contains(unsigned line) const;
 
     unsigned lastLine() const;
 
 private:
-    bool hasExplicitNamedLines() const;
     int firstExplicitPosition() const;
 };
 
