@@ -37,10 +37,13 @@ import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodRequests;
 
 /**
- * Used to manage a collection of scenes which must coordinate on enabling input
- * method events and retrieving InputMethodRequests. This occurs when a stack of
- * PopupWindows are present; the PopupWindows do not have the OS focus and rely
- * on events first being posted to the root (non-popup) window.
+ * Used to manage a collection of scenes which must coordinate enabling input
+ * method events and retrieving InputMethodRequests. PopupWindows do not have
+ * the OS focus and rely on events being posted first to a root
+ * (non-popup) scene and then routed through the PopupWindow stack. If any
+ * PopupWindow requires input method events they must be enabled on the root
+ * scene and input method requests from that scene must be routed to the
+ * PopupWindow.
  */
 public class InputMethodStateManager {
     /**
@@ -50,8 +53,7 @@ public class InputMethodStateManager {
     private final WeakReference<Scene> rootScene;
 
     /**
-     * The scene for which we enabled input method events and which
-     * is presumably processing them.
+     * The scene for which we enabled input method events.
      */
     private Scene currentEventScene;
 
@@ -60,6 +62,10 @@ public class InputMethodStateManager {
      */
     private final LinkedList<Scene> scenes = new LinkedList<Scene>();
 
+    /**
+     * We listen for changes to the input method requests configuration
+     * on every scene in the stack.
+     */
     private final ChangeListener<InputMethodRequests> inputMethodRequestsChangedListener =
         (obs, old, current) -> updateInputMethodEventEnableState();
     private final ChangeListener<EventHandler<? super InputMethodEvent>> onInputMethodTextChangedListener =
@@ -71,7 +77,7 @@ public class InputMethodStateManager {
         new WeakChangeListener(onInputMethodTextChangedListener);
 
     /**
-     * Constructs a new instance.
+     * Constructs a new instance. Only root (non-popup) scenes should do this.
      *
      * @param scene the root {@link Scene} for which input methods should be enabled and disabled
      */
@@ -100,7 +106,7 @@ public class InputMethodStateManager {
 
         /**
          * If this scene is going away we should cleanup any composition
-         * state. This is not normally done when a window is hidden.
+         * state. Hiding a window doesn't ensure proper cleanup.
          */
         SceneHelper.finishInputMethodComposition(rootScene.get());
 
@@ -115,7 +121,7 @@ public class InputMethodStateManager {
     }
 
     /**
-     * Every Scene is expected to call this when the focusOwner changes. At this
+     * Every Scene must call this when the focusOwner changes.
      */
     public void focusOwnerChanged(Node oldFocusOwner, Node newFocusOwner) {
         if (oldFocusOwner != null) {
