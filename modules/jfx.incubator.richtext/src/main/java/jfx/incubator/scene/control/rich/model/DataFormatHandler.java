@@ -62,8 +62,12 @@ public abstract class DataFormatHandler {
      * @throws IOException when an I/O error occurs
      */
     // TODO throw UnsupportedMethodException if export operation is not supported?
-    public abstract Object copy(StyledTextModel model, StyleResolver resolver, TextPos start, TextPos end)
-        throws IOException;
+    public abstract Object copy(
+        StyledTextModel model,
+        StyleResolver resolver,
+        TextPos start,
+        TextPos end
+    ) throws IOException;
 
     /**
      * Save the text range in the handler's format to the output stream (e.g. save to file).
@@ -86,7 +90,8 @@ public abstract class DataFormatHandler {
         StyleResolver resolver,
         TextPos start,
         TextPos end,
-        OutputStream out) throws IOException;
+        OutputStream out
+    ) throws IOException;
 
     private final DataFormat format;
 

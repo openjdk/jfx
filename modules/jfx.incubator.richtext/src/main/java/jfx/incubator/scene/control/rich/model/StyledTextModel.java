@@ -213,14 +213,22 @@ public abstract class StyledTextModel {
     public abstract StyleAttributeMap getStyleAttributeMap(StyleResolver resolver, TextPos pos);
 
     /**
-     * Returns the set of supported attributes to be used for filtering in
+     * Returns the set of attributes supported attributes.  When this method returns a non-null set,
+     * it will be used by the methods which handle the
+     * external input for the purpose of filtering out the attributes the model cannot understand, preventing
+     * the attributes from being added to the model (for example, as a result of pasting from the system
+     * clipboard).
+     * <p>
+     * The methods that utilize the filtering are:
      * {@link #applyStyle(TextPos, TextPos, StyleAttributeMap, boolean)},
      * {@link #replace(StyleResolver, TextPos, TextPos, StyledInput, boolean)}, and
      * {@link #replace(StyleResolver, TextPos, TextPos, String, boolean)}.
      * <p>
-     * A {@code null} value disables filtering.
+     * When this method returns {@code null}, no filtering is performed.
+     * <p>
+     * This method might be overridden by certain models.  The base class implementation returns {@code null}.
      *
-     * @return the supported attributes, or null
+     * @return the set of supported attributes, or null if the model requires no filtering
      */
     protected Set<StyleAttribute<?>> getSupportedAttributes() {
         return null;
@@ -270,7 +278,7 @@ public abstract class StyledTextModel {
      *
      * @param listener a non-null listener
      */
-    public void addListener(StyledTextModel.Listener listener) {
+    public final void addListener(StyledTextModel.Listener listener) {
         listeners.add(listener);
     }
 
@@ -281,7 +289,7 @@ public abstract class StyledTextModel {
      *
      * @param listener a non-null listener
      */
-    public void removeListener(StyledTextModel.Listener listener) {
+    public final void removeListener(StyledTextModel.Listener listener) {
         listeners.remove(listener);
     }
 
@@ -297,7 +305,7 @@ public abstract class StyledTextModel {
      * @param forImport true if the handler supports import operations
      * @param priority from 0 (lowest, usually plain text) to {@code Integer.MAX_VALUE}
      */
-    protected void registerDataFormatHandler(DataFormatHandler h, boolean forExport, boolean forImport, int priority) {
+    protected final void registerDataFormatHandler(DataFormatHandler h, boolean forExport, boolean forImport, int priority) {
         FHPriority p = new FHPriority(h, priority);
         if (forExport) {
             handlers.put(new FHKey(h.getDataFormat(), true), p);
@@ -315,7 +323,7 @@ public abstract class StyledTextModel {
      * @param forExport whether to remove an export handler
      * @param forImport whether to remove an import handler
      */
-    protected void removeDataFormatHandler(DataFormat f, boolean forExport, boolean forImport) {
+    protected final void removeDataFormatHandler(DataFormat f, boolean forExport, boolean forImport) {
         if (forExport) {
             handlers.remove(new FHKey(f, true));
         }
@@ -330,7 +338,7 @@ public abstract class StyledTextModel {
      * @param forExport determines whether the operation is export (true) or import (false)
      * @return supported formats
      */
-    public DataFormat[] getSupportedDataFormats(boolean forExport) {
+    public final DataFormat[] getSupportedDataFormats(boolean forExport) {
         ArrayList<FHPriority> fs = new ArrayList<>(handlers.size());
         handlers.forEach((k, p) -> {
             if (k.forExport == forExport) {
@@ -354,7 +362,7 @@ public abstract class StyledTextModel {
      * @param forExport for export (true) or for input (false)
      * @return DataFormatHandler or null
      */
-    public DataFormatHandler getDataFormatHandler(DataFormat format, boolean forExport) {
+    public final DataFormatHandler getDataFormatHandler(DataFormat format, boolean forExport) {
         FHKey k = new FHKey(format, forExport);
         FHPriority p = handlers.get(k);
         return p == null ? null : p.handler();
@@ -411,7 +419,7 @@ public abstract class StyledTextModel {
      * @throws IOException when an I/O error occurs
      * @see #replace(StyleResolver, TextPos, TextPos, StyledInput, boolean)
      */
-    public void export(TextPos start, TextPos end, StyledOutput out) throws IOException {
+    public final void export(TextPos start, TextPos end, StyledOutput out) throws IOException {
         int cmp = start.compareTo(end);
         if (cmp > 0) {
             // make sure start < end
@@ -473,7 +481,7 @@ public abstract class StyledTextModel {
      * @param out the target StyledOutput
      * @throws IOException when an I/O error occurs
      */
-    protected void exportParagraph(int index, int start, int end, boolean withParAttrs, StyledOutput out) throws IOException {
+    protected final void exportParagraph(int index, int start, int end, boolean withParAttrs, StyledOutput out) throws IOException {
         RichParagraph par = getParagraph(index);
         par.export(start, end, out);
         if (withParAttrs) {
@@ -490,7 +498,7 @@ public abstract class StyledTextModel {
      * @param pos text position
      * @return Marker instance
      */
-    public Marker getMarker(TextPos pos) {
+    public final Marker getMarker(TextPos pos) {
         TextPos p = clamp(pos);
         return markers.getMarker(p);
     }
@@ -501,7 +509,7 @@ public abstract class StyledTextModel {
      * @param p text position, cannot be null
      * @return text position
      */
-    public TextPos clamp(TextPos p) {
+    public final TextPos clamp(TextPos p) {
         Objects.nonNull(p);
         int ct = size();
         int ix = p.index();
@@ -532,7 +540,7 @@ public abstract class StyledTextModel {
      * @return the text position
      * @see TextPos#ZERO
      */
-    public TextPos getDocumentEnd() {
+    public final TextPos getDocumentEnd() {
         int ix = size() - 1;
         if (ix < 0) {
             return TextPos.ZERO;
@@ -547,7 +555,7 @@ public abstract class StyledTextModel {
      * @param index the paragraph index
      * @return the text position
      */
-    public TextPos getEndOfParagraphTextPos(int index) {
+    public final TextPos getEndOfParagraphTextPos(int index) {
         int off = getParagraphLength(index);
         int cix = off - 1;
         if (cix < 0) {
@@ -572,7 +580,7 @@ public abstract class StyledTextModel {
      * @param allowUndo when true, creates an undo-redo entry
      * @return the text position at the end of the inserted text, or null if the model is read only
      */
-    public TextPos replace(StyleResolver resolver, TextPos start, TextPos end, String text, boolean allowUndo) {
+    public final TextPos replace(StyleResolver resolver, TextPos start, TextPos end, String text, boolean allowUndo) {
         if (isUserEditable()) {
             // TODO pick the lowest from start,end.  Possibly add (end) argument to getStyleAttributes?
             StyleAttributeMap a = getStyleAttributeMap(resolver, start);
@@ -596,7 +604,7 @@ public abstract class StyledTextModel {
      * @param allowUndo when true, creates an undo-redo entry
      * @return the text position at the end of the inserted text, or null if the model is read only
      */
-    public TextPos replace(StyleResolver resolver, TextPos start, TextPos end, StyledInput input, boolean allowUndo) {
+    public final TextPos replace(StyleResolver resolver, TextPos start, TextPos end, StyledInput input, boolean allowUndo) {
         if (isUserEditable()) {
             // TODO clamp to document boundaries
             int cmp = start.compareTo(end);
@@ -767,7 +775,7 @@ public abstract class StyledTextModel {
     /**
      * Clears the undo-redo stack.
      */
-    public void clearUndoRedo() {
+    public final void clearUndoRedo() {
         undo = head;
         updateUndoRedo();
     }

@@ -43,10 +43,32 @@ import com.sun.jfx.incubator.scene.control.input.KeyEventMapper;
 import com.sun.jfx.incubator.scene.control.input.PHList;
 
 /**
- * InputMap is a class that is set on a given {@link Control}. When the Node receives
- * an input event from the system, it passes this event in to the InputMap where
- * the InputMap can check all installed mappings to see if there is any
- * suitable mapping, and if so, fire the provided {@link EventHandler}.
+ * InputMap is a property of the {@link Control} class which enables customization
+ * by allowing for custom key mappings and event handlers.
+ * <p>
+ * The {@code InputMap} serves as an integration point between the Control and its Skin.
+ * The {@code InputMap} The InputMap provides an ordered repository of event handlers,
+ * working together with {@link SkinInputMap} supplied by the skin, which
+ * guarantees the order in which handers are invoked.
+ * It also stores key mappings with a similar guarantee that the application mappings
+ * always take precedence over mappings created by the skin,
+ * regardless of when the skin was created or replaced.
+ * <p>
+ * The class supports the following scenarios:
+ * <ul>
+ * <li>map a key binding to a function, provided either by the application or the skin
+ * <li>un-map a key binding
+ * <li>map a new function to an existing key binding
+ * <li>obtain the default function
+ * <li>add an event handler at specific priority (applies to application-defined and skin-defined handlers)
+ * <li>ensure that the application key mappings take priority over mappings created by the skin
+ * </ul>
+ * For key mappings, the {@code InputMap} utilizes a two-stage lookup.
+ * First, the key event is matched to a {@link FunctionTag} which identifies a function provided either by the skin
+ * or the associated behavior (the "default" function), or by the application.
+ * When such a mapping exists, the found function tag is matched to a function registered either by
+ * the application or by the skin.
+ * This mechanism allows for customizing the key mappings and the underlying functions independently and separately.
  *
  * @since 999 TODO
  */
