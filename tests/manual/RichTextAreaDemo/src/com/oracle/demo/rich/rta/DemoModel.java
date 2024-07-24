@@ -26,8 +26,6 @@ package com.oracle.demo.rich.rta;
 import java.util.Arrays;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleStringProperty;
-import jfx.incubator.scene.control.rich.model.RichTextFormatHandler;
-import jfx.incubator.scene.control.rich.model.SimpleViewOnlyStyledModel;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
@@ -35,6 +33,8 @@ import javafx.scene.layout.Background;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
+import jfx.incubator.scene.control.rich.model.RichTextFormatHandler;
+import jfx.incubator.scene.control.rich.model.SimpleViewOnlyStyledModel;
 
 /**
  * RichTextArea demo model.
@@ -173,7 +173,7 @@ public class DemoModel extends SimpleViewOnlyStyledModel {
         addSegment("\t\t終 The End.", "-fx-font-size:200%;");
         nl();
 
-        registerDataFormatHandler(new RichTextFormatHandler(), true, false, 2000);
+        registerDataFormatHandler(RichTextFormatHandler.INSTANCE, true, false, 2000);
     }
 
     private Region createRect() {

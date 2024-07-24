@@ -115,19 +115,14 @@ public class RichTextFormatHandler extends DataFormatHandler {
     // StyleAttribute -> Handler
     private final HashMap<Object,Handler> handlers = new HashMap<>(64);
 
-    /**
-     * Constructs a new instance.
-     */
-    public RichTextFormatHandler() {
-        this(DATA_FORMAT);
-    }
+    /** The singleton instance of {@code RtfFormatHandler}. */ 
+    public static final RichTextFormatHandler INSTANCE = new RichTextFormatHandler();
 
     /**
-     * Constructs a new instance.
-     * @param format the data format
+     * Constructor.
      */
-    public RichTextFormatHandler(DataFormat format) {
-        super(format);
+    private RichTextFormatHandler() {
+        super(DATA_FORMAT);
 
         addHandlerBoolean(StyleAttributeMap.BOLD, "b");
         addHandler(StyleAttributeMap.BACKGROUND, "bg", COLOR_CONVERTER);

@@ -37,8 +37,11 @@ import jfx.incubator.scene.control.rich.TextPos;
  * {@link DataFormatHandler} which operates with plain text.
  */
 public class PlainTextFormatHandler extends DataFormatHandler {
+    /** The singleton instance of {@code PlainTextFormatHandler}. */ 
+    public static final PlainTextFormatHandler INSTANCE = new PlainTextFormatHandler();
+
     /** The constructor. */
-    public PlainTextFormatHandler() {
+    private PlainTextFormatHandler() {
         super(DataFormat.PLAIN_TEXT);
     }
 

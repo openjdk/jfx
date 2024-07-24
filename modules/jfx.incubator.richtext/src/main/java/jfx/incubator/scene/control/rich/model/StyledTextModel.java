@@ -268,9 +268,9 @@ public abstract class StyledTextModel {
      * This constructor registers data handlers for RTF, HTML (export only), and plain text.
      */
     public StyledTextModel() {
-        registerDataFormatHandler(new RtfFormatHandler(), true, false, 1000);
-        registerDataFormatHandler(new HtmlExportFormatHandler(), true, false, 100);
-        registerDataFormatHandler(new PlainTextFormatHandler(), true, false, 0);
+        registerDataFormatHandler(RtfFormatHandler.INSTANCE, true, false, 1000);
+        registerDataFormatHandler(HtmlExportFormatHandler.INSTANCE, true, false, 100);
+        registerDataFormatHandler(PlainTextFormatHandler.INSTANCE, true, false, 0);
     }
 
     /**
@@ -294,17 +294,25 @@ public abstract class StyledTextModel {
     }
 
     /**
-     * Registers a format handler for either export and/or import operations.
-     * Priority determines the format chosen for operations with the {@link javafx.scene.input.Clipboard}
+     * Registers a format handler for export and/or import operations.
+     * The priority determines the format chosen for operations with the {@link javafx.scene.input.Clipboard}
      * when input data is available in more than one supported format.
+     * The handler with the highest priority will be used by
+     * {@link jfx.incubator.scene.control.rich.RichTextArea#read(InputStream)} and
+     * {@link jfx.incubator.scene.control.rich.RichTextArea#write(OutputStream)} methods.
      * <p>
-     * This method is expected to be called by a StyledTextModel implementation constructor.
+     * The same handler can be registered for input and export.  When registering multiple handlers
+     * for the same data handler and import/export, the last registered one wins. 
+     * <p>
+     * This method is expected to be called from a {@code StyledTextModel} child class constructor.
      *
      * @param h data format handler
      * @param forExport true if the handler supports export operations
      * @param forImport true if the handler supports import operations
      * @param priority from 0 (lowest, usually plain text) to {@code Integer.MAX_VALUE}
      */
+    // TODO this method could be made public to allow for adding new handlers to existing models
+    // such as RichTextModel.
     protected final void registerDataFormatHandler(DataFormatHandler h, boolean forExport, boolean forImport, int priority) {
         FHPriority p = new FHPriority(h, priority);
         if (forExport) {
@@ -320,8 +328,8 @@ public abstract class StyledTextModel {
      * {@link #registerDataFormatHandler(DataFormatHandler, boolean, boolean, int)}.
      *
      * @param f the data format
-     * @param forExport whether to remove an export handler
-     * @param forImport whether to remove an import handler
+     * @param forExport whether to remove the export handler
+     * @param forImport whether to remove the import handler
      */
     protected final void removeDataFormatHandler(DataFormat f, boolean forExport, boolean forImport) {
         if (forExport) {
@@ -335,6 +343,11 @@ public abstract class StyledTextModel {
     /**
      * Returns an array of supported data formats for either export or import operations,
      * in the order of priority - from high to low.
+     * <p>
+     * The top priority format will be used by
+     * {@link jfx.incubator.scene.control.rich.RichTextArea#read(InputStream)} and
+     * {@link jfx.incubator.scene.control.rich.RichTextArea#write(OutputStream)} methods.
+     *
      * @param forExport determines whether the operation is export (true) or import (false)
      * @return supported formats
      */

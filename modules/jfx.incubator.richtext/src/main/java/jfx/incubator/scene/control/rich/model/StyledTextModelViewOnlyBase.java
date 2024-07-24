@@ -37,7 +37,7 @@ import jfx.incubator.scene.control.rich.TextPos;
 public abstract class StyledTextModelViewOnlyBase extends StyledTextModel {
     /** The constructor. */
     public StyledTextModelViewOnlyBase() {
-        registerDataFormatHandler(new RichTextFormatHandler(), true, false, 2000);
+        registerDataFormatHandler(RichTextFormatHandler.INSTANCE, true, false, 2000);
     }
 
     @Override

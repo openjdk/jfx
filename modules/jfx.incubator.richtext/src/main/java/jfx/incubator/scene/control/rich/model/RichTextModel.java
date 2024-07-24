@@ -48,10 +48,10 @@ public class RichTextModel extends StyledTextModel {
      * Constructs the empty model.
      */
     public RichTextModel() {
-        registerDataFormatHandler(new RichTextFormatHandler(), true, true, 2000);
-        registerDataFormatHandler(new RtfFormatHandler(), true, true, 1000);
-        registerDataFormatHandler(new HtmlExportFormatHandler(), true, false, 100);
-        registerDataFormatHandler(new PlainTextFormatHandler(), true, true, 0);
+        registerDataFormatHandler(RichTextFormatHandler.INSTANCE, true, true, 2000);
+        registerDataFormatHandler(RtfFormatHandler.INSTANCE, true, true, 1000);
+        registerDataFormatHandler(HtmlExportFormatHandler.INSTANCE, true, false, 100);
+        registerDataFormatHandler(PlainTextFormatHandler.INSTANCE, true, true, 0);
         // always has at least one paragraph
         paragraphs.add(new RParagraph());
     }

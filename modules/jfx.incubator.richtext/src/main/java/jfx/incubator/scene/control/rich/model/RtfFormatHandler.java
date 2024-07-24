@@ -42,8 +42,11 @@ import jfx.incubator.scene.control.rich.TextPos;
  */
 // TODO import is not yet working...
 public class RtfFormatHandler extends DataFormatHandler {
+    /** The singleton instance of {@code RtfFormatHandler}. */ 
+    public static final RtfFormatHandler INSTANCE = new RtfFormatHandler();
+
     /** The constructor */
-    public RtfFormatHandler() {
+    private RtfFormatHandler() {
         super(DataFormat.RTF);
     }
 
