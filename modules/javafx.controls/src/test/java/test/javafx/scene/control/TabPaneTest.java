@@ -1342,5 +1342,4 @@ public class TabPaneTest {
             assertEquals(firstTabBounds.getMinY() - deltaY, newFirstTabBounds.getMinY(), 0);
         }
     }
-
 }
