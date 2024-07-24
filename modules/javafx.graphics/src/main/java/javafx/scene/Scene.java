@@ -2329,13 +2329,7 @@ public class Scene implements EventTarget {
         // This needs to be done before the focus owner is switched as it
         // generates event that needs to be delivered to the old focus owner.
         if (focusOwner.oldFocusOwner != null) {
-            final Scene s = getInputMethodStateManager().getRootScene();
-            if (s != null) {
-                final TKScene peer = s.getPeer();
-                if (peer != null) {
-                    peer.finishInputMethodComposition();
-                }
-            }
+            getInputMethodStateManager().focusOwnerWillChangeForScene(this);
         }
 
         // Store the current focusVisible state of the focus owner in case it needs to be

@@ -88,8 +88,7 @@ public class InputMethodStateManager {
     }
 
     /**
-     * Add a new Scene to the stack. It is assumed that Scenes form a stack
-     * and leave in LIFO order.
+     * Add a new Scene to the stack.
      */
     public void addScene(Scene scene) {
         if (scenes.contains(scene)) {
@@ -99,6 +98,9 @@ public class InputMethodStateManager {
         updateInputMethodEventEnableState();
     }
 
+    /**
+     * Remove a Scene from the stack.
+     */
     public void removeScene(Scene scene) {
         if (scene != scenes.peekFirst()) {
             System.err.println("Popup scene removed out of order");
@@ -118,6 +120,18 @@ public class InputMethodStateManager {
 
         scenes.remove(scene);
         updateInputMethodEventEnableState();
+    }
+
+    /**
+     * Every Scene must call this before the focusOwner changes.
+     */
+    public void focusOwnerWillChangeForScene(Scene scene) {
+        if (scene == currentEventScene) {
+            Scene root = rootScene.get();
+            if (root != null) {
+                SceneHelper.finishInputMethodComposition(root);
+            }
+        }
     }
 
     /**
