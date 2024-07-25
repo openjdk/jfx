@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
+#if ENABLE(WEBASSEMBLY_OMGJIT) || ENABLE(WEBASSEMBLY_BBQJIT)
 
 #include "AirCode.h"
 #include "B3StackmapGenerationParams.h"
@@ -40,7 +40,12 @@
 
 namespace JSC { namespace Wasm {
 
-struct PatchpointExceptionHandle {
+struct PatchpointExceptionHandleBase {
+    static constexpr unsigned s_invalidCallSiteIndex = std::numeric_limits<unsigned>::max();
+};
+
+#if ENABLE(WEBASSEMBLY_OMGJIT)
+struct PatchpointExceptionHandle : public PatchpointExceptionHandleBase {
     PatchpointExceptionHandle(std::optional<bool> hasExceptionHandlers)
         : m_hasExceptionHandlers(hasExceptionHandlers)
     { }
@@ -71,18 +76,21 @@ struct PatchpointExceptionHandle {
         jit.store32(CCallHelpers::TrustedImm32(m_callSiteIndex), CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
     }
 
-    static constexpr unsigned s_invalidCallSiteIndex = std::numeric_limits<unsigned>::max();
-
     std::optional<bool> m_hasExceptionHandlers;
     unsigned m_callSiteIndex { s_invalidCallSiteIndex };
     unsigned m_numLiveValues;
 };
+#else
+
+using PatchpointExceptionHandle = PatchpointExceptionHandleBase;
+
+#endif
 
 
 static inline void computeExceptionHandlerAndLoopEntrypointLocations(Vector<CodeLocationLabel<ExceptionHandlerPtrTag>>& handlers, Vector<CodeLocationLabel<WasmEntryPtrTag>>& loopEntrypoints, const InternalFunction* function, const CompilationContext& context, LinkBuffer& linkBuffer)
 {
     if (!context.procedure) {
-        ASSERT(Options::useSinglePassBBQJIT());
+        ASSERT(Options::useBBQJIT());
 
         for (auto label : function->bbqLoopEntrypoints)
             loopEntrypoints.append(linkBuffer.locationOf<WasmEntryPtrTag>(label));
@@ -97,6 +105,8 @@ static inline void computeExceptionHandlerAndLoopEntrypointLocations(Vector<Code
         }
         return;
     }
+
+#if ENABLE(WEBASSEMBLY_OMGJIT)
 
     unsigned entrypointIndex = 1;
     unsigned numEntrypoints = context.procedure->numEntrypoints();
@@ -113,6 +123,10 @@ static inline void computeExceptionHandlerAndLoopEntrypointLocations(Vector<Code
 
     for (; entrypointIndex < numEntrypoints; ++entrypointIndex)
         loopEntrypoints.append(linkBuffer.locationOf<WasmEntryPtrTag>(context.procedure->code().entrypointLabel(entrypointIndex)));
+#else
+    RELEASE_ASSERT_NOT_REACHED();
+#endif
+
 }
 
 static inline void computeExceptionHandlerLocations(Vector<CodeLocationLabel<ExceptionHandlerPtrTag>>& handlers, const InternalFunction* function, const CompilationContext& context, LinkBuffer& linkBuffer)
@@ -131,11 +145,8 @@ static inline void emitRethrowImpl(CCallHelpers& jit)
     jit.copyCalleeSavesToVMEntryFrameCalleeSavesBuffer(scratch);
 
     jit.prepareWasmCallOperation(GPRInfo::argumentGPR0);
-    CCallHelpers::Call call = jit.call(OperationPtrTag);
+    jit.callOperation<OperationPtrTag>(operationWasmRethrow);
     jit.farJump(GPRInfo::returnValueGPR, ExceptionHandlerPtrTag);
-    jit.addLinkTask([call] (LinkBuffer& linkBuffer) {
-        linkBuffer.link<OperationPtrTag>(call, operationWasmRethrow);
-    });
 }
 
 static inline void emitThrowImpl(CCallHelpers& jit, unsigned exceptionIndex)
@@ -151,20 +162,18 @@ static inline void emitThrowImpl(CCallHelpers& jit, unsigned exceptionIndex)
     jit.move(MacroAssembler::TrustedImm32(exceptionIndex), GPRInfo::argumentGPR1);
     jit.move(MacroAssembler::stackPointerRegister, GPRInfo::argumentGPR2);
     jit.prepareWasmCallOperation(GPRInfo::argumentGPR0);
-    CCallHelpers::Call call = jit.call(OperationPtrTag);
+    jit.callOperation<OperationPtrTag>(operationWasmThrow);
     jit.farJump(GPRInfo::returnValueGPR, ExceptionHandlerPtrTag);
-    jit.addLinkTask([call] (LinkBuffer& linkBuffer) {
-        linkBuffer.link<OperationPtrTag>(call, operationWasmThrow);
-    });
 }
 
+#if ENABLE(WEBASSEMBLY_OMGJIT)
 template<SavedFPWidth savedFPWidth>
 static inline void buildEntryBufferForCatch(Probe::Context& context)
 {
     unsigned valueSize = (savedFPWidth == SavedFPWidth::SaveVectors) ? 2 : 1;
     CallFrame* callFrame = context.fp<CallFrame*>();
     CallSiteIndex callSiteIndex = callFrame->callSiteIndex();
-    OptimizingJITCallee* callee = bitwise_cast<OptimizingJITCallee*>(callFrame->callee().asWasmCallee());
+    OptimizingJITCallee* callee = bitwise_cast<OptimizingJITCallee*>(callFrame->callee().asNativeCallee());
     const StackMap& stackmap = callee->stackmap(callSiteIndex);
     Instance* instance = context.gpr<Instance*>(GPRInfo::wasmContextInstancePointer);
     EncodedJSValue exception = context.gpr<EncodedJSValue>(GPRInfo::returnValueGPR);
@@ -183,6 +192,7 @@ static inline void buildEntryBufferForCatch(Probe::Context& context)
 
 static inline void buildEntryBufferForCatchSIMD(Probe::Context& context) { buildEntryBufferForCatch<SavedFPWidth::SaveVectors>(context); }
 static inline void buildEntryBufferForCatchNoSIMD(Probe::Context& context) { buildEntryBufferForCatch<SavedFPWidth::DontSaveVectors>(context); }
+
 
 static inline void prepareForTailCall(CCallHelpers& jit, const B3::StackmapGenerationParams& params, const Checked<int32_t>& tailCallStackOffsetFromFP)
 {
@@ -213,6 +223,7 @@ static inline void prepareForTailCall(CCallHelpers& jit, const B3::StackmapGener
     jit.addPtr(MacroAssembler::TrustedImm32(newStackOffset), MacroAssembler::stackPointerRegister);
 }
 
+#endif // ENABLE(WEBASSEMBLY_OMGJIT)
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY_B3JIT)
+#endif // ENABLE(WEBASSEMBLY_OMGJIT)

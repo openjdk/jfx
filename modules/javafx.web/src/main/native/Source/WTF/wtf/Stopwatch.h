@@ -32,7 +32,7 @@
 
 namespace WTF {
 
-class Stopwatch : public RefCounted<Stopwatch> {
+class Stopwatch final : public RefCounted<Stopwatch> {
 public:
     static Ref<Stopwatch> create()
     {
@@ -45,10 +45,11 @@ public:
 
     Seconds elapsedTime() const;
     Seconds elapsedTimeSince(MonotonicTime) const;
+    std::tuple<Seconds, MonotonicTime> elapsedTimeAndTimestamp() const;
 
     std::optional<Seconds> fromMonotonicTime(MonotonicTime) const;
 
-    bool isActive() const { return !std::isnan(m_lastStartTime); }
+    bool isActive() const { return !m_lastStartTime.isNaN(); }
 private:
     Stopwatch() { reset(); }
 
@@ -65,14 +66,14 @@ inline void Stopwatch::reset()
 
 inline void Stopwatch::start()
 {
-    ASSERT_WITH_MESSAGE(std::isnan(m_lastStartTime), "Tried to start the stopwatch, but it is already running.");
+    ASSERT_WITH_MESSAGE(m_lastStartTime.isNaN(), "Tried to start the stopwatch, but it is already running.");
 
     m_lastStartTime = MonotonicTime::now();
 }
 
 inline void Stopwatch::stop()
 {
-    ASSERT_WITH_MESSAGE(!std::isnan(m_lastStartTime), "Tried to stop the stopwatch, but it is not running.");
+    ASSERT_WITH_MESSAGE(!m_lastStartTime.isNaN(), "Tried to stop the stopwatch, but it is not running.");
 
     auto stopTime = MonotonicTime::now();
     m_pastInternals.append({ m_lastStartTime, stopTime });
@@ -82,10 +83,16 @@ inline void Stopwatch::stop()
 
 inline Seconds Stopwatch::elapsedTime() const
 {
-    if (!isActive())
-        return m_elapsedTime;
+    return std::get<0>(elapsedTimeAndTimestamp());
+}
 
-    return m_elapsedTime + (MonotonicTime::now() - m_lastStartTime);
+inline std::tuple<Seconds, MonotonicTime> Stopwatch::elapsedTimeAndTimestamp() const
+{
+    auto timestamp = MonotonicTime::now();
+    if (!isActive())
+        return std::tuple { m_elapsedTime, timestamp };
+
+    return std::tuple { m_elapsedTime + (timestamp - m_lastStartTime), timestamp };
 }
 
 inline Seconds Stopwatch::elapsedTimeSince(MonotonicTime timeStamp) const
@@ -98,7 +105,7 @@ inline Seconds Stopwatch::elapsedTimeSince(MonotonicTime timeStamp) const
 
 inline std::optional<Seconds> Stopwatch::fromMonotonicTime(MonotonicTime timeStamp) const
 {
-    if (!std::isnan(m_lastStartTime) && m_lastStartTime < timeStamp)
+    if (!m_lastStartTime.isNaN() && m_lastStartTime < timeStamp)
         return Stopwatch::elapsedTimeSince(timeStamp);
 
     Seconds elapsedTime;

@@ -40,7 +40,7 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLFrameOwnerElement);
 
-HTMLFrameOwnerElement::HTMLFrameOwnerElement(const QualifiedName& tagName, Document& document, ConstructionType constructionType)
+HTMLFrameOwnerElement::HTMLFrameOwnerElement(const QualifiedName& tagName, Document& document, OptionSet<TypeFlag> constructionType)
     : HTMLElement(tagName, document, constructionType)
 {
 }
@@ -49,9 +49,7 @@ RenderWidget* HTMLFrameOwnerElement::renderWidget() const
 {
     // HTMLObjectElement and HTMLEmbedElement may return arbitrary renderers
     // when using fallback content.
-    if (!is<RenderWidget>(renderer()))
-        return nullptr;
-    return downcast<RenderWidget>(renderer());
+    return dynamicDowncast<RenderWidget>(renderer());
 }
 
 void HTMLFrameOwnerElement::setContentFrame(Frame& frame)

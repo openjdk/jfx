@@ -35,7 +35,6 @@
 #include "FontLoadTimingOverride.h"
 #include "ForcedAccessibilityValue.h"
 #include "FourCC.h"
-#include "FrameFlattening.h"
 #include "HTMLParserScriptingFlagPolicy.h"
 #include "MediaPlayerEnums.h"
 #include "StorageBlockingPolicy.h"
@@ -168,7 +167,7 @@ protected:
     void sampleBufferContentKeySessionSupportEnabledChanged();
 #endif
 
-    WeakPtr<Page> m_page;
+    SingleThreadWeakPtr<Page> m_page;
 
     Seconds m_minimumDOMTimerInterval;
 

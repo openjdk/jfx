@@ -88,26 +88,34 @@ float SVGLengthContext::resolveLength(const SVGElement* context, SVGUnitTypes::S
 
 float SVGLengthContext::valueForLength(const Length& length, SVGLengthMode lengthMode)
 {
-    if (length.isPercent()) {
+    switch (length.type()) {
+    case LengthType::Percent: {
         auto result = convertValueFromPercentageToUserUnits(length.value() / 100, lengthMode);
         if (result.hasException())
             return 0;
         return result.releaseReturnValue();
     }
-    if (length.isAuto() || !length.isSpecified())
-        return 0;
 
-    auto viewportSize = this->viewportSize().value_or(FloatSize { });
+    case LengthType::Fixed:
+        return length.value();
 
+    case LengthType::Calculated: {
+        auto viewportSize = this->viewportSize().value_or(FloatSize { });
     switch (lengthMode) {
     case SVGLengthMode::Width:
-        return floatValueForLength(length, viewportSize.width());
+            return length.nonNanCalculatedValue(viewportSize.width());
     case SVGLengthMode::Height:
-        return floatValueForLength(length, viewportSize.height());
+            return length.nonNanCalculatedValue(viewportSize.height());
     case SVGLengthMode::Other:
-        return floatValueForLength(length, viewportSize.diagonalLength() / sqrtOfTwoFloat);
-    };
+            return length.nonNanCalculatedValue(viewportSize.diagonalLength() / sqrtOfTwoFloat);
+        }
+        ASSERT_NOT_REACHED();
     return 0;
+    }
+
+    default:
+        return 0;
+    }
 }
 
 ExceptionOr<float> SVGLengthContext::convertValueToUserUnits(float value, SVGLengthType lengthType, SVGLengthMode lengthMode) const
@@ -122,7 +130,7 @@ ExceptionOr<float> SVGLengthContext::convertValueToUserUnits(float value, SVGLen
 
     switch (lengthType) {
     case SVGLengthType::Unknown:
-        return Exception { NotSupportedError };
+        return Exception { ExceptionCode::NotSupportedError };
     case SVGLengthType::Number:
         return value;
     case SVGLengthType::Pixels:
@@ -153,7 +161,7 @@ ExceptionOr<float> SVGLengthContext::convertValueFromUserUnits(float value, SVGL
 {
     switch (lengthType) {
     case SVGLengthType::Unknown:
-        return Exception { NotSupportedError };
+        return Exception { ExceptionCode::NotSupportedError };
     case SVGLengthType::Number:
         return value;
     case SVGLengthType::Percentage:
@@ -184,7 +192,7 @@ ExceptionOr<float> SVGLengthContext::convertValueFromUserUnitsToPercentage(float
 {
     auto viewportSize = this->viewportSize();
     if (!viewportSize)
-        return Exception { NotSupportedError };
+        return Exception { ExceptionCode::NotSupportedError };
 
     switch (lengthMode) {
     case SVGLengthMode::Width:
@@ -203,7 +211,7 @@ ExceptionOr<float> SVGLengthContext::convertValueFromPercentageToUserUnits(float
 {
     auto viewportSize = this->viewportSize();
     if (!viewportSize)
-        return Exception { NotSupportedError };
+        return Exception { ExceptionCode::NotSupportedError };
 
     switch (lengthMode) {
     case SVGLengthMode::Width:
@@ -237,11 +245,11 @@ ExceptionOr<float> SVGLengthContext::convertValueFromUserUnitsToEMS(float value)
 {
     auto* style = renderStyleForLengthResolving(m_context);
     if (!style)
-        return Exception { NotSupportedError };
+        return Exception { ExceptionCode::NotSupportedError };
 
     float fontSize = style->computedFontSize();
     if (!fontSize)
-        return Exception { NotSupportedError };
+        return Exception { ExceptionCode::NotSupportedError };
 
     return value / fontSize;
 }
@@ -250,7 +258,7 @@ ExceptionOr<float> SVGLengthContext::convertValueFromEMSToUserUnits(float value)
 {
     auto* style = renderStyleForLengthResolving(m_context);
     if (!style)
-        return Exception { NotSupportedError };
+        return Exception { ExceptionCode::NotSupportedError };
 
     return value * style->computedFontSize();
 }
@@ -259,13 +267,13 @@ ExceptionOr<float> SVGLengthContext::convertValueFromUserUnitsToEXS(float value)
 {
     auto* style = renderStyleForLengthResolving(m_context);
     if (!style)
-        return Exception { NotSupportedError };
+        return Exception { ExceptionCode::NotSupportedError };
 
     // Use of ceil allows a pixel match to the W3Cs expected output of coords-units-03-b.svg
     // if this causes problems in real world cases maybe it would be best to remove this
     float xHeight = std::ceil(style->metricsOfPrimaryFont().xHeight());
     if (!xHeight)
-        return Exception { NotSupportedError };
+        return Exception { ExceptionCode::NotSupportedError };
 
     return value / xHeight;
 }
@@ -274,7 +282,7 @@ ExceptionOr<float> SVGLengthContext::convertValueFromEXSToUserUnits(float value)
 {
     auto* style = renderStyleForLengthResolving(m_context);
     if (!style)
-        return Exception { NotSupportedError };
+        return Exception { ExceptionCode::NotSupportedError };
 
     // Use of ceil allows a pixel match to the W3Cs expected output of coords-units-03-b.svg
     // if this causes problems in real world cases maybe it would be best to remove this
@@ -311,14 +319,13 @@ std::optional<FloatSize> SVGLengthContext::computeViewportSize() const
         return downcast<SVGSVGElement>(*m_context).currentViewportSizeExcludingZoom();
 
     // Take size from nearest viewport element.
-    RefPtr viewportElement = m_context->viewportElement();
-    if (!is<SVGSVGElement>(viewportElement))
+    RefPtr svg = dynamicDowncast<SVGSVGElement>(m_context->viewportElement());
+    if (!svg)
         return std::nullopt;
 
-    const SVGSVGElement& svg = downcast<SVGSVGElement>(*viewportElement);
-    auto viewportSize = svg.currentViewBoxRect().size();
+    auto viewportSize = svg->currentViewBoxRect().size();
     if (viewportSize.isEmpty())
-        viewportSize = svg.currentViewportSizeExcludingZoom();
+        viewportSize = svg->currentViewportSizeExcludingZoom();
 
     return viewportSize;
 }

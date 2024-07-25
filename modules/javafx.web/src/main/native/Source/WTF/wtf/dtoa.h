@@ -41,29 +41,12 @@ WTF_EXPORT_PRIVATE const char* numberToFixedPrecisionString(float, unsigned sign
 WTF_EXPORT_PRIVATE const char* numberToFixedWidthString(float, unsigned decimalPlaces, NumberToStringBuffer&);
 
 WTF_EXPORT_PRIVATE const char* numberToString(double, NumberToStringBuffer&);
+WTF_EXPORT_PRIVATE const char* numberToStringWithTrailingPoint(double, NumberToStringBuffer&);
 WTF_EXPORT_PRIVATE const char* numberToFixedPrecisionString(double, unsigned significantFigures, NumberToStringBuffer&, bool truncateTrailingZeros = false);
 WTF_EXPORT_PRIVATE const char* numberToFixedWidthString(double, unsigned decimalPlaces, NumberToStringBuffer&);
 
 // Fixed width with up to 6 decimal places, trailing zeros truncated.
 WTF_EXPORT_PRIVATE const char* numberToCSSString(double, NumberToCSSStringBuffer&);
-
-double parseDouble(const UChar* string, size_t length, size_t& parsedLength);
-double parseDouble(StringView, size_t& parsedLength);
-
-namespace Internal {
-    WTF_EXPORT_PRIVATE double parseDoubleFromLongString(const UChar* string, size_t length, size_t& parsedLength);
-}
-
-inline double parseDouble(const UChar* string, size_t length, size_t& parsedLength)
-{
-    const size_t conversionBufferSize = 64;
-    if (length > conversionBufferSize)
-        return Internal::parseDoubleFromLongString(string, length, parsedLength);
-    LChar conversionBuffer[conversionBufferSize];
-    for (int i = 0; i < static_cast<int>(length); ++i)
-        conversionBuffer[i] = isASCII(string[i]) ? string[i] : 0;
-    return parseDouble(conversionBuffer, length, parsedLength);
-}
 
 inline double parseDouble(StringView string, size_t& parsedLength)
 {
@@ -76,6 +59,7 @@ inline double parseDouble(StringView string, size_t& parsedLength)
 
 using WTF::NumberToStringBuffer;
 using WTF::numberToString;
+using WTF::numberToStringWithTrailingPoint;
 using WTF::numberToFixedPrecisionString;
 using WTF::numberToFixedWidthString;
 using WTF::parseDouble;

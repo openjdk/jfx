@@ -43,6 +43,7 @@
 #include <pal/spi/cg/CoreGraphicsSPI.h>
 #include <unicode/uchar.h>
 #include <wtf/Assertions.h>
+#include <wtf/HexNumber.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/StdLibExtras.h>
 
@@ -182,7 +183,9 @@ void Font::platformInit()
 #endif
 
     // Compute line spacing before the line metrics hacks are applied.
-    float lineSpacing = lroundf(ascent) + lroundf(descent) + lroundf(lineGap);
+#if !PLATFORM(IOS_FAMILY)
+    float lineSpacing = std::lround(ascent) + std::lround(descent) + std::lround(lineGap);
+#endif
 
 #if PLATFORM(MAC)
     // Hack Hiragino line metrics to allow room for marked text underlines.
@@ -200,7 +203,7 @@ void Font::platformInit()
     CGFloat adjustment = shouldUseAdjustment(m_platformData.font()) ? ceil((ascent + descent) * kLineHeightAdjustment) : 0;
 
     lineGap = ceilf(lineGap);
-    lineSpacing = ceil(ascent) + adjustment + ceil(descent) + lineGap;
+    float lineSpacing = std::ceil(ascent) + adjustment + std::ceil(descent) + lineGap;
     ascent = ceilf(ascent + adjustment);
     descent = ceilf(descent);
 
@@ -280,7 +283,6 @@ void Font::platformCharWidthInit()
 
 bool Font::variantCapsSupportedForSynthesis(FontVariantCaps fontVariantCaps) const
 {
-#if (PLATFORM(IOS_FAMILY) && TARGET_OS_IOS) || PLATFORM(MAC)
     switch (fontVariantCaps) {
     case FontVariantCaps::Small:
         return supportsSmallCaps();
@@ -294,21 +296,8 @@ bool Font::variantCapsSupportedForSynthesis(FontVariantCaps fontVariantCaps) con
         // Synthesis only supports the variant-caps values listed above.
         return true;
     }
-#else
-    switch (fontVariantCaps) {
-    case FontVariantCaps::Small:
-    case FontVariantCaps::Petite:
-    case FontVariantCaps::AllSmall:
-    case FontVariantCaps::AllPetite:
-        return false;
-    default:
-        // Synthesis only supports the variant-caps values listed above.
-        return true;
-    }
-#endif
 }
 
-#if (PLATFORM(IOS_FAMILY) && TARGET_OS_IOS) || PLATFORM(MAC)
 static RetainPtr<CFDictionaryRef> smallCapsOpenTypeDictionary(CFStringRef key, int rawValue)
 {
     RetainPtr<CFNumberRef> value = adoptCF(CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &rawValue));
@@ -399,7 +388,6 @@ bool Font::supportsAllPetiteCaps() const
     }
     return m_supportsAllPetiteCaps == SupportsFeature::Yes;
 }
-#endif
 
 static RefPtr<Font> createDerivativeFont(CTFontRef font, float size, FontOrientation orientation, CTFontSymbolicTraits fontTraits, bool syntheticBold, bool syntheticItalic, FontWidthVariant fontWidthVariant, TextRenderingMode textRenderingMode, const FontCustomPlatformData* customPlatformData)
 {
@@ -612,12 +600,15 @@ GlyphBufferAdvance Font::applyTransforms(GlyphBuffer& glyphBuffer, unsigned begi
         | (enableKerning && numberOfInputGlyphs ? kCTFontShapeWithKerning : 0)
         | (textDirection == TextDirection::RTL ? kCTFontShapeRightToLeft : 0);
 
+    // FIXME: This shouldn't actually be necessary, if we pass in a pointer to the base of the string.
     for (unsigned i = 0; i < glyphBuffer.size() - beginningGlyphIndex; ++i)
         glyphBuffer.offsetsInString(beginningGlyphIndex)[i] -= beginningStringIndex;
 
     LOG_WITH_STREAM(TextShaping,
         stream << "Simple shaping " << numberOfInputGlyphs << " glyphs in font " << String(adoptCF(CTFontCopyPostScriptName(m_platformData.ctFont())).get()) << ".\n";
         stream << "Font attributes: " << String(adoptCF(CFCopyDescription(adoptCF(CTFontDescriptorCopyAttributes(adoptCF(CTFontCopyFontDescriptor(m_platformData.ctFont())).get())).get())).get()) << "\n";
+        stream << "Locale: " << String(localeString.get()) << "\n";
+        stream << "Options: " << options << "\n";
         const auto* glyphs = glyphBuffer.glyphs(beginningGlyphIndex);
         stream << "Glyphs:";
         for (unsigned i = 0; i < numberOfInputGlyphs; ++i)
@@ -641,7 +632,7 @@ GlyphBufferAdvance Font::applyTransforms(GlyphBuffer& glyphBuffer, unsigned begi
         const UChar* codeUnits = upconvertedCharacters.get();
         stream << "Code Units:";
         for (unsigned i = 0; i < numberOfInputGlyphs; ++i)
-            stream << " " << codeUnits[i];
+            stream << " U+" << hex(codeUnits[i], 4);
     );
 
     auto initialAdvance = CTFontShapeGlyphs(
@@ -678,11 +669,6 @@ GlyphBufferAdvance Font::applyTransforms(GlyphBuffer& glyphBuffer, unsigned begi
         for (unsigned i = 0; i < glyphBuffer.size() - beginningGlyphIndex; ++i)
             stream << " " << offsets[i];
         stream << "\n";
-        const UChar* codeUnits = upconvertedCharacters.get();
-        stream << "Code Units:";
-        for (unsigned i = 0; i < glyphBuffer.size() - beginningGlyphIndex; ++i)
-            stream << " " << codeUnits[i];
-        stream << "\n";
         stream << "Initial advance: " << FloatSize(initialAdvance);
     );
 
@@ -692,7 +678,6 @@ GlyphBufferAdvance Font::applyTransforms(GlyphBuffer& glyphBuffer, unsigned begi
     for (unsigned i = 0; i < glyphBuffer.size() - beginningGlyphIndex; ++i)
         glyphBuffer.offsetsInString(beginningGlyphIndex)[i] += beginningStringIndex;
 
-    // See the comment above in this function where the other call to reverse() is.
     if (textDirection == TextDirection::RTL)
         glyphBuffer.reverse(beginningGlyphIndex, glyphBuffer.size() - beginningGlyphIndex);
 
@@ -705,6 +690,13 @@ static int extractNumber(CFNumberRef number)
     if (number)
         CFNumberGetValue(number, kCFNumberIntType, &result);
     return result;
+}
+
+static bool extractBoolean(CFBooleanRef value)
+{
+    if (value)
+        return CFBooleanGetValue(value);
+    return false;
 }
 
 void Font::determinePitch()
@@ -727,14 +719,18 @@ void Font::determinePitch()
     auto fullName = adoptCF(CTFontCopyFullName(ctFont));
     auto familyName = adoptCF(CTFontCopyFamilyName(ctFont));
 
-    int fixedPitch = extractNumber(adoptCF(static_cast<CFNumberRef>(CTFontCopyAttribute(m_platformData.ctFont(), kCTFontFixedAdvanceAttribute))).get());
+    int fixedPitch = extractNumber(adoptCF(static_cast<CFNumberRef>(CTFontCopyAttribute(ctFont, kCTFontFixedAdvanceAttribute))).get());
+    bool userInstalled = extractBoolean(adoptCF(static_cast<CFBooleanRef>(CTFontCopyAttribute(ctFont, kCTFontUserInstalledAttribute))).get());
     m_treatAsFixedPitch = (CTFontGetSymbolicTraits(ctFont) & kCTFontMonoSpaceTrait) || fixedPitch || (caseInsensitiveCompare(fullName.get(), CFSTR("Osaka-Mono")) || caseInsensitiveCompare(fullName.get(), CFSTR("MS-PGothic")) || caseInsensitiveCompare(fullName.get(), CFSTR("MonotypeCorsiva")));
-#if PLATFORM(IOS_FAMILY)
     if (familyName && caseInsensitiveCompare(familyName.get(), CFSTR("Courier New"))) {
+#if PLATFORM(IOS_FAMILY)
         // Special case Courier New to not be treated as fixed pitch, as this will make use of a hacked space width which is undesireable for iPhone (see rdar://6269783).
         m_treatAsFixedPitch = false;
-    }
 #endif
+        // "Courier New" has many special case characters which does not have widths (u0181, u0182 etc.). Thus we disable fast content measuring for monospace fonts.
+        m_canTakeFixedPitchFastContentMeasuring = false;
+    } else
+        m_canTakeFixedPitchFastContentMeasuring = m_treatAsFixedPitch && !userInstalled;
 }
 
 FloatRect Font::platformBoundsForGlyph(Glyph glyph) const
@@ -766,7 +762,7 @@ Path Font::platformPathForGlyph(Glyph glyph) const
     return { PathCG::create(adoptCF(CGPathCreateMutableCopy(result.get()))) };
 }
 
-bool Font::platformSupportsCodePoint(UChar32 character, std::optional<UChar32> variation) const
+bool Font::platformSupportsCodePoint(char32_t character, std::optional<char32_t> variation) const
 {
     if (variation)
         return false;

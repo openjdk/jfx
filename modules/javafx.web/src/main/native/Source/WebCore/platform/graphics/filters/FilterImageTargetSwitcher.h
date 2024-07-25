@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc.  All rights reserved.
+ * Copyright (C) 2022-2023 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,9 +39,13 @@ public:
 private:
     GraphicsContext* drawingContext(GraphicsContext& destinationContext) const override;
 
-    void beginClipAndDrawSourceImage(GraphicsContext& destinationContext, const FloatRect& repaintRect) override;
-    void endClipAndDrawSourceImage(GraphicsContext& destinationContext) override;
-    void endDrawSourceImage(GraphicsContext& destinationContext) override;
+    bool hasSourceImage() const override { return m_sourceImage; }
+
+    void beginClipAndDrawSourceImage(GraphicsContext& destinationContext, const FloatRect& repaintRect, const FloatRect& clipRect) override;
+    void endClipAndDrawSourceImage(GraphicsContext& destinationContext, const DestinationColorSpace&) override;
+
+    void beginDrawSourceImage(GraphicsContext&) override { }
+    void endDrawSourceImage(GraphicsContext& destinationContext, const DestinationColorSpace&) override;
 
     RefPtr<ImageBuffer> m_sourceImage;
     FloatRect m_sourceImageRect;

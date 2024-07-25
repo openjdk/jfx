@@ -23,9 +23,9 @@
 #include "SVGGElement.h"
 
 #include "LegacyRenderSVGHiddenContainer.h"
+#include "LegacyRenderSVGResource.h"
 #include "LegacyRenderSVGTransformableContainer.h"
 #include "RenderSVGHiddenContainer.h"
-#include "RenderSVGResource.h"
 #include "RenderSVGTransformableContainer.h"
 #include "SVGNames.h"
 #include <wtf/IsoMallocInlines.h>
@@ -57,7 +57,7 @@ RenderPtr<RenderElement> SVGGElement::createElementRenderer(RenderStyle&& style,
     // FIXME: [LBSE] Support hidden containers
     if (document().settings().layerBasedSVGEngineEnabled()) {
         if (style.display() == DisplayType::None)
-            return createRenderer<RenderSVGHiddenContainer>(*this, WTFMove(style));
+            return createRenderer<RenderSVGHiddenContainer>(RenderObject::Type::SVGHiddenContainer, *this, WTFMove(style));
         return createRenderer<RenderSVGTransformableContainer>(*this, WTFMove(style));
     }
 #endif
@@ -67,7 +67,7 @@ RenderPtr<RenderElement> SVGGElement::createElementRenderer(RenderStyle&& style,
     // subtree may be hidden - we only want the resource renderers to exist so they can be
     // referenced from somewhere else.
     if (style.display() == DisplayType::None)
-        return createRenderer<LegacyRenderSVGHiddenContainer>(*this, WTFMove(style));
+        return createRenderer<LegacyRenderSVGHiddenContainer>(RenderObject::Type::LegacySVGHiddenContainer, *this, WTFMove(style));
     return createRenderer<LegacyRenderSVGTransformableContainer>(*this, WTFMove(style));
 }
 

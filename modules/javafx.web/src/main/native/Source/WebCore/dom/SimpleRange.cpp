@@ -46,14 +46,9 @@ SimpleRange::SimpleRange(BoundaryPoint&& start, BoundaryPoint&& end)
 {
 }
 
-bool operator==(const SimpleRange& a, const SimpleRange& b)
-{
-    return a.start == b.start && a.end == b.end;
-}
-
 std::optional<SimpleRange> makeRangeSelectingNode(Node& node)
 {
-    auto parent = node.parentNode();
+    RefPtr parent = node.parentNode();
     if (!parent)
         return std::nullopt;
     unsigned offset = node.computeNodeIndex();
@@ -123,8 +118,9 @@ void IntersectingNodeIterator::advance()
 
 void IntersectingNodeIterator::advanceSkippingChildren()
 {
-    ASSERT(m_node);
-    m_node = m_node->contains(m_pastLastNode.get()) ? nullptr : NodeTraversal::nextSkippingChildren(*m_node);
+    auto node = protectedNode();
+    ASSERT(node);
+    m_node = node->contains(m_pastLastNode.get()) ? nullptr : NodeTraversal::nextSkippingChildren(*node);
     enforceEndInvariant();
 }
 

@@ -106,13 +106,13 @@ static ALWAYS_INLINE JSValue createWrapperInline(JSGlobalObject* lexicalGlobalOb
     JSDOMObject* wrapper;
     switch (node->nodeType()) {
         case Node::ELEMENT_NODE:
-            if (is<HTMLElement>(node))
-                wrapper = createJSHTMLWrapper(globalObject, static_reference_cast<HTMLElement>(WTFMove(node)));
-            else if (is<SVGElement>(node))
-                wrapper = createJSSVGWrapper(globalObject, static_reference_cast<SVGElement>(WTFMove(node)));
+            if (auto* htmlElement = dynamicDowncast<HTMLElement>(node.get()))
+                wrapper = createJSHTMLWrapper(globalObject, *htmlElement);
+            else if (auto* svgElement = dynamicDowncast<SVGElement>(node.get()))
+                wrapper = createJSSVGWrapper(globalObject, *svgElement);
 #if ENABLE(MATHML)
-            else if (is<MathMLElement>(node))
-                wrapper = createJSMathMLWrapper(globalObject, static_reference_cast<MathMLElement>(WTFMove(node)));
+            else if (auto* mathmlElement = dynamicDowncast<MathMLElement>(node.get()))
+                wrapper = createJSMathMLWrapper(globalObject, *mathmlElement);
 #endif
             else
                 wrapper = createWrapper<Element>(globalObject, WTFMove(node));
@@ -134,7 +134,7 @@ static ALWAYS_INLINE JSValue createWrapperInline(JSGlobalObject* lexicalGlobalOb
             break;
         case Node::DOCUMENT_NODE:
             // we don't want to cache the document itself in the per-document dictionary
-            return toJS(lexicalGlobalObject, globalObject, downcast<Document>(node.get()));
+            return toJS(lexicalGlobalObject, globalObject, uncheckedDowncast<Document>(node.get()));
         case Node::DOCUMENT_TYPE_NODE:
             wrapper = createWrapper<DocumentType>(globalObject, WTFMove(node));
             break;

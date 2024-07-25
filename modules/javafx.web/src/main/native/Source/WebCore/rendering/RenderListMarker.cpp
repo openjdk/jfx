@@ -50,11 +50,12 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(RenderListMarker);
 constexpr int cMarkerPadding = 7;
 
 RenderListMarker::RenderListMarker(RenderListItem& listItem, RenderStyle&& style)
-    : RenderBox(listItem.document(), WTFMove(style), 0)
+    : RenderBox(Type::ListMarker, listItem.document(), WTFMove(style))
     , m_listItem(listItem)
 {
     setInline(true);
     setReplacedOrInlineBlock(true); // pretend to be replaced
+    ASSERT(isRenderListMarker());
 }
 
 RenderListMarker::~RenderListMarker()
@@ -247,19 +248,17 @@ void RenderListMarker::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffse
 RenderBox* RenderListMarker::parentBox(RenderBox& box)
 {
     ASSERT(m_listItem);
-    auto* fragmentedFlow = m_listItem->enclosingFragmentedFlow();
-    if (!is<RenderMultiColumnFlow>(fragmentedFlow))
+    CheckedPtr multiColumnFlow = dynamicDowncast<RenderMultiColumnFlow>(m_listItem->enclosingFragmentedFlow());
+    if (!multiColumnFlow)
         return box.parentBox();
-    auto* placeholder = downcast<RenderMultiColumnFlow>(*fragmentedFlow).findColumnSpannerPlaceholder(&box);
-    if (!placeholder)
-        return box.parentBox();
-    return placeholder->parentBox();
+    auto* placeholder = multiColumnFlow->findColumnSpannerPlaceholder(&box);
+    return placeholder ? placeholder->parentBox() : box.parentBox();
 };
 
 void RenderListMarker::addOverflowFromListMarker()
 {
     ASSERT(m_listItem);
-    if (!parent() || !parent()->isBox())
+    if (!parent() || !parent()->isRenderBox())
         return;
 
     if (isInside() || !inlineBoxWrapper())
@@ -337,11 +336,11 @@ void RenderListMarker::addOverflowFromListMarker()
             markerAncestor = parentBox(*markerAncestor);
             if (markerAncestor->hasNonVisibleOverflow())
                 propagateVisualOverflow = false;
-            if (is<RenderBlock>(*markerAncestor)) {
+            if (CheckedPtr markerAncestorBlock = dynamicDowncast<RenderBlock>(*markerAncestor)) {
                 if (propagateVisualOverflow)
-                    downcast<RenderBlock>(*markerAncestor).addVisualOverflow(markerRect);
+                    markerAncestorBlock->addVisualOverflow(markerRect);
                 if (propagateLayoutOverflow)
-                    downcast<RenderBlock>(*markerAncestor).addLayoutOverflow(markerRect);
+                    markerAncestorBlock->addLayoutOverflow(markerRect);
             }
             if (markerAncestor->hasNonVisibleOverflow())
                 propagateLayoutOverflow = false;

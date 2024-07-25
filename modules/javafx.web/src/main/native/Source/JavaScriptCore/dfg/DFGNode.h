@@ -296,6 +296,11 @@ struct CallDOMGetterData {
     const ClassInfo* requiredClassInfo { nullptr };
 };
 
+struct CallCustomAccessorData {
+    CodePtr<CustomAccessorPtrTag> m_customAccessor;
+    CacheableIdentifier m_identifier;
+};
+
 enum class BucketOwnerType : uint32_t {
     Map,
     Set
@@ -1154,6 +1159,8 @@ public:
         case PutByIdMegamorphic:
         case PutByIdWithThis:
         case PutPrivateNameById:
+        case CallCustomAccessorGetter:
+        case CallCustomAccessorSetter:
             return true;
         default:
             return false;
@@ -1163,7 +1170,32 @@ public:
     CacheableIdentifier cacheableIdentifier()
     {
         ASSERT(hasCacheableIdentifier());
+        switch (op()) {
+        case TryGetById:
+        case GetById:
+        case GetByIdFlush:
+        case GetByIdMegamorphic:
+        case GetByIdWithThis:
+        case GetByIdWithThisMegamorphic:
+        case GetByIdDirect:
+        case GetByIdDirectFlush:
+        case GetPrivateNameById:
+        case DeleteById:
+        case InById:
+        case PutById:
+        case PutByIdFlush:
+        case PutByIdDirect:
+        case PutByIdMegamorphic:
+        case PutByIdWithThis:
+        case PutPrivateNameById:
         return CacheableIdentifier::createFromRawBits(m_opInfo.as<uintptr_t>());
+        case CallCustomAccessorGetter:
+        case CallCustomAccessorSetter:
+            return callCustomAccessorData()->m_identifier;
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+            return { };
+    }
     }
 
     bool hasIdentifier()
@@ -1935,6 +1967,7 @@ public:
         case CallForwardVarargs:
         case TailCallForwardVarargsInlinedCaller:
         case CallWasm:
+        case CallCustomAccessorGetter:
         case GetByOffset:
         case MultiGetByOffset:
         case GetClosureVar:
@@ -1963,6 +1996,8 @@ public:
         case CallDOMGetter:
         case CallDOM:
         case ParseInt:
+        case ToIntegerOrInfinity:
+        case ToLength:
         case AtomicsAdd:
         case AtomicsAnd:
         case AtomicsCompareExchange:
@@ -2251,6 +2286,8 @@ public:
         case NewAsyncGenerator:
         case NewInternalFieldObject:
         case NewStringObject:
+        case NewMap:
+        case NewSet:
             return true;
         default:
             return false;
@@ -3291,6 +3328,29 @@ public:
             RELEASE_ASSERT_NOT_REACHED();
         }
         return nullptr;
+    }
+
+    bool hasCallCustomAccessorData() const
+    {
+        switch (op()) {
+        case CallCustomAccessorGetter:
+        case CallCustomAccessorSetter:
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    CallCustomAccessorData* callCustomAccessorData()
+    {
+        ASSERT(hasCallCustomAccessorData());
+        return m_opInfo.as<CallCustomAccessorData*>();
+    }
+
+    CodePtr<CustomAccessorPtrTag> customAccessor()
+    {
+        ASSERT(hasCallCustomAccessorData());
+        return callCustomAccessorData()->m_customAccessor;
     }
 
     Node* replacement() const

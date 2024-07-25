@@ -31,6 +31,7 @@
 
 #include "CSSFontSelector.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "FontCascade.h"
 #include "HTMLIFrameElement.h"
 #include "LocalFrame.h"
@@ -67,13 +68,13 @@ RenderStyle resolveForDocument(const Document& document)
     documentStyle.setUserModify(document.inDesignMode() ? UserModify::ReadWrite : UserModify::ReadOnly);
 #if PLATFORM(IOS_FAMILY)
     if (document.inDesignMode())
-        documentStyle.setTextSizeAdjust(TextSizeAdjustment(NoTextSizeAdjustment));
+        documentStyle.setTextSizeAdjust(TextSizeAdjustment::none());
 #endif
 
     Adjuster::adjustEventListenerRegionTypesForRootStyle(documentStyle, document);
 
     const Pagination& pagination = renderView.frameView().pagination();
-    if (pagination.mode != Unpaginated) {
+    if (pagination.mode != Pagination::Mode::Unpaginated) {
         documentStyle.setColumnStylesFromPaginationMode(pagination.mode);
         documentStyle.setColumnGap(GapLength(Length((int) pagination.gap, LengthType::Fixed)));
         if (renderView.multiColumnFlow())

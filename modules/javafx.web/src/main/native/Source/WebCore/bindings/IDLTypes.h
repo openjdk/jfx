@@ -37,6 +37,7 @@
 
 #if ENABLE(WEBGL)
 #include "WebGLAny.h"
+#include "WebGLExtensionAny.h"
 #endif
 
 namespace JSC {
@@ -55,10 +56,6 @@ class IDBValue;
 class JSWindowProxy;
 class DOMPromise;
 class ScheduledAction;
-
-#if ENABLE(WEBGL)
-class WebGLExtension;
-#endif
 
 template<typename T>
 struct IDLType {
@@ -277,7 +274,7 @@ template<typename T> struct IDLTypedArray : IDLBufferSource<T> { };
 struct IDLDate : IDLType<WallTime> {
     using NullableType = WallTime;
     static WallTime nullValue() { return WallTime::nan(); }
-    static bool isNullValue(WallTime value) { return std::isnan(value); }
+    static bool isNullValue(WallTime value) { return value.isNaN(); }
     static WallTime extractValueFromNullable(WallTime value) { return value; }
 };
 
@@ -301,7 +298,7 @@ struct IDLIDBValue : IDLWrapper<IDBValue> { };
 
 #if ENABLE(WEBGL)
 struct IDLWebGLAny : IDLType<WebGLAny> { };
-struct IDLWebGLExtension : IDLWrapper<WebGLExtension> { };
+struct IDLWebGLExtensionAny : IDLType<WebGLExtensionAny> { };
 #endif
 
 // Helper predicates

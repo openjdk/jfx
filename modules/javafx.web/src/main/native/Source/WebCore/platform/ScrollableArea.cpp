@@ -41,6 +41,7 @@
 #include "Logging.h"
 #include "PlatformWheelEvent.h"
 #include "ScrollAnimator.h"
+#include "ScrollbarColor.h"
 #include "ScrollbarGutter.h"
 #include "ScrollbarTheme.h"
 #include "ScrollbarsControllerMock.h"
@@ -143,7 +144,7 @@ bool ScrollableArea::scroll(ScrollDirection direction, ScrollGranularity granula
 
     auto scrollDelta = step * stepCount;
 
-    if (direction == ScrollUp || direction == ScrollLeft)
+    if (direction == ScrollDirection::ScrollUp || direction == ScrollDirection::ScrollLeft)
         scrollDelta = -scrollDelta;
 
     return scrollAnimator().singleAxisScroll(axis, scrollDelta, ScrollAnimator::ScrollBehavior::RespectScrollSnap);
@@ -204,11 +205,11 @@ void ScrollableArea::scrollToOffsetWithoutAnimation(const FloatPoint& offset, Sc
 
 void ScrollableArea::scrollToOffsetWithoutAnimation(ScrollbarOrientation orientation, float offset)
 {
-    auto currentPosition = scrollAnimator().currentPosition();
+    auto currentOffset = scrollOffsetFromPosition(scrollAnimator().currentPosition(), toFloatSize(scrollOrigin()));
     if (orientation == ScrollbarOrientation::Horizontal)
-        scrollAnimator().scrollToPositionWithoutAnimation(FloatPoint(offset, currentPosition.y()));
+        scrollToOffsetWithoutAnimation(FloatPoint(offset, currentOffset.y()));
     else
-        scrollAnimator().scrollToPositionWithoutAnimation(FloatPoint(currentPosition.x(), offset));
+        scrollToOffsetWithoutAnimation(FloatPoint(currentOffset.x(), offset));
 }
 
 void ScrollableArea::notifyScrollPositionChanged(const ScrollPosition& position)
@@ -246,8 +247,11 @@ void ScrollableArea::scrollPositionChanged(const ScrollPosition& position)
             verticalScrollbar->invalidate();
     }
 
-    if (scrollPosition() != oldPosition)
+    if (scrollPosition() != oldPosition) {
         scrollbarsController().notifyContentAreaScrolled(scrollPosition() - oldPosition);
+        invalidateScrollAnchoringElement();
+        updateScrollAnchoringElement();
+    }
 }
 
 bool ScrollableArea::handleWheelEventForScrolling(const PlatformWheelEvent& wheelEvent, std::optional<WheelScrollGestureState>)
@@ -520,6 +524,16 @@ String ScrollableArea::horizontalScrollbarStateForTesting() const
 String ScrollableArea::verticalScrollbarStateForTesting() const
 {
     return scrollbarsController().verticalScrollbarStateForTesting();
+}
+
+Color ScrollableArea::scrollbarThumbColorStyle() const
+{
+    return { };
+}
+
+Color ScrollableArea::scrollbarTrackColorStyle() const
+{
+    return { };
 }
 
 ScrollbarGutter ScrollableArea::scrollbarGutterStyle() const
@@ -950,9 +964,10 @@ LayoutRect ScrollableArea::getRectToExposeForScrollIntoView(const LayoutRect& vi
         y = visibleBounds.y();
     else if (scrollY == ScrollAlignment::Behavior::AlignBottom)
         y = exposeRect.maxY() - visibleBounds.height();
-    else if (scrollY == ScrollAlignment::Behavior::AlignCenter)
-        y = exposeRect.y() + (exposeRect.height() - visibleBounds.height()) / 2;
-    else
+    else if (scrollY == ScrollAlignment::Behavior::AlignCenter) {
+        auto halfHeight = (exposeRect.height() - visibleBounds.height()) / 2;
+        y = exposeRect.y() + halfHeight.ceil();
+    } else
         y = exposeRect.y();
 
     return LayoutRect(LayoutPoint(x, y), visibleBounds.size());

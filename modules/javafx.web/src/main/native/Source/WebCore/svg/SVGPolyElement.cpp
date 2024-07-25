@@ -22,10 +22,10 @@
 #include "config.h"
 #include "SVGPolyElement.h"
 
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "LegacyRenderSVGPath.h"
+#include "LegacyRenderSVGResource.h"
 #include "RenderSVGPath.h"
-#include "RenderSVGResource.h"
 #include "SVGDocumentExtensions.h"
 #include "SVGParserUtilities.h"
 #include <wtf/IsoMallocInlines.h>

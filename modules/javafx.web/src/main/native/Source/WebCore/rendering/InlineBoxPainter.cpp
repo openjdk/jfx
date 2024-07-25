@@ -95,7 +95,7 @@ void InlineBoxPainter::paint()
             // paint us atomically.
             containingBlock->addContinuationWithOutline(downcast<RenderInline>(renderer().element()->renderer()));
         } else if (!inlineFlow.isContinuation())
-            m_paintInfo.outlineObjects->add(&inlineFlow);
+            m_paintInfo.outlineObjects->add(inlineFlow);
 
         return;
     }
@@ -154,8 +154,8 @@ void InlineBoxPainter::paintMask()
     auto localRect = LayoutRect { m_inlineBox.visualRect() };
     LayoutPoint adjustedPaintOffset = m_paintOffset + localRect.location();
 
-    const NinePieceImage& maskNinePieceImage = renderer().style().maskBoxImage();
-    StyleImage* maskBoxImage = renderer().style().maskBoxImage().image();
+    const NinePieceImage& maskNinePieceImage = renderer().style().maskBorder();
+    StyleImage* maskBorder = renderer().style().maskBorder().image();
 
     // Figure out if we need to push a transparency layer to render our mask.
     bool pushTransparencyLayer = false;
@@ -163,7 +163,7 @@ void InlineBoxPainter::paintMask()
     bool flattenCompositingLayers = renderer().view().frameView().paintBehavior().contains(PaintBehavior::FlattenCompositingLayers);
     CompositeOperator compositeOp = CompositeOperator::SourceOver;
     if (!compositedMask || flattenCompositingLayers) {
-        if ((maskBoxImage && renderer().style().maskLayers().hasImage()) || renderer().style().maskLayers().next())
+        if ((maskBorder && renderer().style().maskLayers().hasImage()) || renderer().style().maskLayers().next())
             pushTransparencyLayer = true;
 
         compositeOp = CompositeOperator::DestinationIn;
@@ -178,8 +178,8 @@ void InlineBoxPainter::paintMask()
 
     paintFillLayers(Color(), renderer().style().maskLayers(), paintRect, compositeOp);
 
-    bool hasBoxImage = maskBoxImage && maskBoxImage->canRender(&renderer(), renderer().style().effectiveZoom());
-    if (!hasBoxImage || !maskBoxImage->isLoaded()) {
+    bool hasBoxImage = maskBorder && maskBorder->canRender(&renderer(), renderer().style().effectiveZoom());
+    if (!hasBoxImage || !maskBorder->isLoaded(&renderer())) {
         if (pushTransparencyLayer)
             m_paintInfo.context().endTransparencyLayer();
         return; // Don't paint anything while we wait for the image to load.
@@ -254,7 +254,7 @@ void InlineBoxPainter::paintDecorations()
     const NinePieceImage& borderImage = renderer().style().borderImage();
     StyleImage* borderImageSource = borderImage.image();
     bool hasBorderImage = borderImageSource && borderImageSource->canRender(&renderer(), style.effectiveZoom());
-    if (hasBorderImage && !borderImageSource->isLoaded())
+    if (hasBorderImage && !borderImageSource->isLoaded(&renderer()))
         return; // Don't paint anything while we wait for the image to load.
 
     BorderPainter borderPainter { renderer(), m_paintInfo };
@@ -316,14 +316,12 @@ void InlineBoxPainter::paintFillLayer(const Color& color, const FillLayer& fillL
         return;
     }
 
-#if ENABLE(CSS_BOX_DECORATION_BREAK)
     if (renderer().style().boxDecorationBreak() == BoxDecorationBreak::Clone) {
         GraphicsContextStateSaver stateSaver(m_paintInfo.context());
         m_paintInfo.context().clip({ rect.location(), m_inlineBox.visualRectIgnoringBlockDirection().size() });
         backgroundPainter.paintFillLayer(color, fillLayer, rect, BackgroundBleedNone, m_inlineBox, { }, op);
         return;
     }
-#endif
 
     // We have a fill image that spans multiple lines.
     // We need to adjust tx and ty by the width of all previous lines.

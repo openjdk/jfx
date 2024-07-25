@@ -87,12 +87,6 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getMetaKeyI
     return IMPL->metaKey();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getAltGraphKeyImpl(JNIEnv*, jclass, jlong peer)
-{
-    WebCore::JSMainThreadNullState state;
-    return IMPL->altGraphKey();
-}
-
 JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getKeyCodeImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
@@ -125,8 +119,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_initKeyboardEve
     , jboolean ctrlKey
     , jboolean altKey
     , jboolean shiftKey
-    , jboolean metaKey
-    , jboolean altGraphKey)
+    , jboolean metaKey)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->initKeyboardEvent(AtomString {String(env, type)}
@@ -138,8 +131,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_initKeyboardEve
             , ctrlKey
             , altKey
             , shiftKey
-            , metaKey
-            , altGraphKey);
+            , metaKey);
 }
 
 
