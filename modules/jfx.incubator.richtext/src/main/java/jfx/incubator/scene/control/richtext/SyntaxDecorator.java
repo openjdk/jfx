@@ -44,7 +44,7 @@ public interface SyntaxDecorator {
 
     /**
      * Receives the updates from the model, before any of the model's
-     * {@link jfx.incubator.scene.control.rich.model.StyledTextModel.Listener StyledTextModel.Listener}s
+     * {@link jfx.incubator.scene.control.richtext.model.StyledTextModel.Listener StyledTextModel.Listener}s
      * are notified.
      * <p>
      * The implementation might do nothing if the syntax can be determined based on the text of a single

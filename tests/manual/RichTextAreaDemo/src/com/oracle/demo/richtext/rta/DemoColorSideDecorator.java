@@ -22,25 +22,33 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package com.oracle.demo.richtext.rta;
 
-/**
- * RichTextArea Control demo.
- *
- * <BR><b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
- * Will be removed in a future release.</b>
- *
- * @moduleGraph
- */
+import javafx.scene.Node;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.Region;
+import javafx.scene.paint.Color;
+import jfx.incubator.scene.control.richtext.SideDecorator;
 
-module RichTextAreaDemo {
-    exports com.oracle.demo.richtext.codearea;
-    exports com.oracle.demo.richtext.editor;
-    exports com.oracle.demo.richtext.notebook;
-    exports com.oracle.demo.richtext.rta;
+public class DemoColorSideDecorator implements SideDecorator {
+    public DemoColorSideDecorator() {
+    }
 
-    requires javafx.base;
-    requires javafx.controls;
-    requires javafx.graphics;
-    requires jfx.incubator.input;
-    requires jfx.incubator.richtext;
+    @Override
+    public double getPrefWidth(double viewWidth) {
+        return 20.0;
+    }
+
+    @Override
+    public Node getNode(int modelIndex, boolean forMeasurement) {
+        int num = 36;
+        double a = 360.0 * (modelIndex % num) / num;
+        Color c = Color.hsb(a, 0.5, 1.0);
+
+        Region r = new Region();
+        r.setOpacity(1.0);
+        r.setBackground(new Background(new BackgroundFill(c, null, null)));
+        return r;
+    }
 }

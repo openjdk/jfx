@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,24 +23,28 @@
  * questions.
  */
 
+package com.oracle.demo.richtext.notebook.data;
+
+import java.util.ArrayList;
+
 /**
- * RichTextArea Control demo.
- *
- * <BR><b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
- * Will be removed in a future release.</b>
- *
- * @moduleGraph
+ * Notebook Data Object.
  */
+public class Notebook {
+    private final ArrayList<CellInfo> cells = new ArrayList<>();
 
-module RichTextAreaDemo {
-    exports com.oracle.demo.richtext.codearea;
-    exports com.oracle.demo.richtext.editor;
-    exports com.oracle.demo.richtext.notebook;
-    exports com.oracle.demo.richtext.rta;
+    public Notebook() {
+    }
 
-    requires javafx.base;
-    requires javafx.controls;
-    requires javafx.graphics;
-    requires jfx.incubator.input;
-    requires jfx.incubator.richtext;
+    public int size() {
+        return cells.size();
+    }
+
+    public CellInfo getCell(int ix) {
+        return cells.get(ix);
+    }
+
+    public void add(CellInfo cell) {
+        cells.add(cell);
+    }
 }

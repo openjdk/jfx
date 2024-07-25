@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,24 +23,20 @@
  * questions.
  */
 
+package com.oracle.demo.richtext.notebook;
+
+import javafx.geometry.Insets;
+import javafx.scene.layout.VBox;
+import com.oracle.demo.richtext.notebook.data.Notebook;
+
 /**
- * RichTextArea Control demo.
- *
- * <BR><b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
- * Will be removed in a future release.</b>
- *
- * @moduleGraph
+ * Cell Container.
  */
+public class CellContainer extends VBox {
+    private Notebook notebook;
 
-module RichTextAreaDemo {
-    exports com.oracle.demo.richtext.codearea;
-    exports com.oracle.demo.richtext.editor;
-    exports com.oracle.demo.richtext.notebook;
-    exports com.oracle.demo.richtext.rta;
-
-    requires javafx.base;
-    requires javafx.controls;
-    requires javafx.graphics;
-    requires jfx.incubator.input;
-    requires jfx.incubator.richtext;
+    public CellContainer() {
+        setSpacing(3);
+        setPadding(new Insets(3));
+    }
 }

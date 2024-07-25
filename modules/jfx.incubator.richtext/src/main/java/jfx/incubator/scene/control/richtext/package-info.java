@@ -25,8 +25,8 @@
 
 /**
  * Provides two controls for displaying and editing large, virtualized, rich text documents:
- * {@link jfx.incubator.scene.control.rich.RichTextArea RichTextArea} and
- * {@link jfx.incubator.scene.control.rich.CodeArea CodeArea}.
+ * {@link jfx.incubator.scene.control.richtext.RichTextArea RichTextArea} and
+ * {@link jfx.incubator.scene.control.richtext.CodeArea CodeArea}.
  * <p>
  * While {@code RichTextArea} works with styled text and embedded Nodes,
  * the {@code CodeArea} is optimized for plain text documents with syntax highlighting.

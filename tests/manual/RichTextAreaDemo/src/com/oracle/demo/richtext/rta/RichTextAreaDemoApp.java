@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,25 +22,31 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package com.oracle.demo.richtext.rta;
+
+import javafx.application.Application;
+import javafx.stage.Stage;
+import com.oracle.demo.richtext.settings.FxSettings;
 
 /**
- * RichTextArea Control demo.
- *
- * <BR><b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
- * Will be removed in a future release.</b>
- *
- * @moduleGraph
+ * RichTextArea Demo Application.
  */
+public class RichTextAreaDemoApp extends Application {
+    public static void main(String[] args) {
+        Application.launch(RichTextAreaDemoApp.class, args);
+    }
 
-module RichTextAreaDemo {
-    exports com.oracle.demo.richtext.codearea;
-    exports com.oracle.demo.richtext.editor;
-    exports com.oracle.demo.richtext.notebook;
-    exports com.oracle.demo.richtext.rta;
+    @Override
+    public void init() {
+        FxSettings.useDirectory(".RichTextAreaDemo");
+    }
 
-    requires javafx.base;
-    requires javafx.controls;
-    requires javafx.graphics;
-    requires jfx.incubator.input;
-    requires jfx.incubator.richtext;
+    @Override
+    public void start(Stage stage) throws Exception {
+        try {
+            new RichTextAreaWindow(false).show();
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
+    }
 }

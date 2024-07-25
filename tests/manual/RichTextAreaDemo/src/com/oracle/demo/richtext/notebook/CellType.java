@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,24 +23,43 @@
  * questions.
  */
 
+package com.oracle.demo.richtext.notebook;
+
+import javafx.util.StringConverter;
+
 /**
- * RichTextArea Control demo.
- *
- * <BR><b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
- * Will be removed in a future release.</b>
- *
- * @moduleGraph
+ * Cell type enum.
  */
+public enum CellType {
+    CODE,
+    TEXT;
 
-module RichTextAreaDemo {
-    exports com.oracle.demo.richtext.codearea;
-    exports com.oracle.demo.richtext.editor;
-    exports com.oracle.demo.richtext.notebook;
-    exports com.oracle.demo.richtext.rta;
+    public String getDisplayName() {
+        switch(this) {
+        case CODE:
+            return "Code";
+        case TEXT:
+            return "Text";
+        }
+        throw new Error("?" + this);
+    }
 
-    requires javafx.base;
-    requires javafx.controls;
-    requires javafx.graphics;
-    requires jfx.incubator.input;
-    requires jfx.incubator.richtext;
+    public static StringConverter<CellType> converter() {
+        return new StringConverter<CellType>() {
+            @Override
+            public String toString(CellType t) {
+                return t == null ? null : t.getDisplayName();
+            }
+
+            @Override
+            public CellType fromString(String s) {
+                for (CellType t : CellType.values()) {
+                    if (s.equals(t.getDisplayName())) {
+                        return t;
+                    }
+                }
+                return CellType.TEXT;
+            }
+        };
+    }
 }

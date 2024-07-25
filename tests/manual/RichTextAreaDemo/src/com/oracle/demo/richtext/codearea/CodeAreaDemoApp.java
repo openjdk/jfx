@@ -22,25 +22,27 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package com.oracle.demo.richtext.codearea;
+
+import javafx.application.Application;
+import javafx.stage.Stage;
+import com.oracle.demo.richtext.settings.FxSettings;
 
 /**
- * RichTextArea Control demo.
- *
- * <BR><b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
- * Will be removed in a future release.</b>
- *
- * @moduleGraph
+ * CodeArea Demo Application.
  */
+public class CodeAreaDemoApp extends Application {
+    public static void main(String[] args) {
+        Application.launch(CodeAreaDemoApp.class, args);
+    }
 
-module RichTextAreaDemo {
-    exports com.oracle.demo.richtext.codearea;
-    exports com.oracle.demo.richtext.editor;
-    exports com.oracle.demo.richtext.notebook;
-    exports com.oracle.demo.richtext.rta;
+    @Override
+    public void init() {
+        FxSettings.useDirectory(".CodeAreaDemoApp");
+    }
 
-    requires javafx.base;
-    requires javafx.controls;
-    requires javafx.graphics;
-    requires jfx.incubator.input;
-    requires jfx.incubator.richtext;
+    @Override
+    public void start(Stage stage) throws Exception {
+        new CodeAreaWindow(null).show();
+    }
 }

@@ -33,7 +33,7 @@ import jfx.incubator.scene.control.richtext.TextPos;
 
 /**
  * Editable plain text model with optional syntax highlighting for use with the
- * {@link jfx.incubator.scene.control.rich.CodeArea CodeArea} control.
+ * {@link jfx.incubator.scene.control.richtext.CodeArea CodeArea} control.
  * <p>
  * This model supports custom content storage mechanism via {@link BasicTextModel.Content}.  By default,
  * the model provides an in-memory storage via its {@link BasicTextModel.InMemoryContent} implementation.

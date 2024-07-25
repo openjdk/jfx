@@ -22,25 +22,48 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package com.oracle.demo.richtext.rta;
 
-/**
- * RichTextArea Control demo.
- *
- * <BR><b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
- * Will be removed in a future release.</b>
- *
- * @moduleGraph
- */
+import java.util.ArrayList;
 
-module RichTextAreaDemo {
-    exports com.oracle.demo.richtext.codearea;
-    exports com.oracle.demo.richtext.editor;
-    exports com.oracle.demo.richtext.notebook;
-    exports com.oracle.demo.richtext.rta;
+public class DataFrame {
+    private String[] columns;
+    private final ArrayList<String[]> rows = new ArrayList();
 
-    requires javafx.base;
-    requires javafx.controls;
-    requires javafx.graphics;
-    requires jfx.incubator.input;
-    requires jfx.incubator.richtext;
+    public DataFrame() {
+    }
+
+    public static DataFrame parse(String[] lines) {
+        DataFrame f = new DataFrame();
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            String[] ss = line.split("\\|");
+            if (i == 0) {
+                f.setColumns(ss);
+            } else {
+                f.addValues(ss);
+            }
+        }
+        return f;
+    }
+
+    public String[] getColumnNames() {
+        return columns;
+    }
+
+    public void setColumns(String[] columns) {
+        this.columns = columns;
+    }
+
+    public void addValues(String[] ss) {
+        rows.add(ss);
+    }
+
+    public int getRowCount() {
+        return rows.size();
+    }
+
+    public String[] getRow(int ix) {
+        return rows.get(ix);
+    }
 }

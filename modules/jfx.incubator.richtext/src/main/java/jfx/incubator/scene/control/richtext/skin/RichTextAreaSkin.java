@@ -379,9 +379,9 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
 
     /**
      * Handles an input method event.
-     * @param event the {@code InputMethodEvent} to be handled
+     * @param ev the {@code InputMethodEvent} to be handled
      */
-    protected void handleInputMethodEvent(InputMethodEvent ev) {
+    private void handleInputMethodEvent(InputMethodEvent ev) {
         RichTextArea textInput = getSkinnable();
         /** TODO this is taken from TextInputControlSkin:763
         if (textInput.isEditable() && !textInput.textProperty().isBound() && !textInput.isDisabled()) {

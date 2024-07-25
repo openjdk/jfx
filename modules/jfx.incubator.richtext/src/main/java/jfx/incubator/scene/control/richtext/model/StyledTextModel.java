@@ -52,7 +52,7 @@ import jfx.incubator.scene.control.richtext.TextPos;
 
 /**
  * The base class for styled text models used by the
- * {@link jfx.incubator.scene.control.rich.RichTextArea RichTextArea}.
+ * {@link jfx.incubator.scene.control.richtext.RichTextArea RichTextArea}.
  * <p>
  * This class handles the following functionality with the intent
  * to simplify custom models:
@@ -298,8 +298,8 @@ public abstract class StyledTextModel {
      * The priority determines the format chosen for operations with the {@link javafx.scene.input.Clipboard}
      * when input data is available in more than one supported format.
      * The handler with the highest priority will be used by
-     * {@link jfx.incubator.scene.control.rich.RichTextArea#read(InputStream)} and
-     * {@link jfx.incubator.scene.control.rich.RichTextArea#write(OutputStream)} methods.
+     * {@link jfx.incubator.scene.control.richtext.RichTextArea#read(InputStream)} and
+     * {@link jfx.incubator.scene.control.richtext.RichTextArea#write(OutputStream)} methods.
      * <p>
      * The same handler can be registered for input and export.  When registering multiple handlers
      * for the same data handler and import/export, the last registered one wins. 
@@ -345,8 +345,8 @@ public abstract class StyledTextModel {
      * in the order of priority - from high to low.
      * <p>
      * The top priority format will be used by
-     * {@link jfx.incubator.scene.control.rich.RichTextArea#read(InputStream)} and
-     * {@link jfx.incubator.scene.control.rich.RichTextArea#write(OutputStream)} methods.
+     * {@link jfx.incubator.scene.control.richtext.RichTextArea#read(InputStream)} and
+     * {@link jfx.incubator.scene.control.richtext.RichTextArea#write(OutputStream)} methods.
      *
      * @param forExport determines whether the operation is export (true) or import (false)
      * @return supported formats

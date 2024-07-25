@@ -22,25 +22,17 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package com.oracle.demo.richtext.rta;
 
-/**
- * RichTextArea Control demo.
- *
- * <BR><b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
- * Will be removed in a future release.</b>
- *
- * @moduleGraph
- */
+import jfx.incubator.scene.control.richtext.model.SimpleViewOnlyStyledModel;
 
-module RichTextAreaDemo {
-    exports com.oracle.demo.richtext.codearea;
-    exports com.oracle.demo.richtext.editor;
-    exports com.oracle.demo.richtext.notebook;
-    exports com.oracle.demo.richtext.rta;
-
-    requires javafx.base;
-    requires javafx.controls;
-    requires javafx.graphics;
-    requires jfx.incubator.input;
-    requires jfx.incubator.richtext;
+public class NoLastNewlineModel extends SimpleViewOnlyStyledModel {
+    public NoLastNewlineModel(int lineCount) {
+        for(int i=0; i<lineCount; i++) {
+            addSegment("L." + i);
+            if(i != (lineCount - 1)) {
+                nl();
+            }
+        }
+    }
 }
