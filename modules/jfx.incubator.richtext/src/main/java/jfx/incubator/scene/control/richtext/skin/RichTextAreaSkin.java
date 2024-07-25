@@ -248,8 +248,11 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
             if (getSkinnable().getOnInputMethodTextChanged() == inputMethodTextChangedHandler) {
                 getSkinnable().setOnInputMethodTextChanged(null);
             }
+
             listenerHelper.disconnect();
             vflow.dispose();
+            getChildren().remove(mainPane);
+
             super.dispose();
         }
     }
