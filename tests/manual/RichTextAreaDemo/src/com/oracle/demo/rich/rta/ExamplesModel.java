@@ -26,13 +26,13 @@
 package com.oracle.demo.rich.rta;
 
 import javafx.beans.property.SimpleStringProperty;
-import jfx.incubator.scene.control.rich.StyleResolver;
-import jfx.incubator.scene.control.rich.TextPos;
-import jfx.incubator.scene.control.rich.model.RichParagraph;
-import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
-import jfx.incubator.scene.control.rich.model.StyledTextModelViewOnlyBase;
 import javafx.scene.control.TextField;
 import javafx.scene.paint.Color;
+import jfx.incubator.scene.control.richtext.StyleResolver;
+import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.RichParagraph;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.model.StyledTextModelViewOnlyBase;
 
 /** This model contains code examples used in the documentation. */
 public class ExamplesModel extends StyledTextModelViewOnlyBase {

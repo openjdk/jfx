@@ -29,13 +29,13 @@ import java.util.ArrayList;
 import java.util.function.Supplier;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.Region;
-import jfx.incubator.scene.control.rich.RichTextArea;
-import jfx.incubator.scene.control.rich.StyleResolver;
-import jfx.incubator.scene.control.rich.TextPos;
-import jfx.incubator.scene.control.rich.model.BasicTextModel;
-import jfx.incubator.scene.control.rich.model.RichParagraph;
-import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
-import jfx.incubator.scene.control.rich.model.StyledTextModel;
+import jfx.incubator.scene.control.richtext.RichTextArea;
+import jfx.incubator.scene.control.richtext.StyleResolver;
+import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.BasicTextModel;
+import jfx.incubator.scene.control.richtext.model.RichParagraph;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 
 public class NotebookModelStacked extends StyledTextModel {
     enum Type {

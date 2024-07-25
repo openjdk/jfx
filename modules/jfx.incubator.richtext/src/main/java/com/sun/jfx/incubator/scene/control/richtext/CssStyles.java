@@ -25,7 +25,7 @@
 
 package com.sun.jfx.incubator.scene.control.richtext;
 
-import jfx.incubator.scene.control.rich.model.StyleAttribute;
+import jfx.incubator.scene.control.richtext.model.StyleAttribute;
 
 /**
  * Attribute represents CSS styles: a combination of a direct style (-fx-...)

@@ -48,12 +48,12 @@ import javafx.util.StringConverter;
 import com.oracle.demo.rich.rta.FontOption;
 import com.oracle.demo.rich.rta.ROptionPane;
 import com.oracle.demo.rich.util.FX;
-import jfx.incubator.scene.control.rich.CodeArea;
-import jfx.incubator.scene.control.rich.SyntaxDecorator;
-import jfx.incubator.scene.control.rich.TextPos;
-import jfx.incubator.scene.control.rich.model.CodeTextModel;
-import jfx.incubator.scene.control.rich.model.StyleAttribute;
-import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.CodeArea;
+import jfx.incubator.scene.control.richtext.SyntaxDecorator;
+import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.CodeTextModel;
+import jfx.incubator.scene.control.richtext.model.StyleAttribute;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
 /**
  * Main Panel contains CodeArea, split panes for quick size adjustment, and an option pane.

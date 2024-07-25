@@ -31,15 +31,15 @@ import java.util.function.Consumer;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import com.sun.jfx.incubator.scene.control.richtext.SegmentStyledInput;
-import jfx.incubator.scene.control.rich.TextPos;
-import jfx.incubator.scene.control.rich.model.RichTextModel;
-import jfx.incubator.scene.control.rich.model.RichTextModelShim;
-import jfx.incubator.scene.control.rich.model.RichParagraph;
-import jfx.incubator.scene.control.rich.model.StyleAttribute;
-import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
-import jfx.incubator.scene.control.rich.model.StyledInput;
-import jfx.incubator.scene.control.rich.model.StyledSegment;
-import jfx.incubator.scene.control.rich.model.StyledTextModel;
+import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.RichParagraph;
+import jfx.incubator.scene.control.richtext.model.RichTextModel;
+import jfx.incubator.scene.control.richtext.model.RichTextModelShim;
+import jfx.incubator.scene.control.richtext.model.StyleAttribute;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.model.StyledInput;
+import jfx.incubator.scene.control.richtext.model.StyledSegment;
+import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 
 /**
  * Tests RichTextModel.

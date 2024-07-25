@@ -25,7 +25,7 @@
 // adapted from package javax.swing.text.rtf;
 package com.sun.jfx.incubator.scene.control.richtext.rtf;
 
-import jfx.incubator.scene.control.rich.model.StyleAttribute;
+import jfx.incubator.scene.control.richtext.model.StyleAttribute;
 
 /**
  * This abstract class defines a 1-1 mapping between

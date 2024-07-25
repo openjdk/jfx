@@ -35,8 +35,8 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import com.oracle.demo.rich.util.FX;
-import jfx.incubator.scene.control.rich.RichTextArea;
-import jfx.incubator.scene.control.rich.TextPos;
+import jfx.incubator.scene.control.richtext.RichTextArea;
+import jfx.incubator.scene.control.richtext.TextPos;
 
 /**
  * Rich Text Area Demo window

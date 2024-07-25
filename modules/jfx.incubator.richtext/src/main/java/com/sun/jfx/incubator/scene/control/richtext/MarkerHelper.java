@@ -26,8 +26,8 @@
 package com.sun.jfx.incubator.scene.control.richtext;
 
 import com.sun.javafx.util.Utils;
-import jfx.incubator.scene.control.rich.Marker;
-import jfx.incubator.scene.control.rich.TextPos;
+import jfx.incubator.scene.control.richtext.Marker;
+import jfx.incubator.scene.control.richtext.TextPos;
 
 /**
  * Manages Marker Accessor.

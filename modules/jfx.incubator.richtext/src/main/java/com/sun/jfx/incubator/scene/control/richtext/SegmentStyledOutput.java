@@ -27,8 +27,8 @@ package com.sun.jfx.incubator.scene.control.richtext;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import jfx.incubator.scene.control.rich.model.StyledOutput;
-import jfx.incubator.scene.control.rich.model.StyledSegment;
+import jfx.incubator.scene.control.richtext.model.StyledOutput;
+import jfx.incubator.scene.control.richtext.model.StyledSegment;
 
 /**
  * This StyledOutput simply collects StyledSegments in a list.

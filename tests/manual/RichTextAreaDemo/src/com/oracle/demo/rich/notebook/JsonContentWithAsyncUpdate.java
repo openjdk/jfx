@@ -33,9 +33,9 @@ import java.util.function.Consumer;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.util.Duration;
-import jfx.incubator.scene.control.rich.TextPos;
-import jfx.incubator.scene.control.rich.model.BasicTextModel;
-import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.BasicTextModel;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
 /**
  * Mock content which simulates non-instantaneous retrieval of the underlying data,

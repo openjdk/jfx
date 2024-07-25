@@ -27,8 +27,8 @@ package com.sun.jfx.incubator.scene.control.richtext;
 
 import java.io.IOException;
 import java.util.List;
-import jfx.incubator.scene.control.rich.model.StyledInput;
-import jfx.incubator.scene.control.rich.model.StyledSegment;
+import jfx.incubator.scene.control.richtext.model.StyledInput;
+import jfx.incubator.scene.control.richtext.model.StyledSegment;
 
 public class SegmentStyledInput implements StyledInput {
     private final StyledSegment[] segments;

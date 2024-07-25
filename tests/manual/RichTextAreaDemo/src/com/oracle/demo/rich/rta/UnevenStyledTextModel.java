@@ -25,7 +25,7 @@
 package com.oracle.demo.rich.rta;
 
 import java.util.Random;
-import jfx.incubator.scene.control.rich.model.SimpleViewOnlyStyledModel;
+import jfx.incubator.scene.control.richtext.model.SimpleViewOnlyStyledModel;
 
 public class UnevenStyledTextModel extends SimpleViewOnlyStyledModel {
     private Random r = new Random();

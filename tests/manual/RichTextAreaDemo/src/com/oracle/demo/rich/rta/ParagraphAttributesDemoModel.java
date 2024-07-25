@@ -25,12 +25,12 @@
 
 package com.oracle.demo.rich.rta;
 
-import jfx.incubator.scene.control.rich.model.RtfFormatHandler;
-import jfx.incubator.scene.control.rich.model.SimpleViewOnlyStyledModel;
-import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
 import com.oracle.demo.rich.util.FX;
+import jfx.incubator.scene.control.richtext.model.RtfFormatHandler;
+import jfx.incubator.scene.control.richtext.model.SimpleViewOnlyStyledModel;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
 /**
  * This simple, read-only StyledModel demonstrates various paragraph attributes.

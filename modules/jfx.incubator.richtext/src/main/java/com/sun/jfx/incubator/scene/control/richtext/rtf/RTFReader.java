@@ -40,9 +40,9 @@ import java.util.Set;
 import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
 import com.sun.jfx.incubator.scene.control.richtext.SegmentStyledInput;
-import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
-import jfx.incubator.scene.control.rich.model.StyledInput;
-import jfx.incubator.scene.control.rich.model.StyledSegment;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.model.StyledInput;
+import jfx.incubator.scene.control.richtext.model.StyledSegment;
 
 /**
  * Takes a sequence of RTF tokens and text and appends the text

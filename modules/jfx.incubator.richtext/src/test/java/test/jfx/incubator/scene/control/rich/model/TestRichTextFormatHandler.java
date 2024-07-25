@@ -34,13 +34,13 @@ import javafx.scene.text.TextAlignment;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextFormatHandlerHelper;
-import jfx.incubator.scene.control.rich.model.ParagraphDirection;
-import jfx.incubator.scene.control.rich.model.RichTextFormatHandler;
-import jfx.incubator.scene.control.rich.model.StyleAttribute;
-import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
-import jfx.incubator.scene.control.rich.model.StyledInput;
-import jfx.incubator.scene.control.rich.model.StyledOutput;
-import jfx.incubator.scene.control.rich.model.StyledSegment;
+import jfx.incubator.scene.control.richtext.model.ParagraphDirection;
+import jfx.incubator.scene.control.richtext.model.RichTextFormatHandler;
+import jfx.incubator.scene.control.richtext.model.StyleAttribute;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.model.StyledInput;
+import jfx.incubator.scene.control.richtext.model.StyledOutput;
+import jfx.incubator.scene.control.richtext.model.StyledSegment;
 
 /**
  * Tests RichTextFormatHandler.

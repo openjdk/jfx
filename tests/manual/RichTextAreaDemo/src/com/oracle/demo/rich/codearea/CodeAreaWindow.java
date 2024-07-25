@@ -33,9 +33,9 @@ import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 import com.oracle.demo.rich.rta.RichTextAreaWindow;
 import com.oracle.demo.rich.util.FX;
-import jfx.incubator.scene.control.rich.RichTextArea;
-import jfx.incubator.scene.control.rich.TextPos;
-import jfx.incubator.scene.control.rich.model.CodeTextModel;
+import jfx.incubator.scene.control.richtext.RichTextArea;
+import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.CodeTextModel;
 
 /**
  * CodeArea Demo window

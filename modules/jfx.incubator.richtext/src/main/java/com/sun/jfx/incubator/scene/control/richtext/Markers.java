@@ -31,8 +31,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import jfx.incubator.scene.control.rich.Marker;
-import jfx.incubator.scene.control.rich.TextPos;
+import jfx.incubator.scene.control.richtext.Marker;
+import jfx.incubator.scene.control.richtext.TextPos;
 
 /**
  * Manages Markers.

@@ -37,8 +37,8 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.ListView;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
-import jfx.incubator.scene.control.rich.TextPos;
-import jfx.incubator.scene.control.rich.model.CodeTextModel;
+import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.CodeTextModel;
 
 /**
  * A mock script engine for the notebook.

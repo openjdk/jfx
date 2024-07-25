@@ -27,8 +27,8 @@ package test.com.sun.jfx.incubator.scene.control.rich;
 
 import org.junit.jupiter.api.Test;
 import com.sun.jfx.incubator.scene.control.richtext.VFlow;
-import jfx.incubator.scene.control.rich.RichTextArea;
-import jfx.incubator.scene.control.rich.RichTextAreaShim;
+import jfx.incubator.scene.control.richtext.RichTextArea;
+import jfx.incubator.scene.control.richtext.RichTextAreaShim;
 
 /**
  * Tests RichTextArea control.

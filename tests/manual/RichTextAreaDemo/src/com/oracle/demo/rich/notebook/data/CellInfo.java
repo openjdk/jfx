@@ -28,7 +28,7 @@ package com.oracle.demo.rich.notebook.data;
 import com.oracle.demo.rich.notebook.CellType;
 import com.oracle.demo.rich.notebook.CodeCellTextModel;
 import com.oracle.demo.rich.notebook.TextCellTextModel;
-import jfx.incubator.scene.control.rich.model.StyledTextModel;
+import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 
 /**
  * This data structure represents a cell in the notebook.

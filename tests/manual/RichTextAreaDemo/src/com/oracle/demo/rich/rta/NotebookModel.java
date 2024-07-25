@@ -24,9 +24,9 @@
  */
 package com.oracle.demo.rich.rta;
 
-import jfx.incubator.scene.control.rich.model.SimpleViewOnlyStyledModel;
-import jfx.incubator.scene.control.rich.model.StyleAttribute;
-import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.model.SimpleViewOnlyStyledModel;
+import jfx.incubator.scene.control.richtext.model.StyleAttribute;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
 public class NotebookModel extends SimpleViewOnlyStyledModel {
 

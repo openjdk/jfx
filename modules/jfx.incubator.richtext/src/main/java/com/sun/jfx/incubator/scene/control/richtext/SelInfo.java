@@ -25,8 +25,8 @@
 
 package com.sun.jfx.incubator.scene.control.richtext;
 
-import jfx.incubator.scene.control.rich.RichTextArea;
-import jfx.incubator.scene.control.rich.TextPos;
+import jfx.incubator.scene.control.richtext.RichTextArea;
+import jfx.incubator.scene.control.richtext.TextPos;
 
 /**
  * A utility class to help deal with anchor and caret positions.

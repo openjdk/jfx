@@ -33,8 +33,8 @@ import javafx.scene.layout.Background;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
-import jfx.incubator.scene.control.rich.model.RichTextFormatHandler;
-import jfx.incubator.scene.control.rich.model.SimpleViewOnlyStyledModel;
+import jfx.incubator.scene.control.richtext.model.RichTextFormatHandler;
+import jfx.incubator.scene.control.richtext.model.SimpleViewOnlyStyledModel;
 
 /**
  * RichTextArea demo model.

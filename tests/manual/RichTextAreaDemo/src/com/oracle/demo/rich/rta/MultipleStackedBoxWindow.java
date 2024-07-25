@@ -26,8 +26,6 @@
 package com.oracle.demo.rich.rta;
 
 import javafx.geometry.Insets;
-import jfx.incubator.scene.control.rich.LineNumberDecorator;
-import jfx.incubator.scene.control.rich.RichTextArea;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Menu;
@@ -37,6 +35,8 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import com.oracle.demo.rich.util.FX;
+import jfx.incubator.scene.control.richtext.LineNumberDecorator;
+import jfx.incubator.scene.control.richtext.RichTextArea;
 
 /**
  * Test Window that stacks multiple RichTextAreas and other components either vertically or horizontally.

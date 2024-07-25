@@ -51,14 +51,14 @@ import com.oracle.demo.rich.notebook.data.CellInfo;
 import com.oracle.demo.rich.notebook.data.Notebook;
 import com.oracle.demo.rich.util.FX;
 import com.oracle.demo.rich.util.FxAction;
-import jfx.incubator.scene.control.rich.CodeArea;
-import jfx.incubator.scene.control.rich.RichTextArea;
-import jfx.incubator.scene.control.rich.SelectionSegment;
-import jfx.incubator.scene.control.rich.TextPos;
-import jfx.incubator.scene.control.rich.model.ContentChange;
-import jfx.incubator.scene.control.rich.model.StyleAttribute;
-import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
-import jfx.incubator.scene.control.rich.model.StyledTextModel;
+import jfx.incubator.scene.control.richtext.CodeArea;
+import jfx.incubator.scene.control.richtext.RichTextArea;
+import jfx.incubator.scene.control.richtext.SelectionSegment;
+import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.ContentChange;
+import jfx.incubator.scene.control.richtext.model.StyleAttribute;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 
 /**
  * This class reacts to changes in application state such as currently active cell,

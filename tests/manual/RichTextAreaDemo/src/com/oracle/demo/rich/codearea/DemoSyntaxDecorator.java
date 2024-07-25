@@ -27,11 +27,11 @@ package com.oracle.demo.rich.codearea;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javafx.scene.paint.Color;
-import jfx.incubator.scene.control.rich.SyntaxDecorator;
-import jfx.incubator.scene.control.rich.TextPos;
-import jfx.incubator.scene.control.rich.model.CodeTextModel;
-import jfx.incubator.scene.control.rich.model.RichParagraph;
-import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.SyntaxDecorator;
+import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.CodeTextModel;
+import jfx.incubator.scene.control.richtext.model.RichParagraph;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
 /**
  * Simple {@code SyntaxDecorator} which emphasizes digits and java keywords.

@@ -26,10 +26,10 @@
 package com.sun.jfx.incubator.scene.control.richtext;
 
 import java.io.IOException;
-import jfx.incubator.scene.control.rich.StyleResolver;
-import jfx.incubator.scene.control.rich.TextPos;
-import jfx.incubator.scene.control.rich.model.StyledSegment;
-import jfx.incubator.scene.control.rich.model.StyledTextModel;
+import jfx.incubator.scene.control.richtext.StyleResolver;
+import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.StyledSegment;
+import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 
 /**
  * Represents an undo-able and redo-able change.

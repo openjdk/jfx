@@ -26,9 +26,9 @@
 package com.sun.jfx.incubator.scene.control.richtext;
 
 import java.io.IOException;
-import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
-import jfx.incubator.scene.control.rich.model.StyledInput;
-import jfx.incubator.scene.control.rich.model.StyledSegment;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.model.StyledInput;
+import jfx.incubator.scene.control.richtext.model.StyledSegment;
 
 public class StringStyledInput implements StyledInput {
     private final String text;

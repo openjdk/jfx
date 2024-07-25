@@ -34,11 +34,11 @@ import javafx.scene.image.WritableImage;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
-import jfx.incubator.scene.control.rich.StyleResolver;
-import jfx.incubator.scene.control.rich.model.StyleAttribute;
-import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
-import jfx.incubator.scene.control.rich.model.StyledOutput;
-import jfx.incubator.scene.control.rich.model.StyledSegment;
+import jfx.incubator.scene.control.richtext.StyleResolver;
+import jfx.incubator.scene.control.richtext.model.StyleAttribute;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.model.StyledOutput;
+import jfx.incubator.scene.control.richtext.model.StyledSegment;
 
 /**
  * A {@link StyledOutput} which generates HTML output.

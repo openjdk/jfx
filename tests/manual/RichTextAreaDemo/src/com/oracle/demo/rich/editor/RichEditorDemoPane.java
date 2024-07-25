@@ -35,7 +35,7 @@ import javafx.scene.text.Font;
 import com.oracle.demo.rich.common.TextStyle;
 import com.oracle.demo.rich.util.FX;
 import jfx.incubator.scene.control.input.KeyBinding;
-import jfx.incubator.scene.control.rich.RichTextArea;
+import jfx.incubator.scene.control.richtext.RichTextArea;
 
 /**
  * Main Panel.

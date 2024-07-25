@@ -48,15 +48,15 @@ import com.oracle.demo.rich.common.Styles;
 import com.oracle.demo.rich.common.TextStyle;
 import com.oracle.demo.rich.util.FX;
 import com.oracle.demo.rich.util.FxAction;
-import jfx.incubator.scene.control.rich.RichTextArea;
-import jfx.incubator.scene.control.rich.SelectionSegment;
-import jfx.incubator.scene.control.rich.TextPos;
-import jfx.incubator.scene.control.rich.model.ContentChange;
-import jfx.incubator.scene.control.rich.model.RichTextModel;
-import jfx.incubator.scene.control.rich.model.RichTextFormatHandler;
-import jfx.incubator.scene.control.rich.model.StyleAttribute;
-import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
-import jfx.incubator.scene.control.rich.model.StyledTextModel;
+import jfx.incubator.scene.control.richtext.RichTextArea;
+import jfx.incubator.scene.control.richtext.SelectionSegment;
+import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.ContentChange;
+import jfx.incubator.scene.control.richtext.model.RichTextFormatHandler;
+import jfx.incubator.scene.control.richtext.model.RichTextModel;
+import jfx.incubator.scene.control.richtext.model.StyleAttribute;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 
 /**
  * This is a bit of hack.  JavaFX has no actions (yet), so here we are using FxActions from

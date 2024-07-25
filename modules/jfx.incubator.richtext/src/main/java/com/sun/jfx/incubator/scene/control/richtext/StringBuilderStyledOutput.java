@@ -26,8 +26,8 @@
 package com.sun.jfx.incubator.scene.control.richtext;
 
 import java.io.IOException;
-import jfx.incubator.scene.control.rich.model.StyledOutput;
-import jfx.incubator.scene.control.rich.model.StyledSegment;
+import jfx.incubator.scene.control.richtext.model.StyledOutput;
+import jfx.incubator.scene.control.richtext.model.StyledSegment;
 
 public class StringBuilderStyledOutput implements StyledOutput {
     private final StringBuilder sb;

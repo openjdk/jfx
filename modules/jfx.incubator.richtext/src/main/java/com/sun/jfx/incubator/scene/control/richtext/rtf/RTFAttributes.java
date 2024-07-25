@@ -26,8 +26,8 @@
 package com.sun.jfx.incubator.scene.control.richtext.rtf;
 
 import java.util.HashMap;
-import jfx.incubator.scene.control.rich.model.StyleAttribute;
-import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.model.StyleAttribute;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
 class RTFAttributes {
     private static final RTFAttribute[] attributes = {

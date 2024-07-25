@@ -31,11 +31,11 @@ import java.util.function.Consumer;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextFormatHandlerHelper;
-import jfx.incubator.scene.control.rich.TextPos;
-import jfx.incubator.scene.control.rich.model.RichTextModel;
-import jfx.incubator.scene.control.rich.model.RichTextFormatHandler;
-import jfx.incubator.scene.control.rich.model.StyledInput;
-import jfx.incubator.scene.control.rich.model.StyledOutput;
+import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.RichTextFormatHandler;
+import jfx.incubator.scene.control.richtext.model.RichTextModel;
+import jfx.incubator.scene.control.richtext.model.StyledInput;
+import jfx.incubator.scene.control.richtext.model.StyledOutput;
 
 /**
  * Tests RichTextModel handling of style attributes when editing.

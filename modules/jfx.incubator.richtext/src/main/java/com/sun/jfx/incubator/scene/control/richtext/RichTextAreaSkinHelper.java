@@ -28,8 +28,8 @@ package com.sun.jfx.incubator.scene.control.richtext;
 import javafx.scene.control.Skin;
 import com.sun.javafx.util.Utils;
 import com.sun.jfx.incubator.scene.control.richtext.util.ListenerHelper;
-import jfx.incubator.scene.control.rich.RichTextArea;
-import jfx.incubator.scene.control.rich.skin.RichTextAreaSkin;
+import jfx.incubator.scene.control.richtext.RichTextArea;
+import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
 
 /**
  * Manages RichTextAreaSkin Accessor.

@@ -39,7 +39,7 @@ module jfx.incubator.richtext {
     requires transitive jfx.incubator.input;
     requires java.desktop;
 
-    exports jfx.incubator.scene.control.rich;
-    exports jfx.incubator.scene.control.rich.skin;
-    exports jfx.incubator.scene.control.rich.model;
+    exports jfx.incubator.scene.control.richtext;
+    exports jfx.incubator.scene.control.richtext.skin;
+    exports jfx.incubator.scene.control.richtext.model;
 }

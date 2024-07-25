@@ -26,10 +26,10 @@
 package com.oracle.demo.rich.notebook;
 
 import java.io.IOException;
-import jfx.incubator.scene.control.rich.TextPos;
-import jfx.incubator.scene.control.rich.model.CodeTextModel;
-import jfx.incubator.scene.control.rich.model.ContentChange;
-import jfx.incubator.scene.control.rich.model.StyledOutput;
+import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.CodeTextModel;
+import jfx.incubator.scene.control.richtext.model.ContentChange;
+import jfx.incubator.scene.control.richtext.model.StyledOutput;
 
 /**
  * Cell Text Model.

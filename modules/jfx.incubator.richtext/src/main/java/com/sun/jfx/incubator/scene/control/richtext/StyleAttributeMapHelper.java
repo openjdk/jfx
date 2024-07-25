@@ -26,7 +26,7 @@
 package com.sun.jfx.incubator.scene.control.richtext;
 
 import com.sun.javafx.util.Utils;
-import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
 /**
  * Provides access to private methods in StyleAttributeMap.

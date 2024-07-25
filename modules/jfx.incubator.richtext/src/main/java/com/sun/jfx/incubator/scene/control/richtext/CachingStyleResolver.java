@@ -28,8 +28,8 @@ package com.sun.jfx.incubator.scene.control.richtext;
 import java.util.HashMap;
 import javafx.scene.Node;
 import javafx.scene.image.WritableImage;
-import jfx.incubator.scene.control.rich.StyleResolver;
-import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.StyleResolver;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
 /**
  * Caching StyleResolver caches conversion results to avoid re-querying for the same information.

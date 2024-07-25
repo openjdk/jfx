@@ -62,17 +62,17 @@ import javafx.util.Duration;
 import javafx.util.StringConverter;
 import com.oracle.demo.rich.util.FX;
 import jfx.incubator.scene.control.input.KeyBinding;
-import jfx.incubator.scene.control.rich.LineNumberDecorator;
-import jfx.incubator.scene.control.rich.RichTextArea;
-import jfx.incubator.scene.control.rich.SideDecorator;
-import jfx.incubator.scene.control.rich.StyleHandlerRegistry;
-import jfx.incubator.scene.control.rich.TextPos;
-import jfx.incubator.scene.control.rich.model.RichTextModel;
-import jfx.incubator.scene.control.rich.model.ParagraphDirection;
-import jfx.incubator.scene.control.rich.model.StyleAttribute;
-import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
-import jfx.incubator.scene.control.rich.model.StyledTextModel;
-import jfx.incubator.scene.control.rich.skin.RichTextAreaSkin;
+import jfx.incubator.scene.control.richtext.LineNumberDecorator;
+import jfx.incubator.scene.control.richtext.RichTextArea;
+import jfx.incubator.scene.control.richtext.SideDecorator;
+import jfx.incubator.scene.control.richtext.StyleHandlerRegistry;
+import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.ParagraphDirection;
+import jfx.incubator.scene.control.richtext.model.RichTextModel;
+import jfx.incubator.scene.control.richtext.model.StyleAttribute;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.model.StyledTextModel;
+import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
 
 /**
  * Main Panel contains RichTextArea, split panes for quick size adjustment, and an option pane.

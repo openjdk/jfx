@@ -29,7 +29,7 @@ import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
-import jfx.incubator.scene.control.rich.SideDecorator;
+import jfx.incubator.scene.control.richtext.SideDecorator;
 
 public class DemoColorSideDecorator implements SideDecorator {
     public DemoColorSideDecorator() {

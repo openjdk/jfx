@@ -25,8 +25,8 @@
 
 package com.oracle.demo.rich.common;
 
-import jfx.incubator.scene.control.rich.model.StyleAttribute;
-import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.model.StyleAttribute;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
 public class Styles {
     // TODO perhaps we should specifically set fonts to be used,

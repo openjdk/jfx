@@ -62,17 +62,17 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.util.Duration;
-import jfx.incubator.scene.control.rich.RichTextArea;
-import jfx.incubator.scene.control.rich.SideDecorator;
-import jfx.incubator.scene.control.rich.StyleResolver;
-import jfx.incubator.scene.control.rich.TextPos;
-import jfx.incubator.scene.control.rich.model.ContentChange;
-import jfx.incubator.scene.control.rich.model.ParagraphDirection;
-import jfx.incubator.scene.control.rich.model.RichParagraph;
-import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
-import jfx.incubator.scene.control.rich.model.StyledSegment;
-import jfx.incubator.scene.control.rich.model.StyledTextModel;
-import jfx.incubator.scene.control.rich.skin.RichTextAreaSkin;
+import jfx.incubator.scene.control.richtext.RichTextArea;
+import jfx.incubator.scene.control.richtext.SideDecorator;
+import jfx.incubator.scene.control.richtext.StyleResolver;
+import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.ContentChange;
+import jfx.incubator.scene.control.richtext.model.ParagraphDirection;
+import jfx.incubator.scene.control.richtext.model.RichParagraph;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.model.StyledSegment;
+import jfx.incubator.scene.control.richtext.model.StyledTextModel;
+import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
 
 /**
  * Virtual text flow deals with TextCells, scroll bars, and conversion

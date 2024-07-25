@@ -24,7 +24,7 @@
  */
 package com.oracle.demo.rich.rta;
 
-import jfx.incubator.scene.control.rich.model.SimpleViewOnlyStyledModel;
+import jfx.incubator.scene.control.richtext.model.SimpleViewOnlyStyledModel;
 
 public class NoLastNewlineModel extends SimpleViewOnlyStyledModel {
     public NoLastNewlineModel(int lineCount) {

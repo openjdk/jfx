@@ -25,14 +25,14 @@
 package com.oracle.demo.rich.rta;
 
 import java.text.DecimalFormat;
-import jfx.incubator.scene.control.rich.StyleResolver;
-import jfx.incubator.scene.control.rich.TextPos;
-import jfx.incubator.scene.control.rich.model.RichParagraph;
-import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
-import jfx.incubator.scene.control.rich.model.StyledTextModelViewOnlyBase;
 import javafx.scene.Node;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
+import jfx.incubator.scene.control.richtext.StyleResolver;
+import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.RichParagraph;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.model.StyledTextModelViewOnlyBase;
 
 /**
  * Demo StyledTextModel.

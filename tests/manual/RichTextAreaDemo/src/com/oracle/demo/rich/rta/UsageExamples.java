@@ -31,12 +31,12 @@ import javafx.scene.input.KeyCode;
 import javafx.stage.Stage;
 import jfx.incubator.scene.control.input.FunctionTag;
 import jfx.incubator.scene.control.input.KeyBinding;
-import jfx.incubator.scene.control.rich.CodeArea;
-import jfx.incubator.scene.control.rich.LineNumberDecorator;
-import jfx.incubator.scene.control.rich.RichTextArea;
-import jfx.incubator.scene.control.rich.TextPos;
-import jfx.incubator.scene.control.rich.model.SimpleViewOnlyStyledModel;
-import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.CodeArea;
+import jfx.incubator.scene.control.richtext.LineNumberDecorator;
+import jfx.incubator.scene.control.richtext.RichTextArea;
+import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.SimpleViewOnlyStyledModel;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
 /**
  * The usage examples used in the documentation.

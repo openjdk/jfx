@@ -29,9 +29,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import jfx.incubator.scene.control.rich.CodeArea;
-import jfx.incubator.scene.control.rich.model.CodeTextModel;
-import jfx.incubator.scene.control.rich.model.RichTextModel;
+import jfx.incubator.scene.control.richtext.CodeArea;
+import jfx.incubator.scene.control.richtext.model.CodeTextModel;
+import jfx.incubator.scene.control.richtext.model.RichTextModel;
 
 /**
  * Tests CodeArea.

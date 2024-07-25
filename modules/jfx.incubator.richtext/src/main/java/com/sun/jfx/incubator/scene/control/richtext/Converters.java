@@ -28,7 +28,7 @@ package com.sun.jfx.incubator.scene.control.richtext;
 import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
 import javafx.util.StringConverter;
-import jfx.incubator.scene.control.rich.model.ParagraphDirection;
+import jfx.incubator.scene.control.richtext.model.ParagraphDirection;
 
 /**
  * Converters used to serialize/deserialize text attributes.
