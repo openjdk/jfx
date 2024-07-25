@@ -967,7 +967,8 @@ List<String> computeLibraryPath(boolean working) {
     List<String> lp = []
 
     if (HAS_JAVAFX_MODULES) {
-        List<String> modsWithNative = [ 'graphics', 'media', 'web' ]
+        // BUG: javafx.[a-z]* assumption
+        List<String> modsWithNative = [ 'javafx.graphics', 'javafx.media', 'javafx.web' ]
 
         // the build/modular-sdk area
         def platformPrefix = ""
@@ -976,11 +977,8 @@ List<String> computeLibraryPath(boolean working) {
         def modulesLibsDir = "${bundledSdkDir}/modules_libs"
 
         modsWithNative.each() { m ->
-            // RFE: incubator dependency
-            if (m.hasProperty("moduleName")) {
-                def moduleName = m.ext.moduleName
-                lp << cygpath("${modulesLibsDir}/${moduleName}")
-            }
+            // BUG: javafx.[a-z]* assumption
+            lp << cygpath("${modulesLibsDir}/${m}")
         }
     } else {
         def platformPrefix = ""
@@ -1714,14 +1712,17 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
         return
     }
 
-    // RFE: incubator dependency
-    if (!m.hasProperty("moduleName")) {
-        fail("Project ${m} has no module name")
+    // BUG: javafx.[a-z]* assumption
+    if (!project.hasProperty("moduleName")) {
+        fail("Project ${project} has no module name")
     }
-    projectDependencies.each { dep ->
+    println "KCR: project = $project"
+    projectDependencies.each { projName ->
+        def dep = project.project(":$projName")
         if (!dep.hasProperty("moduleName")) {
-            fail("Project ${m} dependency ${dep} has no module name")
+            fail("${project} dependency ${dep} has no module name")
         }
+        println "KCR: dependency = $dep"
     }
 
     project.apply plugin: 'maven-publish'
@@ -1774,9 +1775,10 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
         project.publishing {
             publications {
                 maven(MavenPublication) {
-                    // RFE: incubator dependency
+                    // BUG: javafx.[a-z]* assumption
                     def artifactName = project.moduleName.replace('.', '-')
                     artifactId = artifactName
+                    println "KCR: artifactId = $artifactName"
 
                     afterEvaluate {
                         artifact project.tasks."moduleEmptyPublicationJar$t.capital"
@@ -1795,19 +1797,21 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
 
                         Node projectDependencyPlatform = dependencies.appendNode("dependency")
                         projectDependencyPlatform.appendNode("groupId", MAVEN_GROUP_ID)
-                        // RFE: incubator dependency
+                        // BUG: javafx.[a-z]* assumption
                         projectDependencyPlatform.appendNode("artifactId", artifactName)
+                        println "KCR: artifactId = ${artifactName}"
                         projectDependencyPlatform.appendNode("version", MAVEN_VERSION)
                         projectDependencyPlatform.appendNode("classifier", "\${javafx.platform}")
 
                         if (!projectDependencies.empty) {
                             projectDependencies.each { dep ->
-                                // RFE: incubator dependency
+                                // BUG: javafx.[a-z]* assumption
                                 def depName = dep.moduleName.replace('.', '-')
                                 Node projectDependency = dependencies.appendNode("dependency")
                                 projectDependency.appendNode("groupId", MAVEN_GROUP_ID)
-                                // RFE: incubator dependency
+                                // BUG: javafx.[a-z]* assumption
                                 projectDependency.appendNode("artifactId", depName)
+                                println "KCR: artifactId = $depName"
                                 projectDependency.appendNode("version", MAVEN_VERSION)
                            }
                         }
