@@ -72,6 +72,7 @@ import jfx.incubator.scene.control.rich.model.ParagraphDirection;
 import jfx.incubator.scene.control.rich.model.StyleAttribute;
 import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 import jfx.incubator.scene.control.rich.model.StyledTextModel;
+import jfx.incubator.scene.control.rich.skin.RichTextAreaSkin;
 
 /**
  * Main Panel contains RichTextArea, split panes for quick size adjustment, and an option pane.
@@ -272,6 +273,11 @@ public class RichTextAreaDemoPane extends BorderPane {
             control.insertText(TextPos.ZERO, "Heading\n", heading);
         });
 
+        Button replaceSkin = new Button("Replace Skin");
+        replaceSkin.setOnAction((ev) -> {
+            control.setSkin(new RichTextAreaSkin(control));
+        });
+
         op = new ROptionPane();
         op.label("Model:");
         op.option(modelField);
@@ -291,6 +297,7 @@ public class RichTextAreaDemoPane extends BorderPane {
         op.option(rightDecorator);
         op.option(trackWidth);
         op.option(trackHeight);
+        op.option(replaceSkin);
 
         setCenter(vsplit);
 

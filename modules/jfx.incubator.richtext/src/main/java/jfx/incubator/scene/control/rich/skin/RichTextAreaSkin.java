@@ -27,6 +27,7 @@
 
 package jfx.incubator.scene.control.rich.skin;
 
+import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
@@ -38,6 +39,8 @@ import javafx.scene.control.ScrollBar;
 import javafx.scene.control.Skin;
 import javafx.scene.control.SkinBase;
 import javafx.scene.input.DataFormat;
+import javafx.scene.input.InputMethodEvent;
+import javafx.scene.input.InputMethodRequests;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.shape.PathElement;
@@ -74,6 +77,8 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     private final VFlow vflow;
     private final ScrollBar vscroll;
     private final ScrollBar hscroll;
+    private final EventHandler<InputMethodEvent> inputMethodTextChangedHandler = this::handleInputMethodEvent;
+    private InputMethodRequests inputMethodRequests;
 
     static {
         RichTextAreaSkinHelper.setAccessor(new RichTextAreaSkinHelper.Accessor() {
@@ -199,11 +204,50 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     @Override
     public void install() {
         getSkinnable().getInputMap().setSkinInputMap(behavior.getSkinInputMap());
+
+        // IMPORTANT: both setOnInputMethodTextChanged() and setInputMethodRequests() are required for IME to work
+        if (getSkinnable().getOnInputMethodTextChanged() == null) {
+            getSkinnable().setOnInputMethodTextChanged(inputMethodTextChangedHandler);
+        }
+
+        if (getSkinnable().getInputMethodRequests() == null) {
+            inputMethodRequests = new InputMethodRequests() {
+                @Override
+                public Point2D getTextLocation(int offset) {
+                    System.out.println("getTextLocation offset=" + offset); // FIX
+                    return null;
+                }
+                
+                @Override
+                public String getSelectedText() {
+                    System.out.println("getSelectedText"); // FIX
+                    return null;
+                }
+                
+                @Override
+                public int getLocationOffset(int x, int y) {
+                    System.out.println("getLocationOffset x=" + x + " y=" + y); // FIX
+                    return 0;
+                }
+                
+                @Override
+                public void cancelLatestCommittedText() {
+                    System.out.println("cancelLatestCommittedText"); // FIX
+                }
+            };
+            // TODO getSkinnable().setInputMethodRequests(inputMethodRequests);
+        }
     }
 
     @Override
     public void dispose() {
         if (getSkinnable() != null) {
+            if (getSkinnable().getInputMethodRequests() == inputMethodRequests) {
+                getSkinnable().setInputMethodRequests(null);
+            }
+            if (getSkinnable().getOnInputMethodTextChanged() == inputMethodTextChangedHandler) {
+                getSkinnable().setOnInputMethodTextChanged(null);
+            }
             listenerHelper.disconnect();
             vflow.dispose();
             super.dispose();
@@ -331,6 +375,55 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     @Override
     protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return Params.MIN_WIDTH;
+    }
+
+    /**
+     * Handles an input method event.
+     * @param event the {@code InputMethodEvent} to be handled
+     */
+    protected void handleInputMethodEvent(InputMethodEvent ev) {
+        RichTextArea textInput = getSkinnable();
+        /** TODO this is taken from TextInputControlSkin:763
+        if (textInput.isEditable() && !textInput.textProperty().isBound() && !textInput.isDisabled()) {
+
+            // remove previous input method text (if any) or selected text
+            if (imlength != 0) {
+                removeHighlight(imattrs);
+                imattrs.clear();
+                textInput.selectRange(imstart, imstart + imlength);
+            }
+
+            // Insert committed text
+            if (ev.getCommitted().length() != 0) {
+                String committed = ev.getCommitted();
+                textInput.replaceText(textInput.getSelection(), committed);
+            }
+
+            // Replace composed text
+            imstart = textInput.getSelection().getStart();
+            StringBuilder composed = new StringBuilder();
+            for (InputMethodTextRun run : ev.getComposed()) {
+                composed.append(run.getText());
+            }
+            textInput.replaceText(textInput.getSelection(), composed.toString());
+            imlength = composed.length();
+            if (imlength != 0) {
+                int pos = imstart;
+                for (InputMethodTextRun run : ev.getComposed()) {
+                    int endPos = pos + run.getText().length();
+                    createInputMethodAttributes(run.getHighlight(), pos, endPos);
+                    pos = endPos;
+                }
+                addHighlight(imattrs, imstart);
+
+                // Set caret position in composed text
+                int caretPos = ev.getCaretPosition();
+                if (caretPos >= 0 && caretPos < imlength) {
+                    textInput.selectRange(imstart + caretPos, imstart + caretPos);
+                }
+            }
+        }
+        */
     }
 
     @Override
