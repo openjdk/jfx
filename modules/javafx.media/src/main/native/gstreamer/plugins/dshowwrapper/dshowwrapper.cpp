@@ -59,6 +59,7 @@ using namespace std;
 #define AAC_PTS_INPUT_DEBUG 0
 #define EOS_DEBUG 0
 
+// MAX_HEADER_SIZE is valid max size for H.264 and AAC, however AAC header is actually smaller.
 #define MAX_HEADER_SIZE 256
 #define INPUT_BUFFERS_BEFORE_ERROR 500
 
@@ -635,17 +636,25 @@ void dshowwrapper_deliver_post_process_mp2t(GstBuffer *pBuffer, GstDShowWrapper 
     data = info.data;
     size = info.size;
 
-    if (data == NULL || size < 3)
+    // PES header 6 bytes + optional extension + payload
+    // We should have at least 7 bytes (header + 1 byte for payload)
+    if (data == NULL || size < 7)
+    {
+        gst_buffer_unmap(pBuffer, &info);
         return;
+    }
 
     if (data[0] == 0x00 && data[1] == 0x00 && data[2] == 0x01) // PES header start
     {
-        if ((data[6] & 0x80) == 0x80) // Optional PES header
+        // Check for optional PES header and make sure we have enough bytes
+        // to continue parsing optional PES header which is 3 bytes.
+        if ((data[6] & 0x80) == 0x80 && size >= 9) // Optional PES header
         {
             __int64 PTS = 0;
             GstClockTime gst_pts = GST_CLOCK_TIME_NONE;
 
-            if ((data[7] & 0x80) == 0x80) // Get PTS
+            // Make sure we have enough bytes to read PTS
+            if ((data[7] & 0x80) == 0x80 && size >= 14) // Get PTS
             {
                 PTS |= ((__int64)(data[9] & 0x0E) << 29);
                 PTS |= (data[10] << 22);
@@ -694,11 +703,21 @@ void dshowwrapper_deliver_post_process_mp2t(GstBuffer *pBuffer, GstDShowWrapper 
             }
 
             guint8 optional_remaining_header_size = data[8];
-            size -= (PES_HEADER_SIZE + PES_OPTIONAL_HEADER_SIZE + optional_remaining_header_size);
-            offset = (PES_HEADER_SIZE + PES_OPTIONAL_HEADER_SIZE + optional_remaining_header_size);
+            if ((PES_HEADER_SIZE + PES_OPTIONAL_HEADER_SIZE + optional_remaining_header_size) < size)
+            {
+                size -= (PES_HEADER_SIZE + PES_OPTIONAL_HEADER_SIZE + optional_remaining_header_size);
+                offset = (PES_HEADER_SIZE + PES_OPTIONAL_HEADER_SIZE + optional_remaining_header_size);
+            }
+            else
+            {
+                // Something wrong.
+                gst_buffer_unmap(pBuffer, &info);
+                return;
+            }
         }
         else
         {
+            // Skip 6 bytes of PES header
             size -= PES_HEADER_SIZE;
             offset = PES_HEADER_SIZE;
         }
@@ -1551,7 +1570,14 @@ static gboolean dshowwrapper_load_decoder_aac(GstStructure *s, GstDShowWrapper *
             codec_data = gst_value_get_buffer(v);
             if (codec_data != NULL)
                 if (gst_buffer_map(codec_data, &info, GST_MAP_READ))
-                    codec_data_size = info.size;
+                    codec_data_size = (gint)info.size;
+        }
+
+        // Make sure header has reasonable size
+        if (codec_data_size < 0 || codec_data_size > MAX_HEADER_SIZE)
+        {
+            gst_buffer_unmap(codec_data, &info);
+            return FALSE;
         }
 
         inputFormat.type = MEDIATYPE_Audio;
@@ -2071,13 +2097,14 @@ static gboolean dshowwrapper_load_decoder_h264(GstStructure *s, GstDShowWrapper 
             if (gst_buffer_map(codec_data, &codec_data_info, GST_MAP_READ))
             {
                 if (codec_data_info.size <= MAX_HEADER_SIZE)
-                    header_size = dshowwrapper_get_avc_config(codec_data_info.data, codec_data_info.size, header, MAX_HEADER_SIZE, &decoder->lengthSizeMinusOne);
+                    header_size = (gint)dshowwrapper_get_avc_config(codec_data_info.data, codec_data_info.size, header, MAX_HEADER_SIZE, &decoder->lengthSizeMinusOne);
                 gst_buffer_unmap(codec_data, &codec_data_info);
             }
         }
         else
             return FALSE;
 
+        // dshowwrapper_get_avc_config() will make sure that (header_size <= MAX_HEADER_SIZE)
         if (header_size <= 0)
             return FALSE;
 
