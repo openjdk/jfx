@@ -44,6 +44,7 @@ public abstract class DataFormatHandler {
      * @param attr the style attributes (can be null)
      * @return the StyledInput
      * @throws IOException when operation is not supported or an I/O error occurs
+     * @throws UnsupportedOperationException if the copy operation is not supported
      */
     public abstract StyledInput createStyledInput(String input, StyleAttributeMap attr) throws IOException;
 
@@ -60,8 +61,8 @@ public abstract class DataFormatHandler {
      * @param end end text position
      * @return an object to be placed to the Clipboard
      * @throws IOException when an I/O error occurs
+     * @throws UnsupportedOperationException if the copy operation is not supported
      */
-    // TODO throw UnsupportedMethodException if export operation is not supported?
     public abstract Object copy(
         StyledTextModel model,
         StyleResolver resolver,
@@ -83,8 +84,8 @@ public abstract class DataFormatHandler {
      * @param end end text position
      * @param out target {@code OutputStream}
      * @throws IOException when an I/O error occurs
+     * @throws UnsupportedOperationException if the copy operation is not supported
      */
-    // TODO throw UnsupportedMethodException if export operation is not supported?
     public abstract void save(
         StyledTextModel model,
         StyleResolver resolver,

@@ -74,7 +74,6 @@ public class RtfFormatHandler extends DataFormatHandler {
 
     private void export(StyledTextModel model, StyleResolver resolver, TextPos start, TextPos end, Writer wr)
         throws IOException {
-
         RtfStyledOutput out = new RtfStyledOutput(resolver, wr);
         // collect styles
         model.export(start, end, out.firstPassBuilder());
