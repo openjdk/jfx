@@ -17,4 +17,4 @@
 --add-exports javafx.controls/com.sun.javafx.scene.control=ALL-UNNAMED
 #
 --add-exports jfx.incubator.richtext/com.sun.jfx.incubator.scene.control.dummy=ALL-UNNAMED
---add-exports jfx.incubator.richtext/com.sun.jfx.incubator.scene.control.rich=ALL-UNNAMED
+--add-exports jfx.incubator.richtext/com.sun.jfx.incubator.scene.control.richtext=ALL-UNNAMED
