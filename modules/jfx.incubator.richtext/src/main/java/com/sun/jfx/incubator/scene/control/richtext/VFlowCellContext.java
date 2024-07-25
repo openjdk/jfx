@@ -23,16 +23,48 @@
  * questions.
  */
 
-package jfx.incubator.scene.control.rich;
+package com.sun.jfx.incubator.scene.control.richtext;
 
-import com.sun.jfx.incubator.scene.control.richtext.VFlow;
+import javafx.scene.Node;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
+import jfx.incubator.scene.control.rich.skin.CellContext;
 
 /**
- * RichTextArea shim.
+ * Assist in creating virtualized text cells.
  */
-public class RichTextAreaShim {
-    /** for when we need to access VFlow */
-    public static VFlow vflow(RichTextArea t) {
-        return t.vflow();
+class VFlowCellContext implements CellContext {
+    private Node node;
+    private StyleAttributeMap attrs;
+    private final StringBuilder style = new StringBuilder();
+
+    public VFlowCellContext() {
+    }
+
+    @Override
+    public void addStyle(String fxStyle) {
+        style.append(fxStyle);
+    }
+
+    @Override
+    public StyleAttributeMap getAttributes() {
+        return attrs;
+    }
+
+    @Override
+    public Node getNode() {
+        return node;
+    }
+
+    void reset(Node n, StyleAttributeMap a) {
+        this.node = n;
+        this.attrs = a;
+        style.setLength(0);
+    }
+
+    void apply() {
+        if (style.length() > 0) {
+            String s = style.toString();
+            node.setStyle(s);
+        }
     }
 }

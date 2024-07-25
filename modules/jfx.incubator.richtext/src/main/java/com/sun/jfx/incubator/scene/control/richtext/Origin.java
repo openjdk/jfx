@@ -23,16 +23,21 @@
  * questions.
  */
 
-package jfx.incubator.scene.control.rich;
-
-import com.sun.jfx.incubator.scene.control.richtext.VFlow;
+package com.sun.jfx.incubator.scene.control.richtext;
 
 /**
- * RichTextArea shim.
+ * View origin: model index of the top paragraph index + offset in pixels from the upper edge of the top cell to
+ * the upper edge of the view area.
+ *
+ * @param index the model index of a paragraph at the top of visible area
+ * @param offset the distance in pixels from the top of the visible area to the top of the topmost paragraph
  */
-public class RichTextAreaShim {
-    /** for when we need to access VFlow */
-    public static VFlow vflow(RichTextArea t) {
-        return t.vflow();
+public record Origin(int index, double offset) {
+    /** beginning of the document */
+    public static final Origin ZERO = new Origin(0, 0.0);
+
+    @Override
+    public String toString() {
+        return "Origin{index=" + index + ", offset=" + offset + "}";
     }
 }

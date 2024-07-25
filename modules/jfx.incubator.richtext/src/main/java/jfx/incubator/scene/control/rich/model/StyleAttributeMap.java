@@ -35,9 +35,9 @@ import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
-import com.sun.jfx.incubator.scene.control.rich.CssStyles;
-import com.sun.jfx.incubator.scene.control.rich.StyleAttributeMapHelper;
-import com.sun.jfx.incubator.scene.control.rich.util.RichUtils;
+import com.sun.jfx.incubator.scene.control.richtext.CssStyles;
+import com.sun.jfx.incubator.scene.control.richtext.StyleAttributeMapHelper;
+import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
 
 /**
  * This immutable object contains a map of {@link StyleAttribute}s.

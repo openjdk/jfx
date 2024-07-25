@@ -23,16 +23,43 @@
  * questions.
  */
 
-package jfx.incubator.scene.control.rich;
+package com.sun.jfx.incubator.scene.control.richtext;
 
-import com.sun.jfx.incubator.scene.control.richtext.VFlow;
+import java.util.HashMap;
+import javafx.scene.Node;
+import javafx.scene.image.WritableImage;
+import jfx.incubator.scene.control.rich.StyleResolver;
+import jfx.incubator.scene.control.rich.model.StyleAttributeMap;
 
 /**
- * RichTextArea shim.
+ * Caching StyleResolver caches conversion results to avoid re-querying for the same information.
  */
-public class RichTextAreaShim {
-    /** for when we need to access VFlow */
-    public static VFlow vflow(RichTextArea t) {
-        return t.vflow();
+public class CachingStyleResolver implements StyleResolver {
+    private final StyleResolver resolver;
+    private final HashMap<CssStyles, StyleAttributeMap> cache = new HashMap<>();
+
+    public CachingStyleResolver(StyleResolver r) {
+        this.resolver = r;
+    }
+
+    @Override
+    public StyleAttributeMap resolveStyles(StyleAttributeMap attrs) {
+        CssStyles css = attrs.get(CssStyles.CSS);
+        if (css == null) {
+            // no conversion is needed
+            return attrs;
+        }
+
+        StyleAttributeMap a = cache.get(css);
+        if (a == null) {
+            a = resolver.resolveStyles(attrs);
+            cache.put(css, a);
+        }
+        return a;
+    }
+
+    @Override
+    public WritableImage snapshot(Node node) {
+        return resolver.snapshot(node);
     }
 }

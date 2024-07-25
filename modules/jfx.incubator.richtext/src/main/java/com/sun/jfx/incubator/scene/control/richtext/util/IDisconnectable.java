@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,17 +22,19 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
-package jfx.incubator.scene.control.rich;
-
-import com.sun.jfx.incubator.scene.control.richtext.VFlow;
+// Original code is re-licensed to Oracle by the author.
+// https://github.com/andy-goryachev/FxTextEditor/blob/master/src/goryachev/common/util/Disconnectable.java
+// Copyright © 2021-2022 Andy Goryachev <andy@goryachev.com>
+package com.sun.jfx.incubator.scene.control.richtext.util;
 
 /**
- * RichTextArea shim.
+ * A functional interface that provides a {@link #disconnect()} method.
  */
-public class RichTextAreaShim {
-    /** for when we need to access VFlow */
-    public static VFlow vflow(RichTextArea t) {
-        return t.vflow();
-    }
+@FunctionalInterface
+public interface IDisconnectable {
+    /**
+     * Disconnects what has been connected. May be called multiple times, only the
+     * first invocation actually disconnects.
+     */
+    public void disconnect();
 }

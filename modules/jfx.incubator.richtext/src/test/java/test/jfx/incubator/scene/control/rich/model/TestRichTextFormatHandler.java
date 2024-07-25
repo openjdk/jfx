@@ -33,7 +33,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import com.sun.jfx.incubator.scene.control.rich.RichTextFormatHandlerHelper;
+import com.sun.jfx.incubator.scene.control.richtext.RichTextFormatHandlerHelper;
 import jfx.incubator.scene.control.rich.model.ParagraphDirection;
 import jfx.incubator.scene.control.rich.model.RichTextFormatHandler;
 import jfx.incubator.scene.control.rich.model.StyleAttribute;

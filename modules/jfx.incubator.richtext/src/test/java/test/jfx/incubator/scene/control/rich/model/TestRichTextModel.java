@@ -30,7 +30,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import com.sun.jfx.incubator.scene.control.rich.SegmentStyledInput;
+import com.sun.jfx.incubator.scene.control.richtext.SegmentStyledInput;
 import jfx.incubator.scene.control.rich.TextPos;
 import jfx.incubator.scene.control.rich.model.RichTextModel;
 import jfx.incubator.scene.control.rich.model.RichTextModelShim;

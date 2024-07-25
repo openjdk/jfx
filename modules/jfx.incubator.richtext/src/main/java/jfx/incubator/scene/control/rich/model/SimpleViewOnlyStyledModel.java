@@ -40,8 +40,8 @@ import javafx.scene.Node;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
-import com.sun.jfx.incubator.scene.control.rich.ImageCellPane;
-import com.sun.jfx.incubator.scene.control.rich.TextCell;
+import com.sun.jfx.incubator.scene.control.richtext.ImageCellPane;
+import com.sun.jfx.incubator.scene.control.richtext.TextCell;
 import jfx.incubator.scene.control.rich.StyleResolver;
 import jfx.incubator.scene.control.rich.TextPos;
 

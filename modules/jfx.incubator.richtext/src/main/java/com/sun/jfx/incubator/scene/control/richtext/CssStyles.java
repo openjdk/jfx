@@ -23,16 +23,15 @@
  * questions.
  */
 
-package jfx.incubator.scene.control.rich;
+package com.sun.jfx.incubator.scene.control.richtext;
 
-import com.sun.jfx.incubator.scene.control.richtext.VFlow;
+import jfx.incubator.scene.control.rich.model.StyleAttribute;
 
 /**
- * RichTextArea shim.
+ * Attribute represents CSS styles: a combination of a direct style (-fx-...)
+ * and a number of style names.
  */
-public class RichTextAreaShim {
-    /** for when we need to access VFlow */
-    public static VFlow vflow(RichTextArea t) {
-        return t.vflow();
-    }
+public final record CssStyles(String style, String[] names) {
+    /** This special attribute contains CSS direct style and style names for text segments only */
+    public static final StyleAttribute<CssStyles> CSS = new StyleAttribute<>("CSS", CssStyles.class, false);
 }

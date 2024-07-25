@@ -23,16 +23,13 @@
  * questions.
  */
 
-package jfx.incubator.scene.control.rich;
-
-import com.sun.jfx.incubator.scene.control.richtext.VFlow;
+package com.sun.jfx.incubator.scene.control.richtext.rtf;
 
 /**
- * RichTextArea shim.
+ * Replacement for javax.swing.text.Style.
  */
-public class RichTextAreaShim {
-    /** for when we need to access VFlow */
-    public static VFlow vflow(RichTextArea t) {
-        return t.vflow();
+class Style extends AttrSet {
+    /** Default constructor. */
+    public Style() {
     }
 }

@@ -27,7 +27,7 @@ package jfx.incubator.scene.control.rich.model;
 
 import java.io.Closeable;
 import java.io.IOException;
-import com.sun.jfx.incubator.scene.control.rich.StringBuilderStyledOutput;
+import com.sun.jfx.incubator.scene.control.richtext.StringBuilderStyledOutput;
 
 /**
  * Class represents a consumer of styled text segments for the purposes of

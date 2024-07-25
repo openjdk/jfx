@@ -23,16 +23,42 @@
  * questions.
  */
 
-package jfx.incubator.scene.control.rich;
+package com.sun.jfx.incubator.scene.control.richtext;
 
-import com.sun.jfx.incubator.scene.control.richtext.VFlow;
+import javafx.scene.control.Skin;
+import com.sun.javafx.util.Utils;
+import com.sun.jfx.incubator.scene.control.richtext.util.ListenerHelper;
+import jfx.incubator.scene.control.rich.RichTextArea;
+import jfx.incubator.scene.control.rich.skin.RichTextAreaSkin;
 
 /**
- * RichTextArea shim.
+ * Manages RichTextAreaSkin Accessor.
  */
-public class RichTextAreaShim {
-    /** for when we need to access VFlow */
-    public static VFlow vflow(RichTextArea t) {
-        return t.vflow();
+public class RichTextAreaSkinHelper {
+    public interface Accessor {
+        public VFlow getVFlow(Skin<?> skin);
+        public ListenerHelper getListenerHelper(Skin<?> skin);
+    }
+
+    static {
+        Utils.forceInit(RichTextAreaSkin.class);
+    }
+
+    private static Accessor accessor;
+
+    public static void setAccessor(Accessor a) {
+        if (accessor != null) {
+            throw new IllegalStateException();
+        }
+        accessor = a;
+    }
+
+    public static VFlow getVFlow(RichTextArea t) {
+        var skin = t.getSkin();
+        return accessor.getVFlow(skin);
+    }
+
+    public static ListenerHelper getListenerHelper(RichTextAreaSkin skin) {
+        return accessor.getListenerHelper(skin);
     }
 }

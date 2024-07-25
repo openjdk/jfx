@@ -23,16 +23,37 @@
  * questions.
  */
 
-package jfx.incubator.scene.control.rich;
+package com.sun.jfx.incubator.scene.control.richtext;
 
-import com.sun.jfx.incubator.scene.control.richtext.VFlow;
+import java.io.IOException;
+import java.util.ArrayList;
+import jfx.incubator.scene.control.rich.model.StyledOutput;
+import jfx.incubator.scene.control.rich.model.StyledSegment;
 
 /**
- * RichTextArea shim.
+ * This StyledOutput simply collects StyledSegments in a list.
  */
-public class RichTextAreaShim {
-    /** for when we need to access VFlow */
-    public static VFlow vflow(RichTextArea t) {
-        return t.vflow();
+public class SegmentStyledOutput implements StyledOutput {
+    private ArrayList<StyledSegment> segments;
+
+    public SegmentStyledOutput(int initialCapacity) {
+        segments = new ArrayList<>(initialCapacity);
+    }
+
+    @Override
+    public void consume(StyledSegment s) throws IOException {
+        segments.add(s);
+    }
+
+    @Override
+    public void flush() throws IOException {
+    }
+
+    @Override
+    public void close() throws IOException {
+    }
+
+    public StyledSegment[] getSegments() {
+        return segments.toArray(new StyledSegment[segments.size()]);
     }
 }

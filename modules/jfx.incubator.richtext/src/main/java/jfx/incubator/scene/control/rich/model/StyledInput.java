@@ -27,7 +27,7 @@ package jfx.incubator.scene.control.rich.model;
 
 import java.io.Closeable;
 import java.io.IOException;
-import com.sun.jfx.incubator.scene.control.rich.StringStyledInput;
+import com.sun.jfx.incubator.scene.control.richtext.StringStyledInput;
 
 /**
  * This interface represents a source of styled text segments for the purposes of

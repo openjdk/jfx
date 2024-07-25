@@ -32,7 +32,7 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import javafx.scene.input.DataFormat;
-import com.sun.jfx.incubator.scene.control.rich.HtmlStyledOutput;
+import com.sun.jfx.incubator.scene.control.richtext.HtmlStyledOutput;
 import jfx.incubator.scene.control.rich.StyleResolver;
 import jfx.incubator.scene.control.rich.TextPos;
 

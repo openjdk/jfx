@@ -23,16 +23,51 @@
  * questions.
  */
 
-package jfx.incubator.scene.control.rich;
+package com.sun.jfx.incubator.scene.control.richtext;
 
-import com.sun.jfx.incubator.scene.control.richtext.VFlow;
+import java.io.IOException;
+import jfx.incubator.scene.control.rich.model.StyledOutput;
+import jfx.incubator.scene.control.rich.model.StyledSegment;
 
-/**
- * RichTextArea shim.
- */
-public class RichTextAreaShim {
-    /** for when we need to access VFlow */
-    public static VFlow vflow(RichTextArea t) {
-        return t.vflow();
+public class StringBuilderStyledOutput implements StyledOutput {
+    private final StringBuilder sb;
+    private String newline = System.getProperty("line.separator");
+
+    public StringBuilderStyledOutput(int initialCapacity) {
+        sb = new StringBuilder(initialCapacity);
+    }
+
+    public StringBuilderStyledOutput() {
+        this(1024);
+    }
+
+    public void setLineSeparator(String s) {
+        newline = s;
+    }
+
+    @Override
+    public void consume(StyledSegment seg) {
+        switch (seg.getType()) {
+        case LINE_BREAK:
+            sb.append(newline);
+            break;
+        case TEXT:
+            String text = seg.getText();
+            sb.append(text);
+            break;
+        }
+    }
+
+    @Override
+    public String toString() {
+        return sb.toString();
+    }
+
+    @Override
+    public void flush() throws IOException {
+    }
+
+    @Override
+    public void close() throws IOException {
     }
 }

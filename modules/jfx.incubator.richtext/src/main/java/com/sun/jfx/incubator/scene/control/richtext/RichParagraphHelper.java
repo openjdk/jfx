@@ -23,16 +23,42 @@
  * questions.
  */
 
-package jfx.incubator.scene.control.rich;
+package com.sun.jfx.incubator.scene.control.richtext;
 
-import com.sun.jfx.incubator.scene.control.richtext.VFlow;
+import java.util.List;
+import java.util.function.Consumer;
+import com.sun.javafx.util.Utils;
+import jfx.incubator.scene.control.rich.model.RichParagraph;
+import jfx.incubator.scene.control.rich.model.StyledSegment;
 
 /**
- * RichTextArea shim.
+ * Provides access to internal methods in RichParagraph.
  */
-public class RichTextAreaShim {
-    /** for when we need to access VFlow */
-    public static VFlow vflow(RichTextArea t) {
-        return t.vflow();
+public class RichParagraphHelper {
+    public interface Accessor {
+        public List<Consumer<TextCell>> getHighlights(RichParagraph p);
+
+        public List<StyledSegment> getSegments(RichParagraph p);
+    }
+
+    static {
+        Utils.forceInit(RichParagraph.class);
+    }
+
+    private static Accessor accessor;
+
+    public static void setAccessor(Accessor a) {
+        if (accessor != null) {
+            throw new IllegalStateException();
+        }
+        accessor = a;
+    }
+
+    public static List<Consumer<TextCell>> getHighlights(RichParagraph p) {
+        return accessor.getHighlights(p);
+    }
+
+    public static List<StyledSegment> getSegments(RichParagraph p) {
+        return accessor.getSegments(p);
     }
 }

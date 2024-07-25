@@ -41,8 +41,8 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
 import javafx.util.StringConverter;
 import javafx.util.converter.DoubleStringConverter;
-import com.sun.jfx.incubator.scene.control.rich.Converters;
-import com.sun.jfx.incubator.scene.control.rich.RichTextFormatHandlerHelper;
+import com.sun.jfx.incubator.scene.control.richtext.Converters;
+import com.sun.jfx.incubator.scene.control.richtext.RichTextFormatHandlerHelper;
 import jfx.incubator.scene.control.rich.StyleResolver;
 import jfx.incubator.scene.control.rich.TextPos;
 

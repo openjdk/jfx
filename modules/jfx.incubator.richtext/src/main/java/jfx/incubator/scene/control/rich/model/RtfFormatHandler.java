@@ -32,8 +32,8 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import javafx.scene.input.DataFormat;
-import com.sun.jfx.incubator.scene.control.rich.RtfStyledOutput;
-import com.sun.jfx.incubator.scene.control.rich.rtf.RTFReader;
+import com.sun.jfx.incubator.scene.control.richtext.RtfStyledOutput;
+import com.sun.jfx.incubator.scene.control.richtext.rtf.RTFReader;
 import jfx.incubator.scene.control.rich.StyleResolver;
 import jfx.incubator.scene.control.rich.TextPos;
 

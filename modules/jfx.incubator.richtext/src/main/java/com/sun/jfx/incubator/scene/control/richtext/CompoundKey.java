@@ -23,16 +23,34 @@
  * questions.
  */
 
-package jfx.incubator.scene.control.rich;
+package com.sun.jfx.incubator.scene.control.richtext;
 
-import com.sun.jfx.incubator.scene.control.richtext.VFlow;
+import java.util.Arrays;
 
 /**
- * RichTextArea shim.
+ * Compound Key
  */
-public class RichTextAreaShim {
-    /** for when we need to access VFlow */
-    public static VFlow vflow(RichTextArea t) {
-        return t.vflow();
+public class CompoundKey {
+    private final Object[] keys;
+
+    public CompoundKey(Object... keys) {
+        this.keys = keys;
+    }
+
+    @Override
+    public int hashCode() {
+        int h = CompoundKey.class.hashCode();
+        return 31 * h + Arrays.hashCode(keys);
+    }
+
+    @Override
+    public boolean equals(Object x) {
+        if (x == this) {
+            return true;
+        } else if (x instanceof CompoundKey c) {
+            return Arrays.equals(keys, c.keys);
+        } else {
+            return false;
+        }
     }
 }

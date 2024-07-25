@@ -23,16 +23,20 @@
  * questions.
  */
 
-package jfx.incubator.scene.control.rich;
+package com.sun.jfx.incubator.scene.control.richtext;
 
-import com.sun.jfx.incubator.scene.control.richtext.VFlow;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 
 /**
- * RichTextArea shim.
+ * A spacer node used to emulate the first line indent.
+ *
+ * FIX problems:
+ * - selection: TextFlow thinks there is a separate node (click on left side, move to right side of this node)
  */
-public class RichTextAreaShim {
-    /** for when we need to access VFlow */
-    public static VFlow vflow(RichTextArea t) {
-        return t.vflow();
+public class FirstLineIndentSpacer extends Rectangle {
+    public FirstLineIndentSpacer(double width) {
+        super(width, 1);
+        setFill(Color.rgb(0, 0, 0, 0.0));
     }
 }

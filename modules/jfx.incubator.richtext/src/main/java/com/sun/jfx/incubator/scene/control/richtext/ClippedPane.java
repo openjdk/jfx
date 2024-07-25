@@ -23,16 +23,32 @@
  * questions.
  */
 
-package jfx.incubator.scene.control.rich;
+package com.sun.jfx.incubator.scene.control.richtext;
 
-import com.sun.jfx.incubator.scene.control.richtext.VFlow;
+import javafx.geometry.HPos;
+import javafx.geometry.Insets;
+import javafx.geometry.VPos;
+import javafx.scene.Node;
+import javafx.scene.layout.Pane;
+import javafx.scene.shape.Rectangle;
 
 /**
- * RichTextArea shim.
+ * Pane that allows for container/controller to lay out its children,
+ * clipping its content to its bounds.
  */
-public class RichTextAreaShim {
-    /** for when we need to access VFlow */
-    public static VFlow vflow(RichTextArea t) {
-        return t.vflow();
+public class ClippedPane extends Pane {
+    private final Rectangle clip;
+
+    public ClippedPane(String cssName) {
+        getStyleClass().add(cssName);
+
+        clip = new Rectangle();
+        clip.widthProperty().bind(widthProperty());
+        clip.heightProperty().bind(heightProperty());
+        setClip(clip);
+    }
+
+    public void layoutInArea(Node n, double x, double y, double w, double h) {
+        layoutInArea(n, x, y, w, h, 0.0, Insets.EMPTY, HPos.LEFT, VPos.TOP);
     }
 }

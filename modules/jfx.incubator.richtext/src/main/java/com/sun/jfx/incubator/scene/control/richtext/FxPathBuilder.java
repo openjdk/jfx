@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,17 +22,45 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+// This code borrows heavily from the following project, with permission from the author:
+// https://github.com/andy-goryachev/FxEditor
 
-package jfx.incubator.scene.control.rich;
+package com.sun.jfx.incubator.scene.control.richtext;
 
-import com.sun.jfx.incubator.scene.control.richtext.VFlow;
+import java.util.ArrayList;
+import java.util.List;
+import javafx.scene.shape.LineTo;
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.PathElement;
 
 /**
- * RichTextArea shim.
+ * Conventient utility for building javafx {@link Path}
  */
-public class RichTextAreaShim {
-    /** for when we need to access VFlow */
-    public static VFlow vflow(RichTextArea t) {
-        return t.vflow();
+public class FxPathBuilder {
+    private final ArrayList<PathElement> elements = new ArrayList<>();
+
+    public FxPathBuilder() {
+    }
+
+    public void add(PathElement em) {
+        elements.add(em);
+    }
+
+    public void addAll(PathElement... es) {
+        for (PathElement em : es) {
+            elements.add(em);
+        }
+    }
+
+    public void moveto(double x, double y) {
+        add(new MoveTo(x, y));
+    }
+
+    public void lineto(double x, double y) {
+        add(new LineTo(x, y));
+    }
+
+    public List<PathElement> getPathElements() {
+        return elements;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,16 +23,33 @@
  * questions.
  */
 
-package jfx.incubator.scene.control.rich;
+package com.sun.jfx.incubator.scene.control.richtext;
 
-import com.sun.jfx.incubator.scene.control.richtext.VFlow;
+import java.io.Writer;
+import com.sun.javafx.util.Utils;
+import jfx.incubator.scene.control.rich.StyleResolver;
+import jfx.incubator.scene.control.rich.model.RichTextFormatHandler;
+import jfx.incubator.scene.control.rich.model.StyledOutput;
 
-/**
- * RichTextArea shim.
- */
-public class RichTextAreaShim {
-    /** for when we need to access VFlow */
-    public static VFlow vflow(RichTextArea t) {
-        return t.vflow();
+public class RichTextFormatHandlerHelper {
+    public interface Accessor {
+        public StyledOutput createStyledOutput(RichTextFormatHandler h, StyleResolver r, Writer wr);
+    }
+
+    static {
+        Utils.forceInit(RichTextFormatHandler.class);
+    }
+
+    private static Accessor accessor;
+
+    public static void setAccessor(Accessor a) {
+        if (accessor != null) {
+            throw new IllegalStateException();
+        }
+        accessor = a;
+    }
+
+    public static StyledOutput createStyledOutput(RichTextFormatHandler h, StyleResolver r, Writer wr) {
+        return accessor.createStyledOutput(h, r, wr);
     }
 }

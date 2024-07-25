@@ -29,7 +29,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 import javafx.scene.input.DataFormat;
-import com.sun.jfx.incubator.scene.control.rich.StringBuilderStyledOutput;
+import com.sun.jfx.incubator.scene.control.richtext.StringBuilderStyledOutput;
 import jfx.incubator.scene.control.rich.StyleResolver;
 import jfx.incubator.scene.control.rich.TextPos;
 
