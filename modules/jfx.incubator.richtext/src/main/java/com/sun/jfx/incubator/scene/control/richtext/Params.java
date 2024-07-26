@@ -98,8 +98,11 @@ public class Params {
     /** default preferred width */
     public static final double PREF_WIDTH = 200;
 
+    /** scroll bars block increment, fraction of view width/height (between 0.0 and 1.0). */
+    public static final double SCROLL_BARS_BLOCK_INCREMENT = 0.05;
+
     /** scroll bars unit increment, fraction of view width/height (between 0.0 and 1.0). */
-    public static final double SCROLL_BARS_UNIT_INCREMENT = 0.1;
+    public static final double SCROLL_BARS_UNIT_INCREMENT = 0.01;
 
     /** horizontal mouse wheel scroll block size as a fraction of window width. */
     public static final double SCROLL_SHEEL_BLOCK_SIZE_HORIZONTAL = 0.1;

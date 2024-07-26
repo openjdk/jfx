@@ -107,7 +107,7 @@ public class Actions {
     }
 
     private final NotebookWindow window;
-    private final ScriptEngine engine;
+    private final DemoScriptEngine engine;
     private final ObservableList<CellPane> cellPanes = FXCollections.observableArrayList();
     private final ReadOnlyObjectWrapper<CellPane> activeCellPane = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyBooleanWrapper modified = new ReadOnlyBooleanWrapper();
@@ -123,7 +123,7 @@ public class Actions {
     public Actions(NotebookWindow w) {
         this.window = w;
 
-        engine = new ScriptEngine();
+        engine = new DemoScriptEngine();
 
         BooleanBinding disabledEditing = Bindings.createBooleanBinding(
             () -> {

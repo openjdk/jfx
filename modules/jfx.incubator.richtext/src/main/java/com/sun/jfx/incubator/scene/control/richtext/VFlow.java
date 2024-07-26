@@ -676,6 +676,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         vscroll.setMin(0.0);
         vscroll.setMax(1.0);
         vscroll.setUnitIncrement(Params.SCROLL_BARS_UNIT_INCREMENT);
+        vscroll.setBlockIncrement(Params.SCROLL_BARS_BLOCK_INCREMENT);
         vscroll.setVisibleAmount(visible);
         vscroll.setValue(val);
 
@@ -717,6 +718,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         hscroll.setMin(0.0);
         hscroll.setMax(1.0);
         hscroll.setUnitIncrement(Params.SCROLL_BARS_UNIT_INCREMENT);
+        hscroll.setBlockIncrement(Params.SCROLL_BARS_BLOCK_INCREMENT);
         hscroll.setVisibleAmount(vis);
         hscroll.setValue(val);
 

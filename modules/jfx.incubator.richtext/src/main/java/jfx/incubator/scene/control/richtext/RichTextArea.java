@@ -149,6 +149,7 @@ import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
  * and {@link #rightDecoratorProperty() rightDecorator} properties
  * </ul>
  *
+ * @author Andy Goryachev
  * @since 999 TODO
  */
 public class RichTextArea extends Control {

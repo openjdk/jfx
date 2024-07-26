@@ -41,10 +41,10 @@ import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.CodeTextModel;
 
 /**
- * A mock script engine for the notebook.
+ * A demo script engine for the notebook.
  */
-public class ScriptEngine {
-    public ScriptEngine() {
+public class DemoScriptEngine {
+    public DemoScriptEngine() {
     }
 
     /**
@@ -57,8 +57,8 @@ public class ScriptEngine {
      * @return the result of computation
      */
     public Object executeScript(String src) throws Throwable {
-        // simulate processing
-        Thread.sleep(500); // FIX
+        // pretent we are working
+        Thread.sleep(500);
 
         if (src == null) {
             return null;
@@ -71,10 +71,11 @@ public class ScriptEngine {
                 Completed.
                 """;
         } else if (src.contains("json")) {
-            JsonContentWithAsyncUpdate c = new JsonContentWithAsyncUpdate(10_000_000);
-            return new CodeTextModel(c) {
+            JsonContentWithAsyncUpdate content = new JsonContentWithAsyncUpdate(10_000_000);
+            return new CodeTextModel(content)
+            {
                 {
-                    c.setUpdater((ix) -> {
+                    content.setUpdater((ix) -> {
                         TextPos p = new TextPos(ix, 0);
                         int len = getPlainText(ix).length();
                         fireChangeEvent(p, p, len, 0, 0);
