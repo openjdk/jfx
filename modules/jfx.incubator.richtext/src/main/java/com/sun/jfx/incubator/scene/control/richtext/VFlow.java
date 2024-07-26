@@ -230,7 +230,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
 
     /** width of the area available for text cells. */
     private double viewPortWidth() {
-        double w = getWidth() - leftSide - rightSide - snapSpaceX(Params.LAYOUT_FOCUS_BORDER) - snapSpaceX(Params.LAYOUT_FOCUS_BORDER);
+        double w = flow.getWidth() - leftPadding - rightPadding - snapSpaceX(Params.LAYOUT_FOCUS_BORDER) - snapSpaceX(Params.LAYOUT_FOCUS_BORDER);
         if(w < 0.0) {
             w = 0.0;
         }
@@ -239,7 +239,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
 
     /** height of the area available for text cells. */
     private double viewPortHeight() {
-        double h = getHeight() - snapSpaceX(Params.LAYOUT_FOCUS_BORDER) - snapSpaceX(Params.LAYOUT_FOCUS_BORDER);
+        double h = flow.getHeight() - snapSpaceX(Params.LAYOUT_FOCUS_BORDER) - snapSpaceX(Params.LAYOUT_FOCUS_BORDER);
         if (h < 0.0) {
             h = 0.0;
         }
@@ -305,16 +305,13 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
     public void updateContentPadding() {
         Insets m = control.getContentPadding();
         if (m == null) {
-            leftPadding = 0.0;
-            rightPadding = 0.0;
-            topPadding = 0.0;
-            bottomPadding = 0.0;
-        } else {
-            leftPadding = snapPositionX(m.getLeft());
-            rightPadding = snapPositionX(m.getRight());
-            topPadding = snapPositionY(m.getTop());
-            bottomPadding = snapPositionY(m.getBottom());
+            m = Insets.EMPTY;
         }
+
+        leftPadding = snapPositionX(m.getLeft());
+        rightPadding = snapPositionX(m.getRight());
+        topPadding = snapPositionY(m.getTop());
+        bottomPadding = snapPositionY(m.getBottom());
     }
 
     public double leftPadding() {
