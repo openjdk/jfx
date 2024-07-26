@@ -1713,13 +1713,11 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
     if (!project.hasProperty("moduleName")) {
         fail("Project ${project} has no module name")
     }
-    println "KCR: project = $project"
     projectDependencies.each { projName ->
         def dep = project.project(":$projName")
         if (!dep.hasProperty("moduleName")) {
             fail("${project} dependency ${dep} has no module name")
         }
-        println "KCR: dependency = $dep"
     }
 
     project.apply plugin: 'maven-publish'
@@ -1774,7 +1772,6 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
                 maven(MavenPublication) {
                     def artifactName = project.moduleName.replace('.', '-')
                     artifactId = artifactName
-                    println "KCR: artifactId = $artifactName"
 
                     afterEvaluate {
                         artifact project.tasks."moduleEmptyPublicationJar$t.capital"
@@ -1794,7 +1791,6 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
                         Node projectDependencyPlatform = dependencies.appendNode("dependency")
                         projectDependencyPlatform.appendNode("groupId", MAVEN_GROUP_ID)
                         projectDependencyPlatform.appendNode("artifactId", artifactName)
-                        println "KCR: artifactId = ${artifactName}"
                         projectDependencyPlatform.appendNode("version", MAVEN_VERSION)
                         projectDependencyPlatform.appendNode("classifier", "\${javafx.platform}")
 
@@ -1804,7 +1800,6 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
                                 Node projectDependency = dependencies.appendNode("dependency")
                                 projectDependency.appendNode("groupId", MAVEN_GROUP_ID)
                                 projectDependency.appendNode("artifactId", depName)
-                                println "KCR: artifactId = $depName"
                                 projectDependency.appendNode("version", MAVEN_VERSION)
                            }
                         }
