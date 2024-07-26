@@ -967,7 +967,6 @@ List<String> computeLibraryPath(boolean working) {
     List<String> lp = []
 
     if (HAS_JAVAFX_MODULES) {
-        // BUG: javafx.[a-z]* assumption
         List<String> modsWithNative = [ 'javafx.graphics', 'javafx.media', 'javafx.web' ]
 
         // the build/modular-sdk area
@@ -977,7 +976,6 @@ List<String> computeLibraryPath(boolean working) {
         def modulesLibsDir = "${bundledSdkDir}/modules_libs"
 
         modsWithNative.each() { m ->
-            // BUG: javafx.[a-z]* assumption
             lp << cygpath("${modulesLibsDir}/${m}")
         }
     } else {
@@ -1712,17 +1710,14 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
         return
     }
 
-    // BUG: javafx.[a-z]* assumption
     if (!project.hasProperty("moduleName")) {
         fail("Project ${project} has no module name")
     }
-    println "KCR: project = $project"
     projectDependencies.each { projName ->
         def dep = project.project(":$projName")
         if (!dep.hasProperty("moduleName")) {
             fail("${project} dependency ${dep} has no module name")
         }
-        println "KCR: dependency = $dep"
     }
 
     project.apply plugin: 'maven-publish'
@@ -1775,10 +1770,8 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
         project.publishing {
             publications {
                 maven(MavenPublication) {
-                    // BUG: javafx.[a-z]* assumption
                     def artifactName = project.moduleName.replace('.', '-')
                     artifactId = artifactName
-                    println "KCR: artifactId = $artifactName"
 
                     afterEvaluate {
                         artifact project.tasks."moduleEmptyPublicationJar$t.capital"
@@ -1797,21 +1790,16 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
 
                         Node projectDependencyPlatform = dependencies.appendNode("dependency")
                         projectDependencyPlatform.appendNode("groupId", MAVEN_GROUP_ID)
-                        // BUG: javafx.[a-z]* assumption
                         projectDependencyPlatform.appendNode("artifactId", artifactName)
-                        println "KCR: artifactId = ${artifactName}"
                         projectDependencyPlatform.appendNode("version", MAVEN_VERSION)
                         projectDependencyPlatform.appendNode("classifier", "\${javafx.platform}")
 
                         if (!projectDependencies.empty) {
                             projectDependencies.each { dep ->
-                                // BUG: javafx.[a-z]* assumption
                                 def depName = dep.moduleName.replace('.', '-')
                                 Node projectDependency = dependencies.appendNode("dependency")
                                 projectDependency.appendNode("groupId", MAVEN_GROUP_ID)
-                                // BUG: javafx.[a-z]* assumption
                                 projectDependency.appendNode("artifactId", depName)
-                                println "KCR: artifactId = $depName"
                                 projectDependency.appendNode("version", MAVEN_VERSION)
                            }
                         }
