@@ -302,7 +302,7 @@ public abstract class StyledTextModel {
      * {@link jfx.incubator.scene.control.richtext.RichTextArea#write(OutputStream)} methods.
      * <p>
      * The same handler can be registered for input and export.  When registering multiple handlers
-     * for the same data handler and import/export, the last registered one wins. 
+     * for the same data handler and import/export, the last registered one wins.
      * <p>
      * This method is expected to be called from a {@code StyledTextModel} child class constructor.
      *

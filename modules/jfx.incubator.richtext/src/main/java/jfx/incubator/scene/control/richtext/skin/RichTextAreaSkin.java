@@ -217,19 +217,19 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                     System.out.println("getTextLocation offset=" + offset); // FIX
                     return null;
                 }
-                
+
                 @Override
                 public String getSelectedText() {
                     System.out.println("getSelectedText"); // FIX
                     return null;
                 }
-                
+
                 @Override
                 public int getLocationOffset(int x, int y) {
                     System.out.println("getLocationOffset x=" + x + " y=" + y); // FIX
                     return 0;
                 }
-                
+
                 @Override
                 public void cancelLatestCommittedText() {
                     System.out.println("cancelLatestCommittedText"); // FIX
@@ -463,7 +463,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                 }
                 return null;
             }
-        case FONT: 
+        case FONT:
             {
                 StyleAttributeMap a = getSkinnable().getActiveStyleAttributeMap();
                 if (a != null) {
@@ -515,7 +515,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                 }
                 return null;
             }
-        case OFFSET_AT_POINT: 
+        case OFFSET_AT_POINT:
             {
                 Point2D screenPoint = (Point2D)parameters[0];
                 TextPos p = getSkinnable().getTextPosition(screenPoint.getX(), screenPoint.getY());

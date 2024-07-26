@@ -115,7 +115,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
     // StyleAttribute -> Handler
     private final HashMap<Object,Handler> handlers = new HashMap<>(64);
 
-    /** The singleton instance of {@code RtfFormatHandler}. */ 
+    /** The singleton instance of {@code RtfFormatHandler}. */
     public static final RichTextFormatHandler INSTANCE = new RichTextFormatHandler();
 
     /**

@@ -326,7 +326,7 @@ public class RichTextArea extends Control {
                 nas(AccessibleAttribute.TEXT);
             }
             // TODO should we actually check whether caret/anchor positions changed?
-            // TODO what is the correspondence between start/end and caret/anchor? 
+            // TODO what is the correspondence between start/end and caret/anchor?
             //nas(AccessibleAttribute.SELECTION_END);
             nas(AccessibleAttribute.SELECTION_START);
         });
