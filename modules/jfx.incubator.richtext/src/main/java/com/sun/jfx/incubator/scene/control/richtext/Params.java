@@ -50,9 +50,6 @@ public class Params {
     /** default caret blink period. */
     public static final Duration DEFAULT_CARET_BLINK_PERIOD = Duration.millis(1000);
 
-    /** default content padding. */
-    public static final Insets DEFAULT_CONTENT_PADDING = null;
-
     /** default value for {@code displayCaret} property */
     public static final boolean DEFAULT_DISPLAY_CARET = true;
 

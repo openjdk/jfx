@@ -445,15 +445,14 @@ public class RichTextArea extends Control {
      * @implNote The property object implements {@link StyleableProperty} interface.
      *
      * @return the content padding property
-     * @defaultValue 4 pixels vertical padding, 8 pixels horizontal padding
+     * @defaultValue null
      */
     public final ObjectProperty<Insets> contentPaddingProperty() {
         if (contentPadding == null) {
             contentPadding = new SimpleStyleableObjectProperty<Insets>(
                 StyleableProperties.CONTENT_PADDING,
                 this,
-                "contentPadding",
-                Params.DEFAULT_CONTENT_PADDING
+                "contentPadding"
             );
         }
         return contentPadding;
@@ -464,7 +463,7 @@ public class RichTextArea extends Control {
     }
 
     public final Insets getContentPadding() {
-        return contentPadding == null ? Params.DEFAULT_CONTENT_PADDING : contentPadding.get();
+        return contentPadding == null ? null : contentPadding.get();
     }
 
     /**
@@ -895,7 +894,7 @@ public class RichTextArea extends Control {
         };
 
         private static final CssMetaData<RichTextArea, Insets> CONTENT_PADDING =
-            new CssMetaData<>("-fx-content-padding", InsetsConverter.getInstance(), Params.DEFAULT_CONTENT_PADDING)
+            new CssMetaData<>("-fx-content-padding", InsetsConverter.getInstance())
         {
             @Override
             public boolean isSettable(RichTextArea t) {
