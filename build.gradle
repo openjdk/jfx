@@ -1795,7 +1795,8 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
                         projectDependencyPlatform.appendNode("classifier", "\${javafx.platform}")
 
                         if (!projectDependencies.empty) {
-                            projectDependencies.each { dep ->
+                            projectDependencies.each { projName ->
+                                def dep = project.project(":$projName")
                                 def depName = dep.moduleName.replace('.', '-')
                                 Node projectDependency = dependencies.appendNode("dependency")
                                 projectDependency.appendNode("groupId", MAVEN_GROUP_ID)
