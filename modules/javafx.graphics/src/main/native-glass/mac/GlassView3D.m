@@ -35,8 +35,6 @@
 #import "GlassLayer3D.h"
 #import "GlassApplication.h"
 
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-
 //#define VERBOSE
 #ifndef VERBOSE
     #define LOG(MSG, ...)
