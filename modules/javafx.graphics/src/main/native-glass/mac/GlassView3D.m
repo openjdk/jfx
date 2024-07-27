@@ -486,13 +486,13 @@
             jcharArray jKeyChars = GetJavaKeyChars(env, theEvent);
             jint jModifiers = GetJavaModifiers(theEvent);
 
-            (*env)->CallVoidMethod(env, self->_delegate->jView, jViewNotifyKey,
-                                   com_sun_glass_events_KeyEvent_PRESS,
-                                   uch, jKeyChars, jModifiers);
-            (*env)->CallVoidMethod(env, self->_delegate->jView, jViewNotifyKey,
-                                   com_sun_glass_events_KeyEvent_TYPED,
-                                   uch, jKeyChars, jModifiers);
-            (*env)->CallVoidMethod(env, self->_delegate->jView, jViewNotifyKey,
+            (*env)->CallBooleanMethod(env, self->_delegate->jView, jViewNotifyKeyAndReturnConsumed,
+                                      com_sun_glass_events_KeyEvent_PRESS,
+                                      uch, jKeyChars, jModifiers);
+            (*env)->CallBooleanMethod(env, self->_delegate->jView, jViewNotifyKeyAndReturnConsumed,
+                                      com_sun_glass_events_KeyEvent_TYPED,
+                                      uch, jKeyChars, jModifiers);
+            (*env)->CallBooleanMethod(env, self->_delegate->jView, jViewNotifyKeyAndReturnConsumed,
                                    com_sun_glass_events_KeyEvent_RELEASE,
                                    uch, jKeyChars, jModifiers);
             (*env)->DeleteLocalRef(env, jKeyChars);
@@ -502,9 +502,10 @@
             return YES;
         }
     }
-    [self->_delegate sendJavaKeyEvent:theEvent isDown:YES];
+
+    BOOL result = [self->_delegate sendJavaKeyEvent:theEvent isDown:YES];
     [fsWindow release];
-    return NO; // return NO to allow system-default processing of Cmd+Q, etc.
+    return result;
 }
 
 - (void)keyDown:(NSEvent *)theEvent
