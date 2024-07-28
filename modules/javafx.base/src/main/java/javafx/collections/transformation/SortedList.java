@@ -62,8 +62,6 @@ public final class SortedList<E> extends TransformationList<E, E>{
 
     private final SortHelper helper = new SortHelper();
 
-    private final Element<E> tempElement = new Element<>(null, -1);
-
 
     /**
      * Creates a new SortedList wrapped around the source list.
@@ -298,7 +296,12 @@ public final class SortedList<E> extends TransformationList<E, E>{
 
         @Override
         public int compare(Element<E> o1, Element<E> o2) {
-            return comparator.compare(o1.e, o2.e);
+            int result = comparator.compare(o1.e, o2.e);
+            if (result != 0) {
+                return result;
+            } else {
+                return Integer.compare(o1.index, o2.index);
+            }
         }
 
     }
@@ -325,24 +328,23 @@ public final class SortedList<E> extends TransformationList<E, E>{
         }
     }
 
-    private int findPosition(E e) {
+    private int findPosition(Element<E> element) {
         if (sorted.length == 0) {
             return 0;
         }
-        tempElement.e = e;
-        int pos = Arrays.binarySearch(sorted, 0, size, tempElement, elementComparator);
-        return pos;
+        return Arrays.binarySearch(sorted, 0, size, element, elementComparator);
     }
 
     private void insertToMapping(E e, int idx) {
-        int pos = findPosition(e);
+        Element<E> newElement = new Element<>(e, idx);
+        int pos = findPosition(newElement);
         if (pos < 0) {
             pos = ~pos;
         }
         ensureSize(size + 1);
         updateIndices(idx, pos, 1);
         System.arraycopy(sorted, pos, sorted, pos + 1, size - pos);
-        sorted[pos] = new Element<>(e, idx);
+        sorted[pos] = newElement;
         System.arraycopy(perm, idx, perm, idx + 1, size - idx);
         perm[idx] = pos;
         ++size;
