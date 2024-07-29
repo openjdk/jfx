@@ -45,6 +45,7 @@
 #include "NotificationClient.h"
 #include "NotificationData.h"
 #include "NotificationEvent.h"
+#include "NotificationPayload.h"
 #include "NotificationPermissionCallback.h"
 #include "NotificationResourcesLoader.h"
 #include "ServiceWorkerGlobalScope.h"
@@ -79,7 +80,7 @@ static ExceptionOr<Ref<SerializedScriptValue>> createSerializedScriptValue(Scrip
 {
     auto globalObject = context.globalObject();
     if (!globalObject)
-        return Exception { TypeError, "Notification cannot be created without a global object"_s };
+        return Exception { ExceptionCode::TypeError, "Notification cannot be created without a global object"_s };
 
     Vector<RefPtr<MessagePort>> dummyPorts;
     return SerializedScriptValue::create(*globalObject, value, { }, dummyPorts);
@@ -88,7 +89,7 @@ static ExceptionOr<Ref<SerializedScriptValue>> createSerializedScriptValue(Scrip
 ExceptionOr<Ref<Notification>> Notification::create(ScriptExecutionContext& context, String&& title, Options&& options)
 {
     if (context.isServiceWorkerGlobalScope())
-        return Exception { TypeError, "Notification cannot be directly created in a ServiceWorkerGlobalScope"_s };
+        return Exception { ExceptionCode::TypeError, "Notification cannot be directly created in a ServiceWorkerGlobalScope"_s };
 
     auto dataResult = createSerializedScriptValue(context, options.data);
     if (dataResult.hasException())
@@ -116,8 +117,11 @@ ExceptionOr<Ref<Notification>> Notification::createForServiceWorker(ScriptExecut
 
 Ref<Notification> Notification::create(ScriptExecutionContext& context, NotificationData&& data)
 {
-    Options options { data.direction, WTFMove(data.language), WTFMove(data.body), WTFMove(data.tag), WTFMove(data.iconURL), JSC::jsNull(), data.silent };
-
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    Options options { data.direction, WTFMove(data.language), WTFMove(data.body), WTFMove(data.tag), WTFMove(data.iconURL), JSC::jsNull(), nullptr, nullptr, data.silent, { }, WTFMove(data.defaultActionURL) };
+#else
+    Options options { data.direction, WTFMove(data.language), WTFMove(data.body), WTFMove(data.tag), WTFMove(data.iconURL), JSC::jsNull(), nullptr, nullptr, data.silent };
+#endif
     auto notification = adoptRef(*new Notification(context, data.notificationID, WTFMove(data.title), WTFMove(options), SerializedScriptValue::createFromWireBytes(WTFMove(data.data))));
     notification->suspendIfNeeded();
     notification->m_serviceWorkerRegistrationURL = WTFMove(data.serviceWorkerRegistrationURL);
@@ -125,10 +129,39 @@ Ref<Notification> Notification::create(ScriptExecutionContext& context, Notifica
     return notification;
 }
 
-Notification::Notification(ScriptExecutionContext& context, WTF::UUID identifier, String&& title, Options&& options, Ref<SerializedScriptValue>&& dataForBindings)
+Ref<Notification> Notification::create(ScriptExecutionContext& context, const URL& registrationURL, const NotificationPayload& payload)
+{
+    Options options;
+    if (payload.options) {
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+        options = { payload.options->dir, payload.options->lang, payload.options->body, payload.options->tag, payload.options->icon, JSC::jsNull(), nullptr, nullptr, payload.options->silent, { }, { } };
+        options.defaultActionURL = payload.defaultActionURL;
+#else
+        options = { payload.options->dir, payload.options->lang, payload.options->body, payload.options->tag, payload.options->icon, JSC::jsNull(), nullptr, nullptr, payload.options->silent };
+#endif
+    }
+
+    RefPtr<SerializedScriptValue> dataScriptValue;
+    if (payload.options && !payload.options->dataJSONString.isEmpty() && context.globalObject()) {
+        auto value = JSONParse(context.globalObject(), payload.options->dataJSONString);
+        dataScriptValue = SerializedScriptValue::convert(*context.globalObject(), value);
+    }
+
+    if (!dataScriptValue)
+        dataScriptValue = SerializedScriptValue::nullValue();
+
+    auto notification = adoptRef(*new Notification(context, WTF::UUID::createVersion4(), payload.title, WTFMove(options), dataScriptValue.releaseNonNull()));
+
+    notification->suspendIfNeeded();
+    notification->m_serviceWorkerRegistrationURL = registrationURL;
+    addNotificationToMapIfNecessary(notification);
+    return notification;
+}
+
+Notification::Notification(ScriptExecutionContext& context, WTF::UUID identifier, const String& title, Options&& options, Ref<SerializedScriptValue>&& dataForBindings)
     : ActiveDOMObject(&context)
     , m_identifier(identifier)
-    , m_title(WTFMove(title).isolatedCopy())
+    , m_title(title.isolatedCopy())
     , m_direction(options.dir)
     , m_lang(WTFMove(options.lang).isolatedCopy())
     , m_body(WTFMove(options.body).isolatedCopy())
@@ -146,8 +179,18 @@ Notification::Notification(ScriptExecutionContext& context, WTF::UUID identifier
     else
         RELEASE_ASSERT_NOT_REACHED();
 
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    if (options.defaultActionURL.isValid())
+        m_defaultActionURL = WTFMove(options.defaultActionURL).isolatedCopy();
+    else if (!options.defaultAction.isEmpty()) {
+        auto defaultActionURL = context.completeURL(WTFMove(options.defaultAction).isolatedCopy());
+        if (defaultActionURL.isValid())
+            m_defaultActionURL = WTFMove(defaultActionURL);
+    }
+#endif
+
     if (!options.icon.isEmpty()) {
-        auto iconURL = context.completeURL(options.icon);
+        auto iconURL = context.completeURL(WTFMove(options.icon).isolatedCopy());
         if (iconURL.isValid())
             m_icon = iconURL;
     }
@@ -193,7 +236,7 @@ void Notification::show(CompletionHandler<void()>&& callback)
     if (m_state != Idle)
         return;
 
-    auto* context = scriptExecutionContext();
+    RefPtr context = scriptExecutionContext();
     if (!context)
         return;
 
@@ -201,7 +244,7 @@ void Notification::show(CompletionHandler<void()>&& callback)
     if (!client)
         return;
 
-    if (client->checkPermission(context) != Permission::Granted) {
+    if (client->checkPermission(context.get()) != Permission::Granted) {
         switch (m_notificationSource) {
         case NotificationSource::DedicatedWorker:
         case NotificationSource::Document:
@@ -221,7 +264,7 @@ void Notification::show(CompletionHandler<void()>&& callback)
     m_resourcesLoader->start([this, client, callback = scope.release()](RefPtr<NotificationResources>&& resources) mutable {
         CompletionHandlerCallingScope scope { WTFMove(callback) };
 
-        auto* context = scriptExecutionContext();
+        RefPtr context = scriptExecutionContext();
 
         m_resources = WTFMove(resources);
         if (m_state == Idle && context && client->show(*context, data(), this->resources(), scope.release()))
@@ -247,7 +290,7 @@ void Notification::close()
 
 NotificationClient* Notification::clientFromContext()
 {
-    if (auto* context = scriptExecutionContext())
+    if (RefPtr context = scriptExecutionContext())
         return context->notificationClient();
     return nullptr;
 }
@@ -284,7 +327,7 @@ void Notification::finalize()
 
 void Notification::dispatchShowEvent()
 {
-    auto* context = scriptExecutionContext();
+    RefPtr context = scriptExecutionContext();
     if (!context)
         return;
 
@@ -299,7 +342,7 @@ void Notification::dispatchShowEvent()
 
 void Notification::dispatchClickEvent()
 {
-    auto* context = scriptExecutionContext();
+    RefPtr context = scriptExecutionContext();
     if (!context)
         return;
 
@@ -315,7 +358,7 @@ void Notification::dispatchClickEvent()
 
 void Notification::dispatchCloseEvent()
 {
-    auto* context = scriptExecutionContext();
+    RefPtr context = scriptExecutionContext();
     if (!context)
         return;
 
@@ -329,7 +372,7 @@ void Notification::dispatchCloseEvent()
 
 void Notification::dispatchErrorEvent()
 {
-    auto* context = scriptExecutionContext();
+    RefPtr context = scriptExecutionContext();
     if (!context)
         return;
 
@@ -376,7 +419,7 @@ void Notification::requestPermission(Document& document, RefPtr<NotificationPerm
         return resolvePromiseAndCallback(Permission::Denied);
     }
 
-    auto* window = document.frame() ? document.frame()->window() : nullptr;
+    RefPtr window = document.frame() ? document.frame()->window() : nullptr;
     if (!window || !window->consumeTransientActivation()) {
         document.addConsoleMessage(MessageSource::Security, MessageLevel::Error, "Notification prompting can only be done from a user gesture."_s);
         return resolvePromiseAndCallback(Permission::Denied);
@@ -408,6 +451,11 @@ NotificationData Notification::data() const
     RELEASE_ASSERT(sessionID);
 
     return {
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+        m_defaultActionURL,
+#else
+        { },
+#endif
         m_title,
         m_body,
         m_icon.string(),

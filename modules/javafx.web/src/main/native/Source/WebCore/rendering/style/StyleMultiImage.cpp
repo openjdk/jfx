@@ -74,11 +74,11 @@ void StyleMultiImage::load(CachedResourceLoader& loader, const ResourceLoaderOpt
         return;
     }
 
-    if (is<StyleCachedImage>(bestFitImage.image)) {
-        if (downcast<StyleCachedImage>(*bestFitImage.image).imageScaleFactor() == bestFitImage.scaleFactor)
-            m_selectedImage = bestFitImage.image;
+    if (RefPtr styleCachedImage = dynamicDowncast<StyleCachedImage>(bestFitImage.image)) {
+        if (styleCachedImage->imageScaleFactor() == bestFitImage.scaleFactor)
+            m_selectedImage = WTFMove(styleCachedImage);
         else
-            m_selectedImage = StyleCachedImage::copyOverridingScaleFactor(downcast<StyleCachedImage>(*bestFitImage.image), bestFitImage.scaleFactor);
+            m_selectedImage = StyleCachedImage::copyOverridingScaleFactor(*styleCachedImage, bestFitImage.scaleFactor);
 
         if (m_selectedImage->isPending())
             m_selectedImage->load(loader, options);
@@ -110,9 +110,9 @@ bool StyleMultiImage::isPending() const
     return m_isPending;
 }
 
-bool StyleMultiImage::isLoaded() const
+bool StyleMultiImage::isLoaded(const RenderElement* renderer) const
 {
-    return m_selectedImage && m_selectedImage->isLoaded();
+    return m_selectedImage && m_selectedImage->isLoaded(renderer);
 }
 
 bool StyleMultiImage::errorOccurred() const
@@ -177,11 +177,11 @@ bool StyleMultiImage::hasClient(RenderElement& renderer) const
     return m_selectedImage->hasClient(renderer);
 }
 
-RefPtr<Image> StyleMultiImage::image(const RenderElement* renderer, const FloatSize& size) const
+RefPtr<Image> StyleMultiImage::image(const RenderElement* renderer, const FloatSize& size, bool isForFirstLine) const
 {
     if (!m_selectedImage)
         return nullptr;
-    return m_selectedImage->image(renderer, size);
+    return m_selectedImage->image(renderer, size, isForFirstLine);
 }
 
 float StyleMultiImage::imageScaleFactor() const

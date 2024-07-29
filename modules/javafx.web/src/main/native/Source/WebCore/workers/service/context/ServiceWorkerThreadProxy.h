@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "CacheStorageConnection.h"
 #include "Document.h"
 #include "FetchIdentifier.h"
@@ -51,10 +49,11 @@ class FetchLoaderClient;
 class PageConfiguration;
 class NotificationClient;
 class ServiceWorkerInspectorProxy;
+struct NotificationPayload;
 struct ServiceWorkerContextData;
 enum class WorkerThreadMode : bool;
 
-class ServiceWorkerThreadProxy final : public ThreadSafeRefCounted<ServiceWorkerThreadProxy>, public WorkerLoaderProxy, public WorkerDebuggerProxy, public WorkerBadgeProxy {
+class ServiceWorkerThreadProxy final : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<ServiceWorkerThreadProxy, WTF::DestructionThread::Main>, public WorkerLoaderProxy, public WorkerDebuggerProxy, public WorkerBadgeProxy {
 public:
     template<typename... Args> static Ref<ServiceWorkerThreadProxy> create(Args&&... args)
     {
@@ -85,9 +84,9 @@ public:
 
     WEBCORE_EXPORT void fireMessageEvent(MessageWithMessagePorts&&, ServiceWorkerOrClientData&&);
 
-    void fireInstallEvent();
-    void fireActivateEvent();
-    void firePushEvent(std::optional<Vector<uint8_t>>&&, CompletionHandler<void(bool)>&&);
+    WEBCORE_EXPORT void fireInstallEvent();
+    WEBCORE_EXPORT void fireActivateEvent();
+    void firePushEvent(std::optional<Vector<uint8_t>>&&, std::optional<NotificationPayload>&&, CompletionHandler<void(bool, std::optional<NotificationPayload>&&)>&&);
     void firePushSubscriptionChangeEvent(std::optional<PushSubscriptionData>&& newSubscriptionData, std::optional<PushSubscriptionData>&& oldSubscriptionData);
     void fireNotificationEvent(NotificationData&&, NotificationEventType, CompletionHandler<void(bool)>&&);
     void fireBackgroundFetchEvent(BackgroundFetchInformation&&, CompletionHandler<void(bool)>&&);
@@ -98,8 +97,10 @@ public:
     WEBCORE_EXPORT void setLastNavigationWasAppInitiated(bool);
     WEBCORE_EXPORT bool lastNavigationWasAppInitiated();
 
+    WEBCORE_EXPORT void setInspectable(bool);
+
 private:
-    WEBCORE_EXPORT ServiceWorkerThreadProxy(UniqueRef<Page>&&, ServiceWorkerContextData&&, ServiceWorkerData&&, String&& userAgent, WorkerThreadMode, CacheStorageProvider&, std::unique_ptr<NotificationClient>&&);
+    WEBCORE_EXPORT ServiceWorkerThreadProxy(Ref<Page>&&, ServiceWorkerContextData&&, ServiceWorkerData&&, String&& userAgent, WorkerThreadMode, CacheStorageProvider&, std::unique_ptr<NotificationClient>&&);
 
     WEBCORE_EXPORT static void networkStateChanged(bool isOnLine);
     bool postTaskForModeToWorkerOrWorkletGlobalScope(ScriptExecutionContext::Task&&, const String& mode);
@@ -117,7 +118,7 @@ private:
     // WorkerBadgeProxy
     void setAppBadge(std::optional<uint64_t>) final;
 
-    UniqueRef<Page> m_page;
+    Ref<Page> m_page;
     Ref<Document> m_document;
 #if ENABLE(REMOTE_INSPECTOR)
     std::unique_ptr<ServiceWorkerDebuggable> m_remoteDebuggable;
@@ -130,11 +131,10 @@ private:
     ServiceWorkerInspectorProxy m_inspectorProxy;
     uint64_t m_functionalEventTasksCounter { 0 };
     HashMap<uint64_t, CompletionHandler<void(bool)>> m_ongoingFunctionalEventTasks;
+    HashMap<uint64_t, CompletionHandler<void(bool, std::optional<NotificationPayload>&&)>> m_ongoingNotificationPayloadFunctionalEventTasks;
 
     // Accessed in worker thread.
     HashMap<std::pair<SWServerConnectionIdentifier, FetchIdentifier>, Ref<ServiceWorkerFetch::Client>> m_ongoingFetchTasks;
 };
 
 } // namespace WebKit
-
-#endif // ENABLE(SERVICE_WORKER)

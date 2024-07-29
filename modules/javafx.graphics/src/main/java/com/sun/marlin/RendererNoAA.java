@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,9 @@ package com.sun.marlin;
 import static com.sun.marlin.OffHeapArray.SIZE_INT;
 import sun.misc.Unsafe;
 
+// FIXME: We must replace the terminally deprecated sun.misc.Unsafe
+// memory access methods; see JDK-8334137
+@SuppressWarnings("removal")
 public final class RendererNoAA implements MarlinRenderer, MarlinConst {
 
     static final boolean DISABLE_RENDER = false;

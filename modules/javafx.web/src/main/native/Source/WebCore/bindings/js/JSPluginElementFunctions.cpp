@@ -39,9 +39,10 @@ static JSC_DECLARE_CUSTOM_GETTER(pluginElementPropertyGetter);
 Instance* pluginInstance(HTMLElement& element)
 {
     // The plugin element holds an owning reference, so we don't have to.
-    if (!is<HTMLPlugInElement>(element))
+    auto* pluginElement = dynamicDowncast<HTMLPlugInElement>(element);
+    if (!pluginElement)
         return nullptr;
-    auto* instance = downcast<HTMLPlugInElement>(element).bindingsInstance();
+    auto* instance = pluginElement->bindingsInstance();
     if (!instance || !instance->rootObject())
         return nullptr;
     return instance;
@@ -94,7 +95,7 @@ bool pluginElementCustomGetOwnPropertySlot(JSHTMLElement* element, JSGlobalObjec
     }
 
     if (slot.isVMInquiry()) {
-        slot.setValue(element, static_cast<unsigned>(JSC::PropertyAttribute::None), jsUndefined());
+        slot.setValue(element, enumToUnderlyingType(JSC::PropertyAttribute::None), jsUndefined());
         return false; // Can't execute stuff below because they can call back into JS.
     }
 
@@ -130,6 +131,7 @@ JSC_DEFINE_HOST_FUNCTION(callPlugin, (JSGlobalObject* lexicalGlobalObject, CallF
 
     size_t argumentCount = callFrame->argumentCount();
     MarkedArgumentBuffer argumentList;
+    argumentList.ensureCapacity(argumentCount);
     for (size_t i = 0; i < argumentCount; i++)
         argumentList.append(callFrame->argument(i));
     ASSERT(!argumentList.hasOverflowed());

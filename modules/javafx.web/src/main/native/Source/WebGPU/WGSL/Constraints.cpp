@@ -32,6 +32,9 @@ namespace WGSL {
 
 bool satisfies(const Type* type, Constraint constraint)
 {
+    if (constraint == Constraints::None)
+        return true;
+
     auto* primitive = std::get_if<Types::Primitive>(type);
     if (!primitive) {
         if (auto* reference = std::get_if<Types::Reference>(type))
@@ -50,20 +53,27 @@ bool satisfies(const Type* type, Constraint constraint)
         return constraint & Constraints::U32;
     case Types::Primitive::F32:
         return constraint & Constraints::F32;
-    // FIXME: Add F16 support
-    // https://bugs.webkit.org/show_bug.cgi?id=254668
+    case Types::Primitive::F16:
+        return constraint & Constraints::F16;
     case Types::Primitive::Bool:
         return constraint & Constraints::Bool;
 
     case Types::Primitive::Void:
     case Types::Primitive::Sampler:
+    case Types::Primitive::SamplerComparison:
     case Types::Primitive::TextureExternal:
+    case Types::Primitive::AccessMode:
+    case Types::Primitive::TexelFormat:
+    case Types::Primitive::AddressSpace:
         return false;
     }
 }
 
 const Type* satisfyOrPromote(const Type* type, Constraint constraint, const TypeStore& types)
 {
+    if (constraint == Constraints::None)
+        return type;
+
     auto* primitive = std::get_if<Types::Primitive>(type);
     if (!primitive) {
         if (auto* reference = std::get_if<Types::Reference>(type))
@@ -85,12 +95,9 @@ const Type* satisfyOrPromote(const Type* type, Constraint constraint, const Type
             return types.abstractFloatType();
         if (constraint & Constraints::F32)
             return types.f32Type();
-        if (constraint & Constraints::F16) {
-            // FIXME: Add F16 support
-            // https://bugs.webkit.org/show_bug.cgi?id=254668
+        if (constraint & Constraints::F16)
+            return types.f16Type();
             RELEASE_ASSERT_NOT_REACHED();
-        }
-        RELEASE_ASSERT_NOT_REACHED();
     case Types::Primitive::AbstractFloat:
         if (constraint < Constraints::AbstractFloat)
             return nullptr;
@@ -98,12 +105,9 @@ const Type* satisfyOrPromote(const Type* type, Constraint constraint, const Type
             return type;
         if (constraint & Constraints::F32)
             return types.f32Type();
-        if (constraint & Constraints::F16) {
-            // FIXME: Add F16 support
-            // https://bugs.webkit.org/show_bug.cgi?id=254668
+        if (constraint & Constraints::F16)
+            return types.f16Type();
             RELEASE_ASSERT_NOT_REACHED();
-        }
-        RELEASE_ASSERT_NOT_REACHED();
     case Types::Primitive::I32:
         if (!(constraint & Constraints::I32))
             return nullptr;
@@ -116,8 +120,10 @@ const Type* satisfyOrPromote(const Type* type, Constraint constraint, const Type
         if (!(constraint & Constraints::F32))
             return nullptr;
         return type;
-    // FIXME: Add F16 support
-    // https://bugs.webkit.org/show_bug.cgi?id=254668
+    case Types::Primitive::F16:
+        if (!(constraint & Constraints::F16))
+            return nullptr;
+        return type;
     case Types::Primitive::Bool:
         if (!(constraint & Constraints::Bool))
             return nullptr;
@@ -125,9 +131,79 @@ const Type* satisfyOrPromote(const Type* type, Constraint constraint, const Type
 
     case Types::Primitive::Void:
     case Types::Primitive::Sampler:
+    case Types::Primitive::SamplerComparison:
     case Types::Primitive::TextureExternal:
+    case Types::Primitive::AccessMode:
+    case Types::Primitive::TexelFormat:
+    case Types::Primitive::AddressSpace:
         return nullptr;
     }
+}
+
+const Type* concretize(const Type* type, TypeStore& types)
+{
+    using namespace Types;
+
+    return WTF::switchOn(*type,
+        [&](const Primitive&) -> const Type* {
+            return satisfyOrPromote(type, Constraints::ConcreteScalar, types);
+        },
+        [&](const Vector& vector) -> const Type* {
+            return types.vectorType(vector.size, concretize(vector.element, types));
+        },
+        [&](const Matrix& matrix) -> const Type* {
+            return types.matrixType(matrix.columns, matrix.rows, concretize(matrix.element, types));
+        },
+        [&](const Array& array) -> const Type* {
+            return types.arrayType(concretize(array.element, types), array.size);
+        },
+        [&](const Struct&) -> const Type* {
+            return type;
+        },
+        [&](const PrimitiveStruct& primitiveStruct) -> const Type* {
+            switch (primitiveStruct.kind) {
+            case PrimitiveStruct::FrexpResult::kind: {
+                auto* fract = concretize(primitiveStruct.values[PrimitiveStruct::FrexpResult::fract], types);
+                auto* exp = concretize(primitiveStruct.values[PrimitiveStruct::FrexpResult::exp], types);
+                return types.frexpResultType(fract, exp);
+            }
+            case PrimitiveStruct::ModfResult::kind: {
+                auto* fract = concretize(primitiveStruct.values[PrimitiveStruct::ModfResult::fract], types);
+                auto* whole = concretize(primitiveStruct.values[PrimitiveStruct::ModfResult::whole], types);
+                return types.modfResultType(fract, whole);
+            }
+            case PrimitiveStruct::AtomicCompareExchangeResult::kind: {
+                return type;
+            }
+            }
+        },
+        [&](const Pointer&) -> const Type* {
+            return type;
+        },
+        [&](const Bottom&) -> const Type* {
+            return type;
+        },
+        [&](const Atomic&) -> const Type* {
+            return type;
+        },
+        [&](const Function&) -> const Type* {
+            RELEASE_ASSERT_NOT_REACHED();
+        },
+        [&](const Texture&) -> const Type* {
+            RELEASE_ASSERT_NOT_REACHED();
+        },
+        [&](const TextureStorage&) -> const Type* {
+            RELEASE_ASSERT_NOT_REACHED();
+        },
+        [&](const TextureDepth&) -> const Type* {
+            RELEASE_ASSERT_NOT_REACHED();
+        },
+        [&](const Reference&) -> const Type* {
+            RELEASE_ASSERT_NOT_REACHED();
+        },
+        [&](const TypeConstructor&) -> const Type* {
+            RELEASE_ASSERT_NOT_REACHED();
+        });
 }
 
 } // namespace WGSL

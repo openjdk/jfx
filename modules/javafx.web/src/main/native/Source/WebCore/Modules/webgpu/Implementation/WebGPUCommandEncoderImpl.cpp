@@ -56,55 +56,62 @@ Ref<RenderPassEncoder> CommandEncoderImpl::beginRenderPass(const RenderPassDescr
     for (const auto& colorAttachment : descriptor.colorAttachments) {
         if (colorAttachment) {
             colorAttachments.append(WGPURenderPassColorAttachment {
-                m_convertToBackingContext->convertToBacking(colorAttachment->view),
-                colorAttachment->resolveTarget ? m_convertToBackingContext->convertToBacking(*colorAttachment->resolveTarget) : nullptr,
-                m_convertToBackingContext->convertToBacking(colorAttachment->loadOp),
-                m_convertToBackingContext->convertToBacking(colorAttachment->storeOp),
-                colorAttachment->clearValue ? m_convertToBackingContext->convertToBacking(*colorAttachment->clearValue) : WGPUColor { 0, 0, 0, 0 },
+                .nextInChain = nullptr,
+                .view = m_convertToBackingContext->convertToBacking(colorAttachment->view),
+                .depthSlice = colorAttachment->depthSlice,
+                .resolveTarget = colorAttachment->resolveTarget ? m_convertToBackingContext->convertToBacking(*colorAttachment->resolveTarget) : nullptr,
+                .loadOp = m_convertToBackingContext->convertToBacking(colorAttachment->loadOp),
+                .storeOp = m_convertToBackingContext->convertToBacking(colorAttachment->storeOp),
+                .clearValue = colorAttachment->clearValue ? m_convertToBackingContext->convertToBacking(*colorAttachment->clearValue) : WGPUColor { 0, 0, 0, 0 },
             });
         } else
-            colorAttachments.append({
-                nullptr,
-                nullptr,
-                WGPULoadOp_Clear,
-                WGPUStoreOp_Discard,
-                { 0, 0, 0, 0 },
+            colorAttachments.append(WGPURenderPassColorAttachment {
+                .nextInChain = nullptr,
+                .view = nullptr,
+                .depthSlice = std::nullopt,
+                .resolveTarget = nullptr,
+                .loadOp = WGPULoadOp_Clear,
+                .storeOp = WGPUStoreOp_Discard,
+                .clearValue = { 0, 0, 0, 0 },
             });
     }
 
     std::optional<WGPURenderPassDepthStencilAttachment> depthStencilAttachment;
     if (descriptor.depthStencilAttachment) {
         depthStencilAttachment = WGPURenderPassDepthStencilAttachment {
-            m_convertToBackingContext->convertToBacking(descriptor.depthStencilAttachment->view),
-            descriptor.depthStencilAttachment->depthLoadOp ? m_convertToBackingContext->convertToBacking(*descriptor.depthStencilAttachment->depthLoadOp) : WGPULoadOp_Clear,
-            descriptor.depthStencilAttachment->depthStoreOp ? m_convertToBackingContext->convertToBacking(*descriptor.depthStencilAttachment->depthStoreOp) : WGPUStoreOp_Discard,
-            descriptor.depthStencilAttachment->depthClearValue,
-            descriptor.depthStencilAttachment->depthReadOnly,
-            descriptor.depthStencilAttachment->stencilLoadOp ? m_convertToBackingContext->convertToBacking(*descriptor.depthStencilAttachment->stencilLoadOp) : WGPULoadOp_Clear,
-            descriptor.depthStencilAttachment->stencilStoreOp ? m_convertToBackingContext->convertToBacking(*descriptor.depthStencilAttachment->stencilStoreOp) : WGPUStoreOp_Discard,
-            descriptor.depthStencilAttachment->stencilClearValue,
-            descriptor.depthStencilAttachment->stencilReadOnly,
+            .view = m_convertToBackingContext->convertToBacking(descriptor.depthStencilAttachment->view),
+            .depthLoadOp = descriptor.depthStencilAttachment->depthLoadOp ? m_convertToBackingContext->convertToBacking(*descriptor.depthStencilAttachment->depthLoadOp) : WGPULoadOp_Undefined,
+            .depthStoreOp = descriptor.depthStencilAttachment->depthStoreOp ? m_convertToBackingContext->convertToBacking(*descriptor.depthStencilAttachment->depthStoreOp) : WGPUStoreOp_Undefined,
+            .depthClearValue = descriptor.depthStencilAttachment->depthClearValue,
+            .depthReadOnly = descriptor.depthStencilAttachment->depthReadOnly,
+            .stencilLoadOp = descriptor.depthStencilAttachment->stencilLoadOp ? m_convertToBackingContext->convertToBacking(*descriptor.depthStencilAttachment->stencilLoadOp) : WGPULoadOp_Undefined,
+            .stencilStoreOp = descriptor.depthStencilAttachment->stencilStoreOp ? m_convertToBackingContext->convertToBacking(*descriptor.depthStencilAttachment->stencilStoreOp) : WGPUStoreOp_Undefined,
+            .stencilClearValue = descriptor.depthStencilAttachment->stencilClearValue,
+            .stencilReadOnly = descriptor.depthStencilAttachment->stencilReadOnly,
         };
     }
 
-    Vector<WGPURenderPassTimestampWrite> timestampWrites;
-    for (const auto& timestampWrite : descriptor.timestampWrites) {
-        timestampWrites.append(WGPURenderPassTimestampWrite {
-            m_convertToBackingContext->convertToBacking(timestampWrite.querySet),
-            timestampWrite.queryIndex,
-            m_convertToBackingContext->convertToBacking(timestampWrite.location),
-        });
-    }
+    WGPURenderPassTimestampWrites timestampWrites {
+        .querySet = descriptor.timestampWrites ? m_convertToBackingContext->convertToBacking(*descriptor.timestampWrites->querySet) : nullptr,
+        .beginningOfPassWriteIndex = descriptor.timestampWrites ? descriptor.timestampWrites->beginningOfPassWriteIndex : 0,
+        .endOfPassWriteIndex = descriptor.timestampWrites ? descriptor.timestampWrites->endOfPassWriteIndex : 0
+    };
 
-    WGPURenderPassDescriptor backingDescriptor {
+    WGPURenderPassDescriptorMaxDrawCount maxDrawCount {
+        .chain = {
         nullptr,
-        label.data(),
-        static_cast<uint32_t>(colorAttachments.size()),
-        colorAttachments.data(),
-        depthStencilAttachment ? &depthStencilAttachment.value() : nullptr,
-        descriptor.occlusionQuerySet ? m_convertToBackingContext->convertToBacking(*descriptor.occlusionQuerySet) : nullptr,
-        static_cast<uint32_t>(timestampWrites.size()),
-        timestampWrites.data(),
+            WGPUSType_RenderPassDescriptorMaxDrawCount,
+        },
+        .maxDrawCount = descriptor.maxDrawCount.value_or(0)
+    };
+    WGPURenderPassDescriptor backingDescriptor {
+        .nextInChain = descriptor.maxDrawCount ? &maxDrawCount.chain : nullptr,
+        .label = label.data(),
+        .colorAttachmentCount = static_cast<uint32_t>(colorAttachments.size()),
+        .colorAttachments = colorAttachments.data(),
+        .depthStencilAttachment = depthStencilAttachment ? &depthStencilAttachment.value() : nullptr,
+        .occlusionQuerySet = descriptor.occlusionQuerySet ? m_convertToBackingContext->convertToBacking(*descriptor.occlusionQuerySet) : nullptr,
+        .timestampWrites = timestampWrites.querySet ? &timestampWrites : nullptr
     };
 
     return RenderPassEncoderImpl::create(adoptWebGPU(wgpuCommandEncoderBeginRenderPass(m_backing.get(), &backingDescriptor)), m_convertToBackingContext);
@@ -114,22 +121,16 @@ Ref<ComputePassEncoder> CommandEncoderImpl::beginComputePass(const std::optional
 {
     CString label = descriptor ? descriptor->label.utf8() : CString("");
 
-    Vector<WGPUComputePassTimestampWrite> timestampWrites;
-    if (descriptor) {
-        for (const auto& timestampWrite : descriptor->timestampWrites) {
-            timestampWrites.append(WGPUComputePassTimestampWrite {
-                m_convertToBackingContext->convertToBacking(timestampWrite.querySet),
-                timestampWrite.queryIndex,
-                m_convertToBackingContext->convertToBacking(timestampWrite.location),
-            });
-        }
-    }
+    WGPUComputePassTimestampWrites timestampWrites {
+        .querySet = (descriptor && descriptor->timestampWrites) ? m_convertToBackingContext->convertToBacking(*descriptor->timestampWrites->querySet) : nullptr,
+        .beginningOfPassWriteIndex = (descriptor && descriptor->timestampWrites) ? descriptor->timestampWrites->beginningOfPassWriteIndex : 0,
+        .endOfPassWriteIndex = (descriptor && descriptor->timestampWrites) ? descriptor->timestampWrites->endOfPassWriteIndex : 0
+    };
 
     WGPUComputePassDescriptor backingDescriptor {
-        nullptr,
-        label.data(),
-        static_cast<uint32_t>(timestampWrites.size()),
-        timestampWrites.data(),
+        .nextInChain = nullptr,
+        .label = label.data(),
+        .timestampWrites = timestampWrites.querySet ? &timestampWrites : nullptr
     };
 
     return ComputePassEncoderImpl::create(adoptWebGPU(wgpuCommandEncoderBeginComputePass(m_backing.get(), &backingDescriptor)), m_convertToBackingContext);
@@ -154,8 +155,8 @@ void CommandEncoderImpl::copyBufferToTexture(
         nullptr, {
             nullptr,
             source.offset,
-            source.bytesPerRow.value_or(0),
-            source.rowsPerImage.value_or(1),
+            source.bytesPerRow.value_or(WGPU_COPY_STRIDE_UNDEFINED),
+            source.rowsPerImage.value_or(WGPU_COPY_STRIDE_UNDEFINED),
         },
         m_convertToBackingContext->convertToBacking(source.buffer),
     };
@@ -190,8 +191,8 @@ void CommandEncoderImpl::copyTextureToBuffer(
         nullptr, {
             nullptr,
             destination.offset,
-            destination.bytesPerRow.value_or(0),
-            destination.rowsPerImage.value_or(1),
+            destination.bytesPerRow.value_or(WGPU_COPY_STRIDE_UNDEFINED),
+            destination.rowsPerImage.value_or(WGPU_COPY_STRIDE_UNDEFINED),
         },
         m_convertToBackingContext->convertToBacking(destination.buffer),
     };

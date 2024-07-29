@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014, Google Inc. All rights reserved.
+ * Copyright (c) 2012-2017, Google Inc. All rights reserved.
  * Copyright (c) 2012-2023, Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -87,6 +87,8 @@ public:
     LayoutUnit& operator=(const LayoutUnit&) = default;
     LayoutUnit& operator=(const float& other) { return *this = LayoutUnit(other); }
 
+    friend bool operator==(LayoutUnit, LayoutUnit) = default;
+
     static LayoutUnit fromFloatCeil(float value)
     {
         LayoutUnit v;
@@ -156,7 +158,7 @@ public:
 
     int round() const
     {
-        return saturatedSum<int>(rawValue(), kFixedPointDenominator / 2) >> kLayoutUnitFractionalBits;
+        return toInt() + ((fraction().rawValue() + (kFixedPointDenominator / 2)) >> kLayoutUnitFractionalBits);
     }
 
     int floor() const
@@ -372,11 +374,6 @@ inline bool operator>(const float a, const LayoutUnit& b)
 inline bool operator>(const double a, const LayoutUnit& b)
 {
     return a > b.toDouble();
-}
-
-inline bool operator==(const LayoutUnit& a, const LayoutUnit& b)
-{
-    return a.rawValue() == b.rawValue();
 }
 
 inline bool operator==(const LayoutUnit& a, int b)

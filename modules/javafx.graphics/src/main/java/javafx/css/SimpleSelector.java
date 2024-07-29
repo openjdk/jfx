@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,6 +54,7 @@ import static javafx.geometry.NodeOrientation.RIGHT_TO_LEFT;
  * @deprecated This class was exposed erroneously and will be removed in a future version
  */
 @Deprecated(since = "23", forRemoval = true)
+@SuppressWarnings("removal")
 final public class SimpleSelector extends Selector {
 
     /**

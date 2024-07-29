@@ -23,6 +23,7 @@
 #include "CDATASection.h"
 
 #include "Document.h"
+#include "DocumentInlines.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -30,7 +31,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(CDATASection);
 
 inline CDATASection::CDATASection(Document& document, String&& data)
-    : Text(document, WTFMove(data), CreateText)
+    : Text(document, WTFMove(data), CDATA_SECTION_NODE, { })
 {
 }
 
@@ -44,11 +45,6 @@ String CDATASection::nodeName() const
     return "#cdata-section"_s;
 }
 
-Node::NodeType CDATASection::nodeType() const
-{
-    return CDATA_SECTION_NODE;
-}
-
 Ref<Node> CDATASection::cloneNodeInternal(Document& targetDocument, CloningOperation)
 {
     return create(targetDocument, String { data() });
@@ -56,7 +52,7 @@ Ref<Node> CDATASection::cloneNodeInternal(Document& targetDocument, CloningOpera
 
 Ref<Text> CDATASection::virtualCreate(String&& data)
 {
-    return create(document(), WTFMove(data));
+    return create(protectedDocument(), WTFMove(data));
 }
 
 } // namespace WebCore

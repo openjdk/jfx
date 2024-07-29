@@ -151,7 +151,7 @@ static unsigned __stdcall wtfThreadEntryPoint(void* data)
     return 0;
 }
 
-bool Thread::establishHandle(NewThreadContext* data, std::optional<size_t> stackSize, QOS)
+bool Thread::establishHandle(NewThreadContext* data, std::optional<size_t> stackSize, QOS, SchedulingPolicy)
 {
     unsigned threadIdentifier = 0;
     unsigned initFlag = stackSize ? STACK_SIZE_PARAM_IS_A_RESERVATION : 0;
@@ -351,7 +351,7 @@ void Mutex::unlock()
 // Returns an interval in milliseconds suitable for passing to one of the Win32 wait functions (e.g., ::WaitForSingleObject).
 static DWORD absoluteTimeToWaitTimeoutInterval(WallTime absoluteTime)
 {
-    if (std::isinf(absoluteTime)) {
+    if (absoluteTime.isInfinity()) {
         if (absoluteTime == -WallTime::infinity())
             return 0;
         return INFINITE;

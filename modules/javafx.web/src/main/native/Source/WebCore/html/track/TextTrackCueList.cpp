@@ -54,6 +54,12 @@ Ref<TextTrackCueList> TextTrackCueList::create()
     return adoptRef(*new TextTrackCueList);
 }
 
+void TextTrackCueList::didMoveToNewDocument(Document& newDocument)
+{
+    for (RefPtr cue : m_vector)
+        cue->didMoveToNewDocument(newDocument);
+}
+
 unsigned TextTrackCueList::cueIndex(const TextTrackCue& cue) const
 {
     ASSERT(m_vector.contains(&cue));
@@ -97,8 +103,6 @@ TextTrackCueList& TextTrackCueList::activeCues()
 void TextTrackCueList::add(Ref<TextTrackCue>&& cue)
 {
     ASSERT(!m_vector.contains(cue.ptr()));
-    ASSERT(cue->startMediaTime() >= MediaTime::zeroTime());
-    ASSERT(cue->endMediaTime() >= MediaTime::zeroTime());
 
     RefPtr<TextTrackCue> cueRefPtr { WTFMove(cue) };
     unsigned insertionPosition = std::upper_bound(m_vector.begin(), m_vector.end(), cueRefPtr, cueSortsBefore) - m_vector.begin();

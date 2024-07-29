@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,6 +41,7 @@
 #include <wtf/RedBlackTree.h>
 #include <wtf/Scope.h>
 #include <wtf/SystemTracing.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/WorkQueue.h>
 
 #if ENABLE(LIBPAS_JIT_HEAP)
@@ -83,9 +84,16 @@ extern "C" {
 }
 #endif
 
+#if USE(INLINE_JIT_PERMISSIONS_API)
+#include <wtf/darwin/WeakLinking.h>
+WTF_WEAK_LINK_FORCE_IMPORT(be_memory_inline_jit_restrict_with_witness_supported);
+#endif
+
 namespace JSC {
 
 using namespace WTF;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ExecutableAllocator);
 
 #if OS(DARWIN) && CPU(ARM64)
 // We already rely on page size being CeilingOnPageSize elsewhere (e.g. MarkedBlock).
@@ -151,7 +159,7 @@ static bool isJITEnabled()
 {
     bool jitEnabled = !g_jscConfig.jitDisabled;
 #if HAVE(IOS_JIT_RESTRICTIONS)
-    jitEnabled = jitEnabled && processHasEntitlement("dynamic-codesigning"_s);
+    jitEnabled = jitEnabled && (processHasEntitlement("dynamic-codesigning"_s) || processHasEntitlement("com.apple.developer.cs.allow-jit"_s));
 #elif HAVE(MAC_JIT_RESTRICTIONS) && USE(APPLE_INTERNAL_SDK)
     jitEnabled = jitEnabled && processHasEntitlement("com.apple.security.cs.allow-jit"_s);
 #endif
@@ -171,7 +179,7 @@ void ExecutableAllocator::disableJIT()
 
 #if HAVE(IOS_JIT_RESTRICTIONS) || HAVE(MAC_JIT_RESTRICTIONS) && USE(APPLE_INTERNAL_SDK)
 #if HAVE(IOS_JIT_RESTRICTIONS)
-    bool shouldDisableJITMemory = processHasEntitlement("dynamic-codesigning"_s);
+    bool shouldDisableJITMemory = processHasEntitlement("dynamic-codesigning"_s) || processHasEntitlement("com.apple.developer.cs.allow-jit"_s);
 #else
     bool shouldDisableJITMemory = processHasEntitlement("com.apple.security.cs.allow-jit"_s) && !isKernOpenSource();
 #endif
@@ -349,11 +357,7 @@ static ALWAYS_INLINE void initializeSeparatedWXHeaps(void* stubBase, size_t stub
 #endif
 }
 
-#else // OS(DARWIN) && HAVE(REMAP_JIT)
-static ALWAYS_INLINE void initializeSeparatedWXHeaps(void*, size_t, void*, size_t)
-{
-}
-#endif
+#endif // OS(DARWIN) && HAVE(REMAP_JIT)
 
 struct JITReservation {
     PageReservation pageReservation;
@@ -393,7 +397,7 @@ static ALWAYS_INLINE JITReservation initializeJITPageReservation()
 
     auto tryCreatePageReservation = [] (size_t reservationSize) {
 #if OS(LINUX)
-        // If we use uncommitted reservation, mmap operation is recorded with small page size in perf command's output.
+        // On Linux, if we use uncommitted reservation, mmap operation is recorded with small page size in perf command's output.
         // This makes the following JIT code logging broken and some of JIT code is not recorded correctly.
         // To avoid this problem, we use committed reservation if we need perf JITDump logging.
         if (Options::logJITCodeForPerf())
@@ -412,16 +416,7 @@ static ALWAYS_INLINE JITReservation initializeJITPageReservation()
     if (reservation.pageReservation) {
         ASSERT(reservation.pageReservation.size() == reservation.size);
         reservation.base = reservation.pageReservation.base();
-
-        bool fastJITPermissionsIsSupported = false;
-#if OS(DARWIN) && CPU(ARM64)
-#if USE(PTHREAD_JIT_PERMISSIONS_API)
-        fastJITPermissionsIsSupported = !!pthread_jit_write_protect_supported_np();
-#elif USE(APPLE_INTERNAL_SDK)
-        fastJITPermissionsIsSupported = !!os_thread_self_restrict_rwx_is_supported();
-#endif
-#endif
-        g_jscConfig.useFastJITPermissions = fastJITPermissionsIsSupported;
+        g_jscConfig.useFastJITPermissions = threadSelfRestrictSupported();
 
         if (g_jscConfig.useFastJITPermissions)
             threadSelfRestrictRWXToRX();
@@ -450,7 +445,7 @@ static ALWAYS_INLINE JITReservation initializeJITPageReservation()
 }
 
 class FixedVMPoolExecutableAllocator final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(FixedVMPoolExecutableAllocator);
 
 #if ENABLE(JUMP_ISLANDS)
     class Islands;
@@ -536,9 +531,36 @@ public:
     RefPtr<ExecutableMemoryHandle> allocate(size_t sizeInBytes)
     {
 #if ENABLE(LIBPAS_JIT_HEAP)
+        Vector<void*, 0> randomAllocations;
+        if (UNLIKELY(Options::useRandomizingExecutableIslandAllocation())) {
+            // Let's fragment the executable memory agressively
+            auto bytesAllocated = m_bytesAllocated.load(std::memory_order_relaxed);
+            uint64_t allocationRoom = (m_reservation.size() - bytesAllocated) * 1 / 100 / sizeInBytes;
+            if (!allocationRoom)
+                allocationRoom = 1;
+            int count = cryptographicallyRandomNumber<uint32_t>() % allocationRoom;
+
+            randomAllocations.resize(count);
+
+            for (int i = 0; i < count; ++i) {
+                void* result = jit_heap_try_allocate(sizeInBytes);
+                if (!result) {
+                    // We are running out of memory, so make sure this allocation will succeed.
+                    for (int j = 0; j < i; ++j)
+                        jit_heap_deallocate(randomAllocations[j]);
+                    randomAllocations.resize(0);
+                    break;
+                }
+                randomAllocations[i] = result;
+            }
+        }
         auto result = ExecutableMemoryHandle::createImpl(sizeInBytes);
         if (LIKELY(result))
             m_bytesAllocated.fetch_add(result->sizeInBytes(), std::memory_order_relaxed);
+        if (UNLIKELY(Options::useRandomizingExecutableIslandAllocation())) {
+            for (unsigned i = 0; i < randomAllocations.size(); ++i)
+                jit_heap_deallocate(randomAllocations[i]);
+        }
         return result;
 #elif ENABLE(JUMP_ISLANDS)
         Locker locker { getLock() };
@@ -698,10 +720,10 @@ public:
         }
     }
 
-    void* makeIsland(uintptr_t jumpLocation, uintptr_t newTarget, bool concurrently)
+    void* makeIsland(uintptr_t jumpLocation, uintptr_t newTarget, bool concurrently, bool useMemcpy)
     {
         Locker locker { getLock() };
-        return islandForJumpLocation(locker, jumpLocation, newTarget, concurrently);
+        return islandForJumpLocation(locker, jumpLocation, newTarget, concurrently, useMemcpy);
     }
 
 private:
@@ -736,7 +758,7 @@ private:
         delete islands;
     }
 
-    void* islandForJumpLocation(const LockHolder& locker, uintptr_t jumpLocation, uintptr_t target, bool concurrently)
+    void* islandForJumpLocation(const LockHolder& locker, uintptr_t jumpLocation, uintptr_t target, bool concurrently, bool useMemcpy)
     {
         Islands* islands = m_islandsForJumpSourceLocation.findExact(bitwise_cast<void*>(jumpLocation));
         if (islands) {
@@ -760,22 +782,10 @@ private:
 
             auto emitJumpTo = [&] (void* target) {
                 RELEASE_ASSERT(Assembler::canEmitJump(bitwise_cast<void*>(jumpLocation), target));
-
-                MacroAssembler jit;
-                auto nearTailCall = jit.nearTailCall();
-                LinkBuffer linkBuffer(jit, CodePtr<NoPtrTag>(currentIsland), islandSizeInBytes, LinkBuffer::Profile::JumpIsland, JITCompilationMustSucceed, false);
-                RELEASE_ASSERT(linkBuffer.isValid());
-
-                // We use this to appease the assertion that we're not finalizing on a compiler thread. In this situation, it's
-                // ok to do this on a compiler thread, since the compiler thread is linking a jump to this code (and no other live
-                // code can jump to these islands). It's ok because the CPU protocol for exposing code to other CPUs is:
-                // - Self modifying code fence (what FINALIZE_CODE does below). This does various memory flushes + instruction sync barrier (isb).
-                // - Any CPU that will run the code must run a crossModifyingCodeFence (isb) before running it. Since the code that
-                // has a jump linked to this island hasn't finalized yet, they're guaranteed to finalize there code and run an isb.
-                linkBuffer.setIsJumpIsland();
-
-                linkBuffer.link(nearTailCall, CodeLocationLabel<NoPtrTag>(target));
-                FINALIZE_CODE(linkBuffer, NoPtrTag, "Jump Island: %lu", jumpLocation);
+                if (useMemcpy)
+                    Assembler::fillNearTailCall<MachineCodeCopyMode::Memcpy>(currentIsland, target);
+                else
+                    Assembler::fillNearTailCall<MachineCodeCopyMode::JITMemcpy>(currentIsland, target);
             };
 
             if (Assembler::canEmitJump(bitwise_cast<void*>(jumpLocation), bitwise_cast<void*>(target))) {
@@ -1016,7 +1026,7 @@ private:
 
 #if ENABLE(JUMP_ISLANDS)
     class Islands : public RedBlackTree<Islands, void*>::Node {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_TZONE_ALLOCATED(Islands);
     public:
         void* key() { return jumpSourceLocation.dataLocation(); }
         CodeLocationLabel<ExecutableMemoryPtrTag> jumpSourceLocation;
@@ -1038,6 +1048,9 @@ private:
     std::atomic<size_t> m_bytesAllocated { 0 };
 #endif
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FixedVMPoolExecutableAllocator);
+WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(FixedVMPoolExecutableAllocatorIslands, FixedVMPoolExecutableAllocator::Islands);
 
 // Keep this pointer in a mutable global variable to help Leaks find it.
 // But we do not use this pointer.
@@ -1173,13 +1186,26 @@ void ExecutableAllocator::dumpProfile()
 #endif
 
 #if ENABLE(JUMP_ISLANDS)
-void* ExecutableAllocator::getJumpIslandTo(void* from, void* newDestination)
+void* ExecutableAllocator::getJumpIslandToUsingJITMemcpy(void* from, void* newDestination)
 {
     FixedVMPoolExecutableAllocator* allocator = g_jscConfig.fixedVMPoolExecutableAllocator;
     if (!allocator)
         RELEASE_ASSERT_NOT_REACHED();
 
-    return allocator->makeIsland(bitwise_cast<uintptr_t>(from), bitwise_cast<uintptr_t>(newDestination), false);
+    constexpr bool concurrently = false;
+    constexpr bool useMemcpy = false;
+    return allocator->makeIsland(bitwise_cast<uintptr_t>(from), bitwise_cast<uintptr_t>(newDestination), concurrently, useMemcpy);
+}
+
+void* ExecutableAllocator::getJumpIslandToUsingMemcpy(void* from, void* newDestination)
+{
+    FixedVMPoolExecutableAllocator* allocator = g_jscConfig.fixedVMPoolExecutableAllocator;
+    if (!allocator)
+        RELEASE_ASSERT_NOT_REACHED();
+
+    constexpr bool concurrently = false;
+    constexpr bool useMemcpy = true;
+    return allocator->makeIsland(bitwise_cast<uintptr_t>(from), bitwise_cast<uintptr_t>(newDestination), concurrently, useMemcpy);
 }
 
 void* ExecutableAllocator::getJumpIslandToConcurrently(void* from, void* newDestination)
@@ -1188,7 +1214,9 @@ void* ExecutableAllocator::getJumpIslandToConcurrently(void* from, void* newDest
     if (!allocator)
         RELEASE_ASSERT_NOT_REACHED();
 
-    return allocator->makeIsland(bitwise_cast<uintptr_t>(from), bitwise_cast<uintptr_t>(newDestination), true);
+    constexpr bool concurrently = true;
+    constexpr bool useMemcpy = false;
+    return allocator->makeIsland(bitwise_cast<uintptr_t>(from), bitwise_cast<uintptr_t>(newDestination), concurrently, useMemcpy);
 }
 #endif
 

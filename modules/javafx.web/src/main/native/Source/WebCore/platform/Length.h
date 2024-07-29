@@ -37,6 +37,7 @@ namespace WebCore {
 
 enum class LengthType : uint8_t {
     Auto,
+    Normal,
     Relative,
     Percent,
     Fixed,
@@ -64,6 +65,65 @@ struct Length {
 public:
     Length(LengthType = LengthType::Auto);
 
+    using FloatOrInt = std::variant<float, int>;
+    struct AutoData { };
+    struct NormalData { };
+    struct RelativeData {
+        FloatOrInt value;
+        bool hasQuirk;
+    };
+    struct PercentData {
+        FloatOrInt value;
+        bool hasQuirk;
+    };
+    struct FixedData {
+        FloatOrInt value;
+        bool hasQuirk;
+    };
+    struct IntrinsicData {
+        FloatOrInt value;
+        bool hasQuirk;
+    };
+    struct MinIntrinsicData {
+        FloatOrInt value;
+        bool hasQuirk;
+    };
+    struct MinContentData {
+        FloatOrInt value;
+        bool hasQuirk;
+    };
+    struct MaxContentData {
+        FloatOrInt value;
+        bool hasQuirk;
+    };
+    struct FillAvailableData {
+        FloatOrInt value;
+        bool hasQuirk;
+    };
+    struct FitContentData {
+        FloatOrInt value;
+        bool hasQuirk;
+    };
+    struct ContentData { };
+    struct UndefinedData { };
+    using IPCData = std::variant<
+        AutoData,
+        NormalData,
+        RelativeData,
+        PercentData,
+        FixedData,
+        IntrinsicData,
+        MinIntrinsicData,
+        MinContentData,
+        MaxContentData,
+        FillAvailableData,
+        FitContentData,
+        ContentData,
+        UndefinedData
+        // LengthType::Calculated is intentionally not serialized.
+    >;
+
+    WEBCORE_EXPORT Length(IPCData&&);
     Length(int value, LengthType, bool hasQuirk = false);
     Length(LayoutUnit value, LengthType, bool hasQuirk = false);
     Length(float value, LengthType, bool hasQuirk = false);
@@ -91,12 +151,14 @@ public:
     CalculationValue& calculationValue() const;
 
     LengthType type() const;
+    WEBCORE_EXPORT IPCData ipcData() const;
 
     bool isAuto() const;
     bool isCalculated() const;
     bool isFixed() const;
     bool isMaxContent() const;
     bool isMinContent() const;
+    bool isNormal() const;
     bool isPercent() const;
     bool isRelative() const;
     bool isUndefined() const;
@@ -137,6 +199,8 @@ private:
 
     WEBCORE_EXPORT void ref() const;
     WEBCORE_EXPORT void deref() const;
+    FloatOrInt floatOrInt() const;
+    static LengthType typeFromIndex(const IPCData&);
 
     union {
         int m_intValue { 0 };
@@ -236,6 +300,7 @@ inline void Length::initialize(const Length& other)
 
     switch (m_type) {
     case LengthType::Auto:
+    case LengthType::Normal:
     case LengthType::Content:
     case LengthType::Undefined:
         m_intValue = 0;
@@ -269,6 +334,7 @@ inline void Length::initialize(Length&& other)
 
     switch (m_type) {
     case LengthType::Auto:
+    case LengthType::Normal:
     case LengthType::Content:
     case LengthType::Undefined:
         m_intValue = 0;
@@ -398,6 +464,11 @@ inline void Length::setValue(LengthType type, LayoutUnit value)
     m_isFloat = true;
 }
 
+inline bool Length::isNormal() const
+{
+    return type() == LengthType::Normal;
+}
+
 inline bool Length::isAuto() const
 {
     return type() == LengthType::Auto;
@@ -514,6 +585,7 @@ inline bool Length::isContent() const
 }
 
 Length convertTo100PercentMinusLength(const Length&);
+Length convertTo100PercentMinusLengthSum(const Length&, const Length&);
 
 WTF::TextStream& operator<<(WTF::TextStream&, Length);
 
