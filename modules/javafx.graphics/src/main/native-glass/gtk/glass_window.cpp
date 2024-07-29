@@ -731,8 +731,7 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
             geometry(),
             resizable(),
             on_top(false),
-            is_fullscreen(false),
-            map_received(false) {
+            is_fullscreen(false) {
     jwindow = mainEnv->NewGlobalRef(_jwindow);
     gdk_windowManagerFunctions = wmf;
 
@@ -975,15 +974,7 @@ void WindowContextTop::process_realize() {
     }
 }
 
-void WindowContextTop::process_map() {
-    map_received = true;
-}
-
 void WindowContextTop::process_configure(GdkEventConfigure* event) {
-    if (!map_received) {
-        return;
-    }
-
     int ww = event->width + geometry.extents.left + geometry.extents.right;
     int wh = event->height + geometry.extents.top + geometry.extents.bottom;
 
