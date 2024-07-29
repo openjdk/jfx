@@ -45,6 +45,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+
+import javafx.scene.control.TableCell;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TitledPane;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -7478,5 +7482,43 @@ public class TreeTableViewTest {
 
             assertEquals(secondRowKey, cell.getProperties().get(propertyKey));
         }
+    }
+
+    @Test
+    public void testTitledPaneExpansionShouldCleanupCellsInTableFlow() {
+        AtomicInteger startEditCounter = new AtomicInteger();
+
+        final TreeTableColumn<String, String> col = new TreeTableColumn<>("C");
+        col.setCellValueFactory(value -> new SimpleStringProperty(value.getValue().getValue()));
+        col.setCellFactory(eee -> new TreeTableCell<>() {
+            @Override
+            public void startEdit() {
+                startEditCounter.incrementAndGet();
+                super.startEdit();
+            }
+        });
+        treeTableView.getColumns().add(col);
+
+        treeTableView.setEditable(true);
+        treeTableView.setRoot(new TreeItem<>("Root"));
+        treeTableView.getRoot().setExpanded(true);
+        for (int i = 0; i < 4; i++) {
+            TreeItem<String> parent = new TreeItem<String>("item - " + i);
+            treeTableView.getRoot().getChildren().add(parent);
+        }
+
+        TitledPane root = new TitledPane("title", treeTableView);
+        root.setAnimated(false);
+        stageLoader = new StageLoader(root);
+
+        root.setExpanded(false);
+        Toolkit.getToolkit().firePulse();
+
+        root.setExpanded(true);
+        Toolkit.getToolkit().firePulse();
+
+        treeTableView.edit(0, col);
+
+        assertEquals(1, startEditCounter.get());
     }
 }
