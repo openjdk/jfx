@@ -6267,6 +6267,12 @@ public class TableViewTest {
         }
     }
 
+    /**
+     * The expansion change of a TitledPane triggered an event where the underlying VirtualFlow
+     * was adding cells to the pile and later cleaning them all up without resetting the index to -1.
+     * This led to a bug where two cells received an edit event, although just one should (and is visible).
+     * See also: <a href="https://bugs.openjdk.org/browse/JDK-8320232">JDK-8320232</a>
+     */
     @Test
     public void testTitledPaneExpansionShouldCleanupCellsInTableFlow() {
         AtomicInteger startEditCounter = new AtomicInteger();
