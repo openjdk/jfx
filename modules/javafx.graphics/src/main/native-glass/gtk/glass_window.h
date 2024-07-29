@@ -131,6 +131,7 @@ public:
     virtual void set_level(int) = 0;
     virtual void set_background(float, float, float) = 0;
 
+    virtual void process_map() = 0;
     virtual void process_realize() = 0;
     virtual void process_property_notify(GdkEventProperty*) = 0;
     virtual void process_configure(GdkEventConfigure*) = 0;
@@ -271,6 +272,7 @@ class WindowContextTop: public WindowContextBase {
 
     bool on_top;
     bool is_fullscreen;
+    bool map_received;
 
     static WindowFrameExtents normal_extents;
     static WindowFrameExtents utility_extents;
@@ -279,6 +281,7 @@ class WindowContextTop: public WindowContextBase {
 public:
     WindowContextTop(jobject, WindowContext*, long, WindowFrameType, WindowType, GdkWMFunction);
 
+    void process_map();
     void process_realize();
     void process_property_notify(GdkEventProperty*);
     void process_state(GdkEventWindowState*);
