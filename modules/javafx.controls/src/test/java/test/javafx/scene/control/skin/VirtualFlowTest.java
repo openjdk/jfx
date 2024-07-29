@@ -1353,6 +1353,31 @@ public class VirtualFlowTest {
     }
 
     @Test
+    public void testCellFactoryChangeShouldResetIndex() {
+        List<IndexedCell<?>> cells = new ArrayList<>();
+
+        flow = new VirtualFlowShim<>();
+        flow.setVertical(true);
+        flow.setCellFactory(p -> {
+            CellStub cellStub = new CellStub(flow);
+            cells.add(cellStub);
+            return cellStub;
+        });
+        flow.setCellCount(100);
+        flow.setViewportLength(100);
+        flow.resize(100, 100);
+        pulse();
+
+        flow.setCellFactory(p -> new CellStub(flow));
+
+        pulse();
+
+        for (IndexedCell<?> cell : cells) {
+            assertEquals(-1, cell.getIndex());
+        }
+    }
+
+    @Test
     public void testRecreateCellsChangeShouldResetIndex() {
         List<IndexedCell<?>> cells = new ArrayList<>();
 
