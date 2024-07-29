@@ -2176,22 +2176,13 @@ public abstract class NGNode {
         ((ReadbackGraphics) g).releaseReadBackBuffer(bgRTT);
     }
 
-    private void renderRectClip(Graphics g, NGRectangle clipNode) {
-        BaseBounds newClip = clipNode.getShape().getBounds();
-        if (!clipNode.getTransform().isIdentity()) {
-            newClip = clipNode.getTransform().transform(newClip, newClip);
-        }
-        final BaseTransform curXform = g.getTransformNoClone();
-        final Rectangle curClip = g.getClipRectNoClone();
-        newClip = curXform.transform(newClip, newClip);
-        newClip.intersectWith(PrEffectHelper.getGraphicsClipNoClone(g));
-        if (newClip.isEmpty() ||
-            newClip.getWidth() == 0 ||
-            newClip.getHeight() == 0) {
+    private void renderRectClip(Graphics g, Rectangle clipRect) {
+        if (clipRect.isEmpty()) {
             return;
         }
+        final Rectangle curClip = g.getClipRectNoClone();
         // REMIND: avoid garbage by changing setClipRect to accept xywh
-        g.setClipRect(new Rectangle(newClip));
+        g.setClipRect(clipRect);
         renderForClip(g);
         g.setClipRect(curClip);
     }
@@ -2210,19 +2201,19 @@ public abstract class NGNode {
             return;
         }
 
-        if (getClipNode() instanceof NGRectangle) {
-            // optimized case for rectangular clip
-            NGRectangle rectNode = (NGRectangle)getClipNode();
-            if (rectNode.isRectClip(curXform, false)) {
-                renderRectClip(g, rectNode);
-                return;
-            }
-        }
-
         // TODO: optimize this (RT-26936)
         // Extract clip bounds
         Rectangle clipRect = new Rectangle(clipBounds);
         clipRect.intersectWith(PrEffectHelper.getGraphicsClipNoClone(g));
+
+        if (getClipNode() instanceof NGRectangle) {
+            // optimized case for rectangular clip
+            NGRectangle rectNode = (NGRectangle)getClipNode();
+            if (rectNode.isRectClip(curXform, false)) {
+                renderRectClip(g, clipRect);
+                return;
+            }
+        }
 
         if (!curXform.is2D()) {
             Rectangle savedClip = g.getClipRect();
