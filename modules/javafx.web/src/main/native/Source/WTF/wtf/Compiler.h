@@ -34,6 +34,15 @@
 /* COMPILER_QUIRK() - whether the compiler being used to build the project requires a given quirk. */
 #define COMPILER_QUIRK(WTF_COMPILER_QUIRK) (defined WTF_COMPILER_QUIRK_##WTF_COMPILER_QUIRK  && WTF_COMPILER_QUIRK_##WTF_COMPILER_QUIRK)
 
+/* COMPILER_HAS_ATTRIBUTE() - whether the compiler supports a particular attribute. */
+/* https://clang.llvm.org/docs/LanguageExtensions.html#has-attribute */
+/* https://gcc.gnu.org/onlinedocs/cpp/_005f_005fhas_005fattribute.html */
+#ifdef __has_attribute
+#define COMPILER_HAS_ATTRIBUTE(x) __has_attribute(x)
+#else
+#define COMPILER_HAS_ATTRIBUTE(x) 0
+#endif
+
 /* COMPILER_HAS_CLANG_BUILTIN() - whether the compiler supports a particular clang builtin. */
 #ifdef __has_builtin
 #define COMPILER_HAS_CLANG_BUILTIN(x) __has_builtin(x)
@@ -42,7 +51,7 @@
 #endif
 
 /* COMPILER_HAS_CLANG_FEATURE() - whether the compiler supports a particular language or library feature. */
-/* http://clang.llvm.org/docs/LanguageExtensions.html#has-feature-and-has-extension */
+/* https://clang.llvm.org/docs/LanguageExtensions.html#has-feature-and-has-extension */
 #ifdef __has_feature
 #define COMPILER_HAS_CLANG_FEATURE(x) __has_feature(x)
 #else
@@ -67,6 +76,10 @@
 #define WTF_COMPILER_SUPPORTS_C_STATIC_ASSERT COMPILER_HAS_CLANG_FEATURE(c_static_assert)
 #define WTF_COMPILER_SUPPORTS_CXX_EXCEPTIONS COMPILER_HAS_CLANG_FEATURE(cxx_exceptions)
 #define WTF_COMPILER_SUPPORTS_BUILTIN_IS_TRIVIALLY_COPYABLE COMPILER_HAS_CLANG_FEATURE(is_trivially_copyable)
+
+#if defined(__apple_build_version__)
+#define WTF_COMPILER_APPLE_CLANG 1
+#endif
 
 #ifdef __cplusplus
 #if __cplusplus <= 201103L
@@ -170,6 +183,16 @@
 #define SUPPRESS_TSAN
 #endif
 
+/* COVERAGE_ENABLED and SUPPRESS_COVERAGE */
+
+#define COVERAGE_ENABLED COMPILER_HAS_CLANG_FEATURE(coverage_sanitizer)
+
+#if COVERAGE_ENABLED
+#define SUPPRESS_COVERAGE __attribute__((no_sanitize("coverage")))
+#else
+#define SUPPRESS_COVERAGE
+#endif
+
 /* ==== Compiler-independent macros for various compiler features, in alphabetical order ==== */
 
 /* ALWAYS_INLINE */
@@ -192,6 +215,23 @@
 #define ALWAYS_INLINE_EXCEPT_MSVC inline
 #else
 #define ALWAYS_INLINE_EXCEPT_MSVC ALWAYS_INLINE
+#endif
+
+
+/* ALWAYS_INLINE_LAMBDA */
+
+/* In GCC functions marked with no_sanitize_address cannot call functions that are marked with always_inline and not marked with no_sanitize_address.
+ * Therefore we need to give up on the enforcement of ALWAYS_INLINE_LAMBDA when bulding with ASAN. https://gcc.gnu.org/bugzilla/show_bug.cgi?id=67368 */
+#if !defined(ALWAYS_INLINE_LAMBDA) && (COMPILER(GCC) || COMPILER(CLANG)) && defined(NDEBUG) && !COMPILER(MINGW) && !(COMPILER(GCC) && ASAN_ENABLED)
+#define ALWAYS_INLINE_LAMBDA __attribute__((__always_inline__))
+#endif
+
+#if !defined(ALWAYS_INLINE_LAMBDA) && COMPILER(MSVC) && defined(NDEBUG)
+#define ALWAYS_INLINE_LAMBDA [[msvc::forceinline]]
+#endif
+
+#if !defined(ALWAYS_INLINE_LAMBDA)
+#define ALWAYS_INLINE_LAMBDA
 #endif
 
 /* WTF_EXTERN_C_{BEGIN, END} */
@@ -218,11 +258,8 @@
 
 #elif !defined(FALLTHROUGH) && !defined(__cplusplus)
 
-#if COMPILER(GCC_COMPATIBLE) && defined(__has_attribute)
-// Break out this #if to satisy some versions Windows compilers.
-#if __has_attribute(fallthrough)
+#if COMPILER_HAS_ATTRIBUTE(fallthrough)
 #define FALLTHROUGH __attribute__ ((fallthrough))
-#endif
 #endif
 
 #endif // !defined(FALLTHROUGH) && defined(__cplusplus) && defined(__has_cpp_attribute)
@@ -257,7 +294,7 @@
 
 /* NO_RETURN */
 
-#if !defined(NO_RETURN) && COMPILER(GCC_COMPATIBLE)
+#if !defined(NO_RETURN) && (COMPILER(GCC) || COMPILER(CLANG))
 #define NO_RETURN __attribute((__noreturn__))
 #endif
 
@@ -271,8 +308,8 @@
 
 /* NOT_TAIL_CALLED */
 
-#if !defined(NOT_TAIL_CALLED) && defined(__has_attribute)
-#if __has_attribute(not_tail_called)
+#if !defined(NOT_TAIL_CALLED)
+#if COMPILER_HAS_ATTRIBUTE(not_tail_called)
 #define NOT_TAIL_CALLED __attribute__((not_tail_called))
 #endif
 #endif
@@ -304,7 +341,7 @@
 
 /* NO_RETURN_WITH_VALUE */
 
-#if !defined(NO_RETURN_WITH_VALUE) && !COMPILER(MSVC)
+#if !defined(NO_RETURN_WITH_VALUE) && (COMPILER(GCC) || COMPILER(CLANG))
 #define NO_RETURN_WITH_VALUE NO_RETURN
 #endif
 
@@ -356,7 +393,7 @@
 
 /* UNUSED_FUNCTION */
 
-#if !defined(UNUSED_FUNCTION) && COMPILER(GCC_COMPATIBLE)
+#if !defined(UNUSED_FUNCTION) && (COMPILER(GCC) || COMPILER(CLANG))
 #define UNUSED_FUNCTION __attribute__((unused))
 #endif
 
@@ -376,12 +413,23 @@
 
 /* REFERENCED_FROM_ASM */
 
-#if !defined(REFERENCED_FROM_ASM) && COMPILER(GCC_COMPATIBLE)
+#if !defined(REFERENCED_FROM_ASM) && (COMPILER(GCC) || COMPILER(CLANG))
 #define REFERENCED_FROM_ASM __attribute__((__used__))
 #endif
 
 #if !defined(REFERENCED_FROM_ASM)
 #define REFERENCED_FROM_ASM
+#endif
+
+/* NO_REORDER */
+
+#if !defined(NO_REORDER) && COMPILER(GCC)
+#define NO_REORDER \
+    __attribute__((__no_reorder__))
+#endif
+
+#if !defined(NO_REORDER)
+#define NO_REORDER
 #endif
 
 /* UNLIKELY */
@@ -416,6 +464,16 @@
 /* UNUSED_VARIABLE */
 #if !defined(UNUSED_VARIABLE)
 #define UNUSED_VARIABLE(variable) UNUSED_PARAM(variable)
+#endif
+
+/* UNUSED_VARIADIC_PARAMS */
+
+#if !defined(UNUSED_VARIADIC_PARAMS) && (COMPILER(GCC) || COMPILER(CLANG))
+#define UNUSED_VARIADIC_PARAMS __attribute__((unused))
+#endif
+
+#if !defined(UNUSED_VARIADIC_PARAMS)
+#define UNUSED_VARIADIC_PARAMS
 #endif
 
 /* WARN_UNUSED_RETURN */
@@ -487,7 +545,6 @@
 
 #endif /* COMPILER(GCC) || COMPILER(CLANG) */
 
-
 #if COMPILER(GCC)
 #define IGNORE_GCC_WARNINGS_BEGIN(warning) IGNORE_WARNINGS_BEGIN_IMPL(GCC, warning)
 #define IGNORE_GCC_WARNINGS_END IGNORE_WARNINGS_END_IMPL(GCC)
@@ -512,6 +569,17 @@
 #define IGNORE_WARNINGS_END
 #endif
 
+/* IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_BEGIN() - whether the compiler supports suppressing static analysis warnings. */
+/* https://clang.llvm.org/docs/AttributeReference.html#suppress */
+#if COMPILER_HAS_ATTRIBUTE(suppress)
+#define IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE(warning, ...) [[clang::suppress]]
+#define IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_BEGIN(warning, ...) [[clang::suppress]] {
+#else
+#define IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE(warning, ...)
+#define IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_BEGIN(warning, ...) {
+#endif
+#define IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_END }
+
 #define ALLOW_DEPRECATED_DECLARATIONS_BEGIN IGNORE_WARNINGS_BEGIN("deprecated-declarations")
 #define ALLOW_DEPRECATED_DECLARATIONS_END IGNORE_WARNINGS_END
 
@@ -533,6 +601,9 @@
 #define ALLOW_NONLITERAL_FORMAT_BEGIN IGNORE_WARNINGS_BEGIN("format-nonliteral")
 #define ALLOW_NONLITERAL_FORMAT_END IGNORE_WARNINGS_END
 
+#define IGNORE_CLANG_STATIC_ANALYZER_USE_AFTER_MOVE_ATTRIBUTE \
+    IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE("cplusplus.Move")
+
 #define IGNORE_RETURN_TYPE_WARNINGS_BEGIN IGNORE_WARNINGS_BEGIN("return-type")
 #define IGNORE_RETURN_TYPE_WARNINGS_END IGNORE_WARNINGS_END
 
@@ -553,8 +624,8 @@
 
 /* TLS_MODEL_INITIAL_EXEC */
 
-#if !defined(TLS_MODEL_INITIAL_EXEC) && defined(__has_attribute)
-#if __has_attribute(tls_model)
+#if !defined(TLS_MODEL_INITIAL_EXEC)
+#if COMPILER_HAS_ATTRIBUTE(tls_model)
 #define TLS_MODEL_INITIAL_EXEC __attribute__((tls_model("initial-exec")))
 #endif
 #endif

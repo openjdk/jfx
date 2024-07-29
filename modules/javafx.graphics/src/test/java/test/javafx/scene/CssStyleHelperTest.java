@@ -24,26 +24,31 @@
  */
 package test.javafx.scene;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import com.sun.javafx.css.StyleManager;
 import javafx.stage.Stage;
 import com.sun.javafx.tk.Toolkit;
-import java.io.IOException;
 import javafx.css.CssParser;
 import javafx.css.PseudoClass;
 import javafx.css.Stylesheet;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
+import javafx.scene.layout.Background;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
 import javafx.scene.text.Text;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 public class CssStyleHelperTest {
 
@@ -60,7 +65,7 @@ public class CssStyleHelperTest {
         sm.hasDefaultUserAgentStylesheet = false;
     }
 
-    @Before
+    @BeforeEach
     public void setup() {
         root = new StackPane();
         scene = new Scene(root);
@@ -69,7 +74,7 @@ public class CssStyleHelperTest {
         resetStyleManager();
     }
 
-    @AfterClass
+    @AfterAll
     public static void cleanupOnce() {
         resetStyleManager();
     }
@@ -657,5 +662,100 @@ public class CssStyleHelperTest {
 
         assertEquals(new Insets(10), a.getPadding());
         assertEquals(new Insets(4), b.getPadding());
+    }
+
+    private static final String GRAY_STYLESHEET = ".my-pane {-fx-background-color: #808080}";
+    private static final String GRAY_INDIRECT_STYLESHEET = ".root {-fx-base: #808080} .my-pane {-fx-background-color: -fx-base}";
+    private static final String RED_STYLESHEET = ".my-pane {-fx-background-color: red}";
+    private static final String RED_INDIRECT_STYLESHEET = ".root {-fx-base: red} .my-pane {-fx-background-color: -fx-base}";
+    private static final String FX_BASE_GREEN_STYLESHEET = ".root {-fx-base: green}";
+    private static final String FX_BASE_GRAY_STYLESHEET = ".root {-fx-base: #808080}";
+
+    /**
+     * All cases will lead to a neutral gray color #808080.
+     *
+     * UA = USER_AGENT
+     */
+    enum OverrideCases {
+        // User agent styles win when not overridden directly or indirectly:
+        UA(GRAY_STYLESHEET, null, null, null),
+        INDIRECT_UA(GRAY_INDIRECT_STYLESHEET, null, null, null),
+
+        // Property wins when not directly overridden by author or inline style:
+        PROPERTY(null, Color.web("#808080"), null, null),
+        PROPERTY_OVERRIDES_UA(RED_STYLESHEET, Color.web("#808080"), null, null),
+        PROPERTY_OVERRIDES_INDIRECT_UA(RED_INDIRECT_STYLESHEET, Color.web("#808080"), null, null),
+
+        // Property wins even if indirectly overridden by author or inline style (resolving of a lookup does not change priority of the user agent style):
+        PROPERTY_OVERRIDES_UA_VARIABLE_SET_IN_AUTHOR(RED_INDIRECT_STYLESHEET, Color.web("#808080"), FX_BASE_GREEN_STYLESHEET, null),
+        PROPERTY_OVERRIDES_UA_VARIABLE_SET_INLINE(RED_INDIRECT_STYLESHEET, Color.web("#808080"), null, "-fx-base: yellow"),
+
+        // Author style wins when not directly overridden by inline style:
+        AUTHOR_OVERRIDES_UA(RED_STYLESHEET, null, GRAY_STYLESHEET, null),
+        AUTHOR_OVERRIDES_INDIRECT_UA(RED_INDIRECT_STYLESHEET, null, GRAY_STYLESHEET, null),
+        AUTHOR_OVERRIDES_PROPERTY(null, Color.BLUE, GRAY_STYLESHEET, null),
+
+        // Author style wins even if indirectly overridden by inline style (resolving of a lookup does not change priority of the user agent style):
+        AUTHOR_OVERRIDES_UA_VARIABLE_SET_INLINE(RED_INDIRECT_STYLESHEET, null, GRAY_STYLESHEET, "-fx-base: yellow"),
+
+        // Indirect author styles win when property is not set directly, and there is no direct or indirect override in an inline style:
+        AUTHOR_VARIABLE_OVERRIDES_UA_VARIABLE(RED_INDIRECT_STYLESHEET, null, FX_BASE_GRAY_STYLESHEET, null),
+
+        // Direct inline styles always win over anything:
+        INLINE_OVERRIDES_UA(RED_STYLESHEET, null, null, "-fx-background-color: #808080"),
+        INLINE_OVERRIDES_PROPERTY(null, Color.BLUE, null, "-fx-background-color: #808080"),
+        INLINE_OVERRIDES_AUTHOR(null, null, RED_STYLESHEET, "-fx-background-color: #808080"),
+        INLINE_OVERRIDES_ALL(RED_STYLESHEET, Color.BLUE, RED_STYLESHEET, "-fx-background-color: #808080"),
+
+        // Indirect inline styles win when not directly overridden by author stylesheet or property:
+        INLINE_VARIABLE_OVERRIDES_UA_VARIABLE(RED_INDIRECT_STYLESHEET, null, null, "-fx-base: #808080"),
+        INLINE_VARIABLE_OVERRIDES_AUTHOR_VARIABLE(null, null, RED_INDIRECT_STYLESHEET, "-fx-base: #808080"),
+        INLINE_VARIABLE_OVERRIDES_ALL(RED_INDIRECT_STYLESHEET, null, FX_BASE_GREEN_STYLESHEET, "-fx-base: #808080");
+
+        private final String userAgentStylesheet;
+        private final Color property;
+        private final String authorStylesheet;
+        private final String inlineStyles;
+
+        OverrideCases(String userAgentStylesheet, Color property, String authorStylesheet, String inlineStyles) {
+            this.userAgentStylesheet = userAgentStylesheet;
+            this.property = property;
+            this.authorStylesheet = authorStylesheet;
+            this.inlineStyles = inlineStyles;
+        }
+    }
+
+    /*
+     * Tests various override cases, with direct or indirect (via lookup) overrides. All cases should lead
+     * to a neutral gray color.
+     */
+    @ParameterizedTest
+    @EnumSource(OverrideCases.class)
+    public void whenAllStylesAndOverridesAreAppliedShouldBeNeutralGray(OverrideCases c) throws IOException {
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(new CssParser().parse("userAgentStylSheet", c.userAgentStylesheet));
+        Pane pane = new Pane();
+
+        pane.getStyleClass().addAll("root", "my-pane");
+
+        if (c.property != null) {
+            pane.setBackground(Background.fill(c.property));
+        }
+        if (c.authorStylesheet != null) {
+            pane.getStylesheets().add(toDataURL(c.authorStylesheet));
+        }
+        if (c.inlineStyles != null) {
+            pane.setStyle(c.inlineStyles);
+        }
+
+        root.getChildren().add(pane);
+
+        stage.show();
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(Paint.valueOf("#808080"), pane.getBackground().getFills().get(0).getFill());
+    }
+
+    private static String toDataURL(String stylesheet) {
+        return "data:text/plain;base64," + Base64.getEncoder().encodeToString(stylesheet.getBytes(StandardCharsets.UTF_8));
     }
 }

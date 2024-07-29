@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,11 +33,12 @@
 #include "DFGFlowMap.h"
 #include "DFGGraph.h"
 #include "DFGNode.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC { namespace DFG {
 
 class InPlaceAbstractState {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(InPlaceAbstractState);
 public:
     InPlaceAbstractState(Graph&);
 
@@ -367,12 +368,7 @@ public:
     void setIsValid(bool isValid) { m_isValid = isValid; }
     void setBranchDirection(BranchDirection branchDirection) { m_branchDirection = branchDirection; }
 
-    // This method is evil - it causes a huge maintenance headache and there is a gross amount of
-    // code devoted to it. It would be much nicer to just always run the constant folder on each
-    // block. But, the last time we did it, it was a 1% SunSpider regression:
-    // https://bugs.webkit.org/show_bug.cgi?id=133947
-    // So, we should probably keep this method.
-    void setShouldTryConstantFolding(bool tryConstantFolding) { m_shouldTryConstantFolding = tryConstantFolding; }
+    void setShouldTryConstantFolding(bool) { }
 
     void setProofStatus(Edge& edge, ProofStatus status)
     {
@@ -398,8 +394,6 @@ private:
     Vector<AbstractValue> m_tupleAbstractValues;
     FastBitVector m_activeVariables;
     BasicBlock* m_block;
-
-    bool m_shouldTryConstantFolding;
 
     bool m_isValid;
     AbstractInterpreterClobberState m_clobberState;

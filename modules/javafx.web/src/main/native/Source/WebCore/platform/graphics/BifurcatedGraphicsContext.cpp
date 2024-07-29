@@ -70,22 +70,22 @@ const DestinationColorSpace& BifurcatedGraphicsContext::colorSpace() const
     return m_primaryContext.colorSpace();
 }
 
-void BifurcatedGraphicsContext::save()
+void BifurcatedGraphicsContext::save(GraphicsContextState::Purpose purpose)
 {
     // FIXME: Consider not using the BifurcatedGraphicsContext's state stack at all,
     // and making all of the state getters and setters virtual.
-    GraphicsContext::save();
-    m_primaryContext.save();
-    m_secondaryContext.save();
+    GraphicsContext::save(purpose);
+    m_primaryContext.save(purpose);
+    m_secondaryContext.save(purpose);
 
     VERIFY_STATE_SYNCHRONIZATION();
 }
 
-void BifurcatedGraphicsContext::restore()
+void BifurcatedGraphicsContext::restore(GraphicsContextState::Purpose purpose)
 {
-    GraphicsContext::restore();
-    m_primaryContext.restore();
-    m_secondaryContext.restore();
+    GraphicsContext::restore(purpose);
+    m_primaryContext.restore(purpose);
+    m_secondaryContext.restore(purpose);
 
     VERIFY_STATE_SYNCHRONIZATION();
 }
@@ -162,8 +162,7 @@ void BifurcatedGraphicsContext::beginTransparencyLayer(float opacity)
     m_primaryContext.beginTransparencyLayer(opacity);
     m_secondaryContext.beginTransparencyLayer(opacity);
 
-    GraphicsContext::save();
-    m_state.didBeginTransparencyLayer();
+    GraphicsContext::save(GraphicsContextState::Purpose::TransparencyLayer);
 
     VERIFY_STATE_SYNCHRONIZATION();
 }
@@ -174,7 +173,7 @@ void BifurcatedGraphicsContext::endTransparencyLayer()
     m_primaryContext.endTransparencyLayer();
     m_secondaryContext.endTransparencyLayer();
 
-    GraphicsContext::restore();
+    GraphicsContext::restore(GraphicsContextState::Purpose::TransparencyLayer);
 
     VERIFY_STATE_SYNCHRONIZATION();
 }
@@ -199,6 +198,22 @@ void BifurcatedGraphicsContext::fillRect(const FloatRect& rect, const Color& col
 {
     m_primaryContext.fillRect(rect, color);
     m_secondaryContext.fillRect(rect, color);
+
+    VERIFY_STATE_SYNCHRONIZATION();
+}
+
+void BifurcatedGraphicsContext::fillRect(const FloatRect& rect, Gradient& gradient)
+{
+    m_primaryContext.fillRect(rect, gradient);
+    m_secondaryContext.fillRect(rect, gradient);
+
+    VERIFY_STATE_SYNCHRONIZATION();
+}
+
+void BifurcatedGraphicsContext::fillRect(const FloatRect& rect, Gradient& gradient, const AffineTransform& gradientSpaceTransform)
+{
+    m_primaryContext.fillRect(rect, gradient, gradientSpaceTransform);
+    m_secondaryContext.fillRect(rect, gradient, gradientSpaceTransform);
 
     VERIFY_STATE_SYNCHRONIZATION();
 }
@@ -367,17 +382,12 @@ void BifurcatedGraphicsContext::setMiterLimit(float miterLimit)
     VERIFY_STATE_SYNCHRONIZATION();
 }
 
-void BifurcatedGraphicsContext::drawNativeImageInternal(NativeImage& nativeImage, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
+void BifurcatedGraphicsContext::drawNativeImageInternal(NativeImage& nativeImage, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
 {
-    m_primaryContext.drawNativeImageInternal(nativeImage, selfSize, destRect, srcRect, options);
-    m_secondaryContext.drawNativeImageInternal(nativeImage, selfSize, destRect, srcRect, options);
+    m_primaryContext.drawNativeImageInternal(nativeImage, destRect, srcRect, options);
+    m_secondaryContext.drawNativeImageInternal(nativeImage, destRect, srcRect, options);
 
     VERIFY_STATE_SYNCHRONIZATION();
-}
-
-bool BifurcatedGraphicsContext::needsCachedNativeImageInvalidationWorkaround(RenderingMode renderingMode)
-{
-    return m_primaryContext.needsCachedNativeImageInvalidationWorkaround(renderingMode) || m_secondaryContext.needsCachedNativeImageInvalidationWorkaround(renderingMode);
 }
 
 void BifurcatedGraphicsContext::drawSystemImage(SystemImage& systemImage, const FloatRect& destinationRect)
@@ -396,7 +406,7 @@ void BifurcatedGraphicsContext::drawControlPart(ControlPart& part, const FloatRo
     VERIFY_STATE_SYNCHRONIZATION();
 }
 
-void BifurcatedGraphicsContext::drawPattern(NativeImage& nativeImage, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& options)
+void BifurcatedGraphicsContext::drawPattern(NativeImage& nativeImage, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
 {
     m_primaryContext.drawPattern(nativeImage, destRect, tileRect, patternTransform, phase, spacing, options);
     m_secondaryContext.drawPattern(nativeImage, destRect, tileRect, patternTransform, phase, spacing, options);
@@ -404,7 +414,7 @@ void BifurcatedGraphicsContext::drawPattern(NativeImage& nativeImage, const Floa
     VERIFY_STATE_SYNCHRONIZATION();
 }
 
-ImageDrawResult BifurcatedGraphicsContext::drawImage(Image& image, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& options)
+ImageDrawResult BifurcatedGraphicsContext::drawImage(Image& image, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions options)
 {
     auto result = m_primaryContext.drawImage(image, destination, source, options);
     m_secondaryContext.drawImage(image, destination, source, options);
@@ -414,7 +424,7 @@ ImageDrawResult BifurcatedGraphicsContext::drawImage(Image& image, const FloatRe
     return result;
 }
 
-ImageDrawResult BifurcatedGraphicsContext::drawTiledImage(Image& image, const FloatRect& destination, const FloatPoint& source, const FloatSize& tileSize, const FloatSize& spacing, const ImagePaintingOptions& options)
+ImageDrawResult BifurcatedGraphicsContext::drawTiledImage(Image& image, const FloatRect& destination, const FloatPoint& source, const FloatSize& tileSize, const FloatSize& spacing, ImagePaintingOptions options)
 {
     auto result = m_primaryContext.drawTiledImage(image, destination, source, tileSize, spacing, options);
     m_secondaryContext.drawTiledImage(image, destination, source, tileSize, spacing, options);
@@ -424,7 +434,7 @@ ImageDrawResult BifurcatedGraphicsContext::drawTiledImage(Image& image, const Fl
     return result;
 }
 
-ImageDrawResult BifurcatedGraphicsContext::drawTiledImage(Image& image, const FloatRect& destination, const FloatRect& source, const FloatSize& tileScaleFactor, Image::TileRule hRule, Image::TileRule vRule, const ImagePaintingOptions& options)
+ImageDrawResult BifurcatedGraphicsContext::drawTiledImage(Image& image, const FloatRect& destination, const FloatRect& source, const FloatSize& tileScaleFactor, Image::TileRule hRule, Image::TileRule vRule, ImagePaintingOptions options)
 {
     auto result = m_primaryContext.drawTiledImage(image, destination, source, tileScaleFactor, hRule, vRule, options);
     m_secondaryContext.drawTiledImage(image, destination, source, tileScaleFactor, hRule, vRule, options);

@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include "CSSParserContext.h"
+#include "CSSSelectorEnums.h"
 #include "QualifiedName.h"
 #include "RenderStyleConstants.h"
 #include <wtf/EnumTraits.h>
@@ -29,6 +31,7 @@
 namespace WebCore {
 
 class CSSSelectorList;
+struct CSSSelectorParserContext;
 
 struct PossiblyQuotedIdentifier {
     AtomString identifier;
@@ -37,17 +40,17 @@ struct PossiblyQuotedIdentifier {
     bool isNull() const { return identifier.isNull(); }
 };
 
-    enum class SelectorSpecificityIncrement {
+enum class SelectorSpecificityIncrement {
         ClassA = 0x10000,
         ClassB = 0x100,
         ClassC = 1
-    };
+};
 
-    // Selector for a StyleRule.
-    DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSSelectorRareData);
-    class CSSSelector {
+// Selector for a StyleRule.
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSSelectorRareData);
+class CSSSelector {
         WTF_MAKE_FAST_ALLOCATED;
-    public:
+public:
         CSSSelector() = default;
         CSSSelector(const CSSSelector&);
         explicit CSSSelector(const QualifiedName&, bool tagIsForNamespaceRule = false);
@@ -64,8 +67,12 @@ struct PossiblyQuotedIdentifier {
         bool visitAllSimpleSelectors(auto& apply) const;
 
         bool hasExplicitNestingParent() const;
+    bool hasExplicitPseudoClassScope() const;
         void resolveNestingParentSelectors(const CSSSelectorList& parent);
         void replaceNestingParentByPseudoClassScope();
+
+    using PseudoClass = CSSSelectorPseudoClass;
+    using PseudoElement = CSSSelectorPseudoElement;
 
         // How the attribute value has to match. Default is Exact.
         enum class Match : uint8_t {
@@ -83,11 +90,14 @@ struct PossiblyQuotedIdentifier {
             Begin, // css3: E[foo^="bar"]
             End, // css3: E[foo$="bar"]
             PagePseudoClass,
-            NestingParent // &
+        NestingParent, // &
+        HasScope, // matches the :has() scope
+        ForgivingUnknown,
+        ForgivingUnknownNestContaining
         };
 
-        enum class RelationType : uint8_t {
-            Subselector = 0,
+    enum class Relation : uint8_t {
+        Subselector,
             DescendantSpace,
             Child,
             DirectAdjacent,
@@ -97,161 +107,26 @@ struct PossiblyQuotedIdentifier {
             ShadowSlotted
         };
 
-        enum class PseudoClassType : uint8_t {
-            Unknown = 0,
-            Empty,
-            FirstChild,
-            FirstOfType,
-            LastChild,
-            LastOfType,
-            OnlyChild,
-            OnlyOfType,
-            NthChild,
-            NthOfType,
-            NthLastChild,
-            NthLastOfType,
-            Link,
-            Visited,
-            Any,
-            AnyLink,
-            AnyLinkDeprecated,
-            Autofill,
-            AutofillAndObscured,
-            AutofillStrongPassword,
-            AutofillStrongPasswordViewable,
-            Hover,
-            Drag,
-            Focus,
-            FocusVisible,
-            FocusWithin,
-            Active,
-            Checked,
-            Enabled,
-            FullPageMedia,
-            Default,
-            Disabled,
-            HtmlDocument, // for internal use only with forms in table case in UA stylesheet
-            Is,
-            Matches, // obsolete synonym for PseudoClassIs
-            Where,
-            Optional,
-            PlaceholderShown,
-            Required,
-            ReadOnly,
-            ReadWrite,
-            Valid,
-            Invalid,
-            Indeterminate,
-            Target,
-            Lang,
-            Not,
-            Root,
-            Scope,
-            RelativeScope, // Like :scope but for internal use with relative selectors like :has(> foo).
-            WindowInactive,
-            CornerPresent,
-            Decrement,
-            Increment,
-            Has,
-            Horizontal,
-            Vertical,
-            Start,
-            End,
-            DoubleButton,
-            SingleButton,
-            NoButton,
-#if ENABLE(FULLSCREEN_API)
-            Fullscreen,
-            WebkitFullScreen,
-            FullScreenDocument,
-            FullScreenAncestor,
-            AnimatingFullScreenTransition,
-            FullScreenControlsHidden,
-#endif
-#if ENABLE(PICTURE_IN_PICTURE_API)
-            PictureInPicture,
-#endif
-            InRange,
-            OutOfRange,
-#if ENABLE(VIDEO)
-            Future,
-            Past,
-            Playing,
-            Paused,
-            Seeking,
-            Buffering,
-            Stalled,
-            Muted,
-            VolumeLocked,
-#endif
-            Dir,
-            Host,
-            Defined,
-#if ENABLE(ATTACHMENT_ELEMENT)
-            HasAttachment,
-#endif
-            Modal,
-            PopoverOpen,
-            UserInvalid,
-            UserValid
+    enum class PagePseudoClass : uint8_t {
+        First,
+        Left,
+        Right,
         };
 
-        enum PseudoElementType {
-            PseudoElementUnknown = 0,
-            PseudoElementAfter,
-            PseudoElementBackdrop,
-            PseudoElementBefore,
-#if ENABLE(VIDEO)
-            PseudoElementCue,
-#endif
-            PseudoElementFirstLetter,
-            PseudoElementFirstLine,
-            PseudoElementHighlight,
-            PseudoElementMarker,
-            PseudoElementPart,
-            PseudoElementResizer,
-            PseudoElementScrollbar,
-            PseudoElementScrollbarButton,
-            PseudoElementScrollbarCorner,
-            PseudoElementScrollbarThumb,
-            PseudoElementScrollbarTrack,
-            PseudoElementScrollbarTrackPiece,
-            PseudoElementSelection,
-            PseudoElementSlotted,
-            PseudoElementWebKitCustom,
+    enum AttributeMatchType { CaseSensitive, CaseInsensitive };
 
-            // WebKitCustom that appeared in an old prefixed form
-            // and need special handling.
-            PseudoElementWebKitCustomLegacyPrefixed,
-        };
+    static PseudoId pseudoId(PseudoElement);
+    static bool isPseudoClassEnabled(PseudoClass, const CSSSelectorParserContext&);
+    static bool isPseudoElementEnabled(PseudoElement, StringView, const CSSSelectorParserContext&);
+    static std::optional<PseudoId> parsePseudoElement(const String&, const CSSSelectorParserContext&);
+    static std::optional<PseudoElement> parsePseudoElementName(StringView, const CSSSelectorParserContext&);
+    static bool pseudoClassRequiresArgument(PseudoClass);
+    static bool pseudoElementRequiresArgument(PseudoElement);
+    static bool pseudoClassMayHaveArgument(PseudoClass);
+    static bool pseudoElementMayHaveArgument(PseudoElement);
 
-        enum PagePseudoClassType {
-            PagePseudoClassFirst = 1,
-            PagePseudoClassLeft,
-            PagePseudoClassRight,
-        };
-
-        enum MarginBoxType {
-            TopLeftCornerMarginBox,
-            TopLeftMarginBox,
-            TopCenterMarginBox,
-            TopRightMarginBox,
-            TopRightCornerMarginBox,
-            BottomLeftCornerMarginBox,
-            BottomLeftMarginBox,
-            BottomCenterMarginBox,
-            BottomRightMarginBox,
-            BottomRightCornerMarginBox,
-            LeftTopMarginBox,
-            LeftMiddleMarginBox,
-            LeftBottomMarginBox,
-            RightTopMarginBox,
-            RightMiddleMarginBox,
-            RightBottomMarginBox,
-        };
-
-        static PseudoElementType parsePseudoElementType(StringView);
-        static PseudoId pseudoId(PseudoElementType);
+    static const ASCIILiteral selectorTextForPseudoClass(PseudoClass);
+    static const ASCIILiteral nameForUserAgentPartLegacyAlias(StringView);
 
         // Selectors are kept in an array by CSSSelectorList.
         // The next component of the selector is the next item in the array.
@@ -270,63 +145,66 @@ struct PossiblyQuotedIdentifier {
         const CSSSelectorList* selectorList() const { return m_hasRareData ? m_data.rareData->selectorList.get() : nullptr; }
         CSSSelectorList* selectorList() { return m_hasRareData ? m_data.rareData->selectorList.get() : nullptr; }
 
+        bool matchNth(int count) const;
+        int nthA() const;
+        int nthB() const;
+
+    bool hasDescendantRelation() const { return relation() == Relation::DescendantSpace; }
+    bool hasDescendantOrChildRelation() const { return relation() == Relation::Child || hasDescendantRelation(); }
+
+    PseudoClass pseudoClass() const;
+    PseudoElement pseudoElement() const;
+    PagePseudoClass pagePseudoClass() const;
+
+        bool matchesPseudoElement() const;
+        bool isSiblingSelector() const;
+        bool isAttributeSelector() const;
+
+    Relation relation() const { return static_cast<Relation>(m_relation); }
+        Match match() const { return static_cast<Match>(m_match); }
+
+        bool isLastInSelectorList() const { return m_isLastInSelectorList; }
+        bool isFirstInTagHistory() const { return m_isFirstInTagHistory; }
+        bool isLastInTagHistory() const { return m_isLastInTagHistory; }
+
+    // FIXME: These should ideally be private, but CSSSelectorList and StyleRule use them.
+    void setLastInSelectorList() { m_isLastInSelectorList = true; }
+    void setNotFirstInTagHistory() { m_isFirstInTagHistory = false; }
+        void setNotLastInTagHistory() { m_isLastInTagHistory = false; }
+
+        bool isForPage() const { return m_isForPage; }
+
+    // Implicit means that this selector is not author/UA written.
+    bool isImplicit() const { return m_isImplicit; }
+
+private:
+    friend class MutableCSSSelector;
+
         void setValue(const AtomString&, bool matchLowerCase = false);
 
-        enum AttributeMatchType { CaseSensitive, CaseInsensitive };
         void setAttribute(const QualifiedName&, AttributeMatchType);
         void setNth(int a, int b);
         void setArgument(const AtomString&);
         void setArgumentList(FixedVector<PossiblyQuotedIdentifier>);
         void setSelectorList(std::unique_ptr<CSSSelectorList>);
 
-        bool matchNth(int count) const;
-        int nthA() const;
-        int nthB() const;
+    void setPseudoClass(PseudoClass);
+    void setPseudoElement(PseudoElement);
+    void setPagePseudoClass(PagePseudoClass);
 
-        bool hasDescendantRelation() const { return relation() == RelationType::DescendantSpace; }
-
-        bool hasDescendantOrChildRelation() const { return relation() == RelationType::Child || hasDescendantRelation(); }
-
-        PseudoClassType pseudoClassType() const;
-        void setPseudoClassType(PseudoClassType);
-
-        PseudoElementType pseudoElementType() const;
-        void setPseudoElementType(PseudoElementType);
-
-        PagePseudoClassType pagePseudoClassType() const;
-        void setPagePseudoType(PagePseudoClassType);
-
-        bool matchesPseudoElement() const;
-        bool isUnknownPseudoElement() const;
-        bool isCustomPseudoElement() const;
-        bool isWebKitCustomPseudoElement() const;
-        bool isSiblingSelector() const;
-        bool isAttributeSelector() const;
-
-        RelationType relation() const { return static_cast<RelationType>(m_relation); }
-        void setRelation(RelationType);
-
-        Match match() const { return static_cast<Match>(m_match); }
+    void setRelation(Relation);
         void setMatch(Match);
 
-        bool isLastInSelectorList() const { return m_isLastInSelectorList; }
-        void setLastInSelectorList() { m_isLastInSelectorList = true; }
-        void setNotLastInSelectorList() { m_isLastInSelectorList = false; }
-
-        bool isFirstInTagHistory() const { return m_isFirstInTagHistory; }
-        void setNotFirstInTagHistory() { m_isFirstInTagHistory = false; }
-
-        bool isLastInTagHistory() const { return m_isLastInTagHistory; }
-        void setNotLastInTagHistory() { m_isLastInTagHistory = false; }
-        void setLastInTagHistory() { m_isLastInTagHistory = true; }
-
-        bool isForPage() const { return m_isForPage; }
         void setForPage() { m_isForPage = true; }
+    void setImplicit() { m_isImplicit = true; }
 
-    private:
-        unsigned m_relation : 4 { static_cast<unsigned>(RelationType::DescendantSpace) }; // enum RelationType.
-        mutable unsigned m_match : 4 { static_cast<unsigned>(Match::Unknown) }; // enum Match.
+    unsigned simpleSelectorSpecificityForPage() const;
+    CSSSelector* tagHistory() { return m_isLastInTagHistory ? nullptr : this + 1; }
+
+    unsigned m_relation : 4 { enumToUnderlyingType(Relation::DescendantSpace) };
+    mutable unsigned m_match : 5 { enumToUnderlyingType(Match::Unknown) };
         mutable unsigned m_pseudoType : 8 { 0 }; // PseudoType.
+    // 17 bits
         unsigned m_isLastInSelectorList : 1 { false };
         unsigned m_isFirstInTagHistory : 1 { true };
         unsigned m_isLastInTagHistory : 1 { true };
@@ -334,12 +212,11 @@ struct PossiblyQuotedIdentifier {
         unsigned m_isForPage : 1 { false };
         unsigned m_tagIsForNamespaceRule : 1 { false };
         unsigned m_caseInsensitiveAttributeValueMatching : 1 { false };
+    unsigned m_isImplicit : 1 { false };
+    // 25 bits
 #if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
         unsigned m_destructorHasBeenCalled : 1 { false };
 #endif
-
-        unsigned simpleSelectorSpecificityForPage() const;
-        CSSSelector* tagHistory() { return m_isLastInTagHistory ? nullptr : this + 1; }
 
         CSSSelector& operator=(const CSSSelector&) = delete;
         CSSSelector(CSSSelector&&) = delete;
@@ -377,7 +254,7 @@ struct PossiblyQuotedIdentifier {
             QualifiedName::QualifiedNameImpl* tagQName;
             RareData* rareData;
         } m_data;
-    };
+};
 
 inline bool operator==(const AtomString& a, const PossiblyQuotedIdentifier& b) { return a == b.identifier; }
 inline bool operator==(const PossiblyQuotedIdentifier& a, const AtomString& b) { return a.identifier == b; }
@@ -394,52 +271,34 @@ inline bool CSSSelector::matchesPseudoElement() const
     return match() == Match::PseudoElement;
 }
 
-inline bool CSSSelector::isUnknownPseudoElement() const
+static inline bool pseudoClassIsRelativeToSiblings(CSSSelector::PseudoClass type)
 {
-    return match() == Match::PseudoElement && pseudoElementType() == PseudoElementUnknown;
+    return type == CSSSelector::PseudoClass::Empty
+        || type == CSSSelector::PseudoClass::FirstChild
+        || type == CSSSelector::PseudoClass::FirstOfType
+        || type == CSSSelector::PseudoClass::LastChild
+        || type == CSSSelector::PseudoClass::LastOfType
+        || type == CSSSelector::PseudoClass::OnlyChild
+        || type == CSSSelector::PseudoClass::OnlyOfType
+        || type == CSSSelector::PseudoClass::NthChild
+        || type == CSSSelector::PseudoClass::NthOfType
+        || type == CSSSelector::PseudoClass::NthLastChild
+        || type == CSSSelector::PseudoClass::NthLastOfType;
 }
 
-inline bool CSSSelector::isCustomPseudoElement() const
+static inline bool isTreeStructuralPseudoClass(CSSSelector::PseudoClass type)
 {
-    return match() == Match::PseudoElement
-        && (pseudoElementType() == PseudoElementWebKitCustom
-            || pseudoElementType() == PseudoElementWebKitCustomLegacyPrefixed);
+    return pseudoClassIsRelativeToSiblings(type) || type == CSSSelector::PseudoClass::Root;
 }
 
-inline bool CSSSelector::isWebKitCustomPseudoElement() const
+inline bool isLogicalCombinationPseudoClass(CSSSelector::PseudoClass pseudoClass)
 {
-    return pseudoElementType() == PseudoElementWebKitCustom || pseudoElementType() == PseudoElementWebKitCustomLegacyPrefixed;
-}
-
-static inline bool pseudoClassIsRelativeToSiblings(CSSSelector::PseudoClassType type)
-{
-    return type == CSSSelector::PseudoClassType::Empty
-        || type == CSSSelector::PseudoClassType::FirstChild
-        || type == CSSSelector::PseudoClassType::FirstOfType
-        || type == CSSSelector::PseudoClassType::LastChild
-        || type == CSSSelector::PseudoClassType::LastOfType
-        || type == CSSSelector::PseudoClassType::OnlyChild
-        || type == CSSSelector::PseudoClassType::OnlyOfType
-        || type == CSSSelector::PseudoClassType::NthChild
-        || type == CSSSelector::PseudoClassType::NthOfType
-        || type == CSSSelector::PseudoClassType::NthLastChild
-        || type == CSSSelector::PseudoClassType::NthLastOfType;
-}
-
-static inline bool isTreeStructuralPseudoClass(CSSSelector::PseudoClassType type)
-{
-    return pseudoClassIsRelativeToSiblings(type) || type == CSSSelector::PseudoClassType::Root;
-}
-
-inline bool isLogicalCombinationPseudoClass(CSSSelector::PseudoClassType pseudoClassType)
-{
-    switch (pseudoClassType) {
-    case CSSSelector::PseudoClassType::Is:
-    case CSSSelector::PseudoClassType::Where:
-    case CSSSelector::PseudoClassType::Not:
-    case CSSSelector::PseudoClassType::Any:
-    case CSSSelector::PseudoClassType::Matches:
-    case CSSSelector::PseudoClassType::Has:
+    switch (pseudoClass) {
+    case CSSSelector::PseudoClass::Is:
+    case CSSSelector::PseudoClass::Where:
+    case CSSSelector::PseudoClass::WebKitAny:
+    case CSSSelector::PseudoClass::Not:
+    case CSSSelector::PseudoClass::Has:
         return true;
     default:
         return false;
@@ -448,9 +307,9 @@ inline bool isLogicalCombinationPseudoClass(CSSSelector::PseudoClassType pseudoC
 
 inline bool CSSSelector::isSiblingSelector() const
 {
-    return relation() == RelationType::DirectAdjacent
-        || relation() == RelationType::IndirectAdjacent
-        || (match() == CSSSelector::Match::PseudoClass && pseudoClassIsRelativeToSiblings(pseudoClassType()));
+    return relation() == Relation::DirectAdjacent
+        || relation() == Relation::IndirectAdjacent
+        || (match() == CSSSelector::Match::PseudoClass && pseudoClassIsRelativeToSiblings(pseudoClass()));
 }
 
 inline bool CSSSelector::isAttributeSelector() const
@@ -467,7 +326,7 @@ inline bool CSSSelector::isAttributeSelector() const
 inline void CSSSelector::setValue(const AtomString& value, bool matchLowerCase)
 {
     ASSERT(match() != Match::Tag);
-    AtomString matchingValue = matchLowerCase ? value.convertToASCIILowercase() : value;
+    auto matchingValue = matchLowerCase ? value.convertToASCIILowercase() : value;
     if (!m_hasRareData && matchingValue != value)
         createRareData();
 
@@ -499,7 +358,7 @@ inline CSSSelector::~CSSSelector()
     } else if (match() == Match::Tag) {
         m_data.tagQName->deref();
         m_data.tagQName = nullptr;
-        m_match = static_cast<unsigned>(Match::Unknown);
+        m_match = enumToUnderlyingType(Match::Unknown);
     } else if (m_data.value) {
         m_data.value->deref();
         m_data.value = nullptr;
@@ -541,49 +400,50 @@ inline bool CSSSelector::attributeValueMatchingIsCaseInsensitive() const
     return m_caseInsensitiveAttributeValueMatching;
 }
 
-inline auto CSSSelector::pseudoClassType() const -> PseudoClassType
+inline auto CSSSelector::pseudoClass() const -> PseudoClass
 {
     ASSERT(match() == Match::PseudoClass);
-    return static_cast<PseudoClassType>(m_pseudoType);
+    return static_cast<PseudoClass>(m_pseudoType);
 }
 
-inline void CSSSelector::setPseudoClassType(PseudoClassType pseudoType)
+inline void CSSSelector::setPseudoClass(PseudoClass pseudoClass)
 {
-    m_pseudoType = enumToUnderlyingType(pseudoType);
-    ASSERT(static_cast<PseudoClassType>(m_pseudoType) == pseudoType);
+    m_pseudoType = enumToUnderlyingType(pseudoClass);
+    ASSERT(static_cast<PseudoClass>(m_pseudoType) == pseudoClass);
 }
 
-inline auto CSSSelector::pseudoElementType() const -> PseudoElementType
+inline auto CSSSelector::pseudoElement() const -> PseudoElement
 {
     ASSERT(match() == Match::PseudoElement);
-    return static_cast<PseudoElementType>(m_pseudoType);
+    return static_cast<PseudoElement>(m_pseudoType);
 }
 
-inline void CSSSelector::setPseudoElementType(PseudoElementType pseudoElementType)
+inline void CSSSelector::setPseudoElement(PseudoElement pseudoElement)
 {
-    m_pseudoType = pseudoElementType;
-    ASSERT(m_pseudoType == pseudoElementType);
+    m_pseudoType = enumToUnderlyingType(pseudoElement);
+    ASSERT(static_cast<PseudoElement>(m_pseudoType) == pseudoElement);
 }
 
-inline auto CSSSelector::pagePseudoClassType() const -> PagePseudoClassType
+inline auto CSSSelector::pagePseudoClass() const -> PagePseudoClass
 {
     ASSERT(match() == Match::PagePseudoClass);
-    return static_cast<PagePseudoClassType>(m_pseudoType);
+    return static_cast<PagePseudoClass>(m_pseudoType);
 }
 
-inline void CSSSelector::setPagePseudoType(PagePseudoClassType pagePseudoType)
+inline void CSSSelector::setPagePseudoClass(PagePseudoClass pagePseudoClass)
 {
-    m_pseudoType = pagePseudoType;
+    m_pseudoType = enumToUnderlyingType(pagePseudoClass);
+    ASSERT(static_cast<PagePseudoClass>(m_pseudoType) == pagePseudoClass);
 }
 
-inline void CSSSelector::setRelation(RelationType relation)
+inline void CSSSelector::setRelation(Relation relation)
 {
-    m_relation = static_cast<unsigned>(relation);
+    m_relation = enumToUnderlyingType(relation);
 }
 
 inline void CSSSelector::setMatch(Match match)
 {
-    m_match = static_cast<unsigned>(match);
+    m_match = enumToUnderlyingType(match);
 }
 
 } // namespace WebCore

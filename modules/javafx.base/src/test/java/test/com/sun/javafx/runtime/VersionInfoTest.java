@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,7 +38,7 @@ import static org.junit.Assert.*;
 public class VersionInfoTest {
 
     // Increment this feature-release counter for every major release.
-    private static final String FEATURE = "23";
+    private static final String FEATURE = "24";
 
     // The working directory at runtime is 'modules/javafx.base'.
     private static final String PROPERTIES_FILE = "build/module-lib/javafx.properties";

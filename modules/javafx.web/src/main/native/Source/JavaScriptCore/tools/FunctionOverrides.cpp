@@ -140,7 +140,7 @@ static void initializeOverrideInfo(const SourceCode& origCode, const String& new
 
     auto overridden = "<overridden>"_s;
     URL url({ }, overridden);
-    Ref<SourceProvider> newProvider = StringSourceProvider::create(newProviderString, SourceOrigin { url }, overridden);
+    Ref<SourceProvider> newProvider = StringSourceProvider::create(newProviderString, SourceOrigin { url }, overridden, SourceTaintedOrigin::Untainted);
 
     info.firstLine = 1;
     info.lineCount = 1; // Faking it. This doesn't really matter for now.
@@ -214,7 +214,7 @@ static String parseClause(const char* keyword, size_t keywordLength, FILE* file,
         FAIL_WITH_ERROR(SYNTAX_ERROR, ("'", keyword, "' must be followed by a ' ':\n", line, "\n"));
 
     const char* delimiterStart = &line[keywordLength + 1];
-    const char* delimiterEnd = strstr(delimiterStart, "{");
+    const char* delimiterEnd = strchr(delimiterStart, '{');
     if (!delimiterEnd)
         FAIL_WITH_ERROR(SYNTAX_ERROR, ("Missing { after '", keyword, "' clause start delimiter:\n", line, "\n"));
 

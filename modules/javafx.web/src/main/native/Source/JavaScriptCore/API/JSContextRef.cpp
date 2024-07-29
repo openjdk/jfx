@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -333,10 +333,8 @@ public:
                 builder.append('\n');
             builder.append('#', visitor->index(), ' ', visitor->functionName(), "() at ", visitor->sourceURL());
             if (visitor->hasLineAndColumnInfo()) {
-                unsigned lineNumber;
-                unsigned unusedColumn;
-                visitor->computeLineAndColumn(lineNumber, unusedColumn);
-                builder.append(':', lineNumber);
+                auto lineColumn = visitor->computeLineAndColumn();
+                builder.append(':', lineColumn.line);
             }
 
             if (!visitor->callee().rawPtr())
@@ -475,3 +473,47 @@ Inspector::AugmentableInspectorController* JSGlobalContextGetAugmentableInspecto
     return &globalObject->inspectorController();
 }
 #endif
+
+bool JSContextGroupEnableSamplingProfiler(JSContextGroupRef group)
+{
+    VM& vm = *toJS(group);
+    JSLockHolder locker(&vm);
+
+#if ENABLE(SAMPLING_PROFILER)
+    vm.enableSamplingProfiler();
+    return true;
+#else
+    return false;
+#endif
+}
+
+void JSContextGroupDisableSamplingProfiler(JSContextGroupRef group)
+{
+    VM& vm = *toJS(group);
+    JSLockHolder locker(&vm);
+
+#if ENABLE(SAMPLING_PROFILER)
+    vm.disableSamplingProfiler();
+#endif
+}
+
+JSStringRef JSContextGroupTakeSamplesFromSamplingProfiler(JSContextGroupRef group)
+{
+    VM& vm = *toJS(group);
+    JSLockHolder locker(&vm);
+
+#if ENABLE(SAMPLING_PROFILER)
+    auto json = vm.takeSamplingProfilerSamplesAsJSON();
+    if (UNLIKELY(!json))
+        return nullptr;
+
+    auto jsonData = json->toJSONString();
+    if (UNLIKELY(jsonData.isNull()))
+        return nullptr;
+
+    return OpaqueJSString::tryCreate(WTFMove(jsonData)).leakRef();
+#else
+    return nullptr;
+#endif
+}
+

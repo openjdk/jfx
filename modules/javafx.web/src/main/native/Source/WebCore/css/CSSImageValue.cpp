@@ -1,6 +1,6 @@
 /*
  * (C) 1999-2003 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2004-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -123,6 +123,18 @@ bool CSSImageValue::customTraverseSubresources(const Function<bool(const CachedR
     return m_cachedImage && *m_cachedImage && handler(**m_cachedImage);
 }
 
+void CSSImageValue::customSetReplacementURLForSubresources(const HashMap<String, String>& replacementURLStrings)
+{
+    auto replacementURLString = replacementURLStrings.get(m_location.resolvedURL.string());
+    if (!replacementURLString.isNull())
+        m_replacementURLString = replacementURLString;
+}
+
+void CSSImageValue::customClearReplacementURLForSubresources()
+{
+    m_replacementURLString = { };
+}
+
 bool CSSImageValue::equals(const CSSImageValue& other) const
 {
     return m_location == other.m_location;
@@ -132,6 +144,10 @@ String CSSImageValue::customCSSText() const
 {
     if (m_isInvalid)
         return ""_s;
+
+    if (!m_replacementURLString.isEmpty())
+        return serializeURL(m_replacementURLString);
+
     return serializeURL(m_location.specifiedURLString);
 }
 

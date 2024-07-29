@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -75,7 +75,10 @@ struct MediaTrackConstraintSet {
     std::optional<ConstrainDOMString> groupId;
     std::optional<ConstrainDOMString> displaySurface;
     std::optional<ConstrainBoolean> logicalSurface;
+
+    std::optional<ConstrainDOMString> whiteBalanceMode;
     std::optional<ConstrainDouble> zoom;
+    std::optional<ConstrainBoolean> torch;
 };
 
 struct MediaTrackConstraints : MediaTrackConstraintSet {

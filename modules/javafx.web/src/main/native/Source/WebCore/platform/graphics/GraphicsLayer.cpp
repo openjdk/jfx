@@ -136,6 +136,7 @@ GraphicsLayer::GraphicsLayer(Type type, GraphicsLayerClient& layerClient)
     , m_showDebugBorder(false)
     , m_showRepaintCounter(false)
     , m_isMaskLayer(false)
+    , m_isBackdropRoot(false)
     , m_isTrackingDisplayListReplay(false)
     , m_userInteractionEnabled(true)
     , m_canDetachBackingStore(true)
@@ -321,12 +322,15 @@ bool GraphicsLayer::replaceChild(GraphicsLayer* oldChild, Ref<GraphicsLayer>&& n
 
 void GraphicsLayer::removeAllChildren()
 {
-    while (m_children.size()) {
-        GraphicsLayer* curLayer = m_children[0].ptr();
-        ASSERT(curLayer->parent());
-        curLayer->removeFromParent();
-        // curLayer may be destroyed here.
-    }
+    if (m_children.isEmpty())
+        return;
+
+    willModifyChildren();
+
+    for (auto& child : m_children)
+        child->setParent(nullptr);
+
+    m_children.clear();
 }
 
 void GraphicsLayer::removeFromParentInternal()
@@ -400,6 +404,9 @@ void GraphicsLayer::setOpacity(float opacity)
 
 void GraphicsLayer::removeFromParent()
 {
+    if (m_parent)
+        m_parent->willModifyChildren();
+
     // removeFromParentInternal is nonvirtual, for use in willBeDestroyed,
     // which is called from destructors.
     removeFromParentInternal();
@@ -717,11 +724,7 @@ static inline const FilterOperations& filterOperationsAt(const KeyframeValueList
 
 int GraphicsLayer::validateFilterOperations(const KeyframeValueList& valueList)
 {
-#if ENABLE(FILTERS_LEVEL_2)
     ASSERT(valueList.property() == AnimatedProperty::Filter || valueList.property() == AnimatedProperty::WebkitBackdropFilter);
-#else
-    ASSERT(valueList.property() == AnimatedProperty::Filter);
-#endif
 
     if (valueList.size() < 2)
         return -1;
@@ -761,7 +764,7 @@ void GraphicsLayer::setAcceleratedEffectsAndBaseValues(AcceleratedEffects&& effe
     }
 
     if (!m_effectStack)
-        m_effectStack = makeUnique<AcceleratedEffectStack>();
+        m_effectStack = AcceleratedEffectStack::create();
 
     m_effectStack->setEffects(WTFMove(effects));
     m_effectStack->setBaseValues(WTFMove(baseValues));
@@ -789,13 +792,8 @@ void GraphicsLayer::addRepaintRect(const FloatRect& repaintRect)
 
     FloatRect largestRepaintRect(FloatPoint(), m_size);
     largestRepaintRect.intersect(repaintRect);
-    RepaintMap::iterator repaintIt = repaintRectMap().find(this);
-    if (repaintIt == repaintRectMap().end())
-        repaintRectMap().set(this, Vector { WTFMove(largestRepaintRect) });
-    else {
-        Vector<FloatRect>& repaintRects = repaintIt->value;
-        repaintRects.append(largestRepaintRect);
-    }
+
+    repaintRectMap().add(this, Vector<FloatRect>()).iterator->value.append(WTFMove(largestRepaintRect));
 }
 
 void GraphicsLayer::traverse(GraphicsLayer& layer, const Function<void(GraphicsLayer&)>& traversalFunc)
@@ -872,10 +870,8 @@ void GraphicsLayer::dumpProperties(TextStream& ts, OptionSet<LayerTreeAsTextOpti
     if (m_opacity != 1)
         ts << indent << "(opacity " << m_opacity << ")\n";
 
-#if ENABLE(CSS_COMPOSITING)
     if (m_blendMode != BlendMode::Normal)
         ts << indent << "(blendMode " << compositeOperatorName(CompositeOperator::SourceOver, m_blendMode) << ")\n";
-#endif
 
     if (type() == Type::Normal && tiledBacking())
         ts << indent << "(usingTiledLayer 1)\n";
@@ -1033,7 +1029,6 @@ TextStream& operator<<(TextStream& ts, const GraphicsLayer::CustomAppearance& cu
 {
     switch (customAppearance) {
     case GraphicsLayer::CustomAppearance::None: ts << "none"; break;
-    case GraphicsLayer::CustomAppearance::ScrollingOverhang: ts << "scrolling-overhang"; break;
     case GraphicsLayer::CustomAppearance::ScrollingShadow: ts << "scrolling-shadow"; break;
     }
     return ts;

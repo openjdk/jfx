@@ -37,9 +37,9 @@
 
 namespace WebCore {
 
-const char* MediaKeySystemController::supplementName()
+ASCIILiteral MediaKeySystemController::supplementName()
 {
-    return "MediaKeySystemController";
+    return "MediaKeySystemController"_s;
 }
 
 MediaKeySystemController* MediaKeySystemController::from(Page* page)
@@ -65,7 +65,7 @@ void provideMediaKeySystemTo(Page& page, MediaKeySystemClient& client)
 
 void MediaKeySystemController::logRequestMediaKeySystemDenial(Document& document)
 {
-    if (auto* window = document.domWindow())
+    if (RefPtr window = document.domWindow())
         window->printErrorMessage(makeString("Not allowed to access MediaKeySystem."));
 }
 

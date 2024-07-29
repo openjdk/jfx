@@ -36,7 +36,7 @@ namespace WebCore {
 class CryptoAlgorithmParameters {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    enum class Class {
+    enum class Class : uint8_t {
         None,
         AesCbcCfbParams,
         AesCtrParams,
@@ -53,6 +53,7 @@ public:
         RsaKeyGenParams,
         RsaOaepParams,
         RsaPssParams,
+        X25519Params,
     };
 
     // FIXME: Consider merging name and identifier.

@@ -44,7 +44,11 @@ public:
 
     void init() final;
 
+    // FIXME: Override roleValue(), updateRole(), and updateRoleAfterChildrenCreation() because this class does not use m_role. We should fix this so behavior is unified with other AccessibilityObject subclasses.
     AccessibilityRole roleValue() const final;
+    void updateRole() final { }
+    void updateRoleAfterChildrenCreation() final { }
+
     virtual bool isAriaTable() const { return false; }
 
     void addChildren() final;
@@ -61,7 +65,7 @@ public:
 
     // all the cells in the table
     AccessibilityChildrenVector cells() override;
-    AXCoreObject* cellForColumnAndRow(unsigned column, unsigned row) override;
+    AccessibilityObject* cellForColumnAndRow(unsigned column, unsigned row) override;
 
     AccessibilityChildrenVector columnHeaders() override;
     AccessibilityChildrenVector rowHeaders() override;
@@ -105,7 +109,7 @@ protected:
 
 private:
     virtual bool computeIsTableExposableThroughAccessibility() const;
-    void titleElementText(Vector<AccessibilityText>&) const final;
+    void labelText(Vector<AccessibilityText>&) const final;
     HTMLTableElement* tableElement() const;
 
     void ensureRow(unsigned);

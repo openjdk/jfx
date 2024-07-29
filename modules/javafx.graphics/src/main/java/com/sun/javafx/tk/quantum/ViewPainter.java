@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -388,6 +388,9 @@ abstract class ViewPainter implements Runnable {
             }
             root.clearPainted();
         }
+
+        // Ensure the dirty flags are cleared
+        root.clearDirty();
     }
 
     /**
@@ -449,8 +452,6 @@ abstract class ViewPainter implements Runnable {
         if (renderRootPath != null) {
             if (renderRootPath.isEmpty()) {
                 // empty render path indicates that no rendering is needed.
-                // There may be occluded dirty Nodes however, so we need to clear them
-                root.clearDirtyTree();
                 return;
             }
             // If the path is not empty, the first node must be the root node

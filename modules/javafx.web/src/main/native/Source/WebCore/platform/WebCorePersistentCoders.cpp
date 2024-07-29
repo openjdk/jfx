@@ -48,7 +48,7 @@ namespace WTF::Persistence {
 
 #if ENABLE(APP_HIGHLIGHTS)
 template<> struct Coder<WebCore::AppHighlightRangeData::NodePathComponent> {
-    static void encode(Encoder& encoder, const WebCore::AppHighlightRangeData::NodePathComponent& instance)
+    static void encodeForPersistence(Encoder& encoder, const WebCore::AppHighlightRangeData::NodePathComponent& instance)
     {
         encoder << instance.identifier;
         encoder << instance.nodeName;
@@ -56,7 +56,7 @@ template<> struct Coder<WebCore::AppHighlightRangeData::NodePathComponent> {
         encoder << instance.pathIndex;
     }
 
-    static std::optional<WebCore::AppHighlightRangeData::NodePathComponent> decode(Decoder& decoder)
+    static std::optional<WebCore::AppHighlightRangeData::NodePathComponent> decodeForPersistence(Decoder& decoder)
     {
         std::optional<String> identifier;
         decoder >> identifier;
@@ -84,7 +84,7 @@ template<> struct Coder<WebCore::AppHighlightRangeData::NodePathComponent> {
 
 constexpr uint64_t highlightFileSignature = 0x4141504832303231; // File Signature  (A)pple(AP)plication(H)ighlights(2021)
 
-void Coder<WebCore::AppHighlightRangeData>::encode(Encoder& encoder, const WebCore::AppHighlightRangeData& instance)
+void Coder<WebCore::AppHighlightRangeData>::encodeForPersistence(Encoder& encoder, const WebCore::AppHighlightRangeData& instance)
 {
     constexpr uint64_t currentAppHighlightVersion = 1;
 
@@ -98,7 +98,7 @@ void Coder<WebCore::AppHighlightRangeData>::encode(Encoder& encoder, const WebCo
     encoder << instance.endOffset();
 }
 
-std::optional<WebCore::AppHighlightRangeData> Coder<WebCore::AppHighlightRangeData>::decode(Decoder& decoder)
+std::optional<WebCore::AppHighlightRangeData> Coder<WebCore::AppHighlightRangeData>::decodeForPersistence(Decoder& decoder)
 {
     std::optional<uint64_t> version;
 
@@ -154,13 +154,12 @@ std::optional<WebCore::AppHighlightRangeData> Coder<WebCore::AppHighlightRangeDa
 }
 #endif // ENABLE(APP_HIGHLIGHTS)
 
-#if ENABLE(SERVICE_WORKER)
-void Coder<WebCore::ImportedScriptAttributes>::encode(Encoder& encoder, const WebCore::ImportedScriptAttributes& instance)
+void Coder<WebCore::ImportedScriptAttributes>::encodeForPersistence(Encoder& encoder, const WebCore::ImportedScriptAttributes& instance)
 {
     encoder << instance.responseURL << instance.mimeType;
 }
 
-std::optional<WebCore::ImportedScriptAttributes> Coder<WebCore::ImportedScriptAttributes>::decode(Decoder& decoder)
+std::optional<WebCore::ImportedScriptAttributes> Coder<WebCore::ImportedScriptAttributes>::decodeForPersistence(Decoder& decoder)
 {
     std::optional<URL> responseURL;
     decoder >> responseURL;
@@ -178,12 +177,12 @@ std::optional<WebCore::ImportedScriptAttributes> Coder<WebCore::ImportedScriptAt
     } };
 }
 
-void Coder<WebCore::ImageResource>::encode(Encoder& encoder, const WebCore::ImageResource& instance)
+void Coder<WebCore::ImageResource>::encodeForPersistence(Encoder& encoder, const WebCore::ImageResource& instance)
 {
     encoder << instance.src << instance.sizes << instance.type << instance.label;
 }
 
-std::optional<WebCore::ImageResource> Coder<WebCore::ImageResource>::decode(Decoder& decoder)
+std::optional<WebCore::ImageResource> Coder<WebCore::ImageResource>::decodeForPersistence(Decoder& decoder)
 {
     std::optional<String> src;
     decoder >> src;
@@ -212,9 +211,8 @@ std::optional<WebCore::ImageResource> Coder<WebCore::ImageResource>::decode(Deco
         WTFMove(*label)
     } };
 }
-#endif
 
-void Coder<WebCore::ResourceRequest>::encode(Encoder& encoder, const WebCore::ResourceRequest& instance)
+void Coder<WebCore::ResourceRequest>::encodeForPersistence(Encoder& encoder, const WebCore::ResourceRequest& instance)
 {
     ASSERT(!instance.httpBody());
     ASSERT(!instance.platformRequestUpdated());
@@ -233,7 +231,7 @@ void Coder<WebCore::ResourceRequest>::encode(Encoder& encoder, const WebCore::Re
     encoder << instance.isAppInitiated();
 }
 
-std::optional<WebCore::ResourceRequest> Coder<WebCore::ResourceRequest>::decode(Decoder& decoder)
+std::optional<WebCore::ResourceRequest> Coder<WebCore::ResourceRequest>::decodeForPersistence(Decoder& decoder)
 {
     std::optional<URL> url;
     decoder >> url;
@@ -421,13 +419,13 @@ static std::optional<RetainPtr<CFArrayRef>> decodeCertificateChain(Decoder& deco
     return { WTFMove(array) };
 }
 
-void Coder<WebCore::CertificateInfo>::encode(Encoder& encoder, const WebCore::CertificateInfo& certificateInfo)
+void Coder<WebCore::CertificateInfo>::encodeForPersistence(Encoder& encoder, const WebCore::CertificateInfo& certificateInfo)
 {
     encoder << LegacyCertificateInfoType::Trust;
     encodeSecTrustRef(encoder, certificateInfo.trust().get());
 }
 
-std::optional<WebCore::CertificateInfo> Coder<WebCore::CertificateInfo>::decode(Decoder& decoder)
+std::optional<WebCore::CertificateInfo> Coder<WebCore::CertificateInfo>::decodeForPersistence(Decoder& decoder)
 {
     std::optional<LegacyCertificateInfoType> certificateInfoType;
     decoder >> certificateInfoType;
@@ -456,7 +454,7 @@ std::optional<WebCore::CertificateInfo> Coder<WebCore::CertificateInfo>::decode(
 
 #elif USE(CURL)
 
-void Coder<WebCore::CertificateInfo>::encode(Encoder& encoder, const WebCore::CertificateInfo& certificateInfo)
+void Coder<WebCore::CertificateInfo>::encodeForPersistence(Encoder& encoder, const WebCore::CertificateInfo& certificateInfo)
 {
     auto& certificateChain = certificateInfo.certificateChain();
 
@@ -466,7 +464,7 @@ void Coder<WebCore::CertificateInfo>::encode(Encoder& encoder, const WebCore::Ce
         encoder << certificate;
 }
 
-std::optional<WebCore::CertificateInfo> Coder<WebCore::CertificateInfo>::decode(Decoder& decoder)
+std::optional<WebCore::CertificateInfo> Coder<WebCore::CertificateInfo>::decodeForPersistence(Decoder& decoder)
 {
     std::optional<int> verificationError;
     decoder >> verificationError;
@@ -494,13 +492,13 @@ std::optional<WebCore::CertificateInfo> Coder<WebCore::CertificateInfo>::decode(
 #elif USE(SOUP)
 
 template<> struct Coder<GRefPtr<GByteArray>> {
-    static void encode(Encoder &encoder, const GRefPtr<GByteArray>& byteArray)
+    static void encodeForPersistence(Encoder &encoder, const GRefPtr<GByteArray>& byteArray)
     {
         encoder << static_cast<uint32_t>(byteArray->len);
         encoder.encodeFixedLengthData({ byteArray->data, byteArray->len });
     }
 
-    static std::optional<GRefPtr<GByteArray>> decode(Decoder& decoder)
+    static std::optional<GRefPtr<GByteArray>> decodeForPersistence(Decoder& decoder)
     {
         std::optional<uint32_t> size;
         decoder >> size;
@@ -553,7 +551,7 @@ static GRefPtr<GTlsCertificate> certificateFromCertificatesDataList(const Vector
     return certificate;
 }
 
-void Coder<WebCore::CertificateInfo>::encode(Encoder& encoder, const WebCore::CertificateInfo& certificateInfo)
+void Coder<WebCore::CertificateInfo>::encodeForPersistence(Encoder& encoder, const WebCore::CertificateInfo& certificateInfo)
 {
     auto certificatesDataList = certificatesDataListFromCertificateInfo(certificateInfo);
 
@@ -565,7 +563,7 @@ void Coder<WebCore::CertificateInfo>::encode(Encoder& encoder, const WebCore::Ce
     encoder << static_cast<uint32_t>(certificateInfo.tlsErrors());
 }
 
-std::optional<WebCore::CertificateInfo> Coder<WebCore::CertificateInfo>::decode(Decoder& decoder)
+std::optional<WebCore::CertificateInfo> Coder<WebCore::CertificateInfo>::decodeForPersistence(Decoder& decoder)
 {
     std::optional<Vector<GRefPtr<GByteArray>>> certificatesDataList;
     decoder >> certificatesDataList;
@@ -592,23 +590,23 @@ std::optional<WebCore::CertificateInfo> Coder<WebCore::CertificateInfo>::decode(
 
 #elif PLATFORM(WIN)
 
-void Coder<WebCore::CertificateInfo>::encode(Encoder&, const WebCore::CertificateInfo&)
+void Coder<WebCore::CertificateInfo>::encodeForPersistence(Encoder&, const WebCore::CertificateInfo&)
 {
 }
 
-std::optional<WebCore::CertificateInfo> Coder<WebCore::CertificateInfo>::decode(Decoder&)
+std::optional<WebCore::CertificateInfo> Coder<WebCore::CertificateInfo>::decodeForPersistence(Decoder&)
 {
     return WebCore::CertificateInfo();
 }
 
 #elif  PLATFORM(JAVA)
 
-void Coder<WebCore::CertificateInfo>::encode(Encoder&, const WebCore::CertificateInfo&)
+void Coder<WebCore::CertificateInfo>::encodeForPersistence(Encoder&, const WebCore::CertificateInfo&)
 {
     notImplemented();
 }
 
-std::optional<WebCore::CertificateInfo> Coder<WebCore::CertificateInfo>::decode(Decoder&)
+std::optional<WebCore::CertificateInfo> Coder<WebCore::CertificateInfo>::decodeForPersistence(Decoder&)
 {
     notImplemented();
     return std::nullopt;
@@ -617,14 +615,13 @@ std::optional<WebCore::CertificateInfo> Coder<WebCore::CertificateInfo>::decode(
 #endif
 
 // FIXME: Move persistent coder implementations here and generate IPC coders for these structures.
-#if ENABLE(SERVICE_WORKER)
-void Coder<WebCore::NavigationPreloadState>::encode(Encoder& encoder, const WebCore::NavigationPreloadState& instance)
+void Coder<WebCore::NavigationPreloadState>::encodeForPersistence(Encoder& encoder, const WebCore::NavigationPreloadState& instance)
 {
     encoder << instance.enabled;
     encoder << instance.headerValue;
 }
 
-std::optional<WebCore::NavigationPreloadState> Coder<WebCore::NavigationPreloadState>::decode(Decoder& decoder)
+std::optional<WebCore::NavigationPreloadState> Coder<WebCore::NavigationPreloadState>::decodeForPersistence(Decoder& decoder)
 {
     std::optional<bool> enabled;
     decoder >> enabled;
@@ -637,35 +634,67 @@ std::optional<WebCore::NavigationPreloadState> Coder<WebCore::NavigationPreloadS
         return { };
     return { { *enabled, WTFMove(*headerValue) } };
 }
-#endif
 
-void Coder<WebCore::CrossOriginEmbedderPolicy>::encode(Encoder& encoder, const WebCore::CrossOriginEmbedderPolicy& instance)
+void Coder<WebCore::CrossOriginEmbedderPolicy>::encodeForPersistence(Encoder& encoder, const WebCore::CrossOriginEmbedderPolicy& instance)
 {
     instance.encode(encoder);
 }
 
-std::optional<WebCore::CrossOriginEmbedderPolicy> Coder<WebCore::CrossOriginEmbedderPolicy>::decode(Decoder& decoder)
+std::optional<WebCore::CrossOriginEmbedderPolicy> Coder<WebCore::CrossOriginEmbedderPolicy>::decodeForPersistence(Decoder& decoder)
 {
     return WebCore::CrossOriginEmbedderPolicy::decode(decoder);
 }
 
-void Coder<WebCore::ContentSecurityPolicyResponseHeaders>::encode(Encoder& encoder, const WebCore::ContentSecurityPolicyResponseHeaders& instance)
+void Coder<WebCore::ContentSecurityPolicyResponseHeaders>::encodeForPersistence(Encoder& encoder, const WebCore::ContentSecurityPolicyResponseHeaders& instance)
 {
-    instance.encode(encoder);
+    encoder << static_cast<uint64_t>(instance.headers().size());
+    for (auto& pair : instance.headers()) {
+        encoder << pair.first;
+        encoder << pair.second;
+    }
+    encoder << instance.httpStatusCode();
 }
 
-std::optional<WebCore::ContentSecurityPolicyResponseHeaders> Coder<WebCore::ContentSecurityPolicyResponseHeaders>::decode(Decoder& decoder)
+std::optional<WebCore::ContentSecurityPolicyResponseHeaders> Coder<WebCore::ContentSecurityPolicyResponseHeaders>::decodeForPersistence(Decoder& decoder)
 {
-    return WebCore::ContentSecurityPolicyResponseHeaders::decode(decoder);
+    WebCore::ContentSecurityPolicyResponseHeaders headers;
+
+    std::optional<uint64_t> headersSize;
+    decoder >> headersSize;
+    if (!headersSize)
+        return std::nullopt;
+
+    Vector<std::pair<String, WebCore::ContentSecurityPolicyHeaderType>> headersVector;
+    for (size_t i = 0; i < *headersSize; ++i) {
+        std::optional<String> header;
+        decoder >> header;
+        if (!header)
+            return std::nullopt;
+        std::optional<WebCore::ContentSecurityPolicyHeaderType> headerType;
+        decoder >> headerType;
+        if (!headerType)
+            return std::nullopt;
+        headersVector.append(std::make_pair(WTFMove(*header), WTFMove(*headerType)));
+    }
+    headersVector.shrinkToFit();
+    headers.setHeaders(WTFMove(headersVector));
+
+    std::optional<int> httpStatusCode;
+    decoder >> httpStatusCode;
+    if (!httpStatusCode)
+        return std::nullopt;
+    headers.setHTTPStatusCode(*httpStatusCode);
+
+    return headers;
 }
 
-void Coder<WebCore::ClientOrigin>::encode(Encoder& encoder, const WebCore::ClientOrigin& instance)
+void Coder<WebCore::ClientOrigin>::encodeForPersistence(Encoder& encoder, const WebCore::ClientOrigin& instance)
 {
     encoder << instance.topOrigin;
     encoder << instance.clientOrigin;
 }
 
-std::optional<WebCore::ClientOrigin> Coder<WebCore::ClientOrigin>::decode(Decoder& decoder)
+std::optional<WebCore::ClientOrigin> Coder<WebCore::ClientOrigin>::decodeForPersistence(Decoder& decoder)
 {
     std::optional<WebCore::SecurityOriginData> topOrigin;
     std::optional<WebCore::SecurityOriginData> clientOrigin;
@@ -679,14 +708,14 @@ std::optional<WebCore::ClientOrigin> Coder<WebCore::ClientOrigin>::decode(Decode
     return WebCore::ClientOrigin { WTFMove(*topOrigin), WTFMove(*clientOrigin) };
 }
 
-void Coder<WebCore::SecurityOriginData>::encode(Encoder& encoder, const WebCore::SecurityOriginData& instance)
+void Coder<WebCore::SecurityOriginData>::encodeForPersistence(Encoder& encoder, const WebCore::SecurityOriginData& instance)
 {
     encoder << instance.protocol();
     encoder << instance.host();
     encoder << instance.port();
 }
 
-std::optional<WebCore::SecurityOriginData> Coder<WebCore::SecurityOriginData>::decode(Decoder& decoder)
+std::optional<WebCore::SecurityOriginData> Coder<WebCore::SecurityOriginData>::decodeForPersistence(Decoder& decoder)
 {
     std::optional<String> protocol;
     decoder >> protocol;
@@ -710,25 +739,152 @@ std::optional<WebCore::SecurityOriginData> Coder<WebCore::SecurityOriginData>::d
     return data;
 }
 
-void Coder<WebCore::ResourceResponse>::encode(Encoder& encoder, const WebCore::ResourceResponse& instance)
+void Coder<WebCore::ResourceResponse>::encodeForPersistence(Encoder& encoder, const WebCore::ResourceResponse& instance)
 {
-    instance.encode(encoder);
+    encoder << instance.m_isNull;
+    if (instance.m_isNull)
+        return;
+    instance.lazyInit(WebCore::ResourceResponseBase::AllFields);
+
+    encoder << instance.m_url;
+    encoder << instance.m_mimeType;
+    encoder << static_cast<int64_t>(instance.m_expectedContentLength);
+    encoder << instance.m_textEncodingName;
+    encoder << instance.m_httpStatusText;
+    encoder << instance.m_httpVersion;
+    encoder << instance.m_httpHeaderFields;
+
+    encoder << instance.m_httpStatusCode;
+    encoder << instance.m_certificateInfo;
+    encoder << instance.m_source;
+    encoder << instance.m_type;
+    encoder << instance.m_tainting;
+    encoder << instance.m_isRedirected;
+    WebCore::UsedLegacyTLS usedLegacyTLS = instance.m_usedLegacyTLS;
+    encoder << usedLegacyTLS;
+    WebCore::WasPrivateRelayed wasPrivateRelayed = instance.m_wasPrivateRelayed;
+    encoder << wasPrivateRelayed;
+    encoder << instance.m_isRangeRequested;
 }
 
-std::optional<WebCore::ResourceResponse> Coder<WebCore::ResourceResponse>::decode(Decoder& decoder)
+std::optional<WebCore::ResourceResponse> Coder<WebCore::ResourceResponse>::decodeForPersistence(Decoder& decoder)
 {
     WebCore::ResourceResponse response;
-    if (!WebCore::ResourceResponseBase::decode(decoder, response))
+    ASSERT(response.m_isNull);
+    std::optional<bool> responseIsNull;
+    decoder >> responseIsNull;
+    if (!responseIsNull)
         return std::nullopt;
-    return response;
+    if (*responseIsNull)
+        return { WTFMove(response) };
+
+    response.m_isNull = false;
+
+    std::optional<URL> url;
+    decoder >> url;
+    if (!url)
+        return std::nullopt;
+    response.m_url = WTFMove(*url);
+
+    std::optional<AtomString> mimeType;
+    decoder >> mimeType;
+    if (!mimeType)
+        return std::nullopt;
+    response.m_mimeType = WTFMove(*mimeType);
+
+    std::optional<int64_t> expectedContentLength;
+    decoder >> expectedContentLength;
+    if (!expectedContentLength)
+        return std::nullopt;
+    response.m_expectedContentLength = *expectedContentLength;
+
+    std::optional<AtomString> textEncodingName;
+    decoder >> textEncodingName;
+    if (!textEncodingName)
+        return std::nullopt;
+    response.m_textEncodingName = WTFMove(*textEncodingName);
+
+    std::optional<AtomString> httpStatusText;
+    decoder >> httpStatusText;
+    if (!httpStatusText)
+        return std::nullopt;
+    response.m_httpStatusText = WTFMove(*httpStatusText);
+
+    std::optional<AtomString> httpVersion;
+    decoder >> httpVersion;
+    if (!httpVersion)
+        return std::nullopt;
+    response.m_httpVersion = WTFMove(*httpVersion);
+
+    std::optional<WebCore::HTTPHeaderMap> httpHeaderFields;
+    decoder >> httpHeaderFields;
+    if (!httpHeaderFields)
+        return std::nullopt;
+    response.m_httpHeaderFields = WTFMove(*httpHeaderFields);
+
+    std::optional<short> httpStatusCode;
+    decoder >> httpStatusCode;
+    if (!httpStatusCode)
+        return std::nullopt;
+    response.m_httpStatusCode = WTFMove(*httpStatusCode);
+
+    std::optional<std::optional<WebCore::CertificateInfo>> certificateInfo;
+    decoder >> certificateInfo;
+    if (!certificateInfo)
+        return std::nullopt;
+    response.m_certificateInfo = WTFMove(*certificateInfo);
+
+    std::optional<WebCore::ResourceResponseBase::Source> source;
+    decoder >> source;
+    if (!source)
+        return std::nullopt;
+    response.m_source = WTFMove(*source);
+
+    std::optional<WebCore::ResourceResponseBase::Type> type;
+    decoder >> type;
+    if (!type)
+        return std::nullopt;
+    response.m_type = WTFMove(*type);
+
+    std::optional<WebCore::ResourceResponseBase::Tainting> tainting;
+    decoder >> tainting;
+    if (!tainting)
+        return std::nullopt;
+    response.m_tainting = WTFMove(*tainting);
+
+    std::optional<bool> isRedirected;
+    decoder >> isRedirected;
+    if (!isRedirected)
+        return std::nullopt;
+    response.m_isRedirected = WTFMove(*isRedirected);
+
+    std::optional<WebCore::UsedLegacyTLS> usedLegacyTLS;
+    decoder >> usedLegacyTLS;
+    if (!usedLegacyTLS)
+        return std::nullopt;
+    response.m_usedLegacyTLS = WTFMove(*usedLegacyTLS);
+
+    std::optional<WebCore::WasPrivateRelayed> wasPrivateRelayed;
+    decoder >> wasPrivateRelayed;
+    if (!wasPrivateRelayed)
+        return std::nullopt;
+    response.m_wasPrivateRelayed = WTFMove(*wasPrivateRelayed);
+
+    std::optional<bool> isRangeRequested;
+    decoder >> isRangeRequested;
+    if (!isRangeRequested)
+        return std::nullopt;
+    response.m_isRangeRequested = WTFMove(*isRangeRequested);
+
+    return { WTFMove(response) };
 }
 
-void Coder<WebCore::FetchOptions>::encode(Encoder& encoder, const WebCore::FetchOptions& instance)
+void Coder<WebCore::FetchOptions>::encodeForPersistence(Encoder& encoder, const WebCore::FetchOptions& instance)
 {
     instance.encodePersistent(encoder);
 }
 
-std::optional<WebCore::FetchOptions> Coder<WebCore::FetchOptions>::decode(Decoder& decoder)
+std::optional<WebCore::FetchOptions> Coder<WebCore::FetchOptions>::decodeForPersistence(Decoder& decoder)
 {
     WebCore::FetchOptions options;
     if (!WebCore::FetchOptions::decodePersistent(decoder, options))
@@ -738,7 +894,7 @@ std::optional<WebCore::FetchOptions> Coder<WebCore::FetchOptions>::decode(Decode
 
 // Store common HTTP headers as strings instead of using their value in the HTTPHeaderName enumeration
 // so that the headers stored in the cache stays valid even after HTTPHeaderName.in gets updated.
-void Coder<WebCore::HTTPHeaderMap>::encode(Encoder& encoder, const WebCore::HTTPHeaderMap& headers)
+void Coder<WebCore::HTTPHeaderMap>::encodeForPersistence(Encoder& encoder, const WebCore::HTTPHeaderMap& headers)
 {
     encoder << static_cast<uint64_t>(headers.size());
     for (auto& keyValue : headers) {
@@ -747,7 +903,7 @@ void Coder<WebCore::HTTPHeaderMap>::encode(Encoder& encoder, const WebCore::HTTP
     }
 }
 
-std::optional<WebCore::HTTPHeaderMap> Coder<WebCore::HTTPHeaderMap>::decode(Decoder& decoder)
+std::optional<WebCore::HTTPHeaderMap> Coder<WebCore::HTTPHeaderMap>::decodeForPersistence(Decoder& decoder)
 {
     std::optional<uint64_t> headersSize;
     decoder >> headersSize;

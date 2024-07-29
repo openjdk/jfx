@@ -35,9 +35,9 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(OESTextureHalfFloat);
 
 OESTextureHalfFloat::OESTextureHalfFloat(WebGLRenderingContextBase& context)
-    : WebGLExtension(context)
+    : WebGLExtension(context, WebGLExtensionName::OESTextureHalfFloat)
 {
-    context.graphicsContextGL()->ensureExtensionEnabled("GL_OES_texture_half_float"_s);
+    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_OES_texture_half_float"_s);
 
     // Spec requires EXT_color_buffer_half_float to be turned on implicitly here.
     // Enable it both in the backend and in WebKit.
@@ -45,11 +45,6 @@ OESTextureHalfFloat::OESTextureHalfFloat(WebGLRenderingContextBase& context)
 }
 
 OESTextureHalfFloat::~OESTextureHalfFloat() = default;
-
-WebGLExtension::ExtensionName OESTextureHalfFloat::getName() const
-{
-    return OESTextureHalfFloatName;
-}
 
 bool OESTextureHalfFloat::supported(GraphicsContextGL& context)
 {
