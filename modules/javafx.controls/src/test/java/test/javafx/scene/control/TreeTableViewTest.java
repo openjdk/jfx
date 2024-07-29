@@ -45,10 +45,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-
-import javafx.scene.control.TableCell;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TitledPane;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -93,6 +89,7 @@ import javafx.scene.control.Slider;
 import javafx.scene.control.TableColumnBaseShim;
 import javafx.scene.control.TableSelectionModel;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TitledPane;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableCellShim;
@@ -7503,7 +7500,7 @@ public class TreeTableViewTest {
         treeTableView.setRoot(new TreeItem<>("Root"));
         treeTableView.getRoot().setExpanded(true);
         for (int i = 0; i < 4; i++) {
-            TreeItem<String> parent = new TreeItem<String>("item - " + i);
+            TreeItem<String> parent = new TreeItem<>("item - " + i);
             treeTableView.getRoot().getChildren().add(parent);
         }
 
