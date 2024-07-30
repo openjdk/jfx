@@ -65,7 +65,7 @@ public class RTAccessibilityHelper {
     /** returns true if update is within the a11y window */
     public boolean handleTextUpdate(TextPos p0, TextPos p1) {
         p("handleTextUpdate %s %s", start, end);
-        
+
         if ((start != null) && (end != null)) {
             if (p0.compareTo(end) >= 0) {
                 return false;
