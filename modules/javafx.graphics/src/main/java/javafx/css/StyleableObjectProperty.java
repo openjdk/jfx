@@ -85,19 +85,17 @@ public abstract class StyleableObjectProperty<T>
         }
 
         T oldValue = get();
-        boolean interpolatable = newValue instanceof Interpolatable<?>;
-        boolean transitionable = newValue instanceof ComponentTransitionable;
 
-        // Consider a case where T := Paint. Now 'oldValue' could be a Color instance, while 'newValue' could
-        // be a LinearGradient instance. Both types implement Interpolatable, but with different type arguments.
-        // We detect this case by checking whether 'newValue' is an instance of 'oldValue' (so that
-        // oldValue.interpolate(newValue, t) succeeds), and skipping the transition when the test fails.
-        if ((!interpolatable && !transitionable) || !(newValue.getClass().isInstance(oldValue))) {
-            set(newValue);
-        } else if (transitionable) {
+        if (newValue instanceof ComponentTransitionable) {
             applyComponentTransition(oldValue, newValue);
-        } else /* interpolatable */ {
+        } else if (newValue instanceof Interpolatable<?> && newValue.getClass().isInstance(oldValue)) {
+            // 'oldValue' and 'newValue' could be objects that both implement Interpolatable, but with
+            // different type arguments. We detect this case by checking whether 'newValue' is an instance
+            // of 'oldValue' (so that oldValue.interpolate(newValue, t) succeeds), and only applying the
+            // transition when the test succeeds.
             applyInterpolatableTransition(oldValue, newValue);
+        } else {
+            set(newValue);
         }
 
         this.origin = origin;
@@ -151,21 +149,9 @@ public abstract class StyleableObjectProperty<T>
         if (transitions == null || transitions.isEmpty() || subMetadata == null || subMetadata.isEmpty()) {
             set(newValue);
         } else if (controller == null || !Objects.equals(newValue, controller.getTargetValue())) {
-            Map<CssMetaData<? extends Styleable, ?>, Object> oldCssValues, newCssValues;
-
-            try {
-                var converter = metadata.getConverter();
-                oldCssValues = converter.convertBack(oldValue);
-                newCssValues = converter.convertBack(newValue);
-            } catch (IllegalArgumentException ex) {
-                // IllegalArgumentException is thrown if oldValue or newValue is not deconstructible
-                controller = null;
-                set(newValue);
-                Thread currentThread = Thread.currentThread();
-                currentThread.getUncaughtExceptionHandler().uncaughtException(currentThread, ex);
-                return;
-            }
-
+            var converter = metadata.getConverter();
+            var oldCssValues = converter.convertBack(oldValue);
+            var newCssValues = converter.convertBack(newValue);
             var controller = new AggregatingTransitionController(newValue);
 
             for (int i = 0, max = subMetadata.size(); i < max; ++i) {

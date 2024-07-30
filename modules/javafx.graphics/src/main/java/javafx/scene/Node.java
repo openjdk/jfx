@@ -8976,11 +8976,22 @@ public abstract class Node implements EventTarget, Styleable {
      *                                                                         *
      **************************************************************************/
 
+    /**
+     * The list of running transition timers for this node, implemented as a mapping of
+     * CSS property names to {@link TransitionTimer} instances.
+     */
     private static class TransitionTimerCollection extends HashMap<String, TransitionTimer> {
         TransitionTimerCollection() {
             super(4);
         }
 
+        /**
+         * Returns all transition timers for the specified {@code StyleableProperty},
+         * including all of its sub-properties.
+         *
+         * @param property the {@code StyleableProperty}
+         * @return a mapping of CSS property names to {@code TransitionTimer} instances
+         */
         public Map<String, TransitionTimer> getAll(StyleableProperty<?> property) {
             if (isEmpty()) {
                 return Map.of();
@@ -8990,6 +9001,15 @@ public abstract class Node implements EventTarget, Styleable {
             return result != null ? result : Map.of();
         }
 
+        /**
+         * Finds all transition timers for the specified {@code StyleableProperty}, including all
+         * of its sub-properties. This method does not allocate a new {@code Map} for the common
+         * case where no transitions are found.
+         *
+         * @param property the {@code StyleableProperty}
+         * @param result the map into which results are stored, should be {@code null}
+         * @return a mapping of CSS property names to {@code TransitionTimer} instances
+         */
         private Map<String, TransitionTimer> collectTransitionTimers(
                 StyleableProperty<?> property, Map<String, TransitionTimer> result) {
             CssMetaData<? extends Styleable, ?> metadata = property.getCssMetaData();
@@ -9109,7 +9129,8 @@ public abstract class Node implements EventTarget, Styleable {
 
         /**
          * Returns the transition for the property referenced by the specified CSS metadata,
-         * or {@code null} if no transition was found.
+         * or {@code null} if no transition was found. This method does not account for
+         * sub-properties of the specified property.
          *
          * @param metadata the CSS metadata of the property
          * @return the {@code TransitionDefinition} specified for the property referenced by the
@@ -9137,6 +9158,13 @@ public abstract class Node implements EventTarget, Styleable {
             return null;
         }
 
+        /**
+         * Returns all transitions for the property referenced by the specified CSS metadata,
+         * including all of its sub-properties.
+         *
+         * @param metadata the CSS metadata of the property
+         * @return a mapping of CSS metadata instances to {@code TransitionDefinition} instances
+         */
         public Map<CssMetaData<? extends Styleable, ?>, TransitionDefinition> findAll(
                 CssMetaData<? extends Styleable, ?> metadata) {
             if (isEmpty()) {
@@ -9147,6 +9175,15 @@ public abstract class Node implements EventTarget, Styleable {
             return result != null ? result : Map.of();
         }
 
+        /**
+         * Finds all transition definitions for the property referenced by the specified CSS metadata,
+         * including all of its sub-properties. This method does not allocate a new {@code Map} for the
+         * common case where no transitions are found.
+         *
+         * @param metadata the CSS metadata of the property
+         * @param result the map into which results are stored, should be {@code null}
+         * @return a mapping of CSS metadata instances to {@code TransitionDefinition} instances
+         */
         private Map<CssMetaData<? extends Styleable, ?>, TransitionDefinition> collectTransitions(
                 CssMetaData<? extends Styleable, ?> metadata,
                 Map<CssMetaData<? extends Styleable, ?>, TransitionDefinition> result) {
