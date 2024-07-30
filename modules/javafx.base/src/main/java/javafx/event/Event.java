@@ -137,6 +137,16 @@ public class Event extends EventObject implements Cloneable {
         newEvent.consumedProperty().bindBidirectional(consumedProperty());
         return newEvent;
     }
+    // TODO hide behind the accessor
+    public Event copyForTest(final Object newSource, final EventTarget newTarget) {
+        final Event newEvent = (Event) clone();
+
+        newEvent.source = (newSource != null) ? newSource : NULL_SOURCE_TARGET;
+        newEvent.target = (newTarget != null) ? newTarget : NULL_SOURCE_TARGET;
+        // cloning does not clone properties
+        newEvent.consumed = null;
+        return newEvent;
+    }
 
     /**
      * Indicates whether this {@code Event} has been consumed by any filter or
