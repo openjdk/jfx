@@ -95,8 +95,9 @@ public class SRGBTest extends VisualTestBase {
         return new Point2D(centerX, centerY);
     }
 
-    // We use an AWT Robot since it is color space aware and will correctly convert
-    // from the screeen's color space to sRGB.
+    // An AWT Robot is color space aware and will correctly convert from the
+    // screeen's color space to sRGB. We use one to verify that the JavaFX
+    // Robot is performing the same conversions.
     private Color getSRGBColorAtScreenCenter() throws Exception {
         float[] sRGB = {1.0f, 1,0f, 1.0f};
         SwingUtilities.invokeAndWait(() -> {
@@ -209,9 +210,10 @@ public class SRGBTest extends VisualTestBase {
     }
 
     // Tests that pixels are correctly written out as sRGB using an AWT Robot
-    // that is color space aware. The singlePixel and screenCapture tests only
-    // verify that colors can be round-tripped, not that they are actually
-    // producing sRGB onscreen.
+    // that is color space aware. The singlePixel and screenCapture tests
+    // only verify that the JavaFX renderer and JavaFX Robot can round-trip
+    // colors but they might both be working in the wrong space. We use an
+    // AWT Robot to verify that they are working in sRGB.
     @Test
     public void sRGBPixelTest() throws Exception {
         Rectangle swatch = prepareStage();
