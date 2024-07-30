@@ -34,6 +34,39 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class BorderImageSlicesTest {
 
+    @Test
+    void testEquals() {
+        var a = new BorderImageSlices(new BorderWidths(1, 2, 3, 4), true);
+        var b = new BorderImageSlices(new BorderWidths(1, 2, 3, 4), true);
+        assertTrue(a.equals(b));
+        assertTrue(b.equals(a));
+
+        a = new BorderImageSlices(new BorderWidths(1, 2, 3, 4), true);
+        b = new BorderImageSlices(new BorderWidths(1, 2, 3, 4), false);
+        assertFalse(a.equals(b));
+        assertFalse(b.equals(a));
+
+        a = new BorderImageSlices(new BorderWidths(1, 2, 3, 4), true);
+        b = new BorderImageSlices(new BorderWidths(5, 2, 3, 4), true);
+        assertFalse(a.equals(b));
+        assertFalse(b.equals(a));
+    }
+
+    @Test
+    void testHashCode() {
+        var a = new BorderImageSlices(new BorderWidths(1, 2, 3, 4), true);
+        var b = new BorderImageSlices(new BorderWidths(1, 2, 3, 4), true);
+        assertEquals(a.hashCode(), b.hashCode());
+
+        a = new BorderImageSlices(new BorderWidths(1, 2, 3, 4), true);
+        b = new BorderImageSlices(new BorderWidths(1, 2, 3, 4), false);
+        assertNotEquals(a.hashCode(), b.hashCode());
+
+        a = new BorderImageSlices(new BorderWidths(1, 2, 3, 4), true);
+        b = new BorderImageSlices(new BorderWidths(5, 2, 3, 4), true);
+        assertNotEquals(a.hashCode(), b.hashCode());
+    }
+
     @Nested
     class InterpolationTest {
         @Test

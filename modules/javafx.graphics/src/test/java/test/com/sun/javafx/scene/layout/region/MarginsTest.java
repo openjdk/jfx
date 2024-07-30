@@ -33,6 +33,50 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class MarginsTest {
 
+    @Test
+    void testEquals() {
+        var a = new Margins(1, 2, 3, 4, false);
+        var b = new Margins(1, 2, 3, 4, false);
+        assertTrue(a.equals(b));
+        assertTrue(b.equals(a));
+
+        a = new Margins(1, 2, 3, 4, false);
+        b = new Margins(1, 2, 3, 4, true);
+        assertFalse(a.equals(b));
+        assertFalse(b.equals(a));
+
+        a = new Margins(1, 2, 3, 4, false);
+        b = new Margins(5, 2, 3, 4, false);
+        assertFalse(a.equals(b));
+        assertFalse(b.equals(a));
+
+        a = new Margins(1, 2, 3, 4, false);
+        b = new Margins(1, 5, 3, 4, false);
+        assertFalse(a.equals(b));
+        assertFalse(b.equals(a));
+
+        a = new Margins(1, 2, 3, 4, false);
+        b = new Margins(1, 2, 5, 4, false);
+        assertFalse(a.equals(b));
+        assertFalse(b.equals(a));
+
+        a = new Margins(1, 2, 3, 4, false);
+        b = new Margins(1, 2, 3, 5, false);
+        assertFalse(a.equals(b));
+        assertFalse(b.equals(a));
+    }
+
+    @Test
+    void testHashCode() {
+        var a = new Margins(1, 2, 3, 4, false);
+        var b = new Margins(1, 2, 3, 4, false);
+        assertEquals(a.hashCode(), b.hashCode());
+
+        a = new Margins(1, 2, 3, 4, false);
+        b = new Margins(5, 2, 3, 4, false);
+        assertNotEquals(a.hashCode(), b.hashCode());
+    }
+
     @Nested
     class InterpolationTest {
         @Test
