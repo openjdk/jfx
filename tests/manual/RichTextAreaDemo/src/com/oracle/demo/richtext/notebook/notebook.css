@@ -1,0 +1,31 @@
+.active-cell .code-bar {
+    -fx-background-color: #488f48;
+    -fx-background-radius: 2;
+}
+
+.exec-label {
+    -fx-text-fill: gray;
+}
+
+.cell-pane:focus-within .exec-label {
+    -fx-text-fill: black;
+}
+
+.exec-label:executing {
+    -fx-text-fill: red;
+    -fx-font-weight: bold;
+}
+
+.output-text .content {
+    -fx-background-color:f8f8f8;
+    -fx-background-insets:0;
+}
+
+.output-error .content {
+    -fx-background-color:fff0f0;
+    -fx-background-insets:0;
+}
+
+.image-result {
+    -fx-background-color: #888888;
+}
