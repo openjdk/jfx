@@ -25,7 +25,7 @@
 
 package javafx.scene.paint;
 
-import javafx.animation.Interpolatable;
+import com.sun.javafx.scene.paint.PaintUtils;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -106,7 +106,7 @@ import javafx.beans.NamedArg;
  *
  * @since JavaFX 2.0
  */
-public final class Color extends Paint implements Interpolatable<Color> {
+public final class Color extends Paint {
 
     /**
      * Brightness change factor for darker() and brighter() methods.
@@ -1940,12 +1940,15 @@ public final class Color extends Paint implements Interpolatable<Color> {
     }
 
     /**
-     * {@inheritDoc}
+     * Returns an intermediate value between the value of this {@code Color} and the specified
+     * {@code endValue} using the linear interpolation factor {@code t}, ranging from 0 (inclusive)
+     * to 1 (inclusive).
      *
-     * @throws NullPointerException {@inheritDoc}
-     * @since 23
+     * @param endValue the target value
+     * @param t the interpolation factor
+     * @throws NullPointerException if {@code endValue} is {@code null}
+     * @return the intermediate value
      */
-    @Override
     public Color interpolate(Color endValue, double t) {
         Objects.requireNonNull(endValue, "endValue cannot be null");
 
@@ -1959,6 +1962,17 @@ public final class Color extends Paint implements Interpolatable<Color> {
             blue    + (endValue.blue    - blue)    * ft,
             opacity + (endValue.opacity - opacity) * ft
         );
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws NullPointerException {@inheritDoc}
+     * @since 24
+     */
+    @Override
+    public Paint interpolate(Paint endValue, double t) {
+        return PaintUtils.interpolate(this, endValue, t);
     }
 
     /**

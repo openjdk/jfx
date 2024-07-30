@@ -43,6 +43,7 @@ import javafx.scene.paint.Stop;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.Window;
+import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.util.List;
 import com.sun.javafx.PlatformUtil;
@@ -310,6 +311,187 @@ public class Utils {
         }
 
         return new UnmodifiableArrayList<>(newArray, listSize);
+    }
+
+    /**
+     * Computes an intermediate array series that consists of the pairwise interpolation between two
+     * array series, using the same rules as described in {@link #interpolateArraysPairwise}.
+     *
+     * @param firstArraySeries the first array series, not {@code null}
+     * @param secondArraySeries the second array series, not {@code null}
+     * @return the intermediate array series
+     */
+    public static <T extends Interpolatable<T>> T[][] interpolateArraySeriesPairwise(
+            T[][] firstArraySeries, T[][] secondArraySeries, double t) {
+        Objects.requireNonNull(firstArraySeries, "firstArraySeries");
+        Objects.requireNonNull(secondArraySeries, "secondArraySeries");
+
+        if (secondArraySeries.length == 0) {
+            return firstArraySeries.length == 0 ? firstArraySeries : secondArraySeries;
+        }
+
+        Class<?> arrayType = firstArraySeries.getClass().componentType();
+
+        @SuppressWarnings("unchecked")
+        T[][] newArray = (T[][])Array.newInstance(arrayType, secondArraySeries.length);
+        boolean equal = firstArraySeries.length == secondArraySeries.length;
+
+        for (int i = 0, firstListSize = firstArraySeries.length; i < newArray.length; ++i) {
+            if (firstListSize > i) {
+                newArray[i] = interpolateArraysPairwise(firstArraySeries[i], secondArraySeries[i], t);
+                equal &= newArray[i] == firstArraySeries[i];
+            } else {
+                newArray[i] = secondArraySeries[i];
+            }
+        }
+
+        return equal ? firstArraySeries : newArray;
+    }
+
+    /**
+     * Computes an intermediate array that consists of the pairwise interpolation between two arrays,
+     * using the following rules:
+     * <ol>
+     *     <li>The size of the returned array corresponds to the size of the second array.
+     *     <li>If the first array has fewer elements than the second array, the missing elements are copied
+     *         from the second array.
+     *     <li>If the first array has more elements than the second array, the excess elements are discarded.
+     *     <li>If the intermediate array is shallow-equal to the first array passed into the method (i.e. its
+     *         elements are references to the same objects), the existing array is returned.
+     * </ol>
+     *
+     * @param firstArray the first array, not {@code null}
+     * @param secondArray the second array, not {@code null}
+     * @return the intermediate list
+     */
+    public static <T extends Interpolatable<T>> T[] interpolateArraysPairwise(
+            T[] firstArray, T[] secondArray, double t) {
+        Objects.requireNonNull(firstArray, "firstArray");
+        Objects.requireNonNull(secondArray, "secondArray");
+
+        if (secondArray.length == 0) {
+            return firstArray.length == 0 ? firstArray : secondArray;
+        }
+
+        int arraySize = firstArray.length;
+
+        // For small equisized arrays (up to 8 elements), we use an optimization to prevent the allocation
+        // of a new array in case the intermediate array would be equal to the existing array.
+        if (arraySize <= 8 && arraySize == secondArray.length) {
+            return interpolateEquisizedArraysPairwise(firstArray, secondArray, t);
+        }
+
+        Class<?> componentType = firstArray.getClass().componentType();
+
+        @SuppressWarnings("unchecked")
+        T[] newArray = (T[])Array.newInstance(componentType, secondArray.length);
+        boolean equal = firstArray.length == secondArray.length;
+
+        for (int i = 0; i < newArray.length; ++i) {
+            if (arraySize > i) {
+                newArray[i] = firstArray[i].interpolate(secondArray[i], t);
+                equal &= newArray[i] == firstArray[i];
+            } else {
+                newArray[i] = secondArray[i];
+            }
+        }
+
+        return equal ? firstArray : newArray;
+    }
+
+    /**
+     * Computes an intermediate array that consists of the pairwise interpolation between two arrays
+     * of equal size, each containing up to 8 elements.
+     * <p>
+     * This method is an optimization: it does not allocate memory when the intermediate array is
+     * shallow-equal to the array that is passed into this method, i.e. its elements are references
+     * to the same objects. The existing array is returned in this case.
+     */
+    private static <T extends Interpolatable<T>> T[] interpolateEquisizedArraysPairwise(
+            T[] firstArray, T[] secondArray, double t) {
+        int arraySize = firstArray.length;
+        if (arraySize > 8 || arraySize != secondArray.length) {
+            throw new AssertionError();
+        }
+
+        T item1 = null, item2 = null, item3 = null, item4 = null, item5 = null, item6 = null, item7 = null;
+        T item0 = firstArray[0].interpolate(secondArray[0], t);
+        boolean same = item0 == firstArray[0];
+
+        if (arraySize > 1) {
+            item1 = firstArray[1].interpolate(secondArray[1], t);
+            same &= item1 == firstArray[1];
+
+            if (arraySize > 2) {
+                item2 = firstArray[2].interpolate(secondArray[2], t);
+                same &= item2 == firstArray[2];
+
+                if (arraySize > 3) {
+                    item3 = firstArray[3].interpolate(secondArray[3], t);
+                    same &= item3 == firstArray[3];
+
+                    if (arraySize > 4) {
+                        item4 = firstArray[4].interpolate(secondArray[4], t);
+                        same &= item4 == firstArray[4];
+
+                        if (arraySize > 5) {
+                            item5 = firstArray[5].interpolate(secondArray[5], t);
+                            same &= item5 == firstArray[5];
+
+                            if (arraySize > 6) {
+                                item6 = firstArray[6].interpolate(secondArray[6], t);
+                                same &= item6 == firstArray[6];
+
+                                if (arraySize > 7) {
+                                    item7 = firstArray[7].interpolate(secondArray[7], t);
+                                    same &= item7 == firstArray[7];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (same) {
+            return firstArray;
+        }
+
+        Class<?> componentType = firstArray.getClass().componentType();
+
+        @SuppressWarnings("unchecked")
+        T[] newArray = (T[])Array.newInstance(componentType, arraySize);
+        newArray[0] = item0;
+
+        if (arraySize > 1) {
+            newArray[1] = item1;
+
+            if (arraySize > 2) {
+                newArray[2] = item2;
+
+                if (arraySize > 3) {
+                    newArray[3] = item3;
+
+                    if (arraySize > 4) {
+                        newArray[4] = item4;
+
+                        if (arraySize > 5) {
+                            newArray[5] = item5;
+
+                            if (arraySize > 6) {
+                                newArray[6] = item6;
+
+                                if (arraySize > 7) {
+                                    newArray[7] = item7;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return newArray;
     }
 
     /***************************************************************************

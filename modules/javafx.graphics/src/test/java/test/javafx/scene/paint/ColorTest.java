@@ -31,6 +31,7 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import com.sun.javafx.util.Utils;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -127,9 +128,9 @@ public class ColorTest {
 
     @Test
     public void testOfTheWayIndirect() {
-        Interpolatable<Color> start = new Color(0, 0, 0, 0);
+        Interpolatable<Paint> start = new Color(0, 0, 0, 0);
         Color end = new Color(1, 1, 1, 1);
-        Color mid = start.interpolate(end, .5);
+        Color mid = (Color)start.interpolate(end, .5);
         assertEquals(mid.getRed(), .5, 0.0001);
         assertEquals(mid.getGreen(),.5, 0.0001);
         assertEquals(mid.getBlue(), .5, 0.0001);

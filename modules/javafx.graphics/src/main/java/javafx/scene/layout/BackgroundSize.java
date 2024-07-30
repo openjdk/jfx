@@ -207,7 +207,7 @@ public final class BackgroundSize implements Interpolatable<BackgroundSize> {
      * {@inheritDoc}
      *
      * @throws NullPointerException {@inheritDoc}
-     * @since 23
+     * @since 24
      */
     @Override
     public BackgroundSize interpolate(BackgroundSize endValue, double t) {

@@ -28,10 +28,16 @@ package javafx.css;
 import com.sun.javafx.css.TransitionMediator;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.Utils;
 import javafx.animation.Interpolatable;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -72,37 +78,176 @@ public abstract class StyleableObjectProperty<T>
     /** {@inheritDoc} */
     @Override
     public void applyStyle(StyleOrigin origin, T newValue) {
-        T oldValue;
-
         if (newValue == null) {
             set(null);
-        } else if (!(newValue instanceof Interpolatable<?>)
-                   || ((oldValue = get()) == null)
-                   || !(newValue.getClass().isInstance(oldValue))) {
-            // Consider a case where T := Paint. Now 'oldValue' could be a Color instance, while 'newValue' could
-            // be a LinearGradient instance. Both types implement Interpolatable, but with different type arguments.
-            // We detect this case by checking whether 'newValue' is an instance of 'oldValue' (so that
-            // oldValue.interpolate(newValue, t) succeeds), and skipping the transition when the test fails.
-            set(newValue);
-        } else {
-            // If this.origin == null, we're setting the value for the first time.
-            // No transition should be started in this case.
-            TransitionDefinition transition = this.origin != null && getBean() instanceof Node node ?
-                NodeHelper.findTransitionDefinition(node, getCssMetaData()) : null;
+            this.origin = origin;
+            return;
+        }
 
-            if (transition == null) {
-                set(newValue);
-            } else if (mediator == null || !Objects.equals(mediator.newValue, newValue)) {
-                // We only start a new transition if the new target value is different from the target
-                // value of the existing transition. This scenario can sometimes happen when a CSS value
-                // is redundantly applied, which would cause unexpected animations if we allowed the new
-                // transition to interrupt the existing transition.
-                mediator = new TransitionMediatorImpl(oldValue, newValue);
-                mediator.run(transition);
-            }
+        T oldValue = get();
+        boolean interpolatable = newValue instanceof Interpolatable<?>;
+        boolean transitionable = newValue instanceof ComponentTransitionable;
+
+        // Consider a case where T := Paint. Now 'oldValue' could be a Color instance, while 'newValue' could
+        // be a LinearGradient instance. Both types implement Interpolatable, but with different type arguments.
+        // We detect this case by checking whether 'newValue' is an instance of 'oldValue' (so that
+        // oldValue.interpolate(newValue, t) succeeds), and skipping the transition when the test fails.
+        if ((!interpolatable && !transitionable) || !(newValue.getClass().isInstance(oldValue))) {
+            set(newValue);
+        } else if (transitionable) {
+            applyComponentTransition(oldValue, newValue);
+        } else /* interpolatable */ {
+            applyInterpolatableTransition(oldValue, newValue);
         }
 
         this.origin = origin;
+    }
+
+    /**
+     * Sets the value of the property, and potentially starts a transition.
+     * This method is used for {@link Interpolatable} values.
+     *
+     * @param oldValue the old value
+     * @param newValue the new value
+     */
+    private void applyInterpolatableTransition(T oldValue, T newValue) {
+        // If this.origin == null, we're setting the value for the first time.
+        // No transition should be started in this case.
+        TransitionDefinition transition =
+            this.origin != null && getBean() instanceof Node node ?
+            NodeHelper.findTransitionDefinition(node, getCssMetaData()) : null;
+
+        if (transition == null) {
+            set(newValue);
+        } else if (controller == null || !Objects.equals(newValue, controller.getTargetValue())) {
+            // We only start a new transition if the new target value is different from the target
+            // value of the existing transition. This scenario can sometimes happen when a CSS value
+            // is redundantly applied, which would cause unexpected animations if we allowed the new
+            // transition to interrupt the existing transition.
+            var controller = new InterpolatableTransitionController(oldValue, newValue);
+            this.controller = controller; // needs to be set before calling run()
+            controller.run(transition, getCssMetaData().getProperty(), Toolkit.getToolkit().getPrimaryTimer().nanos());
+        }
+    }
+
+    /**
+     * Sets the value of the property, and potentially starts a transition.
+     * This method is used for {@link ComponentTransitionable} values.
+     *
+     * @param oldValue the old value
+     * @param newValue the new value
+     */
+    private void applyComponentTransition(T oldValue, T newValue) {
+        CssMetaData<? extends Styleable, T> metadata = getCssMetaData();
+
+        // If this.origin == null, we're setting the value for the first time.
+        // No transition should be started in this case.
+        Map<CssMetaData<? extends Styleable, ?>, TransitionDefinition> transitions =
+            this.origin != null && getBean() instanceof Node node ?
+            NodeHelper.findTransitionDefinitions(node, metadata) : null;
+
+        List<CssMetaData<? extends Styleable, ?>> subMetadata = metadata.getSubProperties();
+
+        if (transitions == null || transitions.isEmpty() || subMetadata == null || subMetadata.isEmpty()) {
+            set(newValue);
+        } else if (controller == null || !Objects.equals(newValue, controller.getTargetValue())) {
+            Map<CssMetaData<? extends Styleable, ?>, Object> oldCssValues, newCssValues;
+
+            try {
+                var converter = metadata.getConverter();
+                oldCssValues = converter.convertBack(oldValue);
+                newCssValues = converter.convertBack(newValue);
+            } catch (IllegalArgumentException ex) {
+                // IllegalArgumentException is thrown if oldValue or newValue is not deconstructible
+                controller = null;
+                set(newValue);
+                Thread currentThread = Thread.currentThread();
+                currentThread.getUncaughtExceptionHandler().uncaughtException(currentThread, ex);
+                return;
+            }
+
+            var controller = new AggregatingTransitionController(newValue);
+
+            for (int i = 0, max = subMetadata.size(); i < max; ++i) {
+                processComponent(controller, subMetadata.get(i), transitions, oldCssValues, newCssValues);
+            }
+
+            this.controller = controller; // needs to be set before calling run()
+            controller.run();
+        }
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private void processComponent(AggregatingTransitionController controller,
+                                  CssMetaData<? extends Styleable, ?> metadata,
+                                  Map<CssMetaData<? extends Styleable, ?>, TransitionDefinition> transitions,
+                                  Map<CssMetaData<? extends Styleable, ?>, Object> oldCssValues,
+                                  Map<CssMetaData<? extends Styleable, ?>, Object> newCssValues) {
+        Object oldCssValue = oldCssValues.get(metadata);
+        Object newCssValue = newCssValues.get(metadata);
+
+        // If the old and new CSS value is equal, we don't need to bother checking for a specified
+        // transition, as it would not be noticeable anyway. Note that we're using deepEquals, as
+        // the value might be an array of CSS values.
+        if (Objects.deepEquals(oldCssValue, newCssValue)) {
+            controller.addValue(metadata, oldCssValue);
+        } else {
+            // The following code accounts for pre-existing transition mediators that can occur when more
+            // than two states are involved. Consider the following scenario:
+            //
+            //     .button {
+            //       -fx-border-color: red;
+            //       -fx-border-width: 5;
+            //       transition: all 4s;
+            //     }
+            //
+            //     .button:hover {
+            //       -fx-border-color: green;
+            //     }
+            //
+            //     .button:pressed {
+            //       -fx-border-color: blue;
+            //       -fx-border-width: 20;
+            //     }
+            //
+            // Now assume the following interactions:
+            //   1. Move the cursor over the button (:hover)
+            //   2. Press the mouse button (:hover:pressed)
+            //   3. Release the mouse button (:hover)
+            //   4. Move the cursor away from the button.
+            //
+            // When the mouse button is released (step 3), the -fx-border-width sub-property transitions
+            // from 20 (the current value) to 5 (the target value). Then, when the cursor is moved away
+            // from the button while the -fx-border-width transition is still running, we need to preserve
+            // the running transition by adding its mediator to the newly created transition controller
+            // that manages the hover->base transition. In this way, the new transition controller will
+            // continue to aggregate the effects of the pre-existing transition.
+            //
+            var transition = transitions.get(metadata);
+            var existingTimer = NodeHelper.findTransitionTimer((Node)getBean(), metadata.getProperty());
+            var existingMediator = existingTimer != null && existingTimer.getMediator()
+                instanceof StyleableObjectProperty.ComponentTransitionMediator m ? m : null;
+
+            if (existingMediator != null) {
+                // Note that we're using deepEquals, as the value might be an array of CSS values.
+                if (transition == null || Objects.deepEquals(newCssValue, existingMediator.endValue)) {
+                    controller.addExistingMediator(existingMediator);
+                } else {
+                    controller.addMediator(oldCssValue, newCssValue, metadata, transition);
+                }
+            } else if (transition != null) {
+                controller.addMediator(oldCssValue, newCssValue, metadata, transition);
+            } else {
+                controller.addValue(metadata, newCssValue);
+            }
+        }
+
+        List<CssMetaData<? extends Styleable, ?>> subMetadata = metadata.getSubProperties();
+        if (subMetadata != null) {
+            for (int i = 0, max = subMetadata.size(); i < max; ++i) {
+                processComponent(controller, subMetadata.get(i), transitions, oldCssValues, newCssValues);
+            }
+        }
     }
 
     /** {@inheritDoc} */
@@ -111,9 +256,9 @@ public abstract class StyleableObjectProperty<T>
         super.bind(observable);
         origin = StyleOrigin.USER;
 
-        // Calling the 'bind' method always cancels a transition timer.
-        if (mediator != null) {
-            mediator.cancel(true);
+        // Calling the 'bind' method always cancels a transition.
+        if (controller != null) {
+            controller.cancel(true);
         }
     }
 
@@ -127,7 +272,7 @@ public abstract class StyleableObjectProperty<T>
         // Note that indirect cancellation is still possible: a timer may fire a transition event,
         // which could cause user code to be executed that invokes this 'set' method. In that case,
         // the call will cancel the timer.
-        if (mediator == null || mediator.cancel(false)) {
+        if (controller == null || controller.cancel(false)) {
             origin = StyleOrigin.USER;
         }
     }
@@ -137,37 +282,297 @@ public abstract class StyleableObjectProperty<T>
     public StyleOrigin getStyleOrigin() { return origin; }
 
     private StyleOrigin origin = null;
-    private TransitionMediatorImpl mediator = null;
+    private TransitionController<T> controller = null;
 
-    private final class TransitionMediatorImpl extends TransitionMediator {
-        private final T oldValue;
-        private final T newValue;
+    /**
+     * Common interface for {@link Interpolatable} and {@link ComponentTransitionable} transitions.
+     *
+     * @param <T> the property value type
+     */
+    private interface TransitionController<T> {
+        T getTargetValue();
+        boolean cancel(boolean forceStop);
+    }
 
-        TransitionMediatorImpl(T oldValue, T newValue) {
-            this.oldValue = oldValue;
-            this.newValue = newValue;
+    /**
+     * Controller for transitions of {@link Interpolatable} values.
+     */
+    private final class InterpolatableTransitionController extends TransitionMediator
+                                                           implements TransitionController<T> {
+        private final T startValue;
+        private final T endValue;
+        private T reversingAdjustedStartValue;
+
+        InterpolatableTransitionController(T startValue, T endValue) {
+            this.startValue = startValue;
+            this.endValue = endValue;
+            this.reversingAdjustedStartValue = startValue;
         }
 
         @Override
         @SuppressWarnings("unchecked")
         public void onUpdate(double progress) {
-            set(progress < 1 ? ((Interpolatable<T>)oldValue).interpolate(newValue, progress) : newValue);
+            set(progress < 1 ? ((Interpolatable<T>)startValue).interpolate(endValue, progress) : endValue);
         }
 
         @Override
         public void onStop() {
-            // When the transition is cancelled or completed, we clear the reference to this mediator.
-            // However, when this mediator was cancelled by a reversing transition, the 'mediator' field
-            // refers to the reversing mediator, and not to this mediator. We need to be careful to only
-            // clear references to this mediator.
-            if (mediator == this) {
-                mediator = null;
+            // When the transition is cancelled or completed, we clear the reference to this controller.
+            // However, when this controller was cancelled by a reversing transition, the 'controller' field
+            // refers to the reversing controller, and not to this controller. We need to be careful to only
+            // clear references to this controller.
+            if (controller == this) {
+                controller = null;
             }
         }
 
         @Override
         public StyleableProperty<?> getStyleableProperty() {
             return StyleableObjectProperty.this;
+        }
+
+        @Override
+        public T getTargetValue() {
+            return endValue;
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public boolean updateReversingAdjustedStartValue(TransitionMediator existingMediator) {
+            var mediator = (InterpolatableTransitionController)existingMediator;
+
+            if (Objects.deepEquals(mediator.reversingAdjustedStartValue, endValue)) {
+                reversingAdjustedStartValue = mediator.endValue;
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    /**
+     * Controller for transitions of {@link ComponentTransitionable} values that aggregates the effects
+     * of its component transitions.
+     * <p>
+     * For each animation frame, this controller waits until all its component mediators have updated
+     * their current value, and then converts the collected component values into a new object of type
+     * {@code T} using the {@link StyleConverter} of this {@link StyleableObjectProperty}.
+     */
+    private final class AggregatingTransitionController implements TransitionController<T> {
+        private final T newValue;
+        private final Map<CssMetaData<? extends Styleable, ?>, Object> cssValues;
+        private final List<ComponentTransitionMediator<?>> mediators = new ArrayList<>(5);
+        private boolean updating;
+        private int remainingValues;
+
+        AggregatingTransitionController(T newValue) {
+            this.newValue = newValue;
+            this.cssValues = new HashMap<>();
+        }
+
+        @Override
+        public T getTargetValue() {
+            return newValue;
+        }
+
+        @Override
+        public boolean cancel(boolean forceStop) {
+            if (forceStop || !pollUpdating()) {
+                // Cancelling a mediator removes it from the 'mediators' list, so we need
+                // to make a copy of the list before we iterate on it.
+                for (var mediator : List.copyOf(mediators)) {
+                    mediator.cancel(true);
+                }
+
+                return true;
+            }
+
+            return false;
+        }
+
+        /**
+         * Starts all transition timers managed by this controller.
+         */
+        public void run() {
+            remainingValues = mediators.size();
+            long nanoNow = Toolkit.getToolkit().getPrimaryTimer().nanos();
+
+            // Starting a transition may result in instant cancellation (if the combined duration
+            // is zero), which would instantly remove the mediator from the list. This is why we
+            // need to make a copy of the 'mediators' list before we iterate on it.
+            for (var mediator : List.copyOf(mediators)) {
+                mediator.run(nanoNow);
+            }
+        }
+
+        /**
+         * Adds a component value to the value cache.
+         *
+         * @param metadata the {@code CssMetaData} of the component
+         * @param value the new value
+         */
+        public void addValue(CssMetaData<? extends Styleable, ?> metadata, Object value) {
+            cssValues.put(metadata, value);
+        }
+
+        /**
+         * Adds a new component transition mediator to this controller.
+         *
+         * @param oldValue the old component value
+         * @param newValue the new component value
+         * @param metadata the component metadata
+         * @param transition the transition definition
+         * @param <U> the component value type
+         */
+        public <U> void addMediator(U oldValue, U newValue,
+                                    CssMetaData<? extends Styleable, ?> metadata,
+                                    TransitionDefinition transition) {
+            mediators.add(new ComponentTransitionMediator<>(oldValue, newValue, this, metadata, transition));
+        }
+
+        /**
+         * Adds an existing component transition mediator to this controller.
+         * After calling this method, the existing mediator will be associated with this controller.
+         *
+         * @param mediator the existing component transition mediator
+         * @param <U> the component value type
+         */
+        public <U> void addExistingMediator(ComponentTransitionMediator<U> mediator) {
+            mediator.associatedController = this;
+            mediators.add(mediator);
+        }
+
+        /**
+         * This method is called when a component transition mediator updates its current value.
+         * When all component values have been collected, they are converted to an object of type
+         * {@code T} using the {@link StyleConverter} of this {@link StyleableObjectProperty}.
+         *
+         * @param metadata the {@code CssMetaData} of the component
+         * @param value the new value
+         */
+        public void onUpdate(CssMetaData<? extends Styleable, ?> metadata, Object value) {
+            cssValues.put(metadata, value);
+
+            if (--remainingValues == 0) {
+                try {
+                    updating = true;
+                    set(getCssMetaData().getConverter().convert(cssValues));
+                } finally {
+                    updating = false;
+                }
+
+                remainingValues = mediators.size();
+            }
+        }
+
+        /**
+         * This method is called when a component transition mediator is stopped.
+         *
+         * @param mediator the component transition mediator
+         */
+        public void onStop(ComponentTransitionMediator<?> mediator) {
+            for (int i = 0, max = mediators.size(); i < max; ++i) {
+                if (mediators.get(i) == mediator) {
+                    mediators.remove(i);
+                    break;
+                }
+            }
+
+            // When all component transitions are cancelled or completed, we clear the reference to this
+            // controller. However, when this controller was cancelled by a reversing transition, the 'controller'
+            // field refers to the reversing controller, and not to this controller. We need to be careful to only
+            // clear references to this controller.
+            if (mediators.isEmpty() && StyleableObjectProperty.this.controller == this) {
+                StyleableObjectProperty.this.controller = null;
+            }
+        }
+
+        private boolean pollUpdating() {
+            boolean updating = this.updating;
+            this.updating = false;
+            return updating;
+        }
+    }
+
+    /**
+     * Transition mediator for CSS sub-properties.
+     * <p>
+     * This transition mediator does not interact with the {@link StyleableObjectProperty} directly,
+     * but instead feeds its effects into the associated {@link AggregatingTransitionController}.
+     *
+     * @param <U> the type of the sub-property
+     */
+    private final class ComponentTransitionMediator<U> extends TransitionMediator {
+        private final U startValue;
+        private final U endValue;
+        private final CssMetaData<? extends Styleable, ?> metadata;
+        private final TransitionDefinition definition;
+        private AggregatingTransitionController associatedController;
+        private U reversingAdjustedStartValue;
+        private boolean running;
+
+        ComponentTransitionMediator(U startValue, U endValue,
+                                    AggregatingTransitionController associatedController,
+                                    CssMetaData<? extends Styleable, ?> metadata,
+                                    TransitionDefinition definition) {
+            this.startValue = startValue;
+            this.endValue = endValue;
+            this.reversingAdjustedStartValue = startValue;
+            this.associatedController = associatedController;
+            this.metadata = metadata;
+            this.definition = definition;
+        }
+
+        @Override
+        public StyleableProperty<?> getStyleableProperty() {
+            return StyleableObjectProperty.this;
+        }
+
+        public void run(long now) {
+            if (!running) {
+                running = true;
+                run(definition, metadata.getProperty(), now);
+            }
+        }
+
+        @Override
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        public void onUpdate(double progress) {
+            Object value;
+
+            if (progress < 1) {
+                if (startValue instanceof Interpolatable[][] ov && endValue instanceof Interpolatable[][] nv) {
+                    value = Utils.interpolateArraySeriesPairwise(ov, nv, progress);
+                } else if (startValue instanceof Interpolatable[] ov && endValue instanceof Interpolatable[] nv) {
+                    value = Utils.interpolateArraysPairwise(ov, nv, progress);
+                } else if (startValue instanceof Interpolatable && endValue instanceof Interpolatable) {
+                    value = ((Interpolatable<U>)startValue).interpolate(endValue, progress);
+                } else {
+                    value = Utils.interpolateDiscrete(startValue, endValue, progress);
+                }
+            } else {
+                value = endValue;
+            }
+
+            associatedController.onUpdate(metadata, value);
+        }
+
+        @Override
+        public void onStop() {
+            associatedController.onStop(this);
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public boolean updateReversingAdjustedStartValue(TransitionMediator existingMediator) {
+            var mediator = (ComponentTransitionMediator<U>)existingMediator;
+
+            if (Objects.deepEquals(mediator.reversingAdjustedStartValue, endValue)) {
+                reversingAdjustedStartValue = mediator.endValue;
+                return true;
+            }
+
+            return false;
         }
     }
 }

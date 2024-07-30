@@ -61,9 +61,9 @@ public class TransitionTimerTest {
         }
 
         void run(TransitionDefinition definition) {
-            mediator.run(definition);
-            timer = mediator.getTimer();
             now = Toolkit.getToolkit().getPrimaryTimer().nanos();
+            mediator.run(definition, definition.propertyName(), now);
+            timer = mediator.getTimer();
         }
 
         void fire(Duration elapsedTime) {
@@ -82,6 +82,11 @@ public class TransitionTimerTest {
         @Override
         public StyleableProperty<?> getStyleableProperty() {
             return (StyleableProperty<?>)node.opacityProperty();
+        }
+
+        @Override
+        public boolean updateReversingAdjustedStartValue(TransitionMediator existingMediator) {
+            return true;
         }
     }
 
@@ -145,7 +150,7 @@ public class TransitionTimerTest {
         timer.fire(seconds(0.2));
         assertEquals(1, NodeShim.getTransitionTimers(node).size());
         assertTrue(timer.mediator.cancel(false));
-        assertEquals(0, NodeShim.getTransitionTimers(node).size());
+        assertNull(NodeShim.getTransitionTimers(node));
     }
 
     @Test

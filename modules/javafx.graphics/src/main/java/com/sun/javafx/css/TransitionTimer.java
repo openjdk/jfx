@@ -25,7 +25,6 @@
 
 package com.sun.javafx.css;
 
-import com.sun.javafx.animation.AnimationTimerHelper;
 import com.sun.javafx.animation.InterpolatorHelper;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.util.Utils;
@@ -45,6 +44,7 @@ import javafx.util.Duration;
 public final class TransitionTimer extends AnimationTimer {
 
     private final Node targetNode;
+    private final String targetPropertyName;
     private final Interpolator interpolator;
     private final TransitionMediator mediator;
     private double reversingShorteningFactor;
@@ -53,15 +53,18 @@ public final class TransitionTimer extends AnimationTimer {
     private boolean updating;
     private boolean started;
 
-    private TransitionTimer(TransitionMediator mediator, TransitionDefinition definition) {
-        long now = AnimationTimerHelper.getPrimaryTimer(this).nanos();
+    private TransitionTimer(TransitionMediator mediator,
+                            TransitionDefinition definition,
+                            String targetPropertyName,
+                            long nanoNow) {
         this.delay = millisToNanos(definition.delay().toMillis());
         this.duration = millisToNanos(definition.duration().toMillis());
         this.targetNode = (Node)((Property<?>)mediator.getStyleableProperty()).getBean();
+        this.targetPropertyName = targetPropertyName;
         this.interpolator = definition.interpolator();
         this.mediator = mediator;
-        this.currentTime = now;
-        this.startTime = now + delay;
+        this.currentTime = nanoNow;
+        this.startTime = nanoNow + delay;
         this.endTime = startTime + duration;
         this.reversingShorteningFactor = 1;
     }
@@ -74,9 +77,14 @@ public final class TransitionTimer extends AnimationTimer {
      *
      * @param mediator the {@code TransitionMediator} for the targeted property
      * @param definition the {@code TransitionDefinition} used to initialize the {@code timer}
+     * @param targetPropertyName the name of the CSS property targeted by the transition
+     * @param nanoNow the current time in nanoseconds
      * @return the {@code timer} instance if the timer was started, {@code null} otherwise
      */
-    public static TransitionTimer run(TransitionMediator mediator, TransitionDefinition definition) {
+    public static TransitionTimer run(TransitionMediator mediator,
+                                      TransitionDefinition definition,
+                                      String targetPropertyName,
+                                      long nanoNow) {
         // The transition timer is only started if the targeted node is showing, i.e. if it is part
         // of the scene graph and the node is visible.
         if (!(mediator.getStyleableProperty() instanceof Property<?> property)
@@ -89,13 +97,17 @@ public final class TransitionTimer extends AnimationTimer {
         long duration = millisToNanos(definition.duration().toMillis());
         long combinedDuration = Math.max(duration, 0) + delay;
 
-        var existingTimer = (TransitionTimer)NodeHelper.findTransitionTimer(node, property);
+        var existingTimer = (TransitionTimer)NodeHelper.findTransitionTimer(node, targetPropertyName);
         if (existingTimer != null) {
-            // If we already have a timer for the styleable property, the new timer is a reversing
-            // timer that needs to be adjusted by the reversing shortening algorithm.
             if (combinedDuration > 0) {
-                var newTimer = new TransitionTimer(mediator, definition);
-                newTimer.adjustReversingTimings(existingTimer);
+                var newTimer = new TransitionTimer(mediator, definition, targetPropertyName, nanoNow);
+
+                // If we already have a timer for the styleable property, the new timer might be a reversing
+                // timer that needs to be adjusted by the reversing shortening algorithm.
+                if (mediator.updateReversingAdjustedStartValue(existingTimer.getMediator())) {
+                    newTimer.adjustReversingTimings(existingTimer);
+                }
+
                 existingTimer.stop(TransitionEvent.CANCEL);
                 newTimer.start();
                 return newTimer;
@@ -107,7 +119,7 @@ public final class TransitionTimer extends AnimationTimer {
 
         // We only need a timer if the combined duration is non-zero.
         if (combinedDuration > 0) {
-            var timer = new TransitionTimer(mediator, definition);
+            var timer = new TransitionTimer(mediator, definition, targetPropertyName, nanoNow);
             timer.start();
             return timer;
         }
@@ -133,12 +145,12 @@ public final class TransitionTimer extends AnimationTimer {
     }
 
     /**
-     * Returns the property targeted by this timer.
+     * Returns the {@code TransitionMediator} associated with this timer.
      *
-     * @return the property
+     * @return the {@code TransitionMediator}
      */
-    public Property<?> getTargetProperty() {
-        return (Property<?>)mediator.getStyleableProperty();
+    public TransitionMediator getMediator() {
+        return mediator;
     }
 
     /**
@@ -177,7 +189,7 @@ public final class TransitionTimer extends AnimationTimer {
     @Override
     public void start() {
         super.start();
-        NodeHelper.addTransitionTimer(targetNode, this);
+        NodeHelper.addTransitionTimer(targetNode, targetPropertyName, this);
         fireTransitionEvent(TransitionEvent.RUN);
     }
 
@@ -199,7 +211,7 @@ public final class TransitionTimer extends AnimationTimer {
     public void stop(EventType<TransitionEvent> eventType) {
         super.stop();
         mediator.onStop();
-        NodeHelper.removeTransitionTimer(targetNode, this);
+        NodeHelper.removeTransitionTimer(targetNode, targetPropertyName);
         fireTransitionEvent(eventType);
     }
 
@@ -319,6 +331,7 @@ public final class TransitionTimer extends AnimationTimer {
                 new TransitionEvent(
                     eventType,
                     mediator.getStyleableProperty(),
+                    targetPropertyName,
                     Duration.millis(nanosToMillis(elapsedTime))));
         } catch (Throwable ex) {
             Thread currentThread = Thread.currentThread();

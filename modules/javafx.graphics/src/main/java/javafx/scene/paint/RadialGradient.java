@@ -28,9 +28,9 @@ package javafx.scene.paint;
 import java.util.List;
 import java.util.Objects;
 import com.sun.javafx.scene.paint.GradientUtils;
+import com.sun.javafx.scene.paint.PaintUtils;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.util.Utils;
-import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 
 /**
@@ -67,7 +67,7 @@ import javafx.beans.NamedArg;
  * They mark where the gradient should be exactly a particular color.
  * @since JavaFX 2.0
  */
-public final class RadialGradient extends Paint implements Interpolatable<RadialGradient> {
+public final class RadialGradient extends Paint {
     private double focusAngle;
 
     /**
@@ -344,12 +344,16 @@ public final class RadialGradient extends Paint implements Interpolatable<Radial
     }
 
     /**
-     * {@inheritDoc}
+     * Returns an intermediate value between the value of this {@code RadialGradient} and the specified
+     * {@code endValue} using the linear interpolation factor {@code t}, ranging from 0 (inclusive)
+     * to 1 (inclusive).
      *
-     * @throws NullPointerException {@inheritDoc}
-     * @since 23
+     * @param endValue the target value
+     * @param t the interpolation factor
+     * @throws NullPointerException if {@code endValue} is {@code null}
+     * @return the intermediate value
+     * @since 24
      */
-    @Override
     public RadialGradient interpolate(RadialGradient endValue, double t) {
         Objects.requireNonNull(endValue, "endValue cannot be null");
 
@@ -415,6 +419,17 @@ public final class RadialGradient extends Paint implements Interpolatable<Radial
             && this.proportional == proportional
             && this.cycleMethod == cycleMethod
             && this.stops == stops;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws NullPointerException {@inheritDoc}
+     * @since 24
+     */
+    @Override
+    public Paint interpolate(Paint endValue, double t) {
+        return PaintUtils.interpolate(this, endValue, t);
     }
 
     /**

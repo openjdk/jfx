@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,74 +23,50 @@
  * questions.
  */
 
-package test.javafx.geometry;
+package test.com.sun.javafx.scene.layout.region;
 
-import javafx.geometry.Insets;
+import com.sun.javafx.scene.layout.region.BorderImageSlices;
+import javafx.scene.layout.BorderWidths;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class InsetsTest {
-    @Test
-    public void testEquals() {
-        Insets p1 = new Insets(0, 0, 0, 0);
-        Insets p2 = new Insets(0, 1, 1, 1);
-        Insets p3 = new Insets(1, 0, 1, 1);
-
-        assertTrue(p1.equals(p1));
-        assertTrue(p1.equals(new Insets(0, 0, 0, 0)));
-        assertFalse(p1.equals(new Object()));
-        assertFalse(p1.equals(p2));
-        assertFalse(p1.equals(p3));
-    }
-
-    @Test
-    public void testHash() {
-        Insets p1 = new Insets(0, 0, 0, 0);
-        Insets p2 = new Insets(0, 1, 0, 0);
-        Insets p3 = new Insets(0, 1, 0, 0);
-
-        assertEquals(p3.hashCode(), p2.hashCode());
-        assertEquals(p3.hashCode(), p2.hashCode());
-        assertFalse(p1.hashCode() == p2.hashCode());
-    }
-
-    @Test
-    public void testToString() {
-        Insets p1 = new Insets(0, 0, 0, 0);
-        assertNotNull(p1.toString());
-    }
+public class BorderImageSlicesTest {
 
     @Nested
     class InterpolationTest {
         @Test
         public void interpolateBetweenTwoDifferentValuesReturnsNewInstance() {
-            var startValue = new Insets(2, 4, 6, 8);
-            var endValue = new Insets(4, 8, 12, 16);
-            var expected = new Insets(3, 6, 9, 12);
-            assertEquals(expected, startValue.interpolate(endValue, 0.5));
+            var startValue = new BorderImageSlices(new BorderWidths(0), true);
+            var endValue = new BorderImageSlices(new BorderWidths(1), false);
+
+            assertEquals(new BorderImageSlices(new BorderWidths(0.4), true),
+                         startValue.interpolate(endValue, 0.4));
+
+            assertEquals(new BorderImageSlices(new BorderWidths(0.5), false),
+                         startValue.interpolate(endValue, 0.5));
         }
 
         @Test
         public void interpolateBetweenTwoEqualValuesReturnsStartInstance() {
-            var startValue = new Insets(2, 4, 6, 8);
-            var endValue = new Insets(2, 4, 6, 8);
+            var startValue = new BorderImageSlices(new BorderWidths(1), true);
+            var endValue = new BorderImageSlices(new BorderWidths(1), true);
             assertSame(startValue, startValue.interpolate(endValue, 0.5));
         }
 
         @Test
         public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
-            var startValue = new Insets(2, 4, 6, 8);
-            var endValue = new Insets(4, 8, 12, 16);
+            var startValue = new BorderImageSlices(BorderWidths.EMPTY, true);
+            var endValue = new BorderImageSlices(BorderWidths.FULL, true);
             assertSame(startValue, startValue.interpolate(endValue, 0));
             assertSame(startValue, startValue.interpolate(endValue, -1));
         }
 
         @Test
         public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
-            var startValue = new Insets(2, 4, 6, 8);
-            var endValue = new Insets(4, 8, 12, 16);
+            var startValue = new BorderImageSlices(BorderWidths.EMPTY, true);
+            var endValue = new BorderImageSlices(BorderWidths.FULL, true);
             assertSame(endValue, startValue.interpolate(endValue, 1));
             assertSame(endValue, startValue.interpolate(endValue, 1.5));
         }

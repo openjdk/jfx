@@ -206,7 +206,7 @@ public class BorderImage implements Interpolatable<BorderImage> {
      * {@inheritDoc}
      *
      * @throws NullPointerException {@inheritDoc}
-     * @since 23
+     * @since 24
      */
     @Override
     public BorderImage interpolate(BorderImage endValue, double t) {

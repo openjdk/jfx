@@ -38,10 +38,12 @@ public abstract class TransitionMediator {
      * Starts the transition timer with the specified transition definition.
      *
      * @param definition the transition definition
+     * @param targetPropertyName the name of the targeted CSS property
+     * @param nanoNow the current time in nanoseconds
      */
-    public final void run(TransitionDefinition definition) {
+    public final void run(TransitionDefinition definition, String targetPropertyName, long nanoNow) {
         // Might return 'null' if the transition duration is zero or the target node is not showing.
-        timer = TransitionTimer.run(this, definition);
+        timer = TransitionTimer.run(this, definition, targetPropertyName, nanoNow);
 
         // If no timer was started, we complete the transition immediately.
         if (timer == null) {
@@ -90,4 +92,21 @@ public abstract class TransitionMediator {
      * Derived classes should implement this method to clear any references to this mediator.
      */
     public abstract void onStop();
+
+    /**
+     * Derived classes must implement the following protocol:
+     * <ol>
+     *     <li>If the reversing-adjusted start value of the existing transition is equal
+     *         to the end value of this transition:
+     *         Set the reversing-adjusted start value of this transition to the end value
+     *         of the existing transition and return {@code true}.
+     *     <li>Otherwise, return {@code false}.
+     * </ol>
+     * Refer to <a href="https://www.w3.org/TR/css-transitions-1/#starting">Starting of transitions</a>
+     * for more information about the reversing-adjusted start value.
+     *
+     * @param existingMediator the mediator of the existing transition
+     * @return {@code true} if the reversing-adjusted start value was updated, {@code false} otherwise
+     */
+    public abstract boolean updateReversingAdjustedStartValue(TransitionMediator existingMediator);
 }

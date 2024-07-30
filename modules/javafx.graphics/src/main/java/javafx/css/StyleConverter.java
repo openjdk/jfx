@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -251,6 +251,22 @@ public class StyleConverter<F, T> {
      */
     public T convert(Map<CssMetaData<? extends Styleable, ?>,Object> convertedValues) {
         return null;
+    }
+
+    /**
+     * Converts an object back to a map of its constituent values (deconstruction).
+     * The returned map can be passed into {@link #convert(Map)} to reconstruct the object.
+     *
+     * @param value the object
+     * @throws UnsupportedOperationException if this converter does not support deconstruction
+     * @return a {@code Map} of the constituent values
+     * @apiNote This is an optional operation. The default implementation of this
+     *          method throws {@code UnsupportedOperationException}.
+     * @implSpec The following invariant must be satisfied: {@code convert(convertBack(value)).equals(value)}
+     * @since 24
+     */
+    public Map<CssMetaData<? extends Styleable, ?>, Object> convertBack(T value) {
+        throw new UnsupportedOperationException();
     }
 
     /**

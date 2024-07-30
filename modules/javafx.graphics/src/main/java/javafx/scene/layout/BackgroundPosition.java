@@ -197,7 +197,7 @@ public class BackgroundPosition implements Interpolatable<BackgroundPosition> {
      * {@inheritDoc}
      *
      * @throws NullPointerException {@inheritDoc}
-     * @since 23
+     * @since 24
      */
     @Override
     public BackgroundPosition interpolate(BackgroundPosition endValue, double t) {

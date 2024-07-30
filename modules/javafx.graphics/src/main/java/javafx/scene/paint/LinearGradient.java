@@ -28,9 +28,9 @@ package javafx.scene.paint;
 import java.util.List;
 import java.util.Objects;
 import com.sun.javafx.scene.paint.GradientUtils;
+import com.sun.javafx.scene.paint.PaintUtils;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.util.Utils;
-import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 
 /**
@@ -74,7 +74,7 @@ r2.setFill(lg2);
 </PRE>
  * @since JavaFX 2.0
  */
-public final class LinearGradient extends Paint implements Interpolatable<LinearGradient> {
+public final class LinearGradient extends Paint {
     private double startX;
 
     /**
@@ -328,12 +328,16 @@ public final class LinearGradient extends Paint implements Interpolatable<Linear
     }
 
     /**
-     * {@inheritDoc}
+     * Returns an intermediate value between the value of this {@code LinearGradient} and the specified
+     * {@code endValue} using the linear interpolation factor {@code t}, ranging from 0 (inclusive)
+     * to 1 (inclusive).
      *
-     * @throws NullPointerException {@inheritDoc}
-     * @since 23
+     * @param endValue the target value
+     * @param t the interpolation factor
+     * @throws NullPointerException if {@code endValue} is {@code null}
+     * @return the intermediate value
+     * @since 24
      */
-    @Override
     public LinearGradient interpolate(LinearGradient endValue, double t) {
         Objects.requireNonNull(endValue, "endValue cannot be null");
 
@@ -389,6 +393,17 @@ public final class LinearGradient extends Paint implements Interpolatable<Linear
         return new LinearGradient(newStartX, newStartY, newEndX, newEndY,
                                   newProportional, newCycleMethod,
                                   Objects.requireNonNullElse(newStops, this.stops), 0);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws NullPointerException {@inheritDoc}
+     * @since 24
+     */
+    @Override
+    public Paint interpolate(Paint endValue, double t) {
+        return PaintUtils.interpolate(this, endValue, t);
     }
 
     private boolean isSame(double startX, double startY, double endX, double endY,

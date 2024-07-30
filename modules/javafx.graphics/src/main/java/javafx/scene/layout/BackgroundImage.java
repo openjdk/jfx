@@ -154,7 +154,7 @@ public final class BackgroundImage implements Interpolatable<BackgroundImage> {
      * {@inheritDoc}
      *
      * @throws NullPointerException {@inheritDoc}
-     * @since 23
+     * @since 24
      */
     @Override
     public BackgroundImage interpolate(BackgroundImage endValue, double t) {

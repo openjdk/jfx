@@ -25,8 +25,8 @@
 
 package com.sun.javafx.scene.paint;
 
-import javafx.animation.Interpolatable;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.ImagePattern;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Paint;
 import javafx.scene.paint.RadialGradient;
@@ -49,7 +49,6 @@ public final class PaintUtils {
      * If a paint is not interpolatable, {@code startValue} is returned for {@code t < 0.5},
      * and {@code endValue} is returned otherwise.
      */
-    @SuppressWarnings({"rawtypes", "unchecked"})
     public static Paint interpolate(Paint startValue, Paint endValue, double t) {
         if (startValue instanceof Color start) {
             if (endValue instanceof Color end) {
@@ -85,10 +84,8 @@ public final class PaintUtils {
             }
         }
 
-        if (startValue instanceof Interpolatable start
-                && endValue instanceof Interpolatable end
-                && startValue.getClass().isInstance(endValue)) {
-            return (Paint)start.interpolate(end, t);
+        if (startValue instanceof ImagePattern start && endValue instanceof ImagePattern end) {
+            return start.interpolate(end, t);
         }
 
         return t < 0.5 ? startValue : endValue;

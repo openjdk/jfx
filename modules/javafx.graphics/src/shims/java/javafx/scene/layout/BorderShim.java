@@ -23,29 +23,18 @@
  * questions.
  */
 
-package com.sun.javafx.animation;
+package javafx.scene.layout;
 
-import com.sun.javafx.util.Utils;
-import com.sun.scenario.animation.AbstractPrimaryTimer;
-import javafx.animation.AnimationTimer;
+import javafx.css.CssMetaData;
+import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
+import javafx.scene.Node;
 
-public final class AnimationTimerHelper {
+public class BorderShim {
 
-    static {
-        Utils.forceInit(AnimationTimer.class);
-    }
+    public static final CssMetaData<Node, String[]> BORDER_IMAGE_SOURCE = Border.BORDER_IMAGE_SOURCE;
 
-    private static Accessor accessor;
-
-    public static void setAccessor(Accessor accessor) {
-        AnimationTimerHelper.accessor = accessor;
-    }
-
-    public static AbstractPrimaryTimer getPrimaryTimer(AnimationTimer timer) {
-        return accessor.getPrimaryTimer(timer);
-    }
-
-    public interface Accessor {
-        AbstractPrimaryTimer getPrimaryTimer(AnimationTimer timer);
+    public static StyleConverter<ParsedValue[], Border> getConverter() {
+        return BorderConverter.getInstance();
     }
 }

@@ -25,8 +25,8 @@
 
 package javafx.scene.paint;
 
+import com.sun.javafx.scene.paint.PaintUtils;
 import com.sun.javafx.util.Utils;
-import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 import javafx.scene.image.Image;
 import com.sun.javafx.beans.event.AbstractNotifyListener;
@@ -133,7 +133,7 @@ public class HelloImagePattern extends Application {
  *
  * @since JavaFX 2.2
  */
-public final class ImagePattern extends Paint implements Interpolatable<ImagePattern> {
+public final class ImagePattern extends Paint {
 
     private Image image;
 
@@ -288,12 +288,16 @@ public final class ImagePattern extends Paint implements Interpolatable<ImagePat
     }
 
     /**
-     * {@inheritDoc}
+     * Returns an intermediate value between the value of this {@code ImagePattern} and the specified
+     * {@code endValue} using the linear interpolation factor {@code t}, ranging from 0 (inclusive)
+     * to 1 (inclusive).
      *
-     * @throws NullPointerException {@inheritDoc}
-     * @since 23
+     * @param endValue the target value
+     * @param t the interpolation factor
+     * @throws NullPointerException if {@code endValue} is {@code null}
+     * @return the intermediate value
+     * @since 24
      */
-    @Override
     public ImagePattern interpolate(ImagePattern endValue, double t) {
         Objects.requireNonNull(endValue, "endValue cannot be null");
 
@@ -316,6 +320,17 @@ public final class ImagePattern extends Paint implements Interpolatable<ImagePat
             Utils.interpolate(width, endValue.width, t),
             Utils.interpolate(height, endValue.height, t),
             proportional);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws NullPointerException {@inheritDoc}
+     * @since 24
+     */
+    @Override
+    public Paint interpolate(Paint endValue, double t) {
+        return PaintUtils.interpolate(this, endValue, t);
     }
 
     @Override

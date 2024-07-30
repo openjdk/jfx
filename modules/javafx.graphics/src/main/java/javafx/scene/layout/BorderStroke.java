@@ -390,7 +390,7 @@ public class BorderStroke implements Interpolatable<BorderStroke> {
      * {@inheritDoc}
      *
      * @throws NullPointerException {@inheritDoc}
-     * @since 23
+     * @since 24
      */
     @Override
     public BorderStroke interpolate(BorderStroke endValue, double t) {

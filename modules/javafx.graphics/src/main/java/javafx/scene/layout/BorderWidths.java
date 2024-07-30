@@ -257,7 +257,7 @@ public final class BorderWidths implements Interpolatable<BorderWidths> {
      * {@inheritDoc}
      *
      * @throws NullPointerException {@inheritDoc}
-     * @since 23
+     * @since 24
      */
     @Override
     public BorderWidths interpolate(BorderWidths endValue, double t) {

@@ -413,7 +413,7 @@ public class CornerRadii implements Interpolatable<CornerRadii> {
      * {@inheritDoc}
      *
      * @throws NullPointerException {@inheritDoc}
-     * @since 23
+     * @since 24
      */
     @Override
     public CornerRadii interpolate(CornerRadii endValue, double t) {

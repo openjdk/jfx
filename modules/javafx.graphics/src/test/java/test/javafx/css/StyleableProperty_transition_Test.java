@@ -26,7 +26,6 @@
 package test.javafx.css;
 
 import com.sun.javafx.css.TransitionDefinition;
-import com.sun.javafx.css.TransitionMediator;
 import com.sun.javafx.scene.NodeHelper;
 import javafx.animation.Interpolator;
 import javafx.css.CssMetaData;
@@ -50,6 +49,8 @@ import javafx.css.converter.ColorConverter;
 import javafx.css.converter.SizeConverter;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundShim;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -95,10 +96,21 @@ public class StyleableProperty_transition_Test {
         @Override public StyleableProperty<Number> getStyleableProperty(Styleable styleable) { return longProperty; }
     };
 
-    static final CssMetaData<Styleable, Color> objectPropertyMetadata = new CssMetaData<>(
-            "-fx-object-property", ColorConverter.getInstance(), Color.RED) {
+    static final CssMetaData<Styleable, Color> interpolatableObjectPropertyMetadata = new CssMetaData<>(
+            "-fx-interpolatable-property", ColorConverter.getInstance(), Color.RED) {
         @Override public boolean isSettable(Styleable styleable) { return true; }
-        @Override public StyleableProperty<Color> getStyleableProperty(Styleable styleable) { return objectProperty; }
+        @Override public StyleableProperty<Color> getStyleableProperty(Styleable styleable) {
+            return interpolatableObjectProperty;
+        }
+    };
+
+    static final CssMetaData<Styleable, Background> componentTransitionableObjectPropertyMetadata = new CssMetaData<>(
+            "-fx-component-transitionable-property", BackgroundShim.getConverter(),
+            Background.fill(Color.RED), false, Background.getClassCssMetaData()) {
+        @Override public boolean isSettable(Styleable styleable) { return true; }
+        @Override public StyleableProperty<Background> getStyleableProperty(Styleable styleable) {
+            return componentTransitionableObjectProperty;
+        }
     };
 
     static final Group testBean = new Group() {
@@ -109,7 +121,8 @@ public class StyleableProperty_transition_Test {
                 new TransitionDefinition("-fx-float-property", Duration.ONE, Duration.ZERO, Interpolator.LINEAR),
                 new TransitionDefinition("-fx-integer-property", Duration.ONE, Duration.ZERO, Interpolator.LINEAR),
                 new TransitionDefinition("-fx-long-property", Duration.ONE, Duration.ZERO, Interpolator.LINEAR),
-                new TransitionDefinition("-fx-object-property", Duration.ONE, Duration.ZERO, Interpolator.LINEAR)
+                new TransitionDefinition("-fx-interpolatable-property", Duration.ONE, Duration.ZERO, Interpolator.LINEAR),
+                new TransitionDefinition("-fx-component-transitionable-property", Duration.ONE, Duration.ZERO, Interpolator.LINEAR)
             });
         }
     };
@@ -119,12 +132,13 @@ public class StyleableProperty_transition_Test {
     static StyleableFloatProperty floatProperty;
     static StyleableIntegerProperty integerProperty;
     static StyleableLongProperty longProperty;
-    static StyleableObjectProperty<Color> objectProperty;
+    static StyleableObjectProperty<Color> interpolatableObjectProperty;
+    static StyleableObjectProperty<Background> componentTransitionableObjectProperty;
 
-    static TransitionMediator getTransitionMediator(StyleableProperty<?> property) {
+    static Object getFieldValue(StyleableProperty<?> property, String fieldName) {
         Function<Class<?>, Field> getField = cls -> {
             try {
-                var field = cls.getDeclaredField("mediator");
+                var field = cls.getDeclaredField(fieldName);
                 field.setAccessible(true);
                 return field;
             } catch (NoSuchFieldException e) {
@@ -137,7 +151,7 @@ public class StyleableProperty_transition_Test {
             Field field = getField.apply(cls);
             if (field != null) {
                 try {
-                    return (TransitionMediator)field.get(property);
+                    return field.get(property);
                 } catch (IllegalAccessException e) {
                     throw new AssertionError(e);
                 }
@@ -150,7 +164,7 @@ public class StyleableProperty_transition_Test {
     }
 
     @SuppressWarnings("rawtypes")
-    record TestRun(StyleableProperty property, Object defaultValue, Object newValue) {}
+    record TestRun(StyleableProperty property, String fieldName, Object defaultValue, Object newValue) {}
 
     static Stream<TestRun> transitionParameters() {
         booleanProperty = new SimpleStyleableBooleanProperty(booleanPropertyMetadata, testBean, null);
@@ -158,15 +172,20 @@ public class StyleableProperty_transition_Test {
         floatProperty = new SimpleStyleableFloatProperty(floatPropertyMetadata, testBean, null);
         integerProperty = new SimpleStyleableIntegerProperty(integerPropertyMetadata, testBean, null);
         longProperty = new SimpleStyleableLongProperty(longPropertyMetadata, testBean, null);
-        objectProperty = new SimpleStyleableObjectProperty<>(objectPropertyMetadata, testBean, null, Color.RED);
+        interpolatableObjectProperty = new SimpleStyleableObjectProperty<>(
+            interpolatableObjectPropertyMetadata, testBean, null, Color.RED);
+        componentTransitionableObjectProperty = new SimpleStyleableObjectProperty<>(
+            componentTransitionableObjectPropertyMetadata, testBean, null, Background.fill(Color.RED));
 
         return Stream.of(
-            new TestRun(booleanProperty, false, true),
-            new TestRun(doubleProperty, 0, 1),
-            new TestRun(floatProperty, 0, 1),
-            new TestRun(integerProperty, 0, 1),
-            new TestRun(longProperty, 0, 1),
-            new TestRun(objectProperty, Color.RED, Color.GREEN)
+            new TestRun(booleanProperty, "mediator", false, true),
+            new TestRun(doubleProperty, "mediator", 0, 1),
+            new TestRun(floatProperty, "mediator", 0, 1),
+            new TestRun(integerProperty, "mediator", 0, 1),
+            new TestRun(longProperty, "mediator", 0, 1),
+            new TestRun(interpolatableObjectProperty, "controller", Color.RED, Color.GREEN),
+            new TestRun(componentTransitionableObjectProperty, "controller",
+                        Background.fill(Color.RED), Background.fill(Color.GREEN))
         );
     }
 
@@ -193,18 +212,18 @@ public class StyleableProperty_transition_Test {
     void testRedundantTransitionIsDiscarded(TestRun testRun) {
         // Setting a value for the first time doesn't start a transition.
         testRun.property.applyStyle(StyleOrigin.USER, testRun.defaultValue);
-        var mediator1 = getTransitionMediator(testRun.property);
+        var mediator1 = getFieldValue(testRun.property, testRun.fieldName);
         assertNull(mediator1);
 
         // Start the transition. This adds it to the list of running transitions.
         testRun.property.applyStyle(StyleOrigin.USER, testRun.newValue);
-        var mediator2 = getTransitionMediator(testRun.property);
+        var mediator2 = getFieldValue(testRun.property, testRun.fieldName);
         assertNotNull(mediator2);
 
         // The next call to applyStyle() has the same target value as the last one,
         // making it redundant. No new transition is started.
         testRun.property.applyStyle(StyleOrigin.USER, testRun.newValue);
-        var mediator3 = getTransitionMediator(testRun.property);
+        var mediator3 = getFieldValue(testRun.property, testRun.fieldName);
         assertSame(mediator2, mediator3);
     }
 
@@ -214,18 +233,18 @@ public class StyleableProperty_transition_Test {
     void testReversingTransitionIsNotDiscarded(TestRun testRun) {
         // Setting a value for the first time doesn't start a transition.
         testRun.property.applyStyle(StyleOrigin.USER, testRun.defaultValue);
-        var mediator1 = getTransitionMediator(testRun.property);
+        var mediator1 = getFieldValue(testRun.property, testRun.fieldName);
         assertNull(mediator1);
 
         // Start the transition. This adds it to the list of running transitions.
         testRun.property.applyStyle(StyleOrigin.USER, testRun.newValue);
-        var mediator2 = getTransitionMediator(testRun.property);
+        var mediator2 = getFieldValue(testRun.property, testRun.fieldName);
         assertNotNull(mediator2);
 
         // The next call to applyStyle() has a different target value as the last one,
         // which makes this a reversing transition.
         testRun.property.applyStyle(StyleOrigin.USER, testRun.defaultValue);
-        var mediator3 = getTransitionMediator(testRun.property);
+        var mediator3 = getFieldValue(testRun.property, testRun.fieldName);
         assertNotNull(mediator3);
         assertNotSame(mediator2, mediator3);
     }
