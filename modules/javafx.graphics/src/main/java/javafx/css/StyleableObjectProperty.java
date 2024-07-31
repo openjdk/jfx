@@ -215,8 +215,10 @@ public abstract class StyleableObjectProperty<T>
                 instanceof StyleableObjectProperty.ComponentTransitionMediator m ? m : null;
 
             if (existingMediator != null) {
-                // Note that we're using deepEquals, as the value might be an array of CSS values.
-                if (transition == null || Objects.deepEquals(newCssValue, existingMediator.endValue)) {
+                if (transition == null) {
+                    existingMediator.cancel(true);
+                    controller.addValue(metadata, newCssValue);
+                } else if (Objects.deepEquals(newCssValue, existingMediator.endValue)) {
                     controller.addExistingMediator(existingMediator);
                 } else {
                     controller.addMediator(oldCssValue, newCssValue, metadata, transition);
