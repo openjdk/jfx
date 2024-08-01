@@ -51,22 +51,5 @@
     return [super accessibilityValue];
 }
 
-- (NSString *)accessibilityAttributedStringForRange:(NSRange)range
-{
-    jobject jresult = NULL;
-    GET_MAIN_JENV;
-    if (env == NULL) return NULL;
-    jresult = (jobject)(*env)->CallLongMethod(env, [self getJAccessible],
-                                              jAccessibilityAttributeValueForParameter,
-                                              (jlong)"AXAttributedStringForRange",
-                                              (jlong)&range);
-    GLASS_CHECK_EXCEPTION(env);
-    return variantToID(env, jresult);
-}
-
-- (NSRange)accessibilityVisibleCharacterRange
-{
-    return NSMakeRange(0, [[self accessibilityValue] length]);
-}
 @end
 
