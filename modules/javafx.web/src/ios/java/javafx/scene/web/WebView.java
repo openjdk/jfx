@@ -327,16 +327,11 @@ final public class WebView extends Parent {
 
         });
 
-        layoutBoundsProperty().addListener(new ChangeListener<Bounds>() {
+        localToSceneTransform().addListener(new ChangeListener<Bounds>() {
 
             @Override
-            public void changed(ObservableValue<? extends Bounds> observable, Bounds oldValue, Bounds newValue) {
-                Affine3D trans = calculateNodeToSceneTransform(WebView.this);
-                _setTransform(handle,
-                trans.getMxx(), trans.getMxy(), trans.getMxz(), trans.getMxt(),
-                trans.getMyx(), trans.getMyy(), trans.getMyz(), trans.getMyt(),
-                trans.getMzx(), trans.getMzy(), trans.getMzz(), trans.getMzt());
-
+            public void changed(ObservableValue<? extends Transform> observable, Transform oldValue, Transform newValue) {
+                doTransformsChanged();
             }
 
         });
