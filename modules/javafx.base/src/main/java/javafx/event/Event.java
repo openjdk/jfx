@@ -25,12 +25,12 @@
 
 package javafx.event;
 
-import java.io.IOException;
 import java.util.EventObject;
+
+import com.sun.javafx.event.EventUtil;
+import java.io.IOException;
 import javafx.beans.NamedArg;
 import javafx.beans.property.SimpleBooleanProperty;
-import com.sun.javafx.event.EventHelper;
-import com.sun.javafx.event.EventUtil;
 
 // PENDING_DOC_REVIEW
 /**
@@ -55,8 +55,6 @@ public class Event extends EventObject implements Cloneable {
      */
     public static final EventType<Event> ANY = EventType.ROOT;
 
-    static { initHelper(); }
-
     /**
      * Type of the event.
      */
@@ -71,7 +69,7 @@ public class Event extends EventObject implements Cloneable {
     /**
      * Whether this event has been consumed by any filter or handler.
      */
-    private SimpleBooleanProperty consumed;
+    private transient SimpleBooleanProperty consumed;
 
     /**
      * Construct a new {@code Event} with the specified event type. The source
@@ -132,18 +130,12 @@ public class Event extends EventObject implements Cloneable {
      */
     public Event copyFor(final Object newSource, final EventTarget newTarget) {
         final Event newEvent = (Event) clone();
-        newEvent.source = (newSource != null) ? newSource : NULL_SOURCE_TARGET;
-        newEvent.target = (newTarget != null) ? newTarget : NULL_SOURCE_TARGET;
-        newEvent.consumed = null; // discard the property which is simply copied
-        newEvent.consumedProperty().bindBidirectional(consumedProperty());
-        return newEvent;
-    }
 
-    private Event copyForTest(final Object newSource, final EventTarget newTarget) {
-        final Event newEvent = (Event) clone();
         newEvent.source = (newSource != null) ? newSource : NULL_SOURCE_TARGET;
         newEvent.target = (newTarget != null) ? newTarget : NULL_SOURCE_TARGET;
         newEvent.consumed = null;
+        newEvent.consumedProperty().bindBidirectional(consumedProperty());
+
         return newEvent;
     }
 
@@ -166,7 +158,7 @@ public class Event extends EventObject implements Cloneable {
     }
 
     private final SimpleBooleanProperty consumedProperty() {
-        if (consumed == null) {
+        if(consumed == null) {
             consumed = new SimpleBooleanProperty();
         }
         return consumed;
@@ -214,14 +206,5 @@ public class Event extends EventObject implements Cloneable {
         }
 
         EventUtil.fireEvent(eventTarget, event);
-    }
-
-    private static void initHelper() {
-        EventHelper.setAccessor(new EventHelper.Accessor() {
-            @Override
-            public Event copyForTest(Event ev, Object newSource, EventTarget newTarget) {
-                return ev.copyForTest(newSource, newTarget);
-            }
-        });
     }
 }

@@ -40,7 +40,7 @@ public final class EventUtil {
 
     public static Event fireEvent(EventTarget eventTarget, Event event) {
         if (event.getTarget() != eventTarget) {
-            event = EventHelper.copyForTest(event, event.getSource(), eventTarget);
+            event = event.copyFor(event.getSource(), eventTarget);
         }
 
         if (eventDispatchChainInUse.getAndSet(true)) {
