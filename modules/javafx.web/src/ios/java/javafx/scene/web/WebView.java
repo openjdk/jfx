@@ -37,6 +37,7 @@ import javafx.css.converter.EnumConverter;
 import javafx.css.converter.SizeConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
+import com.sun.javafx.geom.transform.Transform;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
