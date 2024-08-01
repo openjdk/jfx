@@ -43,6 +43,7 @@ import javafx.stage.Stage;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -50,9 +51,6 @@ import com.sun.javafx.PlatformUtil;
 
 import test.util.Util;
 
-// When a key equivalent is sent it may be processed by
-// JavaFX and also trigger a menu item if the system menu
-// bar is in use.
 public class MenuDoubleShortcutTest {
 
     static CountDownLatch startupLatch = new CountDownLatch(1);
@@ -62,13 +60,13 @@ public class MenuDoubleShortcutTest {
     static private final int delayMilliseconds = 100;
 
     private enum TestResult {
-        IGNORED("Key press event triggered no actions"),
-        FIREDTWICE("Key press event consumed by scene also fired menu bar item"),
-        FIREDMENUITEM("Key press event fired menu bar item instead of scene"),
-        FIREDSCENE("Key press event fired scene action instead of menu bar item");
-
         // We provide an explanation of what happened. Since we only see this
         // explanation on failure it is worded accordingly.
+        IGNORED("Key press event triggered no actions"),
+        FIREDTWICE("Key press event fired scene action and also a menu bar item"),
+        FIREDMENUITEM("Key press event fired menu bar item instead of scene action"),
+        FIREDSCENE("Key press event fired scene action instead of menu bar item");
+
         private String explanation;
         TestResult(String e) {
             explanation = e;
@@ -82,24 +80,43 @@ public class MenuDoubleShortcutTest {
     // KeyCode.A will be added to the menu bar and the scene
     // KeyCode.B will be added to the menu bar only
     // KeyCode.C will be added to the scene only.
+    private static final KeyCode menuBarAndSceneKeyCode = KeyCode.A;
+    private static final KeyCode menuBarOnlyKeyCode = KeyCode.B;
+    private static final KeyCode sceneOnlyKeyCode = KeyCode.C;
+    private static final KeyCode noAcceleratorKeyCode = KeyCode.D;
 
+    private static final KeyCombination menuBarAndSceneAccelerator = new KeyCodeCombination(menuBarAndSceneKeyCode, KeyCombination.SHORTCUT_DOWN);
+    private static final KeyCombination menuBarOnlyAccelerator = new KeyCodeCombination(menuBarOnlyKeyCode, KeyCombination.SHORTCUT_DOWN);
+    private static final KeyCombination sceneOnlyAccelerator = new KeyCodeCombination(sceneOnlyKeyCode, KeyCombination.SHORTCUT_DOWN);
+
+    // On Mac the scene should process the event and it should
+    // not trigger a system menu bar item.
+    //
+    // https://bugs.openjdk.org/browse/JDK-8087863
+    // https://bugs.openjdk.org/browse/JDK-8088897
     @Test
-    void sceneComesBeforeMenuBar() {
-        // Assumptions.assumeTrue(PlatformUtil.isMac());
-
-        // KeyCode.A is in the menu bar and scene
-        testApp.testKey(KeyCode.A);
+    void macSceneComesBeforeMenuBar() {
+        Assumptions.assumeTrue(PlatformUtil.isMac());
+        testApp.testKey(menuBarAndSceneKeyCode);
         Util.sleep(delayMilliseconds);
         TestResult result = testApp.testResult();
         Assertions.assertEquals(TestResult.FIREDSCENE, result, result.errorExplanation());
     }
 
+    // On platforms other than Mac the menu bar should process the event
+    // and the scene should not.
+    @Test
+    void nonMacMenuBarComesBeforeScene() {
+        Assumptions.assumeFalse(PlatformUtil.isMac());
+        testApp.testKey(menuBarAndSceneKeyCode);
+        Util.sleep(delayMilliseconds);
+        TestResult result = testApp.testResult();
+        Assertions.assertEquals(TestResult.FIREDMENUITEM, result, result.errorExplanation());
+    }
+
     @Test
     void acceleratorOnlyInMenuBar() {
-        // Assumptions.assumeTrue(PlatformUtil.isMac());
-
-        // KeyCode.B is only in the menu bar.
-        testApp.testKey(KeyCode.B);
+        testApp.testKey(menuBarOnlyKeyCode);
         Util.sleep(delayMilliseconds);
         TestResult result = testApp.testResult();
         Assertions.assertEquals(TestResult.FIREDMENUITEM, result, result.errorExplanation());
@@ -107,10 +124,7 @@ public class MenuDoubleShortcutTest {
 
     @Test
     void acceleratorOnlyInScene() {
-        // Assumptions.assumeTrue(PlatformUtil.isMac());
-
-        // KeyCode.C is only in the scene.
-        testApp.testKey(KeyCode.C);
+        testApp.testKey(sceneOnlyKeyCode);
         Util.sleep(delayMilliseconds);
         TestResult result = testApp.testResult();
         Assertions.assertEquals(TestResult.FIREDSCENE, result, result.errorExplanation());
@@ -118,10 +132,7 @@ public class MenuDoubleShortcutTest {
 
     @Test
     void acceleratorAbsent() {
-        // Assumptions.assumeTrue(PlatformUtil.isMac());
-
-        // KeyCode.D is not registered as an accelerator
-        testApp.testKey(KeyCode.D);
+        testApp.testKey(noAcceleratorKeyCode);
         Util.sleep(delayMilliseconds);
         TestResult result = testApp.testResult();
         Assertions.assertEquals(TestResult.IGNORED, result, result.errorExplanation());
@@ -143,7 +154,7 @@ public class MenuDoubleShortcutTest {
         private boolean menuBarItemFired = false;
 
         private MenuItem createMenuItem(KeyCombination accelerator) {
-            MenuItem menuItem = new MenuItem("Cmd+A menu item");
+            MenuItem menuItem = new MenuItem(accelerator.getName() + " menu item");
             menuItem.setAccelerator(accelerator);
             menuItem.setOnAction(e -> {
                 menuBarItemFired = true;
@@ -163,28 +174,25 @@ public class MenuDoubleShortcutTest {
             MenuBar menuBar = new MenuBar();
             menuBar.setUseSystemMenuBar(true);
 
-            // KeyCode.A will be added to the menu bar and the scene
-            // KeyCode.B will be added to the menu bar only
-            // KeyCode.C will be added to the scene only.
-            KeyCombination acceleratorA = new KeyCodeCombination(KeyCode.A, KeyCombination.SHORTCUT_DOWN);
-            KeyCombination acceleratorB = new KeyCodeCombination(KeyCode.B, KeyCombination.SHORTCUT_DOWN);
-            KeyCombination acceleratorC = new KeyCodeCombination(KeyCode.C, KeyCombination.SHORTCUT_DOWN);
-
             Menu menu = new Menu("Top menu");
-            menu.getItems().add(createMenuItem(acceleratorA));
-            menu.getItems().add(createMenuItem(acceleratorB));
+            menu.getItems().add(createMenuItem(menuBarAndSceneAccelerator));
+            menu.getItems().add(createMenuItem(menuBarOnlyAccelerator));
             menuBar.getMenus().add(menu);
 
             Scene scene = new Scene(new VBox(menuBar, label), 200, 200);
-            scene.getAccelerators().put(acceleratorA, () -> {
+            scene.getAccelerators().put(menuBarAndSceneAccelerator, () -> {
                 sceneAcceleratorFired = true;
             });
-            scene.getAccelerators().put(acceleratorC, () -> {
+            scene.getAccelerators().put(sceneOnlyAccelerator, () -> {
                 sceneAcceleratorFired = true;
             });
 
             stage.setScene(scene);
-            stage.setOnShown(e -> { startupLatch.countDown(); });
+            stage.setOnShown(e -> {
+                Platform.runLater(() -> {
+                    startupLatch.countDown();
+                });
+            });
             stage.show();
         }
 
@@ -192,13 +200,12 @@ public class MenuDoubleShortcutTest {
             sceneAcceleratorFired = false;
             menuBarItemFired = false;
             Platform.runLater(() -> {
-                // Need to ensure Cmd is present so this is handled
-                // as a key equivalent.
+                KeyCode shortcutCode = (PlatformUtil.isMac() ? KeyCode.COMMAND : KeyCode.CONTROL);
                 Robot robot = new Robot();
-                robot.keyPress(KeyCode.COMMAND);
+                robot.keyPress(shortcutCode);
                 robot.keyPress(code);
                 robot.keyRelease(code);
-                robot.keyRelease(KeyCode.COMMAND);
+                robot.keyRelease(shortcutCode);
             });
         }
 
