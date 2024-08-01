@@ -412,15 +412,15 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getPixelColor
                 CFDataRef data = CGDataProviderCopyData(provider);
                 if (data != NULL)
                 {
-                    jint *pixels = (jint*)CFDataGetBytePtr(data);
+                    uint32_t *pixels = (uint32_t*)CFDataGetBytePtr(data);
                     if (pixels != NULL)
                     {
-                        color = *pixels;
+                        uint32_t pixel = *pixels;
                         CGFloat components[4];
-                        components[0] = (CGFloat)((color & 0x00FF0000) >> 16) / 255.0;
-                        components[1] = (CGFloat)((color & 0x0000FF00) >> 8) / 255.0;
-                        components[2] = (CGFloat)((color & 0x000000FF)) / 255.0;
-                        components[3] = (CGFloat)((color & 0xFF000000) >> 24) / 255.0;
+                        components[0] = (CGFloat)((pixel & 0x00FF0000) >> 16) / 255.0;
+                        components[1] = (CGFloat)((pixel & 0x0000FF00) >> 8) / 255.0;
+                        components[2] = (CGFloat)((pixel & 0x000000FF)) / 255.0;
+                        components[3] = (CGFloat)((pixel & 0xFF000000) >> 24) / 255.0;
                         origColor = CGColorCreate(CGImageGetColorSpace(screenImage), components);
                     }
                 }

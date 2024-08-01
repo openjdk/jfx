@@ -64,8 +64,9 @@ public class SRGBTest extends VisualTestBase {
     static final float HIGH = 0.75f;
 
     // The component tolerance allows one bit of rounding when writing a color
-    // out and another bit when reading it back in.
-    static final double COMPONENT_TOLERANCE = 2.0 / 255.0;
+    // out and another bit when reading it back in. The additional 0.0001
+    // accounts for floating point precision limitations.
+    static final double COMPONENT_TOLERANCE = 2.0001 / 255.0;
 
     private enum TestColor {
         COLOR_01(LOW, MID, HIGH),
