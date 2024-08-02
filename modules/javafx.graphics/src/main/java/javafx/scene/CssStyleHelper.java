@@ -1349,7 +1349,7 @@ final class CssStyleHelper {
                     // the resolved value may itself need to be resolved.
                     // For example, if the value "color" resolves to "base",
                     // then "base" will need to be resolved as well.
-                    ParsedValue<?, ?> pv = resolveLookups(styleable, resolvedParsedValue, styleMap, states, whence, resolves);
+                    ParsedValue<?, ?> pv = resolveLookups(styleable, resolvedParsedValue, styleMap, states, resolves);
 
                     resolves.remove(resolvedParsedValue);
 
