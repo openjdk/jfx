@@ -967,7 +967,7 @@ List<String> computeLibraryPath(boolean working) {
     List<String> lp = []
 
     if (HAS_JAVAFX_MODULES) {
-        List<String> modsWithNative = [ 'graphics', 'media', 'web' ]
+        List<String> modsWithNative = [ 'javafx.graphics', 'javafx.media', 'javafx.web' ]
 
         // the build/modular-sdk area
         def platformPrefix = ""
@@ -976,7 +976,7 @@ List<String> computeLibraryPath(boolean working) {
         def modulesLibsDir = "${bundledSdkDir}/modules_libs"
 
         modsWithNative.each() { m ->
-            lp << cygpath("${modulesLibsDir}/javafx.${m}")
+            lp << cygpath("${modulesLibsDir}/${m}")
         }
     } else {
         def platformPrefix = ""
@@ -1710,6 +1710,16 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
         return
     }
 
+    if (!project.hasProperty("moduleName")) {
+        fail("Project ${project} has no module name")
+    }
+    projectDependencies.each { projName ->
+        def dep = project.project(":$projName")
+        if (!dep.hasProperty("moduleName")) {
+            fail("${project} dependency ${dep} has no module name")
+        }
+    }
+
     project.apply plugin: 'maven-publish'
 
     project.group = MAVEN_GROUP_ID
@@ -1760,7 +1770,8 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
         project.publishing {
             publications {
                 maven(MavenPublication) {
-                    artifactId = "javafx-${project.name}"
+                    def artifactName = project.moduleName.replace('.', '-')
+                    artifactId = artifactName
 
                     afterEvaluate {
                         artifact project.tasks."moduleEmptyPublicationJar$t.capital"
@@ -1779,15 +1790,17 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
 
                         Node projectDependencyPlatform = dependencies.appendNode("dependency")
                         projectDependencyPlatform.appendNode("groupId", MAVEN_GROUP_ID)
-                        projectDependencyPlatform.appendNode("artifactId", "javafx-${project.name}")
+                        projectDependencyPlatform.appendNode("artifactId", artifactName)
                         projectDependencyPlatform.appendNode("version", MAVEN_VERSION)
                         projectDependencyPlatform.appendNode("classifier", "\${javafx.platform}")
 
                         if (!projectDependencies.empty) {
-                            projectDependencies.each { dep ->
+                            projectDependencies.each { projName ->
+                                def dep = project.project(":$projName")
+                                def depName = dep.moduleName.replace('.', '-')
                                 Node projectDependency = dependencies.appendNode("dependency")
                                 projectDependency.appendNode("groupId", MAVEN_GROUP_ID)
-                                projectDependency.appendNode("artifactId", "javafx-$dep")
+                                projectDependency.appendNode("artifactId", depName)
                                 projectDependency.appendNode("version", MAVEN_VERSION)
                            }
                         }
