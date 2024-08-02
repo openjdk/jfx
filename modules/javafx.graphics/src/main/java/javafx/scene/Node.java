@@ -9007,7 +9007,7 @@ public abstract class Node implements EventTarget, Styleable {
          * case where no transitions are found.
          *
          * @param property the {@code StyleableProperty}
-         * @param result the map into which results are stored, should be {@code null}
+         * @param result this argument is an implementation detail, callers must specify {@code null}
          * @return a mapping of CSS property names to {@code TransitionTimer} instances
          */
         private Map<String, TransitionTimer> collectTransitionTimers(
@@ -9181,7 +9181,7 @@ public abstract class Node implements EventTarget, Styleable {
          * common case where no transitions are found.
          *
          * @param metadata the CSS metadata of the property
-         * @param result the map into which results are stored, should be {@code null}
+         * @param result this argument is an implementation detail, callers must specify {@code null}
          * @return a mapping of CSS metadata instances to {@code TransitionDefinition} instances
          */
         private Map<CssMetaData<? extends Styleable, ?>, TransitionDefinition> collectTransitions(
