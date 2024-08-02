@@ -25,12 +25,12 @@
 
 package javafx.event;
 
-import java.util.EventObject;
-
-import com.sun.javafx.event.EventUtil;
 import java.io.IOException;
+import java.util.EventObject;
 import javafx.beans.NamedArg;
 import javafx.beans.property.SimpleBooleanProperty;
+import com.sun.javafx.event.EventHelper;
+import com.sun.javafx.event.EventUtil;
 
 // PENDING_DOC_REVIEW
 /**
@@ -55,6 +55,8 @@ public class Event extends EventObject implements Cloneable {
      */
     public static final EventType<Event> ANY = EventType.ROOT;
 
+    static { initHelper(); }
+
     /**
      * Type of the event.
      */
@@ -70,6 +72,7 @@ public class Event extends EventObject implements Cloneable {
      * Whether this event has been consumed by any filter or handler.
      */
     private transient SimpleBooleanProperty consumed;
+    private transient boolean propagateConsume;
 
     /**
      * Construct a new {@code Event} with the specified event type. The source
@@ -134,7 +137,10 @@ public class Event extends EventObject implements Cloneable {
         newEvent.source = (newSource != null) ? newSource : NULL_SOURCE_TARGET;
         newEvent.target = (newTarget != null) ? newTarget : NULL_SOURCE_TARGET;
         newEvent.consumed = null;
-        newEvent.consumedProperty().bindBidirectional(consumedProperty());
+
+        if (propagateConsume) {
+            newEvent.consumedProperty().bindBidirectional(consumedProperty());
+        }
 
         return newEvent;
     }
@@ -206,5 +212,14 @@ public class Event extends EventObject implements Cloneable {
         }
 
         EventUtil.fireEvent(eventTarget, event);
+    }
+
+    private static void initHelper() {
+        EventHelper.setAccessor(new EventHelper.Accessor() {
+            @Override
+            public void propagateConsume(Event ev) {
+                ev.propagateConsume = true;
+            }
+        });
     }
 }
