@@ -34,27 +34,27 @@ package javafx.animation;
  * <table class="striped">
  *     <caption><b>Interpolation types</b></caption>
  *     <tbody>
- *         <tr><td><a id="default" style="white-space: nowrap">default</a></td>
+ *         <tr><td style="vertical-align: top"><a id="default" style="white-space: nowrap">default</a></td>
  *             <td>Component types that implement {@code Interpolatable} are interpolated by calling the
  *                 {@link #interpolate(Object, double)} method.</td>
  *         </tr>
- *         <tr><td><a id="linear" style="white-space: nowrap">linear</a></td>
+ *         <tr><td style="vertical-align: top"><a id="linear" style="white-space: nowrap">linear</a></td>
  *             <td>Two components are combined by linear interpolation such that {@code t = 0} produces
  *                 the start value, and {@code t = 1} produces the end value. This interpolation type
  *                 is usually applicable for numeric components.</td>
  *         </tr>
- *         <tr><td><a id="discrete" style="white-space: nowrap">discrete</a></td>
+ *         <tr><td style="vertical-align: top"><a id="discrete" style="white-space: nowrap">discrete</a></td>
  *             <td>If two components cannot be meaningfully combined, the intermediate component value
  *                 is equal to the start value for {@code t < 0.5} and equal to the end value for
  *                 {@code t >= 0.5}.</td>
  *         </tr>
- *         <tr><td><a id="pairwise" style="white-space: nowrap">pairwise</a></td>
+ *         <tr><td style="vertical-align: top"><a id="pairwise" style="white-space: nowrap">pairwise</a></td>
  *             <td>Two lists are combined by pairwise interpolation. If the start list has fewer elements than
  *                 the target list, the missing elements are copied from the target list. If the start list has
  *                 more elements than the target list, the excess elements are discarded.
  *             </td>
  *         </tr>
- *         <tr><td style="white-space: nowrap">(see prose)</td>
+ *         <tr><td style="white-space: nowrap; vertical-align: top">(see prose)</td>
  *             <td>Some component types are interpolated in specific ways not covered here.
  *                 Refer to their respective documentation for more information.</td>
  *         </tr>
