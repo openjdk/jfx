@@ -271,7 +271,7 @@ public final class Stop implements Interpolatable<Stop> {
      * {@inheritDoc}
      *
      * @throws NullPointerException {@inheritDoc}
-     * @since 23
+     * @since 24
      */
     @Override
     public Stop interpolate(Stop endValue, double t) {
