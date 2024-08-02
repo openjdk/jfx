@@ -115,8 +115,8 @@ public abstract class StyleableIntegerProperty
     @Override
     public StyleOrigin getStyleOrigin() { return origin; }
 
-    private StyleOrigin origin = null;
-    private TransitionMediatorImpl mediator = null;
+    private StyleOrigin origin;
+    private TransitionMediatorImpl mediator;
 
     private final class TransitionMediatorImpl extends TransitionMediator {
         private final int startValue;

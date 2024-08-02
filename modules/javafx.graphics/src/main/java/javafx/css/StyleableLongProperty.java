@@ -117,8 +117,8 @@ public abstract class StyleableLongProperty
     @Override
     public StyleOrigin getStyleOrigin() { return origin; }
 
-    private StyleOrigin origin = null;
-    private TransitionMediatorImpl mediator = null;
+    private StyleOrigin origin;
+    private TransitionMediatorImpl mediator;
 
     private final class TransitionMediatorImpl extends TransitionMediator {
         private final long startValue;

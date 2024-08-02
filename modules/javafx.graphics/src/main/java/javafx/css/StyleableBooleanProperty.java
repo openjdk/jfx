@@ -115,8 +115,8 @@ public abstract class StyleableBooleanProperty
     @Override
     public StyleOrigin getStyleOrigin() { return origin; }
 
-    private StyleOrigin origin = null;
-    private TransitionMediatorImpl mediator = null;
+    private StyleOrigin origin;
+    private TransitionMediatorImpl mediator;
 
     private class TransitionMediatorImpl extends TransitionMediator {
         private final boolean startValue;

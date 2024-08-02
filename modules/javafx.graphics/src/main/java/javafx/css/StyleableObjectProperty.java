@@ -269,8 +269,8 @@ public abstract class StyleableObjectProperty<T>
     @Override
     public StyleOrigin getStyleOrigin() { return origin; }
 
-    private StyleOrigin origin = null;
-    private TransitionController<T> controller = null;
+    private StyleOrigin origin;
+    private TransitionController<T> controller;
 
     /**
      * Common interface for {@link Interpolatable} and {@link ComponentTransitionable} transitions.
