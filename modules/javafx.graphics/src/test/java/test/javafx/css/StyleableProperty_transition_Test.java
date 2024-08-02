@@ -27,6 +27,7 @@ package test.javafx.css;
 
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.tk.Toolkit;
 import javafx.animation.Interpolator;
 import javafx.css.CssMetaData;
 import javafx.css.SimpleStyleableBooleanProperty;
@@ -47,22 +48,27 @@ import javafx.css.StyleableProperty;
 import javafx.css.converter.BooleanConverter;
 import javafx.css.converter.ColorConverter;
 import javafx.css.converter.SizeConverter;
+import javafx.geometry.Insets;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.BackgroundShim;
+import javafx.scene.layout.CornerRadii;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import java.lang.reflect.Field;
-import java.util.function.Function;
+import test.com.sun.javafx.pgstub.StubToolkit;
+import java.util.List;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static test.util.ReflectionUtils.*;
 
 public class StyleableProperty_transition_Test {
 
@@ -135,34 +141,6 @@ public class StyleableProperty_transition_Test {
     static StyleableObjectProperty<Color> interpolatableObjectProperty;
     static StyleableObjectProperty<Background> componentTransitionableObjectProperty;
 
-    static Object getFieldValue(StyleableProperty<?> property, String fieldName) {
-        Function<Class<?>, Field> getField = cls -> {
-            try {
-                var field = cls.getDeclaredField(fieldName);
-                field.setAccessible(true);
-                return field;
-            } catch (NoSuchFieldException e) {
-                return null;
-            }
-        };
-
-        Class<?> cls = property.getClass();
-        while (cls != null) {
-            Field field = getField.apply(cls);
-            if (field != null) {
-                try {
-                    return field.get(property);
-                } catch (IllegalAccessException e) {
-                    throw new AssertionError(e);
-                }
-            }
-
-            cls = cls.getSuperclass();
-        }
-
-        throw new AssertionError();
-    }
-
     @SuppressWarnings("rawtypes")
     record TestRun(StyleableProperty property, String fieldName, Object defaultValue, Object newValue) {}
 
@@ -189,12 +167,14 @@ public class StyleableProperty_transition_Test {
         );
     }
 
+    StubToolkit toolkit;
     Scene scene;
     Stage stage;
 
     @BeforeEach
     void setup() {
-        scene = new Scene(new Group(testBean));
+        toolkit = (StubToolkit)Toolkit.getToolkit();
+        scene = new Scene(new Group());
         stage = new Stage();
         stage.setScene(scene);
         stage.show();
@@ -210,6 +190,8 @@ public class StyleableProperty_transition_Test {
     @MethodSource("transitionParameters")
     @SuppressWarnings("unchecked")
     void testRedundantTransitionIsDiscarded(TestRun testRun) {
+        ((Group)scene.getRoot()).getChildren().setAll(testBean);
+
         // Setting a value for the first time doesn't start a transition.
         testRun.property.applyStyle(StyleOrigin.USER, testRun.defaultValue);
         var mediator1 = getFieldValue(testRun.property, testRun.fieldName);
@@ -231,6 +213,8 @@ public class StyleableProperty_transition_Test {
     @MethodSource("transitionParameters")
     @SuppressWarnings("unchecked")
     void testReversingTransitionIsNotDiscarded(TestRun testRun) {
+        ((Group)scene.getRoot()).getChildren().setAll(testBean);
+
         // Setting a value for the first time doesn't start a transition.
         testRun.property.applyStyle(StyleOrigin.USER, testRun.defaultValue);
         var mediator1 = getFieldValue(testRun.property, testRun.fieldName);
@@ -247,5 +231,45 @@ public class StyleableProperty_transition_Test {
         var mediator3 = getFieldValue(testRun.property, testRun.fieldName);
         assertNotNull(mediator3);
         assertNotSame(mediator2, mediator3);
+    }
+
+    @Test
+    void testExistingTransitionOfComponentTransitionableIsPreserved() {
+        var bean = new Group();
+        ((Group)scene.getRoot()).getChildren().setAll(bean);
+        var border1 = new Background(new BackgroundFill(Color.RED, new CornerRadii(5), Insets.EMPTY));
+        var border2 = new Background(new BackgroundFill(Color.GREEN, new CornerRadii(10), Insets.EMPTY));
+        var border3 = new Background(new BackgroundFill(Color.BLUE, new CornerRadii(10), Insets.EMPTY));
+        var property = new SimpleStyleableObjectProperty<>(componentTransitionableObjectPropertyMetadata, bean, null);
+
+        NodeHelper.getTransitionProperty(bean).setValue(new TransitionDefinition[] {
+            new TransitionDefinition("-fx-background-color", Duration.seconds(1), Duration.ZERO, Interpolator.LINEAR),
+            new TransitionDefinition("-fx-background-radius", Duration.seconds(1), Duration.ZERO, Interpolator.LINEAR)
+        });
+
+        // Setting a value for the first time doesn't start a transition.
+        toolkit.setCurrentTime(0);
+        property.applyStyle(StyleOrigin.USER, border1);
+
+        // Start the transition and capture a copy of the sub-property mediator list.
+        // -fx-background-color will transition from RED to GREEN
+        // -fx-background-radius will transition rom 5 to 10
+        property.applyStyle(StyleOrigin.USER, border2);
+        var oldMediators = List.copyOf((List<?>)getFieldValue(getFieldValue(property, "controller"), "mediators"));
+
+        // Advance the animation time and start the second transition.
+        // -fx-background-color will transition from (mix of RED/GREEN) to BLUE
+        // -fx-background-radius will pick up the previous transition, because its target value is the same (10)
+        toolkit.setCurrentTime(500);
+        toolkit.handleAnimation();
+        property.applyStyle(StyleOrigin.USER, border3);
+        var newMediators = (List<?>)getFieldValue(getFieldValue(property, "controller"), "mediators");
+
+        // The result is that now we have a new mediator for -fx-background-color, but the same
+        // mediator as in the previous transition for -fx-background-radius.
+        assertEquals(2, oldMediators.size());
+        assertEquals(2, newMediators.size());
+        assertNotSame(oldMediators.get(0), newMediators.get(0)); // -fx-background-color
+        assertSame(oldMediators.get(1), newMediators.get(1));    // -fx-background-radius
     }
 }
