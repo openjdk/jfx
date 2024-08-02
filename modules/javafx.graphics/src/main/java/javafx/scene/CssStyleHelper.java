@@ -668,8 +668,7 @@ final class CssStyleHelper {
             CascadingStyle style = getStyle(node, property, styleMap, transitionStates[0]);
             if (style != null) {
                 final ParsedValue cssValue = style.getParsedValue();
-                ObjectProperty<StyleOrigin> whence = new SimpleObjectProperty<>(style.getOrigin());
-                ParsedValue resolved = resolveLookups(node, cssValue, styleMap, transitionStates[0], whence, new HashSet<>());
+                ParsedValue resolved = resolveLookups(node, cssValue, styleMap, transitionStates[0], new HashSet<>());
                 boolean isRelative = ParsedValueImpl.containsFontRelativeSize(resolved, false);
                 if (!isRelative) {
                     continue;
@@ -1319,7 +1318,6 @@ final class CssStyleHelper {
             final Styleable styleable,
             final ParsedValue parsedValue,
             final StyleMap styleMap, Set<PseudoClass> states,
-            final ObjectProperty<StyleOrigin> whence,
             Set<ParsedValue> resolves) {
 
         //
@@ -1346,18 +1344,6 @@ final class CssStyleHelper {
                         }
 
                         throw new IllegalArgumentException("Loop detected in " + resolved.getRule().toString() + " while resolving '" + sval + "'");
-                    }
-
-                    // The origin of this parsed value is the greatest of
-                    // any of the resolved reference. If a resolved reference
-                    // comes from an inline style, for example, then the value
-                    // calculated from the resolved lookup should have inline
-                    // as its origin. Otherwise, an inline style could be
-                    // stored in shared cache.
-                    final StyleOrigin wOrigin = whence.get();
-                    final StyleOrigin rOrigin = resolved.getOrigin();
-                    if (rOrigin != null && (wOrigin == null ||  wOrigin.compareTo(rOrigin) < 0)) {
-                        whence.set(rOrigin);
                     }
 
                     // the resolved value may itself need to be resolved.
@@ -1390,7 +1376,7 @@ final class CssStyleHelper {
                 for (int ll=0; ll<layers[l].length; ll++) {
                     if (layers[l][ll] == null) continue;
                     resolved[l][ll] =
-                        resolveLookups(styleable, layers[l][ll], styleMap, states, whence, resolves);
+                        resolveLookups(styleable, layers[l][ll], styleMap, states, resolves);
                 }
             }
 
@@ -1404,7 +1390,7 @@ final class CssStyleHelper {
             for (int l=0; l<layer.length; l++) {
                 if (layer[l] == null) continue;
                 resolved[l] =
-                    resolveLookups(styleable, layer[l], styleMap, states, whence, resolves);
+                    resolveLookups(styleable, layer[l], styleMap, states, resolves);
             }
 
             return new ParsedValueImpl(resolved, parsedValue.getConverter(), false);
@@ -1537,8 +1523,7 @@ final class CssStyleHelper {
             ParsedValue resolved = null;
             try {
 
-                ObjectProperty<StyleOrigin> whence = new SimpleObjectProperty<>(style.getOrigin());
-                resolved = resolveLookups(styleable, cssValue, styleMap, states, whence, new HashSet<>());
+                resolved = resolveLookups(styleable, cssValue, styleMap, states, new HashSet<>());
 
                 final String property = cssMetaData.getProperty();
 
@@ -1630,8 +1615,7 @@ final class CssStyleHelper {
                 else
                     val = cssMetaData.getConverter().convert(resolved, fontForFontRelativeSizes);
 
-                final StyleOrigin origin = whence.get();
-                return new CalculatedValue(val, origin, isRelative);
+                return new CalculatedValue(val, style.getOrigin(), isRelative);
 
             } catch (ClassCastException cce) {
                 final String msg = formatUnresolvedLookupMessage(styleable, cssMetaData, style.getStyle(),resolved, cce);
