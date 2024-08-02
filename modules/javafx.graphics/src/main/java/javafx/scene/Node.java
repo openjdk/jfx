@@ -9102,9 +9102,9 @@ public abstract class Node implements EventTarget, Styleable {
             return;
         }
 
-        // Make a copy of the list, because completing the timers causes them to be removed
-        // from the list, which would result in a ConcurrentModificationException.
-        for (TransitionTimer timer : Map.copyOf(transitionTimers).values()) {
+        // Make a copy of the timers, because completing the timers causes them to be removed
+        // from the map, which would result in a ConcurrentModificationException.
+        for (TransitionTimer timer : List.copyOf(transitionTimers.values())) {
             timer.complete();
         }
     }

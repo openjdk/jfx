@@ -74,7 +74,6 @@ public class UnmodifiableArrayList<T> extends AbstractList<T> implements RandomA
     public static <T> UnmodifiableArrayList<T> copyOfNullFiltered(List<T> list) {
         Objects.requireNonNull(list, "list cannot be null");
 
-        int index = 0;
         int numNonNullValues = 0;
 
         @SuppressWarnings("unchecked")
@@ -85,15 +84,13 @@ public class UnmodifiableArrayList<T> extends AbstractList<T> implements RandomA
             for (int i = 0, max = list.size(); i < max; ++i) {
                 T value = list.get(i);
                 if (value != null) {
-                    newValues[index++] = value;
-                    ++numNonNullValues;
+                    newValues[numNonNullValues++] = value;
                 }
             }
         } else {
             for (T value : list) {
                 if (value != null) {
-                    newValues[index++] = value;
-                    ++numNonNullValues;
+                    newValues[numNonNullValues++] = value;
                 }
             }
         }
@@ -117,10 +114,9 @@ public class UnmodifiableArrayList<T> extends AbstractList<T> implements RandomA
         @SuppressWarnings("unchecked")
         T[] newValues = (T[])new Object[elements.length];
 
-        for (int i = 0, j = 0; i < elements.length; ++i) {
+        for (int i = 0; i < elements.length; ++i) {
             if (elements[i] != null) {
-                newValues[j++] = elements[i];
-                ++numNonNullValues;
+                newValues[numNonNullValues++] = elements[i];
             }
         }
 

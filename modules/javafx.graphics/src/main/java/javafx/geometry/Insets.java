@@ -114,7 +114,7 @@ public class Insets implements Interpolatable<Insets> {
      * {@inheritDoc}
      *
      * @throws NullPointerException {@inheritDoc}
-     * @since 23
+     * @since 24
      */
     @Override
     public Insets interpolate(Insets endValue, double t) {
