@@ -164,7 +164,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         textField.fireEvent(actionEvent);
         // fix of JDK-8207759: reverted logic
         // mapping not auto-consume and consume if handled by action
-        if (onAction != null || actionEvent.isConsumed()) {
+        if (onAction != null && actionEvent.isConsumed()) {
             event.consume();
         }
     }
