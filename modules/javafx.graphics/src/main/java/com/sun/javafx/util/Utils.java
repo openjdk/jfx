@@ -234,44 +234,27 @@ public class Utils {
         if (listSize > 8 || listSize != secondList.size()) {
             throw new AssertionError();
         }
+        
+        T item0 = null, item1 = null, item2 = null, item3 = null, item4 = null, item5 = null, item6 = null, item7 = null;
+        boolean same = true;
 
-        T item1 = null, item2 = null, item3 = null, item4 = null, item5 = null, item6 = null, item7 = null;
-        T item0 = firstList.get(0).interpolate(secondList.get(0), t);
-        boolean same = item0 == firstList.get(0);
-
-        if (listSize > 1) {
-            item1 = firstList.get(1).interpolate(secondList.get(1), t);
-            same &= item1 == firstList.get(1);
-
-            if (listSize > 2) {
-                item2 = firstList.get(2).interpolate(secondList.get(2), t);
-                same &= item2 == firstList.get(2);
-
-                if (listSize > 3) {
-                    item3 = firstList.get(3).interpolate(secondList.get(3), t);
+        switch (listSize) { // fall-through intended
+            case 8: item7 = firstList.get(7).interpolate(secondList.get(7), t);
+                    same &= item7 == firstList.get(7);
+            case 7: item6 = firstList.get(6).interpolate(secondList.get(6), t);
+                    same &= item6 == firstList.get(6);
+            case 6: item5 = firstList.get(5).interpolate(secondList.get(5), t);
+                    same &= item5 == firstList.get(5);
+            case 5: item4 = firstList.get(4).interpolate(secondList.get(4), t);
+                    same &= item4 == firstList.get(4);
+            case 4: item3 = firstList.get(3).interpolate(secondList.get(3), t);
                     same &= item3 == firstList.get(3);
-
-                    if (listSize > 4) {
-                        item4 = firstList.get(4).interpolate(secondList.get(4), t);
-                        same &= item4 == firstList.get(4);
-
-                        if (listSize > 5) {
-                            item5 = firstList.get(5).interpolate(secondList.get(5), t);
-                            same &= item5 == firstList.get(5);
-
-                            if (listSize > 6) {
-                                item6 = firstList.get(6).interpolate(secondList.get(6), t);
-                                same &= item6 == firstList.get(6);
-
-                                if (listSize > 7) {
-                                    item7 = firstList.get(7).interpolate(secondList.get(7), t);
-                                    same &= item7 == firstList.get(7);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            case 3: item2 = firstList.get(2).interpolate(secondList.get(2), t);
+                    same &= item2 == firstList.get(2);
+            case 2: item1 = firstList.get(1).interpolate(secondList.get(1), t);
+                    same &= item1 == firstList.get(1);
+            case 1: item0 = firstList.get(0).interpolate(secondList.get(0), t);
+                    same &= item0 == firstList.get(0);
         }
 
         if (same) {
@@ -280,34 +263,16 @@ public class Utils {
 
         @SuppressWarnings("unchecked")
         T[] newArray = (T[])new Interpolatable[listSize];
-        newArray[0] = item0;
 
-        if (listSize > 1) {
-            newArray[1] = item1;
-
-            if (listSize > 2) {
-                newArray[2] = item2;
-
-                if (listSize > 3) {
-                    newArray[3] = item3;
-
-                    if (listSize > 4) {
-                        newArray[4] = item4;
-
-                        if (listSize > 5) {
-                            newArray[5] = item5;
-
-                            if (listSize > 6) {
-                                newArray[6] = item6;
-
-                                if (listSize > 7) {
-                                    newArray[7] = item7;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+        switch (listSize) { // fall-through intended
+            case 8: newArray[7] = item7;
+            case 7: newArray[6] = item6;
+            case 6: newArray[5] = item5;
+            case 5: newArray[4] = item4;
+            case 4: newArray[3] = item3;
+            case 3: newArray[2] = item2;
+            case 2: newArray[1] = item1;
+            case 1: newArray[0] = item0;
         }
 
         return new UnmodifiableArrayList<>(newArray, listSize);
