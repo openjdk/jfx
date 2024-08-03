@@ -215,7 +215,8 @@ public class SRGBTest extends VisualTestBase {
     // only verify that the JavaFX renderer and JavaFX Robot can round-trip
     // colors but they might both be working in the wrong space. We use an
     // AWT Robot to verify that they are working in sRGB.
-    @Test
+    // Timeout for potential hang on XWayland, see JDK-8335468.
+    @Test(timeout = 15000)
     public void sRGBPixelTest() throws Exception {
         Rectangle swatch = prepareStage();
 
