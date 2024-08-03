@@ -234,7 +234,7 @@ public class Utils {
         if (listSize > 8 || listSize != secondList.size()) {
             throw new AssertionError();
         }
-        
+
         T item0 = null, item1 = null, item2 = null, item3 = null, item4 = null, item5 = null, item6 = null, item7 = null;
         boolean same = true;
 
