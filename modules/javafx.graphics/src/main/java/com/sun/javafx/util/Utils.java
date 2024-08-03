@@ -414,43 +414,26 @@ public class Utils {
             throw new AssertionError();
         }
 
-        T item1 = null, item2 = null, item3 = null, item4 = null, item5 = null, item6 = null, item7 = null;
-        T item0 = firstArray[0].interpolate(secondArray[0], t);
-        boolean same = item0 == firstArray[0];
+        T item0 = null, item1 = null, item2 = null, item3 = null, item4 = null, item5 = null, item6 = null, item7 = null;
+        boolean same = true;
 
-        if (arraySize > 1) {
-            item1 = firstArray[1].interpolate(secondArray[1], t);
-            same &= item1 == firstArray[1];
-
-            if (arraySize > 2) {
-                item2 = firstArray[2].interpolate(secondArray[2], t);
-                same &= item2 == firstArray[2];
-
-                if (arraySize > 3) {
-                    item3 = firstArray[3].interpolate(secondArray[3], t);
+        switch (arraySize) { // fall-through intended
+            case 8: item7 = firstArray[7].interpolate(secondArray[7], t);
+                    same &= item7 == firstArray[7];
+            case 7: item6 = firstArray[6].interpolate(secondArray[6], t);
+                    same &= item6 == firstArray[6];
+            case 6: item5 = firstArray[5].interpolate(secondArray[5], t);
+                    same &= item5 == firstArray[5];
+            case 5: item4 = firstArray[4].interpolate(secondArray[4], t);
+                    same &= item4 == firstArray[4];
+            case 4: item3 = firstArray[3].interpolate(secondArray[3], t);
                     same &= item3 == firstArray[3];
-
-                    if (arraySize > 4) {
-                        item4 = firstArray[4].interpolate(secondArray[4], t);
-                        same &= item4 == firstArray[4];
-
-                        if (arraySize > 5) {
-                            item5 = firstArray[5].interpolate(secondArray[5], t);
-                            same &= item5 == firstArray[5];
-
-                            if (arraySize > 6) {
-                                item6 = firstArray[6].interpolate(secondArray[6], t);
-                                same &= item6 == firstArray[6];
-
-                                if (arraySize > 7) {
-                                    item7 = firstArray[7].interpolate(secondArray[7], t);
-                                    same &= item7 == firstArray[7];
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            case 3: item2 = firstArray[2].interpolate(secondArray[2], t);
+                    same &= item2 == firstArray[2];
+            case 2: item1 = firstArray[1].interpolate(secondArray[1], t);
+                    same &= item1 == firstArray[1];
+            case 1: item0 = firstArray[0].interpolate(secondArray[0], t);
+                    same &= item0 == firstArray[0];
         }
 
         if (same) {
@@ -461,34 +444,16 @@ public class Utils {
 
         @SuppressWarnings("unchecked")
         T[] newArray = (T[])Array.newInstance(componentType, arraySize);
-        newArray[0] = item0;
 
-        if (arraySize > 1) {
-            newArray[1] = item1;
-
-            if (arraySize > 2) {
-                newArray[2] = item2;
-
-                if (arraySize > 3) {
-                    newArray[3] = item3;
-
-                    if (arraySize > 4) {
-                        newArray[4] = item4;
-
-                        if (arraySize > 5) {
-                            newArray[5] = item5;
-
-                            if (arraySize > 6) {
-                                newArray[6] = item6;
-
-                                if (arraySize > 7) {
-                                    newArray[7] = item7;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+        switch (arraySize) { // fall-through intended
+            case 8: newArray[7] = item7;
+            case 7: newArray[6] = item6;
+            case 6: newArray[5] = item5;
+            case 5: newArray[4] = item4;
+            case 4: newArray[3] = item3;
+            case 3: newArray[2] = item2;
+            case 2: newArray[1] = item1;
+            case 1: newArray[0] = item0;
         }
 
         return newArray;
