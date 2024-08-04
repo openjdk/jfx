@@ -27,7 +27,6 @@ package javafx.scene.layout;
 
 import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
-import javafx.css.ComponentTransitionable;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.geometry.Insets;
@@ -74,7 +73,7 @@ import com.sun.javafx.util.InterpolationUtils;
  * @since JavaFX 8.0
  */
 @SuppressWarnings("unchecked")
-public final class Background implements Interpolatable<Background>, ComponentTransitionable {
+public final class Background implements Interpolatable<Background> {
     static final CssMetaData<Node,Paint[]> BACKGROUND_COLOR =
             new SubCssMetaData<>("-fx-background-color",
                     PaintConverter.SequenceConverter.getInstance(),

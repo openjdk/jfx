@@ -85,15 +85,17 @@ public abstract class StyleableObjectProperty<T>
         }
 
         T oldValue = get();
+        CssMetaData<? extends Styleable, T> metadata = getCssMetaData();
+        StyleConverter<?, T> converter = metadata.getConverter();
 
-        if (newValue instanceof ComponentTransitionable) {
-            applyComponentTransition(oldValue, newValue);
+        if (converter instanceof StyleConverter.SupportsDeconstruction) {
+            applyComponentTransition(oldValue, newValue, metadata, converter);
         } else if (newValue instanceof Interpolatable<?> && newValue.getClass().isInstance(oldValue)) {
             // 'oldValue' and 'newValue' could be objects that both implement Interpolatable, but with
             // different type arguments. We detect this case by checking whether 'newValue' is an instance
             // of 'oldValue' (so that oldValue.interpolate(newValue, t) succeeds), and only applying the
             // transition when the test succeeds.
-            applyInterpolatableTransition(oldValue, newValue);
+            applyInterpolatableTransition(oldValue, newValue, metadata);
         } else {
             set(newValue);
         }
@@ -108,12 +110,12 @@ public abstract class StyleableObjectProperty<T>
      * @param oldValue the old value
      * @param newValue the new value
      */
-    private void applyInterpolatableTransition(T oldValue, T newValue) {
+    private void applyInterpolatableTransition(T oldValue, T newValue, CssMetaData<? extends Styleable, T> metadata) {
         // If this.origin == null, we're setting the value for the first time.
         // No transition should be started in this case.
         TransitionDefinition transition =
             this.origin != null && getBean() instanceof Node node ?
-            NodeHelper.findTransitionDefinition(node, getCssMetaData()) : null;
+            NodeHelper.findTransitionDefinition(node, metadata) : null;
 
         if (transition == null) {
             set(newValue);
@@ -124,20 +126,20 @@ public abstract class StyleableObjectProperty<T>
             // transition to interrupt the existing transition.
             var controller = new InterpolatableTransitionController(oldValue, newValue);
             this.controller = controller; // needs to be set before calling run()
-            controller.run(transition, getCssMetaData().getProperty(), Toolkit.getToolkit().getPrimaryTimer().nanos());
+            controller.run(transition, metadata.getProperty(), Toolkit.getToolkit().getPrimaryTimer().nanos());
         }
     }
 
     /**
      * Sets the value of the property, and potentially starts a transition.
-     * This method is used for {@link ComponentTransitionable} values.
+     * This method is used for values that support component-wise transitions.
      *
      * @param oldValue the old value
      * @param newValue the new value
      */
-    private void applyComponentTransition(T oldValue, T newValue) {
-        CssMetaData<? extends Styleable, T> metadata = getCssMetaData();
-
+    private void applyComponentTransition(T oldValue, T newValue,
+                                          CssMetaData<? extends Styleable, T> metadata,
+                                          StyleConverter<?, T> converter) {
         // If this.origin == null, we're setting the value for the first time.
         // No transition should be started in this case.
         Map<CssMetaData<? extends Styleable, ?>, TransitionDefinition> transitions =
@@ -149,7 +151,6 @@ public abstract class StyleableObjectProperty<T>
         if (transitions == null || transitions.isEmpty() || subMetadata == null || subMetadata.isEmpty()) {
             set(newValue);
         } else if (controller == null || !Objects.equals(newValue, controller.getTargetValue())) {
-            var converter = metadata.getConverter();
             var oldCssValues = converter.convertBack(oldValue);
             var newCssValues = converter.convertBack(newValue);
             var controller = new AggregatingTransitionController(newValue);
@@ -273,7 +274,7 @@ public abstract class StyleableObjectProperty<T>
     private TransitionController<T> controller;
 
     /**
-     * Common interface for {@link Interpolatable} and {@link ComponentTransitionable} transitions.
+     * Common interface for {@link Interpolatable} and component-wise transitions.
      *
      * @param <T> the property value type
      */
@@ -339,8 +340,7 @@ public abstract class StyleableObjectProperty<T>
     }
 
     /**
-     * Controller for transitions of {@link ComponentTransitionable} values that aggregates the effects
-     * of its component transitions.
+     * Controller for component-wise transitions that aggregates the effects of its component transitions.
      * <p>
      * For each animation frame, this controller waits until all its component mediators have updated
      * their current value, and then converts the collected component values into a new object of type

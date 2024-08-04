@@ -40,7 +40,8 @@ import javafx.scene.paint.Paint;
 /**
  * Converts the CSS for -fx-background items into a Background.
  */
-class BackgroundConverter extends StyleConverter<ParsedValue[], Background> {
+class BackgroundConverter extends StyleConverter<ParsedValue[], Background>
+                          implements StyleConverter.SupportsDeconstruction {
 
     static final StyleConverter<ParsedValue[], Background> INSTANCE = new BackgroundConverter();
 

@@ -42,7 +42,8 @@ import javafx.scene.paint.Paint;
 
 /**
  */
-class BorderConverter extends StyleConverter<ParsedValue[], Border> {
+class BorderConverter extends StyleConverter<ParsedValue[], Border>
+                      implements StyleConverter.SupportsDeconstruction {
 
     private static final BorderConverter BORDER_IMAGE_CONVERTER =
             new BorderConverter();

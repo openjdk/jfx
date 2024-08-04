@@ -36,7 +36,6 @@ import javafx.scene.Node;
 import javafx.scene.paint.Paint;
 import com.sun.javafx.UnmodifiableArrayList;
 import com.sun.javafx.css.SubCssMetaData;
-import javafx.css.ComponentTransitionable;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.converter.InsetsConverter;
@@ -90,7 +89,7 @@ import com.sun.javafx.util.InterpolationUtils;
  * @since JavaFX 8.0
  */
 @SuppressWarnings("unchecked")
-public final class Border implements Interpolatable<Border>, ComponentTransitionable {
+public final class Border implements Interpolatable<Border> {
     static final CssMetaData<Node,Paint[]> BORDER_COLOR =
             new SubCssMetaData<>("-fx-border-color",
                     LayeredBorderPaintConverter.getInstance());

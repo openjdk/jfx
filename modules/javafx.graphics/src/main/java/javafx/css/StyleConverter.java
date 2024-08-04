@@ -87,6 +87,13 @@ import java.util.WeakHashMap;
 public class StyleConverter<F, T> {
 
     /**
+     * Marker interface for style converters that implement the {@link #convertBack(Object)} method.
+     *
+     * @since 24
+     */
+    public interface SupportsDeconstruction {}
+
+    /**
      * Creates a {@code StyleConverter}.
      */
     public StyleConverter() {
