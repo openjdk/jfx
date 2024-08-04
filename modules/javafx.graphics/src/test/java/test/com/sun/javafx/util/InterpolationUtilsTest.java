@@ -23,9 +23,9 @@
  * questions.
  */
 
-package test.javafx.scene.paint;
+package test.com.sun.javafx.util;
 
-import com.sun.javafx.scene.paint.PaintUtils;
+import com.sun.javafx.util.InterpolationUtils;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
@@ -36,13 +36,13 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class PaintUtilsTest {
+public class InterpolationUtilsTest {
 
     @Nested
     class InterpolateColorTest {
         @Test
         void toLinearGradient() {
-            var paint = PaintUtils.interpolate(
+            var paint = InterpolationUtils.interpolatePaint(
                 Color.BLUE,
                 new LinearGradient(0, 0, 1, 1, false, CycleMethod.NO_CYCLE,
                                    new Stop(0, Color.RED), new Stop(1, Color.GREEN)),
@@ -57,7 +57,7 @@ public class PaintUtilsTest {
 
         @Test
         void toRadialGradient() {
-            var paint = PaintUtils.interpolate(
+            var paint = InterpolationUtils.interpolatePaint(
                 Color.BLUE,
                 new RadialGradient(0, 0, 0, 0, 10, false, CycleMethod.NO_CYCLE,
                                    new Stop(0, Color.RED), new Stop(1, Color.GREEN)),
@@ -75,7 +75,7 @@ public class PaintUtilsTest {
     class InterpolateLinearGradientTest {
         @Test
         void toColor() {
-            var paint = PaintUtils.interpolate(
+            var paint = InterpolationUtils.interpolatePaint(
                 new LinearGradient(0, 0, 1, 1, false, CycleMethod.NO_CYCLE,
                                    new Stop(0, Color.RED), new Stop(1, Color.GREEN)),
                 Color.BLUE,
@@ -93,7 +93,7 @@ public class PaintUtilsTest {
             var toPaint = new RadialGradient(0, 0, 0, 0, 10, false, CycleMethod.NO_CYCLE,
                                              new Stop(0, Color.RED), new Stop(1, Color.GREEN));
 
-            var actual = PaintUtils.interpolate(
+            var actual = InterpolationUtils.interpolatePaint(
                 new LinearGradient(0, 0, 1, 1, false, CycleMethod.NO_CYCLE,
                                    new Stop(0, Color.RED), new Stop(1, Color.GREEN)),
                 toPaint,
@@ -107,7 +107,7 @@ public class PaintUtilsTest {
     class InterpolateRadialGradientTest {
         @Test
         void toColor() {
-            var paint = PaintUtils.interpolate(
+            var paint = InterpolationUtils.interpolatePaint(
                 new RadialGradient(0, 0, 0, 0, 10, false, CycleMethod.NO_CYCLE,
                                    new Stop(0, Color.RED), new Stop(1, Color.GREEN)),
                 Color.BLUE,
@@ -125,7 +125,7 @@ public class PaintUtilsTest {
             var toPaint = new LinearGradient(0, 0, 1, 1, false, CycleMethod.NO_CYCLE,
                                              new Stop(0, Color.RED), new Stop(1, Color.GREEN));
 
-            var actual = PaintUtils.interpolate(
+            var actual = InterpolationUtils.interpolatePaint(
                 new RadialGradient(0, 0, 0, 0, 10, false, CycleMethod.NO_CYCLE,
                                    new Stop(0, Color.RED), new Stop(1, Color.GREEN)),
                 toPaint,
