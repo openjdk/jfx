@@ -658,6 +658,10 @@ public final class Background implements Interpolatable<Background>, ComponentTr
             return endValue;
         }
 
+        // interpolateListsPairwise() is implemented such that it returns existing list instances
+        // (i.e. the 'this.fills' or 'endValue.fills' arguments) as an indication that the result
+        // is shallow-equal to either of the input arguments. This allows us to very quickly detect
+        // if we can return 'this' or 'endValue' without allocating a new Background instance.
         List<BackgroundFill> newFills = fills == endValue.fills ?
             fills : InterpolationUtils.interpolateListsPairwise(fills, endValue.fills, t);
 

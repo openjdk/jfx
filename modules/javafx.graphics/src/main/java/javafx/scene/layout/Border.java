@@ -431,6 +431,10 @@ public final class Border implements Interpolatable<Border>, ComponentTransition
             return endValue;
         }
 
+        // interpolateListsPairwise() is implemented such that it returns existing list instances
+        // (i.e. the 'this.images' or 'endValue.images' arguments) as an indication that the result
+        // is shallow-equal to either of the input arguments. This allows us to very quickly detect
+        // if we can return 'this' or 'endValue' without allocating a new Border instance.
         List<BorderImage> newImages = images == endValue.images ?
             images : InterpolationUtils.interpolateListsPairwise(images, endValue.images, t);
 
