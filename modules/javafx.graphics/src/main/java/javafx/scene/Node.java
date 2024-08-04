@@ -9017,7 +9017,9 @@ public abstract class Node implements EventTarget, Styleable {
             TransitionTimer timer = get(propertyName);
             if (timer != null) {
                 if (result == null) {
-                    result = new HashMap<>(5);
+                    // We expect the number of concurrent transitions for any given node to be
+                    // quite small in most cases, six mappings should be enough.
+                    result = HashMap.newHashMap(6);
                 }
 
                 result.put(propertyName, timer);
@@ -9197,7 +9199,9 @@ public abstract class Node implements EventTarget, Styleable {
 
                 if (selected) {
                     if (result == null) {
-                        result = new HashMap<>(5);
+                        // We expect the number of concurrent transitions for any given node to be
+                        // quite small in most cases, six mappings should be enough.
+                        result = HashMap.newHashMap(6);
                     }
 
                     result.put(metadata, transition);
