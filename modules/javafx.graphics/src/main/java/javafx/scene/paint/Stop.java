@@ -136,7 +136,7 @@ public final class Stop implements Interpolatable<Stop> {
     }
 
     /**
-     * Interpolates between two lists of stops.
+     * Interpolates between two normalized lists of stops.
      *
      * @param firstList the first list, not {@code null}
      * @param secondList the second list, not {@code null}
@@ -146,6 +146,14 @@ public final class Stop implements Interpolatable<Stop> {
     static List<Stop> interpolateLists(List<Stop> firstList, List<Stop> secondList, double t) {
         Objects.requireNonNull(firstList, "firstList cannot be null");
         Objects.requireNonNull(secondList, "secondList cannot be null");
+
+        if (!firstList.isEmpty() && firstList.get(0).getOffset() > 0) {
+            throw new IllegalArgumentException("firstList is not normalized");
+        }
+
+        if (!secondList.isEmpty() && secondList.get(0).getOffset() > 0) {
+            throw new IllegalArgumentException("secondList is not normalized");
+        }
 
         if (t <= 0) {
             return firstList;
@@ -172,14 +180,10 @@ public final class Stop implements Interpolatable<Stop> {
                 ++i;
                 ++j;
             } else if (first.offset < second.offset) {
-                stops[size] = j == 0 ?
-                    new Stop(first.offset, second.color) :
-                    interpolateVirtualStop(first, second, secondList.get(j - 1), 1 - t);
+                stops[size] = interpolateVirtualStop(first, second, secondList.get(j - 1), 1 - t);
                 ++i;
             } else {
-                stops[size] = i == 0 ?
-                    new Stop(second.offset, first.color) :
-                    interpolateVirtualStop(second, first, firstList.get(i - 1), t);
+                stops[size] = interpolateVirtualStop(second, first, firstList.get(i - 1), t);
                 ++j;
             }
         }

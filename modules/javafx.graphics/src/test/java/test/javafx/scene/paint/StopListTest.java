@@ -263,6 +263,19 @@ public class StopListTest {
             res);
         }
 
+        @Test
+        public void interpolatedVirtualStopIsEqualToExistingStop() {
+            double t = 0.5;
+            var firstList = normalize(List.of(new Stop(0, color1), new Stop(1, color3)));
+            var secondList = normalize(List.of(new Stop(0, color3), new Stop(0.5, color2), new Stop(1, color1)));
+            var res = StopShim.interpolateLists(firstList, secondList, t);
+            assertEquals(List.of(
+                new Stop(0, color2),
+                new Stop(0.5, color2),
+                new Stop(1, color2)),
+            res);
+        }
+
         private void assertSimilar(List<Stop> a, List<Stop> b) {
             assertEquals(a.size(), b.size());
             for (int i = 0; i < a.size(); ++i) {
