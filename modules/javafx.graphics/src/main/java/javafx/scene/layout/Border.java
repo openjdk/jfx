@@ -36,7 +36,6 @@ import javafx.scene.Node;
 import javafx.scene.paint.Paint;
 import com.sun.javafx.UnmodifiableArrayList;
 import com.sun.javafx.css.SubCssMetaData;
-import com.sun.javafx.util.Utils;
 import javafx.css.ComponentTransitionable;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
@@ -51,6 +50,7 @@ import com.sun.javafx.scene.layout.region.Margins;
 import com.sun.javafx.scene.layout.region.RepeatStruct;
 import com.sun.javafx.scene.layout.region.RepeatStructConverter;
 import com.sun.javafx.scene.layout.region.SliceSequenceConverter;
+import com.sun.javafx.util.InterpolationUtils;
 
 /**
  * The border of a {@link Region}. A {@code Border} is an immutable object which
@@ -432,10 +432,10 @@ public final class Border implements Interpolatable<Border>, ComponentTransition
         }
 
         List<BorderImage> newImages = images == endValue.images ?
-            images : Utils.interpolateListsPairwise(images, endValue.images, t);
+            images : InterpolationUtils.interpolateListsPairwise(images, endValue.images, t);
 
         List<BorderStroke> newStrokes = strokes == endValue.strokes ?
-            strokes : Utils.interpolateListsPairwise(strokes, endValue.strokes, t);
+            strokes : InterpolationUtils.interpolateListsPairwise(strokes, endValue.strokes, t);
 
         if (images == newImages && strokes == newStrokes) {
             return this;

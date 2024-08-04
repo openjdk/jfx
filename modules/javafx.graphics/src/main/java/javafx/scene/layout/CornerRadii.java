@@ -25,7 +25,7 @@
 
 package javafx.scene.layout;
 
-import com.sun.javafx.util.Utils;
+import com.sun.javafx.util.InterpolationUtils;
 import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 import java.util.Objects;
@@ -547,8 +547,8 @@ public class CornerRadii implements Interpolatable<CornerRadii> {
                                       boolean startIsPercentage, boolean endIsPercentage,
                                       double t) {
         return startIsPercentage == endIsPercentage ?
-            Utils.interpolate(start, end, t) :
-            Utils.interpolateDiscrete(start, end, t);
+            InterpolationUtils.interpolate(start, end, t) :
+            InterpolationUtils.interpolateDiscrete(start, end, t);
     }
 
     private boolean isSame(double topLeftHorizontalRadius, double topLeftVerticalRadius,

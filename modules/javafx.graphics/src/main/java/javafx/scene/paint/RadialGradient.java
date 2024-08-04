@@ -28,9 +28,8 @@ package javafx.scene.paint;
 import java.util.List;
 import java.util.Objects;
 import com.sun.javafx.scene.paint.GradientUtils;
-import com.sun.javafx.scene.paint.PaintUtils;
 import com.sun.javafx.tk.Toolkit;
-import com.sun.javafx.util.Utils;
+import com.sun.javafx.util.InterpolationUtils;
 import javafx.beans.NamedArg;
 
 /**
@@ -371,9 +370,9 @@ public final class RadialGradient extends Paint {
         boolean newProportional;
 
         if (this.proportional == endValue.proportional) {
-            newCenterX = Utils.interpolate(this.centerX, endValue.centerX, t);
-            newCenterY = Utils.interpolate(this.centerY, endValue.centerY, t);
-            newRadius = Utils.interpolate(this.radius, endValue.radius, t);
+            newCenterX = InterpolationUtils.interpolate(this.centerX, endValue.centerX, t);
+            newCenterY = InterpolationUtils.interpolate(this.centerY, endValue.centerY, t);
+            newRadius = InterpolationUtils.interpolate(this.radius, endValue.radius, t);
             newProportional = this.proportional;
         } else if (t < 0.5) {
             newCenterX = this.centerX;
@@ -387,9 +386,9 @@ public final class RadialGradient extends Paint {
             newProportional = endValue.proportional;
         }
 
-        double newFocusAngle = Utils.interpolate(this.focusAngle, endValue.focusAngle, t);
-        double newFocusDistance = Utils.interpolate(this.focusDistance, endValue.focusDistance, t);
-        CycleMethod newCycleMethod = Utils.interpolateDiscrete(this.cycleMethod, endValue.cycleMethod, t);
+        double newFocusAngle = InterpolationUtils.interpolate(this.focusAngle, endValue.focusAngle, t);
+        double newFocusDistance = InterpolationUtils.interpolate(this.focusDistance, endValue.focusDistance, t);
+        CycleMethod newCycleMethod = InterpolationUtils.interpolateDiscrete(this.cycleMethod, endValue.cycleMethod, t);
 
         // Optimization: if both lists are equal, we don't compute a new intermediate list.
         List<Stop> newStops = this.stops.equals(endValue.stops) ?
@@ -429,7 +428,7 @@ public final class RadialGradient extends Paint {
      */
     @Override
     public Paint interpolate(Paint endValue, double t) {
-        return PaintUtils.interpolate(this, endValue, t);
+        return InterpolationUtils.interpolatePaint(this, endValue, t);
     }
 
     /**

@@ -25,7 +25,7 @@
 
 package com.sun.javafx.scene.layout.region;
 
-import com.sun.javafx.util.Utils;
+import com.sun.javafx.util.InterpolationUtils;
 import javafx.animation.Interpolatable;
 import javafx.scene.layout.BorderWidths;
 import java.util.Objects;
@@ -69,7 +69,7 @@ public final class BorderImageSlices implements Interpolatable<BorderImageSlices
 
         return new BorderImageSlices(
             widths.interpolate(endValue.widths, t),
-            Utils.interpolateDiscrete(filled, endValue.filled, t));
+            InterpolationUtils.interpolateDiscrete(filled, endValue.filled, t));
     }
 
     @Override

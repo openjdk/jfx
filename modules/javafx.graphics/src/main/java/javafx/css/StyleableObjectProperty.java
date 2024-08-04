@@ -29,7 +29,7 @@ import com.sun.javafx.css.TransitionMediator;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.tk.Toolkit;
-import com.sun.javafx.util.Utils;
+import com.sun.javafx.util.InterpolationUtils;
 import javafx.animation.Interpolatable;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.value.ObservableValue;
@@ -530,13 +530,13 @@ public abstract class StyleableObjectProperty<T>
 
             if (progress < 1) {
                 if (startValue instanceof Interpolatable[][] ov && endValue instanceof Interpolatable[][] nv) {
-                    value = Utils.interpolateArraySeriesPairwise(ov, nv, progress);
+                    value = InterpolationUtils.interpolateArraySeriesPairwise(ov, nv, progress);
                 } else if (startValue instanceof Interpolatable[] ov && endValue instanceof Interpolatable[] nv) {
-                    value = Utils.interpolateArraysPairwise(ov, nv, progress);
+                    value = InterpolationUtils.interpolateArraysPairwise(ov, nv, progress);
                 } else if (startValue instanceof Interpolatable && endValue instanceof Interpolatable) {
                     value = ((Interpolatable<U>)startValue).interpolate(endValue, progress);
                 } else {
-                    value = Utils.interpolateDiscrete(startValue, endValue, progress);
+                    value = InterpolationUtils.interpolateDiscrete(startValue, endValue, progress);
                 }
             } else {
                 value = endValue;

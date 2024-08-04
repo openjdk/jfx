@@ -31,7 +31,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import com.sun.javafx.UnmodifiableArrayList;
-import com.sun.javafx.util.Utils;
+import com.sun.javafx.util.InterpolationUtils;
 import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 
@@ -291,7 +291,7 @@ public final class Stop implements Interpolatable<Stop> {
         // intermediate value is equal to the start value or the end value, which allows us to use an
         // identity comparison in place of a value comparison to determine equality.
         Color color = this.color.interpolate(endValue.color, t);
-        double offset = Utils.interpolate(this.offset, endValue.offset, t);
+        double offset = InterpolationUtils.interpolate(this.offset, endValue.offset, t);
 
         if (offset == this.offset && color == this.color) {
             return this;

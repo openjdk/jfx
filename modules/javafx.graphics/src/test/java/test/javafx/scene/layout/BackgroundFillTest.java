@@ -25,7 +25,6 @@
 
 package test.javafx.scene.layout;
 
-import com.sun.javafx.scene.paint.PaintUtils;
 import javafx.geometry.Insets;
 import javafx.scene.image.Image;
 import javafx.scene.layout.BackgroundFill;
@@ -38,6 +37,7 @@ import java.io.ByteArrayInputStream;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import static com.sun.javafx.util.InterpolationUtils.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -137,12 +137,12 @@ public class BackgroundFillTest {
             BackgroundFill endValue = new BackgroundFill(Color.ORANGE, new CornerRadii(4), new Insets(6));
 
             BackgroundFill actual = startValue.interpolate(endValue, 0.5);
-            assertEquals(gradient.interpolate(PaintUtils.newSolidGradient(gradient, Color.ORANGE), 0.5), actual.getFill());
+            assertEquals(gradient.interpolate(newSolidGradient(gradient, Color.ORANGE), 0.5), actual.getFill());
             assertEquals(new CornerRadii(3), actual.getRadii());
             assertEquals(new Insets(4), actual.getInsets());
 
             actual = endValue.interpolate(startValue, 0.5);
-            assertEquals(PaintUtils.newSolidGradient(gradient, Color.ORANGE).interpolate(gradient, 0.5), actual.getFill());
+            assertEquals(newSolidGradient(gradient, Color.ORANGE).interpolate(gradient, 0.5), actual.getFill());
             assertEquals(new CornerRadii(3), actual.getRadii());
             assertEquals(new Insets(4), actual.getInsets());
         }
@@ -166,12 +166,12 @@ public class BackgroundFillTest {
             BackgroundFill endValue = new BackgroundFill(Color.ORANGE, new CornerRadii(4), new Insets(6));
 
             BackgroundFill actual = startValue.interpolate(endValue, 0.5);
-            assertEquals(gradient.interpolate(PaintUtils.newSolidGradient(gradient, Color.ORANGE), 0.5), actual.getFill());
+            assertEquals(gradient.interpolate(newSolidGradient(gradient, Color.ORANGE), 0.5), actual.getFill());
             assertEquals(new CornerRadii(3), actual.getRadii());
             assertEquals(new Insets(4), actual.getInsets());
 
             actual = endValue.interpolate(startValue, 0.5);
-            assertEquals(PaintUtils.newSolidGradient(gradient, Color.ORANGE).interpolate(gradient, 0.5), actual.getFill());
+            assertEquals(newSolidGradient(gradient, Color.ORANGE).interpolate(gradient, 0.5), actual.getFill());
             assertEquals(new CornerRadii(3), actual.getRadii());
             assertEquals(new Insets(4), actual.getInsets());
         }

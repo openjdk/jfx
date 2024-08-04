@@ -25,7 +25,7 @@
 
 package javafx.scene.layout;
 
-import com.sun.javafx.util.Utils;
+import com.sun.javafx.util.InterpolationUtils;
 import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 import java.util.Objects;
@@ -337,8 +337,8 @@ public final class BorderWidths implements Interpolatable<BorderWidths> {
 
     private static double interpolate(double start, double end, double t) {
         return start != AUTO && end != AUTO ?
-            Utils.interpolate(start, end, t) :
-            Utils.interpolateDiscrete(start, end, t);
+            InterpolationUtils.interpolate(start, end, t) :
+            InterpolationUtils.interpolateDiscrete(start, end, t);
     }
 
     private boolean isSame(double top, double right, double bottom, double left,

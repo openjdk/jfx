@@ -25,10 +25,10 @@
 
 package javafx.scene.paint;
 
-import com.sun.javafx.scene.paint.PaintUtils;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import com.sun.javafx.util.InterpolationUtils;
 import com.sun.javafx.util.Utils;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.NamedArg;
@@ -1972,7 +1972,7 @@ public final class Color extends Paint {
      */
     @Override
     public Paint interpolate(Paint endValue, double t) {
-        return PaintUtils.interpolate(this, endValue, t);
+        return InterpolationUtils.interpolatePaint(this, endValue, t);
     }
 
     /**

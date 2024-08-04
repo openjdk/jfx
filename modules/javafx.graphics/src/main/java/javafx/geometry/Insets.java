@@ -25,7 +25,7 @@
 
  package javafx.geometry;
 
- import com.sun.javafx.util.Utils;
+ import com.sun.javafx.util.InterpolationUtils;
  import javafx.animation.Interpolatable;
  import javafx.beans.NamedArg;
  import java.util.Objects;
@@ -129,10 +129,10 @@ public class Insets implements Interpolatable<Insets> {
         }
 
         return new Insets(
-            Utils.interpolate(top, endValue.top, t),
-            Utils.interpolate(right, endValue.right, t),
-            Utils.interpolate(bottom, endValue.bottom, t),
-            Utils.interpolate(left, endValue.left, t));
+            InterpolationUtils.interpolate(top, endValue.top, t),
+            InterpolationUtils.interpolate(right, endValue.right, t),
+            InterpolationUtils.interpolate(bottom, endValue.bottom, t),
+            InterpolationUtils.interpolate(left, endValue.left, t));
     }
 
     /**

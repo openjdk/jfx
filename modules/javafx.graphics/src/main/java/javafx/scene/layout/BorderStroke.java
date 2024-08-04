@@ -25,7 +25,7 @@
 
 package javafx.scene.layout;
 
-import com.sun.javafx.scene.paint.PaintUtils;
+import com.sun.javafx.util.InterpolationUtils;
 import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 import javafx.geometry.Insets;
@@ -412,10 +412,10 @@ public class BorderStroke implements Interpolatable<BorderStroke> {
         CornerRadii newRadii = this.radii.interpolate(endValue.radii, t);
         BorderWidths newWidths = this.widths.interpolate(endValue.widths, t);
         Insets newInsets = this.insets.interpolate(endValue.insets, t);
-        Paint newTopStroke = PaintUtils.interpolate(this.topStroke, endValue.topStroke, t);
-        Paint newRightStroke = PaintUtils.interpolate(this.rightStroke, endValue.rightStroke, t);
-        Paint newBottomStroke = PaintUtils.interpolate(this.bottomStroke, endValue.bottomStroke, t);
-        Paint newLeftStroke = PaintUtils.interpolate(this.leftStroke, endValue.leftStroke, t);
+        Paint newTopStroke = InterpolationUtils.interpolatePaint(this.topStroke, endValue.topStroke, t);
+        Paint newRightStroke = InterpolationUtils.interpolatePaint(this.rightStroke, endValue.rightStroke, t);
+        Paint newBottomStroke = InterpolationUtils.interpolatePaint(this.bottomStroke, endValue.bottomStroke, t);
+        Paint newLeftStroke = InterpolationUtils.interpolatePaint(this.leftStroke, endValue.leftStroke, t);
         BorderStrokeStyle newTopStyle, newRightStyle, newBottomStyle, newLeftStyle;
 
         if (t < 0.5) {

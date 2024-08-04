@@ -41,7 +41,6 @@ import java.util.List;
 import java.util.Objects;
 import com.sun.javafx.UnmodifiableArrayList;
 import com.sun.javafx.css.SubCssMetaData;
-import com.sun.javafx.util.Utils;
 import javafx.css.converter.InsetsConverter;
 import javafx.css.converter.PaintConverter;
 import javafx.css.converter.URLConverter;
@@ -51,6 +50,7 @@ import com.sun.javafx.scene.layout.region.CornerRadiiConverter;
 import com.sun.javafx.scene.layout.region.RepeatStruct;
 import com.sun.javafx.scene.layout.region.RepeatStructConverter;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.InterpolationUtils;
 
 /**
  * The Background of a {@link Region}. A Background is an immutable object which
@@ -659,10 +659,10 @@ public final class Background implements Interpolatable<Background>, ComponentTr
         }
 
         List<BackgroundFill> newFills = fills == endValue.fills ?
-            fills : Utils.interpolateListsPairwise(fills, endValue.fills, t);
+            fills : InterpolationUtils.interpolateListsPairwise(fills, endValue.fills, t);
 
         List<BackgroundImage> newImages = images == endValue.images ?
-            images : Utils.interpolateListsPairwise(images, endValue.images, t);
+            images : InterpolationUtils.interpolateListsPairwise(images, endValue.images, t);
 
         if (newFills == fills && newImages == images) {
             return this;

@@ -25,7 +25,7 @@
 
 package javafx.scene.layout;
 
-import com.sun.javafx.util.Utils;
+import com.sun.javafx.util.InterpolationUtils;
 import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 import javafx.geometry.Side;
@@ -217,7 +217,7 @@ public class BackgroundPosition implements Interpolatable<BackgroundPosition> {
 
         if (this.horizontalSide == endValue.horizontalSide
                 && this.horizontalAsPercentage == endValue.horizontalAsPercentage) {
-            newHorizontalPosition = Utils.interpolate(this.horizontalPosition, endValue.horizontalPosition, t);
+            newHorizontalPosition = InterpolationUtils.interpolate(this.horizontalPosition, endValue.horizontalPosition, t);
             newHorizontalAsPercentage = this.horizontalAsPercentage;
             newHorizontalSide = this.horizontalSide;
         } else if (t < 0.5) {
@@ -232,7 +232,7 @@ public class BackgroundPosition implements Interpolatable<BackgroundPosition> {
 
         if (this.verticalSide == endValue.verticalSide
                 && this.verticalAsPercentage == endValue.verticalAsPercentage) {
-            newVerticalPosition = Utils.interpolate(this.verticalPosition, endValue.verticalPosition, t);
+            newVerticalPosition = InterpolationUtils.interpolate(this.verticalPosition, endValue.verticalPosition, t);
             newVerticalAsPercentage = this.verticalAsPercentage;
             newVerticalSide = this.verticalSide;
         } else if (t < 0.5) {

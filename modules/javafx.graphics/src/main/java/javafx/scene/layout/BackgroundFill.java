@@ -25,7 +25,7 @@
 
 package javafx.scene.layout;
 
-import com.sun.javafx.scene.paint.PaintUtils;
+import com.sun.javafx.util.InterpolationUtils;
 import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 import javafx.geometry.Insets;
@@ -138,7 +138,7 @@ public final class BackgroundFill implements Interpolatable<BackgroundFill> {
         // equality.
         CornerRadii newRadii = radii.interpolate(endValue.radii, t);
         Insets newInsets = insets.interpolate(endValue.insets, t);
-        Paint newFill = PaintUtils.interpolate(fill, endValue.fill, t);
+        Paint newFill = InterpolationUtils.interpolatePaint(fill, endValue.fill, t);
 
         if (isSame(newFill, newRadii, newInsets)) {
             return this;

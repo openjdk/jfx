@@ -28,9 +28,8 @@ package javafx.scene.paint;
 import java.util.List;
 import java.util.Objects;
 import com.sun.javafx.scene.paint.GradientUtils;
-import com.sun.javafx.scene.paint.PaintUtils;
 import com.sun.javafx.tk.Toolkit;
-import com.sun.javafx.util.Utils;
+import com.sun.javafx.util.InterpolationUtils;
 import javafx.beans.NamedArg;
 
 /**
@@ -355,10 +354,10 @@ public final class LinearGradient extends Paint {
         boolean newProportional;
 
         if (this.proportional == endValue.proportional) {
-            newStartX = Utils.interpolate(this.startX, endValue.startX, t);
-            newStartY = Utils.interpolate(this.startY, endValue.startY, t);
-            newEndX = Utils.interpolate(this.endX, endValue.endX, t);
-            newEndY = Utils.interpolate(this.endY, endValue.endY, t);
+            newStartX = InterpolationUtils.interpolate(this.startX, endValue.startX, t);
+            newStartY = InterpolationUtils.interpolate(this.startY, endValue.startY, t);
+            newEndX = InterpolationUtils.interpolate(this.endX, endValue.endX, t);
+            newEndY = InterpolationUtils.interpolate(this.endY, endValue.endY, t);
             newProportional = this.proportional;
         } else if (t < 0.5) {
             newStartX = this.startX;
@@ -374,7 +373,7 @@ public final class LinearGradient extends Paint {
             newProportional = endValue.proportional;
         }
 
-        CycleMethod newCycleMethod = Utils.interpolateDiscrete(this.cycleMethod, endValue.cycleMethod, t);
+        CycleMethod newCycleMethod = InterpolationUtils.interpolateDiscrete(this.cycleMethod, endValue.cycleMethod, t);
 
         // Optimization: if both lists are equal, we don't compute a new intermediate list.
         List<Stop> newStops = this.stops.equals(endValue.stops) ?
@@ -403,7 +402,7 @@ public final class LinearGradient extends Paint {
      */
     @Override
     public Paint interpolate(Paint endValue, double t) {
-        return PaintUtils.interpolate(this, endValue, t);
+        return InterpolationUtils.interpolatePaint(this, endValue, t);
     }
 
     private boolean isSame(double startX, double startY, double endX, double endY,

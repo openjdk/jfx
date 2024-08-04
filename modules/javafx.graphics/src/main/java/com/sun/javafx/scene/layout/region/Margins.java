@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.layout.region;
 
+import com.sun.javafx.util.InterpolationUtils;
 import javafx.animation.Interpolatable;
 import javafx.scene.text.Font;
 import javafx.css.Size;
@@ -33,7 +34,6 @@ import javafx.css.ParsedValue;
 import javafx.css.StyleConverter;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
-import com.sun.javafx.util.Utils;
 import java.util.Objects;
 
 /**
@@ -85,14 +85,14 @@ public final class Margins implements Interpolatable<Margins> {
         }
 
         if (proportional != endValue.proportional) {
-            return Utils.interpolateDiscrete(this, endValue, t);
+            return InterpolationUtils.interpolateDiscrete(this, endValue, t);
         }
 
         return new Margins(
-            Utils.interpolate(top, endValue.top, t),
-            Utils.interpolate(right, endValue.right, t),
-            Utils.interpolate(bottom, endValue.bottom, t),
-            Utils.interpolate(left, endValue.left, t),
+            InterpolationUtils.interpolate(top, endValue.top, t),
+            InterpolationUtils.interpolate(right, endValue.right, t),
+            InterpolationUtils.interpolate(bottom, endValue.bottom, t),
+            InterpolationUtils.interpolate(left, endValue.left, t),
             proportional);
     }
 

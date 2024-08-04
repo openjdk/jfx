@@ -25,12 +25,11 @@
 
 package javafx.scene.paint;
 
-import com.sun.javafx.scene.paint.PaintUtils;
-import com.sun.javafx.util.Utils;
 import javafx.beans.NamedArg;
 import javafx.scene.image.Image;
 import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.InterpolationUtils;
 import java.util.Objects;
 
 /**
@@ -310,15 +309,15 @@ public final class ImagePattern extends Paint {
         }
 
         if (proportional != endValue.proportional) {
-            return Utils.interpolateDiscrete(this, endValue, t);
+            return InterpolationUtils.interpolateDiscrete(this, endValue, t);
         }
 
         return new ImagePattern(
-            Utils.interpolateDiscrete(image, endValue.image, t),
-            Utils.interpolate(x, endValue.x, t),
-            Utils.interpolate(y, endValue.y, t),
-            Utils.interpolate(width, endValue.width, t),
-            Utils.interpolate(height, endValue.height, t),
+            InterpolationUtils.interpolateDiscrete(image, endValue.image, t),
+            InterpolationUtils.interpolate(x, endValue.x, t),
+            InterpolationUtils.interpolate(y, endValue.y, t),
+            InterpolationUtils.interpolate(width, endValue.width, t),
+            InterpolationUtils.interpolate(height, endValue.height, t),
             proportional);
     }
 
@@ -330,7 +329,7 @@ public final class ImagePattern extends Paint {
      */
     @Override
     public Paint interpolate(Paint endValue, double t) {
-        return PaintUtils.interpolate(this, endValue, t);
+        return InterpolationUtils.interpolatePaint(this, endValue, t);
     }
 
     @Override
