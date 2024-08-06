@@ -61,6 +61,7 @@ static JSC_DECLARE_HOST_FUNCTION(mathProtoFuncSinh);
 static JSC_DECLARE_HOST_FUNCTION(mathProtoFuncSqrt);
 static JSC_DECLARE_HOST_FUNCTION(mathProtoFuncTan);
 static JSC_DECLARE_HOST_FUNCTION(mathProtoFuncTanh);
+static JSC_DECLARE_HOST_FUNCTION(mathProtoFuncTrunc);
 static JSC_DECLARE_HOST_FUNCTION(mathProtoFuncIMul);
 
 const ClassInfo MathObject::s_info = { "Math"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(MathObject) };
@@ -190,13 +191,12 @@ JSC_DEFINE_HOST_FUNCTION(mathProtoFuncHypot, (JSGlobalObject* globalObject, Call
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     unsigned argsCount = callFrame->argumentCount();
-    Vector<double, 8> args;
-    args.reserveInitialCapacity(argsCount);
-    for (unsigned i = 0; i < argsCount; ++i) {
+    Vector<double, 8> args(argsCount, [&](size_t i) -> std::optional<double> {
         double argument = callFrame->uncheckedArgument(i).toNumber(globalObject);
+        RETURN_IF_EXCEPTION(scope, std::nullopt);
+        return argument;
+    });
         RETURN_IF_EXCEPTION(scope, { });
-        args.uncheckedAppend(argument);
-    }
 
     double max = 0;
     for (double argument : args) {

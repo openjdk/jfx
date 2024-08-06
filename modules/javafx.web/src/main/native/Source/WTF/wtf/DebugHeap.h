@@ -37,6 +37,9 @@
 
 namespace WTF {
 
+#define DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Type) DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER_AND_EXPORT(Type, WTF_EXPORT_PRIVATE)
+#define DECLARE_COMPACT_ALLOCATOR_WITH_HEAP_IDENTIFIER(Type) DECLARE_COMPACT_ALLOCATOR_WITH_HEAP_IDENTIFIER_AND_EXPORT(Type, WTF_EXPORT_PRIVATE)
+
 #if ENABLE(MALLOC_HEAP_BREAKDOWN)
 
 class DebugHeap {
@@ -55,9 +58,9 @@ private:
 #endif
 };
 
-#define DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Type) \
+#define DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER_AND_EXPORT(Type, Export) \
     struct Type##Malloc { \
-        static WTF_EXPORT_PRIVATE WTF::DebugHeap& debugHeap(); \
+        static Export WTF::DebugHeap& debugHeap(); \
 \
         static void* malloc(size_t size) { return debugHeap().malloc(size); } \
 \
@@ -86,12 +89,24 @@ private:
     } \
     struct MakeDebugHeapMallocedImplMacroSemicolonifier##Type { }
 
+#define DECLARE_COMPACT_ALLOCATOR_WITH_HEAP_IDENTIFIER_AND_EXPORT(Type, Export) \
+    DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER_AND_EXPORT(Type, Export)
+
+#define DEFINE_COMPACT_ALLOCATOR_WITH_HEAP_IDENTIFIER(Type) \
+    DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Type)
+
 #else // ENABLE(MALLOC_HEAP_BREAKDOWN)
 
-#define DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Type) \
+#define DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER_AND_EXPORT(Type, Export) \
     using Type##Malloc = FastMalloc
 
 #define DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Type) \
+    struct MakeDebugHeapMallocedImplMacroSemicolonifier##Type { }
+
+#define DECLARE_COMPACT_ALLOCATOR_WITH_HEAP_IDENTIFIER_AND_EXPORT(Type, Export) \
+    using Type##Malloc = FastCompactMalloc
+
+#define DEFINE_COMPACT_ALLOCATOR_WITH_HEAP_IDENTIFIER(Type) \
     struct MakeDebugHeapMallocedImplMacroSemicolonifier##Type { }
 
 #endif

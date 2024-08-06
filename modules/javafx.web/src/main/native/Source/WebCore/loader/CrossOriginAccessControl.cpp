@@ -123,7 +123,7 @@ ResourceRequest createAccessControlPreflightRequest(const ResourceRequest& reque
     }
 
     if (includeFetchMetadata) {
-        auto requestOrigin = SecurityOrigin::create(request.url());
+        Ref requestOrigin = SecurityOrigin::create(request.url());
         if (requestOrigin->isPotentiallyTrustworthy()) {
             preflightRequest.setHTTPHeaderField(HTTPHeaderName::SecFetchMode, "cors"_s);
             preflightRequest.setHTTPHeaderField(HTTPHeaderName::SecFetchDest, "empty"_s);
@@ -156,7 +156,7 @@ CachedResourceRequest createPotentialAccessControlRequest(ResourceRequest&& requ
         }
     }
 
-    if (auto* documentLoader = document.loader())
+    if (RefPtr documentLoader = document.loader())
         request.setIsAppInitiated(documentLoader->lastNavigationWasAppInitiated());
 
     if (crossOriginAttribute.isNull()) {
@@ -199,18 +199,20 @@ String validateCrossOriginRedirectionURL(const URL& redirectURL)
 OptionSet<HTTPHeadersToKeepFromCleaning> httpHeadersToKeepFromCleaning(const HTTPHeaderMap& headers)
 {
     OptionSet<HTTPHeadersToKeepFromCleaning> headersToKeep;
-    if (headers.contains(HTTPHeaderName::ContentType))
-        headersToKeep.add(HTTPHeadersToKeepFromCleaning::ContentType);
-    if (headers.contains(HTTPHeaderName::Referer))
-        headersToKeep.add(HTTPHeadersToKeepFromCleaning::Referer);
-    if (headers.contains(HTTPHeaderName::Origin))
-        headersToKeep.add(HTTPHeadersToKeepFromCleaning::Origin);
-    if (headers.contains(HTTPHeaderName::UserAgent))
-        headersToKeep.add(HTTPHeadersToKeepFromCleaning::UserAgent);
     if (headers.contains(HTTPHeaderName::AcceptEncoding))
         headersToKeep.add(HTTPHeadersToKeepFromCleaning::AcceptEncoding);
     if (headers.contains(HTTPHeaderName::CacheControl))
         headersToKeep.add(HTTPHeadersToKeepFromCleaning::CacheControl);
+    if (headers.contains(HTTPHeaderName::ContentType))
+        headersToKeep.add(HTTPHeadersToKeepFromCleaning::ContentType);
+    if (headers.contains(HTTPHeaderName::Origin))
+        headersToKeep.add(HTTPHeadersToKeepFromCleaning::Origin);
+    if (headers.contains(HTTPHeaderName::Pragma))
+        headersToKeep.add(HTTPHeadersToKeepFromCleaning::Pragma);
+    if (headers.contains(HTTPHeaderName::Referer))
+        headersToKeep.add(HTTPHeadersToKeepFromCleaning::Referer);
+    if (headers.contains(HTTPHeaderName::UserAgent))
+        headersToKeep.add(HTTPHeadersToKeepFromCleaning::UserAgent);
     return headersToKeep;
 }
 
@@ -222,16 +224,20 @@ void cleanHTTPRequestHeadersForAccessControl(ResourceRequest& request, OptionSet
         if (!contentType.isNull() && !isCrossOriginSafeRequestHeader(HTTPHeaderName::ContentType, contentType))
             request.clearHTTPContentType();
     }
-    if (!headersToKeep.contains(HTTPHeadersToKeepFromCleaning::Referer))
-        request.clearHTTPReferrer();
-    if (!headersToKeep.contains(HTTPHeadersToKeepFromCleaning::Origin))
-        request.clearHTTPOrigin();
-    if (!headersToKeep.contains(HTTPHeadersToKeepFromCleaning::UserAgent))
-        request.clearHTTPUserAgent();
+
     if (!headersToKeep.contains(HTTPHeadersToKeepFromCleaning::AcceptEncoding))
         request.clearHTTPAcceptEncoding();
     if (!headersToKeep.contains(HTTPHeadersToKeepFromCleaning::CacheControl))
         request.removeHTTPHeaderField(HTTPHeaderName::CacheControl);
+    if (!headersToKeep.contains(HTTPHeadersToKeepFromCleaning::Origin))
+        request.clearHTTPOrigin();
+    if (!headersToKeep.contains(HTTPHeadersToKeepFromCleaning::Pragma))
+        request.removeHTTPHeaderField(HTTPHeaderName::Pragma);
+    if (!headersToKeep.contains(HTTPHeadersToKeepFromCleaning::Referer))
+        request.clearHTTPReferrer();
+    if (!headersToKeep.contains(HTTPHeadersToKeepFromCleaning::UserAgent))
+        request.clearHTTPUserAgent();
+
     request.removeHTTPHeaderField(HTTPHeaderName::SecFetchDest);
     request.removeHTTPHeaderField(HTTPHeaderName::SecFetchMode);
     request.removeHTTPHeaderField(HTTPHeaderName::SecFetchSite);

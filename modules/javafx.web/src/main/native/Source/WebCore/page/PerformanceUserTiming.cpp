@@ -100,7 +100,8 @@ ExceptionOr<Ref<PerformanceMark>> PerformanceUserTiming::mark(JSC::JSGlobalObjec
     if (markOptions && markOptions->startTime)
         timestamp = m_performance.monotonicTimeFromRelativeTime(*markOptions->startTime);
 
-    InspectorInstrumentation::performanceMark(context.get(), markName, timestamp, is<Document>(context) ? downcast<Document>(context).frame() : nullptr);
+    RefPtr document = dynamicDowncast<Document>(context);
+    InspectorInstrumentation::performanceMark(context.get(), markName, timestamp, document ? document->protectedFrame().get() : nullptr);
 
     auto mark = PerformanceMark::create(globalObject, context, markName, WTFMove(markOptions));
     if (mark.hasException())
@@ -126,7 +127,7 @@ ExceptionOr<double> PerformanceUserTiming::convertMarkToTimestamp(const String& 
 {
     if (!isMainThread()) {
         if (restrictedMarkFunctions.contains(mark))
-            return Exception { TypeError };
+            return Exception { ExceptionCode::TypeError };
     } else {
         if (auto function = restrictedMarkFunctions.tryGet(mark)) {
             if (*function == &PerformanceTiming::navigationStart)
@@ -138,7 +139,7 @@ ExceptionOr<double> PerformanceUserTiming::convertMarkToTimestamp(const String& 
             auto startTime = timing->navigationStart();
             auto endTime = ((*timing).*(*function))();
             if (!endTime)
-                return Exception { InvalidAccessError };
+                return Exception { ExceptionCode::InvalidAccessError };
             return endTime - startTime;
         }
     }
@@ -147,13 +148,13 @@ ExceptionOr<double> PerformanceUserTiming::convertMarkToTimestamp(const String& 
     if (iterator != m_marksMap.end())
         return iterator->value.last()->startTime();
 
-    return Exception { SyntaxError, makeString("No mark named '", mark, "' exists") };
+    return Exception { ExceptionCode::SyntaxError, makeString("No mark named '", mark, "' exists") };
 }
 
 ExceptionOr<double> PerformanceUserTiming::convertMarkToTimestamp(double mark) const
 {
     if (mark < 0)
-        return Exception { TypeError };
+        return Exception { ExceptionCode::TypeError };
     return mark;
 }
 
@@ -251,11 +252,11 @@ ExceptionOr<Ref<PerformanceMeasure>> PerformanceUserTiming::measure(JSC::JSGloba
             [&] (const PerformanceMeasureOptions& measureOptions) -> ExceptionOr<Ref<PerformanceMeasure>> {
                 if (isNonEmptyDictionary(measureOptions)) {
                     if (!endMark.isNull())
-                        return Exception { TypeError };
+                        return Exception { ExceptionCode::TypeError };
                     if (!measureOptions.start && !measureOptions.end)
-                        return Exception { TypeError };
+                        return Exception { ExceptionCode::TypeError };
                     if (measureOptions.start && measureOptions.duration && measureOptions.end)
-                        return Exception { TypeError };
+                        return Exception { ExceptionCode::TypeError };
                 }
 
                 return measure(globalObject, measureName, measureOptions);

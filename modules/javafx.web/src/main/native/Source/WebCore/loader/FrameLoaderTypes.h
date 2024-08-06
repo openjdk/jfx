@@ -73,9 +73,6 @@ enum class IsMetaRefresh : bool { No, Yes };
 enum class WillContinueLoading : bool { No, Yes };
 enum class WillInternallyHandleFailure : bool { No, Yes };
 
-struct PolicyCheckIdentifierType;
-using PolicyCheckIdentifier = ProcessQualified<ObjectIdentifier<PolicyCheckIdentifierType>>;
-
 enum class ShouldContinuePolicyCheck : bool { No, Yes };
 
 enum class NewFrameOpenerPolicy : uint8_t {
@@ -142,6 +139,7 @@ enum class LockHistory : bool { No, Yes };
 enum class LockBackForwardList : bool { No, Yes };
 enum class AllowNavigationToInvalidURL : bool { No, Yes };
 enum class HasInsecureContent : bool { No, Yes };
+enum class LoadWillContinueInAnotherProcess : bool { No, Yes };
 
 // FIXME: This should move to somewhere else. It no longer is related to frame loading.
 struct SystemPreviewInfo {
@@ -159,6 +157,12 @@ enum class LoadCompletionType : bool {
 enum class AllowsContentJavaScript : bool {
     No,
     Yes,
+};
+
+enum class WindowProxyProperty : uint8_t {
+    Other = 1 << 0,
+    Closed = 1 << 1,
+    PostMessage = 1 << 2,
 };
 
 } // namespace WebCore

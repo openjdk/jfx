@@ -49,9 +49,7 @@ enum class AnimatedProperty : uint8_t {
     Opacity,
     BackgroundColor,
     Filter,
-#if ENABLE(FILTERS_LEVEL_2)
     WebkitBackdropFilter,
-#endif
 };
 
 enum class GraphicsLayerPaintingPhase {
@@ -133,6 +131,8 @@ public:
     virtual TransformationMatrix transformMatrixForProperty(AnimatedProperty) const { return { }; }
 
     virtual bool layerContainsBitmapOnly(const GraphicsLayer*) const { return false; }
+
+    virtual bool layerNeedsPlatformContext(const GraphicsLayer*) const { return false; }
 
 #ifndef NDEBUG
     // RenderLayerBacking overrides this to verify that it is not

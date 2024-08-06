@@ -421,7 +421,7 @@ ExceptionOr<void> AudioBufferSourceNode::setBufferForBindings(RefPtr<AudioBuffer
     Locker locker { m_processLock };
 
     if (buffer && m_wasBufferSet)
-        return Exception { InvalidStateError, "The buffer was already set"_s };
+        return Exception { ExceptionCode::InvalidStateError, "The buffer was already set"_s };
 
     if (buffer) {
         m_wasBufferSet = true;
@@ -486,16 +486,16 @@ ExceptionOr<void> AudioBufferSourceNode::startPlaying(double when, double grainO
     ALWAYS_LOG(LOGIDENTIFIER, "when = ", when, ", offset = ", grainOffset, ", duration = ", grainDuration.value_or(0));
 
     if (m_playbackState != UNSCHEDULED_STATE)
-        return Exception { InvalidStateError, "Cannot call start more than once."_s };
+        return Exception { ExceptionCode::InvalidStateError, "Cannot call start more than once."_s };
 
     if (!std::isfinite(when) || (when < 0))
-        return Exception { RangeError, "when value should be positive"_s };
+        return Exception { ExceptionCode::RangeError, "when value should be positive"_s };
 
     if (!std::isfinite(grainOffset) || (grainOffset < 0))
-        return Exception { RangeError, "offset value should be positive"_s };
+        return Exception { ExceptionCode::RangeError, "offset value should be positive"_s };
 
     if (grainDuration && (!std::isfinite(*grainDuration) || (*grainDuration < 0)))
-        return Exception { RangeError, "duration value should be positive"_s };
+        return Exception { ExceptionCode::RangeError, "duration value should be positive"_s };
 
     context().sourceNodeWillBeginPlayback(*this);
 
@@ -588,6 +588,22 @@ bool AudioBufferSourceNode::propagatesSilence() const
     }
     Locker locker { AdoptLock, m_processLock };
     return !m_buffer;
+}
+
+float AudioBufferSourceNode::noiseInjectionMultiplier() const
+{
+    Locker locker { m_processLock };
+
+    if (!m_buffer)
+        return 0;
+
+    auto multiplier = m_buffer->noiseInjectionMultiplier();
+    if (m_isLooping && m_loopStart < m_loopEnd) {
+        static constexpr auto noiseMultiplierPerLoop = 0.005;
+        auto loopCount = m_buffer->duration() / (m_loopEnd - m_loopStart);
+        multiplier *= std::max(1.0, noiseMultiplierPerLoop * loopCount);
+    }
+    return multiplier;
 }
 
 } // namespace WebCore

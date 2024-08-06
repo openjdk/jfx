@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc.  All rights reserved.
+ * Copyright (C) 2022, 2023 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -50,8 +50,7 @@ bool CSSStyleSheetObservableArray::setValueAt(JSC::JSGlobalObject* lexicalGlobal
     auto& vm = lexicalGlobalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (index > m_sheets.size())
-        return false;
+    RELEASE_ASSERT(index <= m_sheets.size());
 
     RefPtr sheet = convert<IDLInterface<CSSStyleSheet>>(*lexicalGlobalObject, value);
     if (!sheet)
@@ -71,15 +70,17 @@ bool CSSStyleSheetObservableArray::setValueAt(JSC::JSGlobalObject* lexicalGlobal
     return true;
 }
 
-bool CSSStyleSheetObservableArray::deleteValueAt(JSC::JSGlobalObject*, unsigned index)
+void CSSStyleSheetObservableArray::removeLast()
 {
-    if (index >= m_sheets.size())
-        return false;
-
-    auto sheet = std::exchange(m_sheets[index], nullptr);
-    m_sheets.remove(index);
+    RELEASE_ASSERT(!m_sheets.isEmpty());
+    auto sheet = m_sheets.takeLast();
     willRemoveSheet(*sheet);
-    return true;
+}
+
+void CSSStyleSheetObservableArray::shrinkTo(unsigned length)
+{
+    RELEASE_ASSERT(length <= m_sheets.size());
+    m_sheets.shrink(length);
 }
 
 JSC::JSValue CSSStyleSheetObservableArray::valueAt(JSC::JSGlobalObject* lexicalGlobalObject, unsigned index) const
@@ -108,10 +109,10 @@ ExceptionOr<void> CSSStyleSheetObservableArray::setSheets(Vector<RefPtr<CSSStyle
 std::optional<Exception> CSSStyleSheetObservableArray::shouldThrowWhenAddingSheet(const CSSStyleSheet& sheet) const
 {
     if (!sheet.wasConstructedByJS())
-        return Exception { NotAllowedError, "Sheet needs to be constructed by JavaScript"_s };
+        return Exception { ExceptionCode::NotAllowedError, "Sheet needs to be constructed by JavaScript"_s };
     auto* treeScope = this->treeScope();
     if (!treeScope || sheet.constructorDocument() != &treeScope->documentScope())
-        return Exception { NotAllowedError, "Sheet constructor document doesn't match"_s };
+        return Exception { ExceptionCode::NotAllowedError, "Sheet constructor document doesn't match"_s };
     return std::nullopt;
 }
 

@@ -27,15 +27,17 @@
 #pragma once
 
 #include <array>
+#include <wtf/DebugHeap.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
-DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StringSplitCache);
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER_AND_EXPORT(StringSplitCache, WTF_INTERNAL);
 
 class JSImmutableButterfly;
 
 class StringSplitCache {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(StringSplitCache);
     WTF_MAKE_NONCOPYABLE(StringSplitCache);
 public:
     static constexpr unsigned cacheSize = 64;

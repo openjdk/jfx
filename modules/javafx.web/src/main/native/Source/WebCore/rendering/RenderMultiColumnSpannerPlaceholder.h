@@ -46,14 +46,13 @@ private:
     template<class T, class... Args> friend RenderPtr<T> createRenderer(Args&&...);
 
     RenderMultiColumnSpannerPlaceholder(RenderMultiColumnFlow&, RenderBox& spanner, RenderStyle&&);
-    bool isRenderMultiColumnSpannerPlaceholder() const override { return true; }
 
     bool canHaveChildren() const override { return false; }
     void paint(PaintInfo&, const LayoutPoint&) override { }
     ASCIILiteral renderName() const override;
 
-    WeakPtr<RenderBox> m_spanner;
-    WeakPtr<RenderMultiColumnFlow> m_fragmentedFlow;
+    SingleThreadWeakPtr<RenderBox> m_spanner;
+    SingleThreadWeakPtr<RenderMultiColumnFlow> m_fragmentedFlow;
 };
 
 } // namespace WebCore

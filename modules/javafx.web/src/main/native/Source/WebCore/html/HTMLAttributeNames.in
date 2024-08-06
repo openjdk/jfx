@@ -111,6 +111,8 @@ contenteditable
 controls
 coords
 crossorigin
+cue
+cuebackground
 data
 datetime
 declare
@@ -161,6 +163,8 @@ inert
 inputmode
 integrity
 interactive
+invokeaction
+invoketarget
 is
 ismap
 keytype
@@ -223,6 +227,7 @@ oncanplaythrough
 onchange
 onclick
 onclose
+oncontentvisibilityautostatechange
 oncontextmenu
 oncopy
 oncuechange
@@ -321,6 +326,7 @@ ontransitioncancel
 ontransitionend
 ontransitionrun
 ontransitionstart
+onuncapturederror
 onunhandledrejection
 onunload
 onvolumechange
@@ -359,7 +365,6 @@ popovertargetaction
 poster
 preload
 progress
-pseudo
 readonly
 referrerpolicy
 rel
@@ -398,6 +403,7 @@ step
 style
 subtitle
 summary
+switch
 tabindex
 target
 text
@@ -408,6 +414,7 @@ truespeed
 type
 uiactions
 usemap
+useragentpart
 valign
 value
 valuetype

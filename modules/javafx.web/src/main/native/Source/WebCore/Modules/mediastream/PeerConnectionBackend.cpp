@@ -49,6 +49,7 @@
 #include "RTCSessionDescriptionInit.h"
 #include "RTCTrackEvent.h"
 #include "WebRTCProvider.h"
+#include <wtf/EnumTraits.h>
 #include <wtf/UUID.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenateNumbers.h>
@@ -112,7 +113,7 @@ PeerConnectionBackend::PeerConnectionBackend(RTCPeerConnection& peerConnection)
 #endif
 {
 #if USE(LIBWEBRTC)
-    auto* document = peerConnection.document();
+    RefPtr document = peerConnection.document();
     if (auto* page = document ? document->page() : nullptr)
         m_shouldFilterICECandidates = page->webRTCProvider().isSupportingMDNS();
 #endif
@@ -500,12 +501,12 @@ void PeerConnectionBackend::addIceCandidate(RTCIceCandidate* iceCandidate, Funct
             return;
 
         auto& peerConnection = weakThis->m_peerConnection;
-        peerConnection.queueTaskKeepingObjectAlive(peerConnection, TaskSource::Networking, [&peerConnection, callback = WTFMove(callback), result = WTFMove(result)]() mutable {
+        peerConnection.queueTaskKeepingObjectAlive(peerConnection, TaskSource::Networking, [&peerConnection, callback = WTFMove(callback), result = std::forward<decltype(result)>(result)]() mutable {
             if (peerConnection.isClosed())
                 return;
 
             if (result.hasException()) {
-                RELEASE_LOG_ERROR(WebRTC, "Adding ice candidate failed %d", result.exception().code());
+                RELEASE_LOG_ERROR(WebRTC, "Adding ice candidate failed %hhu", enumToUnderlyingType(result.exception().code()));
                 callback(result.releaseException());
                 return;
             }
@@ -601,17 +602,17 @@ void PeerConnectionBackend::markAsNeedingNegotiation(uint32_t eventId)
 
 ExceptionOr<Ref<RTCRtpSender>> PeerConnectionBackend::addTrack(MediaStreamTrack&, FixedVector<String>&&)
 {
-    return Exception { NotSupportedError, "Not implemented"_s };
+    return Exception { ExceptionCode::NotSupportedError, "Not implemented"_s };
 }
 
 ExceptionOr<Ref<RTCRtpTransceiver>> PeerConnectionBackend::addTransceiver(const String&, const RTCRtpTransceiverInit&)
 {
-    return Exception { NotSupportedError, "Not implemented"_s };
+    return Exception { ExceptionCode::NotSupportedError, "Not implemented"_s };
 }
 
 ExceptionOr<Ref<RTCRtpTransceiver>> PeerConnectionBackend::addTransceiver(Ref<MediaStreamTrack>&&, const RTCRtpTransceiverInit&)
 {
-    return Exception { NotSupportedError, "Not implemented"_s };
+    return Exception { ExceptionCode::NotSupportedError, "Not implemented"_s };
 }
 
 void PeerConnectionBackend::generateCertificate(Document& document, const CertificateInformation& info, DOMPromiseDeferred<IDLInterface<RTCCertificate>>&& promise)
@@ -619,7 +620,7 @@ void PeerConnectionBackend::generateCertificate(Document& document, const Certif
 #if USE(LIBWEBRTC)
     auto* page = document.page();
     if (!page) {
-        promise.reject(InvalidStateError);
+        promise.reject(ExceptionCode::InvalidStateError);
         return;
     }
 
@@ -632,11 +633,11 @@ void PeerConnectionBackend::generateCertificate(Document& document, const Certif
     if (certificate.has_value())
         promise.resolve(*certificate);
     else
-        promise.reject(NotSupportedError);
+        promise.reject(ExceptionCode::NotSupportedError);
 #else
     UNUSED_PARAM(document);
     UNUSED_PARAM(info);
-    promise.reject(NotSupportedError);
+    promise.reject(ExceptionCode::NotSupportedError);
 #endif
 }
 
