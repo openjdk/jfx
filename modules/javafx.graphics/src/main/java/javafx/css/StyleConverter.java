@@ -55,6 +55,12 @@ import com.sun.javafx.logging.PlatformLogger.Level;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -87,16 +93,25 @@ import java.util.WeakHashMap;
 public class StyleConverter<F, T> {
 
     /**
-     * Marker interface for style converters that implement the {@link #convertBack(Object)} method.
+     * Indicates whether the style converter implements the {@link StyleConverter#convert(Map)}
+     * and {@link #convertBack(Object)} methods to enable object deconstruction and reconstruction.
+     * The following invariant must be satisfied: {@code convert(convertBack(value)).equals(value)}
      *
      * @since 24
      */
-    public interface SupportsDeconstruction {}
+    @Documented
+    @Inherited
+    @Target(ElementType.TYPE)
+    @Retention(RetentionPolicy.RUNTIME)
+    public @interface SupportsReconstruction {}
+
+    final boolean supportsReconstruction;
 
     /**
      * Creates a {@code StyleConverter}.
      */
     public StyleConverter() {
+        supportsReconstruction = getClass().getAnnotation(SupportsReconstruction.class) != null;
     }
 
     /**

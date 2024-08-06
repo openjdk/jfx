@@ -88,7 +88,7 @@ public abstract class StyleableObjectProperty<T>
         CssMetaData<? extends Styleable, T> metadata = getCssMetaData();
         StyleConverter<?, T> converter = metadata.getConverter();
 
-        if (converter instanceof StyleConverter.SupportsDeconstruction) {
+        if (converter.supportsReconstruction) {
             applyComponentTransition(oldValue, newValue, metadata, converter);
         } else if (newValue instanceof Interpolatable<?> && newValue.getClass().isInstance(oldValue)) {
             // 'oldValue' and 'newValue' could be objects that both implement Interpolatable, but with
