@@ -483,8 +483,8 @@ public abstract class Application {
         GetApplication()._invokeLater(runnable);
     }
 
-    protected abstract Object _enterNestedEventLoop();
-    protected abstract void _leaveNestedEventLoop(Object retValue);
+    protected abstract void _enterNestedEventLoop();
+    protected abstract void _leaveNestedEventLoop();
 
     private static int nestedEventLoopCounter = 0;
 
@@ -494,7 +494,7 @@ public abstract class Application {
      * Calling this method temporarily blocks processing of the current event,
      * and starts a nested event loop to handle other native events.  To
      * proceed with the blocked execution path, the application should call the
-     * {@link #leaveNestedEventLoop(Object)} method.
+     * {@link #leaveNestedEventLoop()} method.
      *
      * Note that this method may only be invoked on the main (event handling)
      * thread.
@@ -502,15 +502,14 @@ public abstract class Application {
      * An application may enter several nested loops recursively. There's no
      * limit of recursion other than that imposed by the native stack size.
      *
-     * @return an object passed to the leaveNestedEventLoop() method
      * @throws RuntimeException if the current thread is not the main thread
      */
-    static Object enterNestedEventLoop() {
+    static void enterNestedEventLoop() {
         checkEventThread();
 
         nestedEventLoopCounter++;
         try {
-            return GetApplication()._enterNestedEventLoop();
+            GetApplication()._enterNestedEventLoop();
         } finally {
             nestedEventLoopCounter--;
         }
@@ -532,14 +531,14 @@ public abstract class Application {
      * @throws IllegalStateException if the application hasn't started a nested
      *                               event loop
      */
-    static void leaveNestedEventLoop(Object retValue) {
+    static void leaveNestedEventLoop() {
         checkEventThread();
 
         if (nestedEventLoopCounter == 0) {
             throw new IllegalStateException("Not in a nested event loop");
         }
 
-        GetApplication()._leaveNestedEventLoop(retValue);
+        GetApplication()._leaveNestedEventLoop();
     }
 
     public static boolean isNestedLoopRunning() {
