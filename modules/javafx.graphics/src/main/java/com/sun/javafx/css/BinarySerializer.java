@@ -66,7 +66,7 @@ public class BinarySerializer {
             writeCompoundSelector(s, os, stringStore);
         }
 
-        throw new IllegalStateException("support missing for selector type: " + selector);
+        throw new IllegalStateException("support missing for selector type: " + (selector == null ? "null" : selector.getClass()));
     }
 
     private static SimpleSelector readSimpleSelector(DataInputStream is, String[] strings) throws IOException {
