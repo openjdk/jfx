@@ -28,14 +28,10 @@ package com.sun.javafx.css;
 import javafx.css.PseudoClass;
 import javafx.css.Selector;
 import javafx.css.StyleClass;
-import javafx.css.StyleConverter;
 import javafx.css.Styleable;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -391,50 +387,5 @@ final public class SimpleSelector extends Selector {
         }
 
         return sbuf.toString();
-    }
-
-    @Override protected final void writeBinary(final DataOutputStream os, final StyleConverter.StringStore stringStore)
-        throws IOException
-    {
-        super.writeBinary(os, stringStore);
-        os.writeShort(stringStore.addString(name));
-        os.writeShort(selectorStyleClassNames.size());
-        Iterator<String> iter1 = selectorStyleClassNames.iterator();
-        while(iter1.hasNext()) {
-            final String sc = iter1.next();
-            os.writeShort(stringStore.addString(sc));
-        }
-        os.writeShort(stringStore.addString(id));
-        int pclassSize = pseudoClassState.size()
-                + (nodeOrientation == RIGHT_TO_LEFT || nodeOrientation == LEFT_TO_RIGHT ? 1 : 0);
-        os.writeShort(pclassSize);
-        Iterator<PseudoClass> iter2 = pseudoClassState.iterator();
-        while(iter2.hasNext()) {
-            final PseudoClass pc = iter2.next();
-            os.writeShort(stringStore.addString(pc.getPseudoClassName()));
-        }
-        if (nodeOrientation == RIGHT_TO_LEFT) {
-            os.writeShort(stringStore.addString("dir(rtl)"));
-        } else if (nodeOrientation == LEFT_TO_RIGHT) {
-            os.writeShort(stringStore.addString("dir(ltr)"));
-        }
-    }
-
-    public static SimpleSelector readBinary(int bssVersion, final DataInputStream is, final String[] strings)
-        throws IOException
-    {
-        final String name = strings[is.readShort()];
-        final int nStyleClasses = is.readShort();
-        final List<String> styleClasses = new ArrayList<>();
-        for (int n=0; n < nStyleClasses; n++) {
-            styleClasses.add(strings[is.readShort()]);
-        }
-        final String id = strings[is.readShort()];
-        final int nPseudoclasses = is.readShort();
-        final List<String> pseudoclasses = new ArrayList<>();
-        for(int n=0; n < nPseudoclasses; n++) {
-            pseudoclasses.add(strings[is.readShort()]);
-        }
-        return new SimpleSelector(name, styleClasses, pseudoclasses, id);
     }
 }

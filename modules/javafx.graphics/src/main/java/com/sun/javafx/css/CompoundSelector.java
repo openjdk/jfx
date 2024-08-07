@@ -25,10 +25,6 @@
 
 package com.sun.javafx.css;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -37,9 +33,7 @@ import java.util.stream.Collectors;
 
 import javafx.css.PseudoClass;
 import javafx.css.Selector;
-import javafx.css.StyleConverter;
 import javafx.css.Styleable;
-
 
 /**
  * A compound selector which behaves according to the CSS standard. The selector is
@@ -75,13 +69,14 @@ final public class CompoundSelector extends Selector {
     }
 
     private final List<Combinator> relationships;
-    // /**
-    //  * The relationships between the selectors
-    //  * @return Immutable List&lt;Combinator&gt;
-    //  */
-    // public List<Combinator> getRelationships() {
-    //     return relationships;
-    // }
+
+    /**
+     * The relationships between the selectors
+     * @return Immutable List&lt;Combinator&gt;
+     */
+    List<Combinator> getRelationships() {
+        return relationships;
+    }
 
     /**
      * Creates a <code>CompoundSelector</code> from a list of selectors and a
@@ -285,42 +280,5 @@ final public class CompoundSelector extends Selector {
             sbuf.append(selectors.get(n));
         }
         return sbuf.toString();
-    }
-
-    @Override protected final void writeBinary(final DataOutputStream os, final StyleConverter.StringStore stringStore)
-            throws IOException
-    {
-        super.writeBinary(os, stringStore);
-        os.writeShort(selectors.size());
-        for (int n=0; n< selectors.size(); n++) selectors.get(n).writeBinary(os,stringStore);
-        os.writeShort(relationships.size());
-        for (int n=0; n< relationships.size(); n++) os.writeByte(relationships.get(n).ordinal());
-    }
-
-    public static CompoundSelector readBinary(int bssVersion, final DataInputStream is, final String[] strings)
-            throws IOException
-    {
-
-        final int nSelectors = is.readShort();
-        final List<SimpleSelector> selectors = new ArrayList<>();
-        for (int n=0; n<nSelectors; n++) {
-            selectors.add((SimpleSelector)Selector.readBinary(bssVersion, is,strings));
-        }
-
-        final int nRelationships = is.readShort();
-
-        final List<Combinator> relationships = new ArrayList<>();
-        for (int n=0; n<nRelationships; n++) {
-            final int ordinal = is.readByte();
-            if (ordinal == Combinator.CHILD.ordinal())
-                relationships.add(Combinator.CHILD);
-            else if (ordinal == Combinator.DESCENDANT.ordinal())
-                relationships.add(Combinator.DESCENDANT);
-            else {
-                assert false : "error deserializing CompoundSelector: Combinator = " + ordinal;
-                relationships.add(Combinator.DESCENDANT);
-            }
-        }
-        return new CompoundSelector(selectors, relationships);
     }
 }

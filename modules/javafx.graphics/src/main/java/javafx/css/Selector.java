@@ -167,42 +167,6 @@ public abstract sealed class Selector permits SimpleSelector, CompoundSelector {
      */
     public abstract boolean stateMatches(Styleable styleable, Set<PseudoClass> state);
 
-    private static final int TYPE_SIMPLE = 1;
-    private static final int TYPE_COMPOUND = 2;
-
-    /**
-     * Writes {@code Selector} data in binary form to given {@code DataOutputStream}.
-     * @param os {@code DataOutputStream} to write {@code Selector} data to
-     * @param stringStore unused
-     * @throws IOException if writing to {@code DataOutputStream} fails
-     */
-    protected void writeBinary(DataOutputStream os, StyleConverter.StringStore stringStore)
-        throws IOException {
-        if (this instanceof SimpleSelector) {
-            os.writeByte(TYPE_SIMPLE);
-        } else {
-            os.writeByte(TYPE_COMPOUND);
-        }
-    }
-
-    /**
-     * Reads binary {@code Selector} data from a given {@code DataInputStream}.
-     * @param bssVersion bss version identifier
-     * @param is {@code DataInputStream} to read {@code Selector} data from
-     * @param strings string array containing selector details
-     * @return a selector, never {@code null}
-     * @throws IOException if reading from {@code DataInputStream} fails
-     * @since 24
-     */
-    protected static Selector readBinary(int bssVersion, DataInputStream is, String[] strings)
-        throws IOException {
-        final int type = is.readByte();
-        if (type == TYPE_SIMPLE)
-            return SimpleSelector.readBinary(bssVersion, is,strings);
-        else
-            return CompoundSelector.readBinary(bssVersion, is,strings);
-    }
-
     /**
      * Creates a {@code Selector} object.
      * @param cssSelector CSS selector string
