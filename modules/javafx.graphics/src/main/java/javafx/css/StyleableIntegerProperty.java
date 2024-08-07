@@ -131,7 +131,8 @@ public abstract class StyleableIntegerProperty
 
         @Override
         public void onUpdate(double progress) {
-            set(progress < 1 ? startValue + (int)((endValue - startValue) * progress) : endValue);
+            // Integers are interpolated in real number space and rounded to the nearest integer.
+            set(progress < 1 ? (int)Math.round(startValue + (endValue - startValue) * progress) : endValue);
         }
 
         @Override

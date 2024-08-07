@@ -119,16 +119,18 @@ public class StyleableProperty_transition_Test {
         }
     };
 
+    static final Duration ONE_SECOND = Duration.seconds(1);
+
     static final Group testBean = new Group() {
         {
             NodeHelper.getTransitionProperty(this).setValue(new TransitionDefinition[] {
-                new TransitionDefinition("-fx-boolean-property", Duration.ONE, Duration.ZERO, Interpolator.LINEAR),
-                new TransitionDefinition("-fx-double-property", Duration.ONE, Duration.ZERO, Interpolator.LINEAR),
-                new TransitionDefinition("-fx-float-property", Duration.ONE, Duration.ZERO, Interpolator.LINEAR),
-                new TransitionDefinition("-fx-integer-property", Duration.ONE, Duration.ZERO, Interpolator.LINEAR),
-                new TransitionDefinition("-fx-long-property", Duration.ONE, Duration.ZERO, Interpolator.LINEAR),
-                new TransitionDefinition("-fx-interpolatable-property", Duration.ONE, Duration.ZERO, Interpolator.LINEAR),
-                new TransitionDefinition("-fx-component-transitionable-property", Duration.ONE, Duration.ZERO, Interpolator.LINEAR)
+                new TransitionDefinition("-fx-boolean-property", ONE_SECOND, Duration.ZERO, Interpolator.LINEAR),
+                new TransitionDefinition("-fx-double-property", ONE_SECOND, Duration.ZERO, Interpolator.LINEAR),
+                new TransitionDefinition("-fx-float-property", ONE_SECOND, Duration.ZERO, Interpolator.LINEAR),
+                new TransitionDefinition("-fx-integer-property", ONE_SECOND, Duration.ZERO, Interpolator.LINEAR),
+                new TransitionDefinition("-fx-long-property", ONE_SECOND, Duration.ZERO, Interpolator.LINEAR),
+                new TransitionDefinition("-fx-interpolatable-property", ONE_SECOND, Duration.ZERO, Interpolator.LINEAR),
+                new TransitionDefinition("-fx-component-transitionable-property", ONE_SECOND, Duration.ZERO, Interpolator.LINEAR)
             });
         }
     };
@@ -170,6 +172,11 @@ public class StyleableProperty_transition_Test {
     StubToolkit toolkit;
     Scene scene;
     Stage stage;
+
+    void setAnimationTime(long time) {
+        toolkit.setCurrentTime(time);
+        toolkit.handleAnimation();
+    }
 
     @BeforeEach
     void setup() {
@@ -248,7 +255,7 @@ public class StyleableProperty_transition_Test {
         });
 
         // Setting a value for the first time doesn't start a transition.
-        toolkit.setCurrentTime(0);
+        setAnimationTime(0);
         property.applyStyle(StyleOrigin.USER, border1);
 
         // Start the transition and capture a copy of the sub-property mediator list.
@@ -260,8 +267,7 @@ public class StyleableProperty_transition_Test {
         // Advance the animation time and start the second transition.
         // -fx-background-color will transition from (mix of RED/GREEN) to BLUE
         // -fx-background-radius will pick up the previous transition, because its target value is the same (10)
-        toolkit.setCurrentTime(500);
-        toolkit.handleAnimation();
+        setAnimationTime(500);
         property.applyStyle(StyleOrigin.USER, border3);
         var newMediators = (List<?>)getFieldValue(getFieldValue(property, "controller"), "mediators");
 
@@ -271,5 +277,51 @@ public class StyleableProperty_transition_Test {
         assertEquals(2, newMediators.size());
         assertNotSame(oldMediators.get(0), newMediators.get(0)); // -fx-background-color
         assertSame(oldMediators.get(1), newMediators.get(1));    // -fx-background-radius
+    }
+
+    @Test
+    void testIntegersAreInterpolatedInRealNumberSpace() {
+        ((Group)scene.getRoot()).getChildren().setAll(testBean);
+        var property = new SimpleStyleableIntegerProperty(integerPropertyMetadata, testBean, null);
+
+        // Setting a value for the first time doesn't start a transition.
+        setAnimationTime(0);
+        property.applyStyle(StyleOrigin.USER, 0);
+
+        // Start the transition and sample the outputs.
+        property.applyStyle(StyleOrigin.USER, 2);
+        setAnimationTime(249);
+        assertEquals(0, property.get());
+        setAnimationTime(250);
+        assertEquals(1, property.get());
+        setAnimationTime(500);
+        assertEquals(1, property.get());
+        setAnimationTime(749);
+        assertEquals(1, property.get());
+        setAnimationTime(750);
+        assertEquals(2, property.get());
+    }
+
+    @Test
+    void testLongsAreInterpolatedInRealNumberSpace() {
+        ((Group)scene.getRoot()).getChildren().setAll(testBean);
+        var property = new SimpleStyleableLongProperty(longPropertyMetadata, testBean, null);
+
+        // Setting a value for the first time doesn't start a transition.
+        setAnimationTime(0);
+        property.applyStyle(StyleOrigin.USER, 0);
+
+        // Start the transition and sample the outputs.
+        property.applyStyle(StyleOrigin.USER, 2);
+        setAnimationTime(249);
+        assertEquals(0, property.get());
+        setAnimationTime(250);
+        assertEquals(1, property.get());
+        setAnimationTime(500);
+        assertEquals(1, property.get());
+        setAnimationTime(749);
+        assertEquals(1, property.get());
+        setAnimationTime(750);
+        assertEquals(2, property.get());
     }
 }

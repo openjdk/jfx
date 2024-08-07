@@ -133,7 +133,8 @@ public abstract class StyleableLongProperty
 
         @Override
         public void onUpdate(double progress) {
-            set(progress < 1 ? startValue + (long)((endValue - startValue) * progress) : endValue);
+            // Longs are interpolated in real number space and rounded to the nearest long.
+            set(progress < 1 ? Math.round(startValue + (endValue - startValue) * progress) : endValue);
         }
 
         @Override
