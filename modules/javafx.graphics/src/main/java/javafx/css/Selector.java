@@ -27,12 +27,8 @@ package javafx.css;
 
 import com.sun.javafx.css.Combinator;
 import com.sun.javafx.css.CompoundSelector;
-import com.sun.javafx.css.PseudoClassState;
 import com.sun.javafx.css.SimpleSelector;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -111,31 +107,7 @@ public abstract sealed class Selector permits SimpleSelector, CompoundSelector {
      * @return a match, never {@code null}
      */
     public final Match createMatch() {
-        if (this instanceof SimpleSelector s) {
-            int idCount = s.getId().isEmpty() ? 0 : 1;
-            int styleClassCount = s.getStyleClassSet().size();
-
-            return new Match(this, s.getPseudoClassStates(), idCount, styleClassCount);
-        }
-
-        if (this instanceof CompoundSelector cs) {
-            PseudoClassState pseudoClasses = new PseudoClassState();
-            int idCount = 0;
-            int styleClassCount = 0;
-
-            for (int n = 0, max = cs.getSelectors().size(); n < max; n++) {
-                Selector selector = cs.getSelectors().get(n);
-                Match match = selector.createMatch();
-
-                pseudoClasses.addAll(match.getPseudoClasses());
-                idCount += match.idCount;
-                styleClassCount += match.styleClassCount;
-            }
-
-            return new Match(this, pseudoClasses, idCount, styleClassCount);
-        }
-
-        throw new AssertionError("unreachable, class is sealed");
+        return Match.of(this);
     }
 
     /**
