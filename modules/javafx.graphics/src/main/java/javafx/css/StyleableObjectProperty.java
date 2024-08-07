@@ -77,6 +77,7 @@ public abstract class StyleableObjectProperty<T>
 
     /** {@inheritDoc} */
     @Override
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public void applyStyle(StyleOrigin origin, T newValue) {
         if (newValue == null) {
             set(null);
@@ -88,8 +89,8 @@ public abstract class StyleableObjectProperty<T>
         CssMetaData<? extends Styleable, T> metadata = getCssMetaData();
         StyleConverter<?, T> converter = metadata.getConverter();
 
-        if (converter.supportsReconstruction) {
-            applyComponentTransition(oldValue, newValue, metadata, converter);
+        if (converter instanceof StyleConverter.WithReconstructionSupport c) {
+            applyComponentTransition(oldValue, newValue, metadata, c);
         } else if (newValue instanceof Interpolatable<?> && newValue.getClass().isInstance(oldValue)) {
             // 'oldValue' and 'newValue' could be objects that both implement Interpolatable, but with
             // different type arguments. We detect this case by checking whether 'newValue' is an instance
@@ -139,7 +140,7 @@ public abstract class StyleableObjectProperty<T>
      */
     private void applyComponentTransition(T oldValue, T newValue,
                                           CssMetaData<? extends Styleable, T> metadata,
-                                          StyleConverter<?, T> converter) {
+                                          StyleConverter.WithReconstructionSupport<T> converter) {
         // If this.origin == null, we're setting the value for the first time.
         // No transition should be started in this case.
         Map<CssMetaData<? extends Styleable, ?>, TransitionDefinition> transitions =

@@ -89,6 +89,8 @@ public class BorderConverterTest {
                                     false, BorderRepeat.STRETCH, BorderRepeat.REPEAT))
         );
 
+        @SuppressWarnings("unchecked")
+        var converter = (StyleConverter.WithReconstructionSupport<Border>)this.converter;
         var actual = converter.convert(converter.convertBack(expected));
         assertEquals(expected, actual);
     }

@@ -55,12 +55,6 @@ import com.sun.javafx.logging.PlatformLogger.Level;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -93,25 +87,36 @@ import java.util.WeakHashMap;
 public class StyleConverter<F, T> {
 
     /**
-     * Indicates whether the style converter implements the {@link StyleConverter#convert(Map)}
-     * and {@link #convertBack(Object)} methods to enable object deconstruction and reconstruction.
-     * The following invariant must be satisfied: {@code convert(convertBack(value)).equals(value)}
+     * Defines the {@code convert} and {@code convertBack} operations that enable object
+     * decomposition and reconstruction. Note that the following invariant must always be
+     * satisfied: {@code convert(convertBack(value)).equals(value)}
      *
+     * @param <T> the target type
      * @since 24
      */
-    @Documented
-    @Inherited
-    @Target(ElementType.TYPE)
-    @Retention(RetentionPolicy.RUNTIME)
-    public @interface SupportsReconstruction {}
+    public interface WithReconstructionSupport<T> {
+        /**
+         * Converts a map of CSS values to the target type.
+         *
+         * @param values the constituent values
+         * @return the converted object
+         */
+        T convert(Map<CssMetaData<? extends Styleable, ?>, Object> values);
 
-    final boolean supportsReconstruction;
+        /**
+         * Converts an object back to a map of its constituent values (deconstruction).
+         * The returned map can be passed into {@link #convert(Map)} to reconstruct the object.
+         *
+         * @param value the object
+         * @return a {@code Map} of the constituent values
+         */
+        Map<CssMetaData<? extends Styleable, ?>, Object> convertBack(T value);
+    }
 
     /**
      * Creates a {@code StyleConverter}.
      */
     public StyleConverter() {
-        supportsReconstruction = getClass().getAnnotation(SupportsReconstruction.class) != null;
     }
 
     /**
@@ -273,22 +278,6 @@ public class StyleConverter<F, T> {
      */
     public T convert(Map<CssMetaData<? extends Styleable, ?>,Object> convertedValues) {
         return null;
-    }
-
-    /**
-     * Converts an object back to a map of its constituent values (deconstruction).
-     * The returned map can be passed into {@link #convert(Map)} to reconstruct the object.
-     *
-     * @param value the object
-     * @throws UnsupportedOperationException if this converter does not support deconstruction
-     * @return a {@code Map} of the constituent values
-     * @apiNote This is an optional operation. The default implementation of this
-     *          method throws {@code UnsupportedOperationException}.
-     * @implSpec The following invariant must be satisfied: {@code convert(convertBack(value)).equals(value)}
-     * @since 24
-     */
-    public Map<CssMetaData<? extends Styleable, ?>, Object> convertBack(T value) {
-        throw new UnsupportedOperationException();
     }
 
     /**

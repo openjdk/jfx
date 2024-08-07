@@ -43,8 +43,8 @@ import javafx.scene.paint.Paint;
 /**
  * Converts -fx-border components into a {@link Border}.
  */
-@StyleConverter.SupportsReconstruction
-class BorderConverter extends StyleConverter<ParsedValue[], Border> {
+class BorderConverter extends StyleConverter<ParsedValue[], Border>
+                      implements StyleConverter.WithReconstructionSupport<Border> {
 
     private static final BorderConverter BORDER_IMAGE_CONVERTER =
             new BorderConverter();

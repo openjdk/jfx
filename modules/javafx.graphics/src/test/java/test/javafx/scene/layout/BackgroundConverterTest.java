@@ -84,6 +84,8 @@ public class BackgroundConverterTest {
                                         BackgroundPosition.CENTER, BackgroundSize.DEFAULT))
         );
 
+        @SuppressWarnings("unchecked")
+        var converter = (StyleConverter.WithReconstructionSupport<Background>)this.converter;
         var actual = converter.convert(converter.convertBack(expected));
         assertEquals(expected, actual);
     }
