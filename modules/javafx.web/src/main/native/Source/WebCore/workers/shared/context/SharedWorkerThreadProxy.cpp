@@ -26,6 +26,7 @@
 #include "config.h"
 #include "SharedWorkerThreadProxy.h"
 
+#include "BadgeClient.h"
 #include "CacheStorageProvider.h"
 #include "Chrome.h"
 #include "ErrorEvent.h"
@@ -52,9 +53,9 @@
 
 namespace WebCore {
 
-static HashMap<ScriptExecutionContextIdentifier, SharedWorkerThreadProxy*>& allSharedWorkerThreadProxies()
+static HashMap<ScriptExecutionContextIdentifier, WeakRef<SharedWorkerThreadProxy>>& allSharedWorkerThreadProxies()
 {
-    static MainThreadNeverDestroyed<HashMap<ScriptExecutionContextIdentifier, SharedWorkerThreadProxy*>> map;
+    static MainThreadNeverDestroyed<HashMap<ScriptExecutionContextIdentifier, WeakRef<SharedWorkerThreadProxy>>> map;
     return map;
 }
 
@@ -78,9 +79,7 @@ static WorkerParameters generateWorkerParameters(const WorkerFetchResult& worker
         document.settingsValues(),
         WorkerThreadMode::CreateNewThread,
         *document.sessionID(),
-#if ENABLE(SERVICE_WORKER)
         WTFMove(initializationData.serviceWorkerData),
-#endif
         *initializationData.clientIdentifier,
         document.noiseInjectionHashSalt()
     };
@@ -96,7 +95,7 @@ bool SharedWorkerThreadProxy::hasInstances()
     return !allSharedWorkerThreadProxies().isEmpty();
 }
 
-SharedWorkerThreadProxy::SharedWorkerThreadProxy(UniqueRef<Page>&& page, SharedWorkerIdentifier sharedWorkerIdentifier, const ClientOrigin& clientOrigin, WorkerFetchResult&& workerFetchResult, WorkerOptions&& workerOptions, WorkerInitializationData&& initializationData, CacheStorageProvider& cacheStorageProvider)
+SharedWorkerThreadProxy::SharedWorkerThreadProxy(Ref<Page>&& page, SharedWorkerIdentifier sharedWorkerIdentifier, const ClientOrigin& clientOrigin, WorkerFetchResult&& workerFetchResult, WorkerOptions&& workerOptions, WorkerInitializationData&& initializationData, CacheStorageProvider& cacheStorageProvider)
     : m_page(WTFMove(page))
     , m_document(*dynamicDowncast<LocalFrame>(m_page->mainFrame())->document())
     , m_contextIdentifier(*initializationData.clientIdentifier)
@@ -105,7 +104,7 @@ SharedWorkerThreadProxy::SharedWorkerThreadProxy(UniqueRef<Page>&& page, SharedW
     , m_clientOrigin(clientOrigin)
 {
     ASSERT(!allSharedWorkerThreadProxies().contains(m_contextIdentifier));
-    allSharedWorkerThreadProxies().add(m_contextIdentifier, this);
+    allSharedWorkerThreadProxies().add(m_contextIdentifier, *this);
 
     static bool addedListener;
     if (!addedListener) {
@@ -151,8 +150,20 @@ void SharedWorkerThreadProxy::postExceptionToWorkerObject(const String& errorMes
         return;
 
     callOnMainThread([sharedWorkerIdentifier = m_workerThread->identifier(), errorMessage = errorMessage.isolatedCopy(), lineNumber, columnNumber, sourceURL = sourceURL.isolatedCopy()] {
+        bool isErrorEvent = true;
         if (auto* connection = SharedWorkerContextManager::singleton().connection())
-            connection->postExceptionToWorkerObject(sharedWorkerIdentifier, errorMessage, lineNumber, columnNumber, sourceURL);
+            connection->postErrorToWorkerObject(sharedWorkerIdentifier, errorMessage, lineNumber, columnNumber, sourceURL, isErrorEvent);
+    });
+}
+
+void SharedWorkerThreadProxy::reportErrorToWorkerObject(const String& errorMessage)
+{
+    ASSERT(!isMainThread());
+
+    callOnMainThread([sharedWorkerIdentifier = m_workerThread->identifier(), errorMessage = errorMessage.isolatedCopy()] {
+        bool isErrorEvent = false;
+        if (auto* connection = SharedWorkerContextManager::singleton().connection())
+            connection->postErrorToWorkerObject(sharedWorkerIdentifier, errorMessage, 0, 0, { }, isErrorEvent);
     });
 }
 
@@ -203,7 +214,7 @@ void SharedWorkerThreadProxy::setResourceCachingDisabledByWebInspector(bool)
 
 void SharedWorkerThreadProxy::networkStateChanged(bool isOnLine)
 {
-    for (auto* proxy : allSharedWorkerThreadProxies().values())
+    for (auto& proxy : allSharedWorkerThreadProxies().values())
         proxy->notifyNetworkStateChange(isOnLine);
 }
 

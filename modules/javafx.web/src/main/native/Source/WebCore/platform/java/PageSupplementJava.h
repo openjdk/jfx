@@ -41,7 +41,7 @@ class PageSupplementJava final : public Supplement<WebCore::Page> {
 
     WEBCORE_EXPORT JLObject jWebPage() const { return m_webPage; }
 
-    WEBCORE_EXPORT static const char* supplementName();
+    WEBCORE_EXPORT static ASCIILiteral supplementName();
     WEBCORE_EXPORT static PageSupplementJava* from(Frame*);
     WEBCORE_EXPORT static PageSupplementJava* from(Page*);
 

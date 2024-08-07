@@ -68,12 +68,12 @@ public:
     }
 
     // For creating before/after positions:
-    WEBCORE_EXPORT Position(Node* anchorNode, AnchorType);
-    Position(Text* textNode, unsigned offset);
+    WEBCORE_EXPORT Position(RefPtr<Node>&& anchorNode, AnchorType);
+    Position(RefPtr<Text>&& textNode, unsigned offset);
 
     // For creating offset positions:
     // FIXME: This constructor should eventually go away. See bug 63040.
-    WEBCORE_EXPORT Position(Node* anchorNode, unsigned offset, AnchorType);
+    WEBCORE_EXPORT Position(RefPtr<Node>&& anchorNode, unsigned offset, AnchorType);
 
     AnchorType anchorType() const { return static_cast<AnchorType>(m_anchorType); }
 
@@ -82,7 +82,9 @@ public:
     // These are always DOM compliant values.  Editing positions like [img, 0] (aka [img, before])
     // will return img->parentNode() and img->computeNodeIndex() from these functions.
     WEBCORE_EXPORT Node* containerNode() const; // null for a before/after position anchored to a node with no parent
+    RefPtr<Node> protectedContainerNode() const { return containerNode(); }
     Text* containerText() const;
+    RefPtr<Text> protectedContainerText() const;
     Element* containerOrParentElement() const;
 
     int computeOffsetInContainerNode() const;  // O(n) for before/after-anchored positions, O(1) for parent-anchored positions
@@ -112,17 +114,19 @@ public:
     WEBCORE_EXPORT Node* computeNodeAfterPosition() const;
 
     Node* anchorNode() const { return m_anchorNode.get(); }
+    RefPtr<Node> protectedAnchorNode() const { return m_anchorNode; }
 
     // FIXME: Callers should be moved off of node(), node() is not always the container for this position.
     // For nodes which editingIgnoresContent(node()) returns true, positions like [ignoredNode, 0]
     // will be treated as before ignoredNode (thus node() is really after the position, not containing it).
     Node* deprecatedNode() const { return m_anchorNode.get(); }
+    RefPtr<Node> protectedDeprecatedNode() const { return m_anchorNode; }
 
     Document* document() const { return m_anchorNode ? &m_anchorNode->document() : nullptr; }
     TreeScope* treeScope() const { return m_anchorNode ? &m_anchorNode->treeScope() : nullptr; }
     Element* rootEditableElement() const
     {
-        Node* container = containerNode();
+        RefPtr container = containerNode();
         return container ? container->rootEditableElement() : nullptr;
     }
 
@@ -135,7 +139,7 @@ public:
     bool isNotNull() const { return m_anchorNode; }
     bool isOrphan() const { return m_anchorNode && !m_anchorNode->isConnected(); }
 
-    Element* element() const;
+    RefPtr<Element> anchorElementAncestor() const;
 
     // Move up or down the DOM by one position.
     // Offsets are computed using render text for nodes that have renderers - but note that even when
@@ -154,7 +158,7 @@ public:
 
     // Returns true if the visually equivalent positions around have different editability
     bool atEditingBoundary() const;
-    Node* parentEditingBoundary() const;
+    RefPtr<Node> parentEditingBoundary() const;
 
     bool atStartOfTree() const;
     bool atEndOfTree() const;
@@ -183,7 +187,7 @@ public:
     static bool hasRenderedNonAnonymousDescendantsWithHeight(const RenderElement&);
     static bool nodeIsUserSelectNone(Node*);
     static bool nodeIsUserSelectAll(const Node*);
-    static Node* rootUserSelectAllForNode(Node*);
+    static RefPtr<Node> rootUserSelectAllForNode(Node*);
 
     void debugPosition(const char* msg = "") const;
 
@@ -200,13 +204,12 @@ public:
 private:
     // For creating legacy editing positions: (Anchor type will be determined from editingIgnoresContent(node))
     enum class LegacyEditingPositionFlag { On };
-    WEBCORE_EXPORT Position(Node* anchorNode, unsigned offset, LegacyEditingPositionFlag);
-    friend Position makeDeprecatedLegacyPosition(Node*, unsigned offset);
+    WEBCORE_EXPORT Position(RefPtr<Node>&& anchorNode, unsigned offset, LegacyEditingPositionFlag);
+    friend Position makeDeprecatedLegacyPosition(RefPtr<Node>&&, unsigned offset);
 
     WEBCORE_EXPORT int offsetForPositionAfterAnchor() const;
 
     Position previousCharacterPosition(Affinity) const;
-    Position nextCharacterPosition(Affinity) const;
 
     static AnchorType anchorTypeForLegacyEditingPosition(Node* anchorNode, unsigned offset);
 
@@ -228,10 +231,10 @@ bool operator>(const Position&, const Position&);
 bool operator>=(const Position&, const Position&);
 bool operator<=(const Position&, const Position&);
 
-Position makeContainerOffsetPosition(Node*, unsigned offset);
+Position makeContainerOffsetPosition(RefPtr<Node>&&, unsigned offset);
 WEBCORE_EXPORT Position makeContainerOffsetPosition(const BoundaryPoint&);
 
-Position makeDeprecatedLegacyPosition(Node*, unsigned offset);
+Position makeDeprecatedLegacyPosition(RefPtr<Node>&&, unsigned offset);
 WEBCORE_EXPORT Position makeDeprecatedLegacyPosition(const BoundaryPoint&);
 
 WEBCORE_EXPORT std::optional<BoundaryPoint> makeBoundaryPoint(const Position&);
@@ -262,14 +265,14 @@ std::optional<SimpleRange> makeSimpleRange(const PositionRange&);
 
 // inlines
 
-inline Position makeContainerOffsetPosition(Node* node, unsigned offset)
+inline Position makeContainerOffsetPosition(RefPtr<Node>&& node, unsigned offset)
 {
-    return { node, offset, Position::PositionIsOffsetInAnchor };
+    return { WTFMove(node), offset, Position::PositionIsOffsetInAnchor };
 }
 
-inline Position makeDeprecatedLegacyPosition(Node* node, unsigned offset)
+inline Position makeDeprecatedLegacyPosition(RefPtr<Node>&& node, unsigned offset)
 {
-    return { node, offset, Position::LegacyEditingPositionFlag::On };
+    return { WTFMove(node), offset, Position::LegacyEditingPositionFlag::On };
 }
 
 // FIXME: Positions at the same document location with different anchoring will return false; that's unlike <= and >=.
@@ -316,22 +319,22 @@ inline Position positionAfterNode(Node* anchorNode)
 // firstPositionInNode and lastPositionInNode return parent-anchored positions, lastPositionInNode construction is O(n) due to countChildNodes()
 inline Position firstPositionInNode(Node* anchorNode)
 {
-    if (anchorNode->isCharacterData())
+    if (anchorNode->isCharacterDataNode())
         return Position(anchorNode, 0, Position::PositionIsOffsetInAnchor);
     return Position(anchorNode, Position::PositionIsBeforeChildren);
 }
 
 inline Position lastPositionInNode(Node* anchorNode)
 {
-    if (anchorNode->isCharacterData())
+    if (anchorNode->isCharacterDataNode())
         return Position(anchorNode, anchorNode->length(), Position::PositionIsOffsetInAnchor);
     return Position(anchorNode, Position::PositionIsAfterChildren);
 }
 
 inline bool offsetIsBeforeLastNodeOffset(unsigned offset, Node* anchorNode)
 {
-    if (is<CharacterData>(*anchorNode))
-        return offset < downcast<CharacterData>(*anchorNode).length();
+    if (auto* characterData = dynamicDowncast<CharacterData>(*anchorNode))
+        return offset < characterData->length();
 
     unsigned currentOffset = 0;
     for (Node* node = anchorNode->firstChild(); node && currentOffset < offset; node = node->nextSibling())

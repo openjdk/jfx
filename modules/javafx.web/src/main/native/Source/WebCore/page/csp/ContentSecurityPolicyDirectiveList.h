@@ -30,6 +30,7 @@
 #include "ContentSecurityPolicyHash.h"
 #include "ContentSecurityPolicyMediaListDirective.h"
 #include "ContentSecurityPolicySourceListDirective.h"
+#include "ContentSecurityPolicyTrustedTypesDirective.h"
 #include <wtf/URL.h>
 
 namespace WebCore {
@@ -75,6 +76,7 @@ public:
     const ContentSecurityPolicyDirective* violatedDirectiveForScript(const URL&, bool didReceiveRedirectResponse, const Vector<ResourceCryptographicDigest>&, const String&) const;
     const ContentSecurityPolicyDirective* violatedDirectiveForStyle(const URL&, bool didReceiveRedirectResponse, const String&) const;
     const ContentSecurityPolicyDirective* violatedDirectiveForWorker(const URL&, bool didReceiveRedirectResponse);
+    const ContentSecurityPolicyDirective* violatedDirectiveForTrustedTypesPolicy(const String&, bool isDuplicate, AllowTrustedTypePolicy&) const;
 
     const ContentSecurityPolicyDirective* defaultSrc() const { return m_defaultSrc.get(); }
 
@@ -103,6 +105,7 @@ private:
     template<typename CharacterType> std::optional<ParsedDirective> parseDirective(StringParsingBuffer<CharacterType>);
     void parseReportTo(ParsedDirective&&);
     void parseReportURI(ParsedDirective&&);
+    void parseRequireTrustedTypesFor(ParsedDirective&&);
     void addDirective(ParsedDirective&&);
     void applySandboxPolicy(ParsedDirective&&);
     void setUpgradeInsecureRequests(ParsedDirective&&);
@@ -129,6 +132,7 @@ private:
     bool m_haveSandboxPolicy { false };
     bool m_upgradeInsecureRequests { false };
     bool m_hasBlockAllMixedContentDirective { false };
+    bool m_requireTrustedTypesForScript { false };
 
     std::unique_ptr<ContentSecurityPolicyMediaListDirective> m_pluginTypes;
     std::unique_ptr<ContentSecurityPolicySourceListDirective> m_baseURI;
@@ -152,6 +156,7 @@ private:
     std::unique_ptr<ContentSecurityPolicySourceListDirective> m_scriptSrcAttr;
     std::unique_ptr<ContentSecurityPolicySourceListDirective> m_styleSrcElem;
     std::unique_ptr<ContentSecurityPolicySourceListDirective> m_styleSrcAttr;
+    std::unique_ptr<ContentSecurityPolicyTrustedTypesDirective> m_trustedTypes;
     std::unique_ptr<ContentSecurityPolicySourceListDirective> m_workerSrc;
 
     Vector<String> m_reportToTokens;

@@ -38,9 +38,9 @@ PageSupplementJava::PageSupplementJava(const JLObject& webPage)
 }
 
 // static
-const char* PageSupplementJava::supplementName()
+ASCIILiteral PageSupplementJava::supplementName()
 {
-    return "PageSupplementJava";
+    return "PageSupplementJava"_s;
 }
 
 // static

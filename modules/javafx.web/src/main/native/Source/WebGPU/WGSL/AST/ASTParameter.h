@@ -27,11 +27,17 @@
 
 #include "ASTAttribute.h"
 #include "ASTBuilder.h"
+#include "ASTExpression.h"
 #include "ASTIdentifier.h"
-#include "ASTTypeName.h"
+#include "ASTInterpolateAttribute.h"
 #include <wtf/ReferenceWrapperVector.h>
 
-namespace WGSL::AST {
+namespace WGSL {
+
+class AttributeValidator;
+class EntryPointRewriter;
+
+namespace AST {
 
 enum class ParameterRole : uint8_t {
     UserDefined,
@@ -41,17 +47,30 @@ enum class ParameterRole : uint8_t {
 
 class Parameter final : public Node {
     WGSL_AST_BUILDER_NODE(Parameter);
+    friend AttributeValidator;
+    friend EntryPointRewriter;
+
 public:
     using List = ReferenceWrapperVector<Parameter>;
 
     NodeKind kind() const override;
+    ParameterRole role() const { return m_role; }
+
     Identifier& name() { return m_name; }
-    TypeName& typeName() { return m_typeName.get(); }
+    Expression& typeName() { return m_typeName.get(); }
     Attribute::List& attributes() { return m_attributes; }
-    ParameterRole role() { return m_role; }
+
+    const Identifier& name() const { return m_name; }
+    const Expression& typeName() const { return m_typeName.get(); }
+    const Attribute::List& attributes() const { return m_attributes; }
+
+    bool invariant() const { return m_invariant; }
+    std::optional<Builtin> builtin() const { return m_builtin; }
+    std::optional<Interpolation> interpolation() const { return m_interpolation; }
+    std::optional<unsigned> location() const { return m_location; }
 
 private:
-    Parameter(SourceSpan span, Identifier&& name, TypeName::Ref&& typeName, Attribute::List&& attributes, ParameterRole role)
+    Parameter(SourceSpan span, Identifier&& name, Expression::Ref&& typeName, Attribute::List&& attributes, ParameterRole role)
         : Node(span)
         , m_role(role)
         , m_name(WTFMove(name))
@@ -61,10 +80,17 @@ private:
 
     ParameterRole m_role;
     Identifier m_name;
-    TypeName::Ref m_typeName;
+    Expression::Ref m_typeName;
     Attribute::List m_attributes;
+
+    // Attributes
+    bool m_invariant { false };
+    std::optional<Builtin> m_builtin;
+    std::optional<Interpolation> m_interpolation;
+    std::optional<unsigned> m_location;
 };
 
-} // namespace WGSL::AST
+} // namespace AST
+} // namespace WGSL
 
 SPECIALIZE_TYPE_TRAITS_WGSL_AST(Parameter)

@@ -24,11 +24,12 @@
  */
 
 #include "config.h"
+#include "VideoTrackList.h"
 
 #if ENABLE(VIDEO)
 
-#include "VideoTrackList.h"
-
+#include "ContextDestructionObserverInlines.h"
+#include "ScriptExecutionContext.h"
 #include "VideoTrack.h"
 
 namespace WebCore {
@@ -75,6 +76,16 @@ VideoTrack* VideoTrackList::getTrackById(const AtomString& id) const
     return nullptr;
 }
 
+VideoTrack* VideoTrackList::getTrackById(TrackID id) const
+{
+    for (auto& inbandTracks : m_inbandTracks) {
+        auto& track = downcast<VideoTrack>(*inbandTracks);
+        if (track.trackId() == id)
+            return &track;
+    }
+    return nullptr;
+}
+
 int VideoTrackList::selectedIndex() const
 {
     // 4.8.10.10.1 AudioTrackList and VideoTrackList objects
@@ -87,6 +98,15 @@ int VideoTrackList::selectedIndex() const
             return i;
     }
     return -1;
+}
+
+VideoTrack* VideoTrackList::selectedItem() const
+{
+    auto selectedIndex = this->selectedIndex();
+    if (selectedIndex < 0)
+        return nullptr;
+
+    return item(selectedIndex);
 }
 
 EventTargetInterface VideoTrackList::eventTargetInterface() const

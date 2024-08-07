@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -66,12 +66,12 @@ static void raiseDOMErrorException(JNIEnv* env, WebCore::ExceptionCode ec)
 
 void raiseTypeErrorException(JNIEnv* env)
 {
-    raiseDOMErrorException(env, WebCore::TypeError);
+    raiseDOMErrorException(env, ExceptionCode::TypeError);
 }
 
 void raiseNotSupportedErrorException(JNIEnv* env)
 {
-    raiseDOMErrorException(env, WebCore::NotSupportedError);
+    raiseDOMErrorException(env, ExceptionCode::NotSupportedError);
 }
 
 void raiseDOMErrorException(JNIEnv* env, Exception&& ec)

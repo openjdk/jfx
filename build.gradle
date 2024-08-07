@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -3693,7 +3693,7 @@ project(":web") {
             enabled = IS_COMPILE_WEBKIT
 
             from configurations.icu.files
-            into "$webkitOutputDir/$webkitConfig/icu/data"
+            into "$webkitOutputDir/icu/data"
         }
 
         def compileNativeTask = task("compileNative${t.capital}", dependsOn: [compileJava, getICUFile]) {
@@ -3790,7 +3790,7 @@ project(":web") {
         def copyDumpTreeNativeTask = task("copyDumpTreeNative${t.capital}", type: Copy,
                 dependsOn: [ compileNativeTask]) {
             def library = rootProject.ext[t.upper].library
-            from "$webkitOutputDir/$webkitConfig/$dllDir/${library('DumpRenderTreeJava')}"
+            from "$webkitOutputDir/$dllDir/${library('DumpRenderTreeJava')}"
             into "$buildDir/test/${t.name}"
         }
 
@@ -3798,7 +3798,7 @@ project(":web") {
                 dependsOn: [compileNativeTask, copyDumpTreeNativeTask]) {
             enabled =  (IS_COMPILE_WEBKIT)
             def library = rootProject.ext[t.upper].library
-            from "$webkitOutputDir/$webkitConfig/$dllDir/${library('jfxwebkit')}"
+            from "$webkitOutputDir/$dllDir/${library('jfxwebkit')}"
             into "$buildDir/libs/${t.name}"
         }
 
@@ -3809,7 +3809,7 @@ project(":web") {
                 if (webkitProperties.rcFlags) {
                     rcParams.addAll(webkitProperties.rcFlags)
                 }
-                output(file("$webkitOutputDir/$webkitConfig/WebCore/obj"))
+                output(file("$webkitOutputDir/WebCore/obj"))
             }
             compileNativeTask.dependsOn rcTask
         }

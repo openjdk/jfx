@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +33,7 @@
 #include <wtf/Hasher.h>
 #include <wtf/MemoryPressureHandler.h>
 #include <wtf/text/StringCommon.h>
+#include <wtf/text/StringImpl.h>
 
 namespace WebCore {
 
@@ -55,31 +56,16 @@ private:
         {
         }
 
-        template<typename CharacterType> SmallStringKey(CharacterType* characters, unsigned short length)
-            : m_length(length)
+        SmallStringKey(StringView string)
+            : m_hash(string.hash())
+            , m_length(string.length())
         {
-            ASSERT(length <= s_capacity);
-
-            StringHasher hasher;
-
-            bool remainder = length & 1;
-            length >>= 1;
-
-            unsigned i = 0;
-            while (length--) {
-                m_characters[i] = characters[i];
-                m_characters[i + 1] = characters[i + 1];
-                hasher.addCharactersAssumingAligned(characters[i], characters[i + 1]);
-                i += 2;
+            ASSERT(m_length <= s_capacity);
+            if (string.is8Bit())
+                StringImpl::copyCharacters(m_characters, string.characters8(), m_length);
+            else
+                StringImpl::copyCharacters(m_characters, string.characters16(), m_length);
             }
-
-            if (remainder) {
-                m_characters[i] = characters[i];
-                hasher.addCharacter(characters[i]);
-            }
-
-            m_hash = hasher.hash();
-        }
 
         const UChar* characters() const { return m_characters; }
         unsigned short length() const { return m_length; }
@@ -179,13 +165,7 @@ private:
             isNewEntry = addResult.isNewEntry;
             value = &addResult.iterator->value;
         } else {
-            SmallStringKey smallStringKey;
-            if (text.is8Bit())
-                smallStringKey = SmallStringKey(text.characters8(), length);
-            else
-                smallStringKey = SmallStringKey(text.characters16(), length);
-
-            Map::AddResult addResult = m_map.fastAdd(smallStringKey, entry);
+            auto addResult = m_map.fastAdd(text, entry);
             isNewEntry = addResult.isNewEntry;
             value = &addResult.iterator->value;
         }

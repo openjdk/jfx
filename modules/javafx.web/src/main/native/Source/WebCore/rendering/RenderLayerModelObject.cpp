@@ -5,6 +5,7 @@
  *           (C) 2005, 2006 Samuel Weinig (sam.weinig@gmail.com)
  * Copyright (C) 2005-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2010-2015 Google Inc. All rights reserved.
+ * Copyright (C) 2023, 2024 Igalia S.L.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -26,6 +27,8 @@
 #include "RenderLayerModelObject.h"
 
 #include "InspectorInstrumentation.h"
+#include "MotionPath.h"
+#include "ReferencedSVGResources.h"
 #include "RenderDescendantIterator.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
@@ -35,13 +38,24 @@
 #include "RenderObjectInlines.h"
 #include "RenderSVGBlock.h"
 #include "RenderSVGModelObject.h"
+#include "RenderSVGResourceClipper.h"
+#include "RenderSVGResourceLinearGradient.h"
+#include "RenderSVGResourceMarker.h"
+#include "RenderSVGResourceMasker.h"
+#include "RenderSVGResourceRadialGradient.h"
 #include "RenderSVGText.h"
 #include "RenderStyleInlines.h"
 #include "RenderView.h"
+#include "SVGClipPathElement.h"
 #include "SVGGraphicsElement.h"
+#include "SVGMarkerElement.h"
+#include "SVGMaskElement.h"
+#include "SVGRenderStyle.h"
 #include "SVGTextElement.h"
+#include "SVGURIReference.h"
 #include "Settings.h"
 #include "StyleScrollSnapPoints.h"
+#include "TransformOperationData.h"
 #include "TransformState.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/MathExtras.h>
@@ -55,14 +69,16 @@ bool RenderLayerModelObject::s_hadLayer = false;
 bool RenderLayerModelObject::s_wasTransformed = false;
 bool RenderLayerModelObject::s_layerWasSelfPainting = false;
 
-RenderLayerModelObject::RenderLayerModelObject(Element& element, RenderStyle&& style, BaseTypeFlags baseTypeFlags)
-    : RenderElement(element, WTFMove(style), baseTypeFlags | RenderLayerModelObjectFlag)
+RenderLayerModelObject::RenderLayerModelObject(Type type, Element& element, RenderStyle&& style, OptionSet<TypeFlag> baseTypeFlags, TypeSpecificFlags typeSpecificFlags)
+    : RenderElement(type, element, WTFMove(style), baseTypeFlags | TypeFlag::IsLayerModelObject, typeSpecificFlags)
 {
+    ASSERT(isRenderLayerModelObject());
 }
 
-RenderLayerModelObject::RenderLayerModelObject(Document& document, RenderStyle&& style, BaseTypeFlags baseTypeFlags)
-    : RenderElement(document, WTFMove(style), baseTypeFlags | RenderLayerModelObjectFlag)
+RenderLayerModelObject::RenderLayerModelObject(Type type, Document& document, RenderStyle&& style, OptionSet<TypeFlag> baseTypeFlags, TypeSpecificFlags typeSpecificFlags)
+    : RenderElement(type, document, WTFMove(style), baseTypeFlags | TypeFlag::IsLayerModelObject, typeSpecificFlags)
 {
+    ASSERT(isRenderLayerModelObject());
 }
 
 RenderLayerModelObject::~RenderLayerModelObject()
@@ -98,9 +114,6 @@ void RenderLayerModelObject::destroyLayer()
 {
     ASSERT(!hasLayer());
     ASSERT(m_layer);
-#if PLATFORM(IOS_FAMILY)
-    m_layer->willBeDestroyed();
-#endif
     m_layer = nullptr;
 }
 
@@ -159,14 +172,12 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
                 setChildNeedsLayout();
             createLayer();
             if (parent() && !needsLayout() && containingBlock())
-                layer()->setRepaintStatus(NeedsFullRepaint);
+                layer()->setRepaintStatus(RepaintStatus::NeedsFullRepaint);
         }
     } else if (layer() && layer()->parent()) {
         gainedOrLostLayer = true;
-#if ENABLE(CSS_COMPOSITING)
         if (oldStyle && oldStyle->hasBlendMode())
             layer()->willRemoveChildWithBlendMode();
-#endif
         setHasTransformRelatedProperty(false); // All transform-related properties force layers, so we know we don't have one or the object doesn't support them.
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
         setHasSVGTransform(false); // Same reason as for setHasTransformRelatedProperty().
@@ -174,8 +185,8 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
         setHasReflection(false);
 
         // Repaint the about to be destroyed self-painting layer when style change also triggers repaint.
-        if (layer()->isSelfPaintingLayer() && layer()->repaintStatus() == NeedsFullRepaint && layer()->repaintRects())
-            repaintUsingContainer(containerForRepaint().renderer, layer()->repaintRects()->clippedOverflowRect);
+        if (layer()->isSelfPaintingLayer() && layer()->repaintStatus() == RepaintStatus::NeedsFullRepaint && layer()->cachedClippedOverflowRect())
+            repaintUsingContainer(containerForRepaint().renderer.get(), *(layer()->cachedClippedOverflowRect()));
 
         layer()->removeOnlyThisLayer(RenderLayer::LayerChangeTiming::StyleChange); // calls destroyLayer() which clears m_layer
         if (s_wasFloating && isFloating())
@@ -237,12 +248,12 @@ bool RenderLayerModelObject::shouldPlaceVerticalScrollbarOnLeft() const
 #endif
 }
 
-std::optional<LayerRepaintRects> RenderLayerModelObject::layerRepaintRects() const
+std::optional<LayoutRect> RenderLayerModelObject::cachedLayerClippedOverflowRect() const
 {
-    return hasLayer() ? layer()->repaintRects() : std::nullopt;
+    return hasLayer() ? layer()->cachedClippedOverflowRect() : std::nullopt;
 }
 
-bool RenderLayerModelObject::startAnimation(double timeOffset, const Animation& animation, const KeyframeList& keyframes)
+bool RenderLayerModelObject::startAnimation(double timeOffset, const Animation& animation, const BlendingKeyframes& keyframes)
 {
     if (!layer() || !layer()->backing())
         return false;
@@ -286,6 +297,12 @@ TransformationMatrix* RenderLayerModelObject::layerTransform() const
 
 void RenderLayerModelObject::updateLayerTransform()
 {
+    if (auto* box = dynamicDowncast<RenderBox>(this); box && style().offsetPath() && MotionPath::needsUpdateAfterContainingBlockLayout(*style().offsetPath())) {
+        if (auto* containingBlock = this->containingBlock()) {
+            view().frameView().layoutContext().setBoxNeedsTransformUpdateAfterContainerLayout(*box, *containingBlock);
+            return;
+        }
+    }
     // Transform-origin depends on box size, so we need to update the layer transform after layout.
     if (hasLayer())
         layer()->updateTransform();
@@ -309,54 +326,48 @@ bool RenderLayerModelObject::shouldPaintSVGRenderer(const PaintInfo& paintInfo, 
     return true;
 }
 
-std::optional<LayoutRect> RenderLayerModelObject::computeVisibleRectInSVGContainer(const LayoutRect& rect, const RenderLayerModelObject* container, RenderObject::VisibleRectContext context) const
+auto RenderLayerModelObject::computeVisibleRectsInSVGContainer(const RepaintRects& rects, const RenderLayerModelObject* container, RenderObject::VisibleRectContext context) const -> std::optional<RepaintRects>
 {
     ASSERT(is<RenderSVGModelObject>(this) || is<RenderSVGBlock>(this));
     ASSERT(!style().hasInFlowPosition());
     ASSERT(!view().frameView().layoutContext().isPaintOffsetCacheEnabled());
 
     if (container == this)
-        return rect;
+        return rects;
 
     bool containerIsSkipped;
     auto* localContainer = this->container(container, containerIsSkipped);
     if (!localContainer)
-        return rect;
+        return rects;
 
     ASSERT_UNUSED(containerIsSkipped, !containerIsSkipped);
 
-    LayoutRect adjustedRect = rect;
+    auto adjustedRects = rects;
 
     LayoutSize locationOffset;
-    if (is<RenderSVGModelObject>(this))
-        locationOffset = downcast<RenderSVGModelObject>(*this).locationOffsetEquivalent();
-    else if (is<RenderSVGBlock>(this))
-        locationOffset = downcast<RenderSVGBlock>(*this).locationOffset();
+    if (CheckedPtr modelObject = dynamicDowncast<RenderSVGModelObject>(this))
+        locationOffset = modelObject->locationOffsetEquivalent();
+    else if (CheckedPtr svgBlock = dynamicDowncast<RenderSVGBlock>(this))
+        locationOffset = svgBlock->locationOffset();
 
-    LayoutPoint topLeft = adjustedRect.location();
-    topLeft.move(locationOffset);
 
     // We are now in our parent container's coordinate space. Apply our transform to obtain a bounding box
     // in the parent's coordinate space that encloses us.
-    if (hasLayer() && layer()->transform()) {
-        adjustedRect = layer()->transform()->mapRect(adjustedRect);
-        topLeft = adjustedRect.location();
-        topLeft.move(locationOffset);
-    }
+    if (hasLayer() && layer()->transform())
+        adjustedRects.transform(*layer()->transform());
 
-    // FIXME: We ignore the lightweight clipping rect that controls use, since if |o| is in mid-layout,
-    // its controlClipRect will be wrong. For overflow clip we use the values cached by the layer.
-    adjustedRect.setLocation(topLeft);
+    adjustedRects.move(locationOffset);
+
     if (localContainer->hasNonVisibleOverflow()) {
-        bool isEmpty = !downcast<RenderLayerModelObject>(*localContainer).applyCachedClipAndScrollPosition(adjustedRect, container, context);
+        bool isEmpty = !downcast<RenderLayerModelObject>(*localContainer).applyCachedClipAndScrollPosition(adjustedRects, container, context);
         if (isEmpty) {
             if (context.options.contains(VisibleRectContextOption::UseEdgeInclusiveIntersection))
                 return std::nullopt;
-            return adjustedRect;
+            return adjustedRects;
         }
     }
 
-    return localContainer->computeVisibleRectInContainer(adjustedRect, container, context);
+    return localContainer->computeVisibleRectsInContainer(adjustedRects, container, context);
 }
 
 void RenderLayerModelObject::mapLocalToSVGContainer(const RenderLayerModelObject* ancestorContainer, TransformState& transformState, OptionSet<MapCoordinatesMode> mode, bool* wasFixed) const
@@ -436,7 +447,7 @@ void RenderLayerModelObject::applySVGTransform(TransformationMatrix& transform, 
 
     // CSS transforms take precedence over SVG transforms.
     if (hasCSSTransform)
-        style.applyCSSTransform(transform, boundingBox, options);
+        style.applyCSSTransform(transform, TransformOperationData(boundingBox, this), options);
     else if (!svgTransform.isIdentity())
         transform.multiplyAffineTransform(svgTransform);
 
@@ -455,6 +466,127 @@ void RenderLayerModelObject::updateHasSVGTransformFlags()
     setHasSVGTransform(hasSVGTransform);
 }
 
+RenderSVGResourceClipper* RenderLayerModelObject::svgClipperResourceFromStyle() const
+{
+    if (!document().settings().layerBasedSVGEngineEnabled())
+        return nullptr;
+
+    RefPtr referenceClipPathOperation = dynamicDowncast<ReferencePathOperation>(style().clipPath());
+    if (!referenceClipPathOperation)
+        return nullptr;
+
+    if (RefPtr referencedClipPathElement = ReferencedSVGResources::referencedClipPathElement(treeScopeForSVGReferences(), *referenceClipPathOperation)) {
+        if (auto* referencedClipperRenderer = dynamicDowncast<RenderSVGResourceClipper>(referencedClipPathElement->renderer()))
+            return referencedClipperRenderer;
+    }
+
+    if (auto* svgElement = dynamicDowncast<SVGElement>(this->element()))
+        document().addPendingSVGResource(referenceClipPathOperation->fragment(), *svgElement);
+
+    return nullptr;
+}
+
+RenderSVGResourceMasker* RenderLayerModelObject::svgMaskerResourceFromStyle() const
+{
+    if (!document().settings().layerBasedSVGEngineEnabled())
+        return nullptr;
+
+    auto* maskImage = style().maskImage();
+    auto reresolvedURL = maskImage ? maskImage->reresolvedURL(document()) : URL();
+    if (reresolvedURL.isEmpty())
+        return nullptr;
+
+    auto resourceID = SVGURIReference::fragmentIdentifierFromIRIString(reresolvedURL.string(), document());
+
+    if (RefPtr referencedMaskElement = ReferencedSVGResources::referencedMaskElement(treeScopeForSVGReferences(), *maskImage)) {
+        if (auto* referencedMaskerRenderer = dynamicDowncast<RenderSVGResourceMasker>(referencedMaskElement->renderer()))
+            return referencedMaskerRenderer;
+    }
+
+    if (auto* element = this->element())
+        document().addPendingSVGResource(resourceID, downcast<SVGElement>(*element));
+
+    return nullptr;
+}
+
+RenderSVGResourceMarker* RenderLayerModelObject::svgMarkerStartResourceFromStyle() const
+{
+    return svgMarkerResourceFromStyle(style().svgStyle().markerStartResource());
+}
+
+RenderSVGResourceMarker* RenderLayerModelObject::svgMarkerMidResourceFromStyle() const
+{
+    return svgMarkerResourceFromStyle(style().svgStyle().markerMidResource());
+}
+
+RenderSVGResourceMarker* RenderLayerModelObject::svgMarkerEndResourceFromStyle() const
+{
+    return svgMarkerResourceFromStyle(style().svgStyle().markerEndResource());
+}
+
+RenderSVGResourceMarker* RenderLayerModelObject::svgMarkerResourceFromStyle(const String& markerResource) const
+{
+    if (markerResource.isEmpty() || !document().settings().layerBasedSVGEngineEnabled())
+        return nullptr;
+
+    if (RefPtr referencedMarkerElement = ReferencedSVGResources::referencedMarkerElement(treeScopeForSVGReferences(), markerResource)) {
+        if (auto* referencedMarkerRenderer = dynamicDowncast<RenderSVGResourceMarker>(referencedMarkerElement->renderer()))
+            return referencedMarkerRenderer;
+    }
+
+    if (auto* element = dynamicDowncast<SVGElement>(this->element()))
+        document().addPendingSVGResource(AtomString(markerResource), *element);
+
+    return nullptr;
+}
+
+RenderSVGResourcePaintServer* RenderLayerModelObject::svgFillPaintServerResourceFromStyle(const RenderStyle& style) const
+{
+    if (!document().settings().layerBasedSVGEngineEnabled())
+        return nullptr;
+
+    const auto& svgStyle = style.svgStyle();
+    if (svgStyle.fillPaintType() < SVGPaintType::URINone)
+        return nullptr;
+
+    if (RefPtr referencedElement = ReferencedSVGResources::referencedPaintServerElement(treeScopeForSVGReferences(), svgStyle.fillPaintUri())) {
+        if (auto* referencedPaintServerRenderer = dynamicDowncast<RenderSVGResourcePaintServer>(referencedElement->renderer()))
+            return referencedPaintServerRenderer;
+    }
+
+    if (auto* element = this->element())
+        document().addPendingSVGResource(AtomString(svgStyle.fillPaintUri()), downcast<SVGElement>(*element));
+
+    return nullptr;
+}
+
+RenderSVGResourcePaintServer* RenderLayerModelObject::svgStrokePaintServerResourceFromStyle(const RenderStyle& style) const
+{
+    if (!document().settings().layerBasedSVGEngineEnabled())
+        return nullptr;
+
+    const auto& svgStyle = style.svgStyle();
+    if (svgStyle.strokePaintType() < SVGPaintType::URINone)
+        return nullptr;
+
+    if (RefPtr referencedElement = ReferencedSVGResources::referencedPaintServerElement(treeScopeForSVGReferences(), svgStyle.strokePaintUri())) {
+        if (auto* referencedPaintServerRenderer = dynamicDowncast<RenderSVGResourcePaintServer>(referencedElement->renderer()))
+            return referencedPaintServerRenderer;
+    }
+
+    if (auto* element = this->element())
+        document().addPendingSVGResource(AtomString(svgStyle.strokePaintUri()), downcast<SVGElement>(*element));
+
+    return nullptr;
+}
+#endif // ENABLE(LAYER_BASED_SVG_ENGINE)
+
+CheckedPtr<RenderLayer> RenderLayerModelObject::checkedLayer() const
+{
+    return m_layer.get();
+}
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
 void RenderLayerModelObject::repaintOrRelayoutAfterSVGTransformChange()
 {
     ASSERT(document().settings().layerBasedSVGEngineEnabled());
@@ -515,14 +647,39 @@ void RenderLayerModelObject::repaintOrRelayoutAfterSVGTransformChange()
     // Instead of performing a full-fledged layout (issuing repaints), just recompute the layer transform, and repaint.
     // In LBSE transformations do not affect the layout (except for text, where it still does!) -- SVG follows closely the CSS/HTML route, to avoid costly layouts.
     updateLayerTransform();
-    repaint();
+    repaintRendererOrClientsOfReferencedSVGResources();
 }
+
+void RenderLayerModelObject::paintSVGClippingMask(PaintInfo& paintInfo, const FloatRect& objectBoundingBox) const
+{
+    ASSERT(paintInfo.phase == PaintPhase::ClippingMask);
+    auto& context = paintInfo.context();
+    if (!paintInfo.shouldPaintWithinRoot(*this) || style().visibility() != Visibility::Visible || context.paintingDisabled())
+        return;
+
+    ASSERT(document().settings().layerBasedSVGEngineEnabled());
+    if (auto* referencedClipperRenderer = svgClipperResourceFromStyle())
+        referencedClipperRenderer->applyMaskClipping(paintInfo, *this, objectBoundingBox);
+}
+
+void RenderLayerModelObject::paintSVGMask(PaintInfo& paintInfo, const LayoutPoint& adjustedPaintOffset) const
+{
+    ASSERT(paintInfo.phase == PaintPhase::Mask);
+    auto& context = paintInfo.context();
+    if (!paintInfo.shouldPaintWithinRoot(*this) || context.paintingDisabled())
+        return;
+
+    ASSERT(isSVGLayerAwareRenderer());
+    if (auto* referencedMaskerRenderer = svgMaskerResourceFromStyle())
+        referencedMaskerRenderer->applyMask(paintInfo, *this, adjustedPaintOffset);
+}
+
 #endif
 
 bool rendererNeedsPixelSnapping(const RenderLayerModelObject& renderer)
 {
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
-    if (renderer.document().settings().layerBasedSVGEngineEnabled() && renderer.isSVGLayerAwareRenderer() && !renderer.isSVGRoot())
+    if (renderer.document().settings().layerBasedSVGEngineEnabled() && renderer.isSVGLayerAwareRenderer() && !renderer.isRenderSVGRoot())
         return false;
 #else
     UNUSED_PARAM(renderer);

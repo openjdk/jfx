@@ -1,5 +1,6 @@
 /*
  * Copyright (C) Research In Motion Limited 2009-2010. All rights reserved.
+ * Copyright (C) 2022, 2023, 2024 Igalia S.L.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -18,13 +19,13 @@
  */
 
 #pragma once
-
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderSVGResourceContainer.h"
+#include "SVGMarkerTypes.h"
 
 namespace WebCore {
 
-class AffineTransform;
-class RenderObject;
+class GraphicsContext;
 class SVGMarkerElement;
 
 class RenderSVGResourceMarker final : public RenderSVGResourceContainer {
@@ -33,47 +34,46 @@ public:
     RenderSVGResourceMarker(SVGMarkerElement&, RenderStyle&&);
     virtual ~RenderSVGResourceMarker();
 
-    inline SVGMarkerElement& markerElement() const;
+    inline bool hasReverseStart() const;
 
-    void removeAllClientsFromCacheIfNeeded(bool markForInvalidation, WeakHashSet<RenderObject>* visitedRenderers) override;
-    void removeClientFromCache(RenderElement&, bool markForInvalidation = true) override;
-
-    void draw(PaintInfo&, const AffineTransform&);
+    void invalidateMarker();
 
     // Calculates marker boundaries, mapped to the target element's coordinate space
-    FloatRect markerBoundaries(const AffineTransform& markerTransformation) const;
+    FloatRect computeMarkerBoundingBox(const SVGBoundingBoxComputation::DecorationOptions&, const AffineTransform& markerTransformation) const;
 
-    void applyViewportClip(PaintInfo&) override;
-    void layout() override;
-    void calcViewport() override;
-
-    const AffineTransform& localToParentTransform() const override;
     AffineTransform markerTransformation(const FloatPoint& origin, float angle, float strokeWidth) const;
 
-    bool applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>) override { return false; }
-    FloatRect resourceBoundingBox(const RenderObject&) override { return FloatRect(); }
+private:
+    ASCIILiteral renderName() const final { return "RenderSVGResourceMarker"_s; }
 
-    FloatPoint referencePoint() const;
-    std::optional<float> angle() const;
+    inline SVGMarkerElement& markerElement() const;
+    inline FloatPoint referencePoint() const;
+    inline std::optional<float> angle() const;
     inline SVGMarkerUnitsType markerUnits() const;
 
-    RenderSVGResourceType resourceType() const override { return MarkerResourceType; }
+    FloatRect viewport() const { return m_viewport; }
+    FloatSize viewportSize() const { return m_viewport.size(); }
+
+    void element() const = delete;
+    bool updateLayoutSizeIfNeeded() final;
+    std::optional<FloatRect> overridenObjectBoundingBoxWithoutTransformations() const final { return std::make_optional(viewport()); }
+
+    FloatRect computeViewport() const;
+
+    void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption>) const final;
+    LayoutRect overflowClipRect(const LayoutPoint& location, RenderFragmentContainer* = nullptr, OverlayScrollbarSizeRelevancy = IgnoreOverlayScrollbarSize, PaintPhase = PaintPhase::BlockBackground) const final;
+    void updateLayerTransform() final;
+    bool needsHasSVGTransformFlags() const final { return true; }
+
+    void layout() final;
+    void updateFromStyle() final;
 
 private:
-    void element() const = delete;
-
-    ASCIILiteral renderName() const override { return "RenderSVGResourceMarker"_s; }
-
-    // Generates a transformation matrix usable to render marker content. Handles scaling the marker content
-    // acording to SVGs markerUnits="strokeWidth" concept, when a strokeWidth value != -1 is passed in.
-    AffineTransform markerContentTransformation(const AffineTransform& contentTransformation, const FloatPoint& origin, float strokeWidth = -1) const;
-
-    AffineTransform viewportTransform() const;
-
-    mutable AffineTransform m_localToParentTransform;
+    AffineTransform m_supplementalLayerTransform;
     FloatRect m_viewport;
 };
 
-} // namespace WebCore
+}
 
-SPECIALIZE_TYPE_TRAITS_RENDER_SVG_RESOURCE(RenderSVGResourceMarker, MarkerResourceType)
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGResourceMarker, isRenderSVGResourceMarker())
+#endif // ENABLE(LAYER_BASED_SVG_ENGINE)
