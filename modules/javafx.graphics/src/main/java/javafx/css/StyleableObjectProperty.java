@@ -79,26 +79,19 @@ public abstract class StyleableObjectProperty<T>
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
     public void applyStyle(StyleOrigin origin, T newValue) {
-        if (newValue == null) {
-            set(null);
-            this.origin = origin;
-            return;
-        }
+        if (newValue != null) {
+            CssMetaData<? extends Styleable, T> metadata = getCssMetaData();
+            StyleConverter<?, T> converter = metadata.getConverter();
 
-        T oldValue = get();
-        CssMetaData<? extends Styleable, T> metadata = getCssMetaData();
-        StyleConverter<?, T> converter = metadata.getConverter();
-
-        if (converter instanceof StyleConverter.WithReconstructionSupport c) {
-            applyComponentTransition(oldValue, newValue, metadata, c);
-        } else if (newValue instanceof Interpolatable<?> && newValue.getClass().isInstance(oldValue)) {
-            // 'oldValue' and 'newValue' could be objects that both implement Interpolatable, but with
-            // different type arguments. We detect this case by checking whether 'newValue' is an instance
-            // of 'oldValue' (so that oldValue.interpolate(newValue, t) succeeds), and only applying the
-            // transition when the test succeeds.
-            applyInterpolatableTransition(oldValue, newValue, metadata);
+            if (converter instanceof StyleConverter.WithReconstructionSupport c) {
+                applyComponentTransition(newValue, metadata, c);
+            } else if (newValue instanceof Interpolatable<?>) {
+                applyInterpolatableTransition(newValue, metadata);
+            } else {
+                set(newValue);
+            }
         } else {
-            set(newValue);
+            set(null);
         }
 
         this.origin = origin;
@@ -108,17 +101,22 @@ public abstract class StyleableObjectProperty<T>
      * Sets the value of the property, and potentially starts a transition.
      * This method is used for {@link Interpolatable} values.
      *
-     * @param oldValue the old value
      * @param newValue the new value
      */
-    private void applyInterpolatableTransition(T oldValue, T newValue, CssMetaData<? extends Styleable, T> metadata) {
+    private void applyInterpolatableTransition(T newValue, CssMetaData<? extends Styleable, T> metadata) {
         // If this.origin == null, we're setting the value for the first time.
         // No transition should be started in this case.
         TransitionDefinition transition =
             this.origin != null && getBean() instanceof Node node ?
             NodeHelper.findTransitionDefinition(node, metadata) : null;
 
-        if (transition == null) {
+        // 'oldValue' and 'newValue' could be objects that both implement Interpolatable, but with
+        // different type arguments. We detect this case by checking whether 'newValue' is an instance
+        // of 'oldValue' (so that oldValue.interpolate(newValue, t) succeeds), and only applying the
+        // transition when the test succeeds.
+        T oldValue;
+
+        if (transition == null || !newValue.getClass().isInstance(oldValue = get())) {
             set(newValue);
         } else if (controller == null || !Objects.equals(newValue, controller.getTargetValue())) {
             // We only start a new transition if the new target value is different from the target
@@ -135,10 +133,9 @@ public abstract class StyleableObjectProperty<T>
      * Sets the value of the property, and potentially starts a transition.
      * This method is used for values that support component-wise transitions.
      *
-     * @param oldValue the old value
      * @param newValue the new value
      */
-    private void applyComponentTransition(T oldValue, T newValue,
+    private void applyComponentTransition(T newValue,
                                           CssMetaData<? extends Styleable, T> metadata,
                                           StyleConverter.WithReconstructionSupport<T> converter) {
         // If this.origin == null, we're setting the value for the first time.
@@ -152,7 +149,7 @@ public abstract class StyleableObjectProperty<T>
         if (transitions == null || transitions.isEmpty() || subMetadata == null || subMetadata.isEmpty()) {
             set(newValue);
         } else if (controller == null || !Objects.equals(newValue, controller.getTargetValue())) {
-            var oldCssValues = converter.convertBack(oldValue);
+            var oldCssValues = converter.convertBack(get());
             var newCssValues = converter.convertBack(newValue);
             var controller = new AggregatingTransitionController(newValue);
 
