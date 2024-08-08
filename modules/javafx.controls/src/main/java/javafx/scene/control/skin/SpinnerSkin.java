@@ -40,7 +40,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
-
+import com.sun.javafx.event.EventHelper;
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.control.FakeFocusTextField;
 import com.sun.javafx.scene.control.ListenerHelper;
@@ -194,9 +194,15 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
                 // Fix for the regression noted in a comment in RT-29885.
                 // This forwards the event down into the TextField when
                 // the key event is actually received by the Spinner.
-                textField.fireEvent(ke.copyFor(textField, textField));
+                KeyEvent ev = ke.copyFor(textField, textField);
+                EventHelper.propagateConsume(ev);
+                textField.fireEvent(ev);
 
-                if (ke.getCode() == KeyCode.ENTER) return;
+                if (ke.getCode() == KeyCode.ENTER) {
+                    if (!ev.isConsumed()) {
+                        return;
+                    }
+                }
 
                 ke.consume();
             }
