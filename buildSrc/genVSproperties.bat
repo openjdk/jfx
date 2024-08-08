@@ -70,6 +70,9 @@ if not exist "%VSTOOLSDIR%" exit
 
 call "%VSTOOLSDIR%\vcvars64.bat" > NUL
 
+REM Set legacy MSVCDIR variable in case some Makefiles still need it
+if "%MSVCDIR%"=="" set MSVCDIR=%VCINSTALLDIR%
+
 REM Echo out a properties file
 echo ############################################################
 echo # DO NOT EDIT: This is a generated file.
