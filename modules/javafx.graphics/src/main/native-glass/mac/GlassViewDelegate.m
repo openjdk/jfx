@@ -1021,7 +1021,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
         if (image != nil)
         {
-            DNDLOG("created an image with dim %dx%d", [image size].width, [image size].height);
+            DNDLOG("created an image with dim %fx%f", [image size].width, [image size].height);
             // check the drag image size and scale it down as needed using Safari behavior (sizes) as reference
             rect.size.width = [image size].width;
             rect.size.height = [image size].height;
@@ -1066,6 +1066,9 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
                 if (offset.y > imageHalfY || offset.y < -imageHalfY) {
                     offset.y = imageHalfY * (offset.y > 0 ? 1 : -1);
                 }
+
+                dragPoint.x += offset.x;
+                dragPoint.y += offset.y;
             }
         }
         else
