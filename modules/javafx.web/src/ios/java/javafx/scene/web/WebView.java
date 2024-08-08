@@ -37,6 +37,7 @@ import javafx.css.converter.EnumConverter;
 import javafx.css.converter.SizeConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
+import com.sun.javafx.geom.transform.Transform;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
@@ -327,16 +328,11 @@ final public class WebView extends Parent {
 
         });
 
-        layoutBoundsProperty().addListener(new ChangeListener<Bounds>() {
+        localToSceneTransform().addListener(new ChangeListener<Bounds>() {
 
             @Override
-            public void changed(ObservableValue<? extends Bounds> observable, Bounds oldValue, Bounds newValue) {
-                Affine3D trans = calculateNodeToSceneTransform(WebView.this);
-                _setTransform(handle,
-                trans.getMxx(), trans.getMxy(), trans.getMxz(), trans.getMxt(),
-                trans.getMyx(), trans.getMyy(), trans.getMyz(), trans.getMyt(),
-                trans.getMzx(), trans.getMzy(), trans.getMzz(), trans.getMzt());
-
+            public void changed(ObservableValue<? extends Transform> observable, Transform oldValue, Transform newValue) {
+                doTransformsChanged();
             }
 
         });
