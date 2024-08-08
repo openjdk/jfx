@@ -26,6 +26,7 @@
 package test.javafx.css;
 
 import com.sun.javafx.css.SelectorPartitioning;
+import com.sun.javafx.css.SimpleSelector;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -36,8 +37,6 @@ import javafx.css.DeclarationShim;
 import javafx.css.Rule;
 import javafx.css.RuleShim;
 import javafx.css.Selector;
-import javafx.css.SimpleSelector;
-import javafx.css.SimpleSelectorShim;
 import javafx.css.Stylesheet;
 import javafx.scene.paint.Color;
 import org.junit.Test;
@@ -88,8 +87,7 @@ public class SelectorPartitioningTest {
                 ).toString());
             List<String> styleClasses =
                 styleClass != null ? Arrays.asList(styleClass.split("\\.")) : null;
-            this.selector =
-                SimpleSelectorShim.getSimpleSelector(type, styleClasses, null, id);
+            this.selector = new SimpleSelector(type, styleClasses, null, id);
             this.matches = matches;
         }
     }
