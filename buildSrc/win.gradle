@@ -91,6 +91,25 @@ setupTools("windows_tools",
     }
 )
 
+// FIXME KCR: BEGIN VERBOSE
+println "KCR: BEGIN"
+println "WINDOWS_VS_VSINSTALLDIR=$WINDOWS_VS_VSINSTALLDIR"
+println "WINDOWS_VS_WINSDKDLLINSTALLDIR=$WINDOWS_VS_WINSDKDLLINSTALLDIR"
+println "WINDOWS_SDK_DIR=$WINDOWS_SDK_DIR"
+println "WINDOWS_SDK_VERSION=$WINDOWS_SDK_VERSION"
+println "WINDOWS_VS_VCINSTALLDIR=$WINDOWS_VS_VCINSTALLDIR"
+println "WINDOWS_VS_DEVENVDIR=$WINDOWS_VS_DEVENVDIR"
+println "WINDOWS_VS_MSVCDIR=$WINDOWS_VS_MSVCDIR"
+println "WINDOWS_VS_VC_TOOLS_INSTALL_DIR=$WINDOWS_VS_VC_TOOLS_INSTALL_DIR"
+println "WINDOWS_VS_VC_TOOLS_REDIST_DIR=$WINDOWS_VS_VC_TOOLS_REDIST_DIR"
+println "WINDOWS_VS_INCLUDE=$WINDOWS_VS_INCLUDE"
+println "WINDOWS_CRT_VER=$WINDOWS_CRT_VER"
+println "WINDOWS_VS_LIB=$WINDOWS_VS_LIB"
+println "WINDOWS_VS_LIBPATH=$WINDOWS_VS_LIBPATH"
+println "WINDOWS_VS_PATH=$WINDOWS_VS_PATH"
+println "KCR: END"
+// FIXME KCR: END VERBOSE
+
 if (WINDOWS_SDK_DIR == null || WINDOWS_SDK_DIR == "") {
     throw new GradleException("Cannot locate Visual Studio compilers; set the 'VSCOMNTOOLS' env var\nto the 'VC/Auxiliary/Build' dir in your Visual Studio installation");
 }
@@ -191,6 +210,9 @@ def winSdkDllDir = WINDOWS_VS_WINSDKDLLINSTALLDIR != "" ?
     "$WINDOWS_VS_WINSDKDLLINSTALLDIR/$TARGET_ARCH" :
     "${WINDOWS_SDK_DIR}/Redist/${WINDOWS_SDK_VERSION}/ucrt/DLLs/$TARGET_ARCH"
 
+// FIXME KCR: VERBOSE
+println "KCR: winSdkDllDir = $winSdkDllDir"
+
 def windowsCRTVer = System.getenv("WINDOWS_CRT_VER") ?: WINDOWS_CRT_VER
 
 def vsDllPath = cygpath("${msvcRedstDir}/Microsoft.VC${windowsCRTVer}.CRT")
@@ -216,6 +238,8 @@ else {
 
 def WinSDKDLLsPath = cygpath("${winSdkDllDir}")
 if (file(WinSDKDLLsPath).exists()) {
+    // FIXME KCR: VERBOSE
+    println "KCR: WinSDKDLLsPath exists"
     ext.WIN.WinSDKDLLNames = [
         "api-ms-win-core-console-l1-1-0.dll",
         "api-ms-win-core-console-l1-2-0.dll",

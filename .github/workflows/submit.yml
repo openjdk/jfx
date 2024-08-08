@@ -410,6 +410,10 @@ jobs:
           java -version
           .\gradlew.bat -version
           .\gradlew.bat --info all
+          # FIXME KCR: BEGIN VERBOSE
+          cat build\windows_tools.properties
+          ls build/sdk/bin
+          # FIXME KCR: END VERBOSE
 
       - name: Run JavaFX headless tests
         working-directory: jfx
