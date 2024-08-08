@@ -3,7 +3,7 @@ AC_PREREQ(2.63)
 
 m4_define([MAJOR_VERSION], [1])
 m4_define([MINOR_VERSION], [1])
-m4_define([MICRO_VERSION], [39])
+m4_define([MICRO_VERSION], [42])
 
 AC_INIT([libxslt], [MAJOR_VERSION.MINOR_VERSION.MICRO_VERSION])
 AC_CONFIG_SRCDIR([libxslt/xslt.c])
@@ -21,7 +21,7 @@ LIBXSLT_MINOR_VERSION=MINOR_VERSION
 LIBXSLT_MICRO_VERSION=MICRO_VERSION
 LIBEXSLT_MAJOR_VERSION=0
 LIBEXSLT_MINOR_VERSION=8
-LIBEXSLT_MICRO_VERSION=21
+LIBEXSLT_MICRO_VERSION=23
 LIBXML_REQUIRED_VERSION=2.6.27
 
 
@@ -252,15 +252,6 @@ else
     WITH_XSLT_DEBUG=1
 fi
 AC_SUBST(WITH_XSLT_DEBUG)
-
-AC_ARG_WITH(mem_debug, [  --with-mem-debug        Add the memory debugging module (off)])
-if test "$with_mem_debug" = "yes" ; then
-    echo Enabling memory debug support
-    WITH_MEM_DEBUG=1
-else    
-    WITH_MEM_DEBUG=0
-fi
-AC_SUBST(WITH_MEM_DEBUG)
 
 dnl 
 dnl Is debugger support requested
@@ -568,7 +559,6 @@ tests/fuzz/Makefile
 doc/Makefile
 doc/devhelp/Makefile
 doc/EXSLT/devhelp/Makefile
-libxslt.spec
 ])
 AC_CONFIG_FILES([xslt-config], [chmod +x xslt-config])
 
