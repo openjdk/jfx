@@ -78,7 +78,8 @@ public final class InterpolationUtils {
      * </ol>
      * This method preferably returns existing list instances (i.e. the {@code firstList} or
      * {@code secondList} arguments) as an indication to the caller that the result is shallow-equal
-     * to either of the input arguments.
+     * to either of the input arguments. Callers might depend on this behavior to optimize their own
+     * object allocation strategy by quickly detecting whether anything has changed at all.
      *
      * @param firstList the first list, not {@code null}
      * @param secondList the second list, not {@code null}
@@ -181,7 +182,8 @@ public final class InterpolationUtils {
      * <p>
      * This method preferably returns existing array instances (i.e. the {@code firstArraySeries} or
      * {@code secondArraySeries} arguments) as an indication to the caller that the result is shallow-equal
-     * to either of the input arguments.
+     * to either of the input arguments. Callers might depend on this behavior to optimize their own
+     * object allocation strategy by quickly detecting whether anything has changed at all.
      *
      * @param firstArraySeries the first array series, not {@code null}
      * @param secondArraySeries the second array series, not {@code null}
@@ -227,7 +229,8 @@ public final class InterpolationUtils {
      * </ol>
      * This method preferably returns existing array instances (i.e. the {@code firstArray} or
      * {@code secondArray} arguments) as an indication to the caller that the result is shallow-equal
-     * to either of the input arguments.
+     * to either of the input arguments. Callers might depend on this behavior to optimize their own
+     * object allocation strategy by quickly detecting whether anything has changed at all.
      *
      * @param firstArray the first array, not {@code null}
      * @param secondArray the second array, not {@code null}
