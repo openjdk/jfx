@@ -53,8 +53,8 @@ public final class SceneHelper {
         sceneAccessor.enableInputMethodEvents(scene, enable);
     }
 
-    public static void processKeyEvent(Scene scene, KeyEvent e) {
-        sceneAccessor.processKeyEvent(scene, e);
+    public static boolean processKeyEvent(Scene scene, KeyEvent e) {
+        return sceneAccessor.processKeyEvent(scene, e);
     }
 
     public static void processMouseEvent(Scene scene, MouseEvent e) {
@@ -118,7 +118,7 @@ public final class SceneHelper {
     public interface SceneAccessor {
         void enableInputMethodEvents(Scene scene, boolean enable);
 
-        void processKeyEvent(Scene scene, KeyEvent e);
+        boolean processKeyEvent(Scene scene, KeyEvent e);
 
         void processMouseEvent(Scene scene, MouseEvent e);
 

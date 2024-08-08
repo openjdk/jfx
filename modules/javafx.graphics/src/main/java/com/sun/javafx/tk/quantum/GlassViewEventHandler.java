@@ -147,7 +147,7 @@ class GlassViewEventHandler extends View.EventHandler {
     }
 
     private final KeyEventNotification keyNotification = new KeyEventNotification();
-    private class KeyEventNotification implements PrivilegedAction<Void> {
+    private class KeyEventNotification implements PrivilegedAction<Boolean> {
         View view;
         long time;
         int type;
@@ -158,11 +158,12 @@ class GlassViewEventHandler extends View.EventHandler {
         private KeyCode lastKeyCode;
 
         @Override
-        public Void run() {
+        public Boolean run() {
             if (PULSE_LOGGING_ENABLED) {
                 PulseLogger.newInput(keyEventType(type).toString());
             }
             WindowStage stage = scene.getWindowStage();
+            Boolean consumed = false;
             try {
                 boolean shiftDown = (modifiers & KeyEvent.MODIFIER_SHIFT) != 0;
                 boolean controlDown = (modifiers & KeyEvent.MODIFIER_CONTROL) != 0;
@@ -215,7 +216,7 @@ class GlassViewEventHandler extends View.EventHandler {
                             }
                         }
                         if (scene.sceneListener != null) {
-                            scene.sceneListener.keyEvent(keyEvent);
+                            consumed = scene.sceneListener.keyEvent(keyEvent);
                         }
                         break;
                     default:
@@ -231,12 +232,12 @@ class GlassViewEventHandler extends View.EventHandler {
                     PulseLogger.newInput(null);
                 }
             }
-            return null;
+            return consumed;
         }
     }
 
     @SuppressWarnings("removal")
-    @Override public void handleKeyEvent(View view, long time, int type, int key,
+    @Override public boolean handleKeyEvent(View view, long time, int type, int key,
                                          char[] chars, int modifiers)
     {
         keyNotification.view = view;
@@ -246,9 +247,10 @@ class GlassViewEventHandler extends View.EventHandler {
         keyNotification.chars = chars;
         keyNotification.modifiers = modifiers;
 
-        QuantumToolkit.runWithoutRenderLock(() -> {
+        final boolean consumed = QuantumToolkit.runWithoutRenderLock(() -> {
             return AccessController.doPrivileged(keyNotification, scene.getAccessControlContext());
         });
+        return consumed;
     }
 
     private static EventType<javafx.scene.input.MouseEvent> mouseEventType(int glassType) {

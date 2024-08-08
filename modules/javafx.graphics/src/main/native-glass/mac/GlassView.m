@@ -106,9 +106,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1initIDs
         if ((*env)->ExceptionCheck(env)) return;
     }
 
-    if (jViewNotifyKey == NULL)
+    if (jViewNotifyKeyAndReturnConsumed == NULL)
     {
-        jViewNotifyKey = (*env)->GetMethodID(env, jViewClass, "notifyKey", "(II[CI)V");
+        jViewNotifyKeyAndReturnConsumed = (*env)->GetMethodID(env, jViewClass, "notifyKeyAndReturnConsumed", "(II[CI)Z");
         if ((*env)->ExceptionCheck(env)) return;
     }
 
