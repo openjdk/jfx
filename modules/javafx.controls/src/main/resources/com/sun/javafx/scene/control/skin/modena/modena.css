@@ -1044,7 +1044,7 @@ is being used to size a border should also be in pixels.
 .scroll-bar > .decrement-button {
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
     -fx-color: transparent;
-    -fx-padding: 0.25em; /* 3px */
+    -fx-padding: 3px;
 }
 .scroll-bar:horizontal > .increment-button,
 .scroll-bar:horizontal > .decrement-button {
@@ -1067,25 +1067,25 @@ is being used to size a border should also be in pixels.
     -fx-background-color: -fx-mark-highlight-color,derive(-fx-base,-55%);
 }
 .scroll-bar:horizontal > .decrement-button > .decrement-arrow {
-    -fx-padding: 0.333em 0.167em 0.333em 0.167em; /* 4 2 4 2 */
+    -fx-padding: 4px 2px 4px 2px;
     -fx-shape: "M5.997,5.072L5.995,6.501l-2.998-4l2.998-4l0.002,1.43l-1.976,2.57L5.997,5.072z";
     -fx-effect: dropshadow(two-pass-box , -fx-shadow-highlight-color, 1, 0.0 , 0, 1.4);
     /*-fx-background-insets: 2 0 -2 0, 0;*/
 }
 .scroll-bar:horizontal > .increment-button > .increment-arrow {
-    -fx-padding: 0.333em 0.167em 0.333em 0.167em; /* 4 2 4 2 */
+    -fx-padding: 4px 2px 4px 2px
     -fx-shape: "M2.998-0.07L3-1.499l2.998,4L3,6.501l-0.002-1.43l1.976-2.57L2.998-0.07z";
     -fx-effect: dropshadow(two-pass-box , -fx-shadow-highlight-color, 1, 0.0 , 0, 1.4);
     /*-fx-background-insets: 2 0 -2 0, 0;*/
 }
 .scroll-bar:vertical > .decrement-button > .decrement-arrow {
-    -fx-padding: 0.167em 0.333em 0.167em 0.333em; /* 2 4 2 4 */
+    -fx-padding: 2px 4px 2px 4px;
     -fx-shape: "M1.929,4L0.5,3.998L4.5,1l4,2.998L7.07,4L4.5,2.024L1.929,4z";
     -fx-effect: dropshadow(two-pass-box , -fx-shadow-highlight-color, 1, 0.0 , 0, 1.4);
     /*-fx-background-insets: 2 0 -2 0, 0;*/
 }
 .scroll-bar:vertical > .increment-button > .increment-arrow {
-    -fx-padding: 0.167em 0.333em 0.167em 0.333em; /* 2 4 2 4 */
+    -fx-padding: 2px 4px 2px 4px;
     -fx-shape: "M7.071,1L8.5,1.002L4.5,4l-4-2.998L1.93,1L4.5,2.976L7.071,1z";
     -fx-effect: dropshadow(two-pass-box , -fx-shadow-highlight-color, 1, 0.0 , 0, 1.4);
     /*-fx-background-insets: 2 0 -2 0, 0;*/
@@ -1105,11 +1105,11 @@ is being used to size a border should also be in pixels.
 }
 .scroll-pane > .scroll-bar:horizontal > .increment-button,
 .scroll-pane > .scroll-bar:horizontal > .decrement-button {
-    -fx-padding: 0.166667em 0.25em 0.25em  0.25em; /* 2 3 3 3 */
+    -fx-padding: 2px 3px 3px 3px;
 }
 .scroll-pane > .scroll-bar:vertical > .increment-button,
 .scroll-pane > .scroll-bar:vertical > .decrement-button {
-    -fx-padding: 0.25em 0.25em 0.25em 0.166667em; /* 3 3 3 2 */
+    -fx-padding: 3px 3px 3px 2px;
 }
 .scroll-pane > .scroll-bar:vertical {
     -fx-background-insets: 1 1 1 0, 1;
@@ -1329,7 +1329,7 @@ is being used to size a border should also be in pixels.
 }
 .text-area .content {
     /*the is 1px less top and bottom than TextInput because of scrollpane border */
-    -fx-padding: 0.25em 0.583em 0.25em 0.583em; /* 3 7 3 7 */
+    -fx-padding: 3px 7px 3px 7px;
     -fx-cursor: text;
     -fx-background-color:
         linear-gradient(from 0px 0px to 0px 4px, derive(-fx-control-inner-background, -8%), -fx-control-inner-background);
