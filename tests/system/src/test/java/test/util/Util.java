@@ -48,6 +48,7 @@ import javafx.stage.Screen;
 import javafx.stage.Window;
 import org.junit.Assert;
 import junit.framework.AssertionFailedError;
+import com.sun.javafx.PlatformUtil;
 
 /**
  * Utility methods for life-cycle testing
@@ -489,5 +490,17 @@ public class Util {
             return 1.0;
         }
         return 0.0;
+    }
+
+
+    /**
+     *
+     * @return true if running Wayland
+     */
+    public static boolean isOnWayland() {
+        if (!PlatformUtil.isLinux()) return false;
+
+        String waylandDisplay = System.getenv("WAYLAND_DISPLAY");
+        return waylandDisplay != null && !waylandDisplay.isEmpty();
     }
 }
