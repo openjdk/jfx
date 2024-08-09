@@ -3584,6 +3584,30 @@ project(":media") {
     addValidateSourceSets(project, sourceSets)
 }
 
+project(":jsobject") {
+    project.ext.buildModule = true
+    project.ext.includeSources = true
+    project.ext.moduleRuntime = true
+    project.ext.moduleName = "jdk.jsobject"
+
+    sourceSets {
+        main
+    }
+
+    project.ext.moduleSourcePath = defaultModuleSourcePath
+    project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
+
+    commonModuleSetup(project, [ 'jsobject' ])
+
+
+    dependencies {
+    }
+
+    addMavenPublication(project, [])
+
+    addValidateSourceSets(project, sourceSets)
+}
+
 project(":web") {
     configurations {
         webkit
@@ -3614,7 +3638,7 @@ project(":web") {
     project.ext.moduleSourcePath = defaultModuleSourcePath
     project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
 
-    commonModuleSetup(project, [ 'base', 'graphics', 'controls', 'media', 'web' ])
+    commonModuleSetup(project, [ 'base', 'graphics', 'controls', 'media', 'jsobject', 'web' ])
 
     dependencies {
         if (IS_COMPILE_WEBKIT) {
@@ -3862,7 +3886,7 @@ project(":web") {
         assemble.dependsOn compileJavaDOMBinding, drtJar
     }
 
-    addMavenPublication(project, [ 'controls', 'media' ])
+    addMavenPublication(project, [ 'controls', 'media', 'jsobject' ])
 
     addValidateSourceSets(project, sourceSets)
 }
@@ -3924,7 +3948,7 @@ project(":systemTests") {
         testImplementation project(":swing").sourceSets.test.output
     }
 
-    def dependentProjects = [ 'base', 'graphics', 'controls', 'media', 'web', 'swing', 'fxml' ]
+    def dependentProjects = [ 'base', 'graphics', 'controls', 'media', 'jsobject', 'web', 'swing', 'fxml' ]
     commonModuleSetup(project, dependentProjects)
 
     File testJavaPolicyFile = new File(rootProject.buildDir, TESTJAVAPOLICYFILE);
@@ -4365,7 +4389,7 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     executable = JAVADOC
     def projectsToDocument = [
             project(":base"), project(":graphics"), project(":controls"), project(":media"),
-            project(":swing"), /*project(":swt"),*/ project(":fxml"), project(":web")]
+            project(":swing"), /*project(":swt"),*/ project(":fxml"), project(":jsobject"), project(":web")]
     source(projectsToDocument.collect({
         [it.sourceSets.main.java]
     }));
