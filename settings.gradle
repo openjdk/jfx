@@ -23,11 +23,40 @@
  * questions.
  */
 
-include "base", "graphics", "controls", "swing", "swt", "fxml", "web", "media", "systemTests"
+// RFE: incubator dependency
+include "base",
+        "graphics",
+        "controls",
+
+        // RFE: incubator dependency
+        // TODO: incubator: Add entry for each incubator module here
+        // BEGIN: incubator placeholder
+        //"incubator.mymod",
+        // END: incubator placeholder
+
+        // TODO: incubator template -- rename module, then remove this TODO comment
+        "incubator.myfeature",
+
+        "swing",
+        "swt",
+        "fxml",
+        "web",
+        "media",
+        "systemTests"
 
 project(":base").projectDir = file("modules/javafx.base")
 project(":graphics").projectDir = file("modules/javafx.graphics")
 project(":controls").projectDir = file("modules/javafx.controls")
+
+// RFE: incubator dependency
+// TODO: incubator: Add entry for each incubator module here
+// BEGIN: incubator placeholder
+//project(":incubator.mymod").projectDir = file("modules/jfx.incubator.mymod")
+// END: incubator placeholder
+
+// TODO: incubator template -- rename module, then remove this TODO comment
+project(":incubator.myfeature").projectDir = file("modules/jfx.incubator.myfeature")
+
 project(":swing").projectDir = file("modules/javafx.swing")
 project(":swt").projectDir = file("modules/javafx.swt")
 project(":fxml").projectDir = file("modules/javafx.fxml")
