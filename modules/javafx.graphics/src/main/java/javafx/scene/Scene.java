@@ -64,6 +64,7 @@ import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.NamedArg;
 import javafx.beans.property.*;
+import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
@@ -561,6 +562,7 @@ public class Scene implements EventTarget {
                 dirtyNodes = tmp;
             }
             dirtyNodes[dirtyNodesSize++] = n;
+            checkCleanDirtyNodes();
         }
     }
 
@@ -732,6 +734,21 @@ public class Scene implements EventTarget {
             return;
         }
         postLayoutPulseListeners.remove(r);
+    }
+
+    private boolean cleanupAdded = false;
+    private TKPulseListener cleanupListener = () -> {
+        cleanupAdded = false;
+        // JDK-8269907 - This is important, to avoid memoryleaks in dirtyNodes and Parent.removed
+        synchronizeSceneNodes();
+    };
+    private void checkCleanDirtyNodes() {
+        if (!cleanupAdded
+                && (window.get() == null || !window.get().isShowing())
+                && dirtyNodesSize > 0) {
+            Toolkit.getToolkit().addCleanupTask(cleanupListener);
+            cleanupAdded = true;
+        }
     }
 
     /**
@@ -1283,12 +1300,15 @@ public class Scene implements EventTarget {
         // because this scene can be stage-less
         doLayoutPass();
 
+        synchronizeSceneNodes();
+    }
+
+    private void synchronizeSceneNodes() {
         getRoot().updateBounds();
         if (peer != null) {
             peer.waitForRenderingToComplete();
             peer.waitForSynchronization();
             try {
-                // Run the synchronizer while holding the render lock
                 scenePulseListener.synchronizeSceneNodes();
             } finally {
                 peer.releaseSynchronization(false);
@@ -1296,7 +1316,6 @@ public class Scene implements EventTarget {
         } else {
             scenePulseListener.synchronizeSceneNodes();
         }
-
     }
 
     // Shared method for Scene.snapshot and Node.snapshot. It is static because
@@ -2095,17 +2114,22 @@ public class Scene implements EventTarget {
 
     private void windowForSceneChanged(Window oldWindow, Window newWindow) {
         if (oldWindow != null) {
+            oldWindow.showingProperty().removeListener(sceneWindowShowingListener);
             oldWindow.focusedProperty().removeListener(sceneWindowFocusedListener);
         }
 
         if (newWindow != null) {
+            newWindow.showingProperty().addListener(sceneWindowShowingListener);
             newWindow.focusedProperty().addListener(sceneWindowFocusedListener);
             setWindowFocused(newWindow.isFocused());
         } else {
             setWindowFocused(false);
         }
+
+        checkCleanDirtyNodes();
     }
 
+    private final ChangeListener<Boolean> sceneWindowShowingListener = (p, o, n) -> checkCleanDirtyNodes();
     private final InvalidationListener sceneWindowFocusedListener =
             valueModel -> setWindowFocused(((ReadOnlyBooleanProperty)valueModel).get());
 
