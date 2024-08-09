@@ -49,8 +49,10 @@ extern "C" {
 #  endif
 # endif
 # define MAYBE_UNUSED __attribute__((__unused__))
+# define NORETURN __attribute__((__noreturn__))
 #else
 # define MAYBE_UNUSED
+# define NORETURN
 # if HAVE_ALLOCA_H
 #  include <alloca.h>
 # else
@@ -82,9 +84,9 @@ char *alloca ();
 #endif
 
 #ifdef FFI_DEBUG
-void ffi_assert(char *expr, char *file, int line);
+NORETURN void ffi_assert(const char *expr, const char *file, int line);
 void ffi_stop_here(void);
-void ffi_type_test(ffi_type *a, char *file, int line);
+void ffi_type_test(ffi_type *a, const char *file, int line);
 
 #define FFI_ASSERT(x) ((x) ? (void)0 : ffi_assert(#x, __FILE__,__LINE__))
 #define FFI_ASSERT_AT(x, f, l) ((x) ? 0 : ffi_assert(#x, (f), (l)))
@@ -127,6 +129,10 @@ void *ffi_data_to_code_pointer (void *data) FFI_HIDDEN;
 /* The arch code calls this to determine if a given closure has a
    static trampoline. */
 int ffi_tramp_is_present (void *closure) FFI_HIDDEN;
+
+/* Return a file descriptor of a temporary zero-sized file in a
+   writable and executable filesystem. */
+int open_temp_exec_file(void) FFI_HIDDEN;
 
 /* Extended cif, used in callback from assembly routine */
 typedef struct

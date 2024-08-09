@@ -134,7 +134,7 @@ CFLAGS =   -DWIN32 \
            -DLIBDIR \
            -DNVALGRIND \
            -DG_OS_WIN32 \
-           -DFFI_BUILDING \
+           -DFFI_STATIC_BUILD \
            -DG_DISABLE_DEPRECATED \
            $(INCLUDES) \
            $(COMPILER_FLAGS)

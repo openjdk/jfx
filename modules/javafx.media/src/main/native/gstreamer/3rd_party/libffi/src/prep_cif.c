@@ -1,7 +1,7 @@
 /* -----------------------------------------------------------------------
    prep_cif.c - Copyright (c) 2011, 2012, 2021  Anthony Green
                 Copyright (c) 1996, 1998, 2007  Red Hat, Inc.
-                Copyright (c) 2022, 2023, Oracle and/or its affiliates.
+                Copyright (c) 2022 Oracle and/or its affiliates.
 
    Permission is hereby granted, free of charge, to any person obtaining
    a copy of this software and associated documentation files (the
@@ -234,7 +234,7 @@ ffi_status ffi_prep_cif_var(ffi_cif *cif,
 {
   ffi_status rc;
   size_t int_size = ffi_type_sint.size;
-  int i;
+  unsigned int i;
 
   rc = ffi_prep_cif_core(cif, abi, 1, nfixedargs, ntotalargs, rtype, atypes);
 
