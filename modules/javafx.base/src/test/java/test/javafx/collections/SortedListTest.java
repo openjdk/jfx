@@ -609,4 +609,26 @@ public class SortedListTest {
         assertThrows(IndexOutOfBoundsException.class, () -> sortedList.getViewIndex(sortedList.size()));
         assertDoesNotThrow(() -> sortedList.getViewIndex(sortedList.size() - 1));
     }
+
+    @Test
+    public void testSortingMaintainsInsertionOrderForEqualElements() {
+        ObservableList<Person> list = FXCollections.observableArrayList();
+
+        Person p1 = new Person("a");
+        Person p2 = new Person("b");
+        Person p3 = new Person("a");
+
+        list.addAll(p2, p1);
+        // After adding p2 and p1, list= [p2, p1], sorted list= [p1, p2]
+        SortedList<Person> sorted = new SortedList<>(list, Comparator.comparing(p -> p.name.get()));
+
+        list.add(p3);
+        // After adding p3, list= [p2, p1, p3]
+        // p1 and p3 have equal names, but p3 was added after p1, so p3 should come after p1 in the sorted list
+        // Expected sorted list= [p1, p3, p2]
+
+        assertSame(sorted.get(0), p1);
+        assertSame(sorted.get(1), p3);
+        assertSame(sorted.get(2), p2);
+    }
 }
