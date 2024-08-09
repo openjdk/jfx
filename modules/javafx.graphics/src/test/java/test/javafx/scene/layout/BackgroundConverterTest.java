@@ -25,6 +25,7 @@
 
 package test.javafx.scene.layout;
 
+import com.sun.javafx.css.SubPropertyConverter;
 import com.sun.javafx.tk.Toolkit;
 import javafx.css.StyleConverter;
 import javafx.geometry.Insets;
@@ -85,7 +86,7 @@ public class BackgroundConverterTest {
         );
 
         @SuppressWarnings("unchecked")
-        var converter = (StyleConverter.WithReconstructionSupport<Background>)this.converter;
+        var converter = (SubPropertyConverter<Background>)this.converter;
         var actual = converter.convert(converter.convertBack(expected));
         assertEquals(expected, actual);
     }

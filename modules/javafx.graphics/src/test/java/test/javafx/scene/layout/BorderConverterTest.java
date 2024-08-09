@@ -25,6 +25,7 @@
 
 package test.javafx.scene.layout;
 
+import com.sun.javafx.css.SubPropertyConverter;
 import com.sun.javafx.tk.Toolkit;
 import javafx.css.StyleConverter;
 import javafx.geometry.Insets;
@@ -90,7 +91,7 @@ public class BorderConverterTest {
         );
 
         @SuppressWarnings("unchecked")
-        var converter = (StyleConverter.WithReconstructionSupport<Border>)this.converter;
+        var converter = (SubPropertyConverter<Border>)this.converter;
         var actual = converter.convert(converter.convertBack(expected));
         assertEquals(expected, actual);
     }

@@ -26,6 +26,7 @@
 package javafx.scene.layout;
 
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.SubPropertyConverter;
 import com.sun.javafx.scene.layout.region.BorderImageSlices;
 import com.sun.javafx.scene.layout.region.Margins;
 import com.sun.javafx.scene.layout.region.RepeatStruct;
@@ -44,7 +45,7 @@ import javafx.scene.paint.Paint;
  * Converts -fx-border components into a {@link Border}.
  */
 class BorderConverter extends StyleConverter<ParsedValue[], Border>
-                      implements StyleConverter.WithReconstructionSupport<Border> {
+                      implements SubPropertyConverter<Border> {
 
     private static final BorderConverter BORDER_IMAGE_CONVERTER =
             new BorderConverter();

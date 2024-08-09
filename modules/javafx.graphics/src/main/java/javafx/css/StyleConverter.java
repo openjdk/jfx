@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -85,33 +85,6 @@ import java.util.WeakHashMap;
  * @since JavaFX 8.0
  */
 public class StyleConverter<F, T> {
-
-    /**
-     * Defines the {@code convert} and {@code convertBack} operations that enable object
-     * decomposition and reconstruction. Note that the following invariant must always be
-     * satisfied: {@code convert(convertBack(value)).equals(value)}
-     *
-     * @param <T> the target type
-     * @since 24
-     */
-    public interface WithReconstructionSupport<T> {
-        /**
-         * Converts a map of CSS values to the target type.
-         *
-         * @param values the constituent values
-         * @return the converted object
-         */
-        T convert(Map<CssMetaData<? extends Styleable, ?>, Object> values);
-
-        /**
-         * Converts an object back to a map of its constituent values (deconstruction).
-         * The returned map can be passed into {@link #convert(Map)} to reconstruct the object.
-         *
-         * @param value the object
-         * @return a {@code Map} of the constituent values
-         */
-        Map<CssMetaData<? extends Styleable, ?>, Object> convertBack(T value);
-    }
 
     /**
      * Creates a {@code StyleConverter}.

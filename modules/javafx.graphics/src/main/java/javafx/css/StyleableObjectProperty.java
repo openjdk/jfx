@@ -27,6 +27,7 @@ package javafx.css;
 
 import com.sun.javafx.css.TransitionMediator;
 import com.sun.javafx.css.TransitionDefinition;
+import com.sun.javafx.css.SubPropertyConverter;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.util.InterpolationUtils;
@@ -82,8 +83,8 @@ public abstract class StyleableObjectProperty<T>
         CssMetaData<? extends Styleable, T> metadata = getCssMetaData();
         StyleConverter<?, T> converter = metadata.getConverter();
 
-        if (converter instanceof StyleConverter.WithReconstructionSupport c) {
-            applyValueComponents(newValue, metadata, c);
+        if (converter instanceof SubPropertyConverter c) {
+            applyComponents(newValue, metadata, c);
         } else {
             applyValue(newValue, metadata);
         }
@@ -140,9 +141,9 @@ public abstract class StyleableObjectProperty<T>
      * @param metadata the CSS metadata of the value
      * @param converter the style converter of the value
      */
-    private void applyValueComponents(T newValue,
-                                      CssMetaData<? extends Styleable, T> metadata,
-                                      StyleConverter.WithReconstructionSupport<T> converter) {
+    private void applyComponents(T newValue,
+                                 CssMetaData<? extends Styleable, T> metadata,
+                                 SubPropertyConverter<T> converter) {
         // If this.origin == null, we're setting the value for the first time.
         // No transition should be started in this case.
         Map<CssMetaData<? extends Styleable, ?>, TransitionDefinition> transitions =
