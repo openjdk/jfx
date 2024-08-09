@@ -1046,12 +1046,9 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
         if (image != nil)
         {
-            // select the center of the image as the drag origin
             // TODO http://javafx-jira.kenai.com/browse/RT-17629
             // would be nice to get this info from the Java layer,
             // so that we could adjust the drag image origin based on where in the src it was clicked on
-            dragPoint.x -= ([image size].width/2.0f);
-            dragPoint.y -= ([image size].height/2.0f);
 
             NSString *offsetString = [pbItem stringForType:DRAG_IMAGE_OFFSET];
             if (offsetString != nil) {
@@ -1067,8 +1064,8 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
                     offset.y = imageHalfY * (offset.y > 0 ? 1 : -1);
                 }
 
-                dragPoint.x += offset.x;
-                dragPoint.y += offset.y;
+                dragPoint.x -= offset.x;
+                dragPoint.y -= offset.y;
             }
         }
         else
