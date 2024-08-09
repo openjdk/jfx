@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,11 +31,11 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import com.sun.javafx.util.Utils;
 import javafx.scene.paint.Color;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import javafx.scene.paint.Paint;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ColorTest {
 
@@ -128,9 +128,9 @@ public class ColorTest {
 
     @Test
     public void testOfTheWayIndirect() {
-        Interpolatable<Color> start = new Color(0, 0, 0, 0);
+        Interpolatable<Paint> start = new Color(0, 0, 0, 0);
         Color end = new Color(1, 1, 1, 1);
-        Color mid = start.interpolate(end, .5);
+        Color mid = (Color)start.interpolate(end, .5);
         assertEquals(mid.getRed(), .5, 0.0001);
         assertEquals(mid.getGreen(),.5, 0.0001);
         assertEquals(mid.getBlue(), .5, 0.0001);
@@ -355,19 +355,19 @@ public class ColorTest {
         assertEquals((128.0/255.0)/2.0, color.getOpacity(), 0.0001);
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testWebPoundNotationIllegalValue() {
-        Color.web("#aabbccddee");
+        assertThrows(IllegalArgumentException.class, () -> Color.web("#aabbccddee"));
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testWebNullValue() {
-        Color.web(null);
+        assertThrows(NullPointerException.class, () -> Color.web(null));
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testWebEmptyColor() {
-        Color.web("", 0.5);
+        assertThrows(IllegalArgumentException.class, () -> Color.web("", 0.5));
     }
 
     @Test
@@ -387,9 +387,9 @@ public class ColorTest {
         assertEquals(128.0/255.0, color.getOpacity(), 0.0001);
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testWebHexNotationIllegalValue() {
-        Color.web("0xaabbccddee");
+        assertThrows(IllegalArgumentException.class, () -> Color.web("0xaabbccddee"));
     }
 
     @Test
@@ -426,9 +426,9 @@ public class ColorTest {
         assertTrue(expected.getOpacity() == color.getOpacity());
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testWebNamedWrongName() {
-        Color.web("foobar");
+        assertThrows(IllegalArgumentException.class, () -> Color.web("foobar"));
     }
 
     @Test
@@ -653,114 +653,114 @@ public class ColorTest {
         assertEquals(c5, c6);
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testWebRgb2Param() {
-        Color.web("rgb(100, 100)");
+        assertThrows(IllegalArgumentException.class, () -> Color.web("rgb(100, 100)"));
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testWebRgb1Param() {
-        Color.web("rgb(100)");
+        assertThrows(IllegalArgumentException.class, () -> Color.web("rgb(100)"));
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testWebRgb0Param() {
-        Color.web("rgb()");
+        assertThrows(IllegalArgumentException.class, () -> Color.web("rgb()"));
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testWebRgbNoParen() {
-        Color.web("rgb 100, 100, 100");
+        assertThrows(IllegalArgumentException.class, () -> Color.web("rgb 100, 100, 100"));
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testWebRgbNoCloseParen() {
-        Color.web("rgb(100, 100, 100");
+        assertThrows(IllegalArgumentException.class, () -> Color.web("rgb(100, 100, 100"));
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testWebRgba3Param() {
-        Color.web("rgba(100, 100, 100)");
+        assertThrows(IllegalArgumentException.class, () -> Color.web("rgba(100, 100, 100)"));
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testWebRgba2Param() {
-        Color.web("rgba(100, 100)");
+        assertThrows(IllegalArgumentException.class, () -> Color.web("rgba(100, 100)"));
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testWebRgba1Param() {
-        Color.web("rgba(100)");
+        assertThrows(IllegalArgumentException.class, () -> Color.web("rgba(100)"));
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testWebRgba0Param() {
-        Color.web("rgba()");
+        assertThrows(IllegalArgumentException.class, () -> Color.web("rgba()"));
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testWebRgbaNoParen() {
-        Color.web("rgba 100, 100, 100");
+        assertThrows(IllegalArgumentException.class, () -> Color.web("rgba 100, 100, 100"));
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testWebRgbaNoCloseParen() {
-        Color.web("rgba(100, 100, 100, 0.5");
+        assertThrows(IllegalArgumentException.class, () -> Color.web("rgba(100, 100, 100, 0.5"));
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testWebHsl2Param() {
-        Color.web("hsl(240, 50%)");
+        assertThrows(IllegalArgumentException.class, () -> Color.web("hsl(240, 50%)"));
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testWebHsl1Param() {
-        Color.web("hsl(240)");
+        assertThrows(IllegalArgumentException.class, () -> Color.web("hsl(240)"));
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testWebHsl0Param() {
-        Color.web("hsl()");
+        assertThrows(IllegalArgumentException.class, () -> Color.web("hsl()"));
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testWebHslNoParen() {
-        Color.web("hsl 240, 50%, 50%");
+        assertThrows(IllegalArgumentException.class, () -> Color.web("hsl 240, 50%, 50%"));
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testWebHslNoCloseParen() {
-        Color.web("hsl(240, 50%, 50%");
+        assertThrows(IllegalArgumentException.class, () -> Color.web("hsl(240, 50%, 50%"));
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testWebHsla3Param() {
-        Color.web("hsla(240, 50%, 50%)");
+        assertThrows(IllegalArgumentException.class, () -> Color.web("hsla(240, 50%, 50%)"));
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testWebHsla2Param() {
-        Color.web("hsla(240, 50%)");
+        assertThrows(IllegalArgumentException.class, () -> Color.web("hsla(240, 50%)"));
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testWebHsla1Param() {
-        Color.web("hsla(240)");
+        assertThrows(IllegalArgumentException.class, () -> Color.web("hsla(240)"));
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testWebHsla0Param() {
-        Color.web("hsla()");
+        assertThrows(IllegalArgumentException.class, () -> Color.web("hsla()"));
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testWebHslaNoParen() {
-        Color.web("hsla 240, 50%, 50%, 0.5");
+        assertThrows(IllegalArgumentException.class, () -> Color.web("hsla 240, 50%, 50%, 0.5"));
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testWebHslaNoCloseParen() {
-        Color.web("hsla(240, 50%, 50%, 0.5");
+        assertThrows(IllegalArgumentException.class, () -> Color.web("hsla(240, 50%, 50%, 0.5"));
     }
 
     @Test
@@ -946,6 +946,39 @@ public class ColorTest {
         assertEquals(color, Color.valueOf(color.toString()));
         color = Color.web("aBc9");
         assertEquals(color, Color.valueOf(color.toString()));
+    }
+
+    @Nested
+    class InterpolationTest {
+        @Test
+        public void interpolateBetweenTwoDifferentValuesReturnsNewInstance() {
+            var startValue = new Color(0.2, 0.4, 0.6, 0.8);
+            var endValue = new Color(0.3, 0.5, 0.7, 0.9);
+            assertEquals(new Color(0.25, 0.45, 0.65, 0.85), startValue.interpolate(endValue, 0.5));
+        }
+
+        @Test
+        public void interpolateBetweenTwoEqualValuesReturnsSameInstance() {
+            var startValue = new Color(0.2, 0.4, 0.6, 0.8);
+            var endValue = new Color(0.2, 0.4, 0.6, 0.8);
+            assertSame(startValue, startValue.interpolate(endValue, 0.5));
+        }
+
+        @Test
+        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+            var startValue = new Color(0.2, 0.4, 0.6, 0.8);
+            var endValue = new Color(0.3, 0.5, 0.7, 0.9);
+            assertSame(startValue, startValue.interpolate(endValue, 0));
+            assertSame(startValue, startValue.interpolate(endValue, -1));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+            var startValue = new Color(0.2, 0.4, 0.6, 0.8);
+            var endValue = new Color(0.3, 0.5, 0.7, 0.9);
+            assertSame(endValue, startValue.interpolate(endValue, 1));
+            assertSame(endValue, startValue.interpolate(endValue, 1.5));
+        }
     }
 
     //function testOfTheWayHandlesNegatives() {

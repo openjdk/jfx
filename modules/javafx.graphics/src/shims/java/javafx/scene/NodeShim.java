@@ -34,6 +34,7 @@ import javafx.collections.ObservableSet;
 import javafx.css.PseudoClass;
 import javafx.scene.transform.Transform;
 import java.util.List;
+import java.util.Map;
 
 public class NodeShim {
 
@@ -93,7 +94,7 @@ public class NodeShim {
         return n.getTransitionDefinitions();
     }
 
-    public static List<TransitionTimer> getTransitionTimers(Node n) {
+    public static Map<String, TransitionTimer> getTransitionTimers(Node n) {
         return n.getTransitionTimers();
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,16 @@
 
 package javafx.scene.layout;
 
+import com.sun.javafx.util.InterpolationUtils;
+import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 import javafx.geometry.Insets;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Paint;
+import javafx.scene.paint.RadialGradient;
 import javafx.scene.shape.StrokeType;
+import java.util.Objects;
 
 /**
  * Defines the stroke to use on a {@link Border} for styling a {@code Region}.
@@ -42,10 +47,19 @@ import javafx.scene.shape.StrokeType;
  * When applied to a {@code Region} with a defined shape, the border width
  * and stroking information for the {@code top} is used, while the other
  * attributes are ignored.
+ * <p>
+ * {@code BorderStroke} supports interpolation between the following heterogeneous paint combinations:
+ * <ul>
+ *     <li>{@link Color} ↔ {@link LinearGradient}
+ *     <li>{@link Color} ↔ {@link RadialGradient}
+ * </ul>
+ * Heterogeneous paint interpolation converts the {@code Color} to a visually identical gradient paint,
+ * and then performs a gradient paint interpolation. If heterogeneous paints cannot be interpolated as
+ * described, the paints are interpolated <a href="../../animation/Interpolatable.html#discrete">discretely</a>.
  *
  * @since JavaFX 8.0
  */
-public class BorderStroke {
+public class BorderStroke implements Interpolatable<BorderStroke> {
     /**
      * The default insets when "thin" is specified.
      */
@@ -72,6 +86,7 @@ public class BorderStroke {
      *
      * @return the fill of top side of this border
      * @defaultValue {@code Color.BLACK}
+     * @interpolationType see {@link BorderStroke}
      */
     public final Paint getTopStroke() { return topStroke; }
     final Paint topStroke;
@@ -85,6 +100,7 @@ public class BorderStroke {
      *
      * @return the fill of right side of this border
      * @defaultValue {@code null} (same as {@code topFill})
+     * @interpolationType see {@link BorderStroke}
      */
     public final Paint getRightStroke() { return rightStroke; }
     final Paint rightStroke;
@@ -95,6 +111,7 @@ public class BorderStroke {
      *
      * @return the fill of bottom side of this border
      * @defaultValue {@code null} (same as {@code topFill})
+     * @interpolationType see {@link BorderStroke}
      */
     public final Paint getBottomStroke() { return bottomStroke; }
     final Paint bottomStroke;
@@ -105,6 +122,7 @@ public class BorderStroke {
      *
      * @return the fill of left side of this border
      * @defaultValue {@code null} (same as {@code rightFill})
+     * @interpolationType see {@link BorderStroke}
      */
     public final Paint getLeftStroke() { return leftStroke; }
     final Paint leftStroke;
@@ -114,6 +132,7 @@ public class BorderStroke {
      *
      * @return the style of top side of this border
      * @defaultValue {@code BorderStrokeStyle.NONE}
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final BorderStrokeStyle getTopStyle() { return topStyle; }
     final BorderStrokeStyle topStyle;
@@ -124,6 +143,7 @@ public class BorderStroke {
      *
      * @return the style of right side of this border
      * @defaultValue {@code null} (same as {@code topStyle})
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final BorderStrokeStyle getRightStyle() { return rightStyle; }
     final BorderStrokeStyle rightStyle;
@@ -135,6 +155,7 @@ public class BorderStroke {
      *
      * @return the style of bottom side of this border
      * @defaultValue {@code null} (same as {@code topStyle})
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final BorderStrokeStyle getBottomStyle() { return bottomStyle; }
     final BorderStrokeStyle bottomStyle;
@@ -146,6 +167,7 @@ public class BorderStroke {
      *
      * @return the style of left side of this border
      * @defaultValue {@code null} (same as {@code rightStyle})
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final BorderStrokeStyle getLeftStyle() { return leftStyle; }
     final BorderStrokeStyle leftStyle;
@@ -153,7 +175,9 @@ public class BorderStroke {
     /**
      * Defines the thickness of each side of the {@code BorderStroke}. This will never
      * be {@code null}, and defaults to {@code DEFAULT_WIDTHS}.
+     *
      * @return the thickness of each side of the {@code BorderStroke}
+     * @interpolationType <a href="../../animation/Interpolatable.html#default">default</a>
      */
     public final BorderWidths getWidths() { return widths; }
     final BorderWidths widths;
@@ -161,7 +185,9 @@ public class BorderStroke {
     /**
      * Defines the insets of each side of the {@code BorderStroke}. This will never
      * be {@code null}, and defaults to {@code Insets.EMPTY}.
+     *
      * @return the insets of each side of the {@code BorderStroke}
+     * @interpolationType <a href="../../animation/Interpolatable.html#default">default</a>
      */
     public final Insets getInsets() { return insets; }
     final Insets insets;
@@ -173,7 +199,9 @@ public class BorderStroke {
     /**
      * Defines the radii for each corner of this {@code BorderStroke}. This will never
      * be {@code null}, and defaults to {@code CornerRadii.EMPTY}.
+     *
      * @return the radii for each corner of this {@code BorderStroke}
+     * @interpolationType <a href="../../animation/Interpolatable.html#default">default</a>
      */
     public final CornerRadii getRadii() { return radii; }
      /* TODO I should change CornerRadii to be 4 properties, one for each corner,
@@ -356,6 +384,84 @@ public class BorderStroke {
         } else {
             throw new AssertionError("Unexpected Stroke Type");
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws NullPointerException {@inheritDoc}
+     * @since 24
+     */
+    @Override
+    public BorderStroke interpolate(BorderStroke endValue, double t) {
+        Objects.requireNonNull(endValue, "endValue cannot be null");
+
+        // We don't check equals(endValue) here to prevent unnecessary equality checks,
+        // and only check for equality with 'this' or 'endValue' after interpolation.
+        if (t <= 0) {
+            return this;
+        }
+
+        if (t >= 1) {
+            return endValue;
+        }
+
+        // CornerRadii, BorderWidths, Insets and Paint are implemented such that interpolate() always returns
+        // the existing instance if the intermediate value is equal to the start value or the end value,
+        // which allows us to use an identity comparison in place of a value comparison to determine equality.
+        CornerRadii newRadii = this.radii.interpolate(endValue.radii, t);
+        BorderWidths newWidths = this.widths.interpolate(endValue.widths, t);
+        Insets newInsets = this.insets.interpolate(endValue.insets, t);
+        Paint newTopStroke = InterpolationUtils.interpolatePaint(this.topStroke, endValue.topStroke, t);
+        Paint newRightStroke = InterpolationUtils.interpolatePaint(this.rightStroke, endValue.rightStroke, t);
+        Paint newBottomStroke = InterpolationUtils.interpolatePaint(this.bottomStroke, endValue.bottomStroke, t);
+        Paint newLeftStroke = InterpolationUtils.interpolatePaint(this.leftStroke, endValue.leftStroke, t);
+        BorderStrokeStyle newTopStyle, newRightStyle, newBottomStyle, newLeftStyle;
+
+        if (t < 0.5) {
+            newTopStyle = this.topStyle;
+            newRightStyle = this.rightStyle;
+            newBottomStyle = this.bottomStyle;
+            newLeftStyle = this.leftStyle;
+        } else {
+            newTopStyle = endValue.topStyle;
+            newRightStyle = endValue.rightStyle;
+            newBottomStyle = endValue.bottomStyle;
+            newLeftStyle = endValue.leftStyle;
+        }
+
+        if (isSame(newTopStroke, newRightStroke, newBottomStroke, newLeftStroke,
+                   newTopStyle, newRightStyle, newBottomStyle, newLeftStyle,
+                   newRadii, newWidths, newInsets)) {
+            return this;
+        }
+
+        if (endValue.isSame(newTopStroke, newRightStroke, newBottomStroke, newLeftStroke,
+                            newTopStyle, newRightStyle, newBottomStyle, newLeftStyle,
+                            newRadii, newWidths, newInsets)) {
+            return endValue;
+        }
+
+        return new BorderStroke(newTopStroke, newRightStroke, newBottomStroke, newLeftStroke,
+                                newTopStyle, newRightStyle, newBottomStyle, newLeftStyle,
+                                newRadii, newWidths, newInsets);
+    }
+
+    private boolean isSame(Paint topStroke, Paint rightStroke, Paint bottomStroke, Paint leftStroke,
+                           BorderStrokeStyle topStyle, BorderStrokeStyle rightStyle,
+                           BorderStrokeStyle bottomStyle, BorderStrokeStyle leftStyle,
+                           CornerRadii radii, BorderWidths widths, Insets insets) {
+        return this.topStroke == topStroke
+            && this.rightStroke == rightStroke
+            && this.bottomStroke == bottomStroke
+            && this.leftStroke == leftStroke
+            && this.topStyle == topStyle
+            && this.rightStyle == rightStyle
+            && this.bottomStyle == bottomStyle
+            && this.leftStyle == leftStyle
+            && this.radii == radii
+            && this.widths == widths
+            && this.insets == insets;
     }
 
     /**

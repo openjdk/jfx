@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,25 +23,15 @@
  * questions.
  */
 
-package javafx.scene.layout;
+package javafx.scene.paint;
 
-import javafx.css.CssMetaData;
-import javafx.css.ParsedValue;
-import javafx.css.StyleConverter;
-import javafx.scene.Node;
-import javafx.scene.image.Image;
+import java.util.List;
 
-public class BackgroundShim {
+public final class StopShim {
 
-    public static final CssMetaData<Node, Image[]> BACKGROUND_IMAGE = Background.BACKGROUND_IMAGE;
+    private StopShim() {}
 
-    public static StyleConverter<ParsedValue[], Background> getConverter() {
-        return BackgroundConverter.INSTANCE;
+    public static List<Stop> interpolateLists(List<Stop> firstList, List<Stop> secondList, double t) {
+        return Stop.interpolateLists(firstList, secondList, t);
     }
-
-    public static void computeOpaqueInsets(Background bg,
-            double width, double height, double[] trbl) {
-        bg.computeOpaqueInsets(width, height, trbl);
-    }
-
 }

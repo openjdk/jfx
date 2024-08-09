@@ -43,6 +43,8 @@ import javafx.util.Duration;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -183,7 +185,7 @@ public class Node_transition_Test {
         node.getStyleClass().add("testClass");
         node.applyCss();
 
-        List<TransitionTimer> timers = NodeShim.getTransitionTimers(node);
+        Map<String, TransitionTimer> timers = NodeShim.getTransitionTimers(node);
         assertNull(timers);
 
         // The hover state starts the timer.
@@ -191,7 +193,7 @@ public class Node_transition_Test {
         node.applyCss();
         timers = NodeShim.getTransitionTimers(node);
         assertEquals(1, timers.size());
-        assertNotNull(timers.get(0));
+        assertNotNull(timers.values().iterator().next());
 
         // Complete the timer, which removes it from the list.
         toolkit.setCurrentTime(2000);
@@ -220,7 +222,7 @@ public class Node_transition_Test {
         // The original node is removed from the scene graph, causing the timer to complete early
         // with the target value of the transition.
         scene.setRoot(new Group());
-        assertEquals(0, NodeShim.getTransitionTimers(node).size());
+        assertNull(NodeShim.getTransitionTimers(node));
         assertEquals(1, node.getOpacity(), 0.001);
     }
 
@@ -245,7 +247,7 @@ public class Node_transition_Test {
         // The node is made invisible, causing the timer to complete early with the
         // target value of the transition.
         node.setVisible(false);
-        assertEquals(0, NodeShim.getTransitionTimers(node).size());
+        assertNull(NodeShim.getTransitionTimers(node));
         assertEquals(1, node.getOpacity(), 0.001);
     }
 

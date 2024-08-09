@@ -40,7 +40,6 @@ import java.util.List;
 import java.util.Map;
 import javafx.beans.binding.BooleanExpression;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.Property;
 import javafx.css.CssMetaData;
 import javafx.css.Style;
 import javafx.css.Styleable;
@@ -323,16 +322,21 @@ public abstract class NodeHelper {
         return nodeAccessor.findTransitionDefinition(node, metadata);
     }
 
-    public static void addTransitionTimer(Node node, TransitionTimer timer) {
-        nodeAccessor.addTransitionTimer(node, timer);
+    public static Map<CssMetaData<? extends Styleable, ?>, TransitionDefinition> findTransitionDefinitions(
+            Node node, CssMetaData<? extends Styleable, ?> metadata) {
+        return nodeAccessor.findTransitionDefinitions(node, metadata);
     }
 
-    public static void removeTransitionTimer(Node node, TransitionTimer timer) {
-        nodeAccessor.removeTransitionTimer(node, timer);
+    public static void addTransitionTimer(Node node, String propertyName, TransitionTimer timer) {
+        nodeAccessor.addTransitionTimer(node, propertyName, timer);
     }
 
-    public static TransitionTimer findTransitionTimer(Node node, Property<?> property) {
-        return nodeAccessor.findTransitionTimer(node, property);
+    public static void removeTransitionTimer(Node node, String propertyName) {
+        nodeAccessor.removeTransitionTimer(node, propertyName);
+    }
+
+    public static TransitionTimer findTransitionTimer(Node node, String propertyName) {
+        return nodeAccessor.findTransitionTimer(node, propertyName);
     }
 
     public static void setNodeAccessor(final NodeAccessor newAccessor) {
@@ -397,9 +401,11 @@ public abstract class NodeHelper {
         void requestFocusVisible(Node node);
         StyleableProperty<TransitionDefinition[]> getTransitionProperty(Node node);
         TransitionDefinition findTransitionDefinition(Node node, CssMetaData<? extends Styleable, ?> metadata);
-        void addTransitionTimer(Node node, TransitionTimer timer);
-        void removeTransitionTimer(Node node, TransitionTimer timer);
-        TransitionTimer findTransitionTimer(Node node, Property<?> property);
+        Map<CssMetaData<? extends Styleable, ?>, TransitionDefinition> findTransitionDefinitions(
+                Node node, CssMetaData<? extends Styleable, ?> metadata);
+        void addTransitionTimer(Node node, String propertyName, TransitionTimer timer);
+        void removeTransitionTimer(Node node, String propertyName);
+        TransitionTimer findTransitionTimer(Node node, String propertyName);
     }
 
 }

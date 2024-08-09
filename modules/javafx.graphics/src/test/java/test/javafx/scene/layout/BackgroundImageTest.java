@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,10 +30,11 @@ import javafx.scene.image.Image;
 import javafx.scene.layout.BackgroundImage;
 import javafx.scene.layout.BackgroundPosition;
 import javafx.scene.layout.BackgroundSize;
-import org.junit.Test;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 import static javafx.scene.layout.BackgroundRepeat.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  */
@@ -65,9 +66,9 @@ public class BackgroundImageTest {
         assertEquals(SIZE_2, image.getSize());
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void instanceCreationNullImage() {
-        new BackgroundImage(null, NO_REPEAT, ROUND, POS_2, SIZE_2);
+        assertThrows(NullPointerException.class, () -> new BackgroundImage(null, NO_REPEAT, ROUND, POS_2, SIZE_2));
     }
 
     @Test public void instanceCreationNullRepeatXDefaultsToREPEAT() {
@@ -217,5 +218,58 @@ public class BackgroundImageTest {
     @Test public void notEquivalentWithRandom() {
         BackgroundImage a = new BackgroundImage(IMAGE_1, REPEAT, REPEAT, POS_2, SIZE_2);
         assertFalse(a.equals("Some random string"));
+    }
+
+    @Nested
+    class InterpolationTests {
+        final BackgroundImage BACKGROUND_IMAGE_A = new BackgroundImage(
+            IMAGE_1, NO_REPEAT, NO_REPEAT,
+            new BackgroundPosition(Side.LEFT, 0, false, Side.TOP, 0, false),
+            new BackgroundSize(50, 100, false, false, false, false));
+
+        final BackgroundImage BACKGROUND_IMAGE_B = new BackgroundImage(
+            IMAGE_2, REPEAT, SPACE,
+            new BackgroundPosition(Side.LEFT, 10, false, Side.TOP, 20, false),
+            new BackgroundSize(100, 200, false, false, false, false));
+
+        @Test
+        public void interpolateBetweenDifferentValuesReturnsNewInstance() {
+            var expect = new BackgroundImage(
+                IMAGE_2, REPEAT, SPACE,
+                new BackgroundPosition(Side.LEFT, 5, false, Side.TOP, 10, false),
+                new BackgroundSize(75, 150, false, false, false, false));
+
+            var actual = BACKGROUND_IMAGE_A.interpolate(BACKGROUND_IMAGE_B, 0.5);
+
+            assertEquals(expect, actual);
+            assertNotSame(expect, actual);
+        }
+
+        @Test
+        public void interpolateBetweenEqualValuesReturnsStartInstance() {
+            var startValue = new BackgroundImage(
+                IMAGE_1, NO_REPEAT, NO_REPEAT,
+                new BackgroundPosition(Side.LEFT, 0, false, Side.TOP, 0, false),
+                new BackgroundSize(50, 100, false, false, false, false));
+
+            var endValue = new BackgroundImage(
+                IMAGE_1, NO_REPEAT, NO_REPEAT,
+                new BackgroundPosition(Side.LEFT, 0, false, Side.TOP, 0, false),
+                new BackgroundSize(50, 100, false, false, false, false));
+
+            assertSame(startValue, startValue.interpolate(endValue, 0.5));
+        }
+
+        @Test
+        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+            assertSame(BACKGROUND_IMAGE_A, BACKGROUND_IMAGE_A.interpolate(BACKGROUND_IMAGE_B, 0));
+            assertSame(BACKGROUND_IMAGE_A, BACKGROUND_IMAGE_A.interpolate(BACKGROUND_IMAGE_B, -0.5));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+            assertSame(BACKGROUND_IMAGE_B, BACKGROUND_IMAGE_A.interpolate(BACKGROUND_IMAGE_B, 1));
+            assertSame(BACKGROUND_IMAGE_B, BACKGROUND_IMAGE_A.interpolate(BACKGROUND_IMAGE_B, 1.5));
+        }
     }
 }

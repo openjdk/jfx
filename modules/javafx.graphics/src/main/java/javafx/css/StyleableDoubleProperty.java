@@ -28,6 +28,7 @@ package javafx.css;
 import com.sun.javafx.css.TransitionMediator;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
@@ -78,13 +79,13 @@ public abstract class StyleableDoubleProperty
 
         if (transition == null) {
             set(newValue);
-        } else if (mediator == null || mediator.newValue != newValue) {
+        } else if (mediator == null || mediator.endValue != newValue) {
             // We only start a new transition if the new target value is different from the target
             // value of the existing transition. This scenario can sometimes happen when a CSS value
             // is redundantly applied, which would cause unexpected animations if we allowed the new
             // transition to interrupt the existing transition.
             mediator = new TransitionMediatorImpl(get(), newValue);
-            mediator.run(transition);
+            mediator.run(transition, getCssMetaData().getProperty(), Toolkit.getToolkit().getPrimaryTimer().nanos());
         }
 
         this.origin = origin;
@@ -116,21 +117,23 @@ public abstract class StyleableDoubleProperty
     @Override
     public StyleOrigin getStyleOrigin() { return origin; }
 
-    private StyleOrigin origin = null;
-    private TransitionMediatorImpl mediator = null;
+    private StyleOrigin origin;
+    private TransitionMediatorImpl mediator;
 
     private class TransitionMediatorImpl extends TransitionMediator {
-        private final double oldValue;
-        private final double newValue;
+        private final double startValue;
+        private final double endValue;
+        private double reversingAdjustedStartValue;
 
-        public TransitionMediatorImpl(double oldValue, double newValue) {
-            this.oldValue = oldValue;
-            this.newValue = newValue;
+        public TransitionMediatorImpl(double startValue, double endValue) {
+            this.startValue = startValue;
+            this.endValue = endValue;
+            this.reversingAdjustedStartValue = startValue;
         }
 
         @Override
         public void onUpdate(double progress) {
-            set(progress < 1 ? oldValue + (newValue - oldValue) * progress : newValue);
+            set(progress < 1 ? startValue + (endValue - startValue) * progress : endValue);
         }
 
         @Override
@@ -147,6 +150,18 @@ public abstract class StyleableDoubleProperty
         @Override
         public StyleableProperty<?> getStyleableProperty() {
             return StyleableDoubleProperty.this;
+        }
+
+        @Override
+        public boolean updateReversingAdjustedStartValue(TransitionMediator existingMediator) {
+            var mediator = (TransitionMediatorImpl)existingMediator;
+
+            if (mediator.reversingAdjustedStartValue == endValue) {
+                reversingAdjustedStartValue = mediator.endValue;
+                return true;
+            }
+
+            return false;
         }
     }
 }

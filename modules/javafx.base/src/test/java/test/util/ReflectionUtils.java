@@ -23,29 +23,42 @@
  * questions.
  */
 
-package com.sun.javafx.animation;
+package test.util;
 
-import com.sun.javafx.util.Utils;
-import com.sun.scenario.animation.AbstractPrimaryTimer;
-import javafx.animation.AnimationTimer;
+import java.lang.reflect.Field;
+import java.util.function.Function;
 
-public final class AnimationTimerHelper {
+public final class ReflectionUtils {
 
-    static {
-        Utils.forceInit(AnimationTimer.class);
-    }
+    /**
+     * Returns the value of a potentially private field of the specified object.
+     * The field can be declared on any of the object's inherited classes.
+     */
+    public static Object getFieldValue(Object object, String fieldName) {
+        Function<Class<?>, Field> getField = cls -> {
+            try {
+                var field = cls.getDeclaredField(fieldName);
+                field.setAccessible(true);
+                return field;
+            } catch (NoSuchFieldException e) {
+                return null;
+            }
+        };
 
-    private static Accessor accessor;
+        Class<?> cls = object.getClass();
+        while (cls != null) {
+            Field field = getField.apply(cls);
+            if (field != null) {
+                try {
+                    return field.get(object);
+                } catch (IllegalAccessException e) {
+                    throw new AssertionError(e);
+                }
+            }
 
-    public static void setAccessor(Accessor accessor) {
-        AnimationTimerHelper.accessor = accessor;
-    }
+            cls = cls.getSuperclass();
+        }
 
-    public static AbstractPrimaryTimer getPrimaryTimer(AnimationTimer timer) {
-        return accessor.getPrimaryTimer(timer);
-    }
-
-    public interface Accessor {
-        AbstractPrimaryTimer getPrimaryTimer(AnimationTimer timer);
+        throw new AssertionError("Field not found");
     }
 }

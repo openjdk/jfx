@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,12 +26,10 @@
 package test.javafx.geometry;
 
 import javafx.geometry.Insets;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class InsetsTest {
     @Test
@@ -62,6 +60,39 @@ public class InsetsTest {
     public void testToString() {
         Insets p1 = new Insets(0, 0, 0, 0);
         assertNotNull(p1.toString());
+    }
 
+    @Nested
+    class InterpolationTest {
+        @Test
+        public void interpolateBetweenTwoDifferentValuesReturnsNewInstance() {
+            var startValue = new Insets(2, 4, 6, 8);
+            var endValue = new Insets(4, 8, 12, 16);
+            var expected = new Insets(3, 6, 9, 12);
+            assertEquals(expected, startValue.interpolate(endValue, 0.5));
+        }
+
+        @Test
+        public void interpolateBetweenTwoEqualValuesReturnsStartInstance() {
+            var startValue = new Insets(2, 4, 6, 8);
+            var endValue = new Insets(2, 4, 6, 8);
+            assertSame(startValue, startValue.interpolate(endValue, 0.5));
+        }
+
+        @Test
+        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+            var startValue = new Insets(2, 4, 6, 8);
+            var endValue = new Insets(4, 8, 12, 16);
+            assertSame(startValue, startValue.interpolate(endValue, 0));
+            assertSame(startValue, startValue.interpolate(endValue, -1));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+            var startValue = new Insets(2, 4, 6, 8);
+            var endValue = new Insets(4, 8, 12, 16);
+            assertSame(endValue, startValue.interpolate(endValue, 1));
+            assertSame(endValue, startValue.interpolate(endValue, 1.5));
+        }
     }
 }

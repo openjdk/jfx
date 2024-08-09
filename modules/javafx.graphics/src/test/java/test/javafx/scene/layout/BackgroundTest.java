@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,12 +33,15 @@ import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.BackgroundImage;
 import javafx.scene.layout.BackgroundPosition;
 import javafx.scene.layout.BackgroundShim;
+import javafx.scene.layout.BackgroundSize;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.paint.Color;
-import org.junit.Test;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import java.util.List;
 
 import static javafx.scene.layout.BackgroundRepeat.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  */
@@ -66,7 +69,8 @@ public class BackgroundTest {
             new BackgroundImage(IMAGE_4, NO_REPEAT, NO_REPEAT, null, null)
     };
 
-    @Test public void instanceCreation() {
+    @Test
+    public void instanceCreation() {
         Background b = new Background(FILLS_1, IMAGES_1);
         assertEquals(FILLS_1.length, b.getFills().size(), 0);
         assertEquals(FILLS_1[0], b.getFills().get(0));
@@ -231,20 +235,22 @@ public class BackgroundTest {
         assertSame(image, b2.getImages().get(0));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void fillsIsUnmodifiable() {
         final BackgroundFill fill = new BackgroundFill(Color.GREEN, new CornerRadii(3), new Insets(4));
         final BackgroundFill[] fills = new BackgroundFill[] { fill };
         Background b = new Background(fills);
-        b.getFills().add(new BackgroundFill(Color.BLUE, new CornerRadii(6), new Insets(8)));
+        assertThrows(UnsupportedOperationException.class,
+            () -> b.getFills().add(new BackgroundFill(Color.BLUE, new CornerRadii(6), new Insets(8))));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void imagesIsUnmodifiable() {
         final BackgroundImage image = new BackgroundImage(IMAGE_2, SPACE, SPACE, null, null);
         final BackgroundImage[] images = new BackgroundImage[] { image };
         Background b = new Background(images);
-        b.getImages().add(new BackgroundImage(IMAGE_3, ROUND, ROUND, null, null));
+        assertThrows(UnsupportedOperationException.class,
+            () -> b.getImages().add(new BackgroundImage(IMAGE_3, ROUND, ROUND, null, null)));
     }
 
     @Test public void backgroundOutsetsAreDefinedByFills() {
@@ -719,14 +725,100 @@ public class BackgroundTest {
     public void testSingleFill() {
         var background1 = Background.fill(Color.BEIGE);
         var background2 = new Background(new BackgroundFill(Color.BEIGE, null, null));
-        assertEquals("The factory method should give the same result as the constructor", background1, background2);
+        assertEquals(background1, background2, "The factory method should give the same result as the constructor");
     }
 
     @Test
     public void testSingleFillWithNullPaint() {
         var background1 = Background.fill(null);
         var background2 = new Background(new BackgroundFill(null, null, null));
-        assertEquals("The factory method should give the same result as the constructor", background1, background2);
+        assertEquals(background1, background2, "The factory method should give the same result as the constructor");
+    }
+
+    @Nested
+    class InterpolationTest {
+        @Test
+        public void interpolateBetweenDifferentValuesReturnsNewInstance() {
+            var startValue = new Background(
+                List.of(new BackgroundFill(Color.RED, new CornerRadii(10), new Insets(10)),
+                        new BackgroundFill(Color.BLUE, new CornerRadii(2), new Insets(2))),
+                List.of(new BackgroundImage(IMAGE_1, REPEAT, REPEAT,
+                                            new BackgroundPosition(Side.LEFT, 10, false, Side.TOP, 5, false),
+                                            new BackgroundSize(10, 10, false, false, false, false))));
+
+            var endValue = new Background(
+                List.of(new BackgroundFill(Color.GREEN, new CornerRadii(20), new Insets(20)),
+                        new BackgroundFill(Color.YELLOW, new CornerRadii(6), new Insets(6))),
+                List.of(new BackgroundImage(IMAGE_1, REPEAT, REPEAT,
+                                            new BackgroundPosition(Side.LEFT, 20, false, Side.TOP, 15, false),
+                                            new BackgroundSize(20, 30, false, false, false, false))));
+
+            var expect = new Background(
+                List.of(new BackgroundFill(Color.RED.interpolate(Color.GREEN, 0.5), new CornerRadii(15), new Insets(15)),
+                        new BackgroundFill(Color.BLUE.interpolate(Color.YELLOW, 0.5), new CornerRadii(4), new Insets(4))),
+                List.of(new BackgroundImage(IMAGE_1, REPEAT, REPEAT,
+                                            new BackgroundPosition(Side.LEFT, 15, false, Side.TOP, 10, false),
+                                            new BackgroundSize(15, 20, false, false, false, false))));
+
+            var actual = startValue.interpolate(endValue, 0.5);
+
+            assertEquals(expect, actual);
+            assertNotSame(expect, actual);
+        }
+
+        @Test
+        public void interpolateBetweenDifferentNumberOfFillsAndImages() {
+            var startValue = new Background(
+                List.of(new BackgroundFill(Color.RED, new CornerRadii(10), new Insets(10))),
+                List.of(new BackgroundImage(IMAGE_1, REPEAT, REPEAT,
+                                            new BackgroundPosition(Side.LEFT, 10, false, Side.TOP, 5, false),
+                                            new BackgroundSize(10, 10, false, false, false, false))));
+
+            var endValue = new Background(
+                List.of(new BackgroundFill(Color.GREEN, new CornerRadii(20), new Insets(20)),
+                        new BackgroundFill(Color.BLUE, new CornerRadii(2), new Insets(2))),
+                List.of(new BackgroundImage(IMAGE_1, REPEAT, REPEAT,
+                                            new BackgroundPosition(Side.LEFT, 20, false, Side.TOP, 15, false),
+                                            new BackgroundSize(20, 30, false, false, false, false)),
+                        new BackgroundImage(IMAGE_1, REPEAT, REPEAT,
+                                            new BackgroundPosition(Side.LEFT, 30, false, Side.TOP, 40, false),
+                                            new BackgroundSize(50, 60, false, false, false, false))));
+
+            var expect = new Background(
+                List.of(new BackgroundFill(Color.RED.interpolate(Color.GREEN, 0.5), new CornerRadii(15), new Insets(15)),
+                        new BackgroundFill(Color.BLUE, new CornerRadii(2), new Insets(2))),
+                List.of(new BackgroundImage(IMAGE_1, REPEAT, REPEAT,
+                                            new BackgroundPosition(Side.LEFT, 15, false, Side.TOP, 10, false),
+                                            new BackgroundSize(15, 20, false, false, false, false)),
+                        new BackgroundImage(IMAGE_1, REPEAT, REPEAT,
+                                            new BackgroundPosition(Side.LEFT, 30, false, Side.TOP, 40, false),
+                                            new BackgroundSize(50, 60, false, false, false, false))));
+
+            assertEquals(expect, startValue.interpolate(endValue, 0.5));
+        }
+
+        @Test
+        public void interpolateBetweenEqualValuesReturnsStartInstance() {
+            var startValue = new Background(new BackgroundFill(Color.RED, new CornerRadii(10), new Insets(10)));
+            var endValue = new Background(new BackgroundFill(Color.RED, new CornerRadii(10), new Insets(10)));
+            assertSame(startValue, startValue.interpolate(endValue, 0.5));
+        }
+
+        @Test
+        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+            var startValue = new Background(new BackgroundFill(Color.RED, new CornerRadii(10), new Insets(10)));
+            var endValue = new Background(new BackgroundFill(Color.GREEN, new CornerRadii(15), new Insets(20)));
+            assertSame(startValue, startValue.interpolate(endValue, 0));
+            assertSame(startValue, startValue.interpolate(endValue, -0.5));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+            var startValue = new Background(new BackgroundFill(Color.RED, new CornerRadii(10), new Insets(10)));
+            var endValue = new Background(new BackgroundFill(Color.GREEN, new CornerRadii(15), new Insets(20)));
+            assertSame(endValue, startValue.interpolate(endValue, 1));
+            assertSame(endValue, startValue.interpolate(endValue, 1.5));
+        }
     }
 
     // TODO: What happens if the corner radii become so big that we would end up with a negative opaque

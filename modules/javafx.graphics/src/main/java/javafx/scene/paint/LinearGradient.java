@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,9 +26,10 @@
 package javafx.scene.paint;
 
 import java.util.List;
-
+import java.util.Objects;
 import com.sun.javafx.scene.paint.GradientUtils;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.InterpolationUtils;
 import javafx.beans.NamedArg;
 
 /**
@@ -78,11 +79,14 @@ public final class LinearGradient extends Paint {
     /**
      * Defines the X coordinate of the gradient axis start point.
      * If proportional is true (the default), this value specifies a
-     * point on a unit square that will be scaled to match the size of the
+     * point on a unit square that will be scaled to match the size of
      * the shape that the gradient fills.
-     (
+     *
      * @return the X coordinate of the gradient axis start point
      * @defaultValue 0.0
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a>
+     *                    if both values are absolute or both values are {@link #isProportional() proportional},
+     *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getStartX() {
         return startX;
@@ -93,11 +97,14 @@ public final class LinearGradient extends Paint {
     /**
      * Defines the Y coordinate of the gradient axis start point.
      * If proportional is true (the default), this value specifies a
-     * point on a unit square that will be scaled to match the size of the
+     * point on a unit square that will be scaled to match the size of
      * the shape that the gradient fills.
      *
      * @return the Y coordinate of the gradient axis start point
      * @defaultValue 0.0
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a>
+     *                    if both values are absolute or both values are {@link #isProportional() proportional},
+     *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getStartY() {
         return startY;
@@ -108,11 +115,14 @@ public final class LinearGradient extends Paint {
     /**
      * Defines the X coordinate of the gradient axis end point.
      * If proportional is true (the default), this value specifies a
-     * point on a unit square that will be scaled to match the size of the
+     * point on a unit square that will be scaled to match the size of
      * the shape that the gradient fills.
      *
      * @return the X coordinate of the gradient axis end point
      * @defaultValue 1.0
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a>
+     *                    if both values are absolute or both values are {@link #isProportional() proportional},
+     *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getEndX() {
         return endX;
@@ -123,11 +133,14 @@ public final class LinearGradient extends Paint {
     /**
      * Defines the Y coordinate of the gradient axis end point.
      * If proportional is true (the default), this value specifies a
-     * point on a unit square that will be scaled to match the size of the
+     * point on a unit square that will be scaled to match the size of
      * the shape that the gradient fills.
      *
      * @return the Y coordinate of the gradient axis end point
      * @defaultValue 1.0
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a>
+     *                    if both values are absolute or both values are {@link #isProportional() proportional},
+     *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getEndY() {
         return endY;
@@ -145,6 +158,7 @@ public final class LinearGradient extends Paint {
      *
      * @return if true start and end locations are proportional, otherwise absolute
      * @defaultValue true
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isProportional() {
         return proportional;
@@ -159,6 +173,7 @@ public final class LinearGradient extends Paint {
      *
      * @return the cycle method applied to this linear gradient
      * @defaultValue NO_CYCLE
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final CycleMethod getCycleMethod() {
         return cycleMethod;
@@ -180,6 +195,9 @@ public final class LinearGradient extends Paint {
      *
      * @return the list of stop values
      * @defaultValue empty
+     * @interpolationType Stop list interpolation produces smooth transitions of gradient stops by allowing
+     *                    the insertion of new stops along the gradient. At most, the intermediate stop list
+     *                    has the combined number of gradient stops of both the start list and the target list.
      */
     public final List<Stop> getStops() {
         return stops;
@@ -265,6 +283,24 @@ public final class LinearGradient extends Paint {
     }
 
     /**
+     * Private constructor accepting a stop list that is already normalized.
+     * This constructor is only called from the {@link #interpolate} method.
+     */
+    private LinearGradient(
+            double startX, double startY, double endX, double endY,
+            boolean proportional, CycleMethod cycleMethod, List<Stop> stops,
+            int ignored) {
+        this.startX = startX;
+        this.startY = startY;
+        this.endX = endX;
+        this.endY = endY;
+        this.proportional = proportional;
+        this.cycleMethod = cycleMethod;
+        this.stops = stops;
+        this.opaque = determineOpacity();
+    }
+
+    /**
      * Iterate over all the stops. If any one of them has a transparent
      * color, then we return false. If there are no stops, we return false.
      * Otherwise, we return true. Note that this is called AFTER Stop.normalize,
@@ -288,6 +324,96 @@ public final class LinearGradient extends Paint {
             platformPaint = Toolkit.getToolkit().getPaint(this);
         }
         return platformPaint;
+    }
+
+    /**
+     * Returns an intermediate value between the value of this {@code LinearGradient} and the specified
+     * {@code endValue} using the linear interpolation factor {@code t}, ranging from 0 (inclusive)
+     * to 1 (inclusive).
+     *
+     * @param endValue the target value
+     * @param t the interpolation factor
+     * @throws NullPointerException if {@code endValue} is {@code null}
+     * @return the intermediate value
+     * @since 24
+     */
+    public LinearGradient interpolate(LinearGradient endValue, double t) {
+        Objects.requireNonNull(endValue, "endValue cannot be null");
+
+        // We don't check equals(endValue) here to prevent unnecessary equality checks,
+        // and only check for equality with 'this' or 'endValue' after interpolation.
+        if (t <= 0.0) {
+            return this;
+        }
+
+        if (t >= 1.0) {
+            return endValue;
+        }
+
+        double newStartX, newStartY, newEndX, newEndY;
+        boolean newProportional;
+
+        if (this.proportional == endValue.proportional) {
+            newStartX = InterpolationUtils.interpolate(this.startX, endValue.startX, t);
+            newStartY = InterpolationUtils.interpolate(this.startY, endValue.startY, t);
+            newEndX = InterpolationUtils.interpolate(this.endX, endValue.endX, t);
+            newEndY = InterpolationUtils.interpolate(this.endY, endValue.endY, t);
+            newProportional = this.proportional;
+        } else if (t < 0.5) {
+            newStartX = this.startX;
+            newStartY = this.startY;
+            newEndX = this.endX;
+            newEndY = this.endY;
+            newProportional = this.proportional;
+        } else {
+            newStartX = endValue.startX;
+            newStartY = endValue.startY;
+            newEndX = endValue.endX;
+            newEndY = endValue.endY;
+            newProportional = endValue.proportional;
+        }
+
+        CycleMethod newCycleMethod = InterpolationUtils.interpolateDiscrete(this.cycleMethod, endValue.cycleMethod, t);
+
+        // Optimization: if both lists are equal, we don't compute a new intermediate list.
+        List<Stop> newStops = this.stops.equals(endValue.stops) ?
+            null : Stop.interpolateLists(this.stops, endValue.stops, t);
+
+        if (isSame(newStartX, newStartY, newEndX, newEndY, newProportional,
+                   newCycleMethod, Objects.requireNonNullElse(newStops, this.stops))) {
+            return this;
+        }
+
+        if (endValue.isSame(newStartX, newStartY, newEndX, newEndY, newProportional,
+                            newCycleMethod, Objects.requireNonNullElse(newStops, endValue.stops))) {
+            return endValue;
+        }
+
+        return new LinearGradient(newStartX, newStartY, newEndX, newEndY,
+                                  newProportional, newCycleMethod,
+                                  Objects.requireNonNullElse(newStops, this.stops), 0);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws NullPointerException {@inheritDoc}
+     * @since 24
+     */
+    @Override
+    public Paint interpolate(Paint endValue, double t) {
+        return InterpolationUtils.interpolatePaint(this, endValue, t);
+    }
+
+    private boolean isSame(double startX, double startY, double endX, double endY,
+                           boolean proportional, CycleMethod cycleMethod, List<Stop> stops) {
+        return this.startX == startX
+            && this.startY == startY
+            && this.endX == endX
+            && this.endY == endY
+            && this.proportional == proportional
+            && this.cycleMethod == cycleMethod
+            && this.stops == stops;
     }
 
     /**

@@ -28,6 +28,7 @@ package javafx.css;
 import com.sun.javafx.css.TransitionMediator;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
@@ -76,13 +77,13 @@ public abstract class StyleableBooleanProperty
 
         if (transition == null) {
             set(newValue);
-        } else if (mediator == null || mediator.newValue != newValue) {
+        } else if (mediator == null || mediator.endValue != newValue) {
             // We only start a new transition if the new target value is different from the target
             // value of the existing transition. This scenario can sometimes happen when a CSS value
             // is redundantly applied, which would cause unexpected animations if we allowed the new
             // transition to interrupt the existing transition.
             mediator = new TransitionMediatorImpl(get(), newValue);
-            mediator.run(transition);
+            mediator.run(transition, getCssMetaData().getProperty(), Toolkit.getToolkit().getPrimaryTimer().nanos());
         }
 
         this.origin = origin;
@@ -114,21 +115,23 @@ public abstract class StyleableBooleanProperty
     @Override
     public StyleOrigin getStyleOrigin() { return origin; }
 
-    private StyleOrigin origin = null;
-    private TransitionMediatorImpl mediator = null;
+    private StyleOrigin origin;
+    private TransitionMediatorImpl mediator;
 
     private class TransitionMediatorImpl extends TransitionMediator {
-        private final boolean oldValue;
-        private final boolean newValue;
+        private final boolean startValue;
+        private final boolean endValue;
+        private boolean reversingAdjustedStartValue;
 
-        public TransitionMediatorImpl(boolean oldValue, boolean newValue) {
-            this.oldValue = oldValue;
-            this.newValue = newValue;
+        public TransitionMediatorImpl(boolean startValue, boolean endValue) {
+            this.startValue = startValue;
+            this.endValue = endValue;
+            this.reversingAdjustedStartValue = startValue;
         }
 
         @Override
         public void onUpdate(double progress) {
-            set(progress > 0 ? newValue : oldValue);
+            set(progress < 0.5 ? startValue : endValue);
         }
 
         @Override
@@ -145,6 +148,18 @@ public abstract class StyleableBooleanProperty
         @Override
         public StyleableProperty<?> getStyleableProperty() {
             return StyleableBooleanProperty.this;
+        }
+
+        @Override
+        public boolean updateReversingAdjustedStartValue(TransitionMediator existingMediator) {
+            var mediator = (TransitionMediatorImpl)existingMediator;
+
+            if (mediator.reversingAdjustedStartValue == endValue) {
+                reversingAdjustedStartValue = mediator.endValue;
+                return true;
+            }
+
+            return false;
         }
     }
 }

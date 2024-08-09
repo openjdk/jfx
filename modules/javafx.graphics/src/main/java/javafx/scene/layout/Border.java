@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,14 +28,16 @@ package javafx.scene.layout;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-
+import java.util.Objects;
+import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.paint.Paint;
 import com.sun.javafx.UnmodifiableArrayList;
-import javafx.css.CssMetaData;
 import com.sun.javafx.css.SubCssMetaData;
+import javafx.css.CssMetaData;
+import javafx.css.Styleable;
 import javafx.css.converter.InsetsConverter;
 import javafx.css.converter.URLConverter;
 import com.sun.javafx.scene.layout.region.BorderImageSlices;
@@ -47,7 +49,7 @@ import com.sun.javafx.scene.layout.region.Margins;
 import com.sun.javafx.scene.layout.region.RepeatStruct;
 import com.sun.javafx.scene.layout.region.RepeatStructConverter;
 import com.sun.javafx.scene.layout.region.SliceSequenceConverter;
-import javafx.css.Styleable;
+import com.sun.javafx.util.InterpolationUtils;
 
 /**
  * The border of a {@link Region}. A {@code Border} is an immutable object which
@@ -87,7 +89,7 @@ import javafx.css.Styleable;
  * @since JavaFX 8.0
  */
 @SuppressWarnings("unchecked")
-public final class Border {
+public final class Border implements Interpolatable<Border> {
     static final CssMetaData<Node,Paint[]> BORDER_COLOR =
             new SubCssMetaData<>("-fx-border-color",
                     LayeredBorderPaintConverter.getInstance());
@@ -165,8 +167,9 @@ public final class Border {
      * The list of BorderStrokes which together define the stroked portion
      * of this Border. This List is unmodifiable and immutable. It
      * will never be null. It will never contain any null elements.
-     * @return the list of BorderStrokes which together define the stroked
-     * portion of this Border
+     *
+     * @return the list of BorderStrokes which together define the stroked portion of this Border
+     * @interpolationType <a href="../../animation/Interpolatable.html#pairwise">pairwise</a>
      */
     public final List<BorderStroke> getStrokes() { return strokes; }
     final List<BorderStroke> strokes;
@@ -180,8 +183,10 @@ public final class Border {
      * <p>
      * This List is unmodifiable and immutable. It will never be null.
      * It will never contain any null elements.
+     *
      * @return the list of BorderImages which together define the images to use
-     * instead of stroke for this Border
+     *         instead of stroke for this Border
+     * @interpolationType <a href="../../animation/Interpolatable.html#pairwise">pairwise</a>
      */
     public final List<BorderImage> getImages() { return images; }
     final List<BorderImage> images;
@@ -277,8 +282,8 @@ public final class Border {
         // properties didn't match the types of the array based constructor parameters.
         // So a Builder will use this constructor, while the CSS engine uses the
         // array based constructor (for speed).
-        this(strokes == null ? null : strokes.toArray(new BorderStroke[strokes.size()]),
-             images == null ? null : images.toArray(new BorderImage[images.size()]));
+        this(strokes != null ? UnmodifiableArrayList.copyOfNullFiltered(strokes) : List.of(),
+             images != null ? UnmodifiableArrayList.copyOfNullFiltered(images) : List.of(), 0);
     }
 
     /**
@@ -300,82 +305,84 @@ public final class Border {
      *                  final List of images. A null array becomes an empty List.
      */
     public Border(@NamedArg("strokes") BorderStroke[] strokes, @NamedArg("images") BorderImage[] images) {
+        this(strokes != null ? UnmodifiableArrayList.copyOfNullFiltered(strokes) : List.of(),
+             images != null ? UnmodifiableArrayList.copyOfNullFiltered(images) : List.of(), 0);
+    }
+
+    /**
+     * Creates a new Border with the specified strokes and images.
+     * This constructor requires that both lists do not contain null values, and that the lists
+     * are immutable. The purpose of this constructor is to prevent an unnecessary array creation
+     * when the caller already knows that the specified lists satisfy the non-null precondition
+     * and preserve the immutability invariant.
+     *
+     * @param strokes the strokes, not {@code null}
+     * @param images the images, not {@code null}
+     */
+    private Border(List<BorderStroke> strokes, List<BorderImage> images, int ignored) {
+        Objects.requireNonNull(strokes, "strokes cannot be null");
+        Objects.requireNonNull(images, "images cannot be null");
+
         double innerTop = 0, innerRight = 0, innerBottom = 0, innerLeft = 0;
         double outerTop = 0, outerRight = 0, outerBottom = 0, outerLeft = 0;
 
-        if (strokes == null || strokes.length == 0) {
-            this.strokes = Collections.emptyList();
-        } else {
-            final BorderStroke[] noNulls = new BorderStroke[strokes.length];
-            int size = 0;
-            for (int i=0; i<strokes.length; i++) {
-                final BorderStroke stroke = strokes[i];
-                if (stroke != null) {
-                    noNulls[size++] = stroke;
+        for (int i = 0, max = strokes.size(); i < max; i++) {
+            final BorderStroke stroke = strokes.get(i);
 
-                    // Calculate the insets and outsets. "insets" are the distance
-                    // from the edge of the region to the inmost edge of the inmost border.
-                    // Outsets are the distance from the edge of the region out towards the
-                    // outer-most edge of the outer-most border.
-                    final double strokeInnerTop = stroke.innerEdge.getTop();
-                    final double strokeInnerRight = stroke.innerEdge.getRight();
-                    final double strokeInnerBottom = stroke.innerEdge.getBottom();
-                    final double strokeInnerLeft = stroke.innerEdge.getLeft();
+            // Calculate the insets and outsets. "insets" are the distance
+            // from the edge of the region to the inmost edge of the inmost border.
+            // Outsets are the distance from the edge of the region out towards the
+            // outer-most edge of the outer-most border.
+            final double strokeInnerTop = stroke.innerEdge.getTop();
+            final double strokeInnerRight = stroke.innerEdge.getRight();
+            final double strokeInnerBottom = stroke.innerEdge.getBottom();
+            final double strokeInnerLeft = stroke.innerEdge.getLeft();
 
-                    innerTop = innerTop >= strokeInnerTop ? innerTop : strokeInnerTop;
-                    innerRight = innerRight >= strokeInnerRight? innerRight : strokeInnerRight;
-                    innerBottom = innerBottom >= strokeInnerBottom ? innerBottom : strokeInnerBottom;
-                    innerLeft = innerLeft >= strokeInnerLeft ? innerLeft : strokeInnerLeft;
+            innerTop = innerTop >= strokeInnerTop ? innerTop : strokeInnerTop;
+            innerRight = innerRight >= strokeInnerRight? innerRight : strokeInnerRight;
+            innerBottom = innerBottom >= strokeInnerBottom ? innerBottom : strokeInnerBottom;
+            innerLeft = innerLeft >= strokeInnerLeft ? innerLeft : strokeInnerLeft;
 
-                    final double strokeOuterTop = stroke.outerEdge.getTop();
-                    final double strokeOuterRight = stroke.outerEdge.getRight();
-                    final double strokeOuterBottom = stroke.outerEdge.getBottom();
-                    final double strokeOuterLeft = stroke.outerEdge.getLeft();
+            final double strokeOuterTop = stroke.outerEdge.getTop();
+            final double strokeOuterRight = stroke.outerEdge.getRight();
+            final double strokeOuterBottom = stroke.outerEdge.getBottom();
+            final double strokeOuterLeft = stroke.outerEdge.getLeft();
 
-                    outerTop = outerTop >= strokeOuterTop ? outerTop : strokeOuterTop;
-                    outerRight = outerRight >= strokeOuterRight? outerRight : strokeOuterRight;
-                    outerBottom = outerBottom >= strokeOuterBottom ? outerBottom : strokeOuterBottom;
-                    outerLeft = outerLeft >= strokeOuterLeft ? outerLeft : strokeOuterLeft;
-                }
-            }
-            this.strokes = new UnmodifiableArrayList<>(noNulls, size);
+            outerTop = outerTop >= strokeOuterTop ? outerTop : strokeOuterTop;
+            outerRight = outerRight >= strokeOuterRight? outerRight : strokeOuterRight;
+            outerBottom = outerBottom >= strokeOuterBottom ? outerBottom : strokeOuterBottom;
+            outerLeft = outerLeft >= strokeOuterLeft ? outerLeft : strokeOuterLeft;
         }
 
-        if (images == null || images.length == 0) {
-            this.images = Collections.emptyList();
-        } else {
-            final BorderImage[] noNulls = new BorderImage[images.length];
-            int size = 0;
-            for (int i=0; i<images.length; i++) {
-                final BorderImage image = images[i];
-                if (image != null){
-                    noNulls[size++] = image;
+        this.strokes = strokes;
 
-                    // The Image width + insets may contribute to the insets / outsets of
-                    // this border.
-                    final double imageInnerTop = image.innerEdge.getTop();
-                    final double imageInnerRight = image.innerEdge.getRight();
-                    final double imageInnerBottom = image.innerEdge.getBottom();
-                    final double imageInnerLeft = image.innerEdge.getLeft();
+        for (int i = 0, max = images.size(); i < max; i++) {
+            final BorderImage image = images.get(i);
 
-                    innerTop = innerTop >= imageInnerTop ? innerTop : imageInnerTop;
-                    innerRight = innerRight >= imageInnerRight? innerRight : imageInnerRight;
-                    innerBottom = innerBottom >= imageInnerBottom ? innerBottom : imageInnerBottom;
-                    innerLeft = innerLeft >= imageInnerLeft ? innerLeft : imageInnerLeft;
+            // The Image width + insets may contribute to the insets / outsets of
+            // this border.
+            final double imageInnerTop = image.innerEdge.getTop();
+            final double imageInnerRight = image.innerEdge.getRight();
+            final double imageInnerBottom = image.innerEdge.getBottom();
+            final double imageInnerLeft = image.innerEdge.getLeft();
 
-                    final double imageOuterTop = image.outerEdge.getTop();
-                    final double imageOuterRight = image.outerEdge.getRight();
-                    final double imageOuterBottom = image.outerEdge.getBottom();
-                    final double imageOuterLeft = image.outerEdge.getLeft();
+            innerTop = innerTop >= imageInnerTop ? innerTop : imageInnerTop;
+            innerRight = innerRight >= imageInnerRight? innerRight : imageInnerRight;
+            innerBottom = innerBottom >= imageInnerBottom ? innerBottom : imageInnerBottom;
+            innerLeft = innerLeft >= imageInnerLeft ? innerLeft : imageInnerLeft;
 
-                    outerTop = outerTop >= imageOuterTop ? outerTop : imageOuterTop;
-                    outerRight = outerRight >= imageOuterRight? outerRight : imageOuterRight;
-                    outerBottom = outerBottom >= imageOuterBottom ? outerBottom : imageOuterBottom;
-                    outerLeft = outerLeft >= imageOuterLeft ? outerLeft : imageOuterLeft;
-                }
-            }
-            this.images = new UnmodifiableArrayList<>(noNulls, size);
+            final double imageOuterTop = image.outerEdge.getTop();
+            final double imageOuterRight = image.outerEdge.getRight();
+            final double imageOuterBottom = image.outerEdge.getBottom();
+            final double imageOuterLeft = image.outerEdge.getLeft();
+
+            outerTop = outerTop >= imageOuterTop ? outerTop : imageOuterTop;
+            outerRight = outerRight >= imageOuterRight? outerRight : imageOuterRight;
+            outerBottom = outerBottom >= imageOuterBottom ? outerBottom : imageOuterBottom;
+            outerLeft = outerLeft >= imageOuterLeft ? outerLeft : imageOuterLeft;
         }
+
+        this.images = images;
 
         // Both the BorderStroke and BorderImage class make sure to return the outsets
         // and insets in the right way, such that we don't have to worry about adjusting
@@ -403,6 +410,45 @@ public final class Border {
      */
     public static Border stroke(Paint stroke) {
         return new Border(new BorderStroke(stroke, BorderStrokeStyle.SOLID, null, null));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws NullPointerException {@inheritDoc}
+     * @since 24
+     */
+    @Override
+    public Border interpolate(Border endValue, double t) {
+        Objects.requireNonNull(endValue, "endValue cannot be null");
+
+        if (t <= 0) {
+            return this;
+        }
+
+        if (t >= 1) {
+            return endValue;
+        }
+
+        // interpolateListsPairwise() is implemented such that it returns existing list instances
+        // (i.e. the 'this.images' or 'endValue.images' arguments) as an indication that the result
+        // is shallow-equal to either of the input arguments. This allows us to very quickly detect
+        // if we can return 'this' or 'endValue' without allocating a new Border instance.
+        List<BorderImage> newImages = images == endValue.images ?
+            images : InterpolationUtils.interpolateListsPairwise(images, endValue.images, t);
+
+        List<BorderStroke> newStrokes = strokes == endValue.strokes ?
+            strokes : InterpolationUtils.interpolateListsPairwise(strokes, endValue.strokes, t);
+
+        if (images == newImages && strokes == newStrokes) {
+            return this;
+        }
+
+        if (endValue.images == newImages && endValue.strokes == newStrokes) {
+            return endValue;
+        }
+
+        return new Border(newStrokes, newImages);
     }
 
     /**

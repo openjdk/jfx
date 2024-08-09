@@ -84,6 +84,11 @@ public final class TransitionEvent extends Event {
     private final StyleableProperty<?> property;
 
     /**
+     * The name of the CSS property or sub-property that is targeted by the transition.
+     */
+    private final String propertyName;
+
+    /**
      * The time that has elapsed since the transition has entered its active period,
      * not including the time spent in the delay phase.
      */
@@ -94,14 +99,17 @@ public final class TransitionEvent extends Event {
      *
      * @param eventType the event type
      * @param property the {@code StyleableProperty} that is targeted by the transition
+     * @param propertyName the name of the targeted CSS property or sub-property
      * @param elapsedTime the time that has elapsed since the transition has entered its active period
      * @throws NullPointerException if {@code eventType}, {@code property} or {@code elapsedTime} is {@code null}
      */
     public TransitionEvent(EventType<? extends Event> eventType,
                            StyleableProperty<?> property,
+                           String propertyName,
                            Duration elapsedTime) {
         super(Objects.requireNonNull(eventType, "eventType cannot be null"));
         this.property = Objects.requireNonNull(property, "property cannot be null");
+        this.propertyName = Objects.requireNonNull(propertyName, "propertyName cannot be null");
         this.elapsedTime = Objects.requireNonNull(elapsedTime, "elapsedTime cannot be null");
     }
 
@@ -112,6 +120,16 @@ public final class TransitionEvent extends Event {
      */
     public StyleableProperty<?> getProperty() {
         return property;
+    }
+
+    /**
+     * Gets the name of the CSS property or sub-property that is targeted by the transition.
+     *
+     * @return the CSS property or sub-property name
+     * @since 24
+     */
+    public String getPropertyName() {
+        return propertyName;
     }
 
     /**
