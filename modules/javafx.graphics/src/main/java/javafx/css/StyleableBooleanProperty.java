@@ -131,7 +131,7 @@ public abstract class StyleableBooleanProperty
 
         @Override
         public void onUpdate(double progress) {
-            set(progress > 0 ? endValue : startValue);
+            set(progress < 0.5 ? startValue : endValue);
         }
 
         @Override

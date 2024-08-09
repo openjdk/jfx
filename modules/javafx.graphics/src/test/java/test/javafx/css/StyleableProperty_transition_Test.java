@@ -36,6 +36,7 @@ import javafx.css.SimpleStyleableFloatProperty;
 import javafx.css.SimpleStyleableIntegerProperty;
 import javafx.css.SimpleStyleableLongProperty;
 import javafx.css.SimpleStyleableObjectProperty;
+import javafx.css.StyleConverter;
 import javafx.css.StyleOrigin;
 import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
@@ -280,7 +281,7 @@ public class StyleableProperty_transition_Test {
     }
 
     @Test
-    void testIntegersAreInterpolatedInRealNumberSpace() {
+    void testIntegerTransitionsInRealNumberSpace() {
         ((Group)scene.getRoot()).getChildren().setAll(testBean);
         var property = new SimpleStyleableIntegerProperty(integerPropertyMetadata, testBean, null);
 
@@ -303,7 +304,7 @@ public class StyleableProperty_transition_Test {
     }
 
     @Test
-    void testLongsAreInterpolatedInRealNumberSpace() {
+    void testLongTransitionsInRealNumberSpace() {
         ((Group)scene.getRoot()).getChildren().setAll(testBean);
         var property = new SimpleStyleableLongProperty(longPropertyMetadata, testBean, null);
 
@@ -323,5 +324,85 @@ public class StyleableProperty_transition_Test {
         assertEquals(1, property.get());
         setAnimationTime(750);
         assertEquals(2, property.get());
+    }
+
+    @Test
+    void testBooleanTransitionsDiscretely() {
+        ((Group)scene.getRoot()).getChildren().setAll(testBean);
+        var property = new SimpleStyleableBooleanProperty(booleanPropertyMetadata, testBean, null);
+
+        // Setting a value for the first time doesn't start a transition.
+        setAnimationTime(0);
+        property.applyStyle(StyleOrigin.USER, false);
+
+        // Start the transition and sample the outputs.
+        property.applyStyle(StyleOrigin.USER, true);
+        setAnimationTime(499);
+        assertFalse(property.get());
+        setAnimationTime(500);
+        assertTrue(property.get());
+    }
+
+    @Test
+    void testNonInterpolatableObjectTransitionsDiscretely() {
+        enum Fruit { APPLE, ORANGE }
+
+        CssMetaData<Styleable, Fruit> metadata = new CssMetaData<>(
+                "-fx-fruit", StyleConverter.getEnumConverter(Fruit.class), Fruit.APPLE) {
+            @Override public boolean isSettable(Styleable styleable) { return true; }
+            @Override public StyleableProperty<Fruit> getStyleableProperty(Styleable styleable) {
+                throw new UnsupportedOperationException();
+            }
+        };
+
+        var bean = new Group();
+        NodeHelper.getTransitionProperty(bean).setValue(new TransitionDefinition[] {
+            new TransitionDefinition("-fx-fruit", ONE_SECOND, Duration.ZERO, Interpolator.LINEAR)
+        });
+
+        ((Group)scene.getRoot()).getChildren().setAll(bean);
+        var property = new SimpleStyleableObjectProperty<Fruit>(metadata, bean, null);
+
+        // Setting a value for the first time doesn't start a transition.
+        setAnimationTime(0);
+        property.applyStyle(StyleOrigin.USER, Fruit.APPLE);
+
+        // Start the transition and sample the outputs.
+        property.applyStyle(StyleOrigin.USER, Fruit.ORANGE);
+        setAnimationTime(499);
+        assertSame(Fruit.APPLE, property.get());
+        setAnimationTime(500);
+        assertSame(Fruit.ORANGE, property.get());
+
+        // This is a reversing transition, so it only needs half the time to flip the value.
+        property.applyStyle(StyleOrigin.USER, Fruit.APPLE);
+        setAnimationTime(749);
+        assertSame(Fruit.ORANGE, property.get());
+        setAnimationTime(750);
+        assertSame(Fruit.APPLE, property.get());
+    }
+
+    @Test
+    void testNullObjectTransitionsDiscretely() {
+        ((Group)scene.getRoot()).getChildren().setAll(testBean);
+        var property = new SimpleStyleableObjectProperty<>(interpolatableObjectPropertyMetadata, testBean, null);
+
+        // Setting a value for the first time doesn't start a transition.
+        setAnimationTime(0);
+        property.applyStyle(StyleOrigin.USER, Color.RED);
+
+        // Start the transition and sample the outputs.
+        property.applyStyle(StyleOrigin.USER, null);
+        setAnimationTime(499);
+        assertSame(Color.RED, property.get());
+        setAnimationTime(500);
+        assertNull(property.get());
+
+        // This is a reversing transition, so it only needs half the time to flip the value.
+        property.applyStyle(StyleOrigin.USER, Color.RED);
+        setAnimationTime(749);
+        assertNull(property.get());
+        setAnimationTime(750);
+        assertSame(Color.RED, property.get());
     }
 }

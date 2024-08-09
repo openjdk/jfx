@@ -79,19 +79,13 @@ public abstract class StyleableObjectProperty<T>
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
     public void applyStyle(StyleOrigin origin, T newValue) {
-        if (newValue != null) {
-            CssMetaData<? extends Styleable, T> metadata = getCssMetaData();
-            StyleConverter<?, T> converter = metadata.getConverter();
+        CssMetaData<? extends Styleable, T> metadata = getCssMetaData();
+        StyleConverter<?, T> converter = metadata.getConverter();
 
-            if (converter instanceof StyleConverter.WithReconstructionSupport c) {
-                applyComponentTransition(newValue, metadata, c);
-            } else if (newValue instanceof Interpolatable<?>) {
-                applyInterpolatableTransition(newValue, metadata);
-            } else {
-                set(newValue);
-            }
+        if (converter instanceof StyleConverter.WithReconstructionSupport c) {
+            applyValueComponents(newValue, metadata, c);
         } else {
-            set(null);
+            applyValue(newValue, metadata);
         }
 
         this.origin = origin;
@@ -99,31 +93,40 @@ public abstract class StyleableObjectProperty<T>
 
     /**
      * Sets the value of the property, and potentially starts a transition.
-     * This method is used for {@link Interpolatable} values.
+     * This method is used for values that don't support component-wise transitions.
      *
      * @param newValue the new value
+     * @param metadata the CSS metadata of the value
      */
-    private void applyInterpolatableTransition(T newValue, CssMetaData<? extends Styleable, T> metadata) {
+    private void applyValue(T newValue, CssMetaData<? extends Styleable, T> metadata) {
         // If this.origin == null, we're setting the value for the first time.
         // No transition should be started in this case.
         TransitionDefinition transition =
             this.origin != null && getBean() instanceof Node node ?
             NodeHelper.findTransitionDefinition(node, metadata) : null;
 
-        // 'oldValue' and 'newValue' could be objects that both implement Interpolatable, but with
-        // different type arguments. We detect this case by checking whether 'newValue' is an instance
-        // of 'oldValue' (so that oldValue.interpolate(newValue, t) succeeds), and only applying the
-        // transition when the test succeeds.
-        T oldValue;
-
-        if (transition == null || !newValue.getClass().isInstance(oldValue = get())) {
+        // We only start a new transition if the new target value is different from the target
+        // value of the existing transition. This scenario can sometimes happen when a CSS value
+        // is redundantly applied, which would cause unexpected animations if we allowed the new
+        // transition to interrupt the existing transition.
+        if (transition == null) {
             set(newValue);
         } else if (controller == null || !Objects.equals(newValue, controller.getTargetValue())) {
-            // We only start a new transition if the new target value is different from the target
-            // value of the existing transition. This scenario can sometimes happen when a CSS value
-            // is redundantly applied, which would cause unexpected animations if we allowed the new
-            // transition to interrupt the existing transition.
-            var controller = new InterpolatableTransitionController(oldValue, newValue);
+            T oldValue = get();
+            TransitionControllerBase controller;
+
+            // 'oldValue' and 'newValue' could be objects that both implement Interpolatable, but with
+            // different type arguments. We detect this case by checking whether 'newValue' is an instance
+            // of 'oldValue' (so that oldValue.interpolate(newValue, t) succeeds), and only applying the
+            // transition when the test succeeds.
+            if (oldValue instanceof Interpolatable<?>
+                    && newValue instanceof Interpolatable<?>
+                    && newValue.getClass().isInstance(oldValue)) {
+                controller = new InterpolatableTransitionController(oldValue, newValue);
+            } else {
+                controller = new DiscreteTransitionController(oldValue, newValue);
+            }
+
             this.controller = controller; // needs to be set before calling run()
             controller.run(transition, metadata.getProperty(), Toolkit.getToolkit().getPrimaryTimer().nanos());
         }
@@ -134,10 +137,12 @@ public abstract class StyleableObjectProperty<T>
      * This method is used for values that support component-wise transitions.
      *
      * @param newValue the new value
+     * @param metadata the CSS metadata of the value
+     * @param converter the style converter of the value
      */
-    private void applyComponentTransition(T newValue,
-                                          CssMetaData<? extends Styleable, T> metadata,
-                                          StyleConverter.WithReconstructionSupport<T> converter) {
+    private void applyValueComponents(T newValue,
+                                      CssMetaData<? extends Styleable, T> metadata,
+                                      StyleConverter.WithReconstructionSupport<T> converter) {
         // If this.origin == null, we're setting the value for the first time.
         // No transition should be started in this case.
         Map<CssMetaData<? extends Styleable, ?>, TransitionDefinition> transitions =
@@ -272,7 +277,12 @@ public abstract class StyleableObjectProperty<T>
     private TransitionController<T> controller;
 
     /**
-     * Common interface for {@link Interpolatable} and component-wise transitions.
+     * Common interface for transition controllers:
+     * <ol>
+     *     <li>{@link DiscreteTransitionController}
+     *     <li>{@link InterpolatableTransitionController}
+     *     <li>{@link AggregatingTransitionController}
+     * </ol>
      *
      * @param <T> the property value type
      */
@@ -282,24 +292,17 @@ public abstract class StyleableObjectProperty<T>
     }
 
     /**
-     * Controller for transitions of {@link Interpolatable} values.
+     * Base class for transition controllers that don't support component-wise transitions.
      */
-    private final class InterpolatableTransitionController extends TransitionMediator
-                                                           implements TransitionController<T> {
-        private final T startValue;
-        private final T endValue;
+    private abstract class TransitionControllerBase extends TransitionMediator implements TransitionController<T> {
+        final T startValue;
+        final T endValue;
         private T reversingAdjustedStartValue;
 
-        InterpolatableTransitionController(T startValue, T endValue) {
+        TransitionControllerBase(T startValue, T endValue) {
             this.startValue = startValue;
             this.endValue = endValue;
             this.reversingAdjustedStartValue = startValue;
-        }
-
-        @Override
-        @SuppressWarnings("unchecked")
-        public void onUpdate(double progress) {
-            set(progress < 1 ? ((Interpolatable<T>)startValue).interpolate(endValue, progress) : endValue);
         }
 
         @Override
@@ -326,7 +329,7 @@ public abstract class StyleableObjectProperty<T>
         @Override
         @SuppressWarnings("unchecked")
         public boolean updateReversingAdjustedStartValue(TransitionMediator existingMediator) {
-            var mediator = (InterpolatableTransitionController)existingMediator;
+            var mediator = (TransitionControllerBase)existingMediator;
 
             if (Objects.deepEquals(mediator.reversingAdjustedStartValue, endValue)) {
                 reversingAdjustedStartValue = mediator.endValue;
@@ -334,6 +337,35 @@ public abstract class StyleableObjectProperty<T>
             }
 
             return false;
+        }
+    }
+
+    /**
+     * Controller for transitions of non-interpolatable values using discrete interpolation.
+     */
+    private final class DiscreteTransitionController extends TransitionControllerBase {
+        DiscreteTransitionController(T startValue, T endValue) {
+            super(startValue, endValue);
+        }
+
+        @Override
+        public void onUpdate(double progress) {
+            set(progress < 0.5 ? startValue : endValue);
+        }
+    }
+
+    /**
+     * Controller for transitions of {@link Interpolatable} values.
+     */
+    private final class InterpolatableTransitionController extends TransitionControllerBase {
+        InterpolatableTransitionController(T startValue, T endValue) {
+            super(startValue, endValue);
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public void onUpdate(double progress) {
+            set(progress < 1 ? ((Interpolatable<T>)startValue).interpolate(endValue, progress) : endValue);
         }
     }
 
