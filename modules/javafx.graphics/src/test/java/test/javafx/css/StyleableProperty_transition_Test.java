@@ -36,6 +36,7 @@ import javafx.css.SimpleStyleableFloatProperty;
 import javafx.css.SimpleStyleableIntegerProperty;
 import javafx.css.SimpleStyleableLongProperty;
 import javafx.css.SimpleStyleableObjectProperty;
+import javafx.css.SimpleStyleableStringProperty;
 import javafx.css.StyleConverter;
 import javafx.css.StyleOrigin;
 import javafx.css.Styleable;
@@ -46,9 +47,11 @@ import javafx.css.StyleableIntegerProperty;
 import javafx.css.StyleableLongProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
+import javafx.css.StyleableStringProperty;
 import javafx.css.converter.BooleanConverter;
 import javafx.css.converter.ColorConverter;
 import javafx.css.converter.SizeConverter;
+import javafx.css.converter.StringConverter;
 import javafx.geometry.Insets;
 import javafx.scene.Group;
 import javafx.scene.Scene;
@@ -103,6 +106,12 @@ public class StyleableProperty_transition_Test {
         @Override public StyleableProperty<Number> getStyleableProperty(Styleable styleable) { return longProperty; }
     };
 
+    static final CssMetaData<Styleable, String> stringPropertyMetadata = new CssMetaData<>(
+            "-fx-string-property", StringConverter.getInstance(), null) {
+        @Override public boolean isSettable(Styleable styleable) { return true; }
+        @Override public StyleableProperty<String> getStyleableProperty(Styleable styleable) { return stringProperty; }
+    };
+
     static final CssMetaData<Styleable, Color> interpolatableObjectPropertyMetadata = new CssMetaData<>(
             "-fx-interpolatable-property", ColorConverter.getInstance(), Color.RED) {
         @Override public boolean isSettable(Styleable styleable) { return true; }
@@ -130,6 +139,7 @@ public class StyleableProperty_transition_Test {
                 new TransitionDefinition("-fx-float-property", ONE_SECOND, Duration.ZERO, Interpolator.LINEAR),
                 new TransitionDefinition("-fx-integer-property", ONE_SECOND, Duration.ZERO, Interpolator.LINEAR),
                 new TransitionDefinition("-fx-long-property", ONE_SECOND, Duration.ZERO, Interpolator.LINEAR),
+                new TransitionDefinition("-fx-string-property", ONE_SECOND, Duration.ZERO, Interpolator.LINEAR),
                 new TransitionDefinition("-fx-interpolatable-property", ONE_SECOND, Duration.ZERO, Interpolator.LINEAR),
                 new TransitionDefinition("-fx-component-transitionable-property", ONE_SECOND, Duration.ZERO, Interpolator.LINEAR)
             });
@@ -141,6 +151,7 @@ public class StyleableProperty_transition_Test {
     static StyleableFloatProperty floatProperty;
     static StyleableIntegerProperty integerProperty;
     static StyleableLongProperty longProperty;
+    static StyleableStringProperty stringProperty;
     static StyleableObjectProperty<Color> interpolatableObjectProperty;
     static StyleableObjectProperty<Background> componentTransitionableObjectProperty;
 
@@ -153,6 +164,7 @@ public class StyleableProperty_transition_Test {
         floatProperty = new SimpleStyleableFloatProperty(floatPropertyMetadata, testBean, null);
         integerProperty = new SimpleStyleableIntegerProperty(integerPropertyMetadata, testBean, null);
         longProperty = new SimpleStyleableLongProperty(longPropertyMetadata, testBean, null);
+        stringProperty = new SimpleStyleableStringProperty(stringPropertyMetadata, testBean, null);
         interpolatableObjectProperty = new SimpleStyleableObjectProperty<>(
             interpolatableObjectPropertyMetadata, testBean, null, Color.RED);
         componentTransitionableObjectProperty = new SimpleStyleableObjectProperty<>(
@@ -164,6 +176,7 @@ public class StyleableProperty_transition_Test {
             new TestRun(floatProperty, "mediator", 0, 1),
             new TestRun(integerProperty, "mediator", 0, 1),
             new TestRun(longProperty, "mediator", 0, 1),
+            new TestRun(stringProperty, "mediator", "foo", "bar"),
             new TestRun(interpolatableObjectProperty, "controller", Color.RED, Color.GREEN),
             new TestRun(componentTransitionableObjectProperty, "controller",
                         Background.fill(Color.RED), Background.fill(Color.GREEN))
@@ -327,7 +340,7 @@ public class StyleableProperty_transition_Test {
     }
 
     @Test
-    void testBooleanTransitionsDiscretely() {
+    void testBooleanTransitionsAsDiscrete() {
         ((Group)scene.getRoot()).getChildren().setAll(testBean);
         var property = new SimpleStyleableBooleanProperty(booleanPropertyMetadata, testBean, null);
 
@@ -344,7 +357,31 @@ public class StyleableProperty_transition_Test {
     }
 
     @Test
-    void testNonInterpolatableObjectTransitionsDiscretely() {
+    void testStringTransitionsAsDiscrete() {
+        ((Group)scene.getRoot()).getChildren().setAll(testBean);
+        var property = new SimpleStyleableStringProperty(stringPropertyMetadata, testBean, null);
+
+        // Setting a value for the first time doesn't start a transition.
+        setAnimationTime(0);
+        property.applyStyle(StyleOrigin.USER, "foo");
+
+        // Start the transition and sample the outputs.
+        property.applyStyle(StyleOrigin.USER, "bar");
+        setAnimationTime(499);
+        assertEquals("foo", property.get());
+        setAnimationTime(500);
+        assertEquals("bar", property.get());
+
+        // This is a reversing transition, so it only needs half the time to flip the value.
+        property.applyStyle(StyleOrigin.USER, "foo");
+        setAnimationTime(749);
+        assertEquals("bar", property.get());
+        setAnimationTime(750);
+        assertEquals("foo", property.get());
+    }
+
+    @Test
+    void testNonInterpolatableObjectTransitionsAsDiscrete() {
         enum Fruit { APPLE, ORANGE }
 
         CssMetaData<Styleable, Fruit> metadata = new CssMetaData<>(
@@ -383,7 +420,7 @@ public class StyleableProperty_transition_Test {
     }
 
     @Test
-    void testNullObjectTransitionsDiscretely() {
+    void testNullObjectTransitionsAsDiscrete() {
         ((Group)scene.getRoot()).getChildren().setAll(testBean);
         var property = new SimpleStyleableObjectProperty<>(interpolatableObjectPropertyMetadata, testBean, null);
 
