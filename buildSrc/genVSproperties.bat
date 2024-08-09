@@ -37,7 +37,7 @@ REM The current officially supported Visual Studio version is VS 2022
 REM Try the following in order of priority:
 REM 1. The VSCOMNTOOLS env var
 REM 2. The legacy VS150COMNTOOLS env var
-REM 3. Look in standard locations for Visual Studio (2022|2019|2017)
+REM 3. Look in standard locations for Visual Studio (2022,2019,2017)
 
 
 set AUXBUILD=VC\Auxiliary\Build
