@@ -636,7 +636,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getItemAs
 
                     if (pixels != NULL)
                     {
-                        CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
+                        CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
                         CGContextRef ctx = CGBitmapContextCreate(pixels, width, height, 8, 4*width, space, kCGImageAlphaPremultipliedFirst|kCGBitmapByteOrder32Little);
                         CGContextSetBlendMode(ctx, kCGBlendModeCopy);
                         CGContextDrawImage(ctx, CGRectMake(0, 0, width, height), cgImage);

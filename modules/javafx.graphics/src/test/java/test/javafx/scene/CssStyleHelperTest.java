@@ -31,6 +31,8 @@ import com.sun.javafx.css.StyleManager;
 import javafx.stage.Stage;
 import com.sun.javafx.tk.Toolkit;
 import javafx.css.CssParser;
+import javafx.css.CssParser.ParseError;
+import javafx.css.CssParser.ParseError.PropertySetError;
 import javafx.css.PseudoClass;
 import javafx.css.Stylesheet;
 import javafx.geometry.Insets;
@@ -41,6 +43,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Text;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -72,6 +75,9 @@ public class CssStyleHelperTest {
         stage = new Stage();
         stage.setScene(scene);
         resetStyleManager();
+
+        // Apparently, need to access this property first, or nothing will be appended at all.
+        CssParser.errorsProperty().clear();
     }
 
     @AfterAll
@@ -662,6 +668,157 @@ public class CssStyleHelperTest {
 
         assertEquals(new Insets(10), a.getPadding());
         assertEquals(new Insets(4), b.getPadding());
+    }
+
+    @Test
+    public void shouldDetectSimpleInfiniteLoop() throws IOException {
+        Stylesheet stylesheet = new CssParser().parse(
+            "userAgentStyleSheet",
+            """
+                .root {
+                    -fx-base-fill: -fx-base;
+                    -fx-base: -fx-base-color;
+                    -fx-base-color: -fx-base-fill;
+                }
+
+                .pane {
+                    -fx-background-color: -fx-base;
+                }
+            """
+        );
+
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
+        Pane a = new Pane();
+
+        a.getStyleClass().add("pane");
+
+        root.getChildren().addAll(a);
+
+        assertDoesNotThrow(() -> stage.show());  // This should not result in a StackOverflowError
+        assertEquals(1, CssParser.errorsProperty().size());
+
+        ParseError error = CssParser.errorsProperty().getFirst();
+
+        assertEquals(PropertySetError.class, error.getClass());
+
+        // Note: on Windows, the message is using inconsistent line endings (sometimes Windows, sometimes Linux)
+        // so I've stripped it.
+        assertEquals(
+            """
+            Caught java.lang.IllegalArgumentException: Loop detected in *.root{
+            \t-fx-base-fill: <Value lookup="true">
+              <value>-fx-base</value>
+              <converter>null</converter>
+            </Value>
+            \t-fx-base: <Value lookup="true">
+              <value>-fx-base-color</value>
+              <converter>null</converter>
+            </Value>
+            \t-fx-base-color: <Value lookup="true">
+              <value>-fx-base-fill</value>
+              <converter>null</converter>
+            </Value>
+            } while resolving '-fx-base'' while calculating value for '-fx-background-color' from rule '*.pane' in stylesheet userAgentStyleSheet\
+            """,
+            error.getMessage().replace("\r", "")
+        );
+    }
+
+    @Test
+    public void shouldDetectNestedInfiniteLoop() throws IOException {
+        Stylesheet stylesheet = new CssParser().parse(
+            "userAgentStyleSheet",
+            """
+                .root {
+                    -fx-base-fill: ladder(-fx-base, white 49%, black 50%);
+                    -fx-base: ladder(-fx-base-fill, white 49%, black 50%);
+                }
+
+                .pane {
+                    -fx-background-color: -fx-base;
+                }
+            """
+        );
+
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
+        Pane a = new Pane();
+
+        a.getStyleClass().add("pane");
+
+        root.getChildren().addAll(a);
+
+        assertDoesNotThrow(() -> stage.show());  // This should not result in a StackOverflowError
+        assertEquals(1, CssParser.errorsProperty().size());
+
+        ParseError error = CssParser.errorsProperty().getFirst();
+
+        assertEquals(PropertySetError.class, error.getClass());
+
+        // Note: on Windows, the message is using inconsistent line endings (sometimes Windows, sometimes Linux)
+        // so I've stripped it.
+        assertEquals(
+            """
+            Caught java.lang.IllegalArgumentException: Loop detected in *.root{
+            \t-fx-base-fill: <Value>
+              <value values="3">
+                <Value lookup="true">
+                  <value>-fx-base</value>
+                  <converter>null</converter>
+                </Value>    <Value>
+                  <value values="2">
+                    <Value>
+                      <value>49.0%</value>
+                      <converter>null</converter>
+                    </Value>        <Value>
+                      <value>0xffffffff</value>
+                      <converter>null</converter>
+                    </Value>      </value>
+                  <converter>StopConverter</converter>
+                </Value>    <Value>
+                  <value values="2">
+                    <Value>
+                      <value>50.0%</value>
+                      <converter>null</converter>
+                    </Value>        <Value>
+                      <value>0x000000ff</value>
+                      <converter>null</converter>
+                    </Value>      </value>
+                  <converter>StopConverter</converter>
+                </Value>  </value>
+              <converter>LadderConverter</converter>
+            </Value>
+            \t-fx-base: <Value>
+              <value values="3">
+                <Value lookup="true">
+                  <value>-fx-base-fill</value>
+                  <converter>null</converter>
+                </Value>    <Value>
+                  <value values="2">
+                    <Value>
+                      <value>49.0%</value>
+                      <converter>null</converter>
+                    </Value>        <Value>
+                      <value>0xffffffff</value>
+                      <converter>null</converter>
+                    </Value>      </value>
+                  <converter>StopConverter</converter>
+                </Value>    <Value>
+                  <value values="2">
+                    <Value>
+                      <value>50.0%</value>
+                      <converter>null</converter>
+                    </Value>        <Value>
+                      <value>0x000000ff</value>
+                      <converter>null</converter>
+                    </Value>      </value>
+                  <converter>StopConverter</converter>
+                </Value>  </value>
+              <converter>LadderConverter</converter>
+            </Value>
+            } while resolving '-fx-base'' while calculating value for '-fx-background-color' from rule '*.pane' in stylesheet userAgentStyleSheet\
+            """,
+            error.getMessage().replace("\r", "")
+        );
     }
 
     private static final String GRAY_STYLESHEET = ".my-pane {-fx-background-color: #808080}";
