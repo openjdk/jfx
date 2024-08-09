@@ -47,6 +47,17 @@ def IS_CROSS = HOST_ARCH != TARGET_ARCH
 
 setupTools("windows_tools",
     { propFile ->
+        if (System.getenv("VS150COMNTOOLS") != null) {
+            println "***********************************************************************"
+            if (System.getenv("VSCOMNTOOLS") != null) {
+                println "*** Using VSCOMNTOOLS and ignoring obsolete VS150COMNTOOLS.         ***"
+            } else {
+                println "*** VS150COMNTOOLS is deprecated and will be ignored in the future. ***"
+                println "*** Set VSCOMNTOOLS to your Visual Studio installation instead.     ***"
+            }
+            println "***********************************************************************"
+        }
+
         if (project.hasProperty('setupWinTools')) {
             setupWinTools(propFile)
         } else {
