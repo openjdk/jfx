@@ -26,7 +26,8 @@
 package test.javafx.scene.layout;
 
 import com.sun.javafx.tk.Toolkit;
-import javafx.css.StyleConverter;
+
+import javafx.css.CompositeStyleConverter;
 import javafx.geometry.Insets;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Background;
@@ -52,7 +53,7 @@ public class BackgroundConverterTest {
     private static final String IMAGE_URL = "file:red.png";
 
     private final StubImageLoaderFactory imageLoaderFactory = ((StubToolkit)Toolkit.getToolkit()).getImageLoaderFactory();
-    private final StyleConverter<?, Background> converter = BackgroundShim.getConverter();
+    private final CompositeStyleConverter<Background> converter = BackgroundShim.getConverter();
     private final Image image;
 
     BackgroundConverterTest() {
@@ -84,8 +85,6 @@ public class BackgroundConverterTest {
                                         BackgroundPosition.CENTER, BackgroundSize.DEFAULT))
         );
 
-        @SuppressWarnings("unchecked")
-        var converter = (StyleConverter.WithReconstructionSupport<Background>)this.converter;
         var actual = converter.convert(converter.convertBack(expected));
         assertEquals(expected, actual);
     }

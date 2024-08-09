@@ -27,6 +27,7 @@ package com.sun.javafx.css;
 
 import com.sun.javafx.scene.NodeHelper;
 import javafx.animation.Interpolator;
+import javafx.css.CompositeStyleConverter;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
@@ -52,7 +53,7 @@ public class TransitionDefinitionCssMetaData extends CssMetaData<Node, Transitio
     }
 
     public TransitionDefinitionCssMetaData() {
-        super("transition", TransitionDefinitionConverter.SequenceConverter.getInstance(),
+        super("transition", (CompositeStyleConverter<TransitionDefinition[]>) TransitionDefinitionConverter.SequenceConverter.getInstance(),
               new TransitionDefinition[0], false, createSubProperties());
     }
 

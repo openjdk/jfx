@@ -35,12 +35,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.WritableValue;
 import com.sun.javafx.css.CascadingStyle;
 import com.sun.javafx.css.ImmutablePseudoClassSetsCache;
 
+import javafx.css.CompositeStyleConverter;
 import javafx.css.CssMetaData;
 import javafx.css.CssParser;
 import javafx.css.FontCssMetaData;
@@ -1158,7 +1157,7 @@ final class CssStyleHelper {
                 }
 
                 try {
-                    final StyleConverter keyType = cssMetaData.getConverter();
+                    final CompositeStyleConverter keyType = cssMetaData.getCompositeStyleConverter();
                     Object ret = keyType.convert(subs);
                     return new CalculatedValue(ret, origin, isRelative);
                 } catch (ClassCastException cce) {

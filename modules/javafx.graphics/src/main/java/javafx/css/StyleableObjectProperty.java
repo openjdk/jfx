@@ -75,16 +75,15 @@ public abstract class StyleableObjectProperty<T>
         super(initialValue);
     }
 
-    /** {@inheritDoc} */
     @Override
-    @SuppressWarnings({"unchecked", "rawtypes"})
     public void applyStyle(StyleOrigin origin, T newValue) {
         CssMetaData<? extends Styleable, T> metadata = getCssMetaData();
-        StyleConverter<?, T> converter = metadata.getConverter();
+        CompositeStyleConverter<T> compositeStyleConverter = metadata.getCompositeStyleConverter();
 
-        if (converter instanceof StyleConverter.WithReconstructionSupport c) {
-            applyValueComponents(newValue, metadata, c);
-        } else {
+        if(compositeStyleConverter != null) {
+            applyValueComponents(newValue, metadata, compositeStyleConverter);
+        }
+        else {
             applyValue(newValue, metadata);
         }
 
@@ -142,7 +141,7 @@ public abstract class StyleableObjectProperty<T>
      */
     private void applyValueComponents(T newValue,
                                       CssMetaData<? extends Styleable, T> metadata,
-                                      StyleConverter.WithReconstructionSupport<T> converter) {
+                                      CompositeStyleConverter<T> converter) {
         // If this.origin == null, we're setting the value for the first time.
         // No transition should be started in this case.
         Map<CssMetaData<? extends Styleable, ?>, TransitionDefinition> transitions =
@@ -167,7 +166,7 @@ public abstract class StyleableObjectProperty<T>
         }
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings("unchecked")
     private void processComponent(AggregatingTransitionController controller,
                                   CssMetaData<? extends Styleable, ?> metadata,
                                   Map<CssMetaData<? extends Styleable, ?>, TransitionDefinition> transitions,
@@ -474,7 +473,7 @@ public abstract class StyleableObjectProperty<T>
             if (--remainingValues == 0) {
                 try {
                     updating = true;
-                    set(getCssMetaData().getConverter().convert(cssValues));
+                    set(getCssMetaData().getCompositeStyleConverter().convert(cssValues));
                 } finally {
                     updating = false;
                 }
@@ -554,7 +553,7 @@ public abstract class StyleableObjectProperty<T>
         }
 
         @Override
-        @SuppressWarnings({"unchecked", "rawtypes"})
+        @SuppressWarnings("unchecked")
         public void onUpdate(double progress) {
             Object value;
 

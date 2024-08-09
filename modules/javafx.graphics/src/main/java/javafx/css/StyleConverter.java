@@ -87,33 +87,6 @@ import java.util.WeakHashMap;
 public class StyleConverter<F, T> {
 
     /**
-     * Defines the {@code convert} and {@code convertBack} operations that enable object
-     * decomposition and reconstruction. Note that the following invariant must always be
-     * satisfied: {@code convert(convertBack(value)).equals(value)}
-     *
-     * @param <T> the target type
-     * @since 24
-     */
-    public interface WithReconstructionSupport<T> {
-        /**
-         * Converts a map of CSS values to the target type.
-         *
-         * @param values the constituent values
-         * @return the converted object
-         */
-        T convert(Map<CssMetaData<? extends Styleable, ?>, Object> values);
-
-        /**
-         * Converts an object back to a map of its constituent values (deconstruction).
-         * The returned map can be passed into {@link #convert(Map)} to reconstruct the object.
-         *
-         * @param value the object
-         * @return a {@code Map} of the constituent values
-         */
-        Map<CssMetaData<? extends Styleable, ?>, Object> convertBack(T value);
-    }
-
-    /**
      * Creates a {@code StyleConverter}.
      */
     public StyleConverter() {
@@ -276,9 +249,10 @@ public class StyleConverter<F, T> {
      * @return the target property type
      * @since 9
      */
-    public T convert(Map<CssMetaData<? extends Styleable, ?>,Object> convertedValues) {
-        return null;
-    }
+    // just to proof it is never used in this way
+//    public T convert(Map<CssMetaData<? extends Styleable, ?>,Object> convertedValues) {
+//        return null;
+//    }
 
     /**
      * Write binary data.

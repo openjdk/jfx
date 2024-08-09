@@ -25,16 +25,15 @@
 
 package javafx.scene.layout;
 
+import javafx.css.CompositeStyleConverter;
 import javafx.css.CssMetaData;
-import javafx.css.ParsedValue;
-import javafx.css.StyleConverter;
 import javafx.scene.Node;
 
 public class BorderShim {
 
     public static final CssMetaData<Node, String[]> BORDER_IMAGE_SOURCE = Border.BORDER_IMAGE_SOURCE;
 
-    public static StyleConverter<ParsedValue[], Border> getConverter() {
+    public static CompositeStyleConverter<Border> getConverter() {
         return BorderConverter.getInstance();
     }
 }

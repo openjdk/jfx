@@ -26,6 +26,7 @@
 package com.sun.javafx.css;
 
 import javafx.animation.Interpolator;
+import javafx.css.CompositeStyleConverter;
 import javafx.css.CssMetaData;
 import javafx.css.ParsedValue;
 import javafx.css.Size;
@@ -85,7 +86,9 @@ public final class TransitionDefinitionConverter extends StyleConverter<ParsedVa
      * Converts a sequence of parsed values to an array of {@link TransitionDefinition} instances.
      */
     public static final class SequenceConverter
-            extends StyleConverter<ParsedValue<ParsedValue[], TransitionDefinition>[], TransitionDefinition[]> {
+            extends StyleConverter<ParsedValue<ParsedValue[], TransitionDefinition>[], TransitionDefinition[]>
+        implements CompositeStyleConverter<TransitionDefinition[]>
+    {
         private static final TransitionDefinition[] EMPTY_TRANSITION = new TransitionDefinition[0];
         private static final String[] EMPTY_STRING = new String[0];
         private static final Duration[] EMPTY_DURATION = new Duration[0];
@@ -131,6 +134,12 @@ public final class TransitionDefinitionConverter extends StyleConverter<ParsedVa
             }
 
             return transitions;
+        }
+
+        @Override
+        public Map<CssMetaData<? extends Styleable, ?>, Object> convertBack(TransitionDefinition[] value) {
+            throw new UnsupportedOperationException("TODO implement?"); // TODO Auto-generated method stub
+//            return null;
         }
 
         @Override

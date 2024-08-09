@@ -31,10 +31,10 @@ import com.sun.javafx.scene.layout.region.Margins;
 import com.sun.javafx.scene.layout.region.RepeatStruct;
 import java.util.List;
 import java.util.Map;
+
+import javafx.css.CompositeStyleConverter;
 import javafx.css.CssMetaData;
-import javafx.css.ParsedValue;
 import javafx.css.Styleable;
-import javafx.css.StyleConverter;
 import javafx.geometry.Insets;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
@@ -43,8 +43,8 @@ import javafx.scene.paint.Paint;
 /**
  * Converts -fx-border components into a {@link Border}.
  */
-class BorderConverter extends StyleConverter<ParsedValue[], Border>
-                      implements StyleConverter.WithReconstructionSupport<Border> {
+class BorderConverter //extends StyleConverter<ParsedValue[], Border>
+                      implements CompositeStyleConverter<Border> {
 
     private static final BorderConverter BORDER_IMAGE_CONVERTER =
             new BorderConverter();

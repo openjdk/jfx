@@ -25,9 +25,8 @@
 
 package javafx.scene.layout;
 
+import javafx.css.CompositeStyleConverter;
 import javafx.css.CssMetaData;
-import javafx.css.ParsedValue;
-import javafx.css.StyleConverter;
 import javafx.scene.Node;
 import javafx.scene.image.Image;
 
@@ -35,7 +34,7 @@ public class BackgroundShim {
 
     public static final CssMetaData<Node, Image[]> BACKGROUND_IMAGE = Background.BACKGROUND_IMAGE;
 
-    public static StyleConverter<ParsedValue[], Background> getConverter() {
+    public static CompositeStyleConverter<Background> getConverter() {
         return BackgroundConverter.INSTANCE;
     }
 

@@ -239,6 +239,7 @@ public abstract class CssMetaData<S extends Styleable, V> {
 
         this.property = property;
         this.converter = converter;
+        this.compositeStyleConverter = null;
         this.initialValue = initialValue;
         this.inherits = inherits;
         this.subProperties = subProperties != null ? Collections.unmodifiableList(subProperties) : null;
@@ -246,6 +247,46 @@ public abstract class CssMetaData<S extends Styleable, V> {
         if (this.property == null || this.converter == null) {
             throw new IllegalArgumentException("neither property nor converter can be null");
         }
+    }
+
+    /**
+     * Construct a CssMetaData with the given parameters and no sub-properties.
+     * @param property the CSS property
+     * @param compositeStyleConverter the CompositeStyleConverter used to convert the CSS parsed value to a Java object.
+     * @param initialValue The initial or default value of the corresponding StyleableProperty
+     * @param inherits true if this property uses CSS inheritance
+     * @param subProperties the sub-properties of this property. For example,
+     * the -fx-font property has the sub-properties -fx-font-family,
+     * -fx-font-size, -fx-font-weight, and -fx-font-style.
+     */
+    protected CssMetaData(
+            final String property,
+            final CompositeStyleConverter<V> compositeStyleConverter,
+            final V initialValue,
+            boolean inherits,
+            final List<CssMetaData<? extends Styleable, ?>> subProperties) {
+
+        this.property = property;
+        this.converter = null;
+        this.compositeStyleConverter = compositeStyleConverter;
+        this.initialValue = initialValue;
+        this.inherits = inherits;
+        this.subProperties = subProperties != null ? Collections.unmodifiableList(subProperties) : null;
+
+        if (this.property == null || this.compositeStyleConverter == null) {
+            throw new IllegalArgumentException("neither property nor compositeStyleConverter can be null");
+        }
+    }
+
+    private final CompositeStyleConverter<V> compositeStyleConverter;
+
+    /**
+     * TODO document
+     *
+     * @return a {@link CompositeStyleConverter}, can be {@code null}
+     */
+    public CompositeStyleConverter<V> getCompositeStyleConverter() {
+        return compositeStyleConverter;
     }
 
     /**

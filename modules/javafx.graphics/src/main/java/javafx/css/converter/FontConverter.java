@@ -27,17 +27,13 @@ package javafx.css.converter;
 
 import com.sun.javafx.util.Utils;
 import javafx.css.Size;
-import javafx.css.CssMetaData;
 import javafx.css.ParsedValue;
 import javafx.css.StyleConverter;
-import javafx.css.Styleable;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
 
 import java.util.Locale;
-import java.util.Map;
-import java.util.Map.Entry;
 
 /**
  * Converter to convert a parsed representation of a {@code Font} to a {@code Font}.
@@ -78,35 +74,6 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
         FontWeight weight = (values[2] != null) ? (FontWeight) values[2].convert(aFont) : FontWeight.NORMAL;
         FontPosture style = (values[3] != null) ? (FontPosture) values[3].convert(aFont) : FontPosture.REGULAR;
         Font f = Font.font(family, weight, style, fsize);
-        return f;
-    }
-
-    @Override
-    public Font convert(Map<CssMetaData<? extends Styleable, ?>, Object> convertedValues) {
-        Font font = Font.getDefault();
-        double size = font.getSize();
-        String family = font.getFamily();
-        FontWeight weight = FontWeight.NORMAL;
-        FontPosture style = FontPosture.REGULAR;
-
-        for (Entry<CssMetaData<? extends Styleable, ?>, Object> entry : convertedValues.entrySet()) {
-
-            Object value = entry.getValue();
-            if (value == null) {
-                continue;
-            }
-            final String prop = entry.getKey().getProperty();
-            if (prop.endsWith("font-size")) {
-                size = ((Number) value).doubleValue();
-            } else if (prop.endsWith("font-family")) {
-                family = Utils.stripQuotes((String) value);
-            } else if (prop.endsWith("font-weight")) {
-                weight = (FontWeight) value;
-            } else if (prop.endsWith("font-style")) {
-                style = (FontPosture) value;
-            }
-        }
-        final Font f = Font.font(family, weight, style, size);
         return f;
     }
 
