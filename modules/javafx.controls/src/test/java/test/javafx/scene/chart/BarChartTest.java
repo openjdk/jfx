@@ -297,6 +297,19 @@ public class BarChartTest extends XYChartTestBase {
     }
 
     @Test
+    public void testNegativeStyleIsRemovedWhenChangingData() {
+        startApp();
+        Series<String, Number> series = bc.getData().getFirst();
+
+        series.getData().getFirst().setYValue(-1);
+        Node bar = series.getData().getFirst().getNode();
+        checkStyleClass(bar, "negative");
+
+        series.getData().getFirst().setYValue(1);
+        Assert.assertFalse(bar.getStyleClass().contains("negative"));
+    }
+
+    @Test
     public void testAddingDataToEmptySeries() {
         Thread.currentThread().setUncaughtExceptionHandler((t, e) -> Assert.fail("Exception: " + e));
         startApp();
@@ -304,10 +317,12 @@ public class BarChartTest extends XYChartTestBase {
         XYChart.Series<String, Number> series = new XYChart.Series<>();
         chart.getData().add(series);
         series.getData().add(new XYChart.Data<>("1", 1));
-        series.getData().add(new XYChart.Data<>("2", 2));
+        series.getData().add(new XYChart.Data<>("2", -2));
         series.getData().add(new XYChart.Data<>("3", 3));
         assertEquals(3, XYChartShim.Series_getDataSize(series));
         assertEquals(3, XYChartShim.getPlotChildren(chart).size());
+        Node bar2 = series.getData().get(1).getNode();
+        checkStyleClass(bar2, "negative");
     }
 
     @Test
@@ -318,9 +333,11 @@ public class BarChartTest extends XYChartTestBase {
         XYChart.Series<String, Number> series = new XYChart.Series<>();
         series.getData().add(new XYChart.Data<>("1", 1));
         chart.getData().add(series);
-        series.getData().add(new XYChart.Data<>("2", 2));
+        series.getData().add(new XYChart.Data<>("2", -2));
         assertEquals(2, XYChartShim.Series_getDataSize(series));
         assertEquals(2, XYChartShim.getPlotChildren(chart).size());
+        Node bar2 = series.getData().get(1).getNode();
+        checkStyleClass(bar2, "negative");
     }
 
     @Test
@@ -333,9 +350,12 @@ public class BarChartTest extends XYChartTestBase {
         series.getData().add(new XYChart.Data<>("1", 2));
         series.getData().add(new XYChart.Data<>("2", 3));
         chart.getData().add(series);
-        series.getData().add(new XYChart.Data<>("3", 3));
+        series.getData().add(new XYChart.Data<>("3", -3));
         assertEquals(3, XYChartShim.Series_getDataSize(series));
         assertEquals(3, XYChartShim.getPlotChildren(chart).size());
+        assertEquals(4, series.getData().size());
+        Node bar3 = series.getData().get(3).getNode();
+        checkStyleClass(bar3, "negative");
     }
 
     @Test
