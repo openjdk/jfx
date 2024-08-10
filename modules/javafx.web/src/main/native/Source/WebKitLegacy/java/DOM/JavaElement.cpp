@@ -1333,21 +1333,6 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_scrollIntoViewIfNeede
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_scrollByLinesImpl(JNIEnv*, jclass, jlong peer
-    , jint lines)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->scrollByLines(lines);
-}
-
-
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_scrollByPagesImpl(JNIEnv*, jclass, jlong peer
-    , jint pages)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->scrollByPages(pages);
-}
-
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getElementsByClassNameImpl(JNIEnv* env, jclass, jlong peer
     , jstring name)

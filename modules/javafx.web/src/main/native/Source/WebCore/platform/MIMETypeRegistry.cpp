@@ -87,9 +87,7 @@ constexpr ComparableCaseFoldingASCIILiteral supportedImageMIMETypeArray[] = {
     "application/x-tiff",
     "application/x-win-bitmap",
 #endif
-#if USE(CG) || ENABLE(APNG)
     "image/apng",
-#endif
 #if HAVE(AVIF) || USE(AVIF)
     "image/avif",
 #endif
@@ -104,17 +102,11 @@ constexpr ComparableCaseFoldingASCIILiteral supportedImageMIMETypeArray[] = {
     "image/heif",
     "image/heif-sequence",
 #endif
-#if USE(CG) || USE(OPENJPEG)
-    "image/jp2",
-#endif
 #if PLATFORM(IOS_FAMILY)
     "image/jp_",
     "image/jpe_",
 #endif
     "image/jpeg",
-#if !USE(CG) && USE(OPENJPEG)
-    "image/jpeg2000",
-#endif
     "image/jpg",
 #if HAVE(JPEGXL) || USE(JPEGXL)
     "image/jxl",
@@ -231,10 +223,10 @@ HashSet<String, ASCIICaseInsensitiveHash>& MIMETypeRegistry::supportedNonImageMI
     return types;
 }
 
-const HashSet<String, ASCIICaseInsensitiveHash>& MIMETypeRegistry::supportedMediaMIMETypes()
+const HashSet<String>& MIMETypeRegistry::supportedMediaMIMETypes()
 {
     static NeverDestroyed types = [] {
-        HashSet<String, ASCIICaseInsensitiveHash> types;
+        HashSet<String> types;
 #if ENABLE(VIDEO)
         MediaPlayer::getSupportedTypes(types);
 #endif

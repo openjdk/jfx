@@ -119,10 +119,7 @@ public:
 
     DECLARE_EXPORT_INFO;
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(CellType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     using KeyType = UniquedStringImpl*;
     using ValueType = PropertyTableEntry;
@@ -601,7 +598,7 @@ inline void PropertyTable::rehash(VM& vm, unsigned newCapacity, bool canStayComp
 
     size_t newDataSize = dataSize(this->isCompact());
     if (oldDataSize < newDataSize)
-        vm.heap.reportExtraMemoryAllocated(newDataSize - oldDataSize);
+        vm.heap.reportExtraMemoryAllocated(this, newDataSize - oldDataSize);
 }
 
 inline unsigned PropertyTable::tableCapacity() const { return m_indexSize >> 1; }

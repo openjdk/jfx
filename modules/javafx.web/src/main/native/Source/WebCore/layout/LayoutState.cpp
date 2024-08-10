@@ -27,8 +27,7 @@
 #include "LayoutState.h"
 
 #include "BlockFormattingState.h"
-#include "FlexFormattingState.h"
-#include "InlineFormattingState.h"
+#include "InlineContentCache.h"
 #include "LayoutBox.h"
 #include "LayoutBoxGeometry.h"
 #include "LayoutContainingBlockChainIterator.h"
@@ -43,9 +42,8 @@ namespace Layout {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(LayoutState);
 
-LayoutState::LayoutState(const Document& document, const ElementBox& rootContainer, std::optional<FormattingContextIntegrationType> formattingContextIntegrationType)
+LayoutState::LayoutState(const Document& document, const ElementBox& rootContainer)
     : m_rootContainer(rootContainer)
-    , m_formattingContextIntegrationType(formattingContextIntegrationType)
 {
     // It makes absolutely no sense to construct a dedicated layout state for a non-formatting context root (layout would be a no-op).
     ASSERT(root().establishesFormattingContext());
@@ -90,23 +88,12 @@ BoxGeometry& LayoutState::ensureGeometryForBoxSlow(const Box& layoutBox)
 bool LayoutState::hasFormattingState(const ElementBox& formattingContextRoot) const
 {
     ASSERT(formattingContextRoot.establishesFormattingContext());
-    return m_blockFormattingStates.contains(&formattingContextRoot)
-        || m_inlineFormattingStates.contains(&formattingContextRoot)
-        || m_tableFormattingStates.contains(&formattingContextRoot)
-        || m_flexFormattingStates.contains(&formattingContextRoot);
+    return m_blockFormattingStates.contains(&formattingContextRoot) || m_tableFormattingStates.contains(&formattingContextRoot);
 }
 
 FormattingState& LayoutState::formattingStateForFormattingContext(const ElementBox& formattingContextRoot) const
 {
     ASSERT(formattingContextRoot.establishesFormattingContext());
-
-    if (isFlexFormattingContextIntegration()) {
-        ASSERT(&formattingContextRoot == m_rootContainer.ptr());
-        return *m_rootFlexFormattingStateForIntegration;
-    }
-
-    if (formattingContextRoot.establishesInlineFormattingContext())
-        return formattingStateForInlineFormattingContext(formattingContextRoot);
 
     if (formattingContextRoot.establishesBlockFormattingContext())
         return formattingStateForBlockFormattingContext(formattingContextRoot);
@@ -114,17 +101,7 @@ FormattingState& LayoutState::formattingStateForFormattingContext(const ElementB
     if (formattingContextRoot.establishesTableFormattingContext())
         return formattingStateForTableFormattingContext(formattingContextRoot);
 
-    if (formattingContextRoot.establishesFlexFormattingContext())
-        return formattingStateForFlexFormattingContext(formattingContextRoot);
-
     CRASH();
-}
-
-InlineFormattingState& LayoutState::formattingStateForInlineFormattingContext(const ElementBox& inlineFormattingContextRoot) const
-{
-    ASSERT(inlineFormattingContextRoot.establishesInlineFormattingContext());
-
-    return *m_inlineFormattingStates.get(&inlineFormattingContextRoot);
 }
 
 BlockFormattingState& LayoutState::formattingStateForBlockFormattingContext(const ElementBox& blockFormattingContextRoot) const
@@ -139,22 +116,10 @@ TableFormattingState& LayoutState::formattingStateForTableFormattingContext(cons
     return *m_tableFormattingStates.get(&tableFormattingContextRoot);
 }
 
-FlexFormattingState& LayoutState::formattingStateForFlexFormattingContext(const ElementBox& flexFormattingContextRoot) const
-{
-    ASSERT(flexFormattingContextRoot.establishesFlexFormattingContext());
-
-    if (isFlexFormattingContextIntegration()) {
-        ASSERT(&flexFormattingContextRoot == m_rootContainer.ptr());
-        return *m_rootFlexFormattingStateForIntegration;
-    }
-
-    return *m_flexFormattingStates.get(&flexFormattingContextRoot);
-}
-
-InlineFormattingState& LayoutState::ensureInlineFormattingState(const ElementBox& formattingContextRoot)
+InlineContentCache& LayoutState::inlineContentCache(const ElementBox& formattingContextRoot)
 {
     ASSERT(formattingContextRoot.establishesInlineFormattingContext());
-    return *m_inlineFormattingStates.ensure(&formattingContextRoot, [&] { return makeUnique<InlineFormattingState>(*this); }).iterator->value;
+    return *m_inlineContentCaches.ensure(&formattingContextRoot, [&] { return makeUnique<InlineContentCache>(); }).iterator->value;
 }
 
 BlockFormattingState& LayoutState::ensureBlockFormattingState(const ElementBox& formattingContextRoot)
@@ -169,36 +134,16 @@ TableFormattingState& LayoutState::ensureTableFormattingState(const ElementBox& 
     return *m_tableFormattingStates.ensure(&formattingContextRoot, [&] { return makeUnique<TableFormattingState>(*this, formattingContextRoot); }).iterator->value;
 }
 
-FlexFormattingState& LayoutState::ensureFlexFormattingState(const ElementBox& formattingContextRoot)
-{
-    ASSERT(formattingContextRoot.establishesFlexFormattingContext());
-
-    if (isFlexFormattingContextIntegration()) {
-        if (!m_rootFlexFormattingStateForIntegration) {
-            ASSERT(&formattingContextRoot == m_rootContainer.ptr());
-            m_rootFlexFormattingStateForIntegration = makeUnique<FlexFormattingState>(*this);
-        }
-        return *m_rootFlexFormattingStateForIntegration;
-    }
-
-    return *m_flexFormattingStates.ensure(&formattingContextRoot, [&] { return makeUnique<FlexFormattingState>(*this); }).iterator->value;
-}
-
 void LayoutState::destroyBlockFormattingState(const ElementBox& formattingContextRoot)
 {
     ASSERT(formattingContextRoot.establishesBlockFormattingContext());
-    m_inlineFormattingStates.remove(&formattingContextRoot);
-}
-
-void LayoutState::destroyInlineFormattingState(const ElementBox& formattingContextRoot)
-{
-    ASSERT(formattingContextRoot.establishesInlineFormattingContext());
     m_blockFormattingStates.remove(&formattingContextRoot);
 }
 
-bool LayoutState::shouldNotSynthesizeInlineBlockBaseline() const
+void LayoutState::destroyInlineContentCache(const ElementBox& formattingContextRoot)
 {
-    return isInlineFormattingContextIntegration();
+    ASSERT(formattingContextRoot.establishesInlineFormattingContext());
+    m_inlineContentCaches.remove(&formattingContextRoot);
 }
 
 }

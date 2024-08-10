@@ -55,6 +55,7 @@ public:
 
     bool isBusy() const override;
     bool isControl() const override;
+    bool isRadioInput() const override;
     bool isFieldset() const override;
     bool isHovered() const override;
     bool isInputImage() const override;
@@ -68,7 +69,7 @@ public:
     bool isChecked() const override;
     bool isEnabled() const override;
     bool isIndeterminate() const override;
-    bool isPressed() const override;
+    bool isPressed() const final;
     bool isRequired() const override;
     bool supportsARIAOwns() const final;
     bool supportsRequiredAttribute() const override;
@@ -121,11 +122,9 @@ public:
     Element* actionElement() const override;
     Element* mouseButtonListener(MouseButtonListenerResultFilter = ExcludeBodyElement) const;
     Element* anchorElement() const override;
-    Element* popoverTargetElement() const final;
-    AccessibilityObject* internalLinkElement() const;
-    void addRadioButtonGroupMembers(AccessibilityChildrenVector& linkedUIElements) const;
-    void addRadioButtonGroupChildren(AXCoreObject&, AccessibilityChildrenVector&) const;
-    AccessibilityChildrenVector linkedObjects() const override;
+    RefPtr<Element> popoverTargetElement() const final;
+    AXCoreObject* internalLinkElement() const final;
+    AccessibilityChildrenVector radioButtonGroup() const final;
     AccessibilityObject* menuForMenuButton() const;
 
     virtual void changeValueByPercent(float percentChange);
@@ -137,11 +136,11 @@ public:
     AccessibilityObject* parentObject() const override;
     AccessibilityObject* parentObjectIfExists() const override;
 
-    void updateRole() override;
     bool matchesTextAreaRole() const;
 
     void increment() override;
     void decrement() override;
+    bool toggleDetailsAncestor() final;
 
     LayoutRect elementRect() const override;
 
@@ -156,7 +155,7 @@ protected:
 
     bool isDetached() const override { return !m_node; }
 
-    virtual AccessibilityRole determineAccessibilityRole();
+    AccessibilityRole determineAccessibilityRole() override;
     enum class TreatStyleFormatGroupAsInline : bool { No, Yes };
     AccessibilityRole determineAccessibilityRoleFromNode(TreatStyleFormatGroupAsInline = TreatStyleFormatGroupAsInline::No) const;
     AccessibilityRole ariaRoleAttribute() const override { return m_ariaRole; }
@@ -193,14 +192,14 @@ protected:
 
     String accessKey() const final;
     bool isLabelable() const;
-    AccessibilityObject* correspondingControlForLabelElement() const override;
-    AccessibilityObject* correspondingLabelForControlElement() const override;
-    String textForLabelElements(Vector<HTMLLabelElement*>&&) const;
+    AccessibilityObject* controlForLabelElement() const final;
+    String textAsLabel() const;
+    String textForLabelElements(Vector<Ref<HTMLElement>>&&) const;
     HTMLLabelElement* labelElementContainer() const;
 
     String ariaAccessibilityDescription() const;
-    Vector<Element*> ariaLabeledByElements() const;
-    String descriptionForElements(Vector<Element*>&&) const;
+    Vector<Ref<Element>> ariaLabeledByElements() const;
+    String descriptionForElements(const Vector<Ref<Element>>&) const;
     LayoutRect boundingBoxRect() const override;
     String ariaDescribedByAttribute() const override;
 
@@ -208,10 +207,7 @@ protected:
     Element* menuItemElementForMenu() const;
     AccessibilityObject* menuButtonForMenu() const;
     AccessibilityObject* captionForFigure() const;
-    virtual void titleElementText(Vector<AccessibilityText>&) const;
-    AccessibilityObject* titleUIElement() const override;
-    bool exposesTitleUIElement() const override;
-
+    virtual void labelText(Vector<AccessibilityText>&) const;
 private:
     bool isAccessibilityNodeObject() const final { return true; }
     void accessibilityText(Vector<AccessibilityText>&) const override;
@@ -234,6 +230,13 @@ private:
 
     WeakPtr<Node, WeakPtrImplWithEventTargetData> m_node;
 };
+
+namespace Accessibility {
+
+RefPtr<HTMLElement> controlForLabelElement(const HTMLLabelElement&);
+Vector<Ref<HTMLElement>> labelsForElement(Element*);
+
+} // namespace Accessibility
 
 } // namespace WebCore
 

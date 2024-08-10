@@ -31,6 +31,7 @@
 #include "BlockMarginCollapse.h"
 #include "LayoutBox.h"
 #include "LayoutBoxGeometry.h"
+#include "LayoutContainingBlockChainIterator.h"
 #include "LayoutElementBox.h"
 #include "LayoutInitialContainingBlock.h"
 #include "LayoutState.h"
@@ -71,7 +72,7 @@ std::optional<LayoutUnit> BlockFormattingQuirks::stretchedInFlowHeightIfApplicab
         auto documentBoxContentHeight = formattingContext.geometryForBox(FormattingContext::initialContainingBlock(layoutBox), FormattingContext::EscapeReason::DocumentBoxStretchesToViewportQuirk).contentBoxHeight();
         // Document box's own vertical margin/border/padding values always shrink the content height.
         auto& documentBoxGeometry = formattingContext.geometryForBox(layoutBox);
-        documentBoxContentHeight -= nonCollapsedVerticalMargin + documentBoxGeometry.verticalBorder() + documentBoxGeometry.verticalPadding().value_or(0);
+        documentBoxContentHeight -= nonCollapsedVerticalMargin + documentBoxGeometry.verticalBorderAndPadding();
         return std::max(contentHeightAndMargin.contentHeight,  documentBoxContentHeight);
     }
 
@@ -83,7 +84,7 @@ std::optional<LayoutUnit> BlockFormattingQuirks::stretchedInFlowHeightIfApplicab
     auto bodyBoxContentHeight = initialContainingBlockGeometry.contentBoxHeight();
     // Body box's own border and padding shrink the content height.
     auto& bodyBoxGeometry = formattingContext.geometryForBox(layoutBox);
-    bodyBoxContentHeight -= bodyBoxGeometry.verticalBorder() + bodyBoxGeometry.verticalPadding().value_or(0);
+    bodyBoxContentHeight -= bodyBoxGeometry.verticalBorderAndPadding();
     // Body box never collapses its vertical margins with the document box but it might collapse its margin with its descendants.
     auto nonCollapsedMargin = contentHeightAndMargin.nonCollapsedMargin;
     auto marginCollapse = BlockMarginCollapse { formattingContext.layoutState(), formattingContext.formattingState() };
@@ -94,7 +95,7 @@ std::optional<LayoutUnit> BlockFormattingQuirks::stretchedInFlowHeightIfApplicab
     // Document box's padding and border also shrink the body box's content height.
     auto& documentBox = layoutBox.parent();
     auto& documentBoxGeometry = formattingContext.geometryForBox(documentBox, FormattingContext::EscapeReason::BodyStretchesToViewportQuirk);
-    bodyBoxContentHeight -= documentBoxGeometry.verticalBorder() + documentBoxGeometry.verticalPadding().value_or(0);
+    bodyBoxContentHeight -= documentBoxGeometry.verticalBorderAndPadding();
     // However the non-in-flow document box's vertical margins are ignored. They don't affect the body box's content height.
     if (documentBox.isInFlow()) {
         auto& formattingGeometry = formattingContext.formattingGeometry();
@@ -126,6 +127,33 @@ bool BlockFormattingQuirks::shouldCollapseMarginBeforeWithParentMarginBefore(con
 bool BlockFormattingQuirks::shouldCollapseMarginAfterWithParentMarginAfter(const ElementBox& layoutBox)
 {
     return hasQuirkMarginToCollapse(layoutBox, VerticalMargin::After) && isQuirkContainer(FormattingContext::containingBlock(layoutBox));
+}
+
+LayoutUnit BlockFormattingQuirks::heightValueOfNearestContainingBlockWithFixedHeight(const Box& layoutBox) const
+{
+    ASSERT(layoutState().inQuirksMode());
+    // In quirks mode, we go and travers the containing block chain to find a block level box with fixed height value, even if it means leaving
+    // the current formatting context. FIXME: surely we need to do some tricks here when block direction support is added.
+    auto& formattingContext = downcast<BlockFormattingContext>(this->formattingContext());
+    auto bodyAndDocumentVerticalMarginPaddingAndBorder = LayoutUnit { };
+    for (auto& containingBlock : containingBlockChain(layoutBox)) {
+        auto containingBlockHeight = containingBlock.style().logicalHeight();
+        if (containingBlockHeight.isFixed())
+            return LayoutUnit(containingBlockHeight.value() - bodyAndDocumentVerticalMarginPaddingAndBorder);
+
+        // If the only fixed value box we find is the ICB, then ignore the body and the document (vertical) margin, padding and border. So much quirkiness.
+        // -and it's totally insane because now we freely travel across formatting context boundaries and computed margins are nonexistent.
+        if (containingBlock.isBodyBox() || containingBlock.isDocumentBox()) {
+            auto& formattingGeometry = formattingContext.formattingGeometry();
+            auto horizontalConstraints = formattingGeometry.constraintsForInFlowContent(FormattingContext::containingBlock(containingBlock), FormattingContext::EscapeReason::FindFixedHeightAncestorQuirk).horizontal();
+            auto verticalMargin = formattingGeometry.computedVerticalMargin(containingBlock, horizontalConstraints);
+
+            auto& boxGeometry = formattingContext.geometryForBox(containingBlock, FormattingContext::EscapeReason::FindFixedHeightAncestorQuirk);
+            bodyAndDocumentVerticalMarginPaddingAndBorder += verticalMargin.before.value_or(0) + verticalMargin.after.value_or(0) + boxGeometry.verticalPadding() + boxGeometry.verticalBorder();
+        }
+    }
+    // Initial containing block has to have a height.
+    return formattingContext.geometryForBox(FormattingContext::initialContainingBlock(layoutBox), FormattingContext::EscapeReason::FindFixedHeightAncestorQuirk).contentBox().height() - bodyAndDocumentVerticalMarginPaddingAndBorder;
 }
 
 }

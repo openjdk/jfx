@@ -91,6 +91,9 @@ public:
     WEBCORE_EXPORT RefPtr<VideoFrameCV> asVideoFrameCV();
 #endif
 
+    enum class ShouldCloneWithDifferentTimestamp : bool { No, Yes };
+    Ref<VideoFrame> updateTimestamp(MediaTime, ShouldCloneWithDifferentTimestamp);
+
     using CopyCallback = CompletionHandler<void(std::optional<Vector<PlaneLayout>>&&)>;
     void copyTo(std::span<uint8_t>, VideoPixelFormat, Vector<ComputedPlaneLayout>&&, CopyCallback&&);
 
@@ -105,8 +108,6 @@ public:
 #endif
 #if PLATFORM(COCOA)
     virtual CVPixelBufferRef pixelBuffer() const { return nullptr; };
-    using ResourceIdentifier = std::pair<uint64_t, uint64_t>;
-    virtual ResourceIdentifier resourceIdentifier() const { return { }; }
 #endif
     WEBCORE_EXPORT virtual void setOwnershipIdentity(const ProcessIdentity&) { }
 
@@ -119,7 +120,11 @@ public:
 protected:
     WEBCORE_EXPORT VideoFrame(MediaTime presentationTime, bool isMirrored, Rotation, PlatformVideoColorSpace&& = { });
 
+    void initializePresentationTime(MediaTime);
+
 private:
+    virtual Ref<VideoFrame> clone() = 0;
+
     const MediaTime m_presentationTime;
     const bool m_isMirrored;
     const Rotation m_rotation;

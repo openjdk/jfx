@@ -30,10 +30,12 @@
 #pragma once
 
 #include "FrameLoader.h"
+#include <wtf/CheckedPtr.h>
 
 namespace WebCore {
 
 class HistoryItem;
+class HistoryItemClient;
 class LocalFrame;
 class SerializedScriptValue;
 
@@ -41,9 +43,9 @@ enum class ShouldTreatAsContinuingLoad : uint8_t;
 
 struct StringWithDirection;
 
-class FrameLoader::HistoryController {
+class HistoryController : public CanMakeCheckedPtr {
     WTF_MAKE_NONCOPYABLE(HistoryController);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
 public:
     enum HistoryUpdateType { UpdateAll, UpdateAllExceptBackForwardList };
 
@@ -72,19 +74,21 @@ public:
     void updateForFrameLoadCompleted();
 
     HistoryItem* currentItem() const { return m_currentItem.get(); }
-    WEBCORE_EXPORT void setCurrentItem(HistoryItem&);
-    void setCurrentItemTitle(const StringWithDirection&);
+    RefPtr<HistoryItem> protectedCurrentItem() const;
+    WEBCORE_EXPORT void setCurrentItem(Ref<HistoryItem>&&);
     bool currentItemShouldBeReplaced() const;
-    WEBCORE_EXPORT void replaceCurrentItem(HistoryItem*);
+    WEBCORE_EXPORT void replaceCurrentItem(RefPtr<HistoryItem>&&);
 
     HistoryItem* previousItem() const { return m_previousItem.get(); }
+    RefPtr<HistoryItem> protectedPreviousItem() const;
     void clearPreviousItem();
 
     HistoryItem* provisionalItem() const { return m_provisionalItem.get(); }
-    void setProvisionalItem(HistoryItem*);
+    RefPtr<HistoryItem> protectedProvisionalItem() const;
+    void setProvisionalItem(RefPtr<HistoryItem>&&);
 
-    void pushState(RefPtr<SerializedScriptValue>&&, const String& title, const String& url);
-    void replaceState(RefPtr<SerializedScriptValue>&&, const String& title, const String& url);
+    void pushState(RefPtr<SerializedScriptValue>&&, const String& url);
+    void replaceState(RefPtr<SerializedScriptValue>&&, const String& url);
 
     void setDefersLoading(bool);
 
@@ -94,8 +98,8 @@ private:
     void goToItem(HistoryItem&, FrameLoadType, ShouldTreatAsContinuingLoad);
 
     void initializeItem(HistoryItem&);
-    Ref<HistoryItem> createItem();
-    Ref<HistoryItem> createItemTree(LocalFrame& targetFrame, bool clipAtTarget);
+    Ref<HistoryItem> createItem(HistoryItemClient&);
+    Ref<HistoryItem> createItemTree(HistoryItemClient&, LocalFrame& targetFrame, bool clipAtTarget);
 
     void recursiveSetProvisionalItem(HistoryItem&, HistoryItem*);
     void recursiveGoToItem(HistoryItem&, HistoryItem*, FrameLoadType, ShouldTreatAsContinuingLoad);
@@ -108,7 +112,9 @@ private:
     void updateBackForwardListClippedAtTarget(bool doClip);
     void updateCurrentItem();
 
-    LocalFrame& m_frame;
+    Ref<LocalFrame> protectedFrame() const;
+
+    WeakRef<LocalFrame> m_frame;
 
     RefPtr<HistoryItem> m_currentItem;
     RefPtr<HistoryItem> m_previousItem;

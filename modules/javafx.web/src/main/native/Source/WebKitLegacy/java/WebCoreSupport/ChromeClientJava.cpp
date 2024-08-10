@@ -321,7 +321,16 @@ void ChromeClientJava::focusedElementChanged(Element*)
     notImplemented();
 }
 
-void ChromeClientJava::focusedFrameChanged(LocalFrame*)
+void ChromeClientJava::focusedFrameChanged(Frame*)
+{
+    notImplemented();
+}
+
+void ChromeClientJava::rootFrameAdded(const LocalFrame&)
+{
+   notImplemented();
+}
+void ChromeClientJava::rootFrameRemoved(const LocalFrame&)
 {
     notImplemented();
 }

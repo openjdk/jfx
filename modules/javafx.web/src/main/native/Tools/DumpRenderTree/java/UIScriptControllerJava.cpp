@@ -36,4 +36,12 @@ unsigned long UIScriptControllerJava::countOfUpdatesWithLayerChanges() const
 {
     return 0;
 }
+bool UIScriptControllerJava::keyboardIsAutomaticallyShifted() const
+{
+    return false;
+}
+void UIScriptControllerJava::setSpellCheckerResults(JSValueRef results)
+{
+
+}
 }

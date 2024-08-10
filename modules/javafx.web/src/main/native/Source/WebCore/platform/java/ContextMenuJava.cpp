@@ -75,9 +75,9 @@ class ContextMenuItemJava {
         ASSERT(setTypeMID);
 
         jint jtype = com_sun_webkit_ContextMenuItem_ACTION_TYPE;
-        if (SeparatorType == type) {
+        if (ContextMenuItemType::Separator == type) {
             jtype = com_sun_webkit_ContextMenuItem_SEPARATOR_TYPE;
-        } else if (SubmenuType == type) {
+        } else if (ContextMenuItemType::Submenu == type) {
             jtype = com_sun_webkit_ContextMenuItem_SUBMENU_TYPE;
         }
         env->CallVoidMethod(m_menuItem, setTypeMID, jtype);
@@ -195,7 +195,7 @@ ContextMenuJava::ContextMenuJava(const Vector<ContextMenuItem>& items)
 
     for (const auto& item : items) {
         if (item.isNull() ||
-              (item.type() != SeparatorType && item.title().isEmpty())) {
+              (item.type() != ContextMenuItemType::Separator && item.title().isEmpty())) {
             continue;
         }
         ContextMenuItemJava menuItem;

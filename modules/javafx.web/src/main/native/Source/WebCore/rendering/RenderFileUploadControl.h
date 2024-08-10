@@ -44,8 +44,6 @@ public:
 private:
     void element() const = delete;
 
-    bool isFileUploadControl() const override { return true; }
-
     ASCIILiteral renderName() const override { return "RenderFileUploadControl"_s; }
 
     void updateFromElement() override;
@@ -54,7 +52,7 @@ private:
     void paintObject(PaintInfo&, const LayoutPoint&) override;
     void paintControl(PaintInfo&, const LayoutPoint&);
 
-    int maxFilenameWidth() const;
+    int maxFilenameLogicalWidth() const;
 
     VisiblePosition positionForPoint(const LayoutPoint&, const RenderFragmentContainer*) override;
 
@@ -65,4 +63,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderFileUploadControl, isFileUploadControl())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderFileUploadControl, isRenderFileUploadControl())
