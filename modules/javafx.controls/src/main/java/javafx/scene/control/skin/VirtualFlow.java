@@ -1074,7 +1074,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             lastWidth = -1;
             lastHeight = -1;
             releaseCell(accumCell);
-            sheet.getChildren().clear();
+            sheetChildren.clear();
 
             resetIndex(cells);
             resetIndex(pile);
@@ -1131,6 +1131,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                     cell.requestLayout();
                 }
             }
+
+            // Also request layout for cells in the pile. As soon as those are reused (and therefore added),
+            // they will do their layout.
+            for (T cell : pile) {
+                cell.requestLayout();
+            }
+
             needsCellsLayout = false;
             // yes, we return here - if needsCellsLayout was set to true, we
             // only did it to do the above - not rerun the entire layout.
@@ -1909,7 +1916,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private final void setViewportBreadth(double value) {
         this.viewportBreadth = value;
     }
-    private final double getViewportBreadth() {
+    final double getViewportBreadth() {
         return viewportBreadth;
     }
 
@@ -2834,6 +2841,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             T cell = pile.get(i);
             wasFocusOwner = wasFocusOwner || doesCellContainFocus(cell);
             cell.setVisible(false);
+        }
+
+        // Remove all cells that are in the pile and therefore not relevant anymore.
+        if (sheetChildren.size() != cells.size()) {
+            sheetChildren.removeAll(pile);
         }
 
         // Fix for RT-35876: Rather than have the cells do weird things with

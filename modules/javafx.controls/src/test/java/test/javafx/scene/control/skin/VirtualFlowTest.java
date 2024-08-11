@@ -2053,6 +2053,32 @@ assertEquals(0, firstCell.getIndex());
         assertEquals(0.0, cell1.getLayoutY(), 0);
     }
 
+    @Test
+    public void testSheetChildrenAreAlwaysTheAmountOfVisibleCells() {
+        flow = new VirtualFlowShim<>();
+        flow.setFixedCellSize(24);
+        flow.setCellFactory(fw -> new CellStub(flow));
+        flow.setCellCount(20);
+
+        flow.resize(250, 240);
+        pulse();
+
+        assertEquals(10, flow.sheetChildren.size());
+        assertEquals(flow.cells, flow.sheetChildren);
+
+        flow.resize(250, 480);
+        pulse();
+
+        assertEquals(20, flow.sheetChildren.size());
+        assertEquals(flow.cells, flow.sheetChildren);
+
+        flow.resize(250, 240);
+        pulse();
+
+        assertEquals(10, flow.sheetChildren.size());
+        assertEquals(flow.cells, flow.sheetChildren);
+    }
+
 }
 
 class GraphicalCellStub extends IndexedCellShim<Node> {
