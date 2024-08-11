@@ -249,6 +249,8 @@
         self->imEnabled = NO;
         self->handlingKeyEvent = NO;
         self->didCommitText = NO;
+
+        lastKeyEvent = nil;
     }
     return self;
 }
@@ -275,6 +277,9 @@
 
     [self->nsAttrBuffer release];
     self->nsAttrBuffer = nil;
+
+    [lastKeyEvent release];
+    lastKeyEvent = nil;
 
     [super dealloc];
 }
@@ -463,7 +468,6 @@
 - (BOOL)performKeyEquivalent:(NSEvent *)theEvent
 {
     KEYLOG("performKeyEquivalent");
-    [GlassApplication registerKeyEvent:theEvent];
 
     // Crash if the FS window is released while performing a key equivalent
     // Local copy of the id keeps the retain/release calls balanced.
@@ -503,20 +507,25 @@
         }
     }
 
-    BOOL result = [self->_delegate sendJavaKeyEvent:theEvent isDown:YES];
+    BOOL result = [self handleKeyDown: theEvent];
     [fsWindow release];
     return result;
 }
 
-- (void)keyDown:(NSEvent *)theEvent
+- (BOOL)handleKeyDown:(NSEvent *)theEvent
 {
-    KEYLOG("keyDown");
+    if (theEvent == lastKeyEvent) return NO;
+
+    [lastKeyEvent release];
+    lastKeyEvent = [theEvent retain];
 
     handlingKeyEvent = YES;
     didCommitText = NO;
     BOOL hadMarkedText = (nsAttrBuffer.length > 0);
     BOOL inputContextHandledEvent = (imEnabled && [self.inputContext handleEvent:theEvent]);
     handlingKeyEvent = NO;
+
+    BOOL wasConsumed = YES;
 
     if (didCommitText) {
         // Exit composition mode
@@ -529,8 +538,16 @@
         ;
     } else if (!inputContextHandledEvent || (nsAttrBuffer.length == 0)) {
         [GlassApplication registerKeyEvent:theEvent];
-        [self->_delegate sendJavaKeyEvent:theEvent isDown:YES];
+        wasConsumed = [self->_delegate sendJavaKeyEvent:theEvent isDown:YES];
     }
+
+    return wasConsumed;
+}
+
+- (void)keyDown:(NSEvent*)theEvent
+{
+    KEYLOG("keyDown");
+    [self handleKeyDown: theEvent];
 }
 
 - (void)keyUp:(NSEvent *)theEvent
