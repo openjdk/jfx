@@ -1042,10 +1042,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
                     [image setSize:NSMakeSize(rect.size.width, rect.size.height)];
                 }
             }
-        }
 
-        if (image != nil)
-        {
             NSString *offsetString = [pbItem stringForType:DRAG_IMAGE_OFFSET];
             if (offsetString != nil) {
                 NSPoint offset = NSPointFromString(offsetString);
