@@ -1046,22 +1046,22 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
         if (image != nil)
         {
-            // TODO http://javafx-jira.kenai.com/browse/RT-17629
-            // would be nice to get this info from the Java layer,
-            // so that we could adjust the drag image origin based on where in the src it was clicked on
-
             NSString *offsetString = [pbItem stringForType:DRAG_IMAGE_OFFSET];
             if (offsetString != nil) {
                 NSPoint offset = NSPointFromString(offsetString);
                 //Adjust offset to the image size
-                float imageHalfX = [image size].width/2.0f;
-                float imageHalfY = [image size].height/2.0f;
+                float imageW = [image size].width;
+                float imageH = [image size].height;
 
-                if (offset.x > imageHalfX || offset.x < -imageHalfX) {
-                    offset.x = imageHalfX * (offset.x > 0 ? 1 : -1);
+                if (offset.x < 0.0f) {
+                    offset.x = 0.0f;
+                } else if (offset.x > imageW) {
+                    offset.x = imageW;
                 }
-                if (offset.y > imageHalfY || offset.y < -imageHalfY) {
-                    offset.y = imageHalfY * (offset.y > 0 ? 1 : -1);
+                if (offset.y < 0.0f) {
+                    offset.y = 0.0f;
+                } else if (offset.y > imageH) {
+                    offset.y = imageH;
                 }
 
                 dragPoint.x -= offset.x;
