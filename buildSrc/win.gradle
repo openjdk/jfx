@@ -110,7 +110,7 @@ if (WINDOWS_SDK_DIR == null || WINDOWS_SDK_DIR == "") {
 def ccDebugFlags =
     IS_DEBUG_NATIVE ? ["/MDd", "/Od", "/Zi", "/DDEBUG"] : ["/O2", "/MD", "/DNDEBUG"]
 
-// Serialize access to PDB file for debug builds if on VS2013 or later
+// Serialize access to PDB file for debug builds
 if (IS_DEBUG_NATIVE) ccDebugFlags += "/FS"
 
 // Enables reproducible builds when defined
@@ -137,7 +137,7 @@ if (sourceDateEpoch != null) {
     linkFlags.add("/experimental:deterministic")
 }
 
-// Remove C++ static linking if not on VS2010
+// Remove C++ static linking
 ccFlags -= ["/D_STATIC_CPPLIB", "/D_DISABLE_DEPRECATE_STATIC_CPPLIB"]
 
 ext.WINDOWS_NATIVE_COMPILE_ENVIRONMENT = [

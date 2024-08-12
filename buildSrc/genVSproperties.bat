@@ -24,7 +24,7 @@ REM questions.
 setlocal ENABLEDELAYEDEXPANSION
 
 REM Windows bat file that runs vcvars64.bat for Visual Studio
-REM and echos out a property file with the values of the environment
+REM and echoes out a property file with the values of the environment
 REM variables we want, e.g. PATH, INCLUDE, LIB, and LIBPATH.
 
 REM Clean out the current settings
