@@ -102,7 +102,7 @@ L(UW1):
         mov         ecx, [12+ebp]               /* load return type code */
         mov     [ebp+8], ebx            /* preserve %ebx */
 L(UW2):
-        // cfi_rel_offset(%ebx, 8)
+        /* cfi_rel_offset(%ebx, 8) */
 
         and     ecx, X86_RET_TYPE_MASK
         lea     ebx, [L(store_table) + ecx * 8]
