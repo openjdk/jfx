@@ -152,14 +152,14 @@ public class Event extends EventObject implements Cloneable {
      * @return {@code true} if this {@code Event} has been consumed,
      *     {@code false} otherwise
      */
-    public final boolean isConsumed() {
+    public boolean isConsumed() {
         return consumed == null ? false : consumed.get();
     }
 
     /**
      * Marks this {@code Event} as consumed. This stops its further propagation.
      */
-    public final void consume() {
+    public void consume() {
         consumedProperty().set(true);
     }
 
