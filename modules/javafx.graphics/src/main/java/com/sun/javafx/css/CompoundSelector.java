@@ -72,7 +72,7 @@ final public class CompoundSelector extends Selector {
 
     /**
      * The relationships between the selectors
-     * @return Immutable List&lt;Combinator&gt;
+     * @return Immutable {@code List<Combinator>}
      */
     List<Combinator> getRelationships() {
         return relationships;
