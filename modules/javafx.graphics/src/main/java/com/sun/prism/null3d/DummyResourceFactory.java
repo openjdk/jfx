@@ -108,7 +108,8 @@ class DummyResourceFactory extends BaseShaderFactory {
     }
 
     @Override
-    public Shader createShader(InputStream pixelShaderCode,
+    public Shader createShader(String pixelShaderName,
+                               InputStream pixelShaderCode,
                                Map<String, Integer> samplers,
                                Map<String, Integer> params,
                                int maxTexCoordIndex,

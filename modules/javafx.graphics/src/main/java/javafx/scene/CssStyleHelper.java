@@ -1336,26 +1336,22 @@ final class CssStyleHelper {
                     resolveRef(styleable, sval, styleMap, states);
 
                 if (resolved != null) {
+                    ParsedValue<?, ?> resolvedParsedValue = resolved.getParsedValue();
 
-                    if (resolves.contains(resolved.getParsedValue())) {
-
+                    if (!resolves.add(resolvedParsedValue)) {
                         if (LOGGER.isLoggable(Level.WARNING)) {
                             LOGGER.warning("Loop detected in " + resolved.getRule().toString() + " while resolving '" + sval + "'");
                         }
-                        throw new IllegalArgumentException("Loop detected in " + resolved.getRule().toString() + " while resolving '" + sval + "'");
 
-                    } else {
-                        resolves.add(parsedValue);
+                        throw new IllegalArgumentException("Loop detected in " + resolved.getRule().toString() + " while resolving '" + sval + "'");
                     }
 
                     // the resolved value may itself need to be resolved.
                     // For example, if the value "color" resolves to "base",
                     // then "base" will need to be resolved as well.
-                    ParsedValue pv = resolveLookups(styleable, resolved.getParsedValue(), styleMap, states, resolves);
+                    ParsedValue<?, ?> pv = resolveLookups(styleable, resolvedParsedValue, styleMap, states, resolves);
 
-                    if (resolves != null) {
-                        resolves.remove(parsedValue);
-                    }
+                    resolves.remove(resolvedParsedValue);
 
                     return pv;
 
@@ -1384,8 +1380,6 @@ final class CssStyleHelper {
                 }
             }
 
-            resolves.clear();
-
             return new ParsedValueImpl(resolved, parsedValue.getConverter(), false);
 
         } else if (val instanceof ParsedValueImpl[]) {
@@ -1398,8 +1392,6 @@ final class CssStyleHelper {
                 resolved[l] =
                     resolveLookups(styleable, layer[l], styleMap, states, resolves);
             }
-
-            resolves.clear();
 
             return new ParsedValueImpl(resolved, parsedValue.getConverter(), false);
 

@@ -43,13 +43,14 @@ public class $shaderName$_Loader {
     }
 
     public static Shader loadShader(ShaderFactory factory,
+                                    String pixelShaderName,
                                     InputStream pixelShaderCode)
     {
         HashMap<String, Integer> samplers = new HashMap<String, Integer>();
         $samplerInit$
         HashMap<String, Integer> params = new HashMap<String, Integer>();
         $paramInit$
-        return factory.createShader(pixelShaderCode, samplers, params,
+        return factory.createShader(pixelShaderName, pixelShaderCode, samplers, params,
                                     $maxTexCoordIndex$,
                                     $isPixcoordUsed$, true);
     }
