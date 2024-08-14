@@ -49,7 +49,7 @@ if not "%VSCOMNTOOLS%"=="" (
 ) else (
     for %%a in (2022, 2019, 2017) do (
         set year=%%a
-        for %%b in (Enterprise, Professional, Community) do (
+        for %%b in (Enterprise, Professional, Community, BuildTools) do (
             set edition=%%b
             for %%c in ("Program Files", "Program Files (x86)") do (
                 set ProgramFiles=%%~c
