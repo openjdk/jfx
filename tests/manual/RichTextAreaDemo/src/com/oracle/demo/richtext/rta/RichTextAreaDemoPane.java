@@ -706,7 +706,7 @@ public class RichTextAreaDemoPane extends BorderPane {
                     (int)x.getRight()
                 );
             }
-    
+
             @Override
             public Insets fromString(String s) {
                 return null;
