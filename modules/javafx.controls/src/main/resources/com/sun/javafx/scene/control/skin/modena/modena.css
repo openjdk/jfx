@@ -3504,6 +3504,7 @@ is being used to size a border should also be in pixels.
     -fx-font-size: 90%;
     -fx-min-height:1;
     -fx-pref-height:1;
+    -fx-padding: 0 1 0 1;
 }
 
 .line-number-decorator .text {

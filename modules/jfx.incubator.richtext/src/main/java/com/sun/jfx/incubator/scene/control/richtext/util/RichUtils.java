@@ -40,9 +40,12 @@ import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
+import javafx.geometry.HPos;
+import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
-import javafx.scene.AccessibleAttribute;
+import javafx.geometry.VPos;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
@@ -52,13 +55,10 @@ import javafx.scene.shape.PathElement;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.scene.text.TextFlow;
-import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.scene.text.TextFlowHelper;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLine;
-import jfx.incubator.scene.control.richtext.model.StyleAttribute;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
-import jfx.incubator.scene.control.richtext.model.StyleAttributeMap.Builder;
 
 /**
  * RichTextArea specific utility methods.
@@ -607,5 +607,22 @@ public final class RichUtils {
             return t.getStart() + t.getLength();
         }
         return null;
+    }
+
+    /**
+     * Convenience method for laying out the node within its parent, filling the available area.
+     * This method is equivalent to calling
+     * {@code Region.layoutInArea(n, x, y, w, h, 0.0, Insets.EMPTY, true, true, HPos.CENTER, VPos.CENTER, snap);}
+     *
+     * @param n the node to lay out
+     * @param x the horizontal offset of the layout area
+     * @param y the vertical offset of the layout area
+     * @param w the width of the layout area
+     * @param h the height of the layout area
+     */
+    public static void layoutInArea(Node n, double x, double y, double w, double h) {
+        Parent p = n.getParent();
+        boolean snap = (p instanceof Region r) ? r.isSnapToPixel() : false;
+        Region.layoutInArea(n, x, y, w, h, 0.0, Insets.EMPTY, true, true, HPos.CENTER, VPos.CENTER, snap);
     }
 }

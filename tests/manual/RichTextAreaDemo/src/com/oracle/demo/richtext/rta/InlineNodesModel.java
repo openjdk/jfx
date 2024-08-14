@@ -44,7 +44,7 @@ public class InlineNodesModel extends SimpleViewOnlyStyledModel {
         String LARGE = "large";
         String ITALIC = "italic";
 
-        addSegment("Inline Nodes", null, UNDER, LARGE);
+        withStyles("Inline Nodes", UNDER, LARGE);
         nl();
         // trailing text
         addNodeSegment(() -> {
@@ -53,34 +53,34 @@ public class InlineNodesModel extends SimpleViewOnlyStyledModel {
             f.textProperty().bindBidirectional(textField);
             return f;
         });
-        addSegment(" ", null, LARGE);
+        withStyles(" ", LARGE);
         addNodeSegment(() -> new Button("OK"));
-        addSegment(" trailing segment.", null, LARGE); // FIX cannot navigate over this segment
+        withStyles(" trailing segment.", LARGE); // FIX cannot navigate over this segment
         nl();
 
         // leading text
-        addSegment("Leading text", null, LARGE);
+        withStyles("Leading text", LARGE);
         addNodeSegment(() -> {
             TextField f = new TextField();
             f.setPrefColumnCount(20);
             f.textProperty().bindBidirectional(textField);
             return f;
         });
-        addSegment("- in between text-", null, LARGE);
+        withStyles("- in between text-", LARGE);
         addNodeSegment(() -> new Button("Find"));
         nl();
 
         // leading and trailing text
-        addSegment("Leading text", null, LARGE);
+        withStyles("Leading text", LARGE);
         addNodeSegment(() -> {
             TextField f = new TextField();
             f.setPrefColumnCount(20);
             f.textProperty().bindBidirectional(textField);
             return f;
         });
-        addSegment("- in between text-", null, LARGE);
+        withStyles("- in between text-", LARGE);
         addNodeSegment(() -> new Button("Find"));
-        addSegment(" trailing segment.", null, LARGE);
+        withStyles(" trailing segment.", LARGE);
         nl();
 
         // adjacent nodes
@@ -90,12 +90,12 @@ public class InlineNodesModel extends SimpleViewOnlyStyledModel {
         addNodeSegment(() -> new Button("Four"));
         addNodeSegment(() -> new Button("Five"));
         nl();
-        addSegment("", null, LARGE);
+        withStyles("", LARGE);
         nl();
 
-        addSegment("A regular text segment for reference.", null, LARGE);
+        withStyles("A regular text segment for reference.", LARGE);
         nl();
-        addSegment("The End █", null, LARGE);
+        withStyles("The End █", LARGE);
         nl();
     }
 }

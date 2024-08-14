@@ -41,7 +41,6 @@ public enum ModelChoice {
     WRITING_SYSTEMS_EDITABLE("Writing Systems (Editable)"),
     EDITABLE_STYLED("❤ Editable Rich Text Model"),
     BILLION_LINES("2,000,000,000 Lines"),
-    NOTEBOOK_STACK("Notebook: Embedded Rich Text Areas"),
     NOTEBOOK("Notebook: Embedded Chart"),
     NOTEBOOK2("Notebook: SQL Queries"),
     EDITABLE_PLAIN("Plaintext with Syntax Highlighting"),
@@ -107,7 +106,7 @@ public enum ModelChoice {
                                 if (i > start) {
                                     String s = text.substring(start, i);
                                     String style = num ? DIGITS : null;
-                                    b.addSegment(s, style, null);
+                                    b.withInlineStyle(s, style);
                                     start = i;
                                 }
                                 num = !num;
@@ -116,7 +115,7 @@ public enum ModelChoice {
                         if (start < sz) {
                             String s = text.substring(start);
                             String style = num ? DIGITS : null;
-                            b.addSegment(s, style, null);
+                            b.withInlineStyle(s, style);
                         }
                         return b.build();
                     }
@@ -141,8 +140,6 @@ public enum ModelChoice {
             return new NotebookModel();
         case NOTEBOOK2:
             return new NotebookModel2();
-        case NOTEBOOK_STACK:
-            return new NotebookModelStacked();
         case NULL:
             return null;
         case ONE_LINE:

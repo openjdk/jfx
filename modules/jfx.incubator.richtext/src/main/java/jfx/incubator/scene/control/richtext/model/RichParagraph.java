@@ -28,6 +28,7 @@ package jfx.incubator.scene.control.richtext.model;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javafx.scene.Node;
@@ -227,8 +228,9 @@ public abstract class RichParagraph {
 
         /**
          * Adds a text segment with no styling (i.e. using default style).
+         * This convenience method is equivalent to calling {@code addSegment(text, StyleAttributeMap.EMPTY);}
          *
-         * @param text segment text
+         * @param text the text to append, must not contain {@code \n}, cannot be null
          * @return this {@code Builder} instance
          */
         public Builder addSegment(String text) {
@@ -241,23 +243,56 @@ public abstract class RichParagraph {
          * Adds a styled text segment.
          *
          * @param text non-null text string
-         * @param style direct style (such as {@code -fx-fill:red;}), or null
-         * @param css array of style names, or null
+         * @param css array of style names, cannot be null
          * @return this {@code Builder} instance
          */
-        public Builder addSegment(String text, String style, String[] css) {
-            StyleAttributeMap a = StyleAttributeMap.fromStyles(style, css);
+        public Builder withStyles(String text, String ... css) {
+            Objects.nonNull(text);
+            Objects.nonNull(css);
+            StyleAttributeMap a = StyleAttributeMap.fromStyles(null, css);
             addSegment(text, a);
             return this;
         }
 
         /**
          * Adds a styled text segment.
-         * @param text the non-null text string
-         * @param attrs the styled attributes
+         *
+         * @param text non-null text string
+         * @param style direct style (such as {@code -fx-fill:red;}), or null
+         * @param css array of style names, or null
+         * @return this {@code Builder} instance
+         */
+        public Builder withInlineAndExternalStyles(String text, String style, String ... css) {
+            Objects.nonNull(text);
+            StyleAttributeMap a = StyleAttributeMap.fromStyles(style, css);
+            addSegment(text, a);
+            return this;
+        }
+
+        /**
+         * Adds a styled text segment, styled with the inline style.
+         *
+         * @param text non-null text string
+         * @param style the inline style (example {@code "-fx-fill:red;"}), or null
+         * @return this {@code Builder} instance
+         */
+        public Builder withInlineStyle(String text, String style) {
+            Objects.nonNull(text);
+            StyleAttributeMap a = StyleAttributeMap.fromStyles(style);
+            addSegment(text, a);
+            return this;
+        }
+
+        /**
+         * Adds a styled text segment.
+         *
+         * @param text the text to append, must not contain {@code \n}, cannot be null
+         * @param attrs the styled attributes, cannot be null
          * @return this {@code Builder} instance
          */
         public Builder addSegment(String text, StyleAttributeMap attrs) {
+            Objects.nonNull(text);
+            Objects.nonNull(attrs);
             StyledSegment seg = StyledSegment.of(text, attrs);
             segments().add(seg);
             return this;
@@ -272,6 +307,7 @@ public abstract class RichParagraph {
          * @return this {@code Builder} instance
          */
         public Builder addSegment(String text, int start, int end, StyleAttributeMap attrs) {
+            Objects.nonNull(text);
             String s = text.substring(start, end);
             addSegment(s, attrs);
             return this;

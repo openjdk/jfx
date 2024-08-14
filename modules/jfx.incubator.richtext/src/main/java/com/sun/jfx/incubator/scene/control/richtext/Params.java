@@ -71,8 +71,8 @@ public class Params {
     /** default value for {@code wrapText} property */
     public static final boolean DEFAULT_WRAP_TEXT = false;
 
-    /** small space between the end of last character and the right edge when typing, in pixels. */
-    public static final double HORIZONTAL_GUARD = 10;
+    /** ensures the caret is always visible when reaching the edge of screen in unwrapped mode, in pixels. */
+    public static final double HORIZONTAL_GUARD = 0; //10; FIX restore
 
     /** focus background outline size */
     public static final double LAYOUT_FOCUS_BORDER = 1;
@@ -94,6 +94,9 @@ public class Params {
 
     /** default minimum width */
     public static final double MIN_WIDTH = 10;
+
+    /** minimum viewport width prevents extra tall text flows */
+    public static final double MIN_VIEWPORT_WIDTH = 10;
 
     /** default preferred height */
     public static final double PREF_HEIGHT = 100;

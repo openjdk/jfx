@@ -66,17 +66,16 @@ public class RichTextAreaWindow extends Stage {
         FX.item(mb, "Close Window", this::hide);
         FX.separator(mb);
         FX.item(mb, "Quit", Platform::exit);
-        // tests
-        FX.menu(mb, "_Tests");
-        FX.item(mb, "Stacked Vertically", () -> openMultipeStacked(true));
-        FX.item(mb, "Stacked Horizontally", () -> openMultipeStacked(false));
-        FX.item(mb, "In a VBox", this::openInVBox);
-        // window
-        FX.menu(mb, "_Window");
-        FX.item(mb, orientation);
         // tools
         FX.menu(mb, "T_ools");
         FX.item(mb, "CSS Tool", this::openCssTool);
+        // window
+        FX.menu(mb, "_Window");
+        FX.item(mb, "Stacked Vertically", () -> openMultipeStacked(true));
+        FX.item(mb, "Stacked Horizontally", () -> openMultipeStacked(false));
+        FX.item(mb, "In a VBox", this::openInVBox);
+        FX.separator(mb);
+        FX.item(mb, orientation);
 
         status = new Label();
         status.setPadding(new Insets(2, 10, 2, 10));

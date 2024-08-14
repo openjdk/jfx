@@ -57,13 +57,12 @@ public class CellArrangement {
     private double unwrappedWidth;
     private double topHeight;
     private double bottomHeight;
-    private double totalHeight;
     private Node[] left;
     private Node[] right;
 
     public CellArrangement(VFlow f) {
         this.flowWidth = f.getWidth();
-        this.flowHeight = f.getViewHeight();
+        this.flowHeight = f.getViewPortHeight();
         this.origin = f.getOrigin();
         this.lineCount = f.getParagraphCount();
         this.contentPadding = f.contentPadding();
@@ -190,7 +189,7 @@ public class CellArrangement {
         return null;
     }
 
-    public CaretInfo getCaretInfo(Region target, double xoffset, TextPos p) {
+    public CaretInfo getCaretInfo(Region target, TextPos p) {
         if (p != null) {
             int ix = p.index();
             TextCell cell = getCell(ix);
@@ -204,6 +203,8 @@ public class CellArrangement {
                 }
 
                 double lineSpacing = cell.getLineSpacing();
+                double top = cell.getContent().snappedTopInset();
+                double bottom = cell.getContent().snappedBottomInset();
                 return CaretInfo.create(lineSpacing, path);
             }
         }
@@ -372,18 +373,5 @@ public class CellArrangement {
 
     public Node getRightNodeAt(int index) {
         return right[index];
-    }
-
-    /**
-     * Returns the total height of all cells that intersect the viewport, or Double.POSITIVE_INFINITY if there
-     * are at least one cell lays beyond the viewport.
-     * @return the total width
-     */
-    public double getTotalHeight() {
-        return totalHeight;
-    }
-
-    void setTotalHeight(double h) {
-        totalHeight = h;
     }
 }

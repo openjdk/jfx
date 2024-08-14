@@ -82,13 +82,15 @@ public class SelectionHelper {
     }
 
     private void process(PathElement[] elements, PathHandler h) {
-        for (PathElement em : elements) {
-            if (em instanceof LineTo p) {
-                h.processPoint(p.getX(), p.getY());
-            } else if (em instanceof MoveTo p) {
-                h.processPoint(p.getX(), p.getY());
-            } else {
-                throw new Error("?" + em);
+        if (elements != null) {
+            for (PathElement em : elements) {
+                if (em instanceof LineTo p) {
+                    h.processPoint(p.getX(), p.getY());
+                } else if (em instanceof MoveTo p) {
+                    h.processPoint(p.getX(), p.getY());
+                } else {
+                    throw new Error("?" + em);
+                }
             }
         }
     }
@@ -183,26 +185,28 @@ public class SelectionHelper {
 
     /** adjusts for line spacing and left padding */
     private void adjust(PathElement[] elements, double px, double py, double dx, double dy) {
-        for (PathElement em : elements) {
-            if (em instanceof LineTo p) {
-                double x = p.getX();
-                if (isNear(x, px)) {
-                    //p.setX(x - dx);
-                }
+        if (elements != null) {
+            for (PathElement em : elements) {
+                if (em instanceof LineTo p) {
+                    double x = p.getX();
+                    if (isNear(x, px)) {
+                        //p.setX(x - dx);
+                    }
 
-                double y = p.getY();
-                if (isNear(y, py)) {
-                    p.setY(y + dy);
-                }
-            } else if (em instanceof MoveTo p) {
-                double x = p.getX();
-                if (isNear(x, px)) {
-                    //p.setX(x - dx);
-                }
+                    double y = p.getY();
+                    if (isNear(y, py)) {
+                        p.setY(y + dy);
+                    }
+                } else if (em instanceof MoveTo p) {
+                    double x = p.getX();
+                    if (isNear(x, px)) {
+                        //p.setX(x - dx);
+                    }
 
-                double y = p.getY();
-                if (isNear(y, py)) {
-                    p.setY(y + dy);
+                    double y = p.getY();
+                    if (isNear(y, py)) {
+                        p.setY(y + dy);
+                    }
                 }
             }
         }

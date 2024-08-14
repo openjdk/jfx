@@ -49,15 +49,15 @@ public class NotebookModel2 extends SimpleViewOnlyStyledModel {
         String EQ = "equation";
         String SUB = "sub";
 
-        addSegment("SQL Select", "-fx-font-size:200%;", UNDER);
+        withInlineAndExternalStyles("SQL Select", "-fx-font-size:200%;", UNDER);
         nl(2);
-        addSegment("The SQL ", null, GRAY);
-        addSegment("SELECT ", "-fx-font-weight:bold;"); // FIX does not work on mac
-        addSegment("statement returns a result set of records, from one or more tables.", null, GRAY);
+        withStyles("The SQL ", GRAY);
+        withInlineStyle("SELECT ", "-fx-font-weight:bold;"); // FIX does not work on mac
+        withStyles("statement returns a result set of records, from one or more tables.", GRAY);
         nl(2);
-        addSegment("A SELECT statement retrieves zero or more rows from one or more database tables or database views. In most applications, SELECT is the most commonly used data manipulation language (DML) command. As SQL is a declarative programming language, SELECT queries specify a result set, but do not specify how to calculate it. The database translates the query into a \"query plan\" which may vary between executions, database versions and database software. This functionality is called the \"query optimizer\" as it is responsible for finding the best possible execution plan for the query, within applicable constraints.", null, GRAY);
+        withStyles("A SELECT statement retrieves zero or more rows from one or more database tables or database views. In most applications, SELECT is the most commonly used data manipulation language (DML) command. As SQL is a declarative programming language, SELECT queries specify a result set, but do not specify how to calculate it. The database translates the query into a \"query plan\" which may vary between executions, database versions and database software. This functionality is called the \"query optimizer\" as it is responsible for finding the best possible execution plan for the query, within applicable constraints.", GRAY);
         nl(2);
-        addSegment(QUERY, "-fx-font-weight:bold;"); // FIX does not work on mac
+        withInlineStyle(QUERY, "-fx-font-weight:bold;"); // FIX does not work on mac
         nl(2);
         addNodeSegment(() -> {
             TextField f = new TextField();
@@ -65,20 +65,20 @@ public class NotebookModel2 extends SimpleViewOnlyStyledModel {
             f.textProperty().bindBidirectional(query);
             return f;
         });
-        addSegment(" ", null, GRAY);
+        withStyles(" ", GRAY);
         addNodeSegment(() -> {
             Button b = new Button("Run");
             b.setOnAction((ev) -> execute());
             return b;
         });
         nl(2);
-        addSegment("Result:", null, GRAY);
+        withStyles("Result:", GRAY);
         nl();
         addParagraph(() -> new ResultParagraph(result));
         nl(2);
         addSegment("Source: Wikipedia");
         nl();
-        addSegment("https://en.wikipedia.org/wiki/Select_(SQL)", null, GREEN, UNDER);
+        withStyles("https://en.wikipedia.org/wiki/Select_(SQL)", GREEN, UNDER);
     }
 
     protected void execute() {

@@ -31,7 +31,7 @@ import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
 
 /**
- * Captures the caret position and bounds in the content view coordinates.
+ * Captures the caret position and bounds in the {@code VFlow.content} coordinates.
  */
 public final class CaretInfo {
     private final double xmin;

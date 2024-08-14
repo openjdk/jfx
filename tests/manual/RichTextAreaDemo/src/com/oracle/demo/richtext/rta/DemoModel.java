@@ -55,7 +55,7 @@ public class DemoModel extends SimpleViewOnlyStyledModel {
         String STRIKETHROUGH = "strikethrough";
         String UNDERLINE = "underline";
 
-        addSegment("RichTextArea Control", "-fx-font-size:200%;", UNDERLINE);
+        withInlineAndExternalStyles("RichTextArea Control", "-fx-font-size:200%;", UNDERLINE);
         nl(2);
 
 //        addParagraph(() -> {
@@ -66,34 +66,34 @@ public class DemoModel extends SimpleViewOnlyStyledModel {
 //            return r;
 //        });
 
-        addSegment("/**", null, RED, CODE);
+        withStyles("/**", RED, CODE);
         nl();
-        addSegment(" * Syntax Highlight Demo.", null, RED, CODE);
+        withStyles(" * Syntax Highlight Demo.", RED, CODE);
         nl();
-        addSegment(" */", null, RED, CODE);
+        withStyles(" */", RED, CODE);
         nl();
-        addSegment("public class ", null, GREEN, CODE);
-        addSegment("SyntaxHighlightDemo ", null, CODE);
-        addSegment("extends ", null, GREEN, CODE);
-        addSegment("Application {", null, CODE);
+        withStyles("public class ", GREEN, CODE);
+        withStyles("SyntaxHighlightDemo ", CODE);
+        withStyles("extends ", GREEN, CODE);
+        withStyles("Application {", CODE);
         nl();
-        addSegment("\tpublic static void", null, GREEN, CODE);
-        addSegment(" main(String[] args) {", null, CODE);
+        withStyles("\tpublic static void", GREEN, CODE);
+        withStyles(" main(String[] args) {", CODE);
         nl();
-        addSegment("\t\tApplication.launch(SyntaxHighlightDemo.", null, CODE);
-        addSegment("class", null, CODE, GREEN);
-        addSegment(", args);", null, CODE);
+        withStyles("\t\tApplication.launch(SyntaxHighlightDemo.", CODE);
+        withStyles("class", CODE, GREEN);
+        withStyles(", args);", CODE);
         nl();
-        addSegment("\t}", null, CODE);
+        withStyles("\t}", CODE);
         nl();
-        addSegment("}", null, CODE);
+        withStyles("}", CODE);
         nl(2);
         // font attributes
-        addSegment("BOLD ", null, BOLD);
-        addSegment("ITALIC ", null, ITALIC);
-        addSegment("STRIKETHROUGH ", null, STRIKETHROUGH);
-        addSegment("UNDERLINE ", null, UNDERLINE);
-        addSegment("ALL OF THEM ", null, BOLD, ITALIC, STRIKETHROUGH, UNDERLINE);
+        withStyles("BOLD ", BOLD);
+        withStyles("ITALIC ", ITALIC);
+        withStyles("STRIKETHROUGH ", STRIKETHROUGH);
+        withStyles("UNDERLINE ", UNDERLINE);
+        withStyles("ALL OF THEM ", BOLD, ITALIC, STRIKETHROUGH, UNDERLINE);
         nl(2);
         // inline nodes
         addSegment("Inline Nodes: ");
@@ -107,15 +107,15 @@ public class DemoModel extends SimpleViewOnlyStyledModel {
         addNodeSegment(() -> new Button("OK"));
         addSegment(" "); // FIX cannot navigate over this segment
         nl(2);
-        addSegment("A regular Arabic verb, كَتَبَ‎ kataba (to write).", null, ARABIC).nl();
-        addSegment("Emojis: [🔥🦋😀😃😄😁😆😅🤣😂🙂🙃😉😊😇]", null, LARGE).nl();
+        withStyles("A regular Arabic verb, كَتَبَ‎ kataba (to write).", ARABIC).nl();
+        withStyles("Emojis: [🔥🦋😀😃😄😁😆😅🤣😂🙂🙃😉😊😇]", LARGE).nl();
         nl();
-        addSegment("Halfwidth and FullWidth Forms", null, UNDERLINE).nl();
-        addSegment("ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯ", "-fx-font-family:monospaced;").nl();
-        addSegment("ABCDEFGHIJKLMNO", "-fx-font-family:monospaced;").nl();
-        addSegment("        leading and trailing whitespace         ", null, CODE).nl();
+        withStyles("Halfwidth and FullWidth Forms", UNDERLINE).nl();
+        withInlineStyle("ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯ", "-fx-font-family:monospaced;").nl();
+        withInlineStyle("ABCDEFGHIJKLMNO", "-fx-font-family:monospaced;").nl();
+        withStyles("        leading and trailing whitespace         ", CODE).nl();
         nl(3);
-        addSegment("Behold various types of highlights, including overlapping highlights.", null, LARGE);
+        withStyles("Behold various types of highlights, including overlapping highlights.", LARGE);
         highlight(7, 7, Color.rgb(255, 255, 128, 0.7));
         squiggly(36, 100, Color.RED);
         highlight(46, 11, Color.rgb(255, 255, 128, 0.7));
@@ -142,7 +142,7 @@ public class DemoModel extends SimpleViewOnlyStyledModel {
         ParagraphAttributesDemoModel.insert(this);
 
         addImage(DemoModel.class.getResourceAsStream("animated.gif"));
-        addSegment("  Fig. 1 Embedded animated GIF image.", null, GRAY, ITALIC);
+        withStyles("  Fig. 1 Embedded animated GIF image.", GRAY, ITALIC);
         nl(2);
 
         /*
@@ -170,7 +170,7 @@ public class DemoModel extends SimpleViewOnlyStyledModel {
         */
 
         nl();
-        addSegment("\t\t終 The End.", "-fx-font-size:200%;");
+        withInlineStyle("\t\t終 The End.", "-fx-font-size:200%;");
         nl();
 
         registerDataFormatHandler(RichTextFormatHandler.INSTANCE, true, false, 2000);

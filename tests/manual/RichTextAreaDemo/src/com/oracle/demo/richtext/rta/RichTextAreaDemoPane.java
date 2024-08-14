@@ -197,41 +197,7 @@ public class RichTextAreaDemoPane extends BorderPane {
             setCustomPopup(v);
         });
 
-        ComboBox<Insets> contentPadding = new ComboBox<>();
-        FX.name(contentPadding, "contentPadding");
-        contentPadding.setConverter(new StringConverter<Insets>() {
-            @Override
-            public String toString(Insets x) {
-                if (x == null) {
-                    return "null";
-                }
-                return String.format(
-                    "T%d, B%d, L%d, R%d",
-                    (int)x.getTop(),
-                    (int)x.getBottom(),
-                    (int)x.getLeft(),
-                    (int)x.getRight()
-                );
-            }
-
-            @Override
-            public Insets fromString(String s) {
-                return null;
-            }
-        });
-        contentPadding.getItems().setAll(
-            null,
-            new Insets(1),
-            new Insets(2),
-            new Insets(10),
-            new Insets(22.22),
-            new Insets(50),
-            new Insets(100),
-            new Insets(5, 10, 15, 20)
-        );
-        contentPadding.getSelectionModel().selectedItemProperty().addListener((s,p,v) -> {
-            control.setContentPadding(v);
-        });
+        ComboBox<Insets> contentPadding = contentPaddingOption();
 
         ComboBox<Decorator> leftDecorator = new ComboBox<>();
         FX.name(leftDecorator, "leftDecorator");
@@ -307,7 +273,6 @@ public class RichTextAreaDemoPane extends BorderPane {
         setRight(sp);
 
         modelField.getSelectionModel().selectFirst();
-        contentPadding.getSelectionModel().selectFirst();
         leftDecorator.getSelectionModel().selectFirst();
         rightDecorator.getSelectionModel().selectFirst();
 
@@ -722,5 +687,67 @@ public class RichTextAreaDemoPane extends BorderPane {
                 add(n);
             }
         }
+    }
+
+    private ComboBox<Insets> contentPaddingOption() {
+        ComboBox<Insets> op = new ComboBox<>();
+        FX.name(op, "contentPadding");
+        op.setConverter(new StringConverter<Insets>() {
+            @Override
+            public String toString(Insets x) {
+                if (x == null) {
+                    return "null";
+                }
+                return String.format(
+                    "T%d, B%d, L%d, R%d",
+                    (int)x.getTop(),
+                    (int)x.getBottom(),
+                    (int)x.getLeft(),
+                    (int)x.getRight()
+                );
+            }
+    
+            @Override
+            public Insets fromString(String s) {
+                return null;
+            }
+        });
+        op.getItems().setAll(
+            null,
+            new Insets(1),
+            new Insets(2),
+            new Insets(10),
+            new Insets(22.22),
+            new Insets(50),
+            new Insets(100),
+            new Insets(5, 10, 15, 20)
+        );
+
+        selectValue(op, control.getContentPadding());
+        control.contentPaddingProperty().addListener((s,p,v) -> {
+            selectValue(op, v);
+        });
+
+        op.getSelectionModel().selectedItemProperty().addListener((s,p,v) -> {
+            control.setContentPadding(v);
+        });
+
+        return op;
+    }
+
+    private <T> void selectValue(ComboBox<T> c, T value) {
+        int ix = -1;
+        for (int i = c.getItems().size() - 1; i >= 0; i--) {
+            T v = c.getItems().get(i);
+            if (Objects.equals(v, value)) {
+                ix = i;
+                break;
+            }
+        }
+        if (ix < 0) {
+            ix = c.getItems().size();
+            c.getItems().add(value);
+        }
+        c.getSelectionModel().select(ix);
     }
 }

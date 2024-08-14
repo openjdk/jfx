@@ -53,7 +53,7 @@ public class NotebookModelStacked extends StyledTextModel {
     }
 
     public static StyledTextModel m1() {
-        return create(Type.COMMENT, "This is\na comment cell.");
+        return create(Type.COMMENT, "██This is\na comment cell.██p");
     }
 
     public static StyledTextModel m2() {
@@ -69,7 +69,7 @@ public class NotebookModelStacked extends StyledTextModel {
                 public RichParagraph getParagraph(int index) {
                     String text = getPlainText(index);
                     RichParagraph.Builder b = RichParagraph.builder();
-                    b.addSegment(text, "-fx-text-fill:darkgreen; -fx-font-family:Monospace;", null);
+                    b.withInlineStyle(text, "-fx-text-fill:darkgreen; -fx-font-family:Monospace;");
                     return b.build();
                 }
             };
@@ -80,7 +80,7 @@ public class NotebookModelStacked extends StyledTextModel {
                 public RichParagraph getParagraph(int index) {
                     String text = getPlainText(index);
                     RichParagraph.Builder b = RichParagraph.builder();
-                    b.addSegment(text, "-fx-text-fill:gray;", null);
+                    b.withInlineStyle(text, "-fx-text-fill:gray;");
                     return b.build();
                 }
             };
@@ -114,6 +114,7 @@ public class NotebookModelStacked extends StyledTextModel {
         if(x instanceof StyledTextModel m) {
             return RichParagraph.of(() -> {
                 RichTextArea t = new RichTextArea(m);
+                t.setHighlightCurrentParagraph(true);
                 t.setMaxWidth(Double.POSITIVE_INFINITY);
                 t.setWrapText(true);
                 t.setUseContentHeight(true);

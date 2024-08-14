@@ -404,7 +404,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
 
     protected void handleMouseReleased(MouseEvent ev) {
         stopAutoScroll();
-        vflow.scrollCaretToVisible();
+        //vflow.scrollCaretToVisible();
         vflow.setSuppressBlink(false);
         clearPhantomX();
     }
@@ -419,9 +419,9 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             // above visible area
             autoScroll(y);
             return;
-        } else if (y > vflow.getViewHeight()) {
+        } else if (y > vflow.getViewPortHeight()) {
             // below visible area
-            autoScroll(y - vflow.getViewHeight());
+            autoScroll(y - vflow.getViewPortHeight());
             return;
         } else {
             stopAutoScroll();
@@ -518,7 +518,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         vflow.scrollVerticalPixels(delta, true);
 
         double x = Math.max(0.0, phantomX + vflow.getOffsetX());
-        double y = autoScrollUp ? 0.0 : vflow.getViewHeight();
+        double y = autoScrollUp ? 0.0 : vflow.getViewPortHeight();
 
         vflow.scrollToVisible(x, y);
 
@@ -527,11 +527,11 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
     }
 
     public void pageDown() {
-        moveLine(vflow.getViewHeight(), false);
+        moveLine(vflow.getViewPortHeight(), false);
     }
 
     public void pageUp() {
-        moveLine(-vflow.getViewHeight(), false);
+        moveLine(-vflow.getViewPortHeight(), false);
     }
 
     public void moveRight() {
@@ -651,18 +651,27 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         if (c == null) {
             return;
         }
-        double sp = c.getLineSpacing();
-        double x = (c.getMinX() + c.getMaxX()) / 2.0;
-        double y = (deltaPixels < 0) ? c.getMinY() + deltaPixels - sp - 0.5 : c.getMaxY() + deltaPixels + sp;
 
+        double sp = c.getLineSpacing();
+        // TODO split caret?
+        double x = (c.getMinX() + c.getMaxX()) / 2.0;
         if (phantomX < 0) {
-            // phantom x is unclear in the case of split caret
+            // phantomX is unclear in the case of split caret
             phantomX = x;
         } else {
             x = phantomX;
         }
 
-        TextPos p = vflow.getTextPosLocal(x + vflow.leftPadding(), y);
+        boolean up = (deltaPixels < 0);
+        double y0 = up ? c.getMinY() : c.getMaxY();
+        double y = up ?
+            c.getMinY() + deltaPixels - sp - 0.5:
+            c.getMaxY() + deltaPixels + sp + 0.5;
+
+        // TODO
+        // check whether the new caret y position changed, unless it's TextPos.ZERO when going up, or EOF if going down
+
+        TextPos p = vflow.getTextPosLocal(x, y);
         if (p != null) {
             moveCaret(p, extendSelection);
         }
@@ -787,11 +796,11 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
     }
 
     public void selectPageDown() {
-        moveLine(vflow.getViewHeight(), true);
+        moveLine(vflow.getViewPortHeight(), true);
     }
 
     public void selectPageUp() {
-        moveLine(-vflow.getViewHeight(), true);
+        moveLine(-vflow.getViewPortHeight(), true);
     }
 
     public void selectAll() {

@@ -25,9 +25,13 @@
 
 package jfx.incubator.scene.control.richtext.model;
 
+import java.util.Objects;
+
 /**
  * Style Attribute provides a way to specify style in the RichTextArea.
+ *
  * @param <T> the attribute value type
+ * @see StyleAttributeMap
  */
 public final class StyleAttribute<T> {
     private final String name;
@@ -37,11 +41,12 @@ public final class StyleAttribute<T> {
     /**
      * Constructs the style attribute.
      *
-     * @param name the attribute name
+     * @param name the attribute name (cannot be null)
      * @param type the attribute type
      * @param isParagraph specifies a paragraph attribute (true), or a character attribute (false)
      */
     public StyleAttribute(String name, Class<T> type, boolean isParagraph) {
+        Objects.requireNonNull(name, "name cannot be null");
         this.name = name;
         this.type = type;
         this.isParagraph = isParagraph;
@@ -78,4 +83,6 @@ public final class StyleAttribute<T> {
     public String toString() {
         return name;
     }
+
+    // TODO maybe it should override equals() and hashCode()
 }

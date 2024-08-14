@@ -390,7 +390,7 @@ public abstract class StyledTextModel {
      * @param linesAdded number of paragraphs inserted
      * @param charsBottom number of characters added after any inserted paragraphs
      */
-    protected void fireChangeEvent(TextPos start, TextPos end, int charsTop, int linesAdded, int charsBottom) {
+    public void fireChangeEvent(TextPos start, TextPos end, int charsTop, int linesAdded, int charsBottom) {
         ContentChange ch = ContentChange.ofEdit(start, end, charsTop, linesAdded, charsBottom);
         markers.update(start, end, charsTop, linesAdded, charsBottom);
         for (Listener li : listeners) {
@@ -405,7 +405,7 @@ public abstract class StyledTextModel {
      * @param start the start position
      * @param end the end position, must be greater than the start position
      */
-    protected void fireStyleChangeEvent(TextPos start, TextPos end) {
+    public void fireStyleChangeEvent(TextPos start, TextPos end) {
         ContentChange ch = ContentChange.ofStyleChange(start, end);
         for (Listener li : listeners) {
             li.onContentChange(ch);

@@ -91,27 +91,63 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
 
     /**
      * Appends a text segment to the last paragraph.
-     * The {@code text} cannot contain newline (\n) symbols.
+     * The {@code text} cannot contain newline ({@code \n}) symbols.
+     * This convenience method is equivalent to calling {@code addSegment(text, StyleAttributeMap.EMPTY);}
      *
-     * @param text the text to append, must not contain \n
+     * @param text the text to append, must not contain {@code \n}, cannot be null
      * @return this model instance
      */
     public SimpleViewOnlyStyledModel addSegment(String text) {
+        Objects.requireNonNull(text);
         return addSegment(text, StyleAttributeMap.EMPTY);
     }
 
     /**
      * Appends a text segment styled with either inline style or external style names (or both).
-     * The {@code text} cannot contain newline (\n) symbols.
+     * The {@code text} cannot contain newline ({@code \n}) symbols.
      *
-     * @param text the text to append, must not contain \n
+     * @param text the text to append, must not contain {@code \n}, cannot be null
      * @param style the inline style (example {@code "-fx-fill:red;"}), or null
-     * @param css external style names
+     * @param css the external style names
      * @return this model instance
      */
-    public SimpleViewOnlyStyledModel addSegment(String text, String style, String... css) {
+    public SimpleViewOnlyStyledModel withInlineAndExternalStyles(String text, String style, String... css) {
+        Objects.requireNonNull(text);
+        StyleAttributeMap a = StyleAttributeMap.fromStyles(style, css);
         Paragraph p = lastParagraph();
-        p.addSegment(text, style, css);
+        p.addSegment(text, a);
+        return this;
+    }
+
+    /**
+     * Appends a text segment styled with external (stylesheet) style names.
+     * The {@code text} cannot contain newline ({@code \n}) symbols.
+     *
+     * @param text the text to append, must not contain {@code \n}, cannot be null
+     * @param css the external style names
+     * @return this model instance
+     */
+    public SimpleViewOnlyStyledModel withStyles(String text, String... css) {
+        Objects.requireNonNull(text);
+        StyleAttributeMap a = StyleAttributeMap.fromStyles(null, css);
+        Paragraph p = lastParagraph();
+        p.addSegment(text, a);
+        return this;
+    }
+
+    /**
+     * Appends a text segment styled with external (stylesheet) style names.
+     * The {@code text} cannot contain newline ({@code \n}) symbols.
+     *
+     * @param text the text to append, must not contain {@code \n}, cannot be null
+     * @param style the inline style (example {@code "-fx-fill:red;"}), or null
+     * @return this model instance
+     */
+    public SimpleViewOnlyStyledModel withInlineStyle(String text, String style) {
+        Objects.requireNonNull(text);
+        StyleAttributeMap a = StyleAttributeMap.fromInlineStyle(style);
+        Paragraph p = lastParagraph();
+        p.addSegment(text, a);
         return this;
     }
 
@@ -329,18 +365,6 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
         void addSegment(String text) {
             StyledSegment seg = StyledSegment.of(text);
             segments().add(seg);
-        }
-
-        /**
-         * Adds a styled text segment.
-         *
-         * @param text non-null text string
-         * @param style direct style (such as {@code -fx-fill:red;}), or null
-         * @param css array of style names, or null
-         */
-        void addSegment(String text, String style, String[] css) {
-            StyleAttributeMap a = StyleAttributeMap.fromStyles(style, css);
-            addSegment(text, a);
         }
 
         /**

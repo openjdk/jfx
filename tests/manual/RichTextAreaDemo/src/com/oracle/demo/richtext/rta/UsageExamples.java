@@ -44,10 +44,10 @@ import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 public class UsageExamples {
     void createViewOnly() {
         SimpleViewOnlyStyledModel m = new SimpleViewOnlyStyledModel();
-        // add text segment using CSS style name (requires a style sheet)
-        m.addSegment("RichTextArea ", null, "HEADER");
-        // add text segment using direct style
-        m.addSegment("Demo", "-fx-font-size:200%;");
+        // add text segment using CSS style name (requires a stylesheet)
+        m.withStyles("RichTextArea ", "HEADER");
+        // add text segment using inline style
+        m.withInlineStyle("Demo", "-fx-font-size:200%;");
         // newline
         m.nl();
 

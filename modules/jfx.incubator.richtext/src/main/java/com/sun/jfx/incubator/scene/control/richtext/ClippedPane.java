@@ -25,10 +25,6 @@
 
 package com.sun.jfx.incubator.scene.control.richtext;
 
-import javafx.geometry.HPos;
-import javafx.geometry.Insets;
-import javafx.geometry.VPos;
-import javafx.scene.Node;
 import javafx.scene.layout.Pane;
 import javafx.scene.shape.Rectangle;
 
@@ -43,12 +39,10 @@ public class ClippedPane extends Pane {
         getStyleClass().add(cssName);
 
         clip = new Rectangle();
+        clip.setSmooth(false);
         clip.widthProperty().bind(widthProperty());
         clip.heightProperty().bind(heightProperty());
-        setClip(clip);
-    }
 
-    public void layoutInArea(Node n, double x, double y, double w, double h) {
-        layoutInArea(n, x, y, w, h, 0.0, Insets.EMPTY, HPos.LEFT, VPos.TOP);
+        setClip(clip);
     }
 }

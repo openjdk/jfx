@@ -112,7 +112,7 @@ public class CodeTextModel extends BasicTextModel {
     }
 
     @Override
-    protected void fireChangeEvent(TextPos start, TextPos end, int charsTop, int linesAdded, int charsBottom) {
+    public void fireChangeEvent(TextPos start, TextPos end, int charsTop, int linesAdded, int charsBottom) {
         SyntaxDecorator d = getDecorator();
         if (d != null) {
             d.handleChange(this, start, end, charsTop, linesAdded, charsBottom);

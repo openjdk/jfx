@@ -33,8 +33,17 @@ import jfx.incubator.scene.control.richtext.model.RichParagraph;
  */
 public interface SyntaxDecorator {
     /**
-     * Creates a {@link RichParagraph} from the paragraph plain text.
-     * The text string is guaranteed to contain neither newline nor carriage return symbols.
+     * Creates a {@link RichParagraph} with syntax decoration for the given paragraph index.
+     * <p>
+     * For simple cases, when decorations can be generated using the paragraph text,
+     * it can be obtained by calling {@link CodeTextModel#getPlainText(int)}.
+     * This string is guaranteed to contain no control symbols except for TAB.
+     * <p>
+     * Alternatively, the syntax decorator may cache the syntax information,
+     * or create {@link Marker}s at critical points in the model, or even perform processing in the background
+     * (provided the model supports concurrent access), culminating in sending a refresh even in the FX
+     * application thread by calling
+     * {@link CodeTextModel#fireChangeEvent(TextPos, TextPos, int, int, int)} method.
      *
      * @param model the model
      * @param index the paragraph index

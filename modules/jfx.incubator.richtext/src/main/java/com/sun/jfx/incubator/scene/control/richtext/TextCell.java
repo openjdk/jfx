@@ -54,6 +54,7 @@ import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
 public final class TextCell extends BorderPane {
     private final int index;
     private final Region content;
+    private double width;
     private double height;
     private double y;
 
@@ -137,6 +138,14 @@ public final class TextCell extends BorderPane {
         return height;
     }
 
+    public void setCellWidth(double w) {
+        width = w;
+    }
+
+    public double getCellWidth() {
+        return width;
+    }
+
     public double getY() {
         return y;
     }
@@ -166,7 +175,11 @@ public final class TextCell extends BorderPane {
     public PathElement[] getCaretShape(Region target, int charIndex, boolean leading, double dx, double dy) {
         PathElement[] p;
         if (content instanceof TextFlow f) {
+            dx += f.snappedLeftInset(); // TODO RTL?
+            dy += f.snappedTopInset();
+
             p = f.caretShape(charIndex, leading);
+
             if (p.length == 2) {
                 PathElement p0 = p[0];
                 PathElement p1 = p[1];
@@ -203,7 +216,11 @@ public final class TextCell extends BorderPane {
     public PathElement[] getRangeShape(Region target, int start, int end, double dx, double dy) {
         PathElement[] p;
         if (content instanceof TextFlow f) {
+            dx += f.snappedLeftInset(); // TODO RTL?
+            dy += f.snappedTopInset();
+
             p = f.rangeShape(start, end);
+
             if ((p == null) || (p.length == 0)) {
                 p = new PathElement[] {
                     new MoveTo(0.0, 0.0),
