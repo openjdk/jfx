@@ -494,8 +494,9 @@ public class Util {
 
 
     /**
+     * Checks if the system is running Linux with the Wayland server.
      *
-     * @return true if running Wayland
+     * @return true if running on Wayland, false otherwise
      */
     public static boolean isOnWayland() {
         if (!PlatformUtil.isLinux()) return false;
