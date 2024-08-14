@@ -120,7 +120,7 @@ public class SplitMenuButton extends MenuButton {
      *
      * @param text the text to display on the menu button
      * @param graphic the graphic to display on the menu button
-     * @param items The items to display in the popup menu.
+     * @param items the items to display in the popup menu
      * @since 24
      */
     public SplitMenuButton(String text, Node graphic, MenuItem... items) {
