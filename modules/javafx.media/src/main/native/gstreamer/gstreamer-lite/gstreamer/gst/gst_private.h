@@ -90,7 +90,8 @@ typedef struct {
 } GstPluginDep;
 
 struct _GstPluginPrivate {
-  GList *deps;    /* list of GstPluginDep structures */
+  GList *deps;                 /* list of GstPluginDep structures */
+  GstStructure *status_info;
   GstStructure *cache_data;
 };
 
@@ -160,7 +161,7 @@ gboolean _priv_gst_registry_remove_cache_plugins (GstRegistry *registry);
 G_GNUC_INTERNAL  void _priv_gst_registry_cleanup (void);
 
 GST_API
-gboolean _gst_plugin_loader_client_run (void);
+gboolean _gst_plugin_loader_client_run (const gchar * pipe_name);
 
 G_GNUC_INTERNAL  GstPlugin * _priv_gst_plugin_load_file_for_registry (const gchar *filename,
                                                                       GstRegistry * registry,
@@ -539,6 +540,11 @@ struct _GstClockEntryImpl
 };
 
 char * priv_gst_get_relocated_libgstreamer (void);
+gint   priv_gst_count_directories (const char *filepath);
+
+void priv_gst_clock_init (void);
+GstClockTime priv_gst_get_monotonic_time (void);
+GstClockTime priv_gst_get_real_time (void);
 
 G_END_DECLS
 #endif /* __GST_PRIVATE_H__ */

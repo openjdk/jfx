@@ -121,11 +121,11 @@ static const struct
   const gchar type_string[12];
 } missing_type_mapping[] = {
   {
-  GST_MISSING_TYPE_URISOURCE, "urisource"}, {
-  GST_MISSING_TYPE_URISINK, "urisink"}, {
-  GST_MISSING_TYPE_ELEMENT, "element"}, {
-  GST_MISSING_TYPE_DECODER, "decoder"}, {
-  GST_MISSING_TYPE_ENCODER, "encoder"}
+      GST_MISSING_TYPE_URISOURCE, "urisource"}, {
+      GST_MISSING_TYPE_URISINK, "urisink"}, {
+      GST_MISSING_TYPE_ELEMENT, "element"}, {
+      GST_MISSING_TYPE_DECODER, "decoder"}, {
+      GST_MISSING_TYPE_ENCODER, "encoder"}
 };
 
 static GstMissingType

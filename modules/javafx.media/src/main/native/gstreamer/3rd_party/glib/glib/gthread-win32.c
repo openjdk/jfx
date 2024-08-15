@@ -424,28 +424,6 @@ g_system_thread_free (GRealThread *thread)
 void
 g_system_thread_exit (void)
 {
-  /* In static compilation, DllMain doesn't exist and so DLL_THREAD_DETACH
-   * case is never called and thread destroy notifications are not triggered.
-   * To ensure that notifications are correctly triggered in static
-   * compilation mode, we call directly the "detach" function here right
-   * before terminating the thread.
-   * As all win32 threads initialized through the glib API are run through
-   * the same proxy function g_thread_win32_proxy() which calls systematically
-   * g_system_thread_exit() when finishing, we obtain the same behavior as
-   * with dynamic compilation.
-   *
-   * WARNING: unfortunately this mechanism cannot work with threads created
-   * directly from the Windows API using CreateThread() or _beginthread/ex().
-   * It only works with threads created by using the glib API with
-   * g_system_thread_new(). If users need absolutely to use a thread NOT
-   * created with glib API under Windows and in static compilation mode, they
-   * should not use glib functions within their thread or they may encounter
-   * memory leaks when the thread finishes.
-   */
-#ifdef GLIB_STATIC_COMPILATION
-  g_thread_win32_thread_detach ();
-#endif
-
   _endthreadex (0);
 }
 
@@ -593,7 +571,7 @@ SetThreadName (DWORD  dwThreadID,
    info.dwThreadID = dwThreadID;
    info.dwFlags = 0;
 
-   infosize = sizeof (info) / sizeof (DWORD);
+   infosize = sizeof (info) / sizeof (ULONG_PTR);
 
 #ifdef _MSC_VER
    __try
@@ -601,14 +579,12 @@ SetThreadName (DWORD  dwThreadID,
        RaiseException (EXCEPTION_SET_THREAD_NAME, 0, infosize,
                        (const ULONG_PTR *) &info);
      }
-   __except (EXCEPTION_EXECUTE_HANDLER)
+   __except (GetExceptionCode () == EXCEPTION_SET_THREAD_NAME ?
+             EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
      {
      }
 #else
-   /* Without a debugger we *must* have an exception handler,
-    * otherwise raising an exception will crash the process.
-    */
-   if ((!IsDebuggerPresent ()) && (SetThreadName_VEH_handle == NULL))
+   if ((!IsDebuggerPresent ()) || (SetThreadName_VEH_handle == NULL))
      return;
 
    RaiseException (EXCEPTION_SET_THREAD_NAME, 0, infosize, (const ULONG_PTR *) &info);
@@ -681,11 +657,15 @@ g_thread_win32_init (void)
   InitializeCriticalSection (&g_private_lock);
 
 #ifndef _MSC_VER
-  SetThreadName_VEH_handle = AddVectoredExceptionHandler (1, &SetThreadName_VEH);
+  /* Set the handler as last to not interfere with ASAN runtimes.
+   * Many ASAN implementations (currently all three of GCC, CLANG
+   * and MSVC) install a Vectored Exception Handler that must be
+   * first in the sequence to work well
+   */
+  SetThreadName_VEH_handle = AddVectoredExceptionHandler (0, &SetThreadName_VEH);
   if (SetThreadName_VEH_handle == NULL)
-    {
-      /* This is bad, but what can we do? */
-    }
+    g_critical ("%s failed with error code %u",
+                "AddVectoredExceptionHandler", (unsigned int) GetLastError ());
 #endif
 }
 

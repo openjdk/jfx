@@ -54,6 +54,7 @@ typedef struct _QtDemuxSample QtDemuxSample;
 typedef struct _QtDemuxSegment QtDemuxSegment;
 typedef struct _QtDemuxRandomAccessEntry QtDemuxRandomAccessEntry;
 typedef struct _QtDemuxStreamStsdEntry QtDemuxStreamStsdEntry;
+typedef struct _QtDemuxGaplessAudioInfo QtDemuxGaplessAudioInfo;
 
 typedef GstBuffer * (*QtDemuxProcessFunc)(GstQTDemux * qtdemux, QtDemuxStream * stream, GstBuffer * buf);
 
@@ -77,6 +78,36 @@ typedef enum {
    * requiring qtdemux to expose and create the streams */
   VARIANT_MSS_FRAGMENTED,
 } Variant;
+
+typedef enum {
+  /* No valid gapless audio info present. Types other than this one
+   * are used only if all of these apply:
+   *
+   * 1. There is embedded gapless audio information available
+   * 2. Only one stream exists
+   * 3. Said stream has only one segment
+   * 4. Said stream is an audio stream
+   */
+  GAPLESS_AUDIO_INFO_TYPE_NONE,
+  /* Using information from the iTunes iTunSMPB revdns tag. */
+  GAPLESS_AUDIO_INFO_TYPE_ITUNES,
+  /* Using known Nero encoder delay information. */
+  GAPLESS_AUDIO_INFO_TYPE_NERO
+} QtDemuxGaplessAudioInfoType;
+
+/* Gapless audio information, only used for single-stream audio-only media. */
+struct _QtDemuxGaplessAudioInfo {
+  QtDemuxGaplessAudioInfoType type;
+
+  guint64 num_start_padding_pcm_frames;
+  guint64 num_end_padding_pcm_frames;
+  guint64 num_valid_pcm_frames;
+
+  /* PCM frame amounts converted to nanoseconds. */
+  GstClockTime start_padding_duration;
+  GstClockTime end_padding_duration;
+  GstClockTime valid_duration;
+};
 
 struct _GstQTDemux {
   GstElement element;
@@ -176,6 +207,8 @@ struct _GstQTDemux {
   gboolean exposed;
 
   gint64 chapters_track_id;
+
+  QtDemuxGaplessAudioInfo gapless_audio_info;
 
   /* protection support */
   GPtrArray *protection_system_ids; /* Holds identifiers of all content protection systems for all tracks */

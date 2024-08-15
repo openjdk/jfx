@@ -233,6 +233,8 @@ static const QtNodeType qt_node_types[] = {
   {FOURCC_schi, "scheme information", QT_FLAG_CONTAINER},
   {FOURCC_pssh, "protection system specific header", 0},
   {FOURCC_tenc, "track encryption", 0},
+  {FOURCC_sgpd, "sample group description", 0},
+  {FOURCC_sbgp, "sample to group", 0},
   {FOURCC_stpp, "XML subtitle sample entry", 0},
   {FOURCC_wvtt, "WebVTT subtitle sample entry", 0},
   {FOURCC_clcp, "Closed Caption", 0},
@@ -263,7 +265,7 @@ qtdemux_type_get (guint32 fourcc)
       return qt_node_types + i;
   }
 
-  GST_WARNING ("unknown QuickTime node type %" GST_FOURCC_FORMAT,
+  GST_FIXME ("unknown QuickTime node type %" GST_FOURCC_FORMAT,
       GST_FOURCC_ARGS (fourcc));
 
   return qt_node_types + n_qt_node_types - 1;
