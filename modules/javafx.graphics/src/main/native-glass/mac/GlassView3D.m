@@ -525,6 +525,8 @@
     BOOL inputContextHandledEvent = (imEnabled && [self.inputContext handleEvent:theEvent]);
     handlingKeyEvent = NO;
 
+    // Returns YES if the event triggered some sort of InputMethod action or
+    // if the PRESSED event was consumed by the scene graph.
     BOOL wasConsumed = YES;
 
     if (didCommitText) {

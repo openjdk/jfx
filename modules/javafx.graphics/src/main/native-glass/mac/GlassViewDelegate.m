@@ -697,6 +697,8 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     }
     else
     {
+        // We only return YES if the PRESSED event was consumed. The TextInput
+        // control consumes any TYPED event that looks like a shortcut.
         SEND_KEY_EVENT(com_sun_glass_events_KeyEvent_PRESS);
         wasConsumed = thisEventWasConsumed;
 
