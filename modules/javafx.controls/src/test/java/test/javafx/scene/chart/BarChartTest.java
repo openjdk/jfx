@@ -29,10 +29,9 @@ import java.util.Arrays;
 import java.util.List;
 
 import javafx.collections.FXCollections;
-import javafx.scene.Scene;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
-import javafx.stage.Stage;
+import org.junit.Assert;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import javafx.collections.*;
@@ -151,7 +150,7 @@ public class BarChartTest extends XYChartTestBase {
     @Override
     ObservableList<XYChart.Series<?, ?>> createTestSeries() {
         ObservableList<XYChart.Series<?, ?>> list = FXCollections.observableArrayList();
-        for (int i = 0; i != 10; i++) {
+        for (int i = 1; i != 10; i++) {
             XYChart.Series<String, Number> series = new XYChart.Series<>();
             series.getData().add(new XYChart.Data<>(Integer.toString(i*10), i*10));
             series.getData().add(new XYChart.Data<>(Integer.toString(i*20), i*20));
@@ -274,6 +273,89 @@ public class BarChartTest extends XYChartTestBase {
         assertEquals("3", categories.get(2));
         assertEquals("5", categories.get(3));
         assertEquals("4", categories.get(4));
+    }
+
+    @Test
+    public void testNegativeStyleIsAddedToNewData() {
+        startApp();
+        Series<String, Number> series = bc.getData().getFirst();
+        series.getData().addFirst(new XYChart.Data<>("1", -1));
+        pulse();
+        Node bar = series.getData().getFirst().getNode();
+        checkStyleClass(bar, "negative");
+    }
+
+    @Test
+    public void testNegativeStyleIsAddedToDataOfNewSeries() {
+        startApp();
+        Series<String, Number> series = new Series<>();
+        series.getData().addFirst(new XYChart.Data<>("1", -1));
+        bc.getData().add(series);
+        pulse();
+        Node bar = series.getData().getFirst().getNode();
+        checkStyleClass(bar, "negative");
+    }
+
+    @Test
+    public void testNegativeStyleIsRemovedWhenChangingData() {
+        startApp();
+        Series<String, Number> series = bc.getData().getFirst();
+
+        series.getData().getFirst().setYValue(-1);
+        Node bar = series.getData().getFirst().getNode();
+        checkStyleClass(bar, "negative");
+
+        series.getData().getFirst().setYValue(1);
+        Assert.assertFalse(bar.getStyleClass().contains("negative"));
+    }
+
+    @Test
+    public void testAddingDataToEmptySeries() {
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> Assert.fail("Exception: " + e));
+        startApp();
+        BarChart<String, Number> chart = new BarChart<>(new CategoryAxis(), new NumberAxis());
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        chart.getData().add(series);
+        series.getData().add(new XYChart.Data<>("1", 1));
+        series.getData().add(new XYChart.Data<>("2", -2));
+        series.getData().add(new XYChart.Data<>("3", 3));
+        assertEquals(3, XYChartShim.Series_getDataSize(series));
+        assertEquals(3, XYChartShim.getPlotChildren(chart).size());
+        Node bar2 = series.getData().get(1).getNode();
+        checkStyleClass(bar2, "negative");
+    }
+
+    @Test
+    public void testAddingDataToNonEmptySeries() {
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> Assert.fail("Exception: " + e));
+        startApp();
+        BarChart<String, Number> chart = new BarChart<>(new CategoryAxis(), new NumberAxis());
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        series.getData().add(new XYChart.Data<>("1", 1));
+        chart.getData().add(series);
+        series.getData().add(new XYChart.Data<>("2", -2));
+        assertEquals(2, XYChartShim.Series_getDataSize(series));
+        assertEquals(2, XYChartShim.getPlotChildren(chart).size());
+        Node bar2 = series.getData().get(1).getNode();
+        checkStyleClass(bar2, "negative");
+    }
+
+    @Test
+    public void testAddingDataToSeriesContainingDuplicateCategories() {
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> Assert.fail("Exception: " + e));
+        startApp();
+        BarChart<String, Number> chart = new BarChart<>(new CategoryAxis(), new NumberAxis());
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        series.getData().add(new XYChart.Data<>("1", 1));
+        series.getData().add(new XYChart.Data<>("1", 2));
+        series.getData().add(new XYChart.Data<>("2", 3));
+        chart.getData().add(series);
+        series.getData().add(new XYChart.Data<>("3", -3));
+        assertEquals(3, XYChartShim.Series_getDataSize(series));
+        assertEquals(3, XYChartShim.getPlotChildren(chart).size());
+        assertEquals(4, series.getData().size());
+        Node bar3 = series.getData().get(3).getNode();
+        checkStyleClass(bar3, "negative");
     }
 
     @Test
