@@ -35,6 +35,7 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 
@@ -1326,6 +1327,81 @@ public class VirtualFlowTest {
         });
         flow.scrollTo(99);
         pulse();
+    }
+
+    @Test
+    public void testVerticalChangeShouldResetIndex() {
+        List<IndexedCell<?>> cells = new ArrayList<>();
+
+        flow = new VirtualFlowShim<>();
+        flow.setVertical(true);
+        flow.setCellFactory(p -> {
+            CellStub cellStub = new CellStub(flow);
+            cells.add(cellStub);
+            return cellStub;
+        });
+        flow.setCellCount(100);
+        flow.setViewportLength(100);
+        flow.resize(100, 100);
+        pulse();
+
+        flow.setVertical(false);
+
+        for (IndexedCell<?> cell : cells) {
+            assertEquals(-1, cell.getIndex());
+        }
+    }
+
+    @Test
+    public void testCellFactoryChangeShouldResetIndex() {
+        List<IndexedCell<?>> cells = new ArrayList<>();
+
+        flow = new VirtualFlowShim<>();
+        flow.setVertical(true);
+        flow.setCellFactory(p -> {
+            CellStub cellStub = new CellStub(flow);
+            cells.add(cellStub);
+            return cellStub;
+        });
+        flow.setCellCount(100);
+        flow.setViewportLength(100);
+        flow.resize(100, 100);
+        pulse();
+
+        flow.setCellFactory(p -> new CellStub(flow));
+
+        pulse();
+
+        for (IndexedCell<?> cell : cells) {
+            assertEquals(-1, cell.getIndex());
+        }
+    }
+
+    @Test
+    public void testRecreateCellsChangeShouldResetIndex() {
+        List<IndexedCell<?>> cells = new ArrayList<>();
+
+        flow = new VirtualFlowShim<>();
+        flow.setVertical(true);
+        flow.setCellFactory(p -> {
+            CellStub cellStub = new CellStub(flow);
+            cells.add(cellStub);
+            return cellStub;
+        });
+        flow.setCellCount(100);
+        flow.setViewportLength(100);
+        flow.resize(100, 100);
+        pulse();
+
+        flow.recreateCells();
+
+        List<IndexedCell<?>> currentCells = new ArrayList<>(cells);
+
+        pulse();
+
+        for (IndexedCell<?> cell : currentCells) {
+            assertEquals(-1, cell.getIndex());
+        }
     }
 
     private ArrayLinkedListShim<GraphicalCellStub> circlelist = new ArrayLinkedListShim<>();

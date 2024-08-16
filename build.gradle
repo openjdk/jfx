@@ -214,7 +214,7 @@ void setupTools(String name, Closure loader, Closure processor) {
     // then generate it. Once generated, we need to read the properties file to
     // help us define the defaults for this block of properties
     File propFile = file("$buildDir/${name}.properties");
-    if (!propFile.exists()) {
+    if (!propFile.exists() || propFile.length() == 0) {
         // Create the properties file
         propFile.getParentFile().mkdirs();
         propFile.createNewFile();
@@ -952,7 +952,6 @@ void ant(String conf,   // platform configuration
                     "INCLUDE"              : WINDOWS_VS_INCLUDE,
                     "LIB"                  : WINDOWS_VS_LIB,
                     "LIBPATH"              : WINDOWS_VS_LIBPATH,
-                    "DXSDK_DIR"            : WINDOWS_DXSDK_DIR,
                     "PATH"                 : WINDOWS_VS_PATH
             ]);
             commandLine "cmd", "/s", "/c", '"' + String.join(" ", cmdArgs) + '"'
@@ -967,7 +966,7 @@ List<String> computeLibraryPath(boolean working) {
     List<String> lp = []
 
     if (HAS_JAVAFX_MODULES) {
-        List<String> modsWithNative = [ 'graphics', 'media', 'web' ]
+        List<String> modsWithNative = [ 'javafx.graphics', 'javafx.media', 'javafx.web' ]
 
         // the build/modular-sdk area
         def platformPrefix = ""
@@ -976,7 +975,7 @@ List<String> computeLibraryPath(boolean working) {
         def modulesLibsDir = "${bundledSdkDir}/modules_libs"
 
         modsWithNative.each() { m ->
-            lp << cygpath("${modulesLibsDir}/javafx.${m}")
+            lp << cygpath("${modulesLibsDir}/${m}")
         }
     } else {
         def platformPrefix = ""
@@ -1710,6 +1709,16 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
         return
     }
 
+    if (!project.hasProperty("moduleName")) {
+        fail("Project ${project} has no module name")
+    }
+    projectDependencies.each { projName ->
+        def dep = project.project(":$projName")
+        if (!dep.hasProperty("moduleName")) {
+            fail("${project} dependency ${dep} has no module name")
+        }
+    }
+
     project.apply plugin: 'maven-publish'
 
     project.group = MAVEN_GROUP_ID
@@ -1760,7 +1769,8 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
         project.publishing {
             publications {
                 maven(MavenPublication) {
-                    artifactId = "javafx-${project.name}"
+                    def artifactName = project.moduleName.replace('.', '-')
+                    artifactId = artifactName
 
                     afterEvaluate {
                         artifact project.tasks."moduleEmptyPublicationJar$t.capital"
@@ -1779,15 +1789,17 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
 
                         Node projectDependencyPlatform = dependencies.appendNode("dependency")
                         projectDependencyPlatform.appendNode("groupId", MAVEN_GROUP_ID)
-                        projectDependencyPlatform.appendNode("artifactId", "javafx-${project.name}")
+                        projectDependencyPlatform.appendNode("artifactId", artifactName)
                         projectDependencyPlatform.appendNode("version", MAVEN_VERSION)
                         projectDependencyPlatform.appendNode("classifier", "\${javafx.platform}")
 
                         if (!projectDependencies.empty) {
-                            projectDependencies.each { dep ->
+                            projectDependencies.each { projName ->
+                                def dep = project.project(":$projName")
+                                def depName = dep.moduleName.replace('.', '-')
                                 Node projectDependency = dependencies.appendNode("dependency")
                                 projectDependency.appendNode("groupId", MAVEN_GROUP_ID)
-                                projectDependency.appendNode("artifactId", "javafx-$dep")
+                                projectDependency.appendNode("artifactId", depName)
                                 projectDependency.appendNode("version", MAVEN_VERSION)
                            }
                         }
@@ -5376,7 +5388,7 @@ compileTargets { t ->
             }
             if (IS_WINDOWS) {
                 from ("${graphicsProject.buildDir}/libs/prismD3D/${t.name}/${library(targetProperties.prismD3D.lib)}");
-                targetProperties.VS2017DLLs.each { vslib ->
+                targetProperties.VSDLLs.each { vslib ->
                     from ("$vslib");
                 }
                 targetProperties.WinSDKDLLs.each { winsdklib ->
@@ -5391,7 +5403,7 @@ compileTargets { t ->
                     inputFiles.include("*.dylib")
                     inputFiles.include("*.so")
                     // FIXME: if we ever need to strip on Windows platforms, we must
-                    // exclude the Microsoft DLLs (VS2017DLLNames and WinSDKDLLNames)
+                    // exclude the Microsoft DLLs (VSDLLNames and WinSDKDLLNames)
 
                     inputFiles.each { file ->
                         exec {
@@ -5408,7 +5420,7 @@ compileTargets { t ->
                     inputFiles.include("*.dylib")
                     inputFiles.include("*.so")
                     // FIXME: if we ever need to sign on Windows platforms, we must
-                    // exclude the Microsoft DLLs (VS2017DLLNames and WinSDKDLLNames)
+                    // exclude the Microsoft DLLs (VSDLLNames and WinSDKDLLNames)
 
                     inputFiles.each { file ->
                         exec {
@@ -5483,7 +5495,7 @@ compileTargets { t ->
                     inputFiles.include("*.dylib")
                     inputFiles.include("*.so")
                     // FIXME: if we ever need to sign on Windows platforms, we must
-                    // exclude the Microsoft DLLs (VS2017DLLNames and WinSDKDLLNames)
+                    // exclude the Microsoft DLLs (VSDLLNames and WinSDKDLLNames)
 
                     inputFiles.each { file ->
                         exec {
@@ -5536,7 +5548,7 @@ compileTargets { t ->
                     inputFiles.include("*.dylib")
                     inputFiles.include("*.so")
                     // FIXME: if we ever need to sign on Windows platforms, we must
-                    // exclude the Microsoft DLLs (VS2017DLLNames and WinSDKDLLNames)
+                    // exclude the Microsoft DLLs (VSDLLNames and WinSDKDLLNames)
 
                     inputFiles.each { file ->
                         exec {

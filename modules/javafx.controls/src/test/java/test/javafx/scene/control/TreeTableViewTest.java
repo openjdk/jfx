@@ -89,6 +89,7 @@ import javafx.scene.control.Slider;
 import javafx.scene.control.TableColumnBaseShim;
 import javafx.scene.control.TableSelectionModel;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TitledPane;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableCellShim;
@@ -7444,7 +7445,7 @@ public class TreeTableViewTest {
         treeTableView.setRoot(new TreeItem<>("Root"));
         treeTableView.getRoot().setExpanded(true);
         for (int i = 0; i < 4; i++) {
-            TreeItem<String> parent = new TreeItem<String>("item - " + i);
+            TreeItem<String> parent = new TreeItem<>("item - " + i);
             treeTableView.getRoot().getChildren().add(parent);
         }
 
@@ -7478,5 +7479,49 @@ public class TreeTableViewTest {
 
             assertEquals(secondRowKey, cell.getProperties().get(propertyKey));
         }
+    }
+
+    /**
+     * The expansion change of a TitledPane triggered an event where the underlying VirtualFlow
+     * was adding cells to the pile and later cleaning them all up without resetting the index to -1.
+     * This led to a bug where two cells received an edit event, although just one should (and is visible).
+     * See also: <a href="https://bugs.openjdk.org/browse/JDK-8320232">JDK-8320232</a>
+     */
+    @Test
+    public void testTitledPaneExpansionShouldCleanupCellsInTableFlow() {
+        AtomicInteger startEditCounter = new AtomicInteger();
+
+        final TreeTableColumn<String, String> col = new TreeTableColumn<>("C");
+        col.setCellValueFactory(value -> new SimpleStringProperty(value.getValue().getValue()));
+        col.setCellFactory(eee -> new TreeTableCell<>() {
+            @Override
+            public void startEdit() {
+                startEditCounter.incrementAndGet();
+                super.startEdit();
+            }
+        });
+        treeTableView.getColumns().add(col);
+
+        treeTableView.setEditable(true);
+        treeTableView.setRoot(new TreeItem<>("Root"));
+        treeTableView.getRoot().setExpanded(true);
+        for (int i = 0; i < 4; i++) {
+            TreeItem<String> parent = new TreeItem<>("item - " + i);
+            treeTableView.getRoot().getChildren().add(parent);
+        }
+
+        TitledPane root = new TitledPane("title", treeTableView);
+        root.setAnimated(false);
+        stageLoader = new StageLoader(root);
+
+        root.setExpanded(false);
+        Toolkit.getToolkit().firePulse();
+
+        root.setExpanded(true);
+        Toolkit.getToolkit().firePulse();
+
+        treeTableView.edit(0, col);
+
+        assertEquals(1, startEditCounter.get());
     }
 }
