@@ -26,11 +26,11 @@ package com.sun.glass.ui.gtk;
 
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.View;
+
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.Map;
-import java.util.TreeSet;
 
 final class GtkView extends View {
     private boolean imEnabled = false;
