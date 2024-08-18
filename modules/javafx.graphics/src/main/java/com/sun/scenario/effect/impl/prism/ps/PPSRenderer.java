@@ -267,7 +267,7 @@ public class PPSRenderer extends PrRenderer {
         InputStream pscode = shaderSource.loadSource(name);
         int maxTexCoordIndex = samplers.keySet().size()-1;
         ShaderFactory factory = (ShaderFactory)rf;
-        return factory.createShader(pscode, samplers, params,
+        return factory.createShader(name, pscode, samplers, params,
                                     maxTexCoordIndex,
                                     isPixcoordUsed, false);
     }

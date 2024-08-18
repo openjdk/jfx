@@ -45,6 +45,16 @@ namespace WebCore {
 
 class SharedBuffer;
 
+enum class CDMKeyGroupingStrategy : bool;
+
+enum class CDMInstanceSessionLoadFailure : uint8_t {
+    None,
+    NoSessionData,
+    MismatchedSessionType,
+    QuotaExceeded,
+    Other,
+};
+
 class CDMInstanceSessionClient : public CanMakeWeakPtr<CDMInstanceSessionClient> {
 public:
     virtual ~CDMInstanceSessionClient() = default;
@@ -62,6 +72,7 @@ class CDMInstanceSession : public RefCounted<CDMInstanceSession> {
 public:
     virtual ~CDMInstanceSession() = default;
 
+    using KeyGroupingStrategy = CDMKeyGroupingStrategy;
     using KeyStatus = CDMKeyStatus;
     using LicenseType = CDMSessionType;
     using MessageType = CDMMessageType;
@@ -79,20 +90,14 @@ public:
     };
 
     using LicenseCallback = CompletionHandler<void(Ref<SharedBuffer>&& message, const String& sessionId, bool needsIndividualization, SuccessValue succeeded)>;
-    virtual void requestLicense(LicenseType, const AtomString& initDataType, Ref<SharedBuffer>&& initData, LicenseCallback&&) = 0;
+    virtual void requestLicense(LicenseType, KeyGroupingStrategy, const AtomString& initDataType, Ref<SharedBuffer>&& initData, LicenseCallback&&) = 0;
 
     using KeyStatusVector = CDMInstanceSessionClient::KeyStatusVector;
     using Message = std::pair<MessageType, Ref<SharedBuffer>>;
     using LicenseUpdateCallback = CompletionHandler<void(bool sessionWasClosed, std::optional<KeyStatusVector>&& changedKeys, std::optional<double>&& changedExpiration, std::optional<Message>&& message, SuccessValue succeeded)>;
     virtual void updateLicense(const String& sessionId, LicenseType, Ref<SharedBuffer>&& response, LicenseUpdateCallback&&) = 0;
 
-    enum class SessionLoadFailure : uint8_t {
-        None,
-        NoSessionData,
-        MismatchedSessionType,
-        QuotaExceeded,
-        Other,
-    };
+    using SessionLoadFailure = CDMInstanceSessionLoadFailure;
 
     using LoadSessionCallback = CompletionHandler<void(std::optional<KeyStatusVector>&&, std::optional<double>&&, std::optional<Message>&&, SuccessValue, SessionLoadFailure)>;
     virtual void loadSession(LicenseType, const String& sessionId, const String& origin, LoadSessionCallback&&) = 0;

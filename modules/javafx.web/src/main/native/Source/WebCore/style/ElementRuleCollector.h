@@ -24,6 +24,7 @@
 #include "MatchResult.h"
 #include "MediaQueryEvaluator.h"
 #include "PropertyAllowlist.h"
+#include "PseudoElementRequest.h"
 #include "RuleSet.h"
 #include "SelectorChecker.h"
 #include "StyleScopeOrdinal.h"
@@ -33,34 +34,15 @@
 
 namespace WebCore::Style {
 
-class MatchRequest;
 class ScopeRuleSets;
+struct MatchRequest;
 struct SelectorMatchingState;
 enum class CascadeLevel : uint8_t;
 
-class PseudoElementRequest {
-public:
-    PseudoElementRequest(PseudoId pseudoId, std::optional<StyleScrollbarState> scrollbarState = std::nullopt)
-        : pseudoId(pseudoId)
-        , scrollbarState(scrollbarState)
-    {
-    }
-
-    PseudoElementRequest(PseudoId pseudoId, const AtomString& highlightName)
-        : pseudoId(pseudoId)
-        , highlightName(highlightName)
-    {
-        ASSERT(pseudoId == PseudoId::Highlight);
-    }
-
-    PseudoId pseudoId;
-    std::optional<StyleScrollbarState> scrollbarState;
-    AtomString highlightName;
-};
-
 struct MatchedRule {
-    const RuleData* ruleData;
-    unsigned specificity;
+    const RuleData* ruleData { nullptr };
+    unsigned specificity { 0 };
+    unsigned scopingRootDistance { 0 };
     ScopeOrdinal styleScopeOrdinal;
     CascadeLayerPriority cascadeLayerPriority;
 };
@@ -105,19 +87,24 @@ private:
 
     void addElementInlineStyleProperties(bool includeSMILProperties);
 
-    void matchShadowPseudoElementRules(CascadeLevel);
+    void matchUserAgentPartRules(CascadeLevel);
     void matchHostPseudoClassRules(CascadeLevel);
     void matchSlottedPseudoElementRules(CascadeLevel);
     void matchPartPseudoElementRules(CascadeLevel);
     void matchPartPseudoElementRulesForScope(const Element& partMatchingElement, CascadeLevel);
 
-    void collectMatchingShadowPseudoElementRules(const MatchRequest&);
+    void collectMatchingUserAgentPartRules(const MatchRequest&);
 
     void collectMatchingRules(CascadeLevel);
     void collectMatchingRules(const MatchRequest&);
     void collectMatchingRulesForList(const RuleSet::RuleDataVector*, const MatchRequest&);
-    bool ruleMatches(const RuleData&, unsigned& specificity, ScopeOrdinal);
+    bool ruleMatches(const RuleData&, unsigned& specificity, ScopeOrdinal, const ContainerNode* scopingRoot = nullptr);
     bool containerQueriesMatch(const RuleData&, const MatchRequest&);
+    struct ScopingRootWithDistance {
+        const ContainerNode* scopingRoot { nullptr };
+        unsigned distance { std::numeric_limits<unsigned>::max() };
+    };
+    std::pair<bool, std::optional<Vector<ScopingRootWithDistance>>> scopeRulesMatch(const RuleData&, const MatchRequest&);
 
     void sortMatchedRules();
 
@@ -126,7 +113,7 @@ private:
     void sortAndTransferMatchedRules(DeclarationOrigin);
     void transferMatchedRules(DeclarationOrigin, std::optional<ScopeOrdinal> forScope = { });
 
-    void addMatchedRule(const RuleData&, unsigned specificity, const MatchRequest&);
+    void addMatchedRule(const RuleData&, unsigned specificity, unsigned scopingRootDistance, const MatchRequest&);
     void addMatchedProperties(MatchedProperties&&, DeclarationOrigin);
 
     const Element& element() const { return m_element.get(); }

@@ -27,10 +27,15 @@
 
 [
     EnabledBySetting=WebGPUEnabled,
-    Exposed=(Window), /* https://bugs.webkit.org/show_bug.cgi?id=232542: DedicatedWorker */
+    Exposed=(Window,DedicatedWorker),
     SecureContext
 ]
 interface GPUQuerySet {
     undefined destroy();
+
+    readonly attribute GPUQueryType type;
+    readonly attribute GPUSize32Out count;
 };
 GPUQuerySet includes GPUObjectBase;
+
+typedef unsigned long GPUSize32Out;

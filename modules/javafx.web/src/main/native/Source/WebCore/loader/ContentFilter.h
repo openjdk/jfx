@@ -28,6 +28,7 @@
 #if ENABLE(CONTENT_FILTERING)
 
 #include "CachedResourceHandle.h"
+#include "LoaderMalloc.h"
 #include "PlatformContentFilter.h"
 #include "ResourceError.h"
 #include <functional>
@@ -44,7 +45,7 @@ class ResourceResponse;
 class SubstituteData;
 
 class ContentFilter {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
     WTF_MAKE_NONCOPYABLE(ContentFilter);
 
 public:
@@ -95,10 +96,12 @@ private:
     void deliverResourceData(const SharedBuffer&, size_t encodedDataLength = 0);
     void deliverStoredResourceData();
 
+    Ref<ContentFilterClient> protectedClient() const;
+
     URL url();
 
     Container m_contentFilters;
-    ContentFilterClient& m_client;
+    WeakRef<ContentFilterClient> m_client;
     URL m_mainResourceURL;
     struct ResourceDataItem {
         RefPtr<const SharedBuffer> buffer;
@@ -106,7 +109,7 @@ private:
     };
     Vector<ResourceDataItem> m_buffers;
     CachedResourceHandle<CachedRawResource> m_mainResource;
-    const PlatformContentFilter* m_blockingContentFilter { nullptr };
+    WeakPtr<const PlatformContentFilter> m_blockingContentFilter;
     State m_state { State::Stopped };
     ResourceError m_blockedError;
     bool m_isLoadingBlockedPage { false };

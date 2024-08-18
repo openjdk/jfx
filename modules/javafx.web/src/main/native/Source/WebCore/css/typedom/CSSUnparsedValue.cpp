@@ -31,6 +31,7 @@
 #include "CSSUnparsedValue.h"
 
 #include "CSSOMVariableReferenceValue.h"
+#include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
 #include "CSSTokenizer.h"
 #include "CSSVariableReferenceValue.h"
@@ -139,7 +140,7 @@ std::optional<CSSUnparsedSegment> CSSUnparsedValue::item(size_t index)
 ExceptionOr<CSSUnparsedSegment> CSSUnparsedValue::setItem(size_t index, CSSUnparsedSegment&& val)
 {
     if (index > m_segments.size())
-        return Exception { RangeError, makeString("Index ", index, " exceeds index range for unparsed segments.") };
+        return Exception { ExceptionCode::RangeError, makeString("Index ", index, " exceeds index range for unparsed segments.") };
     if (index == m_segments.size())
         m_segments.append(WTFMove(val));
     else

@@ -217,7 +217,8 @@ public class ES2ResourceFactory extends BaseShaderFactory {
     }
 
     @Override
-    public Shader createShader(InputStream pixelShaderCode,
+    public Shader createShader(String pixelShaderName,
+            InputStream pixelShaderCode,
             Map<String, Integer> samplers,
             Map<String, Integer> params,
             int maxTexCoordIndex,
@@ -320,8 +321,8 @@ public class ES2ResourceFactory extends BaseShaderFactory {
             }
             Method m =
                     klass.getMethod("loadShader", new Class[]{ShaderFactory.class,
-                        InputStream.class});
-            return (Shader) m.invoke(null, new Object[]{this, stream});
+                        String.class, InputStream.class});
+            return (Shader) m.invoke(null, new Object[]{this, name, stream});
         } catch (Throwable e) {
             e.printStackTrace();
             throw new InternalError("Error loading stock shader " + name);

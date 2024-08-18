@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,8 +26,11 @@
 package test.javafx.scene.control;
 
 import javafx.css.CssMetaData;
+
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 
+import javafx.scene.input.MouseEvent;
+import javafx.util.Duration;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.BooleanProperty;
@@ -47,25 +50,41 @@ import javafx.scene.control.TooltipShim;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
+
 import static org.junit.Assert.*;
 
-
 import org.junit.Before;
+import org.junit.After;
 import org.junit.Ignore;
 import org.junit.Test;
+import test.com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
 public class TooltipTest {
     private TooltipShim toolTip;//Empty string
     private TooltipShim dummyToolTip;//Empty string
 
-    @Before public void setup() {
-        assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
+    private StageLoader stageLoader;
+    private StubToolkit toolkit;
 
+    @Before
+    public void setup() {
         toolTip = new TooltipShim();
         dummyToolTip = new TooltipShim("dummy");
+
+        toolkit = (StubToolkit) Toolkit.getToolkit();
+        toolkit.setAnimationTime(0);
     }
 
-
+    @After
+    public void tearDown() {
+        if (stageLoader != null) {
+            stageLoader.dispose();
+        }
+    }
 
     /*********************************************************************
      * Tests for the constructors                                        *
@@ -318,7 +337,7 @@ public class TooltipTest {
 
     @Test public void whenWrapTextIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.wrapTextProperty()).getCssMetaData();
-          assertTrue(styleable.isSettable(toolTip.get_bridge()));
+        assertTrue(styleable.isSettable(toolTip.get_bridge()));
     }
 
     @Test public void canSpecifyWrapTextViaCSS() {
@@ -328,15 +347,15 @@ public class TooltipTest {
 
     @Test public void whenFontIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)toolTip.fontProperty()).getCssMetaData();
-          assertTrue(styleable.isSettable(toolTip.get_bridge()));
+        assertTrue(styleable.isSettable(toolTip.get_bridge()));
         ObjectProperty<Font> other = new SimpleObjectProperty<>();
         toolTip.fontProperty().bind(other);
-          assertFalse(styleable.isSettable(toolTip.get_bridge()));
+        assertFalse(styleable.isSettable(toolTip.get_bridge()));
     }
 
     @Test public void whenFontIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.fontProperty()).getCssMetaData();
-          assertTrue(styleable.isSettable(toolTip.get_bridge()));
+        assertTrue(styleable.isSettable(toolTip.get_bridge()));
     }
 
     @Test public void canSpecifyFontViaCSS() {
@@ -349,12 +368,12 @@ public class TooltipTest {
         assertTrue(styleable.isSettable(toolTip.get_bridge()));
         ObjectProperty<Node> other = new SimpleObjectProperty<>();
         toolTip.graphicProperty().bind(other);
-          assertFalse(styleable.isSettable(toolTip.get_bridge()));
+        assertFalse(styleable.isSettable(toolTip.get_bridge()));
     }
 
     @Test public void whenGraphicIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.graphicProperty()).getCssMetaData();
-          assertTrue(styleable.isSettable(toolTip.get_bridge()));
+        assertTrue(styleable.isSettable(toolTip.get_bridge()));
     }
 
     @Ignore("CSS sets graphicProperty indirectly")
@@ -366,14 +385,14 @@ public class TooltipTest {
 
     @Test public void whenContentDisplayIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)toolTip.contentDisplayProperty()).getCssMetaData();
-          assertTrue(styleable.isSettable(toolTip.get_bridge()));
+        assertTrue(styleable.isSettable(toolTip.get_bridge()));
         ObjectProperty<ContentDisplay> other = new SimpleObjectProperty<>();
         toolTip.contentDisplayProperty().bind(other);
-          assertFalse(styleable.isSettable(toolTip.get_bridge()));
+        assertFalse(styleable.isSettable(toolTip.get_bridge()));
     }
-     @Test public void whenContentDisplayIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
+    @Test public void whenContentDisplayIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.contentDisplayProperty()).getCssMetaData();
-          assertTrue(styleable.isSettable(toolTip.get_bridge()));
+        assertTrue(styleable.isSettable(toolTip.get_bridge()));
     }
 
     @Test public void canSpecifyContentDisplayViaCSS() {
@@ -383,15 +402,15 @@ public class TooltipTest {
 
     @Test public void whenGraphicTextGapIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)toolTip.graphicTextGapProperty()).getCssMetaData();
-          assertTrue(styleable.isSettable(toolTip.get_bridge()));
+        assertTrue(styleable.isSettable(toolTip.get_bridge()));
         DoubleProperty other = new SimpleDoubleProperty();
         toolTip.graphicTextGapProperty().bind(other);
-          assertFalse(styleable.isSettable(toolTip.get_bridge()));
+        assertFalse(styleable.isSettable(toolTip.get_bridge()));
     }
 
     @Test public void whenGraphicTextGapIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.graphicTextGapProperty()).getCssMetaData();
-          assertTrue(styleable.isSettable(toolTip.get_bridge()));
+        assertTrue(styleable.isSettable(toolTip.get_bridge()));
     }
 
     @Test public void canSpecifyGraphicTextGapViaCSS() {
@@ -531,5 +550,161 @@ public class TooltipTest {
         }
     }
 
+    /**
+     * A {@link Tooltip} once was showing and quickly hiding itself in order to process the CSS.
+     * This was changed in <a href="https://bugs.openjdk.org/browse/JDK-8296387">JDK-8296387</a>
+     * and this test ensure that this is the case.
+     */
+    @Test
+    public void testTooltipShouldNotBeShownBeforeDelayIsUp() {
+        toolTip.showingProperty().addListener(inv -> fail());
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+
+        stageLoader = new StageLoader(rect);
+
+        Tooltip.install(rect, toolTip);
+
+        MouseEvent mouseEvent = MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 1, 1);
+        rect.fireEvent(mouseEvent);
+    }
+
+    @Test
+    public void testTooltipShouldNotBeShownBeforeDefaultDelay() {
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+
+        stageLoader = new StageLoader(rect);
+
+        Tooltip.install(rect, toolTip);
+
+        MouseEvent mouseEvent = MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 1, 1);
+        rect.fireEvent(mouseEvent);
+
+        assertFalse(toolTip.isShowing());
+
+        toolkit.setAnimationTime(999);
+
+        assertFalse(toolTip.isShowing());
+    }
+
+    @Test
+    public void testTooltipShouldBeShownAfterDefaultDelay() {
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+
+        stageLoader = new StageLoader(rect);
+
+        Tooltip.install(rect, toolTip);
+
+        assertFalse(toolTip.isShowing());
+
+        assertTooltipShownAfter(rect, 1000);
+        assertTooltipHiddenAfter(rect, 200);
+    }
+
+    @Test
+    public void testTooltipShouldBeHiddenAfterHideDelay() {
+        int delay = 50;
+        toolTip.setHideDelay(Duration.millis(delay));
+
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+
+        stageLoader = new StageLoader(rect);
+
+        Tooltip.install(rect, toolTip);
+
+        assertFalse(toolTip.isShowing());
+
+        assertTooltipShownAfter(rect, 1000);
+        assertTooltipHiddenAfter(rect, delay);
+    }
+
+    @Test
+    public void testTooltipShouldBeShownAfterSetShowDelay() {
+        int delay = 200;
+        toolTip.setShowDelay(Duration.millis(delay));
+
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+
+        stageLoader = new StageLoader(rect);
+
+        Tooltip.install(rect, toolTip);
+
+        assertFalse(toolTip.isShowing());
+
+        assertTooltipShownAfter(rect, delay);
+        assertTooltipHiddenAfter(rect, 200);
+    }
+
+    @Test
+    public void testTooltipShouldBeShownAfterSetStyleShowDelay() {
+        toolTip.setStyle("-fx-show-delay: 200ms;");
+
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+
+        stageLoader = new StageLoader(rect);
+
+        Tooltip.install(rect, toolTip);
+
+        assertFalse(toolTip.isShowing());
+
+        assertTooltipShownAfter(rect, 200);
+        assertTooltipHiddenAfter(rect, 200);
+    }
+
+    @Test
+    public void testTooltipShouldBeShownAfterSetCssShowDelay() {
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+
+        stageLoader = new StageLoader(rect);
+        stageLoader.getStage().getScene().getStylesheets().setAll(toBase64(".tooltip { -fx-show-delay: 200ms; }"));
+
+        Tooltip.install(rect, toolTip);
+
+        assertFalse(toolTip.isShowing());
+
+        assertTooltipShownAfter(rect, 200);
+        assertTooltipHiddenAfter(rect, 200);
+    }
+
+    @Test
+    public void testTooltipChangeShowDelayCss() {
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+
+        stageLoader = new StageLoader(rect);
+        stageLoader.getStage().getScene().getStylesheets().setAll(toBase64(".tooltip { -fx-show-delay: 200ms; }"));
+
+        Tooltip.install(rect, toolTip);
+
+        assertFalse(toolTip.isShowing());
+
+        assertTooltipShownAfter(rect, 200);
+        assertTooltipHiddenAfter(rect, 200);
+
+        stageLoader.getStage().getScene().getStylesheets().setAll(toBase64(".tooltip { -fx-show-delay: 450ms; }"));
+
+        assertTooltipShownAfter(rect, 450);
+        assertTooltipHiddenAfter(rect, 200);
+    }
+
+    private void assertTooltipShownAfter(Rectangle rect, int millis) {
+        MouseEvent mouseEvent = MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 1, 1);
+        rect.fireEvent(mouseEvent);
+
+        toolkit.setAnimationTime(toolkit.getCurrentTime() + millis);
+
+        assertTrue(toolTip.isShowing());
+    }
+
+    private void assertTooltipHiddenAfter(Rectangle rect, int millis) {
+        MouseEvent mouseEvent = MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_EXITED, -1, -1);
+        rect.fireEvent(mouseEvent);
+
+        toolkit.setAnimationTime(toolkit.getCurrentTime() + millis);
+
+        assertFalse(toolTip.isShowing());
+    }
+
+    private String toBase64(String css) {
+        return "data:base64," + Base64.getUrlEncoder().encodeToString(css.getBytes(StandardCharsets.UTF_8));
+    }
 
 }

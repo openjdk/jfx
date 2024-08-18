@@ -40,6 +40,9 @@ enum class AuxiliaryProcessType : uint8_t {
 #if ENABLE(GPU_PROCESS)
     GPU,
 #endif
+#if ENABLE(MODEL_PROCESS)
+    Model,
+#endif
 };
 
 WEBCORE_EXPORT void setAuxiliaryProcessType(AuxiliaryProcessType);
@@ -89,7 +92,6 @@ WEBCORE_EXPORT bool isSafari();
 bool isSolidStateNetworksDownloader();
 WEBCORE_EXPORT bool isVersions();
 WEBCORE_EXPORT bool isHRBlock();
-WEBCORE_EXPORT bool isIAdProducer();
 WEBCORE_EXPORT bool isEpsonSoftwareUpdater();
 WEBCORE_EXPORT bool isMimeoPhotoProject();
 
@@ -114,6 +116,7 @@ WEBCORE_EXPORT bool isEvernote();
 WEBCORE_EXPORT bool isFIFACompanion();
 WEBCORE_EXPORT bool isFeedly();
 WEBCORE_EXPORT bool isFirefox();
+WEBCORE_EXPORT bool isHimalaya();
 WEBCORE_EXPORT bool isHoYoLAB();
 WEBCORE_EXPORT bool isIMDb();
 WEBCORE_EXPORT bool isGmail();

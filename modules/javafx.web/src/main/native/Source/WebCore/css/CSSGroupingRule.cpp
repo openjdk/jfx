@@ -62,7 +62,7 @@ ExceptionOr<unsigned> CSSGroupingRule::insertRule(const String& ruleString, unsi
 
     if (index > m_groupRule->childRules().size()) {
         // IndexSizeError: Raised if the specified index is not a valid insertion point.
-        return Exception { IndexSizeError };
+        return Exception { ExceptionCode::IndexSizeError };
     }
 
     CSSStyleSheet* styleSheet = parentStyleSheet();
@@ -70,7 +70,7 @@ ExceptionOr<unsigned> CSSGroupingRule::insertRule(const String& ruleString, unsi
     RefPtr<StyleRuleBase> newRule = CSSParser::parseRule(parserContext(), styleSheet ? &styleSheet->contents() : nullptr, ruleString, isNestedContext);
     if (!newRule) {
         // SyntaxError: Raised if the specified rule has a syntax error and is unparsable.
-        return Exception { SyntaxError };
+        return Exception { ExceptionCode::SyntaxError };
     }
 
     if (newRule->isImportRule() || newRule->isNamespaceRule()) {
@@ -81,12 +81,12 @@ ExceptionOr<unsigned> CSSGroupingRule::insertRule(const String& ruleString, unsi
         // HierarchyRequestError: Raised if the rule cannot be inserted at the specified
         // index, e.g., if an @import rule is inserted after a standard rule set or other
         // at-rule.
-        return Exception { HierarchyRequestError };
+        return Exception { ExceptionCode::HierarchyRequestError };
     }
 
     // Nesting inside style rule only accepts style rule or group rule
     if (hasStyleRuleAncestor() && !newRule->isStyleRule() && !newRule->isGroupRule())
-        return Exception { HierarchyRequestError };
+        return Exception { ExceptionCode::HierarchyRequestError };
 
     CSSStyleSheet::RuleMutationScope mutationScope(this);
 
@@ -103,7 +103,7 @@ ExceptionOr<void> CSSGroupingRule::deleteRule(unsigned index)
     if (index >= m_groupRule->childRules().size()) {
         // IndexSizeError: Raised if the specified index does not correspond to a
         // rule in the media rule list.
-        return Exception { IndexSizeError };
+        return Exception { ExceptionCode::IndexSizeError };
     }
 
     CSSStyleSheet::RuleMutationScope mutationScope(this);
@@ -117,55 +117,46 @@ ExceptionOr<void> CSSGroupingRule::deleteRule(unsigned index)
     return { };
 }
 
-void CSSGroupingRule::appendCSSTextForItems(StringBuilder& builder) const
+void CSSGroupingRule::appendCSSTextForItemsInternal(StringBuilder& builder, StringBuilder& rules) const
 {
     builder.append(" {");
-
-    StringBuilder decls;
-    StringBuilder rules;
-    cssTextForDeclsAndRules(decls, rules);
-
-    if (decls.isEmpty() && rules.isEmpty()) {
+    if (rules.isEmpty()) {
         builder.append("\n}");
         return;
     }
 
-    if (rules.isEmpty()) {
-        builder.append(' ', static_cast<StringView>(decls), " }");
-        return;
-    }
-
-    if (decls.isEmpty()) {
         builder.append(static_cast<StringView>(rules), "\n}");
-        return;
-    }
-
-    builder.append('\n', "  ", static_cast<StringView>(decls), static_cast<StringView>(rules), "\n}");
-    return;
 }
 
-void CSSGroupingRule::cssTextForDeclsAndRules(StringBuilder& decls, StringBuilder& rules) const
+void CSSGroupingRule::appendCSSTextForItems(StringBuilder& builder) const
+{
+    StringBuilder rules;
+    cssTextForRules(rules);
+    appendCSSTextForItemsInternal(builder, rules);
+}
+
+void CSSGroupingRule::cssTextForRules(StringBuilder& rules) const
 {
     auto& childRules = m_groupRule->childRules();
-    for (unsigned index = 0 ; index < childRules.size() ; index++) {
-        // We put the declarations at the upper level when the rule:
-        // - is the first rule
-        // - has just "&" as original selector
-        // - has no child rules
-        if (!index) {
-            // It's the first rule.
-            auto childRule = childRules[index];
-            if (childRule->isStyleRuleWithNesting()) {
-                auto& nestedStyleRule = downcast<StyleRuleWithNesting>(childRule);
-                if (nestedStyleRule.originalSelectorList().hasOnlyNestingSelector() && nestedStyleRule.nestedRules().isEmpty()) {
-                    decls.append(nestedStyleRule.properties().asText());
-                    continue;
-                }
-            }
-        }
-        // Otherwise we print the child rule
+    for (unsigned index = 0; index < childRules.size(); index++) {
         auto wrappedRule = item(index);
         rules.append("\n  ", wrappedRule->cssText());
+                }
+}
+
+void CSSGroupingRule::appendCSSTextWithReplacementURLsForItems(StringBuilder& builder, const HashMap<String, String>& replacementURLStrings, const HashMap<RefPtr<CSSStyleSheet>, String>& replacementURLStringsForCSSStyleSheet) const
+{
+    StringBuilder rules;
+    cssTextForRulesWithReplacementURLs(rules, replacementURLStrings, replacementURLStringsForCSSStyleSheet);
+    appendCSSTextForItemsInternal(builder, rules);
+}
+
+void CSSGroupingRule::cssTextForRulesWithReplacementURLs(StringBuilder& rules, const HashMap<String, String>& replacementURLStrings, const HashMap<RefPtr<CSSStyleSheet>, String>& replacementURLStringsForCSSStyleSheet) const
+{
+    auto& childRules = m_groupRule->childRules();
+    for (unsigned index = 0; index < childRules.size(); index++) {
+        auto wrappedRule = item(index);
+        rules.append("\n  ", wrappedRule->cssTextWithReplacementURLs(replacementURLStrings, replacementURLStringsForCSSStyleSheet));
     }
 }
 

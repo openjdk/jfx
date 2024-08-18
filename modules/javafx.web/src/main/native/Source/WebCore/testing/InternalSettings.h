@@ -86,7 +86,6 @@ public:
     ExceptionOr<void> setAllowAnimationControlsOverride(bool);
 
     // DeprecatedGlobalSettings.
-    ExceptionOr<void> setFetchAPIKeepAliveEnabled(bool);
     ExceptionOr<void> setCustomPasteboardDataEnabled(bool);
 
     bool vp9DecoderEnabled() const;
@@ -127,7 +126,7 @@ private:
     explicit InternalSettings(Page*);
 
     Settings& settings() const;
-    static const char* supplementName();
+    static ASCIILiteral supplementName();
 
     class Backup {
     public:
@@ -156,7 +155,6 @@ private:
         WebCore::FontLoadTimingOverride m_fontLoadTimingOverride;
 
         // DeprecatedGlobalSettings
-        bool m_fetchAPIKeepAliveAPIEnabled;
         bool m_customPasteboardDataEnabled;
         bool m_originalMockScrollbarsEnabled;
 #if USE(AUDIO_SESSION)
@@ -167,7 +165,7 @@ private:
         bool m_shouldDeactivateAudioSession;
     };
 
-    WeakPtr<Page> m_page;
+    SingleThreadWeakPtr<Page> m_page;
     Backup m_backup;
 };
 

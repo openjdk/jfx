@@ -29,7 +29,7 @@ class SVGGraphicsElement;
 class RenderSVGInline : public RenderInline {
     WTF_MAKE_ISO_ALLOCATED(RenderSVGInline);
 public:
-    RenderSVGInline(SVGGraphicsElement&, RenderStyle&&);
+    RenderSVGInline(Type, SVGGraphicsElement&, RenderStyle&&);
 
     inline SVGGraphicsElement& graphicsElement() const;
 
@@ -38,7 +38,6 @@ private:
 
     ASCIILiteral renderName() const override { return "RenderSVGInline"_s; }
     bool requiresLayer() const final { return false; }
-    bool isSVGInline() const final { return true; }
 
     void updateFromStyle() final;
 
@@ -49,7 +48,7 @@ private:
     // this element, since we need it for filters.
     FloatRect objectBoundingBox() const final;
     FloatRect strokeBoundingBox() const final;
-    FloatRect repaintRectInLocalCoordinates() const final;
+    FloatRect repaintRectInLocalCoordinates(RepaintRectCalculation = RepaintRectCalculation::Fast) const final;
 
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
     LayoutPoint currentSVGLayoutLocation() const final { return { }; }
@@ -59,7 +58,10 @@ private:
 #endif
 
     LayoutRect clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const final;
+    RepaintRects rectsForRepaintingAfterLayout(const RenderLayerModelObject* repaintContainer, RepaintOutlineBounds) const final;
+
     std::optional<FloatRect> computeFloatVisibleRectInContainer(const FloatRect&, const RenderLayerModelObject* container, VisibleRectContext) const final;
+
     void mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const final;
     const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const final;
     void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const final;
@@ -72,4 +74,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGInline, isSVGInline())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGInline, isRenderSVGInline())

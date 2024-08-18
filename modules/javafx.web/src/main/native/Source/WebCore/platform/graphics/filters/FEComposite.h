@@ -27,7 +27,7 @@
 
 namespace WebCore {
 
-enum CompositeOperationType {
+enum class CompositeOperationType : uint8_t {
     FECOMPOSITE_OPERATOR_UNKNOWN    = 0,
     FECOMPOSITE_OPERATOR_OVER       = 1,
     FECOMPOSITE_OPERATOR_IN         = 2,
@@ -40,7 +40,7 @@ enum CompositeOperationType {
 
 class FEComposite : public FilterEffect {
 public:
-    WEBCORE_EXPORT static Ref<FEComposite> create(const CompositeOperationType&, float k1, float k2, float k3, float k4);
+    WEBCORE_EXPORT static Ref<FEComposite> create(const CompositeOperationType&, float k1, float k2, float k3, float k4, DestinationColorSpace = DestinationColorSpace::SRGB());
 
     bool operator==(const FEComposite&) const;
 
@@ -60,7 +60,7 @@ public:
     bool setK4(float);
 
 private:
-    FEComposite(const CompositeOperationType&, float k1, float k2, float k3, float k4);
+    FEComposite(const CompositeOperationType&, float k1, float k2, float k3, float k4, DestinationColorSpace);
 
     bool operator==(const FilterEffect& other) const override { return areEqual<FEComposite>(*this, other); }
 
@@ -68,7 +68,7 @@ private:
 
     FloatRect calculateImageRect(const Filter&, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
 
-    bool resultIsValidPremultiplied() const override { return m_type != FECOMPOSITE_OPERATOR_ARITHMETIC; }
+    bool resultIsValidPremultiplied() const override { return m_type != CompositeOperationType::FECOMPOSITE_OPERATOR_ARITHMETIC; }
 
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;
 
@@ -90,23 +90,4 @@ private:
 
 } // namespace WebCore
 
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::CompositeOperationType> {
-    using values = EnumValues<
-        WebCore::CompositeOperationType,
-
-        WebCore::FECOMPOSITE_OPERATOR_UNKNOWN,
-        WebCore::FECOMPOSITE_OPERATOR_OVER,
-        WebCore::FECOMPOSITE_OPERATOR_IN,
-        WebCore::FECOMPOSITE_OPERATOR_OUT,
-        WebCore::FECOMPOSITE_OPERATOR_ATOP,
-        WebCore::FECOMPOSITE_OPERATOR_XOR,
-        WebCore::FECOMPOSITE_OPERATOR_ARITHMETIC,
-        WebCore::FECOMPOSITE_OPERATOR_LIGHTER
-    >;
-};
-
-} // namespace WTF
-
-SPECIALIZE_TYPE_TRAITS_FILTER_EFFECT(FEComposite)
+SPECIALIZE_TYPE_TRAITS_FILTER_FUNCTION(FEComposite)

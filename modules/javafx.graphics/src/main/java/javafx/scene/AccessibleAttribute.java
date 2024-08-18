@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -71,22 +71,23 @@ public enum AccessibleAttribute {
     ACCELERATOR(KeyCombination.class),
 
     /**
-     * Returns the bounds for the node.
+     * Returns the bounds for the node, in screen coordinates.
      * <ul>
      * <li>Used by: Node </li>
      * <li>Needs notify: no </li>
-     * <li>Return Type: {@link Bounds} </li>
+     * <li>Return Type: {@link Bounds} in screen coordinates</li>
      * <li>Parameters: </li>
      * </ul>
      */
     BOUNDS(Bounds.class),
 
     /**
-     * Returns the array of bounding rectangles for the given character range.
+     * Returns the array of bounding rectangles for the given character range,
+     * in screen coordinates.
      * <ul>
      * <li>Used by: TextField and TextArea </li>
      * <li>Needs notify: no </li>
-     * <li>Return Type: {@link Bounds}[] </li>
+     * <li>Return Type: {@link Bounds}[] in screen coordinates</li>
      * <li>Parameters:
      *   <ul>
      *    <li>{@link Integer} the start offset </li>
@@ -518,7 +519,7 @@ public enum AccessibleAttribute {
      * <li>Return Type: {@link Node} </li>
      * <li>Parameters:
      *   <ul>
-     *   <li> {@link javafx.geometry.Point2D} the point location </li>
+     *   <li> {@link javafx.geometry.Point2D} the point location, in screen coordinates </li>
      *   </ul>
      * </li>
      * </ul>
@@ -533,7 +534,7 @@ public enum AccessibleAttribute {
      * <li>Return Type: {@link Integer} </li>
      * <li>Parameters:
      *   <ul>
-     *   <li> {@link javafx.geometry.Point2D} the point location </li>
+     *   <li> {@link javafx.geometry.Point2D} the point location, in screen coordinates </li>
      *   </ul>
      * </li>
      * </ul>
@@ -678,6 +679,7 @@ public enum AccessibleAttribute {
 
     /**
      * Returns the text selection end offset for the node.
+     * Selection end corresponds to the larger position in the selection range.
      * <ul>
      * <li>Used by: TextField and TextArea </li>
      * <li>Needs notify: yes </li>
@@ -689,6 +691,7 @@ public enum AccessibleAttribute {
 
     /**
      * Returns the text selection start offset for the node.
+     * Selection start corresponds to the smaller position in the selection range.
      * <ul>
      * <li>Used by: TextField and TextArea </li>
      * <li>Needs notify: yes </li>

@@ -37,16 +37,16 @@
 
 namespace WebCore {
 
-InsertTextCommand::InsertTextCommand(Document& document, const String& text, bool selectInsertedText, RebalanceType rebalanceType, EditAction editingAction)
-    : CompositeEditCommand(document, editingAction)
+InsertTextCommand::InsertTextCommand(Ref<Document>&& document, const String& text, bool selectInsertedText, RebalanceType rebalanceType, EditAction editingAction)
+    : CompositeEditCommand(WTFMove(document), editingAction)
     , m_text(text)
     , m_selectInsertedText(selectInsertedText)
     , m_rebalanceType(rebalanceType)
 {
 }
 
-InsertTextCommand::InsertTextCommand(Document& document, const String& text, Ref<TextInsertionMarkerSupplier>&& markerSupplier, EditAction editingAction)
-    : CompositeEditCommand(document, editingAction)
+InsertTextCommand::InsertTextCommand(Ref<Document>&& document, const String& text, Ref<TextInsertionMarkerSupplier>&& markerSupplier, EditAction editingAction)
+    : CompositeEditCommand(WTFMove(document), editingAction)
     , m_text(text)
     , m_selectInsertedText(false)
     , m_rebalanceType(RebalanceLeadingAndTrailingWhitespaces)
@@ -57,7 +57,7 @@ InsertTextCommand::InsertTextCommand(Document& document, const String& text, Ref
 Position InsertTextCommand::positionInsideTextNode(const Position& p)
 {
     Position pos = p;
-    if (isTabSpanTextNode(pos.anchorNode())) {
+    if (parentTabSpanNode(pos.anchorNode())) {
         auto textNode = document().createEditingTextNode(String { emptyString() });
         insertNodeAtTabSpanPosition(textNode.copyRef(), pos);
         return firstPositionInNode(textNode.ptr());
@@ -244,40 +244,37 @@ Position InsertTextCommand::insertTab(const Position& pos)
     if (insertPos.isNull())
         return pos;
 
-    Node* node = insertPos.containerNode();
+    RefPtr node = insertPos.containerNode();
     unsigned int offset = node->isTextNode() ? insertPos.offsetInContainerNode() : 0;
 
     // keep tabs coalesced in tab span
-    if (isTabSpanTextNode(node)) {
-        Ref<Text> textNode = downcast<Text>(*node);
+    if (parentTabSpanNode(node.get())) {
+        Ref textNode = downcast<Text>(node.releaseNonNull());
         insertTextIntoNode(textNode, offset, "\t"_s);
-        return Position(textNode.ptr(), offset + 1);
+        return Position(WTFMove(textNode), offset + 1);
     }
 
     // create new tab span
     auto spanNode = createTabSpanElement(document());
-    auto* spanNodePtr = spanNode.ptr();
 
     // place it
-    if (!is<Text>(*node))
-        insertNodeAt(WTFMove(spanNode), insertPos);
-    else {
-        Ref<Text> textNode = downcast<Text>(*node);
+    if (RefPtr textNode = dynamicDowncast<Text>(*node)) {
         if (offset >= textNode->length())
-            insertNodeAfter(WTFMove(spanNode), textNode);
+            insertNodeAfter(spanNode.copyRef(), *textNode);
         else {
             // split node to make room for the span
             // NOTE: splitTextNode uses textNode for the
             // second node in the split, so we need to
             // insert the span before it.
             if (offset > 0)
-                splitTextNode(textNode, offset);
-            insertNodeBefore(WTFMove(spanNode), textNode);
+                splitTextNode(*textNode, offset);
+            insertNodeBefore(spanNode.copyRef(), *textNode);
         }
-    }
+    } else
+        insertNodeAt(spanNode.copyRef(), insertPos);
 
     // return the position following the new tab
-    return lastPositionInNode(spanNodePtr);
+    return lastPositionInNode(spanNode.ptr());
 }
 
 }

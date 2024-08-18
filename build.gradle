@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -214,7 +214,7 @@ void setupTools(String name, Closure loader, Closure processor) {
     // then generate it. Once generated, we need to read the properties file to
     // help us define the defaults for this block of properties
     File propFile = file("$buildDir/${name}.properties");
-    if (!propFile.exists()) {
+    if (!propFile.exists() || propFile.length() == 0) {
         // Create the properties file
         propFile.getParentFile().mkdirs();
         propFile.createNewFile();
@@ -546,12 +546,46 @@ ext.IS_RELEASE = !ext.IS_DEBUG_JAVA
 defineProperty("MAVEN_PUBLISH", "false")
 ext.IS_MAVEN_PUBLISH = Boolean.parseBoolean(MAVEN_PUBLISH)
 
-// Defines the compiler warning levels to use. If empty, then no warnings are generated. If
-// not empty, then the expected syntax is as a space or comma separated list of names, such
-// as defined in the javac documentation.
-defineProperty("LINT", "none")
-ext.IS_LINT = LINT != "none"
+// Define the compiler lint warnings to enable.
+//
+// We define a separate set of options for normal classes, test classes
+// (including shims), and tool classes (including JSLC).
+// A project (module) can add project-specific lint options for each
+// category if desired.
+// extraLintOptions
+// extraToolLintOptions
+// extraTestLintOptions
+//
+// The lint options can be overriden on the command line. If set to the
+// empty string, then no lint warnings are enabled; even project-specific
+// lint options are disabled. If not empty, then it is parsed as a space
+// or comma separated list of names. See the javac documentation for a list
+// of valid lint options.
 
+def defaultLintOptions =
+        "removal" + "," +
+        "missing-explicit-ctor"
+defineProperty("LINT", defaultLintOptions)
+ext.IS_LINT = LINT != ""
+
+def defaultToolLintOptions = ""
+defineProperty("TOOL_LINT", defaultToolLintOptions)
+ext.IS_TOOL_LINT = TOOL_LINT != ""
+
+def defaultTestLintOptions = ""
+defineProperty("TEST_LINT", defaultTestLintOptions)
+ext.IS_TEST_LINT = TEST_LINT != ""
+
+defineProperty("JAVAC_WERROR", "true")
+ext.IS_JAVAC_WERROR = Boolean.parseBoolean(JAVAC_WERROR)
+
+defineProperty("TOOL_JAVAC_WERROR", "false")
+ext.IS_TOOL_JAVAC_WERROR = Boolean.parseBoolean(TOOL_JAVAC_WERROR)
+
+defineProperty("TEST_JAVAC_WERROR", "false")
+ext.IS_TEST_JAVAC_WERROR = Boolean.parseBoolean(TEST_JAVAC_WERROR)
+
+// Doclint options (all enabled by default)
 defineProperty("DOC_LINT", "all")
 ext.IS_DOC_LINT = DOC_LINT != ""
 
@@ -918,7 +952,6 @@ void ant(String conf,   // platform configuration
                     "INCLUDE"              : WINDOWS_VS_INCLUDE,
                     "LIB"                  : WINDOWS_VS_LIB,
                     "LIBPATH"              : WINDOWS_VS_LIBPATH,
-                    "DXSDK_DIR"            : WINDOWS_DXSDK_DIR,
                     "PATH"                 : WINDOWS_VS_PATH
             ]);
             commandLine "cmd", "/s", "/c", '"' + String.join(" ", cmdArgs) + '"'
@@ -933,7 +966,7 @@ List<String> computeLibraryPath(boolean working) {
     List<String> lp = []
 
     if (HAS_JAVAFX_MODULES) {
-        List<String> modsWithNative = [ 'graphics', 'media', 'web' ]
+        List<String> modsWithNative = [ 'javafx.graphics', 'javafx.media', 'javafx.web' ]
 
         // the build/modular-sdk area
         def platformPrefix = ""
@@ -942,7 +975,7 @@ List<String> computeLibraryPath(boolean working) {
         def modulesLibsDir = "${bundledSdkDir}/modules_libs"
 
         modsWithNative.each() { m ->
-            lp << cygpath("${modulesLibsDir}/javafx.${m}")
+            lp << cygpath("${modulesLibsDir}/${m}")
         }
     } else {
         def platformPrefix = ""
@@ -1676,6 +1709,16 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
         return
     }
 
+    if (!project.hasProperty("moduleName")) {
+        fail("Project ${project} has no module name")
+    }
+    projectDependencies.each { projName ->
+        def dep = project.project(":$projName")
+        if (!dep.hasProperty("moduleName")) {
+            fail("${project} dependency ${dep} has no module name")
+        }
+    }
+
     project.apply plugin: 'maven-publish'
 
     project.group = MAVEN_GROUP_ID
@@ -1726,7 +1769,8 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
         project.publishing {
             publications {
                 maven(MavenPublication) {
-                    artifactId = "javafx-${project.name}"
+                    def artifactName = project.moduleName.replace('.', '-')
+                    artifactId = artifactName
 
                     afterEvaluate {
                         artifact project.tasks."moduleEmptyPublicationJar$t.capital"
@@ -1745,15 +1789,17 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
 
                         Node projectDependencyPlatform = dependencies.appendNode("dependency")
                         projectDependencyPlatform.appendNode("groupId", MAVEN_GROUP_ID)
-                        projectDependencyPlatform.appendNode("artifactId", "javafx-${project.name}")
+                        projectDependencyPlatform.appendNode("artifactId", artifactName)
                         projectDependencyPlatform.appendNode("version", MAVEN_VERSION)
                         projectDependencyPlatform.appendNode("classifier", "\${javafx.platform}")
 
                         if (!projectDependencies.empty) {
-                            projectDependencies.each { dep ->
+                            projectDependencies.each { projName ->
+                                def dep = project.project(":$projName")
+                                def depName = dep.moduleName.replace('.', '-')
                                 Node projectDependency = dependencies.appendNode("dependency")
                                 projectDependency.appendNode("groupId", MAVEN_GROUP_ID)
-                                projectDependency.appendNode("artifactId", "javafx-$dep")
+                                projectDependency.appendNode("artifactId", depName)
                                 projectDependency.appendNode("version", MAVEN_VERSION)
                            }
                         }
@@ -2159,6 +2205,11 @@ project(":base") {
     project.ext.moduleRuntime = true
     project.ext.moduleName = "javafx.base"
 
+// TODO: the following is an example of enabling module-specific lint opts
+//    project.ext.extraLintOptions =
+//        "deprecation" + "," +
+//        "divzero"
+
     sourceSets {
         main
         shims {
@@ -2227,6 +2278,10 @@ project(":graphics") {
     project.ext.includeSources = true
     project.ext.moduleRuntime = true
     project.ext.moduleName = "javafx.graphics"
+
+    // FIXME: Remove this setting when JDK-8334137 is fixed
+    // Disable javac -Werror until we stop using sun.misc.Unsafe
+    project.ext.disableJavacWerror = true
 
     getConfigurations().create("antlr");
 
@@ -2759,6 +2814,11 @@ project(":swing") {
     // excluded by "--release NN". This will fall back to using
     // "-source NN -target NN" for this module.
     project.ext.skipJavaCompilerOptionRelease = true
+
+    // We also need to disable the implicitly-enabled lint warning that
+    // results from the above
+    project.ext.extraLintOptions =
+        "-options"
 
     tasks.all {
         if (!COMPILE_SWING) it.enabled = false
@@ -3645,7 +3705,7 @@ project(":web") {
             enabled = IS_COMPILE_WEBKIT
 
             from configurations.icu.files
-            into "$webkitOutputDir/$webkitConfig/icu/data"
+            into "$webkitOutputDir/icu/data"
         }
 
         def compileNativeTask = task("compileNative${t.capital}", dependsOn: [compileJava, getICUFile]) {
@@ -3742,7 +3802,7 @@ project(":web") {
         def copyDumpTreeNativeTask = task("copyDumpTreeNative${t.capital}", type: Copy,
                 dependsOn: [ compileNativeTask]) {
             def library = rootProject.ext[t.upper].library
-            from "$webkitOutputDir/$webkitConfig/$dllDir/${library('DumpRenderTreeJava')}"
+            from "$webkitOutputDir/$dllDir/${library('DumpRenderTreeJava')}"
             into "$buildDir/test/${t.name}"
         }
 
@@ -3750,7 +3810,7 @@ project(":web") {
                 dependsOn: [compileNativeTask, copyDumpTreeNativeTask]) {
             enabled =  (IS_COMPILE_WEBKIT)
             def library = rootProject.ext[t.upper].library
-            from "$webkitOutputDir/$webkitConfig/$dllDir/${library('jfxwebkit')}"
+            from "$webkitOutputDir/$dllDir/${library('jfxwebkit')}"
             into "$buildDir/libs/${t.name}"
         }
 
@@ -3761,7 +3821,7 @@ project(":web") {
                 if (webkitProperties.rcFlags) {
                     rcParams.addAll(webkitProperties.rcFlags)
                 }
-                output(file("$webkitOutputDir/$webkitConfig/WebCore/obj"))
+                output(file("$webkitOutputDir/WebCore/obj"))
             }
             compileNativeTask.dependsOn rcTask
         }
@@ -4043,6 +4103,20 @@ project(":systemTests") {
     addValidateSourceSets(project, nonModSrcSets, modSrcSets)
 }
 
+void setupLintOptions(Task compile, String lintOpts, String extraLintOpts) {
+    lintOpts.split("[, ]").each { s ->
+        compile.options.compilerArgs += "-Xlint:$s"
+    }
+
+    if (extraLintOpts != "") {
+        extraLintOpts.split("[, ]").each { s ->
+            compile.options.compilerArgs += "-Xlint:$s"
+        }
+    }
+
+    compile.options.compilerArgs += [ "-Xmaxwarns", "1000" ]
+}
+
 allprojects {
     // The following block is a workaround for the fact that presently Gradle
     // can't set the -XDignore.symbol.file flag, because it appears that the
@@ -4071,18 +4145,64 @@ allprojects {
 
         compile.options.forkOptions.executable = JAVAC
 
-        compile.options.warnings = IS_LINT
-
         compile.options.compilerArgs += ["-XDignore.symbol.file", "-encoding", "UTF-8"]
+        compile.options.compilerArgs += [ "-Xmaxerrs", "1000" ]
 
         // we use a custom javadoc command
         project.javadoc.enabled = false
 
-        // Add in the -Xlint options
-        if (IS_LINT) {
-            LINT.split("[, ]").each { s ->
-                compile.options.compilerArgs += "-Xlint:$s"
+        def disableJavacWerror =
+                project.hasProperty('disableJavacWerror') &&
+                project.ext.disableJavacWerror
+
+        if (compile.name == "compileJava" ||
+            compile.name == "compileFullJava" ||
+            compile.name.startsWith("compileJavaDOMBinding")) {
+
+            // Add in the -Xlint options
+            compile.options.warnings = IS_LINT
+            if (IS_LINT) {
+                def extraLintOpts = project.hasProperty("extraLintOptions") ?
+                                    project.ext.extraLintOptions : ""
+                setupLintOptions(compile, LINT, extraLintOpts);
+
+                if (IS_JAVAC_WERROR && !disableJavacWerror) {
+                    compile.options.compilerArgs += "-Werror"
+                }
             }
+        } else if (compile.name == "compileJslcJava" ||
+            compile.name == "compileDecoraCompilers" ||
+            compile.name == "compilePrismCompilers" ||
+            compile.name == "compileToolsJava") {
+
+            // Add in the -Xlint options
+            compile.options.warnings = IS_TOOL_LINT
+            if (IS_TOOL_LINT) {
+                def extraLintOpts = project.hasProperty("extraToolLintOptions") ?
+                                    project.ext.extraToolLintOptions : ""
+                setupLintOptions(compile, TOOL_LINT, extraLintOpts);
+
+                if (IS_TOOL_JAVAC_WERROR && !disableJavacWerror) {
+                    compile.options.compilerArgs += "-Werror"
+                }
+            }
+        } else if (compile.name == "compileShimsJava" ||
+            compile.name.startsWith("compileTest")) {
+
+            // Add in the -Xlint options
+            compile.options.warnings = IS_TEST_LINT
+            if (IS_TEST_LINT) {
+                def extraLintOpts = project.hasProperty("extraTestLintOptions") ?
+                                    project.ext.extraTestLintOptions : ""
+                setupLintOptions(compile, TEST_LINT, extraLintOpts);
+
+                if (IS_TEST_JAVAC_WERROR && !disableJavacWerror) {
+                    compile.options.compilerArgs += "-Werror"
+                }
+            }
+        } else {
+            logger.info("Unknown compilation task: ${project}:${compile.name}")
+            compile.options.warnings = false
         }
     } // tasks with javaCompile
 
@@ -5268,7 +5388,7 @@ compileTargets { t ->
             }
             if (IS_WINDOWS) {
                 from ("${graphicsProject.buildDir}/libs/prismD3D/${t.name}/${library(targetProperties.prismD3D.lib)}");
-                targetProperties.VS2017DLLs.each { vslib ->
+                targetProperties.VSDLLs.each { vslib ->
                     from ("$vslib");
                 }
                 targetProperties.WinSDKDLLs.each { winsdklib ->
@@ -5283,7 +5403,7 @@ compileTargets { t ->
                     inputFiles.include("*.dylib")
                     inputFiles.include("*.so")
                     // FIXME: if we ever need to strip on Windows platforms, we must
-                    // exclude the Microsoft DLLs (VS2017DLLNames and WinSDKDLLNames)
+                    // exclude the Microsoft DLLs (VSDLLNames and WinSDKDLLNames)
 
                     inputFiles.each { file ->
                         exec {
@@ -5300,7 +5420,7 @@ compileTargets { t ->
                     inputFiles.include("*.dylib")
                     inputFiles.include("*.so")
                     // FIXME: if we ever need to sign on Windows platforms, we must
-                    // exclude the Microsoft DLLs (VS2017DLLNames and WinSDKDLLNames)
+                    // exclude the Microsoft DLLs (VSDLLNames and WinSDKDLLNames)
 
                     inputFiles.each { file ->
                         exec {
@@ -5375,7 +5495,7 @@ compileTargets { t ->
                     inputFiles.include("*.dylib")
                     inputFiles.include("*.so")
                     // FIXME: if we ever need to sign on Windows platforms, we must
-                    // exclude the Microsoft DLLs (VS2017DLLNames and WinSDKDLLNames)
+                    // exclude the Microsoft DLLs (VSDLLNames and WinSDKDLLNames)
 
                     inputFiles.each { file ->
                         exec {
@@ -5428,7 +5548,7 @@ compileTargets { t ->
                     inputFiles.include("*.dylib")
                     inputFiles.include("*.so")
                     // FIXME: if we ever need to sign on Windows platforms, we must
-                    // exclude the Microsoft DLLs (VS2017DLLNames and WinSDKDLLNames)
+                    // exclude the Microsoft DLLs (VSDLLNames and WinSDKDLLNames)
 
                     inputFiles.each { file ->
                         exec {

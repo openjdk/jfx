@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,6 +40,7 @@
 #include "StubInfoSummary.h"
 #include <wtf/Box.h>
 #include <wtf/Lock.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
@@ -53,37 +54,49 @@ class AccessCase;
 class AccessGenerationResult;
 class PolymorphicAccess;
 
+#define JSC_FOR_EACH_STRUCTURE_STUB_INFO_ACCESS_TYPE(macro) \
+    macro(GetById) \
+    macro(GetByIdWithThis) \
+    macro(GetByIdDirect) \
+    macro(TryGetById) \
+    macro(GetByVal) \
+    macro(GetByValWithThis) \
+    macro(PutByIdStrict) \
+    macro(PutByIdSloppy) \
+    macro(PutByIdDirectStrict) \
+    macro(PutByIdDirectSloppy) \
+    macro(PutByValStrict) \
+    macro(PutByValSloppy) \
+    macro(PutByValDirectStrict) \
+    macro(PutByValDirectSloppy) \
+    macro(DefinePrivateNameByVal) \
+    macro(DefinePrivateNameById) \
+    macro(SetPrivateNameByVal) \
+    macro(SetPrivateNameById) \
+    macro(InById) \
+    macro(InByVal) \
+    macro(HasPrivateName) \
+    macro(HasPrivateBrand) \
+    macro(InstanceOf) \
+    macro(DeleteByIdStrict) \
+    macro(DeleteByIdSloppy) \
+    macro(DeleteByValStrict) \
+    macro(DeleteByValSloppy) \
+    macro(GetPrivateName) \
+    macro(GetPrivateNameById) \
+    macro(CheckPrivateBrand) \
+    macro(SetPrivateBrand) \
+
+
 enum class AccessType : int8_t {
-    GetById,
-    GetByIdWithThis,
-    GetByIdDirect,
-    TryGetById,
-    GetByVal,
-    GetByValWithThis,
-    PutByIdStrict,
-    PutByIdSloppy,
-    PutByIdDirectStrict,
-    PutByIdDirectSloppy,
-    PutByValStrict,
-    PutByValSloppy,
-    PutByValDirectStrict,
-    PutByValDirectSloppy,
-    DefinePrivateNameByVal,
-    DefinePrivateNameById,
-    SetPrivateNameByVal,
-    SetPrivateNameById,
-    InById,
-    InByVal,
-    HasPrivateName,
-    HasPrivateBrand,
-    InstanceOf,
-    DeleteByID,
-    DeleteByVal,
-    GetPrivateName,
-    GetPrivateNameById,
-    CheckPrivateBrand,
-    SetPrivateBrand,
+#define JSC_DEFINE_ACCESS_TYPE(name) name,
+    JSC_FOR_EACH_STRUCTURE_STUB_INFO_ACCESS_TYPE(JSC_DEFINE_ACCESS_TYPE)
+#undef JSC_DEFINE_ACCESS_TYPE
 };
+
+#define JSC_INCREMENT_ACCESS_TYPE(name) + 1
+static constexpr unsigned numberOfAccessTypes = 0 JSC_FOR_EACH_STRUCTURE_STUB_INFO_ACCESS_TYPE(JSC_INCREMENT_ACCESS_TYPE);
+#undef JSC_INCREMENT_ACCESS_TYPE
 
 enum class CacheType : int8_t {
     Unset,
@@ -100,7 +113,7 @@ struct BaselineUnlinkedStructureStubInfo;
 
 class StructureStubInfo {
     WTF_MAKE_NONCOPYABLE(StructureStubInfo);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(StructureStubInfo);
 public:
     StructureStubInfo(AccessType accessType, CodeOrigin codeOrigin)
         : codeOrigin(codeOrigin)
@@ -115,11 +128,11 @@ public:
 
     ~StructureStubInfo();
 
-    void initGetByIdSelf(const ConcurrentJSLockerBase&, CodeBlock*, Structure* inlineAccessBaseStructure, PropertyOffset, CacheableIdentifier);
+    void initGetByIdSelf(const ConcurrentJSLockerBase&, CodeBlock*, Structure* inlineAccessBaseStructure, PropertyOffset);
     void initArrayLength(const ConcurrentJSLockerBase&);
     void initStringLength(const ConcurrentJSLockerBase&);
-    void initPutByIdReplace(const ConcurrentJSLockerBase&, CodeBlock*, Structure* inlineAccessBaseStructure, PropertyOffset, CacheableIdentifier);
-    void initInByIdSelf(const ConcurrentJSLockerBase&, CodeBlock*, Structure* inlineAccessBaseStructure, PropertyOffset, CacheableIdentifier);
+    void initPutByIdReplace(const ConcurrentJSLockerBase&, CodeBlock*, Structure* inlineAccessBaseStructure, PropertyOffset);
+    void initInByIdSelf(const ConcurrentJSLockerBase&, CodeBlock*, Structure* inlineAccessBaseStructure, PropertyOffset);
 
     AccessGenerationResult addAccessCase(const GCSafeConcurrentJSLocker&, JSGlobalObject*, CodeBlock*, ECMAMode, CacheableIdentifier, RefPtr<AccessCase>);
 
@@ -128,7 +141,7 @@ public:
     void deref();
     void aboutToDie();
 
-    void initializeFromUnlinkedStructureStubInfo(const BaselineUnlinkedStructureStubInfo&);
+    void initializeFromUnlinkedStructureStubInfo(VM&, const BaselineUnlinkedStructureStubInfo&);
     void initializeFromDFGUnlinkedStructureStubInfo(const DFG::UnlinkedStructureStubInfo&);
 
     DECLARE_VISIT_AGGREGATE;
@@ -144,22 +157,7 @@ public:
 
     static StubInfoSummary summary(VM&, const StructureStubInfo*);
 
-    CacheableIdentifier identifier()
-    {
-        switch (m_cacheType) {
-        case CacheType::Unset:
-        case CacheType::ArrayLength:
-        case CacheType::StringLength:
-        case CacheType::Stub:
-            RELEASE_ASSERT_NOT_REACHED();
-            break;
-        case CacheType::PutByIdReplace:
-        case CacheType::InByIdSelf:
-        case CacheType::GetByIdSelf:
-            break;
-        }
-        return m_identifier;
-    }
+    CacheableIdentifier identifier() const { return m_identifier; }
 
     bool containsPC(void* pc) const;
 
@@ -239,6 +237,9 @@ public:
     {
         return m_inlineAccessBaseStructureID.get();
     }
+
+    CallLinkInfo* callLinkInfoAt(const ConcurrentJSLocker&, unsigned index);
+
 private:
     ALWAYS_INLINE bool considerRepatchingCacheImpl(VM& vm, CodeBlock* codeBlock, Structure* structure, CacheableIdentifier impl)
     {
@@ -342,10 +343,7 @@ private:
             return hash;
         }
 
-        friend bool operator==(const BufferedStructure& a, const BufferedStructure& b)
-        {
-            return a.m_structure == b.m_structure && a.m_byValId == b.m_byValId;
-        }
+        friend bool operator==(const BufferedStructure&, const BufferedStructure&) = default;
 
         struct Hash {
             static unsigned hash(const BufferedStructure& key)
@@ -379,6 +377,8 @@ public:
     static ptrdiff_t offsetOfSlowPathStartLocation() { return OBJECT_OFFSETOF(StructureStubInfo, slowPathStartLocation); }
     static ptrdiff_t offsetOfSlowOperation() { return OBJECT_OFFSETOF(StructureStubInfo, m_slowOperation); }
     static ptrdiff_t offsetOfCountdown() { return OBJECT_OFFSETOF(StructureStubInfo, countdown); }
+    static ptrdiff_t offsetOfCallSiteIndex() { return OBJECT_OFFSETOF(StructureStubInfo, callSiteIndex); }
+    static ptrdiff_t offsetOfHandler() { return OBJECT_OFFSETOF(StructureStubInfo, m_handler); }
 
     GPRReg thisGPR() const { return m_extraGPR; }
     GPRReg prototypeGPR() const { return m_extraGPR; }
@@ -410,15 +410,7 @@ public:
     CodeOrigin codeOrigin { };
     PropertyOffset byIdSelfOffset;
     WriteBarrierStructureID m_inlineAccessBaseStructureID;
-    std::unique_ptr<PolymorphicAccess> m_stub;
-private:
     CacheableIdentifier m_identifier;
-    // Represents those structures that already have buffered AccessCases in the PolymorphicAccess.
-    // Note that it's always safe to clear this. If we clear it prematurely, then if we see the same
-    // structure again during this buffering countdown, we will create an AccessCase object for it.
-    // That's not so bad - we'll get rid of the redundant ones once we regenerate.
-    HashSet<BufferedStructure, BufferedStructure::Hash, BufferedStructure::KeyTraits> m_bufferedStructures WTF_GUARDED_BY_LOCK(m_bufferedStructuresLock);
-public:
     // This is either the start of the inline IC for *byId caches. or the location of patchable jump for 'instanceof' caches.
     // If useDataIC is true, then it is nullptr.
     CodeLocationLabel<JITStubRoutinePtrTag> startLocation;
@@ -431,6 +423,15 @@ public:
     };
 
     CodePtr<JITStubRoutinePtrTag> m_codePtr;
+    std::unique_ptr<PolymorphicAccess> m_stub;
+    RefPtr<InlineCacheHandler> m_handler;
+private:
+    // Represents those structures that already have buffered AccessCases in the PolymorphicAccess.
+    // Note that it's always safe to clear this. If we clear it prematurely, then if we see the same
+    // structure again during this buffering countdown, we will create an AccessCase object for it.
+    // That's not so bad - we'll get rid of the redundant ones once we regenerate.
+    HashSet<BufferedStructure, BufferedStructure::Hash, BufferedStructure::KeyTraits> m_bufferedStructures WTF_GUARDED_BY_LOCK(m_bufferedStructuresLock);
+public:
 
     ScalarRegisterSet usedRegisters;
 
@@ -483,7 +484,7 @@ inline CodeOrigin getStructureStubInfoCodeOrigin(StructureStubInfo& structureStu
     return structureStubInfo.codeOrigin;
 }
 
-inline auto appropriateOptimizingGetByIdFunction(AccessType type) -> decltype(&operationGetByIdOptimize)
+inline auto appropriateGetByIdOptimizeFunction(AccessType type) -> decltype(&operationGetByIdOptimize)
 {
     switch (type) {
     case AccessType::GetById:
@@ -501,7 +502,7 @@ inline auto appropriateOptimizingGetByIdFunction(AccessType type) -> decltype(&o
     }
 }
 
-inline auto appropriateGenericGetByIdFunction(AccessType type) -> decltype(&operationGetByIdGeneric)
+inline auto appropriateGetByIdGenericFunction(AccessType type) -> decltype(&operationGetByIdGeneric)
 {
     switch (type) {
     case AccessType::GetById:
@@ -519,6 +520,29 @@ inline auto appropriateGenericGetByIdFunction(AccessType type) -> decltype(&oper
     }
 }
 
+inline auto appropriatePutByIdOptimizeFunction(AccessType type) -> decltype(&operationPutByIdStrictOptimize)
+{
+    switch (type) {
+    case AccessType::PutByIdStrict:
+        return operationPutByIdStrictOptimize;
+    case AccessType::PutByIdSloppy:
+        return operationPutByIdSloppyOptimize;
+    case AccessType::PutByIdDirectStrict:
+        return operationPutByIdDirectStrictOptimize;
+    case AccessType::PutByIdDirectSloppy:
+        return operationPutByIdDirectSloppyOptimize;
+    case AccessType::DefinePrivateNameById:
+        return operationPutByIdDefinePrivateFieldStrictOptimize;
+    case AccessType::SetPrivateNameById:
+        return operationPutByIdSetPrivateFieldStrictOptimize;
+    default:
+        break;
+    }
+    // Make win port compiler happy
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
+}
+
 struct UnlinkedStructureStubInfo {
 
     AccessType accessType;
@@ -529,12 +553,167 @@ struct UnlinkedStructureStubInfo {
     bool prototypeIsKnownObject : 1 { false };
     bool canBeMegamorphic : 1 { false };
     bool isEnumerator : 1 { false };
+    CacheableIdentifier m_identifier; // This only comes from already marked one. Thus, we do not mark it via GC.
     CodeLocationLabel<JSInternalPtrTag> doneLocation;
     CodeLocationLabel<JITStubRoutinePtrTag> slowPathStartLocation;
 };
 
-struct BaselineUnlinkedStructureStubInfo : UnlinkedStructureStubInfo {
+struct BaselineUnlinkedStructureStubInfo : JSC::UnlinkedStructureStubInfo {
     BytecodeIndex bytecodeIndex;
+};
+
+class SharedJITStubSet {
+    WTF_MAKE_FAST_ALLOCATED(SharedJITStubSet);
+public:
+    SharedJITStubSet() = default;
+
+    struct Hash {
+        struct Key {
+            Key() = default;
+
+            Key(GPRReg baseGPR, GPRReg valueGPR, GPRReg extraGPR, GPRReg extra2GPR, GPRReg stubInfoGPR, GPRReg arrayProfileGPR, ScalarRegisterSet usedRegisters, PolymorphicAccessJITStubRoutine* wrapped)
+                : m_wrapped(wrapped)
+                , m_baseGPR(baseGPR)
+                , m_valueGPR(valueGPR)
+                , m_extraGPR(extraGPR)
+                , m_extra2GPR(extra2GPR)
+                , m_stubInfoGPR(stubInfoGPR)
+                , m_arrayProfileGPR(arrayProfileGPR)
+                , m_usedRegisters(usedRegisters)
+            { }
+
+            Key(WTF::HashTableDeletedValueType)
+                : m_wrapped(bitwise_cast<PolymorphicAccessJITStubRoutine*>(static_cast<uintptr_t>(1)))
+            { }
+
+            bool isHashTableDeletedValue() const { return m_wrapped == bitwise_cast<PolymorphicAccessJITStubRoutine*>(static_cast<uintptr_t>(1)); }
+
+            friend bool operator==(const Key&, const Key&) = default;
+
+            PolymorphicAccessJITStubRoutine* m_wrapped { nullptr };
+            GPRReg m_baseGPR;
+            GPRReg m_valueGPR;
+            GPRReg m_extraGPR;
+            GPRReg m_extra2GPR;
+            GPRReg m_stubInfoGPR;
+            GPRReg m_arrayProfileGPR;
+            ScalarRegisterSet m_usedRegisters;
+        };
+
+        using KeyTraits = SimpleClassHashTraits<Key>;
+
+        static unsigned hash(const Key& p)
+        {
+            if (!p.m_wrapped)
+                return 1;
+            return p.m_wrapped->hash();
+        }
+
+        static bool equal(const Key& a, const Key& b)
+        {
+            return a == b;
+        }
+
+        static constexpr bool safeToCompareToEmptyOrDeleted = false;
+    };
+
+    struct Searcher {
+        struct Translator {
+            static unsigned hash(const Searcher& searcher)
+            {
+                return PolymorphicAccessJITStubRoutine::computeHash(searcher.m_cases, searcher.m_weakStructures);
+            }
+
+            static bool equal(const Hash::Key a, const Searcher& b)
+            {
+                if (a.m_baseGPR == b.m_baseGPR
+                    && a.m_valueGPR == b.m_valueGPR
+                    && a.m_extraGPR == b.m_extraGPR
+                    && a.m_extra2GPR == b.m_extra2GPR
+                    && a.m_stubInfoGPR == b.m_stubInfoGPR
+                    && a.m_arrayProfileGPR == b.m_arrayProfileGPR
+                    && a.m_usedRegisters == b.m_usedRegisters) {
+                    // FIXME: The ordering of cases does not matter for sharing capabilities.
+                    // We can potentially increase success rate by making this comparison / hashing non ordering sensitive.
+                    const auto& aCases = a.m_wrapped->cases();
+                    const auto& bCases = b.m_cases;
+                    if (aCases.size() != bCases.size())
+                        return false;
+                    for (unsigned index = 0; index < bCases.size(); ++index) {
+                        if (!AccessCase::canBeShared(*aCases[index], *bCases[index]))
+                            return false;
+                    }
+                    const auto& aWeak = a.m_wrapped->weakStructures();
+                    const auto& bWeak = b.m_weakStructures;
+                    if (aWeak.size() != bWeak.size())
+                        return false;
+                    for (unsigned i = 0, size = aWeak.size(); i < size; ++i) {
+                        if (aWeak[i] != bWeak[i])
+                            return false;
+                    }
+                    return true;
+                }
+                return false;
+            }
+        };
+
+        GPRReg m_baseGPR;
+        GPRReg m_valueGPR;
+        GPRReg m_extraGPR;
+        GPRReg m_extra2GPR;
+        GPRReg m_stubInfoGPR;
+        GPRReg m_arrayProfileGPR;
+        ScalarRegisterSet m_usedRegisters;
+        const FixedVector<RefPtr<AccessCase>>& m_cases;
+        const FixedVector<StructureID>& m_weakStructures;
+    };
+
+    struct PointerTranslator {
+        static unsigned hash(const PolymorphicAccessJITStubRoutine* stub)
+        {
+            return stub->hash();
+        }
+
+        static bool equal(const Hash::Key& key, const PolymorphicAccessJITStubRoutine* stub)
+        {
+            return key.m_wrapped == stub;
+        }
+    };
+
+    void add(Hash::Key&& key)
+    {
+        m_stubs.add(WTFMove(key));
+    }
+
+    void remove(PolymorphicAccessJITStubRoutine* stub)
+    {
+        auto iter = m_stubs.find<PointerTranslator>(stub);
+        if (iter != m_stubs.end())
+            m_stubs.remove(iter);
+    }
+
+    PolymorphicAccessJITStubRoutine* find(const Searcher& searcher)
+    {
+        auto entry = m_stubs.find<SharedJITStubSet::Searcher::Translator>(searcher);
+        if (entry != m_stubs.end())
+            return entry->m_wrapped;
+        return nullptr;
+    }
+
+    RefPtr<PolymorphicAccessJITStubRoutine> getMegamorphic(AccessType) const;
+    void setMegamorphic(AccessType, Ref<PolymorphicAccessJITStubRoutine>);
+
+    RefPtr<InlineCacheHandler> getSlowPathHandler(AccessType) const;
+    void setSlowPathHandler(AccessType, Ref<InlineCacheHandler>);
+
+private:
+    HashSet<Hash::Key, Hash, Hash::KeyTraits> m_stubs;
+
+    RefPtr<PolymorphicAccessJITStubRoutine> m_getByValMegamorphic;
+    RefPtr<PolymorphicAccessJITStubRoutine> m_getByValWithThisMegamorphic;
+    RefPtr<PolymorphicAccessJITStubRoutine> m_putByValMegamorphic;
+    std::array<RefPtr<InlineCacheHandler>, numberOfAccessTypes> m_fallbackHandlers { };
+    std::array<RefPtr<InlineCacheHandler>, numberOfAccessTypes> m_slowPathHandlers { };
 };
 
 #else
