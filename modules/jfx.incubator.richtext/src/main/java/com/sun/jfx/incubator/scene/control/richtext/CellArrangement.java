@@ -29,7 +29,6 @@ package com.sun.jfx.incubator.scene.control.richtext;
 
 import java.util.ArrayList;
 import javafx.collections.ObservableList;
-import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.layout.Pane;
@@ -44,13 +43,16 @@ import jfx.incubator.scene.control.richtext.TextPos;
  * Manages TextCells in a sliding window, comprised of the visible area and some number of screenfuls
  * before and after the visible area, for the purposes of layout.
  * The purpose is to estimating the average paragraph height, and to support relative navigation.
+ * <p>
+ * Uses {@code Vflow.content} coordinates.
  */
 public class CellArrangement {
     private final ArrayList<TextCell> cells = new ArrayList<>(32);
     private final double flowWidth;
     private final double flowHeight;
     private final int lineCount;
-    private final Insets contentPadding;
+    private final double contentPaddingLeft; // snapped
+    private final double contentPaddingTop; // snapped
     private final Origin origin;
     private int visibleCount;
     private int bottomCount;
@@ -60,28 +62,30 @@ public class CellArrangement {
     private Node[] left;
     private Node[] right;
 
-    public CellArrangement(VFlow f) {
+    public CellArrangement(VFlow f, double contentPaddingLeft, double contentPaddingTop) {
         this.flowWidth = f.getWidth();
         this.flowHeight = f.getViewPortHeight();
         this.origin = f.getOrigin();
         this.lineCount = f.getParagraphCount();
-        this.contentPadding = f.contentPadding();
+        this.contentPaddingLeft = contentPaddingLeft;
+        this.contentPaddingTop = contentPaddingTop;
     }
 
     // TODO not called right now, use it to skip reflow when not necessary
-    public boolean isValid(VFlow f) {
+    public boolean isValid(VFlow f, double padLeft, double padTop) {
         return
             (f.getWidth() == flowWidth) &&
             (f.getHeight() == flowHeight) &&
             (f.topCellIndex() == origin.index()) &&
-            (RichUtils.equals(f.contentPadding(), contentPadding));
+            (contentPaddingLeft == padLeft) &&
+            (contentPaddingTop == padTop);
     }
 
     @Override
     public String toString() {
         return
             "CellArrangement{" +
-            origin +
+            "origin=" + origin +
             ", topCount=" + topCount() +
             ", visible=" + getVisibleCellCount() +
             ", bottomCount=" + bottomCount +
@@ -128,19 +132,17 @@ public class CellArrangement {
         TextCell cell = getCell(ix);
         if (cell != null) {
             Region r = cell.getContent();
-            Insets pad = r.getPadding();
-            double y = cellY - cell.getY() - pad.getTop();
+            double y = cellY - cell.getY() - r.snappedTopInset();
             if (y < 0) {
                 return new TextPos(cell.getIndex(), 0, 0, true);
             } else if (y < cell.getCellHeight()) {
-                if (r instanceof TextFlow t) {
-                    double x = cellX - pad.getLeft();
+                if (r instanceof TextFlow f) {
+                    double x = cellX - f.snappedLeftInset();
                     Point2D p = new Point2D(x - r.getLayoutX(), y - r.getLayoutY());
-                    HitInfo h = t.hitTest(p);
+                    HitInfo h = f.hitTest(p);
                     int ii = h.getInsertionIndex();
                     int ci = h.getCharIndex();
                     boolean leading = h.isLeading();
-                    //System.out.println("CellArrangmenet.getTextPos ix=" + ii + " ci=" + ci + " leading=" + leading); // FIX
                     return new TextPos(cell.getIndex(), ii, ci, leading);
                 } else {
                     return new TextPos(cell.getIndex(), 0, 0, true);
@@ -189,6 +191,12 @@ public class CellArrangement {
         return null;
     }
 
+    /**
+     * Creates a CaretInfo.
+     * @param target the target region (vflow.content)
+     * @param p the text position
+     * @return the new CaretInfo
+     */
     public CaretInfo getCaretInfo(Region target, TextPos p) {
         if (p != null) {
             int ix = p.index();
@@ -196,16 +204,11 @@ public class CellArrangement {
             if (cell != null) {
                 int charIndex = p.charIndex();
                 boolean leading = p.isLeading();
-                double dx = -contentPadding.getLeft();
-                PathElement[] path = cell.getCaretShape(target, charIndex, leading, dx, 0.0);
-                if (path == null) {
-                    return null;
+                PathElement[] path = cell.getCaretShape(target, charIndex, leading);
+                if (path != null) {
+                    double lineSpacing = cell.getLineSpacing();
+                    return CaretInfo.create(lineSpacing, path);
                 }
-
-                double lineSpacing = cell.getLineSpacing();
-                double top = cell.getContent().snappedTopInset();
-                double bottom = cell.getContent().snappedBottomInset();
-                return CaretInfo.create(lineSpacing, path);
             }
         }
         return null;
@@ -330,8 +333,7 @@ public class CellArrangement {
             double top = -origin.offset() - topHeight;
             if (y < top) {
                 if (topIx == 0) {
-                    double topPadding = contentPadding.getTop();
-                    y = Math.max(y, -topPadding);
+                    y = Math.max(y, -contentPaddingTop);
                     return new Origin(0, y);
                 }
                 return new Origin(topIx, 0.0);

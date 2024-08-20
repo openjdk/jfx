@@ -73,6 +73,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
     private boolean autoScrollUp;
     private boolean fastAutoScroll;
     private boolean scrollStarted;
+    /** horizontal cursor position preserved during up/down movement, in vflow.content coordinates */
     private double phantomX = -1.0;
     private final Duration autoScrollPeriod;
     private ContextMenu contextMenu = new ContextMenu();
@@ -517,7 +518,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         }
         vflow.scrollVerticalPixels(delta, true);
 
-        double x = Math.max(0.0, phantomX + vflow.getOffsetX());
+        double x = Math.max(0.0, phantomX);
         double y = autoScrollUp ? 0.0 : vflow.getViewPortHeight();
 
         vflow.scrollToVisible(x, y);
@@ -646,32 +647,40 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         control.select(pos);
     }
 
+    /**
+     * Moves the caret {@code deltaPixels} up (negative) or down (positive) from its current position.
+     * Extends existing selection when {@code extendSelection} is true.
+     * Does nothing if the current caret position is null.
+     *
+     * @param deltaPixels the number of pixels to move
+     * @param extendSelection whether to extend selection
+     */
     protected void moveLine(double deltaPixels, boolean extendSelection) {
-        CaretInfo c = vflow.getCaretInfo();
-        if (c == null) {
+        TextPos caret = getControl().getCaretPosition();
+        if (caret == null) {
             return;
         }
 
-        double sp = c.getLineSpacing();
-        // TODO split caret?
-        double x = (c.getMinX() + c.getMaxX()) / 2.0;
+        CaretInfo ci = vflow.getCaretInfo(caret);
+        if (ci == null) {
+            return;
+        }
+
+        double x = (ci.getMinX() + ci.getMaxX()) / 2.0;
         if (phantomX < 0) {
             // phantomX is unclear in the case of split caret
+            // TODO possibly use effectiveOrientation to determine which side we should use
             phantomX = x;
         } else {
             x = phantomX;
         }
 
-        boolean up = (deltaPixels < 0);
-        double y0 = up ? c.getMinY() : c.getMaxY();
-        double y = up ?
-            c.getMinY() + deltaPixels - sp - 0.5:
-            c.getMaxY() + deltaPixels + sp + 0.5;
+        boolean down = (deltaPixels > 0);
+        double y = down ?
+            ci.getMaxY() + deltaPixels + 0.5 :
+            ci.getMinY() + deltaPixels - 0.5;
 
-        // TODO
-        // check whether the new caret y position changed, unless it's TextPos.ZERO when going up, or EOF if going down
-
-        TextPos p = vflow.getTextPosLocal(x, y);
+        TextPos p = vflow.moveLine(caret.index(), x, y, down);
         if (p != null) {
             moveCaret(p, extendSelection);
         }

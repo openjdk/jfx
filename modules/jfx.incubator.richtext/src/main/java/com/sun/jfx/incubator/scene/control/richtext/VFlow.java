@@ -441,13 +441,11 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         FxPathBuilder b = new FxPathBuilder();
         createSelectionHighlight(b, anchor, caret);
         selectionHighlight.getElements().setAll(b.getPathElements());
-        selectionHighlight.setTranslateX(contentPaddingLeft);
 
         // caret
         b = new FxPathBuilder();
         createCaretPath(b, caret);
         caretPath.getElements().setAll(b.getPathElements());
-        caretPath.setTranslateX(contentPaddingLeft);
     }
 
     protected void removeCaretAndSelection() {
@@ -590,9 +588,9 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         PathElement[] pe;
         if (startOffset == endOffset) {
             // TODO handle split caret!
-            pe = cell.getCaretShape(content, startOffset, true, -contentPaddingLeft, 0.0);
+            pe = cell.getCaretShape(content, startOffset, true);
         } else {
-            pe = cell.getRangeShape(content, startOffset, endOffset, -contentPaddingLeft, 0.0);
+            pe = cell.getRangeShape(content, startOffset, endOffset);
         }
         return pe;
     }
@@ -1094,6 +1092,58 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         }
     }
 
+    /**
+     * Computes the new TextPos for the target coordinates.  This method takes into account
+     * the geometry of text as determined by the layout, thus taking into account
+     * line spacing and paragraph padding and borders.
+     *
+     * @param caretIndex the current caret index
+     * @param x the target x coordinate
+     * @param y the target y coordinate
+     * @param down direction of the movement relative to the caret
+     * @return the new text position, or null if no movement should occur
+     */
+    public TextPos moveLine(int caretIndex, double x, double y, boolean down) {
+        TextCell cell = getCell(caretIndex);
+        // account for line spacing
+        if (down) {
+            y += cell.getLineSpacing();
+        }
+
+        double cy = y - cell.getY();
+        boolean inside = cell.isInsideText(x - contentPaddingLeft, cy, down);
+        TextPos p = getTextPosLocal(x, y);
+        if (p == null) {
+            return null; // should not happen
+        } else if (inside) {
+            return p;
+        }
+
+        int ix = p.index();
+        if (ix == caretIndex) {
+            if (down) {
+                ix++;
+                if (ix >= skin.getSkinnable().getParagraphCount()) {
+                    return skin.getSkinnable().getDocumentEnd();
+                }
+            } else {
+                ix--;
+                if (ix < 0) {
+                    return TextPos.ZERO;
+                }
+            }
+        }
+
+        cell = getCell(ix);
+        double py = cell.findHitCandidate(y - cell.getY(), down);
+        if (Double.isNaN(py)) {
+            return null; // should not happen
+        }
+
+        p = getTextPosLocal(x, py + cell.getY());
+        return p;
+    }
+
     public void handleUseContentHeight() {
         boolean on = control.isUseContentHeight();
         if (on) {
@@ -1213,7 +1263,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             arrangement.removeNodesFrom(content);
             arrangement = null;
         }
-        arrangement = new CellArrangement(this);
+        arrangement = new CellArrangement(this, contentPaddingLeft, contentPaddingTop);
 
         double width = getWidth();
         if (width == 0.0) {

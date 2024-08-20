@@ -28,6 +28,7 @@
 package com.sun.jfx.incubator.scene.control.richtext;
 
 import java.util.Objects;
+import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -36,7 +37,9 @@ import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
+import javafx.scene.text.HitInfo;
 import javafx.scene.text.TextFlow;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
 
@@ -168,15 +171,15 @@ public final class TextCell extends BorderPane {
      * @param target the Region that provides the target frame of reference
      * @param charIndex the character index
      * @param leading the character bias
-     * @param dx the additional X offset
-     * @param dy the additional Y offset
      * @return the array of path elements translated to the target coordinates
      */
-    public PathElement[] getCaretShape(Region target, int charIndex, boolean leading, double dx, double dy) {
+    public PathElement[] getCaretShape(Region target, int charIndex, boolean leading) {
         PathElement[] p;
+        double dx;
+        double dy;
         if (content instanceof TextFlow f) {
-            dx += f.snappedLeftInset(); // TODO RTL?
-            dy += f.snappedTopInset();
+            dx = f.snappedLeftInset(); // TODO RTL?
+            dy = f.snappedTopInset();
 
             p = f.caretShape(charIndex, leading);
 
@@ -194,6 +197,8 @@ public final class TextCell extends BorderPane {
                 }
             }
         } else {
+            dx = 0.0;
+            dy = 0.0;
             p = new PathElement[] {
                 new MoveTo(0.0, 0.0),
                 new LineTo(0.0, content.getHeight())
@@ -209,15 +214,15 @@ public final class TextCell extends BorderPane {
      * @param target the Region that provides the target frame of reference
      * @param start the start offset
      * @param end the end offset
-     * @param dx the additional X offset
-     * @param dy the additional Y offset
      * @return the array of path elements translated to the target coordinates
      */
-    public PathElement[] getRangeShape(Region target, int start, int end, double dx, double dy) {
+    public PathElement[] getRangeShape(Region target, int start, int end) {
         PathElement[] p;
+        double dx;
+        double dy;
         if (content instanceof TextFlow f) {
-            dx += f.snappedLeftInset(); // TODO RTL?
-            dy += f.snappedTopInset();
+            dx = f.snappedLeftInset(); // TODO RTL?
+            dy = f.snappedTopInset();
 
             p = f.rangeShape(start, end);
 
@@ -228,6 +233,8 @@ public final class TextCell extends BorderPane {
                 };
             }
         } else {
+            dx = 0.0;
+            dy = 0.0;
             double w = getWidth();
             double h = getHeight();
 
@@ -348,5 +355,117 @@ public final class TextCell extends BorderPane {
             return RichUtils.lineEnd(f, line);
         }
         return null;
+    }
+
+    /**
+     * Returns true if the cell is a TextFlow cell and the y coordinate is within the text flow
+     * vertical bounds (excluding any insets), or the cell is not a TextFlow cell.
+     *
+     * @param y the y coordinate in this TextCell frame of reference
+     * @return true if y is within TextFlow bounds, or the cell contains no TextFlow
+     */
+    public boolean isGoodTargetY(double y) {
+        if (content instanceof TextFlow f) {
+            if (
+                (y >= (f.snappedTopInset() + snappedTopInset()) &&
+                (y < (f.getHeight() - f.snappedBottomInset() - snappedBottomInset())))
+            ) {
+                return true;
+            }
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Returns the caret offset within the cell text at the given x coordinate
+     * in on the first or last text line as determined by the {@code first} argument.
+     * <p>
+     * A non-TextFlow cell returns 0.
+     *
+     * @param x the x coordinate in TextCell coordinates
+     * @param first determines whether to use the first or last text line 
+     * @return the offset
+     */
+    public int getTextOffsetAt(double x, boolean first) {
+        if (content instanceof TextFlow f) {
+            // to TextFlow coordinates
+            x -= (snappedLeftInset() + f.snappedLeftInset());
+            int len = getTextLength();
+            PathElement[] pe;
+            if (first || (len == 0)) {
+                pe = f.caretShape(0, true);
+            } else {
+                pe = f.caretShape(len - 1, false);
+            }
+            double y = RichUtils.computeMidPointY(pe);
+            HitInfo h = f.hitTest(new Point2D(x, y));
+            if (h != null) {
+                return h.getInsertionIndex();
+            }
+        }
+        return 0;
+    }
+
+    private RangeInfo getTextRange() {
+        if (content instanceof TextFlow f) {
+            int len = getTextLength();
+            PathElement[] pe = f.rangeShape(0, len);
+            if (pe.length > 0) {
+                double sp = f.getLineSpacing();
+                return RangeInfo.of(pe, sp);
+            }
+        }
+        return RangeInfo.of(width, height);
+    }
+
+    public boolean isInsideText(double x, double y, boolean down) {
+        y -= snappedTopInset();
+        y -= content.snappedTopInset();
+
+        RangeInfo ri = getTextRange();
+        int sz = ri.getSegmentCount();
+        for (int i = 0; i < sz; i++) {
+            if(ri.contains(i, x, y)) {
+                return true;
+            }
+        }
+        if (ri.insideY(y)) {
+            return true;
+        }
+        return false;
+    }
+
+    public double findHitCandidate(double py, boolean down) {
+        double dy = snappedTopInset() + content.snappedTopInset();
+        double y = py - dy;
+
+        RangeInfo ri = getTextRange();
+        int sz = ri.getSegmentCount();
+        if (down) {
+            for (int i = 0; i < sz; i++) {
+                if (ri.getMaxY(i) >= y) {
+                    return ri.midPointY(i) + dy;
+                }
+            }
+            if (insideY(py)) {
+                return ri.midPointY(0) + dy;
+            }
+        } else {
+            for (int i = sz - 1; i >= 0; i--) {
+                if (ri.getMinY(i) <= y) {
+                    return ri.midPointY(i) + dy;
+                }
+            }
+            if (insideY(py)) {
+                int ix = ri.getSegmentCount() - 1;
+                return ri.midPointY(ix) + dy;
+            }
+        }
+        return Double.NaN;
+    }
+
+    private boolean insideY(double y) {
+        return (y < getHeight()) && (y >= 0.0);
     }
 }

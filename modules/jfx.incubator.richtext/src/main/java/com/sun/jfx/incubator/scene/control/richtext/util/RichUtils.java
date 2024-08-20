@@ -625,4 +625,37 @@ public final class RichUtils {
         boolean snap = (p instanceof Region r) ? r.isSnapToPixel() : false;
         Region.layoutInArea(n, x, y, w, h, 0.0, Insets.EMPTY, true, true, HPos.CENTER, VPos.CENTER, snap);
     }
+
+    /**
+     * Computes y midpoint of MoveTo and LineTo path elements.
+     *
+     * @param path the PathElements
+     * @return the midpoint
+     */
+    public static double computeMidPointY(PathElement[] path) {
+        double ymin = Double.POSITIVE_INFINITY;
+        double ymax = Double.NEGATIVE_INFINITY;
+        int sz = path.length;
+        for (int i = 0; i < sz; i++) {
+            PathElement em = path[i];
+            if (em instanceof LineTo m) {
+                double y = m.getY();
+                if (ymin > y) {
+                    ymin = y;
+                }
+                if (ymax < y) {
+                    ymax = y;
+                }
+            } else if (em instanceof MoveTo m) {
+                double y = m.getY();
+                if (ymin > y) {
+                    ymin = y;
+                }
+                if (ymax < y) {
+                    ymax = y;
+                }
+            }
+        }
+        return (ymin == Double.POSITIVE_INFINITY) ? 0.0 : (ymax + ymin) / 2.0;
+    }
 }
