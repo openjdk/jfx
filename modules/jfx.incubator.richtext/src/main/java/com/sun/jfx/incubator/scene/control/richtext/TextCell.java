@@ -28,7 +28,6 @@
 package com.sun.jfx.incubator.scene.control.richtext;
 
 import java.util.Objects;
-import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -37,9 +36,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
-import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
-import javafx.scene.text.HitInfo;
 import javafx.scene.text.TextFlow;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
 
@@ -355,56 +352,6 @@ public final class TextCell extends BorderPane {
             return RichUtils.lineEnd(f, line);
         }
         return null;
-    }
-
-    /**
-     * Returns true if the cell is a TextFlow cell and the y coordinate is within the text flow
-     * vertical bounds (excluding any insets), or the cell is not a TextFlow cell.
-     *
-     * @param y the y coordinate in this TextCell frame of reference
-     * @return true if y is within TextFlow bounds, or the cell contains no TextFlow
-     */
-    public boolean isGoodTargetY(double y) {
-        if (content instanceof TextFlow f) {
-            if (
-                (y >= (f.snappedTopInset() + snappedTopInset()) &&
-                (y < (f.getHeight() - f.snappedBottomInset() - snappedBottomInset())))
-            ) {
-                return true;
-            }
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * Returns the caret offset within the cell text at the given x coordinate
-     * in on the first or last text line as determined by the {@code first} argument.
-     * <p>
-     * A non-TextFlow cell returns 0.
-     *
-     * @param x the x coordinate in TextCell coordinates
-     * @param first determines whether to use the first or last text line 
-     * @return the offset
-     */
-    public int getTextOffsetAt(double x, boolean first) {
-        if (content instanceof TextFlow f) {
-            // to TextFlow coordinates
-            x -= (snappedLeftInset() + f.snappedLeftInset());
-            int len = getTextLength();
-            PathElement[] pe;
-            if (first || (len == 0)) {
-                pe = f.caretShape(0, true);
-            } else {
-                pe = f.caretShape(len - 1, false);
-            }
-            double y = RichUtils.computeMidPointY(pe);
-            HitInfo h = f.hitTest(new Point2D(x, y));
-            if (h != null) {
-                return h.getInsertionIndex();
-            }
-        }
-        return 0;
     }
 
     private RangeInfo getTextRange() {
