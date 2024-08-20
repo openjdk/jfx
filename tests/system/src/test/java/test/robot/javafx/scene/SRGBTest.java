@@ -52,6 +52,7 @@ import org.junit.Test;
 import static org.junit.Assume.assumeTrue;
 
 import test.robot.testharness.VisualTestBase;
+import test.util.Util;
 
 public class SRGBTest extends VisualTestBase {
 
@@ -218,6 +219,7 @@ public class SRGBTest extends VisualTestBase {
     // Timeout for potential hang on XWayland, see JDK-8335468.
     @Test(timeout = 15000)
     public void sRGBPixelTest() throws Exception {
+        assumeTrue(!Util.isOnWayland()); // JDK-8335470
         Rectangle swatch = prepareStage();
 
         for (TestColor testColor : TestColor.values()) {

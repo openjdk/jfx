@@ -333,8 +333,6 @@ jobs:
       ANT_DIR: "apache-ant-1.10.5"
       ANT_FILENAME: "apache-ant-1.10.5.tar.gz"
       ANT_URL: "https://archive.apache.org/dist/ant/binaries/apache-ant-1.10.5-bin.tar.gz"
-      # FIXME: hard-code the location of VS 2022 for now
-      VS150COMNTOOLS: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Auxiliary\\Build"
 
     steps:
       - name: Checkout the source
@@ -379,15 +377,10 @@ jobs:
 
       - name: Setup environment
         run: |
-          echo "VS150COMNTOOLS=$env:VS150COMNTOOLS"
           echo "dir ...\VC\Tools\MSVC"
           dir "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC"
-          echo "dir VS150COMNTOOLS"
-          dir "$env:VS150COMNTOOLS"
           # echo "dir ...\VC\Tools\MSVC"
           # dir "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC"
-          # echo "dir VS150COMNTOOLS"
-          # dir "$env:VS150COMNTOOLS"
 
           $env:Path = "$HOME\cygwin\cygwin64\bin;$HOME\cygwin\cygwin64\bin;$env:Path" ;
           $env:JAVA_HOME = "$HOME\bootjdk\jdk-$env:BOOT_JDK_VERSION" ;
