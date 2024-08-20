@@ -2251,7 +2251,6 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkProcessDrag
             dc.dragExited(*localMainFrame,WTFMove(dragData));
             return 0;
         case com_sun_webkit_WebPage_DND_DST_ENTER:
-            return dragOperationToDragCursor(std::get<std::optional<WebCore::DragOperation>>(dc.dragEnteredOrUpdated(*localMainFrame, WTFMove(dragData))));
         case com_sun_webkit_WebPage_DND_DST_OVER:
         case com_sun_webkit_WebPage_DND_DST_CHANGE:
             return dragOperationToDragCursor(std::get<std::optional<WebCore::DragOperation>>(dc.dragEnteredOrUpdated(*localMainFrame, WTFMove(dragData))));
