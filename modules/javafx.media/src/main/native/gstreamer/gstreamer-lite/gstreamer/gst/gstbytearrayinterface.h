@@ -22,6 +22,10 @@
 #include <glib.h>
 #include <gst/gstconfig.h>
 
+#ifdef GSTREAMER_LITE
+#include <string.h>
+#endif // GSTREAMER_LITE
+
 G_BEGIN_DECLS
 
 /**
