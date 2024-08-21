@@ -30,7 +30,7 @@
 #pragma warning(error:4715) /* 'function': not all control paths return a value */
 #pragma warning(error:4098) /* 'void' function returning a value */
 
-#pragma warning(disable:4244)	/* No possible loss of data warnings */
+#pragma warning(disable:4244)   /* No possible loss of data warnings */
 #pragma warning(disable:4305)   /* No truncation from int to char warnings */
 
 #pragma warning(error:4819) /* The file contains a character that cannot be represented in the current code page */

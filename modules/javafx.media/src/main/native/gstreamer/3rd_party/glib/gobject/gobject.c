@@ -143,7 +143,7 @@ enum {
 #if HAVE_PRIVATE
 typedef struct {
 #if !HAVE_OPTIONAL_FLAGS_IN_GOBJECT
-	guint optional_flags; /* (atomic) */
+  guint optional_flags; /* (atomic) */
 #endif
 } GObjectPrivate;
 
@@ -224,14 +224,14 @@ struct _GObjectNotifyQueue
 };
 
 /* --- variables --- */
-static GQuark	            quark_closure_array = 0;
-static GQuark	            quark_weak_notifies = 0;
-static GQuark	            quark_toggle_refs = 0;
-static GQuark               quark_notify_queue;
+static GQuark             quark_closure_array = 0;
+static GQuark             quark_weak_notifies = 0;
+static GQuark             quark_toggle_refs = 0;
+static GQuark             quark_notify_queue;
 static GParamSpecPool      *pspec_pool = NULL;
-static gulong	            gobject_signals[LAST_SIGNAL] = { 0, };
+static gulong             gobject_signals[LAST_SIGNAL] = { 0, };
 static guint (*floating_flag_handler) (GObject*, gint) = object_floating_flag_handler;
-static GQuark	            quark_weak_locations = 0;
+static GQuark             quark_weak_locations = 0;
 
 #if HAVE_PRIVATE
 G_ALWAYS_INLINE static inline GObjectPrivate *
@@ -4149,10 +4149,10 @@ g_object_remove_toggle_ref (GObject       *object,
               tstack->toggle_refs[i] = tstack->toggle_refs[tstack->n_toggle_refs];
 
             if (tstack->n_toggle_refs == 0)
-	            {
+              {
                 g_datalist_unset_flags (&object->qdata, OBJECT_HAS_TOGGLE_REF_FLAG);
-	              g_datalist_id_set_data_full (&object->qdata, quark_toggle_refs, NULL, NULL);
-	            }
+                g_datalist_id_set_data_full (&object->qdata, quark_toggle_refs, NULL, NULL);
+              }
 
             break;
           }
@@ -5202,7 +5202,7 @@ object_remove_closure (gpointer  data,
   carray->n_closures--;
   if (i < carray->n_closures)
     carray->closures[i] = carray->closures[carray->n_closures];
-	object_bit_unlock (object, OPTIONAL_BIT_LOCK_CLOSURE_ARRAY);
+  object_bit_unlock (object, OPTIONAL_BIT_LOCK_CLOSURE_ARRAY);
   return;
       }
   object_bit_unlock (object, OPTIONAL_BIT_LOCK_CLOSURE_ARRAY);

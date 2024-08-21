@@ -3466,7 +3466,7 @@ g_date_time_format_utf8 (GDateTime   *datetime,
       break;
   case 'O':
     alt_digits = TRUE;
-	  goto next_mod;
+    goto next_mod;
         case 'E':
           alt_era = TRUE;
     goto next_mod;
@@ -3534,7 +3534,7 @@ g_date_time_format_utf8 (GDateTime   *datetime,
 
             if (g_strcmp0 (subformat, "") == 0)
               return FALSE;
-	    if (!g_date_time_format_locale (datetime, subformat,
+      if (!g_date_time_format_locale (datetime, subformat,
               outstr, locale_is_utf8))
         return FALSE;
     }
@@ -3549,7 +3549,7 @@ g_date_time_format_utf8 (GDateTime   *datetime,
 
             if (g_strcmp0 (subformat, "") == 0)
               return FALSE;
-	    if (!g_date_time_format_locale (datetime, subformat,
+      if (!g_date_time_format_locale (datetime, subformat,
               outstr, locale_is_utf8))
         return FALSE;
     }
@@ -3634,7 +3634,7 @@ g_date_time_format_utf8 (GDateTime   *datetime,
     if (*utf8_format && *utf8_format != 'z' && *utf8_format != ':')
       return FALSE;
     colons++;
-	  goto next_mod;
+    goto next_mod;
         case '^':
           mod_case = TRUE;
           mod = "^";

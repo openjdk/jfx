@@ -2307,7 +2307,7 @@ type_name##_get_type (void) \
     { \
       GType g_define_type_id = type_name##_get_type_once (); \
       _g_type_once_init_leave (&static_g_define_type_id, g_define_type_id); \
-    }					\
+    } \
   return static_g_define_type_id; \
 } /* closes type_name##_get_type() */ \
 \

@@ -1250,12 +1250,12 @@ g_datalist_get_data (GData   **datalist,
       data_end = data + d->len;
       while (data < data_end)
   {
-	  /* Here we intentionally compare by strings, instead of calling
-	   * g_quark_try_string() first.
-	   *
-	   * See commit 1cceda49b60b ('Make g_datalist_get_data not look up the
-	   * quark').
-	   */
+    /* Here we intentionally compare by strings, instead of calling
+     * g_quark_try_string() first.
+     *
+     * See commit 1cceda49b60b ('Make g_datalist_get_data not look up the
+     * quark').
+     */
     if (g_strcmp0 (g_quark_to_string (data->key), key) == 0)
       {
         res = data->data;

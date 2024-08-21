@@ -1009,7 +1009,7 @@ g_source_iter_next (GSourceIter *iter, GSource **source)
       if (iter->current_list)
   iter->current_list = iter->current_list->next;
       else
-	iter->current_list = iter->context->source_lists.head;
+  iter->current_list = iter->context->source_lists.head;
 
       if (iter->current_list)
   {
@@ -2287,7 +2287,7 @@ g_source_unref_internal (GSource      *source,
       g_warning (G_STRLOC ": ref_count == 0, but source was still attached to a context!");
     source_remove_from_context (source, context);
 
-	  g_hash_table_remove (context->sources, &source->source_id);
+    g_hash_table_remove (context->sources, &source->source_id);
   }
 
       if (source->source_funcs->finalize)

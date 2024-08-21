@@ -144,8 +144,8 @@ typedef struct _IFaceHolder     IFaceHolder;
 
 
 /* --- prototypes --- */
-static inline gboolean			_g_type_test_flags              (GType                   type,
-									 guint                   flags);
+static inline gboolean                  _g_type_test_flags              (GType                   type,
+                                                                         guint                   flags);
 static inline GTypeFundamentalInfo*     type_node_fundamental_info_I    (TypeNode               *node);
 static        void                      type_add_flags_W                (TypeNode               *node,
                                                                          GTypeFlags              flags);
@@ -497,7 +497,7 @@ type_node_any_new_W (TypeNode             *pnode,
   node->global_gdata = NULL;
   g_hash_table_insert (static_type_nodes_ht,
            (gpointer) g_quark_to_string (node->qname),
-		       GTYPE_TO_POINTER (type));
+           GTYPE_TO_POINTER (type));
 
   g_atomic_int_inc ((gint *)&type_registration_serial);
 
@@ -2744,7 +2744,7 @@ g_type_register_fundamental (GType                       type_id,
     {
       g_critical ("attempt to register fundamental type '%s' with invalid type id (%" G_GUINTPTR_FORMAT ")",
       type_name,
-		  (guintptr) type_id);
+      (guintptr) type_id);
       return 0;
     }
   if ((finfo->type_flags & G_TYPE_FLAG_INSTANTIATABLE) &&
