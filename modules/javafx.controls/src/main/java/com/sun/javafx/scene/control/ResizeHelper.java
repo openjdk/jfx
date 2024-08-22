@@ -269,7 +269,7 @@ public class ResizeHelper {
             if (c.isResizable()) {
                 rf.setColumnWidth(c, w);
             }
-            total += w;
+            total += c.getWidth();
         }
 
         return (total > target);
