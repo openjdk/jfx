@@ -57,7 +57,7 @@ enum PlatformWheelEventGranularity : uint8_t {
 
 enum class PlatformWheelEventPhase : uint8_t {
     None        = 0,
-#if ENABLE(KINETIC_SCROLLING)
+#if ENABLE(ASYNC_SCROLLING) || ENABLE(KINETIC_SCROLLING)
     Began       = 1 << 0,
     Stationary  = 1 << 1,
     Changed     = 1 << 2,
@@ -290,22 +290,3 @@ WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, PlatformWheelEventP
 
 } // namespace WebCore
 
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::PlatformWheelEventPhase> {
-    using values = EnumValues<
-        WebCore::PlatformWheelEventPhase,
-        WebCore::PlatformWheelEventPhase::None
-#if ENABLE(KINETIC_SCROLLING)
-        ,
-        WebCore::PlatformWheelEventPhase::Began,
-        WebCore::PlatformWheelEventPhase::Stationary,
-        WebCore::PlatformWheelEventPhase::Changed,
-        WebCore::PlatformWheelEventPhase::Ended,
-        WebCore::PlatformWheelEventPhase::Cancelled,
-        WebCore::PlatformWheelEventPhase::MayBegin
-#endif
-    >;
-};
-
-} // namespace WTF

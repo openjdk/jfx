@@ -94,6 +94,9 @@ bool AccessibilityTableRow::computeAccessibilityIsIgnored() const
     if (!isTableRow())
         return AccessibilityRenderObject::computeAccessibilityIsIgnored();
 
+    if (ignoredFromPresentationalRole())
+        return true;
+
     return false;
 }
 
@@ -116,7 +119,7 @@ AccessibilityTable* AccessibilityTableRow::parentTable() const
     return nullptr;
 }
 
-AXCoreObject* AccessibilityTableRow::headerObject()
+AXCoreObject* AccessibilityTableRow::rowHeader()
 {
     const auto& rowChildren = children();
     if (rowChildren.isEmpty())

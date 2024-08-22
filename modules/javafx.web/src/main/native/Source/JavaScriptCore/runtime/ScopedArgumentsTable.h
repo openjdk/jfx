@@ -78,6 +78,7 @@ public:
 
     ScopedArgumentsTable* trySet(VM&, uint32_t index, ScopeOffset);
     void trySetWatchpointSet(uint32_t index, WatchpointSet* watchpoints);
+    void clearWatchpointSet(uint32_t index) { m_watchpointSets[index] = nullptr; }
 
     DECLARE_INFO;
 
@@ -94,7 +95,7 @@ private:
     ScopeOffset& at(uint32_t i) const
     {
         ASSERT_WITH_SECURITY_IMPLICATION(i < m_length);
-        return m_arguments.get(length())[i];
+        return m_arguments.get()[i];
     }
 
     uint32_t m_length;

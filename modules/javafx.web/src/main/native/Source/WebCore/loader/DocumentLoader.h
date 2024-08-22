@@ -95,6 +95,7 @@ class SubstituteResource;
 class UserContentURLPattern;
 
 enum class ClearSiteDataValue : uint8_t;
+enum class LoadWillContinueInAnotherProcess : bool;
 enum class ShouldContinue;
 
 using ResourceLoaderMap = HashMap<ResourceLoaderIdentifier, RefPtr<ResourceLoader>>;
@@ -164,13 +165,12 @@ using ContentExtensionEnablement = std::pair<ContentExtensionDefaultEnablement, 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DocumentLoader);
 class DocumentLoader
     : public RefCounted<DocumentLoader>
-    , public CanMakeCheckedPtr
     , public FrameDestructionObserver
     , public ContentSecurityPolicyClient
 #if ENABLE(CONTENT_FILTERING)
     , public ContentFilterClient
 #endif
-    , private CachedRawResourceClient {
+    , public CachedRawResourceClient {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(DocumentLoader);
     friend class ContentFilter;
 public:
@@ -179,15 +179,20 @@ public:
         return adoptRef(*new DocumentLoader(request, data));
     }
 
+    using CachedRawResourceClient::weakPtrFactory;
+    using CachedRawResourceClient::WeakValueType;
+    using CachedRawResourceClient::WeakPtrImplType;
+
     WEBCORE_EXPORT static DocumentLoader* fromScriptExecutionContextIdentifier(ScriptExecutionContextIdentifier);
 
     WEBCORE_EXPORT virtual ~DocumentLoader();
 
     void attachToFrame(LocalFrame&);
 
-    WEBCORE_EXPORT virtual void detachFromFrame();
+    WEBCORE_EXPORT virtual void detachFromFrame(LoadWillContinueInAnotherProcess);
 
     WEBCORE_EXPORT FrameLoader* frameLoader() const;
+    CheckedPtr<FrameLoader> checkedFrameLoader() const;
     WEBCORE_EXPORT SubresourceLoader* mainResourceLoader() const;
     WEBCORE_EXPORT RefPtr<FragmentedSharedBuffer> mainResourceData() const;
 
@@ -200,6 +205,7 @@ public:
     ResourceRequest& request();
 
     CachedResourceLoader& cachedResourceLoader() { return m_cachedResourceLoader; }
+    Ref<CachedResourceLoader> protectedCachedResourceLoader() const;
 
     const SubstituteData& substituteData() const { return m_substituteData; }
 
@@ -211,7 +217,7 @@ public:
     const String& responseMIMEType() const;
 #if PLATFORM(IOS_FAMILY)
     // FIXME: This method seems to violate the encapsulation of this class.
-    WEBCORE_EXPORT void setResponseMIMEType(const AtomString&);
+    WEBCORE_EXPORT void setResponseMIMEType(const String&);
 #endif
     const String& currentContentType() const;
     void replaceRequestURLForSameDocumentNavigation(const URL&);
@@ -460,10 +466,8 @@ public:
     void setIdempotentModeAutosizingOnlyHonorsPercentages(bool idempotentModeAutosizingOnlyHonorsPercentages) { m_idempotentModeAutosizingOnlyHonorsPercentages = idempotentModeAutosizingOnlyHonorsPercentages; }
     bool idempotentModeAutosizingOnlyHonorsPercentages() const { return m_idempotentModeAutosizingOnlyHonorsPercentages; }
 
-#if ENABLE(SERVICE_WORKER)
     WEBCORE_EXPORT bool setControllingServiceWorkerRegistration(ServiceWorkerRegistrationData&&);
     WEBCORE_EXPORT ScriptExecutionContextIdentifier resultingClientId() const;
-#endif
 
     bool lastNavigationWasAppInitiated() const { return m_lastNavigationWasAppInitiated; }
     void setLastNavigationWasAppInitiated(bool lastNavigationWasAppInitiated) { m_lastNavigationWasAppInitiated = lastNavigationWasAppInitiated; }
@@ -484,6 +488,9 @@ public:
     void contentFilterHandleProvisionalLoadFailure(const ResourceError&);
 #endif
 
+    uint64_t navigationID() const { return m_navigationID; }
+    WEBCORE_EXPORT void setNavigationID(uint64_t);
+
 protected:
     WEBCORE_EXPORT DocumentLoader(const ResourceRequest&, const SubstituteData&);
 
@@ -497,9 +504,7 @@ private:
 
     Document* document() const;
 
-#if ENABLE(SERVICE_WORKER)
     void matchRegistration(const URL&, CompletionHandler<void(std::optional<ServiceWorkerRegistrationData>&&)>&&);
-#endif
     void unregisterReservedServiceWorkerClient();
 
     std::optional<CrossOriginOpenerPolicyEnforcementResult> doCrossOriginOpenerHandlingOfResponse(const ResourceResponse&);
@@ -548,6 +553,8 @@ private:
 
     bool maybeLoadEmpty();
     void loadErrorDocument();
+
+    bool shouldClearContentSecurityPolicyForResponse(const ResourceResponse&) const;
 
     bool isMultipartReplacingLoad() const;
     bool isPostOrRedirectAfterPost(const ResourceRequest&, const ResourceResponse&);
@@ -624,6 +631,8 @@ private:
     // benefit of the various policy handlers.
     NavigationAction m_triggeringAction;
 
+    uint64_t m_navigationID { 0 };
+
     // We retain all the received responses so we can play back the
     // WebResourceLoadDelegate messages if the item is loaded from the
     // back/forward cache.
@@ -689,9 +698,7 @@ private:
 
     ScriptExecutionContextIdentifier m_resultingClientId;
 
-#if ENABLE(SERVICE_WORKER)
     std::unique_ptr<ServiceWorkerRegistrationData> m_serviceWorkerRegistrationData;
-#endif
 
 #if ENABLE(DEVICE_ORIENTATION)
     DeviceOrientationOrMotionPermissionState m_deviceOrientationAndMotionAccessState { DeviceOrientationOrMotionPermissionState::Prompt };
@@ -747,9 +754,7 @@ private:
     bool m_blockedByContentFilter { false };
 #endif
 
-#if ENABLE(SERVICE_WORKER)
     bool m_canUseServiceWorkers { true };
-#endif
 
 #if ASSERT_ENABLED
     bool m_hasEverBeenAttached { false };

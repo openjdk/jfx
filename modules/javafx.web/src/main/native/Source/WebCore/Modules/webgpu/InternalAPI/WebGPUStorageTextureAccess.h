@@ -26,23 +26,13 @@
 #pragma once
 
 #include <cstdint>
-#include <wtf/EnumTraits.h>
 
 namespace WebCore::WebGPU {
 
 enum class StorageTextureAccess : uint8_t {
     WriteOnly,
+    ReadOnly,
+    ReadWrite,
 };
 
 } // namespace WebCore::WebGPU
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::WebGPU::StorageTextureAccess> {
-    using values = EnumValues<
-        WebCore::WebGPU::StorageTextureAccess,
-        WebCore::WebGPU::StorageTextureAccess::WriteOnly
-    >;
-};
-
-} // namespace WTF

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,6 +38,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import javafx.scene.control.SelectionModel;
+import javafx.scene.input.ScrollEvent;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
@@ -1240,5 +1241,105 @@ public class TabPaneTest {
         tk.firePulse();
         attemptGC(10, weakSMRef);
         assertNull(weakSMRef.get());
+    }
+
+    @Test
+    public void testVerticalScrollTopSide() {
+        scrollTabPane(Side.TOP, 0, -100);
+    }
+
+    @Test
+    public void testVerticalScrollRightSide() {
+        scrollTabPane(Side.RIGHT, 0, 100);
+    }
+
+    @Test
+    public void testVerticalScrollBottomSide() {
+        scrollTabPane(Side.BOTTOM, 0, -100);
+    }
+
+    @Test
+    public void testVerticalScrollLeftSide() {
+        scrollTabPane(Side.LEFT, 0, 100);
+    }
+
+    @Test
+    public void testHorizontalScrollTopSide() {
+        scrollTabPane(Side.TOP, -100, 0);
+    }
+
+    @Test
+    public void testHorizontalScrollRightSide() {
+        scrollTabPane(Side.RIGHT, 100, 0);
+    }
+
+    @Test
+    public void testHorizontalScrollBottomSide() {
+        scrollTabPane(Side.BOTTOM, -100, 0);
+    }
+
+    @Test
+    public void testHorizontalScrollLeftSide() {
+        scrollTabPane(Side.LEFT, 100, 0);
+    }
+
+    private void scrollTabPane(Side side, double deltaX, double deltaY) {
+        tabPane.setMaxSize(400, 100);
+        tabPane.setSide(side);
+        for (int i = 0; i < 40; i++) {
+            Tab tab = new Tab("Tab " + (1000 + i));
+            tabPane.getTabs().add(tab);
+        }
+        root.getChildren().add(tabPane);
+        stage.show();
+
+        Bounds firstTabBounds = tabPane.lookupAll(".tab-label")
+                .stream()
+                .findFirst()
+                .map(n -> n.localToScene(n.getLayoutBounds()))
+                .orElse(null);
+        assertNotNull(firstTabBounds);
+
+        Bounds layoutBounds = tabPane.getLayoutBounds();
+        double minX = tabPane.localToScene(layoutBounds).getMinX();
+        double minY = tabPane.localToScene(layoutBounds).getMinY();
+        double minScrX = tabPane.localToScreen(layoutBounds).getMinX();
+        double minScrY = tabPane.localToScreen(layoutBounds).getMinY();
+        double x = 50;
+        double y = 10;
+
+        SceneHelper.processMouseEvent(scene,
+                MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, minX + x, minY + y));
+        tk.firePulse();
+
+        StackPane tabHeaderArea = (StackPane) tabPane.lookup(".tab-header-area");
+        assertNotNull(tabHeaderArea);
+
+        Event.fireEvent(tabHeaderArea, new ScrollEvent(
+                ScrollEvent.SCROLL,
+                minX + x, minY + y,
+                minScrX + x, minScrY + y,
+                false, false, false, false, true, false,
+                deltaX, deltaY, deltaX, deltaY,
+                ScrollEvent.HorizontalTextScrollUnits.NONE, 0.0,
+                ScrollEvent.VerticalTextScrollUnits.NONE, 0.0,
+                0, null));
+        tk.firePulse();
+
+        Bounds newFirstTabBounds = tabPane.lookupAll(".tab-label")
+                .stream()
+                .findFirst()
+                .map(n -> n.localToScene(n.getLayoutBounds()))
+                .orElse(null);
+        assertNotNull(newFirstTabBounds);
+
+        if (side.equals(Side.TOP) || side.equals(Side.BOTTOM)) {
+            double delta = Math.abs(deltaY) > Math.abs(deltaX) ? deltaY : deltaX;
+            assertEquals(firstTabBounds.getMinX() + delta, newFirstTabBounds.getMinX(), 0);
+            assertEquals(firstTabBounds.getMinY(), newFirstTabBounds.getMinY(), 0);
+        } else {
+            assertEquals(firstTabBounds.getMinX(), newFirstTabBounds.getMinX(), 0);
+            assertEquals(firstTabBounds.getMinY() - deltaY, newFirstTabBounds.getMinY(), 0);
+        }
     }
 }

@@ -43,7 +43,7 @@ public:
         CommonHeader isolatedCopy() const & { return { key , value.isolatedCopy() }; }
         CommonHeader isolatedCopy() && { return { key , WTFMove(value).isolatedCopy() }; }
 
-        bool operator==(const CommonHeader& other) const { return key == other.key && value == other.value; }
+        friend bool operator==(const CommonHeader&, const CommonHeader&) = default;
     };
 
     struct UncommonHeader {
@@ -53,7 +53,7 @@ public:
         UncommonHeader isolatedCopy() const & { return { key.isolatedCopy() , value.isolatedCopy() }; }
         UncommonHeader isolatedCopy() && { return { WTFMove(key).isolatedCopy() , WTFMove(value).isolatedCopy() }; }
 
-        bool operator==(const UncommonHeader& other) const { return key == other.key && value == other.value; }
+        friend bool operator==(const UncommonHeader&, const UncommonHeader&) = default;
     };
 
     typedef Vector<CommonHeader, 0, CrashOnOverflow, 6> CommonHeadersVector;
@@ -75,6 +75,11 @@ public:
             std::optional<HTTPHeaderName> keyAsHTTPHeaderName;
             String value;
         };
+        using difference_type = ptrdiff_t;
+        using value_type = KeyValue;
+        using pointer = const KeyValue*;
+        using reference = const KeyValue&;
+        using iterator_category = std::forward_iterator_tag;
 
         const KeyValue* get() const
         {

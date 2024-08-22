@@ -47,7 +47,7 @@ enum SentinelTag { Sentinel };
 
 template<typename T, typename PassedPtrTraits = RawPtrTraits<T>>
 class BasicRawSentinelNode {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_COMPACT_ALLOCATED;
 public:
     using PtrTraits = typename PassedPtrTraits::template RebindTraits<BasicRawSentinelNode>;
 
@@ -107,10 +107,7 @@ public:
             return *this;
         }
 
-        bool operator==(const BaseIterator& other) const
-        {
-            return m_node == other.m_node;
-        }
+        friend bool operator==(BaseIterator, BaseIterator) = default;
 
     private:
         RawNodeType* m_node;
@@ -304,11 +301,15 @@ inline void SentinelLinkedList<T, RawNode>::takeFrom(SentinelLinkedList<T, RawNo
     if (other.isEmpty())
         return;
 
+// These warnings can occur if takeFrom is used on a temporary local list.
+// It's ok to ignore these warnings as the "other" list is reset to the sentinel below.
+IGNORE_GCC_WARNINGS_BEGIN("dangling-pointer")
     m_sentinel.prev()->setNext(other.m_sentinel.next());
     other.m_sentinel.next()->setPrev(m_sentinel.prev());
 
     m_sentinel.setPrev(other.m_sentinel.prev());
     m_sentinel.prev()->setNext(&m_sentinel);
+IGNORE_GCC_WARNINGS_END
 
     other.m_sentinel.setNext(&other.m_sentinel);
     other.m_sentinel.setPrev(&other.m_sentinel);

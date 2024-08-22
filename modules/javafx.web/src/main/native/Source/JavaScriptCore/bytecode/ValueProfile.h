@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 #include "SpeculatedType.h"
 #include "Structure.h"
 #include "VirtualRegister.h"
+#include <span>
 #include <wtf/PrintStream.h>
 #include <wtf/StringPrintStream.h>
 
@@ -39,12 +40,12 @@ namespace JSC {
 
 class UnlinkedValueProfile;
 
-template<unsigned numberOfBucketsArgument>
+template<unsigned numberOfBucketsArgument, unsigned numberOfSpecFailBucketsArgument>
 struct ValueProfileBase {
     friend class UnlinkedValueProfile;
 
     static constexpr unsigned numberOfBuckets = numberOfBucketsArgument;
-    static constexpr unsigned numberOfSpecFailBuckets = 1;
+    static constexpr unsigned numberOfSpecFailBuckets = numberOfSpecFailBucketsArgument;
     static constexpr unsigned totalNumberOfBuckets = numberOfBuckets + numberOfSpecFailBuckets;
 
     ValueProfileBase()
@@ -61,12 +62,12 @@ struct ValueProfileBase {
     void clearBuckets()
     {
         for (unsigned i = 0; i < totalNumberOfBuckets; ++i)
-            m_buckets[i] = JSValue::encode(JSValue());
+            clearEncodedJSValueConcurrent(m_buckets[i]);
     }
 
     const ClassInfo* classInfo(unsigned bucket) const
     {
-        JSValue value = JSValue::decode(m_buckets[bucket]);
+        JSValue value = JSValue::decodeConcurrent(&m_buckets[bucket]);
         if (!!value) {
             if (!value.isCell())
                 return nullptr;
@@ -79,7 +80,7 @@ struct ValueProfileBase {
     {
         unsigned result = 0;
         for (unsigned i = 0; i < totalNumberOfBuckets; ++i) {
-            if (!!JSValue::decode(m_buckets[i]))
+            if (!!JSValue::decodeConcurrent(&m_buckets[i]))
                 result++;
         }
         return result;
@@ -95,7 +96,7 @@ struct ValueProfileBase {
     bool isLive() const
     {
         for (unsigned i = 0; i < totalNumberOfBuckets; ++i) {
-            if (!!JSValue::decode(m_buckets[i]))
+            if (!!JSValue::decodeConcurrent(&m_buckets[i]))
                 return true;
         }
         return false;
@@ -131,13 +132,13 @@ struct ValueProfileBase {
     {
         SpeculatedType merged = SpecNone;
         for (unsigned i = 0; i < totalNumberOfBuckets; ++i) {
-            JSValue value = JSValue::decode(m_buckets[i]);
+            JSValue value = JSValue::decodeConcurrent(&m_buckets[i]);
             if (!value)
                 continue;
 
             mergeSpeculation(merged, speculationFromValue(value));
 
-            m_buckets[i] = JSValue::encode(JSValue());
+            updateEncodedJSValueConcurrent(m_buckets[i], JSValue::encode(JSValue()));
         }
 
         mergeSpeculation(m_prediction, merged);
@@ -145,27 +146,29 @@ struct ValueProfileBase {
         return m_prediction;
     }
 
+    void computeUpdatedPredictionForExtraValue(const ConcurrentJSLocker&, JSValue& value)
+    {
+        if (value)
+            mergeSpeculation(m_prediction, speculationFromValue(value));
+        value = JSValue();
+    }
+
     EncodedJSValue m_buckets[totalNumberOfBuckets];
 
     SpeculatedType m_prediction { SpecNone };
 };
 
-struct MinimalValueProfile : public ValueProfileBase<0> {
-    MinimalValueProfile(): ValueProfileBase<0>() { }
+struct MinimalValueProfile : public ValueProfileBase<0, 1> {
+    MinimalValueProfile(): ValueProfileBase<0, 1>() { }
 };
 
-template<unsigned logNumberOfBucketsArgument>
-struct ValueProfileWithLogNumberOfBuckets : public ValueProfileBase<1 << logNumberOfBucketsArgument> {
-    static constexpr unsigned logNumberOfBuckets = logNumberOfBucketsArgument;
-
-    ValueProfileWithLogNumberOfBuckets()
-        : ValueProfileBase<1 << logNumberOfBucketsArgument>()
-    {
-    }
+struct ValueProfile : public ValueProfileBase<1, 0> {
+    ValueProfile() : ValueProfileBase<1, 0>() { }
+    static ptrdiff_t offsetOfFirstBucket() { return OBJECT_OFFSETOF(ValueProfile, m_buckets[0]); }
 };
 
-struct ValueProfile : public ValueProfileWithLogNumberOfBuckets<0> {
-    ValueProfile() : ValueProfileWithLogNumberOfBuckets<0>() { }
+struct ArgumentValueProfile : public ValueProfileBase<1, 1> {
+    ArgumentValueProfile() : ValueProfileBase<1, 1>() { }
     static ptrdiff_t offsetOfFirstBucket() { return OBJECT_OFFSETOF(ValueProfile, m_buckets[0]); }
 };
 
@@ -203,6 +206,8 @@ public:
         return bitwise_cast<ValueProfileAndVirtualRegister*>(this + 1);
     }
 
+    std::span<ValueProfileAndVirtualRegister> span() { return { data(), size() }; }
+
 private:
 
     ValueProfileAndVirtualRegisterBuffer(unsigned size)
@@ -229,6 +234,13 @@ public:
     UnlinkedValueProfile() = default;
 
     void update(ValueProfile& profile)
+    {
+        SpeculatedType newType = profile.m_prediction | m_prediction;
+        profile.m_prediction = newType;
+        m_prediction = newType;
+    }
+
+    void update(ArgumentValueProfile& profile)
     {
         SpeculatedType newType = profile.m_prediction | m_prediction;
         profile.m_prediction = newType;

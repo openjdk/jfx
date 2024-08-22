@@ -27,6 +27,7 @@
 
 #include "ScriptController.h"
 #include "JNIUtility.h"
+#include "FrameDestructionObserverInlines.h"
 #include <JavaScriptCore/JSObjectRef.h>
 
 

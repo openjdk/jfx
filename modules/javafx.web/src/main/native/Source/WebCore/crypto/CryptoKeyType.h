@@ -26,15 +26,13 @@
 #pragma once
 
 #if ENABLE(WEB_CRYPTO)
-
 namespace WebCore {
 
-enum class CryptoKeyType {
+enum class CryptoKeyType : uint8_t {
     Public,
     Private,
     Secret
 };
 
 } // namespace WebCore
-
 #endif // ENABLE(WEB_CRYPTO)

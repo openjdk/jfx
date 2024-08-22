@@ -1,7 +1,5 @@
 /*
- * Copyright (C) 2006 Nikolas Zimmermann <zimmermann@kde.org>
- * Copyright (C) 2008 Eric Seidel <eric@webkit.org>
- * Copyright (C) Research In Motion Limited 2010. All rights reserved.
+ * Copyright (C) 2023, 2024 Igalia S.L.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,80 +19,45 @@
 
 #pragma once
 
-#include "ImageBuffer.h"
-#include "RenderSVGResourceContainer.h"
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+#include "RenderSVGResourcePaintServer.h"
 #include "SVGGradientElement.h"
-#include <memory>
-#include <wtf/HashMap.h>
 
 namespace WebCore {
 
-class GraphicsContext;
+class Gradient;
 
-struct GradientData {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
-
-    struct Inputs {
-        bool operator==(const Inputs& other) const
-        {
-            return std::tie(objectBoundingBox, textPaintingScale) == std::tie(other.objectBoundingBox, other.textPaintingScale);
-        }
-
-        std::optional<FloatRect> objectBoundingBox;
-        float textPaintingScale = 1;
-    };
-
-    bool invalidate(const Inputs& inputs)
-    {
-        if (this->inputs != inputs) {
-            gradient = nullptr;
-            userspaceTransform = AffineTransform();
-            this->inputs = inputs;
-        }
-        return !gradient;
-    }
-
-    RefPtr<Gradient> gradient;
-    AffineTransform userspaceTransform;
-    Inputs inputs;
-};
-
-class RenderSVGResourceGradient : public RenderSVGResourceContainer {
+class RenderSVGResourceGradient : public RenderSVGResourcePaintServer {
     WTF_MAKE_ISO_ALLOCATED(RenderSVGResourceGradient);
 public:
-    SVGGradientElement& gradientElement() const { return static_cast<SVGGradientElement&>(RenderSVGResourceContainer::element()); }
+    virtual ~RenderSVGResourceGradient();
 
-    void removeAllClientsFromCacheIfNeeded(bool markForInvalidation, WeakHashSet<RenderObject>* visitedRenderers) final;
-    void removeClientFromCache(RenderElement&, bool markForInvalidation = true) final;
+    inline SVGGradientElement& gradientElement() const;
 
-    bool applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>) final;
-    void postApplyResource(RenderElement&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>, const Path*, const RenderElement*) final;
-    FloatRect resourceBoundingBox(const RenderObject&) final { return FloatRect(); }
+    bool prepareFillOperation(GraphicsContext&, const RenderLayerModelObject&, const RenderStyle&) final;
+    bool prepareStrokeOperation(GraphicsContext&, const RenderLayerModelObject&, const RenderStyle&) final;
 
-protected:
-    RenderSVGResourceGradient(SVGGradientElement&, RenderStyle&&);
-
-    static GradientColorStops stopsByApplyingColorFilter(const GradientColorStops&, const RenderStyle&);
-    static GradientSpreadMethod platformSpreadMethodFromSVGType(SVGSpreadMethodType);
-
-private:
-    void element() const = delete;
-
-    GradientData::Inputs computeInputs(RenderElement&, OptionSet<RenderSVGResourceMode>);
+    virtual void invalidateGradient() = 0;
 
     virtual SVGUnitTypes::SVGUnitType gradientUnits() const = 0;
+
+protected:
+    RenderSVGResourceGradient(Type, SVGElement&, RenderStyle&&);
+
+    virtual void collectGradientAttributesIfNeeded() = 0;
+    virtual RefPtr<Gradient> createGradient(const RenderStyle&) = 0;
+
     virtual AffineTransform gradientTransform() const = 0;
-    virtual bool collectGradientAttributes() = 0;
-    virtual Ref<Gradient> buildGradient(const RenderStyle&) const = 0;
 
-    HashMap<RenderObject*, std::unique_ptr<GradientData>> m_gradientMap;
+    bool buildGradientIfNeeded(const RenderLayerModelObject&, const RenderStyle&, AffineTransform& userspaceTransform);
+    GradientColorStops stopsByApplyingColorFilter(const GradientColorStops&, const RenderStyle&) const;
+    GradientSpreadMethod platformSpreadMethodFromSVGType(SVGSpreadMethodType) const;
 
-#if USE(CG)
-    GraphicsContext* m_savedContext { nullptr };
-    RefPtr<ImageBuffer> m_imageBuffer;
-#endif
-
-    bool m_shouldCollectGradientAttributes { true };
+    RefPtr<Gradient> m_gradient;
 };
 
-} // namespace WebCore
+}
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGResourceGradient, isRenderSVGResourceGradient())
+
+#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

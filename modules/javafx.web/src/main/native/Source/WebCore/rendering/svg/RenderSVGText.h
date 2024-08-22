@@ -62,7 +62,7 @@ public:
 
     FloatRect objectBoundingBox() const final { return m_objectBoundingBox; }
     FloatRect strokeBoundingBox() const final;
-    FloatRect repaintRectInLocalCoordinates() const final;
+    FloatRect repaintRectInLocalCoordinates(RepaintRectCalculation = RepaintRectCalculation::Fast) const final;
 
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
     LayoutRect visualOverflowRectEquivalent() const { return SVGBoundingBoxComputation::computeVisualOverflowRect(*this); }
@@ -73,7 +73,6 @@ private:
     void graphicsElement() const = delete;
 
     ASCIILiteral renderName() const override { return "RenderSVGText"_s; }
-    bool isSVGText() const override { return true; }
 
     void paint(PaintInfo&, const LayoutPoint&) override;
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
@@ -118,4 +117,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGText, isSVGText())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGText, isRenderSVGText())
