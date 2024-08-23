@@ -124,7 +124,7 @@
  *   sink is in the bin, the query fails.
  *
  * A #GstBin will by default forward any event sent to it to all sink
- * ( %GST_EVENT_TYPE_DOWNSTREAM ) or source ( %GST_EVENT_TYPE_UPSTREAM ) elements
+ * ( %GST_EVENT_TYPE_UPSTREAM ) or source ( %GST_EVENT_TYPE_DOWNSTREAM ) elements
  * depending on the event type.
  *
  * If all the elements return %TRUE, the bin will also return %TRUE, else %FALSE
@@ -2888,10 +2888,13 @@ gst_bin_change_state_func (GstElement * element, GstStateChange transition)
       GST_DEBUG_OBJECT (element, "clearing all cached messages");
       bin_remove_messages (bin, NULL, GST_MESSAGE_ANY);
       GST_OBJECT_UNLOCK (bin);
-      /* We might not have reached PAUSED yet due to async errors,
-       * make sure to always deactivate the pads nonetheless */
-      if (!(gst_bin_src_pads_activate (bin, FALSE)))
-        goto activate_failure;
+      /* Pads can be activated in PULL mode before in NULL state */
+      if (current != GST_STATE_NULL) {
+        /* We might not have reached PAUSED yet due to async errors,
+         * make sure to always deactivate the pads nonetheless */
+        if (!gst_bin_src_pads_activate (bin, FALSE))
+          goto activate_failure;
+      }
       break;
     case GST_STATE_NULL:
       /* Clear message list on next NULL */
@@ -3279,7 +3282,7 @@ bin_bus_handler (GstBus * bus, GstMessage * message, GstBin * bin)
 static void
 free_bin_continue_data (BinContinueData * data)
 {
-  g_slice_free (BinContinueData, data);
+  g_free (data);
 }
 
 static void
@@ -3449,7 +3452,7 @@ bin_handle_async_done (GstBin * bin, GstStateChangeReturn ret,
         "continue state change, pending %s",
         gst_element_state_get_name (pending));
 
-    cont = g_slice_new (BinContinueData);
+    cont = g_new (BinContinueData, 1);
 
     /* cookie to detect concurrent state change */
     cont->cookie = GST_ELEMENT_CAST (bin)->state_cookie;
@@ -3505,6 +3508,13 @@ was_busy:
 nothing_pending:
   {
     GST_CAT_INFO_OBJECT (GST_CAT_STATES, bin, "nothing pending");
+
+    amessage = gst_message_new_async_done (GST_OBJECT_CAST (bin), running_time);
+
+    GST_OBJECT_UNLOCK (bin);
+    gst_element_post_message (GST_ELEMENT_CAST (bin), amessage);
+    GST_OBJECT_LOCK (bin);
+
     return;
   }
 }

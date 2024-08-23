@@ -44,27 +44,21 @@ static gboolean
 plugin_init (GstPlugin * plugin)
 #endif // GSTREAMER_LITE
 {
-  if (!gst_element_register (plugin, "osxaudiosink", GST_RANK_PRIMARY,
-          GST_TYPE_OSX_AUDIO_SINK)) {
-    return FALSE;
-  }
+  gboolean ret = FALSE;
 
 #ifdef GSTREAMER_LITE_TEST
-  if (!gst_element_register (plugin, "osxaudiosrc", GST_RANK_PRIMARY,
-          GST_TYPE_OSX_AUDIO_SRC)) {
-    return FALSE;
-  }
+  ret |= GST_ELEMENT_REGISTER (osxaudiosrc, plugin);
 #endif // GSTREAMER_LITE_TEST
+
+ret |= GST_ELEMENT_REGISTER (osxaudiosink, plugin);
 
 #ifndef GSTREAMER_LITE
 #ifndef HAVE_IOS
-  if (!gst_device_provider_register (plugin, "osxaudiodeviceprovider",
-          GST_RANK_PRIMARY, GST_TYPE_OSX_AUDIO_DEVICE_PROVIDER))
-    return FALSE;
+  ret |= GST_DEVICE_PROVIDER_REGISTER (osxaudiodeviceprovider, plugin);
 #endif
 #endif // GSTREAMER_LITE
 
-  return TRUE;
+  return ret;
 }
 
 #ifndef GSTREAMER_LITE
