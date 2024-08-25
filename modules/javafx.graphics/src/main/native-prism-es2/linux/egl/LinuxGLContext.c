@@ -301,6 +301,9 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_LinuxGLContext_nMakeCurrent
     int interval;
     jboolean vSyncNeeded;
 
+    if (dInfo == NULL || ctxInfo == NULL) {
+        return;
+    }
 
     if (!eglMakeCurrent(ctxInfo->eglDisplay, dInfo->eglSurface, dInfo->eglSurface, ctxInfo->context)) {
         fprintf(stderr, "Prism ES2 Error: MakeCurrent - eglMakeCurrent failed [%s]\n", eglGetErrorString(eglGetError()));
