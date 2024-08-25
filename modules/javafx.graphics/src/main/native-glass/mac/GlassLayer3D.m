@@ -77,6 +77,8 @@ static NSArray *allModes = nil;
                                                   NSEventTrackingRunLoopMode,
                                                   NSModalPanelRunLoopMode, nil] retain];
         }
+
+        self.colorspace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
     }
     return self;
 }

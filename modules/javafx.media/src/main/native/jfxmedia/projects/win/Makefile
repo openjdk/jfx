@@ -85,10 +85,6 @@ CFLAGS = -DWIN32 \
          $(INCLUDES) \
          $(CL_COMPILER_FLAGS)
 
-ifeq ($(VS_VER), 100)
-    CFLAGS += -D_STATIC_CPPLIB -D_DISABLE_DEPRECATE_STATIC_CPPLIB
-endif
-
 LIBS = gstreamer-lite.lib \
        glib-lite.lib \
        Winmm.lib \

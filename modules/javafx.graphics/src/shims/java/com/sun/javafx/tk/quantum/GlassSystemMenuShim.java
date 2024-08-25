@@ -40,10 +40,12 @@ public class GlassSystemMenuShim extends GlassSystemMenu {
         super();
     }
 
+    @Override
     public void setMenus(List<MenuBase> menus) {
         super.setMenus(menus);
     }
 
+    @Override
     public void createMenuBar() {
         super.createMenuBar();
     }
