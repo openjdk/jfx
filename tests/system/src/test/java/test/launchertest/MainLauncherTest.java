@@ -100,6 +100,9 @@ public class MainLauncherTest {
         new TestData("TestAppNoMainCCL3", ERROR_NONE),
         new TestData("TestNotApplicationCCL", ERROR_NONE),
         new TestData("TestHeadlessApp", true, ERROR_NONE),
+        new TestData("TestAWTAppDaemon", ERROR_NONE),
+        new TestData("TestAppDaemon", ERROR_NONE),
+        new TestData("TestAppPlatformExitAWT", ERROR_NONE),
     };
 
     @Parameters

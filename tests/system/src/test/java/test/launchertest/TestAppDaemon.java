@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,37 +27,35 @@ package test.launchertest;
 
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.scene.layout.StackPane;
-import javafx.scene.Scene;
-import javafx.scene.control.Label;
 import javafx.stage.Stage;
+import javax.swing.JDialog;
+import javax.swing.SwingUtilities;
 
 import static test.launchertest.Constants.*;
 
 /**
- * Test application that calls Platform.exit while Stage is still showing
- * the Scene.
+ * Test application launcher with daemon threads to verify that the
+ * the platform doesn't exit prematurely. It should remain alive until
+ * Platform.exit is called.
  *
- * This is launched by PlatformExitTest.
+ * This is launched by MainLauncherTest.
  */
-public class PlatformExitApp extends Application {
+public class TestAppDaemon extends Application {
 
-    @Override public void start(Stage stage) throws Exception {
-        StackPane root = new StackPane();
-        Scene scene = new Scene(root, 400, 300);
+    @Override
+    public void stop() {
+        // If we get here then the test passed.
+        System.exit(ERROR_NONE);
+    }
 
-        final Label label = new Label("Hello");
-
-        root.getChildren().add(label);
-
-        stage.setScene(scene);
-        stage.show();
-
-        // Show window for 1 second before calling Platform.exit
+    @Override
+    public void start(Stage st) {
+        // Wait for 3 seconds then call Platform.exit
         Thread thr = new Thread(() -> {
-            Util.sleep(1000);
+            Util.sleep(3000);
             Platform.exit();
         });
+        thr.setDaemon(true);
         thr.start();
     }
 
@@ -66,11 +64,11 @@ public class PlatformExitApp extends Application {
      */
     public static void main(String[] args) {
         Util.setupTimeoutThread();
-        Application.launch(args);
 
-        // Short delay to allow any pending output to be flushed
-        Util.sleep(500);
-        System.exit(ERROR_NONE);
+        // Launch the application from a daemon thread
+        Thread thr = new Thread(() -> Application.launch(args));
+        thr.setDaemon(true);
+        thr.start();
     }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,39 +25,52 @@
 
 package test.launchertest;
 
-import javafx.application.Application;
+import java.awt.BorderLayout;
+
 import javafx.application.Platform;
-import javafx.scene.layout.StackPane;
-import javafx.scene.Scene;
-import javafx.scene.control.Label;
-import javafx.stage.Stage;
+
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 
 import static test.launchertest.Constants.*;
 
 /**
- * Test application that calls Platform.exit while Stage is still showing
- * the Scene.
+ * Test that an AWT app that starts the JavaFX Platform with only daemon
+ * threads doesn't exit prematurely. It should remain alive until
+ * Platform.exit is called.
  *
- * This is launched by PlatformExitTest.
+ * This is launched by MainLauncherTest.
  */
-public class PlatformExitApp extends Application {
+public class TestAWTAppDaemon {
 
-    @Override public void start(Stage stage) throws Exception {
-        StackPane root = new StackPane();
-        Scene scene = new Scene(root, 400, 300);
+    private static void createSwing() {
+        // Start up FX platform
+        Platform.startup(() -> {});
 
-        final Label label = new Label("Hello");
+        final JFrame frame = new JFrame("TestAWTAppDaemon");
+        frame.setLayout(new BorderLayout());
 
-        root.getChildren().add(label);
+        JPanel swingPanel = new JPanel();
+        frame.getContentPane().add(swingPanel, BorderLayout.CENTER);
 
-        stage.setScene(scene);
-        stage.show();
+        // show frame
+        frame.pack();
+        frame.setLocationRelativeTo(null);
+        frame.setVisible(true);
 
-        // Show window for 1 second before calling Platform.exit
+        // Show window for 1 second then close and dispost it
+        Util.sleep(1000);
+        frame.setVisible(false);
+        frame.dispose();
+
+        // Sleep for 5 seconds to ensure that we don't exit prematurely,
+        // then exit normally.
         Thread thr = new Thread(() -> {
-            Util.sleep(1000);
-            Platform.exit();
+            Util.sleep(5000);
+            System.exit(ERROR_NONE);
         });
+        thr.setDaemon(true);
         thr.start();
     }
 
@@ -66,11 +79,7 @@ public class PlatformExitApp extends Application {
      */
     public static void main(String[] args) {
         Util.setupTimeoutThread();
-        Application.launch(args);
-
-        // Short delay to allow any pending output to be flushed
-        Util.sleep(500);
-        System.exit(ERROR_NONE);
+        SwingUtilities.invokeLater(TestAWTAppDaemon::createSwing);
     }
 
 }

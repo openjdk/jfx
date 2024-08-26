@@ -63,6 +63,28 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     private boolean isTaskbarApplication = false;
     private final InvokeLaterDispatcher invokeLaterDispatcher;
 
+    private static final CountDownLatch keepAliveLatch = new CountDownLatch(1);
+
+    private static void startKeepAliveThread() {
+        // Start a non-daemon thread to keep the JavaFX toolkit alive
+        // This is necessary on macOS because the JavaFX Application thread
+        // is attached to the macOS Appkit Thread as a daemon thread
+        Thread thr = new Thread(() -> {
+            try {
+                keepAliveLatch.await();
+            } catch (InterruptedException ex) {
+                throw new RuntimeException("Unexpected exception: ", ex);
+            }
+        });
+        thr.setName("JavaFX-KeepAlive");
+        thr.setDaemon(false);
+        thr.start();
+    }
+
+    private static void finishKeepAliveThread() {
+        keepAliveLatch.countDown();
+    }
+
     MacApplication() {
         // Embedded in SWT, with shared event thread
         @SuppressWarnings("removal")
@@ -104,6 +126,11 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
             });
         isTaskbarApplication = tmp;
 
+        // Since both FX and AWT attaches to the AppKit thread as a daemon
+        // We need to create a non-Daemon KeepAlive thread so the FX toolkit
+        // doesn't exit prematurely
+        startKeepAliveThread();
+
         ClassLoader classLoader = MacApplication.class.getClassLoader();
         _runLoop(classLoader, wrappedRunnable, isTaskbarApplication);
     }
@@ -135,6 +162,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     @Override
     protected void finishTerminating() {
         _finishTerminating();
+        finishKeepAliveThread();
 
         super.finishTerminating();
     }
