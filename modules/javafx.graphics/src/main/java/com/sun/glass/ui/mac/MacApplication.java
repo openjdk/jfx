@@ -65,10 +65,19 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     private static final CountDownLatch keepAliveLatch = new CountDownLatch(1);
 
+    /**
+     * Starts a non-daemon KeepAlive thread to ensure that the
+     * JavaFX toolkit keeps running until the toolkit exits. On
+     * other platforms, the JavaFX Application Thread is created
+     * as a non-daemon Java thread when the toolkit starts. On
+     * macOS, we use the existing AppKit thread as the JavaFX
+     * Application thread, and attach it to the JVM as a daemon
+     * thread. In the case of Swing / JavaFX interop, AWT attaches
+     * the AppKit thread as a daemon thread. Since there is no other
+     * non-daemon thread, we create one so that the JavaFX toolkit
+     * will not exit prematurely.
+     */
     private static void startKeepAliveThread() {
-        // Start a non-daemon thread to keep the JavaFX toolkit alive
-        // This is necessary on macOS because the JavaFX Application thread
-        // is attached to the macOS Appkit Thread as a daemon thread
         Thread thr = new Thread(() -> {
             try {
                 keepAliveLatch.await();
@@ -81,6 +90,9 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         thr.start();
     }
 
+    /**
+     * Terminates the KeepAlive thread.
+     */
     private static void finishKeepAliveThread() {
         keepAliveLatch.countDown();
     }
@@ -126,9 +138,8 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
             });
         isTaskbarApplication = tmp;
 
-        // Since both FX and AWT attaches to the AppKit thread as a daemon
-        // We need to create a non-Daemon KeepAlive thread so the FX toolkit
-        // doesn't exit prematurely
+        // Create a non-daemon KeepAlive thread so the FX toolkit
+        // doesn't exit prematurely.
         startKeepAliveThread();
 
         ClassLoader classLoader = MacApplication.class.getClassLoader();
