@@ -27,6 +27,7 @@
 #include "config.h"
 #include "WorkerThread.h"
 
+#include "AdvancedPrivacyProtections.h"
 #include "IDBConnectionProxy.h"
 #include "ScriptSourceCode.h"
 #include "SecurityOrigin.h"
@@ -71,6 +72,7 @@ WorkerParameters WorkerParameters::isolatedCopy() const
         sessionID,
         crossThreadCopy(serviceWorkerData),
         clientIdentifier,
+        advancedPrivacyProtections,
         noiseInjectionHashSalt
     };
 }
@@ -198,6 +200,7 @@ SocketProvider* WorkerThread::socketProvider()
 
 WorkerGlobalScope* WorkerThread::globalScope()
 {
+    ASSERT(!thread() || thread() == &Thread::current());
     return downcast<WorkerGlobalScope>(WorkerOrWorkletThread::globalScope());
 }
 

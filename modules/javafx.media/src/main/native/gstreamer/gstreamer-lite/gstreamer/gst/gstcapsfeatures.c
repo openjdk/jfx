@@ -180,7 +180,7 @@ gst_caps_features_new_empty (void)
 {
   GstCapsFeatures *features;
 
-  features = g_slice_new (GstCapsFeatures);
+  features = g_new (GstCapsFeatures, 1);
   features->type = _gst_caps_features_type;
   features->parent_refcount = NULL;
   features->array = g_array_new (FALSE, FALSE, sizeof (GQuark));
@@ -431,7 +431,7 @@ gst_caps_features_free (GstCapsFeatures * features)
 #endif
   GST_TRACE ("free caps features %p", features);
 
-  g_slice_free (GstCapsFeatures, features);
+  g_free (features);
 }
 
 /**

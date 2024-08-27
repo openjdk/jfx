@@ -84,7 +84,7 @@ gst_parse_context_new (void)
 #ifndef GST_DISABLE_PARSE
   GstParseContext *ctx;
 
-  ctx = g_slice_new (GstParseContext);
+  ctx = g_new (GstParseContext, 1);
   ctx->missing_elements = NULL;
 
   return ctx;
@@ -136,7 +136,7 @@ gst_parse_context_free (GstParseContext * context)
   if (context) {
     g_list_foreach (context->missing_elements, (GFunc) g_free, NULL);
     g_list_free (context->missing_elements);
-    g_slice_free (GstParseContext, context);
+    g_free (context);
   }
 #endif
 }

@@ -46,6 +46,9 @@
  *
  * A mix matrix can be passed to audioconvert, that will govern the
  * remapping of input to output channels.
+ * This is required if the input channels are unpositioned and no standard layout can be determined.
+ * If an empty mix matrix is specified, a (potentially truncated) identity matrix will be generated.
+ *
  * ## Example matrix generation code
  * To generate the matrix using code:
  *
@@ -73,8 +76,6 @@
  * gst-launch-1.0 audiotestsrc ! audio/x-raw, channels=4 ! audioconvert mix-matrix="<<(float)1.0, (float)0.0, (float)0.0, (float)0.0>, <(float)0.0, (float)1.0, (float)0.0, (float)0.0>>" ! audio/x-raw,channels=2 ! autoaudiosink
  * ]|
  *
- * > If an empty mix matrix is specified, a (potentially truncated)
- * > identity matrix will be generated.
  *
  * ## Example empty matrix generation code
  * |[
@@ -214,10 +215,18 @@ gst_audio_convert_class_init (GstAudioConvertClass * klass)
           GST_TYPE_AUDIO_NOISE_SHAPING_METHOD, GST_AUDIO_NOISE_SHAPING_NONE,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
+  /**
+   * GstAudioConvert:mix-matrix:
+   *
+   * Transformation matrix for input/output channels.
+   * Required if the input channels are unpositioned and no standard layout can be determined.
+   * Setting an empty matrix like \"< >\" will generate an identity matrix."
+   *
+   */
   g_object_class_install_property (gobject_class, PROP_MIX_MATRIX,
       gst_param_spec_array ("mix-matrix",
           "Input/output channel matrix",
-          "Transformation matrix for input/output channels",
+          "Transformation matrix for input/output channels.",
           gst_param_spec_array ("matrix-rows", "rows", "rows",
               g_param_spec_float ("matrix-cols", "cols", "cols",
                   -1, 1, 0,
@@ -310,13 +319,13 @@ gst_audio_convert_get_unit_size (GstBaseTransform * base, GstCaps * caps,
     goto parse_error;
 
   *size = info.bpf;
-  GST_INFO_OBJECT (base, "unit_size = %" G_GSIZE_FORMAT, *size);
+  GST_DEBUG_OBJECT (base, "unit_size = %" G_GSIZE_FORMAT, *size);
 
   return TRUE;
 
 parse_error:
   {
-    GST_INFO_OBJECT (base, "failed to parse caps to get unit_size");
+    GST_WARNING_OBJECT (base, "failed to parse caps to get unit_size");
     return FALSE;
   }
 }
@@ -345,8 +354,9 @@ remove_channels_from_structure (GstCapsFeatures * features, GstStructure * s,
   gint channels;
   GstAudioConvert *this = GST_AUDIO_CONVERT (user_data);
 
-  /* Only remove the channels and channel-mask for non-NONE layouts,
-   * or if a mix matrix was manually specified */
+  /* Only remove the channels and channel-mask if a (empty) mix matrix was manually specified,
+   * if no channel-mask is specified, for non-NONE channel layouts or for a single channel layout
+   */
   if (this->mix_matrix_is_set ||
       !gst_structure_get (s, "channel-mask", GST_TYPE_BITMASK, &mask, NULL) ||
       (mask != 0 || (gst_structure_get_int (s, "channels", &channels)
@@ -1006,7 +1016,8 @@ gst_audio_convert_set_property (GObject * object, guint prop_id,
       break;
     case PROP_MIX_MATRIX:
       if (!gst_value_array_get_size (value)) {
-        this->mix_matrix_is_set = FALSE;
+        g_value_copy (value, &this->mix_matrix);
+        this->mix_matrix_is_set = TRUE;
       } else {
         const GValue *first_row = gst_value_array_get_value (value, 0);
 
@@ -1017,7 +1028,8 @@ gst_audio_convert_set_property (GObject * object, guint prop_id,
           /* issue a reconfigure upstream */
           gst_base_transform_reconfigure_sink (GST_BASE_TRANSFORM (this));
         } else {
-          g_warning ("Empty mix matrix's first row");
+          g_warning ("Empty mix matrix's first row.");
+          this->mix_matrix_is_set = FALSE;
         }
       }
       break;

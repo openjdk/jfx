@@ -45,6 +45,7 @@
   #endif
 #endif
 #include <AudioUnit/AudioUnit.h>
+#include <mach/mach_time.h>
 #include "gstosxaudioelement.h"
 
 
@@ -77,6 +78,9 @@ G_BEGIN_DECLS
 typedef struct _GstCoreAudio GstCoreAudio;
 typedef struct _GstCoreAudioClass GstCoreAudioClass;
 
+#define CORE_AUDIO_TIMING_LOCK(core_audio) (g_mutex_lock(&(core_audio->timing_lock)))
+#define CORE_AUDIO_TIMING_UNLOCK(core_audio) (g_mutex_unlock(&(core_audio->timing_lock)))
+
 struct _GstCoreAudio
 {
   GObject object;
@@ -107,6 +111,12 @@ struct _GstCoreAudio
   AudioStreamBasicDescription original_format, stream_format;
   AudioDeviceIOProcID procID;
 #endif
+
+  mach_timebase_info_data_t timebase;
+  GMutex timing_lock;
+  uint64_t anchor_hosttime_ns;
+  uint32_t anchor_pend_samples;
+  float rate_scalar;
 };
 
 struct _GstCoreAudioClass
@@ -127,6 +137,7 @@ gboolean gst_core_audio_close                                (GstCoreAudio *core
 gboolean gst_core_audio_initialize                           (GstCoreAudio *core_audio,
                                                               AudioStreamBasicDescription format,
                                                               GstCaps *caps,
+                                                              guint32 frames_per_packet,
                                                               gboolean is_passthrough);
 
 void gst_core_audio_uninitialize                             (GstCoreAudio *core_audio);
@@ -141,6 +152,10 @@ gboolean gst_core_audio_get_samples_and_latency              (GstCoreAudio * cor
                                                               gdouble rate,
                                                               guint *samples,
                                                               gdouble *latency);
+
+void gst_core_audio_update_timing                            (GstCoreAudio * core_audio,
+                                                              const AudioTimeStamp * inTimeStamp,
+                                                              unsigned int inNumberFrames);
 
 void  gst_core_audio_set_volume                              (GstCoreAudio *core_audio,
                                                               gfloat volume);

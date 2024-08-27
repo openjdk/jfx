@@ -2185,7 +2185,11 @@ again:
       }
       goto do_times;
     }
-    goto out_of_segment;
+    if (basesink->priv->drop_out_of_segment)
+      goto out_of_segment;
+
+    cstart = start;
+    cstop = stop;
   }
 
   if (G_UNLIKELY (start != cstart || stop != cstop)) {
@@ -3953,6 +3957,11 @@ again:
 
     if (bclass->render)
       ret = bclass->render (basesink, GST_BUFFER_CAST (obj));
+
+    if (ret == GST_BASE_SINK_FLOW_DROPPED) {
+      ret = GST_FLOW_OK;
+      goto dropped;
+    }
   } else {
     GstBufferList *buffer_list = GST_BUFFER_LIST_CAST (obj);
 
@@ -3962,6 +3971,9 @@ again:
     /* Set the first buffer and buffer list to be included in last sample */
     gst_base_sink_set_last_buffer (basesink, sync_buf);
     gst_base_sink_set_last_buffer_list (basesink, buffer_list);
+
+    /* Not currently supported */
+    g_assert (ret != GST_BASE_SINK_FLOW_DROPPED);
   }
 
   if (ret == GST_FLOW_STEP)
@@ -5144,8 +5156,17 @@ gst_base_sink_get_position (GstBaseSink * basesink, GstFormat format,
 
   GST_OBJECT_LOCK (basesink);
   /* we can only get the segment when we are not NULL or READY */
-  if (!basesink->have_newsegment)
+  if (GST_STATE (basesink) <= GST_STATE_READY &&
+      GST_STATE_PENDING (basesink) <= GST_STATE_READY) {
     goto wrong_state;
+  }
+
+  segment = &basesink->segment;
+  /* get the format in the segment */
+  oformat = segment->format;
+
+  if (oformat == GST_FORMAT_UNDEFINED)
+    goto no_segment;
 
   in_paused = FALSE;
   /* when not in PLAYING or when we're busy with a state change, we
@@ -5155,11 +5176,6 @@ gst_base_sink_get_position (GstBaseSink * basesink, GstFormat format,
       GST_STATE_PENDING (basesink) != GST_STATE_VOID_PENDING) {
     in_paused = TRUE;
   }
-
-  segment = &basesink->segment;
-
-  /* get the format in the segment */
-  oformat = segment->format;
 
   /* report with last seen position when EOS */
   last_seen = basesink->eos;
@@ -5354,6 +5370,15 @@ wrong_state:
   {
     /* in NULL or READY we always return FALSE and -1 */
     GST_DEBUG_OBJECT (basesink, "position in wrong state, return -1");
+    res = FALSE;
+    *cur = -1;
+    GST_OBJECT_UNLOCK (basesink);
+    goto done;
+  }
+no_segment:
+  {
+    GST_DEBUG_OBJECT (basesink,
+        "haven't received a segment yet, can't anwser position, return -1");
     res = FALSE;
     *cur = -1;
     GST_OBJECT_UNLOCK (basesink);
