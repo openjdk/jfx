@@ -133,11 +133,13 @@ public class FTFactory extends PrismFontFactory {
         boolean isItalic = primaryResource.isItalic();
         FontConfigManager.FcCompFont font =
             FontConfigManager.getFontConfigFont("sans", isBold, isItalic);
-        ArrayList<String> linkedFontFiles = FontConfigManager.getFileNames(font, false);
-        ArrayList<String> linkedFontNames = FontConfigManager.getFontNames(font, false);
         FontFallbackInfo info = new FontFallbackInfo();
-        for (int i=0; i<linkedFontNames.size(); i++)  {
-            info.add(linkedFontNames.get(i), linkedFontFiles.get(i), null);
+        if (font != null) {
+            ArrayList<String> linkedFontFiles = FontConfigManager.getFileNames(font, false);
+            ArrayList<String> linkedFontNames = FontConfigManager.getFontNames(font, false);
+            for (int i=0; i<linkedFontNames.size(); i++)  {
+                info.add(linkedFontNames.get(i), linkedFontFiles.get(i), null);
+            }
         }
         return info;
     }
