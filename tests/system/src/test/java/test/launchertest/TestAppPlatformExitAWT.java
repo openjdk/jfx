@@ -46,8 +46,8 @@ public class TestAppPlatformExitAWT extends Application {
         JDialog d = new JDialog();
         Platform.runLater(()-> {
             Platform.exit();
+            SwingUtilities.invokeLater(() -> d.setVisible(true));
         });
-        d.setVisible(true);
     }
 
     @Override
