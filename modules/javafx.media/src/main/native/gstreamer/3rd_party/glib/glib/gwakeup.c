@@ -38,11 +38,9 @@
 #include "gwakeup.h"
 
 /*< private >
- * SECTION:gwakeup
- * @title: GWakeup
- * @short_description: portable cross-thread event signal mechanism
+ * GWakeup:
  *
- * #GWakeup is a simple and portable way of signaling events between
+ * `GWakeup` is a simple and portable way of signaling events between
  * different threads in a way that integrates nicely with g_poll().
  * GLib uses it internally for cross-thread signalling in the
  * implementation of #GMainContext and #GCancellable.
@@ -59,7 +57,7 @@
  * is implemented with a pair of pipes.
  *
  * Since: 2.30
- **/
+ */
 #ifdef _WIN32
 
 #include <windows.h>
@@ -124,7 +122,7 @@ struct _GWakeup
   gint fds[2];
 };
 
-/**
+/*< private >
  * g_wakeup_new:
  *
  * Creates a new #GWakeup.
@@ -170,7 +168,7 @@ g_wakeup_new (void)
   return wakeup;
 }
 
-/**
+/*< private >
  * g_wakeup_get_pollfd:
  * @wakeup: a #GWakeup
  * @poll_fd: a #GPollFD
@@ -190,7 +188,7 @@ g_wakeup_get_pollfd (GWakeup *wakeup,
   poll_fd->events = G_IO_IN;
 }
 
-/**
+/*< private >
  * g_wakeup_acknowledge:
  * @wakeup: a #GWakeup
  *
@@ -229,7 +227,7 @@ g_wakeup_acknowledge (GWakeup *wakeup)
     }
 }
 
-/**
+/*< private >
  * g_wakeup_signal:
  * @wakeup: a #GWakeup
  *
@@ -270,7 +268,7 @@ g_wakeup_signal (GWakeup *wakeup)
     }
 }
 
-/**
+/*< private >
  * g_wakeup_free:
  * @wakeup: a #GWakeup
  *

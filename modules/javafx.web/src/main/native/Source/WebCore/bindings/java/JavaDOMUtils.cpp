@@ -47,7 +47,7 @@ namespace WebCore {
 
 static void raiseDOMErrorException(JNIEnv* env, WebCore::ExceptionCode ec)
 {
-    ASSERT(ec);
+    ASSERT(ec == ExceptionCode::TypeError);
 
     auto description = DOMException::description(ec);
 

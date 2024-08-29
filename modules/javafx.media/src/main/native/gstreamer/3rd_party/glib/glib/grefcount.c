@@ -18,29 +18,6 @@
  * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
- * SECTION:refcount
- * @Title: Reference counting
- * @Short_description: Reference counting types and functions
- *
- * Reference counting is a garbage collection mechanism that is based on
- * assigning a counter to a data type, or any memory area; the counter is
- * increased whenever a new reference to that data type is acquired, and
- * decreased whenever the reference is released. Once the last reference
- * is released, the resources associated to that data type are freed.
- *
- * GLib uses reference counting in many of its data types, and provides
- * the #grefcount and #gatomicrefcount types to implement safe and atomic
- * reference counting semantics in new data types.
- *
- * It is important to note that #grefcount and #gatomicrefcount should be
- * considered completely opaque types; you should always use the provided
- * API to increase and decrease the counters, and you should never check
- * their content directly, or compare their content with other values.
- *
- * Since: 2.58
- */
-
 #include "config.h"
 
 #include "grefcount.h"

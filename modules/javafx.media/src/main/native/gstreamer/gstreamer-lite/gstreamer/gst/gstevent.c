@@ -261,7 +261,7 @@ _gst_event_free (GstEvent * event)
   memset (event, 0xff, sizeof (GstEventImpl));
 #endif
 
-  g_slice_free1 (sizeof (GstEventImpl), event);
+  g_free (event);
 }
 
 static void gst_event_init (GstEventImpl * event, GstEventType type);
@@ -272,7 +272,7 @@ _gst_event_copy (GstEvent * event)
   GstEventImpl *copy;
   GstStructure *s;
 
-  copy = g_slice_new0 (GstEventImpl);
+  copy = g_new0 (GstEventImpl, 1);
 
   gst_event_init (copy, GST_EVENT_TYPE (event));
 
@@ -332,7 +332,7 @@ gst_event_new_custom (GstEventType type, GstStructure * structure)
 {
   GstEventImpl *event;
 
-  event = g_slice_new0 (GstEventImpl);
+  event = g_new0 (GstEventImpl, 1);
 
   GST_CAT_DEBUG (GST_CAT_EVENT, "creating new event %p %s %d", event,
       gst_event_type_get_name (type), type);
@@ -353,7 +353,7 @@ gst_event_new_custom (GstEventType type, GstStructure * structure)
   /* ERRORS */
 had_parent:
   {
-    g_slice_free1 (sizeof (GstEventImpl), event);
+    g_free (event);
     g_warning ("structure is already owned by another object");
     return NULL;
   }

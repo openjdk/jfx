@@ -379,7 +379,7 @@ multiply (mpn_t src1, mpn_t src2, mpn_t *dest)
     {
       /* src1 or src2 is zero.  */
       dest->nlimbs = 0;
-      dest->limbs = (mp_limb_t *) malloc (1);
+      dest->limbs = (mp_limb_t *) malloc (sizeof (mp_limb_t));
     }
   else
     {
