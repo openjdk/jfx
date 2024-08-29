@@ -205,6 +205,10 @@ public class RichTextArea extends Control {
         public static final FunctionTag MOVE_TO_DOCUMENT_END = new FunctionTag();
         /** Moves the caret to before the first character of the text. */
         public static final FunctionTag MOVE_TO_DOCUMENT_START = new FunctionTag();
+        /** Moves the caret to the end of the visual text line at caret. */
+        public static final FunctionTag MOVE_TO_LINE_END = new FunctionTag();
+        /** Moves the caret to the beginning of the visual text line at caret. */
+        public static final FunctionTag MOVE_TO_LINE_START = new FunctionTag();
         /** Moves the caret to the end of the paragraph at caret. */
         public static final FunctionTag MOVE_TO_PARAGRAPH_END = new FunctionTag();
         /** Moves the caret to the beginning of the paragraph at caret. */
@@ -257,6 +261,10 @@ public class RichTextArea extends Control {
         public static final FunctionTag SELECT_TO_DOCUMENT_END = new FunctionTag();
         /** Extends selection to the start of the document. */
         public static final FunctionTag SELECT_TO_DOCUMENT_START = new FunctionTag();
+        /** Extends selection to the end of the visual text line at caret. */
+        public static final FunctionTag SELECT_TO_LINE_END = new FunctionTag();
+        /** Extends selection to the start of the visual text line at caret. */
+        public static final FunctionTag SELECT_TO_LINE_START = new FunctionTag();
         /** Extends selection one visual text line up. */
         public static final FunctionTag SELECT_UP = new FunctionTag();
         /** Selects a word at the caret position. */
@@ -1496,6 +1504,30 @@ public class RichTextArea extends Control {
     }
 
     /**
+     * Moves the caret to the end of the visual text line at caret, clearing an existing selection.
+     * <p>
+     * This method does nothing when the caret position is {@code null}.
+     * <p>
+     * This action can be changed by remapping the default behavior via {@link InputMap}.
+     * @see RichTextArea.Tags#MOVE_TO_LINE_END
+     */
+    public void moveLineEnd() {
+        execute(Tags.MOVE_TO_LINE_END);
+    }
+
+    /**
+     * Moves the caret to the start of the visual text line at caret, clearing an existing selection.
+     * <p>
+     * This method does nothing when the caret position is {@code null}.
+     * <p>
+     * This action can be changed by remapping the default behavior via {@link InputMap}.
+     * @see RichTextArea.Tags#MOVE_TO_LINE_START
+     */
+    public void moveLineStart() {
+        execute(Tags.MOVE_TO_LINE_START);
+    }
+
+    /**
      * Moves the caret to the end of the current paragraph, or, if already there, to the end of the next paragraph.
      * <p>
      * This method does nothing when the caret position is {@code null}.
@@ -1958,6 +1990,28 @@ public class RichTextArea extends Control {
      */
     public void selectToDocumentStart() {
         execute(Tags.SELECT_TO_DOCUMENT_START);
+    }
+
+    /**
+     * Extends selection to the end of the visual text line at caret.
+     * <p>
+     * This method does nothing when the caret position is {@code null}.
+     * <p>
+     * This action can be changed by remapping the default behavior via {@link InputMap}.
+     * @see RichTextArea.Tags#SELECT_TO_LINE_END
+     */
+    public void selectToLineEnd() {
+        execute(Tags.SELECT_TO_LINE_END);
+    }
+
+    /**
+     * Extends selection to the start of the visual text line at caret.
+     * <p>
+     * This action can be changed by remapping the default behavior via {@link InputMap}.
+     * @see RichTextArea.Tags#SELECT_TO_LINE_START
+     */
+    public void selectToLineStart() {
+        execute(Tags.SELECT_TO_LINE_START);
     }
 
     /**

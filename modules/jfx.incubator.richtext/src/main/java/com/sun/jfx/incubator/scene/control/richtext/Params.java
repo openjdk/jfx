@@ -116,9 +116,6 @@ public class Params {
     /** vertical mouse wheel scroll block size as a fraction of window height. */
     public static final double SCROLL_WHEEL_BLOCK_SIZE_VERTICAL = 0.1;
 
-    /**
-     * VFlow TextLayout sliding window extent before and after the visible area.
-     * Must be > 1.0f for the relative navigation to work.
-     */
-    public static final float SLIDING_WINDOW_EXTENT = 3.0f;
+    /** The number of paragraphs to lay out before and after the view point in VFlow. */
+    public static final int SLIDING_WINDOW_EXTENT = 100;
 }

@@ -115,6 +115,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         registerFunction(RichTextArea.Tags.MOVE_RIGHT, this::moveRight);
         registerFunction(RichTextArea.Tags.MOVE_TO_DOCUMENT_END, this::moveDocumentEnd);
         registerFunction(RichTextArea.Tags.MOVE_TO_DOCUMENT_START, this::moveDocumentStart);
+        registerFunction(RichTextArea.Tags.MOVE_TO_LINE_END, this::moveLineEnd);
+        registerFunction(RichTextArea.Tags.MOVE_TO_LINE_START, this::moveLineStart);
         registerFunction(RichTextArea.Tags.MOVE_TO_PARAGRAPH_END, this::moveParagraphEnd);
         registerFunction(RichTextArea.Tags.MOVE_TO_PARAGRAPH_START, this::moveParagraphStart);
         registerFunction(RichTextArea.Tags.MOVE_UP, this::moveUp);
@@ -141,6 +143,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         registerFunction(RichTextArea.Tags.SELECT_RIGHT, this::selectRight);
         registerFunction(RichTextArea.Tags.SELECT_TO_DOCUMENT_END, this::selectDocumentEnd);
         registerFunction(RichTextArea.Tags.SELECT_TO_DOCUMENT_START, this::selectDocumentStart);
+        registerFunction(RichTextArea.Tags.SELECT_TO_LINE_END, this::selectLineEnd);
+        registerFunction(RichTextArea.Tags.SELECT_TO_LINE_START, this::selectLineStart);
         registerFunction(RichTextArea.Tags.SELECT_UP, this::selectUp);
         registerFunction(RichTextArea.Tags.SELECT_WORD, this::selectWord);
         registerFunction(RichTextArea.Tags.SELECT_WORD_LEFT, this::selectWordLeft);
@@ -160,11 +164,15 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         registerKey(KeyCode.DELETE, RichTextArea.Tags.DELETE);
         registerKey(KeyCode.DOWN, RichTextArea.Tags.MOVE_DOWN);
         registerKey(KeyBinding.shift(KeyCode.DOWN), RichTextArea.Tags.SELECT_DOWN);
-        registerKey(KeyCode.END, RichTextArea.Tags.MOVE_TO_PARAGRAPH_END);
-        registerKey(KeyBinding.shift(KeyCode.END), RichTextArea.Tags.SELECT_PARAGRAPH_END);
+        registerKey(KeyCode.END, RichTextArea.Tags.MOVE_TO_LINE_END);
+        registerKey(KeyBinding.ctrl(KeyCode.END), RichTextArea.Tags.MOVE_TO_DOCUMENT_END);
+        registerKey(KeyBinding.ctrlShift(KeyCode.END), RichTextArea.Tags.SELECT_TO_DOCUMENT_END);
+        registerKey(KeyBinding.shift(KeyCode.END), RichTextArea.Tags.SELECT_TO_LINE_END);
         registerKey(KeyCode.ENTER, RichTextArea.Tags.INSERT_LINE_BREAK);
-        registerKey(KeyCode.HOME, RichTextArea.Tags.MOVE_TO_PARAGRAPH_START);
-        registerKey(KeyBinding.shift(KeyCode.HOME), RichTextArea.Tags.SELECT_PARAGRAPH_START);
+        registerKey(KeyCode.HOME, RichTextArea.Tags.MOVE_TO_LINE_START);
+        registerKey(KeyBinding.ctrl(KeyCode.HOME), RichTextArea.Tags.MOVE_TO_DOCUMENT_START);
+        registerKey(KeyBinding.ctrlShift(KeyCode.HOME), RichTextArea.Tags.SELECT_TO_DOCUMENT_START);
+        registerKey(KeyBinding.shift(KeyCode.HOME), RichTextArea.Tags.SELECT_TO_LINE_START);
         registerKey(KeyBinding.shift(KeyCode.INSERT), RichTextArea.Tags.PASTE);
         registerKey(KeyBinding.shortcut(KeyCode.INSERT), RichTextArea.Tags.COPY);
         registerKey(KeyCode.LEFT, RichTextArea.Tags.MOVE_LEFT);
@@ -198,12 +206,12 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             registerKey(KeyBinding.shortcut(KeyCode.DOWN), RichTextArea.Tags.MOVE_TO_DOCUMENT_END);
             registerKey(KeyBinding.option(KeyCode.LEFT), RichTextArea.Tags.MOVE_WORD_LEFT);
             registerKey(KeyBinding.shiftOption(KeyCode.LEFT), RichTextArea.Tags.SELECT_WORD_LEFT);
-            registerKey(KeyBinding.shiftShortcut(KeyCode.LEFT), RichTextArea.Tags.SELECT_PARAGRAPH_START);
-            registerKey(KeyBinding.shortcut(KeyCode.LEFT), RichTextArea.Tags.MOVE_TO_PARAGRAPH_START);
+            registerKey(KeyBinding.shiftShortcut(KeyCode.LEFT), RichTextArea.Tags.SELECT_TO_LINE_START);
+            registerKey(KeyBinding.shortcut(KeyCode.LEFT), RichTextArea.Tags.MOVE_TO_LINE_START);
             registerKey(KeyBinding.option(KeyCode.RIGHT), RichTextArea.Tags.MOVE_WORD_RIGHT);
             registerKey(KeyBinding.shiftOption(KeyCode.RIGHT), RichTextArea.Tags.SELECT_WORD_RIGHT);
-            registerKey(KeyBinding.shiftShortcut(KeyCode.RIGHT), RichTextArea.Tags.SELECT_PARAGRAPH_END);
-            registerKey(KeyBinding.shortcut(KeyCode.RIGHT), RichTextArea.Tags.MOVE_TO_PARAGRAPH_END);
+            registerKey(KeyBinding.shiftShortcut(KeyCode.RIGHT), RichTextArea.Tags.SELECT_TO_LINE_END);
+            registerKey(KeyBinding.shortcut(KeyCode.RIGHT), RichTextArea.Tags.MOVE_TO_LINE_END);
             registerKey(KeyBinding.builder(KeyCode.TAB).ctrl().option().shift().build(), RichTextArea.Tags.FOCUS_NEXT);
             registerKey(KeyBinding.option(KeyCode.UP), RichTextArea.Tags.MOVE_PARAGRAPH_UP);
             registerKey(KeyBinding.shiftOption(KeyCode.UP), RichTextArea.Tags.SELECT_PARAGRAPH_UP);
@@ -217,12 +225,6 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             registerKey(KeyBinding.ctrl(KeyCode.DOWN), RichTextArea.Tags.MOVE_PARAGRAPH_DOWN);
             registerKey(KeyBinding.ctrlShift(KeyCode.DOWN), RichTextArea.Tags.SELECT_PARAGRAPH_DOWN);
             registerKey(KeyBinding.ctrl(KeyCode.H), RichTextArea.Tags.BACKSPACE);
-            registerKey(KeyBinding.ctrl(KeyCode.HOME), RichTextArea.Tags.MOVE_TO_DOCUMENT_START);
-            registerKey(KeyBinding.ctrlShift(KeyCode.HOME), RichTextArea.Tags.SELECT_TO_DOCUMENT_START);
-            registerKey(KeyBinding.shift(KeyCode.HOME), RichTextArea.Tags.SELECT_PARAGRAPH_START);
-            registerKey(KeyBinding.ctrl(KeyCode.END), RichTextArea.Tags.MOVE_TO_DOCUMENT_END);
-            registerKey(KeyBinding.ctrlShift(KeyCode.END), RichTextArea.Tags.SELECT_TO_DOCUMENT_END);
-            registerKey(KeyBinding.shift(KeyCode.END), RichTextArea.Tags.SELECT_PARAGRAPH_END);
             registerKey(KeyBinding.ctrl(KeyCode.LEFT), RichTextArea.Tags.MOVE_WORD_LEFT);
             registerKey(KeyBinding.ctrlShift(KeyCode.LEFT), RichTextArea.Tags.SELECT_WORD_LEFT);
             registerKey(KeyBinding.ctrl(KeyCode.RIGHT), RichTextArea.Tags.MOVE_WORD_RIGHT);
@@ -516,7 +518,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         if (autoScrollUp) {
             delta = -delta;
         }
-        vflow.scrollVerticalPixels(delta, true);
+        vflow.scrollVerticalPixels(delta);
+        vflow.layoutChildren();
 
         double x = Math.max(0.0, phantomX);
         double y = autoScrollUp ? 0.0 : vflow.getViewPortHeight();
@@ -528,11 +531,11 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
     }
 
     public void pageDown() {
-        moveLine(vflow.getViewPortHeight(), false);
+        moveVertically(vflow.getViewPortHeight(), false);
     }
 
     public void pageUp() {
-        moveLine(-vflow.getViewPortHeight(), false);
+        moveVertically(-vflow.getViewPortHeight(), false);
     }
 
     public void moveRight() {
@@ -623,11 +626,11 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
     }
 
     public void moveUp() {
-        moveLine(-1.0, false);
+        moveVertically(-1.0, false);
     }
 
     public void moveDown() {
-        moveLine(1.0, false);
+        moveVertically(1.0, false);
     }
 
     /**
@@ -655,11 +658,13 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
      * @param deltaPixels the number of pixels to move
      * @param extendSelection whether to extend selection
      */
-    protected void moveLine(double deltaPixels, boolean extendSelection) {
+    protected void moveVertically(double deltaPixels, boolean extendSelection) {
         TextPos caret = getControl().getCaretPosition();
         if (caret == null) {
             return;
         }
+
+        vflow.scrollCaretToVisible();
 
         CaretInfo ci = vflow.getCaretInfo(caret);
         if (ci == null) {
@@ -680,10 +685,35 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             ci.getMaxY() + deltaPixels + 0.5 :
             ci.getMinY() + deltaPixels - 0.5;
 
-        TextPos p = vflow.moveLine(caret.index(), x, y, down);
+        TextPos p = vflow.moveVertically(caret.index(), x, y, down);
         if (p != null) {
             moveCaret(p, extendSelection);
         }
+    }
+
+    protected void moveHorizontally(boolean start, boolean extendSelection) {
+        TextPos caret = getControl().getCaretPosition();
+        if (caret == null) {
+            return;
+        }
+
+        vflow.scrollCaretToVisible();
+
+        int ix = caret.index();
+        int off = caret.charIndex();
+        TextPos p = vflow.moveHorizontally(start, ix, off);
+        if (p != null) {
+            clearPhantomX();
+            moveCaret(p, extendSelection);
+        }
+    }
+
+    protected void moveLineEnd() {
+        moveHorizontally(false, false);
+    }
+
+    protected void moveLineStart() {
+        moveHorizontally(true, false);
     }
 
     protected void moveCharacter(boolean moveRight, boolean extendSelection) {
@@ -797,19 +827,27 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
     }
 
     public void selectUp() {
-        moveLine(-1.0, true);
+        moveVertically(-1.0, true);
     }
 
     public void selectDown() {
-        moveLine(1.0, true);
+        moveVertically(1.0, true);
+    }
+
+    protected void selectLineEnd() {
+        moveHorizontally(false, true);
+    }
+
+    protected void selectLineStart() {
+        moveHorizontally(true, true);
     }
 
     public void selectPageDown() {
-        moveLine(vflow.getViewPortHeight(), true);
+        moveVertically(vflow.getViewPortHeight(), true);
     }
 
     public void selectPageUp() {
-        moveLine(-vflow.getViewPortHeight(), true);
+        moveVertically(-vflow.getViewPortHeight(), true);
     }
 
     public void selectAll() {

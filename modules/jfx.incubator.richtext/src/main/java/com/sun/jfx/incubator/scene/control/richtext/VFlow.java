@@ -207,7 +207,6 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             }
         });
 
-        // FIX contentWidth.addListener((p) -> updateHorizontalScrollBar());
         offsetX.addListener((p) -> updateHorizontalScrollBar());
         origin.addListener((p) -> handleOriginChange());
         widthProperty().addListener((p) -> handleWidthChange());
@@ -357,11 +356,6 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
     }
 
     private void setUnwrappedContentWidth(double w) {
-        // TODO remove this check later
-        if (Math.abs(w - snapPositionX(w)) > 0.0001) {
-            System.err.println("unwrapped position is not snapped!");
-        }
-
         double min = snapPositionX(Params.LAYOUT_MIN_WIDTH);
         if (w < min) {
             w = min;
@@ -649,7 +643,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             CellArrangement ar = arrangement();
             double av = ar.averageHeight();
             double max = ar.estimatedMax();
-            double h = getHeight();
+            double h = getViewPortHeight();
             val = toScrollBarValue((topCellIndex() - ar.topCount()) * av + ar.topHeight(), h, max);
             visible = h / max;
         }
@@ -669,13 +663,51 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
                 return;
             }
 
-            double max = vscroll.getMax();
-            double val = vscroll.getValue();
-            double visible = vscroll.getVisibleAmount();
-            double pos = fromScrollBarValue(val, visible, max); // max is 1.0
+            // When scrolling virtualized views, we cannot rely on caching of cell heights as it's being done
+            // in the VirtualFlow.  Instead, we must approximate using the information provided to us by the
+            // sliding window.
+            //
+            // 1. rough positioning by using index = pos * (lineCount - 1)
+            // 2. compute resulting position' based on (estimated) pixel counts
+            //      pos' = topPixels / (topPixels + bottomPixels - viewportH)
+            //    where
+            //      topPixels = topPad + (topIndex)*av + topHeight
+            //      bottomPixels = bottomPad + bottomHeight + (lineCount - origin.ix - bottomCount)*av
+            // 3. then adjust by scrolling by pixels
+            //      dy = (pos - pos') * totalPixels
+            //    where
+            //      totalPixels = topPixels + bottomPixels - viewportH
+            //
+            // there might still be some flicker due to the hsb appearing and disappearing
 
-            Origin p = arrangement().fromAbsolutePosition(pos);
+            double max = vscroll.getMax();
+            double min = vscroll.getMin();
+            double val = vscroll.getValue();
+            double pos = (val - min) / max;
+
+            int lineCount = getParagraphCount();
+            int ix = Math.max(0, (int)Math.round(pos * (lineCount - 1)));
+            Origin p = new Origin(ix, 0.0);
             setOrigin(p);
+            layoutCells();
+
+            CellArrangement a = arrangement();
+            int topIx = a.topIndex();
+            double topH = a.topHeight();
+            double bottomH = a.bottomHeight();
+            int cellCount = a.cellCount();
+            double av = a.averageHeight();
+            int originIx = getOrigin().index();
+            double viewH = getViewPortHeight();
+
+            double topPixels = contentPaddingTop + (topIx * av) + topH;
+            double bottomPixels = bottomH + (lineCount - topIx - cellCount) * av + contentPaddingBottom;
+            double totalScroll = Math.max(0.0, (topPixels + bottomPixels - viewH));
+            double pos1 = topPixels / totalScroll;
+            double dy = (pos - pos1) * totalScroll;
+
+            scrollVerticalPixels(dy);
+            layoutChildren();
         }
     }
 
@@ -897,17 +929,9 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
 
     /** scroll by a number of pixels, delta must not exceed the view height in absolute terms */
     public void scrollVerticalPixels(double delta) {
-        scrollVerticalPixels(delta, false);
-    }
-
-    /** scroll by a number of pixels, delta must not exceed the view height in absolute terms */
-    public void scrollVerticalPixels(double delta, boolean forceLayout) {
-        Origin or = arrangement().computeOrigin(delta);
+        Origin or = arrangement().moveOrigin(delta);
         if (or != null) {
             setOrigin(or);
-            if (forceLayout) {
-                layoutChildren();
-            }
         }
     }
 
@@ -942,9 +966,9 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
 
     /** scrolls to visible area, using vflow.content coordinates */
     public void scrollToVisible(double x, double y) {
-        if (y < 0.0) {
+        if (y < snappedTopInset()) {
             // above viewport
-            scrollVerticalPixels(y);
+            scrollVerticalPixels(y - snappedTopInset());
         } else if (y >= getViewPortHeight()) {
             // below viewport
             scrollVerticalPixels(y - getViewPortHeight());
@@ -954,28 +978,35 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
     }
 
     public void scrollCaretToVisible() {
+        TextPos caret = control.getCaretPosition();
+        if (caret == null) {
+            // no caret
+            return;
+        }
+
+        boolean reflow = false;
         CaretInfo c = getCaretInfo();
         if (c == null) {
             // caret is outside of the layout; let's set the origin first to the caret position
             // and then block scroll to avoid scrolling past the document end, if needed
-            TextPos p = control.getCaretPosition();
-            if (p != null) {
-                int ix = p.index();
-                Origin or = new Origin(ix, 0.0);
-                boolean moveDown = (ix > getOrigin().index());
-                setOrigin(or);
-                c = getCaretInfo();
-                if (moveDown) {
-                    scrollVerticalPixels(c.getMaxY() - c.getMinY() - getViewPortHeight());
-                }
-                checkForExcessiveWhitespaceAtTheEnd();
+            int ix = caret.index();
+            Origin or = new Origin(ix, 0.0);
+            boolean moveDown = (ix > getOrigin().index());
+            setOrigin(or);
+            c = getCaretInfo();
+            if (moveDown) {
+                scrollVerticalPixels(c.getMaxY() - c.getMinY() - getViewPortHeight());
             }
+            checkForExcessiveWhitespaceAtTheEnd();
+            reflow = true;
         } else {
             // block scroll, if needed
-            if (c.getMinY() < 0.0) {
-                scrollVerticalPixels(c.getMinY());
+            if (c.getMinY() < snappedTopInset()) {
+                scrollVerticalPixels(c.getMinY() - snappedTopInset());
+                reflow = true;
             } else if (c.getMaxY() > getViewPortHeight()) {
                 scrollVerticalPixels(c.getMaxY() - getViewPortHeight());
+                reflow = true;
             }
 
             if (!control.isWrapText()) {
@@ -987,6 +1018,10 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
                     scrollHorizontalToVisible(c.getMaxX());
                 }
             }
+        }
+
+        if (reflow) {
+            layout();
         }
     }
 
@@ -1092,6 +1127,18 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         }
     }
 
+    public TextPos moveHorizontally(boolean start, int caretIndex, int caretOffset) {
+        TextCell cell = getCell(caretIndex);
+        Integer off = cell.lineEdge(start, caretIndex, caretOffset);
+        if (off == null) {
+            return null;
+        } else if(start || off == 0) {
+            return new TextPos(caretIndex, off);
+        } else {
+            return new TextPos(caretIndex, off, off - 1, false);
+        }
+    }
+
     /**
      * Computes the new TextPos for the target coordinates.  This method takes into account
      * the geometry of text as determined by the layout, thus taking into account
@@ -1103,7 +1150,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
      * @param down direction of the movement relative to the caret
      * @return the new text position, or null if no movement should occur
      */
-    public TextPos moveLine(int caretIndex, double x, double y, boolean down) {
+    public TextPos moveVertically(int caretIndex, double x, double y, boolean down) {
         TextCell cell = getCell(caretIndex);
         // account for line spacing
         if (down) {
@@ -1137,7 +1184,11 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         cell = getCell(ix);
         double py = cell.findHitCandidate(y - cell.getY(), down);
         if (Double.isNaN(py)) {
-            return null; // should not happen
+            if (down) {
+                return skin.getSkinnable().getDocumentEnd();
+            } else {
+                return TextPos.ZERO;
+            }
         }
 
         p = getTextPosLocal(x, py + cell.getY());
@@ -1263,7 +1314,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             arrangement.removeNodesFrom(content);
             arrangement = null;
         }
-        arrangement = new CellArrangement(this, contentPaddingLeft, contentPaddingTop);
+        arrangement = new CellArrangement(this, contentPaddingTop, contentPaddingBottom);
 
         double width = getWidth();
         if (width == 0.0) {
@@ -1285,14 +1336,12 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         boolean useContentHeight = control.isUseContentHeight();
         boolean useContentWidth = control.isUseContentWidth();
         boolean wrap = control.isWrapText() && !useContentWidth;
-        // FIX height as in component height vs. contentHeight in useContentHeight!
-        //double height = useContentHeight ? (padTop + padBottom + contentPaddingTop + contentPaddingBottom) : getHeight();
         double height = getHeight();
         double vsbWidth = vscroll.isVisible() ? vscroll.prefWidth(-1) : 0.0;
         double hsbHeight = hscroll.isVisible() ? hscroll.prefHeight(-1) : 0.0;
 
         double forWidth; // to be used for cell sizing in prefHeight()
-        double maxWidth; // TODO what is it?  replace with cell's preferred width (in unwrapped mode)
+        double maxWidth; // max width to apply before the layout (or replace with cell's preferred width?)
         if (wrap) {
             forWidth = width - leftSide - rightSide - contentPaddingLeft - contentPaddingRight - vsbWidth - padLeft - padRight;
             maxWidth = forWidth;
@@ -1301,18 +1350,15 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             maxWidth = Params.MAX_WIDTH_FOR_LAYOUT;
         }
 
-        double unwrappedWidth = 0.0;
         // total height of visible cells for the purpose of determining vsb visibility
         double arrangementHeight = 0.0;
-
+        double unwrappedWidth = 0.0;
         double ytop = snapPositionY(-getOrigin().offset());
         double y = ytop;
-        double margin = Params.SLIDING_WINDOW_EXTENT * height;
-        int topMarginCount = 0;
-        int bottomMarginCount = 0;
+        int topMarginCount = Params.SLIDING_WINDOW_EXTENT;
+        int bottomMargin = 0;;
         int count = 0;
         boolean cellOnScreen = true;
-        // TODO if topCount < marginCount, increase bottomCount correspondingly
 
         // populating visible part of the sliding window + bottom margin
         int i = topCellIndex();
@@ -1356,16 +1402,22 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
                 // when exceeded both pixel and line count margins
                 if (cellOnScreen) {
                     if (y > height) {
-                        topMarginCount = (int)Math.ceil(count * Params.SLIDING_WINDOW_EXTENT);
-                        bottomMarginCount = count + topMarginCount;
+                        // reached the cell below the last visible cell at the bottom
                         arrangement.setVisibleCellCount(count);
                         cellOnScreen = false;
+
+                        bottomMargin = count + Params.SLIDING_WINDOW_EXTENT;
+                        int less = bottomMargin - getParagraphCount();
+                        if (less > 0) {
+                            // more cells on top
+                            topMarginCount += less;
+                        }
                     }
                 } else {
                     // remove invisible cell from layout after sizing
                     content.getChildren().remove(cell);
 
-                    if ((y > (height + margin)) && (count > bottomMarginCount)) {
+                    if (count > bottomMargin) {
                         break;
                     }
                 }
@@ -1435,7 +1487,6 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         y = ytop;
 
         // populate top margin, going backwards from topCellIndex
-        // TODO populate more, if bottom ended prematurely
         for (i = topCellIndex() - 1; i >= 0; i--) {
             TextCell cell = getCell(i);
             // TODO maybe skip computation if layout width is the same
@@ -1445,13 +1496,13 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             cell.setMaxHeight(USE_COMPUTED_SIZE);
 
             cell.applyCss();
-//            cell.layout();
 
             arrangement.addCell(cell);
 
             double h = cell.prefHeight(forWidth) + getLineSpacing(r);
             h = snapSizeY(h);
             y = snapPositionY(y - h);
+            cell.setPosition(y, h);
             count++;
 
             cell.setPosition(y, h);
@@ -1460,7 +1511,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
 
             // stop populating the top part of the sliding window
             // when exceeded both pixel and line count margins
-            if ((-y > margin) && (count > topMarginCount)) {
+            if (count > topMarginCount) {
                 break;
             }
         }
@@ -1493,7 +1544,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             return;
         }
         if (vsbVisible) {
-            width -= vsbWidth; // TODO or use viewportwidth?
+            width -= vsbWidth;
         }
 
         boolean hsbVisible = (wrap || useContentWidth) ?

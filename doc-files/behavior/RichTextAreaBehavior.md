@@ -25,6 +25,8 @@
 |MOVE_RIGHT                |Moves the caret one symbol to the right
 |MOVE_TO_DOCUMENT_END      |Moves the caret to after the last character of the text
 |MOVE_TO_DOCUMENT_START    |Moves the caret to before the first character of the text
+|MOVE_TO_LINE_END          |Moves the caret to the end of the visual text line at caret
+|MOVE_TO_LINE_START        |Moves the caret to the beginning of the visual text line at caret
 |MOVE_TO_PARAGRAPH_END     |Moves the caret to the end of the paragraph at caret
 |MOVE_TO_PARAGRAPH_START   |Moves the caret to the beginning of the paragraph at caret
 |MOVE_UP                   |Moves the caret one visual text line up
@@ -51,6 +53,8 @@
 |SELECT_RIGHT              |Extends selection one symbol to the right
 |SELECT_TO_DOCUMENT_END    |Extends selection to the end of the document
 |SELECT_TO_DOCUMENT_START  |Extends selection to the start of the document
+|SELECT_TO_LINE_END        |Extends selection to the end of the visual text line at caret
+|SELECT_TO_LINE_START      |Extends selection to the start of the visual text line at caret
 |SELECT_UP                 |Extends selection one visual text line up
 |SELECT_WORD               |Selects a word at the caret position
 |SELECT_WORD_LEFT          |Extends selection to the previous word (LTR) or next word (RTL)
@@ -88,24 +92,24 @@
 |shift-DOWN            |           |SELECT_DOWN               |
 |shift-shortcut-DOWN   |mac        |SELECT_TO_DOCUMENT_END    |
 |shortcut-DOWN         |mac        |MOVE_TO_DOCUMENT_END      |
-|END                   |           |MOVE_TO_PARAGRAPH_END     |4
-|ctrl-END              |linux, win |MOVE_TO_DOCUMENT_END      |
-|ctrl-shift-END        |linux, win |SELECT_TO_DOCUMENT_END    |
-|shift-END             |linux, win |SELECT_PARAGRAPH_END      |
+|END                   |           |MOVE_TO_LINE_END          |4
+|ctrl-END              |           |MOVE_TO_DOCUMENT_END      |
+|ctrl-shift-END        |           |SELECT_TO_DOCUMENT_END    |
+|shift-END             |           |SELECT_LINE_END           |
 |ENTER                 |           |INSERT_LINE_BREAK         |
 |ctrl-H                |linux, win |BACKSPACE                 |
-|HOME                  |           |MOVE_TO_PARAGRAPH_START   |3
-|ctrl-HOME             |linux, win |MOVE_TO_DOCUMENT_START    |
-|ctrl-shift-HOME       |linux, win |SELECT_TO_DOCUMENT_START  |
-|shift-HOME            |linux, win |SELECT_PARAGRAPH_START    |
+|HOME                  |           |MOVE_TO_LINE_START        |3
+|ctrl-HOME             |           |MOVE_TO_DOCUMENT_START    |
+|ctrl-shift-HOME       |           |SELECT_TO_DOCUMENT_START  |
+|shift-HOME            |           |SELECT_TO_LINE_START      |3
 |LEFT                  |           |MOVE_LEFT                 |
 |ctrl-LEFT             |linux, win |MOVE_WORD_LEFT            |
 |ctrl-shift-LEFT       |linux, win |SELECT_WORD_LEFT          |
 |option-LEFT           |mac        |MOVE_WORD_LEFT            |
 |option-shift-LEFT     |mac        |SELECT_WORD_LEFT          |
 |shift-LEFT            |           |SELECT_LEFT               |
-|shift-shortcut-LEFT   |mac        |SELECT_PARAGRAPH_START    |
-|shortcut-LEFT         |mac        |MOVE_TO_PARAGRAPH_START   |
+|shift-shortcut-LEFT   |mac        |SELECT_TO_LINE_START      |3
+|shortcut-LEFT         |mac        |MOVE_TO_LINE_START        |3
 |PAGE_DOWN             |           |PAGE_DOWN                 |6
 |shift-PAGE_DOWN       |           |SELECT_PAGE_DOWN          |6
 |PAGE_UP               |           |PAGE_UP                   |5
@@ -117,8 +121,8 @@
 |option-RIGHT          |mac        |MOVE_WORD_RIGHT           |
 |option-shift-RIGHT    |mac        |SELECT_WORD_RIGHT         |
 |shift-RIGHT           |           |SELECT_RIGHT              |
-|shift-shortcut-RIGHT  |mac        |SELECT_PARAGRAPH_END      |
-|shortcut-RIGHT        |mac        |MOVE_TO_PARAGRAPH_END     |
+|shift-shortcut-RIGHT  |mac        |SELECT_LINE_END           |
+|shortcut-RIGHT        |mac        |MOVE_TO_LINE_END          |
 |TAB                   |           |TAB                       |
 |alt-ctrl-shift-TAB    |linux, win |FOCUS_NEXT                |
 |ctrl-TAB              |           |FOCUS_NEXT                |
@@ -156,9 +160,9 @@ SELECT_PARAGRAPH, SELECT_WORD
 
 1. On macOS, `alt` is represented by the `option` key
 2. On macOS, `shortcut` is represented by the `command` key
-3. On macOS, Home = `command` left arrow key
-4. On macOS, End = `command` right arrow key
-5. On macOS, PgUp = `fn` + `up arrow` key
-6. On macOS, PgDn = `fn` + `down arrow` key
-7. On macOS, BACKSPACE = `delete` key
-8. On macOS, DELETE = `fn` + `delete` key
+3. On macOS, Home is represented by the `command` + left arrow keys
+4. On macOS, End is represented by the `command` + right arrow keys
+5. On macOS, PgUp is represented by the `fn` + `up arrow` keys
+6. On macOS, PgDn is represented by the `fn` + `down arrow` keys
+7. On macOS, BACKSPACE is represented by the `delete` key
+8. On macOS, DELETE is represented by the `fn` + `delete` keys

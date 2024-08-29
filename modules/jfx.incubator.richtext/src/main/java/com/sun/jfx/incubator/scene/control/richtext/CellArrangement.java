@@ -51,8 +51,8 @@ public class CellArrangement {
     private final double flowWidth;
     private final double flowHeight;
     private final int lineCount;
-    private final double contentPaddingLeft; // snapped
     private final double contentPaddingTop; // snapped
+    private final double contentPaddingBottom; // snapped
     private final Origin origin;
     private int visibleCount;
     private int bottomCount;
@@ -62,23 +62,24 @@ public class CellArrangement {
     private Node[] left;
     private Node[] right;
 
-    public CellArrangement(VFlow f, double contentPaddingLeft, double contentPaddingTop) {
+    public CellArrangement(VFlow f, double contentPaddingTop, double contentPaddingBottom) {
         this.flowWidth = f.getWidth();
         this.flowHeight = f.getViewPortHeight();
         this.origin = f.getOrigin();
         this.lineCount = f.getParagraphCount();
-        this.contentPaddingLeft = contentPaddingLeft;
         this.contentPaddingTop = contentPaddingTop;
+        this.contentPaddingBottom = contentPaddingBottom;
     }
 
     // TODO not called right now, use it to skip reflow when not necessary
+    // (may need to include left and right content padding or a sum thereof */
     public boolean isValid(VFlow f, double padLeft, double padTop) {
         return
             (f.getWidth() == flowWidth) &&
             (f.getHeight() == flowHeight) &&
             (f.topCellIndex() == origin.index()) &&
-            (contentPaddingLeft == padLeft) &&
-            (contentPaddingTop == padTop);
+            (contentPaddingTop == padTop) &&
+            (contentPaddingBottom == contentPaddingBottom);
     }
 
     @Override
@@ -87,13 +88,12 @@ public class CellArrangement {
             "CellArrangement{" +
             "origin=" + origin +
             ", topCount=" + topCount() +
-            ", visible=" + getVisibleCellCount() +
             ", bottomCount=" + bottomCount +
+            ", visible=" + getVisibleCellCount() +
             ", topHeight=" + topHeight +
             ", bottomHeight=" + bottomHeight +
             ", lineCount=" + lineCount +
             ", average=" + averageHeight() +
-            ", estMax=" + estimatedMax() +
             ", unwrapped=" + getUnwrappedWidth() +
             "}";
     }
@@ -226,14 +226,20 @@ public class CellArrangement {
         bottomCount = ix;
     }
 
+    /** visible + bottom margin cells */
     public int bottomCount() {
         return bottomCount;
+    }
+
+    public int cellCount() {
+        return cells.size();
     }
 
     public void setBottomHeight(double h) {
         bottomHeight = h;
     }
 
+    /** in pixels from the first visible cell to the last cell in the arrangement */
     public double bottomHeight() {
         return bottomHeight;
     }
@@ -251,7 +257,11 @@ public class CellArrangement {
     }
 
     public double averageHeight() {
-        return (topHeight + bottomHeight) / (topCount() + bottomCount);
+        int sz = cells.size();
+        if (sz == 0) {
+            return 20;
+        }
+        return (topHeight + bottomHeight) / sz;
     }
 
     public double estimatedMax() {
@@ -264,9 +274,7 @@ public class CellArrangement {
      * Should not be called with localY outside of this layout sliding window.
      */
     private int binarySearch(double localY, int low, int high) {
-        //System.err.println("    binarySearch off=" + off + ", high=" + high + ", low=" + low); // FIX
         while (low <= high) {
-            // TODO might be a problem for 2B-rows models
             int mid = (low + high) >>> 1;
             TextCell cell = getCell(mid);
             int cmp = compare(cell, localY);
@@ -304,42 +312,14 @@ public class CellArrangement {
         return origin.index() + bottomCount;
     }
 
-    /** creates a new Origin from the absolute position [0.0 ... (1.0-normalized.visible.amount)] */
-    public Origin fromAbsolutePosition(double pos) {
-        int topIx = topIndex();
-        int btmIx = bottomIndex();
-        int ix = (int)(pos * lineCount);
-        if ((ix >= topIx) && (ix < btmIx)) {
-            // inside the layout
-            double top = topIx / (double)lineCount;
-            double btm = btmIx / (double)lineCount;
-            double f = (pos - top) / (btm - top); // TODO check for dvi0/infinity/NaN
-            double localY = f * (topHeight + bottomHeight) - topHeight;
-
-            ix = binarySearch(localY, topIx, btmIx - 1);
-            TextCell cell = getCell(ix);
-            return new Origin(cell.getIndex(), localY - cell.getY());
-        }
-        return new Origin(ix, 0.0);
-    }
-
-    public Origin computeOrigin(double delta) {
+    /** returns the new origin after scrolling for delta pixels within the arrangement */
+    public Origin moveOrigin(double delta) {
         int topIx = topIndex();
         int btmIx = bottomIndex();
         double y = delta;
 
-        if (delta < 0) {
-            // do not scroll above the top edge
-            double top = -origin.offset() - topHeight;
-            if (y < top) {
-                if (topIx == 0) {
-                    y = Math.max(y, -contentPaddingTop);
-                    return new Origin(0, y);
-                }
-                return new Origin(topIx, 0.0);
-            }
-        } else {
-            // do not scroll past (bottom edge - visible area)
+        if (delta > 0) {
+            // do not scroll beyond the bottom edge
             double max = bottomHeight - flowHeight;
             if (max < 0) {
                 return null;
@@ -352,6 +332,14 @@ public class CellArrangement {
         int ix = binarySearch(y, topIx, btmIx - 1);
         TextCell cell = getCell(ix);
         double off = y - cell.getY();
+
+        // do not scroll beyond the top edge
+        if (delta < 0) {
+            if (ix == 0) {
+                off = Math.max(off, -contentPaddingTop);
+            }
+        }
+
         return new Origin(cell.getIndex(), off);
     }
 
@@ -375,5 +363,13 @@ public class CellArrangement {
 
     public Node getRightNodeAt(int index) {
         return right[index];
+    }
+
+    /** last cell at the bottom of the arrangement */
+    private TextCell lastBottomCell() {
+        if (bottomCount == 0) {
+            return null;
+        }
+        return cells.get(bottomCount - 1);
     }
 }

@@ -413,6 +413,18 @@ public final class TextCell extends BorderPane {
     }
 
     private boolean insideY(double y) {
-        return (y < getHeight()) && (y >= 0.0);
+        return (y < height) && (y >= 0.0);
+    }
+
+    public Integer lineEdge(boolean start, int caretIndex, int caretOffset) {
+        if (content instanceof TextFlow f) {
+            int line = RichUtils.lineForOffset(f, caretOffset);
+            if (start) {
+                return RichUtils.lineStart(f, line);
+            } else {
+                return RichUtils.lineEnd(f, line);
+            }
+        }
+        return null;
     }
 }
