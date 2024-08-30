@@ -16,13 +16,13 @@ See [JDK-8321603](https://bugs.openjdk.org/browse/JDK-8321603) for more informat
 
 ### Clicking on the Scrollbar Track of Virtualized Controls Scrolls by Viewport Length
 
-Clicking on the scrollbar track of virtualized controls, such as `ListView`, TreeView`, `TableView`, and `TreeTableView`, now scrolls by the viewport length rather than the length of the empty cell. Furthermore, cells are no longer aligned to the top or bottom of the viewport after scrolling.
+Clicking on the scrollbar track of virtualized controls, such as `ListView`, `TreeView`, `TableView`, and `TreeTableView`, now scrolls by the viewport length rather than the length of the empty cell. Furthermore, cells are no longer aligned to the top or bottom of the viewport after scrolling.
 
 See [JDK-8323511](https://bugs.openjdk.org/browse/JDK-8323511) for more information.
 
 ### Keyboard Scrolling in Virtualized Controls
 
-Keyboard scrolling key bindings, `alt-ctrl-arrows` (`option-command-arrows` on macOS), have been added to virtualized controls such as  `ListView`, TreeView`, `TableView`, and `TreeTableView` to improve accessibility.
+Keyboard scrolling key bindings, `alt-ctrl-arrows` (`option-command-arrows` on macOS), have been added to virtualized controls such as  `ListView`, `TreeView`, `TableView`, and `TreeTableView` to improve accessibility.
 
 See [JDK-8313138](https://bugs.openjdk.org/browse/JDK-8313138) for more information.
 
