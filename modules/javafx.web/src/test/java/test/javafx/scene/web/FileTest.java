@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,39 +25,23 @@
 
 package test.javafx.scene.web;
 
+import java.io.File;
+
 import com.sun.javafx.webkit.UIClientImplShim;
 import com.sun.webkit.WebPage;
 import com.sun.webkit.WebPageShim;
 import javafx.concurrent.Worker.State;
 import javafx.scene.web.WebEngineShim;
-import netscape.javascript.JSObject;
+
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.util.Base64;
-import java.util.concurrent.CountDownLatch;
-
-import static javafx.concurrent.Worker.State.SUCCEEDED;
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 public class FileTest extends TestBase {
     private final WebPage page = WebEngineShim.getPage(getEngine());
-    private String[] fileList = { new File("src/test/resources/test/html/HelloWorld.txt").getAbsolutePath() };
-
-    private State getLoadState() {
-        return submit(() -> getEngine().getLoadWorker().getState());
-    }
-
-    private String getScriptString(String api) {
-        String scriptContent = String.format("<script type='text/javascript'>" +
+    private final String[] fileList = { new File("src/test/resources/test/html/HelloWorld.txt").getAbsolutePath() };
+    private final String script = String.format("<script type='text/javascript'>" +
                                     "var result;" +
                                     "window.addEventListener('click', (e) => {" +
                                         "document.getElementById('file').click();" +
@@ -65,13 +49,10 @@ public class FileTest extends TestBase {
                                     "function readFile()" +
                                     "{" +
                                         "file = event.target.files[0];" +
-                                        "result = file." + api + ";" +
+                                        "result = file.name;" +
                                     "}" +
-                               "</script>" +
-                               "<body> <input type='file' id='file' onchange='readFile()'/></body>");
-        return scriptContent;
-    }
-
+                                    "</script>" +
+                                    "<body> <input type='file' id='file' onchange='readFile()'/> </body>");
     @Before
     public void before() {
         UIClientImplShim.test_setChooseFiles(fileList);
@@ -80,13 +61,14 @@ public class FileTest extends TestBase {
     private void loadFileReaderTestScript(String testScript) {
         loadContent(testScript);
         submit(() -> {
-            // we send a dummy mouse click event at (0,0) to simulate click on file chooser button.
+            // Send a dummy mouse click event at (0,0) to simulate click on file chooser button.
             WebPageShim.click(page, 0, 0);
         });
     }
 
-    @Test public void testFileName() {
-        loadFileReaderTestScript(getScriptString("name"));
+    @Test
+    public void testFileName() {
+        loadFileReaderTestScript(script);
         submit(() -> {
             assertEquals("Unexpected file name received", "HelloWorld.txt", getEngine().executeScript("window.result"));
         });
