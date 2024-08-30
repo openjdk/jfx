@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,11 +30,8 @@ import com.sun.webkit.WebPageShim;
 import javafx.scene.web.WebEngineShim;
 import org.junit.Test;
 
-import javax.imageio.ImageIO;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -62,11 +59,11 @@ public class ShadowTest extends TestBase {
 
                 int redShadowCnt = 0;
                 int noShadowCnt = 0;
-                for(int x = 0; x < 100; x++){
-                    for(int y = 0; y < 200; y++){
+                for (int x = 0; x < 100; x++) {
+                    for (int y = 0; y < 200; y++) {
                         Color pixelColor = new Color(img.getRGB(x, y), true);
-                        if(isColorsSimilar(Color.RED, pixelColor, 1)){
-                            if(y < 100){
+                        if (isColorsSimilar(Color.RED, pixelColor, 1)) {
+                            if (y < 100) {
                                 redShadowCnt++;
                             } else {
                                 noShadowCnt++;
