@@ -346,10 +346,12 @@ extern void deletePixelFormatInfo(PixelFormatInfo *pfInfo);
 #define VC_3D_INDEX 0
 #define TC_3D_INDEX 1
 #define NC_3D_INDEX 2
+#define CC_3D_INDEX 3
 #define VC_3D_SIZE 3  /* x, y, z */
 #define TC_3D_SIZE 2  /* tu, tv */
 #define NC_3D_SIZE 4  /* nx, ny, nz, nw */
-#define VERT_3D_SIZE (VC_3D_SIZE + TC_3D_SIZE + NC_3D_SIZE)
+#define CC_3D_SIZE 4  /* red, green, blue, alpha */
+#define VERT_3D_SIZE (VC_3D_SIZE + TC_3D_SIZE + NC_3D_SIZE + CC_3D_SIZE)
 #define VERT_3D_STRIDE (sizeof(GLfloat) * VERT_3D_SIZE)
 
 #define MESH_VERTEXBUFFER 0

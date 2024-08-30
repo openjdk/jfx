@@ -54,8 +54,8 @@ import com.sun.javafx.logging.PlatformLogger;
 /**
  * Defines a 3D triangle mesh that consists of its associated {@code VertexFormat}
  * and a set of separate arrays of vertex components such as points, normals,
- * texture coordinates, and an array of faces that define the individual triangles
- * of the mesh.
+ * texture coordinates, colors, and an array of faces that define the individual
+ * triangles of the mesh.
  *<p>
  * Note that the term point, as used in the method names and method
  * descriptions, actually refers to a 3D point (x, y, z) in space
@@ -67,11 +67,16 @@ import com.sun.javafx.logging.PlatformLogger;
  * The term texCoord is used to indicate a single pair of 2D texture
  * coordinates (u, v) for a single vertex, while the term texCoords (plural) is used
  * to indicate sets of texture coordinates for multiple vertices.
+ * Next, the term color is used to indicate a group of four floats (r, g, b, a)
+ * forming a multiplicative color value for a single vertex. It is used for
+ * texture-modulated gouraud shading on the diffuse/selfIllumination maps.
+ * The Values represent the intensity of a particular color component, so a value of
+ * 1.5 for the blue component multiplies the texture's blue color intensity by 1.5.
  * Lastly, the term face is used to indicate 3 sets of interleaving points,
- * normals (optional, depending on the associated VertexFormat)
- * and texture coordinates that together represent the geometric topology of a
- * single triangle, while the term faces (plural) is used to indicate sets of
- * triangles (each represent by a face).
+ * normals (optional, depending on the associated VertexFormat), texCoords, and
+ * colors (optional, depending on the associated VertexFormat), that
+ * together represent the geometric topology of a single triangle, while the term
+ * faces (plural) is used to indicate sets of triangles (each represent by a face).
  * <p>
  * For example, the faces with {@code VertexFormat.POINT_TEXCOORD} that represent
  * a single textured rectangle, using 2 triangles, have the following data order: [
@@ -103,16 +108,19 @@ import com.sun.javafx.logging.PlatformLogger;
  * information.
  *
  * <p>
- * The length of {@code points}, {@code normals}, and {@code texCoords} must be
- * divisible by 3, 3, and 2 respectively. The length of {@code faces} must be
- * divisible by 6 if it is of {@code VertexFormat.POINT_TEXCOORD} else it must
- * be divisible by 9 if it is of {@code VertexFormat.POINT_NORMAL_TEXCOORD}.
+ * The length of {@code points}, {@code normals}, {@code texCoords}, and
+ * {@code colors} must be divisible by 3, 3, 2, and 4 respectively.
+ * The length of {@code faces} must be divisible by the number of array elements
+ * tracked per-face. For example, {@code faces} must be divisible by 6 if it is of
+ * {@code VertexFormat.POINT_TEXCOORD}, or it must be divisible by 9 if it is
+ * of {@code VertexFormat.POINT_NORMAL_TEXCOORD}.
  * The values in the faces array must be within the range of the number of vertices
  * in the points array (0 to points.length / 3 - 1) for the point indices, within
  * the range of the number of vertices in the normals array
- * (0 to normals.length / 3 - 1) for the normal indices, and within the range of
+ * (0 to normals.length / 3 - 1) for the normal indices, within the range of
  * the number of the vertices in the texCoords array (0 to texCoords.length / 2 - 1)
- * for the texture coordinate indices.
+ * for the texture coordinate indices, and within the colors array
+ * (0 to colors.length / 4 - 1) for the color indices.
  *
  * <p> A warning will be recorded to the logger and the mesh will not be rendered
  * (and will have an empty bounds) if any of the array lengths are invalid
@@ -136,17 +144,20 @@ public class TriangleMesh extends Mesh {
     private final ObservableFloatArray points = FXCollections.observableFloatArray();
     private final ObservableFloatArray normals = FXCollections.observableFloatArray();
     private final ObservableFloatArray texCoords = FXCollections.observableFloatArray();
+    private final ObservableFloatArray colors = FXCollections.observableFloatArray();
     private final ObservableFaceArray faces = new ObservableFaceArrayImpl();
     private final ObservableIntegerArray faceSmoothingGroups = FXCollections.observableIntegerArray();
 
     private final Listener pointsSyncer = new Listener(points);
     private final Listener normalsSyncer = new Listener(normals);
     private final Listener texCoordsSyncer = new Listener(texCoords);
+    private final Listener colorsSyncer = new Listener(colors);
     private final Listener facesSyncer = new Listener(faces);
     private final Listener faceSmoothingGroupsSyncer = new Listener(faceSmoothingGroups);
     private final boolean isPredefinedShape;
     private boolean isValidDirty = true;
-    private boolean isPointsValid, isNormalsValid, isTexCoordsValid, isFacesValid, isFaceSmoothingGroupValid;
+    private boolean isPointsValid, isNormalsValid, isTexCoordsValid,
+            isColorsValid, isFacesValid, isFaceSmoothingGroupValid;
     private int refCount = 1;
 
     private BaseBounds cachedBounds;
@@ -180,12 +191,14 @@ public class TriangleMesh extends Mesh {
             isPointsValid = true;
             isNormalsValid = true;
             isTexCoordsValid = true;
+            isColorsValid = true;
             isFacesValid = true;
             isFaceSmoothingGroupValid = true;
         } else {
             isPointsValid = false;
             isNormalsValid = false;
             isTexCoordsValid = false;
+            isColorsValid = false;
             isFacesValid = false;
             isFaceSmoothingGroupValid = false;
         }
@@ -194,7 +207,8 @@ public class TriangleMesh extends Mesh {
 
     /**
      * Specifies the vertex format of this {@code TriangleMesh}, one of
-     * {@code VertexFormat.POINT_TEXCOORD} or {@code VertexFormat.POINT_NORMAL_TEXCOORD}.
+     * {@code VertexFormat.POINT_TEXCOORD}, {@code VertexFormat.POINT_TEXCOORD_COLOR},
+     * {@code VertexFormat.POINT_NORMAL_TEXCOORD}, or {@code VertexFormat.POINT_NORMAL_TEXCOORD_COLOR}.
      *
      * @defaultValue VertexFormat.POINT_TEXCOORD
      *
@@ -217,6 +231,7 @@ public class TriangleMesh extends Mesh {
                 @Override
                 protected void invalidated() {
                     setDirty(true);
+                    isValidDirty = true;
                     // Need to mark faces and faceSmoothingGroups dirty too.
                     facesSyncer.setDirty(true);
                     faceSmoothingGroupsSyncer.setDirty(true);
@@ -253,6 +268,15 @@ public class TriangleMesh extends Mesh {
      */
     public final int getTexCoordElementSize() {
         return getVertexFormat().getTexCoordElementSize();
+    }
+
+    /**
+     * Returns the number of elements that represents a color.
+     *
+     * @return number of elements
+     */
+    public final int getColorElementSize() {
+        return getVertexFormat().getColorElementSize();
     }
 
     /**
@@ -299,6 +323,23 @@ public class TriangleMesh extends Mesh {
     }
 
     /**
+     * Gets the  {@code colors} array of this {@code TriangleMesh}.
+     * The multiplicative colors are normalized, so a value of (0.5, 2.5, 1.0, 1.0)
+     * will multiply the texture's red component by 0.5, the blue component by 2.5,
+     * and the rest by 1.0.
+     * Colors are interpolated between vertices before usage.
+     * They scale (multiply) the diffuse pixel color before lighting calculations
+     * as well as the self-illumination pixel color after lighting calculations.
+     * Specular lighting is not impacted by vertex coloring.
+     *
+     * @return {@code color} array where each color is represented
+     * by 4 float values: red, green, blue, and alpha, in that order.
+     */
+    public final ObservableFloatArray getColors() {
+        return colors;
+    }
+
+    /**
      * Gets the {@code faces} array, indices into the {@code points},
      * {@code normals} (optional, if it is a {@code VertexFormat.POINT_NORMAL_TEXCOORD}
      * mesh) and {@code texCoords} arrays, of this  {@code TriangleMesh}. All
@@ -335,7 +376,8 @@ public class TriangleMesh extends Mesh {
      * be equal to number of faces.
      *
      * <p> This faceSmoothingGroups has no effect on its {@code TriangleMesh} if
-     * it is of {@code VertexFormat.POINT_NORMAL_TEXCOORD} format.
+     * it is of either {@code VertexFormat.POINT_NORMAL_TEXCOORD} or
+     * {@code VertexFormat.POINT_NORMAL_TEXCOORD_COLOR} format.
      * @return the {@code faceSmoothingGroups} array of this {@code TriangleMesh}
      */
     public final ObservableIntegerArray getFaceSmoothingGroups() {
@@ -348,6 +390,7 @@ public class TriangleMesh extends Mesh {
             pointsSyncer.setDirty(false);
             normalsSyncer.setDirty(false);
             texCoordsSyncer.setDirty(false);
+            colorsSyncer.setDirty(false);
             facesSyncer.setDirty(false);
             faceSmoothingGroupsSyncer.setDirty(false);
         }
@@ -395,9 +438,15 @@ public class TriangleMesh extends Mesh {
         return true;
     }
 
+    private boolean vertexFormatHasNormals() {
+        return getVertexFormat().getNormalIndexOffset() >= 0;
+    }
+
     private boolean validateNormals() {
         // Only validate normals if vertex format has normal component
-        if (getVertexFormat() != VertexFormat.POINT_NORMAL_TEXCOORD) return true;
+        if (!vertexFormatHasNormals()) {
+            return true;
+        }
 
         if (normals.size() == 0) { // Valid but meaningless for picking or rendering.
             return false;
@@ -429,6 +478,30 @@ public class TriangleMesh extends Mesh {
         return true;
     }
 
+    private boolean vertexFormatHasColors() {
+        return getVertexFormat().getColorIndexOffset() >= 0;
+    }
+
+    private boolean validateColors() {
+        if (!vertexFormatHasColors()) { // Only validate normals if vertex format has color component
+            return true;
+        }
+
+        if (colors.size() == 0) { // Valid but meaningless for picking or rendering.
+            return false;
+        }
+
+        if ((colors.size() % getVertexFormat().getColorElementSize()) != 0) {
+            String logname = TriangleMesh.class.getName();
+            PlatformLogger.getLogger(logname).warning("colors.size() "
+                    + "has to be divisible by getColorElementSize()."
+                    + " It is to store multiple r/g/b/a colors"
+                    + " of this mesh");
+            return false;
+        }
+        return true;
+    }
+
     private boolean validateFaces() {
         if (faces.size() == 0) { // Valid but meaningless for picking or rendering.
             return false;
@@ -441,44 +514,50 @@ public class TriangleMesh extends Mesh {
             return false;
         }
 
-        if (getVertexFormat() == VertexFormat.POINT_TEXCOORD) {
-            int nVerts = points.size() / getVertexFormat().getPointElementSize();
-            int nTVerts = texCoords.size() / getVertexFormat().getTexCoordElementSize();
-            for (int i = 0; i < faces.size(); i++) {
-                if (i % 2 == 0 && (faces.get(i) >= nVerts || faces.get(i) < 0)
-                        || (i % 2 != 0 && (faces.get(i) >= nTVerts || faces.get(i) < 0))) {
-                    PlatformLogger.getLogger(logname).warning("The values in the "
-                            + "faces array must be within the range of the number "
-                            + "of vertices in the points array (0 to points.length / 3 - 1) "
-                            + "for the point indices and within the range of the "
-                            + "number of the vertices in the texCoords array (0 to "
-                            + "texCoords.length / 2 - 1) for the texture coordinate indices.");
-                    return false;
-                }
+        VertexFormat vertexFormat = getVertexFormat();
+        int nVerts = points.size() / vertexFormat.getPointElementSize();
+        int nNVerts = normals.size() / vertexFormat.getNormalElementSize();
+        int nTVerts = texCoords.size() / vertexFormat.getTexCoordElementSize();
+        int nCVerts = colors.size() / vertexFormat.getColorElementSize();
+        int pointIndexOffset = vertexFormat.getPointIndexOffset();
+        int normalIndexOffset = vertexFormat.getNormalIndexOffset();
+        int texCoordIndexOffset = vertexFormat.getTexCoordIndexOffset();
+        int colorIndexOffset = vertexFormat.getColorIndexOffset();
+
+        for (int i = 0; i < faces.size(); i += vertexFormat.getVertexIndexSize()) {
+            if (pointIndexOffset >= 0
+                    && (faces.get(i + pointIndexOffset) >= nVerts || faces.get(i + pointIndexOffset) < 0)) {
+                PlatformLogger.getLogger(logname).warning("The indices in the "
+                        + "faces array must be within the range of the number "
+                        + "of entries in the points array (0 to points.length / 3 - 1).");
+                return false;
             }
-        } else if (getVertexFormat() == VertexFormat.POINT_NORMAL_TEXCOORD) {
-            int nVerts = points.size() / getVertexFormat().getPointElementSize();
-            int nNVerts =  normals.size() / getVertexFormat().getNormalElementSize();
-            int nTVerts = texCoords.size() / getVertexFormat().getTexCoordElementSize();
-            for (int i = 0; i < faces.size(); i+=3) {
-                if ((faces.get(i) >= nVerts || faces.get(i) < 0)
-                        || (faces.get(i + 1) >= nNVerts || faces.get(i + 1) < 0)
-                        || (faces.get(i + 2) >= nTVerts || faces.get(i + 2) < 0)) {
-                    PlatformLogger.getLogger(logname).warning("The values in the "
-                            + "faces array must be within the range of the number "
-                            + "of vertices in the points array (0 to points.length / 3 - 1) "
-                            + "for the point indices, and within the range of the "
-                            + "number of the vertices in the normals array (0 to "
-                            + "normals.length / 3 - 1) for the normals indices, and "
-                            + "number of the vertices in the texCoords array (0 to "
-                            + "texCoords.length / 2 - 1) for the texture coordinate indices.");
-                    return false;
-                }
+
+            if (normalIndexOffset >= 0
+                    && (faces.get(i + normalIndexOffset) >= nNVerts || faces.get(i + normalIndexOffset) < 0)) {
+                PlatformLogger.getLogger(logname).warning("The indices in the "
+                        + "faces array must be within the range of the number "
+                        + "of entries in the normals array (0 to normals.length / 3 - 1).");
+                return false;
             }
-        } else {
-            PlatformLogger.getLogger(logname).warning("Unsupported VertexFormat: " + getVertexFormat().toString());
-            return false;
+
+            if (texCoordIndexOffset >= 0
+                    && (faces.get(i + texCoordIndexOffset) >= nTVerts || faces.get(i + texCoordIndexOffset) < 0)) {
+                PlatformLogger.getLogger(logname).warning("The indices in the "
+                        + "faces array must be within the range of the number "
+                        + "of entries in the texCoords array (0 to texCoords.length / 2 - 1).");
+                return false;
+            }
+
+            if (colorIndexOffset >= 0
+                    && (faces.get(i + colorIndexOffset) >= nCVerts || faces.get(i + colorIndexOffset) < 0)) {
+                PlatformLogger.getLogger(logname).warning("The indices in the "
+                        + "faces array must be within the range of the number "
+                        + "of entries in the colors array (0 to colors.length / 4 - 1).");
+                return false;
+            }
         }
+
         return true;
     }
 
@@ -508,17 +587,20 @@ public class TriangleMesh extends Mesh {
             if (texCoordsSyncer.dirtyInFull) {
                 isTexCoordsValid = validateTexCoords();
             }
-            if (facesSyncer.dirty || pointsSyncer.dirtyInFull
-                    || normalsSyncer.dirtyInFull || texCoordsSyncer.dirtyInFull) {
+            if (colorsSyncer.dirtyInFull) {
+                isColorsValid = validateColors();
+            }
+            if (facesSyncer.dirty || pointsSyncer.dirtyInFull || normalsSyncer.dirtyInFull
+                    || colorsSyncer.dirtyInFull || texCoordsSyncer.dirtyInFull) {
                 isFacesValid = isPointsValid && isNormalsValid
-                        && isTexCoordsValid && validateFaces();
+                        && isTexCoordsValid  && isColorsValid && validateFaces();
             }
             if (faceSmoothingGroupsSyncer.dirtyInFull || facesSyncer.dirtyInFull) {
                 isFaceSmoothingGroupValid = isFacesValid && validateFaceSmoothingGroups();
             }
             isValidDirty = false;
         }
-        return isPointsValid && isNormalsValid && isTexCoordsValid
+        return isPointsValid && isNormalsValid && isTexCoordsValid && isColorsValid
                 && isFaceSmoothingGroupValid && isFacesValid;
     }
 
@@ -530,17 +612,23 @@ public class TriangleMesh extends Mesh {
 
         final NGTriangleMesh pgTriMesh = getPGTriangleMesh();
         if (validate()) {
-            pgTriMesh.setUserDefinedNormals(getVertexFormat() == VertexFormat.POINT_NORMAL_TEXCOORD);
+            pgTriMesh.setVertexFormat(getVertexFormat());
+            pgTriMesh.setUserDefinedNormals(vertexFormatHasNormals());
+            pgTriMesh.setUserDefinedColors(vertexFormatHasColors());
             pgTriMesh.syncPoints(pointsSyncer);
             pgTriMesh.syncNormals(normalsSyncer);
             pgTriMesh.syncTexCoords(texCoordsSyncer);
+            pgTriMesh.syncColors(colorsSyncer);
             pgTriMesh.syncFaces(facesSyncer);
             pgTriMesh.syncFaceSmoothingGroups(faceSmoothingGroupsSyncer);
         } else {
+            pgTriMesh.setVertexFormat(null);
             pgTriMesh.setUserDefinedNormals(false);
+            pgTriMesh.setUserDefinedColors(false);
             pgTriMesh.syncPoints(null);
             pgTriMesh.syncNormals(null);
             pgTriMesh.syncTexCoords(null);
+            pgTriMesh.syncColors(null);
             pgTriMesh.syncFaces(null);
             pgTriMesh.syncFaceSmoothingGroups(null);
         }

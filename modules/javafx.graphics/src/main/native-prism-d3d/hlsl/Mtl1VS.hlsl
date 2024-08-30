@@ -31,6 +31,7 @@ VsOutput main(VertexType vsInput) {
     VsOutput vsOutput;
 
     vsOutput.texD = vsInput.texD;
+    vsOutput.vertColor = vsInput.modelVertexColor;
     transformVertexAttributes(vsInput.modelVertexPos, vsInput.modelVertexNormal, vsOutput);
 
     return vsOutput;

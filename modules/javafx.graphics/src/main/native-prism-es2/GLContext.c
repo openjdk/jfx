@@ -1740,6 +1740,7 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetDeviceParametersFor2
     ctxInfo->glDisableVertexAttribArray(VC_3D_INDEX);
     ctxInfo->glDisableVertexAttribArray(NC_3D_INDEX);
     ctxInfo->glDisableVertexAttribArray(TC_3D_INDEX);
+    ctxInfo->glDisableVertexAttribArray(CC_3D_INDEX);
 
     ctxInfo->vbFloatData = NULL;
     ctxInfo->vbByteData = NULL;
@@ -2348,6 +2349,7 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nRenderMeshView
     ctxInfo->glEnableVertexAttribArray(VC_3D_INDEX);
     ctxInfo->glEnableVertexAttribArray(TC_3D_INDEX);
     ctxInfo->glEnableVertexAttribArray(NC_3D_INDEX);
+    ctxInfo->glEnableVertexAttribArray(CC_3D_INDEX);
 
     ctxInfo->glVertexAttribPointer(VC_3D_INDEX, VC_3D_SIZE, GL_FLOAT, GL_FALSE,
             VERT_3D_STRIDE, (const GLvoid *) jlong_to_ptr((jlong) offset));
@@ -2357,6 +2359,9 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nRenderMeshView
     offset += TC_3D_SIZE * sizeof(GLfloat);
     ctxInfo->glVertexAttribPointer(NC_3D_INDEX, NC_3D_SIZE, GL_FLOAT, GL_FALSE,
             VERT_3D_STRIDE, (const GLvoid *) jlong_to_ptr((jlong) offset));
+    offset += NC_3D_SIZE * sizeof(GLfloat);
+    ctxInfo->glVertexAttribPointer(CC_3D_INDEX, CC_3D_SIZE, GL_FLOAT, GL_FALSE,
+            VERT_3D_STRIDE, (const GLvoid *) jlong_to_ptr((jlong) offset));
 
     glDrawElements(GL_TRIANGLES, mvInfo->meshInfo->indexBufferSize,
             mvInfo->meshInfo->indexBufferType, 0);
@@ -2365,6 +2370,7 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nRenderMeshView
     ctxInfo->glDisableVertexAttribArray(VC_3D_INDEX);
     ctxInfo->glDisableVertexAttribArray(NC_3D_INDEX);
     ctxInfo->glDisableVertexAttribArray(TC_3D_INDEX);
+    ctxInfo->glDisableVertexAttribArray(CC_3D_INDEX);
     ctxInfo->glBindBuffer(GL_ARRAY_BUFFER, 0);
     ctxInfo->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }

@@ -45,6 +45,8 @@ typedef struct PsInput {
 
     float2 texD : texcoord0;
 
+    float4 vertColor : color0;
+
 //  float  oFog  : fog;
 //  float3 debug : texcoord11;
 } VsOutput;

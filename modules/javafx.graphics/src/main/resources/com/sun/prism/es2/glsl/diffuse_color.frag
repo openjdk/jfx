@@ -57,6 +57,6 @@ uniform sampler2D diffuseTexture;
 varying vec2 oTexCoords;
 
 vec4 apply_diffuse() {
-    return diffuseColor;
+    return diffuseColor * vtxColor;
 }
 */

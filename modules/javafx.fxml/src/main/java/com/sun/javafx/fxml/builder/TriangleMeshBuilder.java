@@ -41,6 +41,7 @@ public class TriangleMeshBuilder extends TreeMap<String, Object> implements Buil
     private float[] points;
     private float[] texCoords;
     private float[] normals;
+    private float[] colors;
     private int[] faces;
     private int[] faceSmoothingGroups;
     private VertexFormat vertexFormat;
@@ -62,6 +63,9 @@ public class TriangleMeshBuilder extends TreeMap<String, Object> implements Buil
         }
         if (normals != null) {
             mesh.getNormals().setAll(normals);
+        }
+        if (colors != null) {
+            mesh.getColors().setAll(colors);
         }
         if (vertexFormat != null) {
             mesh.setVertexFormat(vertexFormat);
@@ -102,13 +106,23 @@ public class TriangleMeshBuilder extends TreeMap<String, Object> implements Buil
             for (int i = 0; i < split.length; ++i) {
                 normals[i] = Float.parseFloat(split[i]);
             }
+        } else if ("colors".equalsIgnoreCase(key)) {
+            String[] split = ((String) value).split(VALUE_SEPARATOR_REGEX);
+            colors = new float[split.length];
+            for (int i = 0; i < split.length; ++i) {
+                colors[i] = Float.parseFloat(split[i]);
+            }
         } else if ("vertexformat".equalsIgnoreCase(key)) {
             if (value instanceof VertexFormat) {
                 vertexFormat = (VertexFormat) value;
             } else if ("point_texcoord".equalsIgnoreCase((String)value)) {
                 vertexFormat = VertexFormat.POINT_TEXCOORD;
+            } else if ("point_texcoord_color".equalsIgnoreCase((String)value)) {
+                vertexFormat = VertexFormat.POINT_TEXCOORD_COLOR;
             } else if ("point_normal_texcoord".equalsIgnoreCase((String)value)) {
                 vertexFormat = VertexFormat.POINT_NORMAL_TEXCOORD;
+            } else if ("point_normal_texcoord_color".equalsIgnoreCase((String)value)) {
+                vertexFormat = VertexFormat.POINT_NORMAL_TEXCOORD_COLOR;
             }
         }
 

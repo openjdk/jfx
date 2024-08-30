@@ -52,6 +52,7 @@ struct PRISM_VERTEX_3D {
     float x, y, z;
     float tu, tv;
     float nx, ny, nz, nw;
+    float red, green, blue, alpha;
 };
 
 const D3DVERTEXELEMENT9 PrismVDecl[5] = {

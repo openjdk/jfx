@@ -36,6 +36,7 @@ class MeshVertex {
     int smGroup;
     int pVert; // vertexBuffer
     int tVert; // vertexBuffer
+    int cVert; // vertexBuffer
     int fIdx;
     int index; // indexBuffer
     Vec3f[] norm; // {N, T, B}
@@ -216,7 +217,7 @@ class MeshVertex {
                 + "\tnorm[0] = " + norm[0] + "\n"
                 + "\tnorm[1] = " + norm[1] + "\n"
                 + "\tnorm[2] = " + norm[2] + "\n"
-                + "\ttIndex = " + tVert + ", fIndex = " + fIdx + "\n"
+                + "\ttIndex = " + tVert + ", cIndex = " + cVert + ", fIndex = " + fIdx + "\n"
                 + "\tpIdx = " + index + "\n"
                 + "\tnext = " + ((next == null) ? next : next.getClass().getName()
                 + "@0x" + Integer.toHexString(next.hashCode())) + "\n";

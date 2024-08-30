@@ -167,6 +167,7 @@ class ES2PhongShader {
             attributes.put("pos", 0);
             attributes.put("texCoords", 1);
             attributes.put("tangent", 2);
+            attributes.put("color", 3);
 
             Map<String, Integer> samplers = new HashMap<>();
             samplers.put("diffuseTexture", 0);

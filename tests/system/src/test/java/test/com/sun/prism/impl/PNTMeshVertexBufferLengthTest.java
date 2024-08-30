@@ -67,7 +67,7 @@ public class PNTMeshVertexBufferLengthTest {
     private static final int SLEEP_TIME = 1000;
 
     // Size of a vertex
-    private static final int VERTEX_SIZE = 9;
+    private static final int VERTEX_SIZE = 13;
 
     private static final float meshScale = 15;
     private static final float minX = -10;
@@ -98,11 +98,14 @@ public class PNTMeshVertexBufferLengthTest {
         final int pointSize = 3;
         final int normalSize = 3;
         final int texCoordSize = 2;
-        final int faceSize = 9; // 3 point indices, 3 normal indices and 3 texCoord indices per triangle
+        final int colorSize = 4;
+        // 3 point indices, 3 normal indices, 3 texCoord indices, and 3 color indices per triangle
+        final int faceSize = 12;
         int numDivX = subDivX + 1;
         int numVerts = (subDivY + 1) * numDivX;
         float points[] = new float[numVerts * pointSize];
         float texCoords[] = new float[numVerts * texCoordSize];
+        float colors[] = new float[numVerts * colorSize];
         int faceCount = subDivX * subDivY * 2;
         float normals[] = new float[faceCount * normalSize];
         int faces[] = new int[faceCount * faceSize];
@@ -121,6 +124,11 @@ public class PNTMeshVertexBufferLengthTest {
                 index = y * numDivX * texCoordSize + (x * texCoordSize);
                 texCoords[index] = dx;
                 texCoords[index + 1] = dy;
+                index = y * numDivX * colorSize + (x * colorSize);
+                colors[index] = dx;
+                colors[index + 1] = 1F - dy;
+                colors[index + 2] = Math.max(0F, dy - dx);
+                colors[index + 3] = 1F;
             }
         }
 
@@ -141,6 +149,10 @@ public class PNTMeshVertexBufferLengthTest {
                 int tc01 = tc00 + 1;
                 int tc10 = tc00 + numDivX;
                 int tc11 = tc10 + 1;
+                int vc00 = y * numDivX + x;
+                int vc01 = vc00 + 1;
+                int vc10 = vc00 + numDivX;
+                int vc11 = vc10 + 1;
 
                 int ii = p00 * 3;
                 triPoints[0].x = points[ii];
@@ -165,12 +177,15 @@ public class PNTMeshVertexBufferLengthTest {
                 faces[index + 0] = p00;
                 faces[index + 1] = normalCount;
                 faces[index + 2] = tc00;
-                faces[index + 3] = p10;
-                faces[index + 4] = normalCount;
-                faces[index + 5] = tc10;
-                faces[index + 6] = p11;
-                faces[index + 7] = normalCount++;
-                faces[index + 8] = tc11;
+                faces[index + 3] = vc00;
+                faces[index + 4] = p10;
+                faces[index + 5] = normalCount;
+                faces[index + 6] = tc10;
+                faces[index + 7] = vc10;
+                faces[index + 8] = p11;
+                faces[index + 9] = normalCount++;
+                faces[index + 10] = tc11;
+                faces[index + 11] = vc11;
                 index += faceSize;
 
                 ii = p11 * 3;
@@ -194,20 +209,24 @@ public class PNTMeshVertexBufferLengthTest {
                 faces[index + 0] = p11;
                 faces[index + 1] = normalCount;
                 faces[index + 2] = tc11;
-                faces[index + 3] = p01;
-                faces[index + 4] = normalCount;
-                faces[index + 5] = tc01;
-                faces[index + 6] = p00;
-                faces[index + 7] = normalCount++;
-                faces[index + 8] = tc00;
+                faces[index + 3] = vc11;
+                faces[index + 4] = p01;
+                faces[index + 5] = normalCount;
+                faces[index + 6] = tc01;
+                faces[index + 7] = vc01;
+                faces[index + 8] = p00;
+                faces[index + 9] = normalCount++;
+                faces[index + 10] = tc00;
+                faces[index + 11] = vc00;
             }
         }
 
 
-        TriangleMesh triangleMesh = new TriangleMesh(VertexFormat.POINT_NORMAL_TEXCOORD);
+        TriangleMesh triangleMesh = new TriangleMesh(VertexFormat.POINT_NORMAL_TEXCOORD_COLOR);
         triangleMesh.getPoints().setAll(points);
         triangleMesh.getNormals().setAll(normals);
         triangleMesh.getTexCoords().setAll(texCoords);
+        triangleMesh.getColors().setAll(colors);
         triangleMesh.getFaces().setAll(faces);
         meshView.setMesh(triangleMesh);
     }
@@ -235,7 +254,7 @@ public class PNTMeshVertexBufferLengthTest {
         @Override
         public void start(Stage primaryStage) throws Exception {
             primaryStage.setTitle("PNTMeshVertexBufferLengthTest");
-            TriangleMesh triangleMesh = new TriangleMesh(VertexFormat.POINT_NORMAL_TEXCOORD);
+            TriangleMesh triangleMesh = new TriangleMesh(VertexFormat.POINT_NORMAL_TEXCOORD_COLOR);
             meshView = new MeshView(triangleMesh);
             Group rotateGrp = new Group(meshView);
             rotateGrp.setRotate(-30);
@@ -309,7 +328,7 @@ public class PNTMeshVertexBufferLengthTest {
         // mesh with 6 vertices (2 triangles)
         assertEquals(6, BaseMeshShim.test_getNumberOfVertices(baseMesh));
         // vertexBuffer started with 4 vertices and grew by 6 (since 12.5% or 1/8th
-        // of 4 is  less than 6). Size of vertex is 9 floats (10 * VERTEX_SIZE = 90)
+        // of 4 is  less than 6). Size of vertex is 12 floats (10 * VERTEX_SIZE = 120)
         assertEquals(10 * VERTEX_SIZE, BaseMeshShim.test_getVertexBufferLength(baseMesh));
     }
 
@@ -328,7 +347,7 @@ public class PNTMeshVertexBufferLengthTest {
         // mesh with 24 vertices (8 triangles)
         assertEquals(24, BaseMeshShim.test_getNumberOfVertices(baseMesh));
         // vertexBuffer started with 9 vertices and grew by 6, 3 times, to a
-        // capacity of 27 vertices (27 * VERTEX_SIZE = 243)
+        // capacity of 27 vertices (27 * VERTEX_SIZE = 324)
         assertEquals(27 * VERTEX_SIZE, BaseMeshShim.test_getVertexBufferLength(baseMesh));
     }
 
@@ -348,7 +367,7 @@ public class PNTMeshVertexBufferLengthTest {
         assertEquals(294, BaseMeshShim.test_getNumberOfVertices(baseMesh));
         // vertexBuffer started with 64 vertices and grew by 6 the first time
         // then crossed over to 12.5% growth rate at each subsequence increase
-        // to a capacity of 325 vertices (325 * VERTEX_SIZE = 2925)
+        // to a capacity of 325 vertices (325 * VERTEX_SIZE = 3900)
         assertEquals(325 * VERTEX_SIZE, BaseMeshShim.test_getVertexBufferLength(baseMesh));
     }
 
@@ -368,7 +387,7 @@ public class PNTMeshVertexBufferLengthTest {
         assertEquals(15000, BaseMeshShim.test_getNumberOfVertices(baseMesh));
         // vertexBuffer started with 2601 vertices and grew at 12.5% growth rate
         // at each subsequence increase to a capacity of 15201 vertices
-        // (15201 * VERTEX_SIZE = 136809)
+        // (15201 * VERTEX_SIZE = 182412)
         assertEquals(15201 * VERTEX_SIZE, BaseMeshShim.test_getVertexBufferLength(baseMesh));
     }
 

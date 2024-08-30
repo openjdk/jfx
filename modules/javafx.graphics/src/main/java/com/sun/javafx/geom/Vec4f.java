@@ -73,6 +73,13 @@ public class Vec4f {
         this.w = v.w;
     }
 
+    public void set(float x, float y, float z, float w) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.w = w;
+    }
+
     @Override
     public String toString() {
         return "(" + x + ", " + y + ", " + z + ", " + w + ")";

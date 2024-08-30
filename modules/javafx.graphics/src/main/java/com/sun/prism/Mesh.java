@@ -25,6 +25,8 @@
 
 package com.sun.prism;
 
+import javafx.scene.shape.VertexFormat;
+
 /**
  * TODO: 3D - Need documentation
  * This class represents mesh geometry data object
@@ -32,10 +34,13 @@ package com.sun.prism;
 public interface Mesh extends GraphicsResource {
     // This method will fail if and only if ALL faces are wrong.
     // A wrong face is one with zero area or with any index out of range
-    public boolean buildGeometry(boolean userDefinedNormals,
+    public boolean buildGeometry(
+            VertexFormat vertexFormat,
+            boolean userDefinedNormals, boolean userDefinedColors,
             float points[], int[] pointsFromAndLengthIndices,
             float normals[], int[] normalsFromAndLengthIndices,
             float texCoords[],  int[] texCoordsFromAndLengthIndices,
+            float colors[],  int[] colorsFromAndLengthIndices,
             int faces[],  int[] facesFromAndLengthIndices,
             int faceSmoothingGroups[], int[] faceSmoothingGroupsFromAndLengthIndices);
 

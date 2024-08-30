@@ -26,7 +26,7 @@ package javafx.scene.shape;
 
 /**
  * Defines the format of the vertices in a mesh. A vertex consists of an array
- * of points, normals (optional), and texture coordinates.
+ * of points, normals (optional), texture coordinates, and colors (optional).
  *
  * @since JavaFX 8u40
  */
@@ -35,31 +35,45 @@ public final class VertexFormat {
     /**
      * Specifies the format of a vertex that consists of a point and texture coordinates.
      */
-    public static final VertexFormat POINT_TEXCOORD = new VertexFormat("POINT_TEXCOORD", 2, 0, -1, 1);
+    public static final VertexFormat POINT_TEXCOORD = new VertexFormat("POINT_TEXCOORD", 2, 0, -1, 1, -1);
+
+    /**
+     * Specifies the format of a vertex that consists of a point, texture coordinates, and a color.
+     */
+    public static final VertexFormat POINT_TEXCOORD_COLOR = new VertexFormat("POINT_TEXCOORD_COLOR", 3, 0, -1, 1, 2);
 
     /**
      * Specifies the format of a vertex that consists of a point, normal and texture coordinates.
      */
-    public static final VertexFormat POINT_NORMAL_TEXCOORD = new VertexFormat("POINT_NORMAL_TEXCOORD", 3, 0, 1, 2);
+    public static final VertexFormat POINT_NORMAL_TEXCOORD = new VertexFormat("POINT_NORMAL_TEXCOORD", 3, 0, 1, 2, -1);
+
+    /**
+     * Specifies the format of a vertex that consists of a point, normal, texture coordinates, and a color.
+     */
+    public static final VertexFormat POINT_NORMAL_TEXCOORD_COLOR
+            = new VertexFormat("POINT_NORMAL_TEXCOORD_COLOR", 4, 0, 1, 2, 3);
 
     // For internal use only
     private static final int POINT_ELEMENT_SIZE = 3;
     private static final int NORMAL_ELEMENT_SIZE = 3;
     private static final int TEXCOORD_ELEMENT_SIZE = 2;
+    private static final int COLOR_ELEMENT_SIZE = 4;
 
     private final String name;
     private final int vertexIndexSize;
     private final int pointIndexOffset;
     private final int normalIndexOffset;
     private final int texCoordIndexOffset;
+    private final int colorIndexOffset;
 
     private VertexFormat(String name, int vertexIndexSize,
-            int pointIndexOffset, int normalIndexOffset, int texCoordIndexOffset) {
+            int pointIndexOffset, int normalIndexOffset, int texCoordIndexOffset, int colorIndexOffset) {
         this.name = name;
         this.vertexIndexSize = vertexIndexSize;
         this.pointIndexOffset = pointIndexOffset;
         this.normalIndexOffset = normalIndexOffset;
         this.texCoordIndexOffset = texCoordIndexOffset;
+        this.colorIndexOffset = colorIndexOffset;
     }
 
     int getPointElementSize() {
@@ -72,6 +86,10 @@ public final class VertexFormat {
 
     int getTexCoordElementSize() {
         return TEXCOORD_ELEMENT_SIZE;
+    }
+
+    int getColorElementSize() {
+        return COLOR_ELEMENT_SIZE;
     }
 
     /**
@@ -113,6 +131,16 @@ public final class VertexFormat {
      */
     public int getTexCoordIndexOffset() {
         return texCoordIndexOffset;
+    }
+
+    /**
+     * Returns the index offset in the face array of the color component
+     * within a vertex.
+     *
+     * @return the offset to the color component.
+     */
+    public int getColorIndexOffset() {
+        return colorIndexOffset;
     }
 
     @Override
