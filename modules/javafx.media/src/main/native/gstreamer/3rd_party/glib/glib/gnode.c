@@ -40,43 +40,6 @@
 #include "gtestutils.h"
 
 /**
- * SECTION:trees-nary
- * @title: N-ary Trees
- * @short_description: trees of data with any number of branches
- *
- * The #GNode struct and its associated functions provide a N-ary tree
- * data structure, where nodes in the tree can contain arbitrary data.
- *
- * To create a new tree use g_node_new().
- *
- * To insert a node into a tree use g_node_insert(),
- * g_node_insert_before(), g_node_append() and g_node_prepend().
- *
- * To create a new node and insert it into a tree use
- * g_node_insert_data(), g_node_insert_data_after(),
- * g_node_insert_data_before(), g_node_append_data()
- * and g_node_prepend_data().
- *
- * To reverse the children of a node use g_node_reverse_children().
- *
- * To find a node use g_node_get_root(), g_node_find(),
- * g_node_find_child(), g_node_child_index(), g_node_child_position(),
- * g_node_first_child(), g_node_last_child(), g_node_nth_child(),
- * g_node_first_sibling(), g_node_prev_sibling(), g_node_next_sibling()
- * or g_node_last_sibling().
- *
- * To get information about a node or tree use G_NODE_IS_LEAF(),
- * G_NODE_IS_ROOT(), g_node_depth(), g_node_n_nodes(),
- * g_node_n_children(), g_node_is_ancestor() or g_node_max_height().
- *
- * To traverse a tree, calling a function for each node visited in the
- * traversal, use g_node_traverse() or g_node_children_foreach().
- *
- * To remove a node or subtree from a tree use g_node_unlink() or
- * g_node_destroy().
- **/
-
-/**
  * GNode:
  * @data: contains the actual data of the node.
  * @next: points to the node's next sibling (a sibling is another
@@ -170,8 +133,8 @@ g_node_unlink (GNode *node)
 /**
  * g_node_copy_deep:
  * @node: a #GNode
- * @copy_func: the function which is called to copy the data inside each node,
- *   or %NULL to use the original data.
+ * @copy_func: (scope call): the function which is called to copy the data
+ *   inside each node, or %NULL to use the original data.
  * @data: data to pass to @copy_func
  *
  * Recursively copies a #GNode and its data.
@@ -812,7 +775,7 @@ g_node_depth_traverse_level (GNode             *node,
  *     depth will not be visited. If max_depth is -1 all nodes in
  *     the tree are visited. If depth is 1, only the root is visited.
  *     If depth is 2, the root and its children are visited. And so on.
- * @func: the function to call for each visited #GNode
+ * @func: (scope call): the function to call for each visited #GNode
  * @data: user data to pass to the function
  *
  * Traverses a tree starting at the given root #GNode.
@@ -1235,7 +1198,7 @@ g_node_last_sibling (GNode *node)
  * @node: a #GNode
  * @flags: which types of children are to be visited, one of
  *     %G_TRAVERSE_ALL, %G_TRAVERSE_LEAVES and %G_TRAVERSE_NON_LEAVES
- * @func: the function to call for each visited node
+ * @func: (scope call): the function to call for each visited node
  * @data: user data to pass to the function
  *
  * Calls a function for each of the children of a #GNode. Note that it

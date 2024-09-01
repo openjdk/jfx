@@ -37,6 +37,9 @@
 #include <gst/gst.h>
 #include "gstqueuearray.h"
 
+#define gst_queue_array_idx(a, i) \
+  ((a)->array + (((a)->head + (i)) % (a)->size) * (a)->elt_size)
+
 struct _GstQueueArray
 {
   /* < private > */
@@ -49,6 +52,12 @@ struct _GstQueueArray
   gboolean struct_array;
   GDestroyNotify clear_func;
 };
+
+typedef struct
+{
+  GCompareDataFunc func;
+  gpointer user_data;
+} QueueSortData;
 
 /**
  * gst_queue_array_new_for_struct: (skip)
@@ -69,7 +78,7 @@ gst_queue_array_new_for_struct (gsize struct_size, guint initial_size)
 
   g_return_val_if_fail (struct_size > 0, NULL);
 
-  array = g_slice_new (GstQueueArray);
+  array = g_new (GstQueueArray, 1);
   array->elt_size = struct_size;
   array->size = initial_size;
   array->array = g_malloc0 (struct_size * initial_size);
@@ -116,7 +125,7 @@ gst_queue_array_free (GstQueueArray * array)
   g_return_if_fail (array != NULL);
   gst_queue_array_clear (array);
   g_free (array->array);
-  g_slice_free (GstQueueArray, array);
+  g_free (array);
 }
 
 /**
@@ -431,6 +440,212 @@ gst_queue_array_push_tail (GstQueueArray * array, gpointer data)
   array->length++;
 }
 
+/* Moves all elements in the queue placed after the given position in the internal array */
+static void
+gst_queue_array_move_data_after_position (GstQueueArray * array, guint pos)
+{
+  guint elt_size = array->elt_size;
+
+  /* If the array does not wrap around OR if it does, but we're inserting past that point */
+  if (array->head < array->tail ||
+      (array->head >= array->tail && pos < array->head)) {
+    memmove (array->array + (pos + 1) * elt_size, array->array + pos * elt_size,
+        (array->tail - pos) * elt_size);
+    return;
+  }
+
+  /* Otherwise, array wraps around and we're inserting before the breaking point.
+   * First, move everything past that point by one place. */
+  memmove (array->array + elt_size, array->array, array->tail * elt_size);
+
+  /* Then move the last element from before the wrap-around point to right after it. */
+  memcpy (array->array, array->array + (array->size - 1) * elt_size, elt_size);
+
+  /* If we're inserting right before the breaking point, no further action is needed.
+   * Otherwise, move data between insertion point and the breaking point by one place. */
+  if (pos != array->size - 1) {
+    memmove (array->array + (pos + 1) * elt_size, array->array + pos * elt_size,
+        (array->size - pos - 1) * elt_size);
+  }
+}
+
+/**
+ * gst_queue_array_push_sorted: (skip)
+ * @array: a #GstQueueArray object
+ * @data: object to push
+ * @func: comparison function
+ * @user_data: (nullable): data for comparison function
+ *
+ * Pushes @data to the queue @array, finding the correct position
+ * by comparing @data with each array element using @func.
+ *
+ * This has a time complexity of O(n), so depending on the size of the queue
+ * and expected access patterns, a different data structure might be better.
+ *
+ * Assumes that the array is already sorted. If it is not, make sure
+ * to call gst_queue_array_sort() first.
+ *
+ * Since: 1.24
+ */
+void
+gst_queue_array_push_sorted (GstQueueArray * array, gpointer data,
+    GCompareDataFunc func, gpointer user_data)
+{
+  guint i;
+  gpointer *p_element;
+
+  g_return_if_fail (array != NULL);
+  g_return_if_fail (func != NULL);
+
+  /* Check if we need to make room */
+  if (G_UNLIKELY (array->length == array->size))
+    gst_queue_array_do_expand (array);
+
+  /* Compare against each element, assuming they're already sorted */
+  for (i = 0; i < array->length; i++) {
+    p_element = (gpointer *) gst_queue_array_idx (array, i);
+
+    if (func (*p_element, data, user_data) > 0) {
+      guint pos = (array->head + i) % array->size;
+      gst_queue_array_move_data_after_position (array, pos);
+
+      *p_element = data;
+      goto finish;
+    }
+  }
+
+  /* No 'bigger' element found - append to tail */
+  *(gpointer *) (array->array + array->elt_size * array->tail) = data;
+
+finish:
+  array->tail++;
+  array->tail %= array->size;
+  array->length++;
+}
+
+/**
+ * gst_queue_array_push_sorted_struct: (skip)
+ * @array: a #GstQueueArray object
+ * @p_struct: address of element or structure to push into the queue
+ * @func: comparison function
+ * @user_data: (nullable): data for comparison function
+ *
+ * Pushes the element at address @p_struct into the queue @array
+ * (copying the contents of a structure of the struct_size specified
+ * when creating the queue into the array), finding the correct position
+ * by comparing the element at @p_struct with each element in the array using @func.
+ *
+ * This has a time complexity of O(n), so depending on the size of the queue
+ * and expected access patterns, a different data structure might be better.
+ *
+ * Assumes that the array is already sorted. If it is not, make sure
+ * to call gst_queue_array_sort() first.
+ *
+ * Since: 1.24
+ */
+void
+gst_queue_array_push_sorted_struct (GstQueueArray * array, gpointer p_struct,
+    GCompareDataFunc func, gpointer user_data)
+{
+  guint i;
+  gpointer p_element;
+
+  g_return_if_fail (array != NULL);
+  g_return_if_fail (p_struct != NULL);
+  g_return_if_fail (func != NULL);
+
+  /* Check if we need to make room */
+  if (G_UNLIKELY (array->length == array->size))
+    gst_queue_array_do_expand (array);
+
+  /* Compare against each element, assuming they're already sorted */
+  for (i = 0; i < array->length; i++) {
+    p_element = gst_queue_array_idx (array, i);
+
+    if (func (p_element, p_struct, user_data) > 0) {
+      guint pos = (array->head + i) % array->size;
+      gst_queue_array_move_data_after_position (array, pos);
+
+      memcpy (p_element, p_struct, array->elt_size);
+      goto finish;
+    }
+  }
+
+  /* No 'bigger' element found - append to tail */
+  memcpy (array->array + array->elt_size * array->tail, p_struct,
+      array->elt_size);
+
+finish:
+  array->tail++;
+  array->tail %= array->size;
+  array->length++;
+}
+
+static int
+compare_wrapper (gpointer * a, gpointer * b, QueueSortData * sort_data)
+{
+  return sort_data->func (*a, *b, sort_data->user_data);
+}
+
+/**
+ * gst_queue_array_sort: (skip)
+ * @array: a #GstQueueArray object
+ * @compare_func: comparison function
+ * @user_data: (nullable): data for comparison function
+ *
+ * Sorts the queue @array by comparing elements against each other using
+ * the provided @compare_func.
+ *
+ * Since: 1.24
+ */
+void
+gst_queue_array_sort (GstQueueArray * array, GCompareDataFunc compare_func,
+    gpointer user_data)
+{
+  g_return_if_fail (array != NULL);
+  g_return_if_fail (compare_func != NULL);
+
+  if (array->length == 0)
+    return;
+
+  /* To be able to use g_qsort_with_data, we might need to rearrange:
+   * [0-----TAIL][HEAD-----SIZE] -> [HEAD-------TAIL] */
+  if (array->head >= array->tail) {
+    gsize t1 = array->head;
+    gsize t2 = array->size - array->head;
+    gsize elt_size = array->elt_size;
+
+    /* Copy [0-------TAIL] part to a temporary buffer */
+    guint8 *tmp = g_malloc0_n (t1, elt_size);
+    memcpy (tmp, array->array, t1 * elt_size);
+
+    /* Move [HEAD-----SIZE] part to the beginning of the original array */
+    memmove (array->array, array->array + (elt_size * array->head),
+        t2 * elt_size);
+
+    /* Copy the temporary buffer to the end of the original array */
+    memmove (array->array + (t2 * elt_size), tmp, t1 * elt_size);
+    g_free (tmp);
+
+    array->head = 0;
+    array->tail = array->length % array->size;
+  }
+
+  if (array->struct_array) {
+    g_qsort_with_data (array->array +
+        (array->head % array->size) * array->elt_size, array->length,
+        array->elt_size, compare_func, user_data);
+  } else {
+    /* For non-struct arrays, we need to wrap the provided compare function
+     * to dereference our pointers before passing them for comparison.
+     * This matches the behaviour of gst_queue_array_find(). */
+    QueueSortData sort_data = { compare_func, user_data };
+    g_qsort_with_data (array->array +
+        (array->head % array->size) * array->elt_size, array->length,
+        array->elt_size, (GCompareDataFunc) compare_wrapper, &sort_data);
+  }
+}
+
 /**
  * gst_queue_array_peek_tail: (skip)
  * @array: a #GstQueueArray object
@@ -718,7 +933,7 @@ gst_queue_array_drop_element (GstQueueArray * array, guint idx)
 /**
  * gst_queue_array_find: (skip)
  * @array: a #GstQueueArray object
- * @func: (allow-none): comparison function, or %NULL to find @data by value
+ * @func: (nullable): comparison function, or %NULL to find @data by value
  * @data: data for comparison function
  *
  * Finds an element in the queue @array, either by comparing every element

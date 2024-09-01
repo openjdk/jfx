@@ -28,13 +28,11 @@
 
 /*
  * we reference strings directly from the plugins and in this case set CONST to
- * avoid freeing them. If g_free() should be used, the MALLOC flag is set,
- * otherwise g_slice_free1() will be used!
+ * avoid freeing them.
  */
 enum {
   GST_REGISTRY_CHUNK_FLAG_NONE = 0,
   GST_REGISTRY_CHUNK_FLAG_CONST = 1,
-  GST_REGISTRY_CHUNK_FLAG_MALLOC = 2,
 };
 
 /*
