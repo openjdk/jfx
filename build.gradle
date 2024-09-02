@@ -3722,6 +3722,7 @@ project(":web") {
                 exec {
                     workingDir("$webkitOutputDir")
                     def cmakeArgs = "-DENABLE_TOOLS=1"
+                    def makeArgs = "-j $NUM_COMPILE_THREADS"
                     if (IS_STATIC_BUILD) {
                         cmakeArgs = " $cmakeArgs -DSTATIC_BUILD=1 -DUSE_THIN_ARCHIVES=OFF";
                     }
@@ -3792,6 +3793,7 @@ project(":web") {
                     cmakeArgs += " -DJAVAFX_RELEASE_VERSION=${jfxReleaseMajorVersion}"
                     commandLine("perl", "$projectDir/src/main/native/Tools/Scripts/build-webkit",
                         "--java", "--icu-unicode", targetCpuBitDepthSwitch,
+                        "--makeArgs=${makeArgs}",
                         "--no-experimental-features", "--cmakeargs=${cmakeArgs}")
                 }
             }
