@@ -103,7 +103,11 @@ public class BinarySerializer {
              * before attempting to read what is known to be a simple selector.
              */
 
-            is.readByte();
+            byte type = is.readByte();
+
+            if (type != TYPE_SIMPLE) {
+                throw new IllegalStateException("Expected compound selector to consist of simple selectors only, but found type: " + type);
+            }
 
             selectors.add(readSimpleSelector(is, strings));
         }
