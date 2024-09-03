@@ -96,27 +96,27 @@ public abstract class StyleableLongProperty
     @Override
     public void bind(ObservableValue<? extends Number> observable) {
         super.bind(observable);
-        origin = StyleOrigin.USER;
-
-        // Calling the 'bind' method always cancels a transition timer.
-        if (mediator != null) {
-            mediator.cancel(true);
-        }
+        onUserChange();
     }
 
     /** {@inheritDoc} */
     @Override
     public void set(long v) {
         super.set(v);
-
-        if (mediator == null || mediator.cancel(false)) {
-            origin = StyleOrigin.USER;
-        }
+        onUserChange();
     }
 
     /** {@inheritDoc} */
     @Override
     public StyleOrigin getStyleOrigin() { return origin; }
+
+    private void onUserChange() {
+        origin = StyleOrigin.USER;
+
+        if (mediator != null) {
+            mediator.cancel();
+        }
+    }
 
     private StyleOrigin origin;
     private TransitionMediatorImpl mediator;
@@ -137,18 +137,12 @@ public abstract class StyleableLongProperty
             // Longs are interpolated in real number space and rounded to the nearest long.
             long diff = endValue - startValue;
             long result = startValue + Math.round(progress * diff);
-            set(progress < 1 ? Utils.clamp(startValue, result, endValue) : endValue);
+            StyleableLongProperty.super.set(progress < 1 ? Utils.clamp(startValue, result, endValue) : endValue);
         }
 
         @Override
         public void onStop() {
-            // When the transition is cancelled or completed, we clear the reference to this mediator.
-            // However, when this mediator was cancelled by a reversing transition, the 'mediator' field
-            // refers to the reversing mediator, and not to this mediator. We need to be careful to only
-            // clear references to this mediator.
-            if (mediator == this) {
-                mediator = null;
-            }
+            mediator = null;
         }
 
         @Override

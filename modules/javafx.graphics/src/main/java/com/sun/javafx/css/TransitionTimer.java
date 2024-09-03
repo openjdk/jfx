@@ -43,6 +43,10 @@ import javafx.util.Duration;
  */
 public final class TransitionTimer extends AnimationTimer {
 
+    public interface CancellationToken {
+        void cancel();
+    }
+
     private final Node targetNode;
     private final String targetPropertyName;
     private final Interpolator interpolator;
@@ -50,7 +54,6 @@ public final class TransitionTimer extends AnimationTimer {
     private double reversingShorteningFactor;
     private long startTime, endTime, delay, duration; // in nanoseconds
     private long currentTime; // in nanoseconds
-    private boolean updating;
     private boolean started;
 
     private TransitionTimer(TransitionMediator mediator,
@@ -81,10 +84,10 @@ public final class TransitionTimer extends AnimationTimer {
      * @param nanoNow the current time in nanoseconds
      * @return the {@code timer} instance if the timer was started, {@code null} otherwise
      */
-    public static TransitionTimer run(TransitionMediator mediator,
-                                      TransitionDefinition definition,
-                                      String targetPropertyName,
-                                      long nanoNow) {
+    public static CancellationToken run(TransitionMediator mediator,
+                                        TransitionDefinition definition,
+                                        String targetPropertyName,
+                                        long nanoNow) {
         // The transition timer is only started if the targeted node is showing, i.e. if it is part
         // of the scene graph and the node is visible.
         if (!(mediator.getStyleableProperty() instanceof Property<?> property)
@@ -97,7 +100,7 @@ public final class TransitionTimer extends AnimationTimer {
         long duration = millisToNanos(definition.duration().toMillis());
         long combinedDuration = Math.max(duration, 0) + delay;
 
-        var existingTimer = (TransitionTimer)NodeHelper.findTransitionTimer(node, targetPropertyName);
+        var existingTimer = NodeHelper.findTransitionTimer(node, targetPropertyName);
         if (existingTimer != null) {
             if (combinedDuration > 0) {
                 var newTimer = new TransitionTimer(mediator, definition, targetPropertyName, nanoNow);
@@ -108,12 +111,12 @@ public final class TransitionTimer extends AnimationTimer {
                     newTimer.adjustReversingTimings(existingTimer);
                 }
 
-                existingTimer.stop(TransitionEvent.CANCEL);
+                existingTimer.interrupt();
                 newTimer.start();
-                return newTimer;
+                return newTimer::stop;
             }
 
-            existingTimer.stop(TransitionEvent.CANCEL);
+            existingTimer.stop();
             return null;
         }
 
@@ -121,27 +124,10 @@ public final class TransitionTimer extends AnimationTimer {
         if (combinedDuration > 0) {
             var timer = new TransitionTimer(mediator, definition, targetPropertyName, nanoNow);
             timer.start();
-            return timer;
+            return timer::stop;
         }
 
         return null;
-    }
-
-    /**
-     * Cancels this timer if it is currently running. If {@code forceStop} is {@code false}, the timer
-     * will only be stopped if this method was not called from the timer's {@link #update(double)} method;
-     * i.e. a timer will not stop itself while trying to set the new value of a styleable property.
-     *
-     * @param forceStop if {@code true}, the timer is stopped unconditionally
-     * @return {@code true} if the timer was cancelled, {@code false} otherwise
-     */
-    public boolean cancel(boolean forceStop) {
-        if (forceStop || !pollUpdating()) {
-            stop(TransitionEvent.CANCEL);
-            return true;
-        }
-
-        return false;
     }
 
     /**
@@ -178,7 +164,7 @@ public final class TransitionTimer extends AnimationTimer {
             }
 
             if (progress == 1) {
-                stop(TransitionEvent.END);
+                stopTimer(TransitionEvent.END);
             }
         }
     }
@@ -194,25 +180,13 @@ public final class TransitionTimer extends AnimationTimer {
     }
 
     /**
-     * This method is unused, calling it will throw {@link UnsupportedOperationException}.
+     * Stops this timer without updating the property to the target value.
+     * This happens when the value of the styleable property is changed by the user, or when a
+     * running timer is cancelled by a transition with zero duration.
      */
     @Override
     public void stop() {
-        throw new UnsupportedOperationException();
-    }
-
-    /**
-     * Stops the running transition and fires the specified event.
-     * This happens when the value of a CSS property targeted by a transition is changed by the user,
-     * when the transition is interrupted by another transition, or when it ends normally.
-     *
-     * @param eventType the event type that is fired after the timer is stopped
-     */
-    public void stop(EventType<TransitionEvent> eventType) {
-        super.stop();
-        mediator.onStop();
-        NodeHelper.removeTransitionTimer(targetNode, targetPropertyName);
-        fireTransitionEvent(eventType);
+        stopTimer(TransitionEvent.CANCEL);
     }
 
     /**
@@ -221,7 +195,29 @@ public final class TransitionTimer extends AnimationTimer {
      */
     public void complete() {
         update(1);
-        stop(TransitionEvent.CANCEL);
+        stopTimer(TransitionEvent.CANCEL);
+    }
+
+    /**
+     * Stops this timer without invoking {@link TransitionMediator#onStop()}.
+     * This form of completion only happens when a timer is interrupted by a reversing timer.
+     */
+    private void interrupt() {
+        super.stop();
+        NodeHelper.removeTransitionTimer(targetNode, targetPropertyName);
+        fireTransitionEvent(TransitionEvent.CANCEL);
+    }
+
+    /**
+     * Stops the running timer and fires the specified event.
+     *
+     * @param eventType the event type that is fired after the timer is stopped
+     */
+    private void stopTimer(EventType<TransitionEvent> eventType) {
+        super.stop();
+        mediator.onStop();
+        NodeHelper.removeTransitionTimer(targetNode, targetPropertyName);
+        fireTransitionEvent(eventType);
     }
 
     /**
@@ -233,26 +229,11 @@ public final class TransitionTimer extends AnimationTimer {
      */
     private void update(double progress) {
         try {
-            updating = true;
             mediator.onUpdate(InterpolatorHelper.curve(interpolator, progress));
         } catch (Throwable ex) {
             Thread currentThread = Thread.currentThread();
             currentThread.getUncaughtExceptionHandler().uncaughtException(currentThread, ex);
-        } finally {
-            updating = false;
         }
-    }
-
-    /**
-     * Polls whether the timer is currently updating the value of the property.
-     * After this method is called, the {@link #updating} flag is {@code false}.
-     *
-     * @return {@code true} if the timer is currently updating the property, {@code false} otherwise
-     */
-    private boolean pollUpdating() {
-        boolean updating = this.updating;
-        this.updating = false;
-        return updating;
     }
 
     /**

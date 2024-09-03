@@ -95,20 +95,27 @@ public abstract class StyleableStringProperty
     @Override
     public void bind(ObservableValue<? extends String> observable) {
         super.bind(observable);
-        origin = StyleOrigin.USER;
+        onUserChange();
     }
 
     /** {@inheritDoc} */
     @Override
     public void set(String v) {
         super.set(v);
-        origin = StyleOrigin.USER;
+        onUserChange();
     }
-
 
     /** {@inheritDoc} */
     @Override
     public StyleOrigin getStyleOrigin() { return origin; }
+
+    private void onUserChange() {
+        origin = StyleOrigin.USER;
+
+        if (mediator != null) {
+            mediator.cancel();
+        }
+    }
 
     private StyleOrigin origin;
     private TransitionMediatorImpl mediator;
@@ -126,18 +133,12 @@ public abstract class StyleableStringProperty
 
         @Override
         public void onUpdate(double progress) {
-            set(progress < 0.5 ? startValue : endValue);
+            StyleableStringProperty.super.set(progress < 0.5 ? startValue : endValue);
         }
 
         @Override
         public void onStop() {
-            // When the transition is cancelled or completed, we clear the reference to this mediator.
-            // However, when this mediator was cancelled by a reversing transition, the 'mediator' field
-            // refers to the reversing mediator, and not to this mediator. We need to be careful to only
-            // clear references to this mediator.
-            if (mediator == this) {
-                mediator = null;
-            }
+            mediator = null;
         }
 
         @Override

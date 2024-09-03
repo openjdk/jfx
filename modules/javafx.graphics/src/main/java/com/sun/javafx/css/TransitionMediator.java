@@ -32,7 +32,7 @@ import javafx.css.StyleableProperty;
  */
 public abstract class TransitionMediator {
 
-    private TransitionTimer timer;
+    private TransitionTimer.CancellationToken cancellationToken;
 
     /**
      * Starts the transition timer with the specified transition definition.
@@ -43,33 +43,22 @@ public abstract class TransitionMediator {
      */
     public final void run(TransitionDefinition definition, String targetPropertyName, long nanoNow) {
         // Might return 'null' if the transition duration is zero or the target node is not showing.
-        timer = TransitionTimer.run(this, definition, targetPropertyName, nanoNow);
+        cancellationToken = TransitionTimer.run(this, definition, targetPropertyName, nanoNow);
 
         // If no timer was started, we complete the transition immediately.
-        if (timer == null) {
+        if (cancellationToken == null) {
             onUpdate(1);
             onStop();
         }
     }
 
     /**
-     * Cancels the transition timer.
-     *
-     * @param forceStop if {@code true}, the transition timer is stopped unconditionally
-     * @return {@code true} if the timer was cancelled, {@code false} otherwise
-     * @see TransitionTimer#cancel(boolean)
+     * Cancels the transition timer if it is currently running.
      */
-    public final boolean cancel(boolean forceStop) {
-        return timer == null || timer.cancel(forceStop);
-    }
-
-    /**
-     * Gets the running {@code TransitionTimer}.
-     *
-     * @return the {@code TransitionTimer}, or {@code null} if no timer is running
-     */
-    public final TransitionTimer getTimer() {
-        return timer;
+    public final void cancel() {
+        if (cancellationToken != null) {
+            cancellationToken.cancel();
+        }
     }
 
     /**

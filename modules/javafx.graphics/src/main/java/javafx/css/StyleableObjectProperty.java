@@ -221,7 +221,7 @@ public abstract class StyleableObjectProperty<T>
 
             if (existingMediator != null) {
                 if (transition == null) {
-                    existingMediator.cancel(true);
+                    existingMediator.cancel();
                     controller.addValue(metadata, newCssValue);
                 } else if (Objects.deepEquals(newCssValue, existingMediator.endValue)) {
                     controller.addExistingMediator(existingMediator);
@@ -247,32 +247,27 @@ public abstract class StyleableObjectProperty<T>
     @Override
     public void bind(ObservableValue<? extends T> observable) {
         super.bind(observable);
-        origin = StyleOrigin.USER;
-
-        // Calling the 'bind' method always cancels a transition.
-        if (controller != null) {
-            controller.cancel(true);
-        }
+        onUserChange();
     }
 
     /** {@inheritDoc} */
     @Override
     public void set(T v) {
         super.set(v);
-
-        // Calling the 'set' method cancels the transition timer, but not if the 'set' method was
-        // directly called by the timer itself (i.e. a timer will not accidentally cancel itself).
-        // Note that indirect cancellation is still possible: a timer may fire a transition event,
-        // which could cause user code to be executed that invokes this 'set' method. In that case,
-        // the call will cancel the timer.
-        if (controller == null || controller.cancel(false)) {
-            origin = StyleOrigin.USER;
-        }
+        onUserChange();
     }
 
     /** {@inheritDoc} */
     @Override
     public StyleOrigin getStyleOrigin() { return origin; }
+
+    private void onUserChange() {
+        origin = StyleOrigin.USER;
+
+        if (controller != null) {
+            controller.cancel();
+        }
+    }
 
     private StyleOrigin origin;
     private TransitionController<T> controller;
@@ -289,7 +284,7 @@ public abstract class StyleableObjectProperty<T>
      */
     private interface TransitionController<T> {
         T getTargetValue();
-        boolean cancel(boolean forceStop);
+        void cancel();
     }
 
     /**
@@ -308,13 +303,7 @@ public abstract class StyleableObjectProperty<T>
 
         @Override
         public void onStop() {
-            // When the transition is cancelled or completed, we clear the reference to this controller.
-            // However, when this controller was cancelled by a reversing transition, the 'controller' field
-            // refers to the reversing controller, and not to this controller. We need to be careful to only
-            // clear references to this controller.
-            if (controller == this) {
-                controller = null;
-            }
+            controller = null;
         }
 
         @Override
@@ -351,7 +340,7 @@ public abstract class StyleableObjectProperty<T>
 
         @Override
         public void onUpdate(double progress) {
-            set(progress < 0.5 ? startValue : endValue);
+            StyleableObjectProperty.super.set(progress < 0.5 ? startValue : endValue);
         }
     }
 
@@ -366,7 +355,8 @@ public abstract class StyleableObjectProperty<T>
         @Override
         @SuppressWarnings("unchecked")
         public void onUpdate(double progress) {
-            set(progress < 1 ? ((Interpolatable<T>)startValue).interpolate(endValue, progress) : endValue);
+            StyleableObjectProperty.super.set(
+                progress < 1 ? ((Interpolatable<T>)startValue).interpolate(endValue, progress) : endValue);
         }
     }
 
@@ -381,7 +371,6 @@ public abstract class StyleableObjectProperty<T>
         private final T newValue;
         private final Map<CssMetaData<? extends Styleable, ?>, Object> cssValues;
         private final List<ComponentTransitionMediator<?>> mediators = new ArrayList<>(5);
-        private boolean updating;
         private int remainingValues;
 
         AggregatingTransitionController(T newValue) {
@@ -395,18 +384,12 @@ public abstract class StyleableObjectProperty<T>
         }
 
         @Override
-        public boolean cancel(boolean forceStop) {
-            if (forceStop || !pollUpdating()) {
-                // Cancelling a mediator removes it from the 'mediators' list, so we need
-                // to make a copy of the list before we iterate on it.
-                for (var mediator : List.copyOf(mediators)) {
-                    mediator.cancel(true);
-                }
-
-                return true;
+        public void cancel() {
+            // Cancelling a mediator removes it from the 'mediators' list, so we need
+            // to make a copy of the list before we iterate on it.
+            for (var mediator : List.copyOf(mediators)) {
+                mediator.cancel();
             }
-
-            return false;
         }
 
         /**
@@ -473,14 +456,8 @@ public abstract class StyleableObjectProperty<T>
             cssValues.put(metadata, value);
 
             if (--remainingValues == 0) {
-                try {
-                    updating = true;
-                    set(getCssMetaData().getConverter().convert(cssValues));
-                } finally {
-                    updating = false;
-                }
-
                 remainingValues = mediators.size();
+                StyleableObjectProperty.super.set(getCssMetaData().getConverter().convert(cssValues));
             }
         }
 
@@ -497,19 +474,9 @@ public abstract class StyleableObjectProperty<T>
                 }
             }
 
-            // When all component transitions are cancelled or completed, we clear the reference to this
-            // controller. However, when this controller was cancelled by a reversing transition, the 'controller'
-            // field refers to the reversing controller, and not to this controller. We need to be careful to only
-            // clear references to this controller.
-            if (mediators.isEmpty() && StyleableObjectProperty.this.controller == this) {
+            if (mediators.isEmpty()) {
                 StyleableObjectProperty.this.controller = null;
             }
-        }
-
-        private boolean pollUpdating() {
-            boolean updating = this.updating;
-            this.updating = false;
-            return updating;
         }
     }
 
