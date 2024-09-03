@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,20 +25,19 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.traversal.TraversalMethod;
-import javafx.scene.Node;
-import javafx.scene.Parent;
-
-import javafx.scene.Scene;
-import javafx.scene.input.KeyEvent;
-
 import javafx.beans.value.ChangeListener;
 import javafx.event.Event;
 import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.traversal.FocusTraversal;
+import javafx.scene.traversal.TraversalDirection;
+import javafx.scene.traversal.TraversalMethod;
+import com.sun.javafx.scene.control.Properties;
 
 public class TwoLevelFocusListBehavior extends TwoLevelFocusBehavior {
 
@@ -87,27 +86,27 @@ public class TwoLevelFocusListBehavior extends TwoLevelFocusBehavior {
                     switch (((KeyEvent)event).getCode()) {
                       case TAB :
                           if (((KeyEvent)event).isShiftDown()) {
-                              NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.PREVIOUS, TraversalMethod.KEY);
+                              FocusTraversal.traverse((Node) obj, TraversalDirection.PREVIOUS, TraversalMethod.KEY);
                           }
                           else {
-                              NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.NEXT, TraversalMethod.KEY);
+                              FocusTraversal.traverse((Node) obj, TraversalDirection.NEXT, TraversalMethod.KEY);
                           }
                           event.consume();
                           break;
                       case UP :
-                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.UP, TraversalMethod.KEY);
+                          FocusTraversal.traverse((Node) obj, TraversalDirection.UP, TraversalMethod.KEY);
                           event.consume();
                           break;
                       case DOWN :
-                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.DOWN, TraversalMethod.KEY);
+                          FocusTraversal.traverse((Node) obj, TraversalDirection.DOWN, TraversalMethod.KEY);
                           event.consume();
                           break;
                       case LEFT :
-                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.LEFT, TraversalMethod.KEY);
+                          FocusTraversal.traverse((Node) obj, TraversalDirection.LEFT, TraversalMethod.KEY);
                           event.consume();
                           break;
                       case RIGHT :
-                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.RIGHT, TraversalMethod.KEY);
+                          FocusTraversal.traverse((Node) obj, TraversalDirection.RIGHT, TraversalMethod.KEY);
                           event.consume();
                           break;
                       case ENTER :

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,16 +25,15 @@
 
 package com.sun.javafx.scene;
 
+import java.util.List;
+import javafx.scene.Node;
+import javafx.scene.Parent;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.input.PickResultChooser;
-import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
-import java.util.List;
-import javafx.scene.Node;
-import javafx.scene.Parent;
 
 /*
  * Used to access internal methods of Parent.
@@ -113,14 +112,6 @@ public class ParentHelper extends NodeHelper {
         return parentAccessor.pickChildrenNode(parent, pickRay, result);
     }
 
-    public static void setTraversalEngine(Parent parent, ParentTraversalEngine value) {
-        parentAccessor.setTraversalEngine(parent, value);
-    }
-
-    public static ParentTraversalEngine getTraversalEngine(Parent parent) {
-        return parentAccessor.getTraversalEngine(parent);
-    }
-
     public static void setParentAccessor(final ParentAccessor newAccessor) {
         if (parentAccessor != null) {
             throw new IllegalStateException();
@@ -137,9 +128,6 @@ public class ParentHelper extends NodeHelper {
         void doProcessCSS(Node node);
         void doPickNodeLocal(Node node, PickRay localPickRay, PickResultChooser result);
         boolean pickChildrenNode(Parent parent, PickRay pickRay, PickResultChooser result);
-        void setTraversalEngine(Parent parent, ParentTraversalEngine value);
-        ParentTraversalEngine getTraversalEngine(Parent parent);
         List<String> doGetAllParentStylesheets(Parent parent);
     }
-
 }

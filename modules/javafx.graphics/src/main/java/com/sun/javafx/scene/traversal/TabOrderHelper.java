@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,30 +25,33 @@
 
 package com.sun.javafx.scene.traversal;
 
-import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.scene.ParentHelper;
+import java.util.List;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-
-import java.util.List;
+import javafx.scene.traversal.TraversalPolicy;
+import com.sun.javafx.scene.NodeHelper;
 
 final class TabOrderHelper {
     private static Node findPreviousFocusableInList(List<Node> nodeList, int startIndex) {
         for (int i = startIndex ; i >= 0 ; i--) {
             Node prevNode = nodeList.get(i);
-            // ParentTraverEngine can override traversability, so we need to check it first
-            if (isDisabledOrInvisible(prevNode)) continue;
-            final ParentTraversalEngine traversalEngine = prevNode instanceof Parent
-                    ? ParentHelper.getTraversalEngine((Parent) prevNode) : null;
-            if (prevNode instanceof Parent) {
-                if (traversalEngine != null && traversalEngine.canTraverse()) {
-                    Node selected = traversalEngine.selectLast();
+            // TraversalPolicy can override traversability, so we need to check it first
+            if (isDisabledOrInvisible(prevNode)) {
+                continue;
+            }
+            TraversalPolicy policy = prevNode instanceof Parent p ? p.getTraversalPolicy() : null;
+            if (prevNode instanceof Parent p) {
+                if (policy != null) {
+                    Node selected = policy.selectLast(p);
                     if (selected != null) {
                         return selected;
                     }
+                    if (policy.isParentTraversable(p)) {
+                        return prevNode;
+                    }
                 } else {
-                    List<Node> prevNodesList = ((Parent) prevNode).getChildrenUnmodifiable();
+                    List<Node> prevNodesList = p.getChildrenUnmodifiable();
                     if (prevNodesList.size() > 0) {
                         Node newNode = findPreviousFocusableInList(prevNodesList, prevNodesList.size() - 1);
                         if (newNode != null) {
@@ -57,9 +60,7 @@ final class TabOrderHelper {
                     }
                 }
             }
-            if (traversalEngine != null
-                    ? traversalEngine.isParentTraversable()
-                    : prevNode.isFocusTraversable()) {
+            if (prevNode.isFocusTraversable()) {
                 return prevNode;
             }
         }
@@ -97,9 +98,8 @@ final class TabOrderHelper {
             Parent parent = startNode.getParent();
             if (parent != null) {
                 // If the parent itself is traversable, select it
-                final ParentTraversalEngine parentEngine
-                        = ParentHelper.getTraversalEngine(parent);
-                if (parentEngine != null ? parentEngine.isParentTraversable() : parent.isFocusTraversable()) {
+                TraversalPolicy policy = parent.getTraversalPolicy();
+                if (policy != null ? policy.isParentTraversable(parent) : parent.isFocusTraversable()) {
                     newNode = parent;
                 } else {
                     peerNodes = findPeers(parent);
@@ -130,18 +130,16 @@ final class TabOrderHelper {
     private static Node findNextFocusableInList(List<Node> nodeList, int startIndex) {
         for (int i = startIndex ; i < nodeList.size() ; i++) {
             Node nextNode = nodeList.get(i);
-            if (isDisabledOrInvisible(nextNode)) continue;
-            final ParentTraversalEngine traversalEngine = nextNode instanceof Parent
-                    ? ParentHelper.getTraversalEngine((Parent) nextNode) : null;
-            // ParentTraverEngine can override traversability, so we need to check it first
-            if (traversalEngine != null
-                    ? traversalEngine.isParentTraversable()
-                    : nextNode.isFocusTraversable()) {
-                return nextNode;
+            if (isDisabledOrInvisible(nextNode)) {
+                continue;
             }
-            else if (nextNode instanceof Parent) {
-                if (traversalEngine!= null && traversalEngine.canTraverse()) {
-                    Node selected = traversalEngine.selectFirst();
+            // TraversalPolicy can override traversability, so we need to check it first
+            if (isParentTraversable(nextNode)) {
+                return nextNode;
+            } else if (nextNode instanceof Parent p) {
+                TraversalPolicy policy = p.getTraversalPolicy();
+                if (policy != null) {
+                    Node selected = policy.selectFirst(p);
                     if (selected != null) {
                         return selected;
                     } else {
@@ -149,7 +147,7 @@ final class TabOrderHelper {
                         continue;
                     }
                 }
-                List<Node> nextNodesList = ((Parent)nextNode).getChildrenUnmodifiable();
+                List<Node> nextNodesList = p.getChildrenUnmodifiable();
                 if (nextNodesList.size() > 0) {
                     Node newNode = findNextFocusableInList(nextNodesList, 0);
                     if (newNode != null) {
@@ -166,8 +164,8 @@ final class TabOrderHelper {
         Node newNode = null;
 
         // First, try to find next peer among the node children
-        if (traverseIntoCurrent && node instanceof Parent) {
-            newNode = findNextFocusableInList(((Parent)node).getChildrenUnmodifiable(), 0);
+        if (traverseIntoCurrent && node instanceof Parent p) {
+            newNode = findNextFocusableInList(p.getChildrenUnmodifiable(), 0);
         }
 
         // Next step is to select the siblings "to the right"
@@ -204,57 +202,72 @@ final class TabOrderHelper {
         return newNode;
     }
 
-    public static Node getFirstTargetNode(Parent p) {
-        if (p == null || isDisabledOrInvisible(p)) return null;
-        final ParentTraversalEngine traversalEngine
-                = ParentHelper.getTraversalEngine(p);
-        if (traversalEngine!= null && traversalEngine.canTraverse()) {
-            Node selected = traversalEngine.selectFirst();
+    public static Node getFirstTargetNode(Parent parent) {
+        if (parent == null || isDisabledOrInvisible(parent)) {
+            return null;
+        }
+
+        TraversalPolicy policy = parent.getTraversalPolicy();
+        if (policy != null) {
+            Node selected = policy.selectFirst(parent);
             if (selected != null) {
                 return selected;
             }
         }
-        List<Node> parentsNodes = p.getChildrenUnmodifiable();
+
+        List<Node> parentsNodes = parent.getChildrenUnmodifiable();
         for (Node n : parentsNodes) {
-            if (isDisabledOrInvisible(n)) continue;
-            final ParentTraversalEngine parentEngine = n instanceof Parent
-                    ? ParentHelper.getTraversalEngine((Parent)n) : null;
-            if (parentEngine != null ? parentEngine.isParentTraversable() : n.isFocusTraversable()) {
+            if (isDisabledOrInvisible(n)) {
+                continue;
+            }
+            if (isParentTraversable(n)) {
                 return n;
             }
-            if (n instanceof Parent) {
-                Node result = getFirstTargetNode((Parent)n);
-                if (result != null) return result;
+            if (n instanceof Parent p) {
+                Node result = getFirstTargetNode(p);
+                if (result != null)
+                    return result;
             }
         }
         return null;
     }
 
-    public static Node getLastTargetNode(Parent p) {
-        if (p == null || isDisabledOrInvisible(p)) return null;
-        final ParentTraversalEngine traversalEngine
-                = ParentHelper.getTraversalEngine(p);
-        if (traversalEngine!= null && traversalEngine.canTraverse()) {
-            Node selected = traversalEngine.selectLast();
+    public static Node getLastTargetNode(Parent parent) {
+        if (parent == null || isDisabledOrInvisible(parent)) return null;
+        TraversalPolicy policy = parent.getTraversalPolicy();
+        if (policy != null) {
+            Node selected = policy.selectLast(parent);
             if (selected != null) {
                 return selected;
             }
         }
-        List<Node> parentsNodes = p.getChildrenUnmodifiable();
+
+        List<Node> parentsNodes = parent.getChildrenUnmodifiable();
         for (int i = parentsNodes.size() - 1; i >= 0; --i) {
             Node n = parentsNodes.get(i);
-            if (isDisabledOrInvisible(n)) continue;
-
-            if (n instanceof Parent) {
-                Node result = getLastTargetNode((Parent) n);
-                if (result != null) return result;
+            if (isDisabledOrInvisible(n)) {
+                continue;
             }
-            final ParentTraversalEngine parentEngine = n instanceof Parent
-                    ? ParentHelper.getTraversalEngine((Parent) n) : null;
-            if (parentEngine != null ? parentEngine.isParentTraversable() : n.isFocusTraversable()) {
+            if (n instanceof Parent p) {
+                Node result = getLastTargetNode(p);
+                if (result != null) {
+                    return result;
+                }
+            }
+            if (isParentTraversable(n)) {
                 return n;
             }
         }
         return null;
+    }
+
+    private static boolean isParentTraversable(Node n) {
+        if (n instanceof Parent p) {
+            TraversalPolicy policy = p.getTraversalPolicy();
+            if (policy != null) {
+                return policy.isParentTraversable(p);
+            }
+        }
+        return n.isFocusTraversable();
     }
 }

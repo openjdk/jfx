@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,29 +25,23 @@
 
 package test.com.sun.javafx.scene.traversal;
 
-import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.scene.traversal.SceneTraversalEngine;
-import com.sun.javafx.scene.traversal.TraversalEngine;
-import com.sun.javafx.scene.traversal.TraversalMethod;
-import com.sun.javafx.scene.traversal.TraverseListener;
 import static org.junit.Assert.assertTrue;
-
 import java.util.Arrays;
 import java.util.Collection;
-
-import javafx.geometry.Bounds;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.traversal.TraversalDirection;
+import javafx.scene.traversal.TraversalMethod;
 import javafx.stage.Stage;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
 
 /**
  * Tests TraversalEngine with invisible nodes, using the default ContainerTabOrder algorithm,
@@ -55,14 +49,13 @@ import org.junit.runners.Parameterized.Parameters;
 @RunWith(Parameterized.class)
 public final class TraverseInvisibleTest {
     private final int fromNumber;
-    private final Direction direction;
+    private final TraversalDirection direction;
     private final int invisibleNumber;
     private final int toNumber;
 
     private Stage stage;
     private Scene scene;
     private Node[] keypadNodes;
-    private SceneTraversalEngine traversalEngine;
 
     /*
     **
@@ -75,17 +68,17 @@ public final class TraverseInvisibleTest {
     @Parameters
     public static Collection data() {
         return Arrays.asList(new Object[][] {
-            { 3, Direction.RIGHT, 4, 5},
-            { 5, Direction.LEFT, 4, 3},
-            { 4, Direction.NEXT, 5, 6},
-            { 6, Direction.PREVIOUS, 5, 4},
-            { 8, Direction.UP, 5, 2 },
-            { 2, Direction.DOWN, 5, 8 }
+            { 3, TraversalDirection.RIGHT, 4, 5},
+            { 5, TraversalDirection.LEFT, 4, 3},
+            { 4, TraversalDirection.NEXT, 5, 6},
+            { 6, TraversalDirection.PREVIOUS, 5, 4},
+            { 8, TraversalDirection.UP, 5, 2 },
+            { 2, TraversalDirection.DOWN, 5, 8 }
         });
     }
 
     public TraverseInvisibleTest(final int fromNumber,
-                         final Direction direction,
+                         final TraversalDirection direction,
                          final int invisibleNumber,
                          final int toNumber) {
         this.fromNumber = fromNumber;
@@ -100,9 +93,7 @@ public final class TraverseInvisibleTest {
         scene = new Scene(new Group(), 500, 500);
         stage.setScene(scene);
 
-        traversalEngine = new SceneTraversalEngine(scene);
-
-        keypadNodes = createKeypadNodesInScene(scene, traversalEngine);
+        keypadNodes = createKeypadNodesInScene(scene);
         stage.show();
         stage.requestFocus();
     }
@@ -112,25 +103,20 @@ public final class TraverseInvisibleTest {
         stage = null;
         scene = null;
         keypadNodes = null;
-        traversalEngine = null;
     }
 
     @Test
     public void traverseOverInvisible() {
         keypadNodes[fromNumber].requestFocus();
         keypadNodes[invisibleNumber].setVisible(false);
-        traversalEngine.trav(keypadNodes[fromNumber], direction, TraversalMethod.DEFAULT);
+        TopMostTraversalEngine.trav(scene.getRoot(), keypadNodes[fromNumber], direction, TraversalMethod.DEFAULT);
 
         assertTrue(keypadNodes[toNumber].isFocused());
 
         keypadNodes[invisibleNumber - 1].setVisible(true);
     }
 
-
-
-    private static Node[] createKeypadNodesInScene(
-            final Scene scene,
-            final TraversalEngine traversalEngine) {
+    private static Node[] createKeypadNodesInScene(final Scene scene) {
         final Node[] keypad = new Node[9];
 
         int index = 0;
@@ -147,25 +133,5 @@ public final class TraverseInvisibleTest {
         }
 
         return keypad;
-    }
-
-    private static final class TraverseListenerImpl
-            implements TraverseListener {
-        private int callCounter;
-        private Node lastNode;
-
-        public int getCallCounter() {
-            return callCounter;
-        }
-
-        public Node getLastNode() {
-            return lastNode;
-        }
-
-        @Override
-        public void onTraverse(final Node node, final Bounds bounds) {
-            ++callCounter;
-            lastNode = node;
-        }
     }
 }

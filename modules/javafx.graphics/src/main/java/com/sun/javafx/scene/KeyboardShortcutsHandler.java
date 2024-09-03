@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,8 +33,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-
-import com.sun.javafx.scene.traversal.TraversalMethod;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.event.Event;
@@ -43,12 +41,13 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.Mnemonic;
-
+import javafx.scene.traversal.FocusTraversal;
+import javafx.scene.traversal.TraversalDirection;
+import javafx.scene.traversal.TraversalMethod;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.collections.ObservableListWrapper;
 import com.sun.javafx.collections.ObservableMapWrapper;
 import com.sun.javafx.event.BasicEventDispatcher;
-import com.sun.javafx.scene.traversal.Direction;
 
 public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
     private ObservableMap<KeyCombination, Runnable> accelerators;
@@ -99,8 +98,8 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
         return accelerators;
     }
 
-    private void traverse(Event event, Node node, Direction dir) {
-        if (NodeHelper.traverse(node, dir, TraversalMethod.KEY)) {
+    private void traverse(Event event, Node node, TraversalDirection dir) {
+        if (FocusTraversal.traverse(node, dir, TraversalMethod.KEY)) {
             event.consume();
         }
     }
@@ -118,23 +117,23 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
             switch (keyEvent.getCode()) {
               case TAB :
                   if (keyEvent.isShiftDown()) {
-                      traverse(event, node, Direction.PREVIOUS);
+                      traverse(event, node, TraversalDirection.PREVIOUS);
                   }
                   else {
-                      traverse(event, node, Direction.NEXT);
+                      traverse(event, node, TraversalDirection.NEXT);
                   }
                   break;
               case UP :
-                  traverse(event, node, Direction.UP);
+                  traverse(event, node, TraversalDirection.UP);
                   break;
               case DOWN :
-                  traverse(event, node, Direction.DOWN);
+                  traverse(event, node, TraversalDirection.DOWN);
                   break;
               case LEFT :
-                  traverse(event, node, Direction.LEFT);
+                  traverse(event, node, TraversalDirection.LEFT);
                   break;
               case RIGHT :
-                  traverse(event, node, Direction.RIGHT);
+                  traverse(event, node, TraversalDirection.RIGHT);
                   break;
               default :
                   break;
