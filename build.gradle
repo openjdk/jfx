@@ -617,13 +617,8 @@ ext.DO_JCOV = Boolean.parseBoolean(JCOV)
 defineProperty("USE_CYGWIN", "true")
 ext.IS_USE_CYGWIN = Boolean.parseBoolean(USE_CYGWIN)
 
-// Define the number of threads to use when compiling (specifically for native compilation)
-// On Mac we limit it to 1 by default due to problems running gcc in parallel
-if (IS_MAC) {
-    defineProperty("NUM_COMPILE_THREADS", "1")
-} else {
-    defineProperty("NUM_COMPILE_THREADS", "${Runtime.runtime.availableProcessors()}")
-}
+// Define the number of threads to use when compiling (specifically for native compilation, including webkit)
+defineProperty("NUM_COMPILE_THREADS", "${Runtime.runtime.availableProcessors()}")
 
 //
 // The next three sections of properties are used to generate the
