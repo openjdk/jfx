@@ -183,7 +183,7 @@ public final class TraversalPolicyTest {
           b22
       ));
     }
-    
+
     private static Rectangle b(String text) {
         Rectangle b = new Rectangle() {
             @Override

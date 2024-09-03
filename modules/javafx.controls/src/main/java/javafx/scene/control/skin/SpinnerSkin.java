@@ -248,7 +248,7 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         // when replacing the skin, the textField (which comes from the control), must first be uninstalled
         // by the old skin in its dispose(), followed by (re-)adding it here.
         getChildren().add(textField);
-        
+
         // Following code borrowed from ComboBoxPopupControl, to resolve the
         // issue initially identified in RT-36902, but specifically (for Spinner)
         // identified in RT-40625

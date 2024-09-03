@@ -44,7 +44,7 @@ public enum TraversalDirection {
     PREVIOUS,
     /** Moving focus right. */
     RIGHT,
-    /** Moving focus upward. */ 
+    /** Moving focus upward. */
     UP;
 
     /**

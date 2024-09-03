@@ -110,8 +110,8 @@ public class TraversalEvent extends Event {
 
     @Override
     public String toString() {
-        return 
-            getClass().getName() + 
+        return
+            getClass().getName() +
             "[node=" + getNode() +
             ", bounds=" + getBounds() +
             ", source=" + source +
