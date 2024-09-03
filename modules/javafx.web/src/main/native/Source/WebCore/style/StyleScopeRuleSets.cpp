@@ -31,6 +31,7 @@
 
 #include "CSSStyleSheet.h"
 #include "CascadeLevel.h"
+#include "DocumentInlines.h"
 #include "ExtensionStyleSheets.h"
 #include "FrameLoader.h"
 #include "HTMLNames.h"
@@ -108,12 +109,12 @@ RuleSet* ScopeRuleSets::styleForCascadeLevel(CascadeLevel level)
 
 void ScopeRuleSets::initializeUserStyle()
 {
-    auto& extensionStyleSheets = m_styleResolver.document().extensionStyleSheets();
+    CheckedRef extensionStyleSheets = m_styleResolver.document().extensionStyleSheets();
     auto& mediaQueryEvaluator = m_styleResolver.mediaQueryEvaluator();
 
     auto userStyle = RuleSet::create();
 
-    if (auto* pageUserSheet = extensionStyleSheets.pageUserSheet()) {
+    if (auto* pageUserSheet = extensionStyleSheets->pageUserSheet()) {
         RuleSetBuilder builder(userStyle, mediaQueryEvaluator, &m_styleResolver);
         builder.addRulesFromSheet(pageUserSheet->contents());
     }
@@ -121,17 +122,17 @@ void ScopeRuleSets::initializeUserStyle()
 #if ENABLE(APP_BOUND_DOMAINS)
     auto* page = m_styleResolver.document().page();
     auto* localMainFrame = page ? dynamicDowncast<LocalFrame>(page->mainFrame()) : nullptr;
-    if (!extensionStyleSheets.injectedUserStyleSheets().isEmpty() && page && localMainFrame && localMainFrame->loader().client().shouldEnableInAppBrowserPrivacyProtections())
+    if (!extensionStyleSheets->injectedUserStyleSheets().isEmpty() && page && localMainFrame && localMainFrame->loader().client().shouldEnableInAppBrowserPrivacyProtections())
         m_styleResolver.document().addConsoleMessage(MessageSource::Security, MessageLevel::Warning, "Ignoring user style sheet for non-app bound domain."_s);
     else {
-        collectRulesFromUserStyleSheets(extensionStyleSheets.injectedUserStyleSheets(), userStyle, mediaQueryEvaluator);
-        if (page && localMainFrame && !extensionStyleSheets.injectedUserStyleSheets().isEmpty())
+        collectRulesFromUserStyleSheets(extensionStyleSheets->injectedUserStyleSheets(), userStyle, mediaQueryEvaluator);
+        if (page && localMainFrame && !extensionStyleSheets->injectedUserStyleSheets().isEmpty())
             localMainFrame->loader().client().notifyPageOfAppBoundBehavior();
     }
 #else
-    collectRulesFromUserStyleSheets(extensionStyleSheets.injectedUserStyleSheets(), userStyle, mediaQueryEvaluator);
+    collectRulesFromUserStyleSheets(extensionStyleSheets->injectedUserStyleSheets(), userStyle, mediaQueryEvaluator);
 #endif
-    collectRulesFromUserStyleSheets(extensionStyleSheets.documentUserStyleSheets(), userStyle, mediaQueryEvaluator);
+    collectRulesFromUserStyleSheets(extensionStyleSheets->documentUserStyleSheets(), userStyle, mediaQueryEvaluator);
 
     if (userStyle->ruleCount() > 0 || userStyle->pageRules().size() > 0)
         m_userStyle = WTFMove(userStyle);
@@ -194,6 +195,18 @@ bool ScopeRuleSets::hasContainerQueries() const
     return false;
 }
 
+bool ScopeRuleSets::hasScopeRules() const
+{
+    if (m_authorStyle->hasScopeRules())
+        return true;
+    if (m_userStyle && m_userStyle->hasScopeRules())
+        return true;
+    if (m_userAgentMediaQueryStyle && m_userAgentMediaQueryStyle->hasScopeRules())
+        return true;
+
+    return false;
+}
+
 std::optional<DynamicMediaQueryEvaluationChanges> ScopeRuleSets::evaluateDynamicMediaQueryRules(const MQ::MediaQueryEvaluator& evaluator)
 {
     std::optional<DynamicMediaQueryEvaluationChanges> evaluationChanges;
@@ -251,6 +264,7 @@ void ScopeRuleSets::collectFeatures() const
 
     m_siblingRuleSet = makeRuleSet(m_features.siblingRules);
     m_uncommonAttributeRuleSet = makeRuleSet(m_features.uncommonAttributeRules);
+    m_scopeBreakingHasPseudoClassInvalidationRuleSet = makeRuleSet(m_features.scopeBreakingHasPseudoClassRules);
 
     m_idInvalidationRuleSets.clear();
     m_classInvalidationRuleSets.clear();
@@ -293,15 +307,10 @@ static Vector<InvalidationRuleSet>* ensureInvalidationRuleSets(const KeyType& ke
             }
         }
 
-        auto invalidationRuleSets = makeUnique<Vector<InvalidationRuleSet>>();
-        invalidationRuleSets->reserveInitialCapacity(invalidationRuleSetMap.size());
-
-        for (auto& invalidationRuleSet : invalidationRuleSetMap.values()) {
+        return makeUnique<Vector<InvalidationRuleSet>>(WTF::map(invalidationRuleSetMap.values(), [](auto&& invalidationRuleSet) {
             invalidationRuleSet.ruleSet->shrinkToFit();
-            invalidationRuleSets->uncheckedAppend(WTFMove(invalidationRuleSet));
-        }
-
-        return invalidationRuleSets;
+            return WTFMove(invalidationRuleSet);
+        }));
     }).iterator->value.get();
 }
 

@@ -32,46 +32,63 @@
 #include "IntSize.h"
 #include "PlatformImage.h"
 #include "RenderingResource.h"
-
-#if USE(CAIRO)
-#include "PixelBuffer.h"
-#endif
+#include <wtf/UniqueRef.h>
 
 namespace WebCore {
 
 class GraphicsContext;
 
+class NativeImageBackend;
+
 class NativeImage final : public RenderingResource {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     static WEBCORE_EXPORT RefPtr<NativeImage> create(PlatformImagePtr&&, RenderingResourceIdentifier = RenderingResourceIdentifier::generate());
-#if USE(CAIRO)
-    static RefPtr<NativeImage> create(Ref<PixelBuffer>&&, bool premultipliedAlpha);
-#endif
+    // Creates a NativeImage that is intended to be drawn once or only few times. Signals the platform to avoid generating any caches for the image.
+    static WEBCORE_EXPORT RefPtr<NativeImage> createTransient(PlatformImagePtr&&, RenderingResourceIdentifier = RenderingResourceIdentifier::generate());
 
-    WEBCORE_EXPORT void setPlatformImage(PlatformImagePtr&&);
-    const PlatformImagePtr& platformImage() const { return m_platformImage; }
+    WEBCORE_EXPORT const PlatformImagePtr& platformImage() const;
 
     WEBCORE_EXPORT IntSize size() const;
     bool hasAlpha() const;
     Color singlePixelSolidColor() const;
     WEBCORE_EXPORT DestinationColorSpace colorSpace() const;
 
-    void draw(GraphicsContext&, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions&);
+    void draw(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions);
     void clearSubimages();
 
-private:
-    NativeImage(PlatformImagePtr&&, RenderingResourceIdentifier);
-#if USE(CAIRO)
-    NativeImage(PlatformImagePtr&&, RenderingResourceIdentifier, Ref<PixelBuffer>&&);
-#endif
+    WEBCORE_EXPORT void replaceBackend(UniqueRef<NativeImageBackend>);
+    NativeImageBackend& backend() { return m_backend.get(); }
+    const NativeImageBackend& backend() const { return m_backend.get(); }
+protected:
+    NativeImage(UniqueRef<NativeImageBackend>, RenderingResourceIdentifier);
 
     bool isNativeImage() const final { return true; }
 
+    UniqueRef<NativeImageBackend> m_backend;
+};
+
+class NativeImageBackend {
+public:
+    WEBCORE_EXPORT NativeImageBackend();
+    WEBCORE_EXPORT virtual ~NativeImageBackend();
+    virtual const PlatformImagePtr& platformImage() const = 0;
+    virtual IntSize size() const = 0;
+    virtual bool hasAlpha() const = 0;
+    virtual DestinationColorSpace colorSpace() const = 0;
+    WEBCORE_EXPORT virtual bool isRemoteNativeImageBackendProxy() const;
+};
+
+class PlatformImageNativeImageBackend final : public NativeImageBackend {
+public:
+    WEBCORE_EXPORT PlatformImageNativeImageBackend(PlatformImagePtr);
+    WEBCORE_EXPORT ~PlatformImageNativeImageBackend() final;
+    WEBCORE_EXPORT const PlatformImagePtr& platformImage() const final;
+    WEBCORE_EXPORT IntSize size() const final;
+    WEBCORE_EXPORT bool hasAlpha() const final;
+    WEBCORE_EXPORT DestinationColorSpace colorSpace() const final;
+private:
     PlatformImagePtr m_platformImage;
-#if USE(CAIRO)
-    RefPtr<PixelBuffer> m_pixelBuffer;
-#endif
 };
 
 } // namespace WebCore

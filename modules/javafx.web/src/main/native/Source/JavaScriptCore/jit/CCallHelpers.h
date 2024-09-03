@@ -33,10 +33,11 @@
 #include "StackAlignment.h"
 #include <wtf/FunctionTraits.h>
 #include <wtf/ScopedLambda.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
-#if CPU(MIPS) || (OS(WINDOWS) && CPU(X86_64))
+#if OS(WINDOWS) && CPU(X86_64)
 #define POKE_ARGUMENT_OFFSET 4
 #else
 #define POKE_ARGUMENT_OFFSET 0
@@ -49,6 +50,7 @@ class RegisteredStructure;
 };
 
 class CCallHelpers : public AssemblyHelpers {
+    WTF_MAKE_TZONE_ALLOCATED(CCallHelpers);
 public:
     CCallHelpers(CodeBlock* codeBlock = nullptr)
         : AssemblyHelpers(codeBlock)
@@ -202,22 +204,6 @@ private:
             }
         }
     }
-
-#if CPU(MIPS)
-    template<unsigned NumCrossSources, unsigned NumberOfRegisters>
-    ALWAYS_INLINE void setupStubCrossArgs(std::array<GPRReg, NumberOfRegisters> destinations, std::array<FPRReg, NumberOfRegisters> sources) {
-        if constexpr (NumCrossSources) {
-        for (unsigned i = 0; i < NumCrossSources; i++) {
-            GPRReg dest = destinations[i];
-            FPRReg source = sources[i];
-
-            moveDouble(source, dest);
-        }
-    }
-        UNUSED_PARAM(destinations);
-        UNUSED_PARAM(sources);
-    }
-#endif
 
     template<typename RegType>
     using InfoTypeForReg = decltype(toInfoFromReg(RegType(-1)));
@@ -459,25 +445,14 @@ private:
     }
 
 #else // USE(JSVALUE64)
-#if CPU(ARM_THUMB2) || CPU(MIPS)
+#if CPU(ARM_THUMB2)
 
     template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned nonArgGPRs, unsigned extraPoke, typename... Args>
     void setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, FPRReg arg, Args... args)
     {
         static_assert(std::is_same_v<CURRENT_ARGUMENT_TYPE, double>, "We should only be passing FPRRegs to a double. We use moveDouble / loadDouble / storeDouble exclusively");
 
-        // MIPS and ARM (hardfp, which we require) pass FP arguments in FP registers.
-#if CPU(MIPS)
-        unsigned numberOfFPArgumentRegisters = FPRInfo::numberOfArgumentRegisters;
-        unsigned currentFPArgCount = argSourceRegs.argCount(arg);
-
-        // MIPS can only use FP argument registers if it isn't preceeded by any GP argument.
-        if (currentFPArgCount < numberOfFPArgumentRegisters && !numGPRArgs) {
-            auto updatedArgSourceRegs = argSourceRegs.pushRegArg(arg, FPRInfo::toArgumentRegister(currentFPArgCount));
-            setupArgumentsImpl<OperationType>(updatedArgSourceRegs.addGPRExtraArg().addGPRExtraArg(), args...);
-            return;
-        }
-#elif CPU(ARM_THUMB2)
+        // ARM (hardfp, which we require) passes FP arguments in FP registers.
         unsigned numberOfFPArgumentRegisters = FPRInfo::numberOfArgumentRegisters;
         unsigned currentFPArgCount = argSourceRegs.argCount(arg);
 
@@ -486,31 +461,6 @@ private:
             setupArgumentsImpl<OperationType>(updatedArgSourceRegs, args...);
             return;
         }
-#endif
-
-#if CPU(MIPS)
-        // On MIPS arguments can be passed in GP registers.
-        unsigned numberOfGPArgumentRegisters = GPRInfo::numberOfArgumentRegisters;
-        unsigned currentGPArgCount = argSourceRegs.argCount(GPRInfo::regT0);
-        unsigned alignedGPArgCount = roundUpToMultipleOf<2>(currentGPArgCount);
-
-        if (alignedGPArgCount + 1 < numberOfGPArgumentRegisters) {
-            auto updatedArgSourceRegs = argSourceRegs.pushRegArg(arg, GPRInfo::toArgumentRegister(alignedGPArgCount));
-
-            if (alignedGPArgCount > currentGPArgCount)
-                setupArgumentsImpl<OperationType>(updatedArgSourceRegs.addGPRExtraArg().addGPRExtraArg().addGPRExtraArg(), args...);
-            else
-                setupArgumentsImpl<OperationType>(updatedArgSourceRegs.addGPRExtraArg().addGPRExtraArg(), args...);
-
-            return;
-        }
-
-        if (currentGPArgCount < numberOfGPArgumentRegisters) {
-            pokeForArgument(arg, numGPRArgs, numFPRArgs, numCrossSources, extraGPRArgs + 1, nonArgGPRs, extraPoke);
-            setupArgumentsImpl<OperationType>(argSourceRegs.addGPRExtraArg().addStackArg(arg).addPoke(), args...);
-            return;
-        }
-#endif
 
         // Otherwise pass FP argument on stack.
         if (stackAligned(numGPRArgs, numFPRArgs, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke)) {
@@ -603,7 +553,7 @@ private:
             pokeArgumentsAligned<OperationType>(argSourceRegs, arg.payloadGPR(), arg.tagGPR(), args...);
     }
 
-#endif // CPU(ARM_THUMB2) || CPU(MIPS)
+#endif // CPU(ARM_THUMB2)
 #endif // USE(JSVALUE64)
 
     template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned nonArgGPRs, unsigned extraPoke, typename Arg, typename... Args>
@@ -761,11 +711,8 @@ private:
         static_assert(fprArgsCount<TraitsType>(std::make_index_sequence<TraitsType::arity>()) == numFPRArgs);
 
         setupStubArgs<numGPRSources, GPRReg>(clampArrayToSize<numGPRSources, GPRReg>(argSourceRegs.gprDestinations), clampArrayToSize<numGPRSources, GPRReg>(argSourceRegs.gprSources));
-#if CPU(MIPS)
-        setupStubCrossArgs<numCrossSources>(argSourceRegs.crossDestinations, argSourceRegs.crossSources);
-#else
         static_assert(!numCrossSources, "shouldn't be used on this architecture.");
-#endif
+
         setupStubArgs<numFPRSources, FPRReg>(clampArrayToSize<numFPRSources, FPRReg>(argSourceRegs.fprDestinations), clampArrayToSize<numFPRSources, FPRReg>(argSourceRegs.fprSources));
 
 #if OS(WINDOWS) && CPU(X86_64)
@@ -858,20 +805,16 @@ public:
         farJump(GPRInfo::regT1, ExceptionHandlerPtrTag);
     }
 
-    void prepareForTailCallSlow(GPRReg preservedGPR1 = InvalidGPRReg, GPRReg preservedGPR2 = InvalidGPRReg)
+    void prepareForTailCallSlow(RegisterSet preserved = { })
     {
-        RegisterSet preserved;
-        if (preservedGPR1 != InvalidGPRReg)
-            preserved.add(preservedGPR1, IgnoreVectors);
-        if (preservedGPR2 != InvalidGPRReg)
-            preserved.add(preservedGPR2, IgnoreVectors);
-
         GPRReg temp1 = selectScratchGPR(preserved);
         preserved.add(temp1, IgnoreVectors);
         GPRReg temp2 = selectScratchGPR(preserved);
         preserved.add(temp2, IgnoreVectors);
+#if CPU(ARM64E)
         GPRReg temp3 = selectScratchGPR(preserved);
-
+        preserved.add(temp3, IgnoreVectors);
+#endif
         ASSERT(!preserved.numberOfSetFPRs());
 
         GPRReg newFramePointer = temp1;
@@ -920,25 +863,20 @@ public:
             mul32(TrustedImm32(sizeof(Register)), newFrameSizeGPR, newFrameSizeGPR);
         }
 
-        GPRReg tempGPR = temp3;
-        ASSERT(tempGPR != newFramePointer && tempGPR != newFrameSizeGPR);
-
         // We don't need the current frame beyond this point. Masquerade as our
         // caller.
 #if CPU(ARM_THUMB2) || CPU(ARM64) || CPU(RISCV64)
         loadPtr(Address(framePointerRegister, CallFrame::returnPCOffset()), linkRegister);
         subPtr(TrustedImm32(2 * sizeof(void*)), newFrameSizeGPR);
 #if CPU(ARM64E)
+        GPRReg tempGPR = temp3;
+        ASSERT(tempGPR != newFramePointer && tempGPR != newFrameSizeGPR);
         addPtr(TrustedImm32(sizeof(CallerFrameAndPC)), MacroAssembler::framePointerRegister, tempGPR);
         untagPtr(tempGPR, linkRegister);
         validateUntaggedPtr(linkRegister, tempGPR);
 #endif
-#elif CPU(MIPS)
-        loadPtr(Address(framePointerRegister, sizeof(void*)), returnAddressRegister);
-        subPtr(TrustedImm32(2 * sizeof(void*)), newFrameSizeGPR);
 #elif CPU(X86_64)
-        loadPtr(Address(framePointerRegister, sizeof(void*)), tempGPR);
-        push(tempGPR);
+        push(Address(framePointerRegister, sizeof(void*)));
         subPtr(TrustedImm32(sizeof(void*)), newFrameSizeGPR);
 #else
         UNREACHABLE_FOR_PLATFORM();
@@ -946,19 +884,66 @@ public:
         subPtr(newFrameSizeGPR, newFramePointer);
         loadPtr(Address(framePointerRegister), framePointerRegister);
 
-
         // We need to move the newFrameSizeGPR slots above the stack pointer by
         // newFramePointer registers. We use pointer-sized chunks.
         MacroAssembler::Label copyLoop(label());
 
         subPtr(TrustedImm32(sizeof(void*)), newFrameSizeGPR);
-        loadPtr(BaseIndex(stackPointerRegister, newFrameSizeGPR, TimesOne), tempGPR);
-        storePtr(tempGPR, BaseIndex(newFramePointer, newFrameSizeGPR, TimesOne));
-
+        transferPtr(BaseIndex(stackPointerRegister, newFrameSizeGPR, TimesOne), BaseIndex(newFramePointer, newFrameSizeGPR, TimesOne));
         branchTest32(MacroAssembler::NonZero, newFrameSizeGPR).linkTo(copyLoop, this);
 
         // Ready for a jump!
         move(newFramePointer, stackPointerRegister);
+    }
+
+    static Address addressOfCalleeCalleeFromCallerPerspective(int offset)
+    {
+        CCallHelpers::Address calleeFrame = CCallHelpers::Address(MacroAssembler::stackPointerRegister, 0);
+        return calleeFrame.withOffset(CallFrameSlot::callee * static_cast<int>(sizeof(Register)))
+            // calleeFrame is from the caller's perspective
+            .withOffset(-safeCast<int>(sizeof(CallerFrameAndPC)))
+            .withOffset(PayloadOffset)
+            .withOffset(offset);
+    }
+
+    // This function is used to store the wasm callee in case this function hasn't tiered up yet.
+    // The LLInt/IPInt is going to expect this so that the common entrypoint can read bytecode/metadata.
+    void storeWasmCalleeCallee(RegisterID value, int offset = 0)
+    {
+        JIT_COMMENT(*this, "< Store Callee's wasm callee");
+        auto addr = CCallHelpers::addressOfCalleeCalleeFromCallerPerspective(offset);
+#if USE(JSVALUE64)
+        storePtr(value, addr);
+#elif USE(JSVALUE32_64)
+        store32(value, addr.withOffset(PayloadOffset));
+        store32(TrustedImm32(JSValue::NativeCalleeTag), addr.withOffset(TagOffset));
+#else
+#error "Unsupported configuration"
+#endif
+    }
+
+    void storeWasmCalleeCallee(const uintptr_t* boxedWasmCalleeLoadLocation)
+    {
+        ASSERT(boxedWasmCalleeLoadLocation);
+        JIT_COMMENT(*this, "> ", RawHex(*boxedWasmCalleeLoadLocation));
+        move(TrustedImmPtr(*boxedWasmCalleeLoadLocation), scratchRegister());
+        storeWasmCalleeCallee(scratchRegister());
+    }
+
+    DataLabelPtr storeWasmCalleeCalleePatchable()
+    {
+        JIT_COMMENT(*this, "Store Callee's wasm callee (patchable)");
+        auto patch = moveWithPatch(TrustedImmPtr(nullptr), scratchRegister());
+        auto addr = CCallHelpers::addressOfCalleeCalleeFromCallerPerspective(0);
+#if USE(JSVALUE64)
+        storePtr(scratchRegister(), addr);
+#elif USE(JSVALUE32_64)
+        store32(scratchRegister(), addr.withOffset(PayloadOffset));
+        store32(TrustedImm32(JSValue::NativeCalleeTag), addr.withOffset(TagOffset));
+#else
+#error "Unsupported configuration"
+#endif
+        return patch;
     }
 
     // These operations clobber all volatile registers. They assume that there is room on the top of
@@ -973,8 +958,6 @@ public:
 
     // Leaves behind a pointer to the Packet we should write to in shadowPacket.
     void ensureShadowChickenPacket(VM&, GPRReg shadowPacket, GPRReg scratch1NonArgGPR, GPRReg scratch2);
-
-    static void emitJITCodeOver(CodePtr<JSInternalPtrTag> where, ScopedLambda<void(CCallHelpers&)>, const char*);
 
     void emitCTIThunkPrologue(bool returnAddressAlreadyTagged = false);
     void emitCTIThunkEpilogue();

@@ -64,65 +64,6 @@
 #endif
 
 /**
- * SECTION:hash_tables
- * @title: Hash Tables
- * @short_description: associations between keys and values so that
- *     given a key the value can be found quickly
- *
- * A #GHashTable provides associations between keys and values which is
- * optimized so that given a key, the associated value can be found,
- * inserted or removed in amortized O(1). All operations going through
- * each element take O(n) time (list all keys/values, table resize, etc.).
- *
- * Note that neither keys nor values are copied when inserted into the
- * #GHashTable, so they must exist for the lifetime of the #GHashTable.
- * This means that the use of static strings is OK, but temporary
- * strings (i.e. those created in buffers and those returned by GTK
- * widgets) should be copied with g_strdup() before being inserted.
- *
- * If keys or values are dynamically allocated, you must be careful to
- * ensure that they are freed when they are removed from the
- * #GHashTable, and also when they are overwritten by new insertions
- * into the #GHashTable. It is also not advisable to mix static strings
- * and dynamically-allocated strings in a #GHashTable, because it then
- * becomes difficult to determine whether the string should be freed.
- *
- * To create a #GHashTable, use g_hash_table_new().
- *
- * To insert a key and value into a #GHashTable, use
- * g_hash_table_insert().
- *
- * To look up a value corresponding to a given key, use
- * g_hash_table_lookup() and g_hash_table_lookup_extended().
- *
- * g_hash_table_lookup_extended() can also be used to simply
- * check if a key is present in the hash table.
- *
- * To remove a key and value, use g_hash_table_remove().
- *
- * To call a function for each key and value pair use
- * g_hash_table_foreach() or use an iterator to iterate over the
- * key/value pairs in the hash table, see #GHashTableIter. The iteration order
- * of a hash table is not defined, and you must not rely on iterating over
- * keys/values in the same order as they were inserted.
- *
- * To destroy a #GHashTable use g_hash_table_destroy().
- *
- * A common use-case for hash tables is to store information about a
- * set of keys, without associating any particular value with each
- * key. GHashTable optimizes one way of doing so: If you store only
- * key-value pairs where key == value, then GHashTable does not
- * allocate memory to store the values, which can be a considerable
- * space saving, if your set is large. The functions
- * g_hash_table_add() and g_hash_table_contains() are designed to be
- * used when using #GHashTable this way.
- *
- * #GHashTable is not designed to be statically initialised with keys and
- * values known at compile time. To build a static hash table, use a tool such
- * as [gperf](https://www.gnu.org/software/gperf/).
- */
-
-/**
  * GHashTable:
  *
  * The #GHashTable struct is an opaque data structure to represent a
@@ -1029,7 +970,7 @@ g_hash_table_ensure_keyval_fits (GHashTable *hash_table, gpointer key, gpointer 
  * as its first parameter, and the user-provided key to check against as
  * its second.
  *
- * Returns: a new #GHashTable
+ * Returns: (transfer full): a new #GHashTable
  */
 GHashTable *
 g_hash_table_new (GHashFunc  hash_func,
@@ -1062,7 +1003,7 @@ g_hash_table_new (GHashFunc  hash_func,
  * calling g_hash_table_remove_all() before releasing the last reference using
  * g_hash_table_unref().
  *
- * Returns: a new #GHashTable
+ * Returns: (transfer full): a new #GHashTable
  */
 GHashTable *
 g_hash_table_new_full (GHashFunc      hash_func,
@@ -1165,7 +1106,7 @@ g_hash_table_iter_init (GHashTableIter *iter,
 /**
  * g_hash_table_iter_next:
  * @iter: an initialized #GHashTableIter
- * @key: (out) (optional): a location to store the key
+ * @key: (out) (optional) (nullable): a location to store the key
  * @value: (out) (optional) (nullable): a location to store the value
  *
  * Advances @iter and retrieves the key and/or value that are now
@@ -1218,7 +1159,7 @@ g_hash_table_iter_next (GHashTableIter *iter,
  *
  * Returns the #GHashTable associated with @iter.
  *
- * Returns: the #GHashTable associated with @iter.
+ * Returns: (transfer none): the #GHashTable associated with @iter.
  *
  * Since: 2.16
  */
@@ -1462,7 +1403,7 @@ g_hash_table_iter_steal (GHashTableIter *iter)
  * Atomically increments the reference count of @hash_table by one.
  * This function is MT-safe and may be called from any thread.
  *
- * Returns: the passed in #GHashTable
+ * Returns: (transfer full): the passed in #GHashTable
  *
  * Since: 2.10
  */
@@ -1478,7 +1419,7 @@ g_hash_table_ref (GHashTable *hash_table)
 
 /**
  * g_hash_table_unref:
- * @hash_table: a valid #GHashTable
+ * @hash_table: (transfer full): a valid #GHashTable
  *
  * Atomically decrements the reference count of @hash_table by one.
  * If the reference count drops to 0, all keys and values will be
@@ -2083,7 +2024,7 @@ g_hash_table_foreach_remove_or_steal (GHashTable *hash_table,
 /**
  * g_hash_table_foreach_remove:
  * @hash_table: a #GHashTable
- * @func: the function to call for each key/value pair
+ * @func: (scope call): the function to call for each key/value pair
  * @user_data: user data to pass to the function
  *
  * Calls the given function for each key/value pair in the
@@ -2111,7 +2052,7 @@ g_hash_table_foreach_remove (GHashTable *hash_table,
 /**
  * g_hash_table_foreach_steal:
  * @hash_table: a #GHashTable
- * @func: the function to call for each key/value pair
+ * @func: (scope call): the function to call for each key/value pair
  * @user_data: user data to pass to the function
  *
  * Calls the given function for each key/value pair in the
@@ -2138,7 +2079,7 @@ g_hash_table_foreach_steal (GHashTable *hash_table,
 /**
  * g_hash_table_foreach:
  * @hash_table: a #GHashTable
- * @func: the function to call for each key/value pair
+ * @func: (scope call): the function to call for each key/value pair
  * @user_data: user data to pass to the function
  *
  * Calls the given function for each of the key/value pairs in the
@@ -2189,7 +2130,7 @@ g_hash_table_foreach (GHashTable *hash_table,
 /**
  * g_hash_table_find:
  * @hash_table: a #GHashTable
- * @predicate: function to test the key/value pairs for a certain property
+ * @predicate: (scope call): function to test the key/value pairs for a certain property
  * @user_data: user data to pass to the function
  *
  * Calls the given function for key/value pairs in the #GHashTable
@@ -2614,6 +2555,50 @@ guint
 g_int_hash (gconstpointer v)
 {
   return *(const gint*) v;
+}
+
+/**
+ * g_uint_equal:
+ * @v1: (not nullable): a pointer to a #guint key
+ * @v2: (not nullable): a pointer to a #guint key to compare with @v1
+ *
+ * Compares the two #guint values being pointed to and returns
+ * %TRUE if they are equal.
+ * It can be passed to g_hash_table_new() as the @key_equal_func
+ * parameter, when using non-%NULL pointers to integers as keys in a
+ * #GHashTable.
+ *
+ * Note that this function acts on pointers to #guint, not on #guint
+ * directly: if your hash table's keys are of the form
+ * `GUINT_TO_POINTER (n)`, use g_direct_equal() instead.
+ *
+ * Returns: %TRUE if the two keys match.
+ */
+gboolean
+g_uint_equal (gconstpointer v1,
+              gconstpointer v2)
+{
+  return *((const guint *) v1) == *((const guint *) v2);
+}
+
+/**
+ * g_uint_hash:
+ * @v: (not nullable): a pointer to a #guint key
+ *
+ * Converts a pointer to a #guint to a hash value.
+ * It can be passed to g_hash_table_new() as the @hash_func parameter,
+ * when using non-%NULL pointers to integer values as keys in a #GHashTable.
+ *
+ * Note that this function acts on pointers to #guint, not on #guint
+ * directly: if your hash table's keys are of the form
+ * `GUINT_TO_POINTER (n)`, use g_direct_hash() instead.
+ *
+ * Returns: a hash value corresponding to the key.
+ */
+guint
+g_uint_hash (gconstpointer v)
+{
+  return *(const guint *) v;
 }
 
 /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021, 2022, 2023 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,15 +25,17 @@
 
 #pragma once
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderSVGResourceRadialGradient.h"
-#include "SVGElementTypeHelpers.h"
 #include "SVGRadialGradientElement.h"
 
 namespace WebCore {
 
 inline SVGRadialGradientElement& RenderSVGResourceRadialGradient::radialGradientElement() const
 {
-    return downcast<SVGRadialGradientElement>(RenderSVGResourceGradient::gradientElement());
+    return downcast<SVGRadialGradientElement>(RenderSVGResourceContainer::element());
 }
 
-} // namespace WebCore
+}
+
+#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

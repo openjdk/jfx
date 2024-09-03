@@ -59,9 +59,9 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(Worker);
 
 static Lock allWorkersLock;
-static HashMap<ScriptExecutionContextIdentifier, Worker*>& allWorkers() WTF_REQUIRES_LOCK(allWorkersLock)
+static HashMap<ScriptExecutionContextIdentifier, WeakRef<Worker, WeakPtrImplWithEventTargetData>>& allWorkers() WTF_REQUIRES_LOCK(allWorkersLock)
 {
-    static NeverDestroyed<HashMap<ScriptExecutionContextIdentifier, Worker*>> map;
+    static NeverDestroyed<HashMap<ScriptExecutionContextIdentifier, WeakRef<Worker, WeakPtrImplWithEventTargetData>>> map;
     return map;
 }
 
@@ -92,7 +92,7 @@ Worker::Worker(ScriptExecutionContext& context, JSC::RuntimeFlags runtimeFlags, 
     }
 
     Locker locker { allWorkersLock };
-    auto addResult = allWorkers().add(m_clientIdentifier, this);
+    auto addResult = allWorkers().add(m_clientIdentifier, *this);
     ASSERT_UNUSED(addResult, addResult.isNewEntry);
 }
 
@@ -213,17 +213,16 @@ void Worker::notifyFinished()
         return;
     }
 
-    const ContentSecurityPolicyResponseHeaders& contentSecurityPolicyResponseHeaders = m_contentSecurityPolicyResponseHeaders ? m_contentSecurityPolicyResponseHeaders.value() : context->contentSecurityPolicy()->responseHeaders();
+    const ContentSecurityPolicyResponseHeaders& contentSecurityPolicyResponseHeaders = m_contentSecurityPolicyResponseHeaders ? m_contentSecurityPolicyResponseHeaders.value() : context->checkedContentSecurityPolicy()->responseHeaders();
     ReferrerPolicy referrerPolicy = ReferrerPolicy::EmptyString;
     if (auto policy = parseReferrerPolicy(m_scriptLoader->referrerPolicy(), ReferrerPolicySource::HTTPHeader))
         referrerPolicy = *policy;
 
     m_didStartWorkerGlobalScope = true;
     WorkerInitializationData initializationData {
-#if ENABLE(SERVICE_WORKER)
         m_scriptLoader->takeServiceWorkerData(),
-#endif
         m_clientIdentifier,
+        m_scriptLoader->advancedPrivacyProtections(),
         context->userAgent(m_scriptLoader->responseURL())
     };
     m_contextProxy.startWorkerGlobalScope(m_scriptLoader->responseURL(), *sessionID, m_options.name, WTFMove(initializationData), m_scriptLoader->script(), contentSecurityPolicyResponseHeaders, m_shouldBypassMainWorldContentSecurityPolicy, m_scriptLoader->crossOriginEmbedderPolicy(), m_workerCreationTime, referrerPolicy, m_options.type, m_options.credentials, m_runtimeFlags);
@@ -240,6 +239,22 @@ void Worker::dispatchEvent(Event& event)
         auto& errorEvent = downcast<ErrorEvent>(event);
         scriptExecutionContext()->reportException(errorEvent.message(), errorEvent.lineno(), errorEvent.colno(), errorEvent.filename(), nullptr, nullptr);
     }
+}
+
+void Worker::reportError(const String& errorMessage)
+{
+    if (m_wasTerminated)
+        return;
+
+    queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [this, errorMessage] {
+        if (m_wasTerminated)
+            return;
+
+        auto event = Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No);
+        AbstractWorker::dispatchEvent(event);
+        if (!event->defaultPrevented() && scriptExecutionContext())
+            scriptExecutionContext()->addConsoleMessage(makeUnique<Inspector::ConsoleMessage>(MessageSource::JS, MessageType::Log, MessageLevel::Error, errorMessage));
+    });
 }
 
 #if ENABLE(WEB_RTC)

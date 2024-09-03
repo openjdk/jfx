@@ -32,6 +32,8 @@
 
 namespace WebCore {
 
+class GPU;
+
 class WorkerNavigator final : public NavigatorBase, public Supplementable<WorkerNavigator> {
 public:
     static Ref<WorkerNavigator> create(ScriptExecutionContext& context, const String& userAgent, bool isOnline) { return adoptRef(*new WorkerNavigator(context, userAgent, isOnline)); }
@@ -40,10 +42,8 @@ public:
     bool onLine() const final;
     void setIsOnline(bool isOnline) { m_isOnline = isOnline; }
 
-#if ENABLE(BADGING)
     void setAppBadge(std::optional<unsigned long long>, Ref<DeferredPromise>&&);
     void clearAppBadge(Ref<DeferredPromise>&&);
-#endif
 
     GPU* gpu();
 
@@ -52,6 +52,9 @@ private:
 
     String m_userAgent;
     bool m_isOnline;
+#if HAVE(WEBGPU_IMPLEMENTATION)
+    RefPtr<GPU> m_gpuForWebGPU;
+#endif
 };
 
 } // namespace WebCore

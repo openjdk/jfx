@@ -61,8 +61,6 @@ struct _GstBufferList
   guint n_buffers;
   guint n_allocated;
 
-  gsize slice_size;
-
   /* one-item array, in reality more items are pre-allocated
    * as part of the GstBufferList structure, and that
    * pre-allocated array extends beyond the declared struct */
@@ -104,7 +102,6 @@ static void
 _gst_buffer_list_free (GstBufferList * list)
 {
   guint i, len;
-  gsize slice_size;
 
   GST_LOG ("free %p", list);
 
@@ -119,17 +116,15 @@ _gst_buffer_list_free (GstBufferList * list)
   if (GST_BUFFER_LIST_IS_USING_DYNAMIC_ARRAY (list))
     g_free (list->buffers);
 
-  slice_size = list->slice_size;
-
 #ifdef USE_POISONING
-  memset (list, 0xff, slice_size);
+  memset (list, 0xff, sizeof (GstBufferList));
 #endif
 
-  g_slice_free1 (slice_size, list);
+  g_free (list);
 }
 
 static void
-gst_buffer_list_init (GstBufferList * list, guint n_allocated, gsize slice_size)
+gst_buffer_list_init (GstBufferList * list, guint n_allocated)
 {
   gst_mini_object_init (GST_MINI_OBJECT_CAST (list), 0, _gst_buffer_list_type,
       (GstMiniObjectCopyFunction) _gst_buffer_list_copy, NULL,
@@ -138,7 +133,6 @@ gst_buffer_list_init (GstBufferList * list, guint n_allocated, gsize slice_size)
   list->buffers = &list->arr[0];
   list->n_buffers = 0;
   list->n_allocated = n_allocated;
-  list->slice_size = slice_size;
 
   GST_LOG ("init %p", list);
 }
@@ -166,11 +160,11 @@ gst_buffer_list_new_sized (guint size)
 
   slice_size = sizeof (GstBufferList) + (n_allocated - 1) * sizeof (gpointer);
 
-  list = g_slice_alloc0 (slice_size);
+  list = g_malloc0 (slice_size);
 
   GST_LOG ("new %p", list);
 
-  gst_buffer_list_init (list, n_allocated, slice_size);
+  gst_buffer_list_init (list, n_allocated);
 
   return list;
 }

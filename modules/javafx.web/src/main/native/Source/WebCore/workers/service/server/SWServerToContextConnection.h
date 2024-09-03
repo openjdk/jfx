@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "BackgroundFetchFailureReason.h"
 #include "ExceptionData.h"
 #include "NotificationEventType.h"
@@ -37,24 +35,30 @@
 #include "ServiceWorkerContextData.h"
 #include "ServiceWorkerIdentifier.h"
 #include "ServiceWorkerTypes.h"
+#include <wtf/CheckedPtr.h>
 #include <wtf/URLHash.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
+enum class AdvancedPrivacyProtections : uint16_t;
 struct BackgroundFetchInformation;
 struct NotificationData;
+struct NotificationPayload;
 class SWServer;
 struct ServiceWorkerClientData;
 struct ServiceWorkerContextData;
 struct ServiceWorkerJobDataIdentifier;
 enum class WorkerThreadMode : bool;
 
-class SWServerToContextConnection {
+class SWServerToContextConnection: public CanMakeWeakPtr<SWServerToContextConnection>, public CanMakeCheckedPtr {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     WEBCORE_EXPORT virtual ~SWServerToContextConnection();
 
     WEBCORE_EXPORT SWServer* server() const;
+    WEBCORE_EXPORT RefPtr<SWServer> protectedServer() const;
+
     SWServerToContextConnectionIdentifier identifier() const { return m_identifier; }
 
     // This flag gets set when the service worker process is no longer clean (because it has loaded several eTLD+1s).
@@ -62,14 +66,14 @@ public:
     void terminateWhenPossible();
 
     // Messages to the SW host process
-    virtual void installServiceWorkerContext(const ServiceWorkerContextData&, const ServiceWorkerData&, const String& userAgent, WorkerThreadMode) = 0;
+    virtual void installServiceWorkerContext(const ServiceWorkerContextData&, const ServiceWorkerData&, const String& userAgent, WorkerThreadMode, OptionSet<AdvancedPrivacyProtections>) = 0;
     virtual void updateAppInitiatedValue(ServiceWorkerIdentifier, LastNavigationWasAppInitiated) = 0;
     virtual void fireInstallEvent(ServiceWorkerIdentifier) = 0;
     virtual void fireActivateEvent(ServiceWorkerIdentifier) = 0;
     virtual void terminateWorker(ServiceWorkerIdentifier) = 0;
     virtual void didSaveScriptsToDisk(ServiceWorkerIdentifier, const ScriptBuffer&, const MemoryCompactRobinHoodHashMap<URL, ScriptBuffer>& importedScripts) = 0;
     virtual void matchAllCompleted(uint64_t requestIdentifier, const Vector<ServiceWorkerClientData>&) = 0;
-    virtual void firePushEvent(ServiceWorkerIdentifier, const std::optional<Vector<uint8_t>>&, CompletionHandler<void(bool)>&&) = 0;
+    virtual void firePushEvent(ServiceWorkerIdentifier, const std::optional<Vector<uint8_t>>&, std::optional<NotificationPayload>&&, CompletionHandler<void(bool, std::optional<NotificationPayload>&&)>&&) = 0;
     virtual void fireNotificationEvent(ServiceWorkerIdentifier, const NotificationData&, NotificationEventType, CompletionHandler<void(bool)>&&) = 0;
     virtual void fireBackgroundFetchEvent(ServiceWorkerIdentifier, const BackgroundFetchInformation&, CompletionHandler<void(bool)>&&) = 0;
     virtual void fireBackgroundFetchClickEvent(ServiceWorkerIdentifier, const BackgroundFetchInformation&, CompletionHandler<void(bool)>&&) = 0;
@@ -98,6 +102,8 @@ public:
     virtual void connectionIsNoLongerNeeded() = 0;
     virtual void terminateDueToUnresponsiveness() = 0;
 
+    virtual void setInspectable(ServiceWorkerIsInspectable) = 0;
+
 protected:
     WEBCORE_EXPORT SWServerToContextConnection(SWServer&, RegistrableDomain&&, std::optional<ScriptExecutionContextIdentifier> serviceWorkerPageIdentifier);
 
@@ -112,5 +118,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

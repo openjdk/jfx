@@ -13,6 +13,12 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
         message(STATUS "The CMake build type is: ${CMAKE_BUILD_TYPE}")
     endif ()
 
+    # Exporting compile commands is available for Ninja and Makefile generators
+    # See https://cmake.org/cmake/help/latest/variable/CMAKE_EXPORT_COMPILE_COMMANDS.html
+    if (DEVELOPER_MODE AND (CMAKE_GENERATOR MATCHES "Makefile" OR CMAKE_GENERATOR MATCHES "Ninja"))
+        set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+    endif ()
+
     option(ENABLE_JAVASCRIPTCORE "Enable building JavaScriptCore" ON)
     option(ENABLE_WEBCORE "Enable building JavaScriptCore" ON)
     option(ENABLE_WEBKIT "Enable building WebKit" ON)
@@ -37,8 +43,6 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
     # Determine which port will be built
     # -----------------------------------------------------------------------------
     set(ALL_PORTS
-        Efl
-        FTW
         GTK
         JSCOnly
         Mac
@@ -71,6 +75,11 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
         if (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "10.2.0")
             message(FATAL_ERROR "GCC 10.2 or newer is required to build WebKit. Use a newer GCC version or Clang.")
         endif ()
+    endif ()
+
+    if (${CMAKE_CXX_COMPILER_ID} STREQUAL "QCC")
+        set(COMPILER_IS_QCC ON)
+        set(COMPILER_IS_GCC_OR_CLANG ON)
     endif ()
 
     if (CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
@@ -111,7 +120,7 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
         endif ()
     elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "(i[3-6]86|x86)")
         set(WTF_CPU_X86 1)
-    elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "ppc")
+    elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "(ppc|powerpc)")
         set(WTF_CPU_PPC 1)
     elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "ppc64")
         set(WTF_CPU_PPC64 1)
@@ -255,6 +264,7 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
     endif ()
 
     # -----------------------------------------------------------------------------
+
     # Job pool to avoid running too many memory hungry processes
     # -----------------------------------------------------------------------------
     if (DEFINED ENV{WEBKIT_NINJA_LINK_MAX})

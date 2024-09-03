@@ -158,9 +158,8 @@ bool jsLocalDOMWindowGetOwnPropertySlotRestrictedAccess(JSDOMGlobalObject* thisO
     // properties that are in Moz but not IE. Since we have some of these, we have to do it
     // the Moz way.
     // FIXME: Add support to named attributes on RemoteFrames.
-    auto* frame = window.frame();
-    if (frame && is<LocalFrame>(*frame)) {
-        if (auto* scopedChild = dynamicDowncast<LocalFrame>(downcast<LocalFrame>(*frame).tree().scopedChildBySpecifiedName(propertyNameToAtomString(propertyName)))) {
+    if (RefPtr frame = window.frame()) {
+        if (auto* scopedChild = dynamicDowncast<LocalFrame>(frame->tree().scopedChildBySpecifiedName(propertyNameToAtomString(propertyName)))) {
             slot.setValue(thisObject, PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum, toJS(&lexicalGlobalObject, scopedChild->document()->domWindow()));
             return true;
         }
@@ -201,15 +200,6 @@ bool JSLocalDOMWindow::getOwnPropertySlot(JSObject* object, JSGlobalObject* lexi
     auto* thisObject = jsCast<JSLocalDOMWindow*>(object);
 
     ASSERT(lexicalGlobalObject->vm().currentThreadIsHoldingAPILock());
-    // Construct3 assumes that the presence of OffscreenCanvas implies
-    // that WebGL will always be available, which isn't true yet.
-    // Disable OffscreenCanvas when the Construct3 library is present
-    // rdar://106341361
-    if (UNLIKELY(propertyName == builtinNames(lexicalGlobalObject->vm()).OffscreenCanvasPublicName()) && lexicalGlobalObject->needsSiteSpecificQuirks()) {
-        auto c3SupportedProperty = JSC::Identifier::fromString(lexicalGlobalObject->vm(), "C3_IsSupported"_s);
-        if (object->hasProperty(lexicalGlobalObject, c3SupportedProperty))
-            return false;
-    }
 
     // Hand off all cross-domain access to jsLocalDOMWindowGetOwnPropertySlotRestrictedAccess.
     String errorMessage;
@@ -251,8 +241,10 @@ bool JSLocalDOMWindow::getOwnPropertySlotByIndex(JSObject* object, JSGlobalObjec
     ASSERT(lexicalGlobalObject->vm().currentThreadIsHoldingAPILock());
     // These are also allowed cross-origin, so come before the access check.
     if (frame && index < frame->tree().scopedChildCount()) {
+        // FIXME: <rdar://118263337> LocalDOMWindow::length needs to include RemoteFrames.
+        // This should also work if it's a RemoteFrame, it should just return a RemoteDOMWindow.
         if (auto* scopedChild = dynamicDowncast<LocalFrame>(frame->tree().scopedChild(index))) {
-            slot.setValue(thisObject, static_cast<unsigned>(JSC::PropertyAttribute::ReadOnly), toJS(lexicalGlobalObject, scopedChild->document()->domWindow()));
+            slot.setValue(thisObject, enumToUnderlyingType(JSC::PropertyAttribute::ReadOnly), toJS(lexicalGlobalObject, scopedChild->document()->domWindow()));
         return true;
     }
     }
@@ -647,7 +639,7 @@ static inline JSC::EncodedJSValue jsLocalDOMWindowInstanceFunction_openDatabaseB
 
     if (!DeprecatedGlobalSettings::webSQLEnabled()) {
         if (name != "null"_s || version != "null"_s || displayName != "null"_s || estimatedSize)
-            propagateException(*lexicalGlobalObject, throwScope, Exception(UnknownError, "Web SQL is deprecated"_s));
+            propagateException(*lexicalGlobalObject, throwScope, Exception(ExceptionCode::UnknownError, "Web SQL is deprecated"_s));
         return JSValue::encode(constructEmptyObject(lexicalGlobalObject, castedThis->globalObject()->objectPrototype()));
     }
 

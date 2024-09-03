@@ -393,6 +393,24 @@ void                    gst_plugin_add_dependency_simple (GstPlugin   * plugin,
                                                           const gchar * names,
                                                           GstPluginDependencyFlags flags);
 GST_API
+void                    gst_plugin_add_status_error      (GstPlugin   * plugin,
+                                                          const gchar * message);
+GST_API
+void                    gst_plugin_add_status_warning    (GstPlugin   * plugin,
+                                                          const gchar * message);
+GST_API
+void                    gst_plugin_add_status_info       (GstPlugin   * plugin,
+                                                          const gchar * message);
+GST_API
+gchar **                gst_plugin_get_status_errors     (GstPlugin   * plugin);
+
+GST_API
+gchar **                gst_plugin_get_status_warnings   (GstPlugin   * plugin);
+
+GST_API
+gchar **                gst_plugin_get_status_infos      (GstPlugin   * plugin);
+
+GST_API
 void                    gst_plugin_list_free (GList *list);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstPlugin, gst_object_unref)

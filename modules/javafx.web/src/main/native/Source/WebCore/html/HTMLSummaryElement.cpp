@@ -31,6 +31,8 @@
 #include "MouseEvent.h"
 #include "PlatformMouseEvent.h"
 #include "RenderBlockFlow.h"
+#include "SVGAElement.h"
+#include "SVGElementTypeHelpers.h"
 #include "ShadowRoot.h"
 #include "SlotAssignment.h"
 #include <wtf/IsoMallocInlines.h>
@@ -78,13 +80,11 @@ void HTMLSummaryElement::didAddUserAgentShadowRoot(ShadowRoot& root)
 
 RefPtr<HTMLDetailsElement> HTMLSummaryElement::detailsElement() const
 {
-    auto* parent = parentElement();
-    if (parent && is<HTMLDetailsElement>(*parent))
-        return downcast<HTMLDetailsElement>(parent);
+    if (auto* parent = dynamicDowncast<HTMLDetailsElement>(parentElement()))
+        return parent;
     // Fallback summary element is in the shadow tree.
-    auto* host = shadowHost();
-    if (host && is<HTMLDetailsElement>(*host))
-        return downcast<HTMLDetailsElement>(host);
+    if (auto* details = dynamicDowncast<HTMLDetailsElement>(shadowHost()))
+        return details;
     return nullptr;
 }
 
@@ -96,12 +96,14 @@ bool HTMLSummaryElement::isActiveSummary() const
     return details->isActiveSummary(*this);
 }
 
-static bool isClickableControl(EventTarget* target)
+static bool isInSummaryInteractiveContent(EventTarget* target)
 {
-    if (!is<Element>(target))
+    for (RefPtr element = dynamicDowncast<Element>(target); element && !is<HTMLSummaryElement>(element); element = element->parentOrShadowHostElement()) {
+        auto* htmlElement = dynamicDowncast<HTMLElement>(*element);
+        if ((htmlElement && htmlElement->isInteractiveContent()) || is<SVGAElement>(element))
+            return true;
+    }
         return false;
-    auto& element = downcast<Element>(*target);
-    return is<HTMLFormControlElement>(element) || is<HTMLFormControlElement>(element.shadowHost());
 }
 
 int HTMLSummaryElement::defaultTabIndex() const
@@ -118,36 +120,35 @@ void HTMLSummaryElement::defaultEventHandler(Event& event)
 {
     if (isActiveSummary()) {
         auto& eventNames = WebCore::eventNames();
-        if (event.type() == eventNames.DOMActivateEvent && !isClickableControl(event.target())) {
+        if (event.type() == eventNames.DOMActivateEvent && !isInSummaryInteractiveContent(event.target())) {
             if (RefPtr<HTMLDetailsElement> details = detailsElement())
                 details->toggleOpen();
             event.setDefaultHandled();
             return;
         }
 
-        if (is<KeyboardEvent>(event)) {
-            KeyboardEvent& keyboardEvent = downcast<KeyboardEvent>(event);
-            if (keyboardEvent.type() == eventNames.keydownEvent && keyboardEvent.keyIdentifier() == "U+0020"_s) {
+        if (auto* keyboardEvent = dynamicDowncast<KeyboardEvent>(event)) {
+            if (keyboardEvent->type() == eventNames.keydownEvent && keyboardEvent->keyIdentifier() == "U+0020"_s) {
                 setActive(true);
                 // No setDefaultHandled() - IE dispatches a keypress in this case.
                 return;
             }
-            if (keyboardEvent.type() == eventNames.keypressEvent) {
-                switch (keyboardEvent.charCode()) {
+            if (keyboardEvent->type() == eventNames.keypressEvent) {
+                switch (keyboardEvent->charCode()) {
                 case '\r':
                     dispatchSimulatedClick(&event);
-                    keyboardEvent.setDefaultHandled();
+                    keyboardEvent->setDefaultHandled();
                     return;
                 case ' ':
                     // Prevent scrolling down the page.
-                    keyboardEvent.setDefaultHandled();
+                    keyboardEvent->setDefaultHandled();
                     return;
                 }
             }
-            if (keyboardEvent.type() == eventNames.keyupEvent && keyboardEvent.keyIdentifier() == "U+0020"_s) {
+            if (keyboardEvent->type() == eventNames.keyupEvent && keyboardEvent->keyIdentifier() == "U+0020"_s) {
                 if (active())
                     dispatchSimulatedClick(&event);
-                keyboardEvent.setDefaultHandled();
+                keyboardEvent->setDefaultHandled();
                 return;
             }
         }

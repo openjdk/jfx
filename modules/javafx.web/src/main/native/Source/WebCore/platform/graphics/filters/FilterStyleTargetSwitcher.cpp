@@ -37,6 +37,16 @@ FilterStyleTargetSwitcher::FilterStyleTargetSwitcher(Filter& filter, const Float
 {
 }
 
+void FilterStyleTargetSwitcher::beginClipAndDrawSourceImage(GraphicsContext& destinationContext, const FloatRect&, const FloatRect& clipRect)
+{
+    for (auto& filterStyle : m_filterStyles) {
+        destinationContext.save();
+        destinationContext.clip(intersection(filterStyle.imageRect, clipRect));
+        destinationContext.setStyle(filterStyle.style);
+        destinationContext.beginTransparencyLayer(1);
+    }
+}
+
 void FilterStyleTargetSwitcher::beginDrawSourceImage(GraphicsContext& destinationContext)
 {
     for (auto& filterStyle : m_filterStyles) {
@@ -47,7 +57,7 @@ void FilterStyleTargetSwitcher::beginDrawSourceImage(GraphicsContext& destinatio
     }
 }
 
-void FilterStyleTargetSwitcher::endDrawSourceImage(GraphicsContext& destinationContext)
+void FilterStyleTargetSwitcher::endDrawSourceImage(GraphicsContext& destinationContext, const DestinationColorSpace&)
 {
     for ([[maybe_unused]] auto& filterStyle : makeReversedRange(m_filterStyles)) {
         destinationContext.endTransparencyLayer();

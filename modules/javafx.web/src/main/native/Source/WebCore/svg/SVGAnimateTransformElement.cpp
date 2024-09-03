@@ -33,7 +33,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(SVGAnimateTransformElement);
 
 inline SVGAnimateTransformElement::SVGAnimateTransformElement(const QualifiedName& tagName, Document& document)
     : SVGAnimateElementBase(tagName, document)
-    , m_type(SVGTransformValue::SVG_TRANSFORM_UNKNOWN)
+    , m_type(SVGTransformValue::SVG_TRANSFORM_TRANSLATE)
 {
     ASSERT(hasTagName(SVGNames::animateTransformTag));
 }
@@ -67,7 +67,7 @@ void SVGAnimateTransformElement::attributeChanged(const QualifiedName& name, con
 
 String SVGAnimateTransformElement::animateRangeString(const String& string) const
 {
-    return SVGTransformValue::prefixForTransfromType(m_type) + string + ')';
+    return SVGTransformValue::prefixForTransformType(m_type) + string + ')';
 }
 
 }

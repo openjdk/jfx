@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------
-   types.c - Copyright (c) 1996, 1998  Red Hat, Inc.
+   types.c - Copyright (c) 1996, 1998, 2024  Red Hat, Inc.
 
    Predefined ffi_types needed by libffi.
 
@@ -95,14 +95,12 @@ FFI_TYPEDEF(double, double, FFI_TYPE_DOUBLE, const);
 #  error FFI_TYPE_LONGDOUBLE out of date
 # endif
 const ffi_type ffi_type_longdouble = { 16, 16, 4, NULL };
-#elif FFI_TYPE_LONGDOUBLE != FFI_TYPE_DOUBLE
+#else
 FFI_TYPEDEF(longdouble, long double, FFI_TYPE_LONGDOUBLE, FFI_LDBL_CONST);
 #endif
 
 #ifdef FFI_TARGET_HAS_COMPLEX_TYPE
 FFI_COMPLEX_TYPEDEF(float, float, const);
 FFI_COMPLEX_TYPEDEF(double, double, const);
-#if FFI_TYPE_LONGDOUBLE != FFI_TYPE_DOUBLE
 FFI_COMPLEX_TYPEDEF(longdouble, long double, FFI_LDBL_CONST);
-#endif
 #endif

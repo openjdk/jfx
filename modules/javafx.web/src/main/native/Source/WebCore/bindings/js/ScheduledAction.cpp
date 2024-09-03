@@ -42,6 +42,7 @@
 #include "WorkerGlobalScope.h"
 #include "WorkerThread.h"
 #include <JavaScriptCore/JSLock.h>
+#include <JavaScriptCore/SourceProvider.h>
 
 namespace WebCore {
 using namespace JSC;
@@ -59,6 +60,7 @@ std::unique_ptr<ScheduledAction> ScheduledAction::create(DOMWrapperWorld& isolat
 ScheduledAction::ScheduledAction(DOMWrapperWorld& isolatedWorld, Strong<JSObject>&& function)
     : m_isolatedWorld(isolatedWorld)
     , m_function(WTFMove(function))
+    , m_sourceTaintedOrigin(JSC::SourceTaintedOrigin::Untainted)
 {
 }
 
@@ -66,6 +68,7 @@ ScheduledAction::ScheduledAction(DOMWrapperWorld& isolatedWorld, String&& code)
     : m_isolatedWorld(isolatedWorld)
     , m_function(isolatedWorld.vm())
     , m_code(WTFMove(code))
+    , m_sourceTaintedOrigin(JSC::computeNewSourceTaintedOriginFromStack(isolatedWorld.vm(), isolatedWorld.vm().topCallFrame))
 {
 }
 
@@ -83,8 +86,8 @@ auto ScheduledAction::type() const -> Type
 
 void ScheduledAction::execute(ScriptExecutionContext& context)
 {
-    if (is<Document>(context))
-        execute(downcast<Document>(context));
+    if (auto* document = dynamicDowncast<Document>(context))
+        execute(*document);
     else
         execute(downcast<WorkerGlobalScope>(context));
 }
@@ -106,6 +109,7 @@ void ScheduledAction::executeFunctionInContext(JSGlobalObject* globalObject, JSV
     JSGlobalObject* lexicalGlobalObject = globalObject;
 
     MarkedArgumentBuffer arguments;
+    arguments.ensureCapacity(m_arguments.size());
     for (auto& argument : m_arguments)
         arguments.append(argument.get());
     if (UNLIKELY(arguments.hasOverflowed())) {
@@ -138,7 +142,7 @@ void ScheduledAction::execute(Document& document)
     if (m_function)
         executeFunctionInContext(window, &window->proxy(), document);
     else
-        frame->script().executeScriptInWorldIgnoringException(m_isolatedWorld, m_code);
+        frame->script().executeScriptInWorldIgnoringException(m_isolatedWorld, m_code, m_sourceTaintedOrigin);
 }
 
 void ScheduledAction::execute(WorkerGlobalScope& workerGlobalScope)
@@ -152,7 +156,7 @@ void ScheduledAction::execute(WorkerGlobalScope& workerGlobalScope)
         auto* contextWrapper = scriptController->globalScopeWrapper();
         executeFunctionInContext(contextWrapper, contextWrapper, workerGlobalScope);
     } else {
-        ScriptSourceCode code(m_code, URL(workerGlobalScope.url()));
+        ScriptSourceCode code(m_code, m_sourceTaintedOrigin, URL(workerGlobalScope.url()));
         scriptController->evaluate(code);
     }
 }
