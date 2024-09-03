@@ -29,6 +29,7 @@ import com.sun.javafx.css.TransitionMediator;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.Utils;
 import javafx.beans.property.LongPropertyBase;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
@@ -134,7 +135,9 @@ public abstract class StyleableLongProperty
         @Override
         public void onUpdate(double progress) {
             // Longs are interpolated in real number space and rounded to the nearest long.
-            set(progress < 1 ? Math.round(startValue + (endValue - startValue) * progress) : endValue);
+            long diff = endValue - startValue;
+            long result = startValue + Math.round(progress * diff);
+            set(progress < 1 ? Utils.clamp(startValue, result, endValue) : endValue);
         }
 
         @Override

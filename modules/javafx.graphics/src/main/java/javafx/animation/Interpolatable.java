@@ -54,12 +54,10 @@ package javafx.animation;
  *                 more elements than the target list, the excess elements are discarded.
  *             </td>
  *         </tr>
- *         <tr><td style="white-space: nowrap; vertical-align: top">(see prose)</td>
- *             <td>Some component types are interpolated in specific ways not covered here.
- *                 Refer to their respective documentation for more information.</td>
- *         </tr>
  *     </tbody>
  * </table>
+ * Some component types are interpolated in specific ways not covered here.
+ * Refer to their respective documentation for more information.
  *
  * @param <T> the interpolatable value type
  * @since JavaFX 2.0

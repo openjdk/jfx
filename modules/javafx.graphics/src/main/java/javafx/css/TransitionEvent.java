@@ -29,6 +29,7 @@ import javafx.animation.Transition;
 import javafx.event.Event;
 import javafx.event.EventType;
 import javafx.scene.Node;
+import javafx.scene.layout.Region;
 import javafx.util.Duration;
 import java.util.Objects;
 
@@ -124,6 +125,12 @@ public final class TransitionEvent extends Event {
 
     /**
      * Gets the name of the CSS property or sub-property that is targeted by the transition.
+     * <p>
+     * The name of the CSS property under transition can be a long-hand property name, which is different
+     * from the name returned by {@link CssMetaData#getProperty()} of the {@code StyleableProperty} that
+     * is targeted by the transition. For example, if a transition targets {@link Region#borderProperty()},
+     * the name of the CSS property might be {@code -fx-background-color}, {@code -fx-background-radius},
+     * etc.
      *
      * @return the CSS property or sub-property name
      * @since 24
