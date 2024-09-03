@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,38 +27,43 @@ package test.launchertest;
 
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.scene.layout.StackPane;
-import javafx.scene.Scene;
-import javafx.scene.control.Label;
 import javafx.stage.Stage;
+import javax.swing.JDialog;
+import javax.swing.SwingUtilities;
 
 import static test.launchertest.Constants.*;
 
 /**
- * Test application that calls Platform.exit while Stage is still showing
- * the Scene.
+ * Test application, also using AWT, that calls Platform.exit and then
+ * tries to show an AWT window. The test might hang after the call to
+ * Platform.exit, but should not crash.
  *
- * This is launched by PlatformExitTest.
+ * This is launched by MainLauncherTest.
  */
-public class PlatformExitApp extends Application {
+public class TestAppPlatformExitAWT extends Application {
 
-    @Override public void start(Stage stage) throws Exception {
-        StackPane root = new StackPane();
-        Scene scene = new Scene(root, 400, 300);
-
-        final Label label = new Label("Hello");
-
-        root.getChildren().add(label);
-
-        stage.setScene(scene);
-        stage.show();
-
-        // Show window for 1 second before calling Platform.exit
-        Thread thr = new Thread(() -> {
-            Util.sleep(1000);
+    private void createSwing() {
+        JDialog d = new JDialog();
+        Platform.runLater(()-> {
             Platform.exit();
+            SwingUtilities.invokeLater(() -> d.setVisible(true));
         });
+    }
+
+    @Override
+    public void stop() {
+        // Sleep for 5 seconds to ensure no crash, then exit normally.
+        Thread thr = new Thread(() -> {
+            Util.sleep(5000);
+            System.exit(ERROR_NONE);
+        });
+        thr.setDaemon(true);
         thr.start();
+    }
+
+    @Override
+    public void start(Stage st) {
+        SwingUtilities.invokeLater(this::createSwing);
     }
 
     /**
@@ -67,10 +72,6 @@ public class PlatformExitApp extends Application {
     public static void main(String[] args) {
         Util.setupTimeoutThread();
         Application.launch(args);
-
-        // Short delay to allow any pending output to be flushed
-        Util.sleep(500);
-        System.exit(ERROR_NONE);
     }
 
 }
