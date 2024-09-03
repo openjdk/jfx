@@ -129,8 +129,7 @@ public final class TransitionEvent extends Event {
      * The name of the CSS property under transition can be a long-hand property name, which is different
      * from the name returned by {@link CssMetaData#getProperty()} of the {@code StyleableProperty} that
      * is targeted by the transition. For example, if a transition targets {@link Region#borderProperty()},
-     * the name of the CSS property might be {@code -fx-background-color}, {@code -fx-background-radius},
-     * etc.
+     * the name of the CSS property might be {@code -fx-border-color}, {@code -fx-border-radius}, etc.
      *
      * @return the CSS property or sub-property name
      * @since 24
