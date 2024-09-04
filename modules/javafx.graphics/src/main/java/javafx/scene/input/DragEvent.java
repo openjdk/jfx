@@ -44,7 +44,7 @@ import java.io.IOException;
  * <p>
  * Drag and drop gesture can be started by calling {@code startDragAndDrop()}
  * (on a node or scene) inside of a {@link MouseEvent#DRAG_DETECTED DRAG_DETECTED} event handler.
- * The data to be transfered to drop target are placed to a {@code dragBoard}
+ * The data to be transferred to drop target are placed to a {@code dragBoard}
  * at this moment.
  * <p>
  * Drag entered/exited events behave similarly to mouse entered/exited
