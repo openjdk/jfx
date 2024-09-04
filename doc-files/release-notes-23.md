@@ -26,24 +26,29 @@ Keyboard scrolling key bindings, `alt-ctrl-arrows` (`option-command-arrows` on m
 
 See [JDK-8313138](https://bugs.openjdk.org/browse/JDK-8313138) for more information.
 
-## List of Enhancements
+## List of New Features
 
-Issue key|Summary|Subcomponent
+Issue Key|Summary|Subcomponent
 ---------|-------|------------
-[JDK-8321603](https://bugs.openjdk.org/browse/JDK-8321603)|Bump minimum JDK version for JavaFX to JDK 21|build
 [JDK-8092102](https://bugs.openjdk.org/browse/JDK-8092102)|Labeled: textTruncated property|controls
 [JDK-8313138](https://bugs.openjdk.org/browse/JDK-8313138)|Scrollbar Keyboard enhancement|controls
-[JDK-8322748](https://bugs.openjdk.org/browse/JDK-8322748)|Caret blinking in JavaFX should only stop when caret moves|controls
 [JDK-8267565](https://bugs.openjdk.org/browse/JDK-8267565)|Support "@3x" and greater high-density image naming convention|graphics
 [JDK-8311895](https://bugs.openjdk.org/browse/JDK-8311895)|CSS Transitions|graphics
+[JDK-8282999](https://bugs.openjdk.org/browse/JDK-8282999)|Add support for EXT-X-MEDIA tag in HTTP Live Streaming|media
+
+## List of Other Enhancements
+
+Issue Key|Summary|Subcomponent
+---------|-------|------------
+[JDK-8321603](https://bugs.openjdk.org/browse/JDK-8321603)|Bump minimum JDK version for JavaFX to JDK 21|build
+[JDK-8322748](https://bugs.openjdk.org/browse/JDK-8322748)|Caret blinking in JavaFX should only stop when caret moves|controls
 [JDK-8322964](https://bugs.openjdk.org/browse/JDK-8322964)|Optimize performance of CSS selector matching|graphics
 [JDK-8324182](https://bugs.openjdk.org/browse/JDK-8324182)|Deprecate for removal SimpleSelector and CompoundSelector classes|graphics
 [JDK-8325900](https://bugs.openjdk.org/browse/JDK-8325900)|Emit a warning on macOS if AWT has set the NSAppearance|graphics
-[JDK-8282999](https://bugs.openjdk.org/browse/JDK-8282999)|Add support for EXT-X-MEDIA tag in HTTP Live Streaming|media
 
 ## List of Fixed Bugs
 
-Issue key|Summary|Subcomponent
+Issue Key|Summary|Subcomponent
 ---------|-------|------------
 [JDK-8309374](https://bugs.openjdk.org/browse/JDK-8309374)|Accessibility Focus Rectangle on ListItem is not drawn when ListView is shown for first time|accessibility
 [JDK-8329705](https://bugs.openjdk.org/browse/JDK-8329705)|Add missing Application thread checks to platform specific a11y methods|accessibility
@@ -130,7 +135,7 @@ Issue key|Summary|Subcomponent
 
 ## List of Security fixes
 
-Issue key|Summary|Subcomponent
+Issue Key|Summary|Subcomponent
 ---------|-------|------------
 JDK-8313040 (not public)|Enhanced Font handling|graphics
 JDK-8313064 (not public)|General enhancements of image handling|graphics
