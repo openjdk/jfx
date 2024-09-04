@@ -56,7 +56,7 @@ public final class Dragboard extends Clipboard {
     }
 
     /**
-     * Gets set of transport modes supported by source of this drag opeation.
+     * Gets set of transport modes supported by source of this drag operation.
      * @return set of supported transfer modes
      */
     public final Set<TransferMode> getTransferModes() {
@@ -73,7 +73,7 @@ public final class Dragboard extends Clipboard {
 
     // PENDING_DOC_REVIEW
     /**
-     * Sets the visual representation of data being transfered
+     * Sets the visual representation of data being transferred
      * in a drag and drop gesture.
      * Uses the given image for the drag view with the offsetX and offsetY
      * specifying cursor position over the image.
@@ -92,7 +92,7 @@ public final class Dragboard extends Clipboard {
     }
 
     /**
-     * Sets the visual representation of data being transfered
+     * Sets the visual representation of data being transferred
      * in a drag and drop gesture.
      * This method should be called only when starting drag and drop operation
      * in the DRAG_DETECTED handler, calling it at other times

@@ -109,13 +109,13 @@ public class ColumnConstraints extends ConstraintsBase {
 
     /**
      * Creates a column constraint object with a fixed size range, horizontal
-     * grow priority, horizonal alignment, and horizontal fill behavior.
+     * grow priority, horizontal alignment, and horizontal fill behavior.
      *
      * @param minWidth the minimum width
      * @param prefWidth the preferred width
      * @param maxWidth the maximum width
      * @param hgrow the horizontal grow priority
-     * @param halignment the horizonal alignment
+     * @param halignment the horizontal alignment
      * @param fillWidth the horizontal fill behavior
      */
     public ColumnConstraints(double minWidth, double prefWidth, double maxWidth, Priority hgrow, HPos halignment, boolean fillWidth) {
