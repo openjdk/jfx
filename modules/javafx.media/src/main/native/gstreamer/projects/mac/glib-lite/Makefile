@@ -77,6 +77,7 @@ C_SOURCES = glib/garcbox.c \
             glib/gdataset.c \
             glib/gdate.c \
             glib/gdatetime.c \
+            glib/gdatetime-private.c \
             glib/gdir.c \
             glib/gerror.c \
             glib/genviron.c \

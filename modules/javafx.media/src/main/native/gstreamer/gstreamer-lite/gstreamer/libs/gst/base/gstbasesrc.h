@@ -347,6 +347,10 @@ GST_BASE_API
 void            gst_base_src_submit_buffer_list (GstBaseSrc    * src,
                                                  GstBufferList * buffer_list);
 
+GST_BASE_API
+gboolean gst_base_src_push_segment              (GstBaseSrc * src,
+                                                 const GstSegment * segment);
+
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstBaseSrc, gst_object_unref)
 
 G_END_DECLS

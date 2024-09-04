@@ -78,7 +78,7 @@ gst_control_point_free (GstControlPoint * cp)
 {
   g_return_if_fail (cp);
 
-  g_slice_free (GstControlPoint, cp);
+  g_free (cp);
 }
 
 /**
@@ -92,7 +92,7 @@ gst_control_point_free (GstControlPoint * cp)
 GstControlPoint *
 gst_control_point_copy (GstControlPoint * cp)
 {
-  return g_slice_dup (GstControlPoint, cp);
+  return g_memdup2 (cp, sizeof (GstControlPoint));
 }
 
 GType
@@ -171,7 +171,7 @@ _make_new_cp (GstTimedValueControlSource * self, GstClockTime timestamp,
   GstControlPoint *cp;
 
   /* create a new GstControlPoint */
-  cp = g_slice_new0 (GstControlPoint);
+  cp = g_new0 (GstControlPoint, 1);
   cp->timestamp = timestamp;
   cp->value = value;
 
@@ -343,7 +343,7 @@ gst_timed_value_control_source_unset (GstTimedValueControlSource * self,
     /* Iter contains the iter right after timestamp, i.e.
      * we need to get the previous one and check the timestamp
      */
-    cp = g_slice_dup (GstControlPoint, g_sequence_get (iter));
+    cp = g_memdup2 (g_sequence_get (iter), sizeof (GstControlPoint));
     g_sequence_remove (iter);
     self->nvalues--;
     self->valid_cache = FALSE;
@@ -354,7 +354,7 @@ gst_timed_value_control_source_unset (GstTimedValueControlSource * self,
   if (cp) {
     g_signal_emit (self,
         gst_timed_value_control_source_signals[VALUE_REMOVED_SIGNAL], 0, cp);
-    g_slice_free (GstControlPoint, cp);
+    g_free (cp);
   }
 
   return res;
