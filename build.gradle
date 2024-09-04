@@ -618,13 +618,8 @@ ext.DO_JCOV = Boolean.parseBoolean(JCOV)
 defineProperty("USE_CYGWIN", "true")
 ext.IS_USE_CYGWIN = Boolean.parseBoolean(USE_CYGWIN)
 
-// Define the number of threads to use when compiling (specifically for native compilation)
-// On Mac we limit it to 1 by default due to problems running gcc in parallel
-if (IS_MAC) {
-    defineProperty("NUM_COMPILE_THREADS", "1")
-} else {
-    defineProperty("NUM_COMPILE_THREADS", "${Runtime.runtime.availableProcessors()}")
-}
+// Define the number of threads to use when compiling (specifically for native compilation, including webkit)
+defineProperty("NUM_COMPILE_THREADS", "${Runtime.runtime.availableProcessors()}")
 
 //
 // The next three sections of properties are used to generate the
@@ -3724,6 +3719,7 @@ project(":web") {
                 exec {
                     workingDir("$webkitOutputDir")
                     def cmakeArgs = "-DENABLE_TOOLS=1"
+                    def makeArgs = "-j $NUM_COMPILE_THREADS"
                     if (IS_STATIC_BUILD) {
                         cmakeArgs = " $cmakeArgs -DSTATIC_BUILD=1 -DUSE_THIN_ARCHIVES=OFF";
                     }
@@ -3794,6 +3790,7 @@ project(":web") {
                     cmakeArgs += " -DJAVAFX_RELEASE_VERSION=${jfxReleaseMajorVersion}"
                     commandLine("perl", "$projectDir/src/main/native/Tools/Scripts/build-webkit",
                         "--java", "--icu-unicode", targetCpuBitDepthSwitch,
+                        "--makeArgs=${makeArgs}",
                         "--no-experimental-features", "--cmakeargs=${cmakeArgs}")
                 }
             }
