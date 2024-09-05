@@ -636,7 +636,7 @@ public abstract class Node implements EventTarget, Styleable {
             public StyleableProperty<TransitionDefinition[]> getTransitionProperty(Node node) {
                 var definitions = node.miscProperties != null ? node.miscProperties.transitionDefinitions : null;
                 if (definitions == null) {
-                    definitions = node.new TransitionDefinitionCollection();
+                    definitions = new TransitionDefinitionCollection();
                     node.getMiscProperties().transitionDefinitions = definitions;
                 }
 
@@ -9134,7 +9134,7 @@ public abstract class Node implements EventTarget, Styleable {
      * the CSS subsystem when a property value is changed. Explicit property changes, such as
      * by calling {@link Property#setValue(Object)}, do not trigger an animated transition.
      */
-    private class TransitionDefinitionCollection
+    private static class TransitionDefinitionCollection
             extends ArrayList<TransitionDefinition>
             implements StyleableProperty<TransitionDefinition[]> {
         private StyleOrigin origin;

@@ -187,7 +187,7 @@ class BorderConverter extends StyleConverter<ParsedValue[], Border>
                 } else if (images[i] instanceof Image img) {
                     image = img;
                 } else {
-                    throw new IllegalArgumentException("convertedValues");
+                    throw new IllegalArgumentException("Unexpected type: " + images[i].getClass().getName());
                 }
 
                 borderImages[i] = new BorderImage(image, width, inset, slice.widths, slice.filled, repeatX, repeatY);

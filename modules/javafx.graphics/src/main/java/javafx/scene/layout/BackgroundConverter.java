@@ -106,7 +106,7 @@ class BackgroundConverter extends StyleConverter<ParsedValue[], Background>
                 } else if (images[i] instanceof Image img) {
                     image = img;
                 } else {
-                    throw new IllegalArgumentException("convertedValues");
+                    throw new IllegalArgumentException("Unexpected type: " + images[i].getClass().getName());
                 }
 
                 if (image == null) continue;
