@@ -23,43 +23,12 @@
  * questions.
  */
 
-package test.javafx.scene.shape;
+package com.sun.javafx.scene;
 
-import com.sun.javafx.scene.shape.AbstractShape;
-import com.sun.javafx.sg.prism.NGNode;
 import javafx.scene.Node;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Shape;
 
-public class StubShape extends AbstractShape {
-    static {
-        StubShapeHelper.setStubShapeAccessor(new StubShapeHelper.StubShapeAccessor() {
-            @Override
-            public NGNode doCreatePeer(Node node) {
-                return ((StubShape) node).doCreatePeer();
-            }
-
-            @Override
-            public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
-                return ((StubShape) shape).doConfigShape();
-            }
-        });
-    }
-
-    {
-        // To initialize the class helper at the begining each constructor of this class
-        StubShapeHelper.initHelper(this);
-    }
-
-    public StubShape() {
-        setStroke(Color.BLACK);
-    }
-
-    private NGNode doCreatePeer() {
-        return new StubNGShape();
-    }
-
-    private com.sun.javafx.geom.Shape doConfigShape() {
-        return new com.sun.javafx.geom.RoundRectangle2D(0, 0, 10, 10, 4, 4);
-    }
-}
+/**
+ * This class only exists so that JavaFX code can extend the {@code Node} class across module
+ * boundaries, as classes in other modules cannot be permitted subclasses.
+ */
+public abstract non-sealed class AbstractNode extends Node {}

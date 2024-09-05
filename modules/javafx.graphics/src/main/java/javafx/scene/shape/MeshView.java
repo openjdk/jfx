@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,7 +47,7 @@ import javafx.scene.Node;
  *
  * @since JavaFX 8.0
  */
-public class MeshView extends Shape3D {
+public non-sealed class MeshView extends Shape3D {
     static {
          // This is used by classes in different packages to get access to
          // private and package private methods.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.AbstractNode;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.media.MediaViewHelper;
 import com.sun.javafx.sg.prism.MediaFrameTracker;
@@ -87,7 +88,7 @@ import javafx.scene.Parent;
  *
  * @since JavaFX 2.0
  */
-public class MediaView extends Node {
+public class MediaView extends AbstractNode {
     static {
          // This is used by classes in different packages to get access to
          // private and package private methods.

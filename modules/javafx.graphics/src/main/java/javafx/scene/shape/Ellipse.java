@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -56,7 +56,7 @@ ellipse.setRadiusY(25.0f);
 </PRE>
  * @since JavaFX 2.0
  */
-public class Ellipse extends Shape {
+public non-sealed class Ellipse extends Shape {
     static {
         EllipseHelper.setEllipseAccessor(new EllipseHelper.EllipseAccessor() {
             @Override

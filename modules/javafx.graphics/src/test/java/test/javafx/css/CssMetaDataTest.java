@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,6 +40,7 @@ import com.sun.javafx.css.CascadingStyle;
 import com.sun.javafx.css.ParsedValueImpl;
 import com.sun.javafx.css.PseudoClassState;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.AbstractNode;
 import test.com.sun.javafx.css.TestNode;
 import test.com.sun.javafx.css.TestNodeBase;
 import javafx.beans.value.WritableValue;
@@ -239,7 +240,7 @@ public class CssMetaDataTest {
     @Test
     public void testEquals() {
         TestNode testNode = new TestNode();
-        Node node = new Node() {
+        Node node = new AbstractNode() {
         };
 
         CssMetaData testNodeOpacity = get(TestNode.getClassCssMetaData(), "-fx-opacity");

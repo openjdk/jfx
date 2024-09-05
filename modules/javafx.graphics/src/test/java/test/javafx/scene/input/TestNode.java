@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ package test.javafx.scene.input;
 import test.com.sun.javafx.scene.input.TestNodeHelper;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.scene.AbstractNode;
 import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.sg.prism.NGNode;
 import javafx.geometry.Point2D;
@@ -37,7 +38,7 @@ import javafx.scene.Node;
 /**
  * Subclass of javafx.scene.Node used for input testing.
  */
-public class TestNode extends Node {
+public class TestNode extends AbstractNode {
     static {
          // This is used by classes in different packages to get access to
          // private and package private methods.
