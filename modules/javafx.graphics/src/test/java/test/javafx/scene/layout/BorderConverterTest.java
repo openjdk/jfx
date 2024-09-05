@@ -27,7 +27,6 @@ package test.javafx.scene.layout;
 
 import com.sun.javafx.css.SubPropertyConverter;
 import com.sun.javafx.tk.Toolkit;
-import javafx.css.StyleConverter;
 import javafx.geometry.Insets;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Border;
@@ -55,8 +54,9 @@ public class BorderConverterTest {
 
     private static final String IMAGE_URL = "file:red.png";
 
+    @SuppressWarnings("unchecked")
+    private final SubPropertyConverter<Border> converter = (SubPropertyConverter<Border>)BorderShim.getConverter();
     private final StubImageLoaderFactory imageLoaderFactory = ((StubToolkit)Toolkit.getToolkit()).getImageLoaderFactory();
-    private final StyleConverter<?, Border> converter = BorderShim.getConverter();
     private final Image image;
 
     BorderConverterTest() {
@@ -80,6 +80,17 @@ public class BorderConverterTest {
     }
 
     @Test
+    void convertBorderImageFromUnexpectedObjectFails() {
+        assertThrows(IllegalArgumentException.class, () ->
+            converter.convert(Map.of(BorderShim.BORDER_IMAGE_SOURCE, new Object[] { 1.0 })));
+    }
+
+    @Test
+    void convertBackDoesNotAcceptNull() {
+        assertThrows(NullPointerException.class, () -> converter.convertBack(null));
+    }
+
+    @Test
     void reconstructedObjectMustBeEqual() {
         var expected = new Border(
             List.of(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID, CornerRadii.EMPTY, BorderWidths.EMPTY),
@@ -90,8 +101,6 @@ public class BorderConverterTest {
                                     false, BorderRepeat.STRETCH, BorderRepeat.REPEAT))
         );
 
-        @SuppressWarnings("unchecked")
-        var converter = (SubPropertyConverter<Border>)this.converter;
         var actual = converter.convert(converter.convertBack(expected));
         assertEquals(expected, actual);
     }

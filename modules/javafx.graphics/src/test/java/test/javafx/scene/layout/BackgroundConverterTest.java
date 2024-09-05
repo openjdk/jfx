@@ -27,7 +27,6 @@ package test.javafx.scene.layout;
 
 import com.sun.javafx.css.SubPropertyConverter;
 import com.sun.javafx.tk.Toolkit;
-import javafx.css.StyleConverter;
 import javafx.geometry.Insets;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Background;
@@ -52,8 +51,9 @@ public class BackgroundConverterTest {
 
     private static final String IMAGE_URL = "file:red.png";
 
+    @SuppressWarnings("unchecked")
+    private final SubPropertyConverter<Background> converter = (SubPropertyConverter<Background>)BackgroundShim.getConverter();
     private final StubImageLoaderFactory imageLoaderFactory = ((StubToolkit)Toolkit.getToolkit()).getImageLoaderFactory();
-    private final StyleConverter<?, Background> converter = BackgroundShim.getConverter();
     private final Image image;
 
     BackgroundConverterTest() {
@@ -77,6 +77,17 @@ public class BackgroundConverterTest {
     }
 
     @Test
+    void convertBackgroundImageFromUnexpectedObjectFails() {
+        assertThrows(IllegalArgumentException.class, () ->
+            converter.convert(Map.of(BackgroundShim.BACKGROUND_IMAGE, new Object[] { 1.0 })));
+    }
+
+    @Test
+    void convertBackDoesNotAcceptNull() {
+        assertThrows(NullPointerException.class, () -> converter.convertBack(null));
+    }
+
+    @Test
     void reconstructedObjectMustBeEqual() {
         var expected = new Background(
             List.of(new BackgroundFill(Color.RED, new CornerRadii(5, true), new Insets(2)),
@@ -85,8 +96,6 @@ public class BackgroundConverterTest {
                                         BackgroundPosition.CENTER, BackgroundSize.DEFAULT))
         );
 
-        @SuppressWarnings("unchecked")
-        var converter = (SubPropertyConverter<Background>)this.converter;
         var actual = converter.convert(converter.convertBack(expected));
         assertEquals(expected, actual);
     }
