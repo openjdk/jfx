@@ -634,23 +634,27 @@ public abstract class Node implements EventTarget, Styleable {
 
             @Override
             public StyleableProperty<TransitionDefinition[]> getTransitionProperty(Node node) {
-                if (node.transitions == null) {
-                    node.transitions = node.new TransitionDefinitionCollection();
+                var definitions = node.miscProperties != null ? node.miscProperties.transitionDefinitions : null;
+                if (definitions == null) {
+                    definitions = node.new TransitionDefinitionCollection();
+                    node.getMiscProperties().transitionDefinitions = definitions;
                 }
 
-                return node.transitions;
+                return definitions;
             }
 
             @Override
             public TransitionDefinition findTransitionDefinition(
                     Node node, CssMetaData<? extends Styleable, ?> metadata) {
-                return node.transitions == null ? null : node.transitions.find(metadata);
+                var definitions = node.miscProperties != null ? node.miscProperties.transitionDefinitions : null;
+                return definitions == null ? null : definitions.find(metadata);
             }
 
             @Override
             public Map<CssMetaData<? extends Styleable, ?>, TransitionDefinition> findTransitionDefinitions(
                     Node node, CssMetaData<? extends Styleable, ?> metadata) {
-                return node.transitions == null ? null : node.transitions.findAll(metadata);
+                var definitions = node.miscProperties != null ? node.miscProperties.transitionDefinitions : null;
+                return definitions == null ? null : definitions.findAll(metadata);
             }
 
             @Override
@@ -6790,6 +6794,8 @@ public abstract class Node implements EventTarget, Styleable {
         private ObjectProperty<InputMethodRequests> inputMethodRequests;
         private BooleanProperty mouseTransparent;
         private DoubleProperty viewOrder;
+        private TransitionTimerCollection transitionTimers;
+        private TransitionDefinitionCollection transitionDefinitions;
 
         public double getViewOrder() {
             return (viewOrder == null) ? DEFAULT_VIEW_ORDER : viewOrder.get();
@@ -9038,8 +9044,6 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
-    private TransitionTimerCollection transitionTimers;
-
     /**
      * Called by animatable {@link StyleableProperty} implementations in order to register
      * a running {@link TransitionTimer} with this {@code Node}. This allows the node
@@ -9048,8 +9052,10 @@ public abstract class Node implements EventTarget, Styleable {
      * @param timer the transition timer
      */
     private void addTransitionTimer(String propertyName, TransitionTimer timer) {
+        var transitionTimers = miscProperties != null ? miscProperties.transitionTimers : null;
         if (transitionTimers == null) {
             transitionTimers = new TransitionTimerCollection();
+            getMiscProperties().transitionTimers = transitionTimers;
         }
 
         transitionTimers.put(propertyName, timer);
@@ -9063,11 +9069,12 @@ public abstract class Node implements EventTarget, Styleable {
      * @param timer the transition timer
      */
     private void removeTransitionTimer(String propertyName) {
+        var transitionTimers = miscProperties != null ? miscProperties.transitionTimers : null;
         if (transitionTimers != null) {
             transitionTimers.remove(propertyName);
 
             if (transitionTimers.isEmpty()) {
-                transitionTimers = null;
+                miscProperties.transitionTimers = null;
             }
         }
     }
@@ -9080,6 +9087,7 @@ public abstract class Node implements EventTarget, Styleable {
      *         targeted by a transition timer
      */
     private TransitionTimer findTransitionTimer(String propertyName) {
+        var transitionTimers = miscProperties != null ? miscProperties.transitionTimers : null;
         return transitionTimers != null ? transitionTimers.get(propertyName) : null;
     }
 
@@ -9091,6 +9099,7 @@ public abstract class Node implements EventTarget, Styleable {
      *         property is not targeted by any transition timers
      */
     private Map<String, TransitionTimer> findTransitionTimers(StyleableProperty<?> property) {
+        var transitionTimers = miscProperties != null ? miscProperties.transitionTimers : null;
         return transitionTimers != null ? transitionTimers.getAll(property) : Map.of();
     }
 
@@ -9100,6 +9109,7 @@ public abstract class Node implements EventTarget, Styleable {
      */
     // package-private for testing
     void completeTransitionTimers() {
+        var transitionTimers = miscProperties != null ? miscProperties.transitionTimers : null;
         if (transitionTimers == null || transitionTimers.isEmpty()) {
             return;
         }
@@ -9113,7 +9123,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     // package-private for testing
     Map<String, TransitionTimer> getTransitionTimers() {
-        return transitionTimers;
+        return miscProperties != null ? miscProperties.transitionTimers : null;
     }
 
     /**
@@ -9251,11 +9261,9 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
-    private TransitionDefinitionCollection transitions;
-
     // package-private for testing
     List<TransitionDefinition> getTransitionDefinitions() {
-        return transitions;
+        return miscProperties != null ? miscProperties.transitionDefinitions : null;
     }
 
 

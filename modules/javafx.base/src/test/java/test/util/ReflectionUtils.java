@@ -59,6 +59,6 @@ public final class ReflectionUtils {
             cls = cls.getSuperclass();
         }
 
-        throw new AssertionError("Field not found");
+        throw new AssertionError("Field not found: " + fieldName);
     }
 }
