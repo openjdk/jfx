@@ -46,7 +46,13 @@ class BackgroundConverter extends StyleConverter<ParsedValue[], Background>
 
     static final StyleConverter<ParsedValue[], Background> INSTANCE = new BackgroundConverter();
 
-    @Override public Background convert(Map<CssMetaData<? extends Styleable, ?>,Object> convertedValues) {
+    /**
+     * {@inheritDoc}
+     *
+     * @throws NullPointerException if {@code convertedValues} is {@code null}
+     */
+    @Override
+    public Background convert(Map<CssMetaData<? extends Styleable, ?>,Object> convertedValues) {
         final Paint[] fills = (Paint[]) convertedValues.get(Background.BACKGROUND_COLOR);
         final Object[] images = (Object[]) convertedValues.get(Background.BACKGROUND_IMAGE);
         final boolean hasFills = fills != null && fills.length > 0;
@@ -132,7 +138,7 @@ class BackgroundConverter extends StyleConverter<ParsedValue[], Background>
     /**
      * {@inheritDoc}
      *
-     * @since 24
+     * @throws NullPointerException if {@code value} is {@code null}
      */
     @Override
     public Map<CssMetaData<? extends Styleable, ?>, Object> convertBack(Background value) {

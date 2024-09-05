@@ -42,6 +42,7 @@ public interface SubPropertyConverter<T> {
      * Converts a map of CSS values to the target type.
      *
      * @param values the constituent values
+     * @throws NullPointerException if {@code values} is {@code null}
      * @return the converted object
      */
     T convert(Map<CssMetaData<? extends Styleable, ?>, Object> values);
@@ -51,6 +52,7 @@ public interface SubPropertyConverter<T> {
      * The returned map can be passed into {@link #convert(Map)} to reconstruct the object.
      *
      * @param value the object
+     * @throws NullPointerException if {@code value} is {@code null}
      * @return a {@code Map} of the constituent values
      */
     Map<CssMetaData<? extends Styleable, ?>, Object> convertBack(T value);

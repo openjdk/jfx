@@ -57,6 +57,11 @@ class BorderConverter extends StyleConverter<ParsedValue[], Border>
     // Disallow instantiation
     private BorderConverter() { }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @throws NullPointerException if {@code convertedValues} is {@code null}
+     */
     @Override
     public Border convert(Map<CssMetaData<? extends Styleable, ?>, Object> convertedValues) {
         final Paint[][] strokeFills = (Paint[][])convertedValues.get(Border.BORDER_COLOR);
@@ -200,7 +205,7 @@ class BorderConverter extends StyleConverter<ParsedValue[], Border>
     /**
      * {@inheritDoc}
      *
-     * @since 24
+     * @throws NullPointerException if {@code border} is {@code null}
      */
     @Override
     public Map<CssMetaData<? extends Styleable, ?>, Object> convertBack(Border border) {
