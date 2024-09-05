@@ -1025,6 +1025,11 @@ void GraphicsContextJava::didUpdateState(GraphicsContextState& state)
         if (dropShadowOpt.has_value()) {
             const auto& dropShadow = dropShadowOpt.value();
             setPlatformShadow(dropShadow.offset,dropShadow.radius, dropShadow.color);
+        } else {
+            float clr = 0.0f;
+            platformContext()->rq().freeSpace(32)
+            << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETSHADOW
+            << clr << clr << clr << clr << clr << clr << clr;
         }
     }
 
