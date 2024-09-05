@@ -41,7 +41,7 @@ public abstract class StyledTextModelViewOnlyBase extends StyledTextModel {
     }
 
     @Override
-    public final boolean isUserEditable() {
+    public final boolean isWritable() {
         return false;
     }
 

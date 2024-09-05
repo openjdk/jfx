@@ -119,8 +119,11 @@ public class BasicTextModel extends StyledTextModel {
     /**
      * Inserts text at the specified position.
      * This is a convenience shortcut for {@link #replace(StyleResolver, TextPos, TextPos, String, boolean)}.
+     *
      * @param p the insertion position
      * @param text the text to insert
+     * @throws NullPointerException if the model is {@code null}
+     * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
     public void insertText(TextPos p, String text) {
         replace(null, p, p, text, false);
@@ -152,7 +155,7 @@ public class BasicTextModel extends StyledTextModel {
      * @return true if the model is user-editable
      */
     @Override
-    public final boolean isUserEditable() {
+    public final boolean isWritable() {
         return content.isUserEditable();
     }
 

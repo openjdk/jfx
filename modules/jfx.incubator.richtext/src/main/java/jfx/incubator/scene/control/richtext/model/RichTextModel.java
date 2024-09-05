@@ -57,7 +57,7 @@ public class RichTextModel extends StyledTextModel {
     }
 
     @Override
-    public final boolean isUserEditable() {
+    public final boolean isWritable() {
         return true;
     }
 
@@ -732,22 +732,27 @@ public class RichTextModel extends StyledTextModel {
 
         /**
          * <pre>
-         * paragraph:    [=============]
-         * case:
-         *         0:                      |-
-         *         1:  -------------------->
-         *         2:    |----------------->
-         *         3:    |-------------|
-         *         4:    |--------|
-         *         5:        |------------->
-         *         6:        |---------|
-         *         7:        |----|
-         *         8:  -----------|
-         *         9:  ----------------|
+         * paragraph:    start [=============] end
+         *      case:
+         *               0:                  |-
+         *               0:                      |-
+         *               1:  -------------------->
+         *               2:    |----------------->
+         *               3:    |-------------|
+         *               4:    |--------|
+         *               5:        |------------->
+         *               6:        |---------|
+         *               7:        |----|
+         *               8:  -----------|
+         *               9:  ----------------|
          */
         private static int whichCase(int off, int max, int start, int end) {
             // TODO unit test!
             if (start >= max) {
+                if ((start == max) && (off == max)) {
+                    // empty paragraph
+                    return 3;
+                }
                 return 0;
             } else if (start < off) {
                 if (end > max) {

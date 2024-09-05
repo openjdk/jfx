@@ -134,7 +134,10 @@ public class Actions {
                 if (r == null) {
                     return true;
                 }
-                return !r.canEdit();
+                if (r.isEditable() && (r.getModel() != null) && (r.getModel().isWritable())) {
+                    return false;
+                }
+                return true;
             },
             editor,
             executing
@@ -301,7 +304,7 @@ public class Actions {
         if (r == null) {
             return EditorType.NONE;
         } else if (r instanceof CodeArea) {
-            if (r.canEdit()) {
+            if (r.isEditable()) {
                 return EditorType.CODE;
             } else {
                 return EditorType.OUTPUT;

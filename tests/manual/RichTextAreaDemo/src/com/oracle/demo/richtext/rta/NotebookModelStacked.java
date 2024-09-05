@@ -94,7 +94,7 @@ public class NotebookModelStacked extends StyledTextModel {
     }
 
     @Override
-    public boolean isUserEditable() {
+    public boolean isWritable() {
         return false;
     }
 
