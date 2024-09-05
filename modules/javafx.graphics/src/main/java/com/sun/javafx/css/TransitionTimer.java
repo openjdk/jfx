@@ -43,6 +43,9 @@ import javafx.util.Duration;
  */
 public final class TransitionTimer extends AnimationTimer {
 
+    /**
+     * A token that can be used to cancel a running timer.
+     */
     public interface CancellationToken {
         void cancel();
     }
@@ -82,7 +85,7 @@ public final class TransitionTimer extends AnimationTimer {
      * @param definition the {@code TransitionDefinition} used to initialize the {@code timer}
      * @param targetPropertyName the name of the CSS property targeted by the transition
      * @param nanoNow the current time in nanoseconds
-     * @return the {@code timer} instance if the timer was started, {@code null} otherwise
+     * @return a {@code CancellationToken} if the timer was started, {@code null} otherwise
      */
     public static CancellationToken run(TransitionMediator mediator,
                                         TransitionDefinition definition,
