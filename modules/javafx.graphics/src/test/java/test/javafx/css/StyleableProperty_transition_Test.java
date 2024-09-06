@@ -420,7 +420,7 @@ public class StyleableProperty_transition_Test {
     }
 
     @Test
-    void testNullObjectTransitionsAsDiscrete() {
+    void testNullObjectTransitionsAsDiscrete_withInterpolatableValue() {
         ((Group)scene.getRoot()).getChildren().setAll(testBean);
         var property = new SimpleStyleableObjectProperty<>(interpolatableObjectPropertyMetadata, testBean, null);
 
@@ -441,5 +441,29 @@ public class StyleableProperty_transition_Test {
         assertNull(property.get());
         setAnimationTime(750);
         assertSame(Color.RED, property.get());
+    }
+
+    @Test
+    void testNullObjectTransitionsAsDiscrete_withComponentTransitionableValue() {
+        ((Group)scene.getRoot()).getChildren().setAll(testBean);
+        var property = new SimpleStyleableObjectProperty<>(componentTransitionableObjectPropertyMetadata, testBean, null);
+
+        // Setting a value for the first time doesn't start a transition.
+        setAnimationTime(0);
+        property.applyStyle(StyleOrigin.USER, Background.fill(Color.RED));
+
+        // Start the transition and sample the outputs.
+        property.applyStyle(StyleOrigin.USER, null);
+        setAnimationTime(499);
+        assertEquals(Background.fill(Color.RED), property.get());
+        setAnimationTime(500);
+        assertNull(property.get());
+
+        // This is a reversing transition, so it only needs half the time to flip the value.
+        property.applyStyle(StyleOrigin.USER, Background.fill(Color.RED));
+        setAnimationTime(749);
+        assertNull(property.get());
+        setAnimationTime(750);
+        assertEquals(Background.fill(Color.RED), property.get());
     }
 }
