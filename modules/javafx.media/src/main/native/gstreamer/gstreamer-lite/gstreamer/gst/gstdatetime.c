@@ -87,7 +87,7 @@ gst_date_time_new_from_g_date_time (GDateTime * dt)
   if (!dt)
     return NULL;
 
-  gst_dt = g_slice_new (GstDateTime);
+  gst_dt = g_new (GstDateTime, 1);
 
   gst_mini_object_init (GST_MINI_OBJECT_CAST (gst_dt), 0, GST_TYPE_DATE_TIME,
       NULL, NULL, (GstMiniObjectFreeFunction) gst_date_time_free);
@@ -1051,7 +1051,7 @@ gst_date_time_free (GstDateTime * datetime)
   memset (datetime, 0xff, sizeof (GstDateTime));
 #endif
 
-  g_slice_free (GstDateTime, datetime);
+  g_free (datetime);
 }
 
 /**

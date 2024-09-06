@@ -63,6 +63,12 @@ gst_context_unref (GstContext * context)
   gst_mini_object_unref (GST_MINI_OBJECT_CAST (context));
 }
 
+static inline void
+gst_clear_context (GstContext ** context_ptr)
+{
+  gst_clear_mini_object ((GstMiniObject **) context_ptr);
+}
+
 /* copy context */
 static inline GstContext *
 gst_context_copy (const GstContext * context)
@@ -75,6 +81,9 @@ GstContext * gst_context_ref    (GstContext * context);
 
 GST_API
 void         gst_context_unref  (GstContext * context);
+
+GST_API
+void         gst_clear_context  (GstContext ** context_ptr);
 
 GST_API
 GstContext * gst_context_copy   (const GstContext * context);

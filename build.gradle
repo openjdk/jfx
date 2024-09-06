@@ -214,7 +214,7 @@ void setupTools(String name, Closure loader, Closure processor) {
     // then generate it. Once generated, we need to read the properties file to
     // help us define the defaults for this block of properties
     File propFile = file("$buildDir/${name}.properties");
-    if (!propFile.exists()) {
+    if (!propFile.exists() || propFile.length() == 0) {
         // Create the properties file
         propFile.getParentFile().mkdirs();
         propFile.createNewFile();
@@ -501,7 +501,8 @@ ext.SWT_FILE_NAME =
     IS_MAC && IS_AARCH64 ? "org.eclipse.swt.cocoa.macosx.aarch64_3.124.200.v20231113-1355" :
     IS_MAC && !IS_AARCH64 ? "org.eclipse.swt.cocoa.macosx.x86_64_3.124.200.v20231113-1355" :
     IS_WINDOWS ? "org.eclipse.swt.win32.win32.x86_64_3.124.200.v20231113-1355" :
-    IS_LINUX ? "org.eclipse.swt.gtk.linux.x86_64_3.124.200.v20231113-1355" : ""
+    IS_LINUX && IS_AARCH64 ? "org.eclipse.swt.gtk.linux.aarch64_3.124.200.v20231113-1355" :
+    IS_LINUX && !IS_AARCH64 ? "org.eclipse.swt.gtk.linux.x86_64_3.124.200.v20231113-1355" : ""
 
 // Specifies whether to run full tests (true) or smoke tests (false)
 defineProperty("FULL_TEST", "false")
@@ -617,13 +618,8 @@ ext.DO_JCOV = Boolean.parseBoolean(JCOV)
 defineProperty("USE_CYGWIN", "true")
 ext.IS_USE_CYGWIN = Boolean.parseBoolean(USE_CYGWIN)
 
-// Define the number of threads to use when compiling (specifically for native compilation)
-// On Mac we limit it to 1 by default due to problems running gcc in parallel
-if (IS_MAC) {
-    defineProperty("NUM_COMPILE_THREADS", "1")
-} else {
-    defineProperty("NUM_COMPILE_THREADS", "${Runtime.runtime.availableProcessors()}")
-}
+// Define the number of threads to use when compiling (specifically for native compilation, including webkit)
+defineProperty("NUM_COMPILE_THREADS", "${Runtime.runtime.availableProcessors()}")
 
 //
 // The next three sections of properties are used to generate the
@@ -952,7 +948,6 @@ void ant(String conf,   // platform configuration
                     "INCLUDE"              : WINDOWS_VS_INCLUDE,
                     "LIB"                  : WINDOWS_VS_LIB,
                     "LIBPATH"              : WINDOWS_VS_LIBPATH,
-                    "DXSDK_DIR"            : WINDOWS_DXSDK_DIR,
                     "PATH"                 : WINDOWS_VS_PATH
             ]);
             commandLine "cmd", "/s", "/c", '"' + String.join(" ", cmdArgs) + '"'
@@ -3010,6 +3005,7 @@ project(":media") {
             media name: "ffmpeg-4.0.2", ext: "tar.gz"
             media name: "ffmpeg-5.1.2", ext: "tar.gz"
             media name: "ffmpeg-6.0", ext: "tar.gz"
+            media name: "ffmpeg-7.0.2", ext: "tar.gz"
         }
         implementation project(":base")
         implementation project(":graphics")
@@ -3356,8 +3352,8 @@ project(":media") {
                     doLast {
                         project.ext.libav = [:]
                         project.ext.libav.basedir = "${buildDir}/native/linux/ffmpeg"
-                        project.ext.libav.versions = [ "3.3.3", "4.0.2", "5.1.2", "6.0" ]
-                        project.ext.libav.versionmap = [ "3.3.3" : "57", "4.0.2" : "58", "5.1.2" : "59", "6.0" : "60" ]
+                        project.ext.libav.versions = [ "3.3.3", "4.0.2", "5.1.2", "6.0", "7.0.2" ]
+                        project.ext.libav.versionmap = [ "3.3.3" : "57", "4.0.2" : "58", "5.1.2" : "59", "6.0" : "60", "7.0.2" : "61" ]
 
                         libav.versions.each { version ->
                             def libavDir = "${libav.basedir}/ffmpeg-${version}"
@@ -3437,7 +3433,7 @@ project(":media") {
                             project.ext.libav.libavffmpeg.versions = [ "56" ]
                             project.ext.libav.ffmpeg = [:]
                             project.ext.libav.ffmpeg.basedir = "${buildDir}/native/linux/ffmpeg/ffmpeg"
-                            project.ext.libav.ffmpeg.versions = [ "57", "58", "59", "60" ]
+                            project.ext.libav.ffmpeg.versions = [ "57", "58", "59", "60", "61" ]
 
                             project.ext.libav.versions.each { version ->
                                 def libavDir = "${project.ext.libav.basedir}-${version}"
@@ -3723,6 +3719,7 @@ project(":web") {
                 exec {
                     workingDir("$webkitOutputDir")
                     def cmakeArgs = "-DENABLE_TOOLS=1"
+                    def makeArgs = "-j $NUM_COMPILE_THREADS"
                     if (IS_STATIC_BUILD) {
                         cmakeArgs = " $cmakeArgs -DSTATIC_BUILD=1 -DUSE_THIN_ARCHIVES=OFF";
                     }
@@ -3793,6 +3790,7 @@ project(":web") {
                     cmakeArgs += " -DJAVAFX_RELEASE_VERSION=${jfxReleaseMajorVersion}"
                     commandLine("perl", "$projectDir/src/main/native/Tools/Scripts/build-webkit",
                         "--java", "--icu-unicode", targetCpuBitDepthSwitch,
+                        "--makeArgs=${makeArgs}",
                         "--no-experimental-features", "--cmakeargs=${cmakeArgs}")
                 }
             }
@@ -5389,7 +5387,7 @@ compileTargets { t ->
             }
             if (IS_WINDOWS) {
                 from ("${graphicsProject.buildDir}/libs/prismD3D/${t.name}/${library(targetProperties.prismD3D.lib)}");
-                targetProperties.VS2017DLLs.each { vslib ->
+                targetProperties.VSDLLs.each { vslib ->
                     from ("$vslib");
                 }
                 targetProperties.WinSDKDLLs.each { winsdklib ->
@@ -5404,7 +5402,7 @@ compileTargets { t ->
                     inputFiles.include("*.dylib")
                     inputFiles.include("*.so")
                     // FIXME: if we ever need to strip on Windows platforms, we must
-                    // exclude the Microsoft DLLs (VS2017DLLNames and WinSDKDLLNames)
+                    // exclude the Microsoft DLLs (VSDLLNames and WinSDKDLLNames)
 
                     inputFiles.each { file ->
                         exec {
@@ -5421,7 +5419,7 @@ compileTargets { t ->
                     inputFiles.include("*.dylib")
                     inputFiles.include("*.so")
                     // FIXME: if we ever need to sign on Windows platforms, we must
-                    // exclude the Microsoft DLLs (VS2017DLLNames and WinSDKDLLNames)
+                    // exclude the Microsoft DLLs (VSDLLNames and WinSDKDLLNames)
 
                     inputFiles.each { file ->
                         exec {
@@ -5496,7 +5494,7 @@ compileTargets { t ->
                     inputFiles.include("*.dylib")
                     inputFiles.include("*.so")
                     // FIXME: if we ever need to sign on Windows platforms, we must
-                    // exclude the Microsoft DLLs (VS2017DLLNames and WinSDKDLLNames)
+                    // exclude the Microsoft DLLs (VSDLLNames and WinSDKDLLNames)
 
                     inputFiles.each { file ->
                         exec {
@@ -5549,7 +5547,7 @@ compileTargets { t ->
                     inputFiles.include("*.dylib")
                     inputFiles.include("*.so")
                     // FIXME: if we ever need to sign on Windows platforms, we must
-                    // exclude the Microsoft DLLs (VS2017DLLNames and WinSDKDLLNames)
+                    // exclude the Microsoft DLLs (VSDLLNames and WinSDKDLLNames)
 
                     inputFiles.each { file ->
                         exec {

@@ -581,7 +581,7 @@ gst_adapter_unmap (GstAdapter * adapter)
  * @dest: (out caller-allocates) (array length=size) (element-type guint8):
  *     the memory to copy into
  * @offset: the bytes offset in the adapter to start from
- * @size: the number of bytes to copy
+ * @size: (in): the number of bytes to copy
  *
  * Copies @size bytes of data starting at @offset out of the buffers
  * contained in #GstAdapter into an array @dest provided by the caller.

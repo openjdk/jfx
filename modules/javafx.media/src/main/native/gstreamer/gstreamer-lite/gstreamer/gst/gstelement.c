@@ -2502,72 +2502,80 @@ gst_element_get_state_func (GstElement * element,
 {
   GstStateChangeReturn ret = GST_STATE_CHANGE_FAILURE;
   GstState old_pending;
+  gint64 end_time;
 
   GST_CAT_DEBUG_OBJECT (GST_CAT_STATES, element, "getting state, timeout %"
       GST_TIME_FORMAT, GST_TIME_ARGS (timeout));
 
   GST_OBJECT_LOCK (element);
-  ret = GST_STATE_RETURN (element);
-  GST_CAT_DEBUG_OBJECT (GST_CAT_STATES, element, "RETURN is %s",
-      gst_element_state_change_return_get_name (ret));
 
-  /* we got an error, report immediately */
-  if (ret == GST_STATE_CHANGE_FAILURE)
-    goto done;
+  if (timeout != GST_CLOCK_TIME_NONE) {
+    /* make timeout absolute */
+    end_time = g_get_monotonic_time () + (timeout / 1000);
+  }
 
-  /* we got no_preroll, report immediately */
-  if (ret == GST_STATE_CHANGE_NO_PREROLL)
-    goto done;
+  do {
+    ret = GST_STATE_RETURN (element);
+    GST_CAT_DEBUG_OBJECT (GST_CAT_STATES, element, "RETURN is %s",
+        gst_element_state_change_return_get_name (ret));
 
-  /* no need to wait async if we are not async */
-  if (ret != GST_STATE_CHANGE_ASYNC)
-    goto done;
+    /* we got an error, report immediately */
+    if (ret == GST_STATE_CHANGE_FAILURE)
+      goto done;
 
-  old_pending = GST_STATE_PENDING (element);
-  if (old_pending != GST_STATE_VOID_PENDING) {
-    gboolean signaled;
-    guint32 cookie;
+    /* we got no_preroll, report immediately */
+    if (ret == GST_STATE_CHANGE_NO_PREROLL)
+      goto done;
 
-    /* get cookie to detect state changes during waiting */
-    cookie = element->state_cookie;
+    /* no need to wait async if we are not async */
+    if (ret != GST_STATE_CHANGE_ASYNC)
+      goto done;
 
-    GST_CAT_INFO_OBJECT (GST_CAT_STATES, element,
-        "waiting for element to commit state");
+    old_pending = GST_STATE_PENDING (element);
+    if (old_pending != GST_STATE_VOID_PENDING) {
+      gboolean signaled = TRUE;
+      guint32 cookie;
 
-    /* we have a pending state change, wait for it to complete */
-    if (timeout != GST_CLOCK_TIME_NONE) {
-      gint64 end_time;
-      /* make timeout absolute */
-      end_time = g_get_monotonic_time () + (timeout / 1000);
-      signaled = GST_STATE_WAIT_UNTIL (element, end_time);
-    } else {
-      GST_STATE_WAIT (element);
-      signaled = TRUE;
-    }
+      /* get cookie to detect state changes during waiting */
+      cookie = element->state_cookie;
 
-    if (!signaled) {
-      GST_CAT_INFO_OBJECT (GST_CAT_STATES, element, "timed out");
-      /* timeout triggered */
-      ret = GST_STATE_CHANGE_ASYNC;
-    } else {
-      if (cookie != element->state_cookie)
-        goto interrupted;
+      GST_CAT_INFO_OBJECT (GST_CAT_STATES, element,
+          "waiting for element to commit state");
 
-      /* could be success or failure */
-      if (old_pending == GST_STATE (element)) {
-        GST_CAT_DEBUG_OBJECT (GST_CAT_STATES, element, "got success");
-        ret = GST_STATE_CHANGE_SUCCESS;
+      /* we have a pending state change, wait for it to complete or for
+         an interruption */
+      if (timeout != GST_CLOCK_TIME_NONE) {
+        signaled = GST_STATE_WAIT_UNTIL (element, end_time);
       } else {
-        GST_CAT_DEBUG_OBJECT (GST_CAT_STATES, element, "got failure");
-        ret = GST_STATE_CHANGE_FAILURE;
+        GST_STATE_WAIT (element);
+        signaled = TRUE;
+      }
+
+      if (!signaled) {
+        GST_CAT_INFO_OBJECT (GST_CAT_STATES, element, "timed out");
+        /* timeout triggered */
+        ret = GST_STATE_CHANGE_ASYNC;
+        goto done;
+      } else {
+        if (cookie != element->state_cookie)
+          goto interrupted;
+
+        /* could be success or failure */
+        if (old_pending == GST_STATE (element)) {
+          GST_CAT_DEBUG_OBJECT (GST_CAT_STATES, element, "got success");
+          ret = GST_STATE_CHANGE_SUCCESS;
+        } else {
+          GST_CAT_DEBUG_OBJECT (GST_CAT_STATES, element, "got failure");
+          ret = GST_STATE_CHANGE_FAILURE;
+        }
+      }
+      /* if nothing is pending anymore we can return SUCCESS */
+      if (GST_STATE_PENDING (element) == GST_STATE_VOID_PENDING) {
+        GST_CAT_LOG_OBJECT (GST_CAT_STATES, element, "nothing pending");
+        ret = GST_STATE_CHANGE_SUCCESS;
       }
     }
-    /* if nothing is pending anymore we can return SUCCESS */
-    if (GST_STATE_PENDING (element) == GST_STATE_VOID_PENDING) {
-      GST_CAT_LOG_OBJECT (GST_CAT_STATES, element, "nothing pending");
-      ret = GST_STATE_CHANGE_SUCCESS;
-    }
-  }
+  } while (old_pending != GST_STATE (element));
 
 done:
   if (state)
