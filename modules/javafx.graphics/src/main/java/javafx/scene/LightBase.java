@@ -97,9 +97,6 @@ import com.sun.javafx.logging.PlatformLogger;
  * * Supports spotlight attenuation factors as described in its class docs.
  *
  * <p>
- * An application cannot add its own light types. Extending {@code LightBase} directly may lead to an
- * {@code UnsupportedOperationException} being thrown.
- * <p>
  * All light types are not affected by scaling and shearing transforms.
  *
  * <h2><a id="Color">Color</a></h2>

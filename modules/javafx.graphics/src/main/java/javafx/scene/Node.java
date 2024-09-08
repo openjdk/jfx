@@ -231,11 +231,6 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * the {@link Platform#startup(Runnable)} method for more information.
  * </p>
  *
- * <p>
- * An application should not extend the Node class directly. Doing so may lead to
- * an UnsupportedOperationException being thrown.
- * </p>
- *
  * <h2><a id="StringID">String ID</a></h2>
  * <p>
  * Each node in the scene graph can be given a unique {@link #idProperty id}. This id is

@@ -60,11 +60,6 @@ import com.sun.javafx.logging.PlatformLogger;
  * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
  * for more information.
  *
- * <p>
- * An application should not extend the Shape3D class directly. Doing so may lead to
- * an UnsupportedOperationException being thrown.
- * </p>
- *
  * @since JavaFX 8.0
  */
 public abstract sealed class Shape3D extends Node permits Box, Cylinder, MeshView, Sphere {
