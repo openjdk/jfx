@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,7 +41,7 @@ import javafx.animation.Interpolatable;
  * Heterogeneous paint interpolation converts the {@code Color} to a visually identical gradient
  * paint, and then performs a linear interpolation between the two gradient paints.
  * If heterogeneous paints cannot be interpolated as described, the paints are interpolated
- * <a href="../../animation/Interpolatable.html#discrete">discretely</a>.
+ * <a href="../../animation/Interpolatable.html#discrete">as discrete</a>.
  *
  * @since JavaFX 2.0
  */

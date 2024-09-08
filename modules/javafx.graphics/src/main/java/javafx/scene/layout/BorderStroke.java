@@ -55,7 +55,7 @@ import java.util.Objects;
  * </ul>
  * Heterogeneous paint interpolation converts the {@code Color} to a visually identical gradient paint,
  * and then performs a gradient paint interpolation. If heterogeneous paints cannot be interpolated as
- * described, the paints are interpolated <a href="../../animation/Interpolatable.html#discrete">discretely</a>.
+ * described, the paints are interpolated <a href="../../animation/Interpolatable.html#discrete">as discrete</a>.
  *
  * @since JavaFX 8.0
  */
