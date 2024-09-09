@@ -25,24 +25,24 @@
 package com.oracle.tools.fx.monkey.options;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Insets;
 import javafx.scene.control.ComboBox;
-import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.text.Font;
 import com.oracle.tools.fx.monkey.util.FX;
 
 /**
  * Font Option Bound to a Property.
  */
-// TODO allow null? use logical fonts?
-// TODO names of families?
-// TODO filtered list
-public class FontOption extends BorderPane {
+public class FontOption extends HBox {
     private final SimpleObjectProperty<Font> property = new SimpleObjectProperty<>();
     private final ComboBox<String> fontField = new ComboBox<>();
+    private final ComboBox<String> styleField = new ComboBox<>();
     private final ComboBox<Double> sizeField = new ComboBox<>();
 
     public FontOption(String name, boolean allowNull, ObjectProperty<Font> p) {
@@ -54,6 +54,13 @@ public class FontOption extends BorderPane {
         FX.name(fontField, name + "_FONT");
         fontField.getItems().setAll(collectFonts(allowNull));
         fontField.getSelectionModel().selectedItemProperty().addListener((x) -> {
+            String fam = fontField.getSelectionModel().getSelectedItem();
+            updateStyles(fam);
+            update();
+        });
+
+        FX.name(styleField, name + "_STYLE");
+        styleField.getSelectionModel().selectedItemProperty().addListener((x) -> {
             update();
         });
 
@@ -78,8 +85,8 @@ public class FontOption extends BorderPane {
             update();
         });
 
-        setCenter(fontField);
-        setRight(sizeField);
+        getChildren().setAll(fontField, styleField, sizeField);
+        setHgrow(fontField, Priority.ALWAYS);
         setMargin(sizeField, new Insets(0, 0, 0, 2));
 
         setFont(property.get());
@@ -87,11 +94,6 @@ public class FontOption extends BorderPane {
 
     public SimpleObjectProperty<Font> getProperty() {
         return property;
-    }
-
-    protected void update() {
-        Font f = getFont();
-        property.set(f);
     }
 
     public void select(String name) {
@@ -103,6 +105,10 @@ public class FontOption extends BorderPane {
         if (name == null) {
             return null;
         }
+        String style = styleField.getSelectionModel().getSelectedItem();
+        if (!isBlank(style)) {
+            name = name + " " + style;
+        }
         Double size = sizeField.getSelectionModel().getSelectedItem();
         if (size == null) {
             size = 12.0;
@@ -110,17 +116,53 @@ public class FontOption extends BorderPane {
         return new Font(name, size);
     }
 
+    private static boolean isBlank(String s) {
+        return s == null ? true : s.trim().length() == 0;
+    }
+
+    protected void updateStyles(String family) {
+        String st = styleField.getSelectionModel().getSelectedItem();
+        if (st == null) {
+            st = "";
+        }
+
+        List<String> ss = Font.getFontNames(family);
+        for (int i = 0; i < ss.size(); i++) {
+            String s = ss.get(i);
+            if (s.startsWith(family)) {
+                s = s.substring(family.length()).trim();
+                ss.set(i, s);
+            }
+        }
+        Collections.sort(ss);
+
+        styleField.getItems().setAll(ss);
+        int ix = ss.indexOf(st);
+        if (ix >= 0) {
+            styleField.getSelectionModel().select(ix);
+        }
+    }
+
+    protected void update() {
+        Font f = getFont();
+        property.set(f);
+    }
+
     private void setFont(Font f) {
         String name;
+        String style;
         double size;
         if (f == null) {
             name = null;
+            style = null;
             size = 12.0;
         } else {
-            name = f.getName();
+            name = f.getFamily();
+            style = f.getStyle();
             size = f.getSize();
         }
         fontField.getSelectionModel().select(name);
+        styleField.getSelectionModel().select(style);
         sizeField.getSelectionModel().select(size);
     }
 
@@ -129,12 +171,13 @@ public class FontOption extends BorderPane {
         if (allowNull) {
             rv.add(null);
         }
-        rv.addAll(Font.getFontNames());
+        rv.addAll(Font.getFamilies());
         return rv;
     }
 
     public void selectSystemFont() {
-        FX.select(fontField, "System Regular"); // windows?
+        FX.select(fontField, "System");
+        FX.select(styleField, "");
         FX.select(sizeField, 12.0);
     }
 }

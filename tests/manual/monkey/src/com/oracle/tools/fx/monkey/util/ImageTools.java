@@ -30,30 +30,44 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.image.PixelWriter;
-import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 
 /**
  * Image Tools.
  */
 public class ImageTools {
-    public static ImageView createImageView(Color c, int w, int h) {
-        Image im = createImage(c, w, h);
+    public static ImageView createImageView(int w, int h) {
+        Image im = createImage(w, h);
         return new ImageView(im);
     }
 
-    public static Image createImage(Color c, int w, int h) {
-        WritableImage im = new WritableImage(w, h);
-        PixelWriter wr = im.getPixelWriter();
+    public static Image createImage(int w, int h) {
+        Canvas c = new Canvas(w, h);
+        GraphicsContext g = c.getGraphicsContext2D();
+        g.setFill(Color.gray(0.97));
+        g.fillRect(0, 0, w, h);
 
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
-                wr.setColor(x, y, c);
-            }
+        g.setStroke(Color.gray(0.9));
+        g.setLineWidth(1.0);
+        for (double y = 0.5; y < h; y += 10) {
+            g.strokeLine(0, y, w, y);
+        }
+        for (double x = 0.5; x < w; x += 10) {
+            g.strokeLine(x, 0, x, h);
         }
 
-        return im;
+        g.setStroke(Color.gray(0.7));
+        for (double y = 0.5; y < h; y += 100) {
+            g.strokeLine(0, y, w, y);
+        }
+        for (double x = 0.5; x < w; x += 100) {
+            g.strokeLine(x, 0, x, h);
+        }
+
+        g.setStroke(Color.RED);
+        g.strokeRect(0, 0, w, h);
+
+        return c.snapshot(null, null);
     }
 
     public static Image createImage(String s, int w, int h) {

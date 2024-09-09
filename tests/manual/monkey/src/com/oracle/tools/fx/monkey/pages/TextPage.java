@@ -27,10 +27,12 @@ package com.oracle.tools.fx.monkey.pages;
 import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
 import javafx.scene.Group;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.PickResult;
 import javafx.scene.layout.Border;
 import javafx.scene.text.FontSmoothingType;
 import javafx.scene.text.HitInfo;
@@ -44,6 +46,8 @@ import com.oracle.tools.fx.monkey.options.IntOption;
 import com.oracle.tools.fx.monkey.options.PaintOption;
 import com.oracle.tools.fx.monkey.sheets.Options;
 import com.oracle.tools.fx.monkey.sheets.ShapePropertySheet;
+import com.oracle.tools.fx.monkey.tools.AccessibilityPropertyViewer;
+import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.ShowCharacterRuns;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
@@ -63,12 +67,13 @@ public class TextPage extends TestPaneBase {
 
         text = new Text();
         text.addEventHandler(MouseEvent.ANY, this::handleMouseEvent);
+        FX.setPopupMenu(text, this::createPopupMenu);
 
         hitInfo = new Label();
 
-        showChars = new BooleanOption("showChars", "show characters", () -> updateShowCharacters());
+        showChars = new BooleanOption("showChars", "show characters", (v) -> updateShowCharacters(v));
 
-        wrap = new BooleanOption("wrap", "wrap width", () -> updateWrap());
+        wrap = new BooleanOption("wrap", "wrap width", (v) -> updateWrap(v));
 
         OptionPane op = new OptionPane();
         op.section("Text");
@@ -105,20 +110,20 @@ public class TextPage extends TestPaneBase {
         setContent(scroll);
         setOptions(op);
 
-        updateWrap();
-        updateShowCharacters();
+        updateWrap(false);
+        updateShowCharacters(false);
     }
 
-    private void updateShowCharacters() {
-        if (showChars.getValue()) {
+    private void updateShowCharacters(boolean on) {
+        if (on) {
             ShowCharacterRuns.createFor(text);
         } else {
             ShowCharacterRuns.remove(text);
         }
     }
 
-    private void updateWrap() {
-        if (wrap.getValue()) {
+    private void updateWrap(boolean on) {
+        if (on) {
             text.wrappingWidthProperty().bind(scroll.viewportBoundsProperty().map((b) -> b.getWidth()));
         } else {
             text.wrappingWidthProperty().unbind();
@@ -130,5 +135,11 @@ public class TextPage extends TestPaneBase {
         Point2D p = new Point2D(ev.getX(), ev.getY());
         HitInfo h = text.hitTest(p);
         hitInfo.setText(String.valueOf(h));
+    }
+
+    private ContextMenu createPopupMenu(PickResult pick) {
+        ContextMenu m = new ContextMenu();
+        FX.item(m, "Accessibility Attributes", () -> AccessibilityPropertyViewer.open(pick));
+        return m;
     }
 }

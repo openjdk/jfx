@@ -41,6 +41,7 @@ public class TextTemplates {
             "Long", "<beg-0123456789012345678901234567890123456789-|-0123456789012345678901234567890123456789-end>",
             "Right-to-Left", RIGHT_TO_LEFT,
             "Writing Systems", WritingSystemsDemo.getText(false),
+            "Lorem Ipsum", loremIpsum(),
             "Combining Chars", "Tibetan ཨོཾ་མ་ཎི་པདྨེ་ཧཱུྃ\nDouble diacritics: a\u0360b a\u0361b a\u0362b a\u035cb",
             "Failed Nav Bug", "Arabic: \u0627\u0644\u0639\u0631\u0628\u064a\u0629",
             "Wrap Index Bug", "A regular Arabic verb, كَتَبَ‎ kataba (to write).",
@@ -85,5 +86,20 @@ public class TextTemplates {
             }
         }
         return sb.toString();
+    }
+
+    private static String loremIpsum() {
+        return
+            """
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Pellentesque habitant morbi tristique senectus et netus et malesuada. Nunc eget lorem dolor sed viverra ipsum. Vulputate enim nulla aliquet porttitor lacus. Platea dictumst quisque sagittis purus sit amet volutpat consequat. Vestibulum rhoncus est pellentesque elit ullamcorper dignissim cras tincidunt. Turpis egestas pretium aenean pharetra magna. Ultricies mi quis hendrerit dolor magna eget est lorem ipsum. Vitae et leo duis ut diam quam. Tincidunt nunc pulvinar sapien et. Laoreet sit amet cursus sit amet dictum sit amet.
+            
+            Ornare suspendisse sed nisi lacus sed viverra tellus. Hac habitasse platea dictumst quisque. Egestas quis ipsum suspendisse ultrices gravida dictum fusce ut placerat. Diam vulputate ut pharetra sit amet aliquam id diam maecenas. At volutpat diam ut venenatis tellus in metus. Imperdiet nulla malesuada pellentesque elit eget gravida cum sociis natoque. Nisl vel pretium lectus quam id leo in vitae. Turpis cursus in hac habitasse platea. Varius vel pharetra vel turpis nunc. Eu volutpat odio facilisis mauris. Dictum fusce ut placerat orci nulla pellentesque. Pulvinar neque laoreet suspendisse interdum. Congue nisi vitae suscipit tellus mauris a diam maecenas. Sapien nec sagittis aliquam malesuada bibendum arcu vitae. Amet nisl purus in mollis nunc sed id semper.
+            
+            Pretium quam vulputate dignissim suspendisse in est ante in. Non odio euismod lacinia at quis risus. Pellentesque elit eget gravida cum. Malesuada proin libero nunc consequat interdum varius sit amet mattis. Nulla posuere sollicitudin aliquam ultrices sagittis orci a scelerisque. Ullamcorper morbi tincidunt ornare massa. Eu facilisis sed odio morbi quis commodo. Lorem ipsum dolor sit amet consectetur. Et molestie ac feugiat sed. Facilisis mauris sit amet massa vitae tortor. Consectetur adipiscing elit duis tristique sollicitudin. Tempus imperdiet nulla malesuada pellentesque elit eget gravida.
+            
+            Diam ut venenatis tellus in metus vulputate eu scelerisque felis. Eget nunc scelerisque viverra mauris in. Ac orci phasellus egestas tellus rutrum tellus. Nulla pellentesque dignissim enim sit amet. Congue quisque egestas diam in arcu cursus euismod quis viverra. Augue interdum velit euismod in pellentesque massa placerat. Vitae tempus quam pellentesque nec nam aliquam sem. Nisl vel pretium lectus quam id leo. Facilisi etiam dignissim diam quis. Pharetra convallis posuere morbi leo urna. Nisl nunc mi ipsum faucibus vitae aliquet nec ullamcorper sit. Eleifend mi in nulla posuere sollicitudin aliquam ultrices. Donec ultrices tincidunt arcu non sodales neque sodales ut. Nisi porta lorem mollis aliquam. Vitae aliquet nec ullamcorper sit.
+            
+            Vitae justo eget magna fermentum iaculis eu non. Sed blandit libero volutpat sed cras. Et ultrices neque ornare aenean euismod elementum nisi quis eleifend. Porta non pulvinar neque laoreet suspendisse interdum consectetur. Orci porta non pulvinar neque laoreet suspendisse interdum. Elementum pulvinar etiam non quam lacus suspendisse faucibus. Eu lobortis elementum nibh tellus molestie nunc non blandit massa. Mi proin sed libero enim sed faucibus turpis in eu. Feugiat vivamus at augue eget arcu. In pellentesque massa placerat duis ultricies lacus sed turpis tincidunt.
+            """;
     }
 }
