@@ -97,7 +97,7 @@ public class Loggers {
                 sb.append(c);
                 continue;
             }
-            
+
             sb.append(s);
         }
         sb.append('"');
