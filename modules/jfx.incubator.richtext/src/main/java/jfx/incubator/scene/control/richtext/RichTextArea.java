@@ -1027,13 +1027,14 @@ public class RichTextArea extends Control {
      * Appends the styled text to the end of the document.  Any embedded {@code "\n"} or {@code "\r\n"}
      * sequences result in a new paragraph being added.
      * <p>
-     * This method is no-op if either the control or the model is not editable.  It is up to the model
-     * to select whether to accept all, some, or none of the
+     * It is up to the model to decide whether to accept all, some, or none of the
      * {@link jfx.incubator.scene.control.richtext.model.StyleAttribute StyleAttribute}s.
      *
      * @param text the text to append
      * @param attrs the style attributes
      * @return the text position at the end of the appended text, or null if editing is disabled
+     * @throws NullPointerException if the model is {@code null}
+     * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
     public final TextPos appendText(String text, StyleAttributeMap attrs) {
         TextPos p = getDocumentEnd();
@@ -1041,12 +1042,29 @@ public class RichTextArea extends Control {
     }
 
     /**
+     * Appends the styled text to the end of the document.  Any embedded {@code "\n"} or {@code "\r\n"}
+     * sequences result in a new paragraph being added.
+     * <p>
+     * This convenience method is equivalent to calling
+     * {@code appendText(text, StyleAttributeMap.EMPTY);}
+     *
+     * @param text the text to append
+     * @return the text position at the end of the appended text, or null if editing is disabled
+     * @throws NullPointerException if the model is {@code null}
+     * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
+     */
+    public final TextPos appendText(String text) {
+        return appendText(text, StyleAttributeMap.EMPTY);
+    }
+
+    /**
      * Appends the styled content to the end of the document.  Any embedded {@code "\n"} or {@code "\r\n"}
      * sequences result in a new paragraph being added.
-     * This method is no-op if either the control or the model is not editable.
      *
      * @param in the input stream
      * @return the text position at the end of the appended text, or null if editing is disabled
+     * @throws NullPointerException if the model is {@code null}
+     * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
     public final TextPos appendText(StyledInput in) {
         TextPos p = getDocumentEnd();
@@ -1085,7 +1103,9 @@ public class RichTextArea extends Control {
 
     /**
      * Clears the document, creating an undo entry.
-     * This method does nothing if either control or the model is not editable.
+     *
+     * @throws NullPointerException if the model is {@code null}
+     * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
     public final void clear() {
         TextPos end = getDocumentEnd();
@@ -1140,10 +1160,13 @@ public class RichTextArea extends Control {
      * Transfers the currently selected text to the clipboard,
      * removing the current selection.
      * <p>
-     * This method does nothing if either control or the model is not editable, or the caret position is {@code null}.
+     * This method does nothing if the model or the caret position is {@code null}.
+     * The default implementation may throw an {@code UnsupportedOperationException}
+     * if the control is not editable.  When this happens, the copying to clipboard will succeed.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#CUT
+     * @throws UnsupportedOperationException if the control is not editable
      */
     public void cut() {
         execute(Tags.CUT);
@@ -1412,13 +1435,13 @@ public class RichTextArea extends Control {
     /**
      * Inserts the styled text at the specified position.  Any embedded {@code "\n"} or {@code "\r\n"}
      * sequences result in a new paragraph being added.
-     * <p>
-     * This method does nothing if either control or the model is not editable.
      *
      * @param pos the insert position
      * @param text the text to inser
      * @param attrs the style attributes
      * @return the text position at the end of the appended text, or null if editing is disabled
+     * @throws NullPointerException if the model is {@code null}
+     * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
     public final TextPos insertText(TextPos pos, String text, StyleAttributeMap attrs) {
         StyledInput in = StyledInput.of(text, attrs);
@@ -1427,12 +1450,12 @@ public class RichTextArea extends Control {
 
     /**
      * Inserts the styled content at the specified position.
-     * <p>
-     * This method does nothing if either control or the model is not editable.
      *
      * @param pos the insert position
      * @param in the input stream
      * @return the text position at the end of the appended text, or null if editing is disabled
+     * @throws NullPointerException if the model is {@code null}
+     * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
     public final TextPos insertText(TextPos pos, StyledInput in) {
         return replaceText(pos, pos, in, true);
@@ -1773,8 +1796,6 @@ public class RichTextArea extends Control {
 
     /**
      * Replaces the specified range with the new input.
-     * <p>
-     * This method does nothing if the model is null.
      *
      * @param start the start text position
      * @param end the end text position
@@ -2092,8 +2113,6 @@ public class RichTextArea extends Control {
      * All the existing attributes in the selected range will be cleared.
      * When setting the paragraph attributes, the affected range
      * might be wider than one specified.
-     * <p>
-     * This method does nothing if either control or the model is not editable.
      *
      * @param start the start of text range
      * @param end the end of text range

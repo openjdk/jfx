@@ -452,6 +452,7 @@ public final class RichUtils {
      * @param error the exception thrown (can be null)
      */
     // TODO this probably should be in Platform
+    // TODO alternatively, we can add a similarly named method to the RichTextArea
     public static void provideErrorFeedback(Node originator, Throwable error) {
         beep();
         if (error != null) {

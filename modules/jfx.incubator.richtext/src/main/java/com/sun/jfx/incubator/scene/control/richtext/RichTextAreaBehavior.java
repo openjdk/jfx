@@ -1222,8 +1222,12 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                     }
                     Clipboard.getSystemClipboard().setContent(c);
 
-                    if (canEdit() && cut) {
-                        deleteSelection();
+                    if (cut) {
+                        if (control.isEditable()) {
+                            deleteSelection();
+                        } else {
+                            throw new UnsupportedOperationException("control is not editable");
+                        }
                     }
                 } catch(Exception | OutOfMemoryError e) {
                     RichUtils.provideErrorFeedback(control, e);
