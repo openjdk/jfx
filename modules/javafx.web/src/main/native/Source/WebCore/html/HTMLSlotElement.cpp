@@ -118,8 +118,8 @@ static void flattenAssignedNodes(Vector<Ref<Node>>& nodes, const HTMLSlotElement
     auto* assignedNodes = slot.assignedNodes();
     if (!assignedNodes) {
         for (RefPtr<Node> child = slot.firstChild(); child; child = child->nextSibling()) {
-            if (is<HTMLSlotElement>(*child))
-                flattenAssignedNodes(nodes, downcast<HTMLSlotElement>(*child));
+            if (auto* slot = dynamicDowncast<HTMLSlotElement>(*child))
+                flattenAssignedNodes(nodes, *slot);
             else if (is<Text>(*child) || is<Element>(*child))
                 nodes.append(*child);
         }
@@ -131,8 +131,8 @@ static void flattenAssignedNodes(Vector<Ref<Node>>& nodes, const HTMLSlotElement
             ASSERT_NOT_REACHED();
             continue;
         }
-        if (is<HTMLSlotElement>(*node) && downcast<HTMLSlotElement>(*node).containingShadowRoot())
-            flattenAssignedNodes(nodes, downcast<HTMLSlotElement>(*node));
+        if (auto* slot = dynamicDowncast<HTMLSlotElement>(*node); slot && slot->containingShadowRoot())
+            flattenAssignedNodes(nodes, *slot);
         else
             nodes.append(*node);
     }
@@ -159,10 +159,8 @@ Vector<Ref<Node>> HTMLSlotElement::assignedNodes(const AssignedNodesOptions& opt
 
 Vector<Ref<Element>> HTMLSlotElement::assignedElements(const AssignedNodesOptions& options) const
 {
-    return compactMap(assignedNodes(options), [](auto&& node) -> RefPtr<Element> {
-        if (!is<Element>(node))
-            return nullptr;
-        return static_reference_cast<Element>(WTFMove(node));
+    return compactMap(assignedNodes(options), [](Ref<Node>&& node) -> RefPtr<Element> {
+        return dynamicDowncast<Element>(WTFMove(node));
     });
 }
 

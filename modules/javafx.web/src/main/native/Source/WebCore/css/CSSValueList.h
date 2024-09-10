@@ -26,7 +26,8 @@
 
 namespace WebCore {
 
-using CSSValueListBuilder = Vector<Ref<CSSValue>, 4>;
+static constexpr size_t CSSValueListBuilderInlineCapacity = 4;
+using CSSValueListBuilder = Vector<Ref<CSSValue>, CSSValueListBuilderInlineCapacity>;
 
 class CSSValueContainingVector : public CSSValue {
 public:
@@ -65,15 +66,20 @@ public:
     using CSSValue::separatorCSSText;
 
     bool customTraverseSubresources(const Function<bool(const CachedResource&)>&) const;
+    void customSetReplacementURLForSubresources(const HashMap<String, String>&);
+    void customClearReplacementURLForSubresources();
 
     CSSValueListBuilder copyValues() const;
 
     // Consider removing these functions and having callers use size() and operator[] instead.
     unsigned length() const { return size(); }
     const CSSValue* item(unsigned index) const { return index < size() ? &(*this)[index] : nullptr; }
+    RefPtr<const CSSValue> protectedItem(unsigned index) const { return item(index); }
     const CSSValue* itemWithoutBoundsCheck(unsigned index) const { return &(*this)[index]; }
 
 protected:
+    friend bool CSSValue::addHash(Hasher&) const;
+
     CSSValueContainingVector(ClassType, ValueSeparator);
     CSSValueContainingVector(ClassType, ValueSeparator, CSSValueListBuilder);
     CSSValueContainingVector(ClassType, ValueSeparator, Ref<CSSValue>);
@@ -81,6 +87,8 @@ protected:
     CSSValueContainingVector(ClassType, ValueSeparator, Ref<CSSValue>, Ref<CSSValue>, Ref<CSSValue>);
     CSSValueContainingVector(ClassType, ValueSeparator, Ref<CSSValue>, Ref<CSSValue>, Ref<CSSValue>, Ref<CSSValue>);
     ~CSSValueContainingVector();
+
+    bool addDerivedHash(Hasher&) const;
 
 private:
     unsigned m_size { 0 };
@@ -110,6 +118,8 @@ public:
     bool equals(const CSSValueList&) const;
 
 private:
+    friend void add(Hasher&, const CSSValueList&);
+
     explicit CSSValueList(ValueSeparator);
     CSSValueList(ValueSeparator, CSSValueListBuilder);
     CSSValueList(ValueSeparator, Ref<CSSValue>);
@@ -128,12 +138,16 @@ inline CSSValueContainingVector::~CSSValueContainingVector()
 
 inline const CSSValue& CSSValueContainingVector::operator[](unsigned index) const
 {
-    ASSERT(index < m_size);
     unsigned maxInlineSize = m_inlineStorage.size();
-    if (index < maxInlineSize)
+    if (index < maxInlineSize) {
+        ASSERT(index < m_size);
         return *m_inlineStorage[index];
+    }
+    RELEASE_ASSERT(index < m_size);
     return *m_additionalStorage[index - maxInlineSize];
 }
+
+void add(Hasher&, const CSSValueContainingVector&);
 
 } // namespace WebCore
 

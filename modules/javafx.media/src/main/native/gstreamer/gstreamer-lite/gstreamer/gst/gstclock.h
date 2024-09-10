@@ -175,18 +175,22 @@ typedef gpointer GstClockID;
  *
  * Converts a #GstClockTime to a GTimeVal
  *
- * > on 32-bit systems, a timeval has a range of only 2^32 - 1 seconds,
- * > which is about 68 years.  Expect trouble if you want to schedule stuff
- * > in your pipeline for 2038.
+ * > on many 32-bit systems, a timeval has a range of only 2^32 - 1 seconds,
+ * > which is about 68 years. Expect trouble if you want to schedule stuff
+ * > in your pipeline for 2038. This macro asserts that this case does not
+ * > happen.
  */
-#define GST_TIME_TO_TIMEVAL(t,tv)                               \
-G_STMT_START {                                                  \
-  g_assert ("Value of time " #t " is out of timeval's range" && \
-      ((t) / GST_SECOND) < G_MAXLONG);                          \
-  (tv).tv_sec  = (glong) (((GstClockTime) (t)) / GST_SECOND);   \
-  (tv).tv_usec = (glong) ((((GstClockTime) (t)) -               \
-                  ((GstClockTime) (tv).tv_sec) * GST_SECOND)    \
-                 / GST_USECOND);                                \
+#define GST_TIME_TO_TIMEVAL(t,tv)                                           \
+G_STMT_START {                                                              \
+  G_STATIC_ASSERT (sizeof ((tv).tv_sec) == 4 || sizeof ((tv).tv_sec) == 8); \
+  if (sizeof ((tv).tv_sec) == 4) {                                          \
+    g_assert ("Value of time " #t " is out of timeval's range" &&           \
+        ((t) / GST_SECOND) < G_MAXINT32);                                   \
+  }                                                                         \
+  (tv).tv_sec  = (((GstClockTime) (t)) / GST_SECOND);                       \
+  (tv).tv_usec = ((((GstClockTime) (t)) -                                   \
+                  ((GstClockTime) (tv).tv_sec) * GST_SECOND)                \
+                 / GST_USECOND);                                            \
 } G_STMT_END
 
 /**
@@ -203,12 +207,15 @@ G_STMT_START {                                                  \
  *
  * Converts a #GstClockTime to a struct timespec (see `man pselect`)
  */
-#define GST_TIME_TO_TIMESPEC(t,ts)                                \
-G_STMT_START {                                                    \
-  g_assert ("Value of time " #t " is out of timespec's range" &&  \
-      ((t) / GST_SECOND) < G_MAXLONG);                            \
-  (ts).tv_sec  =  (glong) ((t) / GST_SECOND);                     \
-  (ts).tv_nsec = (glong) (((t) - (ts).tv_sec * GST_SECOND) / GST_NSECOND);        \
+#define GST_TIME_TO_TIMESPEC(t,ts)                                          \
+G_STMT_START {                                                              \
+  G_STATIC_ASSERT (sizeof ((ts).tv_sec) == 4 || sizeof ((ts).tv_sec) == 8); \
+  if (sizeof ((ts).tv_sec) == 4) {                                          \
+    g_assert ("Value of time " #t " is out of timespec's range" &&          \
+        ((t) / GST_SECOND) < G_MAXINT32);                                   \
+  }                                                                         \
+  (ts).tv_sec  =  ((t) / GST_SECOND);                                       \
+  (ts).tv_nsec = (((t) - (ts).tv_sec * GST_SECOND) / GST_NSECOND);          \
 } G_STMT_END
 
 /* timestamp debugging macros */

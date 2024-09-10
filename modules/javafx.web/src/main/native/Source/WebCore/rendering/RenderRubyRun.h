@@ -77,7 +77,6 @@ public:
     RenderPtr<RenderRubyBase> createRubyBase() const;
 
 private:
-    bool isRubyRun() const override { return true; }
     ASCIILiteral renderName() const override { return "RenderRubyRun (anonymous)"_s; }
     bool createsAnonymousWrapper() const override { return true; }
     bool canDropAnonymousBlockChild() const override { return false; }
@@ -89,4 +88,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderRubyRun, isRubyRun())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderRubyRun, isRenderRubyRun())

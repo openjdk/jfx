@@ -775,4 +775,15 @@ String localizedString(const char* key)
 }
 #endif
 
+String formatLocalizedString(const char* format, ...)
+{
+    notImplemented();
+    return String::fromUTF8(format);
+}
+
+String validationMessageValueMissingForSwitchText()
+{
+    return WEB_UI_STRING("Tap this switch", "Validation message for required switches that are not on");
+}
+
 } // namespace WebCore

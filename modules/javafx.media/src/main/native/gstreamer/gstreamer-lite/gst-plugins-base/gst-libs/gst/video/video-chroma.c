@@ -1094,7 +1094,7 @@ gst_video_chroma_resample_new (GstVideoChromaMethod method,
 
   GST_DEBUG ("v_resample %d, factor %d, cosite %d", v_index, v_factor, cosite);
 
-  result = g_slice_new (GstVideoChromaResample);
+  result = g_new (GstVideoChromaResample, 1);
   result->method = method;
   result->site = site;
   result->flags = flags;
@@ -1144,7 +1144,7 @@ gst_video_chroma_resample_free (GstVideoChromaResample * resample)
 {
   g_return_if_fail (resample != NULL);
 
-  g_slice_free (GstVideoChromaResample, resample);
+  g_free (resample);
 }
 
 /**

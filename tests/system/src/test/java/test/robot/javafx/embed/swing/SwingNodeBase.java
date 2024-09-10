@@ -191,11 +191,6 @@ public class SwingNodeBase {
         }
     }
 
-    private static boolean isOnWayland() {
-        String waylandDisplay = System.getenv("WAYLAND_DISPLAY");
-        return waylandDisplay != null && !waylandDisplay.isEmpty();
-    }
-
     public void testAbove(boolean above) {
         int checkLoc = BASE_LOCATION + 3 * BASE_SIZE /4;
         int clickLoc = BASE_LOCATION + BASE_SIZE / 4;
@@ -207,7 +202,7 @@ public class SwingNodeBase {
 
             // Emulating mouse clicks on XWayland with XTEST does not currently affect the Wayland compositor,
             // so trying to click on the window title or window body will not bring the window to the front.
-            if (isOnWayland()) {
+            if (Util.isOnWayland()) {
                 runWaitSleep(() -> myApp.stage.toFront());
             }
         }

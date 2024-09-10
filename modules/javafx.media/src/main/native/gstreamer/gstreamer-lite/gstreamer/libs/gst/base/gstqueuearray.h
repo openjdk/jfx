@@ -104,6 +104,23 @@ gpointer        gst_queue_array_pop_tail_struct  (GstQueueArray * array);
 GST_BASE_API
 gpointer        gst_queue_array_peek_tail_struct (GstQueueArray * array);
 
+GST_BASE_API
+void            gst_queue_array_push_sorted (GstQueueArray * array,
+                                             gpointer data,
+                                             GCompareDataFunc func,
+                                             gpointer user_data);
+
+GST_BASE_API
+void            gst_queue_array_push_sorted_struct (GstQueueArray * array,
+                                                    gpointer p_struct,
+                                                    GCompareDataFunc func,
+                                                    gpointer user_data);
+
+GST_BASE_API
+void            gst_queue_array_sort (GstQueueArray *array,
+                                      GCompareDataFunc compare_func,
+                                      gpointer user_data);
+
 G_END_DECLS
 
 #endif

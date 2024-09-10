@@ -17,9 +17,8 @@
  Boston, MA 02110-1301, USA.
  */
 
-#ifndef TextureMapperTile_h
-#define TextureMapperTile_h
-
+#pragma once
+#if PLATFORM(JAVA)
 #include "FloatRect.h"
 #include "Image.h"
 #include "TextureMapper.h"
@@ -53,5 +52,36 @@ private:
 };
 
 }
+#else
+#include "FloatRect.h"
+#include "Image.h"
+#include <wtf/RefPtr.h>
 
+namespace WebCore {
+
+class BitmapTexture;
+class GraphicsLayer;
+class TextureMapper;
+
+class TextureMapperTile {
+    WTF_MAKE_FAST_ALLOCATED;
+public:
+    RefPtr<BitmapTexture> texture() const;
+    inline FloatRect rect() const { return m_rect; }
+    void setTexture(BitmapTexture*);
+    inline void setRect(const FloatRect& rect) { m_rect = rect; }
+
+    void updateContents(Image*, const IntRect&);
+    void updateContents(GraphicsLayer*, const IntRect&, float scale = 1);
+    WEBCORE_EXPORT virtual void paint(TextureMapper&, const TransformationMatrix&, float, bool allEdgesExposed);
+    virtual ~TextureMapperTile();
+
+    explicit TextureMapperTile(const FloatRect&);
+protected:
+    RefPtr<BitmapTexture> m_texture;
+private:
+    FloatRect m_rect;
+};
+
+} // namespace WebCore
 #endif

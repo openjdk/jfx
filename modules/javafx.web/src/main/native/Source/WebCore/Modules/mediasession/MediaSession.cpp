@@ -68,54 +68,54 @@ static const char* logClassName()
 static PlatformMediaSession::RemoteControlCommandType platformCommandForMediaSessionAction(MediaSessionAction action)
 {
     static constexpr std::pair<MediaSessionAction, PlatformMediaSession::RemoteControlCommandType> mappings[] {
-        { MediaSessionAction::Play, PlatformMediaSession::PlayCommand },
-        { MediaSessionAction::Pause, PlatformMediaSession::PauseCommand },
-        { MediaSessionAction::Seekbackward, PlatformMediaSession::SkipBackwardCommand },
-        { MediaSessionAction::Seekforward, PlatformMediaSession::SkipForwardCommand },
-        { MediaSessionAction::Previoustrack, PlatformMediaSession::PreviousTrackCommand },
-        { MediaSessionAction::Nexttrack, PlatformMediaSession::NextTrackCommand },
-        { MediaSessionAction::Skipad, PlatformMediaSession::NextTrackCommand },
-        { MediaSessionAction::Stop, PlatformMediaSession::StopCommand },
-        { MediaSessionAction::Seekto, PlatformMediaSession::SeekToPlaybackPositionCommand },
+        { MediaSessionAction::Play, PlatformMediaSession::RemoteControlCommandType::PlayCommand },
+        { MediaSessionAction::Pause, PlatformMediaSession::RemoteControlCommandType::PauseCommand },
+        { MediaSessionAction::Seekbackward, PlatformMediaSession::RemoteControlCommandType::SkipBackwardCommand },
+        { MediaSessionAction::Seekforward, PlatformMediaSession::RemoteControlCommandType::SkipForwardCommand },
+        { MediaSessionAction::Previoustrack, PlatformMediaSession::RemoteControlCommandType::PreviousTrackCommand },
+        { MediaSessionAction::Nexttrack, PlatformMediaSession::RemoteControlCommandType::NextTrackCommand },
+        { MediaSessionAction::Skipad, PlatformMediaSession::RemoteControlCommandType::NextTrackCommand },
+        { MediaSessionAction::Stop, PlatformMediaSession::RemoteControlCommandType::StopCommand },
+        { MediaSessionAction::Seekto, PlatformMediaSession::RemoteControlCommandType::SeekToPlaybackPositionCommand },
     };
     static constexpr SortedArrayMap map { mappings };
-    return map.get(action, PlatformMediaSession::NoCommand);
+    return map.get(action, PlatformMediaSession::RemoteControlCommandType::NoCommand);
 }
 
 static std::optional<std::pair<PlatformMediaSession::RemoteControlCommandType, PlatformMediaSession::RemoteCommandArgument>> platformCommandForMediaSessionAction(const MediaSessionActionDetails& actionDetails)
 {
-    PlatformMediaSession::RemoteControlCommandType command = PlatformMediaSession::NoCommand;
+    PlatformMediaSession::RemoteControlCommandType command = PlatformMediaSession::RemoteControlCommandType::NoCommand;
     PlatformMediaSession::RemoteCommandArgument argument;
 
     switch (actionDetails.action) {
     case MediaSessionAction::Play:
-        command = PlatformMediaSession::PlayCommand;
+        command = PlatformMediaSession::RemoteControlCommandType::PlayCommand;
         break;
     case MediaSessionAction::Pause:
-        command = PlatformMediaSession::PauseCommand;
+        command = PlatformMediaSession::RemoteControlCommandType::PauseCommand;
         break;
     case MediaSessionAction::Seekbackward:
-        command = PlatformMediaSession::SkipBackwardCommand;
+        command = PlatformMediaSession::RemoteControlCommandType::SkipBackwardCommand;
         argument.time = actionDetails.seekOffset;
         break;
     case MediaSessionAction::Seekforward:
-        command = PlatformMediaSession::SkipForwardCommand;
+        command = PlatformMediaSession::RemoteControlCommandType::SkipForwardCommand;
         argument.time = actionDetails.seekOffset;
         break;
     case MediaSessionAction::Previoustrack:
-        command = PlatformMediaSession::PreviousTrackCommand;
+        command = PlatformMediaSession::RemoteControlCommandType::PreviousTrackCommand;
         break;
     case MediaSessionAction::Nexttrack:
-        command = PlatformMediaSession::NextTrackCommand;
+        command = PlatformMediaSession::RemoteControlCommandType::NextTrackCommand;
         break;
     case MediaSessionAction::Skipad:
         // Not supported at present.
         break;
     case MediaSessionAction::Stop:
-        command = PlatformMediaSession::StopCommand;
+        command = PlatformMediaSession::RemoteControlCommandType::StopCommand;
         break;
     case MediaSessionAction::Seekto:
-        command = PlatformMediaSession::SeekToPlaybackPositionCommand;
+        command = PlatformMediaSession::RemoteControlCommandType::SeekToPlaybackPositionCommand;
         argument.time = actionDetails.seekTime;
         argument.fastSeek = actionDetails.fastSeek;
         break;
@@ -123,7 +123,7 @@ static std::optional<std::pair<PlatformMediaSession::RemoteControlCommandType, P
         // Not supported at present.
         break;
     }
-    if (command == PlatformMediaSession::NoCommand)
+    if (command == PlatformMediaSession::RemoteControlCommandType::NoCommand)
         return { };
 
     return std::make_pair(command, argument);
@@ -147,7 +147,7 @@ MediaSession::MediaSession(Navigator& navigator)
     m_logIdentifier = nextLogIdentifier();
 
 #if ENABLE(MEDIA_SESSION_COORDINATOR)
-    auto* frame = navigator.frame();
+    RefPtr frame = navigator.frame();
     auto* page = frame ? frame->page() : nullptr;
     if (page && page->mediaSessionCoordinator())
         m_coordinator->setMediaSessionCoordinatorPrivate(*page->mediaSessionCoordinator());
@@ -218,7 +218,7 @@ ExceptionOr<void> MediaSession::setPlaylist(ScriptExecutionContext& context, Vec
         if (resolvedEntry.hasException())
             return resolvedEntry.releaseException();
 
-        resolvedPlaylist.uncheckedAppend(resolvedEntry.releaseReturnValue());
+        resolvedPlaylist.append(resolvedEntry.releaseReturnValue());
     }
 
     m_playlist = WTFMove(resolvedPlaylist);
@@ -249,7 +249,7 @@ void MediaSession::setActionHandler(MediaSessionAction action, RefPtr<MediaSessi
         m_actionHandlers.set(action, handler);
         }
         auto platformCommand = platformCommandForMediaSessionAction(action);
-        if (platformCommand != PlatformMediaSession::NoCommand)
+        if (platformCommand != PlatformMediaSession::RemoteControlCommandType::NoCommand)
             PlatformMediaSessionManager::sharedManager().addSupportedCommand(platformCommand);
     } else {
         bool containedAction;
@@ -271,7 +271,7 @@ void MediaSession::callActionHandler(const MediaSessionActionDetails& actionDeta
     ALWAYS_LOG(LOGIDENTIFIER);
 
     if (!callActionHandler(actionDetails, TriggerGestureIndicator::No)) {
-        promise.reject(InvalidStateError);
+        promise.reject(ExceptionCode::InvalidStateError);
         return;
     }
 
@@ -288,7 +288,7 @@ bool MediaSession::callActionHandler(const MediaSessionActionDetails& actionDeta
     if (handler) {
         std::optional<UserGestureIndicator> maybeGestureIndicator;
         if (triggerGestureIndicator == TriggerGestureIndicator::Yes)
-            maybeGestureIndicator.emplace(ProcessingUserGesture, document());
+            maybeGestureIndicator.emplace(IsProcessingUserGesture::Yes, document());
         handler->handleEvent(actionDetails);
         return true;
     }
@@ -321,7 +321,7 @@ ExceptionOr<void> MediaSession::setPositionState(std::optional<MediaPositionStat
         && state->position <= state->duration
         && std::isfinite(state->playbackRate)
         && state->playbackRate))
-        return Exception { TypeError };
+        return Exception { ExceptionCode::TypeError };
 
     m_positionState = WTFMove(state);
     m_lastReportedPosition = m_positionState->position;
@@ -404,11 +404,11 @@ void MediaSession::notifyActionHandlerObservers()
 
 RefPtr<HTMLMediaElement> MediaSession::activeMediaElement() const
 {
-    auto* doc = document();
-    if (!doc)
+    RefPtr document = this->document();
+    if (!document)
         return nullptr;
 
-    return HTMLMediaElement::bestMediaElementForRemoteControls(MediaElementSession::PlaybackControlsPurpose::MediaSession, doc);
+    return HTMLMediaElement::bestMediaElementForRemoteControls(MediaElementSession::PlaybackControlsPurpose::MediaSession, document.get());
 }
 
 void MediaSession::updateReportedPosition()

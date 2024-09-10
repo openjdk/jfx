@@ -412,8 +412,8 @@ gboolean              g_strv_equal     (const gchar * const *strv1,
 
 /**
  * GNumberParserError:
- * @G_NUMBER_PARSER_ERROR_INVALID: String was not a valid number.
- * @G_NUMBER_PARSER_ERROR_OUT_OF_BOUNDS: String was a number, but out of bounds.
+ * @G_NUMBER_PARSER_ERROR_INVALID: string was not a valid number
+ * @G_NUMBER_PARSER_ERROR_OUT_OF_BOUNDS: string was a number, but out of bounds
  *
  * Error codes returned by functions converting a string to a number.
  *
@@ -456,28 +456,34 @@ gboolean              g_ascii_string_to_unsigned   (const gchar  *str,
 
 /**
  * g_set_str: (skip)
- * @str_pointer: (inout) (not optional) (nullable): a pointer to either a string or %NULL
- * @new_str: (nullable): a string to assign to @str_pointer, or %NULL
+ * @str_pointer: (inout) (not optional) (nullable): a pointer to either
+ *   a string or `NULL`
+ * @new_str: (nullable): a string to assign to @str_pointer
  *
- * Updates a pointer to a string to a copy of @new_str. The previous string
- * pointed to by @str_pointer will be freed with g_free().
+ * Updates a pointer to a string to a copy of @new_str and returns whether the
+ * string was changed.
  *
- * @str_pointer must not be %NULL, but can point to a %NULL value.
+ * If @new_str matches the previous string, this function is a no-op. If
+ * @new_str is different, a copy of it will be assigned to @str_pointer and
+ * the previous string pointed to by @str_pointer will be freed with
+ * [func@GLib.free].
+ *
+ * @str_pointer must not be `NULL`, but can point to a `NULL` value.
  *
  * One convenient usage of this function is in implementing property settings:
- * |[
- *   void
- *   foo_set_bar (Foo        *foo,
- *                const char *new_bar)
- *   {
- *     g_return_if_fail (IS_FOO (foo));
+ * ```C
+ * void
+ * foo_set_bar (Foo        *foo,
+ *              const char *new_bar)
+ * {
+ *   g_return_if_fail (IS_FOO (foo));
  *
- *     if (g_set_str (&foo->bar, new_bar))
- *       g_object_notify (foo, "bar");
- *   }
- * ]|
+ *   if (g_set_str (&foo->bar, new_bar))
+ *     g_object_notify (foo, "bar");
+ * }
+ * ```
  *
- * Returns: %TRUE if the value of @str_pointer changed, %FALSE otherwise
+ * Returns: true if the value of @str_pointer changed, false otherwise
  *
  * Since: 2.76
  */

@@ -23,6 +23,7 @@
 #include <glib.h>
 #include "gwakeup.h"
 #include "gstdioprivate.h"
+#include "gdatasetprivate.h"
 
 /* gcc defines __SANITIZE_ADDRESS__, clang sets the address_sanitizer
  * feature flag.
@@ -37,13 +38,62 @@
 /*
  * %_GLIB_ADDRESS_SANITIZER:
  *
- * Private macro defined if the AddressSanitizer is in use.
+ * Private macro defined if the AddressSanitizer is in use by GLib itself.
  */
 #define _GLIB_ADDRESS_SANITIZER
 
 #include <sanitizer/lsan_interface.h>
 
+/* If GLib itself is not compiled with ASAN sanitizer we may still want to
+ * control it in case it's linked by the loading application, so we need to
+ * do this check dynamically.
+ * However MinGW doesn't support weak attribute properly (even if it advertises
+ * it), so we ignore it in such case since it's not convenient to go through
+ * dlsym().
+ * Under MSVC we could use alternatename, but it doesn't seem to be as reliable
+ * as we'd like: https://stackoverflow.com/a/11529277/210151 and
+ * https://devblogs.microsoft.com/oldnewthing/20200731-00/?p=104024
+ */
+#elif defined (G_OS_UNIX) && !defined (__APPLE__) && g_macro__has_attribute (weak)
+
+#define HAS_DYNAMIC_ASAN_LOADING
+
+void __lsan_enable (void) __attribute__ ((weak));
+void __lsan_disable (void) __attribute__ ((weak));
+void __lsan_ignore_object (const void *p) __attribute__ ((weak));
+
 #endif
+
+/**
+ * G_CONTAINER_OF:
+ * @ptr: a pointer to a member @field of type @type.
+ * @type: the type of the container in which @field is embedded.
+ * @field: the name of the field in @type.
+ *
+ * Casts away constness of @ptr.
+ *
+ * Returns: a pointer to the container, so that "&(@container)->field == (@ptr)" holds.
+ */
+#define G_CONTAINER_OF(ptr, type, field) ((type *) G_STRUCT_MEMBER_P (ptr, -G_STRUCT_OFFSET (type, field)))
+
+/*
+ * g_leak_sanitizer_is_supported:
+ *
+ * Checks at runtime if LeakSanitizer is currently supported by the running
+ * binary. This may imply that GLib itself is not compiled with sanitizer
+ * but that the loading program is.
+ */
+static inline gboolean
+g_leak_sanitizer_is_supported (void)
+{
+#if defined (_GLIB_ADDRESS_SANITIZER)
+  return TRUE;
+#elif defined (HAS_DYNAMIC_ASAN_LOADING)
+  return __lsan_enable != NULL && __lsan_ignore_object != NULL;
+#else
+  return FALSE;
+#endif
+}
 
 /*
  * g_ignore_leak:
@@ -57,8 +107,11 @@
 static inline void
 g_ignore_leak (gconstpointer p)
 {
-#ifdef _GLIB_ADDRESS_SANITIZER
+#if defined (_GLIB_ADDRESS_SANITIZER)
   if (p != NULL)
+    __lsan_ignore_object (p);
+#elif defined (HAS_DYNAMIC_ASAN_LOADING)
+  if (p != NULL && __lsan_ignore_object != NULL)
     __lsan_ignore_object (p);
 #endif
 }
@@ -73,8 +126,10 @@ g_ignore_leak (gconstpointer p)
 static inline void
 g_ignore_strv_leak (GStrv strv)
 {
-#ifdef _GLIB_ADDRESS_SANITIZER
   gchar **item;
+
+  if (!g_leak_sanitizer_is_supported ())
+    return;
 
   if (strv)
     {
@@ -83,7 +138,6 @@ g_ignore_strv_leak (GStrv strv)
       for (item = strv; *item != NULL; item++)
         g_ignore_leak (*item);
     }
-#endif
 }
 
 /*
@@ -98,8 +152,11 @@ g_ignore_strv_leak (GStrv strv)
 static inline void
 g_begin_ignore_leaks (void)
 {
-#ifdef _GLIB_ADDRESS_SANITIZER
+#if defined (_GLIB_ADDRESS_SANITIZER)
   __lsan_disable ();
+#elif defined (HAS_DYNAMIC_ASAN_LOADING)
+  if (__lsan_disable != NULL)
+    __lsan_disable ();
 #endif
 }
 
@@ -112,10 +169,15 @@ g_begin_ignore_leaks (void)
 static inline void
 g_end_ignore_leaks (void)
 {
-#ifdef _GLIB_ADDRESS_SANITIZER
+#if defined (_GLIB_ADDRESS_SANITIZER)
   __lsan_enable ();
+#elif defined (HAS_DYNAMIC_ASAN_LOADING)
+  if (__lsan_enable != NULL)
+    __lsan_enable ();
 #endif
 }
+
+#undef HAS_DYNAMIC_ASAN_LOADING
 
 GMainContext *          g_get_worker_context            (void);
 gboolean                g_check_setuid                  (void);
@@ -227,11 +289,19 @@ typedef struct {
   /* See guri.c */
   int (* g_uri_get_default_scheme_port) (const char *scheme);
 
+  /* See gutils.c */
+  gboolean (* g_set_prgname_once) (const gchar *prgname);
+
+  gpointer (*g_datalist_id_update_atomic) (GData **datalist,
+                                           GQuark key_id,
+                                           GDataListUpdateAtomicFunc callback,
+                                           gpointer user_data);
+
   /* Add other private functions here, initialize them in glib-private.c */
 } GLibPrivateVTable;
 
 GLIB_AVAILABLE_IN_ALL
-GLibPrivateVTable *glib__private__ (void);
+const GLibPrivateVTable *glib__private__ (void);
 
 /* Please see following for the use of ".ACP" over ""
  * on Windows, although both are accepted at compile-time
@@ -253,5 +323,18 @@ GLibPrivateVTable *glib__private__ (void);
 #else
 # define GLIB_DEFAULT_LOCALE ""
 #endif
+
+gboolean g_uint_equal (gconstpointer v1, gconstpointer v2);
+guint g_uint_hash (gconstpointer v);
+
+#if defined(__GNUC__)
+#define G_THREAD_LOCAL __thread
+#else
+#undef G_THREAD_LOCAL
+#endif
+
+/* Convenience wrapper to call private g_datalist_id_update_atomic() function. */
+#define _g_datalist_id_update_atomic(datalist, key_id, callback, user_data) \
+  (GLIB_PRIVATE_CALL (g_datalist_id_update_atomic) ((datalist), (key_id), (callback), (user_data)))
 
 #endif /* __GLIB_PRIVATE_H__ */

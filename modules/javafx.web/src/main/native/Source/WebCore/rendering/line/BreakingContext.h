@@ -46,6 +46,7 @@
 #include "TrailingObjects.h"
 #include "WordTrailingSpace.h"
 #include <wtf/Function.h>
+#include <wtf/WeakHashSet.h>
 #include <wtf/text/StringView.h>
 #include <wtf/unicode/CharacterNames.h>
 
@@ -67,7 +68,7 @@ struct WordMeasurement {
     float width;
     unsigned startOffset;
     unsigned endOffset;
-    HashSet<const Font*> fallbackFonts;
+    SingleThreadWeakHashSet<const Font> fallbackFonts;
 };
 
 class BreakingContext {
@@ -85,8 +86,6 @@ public:
         , m_renderTextInfo(inRenderTextInfo)
         , m_lastFloatFromPreviousLine(inLastFloatFromPreviousLine)
         , m_width(lineWidth)
-        , m_currWS(WhiteSpace::Normal)
-        , m_lastWS(WhiteSpace::Normal)
         , m_preservesNewline(false)
         , m_atStart(true)
         , m_ignoringSpaces(false)
@@ -100,7 +99,7 @@ public:
         , m_floatsFitOnLine(true)
         , m_collapseWhiteSpace(false)
         , m_startingNewParagraph(m_lineInfo.previousLineBrokeCleanly())
-        , m_allowImagesToBreak(!block.document().inQuirksMode() || !block.isTableCell() || !m_blockStyle.logicalWidth().isIntrinsicOrAuto())
+        , m_allowImagesToBreak(!block.document().inQuirksMode() || !block.isRenderTableCell() || !m_blockStyle.logicalWidth().isIntrinsicOrAuto())
         , m_atEnd(false)
         , m_hadUncommittedWidthBeforeCurrent(false)
         , m_lineWhitespaceCollapsingState(resolver.whitespaceCollapsingState())
@@ -130,12 +129,12 @@ public:
     void commitAndUpdateLineBreakIfNeeded();
     LegacyInlineIterator handleEndOfLine();
 
-    float computeAdditionalBetweenWordsWidth(RenderText&, TextLayout*, UChar, WordTrailingSpace&, HashSet<const Font*>& fallbackFonts, WordMeasurements&, const FontCascade&, bool isFixedPitch, unsigned lastSpace, float lastSpaceWordSpacing, float wordSpacingForWordMeasurement, unsigned offset);
-    float textWidthConsideringPossibleTrailingSpace(RenderText&, TextLayout*, UChar currentCharacter, WordTrailingSpace&, HashSet<const Font*>& fallbackFonts, HashSet<const Font*>& wordMeasurementFallbackFonts, const FontCascade&, bool isFixedPitch, unsigned lastSpace, unsigned offset);
+    float computeAdditionalBetweenWordsWidth(RenderText&, TextLayout*, UChar, WordTrailingSpace&, SingleThreadWeakHashSet<const Font>& fallbackFonts, WordMeasurements&, const FontCascade&, bool isFixedPitch, unsigned lastSpace, float lastSpaceWordSpacing, float wordSpacingForWordMeasurement, unsigned offset);
+    float textWidthConsideringPossibleTrailingSpace(RenderText&, TextLayout*, UChar currentCharacter, WordTrailingSpace&, SingleThreadWeakHashSet<const Font>& fallbackFonts, SingleThreadWeakHashSet<const Font>& wordMeasurementFallbackFonts, const FontCascade&, bool isFixedPitch, unsigned lastSpace, unsigned offset);
 
     void clearLineBreakIfFitsOnLine(bool ignoringTrailingSpace = false)
     {
-        if (m_width.fitsOnLine(ignoringTrailingSpace) || m_lastWS == WhiteSpace::NoWrap || m_hangsAtEnd)
+        if (m_width.fitsOnLine(ignoringTrailingSpace) || (m_lastObjectTextWrap == TextWrapMode::NoWrap && m_lastObjectWhitespaceCollapse == WhiteSpaceCollapse::Collapse) || m_hangsAtEnd)
             m_lineBreak.clear();
         m_hangsAtEnd = false;
     }
@@ -179,8 +178,11 @@ private:
 
     LineWidth m_width;
 
-    WhiteSpace m_currWS;
-    WhiteSpace m_lastWS;
+    TextWrapMode m_currentTextWrap { TextWrapMode::Wrap };
+    TextWrapMode m_lastObjectTextWrap { TextWrapMode::Wrap };
+
+    WhiteSpaceCollapse m_currentWhitespaceCollapse { WhiteSpaceCollapse::Collapse };
+    WhiteSpaceCollapse m_lastObjectWhitespaceCollapse { WhiteSpaceCollapse::Collapse };
 
     bool m_preservesNewline;
     bool m_atStart;
@@ -222,16 +224,19 @@ inline void BreakingContext::initializeForCurrentObject()
     if (m_nextObject && m_nextObject->parent() && !m_nextObject->parent()->isDescendantOf(renderer.parent()))
         m_includeEndWidth = true;
 
-    m_currWS = renderer.isReplacedOrInlineBlock() ? renderer.parent()->style().whiteSpace() : renderer.style().whiteSpace();
-    m_lastWS = m_lastObject->isReplacedOrInlineBlock() ? m_lastObject->parent()->style().whiteSpace() : m_lastObject->style().whiteSpace();
+    m_currentTextWrap = renderer.isReplacedOrInlineBlock() ? renderer.parent()->style().textWrapMode() : renderer.style().textWrapMode();
+    m_currentWhitespaceCollapse = renderer.isReplacedOrInlineBlock() ? renderer.parent()->style().whiteSpaceCollapse() : renderer.style().whiteSpaceCollapse();
 
-    bool isSVGText = renderer.isSVGInlineText();
-    m_autoWrap = !isSVGText && RenderStyle::autoWrap(m_currWS);
+    m_lastObjectTextWrap = m_lastObject->isReplacedOrInlineBlock() ? m_lastObject->parent()->style().textWrapMode() : m_lastObject->style().textWrapMode();
+    m_lastObjectWhitespaceCollapse = m_lastObject->isReplacedOrInlineBlock() ? m_lastObject->parent()->style().whiteSpaceCollapse() : m_lastObject->style().whiteSpaceCollapse();
+
+    bool isSVGText = renderer.isRenderSVGInlineText();
+    m_autoWrap = !isSVGText && m_currentTextWrap != TextWrapMode::NoWrap;
     m_autoWrapWasEverTrueOnLine = m_autoWrapWasEverTrueOnLine || m_autoWrap;
 
-    m_preservesNewline = !isSVGText && RenderStyle::preserveNewline(m_currWS);
+    m_preservesNewline = !isSVGText && m_currentWhitespaceCollapse != WhiteSpaceCollapse::Collapse;
 
-    m_collapseWhiteSpace = RenderStyle::collapseWhiteSpace(m_currWS);
+    m_collapseWhiteSpace = m_currentWhitespaceCollapse == WhiteSpaceCollapse::Collapse || m_currentWhitespaceCollapse == WhiteSpaceCollapse::PreserveBreaks;
 }
 
 inline void BreakingContext::increment()
@@ -302,36 +307,34 @@ inline LayoutUnit inlineLogicalWidth(const RenderObject& renderer, bool checkSta
 
     auto shouldAddBorderPaddingMargin = [] (const auto& renderer) {
         // When deciding whether we're at the edge of an inline, adjacent collapsed whitespace is the same as no sibling at all.
-        if (is<RenderText>(renderer) && !downcast<RenderText>(renderer).text().length())
+        auto* textRenderer = dynamicDowncast<RenderText>(renderer);
+        if (textRenderer && !textRenderer->text().length())
             return true;
-#if ENABLE(CSS_BOX_DECORATION_BREAK)
         if (is<RenderLineBreak>(renderer) && renderer.parent()->style().boxDecorationBreak() == BoxDecorationBreak::Clone)
             return true;
-#endif
         return false;
     };
 
     unsigned lineDepth = 1;
     auto extraWidth = LayoutUnit { };
-    auto* parent = renderer.parent();
+    auto* parent = dynamicDowncast<RenderInline>(renderer.parent());
     auto* child = &renderer;
-    while (is<RenderInline>(*parent) && lineDepth++ < cMaxLineDepth) {
-        const auto& parentAsRenderInline = downcast<RenderInline>(*parent);
-        if (!isEmptyInline(parentAsRenderInline)) {
+    while (parent && lineDepth++ < cMaxLineDepth) {
+        if (!isEmptyInline(*parent)) {
             auto* previousSibling = previousInFlowSibling(*child);
             checkStartEdge = checkStartEdge && (!previousSibling || shouldAddBorderPaddingMargin(*previousSibling));
             if (checkStartEdge)
-                extraWidth += borderPaddingMarginStart(parentAsRenderInline);
+                extraWidth += borderPaddingMarginStart(*parent);
             auto* nextSibling = child->nextSibling();
             checkEndEdge = checkEndEdge && (!nextSibling || shouldAddBorderPaddingMargin(*nextSibling));
             if (checkEndEdge)
-                extraWidth += borderPaddingMarginEnd(parentAsRenderInline);
+                extraWidth += borderPaddingMarginEnd(*parent);
             if (!checkStartEdge && !checkEndEdge)
                 return extraWidth;
         }
         child = parent;
-        parent = child->parent();
-        ASSERT(parent);
+        ASSERT(child->parent());
+        parent = dynamicDowncast<RenderInline>(child->parent());
     }
     return extraWidth;
 }
@@ -368,26 +371,7 @@ inline void BreakingContext::handleOutOfFlowPositioned(Vector<RenderBox*>& posit
 inline void BreakingContext::handleFloat()
 {
     auto& floatBox = downcast<RenderBox>(*m_current.renderer());
-    auto& floatingObject = *m_lineBreaker.insertFloatingObject(floatBox);
-
-    auto wouldFitWithTrimmedMargin = [&](MarginTrimType marginTrimType) {
-        auto widthWitoutMargin = floatingObject.width();
-        widthWitoutMargin -= marginTrimType == MarginTrimType::InlineStart ? floatBox.marginStart(&m_blockStyle) : floatBox.marginEnd(&m_blockStyle);
-        return m_width.fitsOnLineExcludingTrailingWhitespace(widthWitoutMargin.toFloat());
-    };
-    auto hasFloatsOnSideAtVerticalPosition = [&](UsedFloat floatPosition) {
-        return (floatPosition == UsedFloat::Left) ? m_block.logicalLeftOffsetForLine(m_block.logicalHeight(), DoNotIndentText)  != m_block.logicalLeftOffsetForContent(m_block.logicalHeight()) :  m_block.logicalRightOffsetForLine(m_block.logicalHeight(), DoNotIndentText) != m_block.logicalRightOffsetForContent(m_block.logicalHeight());
-    };
-
-    // We should trim a float's margin early at a particular vertical position if the following are true:
-    // 1.) The float's candidate position is adjacent to the containing block's inner edge
-    // 2.) margin-trim is set for that edge (e.g. margin-trim: inline/inline-start for a left positioned float)
-    // 3.) The float overconstrains a line box or intersects with another float at that vertical position
-    //     but would not overconstrain a line box/intersect a float if that margin were trimmed
-    if (m_blockStyle.marginTrim().contains(MarginTrimType::InlineStart) && RenderStyle::usedFloat(floatBox) == UsedFloat::Left && !hasFloatsOnSideAtVerticalPosition(UsedFloat::Left) && wouldFitWithTrimmedMargin(MarginTrimType::InlineStart))
-        m_block.trimMarginForFloat(floatingObject, MarginTrimType::InlineStart);
-    else if (m_blockStyle.marginTrim().contains(MarginTrimType::InlineEnd) && RenderStyle::usedFloat(floatBox) == UsedFloat::Right && !hasFloatsOnSideAtVerticalPosition(UsedFloat::Right) && wouldFitWithTrimmedMargin(MarginTrimType::InlineEnd))
-        m_block.trimMarginForFloat(floatingObject, MarginTrimType::InlineEnd);
+    const auto& floatingObject = *m_lineBreaker.insertFloatingObject(floatBox);
     // check if it fits in the current line.
     // If it does, position it now, otherwise, position
     // it after moving to next line (in clearFloats() func)
@@ -411,10 +395,10 @@ inline bool shouldSkipWhitespaceAfterStartObject(RenderBlockFlow& block, RenderO
     while (next && next->isFloatingOrOutOfFlowPositioned())
         next = nextInlineRendererSkippingEmpty(block, next);
 
-    if (is<RenderText>(next) && downcast<RenderText>(*next).text().length() > 0) {
-        RenderText& nextText = downcast<RenderText>(*next);
-        UChar nextChar = nextText.characterAt(0);
-        if (nextText.style().isCollapsibleWhiteSpace(nextChar)) {
+    auto* nextText = dynamicDowncast<RenderText>(next);
+    if (nextText && nextText->text().length() > 0) {
+        UChar nextChar = nextText->characterAt(0);
+        if (nextText->style().isCollapsibleWhiteSpace(nextChar)) {
             lineWhitespaceCollapsingState.startIgnoringSpaces(LegacyInlineIterator(nullptr, o, 0));
             return true;
         }
@@ -468,8 +452,9 @@ inline void BreakingContext::handleReplaced()
         m_width.updateAvailableWidth(replacedBox.logicalHeight());
 
     // Break on replaced elements if either has normal white-space.
-    if ((m_autoWrap || RenderStyle::autoWrap(m_lastWS)) && (!replacedBox.isImage() || m_allowImagesToBreak)
-        && (!is<RenderRubyRun>(replacedBox) || downcast<RenderRubyRun>(replacedBox).canBreakBefore(m_renderTextInfo.lineBreakIteratorFactory))) {
+    auto* rubyRun = dynamicDowncast<RenderRubyRun>(replacedBox);
+    if ((m_autoWrap || m_lastObjectTextWrap != TextWrapMode::NoWrap) && (!replacedBox.isImage() || m_allowImagesToBreak)
+        && (!rubyRun || rubyRun->canBreakBefore(m_renderTextInfo.lineBreakIteratorFactory))) {
         if (auto* renderer = m_current.renderer())
             commitLineBreakAtCurrentWidth(*renderer);
         else
@@ -489,21 +474,21 @@ inline void BreakingContext::handleReplaced()
     // Optimize for a common case. If we can't find whitespace after the list
     // item, then this is all moot.
     LayoutUnit replacedLogicalWidth = m_block.logicalWidthForChild(replacedBox) + m_block.marginStartForChild(replacedBox) + m_block.marginEndForChild(replacedBox) + inlineLogicalWidth(replacedBox);
-    if (is<RenderListMarker>(replacedBox)) {
-        if (m_blockStyle.collapseWhiteSpace() && shouldSkipWhitespaceAfterStartObject(m_block, &replacedBox, m_lineWhitespaceCollapsingState)) {
+    if (auto* listMarker = dynamicDowncast<RenderListMarker>(replacedBox)) {
+        if (m_blockStyle.collapseWhiteSpace() && shouldSkipWhitespaceAfterStartObject(m_block, listMarker, m_lineWhitespaceCollapsingState)) {
             // Like with inline flows, we start ignoring spaces to make sure that any
             // additional spaces we see will be discarded.
             m_currentCharacterIsSpace = true;
             m_currentCharacterIsWS = false;
             m_ignoringSpaces = true;
         }
-        if (downcast<RenderListMarker>(replacedBox).isInside())
+        if (listMarker->isInside())
             m_width.addUncommittedReplacedWidth(replacedLogicalWidth);
     } else
         m_width.addUncommittedReplacedWidth(replacedLogicalWidth);
-    if (is<RenderRubyRun>(replacedBox)) {
-        m_width.applyOverhang(downcast<RenderRubyRun>(replacedBox), m_lastObject, m_nextObject);
-        downcast<RenderRubyRun>(replacedBox).updatePriorContextFromCachedBreakIterator(m_renderTextInfo.lineBreakIteratorFactory);
+    if (auto* rubyRun = dynamicDowncast<RenderRubyRun>(replacedBox)) {
+        m_width.applyOverhang(*rubyRun, m_lastObject, m_nextObject);
+        rubyRun->updatePriorContextFromCachedBreakIterator(m_renderTextInfo.lineBreakIteratorFactory);
     } else {
         // Update prior line break context characters, using U+FFFD (OBJECT REPLACEMENT CHARACTER) for replaced element.
         m_renderTextInfo.lineBreakIteratorFactory.priorContext().update(replacementCharacter);
@@ -530,13 +515,13 @@ inline void nextCharacter(UChar& currentCharacter, UChar& lastCharacter, UChar& 
     lastCharacter = currentCharacter;
 }
 
-inline float measureHyphenWidth(RenderText& renderer, const FontCascade& font, HashSet<const Font*>* fallbackFonts = 0)
+inline float measureHyphenWidth(RenderText& renderer, const FontCascade& font, SingleThreadWeakHashSet<const Font>* fallbackFonts = nullptr)
 {
     const RenderStyle& style = renderer.style();
     return font.width(RenderBlock::constructTextRun(style.hyphenString().string(), style), fallbackFonts);
 }
 
-ALWAYS_INLINE float textWidth(RenderText& text, unsigned from, unsigned len, const FontCascade& font, float xPos, bool isFixedPitch, bool collapseWhiteSpace, HashSet<const Font*>& fallbackFonts, TextLayout* layout = nullptr)
+ALWAYS_INLINE float textWidth(RenderText& text, unsigned from, unsigned len, const FontCascade& font, float xPos, bool isFixedPitch, bool collapseWhiteSpace, SingleThreadWeakHashSet<const Font>& fallbackFonts, TextLayout* layout = nullptr)
 {
     const RenderStyle& style = text.style();
 
@@ -615,7 +600,7 @@ inline void tryHyphenating(RenderText& text, const FontCascade& font, const Atom
     ASSERT(pos - lastSpace - prefixLength >= minimumSuffixLength);
 
 #if ASSERT_ENABLED
-    HashSet<const Font*> fallbackFonts;
+    SingleThreadWeakHashSet<const Font> fallbackFonts;
     float prefixWidth = hyphenWidth + textWidth(text, lastSpace, prefixLength, font, xPos, isFixedPitch, collapseWhiteSpace, fallbackFonts) + lastSpaceWordSpacing;
     ASSERT(xPos + prefixWidth <= availableWidth);
 #else
@@ -626,14 +611,14 @@ inline void tryHyphenating(RenderText& text, const FontCascade& font, const Atom
     hyphenated = true;
 }
 
-inline float BreakingContext::textWidthConsideringPossibleTrailingSpace(RenderText& renderText, TextLayout* textLayout, UChar currentCharacter, WordTrailingSpace& wordTrailingSpace, HashSet<const Font*>& fallbackFonts, HashSet<const Font*>& wordMeasurementFallbackFonts, const FontCascade& font, bool isFixedPitch, unsigned lastSpace, unsigned offset)
+inline float BreakingContext::textWidthConsideringPossibleTrailingSpace(RenderText& renderText, TextLayout* textLayout, UChar currentCharacter, WordTrailingSpace& wordTrailingSpace, SingleThreadWeakHashSet<const Font>& fallbackFonts, SingleThreadWeakHashSet<const Font>& wordMeasurementFallbackFonts, const FontCascade& font, bool isFixedPitch, unsigned lastSpace, unsigned offset)
 {
     return RenderText::measureTextConsideringPossibleTrailingSpace(currentCharacter == space, lastSpace, offset - lastSpace, wordTrailingSpace, fallbackFonts, [&] (unsigned from, unsigned len) {
         return textWidth(renderText, from, len, font, m_width.currentWidth(), isFixedPitch, m_collapseWhiteSpace, wordMeasurementFallbackFonts, textLayout);
     });
 }
 
-inline float BreakingContext::computeAdditionalBetweenWordsWidth(RenderText& renderText, TextLayout* textLayout, UChar currentCharacter, WordTrailingSpace& wordTrailingSpace, HashSet<const Font*>& fallbackFonts, WordMeasurements& wordMeasurements, const FontCascade& font, bool isFixedPitch, unsigned lastSpace, float lastSpaceWordSpacing, float wordSpacingForWordMeasurement, unsigned offset)
+inline float BreakingContext::computeAdditionalBetweenWordsWidth(RenderText& renderText, TextLayout* textLayout, UChar currentCharacter, WordTrailingSpace& wordTrailingSpace, SingleThreadWeakHashSet<const Font>& fallbackFonts, WordMeasurements& wordMeasurements, const FontCascade& font, bool isFixedPitch, unsigned lastSpace, float lastSpaceWordSpacing, float wordSpacingForWordMeasurement, unsigned offset)
 {
     wordMeasurements.grow(wordMeasurements.size() + 1);
     WordMeasurement& wordMeasurement = wordMeasurements.last();
@@ -644,8 +629,8 @@ inline float BreakingContext::computeAdditionalBetweenWordsWidth(RenderText& ren
 
     float additionalTempWidth = textWidthConsideringPossibleTrailingSpace(renderText, textLayout, currentCharacter, wordTrailingSpace, fallbackFonts, wordMeasurement.fallbackFonts, font, isFixedPitch, lastSpace, offset);
 
-    if (wordMeasurement.fallbackFonts.isEmpty() && !fallbackFonts.isEmpty())
-        wordMeasurement.fallbackFonts.swap(fallbackFonts);
+    if (wordMeasurement.fallbackFonts.isEmptyIgnoringNullReferences() && !fallbackFonts.isEmptyIgnoringNullReferences())
+        wordMeasurement.fallbackFonts = std::exchange(fallbackFonts, { });
     fallbackFonts.clear();
 
     wordMeasurement.width = additionalTempWidth + wordSpacingForWordMeasurement;
@@ -656,22 +641,23 @@ inline float BreakingContext::computeAdditionalBetweenWordsWidth(RenderText& ren
 inline bool BreakingContext::handleText(WordMeasurements& wordMeasurements, bool& hyphenated,  unsigned& consecutiveHyphenatedLines)
 {
     auto& renderer = downcast<RenderText>(*m_current.renderer());
-    bool isSVGText = renderer.isSVGInlineText();
+    auto* svgInlineTextRenderer = dynamicDowncast<RenderSVGInlineText>(renderer);
 
     // If we have left a no-wrap inline and entered an autowrap inline while ignoring spaces
     // then we need to mark the start of the autowrap inline as a potential linebreak now.
-    if (m_autoWrap && !RenderStyle::autoWrap(m_lastWS) && m_ignoringSpaces)
+    if (m_autoWrap && m_lastObjectTextWrap == TextWrapMode::NoWrap && m_ignoringSpaces)
         commitLineBreakAtCurrentWidth(renderer);
 
-    if (renderer.style().hasTextCombine() && is<RenderCombineText>(renderer)) {
-        auto& combineRenderer = downcast<RenderCombineText>(renderer);
-        combineRenderer.combineTextIfNeeded();
+    if (renderer.style().hasTextCombine()) {
+        if (auto* combineRenderer = dynamicDowncast<RenderCombineText>(renderer)) {
+            combineRenderer->combineTextIfNeeded();
         // The length of the renderer's text may have changed. Increment stale iterator positions
-        if (iteratorIsBeyondEndOfRenderCombineText(m_lineBreak, combineRenderer)) {
-            ASSERT(iteratorIsBeyondEndOfRenderCombineText(m_resolver.position(), combineRenderer));
+            if (iteratorIsBeyondEndOfRenderCombineText(m_lineBreak, *combineRenderer)) {
+                ASSERT(iteratorIsBeyondEndOfRenderCombineText(m_resolver.position(), *combineRenderer));
             m_lineBreak.increment();
             m_resolver.increment();
         }
+    }
     }
 
     const RenderStyle& style = lineStyle(renderer, m_lineInfo);
@@ -693,7 +679,7 @@ inline bool BreakingContext::handleText(WordMeasurements& wordMeasurements, bool
     bool breakNBSP = m_autoWrap && style.nbspMode() == NBSPMode::Space;
     // Auto-wrapping text should wrap in the middle of a word only if it could not wrap before the word,
     // which is only possible if the word is the first thing on the line.
-    auto isWrappingAllowed = !(m_currWS == WhiteSpace::Pre || m_currWS == WhiteSpace::NoWrap);
+    auto isWrappingAllowed = m_currentTextWrap != TextWrapMode::NoWrap;
     bool breakWords = isWrappingAllowed && style.breakWords() && !m_width.committedWidth() && !m_width.hasCommittedReplaced();
     bool midWordBreak = false;
     bool breakAnywhere = style.lineBreak() == LineBreak::Anywhere && m_autoWrap;
@@ -705,7 +691,7 @@ inline bool BreakingContext::handleText(WordMeasurements& wordMeasurements, bool
     bool canUseLineBreakShortcut = iteratorMode == TextBreakIterator::LineMode::Behavior::Default;
     bool isLineEmpty = m_lineInfo.isEmpty();
 
-    if (isSVGText) {
+    if (svgInlineTextRenderer) {
         breakWords = false;
         breakAll = false;
     }
@@ -720,7 +706,7 @@ inline bool BreakingContext::handleText(WordMeasurements& wordMeasurements, bool
         m_renderTextInfo.layout = font.createLayout(renderer, m_width.currentWidth(), m_collapseWhiteSpace);
     }
 
-    HashSet<const Font*> fallbackFonts;
+    SingleThreadWeakHashSet<const Font> fallbackFonts;
     m_hasFormerOpportunity = false;
     bool canBreakMidWord = breakWords || breakAll;
     UChar lastCharacterFromPreviousRenderText = m_renderTextInfo.lineBreakIteratorFactory.priorContext().lastCharacter();
@@ -767,7 +753,7 @@ inline bool BreakingContext::handleText(WordMeasurements& wordMeasurements, bool
 
         m_currentCharacterIsWS = m_currentCharacterIsSpace || (breakNBSP && c == noBreakSpace);
 
-        if (canBreakMidWord && !midWordBreak && (!m_currentCharacterIsSpace || m_atStart || style.whiteSpace() != WhiteSpace::PreWrap)) {
+        if (canBreakMidWord && !midWordBreak && (!m_currentCharacterIsSpace || m_atStart || !(m_currentWhitespaceCollapse == WhiteSpaceCollapse::Preserve && m_currentTextWrap == TextWrapMode::Wrap))) {
             // FIXME: This code is ultra wrong.
             // The spec says "word-break: break-all: Any typographic letter units are treated as ID(“ideographic characters”) for the purpose of line-breaking."
             // The spec describes how a "typographic letter unit" is a cluster, not a code point: https://drafts.csswg.org/css-text-3/#typographic-character-unit
@@ -778,7 +764,8 @@ inline bool BreakingContext::handleText(WordMeasurements& wordMeasurements, bool
         }
 
         std::optional<unsigned> nextBreakablePosition = m_current.nextBreakablePosition();
-        bool betweenWords = c == newlineCharacter || (m_currWS != WhiteSpace::Pre && !m_atStart && isBreakable(m_renderTextInfo.lineBreakIteratorFactory, m_current.offset(), nextBreakablePosition, breakNBSP, canUseLineBreakShortcut, keepAllWords, breakAnywhere)
+        auto mayBreakHere = !(m_currentWhitespaceCollapse == WhiteSpaceCollapse::Preserve && m_currentTextWrap == TextWrapMode::NoWrap);
+        bool betweenWords = c == newlineCharacter || (mayBreakHere && !m_atStart && isBreakable(m_renderTextInfo.lineBreakIteratorFactory, m_current.offset(), nextBreakablePosition, breakNBSP, canUseLineBreakShortcut, keepAllWords, breakAnywhere)
             && (style.hyphens() != Hyphens::None || (m_current.previousInSameNode() != softHyphen)));
         m_current.setNextBreakablePosition(nextBreakablePosition);
 
@@ -842,7 +829,8 @@ inline bool BreakingContext::handleText(WordMeasurements& wordMeasurements, bool
                 // If we break only after white-space, consider the current character
                 // as candidate width for this line.
                 bool lineWasTooWide = false;
-                if (fitsOnLineOrHangsAtEnd() && m_currentCharacterIsWS && style.breakOnlyAfterWhiteSpace() && (!midWordBreak || m_currWS == WhiteSpace::BreakSpaces)) {
+                auto mayBreakSpaces = m_currentWhitespaceCollapse == WhiteSpaceCollapse::BreakSpaces && m_currentTextWrap == TextWrapMode::Wrap;
+                if (fitsOnLineOrHangsAtEnd() && m_currentCharacterIsWS && style.breakOnlyAfterWhiteSpace() && (!midWordBreak || mayBreakSpaces)) {
                     float charWidth = textWidth(renderer, m_current.offset(), 1, font, m_width.currentWidth(), isFixedPitch, m_collapseWhiteSpace, wordMeasurement.fallbackFonts, textLayout) + (applyWordSpacing ? wordSpacing : 0);
                     // Check if line is too big even without the extra space
                     // at the end of the line. If it is not, do nothing.
@@ -851,7 +839,7 @@ inline bool BreakingContext::handleText(WordMeasurements& wordMeasurements, bool
                     // additional whitespace.
                     if (!m_width.fitsOnLineIncludingExtraWidth(charWidth)) {
                         lineWasTooWide = true;
-                        if (m_currWS == WhiteSpace::BreakSpaces)
+                        if (mayBreakSpaces)
                             trailingSpacesHang(m_lineBreak, renderer, canBreakMidWord, previousCharacterIsSpace);
                         else {
                             m_lineBreak.moveTo(renderer, m_current.offset(), m_current.nextBreakablePosition());
@@ -895,10 +883,9 @@ inline bool BreakingContext::handleText(WordMeasurements& wordMeasurements, bool
                             // the previous non-empty text renderer.
                             if (!lastBreakingPosition.value())
                                 characterBeforeBreakingPosition = lastCharacterFromPreviousRenderText;
-                            else if (is<RenderText>(rendererAtBreakingPosition)) {
-                                const auto& textRenderer = downcast<RenderText>(*rendererAtBreakingPosition);
-                                ASSERT(lastBreakingPosition.value() >= 1 && textRenderer.text().length() > (lastBreakingPosition.value() - 1));
-                                characterBeforeBreakingPosition = textRenderer.characterAt(lastBreakingPosition.value() - 1);
+                            else if (auto* textRenderer = dynamicDowncast<RenderText>(rendererAtBreakingPosition)) {
+                                ASSERT(lastBreakingPosition.value() >= 1 && textRenderer->text().length() > (lastBreakingPosition.value() - 1));
+                                characterBeforeBreakingPosition = textRenderer->characterAt(lastBreakingPosition.value() - 1);
                             }
                             if (characterBeforeBreakingPosition)
                                 hyphenated = characterBeforeBreakingPosition.value() == softHyphen;
@@ -992,9 +979,9 @@ inline bool BreakingContext::handleText(WordMeasurements& wordMeasurements, bool
                 m_hangsAtEnd = false;
         }
 
-        if (isSVGText && m_current.offset()) {
+        if (svgInlineTextRenderer && m_current.offset()) {
             // Force creation of new InlineBoxes for each absolute positioned character (those that start new text chunks).
-            if (downcast<RenderSVGInlineText>(renderer).characterStartsNewTextChunk(m_current.offset()))
+            if (svgInlineTextRenderer->characterStartsNewTextChunk(m_current.offset()))
                 ensureCharacterGetsLineBox(m_lineWhitespaceCollapsingState, m_current);
         }
 
@@ -1044,8 +1031,8 @@ inline bool BreakingContext::handleText(WordMeasurements& wordMeasurements, bool
     if (m_hangsAtEnd && inlineLogicalTempWidth)
         m_hangsAtEnd = false;
 
-    if (wordMeasurement.fallbackFonts.isEmpty() && !fallbackFonts.isEmpty())
-        wordMeasurement.fallbackFonts.swap(fallbackFonts);
+    if (wordMeasurement.fallbackFonts.isEmptyIgnoringNullReferences() && !fallbackFonts.isEmptyIgnoringNullReferences())
+        wordMeasurement.fallbackFonts = std::exchange(fallbackFonts, { });
     fallbackFonts.clear();
 
     if (m_collapseWhiteSpace && m_currentCharacterIsSpace && additionalTempWidth)
@@ -1077,7 +1064,7 @@ inline bool textBeginsWithBreakablePosition(RenderText& nextText)
 
 inline void BreakingContext::trailingSpacesHang(LegacyInlineIterator& lineBreak, RenderObject& renderObject, bool canBreakMidWord, bool previousCharacterIsSpace)
 {
-    ASSERT(m_currWS == WhiteSpace::BreakSpaces);
+    ASSERT(m_currentWhitespaceCollapse == WhiteSpaceCollapse::BreakSpaces && m_currentTextWrap == TextWrapMode::Wrap);
     // Avoid breaking before the first white-space after a word if there is a
     // breaking opportunity before.
     if (m_hasFormerOpportunity && !previousCharacterIsSpace)
@@ -1094,16 +1081,20 @@ inline void BreakingContext::trailingSpacesHang(LegacyInlineIterator& lineBreak,
 inline bool BreakingContext::canBreakAtThisPosition()
 {
     // If we are no-wrap and have found a line-breaking opportunity already then we should take it.
-    if (m_width.committedWidth() && !m_width.fitsOnLine(m_currentCharacterIsSpace) && m_currWS == WhiteSpace::NoWrap)
+    if (m_width.committedWidth() && !m_width.fitsOnLine(m_currentCharacterIsSpace) && m_currentWhitespaceCollapse == WhiteSpaceCollapse::Collapse && m_currentTextWrap == TextWrapMode::NoWrap)
         return true;
 
     // Avoid breaking on empty inlines.
-    if (is<RenderInline>(*m_current.renderer()) && isEmptyInline(downcast<RenderInline>(*m_current.renderer())))
+    auto* renderInline = dynamicDowncast<RenderInline>(*m_current.renderer());
+    if (renderInline && isEmptyInline(*renderInline))
         return false;
 
     // Avoid breaking before empty inlines (as long as the current object isn't replaced).
-    if (!m_current.renderer()->isReplacedOrInlineBlock() && is<RenderInline>(m_nextObject) && isEmptyInline(downcast<RenderInline>(*m_nextObject)))
+    if (!m_current.renderer()->isReplacedOrInlineBlock()) {
+        auto* renderInline = dynamicDowncast<RenderInline>(m_nextObject);
+        if (renderInline && isEmptyInline(*renderInline))
         return false;
+    }
 
     // Return early if we autowrap and the current character is a space as we will always want to break at such a position.
     if (m_autoWrap && m_currentCharacterIsSpace)
@@ -1112,13 +1103,19 @@ inline bool BreakingContext::canBreakAtThisPosition()
     if (m_nextObject && m_nextObject->isLineBreakOpportunity())
         return m_autoWrap;
 
-    bool nextIsAutoWrappingText = is<RenderText>(m_nextObject) && (m_autoWrap || m_nextObject->style().autoWrap());
+    auto* renderText = dynamicDowncast<RenderText>(m_nextObject);
+    bool nextIsAutoWrappingText = renderText && (m_autoWrap || m_nextObject->style().autoWrap());
     if (!nextIsAutoWrappingText)
         return m_autoWrap;
-    RenderText& nextRenderText = downcast<RenderText>(*m_nextObject);
-    bool currentIsTextOrEmptyInline = is<RenderText>(*m_current.renderer()) || (is<RenderInline>(*m_current.renderer()) && isEmptyInline(downcast<RenderInline>(*m_current.renderer())));
+    RenderText& nextRenderText = *renderText;
+    bool currentIsTextOrEmptyInline = [this] {
+        if (is<RenderText>(*m_current.renderer()))
+            return true;
+        auto* renderInline = dynamicDowncast<RenderInline>(*m_current.renderer());
+        return renderInline && isEmptyInline(*renderInline);
+    }();
     if (!currentIsTextOrEmptyInline)
-        return m_autoWrap && !m_current.renderer()->isRubyRun();
+        return m_autoWrap && !m_current.renderer()->isRenderRubyRun();
 
     bool canBreakHere = !m_currentCharacterIsSpace && textBeginsWithBreakablePosition(nextRenderText);
 
@@ -1166,12 +1163,15 @@ inline void BreakingContext::commitAndUpdateLineBreakIfNeeded()
 
     if (!m_current.renderer()->isFloatingOrOutOfFlowPositioned()) {
         m_lastObject = m_current.renderer();
-        if (m_lastObject->isReplacedOrInlineBlock() && m_autoWrap && !m_lastObject->isRubyRun() && (!m_lastObject->isImage() || m_allowImagesToBreak) && (!is<RenderListMarker>(*m_lastObject) || downcast<RenderListMarker>(*m_lastObject).isInside())) {
+        if (m_lastObject->isReplacedOrInlineBlock() && m_autoWrap && !m_lastObject->isRenderRubyRun() && (!m_lastObject->isImage() || m_allowImagesToBreak)) {
+            auto* renderListMarker = dynamicDowncast<RenderListMarker>(*m_lastObject);
+            if (!renderListMarker || renderListMarker->isInside()) {
             if (m_nextObject)
                 commitLineBreakAtCurrentWidth(*m_nextObject);
             else
                 commitLineBreakClear();
         }
+    }
     }
 }
 
@@ -1190,7 +1190,7 @@ inline TrailingObjects::CollapseFirstSpace checkWhitespaceCollapsingTransitions(
         if (currpoint == lBreak) {
             // We hit the line break before the start point. Shave off the start point.
             lineWhitespaceCollapsingState.decrementNumTransitions();
-            if (endpoint.renderer()->style().collapseWhiteSpace() && endpoint.renderer()->isText()) {
+            if (endpoint.renderer()->style().collapseWhiteSpace() && endpoint.renderer()->isRenderText()) {
                 lineWhitespaceCollapsingState.decrementTransitionAt(lineWhitespaceCollapsingState.numTransitions() - 1);
                 return TrailingObjects::CollapseFirstSpace::No;
             }
@@ -1204,16 +1204,19 @@ inline LegacyInlineIterator BreakingContext::handleEndOfLine()
     if (m_lineBreak == m_resolver.position()) {
         if (!m_lineBreak.renderer() || !m_lineBreak.renderer()->isBR()) {
             // we just add as much as possible
-            if (m_blockStyle.whiteSpace() == WhiteSpace::Pre && !m_current.offset()) {
+            if (m_blockStyle.whiteSpaceCollapse() == WhiteSpaceCollapse::Preserve && m_blockStyle.textWrapMode() == TextWrapMode::NoWrap && !m_current.offset()) {
                 if (m_lastObject)
-                    commitLineBreakAtCurrentWidth(*m_lastObject, m_lastObject->isText() ? m_lastObject->length() : 0);
+                    commitLineBreakAtCurrentWidth(*m_lastObject, m_lastObject->isRenderText() ? m_lastObject->length() : 0);
                 else
                     commitLineBreakClear();
             } else if (m_lineBreak.renderer()) {
                 // Don't ever break in the middle of a word if we can help it.
                 // There's no room at all. We just have to be on this line,
                 // even though we'll spill out.
+                if (m_current.renderer())
                 commitLineBreakAtCurrentWidth(*m_current.renderer(), m_current.offset());
+                else if (m_lastObject)
+                    commitLineBreakAtCurrentWidth(*m_lastObject, m_lastObject->isRenderText() ? m_lastObject->length() : 0);
             }
         }
         // make sure we consume at least one char/object.

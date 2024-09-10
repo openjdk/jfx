@@ -26,8 +26,8 @@
 #include "config.h"
 #include "SVGFilterElement.h"
 
+#include "LegacyRenderSVGResourceFilter.h"
 #include "NodeName.h"
-#include "RenderSVGResourceFilter.h"
 #include "SVGElementInlines.h"
 #include "SVGFilterPrimitiveStandardAttributes.h"
 #include "SVGNames.h"
@@ -129,17 +129,18 @@ void SVGFilterElement::childrenChanged(const ChildChange& change)
 
 RenderPtr<RenderElement> SVGFilterElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderSVGResourceFilter>(*this, WTFMove(style));
+    return createRenderer<LegacyRenderSVGResourceFilter>(*this, WTFMove(style));
 }
 
 bool SVGFilterElement::childShouldCreateRenderer(const Node& child) const
 {
     using namespace ElementNames;
 
-    if (!child.isSVGElement())
+    auto* childElement = dynamicDowncast<SVGElement>(child);
+    if (!childElement)
         return false;
 
-    switch (downcast<SVGElement>(child).elementName()) {
+    switch (childElement->elementName()) {
     case SVG::feBlend:
     case SVG::feColorMatrix:
     case SVG::feComponentTransfer:

@@ -16,13 +16,6 @@ G_BEGIN_DECLS
 
 typedef struct _GPathBuf  GPathBuf;
 
-/**
- * GPathBuf: (copy-func g_path_buf_copy) (free-func g_path_buf_free)
- *
- * A mutable path builder.
- *
- * Since: 2.76
- */
 struct _GPathBuf
 {
   /*< private >*/

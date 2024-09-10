@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -61,16 +61,38 @@ MetadataTable::~MetadataTable()
 
 void MetadataTable::destroy(MetadataTable* table)
 {
-    Ref<UnlinkedMetadataTable> unlinkedMetadata = WTFMove(table->linkingData().unlinkedMetadata);
+    RefPtr<UnlinkedMetadataTable> unlinkedMetadata = WTFMove(table->linkingData().unlinkedMetadata);
+
     table->~MetadataTable();
+
+    // FIXME: This check should really not be necessary, see https://webkit.org/b/272787
+    if (UNLIKELY(!unlinkedMetadata)) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
     // Since UnlinkedMetadata::unlink frees the underlying memory of MetadataTable.
     // We need to destroy LinkingData before calling it.
     unlinkedMetadata->unlink(*table);
 }
 
-size_t MetadataTable::sizeInBytes()
+size_t MetadataTable::sizeInBytesForGC()
 {
-    return linkingData().unlinkedMetadata->sizeInBytes(*this);
+    return unlinkedMetadata()->sizeInBytesForGC(*this);
+}
+
+void MetadataTable::validate() const
+{
+    auto getOffset = [&](unsigned i) {
+        unsigned offset = offsetTable16()[i];
+        if (offset)
+            return offset;
+        return offsetTable32()[i];
+    };
+    UNUSED_PARAM(getOffset);
+    ASSERT(getOffset(0) >= (is32Bit() ? UnlinkedMetadataTable::s_offset16TableSize + UnlinkedMetadataTable::s_offset32TableSize : UnlinkedMetadataTable::s_offset16TableSize));
+    for (unsigned i = 1; i < UnlinkedMetadataTable::s_offsetTableEntries; ++i)
+        ASSERT(getOffset(i-1) <= getOffset(i));
 }
 
 } // namespace JSC

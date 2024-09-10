@@ -46,6 +46,11 @@
 #include "PlatformDisplayLibWPE.h"
 #endif
 
+#if PLATFORM(WPE)
+#include "PlatformDisplayGBM.h"
+#include "PlatformDisplaySurfaceless.h"
+#endif
+
 #if PLATFORM(GTK)
 #include "GtkVersioning.h"
 #endif
@@ -71,7 +76,7 @@
 
 #if USE(EGL)
 #if USE(LIBEPOXY)
-#include "EpoxyEGL.h"
+#include <epoxy/egl.h>
 #else
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
@@ -80,11 +85,16 @@
 #include <wtf/NeverDestroyed.h>
 #endif
 
-#if USE(EGL) && USE(GBM)
-#include "GBMDevice.h"
+#if USE(EGL)
+#if USE(LIBDRM)
 #include <xf86drm.h>
 #ifndef EGL_DRM_RENDER_NODE_FILE_EXT
 #define EGL_DRM_RENDER_NODE_FILE_EXT 0x3377
+#endif
+#endif
+#if USE(GBM)
+#include "GBMDevice.h"
+#include <drm_fourcc.h>
 #endif
 #endif
 
@@ -112,6 +122,10 @@ typedef EGLBoolean (*PFNEGLDESTROYIMAGEKHRPROC) (EGLDisplay, EGLImageKHR);
 #endif
 
 namespace WebCore {
+
+#if PLATFORM(WPE)
+bool PlatformDisplay::s_useDMABufForRendering = false;
+#endif
 
 std::unique_ptr<PlatformDisplay> PlatformDisplay::createPlatformDisplay()
 {
@@ -145,6 +159,18 @@ std::unique_ptr<PlatformDisplay> PlatformDisplay::createPlatformDisplay()
     return PlatformDisplayWayland::create(nullptr);
 #elif PLATFORM(X11)
     return PlatformDisplayX11::create(nullptr);
+#endif
+
+#if PLATFORM(WPE)
+    if (s_useDMABufForRendering) {
+#if USE(GBM)
+        if (GBMDevice::singleton().isInitialized()) {
+            if (auto* device = GBMDevice::singleton().device())
+                return PlatformDisplayGBM::create(device);
+        }
+#endif
+        return PlatformDisplaySurfaceless::create();
+    }
 #endif
 
 #if USE(WPE_RENDERER)
@@ -374,14 +400,10 @@ void PlatformDisplay::terminateEGLDisplay()
 EGLImage PlatformDisplay::createEGLImage(EGLContext context, EGLenum target, EGLClientBuffer clientBuffer, const Vector<EGLAttrib>& attributes) const
 {
     if (eglCheckVersion(1, 5)) {
-#if USE(LIBEPOXY)
-        return eglCreateImage(m_eglDisplay, context, target, clientBuffer, attributes.isEmpty() ? nullptr : attributes.data());
-#else
         static PFNEGLCREATEIMAGEPROC s_eglCreateImage = reinterpret_cast<PFNEGLCREATEIMAGEPROC>(eglGetProcAddress("eglCreateImage"));
         if (s_eglCreateImage)
             return s_eglCreateImage(m_eglDisplay, context, target, clientBuffer, attributes.isEmpty() ? nullptr : attributes.data());
         return EGL_NO_IMAGE;
-#endif
     }
 
     if (!m_eglExtensions.KHR_image_base)
@@ -390,43 +412,31 @@ EGLImage PlatformDisplay::createEGLImage(EGLContext context, EGLenum target, EGL
     Vector<EGLint> intAttributes = attributes.map<Vector<EGLint>>([] (EGLAttrib value) {
         return value;
     });
-#if USE(LIBEPOXY)
-    return eglCreateImageKHR(m_eglDisplay, context, target, clientBuffer, intAttributes.isEmpty() ? nullptr : intAttributes.data());
-#else
     static PFNEGLCREATEIMAGEKHRPROC s_eglCreateImageKHR = reinterpret_cast<PFNEGLCREATEIMAGEKHRPROC>(eglGetProcAddress("eglCreateImageKHR"));
     if (s_eglCreateImageKHR)
         return s_eglCreateImageKHR(m_eglDisplay, context, target, clientBuffer, intAttributes.isEmpty() ? nullptr : intAttributes.data());
     return EGL_NO_IMAGE_KHR;
-#endif
 }
 
 bool PlatformDisplay::destroyEGLImage(EGLImage image) const
 {
     if (eglCheckVersion(1, 5)) {
-#if USE(LIBEPOXY)
-        return eglDestroyImage(m_eglDisplay, image);
-#else
         static PFNEGLDESTROYIMAGEPROC s_eglDestroyImage = reinterpret_cast<PFNEGLDESTROYIMAGEPROC>(eglGetProcAddress("eglDestroyImage"));
         if (s_eglDestroyImage)
             return s_eglDestroyImage(m_eglDisplay, image);
         return false;
-#endif
     }
 
     if (!m_eglExtensions.KHR_image_base)
         return false;
 
-#if USE(LIBEPOXY)
-    return eglDestroyImageKHR(m_eglDisplay, image);
-#else
     static PFNEGLDESTROYIMAGEKHRPROC s_eglDestroyImageKHR = reinterpret_cast<PFNEGLDESTROYIMAGEKHRPROC>(eglGetProcAddress("eglDestroyImageKHR"));
     if (s_eglDestroyImageKHR)
         return s_eglDestroyImageKHR(m_eglDisplay, image);
     return false;
-#endif
 }
 
-#if USE(GBM)
+#if USE(LIBDRM)
 EGLDeviceEXT PlatformDisplay::eglDevice()
 {
     if (!GLContext::isExtensionSupported(eglQueryString(nullptr, EGL_EXTENSIONS), "EGL_EXT_device_query"))
@@ -532,7 +542,9 @@ const String& PlatformDisplay::drmRenderNodeFile()
 
     return m_drmRenderNodeFile.value();
 }
+#endif // USE(LIBDRM)
 
+#if USE(GBM)
 struct gbm_device* PlatformDisplay::gbmDevice()
 {
     auto& device = GBMDevice::singleton();
@@ -541,8 +553,61 @@ struct gbm_device* PlatformDisplay::gbmDevice()
 
     return device.device();
 }
-#endif
 
+const Vector<PlatformDisplay::DMABufFormat>& PlatformDisplay::dmabufFormats()
+{
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [this] {
+        const auto& extensions = eglExtensions();
+        if (!extensions.EXT_image_dma_buf_import)
+            return;
+
+        static PFNEGLQUERYDMABUFFORMATSEXTPROC s_eglQueryDmaBufFormatsEXT = reinterpret_cast<PFNEGLQUERYDMABUFFORMATSEXTPROC>(eglGetProcAddress("eglQueryDmaBufFormatsEXT"));
+        if (!s_eglQueryDmaBufFormatsEXT)
+            return;
+
+        EGLint formatsCount;
+        if (!s_eglQueryDmaBufFormatsEXT(m_eglDisplay, 0, nullptr, &formatsCount) || !formatsCount)
+            return;
+
+        Vector<EGLint> formats(formatsCount);
+        if (!s_eglQueryDmaBufFormatsEXT(m_eglDisplay, formatsCount, reinterpret_cast<EGLint*>(formats.data()), &formatsCount))
+            return;
+
+        static PFNEGLQUERYDMABUFMODIFIERSEXTPROC s_eglQueryDmaBufModifiersEXT = extensions.EXT_image_dma_buf_import_modifiers ?
+            reinterpret_cast<PFNEGLQUERYDMABUFMODIFIERSEXTPROC>(eglGetProcAddress("eglQueryDmaBufModifiersEXT")) : nullptr;
+
+        // For now we only support formats that can be created with a single GBM buffer for all planes.
+        static const Vector<EGLint> s_supportedFormats = {
+            DRM_FORMAT_ARGB8888, DRM_FORMAT_RGBA8888, DRM_FORMAT_ABGR8888, DRM_FORMAT_BGRA8888,
+            DRM_FORMAT_XRGB8888, DRM_FORMAT_RGBX8888, DRM_FORMAT_XBGR8888, DRM_FORMAT_BGRX8888,
+            DRM_FORMAT_RGB565,
+            DRM_FORMAT_ARGB2101010, DRM_FORMAT_ABGR2101010, DRM_FORMAT_XRGB2101010, DRM_FORMAT_XBGR2101010,
+            DRM_FORMAT_ARGB16161616F, DRM_FORMAT_ABGR16161616F, DRM_FORMAT_XRGB16161616F, DRM_FORMAT_XBGR16161616F
+        };
+
+        m_dmabufFormats = WTF::compactMap(s_supportedFormats, [&](auto format) -> std::optional<DMABufFormat> {
+            if (!formats.contains(format))
+                return std::nullopt;
+
+            Vector<uint64_t, 1> dmabufModifiers = { DRM_FORMAT_MOD_INVALID };
+            if (s_eglQueryDmaBufModifiersEXT) {
+                EGLint modifiersCount;
+                if (s_eglQueryDmaBufModifiersEXT(m_eglDisplay, format, 0, nullptr, nullptr, &modifiersCount) && modifiersCount) {
+                    Vector<EGLuint64KHR> modifiers(modifiersCount);
+                    if (s_eglQueryDmaBufModifiersEXT(m_eglDisplay, format, modifiersCount, reinterpret_cast<EGLuint64KHR*>(modifiers.data()), nullptr, &modifiersCount)) {
+                        dmabufModifiers.grow(modifiersCount);
+                        for (int i = 0; i < modifiersCount; ++i)
+                            dmabufModifiers[i] = modifiers[i];
+                    }
+                }
+            }
+            return DMABufFormat { static_cast<uint32_t>(format), WTFMove(dmabufModifiers) };
+        });
+    });
+    return m_dmabufFormats;
+}
+#endif // USE(GBM)
 #endif // USE(EGL)
 
 #if USE(LCMS)

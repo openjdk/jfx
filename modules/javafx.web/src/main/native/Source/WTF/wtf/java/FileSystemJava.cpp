@@ -273,7 +273,7 @@ int readFromFile(PlatformFileHandle handle, void* data, int length)
     return result;
 }
 
-String pathGetFileName(const String& path)
+String pathFileName(const String& path)
 {
     JNIEnv* env = WTF::GetJavaEnv();
 
@@ -441,13 +441,6 @@ bool isHiddenFile(const String& path)
     return false;
 }
 
-String pathFileName(const String& path)
-{
-    UNUSED_PARAM(path);
-   // return path.substring(path.reverseFind('/') + 1);
-   return nullString();
-}
-
 bool hardLinkOrCopyFile(const String& targetPath, const String& linkPath)
 {
     fprintf(stderr, "hardLinkOrCopyFile(const String& targetPath, const String& linkPath) NOT IMPLEMENTED\n");
@@ -526,6 +519,11 @@ bool fileIDsAreEqual(std::optional<PlatformFileID> a, std::optional<PlatformFile
     UNUSED_PARAM(a);
     UNUSED_PARAM(b);
     return true;
+}
+
+int overwriteEntireFile(const String& path, std::span<uint8_t> span)
+{
+    return 0;
 }
 
 } // namespace FileSystemImpl

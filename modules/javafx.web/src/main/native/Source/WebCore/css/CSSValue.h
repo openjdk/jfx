@@ -26,6 +26,10 @@
 #include <wtf/Vector.h>
 #include <wtf/text/ASCIILiteral.h>
 
+namespace WTF {
+class Hasher;
+}
+
 namespace WebCore {
 
 class CSSPrimitiveValue;
@@ -46,14 +50,15 @@ struct ComputedStyleDependencies {
     Vector<CSSPropertyID> properties;
     Vector<CSSPropertyID> rootProperties;
     bool containerDimensions { false };
+    bool viewportDimensions { false };
 
-    bool isEmpty() const { return properties.isEmpty() && rootProperties.isEmpty() && !containerDimensions; }
+    bool isComputationallyIndependent() const { return properties.isEmpty() && rootProperties.isEmpty() && !containerDimensions; }
 };
 
-DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSValue);
+DECLARE_COMPACT_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSValue);
 class CSSValue {
     WTF_MAKE_NONCOPYABLE(CSSValue);
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CSSValue);
+    WTF_MAKE_FAST_COMPACT_ALLOCATED_WITH_HEAP_IDENTIFIER(CSSValue);
 public:
     static constexpr unsigned refCountFlagIsStatic = 0x1;
     static constexpr unsigned refCountIncrement = 0x2; // This allows us to ref / deref without disturbing the static CSSValue flag.
@@ -117,7 +122,9 @@ public:
     bool isRadialGradientValue() const { return m_classType == RadialGradientClass; }
     bool isRayValue() const { return m_classType == RayClass; }
     bool isRect() const { return m_classType == RectClass; }
+    bool isRectShape() const { return m_classType == RectShapeClass; }
     bool isReflectValue() const { return m_classType == ReflectClass; }
+    bool isScrollValue() const { return m_classType == ScrollClass; }
     bool isShadowValue() const { return m_classType == ShadowClass; }
     bool isSpringTimingFunctionValue() const { return m_classType == SpringTimingFunctionClass; }
     bool isStepsTimingFunctionValue() const { return m_classType == StepsTimingFunctionClass; }
@@ -126,6 +133,8 @@ public:
     bool isUnicodeRangeValue() const { return m_classType == UnicodeRangeClass; }
     bool isValueList() const { return m_classType == ValueListClass; }
     bool isVariableReferenceValue() const { return m_classType == VariableReferenceClass; }
+    bool isViewValue() const { return m_classType == ViewClass; }
+    bool isXywhShape() const { return m_classType == XywhShapeClass; }
 
 #if ENABLE(CSS_PAINTING_API)
     bool isPaintImageValue() const { return m_classType == PaintImageClass; }
@@ -143,6 +152,8 @@ public:
     Ref<DeprecatedCSSOMValue> createDeprecatedCSSOMWrapper(CSSStyleDeclaration&) const;
 
     bool traverseSubresources(const Function<bool(const CachedResource&)>&) const;
+    void setReplacementURLForSubresources(const HashMap<String, String>&);
+    void clearReplacementURLForSubresources();
 
     // What properties does this value rely on (eg, font-size for em units)
     ComputedStyleDependencies computedStyleDependencies() const;
@@ -150,6 +161,9 @@ public:
 
     bool equals(const CSSValue&) const;
     bool operator==(const CSSValue& other) const { return equals(other); }
+
+    // Returns false if the hash is computed from the CSSValue pointer instead of the underlying values.
+    bool addHash(Hasher&) const;
 
     // https://www.w3.org/TR/css-values-4/#local-urls
     // Empty URLs and fragment-only URLs should not be resolved relative to the base URL.
@@ -170,7 +184,9 @@ public:
     inline int integer() const;
 
     inline const CSSValue& first() const; // CSSValuePair
+    Ref<CSSValue> protectedFirst() const; // CSSValuePair
     inline const CSSValue& second() const; // CSSValuePair
+    Ref<CSSValue> protectedSecond() const; // CSSValuePair
     inline const Quad& quad() const; // CSSValueQuad
     inline const Rect& rect() const; // CSSSValueRect
 
@@ -178,8 +194,11 @@ public:
     inline bool isValueID() const;
     inline CSSValueID valueID() const;
 
+    void customSetReplacementURLForSubresources(const HashMap<String, String>&) { }
+    void customClearReplacementURLForSubresources() { }
+
 protected:
-    static const size_t ClassTypeBits = 6;
+    static const size_t ClassTypeBits = 7;
 
     // FIXME: Use an enum class here so we don't have to repeat "Class" in every name.
     enum ClassType {
@@ -242,11 +261,15 @@ protected:
         QuadClass,
         RayClass,
         RectClass,
+        RectShapeClass,
         ReflectClass,
+        ScrollClass,
         ShadowClass,
         UnicodeRangeClass,
         ValuePairClass,
         VariableReferenceClass,
+        ViewClass,
+        XywhShapeClass,
 
         // Classes that contain vectors, which derive from CSSValueContainingVector.
         ValueListClass,
@@ -286,6 +309,7 @@ private:
     template<typename Visitor> constexpr decltype(auto) visitDerived(Visitor&&) const;
 
     static inline bool customTraverseSubresources(const Function<bool(const CachedResource&)>&);
+    bool addDerivedHash(Hasher&) const;
 
     mutable unsigned m_refCount { refCountIncrement };
 
@@ -346,6 +370,8 @@ inline bool compareCSSValue(const Ref<CSSValueType>& first, const Ref<CSSValueTy
 {
     return first.get().equals(second);
 }
+
+void add(Hasher&, const CSSValue&);
 
 } // namespace WebCore
 
