@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,24 +25,14 @@
 
 package test.javafx.scene.control;
 
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
-import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
-import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
-import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.getListenerCount;
+import java.util.stream.Stream;
 import javafx.beans.property.ObjectProperty;
-import javafx.scene.Scene;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyCombination;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
-import java.util.Arrays;
-import java.util.Collection;
 import javafx.scene.Group;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Menu;
@@ -53,47 +43,46 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCombination;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
-
-@RunWith(Parameterized.class)
 public class AcceleratorParameterizedTest {
 
     private int eventCounter = 0;
-
     private MenuItem item1;
     private ContextMenu menu;
-
     private ObjectProperty<ContextMenu> contextMenuProperty;
-
     private Button btn;
     private Tab tab;
     private TableColumn<?,?> tableColumn;
     private TreeTableColumn<?,?> treeTableColumn;
-
     private StageLoader sl;
     private Scene scene;
     private KeyEventFirer keyboard;
 
-    private Class<?> testClass;
-
-    @Parameterized.Parameters
-    public static Collection implementations() {
-        return Arrays.asList(new Object[][]{
-            {Button.class},
-            {Tab.class},
-            {TableColumn.class},
-            {TreeTableColumn.class}
-        });
+    private static Stream<Arguments> parameters() {
+        return Stream.of(
+            Arguments.of(Button.class),
+            Arguments.of(Tab.class),
+            Arguments.of(TableColumn.class),
+            Arguments.of(TreeTableColumn.class)
+        );
     }
 
-    public AcceleratorParameterizedTest(Class<?> testClass) {
-        this.testClass = testClass;
-    }
-
-    @Before public void setup() {
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    private void setup(Class<?> testClass) {
         eventCounter = 0;
 
         item1 = new MenuItem("Item 1");
@@ -141,7 +130,8 @@ public class AcceleratorParameterizedTest {
         keyboard = new KeyEventFirer(scene);
     }
 
-    @After public void cleanup() {
+    @AfterEach
+    public void cleanup() {
         sl.dispose();
     }
 
@@ -152,8 +142,10 @@ public class AcceleratorParameterizedTest {
         assertFalse(scene.getAccelerators().containsKey(keyCombination));
     }
 
-
-    @Test public void rt_28136_assertContextMenuAcceleratorWorks() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void rt_28136_assertContextMenuAcceleratorWorks(Class c) {
+        setup(c);
         keyboard.doKeyPress(KeyCode.DIGIT1, KeyModifier.ALT);
         assertEquals(1, eventCounter);
 
@@ -162,7 +154,10 @@ public class AcceleratorParameterizedTest {
         assertEquals(3, eventCounter);
     }
 
-    @Test public void rt_28136_assertContextMenuAcceleratorWorksWithNewMenuItemAdded() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void rt_28136_assertContextMenuAcceleratorWorksWithNewMenuItemAdded(Class c) {
+        setup(c);
         MenuItem item2 = new MenuItem("Item 2");
         item2.setOnAction(e -> eventCounter++);
         item2.setAccelerator(KeyCombination.valueOf("alt+2"));
@@ -177,7 +172,10 @@ public class AcceleratorParameterizedTest {
         assertEquals(2, eventCounter);
     }
 
-    @Test public void rt_28136_assertContextMenuStopsFiringWhenMenuItemRemoved() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void rt_28136_assertContextMenuStopsFiringWhenMenuItemRemoved(Class c) {
+        setup(c);
         menu.getItems().remove(item1);
         assertSceneDoesNotContainKeyCombination(KeyCombination.keyCombination("alt+1"));
 
@@ -189,7 +187,10 @@ public class AcceleratorParameterizedTest {
         assertEquals(0, eventCounter);
     }
 
-    @Test public void rt_28136_assertAcceleratorChangeToNullWorks_oldAcceleratorStopsFiring() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void rt_28136_assertAcceleratorChangeToNullWorks_oldAcceleratorStopsFiring(Class c) {
+        setup(c);
         item1.setAccelerator(null);
         assertSceneDoesNotContainKeyCombination(KeyCombination.keyCombination("alt+1"));
 
@@ -197,7 +198,10 @@ public class AcceleratorParameterizedTest {
         assertEquals(0, eventCounter);
     }
 
-    @Test public void rt_28136_assertAcceleratorChangeToNonNullWorks_oldAcceleratorStopsFiring() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void rt_28136_assertAcceleratorChangeToNonNullWorks_oldAcceleratorStopsFiring(Class c) {
+        setup(c);
         item1.setAccelerator(KeyCombination.valueOf("alt+A"));
         assertSceneDoesNotContainKeyCombination(KeyCombination.keyCombination("alt+1"));
 
@@ -205,7 +209,10 @@ public class AcceleratorParameterizedTest {
         assertEquals(0, eventCounter);
     }
 
-    @Test public void rt_28136_assertAcceleratorChangeToNonNullWorks_newAcceleratorStartsFiring() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void rt_28136_assertAcceleratorChangeToNonNullWorks_newAcceleratorStartsFiring(Class c) {
+        setup(c);
         item1.setAccelerator(KeyCombination.valueOf("alt+A"));
         assertSceneDoesNotContainKeyCombination(KeyCombination.keyCombination("alt+1"));
 
@@ -213,7 +220,10 @@ public class AcceleratorParameterizedTest {
         assertEquals(1, eventCounter);
     }
 
-    @Test public void rt_28136_assertNewMenuWithMenuItemAcceleratorsFire() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void rt_28136_assertNewMenuWithMenuItemAcceleratorsFire(Class c) {
+        setup(c);
         MenuItem item2 = new MenuItem("Item 2");
         item2.setOnAction(e -> eventCounter++);
         item2.setAccelerator(KeyCombination.valueOf("alt+2"));
@@ -232,7 +242,10 @@ public class AcceleratorParameterizedTest {
         assertEquals(2, eventCounter);
     }
 
-    @Test public void rt_28136_assertRemovedMenuItemAcceleratorInSubmenuDoesNotFire() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void rt_28136_assertRemovedMenuItemAcceleratorInSubmenuDoesNotFire(Class c) {
+        setup(c);
         MenuItem item2 = new MenuItem("Item 2");
         item2.setOnAction(e -> eventCounter++);
         item2.setAccelerator(KeyCombination.valueOf("alt+2"));
@@ -263,7 +276,10 @@ public class AcceleratorParameterizedTest {
         assertEquals(3, eventCounter);
     }
 
-    @Test public void rt_28136_assertRemovedMenuWithMenuItemAcceleratorsDoesNotFire() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void rt_28136_assertRemovedMenuWithMenuItemAcceleratorsDoesNotFire(Class c) {
+        setup(c);
         MenuItem item2 = new MenuItem("Item 2");
         item2.setOnAction(e -> eventCounter++);
         item2.setAccelerator(KeyCombination.valueOf("alt+2"));
@@ -294,14 +310,20 @@ public class AcceleratorParameterizedTest {
         assertEquals(3, eventCounter);
     }
 
-    @Test public void rt_28136_assertAcceleratorIsNotFiredWhenContextMenuIsRemoved() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void rt_28136_assertAcceleratorIsNotFiredWhenContextMenuIsRemoved(Class c) {
+        setup(c);
         contextMenuProperty.set(null);
 
         keyboard.doKeyPress(KeyCode.DIGIT1, KeyModifier.ALT);
         assertEquals(0, eventCounter);
     }
 
-    @Test public void testAcceleratorShouldNotGetFiredWhenMenuItemRemovedFromScene() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testAcceleratorShouldNotGetFiredWhenMenuItemRemovedFromScene(Class c) {
+        setup(c);
         KeyEventFirer kb = new KeyEventFirer(item1, scene);
 
         kb.doKeyPress(KeyCode.DIGIT1, KeyModifier.ALT);
@@ -317,7 +339,10 @@ public class AcceleratorParameterizedTest {
         assertEquals(1, eventCounter);
     }
 
-    @Test public void testAcceleratorShouldGetFiredWhenMenuItemRemovedAndAddedBackToScene() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testAcceleratorShouldGetFiredWhenMenuItemRemovedAndAddedBackToScene(Class c) {
+        setup(c);
         KeyEventFirer kb = new KeyEventFirer(item1, scene);
 
         kb.doKeyPress(KeyCode.DIGIT1, KeyModifier.ALT);
@@ -332,7 +357,10 @@ public class AcceleratorParameterizedTest {
         assertEquals(2, eventCounter);
     }
 
-    @Test public void testAcceleratorShouldGetFiredWhenMenuItemRemovedAndAddedToDifferentScene() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testAcceleratorShouldGetFiredWhenMenuItemRemovedAndAddedToDifferentScene(Class c) {
+        setup(c);
         KeyEventFirer kb = new KeyEventFirer(item1, scene);
 
         kb.doKeyPress(KeyCode.DIGIT1, KeyModifier.ALT);
@@ -349,8 +377,11 @@ public class AcceleratorParameterizedTest {
         assertEquals(2, eventCounter);
     }
 
-    @Ignore("JDK-8268374")
-    @Test public void testAcceleratorShouldNotGetFiredWhenControlsIsRemovedFromSceneThenContextMenuIsSetToNullAndControlIsAddedBackToScene() {
+    @Disabled("JDK-8268374")
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testAcceleratorShouldNotGetFiredWhenControlsIsRemovedFromSceneThenContextMenuIsSetToNullAndControlIsAddedBackToScene(Class testClass) {
+        setup(testClass);
         KeyEventFirer kb = new KeyEventFirer(item1, scene);
         kb.doKeyPress(KeyCode.DIGIT1, KeyModifier.ALT);
         assertEquals(1, eventCounter);

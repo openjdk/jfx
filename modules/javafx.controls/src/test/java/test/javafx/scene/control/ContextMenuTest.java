@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,25 @@
 
 package test.javafx.scene.control;
 
-import com.sun.javafx.scene.control.ContextMenuContent;
-import com.sun.javafx.scene.control.ContextMenuContentShim;
-import javafx.geometry.Insets;
-import javafx.scene.layout.StackPane;
-import javafx.scene.text.Font;
-import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+import static com.sun.javafx.scene.control.ContextMenuContentShim.getCurrentFocusedIndex;
+import static com.sun.javafx.scene.control.ContextMenuContentShim.getCurrentFocusedItem;
+import static com.sun.javafx.scene.control.ContextMenuContentShim.getOpenSubMenu;
+import static com.sun.javafx.scene.control.ContextMenuContentShim.getShowingMenuContent;
+import static com.sun.javafx.scene.control.ContextMenuContentShim.getShowingSubMenu;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.Optional;
 import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
+import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Side;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.CustomMenuItem;
@@ -46,18 +53,17 @@ import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import static org.junit.Assert.*;
-import static com.sun.javafx.scene.control.ContextMenuContentShim.*;
-
-import java.util.Optional;
-import javafx.scene.Node;
 import javafx.scene.input.KeyCode;
+import javafx.scene.layout.StackPane;
+import javafx.scene.text.Font;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.scene.control.ContextMenuContent;
+import com.sun.javafx.scene.control.ContextMenuContentShim;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 public class ContextMenuTest {
 
@@ -125,7 +131,8 @@ public class ContextMenuTest {
     private StageLoader sl;
     private Button anchorBtn;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         // earlier test items
         menuItem0 = new MenuItem("0");
         menuItem1 = new MenuItem("1");
@@ -152,7 +159,8 @@ public class ContextMenuTest {
         sl = new StageLoader(anchorBtn);
     }
 
-    @After public void after() {
+    @AfterEach
+    public void after() {
         sl.dispose();
     }
 
@@ -326,8 +334,7 @@ public class ContextMenuTest {
         // make sure the first item of the subMenu is focused
         MenuItem focusedItem = getCurrentFocusedItem(cm);
         assertEquals(0, getCurrentFocusedIndex(cm));
-        assertEquals("Expected " + subMenuItem1.getText() + ", found " + focusedItem.getText(),
-                subMenuItem1, focusedItem);
+        assertEquals(subMenuItem1, focusedItem, "Expected " + subMenuItem1.getText() + ", found " + focusedItem.getText());
 
         return cm;
     }
@@ -353,15 +360,13 @@ public class ContextMenuTest {
         pressDownKey(cm);
         MenuItem focusedItem = getCurrentFocusedItem(cm);
         assertEquals(0, getCurrentFocusedIndex(cm));
-        assertEquals("Expected " + menuItem.getText() + ", found " + focusedItem.getText(),
-                menuItem, focusedItem);
+        assertEquals(menuItem, focusedItem, "Expected " + menuItem.getText() + ", found " + focusedItem.getText());
 
         // press down once to go to subMenu
         pressDownKey(cm);
         focusedItem = getCurrentFocusedItem(cm);
         assertEquals(1, getCurrentFocusedIndex(cm));
-        assertEquals("Expected " + subMenu.getText() + ", found " + focusedItem.getText(),
-                subMenu, focusedItem);
+        assertEquals(subMenu, focusedItem, "Expected " + subMenu.getText() + ", found " + focusedItem.getText());
 
         // ensure the submenu isn't showing (it should only show on right-arrow)
         assertFalse(subMenu.isShowing());
@@ -370,8 +375,7 @@ public class ContextMenuTest {
         pressDownKey(cm);
         focusedItem = getCurrentFocusedItem(cm);
         assertEquals(0, getCurrentFocusedIndex(cm));
-        assertEquals("Expected " + menuItem.getText() + ", found " + focusedItem.getText(),
-                menuItem, focusedItem);
+        assertEquals(menuItem, focusedItem, "Expected " + menuItem.getText() + ", found " + focusedItem.getText());
     }
 
     @Test public void test_navigateMenu_upwards() {
@@ -384,15 +388,13 @@ public class ContextMenuTest {
         pressUpKey(cm);
         MenuItem focusedItem = getCurrentFocusedItem(cm);
         assertEquals(1, getCurrentFocusedIndex(cm));
-        assertEquals("Expected " + subMenu.getText() + ", found " + focusedItem.getText(),
-                subMenu, focusedItem);
+        assertEquals(subMenu, focusedItem, "Expected " + subMenu.getText() + ", found " + focusedItem.getText());
 
         // press up once to go to menuItem
         pressDownKey(cm);
         focusedItem = getCurrentFocusedItem(cm);
         assertEquals(0, getCurrentFocusedIndex(cm));
-        assertEquals("Expected " + menuItem.getText() + ", found " + focusedItem.getText(),
-                menuItem, focusedItem);
+        assertEquals(menuItem, focusedItem, "Expected " + menuItem.getText() + ", found " + focusedItem.getText());
     }
 
     @Test public void test_navigateMenu_showSubMenu() {
@@ -406,22 +408,19 @@ public class ContextMenuTest {
         assertNotNull(getShowingMenuContent(cm));
         MenuItem focusedItem = getCurrentFocusedItem(cm);
         assertEquals(0, getCurrentFocusedIndex(cm));
-        assertEquals("Expected " + subMenuItem1.getText() + ", found " + focusedItem.getText(),
-                subMenuItem1, focusedItem);
+        assertEquals(subMenuItem1, focusedItem, "Expected " + subMenuItem1.getText() + ", found " + focusedItem.getText());
 
         // press down once to go to customMenuItem
         pressDownKey(cm);
         focusedItem = getCurrentFocusedItem(cm);
         assertEquals(1, getCurrentFocusedIndex(cm));
-        assertEquals("Expected " + customMenuItem.getText() + ", found " + focusedItem.getText(),
-                customMenuItem, focusedItem);
+        assertEquals(customMenuItem, focusedItem, "Expected " + customMenuItem.getText() + ", found " + focusedItem.getText());
 
         // press down once to go to wrap back around to subMenuItem1
         pressDownKey(cm);
         focusedItem = getCurrentFocusedItem(cm);
         assertEquals(0, getCurrentFocusedIndex(cm));
-        assertEquals("Expected " + subMenuItem1.getText() + ", found " + focusedItem.getText(),
-                subMenuItem1, focusedItem);
+        assertEquals(subMenuItem1, focusedItem, "Expected " + subMenuItem1.getText() + ", found " + focusedItem.getText());
     }
 
     @Test public void test_navigateSubMenu_upwards() {
@@ -431,22 +430,19 @@ public class ContextMenuTest {
         assertNotNull(getShowingMenuContent(cm));
         MenuItem focusedItem = getCurrentFocusedItem(cm);
         assertEquals(0, getCurrentFocusedIndex(cm));
-        assertEquals("Expected " + subMenuItem1.getText() + ", found " + focusedItem.getText(),
-                subMenuItem1, focusedItem);
+        assertEquals(subMenuItem1, focusedItem, "Expected " + subMenuItem1.getText() + ", found " + focusedItem.getText());
 
         // press up once to go to customMenuItem
         pressUpKey(cm);
         focusedItem = getCurrentFocusedItem(cm);
         assertEquals(1, getCurrentFocusedIndex(cm));
-        assertEquals("Expected " + customMenuItem.getText() + ", found " + focusedItem.getText(),
-                customMenuItem, focusedItem);
+        assertEquals(customMenuItem, focusedItem, "Expected " + customMenuItem.getText() + ", found " + focusedItem.getText());
 
         // press up once to go to subMenuItem1
         pressUpKey(cm);
         focusedItem = getCurrentFocusedItem(cm);
         assertEquals(0, getCurrentFocusedIndex(cm));
-        assertEquals("Expected " + subMenuItem1.getText() + ", found " + focusedItem.getText(),
-                subMenuItem1, focusedItem);
+        assertEquals(subMenuItem1, focusedItem, "Expected " + subMenuItem1.getText() + ", found " + focusedItem.getText());
     }
 
     @Test public void test_navigateSubMenu_rightKeyDoesNothing() {
@@ -457,8 +453,7 @@ public class ContextMenuTest {
         assertNotNull(getShowingMenuContent(cm));
         MenuItem focusedItem = getCurrentFocusedItem(cm);
         assertEquals(0, getCurrentFocusedIndex(cm));
-        assertEquals("Expected " + subMenuItem1.getText() + ", found " + focusedItem.getText(),
-                subMenuItem1, focusedItem);
+        assertEquals(subMenuItem1, focusedItem, "Expected " + subMenuItem1.getText() + ", found " + focusedItem.getText());
     }
 
     @Test public void test_emptySubMenu_rightKeyDoesNothing() {
@@ -487,8 +482,7 @@ public class ContextMenuTest {
         assertNotNull(getShowingMenuContent(cm));
         MenuItem focusedItem = getCurrentFocusedItem(cm);
         assertEquals(1, getCurrentFocusedIndex(cm));
-        assertEquals("Expected " + subMenu.getText() + ", found " + focusedItem.getText(),
-                subMenu, focusedItem);
+        assertEquals(subMenu, focusedItem, "Expected " + subMenu.getText() + ", found " + focusedItem.getText());
     }
 
     private int rt_37127_count = 0;
@@ -588,17 +582,17 @@ public class ContextMenuTest {
         // press down once to go to menuItem
         pressDownKey(cm);
         MenuItem focusedItem = getCurrentFocusedItem(cm);
-        assertEquals("Expected " + menuItem1.getText() + ", found " + focusedItem.getText(), menuItem1, focusedItem);
+        assertEquals(menuItem1, focusedItem, "Expected " + menuItem1.getText() + ", found " + focusedItem.getText());
 
         // press down again should skip invisible menuItem2 and proceed to menuItem3
         pressDownKey(cm);
         focusedItem = getCurrentFocusedItem(cm);
-        assertEquals("Expected " + menuItem3.getText() + ", found " + focusedItem.getText(), menuItem3, focusedItem);
+        assertEquals(menuItem3, focusedItem, "Expected " + menuItem3.getText() + ", found " + focusedItem.getText());
 
         // press up should skip invisible menuItem2 and proceed to menuItem1
         pressUpKey(cm);
         focusedItem = getCurrentFocusedItem(cm);
-        assertEquals("Expected " + menuItem1.getText() + ", found " + focusedItem.getText(), menuItem1, focusedItem);
+        assertEquals(menuItem1, focusedItem, "Expected " + menuItem1.getText() + ", found " + focusedItem.getText());
     }
 
     @Test public void test_jdk_8167132_issue_1() {
@@ -617,15 +611,13 @@ public class ContextMenuTest {
         pressDownKey(cm);
         MenuItem focusedItem = getCurrentFocusedItem(cm);
         assertEquals(0, getCurrentFocusedIndex(cm));
-        assertEquals("Expected " + item1.getText() + ", found " + focusedItem.getText(),
-                item1, focusedItem);
+        assertEquals(item1, focusedItem, "Expected " + item1.getText() + ", found " + focusedItem.getText());
 
         // press down once to go to item2
         pressDownKey(cm);
         focusedItem = getCurrentFocusedItem(cm);
         assertEquals(1, getCurrentFocusedIndex(cm));
-        assertEquals("Expected " + item2.getText() + ", found " + focusedItem.getText(),
-                item2, focusedItem);
+        assertEquals(item2, focusedItem, "Expected " + item2.getText() + ", found " + focusedItem.getText());
 
         // hide context menu
         cm.hide();
@@ -642,8 +634,7 @@ public class ContextMenuTest {
         pressDownKey(cm);
         focusedItem = getCurrentFocusedItem(cm);
         assertEquals(0, getCurrentFocusedIndex(cm));
-        assertEquals("Expected " + item1.getText() + ", found " + focusedItem.getText(),
-                item1, focusedItem);
+        assertEquals(item1, focusedItem, "Expected " + item1.getText() + ", found " + focusedItem.getText());
     }
 
     @Test public void test_position_showOnScreen() {
