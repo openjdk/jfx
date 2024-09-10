@@ -4726,8 +4726,8 @@ compileTargets { t ->
             includeEmptyDirs = false
             // Sets directory and file permissions in archive for Windows
             if (IS_WINDOWS && IS_USE_CYGWIN) {
-                dirMode = 0755
-                fileMode = 0755
+                dirPermissions { unix(0755) }
+                filePermissions { unix(0755) }
             }
             from sdkArtifactsDir
             into "${sdkBundleName}"
