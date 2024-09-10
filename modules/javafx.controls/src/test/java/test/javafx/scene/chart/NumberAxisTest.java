@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,39 +25,43 @@
 
 package test.javafx.scene.chart;
 
-import javafx.css.CssMetaData;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.css.CssMetaData;
 import javafx.css.StyleableProperty;
-import javafx.util.StringConverter;
-import static org.junit.Assert.*;
-
-
-import org.junit.Before;
-import org.junit.Test;
-
-import java.util.Arrays;
-import java.util.List;
 import javafx.geometry.Side;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.NumberAxisShim;
+import javafx.util.StringConverter;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * All public members of NumberAxis are tested here .
  * @author srikalyc
  */
 public class NumberAxisTest {
-    private NumberAxis axis;//Empty string
-    private NumberAxis threeValueAxis;//Empty string
-    private NumberAxis fourValueAxis;//Empty string
+    private NumberAxis axis;
+    private NumberAxis threeValueAxis;
+    private NumberAxis fourValueAxis;
     private StringConverter<Number> formatter;
 
     public NumberAxisTest() {
     }
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         if (axis == null) {
             axis = new NumberAxis();
         }
@@ -108,24 +112,23 @@ public class NumberAxisTest {
      * Tests for property binding                                        *
      ********************************************************************/
 
-
-    @Test public void checkForceZeroInRangePropertyBind() {
+    @Test
+    public void checkForceZeroInRangePropertyBind() {
         BooleanProperty objPr = new SimpleBooleanProperty(true);
         axis.forceZeroInRangeProperty().bind(objPr);
-        assertTrue("forceZeroInRange cannot be bound", axis.forceZeroInRangeProperty().getValue());
+        assertTrue(axis.forceZeroInRangeProperty().getValue(), "forceZeroInRange cannot be bound");
         objPr.setValue(false);
-        assertFalse("forceZeroInRange cannot be bound", axis.forceZeroInRangeProperty().getValue());
+        assertFalse(axis.forceZeroInRangeProperty().getValue(), "forceZeroInRange cannot be bound");
     }
 
-
-    @Test public void checkTickUnitPropertyBind() {
+    @Test
+    public void checkTickUnitPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(56.0);
         axis.tickUnitProperty().bind(objPr);
-        assertEquals("tickUnitProperty cannot be bound", axis.tickUnitProperty().getValue(),56.0,0.0);
+        assertEquals(axis.tickUnitProperty().getValue(), 56.0, 0.0, "tickUnitProperty cannot be bound");
         objPr.setValue(23.0);
-        assertEquals("tickUnitProperty cannot be bound", axis.tickUnitProperty().getValue(),23.0,0.0);
+        assertEquals(axis.tickUnitProperty().getValue(), 23.0, 0.0, "tickUnitProperty cannot be bound");
     }
-
 
     @Test public void forceZeroInRangePropertyHasBeanReference() {
         assertSame(axis, axis.forceZeroInRangeProperty().getBean());
@@ -253,63 +256,73 @@ public class NumberAxisTest {
         assertArrayEquals(new double[] {8.45, 8.55, 8.65}, asDoubleArray, 1e-10);
     }
 
-    @Test(timeout = 1000)
+    @Test
     public void testCloseValues() {
-        axis.setForceZeroInRange(false);
-        axis.setSide(Side.LEFT);
-        double minValue = 1.0;
-        double maxValue = minValue + Math.ulp(minValue);
-        NumberAxisShim.autoRange(axis, minValue, maxValue, 500, 50);
+        assertTimeout(Duration.ofMillis(1000), () -> {
+            axis.setForceZeroInRange(false);
+            axis.setSide(Side.LEFT);
+            double minValue = 1.0;
+            double maxValue = minValue + Math.ulp(minValue);
+            NumberAxisShim.autoRange(axis, minValue, maxValue, 500, 50);
+        });
     }
 
-    @Test(timeout = 1000)
+    @Test
     public void testCloseValuesMinorTicks() {
-        axis.setForceZeroInRange(false);
-        axis.setSide(Side.LEFT);
-        double minValue = 1.0;
-        double maxValue = minValue + 11*Math.ulp(minValue);
-        Object range = NumberAxisShim.autoRange(axis, minValue, maxValue, 500, 50);
-        NumberAxisShim.setRange(axis, range, false);
-        NumberAxisShim.calculateMinorTickMarks(axis);
+        assertTimeout(Duration.ofMillis(1000), () -> {
+            axis.setForceZeroInRange(false);
+            axis.setSide(Side.LEFT);
+            double minValue = 1.0;
+            double maxValue = minValue + 11 * Math.ulp(minValue);
+            Object range = NumberAxisShim.autoRange(axis, minValue, maxValue, 500, 50);
+            NumberAxisShim.setRange(axis, range, false);
+            NumberAxisShim.calculateMinorTickMarks(axis);
+        });
     }
 
-    @Test(timeout = 1000)
+    @Test
     public void testEqualLargeValues() {
-        axis.setForceZeroInRange(false);
-        axis.setSide(Side.LEFT);
-        double minValue = Math.pow(2, 52); // ulp == 1.0
-        double maxValue = minValue;
-        NumberAxisShim.autoRange(axis, minValue, maxValue, 500, 50);
+        assertTimeout(Duration.ofMillis(1000), () -> {
+            axis.setForceZeroInRange(false);
+            axis.setSide(Side.LEFT);
+            double minValue = Math.pow(2, 52); // ulp == 1.0
+            double maxValue = minValue;
+            NumberAxisShim.autoRange(axis, minValue, maxValue, 500, 50);
+        });
     }
 
-    @Test(timeout = 1000)
+    @Test
     public void testCloseValuesNoAutorange() {
-        axis.setForceZeroInRange(false);
-        axis.setSide(Side.LEFT);
-        axis.setAutoRanging(false);
-        double minValue = 1.0;
-        double maxValue = minValue + Math.ulp(minValue);
-        axis.setLowerBound(minValue);
-        axis.setUpperBound(maxValue);
-        // minValue + tickUnit == minValue
-        axis.setTickUnit(0.5*Math.ulp(minValue));
-        Object range = NumberAxisShim.getRange(axis);
-        NumberAxisShim.calculateTickValues(axis, 500, range);
-        NumberAxisShim.calculateMinorTickMarks(axis);
+        assertTimeout(Duration.ofMillis(1000), () -> {
+            axis.setForceZeroInRange(false);
+            axis.setSide(Side.LEFT);
+            axis.setAutoRanging(false);
+            double minValue = 1.0;
+            double maxValue = minValue + Math.ulp(minValue);
+            axis.setLowerBound(minValue);
+            axis.setUpperBound(maxValue);
+            // minValue + tickUnit == minValue
+            axis.setTickUnit(0.5 * Math.ulp(minValue));
+            Object range = NumberAxisShim.getRange(axis);
+            NumberAxisShim.calculateTickValues(axis, 500, range);
+            NumberAxisShim.calculateMinorTickMarks(axis);
+        });
     }
 
-    @Test(timeout = 1000)
+    @Test
     public void testCloseValuesMinorTicksNoAutoRange() {
-        axis.setForceZeroInRange(false);
-        axis.setSide(Side.LEFT);
-        axis.setAutoRanging(false);
-        double minValue = 1.0;
-        double maxValue = minValue + Math.ulp(minValue);
-        axis.setLowerBound(minValue);
-        axis.setUpperBound(maxValue);
-        axis.setTickUnit(Math.ulp(minValue));
-        Object range = NumberAxisShim.getRange(axis);
-        NumberAxisShim.calculateTickValues(axis, 500, range);
-        NumberAxisShim.calculateMinorTickMarks(axis);
+        assertTimeout(Duration.ofMillis(1000), () -> {
+            axis.setForceZeroInRange(false);
+            axis.setSide(Side.LEFT);
+            axis.setAutoRanging(false);
+            double minValue = 1.0;
+            double maxValue = minValue + Math.ulp(minValue);
+            axis.setLowerBound(minValue);
+            axis.setUpperBound(maxValue);
+            axis.setTickUnit(Math.ulp(minValue));
+            Object range = NumberAxisShim.getRange(axis);
+            NumberAxisShim.calculateTickValues(axis, 500, range);
+            NumberAxisShim.calculateMinorTickMarks(axis);
+        });
     }
 }

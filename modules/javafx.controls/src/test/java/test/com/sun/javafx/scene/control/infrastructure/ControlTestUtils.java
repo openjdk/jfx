@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,12 @@
 
 package test.com.sun.javafx.scene.control.infrastructure;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
@@ -36,13 +42,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.Pagination;
 import javafx.scene.control.PopupControl;
 import javafx.scene.control.Tab;
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
 import test.com.sun.javafx.binding.ExpressionHelperUtility;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 public final class ControlTestUtils {
     private ControlTestUtils() { }
@@ -56,7 +56,7 @@ public final class ControlTestUtils {
     }
 
     public static void assertStyleClassContains(String message, Tab tab, String styleClass) {
-        assertTrue(message, tab.getStyleClass().contains(styleClass));
+        assertTrue(tab.getStyleClass().contains(styleClass), message);
     }
 
     /*********************************************************************
@@ -69,7 +69,7 @@ public final class ControlTestUtils {
     }
 
     public static void assertStyleClassContains(String message, MenuItem mi, String styleClass) {
-        assertTrue(message, mi.getStyleClass().contains(styleClass));
+        assertTrue(mi.getStyleClass().contains(styleClass), message);
     }
 
     /*********************************************************************
@@ -82,7 +82,7 @@ public final class ControlTestUtils {
     }
 
     public static void assertStyleClassContains(String message, PopupControl control, String styleClass) {
-        assertTrue(message, control.getStyleClass().contains(styleClass));
+        assertTrue(control.getStyleClass().contains(styleClass), message);
     }
 
     /****************************************************************************
@@ -95,7 +95,7 @@ public final class ControlTestUtils {
     }
 
     public static void assertStyleClassContains(String message, Control control, String styleClass) {
-        assertTrue(message, control.getStyleClass().contains(styleClass));
+        assertTrue(control.getStyleClass().contains(styleClass), message);
     }
 
     /****************************************************************************
@@ -110,7 +110,7 @@ public final class ControlTestUtils {
     public static void assertPseudoClassExists(String message, Control control, String pseudoClass) {
         Set<PseudoClass> allStates = control.getPseudoClassStates();
         PseudoClass state = PseudoClass.getPseudoClass(pseudoClass);
-        assertTrue(message, allStates.contains(state));
+        assertTrue(allStates.contains(state), message);
     }
 
     public static void assertPseudoClassDoesNotExist(Control control, String pseudoClass) {
@@ -122,7 +122,7 @@ public final class ControlTestUtils {
     public static void assertPseudoClassDoesNotExist(String message, Control control, String pseudoClass) {
         Set<PseudoClass> allStates = control.getPseudoClassStates();
         PseudoClass state = PseudoClass.getPseudoClass(pseudoClass);
-        assertFalse(message, allStates.contains(state));
+        assertFalse(allStates.contains(state), message);
     }
 
     /****************************************************************************
@@ -137,7 +137,7 @@ public final class ControlTestUtils {
     public static void assertPseudoClassExists(String message, Axis axis, String pseudoClass) {
         Set<PseudoClass> allStates = axis.getPseudoClassStates();
         PseudoClass state = PseudoClass.getPseudoClass(pseudoClass);
-        assertTrue(message, allStates.contains(state));
+        assertTrue(allStates.contains(state), message);
     }
 
     public static void assertPseudoClassDoesNotExist(Axis axis, String pseudoClass) {
@@ -149,7 +149,7 @@ public final class ControlTestUtils {
     public static void assertPseudoClassDoesNotExist(String message, Axis axis, String pseudoClass) {
         Set<PseudoClass> allStates = axis.getPseudoClassStates();
         PseudoClass state = PseudoClass.getPseudoClass(pseudoClass);
-        assertFalse(message, allStates.contains(state));
+        assertFalse(allStates.contains(state), message);
     }
 
     /*********************************************************************
@@ -162,7 +162,7 @@ public final class ControlTestUtils {
     }
 
     public static void assertStyleClassContains(String message, Pagination control, String styleClass) {
-        assertTrue(message, control.getStyleClass().contains(styleClass));
+        assertTrue(control.getStyleClass().contains(styleClass), message);
     }
 
     public static void assertListenerListContains(ObservableList list, ListChangeListener listener) {
@@ -193,7 +193,7 @@ public final class ControlTestUtils {
 
     public static void assertValueListenersContains(String message, ObservableValue value, InvalidationListener listener) {
         List listeners = getObservableValueListeners(value);
-        assertTrue(message, listeners != null && listeners.contains(listener));
+        assertTrue(listeners != null && listeners.contains(listener), message);
     }
 
     public static void assertValueListenersDoesNotContain(ObservableValue value, InvalidationListener listener) {
@@ -202,7 +202,7 @@ public final class ControlTestUtils {
 
     public static void assertValueListenersDoesNotContain(String message, ObservableValue value, InvalidationListener listener) {
         List listeners = getObservableValueListeners(value);
-        assertTrue(message, listeners == null || !listeners.contains(listener));
+        assertTrue(listeners == null || !listeners.contains(listener), message);
     }
 
     public static int getListenerCount(ObservableValue value) {
