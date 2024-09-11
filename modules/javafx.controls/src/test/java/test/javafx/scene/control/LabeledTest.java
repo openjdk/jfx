@@ -31,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -160,7 +161,7 @@ public class LabeledTest {
         } catch (ClassCastException ignored) {
             // pass!
         } catch (Exception e) {
-            org.junit.Assert.fail(e.toString());
+            fail(e);
         }
     }
 

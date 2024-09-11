@@ -29,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.StringProperty;
@@ -128,7 +129,9 @@ public class ControlSkinTest {
             boolean calledOnce = false;
             @Override
             public void invalidated(Observable o) {
-                if (calledOnce) org.junit.Assert.fail();
+                if (calledOnce) {
+                    fail();
+                }
                 calledOnce = true;
             }
         });

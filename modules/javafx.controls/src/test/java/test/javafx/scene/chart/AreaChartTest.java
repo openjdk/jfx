@@ -84,7 +84,7 @@ public class AreaChartTest extends XYChartTestBase {
         ac.setTitle("HelloAreaChart");
         ac.setAnimated(false);
     }
-    
+
     @Override
     protected Chart getChart() {
         return ac;

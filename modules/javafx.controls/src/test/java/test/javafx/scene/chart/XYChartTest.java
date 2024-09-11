@@ -141,12 +141,11 @@ public class XYChartTest extends ChartTestBase {
 
     @Test
     public void testLegendSizeWhenThereIsNoChartData() {
-        createChart();    
+        createChart();
         startApp();
         assertEquals(0, ChartShim.getLegend(areachart).prefHeight(-1), 0);
         assertEquals(0, ChartShim.getLegend(areachart).prefWidth(-1), 0);
     }
-
 
     @Test
     public void canModifySeriesWithoutChart() {
