@@ -27,6 +27,8 @@ package javafx.scene.traversal;
 
 /**
  * Specifies the traversal method.
+ *
+ * @since 24
  */
 public enum TraversalMethod {
     /**

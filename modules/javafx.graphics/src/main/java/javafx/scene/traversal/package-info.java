@@ -24,6 +24,8 @@
  */
 
 /**
- * <p>Provides the set of classes for focus traversal.</p>
+ * Provides the set of classes for focus traversal.
+ *
+ * @since 24
  */
 package javafx.scene.traversal;

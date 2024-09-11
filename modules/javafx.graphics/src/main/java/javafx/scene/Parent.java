@@ -850,7 +850,7 @@ public abstract class Parent extends Node {
      * JavaFX focus traversal subsystem.
      *
      * @defaultValue null
-     * @since 999 TODO
+     * @since 24
      */
     private ObjectProperty<TraversalPolicy> traversalPolicy;
 

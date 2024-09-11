@@ -46,12 +46,12 @@ import com.sun.javafx.scene.traversal.TraversalUtils;
  * This ensures that the next direction will traverse the same nodes as previous (in the opposite order).
  *
  * @see TraversalDirection
- * @since 999 TODO
+ * @since 24
  */
 public abstract class TraversalPolicy {
     /**
-     * Traverse from owner, in direction dir.
-     * Return the new {@link javafx.scene.Node#isFocusTraversable() focus traversable} Node
+     * Traverses from the specified {@code node}, in the direction {@code dir}.
+     * Returns the new {@link javafx.scene.Node#isFocusTraversable() focus traversable} Node
      * or null if no suitable target is found.
      * <p>
      * Note: the {@code node} does not have to be focused or focus traversable, as it serves
@@ -91,9 +91,9 @@ public abstract class TraversalPolicy {
     public abstract Node selectLast(Parent root);
 
     /**
-     * The constructor.
+     * Constructor for subclasses to call.
      */
-    public TraversalPolicy() {
+    protected TraversalPolicy() {
     }
 
     /**

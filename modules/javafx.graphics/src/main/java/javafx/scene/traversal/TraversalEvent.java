@@ -45,7 +45,7 @@ import javafx.scene.Scene;
  * });}</pre>
  *
  * @see TraversalPolicy
- * @since 999 TODO
+ * @since 24
  */
 public class TraversalEvent extends Event {
 

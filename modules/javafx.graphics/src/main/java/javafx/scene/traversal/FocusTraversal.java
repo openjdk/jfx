@@ -33,7 +33,7 @@ import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
 /**
  * Provides the mechanism for focus traversal in the JavaFX application.
  *
- * @since 999 TODO
+ * @since 24
  */
 public final class FocusTraversal {
     /**
@@ -61,8 +61,11 @@ public final class FocusTraversal {
 
     /**
      * Traverse focus downward as a response to pressing a key.
+     * <p>
+     * This convenience method is equivalent to calling
+     * {@code traverse(node, TraversalDirection.DOWN, TraversalMethod.KEY);}
      *
-     * @param node the origin node
+     * @param node the node to traverse focus from
      * @return true if traversal was successful
      */
     public static boolean traverseDown(Node node) {
@@ -72,10 +75,10 @@ public final class FocusTraversal {
     /**
      * Traverse focus left as a response to pressing a key.
      * <p>
-     * Ths convenience method is equivalent to calling
+     * This convenience method is equivalent to calling
      * {@code traverse(node, TraversalDirection.LEFT, TraversalMethod.KEY)}.
      *
-     * @param node the origin node
+     * @param node the node to traverse focus from
      * @return true if traversal was successful
      */
     public static boolean traverseLeft(Node node) {
@@ -85,10 +88,10 @@ public final class FocusTraversal {
     /**
      * Traverse focus to the next focuseable Node as a response to pressing a key.
      * <p>
-     * Ths convenience method is equivalent to calling
+     * This convenience method is equivalent to calling
      * {@code traverse(node, TraversalDirection.NEXT, TraversalMethod.KEY)}.
      *
-     * @param node the origin node
+     * @param node the node to traverse focus from
      * @return true if traversal was successful
      */
     public static boolean traverseNext(Node node) {
@@ -99,10 +102,10 @@ public final class FocusTraversal {
      * Traverse focus to the next focuseable Node as a response to pressing a key.
      * This method does not traverse into the current parent.
      * <p>
-     * Ths convenience method is equivalent to calling
+     * This convenience method is equivalent to calling
      * {@code traverse(node, TraversalDirection.NEXT_IN_LINE, TraversalMethod.KEY)}.
      *
-     * @param node the origin node
+     * @param node the node to traverse focus from
      * @return true if traversal was successful
      */
     public static boolean traverseNextInLine(Node node) {
@@ -112,10 +115,10 @@ public final class FocusTraversal {
     /**
      * Traverse focus to the previous focusable Node as a response to pressing a key.
      * <p>
-     * Ths convenience method is equivalent to calling
+     * This convenience method is equivalent to calling
      * {@code traverse(node, TraversalDirection.PREVIOUS, TraversalMethod.KEY)}.
      *
-     * @param node the origin node
+     * @param node the node to traverse focus from
      * @return true if traversal was successful
      */
     public static boolean traversePrevious(Node node) {
@@ -125,10 +128,10 @@ public final class FocusTraversal {
     /**
      * Traverse focus right as a response to pressing a key.
      * <p>
-     * Ths convenience method is equivalent to calling
+     * This convenience method is equivalent to calling
      * {@code traverse(node, TraversalDirection.RIGHT, TraversalMethod.KEY)}.
      *
-     * @param node the origin node
+     * @param node the node to traverse focus from
      * @return true if traversal was successful
      */
     public static boolean traverseRight(Node node) {
@@ -138,10 +141,10 @@ public final class FocusTraversal {
     /**
      * Traverse focus upward as a response to pressing a key.
      * <p>
-     * Ths convenience method is equivalent to calling
+     * This convenience method is equivalent to calling
      * {@code traverse(node, TraversalDirection.UP, TraversalMethod.KEY)}.
      *
-     * @param node the origin node
+     * @param node the node to traverse focus from
      * @return true if traversal was successful
      */
     public static boolean traverseUp(Node node) {
