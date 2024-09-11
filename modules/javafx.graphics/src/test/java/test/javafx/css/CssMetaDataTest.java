@@ -54,7 +54,8 @@ import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.css.converter.BooleanConverter;
 import com.sun.javafx.scene.NodeHelper;
-import javafx.css.CompoundSelector;
+import com.sun.javafx.css.CompoundSelector;
+import com.sun.javafx.css.SimpleSelector;
 import javafx.css.CssMetaData;
 import javafx.css.CssParser;
 import javafx.css.CssParserShim;
@@ -67,8 +68,6 @@ import javafx.css.Rule;
 import javafx.css.RuleShim;
 import javafx.css.Selector;
 import javafx.css.SelectorShim;
-import javafx.css.SimpleSelector;
-import javafx.css.SimpleSelectorShim;
 import javafx.css.Style;
 import javafx.css.StyleConverter;
 import javafx.css.StyleOrigin;
@@ -252,16 +251,15 @@ public class CssMetaDataTest {
     static CascadingStyle createCascadingStyle(Selector selector, Declaration declaration) {
 
         Set<PseudoClass> pseudoClasses = null;
-        if (selector instanceof SimpleSelector) {
+        if (selector instanceof SimpleSelector s) {
 
-            pseudoClasses =
-                    SimpleSelectorShim.getPseudoClassStates((SimpleSelector)selector);
+            pseudoClasses = s.getPseudoClassStates();
         } else {
 
             pseudoClasses = new PseudoClassState();
             for (SimpleSelector sel : ((CompoundSelector)selector).getSelectors()) {
 
-                Set<PseudoClass> selectorPseudoClasses = SimpleSelectorShim.getPseudoClassStates(sel);
+                Set<PseudoClass> selectorPseudoClasses = sel.getPseudoClassStates();
                 pseudoClasses.addAll(selectorPseudoClasses);
             }
         }
@@ -291,7 +289,7 @@ public class CssMetaDataTest {
         List<String> rootStyleClass = new ArrayList<>();
         rootStyleClass.add("root");
 
-        Selector root = SimpleSelectorShim.getSimpleSelector("*", rootStyleClass, null, null);
+        Selector root = new SimpleSelector("*", rootStyleClass, null, null);
 
         ParsedValue fxBaseValue = new CssParserShim().parseExpr("-fx-base", "red");
         Declaration fxBase = DeclarationShim.getDeclaration("-fx-base", fxBaseValue, false);
@@ -314,7 +312,7 @@ public class CssMetaDataTest {
         List<String> rectStyleClass = new ArrayList<>();
         rectStyleClass.add("rect");
 
-        Selector rect = SimpleSelectorShim.getSimpleSelector("*", rectStyleClass, null, null);
+        Selector rect = new SimpleSelector("*", rectStyleClass, null, null);
 
         ParsedValue fxFillValue = new CssParserShim().parseExpr("-fx-fill", "-fx-color");
         Declaration fxFill = DeclarationShim.getDeclaration("-fx-fill", fxFillValue, false);
@@ -332,7 +330,7 @@ public class CssMetaDataTest {
         List<String> pseudoclasses = new ArrayList<>();
         pseudoclasses.add("hover");
 
-        Selector rectHover = SimpleSelectorShim.getSimpleSelector("*", rectStyleClass, pseudoclasses, null);
+        Selector rectHover = new SimpleSelector("*", rectStyleClass, pseudoclasses, null);
 
         ParsedValueImpl<Color,Color> fxFillHoverValue = new ParsedValueImpl<>(Color.YELLOW, null);
         Declaration fxFillHover = DeclarationShim.getDeclaration("-fx-fill", fxFillHoverValue, false);
@@ -396,7 +394,7 @@ public class CssMetaDataTest {
         List<String> rootStyleClass = new ArrayList<>();
         rootStyleClass.add("root");
 
-        Selector root = SimpleSelectorShim.getSimpleSelector("*", rootStyleClass, null, null);
+        Selector root = new SimpleSelector("*", rootStyleClass, null, null);
 
         ParsedValue fxBaseValue = new CssParserShim().parseExpr("-fx-base", "red");
         Declaration fxBase = DeclarationShim.getDeclaration("-fx-base", fxBaseValue, false);
@@ -419,7 +417,7 @@ public class CssMetaDataTest {
         List<String> rectStyleClass = new ArrayList<>();
         rectStyleClass.add("rect");
 
-        Selector rect = SimpleSelectorShim.getSimpleSelector("*", rectStyleClass, null, null);
+        Selector rect = new SimpleSelector("*", rectStyleClass, null, null);
 
         ParsedValue fxFillValue = new CssParserShim().parseExpr("-fx-fill", "-fx-color");
         Declaration fxFill = DeclarationShim.getDeclaration("-fx-fill", fxFillValue, false);
@@ -437,7 +435,7 @@ public class CssMetaDataTest {
         List<String> pseudoclasses = new ArrayList<>();
         pseudoclasses.add("hover");
 
-        Selector rectHover = SimpleSelectorShim.getSimpleSelector("*", rectStyleClass, pseudoclasses, null);
+        Selector rectHover = new SimpleSelector("*", rectStyleClass, pseudoclasses, null);
 
         ParsedValueImpl<Color,Color> fxFillHoverValue = new ParsedValueImpl<>(Color.YELLOW, null);
         Declaration fxFillHover = DeclarationShim.getDeclaration("-fx-fill", fxFillHoverValue, false);
@@ -520,7 +518,7 @@ public class CssMetaDataTest {
         List<String> rootStyleClass = new ArrayList<>();
         rootStyleClass.add("root");
 
-        Selector root = SimpleSelectorShim.getSimpleSelector("*", rootStyleClass, null, null);
+        Selector root = new SimpleSelector("*", rootStyleClass, null, null);
 
         ParsedValue fxBaseValue = new CssParserShim().parseExpr("-fx-base", "red");
         Declaration fxBase = DeclarationShim.getDeclaration("-fx-base", fxBaseValue, false);
@@ -543,7 +541,7 @@ public class CssMetaDataTest {
         List<String> rectStyleClass = new ArrayList<>();
         rectStyleClass.add("rect");
 
-        Selector rect = SimpleSelectorShim.getSimpleSelector("*", rectStyleClass, null, null);
+        Selector rect = new SimpleSelector("*", rectStyleClass, null, null);
 
         ParsedValue fxFillValue = new CssParserShim().parseExpr("-fx-fill", "-fx-color");
         Declaration fxFill = DeclarationShim.getDeclaration("-fx-fill", fxFillValue, false);
@@ -561,7 +559,7 @@ public class CssMetaDataTest {
         List<String> pseudoclasses = new ArrayList<>();
         pseudoclasses.add("hover");
 
-        Selector rectHover = SimpleSelectorShim.getSimpleSelector("*", rectStyleClass, pseudoclasses, null);
+        Selector rectHover = new SimpleSelector("*", rectStyleClass, pseudoclasses, null);
 
         ParsedValueImpl<Color,Color> fxFillHoverValue = new ParsedValueImpl<>(Color.YELLOW, null);
         Declaration fxFillHover = DeclarationShim.getDeclaration("-fx-fill", fxFillHoverValue, false);
@@ -644,7 +642,7 @@ public class CssMetaDataTest {
         List<String> rootStyleClass = new ArrayList<>();
         rootStyleClass.add("root");
 
-        Selector root = SimpleSelectorShim.getSimpleSelector("*", rootStyleClass, null, null);
+        Selector root = new SimpleSelector("*", rootStyleClass, null, null);
 
         ParsedValue fxBaseValue = new CssParserShim().parseExpr("-fx-base", "red");
         Declaration fxBase = DeclarationShim.getDeclaration("-fx-base", fxBaseValue, false);
@@ -667,7 +665,7 @@ public class CssMetaDataTest {
         List<String> rectStyleClass = new ArrayList<>();
         rectStyleClass.add("rect");
 
-        Selector rect = SimpleSelectorShim.getSimpleSelector("*", rectStyleClass, null, null);
+        Selector rect = new SimpleSelector("*", rectStyleClass, null, null);
 
         ParsedValue fxFillValue = new CssParserShim().parseExpr("-fx-fill", "-fx-color");
         Declaration fxFill = DeclarationShim.getDeclaration("-fx-fill", fxFillValue, false);
@@ -685,7 +683,7 @@ public class CssMetaDataTest {
         List<String> pseudoclasses = new ArrayList<>();
         pseudoclasses.add("hover");
 
-        Selector rectHover = SimpleSelectorShim.getSimpleSelector("*", rectStyleClass, pseudoclasses, null);
+        Selector rectHover = new SimpleSelector("*", rectStyleClass, pseudoclasses, null);
 
         ParsedValueImpl<Color,Color> fxFillHoverValue = new ParsedValueImpl<>(Color.YELLOW, null);
         Declaration fxFillHover = DeclarationShim.getDeclaration("-fx-fill", fxFillHoverValue, false);
@@ -772,7 +770,7 @@ public class CssMetaDataTest {
         List<String> rootStyleClass = new ArrayList<>();
         rootStyleClass.add("root");
 
-        Selector root = SimpleSelectorShim.getSimpleSelector("*", rootStyleClass, null, null);
+        Selector root = new SimpleSelector("*", rootStyleClass, null, null);
 
         ParsedValue fxBaseValue = new CssParserShim().parseExpr("-fx-base", "red");
         Declaration fxBase = DeclarationShim.getDeclaration("-fx-base", fxBaseValue, false);
@@ -798,7 +796,7 @@ public class CssMetaDataTest {
         List<String> rectStyleClass = new ArrayList<>();
         rectStyleClass.add("rect");
 
-        Selector rect = SimpleSelectorShim.getSimpleSelector("*", rectStyleClass, null, null);
+        Selector rect = new SimpleSelector("*", rectStyleClass, null, null);
 
         ParsedValue fxFillValue = new CssParserShim().parseExpr("-fx-fill", "-fx-color");
         Declaration fxFill = DeclarationShim.getDeclaration("-fx-fill", fxFillValue, false);
@@ -816,7 +814,7 @@ public class CssMetaDataTest {
         List<String> pseudoclasses = new ArrayList<>();
         pseudoclasses.add("hover");
 
-        Selector rectHover = SimpleSelectorShim.getSimpleSelector("*", rectStyleClass, pseudoclasses, null);
+        Selector rectHover = new SimpleSelector("*", rectStyleClass, pseudoclasses, null);
 
         ParsedValueImpl<Color,Color> fxFillHoverValue = new ParsedValueImpl<>(Color.YELLOW, null);
         Declaration fxFillHover = DeclarationShim.getDeclaration("-fx-fill", fxFillHoverValue, false);
@@ -883,7 +881,7 @@ public class CssMetaDataTest {
         //
         // .root { -fx-base: red; -fx-color: -fx-base; }
         //
-        Selector root = SimpleSelectorShim.getSimpleSelector("*", rootStyleClass, null, null);
+        Selector root = new SimpleSelector("*", rootStyleClass, null, null);
 
         ParsedValue fxBaseValue = new CssParserShim().parseExpr("-fx-base", "red");
         Declaration fxBase = DeclarationShim.getDeclaration("-fx-base", fxBaseValue, false);
@@ -906,7 +904,7 @@ public class CssMetaDataTest {
         //
         // .rect { -fx-fill: -fx-color; }
         //
-        Selector rect = SimpleSelectorShim.getSimpleSelector("*", rectStyleClass, null, null);
+        Selector rect = new SimpleSelector("*", rectStyleClass, null, null);
 
         ParsedValue fxFillValue = new CssParserShim().parseExpr("-fx-fill", "-fx-color");
         Declaration fxFill = DeclarationShim.getDeclaration("-fx-fill", fxFillValue, false);
@@ -924,7 +922,7 @@ public class CssMetaDataTest {
         List<String> pseudoclasses = new ArrayList<>();
         pseudoclasses.add("hover");
 
-        Selector rectHover = SimpleSelectorShim.getSimpleSelector("*", rectStyleClass, pseudoclasses, null);
+        Selector rectHover = new SimpleSelector("*", rectStyleClass, pseudoclasses, null);
 
         ParsedValueImpl<Color,Color> fxFillHoverValue = new ParsedValueImpl<>(Color.YELLOW, null);
         Declaration fxFillHover = DeclarationShim.getDeclaration("-fx-fill", fxFillHoverValue, false);
@@ -986,7 +984,7 @@ public class CssMetaDataTest {
         List<String> rootStyleClass = new ArrayList<>();
         rootStyleClass.add("root");
 
-        Selector root = SimpleSelectorShim.getSimpleSelector("*", rootStyleClass, null, null);
+        Selector root = new SimpleSelector("*", rootStyleClass, null, null);
 
         ParsedValue<Color,Color> fxFontShouldInheritValue = new CssParserShim().parseExpr("-fx-font", "12px system");
         Declaration fxFontShouldInherit = DeclarationShim.getDeclaration("-fx-font", fxFontShouldInheritValue, false);
@@ -1006,7 +1004,7 @@ public class CssMetaDataTest {
         List<String> textStyleClass = new ArrayList<>();
         textStyleClass.add("text");
 
-        Selector textSelector = SimpleSelectorShim.getSimpleSelector("*", textStyleClass, null, null);
+        Selector textSelector = new SimpleSelector("*", textStyleClass, null, null);
 
         ParsedValue fxFillValue = new CssParserShim().parseExpr("-fx-fill", "red");
         Declaration fxFill = DeclarationShim.getDeclaration("-fx-fill", fxFillValue, false);
@@ -1067,7 +1065,7 @@ public class CssMetaDataTest {
         List<String> rootStyleClass = new ArrayList<>();
         rootStyleClass.add("root");
 
-        Selector root = SimpleSelectorShim.getSimpleSelector("*", rootStyleClass, null, null);
+        Selector root = new SimpleSelector("*", rootStyleClass, null, null);
 
         ParsedValue<Color,Color> fxFontShouldInheritValue = new CssParserShim().parseExpr("-fx-font", "12px system");
         Declaration fxFontShouldInherit = DeclarationShim.getDeclaration("-fx-font", fxFontShouldInheritValue, false);
@@ -1087,7 +1085,7 @@ public class CssMetaDataTest {
         List<String> rectStyleClass = new ArrayList<>();
         rectStyleClass.add("text");
 
-        Selector textSelector = SimpleSelectorShim.getSimpleSelector("*", rectStyleClass, null, null);
+        Selector textSelector = new SimpleSelector("*", rectStyleClass, null, null);
 
         ParsedValue fxFillValue = new CssParserShim().parseExpr("-fx-fill", "red");
         Declaration fxFill = DeclarationShim.getDeclaration("-fx-fill", fxFillValue, false);
