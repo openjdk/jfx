@@ -23,14 +23,15 @@
  * questions.
  */
 
-package javafx.css;
+package com.sun.javafx.css;
 
+import javafx.css.PseudoClass;
+import javafx.css.Selector;
+import javafx.css.StyleClass;
+import javafx.css.Styleable;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -39,22 +40,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import com.sun.javafx.css.FixedCapacitySet;
-import com.sun.javafx.css.ImmutablePseudoClassSetsCache;
-import com.sun.javafx.css.PseudoClassState;
-
 import static javafx.geometry.NodeOrientation.INHERIT;
 import static javafx.geometry.NodeOrientation.LEFT_TO_RIGHT;
 import static javafx.geometry.NodeOrientation.RIGHT_TO_LEFT;
 
 /**
  * A simple selector which behaves according to the CSS standard.
- *
- * @since 9
- * @deprecated This class was exposed erroneously and will be removed in a future version
  */
-@Deprecated(since = "23", forRemoval = true)
-@SuppressWarnings("removal")
 final public class SimpleSelector extends Selector {
 
     /**
@@ -154,7 +146,7 @@ final public class SimpleSelector extends Selector {
     private final Set<PseudoClass> pseudoClassState;
 
     // for test purposes
-    Set<PseudoClass> getPseudoClassStates() {
+    public Set<PseudoClass> getPseudoClassStates() {
         return pseudoClassState;
     }
 
@@ -181,7 +173,7 @@ final public class SimpleSelector extends Selector {
     }
 
     // TODO: The parser passes styleClasses as a List. Should be array?
-    SimpleSelector(final String name, final List<String> styleClasses,
+    public SimpleSelector(final String name, final List<String> styleClasses,
             final List<String> pseudoClasses, final String id)
     {
         this.name = name == null ? "*" : name;
@@ -241,12 +233,6 @@ final public class SimpleSelector extends Selector {
         }
 
         return scs;
-    }
-
-    @Override public Match createMatch() {
-        final int idCount = (matchOnId) ? 1 : 0;
-        int styleClassCount = selectorStyleClassNames.size();
-        return new Match(this, pseudoClassState, idCount, styleClassCount);
     }
 
     @Override public boolean applies(Styleable styleable) {
@@ -401,50 +387,5 @@ final public class SimpleSelector extends Selector {
         }
 
         return sbuf.toString();
-    }
-
-    @Override protected final void writeBinary(final DataOutputStream os, final StyleConverter.StringStore stringStore)
-        throws IOException
-    {
-        super.writeBinary(os, stringStore);
-        os.writeShort(stringStore.addString(name));
-        os.writeShort(selectorStyleClassNames.size());
-        Iterator<String> iter1 = selectorStyleClassNames.iterator();
-        while(iter1.hasNext()) {
-            final String sc = iter1.next();
-            os.writeShort(stringStore.addString(sc));
-        }
-        os.writeShort(stringStore.addString(id));
-        int pclassSize = pseudoClassState.size()
-                + (nodeOrientation == RIGHT_TO_LEFT || nodeOrientation == LEFT_TO_RIGHT ? 1 : 0);
-        os.writeShort(pclassSize);
-        Iterator<PseudoClass> iter2 = pseudoClassState.iterator();
-        while(iter2.hasNext()) {
-            final PseudoClass pc = iter2.next();
-            os.writeShort(stringStore.addString(pc.getPseudoClassName()));
-        }
-        if (nodeOrientation == RIGHT_TO_LEFT) {
-            os.writeShort(stringStore.addString("dir(rtl)"));
-        } else if (nodeOrientation == LEFT_TO_RIGHT) {
-            os.writeShort(stringStore.addString("dir(ltr)"));
-        }
-    }
-
-    static SimpleSelector readBinary(int bssVersion, final DataInputStream is, final String[] strings)
-        throws IOException
-    {
-        final String name = strings[is.readShort()];
-        final int nStyleClasses = is.readShort();
-        final List<String> styleClasses = new ArrayList<>();
-        for (int n=0; n < nStyleClasses; n++) {
-            styleClasses.add(strings[is.readShort()]);
-        }
-        final String id = strings[is.readShort()];
-        final int nPseudoclasses = is.readShort();
-        final List<String> pseudoclasses = new ArrayList<>();
-        for(int n=0; n < nPseudoclasses; n++) {
-            pseudoclasses.add(strings[is.readShort()]);
-        }
-        return new SimpleSelector(name, styleClasses, pseudoclasses, id);
     }
 }

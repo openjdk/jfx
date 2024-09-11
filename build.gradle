@@ -2124,7 +2124,9 @@ allprojects {
     // Set sourceCompatibility to the target release of Java. Most modules
     // set compiler.options.release (to the same target version), which will
     // override this setting, but it is needed for those modules that can't.
-    sourceCompatibility = JAVA_TARGET_VERSION
+    java {
+        sourceCompatibility = JAVA_TARGET_VERSION
+    }
 
     // By default all of our projects require junit for testing so we can just
     // setup this dependency here.
@@ -2139,6 +2141,7 @@ allprojects {
         testRuntimeOnly group: "org.junit.jupiter", name: "junit-jupiter-engine", version: "5.8.1"
         testRuntimeOnly group: "org.junit.platform", name: "junit-platform-commons", version: "1.8.1"
         testRuntimeOnly group: "org.junit.platform", name: "junit-platform-engine", version: "1.8.1"
+        testRuntimeOnly group: "org.junit.platform", name: "junit-platform-launcher", version: "1.8.1"
         testRuntimeOnly group: "org.junit.vintage", name: "junit-vintage-engine", version: "5.8.1"
 
         if (BUILD_CLOSED && DO_JCOV)  {
@@ -4753,8 +4756,8 @@ compileTargets { t ->
             includeEmptyDirs = false
             // Sets directory and file permissions in archive for Windows
             if (IS_WINDOWS && IS_USE_CYGWIN) {
-                dirMode = 0755
-                fileMode = 0755
+                dirPermissions { unix(0755) }
+                filePermissions { unix(0755) }
             }
             from sdkArtifactsDir
             into "${sdkBundleName}"

@@ -26,9 +26,11 @@
 package javafx.css;
 
 import com.sun.javafx.css.Combinator;
+import com.sun.javafx.css.CompoundSelector;
 import com.sun.javafx.css.FontFaceImpl;
 import com.sun.javafx.css.InterpolatorConverter;
 import com.sun.javafx.css.ParsedValueImpl;
+import com.sun.javafx.css.SimpleSelector;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.TransitionDefinitionConverter;
