@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,16 +28,29 @@ package test.javafx.scene.control;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
-import static org.junit.Assert.*;
-
 import com.sun.javafx.tk.Toolkit;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.Arguments;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.params.provider.Arguments;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.control.Button;
 import javafx.scene.control.ToolBar;
@@ -54,14 +67,12 @@ import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
  * Test basic horizontal navigation mappings for ToolBar.
  * It is parameterized on NodeOrientation
  */
-@RunWith(Parameterized.class)
 public class ToolBarHorizontalArrowsTest {
-    @Parameterized.Parameters
-    public static Collection<?> implementations() {
-        return Arrays.asList(new Object[][] {
-            {NodeOrientation.LEFT_TO_RIGHT},
-            {NodeOrientation.RIGHT_TO_LEFT}
-        });
+    private static Collection<NodeOrientation> parameters() {
+        return Arrays.asList(
+            NodeOrientation.LEFT_TO_RIGHT,
+            NodeOrientation.RIGHT_TO_LEFT
+        );
     }
 
     private ToolBar toolBar;
@@ -75,11 +86,10 @@ public class ToolBarHorizontalArrowsTest {
     private StageLoader stageLoader;
     private NodeOrientation orientation;
 
-    public ToolBarHorizontalArrowsTest(NodeOrientation val) {
-        orientation = val;
-    }
-
-    @Before public void setup() {
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    public void setup(NodeOrientation orientation) {
+        this.orientation = orientation;
         toolBar = new ToolBar();
         toolBar.setNodeOrientation(orientation);
 
@@ -104,7 +114,7 @@ public class ToolBarHorizontalArrowsTest {
         keyboard = new KeyEventFirer(toolBar, toolBar.getScene());
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         toolBar.getSkin().dispose();
         stageLoader.dispose();
@@ -151,8 +161,10 @@ public class ToolBarHorizontalArrowsTest {
     /**
      * Test forward focus movements with TAB key
      */
-    @Test
-    public void testForwardFocus() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testForwardFocus(NodeOrientation orientation) {
+        setup(orientation);
         assertTrue(toolBar.isFocusTraversable());
 
         toolBar.getScene().getWindow().requestFocus();
@@ -174,8 +186,10 @@ public class ToolBarHorizontalArrowsTest {
     /**
      * Test backward focus movements with SHIFT+TAB keys
      */
-    @Test
-    public void testBackwardFocus() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testBackwardFocus(NodeOrientation orientation) {
+        setup(orientation);
         assertTrue(toolBar.isFocusTraversable());
 
         toolBar.getScene().getWindow().requestFocus();
@@ -195,8 +209,10 @@ public class ToolBarHorizontalArrowsTest {
         assertTrue(btn1.isFocused());
     }
 
-    @Test
-    public void testForwardFocusArrows() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testForwardFocusArrows(NodeOrientation orientation) {
+        setup(orientation);
         assertTrue(toolBar.isFocusTraversable());
 
         toolBar.getScene().getWindow().requestFocus();
@@ -215,8 +231,10 @@ public class ToolBarHorizontalArrowsTest {
         assertTrue(btn5.isFocused());
     }
 
-    @Test
-    public void testBackwardFocusArrows() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testBackwardFocusArrows(NodeOrientation orientation) {
+        setup(orientation);
         assertTrue(toolBar.isFocusTraversable());
 
         toolBar.getScene().getWindow().requestFocus();
@@ -240,8 +258,10 @@ public class ToolBarHorizontalArrowsTest {
      * Test forward focus movement when ToolBar's NodeOrientation
      * is changed dynamically.
      */
-    @Test
-    public void testForwardFocusArrows_toggleOrientation() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testForwardFocusArrows_toggleOrientation(NodeOrientation orientation) {
+        setup(orientation);
         assertTrue(toolBar.isFocusTraversable());
 
         toolBar.getScene().getWindow().requestFocus();
@@ -268,8 +288,10 @@ public class ToolBarHorizontalArrowsTest {
      * Test backward focus movement when ToolBar's NodeOrientation
      * is changed dynamically.
      */
-    @Test
-    public void testBackwardFocusArrows_toggleOrientation() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testBackwardFocusArrows_toggleOrientation(NodeOrientation orientation) {
+        setup(orientation);
         assertTrue(toolBar.isFocusTraversable());
 
         toolBar.getScene().getWindow().requestFocus();
@@ -297,8 +319,10 @@ public class ToolBarHorizontalArrowsTest {
      * Test forward/backward focus movements when ToolBar's NodeOrientation
      * is changed dynamically.
      */
-    @Test
-    public void testMixedFocusArrows_toggleOrientation() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testMixedFocusArrows_toggleOrientation(NodeOrientation orientation) {
+        setup(orientation);
         assertTrue(toolBar.isFocusTraversable());
 
         toolBar.getScene().getWindow().requestFocus();
@@ -324,8 +348,10 @@ public class ToolBarHorizontalArrowsTest {
     /**
      * Test focus movements when focus is at extreme child Nodes of the ToolBar
      */
-    @Test
-    public void testFocusExtremeNodesOfToolBar() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testFocusExtremeNodesOfToolBar(NodeOrientation orientation) {
+        setup(orientation);
         assertTrue(toolBar.isFocusTraversable());
 
         // Test backward movement when focus is at the first Button in the toolBar
