@@ -287,7 +287,7 @@ public class TextInputControlTest {
         } catch (ClassCastException ignored) {
             // pass!
         } catch (Exception e) {
-            org.junit.Assert.fail(e.toString());
+            fail(e);
         }
     }
 
@@ -419,7 +419,7 @@ public class TextInputControlTest {
         } catch (ClassCastException ignored) {
             // pass!
         } catch (Exception e) {
-            org.junit.Assert.fail(e.toString());
+            fail(e);
         }
     }
 
