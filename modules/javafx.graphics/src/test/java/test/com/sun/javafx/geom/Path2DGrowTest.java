@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,11 @@
 package test.com.sun.javafx.geom;
 
 import com.sun.javafx.geom.Path2D;
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
+
+import java.time.Duration;
 
 /**
  * @test
@@ -81,16 +85,20 @@ public class Path2DGrowTest {
         }
     }
 
-    @Test(timeout=10000)
+    @Test
     public void testEmptyFloatPaths() {
-        echo("\n - Test: new Path2D(0) ---");
-        test(() -> new Path2D(Path2D.WIND_NON_ZERO, 0));
+        assertTimeout(Duration.ofMillis(10000), () -> {
+            echo("\n - Test: new Path2D(0) ---");
+            test(() -> new Path2D(Path2D.WIND_NON_ZERO, 0));
+        });
     }
 
-    @Test(timeout=10000)
+    @Test
     public void testFloatPaths() {
-        echo("\n - Test: new Path2D() ---");
-        test(() -> new Path2D());
+        assertTimeout(Duration.ofMillis(10000), () -> {
+            echo("\n - Test: new Path2D() ---");
+            test(() -> new Path2D());
+        });
     }
 
     interface PathFactory {
