@@ -846,10 +846,11 @@ public abstract class Parent extends Node {
     }
 
     /**
-     * The {@link TraversalPolicy} to be used by this Parent to provide assistance to the
-     * JavaFX focus traversal subsystem.
+     * The {@link TraversalPolicy} allows for customizing focus traversal within this
+     * {@code Parent}'s children as well as traversal outside of this {@code Parent}.
      *
      * @defaultValue null
+     * @see javafx.scene.traversal.FocusTraversal
      * @since 24
      */
     private ObjectProperty<TraversalPolicy> traversalPolicy;

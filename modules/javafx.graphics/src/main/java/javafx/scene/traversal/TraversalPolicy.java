@@ -30,10 +30,14 @@ import javafx.scene.Parent;
 import com.sun.javafx.scene.traversal.TraversalUtils;
 
 /**
- * TraversalPolicy represents the specific algorithm to be used to traverse between
- * elements in the JavaFX scenegraph.
- *
- * <p>Note that in order to avoid cycles or dead-ends in traversal the algorithms should respect the following order:
+ * The base class for any algorithm that determines focus traversal between elements in the
+ * JavaFX scene graph.
+ * <p>
+ * In addition to the default traversal policy, which can be obtained via {@link #getDefault()}, a custom policy
+ * can be set on via {@link Parent#setTraversalPolicy(TraversalPolicy)}, thus altering the traversal between
+ * the children of that {@code Parent} and out of it.
+ * <p>
+ * Note that in order to avoid cycles or dead-ends in traversal the algorithms should respect the following order:
  * <ul>
  *   <li>For {@link TraversalDirection#NEXT NEXT}:
  *       node -> node subtree -> node siblings (first sibling then its subtree) -> {@link TraversalDirection#NEXT_IN_LINE NEXT_IN_LINE} for node's parent</li>
@@ -60,7 +64,7 @@ public abstract class TraversalPolicy {
      * Typically, the implementation of override TraversalPolicy handles only parent's direct children and looks like this:
      * <ol>
      * <li>Find the nearest parent of the "owner" that is handled by this TraversalPolicy (i.e. it's a direct child of the root).
-     * <li>select the next node within this direct child using the context.selectInSubtree() and return it
+     * <li>select the next node within this direct child and return it
      * <li>if no such node exists, move to the next direct child in the direction (this is where the different order of direct children is defined)
      *     or if direct children are not traversable, the select the first node in the next direct child
      * </ol>
@@ -74,7 +78,7 @@ public abstract class TraversalPolicy {
 
     /**
      * Return the first {@link javafx.scene.Node#isFocusTraversable() focus traversable}
-     * node for the specified context (root).
+     * node for the specified root.
      *
      * @param root the traversal root
      * @return the first node
@@ -83,7 +87,7 @@ public abstract class TraversalPolicy {
 
     /**
      * Return the last
-     * {@link javafx.scene.Node#isFocusTraversable() focus traversable} node for the specified context (root).
+     * {@link javafx.scene.Node#isFocusTraversable() focus traversable} node for the specified root.
      *
      * @param root the traversal root
      * @return the last node

@@ -31,7 +31,12 @@ import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
 
 /**
- * Provides the mechanism for focus traversal in the JavaFX application.
+ * Provides the methods for focus traversal within the JavaFX application.
+ * <p>
+ * The methods provided in this class allow for transferring focus away from the
+ * specific {@code Node} (which serves as a reference and does not have to be focused or
+ * focusable), within the owning {@link Scene} or {@link SubScene}, as determined
+ * by the default and custom {@link TraversalPolicy} set on the adjacent {@code Node}s.
  *
  * @since 24
  */
