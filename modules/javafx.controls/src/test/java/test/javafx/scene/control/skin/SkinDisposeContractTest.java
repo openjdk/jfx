@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,19 +25,14 @@
 
 package test.javafx.scene.control.skin;
 
+import static javafx.scene.control.ControlShim.installDefaultSkin;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.createControl;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.getControlClasses;
 import java.util.Collection;
-import java.util.List;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
-import static javafx.scene.control.ControlShim.*;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.*;
-
 import javafx.scene.control.Control;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Test for https://bugs.openjdk.org/browse/JDK-8244112:
@@ -45,11 +40,9 @@ import javafx.scene.control.Control;
  * <p>
  * This test is parameterized in the type of control.
  */
-@RunWith(Parameterized.class)
 public class SkinDisposeContractTest {
 
     private Control control;
-    private Class<Control> controlClass;
 
     /**
      * Skin must support multiple calls to dispose.
@@ -61,8 +54,10 @@ public class SkinDisposeContractTest {
      * are commented with issue reference
      *
      */
-    @Test
-    public void testDefaultDispose() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testDefaultDispose(Class<Control> controlClass) {
+        setup(controlClass);
         installDefaultSkin(control);
         control.getSkin().dispose();
         control.getSkin().dispose();
@@ -70,27 +65,20 @@ public class SkinDisposeContractTest {
 
   //---------------- parameterized
 
-    // Note: name property not supported before junit 4.11
-    // Note: collection of single values supported since 4.12
-    @Parameterized.Parameters //(name = "{index}: {0} ")
-    public static Collection<Object[]> data() {
-        List<Class<Control>> controlClasses = getControlClasses();
-        return asArrays(controlClasses);
-    }
-
-    public SkinDisposeContractTest(Class<Control> controlClass) {
-        this.controlClass = controlClass;
+    private static Collection<Class<Control>> parameters() {
+        return getControlClasses();
     }
 
 //----------------------
 
-    @After
+    @AfterEach
     public void cleanup() {
         Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
-    @Before
-    public void setup() {
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    public void setup(Class<Control> controlClass) {
         Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
             if (throwable instanceof RuntimeException) {
                 throw (RuntimeException)throwable;
@@ -100,5 +88,4 @@ public class SkinDisposeContractTest {
         });
         control = createControl(controlClass);
     }
-
 }

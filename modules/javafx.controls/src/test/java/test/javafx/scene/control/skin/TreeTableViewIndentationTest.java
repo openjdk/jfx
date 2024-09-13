@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,8 @@
 
 package test.javafx.scene.control.skin;
 
-import com.sun.javafx.tk.Toolkit;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import java.util.List;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.TreeItem;
@@ -35,15 +36,12 @@ import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.control.skin.LabeledSkinBase;
 import javafx.scene.control.skin.LabeledSkinBaseShim;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
-
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
 
 /**
  * Tests for the indentation of the {@link javafx.scene.control.TreeTableView}.
@@ -54,7 +52,7 @@ public class TreeTableViewIndentationTest {
     private TreeTableColumn<String, String> column;
     private StageLoader stageLoader;
 
-    @Before
+    @BeforeEach
     public void setup() {
         treeTableView = new TreeTableView<>();
 
@@ -68,7 +66,7 @@ public class TreeTableViewIndentationTest {
         stageLoader = new StageLoader(treeTableView);
     }
 
-    @After
+    @AfterEach
     public void cleanup() {
         stageLoader.dispose();
     }
