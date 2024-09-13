@@ -36,6 +36,7 @@ import java.io.InputStream;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class ImageLoaderScalingTest {
     // if true, the test will write original and scaled PNG files to the current directory
@@ -73,11 +74,9 @@ public class ImageLoaderScalingTest {
                     if (writeFiles) {
                         writeImages(img, expectedImg);
                     }
-                    throw new org.junit.ComparisonFailure(
-                        "pixel " + x + ", " + y + " does not match",
-                        String.format("0x%08X", expected),
-                        String.format("0x%08X", actual)
-                    );
+                    fail(String.format("pixel " + x + ", " + y + " does not match; expected 0x%08X, actual 0x%08X",
+                        expected, actual
+                    ));
                 }
             }
         }
