@@ -64,6 +64,7 @@ public class LocalStorageAccessTest {
 
         final List<String> cmd = asList(
             workerJavaCmd,
+            "--enable-native-access=ALL-UNNAMED",
             "-cp", appModulePath + "/mymod",
             "-Djava.library.path=" + javaLibraryPath,
             "-Dmodule.path=" + appModulePath + "/mymod" + File.pathSeparator + workerModulePath,
