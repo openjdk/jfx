@@ -362,6 +362,10 @@ ext.IS_LINUX = OS_NAME.contains("linux")
 
 ext.MAVEN_GROUP_ID = "org.openjfx"
 
+// Enable native access from modules with native code
+ext.enableNativeGraphics='--enable-native-access=javafx.graphics'
+ext.enableNativeAll='--enable-native-access=javafx.graphics,javafx.media,javafx.web'
+
 // Verify that the architecture & OS are supported configurations. Note that
 // at present building on PI is not supported, but we would only need to make
 // some changes on assumptions on what should be built (like SWT / Swing) and
@@ -1120,7 +1124,7 @@ List<String> computeModulePathArgs(String  pname, List<String> deps, boolean tes
 }
 
 
-void writeRunArgsFile(File dest, List<String> libpath, List<String> modpath, List<String> modules) {
+void writeArgsFile(boolean isCompile, File dest, List<String> libpath, List<String> modpath, List<String> modules) {
 
     dest.delete()
 
@@ -1164,7 +1168,19 @@ void writeRunArgsFile(File dest, List<String> libpath, List<String> modpath, Lis
         dest <<  "--add-modules="
         dest << modules.join(",")
         dest << "\n"
+        if (!isCompile) {
+            dest << enableNativeAll
+            dest << "\n"
+        }
     }
+}
+
+void writeCompileArgsFile(File dest, List<String> libpath, List<String> modpath, List<String> modules) {
+    writeArgsFile(true, dest, libpath, modpath, modules)
+}
+
+void writeRunArgsFile(File dest, List<String> libpath, List<String> modpath, List<String> modules) {
+    writeArgsFile(false, dest, libpath, modpath, modules)
 }
 
 // perform common project manipulation for modules
@@ -2677,6 +2693,7 @@ project(":graphics") {
 
     test {
         def cssDir = file("$buildDir/classes/java/main/${moduleName}/javafx")
+        jvmArgs enableNativeGraphics
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
         enableAssertions = true
@@ -2765,6 +2782,7 @@ project(":controls") {
 
     test {
         def cssDir = file("$buildDir/classes/java/main/${moduleName}/javafx")
+        jvmArgs enableNativeGraphics
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
     }
@@ -2856,6 +2874,8 @@ project(":swing") {
 
     test {
         enabled = IS_FULL_TEST && IS_AWT_TEST
+
+        jvmArgs enableNativeGraphics
     }
 
     if (COMPILE_SWING) {
@@ -2917,6 +2937,8 @@ project(":swt") {
         enabled = false // FIXME: JIGSAW -- support this with modules
         logger.info("JIGSAW Testing disabled for swt")
 
+        jvmArgs enableNativeGraphics
+
         if (IS_MAC) {
             enabled = false
             logger.info("SWT tests are disabled on MAC, because Gradle test runner does not handle -XstartOnFirstThread properly (https://issues.gradle.org/browse/GRADLE-3290).")
@@ -2965,6 +2987,7 @@ project(":fxml") {
         // StubToolkit is not *really* needed here, but because some code inadvertently invokes performance
         // tracker and this attempts to fire up the toolkit and this looks for native libraries and fails,
         // we have to use the stub toolkit for now.
+        jvmArgs enableNativeGraphics
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit"
         // FIXME: change this to also allow JDK 9 boot jdk
         classpath += files("$JDK_HOME/jre/lib/ext/nashorn.jar")
@@ -3679,6 +3702,10 @@ project(":web") {
                 println "******************************************************"
             }
         }
+
+        // enable native access for all modules with native code
+        jvmArgs enableNativeAll
+
         // Run web tests in headless mode
         systemProperty 'glass.platform', 'Monocle'
         systemProperty 'monocle.platform', 'Headless'
@@ -4050,6 +4077,9 @@ project(":systemTests") {
 
     test {
         enabled = IS_FULL_TEST
+
+        // enable native access for all modules with native code
+        jvmArgs enableNativeAll
 
         // Parse testPatchModuleArgs looking for "--module-path".
         // Save path if found so we can pass it to the module launcher tests
@@ -5168,7 +5198,7 @@ compileTargets { t ->
 
             if (HAS_JAVAFX_MODULES) {
                 writeRunArgsFile(runArgsFile, computeLibraryPath(true), modpath, null)
-                writeRunArgsFile(compileArgsFile, null, modpath, null)
+                writeCompileArgsFile(compileArgsFile, null, modpath, null)
 
                 if (rootProject.hasProperty("EXTRA_ADDEXPORTS_STRING")) {
                     runArgsFile << EXTRA_ADDEXPORTS_STRING
@@ -5177,7 +5207,7 @@ compileTargets { t ->
             } else {
                 modpath = [ cygpath("${standaloneLibDir}") ]
                 writeRunArgsFile(runArgsFile, null, modpath, modnames)
-                writeRunArgsFile(compileArgsFile, null, modpath, modnames)
+                writeCompileArgsFile(compileArgsFile, null, modpath, modnames)
             }
         }
     }
@@ -5678,7 +5708,7 @@ compileTargets { t ->
                     }
                 }
 
-                writeRunArgsFile(testCompileArgsFile, null, modpath, null)
+                writeCompileArgsFile(testCompileArgsFile, null, modpath, null)
                 writeRunArgsFile(testRunArgsFile, computeLibraryPath(true), modpath, null)
 
                 if (rootProject.hasProperty("EXTRA_ADDEXPORTS_STRING")) {
@@ -5713,7 +5743,7 @@ compileTargets { t ->
                     }
                 }
 
-                writeRunArgsFile(testCompileArgsFile, null, modpath, modnames)
+                writeCompileArgsFile(testCompileArgsFile, null, modpath, modnames)
                 writeRunArgsFile(testRunArgsFile, computeLibraryPath(true), modpath, modnames)
 
             }
