@@ -33,6 +33,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.util.List;
+import java.util.Locale;
 import javax.imageio.ImageIO;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
@@ -49,9 +50,11 @@ import javafx.scene.Parent;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
+import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.scene.text.TextFlow;
@@ -658,5 +661,62 @@ public final class RichUtils {
             }
         }
         return (ymin == Double.POSITIVE_INFINITY) ? 0.0 : (ymax + ymin) / 2.0;
+    }
+
+
+    /**
+     * Creates an instance of StyleAttributeMap which contains character attributes found in the specified {@link Text} node.
+     * The following attributes will be set:
+     * <ul>
+     * <li>{@link #BOLD}
+     * <li>{@link #FONT_FAMILY}
+     * <li>{@link #FONT_SIZE}
+     * <li>{@link #ITALIC}
+     * <li>{@link #STRIKE_THROUGH}
+     * <li>{@link #TEXT_COLOR}
+     * <li>{@link #UNDERLINE}
+     * </ul>
+     *
+     * @param textNode the text node
+     * @return the StyleAttributeMap instance
+     */
+    public static StyleAttributeMap fromTextNode(Text textNode) {
+        StyleAttributeMap.Builder b = StyleAttributeMap.builder();
+        Font f = textNode.getFont();
+        String st = f.getStyle().toLowerCase(Locale.US);
+        boolean bold = RichUtils.isBold(st);
+        boolean italic = RichUtils.isItalic(st);
+
+        if (bold) {
+            b.setBold(true);
+        }
+
+        if (italic) {
+            b.setItalic(true);
+        }
+
+        if (textNode.isStrikethrough()) {
+            b.setStrikeThrough(true);
+        }
+
+        if (textNode.isUnderline()) {
+            b.setUnderline(true);
+        }
+
+        String family = f.getFamily();
+        b.setFontFamily(family);
+
+        double sz = f.getSize();
+        if (sz != 12.0) {
+            b.setFontSize(sz);
+        }
+
+        Paint x = textNode.getFill();
+        if (x instanceof Color c) {
+            // we do not support gradients (although we could get the first color, for example)
+            b.setTextColor(c);
+        }
+
+        return b.build();
     }
 }

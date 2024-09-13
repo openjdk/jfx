@@ -27,17 +27,12 @@ package jfx.incubator.scene.control.richtext.model;
 
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import javafx.scene.paint.Color;
-import javafx.scene.paint.Paint;
-import javafx.scene.text.Font;
-import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import com.sun.jfx.incubator.scene.control.richtext.CssStyles;
 import com.sun.jfx.incubator.scene.control.richtext.StyleAttributeMapHelper;
-import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
 
 /**
  * This immutable object contains a map of {@link StyleAttribute}s.
@@ -126,7 +121,7 @@ public final class StyleAttributeMap {
      * @param names style names
      * @return the new instance
      */
-    public static StyleAttributeMap fromStyles(String style, String... names) {
+    static StyleAttributeMap fromStyles(String style, String... names) {
         if ((style == null) && (names == null)) {
             return StyleAttributeMap.EMPTY;
         } else if (names == null) {
@@ -141,7 +136,7 @@ public final class StyleAttributeMap {
      * @param style the inline style, can be null
      * @return the new instance
      */
-    public static StyleAttributeMap fromInlineStyle(String style) {
+    static StyleAttributeMap fromInlineStyle(String style) {
         if (style == null) {
             return StyleAttributeMap.EMPTY;
         }
@@ -434,62 +429,6 @@ public final class StyleAttributeMap {
                 return ss.filterAttributes(isParagraph);
             }
         });
-    }
-
-    /**
-     * Creates an instance of StyleAttributeMap which contains character attributes found in the specified {@link Text} node.
-     * The following attributes will be set:
-     * <ul>
-     * <li>{@link #BOLD}
-     * <li>{@link #FONT_FAMILY}
-     * <li>{@link #FONT_SIZE}
-     * <li>{@link #ITALIC}
-     * <li>{@link #STRIKE_THROUGH}
-     * <li>{@link #TEXT_COLOR}
-     * <li>{@link #UNDERLINE}
-     * </ul>
-     *
-     * @param textNode the text node
-     * @return the StyleAttributeMap instance
-     */
-    public static StyleAttributeMap fromTextNode(Text textNode) {
-        StyleAttributeMap.Builder b = StyleAttributeMap.builder();
-        Font f = textNode.getFont();
-        String st = f.getStyle().toLowerCase(Locale.US);
-        boolean bold = RichUtils.isBold(st);
-        boolean italic = RichUtils.isItalic(st);
-
-        if (bold) {
-            b.setBold(true);
-        }
-
-        if (italic) {
-            b.setItalic(true);
-        }
-
-        if (textNode.isStrikethrough()) {
-            b.setStrikeThrough(true);
-        }
-
-        if (textNode.isUnderline()) {
-            b.setUnderline(true);
-        }
-
-        String family = f.getFamily();
-        b.setFontFamily(family);
-
-        double sz = f.getSize();
-        if (sz != 12.0) {
-            b.setFontSize(sz);
-        }
-
-        Paint x = textNode.getFill();
-        if (x instanceof Color c) {
-            // we do not support gradients (although we could get the first color, for example)
-            b.setTextColor(c);
-        }
-
-        return b.build();
     }
 
     /**

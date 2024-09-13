@@ -1104,7 +1104,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
                 measurer.getStyleClass().setAll(names);
             }
             measurer.applyCss();
-            return StyleAttributeMap.fromTextNode(measurer);
+            return RichUtils.fromTextNode(measurer);
         } finally {
             getChildren().remove(measurer);
         }
