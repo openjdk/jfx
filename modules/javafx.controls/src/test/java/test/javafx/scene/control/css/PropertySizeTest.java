@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,16 +25,14 @@
 
 package test.javafx.scene.control.css;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.text.Font;
-
-import org.junit.Test;
-import org.junit.Before;
-import org.junit.Ignore;
-
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 public class PropertySizeTest {
     private HBox root, p1, p2, p3, p4;
@@ -101,31 +99,29 @@ public class PropertySizeTest {
         public void verifySizes() {
             root.applyCss();
             double fontSize = label.getFont().getSize();
-            assertEquals("Incorrect padding", padding.getValue(fontSize), label.getPadding().getLeft(), 0.1);
-            assertEquals("Incorrect labelPadding", labelPadding.getValue(fontSize), label.getLabelPadding().getLeft(), 0.1);
-            assertEquals("Incorrect max width", maxW.getValue(fontSize), label.getMaxWidth(), 0.1);
-            assertEquals("Incorrect min width", minW.getValue(fontSize), label.getMinWidth(), 0.1);
-            assertEquals("Incorrect pref width", prefW.getValue(fontSize), label.getPrefWidth(), 0.1);
-            assertEquals("Incorrect max Height", maxH.getValue(fontSize), label.getMaxHeight(), 0.1);
-            assertEquals("Incorrect min height", minH.getValue(fontSize), label.getMinHeight(), 0.1);
-            assertEquals("Incorrect pref height", prefH.getValue(fontSize), label.getPrefHeight(), 0.1);
-            assertEquals("Incorrect background radius", bgRadius.getValue(fontSize),
-                    label.getBackground().getFills().get(0).getRadii().getTopLeftHorizontalRadius(), 0.1);
-            assertEquals("Incorrect background insets", bgInsets.getValue(fontSize),
-                    label.getBackground().getFills().get(0).getInsets().getLeft(), 0.1);
+            assertEquals(padding.getValue(fontSize), label.getPadding().getLeft(), 0.1, "Incorrect padding");
+            assertEquals(labelPadding.getValue(fontSize), label.getLabelPadding().getLeft(), 0.1, "Incorrect labelPadding");
+            assertEquals(maxW.getValue(fontSize), label.getMaxWidth(), 0.1, "Incorrect max width");
+            assertEquals(minW.getValue(fontSize), label.getMinWidth(), 0.1, "Incorrect min width");
+            assertEquals(prefW.getValue(fontSize), label.getPrefWidth(), 0.1, "Incorrect pref width");
+            assertEquals(maxH.getValue(fontSize), label.getMaxHeight(), 0.1, "Incorrect max Height");
+            assertEquals(minH.getValue(fontSize), label.getMinHeight(), 0.1, "Incorrect min height");
+            assertEquals(prefH.getValue(fontSize), label.getPrefHeight(), 0.1, "Incorrect pref height");
+            assertEquals(bgRadius.getValue(fontSize), label.getBackground().getFills().get(0).getRadii().getTopLeftHorizontalRadius(), 0.1, "Incorrect background radius");
+            assertEquals(bgInsets.getValue(fontSize), label.getBackground().getFills().get(0).getInsets().getLeft(), 0.1, "Incorrect background insets");
         }
     }
 
     private void verifyFontSizes(double l0Font, double l1Font, double l2Font, double l3Font, double l4Font) {
         root.applyCss();
-        assertEquals("l0 font size is incorrect.", l0Font, l0.getFont().getSize(), 0.1);
-        assertEquals("l1 font size is incorrect.", l1Font, l1.getFont().getSize(), 0.1);
-        assertEquals("l2 font size is incorrect.", l2Font, l2.getFont().getSize(), 0.1);
-        assertEquals("l3 font size is incorrect.", l3Font, l3.getFont().getSize(), 0.1);
-        assertEquals("l4 font size is incorrect.", l4Font, l4.getFont().getSize(), 0.1);
+        assertEquals(l0Font, l0.getFont().getSize(), 0.1, "l0 font size is incorrect.");
+        assertEquals(l1Font, l1.getFont().getSize(), 0.1, "l1 font size is incorrect.");
+        assertEquals(l2Font, l2.getFont().getSize(), 0.1, "l2 font size is incorrect.");
+        assertEquals(l3Font, l3.getFont().getSize(), 0.1, "l3 font size is incorrect.");
+        assertEquals(l4Font, l4.getFont().getSize(), 0.1, "l4 font size is incorrect.");
     }
 
-    @Before
+    @BeforeEach
     public void setupTest() {
         l4 = new Label("L4");
         p4 = new HBox(l4);
@@ -237,7 +233,7 @@ public class PropertySizeTest {
                 p3FontSize * 0.35, p4FontSize * 0.3);
     }
 
-    @Ignore()
+    @Disabled
     @Test
     public void ideal_relativeFontSizeNestedParentControlTest() {
         root.setStyle("-fx-font-size: 0.9em");
@@ -292,7 +288,7 @@ public class PropertySizeTest {
 
     // This is a specific combination where -fx-font-size of parents is same and test fails.
     // If we fix this then the test can be moved inside previous test.
-    @Ignore()
+    @Disabled
     @Test
     public void sameRelativeFontSizeOfNestedParentsTest() {
         testFontSizeOfParents(ROOT_FONT_SIZE + "px", "0.5em", "0.5em",
