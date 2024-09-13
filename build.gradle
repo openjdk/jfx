@@ -573,7 +573,9 @@ def defaultToolLintOptions = ""
 defineProperty("TOOL_LINT", defaultToolLintOptions)
 ext.IS_TOOL_LINT = TOOL_LINT != ""
 
-def defaultTestLintOptions = ""
+def defaultTestLintOptions =
+        "-options" + "," +
+        "removal"
 defineProperty("TEST_LINT", defaultTestLintOptions)
 ext.IS_TEST_LINT = TEST_LINT != ""
 
@@ -583,7 +585,7 @@ ext.IS_JAVAC_WERROR = Boolean.parseBoolean(JAVAC_WERROR)
 defineProperty("TOOL_JAVAC_WERROR", "false")
 ext.IS_TOOL_JAVAC_WERROR = Boolean.parseBoolean(TOOL_JAVAC_WERROR)
 
-defineProperty("TEST_JAVAC_WERROR", "false")
+defineProperty("TEST_JAVAC_WERROR", "true")
 ext.IS_TEST_JAVAC_WERROR = Boolean.parseBoolean(TEST_JAVAC_WERROR)
 
 // Doclint options (all enabled by default)
@@ -2121,7 +2123,7 @@ allprojects {
         testImplementation group: "org.junit.jupiter", name: "junit-jupiter-api", version: "5.8.1"
         testImplementation group: "org.junit.jupiter", name: "junit-jupiter-params", version: "5.8.1"
         testImplementation group: "org.opentest4j", name: "opentest4j", version: "1.2.0"
-        testRuntimeOnly group: "org.apiguardian", name: "apiguardian-api", version: "1.1.2"
+        testImplementation group: "org.apiguardian", name: "apiguardian-api", version: "1.1.2"
         testRuntimeOnly group: "org.junit.jupiter", name: "junit-jupiter-engine", version: "5.8.1"
         testRuntimeOnly group: "org.junit.platform", name: "junit-platform-commons", version: "1.8.1"
         testRuntimeOnly group: "org.junit.platform", name: "junit-platform-engine", version: "1.8.1"
