@@ -29,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.fail;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.getListenerCount;
+import java.util.List;
 import java.util.stream.Stream;
 import javafx.beans.property.ObjectProperty;
 import javafx.scene.Group;
@@ -71,12 +72,12 @@ public class AcceleratorParameterizedTest {
     private Scene scene;
     private KeyEventFirer keyboard;
 
-    private static Stream<Arguments> parameters() {
-        return Stream.of(
-            Arguments.of(Button.class),
-            Arguments.of(Tab.class),
-            Arguments.of(TableColumn.class),
-            Arguments.of(TreeTableColumn.class)
+    private static List<Class> parameters() {
+        return List.of(
+            Button.class,
+            Tab.class,
+            TableColumn.class,
+            TreeTableColumn.class
         );
     }
 

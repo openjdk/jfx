@@ -26,7 +26,8 @@
 package test.javafx.scene.control;
 
 import javafx.scene.control.TextArea;
-import test.javafx.scene.control.DefaultCancelButtonTestBase.ButtonType;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Test for interplay of ENTER/ESCAPE handlers on TextArea with
@@ -36,6 +37,8 @@ public class TextAreaDefaultCancelButtonTest extends DefaultCancelButtonTestBase
     /**
      * Overridden to back out for ENTER (which is handled internally always)
      */
+    @ParameterizedTest
+    @MethodSource("parameters")
     @Override
     public void testFallbackFilter(ButtonType buttonType, boolean consume, boolean registerAfterShowing) {
         if (isEnter(buttonType)) return;
@@ -45,6 +48,8 @@ public class TextAreaDefaultCancelButtonTest extends DefaultCancelButtonTestBase
     /**
      * Overridden to back out for ENTER (which is handled internally always)
      */
+    @ParameterizedTest
+    @MethodSource("parameters")
     @Override
     public void testFallbackHandler(ButtonType buttonType, boolean consume, boolean registerAfterShowing) {
         if (isEnter(buttonType)) return;
@@ -54,6 +59,8 @@ public class TextAreaDefaultCancelButtonTest extends DefaultCancelButtonTestBase
     /**
      * Overridden to back out for ENTER (which is handled internally always)
      */
+    @ParameterizedTest
+    @MethodSource("parameters")
     @Override
     public void testFallbackSingletonHandler(ButtonType buttonType, boolean consume, boolean registerAfterShowing) {
         if (isEnter(buttonType)) return;
@@ -63,6 +70,8 @@ public class TextAreaDefaultCancelButtonTest extends DefaultCancelButtonTestBase
     /**
      * Overridden to back out for ENTER (which is handled internally always)
      */
+    @ParameterizedTest
+    @MethodSource("parameters")
     @Override
     public void testFallbackNoHandler(ButtonType buttonType, boolean consume, boolean registerAfterShowing) {
         if (isEnter(buttonType)) return;

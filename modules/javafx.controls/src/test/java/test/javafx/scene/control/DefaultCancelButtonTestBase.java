@@ -165,7 +165,7 @@ public abstract class DefaultCancelButtonTestBase<C extends Control> {
     private Scene scene;
 
     //( name = "{index}: Button {0}, consuming {1}, registerAfterShowing {2} " )
-    private static Stream<Arguments> parameters() {
+    static Stream<Arguments> parameters() {
         return Stream.of(
                 Arguments.of(new ButtonType(ButtonState.DEFAULT), true, true),
                 Arguments.of(new ButtonType(ButtonState.DEFAULT), true, false),
@@ -312,7 +312,7 @@ public abstract class DefaultCancelButtonTestBase<C extends Control> {
 
     // @BeforeEach
     // junit5 does not support parameterized class-level tests yet
-    public void setup(ButtonType buttonType) {
+    protected void setup(ButtonType buttonType) {
         initStage();
         control = createControl();
         fallback = buttonType.getButton();
