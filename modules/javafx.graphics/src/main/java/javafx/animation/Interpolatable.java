@@ -70,7 +70,7 @@ public interface Interpolatable<T> {
      * {@code endValue} using the linear interpolation factor {@code t}, ranging from 0 (inclusive)
      * to 1 (inclusive).
      * <p>
-     * The returned value may not be a new instance; the implementation might also return one of the
+     * The returned value might not be a new instance; the implementation might also return one of the
      * two existing instances if the intermediate value would be equal to one of the existing values.
      * However, this is an optimization and applications should not assume any particular identity
      * of the returned value.
