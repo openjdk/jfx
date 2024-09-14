@@ -49,9 +49,11 @@ package javafx.animation;
  *                 {@code t >= 0.5}.</td>
  *         </tr>
  *         <tr><td style="vertical-align: top"><a id="pairwise" style="white-space: nowrap">pairwise</a></td>
- *             <td>Two lists are combined by pairwise interpolation. If the start list has fewer elements than
- *                 the target list, the missing elements are copied from the target list. If the start list has
- *                 more elements than the target list, the excess elements are discarded.
+ *             <td>Two lists are combined by pairwise interpolation. Paired list elements are interpolated
+ *                 with rules as described in this table (substituting "component" for "element").
+ *                 If the start list has fewer elements than the target list, the missing elements are copied
+ *                 from the target list. If the start list has more elements than the target list, the excess
+ *                 elements are discarded.
  *             </td>
  *         </tr>
  *     </tbody>
