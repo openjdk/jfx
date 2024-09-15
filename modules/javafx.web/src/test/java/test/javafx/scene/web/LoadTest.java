@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -129,7 +129,7 @@ public class LoadTest extends TestBase {
 
             Element html = doc.getDocumentElement();
             assertNotNull(html, "There should be an HTML element");
-            assertEquals("HTML", html.getTagName(),"HTML element should have tag HTML");
+            assertEquals("HTML", html.getTagName(), "HTML element should have tag HTML");
 
             NodeList htmlNodes = html.getChildNodes();
             assertNotNull(htmlNodes, "HTML element should have two children");
@@ -215,7 +215,7 @@ public class LoadTest extends TestBase {
         submit(() -> {
             WebEngine webEngine = new WebEngine();
             webEngine.titleProperty().addListener((observable, oldValue, newValue) -> {
-                assertTrue(webEngine.getLoadWorker().getState() == SUCCEEDED,"loadContent in SUCCEEDED State");
+                assertTrue(webEngine.getLoadWorker().getState() == SUCCEEDED, "loadContent in SUCCEEDED State");
                 assertEquals("Lorem Ipsum", webEngine.getTitle(), "Title");
                 latch.countDown();
             });

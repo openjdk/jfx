@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -245,7 +245,7 @@ public class FileReaderTest extends TestBase {
                         filePath, expectedLength, actualLength);
                 assertEquals(expectedLength, actualLength, message);
                 for (int i = 0; i < expectedArrayBuffer.length; i++) {
-                    assertEquals(expectedArrayBuffer[i], ((Number)(obj.getSlot(i))).byteValue(),"Unexpected file content received");
+                    assertEquals(expectedArrayBuffer[i], ((Number)(obj.getSlot(i))).byteValue(), "Unexpected file content received");
                 }
             });
         } catch (IOException ex){
