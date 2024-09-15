@@ -43,7 +43,7 @@ import com.sun.javafx.application.PlatformImpl;
 import java.util.concurrent.ExecutionException;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
 import org.w3c.dom.Document;
 
 public class TestBase implements ChangeListener, InvalidationListener {
@@ -53,7 +53,7 @@ public class TestBase implements ChangeListener, InvalidationListener {
 
     private static WebView view;
 
-    @BeforeClass
+    @BeforeAll
     public static void setupOnce() {
         final CountDownLatch startupLatch = new CountDownLatch(1);
 
@@ -220,7 +220,7 @@ public class TestBase implements ChangeListener, InvalidationListener {
     private class LoadFinishedListener implements ChangeListener<Boolean> {
         @Override
         public void changed(ObservableValue<? extends Boolean> observable,
-                Boolean oldValue, Boolean newValue) {
+                            Boolean oldValue, Boolean newValue) {
             if (! newValue) {
                 TestBase.this.notify(LOCK);
             }

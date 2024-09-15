@@ -38,12 +38,12 @@ import javafx.scene.Scene;
 import javafx.scene.text.FontSmoothingType;
 import javafx.scene.web.WebEngineShim;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class CSSTest extends TestBase {
 
@@ -326,46 +326,46 @@ public class CSSTest extends TestBase {
     @Test public void testLongSelectorList() {
         final String FILE = "src/test/resources/test/html/longselectorlist.html";
         load(new File(FILE));
-        assertEquals("Loading Long SelectorList completed successfully", SUCCEEDED, getLoadState());
+        assertEquals(SUCCEEDED, getLoadState(), "Loading Long SelectorList completed successfully");
     }
 
     @Test public void testBorderRadiusPropertyRendering() {
         loadContent(
                 "<!DOCTYPE html>\n" +
-                "<html>\n" +
-                "  <head>\n" +
-                "    <style>\n" +
-                "      button {\n" +
-                "        background-color: black; color: white; display: block; font-size: 32px;\n" +
-                "        width: 200px; height: 100px; padding: 0; border: none;\n" +
-                "        border-radius: 32px;\n" +
-                "      }\n" +
-                "      .bad0 {\n" +
-                "        background-color: red;\n" +
-                "      }\n" +
-                "      .bad1 {\n" +
-                "        border-bottom-left-radius: 0;\n" +
-                "        background-color: blue;\n" +
-                "      }\n" +
-                "      .bad2 {\n" +
-                "        border-bottom-left-radius: 0;\n" +
-                "        border-bottom-right-radius: 0;\n" +
-                "        background-color: green;\n" +
-                "      }\n" +
-                "      .bad3 {\n" +
-                "        border-bottom-left-radius: 0;\n" +
-                "        border-bottom-right-radius: 0;\n" +
-                "        border-top-right-radius: 0;\n" +
-                "      }\n" +
-                "    </style>\n" +
-                "  </head>\n" +
-                "  <body style='margin: 0px 0px;'>\n" +
-                "    <button class=\"bad0\">A</button>\n" +
-                "    <button class=\"bad1\">B</button>\n" +
-                "    <button class=\"bad2\">C</button>\n" +
-                "    <button class=\"bad3\">D</button>\n" +
-                "  </body>\n" +
-                "</html>"
+                        "<html>\n" +
+                        "  <head>\n" +
+                        "    <style>\n" +
+                        "      button {\n" +
+                        "        background-color: black; color: white; display: block; font-size: 32px;\n" +
+                        "        width: 200px; height: 100px; padding: 0; border: none;\n" +
+                        "        border-radius: 32px;\n" +
+                        "      }\n" +
+                        "      .bad0 {\n" +
+                        "        background-color: red;\n" +
+                        "      }\n" +
+                        "      .bad1 {\n" +
+                        "        border-bottom-left-radius: 0;\n" +
+                        "        background-color: blue;\n" +
+                        "      }\n" +
+                        "      .bad2 {\n" +
+                        "        border-bottom-left-radius: 0;\n" +
+                        "        border-bottom-right-radius: 0;\n" +
+                        "        background-color: green;\n" +
+                        "      }\n" +
+                        "      .bad3 {\n" +
+                        "        border-bottom-left-radius: 0;\n" +
+                        "        border-bottom-right-radius: 0;\n" +
+                        "        border-top-right-radius: 0;\n" +
+                        "      }\n" +
+                        "    </style>\n" +
+                        "  </head>\n" +
+                        "  <body style='margin: 0px 0px;'>\n" +
+                        "    <button class=\"bad0\">A</button>\n" +
+                        "    <button class=\"bad1\">B</button>\n" +
+                        "    <button class=\"bad2\">C</button>\n" +
+                        "    <button class=\"bad3\">D</button>\n" +
+                        "  </body>\n" +
+                        "</html>"
         );
         submit(() -> {
             final WebPage webPage = WebEngineShim.getPage(getEngine());
@@ -374,22 +374,22 @@ public class CSSTest extends TestBase {
             assertNotNull(img);
 
             final Color pixelAt0x0 = new Color(img.getRGB(0, 0), true);
-            assertFalse("Color should not be red:" + pixelAt0x0, isColorsSimilar(Color.RED, pixelAt0x0, 1));
+            assertFalse(isColorsSimilar(Color.RED, pixelAt0x0, 1), "Color should not be red:" + pixelAt0x0);
             final Color pixelAt199x0 = new Color(img.getRGB(199, 0), true);
-            assertFalse("Color should not be red:" + pixelAt199x0, isColorsSimilar(Color.RED, pixelAt199x0, 1));
+            assertFalse(isColorsSimilar(Color.RED, pixelAt199x0, 1), "Color should not be red:" + pixelAt199x0);
             final Color pixelAt0x99 = new Color(img.getRGB(0, 99), true);
-            assertFalse("Color should not be red:" + pixelAt0x99, isColorsSimilar(Color.RED, pixelAt0x99, 1));
+            assertFalse(isColorsSimilar(Color.RED, pixelAt0x99, 1), "Color should not be red:" + pixelAt0x99);
             final Color pixelAt199x99 = new Color(img.getRGB(199, 99), true);
-            assertFalse("Color should not be red:" + pixelAt199x99, isColorsSimilar(Color.RED, pixelAt199x99, 1));
+            assertFalse(isColorsSimilar(Color.RED, pixelAt199x99, 1), "Color should not be red:" + pixelAt199x99);
 
             final Color pixelAt0x100 = new Color(img.getRGB(0, 100), true);
-            assertFalse("Color should not be blue:" + pixelAt0x100, isColorsSimilar(Color.BLUE, pixelAt0x100, 1));
+            assertFalse(isColorsSimilar(Color.BLUE, pixelAt0x100, 1), "Color should not be blue:" + pixelAt0x100);
             final Color pixelAt199x100 = new Color(img.getRGB(199, 100), true);
-            assertFalse("Color should not be blue:" + pixelAt199x100, isColorsSimilar(Color.BLUE, pixelAt199x100, 1));
+            assertFalse(isColorsSimilar(Color.BLUE, pixelAt199x100, 1), "Color should not be blue:" + pixelAt199x100);
             final Color pixel0x199 = new Color(img.getRGB(0, 199), true);
-            assertTrue("Color should be opaque blue:" + pixel0x199, isColorsSimilar(Color.BLUE, pixel0x199, 1));
+            assertTrue(isColorsSimilar(Color.BLUE, pixel0x199, 1), "Color should be opaque blue:" + pixel0x199);
             final Color pixelAt199x199 = new Color(img.getRGB(199, 199), true);
-            assertFalse("Color should not be blue:" + pixelAt199x199, isColorsSimilar(Color.BLUE, pixelAt199x199, 1));
+            assertFalse(isColorsSimilar(Color.BLUE, pixelAt199x199, 1), "Color should not be blue:" + pixelAt199x199);
         });
     }
 }
