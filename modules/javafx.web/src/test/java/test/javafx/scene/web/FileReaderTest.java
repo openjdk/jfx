@@ -226,7 +226,7 @@ public class FileReaderTest extends TestBase {
             final byte[] expectedArrayBuffer = in.readAllBytes();
             submit(() -> {
                 final JSObject obj = (JSObject) getEngine().executeScript("new Uint8Array(window.result)");
-                assertEquals(String.format("%s length must be equal in both Java & JavaScript", fileList),
+                assertEquals(String.format("%s length must be equal in both Java & JavaScript", fileList[0]),
                                        expectedArrayBuffer.length, obj.getMember("length"));
                 for (int i = 0; i < expectedArrayBuffer.length; i++) {
                     assertEquals("Unexpected file content received", expectedArrayBuffer[i], ((Number)(obj.getSlot(i))).byteValue());
