@@ -451,8 +451,8 @@ public class CookieTest {
             return;
         }
 
-        assertEquals(expected.name, actual.getName(),"Unexpected name" + s);
-        assertEquals(expected.value, actual.getValue(),"Unexpected value" + s);
+        assertEquals(expected.name, actual.getName(), "Unexpected name" + s);
+        assertEquals(expected.value, actual.getValue(), "Unexpected value" + s);
         assertEquals(expected.expiryTime, actual.getExpiryTime(), "Unexpected expiryTime" + s);
         assertEquals(expected.domain, actual.getDomain(), "Unexpected domain" + s);
         assertEquals(expected.path, actual.getPath(), "Unexpected path" + s);

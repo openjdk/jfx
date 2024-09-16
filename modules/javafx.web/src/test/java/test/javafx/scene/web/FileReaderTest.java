@@ -245,7 +245,7 @@ public class FileReaderTest extends TestBase {
                         filePath, expectedLength, actualLength);
                 assertEquals(expectedLength, actualLength, message);
                 for (int i = 0; i < expectedArrayBuffer.length; i++) {
-                    assertEquals(expectedArrayBuffer[i], ((Number)(obj.getSlot(i))).byteValue(),"Unexpected file content received");
+                    assertEquals(expectedArrayBuffer[i], ((Number)(obj.getSlot(i))).byteValue(), "Unexpected file content received");
                 }
             });
         } catch (IOException ex){
