@@ -25,43 +25,46 @@
 
 package test.javafx.scene.shape.meshmanagercacheleaktest;
 
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static test.javafx.scene.shape.meshmanagercacheleaktest.Constants.ERROR_LAUNCH;
 import static test.javafx.scene.shape.meshmanagercacheleaktest.Constants.ERROR_NONE;
 import static test.javafx.scene.shape.meshmanagercacheleaktest.Constants.ERROR_OOM;
 import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Unit test for verifying leak with cache of TriangleMesh in PredefinedMeshManager.
  */
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class MeshManagerCacheLeakTest {
 
     private final String className = MeshManagerCacheLeakTest.class.getName();
     private final String pkgName = className.substring(0, className.lastIndexOf("."));
     private final String testAppName = pkgName + "." + "MeshManagerCacheLeakApp";
 
-    @Before
+    @BeforeEach
     public void setUp() {
         assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
         assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8201763
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testSphereCacheLeakTest() throws Exception {
         testMeshManagerCacheLeak("Sphere", "10");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testCylinderCacheLeakTest() throws Exception {
         testMeshManagerCacheLeak("Cylinder", "25");
     }
 
-    @Test (timeout = 20000)
+    @Test
     public void testBoxCacheLeakTest() throws Exception {
         testMeshManagerCacheLeak("Box", "350");
     }
