@@ -24,11 +24,14 @@
  */
 package test.com.sun.marlin;
 
+import static org.junit.jupiter.api.Assertions.assertTimeout;
+import static org.junit.jupiter.api.Assertions.fail;
 import static test.util.Util.TIMEOUT;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import java.util.logging.Level;
@@ -46,10 +49,9 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 /**
@@ -74,7 +76,7 @@ public class ScaleX0Test {
         System.setProperty("prism.marlin.log", "true");
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupOnce() throws Exception {
         defaultErrorStream = System.err;
         // Capture stderr:
@@ -86,14 +88,20 @@ public class ScaleX0Test {
         });
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownOnce() {
         System.setErr(defaultErrorStream);
         Util.shutdown();
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testMarlinAIOOBEwhenScaleXIs0() {
+        assertTimeout(Duration.ofMillis(15_000), () -> {
+            testMarlinAIOOBEwhenScaleXIs0Impl();
+        });
+    }
+
+    private void testMarlinAIOOBEwhenScaleXIs0Impl() {
         Scene scene = createScene();
 
         Platform.runLater(() -> {
@@ -126,7 +134,7 @@ public class ScaleX0Test {
         }
 
         if (stdErr.contains("ArrayIndexOutOfBoundsException")) {
-            Assert.fail("ArrayIndexOutOfBoundsException thrown !");
+            fail("ArrayIndexOutOfBoundsException thrown !");
         }
     }
 

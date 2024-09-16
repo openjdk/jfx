@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,13 +24,13 @@
  */
 package test.com.sun.marlin;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.awt.Color;
+import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import javafx.application.Application;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
@@ -45,11 +45,9 @@ import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.transform.Transform;
 import javafx.stage.Stage;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 /**
@@ -98,7 +96,7 @@ public class ScaleClipTest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupOnce() throws Exception {
         Util.launch(launchLatch, MyApp.class);
         assertEquals(0, launchLatch.getCount());
@@ -106,13 +104,19 @@ public class ScaleClipTest {
         System.out.println("ScaleClipTest: size = " + SIZE);
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownOnce() {
         Util.shutdown();
     }
 
-    @Test(timeout = 10000)
+    @Test
     public void TestNegativeScaleClipPath() throws InterruptedException {
+        assertTimeout(Duration.ofMillis(10000), () -> {
+            TestNegativeScaleClipPathImpl();
+        });
+    }
+
+    private void TestNegativeScaleClipPathImpl() {
         final AtomicBoolean fail = new AtomicBoolean();
 
         for (SCALE_MODE mode : SCALE_MODE.values()) {
@@ -133,8 +137,14 @@ public class ScaleClipTest {
         }
     }
 
-    @Test(timeout = 10000)
+    @Test
     public void TestMarginScaleClipPath() throws InterruptedException {
+        assertTimeout(Duration.ofMillis(10000), () -> {
+            TestMarginScaleClipPathImpl();
+        });
+    }
+
+    private void TestMarginScaleClipPathImpl() {
         final AtomicBoolean fail = new AtomicBoolean();
 
         // testMarginScale:

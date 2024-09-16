@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,12 +24,12 @@
 
 package test.com.sun.javafx.sg.prism;
 
-import static org.junit.Assert.assertEquals;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
+import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
@@ -39,11 +39,9 @@ import javafx.scene.SnapshotParameters;
 import javafx.scene.control.Label;
 import javafx.scene.image.WritableImage;
 import javafx.stage.Stage;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 public class RT36296Test {
@@ -67,34 +65,36 @@ public class RT36296Test {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupOnce() {
         Util.launch(launchLatch, MyApp.class);
         assertEquals(0, launchLatch.getCount());
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownOnce() {
         Util.shutdown();
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void TestBug() {
-        Label label = new Label();
-        label.setStyle(" -fx-border-style:dashed; -fx-border-width:0; ");
-        label.setText("test");
+        assertTimeout(Duration.ofMillis(15_000), () -> {
+            Label label = new Label();
+            label.setStyle(" -fx-border-style:dashed; -fx-border-width:0; ");
+            label.setText("test");
 
-        SnapshotParameters params = new SnapshotParameters();
-        params.setViewport(new Rectangle2D(0, 0, 100, 100));
-        Platform.runLater(() -> {
-            Scene scene = new Scene(new Group(label));
-            label.snapshot(p -> done(), params, new WritableImage(100, 100));
+            SnapshotParameters params = new SnapshotParameters();
+            params.setViewport(new Rectangle2D(0, 0, 100, 100));
+            Platform.runLater(() -> {
+                Scene scene = new Scene(new Group(label));
+                label.snapshot(p -> done(), params, new WritableImage(100, 100));
+            });
+            try {
+                latch.await();
+            } catch (InterruptedException ex) {
+                Logger.getLogger(RT36296Test.class.getName()).log(Level.SEVERE, null, ex);
+            }
         });
-        try {
-            latch.await();
-        } catch (InterruptedException ex) {
-            Logger.getLogger(RT36296Test.class.getName()).log(Level.SEVERE, null, ex);
-        }
     }
 
     public Void done() {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,11 +24,11 @@
  */
 package test.com.sun.marlin;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
+import static org.junit.jupiter.api.Assertions.fail;
+import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Application;
 import javafx.collections.ObservableList;
 import javafx.geometry.Rectangle2D;
@@ -44,11 +44,9 @@ import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.VLineTo;
 import javafx.stage.Stage;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 /**
@@ -100,74 +98,76 @@ public class DashedRectTest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupOnce() throws Exception {
         Util.launch(launchLatch, MyApp.class);
         assertEquals(0, launchLatch.getCount());
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownOnce() {
         Util.shutdown();
     }
 
-    @Test(timeout = 10000)
+    @Test
     public void TestDashedPath() throws InterruptedException {
+        assertTimeout(Duration.ofMillis(10000), () -> {
+            final int size = MAX * 2;
 
-        final int size = MAX * 2;
+            Util.runAndWait(() -> {
 
-        Util.runAndWait(() -> {
+                // Corrupt Marlin Dasher.dash cached array:
+                final Path path1 = new Path();
+                path1.getElements().addAll(
+                        new MoveTo(20, 20),
+                        new HLineTo(70),
+                        new VLineTo(70),
+                        new HLineTo(20),
+                        new ClosePath()
+                );
+                path1.setStroke(Color.RED);
+                path1.setFill(null);
+                path1.setStrokeWidth(2);
+                path1.setStrokeDashOffset(DASH_PH);
 
-            // Corrupt Marlin Dasher.dash cached array:
-            final Path path1 = new Path();
-            path1.getElements().addAll(
-                    new MoveTo(20, 20),
-                    new HLineTo(70),
-                    new VLineTo(70),
-                    new HLineTo(20),
-                    new ClosePath()
-            );
-            path1.setStroke(Color.RED);
-            path1.setFill(null);
-            path1.setStrokeWidth(2);
-            path1.setStrokeDashOffset(DASH_PH);
+                final ObservableList<Double> pDashes = path1.getStrokeDashArray();
+                pDashes.clear();
+                for (int i = 0; i < 100; i++) {
+                    pDashes.add(19.333);
+                }
 
-            final ObservableList<Double> pDashes = path1.getStrokeDashArray();
-            pDashes.clear();
-            for (int i = 0; i < 100; i++) {
-                pDashes.add(19.333);
-            }
+                // Create 2nd path shape
+                final Path path2 = new Path();
+                path2.getElements().addAll(
+                        new MoveTo(5, 5),
+                        new HLineTo(MAX),
+                        new VLineTo(MAX),
+                        new HLineTo(5),
+                        new ClosePath()
+                );
+                path2.setFill(null);
+                path2.setStroke(Color.BLUE);
+                path2.setStrokeWidth(2);
+                path2.setStrokeDashOffset(DASH_PH);
+                path2.getStrokeDashArray().setAll(DASH_LEN);
 
-            // Create 2nd path shape
-            final Path path2 = new Path();
-            path2.getElements().addAll(
-                    new MoveTo(5, 5),
-                    new HLineTo(MAX),
-                    new VLineTo(MAX),
-                    new HLineTo(5),
-                    new ClosePath()
-            );
-            path2.setFill(null);
-            path2.setStroke(Color.BLUE);
-            path2.setStrokeWidth(2);
-            path2.setStrokeDashOffset(DASH_PH);
-            path2.getStrokeDashArray().setAll(DASH_LEN);
+                Scene scene = new Scene(new Group(path1, path2));
 
-            Scene scene = new Scene(new Group(path1, path2));
+                myApp.stage.setScene(scene);
 
-            myApp.stage.setScene(scene);
+                final SnapshotParameters sp = new SnapshotParameters();
+                sp.setViewport(new Rectangle2D(0, 0, size, size));
 
-            final SnapshotParameters sp = new SnapshotParameters();
-            sp.setViewport(new Rectangle2D(0, 0, size, size));
+                final WritableImage img = scene.getRoot().snapshot(sp, new WritableImage(size, size));
 
-            final WritableImage img = scene.getRoot().snapshot(sp, new WritableImage(size, size));
+                // Check image on few pixels:
+                final PixelReader pr = img.getPixelReader();
 
-            // Check image on few pixels:
-            final PixelReader pr = img.getPixelReader();
-
-            // 10, 5 = blue
-            checkPixel(pr, 10, 5, BLUE_PIXEL);
+                // 10, 5 = blue
+                checkPixel(pr, 10, 5, BLUE_PIXEL);
+            });
         });
+
     }
 
     private static void checkPixel(final PixelReader pr,
