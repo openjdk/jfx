@@ -107,16 +107,17 @@ public class RenderPerfTest {
     private static final double HEIGHT = 800;
     private static final double R = 25;
     private static final long SECOND_IN_NANOS = 1_000_000_000L;
-    private static final long WARMUP_TIME = 5 * SECOND_IN_NANOS;
-    private static final long TEST_TIME = 10 * SECOND_IN_NANOS;
+    private static final long WARMUP_TIME_SECONDS = 5;
+    private static final long WARMUP_TIME = WARMUP_TIME_SECONDS * SECOND_IN_NANOS;
+    private static final long DEFAULT_TEST_TIME_SECONDS = 10;
     private static final Color[] marker = {Color.RED, Color.BLUE, Color.GREEN, Color.YELLOW, Color.ORANGE, Color.MAGENTA};
 
-    private static Particles balls;
     private static Stage stage;
     private static Scene scene;
     private static Group group;
     private static Random random = new Random(100);
     private static int objectCount = 0;
+    private static long testDuration = DEFAULT_TEST_TIME_SECONDS;
     private static ArrayList<String> testList = null;
 
     interface Renderable {
@@ -126,69 +127,18 @@ public class RenderPerfTest {
         void releaseResource();
     }
 
-    /**
-     * {@link Particles} class keeps track of the coordinates of the rendered components.
-     * It also determines the delta by which the object coordinates shall be changed in each frame.
-     *
-     * The coordinates of the objects are generated randomly within
-     * the width and height of the JavaFX window.
-     * A random number between -2 and 2 determines the delta by which the object will be
-     * moved in each frame.
-     * These values are stored in arrays. These arrays are used as parameters to
-     * {@link ParticleRenderer} methods.
-     */
-
-    static class Particles {
-        private double[] bx;
-        private double[] by;
-        private double[] vx;
-        private double[] vy;
-        private double r;
-        private int n;
-
-        private double width;
-        private double height;
-
-        Particles(int n, double r, double width, double height) {
-            bx = new double[n];
-            by = new double[n];
-            vx = new double[n];
-            vy = new double[n];
-            this.n = n;
-            this.r = r;
-            this.width = width;
-            this.height = height;
-
-            for (int i = 0; i < n; i++) {
-                bx[i] = random.nextDouble(r, (width - r));
-                by[i] = random.nextDouble(r, (height - r));
-                vx[i] = random.nextDouble(-2, 2);
-                vy[i] = random.nextDouble(-2, 2);
-            }
+    private static int roundUpTo4(int n) {
+        if (n % 4 != 0) {
+            n = (n + 3) & ~(0x3);
+            System.out.println("Test requires object count that is a multiple of 4 - rounding up to " + n);
         }
-
-        void addComponents(Group node, ParticleRenderer renderer) {
-            renderer.addComponents(node, n, bx, by, vx, vy);
-        }
-
-        void updateCoordinates() {
-            for (int i = 0; i < n; i++) {
-                bx[i] += vx[i];
-                if (bx[i] + r > width || bx[i] - r < 0) vx[i] = -vx[i];
-                by[i] += vy[i];
-                if (by[i] + r > height || by[i] - r < 0) vy[i] = -vy[i];
-            }
-        }
-
-        void updateComponentCoordinates(ParticleRenderer renderer) {
-            renderer.updateComponentCoordinates(n, bx, by, vx, vy);
-        }
+        return n;
     }
 
     /**
      * This method is used to create object of {@link ParticleRenderable}
      * which will be used to call the {@link PerfMeter#exec} method of
-     * {@link PerfMeter} to render the component the components or update coordinates.
+     * {@link PerfMeter} to render the components or update coordinates.
      * This method shall be called for each teast case.
      *
      * @param renderer object of a particle renderer which inherits from {@link ParticleRenderer}
@@ -196,7 +146,7 @@ public class RenderPerfTest {
      * @return object of {@link ParticleRenderable}
      */
     ParticleRenderable createPR(ParticleRenderer renderer) {
-        return new ParticleRenderable(renderer);
+        return new ParticleRenderable(renderer, WIDTH, HEIGHT);
     }
 
     /**
@@ -210,25 +160,56 @@ public class RenderPerfTest {
      * independant of the test execution.
      */
     static class ParticleRenderable implements Renderable {
-        ParticleRenderer renderer;
+        private ParticleRenderer renderer;
 
-        ParticleRenderable(ParticleRenderer renderer) {
+        private double[] bx;
+        private double[] by;
+        private double[] vx;
+        private double[] vy;
+        private double r;
+        private int n;
+
+        private double width;
+        private double height;
+
+        ParticleRenderable(ParticleRenderer renderer, double width, double height) {
             this.renderer = renderer;
+            this.n = renderer.getObjectCount();
+            this.r = renderer.getParticleRadius();
+
+            bx = new double[n];
+            by = new double[n];
+            vx = new double[n];
+            vy = new double[n];
+            this.width = width;
+            this.height = height;
+
+            for (int i = 0; i < n; i++) {
+                bx[i] = random.nextDouble(r, (width - r));
+                by[i] = random.nextDouble(r, (height - r));
+                vx[i] = random.nextDouble(-2, 2);
+                vy[i] = random.nextDouble(-2, 2);
+            }
         }
 
         @Override
         public void addComponents(Group node) {
-            balls.addComponents(node, renderer);
+            renderer.addComponents(node, n, bx, by, vx, vy);
         }
 
         @Override
         public void updateCoordinates() {
-            balls.updateCoordinates();
+            for (int i = 0; i < n; i++) {
+                bx[i] += vx[i];
+                if (bx[i] + r > width || bx[i] - r < 0) vx[i] = -vx[i];
+                by[i] += vy[i];
+                if (by[i] + r > height || by[i] - r < 0) vy[i] = -vy[i];
+            }
         }
 
         @Override
         public void updateComponentCoordinates() {
-            balls.updateComponentCoordinates(renderer);
+            renderer.updateComponentCoordinates(n, bx, by, vx, vy);
         }
 
         @Override
@@ -247,14 +228,18 @@ public class RenderPerfTest {
         void addComponents(Group node, int n, double[] x, double[] y, double[] vx, double[] vy);
         void updateComponentCoordinates(int n, double[] x, double[] y, double[] vx, double[] vy);
         void releaseResource();
+        int getObjectCount();
+        double getParticleRadius();
     }
 
     static abstract class FlatParticleRenderer implements ParticleRenderer {
         Color[] colors;
+        int n;
         double r;
 
         FlatParticleRenderer(int n, double r) {
             colors = new Color[n];
+            this.n = n;
             this.r = r;
 
             for (int i = 0; i < n; i++) {
@@ -264,6 +249,14 @@ public class RenderPerfTest {
 
         public void releaseResource() {
             colors = null;
+        }
+
+        public int getObjectCount() {
+            return n;
+        }
+
+        public double getParticleRadius() {
+            return r;
         }
     }
 
@@ -1021,10 +1014,12 @@ public class RenderPerfTest {
     }
 
     static class WhiteTextRenderer implements ParticleRenderer {
+        int n;
         double r;
         Text[] text;
 
         WhiteTextRenderer(int n, double r) {
+            this.n = n;
             this.r = r;
             text = new Text[n];
         }
@@ -1051,6 +1046,14 @@ public class RenderPerfTest {
 
         public void releaseResource() {
             text = null;
+        }
+
+        public int getObjectCount() {
+            return n;
+        }
+
+        public double getParticleRadius() {
+            return r;
         }
     }
 
@@ -1112,9 +1115,11 @@ public class RenderPerfTest {
     static class ImageRenderer implements ParticleRenderer {
         ImageView[] dukeImg;
         Image image;
+        int n;
         double r;
 
         ImageRenderer(int n, double r) {
+            this.n = n;
             this.r = r;
             try {
                 String url = RenderPerfTest.class.getResource("duke.png").toString();
@@ -1148,6 +1153,14 @@ public class RenderPerfTest {
             image = null;
             dukeImg = null;
         }
+
+        public int getObjectCount() {
+            return n;
+        }
+
+        public double getParticleRadius() {
+            return r;
+        }
     }
 
     static class ImageRendererRH extends ImageRenderer {
@@ -1172,7 +1185,7 @@ public class RenderPerfTest {
         Ellipse[] ellipse;
 
         MultiShapeRendererInterleaved(int n, double r) {
-            super(n, r);
+            super((n = roundUpTo4(n)), r);
             circle = new Circle[n / 4];
             rectangle = new Rectangle[n / 4];
             arc = new Arc[n / 4];
@@ -1351,9 +1364,8 @@ public class RenderPerfTest {
         Rectangle[] rectangle;
         Box[] box;
 
-
         MultiShape2D3DRendererInterleaved(int n, double r) {
-            super(n, r);
+            super((n = roundUpTo4(n)), r);
             circle = new Circle[n / 4];
             sphere = new Sphere[n / 4];
             rectangle = new Rectangle[n / 4];
@@ -1541,7 +1553,7 @@ public class RenderPerfTest {
 
 
         MultiShape3DRendererInterleaved(int n, double r) {
-            super(n, r);
+            super((n = roundUpTo4(n)), r);
             sphere = new Sphere[n / 4];
             box = new Box[n / 4];
             cylinder = new Cylinder[n / 4];
@@ -1854,10 +1866,12 @@ public class RenderPerfTest {
     }
 
     static class ButtonRenderer implements ParticleRenderer {
+        int n;
         double r;
         Button[] button;
 
         ButtonRenderer(int n, double r) {
+            this.n = n;
             this.r = r;
             button = new Button[n];
         }
@@ -1883,6 +1897,14 @@ public class RenderPerfTest {
         public void releaseResource() {
             button = null;
         }
+
+        public int getObjectCount() {
+            return n;
+        }
+
+        public double getParticleRadius() {
+            return r;
+        }
     }
 
     /**
@@ -1895,13 +1917,24 @@ public class RenderPerfTest {
         private String name;
 
         private int frames = 0;
+        private long testTimeSeconds = DEFAULT_TEST_TIME_SECONDS;
+        private long testTimeNanos = testTimeSeconds * SECOND_IN_NANOS;
         AnimationTimer frameRateMeter;
 
         long startTime = 0;
+        long lastTickTime = 0;
         boolean warmUp = true;
+        boolean completed = false;
+        boolean stopped = false;
 
         PerfMeter(String name) {
+            this(name, DEFAULT_TEST_TIME_SECONDS);
+        }
+
+        PerfMeter(String name, long testTimeSeconds) {
             this.name = name;
+            this.testTimeSeconds = testTimeSeconds;
+            this.testTimeNanos = this.testTimeSeconds * SECOND_IN_NANOS;
         }
 
         /**
@@ -1931,6 +1964,10 @@ public class RenderPerfTest {
                 stage.setAlwaysOnTop(true);
                 stage.setOnShown(event -> Platform.runLater(startupLatch::countDown));
                 stage.setOnHidden(event -> Platform.runLater(stageHiddenLatch::countDown));
+                stage.setOnCloseRequest(event -> {
+                    Platform.runLater(stopLatch::countDown);
+                    stopped = true;
+                });
 
                 stage.show();
 
@@ -1941,17 +1978,22 @@ public class RenderPerfTest {
                             startTime = now;
                         }
 
+                        lastTickTime = now;
+
                         if (warmUp && (now >= startTime + WARMUP_TIME)) {
                             startTime = now;
                             frames = 0;
                             warmUp = false;
                         }
 
-                        moveComponents(renderable);
+                        if (!stopped) {
+                            moveComponents(renderable);
+                        }
 
                         if (!warmUp) {
                             frames++;
-                            if (now >= startTime + TEST_TIME) {
+                            if (testTimeSeconds > 0 && now >= startTime + testTimeNanos) {
+                                completed = true;
                                 stopLatch.countDown();
                             }
                         }
@@ -1964,8 +2006,14 @@ public class RenderPerfTest {
             }
             Platform.runLater(() -> frameRateMeter.start());
 
-            if (!stopLatch.await(20, TimeUnit.SECONDS)) {
-                throw new RuntimeException("Timeout waiting for test execution completion.\n" + name + ": Test workload could be too high. Try running the test with lesser number of objects.");
+            if (testTimeSeconds > 0) {
+                // timed run, which means we can also timeout if something goes wrong
+                if (!stopLatch.await(testTimeSeconds + 10, TimeUnit.SECONDS)) {
+                    throw new RuntimeException("Timeout waiting for test execution completion.\n" + name + ": Test workload could be too high. Try running the test with lesser number of objects.");
+                }
+            } else {
+                // infinite run, await until the stage is closed
+                stopLatch.await();
             }
             Platform.runLater(() -> frameRateMeter.stop());
 
@@ -1990,168 +2038,169 @@ public class RenderPerfTest {
         }
 
         void reportFPS() {
-            double elapsedNanosPerFrame = (double) TEST_TIME / frames;
-            double frameRate = SECOND_IN_NANOS / elapsedNanosPerFrame;
-            System.out.println(String.format("%s (Objects Frames FPS), %d, %d, %.2f", name, objectCount, frames, frameRate));
+            if (warmUp) {
+                System.out.println(String.format("Test %s stopped before warm-up was completed. Results not valid.", name));
+            } else {
+                long totalTestTime = testTimeNanos;
+                if (totalTestTime == 0 || !completed) {
+                    // infinite run, we have to get the time from stop-start delta
+                    totalTestTime = (lastTickTime - startTime);
+                }
+                double totalTestTimeSeconds = (double)totalTestTime / SECOND_IN_NANOS;
+                double frameRate = frames / totalTestTimeSeconds;
+                System.out.println(String.format("%s (Objects Frames Time FPS): %d, %d, %.2f, %.2f", name, objectCount, frames, totalTestTimeSeconds, frameRate));
+            }
         }
     }
 
 
 
     public void testArc() throws Exception {
-        (new PerfMeter("Arc")).exec(createPR(new ArcRenderer(objectCount, R)));
+        (new PerfMeter("Arc", testDuration)).exec(createPR(new ArcRenderer(objectCount, R)));
     }
 
     public void testOpenArc() throws Exception {
-        (new PerfMeter("OpenArc")).exec(createPR(new OpenArcRenderer(objectCount, R)));
+        (new PerfMeter("OpenArc", testDuration)).exec(createPR(new OpenArcRenderer(objectCount, R)));
     }
 
     public void testCubicCurve() throws Exception {
-        (new PerfMeter("CubicCurve")).exec(createPR(new CubicCurveRenderer(objectCount, R)));
+        (new PerfMeter("CubicCurve", testDuration)).exec(createPR(new CubicCurveRenderer(objectCount, R)));
     }
 
     public void testQuadCurve() throws Exception {
-        (new PerfMeter("QuadCurve")).exec(createPR(new QuadCurveRenderer(objectCount, R)));
+        (new PerfMeter("QuadCurve", testDuration)).exec(createPR(new QuadCurveRenderer(objectCount, R)));
     }
 
     public void testCircle() throws Exception {
-        (new PerfMeter("Circle")).exec(createPR(new CircleRenderer(objectCount, R)));
+        (new PerfMeter("Circle", testDuration)).exec(createPR(new CircleRenderer(objectCount, R)));
     }
 
     public void testCircleRH() throws Exception {
-        (new PerfMeter("CircleRH")).exec(createPR(new CircleRendererRH(objectCount, R)));
+        (new PerfMeter("CircleRH", testDuration)).exec(createPR(new CircleRendererRH(objectCount, R)));
     }
 
     public void testCircleBlendMultiply() throws Exception {
-        (new PerfMeter("CircleBlendMultiply")).exec(createPR(new CircleRendererBlendMultiply(objectCount, R)));
+        (new PerfMeter("CircleBlendMultiply", testDuration)).exec(createPR(new CircleRendererBlendMultiply(objectCount, R)));
     }
 
     public void testCircleBlendAdd() throws Exception {
-        (new PerfMeter("CircleBlendAdd")).exec(createPR(new CircleRendererBlendAdd(objectCount, R)));
+        (new PerfMeter("CircleBlendAdd", testDuration)).exec(createPR(new CircleRendererBlendAdd(objectCount, R)));
     }
 
     public void testCircleBlendDarken() throws Exception {
-        (new PerfMeter("CircleBlendDarken")).exec(createPR(new CircleRendererBlendDarken(objectCount, R)));
+        (new PerfMeter("CircleBlendDarken", testDuration)).exec(createPR(new CircleRendererBlendDarken(objectCount, R)));
     }
 
     public void testStrokedCircle() throws Exception {
-        (new PerfMeter("StrokedCircle")).exec(createPR(new StrokedCircleRenderer(objectCount, R)));
+        (new PerfMeter("StrokedCircle", testDuration)).exec(createPR(new StrokedCircleRenderer(objectCount, R)));
     }
 
     public void testLinGradCircle() throws Exception {
-        (new PerfMeter("LinGradCircle")).exec(createPR(new LinGradCircleRenderer(objectCount, R)));
+        (new PerfMeter("LinGradCircle", testDuration)).exec(createPR(new LinGradCircleRenderer(objectCount, R)));
     }
 
     public void testRadGradCircle() throws Exception {
-        (new PerfMeter("RadGradCircle")).exec(createPR(new RadGradCircleRenderer(objectCount, R)));
+        (new PerfMeter("RadGradCircle", testDuration)).exec(createPR(new RadGradCircleRenderer(objectCount, R)));
     }
 
     public void testEllipse() throws Exception {
-        (new PerfMeter("Ellipse")).exec(createPR(new EllipseRenderer(objectCount, R)));
+        (new PerfMeter("Ellipse", testDuration)).exec(createPR(new EllipseRenderer(objectCount, R)));
     }
 
     public void testLine() throws Exception {
-        (new PerfMeter("Line")).exec(createPR(new LineRenderer(objectCount, R)));
+        (new PerfMeter("Line", testDuration)).exec(createPR(new LineRenderer(objectCount, R)));
     }
 
     public void testPath() throws Exception {
-        (new PerfMeter("Path")).exec(createPR(new PathRenderer(objectCount, R)));
+        (new PerfMeter("Path", testDuration)).exec(createPR(new PathRenderer(objectCount, R)));
     }
 
     public void testRectangle() throws Exception {
-        (new PerfMeter("Rectangle")).exec(createPR(new RectangleRenderer(objectCount, R)));
+        (new PerfMeter("Rectangle", testDuration)).exec(createPR(new RectangleRenderer(objectCount, R)));
     }
 
     public void testRotatedRectangleRH() throws Exception {
-        (new PerfMeter("RotatedRectangleRH")).exec(createPR(new RectangleRendererRH(objectCount, R)));
+        (new PerfMeter("RotatedRectangleRH", testDuration)).exec(createPR(new RectangleRendererRH(objectCount, R)));
     }
 
     public void testStrokedRectangle() throws Exception {
-        (new PerfMeter("StrokedRectangle")).exec(createPR(new StrokedRectangleRenderer(objectCount, R)));
+        (new PerfMeter("StrokedRectangle", testDuration)).exec(createPR(new StrokedRectangleRenderer(objectCount, R)));
     }
 
     public void testPolygon() throws Exception {
-        (new PerfMeter("Polygon")).exec(createPR(new PolygonRenderer(objectCount, R)));
+        (new PerfMeter("Polygon", testDuration)).exec(createPR(new PolygonRenderer(objectCount, R)));
     }
 
     public void testStrokedPolygon() throws Exception {
-        (new PerfMeter("StrokedPolygon")).exec(createPR(new StrokedPolygonRenderer(objectCount, R)));
+        (new PerfMeter("StrokedPolygon", testDuration)).exec(createPR(new StrokedPolygonRenderer(objectCount, R)));
     }
 
     public void testWhiteText() throws Exception {
-        (new PerfMeter("WhiteText")).exec(createPR(new WhiteTextRenderer(objectCount, R)));
+        (new PerfMeter("WhiteText", testDuration)).exec(createPR(new WhiteTextRenderer(objectCount, R)));
     }
 
     public void testColorText() throws Exception {
-        (new PerfMeter("ColorText")).exec(createPR(new ColorTextRenderer(objectCount, R)));
+        (new PerfMeter("ColorText", testDuration)).exec(createPR(new ColorTextRenderer(objectCount, R)));
     }
 
     public void testLargeText() throws Exception {
-        (new PerfMeter("LargeText")).exec(createPR(new LargeTextRenderer(objectCount, R)));
+        (new PerfMeter("LargeText", testDuration)).exec(createPR(new LargeTextRenderer(objectCount, R)));
     }
 
     public void testLargeColorText() throws Exception {
-        (new PerfMeter("LargeColorText")).exec(createPR(new LargeColorTextRenderer(objectCount, R)));
+        (new PerfMeter("LargeColorText", testDuration)).exec(createPR(new LargeColorTextRenderer(objectCount, R)));
     }
 
     public void testImage() throws Exception {
-        (new PerfMeter("Image")).exec(createPR(new ImageRenderer(objectCount, R)));
+        (new PerfMeter("Image", testDuration)).exec(createPR(new ImageRenderer(objectCount, R)));
     }
 
     public void testImageRH() throws Exception {
-        (new PerfMeter("ImageRH")).exec(createPR(new ImageRendererRH(objectCount, R)));
+        (new PerfMeter("ImageRH", testDuration)).exec(createPR(new ImageRendererRH(objectCount, R)));
     }
 
     public void test3DBox() throws Exception {
-        (new PerfMeter("3DBox")).exec(createPR(new Box3DRenderer(objectCount, R)));
+        (new PerfMeter("3DBox", testDuration)).exec(createPR(new Box3DRenderer(objectCount, R)));
     }
 
     public void test3DCylinder() throws Exception {
-        (new PerfMeter("3DCylinder")).exec(createPR(new CylinderRenderer(objectCount, R)));
+        (new PerfMeter("3DCylinder", testDuration)).exec(createPR(new CylinderRenderer(objectCount, R)));
     }
 
     public void test3DSphere() throws Exception {
-        (new PerfMeter("3DSphere")).exec(createPR(new SphereRenderer(objectCount, R)));
+        (new PerfMeter("3DSphere", testDuration)).exec(createPR(new SphereRenderer(objectCount, R)));
     }
 
     public void test3DMesh() throws Exception {
-        (new PerfMeter("3DMesh")).exec(createPR(new MeshRenderer(objectCount, R)));
+        (new PerfMeter("3DMesh", testDuration)).exec(createPR(new MeshRenderer(objectCount, R)));
     }
 
     public void testMultiShape2DInterleaved() throws Exception {
-        (new PerfMeter("MultiShape2DInterleaved")).exec(createPR(new MultiShapeRendererInterleaved(objectCount, R)));
+        (new PerfMeter("MultiShape2DInterleaved", testDuration)).exec(createPR(new MultiShapeRendererInterleaved(objectCount, R)));
     }
 
     public void testMultiShape2D() throws Exception {
-        (new PerfMeter("MultiShape2D")).exec(createPR(new MultiShapeRenderer(objectCount, R)));
+        (new PerfMeter("MultiShape2D", testDuration)).exec(createPR(new MultiShapeRenderer(objectCount, R)));
     }
 
     public void testMultiShape3DInterleaved() throws Exception {
-        (new PerfMeter("MultiShape3DInterleaved")).exec(createPR(new MultiShape3DRendererInterleaved(objectCount, R)));
+        (new PerfMeter("MultiShape3DInterleaved", testDuration)).exec(createPR(new MultiShape3DRendererInterleaved(objectCount, R)));
     }
 
     public void testMultiShape3D() throws Exception {
-        (new PerfMeter("MultiShape3D")).exec(createPR(new MultiShape3DRenderer(objectCount, R)));
+        (new PerfMeter("MultiShape3D", testDuration)).exec(createPR(new MultiShape3DRenderer(objectCount, R)));
     }
 
     public void testMultiShape2D3DInterleaved() throws Exception {
-        (new PerfMeter("MultiShape2D3DInterleaved")).exec(createPR(new MultiShape2D3DRendererInterleaved(objectCount, R)));
+        (new PerfMeter("MultiShape2D3DInterleaved", testDuration)).exec(createPR(new MultiShape2D3DRendererInterleaved(objectCount, R)));
     }
 
     public void testMultiShape2D3D() throws Exception {
-        (new PerfMeter("MultiShape2D3D")).exec(createPR(new MultiShape2D3DRenderer(objectCount, R)));
+        (new PerfMeter("MultiShape2D3D", testDuration)).exec(createPR(new MultiShape2D3DRenderer(objectCount, R)));
     }
 
     public void testButton() throws Exception {
-        (new PerfMeter("Button")).exec(createPR(new ButtonRenderer(objectCount, R)));
-    }
-
-    /**
-     * Initialize all the {@link ParticleRenderer} objects with
-     * child classes to render different components.
-     */
-    public void initializeRenderers(int n) {
-        balls = new Particles(n, R, WIDTH, HEIGHT);
+        (new PerfMeter("Button", testDuration)).exec(createPR(new ButtonRenderer(objectCount, R)));
     }
 
     /**
@@ -2189,6 +2238,15 @@ public class RenderPerfTest {
                     return false;
                 }
                 break;
+            case "-d":
+                try {
+                    testDuration = Integer.parseInt(args[++i]);
+                }
+                catch (ArrayIndexOutOfBoundsException e) {
+                    System.out.println("\ntest_duration_in_seconds not provided.");
+                    return false;
+                }
+                break;
             case "-h":
             case "--help":
             default:
@@ -2209,9 +2267,11 @@ public class RenderPerfTest {
     }
 
     public static void printUsage() {
-        System.out.println("Usage: java @<path_to>/run.args RenderPerfTest -t <test_name> -n <number_of_objects> -h");
-        System.out.println("       Where test_name: Name of the test to be executed");
-        System.out.println("             number_of_objects: Number of objects to be rendered in the test");
+        System.out.println("Usage: java @<path_to>/run.args RenderPerfTest [-t <test_name>...] [-n <number_of_objects>] [-d <test_duration_in_seconds>] [-h]");
+        System.out.println("       Where test_name: Name of the test (or tests) to be executed.");
+        System.out.println("             number_of_objects: Number of objects to be rendered in the test(s)");
+        System.out.println("             test_duration_in_seconds: How many seconds should each test take (default 10, set 0 for infinite run)");
+        System.out.println("                                       NOTE: Tests have extra 5 seconds warmup time where performance is NOT measured.");
         System.out.println("             -h: help: print application usage");
         System.out.println("NOTE: Set JVM command line parameter -Djavafx.animation.fullspeed=true to run animation at full speed");
 
@@ -2233,7 +2293,10 @@ public class RenderPerfTest {
         if (test.objectCount == 0) {
             test.objectCount = 1000;
         }
-        test.initializeRenderers(test.objectCount);
+
+        if (test.testDuration == 0) {
+            System.out.println("NOTE: Test length set to 0. Test will run indefinitely until Stage is closed.");
+        }
 
         try {
             if (testList.size() != 0) {
