@@ -100,7 +100,12 @@ public class RT32570Test extends VisualTestBase {
                 Color color = getColor(testScene, WIDTH / 2, HEIGHT / 2);
                 popped = !testColorEquals(Color.GREEN, color, TOLERANCE);
             });
-            try { Thread.sleep(100); } catch(Exception e) {}
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                // fail(e);
+                throw new AssertionError(e);
+            }
         }
 
         // Verify the popup content is painted:

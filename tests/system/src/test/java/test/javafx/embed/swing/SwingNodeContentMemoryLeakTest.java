@@ -85,7 +85,8 @@ public class SwingNodeContentMemoryLeakTest {
                 try {
                     Thread.sleep(100);
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    // fail(e);
+                    throw new AssertionError(e);
                 }
 
                 SwingUtilities.invokeLater(() -> {

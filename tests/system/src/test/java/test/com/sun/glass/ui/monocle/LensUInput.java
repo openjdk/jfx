@@ -232,7 +232,10 @@ public class LensUInput extends NativeUInput {
                 if (LinuxSystemShim.errno() == LinuxSystemShim.ENXIO) { // no reader on pipe
                     try {
                         Thread.sleep(100l);
-                    } catch (InterruptedException e) { }
+                    } catch (InterruptedException e) {
+                        // fail(e);
+                        throw new AssertionError(e);
+                    }
                 } else {
                     break;
                 }
@@ -266,7 +269,8 @@ public class LensUInput extends NativeUInput {
                     try {
                         Thread.sleep(1);
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        // fail(e);
+                        throw new AssertionError(e);
                     }
                 } else {
                     throw new IOException(LinuxSystemShim.getErrorMessage());

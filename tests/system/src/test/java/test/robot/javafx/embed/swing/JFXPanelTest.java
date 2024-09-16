@@ -75,7 +75,8 @@ public class JFXPanelTest {
             try {
                 beginLatch.await();
             } catch (Exception e) {
-                e.printStackTrace();
+                // fail(e);
+                throw new AssertionError(e);
             }
             while (!stop) {
                 robot.mouseMove(300, 10);

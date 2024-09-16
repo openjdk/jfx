@@ -80,7 +80,8 @@ public class JFXPanelEmbeddedWindowTest {
             try {
                 innerLatch.await(5, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                // fail(e);
+                throw new AssertionError(e);
             }
             SwingUtilities.invokeLater(() -> outerLatch.countDown());
         });

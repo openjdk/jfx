@@ -241,6 +241,8 @@ public class ToggleButtonTest {
             Thread.sleep(2000);
         } catch (InterruptedException ex) {
             PlatformLogger.getLogger(ToggleButtonTest.class.getName()).severe(null, ex);
+            // fail(ex);
+            throw new AssertionError(ex);
         }
         assertTrue("fire() doesnt emit ActionEvent!", flag[0]);
     }

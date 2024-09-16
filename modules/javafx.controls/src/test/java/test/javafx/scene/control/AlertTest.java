@@ -92,7 +92,8 @@ public class AlertTest {
                         Platform.runLater(() -> getStage(dialog).close());
                     }
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    // fail(e);
+                    throw new AssertionError(e);
                 }
             }).start();
 

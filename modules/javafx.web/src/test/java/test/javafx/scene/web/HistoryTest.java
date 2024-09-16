@@ -115,7 +115,12 @@ public class HistoryTest extends TestBase {
         //
         history.getEntries().get(history.getCurrentIndex() - 1).lastVisitedDateProperty().addListener(newDateListener());
 
-        try { Thread.sleep(150); } catch (Exception e) {} // ensure the next date doesn't fit into the same millisecond
+        try {
+            Thread.sleep(150); // ensure the next date doesn't fit into the same millisecond
+        } catch (InterruptedException e) {
+            // fail(e);
+            throw new AssertionError(e);
+        }
 
         history.currentIndexProperty().addListener(new ChangeListener<Number>() {
             @Override
@@ -237,7 +242,12 @@ public class HistoryTest extends TestBase {
 
         history.getEntries().get(history.getCurrentIndex()).lastVisitedDateProperty().addListener(newDateListener());
 
-        try { Thread.sleep(150); } catch (Exception e) {} // ensure the next date doesn't fit into the same millisecond
+        try {
+            Thread.sleep(150); // ensure the next date doesn't fit into the same millisecond
+        } catch (InterruptedException e) {
+            // fail(e);
+            throw new AssertionError(e);
+        }
 
         reload();
 

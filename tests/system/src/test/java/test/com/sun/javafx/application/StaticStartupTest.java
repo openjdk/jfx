@@ -39,7 +39,9 @@ public class StaticStartupTest {
         Thread thr = new Thread(() -> {
             try {
                 Thread.sleep(20000);
-            } catch (InterruptedException ex) {}
+            } catch (InterruptedException ex) {
+                // OK to not rethrow; the exit 1 signals an error
+            }
             System.err.println("Test timeout exceeded -- calling System.exit");
             System.exit(1);
         });

@@ -94,6 +94,8 @@ public class RT36296Test {
             latch.await();
         } catch (InterruptedException ex) {
             Logger.getLogger(RT36296Test.class.getName()).log(Level.SEVERE, null, ex);
+            // fail(ex);
+            throw new AssertionError(ex);
         }
     }
 

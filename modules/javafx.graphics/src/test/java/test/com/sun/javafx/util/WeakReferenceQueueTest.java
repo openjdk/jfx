@@ -203,7 +203,12 @@ public class WeakReferenceQueueTest {
         }
 
         // finally, give the VM some idle time to perform gc
-        try { Thread.sleep(100); } catch (InterruptedException e) {}
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            // fail(e);
+            throw new AssertionError(e);
+        }
 
         // hope that worked!
     }

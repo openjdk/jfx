@@ -320,14 +320,17 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
     }
 
     /**
-     * Convenience alias for Thread.sleep() that does not throw an exception.
+     * Convenience alias for Thread.sleep() that rethrows InterruptedException
+     * as an AssertionError.
      * @param ms the timout in milliseconds
      */
     protected void sleep(int ms) {
         try {
+            // KCR: this should be sleep(ms) not a hard-coded 1
             Thread.sleep(1);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            // fail(e);
+            throw new AssertionError(e);
         }
     }
 

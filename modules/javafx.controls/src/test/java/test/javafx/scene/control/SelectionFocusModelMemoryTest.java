@@ -238,7 +238,8 @@ public class SelectionFocusModelMemoryTest {
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {
-               System.err.println("InterruptedException occurred during Thread.sleep()");
+                // fail(e);
+                throw new AssertionError(e);
             }
         }
     }

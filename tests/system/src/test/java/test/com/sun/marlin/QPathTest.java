@@ -201,6 +201,8 @@ public class QPathTest {
             latch.await();
         } catch (InterruptedException ie) {
             Logger.getLogger(QPathTest.class.getName()).log(Level.SEVERE, "interrupted", ie);
+            // fail(ie);
+            throw new AssertionError(ie);
         }
         Assert.assertFalse("DoChecks detected a problem.", doChecksFailed);
     }

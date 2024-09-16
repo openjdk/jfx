@@ -107,6 +107,8 @@ public class ArabicWrappingTest extends Application {
            try {
                Thread.sleep(2000);
            } catch (Exception e) {
+                // fail(e);
+                throw new AssertionError(e);
            }
        }
 

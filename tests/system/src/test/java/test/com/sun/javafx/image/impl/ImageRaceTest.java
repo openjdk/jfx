@@ -69,7 +69,10 @@ public class ImageRaceTest {
             while (!ready) {
                 try {
                     sleep(1);
-                } catch (InterruptedException ex) {}
+                } catch (InterruptedException ex) {
+                    // fail(ex);
+                    throw new AssertionError(ex);
+                }
             }
             init.get();
             if (verbose) System.err.println(getName()+" done");
@@ -83,7 +86,10 @@ public class ImageRaceTest {
             while (!i.isRunning() && System.currentTimeMillis() < limit) {
                 try {
                     Thread.sleep(1);
-                } catch (InterruptedException ex) {}
+                } catch (InterruptedException ex) {
+                    // fail(ex);
+                    throw new AssertionError(ex);
+                }
             }
             if (!i.isRunning()) {
                 throw new RuntimeException("Initializer "+i+" never started");
@@ -93,7 +99,10 @@ public class ImageRaceTest {
         if (verbose) System.err.println("\n[main] signal the threads to proceed\n");
         try {
             Thread.sleep(100);
-        } catch (InterruptedException ex) {}
+        } catch (InterruptedException ex) {
+            // fail(ex);
+            throw new AssertionError(ex);
+        }
         ready = true;
 
         limit = System.currentTimeMillis() + TIMEOUT;

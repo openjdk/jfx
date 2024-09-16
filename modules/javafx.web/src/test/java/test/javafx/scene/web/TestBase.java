@@ -63,7 +63,10 @@ public class TestBase implements ChangeListener, InvalidationListener {
 
         try {
             startupLatch.await();
-        } catch (InterruptedException ex) {}
+        } catch (InterruptedException ex) {
+            // fail(ex);
+            throw new AssertionError(ex);
+        }
     }
 
     public TestBase() {

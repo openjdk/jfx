@@ -197,8 +197,10 @@ public class ScrollPaneSkinTest {
         while (continueTest == false && count < 10) {
             try {
                 Thread.sleep(100);
+            } catch (InterruptedException e) {
+                // fail(e);
+                throw new AssertionError(e);
             }
-            catch (Exception e) {}
             count++;
         }
 
@@ -246,8 +248,10 @@ public class ScrollPaneSkinTest {
         while (continueTest == false && count < 10) {
             try {
                 Thread.sleep(100);
+            } catch (InterruptedException e) {
+                // fail(e);
+                throw new AssertionError(e);
             }
-            catch (Exception e) {}
             count++;
         }
 

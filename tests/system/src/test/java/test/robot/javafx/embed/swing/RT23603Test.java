@@ -102,6 +102,8 @@ public class RT23603Test {
         try {
             latch.await(ms, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
+            // fail(e);
+            throw new AssertionError(e);
         }
         if (latch.getCount() > 0) {
             Assert.fail("unexpected error: waiting timeout " + ms + "ms elapsed for " + latch);

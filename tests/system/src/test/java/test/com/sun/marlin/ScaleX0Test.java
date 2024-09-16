@@ -110,6 +110,8 @@ public class ScaleX0Test {
             Thread.sleep(500L);
         } catch (InterruptedException ie) {
             Logger.getLogger(ScaleX0Test.class.getName()).log(Level.SEVERE, "interrupted", ie);
+            // fail(ie);
+            throw new AssertionError(ie);
         }
 
         // Restore stderr:
