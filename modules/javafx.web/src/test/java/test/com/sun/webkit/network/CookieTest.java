@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -451,8 +451,8 @@ public class CookieTest {
             return;
         }
 
-        assertEquals(expected.name, actual.getName(), "Unexpected name" + s);
-        assertEquals(expected.value, actual.getValue(), "Unexpected value" + s);
+        assertEquals(expected.name, actual.getName(),"Unexpected name" + s);
+        assertEquals(expected.value, actual.getValue(),"Unexpected value" + s);
         assertEquals(expected.expiryTime, actual.getExpiryTime(), "Unexpected expiryTime" + s);
         assertEquals(expected.domain, actual.getDomain(), "Unexpected domain" + s);
         assertEquals(expected.path, actual.getPath(), "Unexpected path" + s);
