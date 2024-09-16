@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,15 +25,19 @@
 
 package test.com.sun.javafx.application;
 
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
+import java.time.Duration;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test calling Platform.exit() once after starting the FX runtime
  */
 public class PlatformExit1Test extends PlatformExitCommon {
 
-    @Test (timeout = 15000)
+    @Test
     public void testPlatformExit() {
-        doTestPlatformExit(false);
+        assertTimeout(Duration.ofMillis(15_000), () -> {
+            doTestPlatformExit(false);
+        });
     }
 }
