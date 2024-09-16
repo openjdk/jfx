@@ -31,12 +31,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import com.sun.glass.ui.monocle.IntSetShim;
 
 public final class IntSetTest {
-
-    private Integer[] array;
 
     private static Collection<Integer[]> parameters() {
         return List.of(
@@ -47,10 +46,6 @@ public final class IntSetTest {
             new Integer[] { 1, 1, 1 },
             new Integer[] { 1, 1, 2 }
         );
-    }
-
-    public IntSetTest(Integer[] array) {
-        this.array = array;
     }
 
     private int[] getIntSetAsArray(IntSetShim s) {
@@ -73,8 +68,9 @@ public final class IntSetTest {
                 "Expected: " + expected + ", found " + actual);
     }
 
-    @Test
-    public void testAddInOrderRemoveInOrder() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testAddInOrderRemoveInOrder(Integer[] array) {
         IntSetShim set = new IntSetShim();
         Set<Integer> hashSet = new HashSet<>();
         assertSet(hashSet, set);
@@ -90,8 +86,9 @@ public final class IntSetTest {
         }
     }
 
-    @Test
-    public void testAddInOrderRemoveInReverse() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testAddInOrderRemoveInReverse(Integer[] array) {
         IntSetShim set = new IntSetShim();
         Set<Integer> hashSet = new HashSet<>();
         assertSet(hashSet, set);
@@ -107,8 +104,9 @@ public final class IntSetTest {
         }
     }
 
-    @Test
-    public void testAddInReverseRemoveInOrder() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testAddInReverseRemoveInOrder(Integer[] array) {
         IntSetShim set = new IntSetShim();
         Set<Integer> hashSet = new HashSet<>();
         assertSet(hashSet, set);
@@ -124,8 +122,9 @@ public final class IntSetTest {
         }
     }
 
-    @Test
-    public void testAddInReverseRemoveInReverse() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testAddInReverseRemoveInReverse(Integer[] array) {
         IntSetShim set = new IntSetShim();
         Set<Integer> hashSet = new HashSet<>();
         assertSet(hashSet, set);
@@ -140,5 +139,4 @@ public final class IntSetTest {
             assertSet(hashSet, set);
         }
     }
-
 }
