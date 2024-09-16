@@ -67,18 +67,25 @@ typedef struct _GstAppSinkPrivate GstAppSinkPrivate;
  *       The callback should return %TRUE if the event has been handled,
  *       %FALSE otherwise.
  *       Since: 1.20
+  * @propose_allocation: Called when the propose_allocation query is available.
+ *       This callback is called from the streaming thread.
+ *       The allocation query can be retrieved with
+ *       gst_app_sink_propose_allocation() either from this callback
+ *       or from any other thread.
+ *       Since: 1.24
  *
  * A set of callbacks that can be installed on the appsink with
  * gst_app_sink_set_callbacks().
  */
 typedef struct {
-  void          (*eos)              (GstAppSink *appsink, gpointer user_data);
-  GstFlowReturn (*new_preroll)      (GstAppSink *appsink, gpointer user_data);
-  GstFlowReturn (*new_sample)       (GstAppSink *appsink, gpointer user_data);
-  gboolean      (*new_event)        (GstAppSink *appsink, gpointer user_data);
+  void          (*eos)                  (GstAppSink *appsink, gpointer user_data);
+  GstFlowReturn (*new_preroll)          (GstAppSink *appsink, gpointer user_data);
+  GstFlowReturn (*new_sample)           (GstAppSink *appsink, gpointer user_data);
+  gboolean      (*new_event)            (GstAppSink *appsink, gpointer user_data);
+  gboolean      (*propose_allocation)   (GstAppSink *appsink, GstQuery *query, gpointer user_data);
 
   /*< private >*/
-  gpointer     _gst_reserved[GST_PADDING - 1];
+  gpointer     _gst_reserved[GST_PADDING - 2];
 } GstAppSinkCallbacks;
 
 struct _GstAppSink
@@ -97,16 +104,16 @@ struct _GstAppSinkClass
   GstBaseSinkClass basesink_class;
 
   /* signals */
-  void          (*eos)              (GstAppSink *appsink);
-  GstFlowReturn (*new_preroll)      (GstAppSink *appsink);
-  GstFlowReturn (*new_sample)       (GstAppSink *appsink);
+  void          (*eos)                (GstAppSink *appsink);
+  GstFlowReturn (*new_preroll)        (GstAppSink *appsink);
+  GstFlowReturn (*new_sample)         (GstAppSink *appsink);
   /* new_event is missing as we ran out padding */
 
   /* actions */
-  GstSample *   (*pull_preroll)      (GstAppSink *appsink);
-  GstSample *   (*pull_sample)       (GstAppSink *appsink);
-  GstSample *   (*try_pull_preroll)  (GstAppSink *appsink, GstClockTime timeout);
-  GstSample *   (*try_pull_sample)   (GstAppSink *appsink, GstClockTime timeout);
+  GstSample *   (*pull_preroll)       (GstAppSink *appsink);
+  GstSample *   (*pull_sample)        (GstAppSink *appsink);
+  GstSample *   (*try_pull_preroll)   (GstAppSink *appsink, GstClockTime timeout);
+  GstSample *   (*try_pull_sample)    (GstAppSink *appsink, GstClockTime timeout);
  /**
    * GstAppSinkClass::try_pull_object:
    *
@@ -114,8 +121,8 @@ struct _GstAppSinkClass
    *
    * Since: 1.20
    */
-  GstMiniObject * (*try_pull_object) (GstAppSink *appsink, GstClockTime timeout);
 
+  GstMiniObject * (*try_pull_object)    (GstAppSink *appsink, GstClockTime timeout);
   /*< private >*/
   gpointer     _gst_reserved[GST_PADDING - 3];
 };
@@ -143,6 +150,18 @@ void            gst_app_sink_set_max_buffers  (GstAppSink *appsink, guint max);
 
 GST_APP_API
 guint           gst_app_sink_get_max_buffers  (GstAppSink *appsink);
+
+GST_APP_API
+void            gst_app_sink_set_max_time (GstAppSink *appsink, GstClockTime max);
+
+GST_APP_API
+GstClockTime    gst_app_sink_get_max_time (GstAppSink *appsink);
+
+GST_APP_API
+void            gst_app_sink_set_max_bytes (GstAppSink *appsink, guint64 max);
+
+GST_APP_API
+guint64         gst_app_sink_get_max_bytes (GstAppSink *appsink);
 
 GST_APP_API
 void            gst_app_sink_set_drop         (GstAppSink *appsink, gboolean drop);
@@ -191,4 +210,3 @@ G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstAppSink, gst_object_unref)
 G_END_DECLS
 
 #endif
-

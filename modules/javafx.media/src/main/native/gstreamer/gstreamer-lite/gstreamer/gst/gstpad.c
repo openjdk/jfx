@@ -659,15 +659,18 @@ _apply_pad_offset (GstPad * pad, GstEvent * event, gboolean upstream,
 
   if (GST_EVENT_TYPE (event) == GST_EVENT_SEGMENT) {
     GstSegment segment;
+    guint32 seqnum;
 
     g_assert (!upstream);
 
     /* copy segment values */
     gst_event_copy_segment (event, &segment);
+    seqnum = gst_event_get_seqnum (event);
     gst_event_unref (event);
 
     gst_segment_offset_running_time (&segment, segment.format, pad_offset);
     event = gst_event_new_segment (&segment);
+    gst_event_set_seqnum (event, seqnum);
   }
 
   event = gst_event_make_writable (event);
@@ -2378,21 +2381,17 @@ wrong_grandparents:
   }
 }
 
-/* FIXME leftover from an attempt at refactoring... */
-/* call with the two pads unlocked, when this function returns GST_PAD_LINK_OK,
- * the two pads will be locked in the srcpad, sinkpad order. */
+/* check that pads does not have any exisiting links
+ * and that hierarchy is valid for linking.
+ *
+ * The LOCK should be held on both pads
+ */
 static GstPadLinkReturn
-gst_pad_link_prepare (GstPad * srcpad, GstPad * sinkpad, GstPadLinkCheck flags)
+gst_pad_link_check_relations (GstPad * srcpad, GstPad * sinkpad,
+    GstPadLinkCheck flags)
 {
-  GST_CAT_INFO (GST_CAT_PADS, "trying to link %s:%s and %s:%s",
-      GST_DEBUG_PAD_NAME (srcpad), GST_DEBUG_PAD_NAME (sinkpad));
-
-  GST_OBJECT_LOCK (srcpad);
-
   if (G_UNLIKELY (GST_PAD_PEER (srcpad) != NULL))
     goto src_was_linked;
-
-  GST_OBJECT_LOCK (sinkpad);
 
   if (G_UNLIKELY (GST_PAD_PEER (sinkpad) != NULL))
     goto sink_was_linked;
@@ -2403,12 +2402,6 @@ gst_pad_link_prepare (GstPad * srcpad, GstPad * sinkpad, GstPadLinkCheck flags)
       && !gst_pad_link_check_hierarchy (srcpad, sinkpad))
     goto wrong_hierarchy;
 
-  /* check pad caps for non-empty intersection */
-  if (!gst_pad_link_check_compatible_unlocked (srcpad, sinkpad, flags))
-    goto no_format;
-
-  /* FIXME check pad scheduling for non-empty intersection */
-
   return GST_PAD_LINK_OK;
 
 src_was_linked:
@@ -2418,7 +2411,6 @@ src_was_linked:
         GST_DEBUG_PAD_NAME (GST_PAD_PEER (srcpad)));
     /* we do not emit a warning in this case because unlinking cannot
      * be made MT safe.*/
-    GST_OBJECT_UNLOCK (srcpad);
     return GST_PAD_LINK_WAS_LINKED;
   }
 sink_was_linked:
@@ -2428,23 +2420,57 @@ sink_was_linked:
         GST_DEBUG_PAD_NAME (GST_PAD_PEER (sinkpad)));
     /* we do not emit a warning in this case because unlinking cannot
      * be made MT safe.*/
-    GST_OBJECT_UNLOCK (sinkpad);
-    GST_OBJECT_UNLOCK (srcpad);
     return GST_PAD_LINK_WAS_LINKED;
   }
 wrong_hierarchy:
   {
     GST_CAT_INFO (GST_CAT_PADS, "pads have wrong hierarchy");
-    GST_OBJECT_UNLOCK (sinkpad);
-    GST_OBJECT_UNLOCK (srcpad);
     return GST_PAD_LINK_WRONG_HIERARCHY;
   }
-no_format:
-  {
+}
+
+/* FIXME leftover from an attempt at refactoring... */
+/* call with the two pads unlocked, when this function returns GST_PAD_LINK_OK,
+ * the two pads will be locked in the srcpad, sinkpad order. */
+static GstPadLinkReturn
+gst_pad_link_prepare (GstPad * srcpad, GstPad * sinkpad, GstPadLinkCheck flags)
+{
+  GstPadLinkReturn result;
+
+  GST_CAT_INFO (GST_CAT_PADS, "trying to link %s:%s and %s:%s",
+      GST_DEBUG_PAD_NAME (srcpad), GST_DEBUG_PAD_NAME (sinkpad));
+
+  GST_OBJECT_LOCK (srcpad);
+  GST_OBJECT_LOCK (sinkpad);
+
+  /* Check pads state, not already linked and correct hierachy. */
+  result = gst_pad_link_check_relations (srcpad, sinkpad, flags);
+  if (result != GST_PAD_LINK_OK)
+    goto unlock_and_return;
+
+  /* check pad caps for non-empty intersection */
+  if (!gst_pad_link_check_compatible_unlocked (srcpad, sinkpad, flags)) {
     GST_CAT_INFO (GST_CAT_PADS, "caps are incompatible");
+    result = GST_PAD_LINK_NOFORMAT;
+    goto unlock_and_return;
+  }
+
+  /* Need to recheck our pads since gst_pad_link_check_compatible_unlocked might have temporarily unlocked them.
+     Keeping the first check, because gst_pad_link_check_compatible_unlocked potentially is an expensive operation
+     which gst_pad_link_check_relations is not. */
+  result = gst_pad_link_check_relations (srcpad, sinkpad, flags);
+  if (result != GST_PAD_LINK_OK)
+    goto unlock_and_return;
+
+  /* FIXME check pad scheduling for non-empty intersection */
+
+  return GST_PAD_LINK_OK;
+
+unlock_and_return:
+  {
     GST_OBJECT_UNLOCK (sinkpad);
     GST_OBJECT_UNLOCK (srcpad);
-    return GST_PAD_LINK_NOFORMAT;
+    return result;
   }
 }
 
@@ -4161,7 +4187,7 @@ gboolean
 gst_pad_query (GstPad * pad, GstQuery * query)
 {
   GstObject *parent;
-  gboolean res, serialized;
+  gboolean res = FALSE, serialized;
   GstPadQueryFunction func;
   GstPadProbeType type;
   GstFlowReturn ret;
@@ -4205,7 +4231,6 @@ gst_pad_query (GstPad * pad, GstQuery * query)
 
   GST_DEBUG_OBJECT (pad, "sent query %p (%s), result %d", query,
       GST_QUERY_TYPE_NAME (query), res);
-  GST_TRACER_PAD_QUERY_POST (pad, query, res);
 
   if (res != TRUE)
     goto query_failed;
@@ -4213,6 +4238,8 @@ gst_pad_query (GstPad * pad, GstQuery * query)
   GST_OBJECT_LOCK (pad);
   PROBE_PUSH (pad, type | GST_PAD_PROBE_TYPE_PULL, query, probe_stopped);
   GST_OBJECT_UNLOCK (pad);
+
+  GST_TRACER_PAD_QUERY_POST (pad, query, res);
 
   if (G_UNLIKELY (serialized))
     GST_PAD_STREAM_UNLOCK (pad);
@@ -4235,6 +4262,7 @@ no_parent:
   {
     GST_DEBUG_OBJECT (pad, "had no parent");
     GST_OBJECT_UNLOCK (pad);
+    GST_TRACER_PAD_QUERY_POST (pad, query, res);
     if (G_UNLIKELY (serialized))
       GST_PAD_STREAM_UNLOCK (pad);
     return FALSE;
@@ -4243,6 +4271,7 @@ no_func:
   {
     GST_DEBUG_OBJECT (pad, "had no query function");
     RELEASE_PARENT (parent);
+    GST_TRACER_PAD_QUERY_POST (pad, query, res);
     if (G_UNLIKELY (serialized))
       GST_PAD_STREAM_UNLOCK (pad);
     return FALSE;
@@ -4250,6 +4279,7 @@ no_func:
 query_failed:
   {
     GST_DEBUG_OBJECT (pad, "query failed");
+    GST_TRACER_PAD_QUERY_POST (pad, query, res);
     if (G_UNLIKELY (serialized))
       GST_PAD_STREAM_UNLOCK (pad);
     return FALSE;
@@ -4258,6 +4288,7 @@ probe_stopped:
   {
     GST_DEBUG_OBJECT (pad, "probe stopped: %s", gst_flow_get_name (ret));
     GST_OBJECT_UNLOCK (pad);
+    GST_TRACER_PAD_QUERY_POST (pad, query, res);
     if (G_UNLIKELY (serialized))
       GST_PAD_STREAM_UNLOCK (pad);
 
@@ -5566,8 +5597,9 @@ gst_pad_push_event_unchecked (GstPad * pad, GstEvent * event,
   pad->priv->using++;
   GST_OBJECT_UNLOCK (pad);
 
-  GST_LOG_OBJECT (pad, "sending event %p (%s) to peerpad %" GST_PTR_FORMAT,
-      event, gst_event_type_get_name (event_type), peerpad);
+  GST_LOG_OBJECT (pad,
+      "sending event %" GST_PTR_FORMAT " to peerpad %" GST_PTR_FORMAT,
+      event, peerpad);
 
   ret = gst_pad_send_event_unchecked (peerpad, event, type);
 

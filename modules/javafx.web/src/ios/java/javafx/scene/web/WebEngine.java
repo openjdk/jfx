@@ -517,7 +517,9 @@ final public class WebEngine {
      * Creates a new engine and loads a Web page into it.
      */
     public WebEngine(String url) {
-        accessControlContext = AccessController.getContext();
+        @SuppressWarnings("removal")
+        AccessControlContext tmpAcc = AccessController.getContext();
+        accessControlContext = tmpAcc;
         js2javaBridge = new JS2JavaBridge(this);
         load(url);
     }
@@ -947,14 +949,17 @@ final public class WebEngine {
         }
     }
 
+    @SuppressWarnings("removal")
     final private AccessControlContext accessControlContext;
 
+    @SuppressWarnings("removal")
     AccessControlContext getAccessControlContext() {
         return accessControlContext;
     }
 
     private void dispatchWebEvent(final EventHandler handler, final WebEvent ev) {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
+        @SuppressWarnings("removal")
+        Void result = AccessController.doPrivileged(new PrivilegedAction<Void>() {
             @Override
             public Void run() {
                 handler.handle(ev);

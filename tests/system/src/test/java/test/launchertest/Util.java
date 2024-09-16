@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,20 +23,35 @@
  * questions.
  */
 
-package com.sun.scenario.animation;
+package test.launchertest;
 
-public class AbstractPrimaryTimerShim {
+import static test.launchertest.Constants.*;
 
-    public static boolean isPaused(AbstractPrimaryTimer amt) {
-        return amt.isPaused();
+public class Util {
+
+    // Timeout in milliseconds (must be at least 15 seconds)
+    private static final int TIMEOUT = 20000;
+
+    public static void sleep(long msec) {
+        try {
+            Thread.sleep(msec);
+        } catch (InterruptedException ex) {
+            ex.printStackTrace();
+            System.exit(ERROR_UNEXPECTED_EXCEPTION);
+        }
     }
 
-    public static long getTotalPausedTime(AbstractPrimaryTimer amt) {
-        return amt.getTotalPausedTime();
+    public static void setupTimeoutThread() {
+        // Timeout thread
+        Thread th = new Thread(() -> {
+            sleep(TIMEOUT);
+            System.exit(ERROR_TIMEOUT);
+        });
+        th.setDaemon(true);
+        th.start();
     }
 
-    public static long getStartPauseTime(AbstractPrimaryTimer amt) {
-        return amt.getStartPauseTime();
-    }
+    // No need to ever create an instance of this class
+    private Util() {}
 
 }

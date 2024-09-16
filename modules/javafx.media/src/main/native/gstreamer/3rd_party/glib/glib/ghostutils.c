@@ -59,6 +59,24 @@
  * ".org" maps to "xn--4wa8awb4637h.org".)
  **/
 
+/**
+ * SECTION:ghostutils
+ * @short_description: Internet hostname utilities
+ *
+ * Functions for manipulating internet hostnames; in particular, for
+ * converting between Unicode and ASCII-encoded forms of
+ * Internationalized Domain Names (IDNs).
+ *
+ * The
+ * [Internationalized Domain Names for Applications (IDNA)](http://www.ietf.org/rfc/rfc3490.txt)
+ * standards allow for the use
+ * of Unicode domain names in applications, while providing
+ * backward-compatibility with the old ASCII-only DNS, by defining an
+ * ASCII-Compatible Encoding of any given Unicode name, which can be
+ * used with non-IDN-aware applications and protocols. (For example,
+ * "Παν語.org" maps to "xn--4wa8awb4637h.org".)
+ **/
+
 #define IDNA_ACE_PREFIX     "xn--"
 #define IDNA_ACE_PREFIX_LEN 4
 

@@ -39,7 +39,7 @@ video_frame_get_perf_category (void)
   static GstDebugCategory *cat = NULL;
 
   if (g_once_init_enter (&cat)) {
-    GstDebugCategory *c;
+    GstDebugCategory *c = NULL;
 
     GST_DEBUG_CATEGORY_GET (c, "GST_PERFORMANCE");
     g_once_init_leave (&cat, c);

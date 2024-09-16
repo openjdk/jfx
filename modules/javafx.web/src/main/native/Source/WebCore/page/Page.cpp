@@ -21,6 +21,7 @@
 #include "Page.h"
 
 #include "ActivityStateChangeObserver.h"
+#include "AdvancedPrivacyProtections.h"
 #include "AlternativeTextClient.h"
 #include "AnimationFrameRate.h"
 #include "AppHighlightStorage.h"
@@ -212,9 +213,9 @@
 
 namespace WebCore {
 
-static HashSet<SingleThreadWeakRef<Page>>& allPages()
+static HashSet<WeakRef<Page>>& allPages()
 {
-    static NeverDestroyed<HashSet<SingleThreadWeakRef<Page>>> set;
+    static NeverDestroyed<HashSet<WeakRef<Page>>> set;
     return set;
 }
 
@@ -242,6 +243,19 @@ void Page::updateValidationBubbleStateIfNeeded()
 {
     if (auto* client = validationMessageClient())
         client->updateValidationBubbleStateIfNeeded();
+}
+
+void Page::scheduleValidationMessageUpdate(ValidatedFormListedElement& element, HTMLElement& anchor)
+{
+    m_validationMessageUpdates.append({ element, anchor });
+}
+
+void Page::updateValidationMessages()
+{
+    for (auto& item : std::exchange(m_validationMessageUpdates, { })) {
+        if (RefPtr anchor = item.second.get())
+            item.first->updateVisibleValidationMessage(*anchor);
+    }
 }
 
 static void networkStateChanged(bool isOnLine)
@@ -1985,6 +1999,8 @@ void Page::doAfterUpdateRendering()
 #if ENABLE(IMAGE_ANALYSIS)
     updateElementsWithTextRecognitionResults();
 #endif
+
+    updateValidationMessages();
 
     prioritizeVisibleResources();
 
@@ -4443,7 +4459,7 @@ ModelPlayerProvider& Page::modelPlayerProvider()
     return m_modelPlayerProvider.get();
 }
 
-void Page::setupForRemoteWorker(const URL& scriptURL, const SecurityOriginData& topOrigin, const String& referrerPolicy)
+void Page::setupForRemoteWorker(const URL& scriptURL, const SecurityOriginData& topOrigin, const String& referrerPolicy, OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections)
 {
     RefPtr localMainFrame = dynamicDowncast<LocalFrame>(mainFrame());
     if (!localMainFrame)
@@ -4458,6 +4474,9 @@ void Page::setupForRemoteWorker(const URL& scriptURL, const SecurityOriginData& 
     URL originAsURL = origin->toURL();
     document->setSiteForCookies(originAsURL);
     document->setFirstPartyForCookies(originAsURL);
+
+    if (RefPtr documentLoader = localMainFrame->checkedLoader()->documentLoader())
+        documentLoader->setAdvancedPrivacyProtections(advancedPrivacyProtections);
 
     if (document->settings().storageBlockingPolicy() != StorageBlockingPolicy::BlockThirdParty)
         document->setDomainForCachePartition(String { emptyString() });

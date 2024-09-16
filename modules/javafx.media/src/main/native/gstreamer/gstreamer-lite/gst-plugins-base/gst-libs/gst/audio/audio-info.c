@@ -25,6 +25,10 @@
 
 #include "audio.h"
 
+#ifdef GSTREAMER_LITE
+#include "gst/glib-compat-private.h"
+#endif // GSTREAMER_LITE
+
 #include <gst/gststructure.h>
 
 #ifndef GST_DISABLE_GST_DEBUG
@@ -61,7 +65,7 @@ ensure_debug_category (void)
 GstAudioInfo *
 gst_audio_info_copy (const GstAudioInfo * info)
 {
-  return g_slice_dup (GstAudioInfo, info);
+  return g_memdup2 (info, sizeof (GstAudioInfo));
 }
 
 /**
@@ -74,7 +78,7 @@ gst_audio_info_copy (const GstAudioInfo * info)
 void
 gst_audio_info_free (GstAudioInfo * info)
 {
-  g_slice_free (GstAudioInfo, info);
+  g_free (info);
 }
 
 G_DEFINE_BOXED_TYPE (GstAudioInfo, gst_audio_info,
@@ -93,7 +97,7 @@ gst_audio_info_new (void)
 {
   GstAudioInfo *info;
 
-  info = g_slice_new (GstAudioInfo);
+  info = g_new (GstAudioInfo, 1);
   gst_audio_info_init (info);
 
   return info;
