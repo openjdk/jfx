@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,22 +25,25 @@
 
 package test.com.sun.javafx.application;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
+import java.time.Duration;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class InitializeJavaFXStartup2Test extends InitializeJavaFXStartupBase {
 
-    @BeforeClass
+    @BeforeAll
     public static void initialize() throws Exception {
         InitializeJavaFXStartupBase.initializeStartup();
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testStartupThenLaunch() throws Exception {
+        assertTimeout(Duration.ofMillis(15000), () -> {
+            // The first call to Application.launch should work
+            InitializeJavaFXLaunchBase.initializeApplicationLaunch();
 
-        // The first call to Application.launch should work
-        InitializeJavaFXLaunchBase.initializeApplicationLaunch();
-
-        doTestInitializeThenSecondLaunch();
+            doTestInitializeThenSecondLaunch();
+        });
     }
 }
