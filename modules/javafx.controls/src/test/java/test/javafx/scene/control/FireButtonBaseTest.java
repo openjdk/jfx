@@ -26,8 +26,8 @@
 package test.javafx.scene.control;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.control.Button;
@@ -44,8 +44,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 /**
  */
 public class FireButtonBaseTest {
-    public static Collection<Class> parameters() {
-        return Arrays.asList(
+    private static Collection<Class<?>> parameters() {
+        return List.of(
             Button.class,
             CheckBox.class,
             Hyperlink.class,
@@ -60,7 +60,7 @@ public class FireButtonBaseTest {
 
     //@BeforeEach
     // junit5 does not support parameterized class-level tests yet
-    public void setup(Class type) {
+    public void setup(Class<?> type) {
         try {
             btn = (ButtonBase) type.getDeclaredConstructor().newInstance();
         } catch(Exception e) {
@@ -70,7 +70,7 @@ public class FireButtonBaseTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void onActionCalledWhenButtonIsFired(Class type) {
+    public void onActionCalledWhenButtonIsFired(Class<?> type) {
         setup(type);
         final EventHandlerStub handler = new EventHandlerStub();
         btn.setOnAction(handler);
@@ -80,7 +80,7 @@ public class FireButtonBaseTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void onActionCalledWhenNullWhenButtonIsFiredIsNoOp(Class type) {
+    public void onActionCalledWhenNullWhenButtonIsFiredIsNoOp(Class<?> type) {
         setup(type);
         btn.fire(); // should throw no exceptions, if it does, the test fails
     }

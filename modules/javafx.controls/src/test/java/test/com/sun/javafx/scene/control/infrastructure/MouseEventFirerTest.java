@@ -32,8 +32,8 @@ import static javafx.scene.layout.AnchorPane.setTopAnchor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
@@ -200,14 +200,13 @@ public class MouseEventFirerTest {
 
  // ------------- parameterized in not/alternative mouseEvent creation
 
-    public static Collection<Object[]> data() {
+    private static Collection<Boolean> data() {
         // current / alternative mouseEvent creation
-        Object[][] data = new Object[][] {
+        return List.of(
             // @Ignore("8253769")
-            // {false},
-            {true},
-        };
-        return Arrays.asList(data);
+            // false,
+            true
+        );
     }
 
  // ------------ setup/cleanup/intial

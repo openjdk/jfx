@@ -75,7 +75,7 @@ public class EventAnyTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void testEventDelivery(EventType type, Event event, Class target, boolean matches) throws Exception {
+    public void testEventDelivery(EventType type, Event event, Class<?> target, boolean matches) throws Exception {
         Node n = (Node) target.getDeclaredConstructor().newInstance();
         delivered = false;
 

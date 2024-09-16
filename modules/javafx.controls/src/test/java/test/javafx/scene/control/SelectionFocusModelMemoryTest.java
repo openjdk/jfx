@@ -27,8 +27,8 @@ package test.javafx.scene.control;
 
 import static org.junit.jupiter.api.Assertions.assertNull;
 import java.lang.ref.WeakReference;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Scene;
@@ -256,7 +256,10 @@ public class SelectionFocusModelMemoryTest {
 
     private static Collection<Boolean> parameters() {
         // show the control before replacing the selectionModel
-        return Arrays.asList(false, true);
+        return List.of(
+            false,
+            true
+        );
     }
 
 //------------------ setup

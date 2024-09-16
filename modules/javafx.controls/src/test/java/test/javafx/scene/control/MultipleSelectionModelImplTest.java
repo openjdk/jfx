@@ -115,7 +115,7 @@ public class MultipleSelectionModelImplTest {
     private TableView tableView;
 
     private static Collection<Class<? extends MultipleSelectionModel>> parameters() {
-        return Arrays.asList(
+        return List.of(
             ListViewShim.get_ListViewBitSetSelectionModel_class(),
             TreeViewShim.get_TreeViewBitSetSelectionModel_class(),
             TableViewShim.get_TableViewArrayListSelectionModel_class(),

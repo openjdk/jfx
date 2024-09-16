@@ -32,8 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.ChoiceBox;
@@ -114,7 +114,7 @@ public class SelectionModelImplTest {
     // --- ListView model data
 
     private static Collection<Class<? extends SelectionModel>> parameters() {
-        return Arrays.asList(
+        return List.of(
             ListViewShim.get_ListViewBitSetSelectionModel_class(),
             TreeViewShim.get_TreeViewBitSetSelectionModel_class(),
             TableViewShim.get_TableViewArrayListSelectionModel_class(),

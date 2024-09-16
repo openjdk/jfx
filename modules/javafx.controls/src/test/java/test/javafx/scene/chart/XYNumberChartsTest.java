@@ -78,7 +78,7 @@ public class XYNumberChartsTest extends XYNumberChartsTestBase {
         // will be using createChart() below
     }
 
-    protected void createChart(Class chartClass, int nodesPerSeries) {
+    protected void createChart(Class<?> chartClass, int nodesPerSeries) {
         try {
             chart = (XYChart<Number, Number>)chartClass.getConstructor(Axis.class, Axis.class).newInstance(new NumberAxis(), new NumberAxis());
             chart.setAnimated(false);
@@ -96,14 +96,14 @@ public class XYNumberChartsTest extends XYNumberChartsTestBase {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void testSeriesClearAnimated_rt_40632(Class chartClass, int nodesPerSeries) {
+    public void testSeriesClearAnimated_rt_40632(Class<?> chartClass, int nodesPerSeries) {
         createChart(chartClass, nodesPerSeries);
         checkSeriesClearAnimated_rt_40632();
     }
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void testSeriesRemove(Class chartClass, int nodesPerSeries) {
+    public void testSeriesRemove(Class<?> chartClass, int nodesPerSeries) {
         createChart(chartClass, nodesPerSeries);
         checkSeriesRemove(seriesData.size() + nodesPerSeries);
     }

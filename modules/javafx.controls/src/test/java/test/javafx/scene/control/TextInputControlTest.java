@@ -30,8 +30,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -61,7 +61,7 @@ import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
  */
 public class TextInputControlTest {
     private static Collection<Class> parameters() {
-        return Arrays.asList(
+        return List.of(
             TextField.class,
             PasswordField.class,
             TextArea.class
@@ -72,7 +72,7 @@ public class TextInputControlTest {
 
     //@BeforeEach
     // junit5 does not support parameterized class-level tests yet
-    public void setup(Class type) {
+    public void setup(Class<?> type) {
         setUncaughtExceptionHandler();
         try {
             textInput = (TextInputControl)type.getDeclaredConstructor().newInstance();
@@ -106,63 +106,63 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void textDefaultsToEmptyString(Class type) {
+    public void textDefaultsToEmptyString(Class<?> type) {
         setup(type);
         assertEquals("", textInput.getText());
     }
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void editableDefaultsToTrue(Class type) {
+    public void editableDefaultsToTrue(Class<?> type) {
         setup(type);
         assertTrue(textInput.isEditable());
     }
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void anchorDefaultsToZero(Class type) {
+    public void anchorDefaultsToZero(Class<?> type) {
         setup(type);
         assertEquals(0, textInput.getAnchor());
     }
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void caretPositionDefaultsToZero(Class type) {
+    public void caretPositionDefaultsToZero(Class<?> type) {
         setup(type);
         assertEquals(0, textInput.getCaretPosition());
     }
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void lengthDefaultsToZero(Class type) {
+    public void lengthDefaultsToZero(Class<?> type) {
         setup(type);
         assertEquals(0, textInput.getLength());
     }
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectedTextDefaultsToEmptyString(Class type) {
+    public void selectedTextDefaultsToEmptyString(Class<?> type) {
         setup(type);
         assertEquals("", textInput.getSelectedText());
     }
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectionDefaultsToEmpty(Class type) {
+    public void selectionDefaultsToEmpty(Class<?> type) {
         setup(type);
         assertEquals(0, textInput.getSelection().getLength());
     }
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectionStartDefaultsToZero(Class type) {
+    public void selectionStartDefaultsToZero(Class<?> type) {
         setup(type);
         assertEquals(0, textInput.getSelection().getStart());
     }
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectionEndDefaultsToZero(Class type) {
+    public void selectionEndDefaultsToZero(Class<?> type) {
         setup(type);
         assertEquals(0, textInput.getSelection().getEnd());
     }
@@ -173,7 +173,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void fontSetFromCSS(Class type) {
+    public void fontSetFromCSS(Class<?> type) {
         setup(type);
         assertEquals(Font.font("System", 12), textInput.getFont());
 
@@ -189,7 +189,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void settingTextUpdatesTheText(Class type) {
+    public void settingTextUpdatesTheText(Class<?> type) {
         setup(type);
         textInput.setText("This is a test");
         assertEquals("This is a test", textInput.getText());
@@ -198,7 +198,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void textCanBeNull(Class type) {
+    public void textCanBeNull(Class<?> type) {
         setup(type);
         textInput.setText(null);
         assertNull(textInput.getText());
@@ -206,7 +206,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void textCanBeSwitchedBetweenNullAndAValue(Class type) {
+    public void textCanBeSwitchedBetweenNullAndAValue(Class<?> type) {
         setup(type);
         textInput.setText(null);
         textInput.setText("Test");
@@ -215,7 +215,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void textCanBeSwitchedFromAValueToNull(Class type) {
+    public void textCanBeSwitchedFromAValueToNull(Class<?> type) {
         setup(type);
         textInput.setText("Test");
         textInput.setText(null);
@@ -224,7 +224,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void textIsNullThenBoundThenUnboundAndShouldReturnTheValueWhenBound(Class type) {
+    public void textIsNullThenBoundThenUnboundAndShouldReturnTheValueWhenBound(Class<?> type) {
         setup(type);
         textInput.setText(null);
         StringProperty other = new SimpleStringProperty("Peppers");
@@ -235,7 +235,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void textHasValueThenIsBoundToNullShouldReturnNullFromGet(Class type) {
+    public void textHasValueThenIsBoundToNullShouldReturnNullFromGet(Class<?> type) {
         setup(type);
         textInput.setText("Value");
         StringProperty other = new SimpleStringProperty(null);
@@ -245,7 +245,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void textHasValueThenIsBoundToNullAndUnboundShouldReturnNullFromGet(Class type) {
+    public void textHasValueThenIsBoundToNullAndUnboundShouldReturnNullFromGet(Class<?> type) {
         setup(type);
         textInput.setText("Value");
         StringProperty other = new SimpleStringProperty(null);
@@ -256,7 +256,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void textHasValueThenIsBoundToNullAndUnboundThenSetShouldReturnNewValueFromGet(Class type) {
+    public void textHasValueThenIsBoundToNullAndUnboundThenSetShouldReturnNewValueFromGet(Class<?> type) {
         setup(type);
         textInput.setText("Value");
         StringProperty other = new SimpleStringProperty(null);
@@ -268,7 +268,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void textCanBeBound(Class type) {
+    public void textCanBeBound(Class<?> type) {
         setup(type);
         StringProperty other = new SimpleStringProperty("Apples");
         textInput.textProperty().bind(other);
@@ -279,7 +279,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void cannotSpecifyTextViaCSS(Class type) {
+    public void cannotSpecifyTextViaCSS(Class<?> type) {
         setup(type);
         try {
             CssMetaData styleable = ((StyleableProperty)textInput.textProperty()).getCssMetaData();
@@ -293,7 +293,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void settingTextNotifiesOfChange(Class type) {
+    public void settingTextNotifiesOfChange(Class<?> type) {
         setup(type);
         final boolean[] passed = new boolean[] { false };
         textInput.textProperty().addListener((observable, oldValue, newValue) -> {
@@ -306,7 +306,7 @@ public class TextInputControlTest {
     // Test for JDK-8212102
     @ParameterizedTest
     @MethodSource("parameters")
-    public void testControlCharacters(Class type) {
+    public void testControlCharacters(Class<?> type) {
         setup(type);
         try {
             String cc = "\r\n\n";
@@ -335,7 +335,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void controlCharactersAreOmitted_setText_getText(Class type) {
+    public void controlCharactersAreOmitted_setText_getText(Class<?> type) {
         setup(type);
         String s = "This is " + '\0' + "a test";
         textInput.setText(s);
@@ -344,7 +344,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void controlCharactersAreOmitted_setText_textProperty_get(Class type) {
+    public void controlCharactersAreOmitted_setText_textProperty_get(Class<?> type) {
         setup(type);
         String s = "This is " + '\0' + "a test";
         textInput.setText(s);
@@ -353,7 +353,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void controlCharactersAreOmitted_bound_getText(Class type) {
+    public void controlCharactersAreOmitted_bound_getText(Class<?> type) {
         setup(type);
         StringProperty other = new SimpleStringProperty("This is " + '\0' + "a test");
         textInput.textProperty().bind(other);
@@ -364,7 +364,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void controlCharactersAreOmitted_bound_textProperty_get(Class type) {
+    public void controlCharactersAreOmitted_bound_textProperty_get(Class<?> type) {
         setup(type);
         StringProperty other = new SimpleStringProperty("This is " + '\0' + "a test");
         textInput.textProperty().bind(other);
@@ -384,7 +384,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void settingEditableValueShouldWork(Class type) {
+    public void settingEditableValueShouldWork(Class<?> type) {
         setup(type);
         textInput.setEditable(false);
         assertFalse(textInput.isEditable());
@@ -392,7 +392,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void settingEditableAndThenCreatingAModelAndReadingTheValueStillWorks(Class type) {
+    public void settingEditableAndThenCreatingAModelAndReadingTheValueStillWorks(Class<?> type) {
         setup(type);
         textInput.setEditable(false);
         assertFalse(textInput.editableProperty().get());
@@ -400,7 +400,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void editableCanBeBound(Class type) {
+    public void editableCanBeBound(Class<?> type) {
         setup(type);
         BooleanProperty other = new SimpleBooleanProperty(false);
         textInput.editableProperty().bind(other);
@@ -411,7 +411,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void cannotSpecifyEditableViaCSS(Class type) {
+    public void cannotSpecifyEditableViaCSS(Class<?> type) {
         setup(type);
         try {
             CssMetaData styleable = ((StyleableProperty)textInput.editableProperty()).getCssMetaData();
@@ -425,7 +425,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void settingEditableNotifiesOfChange(Class type) {
+    public void settingEditableNotifiesOfChange(Class<?> type) {
         setup(type);
         final boolean[] passed = new boolean[] { false };
         textInput.editableProperty().addListener((observable, oldValue, newValue) -> {
@@ -441,7 +441,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void anchorIsSetWhenSelectionChanges(Class type) {
+    public void anchorIsSetWhenSelectionChanges(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(4, 9);
@@ -450,7 +450,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void anchorIsSetWhenSelectionChanges2(Class type) {
+    public void anchorIsSetWhenSelectionChanges2(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(9, 4);
@@ -460,7 +460,7 @@ public class TextInputControlTest {
     // updated when text changes
     @ParameterizedTest
     @MethodSource("parameters")
-    public void anchorIsSetToCaretPositionWhenTextChanges(Class type) {
+    public void anchorIsSetToCaretPositionWhenTextChanges(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(4, 9);
@@ -474,7 +474,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void caretPositionIsSetWhenSelectionChanges(Class type) {
+    public void caretPositionIsSetWhenSelectionChanges(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(4, 9);
@@ -483,7 +483,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void caretPositionIsSetWhenSelectionChanges2(Class type) {
+    public void caretPositionIsSetWhenSelectionChanges2(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(9, 4);
@@ -492,7 +492,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void caretAndAnchorPositionAfterSettingText(Class type) {
+    public void caretAndAnchorPositionAfterSettingText(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         assertEquals(0, textInput.getCaretPosition());
@@ -502,7 +502,7 @@ public class TextInputControlTest {
     // Test for JDK-8178417
     @ParameterizedTest
     @MethodSource("parameters")
-    public void caretPositionUndo(Class type) {
+    public void caretPositionUndo(Class<?> type) {
         setup(type);
         Toolkit tk = Toolkit.getToolkit();
 
@@ -544,7 +544,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void emptyTextResultsInZeroLength(Class type) {
+    public void emptyTextResultsInZeroLength(Class<?> type) {
         setup(type);
         textInput.setText("Hello");
         textInput.setText("");
@@ -553,7 +553,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void lengthMatchesStringLength(Class type) {
+    public void lengthMatchesStringLength(Class<?> type) {
         setup(type);
         final String string = "Hello";
         textInput.setText(string);
@@ -562,7 +562,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void lengthChangeNotificationWhenTextIsUpdatedToNonEmptyResult(Class type) {
+    public void lengthChangeNotificationWhenTextIsUpdatedToNonEmptyResult(Class<?> type) {
         setup(type);
         final boolean[] passed = new boolean[] { false };
         textInput.lengthProperty().addListener((observable, oldValue, newValue) -> {
@@ -574,7 +574,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void lengthChangeNotificationWhenTextIsSetToEmptyResult(Class type) {
+    public void lengthChangeNotificationWhenTextIsSetToEmptyResult(Class<?> type) {
         setup(type);
         textInput.setText("Goodbye");
         final boolean[] passed = new boolean[] { false };
@@ -599,7 +599,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectedTextMatchesTextAndSelection(Class type) {
+    public void selectedTextMatchesTextAndSelection(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(0, 3);
@@ -608,7 +608,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectedTextMatchesTextAndSelection2(Class type) {
+    public void selectedTextMatchesTextAndSelection2(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(4, 9);
@@ -617,7 +617,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectedTextMatchesTextAndSelection3(Class type) {
+    public void selectedTextMatchesTextAndSelection3(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(10, 19);
@@ -626,7 +626,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectedTextIsClearedWhenTextChanges(Class type) {
+    public void selectedTextIsClearedWhenTextChanges(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(4, 9);
@@ -636,7 +636,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectedTextWorksWhenSelectionExceedsPossibleRange(Class type) {
+    public void selectedTextWorksWhenSelectionExceedsPossibleRange(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(10, 180);
@@ -645,7 +645,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectedTextWorksWhenSelectionExceedsPossibleRange2(Class type) {
+    public void selectedTextWorksWhenSelectionExceedsPossibleRange2(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(100, 180);
@@ -654,7 +654,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectedTextWorksWhenTextIsBound(Class type) {
+    public void selectedTextWorksWhenTextIsBound(Class<?> type) {
         setup(type);
         StringProperty other = new SimpleStringProperty("There and back again");
         textInput.textProperty().bind(other);
@@ -666,7 +666,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectedTextChangeEvents(Class type) {
+    public void selectedTextChangeEvents(Class<?> type) {
         setup(type);
         final boolean[] passed = new boolean[] { false };
         textInput.setText("The quick brown fox");
@@ -679,7 +679,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectedTextChangeEvents2(Class type) {
+    public void selectedTextChangeEvents2(Class<?> type) {
         setup(type);
         final boolean[] passed = new boolean[] { false };
         textInput.setText("The quick brown fox");
@@ -693,7 +693,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectedTextChangeEvents3(Class type) {
+    public void selectedTextChangeEvents3(Class<?> type) {
         setup(type);
         final boolean[] passed = new boolean[] { false };
         StringProperty other = new SimpleStringProperty("There and back again");
@@ -712,7 +712,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectionIsClearedWhenTextChanges(Class type) {
+    public void selectionIsClearedWhenTextChanges(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(4, 9);
@@ -722,7 +722,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectionCannotBeSetToBeOutOfRange(Class type) {
+    public void selectionCannotBeSetToBeOutOfRange(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(4, 99);
@@ -731,7 +731,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectionCannotBeSetToBeOutOfRange2(Class type) {
+    public void selectionCannotBeSetToBeOutOfRange2(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(44, 99);
@@ -740,7 +740,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectionChangeEventsHappen(Class type) {
+    public void selectionChangeEventsHappen(Class<?> type) {
         setup(type);
         final boolean[] passed = new boolean[] { false };
         textInput.selectionProperty().addListener(observable -> {
@@ -752,7 +752,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectionChangeEventsHappenWhenTextIsChanged(Class type) {
+    public void selectionChangeEventsHappenWhenTextIsChanged(Class<?> type) {
         setup(type);
         final boolean[] passed = new boolean[] { false };
         StringProperty other = new SimpleStringProperty("There and back again");
@@ -771,7 +771,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void cutRemovesSelection(Class type) {
+    public void cutRemovesSelection(Class<?> type) {
         setup(type);
         // Skip for PasswordField
         if (textInput instanceof PasswordField) return;
@@ -783,7 +783,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void pasteReplacesSelection(Class type) {
+    public void pasteReplacesSelection(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(4, 9);
@@ -794,7 +794,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void pasteIllegalCharacters(Class type) {
+    public void pasteIllegalCharacters(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(19, 19);
@@ -805,7 +805,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void pasteIllegalCharactersCaretNotAtZero(Class type) {
+    public void pasteIllegalCharactersCaretNotAtZero(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(4, 4);
@@ -817,7 +817,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void pasteIllegalCharactersSelection(Class type) {
+    public void pasteIllegalCharactersSelection(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(4, 9);
@@ -828,7 +828,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void pasteIllegalCharactersIntoSelectionPositionsCaretCorrectly(Class type) {
+    public void pasteIllegalCharactersIntoSelectionPositionsCaretCorrectly(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(4, 9);
@@ -845,7 +845,7 @@ public class TextInputControlTest {
     // cut ends up removing the selection, and setting anchor / caretPosition to match index
     @ParameterizedTest
     @MethodSource("parameters")
-    public void cutRemovesSelectionAndResetsAnchorAndCaretPositionToIndex(Class type) {
+    public void cutRemovesSelectionAndResetsAnchorAndCaretPositionToIndex(Class<?> type) {
         setup(type);
         // Skip for PasswordField
         if (textInput instanceof PasswordField) return;
@@ -860,7 +860,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void pasteWithEmptySelection(Class type) {
+    public void pasteWithEmptySelection(Class<?> type) {
         setup(type);
         textInput.setText("quick brown fox");
         textInput.selectRange(0,0);
@@ -874,7 +874,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void pasteWithSelection(Class type) {
+    public void pasteWithSelection(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(4, 9);
@@ -888,7 +888,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void pasteAll(Class type) {
+    public void pasteAll(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectAll();
@@ -902,7 +902,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectBackwardHasNoEffectWhenCaretPositionIsAlreadyZero(Class type) {
+    public void selectBackwardHasNoEffectWhenCaretPositionIsAlreadyZero(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(3, 0);
@@ -913,7 +913,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectBackwardMovesCaretPositionOnePlaceLeft_CaretPositionRightOfAnchor(Class type) {
+    public void selectBackwardMovesCaretPositionOnePlaceLeft_CaretPositionRightOfAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(0, 3);
@@ -924,7 +924,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectBackwardMovesCaretPositionOnePlaceLeft_CaretPositionEqualsAnchor(Class type) {
+    public void selectBackwardMovesCaretPositionOnePlaceLeft_CaretPositionEqualsAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(3, 3);
@@ -935,7 +935,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectBackwardMovesCaretPositionOnePlaceLeft_CaretPositionLeftOfAnchor(Class type) {
+    public void selectBackwardMovesCaretPositionOnePlaceLeft_CaretPositionLeftOfAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(6, 3);
@@ -946,7 +946,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectForwardHasNoEffectWhenCaretPositionIsAtLength(Class type) {
+    public void selectForwardHasNoEffectWhenCaretPositionIsAtLength(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(3, 19);
@@ -957,7 +957,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectForwardMovesCaretPositionOnePlaceRight_CaretPositionRightOfAnchor(Class type) {
+    public void selectForwardMovesCaretPositionOnePlaceRight_CaretPositionRightOfAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(0, 3);
@@ -968,7 +968,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectForwardMovesCaretPositionOnePlaceRight_CaretPositionEqualsAnchor(Class type) {
+    public void selectForwardMovesCaretPositionOnePlaceRight_CaretPositionEqualsAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(3, 3);
@@ -979,7 +979,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectForwardMovesCaretPositionOnePlaceRight_CaretPositionLeftOfAnchor(Class type) {
+    public void selectForwardMovesCaretPositionOnePlaceRight_CaretPositionLeftOfAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(6, 3);
@@ -990,7 +990,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void previousWordWithNoText(Class type) {
+    public void previousWordWithNoText(Class<?> type) {
         setup(type);
         textInput.previousWord();
         assertEquals(0, textInput.getCaretPosition());
@@ -1000,7 +1000,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void previousWordWithSelection_caretPositionBeforeAnchor(Class type) {
+    public void previousWordWithSelection_caretPositionBeforeAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(15, 10);
@@ -1012,7 +1012,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void previousWordWithSelection_caretPositionBeforeAnchor2(Class type) {
+    public void previousWordWithSelection_caretPositionBeforeAnchor2(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(12, 6);
@@ -1024,7 +1024,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void previousWordWithSelection_caretPositionAfterAnchor(Class type) {
+    public void previousWordWithSelection_caretPositionAfterAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(10, 15);
@@ -1036,7 +1036,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void previousWordWithSelection_caretPositionAfterAnchor2(Class type) {
+    public void previousWordWithSelection_caretPositionAfterAnchor2(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(6, 12);
@@ -1048,7 +1048,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void previousWord_caretWithinAWord(Class type) {
+    public void previousWord_caretWithinAWord(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.positionCaret(12);
@@ -1060,7 +1060,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void previousWord_caretAfterWord(Class type) {
+    public void previousWord_caretAfterWord(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.positionCaret(15);
@@ -1072,7 +1072,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void previousWord_caretBeforeWord(Class type) {
+    public void previousWord_caretBeforeWord(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.positionCaret(10);
@@ -1084,7 +1084,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void previousWord_caretWithinWhitespace(Class type) {
+    public void previousWord_caretWithinWhitespace(Class<?> type) {
         setup(type);
         textInput.setText("The quick  brown fox");
         textInput.positionCaret(10);
@@ -1096,7 +1096,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void previousWord_multipleWhitespaceInARow(Class type) {
+    public void previousWord_multipleWhitespaceInARow(Class<?> type) {
         setup(type);
         textInput.setText("The quick  brown fox");
         textInput.positionCaret(11);
@@ -1108,7 +1108,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void previousWord_withANumber(Class type) {
+    public void previousWord_withANumber(Class<?> type) {
         setup(type);
         textInput.setText("There are 5 cards in the hand");
         textInput.positionCaret(12);
@@ -1120,7 +1120,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void previousWord_withALongNumber(Class type) {
+    public void previousWord_withALongNumber(Class<?> type) {
         setup(type);
         textInput.setText("There are 52 cards in the deck");
         textInput.positionCaret(13);
@@ -1132,7 +1132,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void nextWordWithNoText(Class type) {
+    public void nextWordWithNoText(Class<?> type) {
         setup(type);
         textInput.nextWord();
         assertEquals(0, textInput.getCaretPosition());
@@ -1142,7 +1142,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void nextWordWithSelection_caretPositionBeforeAnchor(Class type) {
+    public void nextWordWithSelection_caretPositionBeforeAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(9, 4);
@@ -1154,7 +1154,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void nextWordWithSelection_caretPositionBeforeAnchor2(Class type) {
+    public void nextWordWithSelection_caretPositionBeforeAnchor2(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(9, 2);
@@ -1166,7 +1166,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void nextWordWithSelection_caretPositionAfterAnchor(Class type) {
+    public void nextWordWithSelection_caretPositionAfterAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(4, 9);
@@ -1178,7 +1178,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void nextWordWithSelection_caretPositionAfterAnchor2(Class type) {
+    public void nextWordWithSelection_caretPositionAfterAnchor2(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(5, 11);
@@ -1190,7 +1190,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void nextWord_caretWithinAWord(Class type) {
+    public void nextWord_caretWithinAWord(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.positionCaret(6);
@@ -1202,7 +1202,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void nextWord_caretAfterWord(Class type) {
+    public void nextWord_caretAfterWord(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.positionCaret(9);
@@ -1214,7 +1214,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void nextWord_caretBeforeWord(Class type) {
+    public void nextWord_caretBeforeWord(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.positionCaret(4);
@@ -1226,7 +1226,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void nextWord_caretWithinWhitespace(Class type) {
+    public void nextWord_caretWithinWhitespace(Class<?> type) {
         setup(type);
         textInput.setText("The quick  brown fox");
         textInput.positionCaret(10);
@@ -1238,7 +1238,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void nextWord_multipleWhitespaceInARow(Class type) {
+    public void nextWord_multipleWhitespaceInARow(Class<?> type) {
         setup(type);
         textInput.setText("The quick  brown fox");
         textInput.positionCaret(9);
@@ -1250,7 +1250,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void nextWord_toTheEnd(Class type) {
+    public void nextWord_toTheEnd(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.positionCaret(16);
@@ -1262,7 +1262,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void nextWord_withANumber(Class type) {
+    public void nextWord_withANumber(Class<?> type) {
         setup(type);
         textInput.setText("There are 5 cards in the hand");
         textInput.positionCaret(6);
@@ -1274,7 +1274,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void nextWord_withALongNumber(Class type) {
+    public void nextWord_withALongNumber(Class<?> type) {
         setup(type);
         textInput.setText("There are 52 cards in the deck");
         textInput.positionCaret(10);
@@ -1286,7 +1286,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void endOfNextWordWithNoText(Class type) {
+    public void endOfNextWordWithNoText(Class<?> type) {
         setup(type);
         textInput.endOfNextWord();
         assertEquals(0, textInput.getCaretPosition());
@@ -1296,7 +1296,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void endOfNextWordWithSelection_caretPositionBeforeAnchor(Class type) {
+    public void endOfNextWordWithSelection_caretPositionBeforeAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(9, 4);
@@ -1308,7 +1308,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void endOfNextWordWithSelection_caretPositionBeforeAnchor2(Class type) {
+    public void endOfNextWordWithSelection_caretPositionBeforeAnchor2(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(9, 2);
@@ -1320,7 +1320,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void endOfNextWordWithSelection_caretPositionAfterAnchor(Class type) {
+    public void endOfNextWordWithSelection_caretPositionAfterAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(4, 9);
@@ -1332,7 +1332,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void endOfNextWordWithSelection_caretPositionAfterAnchor2(Class type) {
+    public void endOfNextWordWithSelection_caretPositionAfterAnchor2(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(5, 11);
@@ -1344,7 +1344,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void endOfNextWord_caretWithinAWord(Class type) {
+    public void endOfNextWord_caretWithinAWord(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.positionCaret(6);
@@ -1356,7 +1356,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void endOfNextWord_caretAfterWord(Class type) {
+    public void endOfNextWord_caretAfterWord(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.positionCaret(9);
@@ -1368,7 +1368,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void endOfNextWord_caretBeforeWord(Class type) {
+    public void endOfNextWord_caretBeforeWord(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.positionCaret(4);
@@ -1380,7 +1380,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void endOfNextWord_caretWithinWhitespace(Class type) {
+    public void endOfNextWord_caretWithinWhitespace(Class<?> type) {
         setup(type);
         textInput.setText("The quick  brown fox");
         textInput.positionCaret(10);
@@ -1392,7 +1392,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void endOfNextWord_multipleWhitespaceInARow(Class type) {
+    public void endOfNextWord_multipleWhitespaceInARow(Class<?> type) {
         setup(type);
         textInput.setText("The quick  brown fox");
         textInput.positionCaret(9);
@@ -1404,7 +1404,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void endOfNextWord_withANumber(Class type) {
+    public void endOfNextWord_withANumber(Class<?> type) {
         setup(type);
         textInput.setText("There are 5 cards in the hand");
         textInput.positionCaret(6);
@@ -1416,7 +1416,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void endOfNextWord_withANumber_CaretOnANumber(Class type) {
+    public void endOfNextWord_withANumber_CaretOnANumber(Class<?> type) {
         setup(type);
         textInput.setText("There are 5 cards in the hand");
         textInput.positionCaret(10);
@@ -1428,7 +1428,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void endOfNextWord_withALongNumber_CaretOnANumber(Class type) {
+    public void endOfNextWord_withALongNumber_CaretOnANumber(Class<?> type) {
         setup(type);
         textInput.setText("There are 52 cards in the deck");
         textInput.positionCaret(10);
@@ -1440,7 +1440,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectPreviousWordWithNoText(Class type) {
+    public void selectPreviousWordWithNoText(Class<?> type) {
         setup(type);
         textInput.selectPreviousWord();
         assertEquals(0, textInput.getCaretPosition());
@@ -1450,7 +1450,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectPreviousWordWithSelection_caretPositionBeforeAnchor(Class type) {
+    public void selectPreviousWordWithSelection_caretPositionBeforeAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(15, 10);
@@ -1462,7 +1462,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectPreviousWordWithSelection_caretPositionAfterAnchor(Class type) {
+    public void selectPreviousWordWithSelection_caretPositionAfterAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(10, 15);
@@ -1474,7 +1474,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectPreviousWordWithSelection_caretPositionAfterAnchor2(Class type) {
+    public void selectPreviousWordWithSelection_caretPositionAfterAnchor2(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(11, 15);
@@ -1486,7 +1486,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectPreviousWord_caretWithinAWord(Class type) {
+    public void selectPreviousWord_caretWithinAWord(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.positionCaret(12);
@@ -1498,7 +1498,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectPreviousWord_caretAfterWord(Class type) {
+    public void selectPreviousWord_caretAfterWord(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.positionCaret(15);
@@ -1510,7 +1510,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectPreviousWord_caretBeforeWord(Class type) {
+    public void selectPreviousWord_caretBeforeWord(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.positionCaret(10);
@@ -1522,7 +1522,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectPreviousWord_caretWithinWhitespace(Class type) {
+    public void selectPreviousWord_caretWithinWhitespace(Class<?> type) {
         setup(type);
         textInput.setText("The quick  brown fox");
         textInput.positionCaret(10);
@@ -1534,7 +1534,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectPreviousWord_multipleWhitespaceInARow(Class type) {
+    public void selectPreviousWord_multipleWhitespaceInARow(Class<?> type) {
         setup(type);
         textInput.setText("The quick  brown fox");
         textInput.positionCaret(11);
@@ -1546,7 +1546,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectNextWordWithNoText(Class type) {
+    public void selectNextWordWithNoText(Class<?> type) {
         setup(type);
         textInput.selectNextWord();
         assertEquals(0, textInput.getCaretPosition());
@@ -1556,7 +1556,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectNextWordWithSelection_caretPositionBeforeAnchor(Class type) {
+    public void selectNextWordWithSelection_caretPositionBeforeAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(9, 4);
@@ -1568,7 +1568,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectNextWordWithSelection_caretPositionBeforeAnchor2(Class type) {
+    public void selectNextWordWithSelection_caretPositionBeforeAnchor2(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(9, 2);
@@ -1580,7 +1580,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectNextWordWithSelection_caretPositionAfterAnchor(Class type) {
+    public void selectNextWordWithSelection_caretPositionAfterAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(4, 9);
@@ -1592,7 +1592,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectNextWordWithSelection_caretPositionAfterAnchor2(Class type) {
+    public void selectNextWordWithSelection_caretPositionAfterAnchor2(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(5, 11);
@@ -1604,7 +1604,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectNextWord_caretWithinAWord(Class type) {
+    public void selectNextWord_caretWithinAWord(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.positionCaret(6);
@@ -1616,7 +1616,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectNextWord_caretAfterWord(Class type) {
+    public void selectNextWord_caretAfterWord(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.positionCaret(9);
@@ -1628,7 +1628,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectNextWord_caretBeforeWord(Class type) {
+    public void selectNextWord_caretBeforeWord(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.positionCaret(4);
@@ -1640,7 +1640,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectNextWord_caretWithinWhitespace(Class type) {
+    public void selectNextWord_caretWithinWhitespace(Class<?> type) {
         setup(type);
         textInput.setText("The quick  brown fox");
         textInput.positionCaret(10);
@@ -1652,7 +1652,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectNextWord_multipleWhitespaceInARow(Class type) {
+    public void selectNextWord_multipleWhitespaceInARow(Class<?> type) {
         setup(type);
         textInput.setText("The quick  brown fox");
         textInput.positionCaret(9);
@@ -1664,7 +1664,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectNextWord_toTheEnd(Class type) {
+    public void selectNextWord_toTheEnd(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.positionCaret(16);
@@ -1676,7 +1676,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectEndOfNextWordWithNoText(Class type) {
+    public void selectEndOfNextWordWithNoText(Class<?> type) {
         setup(type);
         textInput.selectEndOfNextWord();
         assertEquals(0, textInput.getCaretPosition());
@@ -1686,7 +1686,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectEndOfNextWordWithSelection_caretPositionBeforeAnchor(Class type) {
+    public void selectEndOfNextWordWithSelection_caretPositionBeforeAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(9, 4);
@@ -1698,7 +1698,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectEndOfNextWordWithSelection_caretPositionBeforeAnchor2(Class type) {
+    public void selectEndOfNextWordWithSelection_caretPositionBeforeAnchor2(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(9, 2);
@@ -1710,7 +1710,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectEndOfNextWordWithSelection_caretPositionAfterAnchor(Class type) {
+    public void selectEndOfNextWordWithSelection_caretPositionAfterAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(4, 9);
@@ -1722,7 +1722,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectEndOfNextWordWithSelection_caretPositionAfterAnchor2(Class type) {
+    public void selectEndOfNextWordWithSelection_caretPositionAfterAnchor2(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(5, 11);
@@ -1734,7 +1734,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectEndOfNextWord_caretWithinAWord(Class type) {
+    public void selectEndOfNextWord_caretWithinAWord(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.positionCaret(6);
@@ -1746,7 +1746,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectEndOfNextWord_caretAfterWord(Class type) {
+    public void selectEndOfNextWord_caretAfterWord(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.positionCaret(9);
@@ -1758,7 +1758,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectEndOfNextWord_caretBeforeWord(Class type) {
+    public void selectEndOfNextWord_caretBeforeWord(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.positionCaret(4);
@@ -1770,7 +1770,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectEndOfNextWord_caretWithinWhitespace(Class type) {
+    public void selectEndOfNextWord_caretWithinWhitespace(Class<?> type) {
         setup(type);
         textInput.setText("The quick  brown fox");
         textInput.positionCaret(10);
@@ -1782,7 +1782,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectEndOfNextWord_multipleWhitespaceInARow(Class type) {
+    public void selectEndOfNextWord_multipleWhitespaceInARow(Class<?> type) {
         setup(type);
         textInput.setText("The quick  brown fox");
         textInput.positionCaret(9);
@@ -1794,7 +1794,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectAllWithNoText(Class type) {
+    public void selectAllWithNoText(Class<?> type) {
         setup(type);
         textInput.setText("");
         textInput.selectAll();
@@ -1805,7 +1805,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectAllWithText_caretPositionIsAlwaysAtTheEnd(Class type) {
+    public void selectAllWithText_caretPositionIsAlwaysAtTheEnd(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectAll();
@@ -1816,7 +1816,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void homeClearsSelection(Class type) {
+    public void homeClearsSelection(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(4, 9);
@@ -1828,7 +1828,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void endClearsSelection(Class type) {
+    public void endClearsSelection(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(4, 9);
@@ -1840,7 +1840,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectHomeHasNoEffectWhenCaretPositionIsAtZero(Class type) {
+    public void selectHomeHasNoEffectWhenCaretPositionIsAtZero(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(3, 0);
@@ -1852,7 +1852,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectHomeMovesCaretPositionToZero_CaretPositionRightOfAnchor(Class type) {
+    public void selectHomeMovesCaretPositionToZero_CaretPositionRightOfAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(4, 9);
@@ -1864,7 +1864,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectHomeMovesCaretPositionToZero_CaretPositionEqualsAnchor(Class type) {
+    public void selectHomeMovesCaretPositionToZero_CaretPositionEqualsAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(3, 3);
@@ -1876,7 +1876,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectHomeMovesCaretPositionToZero_CaretPositionLeftOfAnchor(Class type) {
+    public void selectHomeMovesCaretPositionToZero_CaretPositionLeftOfAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(6, 3);
@@ -1888,7 +1888,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectEndHasNoEffectWhenCaretPositionIsAtLength(Class type) {
+    public void selectEndHasNoEffectWhenCaretPositionIsAtLength(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(3, 19);
@@ -1900,7 +1900,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectEndMovesCaretPositionToLength_CaretPositionRightOfAnchor(Class type) {
+    public void selectEndMovesCaretPositionToLength_CaretPositionRightOfAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(0, 3);
@@ -1912,7 +1912,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectEndMovesCaretPositionToLength_CaretPositionEqualsAnchor(Class type) {
+    public void selectEndMovesCaretPositionToLength_CaretPositionEqualsAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(3, 3);
@@ -1924,7 +1924,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectEndMovesCaretPositionToLength_CaretPositionLeftOfAnchor(Class type) {
+    public void selectEndMovesCaretPositionToLength_CaretPositionLeftOfAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(6, 3);
@@ -1936,7 +1936,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void deletePreviousCharDeletesOnlySelectedText_anchorLessThanCaretPosition(Class type) {
+    public void deletePreviousCharDeletesOnlySelectedText_anchorLessThanCaretPosition(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(4, 10);
@@ -1949,7 +1949,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void deletePreviousCharDeletesOnlySelectedText_caretPositionLessThanAnchor(Class type) {
+    public void deletePreviousCharDeletesOnlySelectedText_caretPositionLessThanAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(10, 4);
@@ -1962,7 +1962,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void deletePreviousCharDeletesPreviousCharWhenCaretPositionEqualsAnchor(Class type) {
+    public void deletePreviousCharDeletesPreviousCharWhenCaretPositionEqualsAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(10, 10);
@@ -1975,7 +1975,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void deletePreviousCharDoesNothingWhenSelectionIs0_0(Class type) {
+    public void deletePreviousCharDoesNothingWhenSelectionIs0_0(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(0, 0);
@@ -1988,7 +1988,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void deleteNextCharDeletesOnlySelectedText_anchorLessThanCaretPosition(Class type) {
+    public void deleteNextCharDeletesOnlySelectedText_anchorLessThanCaretPosition(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(4, 10);
@@ -2001,7 +2001,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void deleteNextCharDeletesOnlySelectedText_caretPositionLessThanAnchor(Class type) {
+    public void deleteNextCharDeletesOnlySelectedText_caretPositionLessThanAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(10, 4);
@@ -2014,7 +2014,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void deleteNextCharDeletesNextCharWhenCaretPositionEqualsAnchor(Class type) {
+    public void deleteNextCharDeletesNextCharWhenCaretPositionEqualsAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(10, 10);
@@ -2027,7 +2027,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void deleteNextCharDoesNothingWhenSelectionIsEmptyAtEnd(Class type) {
+    public void deleteNextCharDoesNothingWhenSelectionIsEmptyAtEnd(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(19, 19);
@@ -2040,7 +2040,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void forwardSkipsSelection(Class type) {
+    public void forwardSkipsSelection(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(4, 9);
@@ -2052,7 +2052,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void forwardSkipsSelection2(Class type) {
+    public void forwardSkipsSelection2(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(9, 4);
@@ -2064,7 +2064,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void forwardMovesForwardWhenNotAtEnd(Class type) {
+    public void forwardMovesForwardWhenNotAtEnd(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(0, 0);
@@ -2076,7 +2076,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void forwardDoesNothingWhenAtEnd(Class type) {
+    public void forwardDoesNothingWhenAtEnd(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(19, 19);
@@ -2088,7 +2088,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void backwardSkipsSelection(Class type) {
+    public void backwardSkipsSelection(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(4, 9);
@@ -2100,7 +2100,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void backwardSkipsSelection2(Class type) {
+    public void backwardSkipsSelection2(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(9, 4);
@@ -2112,7 +2112,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void backwardMovesBackwardWhenNotAtStart(Class type) {
+    public void backwardMovesBackwardWhenNotAtStart(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.positionCaret(14);
@@ -2124,7 +2124,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void backwardDoesNothingWhenAtStart(Class type) {
+    public void backwardDoesNothingWhenAtStart(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(0, 0);
@@ -2136,7 +2136,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void positionCaretAtStart(Class type) {
+    public void positionCaretAtStart(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.positionCaret(0);
@@ -2147,7 +2147,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void positionCaretInMiddle(Class type) {
+    public void positionCaretInMiddle(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.positionCaret(10);
@@ -2158,7 +2158,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void positionCaretAtEnd(Class type) {
+    public void positionCaretAtEnd(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.positionCaret(19);
@@ -2169,7 +2169,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void positionCaretBeyondStartClamps(Class type) {
+    public void positionCaretBeyondStartClamps(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.positionCaret(-10);
@@ -2180,7 +2180,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void positionCaretBeyondEndClamps(Class type) {
+    public void positionCaretBeyondEndClamps(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.positionCaret(1000);
@@ -2191,7 +2191,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectPositionCaretWhenAnchorAndCaretAreBothZero(Class type) {
+    public void selectPositionCaretWhenAnchorAndCaretAreBothZero(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(0, 0);
@@ -2203,7 +2203,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectPositionCaret_anchorLessThanCaretPosition(Class type) {
+    public void selectPositionCaret_anchorLessThanCaretPosition(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(4, 10);
@@ -2215,7 +2215,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectPositionCaret_anchorLessThanCaretPosition2(Class type) {
+    public void selectPositionCaret_anchorLessThanCaretPosition2(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(4, 10);
@@ -2227,7 +2227,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectPositionCaret_anchorLessThanCaretPosition3(Class type) {
+    public void selectPositionCaret_anchorLessThanCaretPosition3(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(4, 10);
@@ -2239,7 +2239,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectPositionCaret_caretPositionLessThanAnchor(Class type) {
+    public void selectPositionCaret_caretPositionLessThanAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(10, 4);
@@ -2251,7 +2251,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectPositionCaret_caretPositionLessThanAnchor2(Class type) {
+    public void selectPositionCaret_caretPositionLessThanAnchor2(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(10, 4);
@@ -2263,7 +2263,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectPositionCaret_caretPositionLessThanAnchor3(Class type) {
+    public void selectPositionCaret_caretPositionLessThanAnchor3(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(10, 4);
@@ -2275,7 +2275,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectPositionCaretWhenCaretPositionEqualsAnchor(Class type) {
+    public void selectPositionCaretWhenCaretPositionEqualsAnchor(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(10, 10);
@@ -2287,7 +2287,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void selectPositionCaretWhenCaretPositionEqualsAnchor2(Class type) {
+    public void selectPositionCaretWhenCaretPositionEqualsAnchor2(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(10, 10);
@@ -2299,7 +2299,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void extendSelectionWithNoText(Class type) {
+    public void extendSelectionWithNoText(Class<?> type) {
         setup(type);
         textInput.extendSelection(0);
         assertEquals(0, textInput.getCaretPosition());
@@ -2309,7 +2309,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void extendSelectionWithOutOfRangePos(Class type) {
+    public void extendSelectionWithOutOfRangePos(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.selectRange(0, 0);
@@ -2321,7 +2321,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void extendSelectionWithOutOfRangePos2(Class type) {
+    public void extendSelectionWithOutOfRangePos2(Class<?> type) {
         setup(type);
         textInput.setText("The quick brown fox");
         textInput.positionCaret(4);
@@ -2333,7 +2333,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void test_rt26250_caret_issue_for_thai_characters(Class type) {
+    public void test_rt26250_caret_issue_for_thai_characters(Class<?> type) {
         setup(type);
         // Thai string containing two characters, consisting of three
         // codepoints each.
@@ -2365,7 +2365,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void test_rt40376_delete_next_when_text_is_null(Class type) {
+    public void test_rt40376_delete_next_when_text_is_null(Class<?> type) {
         setup(type);
         textInput.setText(null);
         textInput.deleteNextChar();
@@ -2373,7 +2373,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void test_jdk_8171229_replaceText(Class type) {
+    public void test_jdk_8171229_replaceText(Class<?> type) {
         setup(type);
         textInput.setText("");
         assertEquals("", textInput.getText());
@@ -2414,7 +2414,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void test_redo_replaceText_selectionShortening(Class type) {
+    public void test_redo_replaceText_selectionShortening(Class<?> type) {
         setup(type);
         textInput.setText("0123456789");
         assertEquals("0123456789", textInput.getText());
@@ -2431,7 +2431,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void replaceSelectionAtEndWithListener(Class type) {
+    public void replaceSelectionAtEndWithListener(Class<?> type) {
         setup(type);
         StringBuilder selectedTextLog = new StringBuilder();
         StringBuilder selectionLog = new StringBuilder();
@@ -2447,7 +2447,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void testSelectionProperties(Class type) {
+    public void testSelectionProperties(Class<?> type) {
         setup(type);
         textInput.setText("abcdefghij");
 
@@ -2482,7 +2482,7 @@ public class TextInputControlTest {
     // Test for JDK-8178418
     @ParameterizedTest
     @MethodSource("parameters")
-    public void UndoRedoSpaceSequence(Class type) {
+    public void UndoRedoSpaceSequence(Class<?> type) {
         setup(type);
         Toolkit tk = Toolkit.getToolkit();
 
@@ -2527,7 +2527,7 @@ public class TextInputControlTest {
     // Test for JDK-8178418
     @ParameterizedTest
     @MethodSource("parameters")
-    public void UndoRedoReverseSpaceSequence(Class type) {
+    public void UndoRedoReverseSpaceSequence(Class<?> type) {
         setup(type);
         Toolkit tk = Toolkit.getToolkit();
 
@@ -2580,7 +2580,7 @@ public class TextInputControlTest {
     // Test for JDK-8178418
     @ParameterizedTest
     @MethodSource("parameters")
-    public void UndoRedoWords(Class type) {
+    public void UndoRedoWords(Class<?> type) {
         setup(type);
         Toolkit tk = Toolkit.getToolkit();
 
@@ -2635,7 +2635,7 @@ public class TextInputControlTest {
     // Test for JDK-8178418
     @ParameterizedTest
     @MethodSource("parameters")
-    public void UndoRedoTimestampBased(Class type) {
+    public void UndoRedoTimestampBased(Class<?> type) {
         setup(type);
         Toolkit tk = Toolkit.getToolkit();
 
@@ -2693,7 +2693,7 @@ public class TextInputControlTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void previousWord_Bhojpuri(Class type) {
+    public void previousWord_Bhojpuri(Class<?> type) {
         setup(type);
         // "Bhojpuri \ud804\udca6\ud804\udcb7\ud804\udc94\ud804\udca3\ud804\udcb3\ud804\udca9\ud804\udcb2 test"
         textInput.setText("Bhojpuri 𑂦𑂷𑂔𑂣𑂳𑂩𑂲 test");

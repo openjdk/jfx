@@ -60,7 +60,7 @@ public class XYNumberLineChartsTest extends XYNumberChartsTestBase {
         // will be using createChart() below
     }
 
-    protected void createChart(Class chartClass, int seriesFadeOutTime, int dataFadeOutTime) {
+    protected void createChart(Class<?> chartClass, int seriesFadeOutTime, int dataFadeOutTime) {
         try {
             chart = (XYChart<Number, Number>) chartClass.getConstructor(Axis.class, Axis.class).newInstance(new NumberAxis(), new NumberAxis());
             Method setCreateSymbolsMethod = chartClass.getMethod("setCreateSymbols", Boolean.TYPE);
@@ -80,14 +80,14 @@ public class XYNumberLineChartsTest extends XYNumberChartsTestBase {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void testSeriesClearAnimatedWithoutSymbols_rt_40632(Class chartClass, int seriesFadeOutTime, int dataFadeOutTime) {
+    public void testSeriesClearAnimatedWithoutSymbols_rt_40632(Class<?> chartClass, int seriesFadeOutTime, int dataFadeOutTime) {
         createChart(chartClass, seriesFadeOutTime, dataFadeOutTime);
         checkSeriesClearAnimated_rt_40632();
     }
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void testSeriesRemoveWithoutSymbols(Class chartClass, int seriesFadeOutTime, int dataFadeOutTime) {
+    public void testSeriesRemoveWithoutSymbols(Class<?> chartClass, int seriesFadeOutTime, int dataFadeOutTime) {
         createChart(chartClass, seriesFadeOutTime, dataFadeOutTime);
         // 1 area group
         checkSeriesRemove(1);
@@ -95,7 +95,7 @@ public class XYNumberLineChartsTest extends XYNumberChartsTestBase {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void testSeriesRemoveWithoutSymbolsAnimated_rt_22124(Class chartClass, int seriesFadeOutTime, int dataFadeOutTime) {
+    public void testSeriesRemoveWithoutSymbolsAnimated_rt_22124(Class<?> chartClass, int seriesFadeOutTime, int dataFadeOutTime) {
         createChart(chartClass, seriesFadeOutTime, dataFadeOutTime);
         startAppWithSeries();
         // 1 area group
@@ -116,7 +116,7 @@ public class XYNumberLineChartsTest extends XYNumberChartsTestBase {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void testDataWithoutSymbolsAddWithAnimation_rt_39353(Class chartClass, int seriesFadeOutTime, int dataFadeOutTime) {
+    public void testDataWithoutSymbolsAddWithAnimation_rt_39353(Class<?> chartClass, int seriesFadeOutTime, int dataFadeOutTime) {
         createChart(chartClass, seriesFadeOutTime, dataFadeOutTime);
         startAppWithSeries();
         chart.setAnimated(true);
@@ -128,7 +128,7 @@ public class XYNumberLineChartsTest extends XYNumberChartsTestBase {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void testSeriesClearWithoutSymbolsAnimated_8150264(Class chartClass, int seriesFadeOutTime, int dataFadeOutTime) {
+    public void testSeriesClearWithoutSymbolsAnimated_8150264(Class<?> chartClass, int seriesFadeOutTime, int dataFadeOutTime) {
         createChart(chartClass, seriesFadeOutTime, dataFadeOutTime);
         startAppWithSeries();
         assertEquals(3, XYChartShim.Series_getDataSize(series));
@@ -148,7 +148,7 @@ public class XYNumberLineChartsTest extends XYNumberChartsTestBase {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void testMinorTicksMatchMajorTicksAfterAnimation(Class chartClass, int seriesFadeOutTime, int dataFadeOutTime) {
+    public void testMinorTicksMatchMajorTicksAfterAnimation(Class<?> chartClass, int seriesFadeOutTime, int dataFadeOutTime) {
         createChart(chartClass, seriesFadeOutTime, dataFadeOutTime);
         startAppWithSeries();
         chart.setAnimated(true);

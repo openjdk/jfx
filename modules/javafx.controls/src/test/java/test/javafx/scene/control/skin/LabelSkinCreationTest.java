@@ -95,7 +95,7 @@ public class LabelSkinCreationTest {
         );
     }
 
-    public record Parameter(
+    private record Parameter(
             Paint fill,
             Font font,
             TextAlignment align,

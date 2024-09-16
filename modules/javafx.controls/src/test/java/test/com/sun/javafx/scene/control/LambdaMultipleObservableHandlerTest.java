@@ -30,11 +30,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.attemptGC;
 import java.lang.ref.WeakReference;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.function.Consumer;
 import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
@@ -126,13 +125,13 @@ public class LambdaMultipleObservableHandlerTest {
     @MethodSource("data")
     public void testUnregistersNotRegistered(boolean useChangeListener) {
         IntegerProperty p = new SimpleIntegerProperty();
-        assertTrue(unregisterListeners(useChangeListener, p) == null);
+        assertNull(unregisterListeners(useChangeListener, p));
     }
 
     @ParameterizedTest
     @MethodSource("data")
     public void testUnregistersNull(boolean useChangeListener) {
-        assertTrue(unregisterListeners(useChangeListener, null) == null);
+        assertNull(unregisterListeners(useChangeListener, null));
     }
 
 
@@ -359,12 +358,11 @@ public class LambdaMultipleObservableHandlerTest {
 
 
     /** parameters */
-    private static Collection<Object[]> data() {
-        Object[][] data = new Object[][] {
-                {true}, // test changeListener api
-                {false} // test invalidationListener api
-        };
-        return Arrays.asList(data);
+    private static Collection<Boolean> data() {
+        return List.of(
+            true, // test changeListener api
+            false // test invalidationListener api
+        );
     }
 
 

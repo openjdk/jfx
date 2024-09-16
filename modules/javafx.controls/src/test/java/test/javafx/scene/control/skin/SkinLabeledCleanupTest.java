@@ -83,7 +83,7 @@ public class SkinLabeledCleanupTest {
 
 //----------- parameterized
 
-    private static Collection<Class> parameters() {
+    private static Collection<Class<?>> parameters() {
         return List.of(
             Button.class,
             CheckBox.class,
