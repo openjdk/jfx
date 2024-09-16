@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,6 @@
 
 package test.javafx.scene.layout;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -37,14 +34,17 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.shape.Rectangle;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 public class HBoxTest {
     HBox hbox;
 
-    @Before public void setUp() {
+    @BeforeEach public void setUp() {
         this.hbox = new HBox();
     }
 
@@ -62,8 +62,8 @@ public class HBoxTest {
         hbox.autosize();
         hbox.layout();
 
-        assertNull(null, hbox.getAlignment());
-        assertNull(null, hbox.alignmentProperty().get());
+        assertNull(hbox.getAlignment());
+        assertNull(hbox.alignmentProperty().get());
     }
 
     @Test public void testSimpleHBox() {
