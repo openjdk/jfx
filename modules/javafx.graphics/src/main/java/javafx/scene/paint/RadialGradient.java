@@ -203,7 +203,9 @@ public final class RadialGradient extends Paint {
      *
      * @return the list of Stop values
      * @defaultValue empty
-     * @interpolationType <a href="../../animation/Interpolatable.html#pairwise">pairwise</a>
+     * @interpolationType Stop list interpolation produces smooth transitions of gradient stops by allowing
+     *                    the insertion of new stops along the gradient. At most, the intermediate stop list
+     *                    has the combined number of gradient stops of both the start list and the target list.
      */
     public final List<Stop> getStops() {
         return stops;
