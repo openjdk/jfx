@@ -35,7 +35,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class RT_26449Test {
     @Test
     public void testRootNotSet() throws IOException {
-        assertThrows(LoadException.class, () -> {FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_26449.fxml"));
-        fxmlLoader.load(); });
+        assertThrows(LoadException.class, () -> {
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_26449.fxml"));
+            fxmlLoader.load();
+        });
     }
 }

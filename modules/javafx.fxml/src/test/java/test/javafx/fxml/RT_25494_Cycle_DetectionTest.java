@@ -34,16 +34,22 @@ public class RT_25494_Cycle_DetectionTest {
 
     @Test
     public void test_dummy_cycle() throws Exception {
-        assertThrows(IOException.class, () -> {FXMLLoader.load(RT_25494_Cycle_DetectionTest.class.getResource("dummy-cycle.fxml")); });
+        assertThrows(IOException.class, () -> {
+            FXMLLoader.load(RT_25494_Cycle_DetectionTest.class.getResource("dummy-cycle.fxml"));
+        });
     }
 
     @Test
     public void test_one_2_one_cycle() throws Exception {
-        assertThrows(IOException.class, () -> {FXMLLoader.load(RT_25494_Cycle_DetectionTest.class.getResource("one-2-one-cycle.fxml")); });
+        assertThrows(IOException.class, () -> {
+            FXMLLoader.load(RT_25494_Cycle_DetectionTest.class.getResource("one-2-one-cycle.fxml"));
+        });
     }
 
     @Test
     public void test_cycle() throws Exception {
-        assertThrows(IOException.class, () -> {FXMLLoader.load(RT_25494_Cycle_DetectionTest.class.getResource("cycle.fxml")); });
+        assertThrows(IOException.class, () -> {
+            FXMLLoader.load(RT_25494_Cycle_DetectionTest.class.getResource("cycle.fxml"));
+        });
     }
 }

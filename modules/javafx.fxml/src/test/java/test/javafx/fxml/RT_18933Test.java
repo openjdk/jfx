@@ -35,7 +35,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class RT_18933Test {
     @Test
     public void testDefaultListProperty() throws IOException {
-            assertThrows(LoadException.class, () -> { FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_18933.fxml"));
+        assertThrows(LoadException.class, () -> {
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_18933.fxml"));
             fxmlLoader.load();
         });
     }

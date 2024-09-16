@@ -34,6 +34,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class RT_19329Test {
     @Test
     public void testIncludeException() throws IOException {
-        assertThrows(IOException.class, () -> { FXMLLoader.load(getClass().getResource("rt_19329.fxml")); });
+        assertThrows(IOException.class, () -> {
+            FXMLLoader.load(getClass().getResource("rt_19329.fxml"));
+        });
     }
 }

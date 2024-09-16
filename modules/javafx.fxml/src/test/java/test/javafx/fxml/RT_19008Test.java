@@ -34,7 +34,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class RT_19008Test {
     @Test
     public void testMissingResource() throws IOException {
-        assertThrows(NullPointerException.class, () -> {FXMLLoader.load(getClass().getResource("rt_19008.fxml"));
+        assertThrows(NullPointerException.class, () -> {
+            FXMLLoader.load(getClass().getResource("rt_19008.fxml"));
         });
     }
 }
