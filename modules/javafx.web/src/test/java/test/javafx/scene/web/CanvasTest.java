@@ -47,7 +47,7 @@ public class CanvasTest extends TestBase {
 
     // JDK-8162922
     @Test public void testCanvasStrokeRect() {
-    final String htmlCanvasContent = "\n"
+        final String htmlCanvasContent = "\n"
             + "<!DOCTYPE html>\n"
             + "<html>\n"
             + "<body>\n"
@@ -71,24 +71,24 @@ public class CanvasTest extends TestBase {
         // Without the fix for JDK-8162922, canvas image data will be like below, which is wrong.
         /**
          final int[] wrongPixelArray = {255, 0, 0, 255,
-         255, 0, 0, 255,
-         255, 0, 0, 255,
-         255, 0, 0, 255,
-         255, 0, 0, 255,
-         255, 0, 0, 255,
-         255, 0, 0, 255,
-         255, 0, 0, 255,};
+                                        255, 0, 0, 255,
+                                        255, 0, 0, 255,
+                                        255, 0, 0, 255,
+                                        255, 0, 0, 255,
+                                        255, 0, 0, 255,
+                                        255, 0, 0, 255,
+                                        255, 0, 0, 255,};
          */
 
         // Sample pixel array to test against the canvas image data (with fix for JDK-8162922)
         final int[] expectedPixelArray = {255, 0, 0, 255,
-                255, 0, 0, 255,
-                255, 0, 0, 255,
-                255, 0, 0, 255,
-                0, 0, 0, 0,
-                0, 0, 0, 0,
-                0, 0, 0, 0,
-                0, 0, 0, 0};
+                                          255, 0, 0, 255,
+                                          255, 0, 0, 255,
+                                          255, 0, 0, 255,
+                                          0, 0, 0, 0,
+                                          0, 0, 0, 0,
+                                          0, 0, 0, 0,
+                                          0, 0, 0, 0};
 
         submit(() -> {
             final JSObject obj = (JSObject) getEngine().executeScript("window.data");
@@ -122,22 +122,22 @@ public class CanvasTest extends TestBase {
     // JDK-8234471
     @Test public void testCanvasPattern() throws Exception {
         final String htmlCanvasContent = "\n"
-                + "<canvas id='canvaspattern' width='100' height='100'></canvas>\n"
-                + "<svg id='svgpattern'></svg>\n"
-                + "<script>\n"
-                + "var patternCanvas = document.createElement('canvas');\n"
-                + "var patternCtx = patternCanvas.getContext('2d');\n"
-                + "patternCanvas.width = patternCanvas.height = 30;\n"
-                + "patternCtx.fillStyle = 'red';\n"
-                + "patternCtx.fillRect(0, 0, 20, 20);\n"
-                + "\n"
-                + "var ctx = document.getElementById('canvaspattern').getContext('2d');\n"
-                + "var pattern = ctx.createPattern(patternCanvas, 'repeat');\n"
-                + "var matrix = document.getElementById('svgpattern').createSVGMatrix();\n"
-                + "pattern.setTransform(matrix.translate(10, 10));\n"
-                + "ctx.fillStyle = pattern;\n"
-                + "ctx.fillRect(0, 0, 100, 100);\n"
-                + "</script>\n";
+            + "<canvas id='canvaspattern' width='100' height='100'></canvas>\n"
+            + "<svg id='svgpattern'></svg>\n"
+            + "<script>\n"
+            + "var patternCanvas = document.createElement('canvas');\n"
+            + "var patternCtx = patternCanvas.getContext('2d');\n"
+            + "patternCanvas.width = patternCanvas.height = 30;\n"
+            + "patternCtx.fillStyle = 'red';\n"
+            + "patternCtx.fillRect(0, 0, 20, 20);\n"
+            + "\n"
+            + "var ctx = document.getElementById('canvaspattern').getContext('2d');\n"
+            + "var pattern = ctx.createPattern(patternCanvas, 'repeat');\n"
+            + "var matrix = document.getElementById('svgpattern').createSVGMatrix();\n"
+            + "pattern.setTransform(matrix.translate(10, 10));\n"
+            + "ctx.fillStyle = pattern;\n"
+            + "ctx.fillRect(0, 0, 100, 100);\n"
+            + "</script>\n";
 
         loadContent(htmlCanvasContent);
         submit(() -> {
@@ -145,26 +145,20 @@ public class CanvasTest extends TestBase {
             assertEquals(
                     0,
                     (int) getEngine().executeScript(
-                            "document.getElementById('canvaspattern').getContext('2d').getImageData(1, 1, 1, 1).data[0]"
-                    ),
-                    "Pattern top-left corner"
-            );
+                            "document.getElementById('canvaspattern').getContext('2d').getImageData(1, 1, 1, 1).data[0]"),
+                    "Pattern top-left corner");
 
             assertEquals(
                     redColor,
                     (int) getEngine().executeScript(
-                            "document.getElementById('canvaspattern').getContext('2d').getImageData(11, 11, 1, 1).data[0]"
-                    ),
-                    "First rect top-left"
-            );
+                            "document.getElementById('canvaspattern').getContext('2d').getImageData(11, 11, 1, 1).data[0]"),
+                    "First rect top-left");
 
             assertEquals(
                     redColor,
                     (int) getEngine().executeScript(
-                            "document.getElementById('canvaspattern').getContext('2d').getImageData(21, 21, 1, 1).data[0]"
-                    ),
-                    "First rect center"
-            );
+                            "document.getElementById('canvaspattern').getContext('2d').getImageData(21, 21, 1, 1).data[0]"),
+                    "First rect center");
         });
     }
 
@@ -183,7 +177,7 @@ public class CanvasTest extends TestBase {
             + "data = canvas.toDataURL('%s');"
             + "</script>"
             + "</body>"
-            , mime);
+        , mime);
 
         loadContent(html);
         System.setErr(ERR);
@@ -192,8 +186,7 @@ public class CanvasTest extends TestBase {
         final String exMessage = errStream.toString();
         assertFalse(
                 exMessage.contains("Exception") || exMessage.contains("Error"),
-                String.format("Test failed with exception:\n%s", exMessage)
-        );
+                String.format("Test failed with exception:\n%s", exMessage));
         String img = (String) executeScript("window.data");
         assertNotNull("window.data must have base64 encoded image", img);
         // get rid of mime type

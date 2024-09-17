@@ -96,14 +96,14 @@ public class WebViewTest extends TestBase {
     @Test public void testFontWeights() {
         loadContent(
                 "<!DOCTYPE html><html><head></head>" +
-                        "<body>" +
-                        "   <div style=\"font: 19px system-ui\">" +
-                        "       <div style=\"font-style: italic;\">" +
-                        "           <span id=\"six\" style=\"font-weight: 600;\">Hello, World</span>" +
-                        "           <span id=\"nine\" style=\"font-weight: 900;\">Hello, World</span>" +
-                        "       </div>" +
-                        "   </div>" +
-                        "</body> </html>"
+                "<body>" +
+                "   <div style=\"font: 19px system-ui\">" +
+                "       <div style=\"font-style: italic;\">" +
+                "           <span id=\"six\" style=\"font-weight: 600;\">Hello, World</span>" +
+                "           <span id=\"nine\" style=\"font-weight: 900;\">Hello, World</span>" +
+                "       </div>" +
+                "   </div>" +
+                "</body> </html>"
         );
         submit(() -> {
             assertFalse(

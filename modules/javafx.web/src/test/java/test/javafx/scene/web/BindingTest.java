@@ -81,9 +81,7 @@ public class BindingTest extends TestBase {
             assertEquals(
                     WebEngineShim.getPage(main.getEngine()).getZoomFactor(true),
                     WebEngineShim.getPage(test.getEngine()).getZoomFactor(true),
-                    0.0,
-                    "WebPage zoom factor"
-            );
+                    0.0, "WebPage zoom factor");
         });
     }
 

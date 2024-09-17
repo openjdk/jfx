@@ -332,40 +332,40 @@ public class CSSTest extends TestBase {
     @Test public void testBorderRadiusPropertyRendering() {
         loadContent(
                 "<!DOCTYPE html>\n" +
-                        "<html>\n" +
-                        "  <head>\n" +
-                        "    <style>\n" +
-                        "      button {\n" +
-                        "        background-color: black; color: white; display: block; font-size: 32px;\n" +
-                        "        width: 200px; height: 100px; padding: 0; border: none;\n" +
-                        "        border-radius: 32px;\n" +
-                        "      }\n" +
-                        "      .bad0 {\n" +
-                        "        background-color: red;\n" +
-                        "      }\n" +
-                        "      .bad1 {\n" +
-                        "        border-bottom-left-radius: 0;\n" +
-                        "        background-color: blue;\n" +
-                        "      }\n" +
-                        "      .bad2 {\n" +
-                        "        border-bottom-left-radius: 0;\n" +
-                        "        border-bottom-right-radius: 0;\n" +
-                        "        background-color: green;\n" +
-                        "      }\n" +
-                        "      .bad3 {\n" +
-                        "        border-bottom-left-radius: 0;\n" +
-                        "        border-bottom-right-radius: 0;\n" +
-                        "        border-top-right-radius: 0;\n" +
-                        "      }\n" +
-                        "    </style>\n" +
-                        "  </head>\n" +
-                        "  <body style='margin: 0px 0px;'>\n" +
-                        "    <button class=\"bad0\">A</button>\n" +
-                        "    <button class=\"bad1\">B</button>\n" +
-                        "    <button class=\"bad2\">C</button>\n" +
-                        "    <button class=\"bad3\">D</button>\n" +
-                        "  </body>\n" +
-                        "</html>"
+                "<html>\n" +
+                "  <head>\n" +
+                "    <style>\n" +
+                "      button {\n" +
+                "        background-color: black; color: white; display: block; font-size: 32px;\n" +
+                "        width: 200px; height: 100px; padding: 0; border: none;\n" +
+                "        border-radius: 32px;\n" +
+                "      }\n" +
+                "      .bad0 {\n" +
+                "        background-color: red;\n" +
+                "      }\n" +
+                "      .bad1 {\n" +
+                "        border-bottom-left-radius: 0;\n" +
+                "        background-color: blue;\n" +
+                "      }\n" +
+                "      .bad2 {\n" +
+                "        border-bottom-left-radius: 0;\n" +
+                "        border-bottom-right-radius: 0;\n" +
+                "        background-color: green;\n" +
+                "      }\n" +
+                "      .bad3 {\n" +
+                "        border-bottom-left-radius: 0;\n" +
+                "        border-bottom-right-radius: 0;\n" +
+                "        border-top-right-radius: 0;\n" +
+                "      }\n" +
+                "    </style>\n" +
+                "  </head>\n" +
+                "  <body style='margin: 0px 0px;'>\n" +
+                "    <button class=\"bad0\">A</button>\n" +
+                "    <button class=\"bad1\">B</button>\n" +
+                "    <button class=\"bad2\">C</button>\n" +
+                "    <button class=\"bad3\">D</button>\n" +
+                "   </body>\n" +
+                "</html>"
         );
         submit(() -> {
             final WebPage webPage = WebEngineShim.getPage(getEngine());

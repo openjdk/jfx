@@ -50,14 +50,12 @@ public class CallbackTest extends TestBase {
     final static String JS_ALERT = "alert('MESSAGE');";
     final static String JS_CONFIRM = "confirm('MESSAGE');";
     final static String JS_PROMPT = "prompt('MESSAGE', 'DEFAULT');";
-    final static String JS_OPEN =
-            "window.open('', '', 'menubar=0, status=1, toolbar=0, resizable=1');";
+    final static String JS_OPEN = "window.open('', '', 'menubar=0, status=1, toolbar=0, resizable=1');";
     final static String JS_OPEN_DEFAULT = "window.open('');";
     final static String JS_CLOSE = "window.close();";
     final static String JS_STATUS = "window.status = 'STATUS'";
 
-    final static String HTML_ONLOAD =
-            "<html><body onload=\"ONLOAD\"></body></html>";
+    final static String HTML_ONLOAD = "<html><body onload=\"ONLOAD\"></body></html>";
 
     final static String ALERT = "onAlert";
     final static String RESIZED = "onResized";
@@ -196,8 +194,7 @@ public class CallbackTest extends TestBase {
         mainUi.checkCalled(CONFIRM, message);
 
         clear();
-        script = JS_PROMPT.replaceAll("MESSAGE", message)
-                .replaceAll("DEFAULT", defaultValue);
+        script = JS_PROMPT.replaceAll("MESSAGE", message).replaceAll("DEFAULT", defaultValue);
         executeScript(script);
         mainUi.checkCalled(PROMPT, message, defaultValue);
 
@@ -278,8 +275,7 @@ public class CallbackTest extends TestBase {
         public final EventHandler<WebEvent<Rectangle2D>> onResized =
                 ev -> {
                     Rectangle2D r = ev.getData();
-                    called(RESIZED, r.getMinX(), r.getMinY(),
-                            r.getWidth(), r.getHeight());
+                    called(RESIZED, r.getMinX(), r.getMinY(), r.getWidth(), r.getHeight());
                 };
 
         public final EventHandler<WebEvent<Boolean>> onVisibilityChanged =
