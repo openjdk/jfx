@@ -151,8 +151,9 @@ import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
  * and {@link #rightDecoratorProperty() rightDecorator} properties
  * </ul>
  *
- * @author Andy Goryachev
  * @since 999 TODO
+ * @author Andy Goryachev
+ * @see StyledTextModel
  */
 public class RichTextArea extends Control {
     /**
@@ -364,7 +365,7 @@ public class RichTextArea extends Control {
      * non-null values.
      * <p>
      * Note:
-     * {@code StyledTextModel.selectionProperty()}, {@link #anchorPositionProperty()}, and {@link #caretPositionProperty()}
+     * {@link #selectionProperty()}, {@link #anchorPositionProperty()}, and {@link #caretPositionProperty()}
      * are logically connected.  When a change occurs, the anchor position is updated first, followed by
      * the caret position, followed by the selection segment.
      *
@@ -434,7 +435,7 @@ public class RichTextArea extends Control {
      * non-null values.
      * <p>
      * Note:
-     * {@code StyledTextModel.selectionProperty()}, {@link #anchorPositionProperty()}, and {@link #caretPositionProperty()}
+     * {@link #selectionProperty()}, {@link #anchorPositionProperty()}, and {@link #caretPositionProperty()}
      * are logically connected.  When a change occurs, the anchor position is updated first, followed by
      * the caret position, followed by the selection segment.
      *
@@ -732,7 +733,7 @@ public class RichTextArea extends Control {
      * null.
      * <p>
      * Note:
-     * {@code StyledTextModel.selectionProperty()}, {@link #anchorPositionProperty()}, and {@link #caretPositionProperty()}
+     * {@link #selectionProperty()}, {@link #anchorPositionProperty()}, and {@link #caretPositionProperty()}
      * are logically connected.  When a change occurs, the anchor position is updated first, followed by
      * the caret position, followed by the selection segment.
      *
