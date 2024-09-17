@@ -23,7 +23,7 @@
  * questions.
  */
 
-package test.com.sun.jfx.incubator.scene.control.rich;
+package test.com.sun.jfx.incubator.scene.control.richtext;
 
 import org.junit.jupiter.api.Test;
 import com.sun.jfx.incubator.scene.control.richtext.VFlow;
