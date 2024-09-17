@@ -25,6 +25,7 @@
 
 package test.javafx.scene.text;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -131,13 +132,13 @@ public class TextNodeTest {
         float avgChar = (float)bounds.getWidth();
         PathElement[] empty = {};
 
-        assertEquals(empty, text.getCaretShape()); //initially empty
+        assertArrayEquals(empty, text.getCaretShape()); //initially empty
 
         text.setCaretPosition(0);
         assertCaretEquals(text.getCaretShape(), 0, 0, 0, lineHeight);
 
         text.setCaretPosition(-1);
-        assertEquals(empty, text.getCaretShape()); //empty after -1
+        assertArrayEquals(empty, text.getCaretShape()); //empty after -1
 
         //set back
         text.setCaretPosition(0);
@@ -145,7 +146,7 @@ public class TextNodeTest {
 
         text.setCaretBias(false);
         text.setText("abc");
-        assertEquals(empty, text.getCaretShape()); //empty after setText
+        assertArrayEquals(empty, text.getCaretShape()); //empty after setText
         assertEquals(-1, text.getCaretPosition());
         assertEquals(true, text.caretBiasProperty().get());
 
@@ -206,24 +207,24 @@ public class TextNodeTest {
         float avgChar = (float)bounds.getWidth();
         PathElement[] empty = {};
 
-        assertEquals(empty, text.getSelectionShape()); //initially null
+        assertArrayEquals(empty, text.getSelectionShape()); //initially null
 
         text.setSelectionStart(0);
-        assertEquals(empty, text.getSelectionShape()); //set start, but not end
+        assertArrayEquals(empty, text.getSelectionShape()); //set start, but not end
 
         text.setSelectionStart(0);
         text.setSelectionEnd(1);
         assertBoundsEquals(text.getSelectionShape(), 0, 0, avgChar, lineHeight);
 
         text.setSelectionStart(-1);
-        assertEquals(empty, text.getSelectionShape());; //no start
+        assertArrayEquals(empty, text.getSelectionShape());; //no start
 
         text.setSelectionStart(0);
         text.setSelectionEnd(1);
         assertBoundsEquals(text.getSelectionShape(), 0, 0, avgChar, lineHeight);
 
         text.setSelectionEnd(-1);
-        assertEquals(empty, text.getSelectionShape()); //no end
+        assertArrayEquals(empty, text.getSelectionShape()); //no end
 
         text.setSelectionStart(0);
         text.setSelectionEnd(1);
@@ -231,7 +232,7 @@ public class TextNodeTest {
 
         text.setSelectionStart(1);
         text.setSelectionEnd(0);
-        assertEquals(empty, text.getSelectionShape()); //end > start
+        assertArrayEquals(empty, text.getSelectionShape()); //end > start
 
         text.setSelectionStart(0);
         text.setSelectionEnd(1);
@@ -239,7 +240,7 @@ public class TextNodeTest {
 
         text.setSelectionStart(0);
         text.setSelectionEnd(0);
-        assertEquals(empty, text.getSelectionShape()); //end == start
+        assertArrayEquals(empty, text.getSelectionShape()); //end == start
 
         text.setSelectionStart(0);
         text.setSelectionEnd(1);
@@ -247,7 +248,7 @@ public class TextNodeTest {
 
         text.setSelectionStart(0);
         text.setSelectionEnd(3);
-        assertEquals(empty, text.getSelectionShape()); //end > length
+        assertArrayEquals(empty, text.getSelectionShape()); //end > length
 
         text.setSelectionStart(0);
         text.setSelectionEnd(1);
@@ -255,16 +256,16 @@ public class TextNodeTest {
 
         text.setSelectionStart(3);
         text.setSelectionEnd(5);
-        assertEquals(empty, text.getSelectionShape()); //start > length
+        assertArrayEquals(empty, text.getSelectionShape()); //start > length
 
         text.setText("abc");
-        assertEquals(empty, text.getSelectionShape()); //setText resets
+        assertArrayEquals(empty, text.getSelectionShape()); //setText resets
         assertEquals(-1, text.getSelectionStart());
         assertEquals(-1, text.getSelectionEnd());
 
         text.setSelectionStart(0);
         text.setSelectionEnd(0);
-        assertEquals(empty, text.getSelectionShape());
+        assertArrayEquals(empty, text.getSelectionShape());
         text.setSelectionStart(0);
         text.setSelectionEnd(1);
         assertBoundsEquals(text.getSelectionShape(), 0, 0, avgChar, lineHeight);
@@ -276,7 +277,7 @@ public class TextNodeTest {
         assertBoundsEquals(text.getSelectionShape(), 0, 0, 3*avgChar, lineHeight);
         text.setSelectionStart(0);
         text.setSelectionEnd(4);
-        assertEquals(empty, text.getSelectionShape());
+        assertArrayEquals(empty, text.getSelectionShape());
         text.setSelectionStart(1);
         text.setSelectionEnd(2);
         assertBoundsEquals(text.getSelectionShape(), avgChar, 0, avgChar, lineHeight);
@@ -288,7 +289,7 @@ public class TextNodeTest {
         assertBoundsEquals(text.getSelectionShape(), 2*avgChar, 0, avgChar, lineHeight);
         text.setSelectionStart(3);
         text.setSelectionEnd(3);
-        assertEquals(empty, text.getSelectionShape());
+        assertArrayEquals(empty, text.getSelectionShape());
     }
 
 }

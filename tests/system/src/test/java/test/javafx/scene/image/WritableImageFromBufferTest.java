@@ -118,7 +118,7 @@ public class WritableImageFromBufferTest {
         Thread.sleep(100);
 
         System.setErr(defaultErrorStream);
-        Assertions.assertEquals("No error should be thrown", "", out.toString());
+        Assertions.assertEquals("", out.toString(), "No error should be thrown");
     }
 
     private void requestFullUpdate() {
