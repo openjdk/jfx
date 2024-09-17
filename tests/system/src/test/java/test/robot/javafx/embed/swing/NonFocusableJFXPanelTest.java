@@ -37,10 +37,35 @@ import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.Arguments;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.params.provider.Arguments;
+import java.util.stream.Stream;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import org.junit.jupiter.api.Assertions;
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Timeout;
 import test.util.Util;
 
 public class NonFocusableJFXPanelTest {
@@ -50,7 +75,7 @@ public class NonFocusableJFXPanelTest {
     private static final int WIDTH = 600;
     private static final int HEIGHT = 200;
 
-    @BeforeClass
+    @BeforeAll
     public static void init() throws Exception {
         robot = new Robot();
         robot.setAutoDelay(100);
@@ -69,14 +94,13 @@ public class NonFocusableJFXPanelTest {
             robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
             robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
         }
-        Assert.assertFalse("Extra MouseEvent generated", clickCount > 5);
+        Assertions.assertFalse(clickCount > 5, "Extra MouseEvent generated");
     }
 
     private void waitForLatch(CountDownLatch latch, long ms) throws Exception {
-        Assert.assertTrue(String.format(
-            "unexpected error: waiting timeout %d ms elapsed for",
-            ms),
-            latch.await(ms, TimeUnit.MILLISECONDS));
+        Assertions.assertTrue(
+            latch.await(ms, TimeUnit.MILLISECONDS),
+            String.format("unexpected error: waiting timeout %d ms elapsed for", ms));
     }
 
     public void initAndShowGUI() {
@@ -108,14 +132,14 @@ public class NonFocusableJFXPanelTest {
         try {
             waitForLatch(latch, 5000);
         } catch (Exception e) {
-            Assert.fail("Exception while waiting for latch");
+            Assertions.fail("Exception while waiting for latch");
         }
     }
 
 
-    @AfterClass
+    @AfterAll
     public static void teardown() throws Exception {
-        Assert.assertNotNull(frame);
+        Assertions.assertNotNull(frame);
         SwingUtilities.invokeLater(frame::dispose);
     }
 }
