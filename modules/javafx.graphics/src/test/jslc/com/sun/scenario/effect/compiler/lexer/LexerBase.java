@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,15 +38,27 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public abstract class LexerBase {
 
-    protected void assertRecognized(char ch) throws Exception {
+    protected void assertRecognized(char ch) {
         assertRecognized(String.valueOf(ch));
     }
 
-    protected void assertRecognized(String text) throws Exception {
+    protected void assertRecognized(String text) {
         Token token = recognize(text);
         assertEquals(text, token.getText());
 
@@ -55,15 +67,15 @@ public abstract class LexerBase {
         }
     }
 
-    protected void assertNotRecognized(char ch) throws Exception {
+    protected void assertNotRecognized(char ch) {
         assertNotRecognized(String.valueOf(ch));
     }
 
-    protected void assertNotRecognized(String text) throws Exception {
+    protected void assertNotRecognized(String text) {
         assertNotRecognized(text, text);
     }
 
-    protected void assertNotRecognized(String text, String shouldLex) throws Exception {
+    protected void assertNotRecognized(String text, String shouldLex) {
         Token token = recognize(text);
         assertEquals(shouldLex, token.getText());
 
@@ -72,7 +84,7 @@ public abstract class LexerBase {
         }
     }
 
-    protected Token recognize(String text) throws Exception {
+    protected Token recognize(String text) {
         JSLLexer lexer = lexerOver(text);
         return lexer.nextToken();
     }

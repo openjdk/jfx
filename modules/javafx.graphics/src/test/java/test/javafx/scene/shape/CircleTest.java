@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,50 +37,57 @@ import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Scale;
-import org.junit.Test;
 
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static test.com.sun.javafx.test.TestHelper.assertSimilar;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 
 
 public class CircleTest {
 
-    @Test public void testPropertyPropagation_visible() throws Exception {
+    @Test
+    public void testPropertyPropagation_visible() throws Exception {
         final Circle node = new StubCircle();
         NodeTest.testBooleanPropertyPropagation(node, "visible", false, true);
     }
 
-    @Test public void testPropertyPropagation_centerX() throws Exception {
+    @Test
+    public void testPropertyPropagation_centerX() throws Exception {
         final Circle node = new StubCircle();
         NodeTest.testDoublePropertyPropagation(node, "centerX", 100, 200);
     }
 
-    @Test public void testPropertyPropagation_centerY() throws Exception {
+    @Test
+    public void testPropertyPropagation_centerY() throws Exception {
         final Circle node = new StubCircle();
         NodeTest.testDoublePropertyPropagation(node, "centerY", 100, 200);
     }
 
-    @Test public void testPropertyPropagation_radius() throws Exception {
+    @Test
+    public void testPropertyPropagation_radius() throws Exception {
         final Circle node = new StubCircle();
         NodeTest.testDoublePropertyPropagation(node, "radius", 100, 200);
     }
 
-    @Test public void testBoundPropertySync_centerX() throws Exception {
+    @Test
+    public void testBoundPropertySync_centerX() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubCircle(100, 200, 50),
                 "centerX", "centerX",
                 350.0);
     }
 
-    @Test public void testBoundPropertySync_centerY() throws Exception {
+    @Test
+    public void testBoundPropertySync_centerY() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubCircle(100, 200, 50),
                 "centerY", "centerY",
                 250.0);
     }
 
-    @Test public void testBoundPropertySync_radius() throws Exception {
+    @Test
+    public void testBoundPropertySync_radius() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubCircle(100, 200, 50),
                 "radius", "radius",
@@ -127,7 +134,8 @@ public class CircleTest {
     }
 
 
-    @Test public void testTransformedBounds_scale() {
+    @Test
+    public void testTransformedBounds_scale() {
         Circle c = new StubCircle(50, 100, 10, Color.RED);
         double scalePivotX = (c.getCenterX() + c.getRadius()) / 2;
         double scalePivotY = (c.getCenterY() + c.getRadius()) / 2;
@@ -138,7 +146,8 @@ public class CircleTest {
                 2 * original.getWidth(), 1.5 * original.getHeight()), c.getBoundsInParent());
     }
 
-    @Test public void toStringShouldReturnNonEmptyString() {
+    @Test
+    public void toStringShouldReturnNonEmptyString() {
         String s = new StubCircle().toString();
         assertNotNull(s);
         assertFalse(s.isEmpty());

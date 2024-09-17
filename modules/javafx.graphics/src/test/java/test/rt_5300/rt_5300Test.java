@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,8 +30,11 @@ import com.sun.prism.BasicStroke;
 import com.sun.prism.Image;
 import com.sun.prism.PixelFormat;
 import java.nio.ByteBuffer;
-import org.junit.Test;
-import org.junit.Assert;
+import java.time.Duration;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class rt_5300Test {
 
@@ -58,13 +61,15 @@ public class rt_5300Test {
             //throw exception System.out.println("Exception Caught: " + e.toString() );
         }
 
-        Assert.assertTrue(assertImageIcon(image));
+        assertTrue(assertImageIcon(image));
     }
 
-    @Test(timeout=5000)
+    @Test
     public void testArcs() {
-        test(10f, null);
-        test(10f, new float[] {2f, 2f});
+        assertTimeout(Duration.ofMillis(5000), () -> {
+            test(10f, null);
+            test(10f, new float[] {2f, 2f});
+        });
     }
 
     public static void test(float lw, float dashes[]) {

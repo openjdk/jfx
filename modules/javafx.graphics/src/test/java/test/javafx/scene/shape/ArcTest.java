@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,91 +31,108 @@ import javafx.scene.Node;
 import test.javafx.scene.NodeTest;
 import javafx.scene.shape.Arc;
 import javafx.scene.shape.ArcType;
-
-import org.junit.Test;
-import static org.junit.Assert.*;
 import test.com.sun.javafx.scene.shape.StubArcHelper;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class ArcTest {
 
-    @Test public void testPropertyPropagation_visible() throws Exception {
+    @Test
+    public void testPropertyPropagation_visible() throws Exception {
         final Arc node = new StubArc();
         NodeTest.testBooleanPropertyPropagation(node, "visible", false, true);
     }
 
-    @Test public void testPropertyPropagation_centerX() throws Exception {
+    @Test
+    public void testPropertyPropagation_centerX() throws Exception {
         final Arc node = new StubArc();
         NodeTest.testDoublePropertyPropagation(node, "centerX", 100, 200);
     }
 
-    @Test public void testPropertyPropagation_centerY() throws Exception {
+    @Test
+    public void testPropertyPropagation_centerY() throws Exception {
         final Arc node = new StubArc();
         NodeTest.testDoublePropertyPropagation(node, "centerY", 100, 200);
     }
 
-    @Test public void testPropertyPropagation_radiusX() throws Exception {
+    @Test
+    public void testPropertyPropagation_radiusX() throws Exception {
         final Arc node = new StubArc();
         NodeTest.testDoublePropertyPropagation(node, "radiusX", 100, 200);
     }
 
-    @Test public void testPropertyPropagation_radiusY() throws Exception {
+    @Test
+    public void testPropertyPropagation_radiusY() throws Exception {
         final Arc node = new StubArc();
         NodeTest.testDoublePropertyPropagation(node, "radiusY", 100, 200);
     }
 
-    @Test public void testPropertyPropagation_startAngle() throws Exception {
+    @Test
+    public void testPropertyPropagation_startAngle() throws Exception {
         final Arc node = new StubArc();
         NodeTest.testDoublePropertyPropagation(node, "startAngle", "angleStart", 30, 60);
     }
 
-    @Test public void testPropertyPropagation_length() throws Exception {
+    @Test
+    public void testPropertyPropagation_length() throws Exception {
         final Arc node = new StubArc();
         NodeTest.testDoublePropertyPropagation(node, "length", "angleExtent", 30, 45);
     }
 
-    @Test public void testBoundPropertySync_length() throws Exception {
+    @Test
+    public void testBoundPropertySync_length() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubArc(10.0, 10.0, 100.0, 100.0, 0.0, 0.0),
                 "length", "angleExtent", 100.0);
     }
 
-    @Test public void testBoundProperySync_startAngle() throws Exception {
+    @Test
+    public void testBoundProperySync_startAngle() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubArc(10.0, 10.0, 100.0, 100.0, 0.0, 0.0),
                 "startAngle", "angleStart", 270.0);
     }
 
-    @Test public void testBoundPropertySync_radiusY() throws Exception {
+    @Test
+    public void testBoundPropertySync_radiusY() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubArc(10.0, 10.0, 100.0, 100.0, 0.0, 0.0),
                 "radiusY", "radiusY", 200.0);
     }
 
-    @Test public void testBoundPropertySync_radiusX() throws Exception {
+    @Test
+    public void testBoundPropertySync_radiusX() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubArc(10.0, 10.0, 100.0, 100.0, 0.0, 0.0),
                 "radiusX", "radiusX", 150.0);
     }
 
-    @Test public void testBoundPropertySync_centerY() throws Exception {
+    @Test
+    public void testBoundPropertySync_centerY() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubArc(10.0, 10.0, 100.0, 100.0, 0.0, 0.0),
                 "centerY", "centerY", 250.0);
     }
 
-    @Test public void testBoundPropertySync_centerX() throws Exception {
+    @Test
+    public void testBoundPropertySync_centerX() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubArc(10.0, 10.0, 100.0, 100.0, 0.0, 0.0),
                 "centerX", "centerX", 350.0);
     }
 
-    @Test public void toStringShouldReturnNonEmptyString() {
+    @Test
+    public void toStringShouldReturnNonEmptyString() {
         String s = new StubArc().toString();
         assertNotNull(s);
         assertFalse(s.isEmpty());
     }
 
-    @Test public void testNullType() {
+    @Test
+    public void testNullType() {
         // null type should not throw NPE
         Arc arc = new StubArc(10.0, 10.0, 100.0, 100.0, 0.0, 0.0);
         arc.setType(null);
