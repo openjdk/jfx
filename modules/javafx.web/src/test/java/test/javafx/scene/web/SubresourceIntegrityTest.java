@@ -43,9 +43,6 @@ import java.util.stream.Stream;
 
 public final class SubresourceIntegrityTest extends TestBase {
 
-    // To arguments from junit data provider.
-    private final String hashValue = "";
-    private final String expected = "";
     private File htmlFile;
     // Expectations
     private final static String LOADED = "hello";
@@ -77,8 +74,8 @@ public final class SubresourceIntegrityTest extends TestBase {
         );
     }
 
-    @BeforeEach
-    public void setup() throws Exception {
+    // @BeforeEach
+    public void setup(String hashValue, String expected) throws Exception {
         // loadContent won't work with CORS, use file:// for main resource.
         htmlFile = new File("subresource-integrity-test.html");
         final FileOutputStream out = new FileOutputStream(htmlFile);
@@ -95,11 +92,12 @@ public final class SubresourceIntegrityTest extends TestBase {
 
     @ParameterizedTest
     @MethodSource("dataProvider")
-    public void testScriptTagWithCorrectHashValue() {
+    public void testScriptTagWithCorrectHashValue(String hashValue, String expected) throws Exception {
+        setup(hashValue, expected);
         load(htmlFile);
         final String bodyText = (String) executeScript("document.body.innerText");
         assertNotNull("document.body.innerText must be non null for " + hashValue, bodyText);
-        assertEquals(hashValue, expected, bodyText);
+        assertEquals(expected, bodyText, hashValue);
     }
 
     @AfterEach
