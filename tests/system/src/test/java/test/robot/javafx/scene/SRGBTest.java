@@ -48,12 +48,40 @@ import com.sun.javafx.PlatformUtil;
 
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.Test;
-import static org.junit.Assume.assumeTrue;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.Arguments;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.params.provider.Arguments;
+import java.util.stream.Stream;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import org.junit.jupiter.api.Assertions;
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Timeout;
 
 import test.robot.testharness.VisualTestBase;
 import test.util.Util;
 
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class SRGBTest extends VisualTestBase {
 
     private static final int SWATCH_SIZE = 200;
@@ -217,7 +245,9 @@ public class SRGBTest extends VisualTestBase {
     // colors but they might both be working in the wrong space. We use an
     // AWT Robot to verify that they are working in sRGB.
     // Timeout for potential hang on XWayland, see JDK-8335468.
-    @Test(timeout = 15000)
+    // the same timeout will apply to the rest of the tests
+    // @Test(timeout = 15000)
+    @Test
     public void sRGBPixelTest() throws Exception {
         assumeTrue(!Util.isOnWayland()); // JDK-8335470
         Rectangle swatch = prepareStage();
