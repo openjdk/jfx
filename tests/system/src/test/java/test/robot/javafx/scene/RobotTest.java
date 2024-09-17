@@ -190,8 +190,9 @@ public class RobotTest {
         });
         Util.waitForLatch(keyActionLatch, 5, "Timeout while waiting for textField.onKey" +
                 capFirst(keyAction.name()) + "().");
-        Assertions.assertEquals("letter 'a' should be " + keyAction.name().toLowerCase() +
-                " by Robot", "a", textField.getText());
+        Assertions.assertEquals(
+            "a", textField.getText(),
+            "letter 'a' should be " + keyAction.name().toLowerCase() + " by Robot");
     }
 
     @Test
@@ -400,8 +401,9 @@ public class RobotTest {
         });
         Util.waitForLatch(onClickLatch, 5, "Timeout while waiting for button.onMouse" +
                 capFirst(mouseAction.name()) + "().");
-        Assertions.assertEquals(mouseButton + " mouse button should be " + mouseAction.name().toLowerCase() + " by Robot",
-                expectedText, button.getText());
+        Assertions.assertEquals(
+            expectedText, button.getText(),
+            mouseButton + " mouse button should be " + mouseAction.name().toLowerCase() + " by Robot");
     }
 
     @Test
@@ -574,8 +576,9 @@ public class RobotTest {
             robot.mouseWheel(amount);
         });
         Util.waitForLatch(onScrollLatch, 5, "Timeout while waiting for button.onScroll().");
-        Assertions.assertEquals("mouse wheel should be scrolled " + amount + " vertical units by Robot",
-                "Scrolled " + amount, button.getText());
+        Assertions.assertEquals(
+            "Scrolled " + amount, button.getText(),
+            "mouse wheel should be scrolled " + amount + " vertical units by Robot");
     }
 
     @Test

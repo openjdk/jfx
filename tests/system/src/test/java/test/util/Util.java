@@ -108,7 +108,13 @@ public class Util {
             }
 
             if (testError[0] != null) {
-                fail(testError[0]);
+                if (testError[0] instanceof Error) {
+                    throw (Error)testError[0];
+                } else if (testError[0] instanceof RuntimeException) {
+                    throw (RuntimeException)testError[0];
+                } else {
+                    fail(testError[0].getCause());
+                }
             }
 
             return true;
