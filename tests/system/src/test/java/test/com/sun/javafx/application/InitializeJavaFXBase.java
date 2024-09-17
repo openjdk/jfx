@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,7 @@ package test.com.sun.javafx.application;
 
 import javafx.application.Application;
 import javafx.stage.Stage;
-import junit.framework.Assert;
+import org.junit.jupiter.api.Assertions;
 import test.util.Util;
 
 public class InitializeJavaFXBase {
@@ -42,7 +42,7 @@ public class InitializeJavaFXBase {
         Util.runAndWait(() ->{
             try {
                 Application.launch(TestApp.class);
-                Assert.fail("Error: No Exception was thrown - expected IllegalStateException");
+                Assertions.fail("Error: No Exception was thrown - expected IllegalStateException");
             } catch (IllegalStateException e) {
                 // This Exception is what we expect!
             }
@@ -52,7 +52,7 @@ public class InitializeJavaFXBase {
     public void doTestInitializeThenSecondLaunch() throws Exception {
         try {
             Application.launch(TestApp.class);
-            Assert.fail("Error: No Exception was thrown - expected IllegalStateException");
+            Assertions.fail("Error: No Exception was thrown - expected IllegalStateException");
         } catch (IllegalStateException e) {
             // This Exception is what we expect!
         }
