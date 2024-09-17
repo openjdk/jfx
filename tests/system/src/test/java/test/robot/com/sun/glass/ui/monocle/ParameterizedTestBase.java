@@ -43,7 +43,7 @@ public abstract class ParameterizedTestBase {
 
     /**
      * There seems to be no need to handle assumptions this way in junit5.
-     * 
+     *
     @Rule
     public TestWatchman monitor = new TestWatchman() {
         @Override
