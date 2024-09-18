@@ -49,7 +49,7 @@ public class Pair<K, V> implements Serializable {
     public K getKey() { return key; }
 
     /**
-     * Value of this this <code>Pair</code>.
+     * Value of this <code>Pair</code>.
      */
     private V value;
 
