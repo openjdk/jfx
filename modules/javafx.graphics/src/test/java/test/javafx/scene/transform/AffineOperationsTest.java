@@ -27,6 +27,7 @@ package test.javafx.scene.transform;
 
 //import java.awt.geom.AffineTransform;
 //import com.sun.javafx.geom.transform.Affine3D;
+import java.util.List;
 import java.util.stream.Stream;
 import javafx.geometry.Point3D;
 import test.com.sun.javafx.test.TransformHelper;
@@ -1923,8 +1924,9 @@ public class AffineOperationsTest {
     @MethodSource("getParams")
     public void testAppendTransform(Affine affine) {
         int counter = 0;
-        for (Object o : TransformOperationsTest.getParams()) {
-            Object[] arr = (Object[]) o;
+        List<Arguments> arguments = TransformOperationsTest.getParams().toList();
+        for (Arguments arg : arguments) {
+            Object[] arr = arg.get();
             Transform other = (Transform) arr[0];
 
             Affine a = affine.clone();
@@ -1964,8 +1966,9 @@ public class AffineOperationsTest {
     @MethodSource("getParams")
     public void testPrependTransform(Affine affine) {
         int counter = 0;
-        for (Object o : TransformOperationsTest.getParams()) {
-            Object[] arr = (Object[]) o;
+        List<Arguments> arguments = TransformOperationsTest.getParams().toList();
+        for (Arguments arg : arguments) {
+            Object[] arr = arg.get();
             Transform other = (Transform) arr[0];
 
             Affine a = affine.clone();

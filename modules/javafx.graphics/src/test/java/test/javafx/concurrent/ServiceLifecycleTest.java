@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,14 +40,16 @@ import javafx.concurrent.Task;
 import javafx.concurrent.TaskShim;
 import javafx.concurrent.Worker;
 import javafx.concurrent.WorkerStateEvent;
-import org.junit.After;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests various rules regarding the lifecycle of a Service.
@@ -66,7 +68,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
      */
     protected ManualTask task;
 
-    @Override protected TestServiceFactory setupServiceFactory() {
+    private TestServiceFactory setupServiceFactory() {
         return new TestServiceFactory() {
             @Override public AbstractTask createTestTask() {
                 return task = new ManualTask();
@@ -74,11 +76,13 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         };
     }
 
-    @Override protected Executor createExecutor() {
+    @Override
+    protected Executor createExecutor() {
         return executor = new ManualExecutor(super.createExecutor());
     }
 
-    @After public void tearDown() {
+    @AfterEach
+    public void tearDown() {
         if (task != null) task.finish.set(true);
     }
 
@@ -156,37 +160,49 @@ public class ServiceLifecycleTest extends ServiceTestBase {
      * Tests while in the ready state                                       *
      ***********************************************************************/
 
-    @Test public void callingStartInReadyStateSchedulesJob() {
+    @Test
+    public void callingStartInReadyStateSchedulesJob() {
+        setup(setupServiceFactory());
         assertNull(executor.scheduled);
         service.start();
         assertNotNull(executor.scheduled);
     }
 
-    @Test public void callingStartInReadyMovesToScheduledState() {
+    @Test
+    public void callingStartInReadyMovesToScheduledState() {
+        setup(setupServiceFactory());
         service.start();
         assertSame(Worker.State.SCHEDULED, service.getState());
         assertSame(Worker.State.SCHEDULED, service.stateProperty().get());
     }
 
-    @Test public void callingRestartInReadyStateSchedulesJob() {
+    @Test
+    public void callingRestartInReadyStateSchedulesJob() {
+        setup(setupServiceFactory());
         assertNull(executor.scheduled);
         service.restart();
         assertNotNull(executor.scheduled);
     }
 
-    @Test public void callingRestartInReadyMovesToScheduledState() {
+    @Test
+    public void callingRestartInReadyMovesToScheduledState() {
+        setup(setupServiceFactory());
         service.restart();
         assertSame(Worker.State.SCHEDULED, service.getState());
         assertSame(Worker.State.SCHEDULED, service.stateProperty().get());
     }
 
-    @Test public void callingCancelInReadyStateMovesToCancelledState() {
+    @Test
+    public void callingCancelInReadyStateMovesToCancelledState() {
+        setup(setupServiceFactory());
         service.cancel();
         assertSame(Worker.State.CANCELLED, service.getState());
         assertSame(Worker.State.CANCELLED, service.stateProperty().get());
     }
 
-    @Test public void callingResetInReadyStateHasNoEffect() {
+    @Test
+    public void callingResetInReadyStateHasNoEffect() {
+        setup(setupServiceFactory());
         service.reset();
         assertSame(Worker.State.READY, service.getState());
         assertSame(Worker.State.READY, service.stateProperty().get());
@@ -196,20 +212,27 @@ public class ServiceLifecycleTest extends ServiceTestBase {
      * Tests while in the scheduled state                                   *
      ***********************************************************************/
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void callingStartInScheduledStateIsISE() {
-        service.start();
-        service.start();
+        setup(setupServiceFactory());
+        assertThrows(IllegalStateException.class, () -> {
+            service.start();
+            service.start();
+        });
     }
 
-    @Test public void callingCancelInScheduledStateResultsInCancelledState() {
+    @Test
+    public void callingCancelInScheduledStateResultsInCancelledState() {
+        setup(setupServiceFactory());
         service.start();
         service.cancel();
         assertSame(Worker.State.CANCELLED, service.getState());
         assertSame(Worker.State.CANCELLED, service.stateProperty().get());
     }
 
-    @Test public void callingRestartInScheduledStateShouldCancelAndReschedule() {
+    @Test
+    public void callingRestartInScheduledStateShouldCancelAndReschedule() {
+        setup(setupServiceFactory());
         service.start();
         service.restart();
         assertSame(Worker.State.SCHEDULED, service.getState());
@@ -224,7 +247,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
      * state of the service is off. At least, that is what is happening with
      * RT-20880. The fix allows this test to pass.
      */
-    @Test public void callingRestartInScheduledStateShouldCancelAndReschedule_RT_20880() {
+    @Test
+    public void callingRestartInScheduledStateShouldCancelAndReschedule_RT_20880() {
+        setup(setupServiceFactory());
         service.start();
         task.failToCancel = true;
         service.restart();
@@ -232,69 +257,92 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertSame(Worker.State.SCHEDULED, service.stateProperty().get());
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void callingResetInScheduledStateThrowsISE() {
-        service.start();
-        service.reset();
+        setup(setupServiceFactory());
+        assertThrows(IllegalStateException.class, () -> {
+            service.start();
+            service.reset();
+        });
     }
 
-    @Test public void stateChangesToRunningWhenExecutorExecutes() {
+    @Test
+    public void stateChangesToRunningWhenExecutorExecutes() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         assertSame(Worker.State.RUNNING, service.getState());
         assertSame(Worker.State.RUNNING, service.stateProperty().get());
     }
 
-    @Test public void exceptionShouldBeNullInScheduledState() {
+    @Test
+    public void exceptionShouldBeNullInScheduledState() {
+        setup(setupServiceFactory());
         service.start();
         assertNull(service.getException());
         assertNull(service.exceptionProperty().get());
     }
 
-    @Test public void valueShouldBeNullInScheduledState() {
+    @Test
+    public void valueShouldBeNullInScheduledState() {
+        setup(setupServiceFactory());
         service.start();
         assertNull(service.getValue());
         assertNull(service.valueProperty().get());
     }
 
-    @Test public void runningShouldBeTrueInScheduledState() {
+    @Test
+    public void runningShouldBeTrueInScheduledState() {
+        setup(setupServiceFactory());
         service.start();
         assertTrue(service.isRunning());
         assertTrue(service.runningProperty().get());
     }
 
-    @Test public void runningPropertyNotificationInScheduledState() {
+    @Test
+    public void runningPropertyNotificationInScheduledState() {
+        setup(setupServiceFactory());
         final AtomicBoolean passed = new AtomicBoolean(false);
         service.runningProperty().addListener((o, oldValue, newValue) -> passed.set(newValue));
         service.start();
         assertTrue(passed.get());
     }
 
-    @Test public void workDoneShouldBeNegativeOneInitiallyInScheduledState() {
+    @Test
+    public void workDoneShouldBeNegativeOneInitiallyInScheduledState() {
+        setup(setupServiceFactory());
         service.start();
         assertEquals(-1, service.getWorkDone(), 0);
         assertEquals(-1, service.workDoneProperty().get(), 0);
     }
 
-    @Test public void totalWorkShouldBeNegativeOneAtStartOfScheduledState() {
+    @Test
+    public void totalWorkShouldBeNegativeOneAtStartOfScheduledState() {
+        setup(setupServiceFactory());
         service.start();
         assertEquals(-1, service.getTotalWork(), 0);
         assertEquals(-1, service.totalWorkProperty().get(), 0);
     }
 
-    @Test public void progressShouldBeNegativeOneAtStartOfScheduledState() {
+    @Test
+    public void progressShouldBeNegativeOneAtStartOfScheduledState() {
+        setup(setupServiceFactory());
         service.start();
         assertEquals(-1, service.getProgress(), 0);
         assertEquals(-1, task.progressProperty().get(), 0);
     }
 
-    @Test public void messageShouldBeEmptyStringWhenEnteringScheduledState() {
+    @Test
+    public void messageShouldBeEmptyStringWhenEnteringScheduledState() {
+        setup(setupServiceFactory());
         service.start();
         assertEquals("", service.getMessage());
         assertEquals("", task.messageProperty().get());
     }
 
-    @Test public void titleShouldBeEmptyStringAtStartOfScheduledState() {
+    @Test
+    public void titleShouldBeEmptyStringAtStartOfScheduledState() {
+        setup(setupServiceFactory());
         service.start();
         assertEquals("", service.getTitle());
         assertEquals("", task.titleProperty().get());
@@ -304,21 +352,29 @@ public class ServiceLifecycleTest extends ServiceTestBase {
      * Tests while in the running state                                     *
      ***********************************************************************/
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void callingStartInRunningStateIsISE() {
-        service.start();
-        executor.executeScheduled();
-        service.start();
+        setup(setupServiceFactory());
+        assertThrows(IllegalStateException.class, () -> {
+            service.start();
+            executor.executeScheduled();
+            service.start();
+        });
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void callingResetInRunningStateIsISE() {
-        service.start();
-        executor.executeScheduled();
-        service.reset();
+        setup(setupServiceFactory());
+        assertThrows(IllegalStateException.class, () -> {
+            service.start();
+            executor.executeScheduled();
+            service.reset();
+        });
     }
 
-    @Test public void callingRestartInRunningStateCancelsAndReschedules() {
+    @Test
+    public void callingRestartInRunningStateCancelsAndReschedules() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         service.restart();
@@ -326,7 +382,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertSame(Worker.State.SCHEDULED, service.stateProperty().get());
     }
 
-    @Test public void callingCancelInRunningStateResultsInCancelledState() {
+    @Test
+    public void callingCancelInRunningStateResultsInCancelledState() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         service.cancel();
@@ -334,28 +392,36 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertSame(Worker.State.CANCELLED, service.stateProperty().get());
     }
 
-    @Test public void exceptionShouldBeNullInRunningState() {
+    @Test
+    public void exceptionShouldBeNullInRunningState() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         assertNull(service.getException());
         assertNull(service.exceptionProperty().get());
     }
 
-    @Test public void valueShouldBeNullInRunningState() {
+    @Test
+    public void valueShouldBeNullInRunningState() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         assertNull(service.getValue());
         assertNull(service.valueProperty().get());
     }
 
-    @Test public void runningShouldBeTrueInRunningState() {
+    @Test
+    public void runningShouldBeTrueInRunningState() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         assertTrue(service.isRunning());
         assertTrue(service.runningProperty().get());
     }
 
-    @Test public void runningPropertyNotificationInRunningState() {
+    @Test
+    public void runningPropertyNotificationInRunningState() {
+        setup(setupServiceFactory());
         final AtomicBoolean passed = new AtomicBoolean(false);
         service.runningProperty().addListener((o, oldValue, newValue) -> passed.set(newValue));
         service.start();
@@ -363,14 +429,18 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(passed.get());
     }
 
-    @Test public void workDoneShouldBeNegativeOneInitiallyInRunningState() {
+    @Test
+    public void workDoneShouldBeNegativeOneInitiallyInRunningState() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         assertEquals(-1, service.getWorkDone(), 0);
         assertEquals(-1, service.workDoneProperty().get(), 0);
     }
 
-    @Test public void workDoneShouldAdvanceTo10() {
+    @Test
+    public void workDoneShouldAdvanceTo10() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         task.progress(10, 20);
@@ -378,7 +448,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertEquals(10, service.workDoneProperty().get(), 0);
     }
 
-    @Test public void workDonePropertyNotification() {
+    @Test
+    public void workDonePropertyNotification() {
+        setup(setupServiceFactory());
         final AtomicBoolean passed = new AtomicBoolean(false);
         service.workDoneProperty().addListener((o, oldValue, newValue) -> passed.set(newValue.doubleValue() == 10));
         service.start();
@@ -387,14 +459,18 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(passed.get());
     }
 
-    @Test public void totalWorkShouldBeNegativeOneAtStartOfRunning() {
+    @Test
+    public void totalWorkShouldBeNegativeOneAtStartOfRunning() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         assertEquals(-1, service.getTotalWork(), 0);
         assertEquals(-1, service.totalWorkProperty().get(), 0);
     }
 
-    @Test public void totalWorkShouldBeTwenty() {
+    @Test
+    public void totalWorkShouldBeTwenty() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         task.progress(10, 20);
@@ -402,7 +478,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertEquals(20, service.totalWorkProperty().get(), 0);
     }
 
-    @Test public void totalWorkPropertyNotification() {
+    @Test
+    public void totalWorkPropertyNotification() {
+        setup(setupServiceFactory());
         final AtomicBoolean passed = new AtomicBoolean(false);
         service.totalWorkProperty().addListener((o, oldValue, newValue) -> passed.set(newValue.doubleValue() == 20));
         service.start();
@@ -411,14 +489,18 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(passed.get());
     }
 
-    @Test public void progressShouldBeNegativeOneAtStartOfRunningState() {
+    @Test
+    public void progressShouldBeNegativeOneAtStartOfRunningState() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         assertEquals(-1, service.getProgress(), 0);
         assertEquals(-1, task.progressProperty().get(), 0);
     }
 
-    @Test public void afterRunningProgressShouldBe_FiftyPercent() {
+    @Test
+    public void afterRunningProgressShouldBe_FiftyPercent() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         task.progress(10, 20);
@@ -426,7 +508,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertEquals(.5, task.progressProperty().get(), 0);
     }
 
-    @Test public void progressPropertyNotification() {
+    @Test
+    public void progressPropertyNotification() {
+        setup(setupServiceFactory());
         final AtomicBoolean passed = new AtomicBoolean(false);
         service.start();
         task.progressProperty().addListener((o, oldValue, newValue) -> passed.set(newValue.doubleValue() == .5));
@@ -435,14 +519,18 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(passed.get());
     }
 
-    @Test public void messageShouldBeEmptyStringWhenEnteringRunningState() {
+    @Test
+    public void messageShouldBeEmptyStringWhenEnteringRunningState() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         assertEquals("", service.getMessage());
         assertEquals("", task.messageProperty().get());
     }
 
-    @Test public void messageShouldBeLastSetValue() {
+    @Test
+    public void messageShouldBeLastSetValue() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         task.message("Running");
@@ -450,7 +538,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertEquals("Running", task.messageProperty().get());
     }
 
-    @Test public void messagePropertyNotification() {
+    @Test
+    public void messagePropertyNotification() {
+        setup(setupServiceFactory());
         final AtomicBoolean passed = new AtomicBoolean(false);
         service.start();
         task.messageProperty().addListener((o, oldValue, newValue) -> passed.set("Running".equals(service.getMessage())));
@@ -459,14 +549,18 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(passed.get());
     }
 
-    @Test public void titleShouldBeEmptyStringAtStartOfRunningState() {
+    @Test
+    public void titleShouldBeEmptyStringAtStartOfRunningState() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         assertEquals("", service.getTitle());
         assertEquals("", task.titleProperty().get());
     }
 
-    @Test public void titleShouldBeLastSetValue() {
+    @Test
+    public void titleShouldBeLastSetValue() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         task.title("Title");
@@ -474,7 +568,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertEquals("Title", task.titleProperty().get());
     }
 
-    @Test public void titlePropertyNotification() {
+    @Test
+    public void titlePropertyNotification() {
+        setup(setupServiceFactory());
         final AtomicBoolean passed = new AtomicBoolean(false);
         service.start();
         task.titleProperty().addListener((o, oldValue, newValue) -> passed.set("Title".equals(service.getTitle())));
@@ -487,15 +583,20 @@ public class ServiceLifecycleTest extends ServiceTestBase {
      * Throw an exception in the running state                              *
      ***********************************************************************/
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void callingStartInFailedStateIsISE() {
-        service.start();
-        executor.executeScheduled();
-        task.fail(new Exception("anything"));
-        service.start();
+        setup(setupServiceFactory());
+        assertThrows(IllegalStateException.class, () -> {
+            service.start();
+            executor.executeScheduled();
+            task.fail(new Exception("anything"));
+            service.start();
+        });
     }
 
-    @Test public void callingResetInFailedStateResetsStateToREADY() {
+    @Test
+    public void callingResetInFailedStateResetsStateToREADY() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         task.fail(new Exception("anything"));
@@ -505,7 +606,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertSame(Worker.State.READY, service.stateProperty().get());
     }
 
-    @Test public void callingResetInFailedStateResetsValueToNull() {
+    @Test
+    public void callingResetInFailedStateResetsValueToNull() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         task.fail(new Exception("anything"));
@@ -515,7 +618,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertNull(service.valueProperty().get());
     }
 
-    @Test public void callingResetInFailedStateResetsExceptionToNull() {
+    @Test
+    public void callingResetInFailedStateResetsExceptionToNull() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         task.fail(new Exception("anything"));
@@ -525,7 +630,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertNull(service.exceptionProperty().get());
     }
 
-    @Test public void callingResetInFailedStateResetsWorkDoneToNegativeOne() {
+    @Test
+    public void callingResetInFailedStateResetsWorkDoneToNegativeOne() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         task.progress(10, 20);
@@ -536,7 +643,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertEquals(-1, service.workDoneProperty().get(), 0);
     }
 
-    @Test public void callingResetInFailedStateResetsTotalWorkToNegativeOne() {
+    @Test
+    public void callingResetInFailedStateResetsTotalWorkToNegativeOne() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         task.progress(10, 20);
@@ -547,7 +656,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertEquals(-1, service.totalWorkProperty().get(), 0);
     }
 
-    @Test public void callingResetInFailedStateResetsProgressToNegativeOne() {
+    @Test
+    public void callingResetInFailedStateResetsProgressToNegativeOne() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         task.progress(10, 20);
@@ -558,7 +669,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertEquals(-1, service.progressProperty().get(), 0);
     }
 
-    @Test public void callingResetInFailedStateResetsRunningToFalse() {
+    @Test
+    public void callingResetInFailedStateResetsRunningToFalse() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         task.fail(new Exception("anything"));
@@ -568,7 +681,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertFalse(service.runningProperty().get());
     }
 
-    @Test public void callingResetInFailedStateResetsMessageToEmptyString() {
+    @Test
+    public void callingResetInFailedStateResetsMessageToEmptyString() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         task.message("Message");
@@ -579,7 +694,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertEquals("", service.messageProperty().get());
     }
 
-    @Test public void callingResetInFailedStateResetsTitleToEmptyString() {
+    @Test
+    public void callingResetInFailedStateResetsTitleToEmptyString() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         task.title("Title");
@@ -590,7 +707,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertEquals("", service.titleProperty().get());
     }
 
-    @Test public void callingRestartInFailedStateReschedules() {
+    @Test
+    public void callingRestartInFailedStateReschedules() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         task.fail(new Exception("anything"));
@@ -599,7 +718,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertSame(Worker.State.SCHEDULED, service.stateProperty().get());
     }
 
-    @Test public void callingCancelInFailedStateResultsInNoChange() {
+    @Test
+    public void callingCancelInFailedStateResultsInNoChange() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         task.fail(new Exception("anything"));
@@ -612,16 +733,21 @@ public class ServiceLifecycleTest extends ServiceTestBase {
      * Proper Completion of a task                                          *
      ***********************************************************************/
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void callingStartInSucceededStateIsISE() {
-        service.start();
-        executor.executeScheduled();
-        task.progress(20, 20);
-        task.complete();
-        service.start();
+        setup(setupServiceFactory());
+        assertThrows(IllegalStateException.class, () -> {
+            service.start();
+            executor.executeScheduled();
+            task.progress(20, 20);
+            task.complete();
+            service.start();
+        });
     }
 
-    @Test public void callingResetInSucceededStateResetsStateToREADY() {
+    @Test
+    public void callingResetInSucceededStateResetsStateToREADY() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         task.progress(20, 20);
@@ -632,7 +758,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertSame(Worker.State.READY, service.stateProperty().get());
     }
 
-    @Test public void callingResetInSucceededStateResetsValueToNull() {
+    @Test
+    public void callingResetInSucceededStateResetsValueToNull() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         task.progress(20, 20);
@@ -643,7 +771,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertNull(service.valueProperty().get());
     }
 
-    @Test public void callingResetInSucceededStateResetsExceptionToNull() {
+    @Test
+    public void callingResetInSucceededStateResetsExceptionToNull() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         task.progress(20, 20);
@@ -654,7 +784,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertNull(service.exceptionProperty().get());
     }
 
-    @Test public void callingResetInSucceededStateResetsWorkDoneToNegativeOne() {
+    @Test
+    public void callingResetInSucceededStateResetsWorkDoneToNegativeOne() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         task.progress(20, 20);
@@ -665,7 +797,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertEquals(-1, service.workDoneProperty().get(), 0);
     }
 
-    @Test public void callingResetInSucceededStateResetsTotalWorkToNegativeOne() {
+    @Test
+    public void callingResetInSucceededStateResetsTotalWorkToNegativeOne() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         task.progress(20, 20);
@@ -676,7 +810,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertEquals(-1, service.totalWorkProperty().get(), 0);
     }
 
-    @Test public void callingResetInSucceededStateResetsProgressToNegativeOne() {
+    @Test
+    public void callingResetInSucceededStateResetsProgressToNegativeOne() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         task.progress(20, 20);
@@ -687,7 +823,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertEquals(-1, service.progressProperty().get(), 0);
     }
 
-    @Test public void callingResetInSucceededStateResetsRunningToFalse() {
+    @Test
+    public void callingResetInSucceededStateResetsRunningToFalse() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         task.progress(20, 20);
@@ -698,7 +836,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertFalse(service.runningProperty().get());
     }
 
-    @Test public void callingResetInSucceededStateResetsMessageToEmptyString() {
+    @Test
+    public void callingResetInSucceededStateResetsMessageToEmptyString() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         task.message("Message");
@@ -710,7 +850,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertEquals("", service.messageProperty().get());
     }
 
-    @Test public void callingResetInSucceededStateResetsTitleToEmptyString() {
+    @Test
+    public void callingResetInSucceededStateResetsTitleToEmptyString() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         task.title("Title");
@@ -722,7 +864,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertEquals("", service.titleProperty().get());
     }
 
-    @Test public void callingRestartInSucceededStateReschedules() {
+    @Test
+    public void callingRestartInSucceededStateReschedules() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         task.progress(20, 20);
@@ -732,7 +876,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertSame(Worker.State.SCHEDULED, service.stateProperty().get());
     }
 
-    @Test public void callingCancelInSucceededStateResultsInNoChange() {
+    @Test
+    public void callingCancelInSucceededStateResultsInNoChange() {
+        setup(setupServiceFactory());
         service.start();
         executor.executeScheduled();
         task.progress(20, 20);
@@ -748,20 +894,28 @@ public class ServiceLifecycleTest extends ServiceTestBase {
      *                                                                         *
      **************************************************************************/
 
-    @Test public void onReadyPropertyNameShouldMatchMethodName() {
+    @Test
+    public void onReadyPropertyNameShouldMatchMethodName() {
+        setup(setupServiceFactory());
         assertEquals("onReady", service.onReadyProperty().getName());
     }
 
-    @Test public void onReadyBeanShouldMatchService() {
+    @Test
+    public void onReadyBeanShouldMatchService() {
+        setup(setupServiceFactory());
         assertSame(service, service.onReadyProperty().getBean());
     }
 
-    @Test public void onReadyIsInitializedToNull() {
+    @Test
+    public void onReadyIsInitializedToNull() {
+        setup(setupServiceFactory());
         assertNull(service.getOnReady());
         assertNull(service.onReadyProperty().get());
     }
 
-    @Test public void onReadyFilterCalledBefore_onReady() {
+    @Test
+    public void onReadyFilterCalledBefore_onReady() {
+        setup(setupServiceFactory());
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean filterCalledFirst = new AtomicBoolean(false);
         service.start();
@@ -776,7 +930,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(filterCalledFirst.get());
     }
 
-    @Test public void onReadyHandlerCalled() {
+    @Test
+    public void onReadyHandlerCalled() {
+        setup(setupServiceFactory());
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         service.start();
         executor.executeScheduled();
@@ -789,7 +945,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(handlerCalled.get());
     }
 
-    @Test public void removed_onReadyHandlerNotCalled() {
+    @Test
+    public void removed_onReadyHandlerNotCalled() {
+        setup(setupServiceFactory());
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
         service.start();
@@ -805,7 +963,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertFalse(handlerCalled.get());
     }
 
-    @Test public void removed_onReadyFilterNotCalled() {
+    @Test
+    public void removed_onReadyFilterNotCalled() {
+        setup(setupServiceFactory());
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
         service.start();
@@ -821,7 +981,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertFalse(filterCalled.get());
     }
 
-    @Test public void cancelCalledFromOnReady() {
+    @Test
+    public void cancelCalledFromOnReady() {
+        setup(setupServiceFactory());
         final AtomicInteger cancelNotificationCount = new AtomicInteger();
         service.start();
         executor.executeScheduled();
@@ -844,20 +1006,28 @@ public class ServiceLifecycleTest extends ServiceTestBase {
      *                                                                         *
      **************************************************************************/
 
-    @Test public void onScheduledPropertyNameShouldMatchMethodName() {
+    @Test
+    public void onScheduledPropertyNameShouldMatchMethodName() {
+        setup(setupServiceFactory());
         assertEquals("onScheduled", service.onScheduledProperty().getName());
     }
 
-    @Test public void onScheduledBeanShouldMatchService() {
+    @Test
+    public void onScheduledBeanShouldMatchService() {
+        setup(setupServiceFactory());
         assertSame(service, service.onScheduledProperty().getBean());
     }
 
-    @Test public void onScheduledIsInitializedToNull() {
+    @Test
+    public void onScheduledIsInitializedToNull() {
+        setup(setupServiceFactory());
         assertNull(service.getOnScheduled());
         assertNull(service.onScheduledProperty().get());
     }
 
-    @Test public void onScheduledFilterCalledBefore_onScheduled() {
+    @Test
+    public void onScheduledFilterCalledBefore_onScheduled() {
+        setup(setupServiceFactory());
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean filterCalledFirst = new AtomicBoolean(false);
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_SCHEDULED, workerStateEvent -> filterCalled.set(true));
@@ -870,7 +1040,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(filterCalledFirst.get());
     }
 
-    @Test public void scheduledCalledAfterHandler() {
+    @Test
+    public void scheduledCalledAfterHandler() {
+        setup(setupServiceFactory());
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         service.setOnScheduled(workerStateEvent -> handlerCalled.set(true));
 
@@ -881,7 +1053,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(handlerCalled.get() && factory.getCurrentTask().scheduledSemaphore.getQueueLength() == 0);
     }
 
-    @Test public void scheduledCalledAfterHandlerEvenIfConsumed() {
+    @Test
+    public void scheduledCalledAfterHandlerEvenIfConsumed() {
+        setup(setupServiceFactory());
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         service.setOnScheduled(workerStateEvent -> {
             handlerCalled.set(true);
@@ -895,7 +1069,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(handlerCalled.get() && factory.getCurrentTask().scheduledSemaphore.getQueueLength() == 0);
     }
 
-    @Test public void onScheduledHandlerCalled() {
+    @Test
+    public void onScheduledHandlerCalled() {
+        setup(setupServiceFactory());
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         service.addEventHandler(WorkerStateEvent.WORKER_STATE_SCHEDULED, workerStateEvent -> handlerCalled.set(true));
 
@@ -905,7 +1081,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(handlerCalled.get());
     }
 
-    @Test public void removed_onScheduledHandlerNotCalled() {
+    @Test
+    public void removed_onScheduledHandlerNotCalled() {
+        setup(setupServiceFactory());
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
         EventHandler<WorkerStateEvent> handler = workerStateEvent -> handlerCalled.set(true);
@@ -919,7 +1097,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertFalse(handlerCalled.get());
     }
 
-    @Test public void removed_onScheduledFilterNotCalled() {
+    @Test
+    public void removed_onScheduledFilterNotCalled() {
+        setup(setupServiceFactory());
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
         EventHandler<WorkerStateEvent> filter = workerStateEvent -> filterCalled.set(true);
@@ -933,7 +1113,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertFalse(filterCalled.get());
     }
 
-    @Test public void cancelCalledFromOnScheduled() {
+    @Test
+    public void cancelCalledFromOnScheduled() {
+        setup(setupServiceFactory());
         final AtomicInteger cancelNotificationCount = new AtomicInteger();
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_SCHEDULED, workerStateEvent -> {
             service.cancel();
@@ -954,20 +1136,28 @@ public class ServiceLifecycleTest extends ServiceTestBase {
      *                                                                         *
      **************************************************************************/
 
-    @Test public void onRunningPropertyNameShouldMatchMethodName() {
+    @Test
+    public void onRunningPropertyNameShouldMatchMethodName() {
+        setup(setupServiceFactory());
         assertEquals("onRunning", service.onRunningProperty().getName());
     }
 
-    @Test public void onRunningBeanShouldMatchService() {
+    @Test
+    public void onRunningBeanShouldMatchService() {
+        setup(setupServiceFactory());
         assertSame(service, service.onRunningProperty().getBean());
     }
 
-    @Test public void onRunningIsInitializedToNull() {
+    @Test
+    public void onRunningIsInitializedToNull() {
+        setup(setupServiceFactory());
         assertNull(service.getOnRunning());
         assertNull(service.onRunningProperty().get());
     }
 
-    @Test public void onRunningFilterCalledBefore_onRunning() {
+    @Test
+    public void onRunningFilterCalledBefore_onRunning() {
+        setup(setupServiceFactory());
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean filterCalledFirst = new AtomicBoolean(false);
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_RUNNING, workerStateEvent -> filterCalled.set(true));
@@ -980,7 +1170,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(filterCalledFirst.get());
     }
 
-    @Test public void runningCalledAfterHandler() {
+    @Test
+    public void runningCalledAfterHandler() {
+        setup(setupServiceFactory());
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         service.setOnRunning(workerStateEvent -> handlerCalled.set(true));
 
@@ -991,7 +1183,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(handlerCalled.get() && factory.getCurrentTask().runningSemaphore.getQueueLength() == 0);
     }
 
-    @Test public void runningCalledAfterHandlerEvenIfConsumed() {
+    @Test
+    public void runningCalledAfterHandlerEvenIfConsumed() {
+        setup(setupServiceFactory());
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         service.setOnRunning(workerStateEvent -> {
             handlerCalled.set(true);
@@ -1005,7 +1199,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(handlerCalled.get() && factory.getCurrentTask().runningSemaphore.getQueueLength() == 0);
     }
 
-    @Test public void onRunningHandlerCalled() {
+    @Test
+    public void onRunningHandlerCalled() {
+        setup(setupServiceFactory());
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         service.addEventHandler(WorkerStateEvent.WORKER_STATE_RUNNING, workerStateEvent -> handlerCalled.set(true));
 
@@ -1015,7 +1211,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(handlerCalled.get());
     }
 
-    @Test public void removed_onRunningHandlerNotCalled() {
+    @Test
+    public void removed_onRunningHandlerNotCalled() {
+        setup(setupServiceFactory());
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
         EventHandler<WorkerStateEvent> handler = workerStateEvent -> handlerCalled.set(true);
@@ -1029,7 +1227,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertFalse(handlerCalled.get());
     }
 
-    @Test public void removed_onRunningFilterNotCalled() {
+    @Test
+    public void removed_onRunningFilterNotCalled() {
+        setup(setupServiceFactory());
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
         EventHandler<WorkerStateEvent> filter = workerStateEvent -> filterCalled.set(true);
@@ -1043,7 +1243,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertFalse(filterCalled.get());
     }
 
-    @Test public void cancelCalledFromOnRunning() {
+    @Test
+    public void cancelCalledFromOnRunning() {
+        setup(setupServiceFactory());
         final AtomicInteger cancelNotificationCount = new AtomicInteger();
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_RUNNING, workerStateEvent -> {
             service.cancel();
@@ -1064,20 +1266,28 @@ public class ServiceLifecycleTest extends ServiceTestBase {
      *                                                                         *
      **************************************************************************/
 
-    @Test public void onSucceededPropertyNameShouldMatchMethodName() {
+    @Test
+    public void onSucceededPropertyNameShouldMatchMethodName() {
+        setup(setupServiceFactory());
         assertEquals("onSucceeded", service.onSucceededProperty().getName());
     }
 
-    @Test public void onSucceededBeanShouldMatchService() {
+    @Test
+    public void onSucceededBeanShouldMatchService() {
+        setup(setupServiceFactory());
         assertSame(service, service.onSucceededProperty().getBean());
     }
 
-    @Test public void onSucceededIsInitializedToNull() {
+    @Test
+    public void onSucceededIsInitializedToNull() {
+        setup(setupServiceFactory());
         assertNull(service.getOnSucceeded());
         assertNull(service.onSucceededProperty().get());
     }
 
-    @Test public void onSucceededFilterCalledBefore_onSucceeded() {
+    @Test
+    public void onSucceededFilterCalledBefore_onSucceeded() {
+        setup(setupServiceFactory());
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean filterCalledFirst = new AtomicBoolean(false);
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_SUCCEEDED, workerStateEvent -> filterCalled.set(true));
@@ -1091,7 +1301,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(filterCalledFirst.get());
     }
 
-    @Test public void succeededCalledAfterHandler() {
+    @Test
+    public void succeededCalledAfterHandler() {
+        setup(setupServiceFactory());
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         service.setOnSucceeded(workerStateEvent -> handlerCalled.set(true));
 
@@ -1103,7 +1315,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(handlerCalled.get() && factory.getCurrentTask().succeededSemaphore.getQueueLength() == 0);
     }
 
-    @Test public void succeededCalledAfterHandlerEvenIfConsumed() {
+    @Test
+    public void succeededCalledAfterHandlerEvenIfConsumed() {
+        setup(setupServiceFactory());
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         service.setOnSucceeded(workerStateEvent -> {
             handlerCalled.set(true);
@@ -1118,7 +1332,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(handlerCalled.get() && factory.getCurrentTask().succeededSemaphore.getQueueLength() == 0);
     }
 
-    @Test public void onSucceededHandlerCalled() {
+    @Test
+    public void onSucceededHandlerCalled() {
+        setup(setupServiceFactory());
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         service.addEventHandler(WorkerStateEvent.WORKER_STATE_SUCCEEDED, workerStateEvent -> handlerCalled.set(true));
 
@@ -1129,7 +1345,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(handlerCalled.get());
     }
 
-    @Test public void removed_onSucceededHandlerNotCalled() {
+    @Test
+    public void removed_onSucceededHandlerNotCalled() {
+        setup(setupServiceFactory());
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
         EventHandler<WorkerStateEvent> handler = workerStateEvent -> handlerCalled.set(true);
@@ -1144,7 +1362,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertFalse(handlerCalled.get());
     }
 
-    @Test public void removed_onSucceededFilterNotCalled() {
+    @Test
+    public void removed_onSucceededFilterNotCalled() {
+        setup(setupServiceFactory());
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
         EventHandler<WorkerStateEvent> filter = workerStateEvent -> filterCalled.set(true);
@@ -1157,7 +1377,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         task.complete();
     }
 
-    @Test public void cancelCalledFromOnSucceeded() {
+    @Test
+    public void cancelCalledFromOnSucceeded() {
+        setup(setupServiceFactory());
         final AtomicInteger cancelNotificationCount = new AtomicInteger();
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_SUCCEEDED, workerStateEvent -> {
             service.cancel();
@@ -1179,20 +1401,28 @@ public class ServiceLifecycleTest extends ServiceTestBase {
      *                                                                         *
      **************************************************************************/
 
-    @Test public void onCancelledPropertyNameShouldMatchMethodName() {
+    @Test
+    public void onCancelledPropertyNameShouldMatchMethodName() {
+        setup(setupServiceFactory());
         assertEquals("onCancelled", service.onCancelledProperty().getName());
     }
 
-    @Test public void onCancelledBeanShouldMatchService() {
+    @Test
+    public void onCancelledBeanShouldMatchService() {
+        setup(setupServiceFactory());
         assertSame(service, service.onCancelledProperty().getBean());
     }
 
-    @Test public void onCancelledIsInitializedToNull() {
+    @Test
+    public void onCancelledIsInitializedToNull() {
+        setup(setupServiceFactory());
         assertNull(service.getOnCancelled());
         assertNull(service.onCancelledProperty().get());
     }
 
-    @Test public void onCancelledFilterCalledBefore_onCancelled() {
+    @Test
+    public void onCancelledFilterCalledBefore_onCancelled() {
+        setup(setupServiceFactory());
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean filterCalledFirst = new AtomicBoolean(false);
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, workerStateEvent -> filterCalled.set(true));
@@ -1206,7 +1436,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(filterCalledFirst.get());
     }
 
-    @Test public void cancelledCalledAfterHandler() {
+    @Test
+    public void cancelledCalledAfterHandler() {
+        setup(setupServiceFactory());
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         service.setOnCancelled(workerStateEvent -> handlerCalled.set(true));
 
@@ -1218,7 +1450,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(handlerCalled.get() && factory.getCurrentTask().cancelledSemaphore.getQueueLength() == 0);
     }
 
-    @Test public void cancelledCalledAfterHandlerEvenIfConsumed() {
+    @Test
+    public void cancelledCalledAfterHandlerEvenIfConsumed() {
+        setup(setupServiceFactory());
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         service.setOnCancelled(workerStateEvent -> {
             handlerCalled.set(true);
@@ -1233,7 +1467,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(handlerCalled.get() && factory.getCurrentTask().cancelledSemaphore.getQueueLength() == 0);
     }
 
-    @Test public void onCancelledHandlerCalled() {
+    @Test
+    public void onCancelledHandlerCalled() {
+        setup(setupServiceFactory());
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         service.addEventHandler(WorkerStateEvent.WORKER_STATE_CANCELLED, workerStateEvent -> handlerCalled.set(true));
 
@@ -1244,7 +1480,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(handlerCalled.get());
     }
 
-    @Test public void removed_onCancelledHandlerNotCalled() {
+    @Test
+    public void removed_onCancelledHandlerNotCalled() {
+        setup(setupServiceFactory());
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
         EventHandler<WorkerStateEvent> handler = workerStateEvent -> handlerCalled.set(true);
@@ -1259,7 +1497,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertFalse(handlerCalled.get());
     }
 
-    @Test public void removed_onCancelledFilterNotCalled() {
+    @Test
+    public void removed_onCancelledFilterNotCalled() {
+        setup(setupServiceFactory());
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
         EventHandler<WorkerStateEvent> filter = workerStateEvent -> filterCalled.set(true);
@@ -1274,7 +1514,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertFalse(filterCalled.get());
     }
 
-    @Test public void cancelCalledFromOnCancelled() {
+    @Test
+    public void cancelCalledFromOnCancelled() {
+        setup(setupServiceFactory());
         final AtomicInteger cancelNotificationCount = new AtomicInteger();
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, workerStateEvent -> {
             service.cancel();
@@ -1290,7 +1532,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertEquals(1, cancelNotificationCount.get());
     }
 
-    @Test public void cancelCalledFromOnFailed() {
+    @Test
+    public void cancelCalledFromOnFailed() {
+        setup(setupServiceFactory());
         final AtomicInteger cancelNotificationCount = new AtomicInteger();
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_FAILED, workerStateEvent -> {
             service.cancel();
@@ -1312,20 +1556,28 @@ public class ServiceLifecycleTest extends ServiceTestBase {
      *                                                                         *
      **************************************************************************/
 
-    @Test public void onFailedPropertyNameShouldMatchMethodName() {
+    @Test
+    public void onFailedPropertyNameShouldMatchMethodName() {
+        setup(setupServiceFactory());
         assertEquals("onFailed", service.onFailedProperty().getName());
     }
 
-    @Test public void onFailedBeanShouldMatchService() {
+    @Test
+    public void onFailedBeanShouldMatchService() {
+        setup(setupServiceFactory());
         assertSame(service, service.onFailedProperty().getBean());
     }
 
-    @Test public void onFailedIsInitializedToNull() {
+    @Test
+    public void onFailedIsInitializedToNull() {
+        setup(setupServiceFactory());
         assertNull(service.getOnFailed());
         assertNull(service.onFailedProperty().get());
     }
 
-    @Test public void onFailedFilterCalledBefore_onFailed() {
+    @Test
+    public void onFailedFilterCalledBefore_onFailed() {
+        setup(setupServiceFactory());
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean filterCalledFirst = new AtomicBoolean(false);
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_FAILED, workerStateEvent -> filterCalled.set(true));
@@ -1339,7 +1591,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(filterCalledFirst.get());
     }
 
-    @Test public void failedCalledAfterHandler() {
+    @Test
+    public void failedCalledAfterHandler() {
+        setup(setupServiceFactory());
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         service.setOnFailed(workerStateEvent -> handlerCalled.set(true));
 
@@ -1351,7 +1605,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(handlerCalled.get() && factory.getCurrentTask().failedSemaphore.getQueueLength() == 0);
     }
 
-    @Test public void failedCalledAfterHandlerEvenIfConsumed() {
+    @Test
+    public void failedCalledAfterHandlerEvenIfConsumed() {
+        setup(setupServiceFactory());
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         service.setOnFailed(workerStateEvent -> handlerCalled.set(true));
 
@@ -1363,7 +1619,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(handlerCalled.get() && factory.getCurrentTask().failedSemaphore.getQueueLength() == 0);
     }
 
-    @Test public void onFailedHandlerCalled() {
+    @Test
+    public void onFailedHandlerCalled() {
+        setup(setupServiceFactory());
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         service.addEventHandler(WorkerStateEvent.WORKER_STATE_FAILED, workerStateEvent -> handlerCalled.set(true));
 
@@ -1374,7 +1632,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertTrue(handlerCalled.get());
     }
 
-    @Test public void removed_onFailedHandlerNotCalled() {
+    @Test
+    public void removed_onFailedHandlerNotCalled() {
+        setup(setupServiceFactory());
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
         EventHandler<WorkerStateEvent> handler = workerStateEvent -> handlerCalled.set(true);
@@ -1389,7 +1649,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertFalse(handlerCalled.get());
     }
 
-    @Test public void removed_onFailedFilterNotCalled() {
+    @Test
+    public void removed_onFailedFilterNotCalled() {
+        setup(setupServiceFactory());
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
         EventHandler<WorkerStateEvent> filter = workerStateEvent -> filterCalled.set(true);
@@ -1412,7 +1674,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
      *                                                                         *
      **************************************************************************/
 
-    @Test public void canCreateServiceOnRandomThread() {
+    @Test
+    public void canCreateServiceOnRandomThread() {
+        setup(setupServiceFactory());
         RandomThread random = new RandomThread(() -> {
             DoNothingService s = null;
             try {
@@ -1424,7 +1688,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         random.test();
     }
 
-    @Test public void canGetReferencesToPropertiesOnRandomThread() {
+    @Test
+    public void canGetReferencesToPropertiesOnRandomThread() {
+        setup(setupServiceFactory());
         RandomThread random = new RandomThread(() -> {
             DoNothingService s = null;
             try {
@@ -1452,7 +1718,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         random.test();
     }
 
-    @Test public void canInvokeGettersOnRandomThread() {
+    @Test
+    public void canInvokeGettersOnRandomThread() {
+        setup(setupServiceFactory());
         RandomThread random = new RandomThread(() -> {
             DoNothingService s = null;
             try {
@@ -1480,7 +1748,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         random.test();
     }
 
-    @Test public void canInvokeSettersOnRandomThread() {
+    @Test
+    public void canInvokeSettersOnRandomThread() {
+        setup(setupServiceFactory());
         RandomThread random = new RandomThread(() -> {
             DoNothingService s = null;
             try {
@@ -1506,7 +1776,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         random.test();
     }
 
-    @Test public void canInvokeStartOnRandomThread() {
+    @Test
+    public void canInvokeStartOnRandomThread() {
+        setup(setupServiceFactory());
         RandomThread random = new RandomThread(() -> {
             DoNothingService s = null;
             try {
@@ -1519,298 +1791,338 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         random.test();
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokeRestartOnRandomThreadAfterStart() throws Throwable {
-        assertThrowsException(s -> s.restart());
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> s.restart());
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokeCancelOnRandomThreadAfterStart() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.cancel();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokeSettersOnRandomThreadAfterStart_1() throws Throwable {
-        assertThrowsException(s ->
-                ServiceShim.setEventHandler(s, WorkerStateEvent.ANY, event -> {
-        }));
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s ->
+                ServiceShim.setEventHandler(s, WorkerStateEvent.ANY, event -> { }));
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokeSettersOnRandomThreadAfterStart_2() throws Throwable {
-        assertThrowsException(s -> s.setOnCancelled(event -> {
-        }));
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> s.setOnCancelled(event -> { }));
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokeSettersOnRandomThreadAfterStart_3() throws Throwable {
-        assertThrowsException(s -> s.setOnFailed(event -> { }));
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> s.setOnFailed(event -> { }));
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokeSettersOnRandomThreadAfterStart_4() throws Throwable {
-        assertThrowsException(s -> s.setOnReady(event -> { }));
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> s.setOnReady(event -> { }));
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokeSettersOnRandomThreadAfterStart_5() throws Throwable {
-        assertThrowsException(s -> s.setOnRunning(event -> { }));
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> s.setOnRunning(event -> { }));
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokeSettersOnRandomThreadAfterStart_6() throws Throwable {
-        assertThrowsException(s -> s.setOnScheduled(event -> {
-        }));
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> s.setOnScheduled(event -> { }));
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokeSettersOnRandomThreadAfterStart_7() throws Throwable {
-        assertThrowsException(s -> s.setOnSucceeded(event -> { }));
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> s.setOnSucceeded(event -> { }));
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokeGettersOnRandomThreadAfterStart_1() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.getException();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokeGettersOnRandomThreadAfterStart_2() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.getExecutor();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokeGettersOnRandomThreadAfterStart_3() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.getMessage();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokeGettersOnRandomThreadAfterStart_4() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.getProgress();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokeGettersOnRandomThreadAfterStart_5() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.getOnCancelled();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokeGettersOnRandomThreadAfterStart_6() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.getOnFailed();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokeGettersOnRandomThreadAfterStart_7() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.getOnReady();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokeGettersOnRandomThreadAfterStart_8() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.getOnRunning();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokeGettersOnRandomThreadAfterStart_9() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.getOnScheduled();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokeGettersOnRandomThreadAfterStart_10() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.getOnSucceeded();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokeGettersOnRandomThreadAfterStart_11() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.isRunning();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokeGettersOnRandomThreadAfterStart_12() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.getState();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokeGettersOnRandomThreadAfterStart_13() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.getTitle();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokeGettersOnRandomThreadAfterStart_14() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.getTotalWork();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokeGettersOnRandomThreadAfterStart_15() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.getValue();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokeGettersOnRandomThreadAfterStart_16() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.getValue();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_1() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.exceptionProperty();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_2() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.executorProperty();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_3() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.messageProperty();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_4() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.progressProperty();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_5() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.onCancelledProperty();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_6() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.onFailedProperty();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_7() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.onReadyProperty();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_8() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.onRunningProperty();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_9() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.onScheduledProperty();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_10() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.onSucceededProperty();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_11() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.runningProperty();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_12() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.stateProperty();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_13() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.titleProperty();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_14() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.totalWorkProperty();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_15() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.valueProperty();
         });
     }
 
-    @Test (expected = IllegalStateException.class)
+    @Test
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_16() throws Throwable {
-        assertThrowsException(s -> {
+        setup(setupServiceFactory());
+        assertThrowsException(IllegalStateException.class, s -> {
             s.workDoneProperty();
         });
     }
 
-    private void assertThrowsException(final ServiceTestExecution c) throws Throwable {
-        RandomThread random = new RandomThread(() -> {
-            DoNothingService s = null;
+    private void assertThrowsException(Class exceptionClass, final ServiceTestExecution c) throws Throwable {
+        assertThrows(exceptionClass, () -> {
+            RandomThread random = new RandomThread(() -> {
+                DoNothingService s = null;
+                try {
+                    s = new DoNothingService();
+                    s.start();
+                    c.test(s);
+                } finally {
+                    if (s != null) s.shutdown();
+                }
+            });
+
             try {
-                s = new DoNothingService();
-                s.start();
-                c.test(s);
-            } finally {
-                if (s != null) s.shutdown();
+                random.test();
+            } catch (AssertionError er) {
+                throw er.getCause();
             }
         });
-
-        try {
-            random.test();
-        } catch (AssertionError er) {
-            throw er.getCause();
-        }
     }
 
     private interface ServiceTestExecution {
@@ -1920,7 +2232,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
      *                                                                         *
      **************************************************************************/
 
-    @Test public void eventFiredOnSubclassWorks() {
+    @Test
+    public void eventFiredOnSubclassWorks() {
+        setup(setupServiceFactory());
         final AtomicBoolean result = new AtomicBoolean(false);
         TestServiceFactory factory = new TestServiceFactory() {
             @Override public AbstractTask createTestTask() {

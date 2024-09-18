@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,7 @@ package test.javafx.concurrent;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import javafx.concurrent.Service;
-import org.junit.Before;
+//import org.junit.jupiter.api.BeforeEach; NOTE: revert once parametrized classes are added
 
 /**
  * Base class for tests of the Service class. This class has built into it
@@ -41,7 +41,6 @@ public abstract class ServiceTestBase {
     protected TestServiceFactory factory;
     protected Service<String> service;
 
-    protected abstract TestServiceFactory setupServiceFactory();
     protected Executor createExecutor() {
         return command -> {
             if (command == null) Thread.dumpStack();
@@ -61,8 +60,11 @@ public abstract class ServiceTestBase {
         };
     }
 
-    @Before public void setup() {
-        factory = setupServiceFactory();
+    // NOTE: This should be reverted once parametrized class tests are added to JUnit5
+    //       For now, tests call this manually
+    // @BeforeEach
+    public void setup(TestServiceFactory factory) {
+        this.factory = factory;
         factory.test = this;
         service = factory.createService();
         service.setExecutor(createExecutor());

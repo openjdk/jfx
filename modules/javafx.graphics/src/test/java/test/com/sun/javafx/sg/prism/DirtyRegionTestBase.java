@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,10 +32,10 @@ import javafx.scene.layout.CornerRadii;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Stream;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.DirtyRegionContainer;
 import com.sun.javafx.geom.DirtyRegionPool;
@@ -49,8 +49,9 @@ import com.sun.javafx.sg.prism.NGRectangle;
 import com.sun.javafx.sg.prism.NGRegion;
 import com.sun.javafx.sg.prism.NGShape;
 import com.sun.prism.paint.Color;
-import org.junit.runners.Parameterized;
-import static org.junit.Assert.assertEquals;
+
+import org.junit.jupiter.params.provider.Arguments;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * A base class for all testing of the dirty regions. This class contains
@@ -69,6 +70,10 @@ import static org.junit.Assert.assertEquals;
  * combination of a node type & dirty method.
  */
 public class DirtyRegionTestBase extends NGTestBase {
+    protected static Stream<Arguments> appendArgument(Stream<Arguments> stream, Arguments arg) {
+        return Stream.concat(stream, Stream.of(arg));
+    }
+
     /**
      * Gets the test parameters to use when running these tests. The parameters
      * are a combination of a Polluter and a Creator. The Creator is used to
@@ -79,8 +84,7 @@ public class DirtyRegionTestBase extends NGTestBase {
      * change to the node's geometry is, such that the test code can create the
      * union and test for the appropriate dirty region for this specific node.
      */
-    @Parameterized.Parameters
-    public static Collection createParameters() {
+    public static Stream<Arguments> createParameters() {
         // This polluter will change the opacity of the test node
         final Polluter polluteOpacity = new Polluter() {
             @Override public void pollute(NGNode node) { node.setOpacity(.5f); }
@@ -201,7 +205,8 @@ public class DirtyRegionTestBase extends NGTestBase {
 
         // We will populate this list with the parameters with which we will test.
         // Each Object[] within the params is composed of a Creator and a Polluter.
-        List<Object[]> params = new ArrayList<>();
+        Stream<Arguments> params = Stream.empty();
+        //List<Object[]> params = new ArrayList<>();
         // A standard list of polluters which applies to all tests
         List<Polluter> polluters = Arrays.asList(new Polluter[]{
                 polluteRotate,
@@ -216,10 +221,13 @@ public class DirtyRegionTestBase extends NGTestBase {
         });
         // Construct the Creator / Polluter pair for Groups
         for (final Polluter polluter : polluters) {
-            params.add(new Object[] {new Creator() {
-                @Override public NGNode create() { return createGroup(createRectangle(0, 0, 100, 100)); }
-                @Override public String toString() { return "Group with one Rectangle"; }
-            }, polluter});
+            params = appendArgument(params, Arguments.of(
+                new Creator() {
+                    @Override public NGNode create() { return createGroup(createRectangle(0, 0, 100, 100)); }
+                    @Override public String toString() { return "Group with one Rectangle"; }
+                },
+                polluter
+            ));
         }
         // Construct the Creator / Polluter pair for Rectangles
         List<Polluter> rectanglePolluters = new ArrayList<>(polluters);
@@ -232,10 +240,13 @@ public class DirtyRegionTestBase extends NGTestBase {
             @Override public String toString() { return "Pollute Rectangle Geometry"; }
         });
         for (final Polluter polluter : rectanglePolluters) {
-            params.add(new Object[] {new Creator() {
-                @Override public NGNode create() { return createRectangle(0, 0, 100, 100); }
-                @Override public String toString() { return "Rectangle"; }
-            }, polluter});
+            params = appendArgument(params, Arguments.of(
+                new Creator() {
+                    @Override public NGNode create() { return createRectangle(0, 0, 100, 100); }
+                    @Override public String toString() { return "Rectangle"; }
+                },
+                polluter
+            ));
         }
         // Construct the Creator / Polluter pair for Circles
         List<Polluter> circlePolluters = new ArrayList<>(polluters);
@@ -251,26 +262,17 @@ public class DirtyRegionTestBase extends NGTestBase {
             @Override public String toString() { return "Pollute Circle Geometry"; }
         });
         for (final Polluter polluter : circlePolluters) {
-            params.add(new Object[] {new Creator() {
-                @Override public NGNode create() { return createCircle(50, 50, 50); }
-                @Override public String toString() { return "Circle"; }
-            }, polluter});
+            params = appendArgument(params, Arguments.of(
+                new Creator() {
+                    @Override public NGNode create() { return createCircle(50, 50, 50); }
+                    @Override public String toString() { return "Circle"; }
+                },
+                polluter
+            ));
         }
         // Return the populated params collection
         return params;
     }
-
-    /**
-     * The test node creator. This is called from within the "setUp" method in each
-     * subclass to create the nodes that are going to be tested.
-     */
-    protected Creator creator;
-
-    /**
-     * The polluter. Subclasses will use the polluter to make a node dirty at the
-     * appropriate time in the test method.
-     */
-    protected Polluter polluter;
 
     /**
      * The root node. This must be created during the "setUp" method in each sub
@@ -286,18 +288,6 @@ public class DirtyRegionTestBase extends NGTestBase {
      * whether accumulating dirty regions takes the clip into account.
      */
     protected RectBounds windowClip = new RectBounds(-100000, -100000, 100000, 10000);
-
-    /**
-     * Creates a new DirtyRegionTestBase. Each subclass must have an identical
-     * constructor which simply passes the creator and polluter to this
-     * constructor. These instances are passed to the constructor by JUnit,
-     * so sub classes don't need to worry about creating these instances
-     * (and in fact must not do so).
-     */
-    protected DirtyRegionTestBase(Creator creator, Polluter polluter) {
-        this.creator = creator;
-        this.polluter = polluter;
-    }
 
     /**
      * Helper method for asserting that the dirty region of the node indicated
@@ -340,7 +330,7 @@ public class DirtyRegionTestBase extends NGTestBase {
                 Math.min(expected.getMaxX() + 1, dirtyRegion.getMaxX()),
                 Math.min(expected.getMaxY() + 1, dirtyRegion.getMaxY()));
         // Now make the check, and print useful error information in case it fails.
-        assertEquals("creator=" + creator + ", polluter=" + polluter, expected, dirtyRegion);
+        assertEquals(expected, dirtyRegion);
     }
 
     /**
@@ -428,7 +418,6 @@ public class DirtyRegionTestBase extends NGTestBase {
      */
     private void assertOnlyTheseNodesWereAskedToAccumulateDirtyRegions(NGNode start, Set<NGNode> nodes) {
         assertEquals(
-                "creator=" + creator + ", polluter=" + polluter,
                 nodes.contains(start), ((TestNGNode)start).askedToAccumulateDirtyRegion());
         if (start instanceof NGGroup) {
             for (NGNode child : ((NGGroup)start).getChildren()) {
@@ -443,7 +432,6 @@ public class DirtyRegionTestBase extends NGTestBase {
      */
     private void assertOnlyTheseNodesWereAskedToComputeDirtyRegions(NGNode start, Set<NGNode> nodes) {
         assertEquals(
-                "creator=" + creator + ", polluter=" + polluter,
                 nodes.contains(start), ((TestNGNode)start).computedDirtyRegion());
         if (start instanceof NGGroup) {
             for (NGNode child : ((NGGroup)start).getChildren()) {

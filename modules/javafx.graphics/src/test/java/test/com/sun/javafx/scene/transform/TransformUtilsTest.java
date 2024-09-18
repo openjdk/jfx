@@ -36,6 +36,7 @@ import test.com.sun.javafx.test.TransformHelper;
 import test.javafx.scene.transform.TransformOperationsTest;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.provider.Arguments;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -102,8 +103,9 @@ public class TransformUtilsTest {
 
     @Test public void testImmutableTransformState() {
         int counter = 0;
-        for (Object o : TransformOperationsTest.getParams()) {
-            Object[] arr = (Object[]) o;
+        List<Arguments> arguments = TransformOperationsTest.getParams().toList();
+        for (Arguments arg : arguments) {
+            Object[] arr = arg.get();
             if (arr[0] instanceof TransformShim.ImmutableTransformShim) {
                 TransformShim.ImmutableTransformShim t =
                         (TransformShim.ImmutableTransformShim) arr[0];
@@ -118,8 +120,9 @@ public class TransformUtilsTest {
 
     @Test public void testReusedImmutableTransform() {
         int counter = 0;
-        for (Object o : TransformOperationsTest.getParams()) {
-            Object[] arr = (Object[]) o;
+        List<Arguments> arguments = TransformOperationsTest.getParams().toList();
+        for (Arguments arg : arguments) {
+            Object[] arr = arg.get();
             if (arr[0] instanceof TransformShim.ImmutableTransformShim) {
 
                 Transform t = (Transform) arr[0];
@@ -172,8 +175,9 @@ public class TransformUtilsTest {
     @Test public void testConcatenatedImmutableTransform() {
 
         List<TransformShim.ImmutableTransformShim> ts = new LinkedList<>();
-        for (Object o : TransformOperationsTest.getParams()) {
-            Object[] arr = (Object[]) o;
+        List<Arguments> arguments = TransformOperationsTest.getParams().toList();
+        for (Arguments arg : arguments) {
+            Object[] arr = arg.get();
             if (arr[0] instanceof TransformShim.ImmutableTransformShim) {
                 ts.add((TransformShim.ImmutableTransformShim) arr[0]);
             }
