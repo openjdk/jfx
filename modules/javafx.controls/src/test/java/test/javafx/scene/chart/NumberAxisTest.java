@@ -29,11 +29,10 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTimeout;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -46,6 +45,7 @@ import javafx.scene.chart.NumberAxisShim;
 import javafx.util.StringConverter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * All public members of NumberAxis are tested here .
@@ -257,72 +257,67 @@ public class NumberAxisTest {
     }
 
     @Test
+    @Timeout(value=1000, unit=TimeUnit.MILLISECONDS)
     public void testCloseValues() {
-        assertTimeout(Duration.ofMillis(1000), () -> {
-            axis.setForceZeroInRange(false);
-            axis.setSide(Side.LEFT);
-            double minValue = 1.0;
-            double maxValue = minValue + Math.ulp(minValue);
-            NumberAxisShim.autoRange(axis, minValue, maxValue, 500, 50);
-        });
+        axis.setForceZeroInRange(false);
+        axis.setSide(Side.LEFT);
+        double minValue = 1.0;
+        double maxValue = minValue + Math.ulp(minValue);
+        NumberAxisShim.autoRange(axis, minValue, maxValue, 500, 50);
     }
 
     @Test
+    @Timeout(value=1000, unit=TimeUnit.MILLISECONDS)
     public void testCloseValuesMinorTicks() {
-        assertTimeout(Duration.ofMillis(1000), () -> {
-            axis.setForceZeroInRange(false);
-            axis.setSide(Side.LEFT);
-            double minValue = 1.0;
-            double maxValue = minValue + 11 * Math.ulp(minValue);
-            Object range = NumberAxisShim.autoRange(axis, minValue, maxValue, 500, 50);
-            NumberAxisShim.setRange(axis, range, false);
-            NumberAxisShim.calculateMinorTickMarks(axis);
-        });
+        axis.setForceZeroInRange(false);
+        axis.setSide(Side.LEFT);
+        double minValue = 1.0;
+        double maxValue = minValue + 11 * Math.ulp(minValue);
+        Object range = NumberAxisShim.autoRange(axis, minValue, maxValue, 500, 50);
+        NumberAxisShim.setRange(axis, range, false);
+        NumberAxisShim.calculateMinorTickMarks(axis);
     }
 
     @Test
+    @Timeout(value=1000, unit=TimeUnit.MILLISECONDS)
     public void testEqualLargeValues() {
-        assertTimeout(Duration.ofMillis(1000), () -> {
-            axis.setForceZeroInRange(false);
-            axis.setSide(Side.LEFT);
-            double minValue = Math.pow(2, 52); // ulp == 1.0
-            double maxValue = minValue;
-            NumberAxisShim.autoRange(axis, minValue, maxValue, 500, 50);
-        });
+        axis.setForceZeroInRange(false);
+        axis.setSide(Side.LEFT);
+        double minValue = Math.pow(2, 52); // ulp == 1.0
+        double maxValue = minValue;
+        NumberAxisShim.autoRange(axis, minValue, maxValue, 500, 50);
     }
 
     @Test
+    @Timeout(value=1000, unit=TimeUnit.MILLISECONDS)
     public void testCloseValuesNoAutorange() {
-        assertTimeout(Duration.ofMillis(1000), () -> {
-            axis.setForceZeroInRange(false);
-            axis.setSide(Side.LEFT);
-            axis.setAutoRanging(false);
-            double minValue = 1.0;
-            double maxValue = minValue + Math.ulp(minValue);
-            axis.setLowerBound(minValue);
-            axis.setUpperBound(maxValue);
-            // minValue + tickUnit == minValue
-            axis.setTickUnit(0.5 * Math.ulp(minValue));
-            Object range = NumberAxisShim.getRange(axis);
-            NumberAxisShim.calculateTickValues(axis, 500, range);
-            NumberAxisShim.calculateMinorTickMarks(axis);
-        });
+        axis.setForceZeroInRange(false);
+        axis.setSide(Side.LEFT);
+        axis.setAutoRanging(false);
+        double minValue = 1.0;
+        double maxValue = minValue + Math.ulp(minValue);
+        axis.setLowerBound(minValue);
+        axis.setUpperBound(maxValue);
+        // minValue + tickUnit == minValue
+        axis.setTickUnit(0.5 * Math.ulp(minValue));
+        Object range = NumberAxisShim.getRange(axis);
+        NumberAxisShim.calculateTickValues(axis, 500, range);
+        NumberAxisShim.calculateMinorTickMarks(axis);
     }
 
     @Test
+    @Timeout(value=1000, unit=TimeUnit.MILLISECONDS)
     public void testCloseValuesMinorTicksNoAutoRange() {
-        assertTimeout(Duration.ofMillis(1000), () -> {
-            axis.setForceZeroInRange(false);
-            axis.setSide(Side.LEFT);
-            axis.setAutoRanging(false);
-            double minValue = 1.0;
-            double maxValue = minValue + Math.ulp(minValue);
-            axis.setLowerBound(minValue);
-            axis.setUpperBound(maxValue);
-            axis.setTickUnit(Math.ulp(minValue));
-            Object range = NumberAxisShim.getRange(axis);
-            NumberAxisShim.calculateTickValues(axis, 500, range);
-            NumberAxisShim.calculateMinorTickMarks(axis);
-        });
+        axis.setForceZeroInRange(false);
+        axis.setSide(Side.LEFT);
+        axis.setAutoRanging(false);
+        double minValue = 1.0;
+        double maxValue = minValue + Math.ulp(minValue);
+        axis.setLowerBound(minValue);
+        axis.setUpperBound(maxValue);
+        axis.setTickUnit(Math.ulp(minValue));
+        Object range = NumberAxisShim.getRange(axis);
+        NumberAxisShim.calculateTickValues(axis, 500, range);
+        NumberAxisShim.calculateMinorTickMarks(axis);
     }
 }
