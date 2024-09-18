@@ -7,6 +7,8 @@
           -->
         <ant dir="ColorCube" target="jar" inheritAll="true"/>
         <ant dir="DragDrop" target="jar" inheritAll="true"/>
+        <ant dir="HelloWorld" target="jar" inheritAll="true"/>
+        <ant dir="EmbeddedSwing" target="jar" inheritAll="true"/>
         <ant dir="HelloFXCanvas" target="jar" inheritAll="true"/>
     </target>
 
@@ -24,6 +26,8 @@
         <ant dir="LayoutDemo" target="clean" inheritAll="true"/>
         <ant dir="PickTest3D" target="clean" inheritAll="true"/>
         <ant dir="DragDrop" target="clean" inheritAll="true"/>
+        <ant dir="HelloWorld" target="clean" inheritAll="true"/>
+        <ant dir="EmbeddedSwing" target="clean" inheritAll="true"/>
         <ant dir="HelloFXCanvas" target="clean" inheritAll="true"/>
     </target>
 
