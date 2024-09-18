@@ -165,5 +165,4 @@ public class PlatformStartupCommon {
     protected void doTestStartupImplicitExit() {
         doTestCommon(true);
     }
-
 }

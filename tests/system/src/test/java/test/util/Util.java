@@ -63,8 +63,18 @@ public class Util {
         public abstract boolean await(long timeout, TimeUnit unit);
     }
 
-    public static void throwError(Throwable e) {
-        fail(e);
+    public static void throwError(Throwable testError) {
+        if (testError != null) {
+            if (testError instanceof Error) {
+                throw (Error)testError;
+            } else if (testError instanceof RuntimeException) {
+                throw (RuntimeException)testError;
+            } else {
+                fail(testError);
+            }
+        } else {
+            fail("Unexpected exception");
+        }
     }
 
     public static void sleep(long msec) {
