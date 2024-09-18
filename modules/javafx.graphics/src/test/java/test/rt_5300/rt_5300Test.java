@@ -30,10 +30,10 @@ import com.sun.prism.BasicStroke;
 import com.sun.prism.Image;
 import com.sun.prism.PixelFormat;
 import java.nio.ByteBuffer;
-import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertTimeout;
+import org.junit.jupiter.api.Timeout;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class rt_5300Test {
@@ -41,7 +41,7 @@ public class rt_5300Test {
     public rt_5300Test() {
     }
 
-    @Test()
+    @Test
     public void RT5346() {
         int num_bands = 4;
         byte[] bytes = new byte[32 * 32 * num_bands];
@@ -65,11 +65,10 @@ public class rt_5300Test {
     }
 
     @Test
+    @Timeout(value=5000, unit=TimeUnit.MILLISECONDS)
     public void testArcs() {
-        assertTimeout(Duration.ofMillis(5000), () -> {
-            test(10f, null);
-            test(10f, new float[] {2f, 2f});
-        });
+        test(10f, null);
+        test(10f, new float[] {2f, 2f});
     }
 
     public static void test(float lw, float dashes[]) {

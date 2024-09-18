@@ -28,9 +28,9 @@ package test.com.sun.javafx.geom;
 import com.sun.javafx.geom.Path2D;
 
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertTimeout;
+import org.junit.jupiter.api.Timeout;
 
-import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @test
@@ -86,19 +86,17 @@ public class Path2DGrowTest {
     }
 
     @Test
+    @Timeout(value=10000, unit=TimeUnit.MILLISECONDS)
     public void testEmptyFloatPaths() {
-        assertTimeout(Duration.ofMillis(10000), () -> {
-            echo("\n - Test: new Path2D(0) ---");
-            test(() -> new Path2D(Path2D.WIND_NON_ZERO, 0));
-        });
+        echo("\n - Test: new Path2D(0) ---");
+        test(() -> new Path2D(Path2D.WIND_NON_ZERO, 0));
     }
 
     @Test
+    @Timeout(value=10000, unit=TimeUnit.MILLISECONDS)
     public void testFloatPaths() {
-        assertTimeout(Duration.ofMillis(10000), () -> {
-            echo("\n - Test: new Path2D() ---");
-            test(() -> new Path2D());
-        });
+        echo("\n - Test: new Path2D() ---");
+        test(() -> new Path2D());
     }
 
     interface PathFactory {

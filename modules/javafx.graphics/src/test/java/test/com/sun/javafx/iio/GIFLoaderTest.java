@@ -31,13 +31,13 @@ import com.sun.javafx.iio.ImageStorage;
 import com.sun.javafx.iio.gif.GIFImageLoader2;
 import java.awt.image.*;
 import java.io.*;
-import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTimeout;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -111,34 +111,33 @@ public class GIFLoaderTest {
     }
 
     @Test
+    @Timeout(value=2000, unit=TimeUnit.MILLISECONDS)
     public void testCtorReadBadExtension()  {
-        assertTimeout(Duration.ofMillis(2000), () -> {
-            final byte badGifData[] = {
-                'G', 'I', 'F', '8', '9', 'a',
-                1, 0, 1, 0, -112, 0, 0, -18, 51, 34,
-                0, 0, 0, 44, 0, 0, 0, 0, 1, 0, 1, 0,
-                0, 2, 2, 4, 1, 43, 48
-            };
+        final byte badGifData[] = {
+            'G', 'I', 'F', '8', '9', 'a',
+            1, 0, 1, 0, -112, 0, 0, -18, 51, 34,
+            0, 0, 0, 44, 0, 0, 0, 0, 1, 0, 1, 0,
+            0, 2, 2, 4, 1, 43, 48
+        };
 
-            // Create a loader using the data containing a bad GIF extension
-            GIFImageLoader2 loader = null;
-            try {
-                loader = new GIFImageLoader2(new TestStream(badGifData));
-            } catch (IOException ioEx) {
-                fail("unexpected IOException:" + ioEx.toString());
-            }
-            assertNotNull(loader);
+        // Create a loader using the data containing a bad GIF extension
+        GIFImageLoader2 loader = null;
+        try {
+            loader = new GIFImageLoader2(new TestStream(badGifData));
+        } catch (IOException ioEx) {
+            fail("unexpected IOException:" + ioEx.toString());
+        }
+        assertNotNull(loader);
 
-            // Now try to load the image; it should get an EOFException
-            try {
-                loader.load(0, 1, 1, true, true);
-            } catch (EOFException ex) {
-                return; // PASSED
-            } catch (IOException ioEx) {
-                fail("unexpected IOException:" + ioEx.toString());
-            }
-            fail("expected EOF exception for streams with bad extension");
-        });
+        // Now try to load the image; it should get an EOFException
+        try {
+            loader.load(0, 1, 1, true, true);
+        } catch (EOFException ex) {
+            return; // PASSED
+        } catch (IOException ioEx) {
+            fail("unexpected IOException:" + ioEx.toString());
+        }
+        fail("expected EOF exception for streams with bad extension");
     }
 
     private void compareBGRaAndIndexed(byte dataRGBA[], byte dataIndexed[], int paletteBGRA[]) {

@@ -30,11 +30,11 @@ import test.com.sun.javafx.iio.ImageTestHelper;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTimeout;
 
 public class PNGImageLoaderTest {
 
@@ -51,8 +51,8 @@ public class PNGImageLoaderTest {
     }
 
     @Test
+    @Timeout(value=1000, unit=TimeUnit.MILLISECONDS)
     public void testRT27010() throws IOException {
-        assertTimeout(Duration.ofMillis(1000), () -> {
         assertThrows(IOException.class, () -> {
             int[] corruptedIDATLength = {
                 137, 80, 78, 71, 13, 10, 26, 10, // signature
@@ -65,12 +65,11 @@ public class PNGImageLoaderTest {
             ByteArrayInputStream stream = ImageTestHelper.constructStreamFromInts(corruptedIDATLength);
             testImage(stream);
         });
-        });
     }
 
     @Test
+    @Timeout(value=1000, unit=TimeUnit.MILLISECONDS)
     public void testRT27010MultipleIDAT() throws IOException {
-        assertTimeout(Duration.ofMillis(1000), () -> {
         assertThrows(IOException.class, () -> {
             int[] corruptedIDATLength = {
                 137, 80, 78, 71, 13, 10, 26, 10, // signature
@@ -85,7 +84,6 @@ public class PNGImageLoaderTest {
 
             ByteArrayInputStream stream = ImageTestHelper.constructStreamFromInts(corruptedIDATLength);
             testImage(stream);
-        });
         });
     }
 }

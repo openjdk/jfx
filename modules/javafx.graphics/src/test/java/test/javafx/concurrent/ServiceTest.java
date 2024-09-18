@@ -30,7 +30,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import test.javafx.concurrent.mocks.SimpleTask;
 
-import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -42,11 +42,11 @@ import javafx.concurrent.Worker;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTimeout;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -191,40 +191,39 @@ public class ServiceTest {
     // and several micro / milliseconds to get setup and execute. So 2 seconds should be more
     // than enough time.
     @Test
-    public void testManyServicesRunConcurrently() {
+    @Timeout(value=2000, unit=TimeUnit.MILLISECONDS)
+    public void testManyServicesRunConcurrently() throws InterruptedException {
         if (PlatformUtil.isWindows()) {
             assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8284552
         }
 
-        assertTimeout(Duration.ofMillis(2000), () -> {
-            final CountDownLatch latch = new CountDownLatch(32);
-            for (int i=0; i<32; i++) {
-                Service<Void> s = new ServiceShim<>() {
-                    @Override public void checkThread() { }
-                    @Override public void runLater(Runnable r) { r.run(); }
+        final CountDownLatch latch = new CountDownLatch(32);
+        for (int i=0; i<32; i++) {
+            Service<Void> s = new ServiceShim<>() {
+                @Override public void checkThread() { }
+                @Override public void runLater(Runnable r) { r.run(); }
 
-                    @Override protected Task<Void> createTask() {
-                        return new TaskShim<>() {
-                            @Override protected Void call() throws Exception {
-                                Thread.sleep(1000);
-                                latch.countDown();
-                                return null;
-                            }
+                @Override protected Task<Void> createTask() {
+                    return new TaskShim<>() {
+                        @Override protected Void call() throws Exception {
+                            Thread.sleep(1000);
+                            latch.countDown();
+                            return null;
+                        }
 
-                            @Override public void runLater(Runnable r) {
-                                r.run();
-                            }
+                        @Override public void runLater(Runnable r) {
+                            r.run();
+                        }
 
-                            @Override public boolean isFxApplicationThread() {
-                                return true;
-                            }
-                        };
+                        @Override public boolean isFxApplicationThread() {
+                            return true;
+                        }
+                    };
 
-                    }
-                };
-                s.start();
-            }
-            latch.await();
-        });
+                }
+            };
+            s.start();
+        }
+        latch.await();
     }
 }

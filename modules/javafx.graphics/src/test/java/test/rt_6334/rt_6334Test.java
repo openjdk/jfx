@@ -34,9 +34,9 @@ import com.sun.javafx.geom.Shape;
 import com.sun.prism.BasicStroke;
 
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertTimeout;
+import org.junit.jupiter.api.Timeout;
 
-import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 public class rt_6334Test {
     static int numcoords[] = { 2, 2, 4, 6, 0 };
@@ -76,15 +76,14 @@ public class rt_6334Test {
     }
 
     @Test
+    @Timeout(value=1000, unit=TimeUnit.MILLISECONDS)
     public void test_6334() {
-        assertTimeout(Duration.ofMillis(1000), () -> {
-            Path2D p = new Path2D();
-            p.moveTo(304.51f, 179.78f);
-            p.quadTo(301.00f, 180.78f, 305.20f, 180.76f);
-            p.quadTo(305.35f, 180.76f, 304.51f, 179.78f);
-            p.closePath();
-            testPath(p, 1f);
-        });
+        Path2D p = new Path2D();
+        p.moveTo(304.51f, 179.78f);
+        p.quadTo(301.00f, 180.78f, 305.20f, 180.76f);
+        p.quadTo(305.35f, 180.76f, 304.51f, 179.78f);
+        p.closePath();
+        testPath(p, 1f);
     }
 
     static float rndFlt() {
@@ -95,47 +94,44 @@ public class rt_6334Test {
     }
 
     @Test
+    @Timeout(value=5000, unit=TimeUnit.MILLISECONDS)
     public void testLines() {
-        assertTimeout(Duration.ofMillis(5000), () -> {
-            Line2D l = new Line2D();
-            for (int i = 0; i < 50000; i++) {
-                l.setLine(rndCoord(), rndCoord(),
-                        rndCoord(), rndCoord());
-                testPath(l, 1f);
-                testPath(l, rndFlt() * 10f);
-                testPath(l, 20f);
-            }
-        });
+        Line2D l = new Line2D();
+        for (int i = 0; i < 50000; i++) {
+            l.setLine(rndCoord(), rndCoord(),
+                    rndCoord(), rndCoord());
+            testPath(l, 1f);
+            testPath(l, rndFlt() * 10f);
+            testPath(l, 20f);
+        }
     }
 
     @Test
+    @Timeout(value=5000, unit=TimeUnit.MILLISECONDS)
     public void testQuads() {
-        assertTimeout(Duration.ofMillis(5000), () -> {
-            QuadCurve2D qc = new QuadCurve2D();
-            for (int i = 0; i < 50000; i++) {
-                qc.setCurve(rndCoord(), rndCoord(),
-                            rndCoord(), rndCoord(),
-                            rndCoord(), rndCoord());
-                testPath(qc, 1f);
-                testPath(qc, rndFlt() * 10f);
-                testPath(qc, 20f);
-            }
-        });
+        QuadCurve2D qc = new QuadCurve2D();
+        for (int i = 0; i < 50000; i++) {
+            qc.setCurve(rndCoord(), rndCoord(),
+                        rndCoord(), rndCoord(),
+                        rndCoord(), rndCoord());
+            testPath(qc, 1f);
+            testPath(qc, rndFlt() * 10f);
+            testPath(qc, 20f);
+        }
     }
 
     @Test
+    @Timeout(value=5000, unit=TimeUnit.MILLISECONDS)
     public void testCubics() {
-        assertTimeout(Duration.ofMillis(5000), () -> {
-            CubicCurve2D cc = new CubicCurve2D();
-            for (int i = 0; i < 50000; i++) {
-                cc.setCurve(rndCoord(), rndCoord(),
-                            rndCoord(), rndCoord(),
-                            rndCoord(), rndCoord(),
-                            rndCoord(), rndCoord());
-                testPath(cc, 1f);
-                testPath(cc, rndFlt() * 10f);
-                testPath(cc, 20f);
-            }
-        });
+        CubicCurve2D cc = new CubicCurve2D();
+        for (int i = 0; i < 50000; i++) {
+            cc.setCurve(rndCoord(), rndCoord(),
+                        rndCoord(), rndCoord(),
+                        rndCoord(), rndCoord(),
+                        rndCoord(), rndCoord());
+            testPath(cc, 1f);
+            testPath(cc, rndFlt() * 10f);
+            testPath(cc, 20f);
+        }
     }
 }
