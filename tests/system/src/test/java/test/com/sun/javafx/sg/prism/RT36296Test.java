@@ -25,9 +25,8 @@
 package test.com.sun.javafx.sg.prism;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTimeout;
-import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Application;
@@ -42,6 +41,7 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import test.util.Util;
 
 public class RT36296Test {
@@ -77,24 +77,23 @@ public class RT36296Test {
     }
 
     @Test
+    @Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
     public void TestBug() {
-        assertTimeout(Duration.ofMillis(15_000), () -> {
-            Label label = new Label();
-            label.setStyle(" -fx-border-style:dashed; -fx-border-width:0; ");
-            label.setText("test");
+        Label label = new Label();
+        label.setStyle(" -fx-border-style:dashed; -fx-border-width:0; ");
+        label.setText("test");
 
-            SnapshotParameters params = new SnapshotParameters();
-            params.setViewport(new Rectangle2D(0, 0, 100, 100));
-            Platform.runLater(() -> {
-                Scene scene = new Scene(new Group(label));
-                label.snapshot(p -> done(), params, new WritableImage(100, 100));
-            });
-            try {
-                latch.await();
-            } catch (InterruptedException ex) {
-                Logger.getLogger(RT36296Test.class.getName()).log(Level.SEVERE, null, ex);
-            }
+        SnapshotParameters params = new SnapshotParameters();
+        params.setViewport(new Rectangle2D(0, 0, 100, 100));
+        Platform.runLater(() -> {
+            Scene scene = new Scene(new Group(label));
+            label.snapshot(p -> done(), params, new WritableImage(100, 100));
         });
+        try {
+            latch.await();
+        } catch (InterruptedException ex) {
+            Logger.getLogger(RT36296Test.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     public Void done() {

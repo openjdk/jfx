@@ -27,9 +27,9 @@ package test.com.sun.marlin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTimeout;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
@@ -51,6 +51,7 @@ import javafx.util.Duration;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import test.util.Util;
 
 /**
@@ -146,13 +147,8 @@ public class QPathTest {
     }
 
     @Test
+    @Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
     public void TestBug() {
-        assertTimeout(java.time.Duration.ofMillis(15_000), () -> {
-            test();
-        });
-    }
-
-    private void test() {
         Platform.runLater(() -> {
             SVGPath path = new SVGPath();
             String svgpath = readPath();

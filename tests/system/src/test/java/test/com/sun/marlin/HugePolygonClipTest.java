@@ -25,16 +25,15 @@
 package test.com.sun.marlin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTimeout;
 import static org.junit.jupiter.api.Assertions.fail;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.time.Duration;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageWriteParam;
@@ -56,6 +55,7 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import test.util.Util;
 
 /**
@@ -135,58 +135,57 @@ public class HugePolygonClipTest {
     }
 
     @Test
+    @Timeout(value=10000, unit=TimeUnit.MILLISECONDS)
     public void TestHugePolygonCoords() throws InterruptedException {
-        assertTimeout(Duration.ofMillis(10000), () -> {
-            Util.runAndWait(() -> {
+        Util.runAndWait(() -> {
 
-                double dpi = Screen.getPrimary().getDpi();
-                System.out.println("dpi: " + dpi);
+            double dpi = Screen.getPrimary().getDpi();
+            System.out.println("dpi: " + dpi);
 
-                double dpiScale = Screen.getPrimary().getOutputScaleX();
-                System.out.println("dpiScale: " + dpiScale);
+            double dpiScale = Screen.getPrimary().getOutputScaleX();
+            System.out.println("dpiScale: " + dpiScale);
 
-                // original test case => large moveTo in Filler but no bug in Stroker:
-                Double longWidth = LARGE_X_COORDINATE + SCENE_WIDTH + 0.001;
+            // original test case => large moveTo in Filler but no bug in Stroker:
+            Double longWidth = LARGE_X_COORDINATE + SCENE_WIDTH + 0.001;
 
-                final Polygon veryWidePolygon;
+            final Polygon veryWidePolygon;
 
-                veryWidePolygon = new Polygon(
-                        longWidth, 50.0,
-                        longWidth, 100.0,
-                        0.0, 100.0,
-                        0.0, 0.0
-                );
+            veryWidePolygon = new Polygon(
+                    longWidth, 50.0,
+                    longWidth, 100.0,
+                    0.0, 100.0,
+                    0.0, 0.0
+            );
 
-                veryWidePolygon.setFill(Color.RED);
-                veryWidePolygon.setStroke(Color.GREEN);
-                veryWidePolygon.setStrokeWidth(WIDTH);
+            veryWidePolygon.setFill(Color.RED);
+            veryWidePolygon.setStroke(Color.GREEN);
+            veryWidePolygon.setStrokeWidth(WIDTH);
 
-                Group group = new Group(veryWidePolygon);
-                group.getTransforms().add(new Translate(-longWidth + SCENE_WIDTH, 100.0));
+            Group group = new Group(veryWidePolygon);
+            group.getTransforms().add(new Translate(-longWidth + SCENE_WIDTH, 100.0));
 
-                Scene scene = new Scene(group, SCENE_WIDTH, SCENE_HEIGHT, Color.BLACK);
-                myApp.stage.setScene(scene);
+            Scene scene = new Scene(group, SCENE_WIDTH, SCENE_HEIGHT, Color.BLACK);
+            myApp.stage.setScene(scene);
 
-                final SnapshotParameters sp = new SnapshotParameters();
-                sp.setFill(Color.BLACK);
-                sp.setViewport(new Rectangle2D(0, 0, SCENE_WIDTH, SCENE_HEIGHT));
+            final SnapshotParameters sp = new SnapshotParameters();
+            sp.setFill(Color.BLACK);
+            sp.setViewport(new Rectangle2D(0, 0, SCENE_WIDTH, SCENE_HEIGHT));
 
-                final WritableImage img = scene.getRoot().snapshot(sp, new WritableImage(SCENE_WIDTH, SCENE_HEIGHT));
+            final WritableImage img = scene.getRoot().snapshot(sp, new WritableImage(SCENE_WIDTH, SCENE_HEIGHT));
 
-                if (SAVE_IMAGE) {
-                    try {
-                        saveImage(img, OUTPUT_DIR, "TestHugePolygonCoords.png");
-                    } catch (IOException ex) {
-                        // ignore
-                    }
+            if (SAVE_IMAGE) {
+                try {
+                    saveImage(img, OUTPUT_DIR, "TestHugePolygonCoords.png");
+                } catch (IOException ex) {
+                    // ignore
                 }
+            }
 
-                // Check image on few pixels:
-                final PixelReader pr = img.getPixelReader();
+            // Check image on few pixels:
+            final PixelReader pr = img.getPixelReader();
 
-                final int x = SCENE_WIDTH / 2;
-                checkColumn(pr, x, SCENE_HEIGHT);
-            });
+            final int x = SCENE_WIDTH / 2;
+            checkColumn(pr, x, SCENE_HEIGHT);
         });
     }
 

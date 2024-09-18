@@ -25,10 +25,10 @@
 
 package test.com.sun.javafx.application;
 
-import static org.junit.jupiter.api.Assertions.assertTimeout;
-import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class InitializeJavaFXStartup2Test extends InitializeJavaFXStartupBase {
 
@@ -38,12 +38,11 @@ public class InitializeJavaFXStartup2Test extends InitializeJavaFXStartupBase {
     }
 
     @Test
+    @Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
     public void testStartupThenLaunch() throws Exception {
-        assertTimeout(Duration.ofMillis(15000), () -> {
-            // The first call to Application.launch should work
-            InitializeJavaFXLaunchBase.initializeApplicationLaunch();
+        // The first call to Application.launch should work
+        InitializeJavaFXLaunchBase.initializeApplicationLaunch();
 
-            doTestInitializeThenSecondLaunch();
-        });
+        doTestInitializeThenSecondLaunch();
     }
 }

@@ -26,15 +26,14 @@
 package test.com.sun.javafx.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTimeout;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class ConcurrentStartupTest {
     CountDownLatch startupLatch;
@@ -42,39 +41,42 @@ public class ConcurrentStartupTest {
     volatile Throwable error = null;
 
     @Test
-    public void testStartupReturnBeforeRunnableComplete() {
-        assertTimeout(Duration.ofMillis(15000), () -> {
-            startupLatch = new CountDownLatch(2);
-            mainLatch = new CountDownLatch(1);
-            Platform.startup(() -> {
-                try {
-                    if (!mainLatch.await(10, TimeUnit.SECONDS)) {
-                        error = new AssertionError("Timeout waiting for main latch");
-                    }
-                    try {
-                        assertEquals(2, startupLatch.getCount(), "Runnable executed out of order");
-                    } catch (Throwable err) {
-                        error = err;
-                    }
-                } catch (InterruptedException ex) {
-                    error = ex;
+    @Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
+    public void testStartupReturnBeforeRunnableComplete() throws Exception {
+        startupLatch = new CountDownLatch(2);
+        mainLatch = new CountDownLatch(1);
+        Platform.startup(() -> {
+            try {
+                if (!mainLatch.await(10, TimeUnit.SECONDS)) {
+                    error = new AssertionError("Timeout waiting for main latch");
                 }
-                startupLatch.countDown();
-            });
-            Platform.runLater(() -> {
                 try {
-                    assertEquals(1, startupLatch.getCount(), "Runnable executed out of order");
+                    assertEquals(2, startupLatch.getCount(), "Runnable executed out of order");
                 } catch (Throwable err) {
                     error = err;
                 }
-                startupLatch.countDown();
-            });
-            mainLatch.countDown();
-            assertTrue(startupLatch.await(10, TimeUnit.SECONDS));
-            if (error != null) {
-                fail(error);
+            } catch (InterruptedException ex) {
+                error = ex;
             }
+            startupLatch.countDown();
         });
+        Platform.runLater(() -> {
+            try {
+                assertEquals(1, startupLatch.getCount(), "Runnable executed out of order");
+            } catch (Throwable err) {
+                error = err;
+            }
+            startupLatch.countDown();
+        });
+        mainLatch.countDown();
+        assertTrue(startupLatch.await(10, TimeUnit.SECONDS));
+        if (error != null) {
+            if (error instanceof Error) {
+                throw (Error) error;
+            } else {
+                throw (Exception) error;
+            }
+        }
     }
 
     @AfterAll

@@ -24,16 +24,15 @@
  */
 package test.com.sun.marlin;
 
-import static org.junit.jupiter.api.Assertions.assertTimeout;
 import static org.junit.jupiter.api.Assertions.fail;
 import static test.util.Util.TIMEOUT;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Platform;
@@ -52,6 +51,7 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import test.util.Util;
 
 /**
@@ -95,13 +95,8 @@ public class ScaleX0Test {
     }
 
     @Test
+    @Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
     public void testMarlinAIOOBEwhenScaleXIs0() {
-        assertTimeout(Duration.ofMillis(15_000), () -> {
-            testMarlinAIOOBEwhenScaleXIs0Impl();
-        });
-    }
-
-    private void testMarlinAIOOBEwhenScaleXIs0Impl() {
         Scene scene = createScene();
 
         Platform.runLater(() -> {

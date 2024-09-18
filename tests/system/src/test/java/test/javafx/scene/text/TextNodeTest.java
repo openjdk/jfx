@@ -182,10 +182,10 @@ public class TextNodeTest {
         //test out of bounds
         text.setCaretPosition(4);
         text.setCaretBias(true);
-        assertEquals(empty, text.getCaretShape());
+        assertArrayEquals(empty, text.getCaretShape());
         text.setCaretPosition(4);
         text.setCaretBias(false);
-        assertEquals(empty, text.getCaretShape());
+        assertArrayEquals(empty, text.getCaretShape());
 
         //test empty text
         text.setText("");

@@ -25,10 +25,10 @@
 
 package test.com.sun.javafx.application;
 
-import static org.junit.jupiter.api.Assertions.assertTimeout;
-import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Test calling Platform.exit() without starting the FX runtime.
@@ -37,9 +37,8 @@ import org.junit.jupiter.api.Test;
 public class PlatformExitSimpleTest {
 
     @Test
+    @Timeout(value=5000, unit=TimeUnit.MILLISECONDS)
     public void testPlatformExit() {
-        assertTimeout(Duration.ofMillis(5_000), () -> {
-            Platform.exit();
-        });
+        Platform.exit();
     }
 }

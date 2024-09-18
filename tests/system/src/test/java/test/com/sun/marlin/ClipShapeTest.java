@@ -26,7 +26,6 @@ package test.com.sun.marlin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTimeout;
 import java.awt.BasicStroke;
 import java.awt.Shape;
 import java.awt.geom.CubicCurve2D;
@@ -37,12 +36,12 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Handler;
@@ -80,6 +79,7 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import test.util.Util;
 
 /**
@@ -991,27 +991,24 @@ NbPixels [All Test setups][n: 30] sum: 232 avg: 7.733 [1 | 27]
     }
 
     @Test
+    @Timeout(value=600000, unit=TimeUnit.MILLISECONDS)
     public void TestPoly() throws InterruptedException {
-        assertTimeout(Duration.ofMillis(600000), () -> {
-            test(new String[]{"-poly"});
-            test(new String[]{"-poly", "-doDash"});
-        });
+        test(new String[]{"-poly"});
+        test(new String[]{"-poly", "-doDash"});
     }
 
     @Test
+    @Timeout(value=900000, unit=TimeUnit.MILLISECONDS)
     public void TestQuad() throws InterruptedException {
-        assertTimeout(Duration.ofMillis(900000), () -> {
-            test(new String[]{"-quad"});
-            test(new String[]{"-quad", "-doDash"});
-        });
+        test(new String[]{"-quad"});
+        test(new String[]{"-quad", "-doDash"});
     }
 
     @Test
+    @Timeout(value=900000, unit=TimeUnit.MILLISECONDS)
     public void TestCubic() throws InterruptedException {
-        assertTimeout(Duration.ofMillis(900000), () -> {
-            test(new String[]{"-cubic"});
-            test(new String[]{"-cubic", "-doDash"});
-        });
+        test(new String[]{"-cubic"});
+        test(new String[]{"-cubic", "-doDash"});
     }
 
     private void test(String[] args) {

@@ -26,30 +26,29 @@
 package test.com.sun.javafx.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTimeout;
 import static org.junit.jupiter.api.Assertions.fail;
-import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class StaticStartupTest {
 
     @Test
+    @Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
     public void testStartupFromClinit() throws Exception {
-        assertTimeout(Duration.ofMillis(15_000), () -> {
-            Thread thr = new Thread(() -> {
-                try {
-                    Thread.sleep(20000);
-                } catch (InterruptedException ex) {}
-                System.err.println("Test timeout exceeded -- calling System.exit");
-                System.exit(1);
-            });
-            thr.setDaemon(true);
-            thr.start();
-            StaticClass.doSomething();
+        Thread thr = new Thread(() -> {
+            try {
+                Thread.sleep(20000);
+            } catch (InterruptedException ex) {}
+            System.err.println("Test timeout exceeded -- calling System.exit");
+            System.exit(1);
         });
+        thr.setDaemon(true);
+        thr.start();
+        StaticClass.doSomething();
     }
 
     @AfterAll

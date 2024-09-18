@@ -25,11 +25,10 @@
 package test.com.sun.marlin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTimeout;
 import static org.junit.jupiter.api.Assertions.fail;
 import java.awt.Color;
-import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.application.Application;
 import javafx.geometry.Rectangle2D;
@@ -48,6 +47,7 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import test.util.Util;
 
 /**
@@ -110,13 +110,8 @@ public class ScaleClipTest {
     }
 
     @Test
+    @Timeout(value=10000, unit=TimeUnit.MILLISECONDS)
     public void TestNegativeScaleClipPath() throws InterruptedException {
-        assertTimeout(Duration.ofMillis(10000), () -> {
-            TestNegativeScaleClipPathImpl();
-        });
-    }
-
-    private void TestNegativeScaleClipPathImpl() {
         final AtomicBoolean fail = new AtomicBoolean();
 
         for (SCALE_MODE mode : SCALE_MODE.values()) {
@@ -138,13 +133,8 @@ public class ScaleClipTest {
     }
 
     @Test
+    @Timeout(value=10000, unit=TimeUnit.MILLISECONDS)
     public void TestMarginScaleClipPath() throws InterruptedException {
-        assertTimeout(Duration.ofMillis(10000), () -> {
-            TestMarginScaleClipPathImpl();
-        });
-    }
-
-    private void TestMarginScaleClipPathImpl() {
         final AtomicBoolean fail = new AtomicBoolean();
 
         // testMarginScale:
