@@ -9,6 +9,7 @@
         <ant dir="DragDrop" target="jar" inheritAll="true"/>
         <ant dir="HelloWorld" target="jar" inheritAll="true"/>
         <ant dir="EmbeddedSwing" target="jar" inheritAll="true"/>
+        <ant dir="HelloFXCanvas" target="jar" inheritAll="true"/>
     </target>
 
     <target description="Build the toys" name="jar" depends="swingJar">
@@ -27,6 +28,7 @@
         <ant dir="DragDrop" target="clean" inheritAll="true"/>
         <ant dir="HelloWorld" target="clean" inheritAll="true"/>
         <ant dir="EmbeddedSwing" target="clean" inheritAll="true"/>
+        <ant dir="HelloFXCanvas" target="clean" inheritAll="true"/>
     </target>
 
 </project>

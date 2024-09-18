@@ -444,7 +444,7 @@ public class RobotTest {
     public void testMousePressThrowsNPEForNullArgument() {
         Util.runAndWait(() -> {
             try {
-                robot.mousePress(null);
+                robot.mousePress((MouseButton[])null);
             } catch (NullPointerException e) {
                 return;
             }
@@ -466,7 +466,7 @@ public class RobotTest {
     public void testMouseReleaseThrowsNPEForNullArgument() {
         Util.runAndWait(() -> {
             try {
-                robot.mouseRelease(null);
+                robot.mouseRelease((MouseButton[])null);
             } catch (NullPointerException e) {
                 return;
             }
@@ -488,7 +488,7 @@ public class RobotTest {
     public void testMouseClickThrowsNPEForNullArgument() {
         Util.runAndWait(() -> {
             try {
-                robot.mouseClick(null);
+                robot.mouseClick((MouseButton[])null);
             } catch (NullPointerException e) {
                 return;
             }
