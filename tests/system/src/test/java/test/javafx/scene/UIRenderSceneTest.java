@@ -91,7 +91,7 @@ public class UIRenderSceneTest {
 
         for (Node node : stage.getScene().getRoot().getChildrenUnmodifiable()) {
             CheckBox box = (CheckBox) node;
-            Assertions.assertEquals("Wrong text", "Check", ((Text) box.lookup(".text")).getText());
+            Assertions.assertEquals("Check", ((Text) box.lookup(".text")).getText(), "Wrong text");
         }
     }
 }
