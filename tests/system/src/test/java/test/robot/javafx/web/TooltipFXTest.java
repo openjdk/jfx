@@ -47,7 +47,6 @@ import org.junit.jupiter.api.Timeout;
 import test.util.Util;
 import test.util.memory.JMemoryBuddy;
 
-@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class TooltipFXTest {
 
     private static final String html = "<html>" +
@@ -108,6 +107,7 @@ public class TooltipFXTest {
 
 // ========================== TEST CASE ==========================
     @Test
+    @Timeout(value=20)
     public void testTooltipLeak() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
 

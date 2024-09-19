@@ -31,7 +31,6 @@ import static test.javafx.scene.shape.meshmanagercacheleaktest.Constants.ERROR_L
 import static test.javafx.scene.shape.meshmanagercacheleaktest.Constants.ERROR_NONE;
 import static test.javafx.scene.shape.meshmanagercacheleaktest.Constants.ERROR_OOM;
 import java.util.ArrayList;
-import java.util.concurrent.TimeUnit;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,7 +40,6 @@ import org.junit.jupiter.api.Timeout;
 /**
  * Unit test for verifying leak with cache of TriangleMesh in PredefinedMeshManager.
  */
-@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class MeshManagerCacheLeakTest {
 
     private final String className = MeshManagerCacheLeakTest.class.getName();
@@ -55,16 +53,19 @@ public class MeshManagerCacheLeakTest {
     }
 
     @Test
+    @Timeout(value=15)
     public void testSphereCacheLeakTest() throws Exception {
         testMeshManagerCacheLeak("Sphere", "10");
     }
 
     @Test
+    @Timeout(value=15)
     public void testCylinderCacheLeakTest() throws Exception {
         testMeshManagerCacheLeak("Cylinder", "25");
     }
 
     @Test
+    @Timeout(value=20)
     public void testBoxCacheLeakTest() throws Exception {
         testMeshManagerCacheLeak("Box", "350");
     }

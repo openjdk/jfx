@@ -43,7 +43,6 @@ import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
  *  */
 public final class RotateTest extends ParameterizedTestBase {
 
-    private TestTouchDevice device;
     private int newX1;
     private int newY1;
     private static final int ZERO_ANGLE = 0;
@@ -60,11 +59,11 @@ public final class RotateTest extends ParameterizedTestBase {
     // @BeforeEach
     // junit5 does not support parameterized class-level tests yet
     public void init(TestTouchDevice device) throws Exception {
+        createDevice(device, null);
+        
         //Rotate tests should be run only on platforms that support current feature
         Assumptions.assumeTrue(Boolean.getBoolean("com.sun.javafx.gestures.rotate"));
 
-        this.device = device;
-        createDevice(device, null);
         centerX = (int) Math.round(width * 0.5);
         centerY = (int) Math.round(height * 0.5);
         radius = (int) Math.round(height * 0.45);

@@ -37,7 +37,6 @@ import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
 
 public final class SwipeSimpleTest extends ParameterizedTestBase {
 
-    private TestTouchDevice device;
     private final int SWIPE_THRESHOLD = 10;
     int startPointX;
     int startPointY;
@@ -63,7 +62,7 @@ public final class SwipeSimpleTest extends ParameterizedTestBase {
     // @BeforeEach
     // junit5 does not support parameterized class-level tests yet
     public void init(TestTouchDevice device) throws Exception {
-        this.device = device;
+        createDevice(device, null);
         TestApplication.getStage().getScene().addEventHandler(
                 GestureEvent.ANY,
                 e -> TestLogShim.format("%s at %.0f, %.0f",

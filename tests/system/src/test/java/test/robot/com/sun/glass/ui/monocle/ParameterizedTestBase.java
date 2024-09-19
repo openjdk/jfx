@@ -35,7 +35,7 @@ import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 
 public abstract class ParameterizedTestBase {
 
-    private TestTouchDevice device;
+    protected TestTouchDevice device;
     private String testName;
     private Throwable exception;
     protected double width;

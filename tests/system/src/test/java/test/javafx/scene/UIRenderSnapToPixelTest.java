@@ -24,6 +24,7 @@
  */
 package test.javafx.scene;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.concurrent.CountDownLatch;
 import javafx.application.Application;
@@ -36,7 +37,6 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import com.sun.javafx.PlatformUtil;
@@ -65,15 +65,15 @@ public class UIRenderSnapToPixelTest {
     public void testScrollPaneSnapChildrenToPixels() {
         assumeTrue(PlatformUtil.isLinux() || PlatformUtil.isWindows());
 
-        Assertions.assertEquals(scale, stage.getRenderScaleY(), 0.0001, "Wrong render scale");
+        assertEquals(scale, stage.getRenderScaleY(), 0.0001, "Wrong render scale");
 
         for (Node node : stage.getScene().getRoot().getChildrenUnmodifiable()) {
             if (node instanceof ScrollPane) {
                 var sp = (ScrollPane) node;
-                Assertions.assertEquals(0, ((sp.snappedTopInset() * scale) + epsilon) % 1, 0.0001, "Top inset not snapped to pixel");
-                Assertions.assertEquals(0, ((sp.snappedBottomInset() * scale) + epsilon) % 1, 0.0001, "Bottom inset not snapped to pixel");
-                Assertions.assertEquals(0, ((sp.snappedLeftInset() * scale) + epsilon) % 1, 0.0001, "Left inset not snapped to pixel");
-                Assertions.assertEquals(0, ((sp.snappedRightInset() * scale) + epsilon) % 1, 0.0001, "Right inset not snapped to pixel");
+                assertEquals(0, ((sp.snappedTopInset() * scale) + epsilon) % 1, 0.0001, "Top inset not snapped to pixel");
+                assertEquals(0, ((sp.snappedBottomInset() * scale) + epsilon) % 1, 0.0001, "Bottom inset not snapped to pixel");
+                assertEquals(0, ((sp.snappedLeftInset() * scale) + epsilon) % 1, 0.0001, "Left inset not snapped to pixel");
+                assertEquals(0, ((sp.snappedRightInset() * scale) + epsilon) % 1, 0.0001, "Right inset not snapped to pixel");
             }
         }
     }

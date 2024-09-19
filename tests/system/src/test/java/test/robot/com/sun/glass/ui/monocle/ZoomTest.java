@@ -37,8 +37,6 @@ import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
 /** Zoom tests with two touch points */
 public final class ZoomTest extends ParameterizedTestBase {
 
-    private TestTouchDevice device;
-
     private static Collection<TestTouchDevice> parameters() {
         return TestTouchDevices.getTouchDeviceParameters(2);
     }
@@ -48,7 +46,6 @@ public final class ZoomTest extends ParameterizedTestBase {
     public void init(TestTouchDevice device) throws Exception {
         // verify zoom enabled
         Assumptions.assumeTrue(Boolean.getBoolean("com.sun.javafx.gestures.zoom"));
-        this.device = device;
         createDevice(device, null);
     }
 

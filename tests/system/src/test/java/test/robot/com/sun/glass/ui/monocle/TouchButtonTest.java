@@ -43,7 +43,6 @@ import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
 
 public final class TouchButtonTest extends ParameterizedTestBase {
 
-    private TestTouchDevice device;
     private Node button1;
     private Node button2;
     private Node button3;

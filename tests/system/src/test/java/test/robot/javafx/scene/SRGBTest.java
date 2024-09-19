@@ -28,7 +28,6 @@ package test.robot.javafx.scene;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.awt.GraphicsEnvironment;
 import java.awt.color.ColorSpace;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.swing.SwingUtilities;
 import javafx.geometry.Bounds;
@@ -51,7 +50,6 @@ import com.sun.javafx.PlatformUtil;
 import test.robot.testharness.VisualTestBase;
 import test.util.Util;
 
-@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class SRGBTest extends VisualTestBase {
 
     private static final int SWATCH_SIZE = 200;
@@ -215,9 +213,8 @@ public class SRGBTest extends VisualTestBase {
     // colors but they might both be working in the wrong space. We use an
     // AWT Robot to verify that they are working in sRGB.
     // Timeout for potential hang on XWayland, see JDK-8335468.
-    // the same timeout will apply to the rest of the tests
-    // @Test(timeout = 15000)
     @Test
+    @Timeout(value=15)
     public void sRGBPixelTest() throws Exception {
         assumeTrue(!Util.isOnWayland()); // JDK-8335470
         Rectangle swatch = prepareStage();
