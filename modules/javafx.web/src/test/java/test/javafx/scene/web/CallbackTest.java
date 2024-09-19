@@ -27,7 +27,7 @@ package test.javafx.scene.web;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -42,8 +42,8 @@ import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebEvent;
 import javafx.util.Callback;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Disabled;
+import org.junit.Test;
+import org.junit.Ignore;
 
 
 public class CallbackTest extends TestBase {
@@ -159,7 +159,7 @@ public class CallbackTest extends TestBase {
         }
     }
 
-    @Disabled("JDK-8290238")
+    @Ignore("JDK-8290238")
     @Test public void testCloseWindow() {
         clear();
         executeScript(JS_CLOSE);
@@ -197,7 +197,7 @@ public class CallbackTest extends TestBase {
 
         clear();
         script = JS_PROMPT.replaceAll("MESSAGE", message)
-                .replaceAll("DEFAULT", defaultValue);
+                       .replaceAll("DEFAULT", defaultValue);
         executeScript(script);
         mainUi.checkCalled(PROMPT, message, defaultValue);
 
@@ -279,7 +279,7 @@ public class CallbackTest extends TestBase {
                 ev -> {
                     Rectangle2D r = ev.getData();
                     called(RESIZED, r.getMinX(), r.getMinY(),
-                            r.getWidth(), r.getHeight());
+                                    r.getWidth(), r.getHeight());
                 };
 
         public final EventHandler<WebEvent<Boolean>> onVisibilityChanged =

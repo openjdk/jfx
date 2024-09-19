@@ -27,8 +27,8 @@ package test.com.sun.webkit.text;
 
 import com.sun.webkit.text.TextBreakIteratorShim;
 import java.text.BreakIterator;
-import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.Test;
+import static org.junit.Assert.assertEquals;
 
 /**
  * A unit test for the {@link TextBreakIterator} class.
@@ -51,20 +51,21 @@ public class TextBreakIteratorTest {
         int method = TextBreakIteratorShim.TEXT_BREAK_PRECEDING;
         for (int type : ITERATOR_TYPES) {
             String[] strings = new String[] {
-                    "", "a", "aa", "a a", "a a. a a."
+                "", "a", "aa", "a a", "a a. a a."
             };
             for (String string : strings) {
                 int length = string.length();
                 BreakIterator it =
                         TextBreakIteratorShim.getIterator(type, "en-US", string, false);
                 int[] positions = new int[] {
-                        length + 1, length + 2, length + 10
+                    length + 1, length + 2, length + 10
                 };
                 for (int position : positions) {
                     int result = TextBreakIteratorShim.invokeMethod(
                             it, method, position);
-                    assertEquals(length, result, "Unexpected result, type: " + type
-                            + ", string: " + string + ", position: " + position);
+                    assertEquals("Unexpected result, type: " + type
+                            + ", string: " + string + ", position: " + position,
+                            length, result);
                 }
             }
         }

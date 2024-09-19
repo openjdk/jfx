@@ -52,16 +52,16 @@ import javafx.scene.web.WebErrorEvent;
 import static javafx.scene.web.WebErrorEvent.USER_DATA_DIRECTORY_ALREADY_IN_USE;
 import static javafx.scene.web.WebErrorEvent.USER_DATA_DIRECTORY_IO_ERROR;
 import static javafx.scene.web.WebErrorEvent.USER_DATA_DIRECTORY_SECURITY_ERROR;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.AfterAll;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.fail;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.AfterClass;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.fail;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 public class UserDataDirectoryTest extends TestBase {
 
@@ -80,7 +80,7 @@ public class UserDataDirectoryTest extends TestBase {
     private WebEngine webEngine;
 
 
-    @BeforeAll
+    @BeforeClass
     public static void beforeClass() throws IOException {
         for (File dir : DIRS) {
             dir.mkdirs();
@@ -94,7 +94,7 @@ public class UserDataDirectoryTest extends TestBase {
         }
     }
 
-    @AfterAll
+    @AfterClass
     public static void afterClass() throws IOException {
         preLockedLock.release();
         preLockedRaf.close();
@@ -104,12 +104,12 @@ public class UserDataDirectoryTest extends TestBase {
     }
 
 
-    @BeforeEach
+    @Before
     public void before() {
         webEngine = createWebEngine();
     }
 
-    @AfterEach
+    @After
     public void after() {
         for (WebEngine webEngine : createdWebEngines) {
             dispose(webEngine);
@@ -711,7 +711,7 @@ public class UserDataDirectoryTest extends TestBase {
     }
 
     private static final class ErrorHandler
-            implements EventHandler<WebErrorEvent>
+        implements EventHandler<WebErrorEvent>
     {
         private final ArrayList<WebErrorEvent> errors = new ArrayList<>();
 

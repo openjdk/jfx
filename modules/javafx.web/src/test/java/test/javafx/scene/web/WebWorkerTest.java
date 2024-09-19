@@ -25,13 +25,13 @@
 
 package test.javafx.scene.web;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import java.io.File;
 import javafx.concurrent.Worker.State;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 public class WebWorkerTest extends TestBase {
 
@@ -44,7 +44,7 @@ public class WebWorkerTest extends TestBase {
         final WebEngine webEngine = getEngine();
         webEngine.setJavaScriptEnabled(true);
         load(new File("src/test/resources/test/html/worker.html"));
-        assertTrue(getLoadState() == State.SUCCEEDED, "Load task completed successfully");
+        assertTrue("Load task completed successfully", getLoadState() == State.SUCCEEDED);
 
         Thread.sleep(500);
 

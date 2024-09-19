@@ -30,10 +30,10 @@ import java.lang.management.ThreadMXBean;
 import javafx.event.EventHandler;
 import javafx.scene.web.WebEvent;
 import netscape.javascript.JSException;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Disabled;
+import org.junit.Test;
+import org.junit.Ignore;
 
-@Disabled("JDK-8280421")
+@Ignore("JDK-8280421")
 public class IrresponsiveScriptTest extends TestBase {
 
     @Test public void testInfiniteLoopInScript() {

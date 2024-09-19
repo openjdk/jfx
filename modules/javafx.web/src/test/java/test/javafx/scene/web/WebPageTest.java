@@ -29,10 +29,9 @@ import com.sun.webkit.WebPage;
 import com.sun.webkit.WebPageShim;
 import javafx.scene.web.WebEngineShim;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import org.junit.jupiter.api.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import org.junit.Test;
 
 public class WebPageTest extends TestBase {
 
@@ -46,17 +45,17 @@ public class WebPageTest extends TestBase {
         WebPage page = WebEngineShim.getPage(getEngine());
 
         loadContent(HTML);
-        assertEquals(HTML, getHtml(page), "HTML document");
+        assertEquals("HTML document", HTML, getHtml(page));
 
         // With XML document, getHtml() should return null
         loadContent(XML, "application/xml");
-        assertNull(getHtml(page), "XML document");
+        assertNull("XML document", getHtml(page));
 
         loadContent("");
-        assertEquals(PLAIN, getHtml(page), "Empty document");
+        assertEquals("Empty document", PLAIN, getHtml(page));
 
         loadContent("", "text/plain");
-        assertEquals(PLAIN, getHtml(page), "Empty text/plain document");
+        assertEquals("Empty text/plain document", PLAIN, getHtml(page));
     }
 
     private String getHtml(final WebPage page) throws Exception {
@@ -74,13 +73,13 @@ public class WebPageTest extends TestBase {
         // load content with single iframe, which leads to two frame
         loadContent(PTAG + IFRAME);
         submit(() -> {
-            assertEquals(2, WebPageShim.getFramesCount(page), "Expected two frames : ");
+            assertEquals("Expected two frames : ", 2, WebPageShim.getFramesCount(page));
         });
 
         // load content with only one element which leads to single frame
         loadContent(PTAG);
         submit(() -> {
-            assertEquals(1, WebPageShim.getFramesCount(page), "Expected single frame : ");
+            assertEquals("Expected single frame : ", 1, WebPageShim.getFramesCount(page));
         });
     }
 
@@ -90,19 +89,15 @@ public class WebPageTest extends TestBase {
                 "test/html/icutagparse.html").toExternalForm());
     }
 
-    @Test
+    @Test(expected = IllegalStateException.class)
     public void testGetClientTextLocationFromNonEventThread() {
-        assertThrows(IllegalStateException.class, () -> {
-            WebPage page = WebEngineShim.getPage(getEngine());
-            page.getClientTextLocation(0);
-        });
+        WebPage page = WebEngineShim.getPage(getEngine());
+        page.getClientTextLocation(0);
     }
 
-    @Test
+    @Test(expected = IllegalStateException.class)
     public void testGetClientLocationOffsetFromNonEventThread() {
-        assertThrows(IllegalStateException.class, () -> {
-            WebPage page = WebEngineShim.getPage(getEngine());
-            page.getClientLocationOffset(0, 0);
-        });
+        WebPage page = WebEngineShim.getPage(getEngine());
+        page.getClientLocationOffset(0, 0);
     }
 }

@@ -25,14 +25,14 @@
 
 package test.javafx.scene.web;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import javafx.scene.web.WebView;
@@ -70,17 +70,17 @@ public class LocalStorageTest extends TestBase {
         });
     }
 
-    @BeforeAll
+    @BeforeClass
     public static void beforeClass() throws IOException {
         deleteRecursively(LOCAL_STORAGE_DIR);
     }
 
-    @AfterAll
+    @AfterClass
     public static void afterClass() throws IOException {
         deleteRecursively(LOCAL_STORAGE_DIR);
     }
 
-    @AfterEach
+    @After
     public void after() {
         final WebEngine webEngine = getEngine();
         webEngine.setUserDataDirectory(null);

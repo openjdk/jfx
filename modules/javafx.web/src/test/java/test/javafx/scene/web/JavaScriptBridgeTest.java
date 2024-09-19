@@ -28,9 +28,8 @@ package test.javafx.scene.web;
 import javafx.scene.web.WebEngine;
 import netscape.javascript.JSException;
 import netscape.javascript.JSObject;
-import static org.junit.jupiter.api.Assertions.*;
-import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.Assert.*;
+import org.junit.Test;
 import org.w3c.dom.Document;
 
 public class JavaScriptBridgeTest extends TestBase {
@@ -686,19 +685,17 @@ public class JavaScriptBridgeTest extends TestBase {
     }
 
     // JDK-8187568
-    @Test
+    @Test(expected=NullPointerException.class)
     public void testcheckJSPeerTostring() {
         final JSObject doc = (JSObject) executeScript("document");
         loadContent("<h1></h1>");
-        assertThrows(NullPointerException.class, () -> {
-            submit(() -> {
-                getEngine().executeScript(doc.toString());
-            });
+        submit(() -> {
+            getEngine().executeScript(doc.toString());
         });
     }
 
     // JDK-8187568
-    @Test
+    @Test(expected=NullPointerException.class)
     public void testcheckJSPeerGetMember() {
         final JSObject doc = (JSObject) executeScript("document");
         submit(() -> {
@@ -706,50 +703,42 @@ public class JavaScriptBridgeTest extends TestBase {
         });
 
         loadContent("<h1></h1>");
-        assertThrows(NullPointerException.class, () -> {
-            submit(() -> {
-                doc.getMember("beforeload");
-            });
+        submit(() -> {
+            doc.getMember("beforeload");
         });
     }
 
     // JDK-8187568
-    @Test
+    @Test(expected=NullPointerException.class)
     public void testcheckJSPeerSetMember() {
         final JSObject doc = (JSObject) executeScript("document");
         loadContent("<h1></h1>");
-        assertThrows(NullPointerException.class, () -> {
-            submit(() -> {
-                doc.setMember("newMember", "newvalue");
-            });
+        submit(() -> {
+            doc.setMember("newMember", "newvalue");
         });
     }
 
     // JDK-8187568
-    @Test
+    @Test(expected=NullPointerException.class)
     public void testcheckJSPeerRemoveMember() {
         final JSObject doc = (JSObject) executeScript("document");
         submit(() -> {
             doc.setMember("oldMember", "oldmember");
         });
         loadContent("<h1></h1>");
-        assertThrows(NullPointerException.class, () -> {
-            submit(() -> {
-                doc.removeMember("oldMember");
-            });
+        submit(() -> {
+            doc.removeMember("oldMember");
         });
     }
 
     // JDK-8187568
-    @Test
-    void testcheckJSPeerEval() {
+    @Test(expected=NullPointerException.class)
+    public void testcheckJSPeerEval() {
         final JSObject doc = (JSObject) executeScript("document");
         executeScript("var x = 10;");
         loadContent("<h1></h1>");
-        assertThrows(NullPointerException.class, () -> {
-            submit(() -> {
-                doc.eval("x");
-            });
+        submit(() -> {
+            doc.eval("x");
         });
     }
 }

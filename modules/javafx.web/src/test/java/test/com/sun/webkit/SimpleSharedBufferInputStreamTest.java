@@ -33,17 +33,17 @@ import com.sun.webkit.SimpleSharedBufferInputStream;
 import com.sun.webkit.WebPage;
 import java.io.IOException;
 import java.util.Random;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Disabled;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.After;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.Ignore;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
-@Disabled("JDK-8290292")
+@Ignore("JDK-8290292")
 public class SimpleSharedBufferInputStreamTest {
 
     private static final int SEGMENT_SIZE = 0x1000;
@@ -54,7 +54,7 @@ public class SimpleSharedBufferInputStreamTest {
             new SimpleSharedBufferInputStream(sb);
 
 
-    @BeforeAll
+    @BeforeClass
     public static void beforeClass() throws ClassNotFoundException {
         if (PlatformUtil.isWindows()) {
             // Must load Microsoft libs before loading jfxwebkit.dll
@@ -560,7 +560,7 @@ public class SimpleSharedBufferInputStreamTest {
     }
 
 
-    @AfterEach
+    @After
     public void after() {
         SharedBufferShim.dispose(sb);
     }
@@ -597,7 +597,7 @@ public class SimpleSharedBufferInputStreamTest {
         byte[] buffer = g(0, offset + length + extraLength);
         int len = is.read(buffer, offset, length);
         if (length == 0) {
-            assertEquals(0, len, "Unexpected len");
+            assertEquals("Unexpected len", 0, len);
         }
         if (len == -1) {
             for (int i = 0; i < buffer.length; i++) {
@@ -605,7 +605,7 @@ public class SimpleSharedBufferInputStreamTest {
             }
             return null;
         }
-        assertTrue(len >= 0, "Unexpected len: " + len);
+        assertTrue("Unexpected len: " + len, len >= 0);
         for (int i = 0; i < offset; i++) {
             assertEquals((byte) (i & 0xff), buffer[i]);
         }

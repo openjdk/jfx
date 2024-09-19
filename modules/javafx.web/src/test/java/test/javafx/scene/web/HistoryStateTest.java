@@ -25,8 +25,8 @@
 
 package test.javafx.scene.web;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.Test;
+import org.junit.Before;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -34,11 +34,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javafx.collections.ObservableList;
 import javafx.scene.web.WebHistory;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class HistoryStateTest extends TestBase {
     private static final CountDownLatch historyStateLatch = new CountDownLatch(3);
@@ -64,7 +64,7 @@ public class HistoryStateTest extends TestBase {
 
     private static final int TIMEOUT = 30;    // seconds
 
-    @BeforeEach
+    @Before
     public void before() {
         load(HistoryStateTest.class.getClassLoader().getResource(
                 resourcePath + initialLoadUrl).toExternalForm());
@@ -72,50 +72,57 @@ public class HistoryStateTest extends TestBase {
 
     @Test
     public void pushAndReplaceTest() throws Exception {
-        // Assuming executeScript is a method that returns an Object
-        Object historyState = executeScript(historyStateScript);
-        Object historyLength = executeScript(historyLengthScript);
-
         // Initial history.state should be null
-        assertNull(historyState, historyStateScript + " : Failed");
-
+        assertNull(historyStateScript + " : Failed",
+                executeScript(historyStateScript));
         // Initial history.length will be 1
-        assertEquals(1, historyLength, historyLengthScript + " : Failed");
+        assertEquals(historyLengthScript + " : Failed",
+                1, executeScript(historyLengthScript));
 
         // history.pushState({push1Key : 1}, '', '?firstLoadUrl"');
         executeScript(historyPushScript1);
         // Check if the history.state object for not null
-        assertNotNull(executeScript(historyStateScript), historyStateScript + " : Failed");
+        assertNotNull(historyStateScript + " : Failed",
+                executeScript(historyStateScript));
         // {push1Key : 1} : {key = push1Key :value = (Integer) 1}
-        assertEquals(1, executeScript("history.state.push1key"), "history.state.push1key Failed");
+        assertEquals("history.state.push1key Failed",
+                1, executeScript("history.state.push1key"));
 
         // history.length expected to be 2
         // Initial load + history.pushState(...)
-        assertEquals(2, executeScript(historyLengthScript), historyLengthScript + " : Failed");
+        assertEquals(historyLengthScript + " : Failed",
+                2, executeScript(historyLengthScript));
 
         // Check for WebEngine location is updated with new URL
-        assertTrue(getEngine().getLocation().endsWith(firstLoadUrl), historyPushScript1 + " : Failed");
+        assertTrue(historyPushScript1 + " : Failed",
+                getEngine().getLocation().endsWith(firstLoadUrl));
 
 
         executeScript(historyPushScript2);
         // {push2Key : 2} : {key = push1Key :value = (Integer) 2}
-        assertEquals(2, executeScript("history.state.push2key"), "history.state.push1key Failed");
+        assertEquals("history.state.push1key Failed",
+                2, executeScript("history.state.push2key"));
 
         // history.length expected to be 2
         // Initial load + history.pushState(...)
-        assertEquals(3, executeScript(historyLengthScript), historyLengthScript + " : Failed");
+        assertEquals(historyLengthScript + " : Failed",
+                3, executeScript(historyLengthScript));
 
         // Check for WebEngine location is updated with new URL
-        assertTrue(getEngine().getLocation().endsWith(secondLoadUrl), historyPushScript2 + " : Failed");
+        assertTrue(historyPushScript2 + " : Failed",
+                getEngine().getLocation().endsWith(secondLoadUrl));
 
         executeScript(historyReplaceScript);
         // history.length remains same
-        assertEquals(3, executeScript(historyLengthScript), historyLengthScript + " : Failed");
+        assertEquals(historyLengthScript + " : Failed",
+                3, executeScript(historyLengthScript));
 
-        assertEquals(3, executeScript("history.state.replaceObject"), "history.state.replaceObject Failed");
+        assertEquals("history.state.replaceObject Failed",
+                3, executeScript("history.state.replaceObject"));
 
         // Check for WebEngine location is updated with new URL
-        assertTrue(getEngine().getLocation().endsWith(replaceLoadUrl), historyPushScript2 + " : Failed");
+        assertTrue(historyPushScript2 + " : Failed",
+                getEngine().getLocation().endsWith(replaceLoadUrl));
 
         submit(() -> {
             getEngine().locationProperty().addListener((observable, previousUrl, newUrl) -> {
@@ -153,7 +160,7 @@ public class HistoryStateTest extends TestBase {
         } catch (InterruptedException ex) {
             throw new AssertionError(ex);
         } finally {
-            assertEquals(2, historyListenerIndex.get(), "history navigation using javascript failed");
+            assertEquals("history navigation using javascript failed", 2, historyListenerIndex.get());
         }
     }
 
@@ -168,9 +175,9 @@ public class HistoryStateTest extends TestBase {
         assertNotNull(getEngine().getDocument());
 
         executeScript("history.pushState('push', 'title', 'pushState.html')");
-        assertNotNull(getEngine().getDocument(), "Document shouldn't be null after history.pushState");
-        assertTrue(getEngine().getLocation().endsWith("pushState.html"), "location must end with pushState.html");
-        assertEquals(initialHistorySize + 1, history.size(), "history count should be incremented");
+        assertNotNull("Document shouldn't be null after history.pushState", getEngine().getDocument());
+        assertTrue("location must end with pushState.html", getEngine().getLocation().endsWith("pushState.html"));
+        assertEquals("history count should be incremented", initialHistorySize + 1, history.size());
     }
 
     // JDK-8204856
@@ -184,9 +191,9 @@ public class HistoryStateTest extends TestBase {
         assertNotNull(getEngine().getDocument());
 
         executeScript("history.replaceState('push', 'title', 'replaceState.html')");
-        assertNotNull(getEngine().getDocument(), "Document shouldn't be null after history.replaceState");
-        assertTrue(getEngine().getLocation().endsWith("replaceState.html"), "location must end with replaceState.html");
-        assertEquals(initialHistorySize, history.size(), "history count shouldn't be incremented");
+        assertNotNull("Document shouldn't be null after history.replaceState", getEngine().getDocument());
+        assertTrue("location must end with replaceState.html", getEngine().getLocation().endsWith("replaceState.html"));
+        assertEquals("history count shouldn't be incremented", initialHistorySize, history.size());
     }
 }
 
