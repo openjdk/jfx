@@ -204,7 +204,7 @@ public class ModifiableObservableListBaseTest {
             var nonEmptySubList = new MockModifiableObservableList(
                     new ArrayList<>(List.of("a", "b", "c")),
                     new ArrayList<>(List.of("a", "b")))
-                .subList(0, 2);
+                    .subList(0, 2);
             assertThrows(IndexOutOfBoundsException.class, () -> nonEmptySubList.addAll(-1, List.of()));
             assertThrows(IndexOutOfBoundsException.class, () -> nonEmptySubList.addAll(3, List.of()));
             assertDoesNotThrow(() -> nonEmptySubList.addAll(2, List.of("d", "e")));
@@ -212,7 +212,7 @@ public class ModifiableObservableListBaseTest {
             var emptySubList = new MockModifiableObservableList(
                     new ArrayList<>(List.of("a", "b", "c")),
                     new ArrayList<>())
-                .subList(0, 0);
+                    .subList(0, 0);
             assertThrows(IndexOutOfBoundsException.class, () -> emptySubList.addAll(-1, List.of()));
             assertThrows(IndexOutOfBoundsException.class, () -> emptySubList.addAll(1, List.of()));
             assertDoesNotThrow(() -> emptySubList.addAll(0, List.of("d", "e")));

@@ -25,7 +25,7 @@
 
 package test.com.sun.javafx.binding;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.sun.javafx.logging.PlatformLogger.Level;
 

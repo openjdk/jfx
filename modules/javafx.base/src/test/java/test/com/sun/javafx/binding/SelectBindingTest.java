@@ -41,9 +41,10 @@ import javafx.beans.binding.ObjectBinding;
 import javafx.beans.binding.StringBinding;
 import test.javafx.binding.Variable;
 import javafx.collections.ObservableList;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import static org.junit.Assert.*;
 
@@ -101,13 +102,13 @@ public class SelectBindingTest {
     private StringBinding select;
     private ObservableList<?> dependencies;
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass() {
         System.err.println("SelectBindingTest : log messages are expected from these tests.");
         ErrorLoggingUtiltity.reset();
     }
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         a = new Variable("a");
         b = new Variable("b");
@@ -381,9 +382,11 @@ public class SelectBindingTest {
         ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void createWithRootNull() {
-        select = Bindings.selectString(null, "next", "name");
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.selectString(null, "next", "name");
+        });
     }
 
     @Test
@@ -397,9 +400,11 @@ public class SelectBindingTest {
         ErrorLoggingUtiltity.checkWarning(NullPointerException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void createWithOneStepIsNull() {
-        select = Bindings.selectString(a.nextProperty(), null, "name");
+        assertThrows(NullPointerException.class, () -> {
+            select = Bindings.selectString(a.nextProperty(), null, "name");
+        });
     }
 
     @Test
