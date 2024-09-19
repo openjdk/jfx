@@ -25,6 +25,12 @@
 
 package test.robot.javafx.scene;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import java.awt.GraphicsEnvironment;
+import java.awt.color.ColorSpace;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import javax.swing.SwingUtilities;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
@@ -37,47 +43,11 @@ import javafx.scene.robot.Robot;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
-
-import java.awt.color.ColorSpace;
-import java.awt.GraphicsEnvironment;
-import javax.swing.SwingUtilities;
-
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Window;
 import com.sun.javafx.PlatformUtil;
-
-import java.util.concurrent.atomic.AtomicReference;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.Arguments;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertTimeout;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.params.provider.Arguments;
-import java.util.stream.Stream;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
-import org.junit.jupiter.api.Assertions;
-import java.time.Duration;
-import java.util.concurrent.TimeUnit;
-import org.junit.jupiter.api.Timeout;
-
 import test.robot.testharness.VisualTestBase;
 import test.util.Util;
 
