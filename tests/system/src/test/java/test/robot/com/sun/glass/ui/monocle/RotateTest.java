@@ -60,7 +60,6 @@ public final class RotateTest extends ParameterizedTestBase {
     // junit5 does not support parameterized class-level tests yet
     public void init(TestTouchDevice device) throws Exception {
         createDevice(device, null);
-        
         //Rotate tests should be run only on platforms that support current feature
         Assumptions.assumeTrue(Boolean.getBoolean("com.sun.javafx.gestures.rotate"));
 
@@ -71,7 +70,7 @@ public final class RotateTest extends ParameterizedTestBase {
 
     @AfterEach
     public void releaseAll() throws Exception {
-        if (device.getPressedPoints() == 2) {
+        if ((device != null) && (device.getPressedPoints() == 2)) {
             TestLogShim.reset();
             device.removePoint(p1);
             device.removePoint(p2);
