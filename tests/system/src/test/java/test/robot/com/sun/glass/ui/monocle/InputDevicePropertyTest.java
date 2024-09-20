@@ -45,8 +45,8 @@ public final class InputDevicePropertyTest extends ParameterizedTestBase {
     // @BeforeEach
     // junit5 does not support parameterized class-level tests yet
     public void checkPlatform(TestTouchDevice device) throws Exception {
-        Assumptions.assumeTrue(TestApplication.isMonocle() || TestApplication.isLens());
         createDevice(device, null);
+        Assumptions.assumeTrue(TestApplication.isMonocle() || TestApplication.isLens());
     }
 
     @ParameterizedTest

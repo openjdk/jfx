@@ -136,7 +136,7 @@ public class Snapshot1Test extends SnapshotCommon {
 
             // Should throw IllegalStateException
             tmpScene.snapshot(p -> {
-                throw new RuntimeException("Should never get here");
+                throw new AssertionError("Should never get here");
             }, null);
         });
     }
@@ -166,7 +166,7 @@ public class Snapshot1Test extends SnapshotCommon {
 
             // Should throw IllegalStateException
             tmpNode.snapshot(p -> {
-                throw new RuntimeException("Should never get here");
+                throw new AssertionError("Should never get here");
             }, null, null);
         });
     }
@@ -262,7 +262,7 @@ public class Snapshot1Test extends SnapshotCommon {
             Callback cb = (Callback<String, Integer>) param -> {
                 // Should not get here
                 latch.countDown();
-                throw new RuntimeException("Should never get here");
+                throw new AssertionError("Should never get here");
             };
 
             tmpScene.snapshot(cb, null);
@@ -384,7 +384,7 @@ public class Snapshot1Test extends SnapshotCommon {
             Callback cb = (Callback<String, Integer>) param -> {
                 // Should not get here
                 latch.countDown();
-                throw new RuntimeException("Should never get here");
+                throw new AssertionError("Should never get here");
             };
 
             tmpNode.snapshot(cb, null, null);

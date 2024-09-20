@@ -90,12 +90,15 @@ public abstract class ParameterizedTestBase {
         if (device != null) {
             device.destroy();
         }
-        TestApplication.waitForNextPulse();
-        if (exception != null) {
-            RuntimeException rte = new RuntimeException("Uncaught exception");
-            rte.setStackTrace(new StackTraceElement[0]);
-            rte.initCause(exception);
-            throw rte;
+        // junit5: ignored tests do not initialize the toolkit
+        if (device != null) {
+            TestApplication.waitForNextPulse();
+            if (exception != null) {
+                RuntimeException rte = new RuntimeException("Uncaught exception");
+                rte.setStackTrace(new StackTraceElement[0]);
+                rte.initCause(exception);
+                throw rte;
+            }
         }
     }
 }

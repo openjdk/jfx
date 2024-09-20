@@ -87,8 +87,8 @@ public final class SingleTouchNonFullScreenTest extends ParameterizedTestBase {
     // junit5 does not support parameterized class-level tests yet
     public void init(TestTouchDevice device, TestCase testCase) throws Exception {
         this.testCase = testCase;
-        TestLogShim.format("Starting test with %s, %s", device, testCase);
         createDevice(device, testCase.stageBounds);
+        TestLogShim.format("Starting test with %s, %s", device, testCase);
 
         TestApplication.getStage().getScene().addEventHandler(
                 TouchEvent.TOUCH_PRESSED,

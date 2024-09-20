@@ -131,15 +131,14 @@ public final class SwipeTest extends ParameterizedTestBase {
     // @BeforeEach
     // junit5 does not support parameterized class-level tests yet
     public void init(TestTouchDevice device, SwipeTestCase testCase) throws Exception {
-        this.testCase = testCase;
+        createDevice(device, null);
+
         TestLogShim.format("Starting test with %s, %s", device, testCase);
         TestApplication.getStage();
         TestRunnable.invokeAndWait(() -> {
             Assumptions.assumeTrue(TestApplication.isMonocle() || TestApplication.isLens());
             Assumptions.assumeTrue(PlatformUtil.isEmbedded());
         });
-
-        createDevice(device, null);
 
         TestApplication.getStage().getScene().addEventHandler(
                 GestureEvent.ANY,

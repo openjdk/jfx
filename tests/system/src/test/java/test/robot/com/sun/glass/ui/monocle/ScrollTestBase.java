@@ -38,7 +38,6 @@ import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
  *  */
 public abstract class ScrollTestBase extends ParameterizedTestBase {
 
-    protected TestTouchDevice device;
     protected int point1X;
     protected int point1Y;
     protected int point2X;
@@ -55,12 +54,11 @@ public abstract class ScrollTestBase extends ParameterizedTestBase {
     // @BeforeEach
     // junit5 does not support parameterized class-level tests yet
     public void init(TestTouchDevice device) throws Exception {
-        this.device = device;
+        createDevice(device, null);
+
         Assumptions.assumeTrue(TestApplication.isMonocle());
         //Scroll tests should be running only on platforms that support current feature
         Assumptions.assumeTrue(Boolean.getBoolean("com.sun.javafx.gestures.scroll"));
-
-        createDevice(device, null);
 
         point1X = (int) Math.round(width * 0.5);
         point1Y = (int) Math.round(height * 0.5);
@@ -70,10 +68,13 @@ public abstract class ScrollTestBase extends ParameterizedTestBase {
 
     @AfterEach
     public void releaseAll() throws Exception {
-        if (device.getPressedPoints() == 1) {
-            releaseFirstFinger();
-        } else if (device.getPressedPoints() == 2){
-            releaseAllFingers();
+        // junit5: device can be null in ignored/assumed cases
+        if (device != null) {
+            if (device.getPressedPoints() == 1) {
+                releaseFirstFinger();
+            } else if (device.getPressedPoints() == 2) {
+                releaseAllFingers();
+            }
         }
     }
 

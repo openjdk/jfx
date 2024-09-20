@@ -44,9 +44,9 @@ public final class ZoomTest extends ParameterizedTestBase {
     // @BeforeEach
     // junit5 does not support parameterized class-level tests yet
     public void init(TestTouchDevice device) throws Exception {
+        createDevice(device, null);
         // verify zoom enabled
         Assumptions.assumeTrue(Boolean.getBoolean("com.sun.javafx.gestures.zoom"));
-        createDevice(device, null);
     }
 
     private void tapToStopInertia() throws Exception {
