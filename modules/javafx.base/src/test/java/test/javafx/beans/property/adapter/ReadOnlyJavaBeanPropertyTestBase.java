@@ -66,8 +66,7 @@ public abstract class ReadOnlyJavaBeanPropertyTestBase<T> {
         assertThrows(NullPointerException.class, () -> {
             try {
                 this.property = extractProperty(null);
-            }
-            catch (NoSuchMethodException e) {
+            } catch (NoSuchMethodException e) {
                 fail();
             }
         });
