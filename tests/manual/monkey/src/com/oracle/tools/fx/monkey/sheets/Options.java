@@ -35,10 +35,16 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.CycleMethod;
+import javafx.scene.paint.ImagePattern;
+import javafx.scene.paint.LinearGradient;
+import javafx.scene.paint.RadialGradient;
+import javafx.scene.paint.Stop;
 import com.oracle.tools.fx.monkey.options.DoubleOption;
 import com.oracle.tools.fx.monkey.options.IntOption;
 import com.oracle.tools.fx.monkey.options.ObjectOption;
 import com.oracle.tools.fx.monkey.options.TextChoiceOption;
+import com.oracle.tools.fx.monkey.util.ImageTools;
 import com.oracle.tools.fx.monkey.util.ObjectSelector;
 import com.oracle.tools.fx.monkey.util.TextTemplates;
 import com.oracle.tools.fx.monkey.util.Utils;
@@ -77,13 +83,13 @@ public class Options {
 
     public static Node tabPaneConstraints(String name, DoubleProperty p) {
         DoubleOption d = new DoubleOption(name, p);
-        d.addChoice("0", Double.valueOf(0));
-        d.addChoice("10", 10.0);
-        d.addChoice("33.3", 33.3);
-        d.addChoice("100", 100.0);
+        d.addChoice(0);
+        d.addChoice(10.0);
+        d.addChoice(33.3);
+        d.addChoice(100.0);
         d.addChoice("Double.MAX_VALUE", Double.MAX_VALUE);
         d.addChoice("Double.POSITIVE_INFINITY", Double.POSITIVE_INFINITY);
-        d.addChoice("Double.NaN", Double.NaN);
+        d.addChoice("NaN", Double.NaN);
         d.selectInitialValue();
         return d;
     }
@@ -99,7 +105,7 @@ public class Options {
         d.addChoice("Double.MAX_VALUE", Double.MAX_VALUE);
         d.addChoice("Double.MIN_VALUE", Double.MIN_VALUE);
         d.addChoice("Double.POSITIVE_INFINITY", Double.POSITIVE_INFINITY);
-        d.addChoice("Double.NaN", Double.NaN);
+        d.addChoice("NaN", Double.NaN);
         d.selectInitialValue();
         return d;
     }
@@ -119,18 +125,29 @@ public class Options {
         op.addChoiceSupplier("White", () -> {
             return Background.fill(Color.WHITE);
         });
-        // TODO let background property track focused and focusWithin properties to change the bg
-        // also make sure to removeListener when the background is set to another value
-//        op.addChoiceSupplier("Focus(Green), NoFocus(Gray)", () -> {
-//            BooleanBinding b = Bindings.createBooleanBinding(
-//                () -> {
-//                },
-//                owner.focusTraversableProperty(),
-//                owner.focusedProperty(),
-//                owner.focusWithinProperty()
-//            );
-//            Background bg = new Background();
-//        });
+        op.addChoiceSupplier("Linear Gradient", () -> {
+            LinearGradient g = new LinearGradient(
+                0, 0, 30, 30, false,
+                CycleMethod.REFLECT,
+                new Stop(0, Color.RED), new Stop(30, Color.GREEN)
+            );
+            return Background.fill(g);
+        });
+        op.addChoiceSupplier("Radial Gradient", () -> {
+            RadialGradient g = new RadialGradient(
+                45, 0, 50, 10, 10, false,
+                CycleMethod.REFLECT,
+                new Stop(0, Color.RED), new Stop(10, Color.GREEN)
+            );
+            return Background.fill(g);
+        });
+        op.addChoiceSupplier("Image Pattern", () -> {
+            ImagePattern g = new ImagePattern(
+                ImageTools.createImage(50, 50),
+                0, 0, 50, 50, false
+            );
+            return Background.fill(g);
+        });
         op.addChoice("<null>", null);
         op.selectInitialValue();
         return op;
@@ -163,5 +180,20 @@ public class Options {
                 e.printStackTrace();
             }
         });
+    }
+
+    public static Node forColumnWidth(String name, double defaultValue, DoubleProperty p) {
+        DoubleOption d = new DoubleOption(name, p);
+        d.addChoice("0", Double.valueOf(0));
+        d.addChoice("10", 10.0);
+        d.addChoice("33.3", 33.3);
+        d.addChoice("100", 100.0);
+        d.addChoice("Double.MAX_VALUE", Double.MAX_VALUE);
+        d.addChoice("Double.MIN_VALUE", Double.MIN_VALUE);
+        d.addChoice("Double.POSITIVE_INFINITY", Double.POSITIVE_INFINITY);
+        d.addChoice("NaN", Double.NaN);
+        d.addChoice("<default: " + defaultValue + ">", defaultValue);
+        d.selectInitialValue();
+        return d;
     }
 }

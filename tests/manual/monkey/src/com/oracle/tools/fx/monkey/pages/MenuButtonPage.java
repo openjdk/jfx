@@ -29,10 +29,12 @@ import java.util.List;
 import java.util.function.Supplier;
 import javafx.collections.ObservableList;
 import javafx.geometry.Side;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.skin.MenuButtonSkin;
+import com.oracle.tools.fx.monkey.Loggers;
 import com.oracle.tools.fx.monkey.options.EnumOption;
 import com.oracle.tools.fx.monkey.sheets.LabeledPropertySheet;
 import com.oracle.tools.fx.monkey.util.HasSkinnable;
@@ -49,7 +51,14 @@ public class MenuButtonPage extends TestPaneBase implements HasSkinnable {
     public MenuButtonPage() {
         super("MenuButtonPage");
 
-        control = new MenuButton();
+        control = new MenuButton() {
+            @Override
+            public Object queryAccessibleAttribute(AccessibleAttribute a, Object... ps) {
+                Object v = super.queryAccessibleAttribute(a, ps);
+                Loggers.accessibility.log(a, v);
+                return v;
+            }
+        };
 
         control.setText("Menu Button");
         control.getItems().add(new MenuItem("Edit"));
@@ -78,6 +87,7 @@ public class MenuButtonPage extends TestPaneBase implements HasSkinnable {
         ObjectSelector<List<MenuItem>> s = new ObjectSelector<>(name, items::setAll);
         s.addChoiceSupplier("1 Item", mk(1));
         s.addChoiceSupplier("10 Items", mk(10));
+        s.addChoiceSupplier("100 Items", mk(100));
         s.addChoiceSupplier("1,000 Items", mk(1000));
         s.addChoiceSupplier("<empty>", mk(0));
         s.selectFirst();
