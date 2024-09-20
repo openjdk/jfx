@@ -43,7 +43,6 @@ import javafx.scene.ImageCursor;
 import javafx.scene.Node;
 
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.params.provider.Arguments;
 
 public final class Node_cssMethods_Test extends CssMethodsTestBase {
     private static final Node TEST_NODE = new Rectangle();
@@ -59,7 +58,7 @@ public final class Node_cssMethods_Test extends CssMethodsTestBase {
                 new StubPlatformImageInfo(32, 32));
     }
 
-    public static Stream<Arguments> data() {
+    public static Stream<Configuration> data() {
         return Stream.of(
             config(TEST_NODE, "cursor", null, "-fx-cursor", Cursor.cursor(TEST_CURSOR_URL),
                    new ValueComparator() {
@@ -106,7 +105,7 @@ public final class Node_cssMethods_Test extends CssMethodsTestBase {
         );
     }
 
-    public static Arguments config(
+    public static Configuration config(
             final String propertyName,
             final Object initialValue,
             final String cssPropertyKey,
@@ -115,7 +114,7 @@ public final class Node_cssMethods_Test extends CssMethodsTestBase {
                       cssPropertyKey, cssPropertyValue);
     }
 
-    public static Arguments config(
+    public static Configuration config(
             final String propertyName,
             final Object initialValue,
             final String cssPropertyKey,

@@ -113,7 +113,10 @@ public class DirtyRegionClipTest extends DirtyRegionTestBase {
      * JUnit5 does not support parametrized classes yet. Make this a @BeforeEach
      * method once it does.
      */
-    public void setUp(Creator creator) {
+    @Override
+    protected void setUp(Creator creator, Polluter polluter) {
+        super.setUp(creator, polluter);
+
         // create the grid
         NGNode[] content = new NGNode[9];
         for (int row=0; row<3; row++) {
@@ -137,7 +140,7 @@ public class DirtyRegionClipTest extends DirtyRegionTestBase {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void sanityCheck(Creator creator, Polluter polluter) {
-        setUp(creator); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
 
         NGNode node = root.getChildren().get(0);
         assertEquals(new RectBounds(0, 0, 100, 100), node.getContentBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM));
@@ -159,7 +162,7 @@ public class DirtyRegionClipTest extends DirtyRegionTestBase {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void dirtyRegionContainsClip(Creator creator, Polluter polluter) {
-        setUp(creator); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
 
         windowClip = new RectBounds(115, 115, 120, 120);
 
@@ -173,7 +176,7 @@ public class DirtyRegionClipTest extends DirtyRegionTestBase {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void dirtyRegionPartiallyOverlapsClip(Creator creator, Polluter polluter) {
-        setUp(creator); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
 
         windowClip = new RectBounds(90, 90, 120, 120);
 
@@ -188,7 +191,7 @@ public class DirtyRegionClipTest extends DirtyRegionTestBase {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void dirtyRegionDoesNotContainClip(Creator creator, Polluter polluter) {
-        setUp(creator); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
 
         NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
         assertContainsClip(root, polluter.polluteAndGetExpectedBounds(middleChild), DirtyRegionContainer.DTR_OK);

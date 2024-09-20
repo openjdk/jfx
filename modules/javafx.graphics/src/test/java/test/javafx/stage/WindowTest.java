@@ -219,7 +219,7 @@ public final class WindowTest {
     }
 
     @Test
-    public void testSizeToSceneBeforeEachShowing() {
+    public void testSizeToSceneBeforeShowing() {
         final var scene = new Scene(new Region(), 400, 500);
         testWindow.setScene(scene);
         testWindow.sizeToScene();

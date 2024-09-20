@@ -37,7 +37,6 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.params.provider.Arguments;
 
 public final class ImageView_cssMethods_Test extends CssMethodsTestBase {
     private static final ImageView TEST_IMAGE_VIEW = new ImageView();
@@ -68,7 +67,7 @@ public final class ImageView_cssMethods_Test extends CssMethodsTestBase {
                 new StubPlatformImageInfo(48, 48));
     }
 
-    public static Stream<Arguments> data() {
+    public static Stream<Configuration> data() {
         boolean smooth = ImageView.SMOOTH_DEFAULT;
 
         return Stream.of(

@@ -31,12 +31,10 @@ import javafx.scene.Parent;
 
 import test.com.sun.javafx.test.CssMethodsTestBase;
 
-import org.junit.jupiter.params.provider.Arguments;
-
 public class Parent_cssMethods_Test extends CssMethodsTestBase {
     private static final Parent TEST_PARENT = new Group();
 
-    public static Stream<Arguments> data() {
+    public static Stream<Configuration> data() {
         return Stream.of(
             config(TEST_PARENT, "translateX", 0.0, "-fx-translate-x", 10.0)
         );

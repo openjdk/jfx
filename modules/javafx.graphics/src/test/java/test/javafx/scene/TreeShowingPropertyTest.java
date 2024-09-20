@@ -36,39 +36,65 @@ import javafx.stage.Stage;
 
 import java.util.stream.Stream;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TreeShowingPropertyTest {
+    private Parent root;
+    private Node node;
+    private TreeShowingProperty property;
 
-    public static Stream<Arguments> parameters() {
-        Node node1 = new StackPane();
-        StackPane node2 = new StackPane();
+    public static Stream<Supplier<RootAndNodeToTest>> parameters() {
+        Supplier<RootAndNodeToTest> supplier1 = () -> {
+            Node node = new StackPane();
+            return new RootAndNodeToTest(new StackPane(node), node);
+        };
+
+        Supplier<RootAndNodeToTest> supplier2 = () -> {
+            StackPane node = new StackPane();
+            return new RootAndNodeToTest(new StackPane(new SubScene(node, 100.0, 100.0)), node);
+        };
 
         return Stream.of(
-            rootAndNodeToTest(new StackPane(node1), node1),
-            rootAndNodeToTest(new StackPane(new SubScene(node2, 100.0, 100.0)), node2)
+            supplier1,
+            supplier2
         );
     }
 
-    private static Arguments rootAndNodeToTest(Parent root, Node node) {
-        return Arguments.of( root, node, new TreeShowingProperty(node) );
+    static class RootAndNodeToTest {
+        RootAndNodeToTest(Parent root, Node nodeToTest) {
+            this.root = root;
+            this.nodeToTest = nodeToTest;
+        }
+
+        Parent root;
+        Node nodeToTest;
+    }
+
+    public void setUp(Supplier<RootAndNodeToTest> nodeSupplier) {
+        RootAndNodeToTest nodes = nodeSupplier.get();
+
+        this.root = nodes.root;
+        this.node = nodes.nodeToTest;
+        this.property = new TreeShowingProperty(this.node);
     }
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void nodeNotAttachedToSceneShouldNotBeShowing(Parent root, Node node, TreeShowingProperty property) {
+    public void nodeNotAttachedToSceneShouldNotBeShowing(Supplier<RootAndNodeToTest> nodeSupplier) {
+        setUp(nodeSupplier);
         assertFalse(property.get());
     }
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void getShouldTrackChangesInShowingStateForGivenNode(Parent root, Node node, TreeShowingProperty property) {
+    public void getShouldTrackChangesInShowingStateForGivenNode(Supplier<RootAndNodeToTest> nodeSupplier) {
+        setUp(nodeSupplier);
         assertFalse(property.get());  // not showing initially as not attached to a Scene
 
         Scene scene = new Scene(root);
@@ -91,7 +117,8 @@ public class TreeShowingPropertyTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void changeListenerShouldRegisterAndUnregisterCorrectly(Parent root, Node node, TreeShowingProperty property) {
+    public void changeListenerShouldRegisterAndUnregisterCorrectly(Supplier<RootAndNodeToTest> nodeSupplier) {
+        setUp(nodeSupplier);
         AtomicReference<Boolean> state = new AtomicReference<>();
         ChangeListener<Boolean> listener = (obs, old, current) -> state.set(current);
 
@@ -114,7 +141,8 @@ public class TreeShowingPropertyTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void invalidationListenerShouldRegisterAndUnregisterCorrectly(Parent root, Node node, TreeShowingProperty property) {
+    public void invalidationListenerShouldRegisterAndUnregisterCorrectly(Supplier<RootAndNodeToTest> nodeSupplier) {
+        setUp(nodeSupplier);
         AtomicReference<Boolean> state = new AtomicReference<>();
         InvalidationListener listener = obs -> state.set(true);
 
@@ -138,7 +166,8 @@ public class TreeShowingPropertyTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void changeListenerShouldTrackShowingState(Parent root, Node node, TreeShowingProperty property) {
+    public void changeListenerShouldTrackShowingState(Supplier<RootAndNodeToTest> nodeSupplier) {
+        setUp(nodeSupplier);
         AtomicReference<Boolean> state = new AtomicReference<>();
 
         property.addListener((obs, old, current) -> state.set(current));
@@ -197,7 +226,8 @@ public class TreeShowingPropertyTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void invalidationListenerShouldNotifyOfChangesInShowingState(Parent root, Node node, TreeShowingProperty property) {
+    public void invalidationListenerShouldNotifyOfChangesInShowingState(Supplier<RootAndNodeToTest> nodeSupplier) {
+        setUp(nodeSupplier);
         AtomicReference<Boolean> state = new AtomicReference<>();
 
         property.addListener(obs -> state.set(true));
@@ -269,7 +299,8 @@ public class TreeShowingPropertyTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    public void disposeShouldUnregisterListenersOnGivenNode(Parent root, Node node, TreeShowingProperty property) {
+    public void disposeShouldUnregisterListenersOnGivenNode(Supplier<RootAndNodeToTest> nodeSupplier) {
+        setUp(nodeSupplier);
         AtomicReference<Boolean> state = new AtomicReference<>();
 
         property.addListener((obs, old, current) -> state.set(current));

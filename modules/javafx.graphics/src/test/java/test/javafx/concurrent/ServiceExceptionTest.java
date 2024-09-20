@@ -55,14 +55,14 @@ public class ServiceExceptionTest extends ServiceTestBase {
         );
     }
 
-    private static Arguments setupServiceFactory(Exception e) {
+    private static Arguments setupServiceFactory(Exception exception) {
         return Arguments.of(
             new TestServiceFactory() {
                 @Override public AbstractTask createTestTask() {
-                    return new EpicFailTask(e);
+                    return new EpicFailTask(exception);
                 }
             },
-            e
+            exception
         );
     }
 

@@ -34,7 +34,6 @@ import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -67,7 +66,7 @@ public abstract class CssMethodsTestBase {
         configuration.cssSetTest();
     }
 
-    public static Arguments config(
+    public static Configuration config(
             final Node node,
             final String propertyName,
             final Object initialValue,
@@ -80,7 +79,7 @@ public abstract class CssMethodsTestBase {
                                         cssPropertyValue));
     }
 
-    public static Arguments config(
+    public static Configuration config(
             final Node node,
             final String propertyName,
             final Object initialValue,
@@ -95,7 +94,7 @@ public abstract class CssMethodsTestBase {
                                         expectedFinalValue));
     }
 
-    public static Arguments config(
+    public static Configuration config(
             final Node node,
             final String propertyName,
             final Object initialValue,
@@ -110,8 +109,8 @@ public abstract class CssMethodsTestBase {
                                         comparator));
     }
 
-    public static Arguments config(final Configuration configuration) {
-        return Arguments.of( configuration );
+    public static Configuration config(final Configuration configuration) {
+        return configuration;
     }
 
     private static CssMetaData<? extends Styleable, ?> getCssMetaData(Node node, String cssProperty) {

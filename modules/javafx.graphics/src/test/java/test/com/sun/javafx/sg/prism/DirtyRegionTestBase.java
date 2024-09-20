@@ -275,6 +275,18 @@ public class DirtyRegionTestBase extends NGTestBase {
     }
 
     /**
+     * The test node creator. This is called from within the "setUp" method in each
+     * subclass to create the nodes that are going to be tested.
+     */
+    protected Creator creator;
+
+    /**
+     * The polluter. Subclasses will use the polluter to make a node dirty at the
+     * appropriate time in the test method.
+     */
+    protected Polluter polluter;
+
+    /**
      * The root node. This must be created during the "setUp" method in each sub
      * class. The root is needed for actually accumulating dirty regions.
      */
@@ -288,6 +300,13 @@ public class DirtyRegionTestBase extends NGTestBase {
      * whether accumulating dirty regions takes the clip into account.
      */
     protected RectBounds windowClip = new RectBounds(-100000, -100000, 100000, 10000);
+
+    // @BeforeEach
+    // commented out until JUnit5 supports parametrized class tests
+    protected void setUp(Creator creator, Polluter polluter) {
+        this.creator = creator;
+        this.polluter = polluter;
+    }
 
     /**
      * Helper method for asserting that the dirty region of the node indicated
@@ -330,7 +349,7 @@ public class DirtyRegionTestBase extends NGTestBase {
                 Math.min(expected.getMaxX() + 1, dirtyRegion.getMaxX()),
                 Math.min(expected.getMaxY() + 1, dirtyRegion.getMaxY()));
         // Now make the check, and print useful error information in case it fails.
-        assertEquals(expected, dirtyRegion);
+        assertEquals(expected, dirtyRegion, "creator=" + creator + ", polluter=" + polluter);
     }
 
     /**
@@ -351,7 +370,7 @@ public class DirtyRegionTestBase extends NGTestBase {
                 drc,
                 BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
 
-        assertEquals(expectedStatus, status);
+        assertEquals(expectedStatus, status, "creator=" + creator + ", polluter=" + polluter);
 
         if (status == DirtyRegionContainer.DTR_OK) {
             assertDirtyRegionEquals(start, expectedDirtyRegion);
@@ -417,8 +436,8 @@ public class DirtyRegionTestBase extends NGTestBase {
      * called, and throws an exception if it was not expected.
      */
     private void assertOnlyTheseNodesWereAskedToAccumulateDirtyRegions(NGNode start, Set<NGNode> nodes) {
-        assertEquals(
-                nodes.contains(start), ((TestNGNode)start).askedToAccumulateDirtyRegion());
+        assertEquals(nodes.contains(start), ((TestNGNode)start).askedToAccumulateDirtyRegion(),
+                     "creator=" + creator + ", polluter=" + polluter);
         if (start instanceof NGGroup) {
             for (NGNode child : ((NGGroup)start).getChildren()) {
                 assertOnlyTheseNodesWereAskedToAccumulateDirtyRegions(child, nodes);
@@ -431,8 +450,8 @@ public class DirtyRegionTestBase extends NGTestBase {
      * compute the dirty region have been called, and throws an exception if it was not expected.
      */
     private void assertOnlyTheseNodesWereAskedToComputeDirtyRegions(NGNode start, Set<NGNode> nodes) {
-        assertEquals(
-                nodes.contains(start), ((TestNGNode)start).computedDirtyRegion());
+        assertEquals(nodes.contains(start), ((TestNGNode)start).computedDirtyRegion(),
+                     "creator=" + creator + ", polluter=" + polluter);
         if (start instanceof NGGroup) {
             for (NGNode child : ((NGGroup)start).getChildren()) {
                 assertOnlyTheseNodesWereAskedToComputeDirtyRegions(child, nodes);

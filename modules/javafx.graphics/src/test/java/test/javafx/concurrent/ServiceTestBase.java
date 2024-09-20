@@ -28,7 +28,6 @@ package test.javafx.concurrent;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import javafx.concurrent.Service;
-//import org.junit.jupiter.api.BeforeEach; NOTE: revert once parametrized classes are added
 
 /**
  * Base class for tests of the Service class. This class has built into it
@@ -63,7 +62,7 @@ public abstract class ServiceTestBase {
     // NOTE: This should be reverted once parametrized class tests are added to JUnit5
     //       For now, tests call this manually
     // @BeforeEach
-    public void setup(TestServiceFactory factory) {
+    protected void setup(TestServiceFactory factory) {
         this.factory = factory;
         factory.test = this;
         service = factory.createService();

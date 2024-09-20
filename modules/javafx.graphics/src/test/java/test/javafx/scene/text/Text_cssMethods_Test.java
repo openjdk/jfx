@@ -36,12 +36,10 @@ import javafx.scene.text.TextAlignment;
 
 import test.com.sun.javafx.test.CssMethodsTestBase;
 
-import org.junit.jupiter.params.provider.Arguments;
-
 public class Text_cssMethods_Test extends CssMethodsTestBase {
     private static final Text TEST_TEXT = new Text();
 
-    public static Stream<Arguments> data() {
+    public static Stream<Configuration> data() {
         return Stream.of(
             config(TEST_TEXT, "font", Font.getDefault(),
                    "-fx-font", Font.font("Verdana", FontWeight.BOLD, 22)),

@@ -65,7 +65,8 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
      * JUnit5 does not support parametrized classes yet. Make this a @BeforeEach
      * method once it does.
      */
-    public void setUp(Creator creator) {
+    @Override
+    protected void setUp(Creator creator, Polluter polluter) {
         // create the grid
         NGNode[] content = new NGNode[9];
         for (int row=0; row<3; row++) {
@@ -89,7 +90,7 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void sanityCheck(Creator creator, Polluter polluter) {
-        setUp(creator); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
 
         NGNode node = root.getChildren().get(0);
         assertEquals(new RectBounds(0, 0, 100, 100), node.getContentBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM));
@@ -107,7 +108,7 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void cleanNodesShouldNotContributeToDirtyRegion(Creator creator, Polluter polluter) {
-        setUp(creator); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
 
         // By default the scene should be clean
         assertDirtyRegionEquals(root, new RectBounds());
@@ -116,7 +117,7 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void cleanChildNodesOnADirtyParentShouldNotContributeToDirtyRegion(Creator creator, Polluter polluter) {
-        setUp(creator); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
 
         // Now if I translate the root, none of the child nodes
         // should contribute to the dirty region
@@ -129,7 +130,7 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void whenOnlyTheRootIsDirtyOnlyTheRootShouldBeAskedToAccumulateDirtyRegions(Creator creator, Polluter polluter) {
-        setUp(creator); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
 
         translate(root, TRANSLATE_DELTA, TRANSLATE_DELTA);
         assertOnlyTheseNodesAreAskedToAccumulateDirtyRegions(root);
@@ -138,7 +139,7 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void cleanChildNodesOnACleanParentShouldNotContributeToDirtyRegion(Creator creator, Polluter polluter) {
-        setUp(creator); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
 
         // If I make one of the children dirty, then the child should contribute
         // to the dirty region, but none of the other nodes should. This test just
@@ -155,7 +156,7 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void whenOnlyASingleChildIsDirtyThenParentAndAllChildrenAreAskedToAccumulateDirtyRegions(Creator creator, Polluter polluter) {
-        setUp(creator); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
 
         NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
         polluter.pollute(middleChild);
@@ -170,7 +171,7 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void whenOnlyASingleChildIsDirtyThenOnlyParentAndThatChildShouldComputeDirtyRegions(Creator creator, Polluter polluter) {
-        setUp(creator); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
 
         NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
         polluter.pollute(middleChild);
@@ -186,7 +187,7 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void aDirtyChildNodeShouldFormTheDirtyRegionWhenItIsTheOnlyDirtyNode(Creator creator, Polluter polluter) {
-        setUp(creator); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
 
         NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
         assertDirtyRegionEquals(root, polluter.polluteAndGetExpectedBounds(middleChild));
@@ -195,7 +196,7 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void theUnionOfTwoDirtyChildNodesDirtyRegionsShouldFormTheDirtyRegionWhenTheyAreTheOnlyDirtyNodes(Creator creator, Polluter polluter) {
-        setUp(creator); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
 
         NGNode firstChild = root.getChildren().get(0);
         NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
@@ -208,7 +209,7 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void whenTheParentIsDirtyAndSomeChildrenAreDirtyTheParentBoundsShouldFormTheDirtyRegion(Creator creator, Polluter polluter) {
-        setUp(creator); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
 
         BaseBounds original = root.getCompleteBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM);
         translate(root, TRANSLATE_DELTA, TRANSLATE_DELTA);
@@ -223,7 +224,7 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void anEffectShouldChangeTheTransformedBoundsOfAChild(Creator creator, Polluter polluter) {
-        setUp(creator); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
 
         NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
         BaseBounds oldTransformedBounds = middleChild.getCompleteBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM);
@@ -240,7 +241,7 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void whenAnEffectIsSetTheChildBecomesDirtyAndTheDirtyRegionIncludesTheEffectBounds(Creator creator, Polluter polluter) {
-        setUp(creator); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
 
         NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
         DropShadow shadow = new DropShadow();
@@ -258,7 +259,7 @@ public class GridDirtyRegionTest extends DirtyRegionTestBase {
     @ParameterizedTest
     @MethodSource("createParameters")
     public void whenAnEffectIsChangedOnTheChildTheDirtyRegionIncludesTheOldAndNewEffectBounds(Creator creator, Polluter polluter) {
-        setUp(creator); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
 
         NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
         DropShadow shadow = new DropShadow();

@@ -683,7 +683,7 @@ public class RegionCSSTest {
     }
 
     @Test
-     public void backgroundImagePosition_left() {
+    public void backgroundImagePosition_left() {
         region.setStyle(
                 "-fx-background-image: url('test/javafx/scene/layout/red.png');" +
                 "-fx-background-position: left;");

@@ -30,12 +30,10 @@ import javafx.scene.shape.Rectangle;
 
 import test.com.sun.javafx.test.CssMethodsTestBase;
 
-import org.junit.jupiter.params.provider.Arguments;
-
 public class Rectangle_cssMethods_Test extends CssMethodsTestBase {
     private static final Rectangle TEST_RECTANGLE = new Rectangle(100, 100);
 
-    public static Stream<Arguments> data() {
+    public static Stream<Configuration> data() {
         return Stream.of(
             config(TEST_RECTANGLE, "arcWidth", 0.0,
                    "-fx-arc-width", 10.0),

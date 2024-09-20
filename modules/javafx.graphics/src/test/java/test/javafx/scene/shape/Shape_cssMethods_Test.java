@@ -35,12 +35,10 @@ import javafx.scene.shape.StrokeType;
 
 import test.com.sun.javafx.test.CssMethodsTestBase;
 
-import org.junit.jupiter.params.provider.Arguments;
-
 public class Shape_cssMethods_Test extends CssMethodsTestBase {
     private static final Rectangle TEST_SHAPE = new Rectangle(100, 100);
 
-    public static Stream<Arguments> data() {
+    public static Stream<Configuration> data() {
         return Stream.of(
             config(TEST_SHAPE, "fill", null, "-fx-fill", Color.RED),
             config(TEST_SHAPE, "fill", null, "-fx-fill", null),

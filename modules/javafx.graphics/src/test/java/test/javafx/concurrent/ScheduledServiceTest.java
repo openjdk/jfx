@@ -38,6 +38,7 @@ import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.concurrent.Worker;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -92,8 +93,9 @@ public class ScheduledServiceTest extends ServiceTestBase {
         };
     }
 
-    @Override public void setup(TestServiceFactory factory) {
-        super.setup(factory);
+    @BeforeEach
+    public void setup() {
+        setup(setupServiceFactory());
         s = (ScheduledServiceMock) service;
         wallClock = 0;
     }
@@ -106,49 +108,42 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIsInfinity_TwoSeconds() {
-        setup(setupServiceFactory());
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(2));
         assertEquals(Duration.seconds(2), s.getCumulativePeriod());
     }
 
     @Test
     public void setCumulativePeriod_MaxIsInfinity_Negative() {
-        setup(setupServiceFactory());
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(-2));
         assertEquals(Duration.ZERO, s.getCumulativePeriod());
     }
 
     @Test
     public void setCumulativePeriod_MaxIsInfinity_NegativeInfinity() {
-        setup(setupServiceFactory());
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(Double.NEGATIVE_INFINITY));
         assertEquals(Duration.ZERO, s.getCumulativePeriod());
     }
 
     @Test
     public void setCumulativePeriod_MaxIsInfinity_NaN() {
-        setup(setupServiceFactory());
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(Double.NaN));
         assertEquals(Duration.UNKNOWN, s.getCumulativePeriod());
     }
 
     @Test
     public void setCumulativePeriod_MaxIsInfinity_PositiveInfinity() {
-        setup(setupServiceFactory());
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(Double.POSITIVE_INFINITY));
         assertEquals(Duration.INDEFINITE, s.getCumulativePeriod());
     }
 
     @Test
     public void setCumulativePeriod_MaxIsInfinity_MAX_VALUE() {
-        setup(setupServiceFactory());
         ScheduledServiceShim.setCumulativePeriod(s, Duration.millis(Double.MAX_VALUE));
         assertEquals(Duration.millis(Double.MAX_VALUE), s.getCumulativePeriod());
     }
 
     @Test
     public void setCumulativePeriod_MaxIsNaN_TwoSeconds() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.UNKNOWN);
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(2));
         assertEquals(Duration.seconds(2), s.getCumulativePeriod());
@@ -156,7 +151,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIsNaN_Negative() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.UNKNOWN);
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(-2));
         assertEquals(Duration.ZERO, s.getCumulativePeriod());
@@ -164,7 +158,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIsNaN_NegativeInfinity() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.UNKNOWN);
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(Double.NEGATIVE_INFINITY));
         assertEquals(Duration.ZERO, s.getCumulativePeriod());
@@ -172,7 +165,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIsNaN_NaN() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.UNKNOWN);
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(Double.NaN));
         assertEquals(Duration.UNKNOWN, s.getCumulativePeriod());
@@ -180,7 +172,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIsNaN_PositiveInfinity() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.UNKNOWN);
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(Double.POSITIVE_INFINITY));
         assertEquals(Duration.INDEFINITE, s.getCumulativePeriod());
@@ -188,7 +179,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIsNaN_MAX_VALUE() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.UNKNOWN);
         ScheduledServiceShim.setCumulativePeriod(s, Duration.millis(Double.MAX_VALUE));
         assertEquals(Duration.millis(Double.MAX_VALUE), s.getCumulativePeriod());
@@ -196,7 +186,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIsNull_TwoSeconds() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(null);
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(2));
         assertEquals(Duration.seconds(2), s.getCumulativePeriod());
@@ -204,7 +193,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIsNull_Negative() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(null);
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(-2));
         assertEquals(Duration.ZERO, s.getCumulativePeriod());
@@ -212,7 +200,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIsNull_NegativeInfinity() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(null);
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(Double.NEGATIVE_INFINITY));
         assertEquals(Duration.ZERO, s.getCumulativePeriod());
@@ -220,7 +207,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIsNull_NaN() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(null);
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(Double.NaN));
         assertEquals(Duration.UNKNOWN, s.getCumulativePeriod());
@@ -228,7 +214,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIsNull_PositiveInfinity() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(null);
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(Double.POSITIVE_INFINITY));
         assertEquals(Duration.INDEFINITE, s.getCumulativePeriod());
@@ -236,7 +221,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIsNull_MAX_VALUE() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(null);
         ScheduledServiceShim.setCumulativePeriod(s, Duration.millis(Double.MAX_VALUE));
         assertEquals(Duration.millis(Double.MAX_VALUE), s.getCumulativePeriod());
@@ -244,7 +228,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIs10_TwoSeconds() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.seconds(10));
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(2));
         assertEquals(Duration.seconds(2), s.getCumulativePeriod());
@@ -252,7 +235,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIs10_TenSeconds() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.seconds(10));
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(10));
         assertEquals(Duration.seconds(10), s.getCumulativePeriod());
@@ -260,7 +242,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIs10_TwelveSeconds() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.seconds(10));
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(12));
         assertEquals(Duration.seconds(10), s.getCumulativePeriod());
@@ -268,7 +249,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIs10_Negative() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.seconds(10));
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(-2));
         assertEquals(Duration.ZERO, s.getCumulativePeriod());
@@ -276,7 +256,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIs10_NegativeInfinity() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.seconds(10));
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(Double.NEGATIVE_INFINITY));
         assertEquals(Duration.ZERO, s.getCumulativePeriod());
@@ -284,7 +263,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIs10_NaN() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.seconds(10));
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(Double.NaN));
         assertEquals(Duration.UNKNOWN, s.getCumulativePeriod());
@@ -292,7 +270,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIs10_PositiveInfinity() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.seconds(10));
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(Double.POSITIVE_INFINITY));
         assertEquals(Duration.seconds(10), s.getCumulativePeriod());
@@ -300,7 +277,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIs10_MAX_VALUE() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.seconds(10));
         ScheduledServiceShim.setCumulativePeriod(s, Duration.millis(Double.MAX_VALUE));
         assertEquals(Duration.seconds(10), s.getCumulativePeriod());
@@ -308,7 +284,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIs0_TwoSeconds() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.ZERO);
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(2));
         assertEquals(Duration.ZERO, s.getCumulativePeriod());
@@ -316,7 +291,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIs0_TenSeconds() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.ZERO);
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(10));
         assertEquals(Duration.ZERO, s.getCumulativePeriod());
@@ -324,7 +298,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIs0_TwelveSeconds() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.ZERO);
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(12));
         assertEquals(Duration.ZERO, s.getCumulativePeriod());
@@ -332,7 +305,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIs0_Negative() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.ZERO);
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(-2));
         assertEquals(Duration.ZERO, s.getCumulativePeriod());
@@ -340,7 +312,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIs0_NegativeInfinity() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.ZERO);
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(Double.NEGATIVE_INFINITY));
         assertEquals(Duration.ZERO, s.getCumulativePeriod());
@@ -348,7 +319,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIs0_NaN() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.ZERO);
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(Double.NaN));
         assertEquals(Duration.UNKNOWN, s.getCumulativePeriod());
@@ -356,7 +326,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIs0_PositiveInfinity() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.ZERO);
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(Double.POSITIVE_INFINITY));
         assertEquals(Duration.ZERO, s.getCumulativePeriod());
@@ -364,7 +333,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIs0_MAX_VALUE() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.ZERO);
         ScheduledServiceShim.setCumulativePeriod(s, Duration.millis(Double.MAX_VALUE));
         assertEquals(Duration.ZERO, s.getCumulativePeriod());
@@ -372,7 +340,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIsNegative_TwoSeconds() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.seconds(-1));
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(2));
         assertEquals(Duration.ZERO, s.getCumulativePeriod());
@@ -380,7 +347,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIsNegative_TenSeconds() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.seconds(-1));
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(10));
         assertEquals(Duration.ZERO, s.getCumulativePeriod());
@@ -388,7 +354,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIsNegative_TwelveSeconds() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.seconds(-1));
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(12));
         assertEquals(Duration.ZERO, s.getCumulativePeriod());
@@ -396,7 +361,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIsNegative_Negative() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.seconds(-1));
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(-2));
         assertEquals(Duration.ZERO, s.getCumulativePeriod());
@@ -404,7 +368,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIsNegative_NegativeInfinity() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.seconds(-1));
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(Double.NEGATIVE_INFINITY));
         assertEquals(Duration.ZERO, s.getCumulativePeriod());
@@ -412,7 +375,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIsNegative_NaN() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.seconds(-1));
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(Double.NaN));
         assertEquals(Duration.UNKNOWN, s.getCumulativePeriod());
@@ -420,7 +382,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIsNegative_PositiveInfinity() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.seconds(-1));
         ScheduledServiceShim.setCumulativePeriod(s, Duration.seconds(Double.POSITIVE_INFINITY));
         assertEquals(Duration.ZERO, s.getCumulativePeriod());
@@ -428,7 +389,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void setCumulativePeriod_MaxIsNegative_MAX_VALUE() {
-        setup(setupServiceFactory());
         s.setMaximumCumulativePeriod(Duration.seconds(-1));
         ScheduledServiceShim.setCumulativePeriod(s, Duration.millis(Double.MAX_VALUE));
         assertEquals(Duration.ZERO, s.getCumulativePeriod());
@@ -446,7 +406,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void delayIsHonored_Positive() {
-        setup(setupServiceFactory());
         s.setDelay(Duration.seconds(1));
         s.start();
         assertEquals(1000, wallClock);
@@ -454,7 +413,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void delayIsHonored_Unknown() {
-        setup(setupServiceFactory());
         s.setDelay(Duration.UNKNOWN);
         s.start();
         assertEquals(0, wallClock);
@@ -462,7 +420,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void delayIsHonored_Infinite() {
-        setup(setupServiceFactory());
         s.setDelay(Duration.INDEFINITE);
         s.start();
         assertEquals(Long.MAX_VALUE, wallClock);
@@ -470,7 +427,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void delayIsHonored_ZERO() {
-        setup(setupServiceFactory());
         s.setDelay(Duration.ZERO);
         s.start();
         assertEquals(0, wallClock);
@@ -478,7 +434,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void delayIsNotUsedOnSubsequentIteration() {
-        setup(setupServiceFactory());
         s.setDelay(Duration.seconds(1));
         s.setPeriod(Duration.seconds(3));
         s.start();
@@ -488,7 +443,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void delayIsUsedOnRestart() {
-        setup(setupServiceFactory());
         s.setDelay(Duration.seconds(1));
         s.setPeriod(Duration.seconds(3));
         s.start();
@@ -501,7 +455,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void delayIsUsedOnStartFollowingReset() {
-        setup(setupServiceFactory());
         s.setDelay(Duration.seconds(1));
         s.setPeriod(Duration.seconds(3));
         s.start();
@@ -524,7 +477,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void periodDoesNotContributeToDelay() {
-        setup(setupServiceFactory());
         s.setDelay(Duration.seconds(1));
         s.setPeriod(Duration.seconds(3));
         s.start();
@@ -533,7 +485,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void executionTimeLessThanPeriod() {
-        setup(setupServiceFactory());
         s.setDelay(Duration.seconds(1));
         s.setPeriod(Duration.seconds(3));
         s.start();
@@ -543,7 +494,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void executionTimeEqualsPeriod() {
-        setup(setupServiceFactory());
         s.setDelay(Duration.seconds(1));
         s.setPeriod(Duration.seconds(3));
         s.start();
@@ -554,7 +504,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void executionTimeExceedsPeriod() {
-        setup(setupServiceFactory());
         s.setDelay(Duration.seconds(1));
         s.setPeriod(Duration.seconds(3));
         s.start();
@@ -565,7 +514,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void startOfPeriodIsResetAfterReset() {
-        setup(setupServiceFactory());
         s.setDelay(Duration.seconds(1));
         s.setPeriod(Duration.seconds(3));
         s.start();
@@ -581,7 +529,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void startOfPeriodIsResetAfterRestart() {
-        setup(setupServiceFactory());
         s.setDelay(Duration.seconds(1));
         s.setPeriod(Duration.seconds(3));
         s.start();
@@ -602,7 +549,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void onFailureCumulativePeriodIsIncreased_EXPONENTIAL_BACKOFF_zero() {
-        setup(setupServiceFactory());
         s.setBackoffStrategy(ScheduledService.EXPONENTIAL_BACKOFF_STRATEGY);
         s.setPeriod(Duration.ZERO);
         taskFactory = EPIC_FAIL_FACTORY;
@@ -612,7 +558,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void onFailureCumulativePeriodIsIncreased_EXPONENTIAL_BACKOFF_one() {
-        setup(setupServiceFactory());
         s.setBackoffStrategy(ScheduledService.EXPONENTIAL_BACKOFF_STRATEGY);
         s.setPeriod(Duration.seconds(1));
         taskFactory = EPIC_FAIL_FACTORY;
@@ -622,7 +567,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void onFailureCumulativePeriodIsIncreased_EXPONENTIAL_BACKOFF_indefinite() {
-        setup(setupServiceFactory());
         s.setBackoffStrategy(ScheduledService.EXPONENTIAL_BACKOFF_STRATEGY);
         s.setPeriod(Duration.INDEFINITE);
         taskFactory = EPIC_FAIL_FACTORY;
@@ -632,7 +576,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void onFailureCumulativePeriodIsIncreased_EXPONENTIAL_BACKOFF_unknown() {
-        setup(setupServiceFactory());
         s.setBackoffStrategy(ScheduledService.EXPONENTIAL_BACKOFF_STRATEGY);
         s.setPeriod(Duration.UNKNOWN);
         taskFactory = EPIC_FAIL_FACTORY;
@@ -642,7 +585,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void onFailureCumulativePeriodIsIncreased_LOGARITHMIC_BACKOFF_zero() {
-        setup(setupServiceFactory());
         s.setBackoffStrategy(ScheduledService.LOGARITHMIC_BACKOFF_STRATEGY);
         s.setPeriod(Duration.ZERO);
         taskFactory = EPIC_FAIL_FACTORY;
@@ -652,7 +594,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void onFailureCumulativePeriodIsIncreased_LOGARITHMIC_BACKOFF_one() {
-        setup(setupServiceFactory());
         s.setBackoffStrategy(ScheduledService.LOGARITHMIC_BACKOFF_STRATEGY);
         s.setPeriod(Duration.seconds(1));
         taskFactory = EPIC_FAIL_FACTORY;
@@ -662,7 +603,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void onFailureCumulativePeriodIsIncreased_LOGARITHMIC_BACKOFF_indefinite() {
-        setup(setupServiceFactory());
         s.setBackoffStrategy(ScheduledService.LOGARITHMIC_BACKOFF_STRATEGY);
         s.setPeriod(Duration.INDEFINITE);
         taskFactory = EPIC_FAIL_FACTORY;
@@ -672,7 +612,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void onFailureCumulativePeriodIsIncreased_LOGARITHMIC_BACKOFF_unknown() {
-        setup(setupServiceFactory());
         s.setBackoffStrategy(ScheduledService.LOGARITHMIC_BACKOFF_STRATEGY);
         s.setPeriod(Duration.UNKNOWN);
         taskFactory = EPIC_FAIL_FACTORY;
@@ -682,7 +621,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void onFailureCumulativePeriodIsIncreased_LINEAR_BACKOFF_zero() {
-        setup(setupServiceFactory());
         s.setBackoffStrategy(ScheduledService.LINEAR_BACKOFF_STRATEGY);
         s.setPeriod(Duration.ZERO);
         taskFactory = EPIC_FAIL_FACTORY;
@@ -692,7 +630,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void onFailureCumulativePeriodIsIncreased_LINEAR_BACKOFF_one() {
-        setup(setupServiceFactory());
         s.setBackoffStrategy(ScheduledService.LINEAR_BACKOFF_STRATEGY);
         s.setPeriod(Duration.seconds(1));
         taskFactory = EPIC_FAIL_FACTORY;
@@ -702,7 +639,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void onFailureCumulativePeriodIsIncreased_LINEAR_BACKOFF_indefinite() {
-        setup(setupServiceFactory());
         s.setBackoffStrategy(ScheduledService.LINEAR_BACKOFF_STRATEGY);
         s.setPeriod(Duration.INDEFINITE);
         taskFactory = EPIC_FAIL_FACTORY;
@@ -712,7 +648,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void onFailureCumulativePeriodIsIncreased_LINEAR_BACKOFF_unknown() {
-        setup(setupServiceFactory());
         s.setBackoffStrategy(ScheduledService.LINEAR_BACKOFF_STRATEGY);
         s.setPeriod(Duration.UNKNOWN);
         taskFactory = EPIC_FAIL_FACTORY;
@@ -730,7 +665,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void cumulativePeriodSetWhenScheduled() {
-        setup(setupServiceFactory());
         assertEquals(Duration.ZERO, s.getCumulativePeriod());
         s.setPeriod(Duration.seconds(1));
         assertEquals(Duration.ZERO, s.getCumulativePeriod());
@@ -740,7 +674,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void cumulativePeriodDoesNotChangeOnSuccessfulRun() {
-        setup(setupServiceFactory());
         s.setPeriod(Duration.seconds(1));
         s.start();
         s.iterate();
@@ -749,7 +682,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void cumulativePeriodResetOnSuccessfulRun() {
-        setup(setupServiceFactory());
         final AtomicInteger counter = new AtomicInteger();
         taskFactory = param -> new AbstractTask() {
             @Override protected String call() throws Exception {
@@ -768,7 +700,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void cumulativePeriodDoesNotChangeOnCancelRun() {
-        setup(setupServiceFactory());
         s.setPeriod(Duration.seconds(1));
         s.start();
         s.iterate();
@@ -783,7 +714,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void restartOnFailure_True() {
-        setup(setupServiceFactory());
         final AtomicInteger counter = new AtomicInteger();
         taskFactory = new Callback<>() {
             @Override public AbstractTask call(Void param) {
@@ -803,7 +733,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void restartOnFailure_False() {
-        setup(setupServiceFactory());
         final AtomicInteger counter = new AtomicInteger();
         taskFactory = new Callback<>() {
             @Override public AbstractTask call(Void param) {
@@ -831,7 +760,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void serviceIteratesWhile_CurrentFailureCount_IsLessThan_MaximumFailureCount() {
-        setup(setupServiceFactory());
         final AtomicInteger counter = new AtomicInteger();
         taskFactory = new Callback<>() {
             @Override public AbstractTask call(Void param) {
@@ -855,7 +783,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void currentFailureCountIsResetOnRestart() {
-        setup(setupServiceFactory());
         taskFactory = EPIC_FAIL_FACTORY;
         s.start();
         for (int i=0; i<10; i++) s.iterate();
@@ -866,7 +793,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void currentFailureCountIsResetOnReset() {
-        setup(setupServiceFactory());
         taskFactory = EPIC_FAIL_FACTORY;
         s.start();
         for (int i=0; i<10; i++) s.iterate();
@@ -877,7 +803,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void currentFailureCountIsNotResetOnCancel() {
-        setup(setupServiceFactory());
         taskFactory = EPIC_FAIL_FACTORY;
         s.start();
         for (int i=0; i<10; i++) s.iterate();
@@ -894,13 +819,11 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void lastValueIsInitiallyNull() {
-        setup(setupServiceFactory());
         assertNull(s.getLastValue());
     }
 
     @Test
     public void lastValueIsNullAfterFailedFirstIteration() {
-        setup(setupServiceFactory());
         taskFactory = EPIC_FAIL_FACTORY;
         s.start();
         assertNull(s.getLastValue());
@@ -908,7 +831,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void lastValueIsSetAfterSuccessfulFirstIteration() {
-        setup(setupServiceFactory());
         s.start();
         assertEquals("Sentinel", s.getLastValue());
         assertNull(s.getValue());
@@ -916,7 +838,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void lastValueIsSetAfterFailedFirstIterationAndSuccessfulSecondIteration() {
-        setup(setupServiceFactory());
         final AtomicInteger counter = new AtomicInteger();
         taskFactory = param -> new AbstractTask() {
             @Override protected String call() throws Exception {
@@ -935,7 +856,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void lastValueIsUnchangedAfterSuccessfulFirstIterationAndFailedSecondIteration() {
-        setup(setupServiceFactory());
         final AtomicInteger counter = new AtomicInteger();
         taskFactory = param -> new AbstractTask() {
             @Override protected String call() throws Exception {
@@ -954,7 +874,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void lastValueIsClearedOnReset() {
-        setup(setupServiceFactory());
         s.start();
         assertEquals("Sentinel", s.getLastValue());
         s.cancel();
@@ -965,7 +884,6 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test
     public void callingCancelFromOnSucceededEventHandlerShouldStopScheduledService() {
-        setup(setupServiceFactory());
         AtomicBoolean onReadyCalled = new AtomicBoolean();
         AtomicBoolean onScheduledCalled = new AtomicBoolean();
         AtomicBoolean onCancelledCalled = new AtomicBoolean();
