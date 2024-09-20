@@ -652,6 +652,18 @@ public class TextInputControlTest {
         assertEquals("", textInput.getSelectedText());
     }
 
+//    @ParameterizedTest
+//    @MethodSource("parameters")
+//    public void selectedTextWorksWhenSelectionIsBound(Class<?> type) {
+//        setup(type);
+//        ObjectProperty<IndexRange> other = new SimpleObjectProperty<IndexRange>(new IndexRange(4, 9));
+//        textInput.setText("The quick brown fox");
+//        textInput.selectionProperty().bind(other);
+//        assertEquals("quick", textInput.getSelectedText());
+//        other.set(new IndexRange(10, 19));
+//        assertEquals("brown fox", textInput.getSelectedText());
+//    }
+
     @ParameterizedTest
     @MethodSource("parameters")
     public void selectedTextWorksWhenTextIsBound(Class<?> type) {
@@ -738,6 +750,17 @@ public class TextInputControlTest {
         assertEquals(new IndexRange(19, 19), textInput.getSelection());
     }
 
+//    @ParameterizedTest
+//    @MethodSource("parameters")
+//    public void selectionCanBeBound(Class<?> type) {
+//        setup(type);
+//        ObjectProperty<IndexRange> other = new SimpleObjectProperty<IndexRange>(new IndexRange(4, 9));
+//        textInput.selectionProperty().bind(other);
+//        assertEquals(new IndexRange(4, 9), textInput.getSelection());
+//        other.set(new IndexRange(10, 19));
+//        assertEquals(new IndexRange(10, 19), textInput.getSelection());
+//    }
+
     @ParameterizedTest
     @MethodSource("parameters")
     public void selectionChangeEventsHappen(Class<?> type) {
@@ -749,6 +772,40 @@ public class TextInputControlTest {
         textInput.selectRange(0, 3);
         assertTrue(passed[0]);
     }
+
+//    @ParameterizedTest
+//    @MethodSource("parameters")
+//    public void selectionChangeEventsHappenWhenBound(Class<?> type) {
+//        setup(type);
+//        final boolean[] passed = new boolean[] { false };
+//        ObjectProperty<IndexRange> other = new SimpleObjectProperty<IndexRange>(new IndexRange(0, 5));
+//        textInput.selectionProperty().addListener(new InvalidationListener() {
+//            @Override
+//            public void invalidated(Observable observable) {
+//                passed[0] = true;
+//            }
+//        });
+//        textInput.selectionProperty().bind(other);
+//        assertTrue(passed[0]);
+//    }
+
+//    @ParameterizedTest
+//    @MethodSource("parameters")
+//    public void selectionChangeEventsHappenWhenBound2(Class<?> type) {
+//        setup(type);
+//        final boolean[] passed = new boolean[] { false };
+//        ObjectProperty<IndexRange> other = new SimpleObjectProperty<IndexRange>(new IndexRange(0, 5));
+//        textInput.selectionProperty().bind(other);
+//        textInput.selectionProperty().addListener(new InvalidationListener() {
+//            @Override
+//            public void invalidated(Observable observable) {
+//                passed[0] = true;
+//            }
+//        });
+//        assertFalse(passed[0]);
+//        other.set(new IndexRange(1, 2));
+//        assertTrue(passed[0]);
+//    }
 
     @ParameterizedTest
     @MethodSource("parameters")
