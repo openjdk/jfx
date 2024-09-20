@@ -320,21 +320,6 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
     }
 
     /**
-     * Convenience alias for Thread.sleep() that rethrows InterruptedException
-     * as an AssertionError.
-     * @param ms the timout in milliseconds
-     */
-    protected void sleep(int ms) {
-        try {
-            // KCR: this should be sleep(ms) not a hard-coded 1
-            Thread.sleep(1);
-        } catch (InterruptedException e) {
-            // fail(e);
-            throw new AssertionError(e);
-        }
-    }
-
-    /**
      * Adds a logging event filter to the control under test which prints all KeyEvent's to stdout,
      * for the duration of a single test case.
      * @return the Runnable
