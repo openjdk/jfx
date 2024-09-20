@@ -44,9 +44,8 @@ import javafx.collections.ObservableList;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class SelectBindingTest {
 
@@ -385,7 +384,7 @@ public class SelectBindingTest {
     @Test
     public void createWithRootNull() {
         assertThrows(NullPointerException.class, () -> {
-            Bindings.selectString(null, "next", "name");
+            select = Bindings.selectString(null, "next", "name");
         });
     }
 

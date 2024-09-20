@@ -88,6 +88,21 @@ public class ContentBindingMapTest {
     }
 
     @Test
+    public void testBind_Null_X() {
+        assertThrows(NullPointerException.class, () -> Bindings.bindContent(null, op2));
+    }
+
+    @Test
+    public void testBind_X_Null() {
+        assertThrows(NullPointerException.class, () -> Bindings.bindContent(op1, null));
+    }
+
+    @Test
+    public void testBind_X_Self() {
+        assertThrows(IllegalArgumentException.class, () -> Bindings.bindContent(op2, op2));
+    }
+
+    @Test
     public void testUnbind() {
         // unbind non-existing binding => no-op
         Bindings.unbindContent(op1, op2);

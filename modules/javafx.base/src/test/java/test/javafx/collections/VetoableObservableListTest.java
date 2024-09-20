@@ -92,63 +92,55 @@ public class VetoableObservableListTest {
     @Test
     @Disabled
     public void testNull_add() {
-        list.add(null);
-
+        assertThrows(NullPointerException.class, () -> list.add(null));
     }
 
     @Test
     @Disabled
     public void testNull_add_indexed() {
-        list.add( 1, null);
-
+        assertThrows(NullPointerException.class, () -> list.add(1, null));
     }
 
     @Test
     @Disabled
     public void testNull_addAll_collection() {
-        list.addAll(Arrays.asList("a", null, "b"));
-
+        assertThrows(NullPointerException.class, () -> list.addAll(Arrays.asList("a", null, "b")));
     }
 
     @Test
     @Disabled
     public void testNull_addAll() {
-        list.addAll("a", null, "b");
-
+        assertThrows(NullPointerException.class, () -> list.addAll(Arrays.asList("a", null, "b")));
     }
 
     @Test
     @Disabled
     public void testNull_addAll_collection_indexed() {
-        list.addAll(1, Arrays.asList("a", null, "b"));
-
+        assertThrows(NullPointerException.class, () -> list.addAll(1, Arrays.asList("a", null, "b")));
     }
 
     @Test
     @Disabled
     public void testNull_set() {
-        list.set(1, null);
-
+        assertThrows(NullPointerException.class, () -> list.set(1, null));
     }
 
     @Test
     @Disabled
     public void testNull_setAll() {
-        list.setAll("a", null);
-
+        assertThrows(NullPointerException.class, () -> list.setAll("a", null));
     }
 
     @Test
     @Disabled
     public void testNull_setAll_collection() {
-        list.setAll(Arrays.asList("a", null, "b"));
+        assertThrows(NullPointerException.class, () -> list.setAll(Arrays.asList("a", null, "b")));
     }
 
     @Test
     @Disabled
     public void testNull_listIterator_add() {
-        list.listIterator().add(null);
-
+        assertThrows(NullPointerException.class, () -> list.listIterator().add(null));
     }
 
     @Test
@@ -156,43 +148,43 @@ public class VetoableObservableListTest {
     public void testNull_listIterator_set() {
         ListIterator<String> it = list.listIterator();
         it.next();
-        it.set(null);
+        assertThrows(NullPointerException.class, () -> it.set(null));
     }
 
     @Test
     @Disabled
     public void testNull_subList_add() {
-        list.subList(0, 1).add(null);
+        assertThrows(NullPointerException.class, () -> list.subList(0, 1).add(null));
     }
 
     @Test
     @Disabled
     public void testNull_subList_add_indexed() {
-        list.subList(0, 1).add(0, null);
+        assertThrows(NullPointerException.class, () -> list.subList(0, 1).add(0, null));
     }
 
     @Test
     @Disabled
     public void testNull_subList_addAll() {
-        list.subList(0, 1).addAll(Collections.<String>singleton(null));
+        assertThrows(NullPointerException.class, () -> list.subList(0, 1).addAll(Collections.<String>singleton(null)));
     }
 
     @Test
     @Disabled
     public void testNull_subList_addAll_indexed() {
-        list.subList(0, 1).addAll(0, Collections.<String>singleton(null));
+        assertThrows(NullPointerException.class, () -> list.subList(0, 1).addAll(0, Collections.<String>singleton(null)));
     }
 
     @Test
     @Disabled
     public void testNull_subList_set() {
-        list.subList(0, 1).set(0, null);
+        assertThrows(NullPointerException.class, () -> list.subList(0, 1).set(0, null));
     }
 
     @Test
     @Disabled
     public void testNull_subList_listIterator() {
-        list.subList(0, 1).listIterator().add(null);
+        assertThrows(NullPointerException.class, () -> list.subList(0, 1).listIterator().add(null));
     }
 
     @Test
@@ -352,6 +344,7 @@ public class VetoableObservableListTest {
         }
         assertCallCount(1);
     }
+
     @Test
     public void testConcurrencyAddAll() {
         boolean exception = false;
@@ -365,6 +358,7 @@ public class VetoableObservableListTest {
         }
         assertCallCount(1);
     }
+
     @Test
     public void testConcurrencyClear() {
         boolean exception = false;
@@ -378,6 +372,7 @@ public class VetoableObservableListTest {
         }
         assertCallCount(1);
     }
+
     @Test
     public void testConcurrencyRemove() {
         boolean exception = false;
@@ -391,6 +386,7 @@ public class VetoableObservableListTest {
         }
         assertCallCount(1);
     }
+
     @Test
     public void testConcurrencyRemoveAll() {
         boolean exception = false;
@@ -404,6 +400,7 @@ public class VetoableObservableListTest {
         }
         assertCallCount(1);
     }
+
     @Test
     public void testConcurrencyRetainAll() {
         boolean exception = false;
@@ -417,6 +414,7 @@ public class VetoableObservableListTest {
         }
         assertCallCount(1);
     }
+
     @Test
     public void testConcurrencySet() {
         boolean exception = false;
@@ -444,6 +442,7 @@ public class VetoableObservableListTest {
         }
         assertCallCount(1);
     }
+
     @Test
     public void testConcurrencyIteratorAdd() {
         boolean exception = false;
@@ -457,6 +456,7 @@ public class VetoableObservableListTest {
         }
         assertCallCount(1);
     }
+
     @Test
     public void testConcurrencyIteratorSet() {
         boolean exception = false;
@@ -482,8 +482,6 @@ public class VetoableObservableListTest {
             it2.remove();
         });
     }
-
-
 
     @Test
     public void testNonConcurrency() {

@@ -186,13 +186,9 @@ public class StringFormatterTest {
         assertEquals(date0.toString() + date1.toString(), s.get());
 
         // test all
-        s = Bindings.concat(doubleV, double1, floatV, float1, longV, long1, intV, int1, booleanV, boolean1, stringV,
-                string1, dateV, date1);
-        DependencyUtils.checkDependencies(((StringBinding) s).getDependencies(), doubleV, floatV, longV, intV, booleanV,
-                stringV, dateV);
-        assertEquals(
-                "" + double0 + double1 + float0 + float1 + long0 + long1 + int0 + int1 + boolean0 + boolean1 + string0 +
-                        string1 + date0 + date1, s.get());
+        s = Bindings.concat(doubleV, double1, floatV, float1, longV, long1, intV, int1, booleanV, boolean1, stringV, string1, dateV, date1);
+        DependencyUtils.checkDependencies(((StringBinding)s).getDependencies(), doubleV, floatV, longV, intV, booleanV, stringV, dateV);
+        assertEquals("" + double0 + double1 + float0 + float1 + long0 + long1 + int0 + int1 + boolean0 + boolean1 + string0 + string1 + date0 + date1, s.get());
         doubleV.set(double1);
         floatV.set(float1);
         longV.set(long1);
@@ -314,28 +310,25 @@ public class StringFormatterTest {
         }
     }
 
-    public class BindingsTest {
+    @Test
+    public void testConvertWithDefaultLocale_Null() {
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.format(null);
+        });
+    }
 
-        @Test
-        public void testConvertWithDefaultLocale_Null() {
-            assertThrows(NullPointerException.class, () -> {
-                Bindings.format(null);
-            });
-        }
+    @Test
+    public void testConvertWithDefaultLocale_IllegalObject() {
+        assertThrows(IllegalFormatException.class, () -> {
+            Bindings.format("%tc", double0);
+        });
+    }
 
-        @Test
-        public void testConvertWithDefaultLocale_IllegalObject() {
-            assertThrows(IllegalFormatException.class, () -> {
-                Bindings.format("%tc", double0);
-            });
-        }
-
-        @Test
-        public void testConvertWithDefaultLocale_IllegalValueModel() {
-            assertThrows(IllegalFormatException.class, () -> {
-                Bindings.format("%tc", doubleV);
-            });
-        }
+    @Test
+    public void testConvertWithDefaultLocale_IllegalValueModel() {
+        assertThrows(IllegalFormatException.class, () -> {
+            Bindings.format("%tc", doubleV);
+        });
     }
 
     @Test
