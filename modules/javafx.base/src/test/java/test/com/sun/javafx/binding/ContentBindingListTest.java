@@ -182,13 +182,13 @@ public class ContentBindingListTest {
     public void testHashCode() {
         final int hc1 = ContentBinding.bind(op1, op2).hashCode();
         ContentBinding.unbind(op1, op2);
-         final int hc2 = ContentBinding.bind(op1, op2).hashCode();
+        final int hc2 = ContentBinding.bind(op1, op2).hashCode();
         assertEquals(hc1, hc2);
     }
 
     @Test
      public void testEquals() {
-     final Object golden = ContentBinding.bind(op1, op2);
+        final Object golden = ContentBinding.bind(op1, op2);
         ContentBinding.unbind(op1, op2);
 
         assertTrue(golden.equals(golden));
