@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,17 +25,21 @@
 
 package test.javafx.scene.control;
 
-import java.util.Arrays;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.util.Collection;
-
+import java.util.List;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ChoiceBoxShim;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ComboBoxShim;
-import javafx.scene.control.TableView.TableViewFocusModel;
-import javafx.scene.control.TableView.TableViewSelectionModel;
 import javafx.scene.control.Control;
 import javafx.scene.control.ControlShim;
 import javafx.scene.control.FocusModel;
@@ -48,26 +52,20 @@ import javafx.scene.control.SelectionModel;
 import javafx.scene.control.SelectionModelShim;
 import javafx.scene.control.SingleSelectionModel;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TableView.TableViewFocusModel;
+import javafx.scene.control.TableView.TableViewSelectionModel;
 import javafx.scene.control.TableViewShim;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.control.TreeTableViewShim;
 import javafx.scene.control.TreeView;
 import javafx.scene.control.TreeViewShim;
-
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
-
-import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
 
 /**
  * Unit tests for the SelectionModel abstract class used by ListView
@@ -77,20 +75,16 @@ import static org.junit.Assert.assertEquals;
  *
  * @author Jonathan Giles
  */
-@RunWith(Parameterized.class)
 public class SelectionModelImplTest {
 
     private SelectionModel model;
     private FocusModel focusModel;
-
-    private Class<? extends SelectionModel> modelClass;
     private Control currentControl;
 
     // ListView
     private ListView<String> listView;
 
     // ListView model data
-//    private static ObservableList<String> defaultData = FXCollections.<String>observableArrayList();
     private static ObservableList<String> data = FXCollections.<String>observableArrayList();
     private static final String ROW_1_VALUE = "Row 1";
     private static final String ROW_2_VALUE = "Row 2";
@@ -119,24 +113,23 @@ public class SelectionModelImplTest {
 
     // --- ListView model data
 
-    @Parameters public static Collection implementations() {
-        return Arrays.asList(new Object[][] {
-            { ListViewShim.get_ListViewBitSetSelectionModel_class() },
-            { TreeViewShim.get_TreeViewBitSetSelectionModel_class() },
-            { TableViewShim.get_TableViewArrayListSelectionModel_class() },
-            { TreeTableViewShim.get_TreeTableViewArrayListSelectionModel_class() }
-//            { ChoiceBox.ChoiceBoxSelectionModel.class } TODO re-enable
-//            { ComboBox.ComboBoxSelectionModel.class }  TODO re-enable
-        });
+    private static Collection<Class<? extends SelectionModel>> parameters() {
+        return List.of(
+            ListViewShim.get_ListViewBitSetSelectionModel_class(),
+            TreeViewShim.get_TreeViewBitSetSelectionModel_class(),
+            TableViewShim.get_TableViewArrayListSelectionModel_class(),
+            TreeTableViewShim.get_TreeTableViewArrayListSelectionModel_class()
+//          ChoiceBox.ChoiceBoxSelectionModel.class, TODO re-enable
+//          ComboBox.ComboBoxSelectionModel.class  TODO re-enable
+        );
     }
 
-    public SelectionModelImplTest(Class<? extends SelectionModel> modelClass) {
-        this.modelClass = modelClass;
-    }
+    @AfterAll
+    public static void tearDownClass() throws Exception {    }
 
-    @AfterClass public static void tearDownClass() throws Exception {    }
-
-    @Before public void setUp() throws Exception {
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    public void setUp(Class<? extends SelectionModel> modelClass) {
         // reset the data model
         data.setAll(ROW_1_VALUE, ROW_2_VALUE, ROW_3_VALUE, "Row 4", ROW_5_VALUE, "Row 6",
                 "Row 7", "Row 8", "Row 9", "Row 10", "Row 11", "Row 12", "Row 13",
@@ -178,8 +171,6 @@ public class SelectionModelImplTest {
         comboBox = new ComboBox();
         comboBox.setItems(data);
         // --- ComboBox init
-
-
 
         try {
             // we create a new SelectionModel per test to ensure it is always back
@@ -244,12 +235,12 @@ public class SelectionModelImplTest {
                 ((MultipleSelectionModel)model).setSelectionMode(SelectionMode.SINGLE);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            throw ex;
+            fail(ex);
         }
     }
 
-    @After public void tearDown() {
+    @AfterEach
+    public void tearDown() {
         model = null;
     }
 
@@ -265,7 +256,14 @@ public class SelectionModelImplTest {
         return item;
     }
 
-    @Test public void testDefaultState() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testDefaultState(Class<? extends SelectionModel> modelClass) {
+        setUp(modelClass);
+        testDefaultState2();
+    }
+
+    private void testDefaultState2() {
         assertEquals(-1, model.getSelectedIndex());
         assertNull(getValue(model.getSelectedItem()));
 
@@ -275,15 +273,21 @@ public class SelectionModelImplTest {
         }
     }
 
-    @Test public void selectInvalidIndex() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void selectInvalidIndex(Class<? extends SelectionModel> modelClass) {
+        setUp(modelClass);
         // there isn't 100 rows, so selecting this shouldn't be possible
         model.select(100);
 
         // we should be in a default state
-        testDefaultState();
+        testDefaultState2();
     }
 
-    @Test public void selectRowAfterInvalidIndex() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void selectRowAfterInvalidIndex(Class<? extends SelectionModel> modelClass) {
+        setUp(modelClass);
         // there isn't 100 rows, so selecting this shouldn't be possible.
         // The end result should be that we remain at the 0 index
         model.select(100);
@@ -299,7 +303,10 @@ public class SelectionModelImplTest {
         if (focusModel != null) assertEquals(2, focusModel.getFocusedIndex());
     }
 
-    @Test public void selectInvalidItem() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void selectInvalidItem(Class<? extends SelectionModel> modelClass) {
+        setUp(modelClass);
         assertEquals(-1, model.getSelectedIndex());
 
         Object obj = new TreeItem("DUMMY");
@@ -309,7 +316,10 @@ public class SelectionModelImplTest {
         assertEquals(-1, model.getSelectedIndex());
     }
 
-    @Test public void selectValidIndex() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void selectValidIndex(Class<? extends SelectionModel> modelClass) {
+        setUp(modelClass);
         int index = 4;
         model.select(index);
 
@@ -324,7 +334,10 @@ public class SelectionModelImplTest {
         }
     }
 
-    @Test public void clearPartialSelectionWithSingleSelection() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void clearPartialSelectionWithSingleSelection(Class<? extends SelectionModel> modelClass) {
+        setUp(modelClass);
         assertFalse(model.isSelected(5));
         model.select(5);
         assertTrue(model.isSelected(5));
@@ -332,7 +345,10 @@ public class SelectionModelImplTest {
         assertFalse(model.isSelected(5));
     }
 
-    @Test public void ensureIsEmptyIsAccurate() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void ensureIsEmptyIsAccurate(Class<? extends SelectionModel> modelClass) {
+        setUp(modelClass);
         assertTrue(model.isEmpty());
         model.select(5);
         assertFalse(model.isEmpty());
@@ -340,23 +356,32 @@ public class SelectionModelImplTest {
         assertTrue(model.isEmpty());
     }
 
-    @Test public void testSingleSelectionMode() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSingleSelectionMode(Class<? extends SelectionModel> modelClass) {
+        setUp(modelClass);
         model.clearSelection();
         assertTrue(model.isEmpty());
 
         model.select(5);
-        assertTrue("Selected: " + model.getSelectedIndex() + ", expected: 5",  model.isSelected(5));
+        assertTrue(model.isSelected(5), "Selected: " + model.getSelectedIndex() + ", expected: 5");
 
         model.select(10);
         assertTrue(model.isSelected(10));
         assertFalse(model.isSelected(5));
     }
 
-    @Test public void testSelectNullObject() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSelectNullObject(Class<? extends SelectionModel> modelClass) {
+        setUp(modelClass);
         model.select(null);
     }
 
-    @Test public void testFocusOnNegativeIndex() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testFocusOnNegativeIndex(Class<? extends SelectionModel> modelClass) {
+        setUp(modelClass);
         if (focusModel == null) return;
         assertEquals(0, focusModel.getFocusedIndex());
         focusModel.focus(-1);
@@ -364,7 +389,10 @@ public class SelectionModelImplTest {
         assertFalse(focusModel.isFocused(-1));
     }
 
-    @Test public void testFocusOnOutOfBoundsIndex() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testFocusOnOutOfBoundsIndex(Class<? extends SelectionModel> modelClass) {
+        setUp(modelClass);
         if (focusModel == null) return;
         assertEquals(0, focusModel.getFocusedIndex());
         focusModel.focus(Integer.MAX_VALUE);
@@ -373,7 +401,10 @@ public class SelectionModelImplTest {
         assertFalse(focusModel.isFocused(Integer.MAX_VALUE));
     }
 
-    @Test public void testFocusOnValidIndex() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testFocusOnValidIndex(Class<? extends SelectionModel> modelClass) {
+        setUp(modelClass);
         if (focusModel == null) return;
         assertEquals(0, focusModel.getFocusedIndex());
         focusModel.focus(1);
@@ -387,8 +418,11 @@ public class SelectionModelImplTest {
         }
     }
 
-    @Ignore("Not yet implemented in TreeView")
-    @Test public void testSelectionChangesWhenItemIsInsertedAtStartOfModel() {
+    @Disabled("Not yet implemented in TreeView")
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSelectionChangesWhenItemIsInsertedAtStartOfModel(Class<? extends SelectionModel> modelClass) {
+        setUp(modelClass);
         /* Select the fourth item, and insert a new item at the start of the
          * data model. The end result should be that the fourth item should NOT
          * be selected, and the fifth item SHOULD be selected.
@@ -400,7 +434,10 @@ public class SelectionModelImplTest {
         assertTrue(model.isSelected(4));
     }
 
-    @Test public void test_rt_29821() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_rt_29821(Class<? extends SelectionModel> modelClass) {
+        setUp(modelClass);
         // in single selection passing in select(null) should clear selection.
         // In multiple selection (tested elsewhere), this would result in a no-op
 
@@ -433,8 +470,10 @@ public class SelectionModelImplTest {
         }
     }
 
-    @Test public void test_rt_30356_selectRowAtIndex0() throws Exception {
-        setUp();
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_rt_30356_selectRowAtIndex0(Class<? extends SelectionModel> modelClass) {
+        setUp(modelClass);
 
         // this test selects the 0th row, then removes it, and sees what happens
         // to the selection.
@@ -459,7 +498,7 @@ public class SelectionModelImplTest {
         } else {
             // for list / table
             model.select(0);
-            assertEquals("model is " + model, ROW_1_VALUE, model.getSelectedItem());
+            assertEquals(ROW_1_VALUE, model.getSelectedItem(), "model is " + model);
 
             data.remove(0);
             assertEquals(ROW_2_VALUE, model.getSelectedItem());
@@ -474,8 +513,10 @@ public class SelectionModelImplTest {
         }
     }
 
-    @Test public void test_rt_30356_selectRowAtIndex1() throws Exception {
-        setUp();
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_rt_30356_selectRowAtIndex1(Class<? extends SelectionModel> modelClass) {
+        setUp(modelClass);
 
         // this test selects the 1st row, then removes it, and sees what happens
         // to the selection.
@@ -525,7 +566,10 @@ public class SelectionModelImplTest {
     }
 
     private int rt32618_count = 0;
-    @Test public void test_rt32618_singleSelection() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_rt32618_singleSelection(Class<? extends SelectionModel> modelClass) {
+        setUp(modelClass);
         model.selectedItemProperty().addListener((ov, t, t1) -> {
             rt32618_count++;
         });

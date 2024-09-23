@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,22 +25,10 @@
 
 package test.javafx.scene.control;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
-import java.util.Arrays;
-import java.util.Collection;
-
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runners.Parameterized.Parameters;
-
-import com.sun.javafx.tk.Toolkit;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
@@ -52,9 +40,13 @@ import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTablePosition;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.control.TreeTableView.TreeTableViewSelectionModel;
-import javafx.scene.control.TreeTableViewShim;
 import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.util.Callback;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.test.Person;
 
 /**
@@ -72,15 +64,11 @@ public class TreeTableViewSelectionModelImplTest {
     private TreeTableColumn<String,String> col1;
     private TreeTableColumn<String,String> col2;
 
-    @Parameters public static Collection implementations() {
-        return Arrays.asList(new Object[][] {
-            { TreeTableViewShim.get_TreeTableViewArrayListSelectionModel_class() }
-        });
-    }
+    @AfterAll
+    public static void tearDownClass() throws Exception {    }
 
-    @AfterClass public static void tearDownClass() throws Exception {    }
-
-    @Before public void setUp() throws Exception {
+    @BeforeEach
+    public void setUp() throws Exception {
         TreeItem<String> root = new TreeItem<>("Root");
         root.setExpanded(true);
         for (int i = 0; i < 20; i++) {
@@ -97,7 +85,8 @@ public class TreeTableViewSelectionModelImplTest {
         focusModel = tableView.getFocusModel();
     }
 
-    @After public void tearDown() {
+    @AfterEach
+    public void tearDown() {
         model = null;
     }
 
@@ -138,7 +127,7 @@ public class TreeTableViewSelectionModelImplTest {
         model.select(3);
         assertFalse(model.isSelected(1, col0));
         assertFalse(model.isSelected(3, col0));
-        assertFalse(cells(model), model.isSelected(3, null));
+        assertFalse(model.isSelected(3, null), cells(model));
         assertTrue(model.isSelected(3));
         assertEquals(1, model.getSelectedCells().size());
     }
@@ -152,7 +141,7 @@ public class TreeTableViewSelectionModelImplTest {
 
         assertFalse(model.isSelected(1, col0));
         assertFalse(model.isSelected(3, col0));
-        assertFalse(cells(model), model.isSelected(3, null));
+        assertFalse(model.isSelected(3, null), cells(model));
         assertTrue(model.isSelected(3));
         assertEquals(1, model.getSelectedCells().size());
     }
@@ -285,8 +274,8 @@ public class TreeTableViewSelectionModelImplTest {
         model.select(2, col1);
         assertTrue(model.isSelected(2, col1));
         model.selectNext();
-        assertFalse(cells(model), model.isSelected(2, col1));
-        assertTrue(cells(model), model.isSelected(2, col2));
+        assertFalse(model.isSelected(2, col1), cells(model));
+        assertTrue(model.isSelected(2, col2));
     }
 
     @Test public void selectPreviousRowInCellSelectionMode() {
@@ -327,8 +316,8 @@ public class TreeTableViewSelectionModelImplTest {
         model.clearSelection();
         model.select(2, col1);
         model.selectLeftCell();
-        assertTrue(cells(model), model.isSelected(2, col1));
-        assertTrue(cells(model), model.isSelected(2, col0));
+        assertTrue(model.isSelected(2, col1), cells(model));
+        assertTrue(model.isSelected(2, col0), cells(model));
         assertEquals(2, model.getSelectedCells().size());
     }
 
@@ -338,8 +327,8 @@ public class TreeTableViewSelectionModelImplTest {
         model.clearSelection();
         model.select(2, col1);
         model.selectRightCell();
-        assertTrue(cells(model), model.isSelected(2, col1));
-        assertTrue(cells(model), model.isSelected(2, col2));
+        assertTrue(model.isSelected(2, col1), cells(model));
+        assertTrue(model.isSelected(2, col2), cells(model));
         assertEquals(2, model.getSelectedCells().size());
     }
 
@@ -348,7 +337,7 @@ public class TreeTableViewSelectionModelImplTest {
         assertFalse(model.isSelected(0, null));
 
         model.select(10);
-        assertFalse(cells(model), model.isSelected(10, null));
+        assertFalse(model.isSelected(10, null), cells(model));
         assertEquals(1, model.getSelectedCells().size());
     }
 
@@ -357,8 +346,8 @@ public class TreeTableViewSelectionModelImplTest {
         model.select(2, col2);
         assertEquals(2, model.getSelectedCells().get(0).getRow());
         assertEquals(col2, model.getSelectedCells().get(0).getTableColumn());
-        assertTrue(cells(model), model.isSelected(2, col2));
-        assertTrue(cells(model), model.isSelected(2));
+        assertTrue(model.isSelected(2, col2), cells(model));
+        assertTrue(model.isSelected(2), cells(model));
     }
 
     @Test public void clearSelectionOfSelectedCell() {
@@ -381,15 +370,15 @@ public class TreeTableViewSelectionModelImplTest {
         assertTrue(model.isSelected(2));
         assertTrue(model.isSelected(3));
         model.clearSelection(2);
-        assertFalse(indices(model), model.isSelected(2));
-        assertTrue(indices(model), model.isSelected(3));
+        assertFalse(model.isSelected(2), indices(model));
+        assertTrue(model.isSelected(3), indices(model));
     }
 
     @Test public void selectNextCellWhenAtFirstCell() {
         model.setCellSelectionEnabled(true);
         model.select(0, col0);
         model.selectBelowCell();
-        assertTrue(cells(model), model.isSelected(1, col0));
+        assertTrue(model.isSelected(1, col0), cells(model));
     }
 
 
@@ -399,8 +388,8 @@ public class TreeTableViewSelectionModelImplTest {
         model.setCellSelectionEnabled(false);
         model.select(4);
         model.selectFirst();
-        assertTrue(cells(model), model.isSelected(0, null));
-        assertTrue(cells(model), model.isSelected(0));
+        assertTrue(model.isSelected(0, null), cells(model));
+        assertTrue(model.isSelected(0), cells(model));
         assertEquals(1, model.getSelectedCells().size());
     }
 
@@ -411,9 +400,9 @@ public class TreeTableViewSelectionModelImplTest {
         model.selectFirst();
 
         // we should go to the top of the currently focused cells column (i.e column 1)
-        assertTrue(cells(model), model.isSelected(0, col1));
-        assertFalse(cells(model), model.isSelected(0, null));
-        assertFalse(cells(model), model.isSelected(0, col0));
+        assertTrue(model.isSelected(0, col1), cells(model));
+        assertFalse(model.isSelected(0, null), cells(model));
+        assertFalse(model.isSelected(0, col0), cells(model));
         assertEquals(1, model.getSelectedCells().size());
     }
 
@@ -422,9 +411,9 @@ public class TreeTableViewSelectionModelImplTest {
         model.setCellSelectionEnabled(false);
         model.select(4);
         model.selectFirst();
-        assertTrue(cells(model), model.isSelected(0));
-        assertTrue(cells(model), model.isSelected(0, null));
-        assertTrue(cells(model), model.isSelected(4));
+        assertTrue(model.isSelected(0), cells(model));
+        assertTrue(model.isSelected(0, null), cells(model));
+        assertTrue(model.isSelected(4), cells(model));
         assertEquals(2, model.getSelectedCells().size());
     }
 
@@ -434,19 +423,17 @@ public class TreeTableViewSelectionModelImplTest {
         model.clearSelection();
         model.select(4, col1);
         model.selectFirst();
-        assertTrue(cells(model), model.isSelected(0, col1));
-        assertTrue(cells(model), model.isSelected(4, col1));
+        assertTrue(model.isSelected(0, col1), cells(model));
+        assertTrue(model.isSelected(4, col1), cells(model));
         assertEquals(2, model.getSelectedCells().size());
     }
-
-
 
     @Test public void selectLastRowInSingleSelectionRowMode() {
         model.setSelectionMode(SelectionMode.SINGLE);
         model.setCellSelectionEnabled(false);
         model.select(4);
         model.selectLast();
-        assertTrue(cells(model), model.isSelected(tableView.getExpandedItemCount() - 1));
+        assertTrue(model.isSelected(tableView.getExpandedItemCount() - 1), cells(model));
         assertEquals(1, model.getSelectedCells().size());
     }
 
@@ -455,7 +442,7 @@ public class TreeTableViewSelectionModelImplTest {
         model.setCellSelectionEnabled(true);
         model.select(4, col1);
         model.selectLast();
-        assertTrue(cells(model), model.isSelected(tableView.getExpandedItemCount() - 1, col1));
+        assertTrue(model.isSelected(tableView.getExpandedItemCount() - 1, col1), cells(model));
         assertEquals(1, model.getSelectedCells().size());
     }
 
@@ -465,8 +452,8 @@ public class TreeTableViewSelectionModelImplTest {
         model.clearSelection();
         model.select(4);
         model.selectLast();
-        assertTrue(cells(model), model.isSelected(tableView.getExpandedItemCount() - 1));
-        assertTrue(cells(model), model.isSelected(4));
+        assertTrue(model.isSelected(tableView.getExpandedItemCount() - 1), cells(model));
+        assertTrue(model.isSelected(4), cells(model));
         assertEquals(2, model.getSelectedCells().size());
     }
 
@@ -476,15 +463,15 @@ public class TreeTableViewSelectionModelImplTest {
         model.clearSelection();
         model.select(4, col1);
         model.selectLast();
-        assertTrue(cells(model), model.isSelected(tableView.getExpandedItemCount() - 1, col1));
-        assertTrue(cells(model), model.isSelected(4, col1));
+        assertTrue(model.isSelected(tableView.getExpandedItemCount() - 1, col1), cells(model));
+        assertTrue(model.isSelected(4, col1), cells(model));
         assertEquals(2, model.getSelectedCells().size());
     }
 
     @Test public void selectCellInRowSelectionMode_expectCellInformationToRemain() {
         model.setCellSelectionEnabled(false);
         model.select(4, col0);
-        assertEquals(cells(model), col0, model.getSelectedCells().get(0).getTableColumn());
+        assertEquals(col0, model.getSelectedCells().get(0).getTableColumn(), cells(model));
         assertEquals(col0, focusModel.getFocusedCell().getTableColumn());
         assertTrue(model.isSelected(4, col0));
         assertTrue(model.isSelected(4));
@@ -497,41 +484,41 @@ public class TreeTableViewSelectionModelImplTest {
         model.clearSelection();
 
         model.select(0, col0);
-        assertTrue(cells(model), model.isSelected(0));
-        assertFalse(cells(model), model.isSelected(1));
-        assertFalse(cells(model), model.isSelected(2));
+        assertTrue(model.isSelected(0), cells(model));
+        assertFalse(model.isSelected(1), cells(model));
+        assertFalse(model.isSelected(2), cells(model));
 
         model.select(1, col0);
         model.select(1, col1);
-        assertTrue(cells(model), model.isSelected(0));
-        assertTrue(cells(model), model.isSelected(1));
-        assertFalse(cells(model), model.isSelected(2));
+        assertTrue(model.isSelected(0), cells(model));
+        assertTrue(model.isSelected(1), cells(model));
+        assertFalse(model.isSelected(2), cells(model));
 
         model.select(2, col0);
         model.select(2, col1);
         model.select(2, col2);
-        assertTrue(cells(model), model.isSelected(0));
-        assertTrue(cells(model), model.isSelected(1));
-        assertTrue(cells(model), model.isSelected(2));
+        assertTrue(model.isSelected(0), cells(model));
+        assertTrue(model.isSelected(1), cells(model));
+        assertTrue(model.isSelected(2), cells(model));
 
-        assertFalse(cells(model), model.isSelected(3));
+        assertFalse(model.isSelected(3), cells(model));
 
         assertEquals(6, model.getSelectedCells().size());
 
         model.clearSelection(0, col0);
-        assertFalse(cells(model), model.isSelected(0));
+        assertFalse(model.isSelected(0), cells(model));
 
         model.clearSelection(1, col0);
-        assertTrue(cells(model), model.isSelected(1));
+        assertTrue(model.isSelected(1), cells(model));
         model.clearSelection(1, col1);
-        assertFalse(cells(model), model.isSelected(1));
+        assertFalse(model.isSelected(1), cells(model));
 
         model.clearSelection(2, col0);
-        assertTrue(cells(model), model.isSelected(2));
+        assertTrue(model.isSelected(2), cells(model));
         model.clearSelection(2, col1);
-        assertTrue(cells(model), model.isSelected(2));
+        assertTrue(model.isSelected(2), cells(model));
         model.clearSelection(2, col2);
-        assertFalse(cells(model), model.isSelected(2));
+        assertFalse(model.isSelected(2), cells(model));
 
         assertEquals(0, model.getSelectedCells().size());
     }
@@ -544,8 +531,8 @@ public class TreeTableViewSelectionModelImplTest {
 
     @Test public void focusOnRow() {
         focusModel.focus(3);
-        assertTrue(focusedCell(), focusModel.isFocused(3));
-        assertTrue(focusedCell(), focusModel.isFocused(3, null));
+        assertTrue(focusModel.isFocused(3), focusedCell());
+        assertTrue(focusModel.isFocused(3, null), focusedCell());
         assertEquals(new TreeTablePosition(tableView, 3, null), focusModel.getFocusedCell());
         assertEquals(tableView.getTreeItem(3), focusModel.getFocusedItem());
     }
@@ -553,39 +540,39 @@ public class TreeTableViewSelectionModelImplTest {
     @Test public void focusOnNegativeRowIndex() {
         focusModel.focus(-20);
         assertEquals(new TreeTablePosition(tableView, -1, null), focusModel.getFocusedCell());
-        assertFalse(focusedCell(), focusModel.isFocused(-20, null));
+        assertFalse(focusModel.isFocused(-20, null), focusedCell());
     }
 
     @Test public void focusOutOfColumnsBounds() {
         focusModel.focus(3, null);
         assertEquals(new TreeTablePosition(tableView, 3, null), focusModel.getFocusedCell());
-        assertTrue(focusedCell(), focusModel.isFocused(3, null));
+        assertTrue(focusModel.isFocused(3, null), focusedCell());
     }
 
     @Test public void focusPreviousRow() {
         focusModel.focus(3);
         assertEquals(new TreeTablePosition(tableView, 3, null), focusModel.getFocusedCell());
-        assertTrue(focusedCell(), focusModel.isFocused(3));
-        assertTrue(focusedCell(), focusModel.isFocused(3, null));
+        assertTrue(focusModel.isFocused(3), focusedCell());
+        assertTrue(focusModel.isFocused(3, null), focusedCell());
 
         focusModel.focusPrevious();
         assertEquals(new TreeTablePosition(tableView, 2, null), focusModel.getFocusedCell());
-        assertTrue(focusedCell(), focusModel.isFocused(2));
-        assertTrue(focusedCell(), focusModel.isFocused(2, null));
+        assertTrue(focusModel.isFocused(2), focusedCell());
+        assertTrue(focusModel.isFocused(2, null), focusedCell());
     }
 
     @Test public void focusPreviousRowImmediately() {
         focusModel.focusPrevious();
         assertEquals(new TreeTablePosition(tableView, 0, null), focusModel.getFocusedCell());
-        assertTrue(focusedCell(), focusModel.isFocused(0, null));
+        assertTrue(focusModel.isFocused(0, null), focusedCell());
     }
 
     @Test public void focusPreviousRowFromFirstRow() {
         focusModel.focus(0);
         focusModel.focusPrevious();
         assertEquals(new TreeTablePosition(tableView, 0, null), focusModel.getFocusedCell());
-        assertTrue(focusedCell(), focusModel.isFocused(0));
-        assertTrue(focusedCell(), focusModel.isFocused(0, null));
+        assertTrue(focusModel.isFocused(0), focusedCell());
+        assertTrue(focusModel.isFocused(0, null), focusedCell());
     }
 
     @Test public void focusNextRow() {
@@ -593,8 +580,8 @@ public class TreeTableViewSelectionModelImplTest {
         focusModel.focusNext();
 
         assertEquals(new TreeTablePosition(tableView, 4, null), focusModel.getFocusedCell());
-        assertTrue(focusedCell(), focusModel.isFocused(4));
-        assertTrue(focusedCell(), focusModel.isFocused(4, null));
+        assertTrue(focusModel.isFocused(4), focusedCell());
+        assertTrue(focusModel.isFocused(4, null), focusedCell());
     }
 
     @Test public void focusNextRowImmediately() {
@@ -603,8 +590,8 @@ public class TreeTableViewSelectionModelImplTest {
         focusModel.focusNext();
 
         assertEquals(new TreeTablePosition(tableView, 1, null), focusModel.getFocusedCell());
-        assertTrue(focusedCell(), focusModel.isFocused(1));
-        assertTrue(focusedCell(), focusModel.isFocused(1, null));
+        assertTrue(focusModel.isFocused(1), focusedCell());
+        assertTrue(focusModel.isFocused(1, null), focusedCell());
     }
 
     @Test public void focusNextRowFromLastRow() {
@@ -613,28 +600,28 @@ public class TreeTableViewSelectionModelImplTest {
         focusModel.focusNext();
 
         assertEquals(new TreeTablePosition(tableView, rowCount, null), focusModel.getFocusedCell());
-        assertTrue(focusedCell(), focusModel.isFocused(rowCount));
-        assertTrue(focusedCell(), focusModel.isFocused(rowCount, null));
+        assertTrue(focusModel.isFocused(rowCount), focusedCell());
+        assertTrue(focusModel.isFocused(rowCount, null), focusedCell());
     }
 
     @Test public void focusAboveCell() {
         focusModel.focus(3, col1);
         assertEquals(new TreeTablePosition(tableView, 3, col1), focusModel.getFocusedCell());
-        assertTrue(focusedCell(), focusModel.isFocused(3, col1));
+        assertTrue(focusModel.isFocused(3, col1), focusedCell());
 
         focusModel.focusAboveCell();
         assertEquals(new TreeTablePosition(tableView, 2, col1), focusModel.getFocusedCell());
         // not sure about this - a row probably shouldn't be focused when we've given it specifically to a cell
-        assertTrue(focusedCell(), focusModel.isFocused(2));
-        assertTrue(focusedCell(), focusModel.isFocused(2, col1));
+        assertTrue(focusModel.isFocused(2), focusedCell());
+        assertTrue(focusModel.isFocused(2, col1), focusedCell());
     }
 
     @Test public void focusAboveCellFromFirstRow() {
         focusModel.focus(0, col1);
         focusModel.focusAboveCell();
         assertEquals(new TreeTablePosition(tableView, 0, col1), focusModel.getFocusedCell());
-        assertTrue(focusedCell(), focusModel.isFocused(0));
-        assertTrue(focusedCell(), focusModel.isFocused(0, col1));
+        assertTrue(focusModel.isFocused(0), focusedCell());
+        assertTrue(focusModel.isFocused(0, col1), focusedCell());
     }
 
     @Test public void focusBelowCell() {
@@ -642,8 +629,8 @@ public class TreeTableViewSelectionModelImplTest {
         focusModel.focusBelowCell();
 
         assertEquals(new TreeTablePosition(tableView, 4, col1), focusModel.getFocusedCell());
-        assertTrue(focusedCell(), focusModel.isFocused(4));
-        assertTrue(focusedCell(), focusModel.isFocused(4, col1));
+        assertTrue(focusModel.isFocused(4), focusedCell());
+        assertTrue(focusModel.isFocused(4, col1), focusedCell());
     }
 
     @Test public void focusBelowCellFromLastRow() {
@@ -652,8 +639,8 @@ public class TreeTableViewSelectionModelImplTest {
         focusModel.focusBelowCell();
 
         assertEquals(new TreeTablePosition(tableView, rowCount, col1), focusModel.getFocusedCell());
-        assertTrue(focusedCell(), focusModel.isFocused(rowCount));
-        assertTrue(focusedCell(), focusModel.isFocused(rowCount, col1));
+        assertTrue(focusModel.isFocused(rowCount), focusedCell());
+        assertTrue(focusModel.isFocused(rowCount, col1), focusedCell());
     }
 
     @Test public void focusLeftCell() {
@@ -661,8 +648,8 @@ public class TreeTableViewSelectionModelImplTest {
         focusModel.focusLeftCell();
 
         assertEquals(new TreeTablePosition(tableView, 3, col0), focusModel.getFocusedCell());
-        assertTrue(focusedCell(), focusModel.isFocused(3));
-        assertTrue(focusedCell(), focusModel.isFocused(3, col0));
+        assertTrue(focusModel.isFocused(3), focusedCell());
+        assertTrue(focusModel.isFocused(3, col0), focusedCell());
     }
 
     @Test public void focusLeftCellFromFirstColumn() {
@@ -670,8 +657,8 @@ public class TreeTableViewSelectionModelImplTest {
         focusModel.focusLeftCell();
 
         assertEquals(new TreeTablePosition(tableView, 3, col0), focusModel.getFocusedCell());
-        assertTrue(focusedCell(), focusModel.isFocused(3));
-        assertTrue(focusedCell(), focusModel.isFocused(3, col0));
+        assertTrue(focusModel.isFocused(3), focusedCell());
+        assertTrue(focusModel.isFocused(3, col0), focusedCell());
     }
 
     @Test public void focusLeftCellFromNullColumn() {
@@ -679,8 +666,8 @@ public class TreeTableViewSelectionModelImplTest {
         focusModel.focusLeftCell();
 
         assertEquals(new TreeTablePosition(tableView, 3, null), focusModel.getFocusedCell());
-        assertTrue(focusedCell(), focusModel.isFocused(3));
-        assertTrue(focusedCell(), focusModel.isFocused(3, null));
+        assertTrue(focusModel.isFocused(3), focusedCell());
+        assertTrue(focusModel.isFocused(3, null), focusedCell());
     }
 
     @Test public void focusRightCell() {
@@ -688,8 +675,8 @@ public class TreeTableViewSelectionModelImplTest {
         focusModel.focusRightCell();
 
         assertEquals(new TreeTablePosition(tableView, 3, col1), focusModel.getFocusedCell());
-        assertTrue(focusedCell(), focusModel.isFocused(3));
-        assertTrue(focusedCell(), focusModel.isFocused(3, col1));
+        assertTrue(focusModel.isFocused(3), focusedCell());
+        assertTrue(focusModel.isFocused(3, col1), focusedCell());
     }
 
     @Test public void focusRightCellFromEndColumn() {
@@ -699,8 +686,8 @@ public class TreeTableViewSelectionModelImplTest {
         focusModel.focusRightCell();
 
         assertEquals(new TreeTablePosition(tableView, 3, rightEdge), focusModel.getFocusedCell());
-        assertTrue(focusedCell(), focusModel.isFocused(3));
-        assertTrue(focusedCell(), focusModel.isFocused(3, rightEdge));
+        assertTrue(focusModel.isFocused(3), focusedCell());
+        assertTrue(focusModel.isFocused(3, rightEdge), focusedCell());
     }
 
     @Test public void test_rt33442() {
@@ -1017,10 +1004,10 @@ public class TreeTableViewSelectionModelImplTest {
         model.setCellSelectionEnabled(true);
         model.select(3);
         // test against contract
-        assertEquals("selected index", 3, model.getSelectedIndex());
-        assertTrue("contained in selected indices", model.getSelectedIndices().contains(3));
+        assertEquals(3, model.getSelectedIndex(), "selected index");
+        assertTrue(model.getSelectedIndices().contains(3), "contained in selected indices");
         // test against spec
-        assertEquals("is selected index", model.getSelectedIndices().contains(3), model.isSelected(3));
+        assertEquals(model.getSelectedIndices().contains(3), model.isSelected(3), "is selected index");
     }
 
     @Test
@@ -1059,11 +1046,11 @@ public class TreeTableViewSelectionModelImplTest {
         TreeTableColumn<Person, ?> column = table.getColumns().get(col);
 
         sm.select(row, column);
-        assertTrue("sanity: row " + row + "contained in selectedIndices", sm.getSelectedIndices().contains(row));
-        assertTrue("sanity: row must be selected" , sm.isSelected(row));
+        assertTrue(sm.getSelectedIndices().contains(row), "sanity: row " + row + "contained in selectedIndices");
+        assertTrue(sm.isSelected(row), "sanity: row must be selected");
         column.setVisible(false);
-        assertTrue("after hiding column: row " + row + "contained in selectedIndices", sm.getSelectedIndices().contains(row));
-        assertTrue("after hiding column: row must be selected" , sm.isSelected(row));
+        assertTrue(sm.getSelectedIndices().contains(row), "after hiding column: row " + row + "contained in selectedIndices");
+        assertTrue(sm.isSelected(row), "after hiding column: row must be selected");
     }
 
     /**

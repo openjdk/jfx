@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,23 +25,19 @@
 
 package test.javafx.scene.control;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import javafx.scene.control.IndexRange;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
-import static org.junit.Assert.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  */
-@RunWith(Parameterized.class)
 public class IndexRangeValueOfTest {
-    @SuppressWarnings("rawtypes")
-    @Parameterized.Parameters public static Collection implementations() {
+    public static Collection<TestParameters> parameters() {
         // Valid strings are ones where the string contains only 2 numbers separated by a comma and
         // have only whitespace surrounding the numbers / comma. Any other characters will lead to
         // an exception.
@@ -59,7 +55,7 @@ public class IndexRangeValueOfTest {
         int[] numbers = new int[] { 10, 20, 1, -10, -20, -1, 0};
         int[] rules = new int[] {0, 1, 2, 3};
 
-        List params = new LinkedList();
+        List<TestParameters> params = new LinkedList<>();
         for (int i=0; i<numbers.length; i++) {
             for (int j=0; j<numbers.length; j++) {
                 for (int k=0; k<rules.length; k++) {
@@ -84,7 +80,7 @@ public class IndexRangeValueOfTest {
                             param.string = start + ",," + end;
                             break;
                     }
-                    params.add(new Object[] {param});
+                    params.add(param);
                 }
             }
         }
@@ -92,13 +88,9 @@ public class IndexRangeValueOfTest {
         return params;
     }
 
-    private TestParameters params;
-
-    public IndexRangeValueOfTest(TestParameters params) {
-        this.params = params;
-    }
-
-    @Test public void testValueOf() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testValueOf(TestParameters params) {
         if (params.expected == null) {
             try {
                 IndexRange.valueOf(params.string);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,33 +25,36 @@
 
 package test.javafx.scene.control;
 
-import com.sun.javafx.scene.control.Properties;
-import javafx.css.CssMetaData;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
-
-import test.com.sun.javafx.pgstub.StubToolkit;
-import com.sun.javafx.tk.Toolkit;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassDoesNotExist;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassExists;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.css.CssMetaData;
 import javafx.css.StyleableProperty;
 import javafx.geometry.Orientation;
 import javafx.scene.control.ScrollBar;
-import static org.junit.Assert.*;
-
-
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.tk.Toolkit;
+import test.com.sun.javafx.pgstub.StubToolkit;
 
 /**
  *
  * @author srikalyc
  */
 public class ScrollBarTest {
-    private ScrollBar scrollBar;//Empty string
+    private ScrollBar scrollBar;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
 
         scrollBar = new ScrollBar();
@@ -116,57 +119,57 @@ public class ScrollBarTest {
     @Test public void checkMinPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         scrollBar.minProperty().bind(objPr);
-        assertEquals("minProperty cannot be bound", scrollBar.minProperty().getValue(), 2.0, 0.0);
+        assertEquals(scrollBar.minProperty().getValue(), 2.0, 0.0, "minProperty cannot be bound");
         objPr.setValue(5.0);
-        assertEquals("minProperty cannot be bound", scrollBar.minProperty().getValue(), 5.0, 0.0);
+        assertEquals(scrollBar.minProperty().getValue(), 5.0, 0.0, "minProperty cannot be bound");
     }
 
     @Test public void checkMaxPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         scrollBar.maxProperty().bind(objPr);
-        assertEquals("maxProperty cannot be bound", scrollBar.maxProperty().getValue(), 2.0, 0.0);
+        assertEquals(scrollBar.maxProperty().getValue(), 2.0, 0.0, "maxProperty cannot be bound");
         objPr.setValue(5.0);
-        assertEquals("maxProperty cannot be bound", scrollBar.maxProperty().getValue(), 5.0, 0.0);
+        assertEquals(scrollBar.maxProperty().getValue(), 5.0, 0.0, "maxProperty cannot be bound");
     }
 
     @Test public void checkValuePropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         scrollBar.valueProperty().bind(objPr);
-        assertEquals("valueProperty cannot be bound", scrollBar.valueProperty().getValue(), 2.0, 0.0);
+        assertEquals(scrollBar.valueProperty().getValue(), 2.0, 0.0, "valueProperty cannot be bound");
         objPr.setValue(5.0);
-        assertEquals("valueProperty cannot be bound", scrollBar.valueProperty().getValue(), 5.0, 0.0);
+        assertEquals(scrollBar.valueProperty().getValue(), 5.0, 0.0, "valueProperty cannot be bound");
     }
 
     @Test public void checkOrientationPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<>(Orientation.HORIZONTAL);
         scrollBar.orientationProperty().bind(objPr);
-        assertSame("orientationProperty cannot be bound", scrollBar.orientationProperty().getValue(), Orientation.HORIZONTAL);
+        assertSame(scrollBar.orientationProperty().getValue(), Orientation.HORIZONTAL, "orientationProperty cannot be bound");
         objPr.setValue(Orientation.VERTICAL);
-        assertSame("orientationProperty cannot be bound", scrollBar.orientationProperty().getValue(), Orientation.VERTICAL);
+        assertSame(scrollBar.orientationProperty().getValue(), Orientation.VERTICAL, "orientationProperty cannot be bound");
     }
 
     @Test public void checkUnitIncrementPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         scrollBar.unitIncrementProperty().bind(objPr);
-        assertEquals("unitIncrementProperty cannot be bound", scrollBar.unitIncrementProperty().getValue(), 2.0, 0.0);
+        assertEquals(scrollBar.unitIncrementProperty().getValue(), 2.0, 0.0, "unitIncrementProperty cannot be bound");
         objPr.setValue(5.0);
-        assertEquals("unitIncrementProperty cannot be bound", scrollBar.unitIncrementProperty().getValue(), 5.0, 0.0);
+        assertEquals(scrollBar.unitIncrementProperty().getValue(), 5.0, 0.0, "unitIncrementProperty cannot be bound");
     }
 
     @Test public void checkBlockIncrementPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         scrollBar.blockIncrementProperty().bind(objPr);
-        assertEquals("blockIncrementProperty cannot be bound", scrollBar.blockIncrementProperty().getValue(), 2.0, 0.0);
+        assertEquals(scrollBar.blockIncrementProperty().getValue(), 2.0, 0.0, "blockIncrementProperty cannot be bound");
         objPr.setValue(5.0);
-        assertEquals("blockIncrementProperty cannot be bound", scrollBar.blockIncrementProperty().getValue(), 5.0, 0.0);
+        assertEquals(scrollBar.blockIncrementProperty().getValue(), 5.0, 0.0, "blockIncrementProperty cannot be bound");
     }
 
     @Test public void checkVisibleAmtPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         scrollBar.visibleAmountProperty().bind(objPr);
-        assertEquals("visibleAmountProperty cannot be bound", scrollBar.visibleAmountProperty().getValue(), 2.0, 0.0);
+        assertEquals(scrollBar.visibleAmountProperty().getValue(), 2.0, 0.0, "visibleAmountProperty cannot be bound");
         objPr.setValue(5.0);
-        assertEquals("visibleAmountProperty cannot be bound", scrollBar.visibleAmountProperty().getValue(), 5.0, 0.0);
+        assertEquals(scrollBar.visibleAmountProperty().getValue(), 5.0, 0.0, "visibleAmountProperty cannot be bound");
     }
 
 

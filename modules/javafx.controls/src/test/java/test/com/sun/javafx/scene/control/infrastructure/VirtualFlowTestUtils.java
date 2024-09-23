@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,21 +24,30 @@
  */
 package test.com.sun.javafx.scene.control.infrastructure;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.List;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
-import javafx.scene.control.*;
+import javafx.scene.control.Cell;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Control;
+import javafx.scene.control.IndexedCell;
+import javafx.scene.control.ListView;
+import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TableRow;
+import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.skin.ComboBoxListViewSkin;
-import com.sun.javafx.scene.control.LabeledText;
 import javafx.scene.control.skin.NestedTableColumnHeader;
 import javafx.scene.control.skin.TableColumnHeader;
 import javafx.scene.control.skin.TableHeaderRow;
 import javafx.scene.control.skin.TableViewSkinBase;
 import javafx.scene.control.skin.VirtualFlow;
-import com.sun.javafx.scene.control.VirtualScrollBar;
 import javafx.util.Callback;
-import java.util.List;
-
-import static org.junit.Assert.*;
+import com.sun.javafx.scene.control.LabeledText;
+import com.sun.javafx.scene.control.VirtualScrollBar;
 
 public class VirtualFlowTestUtils {
 
@@ -113,10 +122,10 @@ public class VirtualFlowTestUtils {
             }
         } else {
             final String text = cell.getText();
-            assertTrue("Expected null, found '" + text + "'", text == null || text.isEmpty());
+            assertTrue(text == null || text.isEmpty(), "Expected null, found '" + text + "'");
 
             final Node graphic = cell.getGraphic();
-            assertTrue("Expected null graphic, found " + graphic, graphic == null);
+            assertTrue(graphic == null, "Expected null graphic, found " + graphic);
         }
     }
 
@@ -132,8 +141,7 @@ public class VirtualFlowTestUtils {
         } else {
             final String text = cell.getText();
             final Node graphic = cell.getGraphic();
-            assertTrue("Expected a non-null text or graphic property",
-                       (text != null && ! text.isEmpty()) || graphic != null);
+            assertTrue((text != null && ! text.isEmpty()) || graphic != null, "Expected a non-null text or graphic property");
         }
     }
 
@@ -229,7 +237,7 @@ public class VirtualFlowTestUtils {
 
             String error = "Element in row " + indexedCell.getIndex() + " has incorrect indentation. "
                     + "Expected " + expectedLayoutX + ", but found " + labeledText.getLayoutX();
-            assertEquals(error, expectedLayoutX, labeledText.getLayoutX(), 0.0);
+            assertEquals(expectedLayoutX, labeledText.getLayoutX(), 0.0, error);
             return null;
         };
 
