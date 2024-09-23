@@ -25,22 +25,23 @@
 
 package test.javafx.scene.control;
 
-import javafx.scene.control.skin.TooltipSkin;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.attemptGC;
+import java.lang.ref.WeakReference;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.SimpleStringProperty;
-
 import javafx.scene.Node;
 import javafx.scene.control.PopupControl;
 import javafx.scene.control.Skin;
 import javafx.scene.control.Tooltip;
-import org.junit.Before;
-import org.junit.Test;
-
-import java.lang.ref.WeakReference;
-
-import static org.junit.Assert.*;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.attemptGC;
+import javafx.scene.control.skin.TooltipSkin;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  *
@@ -55,7 +56,8 @@ public class PopupControlTest {
         @Override public C getSkinnable()   { return null; }
     }
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         popup = new PopupControl();
     }
 
@@ -665,7 +667,7 @@ public class PopupControlTest {
         WeakReference<?> weakRef = new WeakReference<>(skin);
         skin = null;
         attemptGC(weakRef);
-        assertNull("Unused Skin must be gc'ed", weakRef.get());
+        assertNull(weakRef.get(), "Unused Skin must be gc'ed");
     }
 
     @Test
@@ -675,7 +677,6 @@ public class PopupControlTest {
         popup.setSkin(new PopupControlSkin<>());
         Skin<?> newSkin = popup.getSkin();
 
-        assertNotEquals("New skin was not set", oldSkin, newSkin);
+        assertNotEquals(oldSkin, newSkin, "New skin was not set");
     }
-
 }

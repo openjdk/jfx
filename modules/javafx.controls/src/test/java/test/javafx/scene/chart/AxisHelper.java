@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,15 +27,13 @@ package test.javafx.scene.chart;
 
 import java.util.List;
 import javafx.scene.chart.Axis;
-
-
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Helper class for Axis. All functionality common to ValueAxis,NumberAxis,CategoryAxis goes here.
  */
 public class AxisHelper {
-    private Axis axis;//Empty string
+    private Axis axis;
 
     public AxisHelper() {
     }
@@ -68,10 +66,11 @@ public class AxisHelper {
                 public double toNumericValue(Object t) {return 0.0;}
                 @Override
                 public Object toRealValue(double d) {return 0.0;}
-
             };
     }
-    @Before public void setup() {
+
+    @BeforeEach
+    public void setup() {
         if (axis == null) {
             axis = getDummyAxis();
         }
@@ -91,6 +90,4 @@ public class AxisHelper {
     void defaultValueOnAxis() {}
     void defaultNumericValue() {}
     void defaultRealValue() {}
-
-
 }

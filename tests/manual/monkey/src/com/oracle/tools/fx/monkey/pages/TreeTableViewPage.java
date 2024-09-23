@@ -30,11 +30,12 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ConstrainedColumnResizeBase;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.SelectionMode;
-import javafx.scene.control.SplitMenuButton;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeSortMode;
@@ -47,11 +48,13 @@ import javafx.scene.control.skin.TreeTableViewSkin;
 import javafx.scene.layout.Background;
 import javafx.scene.paint.Color;
 import javafx.util.Callback;
+import com.oracle.tools.fx.monkey.Loggers;
 import com.oracle.tools.fx.monkey.options.BooleanOption;
 import com.oracle.tools.fx.monkey.options.EnumOption;
 import com.oracle.tools.fx.monkey.options.ObjectOption;
 import com.oracle.tools.fx.monkey.sheets.ControlPropertySheet;
 import com.oracle.tools.fx.monkey.sheets.Options;
+import com.oracle.tools.fx.monkey.sheets.TableColumnPropertySheet;
 import com.oracle.tools.fx.monkey.util.ColumnBuilder;
 import com.oracle.tools.fx.monkey.util.DataRow;
 import com.oracle.tools.fx.monkey.util.FX;
@@ -71,7 +74,14 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
     public TreeTableViewPage() {
         super("TreeTableViewPage");
 
-        control = new TreeTableView<>();
+        control = new TreeTableView<>() {
+            @Override
+            public Object queryAccessibleAttribute(AccessibleAttribute a, Object... ps) {
+                Object v = super.queryAccessibleAttribute(a, ps);
+                Loggers.accessibility.log(a, v);
+                return v;
+            }
+        };
 
         Button addDataItemButton = FX.button("Add Data Item", this::addDataItem);
         addDataItemButton.setDisable(true); // FIX
@@ -81,21 +91,6 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
             control.setShowRoot(false);
         });
 
-        SplitMenuButton addColumnButton = new SplitMenuButton(
-            FX.menuItem("at the beginning", () -> addColumn(0)),
-            FX.menuItem("in the middle", () -> addColumn(1)),
-            FX.menuItem("at the end", () -> addColumn(2))
-        );
-        addColumnButton.setText("Add Column");
-
-        SplitMenuButton removeColumnButton = new SplitMenuButton(
-            FX.menuItem("at the beginning", () -> removeColumn(0)),
-            FX.menuItem("in the middle", () -> removeColumn(1)),
-            FX.menuItem("at the end", () -> removeColumn(2)),
-            FX.menuItem("all", () -> removeAllColumns())
-        );
-        removeColumnButton.setText("Remove Column");
-
         Button refresh = FX.button("Refresh", () -> {
             control.refresh();
         });
@@ -103,7 +98,6 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
         OptionPane op = new OptionPane();
         op.section("TreeTableView");
         op.option("Columns:", createColumnsSelector("columns", control.getColumns()));
-        op.option(Utils.buttons(addColumnButton, removeColumnButton));
         op.option("Column Resize Policy:", createColumnResizePolicy("columnResizePolicy", control.columnResizePolicyProperty()));
         op.option(new BooleanOption("editable", "editable", control.editableProperty()));
         op.option("Fixed Cell Size:", Options.fixedSizeOption("fixedCellSize", control.fixedCellSizeProperty()));
@@ -117,144 +111,57 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
         op.option("Sort Mode:", new EnumOption("sortMode", TreeSortMode.class, control.sortModeProperty()));
         op.option("Sort Policy: TODO", null); // TODO
         op.option(new BooleanOption("tableMenuButtonVisible", "table menu button visible", control.tableMenuButtonVisibleProperty()));
-        op.option("Tree Column: TODO", null); // TODO
-        ControlPropertySheet.appendTo(op, control);
-
-        // TODO op.option("Cell Factory:", cellFactorySelector);
-        //op.option(addGraphics);
-        //op.option(addSubNodes);
-
         op.separator();
         op.option(refresh);
+        ControlPropertySheet.appendTo(op, control);
 
         setContent(control);
         setOptions(op);
     }
 
-    private void addColumn(int where) {
-        TreeTableColumn<DataRow, Object> c = newColumn();
-        c.setText("C" + System.currentTimeMillis());
-
-        int ct = control.getColumns().size();
-        int ix;
-        switch (where) {
-        case 0:
-            ix = 0;
-            break;
-        case 1:
-            ix = ct / 2;
-            break;
-        case 2:
-        default:
-            ix = ct;
-            break;
-        }
-        if ((ct == 0) || (ix >= ct)) {
-            control.getColumns().add(c);
-        } else {
-            control.getColumns().add(ix, c);
-        }
+    private ContextMenu createPopupMenu(TreeTableColumn<?,?> tc) {
+        ContextMenu m = new ContextMenu();
+        FX.item(m, "Add Column Before", () -> addColumn(tc, false));
+        FX.item(m, "Add Column After", () -> addColumn(tc, true));
+        FX.separator(m);
+        FX.item(m, "Remove Column", () -> control.getColumns().remove(tc));
+        FX.item(m, "Remove All Columns", () -> control.getColumns().clear());
+        FX.separator(m);
+        FX.item(m, "Properties...", () -> TableColumnPropertySheet.open(this, tc));
+        return m;
     }
 
-    private void removeColumn(int where) {
-        int ct = control.getColumns().size();
-        int ix;
-        switch (where) {
-        case 0:
-            ix = 0;
-            break;
-        case 1:
-            ix = ct / 2;
-            break;
-        case 2:
-        default:
-            ix = ct - 1;
-            break;
+    private TreeTableColumn<DataRow, Object> newColumn() {
+        TreeTableColumn<DataRow, Object> tc = new TreeTableColumn();
+        tc.setCellFactory(TextFieldTreeTableCell.<DataRow, Object>forTreeTableColumn(DataRow.converter()));
+        tc.setCellValueFactory((cdf) -> {
+            Object v = cdf.getValue().getValue();
+            if (v instanceof DataRow r) {
+                return r.getValue(tc);
+            }
+            return new SimpleObjectProperty(v);
+        });
+        tc.setContextMenu(createPopupMenu(tc));
+        return tc;
+    }
+
+    private void addColumn(TreeTableColumn<?, ?> ref, boolean after) {
+        int ix = control.getColumns().indexOf(ref);
+        if (ix < 0) {
+            return;
+        }
+        if (after) {
+            ix++;
         }
 
-        if ((ct >= 0) && (ix < ct)) {
-            control.getColumns().remove(ix);
-        }
+        TreeTableColumn<DataRow, Object> c = newColumn();
+        c.setText("C" + System.currentTimeMillis());
+        control.getColumns().add(ix, c);
     }
 
     private void removeAllColumns() {
         control.getColumns().clear();
     }
-
-//    protected Pane createPane(Data demo, ResizePolicy policy, Object[] spec) {
-//        TreeTableColumn<String, String> lastColumn = null;
-//        int id = 1;
-//
-//        for (int i = 0; i < spec.length;) {
-//            Object x = spec[i++];
-//            if (x instanceof Cmd cmd) {
-//                switch (cmd) {
-//                case COL_WITH_GRAPHIC:
-//                    lastColumn = makeColumn((c) -> {
-//                        c.setCellValueFactory((f) -> new SimpleStringProperty(describe(c)));
-//                        c.setCellFactory((r) -> {
-//                            return new TreeTableCell<>() {
-//                                @Override
-//                                protected void updateItem(String item, boolean empty) {
-//                                    super.updateItem(item, empty);
-//                                    if (empty) {
-//                                        setGraphic(null);
-//                                    } else {
-//                                        Text t = new Text("11111111111111111111111111111111111111111111111111111111111111111111111111111111111111\n2\n3\n");
-//                                        t.wrappingWidthProperty().bind(widthProperty());
-//                                        setGraphic(t);
-//                                    }
-//                                    setPrefHeight(USE_COMPUTED_SIZE);
-//                                }
-//                            };
-//                        });
-//                    });
-//                case ROWS:
-//                    {
-//                        int n = (int)(spec[i++]);
-//                        TreeItem subNodeTreeItem = null;
-//                        for (int j = 0; j < n; j++) {
-//                            TreeItem treeItem = new TreeItem(newItem());
-//                            if (addSubNodes.isSelected()) {
-//                                subNodeTreeItem = new TreeItem(newItem());
-//                                treeItem.getChildren().add(subNodeTreeItem);
-//                            }
-//                            if (addGraphics.isSelected()) {
-//                                treeItem.setGraphic(new Rectangle(10, 10, Color.RED));
-//                                if (subNodeTreeItem != null) {
-//                                    subNodeTreeItem.setGraphic(new Rectangle(10, 10));
-//                                }
-//                            }
-//                            control.getRoot().getChildren().add(treeItem);
-//                        }
-//                    }
-
-//    protected TreeTableColumn<String, String> makeColumn(Consumer<TreeTableColumn<String, String>> updater) {
-//        TreeTableColumn<String, String> c = new TreeTableColumn<>();
-//        control.getColumns().add(c);
-//        c.setText("C" + control.getColumns().size());
-//        updater.accept(c);
-//
-//        if (defaultCellFactory == null) {
-//            defaultCellFactory = c.getCellFactory();
-//        }
-//
-//        Cells t = cellFactorySelector.getSelectionModel().getSelectedItem();
-//        Callback<TreeTableColumn<String, String>, TreeTableCell<String, String>> f = getCellFactory(t);
-//        c.setCellFactory(f);
-//
-//        c.setOnEditCommit((ev) -> {
-//            if ("update".equals(ev.getNewValue())) {
-//                var item = ev.getRowValue();
-//                item.setValue("UPDATED!");
-//                System.out.println("committing the value `UPDATED!`");
-//            } else {
-//                System.out.println("discarding the new value: " + ev.getNewValue());
-//            }
-//        });
-//
-//        return c;
-//    }
 
     protected String newItem() {
         return SequenceNumber.next();
@@ -293,19 +200,6 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
         }
     }
 
-    private TreeTableColumn<DataRow, Object> newColumn() {
-        TreeTableColumn<DataRow, Object> tc = new TreeTableColumn();
-        tc.setCellFactory(TextFieldTreeTableCell.<DataRow, Object>forTreeTableColumn(DataRow.converter()));
-        tc.setCellValueFactory((cdf) -> {
-            Object v = cdf.getValue().getValue();
-            if (v instanceof DataRow r) {
-                return r.getValue(tc);
-            }
-            return new SimpleObjectProperty(v);
-        });
-        return tc;
-    }
-
     private ColumnBuilder<TreeTableColumn<DataRow, ?>> columnBuilder() {
         return new ColumnBuilder<>(this::newColumn);
     }
@@ -325,14 +219,14 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
         );
         s.addChoiceSupplier("20 Equal", () -> {
             var cs = columnBuilder();
-            for(int i=1; i<20; i++) {
+            for (int i = 1; i < 20; i++) {
                 cs.col("C" + i);
             }
             return cs.asList();
         });
         s.addChoiceSupplier("20 Equal, Pref=30", () -> {
             var cs = columnBuilder();
-            for(int i=1; i<20; i++) {
+            for (int i = 1; i < 20; i++) {
                 cs.col("C" + i).pref(30);
             }
             return cs.asList();

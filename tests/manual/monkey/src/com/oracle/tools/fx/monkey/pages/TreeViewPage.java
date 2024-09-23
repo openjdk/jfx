@@ -26,6 +26,7 @@ package com.oracle.tools.fx.monkey.pages;
 
 import java.util.function.Supplier;
 import javafx.beans.property.ObjectProperty;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -38,6 +39,7 @@ import javafx.scene.control.cell.CheckBoxTreeCell;
 import javafx.scene.control.cell.TextFieldTreeCell;
 import javafx.scene.control.skin.TreeViewSkin;
 import javafx.util.Callback;
+import com.oracle.tools.fx.monkey.Loggers;
 import com.oracle.tools.fx.monkey.options.BooleanOption;
 import com.oracle.tools.fx.monkey.options.ObjectOption;
 import com.oracle.tools.fx.monkey.sheets.ControlPropertySheet;
@@ -59,7 +61,14 @@ public class TreeViewPage extends TestPaneBase implements HasSkinnable {
     public TreeViewPage() {
         super("TreeViewPage");
 
-        control = new TreeView<>(new CheckBoxTreeItem<>("root"));
+        control = new TreeView<>(new CheckBoxTreeItem<>("root")) {
+            @Override
+            public Object queryAccessibleAttribute(AccessibleAttribute a, Object... ps) {
+                Object v = super.queryAccessibleAttribute(a, ps);
+                Loggers.accessibility.log(a, v);
+                return v;
+            }
+        };
         control.getRoot().setExpanded(true);
         addChild(true, true);
 

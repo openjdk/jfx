@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,21 +25,20 @@
 
 package test.javafx.scene.control.skin;
 
+import static javafx.scene.control.skin.TabPaneSkinShim.disableAnimations;
+import static javafx.scene.control.skin.TabPaneSkinShim.getHeaderAreaScrollOffset;
+import static javafx.scene.control.skin.TabPaneSkinShim.getTabHeaders;
+import static javafx.scene.control.skin.TabPaneSkinShim.isTabsFit;
+import static javafx.scene.control.skin.TabPaneSkinShim.setHeaderAreaScrollOffset;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import com.sun.javafx.scene.control.TabObservableList;
-import com.sun.javafx.tk.Toolkit;
-
-import static javafx.scene.control.skin.TabPaneSkinShim.*;
-import static org.junit.Assert.*;
-
 import javafx.geometry.Side;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -50,6 +49,11 @@ import javafx.scene.control.skin.TabPaneSkin;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.scene.control.TabObservableList;
+import com.sun.javafx.tk.Toolkit;
 
 /**
  * Tests around keeping the selected tab header in visible range of header area.
@@ -84,7 +88,7 @@ public class TabPaneHeaderScrollTest {
         tabs.add(0, selectedTab);
         tabPane.getTabs().setAll(tabs);
         Toolkit.getToolkit().firePulse();
-        assertEquals("scrolled to leading edge", 0, getHeaderAreaScrollOffset(tabPane), 1);
+        assertEquals(0, getHeaderAreaScrollOffset(tabPane), 1, "scrolled to leading edge");
     }
 
     /**
@@ -101,7 +105,7 @@ public class TabPaneHeaderScrollTest {
         // move selected tab to first
         ((TabObservableList<Tab>) tabPane.getTabs()).reorder(selectedTab, tabPane.getTabs().get(0));
         Toolkit.getToolkit().firePulse();
-        assertEquals("scrolled to leading edge", 0, getHeaderAreaScrollOffset(tabPane), 1);
+        assertEquals(0, getHeaderAreaScrollOffset(tabPane), 1, "scrolled to leading edge");
     }
 
     /**
@@ -132,7 +136,7 @@ public class TabPaneHeaderScrollTest {
         tabPane.getTabs().remove(last);
         Toolkit.getToolkit().firePulse();
 
-        assertEquals("scrollOffset adjusted: ", scrollOffset + expectedDelta, getHeaderAreaScrollOffset(tabPane), 1);
+        assertEquals(scrollOffset + expectedDelta, getHeaderAreaScrollOffset(tabPane), 1, "scrollOffset adjusted: ");
     }
 
     /**
@@ -167,7 +171,7 @@ public class TabPaneHeaderScrollTest {
         tabPane.getTabs().remove(last);
         Toolkit.getToolkit().firePulse();
 
-        assertEquals("scrollOffset adjusted: ", scrollOffset + expectedDelta, getHeaderAreaScrollOffset(tabPane), 1);
+        assertEquals(scrollOffset + expectedDelta, getHeaderAreaScrollOffset(tabPane), 1, "scrollOffset adjusted: ");
     }
 
     @Test
@@ -180,15 +184,15 @@ public class TabPaneHeaderScrollTest {
         // state before tabs modification
         double selectedTabOffset = getTabHeaderOffset(tabPane, selectedTab);
         double scrollOffset = getHeaderAreaScrollOffset(tabPane);
-        assertEquals("sanity: tab visible but not scrolled", 0, scrollOffset, 1);
+        assertEquals(0, scrollOffset, 1, "sanity: tab visible but not scrolled");
 
         // scroll selected to leading edge
         setHeaderAreaScrollOffset(tabPane, - selectedTabOffset);
         Toolkit.getToolkit().firePulse();
-        assertEquals("sanity: really scrolled", - selectedTabOffset, getHeaderAreaScrollOffset(tabPane), 1);
+        assertEquals(-selectedTabOffset, getHeaderAreaScrollOffset(tabPane), 1, "sanity: really scrolled");
         tabPane.getTabs().remove(0);
         Toolkit.getToolkit().firePulse();
-        assertEquals("scroll offset", - getTabHeaderOffset(tabPane, selectedTab), getHeaderAreaScrollOffset(tabPane), 1);
+        assertEquals(-getTabHeaderOffset(tabPane, selectedTab), getHeaderAreaScrollOffset(tabPane), 1, "scroll offset");
     }
 
     @Test
@@ -207,8 +211,8 @@ public class TabPaneHeaderScrollTest {
         Toolkit.getToolkit().firePulse();
         Node addedHeader = getTabHeaderFor(tabPane, added);
         double addedWidth = addedHeader.prefWidth(-1);
-        assertEquals("sanity", selectedTabOffset + addedWidth, getTabHeaderOffset(tabPane, selectedTab), 1);
-        assertEquals("scroll offset", scrollOffset - addedWidth, getHeaderAreaScrollOffset(tabPane), 1);
+        assertEquals(selectedTabOffset + addedWidth, getTabHeaderOffset(tabPane, selectedTab), 1, "sanity");
+        assertEquals(scrollOffset - addedWidth, getHeaderAreaScrollOffset(tabPane), 1, "scroll offset");
     }
 
     /**
@@ -239,8 +243,8 @@ public class TabPaneHeaderScrollTest {
 
         // assert scroll state (== no scroll) before resize
         double noScrollOffset = getHeaderAreaScrollOffset(tabPane);
-        assertEquals("scrollOffset for fitting tabs", 0, noScrollOffset, 1);
-        assertEquals("bounds minX", tabOffset, header.getBoundsInParent().getMinX(), 1);
+        assertEquals(0, noScrollOffset, 1, "scrollOffset for fitting tabs");
+        assertEquals(tabOffset, header.getBoundsInParent().getMinX(), 1, "bounds minX");
 
         // force resize of tabPane by decreasing max size.
         if (side.isHorizontal()) {
@@ -252,9 +256,9 @@ public class TabPaneHeaderScrollTest {
 
         // assert scroll state after resize
         double scrollOffset = getHeaderAreaScrollOffset(tabPane);
-        assertFalse("sanity: not fitting after resize", isTabsFit(tabPane));
-        assertTrue("header must be scrolled", scrollOffset < 0);
-        assertEquals("bounds minX", tabOffset, - scrollOffset + header.getBoundsInParent().getMinX(), 0);
+        assertFalse(isTabsFit(tabPane), "sanity: not fitting after resize");
+        assertTrue(scrollOffset < 0, "header must be scrolled");
+        assertEquals(tabOffset, - scrollOffset + header.getBoundsInParent().getMinX(), 0, "bounds minX");
     }
 
     /**
@@ -329,13 +333,14 @@ public class TabPaneHeaderScrollTest {
         double scrollPerTab = firstHeader.prefWidth(-1);
         double scrollPerThirdOfTabs = THIRD_OF * scrollPerTab;
         double scrollOffset = getHeaderAreaScrollOffset(tabPane);
-        assertTrue("scrollOffset must be negative", scrollOffset < 0);
-        assertTrue("scrollOffset " + scrollOffset + "must be much greater than multiple tab widths " + scrollPerThirdOfTabs ,
-                scrollPerThirdOfTabs < - scrollOffset);
+        assertTrue(scrollOffset < 0, "scrollOffset must be negative");
+        assertTrue(
+                scrollPerThirdOfTabs < - scrollOffset,
+                "scrollOffset " + scrollOffset + "must be much greater than multiple tab widths " + scrollPerThirdOfTabs);
         tabPane.getSelectionModel().select(1);
         Toolkit.getToolkit().firePulse();
         // scrolled back such that second header is at the leading edge of the header area
-        assertEquals("scrollOffset", scrollPerTab, - getHeaderAreaScrollOffset(tabPane), 1);
+        assertEquals(scrollPerTab, - getHeaderAreaScrollOffset(tabPane), 1, "scrollOffset");
     }
 
 //------------- setup and initial state testing
@@ -405,7 +410,7 @@ public class TabPaneHeaderScrollTest {
         return tabPane;
     }
 
-    @Before
+    @BeforeEach
     public void setup() {
         Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
             if (throwable instanceof RuntimeException) {
@@ -417,7 +422,7 @@ public class TabPaneHeaderScrollTest {
         tabPane = createTabPane();
     }
 
-    @After
+    @AfterEach
     public void cleanup() {
         if (stage != null) stage.hide();
         Thread.currentThread().setUncaughtExceptionHandler(null);

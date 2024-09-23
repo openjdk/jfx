@@ -32,9 +32,11 @@ import javafx.beans.binding.IntegerBinding;
 import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
 import javafx.util.StringConverter;
+import com.oracle.tools.fx.monkey.Loggers;
 import com.oracle.tools.fx.monkey.options.BooleanOption;
 import com.oracle.tools.fx.monkey.options.DoubleSpinner;
 import com.oracle.tools.fx.monkey.options.DurationOption;
@@ -76,7 +78,14 @@ public class SpinnerPage extends TestPaneBase {
     public SpinnerPage() {
         super("SpinnerPage");
 
-        control = new Spinner<Object>();
+        control = new Spinner<Object>() {
+            @Override
+            public Object queryAccessibleAttribute(AccessibleAttribute a, Object... ps) {
+                Object v = super.queryAccessibleAttribute(a, ps);
+                Loggers.accessibility.log(a, v);
+                return v;
+            }
+        };
         control.valueProperty().addListener((s,p,c) -> {
             // TODO show in UI?
             System.out.println("Value=" + c);

@@ -1435,7 +1435,7 @@ void DocumentLoader::checkLoadComplete()
     if (!m_frame || isLoading())
         return;
 
-    // ASSERT(this == frameLoader()->activeDocumentLoader());
+    ASSERT(this == frameLoader()->activeDocumentLoader());
     m_frame->document()->domWindow()->finishedLoading();
 }
 
@@ -2148,6 +2148,15 @@ void DocumentLoader::startLoadingMainResource()
     m_contentFilter = !m_substituteData.isValid() ? ContentFilter::create(*this) : nullptr;
 #endif
 
+    auto url = m_request.url();
+    auto fragmentDirective = url.consumefragmentDirective();
+
+    m_request.setURL(url, m_request.didFilterLinkDecoration());
+    if (m_frame) {
+        RefPtr page = m_frame->protectedPage();
+        if (page)
+            page->setMainFrameURLFragment(WTFMove(fragmentDirective));
+    }
 
     // Make sure we re-apply the user agent to the Document's ResourceRequest upon reload in case the embedding
     // application has changed it, by clearing the previous user agent value here and applying the new value in CachedResourceLoader.
