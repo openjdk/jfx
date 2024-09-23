@@ -729,6 +729,24 @@ def buildSdkForTest = Boolean.parseBoolean(BUILD_SDK_FOR_TEST)
 defineProperty("TEST_ONLY", "false")
 ext.IS_TEST_ONLY = Boolean.parseBoolean(TEST_ONLY) || !buildSdkForTest
 
+ext.IS_TEST_JAVAFX_SDK = false
+if (hasProperty("TEST_JAVAFX_SDK_PATH")) {
+    if (!IS_TEST_ONLY) {
+        fail("TEST_ONLY must be set true when using an external TEST_JAVAFX_SDK_PATH for running tests: include -PTEST_ONLY=true")
+    }
+    def sdkShimsPath = file("${TEST_JAVAFX_SDK_PATH}")
+    def sdkPath = file("${TEST_JAVAFX_SDK_PATH}/sdk")
+    def shimsPath = file("${TEST_JAVAFX_SDK_PATH}/shims")
+    if (!sdkShimsPath.exists() || !sdkShimsPath.isDirectory() ||
+             !sdkPath.exists() || !sdkPath.isDirectory() ||
+           !shimsPath.exists() || !shimsPath.isDirectory()) {
+        fail("The provided TEST_JAVAFX_SDK_PATH=${TEST_JAVAFX_SDK_PATH} is invalid")
+    }
+    ext.IS_TEST_JAVAFX_SDK = true
+} else {
+    defineProperty("TEST_JAVAFX_SDK_PATH", "${rootProject.buildDir}")
+}
+
 // Make sure JDK_HOME/bin/java exists
 if (!file(JAVA).exists()) throw new Exception("Missing or incorrect path to 'java': '$JAVA'. Perhaps bad JDK_HOME? $JDK_HOME")
 if (!file(JAVAC).exists()) throw new Exception("Missing or incorrect path to 'javac': '$JAVAC'. Perhaps bad JDK_HOME? $JDK_HOME")
@@ -982,7 +1000,7 @@ List<String> computeLibraryPath(boolean working) {
     } else {
         def platformPrefix = ""
         def standaloneSdkDirName = "${platformPrefix}sdk"
-        def standaloneSdkDir = "${rootProject.buildDir}/${standaloneSdkDirName}"
+        def standaloneSdkDir = "${TEST_JAVAFX_SDK_PATH}/${standaloneSdkDirName}"
         def modulesLibName = IS_WINDOWS ? "bin" : "lib"
         def modulesLibsDir = "${standaloneSdkDir}/${modulesLibName}"
         lp << cygpath("${modulesLibsDir}")
@@ -1019,9 +1037,9 @@ List<String> computePatchModuleArgs(List<String> deps, boolean test, boolean inc
                 String moduleName = proj.ext.moduleName
                 File dir;
                 if (test && proj.sourceSets.hasProperty('shims')) {
-                    dir = file("${rootProject.buildDir}/shims/${moduleName}")
+                    dir = file("${TEST_JAVAFX_SDK_PATH}/shims/${moduleName}")
                 } else {
-                    dir = file("${rootProject.buildDir}/sdk/lib/${moduleName}.jar")
+                    dir = file("${TEST_JAVAFX_SDK_PATH}/sdk/lib/${moduleName}.jar")
                 }
                 if (mp == null) {
                     mp = dir.path
@@ -2283,6 +2301,13 @@ project(":base") {
     addMavenPublication(project, [])
 
     addValidateSourceSets(project, sourceSets)
+
+    test {
+        if (IS_TEST_JAVAFX_SDK) {
+            logger.info "Skipping VersionInfoTest when TEST_JAVAFX_SDK_PATH is set."
+            exclude("test/com/sun/javafx/runtime/VersionInfoTest*");
+        }
+    }
 }
 
 // The graphics module is needed for any graphical JavaFX application. It requires
@@ -2694,7 +2719,7 @@ project(":graphics") {
     processResources.dependsOn processDecoraShaders, processPrismShaders
 
     test {
-        def cssDir = file("$buildDir/classes/java/main/${moduleName}/javafx")
+        def cssDir = file("${TEST_JAVAFX_SDK_PATH}/shims/${moduleName}/javafx")
         jvmArgs enableNativeGraphics
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
@@ -2783,7 +2808,7 @@ project(":controls") {
     }
 
     test {
-        def cssDir = file("$buildDir/classes/java/main/${moduleName}/javafx")
+        def cssDir = file("${TEST_JAVAFX_SDK_PATH}/shims/${moduleName}/javafx")
         jvmArgs enableNativeGraphics
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
@@ -5650,6 +5675,34 @@ compileTargets { t ->
     }
     jdkZip.dependsOn(zipTask)
 
+    def buildSdkDir = "${rootProject.buildDir}/sdk"
+    def buildShimsDir = "${rootProject.buildDir}/shims"
+    def sdkShimZipTask = project.task("sdkShimsZip$t.capital", type: Zip, group: "Build",
+            dependsOn: [shims] ) {
+
+        def sdkShimsBundle = "${platformPrefix}javafx-sdk-shims.zip"
+
+        doFirst() {
+            file("${rootProject.buildDir}/${sdkShimsBundle}").delete()
+        }
+
+        if (IS_WINDOWS && IS_USE_CYGWIN) {
+            dirPermissions { unix(0755) }
+            filePermissions { unix(0755) }
+        }
+
+        archiveFileName = sdkShimsBundle
+        destinationDirectory = file("${rootProject.buildDir}")
+        includeEmptyDirs = false
+        from ("${buildSdkDir}") {
+            into "sdk"
+        }
+        from ("${buildShimsDir}") {
+            into "shims"
+        }
+    }
+    jdkZip.dependsOn(sdkShimZipTask)
+
     Task testArgFiles = task("createTestArgfiles${t.capital}") {
 
         File testRunArgsFile = new File(rootProject.buildDir, TESTRUNARGSFILE)
@@ -5724,9 +5777,9 @@ compileTargets { t ->
                         modnames << project.ext.moduleName
                         File dir;
                         if (project.sourceSets.hasProperty('shims')) {
-                           dir = new File(rootProject.buildDir, "shims/${project.ext.moduleName}")
+                           dir = new File(TEST_JAVAFX_SDK_PATH, "shims/${project.ext.moduleName}")
                         } else {
-                           dir = new File(rootProject.buildDir, "sdk/lib/${project.ext.moduleName}.jar")
+                           dir = new File(TEST_JAVAFX_SDK_PATH, "sdk/lib/${project.ext.moduleName}.jar")
                         }
 
                         def dstModuleDir = cygpath(dir.path)
@@ -5737,7 +5790,7 @@ compileTargets { t ->
                         "    permission java.security.AllPermission;\n" +
                         "};\n"
 
-                        dir = new File(rootProject.buildDir, "sdk/lib/${project.ext.moduleName}.jar")
+                        dir = new File(TEST_JAVAFX_SDK_PATH, "sdk/lib/${project.ext.moduleName}.jar")
                         themod = dir.toURI()
                         runJavaPolicyFile <<  "grant codeBase \"${themod}\" {\n" +
                         "    permission java.security.AllPermission;\n" +
