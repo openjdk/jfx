@@ -27,6 +27,8 @@ package test.javafx.scene.shape;
 import java.util.Arrays;
 import javafx.scene.shape.TriangleMesh;
 import static org.junit.Assert.*;
+
+import javafx.scene.shape.VertexFormat;
 import org.junit.Test;
 
 public class TriangleMeshTest {
@@ -442,6 +444,146 @@ public class TriangleMeshTest {
 
         triangleMesh.getPoints().setAll(points);
         triangleMesh.getTexCoords().setAll(texCoords);
+        triangleMesh.getFaces().setAll(faces);
+
+        return triangleMesh;
+    }
+
+    /**
+     * Test of setColors method, of class TriangleMesh.
+     */
+    @Test
+    public void testSetColors_4args() {
+        int divX = 10;
+        int divY = 10;
+        TriangleMesh instance = buildColoredTriangleMesh(divX, divY); // 121 colors
+        float colors[] = {
+                1, 1, 1, 1,
+                1, 1, -1, 1,
+                1, -1, 1, 1,
+                1, -1, -1, 1,
+                -1, 1, 1, 1,
+                -1, 1, -1, 1,
+                -1, -1, 1, 1,
+                -1, -1, -1, 1,};
+        float[] expecteds = new float[colors.length];
+        int index = 4;
+        int start = 0;
+        int length = colors.length;
+        instance.getColors().set(index, colors, start, length);
+        assertArrayEquals(instance.getColors().toArray(index, expecteds, length), colors, 1e-3f);
+    }
+
+    /**
+     * Test setColors with illegal value, of class TriangleMesh.
+     */
+    @Test(expected = ArrayIndexOutOfBoundsException.class)
+    public void testSetColors_4argsIllegalArgument() {
+        int divX = 10;
+        int divY = 10;
+        TriangleMesh instance = buildColoredTriangleMesh(divX, divY); // 121 colors
+        float colors[] = {
+                1, 1, 1, 1,
+                1, 1, -1, 1,
+                1, -1, 1, 1,
+                1, -1, -1, 1,
+                -1, 1, 1, 1,
+                -1, 1, -1, 1,
+                -1, -1, 1, 1,
+                -1, -1, -1, 1,};
+        float[] expecteds = instance.getColors().toArray(null);
+        int length = colors.length;
+        instance.getColors().set(-1, colors, -1, length);
+        // colors should not change
+        assertArrayEquals(instance.getColors().toArray(null), expecteds, 1e-3f);
+    }
+
+    /**
+     * Test setColors with index argument out of range of the
+     * setColors method, of class TriangleMesh.
+     */
+    @Test(expected = ArrayIndexOutOfBoundsException.class)
+    public void testSetColors_4argsIndexOutOfRange() {
+        int divX = 10;
+        int divY = 10;
+        TriangleMesh instance = buildColoredTriangleMesh(divX, divY); // 121 colors
+        float colors[] = {
+                1, 1, 1, 1,
+                1, 1, -1, 1,
+                1, -1, 1, 1,
+                1, -1, -1, 1,
+                -1, 1, 1, 1,
+                -1, 1, -1, 1,
+                -1, -1, 1, 1,
+                -1, -1, -1, 1,};
+        float[] expecteds = instance.getColors().toArray(null);
+        int start = 0;
+        int length = colors.length;
+        instance.getColors().set(120 * 4, colors, start, length);
+        // colors should not change
+        assertArrayEquals(instance.getColors().toArray(null), expecteds, 1e-3f);
+    }
+
+    /**
+     * Test setColors with start argument out of range of
+     * the setColors method, of class TriangleMesh.
+     */
+    @Test(expected = ArrayIndexOutOfBoundsException.class)
+    public void testSetColors_4argsStartOutOfRange() {
+        int divX = 10;
+        int divY = 10;
+        TriangleMesh instance = buildColoredTriangleMesh(divX, divY); // 121 colors
+        float colors[] = {
+                1, 1, 1, 1,
+                1, 1, -1, 1,
+                1, -1, 1, 1,
+                1, -1, -1, 1,
+                -1, 1, 1, 1,
+                -1, 1, -1, 1,
+                -1, -1, 1, 1,
+                -1, -1, -1, 1,};
+        float[] expecteds = instance.getColors().toArray(null);
+        int index = 4;
+        int length = colors.length;
+        instance.getColors().set(index, colors, 1, length);
+        // colors should not change
+        assertArrayEquals(instance.getColors().toArray(null), expecteds, 1e-3f);
+    }
+
+    /**
+     * Test the vertex format length (point, texcoord, color, and face) of the colored test TriangleMesh.
+     */
+    @Test
+    public void testVertexFormatOfColoredTriangleMesh() {
+        TriangleMesh triMesh = new TriangleMesh(VertexFormat.POINT_TEXCOORD_COLOR);
+        // x, y, z
+        assertEquals(3, triMesh.getPointElementSize());
+        // u, v
+        assertEquals(2, triMesh.getTexCoordElementSize());
+        // red, green, blue, alpha
+        assertEquals(4, triMesh.getColorElementSize());
+
+        // 3 point indices, 3 texCoord indices, and 3 color indices per triangle
+        assertEquals(9, triMesh.getFaceElementSize());
+    }
+
+    TriangleMesh buildColoredTriangleMesh(int subDivX, int subDivY) {
+        TriangleMesh triangleMesh = new TriangleMesh(VertexFormat.POINT_TEXCOORD_COLOR);
+        final int pointSize = triangleMesh.getPointElementSize();
+        final int texCoordSize = triangleMesh.getTexCoordElementSize();
+        final int colorSize = triangleMesh.getColorElementSize();
+        final int faceSize = triangleMesh.getFaceElementSize();
+        int numDivX = subDivX + 1;
+        int numVerts = (subDivY + 1) * numDivX;
+        float points[] = new float[numVerts * pointSize];
+        float texCoords[] = new float[numVerts * texCoordSize];
+        float colors[] = new float[numVerts * colorSize];
+        int faceCount = subDivX * subDivY * 2;
+        int faces[] = new int[faceCount * faceSize];
+
+        triangleMesh.getPoints().setAll(points);
+        triangleMesh.getTexCoords().setAll(texCoords);
+        triangleMesh.getColors().setAll(colors);
         triangleMesh.getFaces().setAll(faces);
 
         return triangleMesh;

@@ -50,6 +50,8 @@ precision mediump int;
 
 #endif
 
+varying vec4 vtxColor;
+
 vec4 apply_diffuse();
 vec4 apply_specular();
 vec3 apply_normal();

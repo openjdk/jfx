@@ -72,8 +72,8 @@ float4 main(PsInput psInput) : color {
 
     // diffuse
     float4 tDiff = tex2D(mapDiffuse, texD);
+    tDiff = tDiff * gDiffuseColor * psInput.vertColor;
     if (tDiff.a == 0.0) discard;
-    tDiff = tDiff * gDiffuseColor;
 
     // return gDiffuseColor.aaaa;
 
@@ -125,7 +125,7 @@ float4 main(PsInput psInput) : color {
 
     // self-illumination
     if (isIlluminated) {
-        rez += tex2D(mapSelfIllum, texD).rgb;
+        rez += tex2D(mapSelfIllum, texD).rgb * psInput.vertColor;
     }
 
     return float4(saturate(rez), tDiff.a);

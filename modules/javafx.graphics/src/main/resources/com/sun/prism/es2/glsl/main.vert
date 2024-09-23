@@ -31,6 +31,7 @@ uniform vec3 ambientColor;
 attribute vec3 pos;
 attribute vec2 texCoords;
 attribute vec4 tangent;
+attribute vec4 color;
 
 struct Light {
     vec4 pos;
@@ -49,6 +50,7 @@ uniform Light lights[3];
 varying vec4 lightTangentSpacePositions[3];
 varying vec4 lightTangentSpaceDirections[3];
 varying vec2 oTexCoords;
+varying vec4 vtxColor;
 varying vec3 eyePos;
 
 vec3 getLocalVector(vec3 global, vec3 tangentFrame[3]) {
@@ -113,7 +115,8 @@ void main()
 
     mat4 mvpMatrix = viewProjectionMatrix * worldMatrix;
 
-    //Send texcoords to Pixel Shader and calculate vertex position.
+    //Send color & texcoords to Pixel Shader and calculate vertex position.
     oTexCoords = texCoords;
+    vtxColor = color;
     gl_Position = mvpMatrix * vec4(pos,1.0);
 }

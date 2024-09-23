@@ -53,6 +53,6 @@ precision mediump int;
 uniform sampler2D selfIllumTexture;
 
 vec4 apply_selfIllum() {
-    return texture2D(selfIllumTexture, oTexCoords);
+    return texture2D(selfIllumTexture, oTexCoords) * vtxColor;
 }
 

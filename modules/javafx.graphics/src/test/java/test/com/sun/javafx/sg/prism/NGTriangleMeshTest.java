@@ -154,6 +154,36 @@ public class NGTriangleMeshTest {
     }
 
     /**
+     * Test of syncColors method, of class NGTriangleMesh.
+     */
+    @Test
+    public void testSyncColors() {
+        final float[] colors = new float[]{0, 1, 2, 3, 4, 5};
+        NGTriangleMeshShim instance = new NGTriangleMeshShim();
+        instance.syncColors((array, fromAndLengthIndices) -> colors);
+        float[] actuals = instance.test_getColors();
+        float[] expecteds = new float[]{0, 1, 2, 3, 4, 5};
+        assertArrayEquals(expecteds, actuals, EPSILON_FLOAT);
+    }
+
+    /**
+     * Test of syncColors method, of class NGTriangleMesh.
+     */
+    @Test
+    public void testSyncColors2() {
+        final float[] colors = new float[]{0, 1, 2, 3, 4, 5};
+        NGTriangleMeshShim instance = new NGTriangleMeshShim();
+        instance.syncColors((array, fromAndLengthIndices) -> colors);
+        instance.syncColors((array, fromAndLengthIndices) -> {
+            Arrays.fill(array, 1, 1 + 4, 1);
+            return array;
+        });
+        float[] actuals = instance.test_getColors();
+        float[] expecteds = new float[]{0, 1, 1, 1, 1, 5};
+        assertArrayEquals(expecteds, actuals, EPSILON_FLOAT);
+    }
+
+    /**
      * Test of syncFaces method, of class NGTriangleMesh.
      */
     @Test

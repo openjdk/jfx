@@ -54,6 +54,11 @@ public class NGTriangleMeshShim extends NGTriangleMesh {
         return super.test_getTexCoords();
     }
 
+    @Override
+    public float[] test_getColors() {
+        return super.test_getColors();
+    }
+
     public static BaseMesh test_getMesh(NGTriangleMesh triMesh) {
         return (BaseMesh) triMesh.test_getMesh();
     }

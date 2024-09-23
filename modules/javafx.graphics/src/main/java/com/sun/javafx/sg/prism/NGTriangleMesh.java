@@ -29,6 +29,7 @@ import com.sun.javafx.collections.FloatArraySyncer;
 import com.sun.javafx.collections.IntegerArraySyncer;
 import com.sun.prism.Mesh;
 import com.sun.prism.ResourceFactory;
+import javafx.scene.shape.VertexFormat;
 
 /**
  * TODO: 3D - Need documentation
@@ -36,7 +37,9 @@ import com.sun.prism.ResourceFactory;
 public class NGTriangleMesh {
     private boolean meshDirty = true;
     private Mesh mesh;
+    private VertexFormat vertexFormat;
     private boolean userDefinedNormals = false;
+    private boolean userDefinedColors = false;
 
     // points is an array of x,y,z interleaved
     private float[] points;
@@ -49,6 +52,10 @@ public class NGTriangleMesh {
     // texCoords is an array of u,v interleaved
     private float[] texCoords;
     private int[] texCoordsFromAndLengthIndices = new int[2];
+
+    // colors is an array of r,g,b,a interleaved
+    private float[] colors;
+    private int[] colorsFromAndLengthIndices = new int[2];
 
     // faces is an array of v1,v2,v3 interleaved (where v = {point, texCoord})
     private int[] faces;
@@ -75,14 +82,17 @@ public class NGTriangleMesh {
 
     boolean validate() {
         if (points == null || texCoords == null || faces == null || faceSmoothingGroups == null
-                || (userDefinedNormals && (normals == null))) {
+                || (userDefinedNormals && (normals == null)) || (userDefinedColors && (colors == null))
+                || vertexFormat == null) {
             return false;
         }
         if (meshDirty) {
-            if (!mesh.buildGeometry(userDefinedNormals,
+            if (!mesh.buildGeometry(
+                    vertexFormat, userDefinedNormals, userDefinedColors,
                     points, pointsFromAndLengthIndices,
                     normals, normalsFromAndLengthIndices,
                     texCoords, texCoordsFromAndLengthIndices,
+                    colors, colorsFromAndLengthIndices,
                     faces, facesFromAndLengthIndices,
                     faceSmoothingGroups, faceSmoothingGroupsFromAndLengthIndices)) {
                 throw new RuntimeException("NGTriangleMesh: buildGeometry failed");
@@ -119,6 +129,14 @@ public class NGTriangleMesh {
     // Note: This method is intentionally made package scope for security
     // reason. It is created for internal use only.
     // Do not make it a public method without careful consideration.
+    void setColorsByRef(float[] colors) {
+        meshDirty = true;
+        this.colors = colors;
+    }
+
+    // Note: This method is intentionally made package scope for security
+    // reason. It is created for internal use only.
+    // Do not make it a public method without careful consideration.
     void setFacesByRef(int[] faces) {
         meshDirty = true;
         this.faces = faces;
@@ -132,12 +150,24 @@ public class NGTriangleMesh {
         this.faceSmoothingGroups = faceSmoothingGroups;
     }
 
+    public void setVertexFormat(VertexFormat vertexFormat) {
+        this.vertexFormat = vertexFormat;
+    }
+
     public void setUserDefinedNormals(boolean userDefinedNormals) {
         this.userDefinedNormals = userDefinedNormals;
     }
 
     public boolean isUserDefinedNormals() {
         return userDefinedNormals;
+    }
+
+    public void setUserDefinedColors(boolean userDefinedColors) {
+        this.userDefinedColors = userDefinedColors;
+    }
+
+    public boolean isUserDefinedColors() {
+        return userDefinedColors;
     }
 
     public void syncPoints(FloatArraySyncer array) {
@@ -155,6 +185,11 @@ public class NGTriangleMesh {
         texCoords = array != null ? array.syncTo(texCoords, texCoordsFromAndLengthIndices) : null;
     }
 
+    public void syncColors(FloatArraySyncer array) {
+        meshDirty = true;
+        colors = array != null ? array.syncTo(colors, colorsFromAndLengthIndices) : null;
+    }
+
     public void syncFaces(IntegerArraySyncer array) {
         meshDirty = true;
         faces = array != null ? array.syncTo(faces, facesFromAndLengthIndices) : null;
@@ -165,6 +200,10 @@ public class NGTriangleMesh {
         faceSmoothingGroups = array != null ? array.syncTo(faceSmoothingGroups, faceSmoothingGroupsFromAndLengthIndices) : null;
     }
 
+    // NOTE: This method is used for unit test purpose only.
+    VertexFormat test_getVertexFormat() {
+        return this.vertexFormat;
+    }
     // NOTE: This method is used for unit test purpose only.
     int[] test_getFaceSmoothingGroups() {
         return this.faceSmoothingGroups;
@@ -184,6 +223,10 @@ public class NGTriangleMesh {
     // NOTE: This method is used for unit test purpose only.
     float[] test_getTexCoords() {
         return this.texCoords;
+    }
+    // NOTE: This method is used for unit test purpose only.
+    float[] test_getColors() {
+        return this.colors;
     }
     // NOTE: This method is used for unit test purpose only.
     Mesh test_getMesh() {

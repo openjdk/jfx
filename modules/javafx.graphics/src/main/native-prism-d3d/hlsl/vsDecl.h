@@ -31,5 +31,6 @@ struct VsInput {
     // model space = local space = object space
     float4  modelVertexPos    : position;
     float2  texD              : texcoord0;
-    float4  modelVertexNormal : texcoord1;
+    float4  modelVertexNormal : texcoord1; // Presumably these are declared as texcoords to make FVF vertex buffers work.
+    float4  modelVertexColor  : texcoord2;
 };

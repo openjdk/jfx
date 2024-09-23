@@ -44,7 +44,7 @@ D3DMesh::D3DMesh(D3DContext *ctx) {
     indexBuffer = NULL;
     vertexBuffer = NULL;
     // See MeshData.cc where n = 1
-    fvf = D3DFVF_XYZ | (2 << D3DFVF_TEXCOUNT_SHIFT) | D3DFVF_TEXCOORDSIZE4(1);
+    fvf = D3DFVF_XYZ | (3 << D3DFVF_TEXCOUNT_SHIFT) | D3DFVF_TEXCOORDSIZE4(2) | D3DFVF_TEXCOORDSIZE4(1);
     numVertices = 0;
     numIndices = 0;
 }
