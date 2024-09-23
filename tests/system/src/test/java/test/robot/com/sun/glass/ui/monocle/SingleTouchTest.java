@@ -261,8 +261,8 @@ public final class SingleTouchTest extends ParameterizedTestBase {
     @ParameterizedTest
     @MethodSource("parameters")
     public void tapDragReleaseTapAgain(TestTouchDevice device) throws Exception {
-        Assumptions.assumeTrue(device.getTapRadius() < width * 0.2);
         createDevice(device, null);
+        Assumptions.assumeTrue(device.getTapRadius() < width * 0.2);
         final int x1 = (int) Math.round(width * 0.5);
         final int y1 = (int) Math.round(height * 0.5);
         final int x2 = (int) Math.round(width * 0.7);

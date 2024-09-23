@@ -47,8 +47,8 @@ public final class TouchEventLookaheadTest extends ParameterizedTestBase {
     @ParameterizedTest
     @MethodSource("parameters")
     public void mergeMoves(TestTouchDevice device) throws Exception {
-        Assumptions.assumeTrue(TestApplication.isMonocle());
         createDevice(device, null);
+        Assumptions.assumeTrue(TestApplication.isMonocle());
         TestApplication.showFullScreenScene();
         TestApplication.addMouseListeners();
         TestApplication.addTouchListeners();
