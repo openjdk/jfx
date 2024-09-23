@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2024 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,33 +23,21 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "config.h"
+#include "JSReportingObserver.h"
 
-#if ENABLE(C_LOOP)
+#include "ReportingObserverCallback.h"
 
-#define FOR_EACH_LLINT_NOJIT_NATIVE_HELPER(macro) \
-    FOR_EACH_CLOOP_BYTECODE_HELPER_ID(macro)
+#include <JavaScriptCore/JSCInlines.h>
 
-#define FOR_EACH_LLINT_NOJIT_RETURN_HELPER(macro) \
-    FOR_EACH_CLOOP_RETURN_HELPER_ID(macro)
+namespace WebCore {
 
-#else // !ENABLE(C_LOOP)
+template <typename Visitor>
+void JSReportingObserver::visitAdditionalChildren(Visitor& visitor)
+{
+    wrapped().callbackConcurrently().visitJSFunction(visitor);
+}
 
-#define FOR_EACH_LLINT_NOJIT_NATIVE_HELPER(macro) \
-    // Nothing to do here. Use the LLInt ASM / JIT impl instead.
+DEFINE_VISIT_ADDITIONAL_CHILDREN(JSReportingObserver);
 
-#define FOR_EACH_LLINT_NOJIT_RETURN_HELPER(macro) \
-    // Nothing to do here. Use the LLInt ASM / JIT impl instead.
-
-#endif // ENABLE(C_LOOP)
-
-
-#define FOR_EACH_LLINT_NATIVE_HELPER(macro) \
-    FOR_EACH_LLINT_NOJIT_NATIVE_HELPER(macro) \
-    \
-    FOR_EACH_BYTECODE_HELPER_ID(macro) \
-    \
-    FOR_EACH_LLINT_NOJIT_RETURN_HELPER(macro) \
-
-
-#define FOR_EACH_LLINT_OPCODE_EXTENSION(macro) FOR_EACH_LLINT_NATIVE_HELPER(macro)
+}
