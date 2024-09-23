@@ -786,14 +786,14 @@ public class BackgroundTest {
     }
 
     @Test
-        public void testSingleFill() {
+    public void testSingleFill() {
         var background1 = Background.fill(Color.BEIGE);
         var background2 = new Background(new BackgroundFill(Color.BEIGE, null, null));
         assertEquals(background1, background2, "The factory method should give the same result as the constructor");
     }
 
     @Test
-        public void testSingleFillWithNullPaint() {
+    public void testSingleFillWithNullPaint() {
         var background1 = Background.fill(null);
         var background2 = new Background(new BackgroundFill(null, null, null));
         assertEquals(background1, background2, "The factory method should give the same result as the constructor");

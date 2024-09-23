@@ -297,8 +297,8 @@ public class TransformOperationsTest {
     //    boolean is2d,
     //    boolean isIdentity,
     //    boolean isInvertible,
-    //    Class inverseType
-    private static Arguments prepareArgs(Transform t, boolean is2d, Class inverseType) {
+    //    Class<?> inverseType
+    private static Arguments prepareArgs(Transform t, boolean is2d, Class<?> inverseType) {
         boolean isIdentity = (t.getMxx() == 1 && t.getMxy() == 0 && t.getMxz() == 0 && t.getTx() == 0
                               && t.getMyx() == 0 && t.getMyy() == 1 && t.getMyz() == 0 && t.getTy() == 0
                               && t.getMzx() == 0 && t.getMzy() == 0 && t.getMzz() == 1 && t.getTz() == 0);
@@ -455,7 +455,7 @@ public class TransformOperationsTest {
                           boolean is2d,
                           boolean isIdentity,
                           boolean isInvertible,
-                          Class inverseType) {
+                          Class<?> inverseType) {
         final double mxx = t.getMxx();
         final double mxy = t.getMxy();
         final double mxz = t.getMxz();
@@ -486,9 +486,9 @@ public class TransformOperationsTest {
                 mxx, mxy, mxz, tx, myx, myy, myz, ty, mzx, mzy, mzz, tz);
     }
 
-    private Class getExpectedConcatenationClass(Transform t1, Transform t2) {
-        Class c1 = t1.getClass();
-        Class c2 = t2.getClass();
+    private Class<?> getExpectedConcatenationClass(Transform t1, Transform t2) {
+        Class<?> c1 = t1.getClass();
+        Class<?> c2 = t2.getClass();
 
         if (c1 == Translate.class && c2 == Translate.class) {
             return Translate.class;
@@ -548,7 +548,7 @@ public class TransformOperationsTest {
                                         boolean is2d,
                                         boolean isIdentity,
                                         boolean isInvertible,
-                                        Class inverseType) {
+                                        Class<?> inverseType) {
         int counter = 0;
         List<Arguments> argumentsStream = TransformOperationsTest.getParams().toList();
         for (Arguments a : argumentsStream) {
@@ -574,7 +574,7 @@ public class TransformOperationsTest {
                                                      boolean is2d,
                                                      boolean isIdentity,
                                                      boolean isInvertible,
-                                                     Class inverseType) {
+                                                     Class<?> inverseType) {
         assertThrows(NullPointerException.class, () -> {
             t.createConcatenation(null);
         });
@@ -587,7 +587,7 @@ public class TransformOperationsTest {
                                   boolean is2d,
                                   boolean isIdentity,
                                   boolean isInvertible,
-                                  Class inverseType) {
+                                  Class<?> inverseType) {
         Transform res = null;
         try {
             res = t.createInverse();
@@ -617,7 +617,7 @@ public class TransformOperationsTest {
                                                boolean is2d,
                                                boolean isIdentity,
                                                boolean isInvertible,
-                                               Class inverseType) {
+                                               Class<?> inverseType) {
         Transform ct = t.clone();
         Transform res = null;
         boolean canInvert = isInvertible;
@@ -701,7 +701,7 @@ public class TransformOperationsTest {
                                      boolean is2d,
                                      boolean isIdentity,
                                      boolean isInvertible,
-                                     Class inverseType) {
+                                     Class<?> inverseType) {
         Point3D p = new Point3D(12, -18, 30);
         Point3D expected = new Point3D(
             t.getMxx() * 12 - t.getMxy() * 18 + t.getMxz() * 30 + t.getTx(),
@@ -727,7 +727,7 @@ public class TransformOperationsTest {
                                          boolean is2d,
                                          boolean isIdentity,
                                          boolean isInvertible,
-                                         Class inverseType) {
+                                         Class<?> inverseType) {
         assertThrows(NullPointerException.class, () -> {
             t.transform((Point3D) null);
         });
@@ -740,7 +740,7 @@ public class TransformOperationsTest {
                                      boolean is2d,
                                      boolean isIdentity,
                                      boolean isInvertible,
-                                     Class inverseType) {
+                                     Class<?> inverseType) {
 
         Point2D p = new Point2D(12, -18);
         Point2D expected = new Point2D(
@@ -781,7 +781,7 @@ public class TransformOperationsTest {
                                          boolean is2d,
                                          boolean isIdentity,
                                          boolean isInvertible,
-                                         Class inverseType) {
+                                         Class<?> inverseType) {
         assertThrows(NullPointerException.class, () -> {
             t.transform((Point2D) null);
         });
@@ -794,7 +794,7 @@ public class TransformOperationsTest {
                                           boolean is2d,
                                           boolean isIdentity,
                                           boolean isInvertible,
-                                          Class inverseType) {
+                                          Class<?> inverseType) {
         Point3D p = new Point3D(12, -18, 30);
         Point3D expected = new Point3D(
             t.getMxx() * 12 - t.getMxy() * 18 + t.getMxz() * 30,
@@ -820,7 +820,7 @@ public class TransformOperationsTest {
                                               boolean is2d,
                                               boolean isIdentity,
                                               boolean isInvertible,
-                                              Class inverseType) {
+                                              Class<?> inverseType) {
         assertThrows(NullPointerException.class, () -> {
             t.deltaTransform((Point3D) null);
         });
@@ -833,7 +833,7 @@ public class TransformOperationsTest {
                                           boolean is2d,
                                           boolean isIdentity,
                                           boolean isInvertible,
-                                          Class inverseType) {
+                                          Class<?> inverseType) {
 
         Point2D p = new Point2D(12, -18);
         Point2D expected = new Point2D(
@@ -874,7 +874,7 @@ public class TransformOperationsTest {
                                               boolean is2d,
                                               boolean isIdentity,
                                               boolean isInvertible,
-                                              Class inverseType) {
+                                              Class<?> inverseType) {
         assertThrows(NullPointerException.class, () -> {
             t.deltaTransform((Point2D) null);
         });
@@ -887,7 +887,7 @@ public class TransformOperationsTest {
                                     boolean is2d,
                                     boolean isIdentity,
                                     boolean isInvertible,
-                                    Class inverseType) {
+                                    Class<?> inverseType) {
         Bounds result = t.transform(new BoundingBox(10, 11, 12, 13, 14, 15));
 
         Point3D[] points = new Point3D[] {
@@ -931,7 +931,7 @@ public class TransformOperationsTest {
                                         boolean is2d,
                                         boolean isIdentity,
                                         boolean isInvertible,
-                                        Class inverseType) {
+                                        Class<?> inverseType) {
         assertThrows(NullPointerException.class, () -> {
             t.transform((Bounds) null);
         });
@@ -944,7 +944,7 @@ public class TransformOperationsTest {
                                       boolean is2d,
                                       boolean isIdentity,
                                       boolean isInvertible,
-                                      Class inverseType) {
+                                      Class<?> inverseType) {
         double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6 };
         double[] dstPts = new double[] { 1, 2, 3, 4, 5, 6 };
 
@@ -982,7 +982,7 @@ public class TransformOperationsTest {
                                                  boolean is2d,
                                                  boolean isIdentity,
                                                  boolean isInvertible,
-                                                 Class inverseType) {
+                                                 Class<?> inverseType) {
         assertThrows(NullPointerException.class, () -> {
             t.transform2DPoints(null, 2, null, 0, 0);
         });
@@ -995,7 +995,7 @@ public class TransformOperationsTest {
                                                 boolean is2d,
                                                 boolean isIdentity,
                                                 boolean isInvertible,
-                                                Class inverseType) {
+                                                Class<?> inverseType) {
         assertThrows(NullPointerException.class, () -> {
             t.transform2DPoints(null, 2, new double[] { 1, 2 }, 0, 0);
         });
@@ -1008,7 +1008,7 @@ public class TransformOperationsTest {
                                                 boolean is2d,
                                                 boolean isIdentity,
                                                 boolean isInvertible,
-                                                Class inverseType) {
+                                                Class<?> inverseType) {
         assertThrows(NullPointerException.class, () -> {
             t.transform2DPoints(new double[] { 1, 2, 3, 4 }, 2, null, 0, 0);
         });
@@ -1021,7 +1021,7 @@ public class TransformOperationsTest {
                                                  boolean is2d,
                                                  boolean isIdentity,
                                                  boolean isInvertible,
-                                                 Class inverseType) {
+                                                 Class<?> inverseType) {
         double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
 
         Point2D expected1 = new Point2D(
@@ -1061,7 +1061,7 @@ public class TransformOperationsTest {
                                             boolean is2d,
                                             boolean isIdentity,
                                             boolean isInvertible,
-                                            Class inverseType) {
+                                            Class<?> inverseType) {
         assertThrows(IndexOutOfBoundsException.class, () -> {
             double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7 };
             double[] dstPts = new double[] { 1, 2, 3, 4, 5, 6 };
@@ -1083,7 +1083,7 @@ public class TransformOperationsTest {
                                             boolean is2d,
                                             boolean isIdentity,
                                             boolean isInvertible,
-                                            Class inverseType) {
+                                            Class<?> inverseType) {
         assertThrows(IndexOutOfBoundsException.class, () -> {
             double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7 };
             double[] dstPts = new double[] { 1 };
@@ -1105,7 +1105,7 @@ public class TransformOperationsTest {
                                       boolean is2d,
                                       boolean isIdentity,
                                       boolean isInvertible,
-                                      Class inverseType) {
+                                      Class<?> inverseType) {
         double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
         double[] dstPts = new double[] { 1, 2, 3, 4, 5, 6, 7, 8 };
 
@@ -1138,7 +1138,7 @@ public class TransformOperationsTest {
                                                  boolean is2d,
                                                  boolean isIdentity,
                                                  boolean isInvertible,
-                                                 Class inverseType) {
+                                                 Class<?> inverseType) {
         assertThrows(NullPointerException.class, () -> {
             t.transform3DPoints(null, 2, null, 0, 0);
         });
@@ -1151,7 +1151,7 @@ public class TransformOperationsTest {
                                                 boolean is2d,
                                                 boolean isIdentity,
                                                 boolean isInvertible,
-                                                Class inverseType) {
+                                                Class<?> inverseType) {
         assertThrows(NullPointerException.class, () -> {
             t.transform3DPoints(null, 2, new double[] { 1, 2, 3 }, 0, 0);
         });
@@ -1164,7 +1164,7 @@ public class TransformOperationsTest {
                                                 boolean is2d,
                                                 boolean isIdentity,
                                                 boolean isInvertible,
-                                                Class inverseType) {
+                                                Class<?> inverseType) {
         assertThrows(NullPointerException.class, () -> {
             t.transform3DPoints(new double[] { 1, 2, 3, 4 }, 2, null, 0, 0);
         });
@@ -1177,7 +1177,7 @@ public class TransformOperationsTest {
                                                  boolean is2d,
                                                  boolean isIdentity,
                                                  boolean isInvertible,
-                                                 Class inverseType) {
+                                                 Class<?> inverseType) {
         double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
 
         Point3D expected1 = new Point3D(
@@ -1211,7 +1211,7 @@ public class TransformOperationsTest {
                                             boolean is2d,
                                             boolean isIdentity,
                                             boolean isInvertible,
-                                            Class inverseType) {
+                                            Class<?> inverseType) {
         assertThrows(IndexOutOfBoundsException.class, () -> {
             double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7 };
             double[] dstPts = new double[] { 1, 2, 3, 4, 5, 6 };
@@ -1227,7 +1227,7 @@ public class TransformOperationsTest {
                           boolean is2d,
                           boolean isIdentity,
                           boolean isInvertible,
-                          Class inverseType) {
+                          Class<?> inverseType) {
         assertThrows(IndexOutOfBoundsException.class, () -> {
             double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7 };
             double[] dstPts = new double[] { 1 };
@@ -1243,7 +1243,7 @@ public class TransformOperationsTest {
                                             boolean is2d,
                                             boolean isIdentity,
                                             boolean isInvertible,
-                                            Class inverseType) throws Exception {
+                                            Class<?> inverseType) throws Exception {
         Point3D p = new Point3D(12, -18, 30);
 
         Point3D expected = new Point3D(
@@ -1287,7 +1287,7 @@ public class TransformOperationsTest {
                                                 boolean is2d,
                                                 boolean isIdentity,
                                                 boolean isInvertible,
-                                                Class inverseType) throws NonInvertibleTransformException {
+                                                Class<?> inverseType) throws NonInvertibleTransformException {
         assertThrows(NullPointerException.class, () -> {
             t.inverseTransform((Point3D) null);
         });
@@ -1300,7 +1300,7 @@ public class TransformOperationsTest {
                                             boolean is2d,
                                             boolean isIdentity,
                                             boolean isInvertible,
-                                            Class inverseType) throws Exception {
+                                            Class<?> inverseType) throws Exception {
 
         Point2D p = new Point2D(12, -18);
         Point2D expected = new Point2D(
@@ -1355,7 +1355,7 @@ public class TransformOperationsTest {
                                                 boolean is2d,
                                                 boolean isIdentity,
                                                 boolean isInvertible,
-                                                Class inverseType) throws NonInvertibleTransformException {
+                                                Class<?> inverseType) throws NonInvertibleTransformException {
         assertThrows(NullPointerException.class, () -> {
             t.inverseTransform((Point2D) null);
         });
@@ -1368,7 +1368,7 @@ public class TransformOperationsTest {
                                                  boolean is2d,
                                                  boolean isIdentity,
                                                  boolean isInvertible,
-                                                 Class inverseType) throws Exception {
+                                                 Class<?> inverseType) throws Exception {
         Point3D p = new Point3D(12, -18, 30);
         Point3D expected = new Point3D(
             it.getMxx() * 12 - it.getMxy() * 18 + it.getMxz() * 30,
@@ -1411,7 +1411,7 @@ public class TransformOperationsTest {
                                                      boolean is2d,
                                                      boolean isIdentity,
                                                      boolean isInvertible,
-                                                     Class inverseType) throws NonInvertibleTransformException {
+                                                     Class<?> inverseType) throws NonInvertibleTransformException {
         assertThrows(NullPointerException.class, () -> {
             t.inverseDeltaTransform((Point3D) null);
         });
@@ -1424,7 +1424,7 @@ public class TransformOperationsTest {
                                                  boolean is2d,
                                                  boolean isIdentity,
                                                  boolean isInvertible,
-                                                 Class inverseType) throws Exception {
+                                                 Class<?> inverseType) throws Exception {
 
         Point2D p = new Point2D(12, -18);
         Point2D expected = new Point2D(
@@ -1479,7 +1479,7 @@ public class TransformOperationsTest {
                                                      boolean is2d,
                                                      boolean isIdentity,
                                                      boolean isInvertible,
-                                                     Class inverseType)
+                                                     Class<?> inverseType)
             throws NonInvertibleTransformException {
         assertThrows(NullPointerException.class, () -> {
             t.inverseDeltaTransform((Point2D) null);
@@ -1493,7 +1493,7 @@ public class TransformOperationsTest {
                                            boolean is2d,
                                            boolean isIdentity,
                                            boolean isInvertible,
-                                           Class inverseType) throws Exception {
+                                           Class<?> inverseType) throws Exception {
         Bounds result = null;
         try {
             result = t.inverseTransform(new BoundingBox(10, 11, 12, 13, 14, 15));
@@ -1549,7 +1549,7 @@ public class TransformOperationsTest {
                                                boolean is2d,
                                                boolean isIdentity,
                                                boolean isInvertible,
-                                               Class inverseType) throws NonInvertibleTransformException {
+                                               Class<?> inverseType) throws NonInvertibleTransformException {
         assertThrows(NullPointerException.class, () -> {
             t.inverseTransform((Bounds) null);
         });
@@ -1562,7 +1562,7 @@ public class TransformOperationsTest {
                                              boolean is2d,
                                              boolean isIdentity,
                                              boolean isInvertible,
-                                             Class inverseType) throws Exception {
+                                             Class<?> inverseType) throws Exception {
         double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6 };
         double[] dstPts = new double[] { 1, 2, 3, 4, 5, 6 };
 
@@ -1607,7 +1607,7 @@ public class TransformOperationsTest {
                                                         boolean is2d,
                                                         boolean isIdentity,
                                                         boolean isInvertible,
-                                                        Class inverseType) throws NonInvertibleTransformException {
+                                                        Class<?> inverseType) throws NonInvertibleTransformException {
         assertThrows(NullPointerException.class, () -> {
             t.inverseTransform2DPoints(null, 2, null, 0, 0);
         });
@@ -1620,7 +1620,7 @@ public class TransformOperationsTest {
                                                        boolean is2d,
                                                        boolean isIdentity,
                                                        boolean isInvertible,
-                                                       Class inverseType) throws NonInvertibleTransformException {
+                                                       Class<?> inverseType) throws NonInvertibleTransformException {
         assertThrows(NullPointerException.class, () -> {
             t.inverseTransform2DPoints(null, 2, new double[] { 1, 2, 3 }, 0, 0);
         });
@@ -1633,7 +1633,7 @@ public class TransformOperationsTest {
                                                        boolean is2d,
                                                        boolean isIdentity,
                                                        boolean isInvertible,
-                                                       Class inverseType) throws NonInvertibleTransformException {
+                                                       Class<?> inverseType) throws NonInvertibleTransformException {
         assertThrows(NullPointerException.class, () -> {
             t.inverseTransform2DPoints(new double[] { 1, 2, 3, 4 }, 2, null, 0, 0);
         });
@@ -1646,7 +1646,7 @@ public class TransformOperationsTest {
                                                         boolean is2d,
                                                         boolean isIdentity,
                                                         boolean isInvertible,
-                                                        Class inverseType) throws Exception {
+                                                        Class<?> inverseType) throws Exception {
         double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
 
         Point2D expected1 = new Point2D(
@@ -1692,7 +1692,7 @@ public class TransformOperationsTest {
                                                    boolean is2d,
                                                    boolean isIdentity,
                                                    boolean isInvertible,
-                                                   Class inverseType) throws Exception {
+                                                   Class<?> inverseType) throws Exception {
         assertThrows(IndexOutOfBoundsException.class, () -> {
             double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7 };
             double[] dstPts = new double[] { 1, 2, 3, 4, 5, 6 };
@@ -1718,7 +1718,7 @@ public class TransformOperationsTest {
                                                    boolean is2d,
                                                    boolean isIdentity,
                                                    boolean isInvertible,
-                                                   Class inverseType) throws Exception {
+                                                   Class<?> inverseType) throws Exception {
         assertThrows(IndexOutOfBoundsException.class, () -> {
             double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7 };
             double[] dstPts = new double[] { 1 };
@@ -1744,7 +1744,7 @@ public class TransformOperationsTest {
                                              boolean is2d,
                                              boolean isIdentity,
                                              boolean isInvertible,
-                                             Class inverseType) throws Exception {
+                                             Class<?> inverseType) throws Exception {
         double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
         double[] dstPts = new double[] { 1, 2, 3, 4, 5, 6, 7, 8 };
 
@@ -1786,7 +1786,7 @@ public class TransformOperationsTest {
                                                         boolean is2d,
                                                         boolean isIdentity,
                                                         boolean isInvertible,
-                                                        Class inverseType) throws NonInvertibleTransformException {
+                                                        Class<?> inverseType) throws NonInvertibleTransformException {
         assertThrows(NullPointerException.class, () -> {
             t.inverseTransform3DPoints(null, 2, null, 0, 0);
         });
@@ -1799,7 +1799,7 @@ public class TransformOperationsTest {
                                                        boolean is2d,
                                                        boolean isIdentity,
                                                        boolean isInvertible,
-                                                       Class inverseType) throws NonInvertibleTransformException {
+                                                       Class<?> inverseType) throws NonInvertibleTransformException {
         assertThrows(NullPointerException.class, () -> {
             t.inverseTransform3DPoints(null, 2, new double[] { 1, 2, 3 }, 0, 0);
         });
@@ -1812,7 +1812,7 @@ public class TransformOperationsTest {
                                                        boolean is2d,
                                                        boolean isIdentity,
                                                        boolean isInvertible,
-                                                       Class inverseType) throws NonInvertibleTransformException {
+                                                       Class<?> inverseType) throws NonInvertibleTransformException {
         assertThrows(NullPointerException.class, () -> {
             t.inverseTransform3DPoints(new double[] { 1, 2, 3, 4 }, 2, null, 0, 0);
         });
@@ -1825,7 +1825,7 @@ public class TransformOperationsTest {
                           boolean is2d,
                           boolean isIdentity,
                           boolean isInvertible,
-                          Class inverseType) throws Exception {
+                          Class<?> inverseType) throws Exception {
         double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
 
         Point3D expected1 = new Point3D(
@@ -1868,7 +1868,7 @@ public class TransformOperationsTest {
                                                    boolean is2d,
                                                    boolean isIdentity,
                                                    boolean isInvertible,
-                                                   Class inverseType) throws Exception {
+                                                   Class<?> inverseType) throws Exception {
         assertThrows(IndexOutOfBoundsException.class, () -> {
             double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7 };
             double[] dstPts = new double[] { 1, 2, 3, 4, 5, 6 };
@@ -1890,7 +1890,7 @@ public class TransformOperationsTest {
                                                    boolean is2d,
                                                    boolean isIdentity,
                                                    boolean isInvertible,
-                                                   Class inverseType) throws Exception {
+                                                   Class<?> inverseType) throws Exception {
         assertThrows(IndexOutOfBoundsException.class, () -> {
             double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7 };
             double[] dstPts = new double[] { 1 };
@@ -1912,7 +1912,7 @@ public class TransformOperationsTest {
                                 boolean is2d,
                                 boolean isIdentity,
                                 boolean isInvertible,
-                                Class inverseType) {
+                                Class<?> inverseType) {
         assertEquals(TransformHelper.determinant(t), t.determinant(), 0.00001);
     }
 
@@ -1923,7 +1923,7 @@ public class TransformOperationsTest {
                              boolean is2d,
                              boolean isIdentity,
                              boolean isInvertible,
-                             Class inverseType) {
+                             Class<?> inverseType) {
         Transform clone = t.clone();
 
         if (is2d) {
@@ -1946,7 +1946,7 @@ public class TransformOperationsTest {
                                    boolean is2d,
                                    boolean isIdentity,
                                    boolean isInvertible,
-                                   Class inverseType) {
+                                   Class<?> inverseType) {
         Transform clone = t.clone();
 
         assertEquals("type2D", clone.type2DProperty().getName());
@@ -1960,7 +1960,7 @@ public class TransformOperationsTest {
                                          boolean is2d,
                                          boolean isIdentity,
                                          boolean isInvertible,
-                                         Class inverseType) {
+                                         Class<?> inverseType) {
         Transform clone = t.clone();
 
         if (is2d) {
@@ -1987,7 +1987,7 @@ public class TransformOperationsTest {
                                                boolean is2d,
                                                boolean isIdentity,
                                                boolean isInvertible,
-                                               Class inverseType) {
+                                               Class<?> inverseType) {
         final Transform clone = t.clone();
 
         InvalidationListener l =
@@ -2033,7 +2033,7 @@ public class TransformOperationsTest {
                                          boolean is2d,
                                          boolean isIdentity,
                                          boolean isInvertible,
-                                         Class inverseType) {
+                                         Class<?> inverseType) {
         final Transform clone = t.clone();
 
         ChangeListener<Boolean> l =
@@ -2097,7 +2097,7 @@ public class TransformOperationsTest {
                           boolean is2d,
                           boolean isIdentity,
                           boolean isInvertible,
-                          Class inverseType) {
+                          Class<?> inverseType) {
         Transform clone = t.clone();
 
         if (isIdentity) {
@@ -2120,7 +2120,7 @@ public class TransformOperationsTest {
                           boolean is2d,
                           boolean isIdentity,
                           boolean isInvertible,
-                          Class inverseType) {
+                          Class<?> inverseType) {
         Transform clone = t.clone();
 
         assertEquals("identity", clone.identityProperty().getName());
@@ -2134,7 +2134,7 @@ public class TransformOperationsTest {
                           boolean is2d,
                           boolean isIdentity,
                           boolean isInvertible,
-                          Class inverseType) {
+                          Class<?> inverseType) {
         Transform clone = t.clone();
 
         if (isIdentity) {
@@ -2161,7 +2161,7 @@ public class TransformOperationsTest {
                           boolean is2d,
                           boolean isIdentity,
                           boolean isInvertible,
-                          Class inverseType) {
+                          Class<?> inverseType) {
         final Transform clone = t.clone();
 
         InvalidationListener l =
@@ -2212,7 +2212,7 @@ public class TransformOperationsTest {
                           boolean is2d,
                           boolean isIdentity,
                           boolean isInvertible,
-                          Class inverseType) {
+                          Class<?> inverseType) {
         final Transform clone = t.clone();
 
         ChangeListener<Boolean> l =
@@ -2271,7 +2271,7 @@ public class TransformOperationsTest {
                           boolean is2d,
                           boolean isIdentity,
                           boolean isInvertible,
-                          Class inverseType) {
+                          Class<?> inverseType) {
         Transform clone = t.clone();
 
         assertTrue(t.similarTo(clone, new BoundingBox(-10000, -10000, 10000, 10000), 1e-10));
@@ -2305,7 +2305,7 @@ public class TransformOperationsTest {
                           boolean is2d,
                           boolean isIdentity,
                           boolean isInvertible,
-                          Class inverseType) {
+                          Class<?> inverseType) {
         assertThrows(NullPointerException.class, () -> {
             t.similarTo(null, new BoundingBox(0, 0, 0, 1, 1, 1), 0);
         });
@@ -2318,7 +2318,7 @@ public class TransformOperationsTest {
                           boolean is2d,
                           boolean isIdentity,
                           boolean isInvertible,
-                          Class inverseType) {
+                          Class<?> inverseType) {
         assertThrows(NullPointerException.class, () -> {
             t.similarTo(t, null, 0);
         });
@@ -2359,7 +2359,7 @@ public class TransformOperationsTest {
                                boolean is2d,
                                boolean isIdentity,
                                boolean isInvertible,
-                               Class inverseType) {
+                               Class<?> inverseType) {
         assertGetElement(t, MatrixType.MT_2D_2x3, 0, 0, t.getMxx(), !is2d, false);
         assertGetElement(t, MatrixType.MT_2D_2x3, 0, 1, t.getMxy(), !is2d, false);
         assertGetElement(t, MatrixType.MT_2D_2x3, 0, 2, t.getTx(), !is2d, false);
@@ -2428,7 +2428,7 @@ public class TransformOperationsTest {
                                        boolean is2d,
                                        boolean isIdentity,
                                        boolean isInvertible,
-                                       Class inverseType) {
+                                       Class<?> inverseType) {
         assertThrows(NullPointerException.class, () -> {
             t.getElement(null, 0, 0);
         });
@@ -2523,7 +2523,7 @@ public class TransformOperationsTest {
                             boolean is2d,
                             boolean isIdentity,
                             boolean isInvertible,
-                            Class inverseType) {
+                            Class<?> inverseType) {
 
         assertToArray2D(t, is2d, MatrixType.MT_2D_2x3, null, false, false);
         assertToArray2D(t, is2d, MatrixType.MT_2D_2x3, null, true, false);
@@ -2553,7 +2553,7 @@ public class TransformOperationsTest {
                                      boolean is2d,
                                      boolean isIdentity,
                                      boolean isInvertible,
-                                     Class inverseType) {
+                                     Class<?> inverseType) {
         assertThrows(NullPointerException.class, () -> {
             t.toArray(null);
         });
@@ -2566,7 +2566,7 @@ public class TransformOperationsTest {
                                      boolean is2d,
                                      boolean isIdentity,
                                      boolean isInvertible,
-                                     Class inverseType) {
+                                     Class<?> inverseType) {
         assertThrows(NullPointerException.class, () -> {
             t.toArray(null, new double[] {});
         });
@@ -2696,7 +2696,7 @@ public class TransformOperationsTest {
                           boolean is2d,
                           boolean isIdentity,
                           boolean isInvertible,
-                          Class inverseType) {
+                          Class<?> inverseType) {
         assertRow2D(t, is2d, MatrixType.MT_2D_2x3, 0, null, false, false, false);
         assertRow2D(t, is2d, MatrixType.MT_2D_2x3, 0, null, true, false, false);
         assertRow2D(t, is2d, MatrixType.MT_2D_2x3, 0, new double[2], true, false, false);
@@ -2765,7 +2765,7 @@ public class TransformOperationsTest {
                                  boolean is2d,
                                  boolean isIdentity,
                                  boolean isInvertible,
-                                 Class inverseType) {
+                                 Class<?> inverseType) {
         assertThrows(NullPointerException.class, () -> {
             t.row(null, 0);
         });
@@ -2778,7 +2778,7 @@ public class TransformOperationsTest {
                                  boolean is2d,
                                  boolean isIdentity,
                                  boolean isInvertible,
-                                 Class inverseType) {
+                                 Class<?> inverseType) {
         assertThrows(NullPointerException.class, () -> {
             t.row(null, 0, new double[] {});
         });
@@ -2940,7 +2940,7 @@ public class TransformOperationsTest {
                            boolean is2d,
                            boolean isIdentity,
                            boolean isInvertible,
-                           Class inverseType) {
+                           Class<?> inverseType) {
         assertCol2D(t, is2d, MatrixType.MT_2D_2x3, 0, null, false, false, false);
         assertCol2D(t, is2d, MatrixType.MT_2D_2x3, 0, null, true, false, false);
         assertCol2D(t, is2d, MatrixType.MT_2D_2x3, 0, new double[1], true, false, false);
@@ -3017,7 +3017,7 @@ public class TransformOperationsTest {
                           boolean is2d,
                           boolean isIdentity,
                           boolean isInvertible,
-                          Class inverseType) {
+                          Class<?> inverseType) {
         assertThrows(NullPointerException.class, () -> {
             t.column(null, 0);
         });
@@ -3030,7 +3030,7 @@ public class TransformOperationsTest {
                           boolean is2d,
                           boolean isIdentity,
                           boolean isInvertible,
-                          Class inverseType) {
+                          Class<?> inverseType) {
         assertThrows(NullPointerException.class, () -> {
             t.column(null, 0, new double[] {});
         });
@@ -3043,7 +3043,7 @@ public class TransformOperationsTest {
                           boolean is2d,
                           boolean isIdentity,
                           boolean isInvertible,
-                          Class inverseType) {
+                          Class<?> inverseType) {
         Transform clone = t.clone();
 
         EventHandler<TransformChangedEvent> ontc =
@@ -3084,7 +3084,7 @@ public class TransformOperationsTest {
                           boolean is2d,
                           boolean isIdentity,
                           boolean isInvertible,
-                          Class inverseType) {
+                          Class<?> inverseType) {
         Transform clone = t.clone();
 
         EventHandler<TransformChangedEvent> counting =
@@ -3132,7 +3132,7 @@ public class TransformOperationsTest {
                           boolean is2d,
                           boolean isIdentity,
                           boolean isInvertible,
-                          Class inverseType) {
+                          Class<?> inverseType) {
         Transform clone = t.clone();
 
         EventHandler<TransformChangedEvent> counting =

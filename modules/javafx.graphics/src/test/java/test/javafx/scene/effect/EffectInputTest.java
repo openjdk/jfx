@@ -37,6 +37,7 @@ import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -95,6 +96,11 @@ public class EffectInputTest {
         } else {
             return pgEffectClass.getMethod("getInput");
         }
+    }
+
+    @AfterEach
+    private void tearDownEach() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
     @ParameterizedTest
@@ -212,6 +218,6 @@ public class EffectInputTest {
         assertEquals(null, getInput1.invoke(effect1));
 
         assertEquals(2, countIllegalArgumentException, "Cycle in effect chain detected, exception should occur 2 times.");
-        Thread.currentThread().setUncaughtExceptionHandler(null);
+        // UEH set to null in @AfterEach
     }
 }

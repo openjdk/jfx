@@ -76,7 +76,7 @@ public class TreeShowingPropertyTest {
         Node nodeToTest;
     }
 
-    public void setUp(Supplier<RootAndNodeToTest> nodeSupplier) {
+    private void setUp(Supplier<RootAndNodeToTest> nodeSupplier) {
         RootAndNodeToTest nodes = nodeSupplier.get();
 
         this.root = nodes.root;

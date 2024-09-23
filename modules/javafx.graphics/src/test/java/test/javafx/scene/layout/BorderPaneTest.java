@@ -946,7 +946,7 @@ public class BorderPaneTest {
     }
 
     @Test
-        public void testResizeBelowMinimum() {
+    public void testResizeBelowMinimum() {
         MockResizable left = new MockResizable(10,10,100,100,150,150);
         MockResizable center = new MockResizable(30,30,100,100,200,200);
 

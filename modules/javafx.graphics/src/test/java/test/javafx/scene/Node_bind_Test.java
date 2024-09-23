@@ -33,11 +33,17 @@ import javafx.scene.effect.Effect;
 import javafx.scene.effect.Shadow;
 import javafx.scene.shape.Rectangle;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 
 public class Node_bind_Test {
+
+    @AfterEach
+    private void tearDownEach() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
+    }
 
     @Test
     public void testClip() {
@@ -96,7 +102,7 @@ public class Node_bind_Test {
         assertEquals(rectA.getClip(), clip1);
 
         assertEquals(1, countIllegalArgumentException, "Cycle in effect chain detected, exception should occur once.");
-        Thread.currentThread().setUncaughtExceptionHandler(null);
+        // UEH set to null in @AfterEach
      }
 
     @Test
