@@ -91,7 +91,7 @@ public final class TraverseInvisibleTest {
         int fromNumber,
         TraversalDirection direction,
         int invisibleNumber,
-        int toNumber) 
+        int toNumber)
     {
         keypadNodes[fromNumber].requestFocus();
         keypadNodes[invisibleNumber].setVisible(false);
