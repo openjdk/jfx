@@ -25,6 +25,7 @@
 package test.com.sun.javafx.sg.prism;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -93,6 +94,7 @@ public class RT36296Test {
             latch.await();
         } catch (InterruptedException ex) {
             Logger.getLogger(RT36296Test.class.getName()).log(Level.SEVERE, null, ex);
+            fail(ex);
         }
     }
 

@@ -25,6 +25,7 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
+import static org.junit.jupiter.api.Assertions.fail;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
@@ -404,7 +405,7 @@ public class TestApplication extends Application {
             try {
                 latch.await();
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                fail(e);
             }
         }
     }

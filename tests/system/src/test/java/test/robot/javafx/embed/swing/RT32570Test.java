@@ -25,6 +25,7 @@
 
 package test.robot.javafx.embed.swing;
 
+import static org.junit.jupiter.api.Assertions.fail;
 import java.awt.Dimension;
 import java.util.concurrent.TimeUnit;
 import javax.swing.JLabel;
@@ -103,7 +104,11 @@ public class RT32570Test extends VisualTestBase {
                 Color color = getColor(testScene, WIDTH / 2, HEIGHT / 2);
                 popped = !testColorEquals(Color.GREEN, color, TOLERANCE);
             });
-            try { Thread.sleep(100); } catch(Exception e) {}
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                fail(e);
+            }
         }
 
         // Verify the popup content is painted:

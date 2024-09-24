@@ -26,6 +26,7 @@
 package test.javafx.scene.text;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.Timer;
@@ -108,6 +109,7 @@ public class ArabicWrappingTest extends Application {
            try {
                Thread.sleep(2000);
            } catch (Exception e) {
+               fail(e);
            }
        }
 

@@ -504,7 +504,7 @@ public class ListViewTest {
         try {
             Thread.sleep(100);
         } catch (InterruptedException ex) {
-            ex.printStackTrace();
+            fail(ex);
         }
 
         // the list is totally changing (it is being cleared), so we should

@@ -27,6 +27,7 @@ package test.javafx.scene.control;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.util.Locale;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
@@ -94,7 +95,7 @@ public class AlertTest {
                         Platform.runLater(() -> getStage(dialog).close());
                     }
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    fail(e);
                 }
             }).start();
 

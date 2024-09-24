@@ -80,7 +80,9 @@ public class Util {
     public static void sleep(long msec) {
         try {
             Thread.sleep(msec);
-        } catch (InterruptedException ex) {}
+        } catch (InterruptedException ex) {
+            fail(ex);
+        }
     }
 
     public static boolean await(final CountDownLatch latch) {
