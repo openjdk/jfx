@@ -118,8 +118,7 @@ public class HistoryTest extends TestBase {
         try {
             Thread.sleep(150); // ensure the next date doesn't fit into the same millisecond
         } catch (InterruptedException e) {
-            // fail(e);
-            throw new AssertionError(e);
+            fail(e);
         }
 
         history.currentIndexProperty().addListener(new ChangeListener<Number>() {
@@ -245,8 +244,7 @@ public class HistoryTest extends TestBase {
         try {
             Thread.sleep(150); // ensure the next date doesn't fit into the same millisecond
         } catch (InterruptedException e) {
-            // fail(e);
-            throw new AssertionError(e);
+            fail(e);
         }
 
         reload();

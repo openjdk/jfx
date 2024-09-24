@@ -70,8 +70,7 @@ public class ImageRaceTest {
                 try {
                     sleep(1);
                 } catch (InterruptedException ex) {
-                    // fail(ex);
-                    throw new AssertionError(ex);
+                    fail(ex);
                 }
             }
             init.get();
@@ -87,8 +86,7 @@ public class ImageRaceTest {
                 try {
                     Thread.sleep(1);
                 } catch (InterruptedException ex) {
-                    // fail(ex);
-                    throw new AssertionError(ex);
+                    fail(ex);
                 }
             }
             if (!i.isRunning()) {
@@ -100,8 +98,7 @@ public class ImageRaceTest {
         try {
             Thread.sleep(100);
         } catch (InterruptedException ex) {
-            // fail(ex);
-            throw new AssertionError(ex);
+            fail(ex);
         }
         ready = true;
 

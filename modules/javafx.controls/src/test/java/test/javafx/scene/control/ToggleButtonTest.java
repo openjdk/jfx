@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassDoesNotExist;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassExists;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
@@ -246,8 +247,7 @@ public class ToggleButtonTest {
             Thread.sleep(2000);
         } catch (InterruptedException ex) {
             PlatformLogger.getLogger(ToggleButtonTest.class.getName()).severe(null, ex);
-            // fail(ex);
-            throw new AssertionError(ex);
+            fail(ex);
         }
         assertTrue(flag[0], "fire() doesnt emit ActionEvent!");
     }

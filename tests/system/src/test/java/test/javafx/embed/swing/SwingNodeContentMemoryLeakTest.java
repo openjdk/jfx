@@ -26,6 +26,7 @@
 package test.javafx.embed.swing;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
@@ -85,8 +86,7 @@ public class SwingNodeContentMemoryLeakTest {
                 try {
                     Thread.sleep(100);
                 } catch (InterruptedException e) {
-                    // fail(e);
-                    throw new AssertionError(e);
+                    fail(e);
                 }
 
                 SwingUtilities.invokeLater(() -> {

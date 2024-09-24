@@ -24,6 +24,7 @@
  */
 package test.javafx.embed.swing;
 
+import static org.junit.jupiter.api.Assertions.fail;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import javax.swing.JFrame;
@@ -80,8 +81,7 @@ public class JFXPanelEmbeddedWindowTest {
             try {
                 innerLatch.await(5, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
-                // fail(e);
-                throw new AssertionError(e);
+                fail(e);
             }
             SwingUtilities.invokeLater(() -> outerLatch.countDown());
         });

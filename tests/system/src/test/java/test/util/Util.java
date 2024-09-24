@@ -81,8 +81,7 @@ public class Util {
         try {
             Thread.sleep(msec);
         } catch (InterruptedException ex) {
-            // fail(ex);
-            throw new AssertionError(ex);
+            fail(ex);
         }
     }
 

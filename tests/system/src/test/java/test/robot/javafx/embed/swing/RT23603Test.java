@@ -25,6 +25,7 @@
 
 package test.robot.javafx.embed.swing;
 
+import static org.junit.jupiter.api.Assertions.fail;
 import java.awt.AWTException;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -97,8 +98,7 @@ public class RT23603Test {
         try {
             latch.await(ms, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
-            // fail(e);
-            throw new AssertionError(e);
+            fail(e);
         }
         if (latch.getCount() > 0) {
             Assertions.fail("unexpected error: waiting timeout " + ms + "ms elapsed for " + latch);

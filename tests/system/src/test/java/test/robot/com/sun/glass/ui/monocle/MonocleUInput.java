@@ -25,6 +25,7 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
+import static org.junit.jupiter.api.Assertions.fail;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
@@ -97,8 +98,7 @@ class MonocleUInput extends NativeUInput {
                 try {
                     latch.await();
                 } catch (InterruptedException e) {
-                    // fail(e);
-                    throw new AssertionError(e);
+                    fail(e);
                 }
             }
             device = null;

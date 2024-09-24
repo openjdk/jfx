@@ -159,8 +159,7 @@ public class SystemMenuBarTest {
                     try {
                         Thread.sleep(20);
                     } catch (Exception e) {
-                        // fail(e);
-                        throw new AssertionError(e);
+                        fail(e);
                     }
                     Platform.runLater(() -> {
                         menu.getItems().clear();

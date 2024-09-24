@@ -28,6 +28,7 @@ package test.javafx.scene.control.skin;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.lang.ref.WeakReference;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Scene;
@@ -125,8 +126,7 @@ public class ProgressBarSkinTest {
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {
-                // fail(e);
-                throw new AssertionError(e);
+                fail(e);
             }
         }
     }

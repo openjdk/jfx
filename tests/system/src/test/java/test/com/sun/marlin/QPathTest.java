@@ -27,6 +27,7 @@ package test.com.sun.marlin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -200,8 +201,7 @@ public class QPathTest {
             latch.await();
         } catch (InterruptedException ie) {
             Logger.getLogger(QPathTest.class.getName()).log(Level.SEVERE, "interrupted", ie);
-            // fail(ie);
-            throw new AssertionError(ie);
+            fail(ie);
         }
         assertFalse(doChecksFailed, "DoChecks detected a problem.");
     }

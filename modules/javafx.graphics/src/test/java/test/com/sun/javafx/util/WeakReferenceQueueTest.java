@@ -34,6 +34,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class WeakReferenceQueueTest {
     @Test
@@ -206,8 +207,7 @@ public class WeakReferenceQueueTest {
         try {
             Thread.sleep(100);
         } catch (InterruptedException e) {
-            // fail(e);
-            throw new AssertionError(e);
+            fail(e);
         }
 
         // hope that worked!

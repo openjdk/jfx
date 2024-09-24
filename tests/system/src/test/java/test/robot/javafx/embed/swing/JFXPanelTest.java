@@ -24,6 +24,7 @@
  */
 package test.robot.javafx.embed.swing;
 
+import static org.junit.jupiter.api.Assertions.fail;
 import java.awt.Robot;
 import java.awt.event.InputEvent;
 import java.util.concurrent.CountDownLatch;
@@ -73,8 +74,7 @@ public class JFXPanelTest {
             try {
                 beginLatch.await();
             } catch (Exception e) {
-                // fail(e);
-                throw new AssertionError(e);
+                fail(e);
             }
             while (!stop) {
                 robot.mouseMove(300, 10);

@@ -25,6 +25,7 @@
 
 package test.robot.javafx.embed.swing;
 
+import static org.junit.jupiter.api.Assertions.fail;
 import java.awt.Dimension;
 import java.util.concurrent.TimeUnit;
 import javax.swing.JLabel;
@@ -106,8 +107,7 @@ public class RT32570Test extends VisualTestBase {
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
-                // fail(e);
-                throw new AssertionError(e);
+                fail(e);
             }
         }
 

@@ -27,6 +27,7 @@ package test.javafx.scene.control.skin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import javafx.beans.value.ObservableValue;
@@ -193,8 +194,7 @@ public class ScrollPaneSkinTest {
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
-                // fail(e);
-                throw new AssertionError(e);
+                fail(e);
             }
             count++;
         }
@@ -244,8 +244,7 @@ public class ScrollPaneSkinTest {
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
-                // fail(e);
-                throw new AssertionError(e);
+                fail(e);
             }
             count++;
         }
