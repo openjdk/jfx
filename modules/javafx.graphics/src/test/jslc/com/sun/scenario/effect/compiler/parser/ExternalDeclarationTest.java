@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,14 +37,18 @@ import com.sun.scenario.effect.compiler.tree.FuncDef;
 import com.sun.scenario.effect.compiler.tree.JSLVisitor;
 import com.sun.scenario.effect.compiler.tree.VarDecl;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ExternalDeclarationTest extends ParserBase {
 
     @Test
-    public void declaration() throws Exception {
+    public void declaration() {
         ExtDecl tree = parseTreeFor("param float4 foo;").get(0);
         assertTrue(tree instanceof VarDecl);
         VarDecl d = (VarDecl)tree;
@@ -57,7 +61,7 @@ public class ExternalDeclarationTest extends ParserBase {
     }
 
     @Test
-    public void multiDeclaration() throws Exception {
+    public void multiDeclaration() {
         List<ExtDecl> decls = parseTreeFor("param float4 foo, bar;");
         assertEquals(decls.size(), 2);
         ExtDecl tree;
@@ -82,7 +86,7 @@ public class ExternalDeclarationTest extends ParserBase {
     }
 
     @Test
-    public void funcDefNoParam() throws Exception {
+    public void funcDefNoParam() {
         ExtDecl tree = parseTreeFor("void test() { int i = 3; }").get(0);
         assertTrue(tree instanceof FuncDef);
         FuncDef d = (FuncDef)tree;
@@ -97,7 +101,7 @@ public class ExternalDeclarationTest extends ParserBase {
     }
 
     @Test
-    public void funcDefOneParam() throws Exception {
+    public void funcDefOneParam() {
         ExtDecl tree = parseTreeFor("void test(float3 foo) { int i = 3; }").get(0);
         assertTrue(tree instanceof FuncDef);
         FuncDef d = (FuncDef)tree;
@@ -112,7 +116,7 @@ public class ExternalDeclarationTest extends ParserBase {
     }
 
     @Test
-    public void funcDefTwoParam() throws Exception {
+    public void funcDefTwoParam() {
         ExtDecl tree = parseTreeFor("void test(float3 foo, float3 bar) { int i = 3; }").get(0);
         assertTrue(tree instanceof FuncDef);
         FuncDef d = (FuncDef)tree;
@@ -126,12 +130,14 @@ public class ExternalDeclarationTest extends ParserBase {
         assertNotNull(d.getStmt());
     }
 
-    @Test(expected = ParseCancellationException.class)
-    public void notAnExtDecl() throws Exception {
-        parseTreeFor("foo = 4");
+    @Test
+    public void notAnExtDecl() {
+        assertThrows(ParseCancellationException.class, () -> {
+            parseTreeFor("foo = 4");
+        });
     }
 
-    private List<ExtDecl> parseTreeFor(String text) throws Exception {
+    private List<ExtDecl> parseTreeFor(String text) {
         JSLParser parser = parserOver(text);
         JSLVisitor visitor = new JSLVisitor();
         return visitor.visitExternal_declaration(parser.external_declaration()).getDecls();

@@ -25,11 +25,11 @@
 
 package test.com.sun.webkit.network;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import static com.sun.webkit.network.Util.adjustUrlForWebKit;
 import java.net.MalformedURLException;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class UtilTest {
 

@@ -24,14 +24,13 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
-import javafx.geometry.Pos;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.skin.TextFieldSkin;
-import com.oracle.tools.fx.monkey.options.EnumOption;
-import com.oracle.tools.fx.monkey.options.IntOption;
-import com.oracle.tools.fx.monkey.sheets.TextInputControlPropertySheet;
+import com.oracle.tools.fx.monkey.Loggers;
+import com.oracle.tools.fx.monkey.sheets.TextFieldPropertySheet;
 import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.HasSkinnable;
 import com.oracle.tools.fx.monkey.util.OptionPane;
@@ -45,7 +44,14 @@ public class TextFieldPage extends TestPaneBase implements HasSkinnable {
     private final CheckBox inScroll;
 
     public TextFieldPage() {
-        this(new TextField(), "TextFieldPage");
+        this(new TextField() {
+            @Override
+            public Object queryAccessibleAttribute(AccessibleAttribute a, Object... ps) {
+                Object v = super.queryAccessibleAttribute(a, ps);
+                Loggers.accessibility.log(a, v);
+                return v;
+            }
+        }, "TextFieldPage");
     }
 
     protected TextFieldPage(TextField f, String name) {
@@ -57,12 +63,10 @@ public class TextFieldPage extends TestPaneBase implements HasSkinnable {
         inScroll.setOnAction((ev) -> updateScroll());
 
         OptionPane op = new OptionPane();
-        op.option("Alignment:", new EnumOption<>("alignment", false, Pos.class, control.alignmentProperty()));
-        op.option("Preferred Column Count:", new IntOption("prefColumnCount", -1, Integer.MAX_VALUE, control.prefColumnCountProperty()));
-        op.separator();
-        op.option(inScroll);
-
-        TextInputControlPropertySheet.appendTo(op, false, control);
+        TextFieldPropertySheet.appendTo(op, control, () -> {
+            op.separator();
+            op.option(inScroll);
+        });
 
         setContent(control);
         setOptions(op);

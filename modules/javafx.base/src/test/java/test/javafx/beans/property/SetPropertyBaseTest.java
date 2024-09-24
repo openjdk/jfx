@@ -33,12 +33,12 @@ import test.javafx.beans.InvalidationListenerMock;
 import test.javafx.beans.value.ChangeListenerMock;
 import javafx.beans.value.ObservableObjectValueStub;
 import javafx.collections.*;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static test.javafx.collections.MockSetObserver.Call;
 import test.javafx.collections.MockSetObserver.Tuple;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class SetPropertyBaseTest {
 
@@ -61,7 +61,7 @@ public class SetPropertyBaseTest {
     private ChangeListenerMock<ObservableSet<Object>> changeListener;
     private MockSetObserver<Object> setChangeListener;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         property = new SetPropertyMock();
         invalidationListener = new InvalidationListenerMock();
@@ -435,12 +435,15 @@ public class SetPropertyBaseTest {
         setChangeListener.assertAdded(MockSetObserver.Tuple.tup(OBJECT_1b));
     }
 
-    @Test(expected = RuntimeException.class)
+    @Test
     public void testSetBoundValue() {
-        final SetProperty<Object> v = new SimpleSetProperty<>(VALUE_1a);
-        property.bind(v);
-        property.set(VALUE_1a);
+        assertThrows(RuntimeException.class, () -> {
+            final SetProperty<Object> v = new SimpleSetProperty<>(VALUE_1a);
+            property.bind(v);
+            property.set(VALUE_1a);
+        });
     }
+
 
     @Test
     public void testBind_Invalidation() {
@@ -541,10 +544,13 @@ public class SetPropertyBaseTest {
         assertEquals(0, setChangeListener.getCallsNumber());
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testBindToNull() {
-        property.bind(null);
+        assertThrows(NullPointerException.class, () -> {
+            property.bind(null);
+        });
     }
+
 
     @Test
     public void testRebind() {

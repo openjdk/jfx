@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package test.com.sun.javafx.test;
 
-import static org.junit.Assert.assertTrue;
-
 import java.lang.reflect.Method;
 import javafx.scene.Node;
 import test.javafx.scene.NodeTest;
@@ -36,21 +34,18 @@ import javafx.scene.shape.PathElement;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Transform;
 
-import org.junit.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import javafx.css.CssMetaData;
 import com.sun.javafx.scene.DirtyBits;
 
 public abstract class OnInvalidateMethodsTestBase {
 
-    private final Configuration configuration;
-
-    public OnInvalidateMethodsTestBase(final Configuration configuration) {
-        this.configuration = configuration;
-    }
-
-    @Test
-    public void testFireOnInvalidate() throws Exception {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testFireOnInvalidate(Configuration configuration) throws Exception {
         configuration.testFireOnInvalidate();
     }
 

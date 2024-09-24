@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,15 +30,17 @@ import com.sun.scenario.effect.compiler.model.BinaryOpType;
 import com.sun.scenario.effect.compiler.tree.BinaryExpr;
 import com.sun.scenario.effect.compiler.tree.JSLVisitor;
 import org.antlr.runtime.RecognitionException;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class MultExprTest extends UnaryExprTest {
 
     private String unary;
 
-    @Before
+    @BeforeEach
     @Override
     public void setUp() {
         super.setUp();
@@ -46,29 +48,31 @@ public class MultExprTest extends UnaryExprTest {
     }
 
     @Test
-    public void oneMultiplication() throws Exception {
+    public void oneMultiplication() {
         BinaryExpr tree = parseTreeFor(unary + " * " + unary);
         assertEquals(tree.getOp(), BinaryOpType.MUL);
     }
 
     @Test
-    public void oneDivision() throws Exception {
+    public void oneDivision() {
         BinaryExpr tree = parseTreeFor(unary + "   / " + unary);
         assertEquals(tree.getOp(), BinaryOpType.DIV);
     }
 
     @Test
-    public void expressionCombination() throws Exception {
+    public void expressionCombination() {
         BinaryExpr tree = parseTreeFor(unary + " * " + unary + '/' + unary + '/' + unary + "   *" + unary);
         assertEquals(tree.getOp(), BinaryOpType.MUL);
     }
 
-    @Test(expected = ClassCastException.class)
-    public void notAMultiplicativeExpression() throws Exception {
-        parseTreeFor("3 + 3");
+    @Test
+    public void notAMultiplicativeExpression() {
+        assertThrows(ClassCastException.class, () -> {
+            parseTreeFor("3 + 3");
+        });
     }
 
-    private BinaryExpr parseTreeFor(String text) throws Exception {
+    private BinaryExpr parseTreeFor(String text) {
         JSLParser parser = parserOver(text);
         JSLVisitor visitor = new JSLVisitor();
         return (BinaryExpr) visitor.visit(parser.multiplicative_expression());

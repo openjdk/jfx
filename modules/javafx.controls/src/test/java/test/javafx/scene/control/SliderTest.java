@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,36 +25,35 @@
 
 package test.javafx.scene.control;
 
-
-import javafx.css.ParsedValue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import javafx.css.CssParserShim;
-import test.com.sun.javafx.pgstub.StubToolkit;
-import com.sun.javafx.tk.Toolkit;
+import javafx.css.ParsedValue;
 import javafx.css.StyleableProperty;
 import javafx.scene.Scene;
 import javafx.scene.control.Slider;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.tk.Toolkit;
+import test.com.sun.javafx.pgstub.StubToolkit;
 
 /**
  * @author smarks
  */
 public class SliderTest {
 
-
     private Slider slider;
     private Toolkit tk;
     private Scene scene;
     private Stage stage;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         tk = Toolkit.getToolkit();
 
         assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
@@ -78,7 +77,7 @@ public class SliderTest {
             ((StyleableProperty)slider.minorTickCountProperty()).applyStyle(null, val);
             assertEquals(2, slider.getMinorTickCount(), 0.);
         } catch (Exception e) {
-            Assert.fail(e.toString());
+            fail(e);
         }
     }
     @Test public void testSettingTickLabelFormatter() {
