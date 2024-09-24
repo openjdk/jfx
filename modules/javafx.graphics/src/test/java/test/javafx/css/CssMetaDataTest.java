@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -76,11 +76,15 @@ import javafx.css.StyleableProperty;
 import javafx.css.Stylesheet;
 import javafx.css.StylesheetShim;
 
-import org.junit.After;
-import org.junit.Test;
-import org.junit.Ignore;
-
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Disabled;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 enum TestEnum {
     LEFT,
@@ -110,7 +114,7 @@ public class CssMetaDataTest {
         sm.hasDefaultUserAgentStylesheet = false;
     }
 
-    @After
+    @AfterEach
     public void cleanup() {
         resetStyleManager();
     }
@@ -272,7 +276,7 @@ public class CssMetaDataTest {
         );
     }
 
-    @Ignore("JDK-8234142")
+    @Disabled("JDK-8234142")
     @Test
     public void testGetMatchingStyles() {
 
@@ -378,7 +382,7 @@ public class CssMetaDataTest {
         assertTrue(actuals.isEmpty());
     }
 
-    @Ignore("JDK-8234142")
+    @Disabled("JDK-8234142")
     @Test
     public void testGetMatchingStylesWithInlineStyleOnParent() {
 
@@ -501,7 +505,7 @@ public class CssMetaDataTest {
         assertTrue(actuals.isEmpty());
     }
 
-    @Ignore("JDK-8234142")
+    @Disabled("JDK-8234142")
     @Test
     public void testGetMatchingStylesWithInlineStyleOnLeaf() {
 
@@ -625,7 +629,7 @@ public class CssMetaDataTest {
         assertTrue(actuals.isEmpty());
     }
 
-    @Ignore("JDK-8234142")
+    @Disabled("JDK-8234142")
     @Test
     public void testGetMatchingStylesWithInlineStyleOnRootAndLeaf() {
 
@@ -753,7 +757,7 @@ public class CssMetaDataTest {
         assertTrue(actuals.isEmpty());
     }
 
-    @Ignore("JDK-8234142")
+    @Disabled("JDK-8234142")
     @Test
     public void testGetMatchingStylesShouldNotReturnAncestorPropertyIfNotInherited() {
 
@@ -862,7 +866,7 @@ public class CssMetaDataTest {
         assertTrue(actuals.isEmpty());
     }
 
-    @Ignore("JDK-8234142")
+    @Disabled("JDK-8234142")
     @Test
     public void testGetMatchingStylesShouldNotReturnInlineAncestorPropertyIfNotInherited() {
 
@@ -965,10 +969,10 @@ public class CssMetaDataTest {
         for (Style style : expecteds) {
             actuals.remove(style);
         }
-        assertTrue(actuals.toString(), actuals.isEmpty());
+        assertTrue(actuals.isEmpty(), actuals.toString());
     }
 
-    @Ignore("JDK-8234142")
+    @Disabled("JDK-8234142")
     @Test
     public void testGetMatchingStylesReturnsInheritedProperty() {
 
@@ -1049,7 +1053,7 @@ public class CssMetaDataTest {
         assertTrue(actuals.isEmpty());
     }
 
-    @Ignore("JDK-8234142")
+    @Disabled("JDK-8234142")
     @Test
     public void testGetMatchingStylesReturnsSubProperty() {
 
@@ -1146,7 +1150,7 @@ public class CssMetaDataTest {
                 f = new File(base.toURI());
             }
             //System.err.println(f.getPath());
-            assertTrue("" + f.getCanonicalPath() + " is not a directory", f.isDirectory());
+            assertTrue(f.isDirectory(), "" + f.getCanonicalPath() + " is not a directory");
             recursiveCheck(f, f.getPath().length() - 7);
         } catch (Exception ex) {
             ex.printStackTrace(System.err);
@@ -1171,7 +1175,7 @@ public class CssMetaDataTest {
 
                     what = someClass.getName() + " " + styleable.getProperty();
                     WritableValue writable = styleable.getStyleableProperty(node);
-                    assertNotNull(what, writable);
+                    assertNotNull(writable, what);
 
                     Object defaultValue = writable.getValue();
                     Object initialValue = styleable.getInitialValue((Node) someClass.getDeclaredConstructor().newInstance());
@@ -1182,12 +1186,12 @@ public class CssMetaDataTest {
                         assert(initialValue instanceof Number);
                         double d1 = ((Number)defaultValue).doubleValue();
                         double d2 = ((Number)initialValue).doubleValue();
-                        assertEquals(what, d1, d2, .001);
+                        assertEquals(d1, d2, .001, what);
 
                     } else if (defaultValue != null && defaultValue.getClass().isArray()) {
-                        assertTrue(what, Arrays.equals((Object[])defaultValue, (Object[])initialValue));
+                        assertTrue(Arrays.equals((Object[])defaultValue, (Object[])initialValue), what);
                     } else {
-                        assertEquals(what, defaultValue, initialValue);
+                        assertEquals(defaultValue, initialValue, what);
                     }
 
                 }
@@ -1236,7 +1240,7 @@ public class CssMetaDataTest {
         }
     }
 
-    @Ignore("JDK-8234143") // Tested CssMetaData#set method, which is deprecated.
+    @Disabled("JDK-8234143") // Tested CssMetaData#set method, which is deprecated.
     @Test
     public void testRT_21185() {
 
@@ -1276,7 +1280,7 @@ public class CssMetaDataTest {
 
     }
 
-    @Ignore("JDK-8234142")
+    @Disabled("JDK-8234142")
     @Test
     public void testRT_24606() {
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,8 @@ import com.sun.javafx.PlatformUtil;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import test.javafx.concurrent.mocks.SimpleTask;
+
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -37,21 +39,24 @@ import javafx.concurrent.ServiceShim;
 import javafx.concurrent.Task;
 import javafx.concurrent.TaskShim;
 import javafx.concurrent.Worker;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  */
 public class ServiceTest {
     private Service<String> service;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         // I don't use the AbstractService here because I don't want to
         // take advantage of the built in executor / threading stuff
         service = new ServiceShim<>() {
@@ -73,7 +78,8 @@ public class ServiceTest {
     /**
      * Tests that the executor property is null by default
      */
-    @Test public void executorDefaultsToNull() {
+    @Test
+    public void executorDefaultsToNull() {
         assertNull(service.getExecutor());
         assertNull(service.executorProperty().get());
     }
@@ -83,7 +89,8 @@ public class ServiceTest {
      * to some non-default setting and check that the same instance is
      * then set on the service
      */
-    @Test public void executorCanBeSet() {
+    @Test
+    public void executorCanBeSet() {
         final Executor e = command -> { };
         service.setExecutor(e);
         assertSame(e, service.getExecutor());
@@ -93,7 +100,8 @@ public class ServiceTest {
     /**
      * Tests that you can bind the executor property of a Service
      */
-    @Test public void executorCanBeBound() {
+    @Test
+    public void executorCanBeBound() {
         final Executor e = command -> { };
         ObjectProperty<Executor> other = new SimpleObjectProperty<>(e);
         service.executorProperty().bind(other);
@@ -108,7 +116,8 @@ public class ServiceTest {
      * Tests that if you specify a custom executor, then it is used when
      * you attempt to run a service
      */
-    @Test public void executorIsUsed() {
+    @Test
+    public void executorIsUsed() {
         final AtomicBoolean results = new AtomicBoolean(false);
         final Executor e = command -> results.set(true);
         service.setExecutor(e);
@@ -120,47 +129,56 @@ public class ServiceTest {
      * Test initial values for properties                             *
      *****************************************************************/
 
-    @Test public void stateDefaultsTo_READY() {
+    @Test
+    public void stateDefaultsTo_READY() {
         assertSame(Worker.State.READY, service.getState());
         assertSame(Worker.State.READY, service.stateProperty().get());
     }
 
-    @Test public void valueDefaultsToNull() {
+    @Test
+    public void valueDefaultsToNull() {
         assertNull(service.getValue());
         assertNull(service.valueProperty().get());
     }
 
-    @Test public void exceptionDefaultsToNull() {
+    @Test
+    public void exceptionDefaultsToNull() {
         assertNull(service.getException());
         assertNull(service.exceptionProperty().get());
     }
 
-    @Test public void workDoneDefaultsTo_NegativeOne() {
+    @Test
+    public void workDoneDefaultsTo_NegativeOne() {
         assertEquals(-1, service.getWorkDone(), 0);
         assertEquals(-1, service.workDoneProperty().get(), 0);
     }
 
-    @Test public void totalWorkDefaultsTo_NegativeOne() {
+    @Test
+    public void totalWorkDefaultsTo_NegativeOne() {
         assertEquals(-1, service.getTotalWork(), 0);
         assertEquals(-1, service.totalWorkProperty().get(), 0);
     }
 
-    @Test public void progressDefaultsTo_NegativeOne() {
+    @Test
+    public void progressDefaultsTo_NegativeOne() {
         assertEquals(-1, service.getProgress(), 0);
         assertEquals(-1, service.progressProperty().get(), 0);
     }
 
-    @Test public void runningDefaultsToFalse() {
+    @Test
+    public void runningDefaultsToFalse() {
         assertFalse(service.isRunning());
         assertFalse(service.runningProperty().get());
     }
 
-    @Test public void messageDefaultsToEmptyString() {
+    @Test
+    public void messageDefaultsToEmptyString() {
         assertEquals("", service.getMessage());
         assertEquals("", service.messageProperty().get());
     }
 
-    @Test public void titleDefaultsToEmptyString() {
+    @Test
+    public void titleDefaultsToEmptyString() {
         assertEquals("", service.getTitle());
         assertEquals("", service.titleProperty().get());
     }
@@ -172,7 +190,9 @@ public class ServiceTest {
     // This test should be reliable. Each of the concurrent tasks takes 1 second to complete
     // and several micro / milliseconds to get setup and execute. So 2 seconds should be more
     // than enough time.
-    @Test(timeout = 2000) public void testManyServicesRunConcurrently() throws Exception {
+    @Test
+    @Timeout(value=2000, unit=TimeUnit.MILLISECONDS)
+    public void testManyServicesRunConcurrently() throws InterruptedException {
         if (PlatformUtil.isWindows()) {
             assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8284552
         }

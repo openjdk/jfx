@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,16 +39,17 @@ import javax.print.attribute.standard.MediaPrintableArea;
 import static javax.print.attribute.standard.MediaPrintableArea.INCH;
 import javax.print.attribute.standard.MediaSizeName;
 
-import org.junit.Test;
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeNotNull;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class MarginsTest {
 
-    @Test public void test() {
+    @Test
+    public void test() {
 
         Printer printer = Printer.getDefaultPrinter();
-        assumeNotNull(printer);
+        assumeTrue(printer != null);
 
         PageLayout layout =
              printer.createPageLayout(Paper.NA_LETTER,

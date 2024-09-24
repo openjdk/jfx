@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,16 +26,20 @@
 package test.javafx.scene.layout;
 
 import javafx.scene.layout.BorderWidths;
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * TODO The spec doesn't seem to indicate, but what do we do (if anything) with percentages
  * above 100%?
  */
 public class BorderWidthsTest {
-    @Test public void instanceCreation() {
+    @Test
+    public void instanceCreation() {
         BorderWidths widths = new BorderWidths(1, 2, 3, 4, false, true, false, true);
         assertEquals(1, widths.getTop(), 0);
         assertEquals(2, widths.getRight(), 0);
@@ -47,7 +51,8 @@ public class BorderWidthsTest {
         assertTrue(widths.isLeftAsPercentage());
     }
 
-    @Test public void instanceCreation2() {
+    @Test
+    public void instanceCreation2() {
         BorderWidths widths = new BorderWidths(1, 2, 3, 4, true, false, true, false);
         assertEquals(1, widths.getTop(), 0);
         assertEquals(2, widths.getRight(), 0);
@@ -59,7 +64,8 @@ public class BorderWidthsTest {
         assertFalse(widths.isLeftAsPercentage());
     }
 
-    @Test public void instanceCreation3() {
+    @Test
+    public void instanceCreation3() {
         BorderWidths widths = new BorderWidths(1, 2, 3, 4, true, false, false, true);
         assertEquals(1, widths.getTop(), 0);
         assertEquals(2, widths.getRight(), 0);
@@ -71,7 +77,8 @@ public class BorderWidthsTest {
         assertTrue(widths.isLeftAsPercentage());
     }
 
-    @Test public void instanceCreation4() {
+    @Test
+    public void instanceCreation4() {
         BorderWidths widths = new BorderWidths(100);
         assertEquals(100, widths.getTop(), 0);
         assertEquals(100, widths.getRight(), 0);
@@ -83,7 +90,8 @@ public class BorderWidthsTest {
         assertFalse(widths.isLeftAsPercentage());
     }
 
-    @Test public void instanceCreation5() {
+    @Test
+    public void instanceCreation5() {
         BorderWidths widths = new BorderWidths(1, 2, 3, 4);
         assertEquals(1, widths.getTop(), 0);
         assertEquals(2, widths.getRight(), 0);
@@ -95,115 +103,145 @@ public class BorderWidthsTest {
         assertFalse(widths.isLeftAsPercentage());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void cannotSpecifyNegativeWidth() {
-        new BorderWidths(-2);
+        assertThrows(IllegalArgumentException.class, () -> {
+            new BorderWidths(-2);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void cannotSpecifyNegativeTop() {
-        new BorderWidths(-2, 0, 0, 0, false, false, false, false);
+        assertThrows(IllegalArgumentException.class, () -> {
+            new BorderWidths(-2, 0, 0, 0, false, false, false, false);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void cannotSpecifyNegativeTop2() {
-        new BorderWidths(-2, 0, 0, 0);
+        assertThrows(IllegalArgumentException.class, () -> {
+            new BorderWidths(-2, 0, 0, 0);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void cannotSpecifyNegativeRight() {
-        new BorderWidths(0, -2, 0, 0, false, false, false, false);
+        assertThrows(IllegalArgumentException.class, () -> {
+            new BorderWidths(0, -2, 0, 0, false, false, false, false);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void cannotSpecifyNegativeRight2() {
-        new BorderWidths(0, -2, 0, 0);
+        assertThrows(IllegalArgumentException.class, () -> {
+            new BorderWidths(0, -2, 0, 0);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void cannotSpecifyNegativeBottom() {
-        new BorderWidths(0, 0, -2, 0, false, false, false, false);
+        assertThrows(IllegalArgumentException.class, () -> {
+            new BorderWidths(0, 0, -2, 0, false, false, false, false);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void cannotSpecifyNegativeBottom2() {
-        new BorderWidths(0, 0, -2, 0);
+        assertThrows(IllegalArgumentException.class, () -> {
+            new BorderWidths(0, 0, -2, 0);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void cannotSpecifyNegativeLeft() {
-        new BorderWidths(0, 0, 0, -2, false, false, false, false);
+        assertThrows(IllegalArgumentException.class, () -> {
+            new BorderWidths(0, 0, 0, -2, false, false, false, false);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void cannotSpecifyNegativeLeft2() {
-        new BorderWidths(0, 0, 0, -2);
+        assertThrows(IllegalArgumentException.class, () -> {
+            new BorderWidths(0, 0, 0, -2);
+        });
     }
 
-    @Test public void equality() {
+    @Test
+    public void equality() {
         BorderWidths a = new BorderWidths(1, 2, 3, 4, true, false, false, true);
         BorderWidths b = new BorderWidths(1, 2, 3, 4, true, false, false, true);
         assertEquals(a, b);
     }
 
-    @Test public void same() {
+    @Test
+    public void same() {
         assertEquals(BorderWidths.DEFAULT, BorderWidths.DEFAULT);
     }
 
-    @Test public void different() {
+    @Test
+    public void different() {
         BorderWidths a = new BorderWidths(1, 2, 3, 4, true, false, false, true);
         BorderWidths b = new BorderWidths(2, 2, 3, 4, true, false, false, true);
         assertFalse(a.equals(b));
     }
 
-    @Test public void different2() {
+    @Test
+    public void different2() {
         BorderWidths a = new BorderWidths(1, 2, 3, 4, true, false, false, true);
         BorderWidths b = new BorderWidths(1, 3, 3, 4, true, false, false, true);
         assertFalse(a.equals(b));
     }
 
-    @Test public void different3() {
+    @Test
+    public void different3() {
         BorderWidths a = new BorderWidths(1, 2, 3, 4, true, false, false, true);
         BorderWidths b = new BorderWidths(1, 2, 4, 4, true, false, false, true);
         assertFalse(a.equals(b));
     }
 
-    @Test public void different4() {
+    @Test
+    public void different4() {
         BorderWidths a = new BorderWidths(1, 2, 3, 4, true, false, false, true);
         BorderWidths b = new BorderWidths(1, 2, 3, 5, true, false, false, true);
         assertFalse(a.equals(b));
     }
 
-    @Test public void different5() {
+    @Test
+    public void different5() {
         BorderWidths a = new BorderWidths(1, 2, 3, 4, true, false, false, true);
         BorderWidths b = new BorderWidths(1, 2, 3, 4, false, false, false, true);
         assertFalse(a.equals(b));
     }
 
-    @Test public void different6() {
+    @Test
+    public void different6() {
         BorderWidths a = new BorderWidths(1, 2, 3, 4, true, false, false, true);
         BorderWidths b = new BorderWidths(1, 2, 3, 4, true, true, false, true);
         assertFalse(a.equals(b));
     }
 
-    @Test public void different7() {
+    @Test
+    public void different7() {
         BorderWidths a = new BorderWidths(1, 2, 3, 4, true, false, false, true);
         BorderWidths b = new BorderWidths(1, 2, 3, 4, true, false, true, true);
         assertFalse(a.equals(b));
     }
 
-    @Test public void different8() {
+    @Test
+    public void different8() {
         BorderWidths a = new BorderWidths(1, 2, 3, 4, true, false, false, true);
         BorderWidths b = new BorderWidths(1, 2, 3, 4, true, false, false, false);
         assertFalse(a.equals(b));
     }
 
-    @Test public void noEqualToNull() {
+    @Test
+    public void noEqualToNull() {
         assertFalse(BorderWidths.DEFAULT.equals(null));
     }
 
     @SuppressWarnings("unlikely-arg-type")
-    @Test public void noEqualToRandom() {
+    @Test
+    public void noEqualToRandom() {
         assertFalse(BorderWidths.DEFAULT.equals("Some random value"));
     }
 }
