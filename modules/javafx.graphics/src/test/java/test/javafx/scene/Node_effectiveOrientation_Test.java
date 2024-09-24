@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,24 +26,19 @@
 package test.javafx.scene;
 
 import test.com.sun.javafx.test.NodeOrientationTestBase;
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 
-@RunWith(Parameterized.class)
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 public final class Node_effectiveOrientation_Test
         extends NodeOrientationTestBase {
-    private final Scene testScene;
-    private final String orientationUpdate;
-    private final String expectedOrientation;
 
     private static Scene lriiliScene() {
         return ltrScene(
@@ -105,51 +100,43 @@ public final class Node_effectiveOrientation_Test
     /*
      * Parameters: [testScene], [orientationUpdate], [expectedOrientation]
      */
-    @Parameters
-    public static Collection data() {
-        return Arrays.asList(
-                new Object[][] {
-                        { lriiliScene(), "......", "LRRRLL" },
-                        { lriiliScene(), ".I....", "LLLLLL" },
-                        { lriiliScene(), "...L..", "LRRLLL" },
-                        { lriiliScene(), "....I.", "LRRRRR" },
-                        { lriiliScene(), "RIIIII", "RRRRRR" },
+    public static Stream<Arguments> data() {
+        return Stream.of(
+            Arguments.of(lriiliScene(), "......", "LRRRLL" ),
+            Arguments.of(lriiliScene(), ".I....", "LLLLLL" ),
+            Arguments.of(lriiliScene(), "...L..", "LRRLLL" ),
+            Arguments.of(lriiliScene(), "....I.", "LRRRRR" ),
+            Arguments.of(lriiliScene(), "RIIIII", "RRRRRR" ),
 
-                        {
-                            lriiliWithSubSceneScene(),
-                            ".......", "LRRRLL"
-                        },
-                        {
-                            lriiliWithSubSceneScene(),
-                            ".L.....", "LLLLLL"
-                        },
+            Arguments.of(
+                lriiliWithSubSceneScene(),
+                ".......", "LRRRLL"
+            ),
+            Arguments.of(
+                lriiliWithSubSceneScene(),
+                ".L.....", "LLLLLL"
+            ),
 
-                        { liirliPrecachedScene(), "......", "LLLRLL" },
-                        { liirliPrecachedScene(), "R.....", "RRRRLL" },
-                        { liirliPrecachedScene(), "...I..", "LLLLLL" },
-                        { liirliPrecachedScene(), "R..IR.", "RRRRRR" },
+            Arguments.of(liirliPrecachedScene(), "......", "LLLRLL" ),
+            Arguments.of(liirliPrecachedScene(), "R.....", "RRRRLL" ),
+            Arguments.of(liirliPrecachedScene(), "...I..", "LLLLLL" ),
+            Arguments.of(liirliPrecachedScene(), "R..IR.", "RRRRRR" ),
 
-                        {
-                            riirliPlugedPrecachedScenegraphScene(),
-                            "......", "RRRRLL"
-                        },
+            Arguments.of(
+                riirliPlugedPrecachedScenegraphScene(),
+                "......", "RRRRLL"
+            ),
 
-                        { lrIiilScene(), "......", "LRRRRL" },
-                        { lrIiilScene(), ".L....", "LLLLLL" }
-                    });
+            Arguments.of(lrIiilScene(), "......", "LRRRRL" ),
+            Arguments.of(lrIiilScene(), ".L....", "LLLLLL" )
+        );
     }
 
-    public Node_effectiveOrientation_Test(
-            final Scene testScene,
-            final String orientationUpdate,
-            final String expectedOrientation) {
-        this.testScene = testScene;
-        this.orientationUpdate = orientationUpdate;
-        this.expectedOrientation = expectedOrientation;
-    }
-
-    @Test
-    public void effectiveOrientationTest() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void effectiveOrientationTest(Scene testScene,
+                                         String orientationUpdate,
+                                         String expectedOrientation) {
         updateOrientation(testScene, orientationUpdate);
         assertOrientation(testScene, expectedOrientation);
     }
@@ -158,8 +145,8 @@ public final class Node_effectiveOrientation_Test
             final Scene scene,
             final String expectedOrientation) {
         final String actualOrientation = collectOrientation(scene);
-        Assert.assertEquals("Orientation mismatch",
-                            expectedOrientation, actualOrientation);
+        assertEquals(expectedOrientation, actualOrientation,
+                     "Orientation mismatch");
     }
 
     private static final StateEncoder EFFECTIVE_ORIENTATION_ENCODER =

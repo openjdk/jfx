@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,25 +25,21 @@
 
 package test.javafx.scene.effect;
 
-import static org.junit.Assert.assertEquals;
 import javafx.scene.paint.Color;
-
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import com.sun.scenario.effect.Color4f;
 import javafx.scene.effect.Light;
 import javafx.scene.effect.LightShim;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 public class SpotLightTest extends LightTestBase {
 
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
     private Light.Spot effect;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         effect = new Light.Spot();
         setupTest(effect);

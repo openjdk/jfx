@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,12 +35,13 @@ import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.pgstub.StubToolkit.ScreenConfiguration;
 import com.sun.javafx.tk.Toolkit;
 import javafx.stage.Stage;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertFalse;
-import static junit.framework.Assert.assertTrue;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class StageTest {
 
@@ -50,7 +51,7 @@ public class StageTest {
 
     private int initialNumTimesSetSizeAndLocation;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         toolkit = (StubToolkit) Toolkit.getToolkit();
         s = new Stage();
@@ -59,7 +60,7 @@ public class StageTest {
         initialNumTimesSetSizeAndLocation = peer.numTimesSetSizeAndLocation;
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         s.hide();
     }
@@ -72,7 +73,8 @@ public class StageTest {
      * Simple test which checks whether changing the x/y position of the Stage
      * ends up invoking the appropriate methods on the TKStage interface.
      */
-    public @Test void testMovingStage() {
+    @Test
+    public void testMovingStage() {
         s.setX(100);
         pulse();
         assertEquals(100f, peer.x);
@@ -84,7 +86,8 @@ public class StageTest {
      * Simple test which checks whether changing the w/h size of the Stage
      * ends up invoking the appropriate methods on the TKStage interface.
      */
-    public @Test void testResizingStage() {
+    @Test
+    public void testResizingStage() {
         s.setWidth(100);
         s.setHeight(100);
         pulse();
@@ -98,7 +101,8 @@ public class StageTest {
      * Simple test which checks whether changing the w/h size and x/y position of the Stage
      * ends up invoking the appropriate methods on the TKStage interface.
      */
-    public @Test void testMovingAndResizingStage() {
+    @Test
+    public void testMovingAndResizingStage() {
         s.setX(101);
         s.setY(102);
         s.setWidth(103);
@@ -116,7 +120,8 @@ public class StageTest {
      * Simple test which checks whether changing the minimum w/h of the Stage
      * resize the window if necessary
      */
-    public @Test void testResizingTooSmallStage() {
+    @Test
+    public void testResizingTooSmallStage() {
         s.setWidth(60);
         s.setHeight(70);
         s.setMinWidth(150);
@@ -130,7 +135,8 @@ public class StageTest {
      * Simple test which checks whether changing the maximum w/h of the Stage
      * resize the window if necessary
      */
-    public @Test void testResizingTooBigStage() {
+    @Test
+    public void testResizingTooBigStage() {
         s.setWidth(100);
         s.setHeight(100);
         s.setMaxWidth(60);
@@ -144,7 +150,8 @@ public class StageTest {
      * Test to make sure that when we initialize, the Stage doesn't notify
      * the peer of size and location more than once.
      */
-    public @Test void testSizeAndLocationChangedOverTime() {
+    @Test
+    public void testSizeAndLocationChangedOverTime() {
         pulse();
         assertTrue((peer.numTimesSetSizeAndLocation - initialNumTimesSetSizeAndLocation) <= 1);
         initialNumTimesSetSizeAndLocation = peer.numTimesSetSizeAndLocation;
@@ -466,49 +473,49 @@ public class StageTest {
             s.getIcons().add(null);
             throw new Exception();
         } catch (Exception e) {
-            assertTrue(failMessage, e instanceof NullPointerException);
+            assertTrue(e instanceof NullPointerException, failMessage);
         }
         try {
             s.getIcons().add(0, null);
             throw new Exception();
         } catch (Exception e) {
-            assertTrue(failMessage, e instanceof NullPointerException);
+            assertTrue(e instanceof NullPointerException, failMessage);
         }
         try {
             s.getIcons().addAll(null, null);
             throw new Exception();
         } catch (Exception e) {
-            assertTrue(failMessage, e instanceof NullPointerException);
+            assertTrue(e instanceof NullPointerException, failMessage);
         }
         try {
             s.getIcons().addAll(imageList);
             throw new Exception();
         } catch (Exception e) {
-            assertTrue(failMessage, e instanceof NullPointerException);
+            assertTrue(e instanceof NullPointerException, failMessage);
         }
         try {
             s.getIcons().addAll(0, imageList);
             throw new Exception();
         } catch (Exception e) {
-            assertTrue(failMessage, e instanceof NullPointerException);
+            assertTrue(e instanceof NullPointerException, failMessage);
         }
         try {
             s.getIcons().set(0, null);
             throw new Exception();
         } catch (Exception e) {
-            assertTrue(failMessage, e instanceof NullPointerException);
+            assertTrue(e instanceof NullPointerException, failMessage);
         }
         try {
             s.getIcons().setAll(imageList);
             throw new Exception();
         } catch (Exception e) {
-            assertTrue(failMessage, e instanceof NullPointerException);
+            assertTrue(e instanceof NullPointerException, failMessage);
         }
         try {
             s.getIcons().setAll(null, null);
             throw new Exception();
         } catch (Exception e) {
-            assertTrue(failMessage, e instanceof NullPointerException);
+            assertTrue(e instanceof NullPointerException, failMessage);
         }
     }
 }

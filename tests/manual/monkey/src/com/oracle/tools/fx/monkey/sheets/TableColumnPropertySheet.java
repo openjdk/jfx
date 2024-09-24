@@ -24,51 +24,77 @@
  */
 package com.oracle.tools.fx.monkey.sheets;
 
-import javafx.beans.property.ObjectProperty;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TreeTableColumn;
+import javafx.scene.layout.BorderPane;
+import com.oracle.tools.fx.monkey.options.BooleanOption;
+import com.oracle.tools.fx.monkey.options.EnumOption;
+import com.oracle.tools.fx.monkey.options.GraphicOption;
+import com.oracle.tools.fx.monkey.options.TextOption;
 import com.oracle.tools.fx.monkey.util.OptionPane;
+import com.oracle.tools.fx.monkey.util.OptionWindow;
 
 /**
  * TreeTableView/TableView (Selected) Column Property Sheet
  */
-// TODO this is not used
-public class TableColumnPropertySheet {
-//    public TableColumnOptions(String name, ObjectProperty<TableColumn> p) {
-//        super(name, (v) -> {
-//            var col = p.get();
-//            if(col != null) {
-//                col.set
-//            }
-//            updateValue(v);
-//        });
-//        disableProperty().bind(Bindings.createBooleanBinding(() -> {
-//            return p.get() == null;
-//        }, p));
-//
-//        this.currentColumn = p;
-//    }
+public class TableColumnPropertySheet extends BorderPane {
+    protected TableColumnPropertySheet(TableColumnBase<?,?> c) {
+        OptionPane op = new OptionPane();
+        if(c instanceof TableColumn tc) {
+            tableColumnOptions(op, tc);
+        } else if(c instanceof TreeTableColumn tc) {
+            treeTableColumnOptions(op, tc);
+        }
+        tableColumnBaseOptions(op, c);
 
-    public static void appendTo(OptionPane op, ObjectProperty<TableColumn> currentColumn) {
-        op.section("Current Column");
+        StyleablePropertySheet.appendTo(op, c);
+        setCenter(op);
+    }
+
+    public static void open(Object parent, TableColumnBase<?, ?> c) {
+        String name = c.getText();
+        if (name == null) {
+            name = "<null>";
+        } else {
+            name = " [" + name + "]";
+        }
+
+        TableColumnPropertySheet p = new TableColumnPropertySheet(c);
+        OptionWindow.open(parent, "Table Column Properties" + name, 500, 800, p);
+    }
+
+    private void tableColumnOptions(OptionPane op, TableColumn<?, ?> c) {
+        op.section("TableColumn");
         op.option("Cell Factory: TODO", null); // TODO
         op.option("Cell Value Factory: TODO", null); // TODO
+        op.option("Sort Type:", new EnumOption(null, TableColumn.SortType.class, c.sortTypeProperty()));
+    }
+
+    private void treeTableColumnOptions(OptionPane op, TreeTableColumn<?, ?> c) {
+        op.section("TreeTableColumn");
+        op.option("Cell Factory: TODO", null); // TODO
+        op.option("Cell Value Factory: TODO", null); // TODO
+        op.option("Sort Type:", new EnumOption(null, TreeTableColumn.SortType.class, c.sortTypeProperty()));
+    }
+
+    private void tableColumnBaseOptions(OptionPane op, TableColumnBase<?, ?> c) {
+        op.section("TableColumnBase");
         op.option("Comparator: TODO", null); // TODO
         op.option("Context Menu: TODO", null); // TODO
-        //op.option(new BooleanOption("editable", "editable", null)); // FIX how to set properties dynamically? Optional?
-        op.option("Graphic: TODO", null); // TODO
-        op.option("Id: TODO", null); // TODO
-        op.option("Max Width: TODO", null); // TODO
-        op.option("Min Width: TODO", null); // TODO
-        op.option("Pref Width: TODO", null); // TODO
-        op.option("reorderable: TODO", null); // TODO
-        op.option("resizeable: TODO", null); // TODO
-        op.option("Sort Type: TODO", null); // TODO
-        op.option("sortable: TODO", null); // TODO
+        op.option(new BooleanOption(null, "editable", c.editableProperty()));
+        op.option("Graphic:", new GraphicOption("graphic", c.graphicProperty()));
+        op.option("Id:", new TextOption("id", c.idProperty()));
+        op.option("Max Width:", Options.forColumnWidth("maxWidth", 5000.0, c.maxWidthProperty()));
+        op.option("Min Width:", Options.forColumnWidth("minWidth", 10.0, c.minWidthProperty()));
+        op.option("Pref Width:", Options.forColumnWidth("prefWidth", 80.0, c.prefWidthProperty()));
+        op.option(new BooleanOption(null, "reorderable", c.reorderableProperty()));
+        op.option(new BooleanOption(null, "resizeable", c.resizableProperty()));
+        op.option(new BooleanOption(null, "sortable", c.sortableProperty()));
         op.option("Sort Node: TODO", null); // TODO
-        op.option("Style: TODO", null); // TODO
-        op.option("Text: TODO", null); // TODO
+        op.option("Style:", new TextOption("style", c.styleProperty()));
+        op.option("Text:", new TextOption("text", c.textProperty()));
         op.option("User Data: TODO", null); // TODO
-        op.option("visible: TODO", null); // TODO
-        op.option(": TODO", null); // TODO
+        op.option(new BooleanOption(null, "visible", c.visibleProperty()));
     }
 }

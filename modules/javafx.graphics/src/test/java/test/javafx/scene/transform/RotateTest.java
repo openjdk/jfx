@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,15 +37,16 @@ import test.javafx.scene.NodeTest;
 import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
 import test.javafx.scene.shape.RectangleTest;
-import org.junit.Test;
 
 import java.lang.reflect.Method;
 
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Transform;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static test.javafx.scene.transform.TransformTest.assertTx;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 
 public class RotateTest {
 
@@ -116,7 +117,8 @@ public class RotateTest {
                 );
     }
 
-    @Test public void testRotateAxisCtor() {
+    @Test
+    public void testRotateAxisCtor() {
         final Rotate trans = new Rotate(11, new Point3D(22, 33, 44));
         final Rectangle n = new Rectangle();
         n.getTransforms().add(trans);
@@ -126,7 +128,8 @@ public class RotateTest {
         assertTx(n, expT);
     }
 
-    @Test public void testRotate3DPivotCtor() {
+    @Test
+    public void testRotate3DPivotCtor() {
         final Rotate trans = new Rotate(11, 22, 33, 44);
         final Rectangle n = new Rectangle();
         n.getTransforms().add(trans);
@@ -138,7 +141,8 @@ public class RotateTest {
         assertTx(n, expT);
     }
 
-   @Test public void testRotate3DPivotAxisCtor() {
+   @Test
+   public void testRotate3DPivotAxisCtor() {
         final Rotate trans = new Rotate(11, 22, 33, 44, new Point3D(55, 66, 77));
         final Rectangle n = new Rectangle();
         n.getTransforms().add(trans);
@@ -150,23 +154,28 @@ public class RotateTest {
         assertTx(n, expT);
     }
 
-    @Test public void testBoundPropertySynced_Angle() throws Exception {
+    @Test
+    public void testBoundPropertySynced_Angle() throws Exception {
         TransformTest.checkDoublePropertySynced(new Rotate(300, 300, 0), "angle", 30.0);
     }
 
-    @Test public void testBoundPropertySynced_PivotX() throws Exception {
+    @Test
+    public void testBoundPropertySynced_PivotX() throws Exception {
         TransformTest.checkDoublePropertySynced(new Rotate(300, 300, 0), "pivotX", 200.0);
     }
 
-    @Test public void testBoundPropertySynced_PivotY() throws Exception {
+    @Test
+    public void testBoundPropertySynced_PivotY() throws Exception {
         TransformTest.checkDoublePropertySynced(new Rotate(300, 300, 0), "pivotY", 200.0);
     }
 
-    @Test public void testBoundPropertySynced_PivotZ() throws Exception {
+    @Test
+    public void testBoundPropertySynced_PivotZ() throws Exception {
         TransformTest.checkDoublePropertySynced(new Rotate(300, 300, 0), "pivotZ", 20.0);
     }
 
-    @Test public void testBoundPropertySynced_Axis() throws Exception {
+    @Test
+    public void testBoundPropertySynced_Axis() throws Exception {
         checkObjectPropertySynced("axis", new Point3D(1, 0, 0));
     }
 
@@ -214,7 +223,8 @@ public class RotateTest {
                 );
     }
 
-    @Test public void testToString() {
+    @Test
+    public void testToString() {
         final Rotate trans = new Rotate(40);
 
         String s = trans.toString();

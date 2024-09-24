@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,34 +25,29 @@
 
 package test.javafx.scene.control.skin;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
+import java.lang.ref.WeakReference;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
-import javafx.scene.control.Button;
-
 import javafx.scene.Group;
+import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.stage.Stage;
+import javafx.scene.control.Button;
+import javafx.scene.control.skin.ButtonSkin;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
-import javafx.scene.input.Mnemonic;
-import javafx.collections.ObservableList;
 import javafx.scene.input.KeyCombination;
-
-import com.sun.javafx.scene.control.behavior.MnemonicInfo.MnemonicKeyCombination;
-import javafx.scene.Node;
-import javafx.scene.control.skin.ButtonSkin;
+import javafx.scene.input.Mnemonic;
 import javafx.scene.shape.Rectangle;
-
-import org.junit.Before;
-import org.junit.After;
-import org.junit.Test;
-
-import java.lang.ref.WeakReference;
+import javafx.stage.Stage;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.scene.control.behavior.MnemonicInfo.MnemonicKeyCombination;
 
 /**
  */
@@ -60,7 +55,8 @@ public class ButtonSkinTest {
     private Button button;
     private ButtonSkinMock skin;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         button = new Button("Test");
         skin = new ButtonSkinMock(button);
         // Set some padding so that any places where padding was being
@@ -76,7 +72,8 @@ public class ButtonSkinTest {
         });
     }
 
-    @After public void cleanup() {
+    @AfterEach
+    public void cleanup() {
         Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
@@ -201,9 +198,9 @@ public class ButtonSkinTest {
         skin = null;
 
         attemptGC(oldSkinRef);
-        assertNull("Old ButtonSkin must be GCed.", oldSkinRef.get());
-        assertNull("Default ButtonSkin must be GCed.", defSkinRef.get());
-        assertNotNull("Current ButtonSkin must NOT be GCed.", currSkinRef.get());
+        assertNull(oldSkinRef.get(), "Old ButtonSkin must be GCed.");
+        assertNull(defSkinRef.get(), "Default ButtonSkin must be GCed.");
+        assertNotNull(currSkinRef.get(), "Current ButtonSkin must NOT be GCed.");
     }
 
     @Test
@@ -223,9 +220,9 @@ public class ButtonSkinTest {
         skin = null;
 
         attemptGC(skinRef1);
-        assertNull("Unused ButtonSkin must be GCed.", skinRef1.get());
-        assertNull("Unused ButtonSkin must be GCed.", skinRef2.get());
-        assertNotNull("Default ButtonSkin must NOT be GCed.", defSkinRef.get());
+        assertNull(skinRef1.get(), "Unused ButtonSkin must be GCed.");
+        assertNull(skinRef2.get(), "Unused ButtonSkin must be GCed.");
+        assertNotNull(defSkinRef.get(), "Default ButtonSkin must NOT be GCed.");
     }
 
     @Test
@@ -239,8 +236,8 @@ public class ButtonSkinTest {
         skin = null;
 
         attemptGC(skinRef);
-        assertNull("Button must be GCed.", buttonRef.get());
-        assertNull("ButtonSkin must be GCed.", skinRef.get());
+        assertNull(buttonRef.get(), "Button must be GCed.");
+        assertNull(skinRef.get(), "ButtonSkin must be GCed.");
     }
 
     @Test
@@ -272,7 +269,7 @@ public class ButtonSkinTest {
         assertNull(scene.getAccelerators().get(key));
 
         attemptGC(defSkinRef);
-        assertNull("ButtonSkin must be GCed", defSkinRef.get());
+        assertNull(defSkinRef.get(), "ButtonSkin must be GCed");
     }
 
     @Test
@@ -291,7 +288,7 @@ public class ButtonSkinTest {
         assertNull(scene.getAccelerators().get(key));
 
         attemptGC(defSkinRef);
-        assertNull("ButtonSkin must be GCed", defSkinRef.get());
+        assertNull(defSkinRef.get(), "ButtonSkin must be GCed");
     }
 
     private void attemptGC(WeakReference<ButtonSkin> weakRef) {

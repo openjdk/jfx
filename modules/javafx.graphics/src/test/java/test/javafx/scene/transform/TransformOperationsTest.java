@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,8 @@
 
 package test.javafx.scene.transform;
 
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.List;
+import java.util.stream.Stream;
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.event.EventHandler;
@@ -46,14 +46,19 @@ import javafx.scene.transform.TransformChangedEvent;
 import javafx.scene.transform.TransformShim;
 import javafx.scene.transform.Translate;
 import test.com.sun.javafx.test.TransformHelper;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
-@RunWith(Parameterized.class)
 public class TransformOperationsTest {
     private static final Affine affine_identity = new Affine();
     private static final Affine affine_translate_only = new Affine(0, 0, 2,
@@ -286,146 +291,19 @@ public class TransformOperationsTest {
     private boolean listenerCalled;
     private int eventCounter;
 
-    //BEWARE: used also in AffineOperationsTest
-    @Parameters
-    public static Collection getParams() {
-        return Arrays.asList(new Object[][] {
-            { affine_identity, true, Affine.class },            //  0
-            { affine_translate, true, Affine.class },           //  1
-            { affine_translate_only, true, Affine.class },      //  2
-            { affine_scale, true, Affine.class },               //  3
-            { affine_sc_tr, true, Affine.class },               //  4
-            { affine_shear, true, Affine.class },               //  5
-            { affine_sh_tr, true, Affine.class },               //  6
-            { affine_sh_sc_simple, true, Affine.class },        //  7
-            { affine_sh_sc, true, Affine.class },               //  8
-            { affine_sh_sc_tr, true, Affine.class },            //  9
-            { affine_3d_tr, false, Affine.class },              // 10
-            { affine_3d_sc, false, Affine.class },              // 11
-            { affine_3d_sc_tr, false, Affine.class },           // 12
-            { affine_3d_sc2_tr3, false, Affine.class },         // 13
-            { affine_3d_sc3_tr2, false, Affine.class },         // 14
-            { affine_3d_withShear, false, Affine.class },       // 15
-            { affine_3d_only3d, false, Affine.class },          // 16
-            { affine_3d_translate_only, false, null },          // 17
-            { affine_3d_complex, false, Affine.class },         // 18
-            { affine_3d_complex_noninvertible, false, null },   // 19
-            { affine_empty, false, null },                      // 20
-            { affine_emptyZ, false, null },                     // 21
-            { affine_emptyXY, true, null },                     // 22
-            { affine_nonInv_translate_x, true, null },          // 23
-            { affine_nonInv_translate_y, true, null },          // 24
-            { affine_nonInv_translate_z, false, null },         // 25
-            { affine_nonInv_scale_x, true, null },              // 26
-            { affine_nonInv_scale_y, true, null },              // 27
-            { affine_nonInv_scale_xy, false, null },            // 28
-            { affine_nonInv_scale_z, false, null },             // 29
-            { affine_nonInv_shear_x, true, null },              // 30
-            { affine_nonInv_shear_y, true, null },              // 31
-            { affine_nonInv_sh_tr_x, true, null },              // 32
-            { affine_nonInv_sh_tr_y, true, null },              // 33
-            { affine_nonInv_sh_sc_tr, true, null },             // 34
-            { affine_nonInv_sh_sc, true, null },                // 35
-            { affine_nonInv_sh_tr, true, null },                // 36
-            { affine_nonInv_sc_tr, true, null },                // 37
-            { affine_nonInv_sc_tr_x, true, null },              // 38
-            { affine_nonInv_sc_tr_y, true, null },              // 39
-            { translate2d, true, Translate.class },             // 40
-            { translate3d, false, Translate.class },            // 41
-            { translate3d_only, false, Translate.class },       // 42
-            { noTranslate, true, Translate.class },             // 43
-            { scale2d, true, Scale.class },                     // 44
-            { scale2d_x, true, Scale.class },                   // 45
-            { scale2d_y, true, Scale.class },                   // 46
-            { scale3d, false, Scale.class },                    // 47
-            { scale3dOnly, false, Scale.class },                // 48
-            { scale2dNoPivot, true, Scale.class },              // 49
-            { scale2dUslessPivots, true, Scale.class },         // 50
-            { scale3dNoPivot, false, Scale.class },             // 51
-            { scale2dPivot3d, true, Scale.class },              // 52
-            { noScale, true, Scale.class },                     // 53
-            { nonInvertible2dScale, true, null },               // 54
-            { nonInvertible3dScale, false, null },              // 55
-            { shear, true, Affine.class },                      // 56
-            { shearX, true, Shear.class },                      // 57
-            { shearY, true, Shear.class },                      // 58
-            { shearNoPivot, true, Affine.class },               // 59
-            { noShear, true, Shear.class },                     // 60
-            { simpleRotate3d, false, Rotate.class},             // 61
-            { rotate2d, true, Rotate.class },                   // 62
-            { rotate3d, false, Rotate.class },                  // 63
-            { rotate3d2d, true, Rotate.class },                 // 64
-            { rotate3dUpsideDown2d, true, Rotate.class },       // 65
-            { rotateZeroAxis, true, Rotate.class },             // 66
-            { rotate2dNoPivot, true, Rotate.class },            // 67
-            { rotate3dNoPivot, false, Rotate.class },           // 68
-            { rotate2dPivot3d, true, Rotate.class },            // 69
-            { noRotate, true, Rotate.class },                   // 70
-            { immutable_identity, true, Affine.class },         // 71
-            { immutable_translate, true, Affine.class },        // 72
-            { immutable_translate_only, true, Affine.class },   // 73
-            { immutable_scale, true, Affine.class },            // 74
-            { immutable_sc_tr, true, Affine.class },            // 75
-            { immutable_shear, true, Affine.class },            // 76
-            { immutable_sh_tr, true, Affine.class },            // 77
-            { immutable_sh_sc_simple, true, Affine.class },     // 78
-            { immutable_sh_sc, true, Affine.class },            // 79
-            { immutable_sh_sc_tr, true, Affine.class },         // 80
-            { immutable_3d_tr, false, Affine.class },           // 81
-            { immutable_3d_sc, false, Affine.class },           // 82
-            { immutable_3d_sc_tr, false, Affine.class },        // 83
-            { immutable_3d_sc2_tr3, false, Affine.class },      // 84
-            { immutable_3d_sc3_tr2, false, Affine.class },      // 85
-            { immutable_3d_withShear, false, Affine.class },    // 86
-            { immutable_3d_only3d, false, Affine.class },       // 87
-            { immutable_3d_translate_only, false, null },       // 88
-            { immutable_3d_complex, false, Affine.class },      // 89
-            { immutable_3d_complex_noninvertible, false, null },// 90
-            { immutable_empty, false, null },                   // 91
-            { immutable_emptyZ, false, null },                  // 92
-            { immutable_emptyXY, true, null },                  // 93
-            { immutable_nonInv_translate_x, true, null },       // 94
-            { immutable_nonInv_translate_y, true, null },       // 95
-            { immutable_nonInv_translate_z, false, null },      // 96
-            { immutable_nonInv_scale_x, true, null },           // 97
-            { immutable_nonInv_scale_y, true, null },           // 98
-            { immutable_nonInv_scale_xy, false, null },         // 99
-            { immutable_nonInv_scale_z, false, null },          //100
-            { immutable_nonInv_shear_x, true, null },           //101
-            { immutable_nonInv_shear_y, true, null },           //102
-            { immutable_nonInv_sh_tr_x, true, null },           //103
-            { immutable_nonInv_sh_tr_y, true, null },           //104
-            { immutable_nonInv_sh_sc_tr, true, null },          //105
-            { immutable_nonInv_sh_sc, true, null },             //106
-            { immutable_nonInv_sh_tr, true, null },             //107
-            { immutable_nonInv_sc_tr, true, null },             //108
-            { immutable_nonInv_sc_tr_x, true, null },           //109
-            { immutable_nonInv_sc_tr_y, true, null },           //110
-            { raw_arbitrary, false, Affine.class },             //111
-            { raw_arbitrary_nonInvertible, false, null },       //112
-            { raw_empty, false, null },                         //113
-            { raw_emptyZ, false, null },                        //114
-            { raw_emptyXY, true, null },                        //115
-        });
-    }
-
-    private Transform t;
-    private Transform it;
-    private boolean is2d, isIdentity;
-    private boolean isInvertible;
-    private Class inverseType;
-
-    public TransformOperationsTest(Transform t, boolean twoDee, Class inverseType) {
-        this.t = t;
-        this.is2d = twoDee;
-        this.isIdentity =
-               (t.getMxx() == 1 && t.getMxy() == 0 && t.getMxz() == 0 && t.getTx() == 0
-             && t.getMyx() == 0 && t.getMyy() == 1 && t.getMyz() == 0 && t.getTy() == 0
-             && t.getMzx() == 0 && t.getMzy() == 0 && t.getMzz() == 1 && t.getTz() == 0);
-
-        this.it = null;
-        this.inverseType = inverseType;
-        this.isInvertible = (TransformHelper.determinant(t) != 0);
+    // converts to test parameters:
+    //    Transform t,
+    //    Transform it,
+    //    boolean is2d,
+    //    boolean isIdentity,
+    //    boolean isInvertible,
+    //    Class<?> inverseType
+    private static Arguments prepareArgs(Transform t, boolean is2d, Class<?> inverseType) {
+        boolean isIdentity = (t.getMxx() == 1 && t.getMxy() == 0 && t.getMxz() == 0 && t.getTx() == 0
+                              && t.getMyx() == 0 && t.getMyy() == 1 && t.getMyz() == 0 && t.getTy() == 0
+                              && t.getMzx() == 0 && t.getMzy() == 0 && t.getMzz() == 1 && t.getTz() == 0);
+        boolean isInvertible = (TransformHelper.determinant(t) != 0);
+        Transform it = null;
         if (isInvertible) {
             try {
                 it = TransformHelper.invert(t);
@@ -437,10 +315,147 @@ public class TransformOperationsTest {
             // to avoid non-null checks everywhere
             it = new Affine();
         }
+
+        return Arguments.of(
+            t,
+            it,
+            is2d,
+            isIdentity,
+            isInvertible,
+            inverseType
+        );
     }
 
-    @Test
-    public void testClone() {
+    //BEWARE: used also in AffineOperationsTest
+    public static Stream<Arguments> getParams() {
+        return Stream.of(
+            prepareArgs( affine_identity, true, Affine.class ),            //  0
+            prepareArgs( affine_translate, true, Affine.class ),           //  1
+            prepareArgs( affine_translate_only, true, Affine.class ),      //  2
+            prepareArgs( affine_scale, true, Affine.class ),               //  3
+            prepareArgs( affine_sc_tr, true, Affine.class ),               //  4
+            prepareArgs( affine_shear, true, Affine.class ),               //  5
+            prepareArgs( affine_sh_tr, true, Affine.class ),               //  6
+            prepareArgs( affine_sh_sc_simple, true, Affine.class ),        //  7
+            prepareArgs( affine_sh_sc, true, Affine.class ),               //  8
+            prepareArgs( affine_sh_sc_tr, true, Affine.class ),            //  9
+            prepareArgs( affine_3d_tr, false, Affine.class ),              // 10
+            prepareArgs( affine_3d_sc, false, Affine.class ),              // 11
+            prepareArgs( affine_3d_sc_tr, false, Affine.class ),           // 12
+            prepareArgs( affine_3d_sc2_tr3, false, Affine.class ),         // 13
+            prepareArgs( affine_3d_sc3_tr2, false, Affine.class ),         // 14
+            prepareArgs( affine_3d_withShear, false, Affine.class ),       // 15
+            prepareArgs( affine_3d_only3d, false, Affine.class ),          // 16
+            prepareArgs( affine_3d_translate_only, false, null ),          // 17
+            prepareArgs( affine_3d_complex, false, Affine.class ),         // 18
+            prepareArgs( affine_3d_complex_noninvertible, false, null ),   // 19
+            prepareArgs( affine_empty, false, null ),                      // 20
+            prepareArgs( affine_emptyZ, false, null ),                     // 21
+            prepareArgs( affine_emptyXY, true, null ),                     // 22
+            prepareArgs( affine_nonInv_translate_x, true, null ),          // 23
+            prepareArgs( affine_nonInv_translate_y, true, null ),          // 24
+            prepareArgs( affine_nonInv_translate_z, false, null ),         // 25
+            prepareArgs( affine_nonInv_scale_x, true, null ),              // 26
+            prepareArgs( affine_nonInv_scale_y, true, null ),              // 27
+            prepareArgs( affine_nonInv_scale_xy, false, null ),            // 28
+            prepareArgs( affine_nonInv_scale_z, false, null ),             // 29
+            prepareArgs( affine_nonInv_shear_x, true, null ),              // 30
+            prepareArgs( affine_nonInv_shear_y, true, null ),              // 31
+            prepareArgs( affine_nonInv_sh_tr_x, true, null ),              // 32
+            prepareArgs( affine_nonInv_sh_tr_y, true, null ),              // 33
+            prepareArgs( affine_nonInv_sh_sc_tr, true, null ),             // 34
+            prepareArgs( affine_nonInv_sh_sc, true, null ),                // 35
+            prepareArgs( affine_nonInv_sh_tr, true, null ),                // 36
+            prepareArgs( affine_nonInv_sc_tr, true, null ),                // 37
+            prepareArgs( affine_nonInv_sc_tr_x, true, null ),              // 38
+            prepareArgs( affine_nonInv_sc_tr_y, true, null ),              // 39
+            prepareArgs( translate2d, true, Translate.class ),             // 40
+            prepareArgs( translate3d, false, Translate.class ),            // 41
+            prepareArgs( translate3d_only, false, Translate.class ),       // 42
+            prepareArgs( noTranslate, true, Translate.class ),             // 43
+            prepareArgs( scale2d, true, Scale.class ),                     // 44
+            prepareArgs( scale2d_x, true, Scale.class ),                   // 45
+            prepareArgs( scale2d_y, true, Scale.class ),                   // 46
+            prepareArgs( scale3d, false, Scale.class ),                    // 47
+            prepareArgs( scale3dOnly, false, Scale.class ),                // 48
+            prepareArgs( scale2dNoPivot, true, Scale.class ),              // 49
+            prepareArgs( scale2dUslessPivots, true, Scale.class ),         // 50
+            prepareArgs( scale3dNoPivot, false, Scale.class ),             // 51
+            prepareArgs( scale2dPivot3d, true, Scale.class ),              // 52
+            prepareArgs( noScale, true, Scale.class ),                     // 53
+            prepareArgs( nonInvertible2dScale, true, null ),               // 54
+            prepareArgs( nonInvertible3dScale, false, null ),              // 55
+            prepareArgs( shear, true, Affine.class ),                      // 56
+            prepareArgs( shearX, true, Shear.class ),                      // 57
+            prepareArgs( shearY, true, Shear.class ),                      // 58
+            prepareArgs( shearNoPivot, true, Affine.class ),               // 59
+            prepareArgs( noShear, true, Shear.class ),                     // 60
+            prepareArgs( simpleRotate3d, false, Rotate.class ),            // 61
+            prepareArgs( rotate2d, true, Rotate.class ),                   // 62
+            prepareArgs( rotate3d, false, Rotate.class ),                  // 63
+            prepareArgs( rotate3d2d, true, Rotate.class ),                 // 64
+            prepareArgs( rotate3dUpsideDown2d, true, Rotate.class ),       // 65
+            prepareArgs( rotateZeroAxis, true, Rotate.class ),             // 66
+            prepareArgs( rotate2dNoPivot, true, Rotate.class ),            // 67
+            prepareArgs( rotate3dNoPivot, false, Rotate.class ),           // 68
+            prepareArgs( rotate2dPivot3d, true, Rotate.class ),            // 69
+            prepareArgs( noRotate, true, Rotate.class ),                   // 70
+            prepareArgs( immutable_identity, true, Affine.class ),         // 71
+            prepareArgs( immutable_translate, true, Affine.class ),        // 72
+            prepareArgs( immutable_translate_only, true, Affine.class ),   // 73
+            prepareArgs( immutable_scale, true, Affine.class ),            // 74
+            prepareArgs( immutable_sc_tr, true, Affine.class ),            // 75
+            prepareArgs( immutable_shear, true, Affine.class ),            // 76
+            prepareArgs( immutable_sh_tr, true, Affine.class ),            // 77
+            prepareArgs( immutable_sh_sc_simple, true, Affine.class ),     // 78
+            prepareArgs( immutable_sh_sc, true, Affine.class ),            // 79
+            prepareArgs( immutable_sh_sc_tr, true, Affine.class ),         // 80
+            prepareArgs( immutable_3d_tr, false, Affine.class ),           // 81
+            prepareArgs( immutable_3d_sc, false, Affine.class ),           // 82
+            prepareArgs( immutable_3d_sc_tr, false, Affine.class ),        // 83
+            prepareArgs( immutable_3d_sc2_tr3, false, Affine.class ),      // 84
+            prepareArgs( immutable_3d_sc3_tr2, false, Affine.class ),      // 85
+            prepareArgs( immutable_3d_withShear, false, Affine.class ),    // 86
+            prepareArgs( immutable_3d_only3d, false, Affine.class ),       // 87
+            prepareArgs( immutable_3d_translate_only, false, null ),       // 88
+            prepareArgs( immutable_3d_complex, false, Affine.class ),      // 89
+            prepareArgs( immutable_3d_complex_noninvertible, false, null ),// 90
+            prepareArgs( immutable_empty, false, null ),                   // 91
+            prepareArgs( immutable_emptyZ, false, null ),                  // 92
+            prepareArgs( immutable_emptyXY, true, null ),                  // 93
+            prepareArgs( immutable_nonInv_translate_x, true, null ),       // 94
+            prepareArgs( immutable_nonInv_translate_y, true, null ),       // 95
+            prepareArgs( immutable_nonInv_translate_z, false, null ),      // 96
+            prepareArgs( immutable_nonInv_scale_x, true, null ),           // 97
+            prepareArgs( immutable_nonInv_scale_y, true, null ),           // 98
+            prepareArgs( immutable_nonInv_scale_xy, false, null ),         // 99
+            prepareArgs( immutable_nonInv_scale_z, false, null ),          //100
+            prepareArgs( immutable_nonInv_shear_x, true, null ),           //101
+            prepareArgs( immutable_nonInv_shear_y, true, null ),           //102
+            prepareArgs( immutable_nonInv_sh_tr_x, true, null ),           //103
+            prepareArgs( immutable_nonInv_sh_tr_y, true, null ),           //104
+            prepareArgs( immutable_nonInv_sh_sc_tr, true, null ),          //105
+            prepareArgs( immutable_nonInv_sh_sc, true, null ),             //106
+            prepareArgs( immutable_nonInv_sh_tr, true, null ),             //107
+            prepareArgs( immutable_nonInv_sc_tr, true, null ),             //108
+            prepareArgs( immutable_nonInv_sc_tr_x, true, null ),           //109
+            prepareArgs( immutable_nonInv_sc_tr_y, true, null ),           //110
+            prepareArgs( raw_arbitrary, false, Affine.class ),             //111
+            prepareArgs( raw_arbitrary_nonInvertible, false, null ),       //112
+            prepareArgs( raw_empty, false, null ),                         //113
+            prepareArgs( raw_emptyZ, false, null ),                        //114
+            prepareArgs( raw_emptyXY, true, null )                        //115
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testClone(Transform t,
+                          Transform it,
+                          boolean is2d,
+                          boolean isIdentity,
+                          boolean isInvertible,
+                          Class<?> inverseType) {
         final double mxx = t.getMxx();
         final double mxy = t.getMxy();
         final double mxz = t.getMxz();
@@ -471,9 +486,9 @@ public class TransformOperationsTest {
                 mxx, mxy, mxz, tx, myx, myy, myz, ty, mzx, mzy, mzz, tz);
     }
 
-    private Class getExpectedConcatenationClass(Transform t1, Transform t2) {
-        Class c1 = t1.getClass();
-        Class c2 = t2.getClass();
+    private Class<?> getExpectedConcatenationClass(Transform t1, Transform t2) {
+        Class<?> c1 = t1.getClass();
+        Class<?> c2 = t2.getClass();
 
         if (c1 == Translate.class && c2 == Translate.class) {
             return Translate.class;
@@ -526,11 +541,18 @@ public class TransformOperationsTest {
         return Affine.class;
     }
 
-    @Test
-    public void testCreateConcatenation() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testCreateConcatenation(Transform t,
+                                        Transform it,
+                                        boolean is2d,
+                                        boolean isIdentity,
+                                        boolean isInvertible,
+                                        Class<?> inverseType) {
         int counter = 0;
-        for (Object o : TransformOperationsTest.getParams()) {
-            Object[] arr = (Object[]) o;
+        List<Arguments> argumentsStream = TransformOperationsTest.getParams().toList();
+        for (Arguments a : argumentsStream) {
+            Object[] arr = a.get();
             Transform other = (Transform) arr[0];
 
             Transform res = TransformHelper.concatenate(t, other);
@@ -538,20 +560,34 @@ public class TransformOperationsTest {
 
             TransformHelper.assertMatrix("Concatenating with #" + counter,
                     conc, res);
-            assertSame("Concatenating with #" + counter,
-                    getExpectedConcatenationClass(t, other),
-                    conc.getClass());
+            assertSame(getExpectedConcatenationClass(t, other),
+                       conc.getClass(),
+                       "Concatenating with #" + counter);
             counter++;
         }
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testCreateConcatenationNullTransform() {
-        t.createConcatenation(null);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testCreateConcatenationNullTransform(Transform t,
+                                                     Transform it,
+                                                     boolean is2d,
+                                                     boolean isIdentity,
+                                                     boolean isInvertible,
+                                                     Class<?> inverseType) {
+        assertThrows(NullPointerException.class, () -> {
+            t.createConcatenation(null);
+        });
     }
 
-    @Test
-    public void testCreateInverse() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testCreateInverse(Transform t,
+                                  Transform it,
+                                  boolean is2d,
+                                  boolean isIdentity,
+                                  boolean isInvertible,
+                                  Class<?> inverseType) {
         Transform res = null;
         try {
             res = t.createInverse();
@@ -574,8 +610,14 @@ public class TransformOperationsTest {
         TransformHelper.assertMatrix(res, it);
     }
 
-    @Test
-    public void createInverseShouldUpdateCache() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void createInverseShouldUpdateCache(Transform t,
+                                               Transform it,
+                                               boolean is2d,
+                                               boolean isIdentity,
+                                               boolean isInvertible,
+                                               Class<?> inverseType) {
         Transform ct = t.clone();
         Transform res = null;
         boolean canInvert = isInvertible;
@@ -652,8 +694,14 @@ public class TransformOperationsTest {
         TransformHelper.assertMatrix(res, inv);
     }
 
-    @Test
-    public void testTransformPoint3d() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testTransformPoint3d(Transform t,
+                                     Transform it,
+                                     boolean is2d,
+                                     boolean isIdentity,
+                                     boolean isInvertible,
+                                     Class<?> inverseType) {
         Point3D p = new Point3D(12, -18, 30);
         Point3D expected = new Point3D(
             t.getMxx() * 12 - t.getMxy() * 18 + t.getMxz() * 30 + t.getTx(),
@@ -672,13 +720,27 @@ public class TransformOperationsTest {
         assertEquals(expected.getZ(), result.getZ(), 0.00001);
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testTransformNullPoint3D() {
-        t.transform((Point3D) null);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testTransformNullPoint3D(Transform t,
+                                         Transform it,
+                                         boolean is2d,
+                                         boolean isIdentity,
+                                         boolean isInvertible,
+                                         Class<?> inverseType) {
+        assertThrows(NullPointerException.class, () -> {
+            t.transform((Point3D) null);
+        });
     }
 
-    @Test
-    public void testTransformPoint2d() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testTransformPoint2d(Transform t,
+                                     Transform it,
+                                     boolean is2d,
+                                     boolean isIdentity,
+                                     boolean isInvertible,
+                                     Class<?> inverseType) {
 
         Point2D p = new Point2D(12, -18);
         Point2D expected = new Point2D(
@@ -712,13 +774,27 @@ public class TransformOperationsTest {
         }
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testTransformNullPoint2D() {
-        t.transform((Point2D) null);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testTransformNullPoint2D(Transform t,
+                                         Transform it,
+                                         boolean is2d,
+                                         boolean isIdentity,
+                                         boolean isInvertible,
+                                         Class<?> inverseType) {
+        assertThrows(NullPointerException.class, () -> {
+            t.transform((Point2D) null);
+        });
     }
 
-    @Test
-    public void testDeltaTransformPoint3d() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testDeltaTransformPoint3d(Transform t,
+                                          Transform it,
+                                          boolean is2d,
+                                          boolean isIdentity,
+                                          boolean isInvertible,
+                                          Class<?> inverseType) {
         Point3D p = new Point3D(12, -18, 30);
         Point3D expected = new Point3D(
             t.getMxx() * 12 - t.getMxy() * 18 + t.getMxz() * 30,
@@ -737,13 +813,27 @@ public class TransformOperationsTest {
         assertEquals(expected.getZ(), result.getZ(), 0.00001);
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testDeltaTransformNullPoint3D() {
-        t.deltaTransform((Point3D) null);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testDeltaTransformNullPoint3D(Transform t,
+                                              Transform it,
+                                              boolean is2d,
+                                              boolean isIdentity,
+                                              boolean isInvertible,
+                                              Class<?> inverseType) {
+        assertThrows(NullPointerException.class, () -> {
+            t.deltaTransform((Point3D) null);
+        });
     }
 
-    @Test
-    public void testDeltaTransformPoint2d() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testDeltaTransformPoint2d(Transform t,
+                                          Transform it,
+                                          boolean is2d,
+                                          boolean isIdentity,
+                                          boolean isInvertible,
+                                          Class<?> inverseType) {
 
         Point2D p = new Point2D(12, -18);
         Point2D expected = new Point2D(
@@ -777,13 +867,27 @@ public class TransformOperationsTest {
         }
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testDeltaTransformNullPoint2D() {
-        t.deltaTransform((Point2D) null);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testDeltaTransformNullPoint2D(Transform t,
+                                              Transform it,
+                                              boolean is2d,
+                                              boolean isIdentity,
+                                              boolean isInvertible,
+                                              Class<?> inverseType) {
+        assertThrows(NullPointerException.class, () -> {
+            t.deltaTransform((Point2D) null);
+        });
     }
 
-    @Test
-    public void testTransformBounds() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testTransformBounds(Transform t,
+                                    Transform it,
+                                    boolean is2d,
+                                    boolean isIdentity,
+                                    boolean isInvertible,
+                                    Class<?> inverseType) {
         Bounds result = t.transform(new BoundingBox(10, 11, 12, 13, 14, 15));
 
         Point3D[] points = new Point3D[] {
@@ -820,13 +924,27 @@ public class TransformOperationsTest {
         assertEquals(expected2.getZ(), result.getMaxZ(), 0.00001);
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testTransformNullBounds() {
-        t.transform((Bounds) null);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testTransformNullBounds(Transform t,
+                                        Transform it,
+                                        boolean is2d,
+                                        boolean isIdentity,
+                                        boolean isInvertible,
+                                        Class<?> inverseType) {
+        assertThrows(NullPointerException.class, () -> {
+            t.transform((Bounds) null);
+        });
     }
 
-    @Test
-    public void testTransform2DPoints() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testTransform2DPoints(Transform t,
+                                      Transform it,
+                                      boolean is2d,
+                                      boolean isIdentity,
+                                      boolean isInvertible,
+                                      Class<?> inverseType) {
         double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6 };
         double[] dstPts = new double[] { 1, 2, 3, 4, 5, 6 };
 
@@ -857,23 +975,53 @@ public class TransformOperationsTest {
         }
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testTransform2DPointsBothPtsNull() {
-        t.transform2DPoints(null, 2, null, 0, 0);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testTransform2DPointsBothPtsNull(Transform t,
+                                                 Transform it,
+                                                 boolean is2d,
+                                                 boolean isIdentity,
+                                                 boolean isInvertible,
+                                                 Class<?> inverseType) {
+        assertThrows(NullPointerException.class, () -> {
+            t.transform2DPoints(null, 2, null, 0, 0);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testTransform2DPointsSrcPtsNull() {
-        t.transform2DPoints(null, 2, new double[] { 1, 2 }, 0, 0);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testTransform2DPointsSrcPtsNull(Transform t,
+                                                Transform it,
+                                                boolean is2d,
+                                                boolean isIdentity,
+                                                boolean isInvertible,
+                                                Class<?> inverseType) {
+        assertThrows(NullPointerException.class, () -> {
+            t.transform2DPoints(null, 2, new double[] { 1, 2 }, 0, 0);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testTransform2DPointsDstPtsNull() {
-        t.transform2DPoints(new double[] { 1, 2, 3, 4 }, 2, null, 0, 0);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testTransform2DPointsDstPtsNull(Transform t,
+                                                Transform it,
+                                                boolean is2d,
+                                                boolean isIdentity,
+                                                boolean isInvertible,
+                                                Class<?> inverseType) {
+        assertThrows(NullPointerException.class, () -> {
+            t.transform2DPoints(new double[] { 1, 2, 3, 4 }, 2, null, 0, 0);
+        });
     }
 
-    @Test
-    public void testTransform2DPointsWithOverlap() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testTransform2DPointsWithOverlap(Transform t,
+                                                 Transform it,
+                                                 boolean is2d,
+                                                 boolean isIdentity,
+                                                 boolean isInvertible,
+                                                 Class<?> inverseType) {
         double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
 
         Point2D expected1 = new Point2D(
@@ -906,36 +1054,58 @@ public class TransformOperationsTest {
         }
     }
 
-    @Test(expected=IndexOutOfBoundsException.class)
-    public void testTransform2DPointsSrcOut() {
-        double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7 };
-        double[] dstPts = new double[] { 1, 2, 3, 4, 5, 6 };
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testTransform2DPointsSrcOut(Transform t,
+                                            Transform it,
+                                            boolean is2d,
+                                            boolean isIdentity,
+                                            boolean isInvertible,
+                                            Class<?> inverseType) {
+        assertThrows(IndexOutOfBoundsException.class, () -> {
+            double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7 };
+            double[] dstPts = new double[] { 1, 2, 3, 4, 5, 6 };
 
-        try {
-            t.transform2DPoints(srcPts, 3, dstPts, 0, 3);
-        } catch (IllegalStateException e) {
-            if (!is2d) {
-                throw new IndexOutOfBoundsException("expected result");
+            try {
+                t.transform2DPoints(srcPts, 3, dstPts, 0, 3);
+            } catch (IllegalStateException e) {
+                if (!is2d) {
+                    throw new IndexOutOfBoundsException("expected result");
+                }
             }
-        }
+        });
     }
 
-    @Test(expected=IndexOutOfBoundsException.class)
-    public void testTransform2DPointsDstOut() {
-        double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7 };
-        double[] dstPts = new double[] { 1 };
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testTransform2DPointsDstOut(Transform t,
+                                            Transform it,
+                                            boolean is2d,
+                                            boolean isIdentity,
+                                            boolean isInvertible,
+                                            Class<?> inverseType) {
+        assertThrows(IndexOutOfBoundsException.class, () -> {
+            double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7 };
+            double[] dstPts = new double[] { 1 };
 
-        try {
-            t.transform2DPoints(srcPts, 1, dstPts, 0, 2);
-        } catch (IllegalStateException e) {
-            if (!is2d) {
-                throw new IndexOutOfBoundsException("expected result");
+            try {
+                t.transform2DPoints(srcPts, 1, dstPts, 0, 2);
+            } catch (IllegalStateException e) {
+                if (!is2d) {
+                    throw new IndexOutOfBoundsException("expected result");
+                }
             }
-        }
+        });
     }
 
-    @Test
-    public void testTransform3DPoints() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testTransform3DPoints(Transform t,
+                                      Transform it,
+                                      boolean is2d,
+                                      boolean isIdentity,
+                                      boolean isInvertible,
+                                      Class<?> inverseType) {
         double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
         double[] dstPts = new double[] { 1, 2, 3, 4, 5, 6, 7, 8 };
 
@@ -961,23 +1131,53 @@ public class TransformOperationsTest {
         assertEquals(8, dstPts[7], 0.00001);
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testTransform3DPointsBothPtsNull() {
-        t.transform3DPoints(null, 2, null, 0, 0);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testTransform3DPointsBothPtsNull(Transform t,
+                                                 Transform it,
+                                                 boolean is2d,
+                                                 boolean isIdentity,
+                                                 boolean isInvertible,
+                                                 Class<?> inverseType) {
+        assertThrows(NullPointerException.class, () -> {
+            t.transform3DPoints(null, 2, null, 0, 0);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testTransform3DPointsSrcPtsNull() {
-        t.transform3DPoints(null, 2, new double[] { 1, 2, 3 }, 0, 0);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testTransform3DPointsSrcPtsNull(Transform t,
+                                                Transform it,
+                                                boolean is2d,
+                                                boolean isIdentity,
+                                                boolean isInvertible,
+                                                Class<?> inverseType) {
+        assertThrows(NullPointerException.class, () -> {
+            t.transform3DPoints(null, 2, new double[] { 1, 2, 3 }, 0, 0);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testTransform3DPointsDstPtsNull() {
-        t.transform3DPoints(new double[] { 1, 2, 3, 4 }, 2, null, 0, 0);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testTransform3DPointsDstPtsNull(Transform t,
+                                                Transform it,
+                                                boolean is2d,
+                                                boolean isIdentity,
+                                                boolean isInvertible,
+                                                Class<?> inverseType) {
+        assertThrows(NullPointerException.class, () -> {
+            t.transform3DPoints(new double[] { 1, 2, 3, 4 }, 2, null, 0, 0);
+        });
     }
 
-    @Test
-    public void testTransform3DPointsWithOverlap() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testTransform3DPointsWithOverlap(Transform t,
+                                                 Transform it,
+                                                 boolean is2d,
+                                                 boolean isIdentity,
+                                                 boolean isInvertible,
+                                                 Class<?> inverseType) {
         double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
 
         Point3D expected1 = new Point3D(
@@ -1004,24 +1204,46 @@ public class TransformOperationsTest {
         assertEquals(9, srcPts[9], 0.00001);
     }
 
-    @Test(expected=IndexOutOfBoundsException.class)
-    public void testTransform3DPointsSrcOut() {
-        double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7 };
-        double[] dstPts = new double[] { 1, 2, 3, 4, 5, 6 };
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testTransform3DPointsSrcOut(Transform t,
+                                            Transform it,
+                                            boolean is2d,
+                                            boolean isIdentity,
+                                            boolean isInvertible,
+                                            Class<?> inverseType) {
+        assertThrows(IndexOutOfBoundsException.class, () -> {
+            double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7 };
+            double[] dstPts = new double[] { 1, 2, 3, 4, 5, 6 };
 
-        t.transform3DPoints(srcPts, 6, dstPts, 0, 1);
+            t.transform3DPoints(srcPts, 6, dstPts, 0, 1);
+        });
     }
 
-    @Test(expected=IndexOutOfBoundsException.class)
-    public void testTransform3DPointsDstOut() {
-        double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7 };
-        double[] dstPts = new double[] { 1 };
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testTransform3DPointsDstOut(Transform t,
+                          Transform it,
+                          boolean is2d,
+                          boolean isIdentity,
+                          boolean isInvertible,
+                          Class<?> inverseType) {
+        assertThrows(IndexOutOfBoundsException.class, () -> {
+            double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7 };
+            double[] dstPts = new double[] { 1 };
 
-        t.transform3DPoints(srcPts, 1, dstPts, 0, 1);
+            t.transform3DPoints(srcPts, 1, dstPts, 0, 1);
+        });
     }
 
-    @Test
-    public void testInverseTransformPoint3d() throws Exception {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testInverseTransformPoint3d(Transform t,
+                                            Transform it,
+                                            boolean is2d,
+                                            boolean isIdentity,
+                                            boolean isInvertible,
+                                            Class<?> inverseType) throws Exception {
         Point3D p = new Point3D(12, -18, 30);
 
         Point3D expected = new Point3D(
@@ -1058,14 +1280,27 @@ public class TransformOperationsTest {
         }
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testInverseTransformNullPoint3D()
-            throws NonInvertibleTransformException {
-        t.inverseTransform((Point3D) null);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testInverseTransformNullPoint3D(Transform t,
+                                                Transform it,
+                                                boolean is2d,
+                                                boolean isIdentity,
+                                                boolean isInvertible,
+                                                Class<?> inverseType) throws NonInvertibleTransformException {
+        assertThrows(NullPointerException.class, () -> {
+            t.inverseTransform((Point3D) null);
+        });
     }
 
-    @Test
-    public void testInverseTransformPoint2d() throws Exception {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testInverseTransformPoint2d(Transform t,
+                                            Transform it,
+                                            boolean is2d,
+                                            boolean isIdentity,
+                                            boolean isInvertible,
+                                            Class<?> inverseType) throws Exception {
 
         Point2D p = new Point2D(12, -18);
         Point2D expected = new Point2D(
@@ -1113,14 +1348,27 @@ public class TransformOperationsTest {
         }
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testInverseTransformNullPoint2D()
-            throws NonInvertibleTransformException {
-        t.inverseTransform((Point2D) null);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testInverseTransformNullPoint2D(Transform t,
+                                                Transform it,
+                                                boolean is2d,
+                                                boolean isIdentity,
+                                                boolean isInvertible,
+                                                Class<?> inverseType) throws NonInvertibleTransformException {
+        assertThrows(NullPointerException.class, () -> {
+            t.inverseTransform((Point2D) null);
+        });
     }
 
-    @Test
-    public void testInverseDeltaTransformPoint3d() throws Exception {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testInverseDeltaTransformPoint3d(Transform t,
+                                                 Transform it,
+                                                 boolean is2d,
+                                                 boolean isIdentity,
+                                                 boolean isInvertible,
+                                                 Class<?> inverseType) throws Exception {
         Point3D p = new Point3D(12, -18, 30);
         Point3D expected = new Point3D(
             it.getMxx() * 12 - it.getMxy() * 18 + it.getMxz() * 30,
@@ -1156,14 +1404,27 @@ public class TransformOperationsTest {
         }
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testInverseDeltaTransformNullPoint3D()
-            throws NonInvertibleTransformException {
-        t.inverseDeltaTransform((Point3D) null);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testInverseDeltaTransformNullPoint3D(Transform t,
+                                                     Transform it,
+                                                     boolean is2d,
+                                                     boolean isIdentity,
+                                                     boolean isInvertible,
+                                                     Class<?> inverseType) throws NonInvertibleTransformException {
+        assertThrows(NullPointerException.class, () -> {
+            t.inverseDeltaTransform((Point3D) null);
+        });
     }
 
-    @Test
-    public void testInverseDeltaTransformPoint2d() throws Exception {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testInverseDeltaTransformPoint2d(Transform t,
+                                                 Transform it,
+                                                 boolean is2d,
+                                                 boolean isIdentity,
+                                                 boolean isInvertible,
+                                                 Class<?> inverseType) throws Exception {
 
         Point2D p = new Point2D(12, -18);
         Point2D expected = new Point2D(
@@ -1211,14 +1472,28 @@ public class TransformOperationsTest {
         }
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testInverseDeltaTransformNullPoint2D()
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testInverseDeltaTransformNullPoint2D(Transform t,
+                                                     Transform it,
+                                                     boolean is2d,
+                                                     boolean isIdentity,
+                                                     boolean isInvertible,
+                                                     Class<?> inverseType)
             throws NonInvertibleTransformException {
-        t.inverseDeltaTransform((Point2D) null);
+        assertThrows(NullPointerException.class, () -> {
+            t.inverseDeltaTransform((Point2D) null);
+        });
     }
 
-    @Test
-    public void testInverseTransformBounds() throws Exception {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testInverseTransformBounds(Transform t,
+                                           Transform it,
+                                           boolean is2d,
+                                           boolean isIdentity,
+                                           boolean isInvertible,
+                                           Class<?> inverseType) throws Exception {
         Bounds result = null;
         try {
             result = t.inverseTransform(new BoundingBox(10, 11, 12, 13, 14, 15));
@@ -1267,14 +1542,27 @@ public class TransformOperationsTest {
         }
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testInverseTransformNullBounds()
-            throws NonInvertibleTransformException {
-        t.inverseTransform((Bounds) null);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testInverseTransformNullBounds(Transform t,
+                                               Transform it,
+                                               boolean is2d,
+                                               boolean isIdentity,
+                                               boolean isInvertible,
+                                               Class<?> inverseType) throws NonInvertibleTransformException {
+        assertThrows(NullPointerException.class, () -> {
+            t.inverseTransform((Bounds) null);
+        });
     }
 
-    @Test
-    public void testInverseTransform2DPoints() throws Exception {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testInverseTransform2DPoints(Transform t,
+                                             Transform it,
+                                             boolean is2d,
+                                             boolean isIdentity,
+                                             boolean isInvertible,
+                                             Class<?> inverseType) throws Exception {
         double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6 };
         double[] dstPts = new double[] { 1, 2, 3, 4, 5, 6 };
 
@@ -1312,26 +1600,53 @@ public class TransformOperationsTest {
         }
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testInverseTransform2DPointsBothPtsNull()
-            throws NonInvertibleTransformException {
-        t.inverseTransform2DPoints(null, 2, null, 0, 0);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testInverseTransform2DPointsBothPtsNull(Transform t,
+                                                        Transform it,
+                                                        boolean is2d,
+                                                        boolean isIdentity,
+                                                        boolean isInvertible,
+                                                        Class<?> inverseType) throws NonInvertibleTransformException {
+        assertThrows(NullPointerException.class, () -> {
+            t.inverseTransform2DPoints(null, 2, null, 0, 0);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testInverseTransform2DPointsSrcPtsNull()
-            throws NonInvertibleTransformException {
-        t.inverseTransform2DPoints(null, 2, new double[] { 1, 2, 3 }, 0, 0);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testInverseTransform2DPointsSrcPtsNull(Transform t,
+                                                       Transform it,
+                                                       boolean is2d,
+                                                       boolean isIdentity,
+                                                       boolean isInvertible,
+                                                       Class<?> inverseType) throws NonInvertibleTransformException {
+        assertThrows(NullPointerException.class, () -> {
+            t.inverseTransform2DPoints(null, 2, new double[] { 1, 2, 3 }, 0, 0);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testInverseTransform2DPointsDstPtsNull()
-            throws NonInvertibleTransformException {
-        t.inverseTransform2DPoints(new double[] { 1, 2, 3, 4 }, 2, null, 0, 0);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testInverseTransform2DPointsDstPtsNull(Transform t,
+                                                       Transform it,
+                                                       boolean is2d,
+                                                       boolean isIdentity,
+                                                       boolean isInvertible,
+                                                       Class<?> inverseType) throws NonInvertibleTransformException {
+        assertThrows(NullPointerException.class, () -> {
+            t.inverseTransform2DPoints(new double[] { 1, 2, 3, 4 }, 2, null, 0, 0);
+        });
     }
 
-    @Test
-    public void testInverseTransform2DPointsWithOverlap() throws Exception {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testInverseTransform2DPointsWithOverlap(Transform t,
+                                                        Transform it,
+                                                        boolean is2d,
+                                                        boolean isIdentity,
+                                                        boolean isInvertible,
+                                                        Class<?> inverseType) throws Exception {
         double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
 
         Point2D expected1 = new Point2D(
@@ -1370,44 +1685,66 @@ public class TransformOperationsTest {
         }
     }
 
-    @Test(expected=IndexOutOfBoundsException.class)
-    public void testInverseTransform2DPointsSrcOut() throws Exception {
-        double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7 };
-        double[] dstPts = new double[] { 1, 2, 3, 4, 5, 6 };
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testInverseTransform2DPointsSrcOut(Transform t,
+                                                   Transform it,
+                                                   boolean is2d,
+                                                   boolean isIdentity,
+                                                   boolean isInvertible,
+                                                   Class<?> inverseType) throws Exception {
+        assertThrows(IndexOutOfBoundsException.class, () -> {
+            double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7 };
+            double[] dstPts = new double[] { 1, 2, 3, 4, 5, 6 };
 
-        try {
-            t.inverseTransform2DPoints(srcPts, 3, dstPts, 0, 3);
-        } catch (IllegalStateException e) {
-            if (!is2d) {
-                throw new IndexOutOfBoundsException("expected result");
+            try {
+                t.inverseTransform2DPoints(srcPts, 3, dstPts, 0, 3);
+            } catch (IllegalStateException e) {
+                if (!is2d) {
+                    throw new IndexOutOfBoundsException("expected result");
+                }
+            } catch (NonInvertibleTransformException e) {
+                if (!isInvertible) {
+                    throw new IndexOutOfBoundsException("expected result");
+                }
             }
-        } catch (NonInvertibleTransformException e) {
-            if (!isInvertible) {
-                throw new IndexOutOfBoundsException("expected result");
-            }
-        }
+        });
     }
 
-    @Test(expected=IndexOutOfBoundsException.class)
-    public void testInverseTransform2DPointsDstOut() throws Exception {
-        double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7 };
-        double[] dstPts = new double[] { 1 };
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testInverseTransform2DPointsDstOut(Transform t,
+                                                   Transform it,
+                                                   boolean is2d,
+                                                   boolean isIdentity,
+                                                   boolean isInvertible,
+                                                   Class<?> inverseType) throws Exception {
+        assertThrows(IndexOutOfBoundsException.class, () -> {
+            double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7 };
+            double[] dstPts = new double[] { 1 };
 
-        try {
-            t.inverseTransform2DPoints(srcPts, 1, dstPts, 0, 2);
-        } catch (IllegalStateException e) {
-            if (!is2d) {
-                throw new IndexOutOfBoundsException("expected result");
+            try {
+                t.inverseTransform2DPoints(srcPts, 1, dstPts, 0, 2);
+            } catch (IllegalStateException e) {
+                if (!is2d) {
+                    throw new IndexOutOfBoundsException("expected result");
+                }
+            } catch (NonInvertibleTransformException e) {
+                if (!isInvertible) {
+                    throw new IndexOutOfBoundsException("expected result");
+                }
             }
-        } catch (NonInvertibleTransformException e) {
-            if (!isInvertible) {
-                throw new IndexOutOfBoundsException("expected result");
-            }
-        }
+        });
     }
 
-    @Test
-    public void testInverseTransform3DPoints() throws Exception {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testInverseTransform3DPoints(Transform t,
+                                             Transform it,
+                                             boolean is2d,
+                                             boolean isIdentity,
+                                             boolean isInvertible,
+                                             Class<?> inverseType) throws Exception {
         double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
         double[] dstPts = new double[] { 1, 2, 3, 4, 5, 6, 7, 8 };
 
@@ -1442,26 +1779,53 @@ public class TransformOperationsTest {
         }
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testInverseTransform3DPointsBothPtsNull()
-            throws NonInvertibleTransformException {
-        t.inverseTransform3DPoints(null, 2, null, 0, 0);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testInverseTransform3DPointsBothPtsNull(Transform t,
+                                                        Transform it,
+                                                        boolean is2d,
+                                                        boolean isIdentity,
+                                                        boolean isInvertible,
+                                                        Class<?> inverseType) throws NonInvertibleTransformException {
+        assertThrows(NullPointerException.class, () -> {
+            t.inverseTransform3DPoints(null, 2, null, 0, 0);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testInverseTransform3DPointsSrcPtsNull()
-            throws NonInvertibleTransformException {
-        t.inverseTransform3DPoints(null, 2, new double[] { 1, 2, 3 }, 0, 0);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testInverseTransform3DPointsSrcPtsNull(Transform t,
+                                                       Transform it,
+                                                       boolean is2d,
+                                                       boolean isIdentity,
+                                                       boolean isInvertible,
+                                                       Class<?> inverseType) throws NonInvertibleTransformException {
+        assertThrows(NullPointerException.class, () -> {
+            t.inverseTransform3DPoints(null, 2, new double[] { 1, 2, 3 }, 0, 0);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testInverseTransform3DPointsDstPtsNull()
-            throws NonInvertibleTransformException {
-        t.inverseTransform3DPoints(new double[] { 1, 2, 3, 4 }, 2, null, 0, 0);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testInverseTransform3DPointsDstPtsNull(Transform t,
+                                                       Transform it,
+                                                       boolean is2d,
+                                                       boolean isIdentity,
+                                                       boolean isInvertible,
+                                                       Class<?> inverseType) throws NonInvertibleTransformException {
+        assertThrows(NullPointerException.class, () -> {
+            t.inverseTransform3DPoints(new double[] { 1, 2, 3, 4 }, 2, null, 0, 0);
+        });
     }
 
-    @Test
-    public void testInverseTransform3DPointsWithOverlap() throws Exception {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testInverseTransform3DPointsWithOverlap(Transform t,
+                          Transform it,
+                          boolean is2d,
+                          boolean isIdentity,
+                          boolean isInvertible,
+                          Class<?> inverseType) throws Exception {
         double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
 
         Point3D expected1 = new Point3D(
@@ -1497,41 +1861,69 @@ public class TransformOperationsTest {
         }
     }
 
-    @Test(expected=IndexOutOfBoundsException.class)
-    public void testInverseTransform3DPointsSrcOut() throws Exception {
-        double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7 };
-        double[] dstPts = new double[] { 1, 2, 3, 4, 5, 6 };
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testInverseTransform3DPointsSrcOut(Transform t,
+                                                   Transform it,
+                                                   boolean is2d,
+                                                   boolean isIdentity,
+                                                   boolean isInvertible,
+                                                   Class<?> inverseType) throws Exception {
+        assertThrows(IndexOutOfBoundsException.class, () -> {
+            double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7 };
+            double[] dstPts = new double[] { 1, 2, 3, 4, 5, 6 };
 
-        try {
-            t.inverseTransform3DPoints(srcPts, 6, dstPts, 0, 1);
-        } catch (NonInvertibleTransformException e) {
-            if (!isInvertible) {
-                throw new IndexOutOfBoundsException("expected result");
+            try {
+                t.inverseTransform3DPoints(srcPts, 6, dstPts, 0, 1);
+            } catch (NonInvertibleTransformException e) {
+                if (!isInvertible) {
+                    throw new IndexOutOfBoundsException("expected result");
+                }
             }
-        }
+        });
     }
 
-    @Test(expected=IndexOutOfBoundsException.class)
-    public void testInverseTransform3DPointsDstOut() throws Exception {
-        double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7 };
-        double[] dstPts = new double[] { 1 };
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testInverseTransform3DPointsDstOut(Transform t,
+                                                   Transform it,
+                                                   boolean is2d,
+                                                   boolean isIdentity,
+                                                   boolean isInvertible,
+                                                   Class<?> inverseType) throws Exception {
+        assertThrows(IndexOutOfBoundsException.class, () -> {
+            double[] srcPts = new double[] { 0, 1, 2, 3, 4, 5, 6, 7 };
+            double[] dstPts = new double[] { 1 };
 
-        try {
-            t.inverseTransform3DPoints(srcPts, 1, dstPts, 0, 1);
-        } catch (NonInvertibleTransformException e) {
-            if (!isInvertible) {
-                throw new IndexOutOfBoundsException("expected result");
+            try {
+                t.inverseTransform3DPoints(srcPts, 1, dstPts, 0, 1);
+            } catch (NonInvertibleTransformException e) {
+                if (!isInvertible) {
+                    throw new IndexOutOfBoundsException("expected result");
+                }
             }
-        }
+        });
     }
 
-    @Test
-    public void testDeterminant() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testDeterminant(Transform t,
+                                Transform it,
+                                boolean is2d,
+                                boolean isIdentity,
+                                boolean isInvertible,
+                                Class<?> inverseType) {
         assertEquals(TransformHelper.determinant(t), t.determinant(), 0.00001);
     }
 
-    @Test
-    public void testIsType2D() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testIsType2D(Transform t,
+                             Transform it,
+                             boolean is2d,
+                             boolean isIdentity,
+                             boolean isInvertible,
+                             Class<?> inverseType) {
         Transform clone = t.clone();
 
         if (is2d) {
@@ -1547,16 +1939,28 @@ public class TransformOperationsTest {
         }
     }
 
-    @Test
-    public void testType2DProperty() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testType2DProperty(Transform t,
+                                   Transform it,
+                                   boolean is2d,
+                                   boolean isIdentity,
+                                   boolean isInvertible,
+                                   Class<?> inverseType) {
         Transform clone = t.clone();
 
         assertEquals("type2D", clone.type2DProperty().getName());
         assertSame(clone, clone.type2DProperty().getBean());
     }
 
-    @Test
-    public void testType2DPropertyGetter() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testType2DPropertyGetter(Transform t,
+                                         Transform it,
+                                         boolean is2d,
+                                         boolean isIdentity,
+                                         boolean isInvertible,
+                                         Class<?> inverseType) {
         Transform clone = t.clone();
 
         if (is2d) {
@@ -1576,8 +1980,14 @@ public class TransformOperationsTest {
         }
     }
 
-    @Test
-    public void testType2DPropertyInvalidation() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testType2DPropertyInvalidation(Transform t,
+                                               Transform it,
+                                               boolean is2d,
+                                               boolean isIdentity,
+                                               boolean isInvertible,
+                                               Class<?> inverseType) {
         final Transform clone = t.clone();
 
         InvalidationListener l =
@@ -1616,8 +2026,14 @@ public class TransformOperationsTest {
         }
     }
 
-    @Test
-    public void testType2DPropertyChange() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testType2DPropertyChange(Transform t,
+                                         Transform it,
+                                         boolean is2d,
+                                         boolean isIdentity,
+                                         boolean isInvertible,
+                                         Class<?> inverseType) {
         final Transform clone = t.clone();
 
         ChangeListener<Boolean> l =
@@ -1674,8 +2090,14 @@ public class TransformOperationsTest {
         }
     }
 
-    @Test
-    public void testIsIdentity() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testIsIdentity(Transform t,
+                          Transform it,
+                          boolean is2d,
+                          boolean isIdentity,
+                          boolean isInvertible,
+                          Class<?> inverseType) {
         Transform clone = t.clone();
 
         if (isIdentity) {
@@ -1691,16 +2113,28 @@ public class TransformOperationsTest {
         }
     }
 
-    @Test
-    public void testIdentityProperty() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testIdentityProperty(Transform t,
+                          Transform it,
+                          boolean is2d,
+                          boolean isIdentity,
+                          boolean isInvertible,
+                          Class<?> inverseType) {
         Transform clone = t.clone();
 
         assertEquals("identity", clone.identityProperty().getName());
         assertSame(clone, clone.identityProperty().getBean());
     }
 
-    @Test
-    public void testIdentityPropertyGetter() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testIdentityPropertyGetter(Transform t,
+                          Transform it,
+                          boolean is2d,
+                          boolean isIdentity,
+                          boolean isInvertible,
+                          Class<?> inverseType) {
         Transform clone = t.clone();
 
         if (isIdentity) {
@@ -1720,8 +2154,14 @@ public class TransformOperationsTest {
         }
     }
 
-    @Test
-    public void testIdentityPropertyInvalidation() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testIdentityPropertyInvalidation(Transform t,
+                          Transform it,
+                          boolean is2d,
+                          boolean isIdentity,
+                          boolean isInvertible,
+                          Class<?> inverseType) {
         final Transform clone = t.clone();
 
         InvalidationListener l =
@@ -1765,8 +2205,14 @@ public class TransformOperationsTest {
         }
     }
 
-    @Test
-    public void testIdentityPropertyChange() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testIdentityPropertyChange(Transform t,
+                          Transform it,
+                          boolean is2d,
+                          boolean isIdentity,
+                          boolean isInvertible,
+                          Class<?> inverseType) {
         final Transform clone = t.clone();
 
         ChangeListener<Boolean> l =
@@ -1818,8 +2264,14 @@ public class TransformOperationsTest {
         }
     }
 
-    @Test
-    public void testSimilarTo() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testSimilarTo(Transform t,
+                          Transform it,
+                          boolean is2d,
+                          boolean isIdentity,
+                          boolean isInvertible,
+                          Class<?> inverseType) {
         Transform clone = t.clone();
 
         assertTrue(t.similarTo(clone, new BoundingBox(-10000, -10000, 10000, 10000), 1e-10));
@@ -1846,17 +2298,33 @@ public class TransformOperationsTest {
         }
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testSimilarToNullTransform() {
-        t.similarTo(null, new BoundingBox(0, 0, 0, 1, 1, 1), 0);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testSimilarToNullTransform(Transform t,
+                          Transform it,
+                          boolean is2d,
+                          boolean isIdentity,
+                          boolean isInvertible,
+                          Class<?> inverseType) {
+        assertThrows(NullPointerException.class, () -> {
+            t.similarTo(null, new BoundingBox(0, 0, 0, 1, 1, 1), 0);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testSimilarToNullRange() {
-        t.similarTo(t, null, 0);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testSimilarToNullRange(Transform t,
+                          Transform it,
+                          boolean is2d,
+                          boolean isIdentity,
+                          boolean isInvertible,
+                          Class<?> inverseType) {
+        assertThrows(NullPointerException.class, () -> {
+            t.similarTo(t, null, 0);
+        });
     }
 
-    private void assertGetElement(MatrixType type, int row, int col,
+    private void assertGetElement(Transform t, MatrixType type, int row, int col,
             double expected, boolean iae, boolean iob) {
         double res = Double.MIN_VALUE;
 
@@ -1884,72 +2352,86 @@ public class TransformOperationsTest {
         assertEquals(expected, res, 1e-100);
     }
 
-    @Test
-    public void testGetElement() {
-        assertGetElement(MatrixType.MT_2D_2x3, 0, 0, t.getMxx(), !is2d, false);
-        assertGetElement(MatrixType.MT_2D_2x3, 0, 1, t.getMxy(), !is2d, false);
-        assertGetElement(MatrixType.MT_2D_2x3, 0, 2, t.getTx(), !is2d, false);
-        assertGetElement(MatrixType.MT_2D_2x3, 1, 0, t.getMyx(), !is2d, false);
-        assertGetElement(MatrixType.MT_2D_2x3, 1, 1, t.getMyy(), !is2d, false);
-        assertGetElement(MatrixType.MT_2D_2x3, 1, 2, t.getTy(), !is2d, false);
-        assertGetElement(MatrixType.MT_2D_2x3, -1, 0, 0, !is2d, true);
-        assertGetElement(MatrixType.MT_2D_2x3, 2, 1, 0, !is2d, true);
-        assertGetElement(MatrixType.MT_2D_2x3, 1, 3, 0, !is2d, true);
-        assertGetElement(MatrixType.MT_2D_2x3, 1, -1, 0, !is2d, true);
-        assertGetElement(MatrixType.MT_2D_3x3, 0, 0, t.getMxx(), !is2d, false);
-        assertGetElement(MatrixType.MT_2D_3x3, 0, 1, t.getMxy(), !is2d, false);
-        assertGetElement(MatrixType.MT_2D_3x3, 0, 2, t.getTx(), !is2d, false);
-        assertGetElement(MatrixType.MT_2D_3x3, 1, 0, t.getMyx(), !is2d, false);
-        assertGetElement(MatrixType.MT_2D_3x3, 1, 1, t.getMyy(), !is2d, false);
-        assertGetElement(MatrixType.MT_2D_3x3, 1, 2, t.getTy(), !is2d, false);
-        assertGetElement(MatrixType.MT_2D_3x3, 2, 0, 0, !is2d, false);
-        assertGetElement(MatrixType.MT_2D_3x3, 2, 1, 0, !is2d, false);
-        assertGetElement(MatrixType.MT_2D_3x3, 2, 2, 1, !is2d, false);
-        assertGetElement(MatrixType.MT_2D_3x3, -1, 0, 0, !is2d, true);
-        assertGetElement(MatrixType.MT_2D_3x3, 3, 1, 0, !is2d, true);
-        assertGetElement(MatrixType.MT_2D_3x3, 1, 3, 0, !is2d, true);
-        assertGetElement(MatrixType.MT_2D_3x3, 1, -1, 0, !is2d, true);
-        assertGetElement(MatrixType.MT_3D_3x4, 0, 0, t.getMxx(), false, false);
-        assertGetElement(MatrixType.MT_3D_3x4, 0, 1, t.getMxy(), false, false);
-        assertGetElement(MatrixType.MT_3D_3x4, 0, 2, t.getMxz(), false, false);
-        assertGetElement(MatrixType.MT_3D_3x4, 0, 3, t.getTx(), false, false);
-        assertGetElement(MatrixType.MT_3D_3x4, 1, 0, t.getMyx(), false, false);
-        assertGetElement(MatrixType.MT_3D_3x4, 1, 1, t.getMyy(), false, false);
-        assertGetElement(MatrixType.MT_3D_3x4, 1, 2, t.getMyz(), false, false);
-        assertGetElement(MatrixType.MT_3D_3x4, 1, 3, t.getTy(), false, false);
-        assertGetElement(MatrixType.MT_3D_3x4, 2, 0, t.getMzx(), false, false);
-        assertGetElement(MatrixType.MT_3D_3x4, 2, 1, t.getMzy(), false, false);
-        assertGetElement(MatrixType.MT_3D_3x4, 2, 2, t.getMzz(), false, false);
-        assertGetElement(MatrixType.MT_3D_3x4, 2, 3, t.getTz(), false, false);
-        assertGetElement(MatrixType.MT_3D_3x4, -1, 0, 0, false, true);
-        assertGetElement(MatrixType.MT_3D_3x4, 3, 1, 0, false, true);
-        assertGetElement(MatrixType.MT_3D_3x4, 1, 4, 0, false, true);
-        assertGetElement(MatrixType.MT_3D_3x4, 1, -1, 0, false, true);
-        assertGetElement(MatrixType.MT_3D_4x4, 0, 0, t.getMxx(), false, false);
-        assertGetElement(MatrixType.MT_3D_4x4, 0, 1, t.getMxy(), false, false);
-        assertGetElement(MatrixType.MT_3D_4x4, 0, 2, t.getMxz(), false, false);
-        assertGetElement(MatrixType.MT_3D_4x4, 0, 3, t.getTx(), false, false);
-        assertGetElement(MatrixType.MT_3D_4x4, 1, 0, t.getMyx(), false, false);
-        assertGetElement(MatrixType.MT_3D_4x4, 1, 1, t.getMyy(), false, false);
-        assertGetElement(MatrixType.MT_3D_4x4, 1, 2, t.getMyz(), false, false);
-        assertGetElement(MatrixType.MT_3D_4x4, 1, 3, t.getTy(), false, false);
-        assertGetElement(MatrixType.MT_3D_4x4, 2, 0, t.getMzx(), false, false);
-        assertGetElement(MatrixType.MT_3D_4x4, 2, 1, t.getMzy(), false, false);
-        assertGetElement(MatrixType.MT_3D_4x4, 2, 2, t.getMzz(), false, false);
-        assertGetElement(MatrixType.MT_3D_4x4, 2, 3, t.getTz(), false, false);
-        assertGetElement(MatrixType.MT_3D_4x4, 3, 0, 0, false, false);
-        assertGetElement(MatrixType.MT_3D_4x4, 3, 1, 0, false, false);
-        assertGetElement(MatrixType.MT_3D_4x4, 3, 2, 0, false, false);
-        assertGetElement(MatrixType.MT_3D_4x4, 3, 3, 1, false, false);
-        assertGetElement(MatrixType.MT_3D_4x4, -1, 0, 0, false, true);
-        assertGetElement(MatrixType.MT_3D_4x4, 4, 1, 0, false, true);
-        assertGetElement(MatrixType.MT_3D_4x4, 1, 4, 0, false, true);
-        assertGetElement(MatrixType.MT_3D_4x4, 1, -1, 0, false, true);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testGetElement(Transform t,
+                               Transform it,
+                               boolean is2d,
+                               boolean isIdentity,
+                               boolean isInvertible,
+                               Class<?> inverseType) {
+        assertGetElement(t, MatrixType.MT_2D_2x3, 0, 0, t.getMxx(), !is2d, false);
+        assertGetElement(t, MatrixType.MT_2D_2x3, 0, 1, t.getMxy(), !is2d, false);
+        assertGetElement(t, MatrixType.MT_2D_2x3, 0, 2, t.getTx(), !is2d, false);
+        assertGetElement(t, MatrixType.MT_2D_2x3, 1, 0, t.getMyx(), !is2d, false);
+        assertGetElement(t, MatrixType.MT_2D_2x3, 1, 1, t.getMyy(), !is2d, false);
+        assertGetElement(t, MatrixType.MT_2D_2x3, 1, 2, t.getTy(), !is2d, false);
+        assertGetElement(t, MatrixType.MT_2D_2x3, -1, 0, 0, !is2d, true);
+        assertGetElement(t, MatrixType.MT_2D_2x3, 2, 1, 0, !is2d, true);
+        assertGetElement(t, MatrixType.MT_2D_2x3, 1, 3, 0, !is2d, true);
+        assertGetElement(t, MatrixType.MT_2D_2x3, 1, -1, 0, !is2d, true);
+        assertGetElement(t, MatrixType.MT_2D_3x3, 0, 0, t.getMxx(), !is2d, false);
+        assertGetElement(t, MatrixType.MT_2D_3x3, 0, 1, t.getMxy(), !is2d, false);
+        assertGetElement(t, MatrixType.MT_2D_3x3, 0, 2, t.getTx(), !is2d, false);
+        assertGetElement(t, MatrixType.MT_2D_3x3, 1, 0, t.getMyx(), !is2d, false);
+        assertGetElement(t, MatrixType.MT_2D_3x3, 1, 1, t.getMyy(), !is2d, false);
+        assertGetElement(t, MatrixType.MT_2D_3x3, 1, 2, t.getTy(), !is2d, false);
+        assertGetElement(t, MatrixType.MT_2D_3x3, 2, 0, 0, !is2d, false);
+        assertGetElement(t, MatrixType.MT_2D_3x3, 2, 1, 0, !is2d, false);
+        assertGetElement(t, MatrixType.MT_2D_3x3, 2, 2, 1, !is2d, false);
+        assertGetElement(t, MatrixType.MT_2D_3x3, -1, 0, 0, !is2d, true);
+        assertGetElement(t, MatrixType.MT_2D_3x3, 3, 1, 0, !is2d, true);
+        assertGetElement(t, MatrixType.MT_2D_3x3, 1, 3, 0, !is2d, true);
+        assertGetElement(t, MatrixType.MT_2D_3x3, 1, -1, 0, !is2d, true);
+        assertGetElement(t, MatrixType.MT_3D_3x4, 0, 0, t.getMxx(), false, false);
+        assertGetElement(t, MatrixType.MT_3D_3x4, 0, 1, t.getMxy(), false, false);
+        assertGetElement(t, MatrixType.MT_3D_3x4, 0, 2, t.getMxz(), false, false);
+        assertGetElement(t, MatrixType.MT_3D_3x4, 0, 3, t.getTx(), false, false);
+        assertGetElement(t, MatrixType.MT_3D_3x4, 1, 0, t.getMyx(), false, false);
+        assertGetElement(t, MatrixType.MT_3D_3x4, 1, 1, t.getMyy(), false, false);
+        assertGetElement(t, MatrixType.MT_3D_3x4, 1, 2, t.getMyz(), false, false);
+        assertGetElement(t, MatrixType.MT_3D_3x4, 1, 3, t.getTy(), false, false);
+        assertGetElement(t, MatrixType.MT_3D_3x4, 2, 0, t.getMzx(), false, false);
+        assertGetElement(t, MatrixType.MT_3D_3x4, 2, 1, t.getMzy(), false, false);
+        assertGetElement(t, MatrixType.MT_3D_3x4, 2, 2, t.getMzz(), false, false);
+        assertGetElement(t, MatrixType.MT_3D_3x4, 2, 3, t.getTz(), false, false);
+        assertGetElement(t, MatrixType.MT_3D_3x4, -1, 0, 0, false, true);
+        assertGetElement(t, MatrixType.MT_3D_3x4, 3, 1, 0, false, true);
+        assertGetElement(t, MatrixType.MT_3D_3x4, 1, 4, 0, false, true);
+        assertGetElement(t, MatrixType.MT_3D_3x4, 1, -1, 0, false, true);
+        assertGetElement(t, MatrixType.MT_3D_4x4, 0, 0, t.getMxx(), false, false);
+        assertGetElement(t, MatrixType.MT_3D_4x4, 0, 1, t.getMxy(), false, false);
+        assertGetElement(t, MatrixType.MT_3D_4x4, 0, 2, t.getMxz(), false, false);
+        assertGetElement(t, MatrixType.MT_3D_4x4, 0, 3, t.getTx(), false, false);
+        assertGetElement(t, MatrixType.MT_3D_4x4, 1, 0, t.getMyx(), false, false);
+        assertGetElement(t, MatrixType.MT_3D_4x4, 1, 1, t.getMyy(), false, false);
+        assertGetElement(t, MatrixType.MT_3D_4x4, 1, 2, t.getMyz(), false, false);
+        assertGetElement(t, MatrixType.MT_3D_4x4, 1, 3, t.getTy(), false, false);
+        assertGetElement(t, MatrixType.MT_3D_4x4, 2, 0, t.getMzx(), false, false);
+        assertGetElement(t, MatrixType.MT_3D_4x4, 2, 1, t.getMzy(), false, false);
+        assertGetElement(t, MatrixType.MT_3D_4x4, 2, 2, t.getMzz(), false, false);
+        assertGetElement(t, MatrixType.MT_3D_4x4, 2, 3, t.getTz(), false, false);
+        assertGetElement(t, MatrixType.MT_3D_4x4, 3, 0, 0, false, false);
+        assertGetElement(t, MatrixType.MT_3D_4x4, 3, 1, 0, false, false);
+        assertGetElement(t, MatrixType.MT_3D_4x4, 3, 2, 0, false, false);
+        assertGetElement(t, MatrixType.MT_3D_4x4, 3, 3, 1, false, false);
+        assertGetElement(t, MatrixType.MT_3D_4x4, -1, 0, 0, false, true);
+        assertGetElement(t, MatrixType.MT_3D_4x4, 4, 1, 0, false, true);
+        assertGetElement(t, MatrixType.MT_3D_4x4, 1, 4, 0, false, true);
+        assertGetElement(t, MatrixType.MT_3D_4x4, 1, -1, 0, false, true);
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testGetElementNullType() {
-        t.getElement(null, 0, 0);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testGetElementNullType(Transform t,
+                                       Transform it,
+                                       boolean is2d,
+                                       boolean isIdentity,
+                                       boolean isInvertible,
+                                       Class<?> inverseType) {
+        assertThrows(NullPointerException.class, () -> {
+            t.getElement(null, 0, 0);
+        });
     }
 
     private void assertArray(MatrixType type, double[] a, Transform t) {
@@ -1990,7 +2472,7 @@ public class TransformOperationsTest {
         }
     }
 
-    private void assertToArray2D(MatrixType type, double[] tmp,
+    private void assertToArray2D(Transform t, boolean is2d, MatrixType type, double[] tmp,
             boolean shouldPass, boolean shouldUse) {
         double[] a = null;
         try {
@@ -2017,7 +2499,7 @@ public class TransformOperationsTest {
         }
     }
 
-    private void assertToArray3D(MatrixType type, double[] tmp,
+    private void assertToArray3D(Transform t, MatrixType type, double[] tmp,
             boolean shouldPass, boolean shouldUse) {
         double[] a = null;
 
@@ -2034,38 +2516,60 @@ public class TransformOperationsTest {
         assertArray(type, a, t);
     }
 
-    @Test
-    public void testToArray() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testToArray(Transform t,
+                            Transform it,
+                            boolean is2d,
+                            boolean isIdentity,
+                            boolean isInvertible,
+                            Class<?> inverseType) {
 
-        assertToArray2D(MatrixType.MT_2D_2x3, null, false, false);
-        assertToArray2D(MatrixType.MT_2D_2x3, null, true, false);
-        assertToArray2D(MatrixType.MT_2D_2x3, new double[4], true, false);
-        assertToArray2D(MatrixType.MT_2D_2x3, new double[6], true, true);
+        assertToArray2D(t, is2d, MatrixType.MT_2D_2x3, null, false, false);
+        assertToArray2D(t, is2d, MatrixType.MT_2D_2x3, null, true, false);
+        assertToArray2D(t, is2d, MatrixType.MT_2D_2x3, new double[4], true, false);
+        assertToArray2D(t, is2d, MatrixType.MT_2D_2x3, new double[6], true, true);
 
-        assertToArray2D(MatrixType.MT_2D_3x3, null, false, false);
-        assertToArray2D(MatrixType.MT_2D_3x3, null, true, false);
-        assertToArray2D(MatrixType.MT_2D_3x3, new double[8], true, false);
-        assertToArray2D(MatrixType.MT_2D_3x3, new double[9], true, true);
+        assertToArray2D(t, is2d, MatrixType.MT_2D_3x3, null, false, false);
+        assertToArray2D(t, is2d, MatrixType.MT_2D_3x3, null, true, false);
+        assertToArray2D(t, is2d, MatrixType.MT_2D_3x3, new double[8], true, false);
+        assertToArray2D(t, is2d, MatrixType.MT_2D_3x3, new double[9], true, true);
 
-        assertToArray3D(MatrixType.MT_3D_3x4, null, false, false);
-        assertToArray3D(MatrixType.MT_3D_3x4, null, true, false);
-        assertToArray3D(MatrixType.MT_3D_3x4, new double[11], true, false);
-        assertToArray3D(MatrixType.MT_3D_3x4, new double[12], true, true);
+        assertToArray3D(t, MatrixType.MT_3D_3x4, null, false, false);
+        assertToArray3D(t, MatrixType.MT_3D_3x4, null, true, false);
+        assertToArray3D(t, MatrixType.MT_3D_3x4, new double[11], true, false);
+        assertToArray3D(t, MatrixType.MT_3D_3x4, new double[12], true, true);
 
-        assertToArray3D(MatrixType.MT_3D_4x4, null, false, false);
-        assertToArray3D(MatrixType.MT_3D_4x4, null, true, false);
-        assertToArray3D(MatrixType.MT_3D_4x4, new double[15], true, false);
-        assertToArray3D(MatrixType.MT_3D_4x4, new double[16], true, true);
+        assertToArray3D(t, MatrixType.MT_3D_4x4, null, false, false);
+        assertToArray3D(t, MatrixType.MT_3D_4x4, null, true, false);
+        assertToArray3D(t, MatrixType.MT_3D_4x4, new double[15], true, false);
+        assertToArray3D(t, MatrixType.MT_3D_4x4, new double[16], true, true);
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testToArrayNullType1() {
-        t.toArray(null);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testToArrayNullType1(Transform t,
+                                     Transform it,
+                                     boolean is2d,
+                                     boolean isIdentity,
+                                     boolean isInvertible,
+                                     Class<?> inverseType) {
+        assertThrows(NullPointerException.class, () -> {
+            t.toArray(null);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testToArrayNullType2() {
-        t.toArray(null, new double[] {});
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testToArrayNullType2(Transform t,
+                                     Transform it,
+                                     boolean is2d,
+                                     boolean isIdentity,
+                                     boolean isInvertible,
+                                     Class<?> inverseType) {
+        assertThrows(NullPointerException.class, () -> {
+            t.toArray(null, new double[] {});
+        });
     }
 
     private void assertRow(MatrixType type, int row, double[] a, Transform t) {
@@ -2126,7 +2630,7 @@ public class TransformOperationsTest {
         fail("Should have thrown IOB");
     }
 
-    private void assertRow2D(MatrixType type, int row, double[] tmp,
+    private void assertRow2D(Transform t, boolean is2d, MatrixType type, int row, double[] tmp,
             boolean shouldPass, boolean shouldUse, boolean iob) {
         double[] a = null;
         try {
@@ -2159,7 +2663,7 @@ public class TransformOperationsTest {
         }
     }
 
-    private void assertRow3D(MatrixType type, int row, double[] tmp,
+    private void assertRow3D(Transform t, MatrixType type, int row, double[] tmp,
             boolean shouldPass, boolean shouldUse, boolean iob) {
         double[] a = null;
         try {
@@ -2185,77 +2689,99 @@ public class TransformOperationsTest {
         }
     }
 
-    @Test
-    public void testRow() {
-        assertRow2D(MatrixType.MT_2D_2x3, 0, null, false, false, false);
-        assertRow2D(MatrixType.MT_2D_2x3, 0, null, true, false, false);
-        assertRow2D(MatrixType.MT_2D_2x3, 0, new double[2], true, false, false);
-        assertRow2D(MatrixType.MT_2D_2x3, 0, new double[3], true, true, false);
-        assertRow2D(MatrixType.MT_2D_2x3, 1, null, false, false, false);
-        assertRow2D(MatrixType.MT_2D_2x3, 1, null, true, false, false);
-        assertRow2D(MatrixType.MT_2D_2x3, 1, new double[2], true, false, false);
-        assertRow2D(MatrixType.MT_2D_2x3, 1, new double[3], true, true, false);
-        assertRow2D(MatrixType.MT_2D_2x3, -1, null, true, false, true);
-        assertRow2D(MatrixType.MT_2D_2x3, 2, null, false, false, true);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testRow(Transform t,
+                          Transform it,
+                          boolean is2d,
+                          boolean isIdentity,
+                          boolean isInvertible,
+                          Class<?> inverseType) {
+        assertRow2D(t, is2d, MatrixType.MT_2D_2x3, 0, null, false, false, false);
+        assertRow2D(t, is2d, MatrixType.MT_2D_2x3, 0, null, true, false, false);
+        assertRow2D(t, is2d, MatrixType.MT_2D_2x3, 0, new double[2], true, false, false);
+        assertRow2D(t, is2d, MatrixType.MT_2D_2x3, 0, new double[3], true, true, false);
+        assertRow2D(t, is2d, MatrixType.MT_2D_2x3, 1, null, false, false, false);
+        assertRow2D(t, is2d, MatrixType.MT_2D_2x3, 1, null, true, false, false);
+        assertRow2D(t, is2d, MatrixType.MT_2D_2x3, 1, new double[2], true, false, false);
+        assertRow2D(t, is2d, MatrixType.MT_2D_2x3, 1, new double[3], true, true, false);
+        assertRow2D(t, is2d, MatrixType.MT_2D_2x3, -1, null, true, false, true);
+        assertRow2D(t, is2d, MatrixType.MT_2D_2x3, 2, null, false, false, true);
 
-        assertRow2D(MatrixType.MT_2D_3x3, 0, null, false, false, false);
-        assertRow2D(MatrixType.MT_2D_3x3, 0, null, true, false, false);
-        assertRow2D(MatrixType.MT_2D_3x3, 0, new double[2], true, false, false);
-        assertRow2D(MatrixType.MT_2D_3x3, 0, new double[3], true, true, false);
-        assertRow2D(MatrixType.MT_2D_3x3, 1, null, false, false, false);
-        assertRow2D(MatrixType.MT_2D_3x3, 1, null, true, false, false);
-        assertRow2D(MatrixType.MT_2D_3x3, 1, new double[2], true, false, false);
-        assertRow2D(MatrixType.MT_2D_3x3, 1, new double[3], true, true, false);
-        assertRow2D(MatrixType.MT_2D_3x3, 2, null, false, false, false);
-        assertRow2D(MatrixType.MT_2D_3x3, 2, null, true, false, false);
-        assertRow2D(MatrixType.MT_2D_3x3, 2, new double[2], true, false, false);
-        assertRow2D(MatrixType.MT_2D_3x3, 2, new double[3], true, true, false);
-        assertRow2D(MatrixType.MT_2D_3x3, -1, null, true, false, true);
-        assertRow2D(MatrixType.MT_2D_3x3, 3, null, false, false, true);
+        assertRow2D(t, is2d, MatrixType.MT_2D_3x3, 0, null, false, false, false);
+        assertRow2D(t, is2d, MatrixType.MT_2D_3x3, 0, null, true, false, false);
+        assertRow2D(t, is2d, MatrixType.MT_2D_3x3, 0, new double[2], true, false, false);
+        assertRow2D(t, is2d, MatrixType.MT_2D_3x3, 0, new double[3], true, true, false);
+        assertRow2D(t, is2d, MatrixType.MT_2D_3x3, 1, null, false, false, false);
+        assertRow2D(t, is2d, MatrixType.MT_2D_3x3, 1, null, true, false, false);
+        assertRow2D(t, is2d, MatrixType.MT_2D_3x3, 1, new double[2], true, false, false);
+        assertRow2D(t, is2d, MatrixType.MT_2D_3x3, 1, new double[3], true, true, false);
+        assertRow2D(t, is2d, MatrixType.MT_2D_3x3, 2, null, false, false, false);
+        assertRow2D(t, is2d, MatrixType.MT_2D_3x3, 2, null, true, false, false);
+        assertRow2D(t, is2d, MatrixType.MT_2D_3x3, 2, new double[2], true, false, false);
+        assertRow2D(t, is2d, MatrixType.MT_2D_3x3, 2, new double[3], true, true, false);
+        assertRow2D(t, is2d, MatrixType.MT_2D_3x3, -1, null, true, false, true);
+        assertRow2D(t, is2d, MatrixType.MT_2D_3x3, 3, null, false, false, true);
 
-        assertRow3D(MatrixType.MT_3D_3x4, 0, null, false, false, false);
-        assertRow3D(MatrixType.MT_3D_3x4, 0, null, true, false, false);
-        assertRow3D(MatrixType.MT_3D_3x4, 0, new double[3], true, false, false);
-        assertRow3D(MatrixType.MT_3D_3x4, 0, new double[4], true, true, false);
-        assertRow3D(MatrixType.MT_3D_3x4, 1, null, false, false, false);
-        assertRow3D(MatrixType.MT_3D_3x4, 1, null, true, false, false);
-        assertRow3D(MatrixType.MT_3D_3x4, 1, new double[3], true, false, false);
-        assertRow3D(MatrixType.MT_3D_3x4, 1, new double[4], true, true, false);
-        assertRow3D(MatrixType.MT_3D_3x4, 2, null, false, false, false);
-        assertRow3D(MatrixType.MT_3D_3x4, 2, null, true, false, false);
-        assertRow3D(MatrixType.MT_3D_3x4, 2, new double[3], true, false, false);
-        assertRow3D(MatrixType.MT_3D_3x4, 2, new double[4], true, true, false);
-        assertRow3D(MatrixType.MT_3D_3x4, -1, null, true, false, true);
-        assertRow3D(MatrixType.MT_3D_3x4, 3, null, false, false, true);
+        assertRow3D(t, MatrixType.MT_3D_3x4, 0, null, false, false, false);
+        assertRow3D(t, MatrixType.MT_3D_3x4, 0, null, true, false, false);
+        assertRow3D(t, MatrixType.MT_3D_3x4, 0, new double[3], true, false, false);
+        assertRow3D(t, MatrixType.MT_3D_3x4, 0, new double[4], true, true, false);
+        assertRow3D(t, MatrixType.MT_3D_3x4, 1, null, false, false, false);
+        assertRow3D(t, MatrixType.MT_3D_3x4, 1, null, true, false, false);
+        assertRow3D(t, MatrixType.MT_3D_3x4, 1, new double[3], true, false, false);
+        assertRow3D(t, MatrixType.MT_3D_3x4, 1, new double[4], true, true, false);
+        assertRow3D(t, MatrixType.MT_3D_3x4, 2, null, false, false, false);
+        assertRow3D(t, MatrixType.MT_3D_3x4, 2, null, true, false, false);
+        assertRow3D(t, MatrixType.MT_3D_3x4, 2, new double[3], true, false, false);
+        assertRow3D(t, MatrixType.MT_3D_3x4, 2, new double[4], true, true, false);
+        assertRow3D(t, MatrixType.MT_3D_3x4, -1, null, true, false, true);
+        assertRow3D(t, MatrixType.MT_3D_3x4, 3, null, false, false, true);
 
-        assertRow3D(MatrixType.MT_3D_4x4, 0, null, false, false, false);
-        assertRow3D(MatrixType.MT_3D_4x4, 0, null, true, false, false);
-        assertRow3D(MatrixType.MT_3D_4x4, 0, new double[3], true, false, false);
-        assertRow3D(MatrixType.MT_3D_4x4, 0, new double[4], true, true, false);
-        assertRow3D(MatrixType.MT_3D_4x4, 1, null, false, false, false);
-        assertRow3D(MatrixType.MT_3D_4x4, 1, null, true, false, false);
-        assertRow3D(MatrixType.MT_3D_4x4, 1, new double[3], true, false, false);
-        assertRow3D(MatrixType.MT_3D_4x4, 1, new double[4], true, true, false);
-        assertRow3D(MatrixType.MT_3D_4x4, 2, null, false, false, false);
-        assertRow3D(MatrixType.MT_3D_4x4, 2, null, true, false, false);
-        assertRow3D(MatrixType.MT_3D_4x4, 2, new double[3], true, false, false);
-        assertRow3D(MatrixType.MT_3D_4x4, 2, new double[4], true, true, false);
-        assertRow3D(MatrixType.MT_3D_4x4, 3, null, false, false, false);
-        assertRow3D(MatrixType.MT_3D_4x4, 3, null, true, false, false);
-        assertRow3D(MatrixType.MT_3D_4x4, 3, new double[3], true, false, false);
-        assertRow3D(MatrixType.MT_3D_4x4, 3, new double[4], true, true, false);
-        assertRow3D(MatrixType.MT_3D_4x4, -1, null, true, false, true);
-        assertRow3D(MatrixType.MT_3D_4x4, 4, null, false, false, true);
+        assertRow3D(t, MatrixType.MT_3D_4x4, 0, null, false, false, false);
+        assertRow3D(t, MatrixType.MT_3D_4x4, 0, null, true, false, false);
+        assertRow3D(t, MatrixType.MT_3D_4x4, 0, new double[3], true, false, false);
+        assertRow3D(t, MatrixType.MT_3D_4x4, 0, new double[4], true, true, false);
+        assertRow3D(t, MatrixType.MT_3D_4x4, 1, null, false, false, false);
+        assertRow3D(t, MatrixType.MT_3D_4x4, 1, null, true, false, false);
+        assertRow3D(t, MatrixType.MT_3D_4x4, 1, new double[3], true, false, false);
+        assertRow3D(t, MatrixType.MT_3D_4x4, 1, new double[4], true, true, false);
+        assertRow3D(t, MatrixType.MT_3D_4x4, 2, null, false, false, false);
+        assertRow3D(t, MatrixType.MT_3D_4x4, 2, null, true, false, false);
+        assertRow3D(t, MatrixType.MT_3D_4x4, 2, new double[3], true, false, false);
+        assertRow3D(t, MatrixType.MT_3D_4x4, 2, new double[4], true, true, false);
+        assertRow3D(t, MatrixType.MT_3D_4x4, 3, null, false, false, false);
+        assertRow3D(t, MatrixType.MT_3D_4x4, 3, null, true, false, false);
+        assertRow3D(t, MatrixType.MT_3D_4x4, 3, new double[3], true, false, false);
+        assertRow3D(t, MatrixType.MT_3D_4x4, 3, new double[4], true, true, false);
+        assertRow3D(t, MatrixType.MT_3D_4x4, -1, null, true, false, true);
+        assertRow3D(t, MatrixType.MT_3D_4x4, 4, null, false, false, true);
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testRowNullType1() {
-        t.row(null, 0);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testRowNullType1(Transform t,
+                                 Transform it,
+                                 boolean is2d,
+                                 boolean isIdentity,
+                                 boolean isInvertible,
+                                 Class<?> inverseType) {
+        assertThrows(NullPointerException.class, () -> {
+            t.row(null, 0);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testRowNullType2() {
-        t.row(null, 0, new double[] {});
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testRowNullType2(Transform t,
+                                 Transform it,
+                                 boolean is2d,
+                                 boolean isIdentity,
+                                 boolean isInvertible,
+                                 Class<?> inverseType) {
+        assertThrows(NullPointerException.class, () -> {
+            t.row(null, 0, new double[] {});
+        });
     }
 
     private void assertCol(MatrixType type, int col, double[] a, Transform t) {
@@ -2348,7 +2874,7 @@ public class TransformOperationsTest {
         fail("Should have thrown IOB");
     }
 
-    private void assertCol2D(MatrixType type, int col, double[] tmp,
+    private void assertCol2D(Transform t, boolean is2d, MatrixType type, int col, double[] tmp,
             boolean shouldPass, boolean shouldUse, boolean iob) {
         double[] a = null;
         try {
@@ -2381,7 +2907,7 @@ public class TransformOperationsTest {
         }
     }
 
-    private void assertCol3D(MatrixType type, int col, double[] tmp,
+    private void assertCol3D(Transform t, MatrixType type, int col, double[] tmp,
             boolean shouldPass, boolean shouldUse, boolean iob) {
         double[] a = null;
         try {
@@ -2407,89 +2933,117 @@ public class TransformOperationsTest {
         }
     }
 
-    @Test
-    public void testColumn() {
-        assertCol2D(MatrixType.MT_2D_2x3, 0, null, false, false, false);
-        assertCol2D(MatrixType.MT_2D_2x3, 0, null, true, false, false);
-        assertCol2D(MatrixType.MT_2D_2x3, 0, new double[1], true, false, false);
-        assertCol2D(MatrixType.MT_2D_2x3, 0, new double[2], true, true, false);
-        assertCol2D(MatrixType.MT_2D_2x3, 1, null, false, false, false);
-        assertCol2D(MatrixType.MT_2D_2x3, 1, null, true, false, false);
-        assertCol2D(MatrixType.MT_2D_2x3, 1, new double[1], true, false, false);
-        assertCol2D(MatrixType.MT_2D_2x3, 1, new double[2], true, true, false);
-        assertCol2D(MatrixType.MT_2D_2x3, 2, null, false, false, false);
-        assertCol2D(MatrixType.MT_2D_2x3, 2, null, true, false, false);
-        assertCol2D(MatrixType.MT_2D_2x3, 2, new double[1], true, false, false);
-        assertCol2D(MatrixType.MT_2D_2x3, 2, new double[2], true, true, false);
-        assertCol2D(MatrixType.MT_2D_2x3, -1, null, true, false, true);
-        assertCol2D(MatrixType.MT_2D_2x3, 3, null, false, false, true);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testColumn(Transform t,
+                           Transform it,
+                           boolean is2d,
+                           boolean isIdentity,
+                           boolean isInvertible,
+                           Class<?> inverseType) {
+        assertCol2D(t, is2d, MatrixType.MT_2D_2x3, 0, null, false, false, false);
+        assertCol2D(t, is2d, MatrixType.MT_2D_2x3, 0, null, true, false, false);
+        assertCol2D(t, is2d, MatrixType.MT_2D_2x3, 0, new double[1], true, false, false);
+        assertCol2D(t, is2d, MatrixType.MT_2D_2x3, 0, new double[2], true, true, false);
+        assertCol2D(t, is2d, MatrixType.MT_2D_2x3, 1, null, false, false, false);
+        assertCol2D(t, is2d, MatrixType.MT_2D_2x3, 1, null, true, false, false);
+        assertCol2D(t, is2d, MatrixType.MT_2D_2x3, 1, new double[1], true, false, false);
+        assertCol2D(t, is2d, MatrixType.MT_2D_2x3, 1, new double[2], true, true, false);
+        assertCol2D(t, is2d, MatrixType.MT_2D_2x3, 2, null, false, false, false);
+        assertCol2D(t, is2d, MatrixType.MT_2D_2x3, 2, null, true, false, false);
+        assertCol2D(t, is2d, MatrixType.MT_2D_2x3, 2, new double[1], true, false, false);
+        assertCol2D(t, is2d, MatrixType.MT_2D_2x3, 2, new double[2], true, true, false);
+        assertCol2D(t, is2d, MatrixType.MT_2D_2x3, -1, null, true, false, true);
+        assertCol2D(t, is2d, MatrixType.MT_2D_2x3, 3, null, false, false, true);
 
-        assertCol2D(MatrixType.MT_2D_3x3, 0, null, false, false, false);
-        assertCol2D(MatrixType.MT_2D_3x3, 0, null, true, false, false);
-        assertCol2D(MatrixType.MT_2D_3x3, 0, new double[2], true, false, false);
-        assertCol2D(MatrixType.MT_2D_3x3, 0, new double[3], true, true, false);
-        assertCol2D(MatrixType.MT_2D_3x3, 1, null, false, false, false);
-        assertCol2D(MatrixType.MT_2D_3x3, 1, null, true, false, false);
-        assertCol2D(MatrixType.MT_2D_3x3, 1, new double[2], true, false, false);
-        assertCol2D(MatrixType.MT_2D_3x3, 1, new double[3], true, true, false);
-        assertCol2D(MatrixType.MT_2D_3x3, 2, null, false, false, false);
-        assertCol2D(MatrixType.MT_2D_3x3, 2, null, true, false, false);
-        assertCol2D(MatrixType.MT_2D_3x3, 2, new double[2], true, false, false);
-        assertCol2D(MatrixType.MT_2D_3x3, 2, new double[3], true, true, false);
-        assertCol2D(MatrixType.MT_2D_3x3, -1, null, true, false, true);
-        assertCol2D(MatrixType.MT_2D_3x3, 3, null, false, false, true);
+        assertCol2D(t, is2d, MatrixType.MT_2D_3x3, 0, null, false, false, false);
+        assertCol2D(t, is2d, MatrixType.MT_2D_3x3, 0, null, true, false, false);
+        assertCol2D(t, is2d, MatrixType.MT_2D_3x3, 0, new double[2], true, false, false);
+        assertCol2D(t, is2d, MatrixType.MT_2D_3x3, 0, new double[3], true, true, false);
+        assertCol2D(t, is2d, MatrixType.MT_2D_3x3, 1, null, false, false, false);
+        assertCol2D(t, is2d, MatrixType.MT_2D_3x3, 1, null, true, false, false);
+        assertCol2D(t, is2d, MatrixType.MT_2D_3x3, 1, new double[2], true, false, false);
+        assertCol2D(t, is2d, MatrixType.MT_2D_3x3, 1, new double[3], true, true, false);
+        assertCol2D(t, is2d, MatrixType.MT_2D_3x3, 2, null, false, false, false);
+        assertCol2D(t, is2d, MatrixType.MT_2D_3x3, 2, null, true, false, false);
+        assertCol2D(t, is2d, MatrixType.MT_2D_3x3, 2, new double[2], true, false, false);
+        assertCol2D(t, is2d, MatrixType.MT_2D_3x3, 2, new double[3], true, true, false);
+        assertCol2D(t, is2d, MatrixType.MT_2D_3x3, -1, null, true, false, true);
+        assertCol2D(t, is2d, MatrixType.MT_2D_3x3, 3, null, false, false, true);
 
-        assertCol3D(MatrixType.MT_3D_3x4, 0, null, false, false, false);
-        assertCol3D(MatrixType.MT_3D_3x4, 0, null, true, false, false);
-        assertCol3D(MatrixType.MT_3D_3x4, 0, new double[2], true, false, false);
-        assertCol3D(MatrixType.MT_3D_3x4, 0, new double[3], true, true, false);
-        assertCol3D(MatrixType.MT_3D_3x4, 1, null, false, false, false);
-        assertCol3D(MatrixType.MT_3D_3x4, 1, null, true, false, false);
-        assertCol3D(MatrixType.MT_3D_3x4, 1, new double[2], true, false, false);
-        assertCol3D(MatrixType.MT_3D_3x4, 1, new double[3], true, true, false);
-        assertCol3D(MatrixType.MT_3D_3x4, 2, null, false, false, false);
-        assertCol3D(MatrixType.MT_3D_3x4, 2, null, true, false, false);
-        assertCol3D(MatrixType.MT_3D_3x4, 2, new double[2], true, false, false);
-        assertCol3D(MatrixType.MT_3D_3x4, 2, new double[3], true, true, false);
-        assertCol3D(MatrixType.MT_3D_3x4, 3, null, false, false, false);
-        assertCol3D(MatrixType.MT_3D_3x4, 3, null, true, false, false);
-        assertCol3D(MatrixType.MT_3D_3x4, 3, new double[2], true, false, false);
-        assertCol3D(MatrixType.MT_3D_3x4, 3, new double[3], true, true, false);
-        assertCol3D(MatrixType.MT_3D_3x4, -1, null, true, false, true);
-        assertCol3D(MatrixType.MT_3D_3x4, 4, null, false, false, true);
+        assertCol3D(t, MatrixType.MT_3D_3x4, 0, null, false, false, false);
+        assertCol3D(t, MatrixType.MT_3D_3x4, 0, null, true, false, false);
+        assertCol3D(t, MatrixType.MT_3D_3x4, 0, new double[2], true, false, false);
+        assertCol3D(t, MatrixType.MT_3D_3x4, 0, new double[3], true, true, false);
+        assertCol3D(t, MatrixType.MT_3D_3x4, 1, null, false, false, false);
+        assertCol3D(t, MatrixType.MT_3D_3x4, 1, null, true, false, false);
+        assertCol3D(t, MatrixType.MT_3D_3x4, 1, new double[2], true, false, false);
+        assertCol3D(t, MatrixType.MT_3D_3x4, 1, new double[3], true, true, false);
+        assertCol3D(t, MatrixType.MT_3D_3x4, 2, null, false, false, false);
+        assertCol3D(t, MatrixType.MT_3D_3x4, 2, null, true, false, false);
+        assertCol3D(t, MatrixType.MT_3D_3x4, 2, new double[2], true, false, false);
+        assertCol3D(t, MatrixType.MT_3D_3x4, 2, new double[3], true, true, false);
+        assertCol3D(t, MatrixType.MT_3D_3x4, 3, null, false, false, false);
+        assertCol3D(t, MatrixType.MT_3D_3x4, 3, null, true, false, false);
+        assertCol3D(t, MatrixType.MT_3D_3x4, 3, new double[2], true, false, false);
+        assertCol3D(t, MatrixType.MT_3D_3x4, 3, new double[3], true, true, false);
+        assertCol3D(t, MatrixType.MT_3D_3x4, -1, null, true, false, true);
+        assertCol3D(t, MatrixType.MT_3D_3x4, 4, null, false, false, true);
 
-        assertCol3D(MatrixType.MT_3D_4x4, 0, null, false, false, false);
-        assertCol3D(MatrixType.MT_3D_4x4, 0, null, true, false, false);
-        assertCol3D(MatrixType.MT_3D_4x4, 0, new double[3], true, false, false);
-        assertCol3D(MatrixType.MT_3D_4x4, 0, new double[4], true, true, false);
-        assertCol3D(MatrixType.MT_3D_4x4, 1, null, false, false, false);
-        assertCol3D(MatrixType.MT_3D_4x4, 1, null, true, false, false);
-        assertCol3D(MatrixType.MT_3D_4x4, 1, new double[3], true, false, false);
-        assertCol3D(MatrixType.MT_3D_4x4, 1, new double[4], true, true, false);
-        assertCol3D(MatrixType.MT_3D_4x4, 2, null, false, false, false);
-        assertCol3D(MatrixType.MT_3D_4x4, 2, null, true, false, false);
-        assertCol3D(MatrixType.MT_3D_4x4, 2, new double[3], true, false, false);
-        assertCol3D(MatrixType.MT_3D_4x4, 2, new double[4], true, true, false);
-        assertCol3D(MatrixType.MT_3D_4x4, 3, null, false, false, false);
-        assertCol3D(MatrixType.MT_3D_4x4, 3, null, true, false, false);
-        assertCol3D(MatrixType.MT_3D_4x4, 3, new double[3], true, false, false);
-        assertCol3D(MatrixType.MT_3D_4x4, 3, new double[4], true, true, false);
-        assertCol3D(MatrixType.MT_3D_4x4, -1, null, true, false, true);
-        assertCol3D(MatrixType.MT_3D_4x4, 4, null, false, false, true);
+        assertCol3D(t, MatrixType.MT_3D_4x4, 0, null, false, false, false);
+        assertCol3D(t, MatrixType.MT_3D_4x4, 0, null, true, false, false);
+        assertCol3D(t, MatrixType.MT_3D_4x4, 0, new double[3], true, false, false);
+        assertCol3D(t, MatrixType.MT_3D_4x4, 0, new double[4], true, true, false);
+        assertCol3D(t, MatrixType.MT_3D_4x4, 1, null, false, false, false);
+        assertCol3D(t, MatrixType.MT_3D_4x4, 1, null, true, false, false);
+        assertCol3D(t, MatrixType.MT_3D_4x4, 1, new double[3], true, false, false);
+        assertCol3D(t, MatrixType.MT_3D_4x4, 1, new double[4], true, true, false);
+        assertCol3D(t, MatrixType.MT_3D_4x4, 2, null, false, false, false);
+        assertCol3D(t, MatrixType.MT_3D_4x4, 2, null, true, false, false);
+        assertCol3D(t, MatrixType.MT_3D_4x4, 2, new double[3], true, false, false);
+        assertCol3D(t, MatrixType.MT_3D_4x4, 2, new double[4], true, true, false);
+        assertCol3D(t, MatrixType.MT_3D_4x4, 3, null, false, false, false);
+        assertCol3D(t, MatrixType.MT_3D_4x4, 3, null, true, false, false);
+        assertCol3D(t, MatrixType.MT_3D_4x4, 3, new double[3], true, false, false);
+        assertCol3D(t, MatrixType.MT_3D_4x4, 3, new double[4], true, true, false);
+        assertCol3D(t, MatrixType.MT_3D_4x4, -1, null, true, false, true);
+        assertCol3D(t, MatrixType.MT_3D_4x4, 4, null, false, false, true);
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testColumnNullType1() {
-        t.column(null, 0);
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testColumnNullType1(Transform t,
+                          Transform it,
+                          boolean is2d,
+                          boolean isIdentity,
+                          boolean isInvertible,
+                          Class<?> inverseType) {
+        assertThrows(NullPointerException.class, () -> {
+            t.column(null, 0);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testColumnNullType2() {
-        t.column(null, 0, new double[] {});
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testColumnNullType2(Transform t,
+                          Transform it,
+                          boolean is2d,
+                          boolean isIdentity,
+                          boolean isInvertible,
+                          Class<?> inverseType) {
+        assertThrows(NullPointerException.class, () -> {
+            t.column(null, 0, new double[] {});
+        });
     }
 
-    @Test
-    public void testSetOnTransformChanged() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testSetOnTransformChanged(Transform t,
+                          Transform it,
+                          boolean is2d,
+                          boolean isIdentity,
+                          boolean isInvertible,
+                          Class<?> inverseType) {
         Transform clone = t.clone();
 
         EventHandler<TransformChangedEvent> ontc =
@@ -2523,8 +3077,14 @@ public class TransformOperationsTest {
         }
     }
 
-    @Test
-    public void testAddRemoveEventHandler() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testAddRemoveEventHandler(Transform t,
+                          Transform it,
+                          boolean is2d,
+                          boolean isIdentity,
+                          boolean isInvertible,
+                          Class<?> inverseType) {
         Transform clone = t.clone();
 
         EventHandler<TransformChangedEvent> counting =
@@ -2565,8 +3125,14 @@ public class TransformOperationsTest {
         }
     }
 
-    @Test
-    public void testAddRemoveEventFilter() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testAddRemoveEventFilter(Transform t,
+                          Transform it,
+                          boolean is2d,
+                          boolean isIdentity,
+                          boolean isInvertible,
+                          Class<?> inverseType) {
         Transform clone = t.clone();
 
         EventHandler<TransformChangedEvent> counting =

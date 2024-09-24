@@ -25,24 +25,27 @@
 
 package test.javafx.css.imagecacheleaktest;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 import static test.javafx.css.imagecacheleaktest.Constants.ERROR_IMAGE_VIEW;
 import static test.javafx.css.imagecacheleaktest.Constants.ERROR_INCORRECT_GC;
 import static test.javafx.css.imagecacheleaktest.Constants.ERROR_LEAK;
 import static test.javafx.css.imagecacheleaktest.Constants.ERROR_NONE;
 import java.util.ArrayList;
-import org.junit.Test;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Unit test for verifying leak in CSS styles ImageCache.
  */
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class ImageCacheLeakTest {
 
     private static final String className = ImageCacheLeakTest.class.getName();
     private static final String pkgName = className.substring(0, className.lastIndexOf("."));
     private final String testAppName = pkgName + "." + "ImageCacheLeakApp";
 
-    @Test (timeout = 15000)
+    @Test
     public void testImageCacheLeak() throws Exception {
 
         String[] jvmArgs = new String[1];
