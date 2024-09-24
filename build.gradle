@@ -2959,6 +2959,10 @@ project(":swt") {
             "--add-exports=javafx.graphics/com.sun.javafx.tk=ALL-UNNAMED",
             ])
 
+    compileTestJava {
+        if (IS_TEST_SDK) enabled = false
+    }
+
     test {
         //enabled = IS_FULL_TEST && IS_SWT_TEST
         enabled = false // FIXME: JIGSAW -- support this with modules
