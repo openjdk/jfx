@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,79 +31,93 @@ import com.sun.javafx.sg.prism.NGQuadCurve;
 import javafx.scene.Node;
 import test.javafx.scene.NodeTest;
 import javafx.scene.shape.QuadCurve;
-import org.junit.Test;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 
 public class QuadCurveTest {
 
-    @Test public void testSetGetStartX() throws Exception {
+    @Test
+    public void testSetGetStartX() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new StubQuadCurve(), "startX", 123.2, 0.0);
     }
 
-    @Test public void testSetGetStartY() throws Exception {
+    @Test
+    public void testSetGetStartY() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new StubQuadCurve(), "startY", 123.2, 0.0);
     }
 
-    @Test public void testSetGetEndX() throws Exception {
+    @Test
+    public void testSetGetEndX() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new StubQuadCurve(), "endX", 123.2, 0.0);
     }
 
-    @Test public void testSetGetEndY() throws Exception {
+    @Test
+    public void testSetGetEndY() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new StubQuadCurve(), "endY", 123.2, 0.0);
     }
 
-    @Test public void testSetGetControlX() throws Exception {
+    @Test
+    public void testSetGetControlX() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new StubQuadCurve(), "controlX", 123.2, 0.0);
     }
 
-    @Test public void testSetGetControlY() throws Exception {
+    @Test
+    public void testSetGetControlY() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new StubQuadCurve(), "controlY", 123.2, 0.0);
     }
 
-    @Test public void testPropertyPropagation_visible() throws Exception {
+    @Test
+    public void testPropertyPropagation_visible() throws Exception {
         NodeTest.testBooleanPropertyPropagation(new StubQuadCurve(), "visible", false, true);
     }
 
-    @Test public void testBoundPropertySync_startX() throws Exception {
+    @Test
+    public void testBoundPropertySync_startX() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubQuadCurve(0.0 ,0.0, 10.0, 10.0, 100.0, 100.0),
                 "startX", "x1", 30.0);
     }
 
-    @Test public void testBoundPropertySync_startY() throws Exception {
+    @Test
+    public void testBoundPropertySync_startY() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubQuadCurve(0.0 ,0.0, 10.0, 10.0, 100.0, 100.0),
                 "startY", "y1", 30.0);
     }
 
-    @Test public void testBoundPropertySync_controlX() throws Exception {
+    @Test
+    public void testBoundPropertySync_controlX() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubQuadCurve(0.0 ,0.0, 10.0, 10.0, 100.0, 100.0),
                 "controlX", "ctrlX", 50.0);
     }
 
-    @Test public void testBoundPropertySync_controlY() throws Exception {
+    @Test
+    public void testBoundPropertySync_controlY() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubQuadCurve(0.0 ,0.0, 10.0, 10.0, 100.0, 100.0),
                 "controlY", "ctrlY", 50.0);
     }
 
-    @Test public void testBoundPropertySync_endX() throws Exception {
+    @Test
+    public void testBoundPropertySync_endX() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubQuadCurve(0.0 ,0.0, 10.0, 10.0, 100.0, 100.0),
                 "endX", "x2", 300.0);
     }
 
-    @Test public void testBoundPropertySync_endY() throws Exception {
+    @Test
+    public void testBoundPropertySync_endY() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubQuadCurve(0.0 ,0.0, 10.0, 10.0, 100.0, 100.0),
                 "endY", "y2", 50.0);
     }
 
-    @Test public void toStringShouldReturnNonEmptyString() {
+    @Test
+    public void toStringShouldReturnNonEmptyString() {
         String s = new StubQuadCurve().toString();
         assertNotNull(s);
         assertFalse(s.isEmpty());

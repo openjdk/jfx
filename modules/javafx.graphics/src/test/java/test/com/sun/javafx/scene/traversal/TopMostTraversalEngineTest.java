@@ -25,8 +25,8 @@
 
 package test.com.sun.javafx.scene.traversal;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -35,8 +35,8 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.traversal.TraversalDirection;
 import javafx.scene.traversal.TraversalMethod;
 import javafx.scene.traversal.TraversalPolicy;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import com.sun.javafx.scene.traversal.ContainerTabOrderShim;
 import com.sun.javafx.scene.traversal.OverridableTraversalPolicy;
 import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
@@ -45,7 +45,7 @@ public class TopMostTraversalEngineTest {
     private TraversalPolicy engine;
     private Group root;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         root = new Group();
         engine = new ContainerTabOrderShim();

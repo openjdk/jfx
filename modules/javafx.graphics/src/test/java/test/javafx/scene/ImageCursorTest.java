@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,17 +30,11 @@ import static test.javafx.scene.image.TestImages.TEST_IMAGE_100x0;
 import static test.javafx.scene.image.TestImages.TEST_IMAGE_100x200;
 import static test.javafx.scene.image.TestImages.TEST_IMAGE_200x100;
 import static test.javafx.scene.image.TestImages.TEST_IMAGE_32x32;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
 
 import javafx.beans.InvalidationListener;
 import javafx.geometry.Dimension2D;
 import javafx.scene.image.Image;
 import test.javafx.scene.image.TestImages;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
 
 import test.com.sun.javafx.pgstub.CursorSizeConverter;
 import test.com.sun.javafx.pgstub.StubAsyncImageLoader;
@@ -51,13 +45,19 @@ import test.com.sun.javafx.test.PropertyInvalidationCounter;
 import com.sun.javafx.tk.Toolkit;
 import javafx.scene.ImageCursor;
 
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+
 public final class ImageCursorTest {
     private static StubToolkit toolkit;
 
     private static CursorSizeConverter oldCursorSizeConverter;
     private static int oldMaximumCursorColors;
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass() {
         toolkit = (StubToolkit) Toolkit.getToolkit();
 
@@ -65,7 +65,7 @@ public final class ImageCursorTest {
         oldMaximumCursorColors = toolkit.getMaximumCursorColors();
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDownClass() {
         toolkit.setCursorSizeConverter(oldCursorSizeConverter);
         toolkit.setMaximumCursorColors(oldMaximumCursorColors);

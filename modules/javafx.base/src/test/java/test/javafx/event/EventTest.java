@@ -28,17 +28,21 @@ package test.javafx.event;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventType;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  *
  */
 public class EventTest {
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testTypeConflict() {
-        new EventType(Event.ANY, ActionEvent.ACTION.getName());
+        assertThrows(IllegalArgumentException.class, () -> {
+            new EventType(Event.ANY, ActionEvent.ACTION.getName());
+        });
     }
+
 
     @Test
     public void testTypeNew() {

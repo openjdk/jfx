@@ -27,6 +27,7 @@ package test.javafx.scene.control;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import javafx.geometry.Pos;
@@ -211,7 +212,7 @@ public class ProgressIndicatorTest {
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {
-               System.err.println("InterruptedException occurred during Thread.sleep()");
+                fail(e);
             }
         }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,12 +31,12 @@
 
 package test.javafx.scene.bounds;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
 import javafx.geometry.Bounds;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 public class BoundsPerformanceTest {
 
@@ -57,7 +57,8 @@ public class BoundsPerformanceTest {
      * only invalidates and requires recomputation of boundsInParent --
      * boundsInLocal and geom bounds are not touched.
      */
-    public @Test void testPerformance_TransformChangesOnlyAffectBoundsInParent() {
+    @Test
+    public void testPerformance_TransformChangesOnlyAffectBoundsInParent() {
         PerfNode n = new PerfNode();
         Bounds originalBoundsInParent = n.getBoundsInParent();
         Bounds originalBoundsInLocal = n.getBoundsInLocal();
@@ -76,7 +77,8 @@ public class BoundsPerformanceTest {
         assertNotSame(originalBoundsInParent, newBoundsInParent);
     }
 
-    public @Test void testPerformance_GeomChangesAffectEverything() {
+    @Test
+    public void testPerformance_GeomChangesAffectEverything() {
         PerfNode n = new PerfNode();
         Bounds originalBoundsInParent = n.getBoundsInParent();
         Bounds originalBoundsInLocal = n.getBoundsInLocal();
@@ -94,7 +96,8 @@ public class BoundsPerformanceTest {
         assertNotSame(originalBoundsInParent, newBoundsInParent);
     }
 
-    public @Test void testPerformance_ComputeGeomNotCalledDuringStartup() {
+    @Test
+    public void testPerformance_ComputeGeomNotCalledDuringStartup() {
         PerfNode n = new PerfNode(100, 100, 10, 10);
         assertEquals(0, n.geomComputeCount);
 
@@ -106,7 +109,8 @@ public class BoundsPerformanceTest {
 
     // Tests that if I set the x or y on the ResizablePerfNode, that it doesn't
     // * cause a new layout bounds to be created.
-    public @Test void testPerformance_LayoutBoundsOfResizableNotAffectedByChangesToOtherGeom() {
+    @Test
+    public void testPerformance_LayoutBoundsOfResizableNotAffectedByChangesToOtherGeom() {
         ResizablePerfNode n = new ResizablePerfNode();
         Bounds originalLayoutBounds = n.getLayoutBounds();
         n.setX(100);
@@ -117,7 +121,8 @@ public class BoundsPerformanceTest {
         assertNotSame(originalLayoutBounds, newLayoutBounds);
     }
 
-    public @Test void testPerformance_ChangingMultipleGeomOnlyCallsComputeGeomOnce() {
+    @Test
+    public void testPerformance_ChangingMultipleGeomOnlyCallsComputeGeomOnce() {
         PerfNode n = new PerfNode();
         Bounds originalBoundsInParent = n.getBoundsInParent();
         Bounds originalBoundsInLocal = n.getBoundsInLocal();

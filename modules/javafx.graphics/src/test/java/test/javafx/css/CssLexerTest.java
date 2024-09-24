@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,38 +35,35 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import javafx.css.CssLexerShim;
-import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
 
-import org.junit.Test;
-
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class CssLexerTest {
 
     public CssLexerTest() {
     }
 
-    private void checkTokens(List<TokenShim> resultTokens, TokenShim... expectedTokens)
-        throws org.junit.ComparisonFailure {
+    private void checkTokens(List<TokenShim> resultTokens, TokenShim... expectedTokens) {
 
         if (expectedTokens.length != resultTokens.size()) {
-            throw new org.junit.ComparisonFailure(
-                "lengths do not match",
-                    Arrays.toString(expectedTokens),
-                resultTokens.toString()
+            fail(
+                "lengths do not match; " +
+                "expected: " + Arrays.toString(expectedTokens) +
+                "actual: " + resultTokens.toString()
             );
         }
-
         for (int n = 0; n<expectedTokens.length; n++) {
 
             final TokenShim result = resultTokens.get(n);
             final TokenShim expected = expectedTokens[n];
 
             if (expected.getType() != result.getType()) {
-                throw new org.junit.ComparisonFailure(
-                    "token " + n + " types do not match",
-                    Arrays.toString(expectedTokens),
-                    resultTokens.toString()
+                fail(
+                    "token " + n + " types do not match; " +
+                    "expected: " + Arrays.toString(expectedTokens) +
+                    "actual: " + resultTokens.toString()
                 );
             }
 
@@ -74,10 +71,10 @@ public class CssLexerTest {
             final String resultText = result.getText();
 
             if (expectedText == null ? resultText != null : !expectedText.equals(resultText)) {
-                throw new org.junit.ComparisonFailure(
-                    "token " + n + " text does not match",
-                    Arrays.toString(expectedTokens),
-                    resultTokens.toString()
+                fail(
+                    "token " + n + " text does not match; " +
+                    "expected: " + Arrays.toString(expectedTokens) +
+                    "actual: " + resultTokens.toString()
                 );
             }
         }
@@ -100,7 +97,7 @@ public class CssLexerTest {
         return Collections.unmodifiableList(tokens);
     }
 
-    private void lexDigitsWithUnits(String units, int type) throws org.junit.ComparisonFailure {
+    private void lexDigitsWithUnits(String units, int type) {
 
         checkTokens(getTokens("123"+units), new TokenShim(type, "123"+units), TokenShim.EOF_TOKEN);
         checkTokens(getTokens("123.45"+units), new TokenShim(type, "123.45"+units), TokenShim.EOF_TOKEN);
@@ -323,8 +320,8 @@ public class CssLexerTest {
 
         for(int n=0; n<tlist.size(); n++) {
             TokenShim tok = tlist.get(n);
-            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
-            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+            assertEquals(expected[n].getLine(), tok.getLine(), "bad line. tok="+tok);
+            assertEquals(expected[n].getOffset(), tok.getOffset(), "bad offset. tok="+tok);
         }
 
     }
@@ -355,8 +352,8 @@ public class CssLexerTest {
 
         for(int n=0; n<tlist.size(); n++) {
             TokenShim tok = tlist.get(n);
-            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
-            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+            assertEquals(expected[n].getLine(), tok.getLine(), "bad line. tok="+tok);
+            assertEquals(expected[n].getOffset(), tok.getOffset(), "bad offset. tok="+tok);
         }
 
     }
@@ -387,8 +384,8 @@ public class CssLexerTest {
 
         for(int n=0; n<tlist.size(); n++) {
             TokenShim tok = tlist.get(n);
-            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
-            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+            assertEquals(expected[n].getLine(), tok.getLine(), "bad line. tok="+tok);
+            assertEquals(expected[n].getOffset(), tok.getOffset(), "bad offset. tok="+tok);
         }
 
     }
@@ -419,8 +416,8 @@ public class CssLexerTest {
 
         for(int n=0; n<tlist.size(); n++) {
             TokenShim tok = tlist.get(n);
-            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
-            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+            assertEquals(expected[n].getLine(), tok.getLine(), "bad line. tok="+tok);
+            assertEquals(expected[n].getOffset(), tok.getOffset(), "bad offset. tok="+tok);
         }
 
     }
@@ -445,8 +442,8 @@ public class CssLexerTest {
 
         for(int n=0; n<tlist.size(); n++) {
             TokenShim tok = tlist.get(n);
-            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
-            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+            assertEquals(expected[n].getLine(), tok.getLine(), "bad line. tok="+tok);
+            assertEquals(expected[n].getOffset(), tok.getOffset(), "bad offset. tok="+tok);
         }
     }
 
@@ -471,8 +468,8 @@ public class CssLexerTest {
 
         for(int n=0; n<tlist.size(); n++) {
             TokenShim tok = tlist.get(n);
-            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
-            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+            assertEquals(expected[n].getLine(), tok.getLine(), "bad line. tok="+tok);
+            assertEquals(expected[n].getOffset(), tok.getOffset(), "bad offset. tok="+tok);
         }
     }
 
@@ -499,8 +496,8 @@ public class CssLexerTest {
 
         for(int n=0; n<tlist.size(); n++) {
             TokenShim tok = tlist.get(n);
-            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
-            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+            assertEquals(expected[n].getLine(), tok.getLine(), "bad line. tok="+tok);
+            assertEquals(expected[n].getOffset(), tok.getOffset(), "bad offset. tok="+tok);
         }
     }
 
@@ -524,8 +521,8 @@ public class CssLexerTest {
 
         for(int n=0; n<tlist.size(); n++) {
             TokenShim tok = tlist.get(n);
-            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
-            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+            assertEquals(expected[n].getLine(), tok.getLine(), "bad line. tok="+tok);
+            assertEquals(expected[n].getOffset(), tok.getOffset(), "bad offset. tok="+tok);
         }
     }
 
@@ -549,8 +546,8 @@ public class CssLexerTest {
 
         for(int n=0; n<tlist.size(); n++) {
             TokenShim tok = tlist.get(n);
-            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
-            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+            assertEquals(expected[n].getLine(), tok.getLine(), "bad line. tok="+tok);
+            assertEquals(expected[n].getOffset(), tok.getOffset(), "bad offset. tok="+tok);
         }
     }
 
@@ -576,8 +573,8 @@ public class CssLexerTest {
 
         for(int n=0; n<tlist.size(); n++) {
             TokenShim tok = tlist.get(n);
-            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
-            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+            assertEquals(expected[n].getLine(), tok.getLine(), "bad line. tok="+tok);
+            assertEquals(expected[n].getOffset(), tok.getOffset(), "bad offset. tok="+tok);
         }
     }
 
@@ -603,8 +600,8 @@ public class CssLexerTest {
 
         for(int n=0; n<tlist.size(); n++) {
             TokenShim tok = tlist.get(n);
-            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
-            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+            assertEquals(expected[n].getLine(), tok.getLine(), "bad line. tok="+tok);
+            assertEquals(expected[n].getOffset(), tok.getOffset(), "bad offset. tok="+tok);
         }
     }
 
@@ -628,8 +625,8 @@ public class CssLexerTest {
 
         for(int n=0; n<tlist.size(); n++) {
             TokenShim tok = tlist.get(n);
-            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
-            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+            assertEquals(expected[n].getLine(), tok.getLine(), "bad line. tok="+tok);
+            assertEquals(expected[n].getOffset(), tok.getOffset(), "bad offset. tok="+tok);
         }
     }
 
@@ -667,8 +664,8 @@ public class CssLexerTest {
 
         for(int n=0; n<tlist.size(); n++) {
             TokenShim tok = tlist.get(n);
-            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
-            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+            assertEquals(expected[n].getLine(), tok.getLine(), "bad line. tok="+tok);
+            assertEquals(expected[n].getOffset(), tok.getOffset(), "bad offset. tok="+tok);
         }
     }
 
@@ -688,8 +685,8 @@ public class CssLexerTest {
 
         for(int n=0; n<tlist.size(); n++) {
             TokenShim tok = tlist.get(n);
-            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
-            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+            assertEquals(expected[n].getLine(), tok.getLine(), "bad line. tok="+tok);
+            assertEquals(expected[n].getOffset(), tok.getOffset(), "bad offset. tok="+tok);
         }
 
     }
@@ -710,8 +707,8 @@ public class CssLexerTest {
 
         for(int n=0; n<tlist.size(); n++) {
             TokenShim tok = tlist.get(n);
-            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
-            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+            assertEquals(expected[n].getLine(), tok.getLine(), "bad line. tok="+tok);
+            assertEquals(expected[n].getOffset(), tok.getOffset(), "bad offset. tok="+tok);
         }
 
     }
@@ -732,8 +729,8 @@ public class CssLexerTest {
 
         for(int n=0; n<tlist.size(); n++) {
             TokenShim tok = tlist.get(n);
-            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
-            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+            assertEquals(expected[n].getLine(), tok.getLine(), "bad line. tok="+tok);
+            assertEquals(expected[n].getOffset(), tok.getOffset(), "bad offset. tok="+tok);
         }
 
     }
@@ -754,8 +751,8 @@ public class CssLexerTest {
 
         for(int n=0; n<tlist.size(); n++) {
             TokenShim tok = tlist.get(n);
-            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
-            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+            assertEquals(expected[n].getLine(), tok.getLine(), "bad line. tok="+tok);
+            assertEquals(expected[n].getOffset(), tok.getOffset(), "bad offset. tok="+tok);
         }
 
     }
@@ -776,8 +773,8 @@ public class CssLexerTest {
 
         for(int n=0; n<tlist.size(); n++) {
             TokenShim tok = tlist.get(n);
-            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
-            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+            assertEquals(expected[n].getLine(), tok.getLine(), "bad line. tok="+tok);
+            assertEquals(expected[n].getOffset(), tok.getOffset(), "bad offset. tok="+tok);
         }
 
     }
@@ -798,8 +795,8 @@ public class CssLexerTest {
 
         for(int n=0; n<tlist.size(); n++) {
             TokenShim tok = tlist.get(n);
-            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
-            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+            assertEquals(expected[n].getLine(), tok.getLine(), "bad line. tok="+tok);
+            assertEquals(expected[n].getOffset(), tok.getOffset(), "bad offset. tok="+tok);
         }
 
     }
@@ -820,8 +817,8 @@ public class CssLexerTest {
 
         for(int n=0; n<tlist.size(); n++) {
             TokenShim tok = tlist.get(n);
-            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
-            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+            assertEquals(expected[n].getLine(), tok.getLine(), "bad line. tok="+tok);
+            assertEquals(expected[n].getOffset(), tok.getOffset(), "bad offset. tok="+tok);
         }
 
     }
@@ -842,8 +839,8 @@ public class CssLexerTest {
 
         for(int n=0; n<tlist.size(); n++) {
             TokenShim tok = tlist.get(n);
-            assertEquals("bad line. tok="+tok, expected[n].getLine(), tok.getLine());
-            assertEquals("bad offset. tok="+tok, expected[n].getOffset(), tok.getOffset());
+            assertEquals(expected[n].getLine(), tok.getLine(), "bad line. tok="+tok);
+            assertEquals(expected[n].getOffset(), tok.getOffset(), "bad offset. tok="+tok);
         }
 
     }

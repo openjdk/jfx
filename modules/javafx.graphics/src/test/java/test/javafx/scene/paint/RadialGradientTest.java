@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,13 +34,15 @@ import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.RadialGradient;
 import javafx.scene.paint.Stop;
 import javafx.scene.Scene;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class RadialGradientTest {
 
@@ -82,13 +84,15 @@ public class RadialGradientTest {
         assertEquals(normalizedTwoStops, gradient.getStops());
     }
 
-    @Test(expected=UnsupportedOperationException.class)
+    @Test
     public void testGetStopsCannotChangeGradient() {
-        RadialGradient gradient = new RadialGradient(0, 0, 1, 1, 2, true,
-                CycleMethod.NO_CYCLE, twoStops);
+        assertThrows(UnsupportedOperationException.class, () -> {
+            RadialGradient gradient = new RadialGradient(0, 0, 1, 1, 2, true,
+                    CycleMethod.NO_CYCLE, twoStops);
 
-        List<Stop> returned = gradient.getStops();
-        returned.set(0, stop2);
+            List<Stop> returned = gradient.getStops();
+            returned.set(0, stop2);
+        });
     }
 
     @SuppressWarnings("unlikely-arg-type")
@@ -210,14 +214,18 @@ public class RadialGradientTest {
         assertEquals(1.0, gradient.getStops().get(1).getOffset(), 0);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testValueOfNullValue() {
-        RadialGradient.valueOf(null);
+        assertThrows(NullPointerException.class, () -> {
+            RadialGradient.valueOf(null);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testValueOfEmpty() {
-        RadialGradient.valueOf("");
+        assertThrows(IllegalArgumentException.class, () -> {
+            RadialGradient.valueOf("");
+        });
     }
 
     @Test
