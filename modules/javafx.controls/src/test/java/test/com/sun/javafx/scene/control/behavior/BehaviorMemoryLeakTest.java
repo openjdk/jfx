@@ -25,15 +25,13 @@
 
 package test.com.sun.javafx.scene.control.behavior;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.asArrays;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.attemptGC;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.createBehavior;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.createControl;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.getControlClassesWithBehavior;
 import java.lang.ref.WeakReference;
-import java.util.Collection;
 import java.util.List;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
@@ -45,11 +43,10 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TreeTableView;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 
 /**
@@ -57,29 +54,26 @@ import com.sun.javafx.scene.control.behavior.BehaviorBase;
  * <p>
  * This test is parameterized on control type.
  */
-@RunWith(Parameterized.class)
-public class BehaviorMemoryLeakTest {
-
-    private Class<Control> controlClass;
-    private Control control;
+public final class BehaviorMemoryLeakTest {
 
     /**
-     * Create behavior -> dispose behavior -> gc
+     * Create control -> create behavior -> dispose behavior -> gc
      */
-    @Test
-    public void testMemoryLeakDisposeBehavior() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testMemoryLeakDisposeBehavior(Class<Control> controlClass) {
+        Control control = createControl(controlClass);
+        assertNotNull(control);
         WeakReference<BehaviorBase<?>> weakRef = new WeakReference<>(createBehavior(control));
         assertNotNull(weakRef.get());
         weakRef.get().dispose();
         attemptGC(weakRef);
-        assertNull("behavior must be gc'ed", weakRef.get());
+        assertNull(weakRef.get(), "behavior must be gc'ed");
     }
 
     //---------------- parameterized
 
-    // Note: name property not supported before junit 4.11
-    @Parameterized.Parameters // (name = "{index}: {0} ")
-    public static Collection<Object[]> data() {
+    private static List<Class<Control>> parameters() {
         List<Class<Control>> controlClasses = getControlClassesWithBehavior();
         // FIXME as part of JDK-8241364
         // The behaviors of these controls are leaking
@@ -101,21 +95,17 @@ public class BehaviorMemoryLeakTest {
          );
         // remove the known issues to make the test pass
         controlClasses.removeAll(leakingClasses);
-        return asArrays(controlClasses);
-    }
-
-    public BehaviorMemoryLeakTest(Class<Control> controlClass) {
-        this.controlClass = controlClass;
+        return controlClasses;
     }
 
 //------------------- setup
 
-    @After
+    @AfterEach
     public void cleanup() {
         Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
-    @Before
+    @BeforeEach
     public void setup() {
         Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
             if (throwable instanceof RuntimeException) {
@@ -124,8 +114,5 @@ public class BehaviorMemoryLeakTest {
                 Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
             }
         });
-        control = createControl(controlClass);
-        assertNotNull(control);
     }
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,11 +27,11 @@ package test.com.sun.javafx.scene.control.behavior;
 
 import static javafx.collections.FXCollections.observableArrayList;
 import static javafx.scene.control.skin.TextInputSkinShim.isCaretBlinking;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.createBehavior;
 import java.lang.ref.WeakReference;
 import java.util.Set;
@@ -49,9 +49,9 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.ListCellBehavior;
@@ -73,10 +73,10 @@ public class BehaviorCleanupTest {
     public void testTextAreaFocusListener() {
         TextArea control = new TextArea("some text");
         showControl(control, true);
-        assertTrue("caret must be blinking if focused", isCaretBlinking(control));
+        assertTrue(isCaretBlinking(control), "caret must be blinking if focused");
         Button button = new Button("dummy");
         showControl(button, true);
-        assertFalse("caret must not be blinking if not focused", isCaretBlinking(control));
+        assertFalse(isCaretBlinking(control), "caret must not be blinking if not focused");
     }
 
 //---------- TextField
@@ -85,20 +85,20 @@ public class BehaviorCleanupTest {
     public void testFocusListener() {
         TextField control = new TextField("some text");
         showControl(control, true);
-        assertTrue("caret must be blinking if focused", isCaretBlinking(control));
+        assertTrue(isCaretBlinking(control), "caret must be blinking if focused");
         Button button = new Button("dummy");
         showControl(button, true);
-        assertFalse("caret must not be blinking if not focused", isCaretBlinking(control));
+        assertFalse(isCaretBlinking(control), "caret must not be blinking if not focused");
     }
 
     @Test
     public void testFocusOwnerListenerRegisteredInitially() {
         TextField control = new TextField("some text");
         showControl(control, true);
-        assertEquals("all text selected", control.getText(), control.getSelectedText());
+        assertEquals(control.getText(), control.getSelectedText(), "all text selected");
         Button button = new Button("dummy");
         showControl(button, true);
-        assertEquals("selection cleared", 0, control.getSelectedText().length());
+        assertEquals(0, control.getSelectedText().length(), "selection cleared");
     }
 
     /**
@@ -118,20 +118,18 @@ public class BehaviorCleanupTest {
         Button button = new Button("dummy");
         showControl(button, false);
         control.selectNextWord();
-        assertEquals("sanity: ", secondWord, control.getSelectedText());
+        assertEquals(secondWord, control.getSelectedText(), "sanity: ");
         // detach textfield from scene
         root.getChildren().remove(control);
-        assertEquals("selection unchanged after remove", secondWord, control.getSelectedText());
+        assertEquals(secondWord, control.getSelectedText(), "selection unchanged after remove");
         // change scene's focusOwner to another node
         Button secondButton = new Button("another dummy");
         showControl(secondButton, true);
-        assertEquals("selection unchanged after focusOwner change in old scene",
-                secondWord, control.getSelectedText());
+        assertEquals(secondWord, control.getSelectedText(), "selection unchanged after focusOwner change in old scene");
         // re-add textField
         root.getChildren().add(control);
         control.requestFocus();
-        assertEquals("selection changed on becoming scene's focusOwner",
-                text, control.getSelectedText());
+        assertEquals(text, control.getSelectedText(), "selection changed on becoming scene's focusOwner");
     }
 
     /**
@@ -148,7 +146,7 @@ public class BehaviorCleanupTest {
         Button button = new Button("dummy");
         showControl(button, false);
         control.selectNextWord();
-        assertEquals("sanity: ", secondWord, control.getSelectedText());
+        assertEquals(secondWord, control.getSelectedText(), "sanity: ");
 
         // build and activate second stage
         VBox secondRoot = new VBox(10, new Button("secondButton"));
@@ -159,13 +157,13 @@ public class BehaviorCleanupTest {
         secondStage.requestFocus();
 
         try {
-            assertTrue("sanity: ", secondStage.isFocused());
-            assertEquals("selection unchanged", secondWord, control.getSelectedText());
+            assertTrue(secondStage.isFocused(), "sanity: ");
+            assertEquals(secondWord, control.getSelectedText(), "selection unchanged");
             // back to first
             stage.requestFocus();
-            assertTrue("sanity: ", stage.isFocused());
-            assertTrue("sanity: ", control.isFocused());
-            assertEquals("selection unchanged", secondWord, control.getSelectedText());
+            assertTrue(stage.isFocused(), "sanity: ");
+            assertTrue(control.isFocused(), "sanity: ");
+            assertEquals(secondWord, control.getSelectedText(), "selection unchanged");
         } finally {
             // cleanup
             secondStage.hide();
@@ -179,10 +177,9 @@ public class BehaviorCleanupTest {
 //        TextField control = new TextField("some text");
 //        TextFieldBehavior behavior = (TextFieldBehavior) createBehavior(control);
 //        InputMap<?> inputMap = behavior.getInputMap();
-//        // child maps are not used anymore
-//        //assertFalse("sanity: inputMap has child maps", inputMap.getChildInputMaps().isEmpty());
+//        assertFalse(inputMap.getChildInputMaps().isEmpty(), "sanity: inputMap has child maps");
 //        behavior.dispose();
-//        assertEquals("default child maps must be cleared", 0, inputMap.getChildInputMaps().size());
+//        assertEquals(0, inputMap.getChildInputMaps().size(), "default child maps must be cleared");
 //    }
 
 //    @Test
@@ -190,9 +187,9 @@ public class BehaviorCleanupTest {
 //        TextField control = new TextField("some text");
 //        TextFieldBehavior behavior = (TextFieldBehavior) createBehavior(control);
 //        InputMap<?> inputMap = behavior.getInputMap();
-//        assertFalse("sanity: inputMap has mappings", inputMap.getMappings().isEmpty());
+//        assertFalse(inputMap.getMappings().isEmpty(), "sanity: inputMap has mappings");
 //        behavior.dispose();
-//        assertEquals("default mappings must be cleared", 0, inputMap.getMappings().size());
+//        assertEquals(0, inputMap.getMappings().size(), "default mappings must be cleared");
 //    }
 
     /**
@@ -271,10 +268,10 @@ public class BehaviorCleanupTest {
             if (PlatformUtil.isMac()) {
                 KeyBinding expectedMac = KeyBinding.command(c);
                 System.out.println(expectedMac);
-                assertTrue("code=" + c, keys.contains(expectedMac));
+                assertTrue(keys.contains(expectedMac), "code=" + c);
             } else {
                 KeyBinding expectedNotMac = KeyBinding.ctrl(c);
-                assertTrue("code=" + c, keys.contains(expectedNotMac));
+                assertTrue(keys.contains(expectedNotMac), "code=" + c);
             }
         }
     }
@@ -287,13 +284,13 @@ public class BehaviorCleanupTest {
 //    @Test
 //    public void testTextPropertyListener() {
 //        TextField control = new TextField("some text");
-//        TextFieldBehavior behavior = new TextFieldBehavior();
-//        assertNull("sanity: initial bidi", getRawBidi(behavior));
+//        TextFieldBehavior behavior = (TextFieldBehavior) createBehavior(control);
+//        assertNull(getRawBidi(behavior), "sanity: initial bidi");
 //        // validate bidi field
 //        isRTLText(behavior);
 //        assertNotNull(getRawBidi(behavior));
 //        control.setText("dummy");
-//        assertNull("listener working (bidi is reset)", getRawBidi(behavior));
+//        assertNull(getRawBidi(behavior), "listener working (bidi is reset)");
 //    }
 
 //----------- TreeView
@@ -308,8 +305,7 @@ public class BehaviorCleanupTest {
         treeView.getSelectionModel().select(1);
         weakRef.get().dispose();
         treeView.getSelectionModel().select(0);
-        assertNull("anchor must remain cleared on selecting when disposed",
-                treeView.getProperties().get("anchor"));
+        assertNull(treeView.getProperties().get("anchor"), "anchor must remain cleared on selecting when disposed");
     }
 
     @Test
@@ -318,7 +314,7 @@ public class BehaviorCleanupTest {
         createBehavior(treeView);
         int last = 1;
         treeView.getSelectionModel().select(last);
-        assertEquals("anchor must be set", last, treeView.getProperties().get("anchor"));
+        assertEquals(last, treeView.getProperties().get("anchor"), "anchor must be set");
     }
 
     @Test
@@ -327,7 +323,7 @@ public class BehaviorCleanupTest {
         WeakReference<BehaviorBase<?>> weakRef = new WeakReference<>(createBehavior(treeView));
         treeView.getSelectionModel().select(1);
         weakRef.get().dispose();
-        assertNull("anchor must be cleared after dispose", treeView.getProperties().get("anchor"));
+        assertNull(treeView.getProperties().get("anchor"), "anchor must be cleared after dispose");
     }
 
     /**
@@ -354,10 +350,9 @@ public class BehaviorCleanupTest {
         int last = 1;
         ListCellBehavior.setAnchor(listView, last, false);
         listView.setItems(observableArrayList("other", "again"));
-        assertEquals("sanity: anchor unchanged", last, listView.getProperties().get("anchor"));
+        assertEquals(last, listView.getProperties().get("anchor"), "sanity: anchor unchanged");
         listView.getItems().remove(0);
-        assertEquals("anchor must not be updated on items modification when disposed",
-                last, listView.getProperties().get("anchor"));
+        assertEquals(last, listView.getProperties().get("anchor"), "anchor must not be updated on items modification when disposed");
     }
 
     @Test
@@ -367,10 +362,9 @@ public class BehaviorCleanupTest {
         int last = 1;
         ListCellBehavior.setAnchor(listView, last, false);
         listView.setItems(observableArrayList("other", "again"));
-        assertEquals("sanity: anchor unchanged", last, listView.getProperties().get("anchor"));
+        assertEquals(last, listView.getProperties().get("anchor"), "sanity: anchor unchanged");
         listView.getItems().remove(0);
-        assertEquals("anchor must be updated on items modification",
-                last -1, listView.getProperties().get("anchor"));
+        assertEquals(last -1, listView.getProperties().get("anchor"), "anchor must be updated on items modification");
    }
 
     /**
@@ -384,9 +378,10 @@ public class BehaviorCleanupTest {
         int last = 1;
         ListCellBehavior.setAnchor(listView, last, false);
         listView.getItems().remove(0);
-        assertEquals("anchor must not be updated on items modification when disposed",
-                last,
-                listView.getProperties().get("anchor"));
+        assertEquals(
+            last,
+            listView.getProperties().get("anchor"),
+            "anchor must not be updated on items modification when disposed");
     }
 
     @Test
@@ -395,10 +390,9 @@ public class BehaviorCleanupTest {
         createBehavior(listView);
         int last = 1;
         ListCellBehavior.setAnchor(listView, last, false);
-        assertEquals("behavior must set anchor on select", last, listView.getProperties().get("anchor"));
+        assertEquals(last, listView.getProperties().get("anchor"), "behavior must set anchor on select");
         listView.getItems().remove(0);
-        assertEquals("anchor must be updated on items modification",
-                last -1, listView.getProperties().get("anchor"));
+        assertEquals(last -1, listView.getProperties().get("anchor"), "anchor must be updated on items modification");
     }
 
     /**
@@ -411,8 +405,7 @@ public class BehaviorCleanupTest {
         listView.getSelectionModel().select(1);
         weakRef.get().dispose();
         listView.getSelectionModel().select(0);
-        assertNull("anchor must remain cleared on selecting when disposed",
-                listView.getProperties().get("anchor"));
+        assertNull(listView.getProperties().get("anchor"), "anchor must remain cleared on selecting when disposed");
     }
 
     @Test
@@ -421,7 +414,7 @@ public class BehaviorCleanupTest {
         createBehavior(listView);
         int last = 1;
         listView.getSelectionModel().select(last);
-        assertEquals("anchor must be set", last, listView.getProperties().get("anchor"));
+        assertEquals(last, listView.getProperties().get("anchor"), "anchor must be set");
     }
 
     @Test
@@ -430,7 +423,7 @@ public class BehaviorCleanupTest {
         WeakReference<BehaviorBase<?>> weakRef = new WeakReference<>(createBehavior(listView));
         listView.getSelectionModel().select(1);
         weakRef.get().dispose();
-        assertNull("anchor must be cleared after dispose", listView.getProperties().get("anchor"));
+        assertNull(listView.getProperties().get("anchor"), "anchor must be cleared after dispose");
     }
 
   //------------------ setup/cleanup
@@ -470,7 +463,7 @@ public class BehaviorCleanupTest {
         }
     }
 
-    @After
+    @AfterEach
     public void cleanup() {
         if (stage != null) {
             stage.hide();
@@ -478,7 +471,7 @@ public class BehaviorCleanupTest {
         Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
-    @Before
+    @BeforeEach
     public void setup() {
         Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
             if (throwable instanceof RuntimeException) {
@@ -488,5 +481,4 @@ public class BehaviorCleanupTest {
             }
         });
     }
-
 }

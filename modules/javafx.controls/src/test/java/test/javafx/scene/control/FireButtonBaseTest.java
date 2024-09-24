@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,11 @@
 
 package test.javafx.scene.control;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.Collection;
+import java.util.List;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import java.util.Arrays;
-import java.util.Collection;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBase;
 import javafx.scene.control.CheckBox;
@@ -37,50 +38,50 @@ import javafx.scene.control.MenuButton;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.SplitMenuButton;
 import javafx.scene.control.ToggleButton;
-
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  */
-@RunWith(Parameterized.class)
 public class FireButtonBaseTest {
-    @SuppressWarnings("rawtypes")
-    @Parameterized.Parameters public static Collection implementations() {
-        return Arrays.asList(new Object[][]{
-                {Button.class},
-                {CheckBox.class},
-                {Hyperlink.class},
-                {RadioButton.class},
-                {MenuButton.class},
-                {SplitMenuButton.class},
-                {ToggleButton.class}
-        });
+    private static Collection<Class<?>> parameters() {
+        return List.of(
+            Button.class,
+            CheckBox.class,
+            Hyperlink.class,
+            RadioButton.class,
+            MenuButton.class,
+            SplitMenuButton.class,
+            ToggleButton.class
+        );
     }
 
     private ButtonBase btn;
-    private Class type;
 
-    public FireButtonBaseTest(Class type) {
-        this.type = type;
+    //@BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    public void setup(Class<?> type) {
+        try {
+            btn = (ButtonBase) type.getDeclaredConstructor().newInstance();
+        } catch(Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    @Before public void setup() throws Exception {
-        btn = (ButtonBase) type.getDeclaredConstructor().newInstance();
-    }
-
-    @Test public void onActionCalledWhenButtonIsFired() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void onActionCalledWhenButtonIsFired(Class<?> type) {
+        setup(type);
         final EventHandlerStub handler = new EventHandlerStub();
         btn.setOnAction(handler);
         btn.fire();
         assertTrue(handler.called);
     }
 
-    @Test public void onActionCalledWhenNullWhenButtonIsFiredIsNoOp() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void onActionCalledWhenNullWhenButtonIsFiredIsNoOp(Class<?> type) {
+        setup(type);
         btn.fire(); // should throw no exceptions, if it does, the test fails
     }
 

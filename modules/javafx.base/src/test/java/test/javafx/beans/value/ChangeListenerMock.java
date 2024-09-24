@@ -27,7 +27,7 @@ package test.javafx.beans.value;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class ChangeListenerMock<T> implements ChangeListener<T> {
 

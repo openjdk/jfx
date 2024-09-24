@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,112 +27,119 @@ package com.sun.scenario.effect.compiler.parser;
 
 import com.sun.scenario.effect.compiler.JSLParser;
 import com.sun.scenario.effect.compiler.tree.JSLVisitor;
-import junit.framework.Assert;
-import junit.framework.AssertionFailedError;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class FieldSelectTest extends ParserBase {
 
     @Test
-    public void rgba() throws Exception {
+    public void rgba() {
         String tree = parseTreeFor(".rgba");
         assertEquals(tree, ".rgba");
     }
 
     @Test
-    public void rgb() throws Exception {
+    public void rgb() {
         String tree = parseTreeFor(".rgb");
         assertEquals(tree, ".rgb");
     }
 
     @Test
-    public void rg() throws Exception {
+    public void rg() {
         String tree = parseTreeFor(".rg");
         assertEquals(tree, ".rg");
     }
 
     @Test
-    public void r() throws Exception {
+    public void r() {
         String tree = parseTreeFor(".r");
         assertEquals(tree, ".r");
     }
 
     @Test
-    public void aaaa() throws Exception {
+    public void aaaa() {
         String tree = parseTreeFor(".aaaa");
         assertEquals(tree, ".aaaa");
     }
 
     @Test
-    public void abgr() throws Exception {
+    public void abgr() {
         String tree = parseTreeFor(".abgr");
         assertEquals(tree, ".abgr");
     }
 
     @Test
-    public void xyzw() throws Exception {
+    public void xyzw() {
         String tree = parseTreeFor(".xyzw");
         assertEquals(tree, ".xyzw");
     }
 
     @Test
-    public void xyz() throws Exception {
+    public void xyz() {
         String tree = parseTreeFor(".xyz");
         assertEquals(tree, ".xyz");
     }
 
     @Test
-    public void xy() throws Exception {
+    public void xy() {
         String tree = parseTreeFor(".xy");
         assertEquals(tree, ".xy");
     }
 
     @Test
-    public void x() throws Exception {
+    public void x() {
         String tree = parseTreeFor(".x");
         assertEquals(tree, ".x");
     }
 
     @Test
-    public void zzz() throws Exception {
+    public void zzz() {
         String tree = parseTreeFor(".zzz");
         assertEquals(tree, ".zzz");
     }
 
     @Test
-    public void wzyz() throws Exception {
+    public void wzyz() {
         String tree = parseTreeFor(".wzyx");
         assertEquals(tree, ".wzyx");
     }
 
-    @Test(expected = ParseCancellationException.class)
-    public void notAFieldSelection1() throws Exception {
-        parseTreeFor("qpz");
+    @Test
+    public void notAFieldSelection1() {
+        assertThrows(ParseCancellationException.class, () -> {
+            parseTreeFor("qpz");
+        });
     }
 
-    @Test(expected = AssertionFailedError.class)
-    public void notAFieldSelection2() throws Exception {
-        parseTreeFor(".xqpz", true);
+    @Test
+    public void notAFieldSelection2() {
+        assertThrows(AssertionFailedError.class, () -> {
+            parseTreeFor(".xqpz", true);
+        });
     }
 
-    @Test(expected = AssertionFailedError.class)
-    public void tooManyVals() throws Exception {
-        parseTreeFor(".xyzwx", true);
+    @Test
+    public void tooManyVals() {
+        assertThrows(AssertionFailedError.class, () -> {
+            parseTreeFor(".xyzwx", true);
+        });
     }
 
-    @Test(expected = AssertionFailedError.class)
-    public void mixedVals() throws Exception {
-        parseTreeFor(".xyba", true);
+    @Test
+    public void mixedVals() {
+        assertThrows(AssertionFailedError.class, () -> {
+            parseTreeFor(".xyba", true);
+        });
     }
 
-    private String parseTreeFor(String text) throws Exception {
+    private String parseTreeFor(String text) {
         return parseTreeFor(text, false);
     }
 
-    private String parseTreeFor(String text, boolean expectEx) throws Exception {
+    private String parseTreeFor(String text, boolean expectEx) {
         JSLParser parser = parserOver(text);
         JSLVisitor visitor = new JSLVisitor();
         String ret = visitor.visitField_selection(parser.field_selection()).getString();

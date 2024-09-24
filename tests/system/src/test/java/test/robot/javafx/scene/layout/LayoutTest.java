@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,9 @@
  */
 package test.robot.javafx.scene.layout;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.concurrent.TimeUnit;
 import javafx.geometry.BoundingBox;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
@@ -33,14 +36,14 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Ellipse;
 import javafx.stage.Stage;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import test.robot.testharness.VisualTestBase;
 
 /**
  * Test requestLayout call and layout bounds update of node in the scene graph.
  */
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class LayoutTest extends VisualTestBase {
 
     private static class CustomPane extends Pane {
@@ -72,7 +75,7 @@ public class LayoutTest extends VisualTestBase {
     private Stage testStage;
     private Scene testScene;
 
-    @Test(timeout = 15000)
+    @Test
     public void testRequestLayout() {
     final Label l1 = new Label("1 2");
     final Ellipse e1 = new Ellipse(20, 30);
@@ -152,7 +155,7 @@ public class LayoutTest extends VisualTestBase {
 
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testStackPane() {
     final Label l1 = new Label("1 2");
     final Ellipse e1 = new Ellipse(20, 30);
@@ -223,7 +226,7 @@ public class LayoutTest extends VisualTestBase {
 
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testVBox() {
     final Label l1 = new Label("1 2");
     final Ellipse e1 = new Ellipse(20, 30);
@@ -294,7 +297,7 @@ public class LayoutTest extends VisualTestBase {
 
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testHBox() {
     final Label l1 = new Label("1 2");
     final Ellipse e1 = new Ellipse(20, 30);

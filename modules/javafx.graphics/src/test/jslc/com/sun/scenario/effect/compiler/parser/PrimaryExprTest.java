@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,11 +32,13 @@ import com.sun.scenario.effect.compiler.tree.JSLVisitor;
 import com.sun.scenario.effect.compiler.tree.LiteralExpr;
 import com.sun.scenario.effect.compiler.tree.VariableExpr;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
-import org.junit.Before;
-import org.junit.Test;
 import static com.sun.scenario.effect.compiler.parser.Expressions.SIMPLE_EXPRESSION;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class PrimaryExprTest extends ParserBase {
 
@@ -48,51 +50,53 @@ public class PrimaryExprTest extends ParserBase {
     }
 
     @Test
-    public void variable() throws Exception {
+    public void variable() {
         Expr tree = parseTreeFor("foo");
         assertTrue(tree instanceof VariableExpr);
         assertEquals(((VariableExpr)tree).getVariable().getName(), "foo");
     }
 
     @Test
-    public void intLiteral() throws Exception {
+    public void intLiteral() {
         Expr tree = parseTreeFor("123");
         assertTrue(tree instanceof LiteralExpr);
         assertEquals(((LiteralExpr)tree).getValue(), Integer.valueOf(123));
     }
 
     @Test
-    public void floatLiteral() throws Exception {
+    public void floatLiteral() {
         Expr tree = parseTreeFor("1.234");
         assertTrue(tree instanceof LiteralExpr);
         assertEquals(((LiteralExpr)tree).getValue(), Float.valueOf(1.234f));
     }
 
     @Test
-    public void boolLiteralT() throws Exception {
+    public void boolLiteralT() {
         Expr tree = parseTreeFor("true");
         assertTrue(tree instanceof LiteralExpr);
         assertEquals(((LiteralExpr)tree).getValue(), Boolean.TRUE);
     }
 
     @Test
-    public void boolLiteralF() throws Exception {
+    public void boolLiteralF() {
         Expr tree = parseTreeFor("false");
         assertTrue(tree instanceof LiteralExpr);
         assertEquals(((LiteralExpr)tree).getValue(), Boolean.FALSE);
     }
 
     @Test
-    public void bracketted() throws Exception {
+    public void bracketted() {
         Expr tree = parseTreeFor("(" + primary + ")");
     }
 
-    @Test(expected = ParseCancellationException.class)
-    public void notAPrimaryExpression() throws Exception {
-        parseTreeFor("!(@&#");
+    @Test
+    public void notAPrimaryExpression() {
+        assertThrows(ParseCancellationException.class, () -> {
+            parseTreeFor("!(@&#");
+        });
     }
 
-    private Expr parseTreeFor(String text) throws Exception {
+    private Expr parseTreeFor(String text) {
         JSLParser parser = parserOver(text);
         JSLVisitor visitor = new JSLVisitor();
         visitor.getSymbolTable().declareVariable("foo", Type.INT, null);

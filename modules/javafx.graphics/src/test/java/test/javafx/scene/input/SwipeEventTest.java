@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,9 +38,13 @@ import javafx.scene.input.PickResult;
 import javafx.scene.input.SwipeEvent;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import org.junit.Assert;
-import org.junit.Test;
-import static org.junit.Assert.*;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SwipeEventTest {
 
@@ -210,7 +214,7 @@ public class SwipeEventTest {
         swiped = false;
 
         rect.setOnSwipeUp(event -> {
-            Assert.assertEquals(3, event.getTouchCount());
+            assertEquals(3, event.getTouchCount());
             swiped = true;
         });
 
@@ -230,10 +234,10 @@ public class SwipeEventTest {
         swiped = false;
 
         rect.setOnSwipeUp(event -> {
-            Assert.assertEquals(151.0, event.getX(), 0.0001);
-            Assert.assertEquals(152.0, event.getY(), 0.0001);
-            Assert.assertEquals(153.0, event.getScreenX(), 0.0001);
-            Assert.assertEquals(154.0, event.getScreenY(), 0.0001);
+            assertEquals(151.0, event.getX(), 0.0001);
+            assertEquals(152.0, event.getY(), 0.0001);
+            assertEquals(153.0, event.getScreenX(), 0.0001);
+            assertEquals(154.0, event.getScreenY(), 0.0001);
             swiped = true;
         });
 
@@ -253,7 +257,7 @@ public class SwipeEventTest {
         swiped = false;
 
         rect.setOnSwipeDown(event -> {
-            Assert.assertEquals(swiped, event.isDirect());
+            assertEquals(swiped, event.isDirect());
             swiped = !swiped;
         });
 
@@ -280,16 +284,16 @@ public class SwipeEventTest {
         swiped = false;
         swiped2 = false;
         rect.setOnSwipeLeft(event -> {
-            Assert.assertEquals(150, event.getX(), 0.00001);
-            Assert.assertEquals(150, event.getY(), 0.00001);
-            Assert.assertEquals(0, event.getZ(), 0.00001);
+            assertEquals(150, event.getX(), 0.00001);
+            assertEquals(150, event.getY(), 0.00001);
+            assertEquals(0, event.getZ(), 0.00001);
             swiped = true;
         });
 
         scene.setOnSwipeLeft(event -> {
-            Assert.assertEquals(150, event.getX(), 0.00001);
-            Assert.assertEquals(150, event.getY(), 0.00001);
-            Assert.assertEquals(50, event.getZ(), 0.00001);
+            assertEquals(150, event.getX(), 0.00001);
+            assertEquals(150, event.getY(), 0.00001);
+            assertEquals(50, event.getZ(), 0.00001);
             swiped2 = true;
         });
 
@@ -369,8 +373,8 @@ public class SwipeEventTest {
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
 
         rect.setOnSwipeRight(event -> {
-            Assert.assertEquals(150.0, event.getSceneX(), 0.0001);
-            Assert.assertEquals(150.0, event.getSceneY(), 0.0001);
+            assertEquals(150.0, event.getSceneX(), 0.0001);
+            assertEquals(150.0, event.getSceneY(), 0.0001);
             swiped = true;
         });
 

@@ -31,23 +31,19 @@ import java.awt.Robot;
 import java.awt.event.InputEvent;
 import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.CountDownLatch;
-
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.embed.swing.SwingNode;
 import javafx.scene.Scene;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import test.util.Util;
 
 public class SwingNodeBase {
@@ -64,7 +60,7 @@ public class SwingNodeBase {
     // Singleton Application instance
     static MyApp myApp;
 
-    @BeforeClass
+    @BeforeAll
     public static void setupOnce() throws AWTException, InvocationTargetException, InterruptedException {
         robot = new Robot();
         robot.setAutoDelay(100);
@@ -80,7 +76,7 @@ public class SwingNodeBase {
         paintLatch.countDown();
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownOnce() {
         Util.shutdown();
     }
@@ -208,11 +204,13 @@ public class SwingNodeBase {
         }
 
         if (above) {
-            Assert.assertEquals("JDialog is not above JavaFX stage",
-                    java.awt.Color.BLUE, robot.getPixelColor(checkLoc, checkLoc));
+            Assertions.assertEquals(
+                java.awt.Color.BLUE, robot.getPixelColor(checkLoc, checkLoc),
+                "JDialog is not above JavaFX stage");
         } else {
-            Assert.assertFalse("JDialog is above JavaFX stage",
-                    java.awt.Color.BLUE.equals(robot.getPixelColor(checkLoc, checkLoc)));
+            Assertions.assertFalse(
+                java.awt.Color.BLUE.equals(robot.getPixelColor(checkLoc, checkLoc)),
+                "JDialog is above JavaFX stage");
         }
     }
 }

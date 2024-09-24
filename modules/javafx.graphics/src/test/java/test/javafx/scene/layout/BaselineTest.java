@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,13 @@
 
 package test.javafx.scene.layout;
 
-import static org.junit.Assert.assertEquals;
 import javafx.scene.Parent;
 import javafx.scene.ParentShim;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests baseline offsets on various classes
@@ -41,24 +41,28 @@ public class BaselineTest {
 
     // test isResizable on key base classes
 
-    @Test public void testShapeBaselineAtBottom() {
+    @Test
+    public void testShapeBaselineAtBottom() {
         Rectangle rect = new Rectangle(100,200);
         assertEquals(200, rect.getBaselineOffset(),1e-100);
     }
 
-    @Test public void testTextBaseline() {
+    @Test
+    public void testTextBaseline() {
         Text text = new Text("Graphically");
         float size = (float) text.getFont().getSize();
         assertEquals(size, text.getBaselineOffset(),1e-100);
     }
 
-    @Test public void testParentBaselineMatchesFirstChild() {
+    @Test
+    public void testParentBaselineMatchesFirstChild() {
         Parent p = new MockParent();
         p.layout();
         assertEquals(180, p.getBaselineOffset(),1e-100);
     }
 
-    @Test public void testParentBaselineIgnoresUnmanagedChild() {
+    @Test
+    public void testParentBaselineIgnoresUnmanagedChild() {
         MockParent p = new MockParent();
         Rectangle r = new Rectangle(20,30);
         r.setManaged(false);

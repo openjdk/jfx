@@ -26,9 +26,9 @@
 package test.javafx.scene.web;
 
 import static javafx.concurrent.Worker.State.SUCCEEDED;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.concurrent.CountDownLatch;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -38,10 +38,10 @@ import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 public class StraightLineTest {
@@ -79,17 +79,17 @@ public class StraightLineTest {
         return "rgba(" + r + "," + g + "," + b + "," + a + ")";
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupOnce() {
         Util.launch(launchLatch, StraightLineTestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDownOnce() {
         Util.shutdown();
     }
 
-    @Before
+    @BeforeEach
     public void setupTestObjects() {
         Platform.runLater(() -> {
             webView = new WebView();
@@ -145,7 +145,7 @@ public class StraightLineTest {
                     "</html>");
         });
 
-        assertTrue("Timeout when waiting for focus change ", Util.await(webViewStateLatch));
+        assertTrue(Util.await(webViewStateLatch), "Timeout when waiting for focus change ");
         //introduce sleep , so that web contents would be loaded , then take snapshot for testing
         Util.sleep(1000);
 

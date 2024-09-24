@@ -61,10 +61,4 @@ public class StubPrimaryTimer extends AbstractPrimaryTimer {
     public long nanos() {
         return currentTimeMillis * 1000000;
     }
-
-    @Override
-    public void pause() { }
-
-    @Override
-    public void resume() { }
 }

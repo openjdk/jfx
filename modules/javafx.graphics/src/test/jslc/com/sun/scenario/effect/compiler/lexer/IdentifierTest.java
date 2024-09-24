@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,38 +27,42 @@ package com.sun.scenario.effect.compiler.lexer;
 
 import com.sun.scenario.effect.compiler.JSLLexer;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class IdentifierTest extends LexerBase {
 
     @Test
-    public void basic() throws Exception {
+    public void basic() {
         assertRecognized("foo");
     }
 
     @Test
-    public void mixedCase() throws Exception {
+    public void mixedCase() {
         assertRecognized("aAbBCCdd");
     }
 
     @Test
-    public void lettersAndDigits() throws Exception {
+    public void lettersAndDigits() {
         assertRecognized("aA29");
     }
 
     @Test
-    public void lettersAndDigitsAndSymbols() throws Exception {
+    public void lettersAndDigitsAndSymbols() {
         assertRecognized("$aA___29");
     }
 
     @Test
-    public void notAnId1() throws Exception {
+    public void notAnId1() {
         assertNotRecognized("6foo", "6");
     }
 
-    @Test(expected = ParseCancellationException.class)
-    public void notAnId2() throws Exception {
-        assertRecognized("###");
+    @Test
+    public void notAnId2() {
+        assertThrows(ParseCancellationException.class, () -> {
+            assertRecognized("###");
+        });
     }
 
     @Override

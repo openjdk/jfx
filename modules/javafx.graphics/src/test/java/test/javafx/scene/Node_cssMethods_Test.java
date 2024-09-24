@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,12 @@
 
 package test.javafx.scene;
 
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 
 import javafx.scene.effect.BlendMode;
 import javafx.scene.effect.Shadow;
 import javafx.scene.image.Image;
 import javafx.scene.shape.Rectangle;
-
-import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 
 import test.com.sun.javafx.pgstub.StubImageLoaderFactory;
 import test.com.sun.javafx.pgstub.StubPlatformImageInfo;
@@ -48,12 +42,13 @@ import javafx.scene.Cursor;
 import javafx.scene.ImageCursor;
 import javafx.scene.Node;
 
-@RunWith(Parameterized.class)
+import org.junit.jupiter.api.BeforeAll;
+
 public final class Node_cssMethods_Test extends CssMethodsTestBase {
     private static final Node TEST_NODE = new Rectangle();
     private static final String TEST_CURSOR_URL = "file:cursor.png";
 
-    @BeforeClass
+    @BeforeAll
     public static void configureImageLoaderFactory() {
         final StubImageLoaderFactory imageLoaderFactory =
                 ((StubToolkit) Toolkit.getToolkit()).getImageLoaderFactory();
@@ -63,9 +58,8 @@ public final class Node_cssMethods_Test extends CssMethodsTestBase {
                 new StubPlatformImageInfo(32, 32));
     }
 
-    @Parameters
-    public static Collection data() {
-        return Arrays.asList(new Object[] {
+    public static Stream<Configuration> data() {
+        return Stream.of(
             config(TEST_NODE, "cursor", null, "-fx-cursor", Cursor.cursor(TEST_CURSOR_URL),
                    new ValueComparator() {
                        @Override
@@ -107,11 +101,11 @@ public final class Node_cssMethods_Test extends CssMethodsTestBase {
             config("translateY", 0.0, "-fx-translate-y", 20.0),
             config("translateY", 1.0, "-fx-translate-y", null, 0.0),
             config("translateZ", 0.0, "-fx-translate-z", 30.0),
-            config("translateZ", 1.0, "-fx-translate-z", null, 0.0),
-        });
+            config("translateZ", 1.0, "-fx-translate-z", null, 0.0)
+        );
     }
 
-    public static Object[] config(
+    public static Configuration config(
             final String propertyName,
             final Object initialValue,
             final String cssPropertyKey,
@@ -120,7 +114,7 @@ public final class Node_cssMethods_Test extends CssMethodsTestBase {
                       cssPropertyKey, cssPropertyValue);
     }
 
-    public static Object[] config(
+    public static Configuration config(
             final String propertyName,
             final Object initialValue,
             final String cssPropertyKey,
@@ -128,9 +122,5 @@ public final class Node_cssMethods_Test extends CssMethodsTestBase {
             final Object expectedFinalValue) {
         return config(TEST_NODE, propertyName, initialValue,
                       cssPropertyKey, cssPropertyValue, expectedFinalValue);
-    }
-
-    public Node_cssMethods_Test(final Configuration configuration) {
-        super(configuration);
     }
 }

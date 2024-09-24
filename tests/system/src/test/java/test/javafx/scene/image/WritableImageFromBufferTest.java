@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,7 +34,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.IntBuffer;
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Application;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
@@ -45,13 +44,11 @@ import javafx.scene.image.WritableImage;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
-
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 /**
@@ -83,7 +80,7 @@ public class WritableImageFromBufferTest {
         }
     }
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         BufferedImage awtImage = new BufferedImage(IMG_WIDTH, IMG_HEIGHT, BufferedImage.TYPE_INT_ARGB_PRE);
         g2d = (Graphics2D) awtImage.getGraphics();
@@ -121,7 +118,7 @@ public class WritableImageFromBufferTest {
         Thread.sleep(100);
 
         System.setErr(defaultErrorStream);
-        Assert.assertEquals("No error should be thrown", "", out.toString());
+        Assertions.assertEquals("", out.toString(), "No error should be thrown");
     }
 
     private void requestFullUpdate() {
@@ -150,12 +147,12 @@ public class WritableImageFromBufferTest {
         });
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws Exception {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDown() {
         Util.shutdown();
     }

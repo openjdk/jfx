@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,25 +25,21 @@
 
 package test.robot.javafx.application;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
-
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import javafx.application.Platform;
 import javafx.scene.input.KeyCode;
 import javafx.scene.robot.Robot;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import com.sun.javafx.PlatformUtil;
-
 import test.util.Util;
 
 /**
@@ -55,7 +51,7 @@ public class KeyLockedTest {
     private static final CountDownLatch startupLatch = new CountDownLatch(1);
     private static Robot robot;
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws Exception {
         Platform.setImplicitExit(false);
         Util.startup(startupLatch, startupLatch::countDown);
@@ -65,7 +61,7 @@ public class KeyLockedTest {
         }
     }
 
-    @AfterClass
+    @AfterAll
     public static void cleanupFX() {
         if (robot != null) {
             // Disable caps lock if it is set
@@ -82,17 +78,21 @@ public class KeyLockedTest {
         Util.shutdown();
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testCallOnTestThread() {
-        // This should throw an exception
-        Optional<Boolean> capsLockState = Platform.isKeyLocked(KeyCode.CAPS);
+        assertThrows(IllegalStateException.class, () -> {
+            // This should throw an exception
+            Optional<Boolean> capsLockState = Platform.isKeyLocked(KeyCode.CAPS);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testIllegalKeyCode() {
-        Util.runAndWait(() -> {
-            // This should throw an exception
-            Optional<Boolean> capsLockState = Platform.isKeyLocked(KeyCode.A);
+        assertThrows(IllegalArgumentException.class, () -> {
+            Util.runAndWait(() -> {
+                // This should throw an exception
+                Optional<Boolean> capsLockState = Platform.isKeyLocked(KeyCode.A);
+            });
         });
     }
 
