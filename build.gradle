@@ -768,6 +768,9 @@ try {
             // should the need arise.
 //            def status = compareJdkVersion(jdkVersion, "18")
 //            ext.jdk18OrLater = (status >= 0)
+
+            def status = compareJdkVersion(jdkVersion, "24")
+            ext.jdk24OrLater = (status >= 0)
         }
     }
 } finally {
@@ -775,6 +778,13 @@ try {
 }
 if (!project.hasProperty("jdkRuntimeVersion")) throw new Exception("Unable to determine the version of Java in JDK_HOME at $JDK_HOME");
 
+// Use --upgrade-module-path instead of --module-path when compiling and
+// running tests if we are using a JDK that includes an upgradable
+// jdk.jsobject module.  Currently, this is JDK 24 or later. Once
+// jdk.jsobject is removed from the JDK, we can stop doing it. For example,
+// if jdk.jsobject is removed from the JDK in JDK 26, the logic will then be
+// changed to: "jdk24OrLater && !jdk26OrLater"
+ext.USE_UPGRADE_MODULE_PATH = jdk24OrLater
 
 // Determine whether the javafx.* modules are present in the JDK. To do this,
 // we will execute "java --list-modules" and search for javafx.base.
@@ -996,8 +1006,9 @@ List<String> computeLibraryPath(boolean working) {
     return lp
 }
 
-// Return list with the arguments needed for --patch-module or --module-path
-// for the provided projects. Used with Java executables ie. tests
+// Return list with the arguments needed for --patch-module, --module-path,
+// or --upgrade-module-path for the provided projects.
+// Used with Java executables ie. tests
 List<String> computePatchModuleArgs(List<String> deps, boolean test, boolean includeJLP) {
     List<String> pma = []
 
@@ -1042,7 +1053,7 @@ List<String> computePatchModuleArgs(List<String> deps, boolean test, boolean inc
             return null
         }
 
-        pma += '--module-path'
+        pma += (test && USE_UPGRADE_MODULE_PATH) ? '--upgrade-module-path' : '--module-path'
         pma += mp
 
         String addm = null
@@ -1071,7 +1082,7 @@ List<String> computePatchModuleArgs(List<String> deps, boolean test, boolean inc
 // Return a list containing the --upgrade-module-path or --module-path
 // used with Javac
 List<String> computeModulePathArgs(String  pname, List<String> deps, boolean test) {
-    List<String> mpa = HAS_JAVAFX_MODULES ? [ '--upgrade-module-path' ] : [ '--module-path' ]
+    List<String> mpa = (HAS_JAVAFX_MODULES || (test && USE_UPGRADE_MODULE_PATH)) ? [ '--upgrade-module-path' ] : [ '--module-path' ]
     String mp = null
     deps.each { String projname ->
         def proj = project(projname)
@@ -1155,12 +1166,14 @@ void writeArgsFile(boolean isCompile, File dest, List<String> libpath, List<Stri
             dest << "\"\n"
         }
     } else {
+        def modulePathArgName = USE_UPGRADE_MODULE_PATH ? '--upgrade-module-path' : '--module-path'
+
         if (modpath.size() == 1) {
-            dest <<  "--module-path=\""
+            dest <<  "${modulePathArgName}=\""
             dest << modpath[0]
             dest << "\"\n"
         } else {
-            dest <<  "--module-path=\"\\\n"
+            dest <<  "${modulePathArgName}=\"\\\n"
             modpath.each() { e->
                 dest << "  "
                 dest << e
@@ -4114,14 +4127,14 @@ project(":systemTests") {
         // enable native access for all modules with native code
         jvmArgs enableNativeAll
 
-        // Parse testPatchModuleArgs looking for "--module-path".
+        // Parse testPatchModuleArgs looking for "*module-path".
         // Save path if found so we can pass it to the module launcher tests
         def pendingModulePath = false
         testPatchModuleArgs.each { str ->
             if (pendingModulePath) {
                 project.ext.launcherModulePath = str;
                 pendingModulePath = false
-            } else if (str == "--module-path") {
+            } else if (str.endsWith("module-path")) {
                 pendingModulePath = true
             }
         }
@@ -4196,12 +4209,15 @@ allprojects {
             compile.options.incremental = IS_INCREMENTAL
         }
 
-        if (project.hasProperty('skipJavaCompilerOptionRelease') &&
-                project.ext.skipJavaCompilerOptionRelease) {
+        def isCompileTestTask = compile.name.startsWith("compileTest")
+        if (!isCompileTestTask) {
+            if (project.hasProperty('skipJavaCompilerOptionRelease') &&
+                    project.ext.skipJavaCompilerOptionRelease) {
 
-            logger.info "Using 'javac -source/-target' for ${compile}"
-        } else {
-            compile.options.release = JAVA_TARGET_VERSION
+                logger.info "Using 'javac -source/-target' for ${compile}"
+            } else {
+                compile.options.release = JAVA_TARGET_VERSION
+            }
         }
 
         compile.options.debug = true // we always generate debugging info in the class files
