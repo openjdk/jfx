@@ -729,22 +729,22 @@ def buildSdkForTest = Boolean.parseBoolean(BUILD_SDK_FOR_TEST)
 defineProperty("TEST_ONLY", "false")
 ext.IS_TEST_ONLY = Boolean.parseBoolean(TEST_ONLY) || !buildSdkForTest
 
-ext.IS_TEST_JAVAFX_SDK = false
-if (hasProperty("TEST_JAVAFX_SDK_PATH")) {
+ext.IS_TEST_SDK = false
+if (hasProperty("TEST_SDK_PATH")) {
     if (!IS_TEST_ONLY) {
-        fail("TEST_ONLY must be set true when using an external TEST_JAVAFX_SDK_PATH for running tests: include -PTEST_ONLY=true")
+        fail("TEST_ONLY must be set to true when using an external TEST_SDK_PATH for running tests: include -PTEST_ONLY=true")
     }
-    def sdkShimsPath = file("${TEST_JAVAFX_SDK_PATH}")
-    def sdkPath = file("${TEST_JAVAFX_SDK_PATH}/sdk")
-    def shimsPath = file("${TEST_JAVAFX_SDK_PATH}/shims")
+    def sdkShimsPath = file("${TEST_SDK_PATH}")
+    def sdkPath = file("${TEST_SDK_PATH}/sdk")
+    def shimsPath = file("${TEST_SDK_PATH}/shims")
     if (!sdkShimsPath.exists() || !sdkShimsPath.isDirectory() ||
              !sdkPath.exists() || !sdkPath.isDirectory() ||
            !shimsPath.exists() || !shimsPath.isDirectory()) {
-        fail("The provided TEST_JAVAFX_SDK_PATH=${TEST_JAVAFX_SDK_PATH} is invalid")
+        fail("The provided TEST_SDK_PATH=${TEST_SDK_PATH} is invalid")
     }
-    ext.IS_TEST_JAVAFX_SDK = true
+    ext.IS_TEST_SDK = true
 } else {
-    defineProperty("TEST_JAVAFX_SDK_PATH", "${rootProject.buildDir}")
+    defineProperty("TEST_SDK_PATH", "${rootProject.buildDir}")
 }
 
 // Make sure JDK_HOME/bin/java exists
@@ -1000,7 +1000,7 @@ List<String> computeLibraryPath(boolean working) {
     } else {
         def platformPrefix = ""
         def standaloneSdkDirName = "${platformPrefix}sdk"
-        def standaloneSdkDir = "${TEST_JAVAFX_SDK_PATH}/${standaloneSdkDirName}"
+        def standaloneSdkDir = "${TEST_SDK_PATH}/${standaloneSdkDirName}"
         def modulesLibName = IS_WINDOWS ? "bin" : "lib"
         def modulesLibsDir = "${standaloneSdkDir}/${modulesLibName}"
         lp << cygpath("${modulesLibsDir}")
@@ -1037,9 +1037,9 @@ List<String> computePatchModuleArgs(List<String> deps, boolean test, boolean inc
                 String moduleName = proj.ext.moduleName
                 File dir;
                 if (test && proj.sourceSets.hasProperty('shims')) {
-                    dir = file("${TEST_JAVAFX_SDK_PATH}/shims/${moduleName}")
+                    dir = file("${TEST_SDK_PATH}/shims/${moduleName}")
                 } else {
-                    dir = file("${TEST_JAVAFX_SDK_PATH}/sdk/lib/${moduleName}.jar")
+                    dir = file("${TEST_SDK_PATH}/sdk/lib/${moduleName}.jar")
                 }
                 if (mp == null) {
                     mp = dir.path
@@ -2303,8 +2303,8 @@ project(":base") {
     addValidateSourceSets(project, sourceSets)
 
     test {
-        if (IS_TEST_JAVAFX_SDK) {
-            logger.info "Skipping VersionInfoTest when TEST_JAVAFX_SDK_PATH is set."
+        if (IS_TEST_SDK) {
+            logger.info "Skipping VersionInfoTest when TEST_SDK_PATH is set."
             exclude("test/com/sun/javafx/runtime/VersionInfoTest*");
         }
     }
@@ -2719,7 +2719,7 @@ project(":graphics") {
     processResources.dependsOn processDecoraShaders, processPrismShaders
 
     test {
-        def cssDir = file("${TEST_JAVAFX_SDK_PATH}/shims/${moduleName}/javafx")
+        def cssDir = file("${TEST_SDK_PATH}/shims/${moduleName}/javafx")
         jvmArgs enableNativeGraphics
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
@@ -2808,7 +2808,7 @@ project(":controls") {
     }
 
     test {
-        def cssDir = file("${TEST_JAVAFX_SDK_PATH}/shims/${moduleName}/javafx")
+        def cssDir = file("${TEST_SDK_PATH}/shims/${moduleName}/javafx")
         jvmArgs enableNativeGraphics
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
@@ -5777,9 +5777,9 @@ compileTargets { t ->
                         modnames << project.ext.moduleName
                         File dir;
                         if (project.sourceSets.hasProperty('shims')) {
-                           dir = new File(TEST_JAVAFX_SDK_PATH, "shims/${project.ext.moduleName}")
+                           dir = new File(TEST_SDK_PATH, "shims/${project.ext.moduleName}")
                         } else {
-                           dir = new File(TEST_JAVAFX_SDK_PATH, "sdk/lib/${project.ext.moduleName}.jar")
+                           dir = new File(TEST_SDK_PATH, "sdk/lib/${project.ext.moduleName}.jar")
                         }
 
                         def dstModuleDir = cygpath(dir.path)
@@ -5790,7 +5790,7 @@ compileTargets { t ->
                         "    permission java.security.AllPermission;\n" +
                         "};\n"
 
-                        dir = new File(TEST_JAVAFX_SDK_PATH, "sdk/lib/${project.ext.moduleName}.jar")
+                        dir = new File(TEST_SDK_PATH, "sdk/lib/${project.ext.moduleName}.jar")
                         themod = dir.toURI()
                         runJavaPolicyFile <<  "grant codeBase \"${themod}\" {\n" +
                         "    permission java.security.AllPermission;\n" +
