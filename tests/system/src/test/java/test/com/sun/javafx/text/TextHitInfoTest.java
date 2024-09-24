@@ -25,19 +25,16 @@
 
 package test.com.sun.javafx.text;
 
-import static org.junit.Assume.assumeTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import javafx.scene.text.Font;
 import org.junit.jupiter.api.Test;
-
 import com.sun.javafx.font.PGFont;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.scene.text.FontHelper;
 import com.sun.javafx.scene.text.TextLayout.Hit;
 import com.sun.javafx.scene.text.TextSpan;
 import com.sun.javafx.text.PrismTextLayout;
-
-import javafx.scene.text.Font;
 
 public class TextHitInfoTest {
     private final PrismTextLayout layout = new PrismTextLayout();
@@ -186,6 +183,6 @@ public class TextHitInfoTest {
     }
 
     private void assumeArialFontAvailable() {
-        assumeTrue("Arial font missing", arialFont.getName().equals("Arial"));
+        assumeTrue(arialFont.getName().equals("Arial"), "Arial font missing");
     }
 }

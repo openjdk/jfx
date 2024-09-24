@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,25 +25,22 @@
 
 package test.javafx.stage;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 /**
@@ -82,22 +79,24 @@ public class NestedEventLoopTest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupOnce() {
         Util.launch(launchLatch, MyApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownOnce() {
         Util.shutdown();
     }
 
     // Verify that we cannot enter a nested event loop on a thread other than
     // the FX Application thread
-    @Test (expected=IllegalStateException.class)
+    @Test
     public void testMustRunOnAppThread() {
-        assertFalse(Platform.isFxApplicationThread());
-        Platform.enterNestedEventLoop(new Object());
+        assertThrows(IllegalStateException.class, () -> {
+            assertFalse(Platform.isFxApplicationThread());
+            Platform.enterNestedEventLoop(new Object());
+        });
     }
 
     // Verify that we can enter and exit a nested event loop
@@ -124,42 +123,50 @@ public class NestedEventLoopTest {
     }
 
     // Verify that we cannot enter a nested event loop with the same key twice
-    @Test (expected=IllegalArgumentException.class)
+    @Test
     public void testUniqueKeyRequired() {
-        final Object key = new Object();
-        Util.runAndWait(
-                () -> Platform.enterNestedEventLoop(key),
-                () -> Platform.enterNestedEventLoop(key),
-                () -> Platform.exitNestedEventLoop(key, null)
-        );
+        assertThrows(IllegalArgumentException.class, () -> {
+            final Object key = new Object();
+            Util.runAndWait(
+                    () -> Platform.enterNestedEventLoop(key),
+                    () -> Platform.enterNestedEventLoop(key),
+                    () -> Platform.exitNestedEventLoop(key, null)
+            );
+        });
     }
 
     // Verify that we cannot enter a nested event loop with a null key
-    @Test (expected=NullPointerException.class)
+    @Test
     public void testNonNullKeyRequired() {
-        Util.runAndWait(
+        assertThrows(NullPointerException.class, () -> {
+            Util.runAndWait(
                 () -> Platform.enterNestedEventLoop(null)
-        );
+            );
+        });
     }
 
     // Verify that we cannot exit a nested event loop with a null key
-    @Test (expected=NullPointerException.class)
+    @Test
     public void testNonNullExitKeyRequired() {
-        Util.runAndWait(
+        assertThrows(NullPointerException.class, () -> {
+            Util.runAndWait(
                 () -> Platform.enterNestedEventLoop("validKey"),
                 () -> Platform.exitNestedEventLoop(null, null),
                 () -> Platform.exitNestedEventLoop("validKey", null)
-        );
+            );
+        });
     }
 
     // Verify that we cannot exit a nested event loop with a key that has not been used
-    @Test (expected=IllegalArgumentException.class)
+    @Test
     public void testExitLoopKeyHasBeenRegistered() {
-        Util.runAndWait(
+        assertThrows(IllegalArgumentException.class, () -> {
+            Util.runAndWait(
                 () -> Platform.enterNestedEventLoop("validKey"),
                 () -> Platform.exitNestedEventLoop("invalidKey", null),
                 () -> Platform.exitNestedEventLoop("validKey", null)
-        );
+            );
+        });
     }
 
     // Verify that we can enter and exit multiple nested event loops, in the order they are started

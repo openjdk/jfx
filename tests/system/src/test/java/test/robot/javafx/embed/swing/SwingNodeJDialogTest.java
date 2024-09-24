@@ -25,18 +25,19 @@
 
 package test.robot.javafx.embed.swing;
 
-import org.junit.Test;
-import test.util.Util;
-
-import javax.swing.SwingUtilities;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import javax.swing.SwingUtilities;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import test.util.Util;
 
-import static org.junit.Assume.assumeTrue;
-
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class SwingNodeJDialogTest extends SwingNodeBase {
 
-    @Test(timeout = 15000)
+    @Test
     public void testJDialogAbove() throws InterruptedException, InvocationTargetException {
         assumeTrue(!Util.isOnWayland()); // JDK-8335470
         myApp.createStageAndDialog();
@@ -47,7 +48,7 @@ public class SwingNodeJDialogTest extends SwingNodeBase {
         myApp.closeStageAndDialog();
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testNodeRemovalAfterShow() throws InterruptedException, InvocationTargetException {
         assumeTrue(!Util.isOnWayland()); // JDK-8335470
         myApp.createStageAndDialog();
@@ -62,7 +63,7 @@ public class SwingNodeJDialogTest extends SwingNodeBase {
         myApp.attachSwingNode();
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testNodeRemovalBeforeShow() throws InterruptedException, InvocationTargetException {
         assumeTrue(!Util.isOnWayland()); // JDK-8335470
         myApp.createStageAndDialog();
@@ -75,7 +76,7 @@ public class SwingNodeJDialogTest extends SwingNodeBase {
         myApp.attachSwingNode();
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testStageCloseAfterShow() throws InvocationTargetException, InterruptedException {
         assumeTrue(!Util.isOnWayland()); // JDK-8335470
         myApp.createStageAndDialog();
@@ -85,7 +86,7 @@ public class SwingNodeJDialogTest extends SwingNodeBase {
         myApp.disposeDialog();
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testStageCloseBeforeShow() throws InvocationTargetException, InterruptedException {
         assumeTrue(!Util.isOnWayland()); // JDK-8335470
         myApp.createStageAndDialog();
@@ -96,7 +97,7 @@ public class SwingNodeJDialogTest extends SwingNodeBase {
     }
 
 
-    @Test(timeout = 15000)
+    @Test
     public void testNodeRemovalBeforeShowHoldEDT() throws InterruptedException, InvocationTargetException {
         assumeTrue(!Util.isOnWayland()); // JDK-8335470
         myApp.createAndShowStage();
@@ -114,7 +115,7 @@ public class SwingNodeJDialogTest extends SwingNodeBase {
         myApp.attachSwingNode();
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testStageCloseBeforeShowHoldEDT() throws InvocationTargetException, InterruptedException {
         assumeTrue(!Util.isOnWayland()); // JDK-8335470
         myApp.createAndShowStage();

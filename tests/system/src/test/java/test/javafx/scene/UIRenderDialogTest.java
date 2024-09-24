@@ -24,11 +24,9 @@
  */
 package test.javafx.scene;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
-
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -44,14 +42,11 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import com.sun.javafx.PlatformUtil;
-
-import junit.framework.Assert;
 import test.util.Util;
 
 public class UIRenderDialogTest {
@@ -95,7 +90,7 @@ public class UIRenderDialogTest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupOnce() throws Exception {
         System.setProperty("glass.win.uiScale", String.valueOf(scale));
         System.setProperty("glass.gtk.uiScale", String.valueOf(scale));
@@ -103,7 +98,7 @@ public class UIRenderDialogTest {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardown() {
         Platform.runLater(() -> {
             if (alert != null) {
@@ -117,15 +112,13 @@ public class UIRenderDialogTest {
     public void testCheckBoxTextInDialogDoesNotHaveEllipsis() {
         assumeTrue(PlatformUtil.isLinux() || PlatformUtil.isWindows());
 
-        Assert.assertEquals("Wrong render scale", scale,
-                stage.getRenderScaleY(), 0.0001);
-
-        Assert.assertNotNull(alert);
+        Assertions.assertEquals(scale, stage.getRenderScaleY(), 0.0001, "Wrong render scale");
+        Assertions.assertNotNull(alert);
         assertTrue(alert.isShowing());
 
         for (Node node : ((HBox) alert.getDialogPane().getContent()).getChildrenUnmodifiable()) {
             CheckBox box = (CheckBox) node;
-            Assert.assertEquals("Wrong text", "Check", ((Text) box.lookup(".text")).getText());
+            Assertions.assertEquals("Check", ((Text) box.lookup(".text")).getText(), "Wrong text");
         }
     }
 }

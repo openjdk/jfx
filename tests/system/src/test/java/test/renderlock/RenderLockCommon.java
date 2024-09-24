@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,16 @@
 
 package test.renderlock;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static test.util.Util.TIMEOUT;
-
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-
 import javafx.animation.FillTransition;
 import javafx.animation.Timeline;
 import javafx.application.Application;
@@ -51,12 +49,9 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import com.sun.javafx.PlatformUtil;
-
 import test.util.Util;
 
 /**
@@ -108,7 +103,7 @@ public class RenderLockCommon {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void doSetupOnce() throws Exception {
         // These tests are only valid on Windows and Mac.
         // On Linux the closing of the window does not trigger a
@@ -119,7 +114,7 @@ public class RenderLockCommon {
         assertEquals(0, launchLatch.getCount());
     }
 
-    @AfterClass
+    @AfterAll
     public static void doTeardownOnce() {
         // see doSetupOnce() assumeTrue condition
         if (myApp != null) {

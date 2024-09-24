@@ -25,16 +25,19 @@
 
 package test.com.sun.javafx.application;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
-import org.junit.AfterClass;
-import org.junit.Test;
-import junit.framework.AssertionFailedError;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class StaticStartupTest {
 
-    @Test (timeout=15000)
+    @Test
+    @Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
     public void testStartupFromClinit() throws Exception {
         Thread thr = new Thread(() -> {
             try {
@@ -48,7 +51,7 @@ public class StaticStartupTest {
         StaticClass.doSomething();
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardown() {
         Platform.exit();
     }
@@ -70,7 +73,7 @@ class StaticClass {
             try {
                 assertEquals(staticLatch.getCount(), 0);
             } catch (Throwable th) {
-                throw new AssertionFailedError ("Static latch couldn't be read");
+                fail("Static latch couldn't be read");
             }
         });
     }

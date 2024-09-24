@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,11 @@
 
 package test.com.sun.javafx.image.impl;
 
+import static org.junit.jupiter.api.Assertions.fail;
+import static test.util.Util.TIMEOUT;
+import java.util.ArrayList;
+import java.util.List;
+import org.junit.jupiter.api.Test;
 import com.sun.javafx.image.impl.ByteArgb;
 import com.sun.javafx.image.impl.ByteBgr;
 import com.sun.javafx.image.impl.ByteBgra;
@@ -36,11 +41,6 @@ import com.sun.javafx.image.impl.ByteRgb;
 import com.sun.javafx.image.impl.ByteRgba;
 import com.sun.javafx.image.impl.IntArgb;
 import com.sun.javafx.image.impl.IntArgbPre;
-import java.util.ArrayList;
-import java.util.List;
-import org.junit.Test;
-import static org.junit.Assert.fail;
-import static test.util.Util.TIMEOUT;
 
 public class ImageRaceTest {
     static boolean verbose;

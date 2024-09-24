@@ -25,7 +25,7 @@
 
 package test.robot.javafx.scene;
 
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.concurrent.CountDownLatch;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -37,10 +37,10 @@ import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import com.sun.javafx.PlatformUtil;
 import test.util.Util;
 
@@ -102,12 +102,9 @@ public class SceneChangeEventsTest {
         });
         Util.waitForLatch(onActionLatch, 5, "Timeout while waiting for button.onAction().");
 
-        Assert.assertTrue("MOUSE_EXITED should be received when scene is " +
-            " changed.", mouseExited);
-        Assert.assertTrue("scene.windowProperty() listener should be received" +
-            "on scene change.", windowChanged);
-        Assert.assertTrue("MOUSE_EXITED should have been received before " +
-            "scene.windowProperty().", mouseWindowEventOrder);
+        Assertions.assertTrue(mouseExited, "MOUSE_EXITED should be received when scene is changed.");
+        Assertions.assertTrue(windowChanged, "scene.windowProperty() listener should be received on scene change.");
+        Assertions.assertTrue(mouseWindowEventOrder, "MOUSE_EXITED should have been received before scene.windowProperty().");
     }
 
     public static class TestApp extends Application {
@@ -123,13 +120,13 @@ public class SceneChangeEventsTest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() {
         assumeTrue(!PlatformUtil.isMac()); // See JDK-8300094
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void exit() {
         if (stage != null) {
             Util.shutdown();

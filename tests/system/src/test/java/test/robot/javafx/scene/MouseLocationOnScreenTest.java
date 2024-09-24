@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,21 +26,20 @@
 package test.robot.javafx.scene;
 
 import java.util.concurrent.CountDownLatch;
-
+import java.util.concurrent.TimeUnit;
 import javafx.application.Application;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.robot.Robot;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
-
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import test.util.Util;
 
-
+@Timeout(value=120000, unit=TimeUnit.MILLISECONDS)
 public class MouseLocationOnScreenTest {
     static CountDownLatch startupLatch = new CountDownLatch(1);
     static Robot robot;
@@ -55,17 +54,17 @@ public class MouseLocationOnScreenTest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardown() {
         Util.shutdown();
     }
 
-    @Test(timeout = 120000)
+    @Test
     public void testMouseLocation() throws Exception {
 
         Screen screen = Screen.getPrimary();
@@ -119,8 +118,8 @@ public class MouseLocationOnScreenTest {
      * returned by robot are same
      */
     static void validate(Robot robot, int x, int y) {
-        Assert.assertEquals(x, (int) robot.getMouseX());
-        Assert.assertEquals(y, (int) robot.getMouseY());
+        Assertions.assertEquals(x, (int) robot.getMouseX());
+        Assertions.assertEquals(y, (int) robot.getMouseY());
     }
 
     private static void edge(Robot robot, int x1, int y1, int x2, int y2) {
