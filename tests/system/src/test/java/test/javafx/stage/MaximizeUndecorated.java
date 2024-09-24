@@ -32,10 +32,10 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 public class MaximizeUndecorated {
@@ -58,12 +58,12 @@ public class MaximizeUndecorated {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardown() {
         Util.shutdown();
     }
@@ -73,6 +73,6 @@ public class MaximizeUndecorated {
         Util.sleep(200);
 
         boolean movedToTopCorner = stage.getY() != POS && stage.getX() != POS;
-        Assert.assertTrue("Stage has moved to desktop top corner", movedToTopCorner);
+        Assertions.assertTrue(movedToTopCorner, "Stage has moved to desktop top corner");
     }
 }

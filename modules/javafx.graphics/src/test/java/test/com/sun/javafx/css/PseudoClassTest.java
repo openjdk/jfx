@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,12 +38,19 @@ import java.util.Set;
 import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
 import javafx.css.PseudoClass;
-import static org.junit.Assert.*;
 
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  *
@@ -70,21 +77,21 @@ public class PseudoClassTest {
      * that happen to use a broken pseudo-class instance to fail undeterministically,
      * depending on whether or not they are executed before or after this class.
      */
-    @BeforeClass
-    public static void beforeClass() {
+    @BeforeAll
+    public static void beforeAll() {
         initialPseudoClassMap = new HashMap<>(PseudoClassStateShim.pseudoClassMap);
         initialPseudoClasses = new ArrayList<>(PseudoClassStateShim.pseudoClasses);
     }
 
-    @AfterClass
-    public static void afterClass() {
+    @AfterAll
+    public static void afterAll() {
         PseudoClassStateShim.pseudoClassMap.clear();
         PseudoClassStateShim.pseudoClassMap.putAll(initialPseudoClassMap);
         PseudoClassStateShim.pseudoClasses.clear();
         PseudoClassStateShim.pseudoClasses.addAll(initialPseudoClasses);
     }
 
-    @Before
+    @BeforeEach
     public void before() {
         PseudoClassStateShim.pseudoClassMap.clear();
         PseudoClassStateShim.pseudoClasses.clear();
@@ -771,13 +778,13 @@ public class PseudoClassTest {
         while(iter.hasNext()) {
 
             iterations += 1;
-            assertTrue (iterations+">"+pseudoClasses.length, iterations <= pseudoClasses.length);
+            assertTrue (iterations <= pseudoClasses.length, iterations+">"+pseudoClasses.length);
 
             PseudoClass pseudoClass = iter.next();
             assertEquals (pseudoClass, pseudoClasses[iterations-1]);
         }
 
-        assertTrue (pseudoClasses.length+"!="+iterations, pseudoClasses.length == iterations);
+        assertTrue (pseudoClasses.length == iterations, pseudoClasses.length+"!="+iterations);
 
     }
 
@@ -796,13 +803,13 @@ public class PseudoClassTest {
         while(iter.hasNext()) {
 
             iterations += 1;
-            assertTrue (iterations+">"+pseudoClasses.length, iterations <= pseudoClasses.length);
+            assertTrue (iterations <= pseudoClasses.length, iterations+">"+pseudoClasses.length);
 
             PseudoClass pseudoClass = iter.next();
             assertEquals (pseudoClass, pseudoClasses[iterations-1]);
         }
 
-        assertTrue (pseudoClasses.length+"!="+iterations, pseudoClasses.length == iterations);
+        assertTrue (pseudoClasses.length == iterations, pseudoClasses.length+"!="+iterations);
 
     }
 
@@ -830,7 +837,7 @@ public class PseudoClassTest {
             }
         }
 
-        assertTrue (nPseudoClasses+"!="+BitSetShim.size(states), nPseudoClasses == BitSetShim.size(states));
+        assertTrue (nPseudoClasses == BitSetShim.size(states), nPseudoClasses+"!="+BitSetShim.size(states));
 
     }
 
@@ -858,7 +865,7 @@ public class PseudoClassTest {
             }
         }
 
-        assertTrue (nPseudoClasses+"!="+BitSetShim.size(states), nPseudoClasses == BitSetShim.size(states));
+        assertTrue (nPseudoClasses == BitSetShim.size(states), nPseudoClasses+"!="+BitSetShim.size(states));
 
     }
 

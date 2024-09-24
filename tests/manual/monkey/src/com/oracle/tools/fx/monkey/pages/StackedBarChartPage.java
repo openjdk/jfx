@@ -24,8 +24,10 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.chart.StackedBarChart;
 import javafx.scene.chart.XYChart;
+import com.oracle.tools.fx.monkey.Loggers;
 import com.oracle.tools.fx.monkey.sheets.Options;
 import com.oracle.tools.fx.monkey.sheets.XYChartPropertySheet;
 import com.oracle.tools.fx.monkey.util.OptionPane;
@@ -39,7 +41,14 @@ public class StackedBarChartPage extends XYChartPageBase {
     public StackedBarChartPage() {
         super("StackedBarChartPage");
 
-        chart = new StackedBarChart<>(createCategoryAxis("X Axis"), createNumberAxis("Y Axis"));
+        chart = new StackedBarChart<>(createCategoryAxis("X Axis"), createNumberAxis("Y Axis")) {
+            @Override
+            public Object queryAccessibleAttribute(AccessibleAttribute a, Object... ps) {
+                Object v = super.queryAccessibleAttribute(a, ps);
+                Loggers.accessibility.log(a, v);
+                return v;
+            }
+        };
         chart.setTitle("Stacked Bar Chart");
         addSeries();
 

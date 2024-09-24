@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,17 +27,17 @@ package test.com.sun.scenario.animation.shared;
 
 import com.sun.javafx.animation.TickCalculation;
 import com.sun.scenario.animation.shared.GeneralClipInterpolatorShim;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.util.Duration;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class GeneralClipInterpolatorTest {
 
@@ -538,10 +538,10 @@ public class GeneralClipInterpolatorTest {
         assertEquals(40, v1.get());
         assertEquals(100, v2.get());
         gci1.interpolate(TickCalculation.fromMillis(1600));
-        assertTrue("v1.get(): " + v1.get(), (52 == v1.get()) || (-20 == v1.get()));
+        assertTrue((52 == v1.get()) || (-20 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(40, v2.get());
         gci1.interpolate(TickCalculation.fromMillis(2000));
-        assertTrue("v1.get(): " + v1.get(), (60 == v1.get()) || (-60 == v1.get()));
+        assertTrue((60 == v1.get()) || (-60 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(0, v2.get());
 
         // single value in start, duplicate value in mid, single value in end
@@ -553,13 +553,13 @@ public class GeneralClipInterpolatorTest {
         assertEquals(30, v1.get());
         assertEquals(0, v2.get());
         gci2.interpolate(TickCalculation.fromMillis(300));
-        assertTrue("v1.get(): " + v1.get(), (33 == v1.get()) || (9 == v1.get()));
+        assertTrue((33 == v1.get()) || (9 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(30, v2.get());
         gci2.interpolate(TickCalculation.fromMillis(1000));
-        assertTrue("v1.get(): " + v1.get(), (40 == v1.get()) || (-40 == v1.get()));
+        assertTrue((40 == v1.get()) || (-40 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(100, v2.get());
         gci2.interpolate(TickCalculation.fromMillis(1600));
-        assertTrue("v1.get(): " + v1.get(), (52 == v1.get()) || (20 == v1.get()));
+        assertTrue((52 == v1.get()) || (20 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(40, v2.get());
         gci2.interpolate(TickCalculation.fromMillis(2000));
         assertEquals(60, v1.get());
@@ -571,10 +571,10 @@ public class GeneralClipInterpolatorTest {
         v2.set(0);
         gci3.validate(true);
         gci3.interpolate(TickCalculation.fromMillis(0));
-        assertTrue("v1.get(): " + v1.get(), (30 == v1.get()) || (-30 == v1.get()));
+        assertTrue((30 == v1.get()) || (-30 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(0, v2.get());
         gci3.interpolate(TickCalculation.fromMillis(300));
-        assertTrue("v1.get(): " + v1.get(), (33 == v1.get()) || (-9 == v1.get()));
+        assertTrue((33 == v1.get()) || (-9 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(30, v2.get());
         gci3.interpolate(TickCalculation.fromMillis(1000));
         assertEquals(40, v1.get());
@@ -592,16 +592,16 @@ public class GeneralClipInterpolatorTest {
         v2.set(0);
         gci4.validate(true);
         gci4.interpolate(TickCalculation.fromMillis(0));
-        assertTrue("v1.get(): " + v1.get(), (30 == v1.get()) || (-30 == v1.get()));
+        assertTrue((30 == v1.get()) || (-30 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(0, v2.get());
         gci4.interpolate(TickCalculation.fromMillis(300));
-        assertTrue("v1.get(): " + v1.get(), (33 == v1.get()) || (9 == v1.get()) || (-9 == v1.get()) || (-33 == v1.get()));
+        assertTrue((33 == v1.get()) || (9 == v1.get()) || (-9 == v1.get()) || (-33 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(30, v2.get());
         gci4.interpolate(TickCalculation.fromMillis(1000));
-        assertTrue("v1.get(): " + v1.get(), (40 == v1.get()) || (-40 == v1.get()));
+        assertTrue((40 == v1.get()) || (-40 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(100, v2.get());
         gci4.interpolate(TickCalculation.fromMillis(1600));
-        assertTrue("v1.get(): " + v1.get(), (52 == v1.get()) || (20 == v1.get()));
+        assertTrue((52 == v1.get()) || (20 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(40, v2.get());
         gci4.interpolate(TickCalculation.fromMillis(2000));
         assertEquals(60, v1.get());
@@ -613,19 +613,19 @@ public class GeneralClipInterpolatorTest {
         v2.set(0);
         gci5.validate(true);
         gci5.interpolate(TickCalculation.fromMillis(0));
-        assertTrue("v1.get(): " + v1.get(), (30 == v1.get()) || (-30 == v1.get()));
+        assertTrue((30 == v1.get()) || (-30 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(0, v2.get());
         gci5.interpolate(TickCalculation.fromMillis(300));
-        assertTrue("v1.get(): " + v1.get(), (33 == v1.get()) || (-9 == v1.get()));
+        assertTrue((33 == v1.get()) || (-9 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(30, v2.get());
         gci5.interpolate(TickCalculation.fromMillis(1000));
         assertEquals(40, v1.get());
         assertEquals(100, v2.get());
         gci5.interpolate(TickCalculation.fromMillis(1600));
-        assertTrue("v1.get(): " + v1.get(), (52 == v1.get()) || (-20 == v1.get()));
+        assertTrue((52 == v1.get()) || (-20 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(40, v2.get());
         gci5.interpolate(TickCalculation.fromMillis(2000));
-        assertTrue("v1.get(): " + v1.get(), (60 == v1.get()) || (-60 == v1.get()));
+        assertTrue((60 == v1.get()) || (-60 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(0, v2.get());
 
         // single value in start, duplicate value in mid, duplicate value in end
@@ -637,16 +637,16 @@ public class GeneralClipInterpolatorTest {
         assertEquals(30, v1.get());
         assertEquals(0, v2.get());
         gci6.interpolate(TickCalculation.fromMillis(300));
-        assertTrue("v1.get(): " + v1.get(), (33 == v1.get()) || (9 == v1.get()));
+        assertTrue((33 == v1.get()) || (9 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(30, v2.get());
         gci6.interpolate(TickCalculation.fromMillis(1000));
-        assertTrue("v1.get(): " + v1.get(), (40 == v1.get()) || (-40 == v1.get()));
+        assertTrue((40 == v1.get()) || (-40 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(100, v2.get());
         gci6.interpolate(TickCalculation.fromMillis(1600));
-        assertTrue("v1.get(): " + v1.get(), (52 == v1.get()) || (-20 == v1.get()) || (20 == v1.get()) || (-52 == v1.get()));
+        assertTrue((52 == v1.get()) || (-20 == v1.get()) || (20 == v1.get()) || (-52 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(40, v2.get());
         gci6.interpolate(TickCalculation.fromMillis(2000));
-        assertTrue("v1.get(): " + v1.get(), (60 == v1.get()) || (-60 == v1.get()));
+        assertTrue((60 == v1.get()) || (-60 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(0, v2.get());
 
         // duplicate value in start, duplicate value in mid, duplicate value in end
@@ -655,19 +655,19 @@ public class GeneralClipInterpolatorTest {
         v2.set(0);
         gci7.validate(true);
         gci7.interpolate(TickCalculation.fromMillis(0));
-        assertTrue("v1.get(): " + v1.get(), (30 == v1.get()) || (-30 == v1.get()));
+        assertTrue((30 == v1.get()) || (-30 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(0, v2.get());
         gci7.interpolate(TickCalculation.fromMillis(300));
-        assertTrue("v1.get(): " + v1.get(), (33 == v1.get()) || (9 == v1.get()) || (-9 == v1.get()) || (-33 == v1.get()));
+        assertTrue((33 == v1.get()) || (9 == v1.get()) || (-9 == v1.get()) || (-33 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(30, v2.get());
         gci7.interpolate(TickCalculation.fromMillis(1000));
-        assertTrue("v1.get(): " + v1.get(), (40 == v1.get()) || (-40 == v1.get()));
+        assertTrue((40 == v1.get()) || (-40 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(100, v2.get());
         gci7.interpolate(TickCalculation.fromMillis(1600));
-        assertTrue("v1.get(): " + v1.get(), (52 == v1.get()) || (-20 == v1.get()) || (20 == v1.get()) || (-52 == v1.get()));
+        assertTrue((52 == v1.get()) || (-20 == v1.get()) || (20 == v1.get()) || (-52 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(40, v2.get());
         gci7.interpolate(TickCalculation.fromMillis(2000));
-        assertTrue("v1.get(): " + v1.get(), (60 == v1.get()) || (-60 == v1.get()));
+        assertTrue((60 == v1.get()) || (-60 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(0, v2.get());
 
         // no value in start, single value in mid, duplicate value in end
@@ -685,10 +685,10 @@ public class GeneralClipInterpolatorTest {
         assertEquals(40, v1.get());
         assertEquals(100, v2.get());
         gci8.interpolate(TickCalculation.fromMillis(1600));
-        assertTrue("v1.get(): " + v1.get(), (52 == v1.get()) || (-20 == v1.get()));
+        assertTrue((52 == v1.get()) || (-20 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(40, v2.get());
         gci8.interpolate(TickCalculation.fromMillis(2000));
-        assertTrue("v1.get(): " + v1.get(), (60 == v1.get()) || (-60 == v1.get()));
+        assertTrue((60 == v1.get()) || (-60 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(0, v2.get());
 
         // no value in start, duplicate value in mid, single value in end
@@ -700,13 +700,13 @@ public class GeneralClipInterpolatorTest {
         assertEquals(0, v1.get());
         assertEquals(0, v2.get());
         gci9.interpolate(TickCalculation.fromMillis(400));
-        assertTrue("v1.get(): " + v1.get(), (16 == v1.get()) || (-16 == v1.get()));
+        assertTrue((16 == v1.get()) || (-16 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(40, v2.get());
         gci9.interpolate(TickCalculation.fromMillis(1000));
-        assertTrue("v1.get(): " + v1.get(), (40 == v1.get()) || (-40 == v1.get()));
+        assertTrue((40 == v1.get()) || (-40 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(100, v2.get());
         gci9.interpolate(TickCalculation.fromMillis(1600));
-        assertTrue("v1.get(): " + v1.get(), (52 == v1.get()) || (20 == v1.get()));
+        assertTrue((52 == v1.get()) || (20 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(40, v2.get());
         gci9.interpolate(TickCalculation.fromMillis(2000));
         assertEquals(60, v1.get());
@@ -721,16 +721,16 @@ public class GeneralClipInterpolatorTest {
         assertEquals(0, v1.get());
         assertEquals(0, v2.get());
         gci10.interpolate(TickCalculation.fromMillis(400));
-        assertTrue("v1.get(): " + v1.get(), (16 == v1.get()) || (-16 == v1.get()));
+        assertTrue((16 == v1.get()) || (-16 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(40, v2.get());
         gci10.interpolate(TickCalculation.fromMillis(1000));
-        assertTrue("v1.get(): " + v1.get(), (40 == v1.get()) || (-40 == v1.get()));
+        assertTrue((40 == v1.get()) || (-40 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(100, v2.get());
         gci10.interpolate(TickCalculation.fromMillis(1600));
-        assertTrue("v1.get(): " + v1.get(), (52 == v1.get()) || (-20 == v1.get()) || (20 == v1.get()) || (-52 == v1.get()));
+        assertTrue((52 == v1.get()) || (-20 == v1.get()) || (20 == v1.get()) || (-52 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(40, v2.get());
         gci10.interpolate(TickCalculation.fromMillis(2000));
-        assertTrue("v1.get(): " + v1.get(), (60 == v1.get()) || (-60 == v1.get()));
+        assertTrue((60 == v1.get()) || (-60 == v1.get()), "v1.get(): " + v1.get());
         assertEquals(0, v2.get());
     }
 }

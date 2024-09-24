@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,14 @@
 
 package test.javafx.scene.control.skin;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils.getCell;
 import java.util.List;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-
-import com.sun.javafx.tk.Toolkit;
-
-import static org.junit.Assert.*;
-import static test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils.*;
-
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -50,6 +46,11 @@ import javafx.scene.control.TreeTableView;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 
 /**
@@ -87,29 +88,30 @@ public class TreeTableViewDisclosureNodeTest {
 
         TreeItem<String> grandChild = child.getChildren().get(0);
         int grandChildRowIndex = treeTable.getRow(grandChild);
-        assertTrue("sanity: grandChild is leaf", grandChild.isLeaf());
-        assertFalse("sanity: grandChild not selected", sm.isSelected(grandChildRowIndex));
+        assertTrue(grandChild.isLeaf(), "sanity: grandChild is leaf");
+        assertFalse(sm.isSelected(grandChildRowIndex), "sanity: grandChild not selected");
         fireMouseIntoIndentationRegion(grandChildRowIndex);
-        assertTrue("grandChild must be selected " + grandChildRowIndex, sm.isSelected(grandChildRowIndex));
+        assertTrue(sm.isSelected(grandChildRowIndex), "grandChild must be selected " + grandChildRowIndex);
     }
 
     /**
      * This is the deeper reason for JDK-8253597: on re-use of a treeTableRow
      * in leaf rows, the disclosureNode is not removed
      */
-    @Test @Ignore("real-cleanup")
+    @Test
+    @Disabled("real-cleanup")
     public void testRowReuse() {
         showTreeTable();
         TreeItem<String> expandedChild = root.getChildren().get(rootExpandedChildIndex);
         TreeItem<String> grandChild = expandedChild.getChildren().get(0);
         int grandChildRowIndex = treeTable.getRow(grandChild);
-        assertNull("leaf must not have disclosureNode", getDisclosureNode(grandChildRowIndex));
+        assertNull(getDisclosureNode(grandChildRowIndex), "leaf must not have disclosureNode");
         // collapse/expand cycle
         expandedChild.setExpanded(false);
         Toolkit.getToolkit().firePulse();
         expandedChild.setExpanded(true);
         Toolkit.getToolkit().firePulse();
-        assertNull("leaf must not have disclosureNode", getDisclosureNode(grandChildRowIndex));
+        assertNull(getDisclosureNode(grandChildRowIndex), "leaf must not have disclosureNode");
     }
 
     /**
@@ -122,7 +124,7 @@ public class TreeTableViewDisclosureNodeTest {
         TreeItem<String> grandChild = expandedChild.getChildren().get(0);
         int grandChildRowIndex = treeTable.getRow(grandChild);
         fireMouseIntoIndentationRegion(grandChildRowIndex);
-        assertTrue("row must be selected" + grandChildRowIndex, sm.isSelected(grandChildRowIndex));
+        assertTrue(sm.isSelected(grandChildRowIndex), "row must be selected" + grandChildRowIndex);
     }
 
     /**
@@ -134,7 +136,7 @@ public class TreeTableViewDisclosureNodeTest {
         TreeItem<String> leafChild = root.getChildren().get(rootLeafChildIndex);
         int leafChildRowIndex = treeTable.getRow(leafChild);
         fireMouseIntoIndentationRegion(leafChildRowIndex);
-        assertTrue("row must be selected" + leafChildRowIndex, sm.isSelected(leafChildRowIndex));
+        assertTrue(sm.isSelected(leafChildRowIndex), "row must be selected" + leafChildRowIndex);
    }
 
     /**
@@ -146,7 +148,7 @@ public class TreeTableViewDisclosureNodeTest {
         TreeItem<String> child = root.getChildren().get(rootCollapsedChildIndex);
         boolean expanded = child.isExpanded();
         fireMouseIntoIndentationRegion(treeTable.getRow(child));
-        assertEquals("expansion state changed" + child.getValue(), !expanded,  child.isExpanded());
+        assertEquals(!expanded,  child.isExpanded(), "expansion state changed" + child.getValue());
     }
 
     /**
@@ -188,8 +190,8 @@ public class TreeTableViewDisclosureNodeTest {
      */
     protected void assertHasVisibleDisclosureNode(int rowIndex) {
         Node disclosure = getDisclosureNode(rowIndex);
-        assertNotNull("disclosureNode must added", disclosure);
-        assertTrue("disclosureNode must be visible", disclosure.isVisible());
+        assertNotNull(disclosure, "disclosureNode must added");
+        assertTrue(disclosure.isVisible(), "disclosureNode must be visible");
     }
 
 // ------ accessor helpers
@@ -217,8 +219,8 @@ public class TreeTableViewDisclosureNodeTest {
      */
     protected TreeTableRow<?> getTableRow(int rowIndex) {
         IndexedCell<?> tableRow = getCell(treeTable, rowIndex);
-        assertTrue("sanity: expect TreeTableRow but was: " + tableRow, tableRow instanceof TreeTableRow);
-        assertEquals("sanity: row index", rowIndex, tableRow.getIndex());
+        assertTrue(tableRow instanceof TreeTableRow, "sanity: expect TreeTableRow but was: " + tableRow);
+        assertEquals(rowIndex, tableRow.getIndex(), "sanity: row index");
         return (TreeTableRow<?>) tableRow;
     }
 
@@ -291,7 +293,7 @@ public class TreeTableViewDisclosureNodeTest {
         }
     }
 
-    @Before
+    @BeforeEach
     public void setup() {
         Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
             if (throwable instanceof RuntimeException) {
@@ -315,7 +317,7 @@ public class TreeTableViewDisclosureNodeTest {
         treeTable.getColumns().add(treeColumn);
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         if (stage != null) stage.hide();
         Thread.currentThread().setUncaughtExceptionHandler(null);

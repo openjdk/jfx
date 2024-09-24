@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,21 +22,17 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package javafx.css;
+package com.oracle.tools.fx.monkey.util;
 
-import java.util.List;
-import java.util.Set;
-
-public class SimpleSelectorShim {
-
-    public static SimpleSelector getSimpleSelector(
-            final String name, final List<String> styleClasses,
-            final List<String> pseudoClasses, final String id) {
-        return new SimpleSelector(name, styleClasses, pseudoClasses, id);
-    }
-
-    public static Set<PseudoClass> getPseudoClassStates(SimpleSelector ss) {
-        return ss.getPseudoClassStates();
-    }
-
+/**
+ * Equivalent of Consumer<Boolean> but with primitive value.
+ */
+@FunctionalInterface
+public interface BooleanConsumer {
+    /**
+     * Performs this operation on the given argument.
+     *
+     * @param value the input argument
+     */
+    public void consume(boolean value);
 }

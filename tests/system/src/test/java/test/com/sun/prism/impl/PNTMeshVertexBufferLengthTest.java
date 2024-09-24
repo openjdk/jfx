@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,12 @@
 
 package test.com.sun.prism.impl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.concurrent.CountDownLatch;
-
+import java.util.concurrent.TimeUnit;
 import javafx.application.Application;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
@@ -44,23 +43,22 @@ import javafx.scene.shape.TriangleMeshShim;
 import javafx.scene.shape.VertexFormat;
 import javafx.scene.transform.Rotate;
 import javafx.stage.Stage;
-
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import com.sun.javafx.sg.prism.NGTriangleMesh;
 import com.sun.javafx.sg.prism.NGTriangleMeshShim;
 import com.sun.prism.impl.BaseMesh;
 import com.sun.prism.impl.BaseMeshShim;
-
 import test.util.Util;
 
 /**
  * @test @bug 8178804
  * @summary Excessive memory consumption in TriangleMesh/MeshView
  */
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class PNTMeshVertexBufferLengthTest {
 
     // Sleep time showing/hiding window in milliseconds
@@ -260,24 +258,24 @@ public class PNTMeshVertexBufferLengthTest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupOnce() {
         Util.launch(launchLatch, MyApp.class);
         assertEquals(0, launchLatch.getCount());
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownOnce() {
         Util.shutdown();
     }
 
-    @Before
+    @BeforeEach
     public void setupEach() {
         assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
     }
 
     // ========================== TEST CASES ==========================
-    @Test(timeout = 15000)
+    @Test
     public void testMeshWithZeroDiv() throws InterruptedException {
         Util.runAndWait(() -> {
             Scene scene = myApp.primaryStage.getScene();
@@ -294,7 +292,7 @@ public class PNTMeshVertexBufferLengthTest {
         assertTrue(BaseMeshShim.test_isVertexBufferNull(baseMesh));
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testMeshWithOneDiv() throws InterruptedException {
         Util.runAndWait(() -> {
             Scene scene = myApp.primaryStage.getScene();
@@ -313,7 +311,7 @@ public class PNTMeshVertexBufferLengthTest {
         assertEquals(10 * VERTEX_SIZE, BaseMeshShim.test_getVertexBufferLength(baseMesh));
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testMeshWithTwoDiv() throws InterruptedException {
         Util.runAndWait(() -> {
             Scene scene = myApp.primaryStage.getScene();
@@ -332,7 +330,7 @@ public class PNTMeshVertexBufferLengthTest {
         assertEquals(27 * VERTEX_SIZE, BaseMeshShim.test_getVertexBufferLength(baseMesh));
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testMeshWithThreeDiv() throws InterruptedException {
         Util.runAndWait(() -> {
             Scene scene = myApp.primaryStage.getScene();
@@ -352,7 +350,7 @@ public class PNTMeshVertexBufferLengthTest {
         assertEquals(325 * VERTEX_SIZE, BaseMeshShim.test_getVertexBufferLength(baseMesh));
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testMeshWithFiveDiv() throws InterruptedException {
         Util.runAndWait(() -> {
             Scene scene = myApp.primaryStage.getScene();

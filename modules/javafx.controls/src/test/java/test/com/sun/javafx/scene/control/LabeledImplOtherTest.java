@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,9 @@
 
 package test.com.sun.javafx.scene.control;
 
-import com.sun.javafx.scene.control.LabeledImpl;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import java.net.URL;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
@@ -34,17 +36,13 @@ import javafx.scene.control.skin.MenuButtonSkin;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.stage.Stage;
-import org.junit.Test;
-
-import java.net.URL;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.scene.control.LabeledImpl;
 
 public class LabeledImplOtherTest {
 
-
-    @Test public void test_RT_21357() {
+    @Test
+    public void test_RT_21357() {
 
         final Labeled labeled = new Label("label");
         final LabeledImpl labeledImpl = new LabeledImpl(labeled);
@@ -60,8 +58,8 @@ public class LabeledImplOtherTest {
         assertNotNull(labeled.getGraphic());
     }
 
-    @Test public void test_RT_21617() {
-
+    @Test
+    public void test_RT_21617() {
         MenuButton mb = new MenuButton();
         mb.setText("SomeText");
         MenuButtonSkin mbs = new MenuButtonSkin(mb);
@@ -87,5 +85,4 @@ public class LabeledImplOtherTest {
         assertEquals(1, mb.getOpacity(), 0.00001);
         assertEquals(.5, labeledImpl.getOpacity(), 0.00001);
     }
-
 }

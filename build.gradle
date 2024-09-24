@@ -362,6 +362,10 @@ ext.IS_LINUX = OS_NAME.contains("linux")
 
 ext.MAVEN_GROUP_ID = "org.openjfx"
 
+// Enable native access from modules with native code
+ext.enableNativeGraphics='--enable-native-access=javafx.graphics'
+ext.enableNativeAll='--enable-native-access=javafx.graphics,javafx.media,javafx.web'
+
 // Verify that the architecture & OS are supported configurations. Note that
 // at present building on PI is not supported, but we would only need to make
 // some changes on assumptions on what should be built (like SWT / Swing) and
@@ -533,6 +537,11 @@ ext.IS_SWT_TEST = Boolean.parseBoolean(SWT_TEST);
 defineProperty("UNSTABLE_TEST", "false")
 ext.IS_UNSTABLE_TEST = Boolean.parseBoolean(UNSTABLE_TEST);
 
+// Default timeout values to use in JUnit for tests and lifecycle methods
+// that don't specify one
+defineProperty("JUNIT_TEST_TIMEOUT", "120s")
+defineProperty("JUNIT_LIFECYCLE_TIMEOUT", "20s")
+
 // Toggle diagnostic output from the Gradle workaround and the Sandbox test apps.
 defineProperty("WORKER_DEBUG", "false")
 ext.IS_WORKER_DEBUG = Boolean.parseBoolean(WORKER_DEBUG);
@@ -573,7 +582,9 @@ def defaultToolLintOptions = ""
 defineProperty("TOOL_LINT", defaultToolLintOptions)
 ext.IS_TOOL_LINT = TOOL_LINT != ""
 
-def defaultTestLintOptions = ""
+def defaultTestLintOptions =
+        "-options" + "," +
+        "removal"
 defineProperty("TEST_LINT", defaultTestLintOptions)
 ext.IS_TEST_LINT = TEST_LINT != ""
 
@@ -583,7 +594,7 @@ ext.IS_JAVAC_WERROR = Boolean.parseBoolean(JAVAC_WERROR)
 defineProperty("TOOL_JAVAC_WERROR", "false")
 ext.IS_TOOL_JAVAC_WERROR = Boolean.parseBoolean(TOOL_JAVAC_WERROR)
 
-defineProperty("TEST_JAVAC_WERROR", "false")
+defineProperty("TEST_JAVAC_WERROR", "true")
 ext.IS_TEST_JAVAC_WERROR = Boolean.parseBoolean(TEST_JAVAC_WERROR)
 
 // Doclint options (all enabled by default)
@@ -1120,7 +1131,7 @@ List<String> computeModulePathArgs(String  pname, List<String> deps, boolean tes
 }
 
 
-void writeRunArgsFile(File dest, List<String> libpath, List<String> modpath, List<String> modules) {
+void writeArgsFile(boolean isCompile, File dest, List<String> libpath, List<String> modpath, List<String> modules) {
 
     dest.delete()
 
@@ -1164,7 +1175,19 @@ void writeRunArgsFile(File dest, List<String> libpath, List<String> modpath, Lis
         dest <<  "--add-modules="
         dest << modules.join(",")
         dest << "\n"
+        if (!isCompile) {
+            dest << enableNativeAll
+            dest << "\n"
+        }
     }
+}
+
+void writeCompileArgsFile(File dest, List<String> libpath, List<String> modpath, List<String> modules) {
+    writeArgsFile(true, dest, libpath, modpath, modules)
+}
+
+void writeRunArgsFile(File dest, List<String> libpath, List<String> modpath, List<String> modules) {
+    writeArgsFile(false, dest, libpath, modpath, modules)
 }
 
 // perform common project manipulation for modules
@@ -2108,7 +2131,9 @@ allprojects {
     // Set sourceCompatibility to the target release of Java. Most modules
     // set compiler.options.release (to the same target version), which will
     // override this setting, but it is needed for those modules that can't.
-    sourceCompatibility = JAVA_TARGET_VERSION
+    java {
+        sourceCompatibility = JAVA_TARGET_VERSION
+    }
 
     // By default all of our projects require junit for testing so we can just
     // setup this dependency here.
@@ -2119,10 +2144,11 @@ allprojects {
         testImplementation group: "org.junit.jupiter", name: "junit-jupiter-api", version: "5.8.1"
         testImplementation group: "org.junit.jupiter", name: "junit-jupiter-params", version: "5.8.1"
         testImplementation group: "org.opentest4j", name: "opentest4j", version: "1.2.0"
-        testRuntimeOnly group: "org.apiguardian", name: "apiguardian-api", version: "1.1.2"
+        testImplementation group: "org.apiguardian", name: "apiguardian-api", version: "1.1.2"
         testRuntimeOnly group: "org.junit.jupiter", name: "junit-jupiter-engine", version: "5.8.1"
         testRuntimeOnly group: "org.junit.platform", name: "junit-platform-commons", version: "1.8.1"
         testRuntimeOnly group: "org.junit.platform", name: "junit-platform-engine", version: "1.8.1"
+        testRuntimeOnly group: "org.junit.platform", name: "junit-platform-launcher", version: "1.8.1"
         testRuntimeOnly group: "org.junit.vintage", name: "junit-vintage-engine", version: "5.8.1"
 
         if (BUILD_CLOSED && DO_JCOV)  {
@@ -2163,6 +2189,8 @@ allprojects {
         }
 
         systemProperty 'unstable.test', IS_UNSTABLE_TEST
+        systemProperty 'junit.jupiter.execution.timeout.test.method.default', JUNIT_TEST_TIMEOUT
+        systemProperty 'junit.jupiter.execution.timeout.lifecycle.method.default', JUNIT_LIFECYCLE_TIMEOUT
     }
 
     compileTestJava {
@@ -2674,6 +2702,7 @@ project(":graphics") {
 
     test {
         def cssDir = file("$buildDir/classes/java/main/${moduleName}/javafx")
+        jvmArgs enableNativeGraphics
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
         enableAssertions = true
@@ -2762,6 +2791,7 @@ project(":controls") {
 
     test {
         def cssDir = file("$buildDir/classes/java/main/${moduleName}/javafx")
+        jvmArgs enableNativeGraphics
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
     }
@@ -2853,6 +2883,8 @@ project(":swing") {
 
     test {
         enabled = IS_FULL_TEST && IS_AWT_TEST
+
+        jvmArgs enableNativeGraphics
     }
 
     if (COMPILE_SWING) {
@@ -2914,6 +2946,8 @@ project(":swt") {
         enabled = false // FIXME: JIGSAW -- support this with modules
         logger.info("JIGSAW Testing disabled for swt")
 
+        jvmArgs enableNativeGraphics
+
         if (IS_MAC) {
             enabled = false
             logger.info("SWT tests are disabled on MAC, because Gradle test runner does not handle -XstartOnFirstThread properly (https://issues.gradle.org/browse/GRADLE-3290).")
@@ -2962,6 +2996,7 @@ project(":fxml") {
         // StubToolkit is not *really* needed here, but because some code inadvertently invokes performance
         // tracker and this attempts to fire up the toolkit and this looks for native libraries and fails,
         // we have to use the stub toolkit for now.
+        jvmArgs enableNativeGraphics
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit"
         // FIXME: change this to also allow JDK 9 boot jdk
         classpath += files("$JDK_HOME/jre/lib/ext/nashorn.jar")
@@ -3700,6 +3735,10 @@ project(":web") {
                 println "******************************************************"
             }
         }
+
+        // enable native access for all modules with native code
+        jvmArgs enableNativeAll
+
         // Run web tests in headless mode
         systemProperty 'glass.platform', 'Monocle'
         systemProperty 'monocle.platform', 'Headless'
@@ -4071,6 +4110,9 @@ project(":systemTests") {
 
     test {
         enabled = IS_FULL_TEST
+
+        // enable native access for all modules with native code
+        jvmArgs enableNativeAll
 
         // Parse testPatchModuleArgs looking for "--module-path".
         // Save path if found so we can pass it to the module launcher tests
@@ -4747,8 +4789,8 @@ compileTargets { t ->
             includeEmptyDirs = false
             // Sets directory and file permissions in archive for Windows
             if (IS_WINDOWS && IS_USE_CYGWIN) {
-                dirMode = 0755
-                fileMode = 0755
+                dirPermissions { unix(0755) }
+                filePermissions { unix(0755) }
             }
             from sdkArtifactsDir
             into "${sdkBundleName}"
@@ -5189,7 +5231,7 @@ compileTargets { t ->
 
             if (HAS_JAVAFX_MODULES) {
                 writeRunArgsFile(runArgsFile, computeLibraryPath(true), modpath, null)
-                writeRunArgsFile(compileArgsFile, null, modpath, null)
+                writeCompileArgsFile(compileArgsFile, null, modpath, null)
 
                 if (rootProject.hasProperty("EXTRA_ADDEXPORTS_STRING")) {
                     runArgsFile << EXTRA_ADDEXPORTS_STRING
@@ -5198,7 +5240,7 @@ compileTargets { t ->
             } else {
                 modpath = [ cygpath("${standaloneLibDir}") ]
                 writeRunArgsFile(runArgsFile, null, modpath, modnames)
-                writeRunArgsFile(compileArgsFile, null, modpath, modnames)
+                writeCompileArgsFile(compileArgsFile, null, modpath, modnames)
             }
         }
     }
@@ -5699,7 +5741,7 @@ compileTargets { t ->
                     }
                 }
 
-                writeRunArgsFile(testCompileArgsFile, null, modpath, null)
+                writeCompileArgsFile(testCompileArgsFile, null, modpath, null)
                 writeRunArgsFile(testRunArgsFile, computeLibraryPath(true), modpath, null)
 
                 if (rootProject.hasProperty("EXTRA_ADDEXPORTS_STRING")) {
@@ -5734,7 +5776,7 @@ compileTargets { t ->
                     }
                 }
 
-                writeRunArgsFile(testCompileArgsFile, null, modpath, modnames)
+                writeCompileArgsFile(testCompileArgsFile, null, modpath, modnames)
                 writeRunArgsFile(testRunArgsFile, computeLibraryPath(true), modpath, modnames)
 
             }
