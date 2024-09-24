@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,12 @@
 
 package test.javafx.scene.chart;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
-import javafx.css.CssMetaData;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -34,29 +38,28 @@ import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.css.CssMetaData;
 import javafx.css.StyleableProperty;
 import javafx.scene.chart.ValueAxis;
 import javafx.scene.chart.ValueAxisShim;
 import javafx.util.StringConverter;
-import static org.junit.Assert.*;
-
-
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * All public members of ValueAxis are tested here .
  * @author srikalyc
  */
 public class ValueAxisTest {
-    private ValueAxis axis;//Empty string
-    private ValueAxis twoValueAxis;//Empty string
+    private ValueAxis axis;
+    private ValueAxis twoValueAxis;
     private StringConverter<Number> formatter;
 
     public ValueAxisTest() {
     }
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         if (axis == null) {
               axis = new ValueAxis() {
                 @Override
@@ -142,61 +145,65 @@ public class ValueAxisTest {
      * Tests for property binding                                        *
      ********************************************************************/
 
-
-    @Test public void checkMinorTickVisiblePropertyBind() {
+    @Test
+    public void checkMinorTickVisiblePropertyBind() {
         BooleanProperty objPr = new SimpleBooleanProperty(true);
         axis.minorTickVisibleProperty().bind(objPr);
-        assertTrue("minorTickVisibleProperty cannot be bound", axis.minorTickVisibleProperty().getValue());
+        assertTrue(axis.minorTickVisibleProperty().getValue(), "minorTickVisibleProperty cannot be bound");
         objPr.setValue(false);
-        assertFalse("minorTickVisibleProperty cannot be bound", axis.minorTickVisibleProperty().getValue());
+        assertFalse(axis.minorTickVisibleProperty().getValue(), "minorTickVisibleProperty cannot be bound");
     }
 
-
-    @Test public void checkMinorTickLengthPropertyBind() {
+    @Test
+    public void checkMinorTickLengthPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(56.0);
         axis.minorTickLengthProperty().bind(objPr);
-        assertEquals("minorTickLengthProperty cannot be bound", axis.minorTickLengthProperty().getValue(),56.0,0.0);
+        assertEquals(axis.minorTickLengthProperty().getValue(), 56.0, 0.0, "minorTickLengthProperty cannot be bound");
         objPr.setValue(23.0);
-        assertEquals("minorTickLengthProperty cannot be bound", axis.minorTickLengthProperty().getValue(),23.0,0.0);
+        assertEquals(axis.minorTickLengthProperty().getValue(), 23.0, 0.0, "minorTickLengthProperty cannot be bound");
     }
 
-    @Test public void checkMinorTickCountPropertyBind() {
+    @Test
+    public void checkMinorTickCountPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(56.0);
         axis.minorTickCountProperty().bind(objPr);
-        assertEquals("minorTickCountProperty cannot be bound", axis.minorTickCountProperty().getValue(),56.0,0.0);
+        assertEquals(axis.minorTickCountProperty().getValue(), 56.0, 0.0, "minorTickCountProperty cannot be bound");
         objPr.setValue(23.0);
-        assertEquals("minorTickCountProperty cannot be bound", axis.minorTickCountProperty().getValue(),23.0,0.0);
+        assertEquals(axis.minorTickCountProperty().getValue(), 23.0, 0.0, "minorTickCountProperty cannot be bound");
     }
 
     @SuppressWarnings("cast")
-    @Test public void checkScaleIsReadOnlyPropertyAndHenceCannotBeBound() {
+    @Test
+    public void checkScaleIsReadOnlyPropertyAndHenceCannotBeBound() {
         assertTrue(axis.scaleProperty() instanceof ReadOnlyDoubleProperty);
     }
 
-    @Test public void checkUpperBoundPropertyBind() {
+    @Test
+    public void checkUpperBoundPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(56.0);
         axis.upperBoundProperty().bind(objPr);
-        assertEquals("upperBoundProperty cannot be bound", axis.upperBoundProperty().getValue(),56.0,0.0);
+        assertEquals(axis.upperBoundProperty().getValue(), 56.0, 0.0, "upperBoundProperty cannot be bound");
         objPr.setValue(23.0);
-        assertEquals("upperBoundProperty cannot be bound", axis.upperBoundProperty().getValue(),23.0,0.0);
+        assertEquals(axis.upperBoundProperty().getValue(), 23.0, 0.0, "upperBoundProperty cannot be bound");
     }
 
-    @Test public void checkLowerBoundPropertyBind() {
+    @Test
+    public void checkLowerBoundPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(56.0);
         axis.lowerBoundProperty().bind(objPr);
-        assertEquals("lowerBoundProperty cannot be bound", axis.lowerBoundProperty().getValue(),56.0,0.0);
+        assertEquals(axis.lowerBoundProperty().getValue(), 56.0, 0.0, "lowerBoundProperty cannot be bound");
         objPr.setValue(23.0);
-        assertEquals("lowerBoundProperty cannot be bound", axis.lowerBoundProperty().getValue(),23.0,0.0);
+        assertEquals(axis.lowerBoundProperty().getValue(), 23.0, 0.0, "lowerBoundProperty cannot be bound");
     }
 
-    @Test public void checkTickLabelFormatterPropertyBind() {
+    @Test
+    public void checkTickLabelFormatterPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<StringConverter<Number>>(null);
         axis.tickLabelFormatterProperty().bind(objPr);
-        assertNull("tickLabelFormatterProperty cannot be bound", axis.tickLabelFormatterProperty().getValue());
+        assertNull(axis.tickLabelFormatterProperty().getValue(), "tickLabelFormatterProperty cannot be bound");
         objPr.setValue(formatter);
-        assertSame("tickLabelFormatterProperty cannot be bound", axis.tickLabelFormatterProperty().getValue(), formatter);
+        assertSame(axis.tickLabelFormatterProperty().getValue(), formatter, "tickLabelFormatterProperty cannot be bound");
     }
-
 
     @Test public void minorTickVisiblePropertyHasBeanReference() {
         assertSame(axis, axis.minorTickVisibleProperty().getBean());
@@ -406,5 +413,4 @@ public class ValueAxisTest {
         assertEquals(-1, axis.getDisplayPosition(-1), 1e-10);
         assertEquals(11, axis.getDisplayPosition(11), 1e-10);
     }
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,7 +34,6 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.Group;
 import test.javafx.scene.NodeTest;
 import javafx.scene.Scene;
-import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,12 +44,18 @@ import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 public class PathTest {
 
-    @Test public void testVarargConstructor() {
+    @Test
+    public void testVarargConstructor() {
         PathElement one = new MoveTo(10, 10);
         PathElement two = new LineTo(20, 20);
         PathElement three = new MoveTo(30, 30);
@@ -61,7 +66,8 @@ public class PathTest {
         assertSame(three, path.getElements().get(2));
     }
 
-    @Test public void testListConstructor() {
+    @Test
+    public void testListConstructor() {
         PathElement one = new MoveTo(10, 10);
         PathElement two = new LineTo(20, 20);
         PathElement three = new MoveTo(30, 30);
@@ -77,7 +83,8 @@ public class PathTest {
         assertSame(three, path.getElements().get(2));
     }
 
-    @Test public void testBoundPropertySync_FillRule() throws Exception {
+    @Test
+    public void testBoundPropertySync_FillRule() throws Exception {
         ObjectProperty<FillRule> v = new SimpleObjectProperty<>(FillRule.EVEN_ODD);
         Path path = new Path();
         path.fillRuleProperty().bind(v);
@@ -90,7 +97,8 @@ public class PathTest {
         assertEquals(geometry.getWindingRule(), FillRule.NON_ZERO.ordinal());
     }
 
-    @Test public void testFirstRelativeElement_PathIsEmpty() {
+    @Test
+    public void testFirstRelativeElement_PathIsEmpty() {
         Path path = new Path();
         final MoveTo moveTo = new MoveTo(10, 10);
         moveTo.setAbsolute(false);
@@ -101,7 +109,8 @@ public class PathTest {
         assertTrue(piterator.isDone());//path is empty
     }
 
-     @Test public void testFirstRelativeElement_BoundsAreEmpty() {
+     @Test
+     public void testFirstRelativeElement_BoundsAreEmpty() {
         Path path = new Path();
          final MoveTo moveTo = new MoveTo(10, 10);
          moveTo.setAbsolute(false);
@@ -110,7 +119,8 @@ public class PathTest {
         assertTrue(path.getBoundsInLocal().isEmpty() && path.getBoundsInParent().isEmpty());
     }
 
-    @Test public void testFirstElementIsNotMoveTo_PathIsEmpty() {
+    @Test
+    public void testFirstElementIsNotMoveTo_PathIsEmpty() {
         Path path = new Path();
         path.getElements().add(new LineTo(10, 10));
         path.getElements().add(new LineTo(100, 100));
@@ -119,14 +129,16 @@ public class PathTest {
         assertTrue(piterator.isDone());//path is empty
     }
 
-    @Test public void testFirstElementIsNotMoveTo_BoundsAreEmpty() {
+    @Test
+    public void testFirstElementIsNotMoveTo_BoundsAreEmpty() {
         Path path = new Path();
         path.getElements().add(new LineTo(10, 10));
         path.getElements().add(new LineTo(100, 100));
         assertTrue(path.getBoundsInLocal().isEmpty() && path.getBoundsInParent().isEmpty());
     }
 
-    @Test public void testFillRuleSync() {
+    @Test
+    public void testFillRuleSync() {
         Path path = new Path();
         path.getElements().add(new MoveTo(10, 10));
         path.getElements().add(new LineTo(100, 10));
@@ -143,13 +155,15 @@ public class PathTest {
         assertEquals(Path2D.WIND_NON_ZERO, geometry.getWindingRule());
     }
 
-    @Test public void toStringShouldReturnNonEmptyString() {
+    @Test
+    public void toStringShouldReturnNonEmptyString() {
         String s = new Path().toString();
         assertNotNull(s);
         assertFalse(s.isEmpty());
     }
 
-    @Test public void testPathElementIsAbsoluteAfterAbsoluteProperty() {
+    @Test
+    public void testPathElementIsAbsoluteAfterAbsoluteProperty() {
         PathElement element = new VLineTo();
         assertTrue(element.isAbsolute());
         assertTrue(element.absoluteProperty().getValue());

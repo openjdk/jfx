@@ -26,17 +26,19 @@
 package test.robot.javafx.embed.swing;
 
 import java.awt.Dimension;
+import java.util.concurrent.TimeUnit;
+import javax.swing.JLabel;
+import javax.swing.JMenuItem;
+import javax.swing.JPopupMenu;
+import javax.swing.SwingUtilities;
 import javafx.embed.swing.SwingNode;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
-import javax.swing.JLabel;
-import javax.swing.JMenuItem;
-import javax.swing.JPopupMenu;
-import javax.swing.SwingUtilities;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import test.robot.testharness.VisualTestBase;
 
 /**
@@ -45,6 +47,7 @@ import test.robot.testharness.VisualTestBase;
  *
  * https://javafx-jira.kenai.com/browse/RT-32570
  */
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class RT32570Test extends VisualTestBase {
 
     private static final double TOLERANCE = 0.07;
@@ -58,8 +61,8 @@ public class RT32570Test extends VisualTestBase {
 
     private volatile boolean popped;
 
-    @Ignore("JDK-8153542")
-    @Test(timeout = 15000)
+    @Disabled("JDK-8153542")
+    @Test
     public void test() throws Exception {
         runAndWait(() -> {
             swingNode = new SwingNode();

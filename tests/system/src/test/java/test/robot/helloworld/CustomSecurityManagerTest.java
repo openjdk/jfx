@@ -25,14 +25,15 @@
 
 package test.robot.helloworld;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.awt.AWTPermission;
 import java.security.AllPermission;
 import java.security.Permission;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
@@ -43,14 +44,16 @@ import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.FXPermission;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import com.sun.javafx.PlatformUtil;
 import test.robot.testharness.VisualTestBase;
 
 /**
  * Basic visual tests using glass Robot to sample pixels.
  */
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class CustomSecurityManagerTest extends VisualTestBase {
 
     private Stage testStage1;
@@ -96,7 +99,7 @@ public class CustomSecurityManagerTest extends VisualTestBase {
     }
 
     @SuppressWarnings("removal")
-    @After
+    @AfterEach
     public void cleanup() {
         System.setSecurityManager(null);
     }
@@ -233,64 +236,63 @@ public class CustomSecurityManagerTest extends VisualTestBase {
         }
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testOnTopNoSecurityManager() {
         doTestOnTopCommon(null, true);
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testOnTopPermissiveSecurityManager() {
         doTestOnTopCommon(new MySecurityManager(true), true);
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testOnTopRestrictiveSecurityManager() {
         doTestOnTopCommon(new MySecurityManager(false), false);
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testFullScreenInitNoSecurityManager() {
         doTestFullScreenCommon(null, true, true);
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testFullScreenInitPermissiveSecurityManager() {
         doTestFullScreenCommon(new MySecurityManager(true), true, true);
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testFullScreenInitRestrictiveSecurityManager() {
         doTestFullScreenCommon(new MySecurityManager(false), true, false);
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testFullScreenAfterNoSecurityManager() {
         doTestFullScreenCommon(null, false, true);
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testFullScreenAfterPermissiveSecurityManager() {
         doTestFullScreenCommon(new MySecurityManager(true), false, true);
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testFullScreenAfterRestrictiveSecurityManager() {
         doTestFullScreenCommon(new MySecurityManager(false), false, false);
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testRobotNoSecurityManager() {
         doTestRobotCommon(null, true);
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testRobotPermissiveSecurityManager() {
         doTestRobotCommon(new MySecurityManager(true), true);
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testRobotRestrictiveSecurityManager() {
         doTestRobotCommon(new MySecurityManager(false), false);
     }
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,10 +30,10 @@ import com.sun.javafx.sg.prism.NGNode;
 import javafx.scene.Node;
 import test.javafx.scene.NodeTest;
 import javafx.scene.shape.Line;
-import org.junit.Test;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import test.com.sun.javafx.scene.shape.StubLineHelper;
 
 public class LineTest {
@@ -68,31 +68,36 @@ public class LineTest {
         NodeTest.testDoublePropertyPropagation(node, "endY", "y2", 100, 200);
     }
 
-    @Test public void testBoundPropertySync_startX() throws Exception {
+    @Test
+    public void testBoundPropertySync_startX() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubLine(0.0 ,0.0, 100.0, 100.0),
                 "startX", "x1", 10.0);
     }
 
-    @Test public void testBoundPropertySync_startY() throws Exception {
+    @Test
+    public void testBoundPropertySync_startY() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubLine(0.0 ,0.0, 100.0, 100.0),
                 "startY", "y1", 50.0);
     }
 
-    @Test public void testBoundPropertySync_endX() throws Exception {
+    @Test
+    public void testBoundPropertySync_endX() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubLine(0.0 ,0.0, 100.0, 100.0),
                 "endX", "x2", 200.0);
     }
 
-    @Test public void testBoundPropertySync_endY() throws Exception {
+    @Test
+    public void testBoundPropertySync_endY() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubLine(0.0 ,0.0, 100.0, 100.0),
                 "endY", "y2", 300.0);
     }
 
-    @Test public void toStringShouldReturnNonEmptyString() {
+    @Test
+    public void toStringShouldReturnNonEmptyString() {
         String s = new StubLine().toString();
         assertNotNull(s);
         assertFalse(s.isEmpty());

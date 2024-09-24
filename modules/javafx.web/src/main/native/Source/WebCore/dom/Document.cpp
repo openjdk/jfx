@@ -4028,6 +4028,10 @@ void Document::setURL(const URL& url)
     if (newURL == m_url)
         return;
 
+    if (RefPtr page = protectedPage())
+        m_fragmentDirective = page->mainFrameURLFragment();
+
+    if (m_fragmentDirective.isEmpty())
     m_fragmentDirective = newURL.consumefragmentDirective();
 
     if (SecurityOrigin::shouldIgnoreHost(newURL))

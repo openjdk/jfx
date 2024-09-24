@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,14 @@
 
 package test.javafx.scene.control.skin;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import javafx.scene.control.skin.VirtualFlowShim.ArrayLinkedListShim;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class ArrayLinkedListTest {
     private ArrayLinkedListShim<String> list;
@@ -40,7 +40,8 @@ public class ArrayLinkedListTest {
     private String b = "b";
     private String c = "c";
 
-    @Before public void setUp() {
+    @BeforeEach
+    public void setUp() {
         list = new ArrayLinkedListShim<>();
     }
 
@@ -84,13 +85,11 @@ public class ArrayLinkedListTest {
         assertEquals(0, list.size());
     }
 
-    @Test public void testArrayLinkedList_Empty_GetResultsInArrayIndexOutOfBounds() {
-        try {
+    @Test
+    public void testArrayLinkedList_Empty_GetResultsInArrayIndexOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, () -> {
             list.get(0);
-            assertTrue("get didn't return an IndexOutOfBoundsException", false);
-        } catch (IndexOutOfBoundsException e) {
-            assertTrue(true);
-        }
+        });
     }
 
     @Test public void testArrayLinkedList_Empty_RemoveFirstIsNoOp() {
@@ -101,13 +100,11 @@ public class ArrayLinkedListTest {
         list.removeLast();
     }
 
-    @Test public void testArrayLinkedList_Empty_RemoveResultsInArrayIndexOutOfBounds() {
-        try {
+    @Test
+    public void testArrayLinkedList_Empty_RemoveResultsInArrayIndexOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, () -> {
             list.remove(0);
-            assertTrue("remove didn't return an IndexOutOfBoundsException", false);
-        } catch (IndexOutOfBoundsException e) {
-            assertTrue(true);
-        }
+        });
     }
 
     @Test public void testArrayLinkedList_GetFirst_AfterAddLast() {

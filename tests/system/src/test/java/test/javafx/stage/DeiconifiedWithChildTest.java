@@ -25,19 +25,16 @@
 package test.javafx.stage;
 
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
-
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 public class DeiconifiedWithChildTest {
@@ -71,12 +68,12 @@ public class DeiconifiedWithChildTest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardown() {
         Util.shutdown();
     }
@@ -84,9 +81,9 @@ public class DeiconifiedWithChildTest {
     @Test
     public void testDeiconifiedPosition() throws Exception {
         Thread.sleep(200);
-        Assert.assertTrue(stage.isShowing());
-        Assert.assertTrue(childStage.isShowing());
-        Assert.assertFalse(stage.isIconified());
+        Assertions.assertTrue(stage.isShowing());
+        Assertions.assertTrue(childStage.isShowing());
+        Assertions.assertFalse(stage.isIconified());
 
         double x = childStage.getX();
         double y = childStage.getY();
@@ -95,7 +92,7 @@ public class DeiconifiedWithChildTest {
         Thread.sleep(200);
         Platform.runLater(() -> stage.setIconified(false));
         Thread.sleep(200);
-        Assert.assertEquals("Child window was moved", x, childStage.getX(), 0.1);
-        Assert.assertEquals("Child window was moved", y, childStage.getY(), 0.1);
+        Assertions.assertEquals(x, childStage.getX(), 0.1, "Child window was moved");
+        Assertions.assertEquals(y, childStage.getY(), 0.1, "Child window was moved");
     }
 }

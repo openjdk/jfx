@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,7 +24,7 @@
  */
 package test.javafx.scene.control;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.List;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.scene.control.ConstrainedColumnResizeBase;
@@ -34,8 +34,7 @@ import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableView;
 import javafx.scene.layout.BorderPane;
 import javafx.util.Callback;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
@@ -249,7 +248,7 @@ public class TableViewResizeTest extends ResizeHelperTestBase {
                 t.setPrefWidth(300);
                 Toolkit.getToolkit().firePulse();
                 checkInvariants(t);
-                Assert.assertEquals(t.getWidth(), sumColumnWidths(t.getColumns()), tolerance);
+                assertEquals(t.getWidth(), sumColumnWidths(t.getColumns()), tolerance);
 
                 // clear items
                 t.getItems().clear();
@@ -258,7 +257,7 @@ public class TableViewResizeTest extends ResizeHelperTestBase {
                 t.setPrefWidth(1000);
                 Toolkit.getToolkit().firePulse();
                 checkInvariants(t);
-                Assert.assertEquals(t.getWidth(), sumColumnWidths(t.getColumns()), tolerance);
+                assertEquals(t.getWidth(), sumColumnWidths(t.getColumns()), tolerance);
             }
         } finally {
             stageLoader.dispose();

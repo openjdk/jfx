@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,71 +29,83 @@ import javafx.geometry.Insets;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.paint.Color;
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * Simple tests for BackgroundFill
  */
 public class BackgroundFillTest {
-    @Test public void nullPaintDefaultsToTransparent() {
+    @Test
+    public void nullPaintDefaultsToTransparent() {
         BackgroundFill fill = new BackgroundFill(null, new CornerRadii(3), new Insets(4));
         assertEquals(Color.TRANSPARENT, fill.getFill());
     }
 
-    @Test public void nullRadiusDefaultsToEmpty() {
+    @Test
+    public void nullRadiusDefaultsToEmpty() {
         BackgroundFill fill = new BackgroundFill(Color.ORANGE, null, new Insets(2));
         assertEquals(CornerRadii.EMPTY, fill.getRadii());
     }
 
-    @Test public void nullInsetsDefaultsToEmpty() {
+    @Test
+    public void nullInsetsDefaultsToEmpty() {
         BackgroundFill fill = new BackgroundFill(Color.ORANGE, new CornerRadii(2), null);
         assertEquals(Insets.EMPTY, fill.getInsets());
     }
 
-    @Test public void equivalentFills() {
+    @Test
+    public void equivalentFills() {
         BackgroundFill a = new BackgroundFill(Color.ORANGE, new CornerRadii(2), new Insets(3));
         BackgroundFill b = new BackgroundFill(Color.ORANGE, new CornerRadii(2), new Insets(3));
         assertEquals(a, b);
     }
 
-    @Test public void differentFills() {
+    @Test
+    public void differentFills() {
         BackgroundFill a = new BackgroundFill(Color.ORANGE, new CornerRadii(2), new Insets(3));
         BackgroundFill b = new BackgroundFill(Color.RED, new CornerRadii(2), new Insets(3));
         assertFalse(a.equals(b));
     }
 
-    @Test public void differentFills2() {
+    @Test
+    public void differentFills2() {
         BackgroundFill a = new BackgroundFill(Color.ORANGE, new CornerRadii(2), new Insets(3));
         BackgroundFill b = new BackgroundFill(Color.ORANGE, new CornerRadii(1), new Insets(3));
         assertFalse(a.equals(b));
     }
 
-    @Test public void differentFills3() {
+    @Test
+    public void differentFills3() {
         BackgroundFill a = new BackgroundFill(Color.ORANGE, new CornerRadii(2), new Insets(3));
         BackgroundFill b = new BackgroundFill(Color.ORANGE, new CornerRadii(2), new Insets(1));
         assertFalse(a.equals(b));
     }
 
-    @Test public void equalsAgainstNull() {
+    @Test
+    public void equalsAgainstNull() {
         BackgroundFill a = new BackgroundFill(Color.ORANGE, new CornerRadii(2), new Insets(3));
         assertFalse(a.equals(null));
     }
 
     @SuppressWarnings("unlikely-arg-type")
-    @Test public void equalsAgainstRandomObject() {
+    @Test
+    public void equalsAgainstRandomObject() {
         BackgroundFill a = new BackgroundFill(Color.ORANGE, new CornerRadii(2), new Insets(3));
         assertFalse(a.equals("Some random object"));
     }
 
-    @Test public void equivalentHaveSameHash() {
+    @Test
+    public void equivalentHaveSameHash() {
         BackgroundFill a = new BackgroundFill(Color.ORANGE, new CornerRadii(2), new Insets(3));
         BackgroundFill b = new BackgroundFill(Color.ORANGE, new CornerRadii(2), new Insets(3));
         assertEquals(a.hashCode(), b.hashCode());
     }
 
-    @Test public void toStringCausesNoError() {
+    @Test
+    public void toStringCausesNoError() {
         BackgroundFill f = new BackgroundFill(null, null, null);
         f.toString();
     }

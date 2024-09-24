@@ -36,33 +36,37 @@ public class Pages {
             new DemoPage("AreaChart", AreaChartPage::new),
             new DemoPage("BarChart", BarChartPage::new),
             new DemoPage("BubbleChart", BubbleChartPage::new),
-            // TODO Button
+            new DemoPage("Button", ButtonPage::new),
             // TODO ButtonBar
-            // TODO new DemoPage("Canvas", CanvasPage::new),
-            // TODO CheckBox
+            new DemoPage("Canvas", CanvasPage::new),
+            new DemoPage("CheckBox", CheckBoxPage::new),
             new DemoPage("ChoiceBox", ChoiceBoxPage::new),
             new DemoPage("ComboBox", ComboBoxPage::new),
             new DemoPage("ColorPicker", ColorPickerPage::new),
             new DemoPage("DatePicker", DatePickerPage::new),
+            new DemoPage("Drag and Drop", DnDPage::new),
             new DemoPage("HBox", HBoxPage::new),
             new DemoPage("HTMLEditor", HTMLEditor_Page::new),
-            // TODO Hyperlink
+            new DemoPage("Hyperlink", HyperlinkPage::new),
             // TODO InputField: DoubleField, IntegerField, WebColorField
             new DemoPage("Label", LabelPage::new),
             new DemoPage("LineChart", LineChartPage::new),
             new DemoPage("ListView", ListViewPage::new),
-            // TODO MenuBar
+            new DemoPage("MenuBar", MenuBarPage::new),
             new DemoPage("MenuButton", MenuButtonPage::new),
             new DemoPage("Pagination", PaginationPage::new),
             new DemoPage("PasswordField", PasswordFieldPage::new),
             new DemoPage("PieChart", PieChartPage::new),
             // TODO ProgressIndicator
-            // TODO RadioButton
+            new DemoPage("RadioButton", RadioButtonPage::new),
+            new DemoPage("ScatterChart", ScatterChartPage::new),
             new DemoPage("ScrollBar", ScrollBarPage::new),
             new DemoPage("ScrollPane", ScrollPanePage::new),
             // TODO Separator
+            new DemoPage("Shape", ShapePage::new),
             // TODO Slider
             new DemoPage("Spinner", SpinnerPage::new),
+            new DemoPage("SplitMenuButton", SplitMenuButtonPage::new),
             // TODO SplitPane
             new DemoPage("StackedAreaChart", StackedAreaChartPage::new),
             new DemoPage("StackedBarChart", StackedBarChartPage::new),
@@ -73,7 +77,7 @@ public class Pages {
             new DemoPage("TextField", TextFieldPage::new),
             new DemoPage("TextFlow", TextFlowPage::new),
             new DemoPage("TitledPane", TitledPanePage::new),
-            // TODO ToggleButton
+            new DemoPage("ToggleButton", ToggleButtonPage::new),
             new DemoPage("ToolBar", ToolBarPage::new),
             new DemoPage("Tooltip", TooltipPage::new),
             // TODO in tables: Cell, DateCell, IndexedCell* ?

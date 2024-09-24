@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,7 @@
 
 package test.javafx.scene.control.skin;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
@@ -35,9 +35,8 @@ import javafx.scene.control.Separator;
 import javafx.scene.control.SkinBaseShim;
 import javafx.scene.control.skin.SeparatorSkin;
 import javafx.scene.layout.Region;
-
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  */
@@ -46,7 +45,8 @@ public class SeparatorSkinLayoutTest {
     private SeparatorSkin skin;
     private Region line;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         separator = new Separator();
         skin = new SeparatorSkin(separator);
         // Set some padding so that any places where padding was being

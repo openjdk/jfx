@@ -25,10 +25,9 @@
 
 package test.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.FramebufferShim;
-import org.junit.Test;
-
 import java.nio.ByteBuffer;
+import org.junit.jupiter.api.Test;
+import com.sun.glass.ui.monocle.FramebufferShim;
 
 public class FramebufferTest {
 
