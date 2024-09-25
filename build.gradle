@@ -2001,6 +2001,9 @@ task createTestArgfiles {
     // an empty task we can add to as needed
 }
 
+task createRunArgFiles {
+    // an empty task we can add to as needed
+}
 
 /*****************************************************************************
 *        Project definitions (dependencies, etc)                             *
@@ -4520,7 +4523,7 @@ task sdk() {
         gradle.taskGraph.whenReady { taskGraph ->
             taskGraph.allTasks.each { task ->
                 if (!isTestTask(task) && !task.name.equals("verifyJava") &&
-                    !task.name.equals("validateSourceSets")) {
+                    !task.name.equals("validateSourceSets") && !task.name.contains("buildRunArgs")) {
                     task.enabled = false
                 }
             }
@@ -5084,7 +5087,7 @@ compileTargets { t ->
     // ============================================================
 
     def standaloneSdkDirName = "${platformPrefix}sdk"
-    def standaloneSdkDir = "${rootProject.buildDir}/${standaloneSdkDirName}"
+    def standaloneSdkDir = "${TEST_SDK_PATH}/${standaloneSdkDirName}"
     def standaloneLibDir = "${standaloneSdkDir}/lib"
     def libDest=targetProperties.libDest
     def standaloneNativeDir = "${standaloneSdkDir}/${libDest}"
@@ -5242,6 +5245,7 @@ compileTargets { t ->
             }
         }
     }
+    createRunArgFiles.dependsOn(buildRunArgsTask)
     buildModules.dependsOn(buildRunArgsTask)
 
     def isWindows = IS_WINDOWS && t.name == "win";
