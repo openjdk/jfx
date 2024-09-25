@@ -32,6 +32,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.control.ComboBox;
 import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.NamedValue;
+import com.oracle.tools.fx.monkey.util.Utils;
 
 /**
  * Object Selector Bound to a Property.
@@ -47,7 +48,9 @@ public class ObjectOption<T> extends ComboBox<NamedValue<T>> {
 
         getSelectionModel().selectedItemProperty().addListener((s, pr, c) -> {
             T v = c.getValue();
-            property.set(v);
+            if (!Utils.eq(v, property.getValue())) {
+                property.set(v);
+            }
         });
     }
 

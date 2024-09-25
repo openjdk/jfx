@@ -80,11 +80,13 @@ public class LinearGradientTest {
 
     @Test
     public void testGetStopsCannotChangeGradient() {
-        LinearGradient gradient = new LinearGradient(0, 0, 1, 1, true,
-                CycleMethod.NO_CYCLE, twoStopsWithNulls);
+        assertThrows(UnsupportedOperationException.class, () -> {
+            LinearGradient gradient = new LinearGradient(0, 0, 1, 1, true,
+                    CycleMethod.NO_CYCLE, twoStopsWithNulls);
 
-        List<Stop> returned = gradient.getStops();
-        assertThrows(UnsupportedOperationException.class, () -> returned.set(0, stop2));
+            List<Stop> returned = gradient.getStops();
+            assertThrows(UnsupportedOperationException.class, () -> returned.set(0, stop2));
+        });
     }
 
     @SuppressWarnings("unlikely-arg-type")
@@ -186,12 +188,16 @@ public class LinearGradientTest {
 
     @Test
     public void testValueOfNullValue() {
-        assertThrows(NullPointerException.class, () -> LinearGradient.valueOf(null));
+        assertThrows(NullPointerException.class, () -> {
+            LinearGradient.valueOf(null);
+        });
     }
 
     @Test
     public void testValueOfEmpty() {
-        assertThrows(IllegalArgumentException.class, () -> LinearGradient.valueOf(""));
+        assertThrows(IllegalArgumentException.class, () -> {
+            LinearGradient.valueOf("");
+        });
     }
 
     @Test

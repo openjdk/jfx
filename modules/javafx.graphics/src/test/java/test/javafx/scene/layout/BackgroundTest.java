@@ -78,7 +78,8 @@ public class BackgroundTest {
         assertEquals(IMAGES_1[0], b.getImages().get(0));
     }
 
-    @Test public void instanceCreation2() {
+    @Test
+    public void instanceCreation2() {
         Background b = new Background(FILLS_2, IMAGES_2);
         assertEquals(FILLS_2.length, b.getFills().size(), 0);
         assertEquals(FILLS_2[0], b.getFills().get(0));
@@ -89,35 +90,40 @@ public class BackgroundTest {
         assertEquals(IMAGES_2[2], b.getImages().get(2));
     }
 
-    @Test public void instanceCreationNullFills() {
+    @Test
+    public void instanceCreationNullFills() {
         Background b = new Background(null, IMAGES_1);
         assertEquals(0, b.getFills().size(), 0);
         assertEquals(IMAGES_1.length, b.getImages().size(), 0);
         assertEquals(IMAGES_1[0], b.getImages().get(0));
     }
 
-    @Test public void instanceCreationEmptyFills() {
+    @Test
+    public void instanceCreationEmptyFills() {
         Background b = new Background(new BackgroundFill[0], IMAGES_1);
         assertEquals(0, b.getFills().size(), 0);
         assertEquals(IMAGES_1.length, b.getImages().size(), 0);
         assertEquals(IMAGES_1[0], b.getImages().get(0));
     }
 
-    @Test public void instanceCreationNullImages() {
+    @Test
+    public void instanceCreationNullImages() {
         Background b = new Background(FILLS_1, null);
         assertEquals(FILLS_1.length, b.getFills().size(), 0);
         assertEquals(FILLS_1[0], b.getFills().get(0));
         assertEquals(0, b.getImages().size(), 0);
     }
 
-    @Test public void instanceCreationEmptyImages() {
+    @Test
+    public void instanceCreationEmptyImages() {
         Background b = new Background(FILLS_1, new BackgroundImage[0]);
         assertEquals(FILLS_1.length, b.getFills().size(), 0);
         assertEquals(FILLS_1[0], b.getFills().get(0));
         assertEquals(0, b.getImages().size(), 0);
     }
 
-    @Test public void instanceCreationWithNullsInTheFillArray() {
+    @Test
+    public void instanceCreationWithNullsInTheFillArray() {
         final BackgroundFill[] fills = new BackgroundFill[] {
                 null,
                 new BackgroundFill(Color.GREEN, new CornerRadii(3), new Insets(4)),
@@ -129,7 +135,8 @@ public class BackgroundTest {
         assertEquals(FILLS_2[1], b.getFills().get(1));
     }
 
-    @Test public void instanceCreationWithNullsInTheFillArray2() {
+    @Test
+    public void instanceCreationWithNullsInTheFillArray2() {
         final BackgroundFill[] fills = new BackgroundFill[] {
                 new BackgroundFill(Color.GREEN, new CornerRadii(3), new Insets(4)),
                 null,
@@ -141,7 +148,8 @@ public class BackgroundTest {
         assertEquals(FILLS_2[1], b.getFills().get(1));
     }
 
-    @Test public void instanceCreationWithNullsInTheFillArray3() {
+    @Test
+    public void instanceCreationWithNullsInTheFillArray3() {
         final BackgroundFill[] fills = new BackgroundFill[] {
                 new BackgroundFill(Color.GREEN, new CornerRadii(3), new Insets(4)),
                 new BackgroundFill(Color.BLUE, new CornerRadii(6), new Insets(8)),
@@ -153,7 +161,8 @@ public class BackgroundTest {
         assertEquals(FILLS_2[1], b.getFills().get(1));
     }
 
-    @Test public void instanceCreationWithNullsInTheFillArray4() {
+    @Test
+    public void instanceCreationWithNullsInTheFillArray4() {
         final BackgroundFill[] fills = new BackgroundFill[] {
                 null
         };
@@ -161,7 +170,8 @@ public class BackgroundTest {
         assertEquals(0, b.getFills().size(), 0);
     }
 
-    @Test public void instanceCreationWithNullsInTheImageArray() {
+    @Test
+    public void instanceCreationWithNullsInTheImageArray() {
         final BackgroundImage[] images = new BackgroundImage[] {
                 null,
                 new BackgroundImage(IMAGE_2, SPACE, SPACE, null, null),
@@ -175,7 +185,8 @@ public class BackgroundTest {
         assertEquals(IMAGES_2[2], b.getImages().get(2));
     }
 
-    @Test public void instanceCreationWithNullsInTheImageArray2() {
+    @Test
+    public void instanceCreationWithNullsInTheImageArray2() {
         final BackgroundImage[] images = new BackgroundImage[] {
                 new BackgroundImage(IMAGE_2, SPACE, SPACE, null, null),
                 null,
@@ -189,7 +200,8 @@ public class BackgroundTest {
         assertEquals(IMAGES_2[2], b.getImages().get(2));
     }
 
-    @Test public void instanceCreationWithNullsInTheImageArray3() {
+    @Test
+    public void instanceCreationWithNullsInTheImageArray3() {
         final BackgroundImage[] images = new BackgroundImage[] {
                 new BackgroundImage(IMAGE_2, SPACE, SPACE, null, null),
                 new BackgroundImage(IMAGE_3, ROUND, ROUND, null, null),
@@ -203,7 +215,8 @@ public class BackgroundTest {
         assertEquals(IMAGES_2[2], b.getImages().get(2));
     }
 
-    @Test public void instanceCreationWithNullsInTheImageArray4() {
+    @Test
+    public void instanceCreationWithNullsInTheImageArray4() {
         final BackgroundImage[] images = new BackgroundImage[] {
                 null
         };
@@ -211,7 +224,8 @@ public class BackgroundTest {
         assertEquals(0, b.getImages().size(), 0);
     }
 
-    @Test public void suppliedBackgroundFillsMutatedLaterDoNotChangeFills() {
+    @Test
+    public void suppliedBackgroundFillsMutatedLaterDoNotChangeFills() {
         final BackgroundFill fill = new BackgroundFill(Color.GREEN, new CornerRadii(3), new Insets(4));
         final BackgroundFill[] fills = new BackgroundFill[] { fill };
         Background b = new Background(fills, null);
@@ -223,7 +237,8 @@ public class BackgroundTest {
         assertSame(fill, b2.getFills().get(0));
     }
 
-    @Test public void suppliedBackgroundImagesMutatedLaterDoNotChangeImages() {
+    @Test
+    public void suppliedBackgroundImagesMutatedLaterDoNotChangeImages() {
         final BackgroundImage image = new BackgroundImage(IMAGE_2, SPACE, SPACE, null, null);
         final BackgroundImage[] images = new BackgroundImage[] { image };
         Background b = new Background(null, images);
@@ -237,23 +252,28 @@ public class BackgroundTest {
 
     @Test
     public void fillsIsUnmodifiable() {
-        final BackgroundFill fill = new BackgroundFill(Color.GREEN, new CornerRadii(3), new Insets(4));
-        final BackgroundFill[] fills = new BackgroundFill[] { fill };
-        Background b = new Background(fills);
-        assertThrows(UnsupportedOperationException.class,
+        assertThrows(UnsupportedOperationException.class, () -> {
+            final BackgroundFill fill = new BackgroundFill(Color.GREEN, new CornerRadii(3), new Insets(4));
+            final BackgroundFill[] fills = new BackgroundFill[] { fill };
+            Background b = new Background(fills);
+            assertThrows(UnsupportedOperationException.class,
             () -> b.getFills().add(new BackgroundFill(Color.BLUE, new CornerRadii(6), new Insets(8))));
+        });
     }
 
     @Test
     public void imagesIsUnmodifiable() {
-        final BackgroundImage image = new BackgroundImage(IMAGE_2, SPACE, SPACE, null, null);
-        final BackgroundImage[] images = new BackgroundImage[] { image };
-        Background b = new Background(images);
-        assertThrows(UnsupportedOperationException.class,
+        assertThrows(UnsupportedOperationException.class, () -> {
+            final BackgroundImage image = new BackgroundImage(IMAGE_2, SPACE, SPACE, null, null);
+            final BackgroundImage[] images = new BackgroundImage[] { image };
+            Background b = new Background(images);
+            assertThrows(UnsupportedOperationException.class,
             () -> b.getImages().add(new BackgroundImage(IMAGE_3, ROUND, ROUND, null, null)));
+        });
     }
 
-    @Test public void backgroundOutsetsAreDefinedByFills() {
+    @Test
+    public void backgroundOutsetsAreDefinedByFills() {
         final BackgroundFill[] fills = new BackgroundFill[] {
                 new BackgroundFill(Color.RED, new CornerRadii(3), new Insets(-1, 5, 5, 5)),
                 new BackgroundFill(Color.GREEN, new CornerRadii(6), new Insets(8)),
@@ -268,7 +288,8 @@ public class BackgroundTest {
         assertEquals(new Insets(7, 2, 8, 8), b.getOutsets());
     }
 
-    @Test public void backgroundImagesDoNotContributeToOutsets() {
+    @Test
+    public void backgroundImagesDoNotContributeToOutsets() {
         final BackgroundImage[] images = new BackgroundImage[] {
                 new BackgroundImage(IMAGE_1, null, null,
                         new BackgroundPosition(Side.LEFT, -10, false, Side.TOP, -10, false),
@@ -279,73 +300,85 @@ public class BackgroundTest {
         assertEquals(Insets.EMPTY, b.getOutsets());
     }
 
-    @Test public void equivalent() {
+    @Test
+    public void equivalent() {
         Background a = new Background((BackgroundFill[])null, null);
         Background b = new Background((BackgroundFill[])null, null);
         assertEquals(a, b);
     }
 
-    @Test public void equivalent2() {
+    @Test
+    public void equivalent2() {
         Background a = new Background(FILLS_2, null);
         Background b = new Background(FILLS_2, null);
         assertEquals(a, b);
     }
 
-    @Test public void equivalent3() {
+    @Test
+    public void equivalent3() {
         Background a = new Background(null, IMAGES_2);
         Background b = new Background(null, IMAGES_2);
         assertEquals(a, b);
     }
 
-    @Test public void equivalentHasSameHashCode() {
+    @Test
+    public void equivalentHasSameHashCode() {
         Background a = new Background((BackgroundFill[])null, null);
         Background b = new Background((BackgroundFill[])null, null);
         assertEquals(a.hashCode(), b.hashCode());
     }
 
-    @Test public void equivalentHasSameHashCode2() {
+    @Test
+    public void equivalentHasSameHashCode2() {
         Background a = new Background(FILLS_2, null);
         Background b = new Background(FILLS_2, null);
         assertEquals(a.hashCode(), b.hashCode());
     }
 
-    @Test public void equivalentHasSameHashCode3() {
+    @Test
+    public void equivalentHasSameHashCode3() {
         Background a = new Background(null, IMAGES_2);
         Background b = new Background(null, IMAGES_2);
         assertEquals(a.hashCode(), b.hashCode());
     }
 
-    @Test public void notEqual() {
+    @Test
+    public void notEqual() {
         Background a = new Background(FILLS_1, null);
         Background b = new Background((BackgroundFill[])null, null);
         assertFalse(a.equals(b));
     }
 
-    @Test public void notEqual2() {
+    @Test
+    public void notEqual2() {
         Background a = new Background((BackgroundFill[])null, null);
         Background b = new Background(FILLS_2, null);
         assertFalse(a.equals(b));
     }
 
-    @Test public void notEqual3() {
+    @Test
+    public void notEqual3() {
         Background a = new Background(null, IMAGES_1);
         Background b = new Background((BackgroundFill[])null, null);
         assertFalse(a.equals(b));
     }
 
-    @Test public void notEqual4() {
+    @Test
+    public void notEqual4() {
         Background a = new Background((BackgroundFill[])null, null);
         Background b = new Background(null, IMAGES_2);
         assertFalse(a.equals(b));
     }
 
-    @Test public void notEqualWithNull() {
+    @Test
+    public void notEqualWithNull() {
         Background a = new Background((BackgroundFill[])null, null);
         assertFalse(a.equals(null));
     }
 
     @SuppressWarnings("unlikely-arg-type")
-    @Test public void notEqualWithRandom() {
+    @Test
+    public void notEqualWithRandom() {
         Background a = new Background((BackgroundFill[])null, null);
         assertFalse(a.equals("Some random String"));
     }
@@ -357,7 +390,8 @@ public class BackgroundTest {
      *                                                                        *
      *************************************************************************/
 
-    @Test public void opaqueInsets_nullFillsResultsInNaN() {
+    @Test
+    public void opaqueInsets_nullFillsResultsInNaN() {
         Background b = new Background((BackgroundFill[])null, null);
         final double[] trbl = new double[4];
         BackgroundShim.computeOpaqueInsets(b, 100, 50, trbl);
@@ -367,7 +401,8 @@ public class BackgroundTest {
         assertTrue(Double.isNaN(trbl[3]));
     }
 
-    @Test public void opaqueInsets_transparentFillsResultsInNaN() {
+    @Test
+    public void opaqueInsets_transparentFillsResultsInNaN() {
         BackgroundFill f = new BackgroundFill(Color.TRANSPARENT, null, null);
         Background b = new Background(new BackgroundFill[] { f }, null);
         final double[] trbl = new double[4];
@@ -378,7 +413,8 @@ public class BackgroundTest {
         assertTrue(Double.isNaN(trbl[3]));
     }
 
-    @Test public void opaqueInsets_transparentFillsResultsInNaN2() {
+    @Test
+    public void opaqueInsets_transparentFillsResultsInNaN2() {
         BackgroundFill f = new BackgroundFill(Color.rgb(255, 0, 0, 0), null, null);
         Background b = new Background(new BackgroundFill[] { f }, null);
         final double[] trbl = new double[4];
@@ -389,7 +425,8 @@ public class BackgroundTest {
         assertTrue(Double.isNaN(trbl[3]));
     }
 
-    @Test public void opaqueInsets_transparentFillsResultsInNaN3() {
+    @Test
+    public void opaqueInsets_transparentFillsResultsInNaN3() {
         BackgroundFill f = new BackgroundFill(Color.TRANSPARENT, null, null);
         BackgroundFill f2 = new BackgroundFill(Color.rgb(255, 0, 0, 0), null, null);
         Background b = new Background(new BackgroundFill[] { f, f2 }, null);
@@ -401,7 +438,8 @@ public class BackgroundTest {
         assertTrue(Double.isNaN(trbl[3]));
     }
 
-    @Test public void opaqueInsets_transparentFillsMixedWithNonTransparentFills() {
+    @Test
+    public void opaqueInsets_transparentFillsMixedWithNonTransparentFills() {
         BackgroundFill f = new BackgroundFill(Color.TRANSPARENT, null, null);
         BackgroundFill f2 = new BackgroundFill(Color.RED, null, new Insets(1));
         Background b = new Background(new BackgroundFill[] { f, f2 }, null);
@@ -413,7 +451,8 @@ public class BackgroundTest {
         assertEquals(1, trbl[3], 0);
     }
 
-    @Test public void opaqueInsets_transparentFillsMixedWithNonTransparentFills2() {
+    @Test
+    public void opaqueInsets_transparentFillsMixedWithNonTransparentFills2() {
         BackgroundFill f = new BackgroundFill(Color.TRANSPARENT, null, null);
         BackgroundFill f2 = new BackgroundFill(Color.RED, null, new Insets(-1));
         Background b = new Background(new BackgroundFill[] { f, f2 }, null);
@@ -425,7 +464,8 @@ public class BackgroundTest {
         assertEquals(-1, trbl[3], 0);
     }
 
-    @Test public void opaqueInsets_nestedOpaqueRectangles_LargestRectangleUsed() {
+    @Test
+    public void opaqueInsets_nestedOpaqueRectangles_LargestRectangleUsed() {
         BackgroundFill f = new BackgroundFill(Color.RED, null, new Insets(0));
         BackgroundFill f2 = new BackgroundFill(Color.GREEN, null, new Insets(1));
         BackgroundFill f3 = new BackgroundFill(Color.BLUE, null, new Insets(2));
@@ -438,7 +478,8 @@ public class BackgroundTest {
         assertEquals(0, trbl[3], 0);
     }
 
-    @Test public void opaqueInsets_nestedOpaqueRectangles_LargestRectangleUsed2() {
+    @Test
+    public void opaqueInsets_nestedOpaqueRectangles_LargestRectangleUsed2() {
         BackgroundFill f = new BackgroundFill(Color.RED, null, new Insets(-1));
         BackgroundFill f2 = new BackgroundFill(Color.GREEN, null, new Insets(0));
         BackgroundFill f3 = new BackgroundFill(Color.BLUE, null, new Insets(1));
@@ -451,7 +492,8 @@ public class BackgroundTest {
         assertEquals(-1, trbl[3], 0);
     }
 
-    @Test public void opaqueInsets_nestedOpaqueRectangles_LargestRectangleUsed3() {
+    @Test
+    public void opaqueInsets_nestedOpaqueRectangles_LargestRectangleUsed3() {
         BackgroundFill f = new BackgroundFill(Color.RED, null, new Insets(10));
         BackgroundFill f2 = new BackgroundFill(Color.GREEN, null, new Insets(1));
         BackgroundFill f3 = new BackgroundFill(Color.BLUE, null, new Insets(2));
@@ -464,7 +506,8 @@ public class BackgroundTest {
         assertEquals(1, trbl[3], 0);
     }
 
-    @Test public void opaqueInsets_nestedOpaqueRectangles_LargestRectangleUsed4() {
+    @Test
+    public void opaqueInsets_nestedOpaqueRectangles_LargestRectangleUsed4() {
         BackgroundFill f = new BackgroundFill(Color.RED, null, new Insets(0));
         BackgroundFill f2 = new BackgroundFill(Color.GREEN, null, new Insets(1));
         BackgroundFill f3 = new BackgroundFill(Color.BLUE, null, new Insets(-2));
@@ -477,7 +520,8 @@ public class BackgroundTest {
         assertEquals(-2, trbl[3], 0);
     }
 
-    @Test public void opaqueInsets_offsetOpaqueRectangles_completelyContained_LargestRectangleUsed() {
+    @Test
+    public void opaqueInsets_offsetOpaqueRectangles_completelyContained_LargestRectangleUsed() {
         BackgroundFill f = new BackgroundFill(Color.RED, null, new Insets(0));
         BackgroundFill f2 = new BackgroundFill(Color.GREEN, null, new Insets(1, 0, 0, 0));
         BackgroundFill f3 = new BackgroundFill(Color.BLUE, null, new Insets(0, 1, 0, 0));
@@ -493,7 +537,8 @@ public class BackgroundTest {
     }
 
     // Even when the big rectangle is not the first, does it still work?
-    @Test public void opaqueInsets_offsetOpaqueRectangles_completelyContained_LargestRectangleUsed2() {
+    @Test
+    public void opaqueInsets_offsetOpaqueRectangles_completelyContained_LargestRectangleUsed2() {
         BackgroundFill f = new BackgroundFill(Color.YELLOW, null, new Insets(0, 0, 1, 0));
         BackgroundFill f2 = new BackgroundFill(Color.GREEN, null, new Insets(1, 0, 0, 0));
         BackgroundFill f3 = new BackgroundFill(Color.BLUE, null, new Insets(0, 1, 0, 0));
@@ -508,7 +553,8 @@ public class BackgroundTest {
         assertEquals(0, trbl[3], 0);
     }
 
-    @Test public void opaqueInsets_offsetOpaqueRectangles_UnionUsed() {
+    @Test
+    public void opaqueInsets_offsetOpaqueRectangles_UnionUsed() {
         BackgroundFill f = new BackgroundFill(Color.RED, null, new Insets(10, 0, 0, 0));
         BackgroundFill f2 = new BackgroundFill(Color.GREEN, null, new Insets(0, 10, 0, 0));
         BackgroundFill f3 = new BackgroundFill(Color.BLUE, null, new Insets(0, 0, 10, 0));
@@ -522,7 +568,8 @@ public class BackgroundTest {
         assertEquals(0, trbl[3], 0);
     }
 
-    @Test public void opaqueInsets_offsetOpaqueRectangles_UnionUsed2() {
+    @Test
+    public void opaqueInsets_offsetOpaqueRectangles_UnionUsed2() {
         BackgroundFill f = new BackgroundFill(Color.RED, null, new Insets(10, 0, 0, 0));
         BackgroundFill f2 = new BackgroundFill(Color.GREEN, null, new Insets(10, 10, 0, 0));
         BackgroundFill f3 = new BackgroundFill(Color.BLUE, null, new Insets(10, 10, 10, 0));
@@ -540,7 +587,8 @@ public class BackgroundTest {
     // the one currently being used. We could use the bounds of f, the bounds of f2, or the
     // intersection of the bounds of f and f2. It turns out in this case, the intersection
     // would be smaller, but the bounds of f and f2 are equal in size.
-    @Test public void opaqueInsets_offsetOpaqueRectangles_LargestUsed() {
+    @Test
+    public void opaqueInsets_offsetOpaqueRectangles_LargestUsed() {
         BackgroundFill f = new BackgroundFill(Color.RED, null, new Insets(10));
         BackgroundFill f2 = new BackgroundFill(Color.GREEN, null, new Insets(20, 0, 0, 20));
         Background b = new Background(new BackgroundFill[] { f, f2 }, null);
@@ -556,7 +604,8 @@ public class BackgroundTest {
     // of a single fill is correct for any given set of corner radii, because after
     // the opaque region for a single fill is computed, thereafter the rest of the
     // implementation is all the same
-    @Test public void opaqueInsets_uniformCornerRadii() {
+    @Test
+    public void opaqueInsets_uniformCornerRadii() {
         BackgroundFill f = new BackgroundFill(Color.RED, new CornerRadii(3), null);
         Background b = new Background(new BackgroundFill[] { f }, null);
         final double[] trbl = new double[4];
@@ -567,7 +616,8 @@ public class BackgroundTest {
         assertEquals(1.5, trbl[3], 0);
     }
 
-    @Test public void opaqueInsets_nonUniformCornerRadii() {
+    @Test
+    public void opaqueInsets_nonUniformCornerRadii() {
         BackgroundFill f = new BackgroundFill(Color.RED, new CornerRadii(1, 2, 3, 4, false), null);
         Background b = new Background(new BackgroundFill[] { f }, null);
         final double[] trbl = new double[4];
@@ -578,7 +628,8 @@ public class BackgroundTest {
         assertEquals(2, trbl[3], 0);
     }
 
-    @Test public void opaqueInsets_nonUniformCornerRadii2() {
+    @Test
+    public void opaqueInsets_nonUniformCornerRadii2() {
         BackgroundFill f = new BackgroundFill(Color.RED, new CornerRadii(1, 2, 3, 4, 5, 6, 7, 8,
                                                                          false, false, false, false,
                                                                          false, false, false, false), null);
@@ -591,7 +642,8 @@ public class BackgroundTest {
         assertEquals(4, trbl[3], 0);
     }
 
-    @Test public void opaqueInsetsPercent_uniformCornerRadii() {
+    @Test
+    public void opaqueInsetsPercent_uniformCornerRadii() {
         BackgroundFill f = new BackgroundFill(Color.RED, new CornerRadii(.1, true), null);
         Background b = new Background(new BackgroundFill[] { f }, null);
         final double[] trbl = new double[4];
@@ -602,7 +654,8 @@ public class BackgroundTest {
         assertEquals(5, trbl[3], 0);
     }
 
-    @Test public void opaqueInsetsPercent_nonUniformCornerRadii() {
+    @Test
+    public void opaqueInsetsPercent_nonUniformCornerRadii() {
         BackgroundFill f = new BackgroundFill(Color.RED, new CornerRadii(.1, .2, .3, .4, true), null);
         Background b = new Background(new BackgroundFill[] { f }, null);
         final double[] trbl = new double[4];
@@ -613,7 +666,8 @@ public class BackgroundTest {
         assertEquals(20, trbl[3], 0); // bottom-left-horizontal dominates at 20
     }
 
-    @Test public void opaqueInsetsPercent_nonUniformCornerRadii2() {
+    @Test
+    public void opaqueInsetsPercent_nonUniformCornerRadii2() {
         BackgroundFill f = new BackgroundFill(Color.RED, new CornerRadii(.1, .15, .2, .25, .3, .35, .4, .45,
                                                                          true, true, true, true,
                                                                          true, true, true, true), null);
@@ -626,7 +680,8 @@ public class BackgroundTest {
         assertEquals(22.5, trbl[3], 0); // bottom-left-horizontal dominates at 22.5
     }
 
-    @Test public void opaqueInsetsPercent_nonUniformCornerRadii3() {
+    @Test
+    public void opaqueInsetsPercent_nonUniformCornerRadii3() {
         BackgroundFill f = new BackgroundFill(Color.RED, new CornerRadii(.1, 15, .2, 25, .3, 35, .4, 45,
                                                                          true, false, true, false,
                                                                          true, false, true, false), null);
@@ -639,7 +694,8 @@ public class BackgroundTest {
         assertEquals(22.5, trbl[3], 0); // bottom-left-horizontal dominates at 22.5
     }
 
-    @Test public void opaqueInsetsPercent_nonUniformCornerRadii4() {
+    @Test
+    public void opaqueInsetsPercent_nonUniformCornerRadii4() {
         BackgroundFill f = new BackgroundFill(Color.RED, new CornerRadii(10, .15, 20, .25, 30, .35, 40, .45,
                                                                          false, true, false, true,
                                                                          false, true, false, true), null);
@@ -652,7 +708,8 @@ public class BackgroundTest {
         assertEquals(22.5, trbl[3], 0); // bottom-left-horizontal dominates at 22.5
     }
 
-    @Test public void backgroundFillsArePercentageBased_AllPercentageBased() {
+    @Test
+    public void backgroundFillsArePercentageBased_AllPercentageBased() {
         BackgroundFill f = new BackgroundFill(Color.RED, new CornerRadii(.5, true), new Insets(10, 0, 0, 0));
         BackgroundFill f2 = new BackgroundFill(Color.GREEN, new CornerRadii(.4, true), new Insets(0, 10, 0, 0));
         BackgroundFill f3 = new BackgroundFill(Color.BLUE, new CornerRadii(.3, true), new Insets(0, 0, 10, 0));
@@ -661,7 +718,8 @@ public class BackgroundTest {
         assertTrue(b.isFillPercentageBased());
     }
 
-    @Test public void backgroundFillsArePercentageBased_OnePercentageBased() {
+    @Test
+    public void backgroundFillsArePercentageBased_OnePercentageBased() {
         BackgroundFill f = new BackgroundFill(Color.RED, new CornerRadii(5), new Insets(10, 0, 0, 0));
         BackgroundFill f2 = new BackgroundFill(Color.GREEN, new CornerRadii(4), new Insets(0, 10, 0, 0));
         BackgroundFill f3 = new BackgroundFill(Color.BLUE, new CornerRadii(.3, true), new Insets(0, 0, 10, 0));
@@ -670,7 +728,8 @@ public class BackgroundTest {
         assertTrue(b.isFillPercentageBased());
     }
 
-    @Test public void backgroundFillsArePercentageBased_OneCornerOfOne() {
+    @Test
+    public void backgroundFillsArePercentageBased_OneCornerOfOne() {
         BackgroundFill f = new BackgroundFill(Color.RED, new CornerRadii(5, 5, .5, 5, 5, 5, 5, 5,
                 false, false, true, false, false, false, false, false), new Insets(10, 0, 0, 0));
         BackgroundFill f2 = new BackgroundFill(Color.GREEN, new CornerRadii(4), new Insets(0, 10, 0, 0));
@@ -680,7 +739,8 @@ public class BackgroundTest {
         assertTrue(b.isFillPercentageBased());
     }
 
-    @Test public void backgroundFillsAreNotPercentageBased() {
+    @Test
+    public void backgroundFillsAreNotPercentageBased() {
         BackgroundFill f = new BackgroundFill(Color.RED, new CornerRadii(5), new Insets(10, 0, 0, 0));
         BackgroundFill f2 = new BackgroundFill(Color.GREEN, new CornerRadii(4), new Insets(0, 10, 0, 0));
         BackgroundFill f3 = new BackgroundFill(Color.BLUE, new CornerRadii(3), new Insets(0, 0, 10, 0));
@@ -689,12 +749,14 @@ public class BackgroundTest {
         assertFalse(b.isFillPercentageBased());
     }
 
-    @Test public void backgroundFillsAreNotPercentageBased_NoFills() {
+    @Test
+    public void backgroundFillsAreNotPercentageBased_NoFills() {
         Background b = new Background(new BackgroundFill[0]);
         assertFalse(b.isFillPercentageBased());
     }
 
-    @Test public void backgroundFillsAreNotPercentageBased_NullRadii() {
+    @Test
+    public void backgroundFillsAreNotPercentageBased_NullRadii() {
         BackgroundFill f = new BackgroundFill(Color.RED, null, new Insets(10, 0, 0, 0));
         BackgroundFill f2 = new BackgroundFill(Color.GREEN, null, new Insets(0, 10, 0, 0));
         BackgroundFill f3 = new BackgroundFill(Color.BLUE, null, new Insets(0, 0, 10, 0));
@@ -703,7 +765,8 @@ public class BackgroundTest {
         assertFalse(b.isFillPercentageBased());
     }
 
-    @Test public void backgroundFillsAreNotPercentageBased_OneEmpty() {
+    @Test
+    public void backgroundFillsAreNotPercentageBased_OneEmpty() {
         BackgroundFill f = new BackgroundFill(Color.RED, CornerRadii.EMPTY, new Insets(10, 0, 0, 0));
         BackgroundFill f2 = new BackgroundFill(Color.GREEN, new CornerRadii(4), new Insets(0, 10, 0, 0));
         BackgroundFill f3 = new BackgroundFill(Color.BLUE, new CornerRadii(3), new Insets(0, 0, 10, 0));
@@ -712,7 +775,8 @@ public class BackgroundTest {
         assertFalse(b.isFillPercentageBased());
     }
 
-    @Test public void backgroundFillsAreNotPercentageBased_AllEmpty() {
+    @Test
+    public void backgroundFillsAreNotPercentageBased_AllEmpty() {
         BackgroundFill f = new BackgroundFill(Color.RED, CornerRadii.EMPTY, new Insets(10, 0, 0, 0));
         BackgroundFill f2 = new BackgroundFill(Color.GREEN, CornerRadii.EMPTY, new Insets(0, 10, 0, 0));
         BackgroundFill f3 = new BackgroundFill(Color.BLUE, CornerRadii.EMPTY, new Insets(0, 0, 10, 0));

@@ -81,11 +81,13 @@ public class RadialGradientTest {
 
     @Test
     public void testGetStopsCannotChangeGradient() {
-        RadialGradient gradient = new RadialGradient(0, 0, 1, 1, 2, true,
-                CycleMethod.NO_CYCLE, twoStops);
+        assertThrows(UnsupportedOperationException.class, () -> {
+            RadialGradient gradient = new RadialGradient(0, 0, 1, 1, 2, true,
+                    CycleMethod.NO_CYCLE, twoStops);
 
-        List<Stop> returned = gradient.getStops();
-        assertThrows(UnsupportedOperationException.class, () -> returned.set(0, stop2));
+            List<Stop> returned = gradient.getStops();
+            assertThrows(UnsupportedOperationException.class, () -> returned.set(0, stop2));
+        });
     }
 
     @SuppressWarnings("unlikely-arg-type")
@@ -209,12 +211,16 @@ public class RadialGradientTest {
 
     @Test
     public void testValueOfNullValue() {
-        assertThrows(NullPointerException.class, () -> RadialGradient.valueOf(null));
+        assertThrows(NullPointerException.class, () -> {
+            RadialGradient.valueOf(null);
+        });
     }
 
     @Test
     public void testValueOfEmpty() {
-        assertThrows(IllegalArgumentException.class, () -> RadialGradient.valueOf(""));
+        assertThrows(IllegalArgumentException.class, () -> {
+            RadialGradient.valueOf("");
+        });
     }
 
     @Test

@@ -24,11 +24,20 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
+import java.text.SimpleDateFormat;
+import javafx.beans.value.ChangeListener;
+import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.input.PickResult;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
+import javafx.stage.Window;
+import com.oracle.tools.fx.monkey.sheets.PropertiesMonitor;
+import com.oracle.tools.fx.monkey.tools.AccessibilityPropertyViewer;
+import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
 
 /**
@@ -37,6 +46,7 @@ import com.oracle.tools.fx.monkey.util.TestPaneBase;
 public class CanvasPage extends TestPaneBase {
     private Pane pane;
 
+    // TODO context menu to draw stuff?
     public CanvasPage() {
         super("CanvasPage");
 
@@ -53,10 +63,31 @@ public class CanvasPage extends TestPaneBase {
         double w = pane.getWidth();
         double h = pane.getHeight();
         String text = "width=" + w + " height=" + h;
-        Font f = Font.font("System", 12);
-        Canvas c = new Canvas(w, h);
+        Font f = Font.font("System", 14);
 
-        GraphicsContext g = c.getGraphicsContext2D();
+        ChangeListener<Number> li = (s,p,c) -> {
+            String t = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss").format(System.currentTimeMillis());
+            System.out.println(String.format("%s scalex=%f", t, c));
+        };
+
+        Canvas canvas = new Canvas(w, h);
+        canvas.sceneProperty().addListener((s, p, v) -> {
+            if (p != null) {
+                Window win = p.getWindow();
+                if (win != null) {
+                    win.renderScaleXProperty().removeListener(li);
+                }
+            }
+            if (v != null) {
+                Window win = v.getWindow();
+                if (win != null) {
+                    win.renderScaleXProperty().addListener(li);
+                }
+            }
+        });
+        FX.setPopupMenu(canvas, this::createMenu);
+
+        GraphicsContext g = canvas.getGraphicsContext2D();
 
         g.setFont(f);
         g.setFill(Color.BLACK);
@@ -69,6 +100,14 @@ public class CanvasPage extends TestPaneBase {
         g.lineTo(w, h / 2);
         g.stroke();
 
-        pane.getChildren().setAll(c);
+        pane.getChildren().setAll(canvas);
+    }
+
+    private ContextMenu createMenu(PickResult pick) {
+        Node source = pick.getIntersectedNode();
+        ContextMenu m = new ContextMenu();
+        FX.item(m, "Show Properties Monitor...", () -> PropertiesMonitor.open(source));
+        FX.item(m, "Accessibility Attributes...", () -> AccessibilityPropertyViewer.open(pick));
+        return m;
     }
 }

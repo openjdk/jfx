@@ -65,16 +65,16 @@ public class BackgroundPositionTest {
 
     @Test
     public void TOPHorizontalSideFails() {
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> new BackgroundPosition(Side.TOP, 10, true, Side.BOTTOM, 20, true));
+        assertThrows(IllegalArgumentException.class, () -> {
+            new BackgroundPosition(Side.TOP, 10, true, Side.BOTTOM, 20, true);
+        });
     }
 
     @Test
     public void BOTTOMHorizontalSideFails() {
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> new BackgroundPosition(Side.BOTTOM, 10, true, Side.BOTTOM, 20, true));
+        assertThrows(IllegalArgumentException.class, () -> {
+            new BackgroundPosition(Side.BOTTOM, 10, true, Side.BOTTOM, 20, true);
+        });
     }
 
     @Test public void negativeHorizontalPositionOK() {
@@ -89,16 +89,16 @@ public class BackgroundPositionTest {
 
     @Test
     public void LEFTVerticalSideFails() {
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> new BackgroundPosition(Side.LEFT, 10, true, Side.LEFT, 20, true));
+        assertThrows(IllegalArgumentException.class, () -> {
+            new BackgroundPosition(Side.LEFT, 10, true, Side.LEFT, 20, true);
+        });
     }
 
     @Test
     public void RIGHTVerticalSideFails() {
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> new BackgroundPosition(Side.LEFT, 10, true, Side.RIGHT, 20, true));
+        assertThrows(IllegalArgumentException.class, () -> {
+            new BackgroundPosition(Side.LEFT, 10, true, Side.RIGHT, 20, true);
+        });
     }
 
     @Test public void negativeVerticalPositionOK() {

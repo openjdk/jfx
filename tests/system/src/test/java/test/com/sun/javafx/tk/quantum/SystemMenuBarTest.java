@@ -25,43 +25,39 @@
 
 package test.com.sun.javafx.tk.quantum;
 
-import com.sun.javafx.menu.MenuBase;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import test.util.Util;
-import test.util.memory.JMemoryBuddy;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import com.sun.javafx.tk.quantum.GlassSystemMenuShim;
-import com.sun.javafx.scene.control.GlobalMenuAdapter;
-import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import javafx.application.Platform;
+import javafx.scene.Scene;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.Scene;
 import javafx.stage.Stage;
-
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.menu.MenuBase;
+import com.sun.javafx.scene.control.GlobalMenuAdapter;
+import com.sun.javafx.tk.quantum.GlassSystemMenuShim;
+import test.util.Util;
+import test.util.memory.JMemoryBuddy;
 
 public class SystemMenuBarTest {
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws Exception {
         CountDownLatch startupLatch = new CountDownLatch(1);
         Platform.setImplicitExit(false);
@@ -71,7 +67,7 @@ public class SystemMenuBarTest {
         });
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownOnce() {
         Util.shutdown();
     }
@@ -163,7 +159,7 @@ public class SystemMenuBarTest {
                     try {
                         Thread.sleep(20);
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        fail(e);
                     }
                     Platform.runLater(() -> {
                         menu.getItems().clear();
@@ -215,7 +211,7 @@ public class SystemMenuBarTest {
         stage.show();
         final ArrayList<WeakReference<MenuBase>> uncollectedMenus = new ArrayList<>();
         GlassSystemMenuShim gsmh = new GlassSystemMenuShim();
-        assumeTrue("SystemMenu only supported on MacOS", gsmh.isSupported());
+        assumeTrue(gsmh.isSupported(), "SystemMenu only supported on MacOS");
         Menu m1 = new Menu("Menu");
 
         MenuBase menuBase = GlobalMenuAdapter.adapt(m1);
@@ -232,7 +228,7 @@ public class SystemMenuBarTest {
             for (WeakReference<com.sun.glass.ui.Menu> wr : u2) {
                 if (!JMemoryBuddy.checkCollectable(wr)) {
                     strongCount++;
-                    assertTrue("Too many references", strongCount < 2);
+                    assertTrue(strongCount < 2, "Too many references");
                 }
             }
             assertEquals(1, strongCount, "Exactly one reference should be reachable");

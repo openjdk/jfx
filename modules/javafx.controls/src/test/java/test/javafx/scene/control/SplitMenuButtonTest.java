@@ -25,13 +25,15 @@
 
 package test.javafx.scene.control;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SplitMenuButton;
 import javafx.scene.shape.Rectangle;
-import org.junit.Before;
-import org.junit.Test;
-
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Basic SplitMenuButton Tests.
@@ -41,7 +43,8 @@ import static org.junit.Assert.*;
 public class SplitMenuButtonTest {
     private SplitMenuButton splitMenuButton;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         splitMenuButton = new SplitMenuButton();
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,13 @@
 
 package test.javafx.scene.control;
 
-import javafx.css.CssMetaData;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -40,6 +40,7 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.css.CssMetaData;
 import javafx.css.StyleableProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
@@ -53,10 +54,9 @@ import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
-
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 /**
  *
@@ -68,7 +68,8 @@ import org.junit.Test;
 public class LabeledTest {
     private Labeled labeled;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         labeled = new LabeledMock();
     }
 
@@ -160,7 +161,7 @@ public class LabeledTest {
         } catch (ClassCastException ignored) {
             // pass!
         } catch (Exception e) {
-            org.junit.Assert.fail(e.toString());
+            fail(e);
         }
     }
 
@@ -581,7 +582,7 @@ public class LabeledTest {
         assertTrue(styleable.isSettable(labeled));
     }
 
-    @Ignore ("CSS Graphic must be a URL, and then it will try to load the image. Not sure how to test.")
+    @Disabled("CSS Graphic must be a URL, and then it will try to load the image. Not sure how to test.")
     @Test public void canSpecifyGraphicViaCSS() {
         ((StyleableProperty)labeled.graphicProperty()).applyStyle(null, "/some/url");
         assertNotNull(labeled.getGraphic());

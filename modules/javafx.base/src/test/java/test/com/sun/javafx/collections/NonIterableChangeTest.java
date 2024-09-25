@@ -29,15 +29,15 @@ import java.util.Arrays;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class NonIterableChangeTest {
 
     ObservableList<String> list;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         list = FXCollections.observableArrayList("a", "b", "c", "d", "e");
     }

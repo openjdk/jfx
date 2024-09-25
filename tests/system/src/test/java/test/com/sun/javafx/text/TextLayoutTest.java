@@ -25,18 +25,16 @@
 
 package test.com.sun.javafx.text;
 
-import static org.junit.Assume.assumeTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.Arrays;
 import java.util.List;
-
+import javafx.scene.text.Font;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.font.CharToGlyphMapper;
 import com.sun.javafx.font.PGFont;
@@ -48,8 +46,6 @@ import com.sun.javafx.scene.text.TextLine;
 import com.sun.javafx.scene.text.TextSpan;
 import com.sun.javafx.text.PrismTextLayout;
 import com.sun.javafx.text.TextRun;
-
-import javafx.scene.text.Font;
 
 public class TextLayoutTest {
     private static final String J = "\u3041";  // Japanese not complex
@@ -587,18 +583,18 @@ public class TextLayoutTest {
     }
 
     private void assumeArialFontAvailable() {
-        assumeTrue("Arial font missing", arialFont.getName().equals("Arial"));
+        assumeTrue(arialFont.getName().equals("Arial"), "Arial font missing");
     }
 
     private void assumeTahomaFontAvailable() {
-        assumeTrue("Tahoma font missing", arialFont.getName().equals("Tahoma"));
+        assumeTrue(arialFont.getName().equals("Tahoma"), "Tahoma font missing");
     }
 
     private static void assumeMac() {
-        assumeTrue("Platform is not Mac", PlatformUtil.isMac());
+        assumeTrue(PlatformUtil.isMac(), "Platform is not Mac");
     }
 
     private static void assumeWindows() {
-        assumeTrue("Platform is not Windows", PlatformUtil.isWindows());
+        assumeTrue(PlatformUtil.isWindows(), "Platform is not Windows");
     }
 }

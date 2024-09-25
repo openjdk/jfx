@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,8 @@
 
 package test.javafx.scene.control.skin;
 
-import com.sun.javafx.tk.Toolkit;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.List;
 import javafx.scene.Node;
 import javafx.scene.control.Skin;
 import javafx.scene.control.TreeItem;
@@ -36,16 +37,13 @@ import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.scene.control.skin.TableColumnHeader;
 import javafx.scene.control.skin.TableColumnHeaderShim;
 import javafx.scene.layout.HBox;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
-
-import java.util.List;
-
-import static org.junit.Assert.assertTrue;
 
 public class TreeTableColumnHeaderTest {
 
@@ -57,7 +55,7 @@ public class TreeTableColumnHeaderTest {
     private static String NAME2 = "Orrin Davies";
     private static String NAME3 = "Emma Wilson";
 
-    @Before
+    @BeforeEach
     public void before() {
         TreeItem<Person> root = new TreeItem<>(new Person("Witty quotes", "", ""));
         root.getChildren().addAll(List.of(
@@ -83,7 +81,7 @@ public class TreeTableColumnHeaderTest {
         firstColumnHeader = VirtualFlowTestUtils.getTableColumnHeader(treeTableView, column);
     }
 
-    @After
+    @AfterEach
     public void after() {
         sl.dispose();
     }
@@ -99,7 +97,7 @@ public class TreeTableColumnHeaderTest {
 
         treeTableView.setRowFactory(this::createLargeRow);
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
-        assertTrue("Column width must be greater", width < column.getWidth());
+        assertTrue(width < column.getWidth(), "Column width must be greater");
     }
 
     /** Test resizeColumnToFitContent in the presence of a non-standard row skin */

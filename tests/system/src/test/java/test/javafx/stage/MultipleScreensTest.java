@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,10 @@
 
 package test.javafx.stage;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assume.assumeTrue;
-
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.concurrent.CountDownLatch;
-
+import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
 import javafx.geometry.Rectangle2D;
@@ -38,15 +37,15 @@ import javafx.scene.Scene;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
-
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import test.util.Util;
 
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class MultipleScreensTest {
     static CountDownLatch startupLatch = new CountDownLatch(1);
     static ObservableList<Screen> screens;
@@ -55,16 +54,16 @@ public class MultipleScreensTest {
 
     Stage stage;
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws Exception {
         Platform.setImplicitExit(false);
         Util.startup(startupLatch, startupLatch::countDown);
 
         // Get primary screen and list of all screens, skip tests if there is only one
         primaryScreen = Screen.getPrimary();
-        assertNotNull("Primary screen is null", primaryScreen);
+        assertNotNull(primaryScreen, "Primary screen is null");
         screens = Screen.getScreens();
-        assertNotNull("List of screens is null", screens);
+        assertNotNull(screens, "List of screens is null");
         assumeTrue(screens.size() > 1);
 
         // Get a screen other than the primary screen
@@ -72,20 +71,20 @@ public class MultipleScreensTest {
                 .filter(s -> !primaryScreen.equals(s))
                 .findFirst()
                 .orElseThrow();
-        assertNotNull("Secondary screen is null", otherScreen);
+        assertNotNull(otherScreen, "Secondary screen is null");
     }
 
-    @AfterClass
+    @AfterAll
     public static void exitFX() {
         Util.shutdown();
     }
 
-    @Before
+    @BeforeEach
     public void initTest() {
         Util.runAndWait(() -> stage = new Stage());
     }
 
-    @After
+    @AfterEach
     public void cleanupTest() {
         if (stage != null) {
             Platform.runLater(stage::hide);
@@ -96,7 +95,7 @@ public class MultipleScreensTest {
      * Test all four combinations of [primary,secondary]Screen x [with/without]Scene
      */
     private void createAndShowStage(Screen screen, boolean hasScene) throws Exception {
-        assertNotNull("Stage is null", stage);
+        assertNotNull(stage, "Stage is null");
 
         final CountDownLatch shownLatch = new CountDownLatch(1);
 
@@ -119,24 +118,23 @@ public class MultipleScreensTest {
         Util.waitForLatch(shownLatch, 5, "Stage failed to show");
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void showStageNoScenePrimaryScreen() throws Exception {
         createAndShowStage(primaryScreen, false);
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void showStageNoSceneOtherScreen() throws Exception {
         createAndShowStage(otherScreen, false);
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void showStageScenePrimaryScreen() throws Exception {
         createAndShowStage(primaryScreen, true);
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void showStageSceneOtherScreen() throws Exception {
         createAndShowStage(otherScreen, true);
     }
-
 }

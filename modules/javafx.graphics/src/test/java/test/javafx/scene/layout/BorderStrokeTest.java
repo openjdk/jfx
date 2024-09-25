@@ -41,7 +41,8 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class BorderStrokeTest {
     // be sure to test the innerEdge and outerEdge, I had bugs there!
-    @Test public void dummy() { }
+    @Test
+    public void dummy() { }
 
     @Nested
     class InterpolationTests {
