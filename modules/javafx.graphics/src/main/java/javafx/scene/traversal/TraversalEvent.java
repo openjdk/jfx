@@ -29,8 +29,6 @@ import javafx.beans.NamedArg;
 import javafx.event.Event;
 import javafx.event.EventType;
 import javafx.scene.Node;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
 
 /**
  * An event for representing node traversals that occur within the scenegraph. Traversal events, like all
@@ -40,7 +38,6 @@ import javafx.scene.Scene;
  * node.addEventHandler(TraversalEvent.NODE_TRAVERSED, (ev) -> {
  *   // Use properties of the TraversalEvent to appropriately react to this event
  *   Node n = ev.getNode();
- *   Bounds b = ev.getBounds();
  * });}</pre>
  *
  * @see TraversalPolicy
@@ -65,8 +62,6 @@ public class TraversalEvent extends Event {
     /**
      * Creates new instance of TraversalEvent.
      * @param node the {@link Node} which received the traversal event
-     * @param bounds The layout bounds of the node, transformed into the coordinates of the root element in the
-     *              traversal root being used (i.e. the {@link Scene} or the root {@link Parent})
      * @param eventType Type of the event
      */
     public TraversalEvent(
