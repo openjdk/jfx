@@ -457,9 +457,9 @@ public class ListenerHelper implements IDisconnectable {
         // if focus owner is a child of control, fire
 
         items.add(new X() {
-            private ChangeListener<Node> focusListener = (s, p, c) -> {
-                if (isParent(control, c)) {
-                    client.accept(c);
+            private ChangeListener<Node> focusListener = (s, p, n) -> {
+                if (isParent(control, n)) {
+                    client.accept(n);
                 }
             };
 
@@ -468,7 +468,6 @@ public class ListenerHelper implements IDisconnectable {
                 if (control.getScene() != null) {
                     control.getScene().focusOwnerProperty().addListener(focusListener);
                 }
-                focusListener = null;
             }
 
             private static boolean isParent(Node parent, Node n) {
@@ -487,6 +486,7 @@ public class ListenerHelper implements IDisconnectable {
                 if (control.getScene() != null) {
                     control.getScene().focusOwnerProperty().removeListener(focusListener);
                 }
+                focusListener = null;
             }
 
             @Override
