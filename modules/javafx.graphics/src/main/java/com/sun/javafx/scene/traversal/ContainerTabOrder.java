@@ -51,7 +51,7 @@ public class ContainerTabOrder extends TraversalPolicy {
             case LEFT:
             case RIGHT:
                 List<Node> nodes = TraversalUtils.getAllTargetNodes(root);
-                int target = trav2D(TraversalUtils.getLayoutBounds(node, null), dir, nodes, root);
+                int target = trav2D(TraversalUtils.getLayoutBoundsInSceneCoordinates(node), dir, nodes, root);
                 if (target != -1) {
                     return nodes.get(target);
                 }
@@ -76,7 +76,7 @@ public class ContainerTabOrder extends TraversalPolicy {
         int bestIndex = -1;
 
         for (int i = 0; i < peers.size(); i++) {
-            final Bounds targetBounds = TraversalUtils.getLayoutBounds(peers.get(i), null);
+            final Bounds targetBounds = TraversalUtils.getLayoutBoundsInSceneCoordinates(peers.get(i));
             final double outd = outDistance(dir, origin, targetBounds);
             final double metric;
 

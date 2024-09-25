@@ -28,7 +28,6 @@ package javafx.scene.traversal;
 import javafx.beans.NamedArg;
 import javafx.event.Event;
 import javafx.event.EventType;
-import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -61,10 +60,6 @@ public class TraversalEvent extends Event {
      */
     public static final EventType<TraversalEvent> NODE_TRAVERSED = new EventType<> (ANY, "NODE_TRAVERSED");
 
-    /**
-     * The layout bounds of the node, transformed into the coordinates of the root element.
-     */
-    private final Bounds bounds;
     private transient final Node node;
 
     /**
@@ -76,28 +71,15 @@ public class TraversalEvent extends Event {
      */
     public TraversalEvent(
         final @NamedArg("node") Node node,
-        final @NamedArg("bounds") Bounds bounds,
         final @NamedArg("eventType") EventType<? extends TraversalEvent> eventType
     ) {
         super(node, node, eventType);
         this.node = node;
-        this.bounds = bounds;
     }
 
     @Override
     public EventType<? extends TraversalEvent> getEventType() {
         return (EventType<? extends TraversalEvent>) super.getEventType();
-    }
-
-    /**
-     * The layout bounds of the node which received the traversal event,
-     * transformed into the coordinates of the root element in the
-     * traversal root being used (i.e. the {@link Scene} or the root {@link Parent}).
-     *
-     * @return the layout bounds of the node, transformed into the coordinates of the root element.
-     */
-    public final Bounds getBounds() {
-        return bounds;
     }
 
     /**
@@ -113,7 +95,6 @@ public class TraversalEvent extends Event {
         return
             getClass().getName() +
             "[node=" + getNode() +
-            ", bounds=" + getBounds() +
             ", source=" + source +
             "]";
     }

@@ -64,6 +64,7 @@ import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.ScrollPaneBehavior;
+import com.sun.javafx.scene.traversal.TraversalUtils;
 import com.sun.javafx.util.Utils;
 
 /**
@@ -660,8 +661,11 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
         ListenerHelper lh = ListenerHelper.get(this);
 
         lh.addEventFilter(control, TraversalEvent.NODE_TRAVERSED, (ev) -> {
-            // auto-scroll so node is within (0,0),(contentWidth,contentHeight)
-            scrollBoundsIntoView(ev.getBounds());
+            // auto-scroll node to view
+            Bounds b = TraversalUtils.getLayoutBounds(ev.getNode(), getSkinnable());
+            if (b != null) {
+                scrollBoundsIntoView(b);
+            }
         });
 
         lh.addEventFilter(hsb, MouseEvent.MOUSE_PRESSED, barHandler);

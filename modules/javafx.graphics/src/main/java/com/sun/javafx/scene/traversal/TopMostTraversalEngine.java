@@ -98,7 +98,7 @@ public final class TopMostTraversalEngine {
             n.requestFocus();
         }
 
-        n.fireEvent(new TraversalEvent(n, TraversalUtils.getLayoutBounds(n, root), TraversalEvent.NODE_TRAVERSED));
+        n.fireEvent(new TraversalEvent(n, TraversalEvent.NODE_TRAVERSED));
     }
 
     /**

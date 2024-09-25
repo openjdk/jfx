@@ -49,22 +49,31 @@ public final class TraversalUtils {
     }
 
     /**
-     * Gets the appropriate bounds for the given node, transformed into
-     * the scene's or the specified node's coordinates.
-     * @return bounds of node in {@code forParent} coordinates or scene coordinates if {@code forParent} is null
+     * Gets the appropriate bounds for the given node, transformed into the specified node's coordinates.
+     * This method returns {@code null} if {@code n} or {@code forParent} is null
+     * or the node is not a part of the scene graph.
+     * @return bounds of node in {@code forParent} coordinates, or null
      */
     public static Bounds getLayoutBounds(Node n, Parent forParent) {
-        final Bounds bounds;
-        if (n != null) {
-            if (forParent == null) {
-                bounds = n.localToScene(n.getLayoutBounds());
-            } else {
-                bounds = forParent.sceneToLocal(n.localToScene(n.getLayoutBounds()));
+        if ((n != null) && (forParent != null)) {
+            Bounds b = n.localToScene(n.getLayoutBounds());
+            if (b != null) {
+                return forParent.sceneToLocal(b);
             }
-        } else {
-            bounds = INITIAL_BOUNDS;
         }
-        return bounds;
+        return null;
+    }
+
+    /**
+     * Gets the appropriate bounds for the given node, transformed into the scene's coordinates.
+     * @return bounds of node in scene coordinates
+     */
+    public static Bounds getLayoutBoundsInSceneCoordinates(Node n) {
+        if (n != null) {
+            return n.localToScene(n.getLayoutBounds());
+        } else {
+            return INITIAL_BOUNDS;
+        }
     }
 
     private static TraversalPolicy initEmptyTraversablePolicy() {
