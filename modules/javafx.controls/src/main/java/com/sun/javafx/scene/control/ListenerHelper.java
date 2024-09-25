@@ -448,7 +448,7 @@ public class ListenerHelper implements IDisconnectable {
             }
         }
     }
-    
+
     private abstract static class X implements IDisconnectable, ChangeListener<Scene> { }
 
     public void addSceneFocusOwnerListener(Control control, Consumer<Node> client) {
