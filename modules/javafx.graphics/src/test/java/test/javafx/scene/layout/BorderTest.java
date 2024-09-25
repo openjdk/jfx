@@ -258,8 +258,7 @@ public class BorderTest {
             final BorderStroke stroke = new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, new CornerRadii(3), new BorderWidths(4));
             final BorderStroke[] strokes = new BorderStroke[] { stroke };
             Border b = new Border(strokes);
-            assertThrows(UnsupportedOperationException.class, () ->
-            b.getStrokes().add(new BorderStroke(Color.BLUE, BorderStrokeStyle.SOLID, new CornerRadii(6), new BorderWidths(8))));
+            b.getStrokes().add(new BorderStroke(Color.BLUE, BorderStrokeStyle.SOLID, new CornerRadii(6), new BorderWidths(8)));
         });
     }
 
@@ -270,11 +269,10 @@ public class BorderTest {
                                                       BorderWidths.EMPTY, false, REPEAT, REPEAT);
             final BorderImage[] images = new BorderImage[] { image };
             Border b = new Border(images);
-            assertThrows(UnsupportedOperationException.class, () ->
             b.getImages().add(
                     new BorderImage(
                             IMAGE_4, new BorderWidths(3), Insets.EMPTY,
-                            new BorderWidths(3, 4, 5, 6), true, STRETCH, SPACE)));
+                            new BorderWidths(3, 4, 5, 6), true, STRETCH, SPACE));
         });
     }
 

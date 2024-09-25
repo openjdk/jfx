@@ -86,7 +86,7 @@ public class RadialGradientTest {
                     CycleMethod.NO_CYCLE, twoStops);
 
             List<Stop> returned = gradient.getStops();
-            assertThrows(UnsupportedOperationException.class, () -> returned.set(0, stop2));
+            returned.set(0, stop2);
         });
     }
 

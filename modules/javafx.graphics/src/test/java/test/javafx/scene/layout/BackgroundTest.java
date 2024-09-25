@@ -256,8 +256,7 @@ public class BackgroundTest {
             final BackgroundFill fill = new BackgroundFill(Color.GREEN, new CornerRadii(3), new Insets(4));
             final BackgroundFill[] fills = new BackgroundFill[] { fill };
             Background b = new Background(fills);
-            assertThrows(UnsupportedOperationException.class,
-            () -> b.getFills().add(new BackgroundFill(Color.BLUE, new CornerRadii(6), new Insets(8))));
+            b.getFills().add(new BackgroundFill(Color.BLUE, new CornerRadii(6), new Insets(8)));
         });
     }
 
@@ -267,8 +266,7 @@ public class BackgroundTest {
             final BackgroundImage image = new BackgroundImage(IMAGE_2, SPACE, SPACE, null, null);
             final BackgroundImage[] images = new BackgroundImage[] { image };
             Background b = new Background(images);
-            assertThrows(UnsupportedOperationException.class,
-            () -> b.getImages().add(new BackgroundImage(IMAGE_3, ROUND, ROUND, null, null)));
+            b.getImages().add(new BackgroundImage(IMAGE_3, ROUND, ROUND, null, null));
         });
     }
 
