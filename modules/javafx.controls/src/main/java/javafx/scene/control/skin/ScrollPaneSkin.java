@@ -57,7 +57,6 @@ import javafx.scene.input.ScrollEvent;
 import javafx.scene.input.TouchEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
-import javafx.scene.traversal.TraversalEvent;
 import javafx.util.Duration;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.ListenerHelper;
@@ -660,9 +659,9 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
 
         ListenerHelper lh = ListenerHelper.get(this);
 
-        lh.addEventFilter(control, TraversalEvent.NODE_TRAVERSED, (ev) -> {
+        lh.addSceneFocusOwnerListener(control, (n) -> {
             // auto-scroll node to view
-            Bounds b = TraversalUtils.getLayoutBounds(ev.getNode(), getSkinnable());
+            Bounds b = TraversalUtils.getLayoutBounds(n, control);
             if (b != null) {
                 scrollBoundsIntoView(b);
             }

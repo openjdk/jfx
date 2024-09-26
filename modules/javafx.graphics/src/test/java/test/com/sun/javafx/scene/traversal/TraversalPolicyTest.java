@@ -34,7 +34,6 @@ import javafx.scene.layout.HBox;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.traversal.FocusTraversal;
 import javafx.scene.traversal.TraversalDirection;
-import javafx.scene.traversal.TraversalEvent;
 import javafx.scene.traversal.TraversalMethod;
 import javafx.scene.traversal.TraversalPolicy;
 import javafx.stage.Stage;
@@ -52,6 +51,7 @@ import test.com.sun.javafx.pgstub.StubToolkit;
 public final class TraversalPolicyTest {
     private static StubToolkit tk;
     private static Stage stage;
+    private static Scene scene;
     private static GridPane grid;
     private static Node t0;
     private static Node t1;
@@ -66,7 +66,6 @@ public final class TraversalPolicyTest {
     private static Node b20;
     private static Node b21;
     private static Node b22;
-    private Node fromEvent;
 
     /**
      * [T.0] [T.1] [T.2] [T.3]
@@ -113,15 +112,10 @@ public final class TraversalPolicyTest {
             t3
         ));
 
+        scene = new Scene(bp, 500, 400);
         stage = new Stage();
-        stage.setScene(new Scene(bp, 500, 400));
-        stage.addEventHandler(TraversalEvent.ANY, (ev) -> {
-            //System.out.println(ev);
-            fromEvent = ev.getNode();
-        });
+        stage.setScene(scene);
         stage.show();
-
-        fromEvent = null;
     }
 
     @BeforeEach
@@ -135,6 +129,11 @@ public final class TraversalPolicyTest {
 
     @AfterEach
     void afterEach() {
+        if (stage != null) {
+            stage.hide();
+            stage = null;
+        }
+        scene = null;
     }
 
     @AfterClass
@@ -151,7 +150,6 @@ public final class TraversalPolicyTest {
         checkFocused(from);
 
         for (Node n : nodes) {
-            fromEvent = null;
             boolean success = FocusTraversal.traverse(from, dir, TraversalMethod.DEFAULT);
             Assertions.assertTrue(success, "failed to traverse from node: " + from);
             firePulse();
@@ -166,6 +164,7 @@ public final class TraversalPolicyTest {
     }
 
     void checkEventNode(Node n) {
+        Node fromEvent = scene.getFocusOwner();
         Assertions.assertTrue(fromEvent == n, "TraversalEvent.node is wrong, expecting=" + n + ", observed=" + fromEvent);
         //System.out.println(fromEvent);
     }

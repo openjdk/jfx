@@ -28,7 +28,6 @@ package com.sun.javafx.scene.traversal;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.traversal.TraversalDirection;
-import javafx.scene.traversal.TraversalEvent;
 import javafx.scene.traversal.TraversalMethod;
 import javafx.scene.traversal.TraversalPolicy;
 import com.sun.javafx.scene.NodeHelper;
@@ -97,8 +96,6 @@ public final class TopMostTraversalEngine {
         } else {
             n.requestFocus();
         }
-
-        n.fireEvent(new TraversalEvent(n, TraversalEvent.NODE_TRAVERSED));
     }
 
     /**

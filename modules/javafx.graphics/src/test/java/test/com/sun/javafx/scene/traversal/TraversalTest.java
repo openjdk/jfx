@@ -25,28 +25,21 @@
 
 package test.com.sun.javafx.scene.traversal;
 
-import java.util.Arrays;
-import java.util.Collection;
-import javafx.event.EventHandler;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.stream.Stream;
-import javafx.geometry.Bounds;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.traversal.TraversalDirection;
-import javafx.scene.traversal.TraversalEvent;
 import javafx.scene.traversal.TraversalMethod;
 import javafx.stage.Stage;
-import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
 
 /**
  * Tests for TraversalEngine with the default ContainerTabOrder policy.
@@ -128,6 +121,9 @@ public final class TraversalTest {
 
     @AfterEach
     public void tearDown() {
+        if (stage != null) {
+            stage.hide();
+        }
         stage = null;
         scene = null;
         keypadNodes = null;
@@ -160,26 +156,6 @@ public final class TraversalTest {
         assertTrue(keypadNodes[toNumberTransformed - 1].isFocused());
     }
 
-    @ParameterizedTest
-    @MethodSource("parameters")
-    public void traverseListenerTest(
-        int fromNumber,
-        TraversalDirection direction,
-        int toNumber,
-        int toNumberTransformed)
-    {
-        TraverseListenerImpl h = new TraverseListenerImpl();
-        scene.addEventHandler(TraversalEvent.ANY, h);
-        keypadNodes[fromNumber - 1].requestFocus();
-        TopMostTraversalEngine.trav(scene.getRoot(), keypadNodes[fromNumber - 1], direction, TraversalMethod.DEFAULT);
-        if (fromNumber != toNumber) {
-            assertEquals(1, h.getCallCounter());
-            assertSame(keypadNodes[toNumber - 1], h.getLastNode());
-        } else {
-            assertEquals(0, h.getCallCounter());
-        }
-    }
-
     private static Node[] createKeypadNodesInScene(final Scene scene) {
         final Node[] keypad = new Node[9];
 
@@ -197,24 +173,5 @@ public final class TraversalTest {
         }
 
         return keypad;
-    }
-
-    private static final class TraverseListenerImpl implements EventHandler<TraversalEvent> {
-        private int callCounter;
-        private Node lastNode;
-
-        public int getCallCounter() {
-            return callCounter;
-        }
-
-        public Node getLastNode() {
-            return lastNode;
-        }
-
-        @Override
-        public void handle(TraversalEvent ev) {
-            ++callCounter;
-            lastNode = ev.getNode();
-        }
     }
 }
