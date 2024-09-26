@@ -449,24 +449,27 @@ public class ListenerHelper implements IDisconnectable {
         }
     }
 
-    private abstract static class X implements IDisconnectable, ChangeListener<Scene> { }
-
-    public void addSceneFocusOwnerListener(Control control, Consumer<Node> client) {
-        // add change listener to scene
-        // add change listener to focusOwner
-        // if focus owner is a child of control, fire
-
-        items.add(new X() {
+    /**
+     * Adds a disonnectable machinery to listen to {@code control}'s Scene and Scene.focusOwner properties,
+     * for the purpose of invoking the supplied callback when focused node is in the {@code control}'s hierarchy
+     * or is the control itself.
+     *
+     * @param control the control
+     * @param callback the callback
+     */
+    public void addSceneFocusOwnerListener(Control control, Consumer<Node> callback) {
+        items.add(new ChLi<Scene>() {
             private ChangeListener<Node> focusListener = (s, p, n) -> {
                 if (isParent(control, n)) {
-                    client.accept(n);
+                    callback.accept(n);
                 }
             };
 
             {
                 control.sceneProperty().addListener(this);
-                if (control.getScene() != null) {
-                    control.getScene().focusOwnerProperty().addListener(focusListener);
+                Scene scene = control.getScene();
+                if (scene != null) {
+                    scene.focusOwnerProperty().addListener(focusListener);
                 }
             }
 
@@ -483,8 +486,9 @@ public class ListenerHelper implements IDisconnectable {
             @Override
             public void disconnect() {
                 control.sceneProperty().removeListener(this);
-                if (control.getScene() != null) {
-                    control.getScene().focusOwnerProperty().removeListener(focusListener);
+                Scene scene = control.getScene();
+                if (scene != null) {
+                    scene.focusOwnerProperty().removeListener(focusListener);
                 }
                 focusListener = null;
             }
