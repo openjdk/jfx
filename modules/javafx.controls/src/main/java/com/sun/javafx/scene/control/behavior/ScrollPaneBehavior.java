@@ -28,6 +28,9 @@ package com.sun.javafx.scene.control.behavior;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollPane;
 import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.KeyBinding;
+
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.control.skin.ScrollPaneSkin;
 
@@ -71,18 +74,18 @@ public class ScrollPaneBehavior extends BehaviorBase<ScrollPane> {
 
         // scrollpane-specific mappings for key and mouse input
         addDefaultMapping(inputMap,
-            new InputMap.KeyMapping(LEFT, e -> rtl(scrollPane, this::horizontalUnitIncrement, this::horizontalUnitDecrement)),
-            new InputMap.KeyMapping(RIGHT, e -> rtl(scrollPane, this::horizontalUnitDecrement, this::horizontalUnitIncrement)),
+            new InputMap.KeyMapping(new KeyBinding(LEFT), e -> rtl(scrollPane, this::horizontalUnitIncrement, this::horizontalUnitDecrement), this::isNotFocused),
+            new InputMap.KeyMapping(new KeyBinding(RIGHT), e -> rtl(scrollPane, this::horizontalUnitDecrement, this::horizontalUnitIncrement), this::isNotFocused),
 
-            new InputMap.KeyMapping(UP, e -> verticalUnitDecrement()),
-            new InputMap.KeyMapping(DOWN, e -> verticalUnitIncrement()),
+            new InputMap.KeyMapping(new KeyBinding(UP), e -> verticalUnitDecrement(), this::isNotFocused),
+            new InputMap.KeyMapping(new KeyBinding(DOWN), e -> verticalUnitIncrement(), this::isNotFocused),
 
-            new InputMap.KeyMapping(PAGE_UP, e -> verticalPageDecrement()),
-            new InputMap.KeyMapping(PAGE_DOWN, e -> verticalPageIncrement()),
-            new InputMap.KeyMapping(SPACE, e -> verticalPageIncrement()),
+            new InputMap.KeyMapping(new KeyBinding(PAGE_UP), e -> verticalPageDecrement(), this::isNotFocused),
+            new InputMap.KeyMapping(new KeyBinding(PAGE_DOWN), e -> verticalPageIncrement(), this::isNotFocused),
+            new InputMap.KeyMapping(new KeyBinding(SPACE), e -> verticalPageIncrement(), this::isNotFocused),
 
-            new InputMap.KeyMapping(HOME, e -> verticalHome()),
-            new InputMap.KeyMapping(END, e -> verticalEnd()),
+            new InputMap.KeyMapping(new KeyBinding(HOME), e -> verticalHome(), this::isNotFocused),
+            new InputMap.KeyMapping(new KeyBinding(END), e -> verticalEnd(), this::isNotFocused),
 
             new InputMap.MouseMapping(MouseEvent.MOUSE_PRESSED, this::mousePressed)
         );
@@ -143,6 +146,9 @@ public class ScrollPaneBehavior extends BehaviorBase<ScrollPane> {
         return Optional.ofNullable(((ScrollPaneSkin)getNode().getSkin()).getHorizontalScrollBar());
     }
 
+    private boolean isNotFocused(KeyEvent keyEvent) {
+        return !getNode().isFocused();
+    }
 
     /***************************************************************************
      *                                                                         *
