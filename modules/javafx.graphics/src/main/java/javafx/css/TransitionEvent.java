@@ -102,8 +102,9 @@ public final class TransitionEvent extends Event {
      * @param property the {@code StyleableProperty} that is targeted by the transition
      * @param elapsedTime the time that has elapsed since the transition has entered its active period
      * @throws NullPointerException if {@code eventType}, {@code property} or {@code elapsedTime} is {@code null}
+     * @deprecated use {@link #TransitionEvent(EventType, StyleableProperty, String, Duration)} instead
      */
-    @Deprecated(forRemoval = true)
+    @Deprecated(since = "24", forRemoval = true)
     public TransitionEvent(EventType<? extends Event> eventType,
                            StyleableProperty<?> property,
                            Duration elapsedTime) {
