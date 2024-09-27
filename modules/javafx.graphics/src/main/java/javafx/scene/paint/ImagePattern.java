@@ -139,6 +139,7 @@ public final class ImagePattern extends Paint {
     /**
      * Gets the image to be used as a paint.
      *
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      * @return Image to be used as a paint.
      */
     public final Image getImage() {
