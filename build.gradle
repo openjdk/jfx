@@ -4434,16 +4434,18 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     String draftMsg = IS_MILESTONE_FCS ? "" : "<br><b>DRAFT ${RELEASE_VERSION_LONG}</b>"
     String javadocTitleImpl = javadocTitle
             .replaceAll("@JAVADOC_VERSION@", jfxReleaseMajorVersion)
-            .replaceAll("@DRAFT_UNLESS_FCS@", draftMsg)
     String javadocHeaderImpl = javadocHeader
             .replaceAll("@JAVADOC_VERSION@", jfxReleaseMajorVersion)
             .replaceAll("@DRAFT_UNLESS_FCS@", draftMsg)
     String javadocBottomImpl = javadocBottom
-            .replaceAll("@JAVADOC_VERSION@", jfxReleaseMajorVersion)
             .replaceAll("@DRAFT_UNLESS_FCS@", draftMsg)
+            .replaceAll("@FULL_VERSION@", RELEASE_VERSION_LONG)
     options.windowTitle(javadocTitleImpl)
     options.header(javadocHeaderImpl)
     options.bottom(javadocBottomImpl)
+    if (!IS_MILESTONE_FCS) {
+        options.addStringOption("top").setValue(javadocTop)
+    }
 
     options.locale("en");
     if (JDK_DOCS_LINK != "") {
