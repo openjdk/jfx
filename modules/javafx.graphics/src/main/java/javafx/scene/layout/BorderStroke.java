@@ -30,9 +30,7 @@ import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 import javafx.geometry.Insets;
 import javafx.scene.paint.Color;
-import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Paint;
-import javafx.scene.paint.RadialGradient;
 import javafx.scene.shape.StrokeType;
 import java.util.Objects;
 
