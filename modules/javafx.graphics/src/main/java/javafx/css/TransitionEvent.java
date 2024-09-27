@@ -100,9 +100,25 @@ public final class TransitionEvent extends Event {
      *
      * @param eventType the event type
      * @param property the {@code StyleableProperty} that is targeted by the transition
-     * @param propertyName the name of the targeted CSS property or sub-property
      * @param elapsedTime the time that has elapsed since the transition has entered its active period
      * @throws NullPointerException if {@code eventType}, {@code property} or {@code elapsedTime} is {@code null}
+     */
+    @Deprecated(forRemoval = true)
+    public TransitionEvent(EventType<? extends Event> eventType,
+                           StyleableProperty<?> property,
+                           Duration elapsedTime) {
+        this(eventType, property, property.getCssMetaData().getProperty(), elapsedTime);
+    }
+
+    /**
+     * Creates a new instance of the {@code TransitionEvent} class.
+     *
+     * @param eventType the event type
+     * @param property the {@code StyleableProperty} that is targeted by the transition
+     * @param propertyName the name of the targeted CSS property or sub-property
+     * @param elapsedTime the time that has elapsed since the transition has entered its active period
+     * @throws NullPointerException if any of the arguments is {@code null}
+     * @since 24
      */
     public TransitionEvent(EventType<? extends Event> eventType,
                            StyleableProperty<?> property,

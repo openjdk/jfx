@@ -50,7 +50,7 @@ public final class BackgroundFill implements Interpolatable<BackgroundFill> {
      * This value will never be null.
      *
      * @return the Paint to use for filling the background of the {@link Region}
-     * @interpolationType see {@link BackgroundFill}
+     * @interpolationType see {@link Paint}
      */
     public final Paint getFill() { return fill; }
     final Paint fill;
