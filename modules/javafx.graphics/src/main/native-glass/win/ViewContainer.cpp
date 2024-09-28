@@ -547,8 +547,8 @@ void ViewContainer::HandleViewDeadKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, L
     }
 
     // Since we handle dead keys ourselves, reset the keyboard dead key status (if any)
-    static BYTE kbState[256];
-    ::GetKeyboardState(kbState);
+    static BYTE kbState[256] = {};
+    kbState[VK_SPACE] = 0x80;
     WORD ignored;
     ::ToAsciiEx(VK_SPACE, ::MapVirtualKey(VK_SPACE, 0),
             kbState, &ignored, 0, m_kbLayout);
