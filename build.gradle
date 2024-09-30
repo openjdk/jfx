@@ -5995,12 +5995,12 @@ compileTargets { t ->
                             "    permission java.security.AllPermission;\n" +
                             "};\n"
 
-	                        dir = new File(TEST_SDK_PATH, "sdk/lib/${project.ext.moduleName}.jar")
-	                        themod = dir.toURI()
-	                        runJavaPolicyFile <<  "grant codeBase \"${themod}\" {\n" +
-	                        "    permission java.security.AllPermission;\n" +
-	                        "};\n"
-	                    }
+                            dir = new File(TEST_SDK_PATH, "sdk/lib/${project.ext.moduleName}.jar")
+                            themod = dir.toURI()
+                            runJavaPolicyFile <<  "grant codeBase \"${themod}\" {\n" +
+                            "    permission java.security.AllPermission;\n" +
+                            "};\n"
+                        }
                     }
                 }
 

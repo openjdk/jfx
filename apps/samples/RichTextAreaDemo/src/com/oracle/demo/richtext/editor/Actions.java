@@ -35,7 +35,8 @@ package com.oracle.demo.richtext.editor;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.util.Optional;
+import java.util.Locale;
+import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
@@ -43,10 +44,6 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Alert.AlertType;
-import javafx.scene.control.ButtonBar.ButtonData;
-import javafx.scene.control.ButtonType;
 import javafx.scene.input.DataFormat;
 import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
@@ -56,7 +53,6 @@ import com.oracle.demo.richtext.common.TextStyle;
 import com.oracle.demo.richtext.util.ExceptionDialog;
 import com.oracle.demo.richtext.util.FX;
 import com.oracle.demo.richtext.util.FxAction;
-import com.oracle.demo.richtext.util.SavePane;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.SelectionSegment;
 import jfx.incubator.scene.control.richtext.TextPos;
@@ -83,6 +79,7 @@ public class Actions {
     public final FxAction newDocument = new FxAction(this::newDocument);
     public final FxAction open = new FxAction(this::open);
     public final FxAction save = new FxAction(this::save);
+    public final FxAction saveAs = new FxAction(this::saveAs);
     // style
     public final FxAction bold = new FxAction(this::bold);
     public final FxAction italic = new FxAction(this::italic);
@@ -245,7 +242,7 @@ public class Actions {
         apply(StyleAttributeMap.TEXT_COLOR, color);
     }
 
-    private void newDocument() {
+    void newDocument() {
         if (askToSave()) {
             return;
         }
@@ -253,90 +250,83 @@ public class Actions {
         setModified(false);
     }
 
-    private void open() {
+    void open() {
         if (askToSave()) {
             return;
         }
 
         FileChooser ch = new FileChooser();
         ch.setTitle("Open File");
-        // TODO add extensions
+        ch.getExtensionFilters().addAll(
+            filterAll(),
+            filterRich(),
+            filterRtf()
+        );
+
         Window w = FX.getParentWindow(control);
         File f = ch.showOpenDialog(w);
         if (f != null) {
             try {
-                readFile(f, RichTextFormatHandler.DATA_FORMAT);
+                DataFormat fmt = guessFormat(f);
+                readFile(f, fmt);
             } catch (Exception e) {
                 new ExceptionDialog(control, e).open();
             }
         }
     }
 
-    // FIX this is too simplistic, need save() and save as...
-    private void save() {
+    void save() {
         File f = getFile();
         if (f == null) {
-            FileChooser ch = new FileChooser();
-            ch.setTitle("Save File");
-            // TODO add extensions
-            Window w = FX.getParentWindow(control);
-            f = ch.showSaveDialog(w);
-            if (f == null) {
+            f = chooseFileForSave();
+            if (f != null) {
                 return;
             }
         }
+
         try {
-            writeFile(f, RichTextFormatHandler.DATA_FORMAT);
+            writeFile(f);
         } catch (Exception e) {
             new ExceptionDialog(control, e).open();
         }
     }
 
-    // returns true if the user chose to Cancel
+    void saveAs() {
+        File f = chooseFileForSave();
+        if (f != null) {
+            try {
+                writeFile(f);
+            } catch(Exception e) {
+                new ExceptionDialog(control, e).open();
+            }
+        }
+    }
+
+    private File chooseFileForSave() {
+        File f = getFile();
+        FileChooser ch = new FileChooser();
+        if (f != null) {
+            ch.setInitialDirectory(f.getParentFile());
+            ch.setInitialFileName(f.getName());
+        }
+        ch.setTitle("Save File");
+        ch.getExtensionFilters().addAll(
+            filterRich(),
+            filterRtf(),
+            filterTxt()
+            //filterAll()
+        );
+        Window w = FX.getParentWindow(control);
+        return ch.showSaveDialog(w);
+    }
+
+    /**
+     * @return true if the user chose to Cancel
+     */
     private boolean askToSave() {
         if (isModified()) {
-            // alert: has been modified. do you want to save?
-            Alert alert = new Alert(AlertType.CONFIRMATION);
-            alert.initOwner(FX.getParentWindow(control));
-            alert.setTitle("Document is Modified");
-            alert.setHeaderText("Do you want to save this document?");
-            ButtonType delete = new ButtonType("Delete");
-            ButtonType cancel = new ButtonType("Cancel", ButtonData.CANCEL_CLOSE);
-            ButtonType save = new ButtonType("Save", ButtonData.APPLY);
-            alert.getButtonTypes().setAll(
-                delete,
-                cancel,
-                save
-            );
-
-            File f = getFile();
-            SavePane sp = new SavePane();
-            sp.setFile(f);
-            alert.getDialogPane().setContent(sp);
-            Optional<ButtonType> result = alert.showAndWait();
-            if (result.isPresent()) {
-                ButtonType t = result.get();
-                if (t == delete) {
-                    return false;
-                } else if (t == cancel) {
-                    return true;
-                } else {
-                    // save using info in the panel
-                    f = sp.getFile();
-                    DataFormat fmt = sp.getFileFormat();
-                    // FIX
-                    fmt = RichTextFormatHandler.DATA_FORMAT;
-
-                    try {
-                        writeFile(f, fmt);
-                    } catch (Exception e) {
-                        new ExceptionDialog(control, e).open();
-                        return true;
-                    }
-                }
-            } else {
-                return true;
-            }
+            saveAs();
+            return true;
         }
         return false;
     }
@@ -350,7 +340,8 @@ public class Actions {
         }
     }
 
-    private void writeFile(File f, DataFormat fmt) throws Exception {
+    private void writeFile(File f) throws Exception {
+        DataFormat fmt = guessFormat(f);
         try (FileOutputStream out = new FileOutputStream(f)) {
             control.write(fmt, out);
             file.set(f);
@@ -358,47 +349,47 @@ public class Actions {
         }
     }
 
-    public void copy() {
+    void copy() {
         control.copy();
     }
 
-    public void cut() {
+    void cut() {
         control.cut();
     }
 
-    public void paste() {
+    void paste() {
         control.paste();
     }
 
-    public void pasteUnformatted() {
+    void pasteUnformatted() {
         control.pastePlainText();
     }
 
-    public void selectAll() {
+    void selectAll() {
         control.selectAll();
     }
 
-    public void redo() {
+    void redo() {
        control.redo();
     }
 
-    public void undo() {
+    void undo() {
         control.undo();
     }
 
-    public void bold() {
+    void bold() {
         toggleStyle(StyleAttributeMap.BOLD);
     }
 
-    public void italic() {
+    void italic() {
         toggleStyle(StyleAttributeMap.ITALIC);
     }
 
-    public void strikeThrough() {
+    void strikeThrough() {
         toggleStyle(StyleAttributeMap.STRIKE_THROUGH);
     }
 
-    public void underline() {
+    void underline() {
         toggleStyle(StyleAttributeMap.UNDERLINE);
     }
 
@@ -458,5 +449,40 @@ public class Actions {
             return null;
         }
         return control.getActiveStyleAttributeMap();
+    }
+
+    static FileChooser.ExtensionFilter filterAll() {
+        return new FileChooser.ExtensionFilter("All Files", "*.*");
+    }
+
+    static FileChooser.ExtensionFilter filterRich() {
+        return new FileChooser.ExtensionFilter("Rich Text Files", "*.rich");
+    }
+
+    static FileChooser.ExtensionFilter filterRtf() {
+        return new FileChooser.ExtensionFilter("RTF Files", "*.rtf");
+    }
+
+    static FileChooser.ExtensionFilter filterTxt() {
+        return new FileChooser.ExtensionFilter("Text Files", "*.txt");
+    }
+
+    private static DataFormat guessFormat(File f) {
+        String name = f.getName().toLowerCase(Locale.ENGLISH);
+        if (name.endsWith(".rich")) {
+            return RichTextFormatHandler.DATA_FORMAT;
+        } else if (name.endsWith(".rtf")) {
+            return DataFormat.RTF;
+        }
+        return DataFormat.PLAIN_TEXT;
+    }
+
+    public void quit() {
+        if (isModified()) {
+            if (askToSave()) {
+                return;
+            }
+        }
+        Platform.exit();
     }
 }

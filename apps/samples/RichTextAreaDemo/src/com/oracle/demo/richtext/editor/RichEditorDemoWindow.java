@@ -38,6 +38,7 @@ import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuBar;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 import com.oracle.demo.richtext.rta.RichTextAreaWindow;
@@ -67,8 +68,6 @@ public class RichEditorDemoWindow extends Stage {
 
         Scene scene = new Scene(bp);
 
-        // TODO input map for the window: add shortcut-S for saving
-
         setScene(scene);
         setWidth(1200);
         setHeight(600);
@@ -91,12 +90,12 @@ public class RichEditorDemoWindow extends Stage {
         MenuBar m = new MenuBar();
         // file
         FX.menu(m, "File");
-        FX.item(m, "New", actions.newDocument);
+        FX.item(m, "New", actions.newDocument).setAccelerator(KeyCombination.keyCombination("shortcut+N"));
         FX.item(m, "Open...", actions.open);
         FX.separator(m);
-        FX.item(m, "Save...", actions.save);
-        // TODO print?
-        FX.item(m, "Quit", () -> Platform.exit());
+        FX.item(m, "Save", actions.save).setAccelerator(KeyCombination.keyCombination("shortcut+S"));
+        FX.item(m, "Save As...", actions.saveAs).setAccelerator(KeyCombination.keyCombination("shortcut+A"));
+        FX.item(m, "Quit", actions::quit);
 
         // edit
         FX.menu(m, "Edit");
@@ -110,10 +109,10 @@ public class RichEditorDemoWindow extends Stage {
 
         // format
         FX.menu(m, "Format");
-        FX.item(m, "Bold", actions.bold);
-        FX.item(m, "Italic", actions.italic);
+        FX.item(m, "Bold", actions.bold).setAccelerator(KeyCombination.keyCombination("shortcut+B"));
+        FX.item(m, "Italic", actions.italic).setAccelerator(KeyCombination.keyCombination("shortcut+I"));
         FX.item(m, "Strike Through", actions.strikeThrough);
-        FX.item(m, "Underline", actions.underline);
+        FX.item(m, "Underline", actions.underline).setAccelerator(KeyCombination.keyCombination("shortcut+U"));
 
         // view
         FX.menu(m, "View");

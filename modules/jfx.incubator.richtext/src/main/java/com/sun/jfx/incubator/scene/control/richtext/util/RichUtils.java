@@ -439,7 +439,7 @@ public final class RichUtils {
         InputStreamReader rd = new InputStreamReader(in, StandardCharsets.UTF_8);
         StringBuilder sb = new StringBuilder(65536);
         int c;
-        while ((c = in.read()) >= 0) {
+        while ((c = rd.read()) >= 0) {
             sb.append((char)c);
         }
         return sb.toString();
