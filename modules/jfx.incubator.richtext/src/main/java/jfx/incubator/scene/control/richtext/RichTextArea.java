@@ -1163,7 +1163,7 @@ public class RichTextArea extends Control {
      * <p>
      * This method does nothing if the model or the caret position is {@code null}.
      * The default implementation will attempt to copy the information first, then delete the selected text.
-     * Any failures, such as the control being not editable, or out of memory condition, will be silently ignored. 
+     * Any failures, such as the control being not editable, or out of memory condition, will be silently ignored.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#CUT
