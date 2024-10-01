@@ -174,7 +174,7 @@ public class RichTextArea extends Control {
         public static final FunctionTag CUT = new FunctionTag();
         /** Deletes symbol at the caret. */
         public static final FunctionTag DELETE = new FunctionTag();
-        /** Deletes paragraph at the caret, or selected paragraphs */
+        /** Deletes paragraph at the caret, or selected paragraphs. */
         public static final FunctionTag DELETE_PARAGRAPH = new FunctionTag();
         /** Deletes text from the caret to paragraph start, ignoring selection. */
         public static final FunctionTag DELETE_PARAGRAPH_START = new FunctionTag();
@@ -184,11 +184,13 @@ public class RichTextArea extends Control {
         public static final FunctionTag DELETE_WORD_NEXT_START = new FunctionTag();
         /** Deletes (multiple) empty paragraphs or text to the beginning of the previous word. */
         public static final FunctionTag DELETE_WORD_PREVIOUS = new FunctionTag();
-        /** Clears any existing selection by moving anchor to the caret position */
+        /** Clears any existing selection by moving anchor to the caret position. */
         public static final FunctionTag DESELECT = new FunctionTag();
-        /** Focus the next focusable node */
+        /** Provides audio and/or visual error feedback. */
+        public static final FunctionTag ERROR_FEEDBACK = new FunctionTag();
+        /** Focus the next focusable node. */
         public static final FunctionTag FOCUS_NEXT = new FunctionTag();
-        /** Focus the previous focusable node */
+        /** Focus the previous focusable node. */
         public static final FunctionTag FOCUS_PREVIOUS = new FunctionTag();
         /** Inserts a line break at the caret. */
         public static final FunctionTag INSERT_LINE_BREAK = new FunctionTag();
@@ -1092,7 +1094,8 @@ public class RichTextArea extends Control {
     /**
      * When selection exists, deletes selected text.  Otherwise, deletes the character preceding the caret,
      * possibly breaking up the grapheme clusters.
-     * This method does nothing if either control or the model is not editable, or the caret position is {@code null}.
+     * This method does nothing if the control is not editable, the model is either {@code null} or not writable,
+     * or the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      *
@@ -1168,8 +1171,6 @@ public class RichTextArea extends Control {
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#CUT
      */
-    // TODO javafx does not support the 'beep' functionality.  perhaps we should create a Tag.ERROR
-    // for the application to provide audiovisual error feedback?
     public void cut() {
         execute(Tags.CUT);
     }
@@ -1258,6 +1259,16 @@ public class RichTextArea extends Control {
      */
     public void deselect() {
         execute(Tags.DESELECT);
+    }
+
+    /**
+     * Provides audio and/or visual error feedback.  The default implementation does nothing.
+     *
+     * This action can be changed by remapping the default behavior via {@link InputMap}.
+     * @see RichTextArea.Tags#ERROR_FEEDBACK
+     */
+    public void errorFeedback() {
+        execute(Tags.ERROR_FEEDBACK);
     }
 
     /**

@@ -1192,7 +1192,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 TextPos p = m.replace(vflow, start, end, in, true);
                 moveCaret(p, false);
             } catch (IOException e) {
-                RichUtils.provideErrorFeedback(control, e);
+                control.errorFeedback();
             }
         }
     }
@@ -1230,7 +1230,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                         }
                     }
                 } catch(Exception | OutOfMemoryError e) {
-                    RichUtils.provideErrorFeedback(control, e);
+                    control.errorFeedback();
                 }
             }
         }
@@ -1258,7 +1258,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 }
             }
         } catch(Exception | OutOfMemoryError e) {
-            RichUtils.provideErrorFeedback(control, e);
+            control.errorFeedback();
         }
     }
 

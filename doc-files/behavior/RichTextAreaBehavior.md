@@ -14,6 +14,7 @@
 |DELETE_WORD_NEXT_START    |Deletes empty paragraph or text to the start of the next word
 |DELETE_WORD_PREVIOUS      |Deletes (multiple) empty paragraphs or text to the beginning of the previous word
 |DESELECT                  |Clears any existing selection by moving anchor to the caret position
+|ERROR_FEEDBACK            |Provides audio and/or visual error feedback
 |FOCUS_NEXT                |Transfer focus to the next focusable node
 |FOCUS_PREVIOUS            |Transfer focus to the previous focusable node
 |INSERT_LINE_BREAK         |Inserts a line break at the caret
