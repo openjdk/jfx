@@ -52,4 +52,6 @@ abstract class GLDrawable {
         return nativeDrawableInfo;
     }
     abstract boolean swapBuffers(GLContext glCtx);
+
+    abstract void dispose();
 }

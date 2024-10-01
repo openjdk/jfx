@@ -29,6 +29,7 @@ package com.sun.prism.es2;
 class MacGLDrawable extends GLDrawable {
 
     private static native long nCreateDrawable(long nativeWindow, long nativeCtxInfo);
+    private static native void nDestroyDrawable(long nativeCtxInfo);
     private static native long nGetDummyDrawable(long nativeCtxInfo);
     private static native boolean nSwapBuffers(long nativeCtxInfo, long nativeDInfo);
 
@@ -48,5 +49,10 @@ class MacGLDrawable extends GLDrawable {
     @Override
     boolean swapBuffers(GLContext glCtx) {
         return nSwapBuffers(glCtx.getNativeCtxInfo(), getNativeDrawableInfo());
+    }
+
+    @Override
+    void dispose() {
+        nDestroyDrawable(getNativeDrawableInfo());
     }
 }
