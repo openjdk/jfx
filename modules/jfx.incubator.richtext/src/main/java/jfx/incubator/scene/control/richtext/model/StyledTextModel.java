@@ -77,8 +77,16 @@ import jfx.incubator.scene.control.richtext.TextPos;
  *
  * <h2>Creating a Paragraph</h2>
  * The model presents its content to the view(s) via immutable {@link RichParagraph}.
- * There are three ways of styling: using inline {@link StyleAttributeMap attributes}, relying on
- * style names in the application style sheet, or using direct styles.
+ * There are two ways of adding styles to the model:
+ * <ul>
+ * <li>Using the style names in the stylesheet or inline styles (example: {@code "-fx-font-size:200%;"}), or
+ * <li>Using attributes defined in {@link StyleAttributeMap}, such as bold typeface, italic, and so on.
+ *     In this case, the resulting paragraph appearance is decoupled from the stylesheet and will look the same
+ *     regardless of the active stylesheet.
+ * </ul>
+ * The latter method is intended for applications where an editable control is needed, such as general purpose
+ * rich text editor, the former is designed for view-only informational controls that must follow the application
+ * theme and therefore are coupled to the stylesheet.
  *
  * <h2>Extending the Model</h2>
  * The subclasses are free to choose how the data is stored, the only limitation is that the model neither

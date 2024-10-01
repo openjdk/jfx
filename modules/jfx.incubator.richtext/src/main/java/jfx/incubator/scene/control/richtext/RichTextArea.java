@@ -1122,7 +1122,7 @@ public class RichTextArea extends Control {
 
     /**
      * Clears the undo-redo stack of the underlying model.
-     * This method does nothing if the model is null.
+     * This method does nothing if the model is {@code null}.
      */
     public final void clearUndoRedo() {
         StyledTextModel m = getModel();
@@ -1135,7 +1135,7 @@ public class RichTextArea extends Control {
      * When selection exists, copies the selected rich text to the clipboard in all the formats supported
      * by the model.
      * <p>
-     * This method does nothing when the caret position is {@code null}.
+     * This method does nothing if the model or the caret position is {@code null}.
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#COPY
@@ -1162,13 +1162,14 @@ public class RichTextArea extends Control {
      * removing the current selection.
      * <p>
      * This method does nothing if the model or the caret position is {@code null}.
-     * The default implementation may throw an {@code UnsupportedOperationException}
-     * if the control is not editable.  When this happens, the copying to clipboard will succeed.
+     * The default implementation will attempt to copy the information first, then delete the selected text.
+     * Any failures, such as the control being not editable, or out of memory condition, will be silently ignored. 
      * <p>
      * This action can be changed by remapping the default behavior via {@link InputMap}.
      * @see RichTextArea.Tags#CUT
-     * @throws UnsupportedOperationException if the control is not editable
      */
+    // TODO javafx does not support the 'beep' functionality.  perhaps we should create a Tag.ERROR
+    // for the application to provide audiovisual error feedback?
     public void cut() {
         execute(Tags.CUT);
     }
