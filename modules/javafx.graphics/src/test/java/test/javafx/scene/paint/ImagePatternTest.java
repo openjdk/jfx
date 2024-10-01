@@ -27,18 +27,14 @@ package test.javafx.scene.paint;
 
 import javafx.scene.image.Image;
 import javafx.scene.paint.ImagePattern;
-
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 import test.com.sun.javafx.pgstub.StubImageLoaderFactory;
 import test.com.sun.javafx.pgstub.StubPlatformImageInfo;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 
-import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ImagePatternTest {
 
@@ -90,5 +86,50 @@ public class ImagePatternTest {
         assertSame(paint, Toolkit.getPaintAccessor().getPlatformPaint(pattern));
     }
 
+    @Nested
+    class InterpolationTest {
+        @Test
+        public void interpolateBetweenDifferentValuesReturnsNewInstance() {
+            var image = createImage();
+            var startValue = new ImagePattern(image, 10, 20, 30, 40, false);
+            var endValue = new ImagePattern(image, 20, 30, 40, 50, false);
+            var expected = new ImagePattern(image, 15, 25, 35, 45, false);
+            assertEquals(expected, startValue.interpolate(endValue, 0.5));
+        }
 
+        @Test
+        public void interpolateBetweenProportionalAndNonProportionalReturnsStartInstanceOrEndInstance() {
+            var image = createImage();
+            var startValue = new ImagePattern(image, 10, 20, 30, 40, false);
+            var endValue = new ImagePattern(image, 20, 30, 40, 50, true);
+            assertSame(startValue, startValue.interpolate(endValue, 0));
+            assertSame(endValue, startValue.interpolate(endValue, 0.5));
+        }
+
+        @Test
+        public void interpolateBetweenTwoEqualValuesReturnsStartInstance() {
+            var image = createImage();
+            var startValue = new ImagePattern(image, 10, 20, 30, 40, false);
+            var endValue = new ImagePattern(image, 10, 20, 30, 40, false);
+            assertSame(startValue, startValue.interpolate(endValue, 0.5));
+        }
+
+        @Test
+        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+            var image = createImage();
+            var startValue = new ImagePattern(image, 10, 20, 30, 40, false);
+            var endValue = new ImagePattern(image, 20, 30, 40, 50, false);
+            assertSame(startValue, startValue.interpolate(endValue, 0));
+            assertSame(startValue, startValue.interpolate(endValue, -0.5));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+            var image = createImage();
+            var startValue = new ImagePattern(image, 10, 20, 30, 40, false);
+            var endValue = new ImagePattern(image, 20, 30, 40, 50, false);
+            assertSame(endValue, startValue.interpolate(endValue, 1));
+            assertSame(endValue, startValue.interpolate(endValue, 1.5));
+        }
+    }
 }
