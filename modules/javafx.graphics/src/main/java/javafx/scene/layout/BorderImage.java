@@ -50,7 +50,7 @@ import java.util.Objects;
  * When applied to a Region with a defined shape, a BorderImage is ignored.
  * @since JavaFX 8.0
  */
-public class BorderImage implements Interpolatable<BorderImage> {
+public final class BorderImage implements Interpolatable<BorderImage> {
     /**
      * The image to be used. This will never be null. If this
      * image fails to load, then the entire BorderImage will
