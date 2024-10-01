@@ -669,9 +669,14 @@ void ViewContainer::HandleViewTypedEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
             wChar = (jchar)out[0];
 
             if (res == 3) {
-                // The character cannot be accented, so we send a TYPED event
-                // for the dead key itself first.
-                SendViewTypedEvent(1, (jchar)m_deadKeyWParam);
+                // The character cannot be accented. If it's a Space
+                // we send out the dead key only. Otherwise we send
+                // out the dead key followed by the character.
+                if (wChar == 0x20) {
+                    wChar = m_deadKeyWParam;
+                } else {
+                    SendViewTypedEvent(1, (jchar)m_deadKeyWParam);
+                }
             }
         } else {
             // Folding failed. Use the untranslated original character then
