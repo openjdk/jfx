@@ -34,15 +34,10 @@ import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.RadialGradient;
 import javafx.scene.paint.Stop;
 import javafx.scene.Scene;
-
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class RadialGradientTest {
 
@@ -495,5 +490,92 @@ public class RadialGradientTest {
         region.applyCss();
         rGradient = (RadialGradient) region.backgroundProperty().get().getFills().get(0).getFill();
         assertEquals(CycleMethod.REPEAT, rGradient.getCycleMethod());
+    }
+
+    @Nested
+    class InterpolationTest {
+        @Test
+        public void interpolateBetweenDifferentValuesReturnsNewInstance() {
+            var startValue = new RadialGradient(
+                10, 20, 30, 40, 50,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, Color.BLACK), new Stop(1, Color.WHITE)));
+
+            var endValue = new RadialGradient(
+                20, 40, 60, 80, 100,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, Color.WHITE), new Stop(1, Color.BLACK)));
+
+            var expected = new RadialGradient(
+                15, 30, 45, 60, 75,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, Color.gray(0.5)), new Stop(1, Color.gray(0.5))));
+
+            assertEquals(expected, startValue.interpolate(endValue, 0.5));
+        }
+
+        @Test
+        public void interpolateBetweenProportionalAndNonProportionalReturnsStartInstanceOrEndInstance() {
+            var startValue = new RadialGradient(
+                10, 20, 30, 40, 50,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, Color.BLUE)));
+
+            var endValue = new RadialGradient(
+                10, 20, 30, 40, 50,
+                false, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, Color.BLUE)));
+
+            assertSame(startValue, startValue.interpolate(endValue, 0.25));
+            assertSame(endValue, startValue.interpolate(endValue, 0.5));
+            assertSame(endValue, startValue.interpolate(endValue, 0.75));
+        }
+
+        @Test
+        public void interpolateBetweenTwoEqualValuesReturnsStartInstance() {
+            var startValue = new RadialGradient(
+                10, 20, 30, 40, 50,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, Color.BLUE)));
+
+            var endValue = new RadialGradient(
+                10, 20, 30, 40, 50,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, Color.BLUE)));
+
+            assertSame(startValue, startValue.interpolate(endValue, 0.5));
+        }
+
+        @Test
+        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+            var startValue = new RadialGradient(
+                10, 20, 30, 40, 50,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, Color.BLUE)));
+
+            var endValue = new RadialGradient(
+                10, 20, 30, 40, 50,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, Color.RED)));
+
+            assertSame(startValue, startValue.interpolate(endValue, 0));
+            assertSame(startValue, startValue.interpolate(endValue, -1));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+            var startValue = new RadialGradient(
+                10, 20, 30, 40, 50,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, Color.BLUE)));
+
+            var endValue = new RadialGradient(
+                10, 20, 30, 40, 50,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, Color.RED)));
+
+            assertSame(endValue, startValue.interpolate(endValue, 1));
+            assertSame(endValue, startValue.interpolate(endValue, 1.5));
+        }
     }
 }

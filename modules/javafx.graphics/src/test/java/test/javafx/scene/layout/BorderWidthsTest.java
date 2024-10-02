@@ -26,12 +26,10 @@
 package test.javafx.scene.layout;
 
 import javafx.scene.layout.BorderWidths;
-
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * TODO The spec doesn't seem to indicate, but what do we do (if anything) with percentages
@@ -243,5 +241,102 @@ public class BorderWidthsTest {
     @Test
     public void noEqualToRandom() {
         assertFalse(BorderWidths.DEFAULT.equals("Some random value"));
+    }
+
+    @Nested
+    class InterpolationTests {
+        @Test
+        public void interpolateComponentWithAbsoluteAndPercentageMismatch() {
+            record TestCase(BorderWidths endValue, BorderWidths expected) {}
+
+            final double v0 = 10, v25 = 12.5, v50 = 15, v100 = 20;
+            final var startValue = new BorderWidths(v0, v0, v0, v0, false, false, false, false);
+
+            // For each component: interpolation with t=0.25 returns start value on absolute/percentage mismatch
+            for (var testCase : new TestCase[] {
+                new TestCase(
+                    new BorderWidths(v100, v100, v100, v100, false, false, false, false),
+                    new BorderWidths(v25, v25, v25, v25, false, false, false, false)),
+                new TestCase(
+                    new BorderWidths(v100, v100, v100, v100, true, false, false, false),
+                    new BorderWidths(v0, v25, v25, v25, false, false, false, false)),
+                new TestCase(
+                    new BorderWidths(v100, v100, v100, v100, false, true, false, false),
+                    new BorderWidths(v25, v0, v25, v25, false, false, false, false)),
+                new TestCase(
+                    new BorderWidths(v100, v100, v100, v100, false, false, true, false),
+                    new BorderWidths(v25, v25, v0, v25, false, false, false, false)),
+                new TestCase(
+                    new BorderWidths(v100, v100, v100, v100, false, false, false, true),
+                    new BorderWidths(v25, v25, v25, v0, false, false, false, false))
+            }) {
+                assertEquals(testCase.expected, startValue.interpolate(testCase.endValue, 0.25));
+            }
+
+            // For each component: interpolation with t=0.5 returns end value on absolute/percentage mismatch
+            for (var testCase : new TestCase[] {
+                new TestCase(
+                    new BorderWidths(v100, v100, v100, v100, false, false, false, false),
+                    new BorderWidths(v50, v50, v50, v50, false, false, false, false)),
+                new TestCase(
+                    new BorderWidths(v100, v100, v100, v100, true, false, false, false),
+                    new BorderWidths(v100, v50, v50, v50, true, false, false, false)),
+                new TestCase(
+                    new BorderWidths(v100, v100, v100, v100, false, true, false, false),
+                    new BorderWidths(v50, v100, v50, v50, false, true, false, false)),
+                new TestCase(
+                    new BorderWidths(v100, v100, v100, v100, false, false, true, false),
+                    new BorderWidths(v50, v50, v100, v50, false, false, true, false)),
+                new TestCase(
+                    new BorderWidths(v100, v100, v100, v100, false, false, false, true),
+                    new BorderWidths(v50, v50, v50, v100, false, false, false, true))
+            }) {
+                assertEquals(testCase.expected, startValue.interpolate(testCase.endValue, 0.5));
+            }
+        }
+
+        @Test
+        public void interpolateReturnsStartOrEndInstanceWhenResultIsEqual() {
+            var startValue = new BorderWidths(10, 20, 30, 40, true, true, true, true);
+            var endValue = new BorderWidths(20, 40, 60, 80, false, false, false, false);
+            assertSame(startValue, startValue.interpolate(endValue, 0.25));
+            assertSame(endValue, startValue.interpolate(endValue, 0.5));
+        }
+
+        @Test
+        public void interpolateBetweenDifferentValuesReturnsNewInstance() {
+            var startValue = new BorderWidths(10, 20, 30, 40, true, false, true, false);
+            var endValue = new BorderWidths(20, 40, 60, 80, true, false, true, false);
+            var expect = new BorderWidths(15, 30, 45, 60, true, false, true, false);
+            var actual = startValue.interpolate(endValue, 0.5);
+            assertEquals(expect, actual);
+            assertNotSame(startValue, actual);
+            assertNotSame(endValue, actual);
+        }
+
+        @Test
+        public void interpolateBetweenEqualValuesReturnsStartInstance() {
+            var startValue = new BorderWidths(10, 20, 30, 40, true, false, true, false);
+            var endValue = new BorderWidths(10, 20, 30, 40, true, false, true, false);
+            assertSame(startValue, startValue.interpolate(endValue, 0.25));
+            assertSame(startValue, startValue.interpolate(endValue, 0.5));
+            assertSame(startValue, startValue.interpolate(endValue, 0.75));
+        }
+
+        @Test
+        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+            var startValue = new BorderWidths(10, 20, 30, 40, true, false, true, false);
+            var endValue = new BorderWidths(20, 40, 60, 80, true, false, true, false);
+            assertSame(startValue, startValue.interpolate(endValue, 0));
+            assertSame(startValue, startValue.interpolate(endValue, -1));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+            var startValue = new BorderWidths(10, 20, 30, 40, true, false, true, false);
+            var endValue = new BorderWidths(20, 40, 60, 80, true, false, true, false);
+            assertSame(endValue, startValue.interpolate(endValue, 1));
+            assertSame(endValue, startValue.interpolate(endValue, 1.5));
+        }
     }
 }

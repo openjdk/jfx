@@ -734,6 +734,24 @@ def buildSdkForTest = Boolean.parseBoolean(BUILD_SDK_FOR_TEST)
 defineProperty("TEST_ONLY", "false")
 ext.IS_TEST_ONLY = Boolean.parseBoolean(TEST_ONLY) || !buildSdkForTest
 
+ext.IS_TEST_SDK = false
+if (hasProperty("TEST_SDK_PATH")) {
+    if (!IS_TEST_ONLY) {
+        fail("TEST_ONLY must be set to true when using an external TEST_SDK_PATH for running tests: include -PTEST_ONLY=true")
+    }
+    def sdkShimsPath = file("${TEST_SDK_PATH}")
+    def sdkPath = file("${TEST_SDK_PATH}/sdk")
+    def shimsPath = file("${TEST_SDK_PATH}/shims")
+    if (!sdkShimsPath.exists() || !sdkShimsPath.isDirectory() ||
+             !sdkPath.exists() || !sdkPath.isDirectory() ||
+           !shimsPath.exists() || !shimsPath.isDirectory()) {
+        fail("The provided TEST_SDK_PATH=${TEST_SDK_PATH} is invalid")
+    }
+    ext.IS_TEST_SDK = true
+} else {
+    defineProperty("TEST_SDK_PATH", "${rootProject.buildDir}")
+}
+
 // Make sure JDK_HOME/bin/java exists
 if (!file(JAVA).exists()) throw new Exception("Missing or incorrect path to 'java': '$JAVA'. Perhaps bad JDK_HOME? $JDK_HOME")
 if (!file(JAVAC).exists()) throw new Exception("Missing or incorrect path to 'javac': '$JAVAC'. Perhaps bad JDK_HOME? $JDK_HOME")
@@ -987,7 +1005,7 @@ List<String> computeLibraryPath(boolean working) {
     } else {
         def platformPrefix = ""
         def standaloneSdkDirName = "${platformPrefix}sdk"
-        def standaloneSdkDir = "${rootProject.buildDir}/${standaloneSdkDirName}"
+        def standaloneSdkDir = "${TEST_SDK_PATH}/${standaloneSdkDirName}"
         def modulesLibName = IS_WINDOWS ? "bin" : "lib"
         def modulesLibsDir = "${standaloneSdkDir}/${modulesLibName}"
         lp << cygpath("${modulesLibsDir}")
@@ -1024,9 +1042,9 @@ List<String> computePatchModuleArgs(List<String> deps, boolean test, boolean inc
                 String moduleName = proj.ext.moduleName
                 File dir;
                 if (test && proj.sourceSets.hasProperty('shims')) {
-                    dir = file("${rootProject.buildDir}/shims/${moduleName}")
+                    dir = file("${TEST_SDK_PATH}/shims/${moduleName}")
                 } else {
-                    dir = file("${rootProject.buildDir}/sdk/lib/${moduleName}.jar")
+                    dir = file("${TEST_SDK_PATH}/sdk/lib/${moduleName}.jar")
                 }
                 if (mp == null) {
                     mp = dir.path
@@ -1988,6 +2006,9 @@ task createTestArgfiles {
     // an empty task we can add to as needed
 }
 
+task createRunArgFiles {
+    // an empty task we can add to as needed
+}
 
 /*****************************************************************************
 *        Project definitions (dependencies, etc)                             *
@@ -2290,6 +2311,13 @@ project(":base") {
     addMavenPublication(project, [])
 
     addValidateSourceSets(project, sourceSets)
+
+    test {
+        if (IS_TEST_SDK) {
+            logger.info "Skipping VersionInfoTest when TEST_SDK_PATH is set."
+            exclude("test/com/sun/javafx/runtime/VersionInfoTest*");
+        }
+    }
 }
 
 // The graphics module is needed for any graphical JavaFX application. It requires
@@ -2701,7 +2729,7 @@ project(":graphics") {
     processResources.dependsOn processDecoraShaders, processPrismShaders
 
     test {
-        def cssDir = file("$buildDir/classes/java/main/${moduleName}/javafx")
+        def cssDir = file("${TEST_SDK_PATH}/shims/${moduleName}/javafx")
         jvmArgs enableNativeGraphics
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
@@ -2790,7 +2818,7 @@ project(":controls") {
     }
 
     test {
-        def cssDir = file("$buildDir/classes/java/main/${moduleName}/javafx")
+        def cssDir = file("${TEST_SDK_PATH}/shims/${moduleName}/javafx")
         jvmArgs enableNativeGraphics
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
@@ -2940,6 +2968,10 @@ project(":swt") {
             "--add-exports=javafx.graphics/com.sun.javafx.stage=ALL-UNNAMED",
             "--add-exports=javafx.graphics/com.sun.javafx.tk=ALL-UNNAMED",
             ])
+
+    compileTestJava {
+        if (IS_TEST_SDK) enabled = false
+    }
 
     test {
         //enabled = IS_FULL_TEST && IS_SWT_TEST
@@ -4416,6 +4448,7 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     options.tags("apiNote:a:API Note:")
     options.tags("implSpec:a:Implementation Requirements:")
     options.tags("implNote:a:Implementation Note:")
+    options.tags("interpolationType:a:Interpolation Type:")
     options.tags("param")
     options.tags("return")
     options.tags("throws")
@@ -4431,9 +4464,22 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     options.addStringOption("Xmaxwarns").setValue("1000")
     options.addStringOption("Xmaxerrs").setValue("1000")
 
-    options.windowTitle("${javadocTitle}")
-    options.header("${javadocHeader}")
-    options.bottom("${javadocBottom}")
+    String draftMsg = IS_MILESTONE_FCS ? "" : "<br><b>DRAFT ${RELEASE_VERSION_LONG}</b>"
+    String javadocTitleImpl = javadocTitle
+            .replaceAll("@JAVADOC_VERSION@", jfxReleaseMajorVersion)
+    String javadocHeaderImpl = javadocHeader
+            .replaceAll("@JAVADOC_VERSION@", jfxReleaseMajorVersion)
+            .replaceAll("@DRAFT_UNLESS_FCS@", draftMsg)
+    String javadocBottomImpl = javadocBottom
+            .replaceAll("@DRAFT_UNLESS_FCS@", draftMsg)
+            .replaceAll("@FULL_VERSION@", RELEASE_VERSION_LONG)
+    options.windowTitle(javadocTitleImpl)
+    options.header(javadocHeaderImpl)
+    options.bottom(javadocBottomImpl)
+    if (!IS_MILESTONE_FCS) {
+        options.addStringOption("top").setValue(javadocTop)
+    }
+
     options.locale("en");
     if (JDK_DOCS_LINK != "") {
         options.linksOffline(JDK_DOCS, JDK_DOCS_LINK);
@@ -4498,7 +4544,7 @@ task sdk() {
         gradle.taskGraph.whenReady { taskGraph ->
             taskGraph.allTasks.each { task ->
                 if (!isTestTask(task) && !task.name.equals("verifyJava") &&
-                    !task.name.equals("validateSourceSets")) {
+                    !task.name.equals("validateSourceSets") && !task.name.contains("buildRunArgs")) {
                     task.enabled = false
                 }
             }
@@ -5062,7 +5108,7 @@ compileTargets { t ->
     // ============================================================
 
     def standaloneSdkDirName = "${platformPrefix}sdk"
-    def standaloneSdkDir = "${rootProject.buildDir}/${standaloneSdkDirName}"
+    def standaloneSdkDir = "${TEST_SDK_PATH}/${standaloneSdkDirName}"
     def standaloneLibDir = "${standaloneSdkDir}/lib"
     def libDest=targetProperties.libDest
     def standaloneNativeDir = "${standaloneSdkDir}/${libDest}"
@@ -5220,6 +5266,7 @@ compileTargets { t ->
             }
         }
     }
+    createRunArgFiles.dependsOn(buildRunArgsTask)
     buildModules.dependsOn(buildRunArgsTask)
 
     def isWindows = IS_WINDOWS && t.name == "win";
@@ -5657,6 +5704,34 @@ compileTargets { t ->
     }
     jdkZip.dependsOn(zipTask)
 
+    def buildSdkDir = "${rootProject.buildDir}/sdk"
+    def buildShimsDir = "${rootProject.buildDir}/shims"
+    def sdkShimZipTask = project.task("sdkShimsZip$t.capital", type: Zip, group: "Build",
+            dependsOn: [shims] ) {
+
+        def sdkShimsBundle = "${platformPrefix}javafx-sdk-shims.zip"
+
+        doFirst() {
+            file("${rootProject.buildDir}/${sdkShimsBundle}").delete()
+        }
+
+        if (IS_WINDOWS && IS_USE_CYGWIN) {
+            dirPermissions { unix(0755) }
+            filePermissions { unix(0755) }
+        }
+
+        archiveFileName = sdkShimsBundle
+        destinationDirectory = file("${rootProject.buildDir}")
+        includeEmptyDirs = false
+        from ("${buildSdkDir}") {
+            into "sdk"
+        }
+        from ("${buildShimsDir}") {
+            into "shims"
+        }
+    }
+    jdkZip.dependsOn(sdkShimZipTask)
+
     Task testArgFiles = task("createTestArgfiles${t.capital}") {
 
         File testRunArgsFile = new File(rootProject.buildDir, TESTRUNARGSFILE)
@@ -5731,9 +5806,9 @@ compileTargets { t ->
                         modnames << project.ext.moduleName
                         File dir;
                         if (project.sourceSets.hasProperty('shims')) {
-                           dir = new File(rootProject.buildDir, "shims/${project.ext.moduleName}")
+                           dir = new File(TEST_SDK_PATH, "shims/${project.ext.moduleName}")
                         } else {
-                           dir = new File(rootProject.buildDir, "sdk/lib/${project.ext.moduleName}.jar")
+                           dir = new File(TEST_SDK_PATH, "sdk/lib/${project.ext.moduleName}.jar")
                         }
 
                         def dstModuleDir = cygpath(dir.path)
@@ -5744,7 +5819,7 @@ compileTargets { t ->
                         "    permission java.security.AllPermission;\n" +
                         "};\n"
 
-                        dir = new File(rootProject.buildDir, "sdk/lib/${project.ext.moduleName}.jar")
+                        dir = new File(TEST_SDK_PATH, "sdk/lib/${project.ext.moduleName}.jar")
                         themod = dir.toURI()
                         runJavaPolicyFile <<  "grant codeBase \"${themod}\" {\n" +
                         "    permission java.security.AllPermission;\n" +
