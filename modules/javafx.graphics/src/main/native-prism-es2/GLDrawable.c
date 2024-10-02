@@ -40,27 +40,3 @@ void initializeDrawableInfo(DrawableInfo *dInfo)
     // Initialize structure to all zeros
     memset(dInfo, 0, sizeof(DrawableInfo));
 }
-
-void deleteDrawableInfo(DrawableInfo *dInfo)
-{
-    if (dInfo == NULL) {
-        return;
-    }
-#ifdef WIN32 /* WIN32 */
-    if ((dInfo->hdc != NULL) && (dInfo->hwnd != NULL)) {
-        ReleaseDC(dInfo->hwnd, dInfo->hdc);
-    }
-#endif
-#ifdef UNIX
-    // This win is pass in from Glass so we most likely don't destroy it
-    /*
-            if (dInfo->display == NULL) {
-                if (dInfo->win != None) {
-                    XDestroyWindow(dInfo->display, dInfo->win);
-                }
-            }
-     */
-#endif
-    // Initialize structure to all zeros
-    memset(dInfo, 0, sizeof (DrawableInfo));
-}

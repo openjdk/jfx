@@ -34,7 +34,6 @@
 #include "com_sun_prism_es2_X11GLDrawable.h"
 
 extern void initializeDrawableInfo(DrawableInfo *dInfo);
-extern void deleteDrawableInfo(DrawableInfo *dInfo);
 
 /*
  * Class:     com_sun_prism_es2_X11GLDrawable
@@ -120,7 +119,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_X11GLDrawable_nSwapBuffers
 /*
  * Class:     com_sun_prism_es2_X11GLDrawable
  * Method:    nDestroyDrawable
- * Signature: (J)J
+ * Signature: (J)V
  */
 JNIEXPORT void JNICALL Java_com_sun_prism_es2_X11GLDrawable_nDestroyDrawable
 (JNIEnv *env, jclass class, jlong nativeDInfo) {

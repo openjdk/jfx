@@ -105,3 +105,18 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_MacGLDrawable_nSwapBuffers
     flushBuffer((void *) (intptr_t) ctxInfo->context);
     return JNI_TRUE;
 }
+
+/*
+ * Class:     com_sun_prism_es2_MacGLDrawable
+ * Method:    nDestroyDrawable
+ * Signature: (J)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_prism_es2_MacGLDrawable_nDestroyDrawable
+(JNIEnv *env, jclass class, jlong nativeDInfo) {
+    DrawableInfo *dInfo = (DrawableInfo *) jlong_to_ptr(nativeDInfo);
+    if (dInfo == NULL) {
+        return;
+    }
+
+    free(dInfo);
+}

@@ -126,3 +126,23 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_WinGLDrawable_nSwapBuffers
     }
     return SwapBuffers(dInfo->hdc) ? JNI_TRUE : JNI_FALSE;
 }
+
+
+/*
+ * Class:     com_sun_prism_es2_WinGLDrawable
+ * Method:    nDestroyDrawable
+ * Signature: (J)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_prism_es2_WinGLDrawable_nDestroyDrawable
+(JNIEnv *env, jclass class, jlong nativeDInfo) {
+    DrawableInfo *dInfo = (DrawableInfo *) jlong_to_ptr(nativeDInfo);
+    if (dInfo == NULL) {
+        return;
+    }
+
+    if ((dInfo->hdc != NULL) && (dInfo->hwnd != NULL)) {
+        ReleaseDC(dInfo->hwnd, dInfo->hdc);
+    }
+
+    free(dInfo);
+}
