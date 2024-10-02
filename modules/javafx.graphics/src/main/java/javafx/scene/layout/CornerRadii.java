@@ -217,7 +217,7 @@ public final class CornerRadii implements Interpolatable<CornerRadii> {
      * @return if true each corner radius is uniformly percentage-based, otherwise not
      */
     public final boolean isUniform() { return uniform; }
-    final boolean uniform;
+    private final boolean uniform;
 
     /**
      * The cached hash code.
