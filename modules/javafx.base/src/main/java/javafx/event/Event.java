@@ -26,9 +26,10 @@
 package javafx.event;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.EventObject;
+import java.util.List;
 import javafx.beans.NamedArg;
-import javafx.beans.property.SimpleBooleanProperty;
 import com.sun.javafx.event.EventHelper;
 import com.sun.javafx.event.EventUtil;
 
@@ -71,8 +72,10 @@ public class Event extends EventObject implements Cloneable {
     /**
      * Whether this event has been consumed by any filter or handler.
      */
-    private transient SimpleBooleanProperty consumed;
+    protected boolean consumed;
+
     private transient boolean propagateConsume;
+    private transient List<Event> consumeListeners;
 
     /**
      * Construct a new {@code Event} with the specified event type. The source
@@ -136,10 +139,10 @@ public class Event extends EventObject implements Cloneable {
 
         newEvent.source = (newSource != null) ? newSource : NULL_SOURCE_TARGET;
         newEvent.target = (newTarget != null) ? newTarget : NULL_SOURCE_TARGET;
-        newEvent.consumed = null;
+        newEvent.consumed = false;
 
         if (propagateConsume) {
-            newEvent.consumedProperty().bindBidirectional(consumedProperty());
+            newEvent.setNotifyConsumed(this);
         }
 
         return newEvent;
@@ -153,21 +156,32 @@ public class Event extends EventObject implements Cloneable {
      *     {@code false} otherwise
      */
     public boolean isConsumed() {
-        return consumed == null ? false : consumed.get();
+        return consumed;
     }
 
     /**
      * Marks this {@code Event} as consumed. This stops its further propagation.
      */
     public void consume() {
-        consumedProperty().set(true);
+        consumed = true;
+
+        // consume parent events when the child is consumed
+        if (consumeListeners != null) {
+            List<Event> cs = consumeListeners;
+            consumeListeners = null;
+
+            for (int i = cs.size() - 1; i >= 0; i--) {
+                Event ev = cs.get(i);
+                ev.consume();
+            }
+        }
     }
 
-    private final SimpleBooleanProperty consumedProperty() {
-        if(consumed == null) {
-            consumed = new SimpleBooleanProperty();
+    private void setNotifyConsumed(Event ev) {
+        if (consumeListeners == null) {
+            consumeListeners = new ArrayList(1);
         }
-        return consumed;
+        consumeListeners.add(ev);
     }
 
     /**

@@ -58,8 +58,7 @@ public class EventHelper {
     }
 
     /**
-     * Causes the {@link Event#consume()} of cloned events to invoke the same
-     * method in the original event, and vice versa.
+     * Causes the {@link Event#consume()} of cloned events to consume the original event.
      *
      * @param ev the event
      */
