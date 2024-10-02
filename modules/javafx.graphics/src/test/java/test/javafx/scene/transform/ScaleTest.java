@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,16 +28,17 @@ package test.javafx.scene.transform;
 import static test.javafx.scene.transform.TransformTest.assertTx;
 import javafx.scene.shape.Rectangle;
 
-import org.junit.Assert;
-import org.junit.Test;
-
-import static org.junit.Assert.*;
 import test.com.sun.javafx.test.TransformHelper;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Transform;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class ScaleTest {
 
@@ -58,7 +59,7 @@ public class ScaleTest {
 
 
         trans.setX(34);
-        Assert.assertEquals(34, trans.getX(), 1e-100);
+        assertEquals(34, trans.getX(), 1e-100);
         assertTx(n, BaseTransform.getScaleInstance(34, 52));
         TransformHelper.assertMatrix(trans,
                 34,  0, 0, 0,

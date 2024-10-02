@@ -338,6 +338,42 @@ typedef gsize GType;
 #define G_TYPE_BOOKMARK_FILE (g_bookmark_file_get_type ())
 #endif // GSTREAMER_LITE
 
+/**
+ * G_TYPE_HMAC:
+ *
+ * The #GType for a boxed type holding a #GHmac.
+ *
+ * Since: 2.80
+ */
+#define G_TYPE_HMAC (g_hmac_get_type ())
+
+/**
+ * G_TYPE_DIR:
+ *
+ * The #GType for a boxed type holding a #GDir.
+ *
+ * Since: 2.80
+ */
+#define G_TYPE_DIR (g_dir_get_type ())
+
+/**
+ * G_TYPE_RAND:
+ *
+ * The #GType for a boxed type holding a #GRand.
+ *
+ * Since: 2.80
+ */
+#define G_TYPE_RAND (g_rand_get_type ())
+
+/**
+ * G_TYPE_STRV_BUILDER:
+ *
+ * The #GType for a boxed type holding a #GStrvBuilder.
+ *
+ * Since: 2.80
+ */
+#define G_TYPE_STRV_BUILDER (g_strv_builder_get_type ())
+
 GOBJECT_AVAILABLE_IN_ALL
 GType   g_date_get_type            (void) G_GNUC_CONST;
 GOBJECT_AVAILABLE_IN_ALL
@@ -405,6 +441,14 @@ GType g_pattern_spec_get_type (void) G_GNUC_CONST;
 #ifndef GSTREAMER_LITE
 GOBJECT_AVAILABLE_IN_2_76
 GType   g_bookmark_file_get_type   (void) G_GNUC_CONST;
+GOBJECT_AVAILABLE_IN_2_80
+GType   g_hmac_get_type (void) G_GNUC_CONST;
+GOBJECT_AVAILABLE_IN_2_80
+GType   g_dir_get_type (void) G_GNUC_CONST;
+GOBJECT_AVAILABLE_IN_2_80
+GType   g_rand_get_type (void) G_GNUC_CONST;
+GOBJECT_AVAILABLE_IN_2_80
+GType   g_strv_builder_get_type (void) G_GNUC_CONST;
 #endif // GSTREAMER_LITE
 
 GOBJECT_DEPRECATED_FOR('G_TYPE_VARIANT')

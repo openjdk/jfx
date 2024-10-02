@@ -25,7 +25,6 @@
 
 package javafx.animation;
 
-import com.sun.javafx.animation.AnimationTimerHelper;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.util.Utils;
 import com.sun.scenario.animation.AbstractPrimaryTimer;
@@ -49,15 +48,6 @@ import java.security.PrivilegedAction;
  * @since JavaFX 2.0
  */
 public abstract class AnimationTimer {
-
-    static {
-        AnimationTimerHelper.setAccessor(new AnimationTimerHelper.Accessor() {
-            @Override
-            public AbstractPrimaryTimer getPrimaryTimer(AnimationTimer timer) {
-                return timer.timer;
-            }
-        });
-    }
 
     private class AnimationTimerReceiver implements TimerReceiver {
         @SuppressWarnings("removal")

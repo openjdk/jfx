@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.robot.painttest;
 
+import java.util.concurrent.TimeUnit;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
@@ -34,12 +35,14 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.ImagePattern;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import test.robot.testharness.VisualTestBase;
 
 /**
  * ImagePaint tests
  */
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class ImagePaintTest extends VisualTestBase {
 
     private Stage testStage;
@@ -112,14 +115,13 @@ public class ImagePaintTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testSeparateImagePaint() {
         doTestImagePaint(true);
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testSameImagePaint() {
         doTestImagePaint(false);
     }
-
 }

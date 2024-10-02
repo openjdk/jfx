@@ -138,6 +138,8 @@ G_DEFINE_ABSTRACT_TYPE (GstObject, gst_object, G_TYPE_INITIALLY_UNOWNED);
 static void
 gst_object_constructed (GObject * object)
 {
+  GST_OBJECT_FLAG_SET (object, GST_OBJECT_FLAG_CONSTRUCTED);
+
   GST_TRACER_OBJECT_CREATED (GST_OBJECT_CAST (object));
 
   ((GObjectClass *) gst_object_parent_class)->constructed (object);

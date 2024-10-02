@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package test.javafx.css;
 
-
 import com.sun.javafx.css.StyleManager;
 
 import java.io.IOException;
@@ -39,11 +38,12 @@ import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
-import static org.junit.Assert.*;
 
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class Node_cssStateTransition_Test {
 
@@ -59,12 +59,12 @@ public class Node_cssStateTransition_Test {
         sm.hasDefaultUserAgentStylesheet = false;
     }
 
-    @Before
+    @BeforeEach
     public void setUp() {
         resetStyleManager();
     }
 
-    @AfterClass
+    @AfterAll
     public static void cleanupOnce() {
         resetStyleManager();
     }

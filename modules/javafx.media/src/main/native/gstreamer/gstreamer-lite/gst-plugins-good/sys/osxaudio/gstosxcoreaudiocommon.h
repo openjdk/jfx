@@ -24,6 +24,8 @@
 #include "gstosxcoreaudio.h"
 #include <gst/audio/audio-channels.h>
 
+G_BEGIN_DECLS
+
 typedef struct
 {
   GMutex lock;
@@ -64,3 +66,5 @@ OSStatus gst_core_audio_render_notify                     (GstCoreAudio * core_a
 AudioChannelLabel gst_audio_channel_position_to_core_audio (GstAudioChannelPosition position, int channel);
 
 GstAudioChannelPosition gst_core_audio_channel_label_to_gst (AudioChannelLabel label, int channel, gboolean warn);
+
+G_END_DECLS

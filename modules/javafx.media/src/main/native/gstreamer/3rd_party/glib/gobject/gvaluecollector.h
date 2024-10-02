@@ -18,17 +18,7 @@
  *
  * gvaluecollector.h: GValue varargs stubs
  */
-/**
- * SECTION:value_collection
- * @Short_description: Converting varargs to generic values
- * @Title: Varargs Value Collection
- *
- * The macros in this section provide the varargs parsing support needed
- * in variadic GObject functions such as g_object_new() or g_object_set().
- *
- * They currently support the collection of integral types, floating point
- * types and pointers.
- */
+
 #ifndef __G_VALUE_COLLECTOR_H__
 #define __G_VALUE_COLLECTOR_H__
 

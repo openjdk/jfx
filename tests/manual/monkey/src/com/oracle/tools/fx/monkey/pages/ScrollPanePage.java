@@ -26,12 +26,14 @@ package com.oracle.tools.fx.monkey.pages;
 
 import java.util.function.Supplier;
 import javafx.beans.property.ObjectProperty;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.control.skin.ScrollPaneSkin;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import com.oracle.tools.fx.monkey.Loggers;
 import com.oracle.tools.fx.monkey.options.BooleanOption;
 import com.oracle.tools.fx.monkey.options.EnumOption;
 import com.oracle.tools.fx.monkey.options.ObjectOption;
@@ -50,7 +52,14 @@ public class ScrollPanePage extends TestPaneBase implements HasSkinnable {
     public ScrollPanePage() {
         super("ScrollPanePage");
 
-        control = new ScrollPane();
+        control = new ScrollPane() {
+            @Override
+            public Object queryAccessibleAttribute(AccessibleAttribute a, Object... ps) {
+                Object v = super.queryAccessibleAttribute(a, ps);
+                Loggers.accessibility.log(a, v);
+                return v;
+            }
+        };
 
         OptionPane op = new OptionPane();
         op.section("ScrollPane");
@@ -77,20 +86,6 @@ public class ScrollPanePage extends TestPaneBase implements HasSkinnable {
         setOptions(op);
     }
 
-//        new Dimension2D(50, 50),
-//        new Dimension2D(100, 100),
-//        new Dimension2D(1000, 1000),
-//        new Dimension2D(5000, 5000),
-//        new Dimension2D(5000, 50)
-
-//    private void updatePrefSize(Dimension2D d) {
-//        double w = d.getWidth();
-//        double h = d.getHeight();
-//        content.setPrefSize(w, h);
-//        String s = "Preferred size: " + w + " x " + h;
-//        content.setText(s);
-//    }
-
     @Override
     public void nullSkin() {
         control.setSkin(null);
@@ -103,10 +98,7 @@ public class ScrollPanePage extends TestPaneBase implements HasSkinnable {
 
     private Supplier<Node> mk(int w, int h) {
         return () -> {
-            // TODO maybe a Rectangle with a gradient paint and/or grid?
-            String s = w + "x" + h;
-            Image im = ImageTools.createImage(s, w, h);
-            return new ImageView(im);
+            return ImageTools.createImageView(w, h);
         };
     }
 

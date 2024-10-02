@@ -27,6 +27,7 @@ package com.oracle.tools.fx.monkey.options;
 import javafx.beans.property.Property;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.control.CheckBox;
+import com.oracle.tools.fx.monkey.util.BooleanConsumer;
 import com.oracle.tools.fx.monkey.util.FX;
 
 /**
@@ -45,12 +46,12 @@ public class BooleanOption extends CheckBox {
         selectedProperty().bindBidirectional(property);
     }
 
-    public BooleanOption(String name, String text, Runnable onChange) {
+    public BooleanOption(String name, String text, BooleanConsumer onChange) {
         this(name, text, (Property)null);
 
         property.addListener((src, prev, cur) -> {
             try {
-                onChange.run();
+                onChange.consume(cur);
             } catch (Throwable e) {
                 e.printStackTrace();
             }

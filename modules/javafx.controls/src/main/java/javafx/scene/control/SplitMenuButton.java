@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import javafx.event.ActionEvent;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
+import javafx.scene.Node;
 import javafx.scene.control.skin.SplitMenuButtonSkin;
 
 /**
@@ -76,7 +77,31 @@ public class SplitMenuButton extends MenuButton {
      * {@link #setGraphic(Node)} and {@link #getItems()} to set the content.
      */
     public SplitMenuButton() {
-        this((MenuItem[])null);
+        this(null, null, (MenuItem[])null);
+    }
+
+    /**
+     * Creates a new empty split menu button with the given text to display on the
+     * button. Use {@link #setGraphic(Node)} and {@link #getItems()} to set the
+     * content.
+     *
+     * @param text the text to display on the menu button
+     * @since 24
+     */
+    public SplitMenuButton(String text) {
+        this(text, null, (MenuItem[])null);
+    }
+
+    /**
+     * Creates a new empty split menu button with the given text and graphic to
+     * display on the button. Use {@link #getItems()} to set the content.
+     *
+     * @param text the text to display on the menu button
+     * @param graphic the graphic to display on the menu button
+     * @since 24
+     */
+    public SplitMenuButton(String text, Node graphic) {
+        this(text, graphic, (MenuItem[])null);
     }
 
     /**
@@ -85,6 +110,26 @@ public class SplitMenuButton extends MenuButton {
      * @param items The items to show within this button's menu
      */
     public SplitMenuButton(MenuItem... items) {
+        this(null, null, items);
+    }
+
+    /**
+     * Creates a new split menu button with the given text and graphic to
+     * display on the button, and inserts the given items
+     * into the {@link #getItems() items} list.
+     *
+     * @param text the text to display on the menu button
+     * @param graphic the graphic to display on the menu button
+     * @param items the items to display in the popup menu
+     * @since 24
+     */
+    public SplitMenuButton(String text, Node graphic, MenuItem... items) {
+        if (text != null) {
+            setText(text);
+        }
+        if (graphic != null) {
+            setGraphic(graphic);
+        }
         if (items != null) {
             getItems().addAll(items);
         }

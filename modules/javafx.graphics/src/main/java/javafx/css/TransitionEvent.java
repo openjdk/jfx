@@ -29,6 +29,7 @@ import javafx.animation.Transition;
 import javafx.event.Event;
 import javafx.event.EventType;
 import javafx.scene.Node;
+import javafx.scene.layout.Region;
 import javafx.util.Duration;
 import java.util.Objects;
 
@@ -84,6 +85,11 @@ public final class TransitionEvent extends Event {
     private final StyleableProperty<?> property;
 
     /**
+     * The name of the CSS property or sub-property that is targeted by the transition.
+     */
+    private final String propertyName;
+
+    /**
      * The time that has elapsed since the transition has entered its active period,
      * not including the time spent in the delay phase.
      */
@@ -96,12 +102,32 @@ public final class TransitionEvent extends Event {
      * @param property the {@code StyleableProperty} that is targeted by the transition
      * @param elapsedTime the time that has elapsed since the transition has entered its active period
      * @throws NullPointerException if {@code eventType}, {@code property} or {@code elapsedTime} is {@code null}
+     * @deprecated use {@link #TransitionEvent(EventType, StyleableProperty, String, Duration)} instead
      */
+    @Deprecated(since = "24", forRemoval = true)
     public TransitionEvent(EventType<? extends Event> eventType,
                            StyleableProperty<?> property,
                            Duration elapsedTime) {
+        this(eventType, property, property.getCssMetaData().getProperty(), elapsedTime);
+    }
+
+    /**
+     * Creates a new instance of the {@code TransitionEvent} class.
+     *
+     * @param eventType the event type
+     * @param property the {@code StyleableProperty} that is targeted by the transition
+     * @param propertyName the name of the targeted CSS property or sub-property
+     * @param elapsedTime the time that has elapsed since the transition has entered its active period
+     * @throws NullPointerException if any of the arguments is {@code null}
+     * @since 24
+     */
+    public TransitionEvent(EventType<? extends Event> eventType,
+                           StyleableProperty<?> property,
+                           String propertyName,
+                           Duration elapsedTime) {
         super(Objects.requireNonNull(eventType, "eventType cannot be null"));
         this.property = Objects.requireNonNull(property, "property cannot be null");
+        this.propertyName = Objects.requireNonNull(propertyName, "propertyName cannot be null");
         this.elapsedTime = Objects.requireNonNull(elapsedTime, "elapsedTime cannot be null");
     }
 
@@ -112,6 +138,21 @@ public final class TransitionEvent extends Event {
      */
     public StyleableProperty<?> getProperty() {
         return property;
+    }
+
+    /**
+     * Gets the name of the CSS property or sub-property that is targeted by the transition.
+     * <p>
+     * The name of the CSS property under transition can be a long-hand property name, which is different
+     * from the name returned by {@link CssMetaData#getProperty()} of the {@code StyleableProperty} that
+     * is targeted by the transition. For example, if a transition targets {@link Region#borderProperty()},
+     * the name of the CSS property might be {@code -fx-border-color}, {@code -fx-border-radius}, etc.
+     *
+     * @return the CSS property or sub-property name
+     * @since 24
+     */
+    public String getPropertyName() {
+        return propertyName;
     }
 
     /**

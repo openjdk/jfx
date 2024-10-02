@@ -229,6 +229,11 @@ gchar           *g_log_writer_format_fields    (GLogLevelFlags   log_level,
                                                 gsize            n_fields,
                                                 gboolean         use_color);
 
+GLIB_AVAILABLE_IN_2_80
+GLogWriterOutput g_log_writer_syslog           (GLogLevelFlags   log_level,
+                                                const GLogField *fields,
+                                                gsize            n_fields,
+                                                gpointer         user_data);
 GLIB_AVAILABLE_IN_2_50
 GLogWriterOutput g_log_writer_journald         (GLogLevelFlags   log_level,
                                                 const GLogField *fields,
@@ -250,6 +255,9 @@ void            g_log_writer_default_set_use_stderr (gboolean use_stderr);
 GLIB_AVAILABLE_IN_2_68
 gboolean        g_log_writer_default_would_drop (GLogLevelFlags  log_level,
                                                  const char     *log_domain);
+GLIB_AVAILABLE_IN_2_80
+void            g_log_writer_default_set_debug_domains (const gchar * const *domains);
+
 
 /* G_MESSAGES_DEBUG enablement */
 GLIB_AVAILABLE_IN_2_72
@@ -543,6 +551,9 @@ GPrintFunc      g_set_printerr_handler  (GPrintFunc      func);
  * @expr: the expression to check
  *
  * Logs a warning if the expression is not true.
+ *
+ * Unlike g_return_if_fail(), the expression is always evaluated, even if
+ * checks and assertions are disabled.
  *
  * Since: 2.16
  */

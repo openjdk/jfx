@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,21 +25,26 @@
 
 package test.javafx.scene.control;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SplitMenuButton;
-import org.junit.Before;
-import org.junit.Test;
-
-import static org.junit.Assert.*;
+import javafx.scene.shape.Rectangle;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
+ * Basic SplitMenuButton Tests.
  *
  * @author lubermud
  */
 public class SplitMenuButtonTest {
     private SplitMenuButton splitMenuButton;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         splitMenuButton = new SplitMenuButton();
     }
 
@@ -81,7 +86,67 @@ public class SplitMenuButtonTest {
         assertTrue(smb2.isMnemonicParsing());
     }
 
+    @Test
+    public void oneArgConstructorShouldHaveNoGraphic1() {
+        SplitMenuButton mb2 = new SplitMenuButton((String)null);
+        assertNull(mb2.getGraphic());
+    }
 
+    @Test
+    public void oneArgConstructorShouldHaveNoGraphic2() {
+        SplitMenuButton mb2 = new SplitMenuButton("");
+        assertNull(mb2.getGraphic());
+    }
+
+    @Test
+    public void oneArgConstructorShouldHaveNoGraphic3() {
+        SplitMenuButton mb2 = new SplitMenuButton("Hello");
+        assertNull(mb2.getGraphic());
+    }
+
+    @Test
+    public void oneArgConstructorShouldHaveSpecifiedString1() {
+        SplitMenuButton mb2 = new SplitMenuButton((String)null);
+        assertEquals("", mb2.getText());
+    }
+
+    @Test
+    public void oneArgConstructorShouldHaveSpecifiedString2() {
+        SplitMenuButton mb2 = new SplitMenuButton("");
+        assertEquals("", mb2.getText());
+    }
+
+    @Test
+    public void oneArgConstructorShouldHaveSpecifiedString3() {
+        SplitMenuButton mb2 = new SplitMenuButton("Hello");
+        assertEquals("Hello", mb2.getText());
+    }
+
+    @Test
+    public void twoArgConstructorShouldHaveSpecifiedGraphic1() {
+        SplitMenuButton mb2 = new SplitMenuButton(null, null);
+        assertNull(mb2.getGraphic());
+    }
+
+    @Test
+    public void twoArgConstructorShouldHaveSpecifiedGraphic2() {
+        Rectangle rect = new Rectangle();
+        SplitMenuButton mb2 = new SplitMenuButton("Hello", rect);
+        assertSame(rect, mb2.getGraphic());
+    }
+
+    @Test
+    public void twoArgConstructorShouldHaveSpecifiedString1() {
+        SplitMenuButton mb2 = new SplitMenuButton(null, null);
+        assertEquals("", mb2.getText());
+    }
+
+    @Test
+    public void twoArgConstructorShouldHaveSpecifiedString2() {
+        Rectangle rect = new Rectangle();
+        SplitMenuButton mb2 = new SplitMenuButton("Hello", rect);
+        assertEquals("Hello", mb2.getText());
+    }
 
     @Test public void splitMenuButtonIsFiredIsNoOp() {
         splitMenuButton.fire(); // should throw no exceptions, if it does, the test fails

@@ -28,7 +28,7 @@ package test.com.sun.javafx.event;
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 
-import org.junit.Assert;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public final class EventChangingDispatcher extends LabeledEventDispatcher {
     private final Operation capturingPhaseOperation;
@@ -50,17 +50,17 @@ public final class EventChangingDispatcher extends LabeledEventDispatcher {
     @Override
     public Event dispatchEvent(final Event event,
                                final EventDispatchChain tail) {
-        Assert.assertTrue(event instanceof ValueEvent);
+        assertTrue(event instanceof ValueEvent);
         ValueEvent valueEvent = (ValueEvent) event;
 
         if (capturingPhaseOperation != null) {
             valueEvent.setValue(capturingPhaseOperation.applyTo(
-                                    valueEvent.getValue()));
+                    valueEvent.getValue()));
         }
         valueEvent = (ValueEvent) tail.dispatchEvent(valueEvent);
         if (bubblingPhaseOperation != null) {
             valueEvent.setValue(bubblingPhaseOperation.applyTo(
-                                    valueEvent.getValue()));
+                    valueEvent.getValue()));
         }
 
         return valueEvent;

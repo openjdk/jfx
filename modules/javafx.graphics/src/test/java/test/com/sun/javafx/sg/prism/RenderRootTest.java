@@ -35,11 +35,12 @@ import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGNodeShim;
 import com.sun.javafx.sg.prism.NGRectangle;
 import com.sun.javafx.sg.prism.NodePath;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for the computation of the render root of a graph
@@ -65,7 +66,7 @@ public class RenderRootTest extends NGTestBase {
     private NGRectangle rect;
     private NGGroup root;
 
-    @Before
+    @BeforeEach
     public void setup() {
         rect = createRectangle(10, 10, 90, 90);
         root = createGroup(rect);
@@ -336,7 +337,7 @@ public class RenderRootTest extends NGTestBase {
     // Changing this behavior may cause rendering glitches for any application that
     // relies on this current behavior to render all root tree.
     // So we need to be extensive in testing before modifying the behavior.
-    @Ignore("JDK-8265510")
+    @Disabled("JDK-8265510")
     @Test
     public void emptyDirtyRegion1() {
         NodePath rootPath = getRenderRoot(root, 0, 0, -1, -1);
@@ -345,7 +346,7 @@ public class RenderRootTest extends NGTestBase {
         // assertRenderRoot(null, rootPath);
     }
 
-    @Ignore("JDK-8265510")
+    @Disabled("JDK-8265510")
     @Test
     public void emptyDirtyRegion2() {
         NodePath rootPath = getRenderRoot(root, -1, -1, -2, -2);
@@ -354,7 +355,7 @@ public class RenderRootTest extends NGTestBase {
         // assertRenderRoot(null, rootPath);
     }
 
-    @Ignore("JDK-8265510")
+    @Disabled("JDK-8265510")
     @Test
     public void invalidDirtyRegionOutsideOpaqueRegion() {
         NodePath rootPath = getRenderRoot(root, -10, -10, 5, 5);
