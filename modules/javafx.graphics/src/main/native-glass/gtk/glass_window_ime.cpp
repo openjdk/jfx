@@ -97,8 +97,11 @@ static gboolean on_retrieve_surrounding(GtkIMContext* self, gpointer user_data) 
 }
 
 void WindowContextBase::commitIME(gchar *str) {
+    if (!jview) {
+        return;
+    }
+
     if (im_ctx.on_preedit) {
-        g_print("commitIME: %s\n", str);
         jstring jstr = mainEnv->NewStringUTF(str);
         EXCEPTION_OCCURED(mainEnv);
         jsize slen = mainEnv->GetStringLength(jstr);
@@ -111,7 +114,25 @@ void WindowContextBase::commitIME(gchar *str) {
                 0);
         LOG_EXCEPTION(mainEnv)
     } else {
-        im_ctx.send_key_event = true;
+        if (im_ctx.filtered_key_press) {
+            send_key_event(im_ctx.filtered_key_press->key,
+                           im_ctx.filtered_key_press->glass_key,
+                           im_ctx.filtered_key_press->glass_modifier,
+                           true);
+
+            delete im_ctx.filtered_key_press;
+            im_ctx.filtered_key_press = NULL;
+        }
+
+        if (im_ctx.filtered_key_release) {
+            send_key_event(im_ctx.filtered_key_release->key,
+                           im_ctx.filtered_key_release->glass_key,
+                           im_ctx.filtered_key_release->glass_modifier,
+                           false);
+
+            delete im_ctx.filtered_key_release;
+            im_ctx.filtered_key_release = NULL;
+        }
     }
 }
 
@@ -126,11 +147,20 @@ bool WindowContextBase::filterIME(GdkEvent *event) {
 
     bool filtered = gtk_im_context_filter_keypress(im_ctx.ctx, &event->key);
 
-    g_print("Filtered: %d, Send KeyPress: %d\n", filtered, im_ctx.send_key_event);
+    if (filtered) {
+        GdkEventKey* ke = &event->key;
+        bool press = ke->type == GDK_KEY_PRESS;
+        jint glassKey = get_glass_key(ke);
+        jint glassModifier = gdk_modifier_mask_to_glass(ke->state, glassKey, press);
+        jchar key = gdk_keyval_to_unicode_glass(ke->keyval, ke->state);
 
-    if (filtered && im_ctx.send_key_event) {
-        process_key(&event->key);
-        im_ctx.send_key_event = false;
+        ImFilteredKey* im_filtered_key = new ImFilteredKey(key, glassKey, glassModifier);
+
+        if (press) {
+            im_ctx.filtered_key_press = im_filtered_key;
+        } else {
+            im_ctx.filtered_key_release = im_filtered_key;
+        }
     }
 
     return filtered;

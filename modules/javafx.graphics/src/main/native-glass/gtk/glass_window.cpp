@@ -447,19 +447,20 @@ void WindowContextBase::process_mouse_cross(GdkEventCrossing* event) {
 }
 
 void WindowContextBase::process_key(GdkEventKey* event) {
+    if (!jview) {
+        return;
+    }
+
     bool press = event->type == GDK_KEY_PRESS;
     jint glassKey = get_glass_key(event);
-    jint glassModifier = gdk_modifier_mask_to_glass(event->state);
-    if (press) {
-        glassModifier |= glass_key_to_modifier(glassKey);
-    } else {
-        glassModifier &= ~glass_key_to_modifier(glassKey);
-    }
+    jint glassModifier = gdk_modifier_mask_to_glass(event->state, glassKey, press);
+    jchar key = gdk_keyval_to_unicode_glass(event->keyval, event->state);
+
+    send_key_event(key, glassKey, glassModifier, press);
+}
+
+void WindowContextBase::send_key_event(jchar key, jint glassKey, jint glassModifier, bool press) {
     jcharArray jChars = NULL;
-    jchar key = gdk_keyval_to_unicode(event->keyval);
-    if (key >= 'a' && key <= 'z' && (event->state & GDK_CONTROL_MASK)) {
-        key = key - 'a' + 1; // map 'a' to ctrl-a, and so on.
-    }
 
     if (key > 0) {
         jChars = mainEnv->NewCharArray(1);
@@ -469,10 +470,6 @@ void WindowContextBase::process_key(GdkEventKey* event) {
         }
     } else {
         jChars = mainEnv->NewCharArray(0);
-    }
-
-    if (!jview) {
-        return;
     }
 
     mainEnv->CallVoidMethod(jview, jViewNotifyKey,
